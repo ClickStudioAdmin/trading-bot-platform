@@ -70,7 +70,7 @@ export async function copyChartScreenshot(chart: ChartHandle): Promise<boolean> 
 const SHOT_BUTTON =
   "inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink";
 
-function CopyImageIcon() {
+export function CopyImageIcon() {
   return (
     <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
       <rect
@@ -92,7 +92,7 @@ function CopyImageIcon() {
   );
 }
 
-function ExpandIcon() {
+export function ExpandIcon() {
   return (
     <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
       <path
@@ -127,7 +127,7 @@ function ExpandIcon() {
   );
 }
 
-function CollapseIcon() {
+export function CollapseIcon() {
   return (
     <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
       <path
@@ -162,7 +162,7 @@ function CollapseIcon() {
   );
 }
 
-function MonitorIcon() {
+export function MonitorIcon() {
   return (
     <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
       <rect
@@ -184,7 +184,7 @@ function MonitorIcon() {
   );
 }
 
-function ExitMonitorIcon() {
+export function ExitMonitorIcon() {
   return (
     <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
       <rect
@@ -244,7 +244,7 @@ function exitMonitorFullscreen() {
   return exit();
 }
 
-function CameraIcon() {
+export function CameraIcon() {
   return (
     <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
       <path
@@ -258,7 +258,7 @@ function CameraIcon() {
   );
 }
 
-function CheckIcon() {
+export function ChartCheckIcon() {
   return (
     <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
       <path
@@ -317,7 +317,7 @@ export function ChartScreenshotControls({
           });
         }}
       >
-        {copied ? <CheckIcon /> : <CopyImageIcon />}
+        {copied ? <ChartCheckIcon /> : <CopyImageIcon />}
       </button>
       <button
         type="button"

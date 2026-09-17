@@ -2,37 +2,18 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
+import { IconCheck, IconLoader } from "@/components/icons";
 import { useDeskFormStatus } from "@/components/stay-on-page-form";
 
 const OK_KEY = "tbp-btn-ok";
 const OK_MS = 1500;
 
 export function ButtonBusyIcon() {
-  return (
-    <span
-      className="inline-block size-3 shrink-0 animate-spin rounded-full border border-current border-t-transparent"
-      aria-hidden
-    />
-  );
+  return <IconLoader size={12} className="size-3 shrink-0 animate-spin" />;
 }
 
 export function ButtonCheckIcon() {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden
-      className="size-3 text-success"
-    >
-      <path
-        d="M3.5 8.5 6.5 11.5 12.5 4.5"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+  return <IconCheck size={12} className="size-3 text-success" />;
 }
 
 function queryLooksSuccessful() {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
+import { IconChevronRight } from "@/components/icons";
 
 export function ExpandableTradeRows({
   colSpan,
@@ -130,19 +131,6 @@ export function TabButton({
 
 export function ChevronIcon({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-      className={`h-4 w-4 ${className ?? ""}`}
-    >
-      <path
-        d="M6 3.5 11 8l-5 4.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <IconChevronRight size={16} className={`h-4 w-4 ${className ?? ""}`} />
   );
 }

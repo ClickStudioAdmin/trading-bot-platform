@@ -45,7 +45,7 @@ export function DeskTypeMark({ deskType }: { deskType: DeskType }) {
   );
 }
 
-function CarryIcon() {
+export function CarryIcon() {
   return (
     <svg viewBox="0 0 16 16" className="size-3.5" fill="none">
       <path
@@ -66,7 +66,7 @@ function CarryIcon() {
   );
 }
 
-function PerpsIcon() {
+export function PerpsIcon() {
   return (
     <svg viewBox="0 0 16 16" className="size-3.5" fill="none">
       <path
@@ -87,7 +87,7 @@ function PerpsIcon() {
   );
 }
 
-function SignalIcon() {
+export function SignalIcon() {
   return (
     <svg viewBox="0 0 16 16" className="size-3.5" fill="none">
       <path
@@ -107,7 +107,7 @@ function SignalIcon() {
   );
 }
 
-function DcaIcon() {
+export function DcaIcon() {
   return (
     <svg viewBox="0 0 16 16" className="size-3.5" fill="none">
       <path
@@ -134,7 +134,7 @@ function DcaIcon() {
   );
 }
 
-function PaperIcon() {
+export function PaperIcon() {
   return (
     <svg viewBox="0 0 16 16" className="size-4" fill="none" aria-hidden>
       <path
@@ -152,6 +152,14 @@ function PaperIcon() {
       />
     </svg>
   );
+}
+
+export function BybitIcon() {
+  return <VenueIcon venue="bybit" />;
+}
+
+export function HyperliquidIcon() {
+  return <VenueIcon venue="hyperliquid" />;
 }
 
 function VenueIcon({ venue }: { venue: string }) {

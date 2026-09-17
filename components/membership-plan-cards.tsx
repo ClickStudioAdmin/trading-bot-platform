@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ColumnHint } from "@/components/column-hint";
+import { IconCheck } from "@/components/icons";
 import {
   PLAN_COMPARE_SECTIONS,
   comparePlanCell,
@@ -245,15 +246,7 @@ function CompareMark({ cell }: { cell: PlanCompareCell }) {
   if (cell.kind === "tick") {
     return (
       <span className="inline-flex text-success" aria-label="Included">
-        <svg viewBox="0 0 16 16" fill="none" className="size-5" aria-hidden>
-          <path
-            d="M3.5 8.5 6.5 11.5 12.5 4.5"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <IconCheck size={20} className="size-5" />
       </span>
     );
   }

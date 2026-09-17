@@ -1,4 +1,5 @@
 import { DeskTypeMark } from "@/components/desk-mark";
+import { IconPlay } from "@/components/icons";
 import { formatDeskType, type DeskType } from "@/lib/accounts/model";
 
 const DETAILS: Record<
@@ -87,12 +88,10 @@ export function CreateDeskDetails({ deskType }: { deskType: DeskType }) {
   );
 }
 
-function PlayMark() {
+export function PlayMark() {
   return (
     <span className="inline-flex size-10 items-center justify-center rounded-full border border-line text-ink-muted">
-      <svg viewBox="0 0 16 16" className="size-4" fill="currentColor" aria-hidden>
-        <path d="M6 4.2v7.6L12.2 8 6 4.2Z" />
-      </svg>
+      <IconPlay size={16} className="size-4 fill-current" />
     </span>
   );
 }

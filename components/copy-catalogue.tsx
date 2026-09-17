@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IconStar, IconStarFilled } from "@/components/icons";
 import { NavBadge } from "@/components/nav-badge";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
@@ -64,18 +65,9 @@ function drawdownTone(card: CopyCatalogueCard): string {
   );
 }
 
-function StarIcon({ filled }: { filled: boolean }) {
-  return (
-    <svg viewBox="0 0 16 16" className="size-4" aria-hidden>
-      <path
-        d="M8 1.6 9.76 5.17l3.94.57-2.85 2.78.67 3.92L8 10.6l-3.52 1.84.67-3.92-2.85-2.78 3.94-.57L8 1.6Z"
-        fill={filled ? "currentColor" : "none"}
-        stroke="currentColor"
-        strokeWidth="1.25"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+export function StarIcon({ filled }: { filled: boolean }) {
+  const Icon = filled ? IconStarFilled : IconStar;
+  return <Icon size={16} className="size-4" />;
 }
 
 function winRateLabel(card: CopyCatalogueCard): string {

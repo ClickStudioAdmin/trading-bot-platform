@@ -6,6 +6,7 @@ import {
   type ChangeEvent,
   type InputHTMLAttributes,
 } from "react";
+import { IconCheck } from "@/components/icons";
 
 const BOX =
   "flex size-5 items-center justify-center rounded-[5px] border border-line-strong bg-surface-raised text-canvas peer-checked:border-accent peer-checked:bg-accent peer-checked:[&_svg]:opacity-100 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-disabled:opacity-40";
@@ -56,12 +57,7 @@ export function AppCheck({
         className="peer sr-only"
       />
       <span aria-hidden className={BOX}>
-        <svg
-          viewBox="0 0 12 12"
-          className="size-3 fill-none stroke-current stroke-[1.8] opacity-0"
-        >
-          <path d="M2 6.2 4.6 9 10 3" />
-        </svg>
+        <IconCheck size={12} className="size-3 opacity-0" />
       </span>
     </span>
   );

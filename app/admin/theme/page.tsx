@@ -147,9 +147,10 @@ export default async function ThemePage({
           <section>
             <h2 className="text-xl font-semibold tracking-tight">Icons</h2>
             <p className="mt-1 text-sm text-ink-muted">
-              No icon library. These are the inline SVGs already in the app,
-              plus live market token images. Do not add a pack unless we decide
-              to replace this set.
+              Living list of icons in use. Lucide comes from{" "}
+              <code className="text-ink">@/components/icons</code> — add it
+              there first. Custom marks stay until we replace them. Market
+              tokens stay on TokenIcon.
             </p>
             <div className="mt-5">
               <ThemeIconsDraft />

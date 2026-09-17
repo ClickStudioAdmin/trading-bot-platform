@@ -12,6 +12,7 @@ import {
   formatDeskVenueCaption,
   type TradingAccount,
 } from "@/lib/accounts/model";
+import { IconChevronDown } from "@/components/icons";
 import type { ExchangeConnection } from "@/lib/exchanges/connections";
 
 export function DeskSwitcher({
@@ -72,20 +73,7 @@ export function DeskSwitcher({
           className="flex max-w-[11rem] cursor-pointer list-none items-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:bg-surface-raised sm:max-w-[16rem] [&::-webkit-details-marker]:hidden"
         >
           <span className="truncate">{current.name}</span>
-          <svg
-            viewBox="0 0 12 12"
-            className="size-3 shrink-0 text-ink-faint"
-            aria-hidden
-          >
-            <path
-              d="M3 4.5 6 8l3-3.5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <IconChevronDown size={12} className="size-3 shrink-0 text-ink-faint" />
         </summary>
         <div className="absolute left-1/2 z-30 mt-2 w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 rounded-card border border-line bg-surface p-2">
           <p className="px-3 pt-1.5 pb-1 text-[11px] uppercase tracking-[0.08em] text-ink-faint">

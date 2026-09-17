@@ -16,6 +16,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { IconChevronDown, IconClose } from "@/components/icons";
 import { TokenIcon } from "@/components/token-icon";
 
 export type AppSelectOption = {
@@ -337,7 +338,7 @@ export function AppMultiSelect({
                   }}
                   className="pointer-events-auto inline-flex size-4 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-accent/25 hover:text-ink"
                 >
-                  <CloseMark />
+                  <IconClose size={10} className="size-2.5" />
                 </button>
               </span>
             ))
@@ -508,35 +509,11 @@ function OptionLabel({
   );
 }
 
-function CloseMark() {
-  return (
-    <svg viewBox="0 0 12 12" className="size-2.5" aria-hidden>
-      <path
-        d="M3 3l6 6M9 3l-6 6"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function Chevron({ open }: { open: boolean }) {
   return (
-    <svg
-      viewBox="0 0 12 12"
-      aria-hidden
+    <IconChevronDown
+      size={12}
       className={`size-3 shrink-0 ${open ? "rotate-180" : ""}`}
-    >
-      <path
-        d="m2.5 4.5 3.5 3.5 3.5-3.5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.5"
-      />
-    </svg>
+    />
   );
 }

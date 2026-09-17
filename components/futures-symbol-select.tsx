@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { IconChevronDown } from "@/components/icons";
 import { TokenIcon } from "@/components/token-icon";
 import {
   formatPerpPairLabel,
@@ -130,20 +131,10 @@ export function FuturesSymbolSelect({
         ) : (
           <span className="text-ink-muted">{placeholder}</span>
         )}
-        <svg
-          viewBox="0 0 12 12"
+        <IconChevronDown
+          size={12}
           className="ml-auto size-3 shrink-0 text-ink-faint"
-          aria-hidden
-        >
-          <path
-            d="M3 4.5 6 8l3-3.5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        />
       </button>
       {open ? (
         <div className="absolute z-[60] mt-1 w-full min-w-[16rem] rounded-card border border-line bg-surface p-2">

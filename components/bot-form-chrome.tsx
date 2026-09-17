@@ -10,6 +10,7 @@ import {
 } from "@/lib/bots/status";
 import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
+import { IconCheck } from "@/components/icons";
 
 export const botFieldClass =
   "mt-1 w-full rounded-control border border-line-strong bg-surface-raised px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none";
@@ -69,9 +70,7 @@ export function EnableCheck({ checked }: { checked: boolean }) {
       aria-hidden
     >
       {checked ? (
-        <svg viewBox="0 0 12 12" className="size-3 fill-none stroke-current stroke-[1.8]">
-          <path d="M2 6.2 4.6 9 10 3" />
-        </svg>
+        <IconCheck size={12} className="size-3" />
       ) : null}
     </span>
   );

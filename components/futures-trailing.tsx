@@ -3,6 +3,7 @@
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { AppCheck } from "@/components/app-check";
+import { IconPencil } from "@/components/icons";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { saveFuturesTrailing } from "@/lib/futures/actions";
@@ -152,7 +153,7 @@ export function FuturesTrailingCell({
             className="rounded-control p-1 text-ink-muted hover:text-ink"
             aria-label="Edit trailing stop"
           >
-            <PencilIcon />
+            <IconPencil size={14} className="size-3.5" />
           </button>
         </span>
       ) : (
@@ -388,15 +389,3 @@ function optionalNumber(raw: string): number | null {
   return value > 0 && Number.isFinite(value) ? value : null;
 }
 
-function PencilIcon() {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" aria-hidden className="size-3.5">
-      <path
-        d="M10.5 2.5 13.5 5.5 6 13H3V10Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}

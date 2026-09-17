@@ -14,6 +14,7 @@ import {
   TablePager,
 } from "@/components/table-chrome";
 import { AppCheck } from "@/components/app-check";
+import { IconCheck } from "@/components/icons";
 import { Modal, StarterPackCheckbox } from "@/components/template-modals";
 import { sliceTablePage, type TableSortDir } from "@/lib/table-chrome";
 import type { BacktestLinkHighlight } from "@/lib/backtest/model";
@@ -138,20 +139,11 @@ function StarterPackMark({ on }: { on: boolean }) {
   }
   return (
     <span className="inline-flex text-success" title="Included in Starter Pack">
-      <svg
-        viewBox="0 0 16 16"
-        fill="none"
-        aria-label="Included in Starter Pack"
+      <IconCheck
+        size={16}
         className="size-4"
-      >
-        <path
-          d="M3.5 8.5 6.5 11.5 12.5 4.5"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
+        aria-label="Included in Starter Pack"
+      />
     </span>
   );
 }
