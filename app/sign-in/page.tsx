@@ -90,10 +90,6 @@ export default async function SignInPage({
             <Link href="/sign-up" className="text-accent hover:text-accent-strong">
               Create a free account
             </Link>
-            . Promote the platform without desks?{" "}
-            <Link href="/affiliates" className="text-accent hover:text-accent-strong">
-              Join as an affiliate
-            </Link>
             .
           </p>
         </section>
