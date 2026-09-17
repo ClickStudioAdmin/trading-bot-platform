@@ -41,6 +41,8 @@ import {
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+const filterFieldClass =
+  "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 const primaryBtn =
   "rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink hover:bg-accent";
 const secondaryBtn =
@@ -552,6 +554,12 @@ export function TemplatesLibrary({
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
+  function clearFilters() {
+    setQuery("");
+    setDeskFilter("all");
+    setFolderFilter("all");
+  }
+
   function toggleRow(id: string) {
     setSelected((current) => {
       const next = new Set(current);
@@ -717,20 +725,17 @@ export function TemplatesLibrary({
           </button>
         </div>
       ) : null}
-      <div className="mt-4 rounded-card border border-line bg-surface p-4">
-        <div
-          className={`grid gap-3 sm:grid-cols-2 ${
-            tab === "templates" || tab === "shared-templates"
-              ? "lg:grid-cols-3"
-              : ""
-          }`}
-        >
+      <div className="mt-6 rounded-card border border-line bg-surface p-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <label className="block text-xs text-ink-muted">
             Search
             <input
+              type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className={fieldClass}
+              placeholder="Name or contract"
+              autoComplete="off"
+              className={filterFieldClass}
             />
           </label>
           <label className="block text-xs text-ink-muted">
@@ -740,7 +745,7 @@ export function TemplatesLibrary({
               onChange={(event) =>
                 setDeskFilter(event.target.value as "all" | TemplateDeskType)
               }
-              className={fieldClass}
+              className={filterFieldClass}
             >
               <option value="all">All desk types</option>
               <option value="dca">DCA</option>
@@ -754,7 +759,7 @@ export function TemplatesLibrary({
               <select
                 value={folderFilter}
                 onChange={(event) => setFolderFilter(event.target.value)}
-                className={fieldClass}
+                className={filterFieldClass}
               >
                 <option value="all">All folders</option>
                 {folderFilterOptions.map((folder) => (
@@ -765,6 +770,15 @@ export function TemplatesLibrary({
               </select>
             </label>
           ) : null}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+          >
+            Clear
+          </button>
         </div>
       </div>
       {error ? (
