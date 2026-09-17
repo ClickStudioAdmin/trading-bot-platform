@@ -2,9 +2,15 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  ChevronsUp,
+  CircleOff,
+  Download,
+  FilterX,
+  ListFilter,
   LoaderCircle,
   Pencil,
   Play,
+  Plus,
   SquareArrowOutUpRight,
   Star,
   Trash2,
@@ -49,6 +55,41 @@ export const LUCIDE_ICONS = [
     Icon: ChevronRight,
   },
   {
+    id: "chevrons-up",
+    name: "Chevrons up",
+    lucide: "ChevronsUp",
+    usedIn: "Theme table hide filters",
+    Icon: ChevronsUp,
+  },
+  {
+    id: "circle-off",
+    name: "Disable",
+    lucide: "CircleOff",
+    usedIn: "Theme table bulk disable",
+    Icon: CircleOff,
+  },
+  {
+    id: "download",
+    name: "Download",
+    lucide: "Download",
+    usedIn: "Theme table export",
+    Icon: Download,
+  },
+  {
+    id: "filter-x",
+    name: "Clear filters",
+    lucide: "FilterX",
+    usedIn: "Theme table clear filters",
+    Icon: FilterX,
+  },
+  {
+    id: "list-filter",
+    name: "Filters",
+    lucide: "ListFilter",
+    usedIn: "Theme table show filters",
+    Icon: ListFilter,
+  },
+  {
     id: "loader-circle",
     name: "Loader",
     lucide: "LoaderCircle",
@@ -59,7 +100,7 @@ export const LUCIDE_ICONS = [
     id: "pencil",
     name: "Pencil",
     lucide: "Pencil",
-    usedIn: "TP/SL, trailing, theme table actions",
+    usedIn: "TP/SL, trailing, theme table row actions",
     Icon: Pencil,
   },
   {
@@ -73,8 +114,15 @@ export const LUCIDE_ICONS = [
     id: "open",
     name: "Open",
     lucide: "SquareArrowOutUpRight",
-    usedIn: "Theme table actions",
+    usedIn: "Theme table row actions",
     Icon: SquareArrowOutUpRight,
+  },
+  {
+    id: "plus",
+    name: "Plus",
+    lucide: "Plus",
+    usedIn: "Theme table new item",
+    Icon: Plus,
   },
   {
     id: "star",
@@ -94,14 +142,14 @@ export const LUCIDE_ICONS = [
     id: "x",
     name: "Close",
     lucide: "X",
-    usedIn: "AppSelect pills, panel close",
+    usedIn: "AppSelect pills, panel close, theme table clear selection",
     Icon: X,
   },
   {
     id: "trash",
     name: "Delete",
     lucide: "Trash2",
-    usedIn: "Theme table actions",
+    usedIn: "Theme table row and bulk delete",
     Icon: Trash2,
   },
 ] as const satisfies readonly LucideIconEntry[];
@@ -118,6 +166,26 @@ export function IconChevronRight(props: LucideProps) {
   return <ChevronRight aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
+export function IconChevronsUp(props: LucideProps) {
+  return <ChevronsUp aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconDisable(props: LucideProps) {
+  return <CircleOff aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconDownload(props: LucideProps) {
+  return <Download aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconFilterClear(props: LucideProps) {
+  return <FilterX aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconFilters(props: LucideProps) {
+  return <ListFilter aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
 export function IconLoader(props: LucideProps) {
   return <LoaderCircle aria-hidden strokeWidth={STROKE} {...props} />;
 }
@@ -128,6 +196,10 @@ export function IconPencil(props: LucideProps) {
 
 export function IconPlay(props: LucideProps) {
   return <Play aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconPlus(props: LucideProps) {
+  return <Plus aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconOpen(props: LucideProps) {

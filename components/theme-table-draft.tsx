@@ -2,7 +2,18 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { IconOpen, IconPencil, IconTrash } from "@/components/icons";
+import {
+  IconChevronsUp,
+  IconClose,
+  IconDisable,
+  IconDownload,
+  IconFilterClear,
+  IconFilters,
+  IconOpen,
+  IconPencil,
+  IconPlus,
+  IconTrash,
+} from "@/components/icons";
 import {
   SortTh,
   StatusBadge,
@@ -22,13 +33,15 @@ import { AppSelect } from "@/components/app-select";
 import { AppCheck } from "@/components/app-check";
 
 const primaryBtn =
-  "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
+  "inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
 const secondaryBtn =
-  "rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink";
+  "inline-flex items-center gap-1.5 rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink";
 const bulkBtn =
-  "rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40";
+  "inline-flex items-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40";
 const dangerBulkBtn =
-  "rounded-control border border-line px-3 py-1.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-40";
+  "inline-flex items-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-40";
+const filterBtn =
+  `${TABLE_FILTER_CLEAR_CLASS} inline-flex items-center gap-1.5`;
 const actionIcon =
   "inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink";
 const dangerActionIcon =
@@ -208,9 +221,11 @@ export function ThemeTableDraft() {
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" className={secondaryBtn}>
+            <IconDownload size={14} className="size-3.5" />
             Export all
           </button>
           <button type="button" className={primaryBtn}>
+            <IconPlus size={14} className="size-3.5" />
             New item
           </button>
         </div>
@@ -268,15 +283,17 @@ export function ThemeTableDraft() {
           <button
             type="button"
             onClick={clearFilters}
-            className={TABLE_FILTER_CLEAR_CLASS}
+            className={filterBtn}
           >
+            <IconFilterClear size={14} className="size-3.5" />
             Clear
           </button>
           <button
             type="button"
             onClick={() => setShowFilters(false)}
-            className={TABLE_FILTER_CLEAR_CLASS}
+            className={filterBtn}
           >
+            <IconChevronsUp size={14} className="size-3.5" />
             Hide Filters
           </button>
         </TableFilterBar>
@@ -284,54 +301,59 @@ export function ThemeTableDraft() {
 
       {notice ? <p className="mt-4 text-sm text-success">{notice}</p> : null}
 
-      {!showFilters || selectedCount > 0 ? (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-          {selectedCount > 0 ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm text-ink-muted">{selectedCount} selected</p>
-              <button
-                type="button"
-                className={bulkBtn}
-                onClick={() => flash(`Sample only — export ${selectedCount}.`)}
-              >
-                Export
-              </button>
-              <button
-                type="button"
-                className={bulkBtn}
-                onClick={() => flash(`Sample only — disable ${selectedCount}.`)}
-              >
-                Disable
-              </button>
-              <button
-                type="button"
-                className={dangerBulkBtn}
-                onClick={() => flash(`Sample only — delete ${selectedCount}.`)}
-              >
-                Delete
-              </button>
-              <button
-                type="button"
-                className={bulkBtn}
-                onClick={() => setSelected(new Set())}
-              >
-                Clear
-              </button>
-            </div>
-          ) : (
-            <span />
-          )}
-          {!showFilters ? (
-            <button
-              type="button"
-              onClick={() => setShowFilters(true)}
-              className={TABLE_FILTER_CLEAR_CLASS}
-            >
-              Show Filters
-            </button>
-          ) : null}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm text-ink-muted">
+            {selectedCount > 0 ? `${selectedCount} selected` : "Bulk actions"}
+          </p>
+          <button
+            type="button"
+            className={bulkBtn}
+            disabled={selectedCount === 0}
+            onClick={() => flash(`Sample only — export ${selectedCount}.`)}
+          >
+            <IconDownload size={14} className="size-3.5" />
+            Export
+          </button>
+          <button
+            type="button"
+            className={bulkBtn}
+            disabled={selectedCount === 0}
+            onClick={() => flash(`Sample only — disable ${selectedCount}.`)}
+          >
+            <IconDisable size={14} className="size-3.5" />
+            Disable
+          </button>
+          <button
+            type="button"
+            className={dangerBulkBtn}
+            disabled={selectedCount === 0}
+            onClick={() => flash(`Sample only — delete ${selectedCount}.`)}
+          >
+            <IconTrash size={14} className="size-3.5" />
+            Delete
+          </button>
+          <button
+            type="button"
+            className={bulkBtn}
+            disabled={selectedCount === 0}
+            onClick={() => setSelected(new Set())}
+          >
+            <IconClose size={14} className="size-3.5" />
+            Clear
+          </button>
         </div>
-      ) : null}
+        {!showFilters ? (
+          <button
+            type="button"
+            onClick={() => setShowFilters(true)}
+            className={filterBtn}
+          >
+            <IconFilters size={14} className="size-3.5" />
+            Show Filters
+          </button>
+        ) : null}
+      </div>
 
       <div className="mt-6 overflow-hidden rounded-card border border-line bg-surface">
         <div className="overflow-x-auto">
