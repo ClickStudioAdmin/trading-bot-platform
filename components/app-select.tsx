@@ -34,6 +34,22 @@ const FIELD_TRIGGER =
 const ACTION_TRIGGER =
   "inline-flex w-max max-w-full shrink-0 items-center justify-between gap-3 rounded-control bg-accent-strong px-4 py-2 text-left text-sm font-medium text-ink hover:bg-accent focus:outline-none disabled:opacity-40";
 
+function selectRootClass(variant: "field" | "action", className: string) {
+  const base =
+    variant === "action" ? "inline-flex max-w-full" : "block min-w-0";
+  const layout = className
+    .split(/\s+/)
+    .filter(
+      (token) =>
+        token &&
+        !/^(rounded-|border|bg-|px-|py-|pt-|pb-|pl-|pr-|text-|font-|hover:|focus|disabled:|placeholder:)/.test(
+          token,
+        ),
+    )
+    .join(" ");
+  return `${base} ${layout}`.trim();
+}
+
 export function AppSelect({
   name,
   value,
@@ -142,10 +158,7 @@ export function AppSelect({
 
   const triggerClass =
     variant === "action" ? ACTION_TRIGGER : FIELD_TRIGGER;
-  const rootClass =
-    variant === "action"
-      ? `inline-flex max-w-full ${className}`.trim()
-      : `block min-w-0 ${className}`.trim();
+  const rootClass = selectRootClass(variant, className);
 
   return (
     <span className={rootClass}>
@@ -170,7 +183,7 @@ export function AppSelect({
         aria-expanded={open}
         aria-controls={listId}
         onClick={() => (open ? close() : setOpen(true))}
-        className={triggerClass}
+        className={`${triggerClass} ${className}`.trim()}
       >
         <OptionLabel option={selected} />
         <Chevron open={open} />
