@@ -154,7 +154,7 @@ export default async function AccountSettingsPage({
                 Change the password for this login.
               </p>
             </div>
-            <label className="block text-xs text-ink-muted">
+            <label className="block w-1/2 text-xs text-ink-muted">
               Current password
               <input
                 name="currentPassword"
@@ -164,7 +164,7 @@ export default async function AccountSettingsPage({
                 className={fieldClass}
               />
             </label>
-            <label className="block text-xs text-ink-muted">
+            <label className="block w-1/2 text-xs text-ink-muted">
               New password
               <input
                 name="newPassword"
@@ -175,7 +175,7 @@ export default async function AccountSettingsPage({
                 className={fieldClass}
               />
             </label>
-            <label className="block text-xs text-ink-muted">
+            <label className="block w-1/2 text-xs text-ink-muted">
               Confirm new password
               <input
                 name="confirmPassword"
