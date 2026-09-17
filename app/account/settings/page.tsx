@@ -30,7 +30,7 @@ import { TotpSettings } from "@/components/totp-settings";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Settings",
+  title: "Profile & Settings",
   description: "Desk profile, password, Google Authenticator, and notifications.",
 };
 
@@ -73,7 +73,7 @@ export default async function AccountSettingsPage({
 
   return (
     <div>
-      <PageHeading title="Settings" />
+      <PageHeading title="Profile & Settings" />
       <p className="-mt-4 text-sm text-ink-muted">
         {showPlatformSettings ? (
           <>
