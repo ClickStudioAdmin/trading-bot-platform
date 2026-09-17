@@ -71,43 +71,11 @@ export function TotpSettings({
             code to enable 2FA.
           </p>
         </div>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-          <div className="inline-flex shrink-0 rounded-card bg-white p-3">
-            <div
-              className="size-44 text-canvas [&_svg]:size-full"
-              dangerouslySetInnerHTML={{ __html: pending.qrSvg }}
-            />
-          </div>
-          <div className="min-w-0 flex-1 space-y-3">
-            <form action={confirmTotpEnrollAction} className="space-y-3">
-              <label className="block w-1/2 text-xs text-ink-muted">
-                Code
-                <input
-                  name="code"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  required
-                  minLength={6}
-                  maxLength={6}
-                  className={fieldClass}
-                />
-              </label>
-              <PendingSubmitButton
-                pendingLabel="Enabling…"
-                className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-              >
-                Enable 2FA
-              </PendingSubmitButton>
-            </form>
-            <form action={cancelTotpEnrollAction}>
-              <PendingSubmitButton
-                pendingLabel="Cancelling…"
-                className="rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-              >
-                Cancel
-              </PendingSubmitButton>
-            </form>
-          </div>
+        <div className="inline-flex rounded-card bg-white p-3">
+          <div
+            className="size-44 text-canvas [&_svg]:size-full"
+            dangerouslySetInnerHTML={{ __html: pending.qrSvg }}
+          />
         </div>
         <div>
           <p className="text-xs text-ink-muted">Or enter this key manually</p>
@@ -118,6 +86,34 @@ export function TotpSettings({
             <CopyTextButton text={pending.secret} label="Copy key" />
           </div>
         </div>
+        <form action={confirmTotpEnrollAction} className="space-y-3">
+          <label className="block text-xs text-ink-muted">
+            Code
+            <input
+              name="code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              required
+              minLength={6}
+              maxLength={6}
+              className={fieldClass}
+            />
+          </label>
+          <PendingSubmitButton
+            pendingLabel="Enabling…"
+            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          >
+            Enable 2FA
+          </PendingSubmitButton>
+        </form>
+        <form action={cancelTotpEnrollAction}>
+          <PendingSubmitButton
+            pendingLabel="Cancelling…"
+            className="rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+          >
+            Cancel
+          </PendingSubmitButton>
+        </form>
       </section>
     );
   }
@@ -134,7 +130,7 @@ export function TotpSettings({
           </p>
         </div>
         <form action={disableTotpAction} className="space-y-3">
-          <label className="block w-1/2 text-xs text-ink-muted">
+          <label className="block text-xs text-ink-muted">
             Current password
             <input
               name="currentPassword"
@@ -144,7 +140,7 @@ export function TotpSettings({
               className={fieldClass}
             />
           </label>
-          <label className="block w-1/2 text-xs text-ink-muted">
+          <label className="block text-xs text-ink-muted">
             Code
             <input
               name="code"
