@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { forwardRef, useState, type ReactNode } from "react";
+import { forwardRef, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 
@@ -51,17 +51,40 @@ export function TableHint({
   );
 }
 
-function useActionHint() {
+export function useActionHint() {
   const [box, setBox] = useState<DOMRect | null>(null);
+  const held = useRef(false);
+
+  function show(event: { currentTarget: HTMLElement }) {
+    if (held.current) {
+      return;
+    }
+    setBox(event.currentTarget.getBoundingClientRect());
+  }
+
+  function hide() {
+    setBox(null);
+  }
+
+  function dismiss() {
+    held.current = true;
+    setBox(null);
+  }
+
+  function release() {
+    held.current = false;
+    setBox(null);
+  }
+
   return {
     box,
+    dismiss,
     tip: {
-      onMouseEnter: (event: { currentTarget: HTMLElement }) =>
-        setBox(event.currentTarget.getBoundingClientRect()),
-      onMouseLeave: () => setBox(null),
-      onFocus: (event: { currentTarget: HTMLElement }) =>
-        setBox(event.currentTarget.getBoundingClientRect()),
-      onBlur: () => setBox(null),
+      onMouseEnter: show,
+      onMouseLeave: release,
+      onFocus: show,
+      onBlur: hide,
+      onPointerDown: dismiss,
     },
   };
 }
@@ -101,7 +124,7 @@ export const TableIconAction = forwardRef<
   },
   ref,
 ) {
-  const { box, tip } = useActionHint();
+  const { box, dismiss, tip } = useActionHint();
   const mark = `${
     danger ? TABLE_ICON_ACTION_DANGER_CLASS : TABLE_ICON_ACTION_CLASS
   } ${className}`.trim();
@@ -115,6 +138,7 @@ export const TableIconAction = forwardRef<
           rel={rel}
           aria-label={spoken}
           className={mark}
+          onClick={dismiss}
           {...tip}
         >
           {children}
@@ -130,9 +154,12 @@ export const TableIconAction = forwardRef<
         type={type}
         form={form}
         disabled={disabled}
-        onClick={onClick}
         aria-label={spoken}
         className={mark}
+        onClick={() => {
+          dismiss();
+          onClick?.();
+        }}
         {...tip}
       >
         {children}

@@ -12,7 +12,7 @@ import {
 } from "react";
 import { LiveFilterSubmit } from "@/components/app-select";
 import { IconChevronLeft, IconChevronRight } from "@/components/icons";
-import { TableHint } from "@/components/table-actions";
+import { TableHint, useActionHint } from "@/components/table-actions";
 import {
   formatStatusLabel,
   sliceTablePage,
@@ -31,6 +31,7 @@ export {
   TablePendingLabelButton,
   TABLE_BTN_ICON,
   TABLE_LABEL_BTN_CLASS,
+  useActionHint,
 } from "@/components/table-actions";
 
 export const TABLE_FILTER_FIELD_CLASS =
@@ -230,7 +231,7 @@ function PagerButton({
   disabled: boolean;
   icons: boolean;
 }) {
-  const [box, setBox] = useState<DOMRect | null>(null);
+  const { box, dismiss, tip } = useActionHint();
   const label = kind === "prev" ? "Previous" : "Next";
   const detail =
     kind === "prev" ? "Show the previous page." : "Show the next page.";
@@ -247,24 +248,17 @@ function PagerButton({
   ) : (
     label
   );
-  const tip = icons
-    ? {
-        "aria-label": `${label}. ${detail}`,
-        onMouseEnter: (event: { currentTarget: HTMLElement }) =>
-          setBox(event.currentTarget.getBoundingClientRect()),
-        onMouseLeave: () => setBox(null),
-        onFocus: (event: { currentTarget: HTMLElement }) =>
-          setBox(event.currentTarget.getBoundingClientRect()),
-        onBlur: () => setBox(null),
-      }
+  const spoken = icons
+    ? { "aria-label": `${label}. ${detail}` as const }
     : {};
   const tooltip = icons ? (
     <TableHint box={box} label={label} detail={detail} />
   ) : null;
+  const hover = icons ? tip : {};
   if (href && !disabled) {
     return (
       <>
-        <Link href={href} className={className} {...tip}>
+        <Link href={href} className={className} onClick={dismiss} {...spoken} {...hover}>
           {body}
         </Link>
         {tooltip}
@@ -276,9 +270,13 @@ function PagerButton({
       <button
         type="button"
         disabled={disabled}
-        onClick={onClick}
         className={className}
-        {...tip}
+        onClick={() => {
+          dismiss();
+          onClick?.();
+        }}
+        {...spoken}
+        {...hover}
       >
         {body}
       </button>

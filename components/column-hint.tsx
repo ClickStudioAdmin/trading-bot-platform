@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 export function ColumnHint({
@@ -11,15 +11,26 @@ export function ColumnHint({
   hint: ReactNode;
 }) {
   const [box, setBox] = useState<DOMRect | null>(null);
+  const held = useRef(false);
 
   return (
     <>
       <span
         className="cursor-help"
-        onMouseEnter={(event) =>
-          setBox(event.currentTarget.getBoundingClientRect())
-        }
-        onMouseLeave={() => setBox(null)}
+        onMouseEnter={(event) => {
+          if (held.current) {
+            return;
+          }
+          setBox(event.currentTarget.getBoundingClientRect());
+        }}
+        onMouseLeave={() => {
+          held.current = false;
+          setBox(null);
+        }}
+        onPointerDown={() => {
+          held.current = true;
+          setBox(null);
+        }}
       >
         {label}
       </span>
