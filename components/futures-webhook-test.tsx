@@ -6,6 +6,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { testFuturesWebhook } from "@/lib/futures/actions";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
+import { AppSelect } from "@/components/app-select";
 
 export function FuturesWebhookTest({
   webhooks,
@@ -88,7 +89,7 @@ export function FuturesWebhookTest({
         <div className="mt-3 flex flex-wrap items-end gap-x-6 gap-y-4">
           <label className="block min-w-[14rem] flex-1 text-sm text-ink">
             Webhook
-            <select
+            <AppSelect
               name="webhookId"
               value={webhookId}
               onChange={(event) => setWebhookId(event.target.value)}
@@ -103,11 +104,11 @@ export function FuturesWebhookTest({
                   )
                 </option>
               ))}
-            </select>
+            </AppSelect>
           </label>
           <label className="block w-40 shrink-0 text-sm text-ink">
             Send as
-            <select
+            <AppSelect
               key={selected?.kind ?? "order"}
               name="testAction"
               defaultValue={signal ? "arm" : "buy"}
@@ -126,7 +127,7 @@ export function FuturesWebhookTest({
                   <option value="close">Close</option>
                 </>
               )}
-            </select>
+            </AppSelect>
           </label>
           <PendingSubmitButton
             formAction={standalone ? undefined : testFuturesWebhook}

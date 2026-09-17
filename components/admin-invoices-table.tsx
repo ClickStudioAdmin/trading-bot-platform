@@ -21,6 +21,7 @@ import { invoiceStatusLabel } from "@/lib/membership/billing-cycle";
 import type { AdminInvoice } from "@/lib/membership/billing-store";
 import { compareTableNum, compareTableText, type TableSortDir } from "@/lib/table-chrome";
 import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
+import { AppSelect } from "@/components/app-select";
 
 function periodLabel(invoice: AdminInvoice): string {
   const periodStart = parseDisplayTime(invoice.periodStart);
@@ -122,7 +123,7 @@ export function AdminInvoicesTable({
           />
         </TableFilterField>
         <TableFilterField label="Status">
-          <select
+          <AppSelect
             name="status"
             defaultValue={status}
             className={TABLE_FILTER_FIELD_CLASS}
@@ -133,7 +134,7 @@ export function AdminInvoicesTable({
                 {invoiceStatusLabel(value)}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </TableFilterField>
         <Link
           href="/admin/billing?tab=invoices"

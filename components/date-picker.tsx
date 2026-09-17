@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { isoDateUtc } from "@/lib/backtest/model";
+import { AppSelect } from "@/components/app-select";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const MONTHS = [
@@ -104,9 +105,14 @@ export function DatePicker({
       return;
     }
     function onDoc(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target)) {
+        return;
       }
+      if (target instanceof Element && target.closest('[role="listbox"]')) {
+        return;
+      }
+      setOpen(false);
     }
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -173,7 +179,7 @@ export function DatePicker({
             >
               ‹
             </button>
-            <select
+            <AppSelect
               value={cursor.month}
               onChange={(event) =>
                 setCursor((current) => ({
@@ -188,8 +194,8 @@ export function DatePicker({
                   {month}
                 </option>
               ))}
-            </select>
-            <select
+            </AppSelect>
+            <AppSelect
               value={cursor.year}
               onChange={(event) =>
                 setCursor((current) => ({
@@ -204,7 +210,7 @@ export function DatePicker({
                   {year}
                 </option>
               ))}
-            </select>
+            </AppSelect>
             <button
               type="button"
               onClick={() => shiftMonth(1)}

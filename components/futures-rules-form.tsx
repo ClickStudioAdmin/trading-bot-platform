@@ -79,6 +79,7 @@ import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-mod
 import { perpsFormToSnapshotSource } from "@/lib/templates/recipe";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
 import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
+import { AppSelect } from "@/components/app-select";
 
 export function FuturesAutomationsDesk({
   rules,
@@ -173,7 +174,7 @@ export function FuturesAutomationsDesk({
           />
         ) : null}
         {cloneSources.length > 0 ? (
-          <select
+          <AppSelect variant="action"
             key={cloneMenu}
             aria-label="Clone existing bot"
             defaultValue=""
@@ -197,7 +198,7 @@ export function FuturesAutomationsDesk({
                 {item.name} · {item.symbol}
               </option>
             ))}
-          </select>
+          </AppSelect>
         ) : null}
       </div>
       {empty ? (
@@ -613,7 +614,7 @@ function RuleCard({
             />
           </BotField>
           <BotField label="Action" required>
-            <select
+            <AppSelect
               name={`${prefix}action`}
               value={formAction}
               onChange={(event) => {
@@ -643,7 +644,7 @@ function RuleCard({
               <option value="sell">Sell</option>
               <option value="close_long">Close long</option>
               <option value="close_short">Close short</option>
-            </select>
+            </AppSelect>
           </BotField>
           <BotField label="Order" required>
             <OrderTypePill
@@ -654,7 +655,7 @@ function RuleCard({
           </BotField>
           <BotField label="When" required>
             <input type="hidden" name={`${prefix}entrySource`} value={entrySource} />
-            <select
+            <AppSelect
               value={entrySource}
               onChange={(event) => {
                 const next = parseAutomationEntry(event.target.value);
@@ -684,7 +685,7 @@ function RuleCard({
               {closing ? null : <option value="indicator">Indicator</option>}
               {closing ? null : <option value="trend">Trend</option>}
               <option value="webhook">Signal webhook</option>
-            </select>
+            </AppSelect>
           </BotField>
         </div>
         {closing ? null : (
@@ -740,7 +741,7 @@ function RuleCard({
             />
           ) : webhookEntry ? (
             <BotField label="Webhook" className="lg:col-span-2" required>
-              <select
+              <AppSelect
                 name={`${prefix}webhookId`}
                 value={webhookId}
                 onChange={(event) => setWebhookId(event.target.value)}
@@ -756,12 +757,12 @@ function RuleCard({
                     {hook.name}
                   </option>
                 ))}
-              </select>
+              </AppSelect>
             </BotField>
           ) : (
             <>
               <BotField label="Price source" required>
-                <select
+                <AppSelect
                   name={`${prefix}triggerBy`}
                   defaultValue={layer.triggerBy}
                   className={botFieldClass}
@@ -769,17 +770,17 @@ function RuleCard({
                   <option value="last">Last is</option>
                   <option value="mark">Mark is</option>
                   <option value="index">Index is</option>
-                </select>
+                </AppSelect>
               </BotField>
               <BotField label="Compare" required>
-                <select
+                <AppSelect
                   name={`${prefix}triggerCompare`}
                   defaultValue={layer.triggerCompare}
                   className={botFieldClass}
                 >
                   <option value="gte">At or above</option>
                   <option value="lte">At or below</option>
-                </select>
+                </AppSelect>
               </BotField>
               <BotField label="Price" required>
                 <GroupedNumberInput
@@ -864,7 +865,7 @@ function RuleCard({
           ) : (
             <BotField label="Unit" required>
               <input type="hidden" name={`${prefix}sizeUnit`} value={sizeUnit} />
-              <select
+              <AppSelect
                 value={sizeUnit}
                 onChange={(event) => {
                   setSizeUnit(event.target.value as "qty" | "usdt");
@@ -874,7 +875,7 @@ function RuleCard({
               >
                 <option value="usdt">{quoteLabel}</option>
                 <option value="qty">{baseCoin}</option>
-              </select>
+              </AppSelect>
             </BotField>
           )}
         </div>
@@ -899,7 +900,7 @@ function RuleCard({
           >
             <div className={botRowClass5}>
               <BotField label="Type" required>
-                <select
+                <AppSelect
                   name={`${prefix}tpKind`}
                   value={tpKind}
                   onChange={(event) => {
@@ -911,7 +912,7 @@ function RuleCard({
                 >
                   <option value="price">Price</option>
                   <option value="percent">Percentage</option>
-                </select>
+                </AppSelect>
               </BotField>
               <BotField label={tpKind === "percent" ? "%" : "Price"} required>
                 {tpKind === "percent" ? (
@@ -938,7 +939,7 @@ function RuleCard({
                 )}
               </BotField>
               <BotField label="Trigger" required>
-                <select
+                <AppSelect
                   name={`${prefix}tpTrigger`}
                   value={tpTrigger}
                   onChange={(event) =>
@@ -949,7 +950,7 @@ function RuleCard({
                   <option value="last">Last</option>
                   <option value="mark">Mark</option>
                   <option value="index">Index</option>
-                </select>
+                </AppSelect>
               </BotField>
               <BotField label="Order type" required>
                 <OrderTypePill
@@ -1009,7 +1010,7 @@ function RuleCard({
           >
             <div className={botRowClass5}>
               <BotField label="Type" required>
-                <select
+                <AppSelect
                   name={`${prefix}slKind`}
                   value={slKind}
                   onChange={(event) => {
@@ -1021,7 +1022,7 @@ function RuleCard({
                 >
                   <option value="price">Price</option>
                   <option value="percent">Percentage</option>
-                </select>
+                </AppSelect>
               </BotField>
               <BotField label={slKind === "percent" ? "%" : "Price"} required>
                 {slKind === "percent" ? (
@@ -1048,7 +1049,7 @@ function RuleCard({
                 )}
               </BotField>
               <BotField label="Trigger" required>
-                <select
+                <AppSelect
                   name={`${prefix}slTrigger`}
                   value={slTrigger}
                   onChange={(event) =>
@@ -1059,7 +1060,7 @@ function RuleCard({
                   <option value="last">Last</option>
                   <option value="mark">Mark</option>
                   <option value="index">Index</option>
-                </select>
+                </AppSelect>
               </BotField>
               <BotField label="Order type" required>
                 <OrderTypePill

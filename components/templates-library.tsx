@@ -46,6 +46,7 @@ import {
   parseTemplateLibraryJson,
   type TemplateLibraryFile,
 } from "@/lib/templates/transfer";
+import { AppSelect } from "@/components/app-select";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -756,7 +757,7 @@ export function TemplatesLibrary({
             />
           </TableFilterField>
           <TableFilterField label="Desk type">
-            <select
+            <AppSelect
               value={deskFilter}
               onChange={(event) => {
                 setDeskFilter(event.target.value as "all" | TemplateDeskType);
@@ -768,11 +769,11 @@ export function TemplatesLibrary({
               <option value="dca">DCA</option>
               <option value="perps">Perps bots</option>
               <option value="cash_and_carry">Cash and Carry</option>
-            </select>
+            </AppSelect>
           </TableFilterField>
           {tab === "templates" || tab === "shared-templates" ? (
             <TableFilterField label="Folder">
-              <select
+              <AppSelect
                 value={folderFilter}
                 onChange={(event) => {
                   setFolderFilter(event.target.value);
@@ -786,7 +787,7 @@ export function TemplatesLibrary({
                     {folder.name}
                   </option>
                 ))}
-              </select>
+              </AppSelect>
             </TableFilterField>
           ) : null}
           <button
@@ -1823,7 +1824,7 @@ function BulkFolderModal({
       {folders.length > 0 && !createFolder ? (
         <label className="mt-3 block text-xs text-ink-muted">
           Folder
-          <select
+          <AppSelect
             value={folderId}
             onChange={(event) => setFolderId(event.target.value)}
             className={fieldClass}
@@ -1834,7 +1835,7 @@ function BulkFolderModal({
                 {folder.name}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </label>
       ) : null}
       <label className="mt-3 flex items-start gap-2 text-sm text-ink">
@@ -2320,7 +2321,7 @@ function CreateFolderModal({
       </label>
       <label className="mt-3 block text-xs text-ink-muted">
         Desk type
-        <select
+        <AppSelect
           value={deskType}
           onChange={(event) => {
             setDeskType(event.target.value as TemplateDeskType);
@@ -2333,7 +2334,7 @@ function CreateFolderModal({
               {formatTemplateDeskType(type)}
             </option>
           ))}
-        </select>
+        </AppSelect>
       </label>
       {visibility === "platform" ? (
         <StarterPackCheckbox

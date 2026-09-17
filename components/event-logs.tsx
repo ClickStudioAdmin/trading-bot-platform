@@ -16,6 +16,7 @@ import {
 import { eventLogOptionsForScopes } from "@/lib/logs/events";
 import type { EventLogFilters, EventLogRow } from "@/lib/logs/list";
 import { compareTableText, type TableSortDir } from "@/lib/table-chrome";
+import { AppSelect } from "@/components/app-select";
 
 function compareEventRows(
   left: EventLogRow,
@@ -106,7 +107,7 @@ export function EventLogs({
         ) : null}
         {accounts ? (
           <TableFilterField label="Account">
-            <select
+            <AppSelect
               name="account"
               defaultValue={filters.account}
               className={TABLE_FILTER_FIELD_CLASS}
@@ -117,11 +118,11 @@ export function EventLogs({
                   {account.label}
                 </option>
               ))}
-            </select>
+            </AppSelect>
           </TableFilterField>
         ) : null}
         <TableFilterField label="Scope">
-          <select
+          <AppSelect
             name="scope"
             defaultValue={filters.scope}
             className={TABLE_FILTER_FIELD_CLASS}
@@ -136,10 +137,10 @@ export function EventLogs({
                     : "Trade"}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </TableFilterField>
         <TableFilterField label="Level">
-          <select
+          <AppSelect
             name="level"
             defaultValue={filters.level}
             className={TABLE_FILTER_FIELD_CLASS}
@@ -148,10 +149,10 @@ export function EventLogs({
             <option value="info">Info</option>
             <option value="warning">Warning</option>
             <option value="error">Error</option>
-          </select>
+          </AppSelect>
         </TableFilterField>
         <TableFilterField label="Event">
-          <select
+          <AppSelect
             name="event"
             defaultValue={filters.event}
             className={TABLE_FILTER_FIELD_CLASS}
@@ -162,7 +163,7 @@ export function EventLogs({
                 {event}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </TableFilterField>
         <Link href={clearHref} className={TABLE_FILTER_CLEAR_CLASS}>
           Clear

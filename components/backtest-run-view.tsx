@@ -136,6 +136,7 @@ import {
 } from "@/lib/dca/indicators";
 import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
 import { formatQty, signedTone } from "@/lib/opportunities/format";
+import { AppSelect } from "@/components/app-select";
 
 function backtestChartWindow(
   run: BacktestRun,
@@ -423,7 +424,7 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
           />
         </TableFilterField>
         <TableFilterField label="Action">
-          <select
+          <AppSelect
             value={action}
             onChange={(event) => {
               setAction(event.target.value as FillActionFilter);
@@ -436,7 +437,7 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
             <option value="close">Close</option>
             <option value="buy">Buy</option>
             <option value="sell">Sell</option>
-          </select>
+          </AppSelect>
         </TableFilterField>
         <button
           type="button"
@@ -1201,7 +1202,7 @@ export function ApplyBacktestButton({
           >
             <label className="block text-xs text-ink-muted">
               Desk
-              <select
+              <AppSelect
                 name="accountId"
                 aria-label="Desk"
                 className={saveFieldClass}
@@ -1211,7 +1212,7 @@ export function ApplyBacktestButton({
                     {desk.name}
                   </option>
                 ))}
-              </select>
+              </AppSelect>
             </label>
             <label className="block text-xs text-ink-muted">
               Bot name

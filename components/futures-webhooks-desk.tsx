@@ -7,6 +7,7 @@ import {
   rotateFuturesWebhook,
 } from "@/lib/futures/actions";
 import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
+import { AppSelect } from "@/components/app-select";
 
 const STRATEGY_PAYLOADS = [
   {
@@ -103,7 +104,7 @@ export function FuturesWebhooksDesk({
           {allowSignal && allowOrder ? (
             <label className="min-w-[16rem] flex-[1.4] text-sm text-ink">
               Type
-              <select
+              <AppSelect
                 name="kind"
                 defaultValue="order"
                 className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
@@ -114,7 +115,7 @@ export function FuturesWebhooksDesk({
                 <option value="signal">
                   Signal — entry condition on an automation
                 </option>
-              </select>
+              </AppSelect>
             </label>
           ) : allowSignal ? (
             <input type="hidden" name="kind" value="signal" />

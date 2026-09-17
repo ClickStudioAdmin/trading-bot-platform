@@ -15,6 +15,7 @@ import {
   type DeskCopyListing,
 } from "@/lib/copy/model";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
+import { AppSelect } from "@/components/app-select";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -157,14 +158,14 @@ export function DeskCopyShareCard({
           </label>
           <label className="block text-sm text-ink">
             Visibility
-            <select
+            <AppSelect
               name="visibility"
               defaultValue={listing?.visibility ?? "private"}
               className={fieldClass}
             >
               <option value="private">Private — invite only</option>
               <option value="public">Public — catalogue</option>
-            </select>
+            </AppSelect>
             <span className="mt-1 block text-xs text-ink-faint">
               Private stays off the catalogue. Invite members from{" "}
               <Link

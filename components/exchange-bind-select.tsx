@@ -7,6 +7,7 @@ import {
   sharedKeyWarningKind,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
+import { AppSelect } from "@/components/app-select";
 
 export function ExchangeBindSelect({
   options,
@@ -28,7 +29,7 @@ export function ExchangeBindSelect({
 
   return (
     <>
-      <select
+      <AppSelect
         name="exchangeConnectionId"
         value={value}
         onChange={(event) => setValue(event.target.value)}
@@ -41,7 +42,7 @@ export function ExchangeBindSelect({
             {row.status === "invalid" ? " (Invalid)" : ""}
           </option>
         ))}
-      </select>
+      </AppSelect>
       {warningKind ? (
         <SharedKeyWarning kind={warningKind} className="mt-2" />
       ) : null}

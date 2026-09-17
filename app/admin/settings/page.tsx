@@ -40,6 +40,7 @@ import {
 import { demoBadgesAllowed } from "@/lib/notifications/badges-catalog";
 import { channelLists } from "@/lib/notifications/settings";
 import { loadPlatformAlertSettings } from "@/lib/notifications/store";
+import { AppSelect } from "@/components/app-select";
 
 export async function generateMetadata(): Promise<Metadata> {
   return namedPageMetadata(
@@ -701,7 +702,7 @@ export default async function AdminSettingsPage({
                     </label>
                     <label className="block text-sm text-ink">
                       Kind
-                      <select
+                      <AppSelect
                         name="kind"
                         defaultValue={token.kind}
                         className={BILLING_FIELD_CLASS}
@@ -710,7 +711,7 @@ export default async function AdminSettingsPage({
                         <option value="wbtc">WBTC</option>
                         <option value="native">Native</option>
                         <option value="other">Other</option>
-                      </select>
+                      </AppSelect>
                     </label>
                     <div className="flex items-end">
                       <PendingSubmitButton

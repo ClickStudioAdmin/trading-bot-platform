@@ -4,6 +4,7 @@ import { createMember, updateMember } from "@/lib/members/actions";
 import type { MemberFormValues } from "@/lib/members/form";
 import type { MembershipPlan } from "@/lib/membership/catalog";
 import { planIsArchived } from "@/lib/membership/catalog";
+import { AppSelect } from "@/components/app-select";
 
 export function AdminMemberForm({
   mode,
@@ -67,7 +68,7 @@ export function AdminMemberForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-xs text-ink-muted" htmlFor="role">
           Role
-          <select
+          <AppSelect
             id="role"
             name="role"
             defaultValue={values.role}
@@ -76,11 +77,11 @@ export function AdminMemberForm({
           >
             <option value="member">Member</option>
             <option value="admin">Admin</option>
-          </select>
+          </AppSelect>
         </label>
         <label className="block text-xs text-ink-muted" htmlFor="status">
           Status
-          <select
+          <AppSelect
             id="status"
             name="status"
             defaultValue={values.status}
@@ -89,12 +90,12 @@ export function AdminMemberForm({
           >
             <option value="active">Active</option>
             <option value="disabled">Disabled</option>
-          </select>
+          </AppSelect>
         </label>
       </div>
       <label className="block text-xs text-ink-muted" htmlFor="planId">
         Plan
-        <select
+        <AppSelect
           id="planId"
           name="planId"
           defaultValue={values.planId}
@@ -107,7 +108,7 @@ export function AdminMemberForm({
               {planIsArchived(plan) ? " (archived)" : ""}
             </option>
           ))}
-        </select>
+        </AppSelect>
         <span className="mt-1 block text-xs text-ink-faint">
           Admin assign. Affiliate earning rates come from this plan. No
           invoice.

@@ -51,6 +51,7 @@ import {
 import { parsePaperRulesForm } from "@/lib/engine/rules";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
 import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
+import { AppSelect } from "@/components/app-select";
 
 export function AutomationsDesk({
   values,
@@ -243,7 +244,7 @@ export function PaperRulesForm({
           />
         ) : null}
         {cloneSources.length > 0 ? (
-          <select
+          <AppSelect variant="action"
             key={cloneMenu}
             aria-label="Clone existing bot"
             defaultValue=""
@@ -268,7 +269,7 @@ export function PaperRulesForm({
                 {item.name || "Bot"}
               </option>
             ))}
-          </select>
+          </AppSelect>
         ) : null}
       </div>
 
@@ -459,7 +460,7 @@ function RuleRow({
             required
           />
           <BotField label="Order Type" required>
-            <select
+            <AppSelect
               name={`${prefix}sizeType`}
               value={sizeType}
               onChange={(event) =>
@@ -469,7 +470,7 @@ function RuleRow({
             >
               <option value="dynamic">Dynamic (scale in)</option>
               <option value="fixed">Fixed</option>
-            </select>
+            </AppSelect>
           </BotField>
           {sizeType === "fixed" ? (
             <>
@@ -510,7 +511,7 @@ function RuleRow({
             allowDecimal
           />
           <BotField label="Order Type" required>
-            <select
+            <AppSelect
               name={`${prefix}exitSizeType`}
               value={exitSizeType}
               onChange={(event) =>
@@ -522,7 +523,7 @@ function RuleRow({
             >
               <option value="dynamic">Dynamic (scale out)</option>
               <option value="fixed">Fixed (entire position)</option>
-            </select>
+            </AppSelect>
           </BotField>
         </div>
       </BotFormGroup>

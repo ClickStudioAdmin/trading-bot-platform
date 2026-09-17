@@ -33,6 +33,7 @@ import {
   compareTableText,
   type TableSortDir,
 } from "@/lib/table-chrome";
+import { AppSelect } from "@/components/app-select";
 
 function statusLabel(status: string): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
@@ -297,7 +298,7 @@ export function BacktestRunsTable({
             />
           </TableFilterField>
           <TableFilterField label="Status">
-            <select
+            <AppSelect
               value={status}
               onChange={(event) => {
                 setStatus(event.target.value as "all" | BacktestStatus);
@@ -310,7 +311,7 @@ export function BacktestRunsTable({
                   {value === "all" ? "All statuses" : statusLabel(value)}
                 </option>
               ))}
-            </select>
+            </AppSelect>
           </TableFilterField>
           <button
             type="button"

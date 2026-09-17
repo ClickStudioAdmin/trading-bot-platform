@@ -23,6 +23,7 @@ import {
   venuesForDeskType,
 } from "@/lib/exchanges/venues";
 import { SharedKeyWarning } from "@/components/shared-key-warning";
+import { AppSelect } from "@/components/app-select";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -155,7 +156,7 @@ export function CreateAccountForm({
       ) : (
         <label className="block text-xs text-ink-muted">
           Type
-          <select
+          <AppSelect
             name="deskType"
             value={deskType}
             onChange={(event) => {
@@ -174,7 +175,7 @@ export function CreateAccountForm({
                 {formatDeskTypeChoice(type)}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </label>
       )}
       <label className="block text-xs text-ink-muted">
@@ -201,7 +202,7 @@ export function CreateAccountForm({
       </label>
       <label className="block text-xs text-ink-muted">
         Mode
-        <select
+        <AppSelect
           name="mode"
           value={mode}
           onChange={(event) => {
@@ -215,12 +216,12 @@ export function CreateAccountForm({
         >
           <option value="paper">{formatAccountModeChoice("paper")}</option>
           <option value="live">{formatAccountModeChoice("live")}</option>
-        </select>
+        </AppSelect>
       </label>
       {mode === "paper" && deskType !== "cash_and_carry" && paperVenues.length > 1 ? (
         <label className="block text-xs text-ink-muted">
           Market Data
-          <select
+          <AppSelect
             value={venue}
             onChange={(event) => setPaperVenue(event.target.value)}
             className={fieldClass}
@@ -230,14 +231,14 @@ export function CreateAccountForm({
                 {row.label}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </label>
       ) : null}
       {mode === "live" ? (
         <div className="space-y-4">
           <label className="block text-xs text-ink-muted">
             Exchange Connection
-            <select
+            <AppSelect
               value={bindChoice}
               onChange={(event) => {
                 const nextChoice =
@@ -253,13 +254,13 @@ export function CreateAccountForm({
               <option value="existing">
                 Select Existing Exchange Connection
               </option>
-            </select>
+            </AppSelect>
           </label>
           {bindChoice === "existing" ? (
             liveKeys.length > 0 ? (
               <label className="block text-xs text-ink-muted">
                 Connection
-                <select
+                <AppSelect
                   name="exchangeConnectionId"
                   required
                   value={connectionId}
@@ -274,7 +275,7 @@ export function CreateAccountForm({
                       {formatConnectionSummary(row)}
                     </option>
                   ))}
-                </select>
+                </AppSelect>
               </label>
             ) : (
               <p className="text-sm text-ink-muted">

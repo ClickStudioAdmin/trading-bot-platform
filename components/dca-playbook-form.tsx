@@ -146,6 +146,7 @@ import {
   BYBIT_DCA_UI,
   type DcaPlaybookUiPolicy,
 } from "@/lib/dca/ui-policy";
+import { AppSelect } from "@/components/app-select";
 
 const fieldClass = botFieldClass;
 const labelClass = botLabelClass;
@@ -564,7 +565,7 @@ export function DcaPlaybooksDesk({
           />
         ) : null}
         {cloneSources.length > 0 ? (
-          <select
+          <AppSelect variant="action"
             key={cloneMenu}
             aria-label="Clone existing bot"
             defaultValue=""
@@ -593,7 +594,7 @@ export function DcaPlaybooksDesk({
                 {item.name} · {item.symbol}
               </option>
             ))}
-          </select>
+          </AppSelect>
         ) : null}
       </div>
       {empty ? (
@@ -1433,7 +1434,7 @@ export function DcaPlaybookForm({
               hint="Long and Short are independent positions and never flatten each other."
               required
             />
-            <select
+            <AppSelect
               name="direction"
               value={direction}
               onChange={(event) => {
@@ -1487,11 +1488,11 @@ export function DcaPlaybookForm({
               {policy.includeBoth ? (
                 <option value="both">Both</option>
               ) : null}
-            </select>
+            </AppSelect>
           </label>
           <label className={`${labelClass} lg:col-span-2`}>
             <HintLabel text="Initial Order Trigger" required />
-            <select
+            <AppSelect
               name="startKind"
               value={startKind}
               onChange={(event) => {
@@ -1543,7 +1544,7 @@ export function DcaPlaybookForm({
               <option value="trend">Trend</option>
               <option value="price">Price Cross</option>
               <option value="webhook">Signal Webhook</option>
-            </select>
+            </AppSelect>
           </label>
         </div>
       </BotFormGroup>
@@ -1606,7 +1607,7 @@ export function DcaPlaybookForm({
               <>
                 <label className={`${labelClass} lg:col-span-2`}>
                   <HintLabel text="Signal Webhook" required />
-                  <select
+                  <AppSelect
                     name="webhookId"
                     defaultValue={source?.webhookId ?? signalWebhooks[0]?.id}
                     className={fieldClass}
@@ -1616,7 +1617,7 @@ export function DcaPlaybookForm({
                         {row.name}
                       </option>
                     ))}
-                  </select>
+                  </AppSelect>
                 </label>
               </>
             ) : (
@@ -1865,7 +1866,7 @@ export function DcaPlaybookForm({
             </label>
             <label className={`min-w-0 ${labelClass}`}>
               Max value
-              <select
+              <AppSelect
                 name="maxValueKind"
                 value={maxValueMode}
                 onChange={(event) => {
@@ -1892,7 +1893,7 @@ export function DcaPlaybookForm({
                 <option value="percent">% of account</option>
                 <option value="margin">% of available margin</option>
                 <option value="none">No max value</option>
-              </select>
+              </AppSelect>
             </label>
             {maxValueMode !== "none" ? (
               <label className={`min-w-0 ${labelClass}`}>
@@ -1939,7 +1940,7 @@ export function DcaPlaybookForm({
             ) : (
               <label className={labelClass}>
                 <HintLabel text="Size unit" required />
-                <select
+                <AppSelect
                   name="sizeUnit"
                   value={sizeUnit}
                   onChange={(event) =>
@@ -1949,7 +1950,7 @@ export function DcaPlaybookForm({
                 >
                   <option value="usdt">{policy.quoteLabel}</option>
                   <option value="qty">Token qty</option>
-                </select>
+                </AppSelect>
               </label>
             )}
             <label className={labelClass}>
@@ -1999,7 +2000,7 @@ export function DcaPlaybookForm({
           <div className={botRowClass5}>
             <label className={`${labelClass} lg:col-span-2`}>
               <HintLabel text="Averaging" required />
-              <select
+              <AppSelect
                 name="averaging"
                 value={averaging}
                 onChange={(event) =>
@@ -2009,7 +2010,7 @@ export function DcaPlaybookForm({
               >
                 <option value="dip">Add on price deviation</option>
                 <option value="interval">Add on interval</option>
-              </select>
+              </AppSelect>
             </label>
             {averaging === "dip" ? (
               <label className={labelClass}>
@@ -2018,7 +2019,7 @@ export function DcaPlaybookForm({
                   hint="Percentage or ATR. Used for every add, not only the first."
                   required
                 />
-                <select
+                <AppSelect
                   name="spacingKind"
                   value={spacingKind}
                   onChange={(event) =>
@@ -2028,7 +2029,7 @@ export function DcaPlaybookForm({
                 >
                   <option value="percent">Percentage</option>
                   <option value="atr">ATR</option>
-                </select>
+                </AppSelect>
               </label>
             ) : (
               <input type="hidden" name="spacingKind" value="percent" />
@@ -2083,7 +2084,7 @@ export function DcaPlaybookForm({
                   <HintLabel text="Add every" required />
                 </p>
                 <div className="grid grid-cols-2 gap-2">
-                  <select
+                  <AppSelect
                     name="intervalUnit"
                     value={intervalUnit}
                     onChange={(event) =>
@@ -2095,7 +2096,7 @@ export function DcaPlaybookForm({
                     <option value="minutes">Minutes</option>
                     <option value="hours">Hours</option>
                     <option value="days">Days</option>
-                  </select>
+                  </AppSelect>
                   <GroupedNumberInput
                     name="intervalValue"
                     defaultValue={intervalParts.value}
@@ -2213,7 +2214,7 @@ export function DcaPlaybookForm({
           <div className={rowClass}>
           <label className={labelClass}>
             <HintLabel text="Basis" required />
-            <select
+            <AppSelect
               name="takeProfitBasis"
               value={takeProfitBasis}
               onChange={(event) =>
@@ -2223,11 +2224,11 @@ export function DcaPlaybookForm({
             >
               <option value="average">Average entry</option>
               <option value="first_entry">First fill</option>
-            </select>
+            </AppSelect>
           </label>
           <label className={labelClass}>
             <HintLabel text="Method" required />
-            <select
+            <AppSelect
               name="takeProfitKind"
               value={takeProfitKind}
               onChange={(event) =>
@@ -2237,7 +2238,7 @@ export function DcaPlaybookForm({
             >
               <option value="percent">Percentage</option>
               <option value="atr">ATR × multiplier</option>
-            </select>
+            </AppSelect>
           </label>
           {takeProfitKind === "percent" ? (
           <BotField label="Target %" required>
@@ -2342,7 +2343,7 @@ export function DcaPlaybookForm({
         <div className={rowClass}>
           <label className={labelClass}>
             <HintLabel text="Basis" required />
-            <select
+            <AppSelect
               name="stopLossBasis"
               value={stopLossBasis}
               onChange={(event) =>
@@ -2352,7 +2353,7 @@ export function DcaPlaybookForm({
             >
               <option value="average">Average entry</option>
               <option value="first_entry">First fill</option>
-            </select>
+            </AppSelect>
           </label>
           <BotField label="Stop loss %" required>
             <PercentInput
@@ -2897,7 +2898,7 @@ function TriggerFields({
     <>
       <label className={labelClass}>
         <HintLabel text="Price" required />
-        <select
+        <AppSelect
           name={`${prefix}TriggerBy`}
           defaultValue={triggerBy}
           className={fieldClass}
@@ -2905,18 +2906,18 @@ function TriggerFields({
           <option value="last">Last</option>
           <option value="mark">Mark</option>
           <option value="index">Index</option>
-        </select>
+        </AppSelect>
       </label>
       <label className={labelClass}>
         <HintLabel text="When" required />
-        <select
+        <AppSelect
           name={`${prefix}Compare`}
           defaultValue={compare}
           className={fieldClass}
         >
           <option value="gte">At or above</option>
           <option value="lte">At or below</option>
-        </select>
+        </AppSelect>
       </label>
       <label className={labelClass}>
         <HintLabel text={`Level (${quoteLabel})`} required />

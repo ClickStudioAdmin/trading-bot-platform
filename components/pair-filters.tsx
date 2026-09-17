@@ -10,6 +10,7 @@ import type { PairFilterInputs } from "@/lib/pairs/filter";
 import { DESK_QUERY } from "@/lib/accounts/model";
 import { PAIR_DEFAULT_DIR, PAIR_DEFAULT_SORT } from "@/lib/pairs/page";
 import type { TableSortDir } from "@/lib/table-chrome";
+import { AppSelect } from "@/components/app-select";
 
 export function PairFiltersForm({
   clearHref,
@@ -52,7 +53,7 @@ export function PairFiltersForm({
       </TableFilterField>
       {bases ? (
         <TableFilterField label="Base">
-          <select
+          <AppSelect
             name="base"
             defaultValue={values.base}
             className={TABLE_FILTER_FIELD_CLASS}
@@ -63,7 +64,7 @@ export function PairFiltersForm({
                 {base}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </TableFilterField>
       ) : (
         <TableFilterField label="Base">

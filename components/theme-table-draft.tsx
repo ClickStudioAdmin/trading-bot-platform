@@ -16,6 +16,7 @@ import {
   compareTableText,
   type TableSortDir,
 } from "@/lib/table-chrome";
+import { AppSelect } from "@/components/app-select";
 
 const primaryBtn =
   "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
@@ -226,7 +227,7 @@ export function ThemeTableDraft() {
           />
         </TableFilterField>
         <TableFilterField label="Type">
-          <select
+          <AppSelect
             value={typeFilter}
             onChange={(event) => {
               setTypeFilter(event.target.value);
@@ -240,10 +241,10 @@ export function ThemeTableDraft() {
                 {type}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </TableFilterField>
         <TableFilterField label="Status">
-          <select
+          <AppSelect
             value={statusFilter}
             onChange={(event) => {
               setStatusFilter(event.target.value);
@@ -257,7 +258,7 @@ export function ThemeTableDraft() {
                 {statusLabel(status)}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </TableFilterField>
         <button
           type="button"

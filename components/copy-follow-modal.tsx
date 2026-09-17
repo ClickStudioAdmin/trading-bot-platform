@@ -19,6 +19,7 @@ import {
 } from "@/lib/exchanges/connections";
 import { connectionFitsDesk, getVenue } from "@/lib/exchanges/venues";
 import type { DeskType } from "@/lib/accounts/model";
+import { AppSelect } from "@/components/app-select";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -164,7 +165,7 @@ function CopyFollowModal({
               </label>
               <label className="block text-sm text-ink">
                 Mode
-                <select
+                <AppSelect
                   name="mode"
                   value={mode}
                   onChange={(event) =>
@@ -178,20 +179,20 @@ function CopyFollowModal({
                   <option value="live">
                     {formatAccountModeChoice("live")}
                   </option>
-                </select>
+                </AppSelect>
               </label>
               {mode === "live" ? (
                 matching.length > 0 ? (
                   <label className="block text-sm text-ink">
                     Exchange connection
-                    <select name="exchangeConnectionId" className={fieldClass}>
+                    <AppSelect name="exchangeConnectionId" className={fieldClass}>
                       <option value="">Bind later in Desk Settings</option>
                       {matching.map((row) => (
                         <option key={row.id} value={row.id}>
                           {formatConnectionSummary(row)}
                         </option>
                       ))}
-                    </select>
+                    </AppSelect>
                   </label>
                 ) : (
                   <p className="text-sm text-ink-muted">

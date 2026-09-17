@@ -31,6 +31,7 @@ import { formatUsd } from "@/lib/membership/billing";
 import type { WalletBook } from "@/lib/membership/wallet";
 import { compareTableNum, compareTableText, type TableSortDir } from "@/lib/table-chrome";
 import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
+import { AppSelect } from "@/components/app-select";
 
 function keepEntries(keep: Record<string, string | undefined>) {
   return Object.entries(keep).filter((entry): entry is [string, string] => Boolean(entry[1]));
@@ -145,7 +146,7 @@ export function AdminPayoutFilesTable({
           />
         </TableFilterField>
         <TableFilterField label="Status">
-          <select
+          <AppSelect
             name="fileStatus"
             defaultValue={fileStatus}
             className={TABLE_FILTER_FIELD_CLASS}
@@ -156,7 +157,7 @@ export function AdminPayoutFilesTable({
                 {status === "paid" ? "Paid" : "Pending"}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </TableFilterField>
         <Link href={clearHref} className={TABLE_FILTER_CLEAR_CLASS}>
           Clear
@@ -307,7 +308,7 @@ export function AdminPayoutQueueTable({
           <input key={name} type="hidden" name={name} value={value} />
         ))}
         <TableFilterField label="Status">
-          <select
+          <AppSelect
             name="payoutStatus"
             defaultValue={payoutStatus}
             className={TABLE_FILTER_FIELD_CLASS}
@@ -318,7 +319,7 @@ export function AdminPayoutQueueTable({
                 {payoutStatusLabel(status)}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </TableFilterField>
         <Link href={clearHref} className={TABLE_FILTER_CLEAR_CLASS}>
           Clear
@@ -455,7 +456,7 @@ export function AdminPayoutFilePaymentsTable({
       <LiveGetForm>
         <input type="hidden" name="page" value="1" />
         <TableFilterField label="Status">
-          <select
+          <AppSelect
             name="status"
             defaultValue={status}
             className={TABLE_FILTER_FIELD_CLASS}
@@ -466,7 +467,7 @@ export function AdminPayoutFilePaymentsTable({
                 {payoutStatusLabel(value)}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </TableFilterField>
         <Link href={clearHref} className={TABLE_FILTER_CLEAR_CLASS}>
           Clear

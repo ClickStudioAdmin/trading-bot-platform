@@ -17,6 +17,7 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import type { FuturesSide } from "@/lib/futures/model";
+import { AppSelect } from "@/components/app-select";
 
 function nextFilterSpec(
   current: DcaFilterSpec | null,
@@ -60,7 +61,7 @@ export function DcaFilterBlock({
   const kindField = (
     <label className={labelClass}>
       <HintLabel text={label} required />
-      <select
+      <AppSelect
         name={named ? `${prefix}Kind` : undefined}
         value={spec?.kind ?? ""}
         onChange={(event) => {
@@ -75,7 +76,7 @@ export function DcaFilterBlock({
             {option.label}
           </option>
         ))}
-      </select>
+      </AppSelect>
     </label>
   );
   const params = spec ? (
@@ -177,7 +178,7 @@ function DcaFilterParamFields({
       ) : null}
       <label className={labelClass}>
         <HintLabel text="Timeframe" required />
-        <select
+        <AppSelect
           name={named ? `${prefix}Timeframe` : undefined}
           value={spec.timeframe}
           onChange={(event) =>
@@ -193,11 +194,11 @@ function DcaFilterParamFields({
               {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
             </option>
           ))}
-        </select>
+        </AppSelect>
       </label>
       <label className={`${labelClass} ${whenClass}`}>
         <HintLabel text="When" required />
-        <select
+        <AppSelect
           name={named ? `${prefix}Compare` : undefined}
           value={whenValue}
           onChange={(event) => {
@@ -223,7 +224,7 @@ function DcaFilterParamFields({
               {option.label}
             </option>
           ))}
-        </select>
+        </AppSelect>
       </label>
       {showLevel ? (
         <label className={labelClass}>

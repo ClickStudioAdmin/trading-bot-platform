@@ -32,6 +32,7 @@ import {
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import { AppSelect } from "@/components/app-select";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line-strong bg-surface-raised px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none";
@@ -426,7 +427,7 @@ function PriceTriggerFields({
     return (
       <>
         <Field label="Price source" required>
-          <select
+          <AppSelect
             value={priceSource}
             onChange={(event) => onPriceSource(event.target.value)}
             className={fieldClass}
@@ -434,17 +435,17 @@ function PriceTriggerFields({
             <option value="last">Last is</option>
             <option value="mark">Mark is</option>
             <option value="index">Index is</option>
-          </select>
+          </AppSelect>
         </Field>
         <Field label="Compare" required>
-          <select
+          <AppSelect
             value={priceWhen}
             onChange={(event) => onPriceWhen(event.target.value)}
             className={fieldClass}
           >
             <option value="gte">At or above</option>
             <option value="lte">At or below</option>
-          </select>
+          </AppSelect>
         </Field>
         <Field label="Price" required>
           <OffNumber
@@ -460,7 +461,7 @@ function PriceTriggerFields({
   return (
     <>
       <Field label="Price" required>
-        <select
+        <AppSelect
           value={priceSource}
           onChange={(event) => onPriceSource(event.target.value)}
           className={fieldClass}
@@ -468,17 +469,17 @@ function PriceTriggerFields({
           <option value="last">Last</option>
           <option value="mark">Mark</option>
           <option value="index">Index</option>
-        </select>
+        </AppSelect>
       </Field>
       <Field label="When" required>
-        <select
+        <AppSelect
           value={priceWhen}
           onChange={(event) => onPriceWhen(event.target.value)}
           className={fieldClass}
         >
           <option value="gte">At or above</option>
           <option value="lte">At or below</option>
-        </select>
+        </AppSelect>
       </Field>
       <Field label="Level (USDT)" required>
         <OffNumber
@@ -901,10 +902,10 @@ export function ThemeBotFormDraft() {
         <button type="button" className={deskBtnClass}>
           Create New Bot from Template
         </button>
-        <select aria-label="Clone existing bot" className={deskActionSelectClass} defaultValue="">
+        <AppSelect variant="action" aria-label="Clone existing bot" className={deskActionSelectClass} defaultValue="">
           <option value="">Clone existing bot</option>
           <option value="sample">Sample bot</option>
-        </select>
+        </AppSelect>
         <button type="button" className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink">
           Save Bots
         </button>
@@ -1009,7 +1010,7 @@ export function ThemeBotFormDraft() {
             {desk === "perps" ? (
               <>
                 <Field label="Action" required>
-                  <select
+                  <AppSelect
                     value={action}
                     onChange={(event) => {
                       const next = event.target.value as Action;
@@ -1038,13 +1039,13 @@ export function ThemeBotFormDraft() {
                     <option value="sell">Sell</option>
                     <option value="close_long">Close long</option>
                     <option value="close_short">Close short</option>
-                  </select>
+                  </AppSelect>
                 </Field>
                 <Field label="Order" required>
                   <OrderTypePill value={orderType} onChange={setOrderType} />
                 </Field>
                 <Field label="When" required>
-                  <select
+                  <AppSelect
                     value={startKind}
                     onChange={(event) =>
                       applyStartKind(event.target.value as StartKind)
@@ -1057,7 +1058,7 @@ export function ThemeBotFormDraft() {
                     )}
                     {closing ? null : <option value="trend">Trend</option>}
                     <option value="webhook">Signal webhook</option>
-                  </select>
+                  </AppSelect>
                 </Field>
               </>
             ) : (
@@ -1067,7 +1068,7 @@ export function ThemeBotFormDraft() {
                   hint="Long and Short are independent positions and never flatten each other."
                   required
                 >
-                  <select
+                  <AppSelect
                     value={direction}
                     onChange={(event) =>
                       applyDirection(
@@ -1079,10 +1080,10 @@ export function ThemeBotFormDraft() {
                     <option value="long">Long</option>
                     <option value="short">Short</option>
                     <option value="both">Both</option>
-                  </select>
+                  </AppSelect>
                 </Field>
                 <Field label="Initial Order Trigger" className="lg:col-span-2" required>
-                  <select
+                  <AppSelect
                     value={startKind}
                     onChange={(event) =>
                       applyStartKind(event.target.value as StartKind)
@@ -1093,7 +1094,7 @@ export function ThemeBotFormDraft() {
                     <option value="trend">Trend</option>
                     <option value="price">Price Cross</option>
                     <option value="webhook">Signal Webhook</option>
-                  </select>
+                  </AppSelect>
                 </Field>
               </>
             )}
@@ -1123,7 +1124,7 @@ export function ThemeBotFormDraft() {
                 className="lg:col-span-2"
                 required
               >
-                <select
+                <AppSelect
                   className={
                     showFieldErrors && missing.webhookId
                       ? fieldInvalidClass
@@ -1138,7 +1139,7 @@ export function ThemeBotFormDraft() {
                       : "Pick a Signal webhook"}
                   </option>
                   <option value="sample">Sample signal</option>
-                </select>
+                </AppSelect>
               </Field>
               {desk === "perps" && orderType === "limit" ? (
                 <Field label="Limit price" required>
@@ -1464,7 +1465,7 @@ export function ThemeBotFormDraft() {
                 />
               </Field>
               <Field label="Max value">
-                <select
+                <AppSelect
                   value={maxValueMode}
                   onChange={(event) => {
                     const next = event.target.value;
@@ -1489,7 +1490,7 @@ export function ThemeBotFormDraft() {
                   <option value="percent">% of account</option>
                   <option value="margin">% of available margin</option>
                   <option value="none">No max value</option>
-                </select>
+                </AppSelect>
               </Field>
               {maxValueMode !== "none" ? (
                 <Field
@@ -1527,7 +1528,7 @@ export function ThemeBotFormDraft() {
               {desk === "dca" ? (
                 <>
                   <Field label="Size unit" required>
-                    <select
+                    <AppSelect
                       value={sizeUnit}
                       onChange={(event) =>
                         setSizeUnit(event.target.value as "qty" | "usdt")
@@ -1536,7 +1537,7 @@ export function ThemeBotFormDraft() {
                     >
                       <option value="usdt">USDT</option>
                       <option value="qty">Token qty</option>
-                    </select>
+                    </AppSelect>
                   </Field>
                   <Field label="Order size" required>
                     <GroupedNumberInput
@@ -1573,7 +1574,7 @@ export function ThemeBotFormDraft() {
                     </span>
                   </Field>
                   <Field label="Unit" required>
-                    <select
+                    <AppSelect
                       value={sizeUnit}
                       onChange={(event) => {
                         setSizeUnit(event.target.value as "qty" | "usdt");
@@ -1586,7 +1587,7 @@ export function ThemeBotFormDraft() {
                         {SAMPLE_PAIRS.find((pair) => pair.symbol === symbol)
                           ?.baseCoin ?? "BTC"}
                       </option>
-                    </select>
+                    </AppSelect>
                   </Field>
                 </>
               )}
@@ -1615,7 +1616,7 @@ export function ThemeBotFormDraft() {
         >
           <div className={rowClass5}>
             <Field label="Averaging" className="lg:col-span-2" required>
-              <select
+              <AppSelect
                 className={fieldClass}
                 value={averaging}
                 onChange={(event) =>
@@ -1624,7 +1625,7 @@ export function ThemeBotFormDraft() {
               >
                 <option value="dip">Add on price deviation</option>
                 <option value="interval">Add on interval</option>
-              </select>
+              </AppSelect>
             </Field>
             {averaging === "dip" ? (
               <Field
@@ -1632,7 +1633,7 @@ export function ThemeBotFormDraft() {
                 hint="Percentage or ATR. Used for every add, not only the first."
                 required
               >
-                <select
+                <AppSelect
                   className={fieldClass}
                   value={spacingKind}
                   onChange={(event) =>
@@ -1643,7 +1644,7 @@ export function ThemeBotFormDraft() {
                 >
                   <option value="percent">Percentage</option>
                   <option value="atr">ATR</option>
-                </select>
+                </AppSelect>
               </Field>
             ) : null}
             {averaging === "dip" && spacingKind === "percent" ? (
@@ -1702,7 +1703,7 @@ export function ThemeBotFormDraft() {
                   <HintLabel text="Add every" required />
                 </p>
                 <div className="grid grid-cols-2 gap-2">
-                  <select
+                  <AppSelect
                     className={fieldClass}
                     value={intervalUnit}
                     onChange={(event) =>
@@ -1715,7 +1716,7 @@ export function ThemeBotFormDraft() {
                     <option value="minutes">Minutes</option>
                     <option value="hours">Hours</option>
                     <option value="days">Days</option>
-                  </select>
+                  </AppSelect>
                   <GroupedNumberInput
                     value={intervalValue}
                     onChange={setIntervalValue}
@@ -1833,7 +1834,7 @@ export function ThemeBotFormDraft() {
               ) : (
                 <div className={rowClass}>
                   <Field label="Type" required>
-                    <select
+                    <AppSelect
                       className={fieldClass}
                       value={tpMethod === "percent" ? "percent" : "price"}
                       onChange={(event) => {
@@ -1845,7 +1846,7 @@ export function ThemeBotFormDraft() {
                     >
                       <option value="price">Price</option>
                       <option value="percent">Percentage</option>
-                    </select>
+                    </AppSelect>
                   </Field>
                   <Field
                     label={tpMethod === "percent" ? "%" : "Price"}
@@ -1868,7 +1869,7 @@ export function ThemeBotFormDraft() {
                     )}
                   </Field>
                   <Field label="Trigger" required>
-                    <select
+                    <AppSelect
                       className={fieldClass}
                       value={tpTrigger}
                       onChange={(event) => setTpTrigger(event.target.value)}
@@ -1876,7 +1877,7 @@ export function ThemeBotFormDraft() {
                       <option value="last">Last</option>
                       <option value="mark">Mark</option>
                       <option value="index">Index</option>
-                    </select>
+                    </AppSelect>
                   </Field>
                   <Field label="Order type" required>
                     <OrderTypePill
@@ -1961,14 +1962,14 @@ export function ThemeBotFormDraft() {
               {desk === "dca" ? (
                 <div className={rowClass}>
                   <Field label="Basis" required>
-                    <select
+                    <AppSelect
                       className={fieldClass}
                       value={slBasis}
                       onChange={(event) => setSlBasis(event.target.value)}
                     >
                       <option value="average">Average entry</option>
                       <option value="first_entry">First fill</option>
-                    </select>
+                    </AppSelect>
                   </Field>
                   <Field label="Stop loss %" required>
                     <PercentField
@@ -1982,7 +1983,7 @@ export function ThemeBotFormDraft() {
               ) : (
                 <div className={rowClass}>
                   <Field label="Type" required>
-                    <select
+                    <AppSelect
                       className={fieldClass}
                       value={slMethod === "percent" ? "percent" : "price"}
                       onChange={(event) => {
@@ -1994,7 +1995,7 @@ export function ThemeBotFormDraft() {
                     >
                       <option value="price">Price</option>
                       <option value="percent">Percentage</option>
-                    </select>
+                    </AppSelect>
                   </Field>
                   <Field
                     label={slMethod === "percent" ? "%" : "Price"}
@@ -2017,7 +2018,7 @@ export function ThemeBotFormDraft() {
                     )}
                   </Field>
                   <Field label="Trigger" required>
-                    <select
+                    <AppSelect
                       className={fieldClass}
                       value={slTrigger}
                       onChange={(event) => setSlTrigger(event.target.value)}
@@ -2025,7 +2026,7 @@ export function ThemeBotFormDraft() {
                       <option value="last">Last</option>
                       <option value="mark">Mark</option>
                       <option value="index">Index</option>
-                    </select>
+                    </AppSelect>
                   </Field>
                   <Field label="Order type" required>
                     <OrderTypePill
@@ -2210,7 +2211,7 @@ export function ThemeBotFormDraft() {
                   />
                 </Field>
                 <Field label="Order Type" required>
-                  <select
+                  <AppSelect
                     value={carrySizeType}
                     onChange={(event) =>
                       setCarrySizeType(
@@ -2221,7 +2222,7 @@ export function ThemeBotFormDraft() {
                   >
                     <option value="dynamic">Dynamic (scale in)</option>
                     <option value="fixed">Fixed</option>
-                  </select>
+                  </AppSelect>
                 </Field>
                 {carrySizeType === "fixed" ? (
                   <>
@@ -2269,7 +2270,7 @@ export function ThemeBotFormDraft() {
                   <OffNumber value={closeMinApr} onChange={setCloseMinApr} />
                 </Field>
                 <Field label="Order Type" required>
-                  <select
+                  <AppSelect
                     value={exitSizeType}
                     onChange={(event) =>
                       setExitSizeType(
@@ -2280,7 +2281,7 @@ export function ThemeBotFormDraft() {
                   >
                     <option value="dynamic">Dynamic (scale out)</option>
                     <option value="fixed">Fixed (entire position)</option>
-                  </select>
+                  </AppSelect>
                 </Field>
               </div>
             </Group>
@@ -2686,17 +2687,17 @@ function ExitMethodFields({
   return (
     <div className={rowClass}>
       <Field label="Basis" required>
-        <select
+        <AppSelect
           className={fieldClass}
           value={basis}
           onChange={(event) => onBasis(event.target.value)}
         >
           <option value="average">Average entry</option>
           <option value="first_entry">First fill</option>
-        </select>
+        </AppSelect>
       </Field>
       <Field label="Method" required>
-        <select
+        <AppSelect
           value={method === "atr" ? "atr" : "percent"}
           onChange={(event) => {
             const next = event.target.value === "atr" ? "atr" : "percent";
@@ -2709,7 +2710,7 @@ function ExitMethodFields({
         >
           <option value="percent">Percentage</option>
           <option value="atr">ATR × multiplier</option>
-        </select>
+        </AppSelect>
       </Field>
       {method === "atr" ? (
         <>

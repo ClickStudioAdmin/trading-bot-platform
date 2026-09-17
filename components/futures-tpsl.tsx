@@ -18,6 +18,7 @@ import type {
 } from "@/lib/futures/model";
 import { formatPrice, formatSignedUsd } from "@/lib/opportunities/format";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
+import { AppSelect } from "@/components/app-select";
 
 const INPUT_CLASS =
   "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
@@ -1022,7 +1023,7 @@ function TpslTypeSelect({
   className?: string;
 }) {
   return (
-    <select
+    <AppSelect
       name={name}
       value={value}
       onChange={(event) =>
@@ -1032,7 +1033,7 @@ function TpslTypeSelect({
     >
       <option value="price">Price</option>
       <option value="percent">Percentage</option>
-    </select>
+    </AppSelect>
   );
 }
 
@@ -1088,7 +1089,7 @@ function TriggerSelect({
   defaultValue: FuturesTrigger;
 }) {
   return (
-    <select
+    <AppSelect
       name={name}
       defaultValue={defaultValue}
       className={SELECT_CLASS}
@@ -1097,7 +1098,7 @@ function TriggerSelect({
       <option value="last">Last</option>
       <option value="mark">Mark</option>
       <option value="index">Index</option>
-    </select>
+    </AppSelect>
   );
 }
 
@@ -1111,7 +1112,7 @@ function OrderTypeSelect({
   onChange: (next: FuturesOrderType) => void;
 }) {
   return (
-    <select
+    <AppSelect
       name={name}
       value={value}
       onChange={(event) =>
@@ -1122,7 +1123,7 @@ function OrderTypeSelect({
     >
       <option value="market">Market</option>
       <option value="limit">Limit</option>
-    </select>
+    </AppSelect>
   );
 }
 

@@ -12,6 +12,7 @@ import {
   createMembershipPlanAction,
   updateMembershipPlanAction,
 } from "@/lib/membership/actions";
+import { AppSelect } from "@/components/app-select";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -81,7 +82,7 @@ export function AdminPlanForm({
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="block text-sm text-ink">
             Visibility
-            <select
+            <AppSelect
               name="visibility"
               defaultValue={plan?.visibility ?? "draft"}
               className={fieldClass}
@@ -91,7 +92,7 @@ export function AdminPlanForm({
                   {PLAN_VISIBILITY_LABELS[value]}
                 </option>
               ))}
-            </select>
+            </AppSelect>
             <span className="mt-1 block text-xs text-ink-muted">
               Public is on the Plans page. Private is assign-only. Draft is not
               published.

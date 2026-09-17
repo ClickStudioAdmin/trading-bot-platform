@@ -12,6 +12,7 @@ import {
 import type { CandleBar } from "@/lib/market/candles";
 import type { FuturesOrder, FuturesPosition } from "@/lib/futures/model";
 import type { FuturesWorkingOrder } from "@/lib/futures/working";
+import { AppSelect } from "@/components/app-select";
 
 const CHART_INTERVALS: DcaIndicatorTimeframe[] = ["15", "60", "240", "D"];
 
@@ -164,7 +165,7 @@ export function PositionsChartButton({
                 <div className="mt-4 flex flex-wrap items-center gap-3">
                   <label className="text-xs text-ink-muted">
                     Contract
-                    <select
+                    <AppSelect
                       value={symbol}
                       onChange={(event) => {
                         setLoading(true);
@@ -178,7 +179,7 @@ export function PositionsChartButton({
                           {row}
                         </option>
                       ))}
-                    </select>
+                    </AppSelect>
                   </label>
                   <div className="flex flex-wrap gap-1">
                     {CHART_INTERVALS.map((row) => (

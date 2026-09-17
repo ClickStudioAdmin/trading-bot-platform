@@ -4,11 +4,13 @@ import Link from "next/link";
 import {
   type FormEvent,
   type ReactNode,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import { LiveFilterSubmit } from "@/components/app-select";
 import {
   formatStatusLabel,
   sliceTablePage,
@@ -92,6 +94,7 @@ export function LiveGetForm({
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const timer = useRef<number>(0);
+  const submit = useCallback(() => submitFilters(formRef.current), []);
 
   function onChange(event: FormEvent<HTMLFormElement>) {
     const target = event.target;
@@ -121,15 +124,17 @@ export function LiveGetForm({
   }
 
   return (
-    <form
-      ref={formRef}
-      method="get"
-      action={action}
-      onChange={onChange}
-      className={`rounded-card border border-line bg-surface p-4 ${className}`.trim()}
-    >
-      <div className="flex flex-wrap items-end gap-3">{children}</div>
-    </form>
+    <LiveFilterSubmit.Provider value={submit}>
+      <form
+        ref={formRef}
+        method="get"
+        action={action}
+        onChange={onChange}
+        className={`rounded-card border border-line bg-surface p-4 ${className}`.trim()}
+      >
+        <div className="flex flex-wrap items-end gap-3">{children}</div>
+      </form>
+    </LiveFilterSubmit.Provider>
   );
 }
 

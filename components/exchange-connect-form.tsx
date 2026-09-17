@@ -10,6 +10,7 @@ import {
   saveExchangeConnection,
 } from "@/lib/exchanges/actions";
 import type { VenueDefinition } from "@/lib/exchanges/venues";
+import { AppSelect } from "@/components/app-select";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -84,7 +85,7 @@ export function ExchangeConnectForm({
       {next ? <input type="hidden" name="next" value={next} /> : null}
       <label className="block text-xs text-ink-muted">
         Exchange
-        <select
+        <AppSelect
           name="venue"
           value={venue.id}
           onChange={(event) => {
@@ -98,11 +99,11 @@ export function ExchangeConnectForm({
               {item.label}
             </option>
           ))}
-        </select>
+        </AppSelect>
       </label>
       <label className="block text-xs text-ink-muted">
         Environment
-        <select
+        <AppSelect
           name="environment"
           defaultValue={defaultEnvironment}
           key={`${venue.id}-environment`}
@@ -113,7 +114,7 @@ export function ExchangeConnectForm({
               {item.label}
             </option>
           ))}
-        </select>
+        </AppSelect>
       </label>
       {venue.credentialFields.map((field) => (
         <label key={field.key} className="block text-xs text-ink-muted">

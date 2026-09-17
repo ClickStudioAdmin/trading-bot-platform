@@ -41,6 +41,7 @@ import {
   compareTableText,
   type TableSortDir,
 } from "@/lib/table-chrome";
+import { AppSelect } from "@/components/app-select";
 
 const OPEN_COL_SPAN_DCA = 14;
 const OPEN_COL_SPAN = 13;
@@ -986,7 +987,7 @@ function CycleFilters({
         />
       </TableFilterField>
       <TableFilterField label="Side">
-        <select
+        <AppSelect
           value={side}
           onChange={(event) => onSide(event.target.value as CycleSideFilter)}
           className={TABLE_FILTER_FIELD_CLASS}
@@ -994,7 +995,7 @@ function CycleFilters({
           <option value="">All</option>
           <option value="long">Long</option>
           <option value="short">Short</option>
-        </select>
+        </AppSelect>
       </TableFilterField>
       <button type="button" onClick={onClear} className={TABLE_FILTER_CLEAR_CLASS}>
         Clear

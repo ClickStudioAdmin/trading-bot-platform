@@ -20,6 +20,7 @@ import {
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import { AppSelect } from "@/components/app-select";
 
 const fieldClass = botFieldClass;
 const labelClass = botLabelClass;
@@ -70,7 +71,7 @@ export function IndicatorStartFields({
   const whenField = (
     <label className={labelClass}>
       <HintLabel text="When" required />
-      <select
+      <AppSelect
         name={`${prefix}Compare`}
         value={dcaIndicatorWhenValue(kind, side, compare, level)}
         onChange={(event) => {
@@ -87,13 +88,13 @@ export function IndicatorStartFields({
             {option.label}
           </option>
         ))}
-      </select>
+      </AppSelect>
     </label>
   );
   const indicatorField = (
     <label className={labelClass}>
       <HintLabel text="Indicator" required />
-      <select
+      <AppSelect
         name={`${prefix}Kind`}
         value={kind}
         onChange={(event) => {
@@ -128,13 +129,13 @@ export function IndicatorStartFields({
             {option.label}
           </option>
         ))}
-      </select>
+      </AppSelect>
     </label>
   );
   const timeframeField = (
     <label className={labelClass}>
       <HintLabel text="Timeframe" required />
-      <select
+      <AppSelect
         name={`${prefix}Timeframe`}
         value={timeframe}
         onChange={(event) =>
@@ -147,7 +148,7 @@ export function IndicatorStartFields({
             {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
           </option>
         ))}
-      </select>
+      </AppSelect>
     </label>
   );
   const pairFields = (
@@ -262,7 +263,7 @@ export function TrendStartFields({
     <div className="col-span-full grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-5">
       <label className={labelClass}>
         <HintLabel text="Trend" required />
-        <select
+        <AppSelect
           name={`${prefix}Kind`}
           value={trendKind}
           onChange={(event) => {
@@ -279,7 +280,7 @@ export function TrendStartFields({
               {option.label}
             </option>
           ))}
-        </select>
+        </AppSelect>
       </label>
       <label className={labelClass}>
         <HintLabel text="Period" required />
@@ -302,7 +303,7 @@ export function TrendStartFields({
       </label>
       <label className={labelClass}>
         <HintLabel text="Timeframe" required />
-        <select
+        <AppSelect
           name={`${prefix}Timeframe`}
           value={timeframe}
           onChange={(event) =>
@@ -315,11 +316,11 @@ export function TrendStartFields({
               {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
             </option>
           ))}
-        </select>
+        </AppSelect>
       </label>
       <label className={labelClass}>
         <HintLabel text="When" required />
-        <select
+        <AppSelect
           name={`${prefix}Compare`}
           value={dcaIndicatorWhenValue(trendKind, side, compare)}
           onChange={(event) => onCompareChange(event.target.value)}
@@ -330,7 +331,7 @@ export function TrendStartFields({
               {option.label}
             </option>
           ))}
-        </select>
+        </AppSelect>
       </label>
     </div>
   );

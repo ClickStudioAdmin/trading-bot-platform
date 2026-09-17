@@ -8,6 +8,7 @@ import {
   type BotDeskKind,
   type BotStatusOption,
 } from "@/lib/bots/status";
+import { AppSelect } from "@/components/app-select";
 
 export const botFieldClass =
   "mt-1 w-full rounded-control border border-line-strong bg-surface-raised px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none";
@@ -273,7 +274,7 @@ export function BotStatusField({
         <HintLabel text="Status" hint={selected.note} />
       </p>
       <div className="mt-1 flex items-center gap-2">
-        <select
+        <AppSelect
           name={name}
           className={`${botFieldClass} mt-0 min-w-0 flex-1`}
           value={selected.value}
@@ -287,7 +288,7 @@ export function BotStatusField({
                 : option.label}
             </option>
           ))}
-        </select>
+        </AppSelect>
         <StatusLight
           fill={live.fill}
           label={

@@ -39,6 +39,7 @@ import {
   formatGroupedNumberInput,
   parseTypedDecimalInput,
 } from "@/lib/paper/open";
+import { AppSelect } from "@/components/app-select";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink";
@@ -181,7 +182,7 @@ function BacktestPriceStartFields({
     <>
       <label className={labelClass}>
         When
-        <select
+        <AppSelect
           value={compare}
           onChange={(event) =>
             onCompare(event.target.value === "lte" ? "lte" : "gte")
@@ -190,7 +191,7 @@ function BacktestPriceStartFields({
         >
           <option value="gte">Price ≥</option>
           <option value="lte">Price ≤</option>
-        </select>
+        </AppSelect>
       </label>
       <label className={labelClass}>
         Price
@@ -247,7 +248,7 @@ function BacktestIndicatorStartFields({
   const whenField = (
     <label className={labelClass}>
       When
-      <select
+      <AppSelect
         value={dcaIndicatorWhenValue(kind, side, compare, level)}
         onChange={(event) => {
           const next = event.target.value;
@@ -276,13 +277,13 @@ function BacktestIndicatorStartFields({
             {option.label}
           </option>
         ))}
-      </select>
+      </AppSelect>
     </label>
   );
   const indicatorField = (
     <label className={labelClass}>
       Indicator
-      <select
+      <AppSelect
         value={kind}
         onChange={(event) => {
           const indicatorKind = event.target.value as DcaIndicatorKind;
@@ -313,13 +314,13 @@ function BacktestIndicatorStartFields({
             {option.label}
           </option>
         ))}
-      </select>
+      </AppSelect>
     </label>
   );
   const timeframeField = (
     <label className={labelClass}>
       Timeframe
-      <select
+      <AppSelect
         value={timeframe}
         onChange={(event) =>
           onChange({
@@ -338,7 +339,7 @@ function BacktestIndicatorStartFields({
             {DCA_INDICATOR_TIMEFRAME_LABELS[row]}
           </option>
         ))}
-      </select>
+      </AppSelect>
     </label>
   );
   const pairFields = (
@@ -461,7 +462,7 @@ function BacktestTrendStartFields({
     <div className="col-span-full grid grid-cols-2 gap-x-3 gap-y-2">
       <label className={labelClass}>
         Trend
-        <select
+        <AppSelect
           value="supertrend"
           onChange={() => undefined}
           className={fieldClass}
@@ -471,7 +472,7 @@ function BacktestTrendStartFields({
               {option.label}
             </option>
           ))}
-        </select>
+        </AppSelect>
       </label>
       <label className={labelClass}>
         Period
@@ -508,7 +509,7 @@ function BacktestTrendStartFields({
       </label>
       <label className={labelClass}>
         Timeframe
-        <select
+        <AppSelect
           value={timeframe}
           onChange={(event) =>
             onChange({
@@ -523,11 +524,11 @@ function BacktestTrendStartFields({
               {DCA_INDICATOR_TIMEFRAME_LABELS[row]}
             </option>
           ))}
-        </select>
+        </AppSelect>
       </label>
       <label className={labelClass}>
         When
-        <select
+        <AppSelect
           value={dcaIndicatorWhenValue("supertrend", side, compare)}
           onChange={(event) =>
             onChange({
@@ -542,7 +543,7 @@ function BacktestTrendStartFields({
               {option.label}
             </option>
           ))}
-        </select>
+        </AppSelect>
       </label>
     </div>
   );
@@ -608,7 +609,7 @@ export function BacktestRecipeFields({
         </label>
         <label className={labelClass}>
           Direction
-          <select
+          <AppSelect
             value={recipe.direction}
             onChange={(event) => {
               const direction = event.target
@@ -631,11 +632,11 @@ export function BacktestRecipeFields({
             <option value="long">Long</option>
             <option value="short">Short</option>
             <option value="both">Both</option>
-          </select>
+          </AppSelect>
         </label>
         <label className={labelClass}>
           Start
-          <select
+          <AppSelect
             value={startBlocked ? "" : recipe.startKind}
             onChange={(event) => {
               const startKind = event.target.value as
@@ -670,7 +671,7 @@ export function BacktestRecipeFields({
             <option value="price">Price</option>
             <option value="indicator">Indicator</option>
             <option value="trend">Trend</option>
-          </select>
+          </AppSelect>
           <FieldNote message={issueFor(issues, "startKind")} />
         </label>
         {recipe.startKind === "price" && recipe.direction === "both" ? (
@@ -1028,7 +1029,7 @@ export function BacktestRecipeFields({
         )}
         <label className={labelClass}>
           Size unit
-          <select
+          <AppSelect
             value={recipe.sizeUnit}
             onChange={(event) =>
               onChange({
@@ -1040,7 +1041,7 @@ export function BacktestRecipeFields({
           >
             <option value="qty">Qty</option>
             <option value="usdt">USDT</option>
-          </select>
+          </AppSelect>
         </label>
         <label className={labelClass}>
           Size multiplier
@@ -1055,7 +1056,7 @@ export function BacktestRecipeFields({
         </label>
         <label className={labelClass}>
           Spacing
-          <select
+          <AppSelect
             value={recipe.spacingKind ?? "percent"}
             onChange={(event) =>
               onChange({
@@ -1075,7 +1076,7 @@ export function BacktestRecipeFields({
           >
             <option value="percent">Percentage</option>
             <option value="atr">ATR</option>
-          </select>
+          </AppSelect>
         </label>
         {(recipe.spacingKind ?? "percent") === "percent" ? (
         <label className={labelClass}>
@@ -1134,7 +1135,7 @@ export function BacktestRecipeFields({
         </label>
         <label className={labelClass}>
           Max value
-          <select
+          <AppSelect
             value={maxValueMode}
             onChange={(event) => {
               const next = event.target.value;
@@ -1158,7 +1159,7 @@ export function BacktestRecipeFields({
             <option value="percent">% of account</option>
             <option value="margin">% of available margin</option>
             <option value="none">No max value</option>
-          </select>
+          </AppSelect>
         </label>
         {maxValueMode !== "none" ? (
           <label className={labelClass}>
@@ -1176,7 +1177,7 @@ export function BacktestRecipeFields({
         ) : null}
         <label className={labelClass}>
           Take profit
-          <select
+          <AppSelect
             value={recipe.takeProfitKind ?? "percent"}
             onChange={(event) =>
               onChange({
@@ -1197,7 +1198,7 @@ export function BacktestRecipeFields({
           >
             <option value="percent">Percentage</option>
             <option value="atr">ATR × multiplier</option>
-          </select>
+          </AppSelect>
         </label>
         {(recipe.takeProfitKind ?? "percent") === "percent" ? (
         <label className={labelClass}>
@@ -1307,7 +1308,7 @@ export function BacktestRecipeFields({
       </label>
       <label className={labelClass}>
         Action
-        <select
+        <AppSelect
           value={
             recipe.formAction === "close_long" ||
             recipe.formAction === "close_short"
@@ -1330,20 +1331,20 @@ export function BacktestRecipeFields({
           ) : null}
           <option value="buy">Buy</option>
           <option value="sell">Sell</option>
-        </select>
+        </AppSelect>
         <FieldNote message={issueFor(issues, "formAction")} />
       </label>
       {recipe.entrySource === "webhook" ? (
         <label className={labelClass}>
           When
-          <select
+          <AppSelect
             value=""
             onChange={() => onChange({ ...recipe, entrySource: "price" })}
             className={invalidFieldClass}
           >
             <option value="">Select a When</option>
             <option value="price">Price</option>
-          </select>
+          </AppSelect>
           <FieldNote message={issueFor(issues, "entrySource")} />
         </label>
       ) : null}
@@ -1361,7 +1362,7 @@ export function BacktestRecipeFields({
       </label>
       <label className={labelClass}>
         Size unit
-        <select
+        <AppSelect
           value={recipe.sizeUnit}
           onChange={(event) =>
             onChange({
@@ -1373,13 +1374,13 @@ export function BacktestRecipeFields({
         >
           <option value="qty">Qty</option>
           <option value="usdt">USDT</option>
-        </select>
+        </AppSelect>
       </label>
       {recipe.entrySource === "webhook" ? null : (
         <>
       <label className={labelClass}>
         When
-        <select
+        <AppSelect
           value={recipe.triggerCompare}
           onChange={(event) =>
             onChange({
@@ -1391,7 +1392,7 @@ export function BacktestRecipeFields({
         >
           <option value="gte">Price ≥</option>
           <option value="lte">Price ≤</option>
-        </select>
+        </AppSelect>
       </label>
       <label className={labelClass}>
         Price
@@ -1411,7 +1412,7 @@ export function BacktestRecipeFields({
       )}
       <label className={labelClass}>
         Take profit type
-        <select
+        <AppSelect
           className={fieldClass}
           value={recipe.tpsl?.tpKind === "percent" ? "percent" : "price"}
           onChange={(event) =>
@@ -1426,7 +1427,7 @@ export function BacktestRecipeFields({
         >
           <option value="price">Price</option>
           <option value="percent">Percentage</option>
-        </select>
+        </AppSelect>
       </label>
       <label className={labelClass}>
         {recipe.tpsl?.tpKind === "percent" ? "Take profit %" : "Take profit"}
@@ -1447,7 +1448,7 @@ export function BacktestRecipeFields({
       </label>
       <label className={labelClass}>
         Stop type
-        <select
+        <AppSelect
           className={fieldClass}
           value={recipe.tpsl?.slKind === "percent" ? "percent" : "price"}
           onChange={(event) =>
@@ -1462,7 +1463,7 @@ export function BacktestRecipeFields({
         >
           <option value="price">Price</option>
           <option value="percent">Percentage</option>
-        </select>
+        </AppSelect>
       </label>
       <label className={labelClass}>
         {recipe.tpsl?.slKind === "percent" ? "Stop %" : "Stop"}

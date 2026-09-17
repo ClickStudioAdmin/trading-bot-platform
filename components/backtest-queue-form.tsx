@@ -41,6 +41,7 @@ import {
 } from "@/lib/dca/indicators";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
+import { AppSelect } from "@/components/app-select";
 
 function withSymbol(options: LinearPerp[], symbol: string): LinearPerp[] {
   const needle = symbol.trim().toUpperCase();
@@ -273,7 +274,7 @@ export function BacktestQueueForm({
               templates.some((row) => row.id === templateId) ? templateId : ""
             }
           />
-          <select
+          <AppSelect
             value={templateId}
             onChange={(event) => {
               const value = event.target.value;
@@ -334,7 +335,7 @@ export function BacktestQueueForm({
                 ))}
               </optgroup>
             ))}
-          </select>
+          </AppSelect>
         </label>
         <div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -411,7 +412,7 @@ export function BacktestQueueForm({
         </div>
         <label className="block text-xs text-ink-muted">
           Venue
-          <select
+          <AppSelect
             name="venue"
             value={venue}
             onChange={(event) => setVenue(event.target.value)}
@@ -419,7 +420,7 @@ export function BacktestQueueForm({
           >
             <option value="bybit">Bybit</option>
             <option value="hyperliquid">Hyperliquid</option>
-          </select>
+          </AppSelect>
         </label>
         <div>
           <p className="text-xs text-ink-muted">Primary pair</p>

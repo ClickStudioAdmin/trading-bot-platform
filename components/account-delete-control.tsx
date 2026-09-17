@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { PanelCloseButton } from "@/components/panel-close-button";
 import { deleteTradingAccount } from "@/lib/accounts/actions";
+import { AppSelect } from "@/components/app-select";
 
 const BLOCKED_MS = 4000;
 const PANEL_WIDTH = 288;
@@ -150,7 +151,7 @@ function SwitchFields({
   return (
     <label className="block text-xs text-ink-muted">
       Switch to
-      <select
+      <AppSelect
         name="switchToAccountId"
         defaultValue={defaultSwitchId ?? options[0]?.id}
         className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
@@ -160,7 +161,7 @@ function SwitchFields({
             {option.name} ({option.mode})
           </option>
         ))}
-      </select>
+      </AppSelect>
     </label>
   );
 }

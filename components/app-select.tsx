@@ -1,0 +1,458 @@
+"use client";
+
+import {
+  Children,
+  createContext,
+  isValidElement,
+  useContext,
+  useEffect,
+  useCallback,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
+
+export type AppSelectOption = {
+  value: string;
+  label: string;
+  disabled?: boolean;
+};
+
+export type AppSelectChangeEvent = ChangeEvent<HTMLInputElement>;
+
+export const LiveFilterSubmit = createContext<(() => void) | null>(null);
+
+const FIELD_TRIGGER =
+  "inline-flex w-full min-w-0 items-center justify-between gap-3 rounded-control border border-line bg-surface-raised px-3 py-2 text-left text-sm text-ink hover:border-line-strong focus:border-line-strong focus:outline-none disabled:opacity-40";
+const ACTION_TRIGGER =
+  "inline-flex w-full min-w-0 items-center justify-between gap-3 rounded-control bg-accent-strong px-4 py-2 text-left text-sm font-medium text-ink hover:bg-accent focus:outline-none disabled:opacity-40";
+
+export function AppSelect({
+  name,
+  value,
+  defaultValue,
+  options,
+  children,
+  onChange,
+  disabled = false,
+  required = false,
+  variant = "field",
+  className = "",
+  id,
+  "aria-label": ariaLabel,
+  searchable = false,
+}: {
+  name?: string;
+  value?: string | number;
+  defaultValue?: string | number;
+  options?: readonly AppSelectOption[];
+  children?: ReactNode;
+  onChange?: (event: AppSelectChangeEvent) => void;
+  disabled?: boolean;
+  required?: boolean;
+  variant?: "field" | "action";
+  className?: string;
+  id?: string;
+  "aria-label"?: string;
+  searchable?: boolean;
+}) {
+  const liveSubmit = useContext(LiveFilterSubmit);
+  const listId = useId();
+  const triggerId = id ?? listId;
+  const hiddenRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const parsed = useMemo(
+    () => options ?? optionsFromChildren(children),
+    [children, options],
+  );
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [uncontrolled, setUncontrolled] = useState(
+    String(defaultValue ?? parsed[0]?.value ?? ""),
+  );
+  const current = value != null ? String(value) : uncontrolled;
+  const selected =
+    parsed.find((option) => option.value === current) ?? parsed[0];
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) {
+      return parsed;
+    }
+    return parsed.filter((option) => option.label.toLowerCase().includes(needle));
+  }, [parsed, query]);
+
+  const close = useCallback(() => {
+    setOpen(false);
+    setQuery("");
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    function onPointer(event: MouseEvent) {
+      const target = event.target as Node;
+      if (
+        triggerRef.current?.contains(target) ||
+        panelRef.current?.contains(target)
+      ) {
+        return;
+      }
+      close();
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        close();
+        triggerRef.current?.focus();
+      }
+    }
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [close, open]);
+
+  function pick(next: string) {
+    if (value == null) {
+      setUncontrolled(next);
+    }
+    if (hiddenRef.current) {
+      hiddenRef.current.value = next;
+    }
+    const input = hiddenRef.current;
+    if (input && onChange) {
+      onChange({
+        target: input,
+        currentTarget: input,
+      } as AppSelectChangeEvent);
+    }
+    liveSubmit?.();
+    close();
+  }
+
+  const triggerClass =
+    `${variant === "action" ? ACTION_TRIGGER : FIELD_TRIGGER} ${className}`.trim();
+
+  return (
+    <>
+      {name ? (
+        <input
+          ref={hiddenRef}
+          type="hidden"
+          name={name}
+          value={current}
+          required={required}
+        />
+      ) : (
+        <input ref={hiddenRef} type="hidden" value={current} />
+      )}
+      <button
+        ref={triggerRef}
+        type="button"
+        id={triggerId}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listId}
+        onClick={() => (open ? close() : setOpen(true))}
+        className={triggerClass}
+      >
+        <span className="min-w-0 truncate">{selected?.label ?? ""}</span>
+        <Chevron open={open} />
+      </button>
+      {open
+        ? createPortal(
+            <SelectPanel
+              panelRef={panelRef}
+              listId={listId}
+              triggerRef={triggerRef}
+              searchable={searchable}
+              query={query}
+              onQuery={setQuery}
+            >
+              {visible.length === 0 ? (
+                <p className="px-3 py-2 text-sm text-ink-muted">No matches.</p>
+              ) : (
+                visible.map((option) => {
+                  const active = option.value === current;
+                  return (
+                    <button
+                      key={option.value || "empty"}
+                      type="button"
+                      role="option"
+                      aria-selected={active}
+                      disabled={option.disabled}
+                      onClick={() => pick(option.value)}
+                      className={
+                        active
+                          ? "flex w-full rounded-control bg-accent/15 px-3 py-2 text-left text-sm text-ink disabled:opacity-40"
+                          : "flex w-full rounded-control px-3 py-2 text-left text-sm text-ink hover:bg-surface-raised disabled:opacity-40"
+                      }
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })
+              )}
+            </SelectPanel>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
+export function AppMultiSelect({
+  options,
+  defaultValue = [],
+  placeholder = "Select…",
+  className = "",
+}: {
+  options: readonly AppSelectOption[];
+  defaultValue?: string[];
+  placeholder?: string;
+  className?: string;
+}) {
+  const listId = useId();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<string[]>(defaultValue);
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) {
+      return options;
+    }
+    return options.filter((option) => option.label.toLowerCase().includes(needle));
+  }, [options, query]);
+  const label =
+    selected.length === 0
+      ? placeholder
+      : selected.length === 1
+        ? (options.find((option) => option.value === selected[0])?.label ??
+          placeholder)
+        : `${selected.length} selected`;
+
+  const close = useCallback(() => {
+    setOpen(false);
+    setQuery("");
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    function onPointer(event: MouseEvent) {
+      const target = event.target as Node;
+      if (
+        triggerRef.current?.contains(target) ||
+        panelRef.current?.contains(target)
+      ) {
+        return;
+      }
+      close();
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        close();
+      }
+    }
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [close, open]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listId}
+        onClick={() => (open ? close() : setOpen(true))}
+        className={`${FIELD_TRIGGER} ${className}`.trim()}
+      >
+        <span className="min-w-0 truncate">{label}</span>
+        <Chevron open={open} />
+      </button>
+      {open
+        ? createPortal(
+            <SelectPanel
+              panelRef={panelRef}
+              listId={listId}
+              triggerRef={triggerRef}
+              searchable
+              query={query}
+              onQuery={setQuery}
+            >
+              {visible.map((option) => {
+                const on = selected.includes(option.value);
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="option"
+                    aria-selected={on}
+                    onClick={() =>
+                      setSelected((current) =>
+                        current.includes(option.value)
+                          ? current.filter((value) => value !== option.value)
+                          : [...current, option.value],
+                      )
+                    }
+                    className={
+                      on
+                        ? "flex w-full rounded-control bg-accent/15 px-3 py-2 text-left text-sm text-ink"
+                        : "flex w-full rounded-control px-3 py-2 text-left text-sm text-ink hover:bg-surface-raised"
+                    }
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </SelectPanel>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
+function SelectPanel({
+  panelRef,
+  listId,
+  triggerRef,
+  searchable,
+  query,
+  onQuery,
+  children,
+}: {
+  panelRef: { current: HTMLDivElement | null };
+  listId: string;
+  triggerRef: { current: HTMLButtonElement | null };
+  searchable: boolean;
+  query: string;
+  onQuery: (value: string) => void;
+  children: ReactNode;
+}) {
+  const [box, setBox] = useState({ top: 0, left: 0, width: 220 });
+
+  useLayoutEffect(() => {
+    function place() {
+      const trigger = triggerRef.current;
+      if (!trigger) {
+        return;
+      }
+      const rect = trigger.getBoundingClientRect();
+      const width = Math.max(rect.width, 176);
+      const left = Math.min(rect.left, window.innerWidth - width - 8);
+      const below = rect.bottom + 4;
+      const maxHeight = 224;
+      const top =
+        below + maxHeight > window.innerHeight - 8
+          ? Math.max(8, rect.top - maxHeight - 4)
+          : below;
+      setBox({ top, left: Math.max(8, left), width });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [triggerRef]);
+
+  return (
+    <div
+      ref={(node) => {
+        panelRef.current = node;
+      }}
+      id={listId}
+      role="listbox"
+      style={{ top: box.top, left: box.left, width: box.width }}
+      className="fixed z-50 max-h-56 overflow-auto rounded-card border border-line bg-surface p-1"
+    >
+      {searchable ? (
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => onQuery(event.target.value)}
+          placeholder="Search"
+          autoComplete="off"
+          className="mb-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+        />
+      ) : null}
+      {children}
+    </div>
+  );
+}
+
+export function optionsFromChildren(children: ReactNode): AppSelectOption[] {
+  const rows: AppSelectOption[] = [];
+  Children.forEach(children, (child) => {
+    if (!isValidElement(child) || child.type !== "option") {
+      return;
+    }
+    const props = child.props as {
+      value?: string | number;
+      children?: ReactNode;
+      disabled?: boolean;
+    };
+    rows.push({
+      value: String(props.value ?? ""),
+      label: flattenLabel(props.children),
+      disabled: Boolean(props.disabled),
+    });
+  });
+  return rows;
+}
+
+function flattenLabel(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") {
+    return "";
+  }
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map(flattenLabel).join("");
+  }
+  if (isValidElement(node)) {
+    return flattenLabel((node.props as { children?: ReactNode }).children);
+  }
+  return "";
+}
+
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 12 12"
+      aria-hidden
+      className={`size-3 shrink-0 ${open ? "rotate-180" : ""}`}
+    >
+      <path
+        d="m2.5 4.5 3.5 3.5 3.5-3.5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}

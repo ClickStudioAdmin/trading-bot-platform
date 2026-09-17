@@ -40,6 +40,7 @@ import type {
   DepositAddress,
   MainWalletWithdrawContext,
 } from "@/lib/membership/wallet-store";
+import { AppSelect } from "@/components/app-select";
 
 type LiveMainWalletValue = {
   mainUsd: number;
@@ -584,7 +585,7 @@ function MainWalletWithdrawForm({
       <form action={requestMainWalletWithdrawAction} className="space-y-3">
         <label className="block text-sm text-ink">
           Chain
-          <select
+          <AppSelect
             name="network"
             disabled={!canWithdraw}
             className={BILLING_FIELD_CLASS}
@@ -595,7 +596,7 @@ function MainWalletWithdrawForm({
                 {chain.name}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </label>
         <label className="block text-sm text-ink">
           Amount

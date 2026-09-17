@@ -27,6 +27,7 @@ import {
   listUserNotificationPage,
 } from "@/lib/notifications/store";
 import { redirect } from "next/navigation";
+import { AppSelect } from "@/components/app-select";
 
 export const metadata: Metadata = {
   title: "Inbox",
@@ -102,7 +103,7 @@ export default async function AccountNotificationsPage({
           <input type="hidden" name="dir" value={sort.dir} />
         ) : null}
         <TableFilterField label="Status">
-          <select
+          <AppSelect
             name="status"
             defaultValue={filters.status}
             className={TABLE_FILTER_FIELD_CLASS}
@@ -110,10 +111,10 @@ export default async function AccountNotificationsPage({
             <option value="">All</option>
             <option value="unread">Unread</option>
             <option value="read">Read</option>
-          </select>
+          </AppSelect>
         </TableFilterField>
         <TableFilterField label="Scope">
-          <select
+          <AppSelect
             name="scope"
             defaultValue={filters.scope}
             className={TABLE_FILTER_FIELD_CLASS}
@@ -124,10 +125,10 @@ export default async function AccountNotificationsPage({
                 {group.label}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </TableFilterField>
         <TableFilterField label="Event">
-          <select
+          <AppSelect
             name="event"
             defaultValue={filters.event}
             className={TABLE_FILTER_FIELD_CLASS}
@@ -138,7 +139,7 @@ export default async function AccountNotificationsPage({
                 {NOTIFICATION_LABELS[id]}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </TableFilterField>
         <Link href="/account/notifications" className={TABLE_FILTER_CLEAR_CLASS}>
           Clear

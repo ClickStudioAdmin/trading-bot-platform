@@ -18,6 +18,7 @@ import {
   parseMemberListQuery,
 } from "@/lib/members/query";
 import { tablePageWindow } from "@/lib/table-chrome";
+import { AppSelect } from "@/components/app-select";
 
 export const metadata: Metadata = {
   title: "Members",
@@ -83,7 +84,7 @@ export default async function AdminMembersPage({
           />
         </TableFilterField>
         <TableFilterField label="Role">
-          <select
+          <AppSelect
             name="role"
             defaultValue={query.role}
             className={TABLE_FILTER_FIELD_CLASS}
@@ -91,10 +92,10 @@ export default async function AdminMembersPage({
             <option value="">All</option>
             <option value="member">Member</option>
             <option value="admin">Admin</option>
-          </select>
+          </AppSelect>
         </TableFilterField>
         <TableFilterField label="Status">
-          <select
+          <AppSelect
             name="status"
             defaultValue={query.status}
             className={TABLE_FILTER_FIELD_CLASS}
@@ -102,7 +103,7 @@ export default async function AdminMembersPage({
             <option value="">All</option>
             <option value="active">Active</option>
             <option value="disabled">Disabled</option>
-          </select>
+          </AppSelect>
         </TableFilterField>
         <Link href="/admin/members" className={TABLE_FILTER_CLEAR_CLASS}>
           Clear

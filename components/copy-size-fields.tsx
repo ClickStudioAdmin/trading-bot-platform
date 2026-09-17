@@ -4,6 +4,7 @@ import { useState } from "react";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { formatCopyPaperStartingUsdt } from "@/lib/copy/decide";
 import type { CopySizeMode } from "@/lib/copy/model";
+import { AppSelect } from "@/components/app-select";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -31,7 +32,7 @@ export function CopySizeFields({
       </div>
       <label className="block text-sm text-ink">
         How to size copies
-        <select
+        <AppSelect
           name="sizeMode"
           value={sizeMode}
           onChange={(event) =>
@@ -42,7 +43,7 @@ export function CopySizeFields({
           <option value="balance">Account balance</option>
           <option value="percent">Percent of account balance</option>
           <option value="fixed">Fixed book</option>
-        </select>
+        </AppSelect>
       </label>
       {sizeMode === "balance" ? (
         <p className="text-xs text-ink-muted">

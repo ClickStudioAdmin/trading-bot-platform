@@ -6,6 +6,7 @@ import { saveAffiliatePayoutSettingsAction } from "@/lib/membership/affiliate-ac
 import { formatUsd } from "@/lib/membership/billing";
 import type { AffiliatePayoutSettings } from "@/lib/membership/affiliate";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
+import { AppSelect } from "@/components/app-select";
 
 export function AffiliatePayoutSettingsForm({
   settings,
@@ -22,7 +23,7 @@ export function AffiliatePayoutSettingsForm({
     <form action={saveAffiliatePayoutSettingsAction} className="mt-4 space-y-3">
       <label className="block text-sm text-ink">
         Chain
-        <select
+        <AppSelect
           name="network"
           required
           defaultValue={settings.network ?? chains[0]?.slug ?? ""}
@@ -33,7 +34,7 @@ export function AffiliatePayoutSettingsForm({
               {chain.name}
             </option>
           ))}
-        </select>
+        </AppSelect>
       </label>
       <label className="block text-sm text-ink">
         Address

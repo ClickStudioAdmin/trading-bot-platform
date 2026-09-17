@@ -17,6 +17,7 @@ import {
 } from "@/lib/notifications/settings";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import { firstSearchValue } from "@/lib/paper/open";
+import { AppSelect } from "@/components/app-select";
 
 export const metadata: Metadata = {
   title: "Email templates",
@@ -101,7 +102,7 @@ export default async function AdminEmailTemplatesPage({
           </label>
           <label className="min-w-[12rem] flex-1 text-sm text-ink">
             Template
-            <select
+            <AppSelect
               name="templateId"
               required
               className={BILLING_FIELD_CLASS}
@@ -116,7 +117,7 @@ export default async function AdminEmailTemplatesPage({
                   ))}
                 </optgroup>
               ))}
-            </select>
+            </AppSelect>
           </label>
           <PendingSubmitButton
             pendingLabel="Sending…"

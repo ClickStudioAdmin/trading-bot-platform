@@ -65,6 +65,7 @@ import { formatCount, formatUsd } from "@/lib/membership/billing";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import type { BillingChain } from "@/lib/membership/wallet-store";
 import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
+import { AppSelect } from "@/components/app-select";
 
 export function AffiliateDashboard({
   portal,
@@ -772,7 +773,7 @@ export function AffiliateDashboard({
               </label>
               <label className="w-44 shrink-0 text-sm text-ink">
                 Landing page
-                <select
+                <AppSelect
                   name="landing"
                   defaultValue="home"
                   className={BILLING_FIELD_CLASS}
@@ -782,18 +783,18 @@ export function AffiliateDashboard({
                       {affiliateLandingLabel(landing)}
                     </option>
                   ))}
-                </select>
+                </AppSelect>
               </label>
               <label className="min-w-[12rem] flex-1 text-sm text-ink">
                 Campaign
-                <select name="campaignId" defaultValue="" className={BILLING_FIELD_CLASS}>
+                <AppSelect name="campaignId" defaultValue="" className={BILLING_FIELD_CLASS}>
                   <option value="">No campaign</option>
                   {portal.campaigns.map((campaign) => (
                     <option key={campaign.id} value={campaign.id}>
                       {campaign.name}
                     </option>
                   ))}
-                </select>
+                </AppSelect>
               </label>
               <PendingSubmitButton
                 pendingLabel="Creating…"
@@ -893,7 +894,7 @@ export function AffiliateDashboard({
                 />
                 <label className="w-44 shrink-0 text-sm text-ink">
                   Chain
-                  <select
+                  <AppSelect
                     name="network"
                     disabled={!canWithdraw}
                     className={BILLING_FIELD_CLASS}
@@ -906,7 +907,7 @@ export function AffiliateDashboard({
                         {chain.name}
                       </option>
                     ))}
-                  </select>
+                  </AppSelect>
                 </label>
                 <label className="w-32 shrink-0 text-sm text-ink">
                   Amount
@@ -1372,7 +1373,7 @@ function AffiliateListFilters({
         />
       </TableFilterField>
       <TableFilterField label="Status">
-        <select
+        <AppSelect
           name="status"
           defaultValue={query.status}
           className={TABLE_FILTER_FIELD_CLASS}
@@ -1383,7 +1384,7 @@ function AffiliateListFilters({
               {option.label}
             </option>
           ))}
-        </select>
+        </AppSelect>
       </TableFilterField>
       <Link href={affiliatePortalPath(tab)} className={TABLE_FILTER_CLEAR_CLASS}>
         Clear

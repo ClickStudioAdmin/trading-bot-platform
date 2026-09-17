@@ -22,6 +22,7 @@ import {
   type MembershipPlan,
 } from "@/lib/membership/catalog";
 import { compareTableNum, compareTableText, type TableSortDir } from "@/lib/table-chrome";
+import { AppSelect } from "@/components/app-select";
 
 function planStatusLabel(plan: MembershipPlan): string {
   if (planIsArchived(plan)) {
@@ -76,7 +77,7 @@ export function AdminPlansTable({
       <LiveGetForm>
         <input type="hidden" name="page" value="1" />
         <TableFilterField label="Status">
-          <select
+          <AppSelect
             name="status"
             defaultValue={status}
             className={TABLE_FILTER_FIELD_CLASS}
@@ -85,7 +86,7 @@ export function AdminPlansTable({
             <option value="live">Live</option>
             <option value="draft">Draft</option>
             <option value="archived">Archived</option>
-          </select>
+          </AppSelect>
         </TableFilterField>
         <Link href="/admin/plans" className={TABLE_FILTER_CLEAR_CLASS}>
           Clear

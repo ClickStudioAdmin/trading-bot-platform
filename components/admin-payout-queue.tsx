@@ -13,6 +13,7 @@ import {
 } from "@/lib/membership/affiliate";
 import { formatCount, formatUsd } from "@/lib/membership/billing";
 import type { WalletBook } from "@/lib/membership/wallet";
+import { AppSelect } from "@/components/app-select";
 
 export function AdminPayoutQueue({
   book,
@@ -101,7 +102,7 @@ export function AdminPayoutQueue({
             <input type="hidden" name="book" value={book} />
             <label className="text-sm text-ink">
               Chain
-              <select
+              <AppSelect
                 name="network"
                 className="mt-1 block min-w-[10rem] rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
                 defaultValue=""
@@ -112,7 +113,7 @@ export function AdminPayoutQueue({
                     {row.network}
                   </option>
                 ))}
-              </select>
+              </AppSelect>
             </label>
             <label className="text-sm text-ink">
               Max rows

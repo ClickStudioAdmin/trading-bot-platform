@@ -25,6 +25,7 @@ import {
   formatSignedUsd,
   signedTone,
 } from "@/lib/opportunities/format";
+import { AppSelect } from "@/components/app-select";
 
 function has30dBook(card: CopyCatalogueCard): boolean {
   return Boolean(card.stats30d && card.stats30d.closedCount > 0);
@@ -160,7 +161,7 @@ export function CopyCatalogueBoard({
           />
         </TableFilterField>
         <TableFilterField label="Sort" className="w-44 shrink-0">
-          <select
+          <AppSelect
             name="sort"
             defaultValue={sort}
             className={TABLE_FILTER_FIELD_CLASS}
@@ -169,17 +170,17 @@ export function CopyCatalogueBoard({
             <option value="drawdown">Lowest drawdown</option>
             <option value="followers">Followers</option>
             <option value="newest">Newest</option>
-          </select>
+          </AppSelect>
         </TableFilterField>
         <TableFilterField label="Visibility" className="w-40 shrink-0">
-          <select
+          <AppSelect
             name="private"
             defaultValue={privateOnly ? "1" : ""}
             className={TABLE_FILTER_FIELD_CLASS}
           >
             <option value="">All</option>
             <option value="1">Private only</option>
-          </select>
+          </AppSelect>
         </TableFilterField>
         <Link
           href={copyCatalogueHref({ tab })}
