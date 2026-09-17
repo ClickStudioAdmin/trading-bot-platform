@@ -5,7 +5,9 @@ import {
   LoaderCircle,
   Pencil,
   Play,
+  SquareArrowOutUpRight,
   Star,
+  Trash2,
   X,
   type LucideIcon,
   type LucideProps,
@@ -57,7 +59,7 @@ export const LUCIDE_ICONS = [
     id: "pencil",
     name: "Pencil",
     lucide: "Pencil",
-    usedIn: "TP/SL, trailing",
+    usedIn: "TP/SL, trailing, theme table actions",
     Icon: Pencil,
   },
   {
@@ -66,6 +68,13 @@ export const LUCIDE_ICONS = [
     lucide: "Play",
     usedIn: "Create desk placeholder",
     Icon: Play,
+  },
+  {
+    id: "open",
+    name: "Open",
+    lucide: "SquareArrowOutUpRight",
+    usedIn: "Theme table actions",
+    Icon: SquareArrowOutUpRight,
   },
   {
     id: "star",
@@ -87,6 +96,13 @@ export const LUCIDE_ICONS = [
     lucide: "X",
     usedIn: "AppSelect pills, panel close",
     Icon: X,
+  },
+  {
+    id: "trash",
+    name: "Delete",
+    lucide: "Trash2",
+    usedIn: "Theme table actions",
+    Icon: Trash2,
   },
 ] as const satisfies readonly LucideIconEntry[];
 
@@ -112,6 +128,14 @@ export function IconPencil(props: LucideProps) {
 
 export function IconPlay(props: LucideProps) {
   return <Play aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconOpen(props: LucideProps) {
+  return <SquareArrowOutUpRight aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconTrash(props: LucideProps) {
+  return <Trash2 aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconStar(props: LucideProps) {

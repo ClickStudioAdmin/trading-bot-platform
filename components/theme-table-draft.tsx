@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { IconOpen, IconPencil, IconTrash } from "@/components/icons";
 import {
   SortTh,
   StatusBadge,
@@ -27,10 +29,10 @@ const bulkBtn =
   "rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40";
 const dangerBulkBtn =
   "rounded-control border border-line px-3 py-1.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-40";
-const actionLink =
-  "rounded-control border border-line px-2 py-0.5 text-xs font-medium text-accent hover:text-accent-strong";
-const dangerLink =
-  "rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10";
+const actionIcon =
+  "inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink";
+const dangerActionIcon =
+  "inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-danger/10 hover:text-danger";
 
 const TYPES = ["DCA", "Perps bots", "Cash and Carry"] as const;
 const STATUSES = ["active", "disabled", "pending", "error"] as const;
@@ -375,7 +377,7 @@ export function ThemeTableDraft() {
                 dir={table.sortDir}
                 onSort={() => table.onSort("updated")}
               />
-              <th className="px-4 py-3 font-medium">Actions</th>
+              <th className="w-28 px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -412,16 +414,26 @@ export function ThemeTableDraft() {
                     {item.updated}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <button type="button" className={actionLink}>
-                        Edit
-                      </button>
-                      <button type="button" className={actionLink}>
-                        Open
-                      </button>
-                      <button type="button" className={dangerLink}>
-                        Delete
-                      </button>
+                    <div className="flex items-center gap-0.5">
+                      <RowAction
+                        label="Edit"
+                        detail="Change this item's settings."
+                      >
+                        <IconPencil size={14} className="size-3.5" />
+                      </RowAction>
+                      <RowAction
+                        label="Open"
+                        detail="Go to this item."
+                      >
+                        <IconOpen size={14} className="size-3.5" />
+                      </RowAction>
+                      <RowAction
+                        label="Delete"
+                        detail="Remove this item."
+                        danger
+                      >
+                        <IconTrash size={14} className="size-3.5" />
+                      </RowAction>
                     </div>
                   </td>
                 </tr>
@@ -439,6 +451,54 @@ export function ThemeTableDraft() {
         />
       </div>
     </div>
+  );
+}
+
+function RowAction({
+  label,
+  detail,
+  danger = false,
+  children,
+}: {
+  label: string;
+  detail: string;
+  danger?: boolean;
+  children: ReactNode;
+}) {
+  const [box, setBox] = useState<DOMRect | null>(null);
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={`${label}. ${detail}`}
+        className={danger ? dangerActionIcon : actionIcon}
+        onMouseEnter={(event) =>
+          setBox(event.currentTarget.getBoundingClientRect())
+        }
+        onMouseLeave={() => setBox(null)}
+        onFocus={(event) => setBox(event.currentTarget.getBoundingClientRect())}
+        onBlur={() => setBox(null)}
+      >
+        {children}
+      </button>
+      {box && typeof document !== "undefined"
+        ? createPortal(
+            <span
+              role="tooltip"
+              className="pointer-events-none fixed z-50 max-w-56 rounded-control border border-line bg-surface-raised px-3 py-2 text-xs font-normal normal-case tracking-normal"
+              style={{
+                top: box.bottom + 8,
+                left: Math.max(12, Math.min(box.left, window.innerWidth - 240)),
+              }}
+            >
+              <span className="block text-ink">{label}</span>
+              <span className="mt-0.5 block text-ink-muted">{detail}</span>
+            </span>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }
 

@@ -124,9 +124,10 @@ export default async function ThemePage({
           <section>
             <h2 className="text-xl font-semibold tracking-tight">Table</h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Complete table chrome: filters, sort, paging, row actions, status
-              badges, and bulk actions. Live tables use only the pieces they
-              need. Match this layout when adding a full table.
+              Complete table chrome: filters, sort, paging, icon row actions
+              with hover copy, status badges, and bulk actions. Live tables
+              still use text actions. Match this layout when adding a full
+              table, except row actions until we roll icons out.
             </p>
             <div className="mt-5">
               <ThemeTableDraft />
