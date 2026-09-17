@@ -41,7 +41,7 @@ assert.match(
 );
 assert.match(html, />Notifications<\/a>/);
 assert.match(html, /#ffffff/);
-assert.match(html, NOTICE_EMAIL_PAGE);
+assert.match(html, new RegExp(NOTICE_EMAIL_PAGE));
 assert.match(html, new RegExp(`width="${NOTICE_EMAIL_WIDTH_PX}"`));
 assert.match(html, /Trading Bot Platform/);
 assert.match(
