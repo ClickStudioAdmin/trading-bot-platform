@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import {
   SortTh,
   StatusBadge,
-  TABLE_FILTER_CLEAR_CLASS,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterBar,
   TableFilterField,
@@ -20,15 +19,17 @@ import {
 const primaryBtn =
   "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
 const secondaryBtn =
-  "rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink";
+  "rounded-control bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:bg-line";
 const bulkBtn =
-  "rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40";
+  "rounded-control bg-surface-raised px-3 py-1.5 text-sm font-medium text-ink hover:bg-line disabled:opacity-40";
 const dangerBulkBtn =
-  "rounded-control border border-line px-3 py-1.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-40";
+  "rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-canvas hover:opacity-90 disabled:opacity-40";
 const actionLink =
-  "rounded-control border border-line px-2 py-0.5 text-xs font-medium text-accent hover:text-accent-strong";
+  "rounded-control bg-surface-raised px-2.5 py-1 text-xs font-medium text-ink hover:bg-line";
 const dangerLink =
-  "rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10";
+  "rounded-control bg-danger px-2.5 py-1 text-xs font-medium text-canvas hover:opacity-90";
+const clearBtn =
+  "rounded-control bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:bg-line";
 
 const TYPES = ["DCA", "Perps bots", "Cash and Carry"] as const;
 const STATUSES = ["active", "disabled", "pending", "error"] as const;
@@ -262,7 +263,7 @@ export function ThemeTableDraft() {
         <button
           type="button"
           onClick={clearFilters}
-          className={TABLE_FILTER_CLEAR_CLASS}
+          className={clearBtn}
         >
           Clear
         </button>
