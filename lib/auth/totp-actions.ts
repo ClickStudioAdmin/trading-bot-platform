@@ -202,6 +202,11 @@ export async function dismissRecoveryCodesAction() {
   redirect(SETTINGS_SECURITY);
 }
 
+export async function cancelSignIn2faAction() {
+  await clearSignInChallenge();
+  redirect(SIGN_IN_PATH);
+}
+
 export async function completeSignIn2faAction(formData: FormData) {
   const userId = await getSignInChallengeUserId();
   if (!userId) {

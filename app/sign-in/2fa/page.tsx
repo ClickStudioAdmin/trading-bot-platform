@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { completeSignIn2faAction } from "@/lib/auth/totp-actions";
+import {
+  cancelSignIn2faAction,
+  completeSignIn2faAction,
+} from "@/lib/auth/totp-actions";
 import { redirectSignedInHome } from "@/lib/auth/onboarding";
 import { getSignInChallengeUserId } from "@/lib/auth/session";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
@@ -64,11 +66,14 @@ export default async function SignIn2faPage({
             Continue
           </PendingSubmitButton>
         </form>
-        <p className="mt-4 text-sm text-ink-muted">
-          <Link href="/sign-in" className="text-accent hover:text-accent-strong">
+        <form action={cancelSignIn2faAction} className="mt-4">
+          <button
+            type="submit"
+            className="text-sm text-accent hover:text-accent-strong"
+          >
             Back to sign in
-          </Link>
-        </p>
+          </button>
+        </form>
       </section>
     </main>
   );
