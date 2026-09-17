@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { ButtonBusyIcon } from "@/components/pending-submit-button";
 import { ThemeBotFormDraft } from "@/components/theme-bot-form-draft";
+import { ThemeSelectDraft } from "@/components/theme-select-draft";
 import { ThemeTableDraft } from "@/components/theme-table-draft";
 
 export const metadata: Metadata = {
@@ -367,6 +368,7 @@ export default async function ThemePage({
               className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
             />
           </div>
+          <ThemeSelectDraft />
         </section>
 
         <section className="grid gap-4 lg:grid-cols-3">
