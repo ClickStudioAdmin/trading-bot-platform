@@ -9,8 +9,8 @@ import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Authenticator code",
-  description: "Enter your Google Authenticator code to finish signing in.",
+  title: "Two-factor authentication (2FA)",
+  description: "Enter your two-factor authentication code to finish signing in.",
 };
 
 export default async function SignIn2faPage({
@@ -32,7 +32,7 @@ export default async function SignIn2faPage({
         Desk
       </p>
       <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-        Authenticator code
+        Two-factor authentication (2FA)
       </h1>
       <p className="mt-3 text-sm text-ink-muted">
         Open Google Authenticator and enter the 6-digit code. A recovery code
