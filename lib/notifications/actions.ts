@@ -20,11 +20,7 @@ import {
   noticeEmailText,
   sendResendEmail,
 } from "./email";
-import {
-  DEFAULT_TEST_INBOX,
-  parseMailbox,
-  resolvePlatformEmailFrom,
-} from "./email-from";
+import { parseMailbox, resolvePlatformEmailFrom } from "./email-from";
 import {
   BADGE_IDS,
   demoBadgesAllowed,
@@ -163,8 +159,9 @@ export async function seedAdminInboxAction() {
 }
 
 export async function sendTestEmailAction(formData: FormData) {
-  await requireAdmin();
-  const to = parseMailbox(formData.get("to")) ?? parseMailbox(DEFAULT_TEST_INBOX);
+  const admin = await requireAdmin();
+  const to =
+    parseMailbox(formData.get("to")) ?? parseMailbox(admin.email);
   const template = String(formData.get("templateId") ?? "");
   if (!to) {
     redirect("/admin/email-templates?error=to");

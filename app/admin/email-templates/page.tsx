@@ -3,14 +3,12 @@ import Link from "next/link";
 import { NoticeEmail } from "@/components/notice-email";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { getAdminUser } from "@/lib/admin/access";
 import { sendTestEmailAction } from "@/lib/notifications/actions";
 import { isOperatorNotificationId } from "@/lib/notifications/catalog";
 import { sampleNotice } from "@/lib/notifications/copy";
 import { MEMBER_EMAIL_FOOTER } from "@/lib/notifications/email";
-import {
-  DEFAULT_TEST_INBOX,
-  resolvePlatformEmailFrom,
-} from "@/lib/notifications/email-from";
+import { resolvePlatformEmailFrom } from "@/lib/notifications/email-from";
 import {
   adminSettingGroups,
   NOTIFICATION_HINTS,
@@ -32,8 +30,12 @@ export default async function AdminEmailTemplatesPage({
   const params = await searchParams;
   const sent = firstSearchValue(params.sent) === "1";
   const error = firstSearchValue(params.error);
-  const from = await resolvePlatformEmailFrom();
+  const [from, admin] = await Promise.all([
+    resolvePlatformEmailFrom(),
+    getAdminUser(),
+  ]);
   const groups = adminSettingGroups();
+  const defaultTo = admin?.email ?? "";
 
   return (
     <div>
@@ -87,7 +89,7 @@ export default async function AdminEmailTemplatesPage({
               name="to"
               type="email"
               required
-              defaultValue={DEFAULT_TEST_INBOX}
+              defaultValue={defaultTo}
               autoComplete="email"
               className={BILLING_FIELD_CLASS}
             />
