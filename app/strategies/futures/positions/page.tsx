@@ -310,7 +310,12 @@ export default async function FuturesPositionsPage({
           working={desk.working}
           next={NEXT}
           exchangeBook={desk.exchangeBook}
-          baseCoinFor={(symbol) => baseCoinForPerpSymbol(symbol, pairs)}
+          baseCoins={Object.fromEntries(
+            desk.working.map((row) => [
+              row.symbol,
+              baseCoinForPerpSymbol(row.symbol, pairs),
+            ]),
+          )}
           webhookNames={desk.webhookNames}
           playbookOwnsOrders={dcaBlotter}
           copyDesk={copyDesk}

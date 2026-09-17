@@ -37,7 +37,7 @@ export function FuturesWorkingOrders({
   working,
   next = FUTURES_PATHS.positions,
   exchangeBook = false,
-  baseCoinFor,
+  baseCoins,
   webhookNames = [],
   emptyMessage,
   playbookOwnsOrders = false,
@@ -49,7 +49,7 @@ export function FuturesWorkingOrders({
   working: FuturesWorkingOrder[];
   next?: string;
   exchangeBook?: boolean;
-  baseCoinFor: (symbol: string) => string;
+  baseCoins: Record<string, string>;
   webhookNames?: readonly string[];
   emptyMessage?: ReactNode;
   playbookOwnsOrders?: boolean;
@@ -243,7 +243,11 @@ export function FuturesWorkingOrders({
                   key={row.id}
                   row={row}
                   next={next}
-                  baseCoin={baseCoinFor(row.symbol)}
+                  baseCoin={
+                    baseCoins[row.symbol] ??
+                    row.symbol.replace(/USDT$|USDC$/i, "") ||
+                    row.symbol
+                  }
                   webhookNames={webhookNames}
                   showOrderMeta={showOrderMeta}
                 />
