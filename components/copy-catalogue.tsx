@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { NavBadge } from "@/components/nav-badge";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import {
+  LiveGetForm,
+  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_FILTER_FIELD_CLASS,
+  TableFilterField,
+} from "@/components/table-chrome";
 import { toggleDeskCopyFavoriteAction } from "@/lib/copy/actions";
 import { copyCatalogueHref } from "@/lib/copy/catalogue-href";
 import { CopyFollowButton } from "@/components/copy-follow-modal";
@@ -139,53 +145,49 @@ export function CopyCatalogueBoard({
           </Link>
         ))}
       </div>
-      <form
-        action="/account/copy"
-        method="get"
-        className="flex flex-wrap items-end gap-3"
-      >
+      <LiveGetForm action="/account/copy">
         {tab !== "all" ? (
           <input type="hidden" name="tab" value={tab} />
         ) : null}
-        <label className="block min-w-[12rem] flex-1 text-sm text-ink">
-          Search
+        <TableFilterField label="Search">
           <input
             type="search"
             name="q"
             defaultValue={query}
             placeholder="Trader or desk"
-            className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+            autoComplete="off"
+            className={TABLE_FILTER_FIELD_CLASS}
           />
-        </label>
-        <label className="block text-sm text-ink">
-          Sort
+        </TableFilterField>
+        <TableFilterField label="Sort" className="w-44 shrink-0">
           <select
             name="sort"
             defaultValue={sort}
-            className="mt-1 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+            className={TABLE_FILTER_FIELD_CLASS}
           >
             <option value="roi">30d P&L</option>
             <option value="drawdown">Lowest drawdown</option>
             <option value="followers">Followers</option>
             <option value="newest">Newest</option>
           </select>
-        </label>
-        <label className="flex items-center gap-2 pb-2 text-sm text-ink">
-          <input
-            type="checkbox"
+        </TableFilterField>
+        <TableFilterField label="Visibility" className="w-40 shrink-0">
+          <select
             name="private"
-            value="1"
-            defaultChecked={privateOnly}
-          />
-          Private only
-        </label>
-        <button
-          type="submit"
-          className="rounded-control border border-line px-3 py-2 text-sm text-ink hover:bg-surface-raised"
+            defaultValue={privateOnly ? "1" : ""}
+            className={TABLE_FILTER_FIELD_CLASS}
+          >
+            <option value="">All</option>
+            <option value="1">Private only</option>
+          </select>
+        </TableFilterField>
+        <Link
+          href={copyCatalogueHref({ tab })}
+          className={TABLE_FILTER_CLEAR_CLASS}
         >
-          Apply
-        </button>
-      </form>
+          Clear
+        </Link>
+      </LiveGetForm>
       </>
       ) : null}
       {cards.length === 0 ? (
