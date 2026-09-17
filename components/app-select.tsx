@@ -293,9 +293,18 @@ export function AppMultiSelect({
     <>
       <div
         ref={triggerRef}
-        className={`flex w-full min-w-0 flex-wrap items-center gap-2 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink hover:border-line-strong ${className}`.trim()}
+        className={`relative flex w-full min-w-0 flex-wrap items-center gap-2 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink hover:border-line-strong focus-within:border-line-strong ${className}`.trim()}
       >
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+        <button
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-label={placeholder}
+          onClick={() => (open ? close() : setOpen(true))}
+          className="absolute inset-0 z-0 rounded-control focus:outline-none"
+        />
+        <div className="pointer-events-none relative z-10 flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
           {picked.length === 0 ? (
             <span className="text-ink-faint">{placeholder}</span>
           ) : (
@@ -309,10 +318,11 @@ export function AppMultiSelect({
                   type="button"
                   aria-label={`Remove ${option.label}`}
                   onClick={(event) => {
+                    event.preventDefault();
                     event.stopPropagation();
                     toggleValue(option.value);
                   }}
-                  className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-accent/25 hover:text-ink"
+                  className="pointer-events-auto inline-flex size-4 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-accent/25 hover:text-ink"
                 >
                   <CloseMark />
                 </button>
@@ -320,17 +330,9 @@ export function AppMultiSelect({
             ))
           )}
         </div>
-        <button
-          type="button"
-          aria-haspopup="listbox"
-          aria-expanded={open}
-          aria-controls={listId}
-          aria-label={placeholder}
-          onClick={() => (open ? close() : setOpen(true))}
-          className="ml-auto inline-flex shrink-0 text-ink"
-        >
+        <span className="pointer-events-none relative z-10 ml-auto inline-flex shrink-0 text-ink">
           <Chevron open={open} />
-        </button>
+        </span>
       </div>
       {open
         ? createPortal(
