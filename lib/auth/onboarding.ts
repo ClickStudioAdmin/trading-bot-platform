@@ -1,11 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import {
-  DESK_PATHNAME_HEADER,
-  deskHomePath,
-  pickDefaultAccount,
-  type TradingAccount,
-} from "@/lib/accounts/model";
+import { DESK_PATHNAME_HEADER, type TradingAccount } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import {
   ACCOUNT_HOME_PATH,
@@ -14,11 +9,7 @@ import {
   pathAllowsUnverified,
   VERIFY_PATH,
 } from "@/lib/auth/onboarding-path";
-import {
-  getSessionContext,
-  getSessionMember,
-  type SessionMember,
-} from "@/lib/auth/session";
+import { getSessionMember, type SessionMember } from "@/lib/auth/session";
 
 export {
   ACCOUNT_HOME_PATH,
@@ -40,7 +31,7 @@ export function memberIsVerified(member: SessionMember): boolean {
 
 export function signedInHomePath(
   member: SessionMember,
-  accounts: TradingAccount[],
+  _accounts: TradingAccount[],
 ): string {
   if (!memberIsVerified(member)) {
     return VERIFY_PATH;
@@ -48,8 +39,7 @@ export function signedInHomePath(
   if (!member.platformMember) {
     return AFFILIATES_PATH;
   }
-  const home = pickDefaultAccount(accounts);
-  return home ? deskHomePath(home.deskType, home.id) : ACCOUNT_HOME_PATH;
+  return ACCOUNT_HOME_PATH;
 }
 
 export async function memberHasDesk(userId: string): Promise<boolean> {
@@ -84,10 +74,6 @@ export async function redirectSignedInHome(): Promise<void> {
   }
   if (!member.platformMember) {
     redirect(AFFILIATES_PATH);
-  }
-  const session = await getSessionContext();
-  if (session) {
-    redirect(deskHomePath(session.account.deskType, session.account.id));
   }
   redirect(ACCOUNT_HOME_PATH);
 }
