@@ -1,6 +1,7 @@
 import {
   Check,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   ChevronsUp,
   CircleOff,
@@ -48,10 +49,17 @@ export const LUCIDE_ICONS = [
     Icon: ChevronDown,
   },
   {
+    id: "chevron-left",
+    name: "Chevron left",
+    lucide: "ChevronLeft",
+    usedIn: "Theme table pager",
+    Icon: ChevronLeft,
+  },
+  {
     id: "chevron-right",
     name: "Chevron right",
     lucide: "ChevronRight",
-    usedIn: "Trade expand",
+    usedIn: "Trade expand, theme table pager",
     Icon: ChevronRight,
   },
   {
@@ -160,6 +168,10 @@ export function IconCheck(props: LucideProps) {
 
 export function IconChevronDown(props: LucideProps) {
   return <ChevronDown aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconChevronLeft(props: LucideProps) {
+  return <ChevronLeft aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconChevronRight(props: LucideProps) {

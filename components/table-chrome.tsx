@@ -10,7 +10,9 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { LiveFilterSubmit } from "@/components/app-select";
+import { IconChevronLeft, IconChevronRight } from "@/components/icons";
 import {
   formatStatusLabel,
   sliceTablePage,
@@ -28,6 +30,8 @@ export const TABLE_FILTER_CLEAR_CLASS =
   "rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink";
 export const TABLE_PAGER_BTN_CLASS =
   "rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40";
+const TABLE_PAGER_ICON_CLASS =
+  "inline-flex size-8 items-center justify-center rounded-control border border-line text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40";
 
 const BADGE_TONE: Record<StatusTone, string> = {
   success: "rounded-full bg-success/15 px-2.5 py-0.5 text-xs text-success",
@@ -157,6 +161,7 @@ export function TablePager({
   onNext,
   emptyLabel,
   align = "split",
+  buttons = "text",
   className = "mt-4",
 }: {
   window: Pick<TablePageWindow, "page" | "pageCount" | "total" | "from" | "to">;
@@ -166,12 +171,14 @@ export function TablePager({
   onNext?: () => void;
   emptyLabel?: string;
   align?: "split" | "center";
+  buttons?: "text" | "icons";
   className?: string;
 }) {
   if (window.total === 0) {
     return null;
   }
   const showButtons = window.pageCount > 1;
+  const icons = buttons === "icons";
   return (
     <div
       className={`flex flex-wrap items-center gap-3 text-sm text-ink-muted ${
@@ -181,31 +188,107 @@ export function TablePager({
       <p>{tablePageLabel({ ...window, empty: emptyLabel })}</p>
       {showButtons ? (
         <div className="flex gap-2">
-          {window.page > 1 ? (
-            prevHref ? (
-              <Link href={prevHref} className={TABLE_PAGER_BTN_CLASS}>
-                Previous
-              </Link>
-            ) : (
-              <button type="button" onClick={onPrev} className={TABLE_PAGER_BTN_CLASS}>
-                Previous
-              </button>
-            )
-          ) : null}
-          {window.page < window.pageCount ? (
-            nextHref ? (
-              <Link href={nextHref} className={TABLE_PAGER_BTN_CLASS}>
-                Next
-              </Link>
-            ) : (
-              <button type="button" onClick={onNext} className={TABLE_PAGER_BTN_CLASS}>
-                Next
-              </button>
-            )
-          ) : null}
+          <PagerButton
+            kind="prev"
+            href={prevHref}
+            onClick={onPrev}
+            disabled={window.page <= 1}
+            icons={icons}
+          />
+          <PagerButton
+            kind="next"
+            href={nextHref}
+            onClick={onNext}
+            disabled={window.page >= window.pageCount}
+            icons={icons}
+          />
         </div>
       ) : null}
     </div>
+  );
+}
+
+function PagerButton({
+  kind,
+  href,
+  onClick,
+  disabled,
+  icons,
+}: {
+  kind: "prev" | "next";
+  href?: string;
+  onClick?: () => void;
+  disabled: boolean;
+  icons: boolean;
+}) {
+  const [box, setBox] = useState<DOMRect | null>(null);
+  const label = kind === "prev" ? "Previous" : "Next";
+  const detail =
+    kind === "prev" ? "Show the previous page." : "Show the next page.";
+  if (!icons && disabled) {
+    return null;
+  }
+  const className = icons ? TABLE_PAGER_ICON_CLASS : TABLE_PAGER_BTN_CLASS;
+  const body = icons ? (
+    kind === "prev" ? (
+      <IconChevronLeft size={16} className="size-4" />
+    ) : (
+      <IconChevronRight size={16} className="size-4" />
+    )
+  ) : (
+    label
+  );
+  const tip = icons
+    ? {
+        "aria-label": `${label}. ${detail}`,
+        onMouseEnter: (event: { currentTarget: HTMLElement }) =>
+          setBox(event.currentTarget.getBoundingClientRect()),
+        onMouseLeave: () => setBox(null),
+        onFocus: (event: { currentTarget: HTMLElement }) =>
+          setBox(event.currentTarget.getBoundingClientRect()),
+        onBlur: () => setBox(null),
+      }
+    : {};
+  const tooltip =
+    icons && box && typeof document !== "undefined"
+      ? createPortal(
+          <span
+            role="tooltip"
+            className="pointer-events-none fixed z-50 max-w-56 rounded-control border border-line bg-surface-raised px-3 py-2 text-xs font-normal normal-case tracking-normal"
+            style={{
+              top: box.bottom + 8,
+              left: Math.max(12, Math.min(box.left, window.innerWidth - 240)),
+            }}
+          >
+            <span className="block text-ink">{label}</span>
+            <span className="mt-0.5 block text-ink-muted">{detail}</span>
+          </span>,
+          document.body,
+        )
+      : null;
+  if (href && !disabled) {
+    return (
+      <>
+        <Link href={href} className={className} {...tip}>
+          {body}
+        </Link>
+        {tooltip}
+      </>
+    );
+  }
+  return (
+    <>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onClick}
+        className={className}
+        {...tip}
+      >
+        {body}
+      </button>
+      {tooltip}
+    </>
   );
 }
 

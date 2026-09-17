@@ -466,6 +466,7 @@ export function ThemeTableDraft() {
         </div>
         <TablePager
           align="center"
+          buttons="icons"
           className="border-t border-line px-4 py-3"
           window={table.window}
           onPrev={() => table.setPage(table.window.page - 1)}
