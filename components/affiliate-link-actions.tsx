@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import { AffiliateArchiveButton } from "@/components/affiliate-archive-button";
+import { IconPencil } from "@/components/icons";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
 import { Modal } from "@/components/template-modals";
 import { renameAffiliateLinkAction } from "@/lib/membership/affiliate-actions";
 import { AFFILIATE_LINK_NAME_MAX } from "@/lib/membership/affiliate";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
-
-const ghost =
-  "rounded-control px-2 py-1 text-xs font-medium text-ink-muted hover:bg-surface-raised hover:text-ink";
 
 export function AffiliateLinkActions({
   id,
@@ -24,9 +23,13 @@ export function AffiliateLinkActions({
 
   return (
     <div className="flex flex-wrap items-center gap-1">
-      <button type="button" className={ghost} onClick={() => setOpen(true)}>
-        Rename
-      </button>
+      <TableIconAction
+        label="Rename"
+        detail="Change this URL's name."
+        onClick={() => setOpen(true)}
+      >
+        <IconPencil {...TABLE_BTN_ICON} />
+      </TableIconAction>
       {canArchive ? (
         <AffiliateArchiveButton kind="link" id={id} name={name} />
       ) : null}

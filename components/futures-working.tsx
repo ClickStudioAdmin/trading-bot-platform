@@ -3,10 +3,16 @@
 import Link from "next/link";
 import { useCallback, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
-import { SortTh, TablePager, useClientTable } from "@/components/table-chrome";
+import { IconClose } from "@/components/icons";
 import { LocalTime } from "@/components/local-time";
 import { PendingStatusChip } from "@/components/pending-status-chip";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
+import {
+  SortTh,
+  TABLE_BTN_ICON,
+  TablePager,
+  TablePendingIconAction,
+  useClientTable,
+} from "@/components/table-chrome";
 import { TokenIcon } from "@/components/token-icon";
 import { TpslPair } from "@/components/futures-tpsl";
 import { FuturesCancelAllOrders } from "@/components/futures-close-all";
@@ -28,9 +34,6 @@ import {
   compareTableText,
   type TableSortDir,
 } from "@/lib/table-chrome";
-
-const ACTION_CLASS =
-  "rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium whitespace-nowrap text-ink";
 
 export function FuturesWorkingOrders({
   signedIn,
@@ -361,37 +364,28 @@ function WorkingRow({
                 hint="Cancel submitted. This order leaves when the venue confirms."
               />
             ) : (
-              <div className="flex flex-wrap items-center gap-2">
-                <ColumnHint
-                  hint="Change remaining qty or limit"
-                  label={
-                    <FuturesWorkingEdit
-                      workingId={row.id}
-                      symbol={row.symbol}
-                      action={row.action}
-                      reduceOnly={row.reduceOnly}
-                      remainingQty={row.remainingQty}
-                      filledQty={row.filledQty}
-                      limitPrice={row.limitPrice}
-                      next={next}
-                    />
-                  }
+              <div className="flex flex-wrap items-center gap-1">
+                <FuturesWorkingEdit
+                  workingId={row.id}
+                  symbol={row.symbol}
+                  action={row.action}
+                  reduceOnly={row.reduceOnly}
+                  remainingQty={row.remainingQty}
+                  filledQty={row.filledQty}
+                  limitPrice={row.limitPrice}
+                  next={next}
                 />
                 <form action={cancelFuturesWorking}>
                   <input type="hidden" name="next" value={next} />
                   <input type="hidden" name="workingId" value={row.id} />
-                  <ColumnHint
-                    hint="Cancel remaining size"
-                    label={
-                      <PendingSubmitButton
-                        pendingLabel="Cancelling"
-                        successKey={`working-cancel-${row.id}`}
-                        className={ACTION_CLASS}
-                      >
-                        Cancel
-                      </PendingSubmitButton>
-                    }
-                  />
+                  <TablePendingIconAction
+                    pendingLabel="Cancelling"
+                    successKey={`working-cancel-${row.id}`}
+                    label="Cancel"
+                    detail="Cancel the remaining size."
+                  >
+                    <IconClose {...TABLE_BTN_ICON} />
+                  </TablePendingIconAction>
                 </form>
               </div>
             )}

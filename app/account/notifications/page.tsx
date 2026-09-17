@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { InboxBulkTable } from "@/components/inbox-bulk-table";
 import { PageHeading } from "@/components/page-heading";
+import { IconFilterClear } from "@/components/icons";
 import {
   LiveGetForm,
-  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
+  TableLabelButton,
   TablePager,
 } from "@/components/table-chrome";
 import { listTradingAccounts } from "@/lib/accounts/store";
@@ -141,9 +143,13 @@ export default async function AccountNotificationsPage({
             ))}
           </AppSelect>
         </TableFilterField>
-        <Link href="/account/notifications" className={TABLE_FILTER_CLEAR_CLASS}>
+        <TableLabelButton
+          href="/account/notifications"
+          variant="filter"
+          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+        >
           Clear
-        </Link>
+        </TableLabelButton>
       </LiveGetForm>
       {list.total === 0 && !filteredEmpty ? (
         <p className="mt-6 rounded-card border border-line bg-surface px-5 py-6 text-sm text-ink-muted">

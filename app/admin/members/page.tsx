@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { AdminMembersTable } from "@/components/admin-members-table";
 import { PageHeading } from "@/components/page-heading";
+import { IconFilterClear, IconPlus } from "@/components/icons";
 import {
   LiveGetForm,
-  TABLE_FILTER_CLEAR_CLASS,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
+  TABLE_BTN_ICON,
+  TableLabelButton,
   TablePager,
 } from "@/components/table-chrome";
 import { listMembers } from "@/lib/members/list";
@@ -46,12 +47,14 @@ export default async function AdminMembersPage({
     <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <PageHeading overline="Admin" title="Members" />
-        <Link
+        <TableLabelButton
           href="/admin/members/new"
-          className="mb-6 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          variant="primary"
+          className="mb-6"
+          icon={<IconPlus {...TABLE_BTN_ICON} />}
         >
           New member
-        </Link>
+        </TableLabelButton>
       </div>
       <p className="-mt-4 text-sm text-ink-muted">
         Desk accounts. Sign-in uses this table, not Supabase Auth.
@@ -105,9 +108,13 @@ export default async function AdminMembersPage({
             <option value="disabled">Disabled</option>
           </AppSelect>
         </TableFilterField>
-        <Link href="/admin/members" className={TABLE_FILTER_CLEAR_CLASS}>
+        <TableLabelButton
+          href="/admin/members"
+          variant="filter"
+          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+        >
           Clear
-        </Link>
+        </TableLabelButton>
       </LiveGetForm>
 
       <AdminMembersTable rows={list.rows} query={query} planNames={planNames} />

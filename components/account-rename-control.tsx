@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { IconPencil } from "@/components/icons";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { PanelCloseButton } from "@/components/panel-close-button";
+import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
 import { renameTradingAccount } from "@/lib/accounts/actions";
 import { validateNewDeskName } from "@/lib/accounts/model";
 
@@ -75,9 +77,10 @@ export function AccountRenameControl({
 
   return (
     <>
-      <button
+      <TableIconAction
         ref={buttonRef}
-        type="button"
+        label="Rename"
+        detail="Change this desk's name."
         onClick={() => {
           if (!open) {
             setName(accountName);
@@ -85,10 +88,9 @@ export function AccountRenameControl({
           }
           setOpen((current) => !current);
         }}
-        className="rounded-control border border-line px-2 py-0.5 text-xs font-medium text-accent hover:text-accent-strong"
       >
-        Rename
-      </button>
+        <IconPencil {...TABLE_BTN_ICON} />
+      </TableIconAction>
       {open ? (
         <div
           ref={panelRef}

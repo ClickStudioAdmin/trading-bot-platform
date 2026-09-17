@@ -5,13 +5,15 @@ import { AffiliateLinkActions } from "@/components/affiliate-link-actions";
 import { AffiliatePayoutSettingsForm } from "@/components/affiliate-payout-settings";
 import { AffiliateOrgChartFrame } from "@/components/affiliate-org-chart-frame";
 import { CopyTextButton } from "@/components/copy-text-button";
+import { IconFilterClear } from "@/components/icons";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   LiveGetForm,
   SortTh,
   StatusBadge,
-  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_BTN_ICON,
+  TableLabelButton,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
   TablePager,
@@ -1386,9 +1388,13 @@ function AffiliateListFilters({
           ))}
         </AppSelect>
       </TableFilterField>
-      <Link href={affiliatePortalPath(tab)} className={TABLE_FILTER_CLEAR_CLASS}>
+      <TableLabelButton
+        href={affiliatePortalPath(tab)}
+        variant="filter"
+        icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+      >
         Clear
-      </Link>
+      </TableLabelButton>
     </LiveGetForm>
   );
 }

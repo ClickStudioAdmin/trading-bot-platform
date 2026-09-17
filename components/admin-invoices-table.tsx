@@ -1,14 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useMemo } from "react";
+import { IconFilterClear } from "@/components/icons";
 import {
   LiveGetForm,
   SortTh,
   StatusBadge,
-  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
+  TableLabelButton,
   TablePager,
   useClientTable,
 } from "@/components/table-chrome";
@@ -136,12 +137,13 @@ export function AdminInvoicesTable({
             ))}
           </AppSelect>
         </TableFilterField>
-        <Link
+        <TableLabelButton
           href="/admin/billing?tab=invoices"
-          className={TABLE_FILTER_CLEAR_CLASS}
+          variant="filter"
+          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
         >
           Clear
-        </Link>
+        </TableLabelButton>
       </LiveGetForm>
       <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[56rem] text-left text-sm">

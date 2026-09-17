@@ -2,12 +2,14 @@
 
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
+import { IconFilterClear } from "@/components/icons";
 import {
   SortTh,
-  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterBar,
   TableFilterField,
+  TableLabelButton,
   TablePager,
   useClientTable,
 } from "@/components/table-chrome";
@@ -997,9 +999,13 @@ function CycleFilters({
           <option value="short">Short</option>
         </AppSelect>
       </TableFilterField>
-      <button type="button" onClick={onClear} className={TABLE_FILTER_CLEAR_CLASS}>
+      <TableLabelButton
+        variant="filter"
+        icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+        onClick={onClear}
+      >
         Clear
-      </button>
+      </TableLabelButton>
     </TableFilterBar>
   );
 }

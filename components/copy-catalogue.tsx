@@ -1,12 +1,18 @@
 import Link from "next/link";
-import { IconStar, IconStarFilled } from "@/components/icons";
+import {
+  IconFilterClear,
+  IconOpen,
+  IconStar,
+  IconStarFilled,
+} from "@/components/icons";
 import { NavBadge } from "@/components/nav-badge";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   LiveGetForm,
-  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
+  TableLabelButton,
+  TablePendingIconAction,
 } from "@/components/table-chrome";
 import { toggleDeskCopyFavoriteAction } from "@/lib/copy/actions";
 import { copyCatalogueHref } from "@/lib/copy/catalogue-href";
@@ -174,12 +180,13 @@ export function CopyCatalogueBoard({
             <option value="1">Private only</option>
           </AppSelect>
         </TableFilterField>
-        <Link
+        <TableLabelButton
           href={copyCatalogueHref({ tab })}
-          className={TABLE_FILTER_CLEAR_CLASS}
+          variant="filter"
+          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
         >
           Clear
-        </Link>
+        </TableLabelButton>
       </LiveGetForm>
       </>
       ) : null}
@@ -254,21 +261,23 @@ export function CopyCatalogueBoard({
                       value={card.favorite ? "0" : "1"}
                     />
                     <input type="hidden" name="next" value={next} />
-                    <PendingSubmitButton
+                    <TablePendingIconAction
                       pendingLabel="Starring"
                       successKey={`fav-${card.accountId}`}
-                      title={card.favorite ? "Remove star" : "Star this desk"}
-                      className={`rounded-control p-1.5 ${
+                      label={card.favorite ? "Remove star" : "Star"}
+                      detail={
+                        card.favorite
+                          ? "Remove this desk from your stars."
+                          : "Star this desk."
+                      }
+                      className={
                         card.favorite
                           ? "text-accent hover:text-accent-strong"
-                          : "text-ink-muted hover:text-accent"
-                      }`}
+                          : ""
+                      }
                     >
                       <StarIcon filled={card.favorite} />
-                      <span className="sr-only">
-                        {card.favorite ? "Remove star" : "Star this desk"}
-                      </span>
-                    </PendingSubmitButton>
+                    </TablePendingIconAction>
                   </form>
                 </div>
               </div>
@@ -337,12 +346,14 @@ export function CopyCatalogueBoard({
                   defaultOpen={openParentId === card.accountId}
                   className="w-full rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
                 />
-                <Link
+                <TableLabelButton
                   href={copyDeskPagePath(card.accountId)}
-                  className="mt-2 block text-center text-sm text-accent hover:text-accent-strong"
+                  variant="secondary"
+                  className="mt-2 w-full justify-center"
+                  icon={<IconOpen {...TABLE_BTN_ICON} />}
                 >
                   View details
-                </Link>
+                </TableLabelButton>
               </div>
             </li>
           ))}

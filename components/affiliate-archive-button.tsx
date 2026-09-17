@@ -1,13 +1,12 @@
 "use client";
 
 import { useConfirmDialog } from "@/components/confirm-modal";
+import { IconArchive } from "@/components/icons";
+import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
 import {
   archiveAffiliateCampaignAction,
   archiveAffiliateLinkAction,
 } from "@/lib/membership/affiliate-actions";
-
-const ghost =
-  "rounded-control px-2 py-1 text-xs font-medium text-ink-muted hover:bg-surface-raised hover:text-ink";
 
 export function AffiliateArchiveButton({
   kind,
@@ -45,9 +44,17 @@ export function AffiliateArchiveButton({
   return (
     <>
       {dialog}
-      <button type="button" className={ghost} onClick={() => void onArchive()}>
-        Archive
-      </button>
+      <TableIconAction
+        label="Archive"
+        detail={
+          kind === "campaign"
+            ? "Hide this campaign from the picker."
+            : "Hide this URL from your active list."
+        }
+        onClick={() => void onArchive()}
+      >
+        <IconArchive {...TABLE_BTN_ICON} />
+      </TableIconAction>
     </>
   );
 }

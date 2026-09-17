@@ -8,13 +8,27 @@ import { BacktestHighlightHover } from "@/components/backtest-highlight-hover";
 import { PageHeading } from "@/components/page-heading";
 import {
   SortTh,
-  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
+  TableIconAction,
+  TableLabelButton,
   TablePager,
 } from "@/components/table-chrome";
 import { AppCheck } from "@/components/app-check";
-import { IconCheck } from "@/components/icons";
+import {
+  IconCheck,
+  IconClose,
+  IconDisable,
+  IconDownload,
+  IconFilterClear,
+  IconFolderPlus,
+  IconImport,
+  IconPencil,
+  IconPlus,
+  IconShare,
+  IconTrash,
+} from "@/components/icons";
 import { Modal, StarterPackCheckbox } from "@/components/template-modals";
 import { sliceTablePage, type TableSortDir } from "@/lib/table-chrome";
 import type { BacktestLinkHighlight } from "@/lib/backtest/model";
@@ -58,8 +72,6 @@ const secondaryBtn =
   "rounded-control border border-line px-3 py-1.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink";
 const dangerBtn =
   "rounded-control border border-line px-3 py-1.5 text-xs text-danger hover:bg-danger/10";
-const actionLink =
-  "rounded-control border border-line px-2 py-0.5 text-xs font-medium text-accent hover:text-accent-strong";
 
 function tabForVariant(
   tab: LibraryTab,
@@ -681,20 +693,20 @@ export function TemplatesLibrary({
         className="mb-2"
         actions={
           <>
-            <button
-              type="button"
+            <TableLabelButton
+              variant="secondary"
+              icon={<IconDownload {...TABLE_BTN_ICON} />}
               onClick={() => void exportAll()}
-              className={secondaryBtn}
             >
               Export all
-            </button>
-            <button
-              type="button"
+            </TableLabelButton>
+            <TableLabelButton
+              variant="secondary"
+              icon={<IconImport {...TABLE_BTN_ICON} />}
               onClick={() => setImporting(true)}
-              className={secondaryBtn}
             >
               Import
-            </button>
+            </TableLabelButton>
           </>
         }
       />
@@ -725,13 +737,13 @@ export function TemplatesLibrary({
       </nav>
       {tab === "sets" ? (
         <div className="mt-4 flex justify-end">
-          <button
-            type="button"
+          <TableLabelButton
+            variant="primary"
+            icon={<IconPlus {...TABLE_BTN_ICON} />}
             onClick={() => setCreatingFolder(true)}
-            className={primaryBtn}
           >
             Add New Folder
-          </button>
+          </TableLabelButton>
         </div>
       ) : null}
       <div className="mt-6 rounded-card border border-line bg-surface p-4">
@@ -783,13 +795,13 @@ export function TemplatesLibrary({
               </AppSelect>
             </TableFilterField>
           ) : null}
-          <button
-            type="button"
+          <TableLabelButton
+            variant="filter"
+            icon={<IconFilterClear {...TABLE_BTN_ICON} />}
             onClick={clearFilters}
-            className={TABLE_FILTER_CLEAR_CLASS}
           >
             Clear
-          </button>
+          </TableLabelButton>
         </div>
       </div>
       {error ? (
@@ -803,40 +815,44 @@ export function TemplatesLibrary({
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <p className="text-sm text-ink-muted">{selectedCount} selected</p>
           {tab === "templates" ? (
-            <button type="button" onClick={openBulkFolder} className={secondaryBtn}>
+            <TableLabelButton
+              variant="bulk"
+              icon={<IconFolderPlus {...TABLE_BTN_ICON} />}
+              onClick={openBulkFolder}
+            >
               Add to folder
-            </button>
+            </TableLabelButton>
           ) : null}
-          <button
-            type="button"
+          <TableLabelButton
+            variant="bulk"
+            icon={<IconDownload {...TABLE_BTN_ICON} />}
             onClick={() => void exportSelected()}
-            className={secondaryBtn}
           >
             Export
-          </button>
+          </TableLabelButton>
           {variant === "admin" ? (
-            <button
-              type="button"
+            <TableLabelButton
+              variant="bulk"
+              icon={<IconDisable {...TABLE_BTN_ICON} />}
               onClick={() => void runBulk("unpublish")}
-              className={secondaryBtn}
             >
               Unpublish
-            </button>
+            </TableLabelButton>
           ) : null}
-          <button
-            type="button"
+          <TableLabelButton
+            variant="danger"
+            icon={<IconTrash {...TABLE_BTN_ICON} />}
             onClick={() => void runBulk("delete")}
-            className={dangerBtn}
           >
             Delete
-          </button>
-          <button
-            type="button"
+          </TableLabelButton>
+          <TableLabelButton
+            variant="bulk"
+            icon={<IconClose {...TABLE_BTN_ICON} />}
             onClick={() => setSelected(new Set())}
-            className={secondaryBtn}
           >
             Clear
-          </button>
+          </TableLabelButton>
         </div>
       ) : null}
 
@@ -983,38 +999,40 @@ export function TemplatesLibrary({
                     </td>
                   ) : null}
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap gap-1">
                       {canEdit ? (
-                        <button
-                          type="button"
+                        <TableIconAction
+                          label="Edit"
+                          detail="Change this template."
                           onClick={() => setEditingTemplateId(row.id)}
-                          className={actionLink}
                         >
-                          Edit
-                        </button>
+                          <IconPencil {...TABLE_BTN_ICON} />
+                        </TableIconAction>
                       ) : null}
                       {!sharedTab && row.visibility === "user" ? (
-                        <button
-                          type="button"
+                        <TableIconAction
+                          label="Share"
+                          detail="Share this template with another member."
                           onClick={() => setSharingTemplateId(row.id)}
-                          className={actionLink}
                         >
-                          Share
-                        </button>
+                          <IconShare {...TABLE_BTN_ICON} />
+                        </TableIconAction>
                       ) : null}
                       {canEdit ? (
-                        <button
-                          type="button"
+                        <TableIconAction
+                          danger
+                          label="Delete"
+                          detail="Delete this template."
                           onClick={() => void deleteTemplateRow(row)}
-                          className="rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10"
                         >
-                          Delete
-                        </button>
+                          <IconTrash {...TABLE_BTN_ICON} />
+                        </TableIconAction>
                       ) : null}
                       {sharedTab ? (
                         <>
-                          <button
-                            type="button"
+                          <TableIconAction
+                            label="Import"
+                            detail="Copy this shared template into your library."
                             onClick={() => {
                               const data = new FormData();
                               data.set("templateId", row.id);
@@ -1027,12 +1045,13 @@ export function TemplatesLibrary({
                                 },
                               );
                             }}
-                            className={actionLink}
                           >
-                            Import
-                          </button>
-                          <button
-                            type="button"
+                            <IconImport {...TABLE_BTN_ICON} />
+                          </TableIconAction>
+                          <TableIconAction
+                            danger
+                            label="Remove"
+                            detail="Remove this shared template from your list."
                             onClick={() => {
                               const data = new FormData();
                               data.set("templateId", row.id);
@@ -1043,10 +1062,9 @@ export function TemplatesLibrary({
                                 }
                               });
                             }}
-                            className="rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10"
                           >
-                            Remove
-                          </button>
+                            <IconTrash {...TABLE_BTN_ICON} />
+                          </TableIconAction>
                         </>
                       ) : null}
                     </div>
@@ -1178,38 +1196,40 @@ export function TemplatesLibrary({
                       </td>
                     ) : null}
                     <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-3">
+                      <div className="flex flex-wrap gap-1">
                         {canEdit ? (
-                          <button
-                            type="button"
+                          <TableIconAction
+                            label="Edit"
+                            detail="Change this folder."
                             onClick={() => setEditingFolderId(row.id)}
-                            className={actionLink}
                           >
-                            Edit
-                          </button>
+                            <IconPencil {...TABLE_BTN_ICON} />
+                          </TableIconAction>
                         ) : null}
                         {!sharedTab && row.visibility === "user" ? (
-                          <button
-                            type="button"
+                          <TableIconAction
+                            label="Share"
+                            detail="Share this folder with another member."
                             onClick={() => setSharingFolderId(row.id)}
-                            className={actionLink}
                           >
-                            Share
-                          </button>
+                            <IconShare {...TABLE_BTN_ICON} />
+                          </TableIconAction>
                         ) : null}
                         {canEdit ? (
-                          <button
-                            type="button"
+                          <TableIconAction
+                            danger
+                            label="Delete"
+                            detail="Delete this folder."
                             onClick={() => void deleteFolderRow(row)}
-                            className="rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10"
                           >
-                            Delete
-                          </button>
+                            <IconTrash {...TABLE_BTN_ICON} />
+                          </TableIconAction>
                         ) : null}
                         {sharedTab ? (
                           <>
-                            <button
-                              type="button"
+                            <TableIconAction
+                              label="Import"
+                              detail="Copy this shared folder into your library."
                               onClick={() => {
                                 const data = new FormData();
                                 data.set("setId", row.id);
@@ -1222,12 +1242,13 @@ export function TemplatesLibrary({
                                   },
                                 );
                               }}
-                              className={actionLink}
                             >
-                              Import
-                            </button>
-                            <button
-                              type="button"
+                              <IconImport {...TABLE_BTN_ICON} />
+                            </TableIconAction>
+                            <TableIconAction
+                              danger
+                              label="Remove"
+                              detail="Remove this shared folder from your list."
                               onClick={() => {
                                 const data = new FormData();
                                 data.set("setId", row.id);
@@ -1238,10 +1259,9 @@ export function TemplatesLibrary({
                                   }
                                 });
                               }}
-                              className="rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10"
                             >
-                              Remove
-                            </button>
+                              <IconTrash {...TABLE_BTN_ICON} />
+                            </TableIconAction>
                           </>
                         ) : null}
                       </div>

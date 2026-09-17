@@ -105,6 +105,7 @@ export function PendingSubmitButton({
   title,
   skipSizeGuard = false,
   deskAction,
+  "aria-label": ariaLabel,
 }: {
   children: ReactNode;
   pendingLabel?: string;
@@ -117,6 +118,7 @@ export function PendingSubmitButton({
   title?: string;
   skipSizeGuard?: boolean;
   deskAction?: string;
+  "aria-label"?: string;
 }) {
   const { pending, data } = useFormStatus();
   const desk = useDeskFormStatus();
@@ -168,7 +170,9 @@ export function PendingSubmitButton({
       data-skip-size-guard={skipSizeGuard ? "1" : undefined}
       data-desk-action={deskAction}
       aria-busy={thisPending}
-      aria-label={thisPending ? pendingLabel : ok ? "Done" : undefined}
+      aria-label={
+        thisPending ? pendingLabel : ok ? "Done" : ariaLabel
+      }
       className={`disabled:opacity-70 ${className}`}
     >
       <span

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { IconTrash } from "@/components/icons";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
 import { removeExchangeConnection } from "@/lib/exchanges/actions";
 
 export function RemoveConnectionControl({
@@ -63,19 +65,20 @@ export function RemoveConnectionControl({
 
   return (
     <>
-      <button
+      <TableIconAction
         ref={buttonRef}
-        type="button"
+        danger
+        label="Remove"
+        detail="Remove this exchange key."
         onClick={() => {
           if (!open) {
             place();
           }
           setOpen((current) => !current);
         }}
-        className="rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10"
       >
-        Remove
-      </button>
+        <IconTrash {...TABLE_BTN_ICON} />
+      </TableIconAction>
       {open ? (
         <div
           ref={panelRef}

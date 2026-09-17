@@ -2,6 +2,13 @@
 
 import { useConfirmDialog } from "@/components/confirm-modal";
 import {
+  IconArchive,
+  IconCopy,
+  IconTrash,
+  IconUnarchive,
+} from "@/components/icons";
+import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
+import {
   archiveMembershipPlanAction,
   cloneMembershipPlanAction,
   deleteMembershipPlanAction,
@@ -13,9 +20,6 @@ import {
   canDeletePlan,
   planIsArchived,
 } from "@/lib/membership/catalog";
-
-const ghost =
-  "rounded-control px-2 py-1 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink";
 
 export function AdminPlanRowActions({ plan }: { plan: MembershipPlan }) {
   const { confirm, dialog } = useConfirmDialog();
@@ -66,26 +70,39 @@ export function AdminPlanRowActions({ plan }: { plan: MembershipPlan }) {
   return (
     <div className="flex flex-wrap justify-end gap-1">
       {dialog}
-      <button type="button" className={ghost} onClick={() => void onClone()}>
-        Clone
-      </button>
+      <TableIconAction
+        label="Clone"
+        detail="Make a draft copy of this plan."
+        onClick={() => void onClone()}
+      >
+        <IconCopy {...TABLE_BTN_ICON} />
+      </TableIconAction>
       {archived ? (
-        <button type="button" className={ghost} onClick={() => void onUnarchive()}>
-          Un-archive
-        </button>
+        <TableIconAction
+          label="Un-archive"
+          detail="Put this plan back in the catalog."
+          onClick={() => void onUnarchive()}
+        >
+          <IconUnarchive {...TABLE_BTN_ICON} />
+        </TableIconAction>
       ) : canArchivePlan(plan) ? (
-        <button type="button" className={ghost} onClick={() => void onArchive()}>
-          Archive
-        </button>
+        <TableIconAction
+          label="Archive"
+          detail="Hide this plan from the public catalog."
+          onClick={() => void onArchive()}
+        >
+          <IconArchive {...TABLE_BTN_ICON} />
+        </TableIconAction>
       ) : null}
       {canDeletePlan(plan) ? (
-        <button
-          type="button"
-          className="rounded-control px-2 py-1 text-sm text-danger hover:bg-danger/10"
+        <TableIconAction
+          danger
+          label="Delete"
+          detail="Permanently delete this unused draft."
           onClick={() => void onDelete()}
         >
-          Delete
-        </button>
+          <IconTrash {...TABLE_BTN_ICON} />
+        </TableIconAction>
       ) : null}
     </div>
   );

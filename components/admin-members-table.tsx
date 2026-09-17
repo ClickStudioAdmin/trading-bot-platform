@@ -1,6 +1,11 @@
-import Link from "next/link";
 import { LocalTime } from "@/components/local-time";
-import { SortTh, StatusBadge } from "@/components/table-chrome";
+import { IconPencil } from "@/components/icons";
+import {
+  SortTh,
+  StatusBadge,
+  TABLE_BTN_ICON,
+  TableIconAction,
+} from "@/components/table-chrome";
 import {
   memberListHref,
   toggleMemberSort,
@@ -82,12 +87,13 @@ export function AdminMembersTable({
                   <LocalTime at={row.createdAt} mode="date" />
                 </td>
                 <td className="px-4 py-3">
-                  <Link
+                  <TableIconAction
                     href={`/admin/members/${row.id}`}
-                    className="rounded-control border border-line px-2 py-0.5 text-xs font-medium text-accent hover:text-accent-strong"
+                    label="Edit"
+                    detail="Change this member's settings."
                   >
-                    Edit
-                  </Link>
+                    <IconPencil {...TABLE_BTN_ICON} />
+                  </TableIconAction>
                 </td>
               </tr>
             ))

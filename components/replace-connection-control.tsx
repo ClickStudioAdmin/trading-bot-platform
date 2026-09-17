@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { IconReplace } from "@/components/icons";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
 import { replaceExchangeConnection } from "@/lib/exchanges/actions";
 import type { VenueCredentialField } from "@/lib/exchanges/venues";
 
@@ -67,19 +69,19 @@ export function ReplaceConnectionControl({
 
   return (
     <>
-      <button
+      <TableIconAction
         ref={buttonRef}
-        type="button"
+        label="Replace key"
+        detail="Paste a new API key and secret."
         onClick={() => {
           if (!open) {
             place();
           }
           setOpen((current) => !current);
         }}
-        className="rounded-control border border-line px-2 py-0.5 text-xs font-medium text-accent hover:text-accent-strong"
       >
-        Replace key
-      </button>
+        <IconReplace {...TABLE_BTN_ICON} />
+      </TableIconAction>
       {open ? (
         <div
           ref={panelRef}

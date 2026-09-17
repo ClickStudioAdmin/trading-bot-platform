@@ -3,7 +3,9 @@ import {
   AdminPayoutQueueTable,
 } from "@/components/admin-payout-tables";
 import { ColumnHint } from "@/components/column-hint";
+import { IconDownload } from "@/components/icons";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { TABLE_BTN_ICON, TableLabelButton } from "@/components/table-chrome";
 import { generatePayoutFilesAction } from "@/lib/membership/affiliate-actions";
 import type { PayoutFileRow, PayoutRow } from "@/lib/membership/affiliate-store";
 import {
@@ -88,12 +90,14 @@ export function AdminPayoutQueue({
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold tracking-tight">{filesTitle}</h2>
-            <a
+            <TableLabelButton
               href={exportAllHref}
-              className="mt-1 inline-block text-sm text-accent hover:underline"
+              variant="secondary"
+              className="mt-1"
+              icon={<IconDownload {...TABLE_BTN_ICON} />}
             >
               {exportAllLabel}
-            </a>
+            </TableLabelButton>
           </div>
           <form
             action={generatePayoutFilesAction}

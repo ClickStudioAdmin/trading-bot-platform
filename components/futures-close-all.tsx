@@ -3,7 +3,9 @@
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { AppCheck } from "@/components/app-check";
+import { IconClose, IconClosePosition } from "@/components/icons";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { TABLE_BTN_ICON, TableLabelButton } from "@/components/table-chrome";
 import { closeAllFutures } from "@/lib/futures/actions";
 import {
   closeAllBlockNewSizeCopy,
@@ -15,9 +17,6 @@ import {
 
 const INPUT_CLASS =
   "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
-const BUTTON_CLASS =
-  "rounded-control border border-danger/40 px-3 py-1.5 text-center text-sm text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-40";
-
 const COPY: Record<
   CloseAllScope,
   { label: string; title: string; confirm: string; pending: string }
@@ -126,14 +125,20 @@ function FuturesBulkButton({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        type="button"
+      <TableLabelButton
+        variant="danger"
         disabled={!enabled}
         onClick={() => setOpen(true)}
-        className={BUTTON_CLASS}
+        icon={
+          scope === "orders" ? (
+            <IconClose {...TABLE_BTN_ICON} />
+          ) : (
+            <IconClosePosition {...TABLE_BTN_ICON} />
+          )
+        }
       >
         {COPY[scope].label}
-      </button>
+      </TableLabelButton>
       {open ? (
         <FuturesBulkDialog
           next={next}

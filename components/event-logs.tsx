@@ -1,15 +1,16 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo } from "react";
+import { IconFilterClear } from "@/components/icons";
 import { LocalTime } from "@/components/local-time";
 import {
   LiveGetForm,
   SortTh,
   StatusBadge,
-  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
+  TableLabelButton,
   TablePager,
   useClientTable,
 } from "@/components/table-chrome";
@@ -165,9 +166,13 @@ export function EventLogs({
             ))}
           </AppSelect>
         </TableFilterField>
-        <Link href={clearHref} className={TABLE_FILTER_CLEAR_CLASS}>
+        <TableLabelButton
+          href={clearHref}
+          variant="filter"
+          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+        >
           Clear
-        </Link>
+        </TableLabelButton>
       </LiveGetForm>
 
       <div className="mt-6 overflow-x-auto rounded-card border border-line bg-surface">

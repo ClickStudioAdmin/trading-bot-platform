@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { AdminPlansTable } from "@/components/admin-plans-table";
+import { IconPlus } from "@/components/icons";
 import { PageHeading } from "@/components/page-heading";
+import { TABLE_BTN_ICON, TableLabelButton } from "@/components/table-chrome";
 import { planIsArchived, planIsDraft } from "@/lib/membership/catalog";
 import { listMembershipPlans } from "@/lib/membership/store";
 import { firstSearchValue } from "@/lib/paper/open";
@@ -44,12 +45,14 @@ export default async function AdminPlansPage({
     <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <PageHeading overline="Admin" title="Plans" />
-        <Link
+        <TableLabelButton
           href="/admin/plans/new"
-          className="mb-6 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          variant="primary"
+          className="mb-6"
+          icon={<IconPlus {...TABLE_BTN_ICON} />}
         >
           New plan
-        </Link>
+        </TableLabelButton>
       </div>
       <p className="-mt-4 text-sm text-ink-muted">
         Features, caps, and affiliate rates. A plan with members cannot be

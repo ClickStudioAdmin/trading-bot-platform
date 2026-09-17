@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useMemo, useState } from "react";
 import {
   IconChevronsUp,
   IconClose,
@@ -17,10 +16,12 @@ import {
 import {
   SortTh,
   StatusBadge,
-  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterBar,
   TableFilterField,
+  TableIconAction,
+  TableLabelButton,
   TablePager,
   useClientTable,
 } from "@/components/table-chrome";
@@ -31,21 +32,6 @@ import {
 } from "@/lib/table-chrome";
 import { AppSelect } from "@/components/app-select";
 import { AppCheck } from "@/components/app-check";
-
-const primaryBtn =
-  "inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
-const secondaryBtn =
-  "inline-flex items-center gap-1.5 rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink";
-const bulkBtn =
-  "inline-flex items-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40";
-const dangerBulkBtn =
-  "inline-flex items-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-40";
-const filterBtn =
-  `${TABLE_FILTER_CLEAR_CLASS} inline-flex items-center gap-1.5`;
-const actionIcon =
-  "inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink";
-const dangerActionIcon =
-  "inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-danger/10 hover:text-danger";
 
 const TYPES = ["DCA", "Perps bots", "Cash and Carry"] as const;
 const STATUSES = ["active", "disabled", "pending", "error"] as const;
@@ -220,14 +206,15 @@ export function ThemeTableDraft() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className={secondaryBtn}>
-            <IconDownload size={14} className="size-3.5" />
+          <TableLabelButton
+            variant="secondary"
+            icon={<IconDownload {...TABLE_BTN_ICON} />}
+          >
             Export all
-          </button>
-          <button type="button" className={primaryBtn}>
-            <IconPlus size={14} className="size-3.5" />
+          </TableLabelButton>
+          <TableLabelButton variant="primary" icon={<IconPlus {...TABLE_BTN_ICON} />}>
             New item
-          </button>
+          </TableLabelButton>
         </div>
       </div>
 
@@ -280,22 +267,20 @@ export function ThemeTableDraft() {
               ))}
             </AppSelect>
           </TableFilterField>
-          <button
-            type="button"
+          <TableLabelButton
+            variant="filter"
+            icon={<IconFilterClear {...TABLE_BTN_ICON} />}
             onClick={clearFilters}
-            className={filterBtn}
           >
-            <IconFilterClear size={14} className="size-3.5" />
             Clear
-          </button>
-          <button
-            type="button"
+          </TableLabelButton>
+          <TableLabelButton
+            variant="filter"
+            icon={<IconChevronsUp {...TABLE_BTN_ICON} />}
             onClick={() => setShowFilters(false)}
-            className={filterBtn}
           >
-            <IconChevronsUp size={14} className="size-3.5" />
             Hide Filters
-          </button>
+          </TableLabelButton>
         </TableFilterBar>
       ) : null}
 
@@ -306,52 +291,47 @@ export function ThemeTableDraft() {
           <p className="text-sm text-ink-muted">
             {selectedCount > 0 ? `${selectedCount} selected` : "Bulk actions"}
           </p>
-          <button
-            type="button"
-            className={bulkBtn}
+          <TableLabelButton
+            variant="bulk"
+            icon={<IconDownload {...TABLE_BTN_ICON} />}
             disabled={selectedCount === 0}
             onClick={() => flash(`Sample only — export ${selectedCount}.`)}
           >
-            <IconDownload size={14} className="size-3.5" />
             Export
-          </button>
-          <button
-            type="button"
-            className={bulkBtn}
+          </TableLabelButton>
+          <TableLabelButton
+            variant="bulk"
+            icon={<IconDisable {...TABLE_BTN_ICON} />}
             disabled={selectedCount === 0}
             onClick={() => flash(`Sample only — disable ${selectedCount}.`)}
           >
-            <IconDisable size={14} className="size-3.5" />
             Disable
-          </button>
-          <button
-            type="button"
-            className={dangerBulkBtn}
+          </TableLabelButton>
+          <TableLabelButton
+            variant="danger"
+            icon={<IconTrash {...TABLE_BTN_ICON} />}
             disabled={selectedCount === 0}
             onClick={() => flash(`Sample only — delete ${selectedCount}.`)}
           >
-            <IconTrash size={14} className="size-3.5" />
             Delete
-          </button>
-          <button
-            type="button"
-            className={bulkBtn}
+          </TableLabelButton>
+          <TableLabelButton
+            variant="bulk"
+            icon={<IconClose {...TABLE_BTN_ICON} />}
             disabled={selectedCount === 0}
             onClick={() => setSelected(new Set())}
           >
-            <IconClose size={14} className="size-3.5" />
             Clear
-          </button>
+          </TableLabelButton>
         </div>
         {!showFilters ? (
-          <button
-            type="button"
+          <TableLabelButton
+            variant="filter"
+            icon={<IconFilters {...TABLE_BTN_ICON} />}
             onClick={() => setShowFilters(true)}
-            className={filterBtn}
           >
-            <IconFilters size={14} className="size-3.5" />
             Show Filters
-          </button>
+          </TableLabelButton>
         ) : null}
       </div>
 
@@ -437,25 +417,25 @@ export function ThemeTableDraft() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-0.5">
-                      <RowAction
+                      <TableIconAction
                         label="Edit"
                         detail="Change this item's settings."
                       >
-                        <IconPencil size={14} className="size-3.5" />
-                      </RowAction>
-                      <RowAction
+                        <IconPencil {...TABLE_BTN_ICON} />
+                      </TableIconAction>
+                      <TableIconAction
                         label="Open"
                         detail="Go to this item."
                       >
-                        <IconOpen size={14} className="size-3.5" />
-                      </RowAction>
-                      <RowAction
+                        <IconOpen {...TABLE_BTN_ICON} />
+                      </TableIconAction>
+                      <TableIconAction
                         label="Delete"
                         detail="Remove this item."
                         danger
                       >
-                        <IconTrash size={14} className="size-3.5" />
-                      </RowAction>
+                        <IconTrash {...TABLE_BTN_ICON} />
+                      </TableIconAction>
                     </div>
                   </td>
                 </tr>
@@ -474,54 +454,6 @@ export function ThemeTableDraft() {
         />
       </div>
     </div>
-  );
-}
-
-function RowAction({
-  label,
-  detail,
-  danger = false,
-  children,
-}: {
-  label: string;
-  detail: string;
-  danger?: boolean;
-  children: ReactNode;
-}) {
-  const [box, setBox] = useState<DOMRect | null>(null);
-
-  return (
-    <>
-      <button
-        type="button"
-        aria-label={`${label}. ${detail}`}
-        className={danger ? dangerActionIcon : actionIcon}
-        onMouseEnter={(event) =>
-          setBox(event.currentTarget.getBoundingClientRect())
-        }
-        onMouseLeave={() => setBox(null)}
-        onFocus={(event) => setBox(event.currentTarget.getBoundingClientRect())}
-        onBlur={() => setBox(null)}
-      >
-        {children}
-      </button>
-      {box && typeof document !== "undefined"
-        ? createPortal(
-            <span
-              role="tooltip"
-              className="pointer-events-none fixed z-50 max-w-56 rounded-control border border-line bg-surface-raised px-3 py-2 text-xs font-normal normal-case tracking-normal"
-              style={{
-                top: box.bottom + 8,
-                left: Math.max(12, Math.min(box.left, window.innerWidth - 240)),
-              }}
-            >
-              <span className="block text-ink">{label}</span>
-              <span className="mt-0.5 block text-ink-muted">{detail}</span>
-            </span>,
-            document.body,
-          )
-        : null}
-    </>
   );
 }
 

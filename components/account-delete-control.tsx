@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { IconTrash } from "@/components/icons";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { PanelCloseButton } from "@/components/panel-close-button";
+import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
 import { deleteTradingAccount } from "@/lib/accounts/actions";
 import { AppSelect } from "@/components/app-select";
 
@@ -82,19 +84,20 @@ export function AccountDeleteControl({
 
   return (
     <>
-      <button
+      <TableIconAction
         ref={buttonRef}
-        type="button"
+        danger
+        label="Delete"
+        detail="Remove this desk and its closed history."
         onClick={() => {
           if (!open) {
             place();
           }
           setOpen((current) => !current);
         }}
-        className="rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10"
       >
-        Delete
-      </button>
+        <IconTrash {...TABLE_BTN_ICON} />
+      </TableIconAction>
       {open ? (
         <div
           ref={panelRef}

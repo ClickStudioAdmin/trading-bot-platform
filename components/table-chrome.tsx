@@ -10,9 +10,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
 import { LiveFilterSubmit } from "@/components/app-select";
 import { IconChevronLeft, IconChevronRight } from "@/components/icons";
+import { TableHint } from "@/components/table-actions";
 import {
   formatStatusLabel,
   sliceTablePage,
@@ -24,10 +24,19 @@ import {
   type TableSortDir,
 } from "@/lib/table-chrome";
 
+export {
+  TableIconAction,
+  TableLabelButton,
+  TablePendingIconAction,
+  TablePendingLabelButton,
+  TABLE_BTN_ICON,
+  TABLE_LABEL_BTN_CLASS,
+} from "@/components/table-actions";
+
 export const TABLE_FILTER_FIELD_CLASS =
   "mt-1 w-full min-w-[9rem] rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 export const TABLE_FILTER_CLEAR_CLASS =
-  "rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink";
+  "inline-flex items-center gap-1.5 rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink";
 export const TABLE_PAGER_BTN_CLASS =
   "rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40";
 const TABLE_PAGER_ICON_CLASS =
@@ -161,7 +170,7 @@ export function TablePager({
   onNext,
   emptyLabel,
   align = "split",
-  buttons = "text",
+  buttons = "icons",
   className = "mt-4",
 }: {
   window: Pick<TablePageWindow, "page" | "pageCount" | "total" | "from" | "to">;
@@ -249,23 +258,9 @@ function PagerButton({
         onBlur: () => setBox(null),
       }
     : {};
-  const tooltip =
-    icons && box && typeof document !== "undefined"
-      ? createPortal(
-          <span
-            role="tooltip"
-            className="pointer-events-none fixed z-50 max-w-56 rounded-control border border-line bg-surface-raised px-3 py-2 text-xs font-normal normal-case tracking-normal"
-            style={{
-              top: box.bottom + 8,
-              left: Math.max(12, Math.min(box.left, window.innerWidth - 240)),
-            }}
-          >
-            <span className="block text-ink">{label}</span>
-            <span className="mt-0.5 block text-ink-muted">{detail}</span>
-          </span>,
-          document.body,
-        )
-      : null;
+  const tooltip = icons ? (
+    <TableHint box={box} label={label} detail={detail} />
+  ) : null;
   if (href && !disabled) {
     return (
       <>

@@ -1,8 +1,10 @@
+import { IconFilterClear } from "@/components/icons";
 import {
   LiveGetForm,
-  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
+  TableLabelButton,
 } from "@/components/table-chrome";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { OpportunityFilterInputs } from "@/lib/opportunities/filter";
@@ -49,9 +51,13 @@ export function OpportunityFiltersForm({
         label="Min usable book"
         defaultValue={values.minCapacity}
       />
-      <a href={clearHref} className={TABLE_FILTER_CLEAR_CLASS}>
+      <TableLabelButton
+        href={clearHref}
+        variant="filter"
+        icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+      >
         Clear
-      </a>
+      </TableLabelButton>
     </LiveGetForm>
   );
 }

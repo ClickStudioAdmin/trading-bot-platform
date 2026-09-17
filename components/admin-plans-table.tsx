@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { useCallback } from "react";
 import { AdminPlanRowActions } from "@/components/admin-plan-row-actions";
+import { IconFilterClear, IconPencil } from "@/components/icons";
 import {
   LiveGetForm,
   SortTh,
   StatusBadge,
-  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
+  TableIconAction,
+  TableLabelButton,
   TablePager,
   useClientTable,
 } from "@/components/table-chrome";
@@ -88,9 +91,13 @@ export function AdminPlansTable({
             <option value="archived">Archived</option>
           </AppSelect>
         </TableFilterField>
-        <Link href="/admin/plans" className={TABLE_FILTER_CLEAR_CLASS}>
+        <TableLabelButton
+          href="/admin/plans"
+          variant="filter"
+          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+        >
           Clear
-        </Link>
+        </TableLabelButton>
       </LiveGetForm>
       <div className="mt-6 overflow-x-auto rounded-card border border-line bg-surface">
         <table className="min-w-full text-left text-sm">
@@ -180,12 +187,13 @@ export function AdminPlansTable({
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Link
+                      <TableIconAction
                         href={`/admin/plans/${plan.id}`}
-                        className="text-sm text-accent hover:text-accent-strong"
+                        label="Edit"
+                        detail="Change this plan's settings."
                       >
-                        Edit
-                      </Link>
+                        <IconPencil {...TABLE_BTN_ICON} />
+                      </TableIconAction>
                       <AdminPlanRowActions plan={plan} />
                     </div>
                   </td>

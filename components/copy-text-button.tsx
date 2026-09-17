@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { IconCheck, IconCopy } from "@/components/icons";
+import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
 
 export function CopyTextButton({
   text,
@@ -12,17 +14,23 @@ export function CopyTextButton({
   const [copied, setCopied] = useState(false);
 
   return (
-    <button
-      type="button"
+    <TableIconAction
+      label={copied ? "Copied" : label}
+      detail={
+        copied ? "Copied to the clipboard." : "Copy this to the clipboard."
+      }
       onClick={() => {
         void navigator.clipboard.writeText(text).then(() => {
           setCopied(true);
           window.setTimeout(() => setCopied(false), 1500);
         });
       }}
-      className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink hover:border-line-strong"
     >
-      {copied ? "Copied" : label}
-    </button>
+      {copied ? (
+        <IconCheck {...TABLE_BTN_ICON} />
+      ) : (
+        <IconCopy {...TABLE_BTN_ICON} />
+      )}
+    </TableIconAction>
   );
 }

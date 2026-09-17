@@ -2,8 +2,14 @@
 
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
+import { IconClosePosition, IconLimit, IconMarket } from "@/components/icons";
 import { PendingStatusChip } from "@/components/pending-status-chip";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import {
+  TABLE_BTN_ICON,
+  TableIconAction,
+  TablePendingIconAction,
+} from "@/components/table-chrome";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { closeDcaPositionFromRow } from "@/lib/dca/actions";
 import { submitFuturesTrade } from "@/lib/futures/actions";
@@ -11,8 +17,6 @@ import type { MarkedFutures } from "@/lib/futures/mark";
 import { formatPrice } from "@/lib/opportunities/format";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
 
-const ACTION_CLASS =
-  "inline-flex items-center justify-center rounded-control bg-accent-strong px-2 py-1 text-center text-xs font-medium whitespace-nowrap text-ink";
 const INPUT_CLASS =
   "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 
@@ -82,19 +86,15 @@ function CloseCopiedPositionButton({
       <input type="hidden" name="orderType" value="market" />
       <input type="hidden" name="sizeUnit" value="qty" />
       <input type="hidden" name="size" value={String(trade.qty)} />
-      <span
-        className="inline-flex"
-        title="Flatten this copied position at market. Copied limits for this pair stay until the parent cancels them or you cancel them."
+      <TablePendingIconAction
+        pendingLabel="Closing…"
+        successKey={`close-copy-row-${trade.id}`}
+        skipSizeGuard
+        label="Close"
+        detail="Flatten this copied position at market. Copied limits for this pair stay until the parent cancels them or you cancel them."
       >
-        <PendingSubmitButton
-          pendingLabel="Closing…"
-          successKey={`close-copy-row-${trade.id}`}
-          className={ACTION_CLASS}
-          skipSizeGuard
-        >
-          Close
-        </PendingSubmitButton>
-      </span>
+        <IconClosePosition {...TABLE_BTN_ICON} />
+      </TablePendingIconAction>
     </form>
   );
 }
@@ -148,18 +148,14 @@ function CloseDcaPositionButton({
       <input type="hidden" name="next" value={next} />
       <input type="hidden" name="playbookId" value={playbookId} />
       <input type="hidden" name="side" value={side} />
-      <span
-        className="inline-flex"
-        title="Close this position and its bot orders. The bot stays armed."
+      <TablePendingIconAction
+        pendingLabel="Closing…"
+        skipSizeGuard
+        label="Close"
+        detail="Close this position and its bot orders. The bot stays armed."
       >
-        <PendingSubmitButton
-          pendingLabel="Closing…"
-          className={ACTION_CLASS}
-          skipSizeGuard
-        >
-          Close
-        </PendingSubmitButton>
-      </span>
+        <IconClosePosition {...TABLE_BTN_ICON} />
+      </TablePendingIconAction>
     </form>
   );
 }
@@ -176,9 +172,21 @@ function FuturesCloseButton({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={ACTION_CLASS}>
-        {orderType === "market" ? "Market" : "Limit"}
-      </button>
+      <TableIconAction
+        label={orderType === "market" ? "Market" : "Limit"}
+        detail={
+          orderType === "market"
+            ? "Close this position at market."
+            : "Close this position with a limit order."
+        }
+        onClick={() => setOpen(true)}
+      >
+        {orderType === "market" ? (
+          <IconMarket {...TABLE_BTN_ICON} />
+        ) : (
+          <IconLimit {...TABLE_BTN_ICON} />
+        )}
+      </TableIconAction>
       {open ? (
         <FuturesCloseDialog
           trade={trade}

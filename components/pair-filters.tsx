@@ -1,9 +1,10 @@
-import Link from "next/link";
+import { IconFilterClear } from "@/components/icons";
 import {
   LiveGetForm,
-  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
+  TableLabelButton,
 } from "@/components/table-chrome";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { PairFilterInputs } from "@/lib/pairs/filter";
@@ -97,9 +98,13 @@ export function PairFiltersForm({
           </TableFilterField>
         </>
       ) : null}
-      <Link href={clearHref} className={TABLE_FILTER_CLEAR_CLASS}>
+      <TableLabelButton
+        href={clearHref}
+        variant="filter"
+        icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+      >
         Clear
-      </Link>
+      </TableLabelButton>
     </LiveGetForm>
   );
 }

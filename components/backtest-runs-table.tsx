@@ -5,12 +5,14 @@ import { useConfirmDialog } from "@/components/confirm-modal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RemoveBacktestButton } from "@/components/backtest-run-view";
+import { IconClose, IconFilterClear, IconTrash } from "@/components/icons";
 import {
   SortTh,
   StatusBadge,
-  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
+  TableLabelButton,
   TablePager,
   useClientTable,
 } from "@/components/table-chrome";
@@ -39,11 +41,6 @@ import { AppSelect } from "@/components/app-select";
 function statusLabel(status: string): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
-
-const secondaryBtn =
-  "rounded-control border border-line px-3 py-1.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50";
-const dangerBtn =
-  "rounded-control border border-line px-3 py-1.5 text-xs text-danger hover:bg-danger/10 disabled:opacity-50";
 
 const STATUS_FILTERS: Array<BacktestStatus | "all"> = [
   "all",
@@ -306,34 +303,34 @@ export function BacktestRunsTable({
               ))}
             </AppSelect>
           </TableFilterField>
-          <button
-            type="button"
+          <TableLabelButton
+            variant="filter"
+            icon={<IconFilterClear {...TABLE_BTN_ICON} />}
             onClick={clearFilters}
-            className={TABLE_FILTER_CLEAR_CLASS}
           >
             Clear
-          </button>
+          </TableLabelButton>
         </div>
       </div>
       {selectedCount > 0 ? (
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm text-ink-muted">{selectedCount} selected</p>
-          <button
-            type="button"
-            onClick={() => void deleteSelected()}
+          <TableLabelButton
+            variant="danger"
             disabled={pending}
-            className={dangerBtn}
+            icon={<IconTrash {...TABLE_BTN_ICON} />}
+            onClick={() => void deleteSelected()}
           >
             {pending ? "Deleting…" : "Delete"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelected(new Set())}
+          </TableLabelButton>
+          <TableLabelButton
+            variant="bulk"
             disabled={pending}
-            className={secondaryBtn}
+            icon={<IconClose {...TABLE_BTN_ICON} />}
+            onClick={() => setSelected(new Set())}
           >
             Clear
-          </button>
+          </TableLabelButton>
         </div>
       ) : null}
       {error ? (

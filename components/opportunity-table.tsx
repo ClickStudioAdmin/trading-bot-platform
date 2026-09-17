@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useCallback } from "react";
 import { ColumnHint } from "@/components/column-hint";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { IconOpen } from "@/components/icons";
 import {
   SortTh,
+  TABLE_BTN_ICON,
   TablePager,
+  TablePendingIconAction,
   useClientTable,
 } from "@/components/table-chrome";
 import { TokenIcon } from "@/components/token-icon";
@@ -260,13 +262,14 @@ function PaperOpenAction({
       <input type="hidden" name="futureSymbol" value={row.futureSymbol} />
       <input type="hidden" name="shownCapacityUsdt" value={String(row.capacityUsdt)} />
       <input type="hidden" name="next" value={paper.next} />
-      <PendingSubmitButton
+      <TablePendingIconAction
         pendingLabel="Opening"
         successKey={`open-${row.spotSymbol}-${row.futureSymbol}`}
-        className="rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink"
+        label="Open"
+        detail="Open this pair on the paper desk."
       >
-        Open
-      </PendingSubmitButton>
+        <IconOpen {...TABLE_BTN_ICON} />
+      </TablePendingIconAction>
     </form>
   );
 }

@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { IconFilterClear, IconTrash } from "@/components/icons";
 import {
   SortTh,
-  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterBar,
   TableFilterField,
+  TableIconAction,
+  TableLabelButton,
   TablePager,
   useClientTable,
 } from "@/components/table-chrome";
@@ -440,17 +443,17 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
             <option value="sell">Sell</option>
           </AppSelect>
         </TableFilterField>
-        <button
-          type="button"
+        <TableLabelButton
+          variant="filter"
+          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
           onClick={() => {
             setQuery("");
             setAction("");
             table.setPage(1);
           }}
-          className={TABLE_FILTER_CLEAR_CLASS}
         >
           Clear
-        </button>
+        </TableLabelButton>
       </TableFilterBar>
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-max text-left text-sm">
@@ -1249,7 +1252,7 @@ export function RemoveBacktestButton({
   runId,
   canRemove,
   returnTo = "/account/backtests",
-  compact = false,
+  compact: _compact = false,
   inline = false,
 }: {
   runId: string;
@@ -1281,19 +1284,26 @@ export function RemoveBacktestButton({
       }}
     >
       <input type="hidden" name="runId" value={runId} />
-      <button
-        type="submit"
-        disabled={pending}
-        className={
-          inline
-            ? "text-sm text-danger hover:underline disabled:opacity-50"
-            : compact
-              ? "rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
-              : "rounded-control border border-line px-3 py-1.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-50"
-        }
-      >
-        {pending ? "Removing…" : "Remove"}
-      </button>
+      {inline ? (
+        <TableLabelButton
+          type="submit"
+          variant="danger"
+          disabled={pending}
+          icon={<IconTrash {...TABLE_BTN_ICON} />}
+        >
+          {pending ? "Removing…" : "Remove"}
+        </TableLabelButton>
+      ) : (
+        <TableIconAction
+          type="submit"
+          danger
+          disabled={pending}
+          label="Remove"
+          detail="Delete this backtest run."
+        >
+          <IconTrash {...TABLE_BTN_ICON} />
+        </TableIconAction>
+      )}
       {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
     </form>
   );

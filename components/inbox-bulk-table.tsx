@@ -2,9 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { AppCheck } from "@/components/app-check";
+import { IconMail, IconMailOpen, IconMarkAllRead } from "@/components/icons";
 import { LocalTime } from "@/components/local-time";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { SortTh, StatusBadge } from "@/components/table-chrome";
+import {
+  SortTh,
+  StatusBadge,
+  TABLE_BTN_ICON,
+  TableIconAction,
+  TablePendingLabelButton,
+} from "@/components/table-chrome";
 import {
   markNotificationsReadAction,
   markNotificationsUnreadAction,
@@ -15,11 +21,6 @@ import {
   type InboxFilters,
   type InboxSortQuery,
 } from "@/lib/notifications/inbox";
-
-const actionLink =
-  "rounded-control border border-line px-2 py-0.5 text-xs font-medium text-accent hover:text-accent-strong disabled:opacity-40";
-const bulkAction =
-  "rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40";
 
 export type InboxTableRow = {
   id: number;
@@ -75,33 +76,33 @@ export function InboxBulkTable({
         ) : null}
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
-            <PendingSubmitButton
+            <TablePendingLabelButton
               formAction={markNotificationsReadAction}
               pendingLabel="Marking…"
               disabled={!hasSelection}
-              className={bulkAction}
+              icon={<IconMailOpen {...TABLE_BTN_ICON} />}
             >
               Mark read
-            </PendingSubmitButton>
-            <PendingSubmitButton
+            </TablePendingLabelButton>
+            <TablePendingLabelButton
               formAction={markNotificationsUnreadAction}
               pendingLabel="Marking…"
               disabled={!hasSelection}
-              className={bulkAction}
+              icon={<IconMail {...TABLE_BTN_ICON} />}
             >
               Mark unread
-            </PendingSubmitButton>
+            </TablePendingLabelButton>
           </div>
-          <PendingSubmitButton
+          <TablePendingLabelButton
             formAction={markNotificationsReadAction}
             name="all"
             value="1"
             pendingLabel="Marking…"
             disabled={unread < 1}
-            className={bulkAction}
+            icon={<IconMarkAllRead {...TABLE_BTN_ICON} />}
           >
             Mark all read
-          </PendingSubmitButton>
+          </TablePendingLabelButton>
         </div>
         <div className="overflow-x-auto rounded-card border border-line bg-surface">
           <table className="w-full min-w-[42rem] text-left text-sm">
@@ -188,15 +189,22 @@ export function InboxBulkTable({
                       />
                     </td>
                     <td className="px-4 py-3 align-top">
-                      <div className="flex flex-wrap gap-3">
-                        <button
-                          type="submit"
-                          form={`inbox-row-${row.id}`}
-                          className={actionLink}
-                        >
-                          {row.readAt ? "Mark unread" : "Mark read"}
-                        </button>
-                      </div>
+                      <TableIconAction
+                        type="submit"
+                        form={`inbox-row-${row.id}`}
+                        label={row.readAt ? "Mark unread" : "Mark read"}
+                        detail={
+                          row.readAt
+                            ? "Show this notice as unread."
+                            : "Mark this notice as read."
+                        }
+                      >
+                        {row.readAt ? (
+                          <IconMail {...TABLE_BTN_ICON} />
+                        ) : (
+                          <IconMailOpen {...TABLE_BTN_ICON} />
+                        )}
+                      </TableIconAction>
                     </td>
                   </tr>
                 ))

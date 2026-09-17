@@ -1,15 +1,24 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useMemo } from "react";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
+import {
+  IconCheck,
+  IconDownload,
+  IconFilterClear,
+  IconOpen,
+  IconReject,
+} from "@/components/icons";
 import {
   LiveGetForm,
   SortTh,
   StatusBadge,
-  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
+  TableIconAction,
+  TableLabelButton,
+  TablePendingIconAction,
+  TablePendingLabelButton,
   TablePager,
   useClientTable,
 } from "@/components/table-chrome";
@@ -159,9 +168,13 @@ export function AdminPayoutFilesTable({
             ))}
           </AppSelect>
         </TableFilterField>
-        <Link href={clearHref} className={TABLE_FILTER_CLEAR_CLASS}>
+        <TableLabelButton
+          href={clearHref}
+          variant="filter"
+          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+        >
           Clear
-        </Link>
+        </TableLabelButton>
       </LiveGetForm>
       <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[44rem] text-left text-sm">
@@ -225,25 +238,27 @@ export function AdminPayoutFilesTable({
                     />
                   </td>
                   <td className="py-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <a
+                    <div className="flex flex-wrap items-center gap-1">
+                      <TableIconAction
                         href={`/admin/affiliates/files/${file.id}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="rounded-control border border-line px-2 py-1 text-xs text-ink hover:border-line-strong"
+                        label="View details"
+                        detail="Open this file's payouts."
                       >
-                        View details
-                      </a>
-                      <a
+                        <IconOpen {...TABLE_BTN_ICON} />
+                      </TableIconAction>
+                      <TableIconAction
                         href={`/admin/affiliates/files/${file.id}/export`}
-                        className="rounded-control border border-line px-2 py-1 text-xs text-ink hover:border-line-strong"
+                        label="Download CSV"
+                        detail="Download this file as CSV."
                       >
-                        Download CSV
-                      </a>
+                        <IconDownload {...TABLE_BTN_ICON} />
+                      </TableIconAction>
                       {file.status === "pending" ? (
                         <form
                           action={markPayoutFilePaidAction}
-                          className="flex flex-wrap gap-2"
+                          className="flex flex-wrap items-center gap-2"
                         >
                           <input type="hidden" name="fileId" value={file.id} />
                           <input type="hidden" name="book" value={book} />
@@ -252,12 +267,13 @@ export function AdminPayoutFilesTable({
                             placeholder="Airdrop tx hash"
                             className="w-36 rounded-control border border-line bg-canvas px-2 py-1 text-xs text-ink"
                           />
-                          <PendingSubmitButton
+                          <TablePendingLabelButton
                             pendingLabel="…"
-                            className="rounded-control bg-accent-strong px-2 py-1 text-xs font-medium text-ink"
+                            variant="primary"
+                            icon={<IconCheck {...TABLE_BTN_ICON} />}
                           >
                             Mark file paid
-                          </PendingSubmitButton>
+                          </TablePendingLabelButton>
                         </form>
                       ) : (
                         <span className="text-xs text-ink-faint">
@@ -321,9 +337,13 @@ export function AdminPayoutQueueTable({
             ))}
           </AppSelect>
         </TableFilterField>
-        <Link href={clearHref} className={TABLE_FILTER_CLEAR_CLASS}>
+        <TableLabelButton
+          href={clearHref}
+          variant="filter"
+          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+        >
           Clear
-        </Link>
+        </TableLabelButton>
       </LiveGetForm>
       <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[44rem] text-left text-sm">
@@ -408,12 +428,14 @@ export function AdminPayoutQueueTable({
                       <form action={rejectPayoutAction}>
                         <input type="hidden" name="payoutId" value={payout.id} />
                         <input type="hidden" name="book" value={book} />
-                        <PendingSubmitButton
+                        <TablePendingIconAction
+                          danger
                           pendingLabel="…"
-                          className="rounded-control border border-line px-2 py-1 text-xs text-danger hover:border-line-strong"
+                          label="Reject"
+                          detail="Reject this payout request."
                         >
-                          Reject
-                        </PendingSubmitButton>
+                          <IconReject {...TABLE_BTN_ICON} />
+                        </TablePendingIconAction>
                       </form>
                     ) : (
                       <span className="text-ink-faint">—</span>
@@ -469,9 +491,13 @@ export function AdminPayoutFilePaymentsTable({
             ))}
           </AppSelect>
         </TableFilterField>
-        <Link href={clearHref} className={TABLE_FILTER_CLEAR_CLASS}>
+        <TableLabelButton
+          href={clearHref}
+          variant="filter"
+          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+        >
           Clear
-        </Link>
+        </TableLabelButton>
       </LiveGetForm>
       <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[52rem] text-left text-sm">

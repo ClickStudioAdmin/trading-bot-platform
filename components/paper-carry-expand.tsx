@@ -3,13 +3,17 @@
 import { ExpandableTradeRows, TradeDetailTabs } from "@/components/trade-expand";
 import { ColumnHint } from "@/components/column-hint";
 import { FuturesSourceCell } from "@/components/futures-source";
-import { PendingSubmitButton, ButtonCheckIcon, useStoredButtonSuccess } from "@/components/pending-submit-button";
-import { StatusBadge } from "@/components/table-chrome";
+import { IconClosePosition, IconUnwind } from "@/components/icons";
+import { ButtonCheckIcon, useStoredButtonSuccess } from "@/components/pending-submit-button";
+import {
+  StatusBadge,
+  TABLE_BTN_ICON,
+  TablePendingIconAction,
+} from "@/components/table-chrome";
 import { PaperAutomationTrigger } from "@/components/paper-automation-trigger";
 import { TokenIcon } from "@/components/token-icon";
 import {
   closedTradeLabel,
-  formatExitOrderType,
   formatSourceWord,
 } from "@/lib/paper/automation";
 import {
@@ -268,77 +272,44 @@ function ClosePaperButton({
     );
   }
 
-  const actionClass =
-    "rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium whitespace-nowrap text-ink";
   const auto = trade.source === "engine";
   const dynamicExit = trade.automation.exitSizeType === "dynamic";
+  const closeDetail = auto
+    ? "Close using this bot's exit settings."
+    : hideUnwind
+      ? "Close both Bybit legs at market."
+      : "Close at market.";
 
   return (
     <form
       action={closeOpenPaperCarry}
-      className="flex flex-nowrap items-center gap-2"
+      className="flex flex-nowrap items-center gap-1"
     >
       <input type="hidden" name="carryId" value={trade.id} />
       <input type="hidden" name="next" value={next} />
-      <ColumnHint
-        hint={
-          auto ? (
-            <AutoCloseHint automation={trade.automation} />
-          ) : hideUnwind ? (
-            "Close both Bybit legs at market."
-          ) : (
-            "Close at market"
-          )
-        }
-        label={
-          <PendingSubmitButton
-            name="mode"
-            value={auto && dynamicExit && !hideUnwind ? "unwind" : "market"}
-            pendingLabel="Closing"
-            successKey={closeKey}
-            className={actionClass}
-          >
-            Close
-          </PendingSubmitButton>
-        }
-      />
+      <TablePendingIconAction
+        name="mode"
+        value={auto && dynamicExit && !hideUnwind ? "unwind" : "market"}
+        pendingLabel="Closing"
+        successKey={closeKey}
+        label="Close"
+        detail={closeDetail}
+      >
+        <IconClosePosition {...TABLE_BTN_ICON} />
+      </TablePendingIconAction>
       {trade.source === "manual" && !hideUnwind ? (
-        <ColumnHint
-          hint="Unwind position over time & ASAP (based on the usable book setting)"
-          label={
-            <PendingSubmitButton
-              name="mode"
-              value="unwind"
-              pendingLabel="Unwinding"
-              successKey={closeKey}
-              className={actionClass}
-            >
-              Unwind
-            </PendingSubmitButton>
-          }
-        />
+        <TablePendingIconAction
+          name="mode"
+          value="unwind"
+          pendingLabel="Unwinding"
+          successKey={closeKey}
+          label="Unwind"
+          detail="Unwind this position over time, as soon as the usable book allows."
+        >
+          <IconUnwind {...TABLE_BTN_ICON} />
+        </TablePendingIconAction>
       ) : null}
     </form>
-  );
-}
-
-function AutoCloseHint({
-  automation,
-}: {
-  automation: MarkedPaperCarry["automation"];
-}) {
-  const orderType = formatExitOrderType(automation);
-  return (
-    <span className="block space-y-1">
-      <span className="block text-ink">
-        Close using this bot’s exit order type
-      </span>
-      {orderType ? (
-        <span className="block">{orderType}</span>
-      ) : (
-        <span className="block">No exit order type stored.</span>
-      )}
-    </span>
   );
 }
 
