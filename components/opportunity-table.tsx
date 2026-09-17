@@ -1,12 +1,76 @@
+"use client";
+
 import Link from "next/link";
+import { useCallback } from "react";
 import { ColumnHint } from "@/components/column-hint";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import {
+  SortTh,
+  TablePager,
+  useClientTable,
+} from "@/components/table-chrome";
 import { TokenIcon } from "@/components/token-icon";
 import { formatPct, signedTone } from "@/lib/opportunities/format";
 import { openPaperCarry } from "@/lib/paper/actions";
 import { OpportunityBookAndSize } from "@/components/usdt-size-input";
 import { type OpportunityPaperProps } from "@/lib/paper/open";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
+import {
+  compareTableNum,
+  compareTableText,
+  type TableSortDir,
+} from "@/lib/table-chrome";
+
+function compareNullableNum(
+  left: number | null,
+  right: number | null,
+  dir: TableSortDir,
+): number {
+  if (left === null && right === null) {
+    return 0;
+  }
+  if (left === null) {
+    return 1;
+  }
+  if (right === null) {
+    return -1;
+  }
+  return compareTableNum(left, right, dir);
+}
+
+function compareOpportunity(
+  left: ScannedOpportunity,
+  right: ScannedOpportunity,
+  key: string,
+  dir: TableSortDir,
+): number {
+  if (key === "pair") {
+    return compareTableText(
+      `${left.baseCoin} ${left.futureSymbol}`,
+      `${right.baseCoin} ${right.futureSymbol}`,
+      dir,
+    );
+  }
+  if (key === "dte") {
+    return compareTableNum(left.daysToExpiry, right.daysToExpiry, dir);
+  }
+  if (key === "basis") {
+    return compareTableNum(left.executableBasis, right.executableBasis, dir);
+  }
+  if (key === "fees") {
+    return compareTableNum(left.feeRate, right.feeRate, dir);
+  }
+  if (key === "netBasis") {
+    return compareTableNum(left.netBasis, right.netBasis, dir);
+  }
+  if (key === "netApr") {
+    return compareNullableNum(left.netApr, right.netApr, dir);
+  }
+  if (key === "book") {
+    return compareTableNum(left.capacityUsdt, right.capacityUsdt, dir);
+  }
+  return 0;
+}
 
 export function OpportunityRows({
   rows,
@@ -71,81 +135,99 @@ export function OpportunityTable({
   rows: ScannedOpportunity[];
   paper?: OpportunityPaperProps;
 }) {
+  const compare = useCallback(
+    (
+      left: ScannedOpportunity,
+      right: ScannedOpportunity,
+      key: string,
+      dir: TableSortDir,
+    ) => compareOpportunity(left, right, key, dir),
+    [],
+  );
+  const table = useClientTable(rows, compare);
+
   return (
-    <div className="overflow-x-auto rounded-card border border-line bg-surface">
-      <table className="w-full min-w-[60rem] text-left text-sm">
-        <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
-          <tr>
-            <th className="px-4 py-3 font-medium">
-              <ColumnHint
+    <div>
+      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+        <table className="w-full min-w-[60rem] text-left text-sm">
+          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+            <tr>
+              <SortTh
                 label="Pair"
-                hint="Long USDT spot and short this dated future."
+                active={table.sortKey === "pair"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("pair")}
               />
-            </th>
-            <th className="px-4 py-3 font-medium">
-              <ColumnHint
+              <SortTh
                 label="DTE"
-                hint="Days until this future expires."
+                active={table.sortKey === "dte"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("dte")}
               />
-            </th>
-            <th className="px-4 py-3 font-medium">
-              <ColumnHint
+              <SortTh
                 label="Basis"
-                hint="(future bid − spot ask) / spot ask. Touching the book, not mid or last."
+                active={table.sortKey === "basis"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("basis")}
               />
-            </th>
-            <th className="px-4 py-3 font-medium">
-              <ColumnHint
+              <SortTh
                 label="Fees + slip"
-                hint="VIP0 taker on both legs (0.155%) plus 5 bp slip. USDT expiry delivery is 0. This is the cost of one open, not a round trip."
+                active={table.sortKey === "fees"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("fees")}
               />
-            </th>
-            <th className="px-4 py-3 font-medium">
-              <ColumnHint
+              <SortTh
                 label="Net basis"
-                hint="Scan basis minus assumed VIP0 taker on both legs and 5 bp slip. After the cost model, not after Bybit’s actual bill. Paper Open still stores this as entry."
+                active={table.sortKey === "netBasis"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("netBasis")}
               />
-            </th>
-            <th className="px-4 py-3 font-medium">
-              <ColumnHint
+              <SortTh
                 label="Net APR"
-                hint="Net basis × 365 / DTE. After assumed fees and slip. Used to rank the book."
+                active={table.sortKey === "netApr"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("netApr")}
               />
-            </th>
-            <th className="px-4 py-3 font-medium">
-              <ColumnHint
+              <SortTh
                 label="Usable book"
-                hint="Your usable book share (Settings) of the top 5 book levels inside 5 bp of impact. How much size the books can take, not the full five-level book."
+                active={table.sortKey === "book"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("book")}
               />
-            </th>
-            {paper ? (
-              <>
-                <th className="px-4 py-3 font-medium">
-                  <ColumnHint
-                    label="Size USDT"
-                    hint={
-                      paper.venueOpen
-                        ? "USDT value on the bound exchange. Cannot exceed usable book. A second Open on the same pair adds to the existing position."
-                        : "Paper value to open. Cannot exceed usable book. Each Open creates a new paper row."
-                    }
-                  />
-                </th>
-                <th className="px-4 py-3 font-medium">
-                  <ColumnHint
-                    label="Actions"
-                    hint={
-                      paper.venueOpen
-                        ? "Open cash-and-carry on the bound exchange (buy spot, short the dated future). Same pair adds size."
-                        : "Open a paper carry at the live scan net basis. No Bybit order."
-                    }
-                  />
-                </th>
-              </>
-            ) : null}
-          </tr>
-        </thead>
-        <OpportunityRows rows={rows} paper={paper} />
-      </table>
+              {paper ? (
+                <>
+                  <th className="px-4 py-3 font-medium">
+                    <ColumnHint
+                      label="Size USDT"
+                      hint={
+                        paper.venueOpen
+                          ? "USDT value on the bound exchange. Cannot exceed usable book. A second Open on the same pair adds to the existing position."
+                          : "Paper value to open. Cannot exceed usable book. Each Open creates a new paper row."
+                      }
+                    />
+                  </th>
+                  <th className="px-4 py-3 font-medium">
+                    <ColumnHint
+                      label="Actions"
+                      hint={
+                        paper.venueOpen
+                          ? "Open cash-and-carry on the bound exchange (buy spot, short the dated future). Same pair adds size."
+                          : "Open a paper carry at the live scan net basis. No Bybit order."
+                      }
+                    />
+                  </th>
+                </>
+              ) : null}
+            </tr>
+          </thead>
+          <OpportunityRows rows={table.pageRows} paper={paper} />
+        </table>
+      </div>
+      <TablePager
+        window={table.window}
+        onPrev={() => table.setPage(table.window.page - 1)}
+        onNext={() => table.setPage(table.window.page + 1)}
+      />
     </div>
   );
 }

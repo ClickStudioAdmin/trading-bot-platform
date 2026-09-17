@@ -1,0 +1,56 @@
+import assert from "node:assert/strict";
+import {
+  compareTableNum,
+  compareTableText,
+  parseTablePage,
+  parseTableSortKey,
+  sliceTablePage,
+  statusToneFor,
+  tablePageLabel,
+  tablePageWindow,
+  tableSortHref,
+  toggleTableSortDir,
+} from "./table-chrome";
+
+assert.deepEqual(tablePageWindow(24, 1, 10), {
+  page: 1,
+  pageCount: 3,
+  total: 24,
+  from: 1,
+  to: 10,
+  start: 0,
+  end: 10,
+});
+assert.equal(tablePageLabel({ total: 0, from: 0, to: 0 }), "No rows.");
+assert.equal(
+  tablePageLabel({ total: 24, from: 11, to: 20 }),
+  "Showing 11–20 of 24",
+);
+assert.equal(parseTablePage("2"), 2);
+assert.equal(parseTablePage("nope"), 1);
+assert.equal(toggleTableSortDir("name", "name", "asc"), "desc");
+assert.equal(toggleTableSortDir("name", "status", "asc"), "asc");
+assert.ok(compareTableText("b", "a", "asc") > 0);
+assert.ok(compareTableNum(2, 9, "desc") > 0);
+assert.equal(sliceTablePage(["a", "b", "c"], 2, 2).rows.join(""), "c");
+assert.equal(statusToneFor("active"), "success");
+assert.equal(statusToneFor("Unpaid"), "warning");
+assert.equal(statusToneFor("error"), "danger");
+assert.equal(statusToneFor("archived"), "muted");
+assert.equal(statusToneFor("info"), "muted");
+assert.equal(parseTableSortKey("name", ["name", "date"] as const, "date"), "name");
+assert.equal(parseTableSortKey("nope", ["name", "date"] as const, "date"), "date");
+assert.equal(
+  tableSortHref({
+    pathname: "/admin/members",
+    params: { q: "ada" },
+    key: "name",
+    currentKey: "created",
+    currentDir: "desc",
+    defaultKey: "created",
+    defaultDir: "desc",
+  }),
+  "/admin/members?q=ada&sort=name",
+);
+
+console.log("table-chrome checks passed");

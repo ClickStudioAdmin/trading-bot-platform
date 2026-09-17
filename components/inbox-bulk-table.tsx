@@ -3,11 +3,17 @@
 import { useMemo, useState } from "react";
 import { LocalTime } from "@/components/local-time";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { SortTh, StatusBadge } from "@/components/table-chrome";
 import {
   markNotificationsReadAction,
   markNotificationsUnreadAction,
 } from "@/lib/notifications/actions";
-import type { InboxFilters } from "@/lib/notifications/inbox";
+import {
+  inboxPath,
+  toggleInboxSort,
+  type InboxFilters,
+  type InboxSortQuery,
+} from "@/lib/notifications/inbox";
 
 const actionLink =
   "rounded-control border border-line px-2 py-0.5 text-xs font-medium text-accent hover:text-accent-strong disabled:opacity-40";
@@ -27,11 +33,13 @@ export function InboxBulkTable({
   rows,
   page,
   filters,
+  sort,
   unread,
 }: {
   rows: InboxTableRow[];
   page: number;
   filters: InboxFilters;
+  sort: InboxSortQuery;
   unread: number;
 }) {
   const ids = useMemo(() => rows.map((row) => row.id), [rows]);
@@ -58,6 +66,12 @@ export function InboxBulkTable({
         <input type="hidden" name="status" value={filters.status} />
         <input type="hidden" name="scope" value={filters.scope} />
         <input type="hidden" name="event" value={filters.event} />
+        {sort.sort !== "date" ? (
+          <input type="hidden" name="sort" value={sort.sort} />
+        ) : null}
+        {sort.dir !== "desc" ? (
+          <input type="hidden" name="dir" value={sort.dir} />
+        ) : null}
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
             <PendingSubmitButton
@@ -102,15 +116,31 @@ export function InboxBulkTable({
                     className="size-4 accent-accent"
                   />
                 </th>
-                <th className="px-4 py-3 font-medium">Message</th>
-                <th className="px-4 py-3 font-medium">Date</th>
+                <SortTh
+                  label="Message"
+                  active={sort.sort === "message"}
+                  dir={sort.dir}
+                  href={inboxPath(1, filters, toggleInboxSort(sort, "message"))}
+                />
+                <SortTh
+                  label="Date"
+                  active={sort.sort === "date"}
+                  dir={sort.dir}
+                  href={inboxPath(1, filters, toggleInboxSort(sort, "date"))}
+                />
+                <SortTh
+                  label="Status"
+                  active={sort.sort === "status"}
+                  dir={sort.dir}
+                  href={inboxPath(1, filters, toggleInboxSort(sort, "status"))}
+                />
                 <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-sm text-ink-muted">
+                  <td colSpan={5} className="px-4 py-6 text-sm text-ink-muted">
                     No notices match these filters.
                   </td>
                 </tr>
@@ -153,6 +183,12 @@ export function InboxBulkTable({
                       <LocalTime at={row.createdAt} />
                     </td>
                     <td className="px-4 py-3 align-top">
+                      <StatusBadge
+                        label={row.readAt ? "Read" : "Unread"}
+                        status={row.readAt ? "read" : "unread"}
+                      />
+                    </td>
+                    <td className="px-4 py-3 align-top">
                       <div className="flex flex-wrap gap-3">
                         <button
                           type="submit"
@@ -189,6 +225,12 @@ export function InboxBulkTable({
             <input type="hidden" name="status" value={filters.status} />
             <input type="hidden" name="scope" value={filters.scope} />
             <input type="hidden" name="event" value={filters.event} />
+            {sort.sort !== "date" ? (
+              <input type="hidden" name="sort" value={sort.sort} />
+            ) : null}
+            {sort.dir !== "desc" ? (
+              <input type="hidden" name="dir" value={sort.dir} />
+            ) : null}
           </form>
         </div>
       ))}

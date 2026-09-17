@@ -4,6 +4,7 @@ import { ExpandableTradeRows, TradeDetailTabs } from "@/components/trade-expand"
 import { ColumnHint } from "@/components/column-hint";
 import { FuturesSourceCell } from "@/components/futures-source";
 import { PendingSubmitButton, ButtonCheckIcon, useStoredButtonSuccess } from "@/components/pending-submit-button";
+import { StatusBadge } from "@/components/table-chrome";
 import { PaperAutomationTrigger } from "@/components/paper-automation-trigger";
 import { TokenIcon } from "@/components/token-icon";
 import {
@@ -241,12 +242,16 @@ function ClosePaperButton({
       <ColumnHint
         hint="Exit already submitted. Later ticks clip to usable book until the row is flat."
         label={
-          <span className="inline-grid justify-items-center rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
-            <span className="invisible col-start-1 row-start-1">Closing</span>
-            <span className="col-start-1 row-start-1 inline-flex items-center justify-center">
-              {ok ? <ButtonCheckIcon /> : "Closing"}
+          ok ? (
+            <span className="inline-grid justify-items-center rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
+              <span className="invisible col-start-1 row-start-1">Closing</span>
+              <span className="col-start-1 row-start-1 inline-flex items-center justify-center">
+                <ButtonCheckIcon />
+              </span>
             </span>
-          </span>
+          ) : (
+            <StatusBadge label="Closing" tone="warning" />
+          )
         }
       />
     );

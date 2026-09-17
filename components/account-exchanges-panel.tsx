@@ -1,24 +1,11 @@
+import { AccountConnectionsTable } from "@/components/account-connections-table";
 import { ExchangeConnectForm } from "@/components/exchange-connect-form";
-import { RemoveConnectionControl } from "@/components/remove-connection-control";
-import { RenameConnectionControl } from "@/components/rename-connection-control";
-import { ReplaceConnectionControl } from "@/components/replace-connection-control";
-import {
-  connectionRemoveBlockers,
-  formatConnectionRemoveBlockers,
-} from "@/lib/accounts/model";
-import {
-  formatDeskBindType,
-  formatEnvironmentLabel,
-  formatVenueLabel,
-  type ExchangeConnection,
-} from "@/lib/exchanges/connections";
 import {
   listConnectionDeskBinds,
   listExchangeConnections,
-  type ConnectionDeskBind,
 } from "@/lib/exchanges/store";
 import { exchangeCredentialsConfigured } from "@/lib/exchanges/encrypt";
-import { enabledVenues, getVenue } from "@/lib/exchanges/venues";
+import { enabledVenues } from "@/lib/exchanges/venues";
 import { ACCOUNT_EXCHANGES_HREF } from "@/lib/site-links";
 
 export async function AccountExchangesPanel({
@@ -85,7 +72,7 @@ export async function AccountExchangesPanel({
         </p>
       ) : null}
 
-      <ConnectionList
+      <AccountConnectionsTable
         rows={connections}
         binds={binds}
         canReplace={canSave}
@@ -97,121 +84,3 @@ export async function AccountExchangesPanel({
   );
 }
 
-function ConnectionList({
-  rows,
-  binds,
-  canReplace,
-}: {
-  rows: ExchangeConnection[];
-  binds: ConnectionDeskBind[];
-  canReplace: boolean;
-}) {
-  if (rows.length === 0) {
-    return (
-      <p className="rounded-card border border-line bg-surface p-5 text-sm text-ink-muted">
-        No exchanges connected on this login yet.
-      </p>
-    );
-  }
-
-  return (
-    <section>
-      <div className="overflow-x-auto rounded-card border border-line bg-surface">
-        <table className="w-full min-w-[42rem] text-left text-sm">
-          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
-            <tr>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Exchange</th>
-              <th className="px-4 py-3 font-medium">Bound desks</th>
-              <th className="px-4 py-3 font-medium">Desk type</th>
-              <th className="px-4 py-3 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => {
-              const used = binds.filter(
-                (bind) => bind.connectionId === row.id,
-              );
-              const inUse = used.length > 0;
-              const removeBlocked = formatConnectionRemoveBlockers(
-                connectionRemoveBlockers({ inUse }),
-              );
-              return (
-                <tr
-                  key={row.id}
-                  className="border-b border-line last:border-b-0"
-                >
-                  <td className="px-4 py-3 align-top">
-                    {row.label ? (
-                      <p>{row.label}</p>
-                    ) : (
-                      <span className="text-ink-faint">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 align-top">
-                    <p>{formatVenueLabel(row.venue)}</p>
-                    <p className="mt-1 text-xs text-ink-faint">
-                      {formatEnvironmentLabel(row.venue, row.environment)}
-                      {" · "}
-                      Key ••••{row.fingerprint}
-                      {row.verifiedAtMs ? " · Verified" : null}
-                      {row.status === "invalid" ? " · Invalid" : null}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3 align-top">
-                    {used.length > 0 ? (
-                      <span className="flex flex-col gap-1 text-ink-muted">
-                        {used.map((bind) => (
-                          <span key={`${bind.accountId}-${bind.strategy}`}>
-                            {bind.accountName}
-                          </span>
-                        ))}
-                      </span>
-                    ) : (
-                      <span className="text-ink-faint">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 align-top">
-                    {used.length > 0 ? (
-                      <span className="flex flex-col gap-1 text-ink-muted">
-                        {used.map((bind) => (
-                          <span key={`${bind.accountId}-${bind.strategy}-type`}>
-                            {formatDeskBindType(bind.strategy)}
-                          </span>
-                        ))}
-                      </span>
-                    ) : (
-                      <span className="text-ink-faint">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 align-top">
-                    <div className="flex flex-wrap gap-3">
-                      <RenameConnectionControl
-                        connectionId={row.id}
-                        label={row.label}
-                      />
-                      {canReplace &&
-                      (getVenue(row.venue)?.credentialFields.length ?? 0) >
-                        0 ? (
-                        <ReplaceConnectionControl
-                          connectionId={row.id}
-                          credentialFields={
-                            getVenue(row.venue)?.credentialFields ?? []
-                          }
-                        />
-                      ) : null}
-                      <RemoveConnectionControl
-                        connectionId={row.id}
-                        blockedMessage={inUse ? removeBlocked : null}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}

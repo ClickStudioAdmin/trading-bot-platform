@@ -2,17 +2,23 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { InboxBulkTable } from "@/components/inbox-bulk-table";
 import { PageHeading } from "@/components/page-heading";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
+import {
+  LiveGetForm,
+  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_FILTER_FIELD_CLASS,
+  TableFilterField,
+  TablePager,
+} from "@/components/table-chrome";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { getSessionMember } from "@/lib/auth/session";
 import { resolveInboxHref } from "@/lib/notifications/hrefs";
 import {
   inboxHasFilters,
   inboxFilterTemplates,
-  inboxPageLabel,
   inboxPath,
   parseInboxFilters,
   parseInboxPage,
+  parseInboxSort,
 } from "@/lib/notifications/inbox";
 import { NOTIFICATION_LABELS, memberSettingGroups } from "@/lib/notifications/settings";
 import { firstSearchValue } from "@/lib/paper/open";
@@ -39,6 +45,7 @@ export default async function AccountNotificationsPage({
   const params = await searchParams;
   const groups = memberSettingGroups(!member.platformMember);
   const filters = parseInboxFilters(params, groups);
+  const sort = parseInboxSort(params);
   const page = parseInboxPage(firstSearchValue(params.page));
   const templates = inboxFilterTemplates(filters, groups);
   const events = groups.flatMap((group) =>
@@ -48,12 +55,14 @@ export default async function AccountNotificationsPage({
     listUserNotificationPage(member.id, page, undefined, {
       status: filters.status,
       templates,
+      sort: sort.sort,
+      dir: sort.dir,
     }),
     countUnreadUserNotifications(member.id),
     listTradingAccounts(member.id),
   ]);
   if (page !== list.page) {
-    redirect(inboxPath(list.page, filters));
+    redirect(inboxPath(list.page, filters, sort));
   }
   const rows = list.rows.map((row) => ({
     id: row.id,
@@ -84,69 +93,57 @@ export default async function AccountNotificationsPage({
         </Link>
         .
       </p>
-      <form
-        method="get"
-        className="mt-6 rounded-card border border-line bg-surface p-4"
-      >
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="block text-xs text-ink-muted">
-            Status
-            <select
-              name="status"
-              defaultValue={filters.status}
-              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-            >
-              <option value="">All</option>
-              <option value="unread">Unread</option>
-              <option value="read">Read</option>
-            </select>
-          </label>
-          <label className="block text-xs text-ink-muted">
-            Scope
-            <select
-              name="scope"
-              defaultValue={filters.scope}
-              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-            >
-              <option value="">All</option>
-              {groups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-xs text-ink-muted">
-            Event
-            <select
-              name="event"
-              defaultValue={filters.event}
-              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-            >
-              <option value="">All</option>
-              {events.map((id) => (
-                <option key={id} value={id}>
-                  {NOTIFICATION_LABELS[id]}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <PendingSubmitButton
-            pendingLabel="Applying…"
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+      <LiveGetForm>
+        <input type="hidden" name="page" value="1" />
+        {sort.sort !== "date" ? (
+          <input type="hidden" name="sort" value={sort.sort} />
+        ) : null}
+        {sort.dir !== "desc" ? (
+          <input type="hidden" name="dir" value={sort.dir} />
+        ) : null}
+        <TableFilterField label="Status">
+          <select
+            name="status"
+            defaultValue={filters.status}
+            className={TABLE_FILTER_FIELD_CLASS}
           >
-            Apply filters
-          </PendingSubmitButton>
-          <Link
-            href="/account/notifications"
-            className="rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            <option value="">All</option>
+            <option value="unread">Unread</option>
+            <option value="read">Read</option>
+          </select>
+        </TableFilterField>
+        <TableFilterField label="Scope">
+          <select
+            name="scope"
+            defaultValue={filters.scope}
+            className={TABLE_FILTER_FIELD_CLASS}
           >
-            Clear
-          </Link>
-        </div>
-      </form>
+            <option value="">All</option>
+            {groups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.label}
+              </option>
+            ))}
+          </select>
+        </TableFilterField>
+        <TableFilterField label="Event">
+          <select
+            name="event"
+            defaultValue={filters.event}
+            className={TABLE_FILTER_FIELD_CLASS}
+          >
+            <option value="">All</option>
+            {events.map((id) => (
+              <option key={id} value={id}>
+                {NOTIFICATION_LABELS[id]}
+              </option>
+            ))}
+          </select>
+        </TableFilterField>
+        <Link href="/account/notifications" className={TABLE_FILTER_CLEAR_CLASS}>
+          Clear
+        </Link>
+      </LiveGetForm>
       {list.total === 0 && !filteredEmpty ? (
         <p className="mt-6 rounded-card border border-line bg-surface px-5 py-6 text-sm text-ink-muted">
           No notices yet.
@@ -157,54 +154,17 @@ export default async function AccountNotificationsPage({
             rows={rows}
             page={list.page}
             filters={filters}
+            sort={sort}
             unread={unread}
           />
-          <InboxPager list={list} filters={filters} />
+          <TablePager
+            window={list}
+            prevHref={inboxPath(list.page - 1, filters, sort)}
+            nextHref={inboxPath(list.page + 1, filters, sort)}
+            emptyLabel="No notices."
+          />
         </div>
       )}
-    </div>
-  );
-}
-
-function InboxPager({
-  list,
-  filters,
-}: {
-  list: {
-    page: number;
-    pageCount: number;
-    total: number;
-    from: number;
-    to: number;
-  };
-  filters: Parameters<typeof inboxPath>[1];
-}) {
-  if (list.total === 0) {
-    return null;
-  }
-  return (
-    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-ink-muted">
-      <p>{inboxPageLabel(list)}</p>
-      {list.pageCount > 1 ? (
-        <div className="flex gap-2">
-          {list.page > 1 ? (
-            <Link
-              href={inboxPath(list.page - 1, filters)}
-              className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-            >
-              Previous
-            </Link>
-          ) : null}
-          {list.page < list.pageCount ? (
-            <Link
-              href={inboxPath(list.page + 1, filters)}
-              className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-            >
-              Next
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
     </div>
   );
 }

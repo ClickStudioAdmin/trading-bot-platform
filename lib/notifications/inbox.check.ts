@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  DEFAULT_INBOX_SORT,
   EMPTY_INBOX_FILTERS,
   INBOX_PAGE_SIZE,
   inboxFilterTemplates,
@@ -10,6 +11,8 @@ import {
   markReadSelection,
   parseInboxFilters,
   parseInboxPage,
+  parseInboxSort,
+  toggleInboxSort,
 } from "./inbox";
 import { MEMBER_NOTIFICATION_GROUPS } from "./settings";
 
@@ -61,6 +64,28 @@ assert.equal(
   inboxPath(2, { status: "unread", scope: "desk", event: "desk_sync_failed" }),
   "/account/notifications?status=unread&scope=desk&event=desk_sync_failed&page=2",
 );
+assert.equal(
+  inboxPath(1, EMPTY_INBOX_FILTERS, DEFAULT_INBOX_SORT),
+  "/account/notifications",
+);
+assert.equal(
+  inboxPath(2, { status: "unread", scope: "", event: "" }, { sort: "message", dir: "asc" }),
+  "/account/notifications?status=unread&sort=message&dir=asc&page=2",
+);
+assert.deepEqual(parseInboxSort({}), DEFAULT_INBOX_SORT);
+assert.deepEqual(parseInboxSort({ sort: "status", dir: "asc" }), {
+  sort: "status",
+  dir: "asc",
+});
+assert.deepEqual(parseInboxSort({ sort: "nope" }), DEFAULT_INBOX_SORT);
+assert.deepEqual(toggleInboxSort(DEFAULT_INBOX_SORT, "date"), {
+  sort: "date",
+  dir: "asc",
+});
+assert.deepEqual(toggleInboxSort(DEFAULT_INBOX_SORT, "message"), {
+  sort: "message",
+  dir: "asc",
+});
 assert.equal(inboxHasFilters(EMPTY_INBOX_FILTERS), false);
 assert.equal(
   inboxHasFilters({ status: "unread", scope: "", event: "" }),
@@ -68,7 +93,14 @@ assert.equal(
 );
 
 const parsed = parseInboxFilters(
-  { status: "unread", scope: "desk", event: "desk_sync_failed", page: "2" },
+  {
+    status: "unread",
+    scope: "desk",
+    event: "desk_sync_failed",
+    page: "2",
+    sort: "message",
+    dir: "asc",
+  },
   MEMBER_NOTIFICATION_GROUPS,
 );
 assert.deepEqual(parsed, {

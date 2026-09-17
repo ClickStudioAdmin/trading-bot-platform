@@ -45,6 +45,7 @@ export default async function FuturesActivityPage({
           clearHref={deskHref(FUTURES_PATHS.activity, session.account.id)}
           showUser={false}
           scopes={["strategy", "trade"]}
+          hidden={{ desk: session.account.id }}
         />
       ) : (
         <p className="text-sm text-ink-muted">

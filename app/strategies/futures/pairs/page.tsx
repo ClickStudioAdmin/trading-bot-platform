@@ -7,6 +7,7 @@ import {
   type LinearPerp,
 } from "@/lib/exchanges/bybit/perp";
 import { PairPager } from "@/components/pair-pager";
+import { SortTh } from "@/components/table-chrome";
 import { formatMarketCap, loadMarketCaps } from "@/lib/market/caps";
 import {
   applyPairFilters,
@@ -15,9 +16,12 @@ import {
   parsePairFilters,
 } from "@/lib/pairs/filter";
 import {
+  PAIR_SORTS,
   paginatePairRows,
   pairPageHref,
-  sortByMarketCap,
+  pairSortHref,
+  parsePairSort,
+  sortPairRows,
 } from "@/lib/pairs/page";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { deskHref, deskIsCopy } from "@/lib/accounts/model";
@@ -59,14 +63,14 @@ export default async function FuturesPairsPage({
     base: pair.baseCoin,
   }));
   const active = pairFiltersAreActive(filters);
+  const { sort, dir } = parsePairSort(params, PAIR_SORTS.futures);
   const caps = await loadMarketCaps();
-  const ranked = sortByMarketCap(
-    visible,
-    (pair) => caps.get(pair.baseCoin) ?? null,
-    (left, right) =>
-      left.baseCoin.localeCompare(right.baseCoin) ||
-      left.symbol.localeCompare(right.symbol),
-  );
+  const ranked = sortPairRows(visible, sort, dir, {
+    base: (pair) => pair.baseCoin,
+    contract: (pair) => pair.symbol,
+    quote: (pair) => pair.quoteCoin,
+    cap: (pair) => caps.get(pair.baseCoin) ?? null,
+  });
   const list = paginatePairRows(ranked, params.page);
   const deskId = session?.account.id;
   const hrefFor = (page: number) =>
@@ -75,6 +79,17 @@ export default async function FuturesPairsPage({
       deskId,
       filters,
       page,
+      sort,
+      dir,
+    });
+  const sortHref = (key: string) =>
+    pairSortHref({
+      path: FUTURES_PATHS.pairs,
+      deskId,
+      filters,
+      key,
+      currentKey: sort,
+      currentDir: dir,
     });
 
   return (
@@ -88,6 +103,8 @@ export default async function FuturesPairsPage({
         clearHref={deskHref(FUTURES_PATHS.pairs, session?.account.id)}
         deskId={session?.account.id}
         values={pairFilterInputValues(filters)}
+        sort={sort}
+        dir={dir}
       />
       {error ? (
         <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -95,11 +112,6 @@ export default async function FuturesPairsPage({
         </p>
       ) : (
         <div className="mt-6 space-y-2">
-          <p className="text-sm text-ink-muted">
-            {active
-              ? `${visible.length} of ${pairs.length} pairs`
-              : `${pairs.length} pairs`}
-          </p>
           {visible.length === 0 ? (
             <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
               {active
@@ -111,10 +123,30 @@ export default async function FuturesPairsPage({
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
                   <tr>
-                    <th className="px-4 py-3 font-medium">Base</th>
-                    <th className="px-4 py-3 font-medium">Contract</th>
-                    <th className="px-4 py-3 font-medium">Quote</th>
-                    <th className="px-4 py-3 font-medium">Market cap</th>
+                    <SortTh
+                      label="Base"
+                      active={sort === "base"}
+                      dir={dir}
+                      href={sortHref("base")}
+                    />
+                    <SortTh
+                      label="Contract"
+                      active={sort === "contract"}
+                      dir={dir}
+                      href={sortHref("contract")}
+                    />
+                    <SortTh
+                      label="Quote"
+                      active={sort === "quote"}
+                      dir={dir}
+                      href={sortHref("quote")}
+                    />
+                    <SortTh
+                      label="Market cap"
+                      active={sort === "cap"}
+                      dir={dir}
+                      href={sortHref("cap")}
+                    />
                   </tr>
                 </thead>
                 <tbody>

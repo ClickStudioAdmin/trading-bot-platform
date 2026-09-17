@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminMembersTable } from "@/components/admin-members-table";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { PageHeading } from "@/components/page-heading";
+import {
+  LiveGetForm,
+  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_FILTER_FIELD_CLASS,
+  TableFilterField,
+  TablePager,
+} from "@/components/table-chrome";
 import { listMembers } from "@/lib/members/list";
 import { listMembershipPlans } from "@/lib/membership/store";
 import { firstSearchValue } from "@/lib/paper/open";
@@ -11,6 +17,7 @@ import {
   memberListHref,
   parseMemberListQuery,
 } from "@/lib/members/query";
+import { tablePageWindow } from "@/lib/table-chrome";
 
 export const metadata: Metadata = {
   title: "Members",
@@ -32,6 +39,7 @@ export default async function AdminMembersPage({
   const created = firstSearchValue(params.created) === "1";
   const updated = firstSearchValue(params.updated) === "1";
   const error = firstSearchValue(params.error);
+  const window = tablePageWindow(list.total, list.page, MEMBER_PAGE_SIZE);
 
   return (
     <div>
@@ -59,93 +67,56 @@ export default async function AdminMembersPage({
         <p className="mt-4 text-sm text-success">Member saved.</p>
       ) : null}
 
-      <form
-        method="get"
-        className="mt-6 rounded-card border border-line bg-surface p-4"
-      >
+      <LiveGetForm>
+        <input type="hidden" name="page" value="1" />
         {query.sort !== "created" ? (
           <input type="hidden" name="sort" value={query.sort} />
         ) : null}
         {query.dir !== "desc" ? (
           <input type="hidden" name="dir" value={query.dir} />
         ) : null}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="block text-xs text-ink-muted">
-            Search
-            <input
-              name="q"
-              defaultValue={query.q}
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-            />
-          </label>
-          <label className="block text-xs text-ink-muted">
-            Role
-            <select
-              name="role"
-              defaultValue={query.role}
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-            >
-              <option value="">All</option>
-              <option value="member">Member</option>
-              <option value="admin">Admin</option>
-            </select>
-          </label>
-          <label className="block text-xs text-ink-muted">
-            Status
-            <select
-              name="status"
-              defaultValue={query.status}
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-            >
-              <option value="">All</option>
-              <option value="active">Active</option>
-              <option value="disabled">Disabled</option>
-            </select>
-          </label>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <PendingSubmitButton
-            pendingLabel="Applying…"
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+        <TableFilterField label="Search">
+          <input
+            name="q"
+            defaultValue={query.q}
+            className={TABLE_FILTER_FIELD_CLASS}
+          />
+        </TableFilterField>
+        <TableFilterField label="Role">
+          <select
+            name="role"
+            defaultValue={query.role}
+            className={TABLE_FILTER_FIELD_CLASS}
           >
-            Apply filters
-          </PendingSubmitButton>
-          <Link
-            href="/admin/members"
-            className="rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            <option value="">All</option>
+            <option value="member">Member</option>
+            <option value="admin">Admin</option>
+          </select>
+        </TableFilterField>
+        <TableFilterField label="Status">
+          <select
+            name="status"
+            defaultValue={query.status}
+            className={TABLE_FILTER_FIELD_CLASS}
           >
-            Clear
-          </Link>
-        </div>
-      </form>
+            <option value="">All</option>
+            <option value="active">Active</option>
+            <option value="disabled">Disabled</option>
+          </select>
+        </TableFilterField>
+        <Link href="/admin/members" className={TABLE_FILTER_CLEAR_CLASS}>
+          Clear
+        </Link>
+      </LiveGetForm>
 
       <AdminMembersTable rows={list.rows} query={query} planNames={planNames} />
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-ink-muted">
-        <p>
-          {list.total === 0
-            ? "No members."
-            : `Showing ${(list.page - 1) * MEMBER_PAGE_SIZE + 1}–${Math.min(list.page * MEMBER_PAGE_SIZE, list.total)} of ${list.total}`}
-        </p>
-        <div className="flex gap-2">
-          {list.page > 1 ? (
-            <Link
-              href={memberListHref(query, { page: list.page - 1 })}
-              className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-            >
-              Previous
-            </Link>
-          ) : null}
-          {list.page < list.pageCount ? (
-            <Link
-              href={memberListHref(query, { page: list.page + 1 })}
-              className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-            >
-              Next
-            </Link>
-          ) : null}
-        </div>
-      </div>
+      <TablePager
+        window={window}
+        prevHref={memberListHref(query, { page: list.page - 1 })}
+        nextHref={memberListHref(query, { page: list.page + 1 })}
+        emptyLabel="No members."
+      />
     </div>
   );
 }

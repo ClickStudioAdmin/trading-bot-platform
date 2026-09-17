@@ -1,7 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
+import { SortTh, TablePager, useClientTable } from "@/components/table-chrome";
 import { TpslPair } from "@/components/futures-tpsl";
 import { LocalTime } from "@/components/local-time";
 import { TokenIcon } from "@/components/token-icon";
@@ -27,10 +28,134 @@ import {
   formatUsd,
   signedTone,
 } from "@/lib/opportunities/format";
+import {
+  compareTableNum,
+  compareTableText,
+  type TableSortDir,
+} from "@/lib/table-chrome";
 
 const OPEN_COL_SPAN_DCA = 14;
 const OPEN_COL_SPAN = 13;
 const CLOSED_COL_SPAN = 11;
+
+function compareNullableNum(
+  left: number | null,
+  right: number | null,
+  dir: TableSortDir,
+): number {
+  if (left === null && right === null) {
+    return 0;
+  }
+  if (left === null) {
+    return 1;
+  }
+  if (right === null) {
+    return -1;
+  }
+  return compareTableNum(left, right, dir);
+}
+
+function compareOpenCycle(
+  left: BacktestPositionCycle,
+  right: BacktestPositionCycle,
+  key: string,
+  dir: TableSortDir,
+  mark: number | null,
+  leverage: number | null,
+): number {
+  if (key === "contract") {
+    return 0;
+  }
+  if (key === "side") {
+    return compareTableText(left.side, right.side, dir);
+  }
+  if (key === "qty") {
+    return compareTableNum(left.qty, right.qty, dir);
+  }
+  if (key === "value") {
+    return compareTableNum(left.notionalUsdt, right.notionalUsdt, dir);
+  }
+  if (key === "entry") {
+    return compareTableNum(left.entryPrice, right.entryPrice, dir);
+  }
+  if (key === "mark") {
+    return compareNullableNum(mark, mark, dir);
+  }
+  if (key === "unrealized") {
+    return compareNullableNum(
+      backtestCycleUnrealizedUsdt(left, mark),
+      backtestCycleUnrealizedUsdt(right, mark),
+      dir,
+    );
+  }
+  if (key === "pnl") {
+    const leftU = backtestCycleUnrealizedUsdt(left, mark);
+    const rightU = backtestCycleUnrealizedUsdt(right, mark);
+    return compareNullableNum(
+      leftU != null && left.notionalUsdt > 0 ? leftU / left.notionalUsdt : null,
+      rightU != null && right.notionalUsdt > 0
+        ? rightU / right.notionalUsdt
+        : null,
+      dir,
+    );
+  }
+  if (key === "leverage") {
+    return compareNullableNum(leverage, leverage, dir);
+  }
+  return 0;
+}
+
+function compareClosedCycle(
+  left: BacktestPositionCycle,
+  right: BacktestPositionCycle,
+  key: string,
+  dir: TableSortDir,
+  leverage: number | null,
+): number {
+  if (key === "side") {
+    return compareTableText(left.side, right.side, dir);
+  }
+  if (key === "value") {
+    return compareTableNum(left.notionalUsdt, right.notionalUsdt, dir);
+  }
+  if (key === "closed") {
+    return compareNullableNum(left.closedAtMs, right.closedAtMs, dir);
+  }
+  if (key === "days") {
+    return compareNullableNum(
+      futuresDaysHeld(left.openedAtMs, left.closedAtMs),
+      futuresDaysHeld(right.openedAtMs, right.closedAtMs),
+      dir,
+    );
+  }
+  if (key === "entry") {
+    return compareTableNum(left.entryPrice, right.entryPrice, dir);
+  }
+  if (key === "exit") {
+    return compareNullableNum(left.exitPrice, right.exitPrice, dir);
+  }
+  if (key === "realized") {
+    return compareTableNum(left.realizedUsdt, right.realizedUsdt, dir);
+  }
+  if (key === "pnl") {
+    return compareNullableNum(
+      left.notionalUsdt > 0 ? left.realizedUsdt / left.notionalUsdt : null,
+      right.notionalUsdt > 0 ? right.realizedUsdt / right.notionalUsdt : null,
+      dir,
+    );
+  }
+  if (key === "roe") {
+    return compareNullableNum(
+      roePct(left.realizedUsdt, positionMarginUsdt(left.notionalUsdt, leverage)),
+      roePct(
+        right.realizedUsdt,
+        positionMarginUsdt(right.notionalUsdt, leverage),
+      ),
+      dir,
+    );
+  }
+  return 0;
+}
 
 export function BacktestPositionsTable({
   run,
@@ -106,6 +231,16 @@ function OpenBacktestPositions({
   onSelectCycle?: (id: string) => void;
 }) {
   const colSpan = dca ? OPEN_COL_SPAN_DCA : OPEN_COL_SPAN;
+  const compare = useCallback(
+    (
+      left: BacktestPositionCycle,
+      right: BacktestPositionCycle,
+      key: string,
+      dir: TableSortDir,
+    ) => compareOpenCycle(left, right, key, dir, mark, run.leverage),
+    [mark, run.leverage],
+  );
+  const table = useClientTable(cycles, compare);
   return (
     <section>
       <SectionHead
@@ -122,15 +257,18 @@ function OpenBacktestPositions({
                   hint="Expand for orders and the event log for this position."
                 />
               </th>
-              <th className="px-3 py-3 font-medium">
-                <ColumnHint label="Contract" hint="USDT linear perpetual." />
-              </th>
-              <th className="px-3 py-3 font-medium">
-                <ColumnHint
-                  label="Side"
-                  hint="Long or short. Both can be open on the same contract."
-                />
-              </th>
+              <SortTh
+                label="Contract"
+                active={table.sortKey === "contract"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("contract")}
+              />
+              <SortTh
+                label="Side"
+                active={table.sortKey === "side"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("side")}
+              />
               {dca ? (
                 <th className="px-3 py-3 font-medium">
                   <ColumnHint
@@ -139,45 +277,48 @@ function OpenBacktestPositions({
                   />
                 </th>
               ) : null}
-              <th className="px-3 py-3 font-medium">
-                <ColumnHint label="Qty" hint="Base-coin size on this row." />
-              </th>
-              <th className="px-2 py-3 font-medium">
-                <ColumnHint
-                  label="Value"
-                  hint="Qty × entry. P&L scales with this amount."
-                />
-              </th>
-              <th className="px-2 py-3 font-medium">
-                <ColumnHint
-                  label="Entry"
-                  hint="Size-weighted average fill price."
-                />
-              </th>
-              <th className="px-2 py-3 font-medium">
-                <ColumnHint
-                  label="Mark"
-                  hint="Last close on the replay tape."
-                />
-              </th>
-              <th className="px-2 py-3 font-medium">
-                <ColumnHint
-                  label="Unrealized"
-                  hint="Mark-to-market versus entry at the last bar."
-                />
-              </th>
-              <th className="px-3 py-3 font-medium">
-                <ColumnHint
-                  label="P&L %"
-                  hint="Unrealized ÷ value. Not annualized."
-                />
-              </th>
-              <th className="px-3 py-3 font-medium">
-                <ColumnHint
-                  label="Leverage"
-                  hint="Leverage used for this run’s margin book."
-                />
-              </th>
+              <SortTh
+                label="Qty"
+                active={table.sortKey === "qty"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("qty")}
+              />
+              <SortTh
+                label="Value"
+                active={table.sortKey === "value"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("value")}
+              />
+              <SortTh
+                label="Entry"
+                active={table.sortKey === "entry"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("entry")}
+              />
+              <SortTh
+                label="Mark"
+                active={table.sortKey === "mark"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("mark")}
+              />
+              <SortTh
+                label="Unrealized"
+                active={table.sortKey === "unrealized"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("unrealized")}
+              />
+              <SortTh
+                label="P&L %"
+                active={table.sortKey === "pnl"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("pnl")}
+              />
+              <SortTh
+                label="Leverage"
+                active={table.sortKey === "leverage"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("leverage")}
+              />
               <th className="px-2 py-3 font-medium">
                 <ColumnHint
                   label="Liq"
@@ -199,13 +340,13 @@ function OpenBacktestPositions({
             </tr>
           </thead>
           <tbody>
-            {cycles.length === 0 ? (
+            {table.pageRows.length === 0 ? (
               <EmptyRow
                 colSpan={colSpan}
                 message="No open position at the end of this run."
               />
             ) : (
-              cycles.map((cycle) => (
+              table.pageRows.map((cycle) => (
                 <OpenBacktestRows
                   key={cycle.id}
                   run={run}
@@ -225,6 +366,11 @@ function OpenBacktestPositions({
           </tbody>
         </table>
       </div>
+      <TablePager
+        window={table.window}
+        onPrev={() => table.setPage(table.window.page - 1)}
+        onNext={() => table.setPage(table.window.page + 1)}
+      />
     </section>
   );
 }
@@ -242,6 +388,16 @@ function ClosedBacktestPositions({
   focusCycleId: string | null;
   onSelectCycle?: (id: string) => void;
 }) {
+  const compare = useCallback(
+    (
+      left: BacktestPositionCycle,
+      right: BacktestPositionCycle,
+      key: string,
+      dir: TableSortDir,
+    ) => compareClosedCycle(left, right, key, dir, run.leverage),
+    [run.leverage],
+  );
+  const table = useClientTable(cycles, compare);
   return (
     <section>
       <SectionHead
@@ -258,76 +414,76 @@ function ClosedBacktestPositions({
                   hint="Expand for orders and the event log for this position."
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Contract"
-                  hint="USDT linear perpetual that was closed."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Side"
-                  hint="Long or short. Direction Both can close both."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Value"
-                  hint="Qty × entry. P&L % and ROE use this amount."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Closed"
-                  hint="Local date this row was closed. Hover for UTC."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Days held"
-                  hint="(closed time − opened time) in days."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Entry"
-                  hint="Size-weighted average fill price of the open orders."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Exit"
-                  hint="Close fill price on the replay tape."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Realized"
-                  hint="P&L from entry to close fill, minus fees on the flatten."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="P&L %"
-                  hint="Realized ÷ position value (qty × entry)."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="ROE"
-                  hint="Realized ÷ initial margin (position value ÷ leverage)."
-                />
-              </th>
+              <SortTh
+                label="Contract"
+                active={table.sortKey === "contract"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("contract")}
+              />
+              <SortTh
+                label="Side"
+                active={table.sortKey === "side"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("side")}
+              />
+              <SortTh
+                label="Value"
+                active={table.sortKey === "value"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("value")}
+              />
+              <SortTh
+                label="Closed"
+                active={table.sortKey === "closed"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("closed")}
+              />
+              <SortTh
+                label="Days held"
+                active={table.sortKey === "days"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("days")}
+              />
+              <SortTh
+                label="Entry"
+                active={table.sortKey === "entry"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("entry")}
+              />
+              <SortTh
+                label="Exit"
+                active={table.sortKey === "exit"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("exit")}
+              />
+              <SortTh
+                label="Realized"
+                active={table.sortKey === "realized"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("realized")}
+              />
+              <SortTh
+                label="P&L %"
+                active={table.sortKey === "pnl"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("pnl")}
+              />
+              <SortTh
+                label="ROE"
+                active={table.sortKey === "roe"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("roe")}
+              />
             </tr>
           </thead>
           <tbody>
-            {cycles.length === 0 ? (
+            {table.pageRows.length === 0 ? (
               <EmptyRow
                 colSpan={CLOSED_COL_SPAN}
                 message="No closed positions on this run."
               />
             ) : (
-              cycles.map((cycle) => (
+              table.pageRows.map((cycle) => (
                 <ClosedBacktestRows
                   key={cycle.id}
                   run={run}
@@ -343,6 +499,11 @@ function ClosedBacktestPositions({
           </tbody>
         </table>
       </div>
+      <TablePager
+        window={table.window}
+        onPrev={() => table.setPage(table.window.page - 1)}
+        onNext={() => table.setPage(table.window.page + 1)}
+      />
     </section>
   );
 }

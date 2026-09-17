@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
+import { SortTh, TablePager, useClientTable } from "@/components/table-chrome";
 import { LocalTime } from "@/components/local-time";
 import { OpenStats } from "@/components/open-stats";
 import { PositionLogList } from "@/components/paper-carry-expand";
@@ -30,7 +31,11 @@ import type { MarkedFutures } from "@/lib/futures/mark";
 import { useLiveMarkedOpen } from "@/components/live-ticker";
 import { formatLeverage } from "@/lib/futures/venue-risk";
 import type { FuturesOrder, FuturesTradeSource } from "@/lib/futures/model";
-import { formatFuturesOrigin, resolveOrderOrigin } from "@/lib/futures/source";
+import {
+  formatFuturesOrigin,
+  formatFuturesSourceKind,
+  resolveOrderOrigin,
+} from "@/lib/futures/source";
 import {
   effectiveLeverage,
   annualizeReturnPct,
@@ -57,6 +62,11 @@ import {
   signedTone,
 } from "@/lib/opportunities/format";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
+import {
+  compareTableNum,
+  compareTableText,
+  type TableSortDir,
+} from "@/lib/table-chrome";
 
 export function FuturesOpenStats({
   signedIn,
@@ -78,6 +88,156 @@ export function FuturesOpenStats({
       exposure={futuresOpenExposure(rows)}
     />
   );
+}
+
+function compareNullableNum(
+  left: number | null,
+  right: number | null,
+  dir: TableSortDir,
+): number {
+  if (left === null && right === null) {
+    return 0;
+  }
+  if (left === null) {
+    return 1;
+  }
+  if (right === null) {
+    return -1;
+  }
+  return compareTableNum(left, right, dir);
+}
+
+function sourceSortText(
+  source: FuturesTradeSource,
+  ruleName: string | null,
+  webhookNames: readonly string[],
+): string {
+  return `${formatFuturesSourceKind(source, ruleName, webhookNames)} ${ruleName ?? ""}`;
+}
+
+function compareOpenFutures(
+  left: MarkedFutures,
+  right: MarkedFutures,
+  key: string,
+  dir: TableSortDir,
+  webhookNames: readonly string[],
+): number {
+  if (key === "contract") {
+    return compareTableText(left.symbol, right.symbol, dir);
+  }
+  if (key === "source") {
+    return compareTableText(
+      sourceSortText(left.source, left.ruleName, webhookNames),
+      sourceSortText(right.source, right.ruleName, webhookNames),
+      dir,
+    );
+  }
+  if (key === "side") {
+    return compareTableText(left.side, right.side, dir);
+  }
+  if (key === "qty") {
+    return compareTableNum(left.qty, right.qty, dir);
+  }
+  if (key === "value") {
+    return compareTableNum(left.notionalUsdt, right.notionalUsdt, dir);
+  }
+  if (key === "entry") {
+    return compareTableNum(left.entryPrice, right.entryPrice, dir);
+  }
+  if (key === "mark") {
+    return compareNullableNum(left.mark, right.mark, dir);
+  }
+  if (key === "unrealized") {
+    return compareNullableNum(left.unrealizedUsdt, right.unrealizedUsdt, dir);
+  }
+  if (key === "pnl") {
+    const leftPct =
+      left.unrealizedUsdt === null || left.notionalUsdt <= 0
+        ? null
+        : left.unrealizedUsdt / left.notionalUsdt;
+    const rightPct =
+      right.unrealizedUsdt === null || right.notionalUsdt <= 0
+        ? null
+        : right.unrealizedUsdt / right.notionalUsdt;
+    return compareNullableNum(leftPct, rightPct, dir);
+  }
+  if (key === "leverage") {
+    return compareNullableNum(left.leverage, right.leverage, dir);
+  }
+  if (key === "liq") {
+    return compareNullableNum(left.liqPrice, right.liqPrice, dir);
+  }
+  return 0;
+}
+
+function compareClosedFutures(
+  left: FuturesDeskPosition,
+  right: FuturesDeskPosition,
+  key: string,
+  dir: TableSortDir,
+  webhookNames: readonly string[],
+  fallbackLeverage: number | null,
+): number {
+  if (key === "contract") {
+    return compareTableText(left.symbol, right.symbol, dir);
+  }
+  if (key === "source") {
+    return compareTableText(
+      sourceSortText(left.source, left.ruleName, webhookNames),
+      sourceSortText(right.source, right.ruleName, webhookNames),
+      dir,
+    );
+  }
+  if (key === "closed") {
+    return compareNullableNum(left.closedAtMs, right.closedAtMs, dir);
+  }
+  if (key === "days") {
+    return compareNullableNum(
+      futuresDaysHeld(left.openedAtMs, left.closedAtMs),
+      futuresDaysHeld(right.openedAtMs, right.closedAtMs),
+      dir,
+    );
+  }
+  if (key === "entry") {
+    return compareTableNum(left.entryPrice, right.entryPrice, dir);
+  }
+  if (key === "exit") {
+    return compareNullableNum(
+      flattenExitPrice(left.orders),
+      flattenExitPrice(right.orders),
+      dir,
+    );
+  }
+  if (key === "realized") {
+    return compareTableNum(left.realizedUsdt, right.realizedUsdt, dir);
+  }
+  if (key === "pnl") {
+    return compareNullableNum(
+      left.notionalUsdt > 0 ? left.realizedUsdt / left.notionalUsdt : null,
+      right.notionalUsdt > 0 ? right.realizedUsdt / right.notionalUsdt : null,
+      dir,
+    );
+  }
+  if (key === "roe") {
+    return compareNullableNum(
+      roePct(
+        left.realizedUsdt,
+        positionMarginUsdt(
+          left.notionalUsdt,
+          effectiveLeverage(left.leverage, fallbackLeverage),
+        ),
+      ),
+      roePct(
+        right.realizedUsdt,
+        positionMarginUsdt(
+          right.notionalUsdt,
+          effectiveLeverage(right.leverage, fallbackLeverage),
+        ),
+      ),
+      dir,
+    );
+  }
+  return 0;
 }
 
 export function OpenFuturesTrades({
@@ -118,6 +278,12 @@ export function OpenFuturesTrades({
     ? { ...storedVisible, tpsl: false, trailing: false }
     : storedVisible;
   const rows = useLiveMarkedOpen(open);
+  const compare = useCallback(
+    (left: MarkedFutures, right: MarkedFutures, key: string, dir: TableSortDir) =>
+      compareOpenFutures(left, right, key, dir, webhookNames),
+    [webhookNames],
+  );
+  const table = useClientTable(rows, compare);
   const colSpan = futuresOpenColumnCount(
     visible,
     showDcaColumns ? FUTURES_DCA_OPEN_COLUMN_COUNT : 0,
@@ -171,21 +337,24 @@ export function OpenFuturesTrades({
                   hint="Expand for orders and the event log for this position."
                 />
               </th>
-              <th className="px-3 py-3 font-medium">
-                <ColumnHint
-                  label="Contract"
-                  hint="USDT linear perpetual."
-                />
-              </th>
-              <th className="px-3 py-3 font-medium">
-                <ColumnHint
-                  label="Source"
-                  hint="Manual is a desk click. Auto is an automation. Webhook is a TradingView strategy fill. The name is the rule or webhook that opened this row."
-                />
-              </th>
-              <th className="px-3 py-3 font-medium">
-                <ColumnHint label="Side" hint="Long or short. Both can be open on the same contract." />
-              </th>
+              <SortTh
+                label="Contract"
+                active={table.sortKey === "contract"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("contract")}
+              />
+              <SortTh
+                label="Source"
+                active={table.sortKey === "source"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("source")}
+              />
+              <SortTh
+                label="Side"
+                active={table.sortKey === "side"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("side")}
+              />
               {showDcaColumns ? (
                 <th className="px-3 py-3 font-medium">
                   <ColumnHint
@@ -195,62 +364,68 @@ export function OpenFuturesTrades({
                 </th>
               ) : null}
               {visible.qty ? (
-                <th className="px-3 py-3 font-medium">
-                  <ColumnHint label="Qty" hint="Base-coin size on this row." />
-                </th>
+                <SortTh
+                  label="Qty"
+                  active={table.sortKey === "qty"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("qty")}
+                />
               ) : null}
               {visible.value ? (
-                <th className="px-2 py-3 font-medium">
-                  <ColumnHint
-                    label="Value"
-                    hint="Qty × entry. P&L scales with this amount."
-                  />
-                </th>
+                <SortTh
+                  label="Value"
+                  active={table.sortKey === "value"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("value")}
+                />
               ) : null}
               {visible.entry ? (
-                <th className="px-2 py-3 font-medium">
-                  <ColumnHint
-                    label="Entry"
-                    hint="Size-weighted average fill price."
-                  />
-                </th>
+                <SortTh
+                  label="Entry"
+                  active={table.sortKey === "entry"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("entry")}
+                />
               ) : null}
               {visible.mark ? (
-                <th className="px-2 py-3 font-medium">
-                  <ColumnHint label="Mark" hint="Last price from the live Bybit ticker." />
-                </th>
+                <SortTh
+                  label="Mark"
+                  active={table.sortKey === "mark"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("mark")}
+                />
               ) : null}
               {visible.unrealized ? (
-                <th className="px-2 py-3 font-medium">
-                  <ColumnHint
-                    label="Unrealized"
-                    hint="Mark-to-market versus entry. Not Bybit’s invoice."
-                  />
-                </th>
+                <SortTh
+                  label="Unrealized"
+                  active={table.sortKey === "unrealized"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("unrealized")}
+                />
               ) : null}
               {visible.pnl ? (
-                <th className="px-3 py-3 font-medium">
-                  <ColumnHint
-                    label="P&L %"
-                    hint="Unrealized ÷ value. Not annualized."
-                  />
-                </th>
+                <SortTh
+                  label="P&L %"
+                  active={table.sortKey === "pnl"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("pnl")}
+                />
               ) : null}
               {visible.leverage ? (
-                <th className="px-3 py-3 font-medium">
-                  <ColumnHint
-                    label="Leverage"
-                    hint="Venue leverage on this side. Live reads Bybit. Paper shows —."
-                  />
-                </th>
+                <SortTh
+                  label="Leverage"
+                  active={table.sortKey === "leverage"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("leverage")}
+                />
               ) : null}
               {visible.liq ? (
-                <th className="px-2 py-3 font-medium">
-                  <ColumnHint
-                    label="Liq"
-                    hint="Venue estimated liquidation price. Live reads Bybit. Paper shows —."
-                  />
-                </th>
+                <SortTh
+                  label="Liq"
+                  active={table.sortKey === "liq"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("liq")}
+                />
               ) : null}
               {visible.tpsl ? (
                 <th className="px-3 py-3 font-medium">
@@ -307,7 +482,7 @@ export function OpenFuturesTrades({
                   </>
                 }
               />
-            ) : rows.length === 0 ? (
+            ) : table.pageRows.length === 0 ? (
               <EmptyRow
                 colSpan={colSpan}
                 message={
@@ -315,7 +490,7 @@ export function OpenFuturesTrades({
                 }
               />
             ) : (
-              rows.map((trade) => (
+              table.pageRows.map((trade) => (
                 <OpenFuturesRows
                   key={trade.id}
                   trade={trade}
@@ -335,6 +510,11 @@ export function OpenFuturesTrades({
           </tbody>
         </table>
       </div>
+      <TablePager
+        window={table.window}
+        onPrev={() => table.setPage(table.window.page - 1)}
+        onNext={() => table.setPage(table.window.page + 1)}
+      />
     </section>
   );
 }
@@ -350,6 +530,24 @@ export function ClosedFuturesTrades({
   webhookNames?: readonly string[];
   fallbackLeverage?: number | null;
 }) {
+  const compare = useCallback(
+    (
+      left: FuturesDeskPosition,
+      right: FuturesDeskPosition,
+      key: string,
+      dir: TableSortDir,
+    ) =>
+      compareClosedFutures(
+        left,
+        right,
+        key,
+        dir,
+        webhookNames,
+        fallbackLeverage,
+      ),
+    [fallbackLeverage, webhookNames],
+  );
+  const table = useClientTable(closed, compare);
   return (
     <section>
       <SectionHead
@@ -366,57 +564,60 @@ export function ClosedFuturesTrades({
                   hint="Expand for orders and the event log for this position."
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint label="Contract" hint="USDT linear perpetual that was closed." />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Source"
-                  hint="Manual is a desk click. Auto is an automation. Webhook is a TradingView strategy fill. The name is the rule or webhook that opened this row."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Closed"
-                  hint="Local date this row was closed. Hover for UTC."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Days held"
-                  hint="(closed time − opened time) in days."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Entry"
-                  hint="Size-weighted average fill price of the open orders."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Exit"
-                  hint="Close fill price. Paper uses mark at close."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Realized"
-                  hint="P&L from entry to close mark or fill."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="P&L %"
-                  hint="Realized ÷ position value (qty × entry)."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="ROE"
-                  hint="Realized ÷ initial margin (position value ÷ leverage). — if this row has no leverage."
-                />
-              </th>
+              <SortTh
+                label="Contract"
+                active={table.sortKey === "contract"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("contract")}
+              />
+              <SortTh
+                label="Source"
+                active={table.sortKey === "source"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("source")}
+              />
+              <SortTh
+                label="Closed"
+                active={table.sortKey === "closed"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("closed")}
+              />
+              <SortTh
+                label="Days held"
+                active={table.sortKey === "days"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("days")}
+              />
+              <SortTh
+                label="Entry"
+                active={table.sortKey === "entry"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("entry")}
+              />
+              <SortTh
+                label="Exit"
+                active={table.sortKey === "exit"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("exit")}
+              />
+              <SortTh
+                label="Realized"
+                active={table.sortKey === "realized"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("realized")}
+              />
+              <SortTh
+                label="P&L %"
+                active={table.sortKey === "pnl"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("pnl")}
+              />
+              <SortTh
+                label="ROE"
+                active={table.sortKey === "roe"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("roe")}
+              />
             </tr>
           </thead>
           <tbody>
@@ -432,10 +633,10 @@ export function ClosedFuturesTrades({
                   </>
                 }
               />
-            ) : closed.length === 0 ? (
+            ) : table.pageRows.length === 0 ? (
               <EmptyRow colSpan={10} message="No closed futures yet." />
             ) : (
-              closed.map((trade) => (
+              table.pageRows.map((trade) => (
                 <ClosedFuturesRows
                   key={trade.id}
                   trade={trade}
@@ -447,6 +648,11 @@ export function ClosedFuturesTrades({
           </tbody>
         </table>
       </div>
+      <TablePager
+        window={table.window}
+        onPrev={() => table.setPage(table.window.page - 1)}
+        onNext={() => table.setPage(table.window.page + 1)}
+      />
     </section>
   );
 }

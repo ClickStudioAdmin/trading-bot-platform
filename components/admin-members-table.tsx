@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { LocalTime } from "@/components/local-time";
+import { SortTh, StatusBadge } from "@/components/table-chrome";
 import {
   memberListHref,
   toggleMemberSort,
   type MemberListQuery,
-  type MemberSort,
 } from "@/lib/members/query";
 import type { MemberRow } from "@/lib/members/rows";
 
@@ -22,12 +22,37 @@ export function AdminMembersTable({
       <table className="w-full min-w-[48rem] text-left text-sm">
         <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
           <tr>
-            <SortHeader query={query} sort="name" label="Name" />
-            <SortHeader query={query} sort="email" label="Email" />
-            <SortHeader query={query} sort="role" label="Role" />
-            <SortHeader query={query} sort="status" label="Status" />
+            <SortTh
+              label="Name"
+              active={query.sort === "name"}
+              dir={query.dir}
+              href={memberListHref(toggleMemberSort(query, "name"))}
+            />
+            <SortTh
+              label="Email"
+              active={query.sort === "email"}
+              dir={query.dir}
+              href={memberListHref(toggleMemberSort(query, "email"))}
+            />
+            <SortTh
+              label="Role"
+              active={query.sort === "role"}
+              dir={query.dir}
+              href={memberListHref(toggleMemberSort(query, "role"))}
+            />
+            <SortTh
+              label="Status"
+              active={query.sort === "status"}
+              dir={query.dir}
+              href={memberListHref(toggleMemberSort(query, "status"))}
+            />
             <th className="px-4 py-3 font-medium">Plan</th>
-            <SortHeader query={query} sort="created" label="Created" />
+            <SortTh
+              label="Created"
+              active={query.sort === "created"}
+              dir={query.dir}
+              href={memberListHref(toggleMemberSort(query, "created"))}
+            />
             <th className="px-4 py-3 font-medium">Actions</th>
           </tr>
         </thead>
@@ -44,12 +69,11 @@ export function AdminMembersTable({
                 <td className="px-4 py-3">{row.name}</td>
                 <td className="px-4 py-3 text-ink-muted">{row.email}</td>
                 <td className="px-4 py-3 text-ink-muted">{row.role}</td>
-                <td
-                  className={`px-4 py-3 ${
-                    row.status === "disabled" ? "text-warning" : "text-success"
-                  }`}
-                >
-                  {row.status}
+                <td className="px-4 py-3">
+                  <StatusBadge
+                    label={row.status === "disabled" ? "Disabled" : "Active"}
+                    status={row.status}
+                  />
                 </td>
                 <td className="px-4 py-3 text-ink-muted">
                   {planNames[row.planId] ?? "—"}
@@ -71,30 +95,5 @@ export function AdminMembersTable({
         </tbody>
       </table>
     </div>
-  );
-}
-
-function SortHeader({
-  query,
-  sort,
-  label,
-}: {
-  query: MemberListQuery;
-  sort: MemberSort;
-  label: string;
-}) {
-  const active = query.sort === sort;
-  const next = toggleMemberSort(query, sort);
-  const marker = active ? (query.dir === "asc" ? " ↑" : " ↓") : "";
-  return (
-    <th className="px-4 py-3 font-medium">
-      <Link
-        href={memberListHref(next)}
-        className={active ? "text-ink" : "text-ink-faint hover:text-ink"}
-      >
-        {label}
-        {marker}
-      </Link>
-    </th>
   );
 }

@@ -3,7 +3,7 @@ import {
   parseEmailDispatchClaim,
   type EmailDispatchClaim,
 } from "./catalog";
-import { INBOX_PAGE_SIZE, inboxPageWindow } from "./inbox";
+import { INBOX_PAGE_SIZE, inboxPageWindow, type InboxSort } from "./inbox";
 
 export type NotificationPreferences = {
   disabledEmails: string[];
@@ -193,7 +193,12 @@ export async function listUserNotificationPage(
   userId: string,
   page: number,
   pageSize = INBOX_PAGE_SIZE,
-  filters?: { status?: "unread" | "read" | ""; templates?: string[] | null },
+  filters?: {
+    status?: "unread" | "read" | "";
+    templates?: string[] | null;
+    sort?: InboxSort;
+    dir?: "asc" | "desc";
+  },
 ): Promise<{
   rows: UserNotification[];
   page: number;
@@ -225,11 +230,15 @@ export async function listUserNotificationPage(
   if (window.total === 0) {
     return { ...window, rows: [] };
   }
+  const sort = filters?.sort ?? "date";
+  const ascending = (filters?.dir ?? "desc") === "asc";
+  const column =
+    sort === "message" ? "title" : sort === "status" ? "read_at" : "created_at";
   let listed = supabase
     .from("user_notifications")
     .select("id, template, title, body, href, read_at, created_at")
     .eq("user_id", userId)
-    .order("created_at", { ascending: false })
+    .order(column, { ascending })
     .range(window.start, window.end - 1) as unknown as InboxNotificationQuery;
   listed = applyInboxNotificationFilters(listed, filters);
   const { data, error } = await listed;

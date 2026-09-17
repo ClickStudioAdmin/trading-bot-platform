@@ -1,4 +1,5 @@
 import { firstSearchValue } from "@/lib/paper/open";
+import { parseTableSortKey } from "@/lib/table-chrome";
 import { isNotificationId, type NotificationId } from "./catalog";
 import type { NotificationSettingGroup } from "./settings";
 
@@ -18,6 +19,21 @@ export const EMPTY_INBOX_FILTERS: InboxFilters = {
   status: "",
   scope: "",
   event: "",
+};
+
+export const INBOX_SORTS = ["message", "date", "status"] as const;
+
+export type InboxSort = (typeof INBOX_SORTS)[number];
+export type InboxSortDir = "asc" | "desc";
+
+export type InboxSortQuery = {
+  sort: InboxSort;
+  dir: InboxSortDir;
+};
+
+export const DEFAULT_INBOX_SORT: InboxSortQuery = {
+  sort: "date",
+  dir: "desc",
 };
 
 export function markReadSelection(
@@ -123,7 +139,41 @@ export function inboxPageLabel(input: {
   return `Showing ${input.from}–${input.to} of ${input.total}`;
 }
 
-export function inboxPath(page = 1, filters: InboxFilters = EMPTY_INBOX_FILTERS): string {
+export function parseInboxSort(
+  params: Record<string, string | string[] | undefined>,
+): InboxSortQuery {
+  const dirRaw = firstSearchValue(params.dir) ?? "";
+  return {
+    sort: parseTableSortKey(
+      firstSearchValue(params.sort),
+      INBOX_SORTS,
+      DEFAULT_INBOX_SORT.sort,
+    ),
+    dir: dirRaw === "asc" || dirRaw === "desc" ? dirRaw : DEFAULT_INBOX_SORT.dir,
+  };
+}
+
+export function toggleInboxSort(
+  current: InboxSortQuery,
+  key: InboxSort,
+): InboxSortQuery {
+  if (current.sort === key) {
+    return {
+      sort: key,
+      dir: current.dir === "asc" ? "desc" : "asc",
+    };
+  }
+  return {
+    sort: key,
+    dir: key === "date" ? "desc" : "asc",
+  };
+}
+
+export function inboxPath(
+  page = 1,
+  filters: InboxFilters = EMPTY_INBOX_FILTERS,
+  sort: InboxSortQuery = DEFAULT_INBOX_SORT,
+): string {
   const params = new URLSearchParams();
   if (filters.status) {
     params.set("status", filters.status);
@@ -133,6 +183,12 @@ export function inboxPath(page = 1, filters: InboxFilters = EMPTY_INBOX_FILTERS)
   }
   if (filters.event) {
     params.set("event", filters.event);
+  }
+  if (sort.sort !== DEFAULT_INBOX_SORT.sort) {
+    params.set("sort", sort.sort);
+  }
+  if (sort.dir !== DEFAULT_INBOX_SORT.dir) {
+    params.set("dir", sort.dir);
   }
   const safe = parseInboxPage(page);
   if (safe > 1) {

@@ -6,7 +6,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BacktestHighlightHover } from "@/components/backtest-highlight-hover";
 import { PageHeading } from "@/components/page-heading";
+import {
+  SortTh,
+  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_FILTER_FIELD_CLASS,
+  TableFilterField,
+  TablePager,
+} from "@/components/table-chrome";
 import { Modal, StarterPackCheckbox } from "@/components/template-modals";
+import { sliceTablePage, type TableSortDir } from "@/lib/table-chrome";
 import type { BacktestLinkHighlight } from "@/lib/backtest/model";
 import { formatTemplateDeskType } from "@/lib/templates/recipe";
 import {
@@ -41,8 +49,6 @@ import {
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
-const filterFieldClass =
-  "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 const primaryBtn =
   "rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink hover:bg-accent";
 const secondaryBtn =
@@ -79,7 +85,7 @@ function templateContract(row: { recipe: AutomationTemplate["recipe"] }): string
   return row.recipe.kind === "cash_and_carry" ? "" : row.recipe.symbol;
 }
 
-type SortState = { key: SortKey; dir: "asc" | "desc" };
+type SortState = { key: SortKey; dir: TableSortDir };
 
 function foldersHolding(
   templateId: string,
@@ -148,12 +154,12 @@ function StarterPackMark({ on }: { on: boolean }) {
   );
 }
 
-function compareText(a: string, b: string, dir: "asc" | "desc"): number {
+function compareText(a: string, b: string, dir: TableSortDir): number {
   const n = a.localeCompare(b, undefined, { sensitivity: "base" });
   return dir === "asc" ? n : -n;
 }
 
-function compareNum(a: number, b: number, dir: "asc" | "desc"): number {
+function compareNum(a: number, b: number, dir: TableSortDir): number {
   const n = a === b ? 0 : a < b ? -1 : 1;
   return dir === "asc" ? n : -n;
 }
@@ -227,6 +233,7 @@ export function TemplatesLibrary({
   const [folderFilter, setFolderFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortState>({ key: "name", dir: "asc" });
+  const [page, setPage] = useState(1);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
@@ -444,9 +451,14 @@ export function TemplatesLibrary({
   const listedIds = templateTab
     ? listedTemplates.map((row) => row.id)
     : listedFolders.map((row) => row.id);
+  const pagedTemplates = sliceTablePage(listedTemplates, page);
+  const pagedFolders = sliceTablePage(listedFolders, page);
+  const paged = templateTab ? pagedTemplates : pagedFolders;
+  const pageIds = paged.rows.map((row) => row.id);
   const selectedCount = listedIds.filter((id) => selected.has(id)).length;
   const allListedSelected =
-    listedIds.length > 0 && listedIds.every((id) => selected.has(id));
+    pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+
   const selectedTemplates = templates.filter(
     (row) => selected.has(row.id) && listedIds.includes(row.id),
   );
@@ -480,6 +492,7 @@ export function TemplatesLibrary({
         ? { key, dir: current.dir === "asc" ? "desc" : "asc" }
         : { key, dir: "asc" },
     );
+    setPage(1);
   }
 
   function onEditSaved(result: TemplateActionResult) {
@@ -542,6 +555,7 @@ export function TemplatesLibrary({
   function changeTab(next: LibraryTab) {
     setTab(next);
     setSelected(new Set());
+    setPage(1);
     setBulkFolderOpen(false);
     setCreatingFolder(false);
     const params = new URLSearchParams(window.location.search);
@@ -558,6 +572,7 @@ export function TemplatesLibrary({
     setQuery("");
     setDeskFilter("all");
     setFolderFilter("all");
+    setPage(1);
   }
 
   function toggleRow(id: string) {
@@ -576,11 +591,11 @@ export function TemplatesLibrary({
     setSelected((current) => {
       const next = new Set(current);
       if (allListedSelected) {
-        for (const id of listedIds) {
+        for (const id of pageIds) {
           next.delete(id);
         }
       } else {
-        for (const id of listedIds) {
+        for (const id of pageIds) {
           next.add(id);
         }
       }
@@ -726,40 +741,37 @@ export function TemplatesLibrary({
         </div>
       ) : null}
       <div className="mt-6 rounded-card border border-line bg-surface p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="block text-xs text-ink-muted">
-            Search
+        <div className="flex flex-wrap items-end gap-3">
+          <TableFilterField label="Search">
             <input
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Name or contract"
               autoComplete="off"
-              className={filterFieldClass}
+              className={TABLE_FILTER_FIELD_CLASS}
             />
-          </label>
-          <label className="block text-xs text-ink-muted">
-            Desk type
+          </TableFilterField>
+          <TableFilterField label="Desk type">
             <select
               value={deskFilter}
               onChange={(event) =>
                 setDeskFilter(event.target.value as "all" | TemplateDeskType)
               }
-              className={filterFieldClass}
+              className={TABLE_FILTER_FIELD_CLASS}
             >
               <option value="all">All desk types</option>
               <option value="dca">DCA</option>
               <option value="perps">Perps bots</option>
               <option value="cash_and_carry">Cash and Carry</option>
             </select>
-          </label>
+          </TableFilterField>
           {tab === "templates" || tab === "shared-templates" ? (
-            <label className="block text-xs text-ink-muted">
-              Folder
+            <TableFilterField label="Folder">
               <select
                 value={folderFilter}
                 onChange={(event) => setFolderFilter(event.target.value)}
-                className={filterFieldClass}
+                className={TABLE_FILTER_FIELD_CLASS}
               >
                 <option value="all">All folders</option>
                 {folderFilterOptions.map((folder) => (
@@ -768,14 +780,12 @@ export function TemplatesLibrary({
                   </option>
                 ))}
               </select>
-            </label>
+            </TableFilterField>
           ) : null}
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={clearFilters}
-            className="rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            className={TABLE_FILTER_CLEAR_CLASS}
           >
             Clear
           </button>
@@ -830,6 +840,7 @@ export function TemplatesLibrary({
       ) : null}
 
       {tab === "templates" || tab === "shared-templates" ? (
+        <>
         <LibraryTable
           empty={
             tab === "templates"
@@ -854,30 +865,60 @@ export function TemplatesLibrary({
                   />
                 </th>
               )}
-              <SortTh label="Name" k="name" sort={sort} onSort={onSort} />
-              <SortTh label="Folder" k="folder" sort={sort} onSort={onSort} />
-              <SortTh label="Desk Type" k="deskType" sort={sort} onSort={onSort} />
-              <SortTh label="Contract" k="contract" sort={sort} onSort={onSort} />
+              <SortTh
+                label="Name"
+                active={sort.key === "name"}
+                dir={sort.dir}
+                onSort={() => onSort("name")}
+              />
+              <SortTh
+                label="Folder"
+                active={sort.key === "folder"}
+                dir={sort.dir}
+                onSort={() => onSort("folder")}
+              />
+              <SortTh
+                label="Desk Type"
+                active={sort.key === "deskType"}
+                dir={sort.dir}
+                onSort={() => onSort("deskType")}
+              />
+              <SortTh
+                label="Contract"
+                active={sort.key === "contract"}
+                dir={sort.dir}
+                onSort={() => onSort("contract")}
+              />
               <th className="px-4 py-3 font-medium">Backtests</th>
               {showOwner ? (
                 <SortTh
                   label={sharedTab ? "Shared by" : "Owner"}
-                  k={sharedTab ? "shared" : "owner"}
-                  sort={sort}
-                  onSort={onSort}
+                  active={sort.key === (sharedTab ? "shared" : "owner")}
+                  dir={sort.dir}
+                  onSort={() => onSort(sharedTab ? "shared" : "owner")}
                 />
               ) : null}
               {showSharedWith ? (
-                <SortTh label="Shared with" k="shared" sort={sort} onSort={onSort} />
+                <SortTh
+                  label="Shared with"
+                  active={sort.key === "shared"}
+                  dir={sort.dir}
+                  onSort={() => onSort("shared")}
+                />
               ) : null}
               {showStarterPack ? (
-                <SortTh label="Starter Pack" k="starter" sort={sort} onSort={onSort} />
+                <SortTh
+                  label="Starter Pack"
+                  active={sort.key === "starter"}
+                  dir={sort.dir}
+                  onSort={() => onSort("starter")}
+                />
               ) : null}
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {listedTemplates.map((row) => {
+            {pagedTemplates.rows.map((row) => {
               const canEdit =
                 !sharedTab &&
                 (variant === "admin" || row.visibility === "user");
@@ -1016,6 +1057,12 @@ export function TemplatesLibrary({
             })}
           </tbody>
         </LibraryTable>
+          <TablePager
+            window={pagedTemplates.window}
+            onPrev={() => setPage(pagedTemplates.window.page - 1)}
+            onNext={() => setPage(pagedTemplates.window.page + 1)}
+          />
+        </>
       ) : null}
 
       {tab === "sets" || tab === "shared-sets" ? (
@@ -1044,28 +1091,53 @@ export function TemplatesLibrary({
                     />
                   </th>
                 )}
-                <SortTh label="Name" k="name" sort={sort} onSort={onSort} />
-                <SortTh label="Desk Type" k="deskType" sort={sort} onSort={onSort} />
+                <SortTh
+                  label="Name"
+                  active={sort.key === "name"}
+                  dir={sort.dir}
+                  onSort={() => onSort("name")}
+                />
+                <SortTh
+                  label="Desk Type"
+                  active={sort.key === "deskType"}
+                  dir={sort.dir}
+                  onSort={() => onSort("deskType")}
+                />
                 {showOwner ? (
                   <SortTh
                     label={sharedTab ? "Shared by" : "Owner"}
-                    k={sharedTab ? "shared" : "owner"}
-                    sort={sort}
-                    onSort={onSort}
+                    active={sort.key === (sharedTab ? "shared" : "owner")}
+                    dir={sort.dir}
+                    onSort={() => onSort(sharedTab ? "shared" : "owner")}
                   />
                 ) : null}
-                <SortTh label="Templates" k="items" sort={sort} onSort={onSort} />
+                <SortTh
+                  label="Templates"
+                  active={sort.key === "items"}
+                  dir={sort.dir}
+                  onSort={() => onSort("items")}
+                />
                 {showSharedWith ? (
-                  <SortTh label="Shared with" k="shared" sort={sort} onSort={onSort} />
+                  <SortTh
+                    label="Shared with"
+                    active={sort.key === "shared"}
+                    dir={sort.dir}
+                    onSort={() => onSort("shared")}
+                  />
                 ) : null}
                 {showStarterPack ? (
-                  <SortTh label="Starter Pack" k="starter" sort={sort} onSort={onSort} />
+                  <SortTh
+                    label="Starter Pack"
+                    active={sort.key === "starter"}
+                    dir={sort.dir}
+                    onSort={() => onSort("starter")}
+                  />
                 ) : null}
                 <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {listedFolders.map((row) => {
+              {pagedFolders.rows.map((row) => {
                 const canEdit =
                   !sharedTab &&
                   (variant === "admin" || row.visibility === "user");
@@ -1182,6 +1254,11 @@ export function TemplatesLibrary({
               })}
             </tbody>
           </LibraryTable>
+          <TablePager
+            window={pagedFolders.window}
+            onPrev={() => setPage(pagedFolders.window.page - 1)}
+            onNext={() => setPage(pagedFolders.window.page + 1)}
+          />
         </>
       ) : null}
 
@@ -1317,32 +1394,6 @@ function LibraryTable({
         ) : null}
       </table>
     </div>
-  );
-}
-
-function SortTh({
-  label,
-  k,
-  sort,
-  onSort,
-}: {
-  label: string;
-  k: SortKey;
-  sort: SortState;
-  onSort: (key: SortKey) => void;
-}) {
-  const active = sort.key === k;
-  return (
-    <th className="px-4 py-3 font-medium">
-      <button
-        type="button"
-        onClick={() => onSort(k)}
-        className={active ? "text-ink" : "text-ink-faint hover:text-ink"}
-      >
-        {label}
-        {active ? (sort.dir === "asc" ? " ↑" : " ↓") : ""}
-      </button>
-    </th>
   );
 }
 

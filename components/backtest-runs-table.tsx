@@ -1,10 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RemoveBacktestButton } from "@/components/backtest-run-view";
+import {
+  SortTh,
+  StatusBadge,
+  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_FILTER_FIELD_CLASS,
+  TableFilterField,
+  TablePager,
+  useClientTable,
+} from "@/components/table-chrome";
 import { deleteBacktestRunsAction } from "@/lib/backtest/actions";
 import {
   backtestAprPct,
@@ -16,8 +25,14 @@ import {
   canDeleteBacktestRun,
   formatBacktestReturnPct,
   type BacktestRun,
+  type BacktestStatus,
 } from "@/lib/backtest/model";
 import { formatCount, signedTone } from "@/lib/opportunities/format";
+import {
+  compareTableNum,
+  compareTableText,
+  type TableSortDir,
+} from "@/lib/table-chrome";
 
 function statusLabel(status: string): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
@@ -27,6 +42,98 @@ const secondaryBtn =
   "rounded-control border border-line px-3 py-1.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50";
 const dangerBtn =
   "rounded-control border border-line px-3 py-1.5 text-xs text-danger hover:bg-danger/10 disabled:opacity-50";
+
+const STATUS_FILTERS: Array<BacktestStatus | "all"> = [
+  "all",
+  "queued",
+  "running",
+  "done",
+  "failed",
+  "cancelled",
+  "draft",
+];
+
+function compareNullableNum(
+  left: number | null,
+  right: number | null,
+  dir: TableSortDir,
+): number {
+  if (left === null && right === null) {
+    return 0;
+  }
+  if (left === null) {
+    return 1;
+  }
+  if (right === null) {
+    return -1;
+  }
+  return compareTableNum(left, right, dir);
+}
+
+function runWinRate(row: BacktestRun): number | null {
+  return row.stats && row.stats.trades > 0 ? row.stats.winRate : null;
+}
+
+function runRoe(row: BacktestRun): number | null {
+  return row.stats
+    ? backtestRoePct(row.stats.realizedUsdt, row.orders, row.leverage)
+    : null;
+}
+
+function runApr(row: BacktestRun): number | null {
+  return row.stats
+    ? backtestAprPct(
+        row.stats.realizedUsdt,
+        row.stats.startingUsdt,
+        row.fromMs,
+        row.toMs,
+      )
+    : null;
+}
+
+function compareBacktestRun(
+  left: BacktestRun,
+  right: BacktestRun,
+  key: string,
+  dir: TableSortDir,
+): number {
+  if (key === "name") {
+    return compareTableText(backtestRunTitle(left), backtestRunTitle(right), dir);
+  }
+  if (key === "type") {
+    return compareTableText(left.deskType, right.deskType, dir);
+  }
+  if (key === "contract") {
+    return compareTableText(left.symbol, right.symbol, dir);
+  }
+  if (key === "comps") {
+    return compareTableNum(
+      (left.comparableSymbols ?? []).length,
+      (right.comparableSymbols ?? []).length,
+      dir,
+    );
+  }
+  if (key === "days") {
+    return compareNullableNum(
+      backtestWindowDays(left.fromMs, left.toMs),
+      backtestWindowDays(right.fromMs, right.toMs),
+      dir,
+    );
+  }
+  if (key === "win") {
+    return compareNullableNum(runWinRate(left), runWinRate(right), dir);
+  }
+  if (key === "roe") {
+    return compareNullableNum(runRoe(left), runRoe(right), dir);
+  }
+  if (key === "apr") {
+    return compareNullableNum(runApr(left), runApr(right), dir);
+  }
+  if (key === "status") {
+    return compareTableText(left.status, right.status, dir);
+  }
+  return 0;
+}
 
 export function BacktestRunsTable({
   runs,
@@ -44,21 +151,54 @@ export function BacktestRunsTable({
   watchRunId?: string;
 }) {
   const router = useRouter();
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<"all" | BacktestStatus>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
   const { confirm, dialog } = useConfirmDialog();
-  const removableIds = runs
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return runs.filter((row) => {
+      if (status !== "all" && row.status !== status) {
+        return false;
+      }
+      if (!needle) {
+        return true;
+      }
+      const hay = [
+        backtestRunTitle(row),
+        row.symbol,
+        row.deskType === "dca" ? "dca" : "perps",
+        row.status,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(needle);
+    });
+  }, [query, runs, status]);
+  const compare = useCallback(
+    (left: BacktestRun, right: BacktestRun, key: string, dir: TableSortDir) =>
+      compareBacktestRun(left, right, key, dir),
+    [],
+  );
+  const table = useClientTable(filtered, compare);
+  const removableIds = table.pageRows
+    .filter((row) => canDeleteBacktestRun(row, memberId, isAdmin))
+    .map((row) => row.id);
+  const listedRemovableIds = filtered
     .filter((row) => canDeleteBacktestRun(row, memberId, isAdmin))
     .map((row) => row.id);
   const allSelected =
     removableIds.length > 0 && removableIds.every((id) => selected.has(id));
-  const selectedCount = selected.size;
+  const selectedCount = [...selected].filter((id) =>
+    listedRemovableIds.includes(id),
+  ).length;
 
   useEffect(() => {
-    const known = new Set(removableIds);
+    const known = new Set(listedRemovableIds);
     setSelected((current) => {
       const next = new Set([...current].filter((id) => known.has(id)));
       if (next.size === current.size && [...next].every((id) => current.has(id))) {
@@ -66,7 +206,7 @@ export function BacktestRunsTable({
       }
       return next;
     });
-  }, [removableIds.join("|")]);
+  }, [listedRemovableIds.join("|")]);
 
   useEffect(() => {
     if (selectAllRef.current) {
@@ -88,7 +228,25 @@ export function BacktestRunsTable({
   }
 
   function toggleAll() {
-    setSelected(allSelected ? new Set() : new Set(removableIds));
+    setSelected((current) => {
+      const next = new Set(current);
+      if (allSelected) {
+        for (const id of removableIds) {
+          next.delete(id);
+        }
+      } else {
+        for (const id of removableIds) {
+          next.add(id);
+        }
+      }
+      return next;
+    });
+  }
+
+  function clearFilters() {
+    setQuery("");
+    setStatus("all");
+    table.setPage(1);
   }
 
   async function deleteSelected() {
@@ -132,6 +290,42 @@ export function BacktestRunsTable({
   return (
     <div className="space-y-3">
       {dialog}
+      <div className="rounded-card border border-line bg-surface p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <TableFilterField label="Search">
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Name or contract"
+              autoComplete="off"
+              className={TABLE_FILTER_FIELD_CLASS}
+            />
+          </TableFilterField>
+          <TableFilterField label="Status">
+            <select
+              value={status}
+              onChange={(event) =>
+                setStatus(event.target.value as "all" | BacktestStatus)
+              }
+              className={TABLE_FILTER_FIELD_CLASS}
+            >
+              {STATUS_FILTERS.map((value) => (
+                <option key={value} value={value}>
+                  {value === "all" ? "All statuses" : statusLabel(value)}
+                </option>
+              ))}
+            </select>
+          </TableFilterField>
+          <button
+            type="button"
+            onClick={clearFilters}
+            className={TABLE_FILTER_CLEAR_CLASS}
+          >
+            Clear
+          </button>
+        </div>
+      </div>
       {selectedCount > 0 ? (
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm text-ink-muted">{selectedCount} selected</p>
@@ -175,20 +369,65 @@ export function BacktestRunsTable({
                   />
                 ) : null}
               </th>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Type</th>
-              <th className="px-4 py-3 font-medium">Contract</th>
-              <th className="px-4 py-3 font-medium">Comps</th>
-              <th className="px-4 py-3 font-medium">Days</th>
-              <th className="px-4 py-3 font-medium">Win Rate</th>
-              <th className="px-4 py-3 font-medium">ROE</th>
-              <th className="px-4 py-3 font-medium">APR</th>
-              <th className="px-4 py-3 font-medium">Status</th>
+              <SortTh
+                label="Name"
+                active={table.sortKey === "name"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("name")}
+              />
+              <SortTh
+                label="Type"
+                active={table.sortKey === "type"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("type")}
+              />
+              <SortTh
+                label="Contract"
+                active={table.sortKey === "contract"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("contract")}
+              />
+              <SortTh
+                label="Comps"
+                active={table.sortKey === "comps"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("comps")}
+              />
+              <SortTh
+                label="Days"
+                active={table.sortKey === "days"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("days")}
+              />
+              <SortTh
+                label="Win Rate"
+                active={table.sortKey === "win"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("win")}
+              />
+              <SortTh
+                label="ROE"
+                active={table.sortKey === "roe"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("roe")}
+              />
+              <SortTh
+                label="APR"
+                active={table.sortKey === "apr"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("apr")}
+              />
+              <SortTh
+                label="Status"
+                active={table.sortKey === "status"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("status")}
+              />
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {runs.map((row) => (
+            {table.pageRows.map((row) => (
               <BacktestRunRow
                 key={row.id}
                 row={row}
@@ -203,6 +442,11 @@ export function BacktestRunsTable({
           </tbody>
         </table>
       </div>
+      <TablePager
+        window={table.window}
+        onPrev={() => table.setPage(table.window.page - 1)}
+        onNext={() => table.setPage(table.window.page + 1)}
+      />
     </div>
   );
 }
@@ -295,7 +539,9 @@ function BacktestRunRow({
       <td className={`px-4 py-3 tabular-nums ${signedTone(apr)}`}>
         {formatBacktestReturnPct(apr)}
       </td>
-      <td className="px-4 py-3">{statusLabel(row.status)}</td>
+      <td className="px-4 py-3">
+        <StatusBadge label={statusLabel(row.status)} status={row.status} />
+      </td>
       <td className="px-4 py-3">
         <RemoveBacktestButton
           runId={row.id}

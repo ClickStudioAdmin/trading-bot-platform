@@ -1,8 +1,65 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo } from "react";
 import { LocalTime } from "@/components/local-time";
+import {
+  LiveGetForm,
+  SortTh,
+  StatusBadge,
+  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_FILTER_FIELD_CLASS,
+  TableFilterField,
+  TablePager,
+  useClientTable,
+} from "@/components/table-chrome";
 import { eventLogOptionsForScopes } from "@/lib/logs/events";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
 import type { EventLogFilters, EventLogRow } from "@/lib/logs/list";
+import { compareTableText, type TableSortDir } from "@/lib/table-chrome";
+
+function compareEventRows(
+  left: EventLogRow,
+  right: EventLogRow,
+  key: string,
+  dir: TableSortDir,
+  accountLabel: Map<string, string>,
+): number {
+  if (key === "time") {
+    return compareTableText(left.createdAt, right.createdAt, dir);
+  }
+  if (key === "level") {
+    return compareTableText(left.level, right.level, dir);
+  }
+  if (key === "scope") {
+    return compareTableText(left.scope, right.scope, dir);
+  }
+  if (key === "event") {
+    return compareTableText(left.event, right.event, dir);
+  }
+  if (key === "user") {
+    return compareTableText(left.userId ?? "", right.userId ?? "", dir);
+  }
+  if (key === "account") {
+    const leftLabel = left.accountId
+      ? (accountLabel.get(left.accountId) ?? left.accountId)
+      : "";
+    const rightLabel = right.accountId
+      ? (accountLabel.get(right.accountId) ?? right.accountId)
+      : "";
+    return compareTableText(leftLabel, rightLabel, dir);
+  }
+  return compareTableText(left.message, right.message, dir);
+}
+
+function levelLabel(level: EventLogRow["level"]): string {
+  if (level === "warning") {
+    return "Warning";
+  }
+  if (level === "error") {
+    return "Error";
+  }
+  return "Info";
+}
 
 export function EventLogs({
   rows,
@@ -11,6 +68,7 @@ export function EventLogs({
   showUser,
   scopes,
   accounts,
+  hidden,
 }: {
   rows: EventLogRow[];
   filters: EventLogFilters;
@@ -18,121 +76,153 @@ export function EventLogs({
   showUser: boolean;
   scopes: Array<"system" | "strategy" | "trade">;
   accounts?: { id: string; label: string }[];
+  hidden?: { desk?: string };
 }) {
   const showAccount = Boolean(accounts);
   const columns = 5 + (showUser ? 1 : 0) + (showAccount ? 1 : 0);
-  const accountLabel = new Map(
-    (accounts ?? []).map((account) => [account.id, account.label]),
+  const accountLabel = useMemo(
+    () =>
+      new Map((accounts ?? []).map((account) => [account.id, account.label])),
+    [accounts],
   );
   const events = eventLogOptionsForScopes(scopes, filters.event);
+  const compare = useMemo(
+    () =>
+      (left: EventLogRow, right: EventLogRow, key: string, dir: TableSortDir) =>
+        compareEventRows(left, right, key, dir, accountLabel),
+    [accountLabel],
+  );
+  const table = useClientTable(rows, compare, {
+    defaultKey: "time",
+    defaultDir: "desc",
+  });
 
   return (
     <>
-      <form
-        method="get"
-        className="rounded-card border border-line bg-surface p-4"
-      >
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {accounts ? (
-            <label className="block text-xs text-ink-muted">
-              Account
-              <select
-                name="account"
-                defaultValue={filters.account}
-                className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-              >
-                <option value="">All</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          <label className="block text-xs text-ink-muted">
-            Scope
+      <LiveGetForm>
+        <input type="hidden" name="page" value="1" />
+        {hidden?.desk ? (
+          <input type="hidden" name="desk" value={hidden.desk} />
+        ) : null}
+        {accounts ? (
+          <TableFilterField label="Account">
             <select
-              name="scope"
-              defaultValue={filters.scope}
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+              name="account"
+              defaultValue={filters.account}
+              className={TABLE_FILTER_FIELD_CLASS}
             >
               <option value="">All</option>
-              {scopes.map((scope) => (
-                <option key={scope} value={scope}>
-                  {scope === "system"
-                    ? "System"
-                    : scope === "strategy"
-                      ? "Strategy"
-                      : "Trade"}
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.label}
                 </option>
               ))}
             </select>
-          </label>
-          <label className="block text-xs text-ink-muted">
-            Level
-            <select
-              name="level"
-              defaultValue={filters.level}
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-            >
-              <option value="">All</option>
-              <option value="info">Info</option>
-              <option value="warning">Warning</option>
-              <option value="error">Error</option>
-            </select>
-          </label>
-          <label className="block text-xs text-ink-muted">
-            Event
-            <select
-              name="event"
-              defaultValue={filters.event}
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-            >
-              <option value="">All</option>
-              {events.map((event) => (
-                <option key={event} value={event}>
-                  {event}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <PendingSubmitButton
-            pendingLabel="Applying…"
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          </TableFilterField>
+        ) : null}
+        <TableFilterField label="Scope">
+          <select
+            name="scope"
+            defaultValue={filters.scope}
+            className={TABLE_FILTER_FIELD_CLASS}
           >
-            Apply filters
-          </PendingSubmitButton>
-          <Link
-            href={clearHref}
-            className="rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            <option value="">All</option>
+            {scopes.map((scope) => (
+              <option key={scope} value={scope}>
+                {scope === "system"
+                  ? "System"
+                  : scope === "strategy"
+                    ? "Strategy"
+                    : "Trade"}
+              </option>
+            ))}
+          </select>
+        </TableFilterField>
+        <TableFilterField label="Level">
+          <select
+            name="level"
+            defaultValue={filters.level}
+            className={TABLE_FILTER_FIELD_CLASS}
           >
-            Clear
-          </Link>
-        </div>
-      </form>
+            <option value="">All</option>
+            <option value="info">Info</option>
+            <option value="warning">Warning</option>
+            <option value="error">Error</option>
+          </select>
+        </TableFilterField>
+        <TableFilterField label="Event">
+          <select
+            name="event"
+            defaultValue={filters.event}
+            className={TABLE_FILTER_FIELD_CLASS}
+          >
+            <option value="">All</option>
+            {events.map((event) => (
+              <option key={event} value={event}>
+                {event}
+              </option>
+            ))}
+          </select>
+        </TableFilterField>
+        <Link href={clearHref} className={TABLE_FILTER_CLEAR_CLASS}>
+          Clear
+        </Link>
+      </LiveGetForm>
 
       <div className="mt-6 overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[48rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
-              <th className="px-4 py-3 font-medium">Time</th>
-              <th className="px-4 py-3 font-medium">Level</th>
-              <th className="px-4 py-3 font-medium">Scope</th>
-              <th className="px-4 py-3 font-medium">Event</th>
+              <SortTh
+                label="Time"
+                active={table.sortKey === "time"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("time")}
+              />
+              <SortTh
+                label="Level"
+                active={table.sortKey === "level"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("level")}
+              />
+              <SortTh
+                label="Scope"
+                active={table.sortKey === "scope"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("scope")}
+              />
+              <SortTh
+                label="Event"
+                active={table.sortKey === "event"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("event")}
+              />
               {showUser ? (
-                <th className="px-4 py-3 font-medium">User</th>
+                <SortTh
+                  label="User"
+                  active={table.sortKey === "user"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("user")}
+                />
               ) : null}
               {showAccount ? (
-                <th className="px-4 py-3 font-medium">Account</th>
+                <SortTh
+                  label="Account"
+                  active={table.sortKey === "account"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("account")}
+                />
               ) : null}
-              <th className="px-4 py-3 font-medium">Message</th>
+              <SortTh
+                label="Message"
+                active={table.sortKey === "message"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("message")}
+              />
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
+            {table.pageRows.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns}
@@ -142,7 +232,7 @@ export function EventLogs({
                 </td>
               </tr>
             ) : (
-              rows.map((row) => (
+              table.pageRows.map((row) => (
                 <tr
                   key={row.id}
                   className="border-b border-line last:border-b-0"
@@ -150,8 +240,11 @@ export function EventLogs({
                   <td className="px-4 py-3 align-top tabular-nums text-ink-muted">
                     <LocalTime at={row.createdAt} />
                   </td>
-                  <td className={`px-4 py-3 align-top ${levelTone(row.level)}`}>
-                    {row.level}
+                  <td className="px-4 py-3 align-top">
+                    <StatusBadge
+                      label={levelLabel(row.level)}
+                      status={row.level}
+                    />
                   </td>
                   <td className="px-4 py-3 align-top text-ink-muted">
                     {row.scope}
@@ -188,17 +281,13 @@ export function EventLogs({
           </tbody>
         </table>
       </div>
+      <TablePager
+        window={table.window}
+        onPrev={() => table.setPage(table.window.page - 1)}
+        onNext={() => table.setPage(table.window.page + 1)}
+        emptyLabel="No events match."
+      />
       <p className="mt-3 text-xs text-ink-faint">Showing up to 100 events.</p>
     </>
   );
-}
-
-function levelTone(level: string): string {
-  if (level === "error") {
-    return "text-danger";
-  }
-  if (level === "warning") {
-    return "text-warning";
-  }
-  return "text-ink-muted";
 }

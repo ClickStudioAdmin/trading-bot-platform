@@ -1,4 +1,5 @@
 import { ColumnHint } from "@/components/column-hint";
+import { StatusBadge } from "@/components/table-chrome";
 
 export function PendingStatusChip({
   label,
@@ -10,11 +11,7 @@ export function PendingStatusChip({
   return (
     <ColumnHint
       hint={hint}
-      label={
-        <span className="inline-flex items-center justify-center rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
-          {label}
-        </span>
-      }
+      label={<StatusBadge label={label} tone="warning" />}
     />
   );
 }

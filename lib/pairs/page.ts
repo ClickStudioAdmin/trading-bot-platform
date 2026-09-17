@@ -2,8 +2,26 @@ import { pathWithDesk, withQuery } from "@/lib/accounts/model";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { loadMarketCaps } from "@/lib/market/caps";
 import type { PairFilters } from "@/lib/pairs/filter";
+import {
+  compareTableNum,
+  compareTableText,
+  parseTableSortDir,
+  parseTableSortKey,
+  tableSortHref,
+  type TableSortDir,
+} from "@/lib/table-chrome";
 
 export const PAIRS_PAGE_SIZE = 50;
+export const PAIR_DEFAULT_SORT = "cap";
+export const PAIR_DEFAULT_DIR: TableSortDir = "desc";
+
+export const PAIR_SORTS = {
+  futures: ["base", "contract", "quote", "cap"] as const,
+  carry: ["base", "spot", "future", "delivery", "dte", "cap"] as const,
+} as const;
+
+export type FuturesPairSort = (typeof PAIR_SORTS.futures)[number];
+export type CarryPairSort = (typeof PAIR_SORTS.carry)[number];
 
 export function sortByMarketCap<T>(
   rows: readonly T[],
@@ -81,11 +99,59 @@ export function paginatePairRows<T>(
   };
 }
 
+export function parsePairSort<T extends string>(
+  params: Record<string, string | string[] | undefined>,
+  allowed: readonly T[],
+): { sort: T; dir: TableSortDir } {
+  const fallback = (
+    (allowed as readonly string[]).includes(PAIR_DEFAULT_SORT)
+      ? PAIR_DEFAULT_SORT
+      : allowed[0]
+  ) as T;
+  return {
+    sort: parseTableSortKey(firstSearch(params.sort), allowed, fallback),
+    dir: firstSearch(params.dir)
+      ? parseTableSortDir(firstSearch(params.dir))
+      : PAIR_DEFAULT_DIR,
+  };
+}
+
+export function sortPairRows<T>(
+  rows: readonly T[],
+  key: string,
+  dir: TableSortDir,
+  getters: Record<string, (row: T) => string | number | null>,
+): T[] {
+  const get = getters[key];
+  if (!get) {
+    return [...rows];
+  }
+  return [...rows].sort((left, right) => {
+    const a = get(left);
+    const b = get(right);
+    if (a === null && b === null) {
+      return 0;
+    }
+    if (a === null) {
+      return 1;
+    }
+    if (b === null) {
+      return -1;
+    }
+    if (typeof a === "string" || typeof b === "string") {
+      return compareTableText(String(a), String(b), dir);
+    }
+    return compareTableNum(Number(a), Number(b), dir);
+  });
+}
+
 export function pairPageHref(input: {
   path: string;
   deskId?: string | null;
   filters: PairFilters;
   page: number;
+  sort?: string;
+  dir?: TableSortDir;
 }): string {
   const extra: Record<string, string> = {};
   if (input.filters.q) {
@@ -100,6 +166,14 @@ export function pairPageHref(input: {
   if (input.filters.maxDte !== null) {
     extra.maxDte = String(input.filters.maxDte);
   }
+  const sort = input.sort ?? PAIR_DEFAULT_SORT;
+  const dir = input.dir ?? PAIR_DEFAULT_DIR;
+  if (sort !== PAIR_DEFAULT_SORT) {
+    extra.sort = sort;
+  }
+  if (dir !== PAIR_DEFAULT_DIR) {
+    extra.dir = dir;
+  }
   if (input.page > 1) {
     extra.page = String(input.page);
   }
@@ -107,6 +181,37 @@ export function pairPageHref(input: {
     ? pathWithDesk(input.path, input.deskId)
     : input.path;
   return Object.keys(extra).length > 0 ? withQuery(base, extra) : base;
+}
+
+export function pairSortHref(input: {
+  path: string;
+  deskId?: string | null;
+  filters: PairFilters;
+  key: string;
+  currentKey: string;
+  currentDir: TableSortDir;
+}): string {
+  return tableSortHref({
+    pathname: input.path,
+    params: {
+      desk: input.deskId ?? undefined,
+      q: input.filters.q || undefined,
+      base: input.filters.base || undefined,
+      minDte:
+        input.filters.minDte !== null ? String(input.filters.minDte) : undefined,
+      maxDte:
+        input.filters.maxDte !== null ? String(input.filters.maxDte) : undefined,
+    },
+    key: input.key,
+    currentKey: input.currentKey,
+    currentDir: input.currentDir,
+    defaultKey: PAIR_DEFAULT_SORT,
+    defaultDir: PAIR_DEFAULT_DIR,
+  });
+}
+
+function firstSearch(value: unknown): string {
+  return String(Array.isArray(value) ? value[0] : (value ?? "")).trim();
 }
 
 export function pairPageLabel(input: {

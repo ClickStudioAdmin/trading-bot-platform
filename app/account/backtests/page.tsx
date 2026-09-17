@@ -11,8 +11,6 @@ import { toBacktestLibraryItem } from "@/lib/backtest/library";
 import {
   backtestQueueSeedFromRun,
   backtestSavedListHref,
-  paginateBacktestList,
-  parseBacktestListPage,
 } from "@/lib/backtest/model";
 import {
   canReadBacktestRun,
@@ -75,7 +73,6 @@ export default async function AccountBacktestsPage({
   const wantsForm = Boolean(selectedTemplateId || draftId || rerunId);
   const tab =
     !wantsForm && firstSearchValue(params.tab) === "saved" ? "saved" : "new";
-  const savedPage = parseBacktestListPage(firstSearchValue(params.page));
   let runs: Awaited<ReturnType<typeof listBacktestRuns>> = [];
   let templates: Awaited<ReturnType<typeof listApplyableTemplates>> = [];
   let folders: Awaited<ReturnType<typeof listApplyableSets>> = [];
@@ -113,7 +110,6 @@ export default async function AccountBacktestsPage({
   const pendingRun =
     runs.find((row) => row.status === "queued") ??
     runs.find((row) => row.status === "running");
-  const savedList = paginateBacktestList(runs, savedPage);
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -148,7 +144,7 @@ export default async function AccountBacktestsPage({
         </TabLink>
       </nav>
       {tab === "saved" ? (
-        savedList.total === 0 ? (
+        runs.length === 0 ? (
           <p className="text-sm text-ink-muted">
             No runs yet. Queue one from{" "}
             <Link href="/account/backtests" className="text-accent hover:underline">
@@ -157,15 +153,12 @@ export default async function AccountBacktestsPage({
             .
           </p>
         ) : (
-          <div className="space-y-3">
-            <BacktestRunsTable
-              runs={savedList.rows}
-              memberId={member.id}
-              isAdmin={isAdmin}
-              returnTo={backtestSavedListHref(savedList.page)}
-            />
-            <BacktestListPager list={savedList} />
-          </div>
+          <BacktestRunsTable
+            runs={runs}
+            memberId={member.id}
+            isAdmin={isAdmin}
+            returnTo={backtestSavedListHref()}
+          />
         )
       ) : (
         <BacktestQueueForm
@@ -187,46 +180,6 @@ export default async function AccountBacktestsPage({
         />
       )}
     </main>
-  );
-}
-
-function BacktestListPager({
-  list,
-}: {
-  list: {
-    page: number;
-    pageCount: number;
-    total: number;
-    from: number;
-    to: number;
-  };
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-ink-muted">
-      <p>
-        Showing {list.from}–{list.to} of {list.total}
-      </p>
-      {list.pageCount > 1 ? (
-        <div className="flex gap-2">
-          {list.page > 1 ? (
-            <Link
-              href={backtestSavedListHref(list.page - 1)}
-              className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-            >
-              Previous
-            </Link>
-          ) : null}
-          {list.page < list.pageCount ? (
-            <Link
-              href={backtestSavedListHref(list.page + 1)}
-              className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-            >
-              Next
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
   );
 }
 

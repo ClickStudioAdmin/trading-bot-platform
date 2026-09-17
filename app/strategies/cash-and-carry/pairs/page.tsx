@@ -4,6 +4,7 @@ import { PageHeading } from "@/components/page-heading";
 import { PairFiltersForm } from "@/components/pair-filters";
 import { TokenIcon } from "@/components/token-icon";
 import { PairPager } from "@/components/pair-pager";
+import { SortTh } from "@/components/table-chrome";
 import { listCarryPairs } from "@/lib/exchanges/bybit/list-carry-pairs";
 import { CARRY_BASE_COINS, type CarryPair } from "@/lib/exchanges/bybit/universe";
 import { deskHref } from "@/lib/accounts/model";
@@ -16,9 +17,12 @@ import {
   parsePairFilters,
 } from "@/lib/pairs/filter";
 import {
+  PAIR_SORTS,
   paginatePairRows,
   pairPageHref,
-  sortByMarketCap,
+  pairSortHref,
+  parsePairSort,
+  sortPairRows,
 } from "@/lib/pairs/page";
 
 export const metadata: Metadata = {
@@ -52,14 +56,16 @@ export default async function CashAndCarryPairsPage({
     dte: pair.daysToExpiry,
   }));
   const active = pairFiltersAreActive(filters);
+  const { sort, dir } = parsePairSort(params, PAIR_SORTS.carry);
   const caps = await loadMarketCaps();
-  const ranked = sortByMarketCap(
-    visible,
-    (pair) => caps.get(pair.baseCoin) ?? null,
-    (left, right) =>
-      left.daysToExpiry - right.daysToExpiry ||
-      left.futureSymbol.localeCompare(right.futureSymbol),
-  );
+  const ranked = sortPairRows(visible, sort, dir, {
+    base: (pair) => pair.baseCoin,
+    spot: (pair) => pair.spotSymbol,
+    future: (pair) => pair.futureSymbol,
+    delivery: (pair) => pair.deliveryTimeMs,
+    dte: (pair) => pair.daysToExpiry,
+    cap: (pair) => caps.get(pair.baseCoin) ?? null,
+  });
   const list = paginatePairRows(ranked, params.page);
   const deskId = session?.account.id;
   const hrefFor = (page: number) =>
@@ -68,6 +74,17 @@ export default async function CashAndCarryPairsPage({
       deskId,
       filters,
       page,
+      sort,
+      dir,
+    });
+  const sortHref = (key: string) =>
+    pairSortHref({
+      path: CLEAR,
+      deskId,
+      filters,
+      key,
+      currentKey: sort,
+      currentDir: dir,
     });
 
   return (
@@ -83,6 +100,8 @@ export default async function CashAndCarryPairsPage({
         values={pairFilterInputValues(filters)}
         bases={CARRY_BASE_COINS}
         showDte
+        sort={sort}
+        dir={dir}
       />
       {error ? (
         <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -90,11 +109,6 @@ export default async function CashAndCarryPairsPage({
         </p>
       ) : (
         <div className="mt-6 space-y-2">
-          <p className="text-sm text-ink-muted">
-            {active
-              ? `${visible.length} of ${pairs.length} pairs`
-              : `${pairs.length} pairs`}
-          </p>
           {visible.length === 0 ? (
             <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
               {active
@@ -106,12 +120,42 @@ export default async function CashAndCarryPairsPage({
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
                   <tr>
-                    <th className="px-4 py-3 font-medium">Base</th>
-                    <th className="px-4 py-3 font-medium">Spot</th>
-                    <th className="px-4 py-3 font-medium">Future</th>
-                    <th className="px-4 py-3 font-medium">Delivery</th>
-                    <th className="px-4 py-3 font-medium">DTE</th>
-                    <th className="px-4 py-3 font-medium">Market cap</th>
+                    <SortTh
+                      label="Base"
+                      active={sort === "base"}
+                      dir={dir}
+                      href={sortHref("base")}
+                    />
+                    <SortTh
+                      label="Spot"
+                      active={sort === "spot"}
+                      dir={dir}
+                      href={sortHref("spot")}
+                    />
+                    <SortTh
+                      label="Future"
+                      active={sort === "future"}
+                      dir={dir}
+                      href={sortHref("future")}
+                    />
+                    <SortTh
+                      label="Delivery"
+                      active={sort === "delivery"}
+                      dir={dir}
+                      href={sortHref("delivery")}
+                    />
+                    <SortTh
+                      label="DTE"
+                      active={sort === "dte"}
+                      dir={dir}
+                      href={sortHref("dte")}
+                    />
+                    <SortTh
+                      label="Market cap"
+                      active={sort === "cap"}
+                      dir={dir}
+                      href={sortHref("cap")}
+                    />
                   </tr>
                 </thead>
                 <tbody>

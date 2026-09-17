@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
+import { SortTh, TablePager, useClientTable } from "@/components/table-chrome";
 import { LocalTime } from "@/components/local-time";
 import { PendingStatusChip } from "@/components/pending-status-chip";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -18,7 +21,13 @@ import {
   type FuturesWorkingOrder,
 } from "@/lib/futures/working";
 import { formatPrice, formatQty, formatQtyFull, formatUsd } from "@/lib/opportunities/format";
+import { formatFuturesSourceKind } from "@/lib/futures/source";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
+import {
+  compareTableNum,
+  compareTableText,
+  type TableSortDir,
+} from "@/lib/table-chrome";
 
 const ACTION_CLASS =
   "rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium whitespace-nowrap text-ink";
@@ -51,6 +60,50 @@ export function FuturesWorkingOrders({
   const showOrderMeta = !playbookOwnsOrders;
   const colSpan = showOrderMeta ? 11 : 8;
   const rows = sortFuturesWorkingRows(working);
+  const compare = useCallback(
+    (
+      left: FuturesWorkingOrder,
+      right: FuturesWorkingOrder,
+      key: string,
+      dir: TableSortDir,
+    ) => {
+      if (key === "contract") {
+        return compareTableText(left.symbol, right.symbol, dir);
+      }
+      if (key === "source") {
+        return compareTableText(
+          `${formatFuturesSourceKind(left.source, left.ruleName, webhookNames)} ${left.ruleName ?? ""}`,
+          `${formatFuturesSourceKind(right.source, right.ruleName, webhookNames)} ${right.ruleName ?? ""}`,
+          dir,
+        );
+      }
+      if (key === "side") {
+        return compareTableText(left.action, right.action, dir);
+      }
+      if (key === "type") {
+        return compareTableText(workingTypeLabel(left), workingTypeLabel(right), dir);
+      }
+      if (key === "qty") {
+        return compareTableNum(left.remainingQty, right.remainingQty, dir);
+      }
+      if (key === "limit") {
+        return compareTableNum(left.limitPrice, right.limitPrice, dir);
+      }
+      if (key === "value") {
+        return compareTableNum(
+          left.remainingQty * left.limitPrice,
+          right.remainingQty * right.limitPrice,
+          dir,
+        );
+      }
+      if (key === "time") {
+        return compareTableNum(left.createdAtMs, right.createdAtMs, dir);
+      }
+      return 0;
+    },
+    [webhookNames],
+  );
+  const table = useClientTable(rows, compare);
   const urgent =
     urgentRefresh ||
     working.some((row) => row.status === "cancelling");
@@ -91,51 +144,54 @@ export function FuturesWorkingOrders({
         <table className="w-full min-w-[48rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Contract"
-                  hint="USDT linear perpetual this limit is working on."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Source"
-                  hint="Manual is a desk click. Auto is an automation. Webhook is a TradingView strategy fill. The name is the rule or webhook that placed this limit."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Side"
-                  hint="Buy or Sell. A close is still Buy or Sell on the close side."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Type"
-                  hint="Entry # is the ladder step, including the first fill as # 1. Close is a reduce-only limit. Take profit, stop loss, and trailing rest on the position unless they are working limits."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint label="Qty" hint="Original size. Filled is how much has matched so far." />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Limit"
-                  hint="GTC limit price. Size in USDT used this price, not mark."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Order Value"
-                  hint="Remaining qty × limit."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Open Time"
-                  hint="Local time this limit was placed. Hover for UTC."
-                />
-              </th>
+              <SortTh
+                label="Contract"
+                active={table.sortKey === "contract"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("contract")}
+              />
+              <SortTh
+                label="Source"
+                active={table.sortKey === "source"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("source")}
+              />
+              <SortTh
+                label="Side"
+                active={table.sortKey === "side"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("side")}
+              />
+              <SortTh
+                label="Type"
+                active={table.sortKey === "type"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("type")}
+              />
+              <SortTh
+                label="Qty"
+                active={table.sortKey === "qty"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("qty")}
+              />
+              <SortTh
+                label="Limit"
+                active={table.sortKey === "limit"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("limit")}
+              />
+              <SortTh
+                label="Order Value"
+                active={table.sortKey === "value"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("value")}
+              />
+              <SortTh
+                label="Open Time"
+                active={table.sortKey === "time"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("time")}
+              />
               {showOrderMeta ? (
                 <>
                   <th className="px-4 py-3 font-medium">
@@ -174,7 +230,7 @@ export function FuturesWorkingOrders({
                   to place limits and watch them here.
                 </td>
               </tr>
-            ) : working.length === 0 ? (
+            ) : table.pageRows.length === 0 ? (
               <tr>
                 <td colSpan={colSpan} className="px-4 py-6 text-sm text-ink-muted">
                   {emptyMessage ??
@@ -182,7 +238,7 @@ export function FuturesWorkingOrders({
                 </td>
               </tr>
             ) : (
-              rows.map((row) => (
+              table.pageRows.map((row) => (
                 <WorkingRow
                   key={row.id}
                   row={row}
@@ -196,6 +252,11 @@ export function FuturesWorkingOrders({
           </tbody>
         </table>
       </div>
+      <TablePager
+        window={table.window}
+        onPrev={() => table.setPage(table.window.page - 1)}
+        onNext={() => table.setPage(table.window.page + 1)}
+      />
     </section>
   );
 }

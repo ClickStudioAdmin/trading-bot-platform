@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SortTh, TablePager, useClientTable } from "@/components/table-chrome";
+import {
+  compareTableNum,
+  compareTableText,
+  type TableSortDir,
+} from "@/lib/table-chrome";
 import { useRouter } from "next/navigation";
 import { nudgeBacktestRunAction } from "@/lib/backtest/actions";
 
@@ -100,6 +106,7 @@ import {
   realizedReturnPct,
   splitCompletedBacktestOrders,
   type BacktestRun,
+  type SimulatedOrder,
 } from "@/lib/backtest/model";
 import { loadBacktestDisplayCandles } from "@/lib/charts/load-backtest-candles";
 import {
@@ -287,16 +294,72 @@ export function BacktestPropertyList({
   );
 }
 
-const TRADE_PAGE_SIZE = 15;
+function fillActionLabel(
+  row: SimulatedOrder,
+  current: boolean,
+): string {
+  if (current) {
+    return "Open";
+  }
+  if (row.action === "flatten") {
+    return "Close";
+  }
+  if (row.action === "buy") {
+    return "Buy";
+  }
+  if (row.action === "sell") {
+    return "Sell";
+  }
+  return row.action;
+}
 
 export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
-  const [page, setPage] = useState(0);
-  useEffect(() => {
-    setPage(0);
-  }, [run.id]);
   const { open } = splitCompletedBacktestOrders(run.orders);
-  const openSet = new Set(open);
+  const openSet = useMemo(() => new Set(open), [open]);
   const fills = run.orders;
+  const compare = useCallback(
+    (left: SimulatedOrder, right: SimulatedOrder, key: string, dir: TableSortDir) => {
+      if (key === "time") {
+        return compareTableNum(left.atMs, right.atMs, dir);
+      }
+      if (key === "action") {
+        return compareTableText(
+          fillActionLabel(left, openSet.has(left)),
+          fillActionLabel(right, openSet.has(right)),
+          dir,
+        );
+      }
+      if (key === "side") {
+        return compareTableText(left.side, right.side, dir);
+      }
+      if (key === "qty") {
+        return compareTableNum(left.qty, right.qty, dir);
+      }
+      if (key === "price") {
+        return compareTableNum(left.price, right.price, dir);
+      }
+      if (key === "fee") {
+        return compareTableNum(left.feeUsdt, right.feeUsdt, dir);
+      }
+      if (key === "realized") {
+        const leftVal = openSet.has(left) ? null : left.realizedUsdt;
+        const rightVal = openSet.has(right) ? null : right.realizedUsdt;
+        if (leftVal === null && rightVal === null) {
+          return 0;
+        }
+        if (leftVal === null) {
+          return 1;
+        }
+        if (rightVal === null) {
+          return -1;
+        }
+        return compareTableNum(leftVal, rightVal, dir);
+      }
+      return 0;
+    },
+    [openSet],
+  );
+  const table = useClientTable(fills, compare);
   if (fills.length === 0) {
     return (
       <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
@@ -304,50 +367,69 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
       </p>
     );
   }
-  const pageCount = Math.max(1, Math.ceil(fills.length / TRADE_PAGE_SIZE));
-  const safePage = Math.min(page, pageCount - 1);
-  const start = safePage * TRADE_PAGE_SIZE;
-  const rows = fills.slice(start, start + TRADE_PAGE_SIZE);
-  const from = start + 1;
-  const to = start + rows.length;
   return (
     <div>
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-max text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
             <tr>
-              <th className="px-4 py-3 font-medium">Time</th>
-              <th className="px-4 py-3 font-medium">Action</th>
-              <th className="px-4 py-3 font-medium">Side</th>
-              <th className="px-4 py-3 font-medium">Qty</th>
-              <th className="px-4 py-3 font-medium">Price</th>
-              <th className="px-4 py-3 font-medium">Fee</th>
-              <th className="px-4 py-3 font-medium">Realized</th>
+              <SortTh
+                label="Time"
+                active={table.sortKey === "time"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("time")}
+              />
+              <SortTh
+                label="Action"
+                active={table.sortKey === "action"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("action")}
+              />
+              <SortTh
+                label="Side"
+                active={table.sortKey === "side"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("side")}
+              />
+              <SortTh
+                label="Qty"
+                active={table.sortKey === "qty"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("qty")}
+              />
+              <SortTh
+                label="Price"
+                active={table.sortKey === "price"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("price")}
+              />
+              <SortTh
+                label="Fee"
+                active={table.sortKey === "fee"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("fee")}
+              />
+              <SortTh
+                label="Realized"
+                active={table.sortKey === "realized"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("realized")}
+              />
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, index) => {
+            {table.pageRows.map((row, index) => {
               const current = openSet.has(row);
               const realized = current ? null : row.realizedUsdt;
               return (
                 <tr
-                  key={`${row.atMs}-${start + index}`}
+                  key={`${row.atMs}-${table.window.start + index}`}
                   className="border-b border-line last:border-b-0"
                 >
                   <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
                     {new Date(row.atMs).toLocaleString("en-AU")}
                   </td>
-                  <td className="px-4 py-3">
-                    {current
-                      ? "Open"
-                      : row.action === "flatten"
-                        ? "Close"
-                        : row.action === "buy"
-                          ? "Buy"
-                          : row.action === "sell"
-                            ? "Sell"
-                            : row.action}
-                  </td>
+                  <td className="px-4 py-3">{fillActionLabel(row, current)}</td>
                   <td className="px-4 py-3 capitalize">{row.side}</td>
                   <td
                     className="px-4 py-3 tabular-nums"
@@ -368,36 +450,11 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
           </tbody>
         </table>
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
-        <p>
-          {from}–{to} of {fills.length}
-        </p>
-        {pageCount > 1 ? (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={safePage === 0}
-              onClick={() => setPage((current) => Math.max(0, current - 1))}
-              className="rounded-control border border-line px-2 py-1 text-ink hover:border-line-strong disabled:opacity-40"
-            >
-              Previous
-            </button>
-            <p>
-              {safePage + 1} / {pageCount}
-            </p>
-            <button
-              type="button"
-              disabled={safePage >= pageCount - 1}
-              onClick={() =>
-                setPage((current) => Math.min(pageCount - 1, current + 1))
-              }
-              className="rounded-control border border-line px-2 py-1 text-ink hover:border-line-strong disabled:opacity-40"
-            >
-              Next
-            </button>
-          </div>
-        ) : null}
-      </div>
+      <TablePager
+        window={table.window}
+        onPrev={() => table.setPage(table.window.page - 1)}
+        onNext={() => table.setPage(table.window.page + 1)}
+      />
     </div>
   );
 }

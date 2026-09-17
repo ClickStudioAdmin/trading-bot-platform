@@ -1,11 +1,15 @@
 import Link from "next/link";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
+import {
+  LiveGetForm,
+  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_FILTER_FIELD_CLASS,
+  TableFilterField,
+} from "@/components/table-chrome";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { PairFilterInputs } from "@/lib/pairs/filter";
 import { DESK_QUERY } from "@/lib/accounts/model";
-
-const FILTER_INPUT_CLASS =
-  "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
+import { PAIR_DEFAULT_DIR, PAIR_DEFAULT_SORT } from "@/lib/pairs/page";
+import type { TableSortDir } from "@/lib/table-chrome";
 
 export function PairFiltersForm({
   clearHref,
@@ -13,98 +17,88 @@ export function PairFiltersForm({
   bases,
   showDte = false,
   deskId,
+  sort,
+  dir,
 }: {
   clearHref: string;
   values: PairFilterInputs;
   bases?: readonly string[];
   showDte?: boolean;
   deskId?: string | null;
+  sort?: string;
+  dir?: TableSortDir;
 }) {
   return (
-    <form
-      method="get"
-      className="rounded-card border border-line bg-surface p-4"
-    >
+    <LiveGetForm>
       {deskId ? (
         <input type="hidden" name={DESK_QUERY} value={deskId} />
       ) : null}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="block text-xs text-ink-muted">
-          Search
+      <input type="hidden" name="page" value="1" />
+      {sort && sort !== PAIR_DEFAULT_SORT ? (
+        <input type="hidden" name="sort" value={sort} />
+      ) : null}
+      {dir && dir !== PAIR_DEFAULT_DIR ? (
+        <input type="hidden" name="dir" value={dir} />
+      ) : null}
+      <TableFilterField label="Search">
+        <input
+          name="q"
+          type="search"
+          defaultValue={values.q}
+          placeholder="Base or contract"
+          autoComplete="off"
+          className={TABLE_FILTER_FIELD_CLASS}
+        />
+      </TableFilterField>
+      {bases ? (
+        <TableFilterField label="Base">
+          <select
+            name="base"
+            defaultValue={values.base}
+            className={TABLE_FILTER_FIELD_CLASS}
+          >
+            <option value="">All</option>
+            {bases.map((base) => (
+              <option key={base} value={base}>
+                {base}
+              </option>
+            ))}
+          </select>
+        </TableFilterField>
+      ) : (
+        <TableFilterField label="Base">
           <input
-            name="q"
-            type="search"
-            defaultValue={values.q}
-            placeholder="Base or contract"
+            name="base"
+            defaultValue={values.base}
+            placeholder="BTC"
             autoComplete="off"
-            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+            className={TABLE_FILTER_FIELD_CLASS}
           />
-        </label>
-        {bases ? (
-          <label className="block text-xs text-ink-muted">
-            Base
-            <select
-              name="base"
-              defaultValue={values.base}
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-            >
-              <option value="">All</option>
-              {bases.map((base) => (
-                <option key={base} value={base}>
-                  {base}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : (
-          <label className="block text-xs text-ink-muted">
-            Base
-            <input
-              name="base"
-              defaultValue={values.base}
-              placeholder="BTC"
-              autoComplete="off"
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+        </TableFilterField>
+      )}
+      {showDte ? (
+        <>
+          <TableFilterField label="Min DTE">
+            <GroupedNumberInput
+              name="minDte"
+              defaultValue={values.minDte}
+              allowDecimal
+              className={TABLE_FILTER_FIELD_CLASS}
             />
-          </label>
-        )}
-        {showDte ? (
-          <>
-            <label className="block text-xs text-ink-muted">
-              Min DTE
-              <GroupedNumberInput
-                name="minDte"
-                defaultValue={values.minDte}
-                allowDecimal
-                className={FILTER_INPUT_CLASS}
-              />
-            </label>
-            <label className="block text-xs text-ink-muted">
-              Max DTE
-              <GroupedNumberInput
-                name="maxDte"
-                defaultValue={values.maxDte}
-                allowDecimal
-                className={FILTER_INPUT_CLASS}
-              />
-            </label>
-          </>
-        ) : null}
-      </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <PendingSubmitButton
-          pendingLabel="Applying…"
-          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-        >
-          Apply filters
-        </PendingSubmitButton>
-        <Link
-          href={clearHref}
-          className="rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-        >
-          Clear
-        </Link>
-      </div>
-    </form>
+          </TableFilterField>
+          <TableFilterField label="Max DTE">
+            <GroupedNumberInput
+              name="maxDte"
+              defaultValue={values.maxDte}
+              allowDecimal
+              className={TABLE_FILTER_FIELD_CLASS}
+            />
+          </TableFilterField>
+        </>
+      ) : null}
+      <Link href={clearHref} className={TABLE_FILTER_CLEAR_CLASS}>
+        Clear
+      </Link>
+    </LiveGetForm>
   );
 }

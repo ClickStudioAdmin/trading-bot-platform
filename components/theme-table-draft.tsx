@@ -1,11 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {
+  SortTh,
+  StatusBadge,
+  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_FILTER_FIELD_CLASS,
+  TableFilterBar,
+  TableFilterField,
+  TablePager,
+  useClientTable,
+} from "@/components/table-chrome";
+import {
+  compareTableNum,
+  compareTableText,
+  type TableSortDir,
+} from "@/lib/table-chrome";
 
-const PAGE_SIZE = 10;
-
-const filterFieldClass =
-  "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 const primaryBtn =
   "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
 const secondaryBtn =
@@ -84,18 +95,26 @@ function row(
   };
 }
 
+function compareSampleRows(
+  left: SampleRow,
+  right: SampleRow,
+  key: string,
+  dir: TableSortDir,
+): number {
+  if (key === "updated") {
+    return compareTableNum(left.updatedMs, right.updatedMs, dir);
+  }
+  return compareTableText(
+    String(left[key as SortKey]),
+    String(right[key as SortKey]),
+    dir,
+  );
+}
+
 export function ThemeTableDraft() {
-  const [draftQuery, setDraftQuery] = useState("");
-  const [draftType, setDraftType] = useState("all");
-  const [draftStatus, setDraftStatus] = useState("all");
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
-    key: "name",
-    dir: "asc",
-  });
-  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -118,54 +137,26 @@ export function ThemeTableDraft() {
     });
   }, [query, typeFilter, statusFilter]);
 
-  const sorted = useMemo(() => {
-    const copy = [...filtered];
-    copy.sort((a, b) => {
-      const dir = sort.dir === "asc" ? 1 : -1;
-      if (sort.key === "updated") {
-        return (a.updatedMs - b.updatedMs) * dir;
-      }
-      return a[sort.key].localeCompare(b[sort.key]) * dir;
-    });
-    return copy;
-  }, [filtered, sort]);
-
-  const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const safePage = Math.min(page, pageCount);
-  const from = sorted.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const to = Math.min(safePage * PAGE_SIZE, sorted.length);
-  const pageRows = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const table = useClientTable(filtered, compareSampleRows, {
+    defaultKey: "name",
+    defaultDir: "asc",
+  });
+  const pageRows = table.pageRows;
   const pageIds = pageRows.map((item) => item.id);
   const allPageSelected =
     pageIds.length > 0 && pageIds.every((id) => selected.has(id));
   const selectedCount = selected.size;
 
-  function applyFilters() {
-    setQuery(draftQuery);
-    setTypeFilter(draftType);
-    setStatusFilter(draftStatus);
-    setPage(1);
+  function resetList() {
+    table.setPage(1);
     setSelected(new Set());
   }
 
   function clearFilters() {
-    setDraftQuery("");
-    setDraftType("all");
-    setDraftStatus("all");
     setQuery("");
     setTypeFilter("all");
     setStatusFilter("all");
-    setPage(1);
-    setSelected(new Set());
-  }
-
-  function onSort(key: SortKey) {
-    setSort((current) =>
-      current.key === key
-        ? { key, dir: current.dir === "asc" ? "desc" : "asc" }
-        : { key, dir: "asc" },
-    );
-    setPage(1);
+    resetList();
   }
 
   function toggleAll() {
@@ -220,65 +211,62 @@ export function ThemeTableDraft() {
         </div>
       </div>
 
-      <form
-        className="mt-6 rounded-card border border-line bg-surface p-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          applyFilters();
-        }}
-      >
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="block text-xs text-ink-muted">
-            Search
-            <input
-              type="search"
-              value={draftQuery}
-              onChange={(event) => setDraftQuery(event.target.value)}
-              placeholder="Name or venue"
-              autoComplete="off"
-              className={filterFieldClass}
-            />
-          </label>
-          <label className="block text-xs text-ink-muted">
-            Type
-            <select
-              value={draftType}
-              onChange={(event) => setDraftType(event.target.value)}
-              className={filterFieldClass}
-            >
-              <option value="all">All</option>
-              {TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-xs text-ink-muted">
-            Status
-            <select
-              value={draftStatus}
-              onChange={(event) => setDraftStatus(event.target.value)}
-              className={filterFieldClass}
-            >
-              <option value="all">All</option>
-              {STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {statusLabel(status)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button type="submit" className={primaryBtn}>
-            Apply filters
-          </button>
-          <button type="button" onClick={clearFilters} className={secondaryBtn}>
-            Clear
-          </button>
-        </div>
-      </form>
+      <TableFilterBar>
+        <TableFilterField label="Search">
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              resetList();
+            }}
+            placeholder="Name or venue"
+            autoComplete="off"
+            className={TABLE_FILTER_FIELD_CLASS}
+          />
+        </TableFilterField>
+        <TableFilterField label="Type">
+          <select
+            value={typeFilter}
+            onChange={(event) => {
+              setTypeFilter(event.target.value);
+              resetList();
+            }}
+            className={TABLE_FILTER_FIELD_CLASS}
+          >
+            <option value="all">All</option>
+            {TYPES.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </TableFilterField>
+        <TableFilterField label="Status">
+          <select
+            value={statusFilter}
+            onChange={(event) => {
+              setStatusFilter(event.target.value);
+              resetList();
+            }}
+            className={TABLE_FILTER_FIELD_CLASS}
+          >
+            <option value="all">All</option>
+            {STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {statusLabel(status)}
+              </option>
+            ))}
+          </select>
+        </TableFilterField>
+        <button
+          type="button"
+          onClick={clearFilters}
+          className={TABLE_FILTER_CLEAR_CLASS}
+        >
+          Clear
+        </button>
+      </TableFilterBar>
 
       {notice ? <p className="mt-4 text-sm text-success">{notice}</p> : null}
 
@@ -330,11 +318,36 @@ export function ThemeTableDraft() {
                   className="size-4 accent-accent"
                 />
               </th>
-              <SortTh label="Name" k="name" sort={sort} onSort={onSort} />
-              <SortTh label="Type" k="type" sort={sort} onSort={onSort} />
-              <SortTh label="Status" k="status" sort={sort} onSort={onSort} />
-              <SortTh label="Venue" k="venue" sort={sort} onSort={onSort} />
-              <SortTh label="Updated" k="updated" sort={sort} onSort={onSort} />
+              <SortTh
+                label="Name"
+                active={table.sortKey === "name"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("name")}
+              />
+              <SortTh
+                label="Type"
+                active={table.sortKey === "type"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("type")}
+              />
+              <SortTh
+                label="Status"
+                active={table.sortKey === "status"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("status")}
+              />
+              <SortTh
+                label="Venue"
+                active={table.sortKey === "venue"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("venue")}
+              />
+              <SortTh
+                label="Updated"
+                active={table.sortKey === "updated"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("updated")}
+              />
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
@@ -363,7 +376,10 @@ export function ThemeTableDraft() {
                   <td className="px-4 py-3 font-medium text-ink">{item.name}</td>
                   <td className="px-4 py-3 text-ink-muted">{item.type}</td>
                   <td className="px-4 py-3">
-                    <StatusBadge status={item.status} />
+                    <StatusBadge
+                      label={statusLabel(item.status)}
+                      status={item.status}
+                    />
                   </td>
                   <td className="px-4 py-3 text-ink-muted">{item.venue}</td>
                   <td className="px-4 py-3 tabular-nums text-ink-muted">
@@ -389,75 +405,13 @@ export function ThemeTableDraft() {
         </table>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-ink-muted">
-        <p>
-          {sorted.length === 0
-            ? "No rows."
-            : `Showing ${from}–${to} of ${sorted.length}`}
-        </p>
-        {pageCount > 1 ? (
-          <div className="flex gap-2">
-            {safePage > 1 ? (
-              <button
-                type="button"
-                onClick={() => setPage(safePage - 1)}
-                className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-              >
-                Previous
-              </button>
-            ) : null}
-            {safePage < pageCount ? (
-              <button
-                type="button"
-                onClick={() => setPage(safePage + 1)}
-                className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-              >
-                Next
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      <TablePager
+        window={table.window}
+        onPrev={() => table.setPage(table.window.page - 1)}
+        onNext={() => table.setPage(table.window.page + 1)}
+      />
     </div>
   );
-}
-
-function SortTh({
-  label,
-  k,
-  sort,
-  onSort,
-}: {
-  label: string;
-  k: SortKey;
-  sort: { key: SortKey; dir: "asc" | "desc" };
-  onSort: (key: SortKey) => void;
-}) {
-  const active = sort.key === k;
-  return (
-    <th className="px-4 py-3 font-medium">
-      <button
-        type="button"
-        onClick={() => onSort(k)}
-        className={active ? "text-ink" : "text-ink-faint hover:text-ink"}
-      >
-        {label}
-        {active ? (sort.dir === "asc" ? " ↑" : " ↓") : ""}
-      </button>
-    </th>
-  );
-}
-
-function StatusBadge({ status }: { status: SampleStatus }) {
-  const className =
-    status === "active"
-      ? "rounded-full bg-success/15 px-2.5 py-0.5 text-xs text-success"
-      : status === "disabled"
-        ? "rounded-full bg-ink-faint/15 px-2.5 py-0.5 text-xs text-ink-muted"
-        : status === "pending"
-          ? "rounded-full bg-warning/15 px-2.5 py-0.5 text-xs text-warning"
-          : "rounded-full bg-danger/15 px-2.5 py-0.5 text-xs text-danger";
-  return <span className={className}>{statusLabel(status)}</span>;
 }
 
 function statusLabel(status: SampleStatus): string {

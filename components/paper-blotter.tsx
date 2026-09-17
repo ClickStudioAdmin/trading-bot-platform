@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
+import { SortTh, TablePager, useClientTable } from "@/components/table-chrome";
 import {
   PaperOpenColumnPicker,
   usePaperOpenColumns,
@@ -28,6 +29,12 @@ import {
   type MarkedPaperCarry,
   type PaperCarryRow,
 } from "@/lib/paper/rows";
+import {
+  compareTableNum,
+  compareTableText,
+  type TableSortDir,
+} from "@/lib/table-chrome";
+import { carryPnlPct } from "@/lib/paper/math";
 
 type OpenCarryView = MarkedPaperCarry & {
   orders: PaperOrderRow[];
@@ -37,6 +44,23 @@ type ClosedCarryView = PaperCarryRow & {
   orders: PaperOrderRow[];
   logs: EventLogRow[];
 };
+
+function compareNullableNum(
+  left: number | null,
+  right: number | null,
+  dir: TableSortDir,
+): number {
+  if (left === null && right === null) {
+    return 0;
+  }
+  if (left === null) {
+    return 1;
+  }
+  if (right === null) {
+    return -1;
+  }
+  return compareTableNum(left, right, dir);
+}
 
 export function OpenPaperTrades({
   signedIn,
@@ -57,6 +81,56 @@ export function OpenPaperTrades({
 }) {
   const { visible, setColumn } = usePaperOpenColumns();
   const colSpan = paperOpenColumnCount(visible);
+  const compare = useCallback(
+    (left: OpenCarryView, right: OpenCarryView, key: string, dir: TableSortDir) => {
+      if (key === "pair") {
+        return compareTableText(
+          `${left.baseCoin} ${left.futureSymbol}`,
+          `${right.baseCoin} ${right.futureSymbol}`,
+          dir,
+        );
+      }
+      if (key === "source") {
+        return compareTableText(
+          `${left.source} ${left.ruleName ?? ""}`,
+          `${right.source} ${right.ruleName ?? ""}`,
+          dir,
+        );
+      }
+      if (key === "dte") {
+        return compareNullableNum(left.daysToExpiry, right.daysToExpiry, dir);
+      }
+      if (key === "value") {
+        return compareTableNum(left.notionalUsdt, right.notionalUsdt, dir);
+      }
+      if (key === "entry") {
+        return compareTableNum(left.entryBasis, right.entryBasis, dir);
+      }
+      if (key === "mark") {
+        return compareNullableNum(left.markBasis, right.markBasis, dir);
+      }
+      if (key === "apr") {
+        return compareNullableNum(left.markApr, right.markApr, dir);
+      }
+      if (key === "unrealized") {
+        return compareNullableNum(left.unrealizedUsdt, right.unrealizedUsdt, dir);
+      }
+      if (key === "pnl") {
+        return compareNullableNum(
+          left.unrealizedUsdt === null
+            ? null
+            : carryPnlPct(left.unrealizedUsdt, left.notionalUsdt),
+          right.unrealizedUsdt === null
+            ? null
+            : carryPnlPct(right.unrealizedUsdt, right.notionalUsdt),
+          dir,
+        );
+      }
+      return 0;
+    },
+    [],
+  );
+  const table = useClientTable(open, compare);
 
   return (
     <section>
@@ -96,77 +170,73 @@ export function OpenPaperTrades({
                   }
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Pair"
-                  hint="Long USDT spot and short this dated future."
-                />
-              </th>
-              <th className="w-28 px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Source"
-                  hint="Manual is a desk click. Auto is a bot. The name is the bot that opened this row. Click the name on an open Auto row to see copied rules and edit that trade’s exits."
-                />
-              </th>
+              <SortTh
+                label="Pair"
+                active={table.sortKey === "pair"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("pair")}
+              />
+              <SortTh
+                label="Source"
+                active={table.sortKey === "source"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("source")}
+              />
               {visible.dte ? (
-                <th className="px-4 py-3 font-medium">
-                  <ColumnHint
-                    label="DTE"
-                    hint="Days until this future expires."
-                  />
-                </th>
+                <SortTh
+                  label="DTE"
+                  active={table.sortKey === "dte"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("dte")}
+                />
               ) : null}
               {visible.value ? (
-                <th className="px-4 py-3 font-medium">
-                  <ColumnHint
-                    label="Order Value"
-                    hint={
-                      exchangeBook
-                        ? "Open size in USDT. P&L scales with this amount."
-                        : "Paper size in USDT. P&L scales with this amount."
-                    }
-                  />
-                </th>
+                <SortTh
+                  label="Order Value"
+                  active={table.sortKey === "value"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("value")}
+                />
               ) : null}
               {visible.entry ? (
-                <th className="px-4 py-3 font-medium">
-                  <ColumnHint
-                    label="Entry basis"
-                    hint="Size-weighted average fill basis of the open clips. Connected Exchange: gross from fill prices. Paper: scan net (fill equals the scan)."
-                  />
-                </th>
+                <SortTh
+                  label="Entry basis"
+                  active={table.sortKey === "entry"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("entry")}
+                />
               ) : null}
               {visible.mark ? (
-                <th className="px-4 py-3 font-medium">
-                  <ColumnHint
-                    label="Mark basis"
-                    hint="Current scan for this pair, not mid or last. Connected Exchange: scan basis (gross), same unit as fill. Paper: net basis after assumed fees."
-                  />
-                </th>
+                <SortTh
+                  label="Mark basis"
+                  active={table.sortKey === "mark"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("mark")}
+                />
               ) : null}
               {visible.apr ? (
-                <th className="px-4 py-3 font-medium">
-                  <ColumnHint
-                    label="Net APR"
-                    hint="Scan net basis × 365 / DTE. After assumed fees and slip. Same figure as Opportunities — not computed from Entry or Mark fill. Used to rank pairs and for mark APR exits."
-                  />
-                </th>
+                <SortTh
+                  label="Net APR"
+                  active={table.sortKey === "apr"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("apr")}
+                />
               ) : null}
               {visible.unrealized ? (
-                <th className="px-4 py-3 font-medium">
-                  <ColumnHint
-                    label="Unrealized"
-                    hint="(entry − mark − 2 × assumed fees and slip) × value. Cost model is VIP0 taker on both legs plus 5 bp slip, counted once to open and once to close — not Bybit’s invoice. Connected Exchange: entry is fill, mark is scan. Paper: both are net."
-                  />
-                </th>
+                <SortTh
+                  label="Unrealized"
+                  active={table.sortKey === "unrealized"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("unrealized")}
+                />
               ) : null}
               {visible.pnl ? (
-                <th className="px-4 py-3 font-medium">
-                  <ColumnHint
-                    label="P&L %"
-                    hint="Unrealized ÷ value. Same assumed fee model as Unrealized. Not annualized."
-                  />
-                </th>
+                <SortTh
+                  label="P&L %"
+                  active={table.sortKey === "pnl"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("pnl")}
+                />
               ) : null}
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
@@ -193,7 +263,7 @@ export function OpenPaperTrades({
                   </>
                 }
               />
-            ) : open.length === 0 ? (
+            ) : table.pageRows.length === 0 ? (
               <EmptyRow
                 colSpan={colSpan}
                 message={
@@ -209,7 +279,7 @@ export function OpenPaperTrades({
                 }
               />
             ) : (
-              open.map((trade) => (
+              table.pageRows.map((trade) => (
                 <OpenPaperCarryRows
                   key={trade.id}
                   trade={trade}
@@ -222,6 +292,11 @@ export function OpenPaperTrades({
           </tbody>
         </table>
       </div>
+      <TablePager
+        window={table.window}
+        onPrev={() => table.setPage(table.window.page - 1)}
+        onNext={() => table.setPage(table.window.page + 1)}
+      />
     </section>
   );
 }
@@ -233,6 +308,53 @@ export function ClosedPaperTrades({
   signedIn: boolean;
   closed: ClosedCarryView[];
 }) {
+  const compare = useCallback(
+    (left: ClosedCarryView, right: ClosedCarryView, key: string, dir: TableSortDir) => {
+      if (key === "pair") {
+        return compareTableText(
+          `${left.baseCoin} ${left.futureSymbol}`,
+          `${right.baseCoin} ${right.futureSymbol}`,
+          dir,
+        );
+      }
+      if (key === "source") {
+        return compareTableText(
+          `${left.source} ${left.ruleName ?? ""}`,
+          `${right.source} ${right.ruleName ?? ""}`,
+          dir,
+        );
+      }
+      if (key === "closed") {
+        return compareNullableNum(left.closedAtMs, right.closedAtMs, dir);
+      }
+      if (key === "days") {
+        return compareNullableNum(left.daysHeld, right.daysHeld, dir);
+      }
+      if (key === "entry") {
+        return compareTableNum(left.entryBasis, right.entryBasis, dir);
+      }
+      if (key === "exit") {
+        return compareNullableNum(left.exitBasis, right.exitBasis, dir);
+      }
+      if (key === "realized") {
+        return compareNullableNum(left.realizedUsdt, right.realizedUsdt, dir);
+      }
+      if (key === "pnl") {
+        return compareNullableNum(
+          left.realizedUsdt === null
+            ? null
+            : carryPnlPct(left.realizedUsdt, left.notionalUsdt),
+          right.realizedUsdt === null
+            ? null
+            : carryPnlPct(right.realizedUsdt, right.notionalUsdt),
+          dir,
+        );
+      }
+      return 0;
+    },
+    [],
+  );
+  const table = useClientTable(closed, compare);
   return (
     <section>
       <SectionHead
@@ -249,54 +371,54 @@ export function ClosedPaperTrades({
                   hint="Expand for orders and the event log for this position."
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Pair"
-                  hint="Long USDT spot and short this dated future."
-                />
-              </th>
-              <th className="w-28 px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Source"
-                  hint="Manual is a desk click. Auto is a bot. The name is the bot that opened this row. In / Out is whether the open and close were Manual or System."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Closed"
-                  hint="Local date this carry was closed. Hover for UTC."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Days held"
-                  hint="(closed time − opened time) in days."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Entry"
-                  hint="Size-weighted average fill basis of the open clips. Connected Exchange: gross from fill prices. Paper: scan net (fill equals the scan)."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Exit"
-                  hint="Scan net basis at close (after assumed fees). Same net figure as the Opportunities book."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Realized"
-                  hint="(entry − exit − 2 × assumed fees and slip) × value. Same cost model as Unrealized. Exit is scan net. Not Bybit’s actual invoice."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="P&L %"
-                  hint="Realized ÷ position value. Same assumed fee model as Realized."
-                />
-              </th>
+              <SortTh
+                label="Pair"
+                active={table.sortKey === "pair"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("pair")}
+              />
+              <SortTh
+                label="Source"
+                active={table.sortKey === "source"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("source")}
+              />
+              <SortTh
+                label="Closed"
+                active={table.sortKey === "closed"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("closed")}
+              />
+              <SortTh
+                label="Days held"
+                active={table.sortKey === "days"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("days")}
+              />
+              <SortTh
+                label="Entry"
+                active={table.sortKey === "entry"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("entry")}
+              />
+              <SortTh
+                label="Exit"
+                active={table.sortKey === "exit"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("exit")}
+              />
+              <SortTh
+                label="Realized"
+                active={table.sortKey === "realized"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("realized")}
+              />
+              <SortTh
+                label="P&L %"
+                active={table.sortKey === "pnl"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("pnl")}
+              />
             </tr>
           </thead>
           <tbody>
@@ -312,19 +434,24 @@ export function ClosedPaperTrades({
                   </>
                 }
               />
-            ) : closed.length === 0 ? (
+            ) : table.pageRows.length === 0 ? (
               <EmptyRow
                 colSpan={9}
                 message="No closed paper carries yet."
               />
             ) : (
-              closed.map((trade) => (
+              table.pageRows.map((trade) => (
                 <ClosedPaperCarryRows key={trade.id} trade={trade} />
               ))
             )}
           </tbody>
         </table>
       </div>
+      <TablePager
+        window={table.window}
+        onPrev={() => table.setPage(table.window.page - 1)}
+        onNext={() => table.setPage(table.window.page + 1)}
+      />
     </section>
   );
 }

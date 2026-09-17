@@ -34,6 +34,7 @@ import {
   markReadSelection,
   parseInboxFilters,
   parseInboxPage,
+  parseInboxSort,
 } from "./inbox";
 import { memberSettingGroups } from "./settings";
 import { seedUserInbox } from "./seed";
@@ -45,16 +46,17 @@ import {
 } from "./store";
 
 function inboxReturnPath(formData: FormData, affiliateOnly: boolean): string {
+  const params = {
+    status: String(formData.get("status") ?? ""),
+    scope: String(formData.get("scope") ?? ""),
+    event: String(formData.get("event") ?? ""),
+    sort: String(formData.get("sort") ?? ""),
+    dir: String(formData.get("dir") ?? ""),
+  };
   return inboxPath(
     parseInboxPage(formData.get("page")),
-    parseInboxFilters(
-      {
-        status: String(formData.get("status") ?? ""),
-        scope: String(formData.get("scope") ?? ""),
-        event: String(formData.get("event") ?? ""),
-      },
-      memberSettingGroups(affiliateOnly),
-    ),
+    parseInboxFilters(params, memberSettingGroups(affiliateOnly)),
+    parseInboxSort(params),
   );
 }
 

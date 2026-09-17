@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { pairPageLabel } from "@/lib/pairs/page";
+import { TablePager } from "@/components/table-chrome";
 
 export function PairPager({
   page,
@@ -18,32 +17,18 @@ export function PairPager({
   prevHref: string;
   nextHref: string;
 }) {
-  if (total === 0) {
-    return null;
-  }
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-ink-muted">
-      <p>{pairPageLabel({ page, total, from, to })}</p>
-      {pageCount > 1 ? (
-        <div className="flex gap-2">
-          {page > 1 ? (
-            <Link
-              href={prevHref}
-              className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-            >
-              Previous
-            </Link>
-          ) : null}
-          {page < pageCount ? (
-            <Link
-              href={nextHref}
-              className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-            >
-              Next
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+    <TablePager
+      window={{
+        page,
+        pageCount,
+        total,
+        from: total === 0 ? 0 : from + 1,
+        to,
+      }}
+      prevHref={prevHref}
+      nextHref={nextHref}
+      emptyLabel="No pairs."
+    />
   );
 }

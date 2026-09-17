@@ -103,6 +103,16 @@ assert.equal(
   "/strategies/cash-and-carry/pairs?minDte=10&maxDte=90",
 );
 assert.equal(
+  pairPageHref({
+    path: "/strategies/futures/pairs",
+    filters: { q: "", base: "", minDte: null, maxDte: null },
+    page: 1,
+    sort: "cap",
+    dir: "desc",
+  }),
+  "/strategies/futures/pairs",
+);
+assert.equal(
   pairPageLabel({ page: 1, total: 51, from: 0, to: 50 }),
   "Showing 1–50 of 51",
 );

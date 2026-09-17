@@ -94,11 +94,6 @@ export default async function CashAndCarryOpportunitiesPage({
           </p>
         ) : (
           <div className="space-y-2">
-            <p className="text-sm text-ink-muted">
-              {active
-                ? `${visible.length} of ${rows.length} pairs`
-                : `${rows.length} pairs`}
-            </p>
             {visible.length === 0 ? (
               <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
                 {active

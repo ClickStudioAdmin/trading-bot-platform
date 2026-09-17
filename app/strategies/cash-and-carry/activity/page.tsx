@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EventLogs } from "@/components/event-logs";
 import { PageHeading } from "@/components/page-heading";
+import { deskHref } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
 import { listEventLogs, parseEventLogFilters } from "@/lib/logs/list";
 
@@ -29,9 +30,13 @@ export default async function CashAndCarryActivityPage({
         <EventLogs
           rows={rows}
           filters={filters}
-          clearHref="/strategies/cash-and-carry/activity"
+          clearHref={deskHref(
+            "/strategies/cash-and-carry/activity",
+            session.account.id,
+          )}
           showUser={false}
           scopes={["strategy", "trade"]}
+          hidden={{ desk: session.account.id }}
         />
       ) : (
         <p className="text-sm text-ink-muted">
