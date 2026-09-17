@@ -21,9 +21,7 @@ export function SiteLogo({
         <img
           src={logoUrl}
           alt=""
-          width={32}
-          height={32}
-          className="size-8 shrink-0 rounded-control object-cover"
+          className="h-8 w-auto max-w-[9rem] shrink-0 object-contain"
         />
       ) : (
         <span className="inline-flex h-8 w-8 items-center justify-center rounded-control bg-accent-strong">
@@ -54,9 +52,9 @@ export function SiteLogo({
       {compact ? (
         <span className="sr-only">{name}</span>
       ) : (
-        <span className="leading-tight">
+        <span className="min-w-0 leading-tight">
           <span className="block text-sm font-semibold tracking-tight">
-            TBP
+            {name}
           </span>
           <span className="block text-[11px] text-ink-muted">
             Trading desk
@@ -67,11 +65,15 @@ export function SiteLogo({
   );
 
   if (!linked) {
-    return <div className="flex items-center gap-2.5 text-ink">{mark}</div>;
+    return (
+      <div className="flex min-w-0 shrink-0 items-center gap-2.5 text-ink">
+        {mark}
+      </div>
+    );
   }
 
   return (
-    <Link href={href} className="flex items-center gap-2.5 text-ink">
+    <Link href={href} className="flex min-w-0 shrink-0 items-center gap-2.5 text-ink">
       {mark}
     </Link>
   );

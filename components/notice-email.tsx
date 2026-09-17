@@ -19,7 +19,7 @@ export function NoticeEmail({
 }) {
   return (
     <div
-      className="rounded-card border p-5"
+      className="w-full rounded-card border p-5"
       style={{
         background: "#ffffff",
         borderColor: "#e5e7eb",
@@ -30,7 +30,7 @@ export function NoticeEmail({
         <img
           src={logoUrl}
           alt=""
-          className="mb-3 h-10 w-auto max-w-[140px] object-contain"
+          className="mb-3 h-8 w-auto max-w-[96px] object-contain"
         />
       ) : null}
       <p

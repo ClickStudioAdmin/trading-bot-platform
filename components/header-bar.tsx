@@ -23,6 +23,7 @@ export function HeaderBar({
     !isIdentityPath(pathname) &&
     (pathname.startsWith("/account") ||
       pathname.startsWith("/strategies") ||
+      pathname.startsWith("/admin") ||
       (signedIn && isAffiliatePortalPath(pathname)));
 
   return (
@@ -30,7 +31,7 @@ export function HeaderBar({
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-3">
         <div className="flex min-w-0 items-center gap-4">
           {hideLogo ? null : (
-            <div className="min-w-0">
+            <div className="min-w-0 shrink-0">
               <SiteLogo name={platformName} logoUrl={platformLogoUrl} />
             </div>
           )}

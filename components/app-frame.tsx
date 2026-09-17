@@ -40,6 +40,16 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
             }
           : undefined
       }
+      adminBadges={
+        adminChrome
+          ? {
+              "/admin": adminChrome.overview,
+              "/admin/billing": adminChrome.billing,
+              "/admin/affiliates": adminChrome.affiliates,
+              "/admin/members": adminChrome.members,
+            }
+          : undefined
+      }
       platformName={brand.name}
       platformLogoUrl={brand.logoUrl}
     >

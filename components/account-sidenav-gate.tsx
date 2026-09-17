@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { AccountSidenav } from "@/components/account-sidenav";
+import { AdminSidenav } from "@/components/admin-sidenav";
 import type { TradingAccount } from "@/lib/accounts/model";
 import { usesSignedInAppChrome } from "@/lib/site-links";
 
@@ -11,6 +12,7 @@ export function AccountSidenavGate({
   platformMember,
   desks,
   badges,
+  adminBadges,
   children,
   platformName,
   platformLogoUrl,
@@ -19,29 +21,36 @@ export function AccountSidenavGate({
   platformMember: boolean;
   desks: TradingAccount[];
   badges?: Record<string, number>;
+  adminBadges?: Record<string, number>;
   children: React.ReactNode;
   platformName?: string;
   platformLogoUrl?: string | null;
 }) {
   const pathname = usePathname();
-  if (
-    !signedIn ||
-    !usesSignedInAppChrome(pathname, signedIn) ||
-    pathname.startsWith("/admin")
-  ) {
+  if (!signedIn || !usesSignedInAppChrome(pathname, signedIn)) {
     return children;
   }
+
+  const admin = pathname.startsWith("/admin");
 
   return (
     <div className="flex min-h-dvh">
       <Suspense>
-        <AccountSidenav
-          desks={desks}
-          platformMember={platformMember}
-          badges={badges}
-          platformName={platformName}
-          platformLogoUrl={platformLogoUrl}
-        />
+        {admin ? (
+          <AdminSidenav
+            badges={adminBadges}
+            platformName={platformName}
+            platformLogoUrl={platformLogoUrl}
+          />
+        ) : (
+          <AccountSidenav
+            desks={desks}
+            platformMember={platformMember}
+            badges={badges}
+            platformName={platformName}
+            platformLogoUrl={platformLogoUrl}
+          />
+        )}
       </Suspense>
       {children}
     </div>

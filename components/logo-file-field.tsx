@@ -56,7 +56,7 @@ export function LogoFileField({
             alt=""
             width={56}
             height={56}
-            className="size-14 shrink-0 rounded-card border border-line object-cover"
+            className="size-14 shrink-0 rounded-card border border-line object-contain"
           />
         ) : (
           <span

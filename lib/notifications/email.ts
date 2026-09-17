@@ -94,7 +94,7 @@ export function noticeEmailHtml(
     : "";
   const brand = escapeNoticeHtml(input.brand?.trim() || DEFAULT_PLATFORM_NAME);
   const logo = input.logoUrl
-    ? `<img src="${escapeNoticeHtml(input.logoUrl)}" alt="${brand}" width="140" style="display:block;max-width:140px;height:auto;margin:0 0 12px;border:0;" />`
+    ? `<img src="${escapeNoticeHtml(input.logoUrl)}" alt="${brand}" width="96" style="display:block;max-width:96px;height:auto;margin:0 0 12px;border:0;" />`
     : "";
   return `<!DOCTYPE html>
 <html>
@@ -102,7 +102,7 @@ export function noticeEmailHtml(
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PAGE};">
     <tr>
       <td align="center" style="padding:24px 12px;">
-        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:560px;max-width:100%;background:${CARD};border:1px solid ${LINE};border-radius:16px;">
+        <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="width:640px;max-width:100%;background:${CARD};border:1px solid ${LINE};border-radius:16px;">
           <tr>
             <td style="padding:20px;">
               ${logo}
