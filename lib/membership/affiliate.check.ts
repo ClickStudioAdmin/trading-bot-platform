@@ -20,6 +20,10 @@ import {
   affiliateNetworkPath,
   affiliatePortalPath,
   affiliatePortalPagePath,
+  affiliateListQueryParams,
+  matchesAffiliateArchiveStatus,
+  matchesAffiliateNeedle,
+  parseAffiliatePortalListQuery,
   affiliateDownlineRowHref,
   affiliateOrgChartNodeHtml,
   affiliateOrgPlanLabel,
@@ -391,6 +395,42 @@ assert.equal(
   affiliatePortalPagePath("network", 2),
   "/affiliates?tab=network&page=2",
 );
+assert.equal(
+  affiliatePortalPagePath("referrals", 2, { q: "ada", status: "payable" }),
+  "/affiliates?tab=referrals&q=ada&status=payable&page=2",
+);
+assert.equal(
+  affiliateNetworkPath("list", 2, { status: "paid" }),
+  "/affiliates?tab=network&status=paid&page=2",
+);
+{
+  const query = parseAffiliatePortalListQuery("campaigns", {
+    q: " spring ",
+    status: "archived",
+    sort: "signups",
+    dir: "desc",
+  });
+  assert.deepEqual(query, {
+    q: "spring",
+    status: "archived",
+    sort: "signups",
+    dir: "desc",
+  });
+  assert.deepEqual(affiliateListQueryParams(query, "campaigns"), {
+    q: "spring",
+    status: "archived",
+    sort: "signups",
+    dir: "desc",
+  });
+  assert.equal(parseAffiliatePortalListQuery("campaigns", { status: "nope" }).status, "");
+  assert.equal(parseAffiliatePortalListQuery("payouts", {}).sort, "date");
+  assert.equal(parseAffiliatePortalListQuery("payouts", {}).dir, "desc");
+}
+assert.equal(matchesAffiliateNeedle("ada", "Ada Lovelace", "paid"), true);
+assert.equal(matchesAffiliateNeedle("zzz", "Ada"), false);
+assert.equal(matchesAffiliateArchiveStatus(null, "active"), true);
+assert.equal(matchesAffiliateArchiveStatus("2026-01-01", "active"), false);
+assert.equal(matchesAffiliateArchiveStatus("2026-01-01", "archived"), true);
 assert.equal(affiliatePortalPageForIndex(0), 1);
 assert.equal(affiliatePortalPageForIndex(19), 1);
 assert.equal(affiliatePortalPageForIndex(20), 2);

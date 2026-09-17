@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   compareTableNum,
   compareTableText,
+  formatStatusLabel,
   parseTablePage,
   parseTableSortKey,
   sliceTablePage,
@@ -12,14 +13,14 @@ import {
   toggleTableSortDir,
 } from "./table-chrome";
 
-assert.deepEqual(tablePageWindow(24, 1, 10), {
+assert.deepEqual(tablePageWindow(24, 1), {
   page: 1,
-  pageCount: 3,
+  pageCount: 2,
   total: 24,
   from: 1,
-  to: 10,
+  to: 20,
   start: 0,
-  end: 10,
+  end: 20,
 });
 assert.equal(tablePageLabel({ total: 0, from: 0, to: 0 }), "No rows.");
 assert.equal(
@@ -38,6 +39,8 @@ assert.equal(statusToneFor("Unpaid"), "warning");
 assert.equal(statusToneFor("error"), "danger");
 assert.equal(statusToneFor("archived"), "muted");
 assert.equal(statusToneFor("info"), "muted");
+assert.equal(formatStatusLabel("paid"), "Paid");
+assert.equal(formatStatusLabel("sign_up"), "Sign Up");
 assert.equal(parseTableSortKey("name", ["name", "date"] as const, "date"), "name");
 assert.equal(parseTableSortKey("nope", ["name", "date"] as const, "date"), "date");
 assert.equal(

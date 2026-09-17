@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import {
   billingPath,
+  billingTableQueryParams,
+  DEFAULT_BILLING_INVOICE_SORT,
+  DEFAULT_BILLING_LEDGER_SORT,
+  DEFAULT_BILLING_TABLE_DIR,
+  parseBillingInvoiceSort,
+  parseBillingLedgerSort,
   billingPageLabel,
   paginateBillingRows,
   parseBillingPage,
@@ -118,6 +124,36 @@ assert.equal(billingPath(), "/account/billing");
 assert.equal(
   billingPath({ tab: "wallet", saved: "withdraw" }),
   "/account/billing?tab=wallet&saved=withdraw",
+);
+assert.deepEqual(parseBillingInvoiceSort({}), {
+  sort: DEFAULT_BILLING_INVOICE_SORT,
+  dir: DEFAULT_BILLING_TABLE_DIR,
+});
+assert.deepEqual(parseBillingInvoiceSort({ sort: "amount", dir: "asc" }), {
+  sort: "amount",
+  dir: "asc",
+});
+assert.deepEqual(parseBillingInvoiceSort({ sort: "nope" }), {
+  sort: DEFAULT_BILLING_INVOICE_SORT,
+  dir: DEFAULT_BILLING_TABLE_DIR,
+});
+assert.deepEqual(parseBillingLedgerSort({ sort: "balance", dir: "asc" }), {
+  sort: "balance",
+  dir: "asc",
+});
+assert.deepEqual(
+  billingTableQueryParams(
+    { sort: "issued", dir: "desc" },
+    { sort: DEFAULT_BILLING_INVOICE_SORT, dir: DEFAULT_BILLING_TABLE_DIR },
+  ),
+  { sort: undefined, dir: undefined },
+);
+assert.deepEqual(
+  billingTableQueryParams(
+    { sort: "plan", dir: "asc" },
+    { sort: DEFAULT_BILLING_LEDGER_SORT, dir: DEFAULT_BILLING_TABLE_DIR },
+  ),
+  { sort: "plan", dir: "asc" },
 );
 assert.equal(checkoutPath(), "/account/billing/checkout");
 assert.equal(

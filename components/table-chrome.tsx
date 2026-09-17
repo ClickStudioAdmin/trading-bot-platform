@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import {
+  formatStatusLabel,
   sliceTablePage,
   statusToneFor,
   tablePageLabel,
@@ -44,7 +45,7 @@ export function StatusBadge({
   status?: string;
 }) {
   const resolved = tone ?? statusToneFor(status ?? label);
-  return <span className={BADGE_TONE[resolved]}>{label}</span>;
+  return <span className={BADGE_TONE[resolved]}>{formatStatusLabel(label)}</span>;
 }
 
 export function TableFilterBar({

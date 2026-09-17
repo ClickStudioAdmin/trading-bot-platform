@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SortTh, TablePager, useClientTable } from "@/components/table-chrome";
+import {
+  SortTh,
+  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_FILTER_FIELD_CLASS,
+  TableFilterBar,
+  TableFilterField,
+  TablePager,
+  useClientTable,
+} from "@/components/table-chrome";
 import {
   compareTableNum,
   compareTableText,
@@ -313,10 +321,41 @@ function fillActionLabel(
   return row.action;
 }
 
+type FillActionFilter = "" | "open" | "close" | "buy" | "sell";
+
+function fillHaystack(
+  row: SimulatedOrder,
+  current: boolean,
+): string {
+  return [
+    fillActionLabel(row, current),
+    row.side,
+    row.action,
+    row.reason ?? "",
+    String(row.qty),
+    String(row.price),
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
 export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
   const { open } = splitCompletedBacktestOrders(run.orders);
   const openSet = useMemo(() => new Set(open), [open]);
   const fills = run.orders;
+  const [query, setQuery] = useState("");
+  const [action, setAction] = useState<FillActionFilter>("");
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return fills.filter((row) => {
+      const current = openSet.has(row);
+      const label = fillActionLabel(row, current).toLowerCase();
+      if (action && label !== action) {
+        return false;
+      }
+      return !needle || fillHaystack(row, current).includes(needle);
+    });
+  }, [action, fills, openSet, query]);
   const compare = useCallback(
     (left: SimulatedOrder, right: SimulatedOrder, key: string, dir: TableSortDir) => {
       if (key === "time") {
@@ -359,7 +398,7 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
     },
     [openSet],
   );
-  const table = useClientTable(fills, compare);
+  const table = useClientTable(filtered, compare);
   if (fills.length === 0) {
     return (
       <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
@@ -369,6 +408,48 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
   }
   return (
     <div>
+      <TableFilterBar className="mb-4">
+        <TableFilterField label="Search">
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              table.setPage(1);
+            }}
+            placeholder="Action or side"
+            autoComplete="off"
+            className={TABLE_FILTER_FIELD_CLASS}
+          />
+        </TableFilterField>
+        <TableFilterField label="Action">
+          <select
+            value={action}
+            onChange={(event) => {
+              setAction(event.target.value as FillActionFilter);
+              table.setPage(1);
+            }}
+            className={TABLE_FILTER_FIELD_CLASS}
+          >
+            <option value="">All</option>
+            <option value="open">Open</option>
+            <option value="close">Close</option>
+            <option value="buy">Buy</option>
+            <option value="sell">Sell</option>
+          </select>
+        </TableFilterField>
+        <button
+          type="button"
+          onClick={() => {
+            setQuery("");
+            setAction("");
+            table.setPage(1);
+          }}
+          className={TABLE_FILTER_CLEAR_CLASS}
+        >
+          Clear
+        </button>
+      </TableFilterBar>
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-max text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
@@ -418,7 +499,14 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
             </tr>
           </thead>
           <tbody>
-            {table.pageRows.map((row, index) => {
+            {table.pageRows.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-sm text-ink-muted">
+                  No fills match.
+                </td>
+              </tr>
+            ) : (
+              table.pageRows.map((row, index) => {
               const current = openSet.has(row);
               const realized = current ? null : row.realizedUsdt;
               return (
@@ -446,7 +534,8 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
                   </td>
                 </tr>
               );
-            })}
+            })
+            )}
           </tbody>
         </table>
       </div>

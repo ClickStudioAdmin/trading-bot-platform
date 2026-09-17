@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { AdminPayoutQueue } from "@/components/admin-payout-queue";
 import { PageHeading } from "@/components/page-heading";
 import {
+  parsePayoutFileStatus,
+  parsePayoutStatus,
+} from "@/lib/membership/affiliate";
+import {
   findMemberByEmailOrCode,
   listPayoutFiles,
   listPayouts,
@@ -26,6 +30,9 @@ export default async function AdminAffiliatesPage({
   const error = firstSearchValue(params.error);
   const fileCount = firstSearchValue(params.count);
   const lookup = firstSearchValue(params.q) ?? "";
+  const fileStatus = parsePayoutFileStatus(firstSearchValue(params.fileStatus)) ?? "";
+  const fileQ = (firstSearchValue(params.fileQ) ?? "").trim();
+  const payoutStatus = parsePayoutStatus(firstSearchValue(params.payoutStatus)) ?? "";
   await releaseDueCommissions();
   const [payouts, files, stats] = await Promise.all([
     listPayouts(),
@@ -68,6 +75,10 @@ export default async function AdminAffiliatesPage({
         stats={stats}
         files={files}
         payouts={payouts}
+        fileStatus={fileStatus}
+        fileQ={fileQ}
+        payoutStatus={payoutStatus}
+        keep={{ q: lookup || undefined }}
       />
 
       <section className="mt-8 rounded-card border border-line bg-surface p-5">

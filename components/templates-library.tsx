@@ -746,7 +746,10 @@ export function TemplatesLibrary({
             <input
               type="search"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setPage(1);
+              }}
               placeholder="Name or contract"
               autoComplete="off"
               className={TABLE_FILTER_FIELD_CLASS}
@@ -755,9 +758,10 @@ export function TemplatesLibrary({
           <TableFilterField label="Desk type">
             <select
               value={deskFilter}
-              onChange={(event) =>
-                setDeskFilter(event.target.value as "all" | TemplateDeskType)
-              }
+              onChange={(event) => {
+                setDeskFilter(event.target.value as "all" | TemplateDeskType);
+                setPage(1);
+              }}
               className={TABLE_FILTER_FIELD_CLASS}
             >
               <option value="all">All desk types</option>
@@ -770,7 +774,10 @@ export function TemplatesLibrary({
             <TableFilterField label="Folder">
               <select
                 value={folderFilter}
-                onChange={(event) => setFolderFilter(event.target.value)}
+                onChange={(event) => {
+                  setFolderFilter(event.target.value);
+                  setPage(1);
+                }}
                 className={TABLE_FILTER_FIELD_CLASS}
               >
                 <option value="all">All folders</option>

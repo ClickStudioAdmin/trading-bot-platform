@@ -1,4 +1,9 @@
 import {
+  parseTableSortDir,
+  parseTableSortKey,
+  type TableSortDir,
+} from "../table-chrome";
+import {
   AFFILIATE_LEVEL_MAX,
   AFFILIATE_PCT_MAX,
   AFFILIATE_RATE_KEYS,
@@ -1190,18 +1195,193 @@ export function affiliatePortalPath(
 export function affiliatePortalPagePath(
   tab: AffiliatePortalTab,
   page = 1,
+  extra: Record<string, string> = {},
 ): string {
-  return affiliatePortalPath(tab, page > 1 ? { page: String(page) } : {});
+  const params = { ...extra };
+  delete params.page;
+  return affiliatePortalPath(tab, {
+    ...params,
+    ...(page > 1 ? { page: String(page) } : {}),
+  });
 }
 
 export function affiliateNetworkPath(
   view: AffiliateNetworkView = "list",
   page = 1,
+  extra: Record<string, string> = {},
 ): string {
+  const params = { ...extra };
+  delete params.page;
+  delete params.view;
   return affiliatePortalPath("network", {
+    ...params,
     ...(view !== "list" ? { view } : {}),
     ...(view === "list" && page > 1 ? { page: String(page) } : {}),
   });
+}
+
+export const AFFILIATE_DOWNLINE_SORTS = [
+  "affiliate",
+  "plan",
+  "level",
+  "status",
+  "toYou",
+  "joined",
+] as const;
+export const AFFILIATE_COMMISSION_SORTS = [
+  "date",
+  "from",
+  "level",
+  "rate",
+  "amount",
+  "status",
+  "hold",
+] as const;
+export const AFFILIATE_CAMPAIGN_SORTS = [
+  "name",
+  "urls",
+  "signups",
+  "status",
+] as const;
+export const AFFILIATE_LINK_SORTS = [
+  "name",
+  "landing",
+  "campaign",
+  "url",
+  "type",
+  "status",
+] as const;
+export const AFFILIATE_PAYOUT_SORTS = [
+  "date",
+  "amount",
+  "chain",
+  "address",
+  "status",
+  "paid",
+] as const;
+
+export type AffiliateListQuery = {
+  q: string;
+  status: string;
+  sort: string;
+  dir: TableSortDir;
+};
+
+const AFFILIATE_LIST_DEFAULTS: Partial<
+  Record<AffiliatePortalTab, { sorts: readonly string[]; sort: string; dir: TableSortDir; statuses: readonly string[] }>
+> = {
+  network: {
+    sorts: AFFILIATE_DOWNLINE_SORTS,
+    sort: "joined",
+    dir: "desc",
+    statuses: ["paid", "signup"],
+  },
+  referrals: {
+    sorts: AFFILIATE_COMMISSION_SORTS,
+    sort: "date",
+    dir: "desc",
+    statuses: COMMISSION_STATUSES,
+  },
+  campaigns: {
+    sorts: AFFILIATE_CAMPAIGN_SORTS,
+    sort: "name",
+    dir: "asc",
+    statuses: ["active", "archived"],
+  },
+  links: {
+    sorts: AFFILIATE_LINK_SORTS,
+    sort: "name",
+    dir: "asc",
+    statuses: ["active", "archived"],
+  },
+  payouts: {
+    sorts: AFFILIATE_PAYOUT_SORTS,
+    sort: "date",
+    dir: "desc",
+    statuses: PAYOUT_STATUSES,
+  },
+};
+
+export function affiliateListDefaults(tab: AffiliatePortalTab): {
+  sorts: readonly string[];
+  sort: string;
+  dir: TableSortDir;
+  statuses: readonly string[];
+} {
+  return (
+    AFFILIATE_LIST_DEFAULTS[tab] ?? {
+      sorts: [],
+      sort: "",
+      dir: "asc",
+      statuses: [],
+    }
+  );
+}
+
+export function parseAffiliatePortalListQuery(
+  tab: AffiliatePortalTab,
+  input: { q?: unknown; status?: unknown; sort?: unknown; dir?: unknown },
+): AffiliateListQuery {
+  const defaults = affiliateListDefaults(tab);
+  const q = String(input.q ?? "").trim().slice(0, 80);
+  const statusRaw = String(input.status ?? "").trim().toLowerCase();
+  const dirRaw = String(input.dir ?? "").trim();
+  return {
+    q,
+    status: defaults.statuses.includes(statusRaw) ? statusRaw : "",
+    sort: defaults.sorts.length
+      ? parseTableSortKey(input.sort, defaults.sorts, defaults.sort)
+      : "",
+    dir: dirRaw === "asc" || dirRaw === "desc" ? parseTableSortDir(dirRaw) : defaults.dir,
+  };
+}
+
+export function affiliateListQueryParams(
+  query: AffiliateListQuery,
+  tab: AffiliatePortalTab,
+): Record<string, string> {
+  const defaults = affiliateListDefaults(tab);
+  return {
+    ...(query.q ? { q: query.q } : {}),
+    ...(query.status ? { status: query.status } : {}),
+    ...(query.sort && query.sort !== defaults.sort ? { sort: query.sort } : {}),
+    ...(query.dir !== defaults.dir ? { dir: query.dir } : {}),
+  };
+}
+
+export function affiliateListFilterParams(
+  query: Pick<AffiliateListQuery, "q" | "status">,
+  tab: AffiliatePortalTab,
+): Record<string, string> {
+  return {
+    ...(tab !== "overview" ? { tab } : {}),
+    ...(query.q ? { q: query.q } : {}),
+    ...(query.status ? { status: query.status } : {}),
+  };
+}
+
+export function matchesAffiliateNeedle(
+  q: string,
+  ...values: Array<string | number | null | undefined>
+): boolean {
+  const needle = q.trim().toLowerCase();
+  if (!needle) {
+    return true;
+  }
+  return values.some((value) => String(value ?? "").toLowerCase().includes(needle));
+}
+
+export function matchesAffiliateArchiveStatus(
+  archivedAt: string | null | undefined,
+  status: string,
+): boolean {
+  if (status === "active") {
+    return !archivedAt;
+  }
+  if (status === "archived") {
+    return Boolean(archivedAt);
+  }
+  return true;
 }
 
 export function affiliateDownlineRowHref(

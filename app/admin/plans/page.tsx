@@ -1,13 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AdminPlanRowActions } from "@/components/admin-plan-row-actions";
+import { AdminPlansTable } from "@/components/admin-plans-table";
 import { PageHeading } from "@/components/page-heading";
-import {
-  formatPlanPrice,
-  PLAN_VISIBILITY_LABELS,
-  planIsArchived,
-} from "@/lib/membership/catalog";
-import { formatCount } from "@/lib/membership/billing";
+import { planIsArchived, planIsDraft } from "@/lib/membership/catalog";
 import { listMembershipPlans } from "@/lib/membership/store";
 import { firstSearchValue } from "@/lib/paper/open";
 
@@ -27,7 +22,23 @@ export default async function AdminPlansPage({
   const archived = firstSearchValue(params.archived) === "1";
   const unarchived = firstSearchValue(params.unarchived) === "1";
   const deleted = firstSearchValue(params.deleted) === "1";
-  const plans = listed.ok ? listed.plans : [];
+  const statusRaw = (firstSearchValue(params.status) ?? "").trim().toLowerCase();
+  const status =
+    statusRaw === "live" || statusRaw === "draft" || statusRaw === "archived"
+      ? statusRaw
+      : "";
+  const plans = (listed.ok ? listed.plans : []).filter((plan) => {
+    if (status === "archived") {
+      return planIsArchived(plan);
+    }
+    if (status === "draft") {
+      return !planIsArchived(plan) && planIsDraft(plan);
+    }
+    if (status === "live") {
+      return !planIsArchived(plan) && !planIsDraft(plan);
+    }
+    return true;
+  });
 
   return (
     <div>
@@ -59,81 +70,7 @@ export default async function AdminPlansPage({
         <p className="mt-4 text-sm text-success">Unused plan deleted.</p>
       ) : null}
 
-      <div className="mt-6 overflow-x-auto rounded-card border border-line bg-surface">
-        <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-muted">
-            <tr>
-              <th className="px-4 py-3 font-medium">Plan</th>
-              <th className="px-4 py-3 font-medium">Price</th>
-              <th className="px-4 py-3 font-medium">Members</th>
-              <th className="px-4 py-3 font-medium">Price ID</th>
-              <th className="px-4 py-3 font-medium">Visibility</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {plans.map((plan) => (
-              <tr key={plan.id} className="border-b border-line last:border-0">
-                <td className="px-4 py-3">
-                  <Link
-                    href={`/admin/plans/${plan.id}`}
-                    className="font-medium text-ink hover:text-accent"
-                  >
-                    {plan.name}
-                  </Link>
-                  <p className="mt-0.5 text-xs text-ink-faint">
-                    {plan.isDefault ? "Default · " : ""}
-                    {`L1 ${plan.affiliateL1Pct}%`}
-                  </p>
-                </td>
-                <td className="px-4 py-3 text-ink">{formatPlanPrice(plan.priceUsd)}</td>
-                <td className="px-4 py-3 tabular-nums text-ink">
-                  {formatCount(plan.memberCount)}
-                </td>
-                <td className="px-4 py-3 font-mono text-xs text-ink">
-                  {plan.stripePriceId || (
-                    <span className="font-sans text-ink-faint">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-ink">
-                  {PLAN_VISIBILITY_LABELS[plan.visibility]}
-                  {plan.visibility === "draft" && plan.preview
-                    ? " · Preview"
-                    : ""}
-                </td>
-                <td className="px-4 py-3">
-                  {planIsArchived(plan) ? (
-                    <span className="text-ink-muted">Archived</span>
-                  ) : (
-                    <span className="text-success">
-                      {plan.visibility === "draft" ? "Draft" : "Live"}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <Link
-                      href={`/admin/plans/${plan.id}`}
-                      className="text-sm text-accent hover:text-accent-strong"
-                    >
-                      Edit
-                    </Link>
-                    <AdminPlanRowActions plan={plan} />
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {plans.length === 0 && listed.ok ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-6 text-ink-muted">
-                  No plans yet.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+      <AdminPlansTable plans={plans} status={status} />
     </div>
   );
 }

@@ -1,15 +1,19 @@
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AdminInvoicesTable } from "@/components/admin-invoices-table";
 import { AdminPayoutQueue } from "@/components/admin-payout-queue";
 import { CopyTextButton } from "@/components/copy-text-button";
 import { CreateDepositSeed } from "@/components/create-deposit-seed";
 import { CreateGasWallet } from "@/components/create-gas-wallet";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { formatUsd, invoiceMethodLabel } from "@/lib/membership/billing";
-import { invoiceStatusLabel } from "@/lib/membership/billing-cycle";
+import { formatUsd, parseInvoiceStatus } from "@/lib/membership/billing";
 import { listAdminInvoices } from "@/lib/membership/billing-store";
+import {
+  parsePayoutFileStatus,
+  parsePayoutStatus,
+} from "@/lib/membership/affiliate";
 import {
   listPayoutFiles,
   listPayouts,
@@ -40,7 +44,6 @@ import {
   loadAdminNotificationChrome,
 } from "@/lib/notifications/badges";
 import { firstSearchValue } from "@/lib/paper/open";
-import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
 
 export const metadata: Metadata = {
   title: "Billing & Wallets",
@@ -78,8 +81,16 @@ export default async function AdminBillingPage({
           loadAdminPayoutQueueStats("main"),
         ])
       : null;
+  const invoiceStatus = parseInvoiceStatus(firstSearchValue(params.status)) ?? "";
+  const invoiceQ = (firstSearchValue(params.q) ?? "").trim();
+  const fileStatus = parsePayoutFileStatus(firstSearchValue(params.fileStatus)) ?? "";
+  const fileQ = (firstSearchValue(params.fileQ) ?? "").trim();
+  const payoutStatus = parsePayoutStatus(firstSearchValue(params.payoutStatus)) ?? "";
   const invoices =
     tab === "invoices" ? await listAdminInvoices() : [];
+  const invoiceRows = invoiceStatus
+    ? invoices.filter((invoice) => invoice.status === invoiceStatus)
+    : invoices;
   const hd = overview?.hd;
   const gas = overview?.gas;
   const gasBalances = overview?.gasBalances ?? [];
@@ -148,75 +159,17 @@ export default async function AdminBillingPage({
         </p>
       ) : null}
       {tab === "invoices" ? (
-        <section className="mt-6 rounded-card border border-line bg-surface p-5">
-          <h2 className="text-lg font-semibold tracking-tight">Invoices</h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            Every member invoice. Card, Crypto, and admin comp. Newest first.
-          </p>
-          {invoices.length === 0 ? (
-            <p className="mt-4 text-sm text-ink-muted">No invoices yet.</p>
-          ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[56rem] text-left text-sm">
-                <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-                  <tr>
-                    <th className="py-2 pr-3 font-medium">Date</th>
-                    <th className="py-2 pr-3 font-medium">Member</th>
-                    <th className="py-2 pr-3 font-medium">Plan</th>
-                    <th className="py-2 pr-3 font-medium">Method</th>
-                    <th className="py-2 pr-3 font-medium">Amount</th>
-                    <th className="py-2 pr-3 font-medium">Status</th>
-                    <th className="py-2 pr-3 font-medium">Due</th>
-                    <th className="py-2 pr-3 font-medium">Period</th>
-                    <th className="py-2 font-medium">External id</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoices.map((invoice) => {
-                    const created = parseDisplayTime(invoice.createdAt);
-                    const due = parseDisplayTime(invoice.dueAt);
-                    const periodStart = parseDisplayTime(invoice.periodStart);
-                    const periodEnd = parseDisplayTime(invoice.periodEnd);
-                    return (
-                      <tr key={invoice.id} className="border-t border-line">
-                        <td className="py-3 pr-3 whitespace-nowrap text-ink-muted">
-                          {created ? formatLocalDate(created) : "—"}
-                        </td>
-                        <td className="py-3 pr-3">
-                          {invoice.email ?? invoice.userId}
-                        </td>
-                        <td className="py-3 pr-3">{invoice.planName}</td>
-                        <td className="py-3 pr-3">
-                          {invoiceMethodLabel(invoice.method)}
-                        </td>
-                        <td className="py-3 pr-3 tabular-nums">
-                          {formatUsd(invoice.amountUsd)}
-                        </td>
-                        <td className="py-3 pr-3">
-                          {invoiceStatusLabel(invoice.status)}
-                        </td>
-                        <td className="py-3 pr-3 whitespace-nowrap text-ink-muted">
-                          {due ? formatLocalDate(due) : "—"}
-                        </td>
-                        <td className="py-3 pr-3 whitespace-nowrap text-ink-muted">
-                          {periodStart && periodEnd
-                            ? `${formatLocalDate(periodStart)} – ${formatLocalDate(periodEnd)}`
-                            : "—"}
-                        </td>
-                        <td
-                          className="py-3 max-w-[12rem] truncate font-mono text-xs text-ink-muted"
-                          title={invoice.externalId ?? undefined}
-                        >
-                          {invoice.externalId ?? "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+        invoices.length === 0 && !invoiceStatus && !invoiceQ ? (
+          <p className="mt-6 text-sm text-ink-muted">No invoices yet.</p>
+        ) : (
+          <div className="mt-6">
+            <AdminInvoicesTable
+              invoices={invoiceRows}
+              status={invoiceStatus}
+              q={invoiceQ}
+            />
+          </div>
+        )
       ) : null}
       {tab === "withdrawals" && stats ? (
         <>
@@ -230,6 +183,10 @@ export default async function AdminBillingPage({
             stats={stats}
             files={files}
             payouts={payouts}
+            fileStatus={fileStatus}
+            fileQ={fileQ}
+            payoutStatus={payoutStatus}
+            keep={{ tab: "withdrawals" }}
           />
         </>
       ) : null}

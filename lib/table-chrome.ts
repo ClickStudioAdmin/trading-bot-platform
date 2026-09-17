@@ -1,4 +1,4 @@
-export const TABLE_PAGE_SIZE = 10;
+export const TABLE_PAGE_SIZE = 20;
 
 export type TableSortDir = "asc" | "desc";
 export type StatusTone = "success" | "warning" | "danger" | "accent" | "muted";
@@ -139,6 +139,19 @@ export function parseTableSortKey<T extends string>(
   return (allowed as readonly string[]).includes(key) ? (key as T) : fallback;
 }
 
+export function formatStatusLabel(status: string): string {
+  const trimmed = status.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+  return trimmed
+    .replace(/[_-]+/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export function statusToneFor(status: string): StatusTone {
   const key = status.trim().toLowerCase().replace(/[\s-]+/g, "_");
   if (
@@ -159,6 +172,7 @@ export function statusToneFor(status: string): StatusTone {
   if (
     key === "pending" ||
     key === "hold" ||
+    key === "held" ||
     key === "queued" ||
     key === "running" ||
     key === "draft" ||

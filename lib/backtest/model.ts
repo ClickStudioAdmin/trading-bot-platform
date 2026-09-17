@@ -191,7 +191,7 @@ export function backtestRerunHref(runId: string): string {
   return `/account/backtests?rerun=${encodeURIComponent(runId)}#replay`;
 }
 
-export const BACKTEST_SAVED_PAGE_SIZE = 25;
+export const BACKTEST_SAVED_PAGE_SIZE = 20;
 
 export function parseBacktestListPage(raw: unknown): number {
   const page = Math.trunc(Number(String(raw ?? "").trim()));

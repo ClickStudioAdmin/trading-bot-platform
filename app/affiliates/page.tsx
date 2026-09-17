@@ -8,6 +8,7 @@ import { getSessionMember } from "@/lib/auth/session";
 import {
   firstTouchReferralCode,
   parseAffiliateNetworkView,
+  parseAffiliatePortalListQuery,
   parseAffiliatePortalPage,
   parseAffiliatePortalTab,
 } from "@/lib/membership/affiliate";
@@ -40,6 +41,12 @@ export default async function AffiliatesPage({
   const tab = parseAffiliatePortalTab(firstSearchValue(params.tab));
   const page = parseAffiliatePortalPage(firstSearchValue(params.page));
   const view = parseAffiliateNetworkView(firstSearchValue(params.view));
+  const tableQuery = parseAffiliatePortalListQuery(tab, {
+    q: firstSearchValue(params.q),
+    status: firstSearchValue(params.status),
+    sort: firstSearchValue(params.sort),
+    dir: firstSearchValue(params.dir),
+  });
   const referralCode =
     firstTouchReferralCode(
       await readReferralCookie(),
@@ -76,6 +83,7 @@ export default async function AffiliatesPage({
             tab={tab}
             view={view}
             page={page}
+            tableQuery={tableQuery}
             saved={saved ?? null}
             error={error ?? null}
           />

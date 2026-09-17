@@ -198,17 +198,6 @@ export function BacktestRunsTable({
   ).length;
 
   useEffect(() => {
-    const known = new Set(listedRemovableIds);
-    setSelected((current) => {
-      const next = new Set([...current].filter((id) => known.has(id)));
-      if (next.size === current.size && [...next].every((id) => current.has(id))) {
-        return current;
-      }
-      return next;
-    });
-  }, [listedRemovableIds.join("|")]);
-
-  useEffect(() => {
     if (selectAllRef.current) {
       selectAllRef.current.indeterminate =
         selectedCount > 0 && !allSelected;
@@ -268,7 +257,9 @@ export function BacktestRunsTable({
     setMessage(null);
     const data = new FormData();
     for (const id of selected) {
-      data.append("runId", id);
+      if (listedRemovableIds.includes(id)) {
+        data.append("runId", id);
+      }
     }
     const result = await deleteBacktestRunsAction(data);
     setPending(false);
@@ -296,7 +287,10 @@ export function BacktestRunsTable({
             <input
               type="search"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                table.setPage(1);
+              }}
               placeholder="Name or contract"
               autoComplete="off"
               className={TABLE_FILTER_FIELD_CLASS}
@@ -305,9 +299,10 @@ export function BacktestRunsTable({
           <TableFilterField label="Status">
             <select
               value={status}
-              onChange={(event) =>
-                setStatus(event.target.value as "all" | BacktestStatus)
-              }
+              onChange={(event) => {
+                setStatus(event.target.value as "all" | BacktestStatus);
+                table.setPage(1);
+              }}
               className={TABLE_FILTER_FIELD_CLASS}
             >
               {STATUS_FILTERS.map((value) => (

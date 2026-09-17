@@ -1,18 +1,14 @@
+import {
+  AdminPayoutFilesTable,
+  AdminPayoutQueueTable,
+} from "@/components/admin-payout-tables";
 import { ColumnHint } from "@/components/column-hint";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import {
-  generatePayoutFilesAction,
-  markPayoutFilePaidAction,
-  rejectPayoutAction,
-} from "@/lib/membership/affiliate-actions";
+import { generatePayoutFilesAction } from "@/lib/membership/affiliate-actions";
 import type { PayoutFileRow, PayoutRow } from "@/lib/membership/affiliate-store";
 import {
   PAYOUT_FILE_MAX_ROWS_DEFAULT,
   PAYOUT_FILE_MAX_ROWS_MAX,
-  monthJoinedLabel,
-  payoutEligibleForAirdropFile,
-  payoutStatusLabel,
-  shortenPayoutAddress,
   type AdminPayoutQueueStats,
 } from "@/lib/membership/affiliate";
 import { formatCount, formatUsd } from "@/lib/membership/billing";
@@ -23,11 +19,19 @@ export function AdminPayoutQueue({
   stats,
   files,
   payouts,
+  fileStatus = "",
+  fileQ = "",
+  payoutStatus = "",
+  keep,
 }: {
   book: WalletBook;
   stats: AdminPayoutQueueStats;
   files: PayoutFileRow[];
   payouts: PayoutRow[];
+  fileStatus?: string;
+  fileQ?: string;
+  payoutStatus?: string;
+  keep?: Record<string, string | undefined>;
 }) {
   const filesNoun = book === "main" ? "withdrawal lists" : "payout lists";
   const filesTitle = book === "main" ? "Withdrawal files" : "Payout files";
@@ -79,7 +83,7 @@ export function AdminPayoutQueue({
         </p>
       ) : null}
 
-      <section className="mt-6 rounded-card border border-line bg-surface p-5">
+      <section className="mt-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold tracking-tight">{filesTitle}</h2>
@@ -143,151 +147,38 @@ export function AdminPayoutQueue({
             </PendingSubmitButton>
           </form>
         </div>
-        {files.length === 0 ? (
+        {files.length === 0 && !fileStatus && !fileQ ? (
           <p className="mt-4 text-sm text-ink-muted">{emptyFiles}</p>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[44rem] text-left text-sm">
-              <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-                <tr>
-                  <th className="py-2 pr-3 font-medium">When</th>
-                  <th className="py-2 pr-3 font-medium">Network</th>
-                  <th className="py-2 pr-3 font-medium">Payouts</th>
-                  <th className="py-2 pr-3 font-medium">Amount</th>
-                  <th className="py-2 pr-3 font-medium">Status</th>
-                  <th className="py-2 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {files.map((file) => (
-                  <tr key={file.id} className="border-t border-line">
-                    <td className="py-3 pr-3 text-ink-muted">
-                      {monthJoinedLabel(file.createdAt)}
-                    </td>
-                    <td className="py-3 pr-3">{file.network}</td>
-                    <td className="py-3 pr-3 tabular-nums">{file.payoutCount}</td>
-                    <td className="py-3 pr-3 tabular-nums">
-                      {formatUsd(file.amountUsd)}
-                    </td>
-                    <td className="py-3 pr-3 capitalize">{file.status}</td>
-                    <td className="py-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <a
-                          href={`/admin/affiliates/files/${file.id}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded-control border border-line px-2 py-1 text-xs text-ink hover:border-line-strong"
-                        >
-                          View details
-                        </a>
-                        <a
-                          href={`/admin/affiliates/files/${file.id}/export`}
-                          className="rounded-control border border-line px-2 py-1 text-xs text-ink hover:border-line-strong"
-                        >
-                          Download CSV
-                        </a>
-                        {file.status === "pending" ? (
-                          <form
-                            action={markPayoutFilePaidAction}
-                            className="flex flex-wrap gap-2"
-                          >
-                            <input type="hidden" name="fileId" value={file.id} />
-                            <input type="hidden" name="book" value={book} />
-                            <input
-                              name="externalId"
-                              placeholder="Airdrop tx hash"
-                              className="w-36 rounded-control border border-line bg-canvas px-2 py-1 text-xs text-ink"
-                            />
-                            <PendingSubmitButton
-                              pendingLabel="…"
-                              className="rounded-control bg-accent-strong px-2 py-1 text-xs font-medium text-ink"
-                            >
-                              Mark file paid
-                            </PendingSubmitButton>
-                          </form>
-                        ) : (
-                          <span className="text-xs text-ink-faint">
-                            {file.externalId ?? "Paid"}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <AdminPayoutFilesTable
+            files={
+              fileStatus
+                ? files.filter((file) => file.status === fileStatus)
+                : files
+            }
+            book={book}
+            fileStatus={fileStatus}
+            fileQ={fileQ}
+            keep={{ ...keep, payoutStatus }}
+          />
         )}
       </section>
 
-      <section className="mt-8 rounded-card border border-line bg-surface p-5">
+      <section className="mt-8">
         <h2 className="text-lg font-semibold tracking-tight">{queueTitle}</h2>
-        {payouts.length === 0 ? (
+        {payouts.length === 0 && !payoutStatus ? (
           <p className="mt-4 text-sm text-ink-muted">{emptyQueue}</p>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[44rem] text-left text-sm">
-              <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-                <tr>
-                  <th className="py-2 pr-3 font-medium">When</th>
-                  <th className="py-2 pr-3 font-medium">Member</th>
-                  <th className="py-2 pr-3 font-medium">Amount</th>
-                  <th className="py-2 pr-3 font-medium">Network</th>
-                  <th className="py-2 pr-3 font-medium">Address</th>
-                  <th className="py-2 pr-3 font-medium">Status</th>
-                  <th className="py-2 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payouts.map((payout) => (
-                  <tr key={payout.id} className="border-t border-line">
-                    <td className="py-3 pr-3 text-ink-muted">
-                      {monthJoinedLabel(payout.createdAt)}
-                    </td>
-                    <td className="py-3 pr-3">{payout.email ?? payout.userId}</td>
-                    <td className="py-3 pr-3 tabular-nums">
-                      {formatUsd(payout.amountUsd)}
-                    </td>
-                    <td className="py-3 pr-3">{payout.network ?? "—"}</td>
-                    <td
-                      className="py-3 pr-3 font-mono text-xs"
-                      title={payout.address ?? undefined}
-                    >
-                      {shortenPayoutAddress(payout.address)}
-                    </td>
-                    <td className="py-3 pr-3">
-                      {payoutStatusLabel(payout.status)}
-                      {payout.payoutFileId ? (
-                        <span className="block text-xs text-ink-faint">
-                          File {payout.payoutFileId.slice(0, 8)}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="py-3">
-                      {payoutEligibleForAirdropFile(payout.status) ? (
-                        <form action={rejectPayoutAction}>
-                          <input
-                            type="hidden"
-                            name="payoutId"
-                            value={payout.id}
-                          />
-                          <input type="hidden" name="book" value={book} />
-                          <PendingSubmitButton
-                            pendingLabel="…"
-                            className="rounded-control border border-line px-2 py-1 text-xs text-danger hover:border-line-strong"
-                          >
-                            Reject
-                          </PendingSubmitButton>
-                        </form>
-                      ) : (
-                        <span className="text-ink-faint">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <AdminPayoutQueueTable
+            payouts={
+              payoutStatus
+                ? payouts.filter((payout) => payout.status === payoutStatus)
+                : payouts
+            }
+            book={book}
+            payoutStatus={payoutStatus}
+            keep={{ ...keep, fileStatus, fileQ }}
+          />
         )}
       </section>
     </>

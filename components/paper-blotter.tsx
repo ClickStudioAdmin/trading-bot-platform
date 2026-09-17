@@ -16,7 +16,6 @@ import { OpenStats } from "@/components/open-stats";
 import {
   formatPct,
   formatSignedUsd,
-  formatUsd,
   signedTone,
 } from "@/lib/opportunities/format";
 import type { EventLogRow } from "@/lib/logs/list";

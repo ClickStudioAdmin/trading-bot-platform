@@ -1,4 +1,9 @@
 import {
+  parseTableSortDir,
+  parseTableSortKey,
+  type TableSortDir,
+} from "../table-chrome";
+import {
   planIsArchived,
   planIsDraft,
   type MembershipPlan,
@@ -169,6 +174,78 @@ export function billingPageLabel(input: {
     return "No rows.";
   }
   return `Showing ${input.from}–${input.to} of ${input.total}`;
+}
+
+export const BILLING_INVOICE_SORTS = [
+  "issued",
+  "due",
+  "plan",
+  "method",
+  "amount",
+  "status",
+] as const;
+export const BILLING_LEDGER_SORTS = [
+  "date",
+  "description",
+  "amount",
+  "balance",
+] as const;
+export type BillingInvoiceSort = (typeof BILLING_INVOICE_SORTS)[number];
+export type BillingLedgerSort = (typeof BILLING_LEDGER_SORTS)[number];
+
+export const DEFAULT_BILLING_INVOICE_SORT: BillingInvoiceSort = "issued";
+export const DEFAULT_BILLING_LEDGER_SORT: BillingLedgerSort = "date";
+export const DEFAULT_BILLING_TABLE_DIR: TableSortDir = "desc";
+
+export type BillingTableSort = {
+  sort: string;
+  dir: TableSortDir;
+};
+
+export function parseBillingInvoiceSort(input: {
+  sort?: unknown;
+  dir?: unknown;
+}): { sort: BillingInvoiceSort; dir: TableSortDir } {
+  const dirRaw = String(input.dir ?? "").trim();
+  return {
+    sort: parseTableSortKey(
+      input.sort,
+      BILLING_INVOICE_SORTS,
+      DEFAULT_BILLING_INVOICE_SORT,
+    ),
+    dir:
+      dirRaw === "asc" || dirRaw === "desc"
+        ? parseTableSortDir(dirRaw)
+        : DEFAULT_BILLING_TABLE_DIR,
+  };
+}
+
+export function parseBillingLedgerSort(input: {
+  sort?: unknown;
+  dir?: unknown;
+}): { sort: BillingLedgerSort; dir: TableSortDir } {
+  const dirRaw = String(input.dir ?? "").trim();
+  return {
+    sort: parseTableSortKey(
+      input.sort,
+      BILLING_LEDGER_SORTS,
+      DEFAULT_BILLING_LEDGER_SORT,
+    ),
+    dir:
+      dirRaw === "asc" || dirRaw === "desc"
+        ? parseTableSortDir(dirRaw)
+        : DEFAULT_BILLING_TABLE_DIR,
+  };
+}
+
+export function billingTableQueryParams(
+  sort: BillingTableSort,
+  defaults: BillingTableSort,
+): Record<string, string | undefined> {
+  return {
+    sort: sort.sort !== defaults.sort ? sort.sort : undefined,
+    dir: sort.dir !== defaults.dir ? sort.dir : undefined,
+  };
 }
 
 export function billingPath(

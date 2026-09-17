@@ -1,8 +1,16 @@
 "use client";
 
-import { useCallback, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
-import { SortTh, TablePager, useClientTable } from "@/components/table-chrome";
+import {
+  SortTh,
+  TABLE_FILTER_CLEAR_CLASS,
+  TABLE_FILTER_FIELD_CLASS,
+  TableFilterBar,
+  TableFilterField,
+  TablePager,
+  useClientTable,
+} from "@/components/table-chrome";
 import { TpslPair } from "@/components/futures-tpsl";
 import { LocalTime } from "@/components/local-time";
 import { TokenIcon } from "@/components/token-icon";
@@ -37,6 +45,37 @@ import {
 const OPEN_COL_SPAN_DCA = 14;
 const OPEN_COL_SPAN = 13;
 const CLOSED_COL_SPAN = 11;
+
+type CycleSideFilter = "" | "long" | "short";
+
+function cycleHaystack(run: BacktestRun, cycle: BacktestPositionCycle): string {
+  return [
+    run.symbol,
+    cycle.side,
+    cycle.status,
+    cycle.exitReason ?? "",
+    String(cycle.qty),
+    String(cycle.entryPrice),
+    cycle.exitPrice ?? "",
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+function filterCycles(
+  run: BacktestRun,
+  cycles: BacktestPositionCycle[],
+  query: string,
+  side: CycleSideFilter,
+): BacktestPositionCycle[] {
+  const needle = query.trim().toLowerCase();
+  return cycles.filter((cycle) => {
+    if (side && cycle.side !== side) {
+      return false;
+    }
+    return !needle || cycleHaystack(run, cycle).includes(needle);
+  });
+}
 
 function compareNullableNum(
   left: number | null,
@@ -240,13 +279,38 @@ function OpenBacktestPositions({
     ) => compareOpenCycle(left, right, key, dir, mark, run.leverage),
     [mark, run.leverage],
   );
-  const table = useClientTable(cycles, compare);
+  const [query, setQuery] = useState("");
+  const [side, setSide] = useState<CycleSideFilter>("");
+  const filtered = useMemo(
+    () => filterCycles(run, cycles, query, side),
+    [cycles, query, run, side],
+  );
+  const table = useClientTable(filtered, compare);
   return (
     <section>
       <SectionHead
         title="Open Positions"
         subtitle="Still open at the end of the replay. Click a row to pin it on the chart."
       />
+      {cycles.length > 0 ? (
+        <CycleFilters
+          query={query}
+          side={side}
+          onQuery={(value) => {
+            setQuery(value);
+            table.setPage(1);
+          }}
+          onSide={(value) => {
+            setSide(value);
+            table.setPage(1);
+          }}
+          onClear={() => {
+            setQuery("");
+            setSide("");
+            table.setPage(1);
+          }}
+        />
+      ) : null}
       <div className="min-w-0 overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-max text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
@@ -343,7 +407,11 @@ function OpenBacktestPositions({
             {table.pageRows.length === 0 ? (
               <EmptyRow
                 colSpan={colSpan}
-                message="No open position at the end of this run."
+                message={
+                  cycles.length === 0
+                    ? "No open position at the end of this run."
+                    : "No positions match."
+                }
               />
             ) : (
               table.pageRows.map((cycle) => (
@@ -397,13 +465,38 @@ function ClosedBacktestPositions({
     ) => compareClosedCycle(left, right, key, dir, run.leverage),
     [run.leverage],
   );
-  const table = useClientTable(cycles, compare);
+  const [query, setQuery] = useState("");
+  const [side, setSide] = useState<CycleSideFilter>("");
+  const filtered = useMemo(
+    () => filterCycles(run, cycles, query, side),
+    [cycles, query, run, side],
+  );
+  const table = useClientTable(filtered, compare);
   return (
     <section>
       <SectionHead
         title="Past Positions"
         subtitle="Closed futures. Click a row to pin that trade on the chart."
       />
+      {cycles.length > 0 ? (
+        <CycleFilters
+          query={query}
+          side={side}
+          onQuery={(value) => {
+            setQuery(value);
+            table.setPage(1);
+          }}
+          onSide={(value) => {
+            setSide(value);
+            table.setPage(1);
+          }}
+          onClear={() => {
+            setQuery("");
+            setSide("");
+            table.setPage(1);
+          }}
+        />
+      ) : null}
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[52rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
@@ -480,7 +573,11 @@ function ClosedBacktestPositions({
             {table.pageRows.length === 0 ? (
               <EmptyRow
                 colSpan={CLOSED_COL_SPAN}
-                message="No closed positions on this run."
+                message={
+                  cycles.length === 0
+                    ? "No closed positions on this run."
+                    : "No positions match."
+                }
               />
             ) : (
               table.pageRows.map((cycle) => (
@@ -860,6 +957,49 @@ function OrderMetric({
         {value}
       </span>
     </div>
+  );
+}
+
+function CycleFilters({
+  query,
+  side,
+  onQuery,
+  onSide,
+  onClear,
+}: {
+  query: string;
+  side: CycleSideFilter;
+  onQuery: (value: string) => void;
+  onSide: (value: CycleSideFilter) => void;
+  onClear: () => void;
+}) {
+  return (
+    <TableFilterBar className="mb-4">
+      <TableFilterField label="Search">
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => onQuery(event.target.value)}
+          placeholder="Contract or side"
+          autoComplete="off"
+          className={TABLE_FILTER_FIELD_CLASS}
+        />
+      </TableFilterField>
+      <TableFilterField label="Side">
+        <select
+          value={side}
+          onChange={(event) => onSide(event.target.value as CycleSideFilter)}
+          className={TABLE_FILTER_FIELD_CLASS}
+        >
+          <option value="">All</option>
+          <option value="long">Long</option>
+          <option value="short">Short</option>
+        </select>
+      </TableFilterField>
+      <button type="button" onClick={onClear} className={TABLE_FILTER_CLEAR_CLASS}>
+        Clear
+      </button>
+    </TableFilterBar>
   );
 }
 

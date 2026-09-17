@@ -3,10 +3,14 @@ import Link from "next/link";
 import { SavedBillingMethodForm } from "@/components/billing-method-radios";
 import { PageHeading } from "@/components/page-heading";
 import { getSessionMember } from "@/lib/auth/session";
+import { SortTh, StatusBadge, TablePager } from "@/components/table-chrome";
 import {
   billingMethodPriceNote,
-  billingPageLabel,
   billingPath,
+  billingTableQueryParams,
+  DEFAULT_BILLING_INVOICE_SORT,
+  DEFAULT_BILLING_LEDGER_SORT,
+  DEFAULT_BILLING_TABLE_DIR,
   formatRemainingCycle,
   formatUsd,
   invoiceMethodLabel,
@@ -15,9 +19,16 @@ import {
   stripeCardExpiryLabel,
   stripeCardOnFileLabel,
   paginateBillingRows,
+  parseBillingInvoiceSort,
+  parseBillingLedgerSort,
   parseBillingPage,
   resolveBillingCycle,
 } from "@/lib/membership/billing";
+import {
+  compareTableNum,
+  compareTableText,
+  tableSortHref,
+} from "@/lib/table-chrome";
 import { ManageSavedCard } from "@/components/manage-saved-card";
 import { StripeSwitchToCard } from "@/components/stripe-embedded-checkout";
 import {
@@ -125,8 +136,58 @@ export default async function AccountBillingPage({
       : Promise.resolve(null),
   ]);
   const tablePage = parseBillingPage(firstSearchValue(params.page));
-  const invoicePage = paginateBillingRows(invoices, tablePage);
-  const ledgerPage = paginateBillingRows(ledger, tablePage);
+  const invoiceSort = parseBillingInvoiceSort({
+    sort: firstSearchValue(params.sort),
+    dir: firstSearchValue(params.dir),
+  });
+  const ledgerSort = parseBillingLedgerSort({
+    sort: firstSearchValue(params.sort),
+    dir: firstSearchValue(params.dir),
+  });
+  const invoicePage = paginateBillingRows(
+    [...invoices].sort((left, right) => {
+      if (invoiceSort.sort === "due") {
+        return compareTableText(left.dueAt ?? "", right.dueAt ?? "", invoiceSort.dir);
+      }
+      if (invoiceSort.sort === "plan") {
+        return compareTableText(left.planName, right.planName, invoiceSort.dir);
+      }
+      if (invoiceSort.sort === "method") {
+        return compareTableText(
+          invoiceMethodLabel(left.method),
+          invoiceMethodLabel(right.method),
+          invoiceSort.dir,
+        );
+      }
+      if (invoiceSort.sort === "amount") {
+        return compareTableNum(left.amountUsd, right.amountUsd, invoiceSort.dir);
+      }
+      if (invoiceSort.sort === "status") {
+        return compareTableText(
+          invoiceStatusLabel(left.status),
+          invoiceStatusLabel(right.status),
+          invoiceSort.dir,
+        );
+      }
+      return compareTableText(left.createdAt, right.createdAt, invoiceSort.dir);
+    }),
+    tablePage,
+  );
+  const ledgerPage = paginateBillingRows(
+    [...ledger].sort((left, right) => {
+      if (ledgerSort.sort === "description") {
+        return compareTableText(left.label, right.label, ledgerSort.dir);
+      }
+      if (ledgerSort.sort === "amount") {
+        return compareTableNum(left.deltaUsd, right.deltaUsd, ledgerSort.dir);
+      }
+      if (ledgerSort.sort === "balance") {
+        return compareTableNum(left.balanceUsd, right.balanceUsd, ledgerSort.dir);
+      }
+      return compareTableText(left.createdAt, right.createdAt, ledgerSort.dir);
+    }),
+    tablePage,
+  );
   const cycle = resolveBillingCycle({ periodEnd: billing.periodEnd });
   const stripeReady = stripeSecretConfigured();
   const usableStripeSub = hasUsableStripeSubscription(billing);
@@ -449,44 +510,91 @@ export default async function AccountBillingPage({
           </div>
         </LiveMainWallet>
       ) : tab === "ledger" ? (
-      <section className="mt-6 rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Account Ledger</h2>
-        <p className="mt-1 text-sm text-ink-muted">
-          Running Account Balance activity: deposits, plan payments, withdrawals,
-          and transfers from Affiliate when you deduct from earnings.
-        </p>
-        {ledgerPage.total === 0 ? (
-          <p className="mt-4 text-sm text-ink-muted">No Account Balance activity yet.</p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
+      ledgerPage.total === 0 ? (
+        <p className="mt-6 text-sm text-ink-muted">No Account Balance activity yet.</p>
+      ) : (
+        <div className="mt-6">
+          <div className="overflow-x-auto rounded-card border border-line bg-surface">
             <table className="min-w-full text-left text-sm">
-              <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+              <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
                 <tr>
-                  <th className="pb-2 pr-4 font-medium">Date</th>
-                  <th className="pb-2 pr-4 font-medium">Description</th>
-                  <th className="pb-2 pr-4 font-medium">Amount</th>
-                  <th className="pb-2 font-medium">Balance</th>
+                  <SortTh
+                    label="Date"
+                    active={ledgerSort.sort === "date"}
+                    dir={ledgerSort.dir}
+                    href={tableSortHref({
+                      pathname: "/account/billing",
+                      params: { tab: "ledger" },
+                      key: "date",
+                      currentKey: ledgerSort.sort,
+                      currentDir: ledgerSort.dir,
+                      defaultKey: DEFAULT_BILLING_LEDGER_SORT,
+                      defaultDir: DEFAULT_BILLING_TABLE_DIR,
+                    })}
+                  />
+                  <SortTh
+                    label="Description"
+                    active={ledgerSort.sort === "description"}
+                    dir={ledgerSort.dir}
+                    href={tableSortHref({
+                      pathname: "/account/billing",
+                      params: { tab: "ledger" },
+                      key: "description",
+                      currentKey: ledgerSort.sort,
+                      currentDir: ledgerSort.dir,
+                      defaultKey: DEFAULT_BILLING_LEDGER_SORT,
+                      defaultDir: DEFAULT_BILLING_TABLE_DIR,
+                    })}
+                  />
+                  <SortTh
+                    label="Amount"
+                    active={ledgerSort.sort === "amount"}
+                    dir={ledgerSort.dir}
+                    href={tableSortHref({
+                      pathname: "/account/billing",
+                      params: { tab: "ledger" },
+                      key: "amount",
+                      currentKey: ledgerSort.sort,
+                      currentDir: ledgerSort.dir,
+                      defaultKey: DEFAULT_BILLING_LEDGER_SORT,
+                      defaultDir: DEFAULT_BILLING_TABLE_DIR,
+                    })}
+                  />
+                  <SortTh
+                    label="Balance"
+                    active={ledgerSort.sort === "balance"}
+                    dir={ledgerSort.dir}
+                    href={tableSortHref({
+                      pathname: "/account/billing",
+                      params: { tab: "ledger" },
+                      key: "balance",
+                      currentKey: ledgerSort.sort,
+                      currentDir: ledgerSort.dir,
+                      defaultKey: DEFAULT_BILLING_LEDGER_SORT,
+                      defaultDir: DEFAULT_BILLING_TABLE_DIR,
+                    })}
+                  />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-line">
+              <tbody>
                 {ledgerPage.rows.map((row) => {
                   const created = parseDisplayTime(row.createdAt);
                   const credit = row.deltaUsd >= 0;
                   return (
-                    <tr key={row.id}>
-                      <td className="py-2 pr-4 whitespace-nowrap text-ink-muted">
+                    <tr key={row.id} className="border-b border-line last:border-b-0">
+                      <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
                         {created ? formatLocalDate(created) : "—"}
                       </td>
-                      <td className="py-2 pr-4 text-ink">{row.label}</td>
+                      <td className="px-4 py-3 text-ink">{row.label}</td>
                       <td
-                        className={`py-2 pr-4 tabular-nums ${
+                        className={`px-4 py-3 tabular-nums ${
                           credit ? "text-success" : "text-danger"
                         }`}
                       >
                         {credit ? "+" : "−"}
                         {formatUsd(Math.abs(row.deltaUsd))}
                       </td>
-                      <td className="py-2 tabular-nums text-ink">
+                      <td className="px-4 py-3 tabular-nums text-ink">
                         {formatUsd(row.balanceUsd)}
                       </td>
                     </tr>
@@ -494,65 +602,141 @@ export default async function AccountBillingPage({
                 })}
               </tbody>
             </table>
-            <BillingTablePager
-              tab="ledger"
-              list={ledgerPage}
-            />
           </div>
-        )}
-      </section>
+          <BillingTablePager tab="ledger" list={ledgerPage} sort={ledgerSort} />
+        </div>
+      )
+      ) : invoicePage.total === 0 ? (
+        <p className="mt-6 text-sm text-ink-muted">No invoices yet.</p>
       ) : (
-      <section className="mt-6 rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Invoices</h2>
-        {invoicePage.total === 0 ? (
-          <p className="mt-3 text-sm text-ink-muted">No invoices yet.</p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
+        <div className="mt-6">
+          <div className="overflow-x-auto rounded-card border border-line bg-surface">
             <table className="min-w-full text-left text-sm">
-              <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+              <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
                 <tr>
-                  <th className="pb-2 pr-4 font-medium">Issued</th>
-                  <th className="pb-2 pr-4 font-medium">Due</th>
-                  <th className="pb-2 pr-4 font-medium">Plan</th>
-                  <th className="pb-2 pr-4 font-medium">Method</th>
-                  <th className="pb-2 pr-4 font-medium">Amount</th>
-                  <th className="pb-2 font-medium">Status</th>
+                  <SortTh
+                    label="Issued"
+                    active={invoiceSort.sort === "issued"}
+                    dir={invoiceSort.dir}
+                    href={tableSortHref({
+                      pathname: "/account/billing",
+                      params: { tab: "invoices" },
+                      key: "issued",
+                      currentKey: invoiceSort.sort,
+                      currentDir: invoiceSort.dir,
+                      defaultKey: DEFAULT_BILLING_INVOICE_SORT,
+                      defaultDir: DEFAULT_BILLING_TABLE_DIR,
+                    })}
+                  />
+                  <SortTh
+                    label="Due"
+                    active={invoiceSort.sort === "due"}
+                    dir={invoiceSort.dir}
+                    href={tableSortHref({
+                      pathname: "/account/billing",
+                      params: { tab: "invoices" },
+                      key: "due",
+                      currentKey: invoiceSort.sort,
+                      currentDir: invoiceSort.dir,
+                      defaultKey: DEFAULT_BILLING_INVOICE_SORT,
+                      defaultDir: DEFAULT_BILLING_TABLE_DIR,
+                    })}
+                  />
+                  <SortTh
+                    label="Plan"
+                    active={invoiceSort.sort === "plan"}
+                    dir={invoiceSort.dir}
+                    href={tableSortHref({
+                      pathname: "/account/billing",
+                      params: { tab: "invoices" },
+                      key: "plan",
+                      currentKey: invoiceSort.sort,
+                      currentDir: invoiceSort.dir,
+                      defaultKey: DEFAULT_BILLING_INVOICE_SORT,
+                      defaultDir: DEFAULT_BILLING_TABLE_DIR,
+                    })}
+                  />
+                  <SortTh
+                    label="Method"
+                    active={invoiceSort.sort === "method"}
+                    dir={invoiceSort.dir}
+                    href={tableSortHref({
+                      pathname: "/account/billing",
+                      params: { tab: "invoices" },
+                      key: "method",
+                      currentKey: invoiceSort.sort,
+                      currentDir: invoiceSort.dir,
+                      defaultKey: DEFAULT_BILLING_INVOICE_SORT,
+                      defaultDir: DEFAULT_BILLING_TABLE_DIR,
+                    })}
+                  />
+                  <SortTh
+                    label="Amount"
+                    active={invoiceSort.sort === "amount"}
+                    dir={invoiceSort.dir}
+                    href={tableSortHref({
+                      pathname: "/account/billing",
+                      params: { tab: "invoices" },
+                      key: "amount",
+                      currentKey: invoiceSort.sort,
+                      currentDir: invoiceSort.dir,
+                      defaultKey: DEFAULT_BILLING_INVOICE_SORT,
+                      defaultDir: DEFAULT_BILLING_TABLE_DIR,
+                    })}
+                  />
+                  <SortTh
+                    label="Status"
+                    active={invoiceSort.sort === "status"}
+                    dir={invoiceSort.dir}
+                    href={tableSortHref({
+                      pathname: "/account/billing",
+                      params: { tab: "invoices" },
+                      key: "status",
+                      currentKey: invoiceSort.sort,
+                      currentDir: invoiceSort.dir,
+                      defaultKey: DEFAULT_BILLING_INVOICE_SORT,
+                      defaultDir: DEFAULT_BILLING_TABLE_DIR,
+                    })}
+                  />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-line">
+              <tbody>
                 {invoicePage.rows.map((invoice) => {
                   const created = parseDisplayTime(invoice.createdAt);
                   const due = parseDisplayTime(invoice.dueAt);
                   return (
-                    <tr key={invoice.id}>
-                      <td className="py-2 pr-4 text-ink-muted">
+                    <tr key={invoice.id} className="border-b border-line last:border-b-0">
+                      <td className="px-4 py-3 text-ink-muted">
                         {created ? formatLocalDate(created) : "—"}
                       </td>
-                      <td className="py-2 pr-4 text-ink-muted">
+                      <td className="px-4 py-3 text-ink-muted">
                         {due ? formatLocalDate(due) : "—"}
                       </td>
-                      <td className="py-2 pr-4 text-ink">{invoice.planName}</td>
-                      <td className="py-2 pr-4 text-ink-muted">
+                      <td className="px-4 py-3 text-ink">{invoice.planName}</td>
+                      <td className="px-4 py-3 text-ink-muted">
                         {invoiceMethodLabel(invoice.method)}
                       </td>
-                      <td className="py-2 pr-4 tabular-nums text-ink">
+                      <td className="px-4 py-3 tabular-nums text-ink">
                         {formatUsd(invoice.amountUsd)}
                       </td>
-                      <td className="py-2 text-ink-muted">
-                        {invoiceStatusLabel(invoice.status)}
+                      <td className="px-4 py-3">
+                        <StatusBadge
+                          label={invoiceStatusLabel(invoice.status)}
+                          status={invoiceStatusLabel(invoice.status)}
+                        />
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-            <BillingTablePager
-              tab="invoices"
-              list={invoicePage}
-            />
           </div>
-        )}
-      </section>
+          <BillingTablePager
+            tab="invoices"
+            list={invoicePage}
+            sort={invoiceSort}
+          />
+        </div>
       )}
     </div>
   );
@@ -561,6 +745,7 @@ export default async function AccountBillingPage({
 function BillingTablePager({
   tab,
   list,
+  sort,
 }: {
   tab: "invoices" | "ledger";
   list: {
@@ -570,37 +755,29 @@ function BillingTablePager({
     from: number;
     to: number;
   };
+  sort: { sort: string; dir: "asc" | "desc" };
 }) {
-  if (list.total === 0) {
-    return null;
-  }
+  const extra = billingTableQueryParams(sort, {
+    sort:
+      tab === "invoices"
+        ? DEFAULT_BILLING_INVOICE_SORT
+        : DEFAULT_BILLING_LEDGER_SORT,
+    dir: DEFAULT_BILLING_TABLE_DIR,
+  });
   return (
-    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-ink-muted">
-      <p>{billingPageLabel(list)}</p>
-      {list.pageCount > 1 ? (
-        <div className="flex gap-2">
-          {list.page > 1 ? (
-            <Link
-              href={billingPath({
-                tab,
-                page: list.page > 2 ? String(list.page - 1) : undefined,
-              })}
-              className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-            >
-              Previous
-            </Link>
-          ) : null}
-          {list.page < list.pageCount ? (
-            <Link
-              href={billingPath({ tab, page: String(list.page + 1) })}
-              className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-            >
-              Next
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+    <TablePager
+      window={list}
+      prevHref={billingPath({
+        tab,
+        page: list.page > 2 ? String(list.page - 1) : undefined,
+        ...extra,
+      })}
+      nextHref={billingPath({
+        tab,
+        page: String(list.page + 1),
+        ...extra,
+      })}
+    />
   );
 }
 

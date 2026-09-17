@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdminPayoutFilePaymentsTable } from "@/components/admin-payout-tables";
 import { PageHeading } from "@/components/page-heading";
 import {
   adminPayoutsPath,
-  payoutStatusLabel,
-  shortenPayoutAddress,
+  parsePayoutStatus,
 } from "@/lib/membership/affiliate";
 import {
   listPayoutsForFile,
@@ -13,6 +13,7 @@ import {
 } from "@/lib/membership/affiliate-store";
 import { formatUsd } from "@/lib/membership/billing";
 import { parseUuid } from "@/lib/membership/wallet-form";
+import { firstSearchValue } from "@/lib/paper/open";
 import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
 
 export const metadata: Metadata = {
@@ -22,8 +23,10 @@ export const metadata: Metadata = {
 
 export default async function AdminPayoutFilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id: rawId } = await params;
   const id = parseUuid(rawId);
@@ -34,7 +37,12 @@ export default async function AdminPayoutFilePage({
   if (!file) {
     notFound();
   }
+  const query = await searchParams;
+  const status = parsePayoutStatus(firstSearchValue(query.status)) ?? "";
   const payouts = await listPayoutsForFile(id);
+  const rows = status
+    ? payouts.filter((payout) => payout.status === status)
+    : payouts;
   const created = parseDisplayTime(file.createdAt);
   const paid = parseDisplayTime(file.paidAt);
 
@@ -66,58 +74,17 @@ export default async function AdminPayoutFilePage({
         </a>
       </div>
 
-      <section className="mt-6 rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Payments</h2>
-        {payouts.length === 0 ? (
-          <p className="mt-4 text-sm text-ink-muted">No payments on this file.</p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[52rem] text-left text-sm">
-              <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-                <tr>
-                  <th className="py-2 pr-3 font-medium">When</th>
-                  <th className="py-2 pr-3 font-medium">Member</th>
-                  <th className="py-2 pr-3 font-medium">Amount</th>
-                  <th className="py-2 pr-3 font-medium">Network</th>
-                  <th className="py-2 pr-3 font-medium">Address</th>
-                  <th className="py-2 pr-3 font-medium">Status</th>
-                  <th className="py-2 font-medium">Paid</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payouts.map((payout) => {
-                  const requested = parseDisplayTime(payout.createdAt);
-                  const settled = parseDisplayTime(payout.paidAt);
-                  return (
-                    <tr key={payout.id} className="border-t border-line">
-                      <td className="py-3 pr-3 whitespace-nowrap text-ink-muted">
-                        {requested ? formatLocalDate(requested) : "—"}
-                      </td>
-                      <td className="py-3 pr-3">{payout.email ?? payout.userId}</td>
-                      <td className="py-3 pr-3 tabular-nums">
-                        {formatUsd(payout.amountUsd)}
-                      </td>
-                      <td className="py-3 pr-3">{payout.network ?? "—"}</td>
-                      <td
-                        className="py-3 pr-3 font-mono text-xs whitespace-nowrap"
-                        title={payout.address ?? undefined}
-                      >
-                        {shortenPayoutAddress(payout.address)}
-                      </td>
-                      <td className="py-3 pr-3 whitespace-nowrap">
-                        {payoutStatusLabel(payout.status)}
-                      </td>
-                      <td className="py-3 whitespace-nowrap text-ink-muted">
-                        {settled ? formatLocalDate(settled) : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      {payouts.length === 0 && !status ? (
+        <p className="mt-6 text-sm text-ink-muted">No payments on this file.</p>
+      ) : (
+        <div className="mt-6">
+          <AdminPayoutFilePaymentsTable
+            payouts={rows}
+            status={status}
+            fileId={file.id}
+          />
+        </div>
+      )}
     </div>
   );
 }
