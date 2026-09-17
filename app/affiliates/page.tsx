@@ -92,12 +92,7 @@ export default async function AffiliatesPage({
           <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
             Promote the platform and earn a percent of referred membership
             subscriptions. You do not need a platform account to join. Platform
-            users are already affiliates — sign in to open your dashboard. To
-            run desks,{" "}
-            <Link href="/sign-up" className="text-accent hover:text-accent-strong">
-              start free
-            </Link>
-            .
+            users are already affiliates — sign in to open your dashboard.
           </p>
           <ul className="mt-6 max-w-xl list-disc space-y-2 pl-5 text-sm text-ink-muted">
             <li>Share a unique referral code and custom landing URLs.</li>
@@ -174,7 +169,7 @@ export default async function AffiliatesPage({
             <Link href="/sign-up" className="text-accent hover:text-accent-strong">
               Join here for free
             </Link>
-            . All members are also affiliates.
+            . Platform members are also affiliates.
           </p>
           <p className="mt-2 text-sm text-ink-muted">
             Already have an account?{" "}
