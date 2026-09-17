@@ -34,49 +34,49 @@ export default async function SignIn2faPage({
 
   return (
     <main className="mx-auto w-full max-w-xl px-6 py-16">
-      <h1 className="whitespace-nowrap text-3xl font-semibold tracking-tight">
-        Two-factor authentication (2FA)
-      </h1>
-      <div className={AUTH_FORM_COLUMN_CLASS}>
-      <p className="mt-3 text-sm text-ink-muted">
-        Open Google Authenticator and enter the 6-digit code. A recovery code
-        also works once.
-      </p>
-      <section className={AUTH_FORM_CARD_CLASS}>
-        {error ? (
-          <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {error}
-          </p>
-        ) : null}
-        <form action={completeSignIn2faAction} className="space-y-3">
-          <label className="block text-sm text-ink" htmlFor="code">
-            Code
-            <input
-              id="code"
-              name="code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              autoFocus
-              required
-              className={BILLING_FIELD_CLASS}
-            />
-          </label>
-          <PendingSubmitButton
-            pendingLabel="Checking…"
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-          >
-            Continue
-          </PendingSubmitButton>
-        </form>
-        <form action={cancelSignIn2faAction} className="mt-4">
-          <button
-            type="submit"
-            className="text-sm text-accent hover:text-accent-strong"
-          >
-            Back to sign in
-          </button>
-        </form>
-      </section>
+      <div className={`mx-auto ${AUTH_FORM_COLUMN_CLASS}`}>
+        <h1 className="text-3xl font-semibold tracking-tight">
+          Two-factor authentication (2FA)
+        </h1>
+        <p className="mt-3 text-sm text-ink-muted">
+          Open Google Authenticator and enter the 6-digit code. A recovery code
+          also works once.
+        </p>
+        <section className={AUTH_FORM_CARD_CLASS}>
+          {error ? (
+            <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+              {error}
+            </p>
+          ) : null}
+          <form action={completeSignIn2faAction} className="space-y-3">
+            <label className="block text-sm text-ink" htmlFor="code">
+              Code
+              <input
+                id="code"
+                name="code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
+                required
+                className={BILLING_FIELD_CLASS}
+              />
+            </label>
+            <PendingSubmitButton
+              pendingLabel="Checking…"
+              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            >
+              Continue
+            </PendingSubmitButton>
+          </form>
+          <form action={cancelSignIn2faAction} className="mt-4">
+            <button
+              type="submit"
+              className="text-sm text-accent hover:text-accent-strong"
+            >
+              Back to sign in
+            </button>
+          </form>
+        </section>
       </div>
     </main>
   );
