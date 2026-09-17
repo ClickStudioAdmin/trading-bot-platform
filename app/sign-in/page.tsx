@@ -29,7 +29,7 @@ export default async function SignInPage({
       <main className="mx-auto max-w-md px-6 py-16">
         <h1 className="text-3xl font-semibold tracking-tight">Sign in</h1>
         <p className="mt-3 text-sm text-ink-muted">
-          Sign in with a desk or affiliate account. Market pages stay public.
+          Sign in to the trading platform or an affiliate account.
         </p>
         <section className="mt-8 rounded-card border border-line bg-surface p-5">
           {error ? (
