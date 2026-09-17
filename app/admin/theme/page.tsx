@@ -130,8 +130,8 @@ export default async function ThemePage({
           <section>
             <h2 className="text-xl font-semibold tracking-tight">Forms</h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Standard platform form chrome. This sample matches the live Join
-              for Free registration page. Dummy only — nothing is created.
+              Catalogue of platform field types and controls. Dummy only —
+              nothing is submitted.
             </p>
             <div className="mt-5">
               <ThemeFormDraft />

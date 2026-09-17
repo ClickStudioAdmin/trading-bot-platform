@@ -282,18 +282,9 @@ export function ThemeTableDraft() {
       {notice ? <p className="mt-4 text-sm text-success">{notice}</p> : null}
 
       {!showFilters || selectedCount > 0 ? (
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {!showFilters ? (
-            <button
-              type="button"
-              onClick={() => setShowFilters(true)}
-              className={TABLE_FILTER_CLEAR_CLASS}
-            >
-              Show Filters
-            </button>
-          ) : null}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
           {selectedCount > 0 ? (
-            <>
+            <div className="flex flex-wrap items-center gap-2">
               <p className="text-sm text-ink-muted">{selectedCount} selected</p>
               <button
                 type="button"
@@ -323,7 +314,18 @@ export function ThemeTableDraft() {
               >
                 Clear
               </button>
-            </>
+            </div>
+          ) : (
+            <span />
+          )}
+          {!showFilters ? (
+            <button
+              type="button"
+              onClick={() => setShowFilters(true)}
+              className={TABLE_FILTER_CLEAR_CLASS}
+            >
+              Show Filters
+            </button>
           ) : null}
         </div>
       ) : null}
@@ -430,6 +432,7 @@ export function ThemeTableDraft() {
         </table>
         </div>
         <TablePager
+          align="center"
           className="border-t border-line px-4 py-3"
           window={table.window}
           onPrev={() => table.setPage(table.window.page - 1)}
