@@ -4,6 +4,7 @@ import { PageHeading } from "@/components/page-heading";
 import { ButtonBusyIcon } from "@/components/pending-submit-button";
 import { ThemeBotFormDraft } from "@/components/theme-bot-form-draft";
 import { ThemeFormDraft } from "@/components/theme-form-draft";
+import { ThemeIconsDraft } from "@/components/theme-icons-draft";
 import { ThemeSelectDraft } from "@/components/theme-select-draft";
 import { ThemeTableDraft } from "@/components/theme-table-draft";
 
@@ -61,7 +62,9 @@ export default async function ThemePage({
         ? "table"
         : requested === "forms"
           ? "forms"
-          : "theme";
+          : requested === "icons"
+            ? "icons"
+            : "theme";
   return (
     <div className="space-y-12">
       <div className="overflow-hidden rounded-card border border-line bg-surface">
@@ -100,6 +103,9 @@ export default async function ThemePage({
           <TabLink href="/admin/theme?tab=forms" selected={tab === "forms"}>
             Forms
           </TabLink>
+          <TabLink href="/admin/theme?tab=icons" selected={tab === "icons"}>
+            Icons
+          </TabLink>
         </nav>
         {tab === "bot" ? (
           <section>
@@ -135,6 +141,18 @@ export default async function ThemePage({
             </p>
             <div className="mt-5">
               <ThemeFormDraft />
+            </div>
+          </section>
+        ) : tab === "icons" ? (
+          <section>
+            <h2 className="text-xl font-semibold tracking-tight">Icons</h2>
+            <p className="mt-1 text-sm text-ink-muted">
+              No icon library. These are the inline SVGs already in the app,
+              plus live market token images. Do not add a pack unless we decide
+              to replace this set.
+            </p>
+            <div className="mt-5">
+              <ThemeIconsDraft />
             </div>
           </section>
         ) : (
