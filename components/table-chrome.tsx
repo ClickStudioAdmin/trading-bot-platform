@@ -156,6 +156,7 @@ export function TablePager({
   onPrev,
   onNext,
   emptyLabel,
+  className = "mt-4",
 }: {
   window: Pick<TablePageWindow, "page" | "pageCount" | "total" | "from" | "to">;
   prevHref?: string;
@@ -163,13 +164,16 @@ export function TablePager({
   onPrev?: () => void;
   onNext?: () => void;
   emptyLabel?: string;
+  className?: string;
 }) {
   if (window.total === 0) {
     return null;
   }
   const showButtons = window.pageCount > 1;
   return (
-    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-ink-muted">
+    <div
+      className={`flex flex-wrap items-center justify-between gap-3 text-sm text-ink-muted ${className}`.trim()}
+    >
       <p>{tablePageLabel({ ...window, empty: emptyLabel })}</p>
       {showButtons ? (
         <div className="flex gap-2">
