@@ -14,6 +14,7 @@ import {
   noticeEmailText,
   sendResendEmail,
 } from "./email";
+import { resolvePlatformEmailFrom } from "./email-from";
 import {
   claimEmailDispatch,
   completeEmailDispatch,
@@ -53,7 +54,11 @@ export async function notify(input: {
   const prefs = input.userId
     ? await loadNotificationPreferences(input.userId)
     : { disabledEmails: [], disabledInApp: [] };
-  const configured = resendConfigured();
+  const from = await resolvePlatformEmailFrom();
+  const configured = resendConfigured({
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    EMAIL_FROM: from,
+  });
 
   let inbox = false;
   if (
@@ -93,12 +98,18 @@ export async function notify(input: {
       }
       continue;
     }
-    const sent = await sendResendEmail({
-      to,
-      subject: input.notice.subject,
-      html: noticeEmailHtml(input.notice, { footer, actionHref }),
-      text: noticeEmailText(input.notice, { footer, actionHref }),
-    });
+    const sent = await sendResendEmail(
+      {
+        to,
+        subject: input.notice.subject,
+        html: noticeEmailHtml(input.notice, { footer, actionHref }),
+        text: noticeEmailText(input.notice, { footer, actionHref }),
+      },
+      {
+        RESEND_API_KEY: process.env.RESEND_API_KEY,
+        EMAIL_FROM: from,
+      },
+    );
     if (sent.ok) {
       email = "sent";
       continue;

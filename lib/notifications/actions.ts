@@ -7,9 +7,24 @@ import { redirect } from "next/navigation";
 import {
   emailIsMuteable,
   isNotificationId,
+  isOperatorNotificationId,
   memberNotificationIds,
   NOTIFICATION_IDS,
+  resendConfigured,
 } from "./catalog";
+import { sampleNotice } from "./copy";
+import {
+  MEMBER_EMAIL_FOOTER,
+  noticeAbsoluteHref,
+  noticeEmailHtml,
+  noticeEmailText,
+  sendResendEmail,
+} from "./email";
+import {
+  DEFAULT_TEST_INBOX,
+  parseMailbox,
+  resolvePlatformEmailFrom,
+} from "./email-from";
 import {
   BADGE_IDS,
   demoBadgesAllowed,
@@ -145,6 +160,49 @@ export async function seedAdminInboxAction() {
   }
   refreshAdminAlertPaths();
   redirect("/admin/settings?tab=notifications&saved=seeded");
+}
+
+export async function sendTestEmailAction(formData: FormData) {
+  await requireAdmin();
+  const to = parseMailbox(formData.get("to")) ?? parseMailbox(DEFAULT_TEST_INBOX);
+  const template = String(formData.get("templateId") ?? "");
+  if (!to) {
+    redirect("/admin/email-templates?error=to");
+  }
+  if (!isNotificationId(template)) {
+    redirect("/admin/email-templates?error=template");
+  }
+  const from = await resolvePlatformEmailFrom();
+  if (
+    !resendConfigured({
+      RESEND_API_KEY: process.env.RESEND_API_KEY,
+      EMAIL_FROM: from,
+    })
+  ) {
+    redirect("/admin/email-templates?error=unconfigured");
+  }
+  const notice = sampleNotice(template);
+  const actionHref = noticeAbsoluteHref(notice.actionUrl);
+  const footer = isOperatorNotificationId(template)
+    ? undefined
+    : MEMBER_EMAIL_FOOTER;
+  const sent = await sendResendEmail(
+    {
+      to,
+      subject: notice.subject,
+      html: noticeEmailHtml(notice, { footer, actionHref }),
+      text: noticeEmailText(notice, { footer, actionHref }),
+    },
+    {
+      RESEND_API_KEY: process.env.RESEND_API_KEY,
+      EMAIL_FROM: from,
+    },
+  );
+  if (!sent.ok) {
+    redirect("/admin/email-templates?error=send");
+  }
+  revalidatePath("/admin/email-templates");
+  redirect("/admin/email-templates?sent=1");
 }
 
 export async function clearDemoBadgeCountsAction() {

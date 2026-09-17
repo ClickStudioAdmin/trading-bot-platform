@@ -115,7 +115,7 @@ Platform kill switches: `platform_settings.disabled_emails` and `disabled_badges
 - `/account/notifications` — Inbox (affiliate-only allowed). Status / Scope / Event filters (same Apply / Clear bar as desk Activity). 20 per page (`?page=`), same Previous / Next as Billing. Message / Date / Actions table with checkbox bulk Mark read / Mark unread. Desk notices open Activity with `?desk=` so the layout does not bounce.
 - `/account/settings?tab=notifications`
 - `/admin/settings?tab=notifications` (Member list + Admin list; Email / In-app / Alert)
-- `/admin/email-templates` — locked `NoticeEmail` previews (same layout Resend sends)
+- `/admin/email-templates` — locked `NoticeEmail` previews (same layout Resend sends). **Send test email** posts the sample via Resend (no inbox row). To defaults to `system@alphadesks.app`. From is Admin Settings → General (`platform_settings.email_from`).
 - Header Inbox (unread only); amber action counts on Overview, Billing, Affiliates, and the destination tab / Copy Trading link
 - Admin Overview, Billing, Affiliates amber counts
 - Overview Attention + recent notifications widget. Admin Overview Attention lists gated admin alerts with links to Affiliates, Billing, Members, and Logs.

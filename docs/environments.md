@@ -141,7 +141,7 @@ Admin footer **Tick** runs the same cycle (`POST /api/engine/admin-tick`). Auto 
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub Environment `development` | Same value as Vercel **Protection Bypass for Automation**. Preview deployments are SSO-protected; without this header the tick gets `401 Protected Deployment` |
 | `FLY_API_TOKEN` | GitHub Environments `development` and `production` | Fly deploy token. [`.github/workflows/deploy-engine.yml`](../.github/workflows/deploy-engine.yml) |
 
-Fly app secrets (not GitHub): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EXCHANGE_CREDENTIALS_KEY`, `BILLING_CREDENTIALS_KEY` — development values on `tbp-engine-dev`, production on `tbp-engine`. Never mix. Deploy Engine fails if any of the four is missing. After notifications step 8, also set `RESEND_API_KEY`, `EMAIL_FROM`, and `APP_BASE_URL` on those Fly apps (same values as that environment’s Vercel). Mail no-ops if the first two are missing.
+Fly app secrets (not GitHub): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EXCHANGE_CREDENTIALS_KEY`, `BILLING_CREDENTIALS_KEY` — development values on `tbp-engine-dev`, production on `tbp-engine`. Never mix. Deploy Engine fails if any of the four is missing. After notifications step 8, also set `RESEND_API_KEY` and `APP_BASE_URL` on those Fly apps (same values as that environment’s Vercel). `EMAIL_FROM` is optional fallback; the From is Admin Settings (`platform_settings.email_from`). Mail no-ops if the API key is missing.
 
 The Vercel function already uses `SUPABASE_SERVICE_ROLE_KEY` on that Vercel environment. Never put the service role or `CRON_SECRET` in `NEXT_PUBLIC_*`. Never put production secrets on Preview or the `development` GitHub Environment.
 
@@ -197,11 +197,10 @@ Transactional mail only. Separate Resend projects or API keys for develop and pr
 | --- | --- | --- |
 | `RESEND_API_KEY` | Vercel Development / `.env.local` / Fly `tbp-engine-dev` | Develop Resend key (`re_…`). TBP-dev only |
 | `RESEND_API_KEY` | Vercel Production / Fly `tbp-engine` | A **different** production Resend key |
-| `EMAIL_FROM` | Same as the develop key | `Trading Bot Platform <noreply@your-dev-domain>` |
-| `EMAIL_FROM` | Same as the production key | A **different** production From (verified domain) |
+| `EMAIL_FROM` | Optional fallback | Used only if `platform_settings.email_from` is empty. Admin Settings → General holds the From (default `Trading Bot Platform <system@alphadesks.app>`). Must be a mailbox on a verified Resend domain. |
 | `APP_BASE_URL` | Same as TradingView / Stripe | Email button origin. No trailing slash |
 
-Mail no-ops when `RESEND_API_KEY` or `EMAIL_FROM` is unset. Platform and member mutes still apply. Operator mail goes to every admin until [phase-admin-roles.md](phase-admin-roles.md).
+Mail no-ops when `RESEND_API_KEY` is unset or the resolved From is empty. The From is the admin setting, then `EMAIL_FROM`, then `Trading Bot Platform <system@alphadesks.app>`. Platform and member mutes still apply. Operator mail goes to every admin until [phase-admin-roles.md](phase-admin-roles.md). `/admin/email-templates` can send a sample to a chosen inbox (default `system@alphadesks.app`).
 
 ## Deposit HD (membership step 5)
 

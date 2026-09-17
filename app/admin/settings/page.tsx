@@ -2,8 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { saveAdminSettings, saveAutoTickAction } from "@/lib/admin/actions";
+import {
+  saveAdminSettings,
+  saveAutoTickAction,
+  saveEmailFromAction,
+} from "@/lib/admin/actions";
 import { loadAutoTickEnabled } from "@/lib/admin/settings";
+import { resolvePlatformEmailFrom } from "@/lib/notifications/email-from";
 import { loadCopyPlatformSettings } from "@/lib/copy/settings";
 import { billingChainEnvironment } from "@/lib/membership/wallet";
 import { saveAffiliateSettingsAction } from "@/lib/membership/affiliate-actions";
@@ -67,9 +72,13 @@ export default async function AdminSettingsPage({
   const copyFollowersError = error === "copy-followers";
   const copyFollowersCeilingError = error === "copy-followers-ceiling";
   const copyFollowersRangeError = error === "copy-followers-range";
-  const [autoTick, copySettings, affiliateSettings, gas, chains, walletMinPayoutUsd] =
+  const emailFromError = error === "email-from";
+  const [autoTick, emailFrom, copySettings, affiliateSettings, gas, chains, walletMinPayoutUsd] =
     await Promise.all([
     tab === "general" ? loadAutoTickEnabled() : Promise.resolve(false),
+    tab === "general"
+      ? resolvePlatformEmailFrom()
+      : Promise.resolve(""),
     tab === "copy"
       ? loadCopyPlatformSettings()
       : Promise.resolve({
@@ -135,6 +144,40 @@ export default async function AdminSettingsPage({
           {saved === "1" ? (
             <p className="mt-6 text-sm text-success">Settings saved.</p>
           ) : null}
+          {emailFromError ? (
+            <p className="mt-6 text-sm text-danger">
+              Enter a From address, for example Trading Bot Platform
+              {" <system@alphadesks.app>"}.
+            </p>
+          ) : null}
+          <form
+            action={saveEmailFromAction}
+            className="mt-6 max-w-lg space-y-4 rounded-card border border-line bg-surface p-5"
+          >
+            <label className="block text-sm text-ink">
+              System from address
+              <input
+                name="emailFrom"
+                type="text"
+                required
+                defaultValue={emailFrom}
+                autoComplete="off"
+                className={BILLING_FIELD_CLASS}
+              />
+              <span className="mt-1 block text-xs text-ink-muted">
+                Outbound mail uses this From. It must be on a verified Resend
+                domain. Default is Trading Bot Platform
+                {" <system@alphadesks.app>"}.
+              </span>
+            </label>
+            <PendingSubmitButton
+              pendingLabel="Saving…"
+              successKey="save-email-from"
+              className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
+            >
+              Save from address
+            </PendingSubmitButton>
+          </form>
           <form
             action={saveAutoTickAction}
             className="mt-6 max-w-lg space-y-4 rounded-card border border-line bg-surface p-5"

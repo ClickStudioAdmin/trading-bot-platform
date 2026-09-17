@@ -6,6 +6,7 @@ import {
   noticeEmailText,
   sendResendEmail,
 } from "@/lib/notifications/email";
+import { resolvePlatformEmailFrom } from "@/lib/notifications/email-from";
 import type { NotificationNotice } from "@/lib/notifications/copy";
 
 export const AUTH_EMAIL_FOOTER =
@@ -66,12 +67,19 @@ export async function sendAuthEmail(input: {
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const href = authEmailHref(input.notice.actionUrl);
   const rendered = renderAuthEmail(input.notice, href);
-  return sendResendEmail({
-    to: input.to,
-    subject: rendered.subject,
-    html: rendered.html,
-    text: rendered.text,
-  });
+  const from = await resolvePlatformEmailFrom();
+  return sendResendEmail(
+    {
+      to: input.to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+    },
+    {
+      RESEND_API_KEY: process.env.RESEND_API_KEY,
+      EMAIL_FROM: from,
+    },
+  );
 }
 
 export { escapeNoticeHtml };

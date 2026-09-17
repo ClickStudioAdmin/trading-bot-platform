@@ -2,6 +2,7 @@
 
 import { AUTO_TICK_COOKIE } from "@/lib/admin/settings";
 import { requireAdmin } from "@/lib/admin/access";
+import { saveEmailFrom } from "@/lib/notifications/email-from";
 import {
   parseCopyFollowerLimits,
   parseCopyMinActivityDays,
@@ -41,6 +42,17 @@ export async function saveAdminSettings(formData: FormData) {
   }
   revalidatePath("/admin/settings");
   redirect("/admin/settings?tab=copy&saved=1");
+}
+
+export async function saveEmailFromAction(formData: FormData) {
+  await requireAdmin();
+  const saved = await saveEmailFrom(String(formData.get("emailFrom") ?? ""));
+  if (!saved.ok) {
+    redirect("/admin/settings?error=email-from");
+  }
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin/email-templates");
+  redirect("/admin/settings?saved=1");
 }
 
 export async function saveAutoTickAction(formData: FormData) {
