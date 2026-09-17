@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
+import { AppCheck } from "@/components/app-check";
 import {
   PAPER_OPEN_COLUMN_DEFAULTS,
   PAPER_OPEN_COLUMN_LABELS,
@@ -105,11 +106,10 @@ export function PaperOpenColumnPicker({
             key={id}
             className="flex cursor-pointer items-center gap-2 rounded-control px-2 py-1.5 text-sm text-ink hover:bg-surface-raised"
           >
-            <input
-              type="checkbox"
+            <AppCheck
               checked={visible[id]}
               onChange={(event) => setColumn(id, event.target.checked)}
-              className="mt-0.5"
+              className=""
             />
             {PAPER_OPEN_COLUMN_LABELS[id]}
           </label>

@@ -1,5 +1,6 @@
 "use client";
 
+import { AppCheck } from "@/components/app-check";
 import { CopySizeFields } from "@/components/copy-size-fields";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { formatCopyPaperStartingUsdt } from "@/lib/copy/decide";
@@ -45,11 +46,9 @@ export function CopyDeskGuardsFields({
       />
       {showReduceOnly ? (
         <label className="flex items-start gap-2 text-sm text-ink">
-          <input
-            type="checkbox"
+          <AppCheck
             name="reduceOnly"
             defaultChecked={defaultReduceOnly}
-            className="mt-0.5"
           />
           <span>
             Reduce only

@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
+import { AppCheck } from "@/components/app-check";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { saveFuturesTrailing } from "@/lib/futures/actions";
@@ -35,13 +36,12 @@ export function FuturesTrailingFields({
   return (
     <div className="space-y-3 border-t border-line-strong pt-4">
       <label className="flex items-center gap-2 text-sm text-ink">
-        <input
-          type="checkbox"
+        <AppCheck
           name={`${namePrefix}trailing`}
           value="on"
           checked={enabled}
           onChange={(event) => setEnabled(event.target.checked)}
-          className="size-4 rounded-control accent-accent"
+          className=""
         />
         Trailing stop
       </label>
@@ -61,13 +61,12 @@ export function FuturesTrailingFields({
           </label>
           <div>
             <label className="flex items-center gap-2 text-xs text-ink-muted">
-              <input
-                type="checkbox"
+              <AppCheck
                 name={`${namePrefix}trailingActivation`}
                 value="on"
                 checked={activationOn}
                 onChange={(event) => setActivationOn(event.target.checked)}
-                className="size-4 rounded-control accent-accent"
+                className=""
               />
               Activation price
             </label>
@@ -304,13 +303,12 @@ function FuturesTrailingDialog({
             />
           </div>
           <label className="flex items-center gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
+            <AppCheck
               name="trailingActivation"
               value="on"
               checked={activationOn}
               onChange={(event) => setActivationOn(event.target.checked)}
-              className="size-4 rounded-control accent-accent"
+              className=""
             />
             Activation Price
           </label>

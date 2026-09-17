@@ -13,6 +13,7 @@ import {
   TableFilterField,
   TablePager,
 } from "@/components/table-chrome";
+import { AppCheck } from "@/components/app-check";
 import { Modal, StarterPackCheckbox } from "@/components/template-modals";
 import { sliceTablePage, type TableSortDir } from "@/lib/table-chrome";
 import type { BacktestLinkHighlight } from "@/lib/backtest/model";
@@ -864,12 +865,11 @@ export function TemplatesLibrary({
             <tr>
               {sharedTab ? null : (
                 <th className="w-10 px-4 py-3">
-                  <input
-                    type="checkbox"
+                  <AppCheck
                     checked={allListedSelected}
                     onChange={toggleAllListed}
                     aria-label="Select all templates"
-                    className="size-4"
+                    className=""
                   />
                 </th>
               )}
@@ -935,12 +935,11 @@ export function TemplatesLibrary({
                 <tr key={row.id} className="border-b border-line last:border-b-0">
                   {sharedTab ? null : (
                     <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
+                      <AppCheck
                         checked={selected.has(row.id)}
                         onChange={() => toggleRow(row.id)}
                         aria-label={`Select ${row.name}`}
-                        className="size-4"
+                        className=""
                       />
                     </td>
                   )}
@@ -1090,12 +1089,11 @@ export function TemplatesLibrary({
               <tr>
                 {sharedTab ? null : (
                   <th className="w-10 px-4 py-3">
-                    <input
-                      type="checkbox"
+                    <AppCheck
                       checked={allListedSelected}
                       onChange={toggleAllListed}
                       aria-label="Select all folders"
-                      className="size-4"
+                      className=""
                     />
                   </th>
                 )}
@@ -1153,12 +1151,11 @@ export function TemplatesLibrary({
                   <tr key={row.id} className="border-b border-line last:border-b-0">
                     {sharedTab ? null : (
                       <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
+                        <AppCheck
                           checked={selected.has(row.id)}
                           onChange={() => toggleRow(row.id)}
                           aria-label={`Select ${row.name}`}
-                          className="size-4"
+                          className=""
                         />
                       </td>
                     )}
@@ -1639,12 +1636,10 @@ function ImportPickList({
                       : "hover:bg-surface-raised"
                   }`}
                 >
-                  <input
-                    type="checkbox"
+                  <AppCheck
                     checked={selected.has(row.id)}
                     disabled={isLocked}
                     onChange={() => onToggle(row.id)}
-                    className="mt-0.5 size-4"
                   />
                   <span className="min-w-0">
                     <span className="block truncate">{row.name}</span>
@@ -1839,11 +1834,9 @@ function BulkFolderModal({
         </label>
       ) : null}
       <label className="mt-3 flex items-start gap-2 text-sm text-ink">
-        <input
-          type="checkbox"
+        <AppCheck
           checked={createFolder}
           onChange={(event) => setCreateFolder(event.target.checked)}
-          className="mt-1 size-4"
         />
         Create a new folder
       </label>
@@ -1986,8 +1979,7 @@ function TemplateEditModal({
           <div className="mt-1 space-y-1">
             {folders.map((folder) => (
               <label key={folder.id} className="flex items-center gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
+                <AppCheck
                   checked={folderIds.includes(folder.id)}
                   onChange={(event) => {
                     setFolderIds((current) =>
@@ -1996,6 +1988,7 @@ function TemplateEditModal({
                         : current.filter((id) => id !== folder.id),
                     );
                   }}
+                  className=""
                 />
                 {folder.name}
                 {folder.visibility === "platform" ? (
@@ -2006,11 +1999,9 @@ function TemplateEditModal({
           </div>
         )}
         <label className="mt-2 flex items-start gap-2 text-sm text-ink">
-          <input
-            type="checkbox"
+          <AppCheck
             checked={createFolder}
             onChange={(event) => setCreateFolder(event.target.checked)}
-            className="mt-1 size-4"
           />
           Create a new folder
         </label>

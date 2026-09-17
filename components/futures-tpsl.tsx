@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
+import { AppCheck } from "@/components/app-check";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { saveFuturesTpsl } from "@/lib/futures/actions";
@@ -66,13 +67,12 @@ export function FuturesTpslFields({
     <div className="space-y-3 border-t border-line-strong pt-4">
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-sm text-ink">
-          <input
-            type="checkbox"
+          <AppCheck
             name={`${namePrefix}tpsl`}
             value="on"
             checked={enabled}
             onChange={(event) => setEnabled(event.target.checked)}
-            className="size-4 rounded-control accent-accent"
+            className=""
           />
           Take profit / Stop loss
         </label>

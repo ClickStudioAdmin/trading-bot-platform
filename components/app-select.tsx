@@ -16,11 +16,13 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { TokenIcon } from "@/components/token-icon";
 
 export type AppSelectOption = {
   value: string;
   label: string;
   disabled?: boolean;
+  icon?: string;
 };
 
 export type AppSelectChangeEvent = ChangeEvent<HTMLInputElement>;
@@ -166,7 +168,7 @@ export function AppSelect({
         onClick={() => (open ? close() : setOpen(true))}
         className={triggerClass}
       >
-        <span className="min-w-0 truncate">{selected?.label ?? ""}</span>
+        <OptionLabel option={selected} />
         <Chevron open={open} />
       </button>
       {open
@@ -198,7 +200,7 @@ export function AppSelect({
                           : "flex w-full rounded-control px-3 py-2 text-left text-sm text-ink hover:bg-surface-raised disabled:opacity-40"
                       }
                     >
-                      {option.label}
+                      <OptionLabel option={option} />
                     </button>
                   );
                 })
@@ -223,11 +225,18 @@ export function AppMultiSelect({
   className?: string;
 }) {
   const listId = useId();
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string[]>(defaultValue);
+  const picked = useMemo(
+    () =>
+      selected
+        .map((value) => options.find((option) => option.value === value))
+        .filter((option): option is AppSelectOption => Boolean(option)),
+    [options, selected],
+  );
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) {
@@ -235,18 +244,19 @@ export function AppMultiSelect({
     }
     return options.filter((option) => option.label.toLowerCase().includes(needle));
   }, [options, query]);
-  const label =
-    selected.length === 0
-      ? placeholder
-      : selected.length === 1
-        ? (options.find((option) => option.value === selected[0])?.label ??
-          placeholder)
-        : `${selected.length} selected`;
 
   const close = useCallback(() => {
     setOpen(false);
     setQuery("");
   }, []);
+
+  function toggleValue(value: string) {
+    setSelected((current) =>
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value],
+    );
+  }
 
   useEffect(() => {
     if (!open) {
@@ -277,18 +287,47 @@ export function AppMultiSelect({
 
   return (
     <>
-      <button
+      <div
         ref={triggerRef}
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={listId}
-        onClick={() => (open ? close() : setOpen(true))}
-        className={`${FIELD_TRIGGER} ${className}`.trim()}
+        className={`flex w-full min-w-0 flex-wrap items-center gap-2 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink hover:border-line-strong ${className}`.trim()}
       >
-        <span className="min-w-0 truncate">{label}</span>
-        <Chevron open={open} />
-      </button>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+          {picked.length === 0 ? (
+            <span className="text-ink-faint">{placeholder}</span>
+          ) : (
+            picked.map((option) => (
+              <span
+                key={option.value}
+                className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-accent/15 py-0.5 pr-1 pl-2 text-xs text-ink"
+              >
+                <OptionLabel option={option} size={14} />
+                <button
+                  type="button"
+                  aria-label={`Remove ${option.label}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    toggleValue(option.value);
+                  }}
+                  className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-accent/25 hover:text-ink"
+                >
+                  <CloseMark />
+                </button>
+              </span>
+            ))
+          )}
+        </div>
+        <button
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-label={placeholder}
+          onClick={() => (open ? close() : setOpen(true))}
+          className="ml-auto inline-flex shrink-0 text-ink"
+        >
+          <Chevron open={open} />
+        </button>
+      </div>
       {open
         ? createPortal(
             <SelectPanel
@@ -307,20 +346,14 @@ export function AppMultiSelect({
                     type="button"
                     role="option"
                     aria-selected={on}
-                    onClick={() =>
-                      setSelected((current) =>
-                        current.includes(option.value)
-                          ? current.filter((value) => value !== option.value)
-                          : [...current, option.value],
-                      )
-                    }
+                    onClick={() => toggleValue(option.value)}
                     className={
                       on
                         ? "flex w-full rounded-control bg-accent/15 px-3 py-2 text-left text-sm text-ink"
                         : "flex w-full rounded-control px-3 py-2 text-left text-sm text-ink hover:bg-surface-raised"
                     }
                   >
-                    {option.label}
+                    <OptionLabel option={option} />
                   </button>
                 );
               })}
@@ -343,7 +376,7 @@ function SelectPanel({
 }: {
   panelRef: { current: HTMLDivElement | null };
   listId: string;
-  triggerRef: { current: HTMLButtonElement | null };
+  triggerRef: { current: HTMLElement | null };
   searchable: boolean;
   query: string;
   onQuery: (value: string) => void;
@@ -436,6 +469,38 @@ function flattenLabel(node: ReactNode): string {
     return flattenLabel((node.props as { children?: ReactNode }).children);
   }
   return "";
+}
+
+function OptionLabel({
+  option,
+  size = 18,
+}: {
+  option?: AppSelectOption;
+  size?: number;
+}) {
+  if (!option) {
+    return <span className="min-w-0 truncate" />;
+  }
+  return (
+    <span className="inline-flex min-w-0 items-center gap-2">
+      {option.icon ? <TokenIcon symbol={option.icon} size={size} /> : null}
+      <span className="min-w-0 truncate">{option.label}</span>
+    </span>
+  );
+}
+
+function CloseMark() {
+  return (
+    <svg viewBox="0 0 12 12" className="size-2.5" aria-hidden>
+      <path
+        d="M3 3l6 6M9 3l-6 6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }
 
 function Chevron({ open }: { open: boolean }) {

@@ -2,7 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { AppMultiSelect, AppSelect } from "@/components/app-select";
-import { EnableCheck, HintLabel } from "@/components/bot-form-chrome";
+import { AppCheck, AppRadio } from "@/components/app-check";
+import { HintLabel } from "@/components/bot-form-chrome";
 import { DatePicker } from "@/components/date-picker";
 import { LogoFileField } from "@/components/logo-file-field";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
@@ -25,11 +26,11 @@ const VENUES = [
   { value: "hyperliquid", label: "Hyperliquid" },
 ];
 const CONTRACTS = [
-  { value: "btc", label: "BTCUSDT" },
-  { value: "eth", label: "ETHUSDT" },
-  { value: "sol", label: "SOLUSDT" },
-  { value: "doge", label: "DOGEUSDT" },
-  { value: "xrp", label: "XRPUSDT" },
+  { value: "BTCUSDT", label: "BTCUSDT", icon: "BTC" },
+  { value: "ETHUSDT", label: "ETHUSDT", icon: "ETH" },
+  { value: "SOLUSDT", label: "SOLUSDT", icon: "SOL" },
+  { value: "DOGEUSDT", label: "DOGEUSDT", icon: "DOGE" },
+  { value: "XRPUSDT", label: "XRPUSDT", icon: "XRP" },
 ];
 const CLONE = [
   { value: "", label: "Clone existing bot" },
@@ -43,7 +44,6 @@ export function ThemeFormDraft() {
   const [date, setDate] = useState("2026-09-01");
   const [method, setMethod] = useState("card");
   const [notify, setNotify] = useState(true);
-  const [enabled, setEnabled] = useState(true);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -151,19 +151,19 @@ export function ThemeFormDraft() {
             />
           </label>
           <label className="block text-sm text-ink">
-            Searchable dropdown
+            Contract
             <AppSelect
               className="mt-1"
               searchable
-              defaultValue="btc"
+              defaultValue="BTCUSDT"
               options={CONTRACTS}
             />
           </label>
-          <label className="block text-sm text-ink">
+          <label className="block text-sm text-ink sm:col-span-2">
             Multi-select
             <AppMultiSelect
               className="mt-1"
-              defaultValue={["btc"]}
+              defaultValue={["BTCUSDT", "ETHUSDT"]}
               options={CONTRACTS}
               placeholder="Contracts"
             />
@@ -223,13 +223,11 @@ export function ThemeFormDraft() {
         <fieldset className="space-y-3">
           <legend className="text-sm text-ink">Radio</legend>
           <label className="flex items-start gap-2 text-sm text-ink">
-            <input
-              type="radio"
+            <AppRadio
               name="method"
               value="card"
               checked={method === "card"}
               onChange={() => setMethod("card")}
-              className="mt-0.5"
             />
             <span>
               Card
@@ -239,13 +237,11 @@ export function ThemeFormDraft() {
             </span>
           </label>
           <label className="flex items-start gap-2 text-sm text-ink">
-            <input
-              type="radio"
+            <AppRadio
               name="method"
               value="wallet"
               checked={method === "wallet"}
               onChange={() => setMethod("wallet")}
-              className="mt-0.5"
             />
             <span>
               Wallet
@@ -259,25 +255,11 @@ export function ThemeFormDraft() {
         <div className="space-y-3">
           <p className="text-sm text-ink">Checkbox</p>
           <label className="flex items-start gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
+            <AppCheck
               checked={notify}
               onChange={(event) => setNotify(event.target.checked)}
-              className="mt-0.5"
             />
             Email me when this changes
-          </label>
-          <label className="flex items-center gap-3 text-sm text-ink">
-            <button
-              type="button"
-              onClick={() => setEnabled((on) => !on)}
-              className="inline-flex"
-              aria-pressed={enabled}
-              aria-label="Styled enable"
-            >
-              <EnableCheck checked={enabled} />
-            </button>
-            Styled enable
           </label>
         </div>
 

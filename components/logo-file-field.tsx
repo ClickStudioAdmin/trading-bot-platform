@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AppCheck } from "@/components/app-check";
 
 const fileClass =
   "w-full text-sm text-ink file:mr-3 file:rounded-control file:border-0 file:bg-surface-raised file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-ink hover:file:bg-line";
@@ -87,8 +88,7 @@ export function LogoFileField({
       </div>
       {currentUrl && removeName ? (
         <label className="mt-2 flex items-center gap-2 text-xs text-ink-muted">
-          <input
-            type="checkbox"
+          <AppCheck
             name={removeName}
             checked={remove}
             onChange={(event) => {
@@ -99,7 +99,7 @@ export function LogoFileField({
                 replacePreview(null);
               }
             }}
-            className="mt-0.5"
+            className=""
           />
           {removeLabel}
         </label>

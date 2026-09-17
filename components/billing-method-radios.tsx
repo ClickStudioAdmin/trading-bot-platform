@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { useState } from "react";
+import { AppCheck, AppRadio } from "@/components/app-check";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   BILLING_METHOD_LABELS,
@@ -36,13 +37,11 @@ export function BillingMethodRadios({
     <fieldset className="space-y-3">
       <legend className="sr-only">Select payment method</legend>
       <label className="flex items-start gap-2 text-sm text-ink">
-        <input
-          type="radio"
+        <AppRadio
           name={name}
           value="stripe"
           checked={method === "stripe"}
           onChange={() => choose("stripe")}
-          className="mt-0.5"
         />
         <span>
           {BILLING_METHOD_LABELS.stripe}
@@ -53,13 +52,11 @@ export function BillingMethodRadios({
       </label>
       <div className="space-y-3">
         <label className="flex items-start gap-2 text-sm text-ink">
-          <input
-            type="radio"
+          <AppRadio
             name={name}
             value="wallet"
             checked={method === "wallet"}
             onChange={() => choose("wallet")}
-            className="mt-0.5"
           />
           <span>
             {BILLING_METHOD_LABELS.wallet}
@@ -71,18 +68,15 @@ export function BillingMethodRadios({
         </label>
         {method === "wallet" ? (
           <label className="ml-6 flex items-start gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
+            <AppCheck
               name={deductName}
               value="1"
               {...(onDeductChange
                 ? {
                     checked: deductSelected,
-                    onChange: (event: ChangeEvent<HTMLInputElement>) =>
-                      onDeductChange(event.target.checked),
+                    onChange: (event) => onDeductChange(event.target.checked),
                   }
                 : { defaultChecked: deductSelected })}
-              className="mt-0.5"
             />
             <span>
               {CRYPTO_CREDIT_DEDUCT_LABEL}

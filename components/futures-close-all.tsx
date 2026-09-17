@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
+import { AppCheck } from "@/components/app-check";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { closeAllFutures } from "@/lib/futures/actions";
 import {
@@ -242,11 +243,7 @@ function FuturesBulkDialog({
           <input type="hidden" name="scope" value={scope} />
           {scope !== "orders" ? (
             <label className="flex items-start gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
-                name="setReduceOnly"
-                className="mt-0.5"
-              />
+              <AppCheck name="setReduceOnly" />
               <span>
                 {blockNew.label}
                 <span className="mt-1 block text-xs text-ink-muted">

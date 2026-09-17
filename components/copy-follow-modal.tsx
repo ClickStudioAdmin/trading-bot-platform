@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AppCheck } from "@/components/app-check";
 import { CopyDeskGuardsFields } from "@/components/copy-desk-guards-fields";
 import { DeskFormFlash, StayOnPageForm } from "@/components/stay-on-page-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -217,7 +218,7 @@ function CopyFollowModal({
               Copy
             </PendingSubmitButton>
             <label className="flex items-start gap-2 text-sm text-ink">
-              <input type="checkbox" name="goToDesk" className="mt-0.5" />
+              <AppCheck name="goToDesk" />
               <span>Go to Copy Desk</span>
             </label>
           </div>

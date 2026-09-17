@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AppCheck } from "@/components/app-check";
 import { BacktestRecipeFields } from "@/components/backtest-recipe-fields";
 import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
@@ -471,8 +472,7 @@ export function BacktestQueueForm({
                     key={row.symbol}
                     className="flex items-center gap-2 py-0.5 text-sm text-ink"
                   >
-                    <input
-                      type="checkbox"
+                    <AppCheck
                       checked={checked}
                       onChange={() => {
                         setComparables((current) =>
@@ -481,6 +481,7 @@ export function BacktestQueueForm({
                             : [...current, row.symbol],
                         );
                       }}
+                      className=""
                     />
                     {row.baseCoin}-{row.quoteCoin}
                   </label>

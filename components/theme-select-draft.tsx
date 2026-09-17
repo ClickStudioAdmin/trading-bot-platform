@@ -16,12 +16,12 @@ const VENUES = [
 ];
 
 const CONTRACTS = [
-  { value: "btc", label: "BTCUSDT" },
-  { value: "eth", label: "ETHUSDT" },
-  { value: "sol", label: "SOLUSDT" },
-  { value: "doge", label: "DOGEUSDT" },
-  { value: "xrp", label: "XRPUSDT" },
-  { value: "link", label: "LINKUSDT" },
+  { value: "BTCUSDT", label: "BTCUSDT", icon: "BTC" },
+  { value: "ETHUSDT", label: "ETHUSDT", icon: "ETH" },
+  { value: "SOLUSDT", label: "SOLUSDT", icon: "SOL" },
+  { value: "DOGEUSDT", label: "DOGEUSDT", icon: "DOGE" },
+  { value: "XRPUSDT", label: "XRPUSDT", icon: "XRP" },
+  { value: "LINKUSDT", label: "LINKUSDT", icon: "LINK" },
 ];
 
 export function ThemeSelectDraft() {
@@ -61,7 +61,7 @@ export function ThemeSelectDraft() {
           <AppSelect
             className="mt-1"
             searchable
-            defaultValue="btc"
+            defaultValue="BTCUSDT"
             options={CONTRACTS}
           />
         </label>
@@ -69,7 +69,7 @@ export function ThemeSelectDraft() {
           Multi-select
           <AppMultiSelect
             className="mt-1"
-            defaultValue={["btc"]}
+            defaultValue={["BTCUSDT"]}
             options={CONTRACTS}
             placeholder="Contracts"
           />

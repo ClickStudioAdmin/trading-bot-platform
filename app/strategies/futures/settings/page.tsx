@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AppCheck } from "@/components/app-check";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { PageHeading } from "@/components/page-heading";
 import { CopyDeskGuardsFields } from "@/components/copy-desk-guards-fields";
@@ -280,11 +281,9 @@ export default async function FuturesSettingsPage({
                 />
               )}
               <label className="flex items-start gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
+                <AppCheck
                   name="reduceOnly"
                   defaultChecked={settings.reduceOnly}
-                  className="mt-0.5"
                 />
                 <span>
                   Reduce only

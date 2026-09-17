@@ -13,6 +13,7 @@ import {
   updateMembershipPlanAction,
 } from "@/lib/membership/actions";
 import { AppSelect } from "@/components/app-select";
+import { AppCheck } from "@/components/app-check";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -100,12 +101,10 @@ export function AdminPlanForm({
           </label>
           <div className="space-y-3 self-end pb-1 text-sm text-ink">
             <label className="inline-flex items-start gap-2">
-              <input
-                type="checkbox"
+              <AppCheck
                 name="preview"
                 value="1"
                 defaultChecked={plan?.preview ?? false}
-                className="mt-0.5"
               />
               <span>
                 Show this draft on the Plans page for preview
@@ -115,11 +114,11 @@ export function AdminPlanForm({
               </span>
             </label>
             <label className="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
+              <AppCheck
                 name="isDefault"
                 value="1"
                 defaultChecked={plan?.isDefault ?? false}
+                className=""
               />
               Default for new members
             </label>
@@ -178,12 +177,10 @@ function AdminPlanRow({
   if (row.kind === "feature") {
     return (
       <label className="flex w-full items-start gap-2 text-sm text-ink">
-        <input
-          type="checkbox"
+        <AppCheck
           name={`feature_${row.key}`}
           value="1"
           defaultChecked={plan?.features[row.key] ?? false}
-          className="mt-0.5"
         />
         <span>{row.label}</span>
       </label>

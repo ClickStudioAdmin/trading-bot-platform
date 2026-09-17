@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { AppCheck } from "@/components/app-check";
 import { PanelCloseButton } from "@/components/panel-close-button";
 import {
   applyTemplateAction,
@@ -40,11 +41,9 @@ export function StarterPackCheckbox({
 }) {
   return (
     <label className="mt-3 flex items-start gap-2 text-sm text-ink">
-      <input
-        type="checkbox"
+      <AppCheck
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        className="mt-0.5 size-4"
       />
       Include in Starter Pack
     </label>
@@ -361,9 +360,7 @@ export function SaveAsTemplateButton({
                       {group.rows.map((row) => (
                         <li key={row.id}>
                           <label className="flex items-start gap-2 text-sm text-ink">
-                            <input
-                              type="checkbox"
-                              className="mt-0.5 size-4"
+                            <AppCheck
                               checked={folderIds.has(row.id)}
                               onChange={() => toggleFolder(row.id)}
                             />
@@ -385,11 +382,9 @@ export function SaveAsTemplateButton({
             )}
           </div>
           <label className="mt-3 flex items-start gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
+            <AppCheck
               checked={createFolder}
               onChange={(event) => setCreateFolder(event.target.checked)}
-              className="mt-1 size-4"
             />
             {platform ? "Create a new platform folder" : "Create a new folder"}
           </label>
@@ -406,11 +401,9 @@ export function SaveAsTemplateButton({
           ) : null}
           {result?.code === "name_taken" ? (
             <label className="mt-3 flex items-start gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
+              <AppCheck
                 checked={replace}
                 onChange={(event) => setReplace(event.target.checked)}
-                className="mt-1 size-4"
               />
               Replace the existing template with this name
             </label>
@@ -802,16 +795,9 @@ function FolderNode({
       }
     >
       <label className="flex items-start gap-2 text-sm text-ink">
-        <input
-          type="checkbox"
-          className="mt-0.5 size-4"
+        <AppCheck
           checked={ids.length > 0 && selectedCount === ids.length}
-          ref={(node) => {
-            if (node) {
-              node.indeterminate =
-                selectedCount > 0 && selectedCount < ids.length;
-            }
-          }}
+          indeterminate={selectedCount > 0 && selectedCount < ids.length}
           onChange={() => onToggleFolder(ids)}
         />
         <span>
@@ -841,9 +827,7 @@ function FolderNode({
           {folder.items.map((item) => (
             <li key={`${folder.id}-${item.templateId}`}>
               <label className="flex items-start gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 size-4"
+                <AppCheck
                   checked={selectedIds.has(item.templateId)}
                   onChange={() => onToggleTemplate(item.templateId)}
                 />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AppCheck } from "@/components/app-check";
 import { LocalTime } from "@/components/local-time";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { SortTh, StatusBadge } from "@/components/table-chrome";
@@ -107,13 +108,12 @@ export function InboxBulkTable({
             <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
               <tr>
                 <th className="w-10 px-4 py-3">
-                  <input
-                    type="checkbox"
+                  <AppCheck
                     checked={allSelected}
                     onChange={toggleAll}
                     disabled={ids.length === 0}
                     aria-label="Select all notices on this page"
-                    className="size-4 accent-accent"
+                    className=""
                   />
                 </th>
                 <SortTh
@@ -153,14 +153,13 @@ export function InboxBulkTable({
                     }`}
                   >
                     <td className="px-4 py-3 align-top">
-                      <input
-                        type="checkbox"
+                      <AppCheck
                         name="id"
                         value={row.id}
                         checked={selected.includes(row.id)}
                         onChange={() => toggleOne(row.id)}
                         aria-label={`Select ${row.title}`}
-                        className="size-4 accent-accent"
+                        className=""
                       />
                     </td>
                     <td className="px-4 py-3 align-top">

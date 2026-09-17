@@ -1,3 +1,4 @@
+import { AppCheck } from "@/components/app-check";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   emailDefaultOn,
@@ -273,26 +274,14 @@ function SettingsCheck({
         disabled ? "cursor-not-allowed" : "cursor-pointer"
       }`}
     >
-      <input
-        type="checkbox"
+      <AppCheck
         name={name}
         value={value}
         defaultChecked={defaultChecked}
         disabled={disabled}
         aria-label={label}
-        className="peer sr-only"
+        className=""
       />
-      <span
-        aria-hidden
-        className="flex size-5 items-center justify-center rounded-[5px] border border-line-strong bg-surface-raised text-canvas peer-checked:border-accent peer-checked:bg-accent peer-checked:[&_svg]:opacity-100 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-disabled:opacity-40"
-      >
-        <svg
-          viewBox="0 0 12 12"
-          className="size-3 fill-none stroke-current stroke-[1.8] opacity-0"
-        >
-          <path d="M2 6.2 4.6 9 10 3" />
-        </svg>
-      </span>
     </label>
   );
 }

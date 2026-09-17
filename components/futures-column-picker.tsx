@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
+import { AppCheck } from "@/components/app-check";
 import {
   FUTURES_OPEN_COLUMN_DEFAULTS,
   FUTURES_OPEN_COLUMN_LABELS,
@@ -109,11 +110,10 @@ export function FuturesOpenColumnPicker({
             key={id}
             className="flex cursor-pointer items-center gap-2 rounded-control px-2 py-1.5 text-sm text-ink hover:bg-surface-raised"
           >
-            <input
-              type="checkbox"
+            <AppCheck
               checked={visible[id]}
               onChange={(event) => setColumn(id, event.target.checked)}
-              className="mt-0.5"
+              className=""
             />
             {FUTURES_OPEN_COLUMN_LABELS[id]}
           </label>

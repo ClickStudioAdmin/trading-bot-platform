@@ -15,6 +15,7 @@ import {
   deskActionBtnClass,
   deskActionSelectClass,
 } from "@/components/bot-form-chrome";
+import { AppCheck } from "@/components/app-check";
 import {
   saveAccountReduceOnly,
   savePaperRules,
@@ -92,12 +93,10 @@ export function AutomationsDesk({
           className="max-w-md space-y-3 rounded-card border border-line bg-surface p-5"
         >
           <label className="flex items-start gap-3 text-sm text-ink">
-            <input
-              type="checkbox"
+            <AppCheck
               name="reduceOnly"
               value="on"
               defaultChecked={accountReduceOnly}
-              className="mt-1 size-4"
             />
             <span>
               Reduce only

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,6 +14,7 @@ import {
   TablePager,
   useClientTable,
 } from "@/components/table-chrome";
+import { AppCheck } from "@/components/app-check";
 import { deleteBacktestRunsAction } from "@/lib/backtest/actions";
 import {
   backtestAprPct,
@@ -158,7 +159,6 @@ export function BacktestRunsTable({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const selectAllRef = useRef<HTMLInputElement>(null);
   const { confirm, dialog } = useConfirmDialog();
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -197,13 +197,6 @@ export function BacktestRunsTable({
   const selectedCount = [...selected].filter((id) =>
     listedRemovableIds.includes(id),
   ).length;
-
-  useEffect(() => {
-    if (selectAllRef.current) {
-      selectAllRef.current.indeterminate =
-        selectedCount > 0 && !allSelected;
-    }
-  }, [allSelected, selectedCount]);
 
   function toggleRow(id: string) {
     setSelected((current) => {
@@ -355,13 +348,12 @@ export function BacktestRunsTable({
             <tr>
               <th className="w-10 px-4 py-3">
                 {removableIds.length > 0 ? (
-                  <input
-                    ref={selectAllRef}
-                    type="checkbox"
+                  <AppCheck
                     checked={allSelected}
                     onChange={toggleAll}
+                    indeterminate={selectedCount > 0 && !allSelected}
                     aria-label="Select all backtests"
-                    className="size-4"
+                    className=""
                   />
                 ) : null}
               </th>
@@ -487,12 +479,11 @@ function BacktestRunRow({
     <tr className="border-b border-line last:border-b-0">
       <td className="px-4 py-3">
         {canRemove ? (
-          <input
-            type="checkbox"
+          <AppCheck
             checked={selected}
             onChange={onToggle}
             aria-label={`Select ${title}`}
-            className="size-4"
+            className=""
           />
         ) : null}
       </td>

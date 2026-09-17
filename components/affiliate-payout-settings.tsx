@@ -7,6 +7,7 @@ import { formatUsd } from "@/lib/membership/billing";
 import type { AffiliatePayoutSettings } from "@/lib/membership/affiliate";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import { AppSelect } from "@/components/app-select";
+import { AppCheck } from "@/components/app-check";
 
 export function AffiliatePayoutSettingsForm({
   settings,
@@ -47,13 +48,11 @@ export function AffiliatePayoutSettingsForm({
         />
       </label>
       <label className="flex items-start gap-2 text-sm text-ink">
-        <input
-          type="checkbox"
+        <AppCheck
           name="autoPayout"
           value="1"
           checked={autoPayout}
           onChange={(event) => setAutoPayout(event.target.checked)}
-          className="mt-0.5 size-4"
         />
         <span>
           Auto payouts

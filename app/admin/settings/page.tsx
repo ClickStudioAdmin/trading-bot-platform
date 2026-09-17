@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AppCheck } from "@/components/app-check";
 import { LogoFileField } from "@/components/logo-file-field";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -222,11 +223,9 @@ export default async function AdminSettingsPage({
             className="mt-6 max-w-lg space-y-4 rounded-card border border-line bg-surface p-5"
           >
             <label className="flex items-start gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
+              <AppCheck
                 name="autoTick"
                 defaultChecked={autoTick}
-                className="mt-0.5"
               />
               <span>
                 Auto tick
@@ -646,11 +645,9 @@ export default async function AdminSettingsPage({
                     />
                   </label>
                   <label className="flex items-start gap-2 text-sm text-ink md:col-span-2">
-                    <input
-                      type="checkbox"
+                    <AppCheck
                       name="affiliatePayouts"
                       defaultChecked={chain.affiliatePayouts}
-                      className="mt-0.5"
                     />
                     <span>Affiliate Payouts Allowed on this chain</span>
                   </label>

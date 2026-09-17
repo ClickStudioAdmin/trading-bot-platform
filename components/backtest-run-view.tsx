@@ -10,6 +10,7 @@ import {
   TablePager,
   useClientTable,
 } from "@/components/table-chrome";
+import { AppCheck } from "@/components/app-check";
 import {
   compareTableNum,
   compareTableText,
@@ -1074,9 +1075,7 @@ export function SaveBacktestAsTemplateButton({
                       {group.rows.map((row) => (
                         <li key={row.id}>
                           <label className="flex items-start gap-2 text-sm text-ink">
-                            <input
-                              type="checkbox"
-                              className="mt-0.5 size-4"
+                            <AppCheck
                               checked={folderIds.has(row.id)}
                               onChange={() => toggleFolder(row.id)}
                             />
@@ -1098,11 +1097,9 @@ export function SaveBacktestAsTemplateButton({
             )}
           </div>
           <label className="mt-3 flex items-start gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
+            <AppCheck
               checked={createFolder}
               onChange={(event) => setCreateFolder(event.target.checked)}
-              className="mt-1 size-4"
             />
             {platform ? "Create a new platform folder" : "Create a new folder"}
           </label>

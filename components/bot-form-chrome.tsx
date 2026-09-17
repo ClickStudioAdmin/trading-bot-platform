@@ -8,6 +8,7 @@ import {
   type BotDeskKind,
   type BotStatusOption,
 } from "@/lib/bots/status";
+import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
 
 export const botFieldClass =
@@ -104,17 +105,15 @@ export function OptionalSection({
     >
       <div className="flex items-center gap-3">
         <label className="inline-flex shrink-0 cursor-pointer">
-          <input
-            type="checkbox"
+          <AppCheck
             checked={enabled}
             onChange={(event) => {
               onEnabled(event.target.checked);
               markDirty();
             }}
-            className="sr-only"
             aria-label={title}
+            className=""
           />
-          <EnableCheck checked={enabled} />
         </label>
         <HintLabel text={title} hint={hint} className={botSectionTitleClass} />
       </div>

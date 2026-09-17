@@ -7,6 +7,7 @@ import {
   deskActionSelectClass,
   triggerSectionTitle,
 } from "@/components/bot-form-chrome";
+import { AppCheck } from "@/components/app-check";
 import {
   IndicatorStartFields,
   TrendStartFields,
@@ -170,25 +171,6 @@ function DraftStat({
   );
 }
 
-function EnableCheck({ checked }: { checked: boolean }) {
-  return (
-    <span
-      className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-[5px] border ${
-        checked
-          ? "border-accent bg-accent text-canvas"
-          : "border-line-strong bg-surface-raised"
-      }`}
-      aria-hidden
-    >
-      {checked ? (
-        <svg viewBox="0 0 12 12" className="size-3 fill-none stroke-current stroke-[1.8]">
-          <path d="M2 6.2 4.6 9 10 3" />
-        </svg>
-      ) : null}
-    </span>
-  );
-}
-
 function HintLabel({
   text,
   hint,
@@ -240,14 +222,12 @@ function OptionalSection({
     >
       <div className="flex items-center gap-3">
         <label className="inline-flex shrink-0 cursor-pointer">
-          <input
-            type="checkbox"
+          <AppCheck
             checked={enabled}
             onChange={(event) => onEnabled(event.target.checked)}
-            className="sr-only"
             aria-label={title}
+            className=""
           />
-          <EnableCheck checked={enabled} />
         </label>
         <HintLabel text={title} hint={hint} className={sectionTitleClass} />
       </div>
@@ -1101,11 +1081,9 @@ export function ThemeBotFormDraft() {
           </div>
           {desk === "perps" && !closing ? (
             <label className="flex items-start gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
+              <AppCheck
                 checked={skipIfOpen}
                 onChange={(event) => setSkipIfOpen(event.target.checked)}
-                className="mt-0.5 size-4 accent-accent"
               />
               <HintLabel
                 text="Skip if this side is already open"

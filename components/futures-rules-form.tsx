@@ -20,6 +20,7 @@ import {
   deskActionSelectClass,
   triggerSectionTitle,
 } from "@/components/bot-form-chrome";
+import { AppCheck } from "@/components/app-check";
 import {
   IndicatorStartFields,
   TrendStartFields,
@@ -690,12 +691,10 @@ function RuleCard({
         </div>
         {closing ? null : (
           <label className="flex items-start gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
+            <AppCheck
               name={`${prefix}skipIfOpen`}
               value="on"
               defaultChecked={layer.skipIfOpen}
-              className="mt-0.5 size-4 accent-accent"
             />
             <HintLabel
               text="Skip if this side is already open"

@@ -17,6 +17,7 @@ import {
   type TableSortDir,
 } from "@/lib/table-chrome";
 import { AppSelect } from "@/components/app-select";
+import { AppCheck } from "@/components/app-check";
 
 const primaryBtn =
   "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
@@ -336,13 +337,12 @@ export function ThemeTableDraft() {
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               <th className="w-10 px-4 py-3">
-                <input
-                  type="checkbox"
+                <AppCheck
                   checked={allPageSelected}
                   onChange={toggleAll}
                   disabled={pageIds.length === 0}
                   aria-label="Select all rows on this page"
-                  className="size-4 accent-accent"
+                  className=""
                 />
               </th>
               <SortTh
@@ -392,12 +392,11 @@ export function ThemeTableDraft() {
                   className="border-b border-line last:border-b-0"
                 >
                   <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
+                    <AppCheck
                       checked={selected.has(item.id)}
                       onChange={() => toggleRow(item.id)}
                       aria-label={`Select ${item.name}`}
-                      className="size-4 accent-accent"
+                      className=""
                     />
                   </td>
                   <td className="px-4 py-3 font-medium text-ink">{item.name}</td>

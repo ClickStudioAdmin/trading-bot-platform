@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppCheck } from "@/components/app-check";
 import { LogoFileField } from "@/components/logo-file-field";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
@@ -70,19 +71,12 @@ export function DeskCopyShareCard({
               {sharingLockedOn ? (
                 <>
                   <input type="hidden" name="sharingEnabled" value="on" />
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    disabled
-                    className="mt-0.5"
-                  />
+                  <AppCheck defaultChecked disabled />
                 </>
               ) : (
-                <input
-                  type="checkbox"
+                <AppCheck
                   name="sharingEnabled"
                   defaultChecked={listing?.sharingEnabled ?? false}
-                  className="mt-0.5"
                 />
               )}
               <span>
@@ -142,11 +136,9 @@ export function DeskCopyShareCard({
             />
           </div>
           <label className="flex items-start gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
+            <AppCheck
               name="allowNewFollowers"
               defaultChecked={listing?.allowNewFollowers ?? true}
-              className="mt-0.5"
             />
             <span>
               Allow new followers
