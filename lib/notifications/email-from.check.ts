@@ -4,6 +4,7 @@ import {
   DEFAULT_TEST_INBOX,
   parseEmailFrom,
   parseMailbox,
+  parsePlatformLogoUrl,
   resolveEmailFrom,
 } from "./email-from";
 
@@ -42,6 +43,13 @@ assert.equal(
     env: "Trading Bot Platform <noreply@example.com>",
   }),
   "Trading Bot Platform <noreply@example.com>",
+);
+
+assert.equal(parsePlatformLogoUrl(""), null);
+assert.equal(parsePlatformLogoUrl("not-a-url"), null);
+assert.equal(
+  parsePlatformLogoUrl("https://cdn.example.com/logo.png"),
+  "https://cdn.example.com/logo.png",
 );
 
 console.log("email-from checks passed");

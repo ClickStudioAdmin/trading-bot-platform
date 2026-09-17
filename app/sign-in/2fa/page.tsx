@@ -77,6 +77,7 @@ export default async function SignIn2faPage({
           </button>
         </form>
       </section>
+      </div>
     </main>
   );
 }

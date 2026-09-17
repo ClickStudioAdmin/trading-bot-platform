@@ -46,9 +46,16 @@ export async function saveAdminSettings(formData: FormData) {
 
 export async function saveEmailFromAction(formData: FormData) {
   await requireAdmin();
-  const saved = await saveEmailFrom(String(formData.get("emailFrom") ?? ""));
+  const saved = await saveEmailFrom(
+    String(formData.get("emailFrom") ?? ""),
+    formData.get("platformLogoUrl"),
+  );
   if (!saved.ok) {
-    redirect("/admin/settings?error=email-from");
+    redirect(
+      saved.error.includes("logo")
+        ? "/admin/settings?error=platform-logo"
+        : "/admin/settings?error=email-from",
+    );
   }
   revalidatePath("/admin/settings");
   revalidatePath("/admin/email-templates");

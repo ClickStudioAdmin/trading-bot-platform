@@ -8,7 +8,10 @@ import { sendTestEmailAction } from "@/lib/notifications/actions";
 import { isOperatorNotificationId } from "@/lib/notifications/catalog";
 import { sampleNotice } from "@/lib/notifications/copy";
 import { MEMBER_EMAIL_FOOTER } from "@/lib/notifications/email";
-import { resolvePlatformEmailFrom } from "@/lib/notifications/email-from";
+import {
+  loadPlatformLogoUrl,
+  resolvePlatformEmailFrom,
+} from "@/lib/notifications/email-from";
 import {
   adminSettingGroups,
   NOTIFICATION_HINTS,
@@ -30,9 +33,10 @@ export default async function AdminEmailTemplatesPage({
   const params = await searchParams;
   const sent = firstSearchValue(params.sent) === "1";
   const error = firstSearchValue(params.error);
-  const [from, admin] = await Promise.all([
+  const [from, admin, logoUrl] = await Promise.all([
     resolvePlatformEmailFrom(),
     getAdminUser(),
+    loadPlatformLogoUrl(),
   ]);
   const groups = adminSettingGroups();
   const defaultTo = admin?.email ?? "";
@@ -69,7 +73,7 @@ export default async function AdminEmailTemplatesPage({
           Resend rejected the send. Check the From address and API key.
         </p>
       ) : null}
-      <section className="mt-6 max-w-lg rounded-card border border-line bg-surface p-5">
+      <section className="mt-6 w-full rounded-card border border-line bg-surface p-5">
         <h2 className="text-lg font-semibold tracking-tight">Send test email</h2>
         <p className="mt-2 text-sm text-ink-muted">
           Sends the sample preview. Does not write an inbox row. From is{" "}
@@ -82,8 +86,11 @@ export default async function AdminEmailTemplatesPage({
           </Link>
           .
         </p>
-        <form action={sendTestEmailAction} className="mt-4 space-y-3">
-          <label className="block text-sm text-ink">
+        <form
+          action={sendTestEmailAction}
+          className="mt-4 flex flex-wrap items-end gap-3"
+        >
+          <label className="min-w-[12rem] flex-1 text-sm text-ink">
             Send to
             <input
               name="to"
@@ -94,7 +101,7 @@ export default async function AdminEmailTemplatesPage({
               className={BILLING_FIELD_CLASS}
             />
           </label>
-          <label className="block text-sm text-ink">
+          <label className="min-w-[12rem] flex-1 text-sm text-ink">
             Template
             <select
               name="templateId"
@@ -116,7 +123,7 @@ export default async function AdminEmailTemplatesPage({
           <PendingSubmitButton
             pendingLabel="Sending…"
             successKey="send-test-email"
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            className="shrink-0 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
             Send test email
           </PendingSubmitButton>
@@ -141,6 +148,7 @@ export default async function AdminEmailTemplatesPage({
                   <div className="mt-4">
                     <NoticeEmail
                       notice={sampleNotice(id)}
+                      logoUrl={logoUrl}
                       footer={
                         isOperatorNotificationId(id)
                           ? undefined

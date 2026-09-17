@@ -32,6 +32,7 @@ assert.match(html, /Your password was changed/);
 assert.match(html, /Account settings/);
 assert.match(html, /https:\/\/app\.example\/account\/settings/);
 assert.match(html, /Account Settings → Notifications/);
+assert.match(html, /#ffffff/);
 assert.equal(html.includes("<script>"), false);
 assert.match(
   noticeEmailHtml(

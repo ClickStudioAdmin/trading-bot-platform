@@ -8,7 +8,10 @@ import {
   saveEmailFromAction,
 } from "@/lib/admin/actions";
 import { loadAutoTickEnabled } from "@/lib/admin/settings";
-import { resolvePlatformEmailFrom } from "@/lib/notifications/email-from";
+import {
+  loadPlatformLogoUrl,
+  resolvePlatformEmailFrom,
+} from "@/lib/notifications/email-from";
 import { loadCopyPlatformSettings } from "@/lib/copy/settings";
 import { billingChainEnvironment } from "@/lib/membership/wallet";
 import { saveAffiliateSettingsAction } from "@/lib/membership/affiliate-actions";
@@ -73,12 +76,14 @@ export default async function AdminSettingsPage({
   const copyFollowersCeilingError = error === "copy-followers-ceiling";
   const copyFollowersRangeError = error === "copy-followers-range";
   const emailFromError = error === "email-from";
-  const [autoTick, emailFrom, copySettings, affiliateSettings, gas, chains, walletMinPayoutUsd] =
+  const platformLogoError = error === "platform-logo";
+  const [autoTick, emailFrom, platformLogoUrl, copySettings, affiliateSettings, gas, chains, walletMinPayoutUsd] =
     await Promise.all([
     tab === "general" ? loadAutoTickEnabled() : Promise.resolve(false),
     tab === "general"
       ? resolvePlatformEmailFrom()
       : Promise.resolve(""),
+    tab === "general" ? loadPlatformLogoUrl() : Promise.resolve(null),
     tab === "copy"
       ? loadCopyPlatformSettings()
       : Promise.resolve({
@@ -150,6 +155,11 @@ export default async function AdminSettingsPage({
               {" <system@alphadesks.app>"}.
             </p>
           ) : null}
+          {platformLogoError ? (
+            <p className="mt-6 text-sm text-danger">
+              Enter a http(s) logo URL, or leave it blank.
+            </p>
+          ) : null}
           <form
             action={saveEmailFromAction}
             className="mt-6 max-w-lg space-y-4 rounded-card border border-line bg-surface p-5"
@@ -170,12 +180,27 @@ export default async function AdminSettingsPage({
                 {" <system@alphadesks.app>"}.
               </span>
             </label>
+            <label className="block text-sm text-ink">
+              Platform logo
+              <input
+                name="platformLogoUrl"
+                type="url"
+                defaultValue={platformLogoUrl ?? ""}
+                placeholder="https://"
+                autoComplete="off"
+                className={BILLING_FIELD_CLASS}
+              />
+              <span className="mt-1 block text-xs text-ink-muted">
+                Optional public image URL. Shown on outbound mail. HTTPS
+                preferred.
+              </span>
+            </label>
             <PendingSubmitButton
               pendingLabel="Saving…"
               successKey="save-email-from"
               className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
             >
-              Save from address
+              Save mail settings
             </PendingSubmitButton>
           </form>
           <form

@@ -20,7 +20,11 @@ import {
   noticeEmailText,
   sendResendEmail,
 } from "./email";
-import { parseMailbox, resolvePlatformEmailFrom } from "./email-from";
+import {
+  loadPlatformLogoUrl,
+  parseMailbox,
+  resolvePlatformEmailFrom,
+} from "./email-from";
 import {
   BADGE_IDS,
   demoBadgesAllowed,
@@ -169,7 +173,10 @@ export async function sendTestEmailAction(formData: FormData) {
   if (!isNotificationId(template)) {
     redirect("/admin/email-templates?error=template");
   }
-  const from = await resolvePlatformEmailFrom();
+  const [from, logoUrl] = await Promise.all([
+    resolvePlatformEmailFrom(),
+    loadPlatformLogoUrl(),
+  ]);
   if (
     !resendConfigured({
       RESEND_API_KEY: process.env.RESEND_API_KEY,
@@ -187,7 +194,7 @@ export async function sendTestEmailAction(formData: FormData) {
     {
       to,
       subject: notice.subject,
-      html: noticeEmailHtml(notice, { footer, actionHref }),
+      html: noticeEmailHtml(notice, { footer, actionHref, logoUrl }),
       text: noticeEmailText(notice, { footer, actionHref }),
     },
     {

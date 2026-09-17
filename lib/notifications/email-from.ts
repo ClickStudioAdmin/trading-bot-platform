@@ -73,12 +73,55 @@ export async function resolvePlatformEmailFrom(): Promise<string> {
   });
 }
 
+export function parsePlatformLogoUrl(value: unknown): string | null {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return null;
+  }
+  if (raw.length < 8 || raw.length > 500) {
+    return null;
+  }
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return null;
+    }
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
+export async function loadPlatformLogoUrl(): Promise<string | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("platform_settings")
+    .select("platform_logo_url")
+    .eq("id", "tbp")
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  return parsePlatformLogoUrl(
+    (data as { platform_logo_url?: unknown }).platform_logo_url,
+  );
+}
+
 export async function saveEmailFrom(
   value: string,
+  logoUrl?: unknown,
 ): Promise<{ ok: true; from: string } | { ok: false; error: string }> {
   const from = parseEmailFrom(value);
   if (!from) {
     return { ok: false, error: "Enter a From address, for example Name <you@domain>." };
+  }
+  const rawLogo = String(logoUrl ?? "").trim();
+  const logo = rawLogo ? parsePlatformLogoUrl(rawLogo) : null;
+  if (rawLogo && !logo) {
+    return { ok: false, error: "Enter a http(s) logo URL, or leave it blank." };
   }
   const supabase = createServiceClient();
   if (!supabase) {
@@ -87,6 +130,7 @@ export async function saveEmailFrom(
   const { error } = await supabase.from("platform_settings").upsert({
     id: "tbp",
     email_from: from,
+    platform_logo_url: logo,
     updated_at: new Date().toISOString(),
   });
   if (error) {

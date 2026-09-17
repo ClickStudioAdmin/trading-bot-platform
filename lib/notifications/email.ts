@@ -4,12 +4,14 @@ import type { NotificationNotice } from "./copy";
 export const MEMBER_EMAIL_FOOTER =
   "You can change these emails on Account Settings → Notifications.";
 
-const CANVAS = "#0b0e14";
-const LINE = "#2a313c";
-const INK = "#f4f6f8";
-const INK_MUTED = "#9aa3b2";
-const INK_FAINT = "#6b7382";
+const PAGE = "#f4f6f8";
+const CARD = "#ffffff";
+const LINE = "#e5e7eb";
+const INK = "#111827";
+const INK_MUTED = "#4b5563";
+const INK_FAINT = "#6b7280";
 const ACCENT_STRONG = "#8b6cf6";
+const ON_ACCENT = "#ffffff";
 
 export function appBaseUrl(
   env: { APP_BASE_URL?: string | undefined } = {
@@ -60,7 +62,7 @@ export function noticeEmailText(
 
 export function noticeEmailHtml(
   notice: NotificationNotice,
-  input: { footer?: string; actionHref: string },
+  input: { footer?: string; actionHref: string; logoUrl?: string | null; brand?: string },
 ): string {
   const paragraphs = notice.paragraphs
     .map(
@@ -71,20 +73,25 @@ export function noticeEmailHtml(
   const footer = input.footer
     ? `<p style="margin:16px 0 0;font-size:12px;line-height:1.4;color:${INK_FAINT}">${escapeNoticeHtml(input.footer)}</p>`
     : "";
+  const brand = escapeNoticeHtml(input.brand?.trim() || "Trading Bot Platform");
+  const logo = input.logoUrl
+    ? `<img src="${escapeNoticeHtml(input.logoUrl)}" alt="${brand}" width="140" style="display:block;max-width:140px;height:auto;margin:0 0 12px;border:0;" />`
+    : "";
   return `<!DOCTYPE html>
 <html>
-<body style="margin:0;background:${CANVAS};color:${INK};font-family:ui-sans-serif,system-ui,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CANVAS};">
+<body style="margin:0;background:${PAGE};color:${INK};font-family:ui-sans-serif,system-ui,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PAGE};">
     <tr>
       <td align="center" style="padding:24px 12px;">
-        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:560px;max-width:100%;background:${CANVAS};border:1px solid ${LINE};border-radius:16px;">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:560px;max-width:100%;background:${CARD};border:1px solid ${LINE};border-radius:16px;">
           <tr>
             <td style="padding:20px;">
-              <p style="margin:0;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:${INK_FAINT}">Trading Bot Platform</p>
+              ${logo}
+              <p style="margin:0;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:${INK_FAINT}">${brand}</p>
               <h1 style="margin:12px 0 0;font-size:18px;line-height:1.3;color:${INK}">${escapeNoticeHtml(notice.subject)}</h1>
               ${paragraphs}
               <p style="margin:16px 0 0;">
-                <a href="${escapeNoticeHtml(input.actionHref)}" style="display:inline-block;background:${ACCENT_STRONG};color:${INK};text-decoration:none;padding:8px 12px;border-radius:8px;font-size:14px;font-weight:500;">${escapeNoticeHtml(notice.actionLabel)}</a>
+                <a href="${escapeNoticeHtml(input.actionHref)}" style="display:inline-block;background:${ACCENT_STRONG};color:${ON_ACCENT};text-decoration:none;padding:8px 12px;border-radius:8px;font-size:14px;font-weight:500;">${escapeNoticeHtml(notice.actionLabel)}</a>
               </p>
               ${footer}
             </td>

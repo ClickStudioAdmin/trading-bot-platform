@@ -6,7 +6,10 @@ import {
   noticeEmailText,
   sendResendEmail,
 } from "@/lib/notifications/email";
-import { resolvePlatformEmailFrom } from "@/lib/notifications/email-from";
+import {
+  loadPlatformLogoUrl,
+  resolvePlatformEmailFrom,
+} from "@/lib/notifications/email-from";
 import type { NotificationNotice } from "@/lib/notifications/copy";
 
 export const AUTH_EMAIL_FOOTER =
@@ -43,7 +46,11 @@ export function authEmailHref(actionUrl: string, baseUrl = appBaseUrl()): string
   return noticeAbsoluteHref(actionUrl, baseUrl);
 }
 
-export function renderAuthEmail(notice: NotificationNotice, actionHref: string): {
+export function renderAuthEmail(
+  notice: NotificationNotice,
+  actionHref: string,
+  logoUrl?: string | null,
+): {
   subject: string;
   html: string;
   text: string;
@@ -53,6 +60,7 @@ export function renderAuthEmail(notice: NotificationNotice, actionHref: string):
     html: noticeEmailHtml(notice, {
       footer: AUTH_EMAIL_FOOTER,
       actionHref,
+      logoUrl,
     }),
     text: noticeEmailText(notice, {
       footer: AUTH_EMAIL_FOOTER,
@@ -66,8 +74,11 @@ export async function sendAuthEmail(input: {
   notice: NotificationNotice;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const href = authEmailHref(input.notice.actionUrl);
-  const rendered = renderAuthEmail(input.notice, href);
-  const from = await resolvePlatformEmailFrom();
+  const [from, logoUrl] = await Promise.all([
+    resolvePlatformEmailFrom(),
+    loadPlatformLogoUrl(),
+  ]);
+  const rendered = renderAuthEmail(input.notice, href, logoUrl);
   return sendResendEmail(
     {
       to: input.to,
