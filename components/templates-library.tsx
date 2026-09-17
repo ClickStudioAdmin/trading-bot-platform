@@ -717,47 +717,55 @@ export function TemplatesLibrary({
           </button>
         </div>
       ) : null}
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="block text-xs text-ink-muted">
-          Search
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className={fieldClass}
-          />
-        </label>
-        <label className="block text-xs text-ink-muted">
-          Desk type
-          <select
-            value={deskFilter}
-            onChange={(event) =>
-              setDeskFilter(event.target.value as "all" | TemplateDeskType)
-            }
-            className={fieldClass}
-          >
-            <option value="all">All desk types</option>
-            <option value="dca">DCA</option>
-            <option value="perps">Perps bots</option>
-            <option value="cash_and_carry">Cash and Carry</option>
-          </select>
-        </label>
-        {tab === "templates" || tab === "shared-templates" ? (
+      <div className="mt-4 rounded-card border border-line bg-surface p-4">
+        <div
+          className={`grid gap-3 sm:grid-cols-2 ${
+            tab === "templates" || tab === "shared-templates"
+              ? "lg:grid-cols-3"
+              : ""
+          }`}
+        >
           <label className="block text-xs text-ink-muted">
-            Folder
+            Search
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className={fieldClass}
+            />
+          </label>
+          <label className="block text-xs text-ink-muted">
+            Desk type
             <select
-              value={folderFilter}
-              onChange={(event) => setFolderFilter(event.target.value)}
+              value={deskFilter}
+              onChange={(event) =>
+                setDeskFilter(event.target.value as "all" | TemplateDeskType)
+              }
               className={fieldClass}
             >
-              <option value="all">All folders</option>
-              {folderFilterOptions.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.name}
-                </option>
-              ))}
+              <option value="all">All desk types</option>
+              <option value="dca">DCA</option>
+              <option value="perps">Perps bots</option>
+              <option value="cash_and_carry">Cash and Carry</option>
             </select>
           </label>
-        ) : null}
+          {tab === "templates" || tab === "shared-templates" ? (
+            <label className="block text-xs text-ink-muted">
+              Folder
+              <select
+                value={folderFilter}
+                onChange={(event) => setFolderFilter(event.target.value)}
+                className={fieldClass}
+              >
+                <option value="all">All folders</option>
+                {folderFilterOptions.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </div>
       </div>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
