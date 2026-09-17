@@ -85,7 +85,7 @@ export const ADMIN_NAV_LINKS = [
 export const ACCOUNT_DESK_LINKS = [
   { href: "/account", label: "Overview", exact: true },
   { href: "/account/settings", label: "Profile & Settings", exact: true },
-  { href: "/account/billing", label: "Billing & Account Balance", exact: false },
+  { href: "/account/billing", label: "Billing & Account", exact: false },
   { href: "/account/exchanges", label: "Exchanges", exact: true },
   { href: "/account/sub-accounts", label: "Manage Desks", exact: true },
   { href: "/account/templates", label: "Bot Templates", exact: true },

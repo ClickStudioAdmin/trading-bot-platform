@@ -63,7 +63,7 @@ import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Billing & Account Balance",
+  title: "Billing & Account",
   description: "Plan, payment method, wallets, and invoices.",
 };
 
@@ -151,7 +151,7 @@ export default async function AccountBillingPage({
 
   return (
     <div>
-      <PageHeading title="Billing & Account Balance" />
+      <PageHeading title="Billing & Account" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
         One collection method per login. Card uses the on-site Stripe form.
         Crypto is a payment method: listed stables credit your account 1:1 as
@@ -163,7 +163,7 @@ export default async function AccountBillingPage({
         .
       </p>
       <nav
-        aria-label="Billing & Account Balance"
+        aria-label="Billing & Account"
         className="mt-5 flex flex-wrap border-b border-line"
       >
         <TabLink

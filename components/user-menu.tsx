@@ -1,41 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { signOut } from "@/lib/auth/actions";
 
 export function UserMenu({ name }: { name: string | null }) {
-  const rootRef = useRef<HTMLDetailsElement>(null);
-
-  useEffect(() => {
-    function closeMenu() {
-      if (rootRef.current) {
-        rootRef.current.open = false;
-      }
-    }
-    function onPointerDown(event: PointerEvent) {
-      const root = rootRef.current;
-      if (!root?.open) {
-        return;
-      }
-      if (!root.contains(event.target as Node)) {
-        closeMenu();
-      }
-    }
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        closeMenu();
-      }
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, []);
-
   if (!name) {
     return (
       <div className="flex items-center gap-2">
@@ -58,25 +27,30 @@ export function UserMenu({ name }: { name: string | null }) {
   const initial = name.slice(0, 1).toUpperCase();
 
   return (
-    <details ref={rootRef} className="relative">
-      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-control border border-line px-2 py-1 hover:bg-surface-raised [&::-webkit-details-marker]:hidden">
+    <div className="group relative">
+      <button
+        type="button"
+        className="flex items-center gap-2 rounded-control border border-line px-2 py-1 group-hover:bg-surface-raised group-focus-within:bg-surface-raised"
+      >
         <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold text-accent">
           {initial}
         </span>
         <span className="hidden max-w-[10rem] truncate text-sm text-ink sm:inline">
           {name}
         </span>
-      </summary>
-      <div className="absolute right-0 z-20 mt-2 w-56 rounded-card border border-line bg-surface p-2 shadow-none">
-        <form action={signOut}>
-          <PendingSubmitButton
-            pendingLabel="Signing out…"
-            className="w-full rounded-control px-2 py-2 text-left text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-          >
-            Sign out
-          </PendingSubmitButton>
-        </form>
+      </button>
+      <div className="invisible absolute right-0 z-20 pt-1 opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+        <div className="w-56 rounded-card border border-line bg-surface p-2">
+          <form action={signOut}>
+            <PendingSubmitButton
+              pendingLabel="Signing out…"
+              className="w-full rounded-control px-2 py-2 text-left text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            >
+              Sign out
+            </PendingSubmitButton>
+          </form>
+        </div>
       </div>
-    </details>
+    </div>
   );
 }
