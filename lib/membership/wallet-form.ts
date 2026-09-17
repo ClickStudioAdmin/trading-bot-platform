@@ -2,7 +2,12 @@ import { isEvmAddress } from "./hd";
 import { parseTokenKind, type TokenKind } from "./wallet";
 
 export const BILLING_FIELD_CLASS =
-  "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+  "mt-1 w-full min-w-0 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+
+/** Same width as the Sign in card (max-w-md column minus page px-6). */
+export const AUTH_FORM_COLUMN_CLASS = "w-full min-w-0 max-w-[25rem]";
+export const AUTH_FORM_CARD_CLASS =
+  "mt-8 w-full min-w-0 rounded-card border border-line bg-surface p-5";
 
 export function parseChainName(value: unknown): string | null {
   const name = String(value ?? "").trim();

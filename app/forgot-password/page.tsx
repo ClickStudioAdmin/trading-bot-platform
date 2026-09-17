@@ -5,7 +5,11 @@ import { requestPasswordResetAction } from "@/lib/auth/actions";
 import { AUTH_MAIL_ALWAYS_OK } from "@/lib/auth/email";
 import { redirectSignedInHome } from "@/lib/auth/onboarding";
 import { getSessionMember } from "@/lib/auth/session";
-import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
+import {
+  AUTH_FORM_CARD_CLASS,
+  AUTH_FORM_COLUMN_CLASS,
+  BILLING_FIELD_CLASS,
+} from "@/lib/membership/wallet-form";
 import { firstSearchValue } from "@/lib/paper/open";
 
 export const metadata: Metadata = {
@@ -28,7 +32,8 @@ export default async function ForgotPasswordPage({
   const sent = firstSearchValue(params.sent) === "1";
 
   return (
-    <main className="mx-auto max-w-md px-6 py-16">
+    <main className="mx-auto w-full max-w-xl px-6 py-16">
+      <div className={`mx-auto ${AUTH_FORM_COLUMN_CLASS}`}>
       <h1 className="text-3xl font-semibold tracking-tight">
         Forgot password
       </h1>
@@ -36,7 +41,7 @@ export default async function ForgotPasswordPage({
         Enter the email on the login. We send a reset link if that account
         exists.
       </p>
-      <section className="mt-8 rounded-card border border-line bg-surface p-5">
+      <section className={AUTH_FORM_CARD_CLASS}>
         {error ? (
           <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}
@@ -74,6 +79,7 @@ export default async function ForgotPasswordPage({
           .
         </p>
       </section>
+      </div>
     </main>
   );
 }

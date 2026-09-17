@@ -5,7 +5,11 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { SIGN_IN_2FA_PATH } from "@/lib/auth/onboarding-path";
 import { redirectSignedInHome } from "@/lib/auth/onboarding";
 import { getSignInChallengeUserId } from "@/lib/auth/session";
-import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
+import {
+  AUTH_FORM_CARD_CLASS,
+  AUTH_FORM_COLUMN_CLASS,
+  BILLING_FIELD_CLASS,
+} from "@/lib/membership/wallet-form";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -26,12 +30,13 @@ export default async function SignInPage({
   const { error, verified, reset } = await searchParams;
 
   return (
-      <main className="mx-auto max-w-md px-6 py-16">
+      <main className="mx-auto w-full max-w-xl px-6 py-16">
+        <div className={`mx-auto ${AUTH_FORM_COLUMN_CLASS}`}>
         <h1 className="text-3xl font-semibold tracking-tight">Sign in</h1>
         <p className="mt-3 text-sm text-ink-muted">
           Sign in to the trading platform or an affiliate account.
         </p>
-        <section className="mt-8 rounded-card border border-line bg-surface p-5">
+        <section className={AUTH_FORM_CARD_CLASS}>
           {error ? (
             <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
               {error}
@@ -93,6 +98,7 @@ export default async function SignInPage({
             .
           </p>
         </section>
+        </div>
       </main>
   );
 }

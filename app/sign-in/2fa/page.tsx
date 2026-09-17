@@ -6,7 +6,11 @@ import {
 } from "@/lib/auth/totp-actions";
 import { redirectSignedInHome } from "@/lib/auth/onboarding";
 import { getSignInChallengeUserId } from "@/lib/auth/session";
-import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
+import {
+  AUTH_FORM_CARD_CLASS,
+  AUTH_FORM_COLUMN_CLASS,
+  BILLING_FIELD_CLASS,
+} from "@/lib/membership/wallet-form";
 import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
 
@@ -33,11 +37,12 @@ export default async function SignIn2faPage({
       <h1 className="whitespace-nowrap text-3xl font-semibold tracking-tight">
         Two-factor authentication (2FA)
       </h1>
-      <p className="mt-3 max-w-md text-sm text-ink-muted">
+      <div className={AUTH_FORM_COLUMN_CLASS}>
+      <p className="mt-3 text-sm text-ink-muted">
         Open Google Authenticator and enter the 6-digit code. A recovery code
         also works once.
       </p>
-      <section className="mt-8 max-w-md rounded-card border border-line bg-surface p-5">
+      <section className={AUTH_FORM_CARD_CLASS}>
         {error ? (
           <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}
