@@ -36,7 +36,7 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-const SETTINGS_SECURITY = "/account/settings?tab=security";
+const SETTINGS_SECURITY = "/account/settings?tab=password";
 
 function settingsSecurityPath(query: {
   error?: string;
@@ -44,7 +44,7 @@ function settingsSecurityPath(query: {
   enroll?: "1";
 }): string {
   const params = new URLSearchParams();
-  params.set("tab", "security");
+  params.set("tab", "password");
   if (query.error) {
     params.set("error", query.error);
   }

@@ -50,16 +50,16 @@ export default async function AccountSettingsPage({
   const saved = firstSearchValue(params.saved);
   const rawTab = firstSearchValue(params.tab);
   const tab =
-    rawTab === "password" || saved === "password"
+    rawTab === "password" ||
+    rawTab === "security" ||
+    saved === "password" ||
+    saved === "2fa" ||
+    saved === "2fa-off" ||
+    firstSearchValue(params.enroll) === "1"
       ? "password"
-      : rawTab === "security" ||
-          saved === "2fa" ||
-          saved === "2fa-off" ||
-          firstSearchValue(params.enroll) === "1"
-        ? "security"
-        : rawTab === "notifications" || saved === "notifications"
-          ? "notifications"
-          : "profile";
+      : rawTab === "notifications" || saved === "notifications"
+        ? "notifications"
+        : "profile";
   const showPlatformSettings = member.platformMember;
   const trader =
     tab === "profile" && showPlatformSettings
@@ -98,13 +98,7 @@ export default async function AccountSettingsPage({
           href="/account/settings?tab=password"
           selected={tab === "password"}
         >
-          Password
-        </TabLink>
-        <TabLink
-          href="/account/settings?tab=security"
-          selected={tab === "security"}
-        >
-          Security
+          Password & Security
         </TabLink>
         <TabLink
           href="/account/settings?tab=notifications"
@@ -148,56 +142,63 @@ export default async function AccountSettingsPage({
           affiliateOnly={!showPlatformSettings}
           userId={member.id}
         />
-      ) : tab === "security" ? (
-        <SecuritySettingsTab email={member.email} userId={member.id} />
       ) : tab === "password" ? (
-        <form
-          action={changeOwnPassword}
-          className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
-        >
-          <label className="block text-xs text-ink-muted">
-            Current password
-            <input
-              name="currentPassword"
-              type="password"
-              required
-              autoComplete="current-password"
-              className={fieldClass}
-            />
-          </label>
-          <label className="block text-xs text-ink-muted">
-            New password
-            <input
-              name="newPassword"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              className={fieldClass}
-            />
-          </label>
-          <label className="block text-xs text-ink-muted">
-            Confirm new password
-            <input
-              name="confirmPassword"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              className={fieldClass}
-            />
-            <span className="mt-1 block text-xs text-ink-faint">
-              At least 8 characters.
-            </span>
-          </label>
-          <PendingSubmitButton
-            pendingLabel="Saving…"
-            successKey="save-password"
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+        <div className="mt-6 grid gap-6 lg:grid-cols-2 lg:items-start">
+          <form
+            action={changeOwnPassword}
+            className="space-y-4 rounded-card border border-line bg-surface p-5"
           >
-            Change password
-          </PendingSubmitButton>
-        </form>
+            <div>
+              <p className="text-sm text-ink">Password</p>
+              <p className="mt-1 text-xs text-ink-muted">
+                Change the password for this login.
+              </p>
+            </div>
+            <label className="block text-xs text-ink-muted">
+              Current password
+              <input
+                name="currentPassword"
+                type="password"
+                required
+                autoComplete="current-password"
+                className={fieldClass}
+              />
+            </label>
+            <label className="block text-xs text-ink-muted">
+              New password
+              <input
+                name="newPassword"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                className={fieldClass}
+              />
+            </label>
+            <label className="block text-xs text-ink-muted">
+              Confirm new password
+              <input
+                name="confirmPassword"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                className={fieldClass}
+              />
+              <span className="mt-1 block text-xs text-ink-faint">
+                At least 8 characters.
+              </span>
+            </label>
+            <PendingSubmitButton
+              pendingLabel="Saving…"
+              successKey="save-password"
+              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            >
+              Change password
+            </PendingSubmitButton>
+          </form>
+          <SecuritySettingsTab email={member.email} userId={member.id} />
+        </div>
       ) : (
         <>
         <form

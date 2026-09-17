@@ -25,7 +25,7 @@ export function TotpSettings({
 
   if (recoveryCodes && recoveryCodes.length > 0) {
     return (
-      <section className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5">
+      <section className="space-y-4 rounded-card border border-line bg-surface p-5">
         <div>
           <p className="text-sm text-ink">Save these recovery codes</p>
           <p className="mt-1 text-xs text-ink-muted">
@@ -63,7 +63,7 @@ export function TotpSettings({
 
   if (pending) {
     return (
-      <section className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5">
+      <section className="space-y-4 rounded-card border border-line bg-surface p-5">
         <div>
           <p className="text-sm text-ink">Set up Google Authenticator</p>
           <p className="mt-1 text-xs text-ink-muted">
@@ -122,7 +122,7 @@ export function TotpSettings({
 
   if (enabled) {
     return (
-      <section className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5">
+      <section className="space-y-4 rounded-card border border-line bg-surface p-5">
         <div>
           <p className="text-sm text-ink">Google Authenticator is on</p>
           <p className="mt-1 text-xs text-ink-muted">
@@ -163,7 +163,7 @@ export function TotpSettings({
   }
 
   return (
-    <section className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5">
+    <section className="space-y-4 rounded-card border border-line bg-surface p-5">
       <div>
         <p className="text-sm text-ink">Google Authenticator</p>
         <p className="mt-1 text-xs text-ink-muted">
