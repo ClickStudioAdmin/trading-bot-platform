@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { ButtonBusyIcon } from "@/components/pending-submit-button";
 import { ThemeBotFormDraft } from "@/components/theme-bot-form-draft";
+import { ThemeTableDraft } from "@/components/theme-table-draft";
 
 export const metadata: Metadata = {
   title: "Theme",
@@ -50,7 +51,9 @@ export default async function ThemePage({
 }) {
   const params = await searchParams;
   const raw = params.tab;
-  const tab = (Array.isArray(raw) ? raw[0] : raw) === "bot" ? "bot" : "theme";
+  const requested = Array.isArray(raw) ? raw[0] : raw;
+  const tab =
+    requested === "bot" ? "bot" : requested === "table" ? "table" : "theme";
   return (
     <div className="space-y-12">
       <div className="overflow-hidden rounded-card border border-line bg-surface">
@@ -83,6 +86,9 @@ export default async function ThemePage({
           <TabLink href="/admin/theme?tab=bot" selected={tab === "bot"}>
             Bot form
           </TabLink>
+          <TabLink href="/admin/theme?tab=table" selected={tab === "table"}>
+            Table
+          </TabLink>
         </nav>
         {tab === "bot" ? (
           <section>
@@ -95,6 +101,18 @@ export default async function ThemePage({
             </p>
             <div className="mt-5">
               <ThemeBotFormDraft />
+            </div>
+          </section>
+        ) : tab === "table" ? (
+          <section>
+            <h2 className="text-xl font-semibold tracking-tight">Table</h2>
+            <p className="mt-1 text-sm text-ink-muted">
+              Complete table chrome: filters, sort, paging, row actions, status
+              badges, and bulk actions. Live tables use only the pieces they
+              need. Match this layout when adding a full table.
+            </p>
+            <div className="mt-5">
+              <ThemeTableDraft />
             </div>
           </section>
         ) : (
