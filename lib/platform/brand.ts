@@ -110,9 +110,8 @@ export async function loadPlatformBrand(): Promise<PlatformBrand> {
     parsePlatformName(row.platform_name) ?? DEFAULT_PLATFORM_NAME;
   const storedFrom = parseEmailFrom(row.email_from);
   const from = composeEmailFrom(name, storedFrom ?? process.env.EMAIL_FROM);
-  const logoPath = parsePlatformLogoPath(row.platform_logo_path).ok
-    ? (parsePlatformLogoPath(row.platform_logo_path).path ?? null)
-    : null;
+  const parsedLogo = parsePlatformLogoPath(row.platform_logo_path);
+  const logoPath = parsedLogo.ok ? parsedLogo.path : null;
   const updatedAt =
     typeof row.updated_at === "string" ? row.updated_at : null;
   return {
