@@ -70,7 +70,7 @@ Same ID in email, inbox, and settings.
 
 FQX `NoticeEmail` shape: subject = heading = preview; one or two short paragraphs; one button. Inbox title = subject. Inbox body = first paragraph. Amounts USD. From name Trading Bot Platform. Locked previews live on `/admin/email-templates`. Settings only has on/off switches. Resend send uses the same layout (inline HTML + text). Button links use `APP_BASE_URL` + the inbox path. A dispatch is not complete until mail sends or is muted/skipped; Resend errors and a missing key stay retryable. Existing rows from before that change were marked complete.
 
-Member footer (step 8): “You can change these emails on Account Settings → Notifications.” Operator mail omits that footer.
+Member footer (step 8): “You can modify your email preferences on Account Settings → Notifications.” Notifications links to `/account/settings?tab=notifications`. Operator mail omits that footer.
 
 | ID | Subject | Body | Button |
 | --- | --- | --- | --- |

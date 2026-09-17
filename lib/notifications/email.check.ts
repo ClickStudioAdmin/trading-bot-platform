@@ -27,11 +27,17 @@ const href = noticeAbsoluteHref(notice.actionUrl, "https://app.example");
 const html = noticeEmailHtml(notice, {
   footer: MEMBER_EMAIL_FOOTER,
   actionHref: href,
+  baseUrl: "https://app.example",
 });
 assert.match(html, /Your password was changed/);
 assert.match(html, /Account settings/);
 assert.match(html, /https:\/\/app\.example\/account\/settings/);
-assert.match(html, /Account Settings → Notifications/);
+assert.match(html, /modify your email preferences/);
+assert.match(
+  html,
+  /https:\/\/app\.example\/account\/settings\?tab=notifications/,
+);
+assert.match(html, />Notifications<\/a>/);
 assert.match(html, /#ffffff/);
 assert.equal(html.includes("<script>"), false);
 assert.match(

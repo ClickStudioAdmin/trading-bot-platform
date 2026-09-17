@@ -1,4 +1,9 @@
+import Link from "next/link";
 import type { NotificationNotice } from "@/lib/notifications/copy";
+import {
+  MEMBER_EMAIL_FOOTER,
+  MEMBER_NOTIFICATIONS_PATH,
+} from "@/lib/notifications/email";
 
 export function NoticeEmail({
   notice,
@@ -51,7 +56,19 @@ export function NoticeEmail({
           {notice.actionLabel}
         </span>
       </p>
-      {footer ? (
+      {footer === MEMBER_EMAIL_FOOTER ? (
+        <p className="mt-4 text-xs" style={{ color: "#6b7280" }}>
+          You can modify your email preferences on Account Settings →{" "}
+          <Link
+            href={MEMBER_NOTIFICATIONS_PATH}
+            className="underline"
+            style={{ color: "#8b6cf6" }}
+          >
+            Notifications
+          </Link>
+          .
+        </p>
+      ) : footer ? (
         <p className="mt-4 text-xs" style={{ color: "#6b7280" }}>
           {footer}
         </p>

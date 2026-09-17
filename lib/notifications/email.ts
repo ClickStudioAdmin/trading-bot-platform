@@ -1,8 +1,9 @@
 import { safeNoticeHref } from "./hrefs";
 import type { NotificationNotice } from "./copy";
 
+export const MEMBER_NOTIFICATIONS_PATH = "/account/settings?tab=notifications";
 export const MEMBER_EMAIL_FOOTER =
-  "You can change these emails on Account Settings → Notifications.";
+  "You can modify your email preferences on Account Settings → Notifications.";
 
 const PAGE = "#f4f6f8";
 const CARD = "#ffffff";
@@ -34,6 +35,17 @@ export function noticeAbsoluteHref(
   return `${baseUrl}${path}`;
 }
 
+function memberFooterHtml(footer: string, baseUrl?: string): string {
+  if (footer !== MEMBER_EMAIL_FOOTER) {
+    return escapeNoticeHtml(footer);
+  }
+  const href = noticeAbsoluteHref(
+    MEMBER_NOTIFICATIONS_PATH,
+    baseUrl ?? appBaseUrl(),
+  );
+  return `You can modify your email preferences on Account Settings → <a href="${escapeNoticeHtml(href)}" style="color:${ACCENT_STRONG};text-decoration:underline;">Notifications</a>.`;
+}
+
 export function escapeNoticeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -62,7 +74,13 @@ export function noticeEmailText(
 
 export function noticeEmailHtml(
   notice: NotificationNotice,
-  input: { footer?: string; actionHref: string; logoUrl?: string | null; brand?: string },
+  input: {
+    footer?: string;
+    actionHref: string;
+    logoUrl?: string | null;
+    brand?: string;
+    baseUrl?: string;
+  },
 ): string {
   const paragraphs = notice.paragraphs
     .map(
@@ -71,7 +89,7 @@ export function noticeEmailHtml(
     )
     .join("");
   const footer = input.footer
-    ? `<p style="margin:16px 0 0;font-size:12px;line-height:1.4;color:${INK_FAINT}">${escapeNoticeHtml(input.footer)}</p>`
+    ? `<p style="margin:16px 0 0;font-size:12px;line-height:1.4;color:${INK_FAINT}">${memberFooterHtml(input.footer, input.baseUrl)}</p>`
     : "";
   const brand = escapeNoticeHtml(input.brand?.trim() || "Trading Bot Platform");
   const logo = input.logoUrl
