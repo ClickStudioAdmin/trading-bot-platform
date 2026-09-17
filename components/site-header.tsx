@@ -6,7 +6,13 @@ import { memberDisplayName } from "@/lib/members/sync";
 import { loadMemberNotificationChrome } from "@/lib/notifications/badges";
 import { connection } from "next/server";
 
-export async function SiteHeader() {
+export async function SiteHeader({
+  platformName,
+  platformLogoUrl,
+}: {
+  platformName?: string;
+  platformLogoUrl?: string | null;
+}) {
   await connection();
   const user = await getSessionMember();
   const verified = Boolean(user?.emailVerifiedAt);
@@ -18,6 +24,8 @@ export async function SiteHeader() {
   return (
     <HeaderBar
       signedIn={Boolean(user)}
+      platformName={platformName}
+      platformLogoUrl={platformLogoUrl}
       start={
         <HeaderChromeLinks
           signedIn={Boolean(user)}

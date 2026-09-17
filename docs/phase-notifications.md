@@ -68,7 +68,7 @@ Same ID in email, inbox, and settings.
 
 ## Email templates
 
-FQX `NoticeEmail` shape: subject = heading = preview; one or two short paragraphs; one button. Inbox title = subject. Inbox body = first paragraph. Amounts USD. From name Trading Bot Platform. Locked previews live on `/admin/email-templates`. Settings only has on/off switches. Resend send uses the same layout (inline HTML + text). Button links use `APP_BASE_URL` + the inbox path. A dispatch is not complete until mail sends or is muted/skipped; Resend errors and a missing key stay retryable. Existing rows from before that change were marked complete.
+FQX `NoticeEmail` shape: subject = heading = preview; one or two short paragraphs; one button. Inbox title = subject. Inbox body = first paragraph. Amounts USD. From name and overline are Admin Settings → General → Platform name (default Trading Bot Platform). Optional uploaded logo on the same form. Locked previews live on `/admin/email-templates`. Settings only has on/off switches. Resend send uses the same layout (inline HTML + text). Button links use `APP_BASE_URL` + the inbox path. A dispatch is not complete until mail sends or is muted/skipped; Resend errors and a missing key stay retryable. Existing rows from before that change were marked complete.
 
 Member footer (step 8): “You can modify your email preferences on Account Settings → Notifications.” Notifications links to `/account/settings?tab=notifications`. Operator mail omits that footer.
 
@@ -89,7 +89,7 @@ Member footer (step 8): “You can modify your email preferences on Account Sett
 | `desk_sync_failed` | Desk sync failed — {deskName} | {deskName} could not sync with {venue}. {detail} / The bot stays as it is until this is fixed. Check the desk Activity log. | Desk Activity |
 | `desk_order_failed` | Live order failed — {deskName} | {deskName} hit a repeating {venue} reject ({detail}). / Open the desk, fix the bind or size, or disarm the bot. | Desk |
 | `exchange_verify_failed` | Exchange key failed — {connectionName} | We could not verify {connectionName} ({venue}). Live desks on this key will not place until you replace it. | Open Exchanges → `/account/exchanges` |
-| `password_changed` | Your password was changed | The password for this Trading Bot Platform login was changed. If you did not do this, reset it and contact support. | Account settings → `/account/settings` |
+| `password_changed` | Your password was changed | The password for this {platformName} login was changed. If you did not do this, reset it and contact support. | Account settings → `/account/settings` |
 | `operator_payout_requested` | Payout to send — {bookLabel} {amount} | {memberLabel} requested {amount} USDT ({bookLabel}) to {addressShort} on {network}. | Admin Affiliates or Billing withdrawals |
 | `operator_sweep_failed` | Sweep failed — {chain} | A credited deposit on {chain} did not sweep ({detail}). The member credit stays. Retry on the next watch. | `/admin/billing` |
 | `operator_gas_low` | Gas wallet low — {chain} | The gas wallet on {chain} is {balanceEth} ETH (threshold {thresholdEth}). Fund it so sweeps can pay gas. | `/admin/billing` |
@@ -115,7 +115,7 @@ Platform kill switches: `platform_settings.disabled_emails` and `disabled_badges
 - `/account/notifications` — Inbox (affiliate-only allowed). Status / Scope / Event filters (same Apply / Clear bar as desk Activity). 20 per page (`?page=`), same Previous / Next as Billing. Message / Date / Actions table with checkbox bulk Mark read / Mark unread. Desk notices open Activity with `?desk=` so the layout does not bounce.
 - `/account/settings?tab=notifications`
 - `/admin/settings?tab=notifications` (Member list + Admin list; Email / In-app / Alert)
-- `/admin/email-templates` — locked `NoticeEmail` previews (same layout Resend sends). **Send test email** posts the sample via Resend (no inbox row). To defaults to `system@alphadesks.app`. From is Admin Settings → General (`platform_settings.email_from`).
+- `/admin/email-templates` — locked `NoticeEmail` previews (same layout Resend sends). **Send test email** posts the sample via Resend (no inbox row). To defaults to the signed-in admin. From is Admin Settings → General (`platform_settings.email_from`, display name from `platform_name`).
 - Header Inbox (unread only); amber action counts on Overview, Billing, Affiliates, and the destination tab / Copy Trading link
 - Admin Overview, Billing, Affiliates amber counts
 - Overview Attention + recent notifications widget. Admin Overview Attention lists gated admin alerts with links to Affiliates, Billing, Members, and Logs.

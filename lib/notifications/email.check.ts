@@ -39,6 +39,14 @@ assert.match(
 );
 assert.match(html, />Notifications<\/a>/);
 assert.match(html, /#ffffff/);
+assert.match(html, /Trading Bot Platform/);
+assert.match(
+  noticeEmailHtml(notice, {
+    actionHref: href,
+    brand: "Alpha Desks",
+  }),
+  /Alpha Desks/,
+);
 assert.equal(html.includes("<script>"), false);
 assert.match(
   noticeEmailHtml(

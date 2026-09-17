@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_SYSTEM_FROM,
   DEFAULT_TEST_INBOX,
+  emailFromMailbox,
   parseEmailFrom,
   parseMailbox,
   parsePlatformLogoUrl,
@@ -25,6 +26,11 @@ assert.equal(parseEmailFrom("system@alphadesks.app"), "system@alphadesks.app");
 assert.equal(parseEmailFrom("<>"), null);
 assert.equal(parseEmailFrom("Name <>"), null);
 assert.equal(parseEmailFrom("<system@alphadesks.app>"), null);
+assert.equal(
+  emailFromMailbox("Trading Bot Platform <system@alphadesks.app>"),
+  "system@alphadesks.app",
+);
+assert.equal(emailFromMailbox("system@alphadesks.app"), "system@alphadesks.app");
 
 assert.equal(
   resolveEmailFrom({ stored: null, env: null }),

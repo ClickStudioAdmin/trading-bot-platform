@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
+import { namedPageMetadata } from "@/lib/platform/metadata";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { confirmVerifyEmailAction } from "@/lib/auth/actions";
 import { firstSearchValue } from "@/lib/paper/open";
 
-export const metadata: Metadata = {
-  title: "Confirm email",
-  description: "Confirm your Trading Bot Platform email.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return namedPageMetadata(
+    "Confirm email",
+    (name) => `Confirm your ${name} email.`,
+  );
+}
 
 export default async function VerifyEmailPage({
   searchParams,

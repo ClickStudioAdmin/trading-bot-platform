@@ -12,12 +12,16 @@ export function AccountSidenavGate({
   desks,
   badges,
   children,
+  platformName,
+  platformLogoUrl,
 }: {
   signedIn: boolean;
   platformMember: boolean;
   desks: TradingAccount[];
   badges?: Record<string, number>;
   children: React.ReactNode;
+  platformName?: string;
+  platformLogoUrl?: string | null;
 }) {
   const pathname = usePathname();
   if (
@@ -35,6 +39,8 @@ export function AccountSidenavGate({
           desks={desks}
           platformMember={platformMember}
           badges={badges}
+          platformName={platformName}
+          platformLogoUrl={platformLogoUrl}
         />
       </Suspense>
       {children}

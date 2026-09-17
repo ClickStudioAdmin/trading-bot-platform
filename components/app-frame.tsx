@@ -10,6 +10,7 @@ import {
   loadAdminNotificationChrome,
   loadMemberNotificationChrome,
 } from "@/lib/notifications/badges";
+import { loadPlatformBrand } from "@/lib/platform/brand";
 
 export async function AppFrame({ children }: { children: React.ReactNode }) {
   const member = await getSessionMember();
@@ -23,6 +24,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
   const autoTick = admin ? await loadAutoTickEnabled() : false;
   const adminChrome = admin ? await loadAdminNotificationChrome() : null;
   const appHref = member ? signedInHomePath(member, desks) : null;
+  const brand = await loadPlatformBrand();
 
   return (
     <AccountSidenavGate
@@ -38,9 +40,14 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
             }
           : undefined
       }
+      platformName={brand.name}
+      platformLogoUrl={brand.logoUrl}
     >
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
-        <SiteHeader />
+        <SiteHeader
+          platformName={brand.name}
+          platformLogoUrl={brand.logoUrl}
+        />
         <div className="flex flex-1 flex-col">{children}</div>
         <SiteFooter
           appHref={appHref}
@@ -50,6 +57,8 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
               ? { count: adminChrome?.header ?? 0, autoTick }
               : null
           }
+          platformName={brand.name}
+          platformLogoUrl={brand.logoUrl}
         />
       </div>
     </AccountSidenavGate>

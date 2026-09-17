@@ -26,6 +26,7 @@ import {
   payoutRequestedKey,
 } from "./catalog";
 import { notificationCopy } from "./copy";
+import { loadPlatformName } from "@/lib/platform/brand";
 import { notify } from "./notify";
 import { loadOperatorEmails } from "./operators";
 
@@ -452,7 +453,9 @@ export async function notifyPasswordChanged(input: {
         input.userId,
         input.changedAtMs ?? Date.now(),
       ),
-      notice: notificationCopy.password_changed(),
+      notice: notificationCopy.password_changed({
+        platformName: await loadPlatformName(),
+      }),
     });
   });
 }

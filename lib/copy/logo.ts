@@ -158,3 +158,90 @@ export async function removeDeskLogo(
     "Could not remove the desk logo.",
   );
 }
+
+export const PLATFORM_LOGO_BUCKET = "platform-logos";
+const PLATFORM_LOGO_PATH = /^tbp\/logo\.(png|jpg|webp)$/i;
+
+export function parsePlatformLogoPath(
+  value: unknown,
+): { ok: true; path: string | null } | { ok: false; error: string } {
+  if (value == null) {
+    return { ok: true, path: null };
+  }
+  const path = String(value).trim();
+  if (!path) {
+    return { ok: true, path: null };
+  }
+  if (!PLATFORM_LOGO_PATH.test(path)) {
+    return { ok: false, error: "Platform logo path is invalid." };
+  }
+  return { ok: true, path };
+}
+
+function platformLogoPublicUrlFromPath(
+  path: string | null | undefined,
+  updatedAt?: string | null,
+): string | null {
+  const parsed = parsePlatformLogoPath(path);
+  if (!parsed.ok || !parsed.path) {
+    return null;
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data } = supabase.storage
+    .from(PLATFORM_LOGO_BUCKET)
+    .getPublicUrl(parsed.path);
+  const url = data.publicUrl?.trim();
+  if (!url) {
+    return null;
+  }
+  if (!updatedAt) {
+    return url;
+  }
+  const stamp = encodeURIComponent(updatedAt);
+  return url.includes("?") ? `${url}&t=${stamp}` : `${url}?t=${stamp}`;
+}
+
+export function platformLogoPublicUrl(
+  path: string | null | undefined,
+  updatedAt?: string | null,
+): string | null {
+  return platformLogoPublicUrlFromPath(path, updatedAt);
+}
+
+export async function uploadPlatformLogo(input: {
+  file: File;
+  ext: string;
+  previousPath: string | null;
+}): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  return uploadOwnedLogo({
+    bucket: PLATFORM_LOGO_BUCKET,
+    ownerId: "tbp",
+    file: input.file,
+    ext: input.ext,
+    previousPath: input.previousPath,
+    error: "Could not save the platform logo.",
+  });
+}
+
+export async function removePlatformLogo(
+  path: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = parsePlatformLogoPath(path);
+  if (!parsed.ok || !parsed.path) {
+    return { ok: true };
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase.storage
+    .from(PLATFORM_LOGO_BUCKET)
+    .remove([parsed.path]);
+  if (error) {
+    return { ok: false, error: "Could not remove the platform logo." };
+  }
+  return { ok: true };
+}

@@ -8,10 +8,8 @@ import { sendTestEmailAction } from "@/lib/notifications/actions";
 import { isOperatorNotificationId } from "@/lib/notifications/catalog";
 import { sampleNotice } from "@/lib/notifications/copy";
 import { MEMBER_EMAIL_FOOTER } from "@/lib/notifications/email";
-import {
-  loadPlatformLogoUrl,
-  resolvePlatformEmailFrom,
-} from "@/lib/notifications/email-from";
+import { resolvePlatformEmailFrom } from "@/lib/notifications/email-from";
+import { loadPlatformBrand } from "@/lib/platform/brand";
 import {
   adminSettingGroups,
   NOTIFICATION_HINTS,
@@ -33,10 +31,10 @@ export default async function AdminEmailTemplatesPage({
   const params = await searchParams;
   const sent = firstSearchValue(params.sent) === "1";
   const error = firstSearchValue(params.error);
-  const [from, admin, logoUrl] = await Promise.all([
+  const [from, admin, brand] = await Promise.all([
     resolvePlatformEmailFrom(),
     getAdminUser(),
-    loadPlatformLogoUrl(),
+    loadPlatformBrand(),
   ]);
   const groups = adminSettingGroups();
   const defaultTo = admin?.email ?? "";
@@ -147,8 +145,9 @@ export default async function AdminEmailTemplatesPage({
                   </p>
                   <div className="mt-4">
                     <NoticeEmail
-                      notice={sampleNotice(id)}
-                      logoUrl={logoUrl}
+                      notice={sampleNotice(id, { platformName: brand.name })}
+                      logoUrl={brand.logoUrl}
+                      brand={brand.name}
                       footer={
                         isOperatorNotificationId(id)
                           ? undefined

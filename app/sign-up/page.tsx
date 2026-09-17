@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { namedPageMetadata } from "@/lib/platform/metadata";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -9,10 +10,12 @@ import { readReferralCookie } from "@/lib/membership/affiliate-cookie";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import { firstSearchValue } from "@/lib/paper/open";
 
-export const metadata: Metadata = {
-  title: "Join for Free",
-  description: "Create a Free membership on Trading Bot Platform.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return namedPageMetadata(
+    "Join for Free",
+    (name) => `Create a Free membership on ${name}.`,
+  );
+}
 
 export default async function SignUpPage({
   searchParams,

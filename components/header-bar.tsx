@@ -9,10 +9,14 @@ export function HeaderBar({
   start,
   children,
   signedIn = false,
+  platformName,
+  platformLogoUrl,
 }: {
   start?: ReactNode;
   children: ReactNode;
   signedIn?: boolean;
+  platformName?: string;
+  platformLogoUrl?: string | null;
 }) {
   const pathname = usePathname();
   const hideLogo =
@@ -27,7 +31,7 @@ export function HeaderBar({
         <div className="flex min-w-0 items-center gap-4">
           {hideLogo ? null : (
             <div className="min-w-0">
-              <SiteLogo />
+              <SiteLogo name={platformName} logoUrl={platformLogoUrl} />
             </div>
           )}
           {start}

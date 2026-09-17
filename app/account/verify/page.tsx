@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { namedPageMetadata } from "@/lib/platform/metadata";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -8,10 +9,12 @@ import { getSessionMember } from "@/lib/auth/session";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { firstSearchValue } from "@/lib/paper/open";
 
-export const metadata: Metadata = {
-  title: "Check your email",
-  description: "Confirm your email to use Trading Bot Platform.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return namedPageMetadata(
+    "Check your email",
+    (name) => `Confirm your email to use ${name}.`,
+  );
+}
 
 export default async function VerifyAccountPage({
   searchParams,

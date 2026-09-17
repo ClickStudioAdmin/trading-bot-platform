@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LogoFileField } from "@/components/logo-file-field";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
@@ -8,10 +9,8 @@ import {
   saveEmailFromAction,
 } from "@/lib/admin/actions";
 import { loadAutoTickEnabled } from "@/lib/admin/settings";
-import {
-  loadPlatformLogoUrl,
-  resolvePlatformEmailFrom,
-} from "@/lib/notifications/email-from";
+import { loadPlatformBrand } from "@/lib/platform/brand";
+import { namedPageMetadata } from "@/lib/platform/metadata";
 import { loadCopyPlatformSettings } from "@/lib/copy/settings";
 import { billingChainEnvironment } from "@/lib/membership/wallet";
 import { saveAffiliateSettingsAction } from "@/lib/membership/affiliate-actions";
@@ -42,10 +41,12 @@ import { demoBadgesAllowed } from "@/lib/notifications/badges-catalog";
 import { channelLists } from "@/lib/notifications/settings";
 import { loadPlatformAlertSettings } from "@/lib/notifications/store";
 
-export const metadata: Metadata = {
-  title: "Admin settings",
-  description: "System settings for Trading Bot Platform.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return namedPageMetadata(
+    "Admin settings",
+    (name) => `System settings for ${name}.`,
+  );
+}
 
 const SETTINGS_TABS = [
   "general",
@@ -76,14 +77,14 @@ export default async function AdminSettingsPage({
   const copyFollowersCeilingError = error === "copy-followers-ceiling";
   const copyFollowersRangeError = error === "copy-followers-range";
   const emailFromError = error === "email-from";
+  const platformNameError = error === "platform-name";
   const platformLogoError = error === "platform-logo";
-  const [autoTick, emailFrom, platformLogoUrl, copySettings, affiliateSettings, gas, chains, walletMinPayoutUsd] =
+  const [autoTick, brand, copySettings, affiliateSettings, gas, chains, walletMinPayoutUsd] =
     await Promise.all([
     tab === "general" ? loadAutoTickEnabled() : Promise.resolve(false),
     tab === "general"
-      ? resolvePlatformEmailFrom()
-      : Promise.resolve(""),
-    tab === "general" ? loadPlatformLogoUrl() : Promise.resolve(null),
+      ? loadPlatformBrand()
+      : Promise.resolve(null),
     tab === "copy"
       ? loadCopyPlatformSettings()
       : Promise.resolve({
@@ -149,15 +150,19 @@ export default async function AdminSettingsPage({
           {saved === "1" ? (
             <p className="mt-6 text-sm text-success">Settings saved.</p>
           ) : null}
+          {platformNameError ? (
+            <p className="mt-6 text-sm text-danger">
+              Enter a platform name, 1–80 characters, without : &lt; or &gt;.
+            </p>
+          ) : null}
           {emailFromError ? (
             <p className="mt-6 text-sm text-danger">
-              Enter a From address, for example Trading Bot Platform
-              {" <system@alphadesks.app>"}.
+              Enter a From mailbox, for example system@alphadesks.app.
             </p>
           ) : null}
           {platformLogoError ? (
             <p className="mt-6 text-sm text-danger">
-              Enter a http(s) logo URL, or leave it blank.
+              Use a PNG, JPG, or WebP image, 1 MB or smaller.
             </p>
           ) : null}
           <form
@@ -165,42 +170,50 @@ export default async function AdminSettingsPage({
             className="mt-6 max-w-lg space-y-4 rounded-card border border-line bg-surface p-5"
           >
             <label className="block text-sm text-ink">
+              Platform name
+              <input
+                name="platformName"
+                type="text"
+                required
+                defaultValue={brand?.name ?? ""}
+                autoComplete="off"
+                className={BILLING_FIELD_CLASS}
+              />
+              <span className="mt-1 block text-xs text-ink-muted">
+                Shown on mail, the site chrome, and as the Google Authenticator
+                issuer. Do not use a colon.
+              </span>
+            </label>
+            <label className="block text-sm text-ink">
               System from address
               <input
                 name="emailFrom"
                 type="text"
                 required
-                defaultValue={emailFrom}
+                defaultValue={brand?.mailbox ?? ""}
                 autoComplete="off"
                 className={BILLING_FIELD_CLASS}
               />
               <span className="mt-1 block text-xs text-ink-muted">
-                Outbound mail uses this From. It must be on a verified Resend
-                domain. Default is Trading Bot Platform
-                {" <system@alphadesks.app>"}.
+                Outbound mail uses this mailbox with the platform name as the
+                display name. It must be on a verified Resend domain.
               </span>
             </label>
-            <label className="block text-sm text-ink">
-              Platform logo
-              <input
-                name="platformLogoUrl"
-                type="url"
-                defaultValue={platformLogoUrl ?? ""}
-                placeholder="https://"
-                autoComplete="off"
-                className={BILLING_FIELD_CLASS}
+            <div>
+              <p className="text-sm text-ink">Platform logo</p>
+              <LogoFileField
+                name="platformLogo"
+                currentUrl={brand?.logoUrl ?? null}
+                removeName={brand?.logoPath ? "removePlatformLogo" : undefined}
+                hint="Optional. Square PNG, JPG, or WebP. 1 MB max. Shown on mail and the site mark."
               />
-              <span className="mt-1 block text-xs text-ink-muted">
-                Optional public image URL. Shown on outbound mail. HTTPS
-                preferred.
-              </span>
-            </label>
+            </div>
             <PendingSubmitButton
               pendingLabel="Saving…"
               successKey="save-email-from"
               className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
             >
-              Save mail settings
+              Save platform settings
             </PendingSubmitButton>
           </form>
           <form

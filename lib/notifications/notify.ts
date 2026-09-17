@@ -14,7 +14,8 @@ import {
   noticeEmailText,
   sendResendEmail,
 } from "./email";
-import { loadPlatformLogoUrl, resolvePlatformEmailFrom } from "./email-from";
+import { resolvePlatformEmailFrom } from "./email-from";
+import { loadPlatformBrand } from "@/lib/platform/brand";
 import {
   claimEmailDispatch,
   completeEmailDispatch,
@@ -54,9 +55,9 @@ export async function notify(input: {
   const prefs = input.userId
     ? await loadNotificationPreferences(input.userId)
     : { disabledEmails: [], disabledInApp: [] };
-  const [from, logoUrl] = await Promise.all([
+  const [from, brand] = await Promise.all([
     resolvePlatformEmailFrom(),
-    loadPlatformLogoUrl(),
+    loadPlatformBrand(),
   ]);
   const configured = resendConfigured({
     RESEND_API_KEY: process.env.RESEND_API_KEY,
@@ -105,7 +106,12 @@ export async function notify(input: {
       {
         to,
         subject: input.notice.subject,
-        html: noticeEmailHtml(input.notice, { footer, actionHref, logoUrl }),
+        html: noticeEmailHtml(input.notice, {
+          footer,
+          actionHref,
+          logoUrl: brand.logoUrl,
+          brand: brand.name,
+        }),
         text: noticeEmailText(input.notice, { footer, actionHref }),
       },
       {

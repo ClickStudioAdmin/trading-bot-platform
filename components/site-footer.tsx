@@ -25,10 +25,14 @@ export function SiteFooter({
   appHref = null,
   signedIn = false,
   admin = null,
+  platformName = "Trading Bot Platform",
+  platformLogoUrl = null,
 }: {
   appHref?: string | null;
   signedIn?: boolean;
   admin?: FooterAdminChrome | null;
+  platformName?: string;
+  platformLogoUrl?: string | null;
 }) {
   const compact = usesSignedInAppChrome(usePathname(), signedIn);
 
@@ -37,7 +41,7 @@ export function SiteFooter({
       <footer className="mt-auto border-t border-line bg-surface">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
           <p className="text-xs text-ink-faint">
-            Trading Bot Platform · Development
+            {platformName} · Development
           </p>
           <div className="flex shrink-0 items-center gap-2">
             <FooterAdminTools admin={admin} />
@@ -59,7 +63,7 @@ export function SiteFooter({
     <footer className="mt-auto border-t border-line bg-surface">
       <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 sm:grid-cols-2 lg:grid-cols-3">
         <div>
-          <SiteLogo />
+          <SiteLogo name={platformName} logoUrl={platformLogoUrl} />
           <p className="mt-3 max-w-sm text-sm text-ink-muted">
             Your strategies. Your keys. One desk.
           </p>
@@ -137,7 +141,7 @@ export function SiteFooter({
       <div className="border-t border-line">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
           <p className="text-xs text-ink-faint">
-            Trading Bot Platform · Development
+            {platformName} · Development
           </p>
           <FooterAdminTools admin={admin} />
         </div>

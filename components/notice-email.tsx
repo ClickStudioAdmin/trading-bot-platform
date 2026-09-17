@@ -4,15 +4,18 @@ import {
   MEMBER_EMAIL_FOOTER,
   MEMBER_NOTIFICATIONS_PATH,
 } from "@/lib/notifications/email";
+import { DEFAULT_PLATFORM_NAME } from "@/lib/platform/brand";
 
 export function NoticeEmail({
   notice,
   footer,
   logoUrl,
+  brand = DEFAULT_PLATFORM_NAME,
 }: {
   notice: NotificationNotice;
   footer?: string;
   logoUrl?: string | null;
+  brand?: string;
 }) {
   return (
     <div
@@ -34,7 +37,7 @@ export function NoticeEmail({
         className="text-xs uppercase tracking-[0.12em]"
         style={{ color: "#6b7280" }}
       >
-        Trading Bot Platform
+        {brand}
       </p>
       <h3 className="mt-3 text-base font-semibold" style={{ color: "#111827" }}>
         {notice.subject}

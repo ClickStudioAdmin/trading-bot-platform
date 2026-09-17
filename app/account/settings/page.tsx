@@ -18,6 +18,7 @@ import { loadNotificationPreferences } from "@/lib/notifications/store";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionMember, readRecoveryCodesFlash } from "@/lib/auth/session";
 import { totpOtpauthUrl } from "@/lib/auth/totp";
+import { loadPlatformName } from "@/lib/platform/brand";
 import { totpQrSvg } from "@/lib/auth/totp-qr";
 import {
   decryptMemberTotpSecret,
@@ -350,11 +351,12 @@ async function SecuritySettingsTab({
   const recoveryCodes = await readRecoveryCodesFlash();
   const pendingSecret =
     !enabled && totp ? decryptMemberTotpSecret(totp) : null;
+  const issuer = await loadPlatformName();
   const pending =
     pendingSecret != null
       ? {
           secret: pendingSecret,
-          qrSvg: await totpQrSvg(totpOtpauthUrl(email, pendingSecret)),
+          qrSvg: await totpQrSvg(totpOtpauthUrl(email, pendingSecret, issuer)),
         }
       : null;
   return (

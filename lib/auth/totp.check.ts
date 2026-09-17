@@ -33,6 +33,8 @@ assert.deepEqual(
 const otpauth = totpOtpauthUrl("click@example.com", rfcSecret);
 assert.equal(otpauth.startsWith("otpauth://totp/"), true);
 assert.equal(otpauth.includes("issuer=Trading%20Bot%20Platform"), true);
+const renamed = totpOtpauthUrl("click@example.com", rfcSecret, "Alpha Desks");
+assert.equal(renamed.includes("issuer=Alpha%20Desks"), true);
 assert.equal(otpauth.includes("digits=6"), true);
 assert.equal(otpauth.includes("period=30"), true);
 

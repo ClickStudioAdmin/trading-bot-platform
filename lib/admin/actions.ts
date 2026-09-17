@@ -2,7 +2,7 @@
 
 import { AUTO_TICK_COOKIE } from "@/lib/admin/settings";
 import { requireAdmin } from "@/lib/admin/access";
-import { saveEmailFrom } from "@/lib/notifications/email-from";
+import { savePlatformIdentity } from "@/lib/platform/brand";
 import {
   parseCopyFollowerLimits,
   parseCopyMinActivityDays,
@@ -46,17 +46,23 @@ export async function saveAdminSettings(formData: FormData) {
 
 export async function saveEmailFromAction(formData: FormData) {
   await requireAdmin();
-  const saved = await saveEmailFrom(
-    String(formData.get("emailFrom") ?? ""),
-    formData.get("platformLogoUrl"),
-  );
+  const file = formData.get("platformLogo");
+  const saved = await savePlatformIdentity({
+    name: formData.get("platformName"),
+    emailFrom: formData.get("emailFrom"),
+    file: file instanceof File ? file : null,
+    removeLogo: formData.get("removePlatformLogo") === "on",
+  });
   if (!saved.ok) {
-    redirect(
-      saved.error.includes("logo")
-        ? "/admin/settings?error=platform-logo"
-        : "/admin/settings?error=email-from",
-    );
+    const error =
+      saved.field === "name"
+        ? "platform-name"
+        : saved.field === "platform-logo"
+          ? "platform-logo"
+          : "email-from";
+    redirect(`/admin/settings?error=${error}`);
   }
+  revalidatePath("/", "layout");
   revalidatePath("/admin/settings");
   revalidatePath("/admin/email-templates");
   redirect("/admin/settings?saved=1");

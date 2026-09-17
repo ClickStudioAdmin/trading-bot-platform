@@ -53,11 +53,15 @@ export function newTotpSecret(): string {
   return encodeBase32(randomBytes(20));
 }
 
-export function totpOtpauthUrl(account: string, secret: string): string {
-  const label = encodeURIComponent(`${TOTP_ISSUER}:${account}`);
+export function totpOtpauthUrl(
+  account: string,
+  secret: string,
+  issuer = TOTP_ISSUER,
+): string {
+  const label = encodeURIComponent(`${issuer}:${account}`);
   const query = [
     `secret=${secret}`,
-    `issuer=${encodeURIComponent(TOTP_ISSUER)}`,
+    `issuer=${encodeURIComponent(issuer)}`,
     "algorithm=SHA1",
     `digits=${TOTP_DIGITS}`,
     `period=${TOTP_PERIOD_SEC}`,

@@ -1,3 +1,5 @@
+import { DEFAULT_PLATFORM_NAME } from "@/lib/platform/brand";
+
 export type NotificationNotice = {
   subject: string;
   paragraphs: string[];
@@ -189,11 +191,11 @@ export const notificationCopy = {
       ],
       { label: "Open Exchanges", url: "/account/exchanges" },
     ),
-  password_changed: () =>
+  password_changed: (input?: { platformName?: string }) =>
     notice(
       "Your password was changed",
       [
-        "The password for this Trading Bot Platform login was changed. If you did not do this, reset it and contact support.",
+        `The password for this ${input?.platformName?.trim() || DEFAULT_PLATFORM_NAME} login was changed. If you did not do this, reset it and contact support.`,
       ],
       { label: "Account settings", url: "/account/settings" },
     ),
@@ -260,7 +262,10 @@ export const notificationCopy = {
     ),
 };
 
-export function sampleNotice(id: string): NotificationNotice {
+export function sampleNotice(
+  id: string,
+  input?: { platformName?: string },
+): NotificationNotice {
   switch (id) {
     case "invoice_issued":
       return notificationCopy.invoice_issued({
@@ -346,7 +351,9 @@ export function sampleNotice(id: string): NotificationNotice {
         venue: "Bybit",
       });
     case "password_changed":
-      return notificationCopy.password_changed();
+      return notificationCopy.password_changed({
+        platformName: input?.platformName,
+      });
     default:
       return sampleOperatorNotice(id);
   }

@@ -30,10 +30,14 @@ export function AccountSidenav({
   desks,
   platformMember,
   badges = {},
+  platformName,
+  platformLogoUrl,
 }: {
   desks: TradingAccount[];
   platformMember: boolean;
   badges?: Record<string, number>;
+  platformName?: string;
+  platformLogoUrl?: string | null;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -50,6 +54,8 @@ export function AccountSidenav({
         <SiteLogo
           linked={!platformMember}
           href={platformMember ? "/" : AFFILIATES_PATH}
+          name={platformName}
+          logoUrl={platformLogoUrl}
         />
       </div>
       <NavGroup

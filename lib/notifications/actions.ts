@@ -20,11 +20,8 @@ import {
   noticeEmailText,
   sendResendEmail,
 } from "./email";
-import {
-  loadPlatformLogoUrl,
-  parseMailbox,
-  resolvePlatformEmailFrom,
-} from "./email-from";
+import { parseMailbox, resolvePlatformEmailFrom } from "./email-from";
+import { loadPlatformBrand } from "@/lib/platform/brand";
 import {
   BADGE_IDS,
   demoBadgesAllowed,
@@ -173,9 +170,9 @@ export async function sendTestEmailAction(formData: FormData) {
   if (!isNotificationId(template)) {
     redirect("/admin/email-templates?error=template");
   }
-  const [from, logoUrl] = await Promise.all([
+  const [from, brand] = await Promise.all([
     resolvePlatformEmailFrom(),
-    loadPlatformLogoUrl(),
+    loadPlatformBrand(),
   ]);
   if (
     !resendConfigured({
@@ -185,7 +182,7 @@ export async function sendTestEmailAction(formData: FormData) {
   ) {
     redirect("/admin/email-templates?error=unconfigured");
   }
-  const notice = sampleNotice(template);
+  const notice = sampleNotice(template, { platformName: brand.name });
   const actionHref = noticeAbsoluteHref(notice.actionUrl);
   const footer = isOperatorNotificationId(template)
     ? undefined
@@ -194,7 +191,12 @@ export async function sendTestEmailAction(formData: FormData) {
     {
       to,
       subject: notice.subject,
-      html: noticeEmailHtml(notice, { footer, actionHref, logoUrl }),
+      html: noticeEmailHtml(notice, {
+        footer,
+        actionHref,
+        logoUrl: brand.logoUrl,
+        brand: brand.name,
+      }),
       text: noticeEmailText(notice, { footer, actionHref }),
     },
     {

@@ -39,6 +39,15 @@ export function parseEmailFrom(value: unknown): string | null {
   return parseMailbox(raw);
 }
 
+export function emailFromMailbox(value: string | null | undefined): string {
+  const parsed = parseEmailFrom(value);
+  if (!parsed) {
+    return DEFAULT_TEST_INBOX;
+  }
+  const angled = parsed.match(/<([^<>]+)>$/);
+  return angled?.[1] ?? parsed;
+}
+
 export function resolveEmailFrom(input: {
   stored?: string | null;
   env?: string | null;

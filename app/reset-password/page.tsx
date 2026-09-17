@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { namedPageMetadata } from "@/lib/platform/metadata";
 import Link from "next/link";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { resetPasswordAction } from "@/lib/auth/actions";
@@ -6,10 +7,12 @@ import { FORGOT_PASSWORD_PATH } from "@/lib/auth/onboarding-path";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import { firstSearchValue } from "@/lib/paper/open";
 
-export const metadata: Metadata = {
-  title: "Reset password",
-  description: "Choose a new Trading Bot Platform password.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return namedPageMetadata(
+    "Reset password",
+    (name) => `Choose a new ${name} password.`,
+  );
+}
 
 export default async function ResetPasswordPage({
   searchParams,

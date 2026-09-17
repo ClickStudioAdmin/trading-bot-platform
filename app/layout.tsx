@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { AppFrame } from "@/components/app-frame";
 import { redirectIfNeedsGate } from "@/lib/auth/onboarding";
+import { loadPlatformName } from "@/lib/platform/brand";
 import "./globals.css";
 
 const geist = Geist({
@@ -10,13 +11,16 @@ const geist = Geist({
   adjustFontFallback: false,
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "Trading Bot Platform",
-    template: "%s · TBP",
-  },
-  description: "Development environment.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const name = await loadPlatformName();
+  return {
+    title: {
+      default: name,
+      template: "%s · TBP",
+    },
+    description: "Development environment.",
+  };
+}
 
 export default async function RootLayout({
   children,

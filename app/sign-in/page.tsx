@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { namedPageMetadata } from "@/lib/platform/metadata";
 import Link from "next/link";
 import { signIn } from "@/lib/auth/actions";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -12,10 +13,12 @@ import {
 } from "@/lib/membership/wallet-form";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Sign in",
-  description: "Desk sign-in for Trading Bot Platform.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return namedPageMetadata(
+    "Sign in",
+    (name) => `Desk sign-in for ${name}.`,
+  );
+}
 
 export default async function SignInPage({
   searchParams,

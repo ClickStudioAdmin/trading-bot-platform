@@ -52,7 +52,13 @@ const STEPS = [
   },
 ];
 
-export function MarketingHome({ appHref = null }: { appHref?: string | null }) {
+export function MarketingHome({
+  appHref = null,
+  platformName = "Trading Bot Platform",
+}: {
+  appHref?: string | null;
+  platformName?: string;
+}) {
   const primaryHref = appHref ?? "/sign-up";
   const primaryLabel = appHref ? "Go to App" : "Join for Free";
   const appLinkProps = appHref
@@ -64,7 +70,7 @@ export function MarketingHome({ appHref = null }: { appHref?: string | null }) {
       <section className="border-b border-line bg-surface">
         <div className="mx-auto max-w-7xl px-6 py-16 sm:py-20">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
-            Trading Bot Platform
+            {platformName}
           </p>
           <h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
             Your strategies. Your keys. One desk.

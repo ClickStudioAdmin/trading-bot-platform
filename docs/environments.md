@@ -191,16 +191,16 @@ Webhook events: `checkout.session.completed`, `customer.subscription.updated` (a
 
 ## Resend (notifications step 8)
 
-Transactional mail only. Separate Resend projects or API keys for develop and production. Never `NEXT_PUBLIC_`. Verify the From domain in Resend before expecting delivery. From name is Trading Bot Platform.
+Transactional mail only. Separate Resend projects or API keys for develop and production. Never `NEXT_PUBLIC_`. Verify the From domain in Resend before expecting delivery. From name is Admin Settings → General → Platform name (default Trading Bot Platform).
 
 | Variable | Where | Value |
 | --- | --- | --- |
 | `RESEND_API_KEY` | Vercel Development / `.env.local` / Fly `tbp-engine-dev` | Develop Resend key (`re_…`). TBP-dev only |
 | `RESEND_API_KEY` | Vercel Production / Fly `tbp-engine` | A **different** production Resend key |
-| `EMAIL_FROM` | Optional fallback | Used only if `platform_settings.email_from` is empty. Admin Settings → General holds the From (default `Trading Bot Platform <system@alphadesks.app>`). Must be a mailbox on a verified Resend domain. |
+| `EMAIL_FROM` | Optional fallback | Used only if `platform_settings.email_from` is empty. Admin Settings → General holds the mailbox and Platform name (default `Trading Bot Platform <system@alphadesks.app>`). Must be a mailbox on a verified Resend domain. |
 | `APP_BASE_URL` | Same as TradingView / Stripe | Email button origin. No trailing slash |
 
-Mail no-ops when `RESEND_API_KEY` is unset or the resolved From is empty. The From is the admin setting, then `EMAIL_FROM`, then `Trading Bot Platform <system@alphadesks.app>`. Platform and member mutes still apply. Operator mail goes to every admin until [phase-admin-roles.md](phase-admin-roles.md). `/admin/email-templates` can send a sample to a chosen inbox (default `system@alphadesks.app`).
+Mail no-ops when `RESEND_API_KEY` is unset or the resolved From is empty. The From is the admin setting, then `EMAIL_FROM`, then `Trading Bot Platform <system@alphadesks.app>`. Platform name and uploaded logo live on the same General form. Platform and member mutes still apply. Operator mail goes to every admin until [phase-admin-roles.md](phase-admin-roles.md). `/admin/email-templates` can send a sample to a chosen inbox (default the signed-in admin).
 
 ## Deposit HD (membership step 5)
 

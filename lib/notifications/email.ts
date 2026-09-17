@@ -1,3 +1,4 @@
+import { DEFAULT_PLATFORM_NAME } from "@/lib/platform/brand";
 import { safeNoticeHref } from "./hrefs";
 import type { NotificationNotice } from "./copy";
 
@@ -91,7 +92,7 @@ export function noticeEmailHtml(
   const footer = input.footer
     ? `<p style="margin:16px 0 0;font-size:12px;line-height:1.4;color:${INK_FAINT}">${memberFooterHtml(input.footer, input.baseUrl)}</p>`
     : "";
-  const brand = escapeNoticeHtml(input.brand?.trim() || "Trading Bot Platform");
+  const brand = escapeNoticeHtml(input.brand?.trim() || DEFAULT_PLATFORM_NAME);
   const logo = input.logoUrl
     ? `<img src="${escapeNoticeHtml(input.logoUrl)}" alt="${brand}" width="140" style="display:block;max-width:140px;height:auto;margin:0 0 12px;border:0;" />`
     : "";
