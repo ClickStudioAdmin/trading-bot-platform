@@ -245,8 +245,7 @@ export function FuturesWorkingOrders({
                   next={next}
                   baseCoin={
                     baseCoins[row.symbol] ??
-                    row.symbol.replace(/USDT$|USDC$/i, "") ||
-                    row.symbol
+                    (row.symbol.replace(/USDT$|USDC$/i, "") || row.symbol)
                   }
                   webhookNames={webhookNames}
                   showOrderMeta={showOrderMeta}
