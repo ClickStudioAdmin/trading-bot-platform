@@ -19,13 +19,13 @@ import {
 const primaryBtn =
   "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
 const secondaryBtn =
-  "rounded-control bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:bg-line";
+  "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
 const bulkBtn =
-  "rounded-control bg-surface-raised px-3 py-1.5 text-sm font-medium text-ink hover:bg-line disabled:opacity-40";
+  "rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent disabled:opacity-40";
 const dangerBulkBtn =
   "rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-canvas hover:opacity-90 disabled:opacity-40";
 const actionLink =
-  "rounded-control bg-surface-raised px-2.5 py-1 text-xs font-medium text-ink hover:bg-line";
+  "rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink hover:bg-accent";
 const dangerLink =
   "rounded-control bg-danger px-2.5 py-1 text-xs font-medium text-canvas hover:opacity-90";
 const clearBtn =
