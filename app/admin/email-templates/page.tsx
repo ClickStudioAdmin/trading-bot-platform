@@ -143,7 +143,7 @@ export default async function AdminEmailTemplatesPage({
                   <p className="mt-1 text-xs text-ink-faint">
                     {NOTIFICATION_HINTS[id]}
                   </p>
-                  <div className="mt-4">
+                  <div className="mt-4 overflow-hidden rounded-card border border-line">
                     <NoticeEmail
                       notice={sampleNotice(id, { platformName: brand.name })}
                       logoUrl={brand.logoUrl}

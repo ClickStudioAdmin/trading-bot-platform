@@ -6,9 +6,15 @@ export const MEMBER_NOTIFICATIONS_PATH = "/account/settings?tab=notifications";
 export const MEMBER_EMAIL_FOOTER =
   "You can modify your email preferences on Account Settings → Notifications.";
 
-const PAGE = "#f4f6f8";
-const CARD = "#ffffff";
-const LINE = "#e5e7eb";
+export const NOTICE_EMAIL_PAGE = "#f4f6f8";
+export const NOTICE_EMAIL_CARD = "#ffffff";
+export const NOTICE_EMAIL_LINE = "#e5e7eb";
+export const NOTICE_EMAIL_WIDTH_PX = 640;
+export const NOTICE_EMAIL_LOGO_PX = 96;
+
+const PAGE = NOTICE_EMAIL_PAGE;
+const CARD = NOTICE_EMAIL_CARD;
+const LINE = NOTICE_EMAIL_LINE;
 const INK = "#111827";
 const INK_MUTED = "#4b5563";
 const INK_FAINT = "#6b7280";
@@ -94,7 +100,7 @@ export function noticeEmailHtml(
     : "";
   const brand = escapeNoticeHtml(input.brand?.trim() || DEFAULT_PLATFORM_NAME);
   const logo = input.logoUrl
-    ? `<img src="${escapeNoticeHtml(input.logoUrl)}" alt="${brand}" width="96" style="display:block;max-width:96px;height:auto;margin:0 0 12px;border:0;" />`
+    ? `<img src="${escapeNoticeHtml(input.logoUrl)}" alt="${brand}" width="${NOTICE_EMAIL_LOGO_PX}" style="display:block;max-width:${NOTICE_EMAIL_LOGO_PX}px;height:auto;margin:0 0 12px;border:0;" />`
     : "";
   return `<!DOCTYPE html>
 <html>
@@ -102,7 +108,7 @@ export function noticeEmailHtml(
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PAGE};">
     <tr>
       <td align="center" style="padding:24px 12px;">
-        <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="width:640px;max-width:100%;background:${CARD};border:1px solid ${LINE};border-radius:16px;">
+        <table role="presentation" width="${NOTICE_EMAIL_WIDTH_PX}" cellpadding="0" cellspacing="0" style="width:${NOTICE_EMAIL_WIDTH_PX}px;max-width:100%;background:${CARD};border:1px solid ${LINE};border-radius:16px;">
           <tr>
             <td style="padding:20px;">
               ${logo}

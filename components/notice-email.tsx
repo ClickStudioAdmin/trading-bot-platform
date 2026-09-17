@@ -3,6 +3,11 @@ import type { NotificationNotice } from "@/lib/notifications/copy";
 import {
   MEMBER_EMAIL_FOOTER,
   MEMBER_NOTIFICATIONS_PATH,
+  NOTICE_EMAIL_CARD,
+  NOTICE_EMAIL_LINE,
+  NOTICE_EMAIL_LOGO_PX,
+  NOTICE_EMAIL_PAGE,
+  NOTICE_EMAIL_WIDTH_PX,
 } from "@/lib/notifications/email";
 import { DEFAULT_PLATFORM_NAME } from "@/lib/platform/brand";
 
@@ -19,63 +24,76 @@ export function NoticeEmail({
 }) {
   return (
     <div
-      className="w-full rounded-card border p-5"
-      style={{
-        background: "#ffffff",
-        borderColor: "#e5e7eb",
-        color: "#111827",
-      }}
+      className="flex justify-center px-3 py-6"
+      style={{ background: NOTICE_EMAIL_PAGE }}
     >
-      {logoUrl ? (
-        <img
-          src={logoUrl}
-          alt=""
-          className="mb-3 h-8 w-auto max-w-[96px] object-contain"
-        />
-      ) : null}
-      <p
-        className="text-xs uppercase tracking-[0.12em]"
-        style={{ color: "#6b7280" }}
+      <div
+        className="w-full rounded-card border p-5"
+        style={{
+          maxWidth: NOTICE_EMAIL_WIDTH_PX,
+          background: NOTICE_EMAIL_CARD,
+          borderColor: NOTICE_EMAIL_LINE,
+          color: "#111827",
+        }}
       >
-        {brand}
-      </p>
-      <h3 className="mt-3 text-base font-semibold" style={{ color: "#111827" }}>
-        {notice.subject}
-      </h3>
-      {notice.paragraphs.map((paragraph) => (
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt=""
+            className="mb-3 w-auto object-contain"
+            style={{
+              height: 32,
+              maxWidth: NOTICE_EMAIL_LOGO_PX,
+            }}
+          />
+        ) : null}
         <p
-          key={paragraph}
-          className="mt-2 text-sm"
-          style={{ color: "#4b5563" }}
+          className="text-xs uppercase tracking-[0.12em]"
+          style={{ color: "#6b7280" }}
         >
-          {paragraph}
+          {brand}
         </p>
-      ))}
-      <p className="mt-4">
-        <span
-          className="inline-block rounded-control px-3 py-1.5 text-sm font-medium"
-          style={{ background: "#8b6cf6", color: "#ffffff" }}
+        <h3
+          className="mt-3 text-base font-semibold"
+          style={{ color: "#111827" }}
         >
-          {notice.actionLabel}
-        </span>
-      </p>
-      {footer === MEMBER_EMAIL_FOOTER ? (
-        <p className="mt-4 text-xs" style={{ color: "#6b7280" }}>
-          You can modify your email preferences on Account Settings →{" "}
-          <Link
-            href={MEMBER_NOTIFICATIONS_PATH}
-            className="underline"
-            style={{ color: "#8b6cf6" }}
+          {notice.subject}
+        </h3>
+        {notice.paragraphs.map((paragraph) => (
+          <p
+            key={paragraph}
+            className="mt-2 text-sm"
+            style={{ color: "#4b5563" }}
           >
-            Notifications
-          </Link>
-          .
+            {paragraph}
+          </p>
+        ))}
+        <p className="mt-4">
+          <span
+            className="inline-block rounded-control px-3 py-1.5 text-sm font-medium"
+            style={{ background: "#8b6cf6", color: "#ffffff" }}
+          >
+            {notice.actionLabel}
+          </span>
         </p>
-      ) : footer ? (
-        <p className="mt-4 text-xs" style={{ color: "#6b7280" }}>
-          {footer}
-        </p>
-      ) : null}
+        {footer === MEMBER_EMAIL_FOOTER ? (
+          <p className="mt-4 text-xs" style={{ color: "#6b7280" }}>
+            You can modify your email preferences on Account Settings →{" "}
+            <Link
+              href={MEMBER_NOTIFICATIONS_PATH}
+              className="underline"
+              style={{ color: "#8b6cf6" }}
+            >
+              Notifications
+            </Link>
+            .
+          </p>
+        ) : footer ? (
+          <p className="mt-4 text-xs" style={{ color: "#6b7280" }}>
+            {footer}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

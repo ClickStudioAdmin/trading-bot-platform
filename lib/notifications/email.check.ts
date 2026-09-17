@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { notificationCopy } from "./copy";
 import {
   MEMBER_EMAIL_FOOTER,
+  NOTICE_EMAIL_PAGE,
+  NOTICE_EMAIL_WIDTH_PX,
   appBaseUrl,
   escapeNoticeHtml,
   noticeAbsoluteHref,
@@ -39,6 +41,8 @@ assert.match(
 );
 assert.match(html, />Notifications<\/a>/);
 assert.match(html, /#ffffff/);
+assert.match(html, NOTICE_EMAIL_PAGE);
+assert.match(html, new RegExp(`width="${NOTICE_EMAIL_WIDTH_PX}"`));
 assert.match(html, /Trading Bot Platform/);
 assert.match(
   noticeEmailHtml(notice, {

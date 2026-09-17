@@ -57,7 +57,7 @@ export function SiteLogo({
             {name}
           </span>
           <span className="block text-[11px] text-ink-muted">
-            Trading desk
+            Trading Bots
           </span>
         </span>
       )}
