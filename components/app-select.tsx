@@ -30,7 +30,7 @@ export const LiveFilterSubmit = createContext<(() => void) | null>(null);
 const FIELD_TRIGGER =
   "inline-flex w-full min-w-0 items-center justify-between gap-3 rounded-control border border-line bg-surface-raised px-3 py-2 text-left text-sm text-ink hover:border-line-strong focus:border-line-strong focus:outline-none disabled:opacity-40";
 const ACTION_TRIGGER =
-  "inline-flex w-full min-w-0 items-center justify-between gap-3 rounded-control bg-accent-strong px-4 py-2 text-left text-sm font-medium text-ink hover:bg-accent focus:outline-none disabled:opacity-40";
+  "inline-flex w-max max-w-full shrink-0 items-center justify-between gap-3 rounded-control bg-accent-strong px-4 py-2 text-left text-sm font-medium text-ink hover:bg-accent focus:outline-none disabled:opacity-40";
 
 export function AppSelect({
   name,
