@@ -125,12 +125,12 @@ export default async function AccountSettingsPage({
       ) : null}
       {saved === "2fa" ? (
         <p className="mt-6 text-sm text-success">
-          Google Authenticator is on.
+          2FA is on.
         </p>
       ) : null}
       {saved === "2fa-off" ? (
         <p className="mt-6 text-sm text-success">
-          Google Authenticator is off.
+          2FA is off.
         </p>
       ) : null}
       {saved === "notifications" ? (

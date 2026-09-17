@@ -65,10 +65,10 @@ export function TotpSettings({
     return (
       <section className="space-y-4 rounded-card border border-line bg-surface p-5">
         <div>
-          <p className="text-sm text-ink">Set up Google Authenticator</p>
+          <p className="text-sm text-ink">Set up 2FA</p>
           <p className="mt-1 text-xs text-ink-muted">
             Scan the QR code in Google Authenticator, then enter the 6-digit
-            code to turn it on.
+            code to enable 2FA.
           </p>
         </div>
         <div className="inline-flex rounded-card bg-white p-3">
@@ -101,10 +101,10 @@ export function TotpSettings({
           </label>
           <div className="flex flex-wrap gap-2">
             <PendingSubmitButton
-              pendingLabel="Checking…"
+              pendingLabel="Enabling…"
               className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
             >
-              Turn on
+              Enable 2FA
             </PendingSubmitButton>
           </div>
         </form>
@@ -124,9 +124,9 @@ export function TotpSettings({
     return (
       <section className="space-y-4 rounded-card border border-line bg-surface p-5">
         <div>
-          <p className="text-sm text-ink">Google Authenticator is on</p>
+          <p className="text-sm text-ink">2FA is on</p>
           <p className="mt-1 text-xs text-ink-muted">
-            Sign-in asks for a 6-digit code after your password. Turn it off
+            Sign-in asks for a 6-digit code after your password. Disable it
             with your current password and a code from the app (or a leftover
             recovery code).
           </p>
@@ -152,10 +152,10 @@ export function TotpSettings({
             />
           </label>
           <PendingSubmitButton
-            pendingLabel="Turning off…"
+            pendingLabel="Disabling…"
             className="rounded-control border border-danger/40 px-4 py-2 text-sm text-danger hover:bg-danger/10"
           >
-            Turn off
+            Disable 2FA
           </PendingSubmitButton>
         </form>
       </section>
@@ -165,7 +165,7 @@ export function TotpSettings({
   return (
     <section className="space-y-4 rounded-card border border-line bg-surface p-5">
       <div>
-        <p className="text-sm text-ink">Google Authenticator</p>
+        <p className="text-sm text-ink">2FA</p>
         <p className="mt-1 text-xs text-ink-muted">
           Add a 6-digit code after your password at sign-in. Use the Google
           Authenticator app on your phone.
@@ -177,12 +177,12 @@ export function TotpSettings({
         </p>
       ) : (
         <form action={startTotpEnrollAction}>
-          <PendingSubmitButton
-            pendingLabel="Starting…"
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-          >
-            Turn on Google Authenticator
-          </PendingSubmitButton>
+            <PendingSubmitButton
+              pendingLabel="Starting…"
+              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            >
+              Enable 2FA
+            </PendingSubmitButton>
         </form>
       )}
     </section>
