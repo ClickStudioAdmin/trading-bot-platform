@@ -8,7 +8,7 @@ Never trust the browser for entitlements, verification, 2FA, or admin permission
 
 ## Status
 
-**V1 item 1 (identity) in repo** 16 Sep 2026: verify on signup + forgot password + unverified wall. **V1 item 2 (2FA) in repo** 17 Sep 2026: Google Authenticator enroll + sign-in. Stop. Do not start gates (V1 item 4) until Click says go.
+**V1 item 1 (identity) accepted 17 Sep 2026:** verify on signup + forgot password + unverified wall. **V1 item 2 (2FA) accepted 17 Sep 2026:** Google Authenticator enroll + sign-in. Next is UI cleanup (V1 item 3). Stop. Do not start UI cleanup or gates (V1 item 4) until Click says go.
 
 ## Purpose
 
@@ -18,7 +18,7 @@ Prove the login (verified email; later optional 2FA) then, in V1 item 4, gate pr
 
 | V1 | Step | Who | Done when |
 | --- | --- | --- | --- |
-| 1 | Email verification + forgot password | Agent | Signup (platform and affiliate) creates the login, signs them in, and mails a one-time verify link. Unverified logins hit a **verify wall** (below). Public forgot-password mails a one-time reset link. Existing members are grandfathered verified. First-desk `/welcome` wizard removed; verified new users land on `/account`. **In repo 16 Sep 2026.** |
+| 1 | Email verification + forgot password | Agent | Signup (platform and affiliate) creates the login, signs them in, and mails a one-time verify link. Unverified logins hit a **verify wall** (below). Public forgot-password mails a one-time reset link. Existing members are grandfathered verified. First-desk `/welcome` wizard removed; verified new users land on `/account`. **Accepted 17 Sep 2026.** |
 | 4a | Entitlements + Upgrade UX | Agent | `assertEntitlement` on create desk, Live, copy, backtest, caps, and identity flags. A plan may **require** verified email and/or 2FA (admin plan flag). Controls disable; page/inline **Upgrade** (or “Turn on 2FA”) names the cheapest public plan that unlocks it. Cap notice: “You have 2 of 2 desks. Upgrade to add another.” Server actions reject. Billing page already exists. Stop. |
 | 4b | Downgrade grace | Agent | Entitlements change at period end. Admin grace days (default 7, already saved on `/admin/affiliates`). Banner + operable extras. After grace, billing worker Close/Disable **oldest desk first**: forbidden features, then numeric caps. Upgrade during grace cancels the sweep. Ledgers stay. Stop. |
 | 4c | Desk test | Click | Free gates visible/disabled. A plan that requires 2FA. Upgrade Stripe test. Crypto top-up + leftover debit. Affiliate list/chart/stats. Hold then withdraw. Downgrade grace then oldest-first exit. Archive a used plan (cannot delete). |

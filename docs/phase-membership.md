@@ -190,4 +190,4 @@ KYC / travel-rule / money-transmitter: Click owns compliance. V1 is admin-approv
 
 ## After this
 
-See [roadmap.md](roadmap.md). Notifications are shipped. Current V1 item is identity.
+See [roadmap.md](roadmap.md). Notifications are shipped. Identity and 2FA are accepted. Next V1 item is UI cleanup.

@@ -2,13 +2,13 @@
 
 **V1 item 2** ([roadmap.md](roadmap.md)). Spec written 16 Sep 2026 when Click split this out of entitlements. Identity (verify + forgot password) is V1 item 1. Plan-required 2FA and Upgrade gates are V1 item 4 ([phase-entitlements.md](phase-entitlements.md)).
 
-In repo. Stop. Do not start UI cleanup or plan gates until Click says go.
+**Accepted 17 Sep 2026.** Stop. Do not start UI cleanup or plan gates until Click says go.
 
 Never trust the browser. Server actions reject. Secrets never go in `NEXT_PUBLIC_` or the frontend bundle beyond the enroll QR the signed-in member asked for.
 
 ## Status
 
-In repo 17 Sep 2026. Google Authenticator TOTP on Account Settings → Password & Security. Sign-in asks for the 6-digit code (or a one-time recovery code). Not a plan gate.
+Accepted 17 Sep 2026. Google Authenticator TOTP on Account Settings → Password & Security. Sign-in asks for the 6-digit code (or a one-time recovery code). Not a plan gate.
 
 ## Purpose
 

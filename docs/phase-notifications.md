@@ -134,4 +134,4 @@ Desk Activity and blotters stay. They are not the inbox.
 
 ## After this
 
-See [roadmap.md](roadmap.md). Current V1 item is identity. Admin roles are V2 ([phase-admin-roles.md](phase-admin-roles.md)).
+See [roadmap.md](roadmap.md). Identity and 2FA are accepted. Next V1 item is UI cleanup. Admin roles are V2 ([phase-admin-roles.md](phase-admin-roles.md)).

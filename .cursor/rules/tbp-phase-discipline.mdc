@@ -13,7 +13,7 @@ Feature work happens on `develop`. Merge to `main` only when the user is ready f
 
 Phase 11 is the first managing playbook. Type `dca` on the desk. Same `futures_*` ledger and `runFuturesCommand`. The app owns orders and exits. Signals only arm. Stacked playbooks, one per contract and side. The engine worker claims **one desk at a time** (Postgres leases). Do not call private exchange APIs from the browser. Paper accounts still use the in-app ledger.
 
-**Current V1 item: 2FA** ([docs/phase-2fa.md](docs/phase-2fa.md)). Google Authenticator enroll + sign-in is in repo. Stop. Next is UI cleanup, then entitlements / plan gates, then onboarding. Identity (verify + forgot password) is in repo. V2 (webhooks, backup candles, scale-in, MEXC, admin roles, …) has no order.
+**Current V1 item: UI refinement and cleanup** (V1 item 3). Identity and 2FA are accepted ([docs/phase-entitlements.md](docs/phase-entitlements.md), [docs/phase-2fa.md](docs/phase-2fa.md)). Do not start item 3 until Click says go and locks screens. Next after that is entitlements / plan gates, then onboarding. V2 (webhooks, backup candles, scale-in, MEXC, admin roles, …) has no order.
 
 Do not create later-phase tables or speculative architecture. Standing notes: [docs/click-list.md](docs/click-list.md).
 
