@@ -21,7 +21,10 @@ Style: dark modern business portal. Tokens live in `app/globals.css` (`@theme`).
 | `plan-header` | `#764DED` | Plan compare card headers |
 | `success` | `#34D399` | Positive change |
 | `danger` | `#F07167` | Negative change, alerts, badges |
-| `warning` | `#F5B942` | Caution, secondary chart segment |
+| `warning` | `#F5B942` | Caution, pending, secondary chart segment |
+| `mode-paper` | `#8B93A1` | Desk mode Paper (sidebar dot and filter) |
+| `mode-demo` | `#6A9EAE` | Desk mode Demo / testnet |
+| `mode-live` | `#7B8EB8` | Desk mode Live. Not danger red, not accent purple. |
 
 ## Type
 

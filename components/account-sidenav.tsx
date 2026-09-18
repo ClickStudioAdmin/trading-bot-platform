@@ -339,9 +339,9 @@ function DeskNavLink({
 }
 
 const MODE_DOT: Record<DeskDisplayMode, string> = {
-  paper: "bg-ink-muted/65",
-  demo: "bg-warning/55",
-  live: "bg-danger/55",
+  paper: "bg-mode-paper/80",
+  demo: "bg-mode-demo/80",
+  live: "bg-mode-live/80",
 };
 
 const MODE_FILTER_TONE: Record<
@@ -353,16 +353,16 @@ const MODE_FILTER_TONE: Record<
     active: "bg-surface-raised font-medium text-ink",
   },
   paper: {
-    idle: "text-ink-muted/80 hover:text-ink-muted",
-    active: "bg-ink-faint/15 font-medium text-ink-muted",
+    idle: "text-mode-paper/80 hover:text-mode-paper",
+    active: "bg-mode-paper/15 font-medium text-mode-paper",
   },
   demo: {
-    idle: "text-warning/65 hover:text-warning/80",
-    active: "bg-warning/10 font-medium text-warning/80",
+    idle: "text-mode-demo/80 hover:text-mode-demo",
+    active: "bg-mode-demo/15 font-medium text-mode-demo",
   },
   live: {
-    idle: "text-danger/65 hover:text-danger/80",
-    active: "bg-danger/10 font-medium text-danger/80",
+    idle: "text-mode-live/80 hover:text-mode-live",
+    active: "bg-mode-live/15 font-medium text-mode-live",
   },
 };
 

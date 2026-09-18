@@ -15,6 +15,9 @@
   --color-success: #34d399;
   --color-danger: #f07167;
   --color-warning: #f5b942;
+  --color-mode-paper: #8b93a1;
+  --color-mode-demo: #6a9eae;
+  --color-mode-live: #7b8eb8;
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --radius-card: 1rem;
   --radius-control: 0.5rem;
