@@ -7,6 +7,15 @@ import {
   type ChartContextMenuState,
 } from "@/components/chart-context-menu";
 import {
+  IconCamera,
+  IconCheck,
+  IconCollapse,
+  IconCopy,
+  IconExitMonitor,
+  IconExpand,
+  IconMonitor,
+} from "@/components/icons";
+import {
   attachRightAxisWheel,
   CHART_SCALE_OPTIONS,
   focusedLogicalRange,
@@ -17,6 +26,8 @@ import {
 } from "@/lib/charts/interact";
 import type { ChartOverlay } from "@/lib/charts/overlay";
 import type { CandleBar } from "@/lib/market/candles";
+
+const CHART_ICON = { size: 16, className: "size-4" } as const;
 
 type ChartHandle = {
   takeScreenshot: (
@@ -70,148 +81,6 @@ export async function copyChartScreenshot(chart: ChartHandle): Promise<boolean> 
 const SHOT_BUTTON =
   "inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink";
 
-export function CopyImageIcon() {
-  return (
-    <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
-      <rect
-        x="6.25"
-        y="6.25"
-        width="8"
-        height="8"
-        rx="1.4"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M11.5 6.1V4.7A1.2 1.2 0 0 0 10.3 3.5H4.7A1.2 1.2 0 0 0 3.5 4.7v5.6A1.2 1.2 0 0 0 4.7 11.5H6.1"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-export function ExpandIcon() {
-  return (
-    <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
-      <path
-        d="M3.5 7.25V3.5H7.25"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M14.5 7.25V3.5H10.75"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M3.5 10.75V14.5H7.25"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M14.5 10.75V14.5H10.75"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-export function CollapseIcon() {
-  return (
-    <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
-      <path
-        d="M7.25 3.5V7.25H3.5"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M10.75 3.5V7.25H14.5"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M7.25 14.5V10.75H3.5"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M10.75 14.5V10.75H14.5"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-export function MonitorIcon() {
-  return (
-    <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
-      <rect
-        x="2.5"
-        y="3.5"
-        width="13"
-        height="9"
-        rx="1.4"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M7 14.5h4M9 12.5v2"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-export function ExitMonitorIcon() {
-  return (
-    <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
-      <rect
-        x="2.5"
-        y="3.5"
-        width="13"
-        height="9"
-        rx="1.4"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M7 14.5h4M9 12.5v2"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-      <path
-        d="M6.2 6.2 8 8M11.8 6.2 10 8M6.2 10.3 8 8.5M11.8 10.3 10 8.5"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 type WebkitFullscreenDocument = Document & {
   webkitFullscreenElement?: Element | null;
   webkitExitFullscreen?: () => Promise<void>;
@@ -242,34 +111,6 @@ function exitMonitorFullscreen() {
     return Promise.resolve();
   }
   return exit();
-}
-
-export function CameraIcon() {
-  return (
-    <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
-      <path
-        d="M3.6 6.6h1.85l1.1-1.55h4.9L12.55 6.6H14.4A1.6 1.6 0 0 1 16 8.2v5.2a1.6 1.6 0 0 1-1.6 1.6H3.6A1.6 1.6 0 0 1 2 13.4V8.2a1.6 1.6 0 0 1 1.6-1.6Z"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
-      <circle cx="9" cy="10.7" r="2.15" stroke="currentColor" strokeWidth="1.4" />
-    </svg>
-  );
-}
-
-export function ChartCheckIcon() {
-  return (
-    <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
-      <path
-        d="M4.5 9.2 7.4 12l6.1-6.4"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
 }
 
 export function ChartScreenshotControls({
@@ -317,7 +158,7 @@ export function ChartScreenshotControls({
           });
         }}
       >
-        {copied ? <ChartCheckIcon /> : <CopyImageIcon />}
+        {copied ? <IconCheck {...CHART_ICON} /> : <IconCopy {...CHART_ICON} />}
       </button>
       <button
         type="button"
@@ -331,7 +172,7 @@ export function ChartScreenshotControls({
           }
         }}
       >
-        <CameraIcon />
+        <IconCamera {...CHART_ICON} />
       </button>
     </div>
   );
@@ -578,7 +419,7 @@ export function DeskChart({
                 setExpanded(true);
               }}
             >
-              {expanded ? <CollapseIcon /> : <ExpandIcon />}
+              {expanded ? <IconCollapse {...CHART_ICON} /> : <IconExpand {...CHART_ICON} />}
             </button>
           )}
           <button
@@ -610,7 +451,7 @@ export function DeskChart({
               });
             }}
           >
-            {monitorFull ? <ExitMonitorIcon /> : <MonitorIcon />}
+            {monitorFull ? <IconExitMonitor {...CHART_ICON} /> : <IconMonitor {...CHART_ICON} />}
           </button>
           <ChartScreenshotControls
             getChart={() => chartRef.current}

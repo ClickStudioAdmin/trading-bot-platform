@@ -1,7 +1,10 @@
 import {
   Archive,
   ArchiveRestore,
+  ArrowLeftRight,
   Ban,
+  Camera,
+  ChartColumn,
   Check,
   CheckCheck,
   ChevronDown,
@@ -13,21 +16,30 @@ import {
   CircleX,
   Copy,
   Download,
+  FileText,
   FilterX,
   FolderPlus,
+  Landmark,
   ListFilter,
+  Maximize2,
+  Minimize2,
   Minus,
+  Monitor,
+  MonitorX,
   LoaderCircle,
   Mail,
   MailOpen,
   Pencil,
   Play,
   Plus,
+  Radio,
   RefreshCw,
   Share2,
   SquareArrowOutUpRight,
   Star,
   Trash2,
+  Triangle,
+  TrendingUp,
   Undo2,
   Upload,
   X,
@@ -50,6 +62,13 @@ export type LucideIconEntry = {
 /** Add a Lucide icon here before using it. Import from this file, never `lucide-react`. */
 export const LUCIDE_ICONS = [
   {
+    id: "arrow-left-right",
+    name: "Cash and Carry",
+    lucide: "ArrowLeftRight",
+    usedIn: "Desk type",
+    Icon: ArrowLeftRight,
+  },
+  {
     id: "archive",
     name: "Archive",
     lucide: "Archive",
@@ -71,10 +90,24 @@ export const LUCIDE_ICONS = [
     Icon: Ban,
   },
   {
+    id: "camera",
+    name: "Camera",
+    lucide: "Camera",
+    usedIn: "Chart toolbar save snapshot",
+    Icon: Camera,
+  },
+  {
+    id: "chart-column",
+    name: "DCA",
+    lucide: "ChartColumn",
+    usedIn: "Desk type",
+    Icon: ChartColumn,
+  },
+  {
     id: "check",
     name: "Check",
     lucide: "Check",
-    usedIn: "Pending submit, checkboxes, starter pack, plan compare",
+    usedIn: "Pending submit, checkboxes, starter pack, plan compare, chart copied",
     Icon: Check,
   },
   {
@@ -137,8 +170,15 @@ export const LUCIDE_ICONS = [
     id: "copy",
     name: "Copy",
     lucide: "Copy",
-    usedIn: "Clone plan, copy affiliate URL",
+    usedIn: "Clone plan, copy affiliate URL, chart snapshot",
     Icon: Copy,
+  },
+  {
+    id: "file-text",
+    name: "Paper",
+    lucide: "FileText",
+    usedIn: "Desk mark",
+    Icon: FileText,
   },
   {
     id: "download",
@@ -155,11 +195,25 @@ export const LUCIDE_ICONS = [
     Icon: FilterX,
   },
   {
+    id: "expand",
+    name: "Expand",
+    lucide: "Maximize2",
+    usedIn: "Chart toolbar fill browser",
+    Icon: Maximize2,
+  },
+  {
     id: "folder-plus",
     name: "Add to folder",
     lucide: "FolderPlus",
     usedIn: "Template bulk add to folder",
     Icon: FolderPlus,
+  },
+  {
+    id: "landmark",
+    name: "Bybit",
+    lucide: "Landmark",
+    usedIn: "Desk mark",
+    Icon: Landmark,
   },
   {
     id: "list-filter",
@@ -169,11 +223,32 @@ export const LUCIDE_ICONS = [
     Icon: ListFilter,
   },
   {
+    id: "collapse",
+    name: "Collapse",
+    lucide: "Minimize2",
+    usedIn: "Chart toolbar exit browser fill",
+    Icon: Minimize2,
+  },
+  {
     id: "minus",
     name: "Limit",
     lucide: "Minus",
     usedIn: "Blotter limit close",
     Icon: Minus,
+  },
+  {
+    id: "monitor",
+    name: "Monitor",
+    lucide: "Monitor",
+    usedIn: "Chart toolbar full screen",
+    Icon: Monitor,
+  },
+  {
+    id: "monitor-x",
+    name: "Exit monitor",
+    lucide: "MonitorX",
+    usedIn: "Chart toolbar exit full screen",
+    Icon: MonitorX,
   },
   {
     id: "loader-circle",
@@ -218,6 +293,13 @@ export const LUCIDE_ICONS = [
     Icon: SquareArrowOutUpRight,
   },
   {
+    id: "radio",
+    name: "Signal",
+    lucide: "Radio",
+    usedIn: "Desk type",
+    Icon: Radio,
+  },
+  {
     id: "plus",
     name: "Plus",
     lucide: "Plus",
@@ -258,6 +340,20 @@ export const LUCIDE_ICONS = [
     lucide: "X",
     usedIn: "AppSelect pills, panel close, cancel order, clear selection",
     Icon: X,
+  },
+  {
+    id: "triangle",
+    name: "Hyperliquid",
+    lucide: "Triangle",
+    usedIn: "Desk mark",
+    Icon: Triangle,
+  },
+  {
+    id: "trending-up",
+    name: "Perps",
+    lucide: "TrendingUp",
+    usedIn: "Desk type",
+    Icon: TrendingUp,
   },
   {
     id: "trash",
@@ -420,4 +516,52 @@ export function IconUnwind(props: LucideProps) {
 
 export function IconImport(props: LucideProps) {
   return <Upload aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconPaper(props: LucideProps) {
+  return <FileText aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconBybit(props: LucideProps) {
+  return <Landmark aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconHyperliquid(props: LucideProps) {
+  return <Triangle aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconDca(props: LucideProps) {
+  return <ChartColumn aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconPerps(props: LucideProps) {
+  return <TrendingUp aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconCarry(props: LucideProps) {
+  return <ArrowLeftRight aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconSignal(props: LucideProps) {
+  return <Radio aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconCamera(props: LucideProps) {
+  return <Camera aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconExpand(props: LucideProps) {
+  return <Maximize2 aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconCollapse(props: LucideProps) {
+  return <Minimize2 aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconMonitor(props: LucideProps) {
+  return <Monitor aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconExitMonitor(props: LucideProps) {
+  return <MonitorX aria-hidden strokeWidth={STROKE} {...props} />;
 }

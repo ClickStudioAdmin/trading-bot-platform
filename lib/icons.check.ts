@@ -3,7 +3,6 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LUCIDE_ICONS } from "../components/icons";
-import { CUSTOM_ICON_IDS } from "./icon-catalog";
 
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const ALLOWED_LUCIDE = join("components", "icons.tsx");
@@ -34,15 +33,6 @@ assert.equal(new Set(names).size, names.length, "Lucide catalog names must be un
 
 const lucideIds = LUCIDE_ICONS.map((row) => row.id);
 assert.equal(new Set(lucideIds).size, lucideIds.length, "Lucide catalog ids must be unique");
-
-assert.equal(
-  new Set(CUSTOM_ICON_IDS).size,
-  CUSTOM_ICON_IDS.length,
-  "Custom catalog ids must be unique",
-);
-
-const overlap = lucideIds.filter((id) => CUSTOM_ICON_IDS.includes(id));
-assert.deepEqual(overlap, [], "Lucide and custom catalogs share an id");
 
 const leaks: string[] = [];
 for (const file of walk(ROOT)) {
