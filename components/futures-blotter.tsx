@@ -350,8 +350,8 @@ export function OpenFuturesTrades({
           />
         }
       >
-        <table className="w-full min-w-max text-left text-sm">
-          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
+        <table className="w-full min-w-[48rem] text-left text-sm">
+          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               <th className="w-10 px-2 py-3 font-medium">
                 <ColumnHint

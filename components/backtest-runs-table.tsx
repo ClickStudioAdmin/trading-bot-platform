@@ -357,8 +357,8 @@ export function BacktestRunsTable({
           />
         }
       >
-        <table className="w-full min-w-max text-left text-sm">
-          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
+        <table className="w-full min-w-[48rem] text-left text-sm">
+          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               <th className="w-10 px-4 py-3">
                 {removableIds.length > 0 ? (
