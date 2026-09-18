@@ -271,7 +271,7 @@ function ManualDeskGroup({
           </Link>
         )}
       </div>
-      <nav aria-label="Manual trading desks" className="mt-3 flex flex-col gap-1">
+      <nav aria-label="Manual trading desks" className="mt-3 flex flex-col gap-1 pl-5">
         {visible.map((desk) => (
           <DeskNavLink
             key={desk.id}
