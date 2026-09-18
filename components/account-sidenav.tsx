@@ -33,7 +33,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { upgradeAffiliateToPlatformAction } from "@/lib/membership/affiliate-actions";
 import { IconChevronDown } from "@/components/icons";
 import { NavBadge } from "@/components/nav-badge";
-import { NavItemIcon } from "@/components/site-nav";
+import { NAV_IDLE_CLASS, NavItemIcon } from "@/components/site-nav";
 import { ACCOUNT_DESK_LINKS, AFFILIATE_ONLY_LINKS } from "@/lib/site-links";
 
 export function AccountSidenav({
@@ -196,7 +196,7 @@ function DeskGroup({
                   className={`flex size-6 shrink-0 items-center justify-center rounded-control text-base leading-none ${
                     creating
                       ? "bg-surface-raised text-ink"
-                      : "text-ink-faint hover:bg-surface-raised hover:text-ink"
+                      : NAV_IDLE_CLASS
                   }`}
                 >
                   +
@@ -218,7 +218,7 @@ function DeskGroup({
                   className={`flex items-center gap-1.5 rounded-control px-3 py-2 text-sm ${
                     creating
                       ? "bg-surface-raised text-ink"
-                      : "text-ink-faint hover:bg-surface-raised hover:text-ink"
+                      : NAV_IDLE_CLASS
                   }`}
                 >
                   <span aria-hidden className="text-base leading-none">
@@ -266,7 +266,7 @@ function ManualDeskGroup({
             className={`flex size-6 shrink-0 items-center justify-center rounded-control text-base leading-none ${
               creating
                 ? "bg-surface-raised text-ink"
-                : "text-ink-faint hover:bg-surface-raised hover:text-ink"
+                : NAV_IDLE_CLASS
             }`}
           >
             +
@@ -288,7 +288,7 @@ function ManualDeskGroup({
             className={`flex items-center gap-1.5 rounded-control px-3 py-2 text-sm ${
               creating
                 ? "bg-surface-raised text-ink"
-                : "text-ink-faint hover:bg-surface-raised hover:text-ink"
+                : NAV_IDLE_CLASS
             }`}
           >
             <span aria-hidden className="text-base leading-none">
@@ -324,7 +324,7 @@ function DeskNavLink({
       className={`flex items-center gap-2 rounded-control px-3 py-2 ${
         current
           ? "bg-surface-raised text-ink"
-          : "text-ink-faint hover:bg-surface-raised hover:text-ink"
+          : NAV_IDLE_CLASS
       }`}
     >
       <DeskModeDot mode={mode} hint={hint} />
@@ -547,7 +547,7 @@ function NavGroup({
                 className={`flex items-center justify-between gap-2 rounded-control px-3 py-1.5 text-sm ${
                   active
                     ? "bg-surface-raised text-ink"
-                    : "text-ink-faint hover:bg-surface-raised hover:text-ink"
+                    : NAV_IDLE_CLASS
                 }`}
               >
                 <span className="flex min-w-0 items-center gap-2">
