@@ -325,7 +325,7 @@ function DeskNavLink({
           : "text-ink-faint hover:bg-surface-raised hover:text-ink"
       }`}
     >
-      <span className="min-w-0 truncate text-sm text-ink">{desk.name}</span>
+      <span className="min-w-0 truncate text-sm">{desk.name}</span>
       <DeskModeBadge mode={mode} hint={hint} />
       {formatDeskCopyBadge(desk) ? (
         <span className="shrink-0 rounded-control bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
