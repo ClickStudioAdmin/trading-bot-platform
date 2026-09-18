@@ -18,8 +18,14 @@ import {
   Download,
   FileText,
   FilterX,
+  FlaskConical,
   FolderPlus,
+  Handshake,
   Landmark,
+  Layers,
+  LayoutDashboard,
+  LayoutGrid,
+  LayoutTemplate,
   ListFilter,
   Maximize2,
   Minimize2,
@@ -42,6 +48,9 @@ import {
   TrendingUp,
   Undo2,
   Upload,
+  UserCog,
+  Users,
+  Wallet,
   X,
   type LucideIcon,
   type LucideProps,
@@ -376,6 +385,69 @@ export const LUCIDE_ICONS = [
     usedIn: "Template import",
     Icon: Upload,
   },
+  {
+    id: "users",
+    name: "Copy Trading",
+    lucide: "Users",
+    usedIn: "Header nav",
+    Icon: Users,
+  },
+  {
+    id: "flask-conical",
+    name: "Backtesting Tool",
+    lucide: "FlaskConical",
+    usedIn: "Header nav",
+    Icon: FlaskConical,
+  },
+  {
+    id: "layers",
+    name: "Plans",
+    lucide: "Layers",
+    usedIn: "Header nav",
+    Icon: Layers,
+  },
+  {
+    id: "handshake",
+    name: "Affiliates",
+    lucide: "Handshake",
+    usedIn: "Header nav",
+    Icon: Handshake,
+  },
+  {
+    id: "layout-dashboard",
+    name: "Overview",
+    lucide: "LayoutDashboard",
+    usedIn: "Account sidenav",
+    Icon: LayoutDashboard,
+  },
+  {
+    id: "user-cog",
+    name: "Profile & Settings",
+    lucide: "UserCog",
+    usedIn: "Account sidenav",
+    Icon: UserCog,
+  },
+  {
+    id: "wallet",
+    name: "Billing & Account",
+    lucide: "Wallet",
+    usedIn: "Account sidenav",
+    Icon: Wallet,
+  },
+  {
+    id: "layout-grid",
+    name: "Manage Desks",
+    lucide: "LayoutGrid",
+    usedIn: "Account sidenav",
+    Icon: LayoutGrid,
+  },
+  {
+    id: "layout-template",
+    name: "Bot Templates",
+    lucide: "LayoutTemplate",
+    usedIn: "Account sidenav",
+    Icon: LayoutTemplate,
+  },
 ] as const satisfies readonly LucideIconEntry[];
 
 export function IconArchive(props: LucideProps) {
@@ -564,4 +636,40 @@ export function IconMonitor(props: LucideProps) {
 
 export function IconExitMonitor(props: LucideProps) {
   return <MonitorX aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconCopyTrading(props: LucideProps) {
+  return <Users aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconBacktest(props: LucideProps) {
+  return <FlaskConical aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconPlans(props: LucideProps) {
+  return <Layers aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconAffiliates(props: LucideProps) {
+  return <Handshake aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconOverview(props: LucideProps) {
+  return <LayoutDashboard aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconProfile(props: LucideProps) {
+  return <UserCog aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconBilling(props: LucideProps) {
+  return <Wallet aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconDesks(props: LucideProps) {
+  return <LayoutGrid aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconTemplates(props: LucideProps) {
+  return <LayoutTemplate aria-hidden strokeWidth={STROKE} {...props} />;
 }

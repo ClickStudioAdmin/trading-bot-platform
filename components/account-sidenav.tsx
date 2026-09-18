@@ -24,6 +24,7 @@ import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { upgradeAffiliateToPlatformAction } from "@/lib/membership/affiliate-actions";
 import { NavBadge } from "@/components/nav-badge";
+import { NavItemIcon } from "@/components/site-nav";
 import { ACCOUNT_DESK_LINKS, AFFILIATE_ONLY_LINKS } from "@/lib/site-links";
 
 export function AccountSidenav({
@@ -333,7 +334,10 @@ function NavGroup({
                   : "text-ink-faint hover:bg-surface-raised hover:text-ink"
               }`}
             >
-              <span>{link.label}</span>
+              <span className="flex min-w-0 items-center gap-2">
+                <NavItemIcon href={link.href} />
+                <span>{link.label}</span>
+              </span>
               <NavBadge count={badges?.[link.href] ?? 0} />
             </Link>
           );

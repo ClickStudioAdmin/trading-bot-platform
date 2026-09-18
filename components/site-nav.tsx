@@ -2,6 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  IconAffiliates,
+  IconBacktest,
+  IconBilling,
+  IconCopyTrading,
+  IconDesks,
+  IconOverview,
+  IconPlans,
+  IconProfile,
+  IconTemplates,
+} from "@/components/icons";
 import { NavBadge } from "@/components/nav-badge";
 import {
   AFFILIATE_ONLY_HEADER_LINKS,
@@ -9,6 +20,28 @@ import {
   PUBLIC_NAV_LINKS,
   usesSignedInAppChrome,
 } from "@/lib/site-links";
+
+const NAV_ICON = { size: 16, className: "size-4 shrink-0" } as const;
+
+const NAV_ICONS = {
+  "/account": IconOverview,
+  "/account/copy": IconCopyTrading,
+  "/account/backtests": IconBacktest,
+  "/account/plans": IconPlans,
+  "/account/settings": IconProfile,
+  "/account/billing": IconBilling,
+  "/account/sub-accounts": IconDesks,
+  "/account/templates": IconTemplates,
+  "/affiliates": IconAffiliates,
+} as const;
+
+export function NavItemIcon({ href }: { href: string }) {
+  const Icon = NAV_ICONS[href as keyof typeof NAV_ICONS];
+  if (!Icon) {
+    return null;
+  }
+  return <Icon {...NAV_ICON} />;
+}
 
 function navItemClass(active: boolean): string {
   return `rounded-control px-3 py-1.5 text-sm ${
@@ -85,6 +118,7 @@ export function HeaderBrowseLinks({
             href={link.href}
             className={`${navItemClass(active)} inline-flex items-center gap-2`}
           >
+            <NavItemIcon href={link.href} />
             {link.label}
             <NavBadge count={badges[link.href] ?? 0} />
           </Link>
