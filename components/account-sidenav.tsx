@@ -321,14 +321,14 @@ function DeskNavLink({
           void rememberTradingAccount(desk.id);
         }
       }}
-      className={`flex items-center gap-1.5 rounded-control px-3 py-2 ${
+      className={`flex items-center gap-2 rounded-control px-3 py-2 ${
         current
           ? "bg-surface-raised text-ink"
           : "text-ink-faint hover:bg-surface-raised hover:text-ink"
       }`}
     >
+      <DeskModeDot mode={mode} hint={hint} />
       <span className="min-w-0 truncate text-sm">{desk.name}</span>
-      <DeskModeBadge mode={mode} hint={hint} />
       {formatDeskCopyBadge(desk) ? (
         <span className="shrink-0 rounded-control bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
           Copy
@@ -338,13 +338,35 @@ function DeskNavLink({
   );
 }
 
-const MODE_BADGE_TONE: Record<DeskDisplayMode, string> = {
-  paper: "text-ink-muted",
-  demo: "text-warning",
-  live: "text-danger",
+const MODE_DOT: Record<DeskDisplayMode, string> = {
+  paper: "bg-ink-muted/65",
+  demo: "bg-warning/55",
+  live: "bg-danger/55",
 };
 
-function DeskModeBadge({
+const MODE_FILTER_TONE: Record<
+  DeskModeFilter,
+  { idle: string; active: string }
+> = {
+  all: {
+    idle: "text-ink-muted hover:text-ink",
+    active: "bg-surface-raised font-medium text-ink",
+  },
+  paper: {
+    idle: "text-ink-muted/80 hover:text-ink-muted",
+    active: "bg-ink-faint/15 font-medium text-ink-muted",
+  },
+  demo: {
+    idle: "text-warning/65 hover:text-warning/80",
+    active: "bg-warning/10 font-medium text-warning/80",
+  },
+  live: {
+    idle: "text-danger/65 hover:text-danger/80",
+    active: "bg-danger/10 font-medium text-danger/80",
+  },
+};
+
+function DeskModeDot({
   mode,
   hint,
 }: {
@@ -354,10 +376,9 @@ function DeskModeBadge({
   return (
     <span
       title={hint}
-      className={`shrink-0 text-[10px] ${MODE_BADGE_TONE[mode]}`}
-    >
-      {formatDeskDisplayMode(mode)}
-    </span>
+      aria-label={hint}
+      className={`size-1.5 shrink-0 rounded-full ${MODE_DOT[mode]}`}
+    />
   );
 }
 
@@ -410,17 +431,22 @@ function DeskModeFilterBar({
           const active = value === option;
           const label =
             option === "all" ? "All" : formatDeskDisplayMode(option);
+          const tone = MODE_FILTER_TONE[option];
           return (
             <button
               key={option}
               type="button"
               onClick={() => onChange(option)}
-              className={`min-w-0 flex-1 rounded-control px-1 py-1 text-[11px] ${
-                active
-                  ? "bg-surface-raised font-medium text-ink"
-                  : "text-ink-muted hover:text-ink"
+              className={`inline-flex min-w-0 flex-1 items-center justify-center gap-1 rounded-control px-1 py-1 text-[11px] ${
+                active ? tone.active : tone.idle
               }`}
             >
+              {option === "all" ? null : (
+                <span
+                  aria-hidden
+                  className={`size-1.5 shrink-0 rounded-full ${MODE_DOT[option]}`}
+                />
+              )}
               {label}
             </button>
           );
