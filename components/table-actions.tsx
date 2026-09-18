@@ -89,7 +89,15 @@ export function useActionHint() {
   };
 }
 
-export const TABLE_BTN_ICON = { size: 14 as const, className: "size-3.5" };
+export const TABLE_BTN_ICON = { size: 14 as const, className: "size-3.5 shrink-0" };
+
+function LabelIcon({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex shrink-0 items-center justify-center [&_svg]:max-h-3.5 [&_svg]:max-w-3.5">
+      {children}
+    </span>
+  );
+}
 
 export const TableIconAction = forwardRef<
   HTMLButtonElement,
@@ -230,17 +238,18 @@ export function TableLabelButton({
   className?: string;
 }) {
   const mark = `${TABLE_LABEL_BTN_CLASS[variant]} ${className}`.trim();
+  const leading = <LabelIcon>{icon}</LabelIcon>;
   if (href) {
     return (
       <Link href={href} className={mark}>
-        {icon}
+        {leading}
         {children}
       </Link>
     );
   }
   return (
     <button type={type} disabled={disabled} onClick={onClick} className={mark}>
-      {icon}
+      {leading}
       {children}
     </button>
   );
@@ -275,7 +284,7 @@ export function TablePendingLabelButton({
       className={`${TABLE_LABEL_BTN_CLASS[variant]} ${className}`.trim()}
       {...rest}
     >
-      {icon}
+      <LabelIcon>{icon}</LabelIcon>
       {children}
     </PendingSubmitButton>
   );

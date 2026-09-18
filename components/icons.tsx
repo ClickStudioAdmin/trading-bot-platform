@@ -347,7 +347,15 @@ export function IconDownload(props: LucideProps) {
 }
 
 export function IconFilterClear(props: LucideProps) {
-  return <FilterX aria-hidden strokeWidth={STROKE} {...props} />;
+  return (
+    <FilterX
+      aria-hidden
+      strokeWidth={STROKE}
+      {...props}
+      size={12}
+      className="size-3 shrink-0"
+    />
+  );
 }
 
 export function IconFilters(props: LucideProps) {

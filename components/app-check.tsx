@@ -43,7 +43,7 @@ export function AppCheck({
   }, [indeterminate]);
 
   return (
-    <span className={`inline-flex shrink-0 ${className}`.trim()}>
+    <span className={`relative inline-flex size-5 shrink-0 ${className}`.trim()}>
       <input
         ref={ref}
         type="checkbox"
@@ -54,9 +54,9 @@ export function AppCheck({
         disabled={disabled}
         onChange={onChange}
         aria-label={ariaLabel}
-        className="peer sr-only"
+        className="peer absolute inset-0 z-10 cursor-pointer opacity-0 disabled:cursor-not-allowed"
       />
-      <span aria-hidden className={BOX}>
+      <span aria-hidden className={`${BOX} pointer-events-none`}>
         <IconCheck size={12} className="size-3 opacity-0" />
       </span>
     </span>
@@ -83,7 +83,7 @@ export function AppRadio({
   "aria-label"?: string;
 } & Pick<InputHTMLAttributes<HTMLInputElement>, "name" | "value">) {
   return (
-    <span className={`inline-flex shrink-0 ${className}`.trim()}>
+    <span className={`relative inline-flex size-5 shrink-0 ${className}`.trim()}>
       <input
         type="radio"
         name={name}
@@ -93,9 +93,9 @@ export function AppRadio({
         disabled={disabled}
         onChange={onChange}
         aria-label={ariaLabel}
-        className="peer sr-only"
+        className="peer absolute inset-0 z-10 cursor-pointer opacity-0 disabled:cursor-not-allowed"
       />
-      <span aria-hidden className={RADIO}>
+      <span aria-hidden className={`${RADIO} pointer-events-none`}>
         <span className="size-2 rounded-full bg-accent opacity-0" />
       </span>
     </span>
