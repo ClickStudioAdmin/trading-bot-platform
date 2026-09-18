@@ -181,8 +181,8 @@ function DeskGroup({
           const empty = group.typed.length === 0;
           const typeLabel = formatDeskNavLabel(group.deskType);
           return (
-          <div key={group.deskType} className="mt-3 first:mt-0">
-            <div className="flex items-center gap-1 border-b border-line px-3 pb-1.5">
+          <div key={group.deskType} className="border-b border-line py-3 first:pt-0">
+            <div className="flex items-center gap-1 px-3">
               <p className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium uppercase tracking-[0.12em] text-ink">
                 <DeskTypeMark deskType={group.deskType} />
                 <span>{typeLabel}</span>
