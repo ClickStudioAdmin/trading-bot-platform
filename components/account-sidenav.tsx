@@ -400,7 +400,7 @@ function DeskModeFilterBar({
   empty?: string | null;
 }) {
   return (
-    <div className="mt-2">
+    <div className="mt-2 px-3">
       <div
         role="group"
         aria-label="Desk mode"
