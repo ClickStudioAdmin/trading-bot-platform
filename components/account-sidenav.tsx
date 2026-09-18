@@ -1,22 +1,30 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { DeskTypeMark } from "@/components/desk-mark";
 import { SiteLogo } from "@/components/site-logo";
 import { rememberTradingAccount } from "@/lib/accounts/actions";
 import {
+  DESK_MODE_FILTERS,
   DESK_QUERY,
   createDeskPath,
+  deskDisplayMode,
   deskHomePath,
+  deskMatchesModeFilter,
+  formatDeskCopyBadge,
+  formatDeskDisplayMode,
+  formatDeskDisplayModeHint,
+  formatDeskNavLabel,
+  hrefPathname,
+  parseDeskModeFilter,
   parseDeskQuery,
   parseDeskTypeChoice,
+  shouldShowDeskModeFilter,
   AUTOMATED_DESK_TYPES,
-  formatAccountMode,
-  formatDeskCopyBadge,
-  formatDeskNavLabel,
-  formatDeskVenueCaption,
-  hrefPathname,
+  type DeskDisplayMode,
+  type DeskModeFilter,
   type DeskType,
   type TradingAccount,
 } from "@/lib/accounts/model";
@@ -48,6 +56,11 @@ export function AccountSidenav({
       ? createType.deskType
       : null;
   const currentDeskId = parseDeskQuery(searchParams.get(DESK_QUERY));
+  const modeFilter = useDeskModeFilter();
+  const showModeFilter = shouldShowDeskModeFilter(desks);
+  const filterMatchCount = desks.filter((desk) =>
+    deskMatchesModeFilter(desk, modeFilter.value),
+  ).length;
 
   return (
     <aside className="sticky top-0 z-20 flex h-dvh w-72 shrink-0 flex-col overflow-y-auto border-r border-line bg-surface px-4 py-6">
@@ -99,12 +112,27 @@ export function AccountSidenav({
             desks={desks}
             currentDeskId={currentDeskId}
             createDeskType={createDeskType}
+            modeFilter={modeFilter.value}
+            filterBar={
+              showModeFilter ? (
+                <DeskModeFilterBar
+                  value={modeFilter.value}
+                  onChange={modeFilter.setValue}
+                  empty={
+                    modeFilter.value !== "all" && filterMatchCount === 0
+                      ? `No ${formatDeskDisplayMode(modeFilter.value)} desks.`
+                      : null
+                  }
+                />
+              ) : null
+            }
           />
           <ManualDeskGroup
             className="mt-5"
             desks={desks.filter((desk) => desk.deskType === "perps")}
             currentDeskId={currentDeskId}
             creating={createDeskType === "perps"}
+            modeFilter={modeFilter.value}
           />
         </>
       ) : null}
@@ -118,6 +146,8 @@ function DeskGroup({
   desks,
   currentDeskId,
   createDeskType,
+  modeFilter,
+  filterBar,
   className,
 }: {
   label: string;
@@ -125,21 +155,28 @@ function DeskGroup({
   desks: TradingAccount[];
   currentDeskId: string | null;
   createDeskType?: DeskType | null;
+  modeFilter: DeskModeFilter;
+  filterBar?: ReactNode;
   className?: string;
 }) {
-  const groups = types.map((deskType) => ({
-    deskType,
-    desks: desks.filter((desk) => desk.deskType === deskType),
-  }));
+  const groups = types.map((deskType) => {
+    const typed = desks.filter((desk) => desk.deskType === deskType);
+    return {
+      deskType,
+      typed,
+      visible: visibleDesks(typed, modeFilter, currentDeskId),
+    };
+  });
   return (
     <div className={className}>
       <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
         {label}
       </p>
+      {filterBar}
       <nav aria-label={label} className="mt-3 flex flex-col">
         {groups.map((group) => {
           const creating = createDeskType === group.deskType;
-          const empty = group.desks.length === 0;
+          const empty = group.typed.length === 0;
           const typeLabel = formatDeskNavLabel(group.deskType);
           return (
           <div key={group.deskType} className="mt-3 first:mt-0">
@@ -165,7 +202,7 @@ function DeskGroup({
               )}
             </div>
             <div className="mt-1 flex flex-col gap-1 pl-5">
-              {group.desks.map((desk) => (
+              {group.visible.map((desk) => (
                 <DeskNavLink
                   key={desk.id}
                   desk={desk}
@@ -201,14 +238,17 @@ function ManualDeskGroup({
   desks,
   currentDeskId,
   creating,
+  modeFilter,
   className,
 }: {
   desks: TradingAccount[];
   currentDeskId: string | null;
   creating: boolean;
+  modeFilter: DeskModeFilter;
   className?: string;
 }) {
   const empty = desks.length === 0;
+  const visible = visibleDesks(desks, modeFilter, currentDeskId);
   return (
     <div className={className}>
       <div className="flex items-center gap-1">
@@ -232,7 +272,7 @@ function ManualDeskGroup({
         )}
       </div>
       <nav aria-label="Manual trading desks" className="mt-3 flex flex-col gap-1">
-        {desks.map((desk) => (
+        {visible.map((desk) => (
           <DeskNavLink
             key={desk.id}
             desk={desk}
@@ -267,30 +307,127 @@ function DeskNavLink({
   desk: TradingAccount;
   current: boolean;
 }) {
-  const meta = `${formatDeskVenueCaption(desk)} · ${formatAccountMode(desk.mode)}`;
+  const mode = deskDisplayMode(desk);
+  const hint = formatDeskDisplayModeHint(desk);
   return (
     <Link
       href={deskHomePath(desk.deskType, desk.id)}
       aria-current={current ? "true" : undefined}
-      title={`${desk.name} · ${meta}`}
+      title={`${desk.name} · ${hint}`}
       onClick={() => {
         if (!current) {
           void rememberTradingAccount(desk.id);
         }
       }}
-      className={`flex items-center gap-2 rounded-control px-3 py-2 ${
+      className={`flex items-center gap-1.5 rounded-control px-3 py-2 ${
         current
           ? "bg-surface-raised text-ink"
           : "text-ink-faint hover:bg-surface-raised hover:text-ink"
       }`}
     >
       <span className="min-w-0 truncate text-sm text-ink">{desk.name}</span>
+      <DeskModeBadge mode={mode} hint={hint} />
       {formatDeskCopyBadge(desk) ? (
         <span className="shrink-0 rounded-control bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
           Copy
         </span>
       ) : null}
     </Link>
+  );
+}
+
+const MODE_BADGE_TONE: Record<DeskDisplayMode, string> = {
+  paper: "bg-ink-faint/15 text-ink-muted",
+  demo: "bg-warning/15 text-warning",
+  live: "bg-danger/15 text-danger",
+};
+
+function DeskModeBadge({
+  mode,
+  hint,
+}: {
+  mode: DeskDisplayMode;
+  hint: string;
+}) {
+  return (
+    <span
+      title={hint}
+      className={`shrink-0 rounded-control px-1.5 py-0.5 text-[10px] font-medium ${MODE_BADGE_TONE[mode]}`}
+    >
+      {formatDeskDisplayMode(mode)}
+    </span>
+  );
+}
+
+const DESK_MODE_FILTER_KEY = "tbp-desk-mode-filter";
+
+function useDeskModeFilter() {
+  const [value, setValue] = useState<DeskModeFilter>("all");
+
+  useEffect(() => {
+    setValue(parseDeskModeFilter(window.localStorage.getItem(DESK_MODE_FILTER_KEY)));
+  }, []);
+
+  return {
+    value,
+    setValue(next: DeskModeFilter) {
+      setValue(next);
+      window.localStorage.setItem(DESK_MODE_FILTER_KEY, next);
+    },
+  };
+}
+
+function visibleDesks(
+  desks: TradingAccount[],
+  filter: DeskModeFilter,
+  currentDeskId: string | null,
+) {
+  return desks.filter(
+    (desk) =>
+      deskMatchesModeFilter(desk, filter) || desk.id === currentDeskId,
+  );
+}
+
+function DeskModeFilterBar({
+  value,
+  onChange,
+  empty,
+}: {
+  value: DeskModeFilter;
+  onChange: (next: DeskModeFilter) => void;
+  empty?: string | null;
+}) {
+  return (
+    <div className="mt-2">
+      <div
+        role="group"
+        aria-label="Desk mode"
+        className="flex gap-0.5 rounded-control border border-line bg-surface p-0.5"
+      >
+        {DESK_MODE_FILTERS.map((option) => {
+          const active = value === option;
+          const label =
+            option === "all" ? "All" : formatDeskDisplayMode(option);
+          return (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onChange(option)}
+              className={`min-w-0 flex-1 rounded-control px-1 py-1 text-[11px] ${
+                active
+                  ? "bg-surface-raised font-medium text-ink"
+                  : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      {empty ? (
+        <p className="mt-2 px-1 text-xs text-ink-muted">{empty}</p>
+      ) : null}
+    </div>
   );
 }
 

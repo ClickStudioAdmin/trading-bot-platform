@@ -530,6 +530,86 @@ export function formatDeskVenueCaption(input: {
   return `${name} · ${envLabel}`;
 }
 
+export type DeskDisplayMode = "paper" | "demo" | "live";
+export type DeskModeFilter = "all" | DeskDisplayMode;
+
+export const DESK_MODE_FILTERS = ["all", "paper", "demo", "live"] as const;
+export const DESK_DISPLAY_MODES = ["paper", "demo", "live"] as const;
+
+export function deskDisplayMode(input: {
+  mode: TradingAccountMode;
+  venueEnvironment: string | null;
+}): DeskDisplayMode {
+  if (input.mode === "paper") {
+    return "paper";
+  }
+  const env = String(input.venueEnvironment ?? "").toLowerCase();
+  if (env === "demo" || env === "testnet") {
+    return "demo";
+  }
+  return "live";
+}
+
+export function formatDeskDisplayMode(mode: DeskDisplayMode): string {
+  if (mode === "paper") {
+    return "Paper";
+  }
+  if (mode === "demo") {
+    return "Demo";
+  }
+  return "Live";
+}
+
+export function formatDeskDisplayModeHint(input: {
+  mode: TradingAccountMode;
+  venue: string;
+  venueEnvironment: string | null;
+}): string {
+  const mode = deskDisplayMode(input);
+  if (mode === "paper") {
+    return "Paper Trading";
+  }
+  return formatDeskVenueCaption(input);
+}
+
+export function parseDeskModeFilter(value: unknown): DeskModeFilter {
+  return value === "paper" || value === "demo" || value === "live"
+    ? value
+    : "all";
+}
+
+export function deskMatchesModeFilter(
+  input: {
+    mode: TradingAccountMode;
+    venueEnvironment: string | null;
+  },
+  filter: DeskModeFilter,
+): boolean {
+  return filter === "all" || deskDisplayMode(input) === filter;
+}
+
+export function deskModeFilterChoices(
+  desks: readonly {
+    mode: TradingAccountMode;
+    venueEnvironment: string | null;
+  }[],
+): DeskDisplayMode[] {
+  const seen = new Set<DeskDisplayMode>();
+  for (const desk of desks) {
+    seen.add(deskDisplayMode(desk));
+  }
+  return DESK_DISPLAY_MODES.filter((mode) => seen.has(mode));
+}
+
+export function shouldShowDeskModeFilter(
+  desks: readonly {
+    mode: TradingAccountMode;
+    venueEnvironment: string | null;
+  }[],
+): boolean {
+  return deskModeFilterChoices(desks).length >= 2;
+}
+
 export function formatAccountMode(mode: TradingAccountMode): string {
   return mode === "live" ? "Connected Exchange" : "Paper Trading";
 }

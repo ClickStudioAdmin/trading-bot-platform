@@ -44,6 +44,13 @@ import {
   parseDeskNameChange,
   DESK_NAME_TAKEN,
   parseAccountMode,
+  parseDeskModeFilter,
+  deskDisplayMode,
+  deskMatchesModeFilter,
+  deskModeFilterChoices,
+  formatDeskDisplayMode,
+  formatDeskDisplayModeHint,
+  shouldShowDeskModeFilter,
   parseDeskCreateChoice,
   parseDeskType,
   parseDeskTypeChoice,
@@ -83,6 +90,67 @@ assert.equal(
   formatDeskVenueCaption({ venue: "hyperliquid", venueEnvironment: "testnet" }),
   "Hyperliquid Testnet (demo)",
 );
+assert.equal(deskDisplayMode({ mode: "paper", venueEnvironment: null }), "paper");
+assert.equal(deskDisplayMode({ mode: "live", venueEnvironment: "demo" }), "demo");
+assert.equal(
+  deskDisplayMode({ mode: "live", venueEnvironment: "testnet" }),
+  "demo",
+);
+assert.equal(deskDisplayMode({ mode: "live", venueEnvironment: "live" }), "live");
+assert.equal(deskDisplayMode({ mode: "live", venueEnvironment: null }), "live");
+assert.equal(formatDeskDisplayMode("paper"), "Paper");
+assert.equal(formatDeskDisplayMode("demo"), "Demo");
+assert.equal(formatDeskDisplayMode("live"), "Live");
+assert.equal(
+  formatDeskDisplayModeHint({
+    mode: "paper",
+    venue: "bybit",
+    venueEnvironment: null,
+  }),
+  "Paper Trading",
+);
+assert.equal(
+  formatDeskDisplayModeHint({
+    mode: "live",
+    venue: "bybit",
+    venueEnvironment: "demo",
+  }),
+  "Bybit · Demo",
+);
+assert.equal(parseDeskModeFilter("live"), "live");
+assert.equal(parseDeskModeFilter("nope"), "all");
+assert.equal(
+  deskMatchesModeFilter({ mode: "paper", venueEnvironment: null }, "paper"),
+  true,
+);
+assert.equal(
+  deskMatchesModeFilter({ mode: "paper", venueEnvironment: null }, "live"),
+  false,
+);
+assert.equal(
+  deskMatchesModeFilter({ mode: "paper", venueEnvironment: null }, "all"),
+  true,
+);
+assert.deepEqual(
+  deskModeFilterChoices([
+    { mode: "paper", venueEnvironment: null },
+    { mode: "live", venueEnvironment: "live" },
+    { mode: "paper", venueEnvironment: null },
+  ]),
+  ["paper", "live"],
+);
+assert.equal(
+  shouldShowDeskModeFilter([{ mode: "paper", venueEnvironment: null }]),
+  false,
+);
+assert.equal(
+  shouldShowDeskModeFilter([
+    { mode: "paper", venueEnvironment: null },
+    { mode: "live", venueEnvironment: "demo" },
+  ]),
+  true,
+);
+
 assert.equal(formatAccountMode("paper"), "Paper Trading");
 assert.equal(formatAccountMode("live"), "Connected Exchange");
 assert.equal(
