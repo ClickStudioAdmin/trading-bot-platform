@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import {
+  createContext,
   type FormEvent,
   type ReactNode,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -96,6 +98,8 @@ export function TableCard({
   );
 }
 
+const FilterBarEndCtx = createContext<ReactNode>(null);
+
 export function TableFilterSession({
   children,
   toolbar,
@@ -125,30 +129,33 @@ export function TableFilterSession({
       Show Filters
     </TableLabelButton>
   );
-  const trailing = Boolean(actions) || hasFilters;
-  if (!toolbar && !trailing) {
-    return hasFilters && show ? children : null;
-  }
+  const chrome = Boolean(toolbar) || Boolean(actions) || (hasFilters && !show);
   return (
-    <>
+    <FilterBarEndCtx.Provider value={hasFilters && show ? hideButton : null}>
       {hasFilters && show ? children : null}
-      <div
-        className={`flex flex-wrap items-center gap-2 ${
-          hasFilters && show ? "mt-4" : hasFilters ? "mt-6" : "mb-3"
-        } ${toolbar ? "justify-between" : "justify-end"}`}
-      >
-        {toolbar ? (
-          <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
-        ) : null}
-        {trailing ? (
-          <div className="flex flex-wrap items-center gap-2">
-            {actions}
-            {hasFilters ? (show ? hideButton : showButton) : null}
-          </div>
-        ) : null}
-      </div>
-    </>
+      {chrome ? (
+        <div
+          className={`flex flex-wrap items-center gap-2 ${
+            hasFilters && show ? "mt-4" : hasFilters ? "mt-6" : "mb-3"
+          } ${toolbar ? "justify-between" : "justify-end"}`}
+        >
+          {toolbar ? (
+            <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
+          ) : null}
+          {actions || (hasFilters && !show) ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {actions}
+              {hasFilters && !show ? showButton : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </FilterBarEndCtx.Provider>
   );
+}
+
+function FilterBarEnd() {
+  return useContext(FilterBarEndCtx);
 }
 
 export function TableFilterBar({
@@ -162,7 +169,10 @@ export function TableFilterBar({
     <div
       className={`rounded-card border border-line bg-surface p-4 ${className}`.trim()}
     >
-      <div className="flex flex-wrap items-end gap-3">{children}</div>
+      <div className="flex flex-wrap items-end gap-3">
+        {children}
+        <FilterBarEnd />
+      </div>
     </div>
   );
 }
@@ -233,7 +243,10 @@ export function LiveGetForm({
         onChange={onChange}
         className={`rounded-card border border-line bg-surface p-4 ${className}`.trim()}
       >
-        <div className="flex flex-wrap items-end gap-3">{children}</div>
+        <div className="flex flex-wrap items-end gap-3">
+          {children}
+          <FilterBarEnd />
+        </div>
       </form>
     </LiveFilterSubmit.Provider>
   );
