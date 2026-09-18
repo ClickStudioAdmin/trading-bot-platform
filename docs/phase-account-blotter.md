@@ -10,10 +10,11 @@ Spec only. Current work stays UI refinement (V1 item 3).
 
 ## Purpose
 
-Two product problems, one item:
+Three product problems, one item:
 
 1. **Fragmentation.** Typed desks are still one type, one bind, one UI. Users should not have to hunt desks to see what is open or which bots exist. Add **account-wide Positions** and **account-wide Bots**.
 2. **Automations as a directory.** Desk Automations (DCA, Perps bots, Cash and Carry) is a **table of bots** with actions. One action is **Edit**, which opens the existing bot form. **Create New Bot** sits on the toolbar like other create actions. Stop showing every recipe as a live edit card on first load.
+3. **One live desk per exchange connection.** TBP has no deal ledger. Two desks on one key share one venue position, one margin pool, and symbol cancel-all. Create, bind, and rebind must reject a connection that is already bound to another desk. Virtual lots stay parked.
 
 This is **not** mixed strategies on one desk, **not** virtual lots, and **not** two bots on the same pair. Those stay parked ([click-list.md](click-list.md) item 4, V2 multi-pair / virtual-size).
 
@@ -24,6 +25,7 @@ This is **not** mixed strategies on one desk, **not** virtual lots, and **not** 
 3. **Edit** (and Create) uses the current bot form chrome (`bot-form-chrome`, Theme → Bot form). After save, return to the list. Deep links (`#bot-…` / query) still open that bot’s form.
 4. Manual Perps, TradingView Strategy, and copy desks stay as they are (no recipe list). Their **positions** still appear on the account Positions table.
 5. No new ledger tables. Same `futures_*` / `paper_*` / playbook rows. One playbook per contract and one open perp row per symbol + side stay.
+6. A login connection (`venue` + environment + key) binds to **at most one desk**. Server rejects Create / bind / rebind when that connection is already on another desk. Name the other desk in the error. Paper stays unbound. Existing desks that already share a key keep trading until the member unbinds or rebinds — do not auto-flatten or auto-unbind. Those desks keep the shared-key warning until only one remains. Unique bind is enforced in the database, not only in the form.
 
 Stop. Do not start entitlements, onboarding, virtual positions, or mixed desk types.
 
@@ -33,12 +35,15 @@ Stop. Do not start entitlements, onboarding, virtual positions, or mixed desk ty
 - **Account Bots** — `/account/bots`. Every C&C layer, Perps bots rule, and DCA playbook. Columns include desk, type, pair, status (Active / Disabled / that desk’s extra mode), and a one-line recipe summary. Edit / create still happen on the desk Automations route so bind, caps, and type lock stay correct.
 - **Desk Automations** — list first. Same data as today; the form is a second step, not the page.
 - **3Commas** is the list pattern (directory + Active + actions), not a column-for-column copy. TBP tokens, Lucide actions, and Theme tables.
+- **One key, one desk.** Isolation is another trade-only key, not another desk on the same connection. Same-pair stacking later needs virtual lots (V2). Until then, do not share a bind.
 
 ## Out of scope
 
 - Virtual positions / two bots on one pair / multi-pair one bot
 - Mixing desk types or putting a ticket on a DCA desk
-- Account-wide Close All, Disable all, or one bind across desks
+- Account-wide Close All or Disable all
+- Sharing one exchange connection across desks (this item **ends** that)
+- Auto-unbinding or flattening desks that already share a key
 - New engine behaviour, copy rules, or entitlements
 - TradingView Strategy recipe table (there is no recipe)
 
