@@ -149,7 +149,7 @@ export function CreateAccountForm({
       {track ? <input type="hidden" name="track" value={track} /> : null}
       {lockType ? (
         <div className="text-xs text-ink-muted">
-          Type
+          Desk Type
           <input type="hidden" name="deskType" value={deskType} />
           <p className="mt-1 flex items-center gap-2 text-sm text-ink">
             <DeskTypeMark deskType={deskType} />
@@ -158,7 +158,7 @@ export function CreateAccountForm({
         </div>
       ) : (
         <label className="block text-xs text-ink-muted">
-          Type
+          Desk Type
           <AppSelect
             name="deskType"
             value={deskType}

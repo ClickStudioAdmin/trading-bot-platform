@@ -13,6 +13,7 @@ import {
   TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TABLE_TITLE_CASE_TH_CLASS,
   TableActions,
   TableCard,
   TableFilterBar,
@@ -378,7 +379,8 @@ export function BacktestRunsTable({
                 onSort={() => table.onSort("name")}
               />
               <SortTh
-                label="Type"
+                label="Desk Type"
+                className={TABLE_TITLE_CASE_TH_CLASS}
                 active={table.sortKey === "type"}
                 dir={table.sortDir}
                 onSort={() => table.onSort("type")}

@@ -12,6 +12,7 @@ import {
   TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TABLE_TITLE_CASE_TH_CLASS,
   TableActions,
   TableCard,
   TableFilterBar,
@@ -815,7 +816,7 @@ export function TemplatesLibrary({
                 className={TABLE_FILTER_FIELD_CLASS}
               />
             </TableFilterField>
-            <TableFilterField label="Desk type">
+            <TableFilterField label="Desk Type">
               <AppSelect
                 value={deskFilter}
                 onChange={(event) => {
@@ -911,6 +912,7 @@ export function TemplatesLibrary({
               />
               <SortTh
                 label="Desk Type"
+                className={TABLE_TITLE_CASE_TH_CLASS}
                 active={sort.key === "deskType"}
                 dir={sort.dir}
                 onSort={() => onSort("deskType")}
@@ -1133,6 +1135,7 @@ export function TemplatesLibrary({
                 />
                 <SortTh
                   label="Desk Type"
+                  className={TABLE_TITLE_CASE_TH_CLASS}
                   active={sort.key === "deskType"}
                   dir={sort.dir}
                   onSort={() => onSort("deskType")}
@@ -2272,7 +2275,7 @@ function CreateFolderModal({
         />
       </label>
       <label className="mt-3 block text-xs text-ink-muted">
-        Desk type
+        Desk Type
         <AppSelect
           value={deskType}
           onChange={(event) => {

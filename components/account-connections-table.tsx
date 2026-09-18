@@ -9,6 +9,7 @@ import {
   StatusBadge,
   TABLE_ACTIONS_TD_CLASS,
   TABLE_ACTIONS_TH_CLASS,
+  TABLE_TITLE_CASE_TH_CLASS,
   TableActions,
   TableCard,
   TablePager,
@@ -20,8 +21,8 @@ import {
 } from "@/lib/accounts/model";
 import {
   formatDeskBindType,
-  formatEnvironmentLabel,
-  formatVenueLabel,
+  formatExchangeEnvironmentColumn,
+  formatStrategyConnectionCaption,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
 import type { ConnectionDeskBind } from "@/lib/exchanges/store";
@@ -54,8 +55,8 @@ function compareConnection(
   }
   if (key === "exchange") {
     return compareTableText(
-      formatVenueLabel(left.venue),
-      formatVenueLabel(right.venue),
+      formatExchangeEnvironmentColumn(left.venue, left.environment),
+      formatExchangeEnvironmentColumn(right.venue, right.environment),
       dir,
     );
   }
@@ -118,7 +119,8 @@ export function AccountConnectionsTable({
                 onSort={() => table.onSort("name")}
               />
               <SortTh
-                label="Exchange"
+                label="Exchange / Environment"
+                className={TABLE_TITLE_CASE_TH_CLASS}
                 active={table.sortKey === "exchange"}
                 dir={table.sortDir}
                 onSort={() => table.onSort("exchange")}
@@ -129,7 +131,9 @@ export function AccountConnectionsTable({
                 dir={table.sortDir}
                 onSort={() => table.onSort("desks")}
               />
-              <th className="px-4 py-3 font-medium">Desk type</th>
+              <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
+                Desk Type
+              </th>
               <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
             </tr>
           </thead>
@@ -137,6 +141,7 @@ export function AccountConnectionsTable({
             {table.pageRows.map((row) => {
               const used = binds.filter((bind) => bind.connectionId === row.id);
               const inUse = used.length > 0;
+              const caption = formatStrategyConnectionCaption(row);
               const removeBlocked = formatConnectionRemoveBlockers(
                 connectionRemoveBlockers({ inUse }),
               );
@@ -146,20 +151,15 @@ export function AccountConnectionsTable({
                   className="border-b border-line last:border-b-0"
                 >
                   <td className="px-4 py-3 align-top">
-                    {row.label ? (
-                      <p>{row.label}</p>
-                    ) : (
-                      <span className="text-ink-faint">—</span>
-                    )}
+                    <p>{caption.name}</p>
+                    {caption.venue ? (
+                      <p className="mt-1 text-xs text-ink-faint">{caption.venue}</p>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3 align-top">
-                    <p>{formatVenueLabel(row.venue)}</p>
+                    <p>{formatExchangeEnvironmentColumn(row.venue, row.environment)}</p>
                     <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-faint">
-                      <span>
-                        {formatEnvironmentLabel(row.venue, row.environment)}
-                        {" · "}
-                        Key ••••{row.fingerprint}
-                      </span>
+                      <span>Key ••••{row.fingerprint}</span>
                       {row.verifiedAtMs ? (
                         <StatusBadge label="Verified" status="verified" />
                       ) : null}

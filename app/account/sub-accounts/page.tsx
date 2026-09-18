@@ -17,6 +17,8 @@ import {
   loadAccountUsage,
   type AccountUsage,
 } from "@/lib/accounts/store";
+import type { ExchangeConnection } from "@/lib/exchanges/connections";
+import { listExchangeConnections } from "@/lib/exchanges/store";
 import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
 import { requireVerifiedEmail } from "@/lib/auth/session";
 import { firstSearchValue } from "@/lib/paper/open";
@@ -98,7 +100,10 @@ async function DesksTab({
   renamed: boolean;
 }) {
   const accounts = await listTradingAccounts(memberId);
-  const usage = await loadAccountUsage(accounts);
+  const [usage, connections] = await Promise.all([
+    loadAccountUsage(accounts),
+    listExchangeConnections(memberId),
+  ]);
   const currentId = pickDefaultAccount(accounts)?.id ?? "";
 
   return (
@@ -129,6 +134,7 @@ async function DesksTab({
             types={AUTOMATED_DESK_TYPES}
             accounts={accounts}
             usage={usage}
+            connections={connections}
             currentId={currentId}
           />
           <DeskTypeSections
@@ -136,6 +142,7 @@ async function DesksTab({
             types={MANUAL_DESK_TYPES}
             accounts={accounts}
             usage={usage}
+            connections={connections}
             currentId={currentId}
             hideTypeHeading
           />
@@ -173,6 +180,7 @@ function DeskTypeSections({
   types,
   accounts,
   usage,
+  connections,
   currentId,
   hideTypeHeading = false,
 }: {
@@ -180,6 +188,7 @@ function DeskTypeSections({
   types: readonly DeskType[];
   accounts: TradingAccount[];
   usage: Map<string, AccountUsage>;
+  connections: ExchangeConnection[];
   currentId: string;
   hideTypeHeading?: boolean;
 }) {
@@ -213,6 +222,7 @@ function DeskTypeSections({
                 accounts={group.rows}
                 allAccounts={accounts}
                 usage={Object.fromEntries(usage)}
+                connections={connections}
                 currentId={currentId}
               />
             </div>

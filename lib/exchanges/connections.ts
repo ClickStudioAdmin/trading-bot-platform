@@ -167,6 +167,18 @@ export function formatEnvironmentLabel(
   );
 }
 
+export function formatExchangeEnvironmentColumn(
+  venueId: string,
+  environmentId?: string | null,
+): string {
+  const venue = formatVenueLabel(venueId);
+  const environment = String(environmentId ?? "").trim();
+  if (!environment) {
+    return venue;
+  }
+  return `${venue} / ${formatEnvironmentLabel(venueId, environment)}`;
+}
+
 export function parseExchangeConnectionRow(
   row: Record<string, unknown>,
 ): ExchangeConnection | null {

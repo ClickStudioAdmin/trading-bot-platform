@@ -76,7 +76,7 @@ export const LUCIDE_ICONS = [
     id: "arrow-left-right",
     name: "Cash and Carry",
     lucide: "ArrowLeftRight",
-    usedIn: "Desk type",
+    usedIn: "Desk Type",
     Icon: ArrowLeftRight,
   },
   {
@@ -111,7 +111,7 @@ export const LUCIDE_ICONS = [
     id: "chart-column",
     name: "DCA",
     lucide: "ChartColumn",
-    usedIn: "Desk type",
+    usedIn: "Desk Type",
     Icon: ChartColumn,
   },
   {
@@ -307,7 +307,7 @@ export const LUCIDE_ICONS = [
     id: "radio",
     name: "Signal",
     lucide: "Radio",
-    usedIn: "Desk type",
+    usedIn: "Desk Type",
     Icon: Radio,
   },
   {
@@ -363,7 +363,7 @@ export const LUCIDE_ICONS = [
     id: "trending-up",
     name: "Perps",
     lucide: "TrendingUp",
-    usedIn: "Desk type",
+    usedIn: "Desk Type",
     Icon: TrendingUp,
   },
   {

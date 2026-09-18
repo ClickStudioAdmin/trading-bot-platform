@@ -6,6 +6,7 @@ import {
   formatEnvironmentLabel,
   formatStrategyConnectionCaption,
   formatVenueLabel,
+  formatExchangeEnvironmentColumn,
   keyFingerprint,
   parseBoundConnectionId,
   connectionIdsBoundToOtherDesks,
@@ -62,6 +63,13 @@ assert.deepEqual(parseConnectionLabel("  Desk  "), {
 assert.equal(parseConnectionLabel("x".repeat(41)).ok, false);
 
 assert.equal(formatVenueLabel("bybit"), "Bybit");
+assert.equal(formatExchangeEnvironmentColumn("bybit", "demo"), "Bybit / Demo");
+assert.equal(formatExchangeEnvironmentColumn("bybit", "live"), "Bybit / Live");
+assert.equal(formatExchangeEnvironmentColumn("bybit", null), "Bybit");
+assert.equal(
+  formatExchangeEnvironmentColumn("hyperliquid", "testnet"),
+  "Hyperliquid / Hyperliquid Testnet (demo)",
+);
 assert.equal(formatVenueLabel("okx"), "okx");
 assert.equal(formatEnvironmentLabel("bybit", "demo"), "Demo");
 assert.equal(formatEnvironmentLabel("bybit", "live"), "Live");

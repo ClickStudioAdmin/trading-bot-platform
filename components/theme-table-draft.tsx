@@ -18,6 +18,7 @@ import {
   TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TABLE_TITLE_CASE_TH_CLASS,
   TableCard,
   TableFilterBar,
   TableFilterField,
@@ -38,7 +39,7 @@ import { AppCheck } from "@/components/app-check";
 import { TableColumnPicker } from "@/components/table-column-picker";
 
 const THEME_OPTIONAL_COLUMNS = [
-  { id: "type", label: "Type" },
+  { id: "type", label: "Desk Type" },
   { id: "status", label: "Status" },
   { id: "venue", label: "Venue" },
   { id: "updated", label: "Updated" },
@@ -301,7 +302,7 @@ export function ThemeTableDraft() {
                 className={TABLE_FILTER_FIELD_CLASS}
               />
             </TableFilterField>
-            <TableFilterField label="Type">
+            <TableFilterField label="Desk Type">
               <AppSelect
                 value={typeFilter}
                 onChange={(event) => {
@@ -378,7 +379,8 @@ export function ThemeTableDraft() {
               />
               {columns.type ? (
                 <SortTh
-                  label="Type"
+                  label="Desk Type"
+                  className={TABLE_TITLE_CASE_TH_CLASS}
                   active={table.sortKey === "type"}
                   dir={table.sortDir}
                   onSort={() => table.onSort("type")}
