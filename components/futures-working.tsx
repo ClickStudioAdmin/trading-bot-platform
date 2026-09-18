@@ -13,6 +13,7 @@ import {
   TABLE_BTN_ICON,
   TableActions,
   TableCard,
+  TableFilterSession,
   TablePager,
   TablePendingIconAction,
   useClientTable,
@@ -117,36 +118,36 @@ export function FuturesWorkingOrders({
   return (
     <section>
       <FuturesDeskRefresh urgent={urgent} />
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight">
-            Open orders{" "}
-            <span className="font-normal text-ink-muted">({rows.length})</span>
-          </h2>
-          <p className="text-sm text-ink-muted">
-            {copyDesk && playbookOwnsOrders
-              ? exchangeBook
-                ? `Copied parent DCA limits on ${exchangeName}. Fills appear on the position when they match.`
-                : "Copied parent DCA limits. They fill when mark crosses the limit."
-              : playbookOwnsOrders
-              ? exchangeBook
-                ? `Working bot limits on ${exchangeName}. Fills appear on the position when they match. Stop adding on Automations, or Close on the position.`
-                : "Working bot limits. They fill when mark crosses the limit. Stop adding on Automations, or Close on the position."
-              : exchangeBook
-                ? `Working limits and take-profit / stop-loss triggers on ${exchangeName}. Fills appear on the position when they match. Edit remaining qty or limit. Cancel removes the rest.`
-                : "Working paper limits. They fill when mark crosses the limit. Edit remaining qty or limit. Cancel drops the rest."}
-          </p>
-        </div>
-        {showOrderMeta ? (
-          <div className="shrink-0">
+      <div className="mb-3">
+        <h2 className="text-xl font-semibold tracking-tight">
+          Open orders{" "}
+          <span className="font-normal text-ink-muted">({rows.length})</span>
+        </h2>
+        <p className="text-sm text-ink-muted">
+          {copyDesk && playbookOwnsOrders
+            ? exchangeBook
+              ? `Copied parent DCA limits on ${exchangeName}. Fills appear on the position when they match.`
+              : "Copied parent DCA limits. They fill when mark crosses the limit."
+            : playbookOwnsOrders
+            ? exchangeBook
+              ? `Working bot limits on ${exchangeName}. Fills appear on the position when they match. Stop adding on Automations, or Close on the position.`
+              : "Working bot limits. They fill when mark crosses the limit. Stop adding on Automations, or Close on the position."
+            : exchangeBook
+              ? `Working limits and take-profit / stop-loss triggers on ${exchangeName}. Fills appear on the position when they match. Edit remaining qty or limit. Cancel removes the rest.`
+              : "Working paper limits. They fill when mark crosses the limit. Edit remaining qty or limit. Cancel drops the rest."}
+        </p>
+      </div>
+      {showOrderMeta ? (
+        <TableFilterSession
+          actions={
             <FuturesCancelAllOrders
               next={next}
               signedIn={signedIn}
               workingCount={working.length}
             />
-          </div>
-        ) : null}
-      </div>
+          }
+        />
+      ) : null}
       <TableCard
         pager={
           <TablePager

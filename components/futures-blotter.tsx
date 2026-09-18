@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useCallback, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
-import { SortTh, TableCard, TablePager, useClientTable } from "@/components/table-chrome";
+import {
+  SortTh,
+  TableCard,
+  TableFilterSession,
+  TablePager,
+  useClientTable,
+} from "@/components/table-chrome";
 import { LocalTime } from "@/components/local-time";
 import { OpenStats } from "@/components/open-stats";
 import { PositionLogList } from "@/components/paper-carry-expand";
@@ -312,24 +318,28 @@ export function OpenFuturesTrades({
           </Link>
         </div>
       ) : null}
-      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-        <FuturesOpenColumnPicker
-          visible={visible}
-          setColumn={setColumn}
-          hiddenColumns={hideRowExits ? ["tpsl", "trailing"] : []}
-        />
-        {showCloseAll ? (
-          <FuturesPositionBulkActions
-            next={next}
-            signedIn={signedIn}
-            openCount={open.length}
-            workingCount={workingCount}
-            panicOnly={playbookOwnsOrders}
-            copyDesk={copyDesk}
-          />
-        ) : null}
-        {toolbarActions}
-      </div>
+      <TableFilterSession
+        actions={
+          <>
+            <FuturesOpenColumnPicker
+              visible={visible}
+              setColumn={setColumn}
+              hiddenColumns={hideRowExits ? ["tpsl", "trailing"] : []}
+            />
+            {showCloseAll ? (
+              <FuturesPositionBulkActions
+                next={next}
+                signedIn={signedIn}
+                openCount={open.length}
+                workingCount={workingCount}
+                panicOnly={playbookOwnsOrders}
+                copyDesk={copyDesk}
+              />
+            ) : null}
+            {toolbarActions}
+          </>
+        }
+      />
       <TableCard
         className="min-w-0 mt-6"
         pager={

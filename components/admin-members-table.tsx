@@ -6,6 +6,7 @@ import {
   TABLE_ACTIONS_TD_CLASS,
   TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
+  TableActions,
   TableIconAction,
 } from "@/components/table-chrome";
 import {
@@ -88,13 +89,15 @@ export function AdminMembersTable({
                   <LocalTime at={row.createdAt} mode="date" />
                 </td>
                 <td className={TABLE_ACTIONS_TD_CLASS}>
-                  <TableIconAction
-                    href={`/admin/members/${row.id}`}
-                    label="Edit"
-                    detail="Change this member's settings."
-                  >
-                    <IconPencil {...TABLE_BTN_ICON} />
-                  </TableIconAction>
+                  <TableActions>
+                    <TableIconAction
+                      href={`/admin/members/${row.id}`}
+                      label="Edit"
+                      detail="Change this member's settings."
+                    >
+                      <IconPencil {...TABLE_BTN_ICON} />
+                    </TableIconAction>
+                  </TableActions>
                 </td>
               </tr>
             ))

@@ -2,11 +2,9 @@
 
 import Link from "next/link";
 import {
-  createContext,
   type FormEvent,
   type ReactNode,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -51,8 +49,6 @@ export {
 
 export const TABLE_FILTER_FIELD_CLASS =
   "mt-1 w-full min-w-[9rem] rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
-export const TABLE_FILTER_CLEAR_CLASS =
-  "inline-flex items-center gap-1.5 rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink";
 export const TABLE_PAGER_BTN_CLASS =
   "rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40";
 const TABLE_PAGER_ICON_CLASS =
@@ -100,24 +96,17 @@ export function TableCard({
   );
 }
 
-const TableFilterCtx = createContext<ReactNode>(null);
-
-export function TableHideFilters() {
-  return useContext(TableFilterCtx);
-}
-
 export function TableFilterSession({
   children,
   toolbar,
   actions,
-  filterToggle = "trailing",
 }: {
-  children: ReactNode;
+  children?: ReactNode;
   toolbar?: ReactNode;
   actions?: ReactNode;
-  filterToggle?: "bar" | "trailing";
 }) {
   const [show, setShow] = useState(true);
+  const hasFilters = children != null;
   const hideButton = (
     <TableLabelButton
       variant="filter"
@@ -136,29 +125,29 @@ export function TableFilterSession({
       Show Filters
     </TableLabelButton>
   );
-  const toggleAtEnd = filterToggle === "trailing";
-  const trailing = Boolean(actions) || !show || toggleAtEnd;
+  const trailing = Boolean(actions) || hasFilters;
+  if (!toolbar && !trailing) {
+    return hasFilters && show ? children : null;
+  }
   return (
-    <TableFilterCtx.Provider value={toggleAtEnd ? null : hideButton}>
-      {show ? children : null}
-      {toolbar || trailing ? (
-        <div
-          className={`flex flex-wrap items-center gap-2 ${
-            show ? "mt-4" : "mt-6"
-          } ${toolbar ? "justify-between" : "justify-end"}`}
-        >
-          {toolbar ? (
-            <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
-          ) : null}
-          {trailing ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {actions}
-              {toggleAtEnd ? (show ? hideButton : showButton) : !show ? showButton : null}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </TableFilterCtx.Provider>
+    <>
+      {hasFilters && show ? children : null}
+      <div
+        className={`flex flex-wrap items-center gap-2 ${
+          hasFilters && show ? "mt-4" : hasFilters ? "mt-6" : "mb-3"
+        } ${toolbar ? "justify-between" : "justify-end"}`}
+      >
+        {toolbar ? (
+          <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
+        ) : null}
+        {trailing ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {actions}
+            {hasFilters ? (show ? hideButton : showButton) : null}
+          </div>
+        ) : null}
+      </div>
+    </>
   );
 }
 

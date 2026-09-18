@@ -10,7 +10,9 @@ import {
   TABLE_ACTIONS_TD_CLASS,
   TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
+  TableActions,
   TableCard,
+  TableFilterSession,
   TableIconAction,
   TablePendingLabelButton,
 } from "@/components/table-chrome";
@@ -79,40 +81,40 @@ export function InboxBulkTable({
         {sort.dir !== "desc" ? (
           <input type="hidden" name="dir" value={sort.dir} />
         ) : null}
-        <div
-          className={`mb-3 flex flex-wrap items-center gap-3 ${
-            hasSelection ? "justify-between" : "justify-end"
-          }`}
-        >
-          {hasSelection ? (
-            <div className="flex flex-wrap gap-2">
-              <TablePendingLabelButton
-                formAction={markNotificationsReadAction}
-                pendingLabel="Marking…"
-                icon={<IconMailOpen {...TABLE_BTN_ICON} />}
-              >
-                Mark read
-              </TablePendingLabelButton>
-              <TablePendingLabelButton
-                formAction={markNotificationsUnreadAction}
-                pendingLabel="Marking…"
-                icon={<IconMail {...TABLE_BTN_ICON} />}
-              >
-                Mark unread
-              </TablePendingLabelButton>
-            </div>
-          ) : null}
-          <TablePendingLabelButton
-            formAction={markNotificationsReadAction}
-            name="all"
-            value="1"
-            pendingLabel="Marking…"
-            disabled={unread < 1}
-            icon={<IconMarkAllRead {...TABLE_BTN_ICON} />}
-          >
-            Mark all read
-          </TablePendingLabelButton>
-        </div>
+        <TableFilterSession
+          toolbar={
+            hasSelection ? (
+              <>
+                <TablePendingLabelButton
+                  formAction={markNotificationsReadAction}
+                  pendingLabel="Marking…"
+                  icon={<IconMailOpen {...TABLE_BTN_ICON} />}
+                >
+                  Mark read
+                </TablePendingLabelButton>
+                <TablePendingLabelButton
+                  formAction={markNotificationsUnreadAction}
+                  pendingLabel="Marking…"
+                  icon={<IconMail {...TABLE_BTN_ICON} />}
+                >
+                  Mark unread
+                </TablePendingLabelButton>
+              </>
+            ) : undefined
+          }
+          actions={
+            <TablePendingLabelButton
+              formAction={markNotificationsReadAction}
+              name="all"
+              value="1"
+              pendingLabel="Marking…"
+              disabled={unread < 1}
+              icon={<IconMarkAllRead {...TABLE_BTN_ICON} />}
+            >
+              Mark all read
+            </TablePendingLabelButton>
+          }
+        />
         <TableCard className="" pager={pager}>
           <table className="w-full min-w-[42rem] text-left text-sm">
             <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
@@ -198,22 +200,24 @@ export function InboxBulkTable({
                       />
                     </td>
                     <td className={`${TABLE_ACTIONS_TD_CLASS} align-top`}>
-                      <TableIconAction
-                        type="submit"
-                        form={`inbox-row-${row.id}`}
-                        label={row.readAt ? "Mark unread" : "Mark read"}
-                        detail={
-                          row.readAt
-                            ? "Show this notice as unread."
-                            : "Mark this notice as read."
-                        }
-                      >
-                        {row.readAt ? (
-                          <IconMail {...TABLE_BTN_ICON} />
-                        ) : (
-                          <IconMailOpen {...TABLE_BTN_ICON} />
-                        )}
-                      </TableIconAction>
+                      <TableActions>
+                        <TableIconAction
+                          type="submit"
+                          form={`inbox-row-${row.id}`}
+                          label={row.readAt ? "Mark unread" : "Mark read"}
+                          detail={
+                            row.readAt
+                              ? "Show this notice as unread."
+                              : "Mark this notice as read."
+                          }
+                        >
+                          {row.readAt ? (
+                            <IconMail {...TABLE_BTN_ICON} />
+                          ) : (
+                            <IconMailOpen {...TABLE_BTN_ICON} />
+                          )}
+                        </TableIconAction>
+                      </TableActions>
                     </td>
                   </tr>
                 ))

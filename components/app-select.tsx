@@ -2,6 +2,7 @@
 
 import {
   Children,
+  Fragment,
   createContext,
   isValidElement,
   useContext,
@@ -24,6 +25,7 @@ export type AppSelectOption = {
   label: string;
   disabled?: boolean;
   icon?: string;
+  group?: string;
 };
 
 export type AppSelectChangeEvent = ChangeEvent<HTMLInputElement>;
@@ -202,26 +204,11 @@ export function AppSelect({
               {visible.length === 0 ? (
                 <p className="px-3 py-2 text-sm text-ink-muted">No matches.</p>
               ) : (
-                visible.map((option) => {
-                  const active = option.value === current;
-                  return (
-                    <button
-                      key={option.value || "empty"}
-                      type="button"
-                      role="option"
-                      aria-selected={active}
-                      disabled={option.disabled}
-                      onClick={() => pick(option.value)}
-                      className={
-                        active
-                          ? "flex w-full rounded-control bg-accent/15 px-3 py-2 text-left text-sm text-ink disabled:opacity-40"
-                          : "flex w-full rounded-control px-3 py-2 text-left text-sm text-ink hover:bg-surface-raised disabled:opacity-40"
-                      }
-                    >
-                      <OptionLabel option={option} />
-                    </button>
-                  );
-                })
+                <OptionList
+                  options={visible}
+                  selected={current}
+                  onPick={pick}
+                />
               )}
             </SelectPanel>,
             document.body,
@@ -278,6 +265,10 @@ export function AppMultiSelect({
   }, []);
 
   function toggleValue(nextValue: string) {
+    const option = options.find((row) => row.value === nextValue);
+    if (option?.disabled) {
+      return;
+    }
     const on = selected.includes(nextValue);
     if (!on && max != null && selected.length >= max) {
       return;
@@ -378,28 +369,14 @@ export function AppMultiSelect({
               query={query}
               onQuery={setQuery}
             >
-              {visible.map((option) => {
-                const on = selected.includes(option.value);
-                const capped =
-                  !on && max != null && selected.length >= max;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="option"
-                    aria-selected={on}
-                    disabled={capped}
-                    onClick={() => toggleValue(option.value)}
-                    className={
-                      on
-                        ? "flex w-full rounded-control bg-accent/15 px-3 py-2 text-left text-sm text-ink disabled:opacity-40"
-                        : "flex w-full rounded-control px-3 py-2 text-left text-sm text-ink hover:bg-surface-raised disabled:opacity-40"
-                    }
-                  >
-                    <OptionLabel option={option} />
-                  </button>
-                );
-              })}
+              <OptionList
+                options={visible}
+                selected={selected}
+                onPick={toggleValue}
+                disableUnselected={
+                  max != null && selected.length >= max
+                }
+              />
             </SelectPanel>,
             document.body,
           )
@@ -478,10 +455,67 @@ function SelectPanel({
   );
 }
 
-export function optionsFromChildren(children: ReactNode): AppSelectOption[] {
+function OptionList({
+  options,
+  selected,
+  onPick,
+  disableUnselected = false,
+}: {
+  options: readonly AppSelectOption[];
+  selected: string | readonly string[];
+  onPick: (value: string) => void;
+  disableUnselected?: boolean;
+}) {
+  return options.map((option, index) => {
+    const on = Array.isArray(selected)
+      ? selected.includes(option.value)
+      : option.value === selected;
+    const heading =
+      option.group && option.group !== options[index - 1]?.group ? (
+        <p className="px-3 pt-2 pb-1 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+          {option.group}
+        </p>
+      ) : null;
+    return (
+      <Fragment key={option.value || `empty-${index}`}>
+        {heading}
+        <button
+          type="button"
+          role="option"
+          aria-selected={on}
+          disabled={option.disabled || (!on && disableUnselected)}
+          onClick={() => onPick(option.value)}
+          className={
+            on
+              ? "flex w-full rounded-control bg-accent/15 px-3 py-2 text-left text-sm text-ink disabled:opacity-40"
+              : "flex w-full rounded-control px-3 py-2 text-left text-sm text-ink hover:bg-surface-raised disabled:opacity-40"
+          }
+        >
+          <OptionLabel option={option} />
+        </button>
+      </Fragment>
+    );
+  });
+}
+
+export function optionsFromChildren(
+  children: ReactNode,
+  group?: string,
+): AppSelectOption[] {
   const rows: AppSelectOption[] = [];
   Children.forEach(children, (child) => {
-    if (!isValidElement(child) || child.type !== "option") {
+    if (!isValidElement(child)) {
+      return;
+    }
+    if (child.type === "optgroup") {
+      const props = child.props as {
+        label?: string;
+        children?: ReactNode;
+      };
+      rows.push(...optionsFromChildren(props.children, props.label ?? ""));
+      return;
+    }
+    if (child.type !== "option") {
       return;
     }
     const props = child.props as {
@@ -493,6 +527,7 @@ export function optionsFromChildren(children: ReactNode): AppSelectOption[] {
       value: String(props.value ?? ""),
       label: flattenLabel(props.children),
       disabled: Boolean(props.disabled),
+      ...(group ? { group } : {}),
     });
   });
   return rows;

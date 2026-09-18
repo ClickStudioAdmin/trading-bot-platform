@@ -1232,13 +1232,11 @@ export function RemoveBacktestButton({
   runId,
   canRemove,
   returnTo = "/account/backtests",
-  compact: _compact = false,
   inline = false,
 }: {
   runId: string;
   canRemove: boolean;
   returnTo?: string;
-  compact?: boolean;
   inline?: boolean;
 }) {
   const router = useRouter();

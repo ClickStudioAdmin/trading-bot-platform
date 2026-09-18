@@ -14,4 +14,21 @@ assert.deepEqual(rows, [
   { value: "short", label: "Short", disabled: true },
 ]);
 assert.deepEqual(optionsFromChildren(null), []);
+
+const grouped = optionsFromChildren([
+  createElement(
+    "optgroup",
+    { label: "Desk", key: "desk" },
+    createElement("option", { value: "bot-1", key: "bot-1" }, "DCA bot"),
+  ),
+  createElement(
+    "optgroup",
+    { label: "Templates", key: "templates" },
+    createElement("option", { value: "tpl-1", key: "tpl-1" }, "ETH grid"),
+  ),
+]);
+assert.deepEqual(grouped, [
+  { value: "bot-1", label: "DCA bot", disabled: false, group: "Desk" },
+  { value: "tpl-1", label: "ETH grid", disabled: false, group: "Templates" },
+]);
 console.log("app-select.check ok");

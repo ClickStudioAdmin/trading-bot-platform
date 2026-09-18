@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useCallback, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
-import { SortTh, TableCard, TablePager, useClientTable } from "@/components/table-chrome";
+import {
+  SortTh,
+  TableCard,
+  TableFilterSession,
+  TablePager,
+  useClientTable,
+} from "@/components/table-chrome";
 import {
   PaperOpenColumnPicker,
   usePaperOpenColumns,
@@ -152,9 +158,11 @@ export function OpenPaperTrades({
           </Link>
         </div>
       ) : null}
-      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-        <PaperOpenColumnPicker visible={visible} setColumn={setColumn} />
-      </div>
+      <TableFilterSession
+        actions={
+          <PaperOpenColumnPicker visible={visible} setColumn={setColumn} />
+        }
+      />
       <TableCard
         pager={
           <TablePager

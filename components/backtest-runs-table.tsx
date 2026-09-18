@@ -13,6 +13,7 @@ import {
   TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TableActions,
   TableCard,
   TableFilterBar,
   TableFilterField,
@@ -538,12 +539,13 @@ function BacktestRunRow({
         <StatusBadge label={statusLabel(row.status)} status={row.status} />
       </td>
       <td className={TABLE_ACTIONS_TD_CLASS}>
-        <RemoveBacktestButton
-          runId={row.id}
-          canRemove={canRemove}
-          returnTo={returnTo}
-          compact
-        />
+        <TableActions>
+          <RemoveBacktestButton
+            runId={row.id}
+            canRemove={canRemove}
+            returnTo={returnTo}
+          />
+        </TableActions>
       </td>
     </tr>
   );

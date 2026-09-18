@@ -725,7 +725,6 @@ export function TemplatesLibrary({
         ) : null}
       </nav>
       <TableFilterSession
-        filterToggle="trailing"
         toolbar={
           sharedTab || selectedCount === 0 ? undefined : (
             <>
@@ -1508,47 +1507,6 @@ function ImportModal({
       .flatMap((row) => row.items),
   );
 
-  function toggle(id: string, kind: "template" | "folder") {
-    if (!file) {
-      return;
-    }
-    if (kind === "template") {
-      if (lockedTemplateIds.has(id)) {
-        return;
-      }
-      setTemplateIds((current) => {
-        const next = new Set(current);
-        if (next.has(id)) {
-          next.delete(id);
-        } else {
-          next.add(id);
-        }
-        return next;
-      });
-      return;
-    }
-    const folder = file.sets.find((row) => row.id === id);
-    const selecting = !setIds.has(id);
-    setSetIds((current) => {
-      const next = new Set(current);
-      if (selecting) {
-        next.add(id);
-      } else {
-        next.delete(id);
-      }
-      return next;
-    });
-    if (selecting && folder) {
-      setTemplateIds((current) => {
-        const next = new Set(current);
-        for (const templateId of folder.items) {
-          next.add(templateId);
-        }
-        return next;
-      });
-    }
-  }
-
   async function importSelected() {
     if (!raw || !file) {
       return;
@@ -1586,29 +1544,67 @@ function ImportModal({
       ) : null}
       {file ? (
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <ImportPickList
-            title="Templates"
-            empty="This file has no templates."
-            rows={file.templates.map((row) => ({
-              id: row.id,
-              name: row.name,
-              detail: formatTemplateDeskType(row.deskType),
-            }))}
-            selected={templateIds}
-            locked={lockedTemplateIds}
-            onToggle={(id) => toggle(id, "template")}
-          />
-          <ImportPickList
-            title="Folders"
-            empty="This file has no folders."
-            rows={file.sets.map((row) => ({
-              id: row.id,
-              name: row.name,
-              detail: `${formatTemplateDeskType(row.deskType)} · ${row.items.length} template${row.items.length === 1 ? "" : "s"}`,
-            }))}
-            selected={setIds}
-            onToggle={(id) => toggle(id, "folder")}
-          />
+          <label className="block text-xs text-ink-muted">
+            Templates
+            {file.templates.length === 0 ? (
+              <p className="mt-1 text-sm text-ink-muted">
+                This file has no templates.
+              </p>
+            ) : (
+              <AppMultiSelect
+                className="mt-1"
+                value={[...templateIds]}
+                onChange={(next) => {
+                  const kept = new Set(next);
+                  for (const id of lockedTemplateIds) {
+                    kept.add(id);
+                  }
+                  setTemplateIds(kept);
+                }}
+                placeholder="Templates"
+                options={file.templates.map((row) => ({
+                  value: row.id,
+                  label: `${row.name} · ${formatTemplateDeskType(row.deskType)}`,
+                  disabled: lockedTemplateIds.has(row.id),
+                }))}
+              />
+            )}
+          </label>
+          <label className="block text-xs text-ink-muted">
+            Folders
+            {file.sets.length === 0 ? (
+              <p className="mt-1 text-sm text-ink-muted">
+                This file has no folders.
+              </p>
+            ) : (
+              <AppMultiSelect
+                className="mt-1"
+                value={[...setIds]}
+                onChange={(next) => {
+                  const added = next.filter((id) => !setIds.has(id));
+                  setSetIds(new Set(next));
+                  if (added.length === 0) {
+                    return;
+                  }
+                  setTemplateIds((current) => {
+                    const kept = new Set(current);
+                    for (const id of added) {
+                      const folder = file.sets.find((row) => row.id === id);
+                      for (const templateId of folder?.items ?? []) {
+                        kept.add(templateId);
+                      }
+                    }
+                    return kept;
+                  });
+                }}
+                placeholder="Folders"
+                options={file.sets.map((row) => ({
+                  value: row.id,
+                  label: `${row.name} · ${formatTemplateDeskType(row.deskType)} · ${row.items.length} template${row.items.length === 1 ? "" : "s"}`,
+                }))}
+              />
+            )}
+          </label>
         </div>
       ) : null}
       <div className="mt-4 flex flex-wrap justify-end gap-2">
@@ -1625,60 +1621,6 @@ function ImportModal({
         </button>
       </div>
     </Modal>
-  );
-}
-
-function ImportPickList({
-  title,
-  empty,
-  rows,
-  selected,
-  locked,
-  onToggle,
-}: {
-  title: string;
-  empty: string;
-  rows: { id: string; name: string; detail: string }[];
-  selected: Set<string>;
-  locked?: Set<string>;
-  onToggle: (id: string) => void;
-}) {
-  return (
-    <div className="rounded-card border border-line bg-canvas p-3">
-      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-        {title}
-      </p>
-      {rows.length === 0 ? (
-        <p className="mt-2 text-sm text-ink-muted">{empty}</p>
-      ) : (
-        <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
-          {rows.map((row) => {
-            const isLocked = locked?.has(row.id) ?? false;
-            return (
-              <li key={row.id}>
-                <label
-                  className={`flex items-start gap-2 rounded-control px-1 py-1.5 text-sm text-ink ${
-                    isLocked
-                      ? "cursor-not-allowed text-ink-muted"
-                      : "hover:bg-surface-raised"
-                  }`}
-                >
-                  <AppCheck
-                    checked={selected.has(row.id)}
-                    disabled={isLocked}
-                    onChange={() => onToggle(row.id)}
-                  />
-                  <span className="min-w-0">
-                    <span className="block truncate">{row.name}</span>
-                    <span className="text-xs text-ink-faint">{row.detail}</span>
-                  </span>
-                </label>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
   );
 }
 
