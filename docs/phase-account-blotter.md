@@ -6,7 +6,7 @@ Reference: 3Commas-style **bot list** (table + filters + Create + row actions), 
 
 ## Status
 
-Spec only. Current work stays UI refinement (V1 item 3).
+Spec only for the **lists**. Current work stays UI refinement (V1 item 3). Isolation (one connection per desk, one venue account per login + venue + environment) shipped 19 Sep 2026 during item 3 — do not rebuild it here. Do not start Positions / Bots / Automations tables until item 3 is accepted and Click says go.
 
 ## Purpose
 

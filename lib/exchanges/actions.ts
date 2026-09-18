@@ -59,7 +59,13 @@ async function rejectTakenVenueAccount(input: {
   venueAccountId: string;
   exceptConnectionId?: string;
 }): Promise<string | null> {
-  const existing = await findExchangeConnectionByVenueAccount(input);
+  const existing = await findExchangeConnectionByVenueAccount({
+    userId: input.userId,
+    venue: input.venueId,
+    environment: input.environment,
+    venueAccountId: input.venueAccountId,
+    exceptConnectionId: input.exceptConnectionId,
+  });
   return exclusiveVenueAccountError({
     venueId: input.venueId,
     existing,
