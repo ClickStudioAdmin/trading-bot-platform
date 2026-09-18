@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { DeskMark, DeskTypeMark } from "@/components/desk-mark";
+import { DeskTypeMark } from "@/components/desk-mark";
 import { SiteLogo } from "@/components/site-logo";
 import { rememberTradingAccount } from "@/lib/accounts/actions";
 import {
@@ -284,7 +284,6 @@ function DeskNavLink({
           : "text-ink-faint hover:bg-surface-raised hover:text-ink"
       }`}
     >
-      <DeskMark desk={desk} />
       <span className="min-w-0 truncate text-sm text-ink">{desk.name}</span>
       {formatDeskCopyBadge(desk) ? (
         <span className="shrink-0 rounded-control bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
