@@ -14,6 +14,7 @@ export type ExchangeConnection = {
   environment: string;
   label: string | null;
   fingerprint: string;
+  venueAccountId: string | null;
   status: "active" | "invalid";
   verifiedAtMs: number | null;
   createdAtMs: number;
@@ -187,6 +188,11 @@ export function parseExchangeConnectionRow(
     labelRaw === null || labelRaw === undefined
       ? null
       : String(labelRaw).trim() || null;
+  const venueAccountRaw = row.venue_account_id;
+  const venueAccountId =
+    venueAccountRaw === null || venueAccountRaw === undefined
+      ? null
+      : String(venueAccountRaw).trim() || null;
   return {
     id,
     userId,
@@ -194,6 +200,7 @@ export function parseExchangeConnectionRow(
     environment,
     label,
     fingerprint,
+    venueAccountId,
     status,
     verifiedAtMs: verified && Number.isFinite(verified) ? verified : null,
     createdAtMs: Number.isFinite(created) ? created : 0,

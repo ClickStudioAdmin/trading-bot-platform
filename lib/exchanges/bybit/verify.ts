@@ -1,3 +1,4 @@
+import { parseBybitVenueAccountId } from "@/lib/exchanges/venue-account";
 import { judgeBybitApiKey, type BybitApiKeyInfo } from "./permissions";
 import { bybitSignPayload, hmacSha256Hex } from "./sign";
 import { bybitRestHost } from "./universe";
@@ -13,7 +14,7 @@ type BybitBody<T> = {
 export async function verifyBybitCredentials(
   environmentId: string,
   credentials: Record<string, string>,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true; venueAccountId: string } | { ok: false; error: string }> {
   const apiKey = credentials.apiKey ?? "";
   const apiSecret = credentials.apiSecret ?? "";
   if (!apiKey || !apiSecret) {
@@ -71,7 +72,18 @@ export async function verifyBybitCredentials(
       error: formatBybitVerifyReject(body.retCode, body.retMsg ?? ""),
     };
   }
-  return judgeBybitApiKey(body.result);
+  const judged = judgeBybitApiKey(body.result);
+  if (!judged.ok) {
+    return judged;
+  }
+  const venueAccountId = parseBybitVenueAccountId(body.result);
+  if (!venueAccountId) {
+    return {
+      ok: false,
+      error: "Bybit did not return an account id for this key.",
+    };
+  }
+  return { ok: true, venueAccountId };
 }
 
 export function formatBybitVerifyReject(retCode: number, retMsg: string): string {

@@ -5,11 +5,12 @@ import {
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
 import { decryptCredentials } from "@/lib/exchanges/encrypt";
+import { uniqueConnectionWriteError } from "@/lib/exchanges/venue-account";
 import { credentialsCompleteForVenue } from "@/lib/exchanges/venues";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 const LIST_COLUMNS =
-  "id, user_id, venue, environment, label, key_fingerprint, status, verified_at, created_at";
+  "id, user_id, venue, environment, label, key_fingerprint, venue_account_id, status, verified_at, created_at";
 
 export async function listExchangeConnections(
   userId: string,
@@ -31,12 +32,42 @@ export async function listExchangeConnections(
     .filter((row): row is ExchangeConnection => row !== null);
 }
 
+export async function findExchangeConnectionByVenueAccount(input: {
+  userId: string;
+  venue: string;
+  environment: string;
+  venueAccountId: string;
+  exceptConnectionId?: string;
+}): Promise<{ id: string } | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  let query = supabase
+    .from("exchange_connections")
+    .select("id")
+    .eq("user_id", input.userId)
+    .eq("venue", input.venue)
+    .eq("environment", input.environment)
+    .eq("venue_account_id", input.venueAccountId)
+    .limit(1);
+  if (input.exceptConnectionId) {
+    query = query.neq("id", input.exceptConnectionId);
+  }
+  const { data, error } = await query.maybeSingle();
+  if (error || !data?.id) {
+    return null;
+  }
+  return { id: String(data.id) };
+}
+
 export async function insertExchangeConnection(input: {
   userId: string;
   venue: string;
   environment: string;
   label: string | null;
   fingerprint: string;
+  venueAccountId: string;
   ciphertext: Buffer;
   nonce: Buffer;
   verifiedAt: string;
@@ -53,6 +84,7 @@ export async function insertExchangeConnection(input: {
       environment: input.environment,
       label: input.label,
       key_fingerprint: input.fingerprint,
+      venue_account_id: input.venueAccountId,
       credentials_ciphertext: toByteaParam(input.ciphertext),
       credentials_nonce: toByteaParam(input.nonce),
       status: "active",
@@ -61,11 +93,9 @@ export async function insertExchangeConnection(input: {
     .select("id")
     .single();
   if (error) {
-    if (error.code === "23505") {
-      return {
-        error:
-          "That key is already saved. Pick it on a desk, or add a different key.",
-      };
+    const unique = uniqueConnectionWriteError(error, "insert");
+    if (unique) {
+      return { error: unique };
     }
     return { error: error.message };
   }
@@ -125,6 +155,7 @@ export async function updateExchangeConnectionCredentials(input: {
   userId: string;
   connectionId: string;
   fingerprint: string;
+  venueAccountId: string;
   ciphertext: Buffer;
   nonce: Buffer;
   verifiedAt: string;
@@ -137,6 +168,7 @@ export async function updateExchangeConnectionCredentials(input: {
     .from("exchange_connections")
     .update({
       key_fingerprint: input.fingerprint,
+      venue_account_id: input.venueAccountId,
       credentials_ciphertext: toByteaParam(input.ciphertext),
       credentials_nonce: toByteaParam(input.nonce),
       status: "active",
@@ -147,11 +179,9 @@ export async function updateExchangeConnectionCredentials(input: {
     .select("id")
     .maybeSingle();
   if (error) {
-    if (error.code === "23505") {
-      return {
-        error:
-          "That key is already saved on another connection. Remove the other one first, or paste this same key again.",
-      };
+    const unique = uniqueConnectionWriteError(error, "replace");
+    if (unique) {
+      return { error: unique };
     }
     return { error: error.message };
   }

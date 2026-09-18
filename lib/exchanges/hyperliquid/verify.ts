@@ -9,7 +9,7 @@ export { hyperliquidInfoUrl } from "./host";
 export async function verifyHyperliquidCredentials(
   environmentId: string,
   credentials: Record<string, string>,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true; venueAccountId: string } | { ok: false; error: string }> {
   const account = normalizeAddress(credentials.accountAddress);
   const agent = agentAddressFromPrivateKey(credentials.agentKey);
   if (!account) {
@@ -60,5 +60,5 @@ export async function verifyHyperliquidCredentials(
         "That agent is not approved for this account on this network. Approve it in Hyperliquid first.",
     };
   }
-  return { ok: true };
+  return { ok: true, venueAccountId: account };
 }

@@ -142,7 +142,7 @@ Signing in `lib/exchanges/hyperliquid/` with the smallest keccak+secp256k1 libra
 - `trading_accounts.venue_environment` text null (null on Paper; `demo`/`live`/`testnet` on Connected).
 - Existing desks: `bybit`, environment inferred from the bound connection or null if unbound Paper.
 - Bind: connection.venue and connection.environment must match the desk. C&C create does not list Hyperliquid.
-- `exchange_connections` unchanged (encrypted JSON grows HL fields). Unique still `(user_id, venue, environment, key_fingerprint)`.
+- `exchange_connections` unchanged (encrypted JSON grows HL fields). Unique still `(user_id, venue, environment, key_fingerprint)`, plus `(user_id, venue, environment, venue_account_id)` when the account address is stored.
 - `futures_*` / `dca_playbooks` symbol checks are 2–32 A–Z0–9 so coins like `BTC` persist. Bybit rows stay `BTCUSDT`.
 
 No new blotter tables.

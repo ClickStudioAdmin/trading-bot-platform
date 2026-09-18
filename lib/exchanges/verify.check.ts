@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { judgeBybitApiKey } from "./bybit/permissions";
+import { parseBybitVenueAccountId } from "./venue-account";
 import { bybitSignPayload, hmacSha256Hex } from "./bybit/sign";
 import { bybitRestHost, BYBIT_DEMO_REST, BYBIT_PUBLIC_REST } from "./bybit/universe";
 import { formatBybitVerifyReject } from "./bybit/verify";
@@ -78,6 +79,9 @@ assert.equal(withdrawBeatsReadOnly.ok, false);
 if (!withdrawBeatsReadOnly.ok) {
   assert.match(withdrawBeatsReadOnly.error, /withdraw/i);
 }
+
+assert.equal(parseBybitVenueAccountId({ userID: 246435061 }), "246435061");
+assert.equal(parseBybitVenueAccountId({ userID: "abc" }), null);
 
 assert.equal(venueSupportsVerify("bybit"), true);
 assert.equal(venueSupportsVerify("hyperliquid"), true);

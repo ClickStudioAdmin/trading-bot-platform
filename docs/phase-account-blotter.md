@@ -26,6 +26,7 @@ This is **not** mixed strategies on one desk, **not** virtual lots, and **not** 
 4. Manual Perps, TradingView Strategy, and copy desks stay as they are (no recipe list). Their **positions** still appear on the account Positions table.
 5. No new ledger tables. Same `futures_*` / `paper_*` / playbook rows. One playbook per contract and one open perp row per symbol + side stay.
 6. **One key, one desk — in repo 19 Sep 2026 (during UI refinement).** Create / bind / rebind reject a connection already on another desk (names that desk). Pickers hide those keys. Paper stays unbound. Existing shared binds are not auto-unbound. Unique bind is app-enforced on every bind path (`applyDeskBindRules`). A later unique index is optional.
+7. **One venue account per login + venue + environment — in repo 19 Sep 2026.** Check / Save / Replace store `venue_account_id` (Bybit `userID`, Hyperliquid account address) and reject a second key on the same account. Existing connections stay null until re-verified. No auto-unbind.
 
 Stop. Do not start entitlements, onboarding, virtual positions, or mixed desk types.
 
@@ -35,7 +36,7 @@ Stop. Do not start entitlements, onboarding, virtual positions, or mixed desk ty
 - **Account Bots** — `/account/bots`. Every C&C layer, Perps bots rule, and DCA playbook. Columns include desk, type, pair, status (Active / Disabled / that desk’s extra mode), and a one-line recipe summary. Edit / create still happen on the desk Automations route so bind, caps, and type lock stay correct.
 - **Desk Automations** — list first. Same data as today; the form is a second step, not the page.
 - **3Commas** is the list pattern (directory + Active + actions), not a column-for-column copy. TBP tokens, Lucide actions, and Theme tables.
-- **One key, one desk.** Isolation is another trade-only key, not another desk on the same connection. Same-pair stacking later needs virtual lots (V2). Until then, do not share a bind.
+- **One key, one desk.** Isolation is another trade-only key on a different venue account, not another desk on the same connection. Check / Save / Replace reject a second key that hits the same Bybit UID or Hyperliquid wallet. Same-pair stacking later needs virtual lots (V2). Until then, do not share a bind.
 
 ## Out of scope
 

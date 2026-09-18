@@ -9,7 +9,7 @@ export async function verifyExchangeCredentials(input: {
   venueId: string;
   environmentId: string;
   credentials: Record<string, string>;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<{ ok: true; venueAccountId: string } | { ok: false; error: string }> {
   if (input.venueId === "bybit") {
     return verifyBybitCredentials(input.environmentId, input.credentials);
   }

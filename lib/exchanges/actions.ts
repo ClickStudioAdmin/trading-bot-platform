@@ -14,12 +14,14 @@ import {
 } from "@/lib/exchanges/encrypt";
 import {
   deleteExchangeConnection,
+  findExchangeConnectionByVenueAccount,
   getExchangeConnectionForUser,
   insertExchangeConnection,
   listConnectionDeskBinds,
   updateExchangeConnectionCredentials,
   updateExchangeConnectionLabel,
 } from "@/lib/exchanges/store";
+import { exclusiveVenueAccountError } from "@/lib/exchanges/venue-account";
 import { verifyExchangeCredentials } from "@/lib/exchanges/verify";
 import {
   parseVenueCredentials,
@@ -48,6 +50,20 @@ function finish(path: string, extra: Record<string, string>): never {
 
 function fail(message: string): never {
   finish(ACCOUNT_EXCHANGES_HREF, { error: message });
+}
+
+async function rejectTakenVenueAccount(input: {
+  userId: string;
+  venueId: string;
+  environment: string;
+  venueAccountId: string;
+  exceptConnectionId?: string;
+}): Promise<string | null> {
+  const existing = await findExchangeConnectionByVenueAccount(input);
+  return exclusiveVenueAccountError({
+    venueId: input.venueId,
+    existing,
+  });
 }
 
 function readConnectForm(formData: FormData) {
@@ -105,11 +121,24 @@ export async function checkExchangeConnection(
   if (!parsed.ok) {
     return parsed;
   }
-  return verifyExchangeCredentials({
+  const verified = await verifyExchangeCredentials({
     venueId: parsed.venue.id,
     environmentId: parsed.environment.id,
     credentials: parsed.credentials,
   });
+  if (!verified.ok) {
+    return verified;
+  }
+  const taken = await rejectTakenVenueAccount({
+    userId: session.member.id,
+    venueId: parsed.venue.id,
+    environment: parsed.environment.id,
+    venueAccountId: verified.venueAccountId,
+  });
+  if (taken) {
+    return { ok: false, error: taken };
+  }
+  return { ok: true };
 }
 
 export async function saveExchangeConnection(formData: FormData) {
@@ -154,6 +183,16 @@ export async function saveExchangeConnection(formData: FormData) {
     return failTo(verified.error);
   }
 
+  const taken = await rejectTakenVenueAccount({
+    userId: session.member.id,
+    venueId: venue.id,
+    environment: environment.id,
+    venueAccountId: verified.venueAccountId,
+  });
+  if (taken) {
+    return failTo(taken);
+  }
+
   let packed;
   try {
     packed = encryptCredentials(credentials);
@@ -167,6 +206,7 @@ export async function saveExchangeConnection(formData: FormData) {
     environment: environment.id,
     label,
     fingerprint,
+    venueAccountId: verified.venueAccountId,
     ciphertext: packed.ciphertext,
     nonce: packed.nonce,
     verifiedAt: new Date().toISOString(),
@@ -334,6 +374,17 @@ export async function replaceExchangeConnection(formData: FormData) {
     fail(verified.error);
   }
 
+  const taken = await rejectTakenVenueAccount({
+    userId: session.member.id,
+    venueId: venue.venue.id,
+    environment: environment.environment.id,
+    venueAccountId: verified.venueAccountId,
+    exceptConnectionId: connectionId,
+  });
+  if (taken) {
+    fail(taken);
+  }
+
   let packed;
   try {
     packed = encryptCredentials(parsed.credentials);
@@ -345,6 +396,7 @@ export async function replaceExchangeConnection(formData: FormData) {
     userId: session.member.id,
     connectionId,
     fingerprint,
+    venueAccountId: verified.venueAccountId,
     ciphertext: packed.ciphertext,
     nonce: packed.nonce,
     verifiedAt: new Date().toISOString(),

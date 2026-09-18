@@ -7,6 +7,9 @@ export type BybitApiKeyInfo = {
     Derivatives?: unknown;
     Options?: unknown;
   };
+  userID?: unknown;
+  userId?: unknown;
+  uid?: unknown;
 };
 
 function permissionList(value: unknown): string[] {

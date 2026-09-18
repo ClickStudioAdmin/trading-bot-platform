@@ -16,6 +16,12 @@ import {
   fromByteaParam,
   toByteaParam,
 } from "./connections";
+import {
+  exclusiveVenueAccountError,
+  parseBybitVenueAccountId,
+  parseHyperliquidVenueAccountId,
+  uniqueConnectionWriteError,
+} from "./venue-account";
 import { parseVenueId } from "./venues";
 
 const bybit = parseVenueId("bybit");
@@ -183,6 +189,7 @@ const row = parseExchangeConnectionRow({
 });
 assert.equal(row?.fingerprint, "1234");
 assert.equal(row?.userId, "user-1");
+assert.equal(row?.venueAccountId, null);
 assert.equal(row?.verifiedAtMs, null);
 assert.equal(
   formatConnectionSummary(row!),
@@ -218,5 +225,70 @@ assert.equal(parseExchangeConnectionRow({}), null);
 
 assert.equal(toByteaParam(Buffer.from("ab")), "\\x6162");
 assert.deepEqual(fromByteaParam("\\x6162"), Buffer.from("ab"));
+
+assert.equal(
+  parseExchangeConnectionRow({
+    id: "conn-3",
+    user_id: "user-1",
+    venue: "bybit",
+    environment: "live",
+    label: null,
+    key_fingerprint: "1234",
+    venue_account_id: "246435061",
+    status: "active",
+    verified_at: null,
+    created_at: "2026-08-24T00:00:00.000Z",
+  })?.venueAccountId,
+  "246435061",
+);
+
+assert.equal(parseBybitVenueAccountId({ userID: 246435061 }), "246435061");
+assert.equal(parseBybitVenueAccountId({ userId: "246435061" }), "246435061");
+assert.equal(parseBybitVenueAccountId({ uid: "12" }), null);
+assert.equal(parseBybitVenueAccountId({}), null);
+assert.equal(
+  parseHyperliquidVenueAccountId(
+    "0x1111111111111111111111111111111111111111",
+  ),
+  "0x1111111111111111111111111111111111111111",
+);
+assert.equal(parseHyperliquidVenueAccountId("not-an-address"), null);
+assert.equal(
+  exclusiveVenueAccountError({ venueId: "bybit", existing: null }),
+  null,
+);
+assert.match(
+  exclusiveVenueAccountError({ venueId: "bybit", existing: { id: "c1" } }) ?? "",
+  /Bybit account is already connected/,
+);
+assert.match(
+  exclusiveVenueAccountError({
+    venueId: "hyperliquid",
+    existing: { id: "c1" },
+  }) ?? "",
+  /Hyperliquid account is already connected/,
+);
+assert.match(
+  uniqueConnectionWriteError(
+    {
+      code: "23505",
+      message:
+        'duplicate key value violates unique constraint "exchange_connections_login_venue_account_uidx"',
+    },
+    "insert",
+  ) ?? "",
+  /exchange account is already connected/,
+);
+assert.match(
+  uniqueConnectionWriteError(
+    {
+      code: "23505",
+      message:
+        'duplicate key value violates unique constraint "exchange_connections_user_id_venue_environment_key_fingerprint_key"',
+    },
+    "insert",
+  ) ?? "",
+  /already saved/,
+);
 
 console.log("exchange connection checks passed");
