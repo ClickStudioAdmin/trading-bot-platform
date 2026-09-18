@@ -339,9 +339,9 @@ function DeskNavLink({
 }
 
 const MODE_BADGE_TONE: Record<DeskDisplayMode, string> = {
-  paper: "bg-ink-faint/15 text-ink-muted",
-  demo: "bg-warning/15 text-warning",
-  live: "bg-danger/15 text-danger",
+  paper: "text-ink-muted",
+  demo: "text-warning",
+  live: "text-danger",
 };
 
 function DeskModeBadge({
@@ -354,7 +354,7 @@ function DeskModeBadge({
   return (
     <span
       title={hint}
-      className={`shrink-0 rounded-control px-1.5 py-0.5 text-[10px] font-medium ${MODE_BADGE_TONE[mode]}`}
+      className={`shrink-0 text-[10px] ${MODE_BADGE_TONE[mode]}`}
     >
       {formatDeskDisplayMode(mode)}
     </span>
