@@ -181,7 +181,7 @@ function DeskGroup({
           return (
           <div key={group.deskType} className="mt-3 first:mt-0">
             <div className="flex items-center gap-1 px-3">
-              <p className="flex min-w-0 flex-1 items-center gap-2 text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+              <p className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
                 <DeskTypeMark deskType={group.deskType} />
                 <span>{typeLabel}</span>
               </p>
