@@ -33,8 +33,8 @@ export function ThemeSelectDraft() {
       </p>
       <p className="text-sm text-ink-muted">
         Shared listbox. Native option menus are not used. Field is the default.
-        Action is the purple desk control. Searchable and multi-select are here
-        for review — not wired on live pages yet.
+        Action is the purple desk control. Searchable and multi-select use the
+        same listbox. Live folder and comparable pickers use multi-select.
       </p>
       <div className="flex flex-wrap items-end gap-4">
         <label className="block min-w-[12rem] text-xs text-ink-muted">

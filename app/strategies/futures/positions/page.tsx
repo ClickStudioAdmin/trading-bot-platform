@@ -254,11 +254,13 @@ export default async function FuturesPositionsPage({
           </section>
         ) : null}
 
-        <PageHeading
-          as="h2"
-          title="Current Positions"
-          className="mb-0"
-          actions={
+        <PageHeading as="h2" title="Current Positions" className="mb-0" />
+        <OpenFuturesTrades
+          signedIn={desk.signedIn}
+          open={open}
+          next={NEXT}
+          showHeading={false}
+          toolbarActions={
             <PositionsChartButton
               venue="bybit"
               symbols={[
@@ -276,12 +278,6 @@ export default async function FuturesPositionsPage({
               )}
             />
           }
-        />
-        <OpenFuturesTrades
-          signedIn={desk.signedIn}
-          open={open}
-          next={NEXT}
-          showHeading={false}
           exchangeBook={desk.exchangeBook}
           showCloseAll
           workingCount={desk.working.length}

@@ -256,6 +256,7 @@ export function OpenFuturesTrades({
   positionsHref = FUTURES_PATHS.positions,
   hideRowExits = false,
   copyDesk = false,
+  toolbarActions,
 }: {
   signedIn: boolean;
   open: MarkedFutures[];
@@ -272,6 +273,7 @@ export function OpenFuturesTrades({
   positionsHref?: string;
   hideRowExits?: boolean;
   copyDesk?: boolean;
+  toolbarActions?: ReactNode;
 }) {
   const { visible: storedVisible, setColumn } = useFuturesOpenColumns();
   const visible = hideRowExits
@@ -310,7 +312,7 @@ export function OpenFuturesTrades({
           </Link>
         </div>
       ) : null}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
         <FuturesOpenColumnPicker
           visible={visible}
           setColumn={setColumn}
@@ -326,6 +328,7 @@ export function OpenFuturesTrades({
             copyDesk={copyDesk}
           />
         ) : null}
+        {toolbarActions}
       </div>
       <TableCard
         className="min-w-0 mt-6"

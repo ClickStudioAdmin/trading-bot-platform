@@ -142,7 +142,7 @@ import {
 } from "@/lib/dca/indicators";
 import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
 import { formatQty, signedTone } from "@/lib/opportunities/format";
-import { AppSelect } from "@/components/app-select";
+import { AppMultiSelect, AppSelect } from "@/components/app-select";
 
 function backtestChartWindow(
   run: BacktestRun,
@@ -966,7 +966,7 @@ export function SaveBacktestAsTemplateButton({
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState(defaultName);
   const [platform, setPlatform] = useState(platformOnly);
-  const [folderIds, setFolderIds] = useState<Set<string>>(new Set());
+  const [folderIds, setFolderIds] = useState<string[]>([]);
   const [createFolder, setCreateFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [starterPack, setStarterPack] = useState(false);
@@ -976,22 +976,10 @@ export function SaveBacktestAsTemplateButton({
     return null;
   }
 
-  function toggleFolder(id: string) {
-    setFolderIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }
-
   function resetAndOpen() {
     setName(defaultName);
     setPlatform(platformOnly);
-    setFolderIds(new Set());
+    setFolderIds([]);
     setCreateFolder(false);
     setNewFolderName("");
     setStarterPack(false);
@@ -1074,37 +1062,21 @@ export function SaveBacktestAsTemplateButton({
                   : "None yet. Create one below or on My Folders."}
               </p>
             ) : (
-              <div className="mt-1 space-y-3">
-                {folderGroups.map((group) => (
-                  <div key={group.label}>
-                    {folderGroups.length > 1 ? (
-                      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-                        {group.label}
-                      </p>
-                    ) : null}
-                    <ul className="mt-1 space-y-1 rounded-control border border-line bg-canvas px-3 py-2">
-                      {group.rows.map((row) => (
-                        <li key={row.id}>
-                          <label className="flex items-start gap-2 text-sm text-ink">
-                            <AppCheck
-                              checked={folderIds.has(row.id)}
-                              onChange={() => toggleFolder(row.id)}
-                            />
-                            <span>
-                              <span className="block font-medium">{row.name}</span>
-                              <span className="block text-xs text-ink-muted">
-                                {row.items.length === 0
-                                  ? "Empty folder"
-                                  : `${row.items.length} template${row.items.length === 1 ? "" : "s"}`}
-                              </span>
-                            </span>
-                          </label>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
+              <AppMultiSelect
+                className="mt-1"
+                value={folderIds}
+                onChange={setFolderIds}
+                placeholder="Folders"
+                options={folderGroups.flatMap((group) =>
+                  group.rows.map((row) => ({
+                    value: row.id,
+                    label:
+                      folderGroups.length > 1
+                        ? `${row.name} · ${group.label}`
+                        : row.name,
+                  })),
+                )}
+              />
             )}
           </div>
           <label className="mt-3 flex items-start gap-2 text-sm text-ink">

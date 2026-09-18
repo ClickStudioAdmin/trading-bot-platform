@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type DragEvent, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { AppMultiSelect, AppSelect } from "@/components/app-select";
+import { FileDrop } from "@/components/file-drop";
 import { AppCheck, AppRadio } from "@/components/app-check";
 import { HintLabel } from "@/components/bot-form-chrome";
 import { DatePicker } from "@/components/date-picker";
@@ -210,7 +211,13 @@ export function ThemeFormDraft() {
           />
         </label>
 
-        <ThemeFileDrop />
+        <FileDrop
+          name="logo"
+          accept="image/png,image/jpeg,image/webp"
+          hint="PNG, JPEG, or WebP."
+          label="File"
+          preview
+        />
 
         <fieldset className="space-y-3">
           <legend className="text-sm text-ink">Radio</legend>
@@ -292,64 +299,3 @@ export function ThemeFormDraft() {
   );
 }
 
-function ThemeFileDrop() {
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [over, setOver] = useState(false);
-
-  function take(file: File | undefined) {
-    if (!file) {
-      return;
-    }
-    setFileName(file.name);
-  }
-
-  function onDrop(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    setOver(false);
-    take(event.dataTransfer.files[0]);
-  }
-
-  return (
-    <div>
-      <p className="text-sm text-ink">File</p>
-      <div
-        onDragEnter={(event) => {
-          event.preventDefault();
-          setOver(true);
-        }}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setOver(true);
-        }}
-        onDragLeave={(event) => {
-          event.preventDefault();
-          setOver(false);
-        }}
-        onDrop={onDrop}
-        className={`mt-1 rounded-card border border-dashed px-4 py-6 text-center ${
-          over
-            ? "border-accent bg-accent/10"
-            : "border-line-strong bg-canvas"
-        }`}
-      >
-        <p className="text-sm text-ink">
-          {fileName ? fileName : "Drop a file here"}
-        </p>
-        <p className="mt-1 text-xs text-ink-muted">PNG, JPEG, or WebP.</p>
-        <label className={`${secondaryBtn} mt-3 inline-flex cursor-pointer`}>
-          Choose file
-          <input
-            type="file"
-            name="logo"
-            accept="image/png,image/jpeg,image/webp"
-            className="sr-only"
-            onChange={(event) => {
-              take(event.target.files?.[0]);
-              event.target.value = "";
-            }}
-          />
-        </label>
-      </div>
-    </div>
-  );
-}

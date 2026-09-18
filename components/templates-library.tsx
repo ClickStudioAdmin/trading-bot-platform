@@ -68,7 +68,8 @@ import {
   parseTemplateLibraryJson,
   type TemplateLibraryFile,
 } from "@/lib/templates/transfer";
-import { AppSelect } from "@/components/app-select";
+import { AppMultiSelect, AppSelect } from "@/components/app-select";
+import { FileDrop } from "@/components/file-drop";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -1571,19 +1572,13 @@ function ImportModal({
         A selected folder keeps its templates ticked. Import creates copies in
         your library.
       </p>
-      <label className={`${secondaryBtn} mt-4 inline-flex cursor-pointer`}>
-        Choose file
-        <input
-          type="file"
+      <div className="mt-4">
+        <FileDrop
           accept="application/json,.json"
-          className="sr-only"
-          onChange={(event) => {
-            const picked = event.target.files?.[0];
-            event.target.value = "";
-            void onPick(picked);
-          }}
+          hint="JSON library export."
+          onFile={(picked) => void onPick(picked)}
         />
-      </label>
+      </div>
       {parseError ? (
         <p className="mt-3 rounded-card border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
           {parseError}
@@ -2008,27 +2003,19 @@ function TemplateEditModal({
             No folders for this desk type yet. Create one below.
           </p>
         ) : (
-          <div className="mt-1 space-y-1">
-            {folders.map((folder) => (
-              <label key={folder.id} className="flex items-center gap-2 text-sm text-ink">
-                <AppCheck
-                  checked={folderIds.includes(folder.id)}
-                  onChange={(event) => {
-                    setFolderIds((current) =>
-                      event.target.checked
-                        ? [...current, folder.id]
-                        : current.filter((id) => id !== folder.id),
-                    );
-                  }}
-                  className=""
-                />
-                {folder.name}
-                {folder.visibility === "platform" ? (
-                  <span className="text-xs text-ink-faint">Platform</span>
-                ) : null}
-              </label>
-            ))}
-          </div>
+          <AppMultiSelect
+            className="mt-1"
+            value={folderIds}
+            onChange={setFolderIds}
+            placeholder="Folders"
+            options={folders.map((folder) => ({
+              value: folder.id,
+              label:
+                folder.visibility === "platform"
+                  ? `${folder.name} (Platform)`
+                  : folder.name,
+            }))}
+          />
         )}
         <label className="mt-2 flex items-start gap-2 text-sm text-ink">
           <AppCheck

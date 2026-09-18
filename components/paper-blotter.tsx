@@ -152,7 +152,7 @@ export function OpenPaperTrades({
           </Link>
         </div>
       ) : null}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
         <PaperOpenColumnPicker visible={visible} setColumn={setColumn} />
       </div>
       <TableCard

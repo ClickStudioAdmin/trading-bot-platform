@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useSyncExternalStore } from "react";
-import { AppCheck } from "@/components/app-check";
+import { useSyncExternalStore } from "react";
+import { TableColumnPicker } from "@/components/table-column-picker";
 import {
   FUTURES_OPEN_COLUMN_DEFAULTS,
   FUTURES_OPEN_COLUMN_LABELS,
@@ -59,66 +59,24 @@ export function FuturesOpenColumnPicker({
   visible,
   setColumn,
   hiddenColumns = [],
+  align = "end",
 }: {
   visible: FuturesOpenColumnVisibility;
   setColumn: (id: FuturesOpenOptionalColumn, on: boolean) => void;
   hiddenColumns?: readonly FuturesOpenOptionalColumn[];
+  align?: "start" | "end";
 }) {
-  const rootRef = useRef<HTMLDetailsElement>(null);
-
-  useEffect(() => {
-    function closeMenu() {
-      if (rootRef.current) {
-        rootRef.current.open = false;
-      }
-    }
-    function onPointerDown(event: PointerEvent) {
-      const root = rootRef.current;
-      if (!root?.open) {
-        return;
-      }
-      if (!root.contains(event.target as Node)) {
-        closeMenu();
-      }
-    }
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        closeMenu();
-      }
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, []);
-
   return (
-    <details ref={rootRef} className="relative">
-      <summary className="flex cursor-pointer list-none items-center gap-1 rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink [&::-webkit-details-marker]:hidden">
-        Columns
-      </summary>
-      <div className="absolute left-0 z-20 mt-2 w-56 rounded-card border border-line bg-surface p-2">
-        <p className="px-2 pt-1 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-          Show columns
-        </p>
-        {FUTURES_OPEN_OPTIONAL_COLUMNS.filter(
-          (id) => !hiddenColumns.includes(id),
-        ).map((id) => (
-          <label
-            key={id}
-            className="flex cursor-pointer items-center gap-2 rounded-control px-2 py-1.5 text-sm text-ink hover:bg-surface-raised"
-          >
-            <AppCheck
-              checked={visible[id]}
-              onChange={(event) => setColumn(id, event.target.checked)}
-              className=""
-            />
-            {FUTURES_OPEN_COLUMN_LABELS[id]}
-          </label>
-        ))}
-      </div>
-    </details>
+    <TableColumnPicker
+      align={align}
+      visible={visible}
+      onToggle={(id, on) => setColumn(id as FuturesOpenOptionalColumn, on)}
+      columns={FUTURES_OPEN_OPTIONAL_COLUMNS.filter(
+        (id) => !hiddenColumns.includes(id),
+      ).map((id) => ({
+        id,
+        label: FUTURES_OPEN_COLUMN_LABELS[id],
+      }))}
+    />
   );
 }

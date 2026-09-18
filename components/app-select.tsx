@@ -232,26 +232,35 @@ export function AppSelect({
 }
 
 export function AppMultiSelect({
+  name,
   options,
+  value,
   defaultValue = [],
+  onChange,
   placeholder = "Select…",
   className = "",
+  max,
 }: {
+  name?: string;
   options: readonly AppSelectOption[];
+  value?: string[];
   defaultValue?: string[];
+  onChange?: (values: string[]) => void;
   placeholder?: string;
   className?: string;
+  max?: number;
 }) {
   const listId = useId();
   const triggerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<string[]>(defaultValue);
+  const [uncontrolled, setUncontrolled] = useState<string[]>(defaultValue);
+  const selected = value ?? uncontrolled;
   const picked = useMemo(
     () =>
       selected
-        .map((value) => options.find((option) => option.value === value))
+        .map((item) => options.find((option) => option.value === item))
         .filter((option): option is AppSelectOption => Boolean(option)),
     [options, selected],
   );
@@ -268,12 +277,18 @@ export function AppMultiSelect({
     setQuery("");
   }, []);
 
-  function toggleValue(value: string) {
-    setSelected((current) =>
-      current.includes(value)
-        ? current.filter((item) => item !== value)
-        : [...current, value],
-    );
+  function toggleValue(nextValue: string) {
+    const on = selected.includes(nextValue);
+    if (!on && max != null && selected.length >= max) {
+      return;
+    }
+    const next = on
+      ? selected.filter((item) => item !== nextValue)
+      : [...selected, nextValue];
+    if (value == null) {
+      setUncontrolled(next);
+    }
+    onChange?.(next);
   }
 
   useEffect(() => {
@@ -305,6 +320,11 @@ export function AppMultiSelect({
 
   return (
     <>
+      {name
+        ? selected.map((item) => (
+            <input key={item} type="hidden" name={name} value={item} />
+          ))
+        : null}
       <div
         ref={triggerRef}
         className={`relative flex w-full min-w-0 flex-wrap items-center gap-2 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink hover:border-line-strong focus-within:border-line-strong ${className}`.trim()}
@@ -360,17 +380,20 @@ export function AppMultiSelect({
             >
               {visible.map((option) => {
                 const on = selected.includes(option.value);
+                const capped =
+                  !on && max != null && selected.length >= max;
                 return (
                   <button
                     key={option.value}
                     type="button"
                     role="option"
                     aria-selected={on}
+                    disabled={capped}
                     onClick={() => toggleValue(option.value)}
                     className={
                       on
-                        ? "flex w-full rounded-control bg-accent/15 px-3 py-2 text-left text-sm text-ink"
-                        : "flex w-full rounded-control px-3 py-2 text-left text-sm text-ink hover:bg-surface-raised"
+                        ? "flex w-full rounded-control bg-accent/15 px-3 py-2 text-left text-sm text-ink disabled:opacity-40"
+                        : "flex w-full rounded-control px-3 py-2 text-left text-sm text-ink hover:bg-surface-raised disabled:opacity-40"
                     }
                   >
                     <OptionLabel option={option} />

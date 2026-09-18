@@ -220,35 +220,31 @@ export async function HyperliquidFuturesPositions({
           </section>
         ) : null}
 
-        <PageHeading
-          as="h2"
-          title="Current Positions"
-          className="mb-0"
-          actions={
-            <PositionsChartButton
-              venue="hyperliquid"
-              venueEnvironment={env}
-              symbols={[
-                ...open.map((row) => row.symbol),
-                ...desk.working.map((row) => row.symbol),
-              ]}
-              defaultSymbol={open[0]?.symbol ?? "BTC"}
-              positions={open}
-              working={desk.working}
-              orders={open.flatMap((row) =>
-                row.orders.map((order) => ({
-                  ...order,
-                  symbol: row.symbol,
-                })),
-              )}
-            />
-          }
-        />
+        <PageHeading as="h2" title="Current Positions" className="mb-0" />
           <OpenFuturesTrades
             signedIn={desk.signedIn}
             open={open}
             next={NEXT}
             showHeading={false}
+            toolbarActions={
+              <PositionsChartButton
+                venue="hyperliquid"
+                venueEnvironment={env}
+                symbols={[
+                  ...open.map((row) => row.symbol),
+                  ...desk.working.map((row) => row.symbol),
+                ]}
+                defaultSymbol={open[0]?.symbol ?? "BTC"}
+                positions={open}
+                working={desk.working}
+                orders={open.flatMap((row) =>
+                  row.orders.map((order) => ({
+                    ...order,
+                    symbol: row.symbol,
+                  })),
+                )}
+              />
+            }
             exchangeBook={desk.exchangeBook}
             showCloseAll
             workingCount={desk.working.length}

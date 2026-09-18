@@ -1,10 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { AppCheck } from "@/components/app-check";
-
-const fileClass =
-  "w-full text-sm text-ink file:mr-3 file:rounded-control file:border-0 file:bg-surface-raised file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-ink hover:file:bg-line";
+import { FileDrop } from "@/components/file-drop";
 
 export function LogoFileField({
   name,
@@ -21,89 +17,16 @@ export function LogoFileField({
   hint: string;
   emptyTone?: "canvas" | "raised";
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const blobRef = useRef<string | null>(null);
-  const [pickedUrl, setPickedUrl] = useState<string | null>(null);
-  const [remove, setRemove] = useState(false);
-
-  function replacePreview(next: string | null) {
-    if (blobRef.current) {
-      URL.revokeObjectURL(blobRef.current);
-    }
-    blobRef.current = next;
-    setPickedUrl(next);
-  }
-
-  useEffect(() => {
-    return () => {
-      if (blobRef.current) {
-        URL.revokeObjectURL(blobRef.current);
-      }
-    };
-  }, []);
-
-  const shown = pickedUrl ?? (remove ? null : currentUrl);
-  const emptyClass =
-    emptyTone === "raised" ? "bg-surface-raised" : "bg-canvas";
-
   return (
-    <div>
-      <div className="mt-1 flex items-center gap-3">
-        {shown ? (
-          // Local object URL or stored public mark.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={shown}
-            alt=""
-            width={56}
-            height={56}
-            className="size-14 shrink-0 rounded-card border border-line object-contain"
-          />
-        ) : (
-          <span
-            className={`inline-flex size-14 shrink-0 items-center justify-center rounded-card border border-line text-[11px] text-ink-faint ${emptyClass}`}
-          >
-            None
-          </span>
-        )}
-        <div className="min-w-0 flex-1">
-          <input
-            ref={inputRef}
-            type="file"
-            name={name}
-            accept="image/png,image/jpeg,image/webp"
-            className={fileClass}
-            onChange={(event) => {
-              const file = event.target.files?.[0] ?? null;
-              if (!file || !file.type.startsWith("image/")) {
-                replacePreview(null);
-                return;
-              }
-              setRemove(false);
-              replacePreview(URL.createObjectURL(file));
-            }}
-          />
-          <p className="mt-1 text-xs text-ink-faint">{hint}</p>
-        </div>
-      </div>
-      {currentUrl && removeName ? (
-        <label className="mt-2 flex items-center gap-2 text-xs text-ink-muted">
-          <AppCheck
-            name={removeName}
-            checked={remove}
-            onChange={(event) => {
-              const next = event.target.checked;
-              setRemove(next);
-              if (next && inputRef.current) {
-                inputRef.current.value = "";
-                replacePreview(null);
-              }
-            }}
-            className=""
-          />
-          {removeLabel}
-        </label>
-      ) : null}
-    </div>
+    <FileDrop
+      name={name}
+      accept="image/png,image/jpeg,image/webp"
+      hint={hint}
+      preview
+      currentUrl={currentUrl}
+      removeName={removeName}
+      removeLabel={removeLabel}
+      emptyTone={emptyTone}
+    />
   );
 }

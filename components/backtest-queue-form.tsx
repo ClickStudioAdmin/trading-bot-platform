@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AppCheck } from "@/components/app-check";
+import { AppMultiSelect, AppSelect } from "@/components/app-select";
 import { BacktestRecipeFields } from "@/components/backtest-recipe-fields";
 import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
@@ -42,7 +42,6 @@ import {
 } from "@/lib/dca/indicators";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
-import { AppSelect } from "@/components/app-select";
 
 function withSymbol(options: LinearPerp[], symbol: string): LinearPerp[] {
   const needle = symbol.trim().toUpperCase();
@@ -444,51 +443,19 @@ export function BacktestQueueForm({
           <p className="mt-1 text-xs text-ink-faint">
             Same bot and window on other pairs. Ranked next to the primary.
           </p>
-          {comparables.map((row) => (
-            <input key={row} type="hidden" name="comparable" value={row} />
-          ))}
-          <div className="mt-2 flex flex-wrap gap-2">
-            {comparables.map((row) => (
-              <button
-                key={row}
-                type="button"
-                onClick={() =>
-                  setComparables((current) =>
-                    current.filter((item) => item !== row),
-                  )
-                }
-                className="rounded-control border border-line bg-surface-raised px-2 py-1 text-xs text-ink hover:border-line-strong"
-              >
-                {row} ×
-              </button>
-            ))}
-          </div>
-          {comparables.length < BACKTEST_COMPARABLE_CAP ? (
-            <div className="mt-2 max-h-40 overflow-y-auto rounded-control border border-line bg-canvas px-2 py-2">
-              {comparableOptions.slice(0, 40).map((row) => {
-                const checked = comparables.includes(row.symbol);
-                return (
-                  <label
-                    key={row.symbol}
-                    className="flex items-center gap-2 py-0.5 text-sm text-ink"
-                  >
-                    <AppCheck
-                      checked={checked}
-                      onChange={() => {
-                        setComparables((current) =>
-                          current.includes(row.symbol)
-                            ? current.filter((item) => item !== row.symbol)
-                            : [...current, row.symbol],
-                        );
-                      }}
-                      className=""
-                    />
-                    {row.baseCoin}-{row.quoteCoin}
-                  </label>
-                );
-              })}
-            </div>
-          ) : null}
+          <AppMultiSelect
+            className="mt-2"
+            name="comparable"
+            value={comparables}
+            onChange={setComparables}
+            max={BACKTEST_COMPARABLE_CAP}
+            placeholder="Pairs"
+            options={comparableOptions.slice(0, 40).map((row) => ({
+              value: row.symbol,
+              label: `${row.baseCoin}-${row.quoteCoin}`,
+              icon: row.baseCoin,
+            }))}
+          />
         </fieldset>
         {recipe ? (
           <p className="text-xs text-ink-muted">

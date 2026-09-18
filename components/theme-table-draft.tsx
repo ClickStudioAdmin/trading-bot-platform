@@ -35,6 +35,23 @@ import {
 } from "@/lib/table-chrome";
 import { AppSelect } from "@/components/app-select";
 import { AppCheck } from "@/components/app-check";
+import { TableColumnPicker } from "@/components/table-column-picker";
+
+const THEME_OPTIONAL_COLUMNS = [
+  { id: "type", label: "Type" },
+  { id: "status", label: "Status" },
+  { id: "venue", label: "Venue" },
+  { id: "updated", label: "Updated" },
+] as const;
+
+type ThemeOptionalColumn = (typeof THEME_OPTIONAL_COLUMNS)[number]["id"];
+
+const THEME_COLUMN_DEFAULTS: Record<ThemeOptionalColumn, boolean> = {
+  type: true,
+  status: true,
+  venue: true,
+  updated: true,
+};
 
 const TYPES = ["DCA", "Perps bots", "Cash and Carry"] as const;
 const STATUSES = ["active", "disabled", "pending", "error"] as const;
@@ -123,6 +140,9 @@ export function ThemeTableDraft() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<string | null>(null);
+  const [columns, setColumns] = useState(THEME_COLUMN_DEFAULTS);
+  const visibleColumnCount =
+    3 + THEME_OPTIONAL_COLUMNS.filter((column) => columns[column.id]).length;
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -245,6 +265,16 @@ export function ThemeTableDraft() {
         }
         actions={
           <>
+            <TableColumnPicker
+              columns={THEME_OPTIONAL_COLUMNS}
+              visible={columns}
+              onToggle={(id, on) =>
+                setColumns((current) => ({
+                  ...current,
+                  [id]: on,
+                }))
+              }
+            />
             <TableLabelButton
               variant="secondary"
               icon={<IconDownload {...TABLE_BTN_ICON} />}
@@ -346,37 +376,45 @@ export function ThemeTableDraft() {
                 dir={table.sortDir}
                 onSort={() => table.onSort("name")}
               />
-              <SortTh
-                label="Type"
-                active={table.sortKey === "type"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("type")}
-              />
-              <SortTh
-                label="Status"
-                active={table.sortKey === "status"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("status")}
-              />
-              <SortTh
-                label="Venue"
-                active={table.sortKey === "venue"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("venue")}
-              />
-              <SortTh
-                label="Updated"
-                active={table.sortKey === "updated"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("updated")}
-              />
+              {columns.type ? (
+                <SortTh
+                  label="Type"
+                  active={table.sortKey === "type"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("type")}
+                />
+              ) : null}
+              {columns.status ? (
+                <SortTh
+                  label="Status"
+                  active={table.sortKey === "status"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("status")}
+                />
+              ) : null}
+              {columns.venue ? (
+                <SortTh
+                  label="Venue"
+                  active={table.sortKey === "venue"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("venue")}
+                />
+              ) : null}
+              {columns.updated ? (
+                <SortTh
+                  label="Updated"
+                  active={table.sortKey === "updated"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("updated")}
+                />
+              ) : null}
               <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {pageRows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-sm text-ink-muted">
+                <td colSpan={visibleColumnCount} className="px-4 py-6 text-sm text-ink-muted">
                   No rows match these filters.
                 </td>
               </tr>
@@ -395,17 +433,25 @@ export function ThemeTableDraft() {
                     />
                   </td>
                   <td className="px-4 py-3 font-medium text-ink">{item.name}</td>
-                  <td className="px-4 py-3 text-ink-muted">{item.type}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge
-                      label={statusLabel(item.status)}
-                      status={item.status}
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-ink-muted">{item.venue}</td>
-                  <td className="px-4 py-3 tabular-nums text-ink-muted">
-                    {item.updated}
-                  </td>
+                  {columns.type ? (
+                    <td className="px-4 py-3 text-ink-muted">{item.type}</td>
+                  ) : null}
+                  {columns.status ? (
+                    <td className="px-4 py-3">
+                      <StatusBadge
+                        label={statusLabel(item.status)}
+                        status={item.status}
+                      />
+                    </td>
+                  ) : null}
+                  {columns.venue ? (
+                    <td className="px-4 py-3 text-ink-muted">{item.venue}</td>
+                  ) : null}
+                  {columns.updated ? (
+                    <td className="px-4 py-3 tabular-nums text-ink-muted">
+                      {item.updated}
+                    </td>
+                  ) : null}
                   <td className={TABLE_ACTIONS_TD_CLASS}>
                     <TableActions>
                       <TableIconAction
