@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { OpportunityFiltersForm } from "@/components/opportunity-filters";
 import { OpportunityTable } from "@/components/opportunity-table";
 import { PageHeading } from "@/components/page-heading";
+import { TableFilterSession } from "@/components/table-chrome";
 import { PaperFlash } from "@/components/paper-flash";
 import {
   applyOpportunityFilters,
@@ -84,10 +85,12 @@ export default async function CashAndCarryOpportunitiesPage({
           <PageHeading as="h2" title="Opportunities" className="" />
           <LastScan atMs={scannedAtMs} />
         </div>
-        <OpportunityFiltersForm
-          values={filterInputValues(filters)}
-          deskId={deskIdFromHref(paper.next)}
-        />
+        <TableFilterSession>
+          <OpportunityFiltersForm
+            values={filterInputValues(filters)}
+            deskId={deskIdFromHref(paper.next)}
+          />
+        </TableFilterSession>
         {error ? (
           <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}

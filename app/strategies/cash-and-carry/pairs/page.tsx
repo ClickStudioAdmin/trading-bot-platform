@@ -4,7 +4,7 @@ import { PageHeading } from "@/components/page-heading";
 import { PairFiltersForm } from "@/components/pair-filters";
 import { TokenIcon } from "@/components/token-icon";
 import { PairPager } from "@/components/pair-pager";
-import { SortTh } from "@/components/table-chrome";
+import { SortTh, TableCard, TableFilterSession } from "@/components/table-chrome";
 import { listCarryPairs } from "@/lib/exchanges/bybit/list-carry-pairs";
 import { CARRY_BASE_COINS, type CarryPair } from "@/lib/exchanges/bybit/universe";
 import { deskHref } from "@/lib/accounts/model";
@@ -94,113 +94,114 @@ export default async function CashAndCarryPairsPage({
         Every dated USDT pair in this strategy’s scan. No API key. BTC, ETH,
         SOL, DOGE, XRP, MNT only. Perps are excluded.
       </p>
-      <PairFiltersForm
-        clearHref={deskHref(CLEAR, session?.account.id)}
-        deskId={session?.account.id}
-        values={pairFilterInputValues(filters)}
-        bases={CARRY_BASE_COINS}
-        showDte
-        sort={sort}
-        dir={dir}
-      />
+      <TableFilterSession>
+        <PairFiltersForm
+          clearHref={deskHref(CLEAR, session?.account.id)}
+          deskId={session?.account.id}
+          values={pairFilterInputValues(filters)}
+          bases={CARRY_BASE_COINS}
+          showDte
+          sort={sort}
+          dir={dir}
+        />
+      </TableFilterSession>
       {error ? (
         <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
+      ) : visible.length === 0 ? (
+        <p className="mt-6 rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
+          {active
+            ? "No pairs match these filters."
+            : "No pairs in the current scan."}
+        </p>
       ) : (
-        <div className="mt-6 space-y-2">
-          {visible.length === 0 ? (
-            <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
-              {active
-                ? "No pairs match these filters."
-                : "No pairs in the current scan."}
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-card border border-line bg-surface">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
-                  <tr>
-                    <SortTh
-                      label="Base"
-                      active={sort === "base"}
-                      dir={dir}
-                      href={sortHref("base")}
-                    />
-                    <SortTh
-                      label="Spot"
-                      active={sort === "spot"}
-                      dir={dir}
-                      href={sortHref("spot")}
-                    />
-                    <SortTh
-                      label="Future"
-                      active={sort === "future"}
-                      dir={dir}
-                      href={sortHref("future")}
-                    />
-                    <SortTh
-                      label="Delivery"
-                      active={sort === "delivery"}
-                      dir={dir}
-                      href={sortHref("delivery")}
-                    />
-                    <SortTh
-                      label="DTE"
-                      active={sort === "dte"}
-                      dir={dir}
-                      href={sortHref("dte")}
-                    />
-                    <SortTh
-                      label="Market cap"
-                      active={sort === "cap"}
-                      dir={dir}
-                      href={sortHref("cap")}
-                    />
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.rows.map((pair) => (
-                    <tr
-                      key={`${pair.spotSymbol}-${pair.futureSymbol}`}
-                      className="border-b border-line last:border-b-0"
-                    >
-                      <td className="px-4 py-3">
-                        <span className="flex items-center gap-2">
-                          <TokenIcon symbol={pair.baseCoin} />
-                          {pair.baseCoin}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-ink-muted">
-                        {pair.spotSymbol}
-                      </td>
-                      <td className="px-4 py-3">{pair.futureSymbol}</td>
-                      <td className="px-4 py-3 text-ink-muted">
-                        <LocalTime at={pair.deliveryTimeMs} mode="date" />
-                      </td>
-                      <td className="px-4 py-3 tabular-nums">
-                        {pair.daysToExpiry > 0
-                          ? pair.daysToExpiry.toFixed(1)
-                          : "—"}
-                      </td>
-                      <td className="px-4 py-3 tabular-nums text-ink-muted">
-                        {formatMarketCap(caps.get(pair.baseCoin) ?? null)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <PairPager
-            page={list.page}
-            pageCount={list.pageCount}
-            total={list.total}
-            from={list.from}
-            to={list.to}
-            prevHref={hrefFor(list.page - 1)}
-            nextHref={hrefFor(list.page + 1)}
-          />
-        </div>
+        <TableCard
+          pager={
+            <PairPager
+              page={list.page}
+              pageCount={list.pageCount}
+              total={list.total}
+              from={list.from}
+              to={list.to}
+              prevHref={hrefFor(list.page - 1)}
+              nextHref={hrefFor(list.page + 1)}
+            />
+          }
+        >
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+              <tr>
+                <SortTh
+                  label="Base"
+                  active={sort === "base"}
+                  dir={dir}
+                  href={sortHref("base")}
+                />
+                <SortTh
+                  label="Spot"
+                  active={sort === "spot"}
+                  dir={dir}
+                  href={sortHref("spot")}
+                />
+                <SortTh
+                  label="Future"
+                  active={sort === "future"}
+                  dir={dir}
+                  href={sortHref("future")}
+                />
+                <SortTh
+                  label="Delivery"
+                  active={sort === "delivery"}
+                  dir={dir}
+                  href={sortHref("delivery")}
+                />
+                <SortTh
+                  label="DTE"
+                  active={sort === "dte"}
+                  dir={dir}
+                  href={sortHref("dte")}
+                />
+                <SortTh
+                  label="Market cap"
+                  active={sort === "cap"}
+                  dir={dir}
+                  href={sortHref("cap")}
+                />
+              </tr>
+            </thead>
+            <tbody>
+              {list.rows.map((pair) => (
+                <tr
+                  key={`${pair.spotSymbol}-${pair.futureSymbol}`}
+                  className="border-b border-line last:border-b-0"
+                >
+                  <td className="px-4 py-3">
+                    <span className="flex items-center gap-2">
+                      <TokenIcon symbol={pair.baseCoin} />
+                      {pair.baseCoin}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-ink-muted">
+                    {pair.spotSymbol}
+                  </td>
+                  <td className="px-4 py-3">{pair.futureSymbol}</td>
+                  <td className="px-4 py-3 text-ink-muted">
+                    <LocalTime at={pair.deliveryTimeMs} mode="date" />
+                  </td>
+                  <td className="px-4 py-3 tabular-nums">
+                    {pair.daysToExpiry > 0
+                      ? pair.daysToExpiry.toFixed(1)
+                      : "—"}
+                  </td>
+                  <td className="px-4 py-3 tabular-nums text-ink-muted">
+                    {formatMarketCap(caps.get(pair.baseCoin) ?? null)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableCard>
       )}
     </main>
   );

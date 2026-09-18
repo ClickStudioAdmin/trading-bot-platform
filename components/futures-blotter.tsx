@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
-import { SortTh, TablePager, useClientTable } from "@/components/table-chrome";
+import { SortTh, TableCard, TablePager, useClientTable } from "@/components/table-chrome";
 import { LocalTime } from "@/components/local-time";
 import { OpenStats } from "@/components/open-stats";
 import { PositionLogList } from "@/components/paper-carry-expand";
@@ -327,7 +327,16 @@ export function OpenFuturesTrades({
           />
         ) : null}
       </div>
-      <div className="min-w-0 overflow-x-auto rounded-card border border-line bg-surface">
+      <TableCard
+        className="min-w-0 mt-6"
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+          />
+        }
+      >
         <table className="w-full min-w-max text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
             <tr>
@@ -509,12 +518,7 @@ export function OpenFuturesTrades({
             )}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-      />
+      </TableCard>
     </section>
   );
 }
@@ -554,7 +558,15 @@ export function ClosedFuturesTrades({
         title="Past Positions"
         subtitle="Closed futures. Realized is mark-to-market at close."
       />
-      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+      <TableCard
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+          />
+        }
+      >
         <table className="w-full min-w-[52rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
@@ -647,12 +659,7 @@ export function ClosedFuturesTrades({
             )}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-      />
+      </TableCard>
     </section>
   );
 }

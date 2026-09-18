@@ -9,7 +9,10 @@ import {
   StatusBadge,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TableCard,
   TableFilterField,
+  TableFilterSession,
+  TableHideFilters,
   TableLabelButton,
   TablePager,
   useClientTable,
@@ -101,81 +104,93 @@ export function EventLogs({
 
   return (
     <>
-      <LiveGetForm>
-        <input type="hidden" name="page" value="1" />
-        {hidden?.desk ? (
-          <input type="hidden" name="desk" value={hidden.desk} />
-        ) : null}
-        {accounts ? (
-          <TableFilterField label="Account">
-            <AppSelect
-              name="account"
-              defaultValue={filters.account}
-              className={TABLE_FILTER_FIELD_CLASS}
+      <TableFilterSession>
+          <LiveGetForm>
+            <input type="hidden" name="page" value="1" />
+            {hidden?.desk ? (
+              <input type="hidden" name="desk" value={hidden.desk} />
+            ) : null}
+            {accounts ? (
+              <TableFilterField label="Account">
+                <AppSelect
+                  name="account"
+                  defaultValue={filters.account}
+                  className={TABLE_FILTER_FIELD_CLASS}
+                >
+                  <option value="">All</option>
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.label}
+                    </option>
+                  ))}
+                </AppSelect>
+              </TableFilterField>
+            ) : null}
+            <TableFilterField label="Scope">
+              <AppSelect
+                name="scope"
+                defaultValue={filters.scope}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                {scopes.map((scope) => (
+                  <option key={scope} value={scope}>
+                    {scope === "system"
+                      ? "System"
+                      : scope === "strategy"
+                        ? "Strategy"
+                        : "Trade"}
+                  </option>
+                ))}
+              </AppSelect>
+            </TableFilterField>
+            <TableFilterField label="Level">
+              <AppSelect
+                name="level"
+                defaultValue={filters.level}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                <option value="info">Info</option>
+                <option value="warning">Warning</option>
+                <option value="error">Error</option>
+              </AppSelect>
+            </TableFilterField>
+            <TableFilterField label="Event">
+              <AppSelect
+                name="event"
+                defaultValue={filters.event}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                {events.map((event) => (
+                  <option key={event} value={event}>
+                    {event}
+                  </option>
+                ))}
+              </AppSelect>
+            </TableFilterField>
+            <TableLabelButton
+              href={clearHref}
+              variant="filter"
+              icon={<IconFilterClear {...TABLE_BTN_ICON} />}
             >
-              <option value="">All</option>
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.label}
-                </option>
-              ))}
-            </AppSelect>
-          </TableFilterField>
-        ) : null}
-        <TableFilterField label="Scope">
-          <AppSelect
-            name="scope"
-            defaultValue={filters.scope}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="">All</option>
-            {scopes.map((scope) => (
-              <option key={scope} value={scope}>
-                {scope === "system"
-                  ? "System"
-                  : scope === "strategy"
-                    ? "Strategy"
-                    : "Trade"}
-              </option>
-            ))}
-          </AppSelect>
-        </TableFilterField>
-        <TableFilterField label="Level">
-          <AppSelect
-            name="level"
-            defaultValue={filters.level}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="">All</option>
-            <option value="info">Info</option>
-            <option value="warning">Warning</option>
-            <option value="error">Error</option>
-          </AppSelect>
-        </TableFilterField>
-        <TableFilterField label="Event">
-          <AppSelect
-            name="event"
-            defaultValue={filters.event}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="">All</option>
-            {events.map((event) => (
-              <option key={event} value={event}>
-                {event}
-              </option>
-            ))}
-          </AppSelect>
-        </TableFilterField>
-        <TableLabelButton
-          href={clearHref}
-          variant="filter"
-          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
-        >
-          Clear
-        </TableLabelButton>
-      </LiveGetForm>
+              Clear
+            </TableLabelButton>
+            <TableHideFilters />
+          </LiveGetForm>
+      </TableFilterSession>
 
-      <div className="mt-6 overflow-x-auto rounded-card border border-line bg-surface">
+      <TableCard
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+            emptyLabel="No events match."
+          />
+        }
+      >
         <table className="w-full min-w-[48rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
@@ -286,13 +301,7 @@ export function EventLogs({
             )}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-        emptyLabel="No events match."
-      />
+      </TableCard>
       <p className="mt-3 text-xs text-ink-faint">Showing up to 100 events.</p>
     </>
   );

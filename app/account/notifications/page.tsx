@@ -8,6 +8,8 @@ import {
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
+  TableFilterSession,
+  TableHideFilters,
   TableLabelButton,
   TablePager,
 } from "@/components/table-chrome";
@@ -96,61 +98,64 @@ export default async function AccountNotificationsPage({
         </Link>
         .
       </p>
-      <LiveGetForm>
-        <input type="hidden" name="page" value="1" />
-        {sort.sort !== "date" ? (
-          <input type="hidden" name="sort" value={sort.sort} />
-        ) : null}
-        {sort.dir !== "desc" ? (
-          <input type="hidden" name="dir" value={sort.dir} />
-        ) : null}
-        <TableFilterField label="Status">
-          <AppSelect
-            name="status"
-            defaultValue={filters.status}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="">All</option>
-            <option value="unread">Unread</option>
-            <option value="read">Read</option>
-          </AppSelect>
-        </TableFilterField>
-        <TableFilterField label="Scope">
-          <AppSelect
-            name="scope"
-            defaultValue={filters.scope}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="">All</option>
-            {groups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.label}
-              </option>
-            ))}
-          </AppSelect>
-        </TableFilterField>
-        <TableFilterField label="Event">
-          <AppSelect
-            name="event"
-            defaultValue={filters.event}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="">All</option>
-            {events.map((id) => (
-              <option key={id} value={id}>
-                {NOTIFICATION_LABELS[id]}
-              </option>
-            ))}
-          </AppSelect>
-        </TableFilterField>
-        <TableLabelButton
-          href="/account/notifications"
-          variant="filter"
-          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
-        >
-          Clear
-        </TableLabelButton>
-      </LiveGetForm>
+      <TableFilterSession>
+          <LiveGetForm>
+            <input type="hidden" name="page" value="1" />
+            {sort.sort !== "date" ? (
+              <input type="hidden" name="sort" value={sort.sort} />
+            ) : null}
+            {sort.dir !== "desc" ? (
+              <input type="hidden" name="dir" value={sort.dir} />
+            ) : null}
+            <TableFilterField label="Status">
+              <AppSelect
+                name="status"
+                defaultValue={filters.status}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                <option value="unread">Unread</option>
+                <option value="read">Read</option>
+              </AppSelect>
+            </TableFilterField>
+            <TableFilterField label="Scope">
+              <AppSelect
+                name="scope"
+                defaultValue={filters.scope}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.label}
+                  </option>
+                ))}
+              </AppSelect>
+            </TableFilterField>
+            <TableFilterField label="Event">
+              <AppSelect
+                name="event"
+                defaultValue={filters.event}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                {events.map((id) => (
+                  <option key={id} value={id}>
+                    {NOTIFICATION_LABELS[id]}
+                  </option>
+                ))}
+              </AppSelect>
+            </TableFilterField>
+            <TableLabelButton
+              href="/account/notifications"
+              variant="filter"
+              icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+            >
+              Clear
+            </TableLabelButton>
+            <TableHideFilters />
+          </LiveGetForm>
+      </TableFilterSession>
       {list.total === 0 && !filteredEmpty ? (
         <p className="mt-6 rounded-card border border-line bg-surface px-5 py-6 text-sm text-ink-muted">
           No notices yet.
@@ -163,12 +168,14 @@ export default async function AccountNotificationsPage({
             filters={filters}
             sort={sort}
             unread={unread}
-          />
-          <TablePager
-            window={list}
-            prevHref={inboxPath(list.page - 1, filters, sort)}
-            nextHref={inboxPath(list.page + 1, filters, sort)}
-            emptyLabel="No notices."
+            pager={
+              <TablePager
+                window={list}
+                prevHref={inboxPath(list.page - 1, filters, sort)}
+                nextHref={inboxPath(list.page + 1, filters, sort)}
+                emptyLabel="No notices."
+              />
+            }
           />
         </div>
       )}

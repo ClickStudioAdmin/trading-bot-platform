@@ -13,9 +13,12 @@ import {
   SortTh,
   StatusBadge,
   TABLE_BTN_ICON,
+  TableCard,
+  TableFilterField,
+  TableFilterSession,
+  TableHideFilters,
   TableLabelButton,
   TABLE_FILTER_FIELD_CLASS,
-  TableFilterField,
   TablePager,
 } from "@/components/table-chrome";
 import {
@@ -444,7 +447,7 @@ export function AffiliateDashboard({
 
           <section className="mt-6 grid gap-4 lg:grid-cols-2 lg:items-start">
             <div>
-              <div className="overflow-x-auto rounded-card border border-line bg-surface">
+              <TableCard className="">
                 <table className="w-full text-sm">
                   <thead className="border-b border-line text-left text-xs uppercase tracking-[0.12em] text-ink-faint">
                     <tr>
@@ -463,7 +466,7 @@ export function AffiliateDashboard({
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableCard>
               {platformMember ? (
                 <Link
                   href="/account/plans"
@@ -550,62 +553,64 @@ export function AffiliateDashboard({
                 {downlinePage.total === 0 ? (
                   <p className="mt-4 text-sm text-ink-muted">No referrals match.</p>
                 ) : (
-                  <>
-                    <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
-                      <table className="min-w-full text-left text-sm">
-                        <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
-                          <tr>
-                            <AffiliateSortTh tab="network" query={tableQuery} label="Affiliate" sortKey="affiliate" />
-                            <AffiliateSortTh tab="network" query={tableQuery} label="Plan" sortKey="plan" />
-                            <AffiliateSortTh tab="network" query={tableQuery} label="Level" sortKey="level" />
-                            <AffiliateSortTh tab="network" query={tableQuery} label="Status" sortKey="status" />
-                            <AffiliateSortTh tab="network" query={tableQuery} label="To you" sortKey="toYou" />
-                            <AffiliateSortTh tab="network" query={tableQuery} label="Joined" sortKey="joined" />
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {downlinePage.rows.map((row) => {
-                            const person = affiliateDownlinePersonMeta(
-                              row,
-                              portal.rates,
-                            );
-                            return (
-                              <tr
-                                key={row.userId}
-                                id={`downline-${row.userId}`}
-                                className="border-b border-line last:border-b-0"
-                              >
-                                <td className="px-4 py-3 text-ink">{row.label}</td>
-                                <td className="px-4 py-3 text-ink">
-                                  {person.planLabel}
-                                </td>
-                                <td className="px-4 py-3 tabular-nums text-ink">
-                                  L{row.level}
-                                </td>
-                                <td className="px-4 py-3">
-                                  <StatusBadge
-                                    label={row.firstPaidAt ? "Paid" : "Signup"}
-                                    status={row.firstPaidAt ? "paid" : "signup"}
-                                  />
-                                </td>
-                                <td className="px-4 py-3 tabular-nums text-ink">
-                                  {person.runRateLabel}
-                                </td>
-                                <td className="px-4 py-3 text-ink-muted">
-                                  {monthJoinedLabel(row.attributedAt)}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                    <AffiliateTablePager
-                      tab="network"
-                      list={downlinePage}
-                      extra={queryExtra}
-                    />
-                  </>
+                  <TableCard
+                    className="mt-4"
+                    pager={
+                      <AffiliateTablePager
+                        tab="network"
+                        list={downlinePage}
+                        extra={queryExtra}
+                      />
+                    }
+                  >
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
+                        <tr>
+                          <AffiliateSortTh tab="network" query={tableQuery} label="Affiliate" sortKey="affiliate" />
+                          <AffiliateSortTh tab="network" query={tableQuery} label="Plan" sortKey="plan" />
+                          <AffiliateSortTh tab="network" query={tableQuery} label="Level" sortKey="level" />
+                          <AffiliateSortTh tab="network" query={tableQuery} label="Status" sortKey="status" />
+                          <AffiliateSortTh tab="network" query={tableQuery} label="To you" sortKey="toYou" />
+                          <AffiliateSortTh tab="network" query={tableQuery} label="Joined" sortKey="joined" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {downlinePage.rows.map((row) => {
+                          const person = affiliateDownlinePersonMeta(
+                            row,
+                            portal.rates,
+                          );
+                          return (
+                            <tr
+                              key={row.userId}
+                              id={`downline-${row.userId}`}
+                              className="border-b border-line last:border-b-0"
+                            >
+                              <td className="px-4 py-3 text-ink">{row.label}</td>
+                              <td className="px-4 py-3 text-ink">
+                                {person.planLabel}
+                              </td>
+                              <td className="px-4 py-3 tabular-nums text-ink">
+                                L{row.level}
+                              </td>
+                              <td className="px-4 py-3">
+                                <StatusBadge
+                                  label={row.firstPaidAt ? "Paid" : "Signup"}
+                                  status={row.firstPaidAt ? "paid" : "signup"}
+                                />
+                              </td>
+                              <td className="px-4 py-3 tabular-nums text-ink">
+                                {person.runRateLabel}
+                              </td>
+                              <td className="px-4 py-3 text-ink-muted">
+                                {monthJoinedLabel(row.attributedAt)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </TableCard>
                 )}
               </div>
             )
@@ -631,59 +636,61 @@ export function AffiliateDashboard({
             {commissionPage.total === 0 ? (
               <p className="mt-4 text-sm text-ink-muted">No commissions match.</p>
             ) : (
-              <>
-                <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
-                      <tr>
-                        <AffiliateSortTh tab="referrals" query={tableQuery} label="Date" sortKey="date" />
-                        <AffiliateSortTh tab="referrals" query={tableQuery} label="From" sortKey="from" />
-                        <AffiliateSortTh tab="referrals" query={tableQuery} label="Level" sortKey="level" />
-                        <AffiliateSortTh tab="referrals" query={tableQuery} label="Rate" sortKey="rate" />
-                        <AffiliateSortTh tab="referrals" query={tableQuery} label="Amount" sortKey="amount" />
-                        <AffiliateSortTh tab="referrals" query={tableQuery} label="Status" sortKey="status" />
-                        <AffiliateSortTh tab="referrals" query={tableQuery} label="Hold until" sortKey="hold" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {commissionPage.rows.map((row) => {
-                        const created = parseDisplayTime(row.createdAt);
-                        const hold = parseDisplayTime(row.holdUntil);
-                        return (
-                          <tr key={row.id} className="border-b border-line last:border-b-0">
-                            <td className="px-4 py-3 text-ink-muted">
-                              {created ? formatLocalDate(created) : "—"}
-                            </td>
-                            <td className="px-4 py-3 text-ink">
-                              {sourceLabel(row.sourceUserId)}
-                            </td>
-                            <td className="px-4 py-3 tabular-nums text-ink">
-                              L{row.level}
-                            </td>
-                            <td className="px-4 py-3 tabular-nums text-ink">
-                              {row.ratePct}%
-                            </td>
-                            <td className="px-4 py-3 tabular-nums text-ink">
-                              {formatUsd(row.amountUsd)}
-                            </td>
-                            <td className="px-4 py-3">
-                              <StatusBadge label={row.status} status={row.status} />
-                            </td>
-                            <td className="px-4 py-3 text-ink-muted">
-                              {hold ? formatLocalDate(hold) : "—"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <AffiliateTablePager
-                  tab="referrals"
-                  list={commissionPage}
-                  extra={queryExtra}
-                />
-              </>
+              <TableCard
+                className="mt-4"
+                pager={
+                  <AffiliateTablePager
+                    tab="referrals"
+                    list={commissionPage}
+                    extra={queryExtra}
+                  />
+                }
+              >
+                <table className="min-w-full text-left text-sm">
+                  <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
+                    <tr>
+                      <AffiliateSortTh tab="referrals" query={tableQuery} label="Date" sortKey="date" />
+                      <AffiliateSortTh tab="referrals" query={tableQuery} label="From" sortKey="from" />
+                      <AffiliateSortTh tab="referrals" query={tableQuery} label="Level" sortKey="level" />
+                      <AffiliateSortTh tab="referrals" query={tableQuery} label="Rate" sortKey="rate" />
+                      <AffiliateSortTh tab="referrals" query={tableQuery} label="Amount" sortKey="amount" />
+                      <AffiliateSortTh tab="referrals" query={tableQuery} label="Status" sortKey="status" />
+                      <AffiliateSortTh tab="referrals" query={tableQuery} label="Hold until" sortKey="hold" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {commissionPage.rows.map((row) => {
+                      const created = parseDisplayTime(row.createdAt);
+                      const hold = parseDisplayTime(row.holdUntil);
+                      return (
+                        <tr key={row.id} className="border-b border-line last:border-b-0">
+                          <td className="px-4 py-3 text-ink-muted">
+                            {created ? formatLocalDate(created) : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-ink">
+                            {sourceLabel(row.sourceUserId)}
+                          </td>
+                          <td className="px-4 py-3 tabular-nums text-ink">
+                            L{row.level}
+                          </td>
+                          <td className="px-4 py-3 tabular-nums text-ink">
+                            {row.ratePct}%
+                          </td>
+                          <td className="px-4 py-3 tabular-nums text-ink">
+                            {formatUsd(row.amountUsd)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <StatusBadge label={row.status} status={row.status} />
+                          </td>
+                          <td className="px-4 py-3 text-ink-muted">
+                            {hold ? formatLocalDate(hold) : "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </TableCard>
             )}
           </div>
         )
@@ -735,18 +742,22 @@ export function AffiliateDashboard({
                 {campaignPage.total === 0 ? (
                   <p className="mt-3 text-sm text-ink-muted">No campaigns match.</p>
                 ) : (
-                  <>
+                  <TableCard
+                    className="mt-4"
+                    pager={
+                      <AffiliateTablePager
+                        tab="campaigns"
+                        list={campaignPage}
+                        extra={queryExtra}
+                      />
+                    }
+                  >
                     <AffiliateCampaignsTable
                       portal={portal}
                       campaigns={campaignPage.rows}
                       query={tableQuery}
                     />
-                    <AffiliateTablePager
-                      tab="campaigns"
-                      list={campaignPage}
-                      extra={queryExtra}
-                    />
-                  </>
+                  </TableCard>
                 )}
               </>
             )}
@@ -825,39 +836,41 @@ export function AffiliateDashboard({
                 {linkPage.total === 0 ? (
                   <p className="mt-3 text-sm text-ink-muted">No URLs match.</p>
                 ) : (
-                  <>
-                    <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
-                      <table className="w-full text-left text-sm">
-                        <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
-                          <tr>
-                            <AffiliateSortTh tab="links" query={tableQuery} label="Name" sortKey="name" />
-                            <AffiliateSortTh tab="links" query={tableQuery} label="Landing" sortKey="landing" />
-                            <AffiliateSortTh tab="links" query={tableQuery} label="Campaign" sortKey="campaign" />
-                            <AffiliateSortTh tab="links" query={tableQuery} label="URL" sortKey="url" />
-                            <AffiliateSortTh tab="links" query={tableQuery} label="Type" sortKey="type" />
-                            <AffiliateSortTh tab="links" query={tableQuery} label="Status" sortKey="status" />
-                            <th className="px-4 py-3 font-medium whitespace-nowrap">
-                              Actions
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {linkPage.rows.map((link) => (
-                            <AffiliateLinkRowView
-                              key={link.id}
-                              link={link}
-                              origin={origin}
-                            />
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <AffiliateTablePager
-                      tab="links"
-                      list={linkPage}
-                      extra={queryExtra}
-                    />
-                  </>
+                  <TableCard
+                    className="mt-4"
+                    pager={
+                      <AffiliateTablePager
+                        tab="links"
+                        list={linkPage}
+                        extra={queryExtra}
+                      />
+                    }
+                  >
+                    <table className="w-full text-left text-sm">
+                      <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+                        <tr>
+                          <AffiliateSortTh tab="links" query={tableQuery} label="Name" sortKey="name" />
+                          <AffiliateSortTh tab="links" query={tableQuery} label="Landing" sortKey="landing" />
+                          <AffiliateSortTh tab="links" query={tableQuery} label="Campaign" sortKey="campaign" />
+                          <AffiliateSortTh tab="links" query={tableQuery} label="URL" sortKey="url" />
+                          <AffiliateSortTh tab="links" query={tableQuery} label="Type" sortKey="type" />
+                          <AffiliateSortTh tab="links" query={tableQuery} label="Status" sortKey="status" />
+                          <th className="px-4 py-3 font-medium whitespace-nowrap">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {linkPage.rows.map((link) => (
+                          <AffiliateLinkRowView
+                            key={link.id}
+                            link={link}
+                            origin={origin}
+                          />
+                        ))}
+                      </tbody>
+                    </table>
+                  </TableCard>
                 )}
               </>
             )}
@@ -990,18 +1003,22 @@ export function AffiliateDashboard({
                 {payoutPage.total === 0 ? (
                   <p className="mt-3 text-sm text-ink-muted">No payouts match.</p>
                 ) : (
-                  <>
+                  <TableCard
+                    className="mt-4"
+                    pager={
+                      <AffiliateTablePager
+                        tab="payouts"
+                        list={payoutPage}
+                        extra={queryExtra}
+                      />
+                    }
+                  >
                     <AffiliatePayoutsTable
                       payouts={payoutPage.rows}
                       chainName={chainName}
                       query={tableQuery}
                     />
-                    <AffiliateTablePager
-                      tab="payouts"
-                      list={payoutPage}
-                      extra={queryExtra}
-                    />
-                  </>
+                  </TableCard>
                 )}
               </>
             )}
@@ -1088,19 +1105,18 @@ function AffiliatePayoutsTable({
   query: AffiliateListQuery;
 }) {
   return (
-    <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
-      <table className="w-full text-left text-sm">
-        <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
-          <tr>
-            <AffiliateSortTh tab="payouts" query={query} label="Date" sortKey="date" />
-            <AffiliateSortTh tab="payouts" query={query} label="Amount" sortKey="amount" />
-            <AffiliateSortTh tab="payouts" query={query} label="Chain" sortKey="chain" />
-            <AffiliateSortTh tab="payouts" query={query} label="Address" sortKey="address" />
-            <AffiliateSortTh tab="payouts" query={query} label="Status" sortKey="status" />
-            <AffiliateSortTh tab="payouts" query={query} label="Paid" sortKey="paid" />
-          </tr>
-        </thead>
-        <tbody>
+    <table className="w-full text-left text-sm">
+      <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+        <tr>
+          <AffiliateSortTh tab="payouts" query={query} label="Date" sortKey="date" />
+          <AffiliateSortTh tab="payouts" query={query} label="Amount" sortKey="amount" />
+          <AffiliateSortTh tab="payouts" query={query} label="Chain" sortKey="chain" />
+          <AffiliateSortTh tab="payouts" query={query} label="Address" sortKey="address" />
+          <AffiliateSortTh tab="payouts" query={query} label="Status" sortKey="status" />
+          <AffiliateSortTh tab="payouts" query={query} label="Paid" sortKey="paid" />
+        </tr>
+      </thead>
+      <tbody>
           {payouts.map((payout) => {
             const created = parseDisplayTime(payout.createdAt);
             const paid = parseDisplayTime(payout.paidAt);
@@ -1136,9 +1152,8 @@ function AffiliatePayoutsTable({
               </tr>
             );
           })}
-        </tbody>
-      </table>
-    </div>
+      </tbody>
+    </table>
   );
 }
 
@@ -1153,20 +1168,19 @@ function AffiliateCampaignsTable({
 }) {
   const links = [...portal.links, ...portal.archivedLinks];
   return (
-    <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
-      <table className="w-full text-left text-sm">
-        <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
-          <tr>
-            <AffiliateSortTh tab="campaigns" query={query} label="Name" sortKey="name" />
-            <AffiliateSortTh tab="campaigns" query={query} label="URLs" sortKey="urls" />
-            <AffiliateSortTh tab="campaigns" query={query} label="Signups" sortKey="signups" />
-            <AffiliateSortTh tab="campaigns" query={query} label="Status" sortKey="status" />
-            <th className="px-4 py-3 font-medium whitespace-nowrap">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody>
+    <table className="w-full text-left text-sm">
+      <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+        <tr>
+          <AffiliateSortTh tab="campaigns" query={query} label="Name" sortKey="name" />
+          <AffiliateSortTh tab="campaigns" query={query} label="URLs" sortKey="urls" />
+          <AffiliateSortTh tab="campaigns" query={query} label="Signups" sortKey="signups" />
+          <AffiliateSortTh tab="campaigns" query={query} label="Status" sortKey="status" />
+          <th className="px-4 py-3 font-medium whitespace-nowrap">
+            Actions
+          </th>
+        </tr>
+      </thead>
+      <tbody>
           {campaigns.map((campaign) => (
             <AffiliateCampaignRowView
               key={campaign.id}
@@ -1181,9 +1195,8 @@ function AffiliateCampaignsTable({
               }
             />
           ))}
-        </tbody>
-      </table>
-    </div>
+      </tbody>
+    </table>
   );
 }
 
@@ -1358,44 +1371,47 @@ function AffiliateListFilters({
 }) {
   const defaults = affiliateListDefaults(tab);
   return (
-    <LiveGetForm className="mt-4">
-      <input type="hidden" name="page" value="1" />
-      <input type="hidden" name="tab" value={tab} />
-      {query.sort !== defaults.sort ? (
-        <input type="hidden" name="sort" value={query.sort} />
-      ) : null}
-      {query.dir !== defaults.dir ? (
-        <input type="hidden" name="dir" value={query.dir} />
-      ) : null}
-      <TableFilterField label="Search">
-        <input
-          name="q"
-          defaultValue={query.q}
-          className={TABLE_FILTER_FIELD_CLASS}
-        />
-      </TableFilterField>
-      <TableFilterField label="Status">
-        <AppSelect
-          name="status"
-          defaultValue={query.status}
-          className={TABLE_FILTER_FIELD_CLASS}
-        >
-          <option value="">All</option>
-          {statusOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </AppSelect>
-      </TableFilterField>
-      <TableLabelButton
-        href={affiliatePortalPath(tab)}
-        variant="filter"
-        icon={<IconFilterClear {...TABLE_BTN_ICON} />}
-      >
-        Clear
-      </TableLabelButton>
-    </LiveGetForm>
+    <TableFilterSession>
+        <LiveGetForm className="mt-4">
+          <input type="hidden" name="page" value="1" />
+          <input type="hidden" name="tab" value={tab} />
+          {query.sort !== defaults.sort ? (
+            <input type="hidden" name="sort" value={query.sort} />
+          ) : null}
+          {query.dir !== defaults.dir ? (
+            <input type="hidden" name="dir" value={query.dir} />
+          ) : null}
+          <TableFilterField label="Search">
+            <input
+              name="q"
+              defaultValue={query.q}
+              className={TABLE_FILTER_FIELD_CLASS}
+            />
+          </TableFilterField>
+          <TableFilterField label="Status">
+            <AppSelect
+              name="status"
+              defaultValue={query.status}
+              className={TABLE_FILTER_FIELD_CLASS}
+            >
+              <option value="">All</option>
+              {statusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </AppSelect>
+          </TableFilterField>
+          <TableLabelButton
+            href={affiliatePortalPath(tab)}
+            variant="filter"
+            icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+          >
+            Clear
+          </TableLabelButton>
+          <TableHideFilters />
+        </LiveGetForm>
+    </TableFilterSession>
   );
 }
 

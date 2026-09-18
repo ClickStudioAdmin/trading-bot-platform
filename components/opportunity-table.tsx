@@ -7,6 +7,7 @@ import { IconOpen } from "@/components/icons";
 import {
   SortTh,
   TABLE_BTN_ICON,
+  TableCard,
   TablePager,
   TablePendingIconAction,
   useClientTable,
@@ -149,8 +150,15 @@ export function OpportunityTable({
   const table = useClientTable(rows, compare);
 
   return (
-    <div>
-      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+    <TableCard
+      pager={
+        <TablePager
+          window={table.window}
+          onPrev={() => table.setPage(table.window.page - 1)}
+          onNext={() => table.setPage(table.window.page + 1)}
+        />
+      }
+    >
         <table className="w-full min-w-[60rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
@@ -224,13 +232,7 @@ export function OpportunityTable({
           </thead>
           <OpportunityRows rows={table.pageRows} paper={paper} />
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-      />
-    </div>
+    </TableCard>
   );
 }
 

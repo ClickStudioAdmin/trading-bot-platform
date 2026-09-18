@@ -7,8 +7,11 @@ import {
   SortTh,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TableCard,
   TableFilterBar,
   TableFilterField,
+  TableFilterSession,
+  TableHideFilters,
   TableLabelButton,
   TablePager,
   useClientTable,
@@ -314,7 +317,16 @@ function OpenBacktestPositions({
           }}
         />
       ) : null}
-      <div className="min-w-0 overflow-x-auto rounded-card border border-line bg-surface">
+      <TableCard
+        className=""
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+          />
+        }
+      >
         <table className="w-full min-w-max text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
             <tr>
@@ -436,12 +448,7 @@ function OpenBacktestPositions({
             )}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-      />
+      </TableCard>
     </section>
   );
 }
@@ -500,7 +507,16 @@ function ClosedBacktestPositions({
           }}
         />
       ) : null}
-      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+      <TableCard
+        className=""
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+          />
+        }
+      >
         <table className="w-full min-w-[52rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
@@ -598,12 +614,7 @@ function ClosedBacktestPositions({
             )}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-      />
+      </TableCard>
     </section>
   );
 }
@@ -977,36 +988,39 @@ function CycleFilters({
   onClear: () => void;
 }) {
   return (
-    <TableFilterBar className="mb-4">
-      <TableFilterField label="Search">
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => onQuery(event.target.value)}
-          placeholder="Contract or side"
-          autoComplete="off"
-          className={TABLE_FILTER_FIELD_CLASS}
-        />
-      </TableFilterField>
-      <TableFilterField label="Side">
-        <AppSelect
-          value={side}
-          onChange={(event) => onSide(event.target.value as CycleSideFilter)}
-          className={TABLE_FILTER_FIELD_CLASS}
-        >
-          <option value="">All</option>
-          <option value="long">Long</option>
-          <option value="short">Short</option>
-        </AppSelect>
-      </TableFilterField>
-      <TableLabelButton
-        variant="filter"
-        icon={<IconFilterClear {...TABLE_BTN_ICON} />}
-        onClick={onClear}
-      >
-        Clear
-      </TableLabelButton>
-    </TableFilterBar>
+    <TableFilterSession>
+        <TableFilterBar className="mb-4">
+          <TableFilterField label="Search">
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => onQuery(event.target.value)}
+              placeholder="Contract or side"
+              autoComplete="off"
+              className={TABLE_FILTER_FIELD_CLASS}
+            />
+          </TableFilterField>
+          <TableFilterField label="Side">
+            <AppSelect
+              value={side}
+              onChange={(event) => onSide(event.target.value as CycleSideFilter)}
+              className={TABLE_FILTER_FIELD_CLASS}
+            >
+              <option value="">All</option>
+              <option value="long">Long</option>
+              <option value="short">Short</option>
+            </AppSelect>
+          </TableFilterField>
+          <TableLabelButton
+            variant="filter"
+            icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+            onClick={onClear}
+          >
+            Clear
+          </TableLabelButton>
+          <TableHideFilters />
+        </TableFilterBar>
+    </TableFilterSession>
   );
 }
 

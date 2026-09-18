@@ -4,9 +4,12 @@ import { PageHeading } from "@/components/page-heading";
 import { IconFilterClear, IconPlus } from "@/components/icons";
 import {
   LiveGetForm,
-  TABLE_FILTER_FIELD_CLASS,
-  TableFilterField,
   TABLE_BTN_ICON,
+  TABLE_FILTER_FIELD_CLASS,
+  TableCard,
+  TableFilterField,
+  TableFilterSession,
+  TableHideFilters,
   TableLabelButton,
   TablePager,
 } from "@/components/table-chrome";
@@ -71,60 +74,67 @@ export default async function AdminMembersPage({
         <p className="mt-4 text-sm text-success">Member saved.</p>
       ) : null}
 
-      <LiveGetForm>
-        <input type="hidden" name="page" value="1" />
-        {query.sort !== "created" ? (
-          <input type="hidden" name="sort" value={query.sort} />
-        ) : null}
-        {query.dir !== "desc" ? (
-          <input type="hidden" name="dir" value={query.dir} />
-        ) : null}
-        <TableFilterField label="Search">
-          <input
-            name="q"
-            defaultValue={query.q}
-            className={TABLE_FILTER_FIELD_CLASS}
+      <TableFilterSession>
+          <LiveGetForm>
+            <input type="hidden" name="page" value="1" />
+            {query.sort !== "created" ? (
+              <input type="hidden" name="sort" value={query.sort} />
+            ) : null}
+            {query.dir !== "desc" ? (
+              <input type="hidden" name="dir" value={query.dir} />
+            ) : null}
+            <TableFilterField label="Search">
+              <input
+                name="q"
+                defaultValue={query.q}
+                className={TABLE_FILTER_FIELD_CLASS}
+              />
+            </TableFilterField>
+            <TableFilterField label="Role">
+              <AppSelect
+                name="role"
+                defaultValue={query.role}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+              </AppSelect>
+            </TableFilterField>
+            <TableFilterField label="Status">
+              <AppSelect
+                name="status"
+                defaultValue={query.status}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                <option value="active">Active</option>
+                <option value="disabled">Disabled</option>
+              </AppSelect>
+            </TableFilterField>
+            <TableLabelButton
+              href="/admin/members"
+              variant="filter"
+              icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+            >
+              Clear
+            </TableLabelButton>
+            <TableHideFilters />
+          </LiveGetForm>
+      </TableFilterSession>
+
+      <TableCard
+        pager={
+          <TablePager
+            window={window}
+            prevHref={memberListHref(query, { page: list.page - 1 })}
+            nextHref={memberListHref(query, { page: list.page + 1 })}
+            emptyLabel="No members."
           />
-        </TableFilterField>
-        <TableFilterField label="Role">
-          <AppSelect
-            name="role"
-            defaultValue={query.role}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="">All</option>
-            <option value="member">Member</option>
-            <option value="admin">Admin</option>
-          </AppSelect>
-        </TableFilterField>
-        <TableFilterField label="Status">
-          <AppSelect
-            name="status"
-            defaultValue={query.status}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="">All</option>
-            <option value="active">Active</option>
-            <option value="disabled">Disabled</option>
-          </AppSelect>
-        </TableFilterField>
-        <TableLabelButton
-          href="/admin/members"
-          variant="filter"
-          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
-        >
-          Clear
-        </TableLabelButton>
-      </LiveGetForm>
-
-      <AdminMembersTable rows={list.rows} query={query} planNames={planNames} />
-
-      <TablePager
-        window={window}
-        prevHref={memberListHref(query, { page: list.page - 1 })}
-        nextHref={memberListHref(query, { page: list.page + 1 })}
-        emptyLabel="No members."
-      />
+        }
+      >
+        <AdminMembersTable rows={list.rows} query={query} planNames={planNames} />
+      </TableCard>
     </div>
   );
 }

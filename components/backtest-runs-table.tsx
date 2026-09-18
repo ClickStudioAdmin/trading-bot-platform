@@ -11,7 +11,11 @@ import {
   StatusBadge,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TableCard,
+  TableFilterBar,
   TableFilterField,
+  TableFilterSession,
+  TableHideFilters,
   TableLabelButton,
   TablePager,
   useClientTable,
@@ -270,76 +274,88 @@ export function BacktestRunsTable({
   }
 
   return (
-    <div className="space-y-3">
+    <div>
       {dialog}
-      <div className="rounded-card border border-line bg-surface p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <TableFilterField label="Search">
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                table.setPage(1);
-              }}
-              placeholder="Name or contract"
-              autoComplete="off"
-              className={TABLE_FILTER_FIELD_CLASS}
-            />
-          </TableFilterField>
-          <TableFilterField label="Status">
-            <AppSelect
-              value={status}
-              onChange={(event) => {
-                setStatus(event.target.value as "all" | BacktestStatus);
-                table.setPage(1);
-              }}
-              className={TABLE_FILTER_FIELD_CLASS}
+      <TableFilterSession
+        toolbar={
+          <>
+            <p className="text-sm text-ink-muted">
+              {selectedCount > 0 ? `${selectedCount} selected` : "Bulk actions"}
+            </p>
+            <TableLabelButton
+              variant="danger"
+              disabled={pending || selectedCount === 0}
+              icon={<IconTrash {...TABLE_BTN_ICON} />}
+              onClick={() => void deleteSelected()}
             >
-              {STATUS_FILTERS.map((value) => (
-                <option key={value} value={value}>
-                  {value === "all" ? "All statuses" : statusLabel(value)}
-                </option>
-              ))}
-            </AppSelect>
-          </TableFilterField>
-          <TableLabelButton
-            variant="filter"
-            icon={<IconFilterClear {...TABLE_BTN_ICON} />}
-            onClick={clearFilters}
-          >
-            Clear
-          </TableLabelButton>
-        </div>
-      </div>
-      {selectedCount > 0 ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm text-ink-muted">{selectedCount} selected</p>
-          <TableLabelButton
-            variant="danger"
-            disabled={pending}
-            icon={<IconTrash {...TABLE_BTN_ICON} />}
-            onClick={() => void deleteSelected()}
-          >
-            {pending ? "Deleting…" : "Delete"}
-          </TableLabelButton>
-          <TableLabelButton
-            variant="bulk"
-            disabled={pending}
-            icon={<IconClose {...TABLE_BTN_ICON} />}
-            onClick={() => setSelected(new Set())}
-          >
-            Clear
-          </TableLabelButton>
-        </div>
-      ) : null}
+              {pending ? "Deleting…" : "Delete"}
+            </TableLabelButton>
+            <TableLabelButton
+              variant="bulk"
+              disabled={pending || selectedCount === 0}
+              icon={<IconClose {...TABLE_BTN_ICON} />}
+              onClick={() => setSelected(new Set())}
+            >
+              Clear
+            </TableLabelButton>
+          </>
+        }
+      >
+          <TableFilterBar>
+            <TableFilterField label="Search">
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  table.setPage(1);
+                }}
+                placeholder="Name or contract"
+                autoComplete="off"
+                className={TABLE_FILTER_FIELD_CLASS}
+              />
+            </TableFilterField>
+            <TableFilterField label="Status">
+              <AppSelect
+                value={status}
+                onChange={(event) => {
+                  setStatus(event.target.value as "all" | BacktestStatus);
+                  table.setPage(1);
+                }}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                {STATUS_FILTERS.map((value) => (
+                  <option key={value} value={value}>
+                    {value === "all" ? "All statuses" : statusLabel(value)}
+                  </option>
+                ))}
+              </AppSelect>
+            </TableFilterField>
+            <TableLabelButton
+              variant="filter"
+              icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+              onClick={clearFilters}
+            >
+              Clear
+            </TableLabelButton>
+            <TableHideFilters />
+          </TableFilterBar>
+      </TableFilterSession>
       {error ? (
-        <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+        <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
       ) : null}
-      {message ? <p className="text-sm text-success">{message}</p> : null}
-      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+      {message ? <p className="mt-4 text-sm text-success">{message}</p> : null}
+      <TableCard
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+          />
+        }
+      >
         <table className="w-full min-w-max text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
             <tr>
@@ -426,12 +442,7 @@ export function BacktestRunsTable({
             ))}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-      />
+      </TableCard>
     </div>
   );
 }

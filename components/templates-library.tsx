@@ -10,7 +10,11 @@ import {
   SortTh,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TableCard,
+  TableFilterBar,
   TableFilterField,
+  TableFilterSession,
+  TableHideFilters,
   TableIconAction,
   TableLabelButton,
   TablePager,
@@ -746,115 +750,125 @@ export function TemplatesLibrary({
           </TableLabelButton>
         </div>
       ) : null}
-      <div className="mt-6 rounded-card border border-line bg-surface p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <TableFilterField label="Search">
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setPage(1);
-              }}
-              placeholder="Name or contract"
-              autoComplete="off"
-              className={TABLE_FILTER_FIELD_CLASS}
-            />
-          </TableFilterField>
-          <TableFilterField label="Desk type">
-            <AppSelect
-              value={deskFilter}
-              onChange={(event) => {
-                setDeskFilter(event.target.value as "all" | TemplateDeskType);
-                setPage(1);
-              }}
-              className={TABLE_FILTER_FIELD_CLASS}
-            >
-              <option value="all">All desk types</option>
-              <option value="dca">DCA</option>
-              <option value="perps">Perps bots</option>
-              <option value="cash_and_carry">Cash and Carry</option>
-            </AppSelect>
-          </TableFilterField>
-          {tab === "templates" || tab === "shared-templates" ? (
-            <TableFilterField label="Folder">
-              <AppSelect
-                value={folderFilter}
+      <TableFilterSession
+        toolbar={
+          sharedTab ? undefined : (
+            <>
+              <p className="text-sm text-ink-muted">
+                {selectedCount > 0 ? `${selectedCount} selected` : "Bulk actions"}
+              </p>
+              {tab === "templates" ? (
+                <TableLabelButton
+                  variant="bulk"
+                  disabled={selectedCount === 0}
+                  icon={<IconFolderPlus {...TABLE_BTN_ICON} />}
+                  onClick={openBulkFolder}
+                >
+                  Add to folder
+                </TableLabelButton>
+              ) : null}
+              <TableLabelButton
+                variant="bulk"
+                disabled={selectedCount === 0}
+                icon={<IconDownload {...TABLE_BTN_ICON} />}
+                onClick={() => void exportSelected()}
+              >
+                Export
+              </TableLabelButton>
+              {variant === "admin" ? (
+                <TableLabelButton
+                  variant="bulk"
+                  disabled={selectedCount === 0}
+                  icon={<IconDisable {...TABLE_BTN_ICON} />}
+                  onClick={() => void runBulk("unpublish")}
+                >
+                  Unpublish
+                </TableLabelButton>
+              ) : null}
+              <TableLabelButton
+                variant="danger"
+                disabled={selectedCount === 0}
+                icon={<IconTrash {...TABLE_BTN_ICON} />}
+                onClick={() => void runBulk("delete")}
+              >
+                Delete
+              </TableLabelButton>
+              <TableLabelButton
+                variant="bulk"
+                disabled={selectedCount === 0}
+                icon={<IconClose {...TABLE_BTN_ICON} />}
+                onClick={() => setSelected(new Set())}
+              >
+                Clear
+              </TableLabelButton>
+            </>
+          )
+        }
+      >
+          <TableFilterBar>
+            <TableFilterField label="Search">
+              <input
+                type="search"
+                value={query}
                 onChange={(event) => {
-                  setFolderFilter(event.target.value);
+                  setQuery(event.target.value);
+                  setPage(1);
+                }}
+                placeholder="Name or contract"
+                autoComplete="off"
+                className={TABLE_FILTER_FIELD_CLASS}
+              />
+            </TableFilterField>
+            <TableFilterField label="Desk type">
+              <AppSelect
+                value={deskFilter}
+                onChange={(event) => {
+                  setDeskFilter(event.target.value as "all" | TemplateDeskType);
                   setPage(1);
                 }}
                 className={TABLE_FILTER_FIELD_CLASS}
               >
-                <option value="all">All folders</option>
-                {folderFilterOptions.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </option>
-                ))}
+                <option value="all">All desk types</option>
+                <option value="dca">DCA</option>
+                <option value="perps">Perps bots</option>
+                <option value="cash_and_carry">Cash and Carry</option>
               </AppSelect>
             </TableFilterField>
-          ) : null}
-          <TableLabelButton
-            variant="filter"
-            icon={<IconFilterClear {...TABLE_BTN_ICON} />}
-            onClick={clearFilters}
-          >
-            Clear
-          </TableLabelButton>
-        </div>
-      </div>
+            {tab === "templates" || tab === "shared-templates" ? (
+              <TableFilterField label="Folder">
+                <AppSelect
+                  value={folderFilter}
+                  onChange={(event) => {
+                    setFolderFilter(event.target.value);
+                    setPage(1);
+                  }}
+                  className={TABLE_FILTER_FIELD_CLASS}
+                >
+                  <option value="all">All folders</option>
+                  {folderFilterOptions.map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </option>
+                  ))}
+                </AppSelect>
+              </TableFilterField>
+            ) : null}
+            <TableLabelButton
+              variant="filter"
+              icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+              onClick={clearFilters}
+            >
+              Clear
+            </TableLabelButton>
+            <TableHideFilters />
+          </TableFilterBar>
+      </TableFilterSession>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
       ) : null}
       {message ? <p className="mt-4 text-sm text-success">{message}</p> : null}
-
-      {!sharedTab && selectedCount > 0 ? (
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <p className="text-sm text-ink-muted">{selectedCount} selected</p>
-          {tab === "templates" ? (
-            <TableLabelButton
-              variant="bulk"
-              icon={<IconFolderPlus {...TABLE_BTN_ICON} />}
-              onClick={openBulkFolder}
-            >
-              Add to folder
-            </TableLabelButton>
-          ) : null}
-          <TableLabelButton
-            variant="bulk"
-            icon={<IconDownload {...TABLE_BTN_ICON} />}
-            onClick={() => void exportSelected()}
-          >
-            Export
-          </TableLabelButton>
-          {variant === "admin" ? (
-            <TableLabelButton
-              variant="bulk"
-              icon={<IconDisable {...TABLE_BTN_ICON} />}
-              onClick={() => void runBulk("unpublish")}
-            >
-              Unpublish
-            </TableLabelButton>
-          ) : null}
-          <TableLabelButton
-            variant="danger"
-            icon={<IconTrash {...TABLE_BTN_ICON} />}
-            onClick={() => void runBulk("delete")}
-          >
-            Delete
-          </TableLabelButton>
-          <TableLabelButton
-            variant="bulk"
-            icon={<IconClose {...TABLE_BTN_ICON} />}
-            onClick={() => setSelected(new Set())}
-          >
-            Clear
-          </TableLabelButton>
-        </div>
-      ) : null}
 
       {tab === "templates" || tab === "shared-templates" ? (
         <>
@@ -868,6 +882,13 @@ export function TemplatesLibrary({
           }
           rows={listedTemplates.length}
           columns={tableColumns}
+          pager={
+            <TablePager
+              window={pagedTemplates.window}
+              onPrev={() => setPage(pagedTemplates.window.page - 1)}
+              onNext={() => setPage(pagedTemplates.window.page + 1)}
+            />
+          }
         >
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
@@ -1074,11 +1095,6 @@ export function TemplatesLibrary({
             })}
           </tbody>
         </LibraryTable>
-          <TablePager
-            window={pagedTemplates.window}
-            onPrev={() => setPage(pagedTemplates.window.page - 1)}
-            onNext={() => setPage(pagedTemplates.window.page + 1)}
-          />
         </>
       ) : null}
 
@@ -1094,6 +1110,13 @@ export function TemplatesLibrary({
             }
             rows={listedFolders.length}
             columns={tableColumns}
+            pager={
+              <TablePager
+                window={pagedFolders.window}
+                onPrev={() => setPage(pagedFolders.window.page - 1)}
+                onNext={() => setPage(pagedFolders.window.page + 1)}
+              />
+            }
           >
             <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
               <tr>
@@ -1271,11 +1294,6 @@ export function TemplatesLibrary({
               })}
             </tbody>
           </LibraryTable>
-          <TablePager
-            window={pagedFolders.window}
-            onPrev={() => setPage(pagedFolders.window.page - 1)}
-            onNext={() => setPage(pagedFolders.window.page + 1)}
-          />
         </>
       ) : null}
 
@@ -1390,14 +1408,16 @@ function LibraryTable({
   rows,
   columns,
   children,
+  pager,
 }: {
   empty: string;
   rows: number;
   columns: number;
   children: React.ReactNode;
+  pager?: React.ReactNode;
 }) {
   return (
-    <div className="mt-6 overflow-x-auto rounded-card border border-line bg-surface">
+    <TableCard pager={pager}>
       <table className="w-full min-w-[48rem] text-left text-sm">
         {children}
         {rows === 0 ? (
@@ -1410,7 +1430,7 @@ function LibraryTable({
           </tbody>
         ) : null}
       </table>
-    </div>
+    </TableCard>
   );
 }
 

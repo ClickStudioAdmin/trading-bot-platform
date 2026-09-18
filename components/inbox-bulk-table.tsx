@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { AppCheck } from "@/components/app-check";
 import { IconMail, IconMailOpen, IconMarkAllRead } from "@/components/icons";
 import { LocalTime } from "@/components/local-time";
@@ -8,6 +8,7 @@ import {
   SortTh,
   StatusBadge,
   TABLE_BTN_ICON,
+  TableCard,
   TableIconAction,
   TablePendingLabelButton,
 } from "@/components/table-chrome";
@@ -37,12 +38,14 @@ export function InboxBulkTable({
   filters,
   sort,
   unread,
+  pager,
 }: {
   rows: InboxTableRow[];
   page: number;
   filters: InboxFilters;
   sort: InboxSortQuery;
   unread: number;
+  pager?: ReactNode;
 }) {
   const ids = useMemo(() => rows.map((row) => row.id), [rows]);
   const [selected, setSelected] = useState<number[]>([]);
@@ -104,7 +107,7 @@ export function InboxBulkTable({
             Mark all read
           </TablePendingLabelButton>
         </div>
-        <div className="overflow-x-auto rounded-card border border-line bg-surface">
+        <TableCard className="" pager={pager}>
           <table className="w-full min-w-[42rem] text-left text-sm">
             <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
               <tr>
@@ -211,7 +214,7 @@ export function InboxBulkTable({
               )}
             </tbody>
           </table>
-        </div>
+        </TableCard>
       </form>
       {rows.map((row) => (
         <div key={row.id} className="hidden">

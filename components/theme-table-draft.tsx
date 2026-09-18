@@ -2,12 +2,10 @@
 
 import { useMemo, useState } from "react";
 import {
-  IconChevronsUp,
   IconClose,
   IconDisable,
   IconDownload,
   IconFilterClear,
-  IconFilters,
   IconOpen,
   IconPencil,
   IconPlus,
@@ -18,8 +16,11 @@ import {
   StatusBadge,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TableCard,
   TableFilterBar,
   TableFilterField,
+  TableFilterSession,
+  TableHideFilters,
   TableIconAction,
   TableLabelButton,
   TablePager,
@@ -118,7 +119,6 @@ export function ThemeTableDraft() {
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [showFilters, setShowFilters] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -218,125 +218,119 @@ export function ThemeTableDraft() {
         </div>
       </div>
 
-      {showFilters ? (
-        <TableFilterBar>
-          <TableFilterField label="Search">
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                resetList();
-              }}
-              placeholder="Name or venue"
-              autoComplete="off"
-              className={TABLE_FILTER_FIELD_CLASS}
-            />
-          </TableFilterField>
-          <TableFilterField label="Type">
-            <AppSelect
-              value={typeFilter}
-              onChange={(event) => {
-                setTypeFilter(event.target.value);
-                resetList();
-              }}
-              className={TABLE_FILTER_FIELD_CLASS}
+      <TableFilterSession
+        toolbar={
+          <>
+            <p className="text-sm text-ink-muted">
+              {selectedCount > 0 ? `${selectedCount} selected` : "Bulk actions"}
+            </p>
+            <TableLabelButton
+              variant="bulk"
+              icon={<IconDownload {...TABLE_BTN_ICON} />}
+              disabled={selectedCount === 0}
+              onClick={() => flash(`Sample only — export ${selectedCount}.`)}
             >
-              <option value="all">All</option>
-              {TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </AppSelect>
-          </TableFilterField>
-          <TableFilterField label="Status">
-            <AppSelect
-              value={statusFilter}
-              onChange={(event) => {
-                setStatusFilter(event.target.value);
-                resetList();
-              }}
-              className={TABLE_FILTER_FIELD_CLASS}
+              Export
+            </TableLabelButton>
+            <TableLabelButton
+              variant="bulk"
+              icon={<IconDisable {...TABLE_BTN_ICON} />}
+              disabled={selectedCount === 0}
+              onClick={() => flash(`Sample only — disable ${selectedCount}.`)}
             >
-              <option value="all">All</option>
-              {STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {statusLabel(status)}
-                </option>
-              ))}
-            </AppSelect>
-          </TableFilterField>
-          <TableLabelButton
-            variant="filter"
-            icon={<IconFilterClear {...TABLE_BTN_ICON} />}
-            onClick={clearFilters}
-          >
-            Clear
-          </TableLabelButton>
-          <TableLabelButton
-            variant="filter"
-            icon={<IconChevronsUp {...TABLE_BTN_ICON} />}
-            onClick={() => setShowFilters(false)}
-          >
-            Hide Filters
-          </TableLabelButton>
-        </TableFilterBar>
-      ) : null}
+              Disable
+            </TableLabelButton>
+            <TableLabelButton
+              variant="danger"
+              icon={<IconTrash {...TABLE_BTN_ICON} />}
+              disabled={selectedCount === 0}
+              onClick={() => flash(`Sample only — delete ${selectedCount}.`)}
+            >
+              Delete
+            </TableLabelButton>
+            <TableLabelButton
+              variant="bulk"
+              icon={<IconClose {...TABLE_BTN_ICON} />}
+              disabled={selectedCount === 0}
+              onClick={() => setSelected(new Set())}
+            >
+              Clear
+            </TableLabelButton>
+          </>
+        }
+      >
+          <TableFilterBar>
+            <TableFilterField label="Search">
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  resetList();
+                }}
+                placeholder="Name or venue"
+                autoComplete="off"
+                className={TABLE_FILTER_FIELD_CLASS}
+              />
+            </TableFilterField>
+            <TableFilterField label="Type">
+              <AppSelect
+                value={typeFilter}
+                onChange={(event) => {
+                  setTypeFilter(event.target.value);
+                  resetList();
+                }}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="all">All</option>
+                {TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </AppSelect>
+            </TableFilterField>
+            <TableFilterField label="Status">
+              <AppSelect
+                value={statusFilter}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value);
+                  resetList();
+                }}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="all">All</option>
+                {STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {statusLabel(status)}
+                  </option>
+                ))}
+              </AppSelect>
+            </TableFilterField>
+            <TableLabelButton
+              variant="filter"
+              icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+              onClick={clearFilters}
+            >
+              Clear
+            </TableLabelButton>
+            <TableHideFilters />
+          </TableFilterBar>
+      </TableFilterSession>
 
       {notice ? <p className="mt-4 text-sm text-success">{notice}</p> : null}
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm text-ink-muted">
-            {selectedCount > 0 ? `${selectedCount} selected` : "Bulk actions"}
-          </p>
-          <TableLabelButton
-            variant="bulk"
-            icon={<IconDownload {...TABLE_BTN_ICON} />}
-            disabled={selectedCount === 0}
-            onClick={() => flash(`Sample only — export ${selectedCount}.`)}
-          >
-            Export
-          </TableLabelButton>
-          <TableLabelButton
-            variant="bulk"
-            icon={<IconDisable {...TABLE_BTN_ICON} />}
-            disabled={selectedCount === 0}
-            onClick={() => flash(`Sample only — disable ${selectedCount}.`)}
-          >
-            Disable
-          </TableLabelButton>
-          <TableLabelButton
-            variant="danger"
-            icon={<IconTrash {...TABLE_BTN_ICON} />}
-            disabled={selectedCount === 0}
-            onClick={() => flash(`Sample only — delete ${selectedCount}.`)}
-          >
-            Delete
-          </TableLabelButton>
-          <TableLabelButton
-            variant="bulk"
-            icon={<IconClose {...TABLE_BTN_ICON} />}
-            disabled={selectedCount === 0}
-            onClick={() => setSelected(new Set())}
-          >
-            Clear
-          </TableLabelButton>
-        </div>
-        {!showFilters ? (
-          <TableLabelButton
-            variant="filter"
-            icon={<IconFilters {...TABLE_BTN_ICON} />}
-            onClick={() => setShowFilters(true)}
-          >
-            Show Filters
-          </TableLabelButton>
-        ) : null}
-      </div>
-
-      <div className="mt-6 overflow-hidden rounded-card border border-line bg-surface">
-        <div className="overflow-x-auto">
+      <TableCard
+        pager={
+          <TablePager
+            align="center"
+            buttons="icons"
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+          />
+        }
+      >
         <table className="w-full min-w-[48rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
@@ -443,16 +437,7 @@ export function ThemeTableDraft() {
             )}
           </tbody>
         </table>
-        </div>
-        <TablePager
-          align="center"
-          buttons="icons"
-          className="border-t border-line px-4 py-3"
-          window={table.window}
-          onPrev={() => table.setPage(table.window.page - 1)}
-          onNext={() => table.setPage(table.window.page + 1)}
-        />
-      </div>
+      </TableCard>
     </div>
   );
 }

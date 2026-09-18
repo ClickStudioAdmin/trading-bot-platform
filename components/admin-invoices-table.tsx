@@ -8,7 +8,10 @@ import {
   StatusBadge,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TableCard,
   TableFilterField,
+  TableFilterSession,
+  TableHideFilters,
   TableLabelButton,
   TablePager,
   useClientTable,
@@ -110,42 +113,54 @@ export function AdminInvoicesTable({
 
   return (
     <>
-      <LiveGetForm>
-        <input type="hidden" name="page" value="1" />
-        <input type="hidden" name="tab" value="invoices" />
-        <TableFilterField label="Search">
-          <input
-            name="q"
-            type="search"
-            defaultValue={q}
-            placeholder="Member, plan, or id"
-            autoComplete="off"
-            className={TABLE_FILTER_FIELD_CLASS}
+      <TableFilterSession>
+          <LiveGetForm>
+            <input type="hidden" name="page" value="1" />
+            <input type="hidden" name="tab" value="invoices" />
+            <TableFilterField label="Search">
+              <input
+                name="q"
+                type="search"
+                defaultValue={q}
+                placeholder="Member, plan, or id"
+                autoComplete="off"
+                className={TABLE_FILTER_FIELD_CLASS}
+              />
+            </TableFilterField>
+            <TableFilterField label="Status">
+              <AppSelect
+                name="status"
+                defaultValue={status}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                {INVOICE_STATUSES.map((value) => (
+                  <option key={value} value={value}>
+                    {invoiceStatusLabel(value)}
+                  </option>
+                ))}
+              </AppSelect>
+            </TableFilterField>
+            <TableLabelButton
+              href="/admin/billing?tab=invoices"
+              variant="filter"
+              icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+            >
+              Clear
+            </TableLabelButton>
+            <TableHideFilters />
+          </LiveGetForm>
+      </TableFilterSession>
+      <TableCard
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+            emptyLabel="No invoices."
           />
-        </TableFilterField>
-        <TableFilterField label="Status">
-          <AppSelect
-            name="status"
-            defaultValue={status}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="">All</option>
-            {INVOICE_STATUSES.map((value) => (
-              <option key={value} value={value}>
-                {invoiceStatusLabel(value)}
-              </option>
-            ))}
-          </AppSelect>
-        </TableFilterField>
-        <TableLabelButton
-          href="/admin/billing?tab=invoices"
-          variant="filter"
-          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
-        >
-          Clear
-        </TableLabelButton>
-      </LiveGetForm>
-      <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
+        }
+      >
         <table className="w-full min-w-[56rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
             <tr>
@@ -254,13 +269,7 @@ export function AdminInvoicesTable({
             )}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-        emptyLabel="No invoices."
-      />
+      </TableCard>
     </>
   );
 }

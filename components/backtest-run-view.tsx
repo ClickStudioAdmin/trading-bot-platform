@@ -6,8 +6,11 @@ import {
   SortTh,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TableCard,
   TableFilterBar,
   TableFilterField,
+  TableFilterSession,
+  TableHideFilters,
   TableIconAction,
   TableLabelButton,
   TablePager,
@@ -413,49 +416,61 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
   }
   return (
     <div>
-      <TableFilterBar className="mb-4">
-        <TableFilterField label="Search">
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              table.setPage(1);
-            }}
-            placeholder="Action or side"
-            autoComplete="off"
-            className={TABLE_FILTER_FIELD_CLASS}
+      <TableFilterSession>
+          <TableFilterBar className="mb-4">
+            <TableFilterField label="Search">
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  table.setPage(1);
+                }}
+                placeholder="Action or side"
+                autoComplete="off"
+                className={TABLE_FILTER_FIELD_CLASS}
+              />
+            </TableFilterField>
+            <TableFilterField label="Action">
+              <AppSelect
+                value={action}
+                onChange={(event) => {
+                  setAction(event.target.value as FillActionFilter);
+                  table.setPage(1);
+                }}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                <option value="open">Open</option>
+                <option value="close">Close</option>
+                <option value="buy">Buy</option>
+                <option value="sell">Sell</option>
+              </AppSelect>
+            </TableFilterField>
+            <TableLabelButton
+              variant="filter"
+              icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+              onClick={() => {
+                setQuery("");
+                setAction("");
+                table.setPage(1);
+              }}
+            >
+              Clear
+            </TableLabelButton>
+            <TableHideFilters />
+          </TableFilterBar>
+      </TableFilterSession>
+      <TableCard
+        className=""
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
           />
-        </TableFilterField>
-        <TableFilterField label="Action">
-          <AppSelect
-            value={action}
-            onChange={(event) => {
-              setAction(event.target.value as FillActionFilter);
-              table.setPage(1);
-            }}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="">All</option>
-            <option value="open">Open</option>
-            <option value="close">Close</option>
-            <option value="buy">Buy</option>
-            <option value="sell">Sell</option>
-          </AppSelect>
-        </TableFilterField>
-        <TableLabelButton
-          variant="filter"
-          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
-          onClick={() => {
-            setQuery("");
-            setAction("");
-            table.setPage(1);
-          }}
-        >
-          Clear
-        </TableLabelButton>
-      </TableFilterBar>
-      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+        }
+      >
         <table className="w-full min-w-max text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
             <tr>
@@ -543,12 +558,7 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
             )}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-      />
+      </TableCard>
     </div>
   );
 }

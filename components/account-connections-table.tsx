@@ -4,7 +4,13 @@ import { useCallback } from "react";
 import { RemoveConnectionControl } from "@/components/remove-connection-control";
 import { RenameConnectionControl } from "@/components/rename-connection-control";
 import { ReplaceConnectionControl } from "@/components/replace-connection-control";
-import { SortTh, StatusBadge, TablePager, useClientTable } from "@/components/table-chrome";
+import {
+  SortTh,
+  StatusBadge,
+  TableCard,
+  TablePager,
+  useClientTable,
+} from "@/components/table-chrome";
 import {
   connectionRemoveBlockers,
   formatConnectionRemoveBlockers,
@@ -90,7 +96,15 @@ export function AccountConnectionsTable({
 
   return (
     <section>
-      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+      <TableCard
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+          />
+        }
+      >
         <table className="w-full min-w-[42rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
@@ -204,12 +218,7 @@ export function AccountConnectionsTable({
             })}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-      />
+      </TableCard>
     </section>
   );
 }

@@ -2,17 +2,29 @@
 
 import Link from "next/link";
 import {
+  createContext,
   type FormEvent,
   type ReactNode,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import { LiveFilterSubmit } from "@/components/app-select";
-import { IconChevronLeft, IconChevronRight } from "@/components/icons";
-import { TableHint, useActionHint } from "@/components/table-actions";
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconChevronsUp,
+  IconFilters,
+} from "@/components/icons";
+import {
+  TABLE_BTN_ICON,
+  TableHint,
+  TableLabelButton,
+  useActionHint,
+} from "@/components/table-actions";
 import {
   formatStatusLabel,
   sliceTablePage,
@@ -62,6 +74,78 @@ export function StatusBadge({
 }) {
   const resolved = tone ?? statusToneFor(status ?? label);
   return <span className={BADGE_TONE[resolved]}>{formatStatusLabel(label)}</span>;
+}
+
+export function TableCard({
+  children,
+  pager,
+  className = "mt-6",
+}: {
+  children: ReactNode;
+  pager?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`overflow-hidden rounded-card border border-line bg-surface ${className}`.trim()}
+    >
+      <div className="min-w-0 overflow-x-auto">{children}</div>
+      {pager ? (
+        <div className="border-t border-line px-4 py-3">{pager}</div>
+      ) : null}
+    </div>
+  );
+}
+
+const TableFilterCtx = createContext<ReactNode>(null);
+
+export function TableHideFilters() {
+  return useContext(TableFilterCtx);
+}
+
+export function TableFilterSession({
+  children,
+  toolbar,
+}: {
+  children: ReactNode;
+  toolbar?: ReactNode;
+}) {
+  const [show, setShow] = useState(true);
+  const hideButton = (
+    <TableLabelButton
+      variant="filter"
+      icon={<IconChevronsUp {...TABLE_BTN_ICON} />}
+      onClick={() => setShow(false)}
+    >
+      Hide Filters
+    </TableLabelButton>
+  );
+  const showButton = (
+    <TableLabelButton
+      variant="filter"
+      icon={<IconFilters {...TABLE_BTN_ICON} />}
+      onClick={() => setShow(true)}
+    >
+      Show Filters
+    </TableLabelButton>
+  );
+  return (
+    <TableFilterCtx.Provider value={hideButton}>
+      {show ? children : null}
+      {!show && !toolbar ? (
+        <div className="mt-6 flex justify-end">{showButton}</div>
+      ) : toolbar || !show ? (
+        <div
+          className={`flex flex-wrap items-center justify-between gap-2 ${
+            show ? "mt-4" : "mt-6"
+          }`}
+        >
+          <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
+          {!show ? showButton : null}
+        </div>
+      ) : null}
+    </TableFilterCtx.Provider>
+  );
 }
 
 export function TableFilterBar({
@@ -170,9 +254,9 @@ export function TablePager({
   onPrev,
   onNext,
   emptyLabel,
-  align = "split",
+  align = "center",
   buttons = "icons",
-  className = "mt-4",
+  className = "",
 }: {
   window: Pick<TablePageWindow, "page" | "pageCount" | "total" | "from" | "to">;
   prevHref?: string;

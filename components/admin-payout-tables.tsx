@@ -14,7 +14,10 @@ import {
   StatusBadge,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TableCard,
   TableFilterField,
+  TableFilterSession,
+  TableHideFilters,
   TableIconAction,
   TableLabelButton,
   TablePendingIconAction,
@@ -139,44 +142,56 @@ export function AdminPayoutFilesTable({
 
   return (
     <>
-      <LiveGetForm>
-        <input type="hidden" name="page" value="1" />
-        {keepEntries(keep ?? {}).map(([name, value]) => (
-          <input key={name} type="hidden" name={name} value={value} />
-        ))}
-        <TableFilterField label="Search">
-          <input
-            name="fileQ"
-            type="search"
-            defaultValue={fileQ}
-            placeholder="Network, id, or hash"
-            autoComplete="off"
-            className={TABLE_FILTER_FIELD_CLASS}
-          />
-        </TableFilterField>
-        <TableFilterField label="Status">
-          <AppSelect
-            name="fileStatus"
-            defaultValue={fileStatus}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="">All</option>
-            {PAYOUT_FILE_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {status === "paid" ? "Paid" : "Pending"}
-              </option>
+      <TableFilterSession>
+          <LiveGetForm>
+            <input type="hidden" name="page" value="1" />
+            {keepEntries(keep ?? {}).map(([name, value]) => (
+              <input key={name} type="hidden" name={name} value={value} />
             ))}
-          </AppSelect>
-        </TableFilterField>
-        <TableLabelButton
-          href={clearHref}
-          variant="filter"
-          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
-        >
-          Clear
-        </TableLabelButton>
-      </LiveGetForm>
-      <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
+            <TableFilterField label="Search">
+              <input
+                name="fileQ"
+                type="search"
+                defaultValue={fileQ}
+                placeholder="Network, id, or hash"
+                autoComplete="off"
+                className={TABLE_FILTER_FIELD_CLASS}
+              />
+            </TableFilterField>
+            <TableFilterField label="Status">
+              <AppSelect
+                name="fileStatus"
+                defaultValue={fileStatus}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                {PAYOUT_FILE_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {status === "paid" ? "Paid" : "Pending"}
+                  </option>
+                ))}
+              </AppSelect>
+            </TableFilterField>
+            <TableLabelButton
+              href={clearHref}
+              variant="filter"
+              icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+            >
+              Clear
+            </TableLabelButton>
+            <TableHideFilters />
+          </LiveGetForm>
+      </TableFilterSession>
+      <TableCard
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+            emptyLabel="No files match."
+          />
+        }
+      >
         <table className="w-full min-w-[44rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
             <tr>
@@ -287,13 +302,7 @@ export function AdminPayoutFilesTable({
             )}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-        emptyLabel="No files match."
-      />
+      </TableCard>
     </>
   );
 }
@@ -318,34 +327,46 @@ export function AdminPayoutQueueTable({
 
   return (
     <>
-      <LiveGetForm>
-        <input type="hidden" name="page" value="1" />
-        {keepEntries(keep ?? {}).map(([name, value]) => (
-          <input key={name} type="hidden" name={name} value={value} />
-        ))}
-        <TableFilterField label="Status">
-          <AppSelect
-            name="payoutStatus"
-            defaultValue={payoutStatus}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="">All</option>
-            {PAYOUT_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {payoutStatusLabel(status)}
-              </option>
+      <TableFilterSession>
+          <LiveGetForm>
+            <input type="hidden" name="page" value="1" />
+            {keepEntries(keep ?? {}).map(([name, value]) => (
+              <input key={name} type="hidden" name={name} value={value} />
             ))}
-          </AppSelect>
-        </TableFilterField>
-        <TableLabelButton
-          href={clearHref}
-          variant="filter"
-          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
-        >
-          Clear
-        </TableLabelButton>
-      </LiveGetForm>
-      <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
+            <TableFilterField label="Status">
+              <AppSelect
+                name="payoutStatus"
+                defaultValue={payoutStatus}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                {PAYOUT_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {payoutStatusLabel(status)}
+                  </option>
+                ))}
+              </AppSelect>
+            </TableFilterField>
+            <TableLabelButton
+              href={clearHref}
+              variant="filter"
+              icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+            >
+              Clear
+            </TableLabelButton>
+            <TableHideFilters />
+          </LiveGetForm>
+      </TableFilterSession>
+      <TableCard
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+            emptyLabel="No requests match."
+          />
+        }
+      >
         <table className="w-full min-w-[44rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
             <tr>
@@ -446,13 +467,7 @@ export function AdminPayoutQueueTable({
             )}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-        emptyLabel="No requests match."
-      />
+      </TableCard>
     </>
   );
 }
@@ -475,31 +490,43 @@ export function AdminPayoutFilePaymentsTable({
 
   return (
     <>
-      <LiveGetForm>
-        <input type="hidden" name="page" value="1" />
-        <TableFilterField label="Status">
-          <AppSelect
-            name="status"
-            defaultValue={status}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="">All</option>
-            {PAYOUT_STATUSES.map((value) => (
-              <option key={value} value={value}>
-                {payoutStatusLabel(value)}
-              </option>
-            ))}
-          </AppSelect>
-        </TableFilterField>
-        <TableLabelButton
-          href={clearHref}
-          variant="filter"
-          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
-        >
-          Clear
-        </TableLabelButton>
-      </LiveGetForm>
-      <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
+      <TableFilterSession>
+          <LiveGetForm>
+            <input type="hidden" name="page" value="1" />
+            <TableFilterField label="Status">
+              <AppSelect
+                name="status"
+                defaultValue={status}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                {PAYOUT_STATUSES.map((value) => (
+                  <option key={value} value={value}>
+                    {payoutStatusLabel(value)}
+                  </option>
+                ))}
+              </AppSelect>
+            </TableFilterField>
+            <TableLabelButton
+              href={clearHref}
+              variant="filter"
+              icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+            >
+              Clear
+            </TableLabelButton>
+            <TableHideFilters />
+          </LiveGetForm>
+      </TableFilterSession>
+      <TableCard
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+            emptyLabel="No payments match."
+          />
+        }
+      >
         <table className="w-full min-w-[52rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
             <tr>
@@ -589,13 +616,7 @@ export function AdminPayoutFilePaymentsTable({
             )}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-        emptyLabel="No payments match."
-      />
+      </TableCard>
     </>
   );
 }

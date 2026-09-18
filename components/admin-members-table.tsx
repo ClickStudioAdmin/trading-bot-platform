@@ -23,8 +23,7 @@ export function AdminMembersTable({
   planNames: Record<string, string>;
 }) {
   return (
-    <div className="mt-6 overflow-x-auto rounded-card border border-line bg-surface">
-      <table className="w-full min-w-[48rem] text-left text-sm">
+    <table className="w-full min-w-[48rem] text-left text-sm">
         <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
           <tr>
             <SortTh
@@ -99,7 +98,6 @@ export function AdminMembersTable({
             ))
           )}
         </tbody>
-      </table>
-    </div>
+    </table>
   );
 }

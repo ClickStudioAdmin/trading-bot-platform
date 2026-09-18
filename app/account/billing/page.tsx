@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SavedBillingMethodForm } from "@/components/billing-method-radios";
 import { PageHeading } from "@/components/page-heading";
 import { getSessionMember } from "@/lib/auth/session";
-import { SortTh, StatusBadge, TablePager } from "@/components/table-chrome";
+import { SortTh, StatusBadge, TableCard, TablePager } from "@/components/table-chrome";
 import {
   billingMethodPriceNote,
   billingPath,
@@ -513,8 +513,11 @@ export default async function AccountBillingPage({
       ledgerPage.total === 0 ? (
         <p className="mt-6 text-sm text-ink-muted">No Account Balance activity yet.</p>
       ) : (
-        <div className="mt-6">
-          <div className="overflow-x-auto rounded-card border border-line bg-surface">
+        <TableCard
+          pager={
+            <BillingTablePager tab="ledger" list={ledgerPage} sort={ledgerSort} />
+          }
+        >
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
                 <tr>
@@ -602,15 +605,20 @@ export default async function AccountBillingPage({
                 })}
               </tbody>
             </table>
-          </div>
-          <BillingTablePager tab="ledger" list={ledgerPage} sort={ledgerSort} />
-        </div>
+        </TableCard>
       )
       ) : invoicePage.total === 0 ? (
         <p className="mt-6 text-sm text-ink-muted">No invoices yet.</p>
       ) : (
-        <div className="mt-6">
-          <div className="overflow-x-auto rounded-card border border-line bg-surface">
+        <TableCard
+          pager={
+            <BillingTablePager
+              tab="invoices"
+              list={invoicePage}
+              sort={invoiceSort}
+            />
+          }
+        >
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
                 <tr>
@@ -730,13 +738,7 @@ export default async function AccountBillingPage({
                 })}
               </tbody>
             </table>
-          </div>
-          <BillingTablePager
-            tab="invoices"
-            list={invoicePage}
-            sort={invoiceSort}
-          />
-        </div>
+        </TableCard>
       )}
     </div>
   );

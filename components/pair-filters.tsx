@@ -4,6 +4,7 @@ import {
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
+  TableHideFilters,
   TableLabelButton,
 } from "@/components/table-chrome";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
@@ -105,6 +106,7 @@ export function PairFiltersForm({
       >
         Clear
       </TableLabelButton>
+      <TableHideFilters />
     </LiveGetForm>
   );
 }

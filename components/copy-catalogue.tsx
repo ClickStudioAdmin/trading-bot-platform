@@ -11,6 +11,8 @@ import {
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
+  TableFilterSession,
+  TableHideFilters,
   TableLabelButton,
   TablePendingIconAction,
 } from "@/components/table-chrome";
@@ -144,50 +146,53 @@ export function CopyCatalogueBoard({
           </Link>
         ))}
       </div>
-      <LiveGetForm action="/account/copy">
-        {tab !== "all" ? (
-          <input type="hidden" name="tab" value={tab} />
-        ) : null}
-        <TableFilterField label="Search">
-          <input
-            type="search"
-            name="q"
-            defaultValue={query}
-            placeholder="Trader or desk"
-            autoComplete="off"
-            className={TABLE_FILTER_FIELD_CLASS}
-          />
-        </TableFilterField>
-        <TableFilterField label="Sort" className="w-44 shrink-0">
-          <AppSelect
-            name="sort"
-            defaultValue={sort}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="roi">30d P&L</option>
-            <option value="drawdown">Lowest drawdown</option>
-            <option value="followers">Followers</option>
-            <option value="newest">Newest</option>
-          </AppSelect>
-        </TableFilterField>
-        <TableFilterField label="Visibility" className="w-40 shrink-0">
-          <AppSelect
-            name="private"
-            defaultValue={privateOnly ? "1" : ""}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="">All</option>
-            <option value="1">Private only</option>
-          </AppSelect>
-        </TableFilterField>
-        <TableLabelButton
-          href={copyCatalogueHref({ tab })}
-          variant="filter"
-          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
-        >
-          Clear
-        </TableLabelButton>
-      </LiveGetForm>
+      <TableFilterSession>
+          <LiveGetForm action="/account/copy">
+            {tab !== "all" ? (
+              <input type="hidden" name="tab" value={tab} />
+            ) : null}
+            <TableFilterField label="Search">
+              <input
+                type="search"
+                name="q"
+                defaultValue={query}
+                placeholder="Trader or desk"
+                autoComplete="off"
+                className={TABLE_FILTER_FIELD_CLASS}
+              />
+            </TableFilterField>
+            <TableFilterField label="Sort" className="w-44 shrink-0">
+              <AppSelect
+                name="sort"
+                defaultValue={sort}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="roi">30d P&L</option>
+                <option value="drawdown">Lowest drawdown</option>
+                <option value="followers">Followers</option>
+                <option value="newest">Newest</option>
+              </AppSelect>
+            </TableFilterField>
+            <TableFilterField label="Visibility" className="w-40 shrink-0">
+              <AppSelect
+                name="private"
+                defaultValue={privateOnly ? "1" : ""}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                <option value="1">Private only</option>
+              </AppSelect>
+            </TableFilterField>
+            <TableLabelButton
+              href={copyCatalogueHref({ tab })}
+              variant="filter"
+              icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+            >
+              Clear
+            </TableLabelButton>
+            <TableHideFilters />
+          </LiveGetForm>
+      </TableFilterSession>
       </>
       ) : null}
       {cards.length === 0 ? (

@@ -10,7 +10,10 @@ import {
   StatusBadge,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TableCard,
   TableFilterField,
+  TableFilterSession,
+  TableHideFilters,
   TableIconAction,
   TableLabelButton,
   TablePager,
@@ -77,29 +80,41 @@ export function AdminPlansTable({
 
   return (
     <>
-      <LiveGetForm>
-        <input type="hidden" name="page" value="1" />
-        <TableFilterField label="Status">
-          <AppSelect
-            name="status"
-            defaultValue={status}
-            className={TABLE_FILTER_FIELD_CLASS}
-          >
-            <option value="">All</option>
-            <option value="live">Live</option>
-            <option value="draft">Draft</option>
-            <option value="archived">Archived</option>
-          </AppSelect>
-        </TableFilterField>
-        <TableLabelButton
-          href="/admin/plans"
-          variant="filter"
-          icon={<IconFilterClear {...TABLE_BTN_ICON} />}
-        >
-          Clear
-        </TableLabelButton>
-      </LiveGetForm>
-      <div className="mt-6 overflow-x-auto rounded-card border border-line bg-surface">
+      <TableFilterSession>
+          <LiveGetForm>
+            <input type="hidden" name="page" value="1" />
+            <TableFilterField label="Status">
+              <AppSelect
+                name="status"
+                defaultValue={status}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                <option value="live">Live</option>
+                <option value="draft">Draft</option>
+                <option value="archived">Archived</option>
+              </AppSelect>
+            </TableFilterField>
+            <TableLabelButton
+              href="/admin/plans"
+              variant="filter"
+              icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+            >
+              Clear
+            </TableLabelButton>
+            <TableHideFilters />
+          </LiveGetForm>
+      </TableFilterSession>
+      <TableCard
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+            emptyLabel="No plans."
+          />
+        }
+      >
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-muted">
             <tr>
@@ -202,13 +217,7 @@ export function AdminPlansTable({
             )}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-        emptyLabel="No plans."
-      />
+      </TableCard>
     </>
   );
 }

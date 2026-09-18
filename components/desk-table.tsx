@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { AccountDeleteControl } from "@/components/account-delete-control";
 import { AccountRenameControl } from "@/components/account-rename-control";
-import { SortTh, TablePager, useClientTable } from "@/components/table-chrome";
+import { SortTh, TableCard, TablePager, useClientTable } from "@/components/table-chrome";
 import {
   formatAccountMode,
   formatAccountUsageStatus,
@@ -93,8 +93,15 @@ export function DeskTable({
   const table = useClientTable(accounts, compare);
 
   return (
-    <div>
-      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+    <TableCard
+      pager={
+        <TablePager
+          window={table.window}
+          onPrev={() => table.setPage(table.window.page - 1)}
+          onNext={() => table.setPage(table.window.page + 1)}
+        />
+      }
+    >
         <table className="w-full min-w-[64rem] table-fixed text-left text-sm">
           <colgroup>
             <col className="w-[14rem]" />
@@ -194,12 +201,6 @@ export function DeskTable({
             })}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-      />
-    </div>
+    </TableCard>
   );
 }

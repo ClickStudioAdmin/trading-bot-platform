@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
-import { SortTh, TablePager, useClientTable } from "@/components/table-chrome";
+import { SortTh, TableCard, TablePager, useClientTable } from "@/components/table-chrome";
 import {
   PaperOpenColumnPicker,
   usePaperOpenColumns,
@@ -155,7 +155,15 @@ export function OpenPaperTrades({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <PaperOpenColumnPicker visible={visible} setColumn={setColumn} />
       </div>
-      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+      <TableCard
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+          />
+        }
+      >
         <table className="w-full min-w-[60rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
@@ -290,12 +298,7 @@ export function OpenPaperTrades({
             )}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-      />
+      </TableCard>
     </section>
   );
 }
@@ -360,7 +363,15 @@ export function ClosedPaperTrades({
         title="Past Positions"
         subtitle="Closed paper carries. Realized P&L uses the same all-in fee model as unrealized."
       />
-      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+      <TableCard
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+          />
+        }
+      >
         <table className="w-full min-w-[52rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
@@ -445,12 +456,7 @@ export function ClosedPaperTrades({
             )}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-      />
+      </TableCard>
     </section>
   );
 }

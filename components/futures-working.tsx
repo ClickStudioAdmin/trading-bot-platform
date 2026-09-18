@@ -9,6 +9,7 @@ import { PendingStatusChip } from "@/components/pending-status-chip";
 import {
   SortTh,
   TABLE_BTN_ICON,
+  TableCard,
   TablePager,
   TablePendingIconAction,
   useClientTable,
@@ -143,7 +144,15 @@ export function FuturesWorkingOrders({
           </div>
         ) : null}
       </div>
-      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+      <TableCard
+        pager={
+          <TablePager
+            window={table.window}
+            onPrev={() => table.setPage(table.window.page - 1)}
+            onNext={() => table.setPage(table.window.page + 1)}
+          />
+        }
+      >
         <table className="w-full min-w-[48rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
@@ -257,12 +266,7 @@ export function FuturesWorkingOrders({
             )}
           </tbody>
         </table>
-      </div>
-      <TablePager
-        window={table.window}
-        onPrev={() => table.setPage(table.window.page - 1)}
-        onNext={() => table.setPage(table.window.page + 1)}
-      />
+      </TableCard>
     </section>
   );
 }
