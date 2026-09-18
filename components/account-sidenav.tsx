@@ -31,6 +31,7 @@ import {
 import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { upgradeAffiliateToPlatformAction } from "@/lib/membership/affiliate-actions";
+import { IconChevronDown } from "@/components/icons";
 import { NavBadge } from "@/components/nav-badge";
 import { NavItemIcon } from "@/components/site-nav";
 import { ACCOUNT_DESK_LINKS, AFFILIATE_ONLY_LINKS } from "@/lib/site-links";
@@ -78,6 +79,7 @@ export function AccountSidenav({
         links={platformMember ? ACCOUNT_DESK_LINKS : AFFILIATE_ONLY_LINKS}
         pathname={pathname}
         badges={badges}
+        collapsible
       />
       {!platformMember ? (
         <div className="mt-5">
@@ -431,12 +433,32 @@ function DeskModeFilterBar({
   );
 }
 
+const ACCOUNT_NAV_OPEN_KEY = "tbp-account-nav-open";
+
+function useAccountNavOpen() {
+  const [open, setOpen] = useState(true);
+
+  useEffect(() => {
+    setOpen(window.localStorage.getItem(ACCOUNT_NAV_OPEN_KEY) !== "0");
+  }, []);
+
+  return {
+    open,
+    toggle() {
+      const next = !open;
+      setOpen(next);
+      window.localStorage.setItem(ACCOUNT_NAV_OPEN_KEY, next ? "1" : "0");
+    },
+  };
+}
+
 function NavGroup({
   label,
   ariaLabel,
   links,
   pathname,
   badges,
+  collapsible = false,
   className,
 }: {
   label: string;
@@ -444,41 +466,74 @@ function NavGroup({
   links: readonly { href: string; label: string; exact?: boolean }[];
   pathname: string;
   badges?: Record<string, number>;
+  collapsible?: boolean;
   className?: string;
 }) {
+  const fold = useAccountNavOpen();
+  const open = !collapsible || fold.open;
   return (
     <div className={className}>
-      <p
-        className="truncate text-xs font-medium uppercase tracking-[0.16em] text-accent"
-        title={label}
-      >
-        {label}
-      </p>
-      <nav aria-label={ariaLabel} className="mt-2 flex flex-col gap-0.5">
-        {links.map((link) => {
-          const linkPath = hrefPathname(link.href);
-          const active = link.exact
-            ? pathname === linkPath
-            : pathname === linkPath || pathname.startsWith(`${linkPath}/`);
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`flex items-center justify-between gap-2 rounded-control px-3 py-1.5 text-sm ${
-                active
-                  ? "bg-surface-raised text-ink"
-                  : "text-ink-faint hover:bg-surface-raised hover:text-ink"
-              }`}
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <NavItemIcon href={link.href} />
-                <span>{link.label}</span>
-              </span>
-              <NavBadge count={badges?.[link.href] ?? 0} />
-            </Link>
-          );
-        })}
-      </nav>
+      {collapsible ? (
+        <button
+          type="button"
+          onClick={fold.toggle}
+          aria-expanded={open}
+          aria-controls="account-nav"
+          title={open ? "Collapse Account" : "Expand Account"}
+          className="flex w-full items-center justify-between gap-2 text-left"
+        >
+          <span
+            className="truncate text-xs font-medium uppercase tracking-[0.16em] text-accent"
+            title={label}
+          >
+            {label}
+          </span>
+          <IconChevronDown
+            size={14}
+            className={`size-3.5 shrink-0 text-accent transition-transform ${
+              open ? "" : "-rotate-90"
+            }`}
+          />
+        </button>
+      ) : (
+        <p
+          className="truncate text-xs font-medium uppercase tracking-[0.16em] text-accent"
+          title={label}
+        >
+          {label}
+        </p>
+      )}
+      {open ? (
+        <nav
+          id={collapsible ? "account-nav" : undefined}
+          aria-label={ariaLabel}
+          className="mt-2 flex flex-col gap-0.5"
+        >
+          {links.map((link) => {
+            const linkPath = hrefPathname(link.href);
+            const active = link.exact
+              ? pathname === linkPath
+              : pathname === linkPath || pathname.startsWith(`${linkPath}/`);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`flex items-center justify-between gap-2 rounded-control px-3 py-1.5 text-sm ${
+                  active
+                    ? "bg-surface-raised text-ink"
+                    : "text-ink-faint hover:bg-surface-raised hover:text-ink"
+                }`}
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <NavItemIcon href={link.href} />
+                  <span>{link.label}</span>
+                </span>
+                <NavBadge count={badges?.[link.href] ?? 0} />
+              </Link>
+            );
+          })}
+        </nav>
+      ) : null}
     </div>
   );
 }

@@ -40,7 +40,7 @@ export function DeskMark({ desk }: { desk: TradingAccount }) {
 export function DeskTypeMark({ deskType }: { deskType: DeskType }) {
   return (
     <span
-      className="inline-flex size-4 shrink-0 items-center justify-center text-ink-faint"
+      className="inline-flex size-4 shrink-0 items-center justify-center"
       title={formatDeskType(deskType)}
       aria-hidden
     >
