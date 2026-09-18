@@ -46,7 +46,7 @@ export function NavItemIcon({ href }: { href: string }) {
 
 export const NAV_IDLE_CLASS =
   "text-ink-muted hover:bg-surface-raised hover:text-ink";
-export const NAV_ACTIVE_CLASS = "bg-surface-raised text-mode-live";
+export const NAV_ACTIVE_CLASS = "bg-surface-raised text-logo";
 
 function navItemClass(active: boolean): string {
   return `rounded-control px-3 py-1.5 text-sm ${

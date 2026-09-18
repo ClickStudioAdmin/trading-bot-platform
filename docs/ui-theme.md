@@ -22,6 +22,7 @@ Style: dark modern business portal. Tokens live in `app/globals.css` (`@theme`).
 | `success` | `#34D399` | Positive change |
 | `danger` | `#F07167` | Negative change, alerts, badges |
 | `warning` | `#F5B942` | Caution, pending, secondary chart segment |
+| `logo` | `#5BB9E2` | Blue from the site mark. Active header and sidebar nav. |
 | `mode-paper` | `#8B93A1` | Desk mode Paper (sidebar dot and filter) |
 | `mode-demo` | `#C08B9D` | Desk mode Demo / testnet. Dusty rose, not paper grey and not pending amber. |
 | `mode-live` | `#4AACA7` | Desk mode Live. Dusty teal, not danger red and not accent purple. |
