@@ -103,7 +103,9 @@ export function TableActions({
   className?: string;
 }) {
   return (
-    <div className={`inline-flex flex-nowrap items-center ${className}`.trim()}>
+    <div
+      className={`inline-flex w-max max-w-none shrink-0 flex-nowrap items-center [&_form]:inline-flex ${className}`.trim()}
+    >
       {children}
     </div>
   );

@@ -1247,7 +1247,7 @@ export function RemoveBacktestButton({
   }
   return (
     <form
-      className={inline ? "inline" : undefined}
+      className={inline ? "inline" : "inline-flex"}
       action={async (formData) => {
         setPending(true);
         setError(null);
