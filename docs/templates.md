@@ -76,7 +76,7 @@ Share is a grant, not a copy. The owner keeps the template. Recipients can **Imp
 
 ## Export and import
 
-`/account/templates` and `/admin/templates` both have **Export all** and **Import** on the page title. Row checkboxes add bulk **Export** of the current selection.
+`/account/templates` and `/admin/templates` both have **Export all** and **Import** on the My Templates / My Folders toolbar (not Shared tabs). Row checkboxes add bulk **Export** of the current selection.
 
 - Account export is the current member’s **user** templates and the folders those templates sit in (not platform, not inbound shares).
 - Admin export is the **platform** catalog: templates and folders.
@@ -158,8 +158,8 @@ Tokens from [ui-theme.md](ui-theme.md).
 Login library. Not desk-scoped. Account nav: Templates, with Settings, Exchanges, Manage desks.
 
 - Tabs: **My Templates**, **My Folders**, **Shared Templates**, **Shared Folders**. Table with columns, search, desk-type filter, folder filter, click-to-sort, and row checkboxes. Bulk: **Add to folder** (templates), **Export**, **Delete**. Row **Delete** (confirm) sits with **Edit** and **Share**. **Edit** is name, description, and folders. **Share** is a separate action and modal (email grant). **Edit** folder uses **In Folder** / **Not in Folder** columns; Save writes membership. Apply is on Automations.
-- **Export all** / **Import** on the page title. Import is a modal: pick a JSON file, then choose templates and folders.
-- **Folders tab:** same table. **Add New Folder** opens a modal for name, desk type, and optional templates. Add templates now or later from Edit.
+- **Export all** / **Import** on the My Templates / My Folders toolbar, same row as bulk actions. Import is a modal: pick a JSON file, then choose templates and folders. Shared tabs keep row **Import** / **Remove** only.
+- **Folders tab:** same table. **Add New Folder** sits on that toolbar and opens a modal for name, desk type, and optional templates. Add templates now or later from Edit.
 - **Platform rows** do not appear on My Templates / My Folders. Members apply them from Automations. **Shared** tabs: **Import** copies the template (or the folder and its templates) into My Templates / My Folders. **Remove** drops the grant, not the owner’s copy, including templates that only appear because a folder was shared with you.
 - Empty states: no templates yet; point at Automations **Save as template**. No folders yet; use **Add New Folder** (templates optional).
 
