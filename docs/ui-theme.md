@@ -15,7 +15,7 @@ Style: dark modern business portal. Tokens live in `app/globals.css` (`@theme`).
 | `line-strong` | `#3A4352` | Focus / stronger dividers |
 | `ink` | `#F4F6F8` | Primary text and values |
 | `ink-muted` | `#9AA3B2` | Labels, secondary copy |
-| `ink-faint` | `#6B7382` | Inactive nav, hints |
+| `ink-faint` | `#6B7382` | Hints, unused chrome. Inactive header and sidebar nav use ink at 70%. |
 | `accent` | `#A78BFA` | Active states, links, primary actions, charts |
 | `accent-strong` | `#8B6CF6` | Primary button fill |
 | `plan-header` | `#764DED` | Plan compare card headers |
