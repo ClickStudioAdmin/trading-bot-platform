@@ -21,6 +21,7 @@ import {
   FlaskConical,
   FolderPlus,
   Handshake,
+  Inbox,
   Landmark,
   Layers,
   LayoutDashboard,
@@ -48,6 +49,7 @@ import {
   TrendingUp,
   Undo2,
   Upload,
+  User,
   UserCog,
   Users,
   Wallet,
@@ -448,6 +450,20 @@ export const LUCIDE_ICONS = [
     usedIn: "Account sidenav",
     Icon: LayoutTemplate,
   },
+  {
+    id: "inbox",
+    name: "Inbox",
+    lucide: "Inbox",
+    usedIn: "Header inbox",
+    Icon: Inbox,
+  },
+  {
+    id: "user",
+    name: "Account",
+    lucide: "User",
+    usedIn: "Header account menu",
+    Icon: User,
+  },
 ] as const satisfies readonly LucideIconEntry[];
 
 export function IconArchive(props: LucideProps) {
@@ -672,4 +688,12 @@ export function IconDesks(props: LucideProps) {
 
 export function IconTemplates(props: LucideProps) {
   return <LayoutTemplate aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconInbox(props: LucideProps) {
+  return <Inbox aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconUser(props: LucideProps) {
+  return <User aria-hidden strokeWidth={STROKE} {...props} />;
 }

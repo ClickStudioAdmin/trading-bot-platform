@@ -8,6 +8,7 @@ import {
   IconBilling,
   IconCopyTrading,
   IconDesks,
+  IconInbox,
   IconOverview,
   IconPlans,
   IconProfile,
@@ -50,6 +51,9 @@ function navItemClass(active: boolean): string {
       : "text-ink-muted hover:bg-surface-raised hover:text-ink"
   }`;
 }
+
+export const HEADER_CHIP_CLASS =
+  "inline-flex items-center gap-2 rounded-control border border-line px-2.5 py-1 text-sm";
 
 export function HeaderChromeLinks({
   signedIn,
@@ -147,8 +151,13 @@ export function HeaderInboxLink({ count = 0 }: { count?: number }) {
   return (
     <Link
       href="/account/notifications"
-      className={`${navItemClass(active)} flex items-center gap-2`}
+      className={`${HEADER_CHIP_CLASS} ${
+        active
+          ? "bg-surface-raised text-ink"
+          : "text-ink-muted hover:bg-surface-raised hover:text-ink"
+      }`}
     >
+      <IconInbox {...NAV_ICON} />
       <span>Inbox</span>
       <NavBadge count={count} />
     </Link>

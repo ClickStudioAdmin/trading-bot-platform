@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { IconUser } from "@/components/icons";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { HEADER_CHIP_CLASS } from "@/components/site-nav";
 import { signOut } from "@/lib/auth/actions";
 
 export function UserMenu({ name }: { name: string | null }) {
@@ -24,18 +26,14 @@ export function UserMenu({ name }: { name: string | null }) {
     );
   }
 
-  const initial = name.slice(0, 1).toUpperCase();
-
   return (
     <div className="group relative">
       <button
         type="button"
-        className="flex items-center gap-2 rounded-control border border-line px-2 py-1 group-hover:bg-surface-raised group-focus-within:bg-surface-raised"
+        className={`${HEADER_CHIP_CLASS} text-ink group-hover:bg-surface-raised group-focus-within:bg-surface-raised`}
       >
-        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold text-accent">
-          {initial}
-        </span>
-        <span className="hidden max-w-[10rem] truncate text-sm text-ink sm:inline">
+        <IconUser size={16} className="size-4 shrink-0" />
+        <span className="hidden max-w-[10rem] truncate sm:inline">
           {name}
         </span>
       </button>
