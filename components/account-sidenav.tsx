@@ -437,16 +437,10 @@ function DeskModeFilterBar({
               key={option}
               type="button"
               onClick={() => onChange(option)}
-              className={`inline-flex min-w-0 flex-1 items-center justify-center gap-1 rounded-control px-1 py-1 text-[11px] ${
+              className={`min-w-0 flex-1 rounded-control px-1 py-1 text-[11px] ${
                 active ? tone.active : tone.idle
               }`}
             >
-              {option === "all" ? null : (
-                <span
-                  aria-hidden
-                  className={`size-1.5 shrink-0 rounded-full ${MODE_DOT[option]}`}
-                />
-              )}
               {label}
             </button>
           );
