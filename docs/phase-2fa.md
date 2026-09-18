@@ -1,6 +1,6 @@
 # 2FA (login only)
 
-**V1 item 2** ([roadmap.md](roadmap.md)). Spec written 16 Sep 2026 when Click split this out of entitlements. Identity (verify + forgot password) is V1 item 1. Plan-required 2FA and Upgrade gates are V1 item 4 ([phase-entitlements.md](phase-entitlements.md)).
+**V1 item 2** ([roadmap.md](roadmap.md)). Spec written 16 Sep 2026 when Click split this out of entitlements. Identity (verify + forgot password) is V1 item 1. Plan-required 2FA and Upgrade gates are V1 item 5 ([phase-entitlements.md](phase-entitlements.md)).
 
 **Accepted 17 Sep 2026.** Stop. Do not start UI cleanup or plan gates until Click says go.
 
@@ -26,10 +26,10 @@ Stop. Do not add plan flags, Upgrade copy, or “turn on 2FA to unlock Live” h
 
 ## Out of scope
 
-- Plan-required 2FA (V1 item 4)
+- Plan-required 2FA (V1 item 5)
 - SMS, passkeys, WebAuthn (V2)
 - Change-email (V2)
 
 ## After this
 
-V1 item 3 is UI refinement. V1 item 4 is entitlements and plan / 2FA gates.
+V1 item 3 is UI refinement. V1 item 4 is account Positions / Bots / Automations lists ([phase-account-blotter.md](phase-account-blotter.md)). V1 item 5 is entitlements and plan / 2FA gates.

@@ -229,7 +229,7 @@ Stop after acceptance. Do not start Fly.io, Hyperliquid, scale-in, or backup kli
 - Marketplace
 - Fly.io, private APIs from the browser
 - Scale-in / position builder (V2)
-- Starter Pack delivery to new members and CTA on new desk (V1 item 5; [phase-onboarding.md](phase-onboarding.md))
+- Starter Pack delivery to new members and CTA on new desk (V1 item 6; [phase-onboarding.md](phase-onboarding.md))
 - Plans, payments, and affiliates (shipped; [phase-membership.md](phase-membership.md))
 - Hyperliquid leftover desk-test (V1 system test); MEXC (V2) ([phase-hyperliquid.md](phase-hyperliquid.md))
 - Copy leftover desk-test (V1 system test); Hedged DCA (V2) ([phase-copy-trading.md](phase-copy-trading.md))

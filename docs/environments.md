@@ -189,6 +189,8 @@ Test-mode keys on **Development** / local `.env.local`. Live keys on **Productio
 
 Webhook events: `checkout.session.completed`, `customer.subscription.updated` (and created / deleted), `invoice.paid`, `invoice.updated`, `charge.refunded`. Each paid plan needs a Stripe Price id on `/admin/plans`.
 
+The develop Preview host is SSO-protected. Stripe cannot complete Vercel login, so deliveries return **401 Protected Deployment** unless the destination includes the same **Protection Bypass for Automation** secret as the tick (`x-vercel-protection-bypass` header, or that query on the URL). Do not set a bypass on Production. After adding it, Resend the failed `checkout.session.completed` / `customer.subscription.created` events so test memberships apply.
+
 ## Resend (notifications step 8)
 
 Transactional mail only. Separate Resend projects or API keys for develop and production. Never `NEXT_PUBLIC_`. Verify the From domain in Resend before expecting delivery. From name is Admin Settings → General → Platform name (default Trading Bot Platform).

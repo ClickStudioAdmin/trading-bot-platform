@@ -29,13 +29,13 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Fly.io **is accepted** ([phase-fly.md](phase-fly.md)). Hyperliquid steps 1–6 and copy steps 1–9 are in repo; leftover desk-test is V1 system test. Desk roles (Perps vs Perps bots) are in repo ([phase-desk-roles.md](phase-desk-roles.md)).
 
-The plan after Phase 11 is [roadmap.md](roadmap.md) (**V1 locked order, V2 unordered**). **V1 items 1–2 are accepted** (identity + 2FA). **Next is UI refinement** (item 3) — do not start until Click says go. Then entitlements / plan gates. Plans, payments, and affiliates are shipped ([phase-membership.md](phase-membership.md)). Notifications steps 1–8 are in repo ([phase-notifications.md](phase-notifications.md)). Standing notes: [click-list.md](click-list.md). Automation templates: [templates.md](templates.md).
+The plan after Phase 11 is [roadmap.md](roadmap.md) (**V1 locked order, V2 unordered**). **V1 items 1–2 are accepted** (identity + 2FA). **Current is UI refinement** (item 3). Then account Positions / Bots / Automations lists (item 4, [phase-account-blotter.md](phase-account-blotter.md)). Then entitlements / plan gates. Plans, payments, and affiliates are shipped ([phase-membership.md](phase-membership.md)). Notifications steps 1–8 are in repo ([phase-notifications.md](phase-notifications.md)). Standing notes: [click-list.md](click-list.md). Automation templates: [templates.md](templates.md).
 
 ## Later
 
 Do not implement until Click starts that roadmap item. Order and notes: [roadmap.md](roadmap.md).
 
-**Plans, payments, and affiliates** (shipped). Spec: [phase-membership.md](phase-membership.md). Closed at step 8. Identity is V1 item 1. Entitlements / plan gates are V1 item 4 ([phase-entitlements.md](phase-entitlements.md)).
+**Plans, payments, and affiliates** (shipped). Spec: [phase-membership.md](phase-membership.md). Closed at step 8. Identity is V1 item 1. Entitlements / plan gates are V1 item 5 ([phase-entitlements.md](phase-entitlements.md)).
 
 **Transactional notifications and email** (shipped). Spec: [phase-notifications.md](phase-notifications.md). Inbox + computed badges + Resend. No fills this pass. Admin roles are V2.
 

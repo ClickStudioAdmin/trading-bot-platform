@@ -1,6 +1,6 @@
 # Identity, entitlements, and plan gates
 
-Identity is **V1 item 1**. Plan / 2FA gates are **V1 item 4**. Optional login 2FA is its own item: [phase-2fa.md](phase-2fa.md) (V1 item 2). Locked order: [roadmap.md](roadmap.md).
+Identity is **V1 item 1**. Plan / 2FA gates are **V1 item 5**. Optional login 2FA is its own item: [phase-2fa.md](phase-2fa.md) (V1 item 2). Account blotter lists are V1 item 4 ([phase-account-blotter.md](phase-account-blotter.md)). Locked order: [roadmap.md](roadmap.md).
 
 Membership billing, wallets, and affiliates stay [phase-membership.md](phase-membership.md) (shipped). Admin roles are V2 ([phase-admin-roles.md](phase-admin-roles.md)). The first-desk `/welcome` wizard was removed in identity; new users land on Overview after they verify.
 
@@ -8,20 +8,20 @@ Never trust the browser for entitlements, verification, 2FA, or admin permission
 
 ## Status
 
-**V1 item 1 (identity) accepted 17 Sep 2026:** verify on signup + forgot password + unverified wall. **V1 item 2 (2FA) accepted 17 Sep 2026:** Google Authenticator enroll + sign-in. Next is UI cleanup (V1 item 3). Stop. Do not start UI cleanup or gates (V1 item 4) until Click says go.
+**V1 item 1 (identity) accepted 17 Sep 2026:** verify on signup + forgot password + unverified wall. **V1 item 2 (2FA) accepted 17 Sep 2026:** Google Authenticator enroll + sign-in. Next after UI cleanup (item 3) is account blotter lists (item 4). Stop. Do not start gates (V1 item 5) until Click says go.
 
 ## Purpose
 
-Prove the login (verified email; later optional 2FA) then, in V1 item 4, gate product on the settled plan. Free can test; paid unlocks Live, copy, backtest, and higher caps. Surfaces stay **visible and disabled** with an **Upgrade** banner. A plan can require verified email and/or 2FA before those unlocks apply. After a downgrade, extras stay operable through admin grace, then the worker Close/Disables oldest desk first.
+Prove the login (verified email; later optional 2FA) then, in V1 item 5, gate product on the settled plan. Free can test; paid unlocks Live, copy, backtest, and higher caps. Surfaces stay **visible and disabled** with an **Upgrade** banner. A plan can require verified email and/or 2FA before those unlocks apply. After a downgrade, extras stay operable through admin grace, then the worker Close/Disables oldest desk first.
 
 ## V1 items this file covers
 
 | V1 | Step | Who | Done when |
 | --- | --- | --- | --- |
 | 1 | Email verification + forgot password | Agent | Signup (platform and affiliate) creates the login, signs them in, and mails a one-time verify link. Unverified logins hit a **verify wall** (below). Public forgot-password mails a one-time reset link. Existing members are grandfathered verified. First-desk `/welcome` wizard removed; verified new users land on `/account`. **Accepted 17 Sep 2026.** |
-| 4a | Entitlements + Upgrade UX | Agent | `assertEntitlement` on create desk, Live, copy, backtest, caps, and identity flags. A plan may **require** verified email and/or 2FA (admin plan flag). Controls disable; page/inline **Upgrade** (or “Turn on 2FA”) names the cheapest public plan that unlocks it. Cap notice: “You have 2 of 2 desks. Upgrade to add another.” Server actions reject. Billing page already exists. Stop. |
-| 4b | Downgrade grace | Agent | Entitlements change at period end. Admin grace days (default 7, already saved on `/admin/affiliates`). Banner + operable extras. After grace, billing worker Close/Disable **oldest desk first**: forbidden features, then numeric caps. Upgrade during grace cancels the sweep. Ledgers stay. Stop. |
-| 4c | Desk test | Click | Free gates visible/disabled. A plan that requires 2FA. Upgrade Stripe test. Crypto top-up + leftover debit. Affiliate list/chart/stats. Hold then withdraw. Downgrade grace then oldest-first exit. Archive a used plan (cannot delete). |
+| 5a | Entitlements + Upgrade UX | Agent | `assertEntitlement` on create desk, Live, copy, backtest, caps, and identity flags. A plan may **require** verified email and/or 2FA (admin plan flag). Controls disable; page/inline **Upgrade** (or “Turn on 2FA”) names the cheapest public plan that unlocks it. Cap notice: “You have 2 of 2 desks. Upgrade to add another.” Server actions reject. Billing page already exists. Stop. |
+| 5b | Downgrade grace | Agent | Entitlements change at period end. Admin grace days (default 7, already saved on `/admin/affiliates`). Banner + operable extras. After grace, billing worker Close/Disable **oldest desk first**: forbidden features, then numeric caps. Upgrade during grace cancels the sweep. Ledgers stay. Stop. |
+| 5c | Desk test | Click | Free gates visible/disabled. A plan that requires 2FA. Upgrade Stripe test. Crypto top-up + leftover debit. Affiliate list/chart/stats. Hold then withdraw. Downgrade grace then oldest-first exit. Archive a used plan (cannot delete). |
 
 2FA enroll + sign-in only is [phase-2fa.md](phase-2fa.md), not a row here. Stop after each V1 item until Click says go.
 
@@ -84,7 +84,7 @@ Until `email_verified_at` is set, the login is signed in but **cannot use the pr
 - `/admin/*`
 - Tick, webhooks, engine actions as that user (they have no desk yet on a fresh signup; existing grandfathered users are already verified)
 
-UI may show the verify page only — do not leave gated desk chrome visible “disabled” for this wall. That Upgrade-and-disable pattern is for plan gates in V1 item 4. This wall is “prove the inbox first.”
+UI may show the verify page only — do not leave gated desk chrome visible “disabled” for this wall. That Upgrade-and-disable pattern is for plan gates in V1 item 5. This wall is “prove the inbox first.”
 
 Never trust the browser. `requireVerifiedEmail()` on every mutating server action that is not verify/resend/sign-out.
 
@@ -92,15 +92,15 @@ Never trust the browser. `requireVerifiedEmail()` on every mutating server actio
 
 - Change-email flow (V2)
 - 2FA enroll + sign-in ([phase-2fa.md](phase-2fa.md), V1 item 2) — in repo 17 Sep 2026
-- `assertEntitlement` / Upgrade banners (V1 item 4)
-- Downgrade grace (V1 item 4)
-- Onboarding wizard refine (V1 item 5)
+- `assertEntitlement` / Upgrade banners (V1 item 5)
+- Downgrade grace (V1 item 5)
+- Onboarding wizard refine (V1 item 6)
 
 ### Gates
 
 UI **never hides** a gated surface. Disable the control. Persistent **Upgrade** banner (and the same line on the control) names the plan that unlocks it. Hitting a cap does not hide Create desk — notice + disabled action. Unverified email or missing required 2FA uses the same pattern with copy that says verify or turn on 2FA. Server still rejects.
 
-Plan-limit and Upgrade notices can use the notifications catalog when V1 item 4 starts. Do not add those templates during identity.
+Plan-limit and Upgrade notices can use the notifications catalog when V1 item 5 starts. Do not add those templates during identity.
 
 ### Downgrade and over-quota
 
@@ -118,9 +118,9 @@ Per desk: cancel working orders, market-exit positions, disable bots, disable th
 ## Out of scope
 
 - Notifications product — already shipped. Admin roles are V2 ([phase-admin-roles.md](phase-admin-roles.md))
-- Onboarding wizard refine (V1 item 5)
+- Onboarding wizard refine (V1 item 6)
 - Internal webhooks, scale-in, SMS 2FA, passkeys, WebAuthn, KYC (V2)
 
 ## After this
 
-V1 item 2 is 2FA ([phase-2fa.md](phase-2fa.md)). V1 item 3 is UI cleanup. V1 item 4 is the gates in this file. Then onboarding (V1 item 5). See [roadmap.md](roadmap.md).
+V1 item 2 is 2FA ([phase-2fa.md](phase-2fa.md)). V1 item 3 is UI cleanup. V1 item 4 is account Positions / Bots / Automations lists ([phase-account-blotter.md](phase-account-blotter.md)). V1 item 5 is the gates in this file. Then onboarding (V1 item 6). See [roadmap.md](roadmap.md).

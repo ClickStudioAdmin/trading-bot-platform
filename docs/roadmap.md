@@ -31,13 +31,14 @@ Stop after each item until Click says go.
 | 1 | **Identity** | **Accepted 17 Sep 2026.** Email verify on signup + forgot password + unverified wall. Wizard removed; new users land on Overview after confirm. Spec: [phase-entitlements.md](phase-entitlements.md) (identity slice). |
 | 2 | **2FA** | **Accepted 17 Sep 2026.** Settings enroll + sign-in challenge only. Google Authenticator TOTP, recovery codes shown once. **Not** a plan gate yet. Spec: [phase-2fa.md](phase-2fa.md). |
 | 3 | **UI refinement and cleanup** | **Current.** Desk and account chrome. Started 17 Sep 2026. No phase doc until Click locks screens. |
-| 4 | **Entitlements and plan / 2FA gates** | `assertEntitlement`, visible/disabled + Upgrade, a plan may require verified email and/or 2FA, downgrade grace. Spec: [phase-entitlements.md](phase-entitlements.md) (gates). |
-| 5 | **Onboarding wizards and Starter Packs** | Reimagine first-run and new-desk. Starter Packs copy/apply idle, never arm. Spec: [phase-onboarding.md](phase-onboarding.md). |
-| 6 | **Full system test and refinement** | Whole product, **including Hyperliquid** leftover desk-test and copy leftover desk-test. Fix what Click finds. Not a new feature phase. |
-| 7 | **Front-end website** | Marketing / public site, not desk chrome. |
-| 8 | **Invite friends to test** | Closed testers before the public soft launch. |
-| 9 | **Explainer videos, docs, support** | User-facing help (videos, platform docs, tickets or equivalent). Distinct from these engineering phase files. |
-| 10 | **Soft launch / beta and promote affiliates** | Public beta. Push the affiliate program. |
+| 4 | **Account Positions, Bots, and Automations lists** | Login-wide Positions + Bots. Desk Automations becomes a bot table + Create New Bot + Edit. Spec: [phase-account-blotter.md](phase-account-blotter.md). Locked 19 Sep 2026. Do not start until item 3 is accepted. |
+| 5 | **Entitlements and plan / 2FA gates** | `assertEntitlement`, visible/disabled + Upgrade, a plan may require verified email and/or 2FA, downgrade grace. Spec: [phase-entitlements.md](phase-entitlements.md) (gates). |
+| 6 | **Onboarding wizards and Starter Packs** | Reimagine first-run and new-desk. Starter Packs copy/apply idle, never arm. Spec: [phase-onboarding.md](phase-onboarding.md). |
+| 7 | **Full system test and refinement** | Whole product, **including Hyperliquid** leftover desk-test and copy leftover desk-test. Fix what Click finds. Not a new feature phase. |
+| 8 | **Front-end website** | Marketing / public site, not desk chrome. |
+| 9 | **Invite friends to test** | Closed testers before the public soft launch. |
+| 10 | **Explainer videos, docs, support** | User-facing help (videos, platform docs, tickets or equivalent). Distinct from these engineering phase files. |
+| 11 | **Soft launch / beta and promote affiliates** | Public beta. Push the affiliate program. |
 
 ## V2 (consideration, no order)
 

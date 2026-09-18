@@ -126,7 +126,7 @@ Desk Activity and blotters stay. They are not the inbox.
 
 - Trade fill / opened / closed / unwound notices
 - Identity / 2FA / entitlements / Upgrade / grace (later V1 items)
-- Onboarding wizard refine (V1 item 5)
+- Onboarding wizard refine (V1 item 6)
 - Internal webhooks (V2)
 - Organisation / multi-seat **member** notification roles (FQX-only). Admin roles are [phase-admin-roles.md](phase-admin-roles.md).
 - Bell dropdown

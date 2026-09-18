@@ -1,6 +1,6 @@
 # Onboarding wizard (later)
 
-**V1 item 5** ([roadmap.md](roadmap.md)). Not the current phase. Do not implement until Click starts this item. Identity is V1 item 1. 2FA is V1 item 2. Entitlements / plan gates are V1 item 4 ([phase-entitlements.md](phase-entitlements.md)).
+**V1 item 6** ([roadmap.md](roadmap.md)). Not the current phase. Do not implement until Click starts this item. Identity is V1 item 1. 2FA is V1 item 2. Account blotter lists are V1 item 4 ([phase-account-blotter.md](phase-account-blotter.md)). Entitlements / plan gates are V1 item 5 ([phase-entitlements.md](phase-entitlements.md)).
 
 The first-desk `/welcome` wizard was **removed** on 16 Sep 2026 (identity step 1). Verified new users land on Overview. `/welcome` now redirects to the signed-in home. This phase **reimagines** first-run later; it does not put the old wizard back unless Click asks.
 

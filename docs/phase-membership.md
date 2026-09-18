@@ -180,10 +180,10 @@ KYC / travel-rule / money-transmitter: Click owns compliance. V1 is admin-approv
 - Storing or using the **admin wallet** seed or private key; automated payout from the admin wallet
 - Hosted crypto-sub auto-pull as the primary model
 - Yearly prices, vanity referral slugs, promo coupons (unless Click asks)
-- Marketing website (V1 item 7)
+- Marketing website (V1 item 8)
 - Transactional notifications and email (shipped) — [phase-notifications.md](phase-notifications.md)
-- Identity / 2FA / entitlements / plan gates (V1 items 1, 2, 4) — [phase-entitlements.md](phase-entitlements.md), [phase-2fa.md](phase-2fa.md)
-- Onboarding wizard refine (V1 item 5) — Starter Pack still never arms
+- Identity / 2FA / entitlements / plan gates (V1 items 1, 2, 5) — [phase-entitlements.md](phase-entitlements.md), [phase-2fa.md](phase-2fa.md)
+- Onboarding wizard refine (V1 item 6) — Starter Pack still never arms
 - Internal webhooks, backup candles, scale-in, MEXC (V2)
 - Fly scale-from-admin (parked)
 - Full KYC product
