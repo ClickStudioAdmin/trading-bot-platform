@@ -164,7 +164,7 @@ function DeskGroup({
                 </Link>
               )}
             </div>
-            <div className="mt-1 flex flex-col gap-1">
+            <div className="mt-1 flex flex-col gap-1 pl-5">
               {group.desks.map((desk) => (
                 <DeskNavLink
                   key={desk.id}
