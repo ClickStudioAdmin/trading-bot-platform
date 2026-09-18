@@ -220,43 +220,39 @@ export function ThemeTableDraft() {
 
       <TableFilterSession
         toolbar={
-          <>
-            {selectedCount > 0 ? (
+          selectedCount > 0 ? (
+            <>
               <p className="text-sm text-ink-muted">{selectedCount} selected</p>
-            ) : null}
-            <TableLabelButton
-              variant="bulk"
-              icon={<IconDownload {...TABLE_BTN_ICON} />}
-              disabled={selectedCount === 0}
-              onClick={() => flash(`Sample only — export ${selectedCount}.`)}
-            >
-              Export
-            </TableLabelButton>
-            <TableLabelButton
-              variant="bulk"
-              icon={<IconDisable {...TABLE_BTN_ICON} />}
-              disabled={selectedCount === 0}
-              onClick={() => flash(`Sample only — disable ${selectedCount}.`)}
-            >
-              Disable
-            </TableLabelButton>
-            <TableLabelButton
-              variant="danger"
-              icon={<IconTrash {...TABLE_BTN_ICON} />}
-              disabled={selectedCount === 0}
-              onClick={() => flash(`Sample only — delete ${selectedCount}.`)}
-            >
-              Delete
-            </TableLabelButton>
-            <TableLabelButton
-              variant="bulk"
-              icon={<IconClose {...TABLE_BTN_ICON} />}
-              disabled={selectedCount === 0}
-              onClick={() => setSelected(new Set())}
-            >
-              Clear
-            </TableLabelButton>
-          </>
+              <TableLabelButton
+                variant="bulk"
+                icon={<IconDownload {...TABLE_BTN_ICON} />}
+                onClick={() => flash(`Sample only — export ${selectedCount}.`)}
+              >
+                Export
+              </TableLabelButton>
+              <TableLabelButton
+                variant="bulk"
+                icon={<IconDisable {...TABLE_BTN_ICON} />}
+                onClick={() => flash(`Sample only — disable ${selectedCount}.`)}
+              >
+                Disable
+              </TableLabelButton>
+              <TableLabelButton
+                variant="danger"
+                icon={<IconTrash {...TABLE_BTN_ICON} />}
+                onClick={() => flash(`Sample only — delete ${selectedCount}.`)}
+              >
+                Delete
+              </TableLabelButton>
+              <TableLabelButton
+                variant="bulk"
+                icon={<IconClose {...TABLE_BTN_ICON} />}
+                onClick={() => setSelected(new Set())}
+              >
+                Clear
+              </TableLabelButton>
+            </>
+          ) : undefined
         }
       >
           <TableFilterBar>

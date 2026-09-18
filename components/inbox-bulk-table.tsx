@@ -77,25 +77,29 @@ export function InboxBulkTable({
         {sort.dir !== "desc" ? (
           <input type="hidden" name="dir" value={sort.dir} />
         ) : null}
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2">
-            <TablePendingLabelButton
-              formAction={markNotificationsReadAction}
-              pendingLabel="Marking…"
-              disabled={!hasSelection}
-              icon={<IconMailOpen {...TABLE_BTN_ICON} />}
-            >
-              Mark read
-            </TablePendingLabelButton>
-            <TablePendingLabelButton
-              formAction={markNotificationsUnreadAction}
-              pendingLabel="Marking…"
-              disabled={!hasSelection}
-              icon={<IconMail {...TABLE_BTN_ICON} />}
-            >
-              Mark unread
-            </TablePendingLabelButton>
-          </div>
+        <div
+          className={`mb-3 flex flex-wrap items-center gap-3 ${
+            hasSelection ? "justify-between" : "justify-end"
+          }`}
+        >
+          {hasSelection ? (
+            <div className="flex flex-wrap gap-2">
+              <TablePendingLabelButton
+                formAction={markNotificationsReadAction}
+                pendingLabel="Marking…"
+                icon={<IconMailOpen {...TABLE_BTN_ICON} />}
+              >
+                Mark read
+              </TablePendingLabelButton>
+              <TablePendingLabelButton
+                formAction={markNotificationsUnreadAction}
+                pendingLabel="Marking…"
+                icon={<IconMail {...TABLE_BTN_ICON} />}
+              >
+                Mark unread
+              </TablePendingLabelButton>
+            </div>
+          ) : null}
           <TablePendingLabelButton
             formAction={markNotificationsReadAction}
             name="all"

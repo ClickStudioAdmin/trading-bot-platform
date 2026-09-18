@@ -752,15 +752,12 @@ export function TemplatesLibrary({
       ) : null}
       <TableFilterSession
         toolbar={
-          sharedTab ? undefined : (
+          sharedTab || selectedCount === 0 ? undefined : (
             <>
-              {selectedCount > 0 ? (
-                <p className="text-sm text-ink-muted">{selectedCount} selected</p>
-              ) : null}
+              <p className="text-sm text-ink-muted">{selectedCount} selected</p>
               {tab === "templates" ? (
                 <TableLabelButton
                   variant="bulk"
-                  disabled={selectedCount === 0}
                   icon={<IconFolderPlus {...TABLE_BTN_ICON} />}
                   onClick={openBulkFolder}
                 >
@@ -769,7 +766,6 @@ export function TemplatesLibrary({
               ) : null}
               <TableLabelButton
                 variant="bulk"
-                disabled={selectedCount === 0}
                 icon={<IconDownload {...TABLE_BTN_ICON} />}
                 onClick={() => void exportSelected()}
               >
@@ -778,7 +774,6 @@ export function TemplatesLibrary({
               {variant === "admin" ? (
                 <TableLabelButton
                   variant="bulk"
-                  disabled={selectedCount === 0}
                   icon={<IconDisable {...TABLE_BTN_ICON} />}
                   onClick={() => void runBulk("unpublish")}
                 >
@@ -787,7 +782,6 @@ export function TemplatesLibrary({
               ) : null}
               <TableLabelButton
                 variant="danger"
-                disabled={selectedCount === 0}
                 icon={<IconTrash {...TABLE_BTN_ICON} />}
                 onClick={() => void runBulk("delete")}
               >
@@ -795,7 +789,6 @@ export function TemplatesLibrary({
               </TableLabelButton>
               <TableLabelButton
                 variant="bulk"
-                disabled={selectedCount === 0}
                 icon={<IconClose {...TABLE_BTN_ICON} />}
                 onClick={() => setSelected(new Set())}
               >

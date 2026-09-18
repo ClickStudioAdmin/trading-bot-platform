@@ -278,27 +278,27 @@ export function BacktestRunsTable({
       {dialog}
       <TableFilterSession
         toolbar={
-          <>
-            {selectedCount > 0 ? (
+          selectedCount > 0 ? (
+            <>
               <p className="text-sm text-ink-muted">{selectedCount} selected</p>
-            ) : null}
-            <TableLabelButton
-              variant="danger"
-              disabled={pending || selectedCount === 0}
-              icon={<IconTrash {...TABLE_BTN_ICON} />}
-              onClick={() => void deleteSelected()}
-            >
-              {pending ? "Deleting…" : "Delete"}
-            </TableLabelButton>
-            <TableLabelButton
-              variant="bulk"
-              disabled={pending || selectedCount === 0}
-              icon={<IconClose {...TABLE_BTN_ICON} />}
-              onClick={() => setSelected(new Set())}
-            >
-              Clear
-            </TableLabelButton>
-          </>
+              <TableLabelButton
+                variant="danger"
+                disabled={pending}
+                icon={<IconTrash {...TABLE_BTN_ICON} />}
+                onClick={() => void deleteSelected()}
+              >
+                {pending ? "Deleting…" : "Delete"}
+              </TableLabelButton>
+              <TableLabelButton
+                variant="bulk"
+                disabled={pending}
+                icon={<IconClose {...TABLE_BTN_ICON} />}
+                onClick={() => setSelected(new Set())}
+              >
+                Clear
+              </TableLabelButton>
+            </>
+          ) : undefined
         }
       >
           <TableFilterBar>
