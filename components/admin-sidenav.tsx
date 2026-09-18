@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NavBadge } from "@/components/nav-badge";
 import { SiteLogo } from "@/components/site-logo";
-import { NAV_IDLE_CLASS } from "@/components/site-nav";
 import { ADMIN_NAV_LINKS } from "@/lib/site-links";
 
 export function AdminSidenav({
@@ -43,7 +42,7 @@ export function AdminSidenav({
               className={`flex items-center justify-between gap-2 rounded-control px-3 py-1.5 text-sm ${
                 active
                   ? "bg-surface-raised text-ink"
-                  : NAV_IDLE_CLASS
+                  : "text-ink-faint hover:bg-surface-raised hover:text-ink"
               }`}
             >
               <span>{link.label}</span>
