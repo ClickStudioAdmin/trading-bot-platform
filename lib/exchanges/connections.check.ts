@@ -9,6 +9,7 @@ import {
   keyFingerprint,
   parseBoundConnectionId,
   connectionIdsBoundToOtherDesks,
+  exclusiveConnectionBindError,
   sharedKeyWarningKind,
   parseConnectionLabel,
   parseExchangeConnectionRow,
@@ -94,6 +95,29 @@ assert.deepEqual(
   [],
 );
 assert.deepEqual(connectionIdsBoundToOtherDesks([]), []);
+assert.equal(
+  exclusiveConnectionBindError({
+    connectionId: "k1",
+    currentAccountId: "a",
+    binds: [{ connectionId: "k1", accountId: "a", accountName: "Desk A" }],
+  }),
+  null,
+);
+assert.match(
+  exclusiveConnectionBindError({
+    connectionId: "k1",
+    currentAccountId: "b",
+    binds: [{ connectionId: "k1", accountId: "a", accountName: "Desk A" }],
+  }) ?? "",
+  /Desk A/,
+);
+assert.equal(
+  exclusiveConnectionBindError({
+    connectionId: "k2",
+    binds: [{ connectionId: "k1", accountId: "a", accountName: "Desk A" }],
+  }),
+  null,
+);
 assert.equal(
   sharedKeyWarningKind({
     connectionId: "k1",

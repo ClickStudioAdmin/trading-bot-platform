@@ -25,7 +25,7 @@ This is **not** mixed strategies on one desk, **not** virtual lots, and **not** 
 3. **Edit** (and Create) uses the current bot form chrome (`bot-form-chrome`, Theme → Bot form). After save, return to the list. Deep links (`#bot-…` / query) still open that bot’s form.
 4. Manual Perps, TradingView Strategy, and copy desks stay as they are (no recipe list). Their **positions** still appear on the account Positions table.
 5. No new ledger tables. Same `futures_*` / `paper_*` / playbook rows. One playbook per contract and one open perp row per symbol + side stay.
-6. A login connection (`venue` + environment + key) binds to **at most one desk**. Server rejects Create / bind / rebind when that connection is already on another desk. Name the other desk in the error. Paper stays unbound. Existing desks that already share a key keep trading until the member unbinds or rebinds — do not auto-flatten or auto-unbind. Those desks keep the shared-key warning until only one remains. Unique bind is enforced in the database, not only in the form.
+6. **One key, one desk — in repo 19 Sep 2026 (during UI refinement).** Create / bind / rebind reject a connection already on another desk (names that desk). Pickers hide those keys. Paper stays unbound. Existing shared binds are not auto-unbound. Unique bind is app-enforced on every bind path (`applyDeskBindRules`). A later unique index is optional.
 
 Stop. Do not start entitlements, onboarding, virtual positions, or mixed desk types.
 

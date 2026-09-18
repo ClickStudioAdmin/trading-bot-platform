@@ -43,6 +43,30 @@ export function connectionIdsBoundToOtherDesks(
   return [...ids];
 }
 
+export function exclusiveConnectionBindError(input: {
+  connectionId: string;
+  currentAccountId?: string | null;
+  binds: readonly {
+    connectionId: string;
+    accountId: string;
+    accountName?: string;
+  }[];
+}): string | null {
+  const id = input.connectionId.trim();
+  if (!id) {
+    return null;
+  }
+  const other = input.binds.find(
+    (bind) =>
+      bind.connectionId === id && bind.accountId !== input.currentAccountId,
+  );
+  if (!other) {
+    return null;
+  }
+  const name = other.accountName?.trim() || "another desk";
+  return `That exchange key is already bound to ${name}. Use a different trade-only key.`;
+}
+
 export type SharedKeyWarningKind = "pending" | "shared";
 
 export function sharedKeyWarningKind(input: {

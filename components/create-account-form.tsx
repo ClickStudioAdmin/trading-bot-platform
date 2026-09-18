@@ -73,10 +73,13 @@ export function CreateAccountForm({
         if (row.status !== "active") {
           return false;
         }
+        if (sharedConnectionIds.includes(row.id)) {
+          return false;
+        }
         const venue = getVenue(row.venue);
         return venue ? venueAllowsDeskType(venue, deskType) : false;
       }),
-    [connections, deskType],
+    [connections, deskType, sharedConnectionIds],
   );
   const paperVenues = useMemo(
     () => venuesForDeskType(deskType),
@@ -279,7 +282,9 @@ export function CreateAccountForm({
               </label>
             ) : (
               <p className="text-sm text-ink-muted">
-                {firstDesk ? (
+                {sharedConnectionIds.length > 0 ? (
+                  "Every matching key is already bound to another desk. Save a new trade-only key, or unbind one first."
+                ) : firstDesk ? (
                   "No connections on this login yet. Choose Bind Later — you can add a key after this desk is created."
                 ) : (
                   <>

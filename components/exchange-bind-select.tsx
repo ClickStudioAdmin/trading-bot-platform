@@ -36,13 +36,23 @@ export function ExchangeBindSelect({
         className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
       >
         {allowNone ? <option value="none">None</option> : null}
-        {options.map((row) => (
+        {options
+          .filter(
+            (row) =>
+              row.id === selectedId || !sharedConnectionIds.includes(row.id),
+          )
+          .map((row) => (
           <option key={row.id} value={row.id}>
             {formatConnectionSummary(row)}
             {row.status === "invalid" ? " (Invalid)" : ""}
           </option>
         ))}
       </AppSelect>
+      {sharedConnectionIds.length > 0 ? (
+        <p className="mt-2 text-sm text-ink-muted">
+          Keys already bound to another desk are not listed.
+        </p>
+      ) : null}
       {warningKind ? (
         <SharedKeyWarning kind={warningKind} className="mt-2" />
       ) : null}

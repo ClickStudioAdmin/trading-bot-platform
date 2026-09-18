@@ -16,7 +16,11 @@ import {
   connectionFitsDesk,
   parseStoredVenueEnvironment,
 } from "@/lib/exchanges/venues";
-import { listExchangeConnections } from "@/lib/exchanges/store";
+import { exclusiveConnectionBindError } from "@/lib/exchanges/connections";
+import {
+  listConnectionDeskBinds,
+  listExchangeConnections,
+} from "@/lib/exchanges/store";
 import { listFuturesConnectionIds } from "@/lib/futures/settings";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -185,6 +189,14 @@ export async function applyDeskBindRules(input: {
   });
   if (!fit.ok) {
     return { error: fit.error };
+  }
+  const taken = exclusiveConnectionBindError({
+    connectionId: input.connectionId,
+    currentAccountId: input.account.id,
+    binds: await listConnectionDeskBinds(input.userId),
+  });
+  if (taken) {
+    return { error: taken };
   }
   if (input.account.venueEnvironment || match.status !== "active") {
     return { error: null };
