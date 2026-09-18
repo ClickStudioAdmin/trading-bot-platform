@@ -23,8 +23,8 @@ Style: dark modern business portal. Tokens live in `app/globals.css` (`@theme`).
 | `danger` | `#F07167` | Negative change, alerts, badges |
 | `warning` | `#F5B942` | Caution, pending, secondary chart segment |
 | `mode-paper` | `#8B93A1` | Desk mode Paper (sidebar dot and filter) |
-| `mode-demo` | `#6A9EAE` | Desk mode Demo / testnet |
-| `mode-live` | `#7B8EB8` | Desk mode Live. Not danger red, not accent purple. |
+| `mode-demo` | `#3E9A96` | Desk mode Demo / testnet. Dusty teal, not pending amber. |
+| `mode-live` | `#7A86C0` | Desk mode Live. Dusty indigo, not danger red and not accent purple. |
 
 ## Type
 
