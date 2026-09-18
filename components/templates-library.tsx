@@ -725,6 +725,7 @@ export function TemplatesLibrary({
         ) : null}
       </nav>
       <TableFilterSession
+        toolbarAlign="end"
         toolbar={
           sharedTab ? undefined : (
             <>

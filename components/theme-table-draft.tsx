@@ -200,62 +200,61 @@ export function ThemeTableDraft() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-semibold tracking-tight">Sample table</h3>
-          <p className="mt-1 text-sm text-ink-muted">
-            Dummy rows only. Filters, sort, paging, and bulk actions work here
-            so you can see the chrome. Live tables omit pieces they do not need.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <TableLabelButton
-            variant="secondary"
-            icon={<IconDownload {...TABLE_BTN_ICON} />}
-          >
-            Export all
-          </TableLabelButton>
-          <TableLabelButton variant="primary" icon={<IconPlus {...TABLE_BTN_ICON} />}>
-            New item
-          </TableLabelButton>
-        </div>
+      <div>
+        <h3 className="text-lg font-semibold tracking-tight">Sample table</h3>
+        <p className="mt-1 text-sm text-ink-muted">
+          Dummy rows only. Filters, sort, paging, and bulk actions work here
+          so you can see the chrome. Live tables omit pieces they do not need.
+        </p>
       </div>
 
       <TableFilterSession
+        toolbarAlign="end"
         toolbar={
-          selectedCount > 0 ? (
-            <>
-              <p className="text-sm text-ink-muted">{selectedCount} selected</p>
-              <TableLabelButton
-                variant="bulk"
-                icon={<IconDownload {...TABLE_BTN_ICON} />}
-                onClick={() => flash(`Sample only — export ${selectedCount}.`)}
-              >
-                Export
-              </TableLabelButton>
-              <TableLabelButton
-                variant="bulk"
-                icon={<IconDisable {...TABLE_BTN_ICON} />}
-                onClick={() => flash(`Sample only — disable ${selectedCount}.`)}
-              >
-                Disable
-              </TableLabelButton>
-              <TableLabelButton
-                variant="danger"
-                icon={<IconTrash {...TABLE_BTN_ICON} />}
-                onClick={() => flash(`Sample only — delete ${selectedCount}.`)}
-              >
-                Delete
-              </TableLabelButton>
-              <TableLabelButton
-                variant="bulk"
-                icon={<IconClose {...TABLE_BTN_ICON} />}
-                onClick={() => setSelected(new Set())}
-              >
-                Clear
-              </TableLabelButton>
-            </>
-          ) : undefined
+          <>
+            <TableLabelButton
+              variant="secondary"
+              icon={<IconDownload {...TABLE_BTN_ICON} />}
+            >
+              Export all
+            </TableLabelButton>
+            <TableLabelButton variant="primary" icon={<IconPlus {...TABLE_BTN_ICON} />}>
+              New item
+            </TableLabelButton>
+            {selectedCount > 0 ? (
+              <>
+                <p className="text-sm text-ink-muted">{selectedCount} selected</p>
+                <TableLabelButton
+                  variant="bulk"
+                  icon={<IconDownload {...TABLE_BTN_ICON} />}
+                  onClick={() => flash(`Sample only — export ${selectedCount}.`)}
+                >
+                  Export
+                </TableLabelButton>
+                <TableLabelButton
+                  variant="bulk"
+                  icon={<IconDisable {...TABLE_BTN_ICON} />}
+                  onClick={() => flash(`Sample only — disable ${selectedCount}.`)}
+                >
+                  Disable
+                </TableLabelButton>
+                <TableLabelButton
+                  variant="danger"
+                  icon={<IconTrash {...TABLE_BTN_ICON} />}
+                  onClick={() => flash(`Sample only — delete ${selectedCount}.`)}
+                >
+                  Delete
+                </TableLabelButton>
+                <TableLabelButton
+                  variant="bulk"
+                  icon={<IconClose {...TABLE_BTN_ICON} />}
+                  onClick={() => setSelected(new Set())}
+                >
+                  Clear
+                </TableLabelButton>
+              </>
+            ) : null}
+          </>
         }
       >
           <TableFilterBar>
