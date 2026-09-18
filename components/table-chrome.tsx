@@ -109,11 +109,11 @@ export function TableHideFilters() {
 export function TableFilterSession({
   children,
   toolbar,
-  toolbarAlign = "start",
+  actions,
 }: {
   children: ReactNode;
   toolbar?: ReactNode;
-  toolbarAlign?: "start" | "end";
+  actions?: ReactNode;
 }) {
   const [show, setShow] = useState(true);
   const hideButton = (
@@ -134,22 +134,25 @@ export function TableFilterSession({
       Show Filters
     </TableLabelButton>
   );
-  const end = toolbarAlign === "end";
+  const trailing = actions || !show;
   return (
     <TableFilterCtx.Provider value={hideButton}>
       {show ? children : null}
-      {!show && !toolbar ? (
-        <div className="mt-6 flex justify-end">{showButton}</div>
-      ) : toolbar || !show ? (
+      {toolbar || trailing ? (
         <div
           className={`flex flex-wrap items-center gap-2 ${
             show ? "mt-4" : "mt-6"
-          } ${end || !toolbar ? "justify-end" : "justify-between"}`}
+          } ${toolbar ? "justify-between" : "justify-end"}`}
         >
           {toolbar ? (
             <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
           ) : null}
-          {!show ? showButton : null}
+          {trailing ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {actions}
+              {!show ? showButton : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </TableFilterCtx.Provider>

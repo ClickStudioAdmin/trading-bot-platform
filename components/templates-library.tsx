@@ -725,8 +725,53 @@ export function TemplatesLibrary({
         ) : null}
       </nav>
       <TableFilterSession
-        toolbarAlign="end"
         toolbar={
+          sharedTab || selectedCount === 0 ? undefined : (
+            <>
+              <p className="text-sm text-ink-muted">{selectedCount} selected</p>
+              {tab === "templates" ? (
+                <TableLabelButton
+                  variant="bulk"
+                  icon={<IconFolderPlus {...TABLE_BTN_ICON} />}
+                  onClick={openBulkFolder}
+                >
+                  Add to folder
+                </TableLabelButton>
+              ) : null}
+              <TableLabelButton
+                variant="bulk"
+                icon={<IconDownload {...TABLE_BTN_ICON} />}
+                onClick={() => void exportSelected()}
+              >
+                Export
+              </TableLabelButton>
+              {variant === "admin" ? (
+                <TableLabelButton
+                  variant="bulk"
+                  icon={<IconDisable {...TABLE_BTN_ICON} />}
+                  onClick={() => void runBulk("unpublish")}
+                >
+                  Unpublish
+                </TableLabelButton>
+              ) : null}
+              <TableLabelButton
+                variant="danger"
+                icon={<IconTrash {...TABLE_BTN_ICON} />}
+                onClick={() => void runBulk("delete")}
+              >
+                Delete
+              </TableLabelButton>
+              <TableLabelButton
+                variant="bulk"
+                icon={<IconClose {...TABLE_BTN_ICON} />}
+                onClick={() => setSelected(new Set())}
+              >
+                Clear
+              </TableLabelButton>
+            </>
+          )
+        }
+        actions={
           sharedTab ? undefined : (
             <>
               <TableLabelButton
@@ -751,50 +796,6 @@ export function TemplatesLibrary({
                 >
                   Add New Folder
                 </TableLabelButton>
-              ) : null}
-              {selectedCount > 0 ? (
-                <>
-                  <p className="text-sm text-ink-muted">{selectedCount} selected</p>
-                  {tab === "templates" ? (
-                    <TableLabelButton
-                      variant="bulk"
-                      icon={<IconFolderPlus {...TABLE_BTN_ICON} />}
-                      onClick={openBulkFolder}
-                    >
-                      Add to folder
-                    </TableLabelButton>
-                  ) : null}
-                  <TableLabelButton
-                    variant="bulk"
-                    icon={<IconDownload {...TABLE_BTN_ICON} />}
-                    onClick={() => void exportSelected()}
-                  >
-                    Export
-                  </TableLabelButton>
-                  {variant === "admin" ? (
-                    <TableLabelButton
-                      variant="bulk"
-                      icon={<IconDisable {...TABLE_BTN_ICON} />}
-                      onClick={() => void runBulk("unpublish")}
-                    >
-                      Unpublish
-                    </TableLabelButton>
-                  ) : null}
-                  <TableLabelButton
-                    variant="danger"
-                    icon={<IconTrash {...TABLE_BTN_ICON} />}
-                    onClick={() => void runBulk("delete")}
-                  >
-                    Delete
-                  </TableLabelButton>
-                  <TableLabelButton
-                    variant="bulk"
-                    icon={<IconClose {...TABLE_BTN_ICON} />}
-                    onClick={() => setSelected(new Set())}
-                  >
-                    Clear
-                  </TableLabelButton>
-                </>
               ) : null}
             </>
           )

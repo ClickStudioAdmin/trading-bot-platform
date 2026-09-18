@@ -209,8 +209,42 @@ export function ThemeTableDraft() {
       </div>
 
       <TableFilterSession
-        toolbarAlign="end"
         toolbar={
+          selectedCount > 0 ? (
+            <>
+              <p className="text-sm text-ink-muted">{selectedCount} selected</p>
+              <TableLabelButton
+                variant="bulk"
+                icon={<IconDownload {...TABLE_BTN_ICON} />}
+                onClick={() => flash(`Sample only — export ${selectedCount}.`)}
+              >
+                Export
+              </TableLabelButton>
+              <TableLabelButton
+                variant="bulk"
+                icon={<IconDisable {...TABLE_BTN_ICON} />}
+                onClick={() => flash(`Sample only — disable ${selectedCount}.`)}
+              >
+                Disable
+              </TableLabelButton>
+              <TableLabelButton
+                variant="danger"
+                icon={<IconTrash {...TABLE_BTN_ICON} />}
+                onClick={() => flash(`Sample only — delete ${selectedCount}.`)}
+              >
+                Delete
+              </TableLabelButton>
+              <TableLabelButton
+                variant="bulk"
+                icon={<IconClose {...TABLE_BTN_ICON} />}
+                onClick={() => setSelected(new Set())}
+              >
+                Clear
+              </TableLabelButton>
+            </>
+          ) : undefined
+        }
+        actions={
           <>
             <TableLabelButton
               variant="secondary"
@@ -221,39 +255,6 @@ export function ThemeTableDraft() {
             <TableLabelButton variant="primary" icon={<IconPlus {...TABLE_BTN_ICON} />}>
               New item
             </TableLabelButton>
-            {selectedCount > 0 ? (
-              <>
-                <p className="text-sm text-ink-muted">{selectedCount} selected</p>
-                <TableLabelButton
-                  variant="bulk"
-                  icon={<IconDownload {...TABLE_BTN_ICON} />}
-                  onClick={() => flash(`Sample only — export ${selectedCount}.`)}
-                >
-                  Export
-                </TableLabelButton>
-                <TableLabelButton
-                  variant="bulk"
-                  icon={<IconDisable {...TABLE_BTN_ICON} />}
-                  onClick={() => flash(`Sample only — disable ${selectedCount}.`)}
-                >
-                  Disable
-                </TableLabelButton>
-                <TableLabelButton
-                  variant="danger"
-                  icon={<IconTrash {...TABLE_BTN_ICON} />}
-                  onClick={() => flash(`Sample only — delete ${selectedCount}.`)}
-                >
-                  Delete
-                </TableLabelButton>
-                <TableLabelButton
-                  variant="bulk"
-                  icon={<IconClose {...TABLE_BTN_ICON} />}
-                  onClick={() => setSelected(new Set())}
-                >
-                  Clear
-                </TableLabelButton>
-              </>
-            ) : null}
           </>
         }
       >
