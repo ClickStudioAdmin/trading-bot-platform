@@ -46,10 +46,11 @@ export function NavItemIcon({ href }: { href: string }) {
 
 export const NAV_IDLE_CLASS =
   "text-ink-muted hover:bg-surface-raised hover:text-ink";
+export const NAV_ACTIVE_CLASS = "bg-surface-raised text-mode-live";
 
 function navItemClass(active: boolean): string {
   return `rounded-control px-3 py-1.5 text-sm ${
-    active ? "bg-surface-raised text-ink" : NAV_IDLE_CLASS
+    active ? NAV_ACTIVE_CLASS : NAV_IDLE_CLASS
   }`;
 }
 
@@ -153,9 +154,7 @@ export function HeaderInboxLink({ count = 0 }: { count?: number }) {
     <Link
       href="/account/notifications"
       className={`${HEADER_CHIP_CLASS} ${
-        active
-          ? "bg-surface-raised text-ink"
-          : NAV_IDLE_CLASS
+        active ? NAV_ACTIVE_CLASS : NAV_IDLE_CLASS
       }`}
     >
       <IconInbox {...NAV_ICON} />

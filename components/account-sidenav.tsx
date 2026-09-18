@@ -33,7 +33,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { upgradeAffiliateToPlatformAction } from "@/lib/membership/affiliate-actions";
 import { IconChevronDown } from "@/components/icons";
 import { NavBadge } from "@/components/nav-badge";
-import { NAV_IDLE_CLASS, NavItemIcon } from "@/components/site-nav";
+import { NAV_ACTIVE_CLASS, NAV_IDLE_CLASS, NavItemIcon } from "@/components/site-nav";
 import { ACCOUNT_DESK_LINKS, AFFILIATE_ONLY_LINKS } from "@/lib/site-links";
 
 export function AccountSidenav({
@@ -183,7 +183,7 @@ function DeskGroup({
           return (
           <div key={group.deskType} className="mt-3 first:mt-0">
             <div className="flex items-center gap-1 px-3">
-              <p className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+              <p className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium uppercase tracking-[0.12em] text-ink">
                 <DeskTypeMark deskType={group.deskType} />
                 <span>{typeLabel}</span>
               </p>
@@ -322,9 +322,7 @@ function DeskNavLink({
         }
       }}
       className={`flex items-center gap-2 rounded-control px-3 py-2 ${
-        current
-          ? "bg-surface-raised text-ink"
-          : NAV_IDLE_CLASS
+        current ? NAV_ACTIVE_CLASS : NAV_IDLE_CLASS
       }`}
     >
       <DeskModeDot mode={mode} hint={hint} />
@@ -539,9 +537,7 @@ function NavGroup({
                 key={link.href}
                 href={link.href}
                 className={`flex items-center justify-between gap-2 rounded-control px-3 py-1.5 text-sm ${
-                  active
-                    ? "bg-surface-raised text-ink"
-                    : NAV_IDLE_CLASS
+                  active ? NAV_ACTIVE_CLASS : NAV_IDLE_CLASS
                 }`}
               >
                 <span className="flex min-w-0 items-center gap-2">
