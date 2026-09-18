@@ -110,10 +110,12 @@ export function TableFilterSession({
   children,
   toolbar,
   actions,
+  filterToggle = "bar",
 }: {
   children: ReactNode;
   toolbar?: ReactNode;
   actions?: ReactNode;
+  filterToggle?: "bar" | "trailing";
 }) {
   const [show, setShow] = useState(true);
   const hideButton = (
@@ -134,9 +136,10 @@ export function TableFilterSession({
       Show Filters
     </TableLabelButton>
   );
-  const trailing = actions || !show;
+  const toggleAtEnd = filterToggle === "trailing";
+  const trailing = Boolean(actions) || !show || toggleAtEnd;
   return (
-    <TableFilterCtx.Provider value={hideButton}>
+    <TableFilterCtx.Provider value={toggleAtEnd ? null : hideButton}>
       {show ? children : null}
       {toolbar || trailing ? (
         <div
@@ -150,7 +153,7 @@ export function TableFilterSession({
           {trailing ? (
             <div className="flex flex-wrap items-center gap-2">
               {actions}
-              {!show ? showButton : null}
+              {toggleAtEnd ? (show ? hideButton : showButton) : !show ? showButton : null}
             </div>
           ) : null}
         </div>

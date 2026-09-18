@@ -17,7 +17,6 @@ import {
   TableFilterBar,
   TableFilterField,
   TableFilterSession,
-  TableHideFilters,
   TableIconAction,
   TableLabelButton,
   TablePager,
@@ -725,6 +724,7 @@ export function TemplatesLibrary({
         ) : null}
       </nav>
       <TableFilterSession
+        filterToggle="trailing"
         toolbar={
           sharedTab || selectedCount === 0 ? undefined : (
             <>
@@ -856,7 +856,6 @@ export function TemplatesLibrary({
             >
               Clear
             </TableLabelButton>
-            <TableHideFilters />
           </TableFilterBar>
       </TableFilterSession>
       {error ? (
