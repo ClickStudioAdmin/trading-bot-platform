@@ -14,12 +14,15 @@ import {
 import {
   SortTh,
   StatusBadge,
+  TABLE_ACTIONS_TD_CLASS,
+  TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableCard,
   TableFilterBar,
   TableFilterField,
   TableFilterSession,
+  TableActions,
   TableHideFilters,
   TableIconAction,
   TableLabelButton,
@@ -369,7 +372,7 @@ export function ThemeTableDraft() {
                 dir={table.sortDir}
                 onSort={() => table.onSort("updated")}
               />
-              <th className="w-28 px-4 py-3 font-medium">Actions</th>
+              <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -405,8 +408,8 @@ export function ThemeTableDraft() {
                   <td className="px-4 py-3 tabular-nums text-ink-muted">
                     {item.updated}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-0.5">
+                  <td className={TABLE_ACTIONS_TD_CLASS}>
+                    <TableActions>
                       <TableIconAction
                         label="Edit"
                         detail="Change this item's settings."
@@ -426,7 +429,7 @@ export function ThemeTableDraft() {
                       >
                         <IconTrash {...TABLE_BTN_ICON} />
                       </TableIconAction>
-                    </div>
+                    </TableActions>
                   </td>
                 </tr>
               ))

@@ -12,6 +12,8 @@ import {
   LiveGetForm,
   SortTh,
   StatusBadge,
+  TABLE_ACTIONS_TD_CLASS,
+  TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
   TableCard,
   TableFilterField,
@@ -855,7 +857,7 @@ export function AffiliateDashboard({
                           <AffiliateSortTh tab="links" query={tableQuery} label="URL" sortKey="url" />
                           <AffiliateSortTh tab="links" query={tableQuery} label="Type" sortKey="type" />
                           <AffiliateSortTh tab="links" query={tableQuery} label="Status" sortKey="status" />
-                          <th className="px-4 py-3 font-medium whitespace-nowrap">
+                          <th className={TABLE_ACTIONS_TH_CLASS}>
                             Actions
                           </th>
                         </tr>
@@ -1175,7 +1177,7 @@ function AffiliateCampaignsTable({
           <AffiliateSortTh tab="campaigns" query={query} label="URLs" sortKey="urls" />
           <AffiliateSortTh tab="campaigns" query={query} label="Signups" sortKey="signups" />
           <AffiliateSortTh tab="campaigns" query={query} label="Status" sortKey="status" />
-          <th className="px-4 py-3 font-medium whitespace-nowrap">
+          <th className={TABLE_ACTIONS_TH_CLASS}>
             Actions
           </th>
         </tr>
@@ -1226,7 +1228,7 @@ function AffiliateCampaignRowView({
           status={archived ? "archived" : "active"}
         />
       </td>
-      <td className="px-4 py-3 whitespace-nowrap">
+      <td className={TABLE_ACTIONS_TD_CLASS}>
         {archived ? (
           <span className="text-ink-faint">—</span>
         ) : (
@@ -1287,7 +1289,7 @@ function AffiliateLinkRowView({
           status={archived ? "archived" : "active"}
         />
       </td>
-      <td className="px-4 py-3 whitespace-nowrap">
+      <td className={TABLE_ACTIONS_TD_CLASS}>
         {link.kind === "custom" ? (
           <AffiliateLinkActions
             id={link.id}

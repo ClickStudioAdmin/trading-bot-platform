@@ -68,7 +68,7 @@ export function AdminPlanRowActions({ plan }: { plan: MembershipPlan }) {
   }
 
   return (
-    <div className="flex flex-wrap justify-end gap-1">
+    <div className="contents">
       {dialog}
       <TableIconAction
         label="Clone"

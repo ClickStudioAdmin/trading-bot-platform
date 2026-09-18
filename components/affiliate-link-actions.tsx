@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AffiliateArchiveButton } from "@/components/affiliate-archive-button";
 import { IconPencil } from "@/components/icons";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
+import { TABLE_BTN_ICON, TableActions, TableIconAction } from "@/components/table-chrome";
 import { Modal } from "@/components/template-modals";
 import { renameAffiliateLinkAction } from "@/lib/membership/affiliate-actions";
 import { AFFILIATE_LINK_NAME_MAX } from "@/lib/membership/affiliate";
@@ -22,7 +22,7 @@ export function AffiliateLinkActions({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex flex-wrap items-center gap-1">
+    <TableActions>
       <TableIconAction
         label="Rename"
         detail="Change this URL's name."
@@ -56,6 +56,6 @@ export function AffiliateLinkActions({
           </form>
         </Modal>
       ) : null}
-    </div>
+    </TableActions>
   );
 }

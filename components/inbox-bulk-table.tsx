@@ -7,6 +7,8 @@ import { LocalTime } from "@/components/local-time";
 import {
   SortTh,
   StatusBadge,
+  TABLE_ACTIONS_TD_CLASS,
+  TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
   TableCard,
   TableIconAction,
@@ -142,7 +144,7 @@ export function InboxBulkTable({
                   dir={sort.dir}
                   href={inboxPath(1, filters, toggleInboxSort(sort, "status"))}
                 />
-                <th className="px-4 py-3 font-medium">Actions</th>
+                <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -195,7 +197,7 @@ export function InboxBulkTable({
                         status={row.readAt ? "read" : "unread"}
                       />
                     </td>
-                    <td className="px-4 py-3 align-top">
+                    <td className={`${TABLE_ACTIONS_TD_CLASS} align-top`}>
                       <TableIconAction
                         type="submit"
                         form={`inbox-row-${row.id}`}

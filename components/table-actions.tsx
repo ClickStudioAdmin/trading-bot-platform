@@ -91,6 +91,24 @@ export function useActionHint() {
 
 export const TABLE_BTN_ICON = { size: 14 as const, className: "size-3.5 shrink-0" };
 
+export const TABLE_ACTIONS_TH_CLASS =
+  "w-[1%] whitespace-nowrap px-4 py-3 font-medium";
+export const TABLE_ACTIONS_TD_CLASS = "w-[1%] whitespace-nowrap px-4 py-3";
+
+export function TableActions({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`inline-flex flex-nowrap items-center ${className}`.trim()}>
+      {children}
+    </div>
+  );
+}
+
 function LabelIcon({ children }: { children: ReactNode }) {
   return (
     <span className="inline-flex shrink-0 items-center justify-center [&_svg]:max-h-3.5 [&_svg]:max-w-3.5">

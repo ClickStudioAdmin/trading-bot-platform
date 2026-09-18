@@ -8,7 +8,10 @@ import { LocalTime } from "@/components/local-time";
 import { PendingStatusChip } from "@/components/pending-status-chip";
 import {
   SortTh,
+  TABLE_ACTIONS_TD_CLASS,
+  TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
+  TableActions,
   TableCard,
   TablePager,
   TablePendingIconAction,
@@ -218,7 +221,7 @@ export function FuturesWorkingOrders({
                       hint="Retracement attached when this limit was placed. It moves onto the position when it fills."
                     />
                   </th>
-                  <th className="px-4 py-3 font-medium">
+                  <th className={TABLE_ACTIONS_TH_CLASS}>
                     <ColumnHint
                       label="Actions"
                       hint={
@@ -361,14 +364,14 @@ function WorkingRow({
               <span className="tabular-nums">{formatPrice(row.trailingStop)}</span>
             )}
           </td>
-          <td className="px-4 py-3">
+          <td className={TABLE_ACTIONS_TD_CLASS}>
             {row.status === "cancelling" ? (
               <PendingStatusChip
                 label="Cancelling"
                 hint="Cancel submitted. This order leaves when the venue confirms."
               />
             ) : (
-              <div className="flex flex-wrap items-center gap-1">
+              <TableActions>
                 <FuturesWorkingEdit
                   workingId={row.id}
                   symbol={row.symbol}
@@ -391,7 +394,7 @@ function WorkingRow({
                     <IconClose {...TABLE_BTN_ICON} />
                   </TablePendingIconAction>
                 </form>
-              </div>
+              </TableActions>
             )}
           </td>
         </>

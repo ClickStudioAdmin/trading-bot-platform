@@ -3,7 +3,15 @@
 import { useCallback } from "react";
 import { AccountDeleteControl } from "@/components/account-delete-control";
 import { AccountRenameControl } from "@/components/account-rename-control";
-import { SortTh, TableCard, TablePager, useClientTable } from "@/components/table-chrome";
+import {
+  SortTh,
+  TABLE_ACTIONS_TD_CLASS,
+  TABLE_ACTIONS_TH_CLASS,
+  TableActions,
+  TableCard,
+  TablePager,
+  useClientTable,
+} from "@/components/table-chrome";
 import {
   formatAccountMode,
   formatAccountUsageStatus,
@@ -136,7 +144,7 @@ export function DeskTable({
                 dir={table.sortDir}
                 onSort={() => table.onSort("details")}
               />
-              <th className="px-4 py-3 font-medium">Actions</th>
+              <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -168,8 +176,8 @@ export function DeskTable({
                       <span className="text-ink-faint">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 align-top">
-                    <div className="flex flex-wrap items-center gap-3">
+                  <td className={`${TABLE_ACTIONS_TD_CLASS} align-top`}>
+                    <TableActions>
                       <AccountRenameControl
                         accountId={account.id}
                         accountName={account.name}
@@ -194,7 +202,7 @@ export function DeskTable({
                           current && canDelete ? defaultSwitch?.id : undefined
                         }
                       />
-                    </div>
+                    </TableActions>
                   </td>
                 </tr>
               );

@@ -8,8 +8,11 @@ import {
   LiveGetForm,
   SortTh,
   StatusBadge,
+  TABLE_ACTIONS_TD_CLASS,
+  TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TableActions,
   TableCard,
   TableFilterField,
   TableFilterSession,
@@ -154,7 +157,7 @@ export function AdminPlansTable({
                 dir={table.sortDir}
                 onSort={() => table.onSort("status")}
               />
-              <th className="px-4 py-3 font-medium text-right">Actions</th>
+              <th className={`${TABLE_ACTIONS_TH_CLASS} text-right`}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -200,8 +203,8 @@ export function AdminPlansTable({
                       status={planStatusLabel(plan)}
                     />
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className={`${TABLE_ACTIONS_TD_CLASS} text-right`}>
+                    <TableActions className="justify-end">
                       <TableIconAction
                         href={`/admin/plans/${plan.id}`}
                         label="Edit"
@@ -210,7 +213,7 @@ export function AdminPlansTable({
                         <IconPencil {...TABLE_BTN_ICON} />
                       </TableIconAction>
                       <AdminPlanRowActions plan={plan} />
-                    </div>
+                    </TableActions>
                   </td>
                 </tr>
               ))

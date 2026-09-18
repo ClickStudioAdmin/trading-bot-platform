@@ -9,6 +9,8 @@ import { IconClose, IconFilterClear, IconTrash } from "@/components/icons";
 import {
   SortTh,
   StatusBadge,
+  TABLE_ACTIONS_TD_CLASS,
+  TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableCard,
@@ -424,7 +426,7 @@ export function BacktestRunsTable({
                 dir={table.sortDir}
                 onSort={() => table.onSort("status")}
               />
-              <th className="px-4 py-3 font-medium">Actions</th>
+              <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -537,7 +539,7 @@ function BacktestRunRow({
       <td className="px-4 py-3">
         <StatusBadge label={statusLabel(row.status)} status={row.status} />
       </td>
-      <td className="px-4 py-3">
+      <td className={TABLE_ACTIONS_TD_CLASS}>
         <RemoveBacktestButton
           runId={row.id}
           canRemove={canRemove}

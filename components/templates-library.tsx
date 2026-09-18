@@ -8,8 +8,11 @@ import { BacktestHighlightHover } from "@/components/backtest-highlight-hover";
 import { PageHeading } from "@/components/page-heading";
 import {
   SortTh,
+  TABLE_ACTIONS_TD_CLASS,
+  TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TableActions,
   TableCard,
   TableFilterBar,
   TableFilterField,
@@ -942,7 +945,7 @@ export function TemplatesLibrary({
                   onSort={() => onSort("starter")}
                 />
               ) : null}
-              <th className="px-4 py-3 font-medium">Actions</th>
+              <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -1010,8 +1013,8 @@ export function TemplatesLibrary({
                       />
                     </td>
                   ) : null}
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
+                  <td className={TABLE_ACTIONS_TD_CLASS}>
+                    <TableActions>
                       {canEdit ? (
                         <TableIconAction
                           label="Edit"
@@ -1079,7 +1082,7 @@ export function TemplatesLibrary({
                           </TableIconAction>
                         </>
                       ) : null}
-                    </div>
+                    </TableActions>
                   </td>
                 </tr>
               );
@@ -1146,6 +1149,7 @@ export function TemplatesLibrary({
                   active={sort.key === "items"}
                   dir={sort.dir}
                   onSort={() => onSort("items")}
+                  className="w-36 max-w-36"
                 />
                 {showSharedWith ? (
                   <SortTh
@@ -1163,7 +1167,7 @@ export function TemplatesLibrary({
                     onSort={() => onSort("starter")}
                   />
                 ) : null}
-                <th className="px-4 py-3 font-medium">Actions</th>
+                <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -1194,10 +1198,14 @@ export function TemplatesLibrary({
                           : (row.ownerEmail ?? "—")}
                       </td>
                     ) : null}
-                    <td className="px-4 py-3 text-ink-muted">
-                      {row.items.length === 0
-                        ? "—"
-                        : row.items.map((item) => item.name).join(", ")}
+                    <td className="max-w-36 overflow-hidden px-4 py-3 text-ink-muted">
+                      {row.items.length === 0 ? (
+                        "—"
+                      ) : (
+                        <span className="line-clamp-2 break-words">
+                          {row.items.map((item) => item.name).join(", ")}
+                        </span>
+                      )}
                     </td>
                     {showSharedWith ? (
                       <td className="px-4 py-3 tabular-nums text-ink-muted">
@@ -1209,8 +1217,8 @@ export function TemplatesLibrary({
                         <StarterPackMark on={row.starterPack} />
                       </td>
                     ) : null}
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
+                    <td className={TABLE_ACTIONS_TD_CLASS}>
+                      <TableActions>
                         {canEdit ? (
                           <TableIconAction
                             label="Edit"
@@ -1278,7 +1286,7 @@ export function TemplatesLibrary({
                             </TableIconAction>
                           </>
                         ) : null}
-                      </div>
+                      </TableActions>
                     </td>
                   </tr>
                 );

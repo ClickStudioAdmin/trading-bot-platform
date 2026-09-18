@@ -12,8 +12,11 @@ import {
   LiveGetForm,
   SortTh,
   StatusBadge,
+  TABLE_ACTIONS_TD_CLASS,
+  TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
+  TableActions,
   TableCard,
   TableFilterField,
   TableFilterSession,
@@ -225,7 +228,7 @@ export function AdminPayoutFilesTable({
                 dir={table.sortDir}
                 onSort={() => table.onSort("status")}
               />
-              <th className="px-4 py-3 font-medium">Actions</th>
+              <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -252,8 +255,8 @@ export function AdminPayoutFilesTable({
                       status={file.status}
                     />
                   </td>
-                  <td className="py-3">
-                    <div className="flex flex-wrap items-center gap-1">
+                  <td className={TABLE_ACTIONS_TD_CLASS}>
+                    <TableActions>
                       <TableIconAction
                         href={`/admin/affiliates/files/${file.id}`}
                         target="_blank"
@@ -273,7 +276,7 @@ export function AdminPayoutFilesTable({
                       {file.status === "pending" ? (
                         <form
                           action={markPayoutFilePaidAction}
-                          className="flex flex-wrap items-center gap-2"
+                          className="inline-flex flex-nowrap items-center gap-2"
                         >
                           <input type="hidden" name="fileId" value={file.id} />
                           <input type="hidden" name="book" value={book} />
@@ -295,7 +298,7 @@ export function AdminPayoutFilesTable({
                           {file.externalId ?? "Paid"}
                         </span>
                       )}
-                    </div>
+                    </TableActions>
                   </td>
                 </tr>
               ))
@@ -406,7 +409,7 @@ export function AdminPayoutQueueTable({
                 dir={table.sortDir}
                 onSort={() => table.onSort("status")}
               />
-              <th className="px-4 py-3 font-medium">Actions</th>
+              <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -444,7 +447,7 @@ export function AdminPayoutQueueTable({
                       </span>
                     ) : null}
                   </td>
-                  <td className="py-3">
+                  <td className={TABLE_ACTIONS_TD_CLASS}>
                     {payoutEligibleForAirdropFile(payout.status) ? (
                       <form action={rejectPayoutAction}>
                         <input type="hidden" name="payoutId" value={payout.id} />

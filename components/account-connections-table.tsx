@@ -7,6 +7,9 @@ import { ReplaceConnectionControl } from "@/components/replace-connection-contro
 import {
   SortTh,
   StatusBadge,
+  TABLE_ACTIONS_TD_CLASS,
+  TABLE_ACTIONS_TH_CLASS,
+  TableActions,
   TableCard,
   TablePager,
   useClientTable,
@@ -127,7 +130,7 @@ export function AccountConnectionsTable({
                 onSort={() => table.onSort("desks")}
               />
               <th className="px-4 py-3 font-medium">Desk type</th>
-              <th className="px-4 py-3 font-medium">Actions</th>
+              <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -191,8 +194,8 @@ export function AccountConnectionsTable({
                       <span className="text-ink-faint">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 align-top">
-                    <div className="flex flex-wrap gap-3">
+                  <td className={`${TABLE_ACTIONS_TD_CLASS} align-top`}>
+                    <TableActions>
                       <RenameConnectionControl
                         connectionId={row.id}
                         label={row.label}
@@ -211,7 +214,7 @@ export function AccountConnectionsTable({
                         connectionId={row.id}
                         blockedMessage={inUse ? removeBlocked : null}
                       />
-                    </div>
+                    </TableActions>
                   </td>
                 </tr>
               );

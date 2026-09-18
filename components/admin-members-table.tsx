@@ -3,6 +3,8 @@ import { IconPencil } from "@/components/icons";
 import {
   SortTh,
   StatusBadge,
+  TABLE_ACTIONS_TD_CLASS,
+  TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
   TableIconAction,
 } from "@/components/table-chrome";
@@ -57,7 +59,7 @@ export function AdminMembersTable({
               dir={query.dir}
               href={memberListHref(toggleMemberSort(query, "created"))}
             />
-            <th className="px-4 py-3 font-medium">Actions</th>
+            <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -85,7 +87,7 @@ export function AdminMembersTable({
                 <td className="px-4 py-3 tabular-nums text-ink-muted">
                   <LocalTime at={row.createdAt} mode="date" />
                 </td>
-                <td className="px-4 py-3">
+                <td className={TABLE_ACTIONS_TD_CLASS}>
                   <TableIconAction
                     href={`/admin/members/${row.id}`}
                     label="Edit"

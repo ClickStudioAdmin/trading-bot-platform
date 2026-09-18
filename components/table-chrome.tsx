@@ -37,10 +37,13 @@ import {
 } from "@/lib/table-chrome";
 
 export {
+  TableActions,
   TableIconAction,
   TableLabelButton,
   TablePendingIconAction,
   TablePendingLabelButton,
+  TABLE_ACTIONS_TD_CLASS,
+  TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
   TABLE_LABEL_BTN_CLASS,
   useActionHint,
@@ -422,24 +425,26 @@ export function SortTh({
   dir,
   onSort,
   href,
+  className = "",
 }: {
   label: string;
   active: boolean;
   dir: TableSortDir;
   onSort?: () => void;
   href?: string;
+  className?: string;
 }) {
   const marker = active ? (dir === "asc" ? " ↑" : " ↓") : "";
-  const className = active ? "text-ink" : "text-ink-faint hover:text-ink";
+  const tone = active ? "text-ink" : "text-ink-faint hover:text-ink";
   return (
-    <th className="px-4 py-3 font-medium">
+    <th className={`px-4 py-3 font-medium ${className}`.trim()}>
       {href ? (
-        <Link href={href} className={className}>
+        <Link href={href} className={tone}>
           {label}
           {marker}
         </Link>
       ) : (
-        <button type="button" onClick={onSort} className={className}>
+        <button type="button" onClick={onSort} className={tone}>
           {label}
           {marker}
         </button>

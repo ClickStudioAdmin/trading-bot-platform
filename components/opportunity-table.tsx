@@ -6,6 +6,8 @@ import { ColumnHint } from "@/components/column-hint";
 import { IconOpen } from "@/components/icons";
 import {
   SortTh,
+  TABLE_ACTIONS_TD_CLASS,
+  TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
   TableCard,
   TablePager,
@@ -121,7 +123,7 @@ export function OpportunityRows({
             formId={openFormId(row)}
           />
           {paper ? (
-            <td className="px-4 py-3">
+            <td className={TABLE_ACTIONS_TD_CLASS}>
               <PaperOpenAction row={row} paper={paper} />
             </td>
           ) : null}
@@ -216,7 +218,7 @@ export function OpportunityTable({
                       }
                     />
                   </th>
-                  <th className="px-4 py-3 font-medium">
+                  <th className={TABLE_ACTIONS_TH_CLASS}>
                     <ColumnHint
                       label="Actions"
                       hint={
