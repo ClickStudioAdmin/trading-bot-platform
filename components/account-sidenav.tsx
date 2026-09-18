@@ -339,9 +339,9 @@ function DeskNavLink({
 }
 
 const MODE_DOT: Record<DeskDisplayMode, string> = {
-  paper: "bg-mode-paper/80",
-  demo: "bg-mode-demo/80",
-  live: "bg-mode-live/80",
+  paper: "bg-mode-paper",
+  demo: "bg-mode-demo",
+  live: "bg-mode-live",
 };
 
 const MODE_FILTER_TONE: Record<
