@@ -279,9 +279,9 @@ export function BacktestRunsTable({
       <TableFilterSession
         toolbar={
           <>
-            <p className="text-sm text-ink-muted">
-              {selectedCount > 0 ? `${selectedCount} selected` : "Bulk actions"}
-            </p>
+            {selectedCount > 0 ? (
+              <p className="text-sm text-ink-muted">{selectedCount} selected</p>
+            ) : null}
             <TableLabelButton
               variant="danger"
               disabled={pending || selectedCount === 0}

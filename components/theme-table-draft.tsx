@@ -221,9 +221,9 @@ export function ThemeTableDraft() {
       <TableFilterSession
         toolbar={
           <>
-            <p className="text-sm text-ink-muted">
-              {selectedCount > 0 ? `${selectedCount} selected` : "Bulk actions"}
-            </p>
+            {selectedCount > 0 ? (
+              <p className="text-sm text-ink-muted">{selectedCount} selected</p>
+            ) : null}
             <TableLabelButton
               variant="bulk"
               icon={<IconDownload {...TABLE_BTN_ICON} />}

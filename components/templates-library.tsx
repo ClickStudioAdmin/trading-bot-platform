@@ -754,9 +754,9 @@ export function TemplatesLibrary({
         toolbar={
           sharedTab ? undefined : (
             <>
-              <p className="text-sm text-ink-muted">
-                {selectedCount > 0 ? `${selectedCount} selected` : "Bulk actions"}
-              </p>
+              {selectedCount > 0 ? (
+                <p className="text-sm text-ink-muted">{selectedCount} selected</p>
+              ) : null}
               {tab === "templates" ? (
                 <TableLabelButton
                   variant="bulk"
