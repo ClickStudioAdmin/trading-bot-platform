@@ -18,7 +18,6 @@ import {
   TableCard,
   TableFilterField,
   TableFilterSession,
-  TableHideFilters,
   TableLabelButton,
   TABLE_FILTER_FIELD_CLASS,
   TablePager,
@@ -1411,7 +1410,6 @@ function AffiliateListFilters({
           >
             Clear
           </TableLabelButton>
-          <TableHideFilters />
         </LiveGetForm>
     </TableFilterSession>
   );

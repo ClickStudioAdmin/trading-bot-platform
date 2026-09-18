@@ -17,7 +17,6 @@ import {
   TableFilterBar,
   TableFilterField,
   TableFilterSession,
-  TableHideFilters,
   TableLabelButton,
   TablePager,
   useClientTable,
@@ -340,7 +339,6 @@ export function BacktestRunsTable({
             >
               Clear
             </TableLabelButton>
-            <TableHideFilters />
           </TableFilterBar>
       </TableFilterSession>
       {error ? (

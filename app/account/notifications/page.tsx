@@ -9,7 +9,6 @@ import {
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
   TableFilterSession,
-  TableHideFilters,
   TableLabelButton,
   TablePager,
 } from "@/components/table-chrome";
@@ -153,7 +152,6 @@ export default async function AccountNotificationsPage({
             >
               Clear
             </TableLabelButton>
-            <TableHideFilters />
           </LiveGetForm>
       </TableFilterSession>
       {list.total === 0 && !filteredEmpty ? (

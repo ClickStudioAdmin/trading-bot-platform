@@ -11,7 +11,6 @@ import {
   TableFilterBar,
   TableFilterField,
   TableFilterSession,
-  TableHideFilters,
   TableLabelButton,
   TablePager,
   useClientTable,
@@ -1018,7 +1017,6 @@ function CycleFilters({
           >
             Clear
           </TableLabelButton>
-          <TableHideFilters />
         </TableFilterBar>
     </TableFilterSession>
   );

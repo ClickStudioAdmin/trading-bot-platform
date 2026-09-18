@@ -12,7 +12,6 @@ import {
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
   TableFilterSession,
-  TableHideFilters,
   TableLabelButton,
   TablePendingIconAction,
 } from "@/components/table-chrome";
@@ -190,7 +189,6 @@ export function CopyCatalogueBoard({
             >
               Clear
             </TableLabelButton>
-            <TableHideFilters />
           </LiveGetForm>
       </TableFilterSession>
       </>

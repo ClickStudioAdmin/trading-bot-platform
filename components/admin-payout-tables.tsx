@@ -20,7 +20,6 @@ import {
   TableCard,
   TableFilterField,
   TableFilterSession,
-  TableHideFilters,
   TableIconAction,
   TableLabelButton,
   TablePendingIconAction,
@@ -182,7 +181,6 @@ export function AdminPayoutFilesTable({
             >
               Clear
             </TableLabelButton>
-            <TableHideFilters />
           </LiveGetForm>
       </TableFilterSession>
       <TableCard
@@ -357,7 +355,6 @@ export function AdminPayoutQueueTable({
             >
               Clear
             </TableLabelButton>
-            <TableHideFilters />
           </LiveGetForm>
       </TableFilterSession>
       <TableCard
@@ -517,7 +514,6 @@ export function AdminPayoutFilePaymentsTable({
             >
               Clear
             </TableLabelButton>
-            <TableHideFilters />
           </LiveGetForm>
       </TableFilterSession>
       <TableCard

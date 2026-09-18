@@ -110,7 +110,7 @@ export function TableFilterSession({
   children,
   toolbar,
   actions,
-  filterToggle = "bar",
+  filterToggle = "trailing",
 }: {
   children: ReactNode;
   toolbar?: ReactNode;

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback } from "react";
+import { useCallback, type ReactNode } from "react";
 import { AdminPlanRowActions } from "@/components/admin-plan-row-actions";
 import { IconFilterClear, IconPencil } from "@/components/icons";
 import {
@@ -16,7 +16,6 @@ import {
   TableCard,
   TableFilterField,
   TableFilterSession,
-  TableHideFilters,
   TableIconAction,
   TableLabelButton,
   TablePager,
@@ -71,9 +70,11 @@ function comparePlans(
 export function AdminPlansTable({
   plans,
   status,
+  actions,
 }: {
   plans: MembershipPlan[];
   status: string;
+  actions?: ReactNode;
 }) {
   const compare = useCallback(comparePlans, []);
   const table = useClientTable(plans, compare, {
@@ -83,7 +84,7 @@ export function AdminPlansTable({
 
   return (
     <>
-      <TableFilterSession>
+      <TableFilterSession actions={actions}>
           <LiveGetForm>
             <input type="hidden" name="page" value="1" />
             <TableFilterField label="Status">
@@ -105,7 +106,6 @@ export function AdminPlansTable({
             >
               Clear
             </TableLabelButton>
-            <TableHideFilters />
           </LiveGetForm>
       </TableFilterSession>
       <TableCard

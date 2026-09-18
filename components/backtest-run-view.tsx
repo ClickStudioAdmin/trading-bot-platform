@@ -10,7 +10,6 @@ import {
   TableFilterBar,
   TableFilterField,
   TableFilterSession,
-  TableHideFilters,
   TableIconAction,
   TableLabelButton,
   TablePager,
@@ -458,7 +457,6 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
             >
               Clear
             </TableLabelButton>
-            <TableHideFilters />
           </TableFilterBar>
       </TableFilterSession>
       <TableCard

@@ -12,7 +12,6 @@ import {
   TableCard,
   TableFilterField,
   TableFilterSession,
-  TableHideFilters,
   TableLabelButton,
   TablePager,
   useClientTable,
@@ -177,7 +176,6 @@ export function EventLogs({
             >
               Clear
             </TableLabelButton>
-            <TableHideFilters />
           </LiveGetForm>
       </TableFilterSession>
 

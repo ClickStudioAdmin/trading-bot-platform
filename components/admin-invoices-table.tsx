@@ -11,7 +11,6 @@ import {
   TableCard,
   TableFilterField,
   TableFilterSession,
-  TableHideFilters,
   TableLabelButton,
   TablePager,
   useClientTable,
@@ -148,7 +147,6 @@ export function AdminInvoicesTable({
             >
               Clear
             </TableLabelButton>
-            <TableHideFilters />
           </LiveGetForm>
       </TableFilterSession>
       <TableCard

@@ -23,7 +23,6 @@ import {
   TableFilterField,
   TableFilterSession,
   TableActions,
-  TableHideFilters,
   TableIconAction,
   TableLabelButton,
   TablePager,
@@ -313,7 +312,6 @@ export function ThemeTableDraft() {
             >
               Clear
             </TableLabelButton>
-            <TableHideFilters />
           </TableFilterBar>
       </TableFilterSession>
 

@@ -43,17 +43,7 @@ export default async function AdminPlansPage({
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <PageHeading overline="Admin" title="Plans" />
-        <TableLabelButton
-          href="/admin/plans/new"
-          variant="primary"
-          className="mb-6"
-          icon={<IconPlus {...TABLE_BTN_ICON} />}
-        >
-          New plan
-        </TableLabelButton>
-      </div>
+      <PageHeading overline="Admin" title="Plans" />
       <p className="-mt-4 text-sm text-ink-muted">
         Features, caps, and affiliate rates. A plan with members cannot be
         deleted — archive it instead.
@@ -73,7 +63,19 @@ export default async function AdminPlansPage({
         <p className="mt-4 text-sm text-success">Unused plan deleted.</p>
       ) : null}
 
-      <AdminPlansTable plans={plans} status={status} />
+      <AdminPlansTable
+        plans={plans}
+        status={status}
+        actions={
+          <TableLabelButton
+            href="/admin/plans/new"
+            variant="primary"
+            icon={<IconPlus {...TABLE_BTN_ICON} />}
+          >
+            New plan
+          </TableLabelButton>
+        }
+      />
     </div>
   );
 }

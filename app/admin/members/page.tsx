@@ -9,7 +9,6 @@ import {
   TableCard,
   TableFilterField,
   TableFilterSession,
-  TableHideFilters,
   TableLabelButton,
   TablePager,
 } from "@/components/table-chrome";
@@ -48,17 +47,7 @@ export default async function AdminMembersPage({
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <PageHeading overline="Admin" title="Members" />
-        <TableLabelButton
-          href="/admin/members/new"
-          variant="primary"
-          className="mb-6"
-          icon={<IconPlus {...TABLE_BTN_ICON} />}
-        >
-          New member
-        </TableLabelButton>
-      </div>
+      <PageHeading overline="Admin" title="Members" />
       <p className="-mt-4 text-sm text-ink-muted">
         Desk accounts. Sign-in uses this table, not Supabase Auth.
       </p>
@@ -74,7 +63,17 @@ export default async function AdminMembersPage({
         <p className="mt-4 text-sm text-success">Member saved.</p>
       ) : null}
 
-      <TableFilterSession>
+      <TableFilterSession
+        actions={
+          <TableLabelButton
+            href="/admin/members/new"
+            variant="primary"
+            icon={<IconPlus {...TABLE_BTN_ICON} />}
+          >
+            New member
+          </TableLabelButton>
+        }
+      >
           <LiveGetForm>
             <input type="hidden" name="page" value="1" />
             {query.sort !== "created" ? (
@@ -119,7 +118,6 @@ export default async function AdminMembersPage({
             >
               Clear
             </TableLabelButton>
-            <TableHideFilters />
           </LiveGetForm>
       </TableFilterSession>
 

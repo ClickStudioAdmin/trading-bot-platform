@@ -4,7 +4,6 @@ import {
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
   TableFilterField,
-  TableHideFilters,
   TableLabelButton,
 } from "@/components/table-chrome";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
@@ -59,7 +58,6 @@ export function OpportunityFiltersForm({
       >
         Clear
       </TableLabelButton>
-      <TableHideFilters />
     </LiveGetForm>
   );
 }
