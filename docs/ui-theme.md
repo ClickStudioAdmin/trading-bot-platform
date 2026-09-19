@@ -38,8 +38,8 @@ Draft light (Theme page preview only):
 | `line` | `#D4DAE3` | Default borders |
 | `line-strong` | `#B7C0CC` | Focus / stronger dividers |
 | `ink` | `#12161C` | Primary text and values |
-| `ink-muted` | `#5A6472` | Labels, secondary copy |
-| `ink-faint` | `#8B93A1` | Inactive nav, hints |
+| `ink-muted` | `#3F4754` | Labels, secondary copy |
+| `ink-faint` | `#66707E` | Inactive nav, hints |
 | `accent` | `#7C5CDB` | Active states, links (deeper than dark so it reads on white) |
 | `accent-strong` | `#6D4FE0` | Primary button fill. Label is white (`#F4F6F8`), not light-scheme `ink`. |
 | `plan-header` | `#5B3CC9` | Plan compare card headers |

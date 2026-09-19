@@ -45,14 +45,14 @@ export const THEME_COLOURS = [
     name: "ink-muted",
     use: "Labels",
     dark: "#9AA3B2",
-    light: "#5A6472",
+    light: "#3F4754",
     swatch: "bg-ink-muted",
   },
   {
     name: "ink-faint",
     use: "Inactive / hints",
     dark: "#6B7382",
-    light: "#8B93A1",
+    light: "#66707E",
     swatch: "bg-ink-faint",
   },
   {
