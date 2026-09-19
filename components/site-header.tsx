@@ -38,13 +38,13 @@ export async function SiteHeader({
           }
         />
       }
+      end={<UiPreferencesMenu />}
     >
       <div className="flex shrink-0 items-center justify-end gap-2">
         {memberChrome ? <HeaderInboxLink count={memberChrome.inbox} /> : null}
         <UserMenu
           name={user ? memberDisplayName(user.email, user.name) : null}
         />
-        <UiPreferencesMenu />
       </div>
     </HeaderBar>
   );
