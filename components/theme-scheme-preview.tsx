@@ -8,8 +8,9 @@ import {
   type ReactNode,
 } from "react";
 import { IconMoon, IconSun } from "@/components/icons";
-import { TABLE_BTN_ICON } from "@/components/table-actions";
 import type { ThemePreviewScheme } from "@/lib/theme/tokens";
+
+const TOGGLE_ICON = { size: 14 as const, className: "size-3.5 shrink-0" };
 
 const STORAGE_KEY = "tbp.admin-theme.scheme";
 
@@ -23,6 +24,14 @@ const ThemeSchemeContext = createContext<{
 
 export function useThemePreviewScheme() {
   return useContext(ThemeSchemeContext);
+}
+
+export function themePreviewPortalClass(scheme: ThemePreviewScheme) {
+  return scheme === "light" ? "theme-preview-light" : "";
+}
+
+export function useThemePreviewPortalClass() {
+  return themePreviewPortalClass(useThemePreviewScheme().scheme);
 }
 
 export function ThemeSchemePreview({ children }: { children: ReactNode }) {
@@ -46,7 +55,7 @@ export function ThemeSchemePreview({ children }: { children: ReactNode }) {
         data-theme-preview={scheme}
         className={
           scheme === "light"
-            ? "theme-preview-light -mx-6 -my-8 min-h-dvh px-6 py-8"
+            ? "theme-preview-light theme-preview-canvas -mx-6 -my-8 min-h-dvh px-6 py-8"
             : undefined
         }
       >
@@ -68,13 +77,13 @@ export function ThemeSchemeToggle() {
         label="Dark"
         selected={scheme === "dark"}
         onClick={() => setScheme("dark")}
-        icon={<IconMoon {...TABLE_BTN_ICON} />}
+        icon={<IconMoon {...TOGGLE_ICON} />}
       />
       <SchemeButton
         label="Light"
         selected={scheme === "light"}
         onClick={() => setScheme("light")}
-        icon={<IconSun {...TABLE_BTN_ICON} />}
+        icon={<IconSun {...TOGGLE_ICON} />}
       />
     </div>
   );

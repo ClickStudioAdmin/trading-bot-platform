@@ -184,7 +184,9 @@ select.desk-action-select {
   background-size: 0.75rem;
 }
 
-/* Draft light scheme. Scoped to /admin/theme. Do not put on html/body until Click accepts it. */
+/* Draft light scheme. Scoped to /admin/theme. Do not put on html/body until Click accepts it.
+   Token remaps only — canvas fill is .theme-preview-canvas so portaled panels can inherit
+   light tokens without forcing a page background. */
 .theme-preview-light {
   color-scheme: light;
   --color-canvas: #f4f6f8;
@@ -198,10 +200,68 @@ select.desk-action-select {
   --color-accent: #7c5cdb;
   --color-accent-strong: #6d4fe0;
   --color-plan-header: #5b3cc9;
+  --color-success: #0d7a4f;
+  --color-danger: #c4473e;
+  --color-warning: #9a6f0a;
+}
+
+.theme-preview-canvas {
   background: var(--color-canvas);
   color: var(--color-ink);
 }
 
-.theme-preview-light :is(.bg-accent-strong, .bg-plan-header) {
+.theme-preview-light :is(.bg-accent-strong, .bg-plan-header, .bg-danger, .bg-success, .bg-warning) {
   color: #f4f6f8;
+}
+
+.theme-preview-light .bg-accent\/10 {
+  background-color: color-mix(in oklab, var(--color-accent) 16%, var(--color-surface));
+}
+.theme-preview-light .bg-success\/10 {
+  background-color: color-mix(in oklab, var(--color-success) 16%, var(--color-surface));
+}
+.theme-preview-light .bg-danger\/10 {
+  background-color: color-mix(in oklab, var(--color-danger) 16%, var(--color-surface));
+}
+.theme-preview-light .bg-warning\/10 {
+  background-color: color-mix(in oklab, var(--color-warning) 16%, var(--color-surface));
+}
+
+.theme-preview-light .bg-accent\/15 {
+  background-color: color-mix(in oklab, var(--color-accent) 22%, var(--color-surface));
+}
+.theme-preview-light .bg-success\/15 {
+  background-color: color-mix(in oklab, var(--color-success) 22%, var(--color-surface));
+}
+.theme-preview-light .bg-danger\/15 {
+  background-color: color-mix(in oklab, var(--color-danger) 22%, var(--color-surface));
+}
+.theme-preview-light .bg-warning\/15 {
+  background-color: color-mix(in oklab, var(--color-warning) 22%, var(--color-surface));
+}
+
+.theme-preview-light .bg-accent\/20 {
+  background-color: color-mix(in oklab, var(--color-accent) 26%, var(--color-surface));
+}
+.theme-preview-light .bg-success\/20 {
+  background-color: color-mix(in oklab, var(--color-success) 26%, var(--color-surface));
+}
+.theme-preview-light .bg-danger\/20 {
+  background-color: color-mix(in oklab, var(--color-danger) 26%, var(--color-surface));
+}
+.theme-preview-light .bg-warning\/20 {
+  background-color: color-mix(in oklab, var(--color-warning) 26%, var(--color-surface));
+}
+
+.theme-preview-light .border-accent\/30 {
+  border-color: color-mix(in oklab, var(--color-accent) 42%, var(--color-line));
+}
+.theme-preview-light .border-success\/30 {
+  border-color: color-mix(in oklab, var(--color-success) 42%, var(--color-line));
+}
+.theme-preview-light .border-danger\/30 {
+  border-color: color-mix(in oklab, var(--color-danger) 42%, var(--color-line));
+}
+.theme-preview-light .border-warning\/30 {
+  border-color: color-mix(in oklab, var(--color-warning) 42%, var(--color-line));
 }

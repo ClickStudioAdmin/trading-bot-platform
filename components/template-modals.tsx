@@ -25,6 +25,7 @@ import {
 } from "@/lib/templates/recipe";
 import { formatDeskType } from "@/lib/accounts/model";
 import { deskActionBtnClass } from "@/components/bot-form-chrome";
+import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -71,6 +72,7 @@ export function Modal({
   sticky?: React.ReactNode;
   elevated?: boolean;
 }) {
+  const previewClass = useThemePreviewPortalClass();
   useEffect(() => {
     const id = ++nextModalId;
     modalStack.push(id);
@@ -95,7 +97,7 @@ export function Modal({
     <div
       className={`fixed inset-0 flex items-center justify-center bg-canvas/70 p-4 ${
         elevated ? "z-[60]" : "z-50"
-      }`}
+      } ${previewClass}`.trim()}
       onClick={onClose}
     >
       <div

@@ -43,8 +43,12 @@ Draft light (Theme page preview only):
 | `accent` | `#7C5CDB` | Active states, links (deeper than dark so it reads on white) |
 | `accent-strong` | `#6D4FE0` | Primary button fill. Label is white (`#F4F6F8`), not light-scheme `ink`. |
 | `plan-header` | `#5B3CC9` | Plan compare card headers |
-| `success` / `danger` / `warning` | same as dark | Status colours unchanged this pass |
+| `success` | `#0D7A4F` | Positive text and badges (deeper so it reads on white) |
+| `danger` | `#C4473E` | Negative text, alerts, badges |
+| `warning` | `#9A6F0A` | Caution, pending |
 | `mode-*` | same as dark | Desk mode dots unchanged |
+
+Light callout and badge tints use a stronger mix than the dark `/10` `/15` washes so they separate from white `surface`. Solid `accent-strong`, `plan-header`, `success`, `danger`, and `warning` fills keep white labels. Portaled listboxes (AppSelect / AppMultiSelect), hints, and confirm overlays pick up `.theme-preview-light` so they do not stay on the live dark tokens.
 
 ## Type
 

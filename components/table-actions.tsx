@@ -4,6 +4,7 @@ import Link from "next/link";
 import { forwardRef, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 
 export const TABLE_ICON_ACTION_CLASS =
   "inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40";
@@ -32,13 +33,14 @@ export function TableHint({
   label: string;
   detail: string;
 }) {
+  const previewClass = useThemePreviewPortalClass();
   if (!box || typeof document === "undefined") {
     return null;
   }
   return createPortal(
     <span
       role="tooltip"
-      className="pointer-events-none fixed z-50 max-w-56 rounded-control border border-line bg-surface-raised px-3 py-2 text-xs font-normal normal-case tracking-normal"
+      className={`pointer-events-none fixed z-50 max-w-56 rounded-control border border-line bg-surface-raised px-3 py-2 text-xs font-normal normal-case tracking-normal text-ink ${previewClass}`.trim()}
       style={{
         top: box.bottom + 8,
         left: Math.max(12, Math.min(box.left, window.innerWidth - 240)),

@@ -18,6 +18,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { IconChevronDown, IconClose } from "@/components/icons";
+import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import { TokenIcon } from "@/components/token-icon";
 
 export type AppSelectOption = {
@@ -402,6 +403,7 @@ function SelectPanel({
   onQuery: (value: string) => void;
   children: ReactNode;
 }) {
+  const previewClass = useThemePreviewPortalClass();
   const [box, setBox] = useState({ top: 0, left: 0, width: 220 });
 
   useLayoutEffect(() => {
@@ -438,7 +440,7 @@ function SelectPanel({
       id={listId}
       role="listbox"
       style={{ top: box.top, left: box.left, width: box.width }}
-      className="fixed z-50 max-h-56 overflow-auto rounded-card border border-line bg-surface p-1"
+      className={`fixed z-50 max-h-56 overflow-auto rounded-card border border-line bg-surface p-1 text-ink ${previewClass}`.trim()}
     >
       {searchable ? (
         <input
