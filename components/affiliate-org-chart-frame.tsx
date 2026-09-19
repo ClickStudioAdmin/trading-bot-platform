@@ -12,6 +12,7 @@ import {
   searchAffiliateOrgChart,
   type AffiliateOrgLayout,
 } from "@/lib/membership/affiliate";
+import { useUiPreferences } from "@/components/ui-preferences";
 import type { AffiliateTreeNode } from "@/lib/membership/affiliate-store";
 
 const control =
@@ -25,6 +26,7 @@ export function AffiliateOrgChartFrame({
   rootPlanName?: string | null;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
+  const { content } = useUiPreferences();
   const [expanded, setExpanded] = useState(false);
   const [monitor, setMonitor] = useState(false);
   const [api, setApi] = useState<AffiliateOrgChartApi | null>(null);
@@ -128,8 +130,8 @@ export function AffiliateOrgChartFrame({
       aria-label="Org chart"
       className={
         expanded
-          ? "affiliate-org-chart-frame fixed inset-0 z-50 flex flex-col bg-canvas p-6"
-          : "affiliate-org-chart-frame rounded-card border border-line bg-surface p-5"
+          ? `affiliate-org-chart-frame${content === "light" ? " theme-light" : ""} fixed inset-0 z-50 flex flex-col bg-canvas p-6`
+          : `affiliate-org-chart-frame${content === "light" ? " theme-light" : ""} rounded-card border border-line bg-surface p-5`
       }
     >
       <div className="flex flex-wrap items-start justify-between gap-3">

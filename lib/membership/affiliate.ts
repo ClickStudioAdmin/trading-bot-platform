@@ -1572,18 +1572,17 @@ export function affiliateOrgChartNodeHtml(
     ),
   );
   const title = href
-    ? `<a href="${escapeHtmlText(href)}" style="color:#F4F6F8;text-decoration:none">${label}</a>`
-    : `<span style="color:#F4F6F8">${label}</span>`;
-  const border = highlight?.selected
-    ? "#8B6CF6"
+    ? `<a href="${escapeHtmlText(href)}">${label}</a>`
+    : `<span class="affiliate-org-node-title">${label}</span>`;
+  const tone = highlight?.selected
+    ? "selected"
     : highlight?.onPath || row.level === 0
-      ? "#A78BFA"
-      : "#2A313C";
-  const borderWidth = highlight?.selected || highlight?.onPath ? 2 : 1;
-  return `<div style="box-sizing:border-box;height:100%;padding:10px 12px;border:${borderWidth}px solid ${border};border-radius:8px;background:#1C222C;font-size:14px;line-height:1.25">
+      ? "path"
+      : "default";
+  return `<div class="affiliate-org-node" data-tone="${tone}">
     <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</div>
-    <div style="margin-top:4px;color:#9AA3B2;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${meta}</div>
-    <div style="margin-top:2px;color:#F4F6F8;font-size:12px;font-variant-numeric:tabular-nums">${runRate}</div>
+    <div class="affiliate-org-node-meta">${meta}</div>
+    <div class="affiliate-org-node-rate">${runRate}</div>
   </div>`;
 }
 

@@ -609,8 +609,8 @@ assert.equal(
   ]);
   assert.equal(searchAffiliateOrgChart(rows, "zzz").length, 0);
 }
-assert.equal(
-  affiliateOrgChartNodeHtml(
+{
+  const selected = affiliateOrgChartNodeHtml(
     {
       id: "a",
       parentId: "you",
@@ -621,9 +621,10 @@ assert.equal(
     },
     null,
     { selected: true, onPath: true },
-  ).includes("#8B6CF6"),
-  true,
-);
+  );
+  assert.equal(selected.includes('data-tone="selected"'), true);
+  assert.equal(/#[0-9A-Fa-f]{3,8}/.test(selected), false);
+}
 assert.equal(affiliateOrgPlanLabel(null), "Affiliate");
 assert.equal(affiliateOrgPlanLabel("Plus"), "Plus");
 assert.equal(

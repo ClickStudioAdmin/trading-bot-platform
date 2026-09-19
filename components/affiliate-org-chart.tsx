@@ -316,11 +316,14 @@ export function AffiliateOrgChart({
         .buttonContent(({ node }) => {
           const open = Boolean(node.children);
           const count = Number(node.data._directSubordinatesPaging ?? 0);
-          return `<div style="margin:auto;border:1px solid #2A313C;border-radius:8px;background:#161B22;color:#9AA3B2;font-size:10px;line-height:1;padding:3px 6px">${open ? "−" : "+"} ${count}</div>`;
+          return `<div class="affiliate-org-expand">${open ? "−" : "+"} ${count}</div>`;
         })
         .linkUpdate(function (node) {
           const onPath = Boolean(node.data._upToTheRootHighlighted);
-          this.setAttribute("stroke", onPath ? "#A78BFA" : "#2A313C");
+          this.setAttribute(
+            "stroke",
+            onPath ? "var(--color-accent)" : "var(--color-line)",
+          );
           this.setAttribute("stroke-width", onPath ? "2.5" : "1.5");
           if (onPath) {
             this.parentNode?.appendChild(this);

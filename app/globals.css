@@ -73,6 +73,64 @@ body {
   height: 100%;
 }
 
+.affiliate-org-node {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.affiliate-org-node[data-tone="path"],
+.affiliate-org-node[data-tone="selected"] {
+  border-width: 2px;
+}
+
+.affiliate-org-node[data-tone="path"] {
+  border-color: var(--color-accent);
+}
+
+.affiliate-org-node[data-tone="selected"] {
+  border-color: var(--color-accent-strong);
+}
+
+.affiliate-org-node a,
+.affiliate-org-node-title {
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.affiliate-org-node-meta {
+  margin-top: 4px;
+  color: var(--color-ink-muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.affiliate-org-node-rate {
+  margin-top: 2px;
+  color: var(--color-ink);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.affiliate-org-expand {
+  margin: auto;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 6px;
+}
+
 a[href],
 button:not(:disabled),
 [role="button"]:not([aria-disabled="true"]) {
