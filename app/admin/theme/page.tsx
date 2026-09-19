@@ -65,8 +65,8 @@ export default async function ThemePage({
           actions={<ThemeSchemeToggle />}
         />
         <p className="mb-6 text-sm text-ink-muted">
-          Dark / Light here is a preview only. The live site stays dark until
-          Click accepts the light tokens.
+          Dark / Light here previews this sample. Live chrome and content
+          schemes are set from UI preferences in the header.
         </p>
         <nav
           aria-label="Theme reference"

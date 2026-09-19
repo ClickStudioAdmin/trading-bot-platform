@@ -43,6 +43,7 @@ import {
   RefreshCw,
   Moon,
   Share2,
+  SlidersHorizontal,
   SquareArrowOutUpRight,
   Sun,
   Star,
@@ -334,6 +335,13 @@ export const LUCIDE_ICONS = [
     Icon: Share2,
   },
   {
+    id: "sliders-horizontal",
+    name: "UI preferences",
+    lucide: "SlidersHorizontal",
+    usedIn: "Header UI preferences",
+    Icon: SlidersHorizontal,
+  },
+  {
     id: "star",
     name: "Star",
     lucide: "Star",
@@ -463,14 +471,14 @@ export const LUCIDE_ICONS = [
     id: "moon",
     name: "Dark",
     lucide: "Moon",
-    usedIn: "Theme page scheme toggle",
+    usedIn: "Theme page and UI preferences",
     Icon: Moon,
   },
   {
     id: "sun",
     name: "Light",
     lucide: "Sun",
-    usedIn: "Theme page scheme toggle",
+    usedIn: "Theme page and UI preferences",
     Icon: Sun,
   },
   {
@@ -708,6 +716,10 @@ export function IconTemplates(props: LucideProps) {
 
 export function IconInbox(props: LucideProps) {
   return <Inbox aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconUiPrefs(props: LucideProps) {
+  return <SlidersHorizontal aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconMoon(props: LucideProps) {

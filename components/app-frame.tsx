@@ -1,7 +1,17 @@
+import { cookies } from "next/headers";
 import { AccountSidenavGate } from "@/components/account-sidenav-gate";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import {
+  UiPreferencesProvider,
+  UiRegion,
+} from "@/components/ui-preferences";
 import { listTradingAccounts } from "@/lib/accounts/store";
+import {
+  UI_CHROME_COOKIE,
+  UI_CONTENT_COOKIE,
+  parseUiScheme,
+} from "@/lib/theme/preferences";
 import { getAdminUser } from "@/lib/admin/access";
 import { loadAutoTickEnabled } from "@/lib/admin/settings";
 import { signedInHomePath } from "@/lib/auth/onboarding";
@@ -25,8 +35,12 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
   const adminChrome = admin ? await loadAdminNotificationChrome() : null;
   const appHref = member ? signedInHomePath(member, desks) : null;
   const brand = await loadPlatformBrand();
+  const jar = await cookies();
+  const chromeScheme = parseUiScheme(jar.get(UI_CHROME_COOKIE)?.value);
+  const contentScheme = parseUiScheme(jar.get(UI_CONTENT_COOKIE)?.value);
 
   return (
+    <UiPreferencesProvider chrome={chromeScheme} content={contentScheme}>
     <AccountSidenavGate
       signedIn={Boolean(member)}
       platformMember={member?.platformMember === true}
@@ -54,23 +68,30 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
       platformLogoUrl={brand.logoUrl}
     >
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
-        <SiteHeader
-          platformName={brand.name}
-          platformLogoUrl={brand.logoUrl}
-        />
-        <div className="flex flex-1 flex-col">{children}</div>
-        <SiteFooter
-          appHref={appHref}
-          signedIn={Boolean(member)}
-          admin={
-            admin
-              ? { count: adminChrome?.header ?? 0, autoTick }
-              : null
-          }
-          platformName={brand.name}
-          platformLogoUrl={brand.logoUrl}
-        />
+        <UiRegion region="chrome">
+          <SiteHeader
+            platformName={brand.name}
+            platformLogoUrl={brand.logoUrl}
+          />
+        </UiRegion>
+        <UiRegion region="content" className="flex flex-1 flex-col">
+          {children}
+        </UiRegion>
+        <UiRegion region="chrome">
+          <SiteFooter
+            appHref={appHref}
+            signedIn={Boolean(member)}
+            admin={
+              admin
+                ? { count: adminChrome?.header ?? 0, autoTick }
+                : null
+            }
+            platformName={brand.name}
+            platformLogoUrl={brand.logoUrl}
+          />
+        </UiRegion>
       </div>
     </AccountSidenavGate>
+    </UiPreferencesProvider>
   );
 }

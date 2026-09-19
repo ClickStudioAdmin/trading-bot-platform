@@ -186,9 +186,10 @@ select.desk-action-select {
   background-size: 0.75rem;
 }
 
-/* Draft light scheme. Scoped to /admin/theme. Do not put on html/body until Click accepts it.
-   Token remaps only — canvas fill is .theme-preview-canvas so portaled panels can inherit
-   light tokens without forcing a page background. */
+/* Light scheme. Live chrome/content wrappers use .theme-light. Theme page preview
+   still uses .theme-preview-light. Canvas fill is .theme-preview-canvas so portaled
+   panels can inherit light tokens without forcing a page background. */
+.theme-light,
 .theme-preview-light {
   color-scheme: light;
   --color-canvas: #f4f6f8;
@@ -212,58 +213,76 @@ select.desk-action-select {
   color: var(--color-ink);
 }
 
-.theme-preview-light :is(.bg-accent-strong, .bg-plan-header, .bg-danger, .bg-success, .bg-warning) {
+.theme-dark {
+  color-scheme: dark;
+  --color-canvas: #0b0e14;
+  --color-surface: #161b22;
+  --color-surface-raised: #1c222c;
+  --color-line: #2a313c;
+  --color-line-strong: #3a4352;
+  --color-ink: #f4f6f8;
+  --color-ink-muted: #9aa3b2;
+  --color-ink-faint: #6b7382;
+  --color-accent: #a78bfa;
+  --color-accent-strong: #8b6cf6;
+  --color-plan-header: #764ded;
+  --color-success: #34d399;
+  --color-danger: #f07167;
+  --color-warning: #f5b942;
+}
+
+:is(.theme-light, .theme-preview-light) :is(.bg-accent-strong, .bg-plan-header, .bg-danger, .bg-success, .bg-warning) {
   color: #f4f6f8;
 }
 
-.theme-preview-light .bg-accent\/10 {
+:is(.theme-light, .theme-preview-light) .bg-accent\/10 {
   background-color: color-mix(in oklab, var(--color-accent) 16%, var(--color-surface));
 }
-.theme-preview-light .bg-success\/10 {
+:is(.theme-light, .theme-preview-light) .bg-success\/10 {
   background-color: color-mix(in oklab, var(--color-success) 16%, var(--color-surface));
 }
-.theme-preview-light .bg-danger\/10 {
+:is(.theme-light, .theme-preview-light) .bg-danger\/10 {
   background-color: color-mix(in oklab, var(--color-danger) 16%, var(--color-surface));
 }
-.theme-preview-light .bg-warning\/10 {
+:is(.theme-light, .theme-preview-light) .bg-warning\/10 {
   background-color: color-mix(in oklab, var(--color-warning) 16%, var(--color-surface));
 }
 
-.theme-preview-light .bg-accent\/15 {
+:is(.theme-light, .theme-preview-light) .bg-accent\/15 {
   background-color: color-mix(in oklab, var(--color-accent) 22%, var(--color-surface));
 }
-.theme-preview-light .bg-success\/15 {
+:is(.theme-light, .theme-preview-light) .bg-success\/15 {
   background-color: color-mix(in oklab, var(--color-success) 22%, var(--color-surface));
 }
-.theme-preview-light .bg-danger\/15 {
+:is(.theme-light, .theme-preview-light) .bg-danger\/15 {
   background-color: color-mix(in oklab, var(--color-danger) 22%, var(--color-surface));
 }
-.theme-preview-light .bg-warning\/15 {
+:is(.theme-light, .theme-preview-light) .bg-warning\/15 {
   background-color: color-mix(in oklab, var(--color-warning) 22%, var(--color-surface));
 }
 
-.theme-preview-light .bg-accent\/20 {
+:is(.theme-light, .theme-preview-light) .bg-accent\/20 {
   background-color: color-mix(in oklab, var(--color-accent) 26%, var(--color-surface));
 }
-.theme-preview-light .bg-success\/20 {
+:is(.theme-light, .theme-preview-light) .bg-success\/20 {
   background-color: color-mix(in oklab, var(--color-success) 26%, var(--color-surface));
 }
-.theme-preview-light .bg-danger\/20 {
+:is(.theme-light, .theme-preview-light) .bg-danger\/20 {
   background-color: color-mix(in oklab, var(--color-danger) 26%, var(--color-surface));
 }
-.theme-preview-light .bg-warning\/20 {
+:is(.theme-light, .theme-preview-light) .bg-warning\/20 {
   background-color: color-mix(in oklab, var(--color-warning) 26%, var(--color-surface));
 }
 
-.theme-preview-light .border-accent\/30 {
+:is(.theme-light, .theme-preview-light) .border-accent\/30 {
   border-color: color-mix(in oklab, var(--color-accent) 42%, var(--color-line));
 }
-.theme-preview-light .border-success\/30 {
+:is(.theme-light, .theme-preview-light) .border-success\/30 {
   border-color: color-mix(in oklab, var(--color-success) 42%, var(--color-line));
 }
-.theme-preview-light .border-danger\/30 {
+:is(.theme-light, .theme-preview-light) .border-danger\/30 {
   border-color: color-mix(in oklab, var(--color-danger) 42%, var(--color-line));
 }
-.theme-preview-light .border-warning\/30 {
+:is(.theme-light, .theme-preview-light) .border-warning\/30 {
   border-color: color-mix(in oklab, var(--color-warning) 42%, var(--color-line));
 }

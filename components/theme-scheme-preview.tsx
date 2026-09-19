@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { IconMoon, IconSun } from "@/components/icons";
+import { useUiPreferences, useUiRegion } from "@/components/ui-preferences";
 import type { ThemePreviewScheme } from "@/lib/theme/tokens";
 
 const TOGGLE_ICON = { size: 14 as const, className: "size-3.5 shrink-0" };
@@ -17,9 +18,11 @@ const STORAGE_KEY = "tbp.admin-theme.scheme";
 const ThemeSchemeContext = createContext<{
   scheme: ThemePreviewScheme;
   setScheme: (scheme: ThemePreviewScheme) => void;
+  insidePreview: boolean;
 }>({
   scheme: "dark",
   setScheme: () => {},
+  insidePreview: false,
 });
 
 export function useThemePreviewScheme() {
@@ -31,7 +34,14 @@ export function themePreviewPortalClass(scheme: ThemePreviewScheme) {
 }
 
 export function useThemePreviewPortalClass() {
-  return themePreviewPortalClass(useThemePreviewScheme().scheme);
+  const preview = useThemePreviewScheme();
+  const prefs = useUiPreferences();
+  const region = useUiRegion();
+  if (preview.insidePreview) {
+    return preview.scheme === "light" ? "theme-preview-light" : "theme-dark";
+  }
+  const scheme = region === "chrome" ? prefs.chrome : prefs.content;
+  return scheme === "light" ? "theme-preview-light" : "";
 }
 
 export function ThemeSchemePreview({ children }: { children: ReactNode }) {
@@ -50,13 +60,15 @@ export function ThemeSchemePreview({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ThemeSchemeContext.Provider value={{ scheme, setScheme: onScheme }}>
+    <ThemeSchemeContext.Provider
+      value={{ scheme, setScheme: onScheme, insidePreview: true }}
+    >
       <div
         data-theme-preview={scheme}
         className={
           scheme === "light"
             ? "theme-preview-light theme-preview-canvas -mx-6 -my-8 min-h-dvh px-6 py-8"
-            : undefined
+            : "theme-dark theme-preview-canvas -mx-6 -my-8 min-h-dvh px-6 py-8"
         }
       >
         {children}

@@ -1,5 +1,6 @@
 import { HeaderBar } from "@/components/header-bar";
 import { HeaderChromeLinks, HeaderInboxLink } from "@/components/site-nav";
+import { UiPreferencesMenu } from "@/components/ui-preferences";
 import { UserMenu } from "@/components/user-menu";
 import { getSessionMember } from "@/lib/auth/session";
 import { memberDisplayName } from "@/lib/members/sync";
@@ -43,6 +44,7 @@ export async function SiteHeader({
         <UserMenu
           name={user ? memberDisplayName(user.email, user.name) : null}
         />
+        <UiPreferencesMenu />
       </div>
     </HeaderBar>
   );

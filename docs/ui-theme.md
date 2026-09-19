@@ -4,7 +4,7 @@ Living reference: [/admin/theme](../app/admin/theme/page.tsx) on the deployed si
 
 Style: dark modern business portal. Tokens live in `app/globals.css` (`@theme`). Use those names in Tailwind (`bg-canvas`, `text-ink`, `border-line`, `bg-accent`). Do not introduce new brand hex values in components.
 
-A **draft light scheme** lives on `/admin/theme` only (Dark / Light toggle). It remaps the same token names under `.theme-preview-light`. Do not put light tokens on `html` / `body` or any live desk until Click accepts them.
+Light is live. Header **UI preferences** (hover) sets Dark / Light for the whole app, then separately for **chrome** (sidebar, header, footer) and **content** (main page). Prefs persist on `tbp.ui.chrome` and `tbp.ui.content` cookies. Do not put light tokens on `html` / `body` — wrappers use `.theme-light`. `/admin/theme` still has a sample Dark / Light preview (`.theme-preview-light` / `.theme-dark`).
 
 ## Colour
 
@@ -28,7 +28,7 @@ A **draft light scheme** lives on `/admin/theme` only (Dark / Light toggle). It 
 | `mode-demo` | `#C9B44A` | Desk mode Demo / testnet. Dusty yellow, not paper grey and not pending amber. |
 | `mode-live` | `#4AACA7` | Desk mode Live. Dusty teal, not danger red and not accent purple. |
 
-Draft light (Theme page preview only):
+Light (live chrome/content + Theme page preview):
 
 | Token | Hex | Use |
 | --- | --- | --- |
@@ -48,7 +48,7 @@ Draft light (Theme page preview only):
 | `warning` | `#9A6F0A` | Caution, pending |
 | `mode-*` | same as dark | Desk mode dots unchanged |
 
-Light callout and badge tints use a stronger mix than the dark `/10` `/15` washes so they separate from white `surface`. Solid `accent-strong`, `plan-header`, `success`, `danger`, and `warning` fills keep white labels. Portaled listboxes (AppSelect / AppMultiSelect), hints, and confirm overlays pick up `.theme-preview-light` so they do not stay on the live dark tokens.
+Light callout and badge tints use a stronger mix than the dark `/10` `/15` washes so they separate from white `surface`. Solid `accent-strong`, `plan-header`, `success`, `danger`, and `warning` fills keep white labels. Portaled listboxes (AppSelect / AppMultiSelect), hints, and confirm overlays follow the nearest chrome or content scheme.
 
 ## Type
 
@@ -64,7 +64,7 @@ Desk chrome (header, footer, strategy nav, strategy pages, `/account`, `/admin`)
 
 ## Controls
 
-Primary: `bg-accent-strong` / `text-ink`. In the Theme-page light preview, purple fills keep white labels. Desk **Create New Bot**, **Create New Bot from Template**, and **Clone existing bot** use that same primary. Secondary: surface + `border-line`. Ghost: ink-muted, no fill. Danger: `danger` text or fill for destructive only. Confirmations use the in-app modal (`ConfirmModal`), not the browser `confirm()` dialog. Destructive confirms (disable, delete, unfollow) use Cancel plus a danger action. Publish / unpublish use the primary action.
+Primary: `bg-accent-strong` / `text-ink`. On light chrome or content, purple fills keep white labels. Desk **Create New Bot**, **Create New Bot from Template**, and **Clone existing bot** use that same primary. Secondary: surface + `border-line`. Ghost: ink-muted, no fill. Danger: `danger` text or fill for destructive only. Confirmations use the in-app modal (`ConfirmModal`), not the browser `confirm()` dialog. Destructive confirms (disable, delete, unfollow) use Cancel plus a danger action. Publish / unpublish use the primary action.
 
 Geist is the next/font face on `--font-geist` (not a local family named `Geist`). Dropdowns use the shared `AppSelect` listbox (`components/app-select.tsx`): surface panel, raised hover, accent on the selected row, Geist. Search stays pinned at the top of the listbox while options scroll. Desk **Clone existing bot** is `variant="action"` (same purple fill as the other desk buttons). Do not use a native `<select>` option menu. Multi-pick fields use `AppMultiSelect` (pills + search). File fields use the shared dropzone (`components/file-drop.tsx`); image fields keep the 56px preview. Samples live on **Theme → Controls** and **Theme → Forms**.
 
