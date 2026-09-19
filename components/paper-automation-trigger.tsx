@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { updatePaperCarryExits } from "@/lib/paper/actions";
@@ -41,6 +42,7 @@ export function PaperAutomationTrigger({
   const [box, setBox] = useState<DOMRect | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const previewClass = useThemePreviewPortalClass();
   const labelId = useId();
   const entries = formatEntryTriggers(automation).filter(
     (line) => !line.startsWith("Order Type"),
@@ -95,7 +97,7 @@ export function PaperAutomationTrigger({
               id={labelId}
               role="dialog"
               aria-label="Trade triggers"
-              className="fixed z-50 w-72 rounded-card border border-line bg-surface-raised p-3 text-left shadow-none"
+              className={`fixed z-50 w-72 overflow-hidden whitespace-normal rounded-card border border-line bg-surface-raised p-3 text-left text-ink shadow-none ${previewClass}`.trim()}
               style={{
                 top: box.bottom + 8,
                 left: Math.max(12, Math.min(box.left, window.innerWidth - 300)),

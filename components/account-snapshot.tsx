@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import type { AccountSnapshotView } from "@/lib/exchanges/account-view";
 import {
   formatMarginModeWithLeverage,
@@ -18,6 +19,7 @@ export function AccountSnapshotHover({
   children: ReactNode;
 }) {
   const [box, setBox] = useState<DOMRect | null>(null);
+  const previewClass = useThemePreviewPortalClass();
   if (!snapshot) {
     return children;
   }
@@ -37,7 +39,7 @@ export function AccountSnapshotHover({
         ? createPortal(
             <span
               role="tooltip"
-              className="pointer-events-none fixed z-50 w-64 rounded-control border border-line bg-surface-raised px-3 py-2 text-left text-hint font-normal normal-case tracking-normal"
+              className={`pointer-events-none fixed z-50 w-64 whitespace-normal rounded-control border border-line bg-surface-raised px-3 py-2 text-left text-hint font-normal normal-case tracking-normal text-ink ${previewClass}`.trim()}
               style={{
                 top: box.bottom + 8,
                 left: Math.max(12, Math.min(box.left, window.innerWidth - 280)),
