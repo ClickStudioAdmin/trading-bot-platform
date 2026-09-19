@@ -440,7 +440,7 @@ function SelectPanel({
       id={listId}
       role="listbox"
       style={{ top: box.top, left: box.left, width: box.width }}
-      className={`fixed z-50 max-h-56 overflow-auto rounded-card border border-line bg-surface p-1 text-ink ${previewClass}`.trim()}
+      className={`fixed z-50 flex max-h-56 flex-col overflow-hidden rounded-card border border-line bg-surface p-1 text-ink ${previewClass}`.trim()}
     >
       {searchable ? (
         <input
@@ -449,10 +449,10 @@ function SelectPanel({
           onChange={(event) => onQuery(event.target.value)}
           placeholder="Search"
           autoComplete="off"
-          className="mb-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+          className="mb-1 w-full shrink-0 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
         />
       ) : null}
-      {children}
+      <div className="min-h-0 flex-1 overflow-auto">{children}</div>
     </div>
   );
 }

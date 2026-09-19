@@ -59,7 +59,7 @@ export const THEME_COLOURS = [
     name: "accent",
     use: "Links, charts, active",
     dark: "#A78BFA",
-    light: "#7C5CDB",
+    light: "#4E32B8",
     swatch: "bg-accent",
   },
   {
