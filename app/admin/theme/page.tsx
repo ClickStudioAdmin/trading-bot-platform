@@ -3,48 +3,19 @@ import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { ButtonBusyIcon } from "@/components/pending-submit-button";
 import { ThemeBotFormDraft } from "@/components/theme-bot-form-draft";
+import { ThemeColourDraft } from "@/components/theme-colour-draft";
 import { ThemeFormDraft } from "@/components/theme-form-draft";
 import { ThemeIconsDraft } from "@/components/theme-icons-draft";
 import { ThemeSelectDraft } from "@/components/theme-select-draft";
+import {
+  ThemeSchemePreview,
+  ThemeSchemeToggle,
+} from "@/components/theme-scheme-preview";
 import { ThemeTableDraft } from "@/components/theme-table-draft";
 
 export const metadata: Metadata = {
   title: "Theme",
   description: "Visual reference for the TBP business portal theme.",
-};
-
-const colours = [
-  { name: "canvas", hex: "#0B0E14", use: "Page background" },
-  { name: "surface", hex: "#161B22", use: "Cards, sidebar, header" },
-  { name: "surface-raised", hex: "#1C222C", use: "Hover and active chrome" },
-  { name: "line", hex: "#2A313C", use: "Default borders" },
-  { name: "line-strong", hex: "#3A4352", use: "Focus / strong dividers" },
-  { name: "ink", hex: "#F4F6F8", use: "Primary text" },
-  { name: "ink-muted", hex: "#9AA3B2", use: "Labels" },
-  { name: "ink-faint", hex: "#6B7382", use: "Inactive / hints" },
-  { name: "accent", hex: "#A78BFA", use: "Links, charts, active" },
-  { name: "accent-strong", hex: "#8B6CF6", use: "Primary fill" },
-  { name: "plan-header", hex: "#764DED", use: "Plan compare headers" },
-  { name: "success", hex: "#34D399", use: "Positive" },
-  { name: "danger", hex: "#F07167", use: "Negative" },
-  { name: "warning", hex: "#F5B942", use: "Caution" },
-] as const;
-
-const swatchClass: Record<(typeof colours)[number]["name"], string> = {
-  canvas: "bg-canvas",
-  surface: "bg-surface",
-  "surface-raised": "bg-surface-raised",
-  line: "bg-line",
-  "line-strong": "bg-line-strong",
-  ink: "bg-ink",
-  "ink-muted": "bg-ink-muted",
-  "ink-faint": "bg-ink-faint",
-  accent: "bg-accent",
-  "accent-strong": "bg-accent-strong",
-  "plan-header": "bg-plan-header",
-  success: "bg-success",
-  danger: "bg-danger",
-  warning: "bg-warning",
 };
 
 export default async function ThemePage({
@@ -66,6 +37,7 @@ export default async function ThemePage({
             ? "icons"
             : "theme";
   return (
+    <ThemeSchemePreview>
     <div className="space-y-12">
       <div className="overflow-hidden rounded-card border border-line bg-surface">
         <div className="flex gap-8 px-5 py-2.5 text-xs whitespace-nowrap text-ink-muted">
@@ -86,7 +58,16 @@ export default async function ThemePage({
       </div>
 
       <div className="space-y-12">
-        <PageHeading overline="Reference" title="Portal theme" />
+        <PageHeading
+          overline="Reference"
+          title="Portal theme"
+          className="mb-2"
+          actions={<ThemeSchemeToggle />}
+        />
+        <p className="mb-6 text-sm text-ink-muted">
+          Dark / Light here is a preview only. The live site stays dark until
+          Click accepts the light tokens.
+        </p>
         <nav
           aria-label="Theme reference"
           className="flex border-b border-line"
@@ -165,23 +146,7 @@ export default async function ThemePage({
             Tailwind tokens from <code className="text-accent">app/globals.css</code>.
             Use these names. Do not invent hex in components.
           </p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {colours.map((colour) => (
-              <div
-                key={colour.name}
-                className="flex gap-3 rounded-card border border-line bg-surface p-3"
-              >
-                <div
-                  className={`h-14 w-14 shrink-0 rounded-control border border-line ${swatchClass[colour.name]}`}
-                />
-                <div className="min-w-0">
-                  <p className="font-medium">{colour.name}</p>
-                  <p className="font-mono text-xs text-ink-muted">{colour.hex}</p>
-                  <p className="mt-1 text-xs text-ink-faint">{colour.use}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ThemeColourDraft />
         </section>
 
         <section>
@@ -480,6 +445,7 @@ export default async function ThemePage({
         )}
       </div>
     </div>
+    </ThemeSchemePreview>
   );
 }
 

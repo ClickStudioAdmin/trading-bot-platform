@@ -33,6 +33,7 @@ Keep building on these; do not reopen them as a phase unless Click asks.
 - Sidenav: faint line after each desk type’s desks, not under the type title.
 - Manage Desks: field and column **Desk Type** (title case, not all caps).
 - Desks and Exchanges: column **Exchange / Environment** — user’s connection name plus venue / environment (`Bybit / Demo`).
+- `/admin/theme` has a Dark / Light preview toggle. Light tokens are draft only; live desks stay dark.
 
 **Isolation shipped here 19 Sep 2026** (pulled forward from item 4 so Click can test now)
 

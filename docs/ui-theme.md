@@ -4,6 +4,8 @@ Living reference: [/admin/theme](../app/admin/theme/page.tsx) on the deployed si
 
 Style: dark modern business portal. Tokens live in `app/globals.css` (`@theme`). Use those names in Tailwind (`bg-canvas`, `text-ink`, `border-line`, `bg-accent`). Do not introduce new brand hex values in components.
 
+A **draft light scheme** lives on `/admin/theme` only (Dark / Light toggle). It remaps the same token names under `.theme-preview-light`. Do not put light tokens on `html` / `body` or any live desk until Click accepts them.
+
 ## Colour
 
 | Token | Hex | Use |
@@ -25,6 +27,24 @@ Style: dark modern business portal. Tokens live in `app/globals.css` (`@theme`).
 | `mode-paper` | `#8B93A1` | Desk mode Paper (sidebar dot and filter) |
 | `mode-demo` | `#C9B44A` | Desk mode Demo / testnet. Dusty yellow, not paper grey and not pending amber. |
 | `mode-live` | `#4AACA7` | Desk mode Live. Dusty teal, not danger red and not accent purple. |
+
+Draft light (Theme page preview only):
+
+| Token | Hex | Use |
+| --- | --- | --- |
+| `canvas` | `#F4F6F8` | Page background |
+| `surface` | `#FFFFFF` | Cards, sidebar, header |
+| `surface-raised` | `#EBEEF2` | Hover, active nav, raised controls |
+| `line` | `#D4DAE3` | Default borders |
+| `line-strong` | `#B7C0CC` | Focus / stronger dividers |
+| `ink` | `#12161C` | Primary text and values |
+| `ink-muted` | `#5A6472` | Labels, secondary copy |
+| `ink-faint` | `#8B93A1` | Inactive nav, hints |
+| `accent` | `#7C5CDB` | Active states, links (deeper than dark so it reads on white) |
+| `accent-strong` | `#6D4FE0` | Primary button fill |
+| `plan-header` | `#5B3CC9` | Plan compare card headers |
+| `success` / `danger` / `warning` | same as dark | Status colours unchanged this pass |
+| `mode-*` | same as dark | Desk mode dots unchanged |
 
 ## Type
 

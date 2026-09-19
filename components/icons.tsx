@@ -41,8 +41,10 @@ import {
   Plus,
   Radio,
   RefreshCw,
+  Moon,
   Share2,
   SquareArrowOutUpRight,
+  Sun,
   Star,
   Trash2,
   Triangle,
@@ -458,6 +460,20 @@ export const LUCIDE_ICONS = [
     Icon: Inbox,
   },
   {
+    id: "moon",
+    name: "Dark",
+    lucide: "Moon",
+    usedIn: "Theme page scheme toggle",
+    Icon: Moon,
+  },
+  {
+    id: "sun",
+    name: "Light",
+    lucide: "Sun",
+    usedIn: "Theme page scheme toggle",
+    Icon: Sun,
+  },
+  {
     id: "user",
     name: "Account",
     lucide: "User",
@@ -692,6 +708,14 @@ export function IconTemplates(props: LucideProps) {
 
 export function IconInbox(props: LucideProps) {
   return <Inbox aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconMoon(props: LucideProps) {
+  return <Moon aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconSun(props: LucideProps) {
+  return <Sun aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconUser(props: LucideProps) {
