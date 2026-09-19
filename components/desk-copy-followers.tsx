@@ -88,7 +88,7 @@ export function DeskCopyFollowersList({
                   <span className="block text-xs text-ink-muted">
                     {situation.sourceLabel}
                   </span>
-                  <span className="block text-xs text-ink-faint">
+                  <span className="block text-hint text-ink-faint">
                     {situation.detail}
                   </span>
                 </span>

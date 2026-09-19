@@ -298,7 +298,7 @@ export function BotStatusField({
         />
       </div>
       {pending ? (
-        <p className="mt-1 text-xs text-ink-muted">Save bot to apply Status</p>
+        <p className="mt-1 text-hint text-ink-muted">Save bot to apply Status</p>
       ) : null}
     </div>
   );

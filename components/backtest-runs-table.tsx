@@ -514,7 +514,7 @@ function BacktestRunRow({
             </span>
           ) : null}
           {row.userId == null ? (
-            <span className="text-xs text-ink-faint">published</span>
+            <span className="text-hint text-ink-faint">published</span>
           ) : null}
         </span>
       </td>

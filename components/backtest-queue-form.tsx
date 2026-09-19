@@ -379,7 +379,7 @@ export function BacktestQueueForm({
               );
             })}
           </div>
-          <p className="mt-2 text-xs text-ink-faint">
+          <p className="mt-2 text-hint text-ink-faint">
             Any range the venue has. Long tapes queue to the engine worker.
           </p>
         </div>
@@ -403,7 +403,7 @@ export function BacktestQueueForm({
               allowDecimal
               className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink"
             />
-            <span className="mt-1 block text-xs text-ink-faint">
+            <span className="mt-1 block text-hint text-ink-faint">
               Cash gates on margin (position value ÷ this). Empty is 1×. If
               marked equity hits $0, the account liquidates and the replay
               stops.
@@ -440,7 +440,7 @@ export function BacktestQueueForm({
           <legend className="text-xs text-ink-muted">
             Comparables ({comparables.length}/{BACKTEST_COMPARABLE_CAP})
           </legend>
-          <p className="mt-1 text-xs text-ink-faint">
+          <p className="mt-1 text-hint text-ink-faint">
             Same bot and window on other pairs. Ranked next to the primary.
           </p>
           <AppMultiSelect

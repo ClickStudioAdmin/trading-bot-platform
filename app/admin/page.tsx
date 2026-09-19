@@ -164,7 +164,7 @@ export default async function AdminOverviewPage() {
                 "—"
               )}
             </p>
-            <p className="mt-1 text-xs text-ink-faint">
+            <p className="mt-1 text-hint text-ink-faint">
               {overview.lastTick
                 ? `${overview.lastTick.event} · ${overview.lastTick.message}`
                 : "No tick events yet"}
@@ -177,7 +177,7 @@ export default async function AdminOverviewPage() {
             <p className="mt-1 tabular-nums">
               <LocalTime at={overview.scan.lastAtMs} mode="datetime-short" />
             </p>
-            <p className="mt-1 text-xs text-ink-faint">
+            <p className="mt-1 text-hint text-ink-faint">
               {overview.scan.count} pair
               {overview.scan.count === 1 ? "" : "s"} in opportunities
             </p>
@@ -203,7 +203,7 @@ export default async function AdminOverviewPage() {
           <ul className="mt-4 divide-y divide-line">
             {overview.issues.map((issue) => (
               <li key={issue.id} className="py-3 first:pt-0 last:pb-0">
-                <p className="text-xs tabular-nums text-ink-faint">
+                <p className="text-hint tabular-nums text-ink-faint">
                   <LocalTime at={issue.createdAt} />
                   <span
                     className={`ml-2 ${
@@ -298,7 +298,7 @@ function StatCard({
         {label}
       </p>
       <p className="mt-3 text-2xl font-semibold tracking-tight">{value}</p>
-      <p className="mt-2 text-xs text-ink-faint">{hint}</p>
+      <p className="mt-2 text-hint text-ink-faint">{hint}</p>
     </>
   );
   if (href) {
@@ -348,7 +348,7 @@ function Shortcut({
       className="rounded-card border border-line bg-surface p-4 hover:border-line-strong"
     >
       <p className="text-sm">{label}</p>
-      <p className="mt-1 text-xs text-ink-faint">{hint}</p>
+      <p className="mt-1 text-hint text-ink-faint">{hint}</p>
     </Link>
   );
 }

@@ -170,7 +170,7 @@ function ConnectionList({
                   <span className="text-ink-muted"> ({caption.venue})</span>
                 ) : null}
               </p>
-              <p className="mt-1 text-xs text-ink-faint">
+              <p className="mt-1 text-hint text-ink-faint">
                 {formatEnvironmentLabel(row.venue, row.environment)}
                 {row.verifiedAtMs ? " · Verified" : null}
                 {row.status === "invalid" ? " · Invalid" : null}
@@ -211,7 +211,7 @@ function StatCard({
       <p className="mt-3 truncate text-2xl font-semibold tracking-tight">
         {value}
       </p>
-      <p className="mt-2 text-xs text-ink-faint">{hint}</p>
+      <p className="mt-2 text-hint text-ink-faint">{hint}</p>
     </>
   );
   if (href) {

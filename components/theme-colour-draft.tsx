@@ -20,7 +20,7 @@ export function ThemeColourDraft() {
             <p className="font-mono text-xs text-ink-muted">
               {scheme === "light" ? colour.light : colour.dark}
             </p>
-            <p className="mt-1 text-xs text-ink-faint">{colour.use}</p>
+            <p className="mt-1 text-hint text-ink-faint">{colour.use}</p>
           </div>
         </div>
       ))}

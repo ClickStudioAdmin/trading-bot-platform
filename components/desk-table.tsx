@@ -208,7 +208,7 @@ export function DeskTable({
                     {exchange ? (
                       <>
                         {exchange.label ? <p>{exchange.label}</p> : null}
-                        <p className={exchange.label ? "mt-1 text-xs text-ink-faint" : undefined}>
+                        <p className={exchange.label ? "mt-1 text-hint text-ink-faint" : undefined}>
                           {exchange.venueEnv}
                         </p>
                       </>

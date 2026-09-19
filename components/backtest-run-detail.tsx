@@ -549,7 +549,7 @@ function StatCard({
       >
         {value}
       </p>
-      {note ? <p className="mt-2 text-xs text-ink-faint">{note}</p> : null}
+      {note ? <p className="mt-2 text-hint text-ink-faint">{note}</p> : null}
     </div>
   );
 }

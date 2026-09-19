@@ -40,7 +40,7 @@ export function SiteFooter({
     return (
       <footer className="mt-auto border-t border-line bg-surface">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-          <p className="text-xs text-ink-faint">
+          <p className="text-hint text-ink-faint">
             {platformName} · Development
           </p>
           <div className="flex shrink-0 items-center gap-2">
@@ -140,7 +140,7 @@ export function SiteFooter({
       </div>
       <div className="border-t border-line">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-          <p className="text-xs text-ink-faint">
+          <p className="text-hint text-ink-faint">
             {platformName} · Development
           </p>
           <FooterAdminTools admin={admin} />

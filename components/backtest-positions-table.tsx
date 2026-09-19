@@ -665,7 +665,7 @@ function OpenBacktestRows({
                 </span>
               ) : null}
             </span>
-            <span className="mt-0.5 block truncate text-xs text-ink-faint">
+            <span className="mt-0.5 block truncate text-hint text-ink-faint">
               {run.symbol}
             </span>
           </span>
@@ -788,7 +788,7 @@ function ClosedBacktestRows({
               ) : null}
             </span>
             <span
-              className="mt-0.5 block text-xs text-ink-faint"
+              className="mt-0.5 block text-hint text-ink-faint"
               title={cycle.qty ? formatQtyFull(cycle.qty) : undefined}
             >
               {run.symbol}

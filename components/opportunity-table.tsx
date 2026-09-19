@@ -96,7 +96,7 @@ export function OpportunityRows({
               <TokenIcon symbol={row.baseCoin} />
               {row.baseCoin}
             </span>
-            <span className="mt-0.5 block pl-7 text-xs text-ink-faint">
+            <span className="mt-0.5 block pl-7 text-hint text-ink-faint">
               {row.futureSymbol}
             </span>
           </td>
@@ -257,7 +257,7 @@ function PaperOpenAction({
     );
   }
   if (!paper.canOpen) {
-    return <span className="text-xs text-ink-faint">Live</span>;
+    return <span className="text-hint text-ink-faint">Live</span>;
   }
 
   return (

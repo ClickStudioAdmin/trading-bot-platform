@@ -52,7 +52,7 @@ Light callout and badge tints use a stronger mix than the dark `/10` `/15` washe
 
 ## Type
 
-Geist. Page title 30–36px semibold. Section 18–20px semibold. Body 14px. Labels 12px muted uppercase tracking. KPI values 24–32px semibold tabular.
+Geist. Page title 30–36px semibold. Section 18–20px semibold. Body 14px. Labels 12px muted uppercase tracking. Hints 13px faint (`text-hint`), sentence case — live helpers use this step. KPI values 24–32px semibold tabular.
 
 ## Surfaces
 

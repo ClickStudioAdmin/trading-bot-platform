@@ -166,7 +166,7 @@ export default async function ThemePage({
             <p className="text-sm text-ink-muted">
               Secondary 14 — supporting description.
             </p>
-            <p className="text-xs text-ink-faint">Hint 12 — inactive or helper.</p>
+            <p className="text-hint text-ink-faint">Hint 13 — inactive or helper.</p>
             <p className="text-3xl font-semibold tracking-tight">$284,392.18</p>
             <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
               KPI value
@@ -438,7 +438,7 @@ export default async function ThemePage({
           </p>
         </section>
 
-        <p className="text-xs text-ink-faint">
+        <p className="text-hint text-ink-faint">
           Sample figures are for theme review only. Source: docs/ui-theme.md
         </p>
           </>

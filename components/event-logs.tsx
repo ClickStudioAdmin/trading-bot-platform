@@ -271,7 +271,7 @@ export function EventLogs({
                   <td className="px-4 py-3 align-top">
                     <div>{row.event}</div>
                     {row.strategy ? (
-                      <div className="text-xs text-ink-faint">{row.strategy}</div>
+                      <div className="text-hint text-ink-faint">{row.strategy}</div>
                     ) : null}
                   </td>
                   {showUser ? (
@@ -289,7 +289,7 @@ export function EventLogs({
                   <td className="px-4 py-3 align-top">
                     <div>{row.message}</div>
                     {Object.keys(row.data).length > 0 ? (
-                      <pre className="mt-1 whitespace-pre-wrap break-all text-xs text-ink-faint">
+                      <pre className="mt-1 whitespace-pre-wrap break-all text-hint text-ink-faint">
                         {JSON.stringify(row.data, null, 2)}
                       </pre>
                     ) : null}
@@ -300,7 +300,7 @@ export function EventLogs({
           </tbody>
         </table>
       </TableCard>
-      <p className="mt-3 text-xs text-ink-faint">Showing up to 100 events.</p>
+      <p className="mt-3 text-hint text-ink-faint">Showing up to 100 events.</p>
     </>
   );
 }

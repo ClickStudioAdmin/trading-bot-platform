@@ -166,7 +166,7 @@ function DraftStat({
       <p className={`mt-1 text-2xl font-semibold tabular-nums ${valueClass}`}>
         {value}
       </p>
-      {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-hint text-ink-muted">{hint}</p> : null}
     </div>
   );
 }
@@ -2466,7 +2466,7 @@ function ThemeBotFormReference() {
 
       <div className="space-y-2">
         <p className={labelClass}>Perps statuses</p>
-        <p className="text-xs text-ink-faint">
+        <p className="text-hint text-ink-faint">
           Own list. Do not mix with DCA.
         </p>
         <div className="flex flex-wrap gap-x-4 gap-y-2">
@@ -2479,7 +2479,7 @@ function ThemeBotFormReference() {
 
       <div className="space-y-2">
         <p className={labelClass}>C&C statuses</p>
-        <p className="text-xs text-ink-faint">
+        <p className="text-hint text-ink-faint">
           Same three as Perps. Reduce only is not DCA Stop adding.
         </p>
         <div className="flex flex-wrap gap-x-4 gap-y-2">
@@ -2492,7 +2492,7 @@ function ThemeBotFormReference() {
 
       <div className="space-y-2">
         <p className={labelClass}>DCA statuses</p>
-        <p className="text-xs text-ink-faint">
+        <p className="text-hint text-ink-faint">
           Own list. Stop adding is not Reduce only. Save and Arm / Arm /
           Disarm / Close bot become Status + Save.
         </p>
@@ -2506,7 +2506,7 @@ function ThemeBotFormReference() {
 
       <div className="space-y-2">
         <p className={labelClass}>Current DCA buttons (replaced by the dropdown)</p>
-        <p className="text-xs text-ink-faint">
+        <p className="text-hint text-ink-faint">
           Replaced. Pick the status, then Save. Save and Arm is Active +
           Save. Close bot is Disabled + Save.
         </p>
@@ -2576,7 +2576,7 @@ function ThemeBotFormReference() {
 
       <div className="space-y-3">
         <p className={labelClass}>DCA summary / ladder</p>
-        <p className="text-xs text-ink-faint">
+        <p className="text-hint text-ink-faint">
           Same block as the sample DCA card. Show / Hide when the bot is
           running. Long / Short tabs only when Direction is Both.
         </p>

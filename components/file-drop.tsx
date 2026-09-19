@@ -134,7 +134,7 @@ export function FileDrop({
         ) : (
           <p className="text-sm text-ink">{fileName ?? "Drop a file here"}</p>
         )}
-        <p className="mt-1 text-xs text-ink-muted">{hint}</p>
+        <p className="mt-1 text-hint text-ink-muted">{hint}</p>
         <label className={CHOOSE_BTN}>
           Choose file
           <input

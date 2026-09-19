@@ -230,7 +230,7 @@ export function ThemeFormDraft() {
             />
             <span>
               Card
-              <span className="mt-1 block text-xs text-ink-faint">
+              <span className="mt-1 block text-hint text-ink-faint">
                 Automatic payments.
               </span>
             </span>
@@ -244,7 +244,7 @@ export function ThemeFormDraft() {
             />
             <span>
               Wallet
-              <span className="mt-1 block text-xs text-ink-faint">
+              <span className="mt-1 block text-hint text-ink-faint">
                 Manual top-up. Deductions from Account Balance.
               </span>
             </span>

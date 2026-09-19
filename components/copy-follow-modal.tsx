@@ -152,7 +152,7 @@ function CopyFollowModal({
           <DeskFormFlash />
           <div className="grid items-start gap-6 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
             <div className="space-y-4">
-              <p className="text-xs text-ink-faint">{stamp}</p>
+              <p className="text-hint text-ink-faint">{stamp}</p>
               <label className="block text-sm text-ink">
                 Desk name
                 <input

@@ -102,7 +102,7 @@ export function DeskSwitcher({
                   <span className="block truncate text-sm text-ink">
                     {desk.name}
                   </span>
-                  <span className="mt-0.5 block truncate text-xs text-ink-faint">
+                  <span className="mt-0.5 block truncate text-hint text-ink-faint">
                     {meta}
                   </span>
                 </Link>

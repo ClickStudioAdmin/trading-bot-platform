@@ -254,7 +254,7 @@ export function CopyCatalogueBoard({
                     >
                       {pnlLabel(card)}
                     </p>
-                    <p className="mt-1 text-xs text-ink-faint">P&L [30d]</p>
+                    <p className="mt-1 text-hint text-ink-faint">P&L [30d]</p>
                   </div>
                   <form action={toggleDeskCopyFavoriteAction}>
                     <input type="hidden" name="accountId" value={card.accountId} />
@@ -295,7 +295,7 @@ export function CopyCatalogueBoard({
                       Public
                     </span>
                   )}
-                  <span className="text-xs text-ink-faint">
+                  <span className="text-hint text-ink-faint">
                     {formatDeskType(card.deskType)} ·{" "}
                     {getVenue(card.venue)?.label ?? card.venue}
                   </span>

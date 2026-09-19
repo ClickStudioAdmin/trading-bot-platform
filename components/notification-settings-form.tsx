@@ -167,9 +167,9 @@ function ChannelSettingRow({
     <div className={`${CHANNEL_GRID} py-3`}>
       <div className="pr-4">
         <p className="text-ink">{row.label}</p>
-        <p className="mt-1 text-xs text-ink-faint">{row.hint}</p>
+        <p className="mt-1 text-hint text-ink-faint">{row.hint}</p>
         {row.emailId && !emailDefaultOn(row.emailId) ? (
-          <p className="mt-1 text-xs text-ink-faint">Email defaults off.</p>
+          <p className="mt-1 text-hint text-ink-faint">Email defaults off.</p>
         ) : null}
       </div>
       <div className="flex justify-center">
@@ -229,7 +229,7 @@ function SettingRow({
     <tr>
       <td className="py-3 pr-4">
         <p className="text-ink">{NOTIFICATION_LABELS[id]}</p>
-        <p className="mt-1 text-xs text-ink-faint">{NOTIFICATION_HINTS[id]}</p>
+        <p className="mt-1 text-hint text-ink-faint">{NOTIFICATION_HINTS[id]}</p>
       </td>
       <td className="py-3 text-center">
         <SettingsCheck

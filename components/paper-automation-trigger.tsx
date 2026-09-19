@@ -25,7 +25,7 @@ export function PaperAutomationTrigger({
   closeSource = null,
   closeReason = null,
   next = "/strategies/cash-and-carry",
-  className = "text-xs text-ink-faint hover:text-ink",
+  className = "text-hint text-ink-faint hover:text-ink",
 }: {
   carryId: number;
   automation: PaperCarryAutomation;

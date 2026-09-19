@@ -19,6 +19,8 @@
   --color-mode-demo: #c9b44a;
   --color-mode-live: #4aaca7;
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --text-hint: 0.8125rem;
+  --text-hint--line-height: 1.25rem;
   --radius-card: 1rem;
   --radius-control: 0.5rem;
 }

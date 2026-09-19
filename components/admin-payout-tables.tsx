@@ -292,7 +292,7 @@ export function AdminPayoutFilesTable({
                           </TablePendingLabelButton>
                         </form>
                       ) : (
-                        <span className="text-xs text-ink-faint">
+                        <span className="text-hint text-ink-faint">
                           {file.externalId ?? "Paid"}
                         </span>
                       )}
@@ -439,7 +439,7 @@ export function AdminPayoutQueueTable({
                       status={payout.status}
                     />
                     {payout.payoutFileId ? (
-                      <span className="mt-1 block text-xs text-ink-faint">
+                      <span className="mt-1 block text-hint text-ink-faint">
                         File {payout.payoutFileId.slice(0, 8)}
                       </span>
                     ) : null}

@@ -440,7 +440,7 @@ function SummaryStat({
       >
         {value}
       </p>
-      {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-hint text-ink-muted">{hint}</p> : null}
     </div>
   );
 }

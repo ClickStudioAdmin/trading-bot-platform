@@ -33,7 +33,7 @@ export function CopyPaperEquityHover({
         ? createPortal(
             <span
               role="tooltip"
-              className="pointer-events-none fixed z-50 w-64 rounded-control border border-line bg-surface-raised px-3 py-2 text-left text-xs font-normal normal-case tracking-normal"
+              className="pointer-events-none fixed z-50 w-64 rounded-control border border-line bg-surface-raised px-3 py-2 text-left text-hint font-normal normal-case tracking-normal"
               style={{
                 top: box.bottom + 8,
                 left: Math.max(12, Math.min(box.left, window.innerWidth - 280)),

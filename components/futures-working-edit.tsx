@@ -130,7 +130,7 @@ function FuturesWorkingEditDialog({
         <p className="mt-2 text-sm text-ink-muted">
           {workingActionLabel(action, reduceOnly)} {symbol}
           {filledQty > 0 ? (
-            <span className="mt-1 block text-xs text-ink-faint">
+            <span className="mt-1 block text-hint text-ink-faint">
               {filledQty} filled stays. Qty is the rest.
             </span>
           ) : null}

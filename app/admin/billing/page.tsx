@@ -286,7 +286,7 @@ export default async function AdminBillingPage({
                 </WalletChainCard>
               ))
             )}
-            <p className="text-xs text-ink-faint">
+            <p className="text-hint text-ink-faint">
               Send {env === "production" ? "ETH" : "testnet ETH"} to this
               address on each listed chain so drips and sweeps can run. Low ETH
               level is on Settings.
@@ -339,7 +339,7 @@ export default async function AdminBillingPage({
                         : null,
                   }))}
                 />
-                <p className="mt-2 text-xs text-ink-faint">
+                <p className="mt-2 text-hint text-ink-faint">
                   {row.creditedUnsweptCount === 0
                     ? "No credited deposits waiting on a sweep hash."
                     : `${row.creditedUnsweptCount} credited deposit${
@@ -460,7 +460,7 @@ function WalletChainCard({
     <div className="rounded-card border border-line bg-surface-raised p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-sm font-medium text-ink">{title}</p>
-        {detail ? <p className="text-xs text-ink-faint">{detail}</p> : null}
+        {detail ? <p className="text-hint text-ink-faint">{detail}</p> : null}
       </div>
       {address ? (
         <div className="mt-2 space-y-2">

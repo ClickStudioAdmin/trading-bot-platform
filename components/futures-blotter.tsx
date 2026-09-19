@@ -724,7 +724,7 @@ function drawdownCard(input: {
             >
               {giveback}
             </p>
-            <p className="mt-1 text-xs text-ink-faint">Realized giveback</p>
+            <p className="mt-1 text-hint text-ink-faint">Realized giveback</p>
           </div>
           <div>
             <p
@@ -732,7 +732,7 @@ function drawdownCard(input: {
             >
               {worst}
             </p>
-            <p className="mt-1 text-xs text-ink-faint">Max realized loss</p>
+            <p className="mt-1 text-hint text-ink-faint">Max realized loss</p>
           </div>
         </div>
       ),
@@ -951,7 +951,7 @@ function OpenFuturesRows({
             <span className="flex items-center gap-2 font-medium">
               <span>{trade.baseCoin}</span>
             </span>
-            <span className="mt-0.5 block truncate text-xs text-ink-faint">
+            <span className="mt-0.5 block truncate text-hint text-ink-faint">
               {trade.symbol}
             </span>
           </span>
@@ -1135,7 +1135,7 @@ function ClosedFuturesRows({
               <span>{baseCoin}</span>
             </span>
             <span
-              className="mt-0.5 block text-xs text-ink-faint"
+              className="mt-0.5 block text-hint text-ink-faint"
               title={trade.qty ? formatQtyFull(trade.qty) : undefined}
             >
               {trade.symbol}
@@ -1352,7 +1352,7 @@ function StatCard({
           </p>
           <div className="mt-3">{content}</div>
           {note ? (
-            <p className="mt-2 text-xs text-ink-faint">{note}</p>
+            <p className="mt-2 text-hint text-ink-faint">{note}</p>
           ) : null}
         </div>
       ) : (
@@ -1391,7 +1391,7 @@ function StatBlock({
       >
         {value}
       </p>
-      {note ? <p className="mt-2 text-xs text-ink-faint">{note}</p> : null}
+      {note ? <p className="mt-2 text-hint text-ink-faint">{note}</p> : null}
     </div>
   );
 }

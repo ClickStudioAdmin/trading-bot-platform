@@ -208,7 +208,7 @@ function PlanCell({
                 Join for Free
               </Link>
             )}
-            <p className="mt-2 text-xs text-ink-faint">
+            <p className="mt-2 text-hint text-ink-faint">
               {checkout
                 ? "Uses your saved payment method at Checkout."
                 : "Create a free account, then upgrade."}
@@ -222,7 +222,7 @@ function PlanCell({
             Join for Free
           </Link>
         ) : (
-          <p className="text-xs text-ink-faint">Free</p>
+          <p className="text-hint text-ink-faint">Free</p>
         )}
       </div>
     );

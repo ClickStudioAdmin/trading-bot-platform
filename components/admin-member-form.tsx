@@ -59,7 +59,7 @@ export function AdminMemberForm({
           minLength={mode === "create" ? 8 : undefined}
           className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
         />
-        <span className="mt-1 block text-xs text-ink-faint">
+        <span className="mt-1 block text-hint text-ink-faint">
           {mode === "create"
             ? "At least 8 characters. This is the desk password."
             : "Leave blank to keep the current password."}
@@ -109,7 +109,7 @@ export function AdminMemberForm({
             </option>
           ))}
         </AppSelect>
-        <span className="mt-1 block text-xs text-ink-faint">
+        <span className="mt-1 block text-hint text-ink-faint">
           Admin assign. Affiliate earning rates come from this plan. No
           invoice.
         </span>
@@ -124,7 +124,7 @@ export function AdminMemberForm({
             maxLength={32}
             className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
           />
-          <span className="mt-1 block text-xs text-ink-faint">
+          <span className="mt-1 block text-hint text-ink-faint">
             Optional first-touch attribution. Must match an enrolled member’s
             code.
           </span>

@@ -94,7 +94,7 @@ export function OpenPaperCarryRows({
           <TokenIcon symbol={trade.baseCoin} />
           {trade.baseCoin}
         </span>
-        <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
+        <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-hint text-ink-faint">
           {trade.futureSymbol}
         </span>
       </td>
@@ -184,7 +184,7 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
           <TokenIcon symbol={trade.baseCoin} />
           {trade.baseCoin}
         </span>
-        <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
+        <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-hint text-ink-faint">
           {trade.futureSymbol}
         </span>
       </td>
@@ -264,7 +264,7 @@ function ClosePaperButton({
   if (trade.markBasis === null) {
     return (
       <span
-        className="text-xs text-ink-faint"
+        className="text-hint text-ink-faint"
         title="That pair is not in the live scan"
       >
         No mark
@@ -402,7 +402,7 @@ export function PositionLogList({ logs }: { logs: EventLogRow[] }) {
           );
         })}
       </div>
-      <p className="mt-2 text-xs text-ink-faint">
+      <p className="mt-2 text-hint text-ink-faint">
         Trade events for this position. Same log as Activity.
       </p>
     </div>

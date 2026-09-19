@@ -1915,7 +1915,7 @@ function TemplateEditModal({
   return (
     <>
     <Modal title="Edit template" onClose={onClose}>
-      <p className="mt-1 text-xs text-ink-faint">{recipePreview(template.recipe)}</p>
+      <p className="mt-1 text-hint text-ink-faint">{recipePreview(template.recipe)}</p>
       <label className="mt-4 block text-xs text-ink-muted">
         Name
         <input
@@ -2198,7 +2198,7 @@ function MembershipColumn({
               <span className="min-w-0 text-sm text-ink">
                 <span className="block truncate">{row.name}</span>
                 {row.visibility === "platform" ? (
-                  <span className="text-xs text-ink-faint">Platform</span>
+                  <span className="text-hint text-ink-faint">Platform</span>
                 ) : null}
               </span>
               <button

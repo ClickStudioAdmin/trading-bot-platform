@@ -90,7 +90,7 @@ function IconTile({
       </span>
       <div className="min-w-0">
         <p className="truncate text-sm text-ink">{name}</p>
-        <p className="truncate text-xs text-ink-faint">
+        <p className="truncate text-hint text-ink-faint">
           {source}
           {lucide ? ` · ${lucide}` : ""}
         </p>
