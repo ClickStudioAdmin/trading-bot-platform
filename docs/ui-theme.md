@@ -41,7 +41,7 @@ Draft light (Theme page preview only):
 | `ink-muted` | `#5A6472` | Labels, secondary copy |
 | `ink-faint` | `#8B93A1` | Inactive nav, hints |
 | `accent` | `#7C5CDB` | Active states, links (deeper than dark so it reads on white) |
-| `accent-strong` | `#6D4FE0` | Primary button fill |
+| `accent-strong` | `#6D4FE0` | Primary button fill. Label is white (`#F4F6F8`), not light-scheme `ink`. |
 | `plan-header` | `#5B3CC9` | Plan compare card headers |
 | `success` / `danger` / `warning` | same as dark | Status colours unchanged this pass |
 | `mode-*` | same as dark | Desk mode dots unchanged |
@@ -60,7 +60,7 @@ Desk chrome (header, footer, strategy nav, strategy pages, `/account`, `/admin`)
 
 ## Controls
 
-Primary: `bg-accent-strong` / `text-ink`. Desk **Create New Bot**, **Create New Bot from Template**, and **Clone existing bot** use that same primary. Secondary: surface + `border-line`. Ghost: ink-muted, no fill. Danger: `danger` text or fill for destructive only. Confirmations use the in-app modal (`ConfirmModal`), not the browser `confirm()` dialog. Destructive confirms (disable, delete, unfollow) use Cancel plus a danger action. Publish / unpublish use the primary action.
+Primary: `bg-accent-strong` / `text-ink`. In the Theme-page light preview, purple fills keep white labels. Desk **Create New Bot**, **Create New Bot from Template**, and **Clone existing bot** use that same primary. Secondary: surface + `border-line`. Ghost: ink-muted, no fill. Danger: `danger` text or fill for destructive only. Confirmations use the in-app modal (`ConfirmModal`), not the browser `confirm()` dialog. Destructive confirms (disable, delete, unfollow) use Cancel plus a danger action. Publish / unpublish use the primary action.
 
 Geist is the next/font face on `--font-geist` (not a local family named `Geist`). Dropdowns use the shared `AppSelect` listbox (`components/app-select.tsx`): surface panel, raised hover, accent on the selected row, Geist. Desk **Clone existing bot** is `variant="action"` (same purple fill as the other desk buttons). Do not use a native `<select>` option menu. Multi-pick fields use `AppMultiSelect` (pills + search). File fields use the shared dropzone (`components/file-drop.tsx`); image fields keep the 56px preview. Samples live on **Theme → Controls** and **Theme → Forms**.
 

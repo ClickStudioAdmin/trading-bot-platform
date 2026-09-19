@@ -201,3 +201,7 @@ select.desk-action-select {
   background: var(--color-canvas);
   color: var(--color-ink);
 }
+
+.theme-preview-light :is(.bg-accent-strong, .bg-plan-header) {
+  color: #f4f6f8;
+}
