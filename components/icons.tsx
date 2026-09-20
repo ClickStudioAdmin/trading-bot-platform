@@ -163,7 +163,7 @@ export const LUCIDE_ICONS = [
     id: "chevron-right",
     name: "Chevron right",
     lucide: "ChevronRight",
-    usedIn: "Trade expand, table pager",
+    usedIn: "Trade expand, table pager, breadcrumbs",
     Icon: ChevronRight,
   },
   {

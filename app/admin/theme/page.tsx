@@ -12,6 +12,7 @@ import {
   ThemeSchemeToggle,
 } from "@/components/theme-scheme-preview";
 import { ThemeTableDraft } from "@/components/theme-table-draft";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 
 export const metadata: Metadata = {
   title: "Theme",
@@ -166,6 +167,54 @@ export default async function ThemePage({
             <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
               KPI value
             </p>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold tracking-tight">Breadcrumbs</h2>
+          <p className="mt-1 text-sm text-ink-muted">
+            Subtle trail for pages that are not in a nav menu. Sit above the
+            title. Parent is muted; current page is faint. Sample only — not
+            live yet.
+          </p>
+          <div className="mt-5 space-y-6 rounded-card border border-line bg-surface p-6">
+            <div>
+              <p className="mb-3 text-xs uppercase tracking-[0.12em] text-ink-faint">
+                Two levels
+              </p>
+              <Breadcrumbs
+                items={[
+                  { href: "#", label: "Backtesting Tool" },
+                  { label: "BTCUSDT 4h RSI" },
+                ]}
+              />
+              <PageHeading title="BTCUSDT 4h RSI" className="mt-2 mb-0" />
+            </div>
+            <div className="border-t border-line pt-6">
+              <p className="mb-3 text-xs uppercase tracking-[0.12em] text-ink-faint">
+                Three levels
+              </p>
+              <Breadcrumbs
+                items={[
+                  { href: "#", label: "Copy Trading" },
+                  { href: "#", label: "alpha" },
+                  { label: "SOL Perps" },
+                ]}
+              />
+              <PageHeading title="SOL Perps" className="mt-2 mb-0" />
+            </div>
+            <div className="border-t border-line pt-6">
+              <p className="mb-3 text-xs uppercase tracking-[0.12em] text-ink-faint">
+                Create / edit
+              </p>
+              <Breadcrumbs
+                items={[
+                  { href: "#", label: "Members" },
+                  { label: "New member" },
+                ]}
+              />
+              <PageHeading title="New member" className="mt-2 mb-0" />
+            </div>
           </div>
         </section>
 
