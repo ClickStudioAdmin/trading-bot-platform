@@ -74,7 +74,7 @@ export default async function AccountCheckoutPage({
           { label: "Upgrade" },
         ]}
       />
-      <PageHeading title="Upgrade" className="mt-2" />
+      <PageHeading title="Upgrade" />
       {error ? (
         <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}

@@ -8,15 +8,17 @@ export type BreadcrumbItem = {
 
 export function Breadcrumbs({
   items,
+  className = "-mt-4 mb-6",
 }: {
   items: readonly BreadcrumbItem[];
+  className?: string;
 }) {
   if (items.length === 0) {
     return null;
   }
 
   return (
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="Breadcrumb" className={className}>
       <ol className="flex flex-wrap items-center gap-x-1.5 text-hint text-ink-faint">
         {items.map((item, index) => {
           const last = index === items.length - 1;

@@ -57,7 +57,7 @@ export default async function AdminPayoutFilePage({
           { label: "Payout file" },
         ]}
       />
-      <PageHeading title="Payout file" className="mt-2" />
+      <PageHeading title="Payout file" />
       <p className="-mt-4 text-sm text-ink-muted">
         {file.network} · {file.payoutCount} payment
         {file.payoutCount === 1 ? "" : "s"} · {formatUsd(file.amountUsd)} ·{" "}

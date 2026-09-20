@@ -257,20 +257,21 @@ export function BacktestRunDetail({
   const pendingMessage = incompleteRunMessage(run);
   const status = backtestStatusTone(run.status);
   return (
-    <div className="space-y-6">
+    <>
       <BacktestRunRefresh
         active={run.status === "queued" || run.status === "running"}
         runId={run.id}
       />
+      <Breadcrumbs
+        items={[
+          { href: listHref, label: "Backtesting Tool" },
+          { label: backtestRunTitle(run) },
+        ]}
+      />
+      <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="min-w-0 flex-1">
-          <Breadcrumbs
-            items={[
-              { href: listHref, label: "Backtesting Tool" },
-              { label: backtestRunTitle(run) },
-            ]}
-          />
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <h1 className="text-3xl font-semibold tracking-tight">
               {backtestRunTitle(run)}
             </h1>
@@ -405,7 +406,8 @@ export function BacktestRunDetail({
           />
         </section>
       ) : null}
-    </div>
+      </div>
+    </>
   );
 }
 

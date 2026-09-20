@@ -139,9 +139,8 @@ export default async function ThemePage({
         <section>
           <h2 className="text-xl font-semibold tracking-tight">Breadcrumbs</h2>
           <p className="mt-1 text-sm text-ink-muted">
-            Subtle trail for pages that are not in a nav menu. Sit above the
-            title. Parent is muted; current page is faint. Sample only — not
-            live yet.
+            Subtle trail for pages that are not in a nav menu. Top-left of the
+            page, above the title. Parent is muted; current page is faint.
           </p>
           <div className="mt-5 space-y-6 rounded-card border border-line bg-surface p-6">
             <div>
@@ -149,37 +148,40 @@ export default async function ThemePage({
                 Two levels
               </p>
               <Breadcrumbs
+                className="mb-6"
                 items={[
                   { href: "#", label: "Backtesting Tool" },
                   { label: "BTCUSDT 4h RSI" },
                 ]}
               />
-              <PageHeading title="BTCUSDT 4h RSI" className="mt-2 mb-0" />
+              <PageHeading title="BTCUSDT 4h RSI" className="mb-0" />
             </div>
             <div className="border-t border-line pt-6">
               <p className="mb-3 text-xs uppercase tracking-[0.12em] text-ink-faint">
                 Three levels
               </p>
               <Breadcrumbs
+                className="mb-6"
                 items={[
                   { href: "#", label: "Copy Trading" },
                   { href: "#", label: "alpha" },
                   { label: "SOL Perps" },
                 ]}
               />
-              <PageHeading title="SOL Perps" className="mt-2 mb-0" />
+              <PageHeading title="SOL Perps" className="mb-0" />
             </div>
             <div className="border-t border-line pt-6">
               <p className="mb-3 text-xs uppercase tracking-[0.12em] text-ink-faint">
                 Create / edit
               </p>
               <Breadcrumbs
+                className="mb-6"
                 items={[
                   { href: "#", label: "Members" },
                   { label: "New member" },
                 ]}
               />
-              <PageHeading title="New member" className="mt-2 mb-0" />
+              <PageHeading title="New member" className="mb-0" />
             </div>
           </div>
         </section>

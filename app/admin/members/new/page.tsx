@@ -34,7 +34,7 @@ export default async function AdminNewMemberPage({
           { label: "New member" },
         ]}
       />
-      <PageHeading title="New member" className="mt-2" />
+      <PageHeading title="New member" />
       {error || loadError ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error ?? loadError}

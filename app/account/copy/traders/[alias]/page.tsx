@@ -48,7 +48,7 @@ export default async function CopyTraderPage({
           { label: trader.alias },
         ]}
       />
-      <div className="mb-6 mt-2 flex items-start gap-4">
+      <div className="mb-6 flex items-start gap-4">
         <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface-raised text-lg text-ink-muted">
           {trader.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element

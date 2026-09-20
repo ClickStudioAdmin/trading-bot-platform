@@ -38,7 +38,7 @@ export default async function AdminEditPlanPage({
           { label: loaded.plan.name },
         ]}
       />
-      <PageHeading title={loaded.plan.name} className="mt-2" />
+      <PageHeading title={loaded.plan.name} />
       <p className="-mt-4 text-sm text-ink-muted">
         {loaded.plan.memberCount} member
         {loaded.plan.memberCount === 1 ? "" : "s"} on this plan.

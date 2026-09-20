@@ -48,7 +48,7 @@ export default async function AdminEditMemberPage({
           { label: memberLabel },
         ]}
       />
-      <PageHeading title="Edit member" className="mt-2" />
+      <PageHeading title="Edit member" />
       <p className="-mt-4 text-sm text-ink-muted">{member.email}</p>
       {error || loadError ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

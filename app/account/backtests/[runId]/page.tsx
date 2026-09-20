@@ -120,31 +120,29 @@ export default async function AccountBacktestDetailPage({
   const comparableFamily = await loadComparableFamily(run, member.id, isAdmin);
 
   return (
-    <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-      <BacktestRunDetail
-        run={run}
-        listHref={backtestSavedListHref()}
-        applyDesks={applyDesks}
-        canRemove={canDeleteBacktestRun(run, member.id, isAdmin)}
-        canAttach={templateActions.canAttach}
-        canSaveAs={templateActions.canSaveAs}
-        canSaveAsPlatform={templateActions.canSaveAsPlatform}
-        sourceTemplateName={templateActions.sourceName}
-        attachTemplateId={templateActions.matchingTemplateId}
-        matchingTemplateName={templateActions.matchingTemplateName}
-        matchingDeskLabel={templateActions.matchingDeskLabel}
-        matchingDeskHref={
-          matchingDeskBot ? deskBotAutomationsHref(matchingDeskBot) : null
-        }
-        linkedTemplateName={templateActions.linkedName}
-        isAdmin={isAdmin}
-        memberId={member.id}
-        folders={folders}
-        returnTo={backtestSavedListHref()}
-        comparablePrimary={comparableFamily?.primary ?? null}
-        comparables={comparableFamily?.children ?? []}
-      />
-    </main>
+    <BacktestRunDetail
+      run={run}
+      listHref={backtestSavedListHref()}
+      applyDesks={applyDesks}
+      canRemove={canDeleteBacktestRun(run, member.id, isAdmin)}
+      canAttach={templateActions.canAttach}
+      canSaveAs={templateActions.canSaveAs}
+      canSaveAsPlatform={templateActions.canSaveAsPlatform}
+      sourceTemplateName={templateActions.sourceName}
+      attachTemplateId={templateActions.matchingTemplateId}
+      matchingTemplateName={templateActions.matchingTemplateName}
+      matchingDeskLabel={templateActions.matchingDeskLabel}
+      matchingDeskHref={
+        matchingDeskBot ? deskBotAutomationsHref(matchingDeskBot) : null
+      }
+      linkedTemplateName={templateActions.linkedName}
+      isAdmin={isAdmin}
+      memberId={member.id}
+      folders={folders}
+      returnTo={backtestSavedListHref()}
+      comparablePrimary={comparableFamily?.primary ?? null}
+      comparables={comparableFamily?.children ?? []}
+    />
   );
 }
 

@@ -25,7 +25,7 @@ export default async function AdminNewPlanPage({
           { label: "New plan" },
         ]}
       />
-      <PageHeading title="New plan" className="mt-2" />
+      <PageHeading title="New plan" />
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}

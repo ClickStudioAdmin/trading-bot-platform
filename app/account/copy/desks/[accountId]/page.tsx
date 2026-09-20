@@ -70,7 +70,7 @@ export default async function CopyDeskPerformancePage({
           { label: card.deskName },
         ]}
       />
-      <div className="mt-2">
+      <div>
         <CopyDeskDetailsHeader
           card={card}
           action={
