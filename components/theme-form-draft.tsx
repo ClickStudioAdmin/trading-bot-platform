@@ -144,7 +144,7 @@ export function ThemeFormDraft() {
           <label className="block text-sm text-ink">
             Field dropdown
             <AppSelect
-              className="mt-1"
+              className="mt-1 bg-canvas"
               value={venue}
               onChange={(event) => setVenue(event.target.value)}
               options={VENUES}
@@ -153,7 +153,7 @@ export function ThemeFormDraft() {
           <label className="block text-sm text-ink">
             Contract
             <AppSelect
-              className="mt-1"
+              className="mt-1 bg-canvas"
               searchable
               defaultValue="BTCUSDT"
               options={CONTRACTS}
@@ -162,7 +162,7 @@ export function ThemeFormDraft() {
           <label className="block text-sm text-ink sm:col-span-2">
             Multi-select
             <AppMultiSelect
-              className="mt-1"
+              className="mt-1 bg-canvas"
               defaultValue={["BTCUSDT", "ETHUSDT"]}
               options={CONTRACTS}
               placeholder="Contracts"

@@ -38,6 +38,16 @@ const FIELD_TRIGGER =
 const ACTION_TRIGGER =
   "inline-flex w-max max-w-full shrink-0 items-center justify-between gap-3 rounded-control bg-accent-strong px-4 py-2 text-left text-sm font-medium text-ink hover:bg-accent focus:outline-none disabled:opacity-40";
 
+function mergeTriggerClass(base: string, className: string) {
+  if (!/\bbg-/.test(className)) {
+    return `${base} ${className}`.trim();
+  }
+  return `${base
+    .split(/\s+/)
+    .filter((token) => !token.startsWith("bg-"))
+    .join(" ")} ${className}`.trim();
+}
+
 function selectRootClass(variant: "field" | "action", className: string) {
   const base =
     variant === "action" ? "inline-flex max-w-full" : "block min-w-0";
@@ -187,7 +197,7 @@ export function AppSelect({
         aria-expanded={open}
         aria-controls={listId}
         onClick={() => (open ? close() : setOpen(true))}
-        className={`${triggerClass} ${className}`.trim()}
+        className={mergeTriggerClass(triggerClass, className)}
       >
         <OptionLabel option={selected} />
         <Chevron open={open} />
@@ -319,7 +329,10 @@ export function AppMultiSelect({
         : null}
       <div
         ref={triggerRef}
-        className={`relative flex w-full min-w-0 flex-wrap items-center gap-2 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink hover:border-line-strong focus-within:border-line-strong ${className}`.trim()}
+        className={mergeTriggerClass(
+          "relative flex w-full min-w-0 flex-wrap items-center gap-2 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink hover:border-line-strong focus-within:border-line-strong",
+          className,
+        )}
       >
         <button
           type="button"
