@@ -436,7 +436,6 @@ export async function savePaperSettings(formData: FormData) {
   });
 
   revalidatePath("/account/exchanges");
-  revalidatePath("/account/book");
   revalidatePath("/strategies/cash-and-carry");
   redirect(deskPath(SETTINGS_PATH, account.id, { saved: "1" }));
 }
@@ -545,7 +544,6 @@ export async function detachStrategyConnection() {
     data: { exchangeConnectionId: null },
   });
   revalidatePath("/account/exchanges");
-  revalidatePath("/account/book");
   revalidatePath("/strategies/cash-and-carry");
   redirect(deskPath(SETTINGS_PATH, account.id, { saved: "1" }));
 }

@@ -131,7 +131,4 @@ export const FUTURES_SECONDARY_LINKS = [
   { href: "/strategies/futures/activity", label: "Activity" },
 ] as const;
 
-export const ACCOUNT_BOOK_LINKS = [
-  { href: "/account/book", label: "Overview", exact: true },
-] as const;
 

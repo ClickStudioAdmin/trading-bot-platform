@@ -173,9 +173,7 @@ export function isDeskScopedPath(pathname: string): boolean {
     pathname === "/strategies/futures" ||
     pathname.startsWith("/strategies/futures/") ||
     pathname === "/strategies/cash-and-carry" ||
-    pathname.startsWith("/strategies/cash-and-carry/") ||
-    pathname === "/account/book" ||
-    pathname.startsWith("/account/book/")
+    pathname.startsWith("/strategies/cash-and-carry/")
   );
 }
 

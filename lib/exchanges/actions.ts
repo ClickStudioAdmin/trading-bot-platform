@@ -248,7 +248,6 @@ export async function saveExchangeConnection(formData: FormData) {
   });
   revalidatePath("/account/exchanges");
   revalidatePath("/account");
-  revalidatePath("/account/book");
   revalidatePath("/account/sub-accounts");
   revalidatePath("/strategies/futures/settings");
   revalidatePath("/strategies/cash-and-carry/settings");
@@ -304,7 +303,6 @@ export async function renameExchangeConnection(formData: FormData) {
   });
   revalidatePath("/account/exchanges");
   revalidatePath("/account");
-  revalidatePath("/account/book");
   revalidatePath("/account/sub-accounts");
   revalidatePath("/strategies/cash-and-carry/settings");
   revalidatePath("/strategies/futures/settings");
@@ -440,7 +438,6 @@ export async function replaceExchangeConnection(formData: FormData) {
   });
   revalidatePath("/account/exchanges");
   revalidatePath("/account");
-  revalidatePath("/account/book");
   revalidatePath("/account/sub-accounts");
   revalidatePath("/strategies/cash-and-carry");
   revalidatePath("/strategies/cash-and-carry/settings");
@@ -490,7 +487,6 @@ export async function removeExchangeConnection(formData: FormData) {
   });
   revalidatePath("/account/exchanges");
   revalidatePath("/account");
-  revalidatePath("/account/book");
   revalidatePath("/account/sub-accounts");
   revalidatePath("/strategies/cash-and-carry");
   revalidatePath("/strategies/cash-and-carry/settings");

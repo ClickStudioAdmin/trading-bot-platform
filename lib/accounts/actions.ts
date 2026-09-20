@@ -53,7 +53,6 @@ function createDeskErrorPath(
 function refreshAccountChrome() {
   revalidatePath("/", "layout");
   revalidatePath("/account");
-  revalidatePath("/account/book");
   revalidatePath(SUB_ACCOUNTS_PATH);
   revalidatePath("/account/exchanges");
 }
