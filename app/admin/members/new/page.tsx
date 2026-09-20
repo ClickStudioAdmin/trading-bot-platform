@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { AdminMemberForm } from "@/components/admin-member-form";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { PageHeading } from "@/components/page-heading";
 import {
   assignablePlans,
@@ -28,7 +28,13 @@ export default async function AdminNewMemberPage({
 
   return (
     <div>
-      <PageHeading overline="Admin" title="New member" />
+      <Breadcrumbs
+        items={[
+          { href: "/admin/members", label: "Members" },
+          { label: "New member" },
+        ]}
+      />
+      <PageHeading title="New member" className="mt-2" />
       {error || loadError ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error ?? loadError}
@@ -47,11 +53,6 @@ export default async function AdminNewMemberPage({
         }}
         plans={plans}
       />
-      <p className="mt-6">
-        <Link href="/admin/members" className="text-sm text-accent hover:text-accent-strong">
-          Back to members
-        </Link>
-      </p>
     </div>
   );
 }

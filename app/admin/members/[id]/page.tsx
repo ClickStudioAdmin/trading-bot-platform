@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminMemberForm } from "@/components/admin-member-form";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { PageHeading } from "@/components/page-heading";
 import { parseMemberId } from "@/lib/members/form";
 import { getMemberById } from "@/lib/members/list";
@@ -38,9 +38,17 @@ export default async function AdminEditMemberPage({
     : [];
   const loadError = listed.ok ? null : listed.error;
 
+  const memberLabel = member.name?.trim() || member.email;
+
   return (
     <div>
-      <PageHeading overline="Admin" title="Edit member" />
+      <Breadcrumbs
+        items={[
+          { href: "/admin/members", label: "Members" },
+          { label: memberLabel },
+        ]}
+      />
+      <PageHeading title="Edit member" className="mt-2" />
       <p className="-mt-4 text-sm text-ink-muted">{member.email}</p>
       {error || loadError ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -61,11 +69,6 @@ export default async function AdminEditMemberPage({
         }}
         plans={plans}
       />
-      <p className="mt-6">
-        <Link href="/admin/members" className="text-sm text-accent hover:text-accent-strong">
-          Back to members
-        </Link>
-      </p>
     </div>
   );
 }

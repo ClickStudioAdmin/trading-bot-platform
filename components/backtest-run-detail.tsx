@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import {
   ApplyBacktestButton,
   AttachBacktestButton,
@@ -263,9 +263,12 @@ export function BacktestRunDetail({
       />
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
-            Backtest
-          </p>
+          <Breadcrumbs
+            items={[
+              { href: listHref, label: "Backtesting Tool" },
+              { label: backtestRunTitle(run) },
+            ]}
+          />
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             <h1 className="text-3xl font-semibold tracking-tight">
               {backtestRunTitle(run)}
@@ -292,9 +295,6 @@ export function BacktestRunDetail({
             {BACKTEST_FEE_PRESETS[run.feePreset].label}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-            <Link href={listHref} className="text-accent hover:underline">
-              All backtests
-            </Link>
             <RemoveBacktestButton
               runId={run.id}
               canRemove={canRemove}

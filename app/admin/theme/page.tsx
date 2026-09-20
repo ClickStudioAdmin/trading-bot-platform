@@ -137,40 +137,6 @@ export default async function ThemePage({
         ) : (
           <>
         <section>
-          <h2 className="text-xl font-semibold tracking-tight">Colour</h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            Tailwind tokens from <code className="text-accent">app/globals.css</code>.
-            Use these names. Do not invent hex in components.
-          </p>
-          <ThemeColourDraft />
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold tracking-tight">Type</h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            Geist. High-contrast values, muted labels.
-          </p>
-          <div className="mt-5 space-y-4 rounded-card border border-line bg-surface p-6">
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
-              Overline
-            </p>
-            <p className="text-3xl font-semibold tracking-tight">Page title 30</p>
-            <p className="text-xl font-semibold">Section 20</p>
-            <p className="text-sm text-ink">
-              Body 14 — primary copy on canvas or surface.
-            </p>
-            <p className="text-sm text-ink-muted">
-              Secondary 14 — supporting description.
-            </p>
-            <p className="text-hint text-ink-faint">Hint 13 — inactive or helper.</p>
-            <p className="text-3xl font-semibold tracking-tight">$284,392.18</p>
-            <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-              KPI value
-            </p>
-          </div>
-        </section>
-
-        <section>
           <h2 className="text-xl font-semibold tracking-tight">Breadcrumbs</h2>
           <p className="mt-1 text-sm text-ink-muted">
             Subtle trail for pages that are not in a nav menu. Sit above the
@@ -215,6 +181,40 @@ export default async function ThemePage({
               />
               <PageHeading title="New member" className="mt-2 mb-0" />
             </div>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold tracking-tight">Colour</h2>
+          <p className="mt-1 text-sm text-ink-muted">
+            Tailwind tokens from <code className="text-accent">app/globals.css</code>.
+            Use these names. Do not invent hex in components.
+          </p>
+          <ThemeColourDraft />
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold tracking-tight">Type</h2>
+          <p className="mt-1 text-sm text-ink-muted">
+            Geist. High-contrast values, muted labels.
+          </p>
+          <div className="mt-5 space-y-4 rounded-card border border-line bg-surface p-6">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
+              Overline
+            </p>
+            <p className="text-3xl font-semibold tracking-tight">Page title 30</p>
+            <p className="text-xl font-semibold">Section 20</p>
+            <p className="text-sm text-ink">
+              Body 14 — primary copy on canvas or surface.
+            </p>
+            <p className="text-sm text-ink-muted">
+              Secondary 14 — supporting description.
+            </p>
+            <p className="text-hint text-ink-faint">Hint 13 — inactive or helper.</p>
+            <p className="text-3xl font-semibold tracking-tight">$284,392.18</p>
+            <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+              KPI value
+            </p>
           </div>
         </section>
 

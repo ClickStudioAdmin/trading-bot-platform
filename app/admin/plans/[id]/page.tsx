@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminPlanForm } from "@/components/admin-plan-form";
 import { AdminPlanRowActions } from "@/components/admin-plan-row-actions";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { PageHeading } from "@/components/page-heading";
 import { getMembershipPlan } from "@/lib/membership/store";
 import { firstSearchValue } from "@/lib/paper/open";
@@ -32,7 +32,13 @@ export default async function AdminEditPlanPage({
 
   return (
     <div>
-      <PageHeading overline="Admin" title={loaded.plan.name} />
+      <Breadcrumbs
+        items={[
+          { href: "/admin/plans", label: "Plans" },
+          { label: loaded.plan.name },
+        ]}
+      />
+      <PageHeading title={loaded.plan.name} className="mt-2" />
       <p className="-mt-4 text-sm text-ink-muted">
         {loaded.plan.memberCount} member
         {loaded.plan.memberCount === 1 ? "" : "s"} on this plan.
@@ -58,11 +64,6 @@ export default async function AdminEditPlanPage({
         <AdminPlanRowActions plan={loaded.plan} />
       </div>
       <AdminPlanForm plan={loaded.plan} />
-      <p className="mt-6">
-        <Link href="/admin/plans" className="text-sm text-accent hover:text-accent-strong">
-          Back to plans
-        </Link>
-      </p>
     </div>
   );
 }

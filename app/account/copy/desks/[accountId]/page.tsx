@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import {
   ClosedFuturesTrades,
   FuturesPerformanceStats,
@@ -55,36 +55,46 @@ export default async function CopyDeskPerformancePage({
     listExchangeConnections(member.id),
   ]);
 
+  const traderHref = card.traderAlias
+    ? `/account/copy/traders/${encodeURIComponent(card.traderAlias)}`
+    : null;
+
   return (
     <>
-      <p className="mb-3 text-sm">
-        <Link href="/account/copy" className="text-accent">
-          Copy Trading
-        </Link>
-      </p>
-      <CopyDeskDetailsHeader
-        card={card}
-        action={
-          <CopyFollowButton
-            parentAccountId={card.accountId}
-            deskName={card.deskName}
-            deskType={card.deskType}
-            venue={card.venue}
-            venueEnvironment={card.venueEnvironment}
-            connections={connections}
-            following={card.following}
-            className="whitespace-nowrap rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
+      <Breadcrumbs
+        items={[
+          { href: "/account/copy", label: "Copy Trading" },
+          ...(traderHref && card.traderAlias
+            ? [{ href: traderHref, label: card.traderAlias }]
+            : []),
+          { label: card.deskName },
+        ]}
+      />
+      <div className="mt-2">
+        <CopyDeskDetailsHeader
+          card={card}
+          action={
+            <CopyFollowButton
+              parentAccountId={card.accountId}
+              deskName={card.deskName}
+              deskType={card.deskType}
+              venue={card.venue}
+              venueEnvironment={card.venueEnvironment}
+              connections={connections}
+              following={card.following}
+              className="whitespace-nowrap rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
+            />
+          }
+        >
+          <FuturesPerformanceStats
+            signedIn
+            closed={closed}
+            embedded
+            exchangeBook
           />
-        }
-      >
-        <FuturesPerformanceStats
-          signedIn
-          closed={closed}
-          embedded
-          exchangeBook
-        />
-      </CopyDeskDetailsHeader>
-      <ClosedFuturesTrades signedIn closed={closed} webhookNames={[]} />
+        </CopyDeskDetailsHeader>
+        <ClosedFuturesTrades signedIn closed={closed} webhookNames={[]} />
+      </div>
     </>
   );
 }

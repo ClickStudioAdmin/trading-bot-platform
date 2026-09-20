@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CheckoutPayment } from "@/components/checkout-payment";
 import { PageHeading } from "@/components/page-heading";
 import { getSessionMember } from "@/lib/auth/session";
@@ -68,14 +68,13 @@ export default async function AccountCheckoutPage({
 
   return (
     <div>
-      <PageHeading title="Upgrade" />
-      <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
-        Compare plans on{" "}
-        <Link href="/account/plans" className="text-accent">
-          Plans
-        </Link>
-        .
-      </p>
+      <Breadcrumbs
+        items={[
+          { href: "/account/plans", label: "Plans" },
+          { label: "Upgrade" },
+        ]}
+      />
+      <PageHeading title="Upgrade" className="mt-2" />
       {error ? (
         <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}

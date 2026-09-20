@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminPayoutFilePaymentsTable } from "@/components/admin-payout-tables";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { PageHeading } from "@/components/page-heading";
 import {
   adminPayoutsPath,
@@ -46,9 +46,18 @@ export default async function AdminPayoutFilePage({
   const created = parseDisplayTime(file.createdAt);
   const paid = parseDisplayTime(file.paidAt);
 
+  const parentHref = adminPayoutsPath(file.book);
+  const parentLabel = file.book === "main" ? "Billing & Wallets" : "Affiliates";
+
   return (
     <div>
-      <PageHeading overline="Admin" title="Payout file" />
+      <Breadcrumbs
+        items={[
+          { href: parentHref, label: parentLabel },
+          { label: "Payout file" },
+        ]}
+      />
+      <PageHeading title="Payout file" className="mt-2" />
       <p className="-mt-4 text-sm text-ink-muted">
         {file.network} · {file.payoutCount} payment
         {file.payoutCount === 1 ? "" : "s"} · {formatUsd(file.amountUsd)} ·{" "}
@@ -60,12 +69,6 @@ export default async function AdminPayoutFilePage({
         <p className="mt-2 font-mono text-xs text-ink-muted">{file.externalId}</p>
       ) : null}
       <div className="mt-4 flex flex-wrap gap-3">
-        <Link
-          href={adminPayoutsPath(file.book)}
-          className="text-sm text-accent hover:underline"
-        >
-          {file.book === "main" ? "Back to withdrawals" : "Back to payouts"}
-        </Link>
         <a
           href={`/admin/affiliates/files/${file.id}/export`}
           className="text-sm text-accent hover:underline"

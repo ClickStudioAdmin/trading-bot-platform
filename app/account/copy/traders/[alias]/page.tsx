@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CopyCatalogueBoard } from "@/components/copy-catalogue";
 import { PageHeading } from "@/components/page-heading";
 import { loadTraderCatalogueDesks } from "@/lib/copy/catalogue";
@@ -42,12 +42,13 @@ export default async function CopyTraderPage({
 
   return (
     <>
-      <p className="mb-3 text-sm">
-        <Link href="/account/copy" className="text-accent">
-          Copy Trading
-        </Link>
-      </p>
-      <div className="mb-6 flex items-start gap-4">
+      <Breadcrumbs
+        items={[
+          { href: "/account/copy", label: "Copy Trading" },
+          { label: trader.alias },
+        ]}
+      />
+      <div className="mb-6 mt-2 flex items-start gap-4">
         <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface-raised text-lg text-ink-muted">
           {trader.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -57,11 +58,11 @@ export default async function CopyTraderPage({
           )}
         </span>
         <div>
-          <PageHeading as="h1" title={trader.alias} />
+          <PageHeading as="h1" title={trader.alias} className="mb-0" />
           {trader.bio ? (
-            <p className="-mt-4 text-sm text-ink-muted">{trader.bio}</p>
+            <p className="mt-2 text-sm text-ink-muted">{trader.bio}</p>
           ) : (
-            <p className="-mt-4 text-sm text-ink-faint">No bio yet.</p>
+            <p className="mt-2 text-sm text-ink-faint">No bio yet.</p>
           )}
         </div>
       </div>

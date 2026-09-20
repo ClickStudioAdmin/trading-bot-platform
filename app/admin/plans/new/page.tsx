@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { AdminPlanForm } from "@/components/admin-plan-form";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { PageHeading } from "@/components/page-heading";
 import { firstSearchValue } from "@/lib/paper/open";
 
@@ -19,18 +19,19 @@ export default async function AdminNewPlanPage({
 
   return (
     <div>
-      <PageHeading overline="Admin" title="New plan" />
+      <Breadcrumbs
+        items={[
+          { href: "/admin/plans", label: "Plans" },
+          { label: "New plan" },
+        ]}
+      />
+      <PageHeading title="New plan" className="mt-2" />
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
       ) : null}
       <AdminPlanForm />
-      <p className="mt-6">
-        <Link href="/admin/plans" className="text-sm text-accent hover:text-accent-strong">
-          Back to plans
-        </Link>
-      </p>
     </div>
   );
 }

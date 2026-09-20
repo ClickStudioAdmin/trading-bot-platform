@@ -39,7 +39,7 @@ Keep building on these; do not reopen them as a phase unless Click asks.
 - Portaled overlays (selects, hints, table action popups) follow the nearest chrome or content scheme. Table rename / replace / remove / delete popups portal out of the nowrap actions cell (`AnchoredPanel`).
 - Form field wells (text, `AppSelect`, `AppMultiSelect`, table filters) use `canvas`. Action selects stay the purple primary.
 - Affiliate org chart uses theme tokens. Light nodes are white `surface`. **You** is the sum of downline monthly run-rate, not the member’s own plan price.
-- Breadcrumb sample on Theme (not live). For orphan pages only — list / create / edit that are not a nav item.
+- Breadcrumbs on orphan pages (backtest result, copy trader/desk, checkout, admin member/plan, payout file). Sample on Theme. Not on nav pages, new-desk, or leftover `/account/book`.
 
 **Isolation shipped here 19 Sep 2026** (pulled forward from item 4 so Click can test now)
 
