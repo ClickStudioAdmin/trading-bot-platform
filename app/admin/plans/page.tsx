@@ -44,10 +44,6 @@ export default async function AdminPlansPage({
   return (
     <div>
       <PageHeading overline="Admin" title="Plans" />
-      <p className="-mt-4 text-sm text-ink-muted">
-        Features, caps, and affiliate rates. A plan with members cannot be
-        deleted — archive it instead.
-      </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}

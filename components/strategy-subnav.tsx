@@ -15,7 +15,7 @@ import {
 export function StrategySubnav({
   title = "Cash and Carry",
   typeLabel,
-  description = "Buy the USDT spot, sell the dated future.",
+  description,
   navLabel = "Cash and Carry",
   primaryLinks = CASH_AND_CARRY_PRIMARY_LINKS,
   secondaryLinks = CASH_AND_CARRY_SECONDARY_LINKS,

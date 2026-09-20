@@ -20,10 +20,6 @@ export default async function AdminNewPlanPage({
   return (
     <div>
       <PageHeading overline="Admin" title="New plan" />
-      <p className="-mt-4 text-sm text-ink-muted">
-        Ticks and caps are read by the app. No hardcoded Pro after the seed
-        rows.
-      </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}

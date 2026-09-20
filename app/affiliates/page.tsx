@@ -97,11 +97,6 @@ export default async function AffiliatesPage({
       <div className="grid gap-10 lg:grid-cols-[1fr_24rem] lg:items-start">
         <div>
           <PageHeading title="Affiliates" />
-          <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
-            Promote the platform and earn a percent of referred membership
-            subscriptions. You do not need a platform account to join. Platform
-            users are already affiliates — sign in to open your dashboard.
-          </p>
           <ul className="mt-6 max-w-xl list-disc space-y-2 pl-5 text-sm text-ink-muted">
             <li>Share a unique referral code and custom landing URLs.</li>
             <li>Commission is on platform subscriptions only, not trading PnL.</li>

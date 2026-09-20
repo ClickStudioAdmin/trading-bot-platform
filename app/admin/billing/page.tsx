@@ -105,13 +105,6 @@ export default async function AdminBillingPage({
   return (
     <div>
       <PageHeading overline="Admin" title="Billing & Wallets" />
-      <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
-        EVM deposit rails. This environment is{" "}
-        <span className="text-ink">{env}</span>. Develop uses testnets.
-        Production uses mainnets. The admin wallet seed is never stored —
-        only the public receive address. Sweeps drip gas from a dedicated
-        encrypted wallet, not from the admin payout wallet.
-      </p>
       <nav
         aria-label="Billing and Wallets"
         className="mt-5 flex flex-wrap border-b border-line"

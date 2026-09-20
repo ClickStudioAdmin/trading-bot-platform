@@ -61,13 +61,8 @@ export default async function ThemePage({
         <PageHeading
           overline="Reference"
           title="Portal theme"
-          className="mb-2"
           actions={<ThemeSchemeToggle />}
         />
-        <p className="mb-6 text-sm text-ink-muted">
-          Dark / Light here previews this sample. Live chrome and content
-          schemes are set from UI preferences in the header.
-        </p>
         <nav
           aria-label="Theme reference"
           className="flex border-b border-line"

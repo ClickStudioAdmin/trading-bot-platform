@@ -317,11 +317,6 @@ export function AffiliateDashboard({
   return (
     <div>
       <PageHeading title="Affiliates" />
-      <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
-        Earn a percent of referred platform subscriptions. Pending commission
-        sits on hold, then becomes payable Affiliate earnings. Not trading
-        PnL.
-      </p>
       <nav aria-label="Affiliate portal" className="mt-5 flex border-b border-line">
         <TabLink href={affiliatePortalPath("overview")} selected={tab === "overview"}>
           Overview

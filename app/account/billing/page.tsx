@@ -213,16 +213,6 @@ export default async function AccountBillingPage({
   return (
     <div>
       <PageHeading title="Billing & Account" />
-      <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
-        One collection method per login. Card uses the on-site Stripe form.
-        Crypto is a payment method: listed stables credit your account 1:1 as
-        USD. You can optionally deduct that credit first. Compare plans
-        on{" "}
-        <Link href="/account/plans" className="text-accent">
-          Plans
-        </Link>
-        .
-      </p>
       <nav
         aria-label="Billing & Account"
         className="mt-5 flex flex-wrap border-b border-line"

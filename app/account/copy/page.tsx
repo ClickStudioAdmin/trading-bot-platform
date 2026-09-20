@@ -52,10 +52,6 @@ export default async function AccountCopyCataloguePage({
   return (
     <>
       <PageHeading as="h1" title="Copy Trading" />
-      <p className="-mt-4 mb-6 text-sm text-ink-muted">
-        Public listings plus private invites sent to you. Star a desk to keep
-        it on Favorites. Subscribed is desks you are currently following.
-      </p>
       {error ? (
         <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}

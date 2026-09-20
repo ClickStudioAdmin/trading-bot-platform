@@ -25,11 +25,6 @@ export default async function AdminOverviewPage() {
     <div className="space-y-8">
       <div>
         <PageHeading overline="Admin" title="Overview" />
-        <p className="-mt-4 text-sm text-ink-muted">
-          Each login can have many desks. Type locks the manager. Paper Trading
-          writes the in-app ledger. Connected Exchange desks bind a key from
-          the login.
-        </p>
       </div>
 
       {!overview.configured ? (

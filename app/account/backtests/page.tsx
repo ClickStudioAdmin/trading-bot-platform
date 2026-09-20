@@ -127,11 +127,6 @@ export default async function AccountBacktestsPage({
           </Link>
         }
       />
-      <p className="mb-6 max-w-2xl text-sm text-ink-muted">
-        Paper replay of a desk bot or a library template. Edit the replay
-        fields, then queue. Long history goes to the worker. Open a row for
-        the full picture.
-      </p>
       <nav
         aria-label="Backtesting"
         className="mb-6 flex border-b border-line"

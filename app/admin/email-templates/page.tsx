@@ -43,16 +43,6 @@ export default async function AdminEmailTemplatesPage({
   return (
     <div>
       <PageHeading overline="Admin" title="Email templates" />
-      <p className="-mt-4 text-sm text-ink-muted">
-        Locked copy. On/off switches stay on{" "}
-        <Link
-          href="/admin/settings?tab=notifications"
-          className="text-accent hover:text-accent-strong"
-        >
-          Settings → Notifications & Alerts
-        </Link>
-        . Admin emails never write a member inbox row.
-      </p>
       {sent ? (
         <p className="mt-6 text-sm text-success">Test email sent.</p>
       ) : null}

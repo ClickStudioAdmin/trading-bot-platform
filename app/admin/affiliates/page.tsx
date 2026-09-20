@@ -45,12 +45,6 @@ export default async function AdminAffiliatesPage({
   return (
     <div>
       <PageHeading overline="Admin" title="Affiliates" />
-      <p className="-mt-4 text-sm text-ink-muted">
-        Generate a payout list per chain for your airdrop tool. That marks the
-        requests pending. After you send USDT, mark the file paid. Program knobs
-        live on Settings → Affiliates. Allowed withdraw chains are ticked on
-        Settings → Crypto.
-      </p>
       {saved ? (
         <p className="mt-6 text-sm text-success">
           {saved === "files"

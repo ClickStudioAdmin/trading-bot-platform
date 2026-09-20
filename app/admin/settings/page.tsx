@@ -120,9 +120,6 @@ export default async function AdminSettingsPage({
   return (
     <div>
       <PageHeading overline="Admin" title="Settings" />
-      <p className="-mt-4 text-sm text-ink-muted">
-        Desk-wide knobs. Members and logs stay in the menu.
-      </p>
       <nav aria-label="Settings" className="mt-5 flex flex-wrap border-b border-line">
         <TabLink href="/admin/settings" selected={tab === "general"}>
           General

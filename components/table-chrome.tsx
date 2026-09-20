@@ -111,7 +111,7 @@ export function TableFilterSession({
   toolbar?: ReactNode;
   actions?: ReactNode;
 }) {
-  const [show, setShow] = useState(true);
+  const [show, setShow] = useState(false);
   const hasFilters = children != null;
   const hideButton = (
     <TableLabelButton

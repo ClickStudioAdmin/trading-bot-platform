@@ -32,10 +32,6 @@ export async function AccountExchangesPanel({
 
   return (
     <>
-      <p className="mb-6 text-sm text-ink-muted">
-        Keys belong to this login. Live desks bind one. Paper does not use a
-        key.
-      </p>
       {error || saved || renamed || replaced || removed ? (
         <div className="mb-6 space-y-3">
           {error ? (

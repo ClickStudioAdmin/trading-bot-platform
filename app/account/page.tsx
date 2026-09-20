@@ -63,9 +63,6 @@ export default async function AccountOverviewPage() {
     <div className="space-y-8">
       <div>
         <PageHeading title="Overview" />
-        <p className="-mt-4 text-sm text-ink-muted">
-          Keys and desk count for this login.
-        </p>
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2">

@@ -231,7 +231,7 @@ export function TemplatesLibrary({
 }: {
   variant: "account" | "admin";
   title: string;
-  description: string;
+  description?: string;
   overline?: string;
   templates: AutomationTemplate[];
   sets: AutomationTemplateSet[];
@@ -698,9 +698,11 @@ export function TemplatesLibrary({
       <PageHeading
         overline={overline}
         title={title}
-        className="mb-2"
+        className={description ? "mb-2" : "mb-6"}
       />
-      <p className="mb-6 text-sm text-ink-muted">{description}</p>
+      {description ? (
+        <p className="mb-6 text-sm text-ink-muted">{description}</p>
+      ) : null}
       <nav className="flex flex-wrap border-b border-line">
         <TabButton selected={tab === "templates"} onClick={() => changeTab("templates")}>
           {variant === "admin" ? "Templates" : "My Templates"}

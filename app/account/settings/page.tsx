@@ -74,20 +74,6 @@ export default async function AccountSettingsPage({
   return (
     <div>
       <PageHeading title="Profile & Settings" />
-      <p className="-mt-4 text-sm text-ink-muted">
-        {showPlatformSettings ? (
-          <>
-            Your desk login. Desks and exchange keys live on Manage Desks.
-            Membership plans are on{" "}
-            <Link href="/account/plans" className="text-accent hover:text-accent-strong">
-              Plans
-            </Link>
-            .
-          </>
-        ) : (
-          <>Your affiliate login. Name and password live here.</>
-        )}
-      </p>
       <nav
         aria-label="Settings"
         className="mt-5 flex flex-wrap border-b border-line"

@@ -108,9 +108,6 @@ async function DesksTab({
 
   return (
     <div className="mt-6">
-      <p className="mb-6 text-sm text-ink-muted">
-        Type and mode never change. Create a desk from the sidebar.
-      </p>
       {error ? (
         <p className="mb-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}

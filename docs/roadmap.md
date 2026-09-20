@@ -24,7 +24,7 @@ Keep building on these; do not reopen them as a phase unless Click asks.
 
 ## Current (V1 item 3)
 
-**UI refinement and cleanup.** Started 17 Sep 2026. **Not accepted.** Work only what Click asks. No phase doc.
+**UI refinement and cleanup.** Started 17 Sep 2026. **Not accepted.** Work only what Click asks. No phase doc. Status below is through 21 Sep 2026.
 
 **Chrome so far**
 
@@ -33,7 +33,12 @@ Keep building on these; do not reopen them as a phase unless Click asks.
 - Sidenav: faint line after each desk type’s desks, not under the type title.
 - Manage Desks: field and column **Desk Type** (title case, not all caps).
 - Desks and Exchanges: column **Exchange / Environment** — user’s connection name plus venue / environment (`Bybit / Demo`).
-- `/admin/theme` has a Dark / Light preview toggle. Light tokens are draft only; live desks stay dark.
+- Light is **live**. Header **UI preferences** (sliders, far-right viewport) sets Dark / Light for the whole app, then separately for **chrome** (sidebar, header, footer) and **content** (main page). Cookies `tbp.ui.chrome` / `tbp.ui.content`. Do not put light tokens on `html` / `body`. Tokens and rules: [ui-theme.md](ui-theme.md).
+- `/admin/theme` still has a sample Dark / Light preview (Theme-page only).
+- Hint type step is 13px (`text-hint`) on the live site.
+- Portaled overlays (selects, hints, table action popups) follow the nearest chrome or content scheme. Table rename / replace / remove / delete popups portal out of the nowrap actions cell (`AnchoredPanel`).
+- Theme → Forms sample field / contract / multi-select wells match text fields (`canvas`). Live selects stay `surface-raised` until Click rolls that out.
+- Affiliate org chart uses theme tokens. Light nodes are white `surface`. **You** is the sum of downline monthly run-rate, not the member’s own plan price.
 
 **Isolation shipped here 19 Sep 2026** (pulled forward from item 4 so Click can test now)
 
@@ -54,7 +59,7 @@ Stop after each item until Click says go.
 | --- | --- | --- |
 | 1 | **Identity** | **Accepted 17 Sep 2026.** Email verify on signup + forgot password + unverified wall. Wizard removed; new users land on Overview after confirm. Spec: [phase-entitlements.md](phase-entitlements.md) (identity slice). |
 | 2 | **2FA** | **Accepted 17 Sep 2026.** Settings enroll + sign-in challenge only. Google Authenticator TOTP, recovery codes shown once. **Not** a plan gate yet. Spec: [phase-2fa.md](phase-2fa.md). |
-| 3 | **UI refinement and cleanup** | **Current.** Started 17 Sep 2026. See **Current** above. Isolation (one key / one venue account) shipped 19 Sep 2026 during this item. Not accepted. |
+| 3 | **UI refinement and cleanup** | **Current.** Started 17 Sep 2026. See **Current** above. Light is live (chrome vs content). Isolation shipped 19 Sep 2026. Not accepted. |
 | 4 | **Account Positions, Bots, and Automations lists** | Spec locked 19 Sep 2026: [phase-account-blotter.md](phase-account-blotter.md). Login-wide Positions + Bots. Desk Automations becomes a bot table + Create New Bot + Edit. Isolation already in repo (item 3) — this item is the lists only. Virtual lots stay V2. Do not start until item 3 is accepted. |
 | 5 | **Entitlements and plan / 2FA gates** | `assertEntitlement`, visible/disabled + Upgrade, a plan may require verified email and/or 2FA, downgrade grace. Spec: [phase-entitlements.md](phase-entitlements.md) (gates). |
 | 6 | **Onboarding wizards and Starter Packs** | Reimagine first-run and new-desk. Starter Packs copy/apply idle, never arm. Spec: [phase-onboarding.md](phase-onboarding.md). |
