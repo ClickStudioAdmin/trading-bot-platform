@@ -98,7 +98,7 @@ export function FuturesWebhooksDesk({
               maxLength={40}
               placeholder="Name this webhook"
               autoComplete="off"
-              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
             />
           </label>
           {allowSignal && allowOrder ? (
@@ -107,7 +107,7 @@ export function FuturesWebhooksDesk({
               <AppSelect
                 name="kind"
                 defaultValue="order"
-                className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+                className="mt-1 w-full"
               >
                 <option value="order">
                   TradingView strategy — TV controls the orders
@@ -150,7 +150,7 @@ export function FuturesWebhooksDesk({
                   defaultValue={hook.name}
                   required
                   maxLength={40}
-                  className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+                  className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
                 />
               </label>
               <PendingSubmitButton
@@ -186,7 +186,7 @@ export function FuturesWebhooksDesk({
                   readOnly
                   rows={2}
                   value={hook.url}
-                  className="min-w-0 flex-1 resize-none break-all rounded-control border border-line bg-surface-raised px-3 py-2 font-mono text-xs leading-5 text-ink-muted focus:border-line-strong focus:outline-none"
+                  className="min-w-0 flex-1 resize-none break-all rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs leading-5 text-ink-muted focus:border-line-strong focus:outline-none"
                 />
                 <span className="shrink-0">
                   <CopyTextButton text={hook.url} label="Copy URL" />

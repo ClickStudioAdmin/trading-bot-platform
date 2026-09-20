@@ -14,7 +14,7 @@ import {
 import { formatAuDateUtc, parseDisplayTime } from "@/lib/time/display";
 
 const fieldClass =
-  "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+  "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 
 function formatShareDay(value: string): string | null {
   const ms = parseDisplayTime(value);

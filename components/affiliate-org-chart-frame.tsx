@@ -273,7 +273,7 @@ export function AffiliateOrgChartFrame({
               value={query}
               placeholder="Name"
               autoComplete="off"
-              className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
+              className="w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
               onChange={(event) => {
                 setQuery(event.target.value);
                 setOpen(true);

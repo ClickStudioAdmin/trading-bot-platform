@@ -93,7 +93,7 @@ export function FuturesWebhookTest({
               name="webhookId"
               value={webhookId}
               onChange={(event) => setWebhookId(event.target.value)}
-              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+              className="mt-1 w-full"
             >
               {webhooks.map((row) => (
                 <option key={row.id} value={row.id}>
@@ -112,7 +112,7 @@ export function FuturesWebhookTest({
               key={selected?.kind ?? "order"}
               name="testAction"
               defaultValue={signal ? "arm" : "buy"}
-              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+              className="mt-1 w-full"
             >
               {signal ? (
                 <>

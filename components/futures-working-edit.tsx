@@ -10,7 +10,7 @@ import { workingActionLabel } from "@/lib/futures/working";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
 
 const INPUT_CLASS =
-  "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
+  "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 export function FuturesWorkingEdit({
   workingId,
   symbol,

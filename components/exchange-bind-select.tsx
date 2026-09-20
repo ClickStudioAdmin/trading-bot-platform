@@ -33,7 +33,7 @@ export function ExchangeBindSelect({
         name="exchangeConnectionId"
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+        className="mt-1 w-full"
       >
         {allowNone ? <option value="none">None</option> : null}
         {options

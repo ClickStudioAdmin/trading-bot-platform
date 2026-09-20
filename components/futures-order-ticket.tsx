@@ -132,7 +132,7 @@ export function FuturesOrderTicket({
                       ? `Size in ${quoteCoin}`
                       : `Size in ${baseCoin}`
                   }
-                  className={`w-full rounded-control border bg-surface-raised py-2 text-sm tabular-nums text-ink focus:outline-none ${
+                  className={`w-full rounded-control border bg-canvas py-2 text-sm tabular-nums text-ink focus:outline-none ${
                     sizeError
                       ? "border-danger focus:border-danger"
                       : "border-line focus:border-line-strong"
@@ -179,7 +179,7 @@ export function FuturesOrderTicket({
                   allowDecimal
                   placeholder={limitPlaceholder}
                   ariaLabel="Limit price"
-                  className={`w-full rounded-control border bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:outline-none ${
+                  className={`w-full rounded-control border bg-canvas py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:outline-none ${
                     limitError
                       ? "border-danger focus:border-danger"
                       : "border-line focus:border-line-strong"

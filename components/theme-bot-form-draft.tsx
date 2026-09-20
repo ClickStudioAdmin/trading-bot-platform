@@ -36,9 +36,9 @@ import {
 import { AppSelect } from "@/components/app-select";
 
 const fieldClass =
-  "mt-1 w-full rounded-control border border-line-strong bg-surface-raised px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none";
+  "mt-1 w-full rounded-control border border-line-strong bg-canvas px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none";
 const fieldInvalidClass =
-  "mt-1 w-full rounded-control border border-danger bg-surface-raised px-3 py-2 text-sm text-ink focus:border-danger focus:outline-none";
+  "mt-1 w-full rounded-control border border-danger bg-canvas px-3 py-2 text-sm text-ink focus:border-danger focus:outline-none";
 const labelClass = "block text-xs text-ink-muted";
 const sectionTitleClass =
   "text-xs font-semibold uppercase tracking-[0.1em] text-ink";

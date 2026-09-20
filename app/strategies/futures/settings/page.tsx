@@ -314,7 +314,7 @@ export default async function FuturesSettingsPage({
                       allowDecimal
                       placeholder="No cap"
                       ariaLabel="Max value per symbol"
-                      className="w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+                      className="w-full rounded-control border border-line bg-canvas py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
                     />
                   </span>
                 </label>
@@ -328,7 +328,7 @@ export default async function FuturesSettingsPage({
                         : String(settings.maxOpenPositions)
                     }
                     placeholder="No cap"
-                    className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+                    className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
                   />
                 </label>
               </div>
@@ -374,7 +374,7 @@ function PaperLeverageField({
         allowDecimal
         placeholder="—"
         ariaLabel="Paper leverage"
-        className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+        className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
       />
     </label>
   );

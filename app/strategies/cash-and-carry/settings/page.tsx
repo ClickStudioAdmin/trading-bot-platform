@@ -117,7 +117,7 @@ export default async function CashAndCarrySettingsPage({
             name="usableBookShare"
             defaultValue={usableBookShareToInput(settings.share)}
             allowDecimal
-            className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
           />
         </label>
         <p className="text-xs text-ink-muted">

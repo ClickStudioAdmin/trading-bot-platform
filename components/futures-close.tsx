@@ -18,7 +18,7 @@ import { formatPrice } from "@/lib/opportunities/format";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
 
 const INPUT_CLASS =
-  "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
+  "w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 
 const CLOSING_ROW_KEY = "tbp-closing-row";
 

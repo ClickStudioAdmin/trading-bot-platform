@@ -37,7 +37,7 @@ Keep building on these; do not reopen them as a phase unless Click asks.
 - `/admin/theme` still has a sample Dark / Light preview (Theme-page only).
 - Hint type step is 13px (`text-hint`) on the live site.
 - Portaled overlays (selects, hints, table action popups) follow the nearest chrome or content scheme. Table rename / replace / remove / delete popups portal out of the nowrap actions cell (`AnchoredPanel`).
-- Theme → Forms sample field / contract / multi-select wells match text fields (`canvas`). Live selects stay `surface-raised` until Click rolls that out.
+- Form field wells (text, `AppSelect`, `AppMultiSelect`, table filters) use `canvas`. Action selects stay the purple primary.
 - Affiliate org chart uses theme tokens. Light nodes are white `surface`. **You** is the sum of downline monthly run-rate, not the member’s own plan price.
 
 **Isolation shipped here 19 Sep 2026** (pulled forward from item 4 so Click can test now)

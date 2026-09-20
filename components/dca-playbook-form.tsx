@@ -1978,7 +1978,7 @@ export function DcaPlaybookForm({
                   value={clipSize}
                   onChange={setClipSize}
                   allowDecimal
-                  className={`mt-0.5 w-full rounded-control border bg-surface-raised px-2 py-1.5 text-sm text-ink focus:outline-none ${
+                  className={`mt-0.5 w-full rounded-control border bg-canvas px-2 py-1.5 text-sm text-ink focus:outline-none ${
                     sizeError
                       ? "border-danger focus:border-danger"
                       : "border-line focus:border-line-strong"
@@ -2167,7 +2167,7 @@ export function DcaPlaybookForm({
                 value={sizeMultiplier}
                 onChange={setSizeMultiplier}
                 allowDecimal
-                className={`mt-0.5 w-full rounded-control border bg-surface-raised px-2 py-1.5 text-sm text-ink focus:outline-none ${
+                className={`mt-0.5 w-full rounded-control border bg-canvas px-2 py-1.5 text-sm text-ink focus:outline-none ${
                   ladderMaxError
                     ? "border-warning focus:border-warning"
                     : "border-line focus:border-line-strong"

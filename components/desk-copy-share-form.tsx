@@ -19,7 +19,7 @@ import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { AppSelect } from "@/components/app-select";
 
 const fieldClass =
-  "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+  "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 
 export function DeskCopyShareCard({
   account,
@@ -215,7 +215,7 @@ export function DeskCopyShareCard({
                   allowDecimal
                   placeholder="No floor"
                   ariaLabel="Minimum account balance"
-                  className="mt-0 w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+                  className="mt-0 w-full rounded-control border border-line bg-canvas py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
                 />
               </span>
               <span className="mt-1 block text-hint text-ink-faint">

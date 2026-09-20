@@ -5,7 +5,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { validateNewDeskName } from "@/lib/accounts/model";
 
 const fieldClass =
-  "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+  "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 
 export function DeskSettingsForm({
   action,

@@ -7,7 +7,7 @@ import type { CopySizeMode } from "@/lib/copy/model";
 import { AppSelect } from "@/components/app-select";
 
 const fieldClass =
-  "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+  "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 
 export function CopySizeFields({
   defaultMode = "balance",
@@ -62,7 +62,7 @@ export function CopySizeFields({
               allowDecimal
               placeholder="20"
               ariaLabel="Percent of account"
-              className="w-full rounded-control border border-line bg-surface-raised py-2 pr-8 pl-3 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+              className="w-full rounded-control border border-line bg-canvas py-2 pr-8 pl-3 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
             />
             <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-ink-muted">
               %
@@ -88,7 +88,7 @@ export function CopySizeFields({
               allowDecimal
               placeholder="5000"
               ariaLabel="Fixed book"
-              className="w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+              className="w-full rounded-control border border-line bg-canvas py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
             />
           </span>
           <span className="mt-1 block text-xs text-ink-muted">

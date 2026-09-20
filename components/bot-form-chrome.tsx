@@ -13,9 +13,9 @@ import { AppSelect } from "@/components/app-select";
 import { IconCheck } from "@/components/icons";
 
 export const botFieldClass =
-  "mt-1 w-full rounded-control border border-line-strong bg-surface-raised px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none";
+  "mt-1 w-full rounded-control border border-line-strong bg-canvas px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none";
 export const botFieldInvalidClass =
-  "mt-1 w-full rounded-control border border-danger bg-surface-raised px-3 py-2 text-sm text-ink focus:border-danger focus:outline-none";
+  "mt-1 w-full rounded-control border border-danger bg-canvas px-3 py-2 text-sm text-ink focus:border-danger focus:outline-none";
 export const botLabelClass = "block text-xs text-ink-muted";
 export const botSectionTitleClass =
   "text-xs font-semibold uppercase tracking-[0.1em] text-ink";

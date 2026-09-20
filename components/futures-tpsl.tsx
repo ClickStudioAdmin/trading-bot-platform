@@ -23,13 +23,13 @@ import { formatGroupedNumberInput } from "@/lib/paper/open";
 import { AppSelect } from "@/components/app-select";
 
 const INPUT_CLASS =
-  "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
+  "w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 const SELECT_CLASS =
-  "shrink-0 rounded-control border border-line bg-surface-raised px-2 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+  "shrink-0 rounded-control border border-line bg-canvas px-2 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 const TICKET_INPUT =
-  "min-w-0 flex-1 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
+  "min-w-0 flex-1 rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 const TICKET_QTY =
-  "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
+  "w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 
 export function FuturesTpslFields({
   namePrefix = "",
@@ -938,7 +938,7 @@ function TpslDialogRow({
         <p className="block text-sm text-ink">
           {resultLabel}
           <span
-            className={`mt-1 block rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums ${
+            className={`mt-1 block rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums ${
               result === null ? "text-ink-faint" : resultClass
             }`}
           >

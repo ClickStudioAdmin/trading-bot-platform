@@ -94,7 +94,7 @@ export function FuturesSymbolSelect({
         placeholder={allowEmpty ? placeholder : undefined}
         autoComplete="off"
         spellCheck={false}
-        className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm uppercase text-ink focus:border-line-strong focus:outline-none"
+        className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm uppercase text-ink focus:border-line-strong focus:outline-none"
       />
     );
   }
@@ -119,7 +119,7 @@ export function FuturesSymbolSelect({
           setOpen((current) => !current);
           setQuery("");
         }}
-        className="flex w-full items-center gap-4 rounded-control border border-line bg-surface-raised px-3 py-2 text-left text-sm text-ink hover:border-line-strong focus:border-line-strong focus:outline-none"
+        className="flex w-full items-center gap-4 rounded-control border border-line bg-canvas px-3 py-2 text-left text-sm text-ink hover:border-line-strong focus:border-line-strong focus:outline-none"
       >
         {selected ? (
           <>
@@ -154,7 +154,7 @@ export function FuturesSymbolSelect({
             placeholder={`Search ${options.length} pairs`}
             autoComplete="off"
             spellCheck={false}
-            className="mb-2 w-full rounded-control border border-line bg-surface-raised px-3 py-1.5 text-sm text-ink focus:border-line-strong focus:outline-none"
+            className="mb-2 w-full rounded-control border border-line bg-canvas px-3 py-1.5 text-sm text-ink focus:border-line-strong focus:outline-none"
           />
           <ul role="listbox" className="max-h-72 overflow-y-auto">
             {filtered.length === 0 ? (

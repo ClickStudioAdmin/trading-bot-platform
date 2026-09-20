@@ -16,7 +16,7 @@ import {
 } from "@/lib/futures/close-all";
 
 const INPUT_CLASS =
-  "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+  "w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 const COPY: Record<
   CloseAllScope,
   { label: string; title: string; confirm: string; pending: string }

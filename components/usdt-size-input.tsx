@@ -113,8 +113,8 @@ export function UsdtSizeInput({
         }
         className={
           compact
-            ? "w-20 rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs tabular-nums text-ink focus:border-line-strong focus:outline-none"
-            : "w-28 rounded-control border border-line bg-surface-raised px-2 py-1 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+            ? "w-20 rounded-control border border-line bg-canvas px-1.5 py-1 text-xs tabular-nums text-ink focus:border-line-strong focus:outline-none"
+            : "w-28 rounded-control border border-line bg-canvas px-2 py-1 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
         }
       />
     </span>
@@ -122,7 +122,7 @@ export function UsdtSizeInput({
 }
 
 const DEFAULT_GROUPED_CLASS =
-  "mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs tabular-nums text-ink focus:border-line-strong focus:outline-none";
+  "mt-0.5 w-full rounded-control border border-line bg-canvas px-1.5 py-1 text-xs tabular-nums text-ink focus:border-line-strong focus:outline-none";
 
 export function GroupedNumberInput({
   name,
