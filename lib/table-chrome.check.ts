@@ -67,5 +67,7 @@ assert.equal(
 );
 assert.equal(tableFiltersSuggestOpen({ q: "  " }), false);
 assert.equal(tableFiltersSuggestOpen({ status: "unread" }), true);
+assert.equal(tableFiltersSuggestOpen({ paperError: "x" }), false);
+assert.equal(tableFiltersSuggestOpen({ bot: "pb-1" }), true);
 
 console.log("table-chrome checks passed");

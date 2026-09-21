@@ -75,6 +75,9 @@ export function OpenPaperTrades({
   exchangeBook = false,
   positionsHref = "/strategies/cash-and-carry/positions",
   opportunitiesHref = "/strategies/cash-and-carry/opportunities",
+  filterBar,
+  filtersOpen = false,
+  emptyMessage,
 }: {
   signedIn: boolean;
   open: OpenCarryView[];
@@ -83,6 +86,9 @@ export function OpenPaperTrades({
   exchangeBook?: boolean;
   positionsHref?: string;
   opportunitiesHref?: string;
+  filterBar?: ReactNode;
+  filtersOpen?: boolean;
+  emptyMessage?: ReactNode;
 }) {
   const { visible, setColumn } = usePaperOpenColumns();
   const colSpan = paperOpenColumnCount(visible);
@@ -159,10 +165,13 @@ export function OpenPaperTrades({
         </div>
       ) : null}
       <TableFilterSession
+        defaultOpen={filtersOpen}
         actions={
           <PaperOpenColumnPicker visible={visible} setColumn={setColumn} />
         }
-      />
+      >
+        {filterBar}
+      </TableFilterSession>
       <TableCard
         pager={
           <TablePager
@@ -282,6 +291,7 @@ export function OpenPaperTrades({
               <EmptyRow
                 colSpan={colSpan}
                 message={
+                  emptyMessage ?? (
                   <>
                     {exchangeBook
                       ? "No open carries. Open one from "
@@ -291,6 +301,7 @@ export function OpenPaperTrades({
                     </Link>
                     .
                   </>
+                  )
                 }
               />
             ) : (
@@ -314,9 +325,15 @@ export function OpenPaperTrades({
 export function ClosedPaperTrades({
   signedIn,
   closed,
+  filterBar,
+  filtersOpen = false,
+  emptyMessage,
 }: {
   signedIn: boolean;
   closed: ClosedCarryView[];
+  filterBar?: ReactNode;
+  filtersOpen?: boolean;
+  emptyMessage?: ReactNode;
 }) {
   const compare = useCallback(
     (left: ClosedCarryView, right: ClosedCarryView, key: string, dir: TableSortDir) => {
@@ -371,6 +388,9 @@ export function ClosedPaperTrades({
         title="Past Positions"
         subtitle="Closed paper carries. Realized P&L uses the same all-in fee model as unrealized."
       />
+      {filterBar ? (
+        <TableFilterSession defaultOpen={filtersOpen}>{filterBar}</TableFilterSession>
+      ) : null}
       <TableCard
         pager={
           <TablePager
@@ -455,7 +475,7 @@ export function ClosedPaperTrades({
             ) : table.pageRows.length === 0 ? (
               <EmptyRow
                 colSpan={9}
-                message="No closed paper carries yet."
+                message={emptyMessage ?? "No closed paper carries yet."}
               />
             ) : (
               table.pageRows.map((trade) => (

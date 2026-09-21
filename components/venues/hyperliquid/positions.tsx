@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { LiveTickerScope } from "@/components/live-ticker";
 import { FuturesOrderTicket } from "@/components/futures-order-ticket";
+import { DeskBlotterFilters } from "@/components/desk-blotter-filters";
 import {
   FuturesOpenStats,
   OpenFuturesTrades,
@@ -21,8 +22,15 @@ import {
   deskIsCopy,
   deskShowsDcaBlotter,
 } from "@/lib/accounts/model";
-import { dcaHintsForCopyOpen, dcaHintsForOpen } from "@/lib/dca/playbook";
+import { dcaHintKey, dcaHintsForCopyOpen, dcaHintsForOpen } from "@/lib/dca/playbook";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
+import {
+  deskBlotterFiltersActive,
+  filterFuturesBlotterRows,
+  parseDeskBlotterFilters,
+} from "@/lib/desk-blotter-filters";
+import { loadFuturesAutomationRules } from "@/lib/futures/automation-load";
+import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
 import { submitFuturesTrade } from "@/lib/futures/actions";
 import { futuresWebhookOrigin } from "@/lib/futures/webhook";
 import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
@@ -128,6 +136,29 @@ export async function HyperliquidFuturesPositions({
       ? dcaHintsForCopyOpen(playbooks, open, desk.working)
       : dcaHintsForOpen(playbooks, open, desk.working)
     : undefined;
+  const filters = parseDeskBlotterFilters(params);
+  const recipeAccountId = playbookAccountId ?? session?.account.id;
+  const perpsBots =
+    deskType === "perps_bots" && recipeAccountId
+      ? await loadFuturesAutomationRules(recipeAccountId)
+      : [];
+  const bots = dcaBlotter
+    ? playbooks.map((playbook) => ({
+        id: playbook.id,
+        name: playbook.name || playbook.symbol,
+      }))
+    : perpsBots
+        .filter((rule) => rule.id)
+        .map((rule) => ({
+          id: rule.id as string,
+          name: rule.name,
+        }));
+  const visibleOpen = filterFuturesBlotterRows(
+    open,
+    filters,
+    playbooks,
+    (row) => dcaHints?.[dcaHintKey(row.symbol, row.side)]?.playbookId,
+  );
   const testWebhooks = allowSignal
     ? webhooks
     : webhooks.filter((row) => row.kind !== "signal");
@@ -142,7 +173,7 @@ export async function HyperliquidFuturesPositions({
           venue="hyperliquid"
           environment={session?.account.venueEnvironment}
         >
-        <FuturesOpenStats signedIn={desk.signedIn} open={open} />
+        <FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />
         {showTicket ? (
           <section>
             <h2 className="text-xl font-semibold tracking-tight">
@@ -223,9 +254,19 @@ export async function HyperliquidFuturesPositions({
         <PageHeading as="h2" title="Current Positions" className="mb-0" />
           <OpenFuturesTrades
             signedIn={desk.signedIn}
-            open={open}
+            open={visibleOpen}
+            closeAllOpenCount={open.length}
             next={NEXT}
             showHeading={false}
+            filtersOpen={tableFiltersSuggestOpen(params)}
+            filterBar={
+              <DeskBlotterFilters
+                values={filters}
+                bots={bots}
+                deskId={session?.account.id}
+                clearHref={NEXT}
+              />
+            }
             toolbarActions={
               <PositionsChartButton
                 venue="hyperliquid"
@@ -255,15 +296,17 @@ export async function HyperliquidFuturesPositions({
             copyDesk={copyDesk}
             dcaHints={dcaHints}
             emptyMessage={
-              showTicket
-                ? undefined
-                : copyDesk && dcaBlotter
-                  ? "No open futures. Copied parent DCA fills appear here."
-                  : copyDesk
-                    ? "No open futures. Copied fills from the parent will appear here."
-                    : dcaBlotter
-                      ? "No open futures. The bot adds orders once it is armed."
-                      : "No open futures. TradingView opens them through a webhook."
+              deskBlotterFiltersActive(filters)
+                ? "No positions match these filters."
+                : showTicket
+                  ? undefined
+                  : copyDesk && dcaBlotter
+                    ? "No open futures. Copied parent DCA fills appear here."
+                    : copyDesk
+                      ? "No open futures. Copied fills from the parent will appear here."
+                      : dcaBlotter
+                        ? "No open futures. The bot adds orders once it is armed."
+                        : "No open futures. TradingView opens them through a webhook."
             }
           />
         </LiveTickerScope>

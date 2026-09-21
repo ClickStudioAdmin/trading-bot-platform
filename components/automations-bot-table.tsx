@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   IconCopy,
   IconPencil,
@@ -63,7 +64,14 @@ export function AutomationsBotTable({
         <tbody>
           {rows.map((row) => (
             <tr key={row.id} className="border-b border-line last:border-b-0">
-              <td className="px-4 py-3 pr-8 align-top">{row.name || "Bot"}</td>
+              <td className="px-4 py-3 pr-8 align-top">
+                <Link
+                  href={row.editHref}
+                  className="text-accent hover:text-accent-strong"
+                >
+                  {row.name || "Bot"}
+                </Link>
+              </td>
               <td className="px-4 py-3 pr-8 align-top text-ink-muted">
                 {row.pair}
               </td>

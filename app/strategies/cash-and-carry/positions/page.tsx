@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import { DeskBlotterFilters } from "@/components/desk-blotter-filters";
 import { PageHeading } from "@/components/page-heading";
 import { OpenPaperTrades, PaperOpenStats } from "@/components/paper-blotter";
 import { PaperFlash } from "@/components/paper-flash";
+import { loadPaperRules } from "@/lib/engine/load";
+import { paperConfigToFormValues } from "@/lib/engine/rules";
 import { loadUsableBookShare } from "@/lib/engine/settings";
 import { applyUsableBookShare } from "@/lib/opportunities/capacity";
 import { loadOpportunityBook } from "@/lib/opportunities/load";
@@ -9,6 +12,12 @@ import { firstSearchValue } from "@/lib/paper/open";
 import { loadPaperDesk } from "@/lib/paper/list";
 import { deskHref } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
+import {
+  deskBlotterFiltersActive,
+  filterPaperBlotterRows,
+  parseDeskBlotterFilters,
+} from "@/lib/desk-blotter-filters";
+import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
 
 export const metadata: Metadata = {
   title: "Current Positions",
@@ -29,6 +38,15 @@ export default async function CashAndCarryPositionsPage({
   const book = await loadOpportunityBook("stored");
   const rows = applyUsableBookShare(book.rows, await loadUsableBookShare());
   const desk = await loadPaperDesk(rows);
+  const filters = parseDeskBlotterFilters(params);
+  const { config } = await loadPaperRules();
+  const bots = paperConfigToFormValues(config)
+    .layers.filter((layer) => layer.id)
+    .map((layer) => ({
+      id: layer.id,
+      name: layer.name || "Bot",
+    }));
+  const visibleOpen = filterPaperBlotterRows(desk.open, filters);
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -49,14 +67,29 @@ export default async function CashAndCarryPositionsPage({
           unwinding={firstSearchValue(params.paper) === "unwinding"}
           error={firstSearchValue(params.paperError)}
         />
-        <PaperOpenStats signedIn={desk.signedIn} open={desk.open} />
+        <PaperOpenStats signedIn={desk.signedIn} open={visibleOpen} />
         <PageHeading as="h2" title="Current Positions" className="mb-0" />
         <OpenPaperTrades
           signedIn={desk.signedIn}
-          open={desk.open}
+          open={visibleOpen}
           next={next}
           showHeading={false}
           exchangeBook={desk.exchangeBook}
+          filtersOpen={tableFiltersSuggestOpen(params)}
+          filterBar={
+            <DeskBlotterFilters
+              values={filters}
+              bots={bots}
+              deskId={session?.account.id}
+              clearHref={next}
+              showSide={false}
+            />
+          }
+          emptyMessage={
+            deskBlotterFiltersActive(filters)
+              ? "No positions match these filters."
+              : undefined
+          }
           opportunitiesHref={deskHref(
             "/strategies/cash-and-carry/opportunities",
             session?.account.id,

@@ -263,6 +263,9 @@ export function OpenFuturesTrades({
   hideRowExits = false,
   copyDesk = false,
   toolbarActions,
+  filterBar,
+  filtersOpen = false,
+  closeAllOpenCount,
 }: {
   signedIn: boolean;
   open: MarkedFutures[];
@@ -280,6 +283,9 @@ export function OpenFuturesTrades({
   hideRowExits?: boolean;
   copyDesk?: boolean;
   toolbarActions?: ReactNode;
+  filterBar?: ReactNode;
+  filtersOpen?: boolean;
+  closeAllOpenCount?: number;
 }) {
   const { visible: storedVisible, setColumn } = useFuturesOpenColumns();
   const visible = hideRowExits
@@ -319,6 +325,7 @@ export function OpenFuturesTrades({
         </div>
       ) : null}
       <TableFilterSession
+        defaultOpen={filtersOpen}
         actions={
           <>
             <FuturesOpenColumnPicker
@@ -330,7 +337,7 @@ export function OpenFuturesTrades({
               <FuturesPositionBulkActions
                 next={next}
                 signedIn={signedIn}
-                openCount={open.length}
+                openCount={closeAllOpenCount ?? open.length}
                 workingCount={workingCount}
                 panicOnly={playbookOwnsOrders}
                 copyDesk={copyDesk}
@@ -339,7 +346,9 @@ export function OpenFuturesTrades({
             {toolbarActions}
           </>
         }
-      />
+      >
+        {filterBar}
+      </TableFilterSession>
       <TableCard
         className="min-w-0 mt-6"
         pager={
@@ -541,11 +550,17 @@ export function ClosedFuturesTrades({
   closed,
   webhookNames = [],
   fallbackLeverage = null,
+  filterBar,
+  filtersOpen = false,
+  emptyMessage,
 }: {
   signedIn: boolean;
   closed: FuturesDeskPosition[];
   webhookNames?: readonly string[];
   fallbackLeverage?: number | null;
+  filterBar?: ReactNode;
+  filtersOpen?: boolean;
+  emptyMessage?: ReactNode;
 }) {
   const compare = useCallback(
     (
@@ -571,6 +586,9 @@ export function ClosedFuturesTrades({
         title="Past Positions"
         subtitle="Closed futures. Realized is mark-to-market at close."
       />
+      {filterBar ? (
+        <TableFilterSession defaultOpen={filtersOpen}>{filterBar}</TableFilterSession>
+      ) : null}
       <TableCard
         pager={
           <TablePager
@@ -659,7 +677,10 @@ export function ClosedFuturesTrades({
                 }
               />
             ) : table.pageRows.length === 0 ? (
-              <EmptyRow colSpan={10} message="No closed futures yet." />
+              <EmptyRow
+                colSpan={10}
+                message={emptyMessage ?? "No closed futures yet."}
+              />
             ) : (
               table.pageRows.map((trade) => (
                 <ClosedFuturesRows
