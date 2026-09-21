@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   createContext,
   type FormEvent,
@@ -8,6 +9,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -102,22 +104,80 @@ export function TableCard({
 
 const FilterBarEndCtx = createContext<ReactNode>(null);
 
+const FILTERS_OPEN_STORAGE = "tbp.ui.table-filters";
+
+function filtersOpenStorageKey(pathname: string): string {
+  return `${FILTERS_OPEN_STORAGE}:${pathname}`;
+}
+
+function readFiltersOpen(pathname: string): boolean | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  try {
+    const raw = window.sessionStorage.getItem(filtersOpenStorageKey(pathname));
+    if (raw === "1") {
+      return true;
+    }
+    if (raw === "0") {
+      return false;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function writeFiltersOpen(pathname: string, open: boolean) {
+  try {
+    window.sessionStorage.setItem(
+      filtersOpenStorageKey(pathname),
+      open ? "1" : "0",
+    );
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
 export function TableFilterSession({
   children,
   toolbar,
   actions,
+  defaultOpen = false,
 }: {
   children?: ReactNode;
   toolbar?: ReactNode;
   actions?: ReactNode;
+  defaultOpen?: boolean;
 }) {
-  const [show, setShow] = useState(false);
+  const pathname = usePathname();
+  const [show, setShow] = useState(defaultOpen);
+
+  useLayoutEffect(() => {
+    if (defaultOpen) {
+      setShow(true);
+      return;
+    }
+    if (readFiltersOpen(pathname) === true) {
+      setShow(true);
+    }
+  }, [defaultOpen, pathname]);
+
+  function openFilters() {
+    setShow(true);
+    writeFiltersOpen(pathname, true);
+  }
+
+  function hideFilters() {
+    setShow(false);
+    writeFiltersOpen(pathname, false);
+  }
   const hasFilters = children != null;
   const hideButton = (
     <TableLabelButton
       variant="filter"
       icon={<IconChevronsUp {...TABLE_BTN_ICON} />}
-      onClick={() => setShow(false)}
+      onClick={hideFilters}
     >
       Hide Filters
     </TableLabelButton>
@@ -126,7 +186,7 @@ export function TableFilterSession({
     <TableLabelButton
       variant="filter"
       icon={<IconFilters {...TABLE_BTN_ICON} />}
-      onClick={() => setShow(true)}
+      onClick={openFilters}
     >
       Show Filters
     </TableLabelButton>
@@ -262,6 +322,7 @@ function submitFilters(form: HTMLFormElement | null) {
   if (page instanceof HTMLInputElement) {
     page.value = "1";
   }
+  writeFiltersOpen(window.location.pathname, true);
   form.requestSubmit();
 }
 

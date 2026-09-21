@@ -103,7 +103,11 @@ export function EventLogs({
 
   return (
     <>
-      <TableFilterSession>
+      <TableFilterSession
+        defaultOpen={Boolean(
+          filters.scope || filters.level || filters.event || filters.account,
+        )}
+      >
           <LiveGetForm>
             <input type="hidden" name="page" value="1" />
             {hidden?.desk ? (

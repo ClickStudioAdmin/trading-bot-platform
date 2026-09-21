@@ -237,12 +237,12 @@ assert.equal(
 );
 assert.equal(
   deskHomePath("cash_and_carry"),
-  "/strategies/cash-and-carry/positions",
+  "/strategies/cash-and-carry/automations",
 );
 assert.equal(deskHomePath("perps"), "/strategies/futures/positions");
-assert.equal(deskHomePath("perps_bots"), "/strategies/futures/positions");
+assert.equal(deskHomePath("perps_bots"), "/strategies/futures/automations");
 assert.equal(deskHomePath("signal_follower"), "/strategies/futures/positions");
-assert.equal(deskHomePath("dca"), "/strategies/futures/positions");
+assert.equal(deskHomePath("dca"), "/strategies/futures/automations");
 assert.equal(
   deskHomePath("perps", "11111111-1111-4111-8111-111111111111"),
   "/strategies/futures/positions?desk=11111111-1111-4111-8111-111111111111",

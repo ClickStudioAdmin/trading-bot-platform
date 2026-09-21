@@ -145,7 +145,7 @@ export function CopyCatalogueBoard({
           </Link>
         ))}
       </div>
-      <TableFilterSession>
+      <TableFilterSession defaultOpen={Boolean(query.trim()) || privateOnly}>
           <LiveGetForm action="/account/copy">
             {tab !== "all" ? (
               <input type="hidden" name="tab" value={tab} />

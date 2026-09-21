@@ -222,8 +222,10 @@ export function createDeskPath(deskType: DeskType): string {
 export function deskHomePath(deskType: DeskType, accountId?: string): string {
   const base =
     deskType === "cash_and_carry"
-      ? "/strategies/cash-and-carry/positions"
-      : "/strategies/futures/positions";
+      ? "/strategies/cash-and-carry/automations"
+      : deskType === "perps_bots" || deskType === "dca"
+        ? "/strategies/futures/automations"
+        : "/strategies/futures/positions";
   return accountId ? pathWithDesk(base, accountId) : base;
 }
 

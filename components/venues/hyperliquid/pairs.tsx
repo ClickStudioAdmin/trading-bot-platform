@@ -2,6 +2,7 @@ import { PageHeading } from "@/components/page-heading";
 import { PairFiltersForm } from "@/components/pair-filters";
 import { PairPager } from "@/components/pair-pager";
 import { SortTh, TableCard, TableFilterSession } from "@/components/table-chrome";
+import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
 import { TokenIcon } from "@/components/token-icon";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { formatMarketCap, loadMarketCaps } from "@/lib/market/caps";
@@ -85,7 +86,7 @@ export async function HyperliquidFuturesPairs({
         Every trading Hyperliquid perpetual this desk can buy, sell, or close.
         Coins settle in USDC. No agent key.
       </p>
-      <TableFilterSession>
+      <TableFilterSession defaultOpen={tableFiltersSuggestOpen(params)}>
         <PairFiltersForm
           clearHref={deskHref(FUTURES_PATHS.pairs, session?.account.id)}
           deskId={session?.account.id}

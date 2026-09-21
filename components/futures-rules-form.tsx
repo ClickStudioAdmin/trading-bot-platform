@@ -144,14 +144,27 @@ export function FuturesAutomationsDesk({
     options.find((row) => row.symbol === preferredSymbol)?.symbol ??
     options[0]?.symbol ??
     preferredSymbol;
-  const [draft] = useState(() =>
+  const [draft, setDraft] = useState(() =>
     edit === AUTOMATIONS_NEW
       ? resolvePerpsDraft(rules, clone, defaultSymbol)
       : null,
   );
+  const [draftEdit, setDraftEdit] = useState(edit);
+  const [draftClone, setDraftClone] = useState(clone);
+  const nextDraft =
+    edit !== draftEdit || clone !== draftClone
+      ? edit === AUTOMATIONS_NEW
+        ? resolvePerpsDraft(rules, clone, defaultSymbol)
+        : null
+      : draft;
+  if (edit !== draftEdit || clone !== draftClone) {
+    setDraftEdit(edit);
+    setDraftClone(clone);
+    setDraft(nextDraft);
+  }
   const formLayer =
     edit === AUTOMATIONS_NEW
-      ? draft
+      ? nextDraft
       : edit
         ? layers.find((layer) => layer.id === edit) ?? null
         : null;
@@ -230,7 +243,10 @@ export function FuturesAutomationsDesk({
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            <Link href={automationsNewHref(listHref)} className={deskActionBtnClass}>
+            <Link
+              href={automationsNewHref(listHref)}
+              className={`inline-flex items-center ${deskActionBtnClass}`}
+            >
               Create New Bot
             </Link>
             {accountId ? (

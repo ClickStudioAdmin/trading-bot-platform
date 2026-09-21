@@ -5,6 +5,7 @@ import { PairFiltersForm } from "@/components/pair-filters";
 import { TokenIcon } from "@/components/token-icon";
 import { PairPager } from "@/components/pair-pager";
 import { SortTh, TableCard, TableFilterSession } from "@/components/table-chrome";
+import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
 import { listCarryPairs } from "@/lib/exchanges/bybit/list-carry-pairs";
 import { CARRY_BASE_COINS, type CarryPair } from "@/lib/exchanges/bybit/universe";
 import { deskHref } from "@/lib/accounts/model";
@@ -94,7 +95,7 @@ export default async function CashAndCarryPairsPage({
         Every dated USDT pair in this strategy’s scan. No API key. BTC, ETH,
         SOL, DOGE, XRP, MNT only. Perps are excluded.
       </p>
-      <TableFilterSession>
+      <TableFilterSession defaultOpen={tableFiltersSuggestOpen(params)}>
         <PairFiltersForm
           clearHref={deskHref(CLEAR, session?.account.id)}
           deskId={session?.account.id}

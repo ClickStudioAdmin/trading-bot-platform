@@ -20,7 +20,7 @@ import {
   memberListHref,
   parseMemberListQuery,
 } from "@/lib/members/query";
-import { tablePageWindow } from "@/lib/table-chrome";
+import { tableFiltersSuggestOpen, tablePageWindow } from "@/lib/table-chrome";
 import { AppSelect } from "@/components/app-select";
 
 export const metadata: Metadata = {
@@ -61,6 +61,7 @@ export default async function AdminMembersPage({
       ) : null}
 
       <TableFilterSession
+        defaultOpen={tableFiltersSuggestOpen(params)}
         actions={
           <TableLabelButton
             href="/admin/members/new"

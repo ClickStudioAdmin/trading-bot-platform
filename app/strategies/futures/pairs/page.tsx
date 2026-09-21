@@ -8,6 +8,7 @@ import {
 } from "@/lib/exchanges/bybit/perp";
 import { PairPager } from "@/components/pair-pager";
 import { SortTh, TableCard, TableFilterSession } from "@/components/table-chrome";
+import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
 import { formatMarketCap, loadMarketCaps } from "@/lib/market/caps";
 import {
   applyPairFilters,
@@ -99,7 +100,7 @@ export default async function FuturesPairsPage({
         Every trading USDT linear perpetual this strategy can buy, sell, or
         close. No API key. Dated futures are excluded.
       </p>
-      <TableFilterSession>
+      <TableFilterSession defaultOpen={tableFiltersSuggestOpen(params)}>
         <PairFiltersForm
           clearHref={deskHref(FUTURES_PATHS.pairs, session?.account.id)}
           deskId={session?.account.id}

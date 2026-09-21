@@ -9,6 +9,7 @@ import {
   statusToneFor,
   tablePageLabel,
   tablePageWindow,
+  tableFiltersSuggestOpen,
   tableSortHref,
   toggleTableSortDir,
 } from "./table-chrome";
@@ -57,5 +58,14 @@ assert.equal(
   }),
   "/admin/members?q=ada&sort=name",
 );
+
+assert.equal(tableFiltersSuggestOpen({ desk: "desk-1", page: "2" }), false);
+assert.equal(tableFiltersSuggestOpen({ desk: "desk-1", q: "BTC" }), true);
+assert.equal(
+  tableFiltersSuggestOpen(new URLSearchParams("sort=cap&dir=desc")),
+  false,
+);
+assert.equal(tableFiltersSuggestOpen({ q: "  " }), false);
+assert.equal(tableFiltersSuggestOpen({ status: "unread" }), true);
 
 console.log("table-chrome checks passed");

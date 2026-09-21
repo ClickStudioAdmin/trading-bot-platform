@@ -97,7 +97,7 @@ export default async function AccountNotificationsPage({
         </Link>
         .
       </p>
-      <TableFilterSession>
+      <TableFilterSession defaultOpen={inboxHasFilters(filters)}>
           <LiveGetForm>
             <input type="hidden" name="page" value="1" />
             {sort.sort !== "date" ? (

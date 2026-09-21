@@ -112,7 +112,7 @@ export function AdminInvoicesTable({
 
   return (
     <>
-      <TableFilterSession>
+      <TableFilterSession defaultOpen={Boolean(q?.trim() || status)}>
           <LiveGetForm>
             <input type="hidden" name="page" value="1" />
             <input type="hidden" name="tab" value="invoices" />

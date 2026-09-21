@@ -206,3 +206,52 @@ export function statusToneFor(status: string): StatusTone {
   }
   return "muted";
 }
+
+export const TABLE_FILTER_CHROME_KEYS = new Set([
+  "desk",
+  "page",
+  "sort",
+  "dir",
+  "tab",
+  "saved",
+  "error",
+  "notice",
+  "edit",
+  "clone",
+  "reduce",
+  "created",
+  "updated",
+  "paper",
+]);
+
+export function tableFiltersSuggestOpen(
+  search:
+    | URLSearchParams
+    | Record<string, string | string[] | undefined | null>
+    | null
+    | undefined,
+): boolean {
+  if (!search) {
+    return false;
+  }
+  const entries =
+    search instanceof URLSearchParams
+      ? [...search.entries()]
+      : Object.entries(search).flatMap(([key, value]) => {
+          if (value == null) {
+            return [];
+          }
+          return Array.isArray(value)
+            ? value.map((item) => [key, item] as const)
+            : [[key, value] as const];
+        });
+  for (const [key, value] of entries) {
+    if (TABLE_FILTER_CHROME_KEYS.has(key)) {
+      continue;
+    }
+    if (String(value).trim() !== "") {
+      return true;
+    }
+  }
+  return false;
+}

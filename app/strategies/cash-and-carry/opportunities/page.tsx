@@ -3,6 +3,7 @@ import { OpportunityFiltersForm } from "@/components/opportunity-filters";
 import { OpportunityTable } from "@/components/opportunity-table";
 import { PageHeading } from "@/components/page-heading";
 import { TableFilterSession } from "@/components/table-chrome";
+import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
 import { PaperFlash } from "@/components/paper-flash";
 import {
   applyOpportunityFilters,
@@ -85,7 +86,7 @@ export default async function CashAndCarryOpportunitiesPage({
           <PageHeading as="h2" title="Opportunities" className="" />
           <LastScan atMs={scannedAtMs} />
         </div>
-        <TableFilterSession>
+        <TableFilterSession defaultOpen={tableFiltersSuggestOpen(params)}>
           <OpportunityFiltersForm
             values={filterInputValues(filters)}
             deskId={deskIdFromHref(paper.next)}

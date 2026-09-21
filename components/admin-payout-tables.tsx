@@ -144,7 +144,7 @@ export function AdminPayoutFilesTable({
 
   return (
     <>
-      <TableFilterSession>
+      <TableFilterSession defaultOpen={Boolean(fileQ.trim() || fileStatus)}>
           <LiveGetForm>
             <input type="hidden" name="page" value="1" />
             {keepEntries(keep ?? {}).map(([name, value]) => (
@@ -328,7 +328,7 @@ export function AdminPayoutQueueTable({
 
   return (
     <>
-      <TableFilterSession>
+      <TableFilterSession defaultOpen={Boolean(payoutStatus)}>
           <LiveGetForm>
             <input type="hidden" name="page" value="1" />
             {keepEntries(keep ?? {}).map(([name, value]) => (
@@ -490,7 +490,7 @@ export function AdminPayoutFilePaymentsTable({
 
   return (
     <>
-      <TableFilterSession>
+      <TableFilterSession defaultOpen={Boolean(status)}>
           <LiveGetForm>
             <input type="hidden" name="page" value="1" />
             <TableFilterField label="Status">

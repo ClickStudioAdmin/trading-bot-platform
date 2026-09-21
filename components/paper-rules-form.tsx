@@ -190,11 +190,24 @@ export function PaperRulesForm({
   const router = useRouter();
   const [layers, setLayers] = useState(() => [...values.layers].reverse());
   const [cloneMenu, setCloneMenu] = useState(0);
-  const [draft] = useState(() =>
+  const [draft, setDraft] = useState(() =>
     edit === AUTOMATIONS_NEW
       ? resolvePaperDraft(values.layers, clone)
       : null,
   );
+  const [draftEdit, setDraftEdit] = useState(edit);
+  const [draftClone, setDraftClone] = useState(clone);
+  const nextDraft =
+    edit !== draftEdit || clone !== draftClone
+      ? edit === AUTOMATIONS_NEW
+        ? resolvePaperDraft(values.layers, clone)
+        : null
+      : draft;
+  if (edit !== draftEdit || clone !== draftClone) {
+    setDraftEdit(edit);
+    setDraftClone(clone);
+    setDraft(nextDraft);
+  }
   const [inUseIds, setInUseIds] = useState(inUseRuleIds);
   const inUse = new Set(inUseIds);
   const savedLayers = layers.filter((layer) => layer.id);
@@ -202,7 +215,7 @@ export function PaperRulesForm({
   const cloneSources = savedLayers;
   const formLayer =
     edit === AUTOMATIONS_NEW
-      ? draft
+      ? nextDraft
       : edit
         ? layers.find((layer) => layer.id === edit) ?? null
         : null;
@@ -293,7 +306,10 @@ export function PaperRulesForm({
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            <Link href={automationsNewHref(listHref)} className={deskActionBtnClass}>
+            <Link
+              href={automationsNewHref(listHref)}
+              className={`inline-flex items-center ${deskActionBtnClass}`}
+            >
               Create New Bot
             </Link>
             {accountId ? (

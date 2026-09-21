@@ -1367,7 +1367,9 @@ function AffiliateListFilters({
 }) {
   const defaults = affiliateListDefaults(tab);
   return (
-    <TableFilterSession>
+    <TableFilterSession
+      defaultOpen={Boolean(query.q.trim() || query.status)}
+    >
         <LiveGetForm className="mt-4">
           <input type="hidden" name="page" value="1" />
           <input type="hidden" name="tab" value={tab} />

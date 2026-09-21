@@ -84,7 +84,7 @@ export function AdminPlansTable({
 
   return (
     <>
-      <TableFilterSession actions={actions}>
+      <TableFilterSession defaultOpen={Boolean(status)} actions={actions}>
           <LiveGetForm>
             <input type="hidden" name="page" value="1" />
             <TableFilterField label="Status">

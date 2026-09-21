@@ -523,12 +523,25 @@ export function DcaPlaybooksDesk({
     .filter((playbook): playbook is DcaPlaybook => Boolean(playbook?.id));
   const cloneSources = savedPlaybooks;
   const addPlaybookClass = deskActionBtnClass;
-  const [draft] = useState(() =>
+  const [draft, setDraft] = useState(() =>
     edit === AUTOMATIONS_NEW ? resolveDcaDraft(playbooks, clone) : null,
   );
+  const [draftEdit, setDraftEdit] = useState(edit);
+  const [draftClone, setDraftClone] = useState(clone);
+  const nextDraft =
+    edit !== draftEdit || clone !== draftClone
+      ? edit === AUTOMATIONS_NEW
+        ? resolveDcaDraft(playbooks, clone)
+        : null
+      : draft;
+  if (edit !== draftEdit || clone !== draftClone) {
+    setDraftEdit(edit);
+    setDraftClone(clone);
+    setDraft(nextDraft);
+  }
   const formCard =
     edit === AUTOMATIONS_NEW
-      ? draft
+      ? nextDraft
       : edit
         ? cards.find((card) => card.playbook?.id === edit) ?? null
         : null;
@@ -633,7 +646,10 @@ export function DcaPlaybooksDesk({
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            <Link href={automationsNewHref(listHref)} className={addPlaybookClass}>
+            <Link
+              href={automationsNewHref(listHref)}
+              className={`inline-flex items-center ${addPlaybookClass}`}
+            >
               Create New Bot
             </Link>
             {accountId ? (
