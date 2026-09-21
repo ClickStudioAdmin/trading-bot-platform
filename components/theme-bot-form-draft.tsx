@@ -1064,27 +1064,22 @@ export function ThemeBotFormDraft() {
         <Group>
           <div className={rowClass}>
             {desk === "perps" ? (
-              <>
-                <Field label="Order" required>
-                  <OrderTypePill value={orderType} onChange={setOrderType} />
-                </Field>
-                <Field label="When" required>
-                  <AppSelect
-                    value={startKind}
-                    onChange={(event) =>
-                      applyStartKind(event.target.value as StartKind)
-                    }
-                    className={fieldClass}
-                  >
-                    <option value="price">Price cross</option>
-                    {closing ? null : (
-                      <option value="indicator">Indicator</option>
-                    )}
-                    {closing ? null : <option value="trend">Trend</option>}
-                    <option value="webhook">Signal webhook</option>
-                  </AppSelect>
-                </Field>
-              </>
+              <Field label="Initial Order Trigger" required>
+                <AppSelect
+                  value={startKind}
+                  onChange={(event) =>
+                    applyStartKind(event.target.value as StartKind)
+                  }
+                  className={fieldClass}
+                >
+                  <option value="price">Price cross</option>
+                  {closing ? null : (
+                    <option value="indicator">Indicator</option>
+                  )}
+                  {closing ? null : <option value="trend">Trend</option>}
+                  <option value="webhook">Signal webhook</option>
+                </AppSelect>
+              </Field>
             ) : (
               <Field label="Initial Order Trigger" className="lg:col-span-2" required>
                 <AppSelect
@@ -1143,16 +1138,6 @@ export function ThemeBotFormDraft() {
                   <option value="sample">Sample signal</option>
                 </AppSelect>
               </Field>
-              {desk === "perps" && orderType === "limit" ? (
-                <Field label="Limit price" required>
-                  <OffNumber
-                    value={limitPrice}
-                    onChange={setLimitPrice}
-                    required
-                    invalid={showFieldErrors && missing.limitPrice}
-                  />
-                </Field>
-              ) : null}
             </div>
             {bothSides && !closing ? (
               <div className="mt-5 space-y-5">
@@ -1261,16 +1246,6 @@ export function ThemeBotFormDraft() {
                   onPeriodChange={setPeriod}
                   onSlowPeriodChange={setSlowPeriod}
                 />
-                {desk === "perps" && orderType === "limit" ? (
-                  <Field label="Limit price" required>
-                    <OffNumber
-                      value={limitPrice}
-                      onChange={setLimitPrice}
-                      required
-                      invalid={showFieldErrors && missing.limitPrice}
-                    />
-                  </Field>
-                ) : null}
               </div>
             )
           ) : startKind === "trend" && !closing ? (
@@ -1347,16 +1322,6 @@ export function ThemeBotFormDraft() {
                   onPeriodChange={setPeriod}
                   onMultiplierChange={setMultiplier}
                 />
-                {desk === "perps" && orderType === "limit" ? (
-                  <Field label="Limit price" required>
-                    <OffNumber
-                      value={limitPrice}
-                      onChange={setLimitPrice}
-                      required
-                      invalid={showFieldErrors && missing.limitPrice}
-                    />
-                  </Field>
-                ) : null}
               </div>
             )
           ) : (
@@ -1422,16 +1387,6 @@ export function ThemeBotFormDraft() {
                   invalid={showFieldErrors && missing.priceLevel}
                 />
               )}
-              {desk === "perps" && orderType === "limit" ? (
-                <Field label="Limit price" required>
-                  <OffNumber
-                    value={limitPrice}
-                    onChange={setLimitPrice}
-                    required
-                    invalid={showFieldErrors && missing.limitPrice}
-                  />
-                </Field>
-              ) : null}
             </div>
           )}
         </Group>
@@ -1554,6 +1509,19 @@ export function ThemeBotFormDraft() {
                 </>
               ) : (
                 <>
+                  <Field label="Order" required>
+                    <OrderTypePill value={orderType} onChange={setOrderType} />
+                  </Field>
+                  {orderType === "limit" ? (
+                    <Field label="Limit price" required>
+                      <OffNumber
+                        value={limitPrice}
+                        onChange={setLimitPrice}
+                        required
+                        invalid={showFieldErrors && missing.limitPrice}
+                      />
+                    </Field>
+                  ) : null}
                   <Field label="Size" required>
                     <span className="relative mt-1 block">
                       {sizeUnit === "usdt" ? (
@@ -1596,6 +1564,23 @@ export function ThemeBotFormDraft() {
         ) : (
           <Group>
             <div className={rowClass}>
+              {desk === "perps" ? (
+                <>
+                  <Field label="Order" required>
+                    <OrderTypePill value={orderType} onChange={setOrderType} />
+                  </Field>
+                  {orderType === "limit" ? (
+                    <Field label="Limit price" required>
+                      <OffNumber
+                        value={limitPrice}
+                        onChange={setLimitPrice}
+                        required
+                        invalid={showFieldErrors && missing.limitPrice}
+                      />
+                    </Field>
+                  ) : null}
+                </>
+              ) : null}
               <Field label="Qty to close" hint="Empty closes the whole row.">
                 <GroupedNumberInput
                   value={size}

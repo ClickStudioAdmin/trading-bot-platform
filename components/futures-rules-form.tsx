@@ -694,14 +694,7 @@ function RuleCard({
       <BotFormStep title="Entry Conditions">
       <BotFormGroup>
         <div className={botRowClass}>
-          <BotField label="Order" required>
-            <OrderTypePill
-              name={`${prefix}orderType`}
-              value={orderType === "limit" ? "limit" : "market"}
-              onChange={setOrderType}
-            />
-          </BotField>
-          <BotField label="When" required>
+          <BotField label="Initial Order Trigger" required>
             <input type="hidden" name={`${prefix}entrySource`} value={entrySource} />
             <AppSelect
               value={entrySource}
@@ -839,17 +832,6 @@ function RuleCard({
               </BotField>
             </>
           )}
-          {orderType === "limit" ? (
-            <BotField label="Limit price" required>
-              <GroupedNumberInput
-                name={`${prefix}limitPrice`}
-                value={limitPrice}
-                onChange={setLimitPrice}
-                allowDecimal
-                className={botFieldClass}
-              />
-            </BotField>
-          ) : null}
         </div>
       </BotFormGroup>
 
@@ -885,6 +867,24 @@ function RuleCard({
       <BotFormStep title="Position Sizing">
       <BotFormGroup title={closing ? undefined : "Order Size"}>
         <div className={botRowClass}>
+          <BotField label="Order" required>
+            <OrderTypePill
+              name={`${prefix}orderType`}
+              value={orderType === "limit" ? "limit" : "market"}
+              onChange={setOrderType}
+            />
+          </BotField>
+          {orderType === "limit" ? (
+            <BotField label="Limit price" required>
+              <GroupedNumberInput
+                name={`${prefix}limitPrice`}
+                value={limitPrice}
+                onChange={setLimitPrice}
+                allowDecimal
+                className={botFieldClass}
+              />
+            </BotField>
+          ) : null}
           <BotField
             label={closing ? "Qty to close" : "Size"}
             hint={closing ? "Empty closes the whole row." : undefined}
