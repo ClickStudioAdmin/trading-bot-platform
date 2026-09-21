@@ -390,6 +390,48 @@ function SideBlock({
   );
 }
 
+function ThemeSecondaryEntry({
+  side,
+  prefix,
+  spec,
+  onChange,
+  enabled,
+  onEnabled,
+}: {
+  side: "long" | "short";
+  prefix: string;
+  spec: DcaFilterSpec | null;
+  onChange: (next: DcaFilterSpec | null) => void;
+  enabled: boolean;
+  onEnabled: (next: boolean) => void;
+}) {
+  return (
+    <OptionalSection
+      title="Secondary Entry Condition"
+      hint="Must be true for the entry trigger to execute."
+      enabled={enabled}
+      onEnabled={(next) => {
+        onEnabled(next);
+        onChange(next ? (spec ?? dcaFilterSpecForKind("rsi", side)) : null);
+      }}
+    >
+      <DcaFilterBlock
+        label="Kind"
+        prefix={prefix}
+        side={side}
+        spec={spec}
+        onChange={onChange}
+        dense
+        allowOff={false}
+        gridClass={rowClass5}
+        whenClass=""
+        fieldClass={fieldClass}
+        labelClass={labelClass}
+      />
+    </OptionalSection>
+  );
+}
+
 function PriceTriggerFields({
   desk,
   priceSource,
@@ -1077,6 +1119,7 @@ export function ThemeBotFormDraft() {
 
         <Group>
           {startKind === "webhook" ? (
+            <>
             <div className={rowClass5}>
               <Field
                 label={desk === "perps" ? "Webhook" : "Signal Webhook"}
@@ -1111,6 +1154,33 @@ export function ThemeBotFormDraft() {
                 </Field>
               ) : null}
             </div>
+            {bothSides && !closing ? (
+              <div className="mt-5 space-y-5">
+                <SideBlock title="Long">
+                  <ThemeSecondaryEntry
+                    side="long"
+                    prefix="themeConfirm"
+                    spec={confirm}
+                    onChange={setConfirm}
+                    enabled={confirmOn}
+                    onEnabled={setConfirmOn}
+                  />
+                </SideBlock>
+                <div className="space-y-5 border-t border-line pt-5">
+                  <SideBlock title="Short">
+                    <ThemeSecondaryEntry
+                      side="short"
+                      prefix="themeShortConfirm"
+                      spec={shortConfirm}
+                      onChange={setShortConfirm}
+                      enabled={shortConfirmOn}
+                      onEnabled={setShortConfirmOn}
+                    />
+                  </SideBlock>
+                </div>
+              </div>
+            ) : null}
+            </>
           ) : startKind === "indicator" && !closing ? (
             bothSides ? (
               <div className="space-y-5">
@@ -1133,6 +1203,14 @@ export function ThemeBotFormDraft() {
                       onSlowPeriodChange={setSlowPeriod}
                     />
                   </div>
+                  <ThemeSecondaryEntry
+                    side="long"
+                    prefix="themeConfirm"
+                    spec={confirm}
+                    onChange={setConfirm}
+                    enabled={confirmOn}
+                    onEnabled={setConfirmOn}
+                  />
                 </SideBlock>
                 <div className="space-y-5 border-t border-line pt-5">
                   <SideBlock title="Short">
@@ -1154,6 +1232,14 @@ export function ThemeBotFormDraft() {
                         onSlowPeriodChange={setShortSlowPeriod}
                       />
                     </div>
+                    <ThemeSecondaryEntry
+                      side="short"
+                      prefix="themeShortConfirm"
+                      spec={shortConfirm}
+                      onChange={setShortConfirm}
+                      enabled={shortConfirmOn}
+                      onEnabled={setShortConfirmOn}
+                    />
                   </SideBlock>
                 </div>
               </div>
@@ -1207,6 +1293,14 @@ export function ThemeBotFormDraft() {
                       onMultiplierChange={setMultiplier}
                     />
                   </div>
+                  <ThemeSecondaryEntry
+                    side="long"
+                    prefix="themeConfirm"
+                    spec={confirm}
+                    onChange={setConfirm}
+                    enabled={confirmOn}
+                    onEnabled={setConfirmOn}
+                  />
                 </SideBlock>
                 <div className="space-y-5 border-t border-line pt-5">
                   <SideBlock title="Short">
@@ -1226,6 +1320,14 @@ export function ThemeBotFormDraft() {
                         onMultiplierChange={setShortMultiplier}
                       />
                     </div>
+                    <ThemeSecondaryEntry
+                      side="short"
+                      prefix="themeShortConfirm"
+                      spec={shortConfirm}
+                      onChange={setShortConfirm}
+                      enabled={shortConfirmOn}
+                      onEnabled={setShortConfirmOn}
+                    />
                   </SideBlock>
                 </div>
               </div>
@@ -1274,6 +1376,14 @@ export function ThemeBotFormDraft() {
                         invalid={showFieldErrors && missing.priceLevel}
                       />
                     </div>
+                    <ThemeSecondaryEntry
+                      side="long"
+                      prefix="themeConfirm"
+                      spec={confirm}
+                      onChange={setConfirm}
+                      enabled={confirmOn}
+                      onEnabled={setConfirmOn}
+                    />
                   </SideBlock>
                   <div className="space-y-5 border-t border-line pt-5">
                     <SideBlock title="Short">
@@ -1289,6 +1399,14 @@ export function ThemeBotFormDraft() {
                           invalid={showFieldErrors && missing.shortPriceLevel}
                         />
                       </div>
+                      <ThemeSecondaryEntry
+                        side="short"
+                        prefix="themeShortConfirm"
+                        spec={shortConfirm}
+                        onChange={setShortConfirm}
+                        enabled={shortConfirmOn}
+                        onEnabled={setShortConfirmOn}
+                      />
                     </SideBlock>
                   </div>
                 </div>
@@ -1318,94 +1436,15 @@ export function ThemeBotFormDraft() {
           )}
         </Group>
 
-        {!closing ? (
-          bothSides ? (
-            <Group
-              title="Secondary Entry Condition"
-              hint="Must be true for the entry trigger to execute."
-            >
-              <OptionalSection
-                title="Long"
-                nested
-                enabled={confirmOn}
-                onEnabled={(next) => {
-                  setConfirmOn(next);
-                  setConfirm(
-                    next ? (confirm ?? dcaFilterSpecForKind("rsi", "long")) : null,
-                  );
-                }}
-              >
-                <DcaFilterBlock
-                  label="Kind"
-                  prefix="themeConfirm"
-                  side="long"
-                  spec={confirm}
-                  onChange={setConfirm}
-                  dense
-                  allowOff={false}
-                  gridClass={rowClass5}
-                  whenClass=""
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-                />
-              </OptionalSection>
-              <OptionalSection
-                title="Short"
-                nested
-                enabled={shortConfirmOn}
-                onEnabled={(next) => {
-                  setShortConfirmOn(next);
-                  setShortConfirm(
-                    next
-                      ? (shortConfirm ?? dcaFilterSpecForKind("rsi", "short"))
-                      : null,
-                  );
-                }}
-              >
-                <DcaFilterBlock
-                  label="Kind"
-                  prefix="themeShortConfirm"
-                  side="short"
-                  spec={shortConfirm}
-                  onChange={setShortConfirm}
-                  dense
-                  allowOff={false}
-                  gridClass={rowClass5}
-                  whenClass=""
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-                />
-              </OptionalSection>
-            </Group>
-          ) : (
-            <OptionalSection
-              title="Secondary Entry Condition"
-              hint="Must be true for the entry trigger to execute."
+        {!closing && !bothSides ? (
+            <ThemeSecondaryEntry
+              side={entrySide}
+              prefix="themeConfirm"
+              spec={confirm}
+              onChange={setConfirm}
               enabled={confirmOn}
-              onEnabled={(next) => {
-                setConfirmOn(next);
-                setConfirm(
-                  next
-                    ? (confirm ?? dcaFilterSpecForKind("rsi", entrySide))
-                    : null,
-                );
-              }}
-            >
-              <DcaFilterBlock
-                label="Kind"
-                prefix="themeConfirm"
-                side={entrySide}
-                spec={confirm}
-                onChange={setConfirm}
-                dense
-                allowOff={false}
-                gridClass={rowClass5}
-                whenClass=""
-                fieldClass={fieldClass}
-                labelClass={labelClass}
-              />
-            </OptionalSection>
-          )
+              onEnabled={setConfirmOn}
+            />
         ) : null}
         </BotFormStep>
 

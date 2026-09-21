@@ -173,6 +173,47 @@ function optional(value: number | null | undefined): string {
   return value == null ? "" : String(value);
 }
 
+function DcaSecondaryEntrySection({
+  side,
+  prefix,
+  spec,
+  onChange,
+  locked = false,
+}: {
+  side: "long" | "short";
+  prefix: string;
+  spec: DcaFilterSpec | null;
+  onChange: (next: DcaFilterSpec | null) => void;
+  locked?: boolean;
+}) {
+  return (
+    <OptionalSection
+      title="Secondary Entry Condition"
+      hint="Must be true for the entry trigger to execute."
+      locked={locked}
+      enabled={Boolean(spec)}
+      onEnabled={(next) =>
+        onChange(next ? (spec ?? dcaFilterSpecForKind("rsi", side)) : null)
+      }
+    >
+      <DcaFilterBlock
+        label="Kind"
+        prefix={prefix}
+        side={side}
+        spec={spec}
+        onChange={onChange}
+        named
+        dense
+        allowOff={false}
+        gridClass={botRowClass5}
+        whenClass=""
+        fieldClass={fieldClass}
+        labelClass={labelClass}
+      />
+    </OptionalSection>
+  );
+}
+
 function initialIndicatorCompare(
   kind: DcaIndicatorKind,
   stored: string | null | undefined,
@@ -1594,7 +1635,7 @@ export function DcaPlaybookForm({
         <div className={rowClass}>
           {startKind === "price" && direction === "both" ? (
             <div className="space-y-4 sm:col-span-2 lg:col-span-4">
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <p className={sectionTitleClass}>Long</p>
                 <div className={rowClass}>
                   <TriggerFields
@@ -1605,8 +1646,15 @@ export function DcaPlaybookForm({
                     quoteLabel={policy.quoteLabel}
                   />
                 </div>
+                <DcaSecondaryEntrySection
+                  side="long"
+                  prefix="confirm"
+                  spec={confirm}
+                  onChange={setConfirm}
+                  locked={cycleLocked}
+                />
               </div>
-              <div className="space-y-2 border-t border-line pt-3">
+              <div className="space-y-4 border-t border-line pt-4">
                 <p className={sectionTitleClass}>Short</p>
                 <div className={rowClass}>
                   <TriggerFields
@@ -1629,6 +1677,13 @@ export function DcaPlaybookForm({
                     quoteLabel={policy.quoteLabel}
                   />
                 </div>
+                <DcaSecondaryEntrySection
+                  side="short"
+                  prefix="shortConfirm"
+                  spec={shortConfirm}
+                  onChange={setShortConfirm}
+                  locked={cycleLocked}
+                />
               </div>
             </div>
           ) : null}
@@ -1674,7 +1729,7 @@ export function DcaPlaybookForm({
           ) : null}
           {startKind === "indicator" && direction === "both" ? (
             <div className="space-y-4 sm:col-span-2 lg:col-span-4">
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <p className={sectionTitleClass}>Long</p>
                 <div className={rowClass}>
                   <IndicatorStartFields
@@ -1694,8 +1749,15 @@ export function DcaPlaybookForm({
                     onSlowPeriodChange={setIndicatorSlowPeriod}
                   />
                 </div>
+                <DcaSecondaryEntrySection
+                  side="long"
+                  prefix="confirm"
+                  spec={confirm}
+                  onChange={setConfirm}
+                  locked={cycleLocked}
+                />
               </div>
-              <div className="space-y-2 border-t border-line pt-3">
+              <div className="space-y-4 border-t border-line pt-4">
                 <p className={sectionTitleClass}>Short</p>
                 <div className={rowClass}>
                   <IndicatorStartFields
@@ -1715,6 +1777,13 @@ export function DcaPlaybookForm({
                     onSlowPeriodChange={setShortIndicatorSlowPeriod}
                   />
                 </div>
+                <DcaSecondaryEntrySection
+                  side="short"
+                  prefix="shortConfirm"
+                  spec={shortConfirm}
+                  onChange={setShortConfirm}
+                  locked={cycleLocked}
+                />
               </div>
             </div>
           ) : null}
@@ -1740,7 +1809,7 @@ export function DcaPlaybookForm({
           ) : null}
           {startKind === "trend" && direction === "both" ? (
             <div className="space-y-4 sm:col-span-2 lg:col-span-4">
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <p className={sectionTitleClass}>Long</p>
                 <div className={rowClass}>
                   <TrendStartFields
@@ -1758,8 +1827,15 @@ export function DcaPlaybookForm({
                     onMultiplierChange={setIndicatorMultiplier}
                   />
                 </div>
+                <DcaSecondaryEntrySection
+                  side="long"
+                  prefix="confirm"
+                  spec={confirm}
+                  onChange={setConfirm}
+                  locked={cycleLocked}
+                />
               </div>
-              <div className="space-y-2 border-t border-line pt-3">
+              <div className="space-y-4 border-t border-line pt-4">
                 <p className={sectionTitleClass}>Short</p>
                 <div className={rowClass}>
                   <TrendStartFields
@@ -1777,6 +1853,13 @@ export function DcaPlaybookForm({
                     onMultiplierChange={setShortIndicatorMultiplier}
                   />
                 </div>
+                <DcaSecondaryEntrySection
+                  side="short"
+                  prefix="shortConfirm"
+                  spec={shortConfirm}
+                  onChange={setShortConfirm}
+                  locked={cycleLocked}
+                />
               </div>
             </div>
           ) : null}
@@ -1801,97 +1884,36 @@ export function DcaPlaybookForm({
         </div>
       </BotFormGroup>
 
-      {direction === "both" ? (
-        <BotFormGroup
-          title="Secondary Entry Condition"
-          hint="Must be true for the entry trigger to execute."
-          locked={cycleLocked}
-        >
-          <OptionalSection
-            title="Long"
-            nested
-            enabled={Boolean(confirm)}
-            onEnabled={(next) =>
-              setConfirm(next ? (confirm ?? dcaFilterSpecForKind("rsi", "long")) : null)
-            }
-          >
-            <DcaFilterBlock
-              label="Kind"
-              prefix="confirm"
+      {direction === "both" && startKind === "webhook" ? (
+        <>
+          <BotFormGroup title="Long" locked={cycleLocked}>
+            <DcaSecondaryEntrySection
               side="long"
+              prefix="confirm"
               spec={confirm}
               onChange={setConfirm}
-              named
-              dense
-              allowOff={false}
-              gridClass={botRowClass5}
-              whenClass=""
-              fieldClass={fieldClass}
-              labelClass={labelClass}
+              locked={cycleLocked}
             />
-          </OptionalSection>
-          <OptionalSection
-            title="Short"
-            nested
-            enabled={Boolean(shortConfirm)}
-            onEnabled={(next) =>
-              setShortConfirm(
-                next
-                  ? (shortConfirm ?? dcaFilterSpecForKind("rsi", "short"))
-                  : null,
-              )
-            }
-          >
-            <DcaFilterBlock
-              label="Kind"
-              prefix="shortConfirm"
+          </BotFormGroup>
+          <BotFormGroup title="Short" locked={cycleLocked}>
+            <DcaSecondaryEntrySection
               side="short"
+              prefix="shortConfirm"
               spec={shortConfirm}
               onChange={setShortConfirm}
-              named
-              dense
-              allowOff={false}
-              gridClass={botRowClass5}
-              whenClass=""
-              fieldClass={fieldClass}
-              labelClass={labelClass}
+              locked={cycleLocked}
             />
-          </OptionalSection>
-        </BotFormGroup>
-      ) : (
-        <OptionalSection
-          title="Secondary Entry Condition"
-          hint="Must be true for the entry trigger to execute."
+          </BotFormGroup>
+        </>
+      ) : direction !== "both" ? (
+        <DcaSecondaryEntrySection
+          side={direction === "short" ? "short" : "long"}
+          prefix="confirm"
+          spec={confirm}
+          onChange={setConfirm}
           locked={cycleLocked}
-          enabled={Boolean(confirm)}
-          onEnabled={(next) =>
-            setConfirm(
-              next
-                ? (confirm ??
-                  dcaFilterSpecForKind(
-                    "rsi",
-                    direction === "short" ? "short" : "long",
-                  ))
-                : null,
-            )
-          }
-        >
-          <DcaFilterBlock
-            label="Kind"
-            prefix="confirm"
-            side={direction === "short" ? "short" : "long"}
-            spec={confirm}
-            onChange={setConfirm}
-            named
-            dense
-            allowOff={false}
-            gridClass={botRowClass5}
-            whenClass=""
-            fieldClass={fieldClass}
-            labelClass={labelClass}
-          />
-        </OptionalSection>
-      )}
+        />
+      ) : null}
 
       </BotFormStep>
       <BotFormStep title="Position Sizing" locked={cycleLocked}>
