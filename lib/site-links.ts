@@ -57,8 +57,8 @@ export const STRATEGY_LINKS = [
 ] as const;
 
 export const CASH_AND_CARRY_PRIMARY_LINKS = [
-  { href: "/strategies/cash-and-carry/positions", label: "Positions" },
   { href: "/strategies/cash-and-carry/automations", label: "Automations (bots)" },
+  { href: "/strategies/cash-and-carry/positions", label: "Positions" },
   { href: "/strategies/cash-and-carry/performance", label: "Performance" },
 ] as const;
 
@@ -98,8 +98,8 @@ export const AFFILIATE_ONLY_LINKS = [
 ] as const;
 
 export const FUTURES_PRIMARY_LINKS = [
-  { href: "/strategies/futures/positions", label: "Positions" },
   { href: "/strategies/futures/automations", label: "Automations (bots)" },
+  { href: "/strategies/futures/positions", label: "Positions" },
   { href: "/strategies/futures/webhooks", label: "Webhooks" },
   { href: "/strategies/futures/performance", label: "Performance" },
 ] as const;
@@ -110,8 +110,8 @@ export const PERPS_PRIMARY_LINKS = [
 ] as const;
 
 export const PERPS_BOTS_PRIMARY_LINKS = [
-  { href: "/strategies/futures/positions", label: "Positions" },
   { href: "/strategies/futures/automations", label: "Automations (bots)" },
+  { href: "/strategies/futures/positions", label: "Positions" },
   { href: "/strategies/futures/webhooks", label: "Webhooks" },
   { href: "/strategies/futures/performance", label: "Performance" },
 ] as const;

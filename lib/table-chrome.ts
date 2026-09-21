@@ -183,7 +183,9 @@ export function statusToneFor(status: string): StatusTone {
     key === "open" ||
     key === "unpaid" ||
     key === "closing" ||
-    key === "cancelling"
+    key === "cancelling" ||
+    key === "reduce_only" ||
+    key === "stop_adding"
   ) {
     return "warning";
   }

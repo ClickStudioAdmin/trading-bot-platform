@@ -8,7 +8,7 @@ Never trust the browser for entitlements, verification, 2FA, or admin permission
 
 ## Status
 
-**V1 item 1 (identity) accepted 17 Sep 2026:** verify on signup + forgot password + unverified wall. **V1 item 2 (2FA) accepted 17 Sep 2026:** Google Authenticator enroll + sign-in. Next after UI cleanup (item 3) is account blotter lists (item 4). Stop. Do not start gates (V1 item 5) until Click says go.
+**V1 item 1 (identity) accepted 17 Sep 2026:** verify on signup + forgot password + unverified wall. **V1 item 2 (2FA) accepted 17 Sep 2026:** Google Authenticator enroll + sign-in. **V1 item 3 accepted 21 Sep 2026.** Item 4 (account blotter lists) is current. Stop. Do not start gates (V1 item 5) until Click says go.
 
 ## Purpose
 

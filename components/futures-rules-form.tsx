@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AutomationsBotTable } from "@/components/automations-bot-table";
 import {
   AdditionalActions,
   BotField,
@@ -81,6 +84,17 @@ import { perpsFormToSnapshotSource } from "@/lib/templates/recipe";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
 import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
 import { AppSelect } from "@/components/app-select";
+import {
+  botModeLabel,
+  perpsBotPair,
+  perpsBotSummary,
+} from "@/lib/bots/automations-list";
+import {
+  AUTOMATIONS_NEW,
+  automationsEditHref,
+  automationsNewHref,
+  automationsSavedHref,
+} from "@/lib/bots/automations-path";
 
 export function FuturesAutomationsDesk({
   rules,
@@ -96,6 +110,9 @@ export function FuturesAutomationsDesk({
   quoteLabel = "USDT",
   venueEnvironment = null,
   backtestLibrary = [],
+  edit = null,
+  clone = null,
+  listHref,
 }: {
   rules: FuturesAutomationFormValues[];
   options: LinearPerp[];
@@ -110,19 +127,35 @@ export function FuturesAutomationsDesk({
   quoteLabel?: string;
   venueEnvironment?: string | null;
   backtestLibrary?: BacktestLibraryItem[];
+  edit?: string | null;
+  clone?: string | null;
+  listHref: string;
 }) {
+  const router = useRouter();
   const [layers, setLayers] = useState(() => [...rules].reverse());
   const [extraLibrary, setExtraLibrary] = useState<BacktestLibraryItem[]>([]);
   const library = [...backtestLibrary, ...extraLibrary];
   const [cloneMenu, setCloneMenu] = useState(0);
-  const empty = layers.length === 0;
+  const savedLayers = layers.filter((layer) => layer.id);
   const inUse = new Set(inUseRuleIds);
-  const cloneSources = layers.filter((layer) => layer.id);
+  const cloneSources = savedLayers;
   const preferredSymbol = venueId === "hyperliquid" ? "BTC" : "BTCUSDT";
   const defaultSymbol =
     options.find((row) => row.symbol === preferredSymbol)?.symbol ??
     options[0]?.symbol ??
     preferredSymbol;
+  const [draft] = useState(() =>
+    edit === AUTOMATIONS_NEW
+      ? resolvePerpsDraft(rules, clone, defaultSymbol)
+      : null,
+  );
+  const formLayer =
+    edit === AUTOMATIONS_NEW
+      ? draft
+      : edit
+        ? layers.find((layer) => layer.id === edit) ?? null
+        : null;
+  const showForm = Boolean(formLayer);
 
   function appendApplied(items: AppliedDeskItem[]) {
     const nextRules = items
@@ -139,6 +172,11 @@ export function FuturesAutomationsDesk({
       const fresh = nextRules.filter((row) => !row.id || !seen.has(row.id));
       return fresh.length === 0 ? current : [...fresh, ...current];
     });
+    router.refresh();
+  }
+
+  function leaveToList(saved = false) {
+    router.push(saved ? automationsSavedHref(listHref) : listHref);
   }
 
   function applySaveResult(result: SaveFuturesAutomationsResult) {
@@ -152,97 +190,114 @@ export function FuturesAutomationsDesk({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() =>
-            setLayers((current) => [
-              defaultFuturesAutomationForm(current.length, defaultSymbol),
-              ...current,
+      {showForm && formLayer ? (
+        <RuleCard
+          key={formLayer.key}
+          layer={formLayer}
+          options={options}
+          triggerWebhooks={triggerWebhooks}
+          accountReduceOnly={reduceOnly}
+          inUse={Boolean(formLayer.id && inUse.has(formLayer.id))}
+          isAdmin={isAdmin}
+          folders={sets}
+          quoteLabel={quoteLabel}
+          venueId={venueId}
+          venueEnvironment={venueEnvironment}
+          backtestLibrary={library}
+          onSaved={(result) => {
+            applySaveResult(result);
+            if (result.ok) {
+              leaveToList(true);
+            }
+          }}
+          onTemplateSaved={(item) =>
+            setExtraLibrary((current) => [
+              ...current.filter((row) => row.id !== item.id),
+              item,
             ])
           }
-          className={deskActionBtnClass}
-        >
-          Create New Bot
-        </button>
-        {accountId ? (
-          <DeskTemplateBar
-            deskType="perps"
-            accountId={accountId}
-            templates={templates}
-            sets={sets}
-            onApplied={appendApplied}
-          />
-        ) : null}
-        {cloneSources.length > 0 ? (
-          <AppSelect variant="action"
-            key={cloneMenu}
-            aria-label="Clone existing bot"
-            defaultValue=""
-            onChange={(event) => {
-              const key = event.target.value;
-              const source = cloneSources.find((item) => item.key === key);
-              if (!source) {
-                return;
-              }
-              setLayers((current) => [
-                cloneFuturesAutomationForm(source),
-                ...current,
-              ]);
-              setCloneMenu((n) => n + 1);
-            }}
-            className={deskActionSelectClass}
-          >
-            <option value="">Clone existing bot</option>
-            {cloneSources.map((item) => (
-              <option key={item.key} value={item.key}>
-                {item.name} · {item.symbol}
-              </option>
-            ))}
-          </AppSelect>
-        ) : null}
-      </div>
-      {empty ? (
-        <p className="rounded-card border border-line bg-canvas px-4 py-6 text-sm text-ink-muted">
-          No bots yet. Add a bot to fire Buy, Sell, or Close on a price
-          cross, Indicator, Trend, or a Signal webhook.
-        </p>
-      ) : (
-        layers.map((layer) => (
-          <RuleCard
-            key={layer.key}
-            layer={layer}
-            options={options}
-            triggerWebhooks={triggerWebhooks}
-            accountReduceOnly={reduceOnly}
-            inUse={Boolean(layer.id && inUse.has(layer.id))}
-            isAdmin={isAdmin}
-            folders={sets}
-            quoteLabel={quoteLabel}
-            venueId={venueId}
-            venueEnvironment={venueEnvironment}
-            backtestLibrary={library}
-            onSaved={applySaveResult}
-            onTemplateSaved={(item) =>
-              setExtraLibrary((current) => [
-                ...current.filter((row) => row.id !== item.id),
-                item,
-              ])
+          onRemove={() => {
+            const next = layers.filter((item) => item.key !== formLayer.key);
+            setLayers(next);
+            if (formLayer.id && next.filter((item) => item.id).length === 0) {
+              const data = new FormData();
+              data.set("ruleCount", "0");
+              void saveFuturesAutomations(data).then(applySaveResult);
             }
-            onRemove={() => {
-              const next = layers.filter((item) => item.key !== layer.key);
-              setLayers(next);
-              if (next.length === 0) {
-                const data = new FormData();
-                data.set("ruleCount", "0");
-                void saveFuturesAutomations(data).then(applySaveResult);
-              }
-            }}
+            leaveToList();
+          }}
+        />
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={automationsNewHref(listHref)} className={deskActionBtnClass}>
+              Create New Bot
+            </Link>
+            {accountId ? (
+              <DeskTemplateBar
+                deskType="perps"
+                accountId={accountId}
+                templates={templates}
+                sets={sets}
+                onApplied={appendApplied}
+              />
+            ) : null}
+            {cloneSources.length > 0 ? (
+              <AppSelect variant="action"
+                key={cloneMenu}
+                aria-label="Clone existing bot"
+                defaultValue=""
+                onChange={(event) => {
+                  const id = event.target.value;
+                  const source = cloneSources.find((item) => item.id === id);
+                  if (!source) {
+                    return;
+                  }
+                  router.push(automationsNewHref(listHref, source.id));
+                  setCloneMenu((n) => n + 1);
+                }}
+                className={deskActionSelectClass}
+              >
+                <option value="">Clone existing bot</option>
+                {cloneSources.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} · {item.symbol}
+                  </option>
+                ))}
+              </AppSelect>
+            ) : null}
+          </div>
+          <AutomationsBotTable
+            empty="No bots yet. Create a bot to fire Buy, Sell, or Close on a price cross, Indicator, Trend, or a Signal webhook."
+            rows={savedLayers.map((layer) => ({
+              id: layer.id,
+              name: layer.name || "Bot",
+              pair: perpsBotPair(layer),
+              status: botModeLabel("perps", layer.mode),
+              statusKey: layer.mode,
+              summary: perpsBotSummary(layer),
+              editHref: automationsEditHref(listHref, layer.id),
+              cloneHref: automationsNewHref(listHref, layer.id),
+            }))}
           />
-        ))
+        </>
       )}
     </div>
   );
+}
+
+function resolvePerpsDraft(
+  rules: FuturesAutomationFormValues[],
+  clone: string | null,
+  defaultSymbol: string,
+): FuturesAutomationFormValues {
+  if (clone) {
+    const source = rules.find((rule) => rule.id === clone);
+    if (source) {
+      return cloneFuturesAutomationForm(source);
+    }
+  }
+  return defaultFuturesAutomationForm(rules.length, defaultSymbol);
 }
 
 function RuleCard({

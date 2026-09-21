@@ -1,12 +1,12 @@
 # Account Positions, Bots, and Automations lists
 
-**V1 item 4** ([roadmap.md](roadmap.md)). Locked 19 Sep 2026. Not the current phase. Do not implement until UI refinement (item 3) is accepted and Click says go.
+**V1 item 4** ([roadmap.md](roadmap.md)). Locked 19 Sep 2026. **Current.** Started 21 Sep 2026 with desk Automations lists. Do not start account-wide Positions / Bots until Click asks.
 
 Reference: 3Commas-style **bot list** (table + filters + Create + row actions), not a wall of edit forms. Same Theme table chrome as other data types ([ui-theme.md](ui-theme.md)).
 
 ## Status
 
-Spec only for the **lists**. Current work stays UI refinement (V1 item 3). Isolation (one connection per desk, one venue account per login + venue + environment) shipped 19 Sep 2026 during item 3 — do not rebuild it here. Do not start Positions / Bots / Automations tables until item 3 is accepted and Click says go.
+Isolation (one connection per desk, one venue account per login + venue + environment) shipped 19 Sep 2026 during item 3 — do not rebuild it here. Item 3 is accepted. **Started:** desk Automations is a bot table + Create / View/Edit form (`?edit=`). Account-wide Positions and Bots wait until Click asks.
 
 ## Purpose
 

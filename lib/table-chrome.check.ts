@@ -38,6 +38,8 @@ assert.equal(statusToneFor("active"), "success");
 assert.equal(statusToneFor("Unpaid"), "warning");
 assert.equal(statusToneFor("error"), "danger");
 assert.equal(statusToneFor("archived"), "muted");
+assert.equal(statusToneFor("reduce_only"), "warning");
+assert.equal(statusToneFor("stop_adding"), "warning");
 assert.equal(statusToneFor("info"), "muted");
 assert.equal(formatStatusLabel("paid"), "Paid");
 assert.equal(formatStatusLabel("sign_up"), "Sign Up");

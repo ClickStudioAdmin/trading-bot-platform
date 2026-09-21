@@ -184,7 +184,7 @@ export const LUCIDE_ICONS = [
     id: "copy",
     name: "Copy",
     lucide: "Copy",
-    usedIn: "Clone plan, copy affiliate URL, chart snapshot",
+    usedIn: "Clone plan, clone bot, copy affiliate URL, chart snapshot",
     Icon: Copy,
   },
   {
@@ -289,7 +289,7 @@ export const LUCIDE_ICONS = [
     id: "pencil",
     name: "Pencil",
     lucide: "Pencil",
-    usedIn: "Edit, rename, TP/SL, trailing",
+    usedIn: "Edit, view/edit bot, rename, TP/SL, trailing",
     Icon: Pencil,
   },
   {

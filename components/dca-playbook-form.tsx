@@ -1,7 +1,9 @@
 ﻿"use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { AutomationsBotTable } from "@/components/automations-bot-table";
 import {
   AdditionalActions,
   BotField,
@@ -45,6 +47,17 @@ import {
   disableNeedsConfirm,
   type DcaBotStatus,
 } from "@/lib/bots/status";
+import {
+  dcaBotPair,
+  dcaBotSummary,
+  dcaListStatus,
+} from "@/lib/bots/automations-list";
+import {
+  AUTOMATIONS_NEW,
+  automationsEditHref,
+  automationsNewHref,
+  automationsSavedHref,
+} from "@/lib/bots/automations-path";
 import {
   deleteDcaPlaybookAction,
   runDcaArmAction,
@@ -128,7 +141,6 @@ import type { FuturesOrderType, FuturesSide } from "@/lib/futures/model";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { perpEffectiveMaxQty, perpTicketSizeError } from "@/lib/exchanges/bybit/ticket-size";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
-import Link from "next/link";
 import {
   BacktestTemplateLink,
   type BacktestLibraryItem,
@@ -469,6 +481,9 @@ export function DcaPlaybooksDesk({
   backtestLibrary = [],
   openPositions = [],
   urgentRefresh = false,
+  edit = null,
+  clone = null,
+  listHref,
 }: {
   playbooks: DcaPlaybook[];
   options: LinearPerp[];
@@ -488,6 +503,9 @@ export function DcaPlaybooksDesk({
   backtestLibrary?: BacktestLibraryItem[];
   openPositions?: DcaCycleOpen[];
   urgentRefresh?: boolean;
+  edit?: string | null;
+  clone?: string | null;
+  listHref: string;
 }) {
   const router = useRouter();
   const [extraLibrary, setExtraLibrary] = useState<BacktestLibraryItem[]>([]);
@@ -500,11 +518,21 @@ export function DcaPlaybooksDesk({
       .map((playbook) => ({ key: playbook.id, playbook })),
   );
   const [cloneMenu, setCloneMenu] = useState(0);
-  const empty = cards.length === 0;
-  const cloneSources = cards
+  const savedPlaybooks = cards
     .map((card) => card.playbook)
-    .filter((playbook): playbook is DcaPlaybook => Boolean(playbook));
+    .filter((playbook): playbook is DcaPlaybook => Boolean(playbook?.id));
+  const cloneSources = savedPlaybooks;
   const addPlaybookClass = deskActionBtnClass;
+  const [draft] = useState(() =>
+    edit === AUTOMATIONS_NEW ? resolveDcaDraft(playbooks, clone) : null,
+  );
+  const formCard =
+    edit === AUTOMATIONS_NEW
+      ? draft
+      : edit
+        ? cards.find((card) => card.playbook?.id === edit) ?? null
+        : null;
+  const showForm = Boolean(formCard);
 
   function appendApplied(items: AppliedDeskItem[]) {
     const playbooks = items
@@ -531,6 +559,11 @@ export function DcaPlaybooksDesk({
         ...current,
       ];
     });
+    router.refresh();
+  }
+
+  function leaveToList(saved = false) {
+    router.push(saved ? automationsSavedHref(listHref) : listHref);
   }
 
   return (
@@ -542,131 +575,142 @@ export function DcaPlaybooksDesk({
           Desk Settings. Take profit and stop still run.
         </p>
       ) : null}
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() =>
-            setCards((current) => [
-              { key: `new-${current.length}-${Date.now()}`, playbook: null },
-              ...current,
+      {showForm && formCard ? (
+        <DcaPlaybookForm
+          key={formCard.key}
+          playbook={formCard.playbook}
+          seed={formCard.seed}
+          options={options}
+          signalWebhooks={signalWebhooks}
+          availableUsdt={availableUsdt}
+          bookUsdt={bookUsdt}
+          leverage={leverage}
+          lastPrices={lastPrices}
+          webhooksHref={webhooksHref}
+          isAdmin={isAdmin}
+          folders={sets}
+          policy={policy}
+          venueEnvironment={venueEnvironment}
+          backtestLibrary={library}
+          openPositions={openPositions}
+          onTemplateSaved={(item) =>
+            setExtraLibrary((current) => [
+              ...current.filter((row) => row.id !== item.id),
+              item,
             ])
           }
-          className={addPlaybookClass}
-        >
-          Create New Bot
-        </button>
-        {accountId ? (
-          <DeskTemplateBar
-            deskType="dca"
-            accountId={accountId}
-            templates={templates}
-            sets={sets}
-            onApplied={appendApplied}
-          />
-        ) : null}
-        {cloneSources.length > 0 ? (
-          <AppSelect variant="action"
-            key={cloneMenu}
-            aria-label="Clone existing bot"
-            defaultValue=""
-            onChange={(event) => {
-              const id = event.target.value;
-              const source = cloneSources.find((item) => item.id === id);
-              if (!source) {
-                return;
-              }
-              const seed = dcaCloneIdleDraft(source);
-              setCards((current) => [
-                {
-                  key: `clone-${source.id}-${Date.now()}`,
-                  playbook: null,
-                  seed,
-                },
-                ...current,
-              ]);
-              setCloneMenu((n) => n + 1);
-            }}
-            className={deskActionSelectClass}
-          >
-            <option value="">Clone existing bot</option>
-            {cloneSources.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} · {item.symbol}
-              </option>
-            ))}
-          </AppSelect>
-        ) : null}
-      </div>
-      {empty ? (
-        <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
-          No bots yet. Add a bot to own orders and exits on one
-          contract. Leave this empty if you are not ready to arm.
-        </p>
+          defaultName={
+            formCard.playbook?.name ?? formCard.seed?.name ?? DEFAULT_DCA_NAME
+          }
+          onResult={(result) => {
+            const next = result as DcaDeskActionResult;
+            if (next.deletedId) {
+              setCards((current) =>
+                current.filter((item) => item.key !== formCard.key),
+              );
+              leaveToList();
+              return;
+            }
+            if (next.playbook) {
+              setCards((current) =>
+                current.map((item) =>
+                  item.key === formCard.key
+                    ? { ...item, playbook: next.playbook ?? null, seed: undefined }
+                    : item,
+                ),
+              );
+            }
+            if (next.ok) {
+              leaveToList(true);
+            }
+          }}
+          onRemoveDraft={
+            formCard.playbook
+              ? undefined
+              : () => leaveToList()
+          }
+        />
       ) : (
-        cards.map((card, index) => (
-          <DcaPlaybookForm
-            key={card.key}
-            playbook={card.playbook}
-            seed={card.seed}
-            options={options}
-            signalWebhooks={signalWebhooks}
-            availableUsdt={availableUsdt}
-            bookUsdt={bookUsdt}
-            leverage={leverage}
-            lastPrices={lastPrices}
-            webhooksHref={webhooksHref}
-            isAdmin={isAdmin}
-            folders={sets}
-            policy={policy}
-            venueEnvironment={venueEnvironment}
-            backtestLibrary={library}
-            openPositions={openPositions}
-            onTemplateSaved={(item) =>
-              setExtraLibrary((current) => [
-                ...current.filter((row) => row.id !== item.id),
-                item,
-              ])
-            }
-            defaultName={
-              card.playbook?.name ??
-              card.seed?.name ??
-              (cards.length === 1 ? DEFAULT_DCA_NAME : `DCA ${cards.length - index}`)
-            }
-            onResult={(result) => {
-              const next = result as DcaDeskActionResult;
-              if (next.deletedId) {
-                setCards((current) =>
-                  current.filter((item) => item.key !== card.key),
-                );
-                router.refresh();
-                return;
-              }
-              if (next.playbook) {
-                setCards((current) =>
-                  current.map((item) =>
-                    item.key === card.key
-                      ? { ...item, playbook: next.playbook ?? null, seed: undefined }
-                      : item,
-                  ),
-                );
-              }
-              if (next.ok) {
-                router.refresh();
-              }
-            }}
-            onRemoveDraft={
-              card.playbook
-                ? undefined
-                : () =>
-                    setCards((current) =>
-                      current.filter((item) => item.key !== card.key),
-                    )
-            }
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={automationsNewHref(listHref)} className={addPlaybookClass}>
+              Create New Bot
+            </Link>
+            {accountId ? (
+              <DeskTemplateBar
+                deskType="dca"
+                accountId={accountId}
+                templates={templates}
+                sets={sets}
+                onApplied={appendApplied}
+              />
+            ) : null}
+            {cloneSources.length > 0 ? (
+              <AppSelect variant="action"
+                key={cloneMenu}
+                aria-label="Clone existing bot"
+                defaultValue=""
+                onChange={(event) => {
+                  const id = event.target.value;
+                  const source = cloneSources.find((item) => item.id === id);
+                  if (!source) {
+                    return;
+                  }
+                  router.push(automationsNewHref(listHref, source.id));
+                  setCloneMenu((n) => n + 1);
+                }}
+                className={deskActionSelectClass}
+              >
+                <option value="">Clone existing bot</option>
+                {cloneSources.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} · {item.symbol}
+                  </option>
+                ))}
+              </AppSelect>
+            ) : null}
+          </div>
+          <AutomationsBotTable
+            empty="No bots yet. Create a bot to own orders and exits on one contract. Leave this empty if you are not ready to arm."
+            rows={savedPlaybooks.map((playbook) => ({
+              id: playbook.id,
+              name: playbook.name || "Bot",
+              pair: dcaBotPair(playbook),
+              status: dcaListStatus(playbook),
+              statusKey: dcaStatusFromLegs({
+                armed:
+                  playbook.long.status === "armed" ||
+                  playbook.short.status === "armed",
+                stopAdding:
+                  playbook.long.status === "stop_adding" ||
+                  playbook.short.status === "stop_adding",
+              }),
+              summary: dcaBotSummary(playbook),
+              editHref: automationsEditHref(listHref, playbook.id),
+              cloneHref: automationsNewHref(listHref, playbook.id),
+            }))}
           />
-        ))
+        </>
       )}
     </div>
   );
+}
+
+function resolveDcaDraft(
+  playbooks: DcaPlaybook[],
+  clone: string | null,
+): { key: string; playbook: DcaPlaybook | null; seed?: DcaPlaybook } {
+  if (clone) {
+    const source = playbooks.find((playbook) => playbook.id === clone);
+    if (source) {
+      return {
+        key: `clone-${source.id}-${Date.now()}`,
+        playbook: null,
+        seed: dcaCloneIdleDraft(source),
+      };
+    }
+  }
+  return { key: `new-${Date.now()}`, playbook: null };
 }
 
 export function DcaPlaybookForm({

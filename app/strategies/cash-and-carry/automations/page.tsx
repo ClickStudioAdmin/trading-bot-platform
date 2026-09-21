@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PageHeading } from "@/components/page-heading";
+import { AutomationsPageFrame } from "@/components/automations-page-frame";
 import { AutomationsDesk } from "@/components/paper-rules-form";
 import { PaperRulesGuide } from "@/components/paper-rules-guide";
+import { deskHref } from "@/lib/accounts/model";
+import {
+  AUTOMATIONS_NEW,
+  CASH_AND_CARRY_AUTOMATIONS_PATH,
+  automationsEditTitle,
+  parseAutomationsClone,
+  parseAutomationsEdit,
+} from "@/lib/bots/automations-path";
 import { loadPaperRules } from "@/lib/engine/load";
 import { paperConfigToFormValues } from "@/lib/engine/rules";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
@@ -31,6 +39,20 @@ export default async function CashAndCarryAutomationsPage({
     session && accountCanHoldConnections(session.account.mode),
   );
   const { signedIn, config, inUseRuleIds } = await loadPaperRules();
+  const values = paperConfigToFormValues(config);
+  const listHref = deskHref(CASH_AND_CARRY_AUTOMATIONS_PATH, session?.account.id);
+  const requestedEdit = parseAutomationsEdit(firstSearchValue(params.edit));
+  const clone = parseAutomationsClone(firstSearchValue(params.clone));
+  const knownEdit =
+    requestedEdit &&
+    requestedEdit !== AUTOMATIONS_NEW &&
+    !values.layers.some((layer) => layer.id === requestedEdit)
+      ? null
+      : requestedEdit;
+  const editTitle = automationsEditTitle({
+    edit: knownEdit,
+    name: values.layers.find((layer) => layer.id === knownEdit)?.name,
+  });
   const saved = firstSearchValue(params.saved) === "1";
   const reduceSaved = firstSearchValue(params.reduce) === "1";
   const error = firstSearchValue(params.error);
@@ -48,8 +70,7 @@ export default async function CashAndCarryAutomationsPage({
     : [];
 
   return (
-    <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-      <PageHeading as="h2" title="Automations (bots)" />
+    <AutomationsPageFrame listHref={listHref} editTitle={editTitle}>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
@@ -62,18 +83,23 @@ export default async function CashAndCarryAutomationsPage({
         <p className="mt-4 text-sm text-success">Reduce only saved.</p>
       ) : null}
       {signedIn && session ? (
-        <AutomationsDesk
-          values={paperConfigToFormValues(config)}
-          inUseRuleIds={inUseRuleIds}
-          reduceOnly={Boolean(config.reduceOnly)}
-          isAdmin={memberIsAdmin(session.member)}
-          accountId={session.account.id}
-          templates={templates.map(templateToSummary)}
-          sets={sets}
-          recipeLibrary={templates}
-        />
+        <div className="mt-6">
+          <AutomationsDesk
+            values={values}
+            inUseRuleIds={inUseRuleIds}
+            reduceOnly={Boolean(config.reduceOnly)}
+            isAdmin={memberIsAdmin(session.member)}
+            accountId={session.account.id}
+            templates={templates.map(templateToSummary)}
+            sets={sets}
+            recipeLibrary={templates}
+            edit={knownEdit}
+            clone={clone}
+            listHref={listHref}
+          />
+        </div>
       ) : (
-        <p className="text-sm text-ink-muted">
+        <p className="mt-6 text-sm text-ink-muted">
           <Link href="/sign-in" className="text-accent">
             Sign in
           </Link>{" "}
@@ -81,6 +107,6 @@ export default async function CashAndCarryAutomationsPage({
         </p>
       )}
       <PaperRulesGuide exchangeBook={exchangeBook} />
-    </main>
+    </AutomationsPageFrame>
   );
 }

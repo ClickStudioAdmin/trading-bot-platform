@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PageHeading } from "@/components/page-heading";
+import { AutomationsPageFrame } from "@/components/automations-page-frame";
 import { toBacktestLibraryItem } from "@/lib/backtest/library";
 import { DcaPlaybooksDesk } from "@/components/dca-playbook-form";
 import { FuturesAutomationsDesk } from "@/components/futures-rules-form";
+import {
+  AUTOMATIONS_NEW,
+  automationsEditTitle,
+  parseAutomationsClone,
+  parseAutomationsEdit,
+} from "@/lib/bots/automations-path";
 import { FuturesRulesGuide } from "@/components/futures-rules-guide";
 import { dcaPaperBookUsdt } from "@/lib/dca/book";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
@@ -132,6 +138,19 @@ export default async function FuturesAutomationsPage({
     const saved = firstSearchValue(params.saved) === "1";
     const error = firstSearchValue(params.error);
     const notice = firstSearchValue(params.notice);
+    const listHref = deskHref(FUTURES_PATHS.automations, session.account.id);
+    const requestedEdit = parseAutomationsEdit(firstSearchValue(params.edit));
+    const clone = parseAutomationsClone(firstSearchValue(params.clone));
+    const knownEdit =
+      requestedEdit &&
+      requestedEdit !== AUTOMATIONS_NEW &&
+      !playbooks.some((playbook) => playbook.id === requestedEdit)
+        ? null
+        : requestedEdit;
+    const editTitle = automationsEditTitle({
+      edit: knownEdit,
+      name: playbooks.find((playbook) => playbook.id === knownEdit)?.name,
+    });
     const templates = await listApplyableTemplates({
       userId: session.member.id,
       deskType: "dca",
@@ -141,8 +160,7 @@ export default async function FuturesAutomationsPage({
       deskType: "dca",
     }).catch(() => []);
     return (
-      <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-        <PageHeading as="h2" title="Automations (bots)" />
+      <AutomationsPageFrame listHref={listHref} editTitle={editTitle}>
         {hl ? (
           <p className="mt-4 rounded-card border border-line bg-surface px-4 py-3 text-sm text-ink-muted">
             This Hyperliquid desk is one-way. Long or short only. Indicators
@@ -186,9 +204,12 @@ export default async function FuturesAutomationsPage({
               positions: openPositions,
               working: liveWorking,
             })}
+            edit={knownEdit}
+            clone={clone}
+            listHref={listHref}
           />
         </div>
-      </main>
+      </AutomationsPageFrame>
     );
   }
   const settings = session ? await loadFuturesSettings(session.account.id) : null;
@@ -214,6 +235,19 @@ export default async function FuturesAutomationsPage({
   );
   const saved = firstSearchValue(params.saved) === "1";
   const error = firstSearchValue(params.error);
+  const listHref = deskHref(FUTURES_PATHS.automations, session?.account.id);
+  const requestedEdit = parseAutomationsEdit(firstSearchValue(params.edit));
+  const clone = parseAutomationsClone(firstSearchValue(params.clone));
+  const knownEdit =
+    requestedEdit &&
+    requestedEdit !== AUTOMATIONS_NEW &&
+    !rules.some((rule) => rule.id === requestedEdit)
+      ? null
+      : requestedEdit;
+  const editTitle = automationsEditTitle({
+    edit: knownEdit,
+    name: rules.find((rule) => rule.id === knownEdit)?.name,
+  });
   const templates = session
     ? await listApplyableTemplates({
         userId: session.member.id,
@@ -228,8 +262,7 @@ export default async function FuturesAutomationsPage({
     : [];
 
   return (
-    <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-      <PageHeading as="h2" title="Automations (bots)" />
+    <AutomationsPageFrame listHref={listHref} editTitle={editTitle}>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
@@ -248,25 +281,30 @@ export default async function FuturesAutomationsPage({
         </p>
       ) : null}
       {session ? (
-        <FuturesAutomationsDesk
-          rules={rules.map(futuresRuleToForm)}
-          options={pairs}
-          triggerWebhooks={triggerWebhooks}
-          inUseRuleIds={inUseRuleIds}
-          reduceOnly={Boolean(settings?.reduceOnly)}
-          isAdmin={memberIsAdmin(session.member)}
-          accountId={session.account.id}
-          templates={templates.map(templateToSummary)}
-          sets={sets}
-          venueId={hl ? "hyperliquid" : "bybit"}
-          quoteLabel={hl ? "USDC" : "USDT"}
-          venueEnvironment={session.account.venueEnvironment}
-          backtestLibrary={templates
-            .map(toBacktestLibraryItem)
-            .filter((row): row is NonNullable<typeof row> => Boolean(row))}
-        />
+        <div className="mt-6">
+          <FuturesAutomationsDesk
+            rules={rules.map(futuresRuleToForm)}
+            options={pairs}
+            triggerWebhooks={triggerWebhooks}
+            inUseRuleIds={inUseRuleIds}
+            reduceOnly={Boolean(settings?.reduceOnly)}
+            isAdmin={memberIsAdmin(session.member)}
+            accountId={session.account.id}
+            templates={templates.map(templateToSummary)}
+            sets={sets}
+            venueId={hl ? "hyperliquid" : "bybit"}
+            quoteLabel={hl ? "USDC" : "USDT"}
+            venueEnvironment={session.account.venueEnvironment}
+            backtestLibrary={templates
+              .map(toBacktestLibraryItem)
+              .filter((row): row is NonNullable<typeof row> => Boolean(row))}
+            edit={knownEdit}
+            clone={clone}
+            listHref={listHref}
+          />
+        </div>
       ) : (
-        <p className="text-sm text-ink-muted">
+        <p className="mt-6 text-sm text-ink-muted">
           <Link href="/sign-in" className="text-accent">
             Sign in
           </Link>{" "}
@@ -274,6 +312,6 @@ export default async function FuturesAutomationsPage({
         </p>
       )}
       <FuturesRulesGuide exchangeBook={exchangeBook} />
-    </main>
+    </AutomationsPageFrame>
   );
 }

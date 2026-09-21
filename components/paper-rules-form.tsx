@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AutomationsBotTable } from "@/components/automations-bot-table";
 import {
   AdditionalActions,
   BotField,
@@ -53,6 +56,17 @@ import { parsePaperRulesForm } from "@/lib/engine/rules";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
 import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
 import { AppSelect } from "@/components/app-select";
+import {
+  botModeLabel,
+  paperBotPair,
+  paperBotSummary,
+} from "@/lib/bots/automations-list";
+import {
+  AUTOMATIONS_NEW,
+  automationsEditHref,
+  automationsNewHref,
+  automationsSavedHref,
+} from "@/lib/bots/automations-path";
 
 export function AutomationsDesk({
   values,
@@ -63,6 +77,9 @@ export function AutomationsDesk({
   templates = [],
   sets = [],
   recipeLibrary = [],
+  edit = null,
+  clone = null,
+  listHref,
 }: {
   values: PaperRulesFormValues;
   inUseRuleIds: number[];
@@ -76,12 +93,16 @@ export function AutomationsDesk({
     recipe: TemplateRecipe;
     visibility?: string;
   }[];
+  edit?: string | null;
+  clone?: string | null;
+  listHref: string;
 }) {
   const [hasSets, setHasSets] = useState(values.layers.length > 0);
   const [accountReduceOnly, setAccountReduceOnly] = useState(reduceOnly);
+  const showList = !edit;
   return (
     <div className="space-y-4">
-      {hasSets ? (
+      {hasSets && showList ? (
         <StayOnPageForm
           action={saveAccountReduceOnly}
           onResult={(result) => {
@@ -127,6 +148,9 @@ export function AutomationsDesk({
         templates={templates}
         sets={sets}
         recipeLibrary={recipeLibrary}
+        edit={edit}
+        clone={clone}
+        listHref={listHref}
       />
     </div>
   );
@@ -142,6 +166,9 @@ export function PaperRulesForm({
   templates = [],
   sets = [],
   recipeLibrary = [],
+  edit = null,
+  clone = null,
+  listHref,
 }: {
   values: PaperRulesFormValues;
   inUseRuleIds: number[];
@@ -156,13 +183,30 @@ export function PaperRulesForm({
     recipe: TemplateRecipe;
     visibility?: string;
   }[];
+  edit?: string | null;
+  clone?: string | null;
+  listHref: string;
 }) {
+  const router = useRouter();
   const [layers, setLayers] = useState(() => [...values.layers].reverse());
   const [cloneMenu, setCloneMenu] = useState(0);
+  const [draft] = useState(() =>
+    edit === AUTOMATIONS_NEW
+      ? resolvePaperDraft(values.layers, clone)
+      : null,
+  );
   const [inUseIds, setInUseIds] = useState(inUseRuleIds);
   const inUse = new Set(inUseIds);
-  const empty = layers.length === 0;
-  const cloneSources = layers.filter((layer) => layer.id);
+  const savedLayers = layers.filter((layer) => layer.id);
+  const empty = savedLayers.length === 0;
+  const cloneSources = savedLayers;
+  const formLayer =
+    edit === AUTOMATIONS_NEW
+      ? draft
+      : edit
+        ? layers.find((layer) => layer.id === edit) ?? null
+        : null;
+  const showForm = Boolean(formLayer);
 
   function applySaveResult(result: SavePaperRulesResult) {
     if (!result.ok) {
@@ -197,6 +241,11 @@ export function PaperRulesForm({
       return fresh.length === 0 ? current : [...fresh, ...current];
     });
     onHasSetsChange?.(true);
+    router.refresh();
+  }
+
+  function leaveToList(saved = false) {
+    router.push(saved ? automationsSavedHref(listHref) : listHref);
   }
 
   function removeLayer(key: string, id: string) {
@@ -220,85 +269,97 @@ export function PaperRulesForm({
         </p>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() =>
-            setLayers((current) => [
-              layerToForm(current.length),
-              ...current,
-            ])
-          }
-          className={deskActionBtnClass}
-        >
-          Create New Bot
-        </button>
-        {accountId ? (
-          <DeskTemplateBar
-            deskType="cash_and_carry"
-            accountId={accountId}
-            templates={templates}
-            sets={sets}
-            onApplied={appendApplied}
-          />
-        ) : null}
-        {cloneSources.length > 0 ? (
-          <AppSelect variant="action"
-            key={cloneMenu}
-            aria-label="Clone existing bot"
-            defaultValue=""
-            onChange={(event) => {
-              const key = event.target.value;
-              const source = cloneSources.find((item) => item.key === key);
-              if (!source) {
-                return;
-              }
-              setLayers((current) => [
-                clonePaperLayerForm(source),
-                ...current,
-              ]);
-              onHasSetsChange?.(true);
-              setCloneMenu((n) => n + 1);
-            }}
-            className={deskActionSelectClass}
-          >
-            <option value="">Clone existing bot</option>
-            {cloneSources.map((item) => (
-              <option key={item.key} value={item.key}>
-                {item.name || "Bot"}
-              </option>
-            ))}
-          </AppSelect>
-        ) : null}
-      </div>
-
-      {empty ? (
-        <p className="rounded-card border border-line bg-canvas px-4 py-6 text-sm text-ink-muted">
-          No bots yet. Add a bot to start the engine, or leave this
-          empty if you only trade by hand.
-        </p>
+      {showForm && formLayer ? (
+        <RuleRow
+          key={formLayer.key}
+          layer={formLayer}
+          canRemove={!(Number.isFinite(Number(formLayer.id)) && inUse.has(Number(formLayer.id)))}
+          inUse={Boolean(formLayer.id && inUse.has(Number(formLayer.id)))}
+          accountReduceOnly={reduceOnly}
+          isAdmin={isAdmin}
+          onSaved={(result) => {
+            applySaveResult(result);
+            if (result.ok) {
+              leaveToList(true);
+            }
+          }}
+          onRemove={() => {
+            removeLayer(formLayer.key, formLayer.id);
+            leaveToList();
+          }}
+          folders={sets}
+          recipeLibrary={recipeLibrary}
+        />
       ) : (
-        layers.map((layer) => {
-          const id = Number(layer.id);
-          const used = Number.isFinite(id) && inUse.has(id);
-          return (
-            <RuleRow
-              key={layer.key}
-              layer={layer}
-              canRemove={!used}
-              inUse={used}
-              accountReduceOnly={reduceOnly}
-              isAdmin={isAdmin}
-              onSaved={applySaveResult}
-              onRemove={() => removeLayer(layer.key, layer.id)}
-              folders={sets}
-              recipeLibrary={recipeLibrary}
-            />
-          );
-        })
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={automationsNewHref(listHref)} className={deskActionBtnClass}>
+              Create New Bot
+            </Link>
+            {accountId ? (
+              <DeskTemplateBar
+                deskType="cash_and_carry"
+                accountId={accountId}
+                templates={templates}
+                sets={sets}
+                onApplied={appendApplied}
+              />
+            ) : null}
+            {cloneSources.length > 0 ? (
+              <AppSelect variant="action"
+                key={cloneMenu}
+                aria-label="Clone existing bot"
+                defaultValue=""
+                onChange={(event) => {
+                  const id = event.target.value;
+                  const source = cloneSources.find((item) => item.id === id);
+                  if (!source) {
+                    return;
+                  }
+                  router.push(automationsNewHref(listHref, source.id));
+                  setCloneMenu((n) => n + 1);
+                }}
+                className={deskActionSelectClass}
+              >
+                <option value="">Clone existing bot</option>
+                {cloneSources.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name || "Bot"}
+                  </option>
+                ))}
+              </AppSelect>
+            ) : null}
+          </div>
+          <AutomationsBotTable
+            empty="No bots yet. Create a bot to start the engine, or leave this empty if you only trade by hand."
+            rows={savedLayers.map((layer) => ({
+              id: layer.id,
+              name: layer.name || "Bot",
+              pair: paperBotPair(),
+              status: botModeLabel("cnc", layer.mode),
+              statusKey: layer.mode,
+              summary: paperBotSummary(layer),
+              editHref: automationsEditHref(listHref, layer.id),
+              cloneHref: automationsNewHref(listHref, layer.id),
+            }))}
+          />
+        </>
       )}
     </div>
   );
+}
+
+function resolvePaperDraft(
+  layers: PaperLayerFormValues[],
+  clone: string | null,
+): PaperLayerFormValues {
+  if (clone) {
+    const source = layers.find((layer) => layer.id === clone);
+    if (source) {
+      return clonePaperLayerForm(source);
+    }
+  }
+  return layerToForm(layers.length);
 }
 
 function layerToForm(index: number): PaperLayerFormValues {
