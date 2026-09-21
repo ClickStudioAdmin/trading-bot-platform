@@ -67,7 +67,7 @@ export function AutomationsBotTable({
               <td className="px-4 py-3 pr-8 align-top">
                 <Link
                   href={row.editHref}
-                  className="text-accent hover:text-accent-strong"
+                  className="text-ink hover:underline"
                 >
                   {row.name || "Bot"}
                 </Link>
