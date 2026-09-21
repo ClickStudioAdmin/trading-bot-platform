@@ -592,6 +592,55 @@ export async function saveFuturesAutomations(
   };
 }
 
+export async function deleteFuturesAutomationAction(
+  formData: FormData,
+): Promise<SaveFuturesAutomationsResult> {
+  const session = await requirePerpsUiSession();
+  const { member: user, account } = session;
+  if (!deskAllowsPerpsRecipes(account)) {
+    return deskActionError("This desk is not a Perps bots desk.");
+  }
+  const id = String(formData.get("ruleId") ?? "").trim();
+  if (!id) {
+    return deskActionError("That bot was not found.");
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return deskActionError("Auth is not configured.");
+  }
+  const existing = await loadFuturesAutomationRules(account.id);
+  if (!existing.some((rule) => rule.id === id)) {
+    return deskActionError("That bot was not found.");
+  }
+  const remaining = existing.filter((rule) => rule.id !== id);
+  const saved = await saveFuturesAutomationRules({
+    supabase,
+    userId: user.id,
+    accountId: account.id,
+    rules: remaining,
+  });
+  if (!saved.ok) {
+    return deskActionError(saved.error);
+  }
+  await writeEventLog({
+    scope: "strategy",
+    event: "automations.deleted",
+    message: "Removed futures bot",
+    userId: user.id,
+    accountId: account.id,
+    strategy: FUTURES_STRATEGY_ID,
+    data: { ruleId: id },
+  });
+  revalidatePath(FUTURES_PATHS.automations);
+  revalidatePath(FUTURES_PATHS.positions);
+  const rules = await loadFuturesAutomationRules(account.id);
+  return {
+    ok: true,
+    notice: "Bot removed.",
+    forms: rules.map(futuresRuleToForm),
+  };
+}
+
 async function flattenOwnedFuturesRules(input: {
   userId: string;
   accountId: string;

@@ -47,6 +47,7 @@ import {
 } from "@/lib/bots/status";
 import { parseAutomationMode } from "@/lib/engine/decide";
 import {
+  deleteFuturesAutomationAction,
   saveFuturesAutomations,
   type SaveFuturesAutomationsResult,
 } from "@/lib/futures/actions";
@@ -299,6 +300,21 @@ export function FuturesAutomationsDesk({
               status: botModeLabel("perps", layer.mode),
               statusKey: layer.mode,
               summary: perpsBotSummary(layer),
+              canRemove: !inUse.has(layer.id),
+              removeBlocked:
+                "This bot has an open position. Close that row before removing it.",
+              onRemove: async () => {
+                const data = new FormData();
+                data.set("ruleId", layer.id);
+                const result = await deleteFuturesAutomationAction(data);
+                if (!result.ok) {
+                  return;
+                }
+                applySaveResult(result);
+                setLayers((current) =>
+                  current.filter((item) => item.id !== layer.id),
+                );
+              },
               ...automationsBotBlotterCells(
                 layer.id,
                 blotter,
@@ -1288,20 +1304,7 @@ function RuleCard({
             })
           }
         />
-        {inUse ? (
-          <span
-            className="inline-flex w-full"
-            title="This bot has an open position. Close that row before removing it."
-          >
-            <button
-              type="button"
-              disabled
-              className={`${botSidebarRemoveClass} pointer-events-none opacity-40`}
-            >
-              Remove
-            </button>
-          </span>
-        ) : (
+        {layer.id ? null : (
           <button
             type="button"
             onClick={onRemove}

@@ -749,6 +749,20 @@ export function DcaPlaybooksDesk({
                   playbook.short.status === "stop_adding",
               }),
               summary: dcaBotSummary(playbook),
+              canRemove: !dcaPlaybookIsRunning(playbook),
+              removeBlocked: "Stop adding or close before removing.",
+              onRemove: async () => {
+                const data = new FormData();
+                data.set("playbookId", playbook.id);
+                const result = (await deleteDcaPlaybookAction(
+                  data,
+                )) as DcaDeskActionResult;
+                if (result.deletedId) {
+                  setCards((current) =>
+                    current.filter((item) => item.key !== playbook.id),
+                  );
+                }
+              },
               ...automationsBotBlotterCells(
                 playbook.id,
                 blotter,
@@ -1390,31 +1404,7 @@ export function DcaPlaybookForm({
     }
     return { ok: true as const, recipe: snapshotDcaRecipe(parsed.config) };
   }
-  const removeControl = playbook ? (
-    running ? (
-      <span
-        className="inline-flex"
-        title="Stop adding or close before removing."
-      >
-        <button
-          type="button"
-          disabled
-          className={`${headerRemoveClass} pointer-events-none opacity-40`}
-        >
-          Remove
-        </button>
-      </span>
-    ) : (
-      <PendingSubmitButton
-        deskAction="delete"
-        pendingLabel="Removing…"
-        className={headerRemoveClass}
-        skipSizeGuard
-      >
-        Remove
-      </PendingSubmitButton>
-    )
-  ) : onRemoveDraft ? (
+  const removeControl = playbook ? null : onRemoveDraft ? (
     <button
       type="button"
       onClick={onRemoveDraft}

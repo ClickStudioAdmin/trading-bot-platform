@@ -36,6 +36,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 const SETTINGS_PATH = "/strategies/cash-and-carry/settings";
+const AUTOMATIONS_PATH = "/strategies/cash-and-carry/automations";
 
 function settingsFail(accountId: string, error: string): never {
   redirect(deskPath(SETTINGS_PATH, accountId, { error }));
@@ -174,6 +175,70 @@ export async function savePaperRules(
     layers: paperConfigToFormValues(loaded.config).layers,
     inUseRuleIds: loaded.inUseRuleIds,
     reduceOnly: loaded.config.reduceOnly,
+  };
+}
+
+export async function deletePaperRuleAction(
+  formData: FormData,
+): Promise<SavePaperRulesResult> {
+  const session = await requireCashAndCarrySession();
+  const { member: user, account } = session;
+  const id = Number(String(formData.get("ruleId") ?? "").trim());
+  if (!Number.isFinite(id)) {
+    return deskActionError("That bot was not found.");
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return deskActionError("Auth is not configured.");
+  }
+  const loaded = await loadPaperRules();
+  if (!loaded.config.layers.some((layer) => layer.id === id)) {
+    return deskActionError("That bot was not found.");
+  }
+  if (loaded.inUseRuleIds.includes(id)) {
+    return deskActionError("Cannot remove a bot that has an open position.");
+  }
+  const remaining = loaded.config.layers.filter((layer) => layer.id !== id);
+  const saved = await replacePaperRules({
+    supabase,
+    userId: user.id,
+    accountId: account.id,
+    layers: remaining,
+  });
+  if (!saved.ok) {
+    return deskActionError(saved.error);
+  }
+  const enabled = remaining.some((layer) => layer.mode !== "disabled");
+  const { error: settingsError } = await supabase
+    .from("paper_engine_settings")
+    .upsert({
+      user_id: user.id,
+      account_id: account.id,
+      enabled,
+      ...(remaining.length === 0 ? { reduce_only: false } : {}),
+      updated_at: new Date().toISOString(),
+    });
+  if (settingsError) {
+    return deskActionError(settingsError.message);
+  }
+  await writeEventLog({
+    scope: "strategy",
+    event: "automations.deleted",
+    message: "Removed cash-and-carry bot",
+    userId: user.id,
+    accountId: account.id,
+    strategy: "cash-and-carry",
+    data: { ruleId: id },
+  });
+  revalidatePath(AUTOMATIONS_PATH);
+  revalidatePath("/strategies/cash-and-carry");
+  const next = await loadPaperRules();
+  return {
+    ok: true,
+    notice: "Bot removed.",
+    layers: paperConfigToFormValues(next.config).layers,
+    inUseRuleIds: next.inUseRuleIds,
+    reduceOnly: next.config.reduceOnly,
   };
 }
 

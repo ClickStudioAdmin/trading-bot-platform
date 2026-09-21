@@ -1,9 +1,13 @@
+"use client";
+
 import Link from "next/link";
+import { useConfirmDialog } from "@/components/confirm-modal";
 import {
   IconCopy,
   IconPencil,
   IconPerformance,
   IconPositions,
+  IconTrash,
 } from "@/components/icons";
 import {
   StatusBadge,
@@ -31,6 +35,9 @@ export type AutomationsBotRow = {
   performanceHref: string;
   editHref: string;
   cloneHref?: string;
+  canRemove?: boolean;
+  removeBlocked?: string;
+  onRemove?: () => void | Promise<void>;
 };
 
 export function AutomationsBotTable({
@@ -40,6 +47,24 @@ export function AutomationsBotTable({
   rows: readonly AutomationsBotRow[];
   empty: string;
 }) {
+  const { confirm, dialog } = useConfirmDialog();
+
+  async function removeRow(row: AutomationsBotRow) {
+    if (!row.onRemove || row.canRemove === false) {
+      return;
+    }
+    const ok = await confirm({
+      title: "Remove this bot?",
+      message: "This cannot be undone.",
+      confirmLabel: "Remove",
+      danger: true,
+    });
+    if (!ok) {
+      return;
+    }
+    await row.onRemove();
+  }
+
   if (rows.length === 0) {
     return (
       <p className="rounded-card border border-line bg-canvas px-4 py-6 text-sm text-ink-muted">
@@ -49,6 +74,8 @@ export function AutomationsBotTable({
   }
 
   return (
+    <>
+    {dialog}
     <TableCard className="mt-0">
       <table className="min-w-full text-left text-sm text-ink">
         <thead className="border-b border-line bg-surface-raised text-hint text-ink-muted">
@@ -145,6 +172,22 @@ export function AutomationsBotTable({
                       <IconCopy {...TABLE_BTN_ICON} />
                     </TableIconAction>
                   ) : null}
+                  {row.onRemove ? (
+                    <TableIconAction
+                      danger
+                      disabled={row.canRemove === false}
+                      label="Remove"
+                      detail={
+                        row.canRemove === false
+                          ? (row.removeBlocked ??
+                            "This bot cannot be removed.")
+                          : "Delete this bot."
+                      }
+                      onClick={() => void removeRow(row)}
+                    >
+                      <IconTrash {...TABLE_BTN_ICON} />
+                    </TableIconAction>
+                  ) : null}
                 </TableActions>
               </td>
             </tr>
@@ -152,5 +195,6 @@ export function AutomationsBotTable({
         </tbody>
       </table>
     </TableCard>
+    </>
   );
 }

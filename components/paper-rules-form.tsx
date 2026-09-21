@@ -23,6 +23,7 @@ import {
 } from "@/components/bot-form-chrome";
 import { AppCheck } from "@/components/app-check";
 import {
+  deletePaperRuleAction,
   saveAccountReduceOnly,
   savePaperRules,
   type SavePaperRulesResult,
@@ -367,6 +368,24 @@ export function PaperRulesForm({
               status: botModeLabel("cnc", layer.mode),
               statusKey: layer.mode,
               summary: paperBotSummary(layer),
+              canRemove: !(
+                Number.isFinite(Number(layer.id)) &&
+                inUse.has(Number(layer.id))
+              ),
+              removeBlocked:
+                "This bot has an open position. Close that row before removing it.",
+              onRemove: async () => {
+                const data = new FormData();
+                data.set("ruleId", layer.id);
+                const result = await deletePaperRuleAction(data);
+                if (!result.ok) {
+                  return;
+                }
+                applySaveResult(result);
+                setLayers((current) =>
+                  current.filter((item) => item.id !== layer.id),
+                );
+              },
               ...automationsBotBlotterCells(
                 layer.id,
                 blotter,
@@ -704,7 +723,7 @@ function RuleRow({
           }
           buttonClassName={botSidebarActionClass}
         />
-        {canRemove ? (
+        {layer.id ? null : (
           <button
             type="button"
             onClick={onRemove}
@@ -712,19 +731,6 @@ function RuleRow({
           >
             Remove
           </button>
-        ) : (
-          <span
-            className="inline-flex w-full"
-            title="This bot has an open position. Close that row before removing it."
-          >
-            <button
-              type="button"
-              disabled
-              className={`${botSidebarRemoveClass} pointer-events-none opacity-40`}
-            >
-              Remove
-            </button>
-          </span>
         )}
       </BotFormSidebar>
       </BotFormColumns>
