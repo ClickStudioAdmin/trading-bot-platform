@@ -260,10 +260,12 @@ export function LiveGetForm({
   children,
   className = "mt-6",
   action,
+  bare = false,
 }: {
   children: ReactNode;
   className?: string;
   action?: string;
+  bare?: boolean;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const timer = useRef<number>(0);
@@ -303,12 +305,20 @@ export function LiveGetForm({
         method="get"
         action={action}
         onChange={onChange}
-        className={`rounded-card border border-line bg-surface p-4 ${className}`.trim()}
+        className={
+          bare
+            ? className
+            : `rounded-card border border-line bg-surface p-4 ${className}`.trim()
+        }
       >
-        <div className="flex flex-wrap items-end gap-3">
-          {children}
-          <FilterBarEnd />
-        </div>
+        {bare ? (
+          children
+        ) : (
+          <div className="flex flex-wrap items-end gap-3">
+            {children}
+            <FilterBarEnd />
+          </div>
+        )}
       </form>
     </LiveFilterSubmit.Provider>
   );

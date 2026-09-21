@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  DESK_BLOTTER_ALL_BOTS_LABEL,
   deskBlotterFiltersActive,
   filterFuturesBlotterRows,
   filterPaperBlotterRows,
@@ -7,6 +8,8 @@ import {
   parseDeskBlotterFilters,
   resolveFuturesRowBotId,
 } from "./desk-blotter-filters";
+
+assert.equal(DESK_BLOTTER_ALL_BOTS_LABEL, "Desk Wide (all bots)");
 
 assert.deepEqual(parseDeskBlotterFilters({}), {
   bot: "",

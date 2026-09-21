@@ -2,7 +2,10 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { LiveTickerScope } from "@/components/live-ticker";
 import { FuturesOrderTicket } from "@/components/futures-order-ticket";
-import { DeskBlotterFilters } from "@/components/desk-blotter-filters";
+import {
+  DeskBlotterFilters,
+  DeskBlotterScopeSelect,
+} from "@/components/desk-blotter-filters";
 import {
   FuturesOpenStats,
   OpenFuturesTrades,
@@ -173,6 +176,18 @@ export async function HyperliquidFuturesPositions({
           venue="hyperliquid"
           environment={session?.account.venueEnvironment}
         >
+        <PageHeading
+          as="h2"
+          title="Current Positions"
+          className="mb-0"
+          actions={
+            <DeskBlotterScopeSelect
+              values={filters}
+              bots={bots}
+              deskId={session?.account.id}
+            />
+          }
+        />
         <FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />
         {showTicket ? (
           <section>
@@ -251,7 +266,6 @@ export async function HyperliquidFuturesPositions({
           </section>
         ) : null}
 
-        <PageHeading as="h2" title="Current Positions" className="mb-0" />
           <OpenFuturesTrades
             signedIn={desk.signedIn}
             open={visibleOpen}

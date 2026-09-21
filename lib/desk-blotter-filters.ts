@@ -3,6 +3,8 @@ export type DeskBlotterBotOption = {
   name: string;
 };
 
+export const DESK_BLOTTER_ALL_BOTS_LABEL = "Desk Wide (all bots)";
+
 export type DeskBlotterFilters = {
   bot: string;
   pair: string;

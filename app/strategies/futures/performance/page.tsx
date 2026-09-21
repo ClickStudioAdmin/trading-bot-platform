@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
-import { DeskBlotterFilters } from "@/components/desk-blotter-filters";
+import {
+  DeskBlotterFilters,
+  DeskBlotterScopeSelect,
+} from "@/components/desk-blotter-filters";
 import {
   ClosedFuturesTrades,
   FuturesPerformanceStats,
@@ -88,6 +91,13 @@ export default async function FuturesPerformancePage({
         exchangeBook={desk.exchangeBook}
         fallbackLeverage={
           desk.exchangeBook ? null : (settings?.paperLeverage ?? null)
+        }
+        scope={
+          <DeskBlotterScopeSelect
+            values={filters}
+            bots={bots}
+            deskId={session?.account.id}
+          />
         }
       />
       <ClosedFuturesTrades

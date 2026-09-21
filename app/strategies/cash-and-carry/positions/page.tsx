@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
-import { DeskBlotterFilters } from "@/components/desk-blotter-filters";
+import {
+  DeskBlotterFilters,
+  DeskBlotterScopeSelect,
+} from "@/components/desk-blotter-filters";
 import { PageHeading } from "@/components/page-heading";
 import { OpenPaperTrades, PaperOpenStats } from "@/components/paper-blotter";
 import { PaperFlash } from "@/components/paper-flash";
@@ -67,8 +70,19 @@ export default async function CashAndCarryPositionsPage({
           unwinding={firstSearchValue(params.paper) === "unwinding"}
           error={firstSearchValue(params.paperError)}
         />
+        <PageHeading
+          as="h2"
+          title="Current Positions"
+          className="mb-0"
+          actions={
+            <DeskBlotterScopeSelect
+              values={filters}
+              bots={bots}
+              deskId={session?.account.id}
+            />
+          }
+        />
         <PaperOpenStats signedIn={desk.signedIn} open={visibleOpen} />
-        <PageHeading as="h2" title="Current Positions" className="mb-0" />
         <OpenPaperTrades
           signedIn={desk.signedIn}
           open={visibleOpen}

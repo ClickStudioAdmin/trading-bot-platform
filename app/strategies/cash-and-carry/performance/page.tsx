@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
-import { DeskBlotterFilters } from "@/components/desk-blotter-filters";
+import {
+  DeskBlotterFilters,
+  DeskBlotterScopeSelect,
+} from "@/components/desk-blotter-filters";
 import {
   ClosedPaperTrades,
   PaperPerformanceStats,
@@ -48,6 +51,13 @@ export default async function CashAndCarryPerformancePage({
       <PaperPerformanceStats
         signedIn={desk.signedIn}
         closed={visibleClosed}
+        scope={
+          <DeskBlotterScopeSelect
+            values={filters}
+            bots={bots}
+            deskId={session?.account.id}
+          />
+        }
       />
       <ClosedPaperTrades
         signedIn={desk.signedIn}

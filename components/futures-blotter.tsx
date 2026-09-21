@@ -786,6 +786,7 @@ export function FuturesPerformanceStats({
   paperStartingUsdt = COPY_PAPER_STARTING_USDT,
   openUnrealizedUsdt = null,
   open = [],
+  scope,
 }: {
   signedIn: boolean;
   closed: FuturesDeskPosition[];
@@ -797,6 +798,7 @@ export function FuturesPerformanceStats({
   paperStartingUsdt?: number;
   openUnrealizedUsdt?: number | null;
   open?: FuturesDeskPosition[];
+  scope?: ReactNode;
 }) {
   const stats = futuresClosedStats(closed, fallbackLeverage);
   const drawdown = deskWindowStats(closed);
@@ -914,6 +916,7 @@ export function FuturesPerformanceStats({
         subtitle={
           signedIn ? undefined : "Sign in to see this book’s realized numbers."
         }
+        action={scope}
       />
       {grid}
     </section>
@@ -1329,16 +1332,23 @@ function EmptyRow({
 function SectionHead({
   title,
   subtitle,
+  action,
   className = "mb-3",
 }: {
   title: string;
   subtitle?: string;
+  action?: ReactNode;
   className?: string;
 }) {
   return (
-    <div className={className}>
-      <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
-      {subtitle ? <p className="text-sm text-ink-muted">{subtitle}</p> : null}
+    <div
+      className={`flex items-start justify-between gap-4 ${className}`.trim()}
+    >
+      <div className="min-w-0">
+        <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+        {subtitle ? <p className="text-sm text-ink-muted">{subtitle}</p> : null}
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
     </div>
   );
 }

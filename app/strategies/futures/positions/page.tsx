@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { FuturesFlash } from "@/components/futures-flash";
 import { LiveTickerScope } from "@/components/live-ticker";
 import { FuturesOrderTicket } from "@/components/futures-order-ticket";
-import { DeskBlotterFilters } from "@/components/desk-blotter-filters";
+import {
+  DeskBlotterFilters,
+  DeskBlotterScopeSelect,
+} from "@/components/desk-blotter-filters";
 import {
   FuturesOpenStats,
   OpenFuturesTrades,
@@ -211,6 +214,18 @@ export default async function FuturesPositionsPage({
         />
 
         <LiveTickerScope symbols={open.map((row) => row.symbol)}>
+        <PageHeading
+          as="h2"
+          title="Current Positions"
+          className="mb-0"
+          actions={
+            <DeskBlotterScopeSelect
+              values={filters}
+              bots={bots}
+              deskId={session?.account.id}
+            />
+          }
+        />
         <FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />
         {showTicket ? (
           <section>
@@ -285,7 +300,6 @@ export default async function FuturesPositionsPage({
           </section>
         ) : null}
 
-        <PageHeading as="h2" title="Current Positions" className="mb-0" />
         <OpenFuturesTrades
           signedIn={desk.signedIn}
           open={visibleOpen}
