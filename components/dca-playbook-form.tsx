@@ -1417,7 +1417,7 @@ export function DcaPlaybookForm({
       <BotFormColumns>
       <BotFormCard>
       {reduceOnly ? (
-        <p className="my-5 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Reduce only is on. New orders stay blocked until you turn it off in
           Desk Settings. Take profit and stop still run.
         </p>
@@ -1437,13 +1437,13 @@ export function DcaPlaybookForm({
         </BotField>
       </BotFormGroup>
       {cycleLocked ? (
-        <p className="py-5 text-xs text-warning">
+        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           {status === "disabled" && statusDirty
             ? "Save Disabled to close this position. Cycle settings stay locked until the close is accepted."
             : "A position is open. Cycle settings are locked. Take profit and stops still save."}
         </p>
       ) : hasOpenPosition && !running ? (
-        <p className="py-5 text-xs text-warning">
+        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Closing this position. Cycle settings are unlocked for the next
           cycle.
         </p>

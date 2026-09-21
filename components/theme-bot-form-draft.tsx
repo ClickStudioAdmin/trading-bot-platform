@@ -7,6 +7,12 @@ import {
   BotFormSidebar,
   BotFormSummaryCard,
   BotStatusField,
+  botFieldClass,
+  botFieldInvalidClass,
+  botLabelClass,
+  botRowClass,
+  botRowClass5,
+  botSectionTitleClass,
   botSidebarActionClass,
   botSidebarRemoveClass,
   botSidebarSaveClass,
@@ -42,15 +48,12 @@ import {
 } from "@/lib/dca/indicators";
 import { AppSelect } from "@/components/app-select";
 
-const fieldClass =
-  "mt-1 w-full rounded-control border border-line-strong bg-canvas px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none";
-const fieldInvalidClass =
-  "mt-1 w-full rounded-control border border-danger bg-canvas px-3 py-2 text-sm text-ink focus:border-danger focus:outline-none";
-const labelClass = "block text-xs text-ink-muted";
-const sectionTitleClass =
-  "text-xs font-semibold uppercase tracking-[0.1em] text-ink";
-const rowClass = "grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-4";
-const rowClass5 = "grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-5";
+const fieldClass = botFieldClass;
+const fieldInvalidClass = botFieldInvalidClass;
+const labelClass = botLabelClass;
+const sectionTitleClass = botSectionTitleClass;
+const rowClass = botRowClass;
+const rowClass5 = botRowClass5;
 const headerBtnClass = "rounded-control px-3 py-1.5 text-xs font-medium";
 const headerPrimaryClass = `${headerBtnClass} bg-accent-strong text-ink hover:bg-accent`;
 const headerSecondaryClass = `${headerBtnClass} border border-line bg-surface text-ink hover:bg-surface-raised`;
@@ -221,9 +224,7 @@ function OptionalSection({
 }) {
   return (
     <section
-      className={`col-span-full block w-full min-w-0 ${
-        nested ? "space-y-3" : "space-y-3 py-5"
-      }`}
+      className="col-span-full block w-full min-w-0 space-y-3"
     >
       <div className="flex items-center gap-3">
         <label className="inline-flex shrink-0 cursor-pointer">
@@ -251,7 +252,7 @@ function Group({
   children: ReactNode;
 }) {
   return (
-    <section className="col-span-full block w-full min-w-0 space-y-3 py-5">
+    <section className="col-span-full block w-full min-w-0 space-y-3">
       {title ? (
         <h3 className={sectionTitleClass}>
           <HintLabel text={title} hint={hint} />

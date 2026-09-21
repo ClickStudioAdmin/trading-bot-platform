@@ -11,22 +11,21 @@ import {
 import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
 import { IconCheck } from "@/components/icons";
+import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 
-export const botFieldClass =
-  "mt-1 w-full rounded-control border border-line-strong bg-canvas px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none";
+export const botFieldClass = BILLING_FIELD_CLASS;
 export const botFieldInvalidClass =
-  "mt-1 w-full rounded-control border border-danger bg-canvas px-3 py-2 text-sm text-ink focus:border-danger focus:outline-none";
-export const botLabelClass = "block text-xs text-ink-muted";
-export const botSectionTitleClass =
-  "text-xs font-semibold uppercase tracking-[0.1em] text-ink";
-export const botRowClass = "grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-4";
-export const botRowClass5 = "grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-5";
+  "mt-1 w-full min-w-0 rounded-control border border-danger bg-canvas px-3 py-2 text-sm text-ink focus:border-danger focus:outline-none";
+export const botLabelClass = "block text-sm text-ink";
+export const botSectionTitleClass = "text-sm font-semibold text-ink";
+export const botRowClass = "grid grid-cols-2 gap-4 lg:grid-cols-4";
+export const botRowClass5 = "grid grid-cols-2 gap-4 lg:grid-cols-5";
 export const botSidebarSaveClass =
-  "w-full rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50";
+  "w-full rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50";
 export const botSidebarActionClass =
-  "w-full rounded-control border border-line bg-canvas px-3 py-2 text-left text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50";
+  "w-full rounded-control border border-line px-4 py-2 text-left text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50";
 export const botSidebarRemoveClass =
-  "w-full rounded-control border border-line px-3 py-2 text-sm text-danger hover:bg-danger/10 disabled:opacity-50";
+  "w-full rounded-control border border-line bg-danger/15 px-4 py-2 text-sm font-medium text-danger disabled:opacity-50";
 export const deskActionBtnClass =
   "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
 export const deskActionSelectClass = `${deskActionBtnClass} desk-action-select`;
@@ -96,9 +95,9 @@ export function OptionalSection({
   const { markDirty } = useDeskFormStatus();
   return (
     <section
-      className={`col-span-full block w-full min-w-0 ${
-        nested ? "space-y-3" : "space-y-3 py-5"
-      }${locked ? " pointer-events-none opacity-40" : ""}`}
+      className={`col-span-full block w-full min-w-0 space-y-3${
+        locked ? " pointer-events-none opacity-40" : ""
+      }`}
       inert={locked || undefined}
       aria-disabled={locked || undefined}
     >
@@ -136,7 +135,7 @@ export function BotFormGroup({
 }) {
   return (
     <section
-      className={`col-span-full block min-w-0 space-y-3 py-5${
+      className={`col-span-full block min-w-0 space-y-3${
         locked ? " pointer-events-none opacity-40" : ""
       }${className ? ` ${className}` : ""}`}
       inert={locked || undefined}
@@ -321,7 +320,7 @@ export function BotFormCard({
 }) {
   return (
     <div
-      className={`flex min-w-0 flex-col divide-y divide-line overflow-hidden rounded-card border border-line bg-canvas px-5${
+      className={`flex min-w-0 flex-col space-y-5 rounded-card border border-line bg-surface p-5${
         className ? ` ${className}` : ""
       }`}
     >
