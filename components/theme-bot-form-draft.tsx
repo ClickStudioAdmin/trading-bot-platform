@@ -1064,6 +1064,7 @@ export function ThemeBotFormDraft() {
         <Group>
           <div className={rowClass}>
             {desk === "perps" ? (
+              <>
               <Field label="Initial Order Trigger" required>
                 <AppSelect
                   value={startKind}
@@ -1080,6 +1081,19 @@ export function ThemeBotFormDraft() {
                   <option value="webhook">Signal webhook</option>
                 </AppSelect>
               </Field>
+              {closing ? null : (
+                <label className="flex items-center gap-2 self-end pb-0.5 text-sm text-ink-muted lg:col-span-2">
+                  <AppCheck
+                    checked={skipIfOpen}
+                    onChange={(event) => setSkipIfOpen(event.target.checked)}
+                  />
+                  <HintLabel
+                    text="Skip if this side is already open"
+                    hint="Off means each new cross or trigger can add size to the same row."
+                  />
+                </label>
+              )}
+              </>
             ) : (
               <Field label="Initial Order Trigger" className="lg:col-span-2" required>
                 <AppSelect
@@ -1097,19 +1111,6 @@ export function ThemeBotFormDraft() {
               </Field>
             )}
           </div>
-          {desk === "perps" && !closing ? (
-            <label className="flex items-start gap-2 text-sm text-ink-muted">
-              <AppCheck
-                checked={skipIfOpen}
-                onChange={(event) => setSkipIfOpen(event.target.checked)}
-              />
-              <HintLabel
-                text="Skip if this side is already open"
-                hint="Off means each new cross or trigger can add size to the same row."
-              />
-            </label>
-          ) : null}
-
         </Group>
 
         <Group>

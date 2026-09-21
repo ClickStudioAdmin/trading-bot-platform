@@ -728,20 +728,20 @@ function RuleCard({
               <option value="webhook">Signal webhook</option>
             </AppSelect>
           </BotField>
+          {closing ? null : (
+            <label className="flex items-center gap-2 self-end pb-0.5 text-sm text-ink-muted lg:col-span-2">
+              <AppCheck
+                name={`${prefix}skipIfOpen`}
+                value="on"
+                defaultChecked={layer.skipIfOpen}
+              />
+              <HintLabel
+                text="Skip if this side is already open"
+                hint="Off means each new cross or trigger can add size to the same row."
+              />
+            </label>
+          )}
         </div>
-        {closing ? null : (
-          <label className="flex items-start gap-2 text-sm text-ink-muted">
-            <AppCheck
-              name={`${prefix}skipIfOpen`}
-              value="on"
-              defaultChecked={layer.skipIfOpen}
-            />
-            <HintLabel
-              text="Skip if this side is already open"
-              hint="Off means each new cross or trigger can add size to the same row."
-            />
-          </label>
-        )}
       </BotFormGroup>
 
       <BotFormGroup>
