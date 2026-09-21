@@ -136,16 +136,18 @@ export function BotFormStep({
 }) {
   return (
     <section
-      className={`min-w-0 space-y-4 rounded-card border border-line bg-surface p-5${
+      className={`min-w-0 rounded-card border border-line bg-surface px-5${
         locked ? " pointer-events-none opacity-40" : ""
       }${className ? ` ${className}` : ""}`}
       inert={locked || undefined}
       aria-disabled={locked || undefined}
     >
-      <h3 className={botStepTitleClass}>
+      <h3 className={`${botStepTitleClass} py-5`}>
         <HintLabel text={title} hint={hint} />
       </h3>
-      {children}
+      <div className="border-t border-line [&>*:not([hidden])]:py-5 [&>*:not([hidden])~*:not([hidden])]:border-t [&>*:not([hidden])~*:not([hidden])]:border-line">
+        {children}
+      </div>
     </section>
   );
 }
@@ -176,7 +178,9 @@ export function BotFormGroup({
           <HintLabel text={title} hint={hint} />
         </h3>
       ) : null}
-      {children}
+      <div className="[&>*:not([hidden])~*:not([hidden])]:border-t [&>*:not([hidden])~*:not([hidden])]:border-line [&>*:not([hidden])~*:not([hidden])]:pt-5">
+        {children}
+      </div>
     </section>
   );
 }
