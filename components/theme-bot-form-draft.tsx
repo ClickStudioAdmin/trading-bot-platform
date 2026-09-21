@@ -1509,19 +1509,6 @@ export function ThemeBotFormDraft() {
                 </>
               ) : (
                 <>
-                  <Field label="Order" required>
-                    <OrderTypePill value={orderType} onChange={setOrderType} />
-                  </Field>
-                  {orderType === "limit" ? (
-                    <Field label="Limit price" required>
-                      <OffNumber
-                        value={limitPrice}
-                        onChange={setLimitPrice}
-                        required
-                        invalid={showFieldErrors && missing.limitPrice}
-                      />
-                    </Field>
-                  ) : null}
                   <Field label="Size" required>
                     <span className="relative mt-1 block">
                       {sizeUnit === "usdt" ? (
@@ -1557,6 +1544,19 @@ export function ThemeBotFormDraft() {
                       </option>
                     </AppSelect>
                   </Field>
+                  <Field label="Order" required>
+                    <OrderTypePill value={orderType} onChange={setOrderType} />
+                  </Field>
+                  {orderType === "limit" ? (
+                    <Field label="Limit price" required>
+                      <OffNumber
+                        value={limitPrice}
+                        onChange={setLimitPrice}
+                        required
+                        invalid={showFieldErrors && missing.limitPrice}
+                      />
+                    </Field>
+                  ) : null}
                 </>
               )}
             </div>
@@ -1564,6 +1564,15 @@ export function ThemeBotFormDraft() {
         ) : (
           <Group>
             <div className={rowClass}>
+              <Field label="Qty to close" hint="Empty closes the whole row.">
+                <GroupedNumberInput
+                  value={size}
+                  onChange={setSize}
+                  allowDecimal
+                  placeholder="All"
+                  className={fieldClass}
+                />
+              </Field>
               {desk === "perps" ? (
                 <>
                   <Field label="Order" required>
@@ -1581,15 +1590,6 @@ export function ThemeBotFormDraft() {
                   ) : null}
                 </>
               ) : null}
-              <Field label="Qty to close" hint="Empty closes the whole row.">
-                <GroupedNumberInput
-                  value={size}
-                  onChange={setSize}
-                  allowDecimal
-                  placeholder="All"
-                  className={fieldClass}
-                />
-              </Field>
             </div>
           </Group>
         )}

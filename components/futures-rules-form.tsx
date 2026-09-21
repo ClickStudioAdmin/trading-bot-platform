@@ -867,24 +867,6 @@ function RuleCard({
       <BotFormStep title="Position Sizing">
       <BotFormGroup title={closing ? undefined : "Order Size"}>
         <div className={botRowClass}>
-          <BotField label="Order" required>
-            <OrderTypePill
-              name={`${prefix}orderType`}
-              value={orderType === "limit" ? "limit" : "market"}
-              onChange={setOrderType}
-            />
-          </BotField>
-          {orderType === "limit" ? (
-            <BotField label="Limit price" required>
-              <GroupedNumberInput
-                name={`${prefix}limitPrice`}
-                value={limitPrice}
-                onChange={setLimitPrice}
-                allowDecimal
-                className={botFieldClass}
-              />
-            </BotField>
-          ) : null}
           <BotField
             label={closing ? "Qty to close" : "Size"}
             hint={closing ? "Empty closes the whole row." : undefined}
@@ -926,6 +908,24 @@ function RuleCard({
               </AppSelect>
             </BotField>
           )}
+          <BotField label="Order" required>
+            <OrderTypePill
+              name={`${prefix}orderType`}
+              value={orderType === "limit" ? "limit" : "market"}
+              onChange={setOrderType}
+            />
+          </BotField>
+          {orderType === "limit" ? (
+            <BotField label="Limit price" required>
+              <GroupedNumberInput
+                name={`${prefix}limitPrice`}
+                value={limitPrice}
+                onChange={setLimitPrice}
+                allowDecimal
+                className={botFieldClass}
+              />
+            </BotField>
+          ) : null}
         </div>
       </BotFormGroup>
       </BotFormStep>
