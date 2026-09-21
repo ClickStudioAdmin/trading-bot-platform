@@ -1423,19 +1423,98 @@ export function DcaPlaybookForm({
           Desk Settings. Take profit and stop still run.
         </p>
       ) : null}
-      <BotFormStep title="Bot">
-        <BotField label="Name" required>
-          <input
-            name="name"
-            defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
-            maxLength={40}
-            onChange={() => {
-              setTouched(true);
-              setFormTick((tick) => tick + 1);
-            }}
-            className={fieldClass}
-          />
-        </BotField>
+      <BotFormStep title="General">
+        <div className={rowClass}>
+          <BotField label="Name" required>
+            <input
+              name="name"
+              defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
+              maxLength={40}
+              onChange={() => {
+                setTouched(true);
+                setFormTick((tick) => tick + 1);
+              }}
+              className={fieldClass}
+            />
+          </BotField>
+          <div
+            className="contents"
+            inert={cycleLocked || undefined}
+            aria-disabled={cycleLocked || undefined}
+          >
+            <label className={labelClass}>
+              <HintLabel text="Contract" required />
+              <FuturesSymbolSelect
+                options={options}
+                defaultSymbol={defaultSymbol}
+                value={symbol}
+                onChange={setSymbol}
+              />
+            </label>
+            <label className={labelClass}>
+              <HintLabel
+                text="Direction"
+                hint="Long and Short are independent positions and never flatten each other."
+                required
+              />
+              <AppSelect
+                name="direction"
+                value={direction}
+                onChange={(event) => {
+                  const next = event.target.value as typeof direction;
+                  if (next === "both" && direction !== "both") {
+                    if (direction === "short") {
+                      setShortIndicatorKind(indicatorKind);
+                      setShortIndicatorTimeframe(indicatorTimeframe);
+                      setShortIndicatorCompare(indicatorCompare);
+                      setShortIndicatorLevel(indicatorLevel);
+                      setShortIndicatorPeriod(indicatorPeriod);
+                      setShortIndicatorSlowPeriod(indicatorSlowPeriod);
+                      setShortIndicatorMultiplier(indicatorMultiplier);
+                      if (indicatorKind === "rsi") {
+                        setIndicatorCompare(oppositeRsiCompare(indicatorCompare));
+                        setIndicatorLevel(seedOppositeRsiLevel(indicatorLevel));
+                      }
+                    } else {
+                      setShortIndicatorKind(indicatorKind);
+                      setShortIndicatorTimeframe(indicatorTimeframe);
+                      setShortIndicatorCompare(
+                        oppositeIndicatorCompare(
+                          indicatorKind,
+                          indicatorCompare,
+                        ),
+                      );
+                      setShortIndicatorLevel(
+                        indicatorKind === "rsi"
+                          ? seedOppositeRsiLevel(indicatorLevel)
+                          : indicatorLevel,
+                      );
+                      setShortIndicatorPeriod(indicatorPeriod);
+                      setShortIndicatorSlowPeriod(indicatorSlowPeriod);
+                      setShortIndicatorMultiplier(indicatorMultiplier);
+                    }
+                  } else if (direction === "both" && next === "short") {
+                    setIndicatorKind(shortIndicatorKind);
+                    setIndicatorTimeframe(shortIndicatorTimeframe);
+                    setIndicatorCompare(shortIndicatorCompare);
+                    setIndicatorLevel(shortIndicatorLevel);
+                    setIndicatorPeriod(shortIndicatorPeriod);
+                    setIndicatorSlowPeriod(shortIndicatorSlowPeriod);
+                    setIndicatorMultiplier(shortIndicatorMultiplier);
+                  }
+                  setDirection(next);
+                }}
+                className={fieldClass}
+              >
+                <option value="long">Long</option>
+                <option value="short">Short</option>
+                {policy.includeBoth ? (
+                  <option value="both">Both</option>
+                ) : null}
+              </AppSelect>
+            </label>
+          </div>
+        </div>
       </BotFormStep>
       {cycleLocked ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
@@ -1450,80 +1529,9 @@ export function DcaPlaybookForm({
         </p>
       ) : null}
 
-      <BotFormStep title="When" locked={cycleLocked}>
+      <BotFormStep title="Entry Conditions" locked={cycleLocked}>
       <BotFormGroup title="What & When" locked={cycleLocked}>
         <div className={rowClass}>
-          <label className={labelClass}>
-            <HintLabel text="Contract" required />
-            <FuturesSymbolSelect
-              options={options}
-              defaultSymbol={defaultSymbol}
-              value={symbol}
-              onChange={setSymbol}
-            />
-          </label>
-          <label className={labelClass}>
-            <HintLabel
-              text="Direction"
-              hint="Long and Short are independent positions and never flatten each other."
-              required
-            />
-            <AppSelect
-              name="direction"
-              value={direction}
-              onChange={(event) => {
-                const next = event.target.value as typeof direction;
-                if (next === "both" && direction !== "both") {
-                  if (direction === "short") {
-                    setShortIndicatorKind(indicatorKind);
-                    setShortIndicatorTimeframe(indicatorTimeframe);
-                    setShortIndicatorCompare(indicatorCompare);
-                    setShortIndicatorLevel(indicatorLevel);
-                    setShortIndicatorPeriod(indicatorPeriod);
-                    setShortIndicatorSlowPeriod(indicatorSlowPeriod);
-                    setShortIndicatorMultiplier(indicatorMultiplier);
-                    if (indicatorKind === "rsi") {
-                      setIndicatorCompare(oppositeRsiCompare(indicatorCompare));
-                      setIndicatorLevel(seedOppositeRsiLevel(indicatorLevel));
-                    }
-                  } else {
-                    setShortIndicatorKind(indicatorKind);
-                    setShortIndicatorTimeframe(indicatorTimeframe);
-                    setShortIndicatorCompare(
-                      oppositeIndicatorCompare(
-                        indicatorKind,
-                        indicatorCompare,
-                      ),
-                    );
-                    setShortIndicatorLevel(
-                      indicatorKind === "rsi"
-                        ? seedOppositeRsiLevel(indicatorLevel)
-                        : indicatorLevel,
-                    );
-                    setShortIndicatorPeriod(indicatorPeriod);
-                    setShortIndicatorSlowPeriod(indicatorSlowPeriod);
-                    setShortIndicatorMultiplier(indicatorMultiplier);
-                  }
-                } else if (direction === "both" && next === "short") {
-                  setIndicatorKind(shortIndicatorKind);
-                  setIndicatorTimeframe(shortIndicatorTimeframe);
-                  setIndicatorCompare(shortIndicatorCompare);
-                  setIndicatorLevel(shortIndicatorLevel);
-                  setIndicatorPeriod(shortIndicatorPeriod);
-                  setIndicatorSlowPeriod(shortIndicatorSlowPeriod);
-                  setIndicatorMultiplier(shortIndicatorMultiplier);
-                }
-                setDirection(next);
-              }}
-              className={fieldClass}
-            >
-              <option value="long">Long</option>
-              <option value="short">Short</option>
-              {policy.includeBoth ? (
-                <option value="both">Both</option>
-              ) : null}
-            </AppSelect>
-          </label>
           <label className={`${labelClass} lg:col-span-2`}>
             <HintLabel text="Initial Order Trigger" required />
             <AppSelect
@@ -1887,7 +1895,7 @@ export function DcaPlaybookForm({
       )}
 
       </BotFormStep>
-      <BotFormStep title="Size" locked={cycleLocked}>
+      <BotFormStep title="Position Sizing" locked={cycleLocked}>
       <BotFormGroup title="Maximum Exposure" locked={cycleLocked}>
           <div className={rowClass}>
             <label className={`min-w-0 ${labelClass}`}>
@@ -2228,7 +2236,7 @@ export function DcaPlaybookForm({
           {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         </BotFormGroup>
       </BotFormStep>
-      <BotFormStep title="Exits">
+      <BotFormStep title="Exit Conditions">
 
       {!tpOn ? (
         <div hidden>

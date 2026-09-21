@@ -939,31 +939,26 @@ export function ThemeBotFormDraft() {
 
       <BotFormColumns>
       <BotFormCard>
-        <BotFormStep title="Bot">
-        <Field label="Name" required>
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            maxLength={40}
-            className={fieldClass}
-          />
-        </Field>
-        </BotFormStep>
-
-        {desk !== "cnc" ? (
-        <>
-        <BotFormStep title="When">
-        <Group title="What & When">
-          <div className={rowClass}>
-            <Field label="Contract" required>
-              <FuturesSymbolSelect
-                options={SAMPLE_PAIRS}
-                value={symbol}
-                onChange={setSymbol}
-              />
-            </Field>
-            {desk === "perps" ? (
-              <>
+        <BotFormStep title="General">
+        <div className={rowClass}>
+          <Field label="Name" required>
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              maxLength={40}
+              className={fieldClass}
+            />
+          </Field>
+          {desk !== "cnc" ? (
+            <>
+              <Field label="Contract" required>
+                <FuturesSymbolSelect
+                  options={SAMPLE_PAIRS}
+                  value={symbol}
+                  onChange={setSymbol}
+                />
+              </Field>
+              {desk === "perps" ? (
                 <Field label="Action" required>
                   <AppSelect
                     value={action}
@@ -996,6 +991,39 @@ export function ThemeBotFormDraft() {
                     <option value="close_short">Close short</option>
                   </AppSelect>
                 </Field>
+              ) : (
+                <Field
+                  label="Direction"
+                  hint="Long and Short are independent positions and never flatten each other."
+                  required
+                >
+                  <AppSelect
+                    value={direction}
+                    onChange={(event) =>
+                      applyDirection(
+                        event.target.value as "long" | "short" | "both",
+                      )
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="long">Long</option>
+                    <option value="short">Short</option>
+                    <option value="both">Both</option>
+                  </AppSelect>
+                </Field>
+              )}
+            </>
+          ) : null}
+        </div>
+        </BotFormStep>
+
+        {desk !== "cnc" ? (
+        <>
+        <BotFormStep title="Entry Conditions">
+        <Group title="What & When">
+          <div className={rowClass}>
+            {desk === "perps" ? (
+              <>
                 <Field label="Order" required>
                   <OrderTypePill value={orderType} onChange={setOrderType} />
                 </Field>
@@ -1017,45 +1045,24 @@ export function ThemeBotFormDraft() {
                 </Field>
               </>
             ) : (
-              <>
-                <Field
-                  label="Direction"
-                  hint="Long and Short are independent positions and never flatten each other."
-                  required
+              <Field label="Initial Order Trigger" className="lg:col-span-2" required>
+                <AppSelect
+                  value={startKind}
+                  onChange={(event) =>
+                    applyStartKind(event.target.value as StartKind)
+                  }
+                  className={fieldClass}
                 >
-                  <AppSelect
-                    value={direction}
-                    onChange={(event) =>
-                      applyDirection(
-                        event.target.value as "long" | "short" | "both",
-                      )
-                    }
-                    className={fieldClass}
-                  >
-                    <option value="long">Long</option>
-                    <option value="short">Short</option>
-                    <option value="both">Both</option>
-                  </AppSelect>
-                </Field>
-                <Field label="Initial Order Trigger" className="lg:col-span-2" required>
-                  <AppSelect
-                    value={startKind}
-                    onChange={(event) =>
-                      applyStartKind(event.target.value as StartKind)
-                    }
-                    className={fieldClass}
-                  >
-                    <option value="indicator">Indicator</option>
-                    <option value="trend">Trend</option>
-                    <option value="price">Price Cross</option>
-                    <option value="webhook">Signal Webhook</option>
-                  </AppSelect>
-                </Field>
-              </>
+                  <option value="indicator">Indicator</option>
+                  <option value="trend">Trend</option>
+                  <option value="price">Price Cross</option>
+                  <option value="webhook">Signal Webhook</option>
+                </AppSelect>
+              </Field>
             )}
           </div>
           {desk === "perps" && !closing ? (
-            <label className="flex items-start gap-2 text-sm text-ink">
+            <label className="flex items-start gap-2 text-sm text-ink-muted">
               <AppCheck
                 checked={skipIfOpen}
                 onChange={(event) => setSkipIfOpen(event.target.checked)}
@@ -1403,7 +1410,7 @@ export function ThemeBotFormDraft() {
         ) : null}
         </BotFormStep>
 
-        <BotFormStep title="Size">
+        <BotFormStep title="Position Sizing">
         {desk === "dca" && !closing ? (
           <Group title="Maximum Exposure">
             <div className={rowClass}>
@@ -1761,7 +1768,7 @@ export function ThemeBotFormDraft() {
         </BotFormStep>
 
         {!closing ? (
-          <BotFormStep title="Exits">
+          <BotFormStep title="Exit Conditions">
             <OptionalSection
               title="Take profit"
               enabled={tpOn}
@@ -2122,7 +2129,7 @@ export function ThemeBotFormDraft() {
         </>
         ) : (
           <>
-            <BotFormStep title="When" hint="All conditions must be true.">
+            <BotFormStep title="Entry Conditions" hint="All conditions must be true.">
               <div className={rowClass}>
                 <Field label="Min APR %">
                   <OffNumber value={minApr} onChange={setMinApr} />
@@ -2144,7 +2151,7 @@ export function ThemeBotFormDraft() {
               </div>
             </BotFormStep>
 
-            <BotFormStep title="Size">
+            <BotFormStep title="Position Sizing">
             <Group title="Position and Orders">
               <div className={rowClass}>
                 <Field label="Max Position Size">
@@ -2212,7 +2219,7 @@ export function ThemeBotFormDraft() {
             </Group>
             </BotFormStep>
 
-            <BotFormStep title="Exits" hint="Any condition can be true.">
+            <BotFormStep title="Exit Conditions" hint="Any condition can be true.">
             <Group title="Exit" hint="Any condition can be true.">
               <div className={rowClass}>
                 <Field label="DTE ≤">

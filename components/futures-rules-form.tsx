@@ -637,21 +637,17 @@ function RuleCard({
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
       <BotFormColumns>
       <BotFormCard>
-      <BotFormStep title="Bot">
-        <BotField label="Name" required>
-          <input
-            id={`${prefix}name`}
-            name={`${prefix}name`}
-            defaultValue={layer.name}
-            maxLength={40}
-            className={botFieldClass}
-          />
-        </BotField>
-      </BotFormStep>
-
-      <BotFormStep title="When">
-      <BotFormGroup title="What & When">
+      <BotFormStep title="General">
         <div className={botRowClass}>
+          <BotField label="Name" required>
+            <input
+              id={`${prefix}name`}
+              name={`${prefix}name`}
+              defaultValue={layer.name}
+              maxLength={40}
+              className={botFieldClass}
+            />
+          </BotField>
           <BotField label="Contract" required>
             <FuturesSymbolSelect
               name={`${prefix}symbol`}
@@ -693,6 +689,12 @@ function RuleCard({
               <option value="close_short">Close short</option>
             </AppSelect>
           </BotField>
+        </div>
+      </BotFormStep>
+
+      <BotFormStep title="Entry Conditions">
+      <BotFormGroup title="What & When">
+        <div className={botRowClass}>
           <BotField label="Order" required>
             <OrderTypePill
               name={`${prefix}orderType`}
@@ -736,7 +738,7 @@ function RuleCard({
           </BotField>
         </div>
         {closing ? null : (
-          <label className="flex items-start gap-2 text-sm text-ink">
+          <label className="flex items-start gap-2 text-sm text-ink-muted">
             <AppCheck
               name={`${prefix}skipIfOpen`}
               value="on"
@@ -881,7 +883,7 @@ function RuleCard({
       ) : null}
       </BotFormStep>
 
-      <BotFormStep title="Size">
+      <BotFormStep title="Position Sizing">
       <BotFormGroup title={closing ? undefined : "Order Size"}>
         <div className={botRowClass}>
           <BotField
@@ -930,7 +932,7 @@ function RuleCard({
       </BotFormStep>
 
       {!closing ? (
-        <BotFormStep title="Exits">
+        <BotFormStep title="Exit Conditions">
           {tpOn || slOn ? (
             <>
               <input type="hidden" name={`${prefix}tpsl`} value="on" />
