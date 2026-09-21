@@ -51,9 +51,11 @@ import {
   type DcaBotStatus,
 } from "@/lib/bots/status";
 import {
+  automationsBotBlotterCells,
   dcaBotPair,
   dcaBotSummary,
   dcaListStatus,
+  type AutomationsBotBlotter,
 } from "@/lib/bots/automations-list";
 import {
   AUTOMATIONS_NEW,
@@ -527,6 +529,7 @@ export function DcaPlaybooksDesk({
   edit = null,
   clone = null,
   listHref,
+  blotter,
 }: {
   playbooks: DcaPlaybook[];
   options: LinearPerp[];
@@ -549,6 +552,7 @@ export function DcaPlaybooksDesk({
   edit?: string | null;
   clone?: string | null;
   listHref: string;
+  blotter?: Record<string, AutomationsBotBlotter>;
 }) {
   const router = useRouter();
   const [extraLibrary, setExtraLibrary] = useState<BacktestLibraryItem[]>([]);
@@ -745,6 +749,13 @@ export function DcaPlaybooksDesk({
                   playbook.short.status === "stop_adding",
               }),
               summary: dcaBotSummary(playbook),
+              ...automationsBotBlotterCells(
+                playbook.id,
+                blotter,
+                FUTURES_PATHS.positions,
+                FUTURES_PATHS.performance,
+                accountId,
+              ),
               editHref: automationsEditHref(listHref, playbook.id),
               cloneHref: automationsNewHref(listHref, playbook.id),
             }))}

@@ -2,6 +2,8 @@ import Link from "next/link";
 import {
   IconCopy,
   IconPencil,
+  IconPerformance,
+  IconPositions,
 } from "@/components/icons";
 import {
   StatusBadge,
@@ -13,6 +15,7 @@ import {
   TableCard,
   TableIconAction,
 } from "@/components/table-chrome";
+import { formatCount, formatPct, signedTone } from "@/lib/opportunities/format";
 import { statusToneFor } from "@/lib/table-chrome";
 
 export type AutomationsBotRow = {
@@ -22,6 +25,10 @@ export type AutomationsBotRow = {
   status: string;
   statusKey?: string;
   summary: string;
+  positionCount: number;
+  roePct: number | null;
+  positionsHref: string;
+  performanceHref: string;
   editHref: string;
   cloneHref?: string;
 };
@@ -58,6 +65,12 @@ export function AutomationsBotTable({
             <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
               Recipe
             </th>
+            <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
+              Positions
+            </th>
+            <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
+              Performance
+            </th>
             <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
           </tr>
         </thead>
@@ -83,6 +96,36 @@ export function AutomationsBotTable({
               </td>
               <td className="px-4 py-3 pr-8 align-top text-ink-muted">
                 {row.summary}
+              </td>
+              <td className="px-4 py-3 pr-8 align-top">
+                <div className="flex items-center gap-1.5">
+                  <span className="tabular-nums">
+                    {formatCount(row.positionCount)}
+                  </span>
+                  <TableIconAction
+                    href={row.positionsHref}
+                    label="Positions"
+                    detail="Open this bot’s positions."
+                  >
+                    <IconPositions {...TABLE_BTN_ICON} />
+                  </TableIconAction>
+                </div>
+              </td>
+              <td className="px-4 py-3 pr-8 align-top">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`tabular-nums ${signedTone(row.roePct)}`}
+                  >
+                    {row.roePct == null ? "—" : formatPct(row.roePct)}
+                  </span>
+                  <TableIconAction
+                    href={row.performanceHref}
+                    label="Performance"
+                    detail="Open this bot’s realized ROE."
+                  >
+                    <IconPerformance {...TABLE_BTN_ICON} />
+                  </TableIconAction>
+                </div>
               </td>
               <td className={`${TABLE_ACTIONS_TD_CLASS} align-top`}>
                 <TableActions>

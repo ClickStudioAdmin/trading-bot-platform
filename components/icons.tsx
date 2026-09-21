@@ -5,6 +5,7 @@ import {
   Ban,
   Camera,
   ChartColumn,
+  ChartLine,
   Check,
   CheckCheck,
   ChevronDown,
@@ -40,6 +41,7 @@ import {
   Play,
   Plus,
   Radio,
+  Rows3,
   RefreshCw,
   Moon,
   Share2,
@@ -116,6 +118,13 @@ export const LUCIDE_ICONS = [
     lucide: "ChartColumn",
     usedIn: "Desk Type",
     Icon: ChartColumn,
+  },
+  {
+    id: "chart-line",
+    name: "Performance",
+    lucide: "ChartLine",
+    usedIn: "Automations list performance link",
+    Icon: ChartLine,
   },
   {
     id: "check",
@@ -312,6 +321,13 @@ export const LUCIDE_ICONS = [
     lucide: "Radio",
     usedIn: "Desk Type",
     Icon: Radio,
+  },
+  {
+    id: "rows-3",
+    name: "Positions",
+    lucide: "Rows3",
+    usedIn: "Automations list positions link",
+    Icon: Rows3,
   },
   {
     id: "plus",
@@ -644,6 +660,14 @@ export function IconHyperliquid(props: LucideProps) {
 
 export function IconDca(props: LucideProps) {
   return <ChartColumn aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconPerformance(props: LucideProps) {
+  return <ChartLine aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconPositions(props: LucideProps) {
+  return <Rows3 aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconPerps(props: LucideProps) {

@@ -11,8 +11,10 @@ import {
   parseAutomationsClone,
   parseAutomationsEdit,
 } from "@/lib/bots/automations-path";
+import { paperAutomationsBotBlotter } from "@/lib/bots/automations-list";
 import { loadPaperRules } from "@/lib/engine/load";
 import { paperConfigToFormValues } from "@/lib/engine/rules";
+import { listPaperCarries } from "@/lib/paper/list";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionContext } from "@/lib/auth/session";
@@ -68,6 +70,17 @@ export default async function CashAndCarryAutomationsPage({
         deskType: "cash_and_carry",
       })
     : [];
+  const carries = session ? await listPaperCarries() : [];
+  const paperOpen = carries.filter((row) => row.status !== "closed");
+  const paperClosed = carries.filter((row) => row.status === "closed");
+  const blotter = Object.fromEntries(
+    values.layers
+      .filter((layer) => layer.id)
+      .map((layer) => [
+        layer.id,
+        paperAutomationsBotBlotter(layer.id, paperOpen, paperClosed),
+      ]),
+  );
 
   return (
     <AutomationsPageFrame listHref={listHref} editTitle={editTitle}>
@@ -96,6 +109,7 @@ export default async function CashAndCarryAutomationsPage({
             edit={knownEdit}
             clone={clone}
             listHref={listHref}
+            blotter={blotter}
           />
         </div>
       ) : (

@@ -1,3 +1,4 @@
+import { automationsBotBlotterHref } from "@/lib/bots/automations-path";
 import type { DcaPlaybook } from "@/lib/dca/playbook";
 import type { PaperLayerFormValues } from "@/lib/engine/rules";
 import type { FuturesAutomationFormValues } from "@/lib/futures/automation";
@@ -6,6 +7,124 @@ import {
   statusOptionsFor,
   type BotDeskKind,
 } from "@/lib/bots/status";
+import {
+  filterFuturesBlotterRows,
+  filterPaperBlotterRows,
+} from "@/lib/desk-blotter-filters";
+import { futuresClosedStats } from "@/lib/futures/stats";
+import type { FuturesPosition } from "@/lib/futures/model";
+import { paperDeskStats } from "@/lib/paper/rows";
+import type { PaperCarryRow } from "@/lib/paper/rows";
+
+export type AutomationsBotBlotter = {
+  positionCount: number;
+  roePct: number | null;
+};
+
+export const EMPTY_AUTOMATIONS_BOT_BLOTTER: AutomationsBotBlotter = {
+  positionCount: 0,
+  roePct: null,
+};
+
+type FuturesBlotterRow = {
+  ruleId: string | null;
+  ruleName: string | null;
+  symbol: string;
+  side: string;
+  source: string;
+};
+
+type FuturesClosedBlotterRow = FuturesBlotterRow & {
+  realizedUsdt: number;
+  notionalUsdt: number;
+  leverage: number | null;
+  openedAtMs: number;
+  closedAtMs: number | null;
+};
+
+type PaperBlotterRow = {
+  ruleId: number | null;
+  baseCoin: string;
+  spotSymbol: string;
+  futureSymbol: string;
+  notionalUsdt: number;
+  realizedUsdt?: number | null;
+};
+
+export function futuresAutomationsBotBlotter(
+  botId: string,
+  open: readonly FuturesBlotterRow[],
+  closed: readonly FuturesClosedBlotterRow[],
+  playbooks: readonly {
+    id: string;
+    name: string;
+    symbol: string;
+    direction: string;
+  }[] = [],
+  hintPlaybookId?: (row: FuturesBlotterRow) => string | null | undefined,
+  fallbackLeverage: number | null = null,
+): AutomationsBotBlotter {
+  const filters = { bot: botId, pair: "", side: "" as const };
+  const openRows = filterFuturesBlotterRows(
+    open,
+    filters,
+    playbooks,
+    hintPlaybookId,
+  );
+  const closedRows = filterFuturesBlotterRows(
+    closed,
+    filters,
+    playbooks,
+    hintPlaybookId,
+  );
+  return {
+    positionCount: openRows.length,
+    roePct: futuresClosedStats(
+      closedRows as unknown as FuturesPosition[],
+      fallbackLeverage,
+    ).roePct,
+  };
+}
+
+export function paperAutomationsBotBlotter(
+  botId: string,
+  open: readonly PaperBlotterRow[],
+  closed: readonly PaperBlotterRow[],
+): AutomationsBotBlotter {
+  const filters = { bot: botId, pair: "", side: "" as const };
+  return {
+    positionCount: filterPaperBlotterRows(open, filters).length,
+    roePct: paperDeskStats(
+      [],
+      filterPaperBlotterRows(closed, filters) as PaperCarryRow[],
+    ).realizedPct,
+  };
+}
+
+export function automationsBotBlotterCells(
+  botId: string,
+  blotter: Record<string, AutomationsBotBlotter> | undefined,
+  positionsPath: string,
+  performancePath: string,
+  accountId?: string,
+): {
+  positionCount: number;
+  roePct: number | null;
+  positionsHref: string;
+  performanceHref: string;
+} {
+  const stats = blotter?.[botId] ?? EMPTY_AUTOMATIONS_BOT_BLOTTER;
+  return {
+    positionCount: stats.positionCount,
+    roePct: stats.roePct,
+    positionsHref: automationsBotBlotterHref(positionsPath, accountId, botId),
+    performanceHref: automationsBotBlotterHref(
+      performancePath,
+      accountId,
+      botId,
+    ),
+  };
+}
 
 const PERPS_ACTION_LABEL: Record<
   FuturesAutomationFormValues["formAction"],

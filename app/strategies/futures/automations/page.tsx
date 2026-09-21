@@ -10,6 +10,9 @@ import {
   parseAutomationsClone,
   parseAutomationsEdit,
 } from "@/lib/bots/automations-path";
+import { futuresAutomationsBotBlotter } from "@/lib/bots/automations-list";
+import { dcaHintKey, dcaHintsForOpen } from "@/lib/dca/playbook";
+import { futuresPositionIsLive } from "@/lib/futures/pending-close";
 import { FuturesRulesGuide } from "@/components/futures-rules-guide";
 import { dcaPaperBookUsdt } from "@/lib/dca/book";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
@@ -107,12 +110,17 @@ export default async function FuturesAutomationsPage({
     )
       ? null
       : (settings.paperLeverage ?? null);
-    const [openPositions, liveWorking] = await Promise.all([
-      loadFuturesPositions({
-        status: "open",
-      }).catch(() => []),
+    const [allPositions, liveWorking] = await Promise.all([
+      loadFuturesPositions().catch(() => []),
       loadLiveFuturesWorking().catch(() => []),
     ]);
+    const openPositions = allPositions.filter((row) =>
+      futuresPositionIsLive(row.status),
+    );
+    const closedPositions = allPositions.filter(
+      (row) => row.status === "closed",
+    );
+    const dcaHints = dcaHintsForOpen(playbooks, openPositions, liveWorking);
     if (accountCanHoldConnections(session.account.mode) && settings.connectionId) {
       const connections = await listExchangeConnections(session.member.id);
       const bound = connections.find((row) => row.id === settings.connectionId);
@@ -128,13 +136,28 @@ export default async function FuturesAutomationsPage({
         }
       }
     } else if (!accountCanHoldConnections(session.account.mode)) {
-      const positions = await loadFuturesPositions();
-      const realized = positions.reduce(
+      const realized = allPositions.reduce(
         (sum, row) => sum + row.realizedUsdt,
         0,
       );
       bookUsdt = dcaPaperBookUsdt(realized);
     }
+    const blotter = Object.fromEntries(
+      playbooks.map((playbook) => [
+        playbook.id,
+        futuresAutomationsBotBlotter(
+          playbook.id,
+          openPositions,
+          closedPositions,
+          playbooks,
+          (row) =>
+            row.side === "long" || row.side === "short"
+              ? dcaHints[dcaHintKey(row.symbol, row.side)]?.playbookId
+              : null,
+          leverage,
+        ),
+      ]),
+    );
     const saved = firstSearchValue(params.saved) === "1";
     const error = firstSearchValue(params.error);
     const notice = firstSearchValue(params.notice);
@@ -207,6 +230,7 @@ export default async function FuturesAutomationsPage({
             edit={knownEdit}
             clone={clone}
             listHref={listHref}
+            blotter={blotter}
           />
         </div>
       </AutomationsPageFrame>
@@ -260,6 +284,32 @@ export default async function FuturesAutomationsPage({
         deskType: "perps",
       })
     : [];
+  const [perpsOpen, perpsClosed] = session
+    ? await Promise.all([
+        loadFuturesPositions({ status: "open" }).catch(() => []),
+        loadFuturesPositions({ status: "closed" }).catch(() => []),
+      ])
+    : [[], []];
+  const perpsBlotter = Object.fromEntries(
+    rules.flatMap((rule) => {
+      if (!rule.id) {
+        return [];
+      }
+      return [
+        [
+          rule.id,
+          futuresAutomationsBotBlotter(
+            rule.id,
+            perpsOpen,
+            perpsClosed,
+            [],
+            undefined,
+            exchangeBook ? null : (settings?.paperLeverage ?? null),
+          ),
+        ] as const,
+      ];
+    }),
+  );
 
   return (
     <AutomationsPageFrame listHref={listHref} editTitle={editTitle}>
@@ -301,6 +351,7 @@ export default async function FuturesAutomationsPage({
             edit={knownEdit}
             clone={clone}
             listHref={listHref}
+            blotter={perpsBlotter}
           />
         </div>
       ) : (

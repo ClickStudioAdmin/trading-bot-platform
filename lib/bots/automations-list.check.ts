@@ -1,14 +1,18 @@
 import assert from "node:assert/strict";
 import {
+  automationsBotBlotterCells,
   botModeLabel,
   dcaBotPair,
   dcaBotSummary,
   dcaListStatus,
+  futuresAutomationsBotBlotter,
+  paperAutomationsBotBlotter,
   paperBotPair,
   paperBotSummary,
   perpsBotPair,
   perpsBotSummary,
 } from "./automations-list";
+import { automationsBotBlotterHref } from "./automations-path";
 import { defaultFuturesAutomationForm } from "@/lib/futures/automation";
 import { paperConfigToFormValues, defaultPaperLayer } from "@/lib/engine/rules";
 import type { DcaPlaybook } from "@/lib/dca/playbook";
@@ -58,3 +62,98 @@ const playbook = {
 assert.equal(dcaBotPair(playbook), "BTCUSDT · Both");
 assert.equal(dcaBotSummary(playbook), "Price · 5 clips · 2% dip");
 assert.equal(dcaListStatus(playbook), "Active");
+
+const futuresOpen = [
+  {
+    ruleId: "rule-1",
+    ruleName: "A",
+    symbol: "BTCUSDT",
+    side: "long",
+    source: "engine",
+  },
+  {
+    ruleId: "rule-2",
+    ruleName: "B",
+    symbol: "ETHUSDT",
+    side: "short",
+    source: "engine",
+  },
+];
+const futuresClosed = [
+  {
+    ruleId: "rule-1",
+    ruleName: "A",
+    symbol: "BTCUSDT",
+    side: "long",
+    source: "engine",
+    realizedUsdt: 20,
+    notionalUsdt: 100,
+    leverage: 10,
+    openedAtMs: 1,
+    closedAtMs: 2,
+  },
+];
+assert.deepEqual(
+  futuresAutomationsBotBlotter("rule-1", futuresOpen, futuresClosed),
+  { positionCount: 1, roePct: 2 },
+);
+assert.deepEqual(
+  futuresAutomationsBotBlotter("rule-2", futuresOpen, futuresClosed),
+  { positionCount: 1, roePct: null },
+);
+
+const paperOpen = [
+  {
+    ruleId: 4,
+    baseCoin: "BTC",
+    spotSymbol: "BTCUSDT",
+    futureSymbol: "BTCUSDT-26",
+    notionalUsdt: 2500,
+  },
+];
+const paperClosed = [
+  {
+    ruleId: 4,
+    baseCoin: "BTC",
+    spotSymbol: "BTCUSDT",
+    futureSymbol: "BTCUSDT-26",
+    notionalUsdt: 100,
+    realizedUsdt: 5,
+  },
+  {
+    ruleId: 9,
+    baseCoin: "ETH",
+    spotSymbol: "ETHUSDT",
+    futureSymbol: "ETHUSDT-26",
+    notionalUsdt: 100,
+    realizedUsdt: 10,
+  },
+];
+assert.deepEqual(paperAutomationsBotBlotter("4", paperOpen, paperClosed), {
+  positionCount: 1,
+  roePct: 0.05,
+});
+assert.deepEqual(paperAutomationsBotBlotter("9", paperOpen, paperClosed), {
+  positionCount: 0,
+  roePct: 0.1,
+});
+
+assert.equal(
+  automationsBotBlotterHref("/strategies/futures/positions", "desk-1", "pb-1"),
+  "/strategies/futures/positions?desk=desk-1&bot=pb-1",
+);
+assert.deepEqual(
+  automationsBotBlotterCells(
+    "pb-1",
+    { "pb-1": { positionCount: 2, roePct: 0.14 } },
+    "/strategies/futures/positions",
+    "/strategies/futures/performance",
+    "desk-1",
+  ),
+  {
+    positionCount: 2,
+    roePct: 0.14,
+    positionsHref: "/strategies/futures/positions?desk=desk-1&bot=pb-1",
+    performanceHref: "/strategies/futures/performance?desk=desk-1&bot=pb-1",
+  },
+);

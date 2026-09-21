@@ -87,9 +87,11 @@ import type { AppliedDeskItem } from "@/lib/templates/apply";
 import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
 import { AppSelect } from "@/components/app-select";
 import {
+  automationsBotBlotterCells,
   botModeLabel,
   perpsBotPair,
   perpsBotSummary,
+  type AutomationsBotBlotter,
 } from "@/lib/bots/automations-list";
 import {
   AUTOMATIONS_NEW,
@@ -97,6 +99,7 @@ import {
   automationsNewHref,
   automationsSavedHref,
 } from "@/lib/bots/automations-path";
+import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
 export function FuturesAutomationsDesk({
   rules,
@@ -115,6 +118,7 @@ export function FuturesAutomationsDesk({
   edit = null,
   clone = null,
   listHref,
+  blotter,
 }: {
   rules: FuturesAutomationFormValues[];
   options: LinearPerp[];
@@ -132,6 +136,7 @@ export function FuturesAutomationsDesk({
   edit?: string | null;
   clone?: string | null;
   listHref: string;
+  blotter?: Record<string, AutomationsBotBlotter>;
 }) {
   const router = useRouter();
   const [layers, setLayers] = useState(() => [...rules].reverse());
@@ -294,6 +299,13 @@ export function FuturesAutomationsDesk({
               status: botModeLabel("perps", layer.mode),
               statusKey: layer.mode,
               summary: perpsBotSummary(layer),
+              ...automationsBotBlotterCells(
+                layer.id,
+                blotter,
+                FUTURES_PATHS.positions,
+                FUTURES_PATHS.performance,
+                accountId,
+              ),
               editHref: automationsEditHref(listHref, layer.id),
               cloneHref: automationsNewHref(listHref, layer.id),
             }))}

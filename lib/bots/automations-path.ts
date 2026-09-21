@@ -1,4 +1,4 @@
-import { withQuery } from "@/lib/accounts/model";
+import { deskPath, withQuery } from "@/lib/accounts/model";
 
 export const AUTOMATIONS_EDIT_QUERY = "edit";
 export const AUTOMATIONS_CLONE_QUERY = "clone";
@@ -7,6 +7,18 @@ export const BOT_HASH_PREFIX = "bot-";
 
 export const CASH_AND_CARRY_AUTOMATIONS_PATH =
   "/strategies/cash-and-carry/automations";
+export const CASH_AND_CARRY_POSITIONS_PATH =
+  "/strategies/cash-and-carry/positions";
+export const CASH_AND_CARRY_PERFORMANCE_PATH =
+  "/strategies/cash-and-carry/performance";
+
+export function automationsBotBlotterHref(
+  path: string,
+  accountId: string | null | undefined,
+  botId: string,
+): string {
+  return deskPath(path, accountId, { bot: botId });
+}
 
 export function parseAutomationsEdit(raw: unknown): string | null {
   const value = String(raw ?? "").trim();

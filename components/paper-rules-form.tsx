@@ -60,12 +60,16 @@ import type { AppliedDeskItem } from "@/lib/templates/apply";
 import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
 import { AppSelect } from "@/components/app-select";
 import {
+  automationsBotBlotterCells,
   botModeLabel,
   paperBotPair,
   paperBotSummary,
+  type AutomationsBotBlotter,
 } from "@/lib/bots/automations-list";
 import {
   AUTOMATIONS_NEW,
+  CASH_AND_CARRY_PERFORMANCE_PATH,
+  CASH_AND_CARRY_POSITIONS_PATH,
   automationsEditHref,
   automationsNewHref,
   automationsSavedHref,
@@ -83,6 +87,7 @@ export function AutomationsDesk({
   edit = null,
   clone = null,
   listHref,
+  blotter,
 }: {
   values: PaperRulesFormValues;
   inUseRuleIds: number[];
@@ -99,6 +104,7 @@ export function AutomationsDesk({
   edit?: string | null;
   clone?: string | null;
   listHref: string;
+  blotter?: Record<string, AutomationsBotBlotter>;
 }) {
   const [hasSets, setHasSets] = useState(values.layers.length > 0);
   const [accountReduceOnly, setAccountReduceOnly] = useState(reduceOnly);
@@ -154,6 +160,7 @@ export function AutomationsDesk({
         edit={edit}
         clone={clone}
         listHref={listHref}
+        blotter={blotter}
       />
     </div>
   );
@@ -172,6 +179,7 @@ export function PaperRulesForm({
   edit = null,
   clone = null,
   listHref,
+  blotter,
 }: {
   values: PaperRulesFormValues;
   inUseRuleIds: number[];
@@ -189,6 +197,7 @@ export function PaperRulesForm({
   edit?: string | null;
   clone?: string | null;
   listHref: string;
+  blotter?: Record<string, AutomationsBotBlotter>;
 }) {
   const router = useRouter();
   const [layers, setLayers] = useState(() => [...values.layers].reverse());
@@ -358,6 +367,13 @@ export function PaperRulesForm({
               status: botModeLabel("cnc", layer.mode),
               statusKey: layer.mode,
               summary: paperBotSummary(layer),
+              ...automationsBotBlotterCells(
+                layer.id,
+                blotter,
+                CASH_AND_CARRY_POSITIONS_PATH,
+                CASH_AND_CARRY_PERFORMANCE_PATH,
+                accountId,
+              ),
               editHref: automationsEditHref(listHref, layer.id),
               cloneHref: automationsNewHref(listHref, layer.id),
             }))}
