@@ -21,12 +21,12 @@ export const botSectionTitleClass =
   "text-xs font-semibold uppercase tracking-[0.1em] text-ink";
 export const botRowClass = "grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-4";
 export const botRowClass5 = "grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-5";
-export const botHeaderPrimaryClass =
-  "rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink hover:bg-accent";
-export const botHeaderGhostClass =
-  "shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink";
-export const botHeaderRemoveClass =
-  "shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
+export const botSidebarSaveClass =
+  "w-full rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50";
+export const botSidebarActionClass =
+  "w-full rounded-control border border-line bg-canvas px-3 py-2 text-left text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50";
+export const botSidebarRemoveClass =
+  "w-full rounded-control border border-line px-3 py-2 text-sm text-danger hover:bg-danger/10 disabled:opacity-50";
 export const deskActionBtnClass =
   "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
 export const deskActionSelectClass = `${deskActionBtnClass} desk-action-select`;
@@ -304,44 +304,81 @@ export function BotStatusField({
   );
 }
 
-export function DirtySaveBanner({
-  dirty,
-  error,
-  children,
-}: {
-  dirty: boolean;
-  error?: string;
-  children: ReactNode;
-}) {
-  if (!dirty && !error) {
-    return null;
-  }
+export function BotFormColumns({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 py-4">
-      <div>
-        {dirty ? (
-          <p className="text-sm text-warning">
-            You have unsaved changes on this bot
-          </p>
-        ) : null}
-        {error ? <p className="mt-1 text-sm text-danger">{error}</p> : null}
-      </div>
+    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
       {children}
     </div>
   );
 }
 
-export function AdditionalActions({
+export function BotFormCard({
   children,
+  className,
 }: {
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="col-span-full flex w-full min-w-0 flex-wrap items-center justify-between gap-2 py-5">
-      <h3 className={botSectionTitleClass}>Additional Actions</h3>
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {children}
+    <div
+      className={`flex min-w-0 flex-col divide-y divide-line overflow-hidden rounded-card border border-line bg-canvas px-5${
+        className ? ` ${className}` : ""
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function BotFormSidebar({
+  status,
+  dirty,
+  error,
+  save,
+  children,
+}: {
+  status: ReactNode;
+  dirty: boolean;
+  error?: string;
+  save: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <aside className="flex flex-col gap-4 rounded-card border border-line bg-surface p-5 lg:sticky lg:top-24">
+      <h3 className={botSectionTitleClass}>Status & actions</h3>
+      {status}
+      <div className="space-y-2">
+        {dirty ? (
+          <p className="text-sm text-warning">
+            You have unsaved changes on this bot
+          </p>
+        ) : null}
+        {error ? <p className="text-sm text-danger">{error}</p> : null}
+        {save}
       </div>
+      {children ? (
+        <div className="flex flex-col gap-2 border-t border-line pt-4">
+          {children}
+        </div>
+      ) : null}
+    </aside>
+  );
+}
+
+export function BotFormSummaryCard({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={`rounded-card border border-line bg-surface px-5 py-5${
+        className ? ` ${className}` : ""
+      }`}
+    >
+      {children}
     </section>
   );
 }

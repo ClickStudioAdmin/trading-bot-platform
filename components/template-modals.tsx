@@ -177,6 +177,7 @@ export function SaveAsTemplateButton({
   library = [],
   currentRecipe = null,
   onSaved,
+  buttonClassName,
 }: {
   isAdmin: boolean;
   defaultName: string;
@@ -194,6 +195,7 @@ export function SaveAsTemplateButton({
     name: string;
     visibility: TemplateVisibility;
   }) => void;
+  buttonClassName?: string;
 }) {
   const savedUser = findMatchingLibraryTemplate(
     currentRecipe,
@@ -279,7 +281,10 @@ export function SaveAsTemplateButton({
       <button
         type="button"
         onClick={() => resetAndOpen(false)}
-        className="shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
+        className={
+          buttonClassName ??
+          "shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
+        }
       >
         {savedUser
           ? `Saved template: ${savedUser.name}`
@@ -289,7 +294,10 @@ export function SaveAsTemplateButton({
         <button
           type="button"
           onClick={() => resetAndOpen(true)}
-          className="shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
+          className={
+            buttonClassName ??
+            "shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
+          }
         >
           {savedPlatform
             ? `Saved platform template: ${savedPlatform.name}`

@@ -5,21 +5,24 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { AutomationsBotTable } from "@/components/automations-bot-table";
 import {
-  AdditionalActions,
   BotField,
+  BotFormCard,
+  BotFormColumns,
   BotFormGroup,
+  BotFormSidebar,
+  BotFormSummaryCard,
   BotStatusField,
-  DirtySaveBanner,
   HintLabel,
   OptionalSection,
   OrderTypePill,
   botFieldClass,
-  botHeaderPrimaryClass,
-  botHeaderRemoveClass,
   botLabelClass,
   botRowClass,
   botRowClass5,
   botSectionTitleClass,
+  botSidebarActionClass,
+  botSidebarRemoveClass,
+  botSidebarSaveClass,
   deskActionBtnClass,
   deskActionSelectClass,
   triggerSectionTitle,
@@ -164,8 +167,7 @@ const fieldClass = botFieldClass;
 const labelClass = botLabelClass;
 const sectionTitleClass = botSectionTitleClass;
 const rowClass = botRowClass;
-const headerPrimaryClass = botHeaderPrimaryClass;
-const headerRemoveClass = botHeaderRemoveClass;
+const headerRemoveClass = botSidebarRemoveClass;
 
 function optional(value: number | null | undefined): string {
   return value == null ? "" : String(value);
@@ -989,6 +991,7 @@ export function DcaPlaybookForm({
     policy.defaultSymbol;
   const [symbol, setSymbol] = useState(defaultSymbol);
   const [formTick, setFormTick] = useState(0);
+  const [touched, setTouched] = useState(false);
   useEffect(() => {
     setFormTick(1);
   }, []);
@@ -1320,10 +1323,11 @@ export function DcaPlaybookForm({
     breakevenMissing ||
     (!cycleLocked && !parsedLive.ok && !parseConstraint);
   const dirty =
-    !playbook ||
     statusDirty ||
-    requiredMissing ||
-    (formTick > 0 && !dcaFormMatchesPlaybook(playbook, liveConfig));
+    (playbook
+      ? (formTick > 0 && !dcaFormMatchesPlaybook(playbook, liveConfig)) ||
+        (touched && requiredMissing)
+      : touched);
   const constraintBlocked = cycleLocked
     ? null
     : (parseConstraint ?? saveBlocked);
@@ -1383,7 +1387,10 @@ export function DcaPlaybookForm({
         delete: deleteDcaPlaybookAction,
       }}
       onResult={(result) => onResult?.(result as DcaDeskActionResult)}
-      onChange={() => setFormTick((tick) => tick + 1)}
+      onChange={() => {
+        setTouched(true);
+        setFormTick((tick) => tick + 1);
+      }}
       guard={async (event) => {
         const submitter = (event.nativeEvent as SubmitEvent).submitter as
           | HTMLElement
@@ -1402,37 +1409,13 @@ export function DcaPlaybookForm({
         }
         return true;
       }}
-      className="flex flex-col scroll-mt-24 divide-y divide-line overflow-hidden rounded-card border border-line bg-canvas px-5"
+      className="space-y-5 scroll-mt-24"
     >
       <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
       <input type="hidden" name="deskVenue" value={policy.venueId} />
       <input type="hidden" name="botStatus" value={status} />
-      <DirtySaveBanner
-        dirty={dirty}
-        error={
-          requiredMissing
-            ? "Fill required fields before saving."
-            : constraintBlocked ?? undefined
-        }
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <DeskFormFlash />
-          <PendingSubmitButton
-            pendingLabel="Saving…"
-            deskAction="default"
-            className={headerPrimaryClass}
-            disabled={Boolean(constraintBlocked || requiredMissing)}
-            title={
-              constraintBlocked ??
-              (requiredMissing
-                ? "Fill required fields before saving."
-                : undefined)
-            }
-          >
-            Save
-          </PendingSubmitButton>
-        </div>
-      </DirtySaveBanner>
+      <BotFormColumns>
+      <BotFormCard>
       {reduceOnly ? (
         <p className="my-5 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Reduce only is on. New orders stay blocked until you turn it off in
@@ -1440,29 +1423,18 @@ export function DcaPlaybookForm({
         </p>
       ) : null}
       <BotFormGroup title="Bot">
-        <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
-          <BotField label="Name" required>
-            <input
-              name="name"
-              defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
-              maxLength={40}
-              onChange={() => setFormTick((tick) => tick + 1)}
-              className={fieldClass}
-            />
-          </BotField>
-          <BotStatusField
-            desk="dca"
-            name="botStatusControl"
-            value={status}
-            applied={currentStatus}
-            onChange={(next) => {
-              setStatus(next as DcaBotStatus);
+        <BotField label="Name" required>
+          <input
+            name="name"
+            defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
+            maxLength={40}
+            onChange={() => {
+              setTouched(true);
               setFormTick((tick) => tick + 1);
             }}
-            inUse={hasOpenPosition}
-            accountReduceOnly={reduceOnly}
+            className={fieldClass}
           />
-        </div>
+        </BotField>
       </BotFormGroup>
       {cycleLocked ? (
         <p className="py-5 text-xs text-warning">
@@ -2545,13 +2517,59 @@ export function DcaPlaybookForm({
         </OptionalSection>
       )}
 
-      <AdditionalActions>
+      </BotFormCard>
+      <BotFormSidebar
+        status={
+          <BotStatusField
+            desk="dca"
+            name="botStatusControl"
+            value={status}
+            applied={currentStatus}
+            onChange={(next) => {
+              setStatus(next as DcaBotStatus);
+              setTouched(true);
+              setFormTick((tick) => tick + 1);
+            }}
+            inUse={hasOpenPosition}
+            accountReduceOnly={reduceOnly}
+          />
+        }
+        dirty={dirty}
+        error={
+          dirty
+            ? requiredMissing
+              ? "Fill required fields before saving."
+              : constraintBlocked ?? undefined
+            : undefined
+        }
+        save={
+          <div className="space-y-2">
+            <DeskFormFlash />
+            <PendingSubmitButton
+              pendingLabel="Saving…"
+              deskAction="default"
+              className={botSidebarSaveClass}
+              disabled={Boolean(!dirty || constraintBlocked || requiredMissing)}
+              title={
+                constraintBlocked ??
+                (requiredMissing
+                  ? "Fill required fields before saving."
+                  : undefined)
+              }
+            >
+              Save
+            </PendingSubmitButton>
+          </div>
+        }
+      >
         <BacktestTemplateLink
           current={liveRecipe()}
           getRecipe={recipeForBacktest}
           templates={backtestLibrary}
           venueId={policy.venueId}
           venueEnvironment={venueEnvironment}
+          className="flex w-full flex-col"
+          buttonClassName={botSidebarActionClass}
         />
         <SaveAsTemplateButton
           isAdmin={isAdmin}
@@ -2561,6 +2579,7 @@ export function DcaPlaybookForm({
           library={backtestLibrary}
           currentRecipe={liveRecipe()}
           buildForm={snapshotForm}
+          buttonClassName={botSidebarActionClass}
           onSaved={(saved) => {
             const recipe = liveRecipe();
             if (recipe) {
@@ -2574,7 +2593,8 @@ export function DcaPlaybookForm({
           }}
         />
         {removeControl}
-      </AdditionalActions>
+      </BotFormSidebar>
+      </BotFormColumns>
       {running ? (
         <div className="py-4">
           {ladderMaxError && !ladderOpen ? (
@@ -2592,10 +2612,8 @@ export function DcaPlaybookForm({
         </div>
       ) : null}
       {!running || ladderOpen ? (
-      <BotFormGroup
-        title="Summary"
-        className="-mx-5 w-[calc(100%+2.5rem)] rounded-b-card bg-surface px-5"
-      >
+      <BotFormSummaryCard className="space-y-3">
+        <h3 className={sectionTitleClass}>Summary</h3>
         {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         <div
           className={
@@ -2932,7 +2950,7 @@ export function DcaPlaybookForm({
           </p>
         )}
         </div>
-      </BotFormGroup>
+      </BotFormSummaryCard>
       ) : null}
     </StayOnPageForm>
     {dialog}

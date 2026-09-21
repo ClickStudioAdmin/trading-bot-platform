@@ -2,7 +2,14 @@
 
 import { useState, type ReactNode } from "react";
 import {
+  BotFormCard,
+  BotFormColumns,
+  BotFormSidebar,
+  BotFormSummaryCard,
   BotStatusField,
+  botSidebarActionClass,
+  botSidebarRemoveClass,
+  botSidebarSaveClass,
   deskActionBtnClass,
   deskActionSelectClass,
   triggerSectionTitle,
@@ -48,8 +55,6 @@ const headerBtnClass = "rounded-control px-3 py-1.5 text-xs font-medium";
 const headerPrimaryClass = `${headerBtnClass} bg-accent-strong text-ink hover:bg-accent`;
 const headerSecondaryClass = `${headerBtnClass} border border-line bg-surface text-ink hover:bg-surface-raised`;
 const headerLongClass = `${headerBtnClass} bg-success text-canvas`;
-const headerGhostClass =
-  "shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink";
 const headerRemoveClass =
   "shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
 const deskBtnClass = deskActionBtnClass;
@@ -868,10 +873,10 @@ export function ThemeBotFormDraft() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       <p className="text-sm text-ink-muted">
         Draft standard for every desk. Local only — nothing saves. Save
-        appears at the top when this bot is dirty. Status + Save applies
+        lives in the Status & actions sidebar. Status + Save applies
         the selected mode. Switch the sample desk to see each status list.
       </p>
 
@@ -930,50 +935,17 @@ export function ThemeBotFormDraft() {
         </div>
       </div>
 
-      <div className="flex flex-col divide-y divide-line rounded-card border border-line bg-canvas px-5">
-        {dirty || hasMissing ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 py-4">
-            <div>
-              <p className="text-sm text-warning">
-                You have unsaved changes on this bot
-              </p>
-              {hasMissing ? (
-                <p className="mt-1 text-sm text-danger">
-                  Fill required fields before saving.
-                </p>
-              ) : null}
-            </div>
-            <button
-              type="button"
-              className={headerPrimaryClass}
-              disabled={hasMissing}
-              title={
-                hasMissing ? "Fill required fields before saving." : undefined
-              }
-              onClick={saveDraft}
-            >
-              Save
-            </button>
-          </div>
-        ) : null}
+      <BotFormColumns>
+      <BotFormCard>
         <Group title="Bot">
-        <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
-          <Field label="Name" required>
-            <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              maxLength={40}
-              className={fieldClass}
-            />
-          </Field>
-          <BotStatusField
-            desk={desk}
-            name="themeStatus"
-            value={status}
-            applied={appliedStatus}
-            onChange={setStatus}
+        <Field label="Name" required>
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            maxLength={40}
+            className={fieldClass}
           />
-        </div>
+        </Field>
         </Group>
 
         {desk !== "cnc" ? (
@@ -2300,35 +2272,62 @@ export function ThemeBotFormDraft() {
           </>
         )}
 
-        <section className="flex flex-wrap items-center justify-between gap-2 py-5">
-          <h3 className={sectionTitleClass}>Additional Actions</h3>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {desk !== "cnc" ? (
-            <button type="button" className={headerGhostClass}>
-              Backtest
-            </button>
-            ) : null}
-            <button type="button" className={headerGhostClass}>
-              Save as template
-            </button>
-            <button type="button" className={headerGhostClass}>
-              Save as platform template
-            </button>
-            <button type="button" className={headerRemoveClass}>
-              Remove
-            </button>
-          </div>
-        </section>
-        {desk === "dca" ? (
-          <ThemeDcaSummary
-            bothSides={bothSides}
-            ladderOpen={ladderOpen}
-            onLadderOpen={setLadderOpen}
-            ladderTab={ladderTab}
-            onLadderTab={setLadderTab}
+      </BotFormCard>
+      <BotFormSidebar
+        status={
+          <BotStatusField
+            desk={desk}
+            name="themeStatus"
+            value={status}
+            applied={appliedStatus}
+            onChange={setStatus}
           />
+        }
+        dirty={dirty}
+        error={
+          dirty && hasMissing
+            ? "Fill required fields before saving."
+            : undefined
+        }
+        save={
+          <button
+            type="button"
+            className={botSidebarSaveClass}
+            disabled={!dirty || hasMissing}
+            title={
+              hasMissing ? "Fill required fields before saving." : undefined
+            }
+            onClick={saveDraft}
+          >
+            Save
+          </button>
+        }
+      >
+        {desk !== "cnc" ? (
+          <button type="button" className={botSidebarActionClass}>
+            Backtest
+          </button>
         ) : null}
-      </div>
+        <button type="button" className={botSidebarActionClass}>
+          Save as template
+        </button>
+        <button type="button" className={botSidebarActionClass}>
+          Save as platform template
+        </button>
+        <button type="button" className={botSidebarRemoveClass}>
+          Remove
+        </button>
+      </BotFormSidebar>
+      </BotFormColumns>
+      {desk === "dca" ? (
+        <ThemeDcaSummary
+          bothSides={bothSides}
+          ladderOpen={ladderOpen}
+          onLadderOpen={setLadderOpen}
+          ladderTab={ladderTab}
+          onLadderTab={setLadderTab}
+        />
+      ) : null}
 
       <ThemeBotFormReference />
     </div>
@@ -2349,20 +2348,18 @@ function ThemeDcaSummary({
   onLadderTab: (next: "long" | "short") => void;
 }) {
   return (
-    <>
-      <div className="py-4">
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
-          aria-expanded={ladderOpen}
-          onClick={() => onLadderOpen(!ladderOpen)}
-        >
-          {ladderOpen ? "Hide Summary" : "Show Summary"}
-          <ChevronIcon className={ladderOpen ? "rotate-90" : undefined} />
-        </button>
-      </div>
+    <div className="space-y-3">
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
+        aria-expanded={ladderOpen}
+        onClick={() => onLadderOpen(!ladderOpen)}
+      >
+        {ladderOpen ? "Hide Summary" : "Show Summary"}
+        <ChevronIcon className={ladderOpen ? "rotate-90" : undefined} />
+      </button>
       {ladderOpen ? (
-        <section className="-mx-5 w-[calc(100%+2.5rem)] space-y-3 rounded-b-card bg-surface px-5 py-5">
+        <BotFormSummaryCard className="space-y-3">
           <h3 className={sectionTitleClass}>Summary</h3>
           <div
             className={
@@ -2439,9 +2436,9 @@ function ThemeDcaSummary({
               valueClass="text-danger"
             />
           </div>
-        </section>
+        </BotFormSummaryCard>
       ) : null}
-    </>
+    </div>
   );
 }
 

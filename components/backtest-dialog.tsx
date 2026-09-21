@@ -42,6 +42,8 @@ export function BacktestTemplateLink({
   templates,
   venueId,
   venueEnvironment = null,
+  className,
+  buttonClassName,
 }: {
   current?: BacktestRecipe | null;
   getRecipe?: () =>
@@ -50,11 +52,13 @@ export function BacktestTemplateLink({
   templates: BacktestLibraryItem[];
   venueId: string;
   venueEnvironment?: string | null;
+  className?: string;
+  buttonClassName?: string;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   return (
-    <span className="inline-flex flex-col items-end">
+    <span className={className ?? "inline-flex flex-col items-end"}>
       <button
         type="button"
         disabled={pending}
@@ -105,14 +109,15 @@ export function BacktestTemplateLink({
             );
           });
         }}
-        className="shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50"
+        className={
+          buttonClassName ??
+          "shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50"
+        }
       >
         {pending ? "Opening…" : "Backtest"}
       </button>
       {error ? (
-        <span className="mt-1 max-w-56 text-right text-xs text-danger">
-          {error}
-        </span>
+        <span className="mt-1 text-xs text-danger">{error}</span>
       ) : null}
     </span>
   );

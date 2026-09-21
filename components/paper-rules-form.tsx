@@ -5,16 +5,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AutomationsBotTable } from "@/components/automations-bot-table";
 import {
-  AdditionalActions,
   BotField,
+  BotFormCard,
+  BotFormColumns,
   BotFormGroup,
+  BotFormSidebar,
   BotStatusField,
-  DirtySaveBanner,
   OptionalSection,
   botFieldClass,
-  botHeaderPrimaryClass,
-  botHeaderRemoveClass,
   botRowClass,
+  botSidebarActionClass,
+  botSidebarRemoveClass,
+  botSidebarSaveClass,
   deskActionBtnClass,
   deskActionSelectClass,
 } from "@/components/bot-form-chrome";
@@ -412,7 +414,7 @@ function RuleRow({
   }[];
 }) {
   const prefix = "r0_";
-  const [dirty, setDirty] = useState(!layer.id);
+  const [dirty, setDirty] = useState(false);
   const [sizeType, setSizeType] = useState(layer.sizeType);
   const [exitSizeType, setExitSizeType] = useState(layer.exitSizeType);
   const [mode, setMode] = useState(layer.mode);
@@ -455,51 +457,24 @@ function RuleRow({
         }
         return true;
       }}
-      className="flex flex-col scroll-mt-24 divide-y divide-line rounded-card border border-line bg-canvas px-5"
+      className="space-y-5 scroll-mt-24"
       id={layer.id ? `bot-${layer.id}` : undefined}
     >
       <input type="hidden" name="saveScope" value="one" />
       <input type="hidden" name="ruleCount" value="1" />
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
-      <DirtySaveBanner
-        dirty={dirty || missing}
-        error={
-          missing ? "Fill required fields before saving." : undefined
-        }
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <DeskFormFlash />
-          <PendingSubmitButton
-            pendingLabel="Saving…"
-            deskAction="default"
-            className={botHeaderPrimaryClass}
-            disabled={missing}
-          >
-            Save
-          </PendingSubmitButton>
-        </div>
-      </DirtySaveBanner>
+      <BotFormColumns>
+      <BotFormCard>
       <BotFormGroup title="Bot">
-        <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
-          <BotField label="Name" required>
-            <input
-              id={`${prefix}name`}
-              name={`${prefix}name`}
-              defaultValue={layer.name}
-              maxLength={40}
-              className={botFieldClass}
-            />
-          </BotField>
-          <BotStatusField
-            desk="cnc"
-            name={`${prefix}mode`}
-            value={mode}
-            applied={layer.mode}
-            onChange={(next) => setMode(parseAutomationMode(next))}
-            inUse={inUse}
-            accountReduceOnly={accountReduceOnly}
+        <BotField label="Name" required>
+          <input
+            id={`${prefix}name`}
+            name={`${prefix}name`}
+            defaultValue={layer.name}
+            maxLength={40}
+            className={botFieldClass}
           />
-        </div>
+        </BotField>
       </BotFormGroup>
       <BotFormGroup title="Entry" hint="All conditions must be true.">
         <div className={botRowClass}>
@@ -637,7 +612,40 @@ function RuleRow({
           />
         </div>
       </OptionalSection>
-      <AdditionalActions>
+      </BotFormCard>
+      <BotFormSidebar
+        status={
+          <BotStatusField
+            desk="cnc"
+            name={`${prefix}mode`}
+            value={mode}
+            applied={layer.mode}
+            onChange={(next) => {
+              setMode(parseAutomationMode(next));
+              setDirty(true);
+            }}
+            inUse={inUse}
+            accountReduceOnly={accountReduceOnly}
+          />
+        }
+        dirty={dirty}
+        error={
+          dirty && missing ? "Fill required fields before saving." : undefined
+        }
+        save={
+          <div className="space-y-2">
+            <DeskFormFlash />
+            <PendingSubmitButton
+              pendingLabel="Saving…"
+              deskAction="default"
+              className={botSidebarSaveClass}
+              disabled={!dirty || missing}
+            >
+              Save
+            </PendingSubmitButton>
+          </div>
+        }
+      >
         <SaveAsTemplateButton
           isAdmin={isAdmin}
           defaultName={layer.name}
@@ -673,30 +681,32 @@ function RuleRow({
               stopLoss: slOn ? stopLoss : "",
             })
           }
+          buttonClassName={botSidebarActionClass}
         />
         {canRemove ? (
           <button
             type="button"
             onClick={onRemove}
-            className={botHeaderRemoveClass}
+            className={botSidebarRemoveClass}
           >
             Remove
           </button>
         ) : (
           <span
-            className="inline-flex"
+            className="inline-flex w-full"
             title="This bot has an open position. Close that row before removing it."
           >
             <button
               type="button"
               disabled
-              className={`${botHeaderRemoveClass} pointer-events-none opacity-40`}
+              className={`${botSidebarRemoveClass} pointer-events-none opacity-40`}
             >
               Remove
             </button>
           </span>
         )}
-      </AdditionalActions>
+      </BotFormSidebar>
+      </BotFormColumns>
     </StayOnPageForm>
     {dialog}
     </>
