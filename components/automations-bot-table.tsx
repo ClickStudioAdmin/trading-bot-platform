@@ -60,10 +60,10 @@ export function AutomationsBotTable({
               Pair / Side
             </th>
             <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
-              Status
+              Recipe
             </th>
             <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
-              Recipe
+              Status
             </th>
             <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
               Positions
@@ -88,14 +88,14 @@ export function AutomationsBotTable({
               <td className="px-4 py-3 pr-8 align-top text-ink-muted">
                 {row.pair}
               </td>
+              <td className="px-4 py-3 pr-8 align-top text-ink-muted">
+                {row.summary}
+              </td>
               <td className="px-4 py-3 pr-8 align-top">
                 <StatusBadge
                   label={row.status}
                   tone={statusToneFor(row.statusKey ?? row.status)}
                 />
-              </td>
-              <td className="px-4 py-3 pr-8 align-top text-ink-muted">
-                {row.summary}
               </td>
               <td className="px-4 py-3 pr-8 align-top">
                 <div className="flex items-center gap-1.5">
