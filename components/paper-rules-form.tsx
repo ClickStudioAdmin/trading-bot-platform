@@ -9,6 +9,7 @@ import {
   BotFormCard,
   BotFormColumns,
   BotFormGroup,
+  BotFormStep,
   BotFormSidebar,
   BotStatusField,
   OptionalSection,
@@ -465,7 +466,7 @@ function RuleRow({
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
       <BotFormColumns>
       <BotFormCard>
-      <BotFormGroup title="Bot">
+      <BotFormStep title="Bot">
         <BotField label="Name" required>
           <input
             id={`${prefix}name`}
@@ -475,8 +476,8 @@ function RuleRow({
             className={botFieldClass}
           />
         </BotField>
-      </BotFormGroup>
-      <BotFormGroup title="Entry" hint="All conditions must be true.">
+      </BotFormStep>
+      <BotFormStep title="When" hint="All conditions must be true.">
         <div className={botRowClass}>
           <CarryNumber
             name={`${prefix}minApr`}
@@ -495,7 +496,8 @@ function RuleRow({
             defaultValue={layer.maxDte}
           />
         </div>
-      </BotFormGroup>
+      </BotFormStep>
+      <BotFormStep title="Size">
       <BotFormGroup title="Position and Orders">
         <div className={botRowClass}>
           <CarryNumber
@@ -548,6 +550,8 @@ function RuleRow({
           ) : null}
         </div>
       </BotFormGroup>
+      </BotFormStep>
+      <BotFormStep title="Exits" hint="Any condition can be true.">
       <BotFormGroup title="Exit" hint="Any condition can be true.">
         <div className={botRowClass}>
           <CarryNumber
@@ -612,6 +616,7 @@ function RuleRow({
           />
         </div>
       </OptionalSection>
+      </BotFormStep>
       </BotFormCard>
       <BotFormSidebar
         status={

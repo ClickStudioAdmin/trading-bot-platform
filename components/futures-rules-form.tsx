@@ -9,6 +9,7 @@ import {
   BotFormCard,
   BotFormColumns,
   BotFormGroup,
+  BotFormStep,
   BotFormSidebar,
   BotStatusField,
   HintLabel,
@@ -636,7 +637,7 @@ function RuleCard({
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
       <BotFormColumns>
       <BotFormCard>
-      <BotFormGroup title="Bot">
+      <BotFormStep title="Bot">
         <BotField label="Name" required>
           <input
             id={`${prefix}name`}
@@ -646,8 +647,9 @@ function RuleCard({
             className={botFieldClass}
           />
         </BotField>
-      </BotFormGroup>
+      </BotFormStep>
 
+      <BotFormStep title="When">
       <BotFormGroup title="What & When">
         <div className={botRowClass}>
           <BotField label="Contract" required>
@@ -877,7 +879,9 @@ function RuleCard({
           />
         </OptionalSection>
       ) : null}
+      </BotFormStep>
 
+      <BotFormStep title="Size">
       <BotFormGroup title={closing ? undefined : "Order Size"}>
         <div className={botRowClass}>
           <BotField
@@ -923,9 +927,10 @@ function RuleCard({
           )}
         </div>
       </BotFormGroup>
+      </BotFormStep>
 
       {!closing ? (
-        <>
+        <BotFormStep title="Exits">
           {tpOn || slOn ? (
             <>
               <input type="hidden" name={`${prefix}tpsl`} value="on" />
@@ -1203,7 +1208,7 @@ function RuleCard({
               labelClass={botLabelClass}
             />
           </OptionalSection>
-        </>
+        </BotFormStep>
       ) : null}
 
       </BotFormCard>

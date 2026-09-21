@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import {
   BotFormCard,
   BotFormColumns,
+  BotFormStep,
   BotFormSidebar,
   BotFormSummaryCard,
   BotStatusField,
@@ -938,7 +939,7 @@ export function ThemeBotFormDraft() {
 
       <BotFormColumns>
       <BotFormCard>
-        <Group title="Bot">
+        <BotFormStep title="Bot">
         <Field label="Name" required>
           <input
             value={name}
@@ -947,10 +948,11 @@ export function ThemeBotFormDraft() {
             className={fieldClass}
           />
         </Field>
-        </Group>
+        </BotFormStep>
 
         {desk !== "cnc" ? (
         <>
+        <BotFormStep title="When">
         <Group title="What & When">
           <div className={rowClass}>
             <Field label="Contract" required>
@@ -1399,7 +1401,9 @@ export function ThemeBotFormDraft() {
             </OptionalSection>
           )
         ) : null}
+        </BotFormStep>
 
+        <BotFormStep title="Size">
         {desk === "dca" && !closing ? (
           <Group title="Maximum Exposure">
             <div className={rowClass}>
@@ -1754,9 +1758,10 @@ export function ThemeBotFormDraft() {
           </div>
         </Group>
         ) : null}
+        </BotFormStep>
 
         {!closing ? (
-          <>
+          <BotFormStep title="Exits">
             <OptionalSection
               title="Take profit"
               enabled={tpOn}
@@ -2112,15 +2117,12 @@ export function ThemeBotFormDraft() {
               </OptionalSection>
             )}
 
-          </>
+          </BotFormStep>
         ) : null}
         </>
         ) : (
           <>
-            <Group
-              title="Entry"
-              hint="All conditions must be true."
-            >
+            <BotFormStep title="When" hint="All conditions must be true.">
               <div className={rowClass}>
                 <Field label="Min APR %">
                   <OffNumber value={minApr} onChange={setMinApr} />
@@ -2140,8 +2142,9 @@ export function ThemeBotFormDraft() {
                   />
                 </Field>
               </div>
-            </Group>
+            </BotFormStep>
 
+            <BotFormStep title="Size">
             <Group title="Position and Orders">
               <div className={rowClass}>
                 <Field label="Max Position Size">
@@ -2207,7 +2210,9 @@ export function ThemeBotFormDraft() {
                 ) : null}
               </div>
             </Group>
+            </BotFormStep>
 
+            <BotFormStep title="Exits" hint="Any condition can be true.">
             <Group title="Exit" hint="Any condition can be true.">
               <div className={rowClass}>
                 <Field label="DTE ≤">
@@ -2270,6 +2275,7 @@ export function ThemeBotFormDraft() {
                 </Field>
               </div>
             </OptionalSection>
+            </BotFormStep>
           </>
         )}
 

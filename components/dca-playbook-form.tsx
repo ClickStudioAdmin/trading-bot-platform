@@ -9,6 +9,7 @@ import {
   BotFormCard,
   BotFormColumns,
   BotFormGroup,
+  BotFormStep,
   BotFormSidebar,
   BotFormSummaryCard,
   BotStatusField,
@@ -1422,7 +1423,7 @@ export function DcaPlaybookForm({
           Desk Settings. Take profit and stop still run.
         </p>
       ) : null}
-      <BotFormGroup title="Bot">
+      <BotFormStep title="Bot">
         <BotField label="Name" required>
           <input
             name="name"
@@ -1435,7 +1436,7 @@ export function DcaPlaybookForm({
             className={fieldClass}
           />
         </BotField>
-      </BotFormGroup>
+      </BotFormStep>
       {cycleLocked ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           {status === "disabled" && statusDirty
@@ -1449,6 +1450,7 @@ export function DcaPlaybookForm({
         </p>
       ) : null}
 
+      <BotFormStep title="When" locked={cycleLocked}>
       <BotFormGroup title="What & When" locked={cycleLocked}>
         <div className={rowClass}>
           <label className={labelClass}>
@@ -1884,6 +1886,8 @@ export function DcaPlaybookForm({
         </OptionalSection>
       )}
 
+      </BotFormStep>
+      <BotFormStep title="Size" locked={cycleLocked}>
       <BotFormGroup title="Maximum Exposure" locked={cycleLocked}>
           <div className={rowClass}>
             <label className={`min-w-0 ${labelClass}`}>
@@ -2223,6 +2227,8 @@ export function DcaPlaybookForm({
           </div>
           {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         </BotFormGroup>
+      </BotFormStep>
+      <BotFormStep title="Exits">
 
       {!tpOn ? (
         <div hidden>
@@ -2516,6 +2522,7 @@ export function DcaPlaybookForm({
           />
         </OptionalSection>
       )}
+      </BotFormStep>
 
       </BotFormCard>
       <BotFormSidebar

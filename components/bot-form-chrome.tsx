@@ -18,6 +18,7 @@ export const botFieldInvalidClass =
   "mt-1 w-full min-w-0 rounded-control border border-danger bg-canvas px-3 py-2 text-sm text-ink focus:border-danger focus:outline-none";
 export const botLabelClass = "block text-sm text-ink";
 export const botSectionTitleClass = "text-sm font-semibold text-ink";
+export const botStepTitleClass = "text-lg font-semibold tracking-tight text-ink";
 export const botRowClass = "grid grid-cols-2 gap-4 lg:grid-cols-4";
 export const botRowClass5 = "grid grid-cols-2 gap-4 lg:grid-cols-5";
 export const botSidebarSaveClass =
@@ -116,6 +117,35 @@ export function OptionalSection({
         <HintLabel text={title} hint={hint} className={botSectionTitleClass} />
       </div>
       {enabled ? children : null}
+    </section>
+  );
+}
+
+export function BotFormStep({
+  title,
+  hint,
+  locked = false,
+  className,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  locked?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      className={`min-w-0 space-y-4 rounded-card border border-line bg-surface p-5${
+        locked ? " pointer-events-none opacity-40" : ""
+      }${className ? ` ${className}` : ""}`}
+      inert={locked || undefined}
+      aria-disabled={locked || undefined}
+    >
+      <h3 className={botStepTitleClass}>
+        <HintLabel text={title} hint={hint} />
+      </h3>
+      {children}
     </section>
   );
 }
@@ -320,7 +350,7 @@ export function BotFormCard({
 }) {
   return (
     <div
-      className={`flex min-w-0 flex-col space-y-5 rounded-card border border-line bg-surface p-5${
+      className={`flex min-w-0 flex-col space-y-5${
         className ? ` ${className}` : ""
       }`}
     >
