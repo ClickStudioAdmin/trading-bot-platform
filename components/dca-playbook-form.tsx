@@ -1424,7 +1424,7 @@ export function DcaPlaybookForm({
       ) : null}
       <BotFormStep title="General">
         <div className={rowClass}>
-          <BotField label="Name" required>
+          <BotField label="Name" required className="col-span-2">
             <input
               name="name"
               defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}

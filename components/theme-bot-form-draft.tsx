@@ -940,7 +940,7 @@ export function ThemeBotFormDraft() {
       <BotFormCard>
         <BotFormStep title="General">
         <div className={rowClass}>
-          <Field label="Name" required>
+          <Field label="Name" required className="col-span-2">
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}

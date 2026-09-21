@@ -638,7 +638,7 @@ function RuleCard({
       <BotFormCard>
       <BotFormStep title="General">
         <div className={botRowClass}>
-          <BotField label="Name" required>
+          <BotField label="Name" required className="col-span-2">
             <input
               id={`${prefix}name`}
               name={`${prefix}name`}
