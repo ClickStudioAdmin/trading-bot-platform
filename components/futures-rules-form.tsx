@@ -693,7 +693,7 @@ function RuleCard({
       </BotFormStep>
 
       <BotFormStep title="Entry Conditions">
-      <BotFormGroup title="What & When">
+      <BotFormGroup>
         <div className={botRowClass}>
           <BotField label="Order" required>
             <OrderTypePill

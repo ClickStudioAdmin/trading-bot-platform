@@ -1020,7 +1020,7 @@ export function ThemeBotFormDraft() {
         {desk !== "cnc" ? (
         <>
         <BotFormStep title="Entry Conditions">
-        <Group title="What & When">
+        <Group>
           <div className={rowClass}>
             {desk === "perps" ? (
               <>

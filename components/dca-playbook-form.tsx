@@ -1530,7 +1530,7 @@ export function DcaPlaybookForm({
       ) : null}
 
       <BotFormStep title="Entry Conditions" locked={cycleLocked}>
-      <BotFormGroup title="What & When" locked={cycleLocked}>
+      <BotFormGroup locked={cycleLocked}>
         <div className={rowClass}>
           <label className={`${labelClass} lg:col-span-2`}>
             <HintLabel text="Initial Order Trigger" required />
