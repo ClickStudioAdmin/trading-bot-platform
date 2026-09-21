@@ -259,9 +259,7 @@ function Group({
           <HintLabel text={title} hint={hint} />
         </h3>
       ) : null}
-      <div className="[&>*:not([hidden])~*:not([hidden])]:border-t [&>*:not([hidden])~*:not([hidden])]:border-line [&>*:not([hidden])~*:not([hidden])]:pt-5">
-        {children}
-      </div>
+      {children}
     </section>
   );
 }
