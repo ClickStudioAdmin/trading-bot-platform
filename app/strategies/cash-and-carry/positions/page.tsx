@@ -70,10 +70,11 @@ export default async function CashAndCarryPositionsPage({
           unwinding={firstSearchValue(params.paper) === "unwinding"}
           error={firstSearchValue(params.paperError)}
         />
+        <section>
         <PageHeading
           as="h2"
           title="Current Positions"
-          className="mb-0"
+          className="mb-3"
           actions={
             <DeskBlotterScopeSelect
               values={filters}
@@ -83,6 +84,7 @@ export default async function CashAndCarryPositionsPage({
           }
         />
         <PaperOpenStats signedIn={desk.signedIn} open={visibleOpen} />
+        </section>
         <OpenPaperTrades
           signedIn={desk.signedIn}
           open={visibleOpen}

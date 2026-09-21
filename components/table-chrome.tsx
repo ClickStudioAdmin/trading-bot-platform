@@ -269,7 +269,11 @@ export function LiveGetForm({
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const timer = useRef<number>(0);
-  const submit = useCallback(() => submitFilters(formRef.current), []);
+  const persistOpen = !bare;
+  const submit = useCallback(
+    () => submitFilters(formRef.current, persistOpen),
+    [persistOpen],
+  );
 
   function onChange(event: FormEvent<HTMLFormElement>) {
     const target = event.target;
@@ -291,11 +295,11 @@ export function LiveGetForm({
     window.clearTimeout(timer.current);
     if (searchLike) {
       timer.current = window.setTimeout(() => {
-        submitFilters(formRef.current);
+        submitFilters(formRef.current, persistOpen);
       }, 300);
       return;
     }
-    submitFilters(formRef.current);
+    submitFilters(formRef.current, persistOpen);
   }
 
   return (
@@ -324,7 +328,7 @@ export function LiveGetForm({
   );
 }
 
-function submitFilters(form: HTMLFormElement | null) {
+function submitFilters(form: HTMLFormElement | null, persistOpen = true) {
   if (!form) {
     return;
   }
@@ -332,7 +336,9 @@ function submitFilters(form: HTMLFormElement | null) {
   if (page instanceof HTMLInputElement) {
     page.value = "1";
   }
-  writeFiltersOpen(window.location.pathname, true);
+  if (persistOpen) {
+    writeFiltersOpen(window.location.pathname, true);
+  }
   form.requestSubmit();
 }
 

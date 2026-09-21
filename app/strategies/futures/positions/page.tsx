@@ -214,10 +214,11 @@ export default async function FuturesPositionsPage({
         />
 
         <LiveTickerScope symbols={open.map((row) => row.symbol)}>
+        <section>
         <PageHeading
           as="h2"
           title="Current Positions"
-          className="mb-0"
+          className="mb-3"
           actions={
             <DeskBlotterScopeSelect
               values={filters}
@@ -227,6 +228,7 @@ export default async function FuturesPositionsPage({
           }
         />
         <FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />
+        </section>
         {showTicket ? (
           <section>
             <h2 className="text-xl font-semibold tracking-tight">

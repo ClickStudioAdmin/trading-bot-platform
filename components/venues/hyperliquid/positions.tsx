@@ -176,10 +176,11 @@ export async function HyperliquidFuturesPositions({
           venue="hyperliquid"
           environment={session?.account.venueEnvironment}
         >
+        <section>
         <PageHeading
           as="h2"
           title="Current Positions"
-          className="mb-0"
+          className="mb-3"
           actions={
             <DeskBlotterScopeSelect
               values={filters}
@@ -189,6 +190,7 @@ export async function HyperliquidFuturesPositions({
           }
         />
         <FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />
+        </section>
         {showTicket ? (
           <section>
             <h2 className="text-xl font-semibold tracking-tight">

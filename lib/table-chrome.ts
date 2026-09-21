@@ -223,6 +223,7 @@ export const TABLE_FILTER_CHROME_KEYS = new Set([
   "updated",
   "paper",
   "paperError",
+  "bot",
 ]);
 
 export function tableFiltersSuggestOpen(
