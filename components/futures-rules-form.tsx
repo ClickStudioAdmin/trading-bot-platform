@@ -24,7 +24,6 @@ import {
   botSidebarSaveClass,
   deskActionBtnClass,
   deskActionSelectClass,
-  triggerSectionTitle,
 } from "@/components/bot-form-chrome";
 import { AppCheck } from "@/components/app-check";
 import {
@@ -752,7 +751,7 @@ function RuleCard({
         )}
       </BotFormGroup>
 
-      <BotFormGroup title={triggerSectionTitle(entrySource)}>
+      <BotFormGroup>
         <div className={botRowClass5}>
           {entrySource === "indicator" && !closing ? (
             <IndicatorStartFields

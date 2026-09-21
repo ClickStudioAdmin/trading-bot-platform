@@ -414,19 +414,6 @@ export function BotFormSummaryCard({
   );
 }
 
-export function triggerSectionTitle(kind: string): string {
-  if (kind === "indicator") {
-    return "Trigger - Indicator";
-  }
-  if (kind === "trend") {
-    return "Trigger - Trend";
-  }
-  if (kind === "webhook") {
-    return "Trigger - Signal Webhook";
-  }
-  return "Trigger - Price Cross";
-}
-
 export function selectedStatusOption(
   desk: BotDeskKind,
   value: string,

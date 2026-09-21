@@ -26,7 +26,6 @@ import {
   botSidebarSaveClass,
   deskActionBtnClass,
   deskActionSelectClass,
-  triggerSectionTitle,
 } from "@/components/bot-form-chrome";
 import { ColumnHint } from "@/components/column-hint";
 import { FuturesDeskRefresh } from "@/components/futures-desk-refresh";
@@ -1591,7 +1590,7 @@ export function DcaPlaybookForm({
         </div>
       </BotFormGroup>
 
-      <BotFormGroup title={triggerSectionTitle(startKind)} locked={cycleLocked}>
+      <BotFormGroup locked={cycleLocked}>
         <div className={rowClass}>
           {startKind === "price" && direction === "both" ? (
             <div className="space-y-4 sm:col-span-2 lg:col-span-4">

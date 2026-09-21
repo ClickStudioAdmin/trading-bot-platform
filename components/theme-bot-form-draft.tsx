@@ -19,7 +19,6 @@ import {
   botSidebarSaveClass,
   deskActionBtnClass,
   deskActionSelectClass,
-  triggerSectionTitle,
 } from "@/components/bot-form-chrome";
 import { AppCheck } from "@/components/app-check";
 import {
@@ -1076,7 +1075,7 @@ export function ThemeBotFormDraft() {
 
         </Group>
 
-        <Group title={triggerSectionTitle(startKind)}>
+        <Group>
           {startKind === "webhook" ? (
             <div className={rowClass5}>
               <Field
