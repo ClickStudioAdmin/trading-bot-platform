@@ -1279,16 +1279,6 @@ function RuleCard({
           </div>
         }
       >
-        <BotFormSidebarSection title="Backtesting">
-          <BacktestTemplateLink
-            current={liveRecipe()}
-            templates={backtestLibrary}
-            venueId={venueId}
-            venueEnvironment={venueEnvironment}
-            className="flex w-full flex-col"
-            buttonClassName={botSidebarActionClass}
-          />
-        </BotFormSidebarSection>
         <BotFormSidebarSection title="Templates">
           <SaveAsTemplateButton
             isAdmin={isAdmin}
@@ -1309,6 +1299,16 @@ function RuleCard({
                 visibility: saved.visibility,
               })
             }
+          />
+        </BotFormSidebarSection>
+        <BotFormSidebarSection title="Backtesting">
+          <BacktestTemplateLink
+            current={liveRecipe()}
+            templates={backtestLibrary}
+            venueId={venueId}
+            venueEnvironment={venueEnvironment}
+            className="flex w-full flex-col"
+            buttonClassName={botSidebarActionClass}
           />
         </BotFormSidebarSection>
         {layer.id ? null : (

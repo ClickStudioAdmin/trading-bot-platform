@@ -2341,13 +2341,6 @@ export function ThemeBotFormDraft() {
           </button>
         }
       >
-        {desk !== "cnc" ? (
-          <BotFormSidebarSection title="Backtesting">
-            <button type="button" className={botSidebarActionClass}>
-              Backtest
-            </button>
-          </BotFormSidebarSection>
-        ) : null}
         <BotFormSidebarSection title="Templates">
           <button type="button" className={botSidebarActionClass}>
             Save as template
@@ -2356,6 +2349,13 @@ export function ThemeBotFormDraft() {
             Save as platform template
           </button>
         </BotFormSidebarSection>
+        {desk !== "cnc" ? (
+          <BotFormSidebarSection title="Backtesting">
+            <button type="button" className={botSidebarActionClass}>
+              Backtest
+            </button>
+          </BotFormSidebarSection>
+        ) : null}
       </BotFormSidebar>
       </BotFormColumns>
       {desk === "dca" ? (

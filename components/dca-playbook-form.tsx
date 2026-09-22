@@ -2602,17 +2602,6 @@ export function DcaPlaybookForm({
           </div>
         }
       >
-        <BotFormSidebarSection title="Backtesting">
-          <BacktestTemplateLink
-            current={liveRecipe()}
-            getRecipe={recipeForBacktest}
-            templates={backtestLibrary}
-            venueId={policy.venueId}
-            venueEnvironment={venueEnvironment}
-            className="flex w-full flex-col"
-            buttonClassName={botSidebarActionClass}
-          />
-        </BotFormSidebarSection>
         <BotFormSidebarSection title="Templates">
           <SaveAsTemplateButton
             isAdmin={isAdmin}
@@ -2634,6 +2623,17 @@ export function DcaPlaybookForm({
                 });
               }
             }}
+          />
+        </BotFormSidebarSection>
+        <BotFormSidebarSection title="Backtesting">
+          <BacktestTemplateLink
+            current={liveRecipe()}
+            getRecipe={recipeForBacktest}
+            templates={backtestLibrary}
+            venueId={policy.venueId}
+            venueEnvironment={venueEnvironment}
+            className="flex w-full flex-col"
+            buttonClassName={botSidebarActionClass}
           />
         </BotFormSidebarSection>
         {removeControl ? (
