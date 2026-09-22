@@ -145,15 +145,61 @@ export function sortPairRows<T>(
   });
 }
 
+export function exchangePairsPath(venueId: string): string {
+  return `/account/exchanges/${encodeURIComponent(venueId)}/pairs`;
+}
+
+export function exchangePairsHref(
+  venueId: string,
+  options?: {
+    environment?: string | null;
+    kind?: "carry" | "perps";
+    extra?: Record<string, string | undefined>;
+  },
+): string {
+  const extra: Record<string, string> = {};
+  if (options?.environment && options.environment !== "live") {
+    extra.env = options.environment;
+  }
+  if (options?.kind === "carry") {
+    extra.kind = "carry";
+  }
+  if (options?.extra) {
+    for (const [key, value] of Object.entries(options.extra)) {
+      if (value) {
+        extra[key] = value;
+      }
+    }
+  }
+  const path = exchangePairsPath(venueId);
+  return Object.keys(extra).length > 0 ? withQuery(path, extra) : path;
+}
+
+function keepParams(
+  keep: Record<string, string | undefined> | undefined,
+): Record<string, string> {
+  const extra: Record<string, string> = {};
+  if (!keep) {
+    return extra;
+  }
+  for (const [key, value] of Object.entries(keep)) {
+    if (value) {
+      extra[key] = value;
+    }
+  }
+  return extra;
+}
+
 export function pairPageHref(input: {
   path: string;
   deskId?: string | null;
+  keep?: Record<string, string | undefined>;
   filters: PairFilters;
   page: number;
   sort?: string;
   dir?: TableSortDir;
 }): string {
-  const extra: Record<string, string> = {};
+  const extra: Record<string, string> = keepParams(input.keep);
   if (input.filters.q) {
     extra.q = input.filters.q;
   }
@@ -186,6 +232,7 @@ export function pairPageHref(input: {
 export function pairSortHref(input: {
   path: string;
   deskId?: string | null;
+  keep?: Record<string, string | undefined>;
   filters: PairFilters;
   key: string;
   currentKey: string;
@@ -195,6 +242,7 @@ export function pairSortHref(input: {
     pathname: input.path,
     params: {
       desk: input.deskId ?? undefined,
+      ...keepParams(input.keep),
       q: input.filters.q || undefined,
       base: input.filters.base || undefined,
       minDte:

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { formatMarketCap, marketCapByBase } from "@/lib/market/caps";
 import {
   PAIRS_PAGE_SIZE,
+  exchangePairsHref,
   paginatePairRows,
   pairPageHref,
   pairPageLabel,
@@ -86,31 +87,44 @@ assert.equal(paginatePairRows(many, "99").page, 2);
 assert.equal(paginatePairRows([], "3").page, 1);
 
 assert.equal(
+  exchangePairsHref("bybit"),
+  "/account/exchanges/bybit/pairs",
+);
+assert.equal(
+  exchangePairsHref("hyperliquid", { environment: "testnet" }),
+  "/account/exchanges/hyperliquid/pairs?env=testnet",
+);
+assert.equal(
+  exchangePairsHref("bybit", { kind: "carry" }),
+  "/account/exchanges/bybit/pairs?kind=carry",
+);
+assert.equal(
   pairPageHref({
-    path: "/strategies/futures/pairs",
-    deskId: "11111111-1111-4111-8111-111111111111",
+    path: "/account/exchanges/bybit/pairs",
+    keep: { kind: "carry" },
     filters: { q: "btc", base: "BTC", minDte: null, maxDte: null },
     page: 2,
   }),
-  "/strategies/futures/pairs?desk=11111111-1111-4111-8111-111111111111&q=btc&base=BTC&page=2",
+  "/account/exchanges/bybit/pairs?kind=carry&q=btc&base=BTC&page=2",
 );
 assert.equal(
   pairPageHref({
-    path: "/strategies/cash-and-carry/pairs",
+    path: "/account/exchanges/bybit/pairs",
+    keep: { kind: "carry" },
     filters: { q: "", base: "", minDte: 10, maxDte: 90 },
     page: 1,
   }),
-  "/strategies/cash-and-carry/pairs?minDte=10&maxDte=90",
+  "/account/exchanges/bybit/pairs?kind=carry&minDte=10&maxDte=90",
 );
 assert.equal(
   pairPageHref({
-    path: "/strategies/futures/pairs",
+    path: "/account/exchanges/bybit/pairs",
     filters: { q: "", base: "", minDte: null, maxDte: null },
     page: 1,
     sort: "cap",
     dir: "desc",
   }),
-  "/strategies/futures/pairs",
+  "/account/exchanges/bybit/pairs",
 );
 assert.equal(
   pairPageLabel({ page: 1, total: 51, from: 0, to: 50 }),

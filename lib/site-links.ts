@@ -65,7 +65,6 @@ export const CASH_AND_CARRY_PRIMARY_LINKS = [
 export const CASH_AND_CARRY_SECONDARY_LINKS = [
   { href: "/strategies/cash-and-carry/settings", label: "Desk Settings" },
   { href: "/strategies/cash-and-carry/opportunities", label: "Opportunities" },
-  { href: "/strategies/cash-and-carry/pairs", label: "Pairs" },
   { href: "/strategies/cash-and-carry/activity", label: "Activity" },
 ] as const;
 
@@ -127,7 +126,6 @@ export const COPY_PRIMARY_LINKS = PERPS_PRIMARY_LINKS;
 export const FUTURES_SECONDARY_LINKS = [
   { href: "/strategies/futures/shared", label: "Manage Copy Traders" },
   { href: "/strategies/futures/settings", label: "Desk Settings" },
-  { href: "/strategies/futures/pairs", label: "Pairs" },
   { href: "/strategies/futures/activity", label: "Activity" },
 ] as const;
 

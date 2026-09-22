@@ -19,6 +19,7 @@ export function PairFiltersForm({
   bases,
   showDte = false,
   deskId,
+  keep,
   sort,
   dir,
 }: {
@@ -27,6 +28,7 @@ export function PairFiltersForm({
   bases?: readonly string[];
   showDte?: boolean;
   deskId?: string | null;
+  keep?: Record<string, string | undefined>;
   sort?: string;
   dir?: TableSortDir;
 }) {
@@ -35,6 +37,11 @@ export function PairFiltersForm({
       {deskId ? (
         <input type="hidden" name={DESK_QUERY} value={deskId} />
       ) : null}
+      {Object.entries(keep ?? {}).map(([name, value]) =>
+        value ? (
+          <input key={name} type="hidden" name={name} value={value} />
+        ) : null,
+      )}
       <input type="hidden" name="page" value="1" />
       {sort && sort !== PAIR_DEFAULT_SORT ? (
         <input type="hidden" name="sort" value={sort} />

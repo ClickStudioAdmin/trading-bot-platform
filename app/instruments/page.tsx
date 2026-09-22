@@ -1,5 +1,6 @@
+import { exchangePairsHref } from "@/lib/pairs/page";
 import { redirect } from "next/navigation";
 
 export default function InstrumentsRedirect() {
-  redirect("/strategies/cash-and-carry/pairs");
+  redirect(exchangePairsHref("bybit", { kind: "carry" }));
 }

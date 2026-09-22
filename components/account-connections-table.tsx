@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback } from "react";
 import { RemoveConnectionControl } from "@/components/remove-connection-control";
 import { RenameConnectionControl } from "@/components/rename-connection-control";
@@ -26,7 +27,8 @@ import {
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
 import type { ConnectionDeskBind } from "@/lib/exchanges/store";
-import { getVenue } from "@/lib/exchanges/venues";
+import { enabledVenues, getVenue } from "@/lib/exchanges/venues";
+import { exchangePairsHref } from "@/lib/pairs/page";
 import {
   compareTableNum,
   compareTableText,
@@ -93,7 +95,18 @@ export function AccountConnectionsTable({
   if (rows.length === 0) {
     return (
       <p className="rounded-card border border-line bg-surface p-5 text-sm text-ink-muted">
-        No exchanges connected on this login yet.
+        No exchanges connected on this login yet.{" "}
+        {enabledVenues().map((venue, index) => (
+          <span key={venue.id}>
+            {index > 0 ? " · " : null}
+            <Link
+              href={exchangePairsHref(venue.id)}
+              className="text-accent underline underline-offset-2 hover:text-accent-strong"
+            >
+              {venue.label} pairs
+            </Link>
+          </span>
+        ))}
       </p>
     );
   }
@@ -158,6 +171,16 @@ export function AccountConnectionsTable({
                   </td>
                   <td className="px-4 py-3 align-top">
                     <p>{formatExchangeEnvironmentColumn(row.venue, row.environment)}</p>
+                    <p className="mt-1">
+                      <Link
+                        href={exchangePairsHref(row.venue, {
+                          environment: row.environment,
+                        })}
+                        className="text-sm text-accent underline underline-offset-2 hover:text-accent-strong"
+                      >
+                        View pairs
+                      </Link>
+                    </p>
                     <p className="mt-1 flex flex-wrap items-center gap-2 text-hint text-ink-faint">
                       <span>Key ••••{row.fingerprint}</span>
                       {row.verifiedAtMs ? (

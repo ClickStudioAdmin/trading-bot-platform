@@ -1,10 +1,13 @@
 import { PageHeading } from "@/components/page-heading";
 import { PairFiltersForm } from "@/components/pair-filters";
+import { TokenIcon } from "@/components/token-icon";
+import {
+  loadUsdtLinearPerps,
+  type LinearPerp,
+} from "@/lib/exchanges/bybit/perp";
 import { PairPager } from "@/components/pair-pager";
 import { SortTh, TableCard, TableFilterSession } from "@/components/table-chrome";
 import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
-import { TokenIcon } from "@/components/token-icon";
-import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { formatMarketCap, loadMarketCaps } from "@/lib/market/caps";
 import {
   applyPairFilters,
@@ -20,30 +23,25 @@ import {
   parsePairSort,
   sortPairRows,
 } from "@/lib/pairs/page";
-import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
-import { loadHyperliquidLinearPerps } from "@/lib/venues/hyperliquid/market";
 
-export async function HyperliquidFuturesPairs({
+export async function BybitFuturesPairs({
   searchParams,
   path,
   keep,
-  environment,
 }: {
   searchParams: Record<string, string | string[] | undefined>;
   path: string;
   keep?: Record<string, string | undefined>;
-  environment?: string | null;
 }) {
   const filters = parsePairFilters(searchParams);
-  const env = hyperliquidInfoEnvironment(environment);
   let pairs: LinearPerp[] = [];
   let error: string | null = null;
 
   try {
-    pairs = await loadHyperliquidLinearPerps(env);
+    pairs = await loadUsdtLinearPerps();
   } catch (cause) {
     pairs = [];
-    error = cause instanceof Error ? cause.message : "Hyperliquid request failed";
+    error = cause instanceof Error ? cause.message : "Bybit request failed";
   }
 
   const visible = applyPairFilters(pairs, filters, (pair) => ({
@@ -83,8 +81,8 @@ export async function HyperliquidFuturesPairs({
     <>
       <PageHeading as="h2" title="Pairs" />
       <p className="-mt-2 mb-6 text-sm text-ink-muted">
-        Every trading Hyperliquid perpetual. Coins settle in USDC. No agent
-        key.
+        Every trading USDT linear perpetual on Bybit. No API key. Dated
+        futures are excluded.
       </p>
       <TableFilterSession defaultOpen={tableFiltersSuggestOpen(searchParams)}>
         <PairFiltersForm
@@ -128,7 +126,7 @@ export async function HyperliquidFuturesPairs({
             <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
               <tr>
                 <SortTh
-                  label="Coin"
+                  label="Base"
                   active={sort === "base"}
                   dir={dir}
                   href={sortHref("base")}

@@ -109,11 +109,7 @@ export default async function FuturesLayout({
     ? navLinksWithDesk(primaryBase, deskId)
     : primaryBase;
   const secondaryBase = copyDesk
-    ? FUTURES_SECONDARY_LINKS.filter(
-        (link) =>
-          link.href !== FUTURES_PATHS.shared &&
-          link.href !== FUTURES_PATHS.pairs,
-      )
+    ? FUTURES_SECONDARY_LINKS.filter((link) => link.href !== FUTURES_PATHS.shared)
     : FUTURES_SECONDARY_LINKS;
   const secondaryLinks = deskId
     ? navLinksWithDesk(secondaryBase, deskId)

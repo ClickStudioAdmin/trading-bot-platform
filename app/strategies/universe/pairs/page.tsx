@@ -1,5 +1,6 @@
+import { exchangePairsHref } from "@/lib/pairs/page";
 import { redirect } from "next/navigation";
 
-export default function StrategiesUniversePairsRedirect() {
-  redirect("/strategies/cash-and-carry/pairs");
+export default function StrategyUniversePairsRedirect() {
+  redirect(exchangePairsHref("bybit", { kind: "carry" }));
 }

@@ -923,7 +923,7 @@ export function ThemeBotFormDraft() {
     <div className="space-y-5">
       <p className="text-sm text-ink-muted">
         Draft standard for every desk. Local only — nothing saves. Save
-        lives in the Status & actions sidebar. Status + Save applies
+        lives in the Status & Save sidebar. Status + Save applies
         the selected mode. Switch the sample desk to see each status list.
       </p>
 

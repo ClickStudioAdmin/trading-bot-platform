@@ -395,7 +395,7 @@ export function BotFormSidebar({
 }) {
   return (
     <aside className="flex flex-col gap-4 rounded-card border border-line bg-surface p-5 lg:sticky lg:top-24">
-      <h3 className={botSectionTitleClass}>Status & actions</h3>
+      <h3 className={botSectionTitleClass}>Status & Save</h3>
       {status}
       <div className="space-y-2">
         {save}
