@@ -616,6 +616,17 @@ assert.equal(
     AFFILIATE_ORG_ROOT_ID,
   ]);
   assert.equal(searchAffiliateOrgChart(rows, "zzz").length, 0);
+  const many = flattenAffiliateOrgChart(
+    Array.from({ length: 12 }, (_, index) => ({
+      userId: `k${index}`,
+      label: `${String.fromCharCode(65 + index)} Kim`,
+      level: 1,
+      paid: true,
+      children: [],
+    })),
+  );
+  assert.equal(searchAffiliateOrgChart(many, "kim").length, 12);
+  assert.equal(searchAffiliateOrgChart(many, "kim", 8).length, 8);
 }
 {
   const selected = affiliateOrgChartNodeHtml(

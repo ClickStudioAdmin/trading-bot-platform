@@ -314,7 +314,7 @@ export function AffiliateOrgChartFrame({
                 <ul
                   id={listId}
                   role="listbox"
-                  className="absolute z-10 mt-1 max-h-64 w-56 overflow-auto rounded-control border border-line bg-surface-raised py-1"
+                  className="absolute z-10 mt-1 max-h-80 w-56 overflow-auto rounded-control border border-line bg-surface-raised py-1"
                 >
                   {hits.map((hit, index) => (
                     <li key={hit.id} role="presentation">

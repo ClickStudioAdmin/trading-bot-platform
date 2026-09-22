@@ -1480,13 +1480,13 @@ export type AffiliateOrgSearchHit = {
 export function searchAffiliateOrgChart(
   rows: readonly Pick<AffiliateOrgChartRow, "id" | "label" | "level">[],
   query: string,
-  limit = 8,
+  limit?: number,
 ): AffiliateOrgSearchHit[] {
   const needle = query.trim().toLowerCase();
   if (!needle) {
     return [];
   }
-  return rows
+  const hits = rows
     .map((row) => {
       const label = row.label.toLowerCase();
       const score = label === needle ? 0 : label.startsWith(needle) ? 1 : 2;
@@ -1498,13 +1498,12 @@ export function searchAffiliateOrgChart(
         return left.score - right.score;
       }
       return left.row.label.localeCompare(right.row.label);
-    })
-    .slice(0, limit)
-    .map(({ row }) => ({
-      id: row.id,
-      label: row.label,
-      level: row.level,
-    }));
+    });
+  return (limit == null ? hits : hits.slice(0, limit)).map(({ row }) => ({
+    id: row.id,
+    label: row.label,
+    level: row.level,
+  }));
 }
 
 export function affiliateOrgPathToRoot(
