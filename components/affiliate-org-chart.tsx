@@ -180,8 +180,8 @@ function placeOpeningView(chart: OrgChartHandle, host: HTMLElement) {
   return true;
 }
 
-const AFFILIATE_ORG_NODE_WIDTH = 220;
-const AFFILIATE_ORG_NODE_HEIGHT = 108;
+const AFFILIATE_ORG_NODE_WIDTH = 188;
+const AFFILIATE_ORG_NODE_HEIGHT = 124;
 const AFFILIATE_ORG_FIT_PAD = 28;
 
 function visibleChartBounds(chart: OrgChartHandle) {
