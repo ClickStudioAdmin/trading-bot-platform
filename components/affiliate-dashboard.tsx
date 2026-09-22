@@ -309,10 +309,6 @@ export function AffiliateDashboard({
   const defaultShareUrl = portal.code
     ? referralShareUrl(origin, portal.code)
     : "";
-  const shareRates = portal.rates.rows
-    .filter((row) => row.active)
-    .map((row) => `L${row.level} ${row.ratePct}%`)
-    .join(" · ");
 
   return (
     <div>
@@ -482,17 +478,12 @@ export function AffiliateDashboard({
               </p>
               {defaultShareUrl ? (
                 <>
-                  <p className="mt-4 break-all font-mono text-sm text-ink">
-                    {defaultShareUrl}
-                  </p>
-                  <div className="mt-3">
+                  <div className="mt-4 flex items-center gap-2">
+                    <p className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
+                      {defaultShareUrl}
+                    </p>
                     <CopyTextButton text={defaultShareUrl} label="Copy URL" />
                   </div>
-                  {shareRates ? (
-                    <p className="mt-4 text-sm text-ink-muted">
-                      Your current rates: {shareRates}.
-                    </p>
-                  ) : null}
           </>
         ) : (
                 <p className="mt-4 text-sm text-ink-muted">
