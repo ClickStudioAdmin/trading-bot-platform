@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { ButtonBusyIcon } from "@/components/pending-submit-button";
 import { ThemeBotFormDraft } from "@/components/theme-bot-form-draft";
+import { ThemeCardsDraft } from "@/components/theme-cards-draft";
 import { ThemeColourDraft } from "@/components/theme-colour-draft";
 import { ThemeFormDraft } from "@/components/theme-form-draft";
 import { ThemeIconsDraft } from "@/components/theme-icons-draft";
@@ -28,15 +29,17 @@ export default async function ThemePage({
   const raw = params.tab;
   const requested = Array.isArray(raw) ? raw[0] : raw;
   const tab =
-    requested === "bot"
-      ? "bot"
-      : requested === "table"
-        ? "table"
-        : requested === "forms"
-          ? "forms"
-          : requested === "icons"
-            ? "icons"
-            : "theme";
+    requested === "cards"
+      ? "cards"
+      : requested === "bot"
+        ? "bot"
+        : requested === "table"
+          ? "table"
+          : requested === "forms"
+            ? "forms"
+            : requested === "icons"
+              ? "icons"
+              : "theme";
   return (
     <ThemeSchemePreview>
     <div className="space-y-12">
@@ -71,6 +74,9 @@ export default async function ThemePage({
           <TabLink href="/admin/theme" selected={tab === "theme"}>
             Theme
           </TabLink>
+          <TabLink href="/admin/theme?tab=cards" selected={tab === "cards"}>
+            Cards
+          </TabLink>
           <TabLink href="/admin/theme?tab=bot" selected={tab === "bot"}>
             Bot form
           </TabLink>
@@ -84,7 +90,20 @@ export default async function ThemePage({
             Icons
           </TabLink>
         </nav>
-        {tab === "bot" ? (
+        {tab === "cards" ? (
+          <section>
+            <h2 className="text-xl font-semibold tracking-tight">
+              Cards (proposal)
+            </h2>
+            <p className="mt-1 text-sm text-ink-muted">
+              Type audit and every card surface, using the proposed sizes.
+              Review here before any live page changes.
+            </p>
+            <div className="mt-5">
+              <ThemeCardsDraft />
+            </div>
+          </section>
+        ) : tab === "bot" ? (
           <section>
             <h2 className="text-xl font-semibold tracking-tight">
               Bot form (draft)
@@ -198,24 +217,41 @@ export default async function ThemePage({
         <section>
           <h2 className="text-xl font-semibold tracking-tight">Type</h2>
           <p className="mt-1 text-sm text-ink-muted">
-            Geist. High-contrast values, muted labels.
+            Geist. Proposed scale — full card samples on{" "}
+            <Link href="/admin/theme?tab=cards" className="text-accent">
+              Cards
+            </Link>
+            .
           </p>
           <div className="mt-5 space-y-4 rounded-card border border-line bg-surface p-6">
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
               Overline
             </p>
-            <p className="text-3xl font-semibold tracking-tight">Page title 30</p>
-            <p className="text-xl font-semibold">Section 20</p>
+            <p className="text-2xl font-semibold tracking-tight">
+              Page title 24
+            </p>
+            <p className="text-lg font-semibold tracking-tight">Card title 18</p>
+            <p className="text-sm font-semibold text-ink">Group title 14</p>
             <p className="text-sm text-ink">
               Body 14 — primary copy on canvas or surface.
             </p>
             <p className="text-sm text-ink-muted">
-              Secondary 14 — supporting description.
+              Card intro / form label 14 muted.
             </p>
-            <p className="text-hint text-ink-faint">Hint 13 — inactive or helper.</p>
-            <p className="text-3xl font-semibold tracking-tight">$284,392.18</p>
             <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-              KPI value
+              Fact label 12
+            </p>
+            <p className="text-xs text-ink-muted">
+              Helper 12 muted — under a field.
+            </p>
+            <p className="text-hint text-ink-faint">
+              Hint 13 faint — hover or inactive only.
+            </p>
+            <p className="text-2xl font-semibold tabular-nums tracking-tight">
+              $284,392.18
+            </p>
+            <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+              KPI 24
             </p>
           </div>
         </section>
@@ -254,8 +290,8 @@ export default async function ThemePage({
           <div className="rounded-card border border-line bg-surface p-6 lg:col-span-2">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold">Area chart</h3>
-                <p className="text-xs text-ink-muted">Accent line, faint fill</p>
+                <h3 className="text-lg font-semibold tracking-tight">Area chart</h3>
+                <p className="mt-2 text-sm text-ink-muted">Accent line, faint fill</p>
               </div>
               <div className="flex gap-1 text-xs">
                 <span className="rounded-control bg-surface-raised px-2 py-1 text-ink">
@@ -299,8 +335,8 @@ export default async function ThemePage({
             </svg>
           </div>
           <div className="rounded-card border border-line bg-surface p-6">
-            <h3 className="font-semibold">Allocation</h3>
-            <p className="text-xs text-ink-muted">Accent / success / warning</p>
+            <h3 className="text-lg font-semibold tracking-tight">Allocation</h3>
+            <p className="mt-2 text-sm text-ink-muted">Accent / success / warning</p>
             <div className="mt-6 flex items-center gap-5">
               <svg viewBox="0 0 40 40" className="h-24 w-24" aria-hidden>
                 <circle
@@ -411,7 +447,7 @@ export default async function ThemePage({
             </span>
           </div>
           <div className="mt-4 max-w-md">
-            <label className="text-xs text-ink-muted" htmlFor="theme-search">
+            <label className="text-sm text-ink-muted" htmlFor="theme-search">
               Search
             </label>
             <input
