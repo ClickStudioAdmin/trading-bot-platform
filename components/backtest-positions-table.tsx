@@ -290,7 +290,7 @@ function OpenBacktestPositions({
     () => filterCycles(run, cycles, query, side),
     [cycles, query, run, side],
   );
-  const table = useClientTable(filtered, compare);
+  const table = useClientTable(filtered, compare, { defaultKey: "contract" });
   return (
     <section>
       <SectionHead
@@ -479,7 +479,10 @@ function ClosedBacktestPositions({
     () => filterCycles(run, cycles, query, side),
     [cycles, query, run, side],
   );
-  const table = useClientTable(filtered, compare);
+  const table = useClientTable(filtered, compare, {
+    defaultKey: "closed",
+    defaultDir: "desc",
+  });
   return (
     <section>
       <SectionHead title="Past Positions" />

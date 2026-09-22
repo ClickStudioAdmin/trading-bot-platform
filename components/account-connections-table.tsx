@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback } from "react";
+import { ExchangeConnectModal } from "@/components/exchange-connect-modal";
 import { IconOpen } from "@/components/icons";
 import { RemoveConnectionControl } from "@/components/remove-connection-control";
 import { RenameConnectionControl } from "@/components/rename-connection-control";
@@ -15,6 +16,7 @@ import {
   TABLE_TITLE_CASE_TH_CLASS,
   TableActions,
   TableCard,
+  TableFilterSession,
   TableIconAction,
   TablePager,
   useClientTable,
@@ -30,7 +32,7 @@ import {
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
 import type { ConnectionDeskBind } from "@/lib/exchanges/store";
-import { enabledVenues, getVenue } from "@/lib/exchanges/venues";
+import { enabledVenues, getVenue, type VenueDefinition } from "@/lib/exchanges/venues";
 import { formatCount } from "@/lib/opportunities/format";
 import { exchangePairCountKey, exchangePairsHref } from "@/lib/pairs/page";
 import {
@@ -89,11 +91,15 @@ export function AccountConnectionsTable({
   binds,
   pairCounts,
   canReplace,
+  venues,
+  next,
 }: {
   rows: ExchangeConnection[];
   binds: ConnectionDeskBind[];
   pairCounts: Record<string, number | null>;
   canReplace: boolean;
+  venues: VenueDefinition[];
+  next?: string;
 }) {
   const compare = useCallback(
     (
@@ -104,29 +110,30 @@ export function AccountConnectionsTable({
     ) => compareConnection(left, right, key, dir, binds, pairCounts),
     [binds, pairCounts],
   );
-  const table = useClientTable(rows, compare);
-
-  if (rows.length === 0) {
-    return (
-      <p className="rounded-card border border-line bg-surface p-5 text-sm text-ink-muted">
-        No exchanges connected on this login yet.{" "}
-        {enabledVenues().map((venue, index) => (
-          <span key={venue.id}>
-            {index > 0 ? " · " : null}
-            <Link
-              href={exchangePairsHref(venue.id)}
-              className="text-accent underline underline-offset-2 hover:text-accent-strong"
-            >
-              {venue.label} pairs
-            </Link>
-          </span>
-        ))}
-      </p>
-    );
-  }
+  const table = useClientTable(rows, compare, { defaultKey: "name" });
+  const addAction = canReplace ? (
+    <ExchangeConnectModal venues={venues} next={next} trigger="toolbar" />
+  ) : null;
 
   return (
     <section>
+      {addAction ? <TableFilterSession actions={addAction} /> : null}
+      {rows.length === 0 ? (
+        <p className="rounded-card border border-line bg-surface p-5 text-sm text-ink-muted">
+          No exchanges connected on this login yet.{" "}
+          {enabledVenues().map((venue, index) => (
+            <span key={venue.id}>
+              {index > 0 ? " · " : null}
+              <Link
+                href={exchangePairsHref(venue.id)}
+                className="text-accent underline underline-offset-2 hover:text-accent-strong"
+              >
+                {venue.label} pairs
+              </Link>
+            </span>
+          ))}
+        </p>
+      ) : (
       <TableCard
         pager={
           <TablePager
@@ -273,6 +280,7 @@ export function AccountConnectionsTable({
           </tbody>
         </table>
       </TableCard>
+      )}
     </section>
   );
 }

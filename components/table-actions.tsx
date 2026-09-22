@@ -28,10 +28,12 @@ export function TableHint({
   box,
   label,
   detail,
+  className = "max-w-56",
 }: {
   box: DOMRect | null;
   label: string;
   detail: string;
+  className?: string;
 }) {
   const previewClass = useThemePreviewPortalClass();
   if (!box || typeof document === "undefined") {
@@ -40,14 +42,16 @@ export function TableHint({
   return createPortal(
     <span
       role="tooltip"
-      className={`pointer-events-none fixed z-50 max-w-56 rounded-control border border-line bg-surface-raised px-3 py-2 text-hint font-normal normal-case tracking-normal text-ink ${previewClass}`.trim()}
+      className={`pointer-events-none fixed z-50 ${className} rounded-control border border-line bg-surface-raised px-3 py-2 text-hint font-normal normal-case tracking-normal text-ink ${previewClass}`.trim()}
       style={{
         top: box.bottom + 8,
         left: Math.max(12, Math.min(box.left, window.innerWidth - 240)),
       }}
     >
       <span className="block text-ink">{label}</span>
-      <span className="mt-0.5 block text-ink-muted">{detail}</span>
+      <span className="mt-0.5 block whitespace-pre-line text-ink-muted">
+        {detail}
+      </span>
     </span>,
     document.body,
   );

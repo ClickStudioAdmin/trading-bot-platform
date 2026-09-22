@@ -1,5 +1,4 @@
 import { AccountConnectionsTable } from "@/components/account-connections-table";
-import { ExchangeConnectForm } from "@/components/exchange-connect-form";
 import {
   listConnectionDeskBinds,
   listExchangeConnections,
@@ -75,10 +74,9 @@ export async function AccountExchangesPanel({
         binds={binds}
         pairCounts={pairCounts}
         canReplace={canSave}
+        venues={venues}
+        next={ACCOUNT_EXCHANGES_HREF}
       />
-      {canSave ? (
-        <ExchangeConnectForm venues={venues} next={ACCOUNT_EXCHANGES_HREF} />
-      ) : null}
     </>
   );
 }

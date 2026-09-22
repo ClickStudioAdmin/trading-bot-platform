@@ -149,7 +149,10 @@ export function OpportunityTable({
     ) => compareOpportunity(left, right, key, dir),
     [],
   );
-  const table = useClientTable(rows, compare);
+  const table = useClientTable(rows, compare, {
+    defaultKey: "netApr",
+    defaultDir: "desc",
+  });
 
   return (
     <TableCard

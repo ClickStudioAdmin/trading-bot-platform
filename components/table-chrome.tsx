@@ -40,6 +40,7 @@ import {
 
 export {
   TableActions,
+  TableHint,
   TableIconAction,
   TableLabelButton,
   TablePendingIconAction,
@@ -527,10 +528,18 @@ export function SortTh({
   href?: string;
   className?: string;
 }) {
-  const marker = active ? (dir === "asc" ? " ↑" : " ↓") : "";
+  const marker = active ? (
+    <span className="ml-1 text-ink" aria-hidden>
+      {dir === "asc" ? "↑" : "↓"}
+    </span>
+  ) : null;
   const tone = active ? "text-ink" : "text-ink-faint hover:text-ink";
+  const ariaSort = active ? (dir === "asc" ? "ascending" : "descending") : "none";
   return (
-    <th className={`px-4 py-3 font-medium ${className}`.trim()}>
+    <th
+      className={`px-4 py-3 font-medium ${className}`.trim()}
+      aria-sort={ariaSort}
+    >
       {href ? (
         <Link href={href} className={tone}>
           {label}

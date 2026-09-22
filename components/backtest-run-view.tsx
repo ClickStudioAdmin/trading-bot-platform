@@ -406,7 +406,7 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
     },
     [openSet],
   );
-  const table = useClientTable(filtered, compare);
+  const table = useClientTable(filtered, compare, { defaultKey: "time" });
   if (fills.length === 0) {
     return (
       <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">

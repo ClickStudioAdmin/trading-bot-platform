@@ -132,7 +132,7 @@ export function FuturesWorkingOrders({
     },
     [webhookNames],
   );
-  const table = useClientTable(rows, compare);
+  const table = useClientTable(rows, compare, { defaultKey: "contract" });
   const urgent =
     urgentRefresh ||
     working.some((row) => row.status === "cancelling");

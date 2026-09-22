@@ -52,7 +52,7 @@ Site header **Copy Trading** (`/account/copy`) is one catalogue: public listings
 
 ## Data shape
 
-- Login trader profile: alias (unique), optional bio, optional logo (PNG/JPG/WebP in Storage)
+- Login trader profile: alias (unique), optional bio, optional logo (PNG/JPG/WebP in Storage). Account Settings → Profile is two columns: **Account Holder** (name, email) and **Trader Profile**.
 - Persisted admin `copy_min_activity_days`, `copy_max_followers_default` (pre-fill; also the hard cap when the ceiling is empty), and `copy_max_followers_ceiling` (hard cap; empty uses the default)
 - `trading_accounts.copy_of_account_id` (immutable when set)
 - Listing: required catalogue **name**, `private` \| `public`, required description, optional `max_followers`, optional `min_balance_usdt`, optional desk logo, `sharing_enabled`, `allow_new_followers`

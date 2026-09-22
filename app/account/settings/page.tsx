@@ -188,10 +188,23 @@ export default async function AccountSettingsPage({
         </div>
       ) : (
         <>
+        <div
+          className={
+            showPlatformSettings
+              ? "mt-6 grid gap-6 lg:grid-cols-2 lg:items-start"
+              : "mt-6"
+          }
+        >
         <form
           action={updateOwnProfile}
-          className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
+          className="space-y-4 rounded-card border border-line bg-surface p-5"
         >
+          <div>
+            <p className="text-sm text-ink">Account Holder</p>
+            <p className="mt-1 text-xs text-ink-muted">
+              Name and login email for this account.
+            </p>
+          </div>
           <label className="block text-xs text-ink-muted">
             Name
             <input
@@ -227,13 +240,12 @@ export default async function AccountSettingsPage({
           </div>
         </form>
         {showPlatformSettings ? (
-        <>
         <form
           action={saveTraderProfileAction}
-          className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
+          className="space-y-4 rounded-card border border-line bg-surface p-5"
         >
           <div>
-            <p className="text-sm text-ink">Trader profile</p>
+            <p className="text-sm text-ink">Trader Profile</p>
             <p className="mt-1 text-xs text-ink-muted">
               Required before you share a desk. Other members see this alias
               and logo, never your email. This is not your affiliate alias —
@@ -285,7 +297,9 @@ export default async function AccountSettingsPage({
             Save trader profile
           </PendingSubmitButton>
         </form>
-        {invites.length > 0 ? (
+        ) : null}
+        </div>
+        {showPlatformSettings && invites.length > 0 ? (
           <section className="mt-6 space-y-3 rounded-card border border-line bg-surface p-5">
             <div>
               <p className="text-sm text-ink">Copy invites</p>
@@ -316,8 +330,6 @@ export default async function AccountSettingsPage({
               ))}
             </ul>
           </section>
-        ) : null}
-        </>
         ) : null}
         </>
       )}

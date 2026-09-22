@@ -189,7 +189,7 @@ export function BacktestRunsTable({
       compareBacktestRun(left, right, key, dir),
     [],
   );
-  const table = useClientTable(filtered, compare);
+  const table = useClientTable(filtered, compare, { defaultKey: "name" });
   const removableIds = table.pageRows
     .filter((row) => canDeleteBacktestRun(row, memberId, isAdmin))
     .map((row) => row.id);

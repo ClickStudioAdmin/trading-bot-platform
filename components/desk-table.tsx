@@ -135,7 +135,7 @@ export function DeskTable({
       compareDesk(left, right, key, dir, usage, connections),
     [usage, connections],
   );
-  const table = useClientTable(accounts, compare);
+  const table = useClientTable(accounts, compare, { defaultKey: "name" });
 
   return (
     <TableCard

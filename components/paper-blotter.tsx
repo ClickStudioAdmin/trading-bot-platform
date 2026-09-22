@@ -146,7 +146,7 @@ export function OpenPaperTrades({
     },
     [],
   );
-  const table = useClientTable(open, compare);
+  const table = useClientTable(open, compare, { defaultKey: "pair" });
 
   return (
     <section>
@@ -386,7 +386,10 @@ export function ClosedPaperTrades({
     },
     [],
   );
-  const table = useClientTable(closed, compare);
+  const table = useClientTable(closed, compare, {
+    defaultKey: "closed",
+    defaultDir: "desc",
+  });
   const { visible, setColumn } = usePaperClosedColumns();
   const colSpan = paperClosedColumnCount(visible);
   return (

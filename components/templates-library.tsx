@@ -18,9 +18,11 @@ import {
   TableFilterBar,
   TableFilterField,
   TableFilterSession,
+  TableHint,
   TableIconAction,
   TableLabelButton,
   TablePager,
+  useActionHint,
 } from "@/components/table-chrome";
 import { AppCheck } from "@/components/app-check";
 import {
@@ -139,6 +141,48 @@ function folderLabel(folders: AutomationTemplateSet[]): string {
 
 function sharedCountLabel(peers: { email: string }[]): string {
   return peers.length === 0 ? "—" : String(peers.length);
+}
+
+const FOLDER_TEMPLATE_PREVIEW = 5;
+
+function FolderTemplateNames({ names }: { names: string[] }) {
+  if (names.length === 0) {
+    return "—";
+  }
+  const preview = names.slice(0, FOLDER_TEMPLATE_PREVIEW);
+  return (
+    <div className="flex flex-col gap-0.5">
+      {preview.map((name, index) => (
+        <span key={`${index}-${name}`} className="break-words">
+          {name}
+        </span>
+      ))}
+      {names.length > FOLDER_TEMPLATE_PREVIEW ? (
+        <FolderTemplatesSeeAll names={names} />
+      ) : null}
+    </div>
+  );
+}
+
+function FolderTemplatesSeeAll({ names }: { names: string[] }) {
+  const { box, tip } = useActionHint();
+  return (
+    <>
+      <button
+        type="button"
+        className="w-fit text-left text-sm text-accent underline underline-offset-2 hover:text-accent-strong"
+        {...tip}
+      >
+        See All
+      </button>
+      <TableHint
+        box={box}
+        label="Templates"
+        detail={names.join("\n")}
+        className="max-w-sm"
+      />
+    </>
+  );
 }
 
 function sharedLabel(
@@ -1156,7 +1200,6 @@ export function TemplatesLibrary({
                   active={sort.key === "items"}
                   dir={sort.dir}
                   onSort={() => onSort("items")}
-                  className="w-36 max-w-36"
                 />
                 {showSharedWith ? (
                   <SortTh
@@ -1205,14 +1248,10 @@ export function TemplatesLibrary({
                           : (row.ownerEmail ?? "—")}
                       </td>
                     ) : null}
-                    <td className="max-w-36 overflow-hidden px-4 py-3 text-ink-muted">
-                      {row.items.length === 0 ? (
-                        "—"
-                      ) : (
-                        <span className="line-clamp-2 break-words">
-                          {row.items.map((item) => item.name).join(", ")}
-                        </span>
-                      )}
+                    <td className="px-4 py-3 text-ink-muted">
+                      <FolderTemplateNames
+                        names={row.items.map((item) => item.name)}
+                      />
                     </td>
                     {showSharedWith ? (
                       <td className="px-4 py-3 tabular-nums text-ink-muted">

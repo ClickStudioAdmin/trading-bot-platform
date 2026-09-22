@@ -301,7 +301,7 @@ export function OpenFuturesTrades({
       compareOpenFutures(left, right, key, dir, webhookNames),
     [webhookNames],
   );
-  const table = useClientTable(rows, compare);
+  const table = useClientTable(rows, compare, { defaultKey: "contract" });
   const colSpan = futuresOpenColumnCount(
     visible,
     showDcaColumns ? FUTURES_DCA_OPEN_COLUMN_COUNT : 0,
@@ -583,7 +583,10 @@ export function ClosedFuturesTrades({
       ),
     [fallbackLeverage, webhookNames],
   );
-  const table = useClientTable(closed, compare);
+  const table = useClientTable(closed, compare, {
+    defaultKey: "closed",
+    defaultDir: "desc",
+  });
   const { visible, setColumn } = useFuturesClosedColumns();
   const colSpan = futuresClosedColumnCount(visible);
   return (
