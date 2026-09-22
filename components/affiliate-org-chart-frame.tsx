@@ -196,7 +196,7 @@ export function AffiliateOrgChartFrame({
           {nodes.length > 0 ? (
             <div
               role="group"
-              aria-label="Chart density. Compact is the default."
+              aria-label="Chart density"
               className={pillGroup}
             >
               {AFFILIATE_ORG_DENSITIES.map((option) => {
@@ -214,11 +214,6 @@ export function AffiliateOrgChartFrame({
                     }}
                   >
                     {affiliateOrgDensityLabel(option)}
-                    {option === AFFILIATE_ORG_DEFAULT_DENSITY ? (
-                      <span className="ml-1 font-normal text-ink-faint">
-                        Default
-                      </span>
-                    ) : null}
                   </button>
                 );
               })}
