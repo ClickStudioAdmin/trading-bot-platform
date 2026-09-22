@@ -5,7 +5,7 @@ import { CopyTextButton } from "@/components/copy-text-button";
 import { IconCheck } from "@/components/icons";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 
-/** Proposed type roles. Preview only — live pages are unchanged. */
+/** Type roles. Card samples use this scale. Live pages are called out below. */
 export const themeCardTitleClass =
   "text-lg font-semibold tracking-tight text-ink";
 export const themeCardIntroClass = "mt-2 text-sm text-ink-muted";
@@ -42,7 +42,7 @@ const SCALE: {
     sample: "Billing & Account",
     cls: "text-2xl font-semibold tracking-tight text-ink",
     px: "24",
-    use: "PageHeading. Live is 24 — keep it. Theme used to show 30.",
+    use: "PageHeading. Live and Theme → Type are 24.",
   },
   {
     role: "Card title",
@@ -77,14 +77,14 @@ const SCALE: {
     sample: "Name",
     cls: themeFormLabelClass,
     px: "14",
-    use: "Bot form labels. All account forms should match.",
+    use: "Bot form, Profile, password, and Theme → Forms. Other field labels are still white or 12px.",
   },
   {
     role: "Fact label",
     sample: "CURRENT PLAN",
     cls: themeFactLabelClass,
     px: "12",
-    use: "Read-only key/value rows inside a card.",
+    use: "Subscription Details. Top up keeps the label beside the value.",
   },
   {
     role: "Fact value",
@@ -120,14 +120,12 @@ export function ThemeCardsDraft() {
   return (
     <div className="space-y-12">
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">
-          Proposed type scale
-        </h2>
+        <h2 className="text-xl font-semibold tracking-tight">Type scale</h2>
         <p className="text-sm text-ink-muted">
-          Dummy only. Live pages are unchanged until you accept this scale.
-          Card titles follow Subscription Details. Form labels follow the bot
-          form. Helpers under fields are 12px muted — not the 13px faint hint
-          used on Profile today.
+          Card titles are live at 18px. Profile and password field labels are
+          live at 14px muted, matching the bot form. Fact rows are 12px
+          uppercase labels and 14px values. Top up keeps the label beside the
+          value. Helpers on Profile are still 13px faint.
         </p>
         <div className="overflow-hidden rounded-card border border-line bg-surface">
           <table className="w-full text-left text-sm">
@@ -161,25 +159,83 @@ export function ThemeCardsDraft() {
         <h2 className="text-xl font-semibold tracking-tight">
           What is inconsistent today
         </h2>
-        <ul className="space-y-2 text-sm text-ink-muted">
+        <ul className="space-y-3 text-sm text-ink-muted">
           <li>
-            <span className="text-ink">Helpers.</span> Docs say 12px muted
-            under a field. Live Profile uses 13px faint. Top-up instructions
-            are a 14px body paragraph. Radio notes mix 13px faint and 14px
-            muted.
+            <span className="text-ink">Field labels — colour.</span> The bot
+            form, Profile, password, 2FA, Affiliates → Settings, and Theme →
+            Forms use 14px muted labels. Many other fields are the same size
+            but white (<span className="text-ink">ink</span>): sign in, sign
+            up, forgot and reset password, affiliate signup, create campaign,
+            create URL, payout request, admin settings, plans, and email test,
+            desk settings, copy follow and share, close and TP/SL, webhooks,
+            and Request withdraw. Checkbox and radio titles stay white on
+            purpose — that includes the bot form.
+          </li>
+          <li>
+            <span className="text-ink">Field labels — size.</span> These are
+            muted but still 12px: Members, New desk, exchange connect and
+            rename, account rename and delete, backtest queue and save,
+            templates, table filters, and some trailing and TP/SL fields.
+            Theme → Controls selects are 12px too.
+          </li>
+          <li>
+            <span className="text-ink">Card intros.</span> Profile, password,
+            Trader Profile, and Copy invites still use 12px under the 18px
+            title. The scale is 14px muted.
+          </li>
+          <li>
+            <span className="text-ink">Helpers.</span> Under a field should be
+            12px muted. Profile and password still use 13px faint. Top-up
+            instructions are a 14px paragraph. Radio notes mix 13px faint and
+            14px muted.
           </li>
         </ul>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <SampleFrame
+            label="Bot form — muted label"
+            note="Reference. 14px muted, behind the card title."
+          >
+            <Card>
+              <h3 className={themeCardTitleClass}>General</h3>
+              <label className={`${themeFormLabelClass} mt-4`}>
+                Name
+                <input
+                  defaultValue="DCA · BTCUSDT"
+                  readOnly
+                  className={fieldClass}
+                />
+              </label>
+            </Card>
+          </SampleFrame>
+          <SampleFrame
+            label="Other forms — white label"
+            note="Same 14px, but ink. Sign in, admin, and desk settings."
+          >
+            <Card>
+              <h3 className={themeCardTitleClass}>Sign in</h3>
+              <label className="mt-4 block text-sm text-ink">
+                Email
+                <input
+                  defaultValue="you@studio.test"
+                  readOnly
+                  className={fieldClass}
+                />
+              </label>
+            </Card>
+          </SampleFrame>
+        </div>
       </section>
 
       <section className="space-y-4">
         <h2 className="text-xl font-semibold tracking-tight">
-          Now vs proposed — form card
+          Profile — live vs scale
         </h2>
         <p className="text-sm text-ink-muted">
-          Left is live Profile. Right is the proposed scale.
+          Title and field labels match. Left is live: the intro is still 12px
+          and the helper is still 13px faint. Right is the scale.
         </p>
         <div className="grid gap-5 lg:grid-cols-2">
-          <SampleFrame label="Now — Account Holder">
+          <SampleFrame label="Live — Account Holder">
             <Card>
               <p className="text-lg font-semibold tracking-tight">
                 Account Holder
@@ -211,7 +267,7 @@ export function ThemeCardsDraft() {
               </button>
             </Card>
           </SampleFrame>
-          <SampleFrame label="Proposed — Account Holder">
+          <SampleFrame label="Scale — Account Holder">
             <FormCard />
           </SampleFrame>
         </div>

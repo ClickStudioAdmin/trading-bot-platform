@@ -92,12 +92,10 @@ export default async function ThemePage({
         </nav>
         {tab === "cards" ? (
           <section>
-            <h2 className="text-xl font-semibold tracking-tight">
-              Cards (proposal)
-            </h2>
+            <h2 className="text-xl font-semibold tracking-tight">Cards</h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Type audit and every card surface, using the proposed sizes.
-              Review here before any live page changes.
+              Type scale, card samples, and what is still inconsistent. Card
+              titles, Profile and password labels, and fact rows are live.
             </p>
             <div className="mt-5">
               <ThemeCardsDraft />
