@@ -23,13 +23,10 @@ import {
   botSidebarSaveClass,
   deskActionBtnClass,
 } from "@/components/bot-form-chrome";
-import { AppCheck } from "@/components/app-check";
 import {
   deletePaperRuleAction,
-  saveAccountReduceOnly,
   savePaperRules,
   type SavePaperRulesResult,
-  type SaveReduceOnlyResult,
 } from "@/lib/engine/actions";
 import { parseAutomationMode } from "@/lib/engine/decide";
 import {
@@ -70,6 +67,7 @@ import {
   paperBotSummary,
   type AutomationsBotBlotter,
 } from "@/lib/bots/automations-list";
+import { deskHref } from "@/lib/accounts/model";
 import {
   AUTOMATIONS_NEW,
   CASH_AND_CARRY_PERFORMANCE_PATH,
@@ -110,63 +108,21 @@ export function AutomationsDesk({
   listHref: string;
   blotter?: Record<string, AutomationsBotBlotter>;
 }) {
-  const [hasSets, setHasSets] = useState(values.layers.length > 0);
-  const [accountReduceOnly, setAccountReduceOnly] = useState(reduceOnly);
-  const showList = !edit;
   return (
-    <div className="space-y-4">
-      {hasSets && showList ? (
-        <StayOnPageForm
-          action={saveAccountReduceOnly}
-          onResult={(result) => {
-            const next = result as SaveReduceOnlyResult;
-            if (next.ok && typeof next.reduceOnly === "boolean") {
-              setAccountReduceOnly(next.reduceOnly);
-            }
-          }}
-          className="max-w-md space-y-3 rounded-card border border-line bg-surface p-5"
-        >
-          <label className="flex items-start gap-3 text-sm text-ink">
-            <AppCheck
-              name="reduceOnly"
-              value="on"
-              defaultChecked={accountReduceOnly}
-            />
-            <span>
-              Reduce only
-              <span className="mt-1 block text-xs text-ink-muted">
-                Stops every bot from opening or adding size. Automated
-                exits still run unless a bot is Disabled. Manual Open,
-                Close, and Unwind still work.
-              </span>
-            </span>
-          </label>
-          <DeskFormFlash />
-          <PendingSubmitButton
-            pendingLabel="Saving…"
-            deskAction="default"
-            className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
-          >
-            Save
-          </PendingSubmitButton>
-        </StayOnPageForm>
-      ) : null}
-      <PaperRulesForm
-        values={values}
-        inUseRuleIds={inUseRuleIds}
-        reduceOnly={accountReduceOnly}
-        onHasSetsChange={setHasSets}
-        isAdmin={isAdmin}
-        accountId={accountId}
-        templates={templates}
-        sets={sets}
-        recipeLibrary={recipeLibrary}
-        edit={edit}
-        clone={clone}
-        listHref={listHref}
-        blotter={blotter}
-      />
-    </div>
+    <PaperRulesForm
+      values={values}
+      inUseRuleIds={inUseRuleIds}
+      reduceOnly={reduceOnly}
+      isAdmin={isAdmin}
+      accountId={accountId}
+      templates={templates}
+      sets={sets}
+      recipeLibrary={recipeLibrary}
+      edit={edit}
+      clone={clone}
+      listHref={listHref}
+      blotter={blotter}
+    />
   );
 }
 
@@ -174,7 +130,6 @@ export function PaperRulesForm({
   values,
   inUseRuleIds,
   reduceOnly = false,
-  onHasSetsChange,
   isAdmin = false,
   accountId,
   templates = [],
@@ -188,7 +143,6 @@ export function PaperRulesForm({
   values: PaperRulesFormValues;
   inUseRuleIds: number[];
   reduceOnly?: boolean;
-  onHasSetsChange?: (hasSets: boolean) => void;
   isAdmin?: boolean;
   accountId?: string;
   templates?: TemplateSummary[];
@@ -243,7 +197,6 @@ export function PaperRulesForm({
       setLayers((current) =>
         keepFormKeys(current, [...(result.layers ?? [])].reverse()),
       );
-      onHasSetsChange?.(result.layers.length > 0);
     }
     if (result.inUseRuleIds) {
       setInUseIds(result.inUseRuleIds);
@@ -267,7 +220,6 @@ export function PaperRulesForm({
       const fresh = nextLayers.filter((row) => !row.id || !seen.has(row.id));
       return fresh.length === 0 ? current : [...fresh, ...current];
     });
-    onHasSetsChange?.(true);
     router.refresh();
   }
 
@@ -278,7 +230,6 @@ export function PaperRulesForm({
   function removeLayer(key: string, id: string) {
     const next = layers.filter((item) => item.key !== key);
     setLayers(next);
-    onHasSetsChange?.(next.length > 0);
     if (next.length === 0 && id !== "") {
       const data = new FormData();
       data.set("ruleCount", "0");
@@ -290,9 +241,16 @@ export function PaperRulesForm({
     <div className="space-y-4">
       {reduceOnly && !empty ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Account Reduce only is on. Active bots will not open or add size.
-          Exits still run unless a bot is Disabled. Manual Open, Close, and
-          Unwind still work.
+          Reduce only is on. Active bots will not open or add size until you
+          turn it off in{" "}
+          <Link
+            href={deskHref("/strategies/cash-and-carry/settings", accountId)}
+            className="underline"
+          >
+            Desk Settings
+          </Link>
+          . Automated exits still run unless a bot is Disabled. Manual Open,
+          Close, and Unwind still work.
         </p>
       ) : null}
 

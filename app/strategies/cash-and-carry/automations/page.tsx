@@ -51,7 +51,6 @@ export default async function CashAndCarryAutomationsPage({
     name: values.layers.find((layer) => layer.id === knownEdit)?.name,
   });
   const saved = firstSearchValue(params.saved) === "1";
-  const reduceSaved = firstSearchValue(params.reduce) === "1";
   const error = firstSearchValue(params.error);
   const templates = session
     ? await listApplyableTemplates({
@@ -86,9 +85,6 @@ export default async function CashAndCarryAutomationsPage({
       ) : null}
       {saved ? (
         <p className="mt-4 text-sm text-success">Bots saved.</p>
-      ) : null}
-      {reduceSaved ? (
-        <p className="mt-4 text-sm text-success">Reduce only saved.</p>
       ) : null}
       {signedIn && session ? (
         <div className="mt-6">

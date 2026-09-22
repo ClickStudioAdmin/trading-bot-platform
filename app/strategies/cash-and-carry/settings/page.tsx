@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AppCheck } from "@/components/app-check";
 import { PageHeading } from "@/components/page-heading";
 import { DeskSettingsForm } from "@/components/desk-settings-form";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
@@ -125,6 +126,20 @@ export default async function CashAndCarrySettingsPage({
           a quarter of that in-range book. Manual Size, Dynamic clips, and
           Dynamic exits all use this number.
         </p>
+        <label className="flex items-start gap-2 text-sm text-ink">
+          <AppCheck
+            name="reduceOnly"
+            defaultChecked={settings.reduceOnly}
+          />
+          <span>
+            Reduce only
+            <span className="mt-1 block text-xs text-ink-muted">
+              Stops every bot from opening or adding size. Automated
+              exits still run unless a bot is Disabled. Manual Open,
+              Close, and Unwind still work.
+            </span>
+          </span>
+        </label>
       </DeskSettingsForm>
     </main>
   );

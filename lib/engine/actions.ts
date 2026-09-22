@@ -402,6 +402,7 @@ export async function savePaperSettings(formData: FormData) {
   if (typeof parsed !== "number") {
     settingsFail(account.id, parsed.error);
   }
+  const reduceOnly = parseReduceOnly(formData.get("reduceOnly"));
 
   const supabase = createServiceClient();
   if (!supabase) {
@@ -457,6 +458,7 @@ export async function savePaperSettings(formData: FormData) {
     user_id: user.id,
     account_id: account.id,
     usable_book_share: parsed,
+    reduce_only: reduceOnly,
     ...(accountCanHoldConnections(account.mode) && bindSubmitted
       ? { exchange_connection_id: connectionId }
       : {}),
@@ -496,6 +498,7 @@ export async function savePaperSettings(formData: FormData) {
     strategy: "cash-and-carry",
     data: {
       usableBookShare: parsed,
+      reduceOnly,
       ...(bindSubmitted ? { exchangeConnectionId: connectionId } : {}),
     },
   });
@@ -503,67 +506,6 @@ export async function savePaperSettings(formData: FormData) {
   revalidatePath("/account/exchanges");
   revalidatePath("/strategies/cash-and-carry");
   redirect(deskPath(SETTINGS_PATH, account.id, { saved: "1" }));
-}
-
-export type SaveReduceOnlyResult = DeskActionResult & {
-  reduceOnly?: boolean;
-};
-
-export async function saveAccountReduceOnly(
-  formData: FormData,
-): Promise<SaveReduceOnlyResult> {
-  const session = await requireCashAndCarrySession();
-  const { member: user, account } = session;
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return deskActionError("Auth is not configured.");
-  }
-
-  const { count: setCount, error: countError } = await supabase
-    .from("paper_rules")
-    .select("id", { count: "exact", head: true })
-    .eq("account_id", account.id);
-  if (countError) {
-    return deskActionError(countError.message);
-  }
-  const reduceOnly =
-    (setCount ?? 0) > 0 && parseReduceOnly(formData.get("reduceOnly"));
-
-  const { error } = await supabase.from("paper_engine_settings").upsert({
-    user_id: user.id,
-    account_id: account.id,
-    reduce_only: reduceOnly,
-    updated_at: new Date().toISOString(),
-  });
-
-  if (error) {
-    await writeEventLog({
-      level: "error",
-      scope: "strategy",
-      event: "settings.save_failed",
-      message: error.message,
-      userId: user.id,
-      accountId: account.id,
-      strategy: "cash-and-carry",
-    });
-    return deskActionError(error.message);
-  }
-
-  await writeEventLog({
-    scope: "strategy",
-    event: "settings.saved",
-    message: reduceOnly ? "Turned on reduce only" : "Turned off reduce only",
-    userId: user.id,
-    accountId: account.id,
-    strategy: "cash-and-carry",
-    data: { reduceOnly },
-  });
-
-  return {
-    ok: true,
-    notice: reduceOnly ? "Reduce only is on." : "Reduce only is off.",
-    reduceOnly,
-  };
 }
 
 export async function detachStrategyConnection() {
