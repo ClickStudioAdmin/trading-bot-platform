@@ -45,5 +45,8 @@ export function columnPickerLabel(
   selected: number,
   total: number,
 ): string {
+  if (selected === total) {
+    return "Columns";
+  }
   return `Columns (${selected} / ${total})`;
 }

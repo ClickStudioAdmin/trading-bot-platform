@@ -29,5 +29,7 @@ assert.deepEqual(countPickedColumns(columns, defaults), {
   total: 3,
 });
 assert.equal(columnPickerLabel(10, 15), "Columns (10 / 15)");
+assert.equal(columnPickerLabel(15, 15), "Columns");
+assert.equal(columnPickerLabel(0, 0), "Columns");
 
 console.log("table columns checks passed");
