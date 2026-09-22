@@ -75,8 +75,9 @@ body {
 
 .affiliate-org-node {
   box-sizing: border-box;
+  position: relative;
   height: 100%;
-  padding: 10px 12px;
+  padding: 10px 40px 10px 12px;
   border: 1px solid var(--color-line);
   border-radius: 8px;
   background: var(--color-surface);
@@ -104,20 +105,55 @@ body {
   text-decoration: none;
 }
 
-.affiliate-org-node-meta {
-  margin-top: 4px;
+.affiliate-org-node-level {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-ink-faint) 18%, transparent);
   color: var(--color-ink-muted);
-  font-size: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 6px;
+}
+
+.affiliate-org-node[data-tone="path"] .affiliate-org-node-level,
+.affiliate-org-node[data-tone="selected"] .affiliate-org-node-level {
+  background: color-mix(in oklab, var(--color-accent) 18%, transparent);
+  color: var(--color-accent);
+}
+
+.affiliate-org-node-name {
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.affiliate-org-node-rate {
-  margin-top: 2px;
+.affiliate-org-node-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.affiliate-org-node-label {
+  color: var(--color-ink-muted);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.affiliate-org-node-value {
+  min-width: 0;
   color: var(--color-ink);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .affiliate-org-expand {

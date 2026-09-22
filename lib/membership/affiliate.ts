@@ -367,6 +367,10 @@ export function affiliateOrgPlanLabel(planName: string | null | undefined): stri
   return name || "Affiliate";
 }
 
+export function affiliateOrgLevelBadge(level: number): string {
+  return level === 0 ? "You" : `L${level}`;
+}
+
 export function affiliateOrgRunRateLabel(
   runRateUsd: number,
   kind: "person" | "root" = "person",
@@ -1575,13 +1579,14 @@ export function affiliateOrgChartNodeHtml(
 ): string {
   const label = escapeHtmlText(row.label);
   const plan = escapeHtmlText(affiliateOrgPlanLabel(row.planName));
-  const meta =
-    row.level === 0 ? plan : `${plan} · L${row.level}`;
-  const runRate = escapeHtmlText(
-    affiliateOrgRunRateLabel(
-      row.runRateUsd ?? 0,
-      row.level === 0 ? "root" : "person",
-    ),
+  const amount = row.runRateUsd ?? 0;
+  const earnings = escapeHtmlText(
+    amount < 0.01 && row.level !== 0
+      ? "Signup"
+      : new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+        }).format(amount),
   );
   const title = href
     ? `<a href="${escapeHtmlText(href)}">${label}</a>`
@@ -1592,9 +1597,16 @@ export function affiliateOrgChartNodeHtml(
       ? "path"
       : "default";
   return `<div class="affiliate-org-node" data-tone="${tone}">
-    <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</div>
-    <div class="affiliate-org-node-meta">${meta}</div>
-    <div class="affiliate-org-node-rate">${runRate}</div>
+    <span class="affiliate-org-node-level">${escapeHtmlText(affiliateOrgLevelBadge(row.level))}</span>
+    <div class="affiliate-org-node-name">${title}</div>
+    <div class="affiliate-org-node-row">
+      <span class="affiliate-org-node-label">Plan</span>
+      <span class="affiliate-org-node-value">${plan}</span>
+    </div>
+    <div class="affiliate-org-node-row">
+      <span class="affiliate-org-node-label">Monthly earnings</span>
+      <span class="affiliate-org-node-value">${earnings}</span>
+    </div>
   </div>`;
 }
 

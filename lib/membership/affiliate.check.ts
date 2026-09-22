@@ -26,6 +26,7 @@ import {
   parseAffiliatePortalListQuery,
   affiliateDownlineRowHref,
   affiliateOrgChartNodeHtml,
+  affiliateOrgLevelBadge,
   affiliateOrgPlanLabel,
   affiliateOrgRunRateLabel,
   affiliateOrgRunRateUsd,
@@ -646,6 +647,8 @@ assert.equal(
 }
 assert.equal(affiliateOrgPlanLabel(null), "Affiliate");
 assert.equal(affiliateOrgPlanLabel("Plus"), "Plus");
+assert.equal(affiliateOrgLevelBadge(0), "You");
+assert.equal(affiliateOrgLevelBadge(2), "L2");
 assert.equal(
   affiliateOrgRunRateUsd({ planPriceUsd: 20, paid: true, ratePct: 10 }),
   2,
@@ -723,8 +726,8 @@ assert.equal(
   )[0]?.runRateUsd,
   2,
 );
-assert.equal(
-  affiliateOrgChartNodeHtml(
+{
+  const card = affiliateOrgChartNodeHtml(
     {
       id: "a",
       parentId: "you",
@@ -736,9 +739,14 @@ assert.equal(
       childCount: 0,
     },
     null,
-  ).includes("Plus · L1"),
-  true,
-);
+  );
+  assert.equal(card.includes("Plan"), true);
+  assert.equal(card.includes("Plus"), true);
+  assert.equal(card.includes("Monthly earnings"), true);
+  assert.equal(card.includes("$2.00"), true);
+  assert.equal(card.includes("L1"), true);
+  assert.equal(card.includes("Plus · L1"), false);
+}
 assert.equal(
   affiliateOrgChartNodeHtml(
     {
