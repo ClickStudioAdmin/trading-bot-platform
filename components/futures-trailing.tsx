@@ -335,7 +335,7 @@ function FuturesTrailingDialog({
               Market Order to close the {side} position.
             </li>
           </ol>
-          <p className="text-[11px] text-ink-faint">
+          <p className="text-hint text-ink-muted">
             Leave retracement empty to remove.
           </p>
           <button

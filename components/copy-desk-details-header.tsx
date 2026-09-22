@@ -28,7 +28,7 @@ export function CopyDeskDetailsHeader({
       <div className="flex items-start justify-between gap-4">
         <div className="grid min-w-0 flex-1 gap-6 md:grid-cols-2 xl:grid-cols-3 xl:gap-8">
           <div className="min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-faint">
+            <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
               Desk
             </p>
             <div className="mt-3 flex items-start gap-3">
@@ -66,7 +66,7 @@ export function CopyDeskDetailsHeader({
             </div>
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-faint">
+            <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
               Followers
             </p>
             <p className="mt-3 text-2xl font-semibold tracking-tight text-ink">
@@ -74,7 +74,7 @@ export function CopyDeskDetailsHeader({
             </p>
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-faint">
+            <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
               Trader
             </p>
             <Link

@@ -149,7 +149,7 @@ export function CheckoutPayment({
           </dl>
           {showMethodPicker ? (
             <div className="mt-5 border-t border-line pt-4">
-              <p className="mb-3 text-sm font-medium text-ink">
+              <p className="mb-3 text-sm font-semibold text-ink">
                 Payment method
               </p>
               <BillingMethodRadios

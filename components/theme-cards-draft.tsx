@@ -814,8 +814,11 @@ function CatalogueCard() {
     <Card>
       <div className="flex items-start justify-between gap-3">
         <div>
+          <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+            Desk
+          </p>
           <h3 className={themeCardTitleClass}>Alpha · SOL Perps</h3>
-          <p className="mt-1 text-xs text-ink-muted">Perpetuals · Bybit</p>
+          <p className="mt-1 text-xs text-ink-muted">Trader alias</p>
         </div>
         <span className="rounded-control border border-line px-2 py-0.5 text-xs text-ink-faint">
           Public

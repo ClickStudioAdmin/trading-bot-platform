@@ -58,10 +58,10 @@ export async function CopyDeskHeader({
             <div className="min-w-0">
               {leader ? (
                 <>
-                  <p className="text-[11px] uppercase tracking-wide text-ink-faint">
+                  <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
                     Desk
                   </p>
-                  <h1 className="truncate text-xl font-semibold tracking-tight text-ink">
+                  <h1 className="truncate text-2xl font-semibold tracking-tight text-ink">
                     {leader.deskName}
                   </h1>
                   <p className="truncate text-sm text-ink-muted">
@@ -69,7 +69,7 @@ export async function CopyDeskHeader({
                   </p>
                 </>
               ) : (
-                <h1 className="text-xl font-semibold tracking-tight text-ink">
+                <h1 className="text-2xl font-semibold tracking-tight text-ink">
                   Parent desk unavailable
                 </h1>
               )}
@@ -93,10 +93,10 @@ export async function CopyDeskHeader({
                 )}
               </span>
               <span className="min-w-0">
-                <span className="block text-[11px] uppercase tracking-wide text-ink-faint">
+                <span className="block text-xs uppercase tracking-[0.12em] text-ink-muted">
                   Trader
                 </span>
-                <span className="block truncate text-xl font-semibold tracking-tight text-ink">
+                <span className="block truncate text-2xl font-semibold tracking-tight text-ink">
                   {leader.traderAlias ?? "Trader"}
                 </span>
                 <span className="mt-1 block text-sm text-ink-muted">

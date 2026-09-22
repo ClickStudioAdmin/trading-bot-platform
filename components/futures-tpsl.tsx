@@ -788,7 +788,7 @@ function TpslPriceField({
           />
         </span>
         {orderType === "market" ? (
-          <span className="mt-1 block text-[11px] text-ink-faint">
+          <span className="mt-1 block text-hint text-ink-muted">
             {kind === "percent"
               ? "Closes at market when this percent from the fill hits."
               : "Closes at market when this price hits."}
@@ -805,7 +805,7 @@ function TpslPriceField({
             defaultValue={defaultLimit != null ? String(defaultLimit) : ""}
             className={`${TICKET_QTY} mt-1`}
           />
-          <span className="mt-1 block text-[11px] text-ink-faint">
+          <span className="mt-1 block text-hint text-ink-muted">
             Fires at the trigger. The close rests at this price.
           </span>
         </label>

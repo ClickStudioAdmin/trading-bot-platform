@@ -45,8 +45,10 @@ export function DeskCopyShareCard({
   return (
     <section className="space-y-4 rounded-card border border-line bg-surface p-5">
       <div>
-        <h3 className="text-sm font-medium text-ink">Share this desk</h3>
-        <p className="mt-1 text-hint text-ink-muted">
+        <h3 className="text-lg font-semibold tracking-tight text-ink">
+          Share this desk
+        </h3>
+        <p className="mt-1 text-sm text-ink-muted">
           Followers copy fills, not recipes. Venue, type, and Live are stamped.
           Email is never shown.
         </p>

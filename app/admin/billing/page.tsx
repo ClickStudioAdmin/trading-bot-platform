@@ -452,7 +452,7 @@ function WalletChainCard({
   return (
     <div className="rounded-card border border-line bg-surface-raised p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-sm font-medium text-ink">{title}</p>
+        <p className="text-lg font-semibold tracking-tight text-ink">{title}</p>
         {detail ? <p className="text-hint text-ink-faint">{detail}</p> : null}
       </div>
       {address ? (

@@ -223,10 +223,10 @@ export function CopyCatalogueBoard({
                     )}
                   </span>
                   <div className="min-w-0">
-                    <p className="text-[11px] uppercase tracking-wide text-ink-faint">
+                    <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
                       Desk
                     </p>
-                    <p className="truncate text-sm font-medium text-ink">
+                    <p className="truncate text-lg font-semibold tracking-tight text-ink">
                       {card.deskName}
                     </p>
                     <p className="mt-1 truncate text-xs text-ink-muted">

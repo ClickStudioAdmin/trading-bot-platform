@@ -48,8 +48,10 @@ export function DeskCopyFollowersList({
   return (
     <section className="space-y-4 rounded-card border border-line bg-surface p-5">
       <div>
-        <h3 className="text-sm font-medium text-ink">Followers</h3>
-        <p className="mt-1 text-hint text-ink-muted">
+        <h3 className="text-lg font-semibold tracking-tight text-ink">
+          Followers
+        </h3>
+        <p className="mt-1 text-sm text-ink-muted">
           Private invites show email. Public followers show user id. {capLabel}.
         </p>
       </div>
@@ -129,8 +131,10 @@ export function DeskCopyPrivateShareCard({
   return (
     <section className="space-y-4 rounded-card border border-line bg-surface p-5">
       <div>
-        <h3 className="text-sm font-medium text-ink">Private share</h3>
-        <p className="mt-1 text-hint text-ink-muted">
+        <h3 className="text-lg font-semibold tracking-tight text-ink">
+          Private share
+        </h3>
+        <p className="mt-1 text-sm text-ink-muted">
           Invite a member by email. They must already have a login. No email is
           sent.
         </p>

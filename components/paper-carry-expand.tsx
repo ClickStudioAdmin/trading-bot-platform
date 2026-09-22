@@ -409,8 +409,8 @@ export function PositionLogList({ logs }: { logs: EventLogRow[] }) {
             >
               <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
                 <h3
-                  className={`min-w-0 text-sm font-semibold tracking-tight ${
-                    log.level === "info" ? "" : logLevelTone(log.level)
+                  className={`min-w-0 text-lg font-semibold tracking-tight ${
+                    log.level === "info" ? "text-ink" : logLevelTone(log.level)
                   }`}
                 >
                   {formatLogHeadline(log)}
@@ -702,7 +702,7 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
   return (
     <article className="rounded-card border border-line bg-surface-raised p-4">
       <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-        <h3 className="text-sm font-semibold tracking-tight">
+        <h3 className="text-lg font-semibold tracking-tight text-ink">
           {formatOrderHeadline(order)}
         </h3>
         <p className="text-xs text-ink-muted">
@@ -864,7 +864,7 @@ function CloseOrderCard({
   return (
     <article className="rounded-card border border-line bg-surface-raised px-3 py-2.5">
       <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-        <h3 className="text-sm font-semibold tracking-tight">
+        <h3 className="text-lg font-semibold tracking-tight text-ink">
           {formatOrderHeadline(order)}
         </h3>
         <p className="text-xs text-ink-muted">
@@ -897,10 +897,10 @@ function ComparePairs({
   return (
     <div className="mt-3">
       <div className="grid grid-cols-2 gap-x-6">
-        <p className="text-sm font-semibold tracking-tight">
+        <p className="text-sm font-semibold text-ink">
           {leftTitle}
         </p>
-        <p className="text-sm font-semibold tracking-tight">
+        <p className="text-sm font-semibold text-ink">
           {rightTitle}
         </p>
       </div>

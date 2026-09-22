@@ -870,7 +870,7 @@ function BacktestOrderCards({
           className="rounded-card border border-line bg-surface-raised px-3 py-2.5"
         >
           <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-            <h3 className="text-sm font-semibold tracking-tight">
+            <h3 className="text-lg font-semibold tracking-tight text-ink">
               {orderCardTitle(order)}
             </h3>
             <p className="text-xs text-ink-muted">
@@ -925,7 +925,7 @@ function BacktestLogList({ cycle }: { cycle: BacktestPositionCycle }) {
           className="min-w-0 overflow-hidden rounded-card border border-line bg-surface-raised p-4"
         >
           <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-            <h3 className="min-w-0 text-sm font-semibold tracking-tight">
+            <h3 className="min-w-0 text-lg font-semibold tracking-tight text-ink">
               {log.message}
             </h3>
             <p className="shrink-0 text-xs text-ink-muted">

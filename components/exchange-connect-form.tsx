@@ -78,7 +78,9 @@ export function ExchangeConnectForm({
       }
     >
       {hideTitle ? null : compact ? (
-        <h3 className="text-sm font-medium text-ink">Add a connection</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-ink">
+          Add a connection
+        </h3>
       ) : (
         <h2 className="text-lg font-semibold tracking-tight">Connect</h2>
       )}

@@ -677,7 +677,9 @@ function MainWalletWithdrawForm({
       </form>
       {withdraw.pending.length > 0 ? (
         <div>
-          <h3 className="text-sm font-medium text-ink">Pending withdrawals</h3>
+          <h3 className="text-sm font-semibold text-ink">
+            Pending withdrawals
+          </h3>
           <ul className="mt-2 space-y-2">
             {withdraw.pending.map((row) => (
               <li
