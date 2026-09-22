@@ -27,7 +27,7 @@ export function TotpSettings({
     return (
       <section className="space-y-4 rounded-card border border-line bg-surface p-5">
         <div>
-          <p className="text-sm text-ink">Save these recovery codes</p>
+          <p className="text-lg font-semibold tracking-tight">Save these recovery codes</p>
           <p className="mt-1 text-sm text-ink-muted">
             Each code signs you in once if you lose Google Authenticator. We
             will not show them again.
@@ -65,7 +65,9 @@ export function TotpSettings({
     return (
       <section className="space-y-4 rounded-card border border-line bg-surface p-5">
         <div>
-          <p className="text-sm text-ink">Set up two-factor authentication (2FA)</p>
+          <p className="text-lg font-semibold tracking-tight">
+            Set up two-factor authentication (2FA)
+          </p>
           <p className="mt-1 text-sm text-ink-muted">
             Scan the QR code in Google Authenticator, then enter the 6-digit
             code to enable 2FA.
@@ -122,7 +124,9 @@ export function TotpSettings({
     return (
       <section className="space-y-4 rounded-card border border-line bg-surface p-5">
         <div>
-          <p className="text-sm text-ink">Two-factor authentication (2FA) is on</p>
+          <p className="text-lg font-semibold tracking-tight">
+            Two-factor authentication (2FA) is on
+          </p>
           <p className="mt-1 text-sm text-ink-muted">
             Sign-in asks for a 6-digit code after your password. Disable it
             with your current password and a code from the app (or a leftover
@@ -163,7 +167,9 @@ export function TotpSettings({
   return (
     <section className="space-y-4 rounded-card border border-line bg-surface p-5">
       <div>
-        <p className="text-sm text-ink">Two-factor authentication (2FA)</p>
+        <p className="text-lg font-semibold tracking-tight">
+          Two-factor authentication (2FA)
+        </p>
         <p className="mt-1 text-sm text-ink-muted">
           Add a 6-digit code after your password at sign-in. Use the Google
           Authenticator app on your phone.

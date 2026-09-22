@@ -52,35 +52,35 @@ export function CopyPaperEquityHover({
 
 export function CopyPaperEquityBody({ book }: { book: CopyPaperEquityView }) {
   return (
-    <dl className="space-y-1">
+    <dl className="space-y-1 text-sm">
       <div className="flex justify-between gap-3">
-        <dt className="text-ink-muted">Margin</dt>
+        <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">Margin</dt>
         <dd className="text-ink">
           {formatMarginModeWithLeverage("cross", book.leverage)}
         </dd>
       </div>
       {book.startingUsdt > 0 ? (
         <div className="flex justify-between gap-3">
-          <dt className="text-ink-muted">Started at</dt>
+          <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">Started at</dt>
           <dd className="tabular-nums text-ink">
             {formatCopyPaperStartingUsdt(book.startingUsdt)}
           </dd>
         </div>
       ) : null}
       <div className="flex justify-between gap-3">
-        <dt className="text-ink-muted">Realized</dt>
+        <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">Realized</dt>
         <dd className="tabular-nums text-ink">
           {formatSnapshotMoney(book.realizedUsdt)}
         </dd>
       </div>
       <div className="flex justify-between gap-3">
-        <dt className="text-ink-muted">Unrealized</dt>
+        <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">Unrealized</dt>
         <dd className="tabular-nums text-ink">
           {formatSnapshotMoney(book.unrealizedUsdt)}
         </dd>
       </div>
       <div className="flex justify-between gap-3">
-        <dt className="text-ink-muted">Equity</dt>
+        <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">Equity</dt>
         <dd className="tabular-nums text-ink">
           {formatSnapshotMoney(book.equityUsdt)}
         </dd>

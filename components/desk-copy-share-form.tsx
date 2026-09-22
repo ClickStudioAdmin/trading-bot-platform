@@ -193,7 +193,7 @@ export function DeskCopyShareCard({
             </span>
           </label>
           <div className="space-y-3 border-t border-line pt-4">
-            <p className="text-sm text-ink">Copier requirements</p>
+            <p className="text-sm font-semibold text-ink">Copier requirements</p>
             <p className="text-xs text-ink-muted">
               Checked when a Live copy desk is enabled or unpaused. Paper
               followers skip this. Mode and leverage stay in the setup notes

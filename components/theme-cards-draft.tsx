@@ -157,30 +157,6 @@ export function ThemeCardsDraft() {
 
       <section className="space-y-4">
         <h2 className="text-xl font-semibold tracking-tight">
-          What is inconsistent today
-        </h2>
-        <ul className="space-y-3 text-sm text-ink-muted">
-          <li>
-            <span className="text-ink">2FA card titles.</span> Password,
-            Account Holder, Trader Profile, and Copy invites are 18px
-            semibold. The 2FA cards on the password tab are still 14px regular:
-            recovery codes, set up, on, and off.
-          </li>
-          <li>
-            <span className="text-ink">Group titles.</span> The scale is 14px
-            semibold. Risk caps, Copier requirements, Sizing, and Guards are
-            14px regular ink.
-          </li>
-          <li>
-            <span className="text-ink">Hover fact rows.</span> Billing and Top
-            up use 12px uppercase labels. Account snapshot and copy-equity
-            hovers still use sentence-case labels beside the value.
-          </li>
-        </ul>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">
           Profile — live vs scale
         </h2>
         <p className="text-sm text-ink-muted">

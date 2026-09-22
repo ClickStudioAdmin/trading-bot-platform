@@ -64,27 +64,27 @@ export function AccountSnapshotBody({
   }
   const row = snapshot.snapshot;
   return (
-    <dl className="space-y-1">
+    <dl className="space-y-1 text-sm">
       <div className="flex justify-between gap-3">
-        <dt className="text-ink-muted">Margin</dt>
+        <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">Margin</dt>
         <dd className="text-ink">
           {formatMarginModeWithLeverage(row.marginMode, row.leverage)}
         </dd>
       </div>
       <div className="flex justify-between gap-3">
-        <dt className="text-ink-muted">Available</dt>
+        <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">Available</dt>
         <dd className="tabular-nums text-ink">
           {formatSnapshotMoney(row.availableBalance)}
         </dd>
       </div>
       <div className="flex justify-between gap-3">
-        <dt className="text-ink-muted">Balance</dt>
+        <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">Balance</dt>
         <dd className="tabular-nums text-ink">
           {formatSnapshotMoney(row.marginBalance)}
         </dd>
       </div>
       <div className="flex justify-between gap-3">
-        <dt className="text-ink-muted">IM / MM</dt>
+        <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">IM / MM</dt>
         <dd className="tabular-nums">
           <span className={marginRateTone(row.initialMarginRate)}>
             {formatPct(row.initialMarginRate)}
