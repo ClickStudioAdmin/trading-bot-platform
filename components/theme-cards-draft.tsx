@@ -163,11 +163,6 @@ export function ThemeCardsDraft() {
         </h2>
         <ul className="space-y-2 text-sm text-ink-muted">
           <li>
-            <span className="text-ink">Card titles.</span> Billing,
-            affiliates, and most admin cards use 18px. Account Holder, Trader
-            Profile, Password, and Copy invites use 14px regular ink.
-          </li>
-          <li>
             <span className="text-ink">Form labels.</span> Bot form is 14px
             muted. Profile, password, and some affiliate settings are 12px
             muted. Theme → Forms still uses 14px ink.
@@ -201,7 +196,9 @@ export function ThemeCardsDraft() {
         <div className="grid gap-5 lg:grid-cols-2">
           <SampleFrame label="Now — Account Holder">
             <Card>
-              <p className="text-sm text-ink">Account Holder</p>
+              <p className="text-lg font-semibold tracking-tight">
+                Account Holder
+              </p>
               <p className="mt-1 text-xs text-ink-muted">
                 Name and login email for this account.
               </p>

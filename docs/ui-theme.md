@@ -52,7 +52,7 @@ Light callout and badge tints use a stronger mix than the dark `/10` `/15` washe
 
 ## Type
 
-Geist. Proposed scale is on **Theme → Cards** (`/admin/theme?tab=cards`) — review there before changing live pages. Live Profile still uses smaller card titles and 12px labels.
+Geist. Proposed scale is on **Theme → Cards** (`/admin/theme?tab=cards`) — review there before changing live pages. Live Profile card titles are 18px. Labels are still 12px.
 
 | Role | Size | Class | Use |
 | --- | --- | --- | --- |

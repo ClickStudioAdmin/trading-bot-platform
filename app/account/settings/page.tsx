@@ -136,7 +136,7 @@ export default async function AccountSettingsPage({
             className="space-y-4 rounded-card border border-line bg-surface p-5"
           >
             <div>
-              <p className="text-sm text-ink">Password</p>
+              <p className="text-lg font-semibold tracking-tight">Password</p>
               <p className="mt-1 text-xs text-ink-muted">
                 Change the password for this login.
               </p>
@@ -200,7 +200,7 @@ export default async function AccountSettingsPage({
           className="space-y-4 rounded-card border border-line bg-surface p-5"
         >
           <div>
-            <p className="text-sm text-ink">Account Holder</p>
+            <p className="text-lg font-semibold tracking-tight">Account Holder</p>
             <p className="mt-1 text-xs text-ink-muted">
               Name and login email for this account.
             </p>
@@ -245,7 +245,7 @@ export default async function AccountSettingsPage({
           className="space-y-4 rounded-card border border-line bg-surface p-5"
         >
           <div>
-            <p className="text-sm text-ink">Trader Profile</p>
+            <p className="text-lg font-semibold tracking-tight">Trader Profile</p>
             <p className="mt-1 text-xs text-ink-muted">
               Required before you share a desk. Other members see this alias
               and logo, never your email. This is not your affiliate alias —
@@ -302,7 +302,7 @@ export default async function AccountSettingsPage({
         {showPlatformSettings && invites.length > 0 ? (
           <section className="mt-6 space-y-3 rounded-card border border-line bg-surface p-5">
             <div>
-              <p className="text-sm text-ink">Copy invites</p>
+              <p className="text-lg font-semibold tracking-tight">Copy invites</p>
               <p className="mt-1 text-xs text-ink-muted">
                 Private grants to follow another desk. They also appear on{" "}
                 <Link href="/account/copy" className="text-accent">
