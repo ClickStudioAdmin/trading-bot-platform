@@ -86,9 +86,11 @@ export function AutomationsBotTable({
     <>
     {dialog}
     <TableFilterSession
-      toolbar={toolbar}
       actions={
-        <AutomationsColumnPicker visible={visible} setColumn={setColumn} />
+        <>
+          {toolbar}
+          <AutomationsColumnPicker visible={visible} setColumn={setColumn} />
+        </>
       }
     />
     <TableCard className="mt-0">
