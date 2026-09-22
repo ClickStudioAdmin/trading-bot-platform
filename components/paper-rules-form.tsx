@@ -658,9 +658,10 @@ function RuleRow({
               className={botSidebarSaveClass}
               disabled={!dirty || missing}
             >
-              <BotButtonLead icon={<IconSave {...botBtnIcon} />}>
+              <span className="inline-flex items-center gap-1.5">
+                <IconSave {...botBtnIcon} />
                 Save
-              </BotButtonLead>
+              </span>
             </PendingSubmitButton>
             <DeskFormFlash />
           </div>

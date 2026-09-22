@@ -185,7 +185,7 @@ export function PendingSubmitButton({
         <span
           className={`invisible col-start-1 row-start-1 whitespace-nowrap ${
             stretch
-              ? "flex w-full items-center justify-between gap-1.5"
+              ? "flex w-full items-center justify-center gap-1.5"
               : "inline-flex items-center justify-center gap-1.5"
           }`}
           aria-hidden
@@ -195,9 +195,7 @@ export function PendingSubmitButton({
         <span
           className={
             stretch
-              ? `col-start-1 row-start-1 flex w-full items-center gap-1.5 ${
-                  thisPending || ok ? "justify-center" : "justify-between"
-                }`
+              ? "col-start-1 row-start-1 flex w-full items-center justify-center gap-1.5"
               : "col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5"
           }
         >

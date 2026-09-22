@@ -2340,9 +2340,10 @@ export function ThemeBotFormDraft() {
             }
             onClick={saveDraft}
           >
-            <BotButtonLead icon={<IconSave {...botBtnIcon} />}>
+            <span className="inline-flex items-center gap-1.5">
+              <IconSave {...botBtnIcon} />
               Save
-            </BotButtonLead>
+            </span>
           </button>
         }
       >

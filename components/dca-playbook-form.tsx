@@ -2580,9 +2580,10 @@ export function DcaPlaybookForm({
                   : undefined)
               }
             >
-              <BotButtonLead icon={<IconSave {...botBtnIcon} />}>
+              <span className="inline-flex items-center gap-1.5">
+                <IconSave {...botBtnIcon} />
                 Save
-              </BotButtonLead>
+              </span>
             </PendingSubmitButton>
             <DeskFormFlash />
           </div>
