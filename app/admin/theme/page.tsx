@@ -94,8 +94,8 @@ export default async function ThemePage({
           <section>
             <h2 className="text-xl font-semibold tracking-tight">Cards</h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Card titles, field labels, fact rows, and helpers. Labels are
-              14px ink — white in dark mode.
+              Type scale and what is still off. Field labels are 14px ink —
+              white in dark mode.
             </p>
             <div className="mt-5">
               <ThemeCardsDraft />
