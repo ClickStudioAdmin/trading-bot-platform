@@ -946,7 +946,9 @@ function MetricCell({ row }: { row?: MetricRow }) {
   );
   return (
     <div className="flex min-w-0 items-start justify-between gap-3 text-sm">
-      <span className="shrink-0 text-ink-muted">{row.label}</span>
+      <span className="shrink-0 text-xs uppercase tracking-[0.12em] text-ink-muted">
+        {row.label}
+      </span>
       {row.hint ? <ColumnHint label={value} hint={row.hint} /> : value}
     </div>
   );

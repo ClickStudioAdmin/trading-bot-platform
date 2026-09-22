@@ -487,7 +487,7 @@ function OptionList({
       : option.value === selected;
     const heading =
       option.group && option.group !== options[index - 1]?.group ? (
-        <p className="px-3 pt-2 pb-1 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+        <p className="px-3 pt-2 pb-1 text-xs uppercase tracking-[0.12em] text-ink-muted">
           {option.group}
         </p>
       ) : null;

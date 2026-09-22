@@ -159,104 +159,93 @@ export function ThemeCardsDraft() {
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Still off</h2>
           <p className="mt-1 text-sm text-ink-muted">
-            Live on the left. The scale on the right. The layout stays the
-            same: the label sits beside the value.
+            Live on the left. The scale on the right.
           </p>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-2">
           <SampleFrame
-            label="Live — order row"
-            note="Futures fills, backtest orders, and paper order details. Label is 14px sentence-case."
+            label="Live — caption under a KPI"
+            note="Positions drawdown tiles. The line under the 24px figure is 13px faint."
           >
             <Card>
-              <div className="space-y-1">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-ink-muted">Qty</span>
-                  <span className="tabular-nums text-ink">0.50</span>
-                </div>
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-ink-muted">Price</span>
-                  <span className="tabular-nums text-ink">64,200</span>
-                </div>
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-ink-muted">Value</span>
-                  <span className="tabular-nums text-ink">$32,100</span>
-                </div>
-              </div>
+              <p className="text-2xl font-semibold tabular-nums tracking-tight text-danger">
+                −$420
+              </p>
+              <p className="mt-1 text-hint text-ink-faint">Realized giveback</p>
             </Card>
           </SampleFrame>
           <SampleFrame
-            label="Scale — order row"
-            note="Fact label 12px uppercase, value 14px, still beside the label."
+            label="Scale — caption under a KPI"
+            note="That line is the fact label. 12px uppercase, muted. The figure stays 24px."
           >
             <Card>
-              <div className="space-y-1 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <span className={themeFactLabelClass}>Qty</span>
-                  <span className="tabular-nums text-ink">0.50</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className={themeFactLabelClass}>Price</span>
-                  <span className="tabular-nums text-ink">64,200</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className={themeFactLabelClass}>Value</span>
-                  <span className="tabular-nums text-ink">$32,100</span>
-                </div>
-              </div>
+              <p className="text-2xl font-semibold tabular-nums tracking-tight text-danger">
+                −$420
+              </p>
+              <p className={`${themeFactLabelClass} mt-1`}>Realized giveback</p>
             </Card>
           </SampleFrame>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-2">
           <SampleFrame
-            label="Live — form group"
-            note="Backtest recipe Long / Short, and the template picker group title. 11px faint uppercase."
+            label="Live — stat hint"
+            note="Account home and admin Snapshot tiles. The fact label is already above the number. The hint under it is 13px faint."
           >
             <Card>
-              <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-                Long
+              <p className={themeFactLabelClass}>Open positions</p>
+              <p className="mt-3 text-2xl font-semibold tracking-tight text-ink">
+                3
               </p>
-              <p className="mt-2 text-sm text-ink">Price cross fields sit under this.</p>
+              <p className="mt-2 text-hint text-ink-faint">
+                2 Cash and Carry · 1 Perps
+              </p>
             </Card>
           </SampleFrame>
           <SampleFrame
-            label="Scale — form group"
-            note="Group title. 14px semibold."
+            label="Scale — stat hint"
+            note="Helper. 13px muted."
           >
             <Card>
-              <p className={themeGroupTitleClass}>Long</p>
-              <p className="mt-2 text-sm text-ink">Price cross fields sit under this.</p>
+              <p className={themeFactLabelClass}>Open positions</p>
+              <p className="mt-3 text-2xl font-semibold tracking-tight text-ink">
+                3
+              </p>
+              <p className="mt-2 text-hint text-ink-muted">
+                2 Cash and Carry · 1 Perps
+              </p>
             </Card>
           </SampleFrame>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-2">
           <SampleFrame
-            label="Live — menu caption"
-            note="Paper automation Entry / Exit, desk menu, column picker, select groups, and the strategy subnav. 11px faint uppercase."
+            label="Live — 11px chrome"
+            note="Logo line under the wordmark, and the plan ribbon. Both are 11px."
           >
             <Card>
-              <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-                Desks
+              <p className="text-sm font-semibold tracking-tight text-ink">
+                Trading Bot Platform
               </p>
-              <p className="mt-2 text-sm text-ink">Perps · Bybit</p>
-              <p className="mt-4 text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
-                Environment
+              <p className="text-[11px] text-ink-muted">Trading Bots</p>
+              <p className="mt-4 text-[11px] font-medium uppercase tracking-[0.16em] text-accent">
+                Your plan
               </p>
-              <p className="mt-2 text-sm text-ink">Paper</p>
             </Card>
           </SampleFrame>
           <SampleFrame
-            label="Scale — menu caption"
-            note="Fact label. 12px uppercase, muted."
+            label="Scale — 11px chrome"
+            note="The logo line is a helper, 13px muted. The ribbon is the overline, 12px."
           >
             <Card>
-              <p className={themeFactLabelClass}>Desks</p>
-              <p className="mt-2 text-sm text-ink">Perps · Bybit</p>
-              <p className={`${themeFactLabelClass} mt-4`}>Environment</p>
-              <p className="mt-2 text-sm text-ink">Paper</p>
+              <p className="text-sm font-semibold tracking-tight text-ink">
+                Trading Bot Platform
+              </p>
+              <p className="text-hint text-ink-muted">Trading Bots</p>
+              <p className="mt-4 text-xs font-medium uppercase tracking-[0.16em] text-accent">
+                Your plan
+              </p>
             </Card>
           </SampleFrame>
         </div>

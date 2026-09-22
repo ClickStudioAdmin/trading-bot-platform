@@ -59,7 +59,7 @@ export function TableColumnPicker({
           align === "end" ? "right-0" : "left-0"
         }`}
       >
-        <p className="px-2 pt-1 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+        <p className="px-2 pt-1 text-xs uppercase tracking-[0.12em] text-ink-muted">
           Show columns
         </p>
         {columns.map((column) => (

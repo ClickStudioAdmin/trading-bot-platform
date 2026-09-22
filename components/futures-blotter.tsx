@@ -1351,7 +1351,9 @@ function OrderMetric({
 }) {
   return (
     <div className="flex min-w-0 items-center justify-between gap-3 text-sm">
-      <span className="shrink-0 text-ink-muted">{label}</span>
+      <span className="shrink-0 text-xs uppercase tracking-[0.12em] text-ink-muted">
+        {label}
+      </span>
       <span
         className="min-w-0 truncate tabular-nums text-ink"
         title={title ?? value}

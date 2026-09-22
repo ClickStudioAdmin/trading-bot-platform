@@ -77,7 +77,7 @@ export function DeskSwitcher({
           <IconChevronDown size={12} className="size-3 shrink-0 text-ink-faint" />
         </summary>
         <div className="absolute left-1/2 z-30 mt-2 w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 rounded-card border border-line bg-surface p-2">
-          <p className="px-3 pt-1.5 pb-1 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+          <p className="px-3 pt-1.5 pb-1 text-xs uppercase tracking-[0.12em] text-ink-muted">
             Desks
           </p>
           <div className="panel-scroll space-y-0.5">

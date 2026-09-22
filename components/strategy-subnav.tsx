@@ -210,7 +210,7 @@ function HeaderMeta({
     "block w-max max-w-full rounded-card border border-line bg-surface px-3 py-2 text-left";
   const body = (
     <>
-      <p className="whitespace-nowrap text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+      <p className="whitespace-nowrap text-xs uppercase tracking-[0.12em] text-ink-muted">
         {overline}
       </p>
       <div className="mt-1 whitespace-nowrap">{children}</div>

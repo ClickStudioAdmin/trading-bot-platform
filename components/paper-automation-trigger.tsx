@@ -103,7 +103,7 @@ export function PaperAutomationTrigger({
                 left: Math.max(12, Math.min(box.left, window.innerWidth - 300)),
               }}
             >
-              <p className="text-[11px] uppercase tracking-[0.12em] text-ink-faint">
+              <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
                 Entry
               </p>
               <p className="mt-1 text-hint text-ink-muted">
@@ -113,7 +113,7 @@ export function PaperAutomationTrigger({
                 lines={entries}
                 empty=""
               />
-              <p className="mt-3 text-[11px] uppercase tracking-[0.12em] text-ink-faint">
+              <p className="mt-3 text-xs uppercase tracking-[0.12em] text-ink-muted">
                 Exit
               </p>
               {canEdit ? (
