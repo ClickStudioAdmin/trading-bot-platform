@@ -165,86 +165,65 @@ export function ThemeCardsDraft() {
 
         <div className="grid gap-5 lg:grid-cols-2">
           <SampleFrame
-            label="Live — caption under a KPI"
-            note="Positions drawdown tiles. The line under the 24px figure is 13px faint."
-          >
-            <Card>
-              <p className="text-2xl font-semibold tabular-nums tracking-tight text-danger">
-                −$420
-              </p>
-              <p className="mt-1 text-hint text-ink-faint">Realized giveback</p>
-            </Card>
-          </SampleFrame>
-          <SampleFrame
-            label="Scale — caption under a KPI"
-            note="That line is the fact label. 12px uppercase, muted. The figure stays 24px."
-          >
-            <Card>
-              <p className="text-2xl font-semibold tabular-nums tracking-tight text-danger">
-                −$420
-              </p>
-              <p className={`${themeFactLabelClass} mt-1`}>Realized giveback</p>
-            </Card>
-          </SampleFrame>
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-2">
-          <SampleFrame
-            label="Live — stat hint"
-            note="Account home and admin Snapshot tiles. The fact label is already above the number. The hint under it is 13px faint."
+            label="Live — stat note"
+            note="Positions and paper stat tiles. The fact label is already above the number. The note under it is 13px faint."
           >
             <Card>
               <p className={themeFactLabelClass}>Open positions</p>
               <p className="mt-3 text-2xl font-semibold tracking-tight text-ink">
-                3
+                4
               </p>
-              <p className="mt-2 text-hint text-ink-faint">
-                2 Cash and Carry · 1 Perps
-              </p>
+              <p className="mt-2 text-hint text-ink-faint">2 closing</p>
             </Card>
           </SampleFrame>
           <SampleFrame
-            label="Scale — stat hint"
+            label="Scale — stat note"
             note="Helper. 13px muted."
           >
             <Card>
               <p className={themeFactLabelClass}>Open positions</p>
               <p className="mt-3 text-2xl font-semibold tracking-tight text-ink">
-                3
+                4
               </p>
-              <p className="mt-2 text-hint text-ink-muted">
-                2 Cash and Carry · 1 Perps
-              </p>
+              <p className="mt-2 text-hint text-ink-muted">2 closing</p>
             </Card>
           </SampleFrame>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-2">
           <SampleFrame
-            label="Live — 11px chrome"
-            note="Logo line under the wordmark, and the plan ribbon. Both are 11px."
+            label="Live — line under a title"
+            note="Admin shortcut tiles, and the engine Last tick / Last scan lines. 13px faint."
           >
             <Card>
-              <p className="text-sm font-semibold tracking-tight text-ink">
-                Trading Bot Platform
+              <p className="text-lg font-semibold tracking-tight text-ink">
+                Billing
               </p>
-              <p className="text-[11px] text-ink-muted">Trading Bots</p>
-              <p className="mt-4 text-[11px] font-medium uppercase tracking-[0.16em] text-accent">
-                Your plan
+              <p className="mt-1 text-hint text-ink-faint">
+                Plans, invoices, and gas wallets
+              </p>
+              <p className={`${themeFactLabelClass} mt-4`}>Last tick</p>
+              <p className="mt-1 text-sm text-ink">12:04</p>
+              <p className="mt-1 text-hint text-ink-faint">
+                heartbeat · worker ok
               </p>
             </Card>
           </SampleFrame>
           <SampleFrame
-            label="Scale — 11px chrome"
-            note="The logo line is a helper, 13px muted. The ribbon is the overline, 12px."
+            label="Scale — line under a title"
+            note="The shortcut line is a card intro, 14px muted. The tick line is a helper, 13px muted."
           >
             <Card>
-              <p className="text-sm font-semibold tracking-tight text-ink">
-                Trading Bot Platform
+              <p className="text-lg font-semibold tracking-tight text-ink">
+                Billing
               </p>
-              <p className="text-hint text-ink-muted">Trading Bots</p>
-              <p className="mt-4 text-xs font-medium uppercase tracking-[0.16em] text-accent">
-                Your plan
+              <p className="mt-1 text-sm text-ink-muted">
+                Plans, invoices, and gas wallets
+              </p>
+              <p className={`${themeFactLabelClass} mt-4`}>Last tick</p>
+              <p className="mt-1 text-sm text-ink">12:04</p>
+              <p className="mt-1 text-hint text-ink-muted">
+                heartbeat · worker ok
               </p>
             </Card>
           </SampleFrame>

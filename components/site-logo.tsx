@@ -56,7 +56,7 @@ export function SiteLogo({
           <span className="block text-sm font-semibold tracking-tight">
             {name}
           </span>
-          <span className="block text-[11px] text-ink-muted">
+          <span className="block text-hint text-ink-muted">
             Trading Bots
           </span>
         </span>

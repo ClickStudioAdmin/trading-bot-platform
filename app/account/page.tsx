@@ -228,7 +228,7 @@ function StatCard({
       <p className="mt-3 truncate text-2xl font-semibold tracking-tight">
         {value}
       </p>
-      <p className="mt-2 text-hint text-ink-faint">{hint}</p>
+      <p className="mt-2 text-hint text-ink-muted">{hint}</p>
     </>
   );
   if (href) {

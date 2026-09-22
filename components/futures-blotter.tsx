@@ -774,7 +774,7 @@ function drawdownCard(input: {
             >
               {giveback}
             </p>
-            <p className="mt-1 text-hint text-ink-faint">Realized giveback</p>
+            <p className="mt-1 text-hint text-ink-muted">Realized giveback</p>
           </div>
           <div>
             <p
@@ -782,7 +782,7 @@ function drawdownCard(input: {
             >
               {worst}
             </p>
-            <p className="mt-1 text-hint text-ink-faint">Max realized loss</p>
+            <p className="mt-1 text-hint text-ink-muted">Max realized loss</p>
           </div>
         </div>
       ),

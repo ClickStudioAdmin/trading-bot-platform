@@ -85,7 +85,7 @@ export function MembershipPlanCards({
               style={{ gridColumn: planIndex + 2, gridRow: "1 / -1" }}
             >
               {current ? (
-                <p className="pointer-events-none absolute inset-x-0 -top-6 text-center text-[11px] font-medium uppercase tracking-[0.16em] text-accent">
+                <p className="pointer-events-none absolute inset-x-0 -top-6 text-center text-xs font-medium uppercase tracking-[0.16em] text-accent">
                   Your plan
                 </p>
               ) : null}
