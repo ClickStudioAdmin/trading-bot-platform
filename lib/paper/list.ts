@@ -3,7 +3,13 @@ import { deskHref } from "@/lib/accounts/model";
 import { loadEngineSettings } from "@/lib/engine/settings";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
-import { attachLogs, listEventLogs, type EventLogRow } from "@/lib/logs/list";
+import {
+  attachLogs,
+  listEventLogs,
+  listEventLogsForAnchors,
+  mergeEventLogs,
+  type EventLogRow,
+} from "@/lib/logs/list";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 import { type OpportunityPaperProps } from "@/lib/paper/open";
 import {
@@ -136,24 +142,32 @@ export async function loadPaperDesk(scan: ScannedOpportunity[]): Promise<{
     listPaperCarries(),
     listPaperOrders(),
   ]);
-  const oldestOpenMs = rows.reduce((oldest, row) => {
-    if (!(row.openedAtMs > 0)) {
+  const liveOpenedMs = rows.reduce((oldest, row) => {
+    if (row.status === "closed" || !(row.openedAtMs > 0)) {
       return oldest;
     }
     return oldest === 0 ? row.openedAtMs : Math.min(oldest, row.openedAtMs);
   }, 0);
-  const logs = await listEventLogs(
-    { scope: "", level: "", event: "" },
-    {
+  const [recentLogs, anchoredLogs] = await Promise.all([
+    listEventLogs(
+      { scope: "", level: "", event: "" },
+      {
+        accountId: session.account.id,
+        limit: 500,
+        scopes: ["trade", "strategy"],
+        since:
+          liveOpenedMs > 0
+            ? new Date(liveOpenedMs - 60_000).toISOString()
+            : undefined,
+      },
+    ),
+    listEventLogsForAnchors({
       accountId: session.account.id,
-      limit: 2000,
-      scopes: ["trade", "strategy"],
-      since:
-        oldestOpenMs > 0
-          ? new Date(oldestOpenMs - 60_000).toISOString()
-          : undefined,
-    },
-  );
+      field: "carryId",
+      ids: rows.map((row) => String(row.id)),
+    }),
+  ]);
+  const logs = mergeEventLogs(recentLogs, anchoredLogs);
   const open = attachLogs(
     attachOrders(
       markOpenCarries(

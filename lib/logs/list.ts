@@ -73,11 +73,76 @@ export async function listEventLogs(
     return [];
   }
 
-  return data.map((row) => ({
+  return data.map((row) => parseEventLogRow(row as Record<string, unknown>));
+}
+
+const DESK_LOG_ID_BATCH = 40;
+
+export function mergeEventLogs(
+  ...lists: readonly (readonly EventLogRow[])[]
+): EventLogRow[] {
+  const byId = new Map<number, EventLogRow>();
+  for (const list of lists) {
+    for (const row of list) {
+      byId.set(row.id, row);
+    }
+  }
+  return [...byId.values()].sort(
+    (left, right) =>
+      right.createdAt.localeCompare(left.createdAt) || right.id - left.id,
+  );
+}
+
+export function eventLogJsonInFilter(
+  field: "positionId" | "carryId",
+  ids: readonly string[],
+): string {
+  return ids
+    .map((id) => id.replace(/[,()]/g, "").trim())
+    .filter(Boolean)
+    .map((id) => `data->>${field}.eq.${id}`)
+    .join(",");
+}
+
+export async function listEventLogsForAnchors(input: {
+  accountId: string;
+  field: "positionId" | "carryId";
+  ids: readonly string[];
+}): Promise<EventLogRow[]> {
+  const supabase = createServiceClient();
+  const ids = [...new Set(input.ids.map((id) => id.trim()).filter(Boolean))];
+  if (!supabase || ids.length === 0) {
+    return [];
+  }
+  const pages: EventLogRow[][] = [];
+  for (let index = 0; index < ids.length; index += DESK_LOG_ID_BATCH) {
+    const batch = ids.slice(index, index + DESK_LOG_ID_BATCH);
+    const filter = eventLogJsonInFilter(input.field, batch);
+    if (!filter) {
+      continue;
+    }
+    const { data, error } = await supabase
+      .from("event_logs")
+      .select("*")
+      .eq("account_id", input.accountId)
+      .in("scope", ["trade", "strategy"])
+      .or(filter)
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    if (error || !data) {
+      continue;
+    }
+    pages.push(data.map((row) => parseEventLogRow(row as Record<string, unknown>)));
+  }
+  return mergeEventLogs(...pages);
+}
+
+function parseEventLogRow(row: Record<string, unknown>): EventLogRow {
+  return {
     id: Number(row.id),
     createdAt: String(row.created_at),
-    level: row.level,
-    scope: row.scope,
+    level: row.level as EventLogRow["level"],
+    scope: row.scope as EventLogRow["scope"],
     event: String(row.event),
     message: String(row.message),
     userId: row.user_id ? String(row.user_id) : null,
@@ -87,7 +152,7 @@ export async function listEventLogs(
       row.data && typeof row.data === "object" && !Array.isArray(row.data)
         ? (row.data as Record<string, unknown>)
         : {},
-  }));
+  };
 }
 
 export function carryIdFromLogData(

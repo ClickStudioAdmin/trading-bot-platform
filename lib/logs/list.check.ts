@@ -5,7 +5,9 @@ import {
   attachLogs,
   attachPositionLogs,
   carryIdFromLogData,
+  eventLogJsonInFilter,
   logsForCarry,
+  mergeEventLogs,
   positionIdFromLogData,
   type EventLogRow,
 } from "./list";
@@ -211,6 +213,24 @@ const fallback = attachPositionLogs(
 assert.deepEqual(
   fallback[0]?.logs.map((row) => row.id),
   [11],
+);
+
+assert.equal(
+  eventLogJsonInFilter("positionId", ["pos-1", "pos-2", ""]),
+  "data->>positionId.eq.pos-1,data->>positionId.eq.pos-2",
+);
+const merged = mergeEventLogs(
+  [
+    { ...sample(1, 7, "2026-08-23T08:00:00.000Z"), data: { positionId: "a" } },
+  ],
+  [
+    { ...sample(1, 7, "2026-08-23T08:00:00.000Z"), data: { positionId: "a" } },
+    { ...sample(2, 7, "2026-08-23T09:00:00.000Z"), data: { positionId: "b" } },
+  ],
+);
+assert.deepEqual(
+  merged.map((row) => row.id),
+  [2, 1],
 );
 
 console.log("event log list checks passed");

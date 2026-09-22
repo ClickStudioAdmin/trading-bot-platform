@@ -14,6 +14,8 @@ import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import {
   attachPositionLogs,
   listEventLogs,
+  listEventLogsForAnchors,
+  mergeEventLogs,
   type EventLogRow,
 } from "@/lib/logs/list";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -169,24 +171,32 @@ export async function loadFuturesDesk(): Promise<{
     loadLiveFuturesWorking(),
     listFuturesOrderWebhookNames(session.account.id),
   ]);
-  const oldestOpenMs = rows.reduce((oldest, row) => {
-    if (!(row.openedAtMs > 0)) {
+  const liveOpenedMs = rows.reduce((oldest, row) => {
+    if (!futuresPositionIsLive(row.status) || !(row.openedAtMs > 0)) {
       return oldest;
     }
     return oldest === 0 ? row.openedAtMs : Math.min(oldest, row.openedAtMs);
   }, 0);
-  const logs = await listEventLogs(
-    { scope: "", level: "", event: "" },
-    {
+  const [recentLogs, anchoredLogs] = await Promise.all([
+    listEventLogs(
+      { scope: "", level: "", event: "" },
+      {
+        accountId: session.account.id,
+        limit: 500,
+        scopes: ["trade", "strategy"],
+        since:
+          liveOpenedMs > 0
+            ? new Date(liveOpenedMs - 60_000).toISOString()
+            : undefined,
+      },
+    ),
+    listEventLogsForAnchors({
       accountId: session.account.id,
-      limit: 2000,
-      scopes: ["trade", "strategy"],
-      since:
-        oldestOpenMs > 0
-          ? new Date(oldestOpenMs - 60_000).toISOString()
-          : undefined,
-    },
-  );
+      field: "positionId",
+      ids: rows.map((row) => row.id),
+    }),
+  ]);
+  const logs = mergeEventLogs(recentLogs, anchoredLogs);
   const withOrders = attachOrders(rows, orders);
   const withLogs = attachPositionLogs(withOrders, logs);
   return {
