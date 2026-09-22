@@ -1,3 +1,8 @@
+import {
+  parseColumnFlags,
+  parseStoredColumnFlags,
+} from "@/lib/table-columns";
+
 export const PAPER_OPEN_OPTIONAL_COLUMNS = [
   "dte",
   "value",
@@ -46,30 +51,21 @@ export const PAPER_OPEN_COLUMN_DEFAULTS: PaperOpenColumnVisibility = {
 export function parsePaperOpenColumns(
   raw: unknown,
 ): PaperOpenColumnVisibility {
-  const next = { ...PAPER_OPEN_COLUMN_DEFAULTS };
-  if (!raw || typeof raw !== "object") {
-    return next;
-  }
-  const record = raw as Record<string, unknown>;
-  for (const id of PAPER_OPEN_OPTIONAL_COLUMNS) {
-    if (typeof record[id] === "boolean") {
-      next[id] = record[id];
-    }
-  }
-  return next;
+  return parseColumnFlags(
+    raw,
+    PAPER_OPEN_OPTIONAL_COLUMNS,
+    PAPER_OPEN_COLUMN_DEFAULTS,
+  );
 }
 
 export function parseStoredPaperOpenColumns(
   raw: string | null,
 ): PaperOpenColumnVisibility {
-  if (!raw) {
-    return PAPER_OPEN_COLUMN_DEFAULTS;
-  }
-  try {
-    return parsePaperOpenColumns(JSON.parse(raw));
-  } catch {
-    return PAPER_OPEN_COLUMN_DEFAULTS;
-  }
+  return parseStoredColumnFlags(
+    raw,
+    PAPER_OPEN_OPTIONAL_COLUMNS,
+    PAPER_OPEN_COLUMN_DEFAULTS,
+  );
 }
 
 export function paperOpenColumnCount(
@@ -78,5 +74,79 @@ export function paperOpenColumnCount(
   return (
     PAPER_OPEN_LOCKED_COLUMN_COUNT +
     PAPER_OPEN_OPTIONAL_COLUMNS.filter((id) => visible[id]).length
+  );
+}
+
+export const PAPER_CLOSED_OPTIONAL_COLUMNS = [
+  "source",
+  "closed",
+  "days",
+  "entry",
+  "exit",
+  "realized",
+  "pnl",
+] as const;
+
+export type PaperClosedOptionalColumn =
+  (typeof PAPER_CLOSED_OPTIONAL_COLUMNS)[number];
+
+export type PaperClosedColumnVisibility = Record<
+  PaperClosedOptionalColumn,
+  boolean
+>;
+
+export const PAPER_CLOSED_COLUMNS_KEY = "tbp-columns:paper-closed";
+
+export const PAPER_CLOSED_LOCKED_COLUMN_COUNT = 2;
+
+export const PAPER_CLOSED_COLUMN_LABELS: Record<
+  PaperClosedOptionalColumn,
+  string
+> = {
+  source: "Source",
+  closed: "Closed",
+  days: "Days held",
+  entry: "Entry",
+  exit: "Exit",
+  realized: "Realized",
+  pnl: "P&L %",
+};
+
+export const PAPER_CLOSED_COLUMN_DEFAULTS: PaperClosedColumnVisibility = {
+  source: true,
+  closed: true,
+  days: true,
+  entry: true,
+  exit: true,
+  realized: true,
+  pnl: true,
+};
+
+export function parsePaperClosedColumns(
+  raw: unknown,
+): PaperClosedColumnVisibility {
+  return parseColumnFlags(
+    raw,
+    PAPER_CLOSED_OPTIONAL_COLUMNS,
+    PAPER_CLOSED_COLUMN_DEFAULTS,
+  );
+}
+
+export function parseStoredPaperClosedColumns(
+  raw: string | null,
+): PaperClosedColumnVisibility {
+  return parseStoredColumnFlags(
+    raw,
+    PAPER_CLOSED_OPTIONAL_COLUMNS,
+    PAPER_CLOSED_COLUMN_DEFAULTS,
+  );
+}
+
+export function paperClosedColumnCount(
+  visible: PaperClosedColumnVisibility,
+): number {
+  return (
+    PAPER_CLOSED_LOCKED_COLUMN_COUNT +
+    PAPER_CLOSED_OPTIONAL_COLUMNS.filter((id) => visible[id]).length
   );
 }

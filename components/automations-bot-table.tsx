@@ -1,6 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
+import {
+  AutomationsColumnPicker,
+  useAutomationsColumns,
+} from "@/components/automations-column-picker";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import {
   IconCopy,
@@ -17,6 +22,7 @@ import {
   TABLE_TITLE_CASE_TH_CLASS,
   TableActions,
   TableCard,
+  TableFilterSession,
   TableIconAction,
 } from "@/components/table-chrome";
 import { formatCount, formatPct, signedTone } from "@/lib/opportunities/format";
@@ -43,11 +49,14 @@ export type AutomationsBotRow = {
 export function AutomationsBotTable({
   rows,
   empty,
+  toolbar,
 }: {
   rows: readonly AutomationsBotRow[];
   empty: string;
+  toolbar?: ReactNode;
 }) {
   const { confirm, dialog } = useConfirmDialog();
+  const { visible, setColumn } = useAutomationsColumns();
 
   async function removeRow(row: AutomationsBotRow) {
     if (!row.onRemove || row.canRemove === false) {
@@ -65,17 +74,20 @@ export function AutomationsBotTable({
     await row.onRemove();
   }
 
-  if (rows.length === 0) {
-    return (
-      <p className="rounded-card border border-line bg-canvas px-4 py-6 text-sm text-ink-muted">
-        {empty}
-      </p>
-    );
-  }
-
   return (
     <>
     {dialog}
+    <TableFilterSession
+      toolbar={toolbar}
+      actions={
+        <AutomationsColumnPicker visible={visible} setColumn={setColumn} />
+      }
+    />
+    {rows.length === 0 ? (
+      <p className="rounded-card border border-line bg-canvas px-4 py-6 text-sm text-ink-muted">
+        {empty}
+      </p>
+    ) : (
     <TableCard className="mt-0">
       <table className="min-w-full text-left text-sm text-ink">
         <thead className="border-b border-line bg-surface-raised text-hint text-ink-muted">
@@ -83,21 +95,31 @@ export function AutomationsBotTable({
             <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
               Name
             </th>
-            <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
-              Pair / Side
-            </th>
-            <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
-              Recipe
-            </th>
-            <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
-              Status
-            </th>
-            <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
-              Positions
-            </th>
-            <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
-              Performance
-            </th>
+            {visible.pair ? (
+              <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
+                Pair / Side
+              </th>
+            ) : null}
+            {visible.recipe ? (
+              <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
+                Recipe
+              </th>
+            ) : null}
+            {visible.status ? (
+              <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
+                Status
+              </th>
+            ) : null}
+            {visible.positions ? (
+              <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
+                Positions
+              </th>
+            ) : null}
+            {visible.performance ? (
+              <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
+                Performance
+              </th>
+            ) : null}
             <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
           </tr>
         </thead>
@@ -112,48 +134,58 @@ export function AutomationsBotTable({
                   {row.name || "Bot"}
                 </Link>
               </td>
-              <td className="px-4 py-3 pr-8 align-top text-ink-muted">
-                {row.pair}
-              </td>
-              <td className="px-4 py-3 pr-8 align-top text-ink-muted">
-                {row.summary}
-              </td>
-              <td className="px-4 py-3 pr-8 align-top">
-                <StatusBadge
-                  label={row.status}
-                  tone={statusToneFor(row.statusKey ?? row.status)}
-                />
-              </td>
-              <td className="px-4 py-3 pr-8 align-top">
-                <div className="flex items-center gap-1.5">
-                  <span className="tabular-nums">
-                    {formatCount(row.positionCount)}
-                  </span>
-                  <TableIconAction
-                    href={row.positionsHref}
-                    label="Positions"
-                    detail="Open this bot’s positions."
-                  >
-                    <IconPositions {...TABLE_BTN_ICON} />
-                  </TableIconAction>
-                </div>
-              </td>
-              <td className="px-4 py-3 pr-8 align-top">
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`tabular-nums ${signedTone(row.roePct)}`}
-                  >
-                    {row.roePct == null ? "—" : formatPct(row.roePct)}
-                  </span>
-                  <TableIconAction
-                    href={row.performanceHref}
-                    label="Performance"
-                    detail="Open this bot’s realized ROE."
-                  >
-                    <IconPerformance {...TABLE_BTN_ICON} />
-                  </TableIconAction>
-                </div>
-              </td>
+              {visible.pair ? (
+                <td className="px-4 py-3 pr-8 align-top text-ink-muted">
+                  {row.pair}
+                </td>
+              ) : null}
+              {visible.recipe ? (
+                <td className="px-4 py-3 pr-8 align-top text-ink-muted">
+                  {row.summary}
+                </td>
+              ) : null}
+              {visible.status ? (
+                <td className="px-4 py-3 pr-8 align-top">
+                  <StatusBadge
+                    label={row.status}
+                    tone={statusToneFor(row.statusKey ?? row.status)}
+                  />
+                </td>
+              ) : null}
+              {visible.positions ? (
+                <td className="px-4 py-3 pr-8 align-top">
+                  <div className="flex items-center gap-1.5">
+                    <span className="tabular-nums">
+                      {formatCount(row.positionCount)}
+                    </span>
+                    <TableIconAction
+                      href={row.positionsHref}
+                      label="Positions"
+                      detail="Open this bot’s positions."
+                    >
+                      <IconPositions {...TABLE_BTN_ICON} />
+                    </TableIconAction>
+                  </div>
+                </td>
+              ) : null}
+              {visible.performance ? (
+                <td className="px-4 py-3 pr-8 align-top">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`tabular-nums ${signedTone(row.roePct)}`}
+                    >
+                      {row.roePct == null ? "—" : formatPct(row.roePct)}
+                    </span>
+                    <TableIconAction
+                      href={row.performanceHref}
+                      label="Performance"
+                      detail="Open this bot’s realized ROE."
+                    >
+                      <IconPerformance {...TABLE_BTN_ICON} />
+                    </TableIconAction>
+                  </div>
+                </td>
+              ) : null}
               <td className={`${TABLE_ACTIONS_TD_CLASS} align-top`}>
                 <TableActions>
                   <TableIconAction
@@ -195,6 +227,7 @@ export function AutomationsBotTable({
         </tbody>
       </table>
     </TableCard>
+    )}
     </>
   );
 }

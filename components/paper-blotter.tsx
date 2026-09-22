@@ -11,7 +11,9 @@ import {
   useClientTable,
 } from "@/components/table-chrome";
 import {
+  PaperClosedColumnPicker,
   PaperOpenColumnPicker,
+  usePaperClosedColumns,
   usePaperOpenColumns,
 } from "@/components/paper-column-picker";
 import {
@@ -26,7 +28,10 @@ import {
 } from "@/lib/opportunities/format";
 import type { EventLogRow } from "@/lib/logs/list";
 import type { PaperOrderRow } from "@/lib/paper/orders";
-import { paperOpenColumnCount } from "@/lib/paper/columns";
+import {
+  paperClosedColumnCount,
+  paperOpenColumnCount,
+} from "@/lib/paper/columns";
 import { formatTradingDaysNote } from "@/lib/futures/stats";
 import {
   openExposure,
@@ -382,15 +387,22 @@ export function ClosedPaperTrades({
     [],
   );
   const table = useClientTable(closed, compare);
+  const { visible, setColumn } = usePaperClosedColumns();
+  const colSpan = paperClosedColumnCount(visible);
   return (
     <section>
       <SectionHead
         title="Past Positions"
         subtitle="Closed paper carries. Realized P&L uses the same all-in fee model as unrealized."
       />
-      {filterBar ? (
-        <TableFilterSession defaultOpen={filtersOpen}>{filterBar}</TableFilterSession>
-      ) : null}
+      <TableFilterSession
+        defaultOpen={filtersOpen}
+        actions={
+          <PaperClosedColumnPicker visible={visible} setColumn={setColumn} />
+        }
+      >
+        {filterBar}
+      </TableFilterSession>
       <TableCard
         pager={
           <TablePager
@@ -415,54 +427,68 @@ export function ClosedPaperTrades({
                 dir={table.sortDir}
                 onSort={() => table.onSort("pair")}
               />
-              <SortTh
-                label="Source"
-                active={table.sortKey === "source"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("source")}
-              />
-              <SortTh
-                label="Closed"
-                active={table.sortKey === "closed"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("closed")}
-              />
-              <SortTh
-                label="Days held"
-                active={table.sortKey === "days"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("days")}
-              />
-              <SortTh
-                label="Entry"
-                active={table.sortKey === "entry"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("entry")}
-              />
-              <SortTh
-                label="Exit"
-                active={table.sortKey === "exit"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("exit")}
-              />
-              <SortTh
-                label="Realized"
-                active={table.sortKey === "realized"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("realized")}
-              />
-              <SortTh
-                label="P&L %"
-                active={table.sortKey === "pnl"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("pnl")}
-              />
+              {visible.source ? (
+                <SortTh
+                  label="Source"
+                  active={table.sortKey === "source"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("source")}
+                />
+              ) : null}
+              {visible.closed ? (
+                <SortTh
+                  label="Closed"
+                  active={table.sortKey === "closed"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("closed")}
+                />
+              ) : null}
+              {visible.days ? (
+                <SortTh
+                  label="Days held"
+                  active={table.sortKey === "days"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("days")}
+                />
+              ) : null}
+              {visible.entry ? (
+                <SortTh
+                  label="Entry"
+                  active={table.sortKey === "entry"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("entry")}
+                />
+              ) : null}
+              {visible.exit ? (
+                <SortTh
+                  label="Exit"
+                  active={table.sortKey === "exit"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("exit")}
+                />
+              ) : null}
+              {visible.realized ? (
+                <SortTh
+                  label="Realized"
+                  active={table.sortKey === "realized"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("realized")}
+                />
+              ) : null}
+              {visible.pnl ? (
+                <SortTh
+                  label="P&L %"
+                  active={table.sortKey === "pnl"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("pnl")}
+                />
+              ) : null}
             </tr>
           </thead>
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={9}
+                colSpan={colSpan}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -474,12 +500,17 @@ export function ClosedPaperTrades({
               />
             ) : table.pageRows.length === 0 ? (
               <EmptyRow
-                colSpan={9}
+                colSpan={colSpan}
                 message={emptyMessage ?? "No closed paper carries yet."}
               />
             ) : (
               table.pageRows.map((trade) => (
-                <ClosedPaperCarryRows key={trade.id} trade={trade} />
+                <ClosedPaperCarryRows
+                  key={trade.id}
+                  trade={trade}
+                  visible={visible}
+                  colSpan={colSpan}
+                />
               ))
             )}
           </tbody>

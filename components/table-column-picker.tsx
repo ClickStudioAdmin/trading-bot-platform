@@ -2,6 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { AppCheck } from "@/components/app-check";
+import {
+  columnPickerLabel,
+  countPickedColumns,
+} from "@/lib/table-columns";
 
 export function TableColumnPicker({
   columns,
@@ -14,6 +18,7 @@ export function TableColumnPicker({
   onToggle: (id: string, on: boolean) => void;
   align?: "start" | "end";
 }) {
+  const counts = countPickedColumns(columns, visible);
   const rootRef = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
@@ -47,7 +52,7 @@ export function TableColumnPicker({
   return (
     <details ref={rootRef} className="relative">
       <summary className="flex cursor-pointer list-none items-center gap-1 rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink [&::-webkit-details-marker]:hidden">
-        Columns
+        {columnPickerLabel(counts.selected, counts.total)}
       </summary>
       <div
         className={`absolute z-20 mt-2 w-56 rounded-card border border-line bg-surface p-2 ${

@@ -692,48 +692,50 @@ export function DcaPlaybooksDesk({
         />
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href={automationsNewHref(listHref)}
-              className={`inline-flex items-center ${addPlaybookClass}`}
-            >
-              Create New Bot
-            </Link>
-            {accountId ? (
-              <DeskTemplateBar
-                deskType="dca"
-                accountId={accountId}
-                templates={templates}
-                sets={sets}
-                onApplied={appendApplied}
-              />
-            ) : null}
-            {cloneSources.length > 0 ? (
-              <AppSelect variant="action"
-                key={cloneMenu}
-                aria-label="Clone existing bot"
-                defaultValue=""
-                onChange={(event) => {
-                  const id = event.target.value;
-                  const source = cloneSources.find((item) => item.id === id);
-                  if (!source) {
-                    return;
-                  }
-                  router.push(automationsNewHref(listHref, source.id));
-                  setCloneMenu((n) => n + 1);
-                }}
-                className={deskActionSelectClass}
-              >
-                <option value="">Clone existing bot</option>
-                {cloneSources.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} · {item.symbol}
-                  </option>
-                ))}
-              </AppSelect>
-            ) : null}
-          </div>
           <AutomationsBotTable
+            toolbar={
+              <>
+                <Link
+                  href={automationsNewHref(listHref)}
+                  className={`inline-flex items-center ${addPlaybookClass}`}
+                >
+                  Create New Bot
+                </Link>
+                {accountId ? (
+                  <DeskTemplateBar
+                    deskType="dca"
+                    accountId={accountId}
+                    templates={templates}
+                    sets={sets}
+                    onApplied={appendApplied}
+                  />
+                ) : null}
+                {cloneSources.length > 0 ? (
+                  <AppSelect variant="action"
+                    key={cloneMenu}
+                    aria-label="Clone existing bot"
+                    defaultValue=""
+                    onChange={(event) => {
+                      const id = event.target.value;
+                      const source = cloneSources.find((item) => item.id === id);
+                      if (!source) {
+                        return;
+                      }
+                      router.push(automationsNewHref(listHref, source.id));
+                      setCloneMenu((n) => n + 1);
+                    }}
+                    className={deskActionSelectClass}
+                  >
+                    <option value="">Clone existing bot</option>
+                    {cloneSources.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} · {item.symbol}
+                      </option>
+                    ))}
+                  </AppSelect>
+                ) : null}
+              </>
+            }
             empty="No bots yet. Create a bot to own orders and exits on one contract. Leave this empty if you are not ready to arm."
             rows={savedPlaybooks.map((playbook) => ({
               id: playbook.id,

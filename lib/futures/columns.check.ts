@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 import {
+  FUTURES_CLOSED_COLUMN_DEFAULTS,
+  FUTURES_CLOSED_LOCKED_COLUMN_COUNT,
   FUTURES_DCA_OPEN_COLUMN_COUNT,
   FUTURES_OPEN_COLUMN_DEFAULTS,
   FUTURES_OPEN_LOCKED_COLUMN_COUNT,
+  futuresClosedColumnCount,
   futuresOpenColumnCount,
+  parseFuturesClosedColumns,
   parseFuturesOpenColumns,
   parseStoredFuturesOpenColumns,
 } from "./columns";
@@ -47,4 +51,19 @@ assert.equal(
     FUTURES_DCA_OPEN_COLUMN_COUNT,
   ),
   FUTURES_OPEN_LOCKED_COLUMN_COUNT + 10 + FUTURES_DCA_OPEN_COLUMN_COUNT,
+);
+
+assert.equal(parseFuturesClosedColumns({ source: false }).source, false);
+assert.equal(parseFuturesClosedColumns({ source: false }).roe, true);
+assert.equal(
+  futuresClosedColumnCount(FUTURES_CLOSED_COLUMN_DEFAULTS),
+  FUTURES_CLOSED_LOCKED_COLUMN_COUNT + 8,
+);
+assert.equal(
+  futuresClosedColumnCount({
+    ...FUTURES_CLOSED_COLUMN_DEFAULTS,
+    source: false,
+    roe: false,
+  }),
+  FUTURES_CLOSED_LOCKED_COLUMN_COUNT + 6,
 );

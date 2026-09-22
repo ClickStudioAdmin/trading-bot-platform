@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import {
+  PAPER_CLOSED_COLUMN_DEFAULTS,
+  PAPER_CLOSED_LOCKED_COLUMN_COUNT,
   PAPER_OPEN_COLUMN_DEFAULTS,
   PAPER_OPEN_LOCKED_COLUMN_COUNT,
+  paperClosedColumnCount,
   paperOpenColumnCount,
+  parsePaperClosedColumns,
   parsePaperOpenColumns,
   parseStoredPaperOpenColumns,
 } from "./columns";
@@ -38,6 +42,21 @@ assert.equal(
     value: false,
   }),
   PAPER_OPEN_LOCKED_COLUMN_COUNT + 5,
+);
+
+assert.equal(parsePaperClosedColumns({ source: false }).source, false);
+assert.equal(parsePaperClosedColumns({ source: false }).pnl, true);
+assert.equal(
+  paperClosedColumnCount(PAPER_CLOSED_COLUMN_DEFAULTS),
+  PAPER_CLOSED_LOCKED_COLUMN_COUNT + 7,
+);
+assert.equal(
+  paperClosedColumnCount({
+    ...PAPER_CLOSED_COLUMN_DEFAULTS,
+    source: false,
+    pnl: false,
+  }),
+  PAPER_CLOSED_LOCKED_COLUMN_COUNT + 5,
 );
 
 console.log("paper columns checks passed");

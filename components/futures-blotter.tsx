@@ -16,7 +16,9 @@ import { PositionLogList } from "@/components/paper-carry-expand";
 import { TokenIcon } from "@/components/token-icon";
 import { ExpandableTradeRows, TradeDetailTabs } from "@/components/trade-expand";
 import {
+  FuturesClosedColumnPicker,
   FuturesOpenColumnPicker,
+  useFuturesClosedColumns,
   useFuturesOpenColumns,
 } from "@/components/futures-column-picker";
 import { FuturesPositionBulkActions } from "@/components/futures-close-all";
@@ -26,7 +28,9 @@ import { FuturesTpslCell } from "@/components/futures-tpsl";
 import { FuturesTrailingCell } from "@/components/futures-trailing";
 import {
   FUTURES_DCA_OPEN_COLUMN_COUNT,
+  futuresClosedColumnCount,
   futuresOpenColumnCount,
+  type FuturesClosedColumnVisibility,
   type FuturesOpenColumnVisibility,
 } from "@/lib/futures/columns";
 import type { DcaOpenHint } from "@/lib/dca/playbook";
@@ -580,15 +584,22 @@ export function ClosedFuturesTrades({
     [fallbackLeverage, webhookNames],
   );
   const table = useClientTable(closed, compare);
+  const { visible, setColumn } = useFuturesClosedColumns();
+  const colSpan = futuresClosedColumnCount(visible);
   return (
     <section>
       <SectionHead
         title="Past Positions"
         subtitle="Closed futures. Realized is mark-to-market at close."
       />
-      {filterBar ? (
-        <TableFilterSession defaultOpen={filtersOpen}>{filterBar}</TableFilterSession>
-      ) : null}
+      <TableFilterSession
+        defaultOpen={filtersOpen}
+        actions={
+          <FuturesClosedColumnPicker visible={visible} setColumn={setColumn} />
+        }
+      >
+        {filterBar}
+      </TableFilterSession>
       <TableCard
         pager={
           <TablePager
@@ -613,60 +624,76 @@ export function ClosedFuturesTrades({
                 dir={table.sortDir}
                 onSort={() => table.onSort("contract")}
               />
-              <SortTh
-                label="Source"
-                active={table.sortKey === "source"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("source")}
-              />
-              <SortTh
-                label="Closed"
-                active={table.sortKey === "closed"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("closed")}
-              />
-              <SortTh
-                label="Days held"
-                active={table.sortKey === "days"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("days")}
-              />
-              <SortTh
-                label="Entry"
-                active={table.sortKey === "entry"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("entry")}
-              />
-              <SortTh
-                label="Exit"
-                active={table.sortKey === "exit"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("exit")}
-              />
-              <SortTh
-                label="Realized"
-                active={table.sortKey === "realized"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("realized")}
-              />
-              <SortTh
-                label="P&L %"
-                active={table.sortKey === "pnl"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("pnl")}
-              />
-              <SortTh
-                label="ROE"
-                active={table.sortKey === "roe"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("roe")}
-              />
+              {visible.source ? (
+                <SortTh
+                  label="Source"
+                  active={table.sortKey === "source"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("source")}
+                />
+              ) : null}
+              {visible.closed ? (
+                <SortTh
+                  label="Closed"
+                  active={table.sortKey === "closed"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("closed")}
+                />
+              ) : null}
+              {visible.days ? (
+                <SortTh
+                  label="Days held"
+                  active={table.sortKey === "days"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("days")}
+                />
+              ) : null}
+              {visible.entry ? (
+                <SortTh
+                  label="Entry"
+                  active={table.sortKey === "entry"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("entry")}
+                />
+              ) : null}
+              {visible.exit ? (
+                <SortTh
+                  label="Exit"
+                  active={table.sortKey === "exit"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("exit")}
+                />
+              ) : null}
+              {visible.realized ? (
+                <SortTh
+                  label="Realized"
+                  active={table.sortKey === "realized"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("realized")}
+                />
+              ) : null}
+              {visible.pnl ? (
+                <SortTh
+                  label="P&L %"
+                  active={table.sortKey === "pnl"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("pnl")}
+                />
+              ) : null}
+              {visible.roe ? (
+                <SortTh
+                  label="ROE"
+                  active={table.sortKey === "roe"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("roe")}
+                />
+              ) : null}
             </tr>
           </thead>
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={10}
+                colSpan={colSpan}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -678,7 +705,7 @@ export function ClosedFuturesTrades({
               />
             ) : table.pageRows.length === 0 ? (
               <EmptyRow
-                colSpan={10}
+                colSpan={colSpan}
                 message={emptyMessage ?? "No closed futures yet."}
               />
             ) : (
@@ -686,6 +713,8 @@ export function ClosedFuturesTrades({
                 <ClosedFuturesRows
                   key={trade.id}
                   trade={trade}
+                  visible={visible}
+                  colSpan={colSpan}
                   webhookNames={webhookNames}
                   fallbackLeverage={fallbackLeverage}
                 />
@@ -1114,10 +1143,14 @@ function OpenFuturesRows({
 
 function ClosedFuturesRows({
   trade,
+  visible,
+  colSpan,
   webhookNames,
   fallbackLeverage,
 }: {
   trade: FuturesDeskPosition;
+  visible: FuturesClosedColumnVisibility;
+  colSpan: number;
   webhookNames: readonly string[];
   fallbackLeverage: number | null;
 }) {
@@ -1136,7 +1169,7 @@ function ClosedFuturesRows({
 
   return (
     <ExpandableTradeRows
-      colSpan={10}
+      colSpan={colSpan}
       details={
         <TradeDetailTabs
           orders={
@@ -1168,36 +1201,52 @@ function ClosedFuturesRows({
           </span>
         </span>
       </td>
-      <td className="px-4 py-3">
-        <FuturesSourceCell
-          source={trade.source}
-          ruleName={trade.ruleName}
-          webhookNames={webhookNames}
-        />
-      </td>
-      <td className="px-4 py-3 text-ink-muted">
-        {trade.closedAtMs ? (
-          <LocalTime at={trade.closedAtMs} mode="date" />
-        ) : (
-          "—"
-        )}
-      </td>
-      <td className="px-4 py-3 tabular-nums text-ink-muted">
-        {held === null ? "—" : held.toFixed(1)}
-      </td>
-      <td className="px-4 py-3 tabular-nums">{formatPrice(trade.entryPrice)}</td>
-      <td className="px-4 py-3 tabular-nums">
-        {exit === null ? "—" : formatPrice(exit)}
-      </td>
-      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.realizedUsdt)}`}>
-        {formatSignedUsd(trade.realizedUsdt)}
-      </td>
-      <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
-        {formatPct(pnlPct)}
-      </td>
-      <td className={`px-4 py-3 tabular-nums ${signedTone(roe)}`}>
-        {formatPct(roe)}
-      </td>
+      {visible.source ? (
+        <td className="px-4 py-3">
+          <FuturesSourceCell
+            source={trade.source}
+            ruleName={trade.ruleName}
+            webhookNames={webhookNames}
+          />
+        </td>
+      ) : null}
+      {visible.closed ? (
+        <td className="px-4 py-3 text-ink-muted">
+          {trade.closedAtMs ? (
+            <LocalTime at={trade.closedAtMs} mode="date" />
+          ) : (
+            "—"
+          )}
+        </td>
+      ) : null}
+      {visible.days ? (
+        <td className="px-4 py-3 tabular-nums text-ink-muted">
+          {held === null ? "—" : held.toFixed(1)}
+        </td>
+      ) : null}
+      {visible.entry ? (
+        <td className="px-4 py-3 tabular-nums">{formatPrice(trade.entryPrice)}</td>
+      ) : null}
+      {visible.exit ? (
+        <td className="px-4 py-3 tabular-nums">
+          {exit === null ? "—" : formatPrice(exit)}
+        </td>
+      ) : null}
+      {visible.realized ? (
+        <td className={`px-4 py-3 tabular-nums ${signedTone(trade.realizedUsdt)}`}>
+          {formatSignedUsd(trade.realizedUsdt)}
+        </td>
+      ) : null}
+      {visible.pnl ? (
+        <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
+          {formatPct(pnlPct)}
+        </td>
+      ) : null}
+      {visible.roe ? (
+        <td className={`px-4 py-3 tabular-nums ${signedTone(roe)}`}>
+          {formatPct(roe)}
+        </td>
+      ) : null}
     </ExpandableTradeRows>
   );
 }

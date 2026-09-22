@@ -44,6 +44,7 @@ import {
 import { LocalTime } from "@/components/local-time";
 import {
   PAPER_OPEN_COLUMN_DEFAULTS,
+  type PaperClosedColumnVisibility,
   type PaperOpenColumnVisibility,
 } from "@/lib/paper/columns";
 import {
@@ -162,7 +163,15 @@ export function OpenPaperCarryRows({
   );
 }
 
-export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
+export function ClosedPaperCarryRows({
+  trade,
+  visible,
+  colSpan,
+}: {
+  trade: ClosedCarryView;
+  visible: PaperClosedColumnVisibility;
+  colSpan: number;
+}) {
   const pnlPct =
     trade.realizedUsdt === null
       ? null
@@ -170,7 +179,7 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
 
   return (
     <ExpandableTradeRows
-      colSpan={9}
+      colSpan={colSpan}
       details={
         <PositionDetailTabs
           orders={trade.orders}
@@ -188,43 +197,57 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
           {trade.futureSymbol}
         </span>
       </td>
-      <td className="px-4 py-3">
-        <FuturesSourceCell
-          source={trade.source}
-          ruleName={trade.ruleName}
-          footer={
-            <PaperAutomationTrigger
-              carryId={trade.id}
-              automation={trade.automation}
-              label={closedTradeLabel(trade.source, trade.closeSource)}
-              canEdit={false}
-              entrySource={trade.source}
-              closeSource={trade.closeSource}
-              closeReason={trade.closeReason}
-            />
-          }
-        />
-      </td>
-      <td className="px-4 py-3 text-ink-muted">
-        <LocalTime at={trade.closedAtMs} mode="date" />
-      </td>
-      <td className="px-4 py-3 tabular-nums text-ink-muted">
-        {trade.daysHeld === null ? "—" : trade.daysHeld.toFixed(1)}
-      </td>
-      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.entryBasis)}`}>
-        {formatPct(trade.entryBasis)}
-      </td>
-      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.exitBasis)}`}>
-        {formatPct(trade.exitBasis)}
-      </td>
-      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.realizedUsdt)}`}>
-        {trade.realizedUsdt === null
-          ? "—"
-          : formatSignedUsd(trade.realizedUsdt)}
-      </td>
-      <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
-        {formatPct(pnlPct)}
-      </td>
+      {visible.source ? (
+        <td className="px-4 py-3">
+          <FuturesSourceCell
+            source={trade.source}
+            ruleName={trade.ruleName}
+            footer={
+              <PaperAutomationTrigger
+                carryId={trade.id}
+                automation={trade.automation}
+                label={closedTradeLabel(trade.source, trade.closeSource)}
+                canEdit={false}
+                entrySource={trade.source}
+                closeSource={trade.closeSource}
+                closeReason={trade.closeReason}
+              />
+            }
+          />
+        </td>
+      ) : null}
+      {visible.closed ? (
+        <td className="px-4 py-3 text-ink-muted">
+          <LocalTime at={trade.closedAtMs} mode="date" />
+        </td>
+      ) : null}
+      {visible.days ? (
+        <td className="px-4 py-3 tabular-nums text-ink-muted">
+          {trade.daysHeld === null ? "—" : trade.daysHeld.toFixed(1)}
+        </td>
+      ) : null}
+      {visible.entry ? (
+        <td className={`px-4 py-3 tabular-nums ${signedTone(trade.entryBasis)}`}>
+          {formatPct(trade.entryBasis)}
+        </td>
+      ) : null}
+      {visible.exit ? (
+        <td className={`px-4 py-3 tabular-nums ${signedTone(trade.exitBasis)}`}>
+          {formatPct(trade.exitBasis)}
+        </td>
+      ) : null}
+      {visible.realized ? (
+        <td className={`px-4 py-3 tabular-nums ${signedTone(trade.realizedUsdt)}`}>
+          {trade.realizedUsdt === null
+            ? "—"
+            : formatSignedUsd(trade.realizedUsdt)}
+        </td>
+      ) : null}
+      {visible.pnl ? (
+        <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
+          {formatPct(pnlPct)}
+        </td>
+      ) : null}
     </ExpandableTradeRows>
   );
 }
