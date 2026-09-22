@@ -189,7 +189,7 @@ function placeOpeningView(chart: OrgChartHandle, host: HTMLElement) {
   return true;
 }
 
-const AFFILIATE_ORG_NODE_WIDTH = 188;
+const AFFILIATE_ORG_NODE_WIDTH = 168;
 const AFFILIATE_ORG_NODE_HEIGHT = 96;
 const AFFILIATE_ORG_FIT_PAD = 28;
 

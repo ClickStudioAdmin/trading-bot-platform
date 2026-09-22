@@ -1617,7 +1617,7 @@ export function affiliateOrgChartNodeHtml(
   const earningsHint = escapeHtmlText(affiliateOrgEarningsHint(row.level));
   return `<div class="affiliate-org-node" data-tone="${tone}">
     <span class="affiliate-org-node-level">${escapeHtmlText(affiliateOrgLevelBadge(row.level))}</span>
-    <div class="affiliate-org-node-name">${title}</div>
+    <div class="affiliate-org-node-name" title="${label}">${title}</div>
     <div class="affiliate-org-node-grid">
       <span class="affiliate-org-node-label">Plan</span>
       <span class="affiliate-org-node-label" title="${earningsHint}">Earnings</span>

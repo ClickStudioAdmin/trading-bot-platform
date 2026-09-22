@@ -765,6 +765,7 @@ assert.equal(
   assert.equal(card.includes("$2.00"), true);
   assert.equal(card.includes("L1"), true);
   assert.equal(card.includes("Plus · L1"), false);
+  assert.equal(card.includes('title="Ann"'), true);
 }
 assert.equal(
   affiliateOrgChartNodeHtml(
