@@ -7,11 +7,75 @@ import {
   TableLabelButton,
 } from "@/components/table-chrome";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
-import type { PairFilterInputs } from "@/lib/pairs/filter";
+import type { PairFilterInputs, PairFilters } from "@/lib/pairs/filter";
 import { DESK_QUERY } from "@/lib/accounts/model";
+import type { VenueDefinition } from "@/lib/exchanges/venues";
 import { PAIR_DEFAULT_DIR, PAIR_DEFAULT_SORT } from "@/lib/pairs/page";
 import type { TableSortDir } from "@/lib/table-chrome";
 import { AppSelect } from "@/components/app-select";
+
+export function PairsScopeSelect({
+  venues,
+  venueId,
+  environment,
+  kind,
+  filters,
+}: {
+  venues: readonly VenueDefinition[];
+  venueId: string;
+  environment: string;
+  kind: "perps" | "carry";
+  filters: PairFilters;
+}) {
+  const venue = venues.find((item) => item.id === venueId) ?? venues[0];
+  if (!venue) {
+    return null;
+  }
+  return (
+    <LiveGetForm bare className="flex flex-wrap items-end gap-2">
+      {kind === "carry" && venue.datedCarry ? (
+        <input type="hidden" name="kind" value="carry" />
+      ) : null}
+      {filters.q ? <input type="hidden" name="q" value={filters.q} /> : null}
+      {filters.base ? (
+        <input type="hidden" name="base" value={filters.base} />
+      ) : null}
+      {filters.minDte !== null ? (
+        <input type="hidden" name="minDte" value={String(filters.minDte)} />
+      ) : null}
+      {filters.maxDte !== null ? (
+        <input type="hidden" name="maxDte" value={String(filters.maxDte)} />
+      ) : null}
+      <TableFilterField label="Exchange" className="min-w-[10rem]">
+        <AppSelect
+          name="venue"
+          defaultValue={venue.id}
+          className={TABLE_FILTER_FIELD_CLASS}
+        >
+          {venues.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.label}
+            </option>
+          ))}
+        </AppSelect>
+      </TableFilterField>
+      <TableFilterField label="Environment" className="min-w-[10rem]">
+        <AppSelect
+          name="env"
+          key={`${venue.id}-env`}
+          defaultValue={environment}
+          className={TABLE_FILTER_FIELD_CLASS}
+        >
+          {venue.environments.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.label}
+            </option>
+          ))}
+        </AppSelect>
+      </TableFilterField>
+    </LiveGetForm>
+  );
+}
 
 export function PairFiltersForm({
   clearHref,

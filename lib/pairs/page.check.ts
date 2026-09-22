@@ -5,6 +5,7 @@ import {
   exchangePairCountKey,
   exchangePairsHref,
   paginatePairRows,
+  parsePairsVenue,
   pairPageHref,
   pairPageLabel,
   rankLinearPerps,
@@ -89,43 +90,46 @@ assert.equal(paginatePairRows([], "3").page, 1);
 
 assert.equal(
   exchangePairsHref("bybit"),
-  "/account/exchanges/bybit/pairs",
+  "/account/exchanges/pairs?venue=bybit",
 );
 assert.equal(
   exchangePairsHref("hyperliquid", { environment: "testnet" }),
-  "/account/exchanges/hyperliquid/pairs?env=testnet",
+  "/account/exchanges/pairs?venue=hyperliquid&env=testnet",
 );
 assert.equal(
   exchangePairsHref("bybit", { kind: "carry" }),
-  "/account/exchanges/bybit/pairs?kind=carry",
+  "/account/exchanges/pairs?venue=bybit&kind=carry",
 );
+assert.equal(parsePairsVenue("hyperliquid").id, "hyperliquid");
+assert.equal(parsePairsVenue("nope").id, "bybit");
 assert.equal(
   pairPageHref({
-    path: "/account/exchanges/bybit/pairs",
-    keep: { kind: "carry" },
+    path: "/account/exchanges/pairs",
+    keep: { venue: "bybit", kind: "carry" },
     filters: { q: "btc", base: "BTC", minDte: null, maxDte: null },
     page: 2,
   }),
-  "/account/exchanges/bybit/pairs?kind=carry&q=btc&base=BTC&page=2",
+  "/account/exchanges/pairs?venue=bybit&kind=carry&q=btc&base=BTC&page=2",
 );
 assert.equal(
   pairPageHref({
-    path: "/account/exchanges/bybit/pairs",
-    keep: { kind: "carry" },
+    path: "/account/exchanges/pairs",
+    keep: { venue: "bybit", kind: "carry" },
     filters: { q: "", base: "", minDte: 10, maxDte: 90 },
     page: 1,
   }),
-  "/account/exchanges/bybit/pairs?kind=carry&minDte=10&maxDte=90",
+  "/account/exchanges/pairs?venue=bybit&kind=carry&minDte=10&maxDte=90",
 );
 assert.equal(
   pairPageHref({
-    path: "/account/exchanges/bybit/pairs",
+    path: "/account/exchanges/pairs",
+    keep: { venue: "bybit" },
     filters: { q: "", base: "", minDte: null, maxDte: null },
     page: 1,
     sort: "cap",
     dir: "desc",
   }),
-  "/account/exchanges/bybit/pairs",
+  "/account/exchanges/pairs?venue=bybit",
 );
 assert.equal(
   pairPageLabel({ page: 1, total: 51, from: 0, to: 50 }),

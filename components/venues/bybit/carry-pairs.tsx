@@ -27,10 +27,12 @@ export async function BybitCarryPairs({
   searchParams,
   path,
   keep,
+  hideHeading = false,
 }: {
   searchParams: Record<string, string | string[] | undefined>;
   path: string;
   keep?: Record<string, string | undefined>;
+  hideHeading?: boolean;
 }) {
   const filters = parsePairFilters(searchParams);
   let pairs: CarryPair[] = [];
@@ -81,11 +83,15 @@ export async function BybitCarryPairs({
 
   return (
     <>
-      <PageHeading as="h2" title="Pairs" />
-      <p className="-mt-2 mb-6 text-sm text-ink-muted">
-        Every dated USDT cash-and-carry pair on Bybit. No API key. BTC, ETH,
-        SOL, DOGE, XRP, MNT only. Perps are excluded.
-      </p>
+      {hideHeading ? null : (
+        <>
+          <PageHeading as="h2" title="Pairs" />
+          <p className="-mt-2 mb-6 text-sm text-ink-muted">
+            Every dated USDT cash-and-carry pair on Bybit. No API key. BTC, ETH,
+            SOL, DOGE, XRP, MNT only. Perps are excluded.
+          </p>
+        </>
+      )}
       <TableFilterSession defaultOpen={tableFiltersSuggestOpen(searchParams)}>
         <PairFiltersForm
           clearHref={pairPageHref({

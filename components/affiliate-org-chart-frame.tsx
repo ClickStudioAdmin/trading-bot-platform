@@ -6,6 +6,22 @@ import {
   type AffiliateOrgChartApi,
 } from "@/components/affiliate-org-chart";
 import {
+  IconClose,
+  IconCollapseAll,
+  IconExpand,
+  IconExpandAll,
+  IconExitMonitor,
+  IconFit,
+  IconMonitor,
+  IconZoomIn,
+  IconZoomOut,
+} from "@/components/icons";
+import {
+  TABLE_BTN_ICON,
+  TableIconAction,
+  TableLabelButton,
+} from "@/components/table-chrome";
+import {
   AFFILIATE_ORG_LAYOUTS,
   affiliateOrgLayoutLabel,
   flattenAffiliateOrgChart,
@@ -17,6 +33,7 @@ import type { AffiliateTreeNode } from "@/lib/membership/affiliate-store";
 
 const control =
   "rounded-control border border-line px-3 py-1.5 text-xs text-ink hover:border-line-strong disabled:text-ink-faint disabled:hover:border-line";
+const groupRule = "hidden h-6 w-px bg-line sm:block";
 
 export function AffiliateOrgChartFrame({
   nodes,
@@ -168,82 +185,90 @@ export function AffiliateOrgChartFrame({
           ) : null}
         </div>
         {nodes.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={control}
-              disabled={!api}
-              onClick={() => api?.expandAll()}
-            >
-              Expand all
-            </button>
-            <button
-              type="button"
-              className={control}
-              disabled={!api}
-              onClick={() => api?.collapseAll()}
-            >
-              Collapse all
-            </button>
-            <button
-              type="button"
-              className={control}
-              disabled={!api}
-              onClick={() => api?.fit()}
-            >
-              Fit
-            </button>
-            <button
-              type="button"
-              className={control}
-              disabled={!api}
-              onClick={() => api?.zoomOut()}
-            >
-              Zoom out
-            </button>
-            <button
-              type="button"
-              className={control}
-              disabled={!api}
-              onClick={() => api?.zoomIn()}
-            >
-              Zoom in
-            </button>
-            {!expanded ? (
-              <button
-                type="button"
-                className={control}
-                onClick={() => setExpanded(true)}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <TableLabelButton
+                variant="secondary"
+                icon={<IconExpandAll {...TABLE_BTN_ICON} />}
+                disabled={!api}
+                onClick={() => api?.expandAll()}
               >
-                Expand
-              </button>
-            ) : null}
-            {monitor ? (
-              <button
-                type="button"
-                className={control}
-                onClick={() => void exitMonitor()}
+                Expand all
+              </TableLabelButton>
+              <TableLabelButton
+                variant="secondary"
+                icon={<IconCollapseAll {...TABLE_BTN_ICON} />}
+                disabled={!api}
+                onClick={() => api?.collapseAll()}
               >
-                Exit fullscreen
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={control}
-                onClick={() => void enterMonitor()}
+                Collapse all
+              </TableLabelButton>
+            </div>
+            <span className={groupRule} aria-hidden />
+            <div className="flex items-center">
+              <TableIconAction
+                label="Fit"
+                detail="Fit the whole chart in view."
+                disabled={!api}
+                onClick={() => api?.fit()}
               >
-                Fullscreen
-              </button>
-            )}
-            {expanded && !monitor ? (
-              <button
-                type="button"
-                className={control}
-                onClick={() => void closeExpand()}
+                <IconFit {...TABLE_BTN_ICON} />
+              </TableIconAction>
+              <TableIconAction
+                label="Zoom out"
+                detail="Show more of the chart."
+                disabled={!api}
+                onClick={() => api?.zoomOut()}
               >
-                Close
-              </button>
-            ) : null}
+                <IconZoomOut {...TABLE_BTN_ICON} />
+              </TableIconAction>
+              <TableIconAction
+                label="Zoom in"
+                detail="Show less of the chart."
+                disabled={!api}
+                onClick={() => api?.zoomIn()}
+              >
+                <IconZoomIn {...TABLE_BTN_ICON} />
+              </TableIconAction>
+            </div>
+            <span className={groupRule} aria-hidden />
+            <div className="flex items-center">
+              {!expanded ? (
+                <TableIconAction
+                  label="Expand"
+                  detail="Fill the browser with this chart."
+                  onClick={() => setExpanded(true)}
+                >
+                  <IconExpand {...TABLE_BTN_ICON} />
+                </TableIconAction>
+              ) : null}
+              {monitor ? (
+                <TableIconAction
+                  label="Exit fullscreen"
+                  detail="Leave monitor fullscreen."
+                  onClick={() => void exitMonitor()}
+                >
+                  <IconExitMonitor {...TABLE_BTN_ICON} />
+                </TableIconAction>
+              ) : (
+                <TableIconAction
+                  label="Fullscreen"
+                  detail="Open this chart on the monitor."
+                  onClick={() => void enterMonitor()}
+                >
+                  <IconMonitor {...TABLE_BTN_ICON} />
+                </TableIconAction>
+              )}
+              {expanded && !monitor ? (
+                <TableIconAction
+                  label="Close"
+                  detail="Leave the expanded chart."
+                  onClick={() => void closeExpand()}
+                >
+                  <IconClose {...TABLE_BTN_ICON} />
+                </TableIconAction>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </div>

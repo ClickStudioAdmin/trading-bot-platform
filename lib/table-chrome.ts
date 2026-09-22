@@ -213,6 +213,10 @@ export const TABLE_FILTER_CHROME_KEYS = new Set([
   "sort",
   "dir",
   "tab",
+  "view",
+  "venue",
+  "env",
+  "kind",
   "saved",
   "error",
   "notice",
@@ -225,6 +229,44 @@ export const TABLE_FILTER_CHROME_KEYS = new Set([
   "paperError",
   "bot",
 ]);
+
+export function tableFiltersOpenStorageKey(input: {
+  pathname: string;
+  tab?: string | null;
+  view?: string | null;
+  id?: string | null;
+}): string {
+  const path = input.pathname.replace(/\/+$/, "") || "/";
+  const parts = [path];
+  const tab = String(input.tab ?? "").trim();
+  const view = String(input.view ?? "").trim();
+  const id = String(input.id ?? "").trim();
+  if (tab) {
+    parts.push(`tab=${tab}`);
+  }
+  if (view) {
+    parts.push(`view=${view}`);
+  }
+  if (id) {
+    parts.push(`id=${id}`);
+  }
+  return `tbp.ui.table-filters:${parts.join("|")}`;
+}
+
+export function tableFiltersOpenScopeFromSearch(
+  pathname: string,
+  search: string,
+  id?: string | null,
+): string {
+  const query = search.startsWith("?") ? search.slice(1) : search;
+  const params = new URLSearchParams(query);
+  return tableFiltersOpenStorageKey({
+    pathname,
+    tab: params.get("tab"),
+    view: params.get("view"),
+    id,
+  });
+}
 
 export function tableFiltersSuggestOpen(
   search:

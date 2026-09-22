@@ -9,6 +9,7 @@ import {
   statusToneFor,
   tablePageLabel,
   tablePageWindow,
+  tableFiltersOpenStorageKey,
   tableFiltersSuggestOpen,
   tableSortHref,
   toggleTableSortDir,
@@ -70,5 +71,21 @@ assert.equal(tableFiltersSuggestOpen({ status: "unread" }), true);
 assert.equal(tableFiltersSuggestOpen({ paperError: "x" }), false);
 assert.equal(tableFiltersSuggestOpen({ bot: "pb-1" }), false);
 assert.equal(tableFiltersSuggestOpen({ bot: "pb-1", pair: "BTC" }), true);
+assert.equal(tableFiltersSuggestOpen({ venue: "bybit", env: "demo" }), false);
+assert.equal(
+  tableFiltersOpenStorageKey({ pathname: "/account/billing" }),
+  "tbp.ui.table-filters:/account/billing",
+);
+assert.equal(
+  tableFiltersOpenStorageKey({
+    pathname: "/account/billing",
+    tab: "ledger",
+  }),
+  "tbp.ui.table-filters:/account/billing|tab=ledger",
+);
+assert.notEqual(
+  tableFiltersOpenStorageKey({ pathname: "/account/billing", tab: "ledger" }),
+  tableFiltersOpenStorageKey({ pathname: "/account/inbox" }),
+);
 
 console.log("table-chrome checks passed");

@@ -1,5 +1,12 @@
 import { pathWithDesk, withQuery } from "@/lib/accounts/model";
 import { loadUsdtLinearPerps, type LinearPerp } from "@/lib/exchanges/bybit/perp";
+import {
+  enabledVenues,
+  getVenue,
+  parseVenueEnvironment,
+  parseVenueId,
+  type VenueDefinition,
+} from "@/lib/exchanges/venues";
 import { loadMarketCaps } from "@/lib/market/caps";
 import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
 import { loadHyperliquidLinearPerps } from "@/lib/venues/hyperliquid/market";
@@ -147,8 +154,46 @@ export function sortPairRows<T>(
   });
 }
 
-export function exchangePairsPath(venueId: string): string {
-  return `/account/exchanges/${encodeURIComponent(venueId)}/pairs`;
+export const ACCOUNT_PAIRS_PATH = "/account/exchanges/pairs";
+
+export function exchangePairsPath(): string {
+  return ACCOUNT_PAIRS_PATH;
+}
+
+export function parsePairsVenue(raw: unknown): VenueDefinition {
+  const parsed = parseVenueId(raw);
+  if (parsed.ok && parsed.venue.enabled) {
+    return parsed.venue;
+  }
+  return getVenue("bybit") ?? enabledVenues()[0];
+}
+
+export function parsePairsEnvironment(
+  venue: VenueDefinition,
+  raw: unknown,
+): string {
+  const parsed = parseVenueEnvironment(venue, raw);
+  if (parsed.ok) {
+    return parsed.environment.id;
+  }
+  return (
+    venue.environments.find((item) => item.id === "live")?.id ??
+    venue.environments[0]?.id ??
+    "live"
+  );
+}
+
+export function pairsPageCaption(
+  venueId: string,
+  kind: "perps" | "carry",
+): string {
+  if (venueId === "hyperliquid") {
+    return "Every trading Hyperliquid perpetual. Coins settle in USDC. No agent key.";
+  }
+  if (kind === "carry") {
+    return "Every dated USDT cash-and-carry pair on Bybit. No API key. BTC, ETH, SOL, DOGE, XRP, MNT only. Perps are excluded.";
+  }
+  return "Every trading USDT linear perpetual on Bybit. No API key. Dated futures are excluded.";
 }
 
 export function exchangePairCountKey(
@@ -194,7 +239,7 @@ export function exchangePairsHref(
     extra?: Record<string, string | undefined>;
   },
 ): string {
-  const extra: Record<string, string> = {};
+  const extra: Record<string, string> = { venue: venueId };
   if (options?.environment && options.environment !== "live") {
     extra.env = options.environment;
   }
@@ -208,8 +253,7 @@ export function exchangePairsHref(
       }
     }
   }
-  const path = exchangePairsPath(venueId);
-  return Object.keys(extra).length > 0 ? withQuery(path, extra) : path;
+  return withQuery(exchangePairsPath(), extra);
 }
 
 function keepParams(

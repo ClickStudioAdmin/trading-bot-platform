@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   createContext,
   type FormEvent,
@@ -31,6 +31,8 @@ import {
   formatStatusLabel,
   sliceTablePage,
   statusToneFor,
+  tableFiltersOpenScopeFromSearch,
+  tableFiltersOpenStorageKey,
   tablePageLabel,
   toggleTableSortDir,
   type StatusTone,
@@ -106,18 +108,12 @@ export function TableCard({
 
 const FilterBarEndCtx = createContext<ReactNode>(null);
 
-const FILTERS_OPEN_STORAGE = "tbp.ui.table-filters";
-
-function filtersOpenStorageKey(pathname: string): string {
-  return `${FILTERS_OPEN_STORAGE}:${pathname}`;
-}
-
-function readFiltersOpen(pathname: string): boolean | null {
+function readFiltersOpen(scope: string): boolean | null {
   if (typeof window === "undefined") {
     return null;
   }
   try {
-    const raw = window.sessionStorage.getItem(filtersOpenStorageKey(pathname));
+    const raw = window.sessionStorage.getItem(scope);
     if (raw === "1") {
       return true;
     }
@@ -130,12 +126,9 @@ function readFiltersOpen(pathname: string): boolean | null {
   return null;
 }
 
-function writeFiltersOpen(pathname: string, open: boolean) {
+function writeFiltersOpen(scope: string, open: boolean) {
   try {
-    window.sessionStorage.setItem(
-      filtersOpenStorageKey(pathname),
-      open ? "1" : "0",
-    );
+    window.sessionStorage.setItem(scope, open ? "1" : "0");
   } catch {
     // ignore quota / private mode
   }
@@ -146,13 +139,22 @@ export function TableFilterSession({
   toolbar,
   actions,
   defaultOpen = false,
+  id,
 }: {
   children?: ReactNode;
   toolbar?: ReactNode;
   actions?: ReactNode;
   defaultOpen?: boolean;
+  id?: string;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const scope = tableFiltersOpenStorageKey({
+    pathname,
+    tab: searchParams.get("tab"),
+    view: searchParams.get("view"),
+    id,
+  });
   const [show, setShow] = useState(defaultOpen);
 
   useLayoutEffect(() => {
@@ -160,19 +162,17 @@ export function TableFilterSession({
       setShow(true);
       return;
     }
-    if (readFiltersOpen(pathname) === true) {
-      setShow(true);
-    }
-  }, [defaultOpen, pathname]);
+    setShow(readFiltersOpen(scope) === true);
+  }, [defaultOpen, scope]);
 
   function openFilters() {
     setShow(true);
-    writeFiltersOpen(pathname, true);
+    writeFiltersOpen(scope, true);
   }
 
   function hideFilters() {
     setShow(false);
-    writeFiltersOpen(pathname, false);
+    writeFiltersOpen(scope, false);
   }
   const hasFilters = children != null;
   const hideButton = (
@@ -339,7 +339,13 @@ function submitFilters(form: HTMLFormElement | null, persistOpen = true) {
     page.value = "1";
   }
   if (persistOpen) {
-    writeFiltersOpen(window.location.pathname, true);
+    writeFiltersOpen(
+      tableFiltersOpenScopeFromSearch(
+        window.location.pathname,
+        window.location.search,
+      ),
+      true,
+    );
   }
   form.requestSubmit();
 }

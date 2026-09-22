@@ -20,6 +20,7 @@ import {
   FileText,
   FilterX,
   FlaskConical,
+  FoldVertical,
   FolderPlus,
   Handshake,
   Inbox,
@@ -45,6 +46,7 @@ import {
   RefreshCw,
   Moon,
   Save,
+  Scan,
   Share2,
   SlidersHorizontal,
   SquareArrowOutUpRight,
@@ -54,12 +56,15 @@ import {
   Triangle,
   TrendingUp,
   Undo2,
+  UnfoldVertical,
   Upload,
   User,
   UserCog,
   Users,
   Wallet,
   X,
+  ZoomIn,
+  ZoomOut,
   type LucideIcon,
   type LucideProps,
 } from "lucide-react";
@@ -219,10 +224,17 @@ export const LUCIDE_ICONS = [
     Icon: FilterX,
   },
   {
+    id: "fold-vertical",
+    name: "Collapse all",
+    lucide: "FoldVertical",
+    usedIn: "Affiliate org chart",
+    Icon: FoldVertical,
+  },
+  {
     id: "expand",
     name: "Expand",
     lucide: "Maximize2",
-    usedIn: "Chart toolbar fill browser",
+    usedIn: "Chart toolbar fill browser, affiliate org chart",
     Icon: Maximize2,
   },
   {
@@ -250,7 +262,7 @@ export const LUCIDE_ICONS = [
     id: "collapse",
     name: "Collapse",
     lucide: "Minimize2",
-    usedIn: "Chart toolbar exit browser fill",
+    usedIn: "Chart toolbar exit browser fill, affiliate org chart",
     Icon: Minimize2,
   },
   {
@@ -264,14 +276,14 @@ export const LUCIDE_ICONS = [
     id: "monitor",
     name: "Monitor",
     lucide: "Monitor",
-    usedIn: "Chart toolbar full screen",
+    usedIn: "Chart toolbar full screen, affiliate org chart",
     Icon: Monitor,
   },
   {
     id: "monitor-x",
     name: "Exit monitor",
     lucide: "MonitorX",
-    usedIn: "Chart toolbar exit full screen",
+    usedIn: "Chart toolbar exit full screen, affiliate org chart",
     Icon: MonitorX,
   },
   {
@@ -352,11 +364,25 @@ export const LUCIDE_ICONS = [
     Icon: Save,
   },
   {
+    id: "scan",
+    name: "Fit",
+    lucide: "Scan",
+    usedIn: "Affiliate org chart",
+    Icon: Scan,
+  },
+  {
     id: "share",
     name: "Share",
     lucide: "Share2",
     usedIn: "Template share",
     Icon: Share2,
+  },
+  {
+    id: "unfold-vertical",
+    name: "Expand all",
+    lucide: "UnfoldVertical",
+    usedIn: "Affiliate org chart",
+    Icon: UnfoldVertical,
   },
   {
     id: "sliders-horizontal",
@@ -385,6 +411,20 @@ export const LUCIDE_ICONS = [
     lucide: "X",
     usedIn: "AppSelect pills, panel close, cancel order, clear selection",
     Icon: X,
+  },
+  {
+    id: "zoom-in",
+    name: "Zoom in",
+    lucide: "ZoomIn",
+    usedIn: "Affiliate org chart",
+    Icon: ZoomIn,
+  },
+  {
+    id: "zoom-out",
+    name: "Zoom out",
+    lucide: "ZoomOut",
+    usedIn: "Affiliate org chart",
+    Icon: ZoomOut,
   },
   {
     id: "triangle",
@@ -768,4 +808,24 @@ export function IconSun(props: LucideProps) {
 
 export function IconUser(props: LucideProps) {
   return <User aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconExpandAll(props: LucideProps) {
+  return <UnfoldVertical aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconCollapseAll(props: LucideProps) {
+  return <FoldVertical aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconFit(props: LucideProps) {
+  return <Scan aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconZoomIn(props: LucideProps) {
+  return <ZoomIn aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconZoomOut(props: LucideProps) {
+  return <ZoomOut aria-hidden strokeWidth={STROKE} {...props} />;
 }

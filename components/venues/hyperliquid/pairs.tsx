@@ -28,11 +28,13 @@ export async function HyperliquidFuturesPairs({
   path,
   keep,
   environment,
+  hideHeading = false,
 }: {
   searchParams: Record<string, string | string[] | undefined>;
   path: string;
   keep?: Record<string, string | undefined>;
   environment?: string | null;
+  hideHeading?: boolean;
 }) {
   const filters = parsePairFilters(searchParams);
   const env = hyperliquidInfoEnvironment(environment);
@@ -81,11 +83,15 @@ export async function HyperliquidFuturesPairs({
 
   return (
     <>
-      <PageHeading as="h2" title="Pairs" />
-      <p className="-mt-2 mb-6 text-sm text-ink-muted">
-        Every trading Hyperliquid perpetual. Coins settle in USDC. No agent
-        key.
-      </p>
+      {hideHeading ? null : (
+        <>
+          <PageHeading as="h2" title="Pairs" />
+          <p className="-mt-2 mb-6 text-sm text-ink-muted">
+            Every trading Hyperliquid perpetual. Coins settle in USDC. No agent
+            key.
+          </p>
+        </>
+      )}
       <TableFilterSession defaultOpen={tableFiltersSuggestOpen(searchParams)}>
         <PairFiltersForm
           clearHref={pairPageHref({

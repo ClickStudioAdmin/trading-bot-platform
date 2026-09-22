@@ -28,10 +28,12 @@ export async function BybitFuturesPairs({
   searchParams,
   path,
   keep,
+  hideHeading = false,
 }: {
   searchParams: Record<string, string | string[] | undefined>;
   path: string;
   keep?: Record<string, string | undefined>;
+  hideHeading?: boolean;
 }) {
   const filters = parsePairFilters(searchParams);
   let pairs: LinearPerp[] = [];
@@ -79,11 +81,15 @@ export async function BybitFuturesPairs({
 
   return (
     <>
-      <PageHeading as="h2" title="Pairs" />
-      <p className="-mt-2 mb-6 text-sm text-ink-muted">
-        Every trading USDT linear perpetual on Bybit. No API key. Dated
-        futures are excluded.
-      </p>
+      {hideHeading ? null : (
+        <>
+          <PageHeading as="h2" title="Pairs" />
+          <p className="-mt-2 mb-6 text-sm text-ink-muted">
+            Every trading USDT linear perpetual on Bybit. No API key. Dated
+            futures are excluded.
+          </p>
+        </>
+      )}
       <TableFilterSession defaultOpen={tableFiltersSuggestOpen(searchParams)}>
         <PairFiltersForm
           clearHref={pairPageHref({
