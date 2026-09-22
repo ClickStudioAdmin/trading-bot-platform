@@ -37,6 +37,8 @@ type OrgChartState = {
   allNodes?: {
     x?: number;
     y?: number;
+    width?: number;
+    height?: number;
     parent?: unknown;
     data: {
       _highlighted?: boolean;
@@ -56,7 +58,12 @@ type OrgChartState = {
   centerG?: {
     attr: (name: string, value?: string) => unknown;
   };
-  zoomBehavior: { scaleTo: unknown; translateBy: unknown; translateTo: unknown };
+  zoomBehavior: {
+    scaleTo: unknown;
+    translateBy: unknown;
+    translateTo: unknown;
+    scaleExtent: (extent: [number, number]) => unknown;
+  };
 };
 
 type OrgChartHandle = {
@@ -169,6 +176,54 @@ function placeOpeningView(chart: OrgChartHandle, host: HTMLElement) {
   state.svg.call(state.zoomBehavior.translateTo, root.x ?? 0, root.y ?? 0);
   nudgeChart(chart, 0, AFFILIATE_ORG_TOP_INSET - height / 2);
   return true;
+}
+
+const AFFILIATE_ORG_NODE_WIDTH = 188;
+const AFFILIATE_ORG_NODE_HEIGHT = 96;
+const AFFILIATE_ORG_FIT_PAD = 28;
+
+function visibleChartBounds(chart: OrgChartHandle) {
+  const nodes = chart.getChartState().allNodes ?? [];
+  if (nodes.length === 0) {
+    return null;
+  }
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const node of nodes) {
+    const width = node.width ?? AFFILIATE_ORG_NODE_WIDTH;
+    const height = node.height ?? AFFILIATE_ORG_NODE_HEIGHT;
+    const x = node.x ?? 0;
+    const y = node.y ?? 0;
+    minX = Math.min(minX, x - width / 2);
+    maxX = Math.max(maxX, x + width / 2);
+    minY = Math.min(minY, y - height / 2);
+    maxY = Math.max(maxY, y + height / 2);
+  }
+  return {
+    midX: (minX + maxX) / 2,
+    midY: (minY + maxY) / 2,
+    width: Math.max(maxX - minX, 1),
+    height: Math.max(maxY - minY, 1),
+  };
+}
+
+function fitToView(chart: OrgChartHandle, host: HTMLElement, animate: boolean) {
+  applyChartHeight(chart, host);
+  const state = chart.getChartState();
+  state.centerG?.attr("transform", "translate(0,0)");
+  const bounds = visibleChartBounds(chart);
+  if (!bounds) {
+    chart.fit({ animate, scale: true });
+    return;
+  }
+  const viewW = Math.max(host.clientWidth - AFFILIATE_ORG_FIT_PAD * 2, 1);
+  const viewH = Math.max(host.clientHeight - AFFILIATE_ORG_FIT_PAD * 2, 1);
+  const scale = Math.min(viewW / bounds.width, viewH / bounds.height);
+  state.zoomBehavior.scaleExtent([0.05, 8]);
+  state.svg.call(state.zoomBehavior.scaleTo, scale);
+  state.svg.call(state.zoomBehavior.translateTo, bounds.midX, bounds.midY);
 }
 
 function fitChart(chart: OrgChartHandle, animate: boolean) {
@@ -347,6 +402,7 @@ export function AffiliateOrgChart({
         .data(rows)
         .render();
       chart = next;
+      next.getChartState().zoomBehavior.scaleExtent([0.05, 8]);
       let placed = placeOpeningView(next, hostRef.current);
       const api: AffiliateOrgChartApi = {
         expandAll: () => {
@@ -358,7 +414,10 @@ export function AffiliateOrgChart({
           fitChart(next, true);
         },
         fit: () => {
-          fitChart(next, true);
+          if (!hostRef.current) {
+            return;
+          }
+          fitToView(next, hostRef.current, true);
         },
         refit: () => {
           fitChart(next, true);

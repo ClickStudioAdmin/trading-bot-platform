@@ -183,19 +183,6 @@ export function parsePairsEnvironment(
   );
 }
 
-export function pairsPageCaption(
-  venueId: string,
-  kind: "perps" | "carry",
-): string {
-  if (venueId === "hyperliquid") {
-    return "Every trading Hyperliquid perpetual. Coins settle in USDC. No agent key.";
-  }
-  if (kind === "carry") {
-    return "Every dated USDT cash-and-carry pair on Bybit. No API key. BTC, ETH, SOL, DOGE, XRP, MNT only. Perps are excluded.";
-  }
-  return "Every trading USDT linear perpetual on Bybit. No API key. Dated futures are excluded.";
-}
-
 export function exchangePairCountKey(
   venue: string,
   environment?: string | null,

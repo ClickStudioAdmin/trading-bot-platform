@@ -14,7 +14,6 @@ import {
   exchangePairsHref,
   parsePairsEnvironment,
   parsePairsVenue,
-  pairsPageCaption,
 } from "@/lib/pairs/page";
 import { ACCOUNT_EXCHANGES_HREF } from "@/lib/site-links";
 
@@ -51,6 +50,20 @@ export default async function AccountPairsPage({
           { label: "Pairs" },
         ]}
       />
+      <PageHeading
+        as="h2"
+        title="Pairs"
+        className={venue.datedCarry ? "mb-4" : "mb-6"}
+        actions={
+          <PairsScopeSelect
+            venues={venues}
+            venueId={venue.id}
+            environment={environment}
+            kind={kind}
+            filters={filters}
+          />
+        }
+      />
       {venue.datedCarry ? (
         <nav
           aria-label="Pair lists"
@@ -81,21 +94,6 @@ export default async function AccountPairsPage({
           </Link>
         </nav>
       ) : null}
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <PageHeading as="h2" title="Pairs" />
-          <p className="-mt-2 text-sm text-ink-muted">
-            {pairsPageCaption(venue.id, kind)}
-          </p>
-        </div>
-        <PairsScopeSelect
-          venues={venues}
-          venueId={venue.id}
-          environment={environment}
-          kind={kind}
-          filters={filters}
-        />
-      </div>
       {venue.id === "hyperliquid" ? (
         <HyperliquidFuturesPairs
           searchParams={query}
