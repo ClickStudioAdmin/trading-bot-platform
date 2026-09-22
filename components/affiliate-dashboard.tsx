@@ -1025,7 +1025,7 @@ export function AffiliateDashboard({
               trading.
             </p>
             <form action={saveAffiliateAliasAction} className="mt-4 space-y-3">
-              <label className="block text-sm text-ink">
+              <label className="block text-sm text-ink-muted">
                 Alias
                 <input
                   name="alias"

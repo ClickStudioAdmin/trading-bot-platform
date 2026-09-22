@@ -87,7 +87,7 @@ export function TotpSettings({
           </div>
         </div>
         <form action={confirmTotpEnrollAction} className="space-y-3">
-          <label className="block text-xs text-ink-muted">
+          <label className="block text-sm text-ink-muted">
             Code
             <input
               name="code"
@@ -130,7 +130,7 @@ export function TotpSettings({
           </p>
         </div>
         <form action={disableTotpAction} className="space-y-3">
-          <label className="block text-xs text-ink-muted">
+          <label className="block text-sm text-ink-muted">
             Current password
             <input
               name="currentPassword"
@@ -140,7 +140,7 @@ export function TotpSettings({
               className={fieldClass}
             />
           </label>
-          <label className="block text-xs text-ink-muted">
+          <label className="block text-sm text-ink-muted">
             Code
             <input
               name="code"

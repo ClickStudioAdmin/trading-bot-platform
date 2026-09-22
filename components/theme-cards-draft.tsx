@@ -163,11 +163,6 @@ export function ThemeCardsDraft() {
         </h2>
         <ul className="space-y-2 text-sm text-ink-muted">
           <li>
-            <span className="text-ink">Form labels.</span> Bot form is 14px
-            muted. Profile, password, and some affiliate settings are 12px
-            muted. Theme → Forms still uses 14px ink.
-          </li>
-          <li>
             <span className="text-ink">Helpers.</span> Docs say 12px muted
             under a field. Live Profile uses 13px faint. Top-up instructions
             are a 14px body paragraph. Radio notes mix 13px faint and 14px
@@ -202,7 +197,7 @@ export function ThemeCardsDraft() {
               <p className="mt-1 text-xs text-ink-muted">
                 Name and login email for this account.
               </p>
-              <label className="mt-4 block text-xs text-ink-muted">
+              <label className="mt-4 block text-sm text-ink-muted">
                 Name
                 <input
                   defaultValue="Click Studio"
@@ -210,7 +205,7 @@ export function ThemeCardsDraft() {
                   className={fieldClass}
                 />
               </label>
-              <label className="mt-4 block text-xs text-ink-muted">
+              <label className="mt-4 block text-sm text-ink-muted">
                 Email
                 <input
                   defaultValue="click.studioadmin@gmail.com"

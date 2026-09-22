@@ -141,7 +141,7 @@ export default async function AccountSettingsPage({
                 Change the password for this login.
               </p>
             </div>
-            <label className="block text-xs text-ink-muted">
+            <label className="block text-sm text-ink-muted">
               Current password
               <input
                 name="currentPassword"
@@ -151,7 +151,7 @@ export default async function AccountSettingsPage({
                 className={fieldClass}
               />
             </label>
-            <label className="block text-xs text-ink-muted">
+            <label className="block text-sm text-ink-muted">
               New password
               <input
                 name="newPassword"
@@ -162,7 +162,7 @@ export default async function AccountSettingsPage({
                 className={fieldClass}
               />
             </label>
-            <label className="block text-xs text-ink-muted">
+            <label className="block text-sm text-ink-muted">
               Confirm new password
               <input
                 name="confirmPassword"
@@ -205,7 +205,7 @@ export default async function AccountSettingsPage({
               Name and login email for this account.
             </p>
           </div>
-          <label className="block text-xs text-ink-muted">
+          <label className="block text-sm text-ink-muted">
             Name
             <input
               name="name"
@@ -216,7 +216,7 @@ export default async function AccountSettingsPage({
               className={fieldClass}
             />
           </label>
-          <label className="block text-xs text-ink-muted">
+          <label className="block text-sm text-ink-muted">
             Email
             <input
               type="email"
@@ -252,7 +252,7 @@ export default async function AccountSettingsPage({
               that lives on Affiliates → Settings.
             </p>
           </div>
-          <label className="block text-xs text-ink-muted">
+          <label className="block text-sm text-ink-muted">
             Alias
             <input
               name="alias"
@@ -268,7 +268,7 @@ export default async function AccountSettingsPage({
             </span>
           </label>
           <div>
-            <p className="text-xs text-ink-muted">Logo</p>
+            <p className="text-sm text-ink-muted">Logo</p>
             <LogoFileField
               name="logo"
               currentUrl={trader?.logoUrl ?? null}
@@ -276,7 +276,7 @@ export default async function AccountSettingsPage({
               hint="Optional. Square PNG, JPG, or WebP. 1 MB max."
             />
           </div>
-          <label className="block text-xs text-ink-muted">
+          <label className="block text-sm text-ink-muted">
             Bio
             <textarea
               name="bio"

@@ -22,7 +22,7 @@ export function AffiliatePayoutSettingsForm({
 
   return (
     <form action={saveAffiliatePayoutSettingsAction} className="mt-4 space-y-3">
-      <label className="block text-sm text-ink">
+      <label className="block text-sm text-ink-muted">
         Chain
         <AppSelect
           name="network"
@@ -37,7 +37,7 @@ export function AffiliatePayoutSettingsForm({
           ))}
         </AppSelect>
       </label>
-      <label className="block text-sm text-ink">
+      <label className="block text-sm text-ink-muted">
         Address
         <input
           name="address"
@@ -62,7 +62,7 @@ export function AffiliatePayoutSettingsForm({
           </span>
         </span>
       </label>
-      <label className="block text-sm text-ink">
+      <label className="block text-sm text-ink-muted">
         Auto payout when payable is over
         <input
           name="autoPayoutUsd"

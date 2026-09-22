@@ -89,7 +89,7 @@ export function FileDrop({
 
   return (
     <div>
-      {label ? <p className="text-sm text-ink">{label}</p> : null}
+      {label ? <p className="text-sm text-ink-muted">{label}</p> : null}
       <div
         onDragEnter={(event) => {
           event.preventDefault();

@@ -59,12 +59,12 @@ export function ThemeFormDraft() {
       ) : null}
       <form onSubmit={onSubmit} className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm text-ink" htmlFor="theme-form-text">
+          <label className="block text-sm text-ink-muted" htmlFor="theme-form-text">
             <HintLabel
               text="Text"
               required
               hint="Hover hint on the label. Required fields use an asterisk."
-              className="text-sm text-ink"
+              className="text-sm text-ink-muted"
             />
             <input
               id="theme-form-text"
@@ -74,7 +74,7 @@ export function ThemeFormDraft() {
               className={fieldClass}
             />
           </label>
-          <label className="block text-sm text-ink" htmlFor="theme-form-email">
+          <label className="block text-sm text-ink-muted" htmlFor="theme-form-email">
             Email
             <input
               id="theme-form-email"
@@ -86,7 +86,7 @@ export function ThemeFormDraft() {
             />
           </label>
           <label
-            className="block text-sm text-ink"
+            className="block text-sm text-ink-muted"
             htmlFor="theme-form-password"
           >
             Password
@@ -102,7 +102,7 @@ export function ThemeFormDraft() {
               Helper under the field.
             </span>
           </label>
-          <label className="block text-sm text-ink" htmlFor="theme-form-search">
+          <label className="block text-sm text-ink-muted" htmlFor="theme-form-search">
             Search
             <input
               id="theme-form-search"
@@ -113,7 +113,7 @@ export function ThemeFormDraft() {
               className={fieldClass}
             />
           </label>
-          <label className="block text-sm text-ink" htmlFor="theme-form-number">
+          <label className="block text-sm text-ink-muted" htmlFor="theme-form-number">
             Number
             <input
               id="theme-form-number"
@@ -125,7 +125,7 @@ export function ThemeFormDraft() {
               className={fieldClass}
             />
           </label>
-          <label className="block text-sm text-ink" htmlFor="theme-form-grouped">
+          <label className="block text-sm text-ink-muted" htmlFor="theme-form-grouped">
             Grouped number
             <GroupedNumberInput
               id="theme-form-grouped"
@@ -141,7 +141,7 @@ export function ThemeFormDraft() {
             value={date}
             onChange={setDate}
           />
-          <label className="block text-sm text-ink">
+          <label className="block text-sm text-ink-muted">
             Field dropdown
             <AppSelect
               className="mt-1"
@@ -150,7 +150,7 @@ export function ThemeFormDraft() {
               options={VENUES}
             />
           </label>
-          <label className="block text-sm text-ink">
+          <label className="block text-sm text-ink-muted">
             Contract
             <AppSelect
               className="mt-1"
@@ -159,7 +159,7 @@ export function ThemeFormDraft() {
               options={CONTRACTS}
             />
           </label>
-          <label className="block text-sm text-ink sm:col-span-2">
+          <label className="block text-sm text-ink-muted sm:col-span-2">
             Multi-select
             <AppMultiSelect
               className="mt-1"
@@ -168,7 +168,7 @@ export function ThemeFormDraft() {
               placeholder="Contracts"
             />
           </label>
-          <label className="block text-sm text-ink">
+          <label className="block text-sm text-ink-muted">
             Action dropdown
             <AppSelect
               variant="action"
@@ -177,7 +177,7 @@ export function ThemeFormDraft() {
               options={ACTION_MENU}
             />
           </label>
-          <label className="block text-sm text-ink" htmlFor="theme-form-disabled">
+          <label className="block text-sm text-ink-muted" htmlFor="theme-form-disabled">
             Disabled
             <input
               id="theme-form-disabled"
@@ -186,7 +186,7 @@ export function ThemeFormDraft() {
               className={`${fieldClass} disabled:opacity-40`}
             />
           </label>
-          <label className="block text-sm text-ink" htmlFor="theme-form-invalid">
+          <label className="block text-sm text-ink-muted" htmlFor="theme-form-invalid">
             Invalid
             <input
               id="theme-form-invalid"
@@ -200,7 +200,7 @@ export function ThemeFormDraft() {
           </label>
         </div>
 
-        <label className="block text-sm text-ink" htmlFor="theme-form-notes">
+        <label className="block text-sm text-ink-muted" htmlFor="theme-form-notes">
           Textarea
           <textarea
             id="theme-form-notes"
