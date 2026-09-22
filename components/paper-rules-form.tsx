@@ -299,7 +299,6 @@ export function PaperRulesForm({
         <RuleRow
           key={formLayer.key}
           layer={formLayer}
-          canRemove={!(Number.isFinite(Number(formLayer.id)) && inUse.has(Number(formLayer.id)))}
           inUse={Boolean(formLayer.id && inUse.has(Number(formLayer.id)))}
           accountReduceOnly={reduceOnly}
           isAdmin={isAdmin}
@@ -426,7 +425,6 @@ function layerToForm(index: number): PaperLayerFormValues {
 
 function RuleRow({
   layer,
-  canRemove,
   inUse,
   accountReduceOnly,
   isAdmin,
@@ -436,7 +434,6 @@ function RuleRow({
   recipeLibrary = [],
 }: {
   layer: PaperLayerFormValues;
-  canRemove: boolean;
   inUse: boolean;
   accountReduceOnly: boolean;
   isAdmin: boolean;

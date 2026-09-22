@@ -15,7 +15,6 @@ import {
   botRowClass5,
   botSectionTitleClass,
   botSidebarActionClass,
-  botSidebarRemoveClass,
   botSidebarSaveClass,
   deskActionBtnClass,
   deskActionSelectClass,
@@ -2351,9 +2350,6 @@ export function ThemeBotFormDraft() {
         </button>
         <button type="button" className={botSidebarActionClass}>
           Save as platform template
-        </button>
-        <button type="button" className={botSidebarRemoveClass}>
-          Remove
         </button>
       </BotFormSidebar>
       </BotFormColumns>

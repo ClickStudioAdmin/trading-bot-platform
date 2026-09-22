@@ -509,6 +509,8 @@ export async function deleteDcaPlaybookAction(
     strategy: FUTURES_STRATEGY_ID,
     data: { playbookId: id },
   });
+  revalidatePath(FUTURES_PATHS.automations);
+  revalidatePath(FUTURES_PATHS.positions);
   return { ok: true, notice: "Bot removed.", deletedId: id };
 }
 
