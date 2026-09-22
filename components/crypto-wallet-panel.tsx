@@ -249,7 +249,7 @@ function DepositAddressQr({ value }: { value: string }) {
     void QRCode.toString(value, {
       type: "svg",
       margin: 1,
-      width: 80,
+      width: 112,
       errorCorrectionLevel: "M",
       color: { dark: "#0B0E14", light: "#F4F6F8" },
     }).then((markup) => {
@@ -264,14 +264,14 @@ function DepositAddressQr({ value }: { value: string }) {
   if (!svg) {
     return (
       <div
-        className="size-20 shrink-0 rounded-control border border-line bg-ink"
+        className="size-28 shrink-0 rounded-control border border-line bg-ink"
         aria-hidden
       />
     );
   }
   return (
     <div
-      className="size-20 shrink-0 overflow-hidden rounded-control border border-line bg-ink [&_svg]:block [&_svg]:size-full"
+      className="size-28 shrink-0 overflow-hidden rounded-control border border-line bg-ink [&_svg]:block [&_svg]:size-full"
       role="img"
       aria-label="Deposit address QR code"
       dangerouslySetInnerHTML={{ __html: svg }}
@@ -347,67 +347,93 @@ export function TopUpWallet({
     tokens.find((row) => row.chainId === chain?.id && row.kind === "stable") ??
     tokens[0] ??
     null;
+  const showQr = revealAddress && Boolean(address);
+  const qrRows =
+    1 +
+    (showBalance ? 1 : 0) +
+    (typeof dueUsd === "number" ? 1 : 0) +
+    2;
   return (
     <div id="top-up" className="space-y-3">
-      {heading ? (
-        <h2 className="text-lg font-semibold tracking-tight">{heading}</h2>
-      ) : null}
       {shortForCycle && typeof cycleDueUsd === "number" ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           {methodTopUpShortfall(cycleDueUsd)}
         </p>
       ) : null}
       {!revealAddress ? (
-        <p className="text-sm text-ink-muted">
-          Save Crypto as your method to see your deposit address.
-        </p>
+        <>
+          {heading ? (
+            <h2 className="text-lg font-semibold tracking-tight">{heading}</h2>
+          ) : null}
+          <p className="text-sm text-ink-muted">
+            Save Crypto as your method to see your deposit address.
+          </p>
+        </>
+      ) : address ? (
+        <>
+          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 text-sm">
+            {heading ? (
+              <h2 className="col-span-2 text-lg font-semibold tracking-tight">
+                {heading}
+              </h2>
+            ) : (
+              <span className="col-span-2" />
+            )}
+            {showQr ? (
+              <div
+                className="col-start-3 row-start-1 justify-self-end self-start"
+                style={{ gridRowEnd: `span ${qrRows}` }}
+              >
+                <DepositAddressQr value={address.address} />
+              </div>
+            ) : null}
+            {showBalance ? (
+              <>
+                <dt className="text-ink-muted">Current Balance:</dt>
+                <dd className="tabular-nums text-ink">
+                  <AccountBalanceAmount
+                    mainUsd={live.mainUsd}
+                    pendingWithdrawUsd={live.pendingWithdrawUsd}
+                  />
+                </dd>
+              </>
+            ) : null}
+            {typeof dueUsd === "number" ? (
+              <>
+                <dt className="text-ink-muted">Amount due:</dt>
+                <dd className="tabular-nums text-ink">{formatUsd(dueUsd)}</dd>
+              </>
+            ) : null}
+            <dt className="text-ink-muted">Network:</dt>
+            <dd className="text-ink">{chain?.name ?? "—"}</dd>
+            <dt className="text-ink-muted">Token:</dt>
+            <dd className="text-ink">{token?.symbol ?? "—"}</dd>
+            <dt className="text-ink-muted">Address:</dt>
+            <dd className="col-span-2 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
+                  {address.address}
+                </p>
+                <CopyTextButton
+                  text={address.address}
+                  label="Copy address"
+                />
+              </div>
+            </dd>
+          </div>
+          {instructions ? (
+            <p className="text-sm text-ink-muted">{instructions}</p>
+          ) : null}
+          {showCheck ? <CheckDepositButton checkout={checkout} /> : null}
+        </>
       ) : (
         <>
-      {address ? (
-        <div className="space-y-3">
-          <div className="flex items-start justify-between gap-4">
-            <dl className="min-w-0 flex-1 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
-              {showBalance ? (
-                <>
-                  <dt className="text-ink-muted">Current Balance:</dt>
-                  <dd className="tabular-nums text-ink">
-                    <AccountBalanceAmount
-                      mainUsd={live.mainUsd}
-                      pendingWithdrawUsd={live.pendingWithdrawUsd}
-                    />
-                  </dd>
-                </>
-              ) : null}
-              {typeof dueUsd === "number" ? (
-                <>
-                  <dt className="text-ink-muted">Amount due:</dt>
-                  <dd className="tabular-nums text-ink">{formatUsd(dueUsd)}</dd>
-                </>
-              ) : null}
-              <dt className="text-ink-muted">Network:</dt>
-              <dd className="text-ink">{chain?.name ?? "—"}</dd>
-              <dt className="text-ink-muted">Token:</dt>
-              <dd className="text-ink">{token?.symbol ?? "—"}</dd>
-            </dl>
-            <DepositAddressQr value={address.address} />
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="shrink-0 text-ink-muted">Address:</span>
-            <p className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
-              {address.address}
-            </p>
-            <CopyTextButton text={address.address} label="Copy address" />
-          </div>
-        </div>
-      ) : (
-        <p className="text-sm text-warning">
-          {addressError ?? "Deposit address is not available yet."}
-        </p>
-      )}
-      {instructions ? (
-        <p className="text-sm text-ink-muted">{instructions}</p>
-      ) : null}
-      {showCheck ? <CheckDepositButton checkout={checkout} /> : null}
+          {heading ? (
+            <h2 className="text-lg font-semibold tracking-tight">{heading}</h2>
+          ) : null}
+          <p className="text-sm text-warning">
+            {addressError ?? "Deposit address is not available yet."}
+          </p>
         </>
       )}
     </div>
