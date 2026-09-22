@@ -11,6 +11,7 @@ import {
   BotFormGroup,
   BotFormStep,
   BotFormSidebar,
+  BotFormSidebarSection,
   BotStatusField,
   OptionalSection,
   botFieldClass,
@@ -685,14 +686,31 @@ function RuleRow({
           </div>
         }
       >
-        <SaveAsTemplateButton
-          isAdmin={isAdmin}
-          defaultName={layer.name}
-          kind="cash_and_carry"
-          folders={folders}
-          library={recipeLibrary}
-          currentRecipe={(() => {
-            const parsed = parsePaperRulesForm(
+        <BotFormSidebarSection title="Templates">
+          <SaveAsTemplateButton
+            isAdmin={isAdmin}
+            defaultName={layer.name}
+            kind="cash_and_carry"
+            folders={folders}
+            library={recipeLibrary}
+            currentRecipe={(() => {
+              const parsed = parsePaperRulesForm(
+                paperFormToSnapshotSource({
+                  ...layer,
+                  mode,
+                  sizeType,
+                  exitSizeType,
+                  maxOpenCount,
+                  notionalUsdt: Number(orderSizeUsdt.replace(/,/g, "")) || 0,
+                  takeProfit: tpOn ? takeProfit : "",
+                  stopLoss: slOn ? stopLoss : "",
+                }),
+              );
+              return parsed.ok && parsed.config.layers[0]
+                ? snapshotPaperRecipe(parsed.config.layers[0])
+                : null;
+            })()}
+            buildForm={() =>
               paperFormToSnapshotSource({
                 ...layer,
                 mode,
@@ -702,34 +720,21 @@ function RuleRow({
                 notionalUsdt: Number(orderSizeUsdt.replace(/,/g, "")) || 0,
                 takeProfit: tpOn ? takeProfit : "",
                 stopLoss: slOn ? stopLoss : "",
-              }),
-            );
-            return parsed.ok && parsed.config.layers[0]
-              ? snapshotPaperRecipe(parsed.config.layers[0])
-              : null;
-          })()}
-          buildForm={() =>
-            paperFormToSnapshotSource({
-              ...layer,
-              mode,
-              sizeType,
-              exitSizeType,
-              maxOpenCount,
-              notionalUsdt: Number(orderSizeUsdt.replace(/,/g, "")) || 0,
-              takeProfit: tpOn ? takeProfit : "",
-              stopLoss: slOn ? stopLoss : "",
-            })
-          }
-          buttonClassName={botSidebarActionClass}
-        />
+              })
+            }
+            buttonClassName={botSidebarActionClass}
+          />
+        </BotFormSidebarSection>
         {layer.id ? null : (
-          <button
-            type="button"
-            onClick={onRemove}
-            className={botSidebarRemoveClass}
-          >
-            Remove
-          </button>
+          <BotFormSidebarSection>
+            <button
+              type="button"
+              onClick={onRemove}
+              className={botSidebarRemoveClass}
+            >
+              Remove
+            </button>
+          </BotFormSidebarSection>
         )}
       </BotFormSidebar>
       </BotFormColumns>

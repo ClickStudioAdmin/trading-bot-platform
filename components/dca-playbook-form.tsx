@@ -11,6 +11,7 @@ import {
   BotFormGroup,
   BotFormStep,
   BotFormSidebar,
+  BotFormSidebarSection,
   BotFormSummaryCard,
   BotStatusField,
   HintLabel,
@@ -2601,37 +2602,43 @@ export function DcaPlaybookForm({
           </div>
         }
       >
-        <BacktestTemplateLink
-          current={liveRecipe()}
-          getRecipe={recipeForBacktest}
-          templates={backtestLibrary}
-          venueId={policy.venueId}
-          venueEnvironment={venueEnvironment}
-          className="flex w-full flex-col"
-          buttonClassName={botSidebarActionClass}
-        />
-        <SaveAsTemplateButton
-          isAdmin={isAdmin}
-          defaultName={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
-          kind="dca"
-          folders={folders}
-          library={backtestLibrary}
-          currentRecipe={liveRecipe()}
-          buildForm={snapshotForm}
-          buttonClassName={botSidebarActionClass}
-          onSaved={(saved) => {
-            const recipe = liveRecipe();
-            if (recipe) {
-              onTemplateSaved?.({
-                id: saved.id,
-                name: saved.name,
-                recipe,
-                visibility: saved.visibility,
-              });
-            }
-          }}
-        />
-        {removeControl}
+        <BotFormSidebarSection title="Backtesting">
+          <BacktestTemplateLink
+            current={liveRecipe()}
+            getRecipe={recipeForBacktest}
+            templates={backtestLibrary}
+            venueId={policy.venueId}
+            venueEnvironment={venueEnvironment}
+            className="flex w-full flex-col"
+            buttonClassName={botSidebarActionClass}
+          />
+        </BotFormSidebarSection>
+        <BotFormSidebarSection title="Templates">
+          <SaveAsTemplateButton
+            isAdmin={isAdmin}
+            defaultName={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
+            kind="dca"
+            folders={folders}
+            library={backtestLibrary}
+            currentRecipe={liveRecipe()}
+            buildForm={snapshotForm}
+            buttonClassName={botSidebarActionClass}
+            onSaved={(saved) => {
+              const recipe = liveRecipe();
+              if (recipe) {
+                onTemplateSaved?.({
+                  id: saved.id,
+                  name: saved.name,
+                  recipe,
+                  visibility: saved.visibility,
+                });
+              }
+            }}
+          />
+        </BotFormSidebarSection>
+        {removeControl ? (
+          <BotFormSidebarSection>{removeControl}</BotFormSidebarSection>
+        ) : null}
       </BotFormSidebar>
       </BotFormColumns>
       {running ? (

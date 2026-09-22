@@ -11,6 +11,7 @@ import {
   BotFormGroup,
   BotFormStep,
   BotFormSidebar,
+  BotFormSidebarSection,
   BotStatusField,
   HintLabel,
   OptionalSection,
@@ -1278,42 +1279,48 @@ function RuleCard({
           </div>
         }
       >
-        <BacktestTemplateLink
-          current={liveRecipe()}
-          templates={backtestLibrary}
-          venueId={venueId}
-          venueEnvironment={venueEnvironment}
-          className="flex w-full flex-col"
-          buttonClassName={botSidebarActionClass}
-        />
-        <SaveAsTemplateButton
-          isAdmin={isAdmin}
-          defaultName={layer.name}
-          kind="perps"
-          folders={folders}
-          library={backtestLibrary}
-          currentRecipe={liveRecipe()}
-          buildForm={() =>
-            perpsFormToSnapshotSource(snapshotLayer, venueId)
-          }
-          buttonClassName={botSidebarActionClass}
-          onSaved={(saved) =>
-            onTemplateSaved?.({
-              id: saved.id,
-              name: saved.name,
-              recipe: liveRecipe(),
-              visibility: saved.visibility,
-            })
-          }
-        />
+        <BotFormSidebarSection title="Backtesting">
+          <BacktestTemplateLink
+            current={liveRecipe()}
+            templates={backtestLibrary}
+            venueId={venueId}
+            venueEnvironment={venueEnvironment}
+            className="flex w-full flex-col"
+            buttonClassName={botSidebarActionClass}
+          />
+        </BotFormSidebarSection>
+        <BotFormSidebarSection title="Templates">
+          <SaveAsTemplateButton
+            isAdmin={isAdmin}
+            defaultName={layer.name}
+            kind="perps"
+            folders={folders}
+            library={backtestLibrary}
+            currentRecipe={liveRecipe()}
+            buildForm={() =>
+              perpsFormToSnapshotSource(snapshotLayer, venueId)
+            }
+            buttonClassName={botSidebarActionClass}
+            onSaved={(saved) =>
+              onTemplateSaved?.({
+                id: saved.id,
+                name: saved.name,
+                recipe: liveRecipe(),
+                visibility: saved.visibility,
+              })
+            }
+          />
+        </BotFormSidebarSection>
         {layer.id ? null : (
-          <button
-            type="button"
-            onClick={onRemove}
-            className={botSidebarRemoveClass}
-          >
-            Remove
-          </button>
+          <BotFormSidebarSection>
+            <button
+              type="button"
+              onClick={onRemove}
+              className={botSidebarRemoveClass}
+            >
+              Remove
+            </button>
+          </BotFormSidebarSection>
         )}
       </BotFormSidebar>
       </BotFormColumns>

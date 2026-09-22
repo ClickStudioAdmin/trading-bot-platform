@@ -6,6 +6,7 @@ import {
   BotFormColumns,
   BotFormStep,
   BotFormSidebar,
+  BotFormSidebarSection,
   BotFormSummaryCard,
   BotStatusField,
   botFieldClass,
@@ -2341,16 +2342,20 @@ export function ThemeBotFormDraft() {
         }
       >
         {desk !== "cnc" ? (
-          <button type="button" className={botSidebarActionClass}>
-            Backtest
-          </button>
+          <BotFormSidebarSection title="Backtesting">
+            <button type="button" className={botSidebarActionClass}>
+              Backtest
+            </button>
+          </BotFormSidebarSection>
         ) : null}
-        <button type="button" className={botSidebarActionClass}>
-          Save as template
-        </button>
-        <button type="button" className={botSidebarActionClass}>
-          Save as platform template
-        </button>
+        <BotFormSidebarSection title="Templates">
+          <button type="button" className={botSidebarActionClass}>
+            Save as template
+          </button>
+          <button type="button" className={botSidebarActionClass}>
+            Save as platform template
+          </button>
+        </BotFormSidebarSection>
       </BotFormSidebar>
       </BotFormColumns>
       {desk === "dca" ? (
