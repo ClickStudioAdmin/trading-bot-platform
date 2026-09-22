@@ -266,24 +266,22 @@ export function BacktestRunDetail({
       <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <h1 className="text-3xl font-semibold tracking-tight">
-              {backtestRunTitle(run)}
-            </h1>
-            <div
-              className={`flex items-center gap-2 text-sm ${
-                status.tone === "warning"
-                  ? "text-warning"
-                  : status.tone === "danger"
-                    ? "text-danger"
-                    : status.tone === "faint"
-                      ? "text-ink-muted"
-                      : "text-success"
-              }`}
-            >
-              <StatusDot tone={status.tone} pulse={status.pulse} />
-              {status.label}
-            </div>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            {backtestRunTitle(run)}
+          </h1>
+          <div
+            className={`mt-2 flex items-center gap-2 text-sm ${
+              status.tone === "warning"
+                ? "text-warning"
+                : status.tone === "danger"
+                  ? "text-danger"
+                  : status.tone === "faint"
+                    ? "text-ink-muted"
+                    : "text-success"
+            }`}
+          >
+            <StatusDot tone={status.tone} pulse={status.pulse} />
+            {status.label}
           </div>
         </div>
         <BacktestMatchCard
