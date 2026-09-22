@@ -249,7 +249,7 @@ function DepositAddressQr({ value }: { value: string }) {
     void QRCode.toString(value, {
       type: "svg",
       margin: 1,
-      width: 144,
+      width: 80,
       errorCorrectionLevel: "M",
       color: { dark: "#0B0E14", light: "#F4F6F8" },
     }).then((markup) => {
@@ -264,14 +264,14 @@ function DepositAddressQr({ value }: { value: string }) {
   if (!svg) {
     return (
       <div
-        className="size-36 shrink-0 rounded-control border border-line bg-ink"
+        className="size-20 shrink-0 rounded-control border border-line bg-ink"
         aria-hidden
       />
     );
   }
   return (
     <div
-      className="size-36 shrink-0 overflow-hidden rounded-control border border-line bg-ink [&_svg]:block [&_svg]:size-full"
+      className="size-20 shrink-0 overflow-hidden rounded-control border border-line bg-ink [&_svg]:block [&_svg]:size-full"
       role="img"
       aria-label="Deposit address QR code"
       dangerouslySetInnerHTML={{ __html: svg }}
@@ -364,9 +364,9 @@ export function TopUpWallet({
       ) : (
         <>
       {address ? (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-          <div className="min-w-0 flex-1 space-y-3">
-            <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
+        <div className="space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <dl className="min-w-0 flex-1 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
               {showBalance ? (
                 <>
                   <dt className="text-ink-muted">Current Balance:</dt>
@@ -388,21 +388,16 @@ export function TopUpWallet({
               <dd className="text-ink">{chain?.name ?? "—"}</dd>
               <dt className="text-ink-muted">Token:</dt>
               <dd className="text-ink">{token?.symbol ?? "—"}</dd>
-              <dt className="text-ink-muted">Address:</dt>
-              <dd className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="min-w-0 flex-1 break-all rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
-                    {address.address}
-                  </p>
-                  <CopyTextButton
-                    text={address.address}
-                    label="Copy address"
-                  />
-                </div>
-              </dd>
             </dl>
+            <DepositAddressQr value={address.address} />
           </div>
-          <DepositAddressQr value={address.address} />
+          <div className="flex items-center gap-2 text-sm">
+            <span className="shrink-0 text-ink-muted">Address:</span>
+            <p className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
+              {address.address}
+            </p>
+            <CopyTextButton text={address.address} label="Copy address" />
+          </div>
         </div>
       ) : (
         <p className="text-sm text-warning">

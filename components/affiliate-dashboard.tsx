@@ -398,48 +398,48 @@ export function AffiliateDashboard({
             Signups stay yours even if they later click someone else’s URL.
             Commission starts when they first pay.
           </p>
-          <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatTile
               label="Signups"
               value={formatCount(portal.stats.attributed)}
               hint="People who joined through your referral, paid or not."
             />
-            <StatTile
-              label="Paid conversions"
+        <StatTile
+          label="Paid conversions"
               value={formatCount(portal.stats.paid)}
               hint="Signups who have paid for a membership at least once."
-            />
-            <StatTile
-              label="Conversion"
-              value={`${portal.stats.conversionPct}%`}
+        />
+        <StatTile
+          label="Conversion"
+          value={`${portal.stats.conversionPct}%`}
               hint="Paid conversions as a percent of signups."
-            />
-            <StatTile
-              label="Referred MRR"
-              value={formatUsd(portal.stats.referredMrrUsd)}
+        />
+        <StatTile
+          label="Referred MRR"
+          value={formatUsd(portal.stats.referredMrrUsd)}
               hint="What your paid downline pays the platform each month. Not your commission."
-            />
-            <StatTile
-              label="Pending"
-              value={formatUsd(portal.pendingUsd)}
+        />
+        <StatTile
+          label="Pending"
+          value={formatUsd(portal.pendingUsd)}
               hint="Your commission still on hold. It becomes payable after the hold, unless refunded."
-            />
-            <StatTile
-              label="Payable"
-              value={formatUsd(portal.payableUsd)}
+        />
+        <StatTile
+          label="Payable"
+          value={formatUsd(portal.payableUsd)}
               hint="Commission past the hold that you can withdraw."
-            />
-            <StatTile
-              label="Paid out"
-              value={formatUsd(portal.paidOutUsd)}
+        />
+        <StatTile
+          label="Paid out"
+          value={formatUsd(portal.paidOutUsd)}
               hint="Commission already sent to your payout address."
-            />
-            <StatTile
-              label="Earned (30d)"
-              value={formatUsd(portal.stats.earnedPeriodUsd)}
+        />
+        <StatTile
+          label="Earned (30d)"
+          value={formatUsd(portal.stats.earnedPeriodUsd)}
               hint="Commission credited to you in the last 30 days, including amounts still on hold."
-            />
-          </section>
+        />
+      </section>
 
           <section className="mt-6 grid gap-4 lg:grid-cols-2 lg:items-start">
             <div>
@@ -493,14 +493,14 @@ export function AffiliateDashboard({
                       Your current rates: {shareRates}.
                     </p>
                   ) : null}
-                </>
-              ) : (
+          </>
+        ) : (
                 <p className="mt-4 text-sm text-ink-muted">
                   Your referral code will show here after the first visit.
-                </p>
-              )}
+          </p>
+        )}
             </div>
-          </section>
+      </section>
         </>
       ) : null}
 
@@ -599,7 +599,7 @@ export function AffiliateDashboard({
                                 {person.runRateLabel}
                               </td>
                               <td className="px-4 py-3 text-ink-muted">
-                                {monthJoinedLabel(row.attributedAt)}
+                  {monthJoinedLabel(row.attributedAt)}
                               </td>
                             </tr>
                           );
@@ -718,7 +718,7 @@ export function AffiliateDashboard({
                 Create campaign
               </PendingSubmitButton>
             </form>
-          </section>
+        </section>
           <section>
             <h2 className="text-lg font-semibold tracking-tight">
               Your campaigns
@@ -763,7 +763,7 @@ export function AffiliateDashboard({
 
       {tab === "links" ? (
         <div className="mt-6 space-y-5">
-          <section className="rounded-card border border-line bg-surface p-5">
+        <section className="rounded-card border border-line bg-surface p-5">
             <h2 className="text-lg font-semibold tracking-tight">
               Create a URL
             </h2>
@@ -818,8 +818,8 @@ export function AffiliateDashboard({
             {allLinks.length === 0 ? (
               <p className="mt-3 text-sm text-ink-muted">
                 A referral code could not be created yet. Refresh and try again.
-              </p>
-            ) : (
+            </p>
+          ) : (
               <>
                 <AffiliateListFilters
                   tab="links"
@@ -869,31 +869,31 @@ export function AffiliateDashboard({
                   </TableCard>
                 )}
               </>
-            )}
-          </section>
-        </div>
+          )}
+        </section>
+      </div>
       ) : null}
 
       {tab === "payouts" ? (
         <div className="mt-6 space-y-5">
           <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
             <section className="rounded-card border border-line bg-surface p-5 lg:col-span-2">
-              <h2 className="text-lg font-semibold tracking-tight">
+        <h2 className="text-lg font-semibold tracking-tight">
                 Payout request
-              </h2>
-              <p className="mt-2 text-sm text-ink-muted">
+        </h2>
+        <p className="mt-2 text-sm text-ink-muted">
                 Request USDT from payable earnings. Change chain and address on
                 Settings.
-              </p>
-              {!withdraw.ok ? (
-                <p className="mt-3 text-sm text-warning">{withdraw.reason}</p>
-              ) : null}
-              {withdraw.ok && payoutChains.length === 0 ? (
-                <p className="mt-3 text-sm text-warning">
-                  Affiliate payouts are not enabled on any chain yet. An admin can
-                  tick this on Settings → Crypto.
-                </p>
-              ) : null}
+        </p>
+        {!withdraw.ok ? (
+          <p className="mt-3 text-sm text-warning">{withdraw.reason}</p>
+        ) : null}
+        {withdraw.ok && payoutChains.length === 0 ? (
+          <p className="mt-3 text-sm text-warning">
+            Affiliate payouts are not enabled on any chain yet. An admin can
+            tick this on Settings → Crypto.
+          </p>
+        ) : null}
               <form
                 action={requestAffiliatePayoutAction}
                 className="mt-4 flex flex-wrap items-end gap-3"
@@ -904,36 +904,36 @@ export function AffiliateDashboard({
                   value={portal.payoutSettings.address ?? ""}
                 />
                 <label className="w-44 shrink-0 text-sm text-ink">
-                  Chain
+            Chain
                   <AppSelect
-                    name="network"
-                    disabled={!canWithdraw}
-                    className={BILLING_FIELD_CLASS}
+              name="network"
+              disabled={!canWithdraw}
+              className={BILLING_FIELD_CLASS}
                     defaultValue={
                       portal.payoutSettings.network ?? payoutChains[0]?.slug ?? ""
                     }
-                  >
-                    {payoutChains.map((chain) => (
-                      <option key={chain.id} value={chain.slug}>
-                        {chain.name}
-                      </option>
-                    ))}
+            >
+              {payoutChains.map((chain) => (
+                <option key={chain.id} value={chain.slug}>
+                  {chain.name}
+                </option>
+              ))}
                   </AppSelect>
-                </label>
+          </label>
                 <label className="w-32 shrink-0 text-sm text-ink">
                   Amount
-                  <input
+            <input
                     name="amountUsd"
                     type="number"
                     inputMode="decimal"
                     step="0.01"
                     min={portal.settings.minPayoutUsd}
                     max={portal.payableUsd}
-                    disabled={!canWithdraw}
+              disabled={!canWithdraw}
                     placeholder="0.00"
-                    className={BILLING_FIELD_CLASS}
-                  />
-                </label>
+              className={BILLING_FIELD_CLASS}
+            />
+          </label>
                 <div className="min-w-[10rem] text-sm text-ink">
                   Address
                   <p
@@ -943,14 +943,14 @@ export function AffiliateDashboard({
                     {shortenPayoutAddress(portal.payoutSettings.address)}
                   </p>
                 </div>
-                <PendingSubmitButton
-                  pendingLabel="Requesting…"
-                  disabled={!canWithdraw}
-                  className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:bg-accent-strong/40"
-                >
+          <PendingSubmitButton
+            pendingLabel="Requesting…"
+            disabled={!canWithdraw}
+            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:bg-accent-strong/40"
+          >
                   Request payout
-                </PendingSubmitButton>
-              </form>
+          </PendingSubmitButton>
+        </form>
             </section>
             <section className="rounded-card border border-line bg-surface p-5">
               <h2 className="text-lg font-semibold tracking-tight">
@@ -970,14 +970,14 @@ export function AffiliateDashboard({
                         <span className="mt-0.5 block text-xs text-ink-muted">
                           Over {formatUsd(portal.payoutSettings.autoPayoutUsd)}
                         </span>
-                      ) : null}
+        ) : null}
                     </>
                   ) : (
                     "Off"
                   )}
                 </p>
               </div>
-            </section>
+      </section>
           </div>
           <section>
             <h2 className="text-lg font-semibold tracking-tight">Payouts</h2>
