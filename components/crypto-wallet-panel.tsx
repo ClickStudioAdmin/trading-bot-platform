@@ -389,7 +389,9 @@ export function TopUpWallet({
             ) : null}
             {showBalance ? (
               <>
-                <dt className="text-ink-muted">Current Balance:</dt>
+                <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                  Current Balance
+                </dt>
                 <dd className="tabular-nums text-ink">
                   <AccountBalanceAmount
                     mainUsd={live.mainUsd}
@@ -400,15 +402,23 @@ export function TopUpWallet({
             ) : null}
             {typeof dueUsd === "number" ? (
               <>
-                <dt className="text-ink-muted">Amount due:</dt>
+                <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                  Amount due
+                </dt>
                 <dd className="tabular-nums text-ink">{formatUsd(dueUsd)}</dd>
               </>
             ) : null}
-            <dt className="text-ink-muted">Network:</dt>
+            <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+              Network
+            </dt>
             <dd className="text-ink">{chain?.name ?? "—"}</dd>
-            <dt className="text-ink-muted">Token:</dt>
+            <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+              Token
+            </dt>
             <dd className="text-ink">{token?.symbol ?? "—"}</dd>
-            <dt className="text-ink-muted">Address:</dt>
+            <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+              Address
+            </dt>
             <dd className="col-span-2 min-w-0">
               <div className="flex items-center gap-2">
                 <p className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
@@ -506,7 +516,9 @@ export function CryptoWalletPanel({
               Pay with Account Balance
             </h2>
             <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
-              <dt className="text-ink-muted">Current balance:</dt>
+              <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                Current balance
+              </dt>
               <dd className="tabular-nums text-ink">
                 <AccountBalanceAmount
                   mainUsd={shownMainUsd}
@@ -515,7 +527,9 @@ export function CryptoWalletPanel({
               </dd>
               {typeof planPriceUsd === "number" ? (
                 <>
-                  <dt className="text-ink-muted">Amount due:</dt>
+                  <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                    Amount due
+                  </dt>
                   <dd className="tabular-nums text-ink">
                     {formatUsd(planPriceUsd)}
                   </dd>
@@ -523,7 +537,9 @@ export function CryptoWalletPanel({
               ) : null}
               {shortUsd >= 0.01 ? (
                 <>
-                  <dt className="text-ink-muted">Account shortfall:</dt>
+                  <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                    Account shortfall
+                  </dt>
                   <dd className="tabular-nums text-ink">
                     {formatUsd(shortUsd)}
                   </dd>

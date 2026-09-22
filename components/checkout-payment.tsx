@@ -122,17 +122,27 @@ export function CheckoutPayment({
             Subscription Details
           </h2>
           <dl className="mt-4 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
-            <dt className="text-ink-muted">Current Plan:</dt>
+            <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+              Current Plan
+            </dt>
             <dd className="text-ink">{currentPlanName ?? "—"}</dd>
-            <dt className="text-ink-muted">Upgrading to:</dt>
+            <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+              Upgrading to
+            </dt>
             <dd className="text-ink">{planName}</dd>
-            <dt className="text-ink-muted">Due Today:</dt>
+            <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+              Due Today
+            </dt>
             <dd className="tabular-nums text-ink">{formatUsd(dueUsd)}</dd>
-            <dt className="text-ink-muted">Then:</dt>
+            <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+              Then
+            </dt>
             <dd className="text-ink">{planPrice}</dd>
             {showMethodPicker ? null : (
               <>
-                <dt className="text-ink-muted">Payment Method:</dt>
+                <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                  Payment Method
+                </dt>
                 <dd className="text-ink">{billingMethodPriceNote(method)}</dd>
               </>
             )}

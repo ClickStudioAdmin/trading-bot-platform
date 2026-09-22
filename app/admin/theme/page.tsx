@@ -241,6 +241,7 @@ export default async function ThemePage({
             <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
               Fact label 12
             </p>
+            <p className="text-sm text-ink">Fact value 14</p>
             <p className="text-xs text-ink-muted">
               Helper 12 muted — under a field.
             </p>
@@ -248,9 +249,6 @@ export default async function ThemePage({
               Hint 13 faint — hover or inactive only.
             </p>
             <p className="text-2xl font-semibold tabular-nums tracking-tight">
-              $284,392.18
-            </p>
-            <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
               KPI 24
             </p>
           </div>

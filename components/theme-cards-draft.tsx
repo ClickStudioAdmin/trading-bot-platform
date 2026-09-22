@@ -168,16 +168,6 @@ export function ThemeCardsDraft() {
             are a 14px body paragraph. Radio notes mix 13px faint and 14px
             muted.
           </li>
-          <li>
-            <span className="text-ink">Fact rows.</span> Subscription Details
-            uses uppercase 12px labels + 14px values. Top-up uses sentence-case
-            14px muted labels in the same card family.
-          </li>
-          <li>
-            <span className="text-ink">Theme Type sample.</span> Still shows
-            page title 30 and section 20. Live page titles are 24. Card titles
-            are 18.
-          </li>
         </ul>
       </section>
 
@@ -259,7 +249,7 @@ export function ThemeCardsDraft() {
           </SampleFrame>
           <SampleFrame
             label="Deposit card"
-            note="Top-up. Fact rows + address well + 12px helper."
+            note="Top-up. Label beside the value. Fact label 12 uppercase, value 14."
           >
             <DepositCard />
           </SampleFrame>
@@ -585,18 +575,21 @@ function DepositCard() {
   return (
     <Card>
       <h3 className={themeCardTitleClass}>Top up Account Balance</h3>
-      <div className="mt-3 grid gap-4 sm:grid-cols-2">
-        <Fact label="Current Balance" value="$237" />
-        <Fact label="Network" value="Arbitrum Sepolia" />
-        <Fact label="Token" value="USDT" />
-      </div>
-      <div className="mt-4">
-        <p className={themeFactLabelClass}>Address</p>
-        <div className="mt-1 flex items-center gap-2">
-          <p className={themeAddressWellClass}>{SAMPLE_ADDRESS}</p>
-          <CopyTextButton text={SAMPLE_ADDRESS} label="Copy address" />
-        </div>
-      </div>
+      <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-3 text-sm">
+        <dt className={themeFactLabelClass}>Current Balance</dt>
+        <dd className="tabular-nums text-ink">$237</dd>
+        <dt className={themeFactLabelClass}>Network</dt>
+        <dd className="text-ink">Arbitrum Sepolia</dd>
+        <dt className={themeFactLabelClass}>Token</dt>
+        <dd className="text-ink">USDT</dd>
+        <dt className={themeFactLabelClass}>Address</dt>
+        <dd className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className={themeAddressWellClass}>{SAMPLE_ADDRESS}</p>
+            <CopyTextButton text={SAMPLE_ADDRESS} label="Copy address" />
+          </div>
+        </dd>
+      </dl>
       <p className={`${themeHelperClass} mt-3`}>
         Keep enough balance for your next monthly subscription ($19). Remaining
         balance can cover later payments. Withdraw any time. Transfer one of
