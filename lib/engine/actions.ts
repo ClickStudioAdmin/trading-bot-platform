@@ -198,6 +198,14 @@ export async function deletePaperRuleAction(
   if (loaded.inUseRuleIds.includes(id)) {
     return deskActionError("Cannot remove a bot that has an open position.");
   }
+  const { error: unlinkError } = await supabase
+    .from("paper_carries")
+    .update({ rule_id: null })
+    .eq("account_id", account.id)
+    .eq("rule_id", id);
+  if (unlinkError) {
+    return deskActionError(unlinkError.message);
+  }
   const remaining = loaded.config.layers.filter((layer) => layer.id !== id);
   const saved = await replacePaperRules({
     supabase,
@@ -325,6 +333,14 @@ async function replacePaperRules(input: {
     );
     if (blocked.length > 0) {
       return { ok: false, error: "Cannot remove a bot that has an open position." };
+    }
+    const { error: unlinkError } = await input.supabase
+      .from("paper_carries")
+      .update({ rule_id: null })
+      .eq("account_id", input.accountId)
+      .in("rule_id", staleIds);
+    if (unlinkError) {
+      return { ok: false, error: unlinkError.message };
     }
     const { error } = await input.supabase
       .from("paper_rules")

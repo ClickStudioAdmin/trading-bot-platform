@@ -125,7 +125,8 @@ export function futuresAutomationsBotBlotter(
     closed,
     filters,
     playbooks,
-    hintPlaybookId,
+    undefined,
+    { inferBot: false },
   );
   return {
     positionCount: openRows.length,

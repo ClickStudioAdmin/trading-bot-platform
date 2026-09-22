@@ -77,9 +77,13 @@ export function resolveFuturesRowBotId(
     direction: string;
   }[],
   hintPlaybookId?: string | null,
+  options?: { inferBot?: boolean },
 ): string | null {
   if (row.ruleId) {
     return row.ruleId;
+  }
+  if (options?.inferBot === false) {
+    return null;
   }
   if (hintPlaybookId) {
     return hintPlaybookId;
@@ -117,6 +121,7 @@ export function filterFuturesBlotterRows<
     direction: string;
   }[] = [],
   hintPlaybookId?: (row: T) => string | null | undefined,
+  options?: { inferBot?: boolean },
 ): T[] {
   if (!deskBlotterFiltersActive(filters)) {
     return [...rows];
@@ -128,6 +133,7 @@ export function filterFuturesBlotterRows<
           row,
           playbooks,
           hintPlaybookId?.(row) ?? null,
+          options,
         ),
         pair: row.symbol,
         side: row.side,

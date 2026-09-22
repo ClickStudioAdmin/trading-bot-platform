@@ -138,6 +138,42 @@ assert.deepEqual(paperAutomationsBotBlotter("9", paperOpen, paperClosed), {
   positionCount: 0,
   roePct: 0.1,
 });
+assert.deepEqual(
+  paperAutomationsBotBlotter("4", paperOpen, [
+    ...paperClosed,
+    {
+      ruleId: null,
+      baseCoin: "BTC",
+      spotSymbol: "BTCUSDT",
+      futureSymbol: "BTCUSDT-26",
+      notionalUsdt: 100,
+      realizedUsdt: 50,
+    },
+  ]),
+  { positionCount: 1, roePct: 0.05 },
+);
+assert.deepEqual(
+  futuresAutomationsBotBlotter(
+    "pb-new",
+    [],
+    [
+      {
+        ruleId: null,
+        ruleName: "Old bot",
+        symbol: "BTCUSDT",
+        side: "long",
+        source: "engine",
+        realizedUsdt: 20,
+        notionalUsdt: 100,
+        leverage: 10,
+        openedAtMs: 1,
+        closedAtMs: 2,
+      },
+    ],
+    [{ id: "pb-new", name: "Old bot", symbol: "BTCUSDT", direction: "both" }],
+  ),
+  { positionCount: 0, roePct: null },
+);
 
 assert.equal(
   automationsBotBlotterHref("/strategies/futures/positions", "desk-1", "pb-1"),

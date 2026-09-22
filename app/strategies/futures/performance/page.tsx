@@ -67,6 +67,8 @@ export default async function FuturesPerformancePage({
     desk.closed,
     filters,
     playbooks,
+    undefined,
+    { inferBot: false },
   );
   const visibleOpen = filterFuturesBlotterRows(desk.open, filters, playbooks);
   const clearHref = deskHref(FUTURES_PATHS.performance, session?.account.id);

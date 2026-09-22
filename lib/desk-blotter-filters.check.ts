@@ -96,6 +96,21 @@ assert.equal(
   ),
   null,
 );
+assert.equal(
+  resolveFuturesRowBotId(
+    {
+      ruleId: null,
+      ruleName: "Doge bot",
+      symbol: "DOGEUSDT",
+      side: "long",
+      source: "engine",
+    },
+    playbooks,
+    "hint-id",
+    { inferBot: false },
+  ),
+  null,
+);
 
 assert.equal(
   filterFuturesBlotterRows(
@@ -176,6 +191,20 @@ assert.equal(
     { bot: "3", pair: "", side: "" },
   ).map((row) => row.baseCoin).join(","),
   "BTC",
+);
+assert.equal(
+  filterPaperBlotterRows(
+    [
+      {
+        ruleId: null,
+        baseCoin: "BTC",
+        spotSymbol: "BTCUSDT",
+        futureSymbol: "BTCUSDH26",
+      },
+    ],
+    { bot: "3", pair: "", side: "" },
+  ).length,
+  0,
 );
 
 console.log("desk-blotter-filters checks passed");
