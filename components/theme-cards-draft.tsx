@@ -193,7 +193,7 @@ export function ThemeCardsDraft() {
         <div className="grid gap-5 lg:grid-cols-2">
           <SampleFrame
             label="Live — line under a title"
-            note="Admin shortcut tiles, and the engine Last tick / Last scan lines. 13px faint."
+            note="Admin shortcut tiles, gas chain cards, and the engine Last tick / Last scan lines. 13px faint."
           >
             <Card>
               <p className="text-lg font-semibold tracking-tight text-ink">
@@ -225,6 +225,52 @@ export function ThemeCardsDraft() {
               <p className="mt-1 text-hint text-ink-muted">
                 heartbeat · worker ok
               </p>
+            </Card>
+          </SampleFrame>
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          <SampleFrame
+            label="Live — field helper"
+            note="Backtest range note, and the desk-test status line. 13px faint."
+          >
+            <Card>
+              <p className="text-sm text-ink">Range</p>
+              <p className="mt-2 text-hint text-ink-faint">
+                Any range the venue has. Long tapes queue to the engine worker.
+              </p>
+            </Card>
+          </SampleFrame>
+          <SampleFrame
+            label="Scale — field helper"
+            note="Helper. 13px muted."
+          >
+            <Card>
+              <p className="text-sm text-ink">Range</p>
+              <p className="mt-2 text-hint text-ink-muted">
+                Any range the venue has. Long tapes queue to the engine worker.
+              </p>
+            </Card>
+          </SampleFrame>
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          <SampleFrame
+            label="Live — row subtitle"
+            note="The second line under a pair, order, or desk name. 13px faint."
+          >
+            <Card>
+              <p className="text-sm font-medium text-ink">BTC</p>
+              <p className="mt-0.5 text-hint text-ink-faint">BTCUSDT</p>
+            </Card>
+          </SampleFrame>
+          <SampleFrame
+            label="Scale — row subtitle"
+            note="Helper. 13px muted."
+          >
+            <Card>
+              <p className="text-sm font-medium text-ink">BTC</p>
+              <p className="mt-0.5 text-hint text-ink-muted">BTCUSDT</p>
             </Card>
           </SampleFrame>
         </div>
