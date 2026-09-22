@@ -47,8 +47,6 @@ import { firstSearchValue } from "@/lib/paper/open";
 import { withMarketCapRank } from "@/lib/pairs/page";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { HyperliquidFuturesPositions } from "@/components/venues/hyperliquid/positions";
-import { PositionsChartButton } from "@/components/positions-chart-button";
-
 export const metadata: Metadata = {
   title: "Current Positions",
   description: "Open USDT perpetual positions.",
@@ -315,24 +313,6 @@ export default async function FuturesPositionsPage({
               bots={bots}
               deskId={session?.account.id}
               clearHref={NEXT}
-            />
-          }
-          toolbarActions={
-            <PositionsChartButton
-              venue="bybit"
-              symbols={[
-                ...open.map((row) => row.symbol),
-                ...desk.working.map((row) => row.symbol),
-              ]}
-              defaultSymbol={open[0]?.symbol ?? "BTCUSDT"}
-              positions={open}
-              working={desk.working}
-              orders={open.flatMap((row) =>
-                row.orders.map((order) => ({
-                  ...order,
-                  symbol: row.symbol,
-                })),
-              )}
             />
           }
           exchangeBook={desk.exchangeBook}

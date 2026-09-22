@@ -1,6 +1,6 @@
 # Charts (popup)
 
-**Roadmap 4, plan A.** Positions popup is **in repo**. Pairs with [phase-backtesting.md](phase-backtesting.md). Shared chart kit; different homes.
+**Roadmap 4, plan A.** Positions popup was **removed**. Pairs with [phase-backtesting.md](phase-backtesting.md). Shared chart kit stays for backtests.
 
 ## Purpose
 
@@ -35,7 +35,7 @@ Do not fetch candles from the browser venue APIs. Do not call private exchange A
 
 | Surface | Status |
 | --- | --- |
-| **Positions** (Bybit + Hyperliquid) | **Shipped.** Chart on Current Positions heading. Empty book still charts the default contract. |
+| **Positions** (Bybit + Hyperliquid) | **Removed.** Chart button is gone from Positions. Shared kit stays for backtests. |
 | **Automations** | Not wired. |
 | **Pairs** | Not wired. |
 | **Activity** | Not wired. |
@@ -64,7 +64,7 @@ C&C / basis charts stay parked.
 ## Files that are easy to rip out
 
 - `components/desk-chart.tsx`
-- `components/positions-chart-button.tsx`
+- ~~`components/positions-chart-button.tsx`~~ (removed)
 - `lib/charts/overlay.ts` (+ check)
 - `app/api/market/candles/route.ts`
 - `lib/market/candles.ts` (+ check)

@@ -56,6 +56,9 @@ export function FuturesPositionBulkActions({
   panicOnly?: boolean;
   copyDesk?: boolean;
 }) {
+  if (openCount === 0) {
+    return null;
+  }
   return (
     <div className="flex flex-wrap justify-end gap-2">
       {panicOnly ? null : (
