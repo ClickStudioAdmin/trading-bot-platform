@@ -155,58 +155,11 @@ export function ThemeCardsDraft() {
         </div>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">
-          Profile — live vs scale
-        </h2>
-        <p className="text-sm text-ink-muted">
-          Live Account Holder matches the scale: 18px title, 14px muted intro,
-          14px white field labels, 13px muted helper.
-        </p>
-        <div className="grid gap-5 lg:grid-cols-2">
-          <SampleFrame label="Live — Account Holder">
-            <Card>
-              <p className="text-lg font-semibold tracking-tight">
-                Account Holder
-              </p>
-              <p className="mt-1 text-sm text-ink-muted">
-                Name and login email for this account.
-              </p>
-              <label className="mt-4 block text-sm text-ink">
-                Name
-                <input
-                  defaultValue="Click Studio"
-                  readOnly
-                  className={fieldClass}
-                />
-              </label>
-              <label className="mt-4 block text-sm text-ink">
-                Email
-                <input
-                  defaultValue="click.studioadmin@gmail.com"
-                  readOnly
-                  className={`${fieldClass} text-ink-muted`}
-                />
-                <span className="mt-1 block text-hint text-ink-muted">
-                  Email is the login. An admin can change it from Members.
-                </span>
-              </label>
-              <button type="button" className={`${primaryBtn} mt-4`}>
-                Save profile
-              </button>
-            </Card>
-          </SampleFrame>
-          <SampleFrame label="Scale — Account Holder">
-            <FormCard />
-          </SampleFrame>
-        </div>
-      </section>
-
       <section className="space-y-5">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Card types</h2>
           <p className="mt-1 text-sm text-ink-muted">
-            Every surface that uses a card, set in the proposed type roles.
+            Each card variation on the type scale.
           </p>
         </div>
 
@@ -226,6 +179,12 @@ export function ThemeCardsDraft() {
         </div>
 
         <div className="grid gap-5 lg:grid-cols-2">
+          <SampleFrame
+            label="Form card"
+            note="Account Holder. Intro 14 muted, labels 14 ink, helper 13 muted."
+          >
+            <FormCard />
+          </SampleFrame>
           <SampleFrame
             label="Choice card"
             note="Payment method. Radio title is body. Notes are helpers."
@@ -276,7 +235,7 @@ export function ThemeCardsDraft() {
           <div className="lg:col-span-2">
             <SampleFrame
               label="Bot step card"
-              note="18px step title, 14px group, 14px muted labels."
+              note="18px step title, 14px group, 14px ink labels."
             >
               <BotStepCard />
             </SampleFrame>
@@ -369,7 +328,7 @@ export function ThemeCardsDraft() {
           </SampleFrame>
           <SampleFrame
             label="Modal card"
-            note="In-app confirm. Title 18, body 14, helper 12."
+            note="In-app confirm. Title 18, body 14, helper 13."
           >
             <ModalCard />
           </SampleFrame>
