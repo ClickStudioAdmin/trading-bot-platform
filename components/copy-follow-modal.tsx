@@ -21,6 +21,8 @@ import {
 import { connectionFitsDesk, getVenue } from "@/lib/exchanges/venues";
 import type { DeskType } from "@/lib/accounts/model";
 import { AppSelect } from "@/components/app-select";
+import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
+import { IconCopyTrading } from "@/components/icons";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -58,8 +60,14 @@ export function CopyFollowButton({
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={className}>
-        Copy
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={`inline-flex items-center justify-center gap-2 ${className}`}
+      >
+        <BotButtonLead icon={<IconCopyTrading {...botBtnIcon} />}>
+          Copy
+        </BotButtonLead>
       </button>
       {open ? (
         <CopyFollowModal
@@ -215,7 +223,9 @@ function CopyFollowModal({
               pendingLabel="Copying…"
               className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
             >
-              Copy
+              <BotButtonLead icon={<IconCopyTrading {...botBtnIcon} />}>
+                Copy
+              </BotButtonLead>
             </PendingSubmitButton>
             <label className="flex items-start gap-2 text-sm text-ink">
               <AppCheck name="goToDesk" />

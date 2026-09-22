@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { DeskBlotterFilters } from "@/components/desk-blotter-filters";
 import {
   ClosedFuturesTrades,
   FuturesPerformanceStats,
@@ -7,9 +8,16 @@ import {
 import { CopyDeskDetailsHeader } from "@/components/copy-desk-details-header";
 import { CopyFollowButton } from "@/components/copy-follow-modal";
 import { loadCopyCatalogueDesk } from "@/lib/copy/catalogue";
+import { copyDeskPagePath } from "@/lib/copy/model";
 import { loadCopyDeskPublicClosed } from "@/lib/copy/desk-performance";
 import { getSessionMember } from "@/lib/auth/session";
 import { listExchangeConnections } from "@/lib/exchanges/store";
+import {
+  deskBlotterFiltersActive,
+  filterFuturesBlotterRows,
+  parseDeskBlotterFilters,
+} from "@/lib/desk-blotter-filters";
+import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
 import { notFound, redirect } from "next/navigation";
 
 export async function generateMetadata({
@@ -34,8 +42,10 @@ export async function generateMetadata({
 
 export default async function CopyDeskPerformancePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ accountId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const member = await getSessionMember();
   if (!member) {
@@ -54,6 +64,15 @@ export default async function CopyDeskPerformancePage({
     loadCopyDeskPublicClosed(card.accountId),
     listExchangeConnections(member.id),
   ]);
+  const query = await searchParams;
+  const filters = parseDeskBlotterFilters(query);
+  const visibleClosed = filterFuturesBlotterRows(
+    closed,
+    filters,
+    [],
+    undefined,
+    { inferBot: false },
+  );
 
   const traderHref = card.traderAlias
     ? `/account/copy/traders/${encodeURIComponent(card.traderAlias)}`
@@ -93,7 +112,24 @@ export default async function CopyDeskPerformancePage({
             exchangeBook
           />
         </CopyDeskDetailsHeader>
-        <ClosedFuturesTrades signedIn closed={closed} webhookNames={[]} />
+        <ClosedFuturesTrades
+          signedIn
+          closed={visibleClosed}
+          webhookNames={[]}
+          filtersOpen={tableFiltersSuggestOpen(query)}
+          filterBar={
+            <DeskBlotterFilters
+              values={filters}
+              bots={[]}
+              clearHref={copyDeskPagePath(accountId)}
+            />
+          }
+          emptyMessage={
+            deskBlotterFiltersActive(filters)
+              ? "No positions match these filters."
+              : undefined
+          }
+        />
       </div>
     </>
   );

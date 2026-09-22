@@ -425,7 +425,7 @@ export const LUCIDE_ICONS = [
     id: "users",
     name: "Copy Trading",
     lucide: "Users",
-    usedIn: "Header nav",
+    usedIn: "Header nav, Copy buttons",
     Icon: Users,
   },
   {
