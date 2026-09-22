@@ -148,10 +148,6 @@ body {
   white-space: nowrap;
 }
 
-.affiliate-org-node-label[title] {
-  cursor: help;
-}
-
 .affiliate-org-node-value {
   min-width: 0;
   color: var(--color-ink);

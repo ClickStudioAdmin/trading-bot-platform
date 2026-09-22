@@ -1614,14 +1614,15 @@ export function affiliateOrgChartNodeHtml(
     : highlight?.onPath || row.level === 0
       ? "path"
       : "default";
+  const earningsHint = escapeHtmlText(affiliateOrgEarningsHint(row.level));
   return `<div class="affiliate-org-node" data-tone="${tone}">
     <span class="affiliate-org-node-level">${escapeHtmlText(affiliateOrgLevelBadge(row.level))}</span>
     <div class="affiliate-org-node-name">${title}</div>
     <div class="affiliate-org-node-grid">
       <span class="affiliate-org-node-label">Plan</span>
-      <span class="affiliate-org-node-label" title="${escapeHtmlText(affiliateOrgEarningsHint(row.level))}">Earnings</span>
+      <span class="affiliate-org-node-label" title="${earningsHint}">Earnings</span>
       <span class="affiliate-org-node-value">${plan}</span>
-      <span class="affiliate-org-node-value">${earnings}</span>
+      <span class="affiliate-org-node-value" title="${earningsHint}">${earnings}</span>
     </div>
   </div>`;
 }

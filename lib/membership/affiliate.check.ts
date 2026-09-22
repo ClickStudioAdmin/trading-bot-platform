@@ -759,8 +759,8 @@ assert.equal(
   assert.equal(card.includes("Earnings"), true);
   assert.equal(card.includes("Monthly Earnings"), false);
   assert.equal(
-    card.includes("Amount you earn per month from affiliate"),
-    true,
+    card.split("Amount you earn per month from affiliate").length - 1,
+    2,
   );
   assert.equal(card.includes("$2.00"), true);
   assert.equal(card.includes("L1"), true);
