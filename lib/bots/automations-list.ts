@@ -1,4 +1,9 @@
 import { automationsBotBlotterHref } from "@/lib/bots/automations-path";
+import {
+  compareTableNum,
+  compareTableText,
+  type TableSortDir,
+} from "@/lib/table-chrome";
 import type { DcaPlaybook } from "@/lib/dca/playbook";
 import type { PaperLayerFormValues } from "@/lib/engine/rules";
 import type { FuturesAutomationFormValues } from "@/lib/futures/automation";
@@ -20,6 +25,51 @@ export type AutomationsBotBlotter = {
   positionCount: number;
   roePct: number | null;
 };
+
+export type AutomationsBotSortRow = {
+  name: string;
+  pair: string;
+  status: string;
+  summary: string;
+  positionCount: number;
+  roePct: number | null;
+};
+
+export function compareAutomationsBot(
+  left: AutomationsBotSortRow,
+  right: AutomationsBotSortRow,
+  key: string,
+  dir: TableSortDir,
+): number {
+  if (key === "name") {
+    return compareTableText(left.name || "Bot", right.name || "Bot", dir);
+  }
+  if (key === "pair") {
+    return compareTableText(left.pair, right.pair, dir);
+  }
+  if (key === "recipe") {
+    return compareTableText(left.summary, right.summary, dir);
+  }
+  if (key === "status") {
+    return compareTableText(left.status, right.status, dir);
+  }
+  if (key === "positions") {
+    return compareTableNum(left.positionCount, right.positionCount, dir);
+  }
+  if (key === "performance") {
+    if (left.roePct == null && right.roePct == null) {
+      return 0;
+    }
+    if (left.roePct == null) {
+      return 1;
+    }
+    if (right.roePct == null) {
+      return -1;
+    }
+    return compareTableNum(left.roePct, right.roePct, dir);
+  }
+  return 0;
+}
 
 export const EMPTY_AUTOMATIONS_BOT_BLOTTER: AutomationsBotBlotter = {
   positionCount: 0,

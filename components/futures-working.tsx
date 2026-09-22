@@ -141,7 +141,7 @@ export function FuturesWorkingOrders({
       <FuturesDeskRefresh urgent={urgent} />
       <div className="mb-3">
         <h2 className="text-xl font-semibold tracking-tight text-ink">
-          Open orders{" "}
+          Open Orders{" "}
           <span className="text-base font-semibold">({rows.length})</span>
         </h2>
       </div>

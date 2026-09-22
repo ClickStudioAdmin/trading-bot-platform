@@ -97,7 +97,7 @@ export function TableCard({
     >
       <div className="min-w-0 overflow-x-auto">{children}</div>
       {pager ? (
-        <div className="border-t border-line px-4 py-3">{pager}</div>
+        <div className="border-t border-line px-4 py-3 empty:hidden">{pager}</div>
       ) : null}
     </div>
   );

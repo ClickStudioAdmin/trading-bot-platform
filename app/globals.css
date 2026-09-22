@@ -240,7 +240,7 @@ table:has(> tbody > tr:only-child > td[colspan]) > thead {
 }
 
 .overflow-hidden:has(table > tbody > tr:only-child > td[colspan]) > .border-t {
-  border-top-width: 0;
+  display: none;
 }
 
 /* Light scheme. Live chrome/content wrappers use .theme-light. Theme page preview

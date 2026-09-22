@@ -15,6 +15,7 @@ import {
   IconTrash,
 } from "@/components/icons";
 import {
+  SortTh,
   StatusBadge,
   TABLE_ACTIONS_TD_CLASS,
   TABLE_ACTIONS_TH_CLASS,
@@ -25,7 +26,10 @@ import {
   TableCard,
   TableFilterSession,
   TableIconAction,
+  TablePager,
+  useClientTable,
 } from "@/components/table-chrome";
+import { compareAutomationsBot } from "@/lib/bots/automations-list";
 import { formatCount, formatPct, signedTone } from "@/lib/opportunities/format";
 import { statusToneFor } from "@/lib/table-chrome";
 
@@ -58,6 +62,9 @@ export function AutomationsBotTable({
 }) {
   const { confirm, dialog } = useConfirmDialog();
   const { visible, setColumn } = useAutomationsColumns();
+  const table = useClientTable(rows, compareAutomationsBot, {
+    defaultKey: "name",
+  });
   const colSpan =
     2 +
     Number(visible.pair) +
@@ -93,37 +100,70 @@ export function AutomationsBotTable({
         </>
       }
     />
-    <TableCard className="mt-0">
+    <TableCard
+      className="mt-0"
+      pager={
+        <TablePager
+          window={table.window}
+          onPrev={() => table.setPage(table.window.page - 1)}
+          onNext={() => table.setPage(table.window.page + 1)}
+        />
+      }
+    >
       <table className="min-w-full text-left text-sm text-ink">
         <thead className={`${TABLE_THEAD_CLASS} text-hint text-ink-muted`}>
           <tr>
-            <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
-              Name
-            </th>
+            <SortTh
+              label="Name"
+              className={TABLE_TITLE_CASE_TH_CLASS}
+              active={table.sortKey === "name"}
+              dir={table.sortDir}
+              onSort={() => table.onSort("name")}
+            />
             {visible.pair ? (
-              <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
-                Pair / Side
-              </th>
+              <SortTh
+                label="Pair / Side"
+                className={TABLE_TITLE_CASE_TH_CLASS}
+                active={table.sortKey === "pair"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("pair")}
+              />
             ) : null}
             {visible.recipe ? (
-              <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
-                Recipe
-              </th>
+              <SortTh
+                label="Recipe"
+                className={TABLE_TITLE_CASE_TH_CLASS}
+                active={table.sortKey === "recipe"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("recipe")}
+              />
             ) : null}
             {visible.status ? (
-              <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
-                Status
-              </th>
+              <SortTh
+                label="Status"
+                className={TABLE_TITLE_CASE_TH_CLASS}
+                active={table.sortKey === "status"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("status")}
+              />
             ) : null}
             {visible.positions ? (
-              <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
-                Positions
-              </th>
+              <SortTh
+                label="Positions"
+                className={TABLE_TITLE_CASE_TH_CLASS}
+                active={table.sortKey === "positions"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("positions")}
+              />
             ) : null}
             {visible.performance ? (
-              <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
-                Performance
-              </th>
+              <SortTh
+                label="Performance"
+                className={TABLE_TITLE_CASE_TH_CLASS}
+                active={table.sortKey === "performance"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("performance")}
+              />
             ) : null}
             <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
           </tr>
@@ -139,7 +179,7 @@ export function AutomationsBotTable({
               </td>
             </tr>
           ) : (
-          rows.map((row) => (
+          table.pageRows.map((row) => (
             <tr key={row.id} className="border-b border-line last:border-b-0">
               <td className="px-4 py-3 pr-8 align-top">
                 <Link

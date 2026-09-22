@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   automationsBotBlotterCells,
   botModeLabel,
+  compareAutomationsBot,
   dcaBotPair,
   dcaBotSummary,
   dcaListStatus,
@@ -157,3 +158,27 @@ assert.deepEqual(
     performanceHref: "/strategies/futures/performance?desk=desk-1&bot=pb-1",
   },
 );
+
+const alpha = {
+  name: "Alpha",
+  pair: "ETHUSDT · Long",
+  status: "Disabled",
+  summary: "Price",
+  positionCount: 2,
+  roePct: 0.1,
+};
+const beta = {
+  name: "Beta",
+  pair: "BTCUSDT · Short",
+  status: "Active",
+  summary: "Signal",
+  positionCount: 0,
+  roePct: null,
+};
+assert.ok(compareAutomationsBot(alpha, beta, "name", "asc") < 0);
+assert.ok(compareAutomationsBot(alpha, beta, "pair", "asc") > 0);
+assert.ok(compareAutomationsBot(alpha, beta, "status", "asc") > 0);
+assert.ok(compareAutomationsBot(alpha, beta, "recipe", "asc") < 0);
+assert.ok(compareAutomationsBot(alpha, beta, "positions", "desc") < 0);
+assert.ok(compareAutomationsBot(alpha, beta, "performance", "asc") < 0);
+assert.ok(compareAutomationsBot(beta, alpha, "performance", "asc") > 0);
