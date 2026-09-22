@@ -379,13 +379,13 @@ export function BotFormSidebar({
       <h3 className={botSectionTitleClass}>Status & actions</h3>
       {status}
       <div className="space-y-2">
+        {save}
         {dirty ? (
           <p className="text-sm text-warning">
             You have unsaved changes on this bot
           </p>
         ) : null}
         {error ? <p className="text-sm text-danger">{error}</p> : null}
-        {save}
       </div>
       {children ? (
         <div className="flex flex-col">{children}</div>

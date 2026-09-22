@@ -674,7 +674,6 @@ function RuleRow({
         }
         save={
           <div className="space-y-2">
-            <DeskFormFlash />
             <PendingSubmitButton
               pendingLabel="Saving…"
               deskAction="default"
@@ -683,6 +682,7 @@ function RuleRow({
             >
               Save
             </PendingSubmitButton>
+            <DeskFormFlash />
           </div>
         }
       >

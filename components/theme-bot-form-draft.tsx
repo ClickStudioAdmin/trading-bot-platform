@@ -2354,6 +2354,14 @@ export function ThemeBotFormDraft() {
             <button type="button" className={botSidebarActionClass}>
               Backtest
             </button>
+            <a
+              href="/account/backtests/sample"
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-ink-muted hover:text-ink hover:underline"
+            >
+              DCA Test · results
+            </a>
           </BotFormSidebarSection>
         ) : null}
       </BotFormSidebar>

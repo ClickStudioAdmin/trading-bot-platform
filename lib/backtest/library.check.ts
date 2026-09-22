@@ -4,6 +4,8 @@ import {
   decideBacktestTemplateActions,
   deskBotAutomationsHref,
   findMatchingBacktestDeskBot,
+  findMatchingSavedBacktest,
+  toSavedBacktestMatch,
   findMatchingBacktestTemplate,
   groupBacktestLibrary,
   parseBacktestRecipeJson,
@@ -185,6 +187,41 @@ assert.equal(
   )?.id,
   "tmpl-eth",
 );
+assert.equal(
+  findMatchingSavedBacktest(perps, [
+    { id: "run-old", name: "Old dip", recipe: { ...perps, triggerPrice: "1" } },
+    { id: "run-1", name: "Buy dip results", recipe: perps },
+  ])?.id,
+  "run-1",
+);
+assert.equal(
+  findMatchingSavedBacktest({ ...perps, symbol: "ETHUSDT" }, [
+    { id: "run-1", name: "Buy dip results", recipe: perps },
+  ]),
+  null,
+);
+assert.equal(findMatchingSavedBacktest(null, []), null);
+assert.equal(
+  toSavedBacktestMatch({
+    id: "run-1",
+    status: "done",
+    recipe: perps,
+    symbol: "BTCUSDT",
+    parentRunId: null,
+  })?.name,
+  "Buy dip",
+);
+assert.equal(
+  toSavedBacktestMatch({
+    id: "run-2",
+    status: "queued",
+    recipe: perps,
+    symbol: "BTCUSDT",
+    parentRunId: null,
+  }),
+  null,
+);
+
 assert.equal(
   findMatchingBacktestDeskBot(perps, [
     {

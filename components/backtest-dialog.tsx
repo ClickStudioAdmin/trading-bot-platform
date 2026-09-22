@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
@@ -8,11 +9,13 @@ import type { BacktestRecipe } from "@/lib/backtest/model";
 import { recipesMatchForBacktest } from "@/lib/templates/recipe";
 import {
   canQueueUserBacktest,
+  findMatchingSavedBacktest,
   toBacktestLibraryItem,
   type BacktestLibraryItem,
+  type SavedBacktestMatch,
 } from "@/lib/backtest/library";
 
-export type { BacktestLibraryItem };
+export type { BacktestLibraryItem, SavedBacktestMatch };
 export { toBacktestLibraryItem };
 
 function canReplay(recipe: BacktestRecipe) {
@@ -40,6 +43,7 @@ export function BacktestTemplateLink({
   current,
   getRecipe,
   templates,
+  savedBacktests = [],
   venueId,
   venueEnvironment = null,
   className,
@@ -50,6 +54,7 @@ export function BacktestTemplateLink({
     | { ok: true; recipe: BacktestRecipe }
     | { ok: false; error: string };
   templates: BacktestLibraryItem[];
+  savedBacktests?: readonly SavedBacktestMatch[];
   venueId: string;
   venueEnvironment?: string | null;
   className?: string;
@@ -57,6 +62,7 @@ export function BacktestTemplateLink({
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const saved = findMatchingSavedBacktest(current, savedBacktests);
   return (
     <span className={className ?? "inline-flex flex-col items-end"}>
       <button
@@ -116,6 +122,16 @@ export function BacktestTemplateLink({
       >
         {pending ? "Opening…" : "Backtest"}
       </button>
+      {saved ? (
+        <Link
+          href={`/account/backtests/${saved.id}`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-ink-muted hover:text-ink hover:underline"
+        >
+          {saved.name}
+        </Link>
+      ) : null}
       {error ? (
         <span className="mt-1 text-xs text-danger">{error}</span>
       ) : null}

@@ -150,6 +150,7 @@ import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import {
   BacktestTemplateLink,
   type BacktestLibraryItem,
+  type SavedBacktestMatch,
 } from "@/components/backtest-dialog";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
@@ -525,6 +526,7 @@ export function DcaPlaybooksDesk({
   policy = BYBIT_DCA_UI,
   venueEnvironment = null,
   backtestLibrary = [],
+  savedBacktests = [],
   openPositions = [],
   urgentRefresh = false,
   edit = null,
@@ -548,6 +550,7 @@ export function DcaPlaybooksDesk({
   policy?: DcaPlaybookUiPolicy;
   venueEnvironment?: string | null;
   backtestLibrary?: BacktestLibraryItem[];
+  savedBacktests?: readonly SavedBacktestMatch[];
   openPositions?: DcaCycleOpen[];
   urgentRefresh?: boolean;
   edit?: string | null;
@@ -653,6 +656,7 @@ export function DcaPlaybooksDesk({
           policy={policy}
           venueEnvironment={venueEnvironment}
           backtestLibrary={library}
+          savedBacktests={savedBacktests}
           openPositions={openPositions}
           onTemplateSaved={(item) =>
             setExtraLibrary((current) => [
@@ -819,6 +823,7 @@ export function DcaPlaybookForm({
   policy = BYBIT_DCA_UI,
   venueEnvironment = null,
   backtestLibrary = [],
+  savedBacktests = [],
   openPositions = [],
   onTemplateSaved,
 }: {
@@ -840,6 +845,7 @@ export function DcaPlaybookForm({
   policy?: DcaPlaybookUiPolicy;
   venueEnvironment?: string | null;
   backtestLibrary?: BacktestLibraryItem[];
+  savedBacktests?: readonly SavedBacktestMatch[];
   openPositions?: DcaCycleOpen[];
   onTemplateSaved?: (item: BacktestLibraryItem) => void;
 }) {
@@ -2584,7 +2590,6 @@ export function DcaPlaybookForm({
         }
         save={
           <div className="space-y-2">
-            <DeskFormFlash />
             <PendingSubmitButton
               pendingLabel="Saving…"
               deskAction="default"
@@ -2599,6 +2604,7 @@ export function DcaPlaybookForm({
             >
               Save
             </PendingSubmitButton>
+            <DeskFormFlash />
           </div>
         }
       >
@@ -2630,6 +2636,7 @@ export function DcaPlaybookForm({
             current={liveRecipe()}
             getRecipe={recipeForBacktest}
             templates={backtestLibrary}
+            savedBacktests={savedBacktests}
             venueId={policy.venueId}
             venueEnvironment={venueEnvironment}
             className="flex w-full flex-col"

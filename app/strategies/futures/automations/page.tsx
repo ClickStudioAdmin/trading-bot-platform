@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AutomationsPageFrame } from "@/components/automations-page-frame";
-import { toBacktestLibraryItem } from "@/lib/backtest/library";
+import {
+  toBacktestLibraryItem,
+  toSavedBacktestMatch,
+} from "@/lib/backtest/library";
+import { listBacktestRuns } from "@/lib/backtest/store";
 import { DcaPlaybooksDesk } from "@/components/dca-playbook-form";
 import { FuturesAutomationsDesk } from "@/components/futures-rules-form";
 import {
@@ -218,6 +222,16 @@ export default async function FuturesAutomationsPage({
             backtestLibrary={templates
               .map(toBacktestLibraryItem)
               .filter((row): row is NonNullable<typeof row> => Boolean(row))}
+            savedBacktests={(
+              await listBacktestRuns({
+                userId: session.member.id,
+                standaloneOnly: true,
+                primaryOnly: true,
+              })
+            ).flatMap((run) => {
+              const match = toSavedBacktestMatch(run);
+              return match ? [match] : [];
+            })}
             openPositions={openPositions.map((row) => ({
               symbol: row.symbol,
               side: row.side,
@@ -348,6 +362,16 @@ export default async function FuturesAutomationsPage({
             backtestLibrary={templates
               .map(toBacktestLibraryItem)
               .filter((row): row is NonNullable<typeof row> => Boolean(row))}
+            savedBacktests={(
+              await listBacktestRuns({
+                userId: session.member.id,
+                standaloneOnly: true,
+                primaryOnly: true,
+              })
+            ).flatMap((run) => {
+              const match = toSavedBacktestMatch(run);
+              return match ? [match] : [];
+            })}
             edit={knownEdit}
             clone={clone}
             listHref={listHref}

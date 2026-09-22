@@ -64,6 +64,7 @@ import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
 import {
   BacktestTemplateLink,
   type BacktestLibraryItem,
+  type SavedBacktestMatch,
 } from "@/components/backtest-dialog";
 import { snapshotPerpsRecipe } from "@/lib/templates/recipe";
 import {
@@ -117,6 +118,7 @@ export function FuturesAutomationsDesk({
   quoteLabel = "USDT",
   venueEnvironment = null,
   backtestLibrary = [],
+  savedBacktests = [],
   edit = null,
   clone = null,
   listHref,
@@ -135,6 +137,7 @@ export function FuturesAutomationsDesk({
   quoteLabel?: string;
   venueEnvironment?: string | null;
   backtestLibrary?: BacktestLibraryItem[];
+  savedBacktests?: readonly SavedBacktestMatch[];
   edit?: string | null;
   clone?: string | null;
   listHref: string;
@@ -226,6 +229,7 @@ export function FuturesAutomationsDesk({
           venueId={venueId}
           venueEnvironment={venueEnvironment}
           backtestLibrary={library}
+          savedBacktests={savedBacktests}
           onSaved={(result) => {
             applySaveResult(result);
             if (result.ok) {
@@ -363,6 +367,7 @@ function RuleCard({
   venueId = "bybit",
   venueEnvironment = null,
   backtestLibrary = [],
+  savedBacktests = [],
   onTemplateSaved,
 }: {
   layer: FuturesAutomationFormValues;
@@ -378,6 +383,7 @@ function RuleCard({
   venueId?: string;
   venueEnvironment?: string | null;
   backtestLibrary?: BacktestLibraryItem[];
+  savedBacktests?: readonly SavedBacktestMatch[];
   onTemplateSaved?: (item: BacktestLibraryItem) => void;
 }) {
   const prefix = "r0_";
@@ -1267,7 +1273,6 @@ function RuleCard({
         }
         save={
           <div className="space-y-2">
-            <DeskFormFlash />
             <PendingSubmitButton
               pendingLabel="Saving…"
               deskAction="default"
@@ -1276,6 +1281,7 @@ function RuleCard({
             >
               Save
             </PendingSubmitButton>
+            <DeskFormFlash />
           </div>
         }
       >
@@ -1305,6 +1311,7 @@ function RuleCard({
           <BacktestTemplateLink
             current={liveRecipe()}
             templates={backtestLibrary}
+            savedBacktests={savedBacktests}
             venueId={venueId}
             venueEnvironment={venueEnvironment}
             className="flex w-full flex-col"

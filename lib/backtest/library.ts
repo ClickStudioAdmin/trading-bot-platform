@@ -1,5 +1,5 @@
 import { deskPath } from "@/lib/accounts/model";
-import type { BacktestRecipe } from "@/lib/backtest/model";
+import { backtestRunTitle, type BacktestRecipe } from "@/lib/backtest/model";
 import { dcaFilterLabel } from "@/lib/dca/filters";
 import { formatDcaIndicatorStartLabel } from "@/lib/dca/indicators";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
@@ -63,6 +63,41 @@ export function findMatchingBacktestTemplate(
   return (
     templates.find((row) => recipesMatchReplayFields(recipe, row.recipe)) ??
     null
+  );
+}
+
+export type SavedBacktestMatch = {
+  id: string;
+  name: string;
+  recipe: BacktestRecipe;
+};
+
+export function toSavedBacktestMatch(run: {
+  id: string;
+  status: string;
+  recipe: BacktestRecipe;
+  symbol: string;
+  parentRunId: string | null;
+}): SavedBacktestMatch | null {
+  if (run.status !== "done") {
+    return null;
+  }
+  return {
+    id: run.id,
+    name: backtestRunTitle(run),
+    recipe: run.recipe,
+  };
+}
+
+export function findMatchingSavedBacktest(
+  recipe: BacktestRecipe | null | undefined,
+  runs: readonly SavedBacktestMatch[],
+): SavedBacktestMatch | null {
+  if (!recipe) {
+    return null;
+  }
+  return (
+    runs.find((run) => recipesMatchReplayFields(recipe, run.recipe)) ?? null
   );
 }
 
