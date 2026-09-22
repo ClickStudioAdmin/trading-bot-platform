@@ -445,7 +445,7 @@ export default async function ThemePage({
           </div>
           <div className="lg:col-span-2 overflow-hidden rounded-card border border-line bg-surface">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+              <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
                 <tr>
                   <th className="px-4 py-3 font-medium">Pair</th>
                   <th className="px-4 py-3 font-medium">Net APR</th>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -2821,7 +2821,7 @@ export function DcaPlaybookForm({
         {summary.levels.length > 0 ? (
           <div className="thin-scroll mt-4 max-h-80 overflow-auto rounded-card border border-line bg-canvas">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+              <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
                 <tr>
                   <th className="px-3 py-2 font-medium">Order</th>
                   <th className="px-3 py-2 font-medium">Price</th>

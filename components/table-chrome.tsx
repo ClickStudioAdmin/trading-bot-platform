@@ -52,6 +52,7 @@ export {
 } from "@/components/table-actions";
 
 export const TABLE_TITLE_CASE_TH_CLASS = "normal-case tracking-normal";
+export const TABLE_THEAD_CLASS = "border-b border-line bg-surface-raised";
 
 export const TABLE_FILTER_FIELD_CLASS =
   "mt-1 w-full min-w-[9rem] rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";

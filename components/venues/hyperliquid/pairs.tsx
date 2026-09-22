@@ -125,7 +125,7 @@ export async function HyperliquidFuturesPairs({
           }
         >
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+            <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
               <tr>
                 <SortTh
                   label="Coin"

@@ -194,7 +194,7 @@ export function AdminPayoutFilesTable({
         }
       >
         <table className="w-full min-w-[44rem] text-left text-sm">
-          <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
+          <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.12em] text-ink-faint">
             <tr>
               <SortTh
                 label="When"
@@ -368,7 +368,7 @@ export function AdminPayoutQueueTable({
         }
       >
         <table className="w-full min-w-[44rem] text-left text-sm">
-          <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
+          <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.12em] text-ink-faint">
             <tr>
               <SortTh
                 label="When"
@@ -527,7 +527,7 @@ export function AdminPayoutFilePaymentsTable({
         }
       >
         <table className="w-full min-w-[52rem] text-left text-sm">
-          <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
+          <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.12em] text-ink-faint">
             <tr>
               <SortTh
                 label="When"

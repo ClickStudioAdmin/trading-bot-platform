@@ -889,7 +889,7 @@ export function TemplatesLibrary({
             />
           }
         >
-          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+          <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               {sharedTab ? null : (
                 <th className="w-10 px-4 py-3">
@@ -1118,7 +1118,7 @@ export function TemplatesLibrary({
               />
             }
           >
-            <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+            <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
               <tr>
                 {sharedTab ? null : (
                   <th className="w-10 px-4 py-3">

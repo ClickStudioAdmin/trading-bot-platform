@@ -155,7 +155,7 @@ export function DeskTable({
             <col />
             <col className="w-[11rem]" />
           </colgroup>
-          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+          <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               <SortTh
                 label="Name"

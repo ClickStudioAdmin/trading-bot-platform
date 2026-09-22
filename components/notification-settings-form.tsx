@@ -42,7 +42,7 @@ export function MemberNotificationSettingsForm({
           <h2 className="text-sm font-semibold text-ink">{group.label}</h2>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[28rem] text-left text-sm">
-              <thead>
+              <thead className="border-b border-line bg-surface-raised">
                 <tr className="text-xs uppercase tracking-[0.12em] text-ink-faint">
                   <th className="pb-2 font-medium">Notice</th>
                   <th className="w-20 pb-2 text-center font-medium">Email</th>

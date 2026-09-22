@@ -471,7 +471,7 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
         }
       >
         <table className="w-full min-w-[48rem] text-left text-sm">
-          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+          <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               <SortTh
                 label="Time"

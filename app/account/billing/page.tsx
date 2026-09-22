@@ -509,7 +509,7 @@ export default async function AccountBillingPage({
           }
         >
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
+              <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.12em] text-ink-faint">
                 <tr>
                   <SortTh
                     label="Date"
@@ -610,7 +610,7 @@ export default async function AccountBillingPage({
           }
         >
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
+              <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.12em] text-ink-faint">
                 <tr>
                   <SortTh
                     label="Issued"

@@ -364,7 +364,7 @@ export function OpenFuturesTrades({
         }
       >
         <table className="w-full min-w-[48rem] text-left text-sm">
-          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+          <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               <th className="w-10 px-2 py-3 font-medium">
                 <ColumnHint
@@ -610,7 +610,7 @@ export function ClosedFuturesTrades({
         }
       >
         <table className="w-full min-w-[52rem] text-left text-sm">
-          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+          <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint

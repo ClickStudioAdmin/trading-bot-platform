@@ -19,6 +19,7 @@ import {
   TABLE_ACTIONS_TD_CLASS,
   TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
+  TABLE_THEAD_CLASS,
   TABLE_TITLE_CASE_TH_CLASS,
   TableActions,
   TableCard,
@@ -92,7 +93,7 @@ export function AutomationsBotTable({
     />
     <TableCard className="mt-0">
       <table className="min-w-full text-left text-sm text-ink">
-        <thead className="border-b border-line bg-surface-raised text-hint text-ink-muted">
+        <thead className={`${TABLE_THEAD_CLASS} text-hint text-ink-muted`}>
           <tr>
             <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
               Name

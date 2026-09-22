@@ -445,7 +445,7 @@ export function AffiliateDashboard({
             <div>
               <TableCard className="">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-line text-left text-xs uppercase tracking-[0.12em] text-ink-faint">
+                  <thead className="border-b border-line bg-surface-raised text-left text-xs uppercase tracking-[0.12em] text-ink-faint">
                     <tr>
                       <th className="px-4 py-3 font-medium">Level</th>
                       <th className="px-4 py-3 font-medium">Commission</th>
@@ -560,7 +560,7 @@ export function AffiliateDashboard({
                     }
                   >
                     <table className="min-w-full text-left text-sm">
-                      <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
+                      <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.12em] text-ink-faint">
                         <tr>
                           <AffiliateSortTh tab="network" query={tableQuery} label="Affiliate" sortKey="affiliate" />
                           <AffiliateSortTh tab="network" query={tableQuery} label="Plan" sortKey="plan" />
@@ -643,7 +643,7 @@ export function AffiliateDashboard({
                 }
               >
                 <table className="min-w-full text-left text-sm">
-                  <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-faint">
+                  <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.12em] text-ink-faint">
                     <tr>
                       <AffiliateSortTh tab="referrals" query={tableQuery} label="Date" sortKey="date" />
                       <AffiliateSortTh tab="referrals" query={tableQuery} label="From" sortKey="from" />
@@ -843,7 +843,7 @@ export function AffiliateDashboard({
                     }
                   >
                     <table className="w-full text-left text-sm">
-                      <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+                      <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
                         <tr>
                           <AffiliateSortTh tab="links" query={tableQuery} label="Name" sortKey="name" />
                           <AffiliateSortTh tab="links" query={tableQuery} label="Landing" sortKey="landing" />
@@ -1102,7 +1102,7 @@ function AffiliatePayoutsTable({
 }) {
   return (
     <table className="w-full text-left text-sm">
-      <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+      <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
         <tr>
           <AffiliateSortTh tab="payouts" query={query} label="Date" sortKey="date" />
           <AffiliateSortTh tab="payouts" query={query} label="Amount" sortKey="amount" />
@@ -1165,7 +1165,7 @@ function AffiliateCampaignsTable({
   const links = [...portal.links, ...portal.archivedLinks];
   return (
     <table className="w-full text-left text-sm">
-      <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+      <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
         <tr>
           <AffiliateSortTh tab="campaigns" query={query} label="Name" sortKey="name" />
           <AffiliateSortTh tab="campaigns" query={query} label="URLs" sortKey="urls" />
