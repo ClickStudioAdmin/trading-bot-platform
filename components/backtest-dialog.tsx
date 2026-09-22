@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
+import { PreviousBacktestLink } from "@/components/bot-form-chrome";
 import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import { seedBacktestDraftAction } from "@/lib/backtest/actions";
@@ -123,14 +123,10 @@ export function BacktestTemplateLink({
         {pending ? "Opening…" : "Backtest"}
       </button>
       {saved ? (
-        <Link
+        <PreviousBacktestLink
           href={`/account/backtests/${saved.id}`}
-          target="_blank"
-          rel="noreferrer"
-          className="text-sm text-ink-muted hover:text-ink hover:underline"
-        >
-          {saved.name}
-        </Link>
+          name={saved.name}
+        />
       ) : null}
       {error ? (
         <span className="mt-1 text-xs text-danger">{error}</span>

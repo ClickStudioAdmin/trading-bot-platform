@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
+import Link from "next/link";
 import { ColumnHint } from "@/components/column-hint";
 import { useDeskFormStatus } from "@/components/stay-on-page-form";
 import {
@@ -10,7 +11,7 @@ import {
 } from "@/lib/bots/status";
 import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
-import { IconCheck } from "@/components/icons";
+import { IconCheck, IconOpen } from "@/components/icons";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 
 export const botFieldClass = BILLING_FIELD_CLASS;
@@ -405,6 +406,29 @@ export function BotFormSidebarSection({
     <div className="flex flex-col gap-2 border-t border-line pt-4">
       {title ? <h4 className={botSectionTitleClass}>{title}</h4> : null}
       {children}
+    </div>
+  );
+}
+
+export function PreviousBacktestLink({
+  href,
+  name,
+}: {
+  href: string;
+  name: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1 pt-1">
+      <p className={botLabelClass}>Previous Backtests</p>
+      <Link
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex min-w-0 items-center gap-1.5 text-sm text-accent underline underline-offset-2 hover:text-accent-strong"
+      >
+        <span className="truncate">{name}</span>
+        <IconOpen size={14} className="size-3.5 shrink-0" />
+      </Link>
     </div>
   );
 }

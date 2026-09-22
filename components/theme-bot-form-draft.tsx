@@ -8,6 +8,7 @@ import {
   BotFormSidebar,
   BotFormSidebarSection,
   BotFormSummaryCard,
+  PreviousBacktestLink,
   BotStatusField,
   botFieldClass,
   botFieldInvalidClass,
@@ -2354,14 +2355,10 @@ export function ThemeBotFormDraft() {
             <button type="button" className={botSidebarActionClass}>
               Backtest
             </button>
-            <a
+            <PreviousBacktestLink
               href="/account/backtests/sample"
-              target="_blank"
-              rel="noreferrer"
-              className="text-sm text-ink-muted hover:text-ink hover:underline"
-            >
-              DCA Test · results
-            </a>
+              name="DCA Test · results"
+            />
           </BotFormSidebarSection>
         ) : null}
       </BotFormSidebar>
