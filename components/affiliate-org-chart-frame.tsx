@@ -165,8 +165,8 @@ export function AffiliateOrgChartFrame({
           : `affiliate-org-chart-frame${content === "light" ? " theme-light" : ""} rounded-card border border-line bg-surface p-5`
       }
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {nodes.length > 0 ? (
             <div
               role="group"
@@ -219,7 +219,9 @@ export function AffiliateOrgChartFrame({
               })}
             </div>
           ) : null}
-          {nodes.length > 0 ? (
+        </div>
+        {nodes.length > 0 ? (
+          <div className="flex min-w-56 flex-1 justify-center">
             <div
               className="relative"
               onBlur={(event) => {
@@ -342,8 +344,8 @@ export function AffiliateOrgChartFrame({
                 </p>
               ) : null}
             </div>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
         {nodes.length > 0 ? (
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex flex-wrap items-center gap-2">

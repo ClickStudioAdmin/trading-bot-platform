@@ -742,7 +742,7 @@ assert.equal(
   );
   assert.equal(card.includes("Plan"), true);
   assert.equal(card.includes("Plus"), true);
-  assert.equal(card.includes("Monthly earnings"), true);
+  assert.equal(card.includes("Monthly Earnings"), true);
   assert.equal(card.includes("$2.00"), true);
   assert.equal(card.includes("L1"), true);
   assert.equal(card.includes("Plus · L1"), false);

@@ -1599,12 +1599,10 @@ export function affiliateOrgChartNodeHtml(
   return `<div class="affiliate-org-node" data-tone="${tone}">
     <span class="affiliate-org-node-level">${escapeHtmlText(affiliateOrgLevelBadge(row.level))}</span>
     <div class="affiliate-org-node-name">${title}</div>
-    <div class="affiliate-org-node-row">
+    <div class="affiliate-org-node-grid">
       <span class="affiliate-org-node-label">Plan</span>
+      <span class="affiliate-org-node-label">Monthly Earnings</span>
       <span class="affiliate-org-node-value">${plan}</span>
-    </div>
-    <div class="affiliate-org-node-row">
-      <span class="affiliate-org-node-label">Monthly earnings</span>
       <span class="affiliate-org-node-value">${earnings}</span>
     </div>
   </div>`;
