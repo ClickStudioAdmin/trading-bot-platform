@@ -3,14 +3,32 @@ import Link from "next/link";
 import { SavedBillingMethodForm } from "@/components/billing-method-radios";
 import { PageHeading } from "@/components/page-heading";
 import { getSessionMember } from "@/lib/auth/session";
-import { SortTh, StatusBadge, TableCard, TablePager } from "@/components/table-chrome";
+import { IconFilterClear } from "@/components/icons";
+import { AppSelect } from "@/components/app-select";
 import {
+  LiveGetForm,
+  SortTh,
+  StatusBadge,
+  TABLE_BTN_ICON,
+  TABLE_FILTER_FIELD_CLASS,
+  TableCard,
+  TableFilterField,
+  TableFilterSession,
+  TableLabelButton,
+  TablePager,
+} from "@/components/table-chrome";
+import {
+  BILLING_LEDGER_TYPE_FILTERS,
+  billingLedgerFilterQuery,
+  billingLedgerFiltersActive,
   billingMethodPriceNote,
   billingPath,
   billingTableQueryParams,
   DEFAULT_BILLING_INVOICE_SORT,
   DEFAULT_BILLING_LEDGER_SORT,
   DEFAULT_BILLING_TABLE_DIR,
+  filterBillingLedgerRows,
+  parseBillingLedgerFilters,
   formatRemainingCycle,
   formatUsd,
   invoiceMethodLabel,
@@ -27,6 +45,7 @@ import {
 import {
   compareTableNum,
   compareTableText,
+  tableFiltersSuggestOpen,
   tableSortHref,
 } from "@/lib/table-chrome";
 import { ManageSavedCard } from "@/components/manage-saved-card";
@@ -43,6 +62,7 @@ import {
 } from "@/lib/membership/billing-store";
 import {
   creditedDepositsNotice,
+  mainWalletLedgerLabel,
   methodTopUpNote,
   showMemberLedgerTab,
   showMemberWalletTab,
@@ -144,6 +164,8 @@ export default async function AccountBillingPage({
     sort: firstSearchValue(params.sort),
     dir: firstSearchValue(params.dir),
   });
+  const ledgerFilters = parseBillingLedgerFilters(params);
+  const ledgerFilterQuery = billingLedgerFilterQuery(ledgerFilters);
   const invoicePage = paginateBillingRows(
     [...invoices].sort((left, right) => {
       if (invoiceSort.sort === "due") {
@@ -174,7 +196,7 @@ export default async function AccountBillingPage({
     tablePage,
   );
   const ledgerPage = paginateBillingRows(
-    [...ledger].sort((left, right) => {
+    filterBillingLedgerRows(ledger, ledgerFilters).sort((left, right) => {
       if (ledgerSort.sort === "description") {
         return compareTableText(left.label, right.label, ledgerSort.dir);
       }
@@ -500,12 +522,72 @@ export default async function AccountBillingPage({
           </div>
         </LiveMainWallet>
       ) : tab === "ledger" ? (
-      ledgerPage.total === 0 ? (
+      ledger.length === 0 && !billingLedgerFiltersActive(ledgerFilters) ? (
         <p className="mt-6 text-sm text-ink-muted">No Account Balance activity yet.</p>
       ) : (
+        <>
+        <TableFilterSession defaultOpen={tableFiltersSuggestOpen(params)}>
+          <LiveGetForm>
+            <input type="hidden" name="page" value="1" />
+            <input type="hidden" name="tab" value="ledger" />
+            {ledgerSort.sort !== DEFAULT_BILLING_LEDGER_SORT ? (
+              <input type="hidden" name="sort" value={ledgerSort.sort} />
+            ) : null}
+            {ledgerSort.dir !== DEFAULT_BILLING_TABLE_DIR ? (
+              <input type="hidden" name="dir" value={ledgerSort.dir} />
+            ) : null}
+            <TableFilterField label="Search">
+              <input
+                name="q"
+                type="search"
+                defaultValue={ledgerFilters.q}
+                placeholder="Description"
+                autoComplete="off"
+                className={TABLE_FILTER_FIELD_CLASS}
+              />
+            </TableFilterField>
+            <TableFilterField label="Type">
+              <AppSelect
+                name="kind"
+                defaultValue={ledgerFilters.kind}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                {BILLING_LEDGER_TYPE_FILTERS.map((kind) => (
+                  <option key={kind} value={kind}>
+                    {mainWalletLedgerLabel(kind)}
+                  </option>
+                ))}
+              </AppSelect>
+            </TableFilterField>
+            <TableFilterField label="Direction">
+              <AppSelect
+                name="direction"
+                defaultValue={ledgerFilters.direction}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                <option value="">All</option>
+                <option value="credit">Credit</option>
+                <option value="debit">Debit</option>
+              </AppSelect>
+            </TableFilterField>
+            <TableLabelButton
+              href={billingPath({ tab: "ledger" })}
+              variant="filter"
+              icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+            >
+              Clear
+            </TableLabelButton>
+          </LiveGetForm>
+        </TableFilterSession>
         <TableCard
           pager={
-            <BillingTablePager tab="ledger" list={ledgerPage} sort={ledgerSort} />
+            <BillingTablePager
+              tab="ledger"
+              list={ledgerPage}
+              sort={ledgerSort}
+              extra={ledgerFilterQuery}
+            />
           }
         >
             <table className="min-w-full text-left text-sm">
@@ -517,7 +599,7 @@ export default async function AccountBillingPage({
                     dir={ledgerSort.dir}
                     href={tableSortHref({
                       pathname: "/account/billing",
-                      params: { tab: "ledger" },
+                      params: { tab: "ledger", ...ledgerFilterQuery },
                       key: "date",
                       currentKey: ledgerSort.sort,
                       currentDir: ledgerSort.dir,
@@ -531,7 +613,7 @@ export default async function AccountBillingPage({
                     dir={ledgerSort.dir}
                     href={tableSortHref({
                       pathname: "/account/billing",
-                      params: { tab: "ledger" },
+                      params: { tab: "ledger", ...ledgerFilterQuery },
                       key: "description",
                       currentKey: ledgerSort.sort,
                       currentDir: ledgerSort.dir,
@@ -545,7 +627,7 @@ export default async function AccountBillingPage({
                     dir={ledgerSort.dir}
                     href={tableSortHref({
                       pathname: "/account/billing",
-                      params: { tab: "ledger" },
+                      params: { tab: "ledger", ...ledgerFilterQuery },
                       key: "amount",
                       currentKey: ledgerSort.sort,
                       currentDir: ledgerSort.dir,
@@ -559,7 +641,7 @@ export default async function AccountBillingPage({
                     dir={ledgerSort.dir}
                     href={tableSortHref({
                       pathname: "/account/billing",
-                      params: { tab: "ledger" },
+                      params: { tab: "ledger", ...ledgerFilterQuery },
                       key: "balance",
                       currentKey: ledgerSort.sort,
                       currentDir: ledgerSort.dir,
@@ -570,7 +652,17 @@ export default async function AccountBillingPage({
                 </tr>
               </thead>
               <tbody>
-                {ledgerPage.rows.map((row) => {
+                {ledgerPage.total === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="px-4 py-6 text-sm text-ink-muted"
+                    >
+                      No entries match these filters.
+                    </td>
+                  </tr>
+                ) : (
+                ledgerPage.rows.map((row) => {
                   const created = parseDisplayTime(row.createdAt);
                   const credit = row.deltaUsd >= 0;
                   return (
@@ -592,10 +684,12 @@ export default async function AccountBillingPage({
                       </td>
                     </tr>
                   );
-                })}
+                })
+                )}
               </tbody>
             </table>
         </TableCard>
+        </>
       )
       ) : invoicePage.total === 0 ? (
         <p className="mt-6 text-sm text-ink-muted">No invoices yet.</p>
@@ -738,6 +832,7 @@ function BillingTablePager({
   tab,
   list,
   sort,
+  extra: extraQuery,
 }: {
   tab: "invoices" | "ledger";
   list: {
@@ -748,14 +843,18 @@ function BillingTablePager({
     to: number;
   };
   sort: { sort: string; dir: "asc" | "desc" };
+  extra?: Record<string, string | undefined>;
 }) {
-  const extra = billingTableQueryParams(sort, {
-    sort:
-      tab === "invoices"
-        ? DEFAULT_BILLING_INVOICE_SORT
-        : DEFAULT_BILLING_LEDGER_SORT,
-    dir: DEFAULT_BILLING_TABLE_DIR,
-  });
+  const extra = {
+    ...extraQuery,
+    ...billingTableQueryParams(sort, {
+      sort:
+        tab === "invoices"
+          ? DEFAULT_BILLING_INVOICE_SORT
+          : DEFAULT_BILLING_LEDGER_SORT,
+      dir: DEFAULT_BILLING_TABLE_DIR,
+    }),
+  };
   return (
     <TablePager
       window={list}

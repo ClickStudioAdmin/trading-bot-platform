@@ -248,6 +248,92 @@ export function billingTableQueryParams(
   };
 }
 
+export const BILLING_LEDGER_TYPE_FILTERS = [
+  "deposit",
+  "debit_rent",
+  "transfer_in",
+  "transfer_out",
+  "withdraw",
+  "adjust",
+] as const;
+export type BillingLedgerTypeFilter =
+  (typeof BILLING_LEDGER_TYPE_FILTERS)[number];
+
+export type BillingLedgerFilters = {
+  q: string;
+  kind: "" | BillingLedgerTypeFilter;
+  direction: "" | "credit" | "debit";
+};
+
+export const EMPTY_BILLING_LEDGER_FILTERS: BillingLedgerFilters = {
+  q: "",
+  kind: "",
+  direction: "",
+};
+
+function firstBillingParam(
+  value: string | string[] | undefined | null,
+): string {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return String(raw ?? "").trim();
+}
+
+export function parseBillingLedgerFilters(
+  params: Record<string, string | string[] | undefined> | null | undefined,
+): BillingLedgerFilters {
+  const kind = firstBillingParam(params?.kind);
+  const direction = firstBillingParam(params?.direction).toLowerCase();
+  return {
+    q: firstBillingParam(params?.q),
+    kind: BILLING_LEDGER_TYPE_FILTERS.includes(
+      kind as BillingLedgerTypeFilter,
+    )
+      ? (kind as BillingLedgerTypeFilter)
+      : "",
+    direction: direction === "credit" || direction === "debit" ? direction : "",
+  };
+}
+
+export function billingLedgerFiltersActive(
+  filters: BillingLedgerFilters,
+): boolean {
+  return Boolean(filters.q || filters.kind || filters.direction);
+}
+
+export function billingLedgerFilterQuery(
+  filters: BillingLedgerFilters,
+): Record<string, string | undefined> {
+  return {
+    q: filters.q || undefined,
+    kind: filters.kind || undefined,
+    direction: filters.direction || undefined,
+  };
+}
+
+export function filterBillingLedgerRows<
+  T extends { kind: string; label: string; deltaUsd: number },
+>(rows: readonly T[], filters: BillingLedgerFilters): T[] {
+  if (!billingLedgerFiltersActive(filters)) {
+    return [...rows];
+  }
+  const needle = filters.q.toLowerCase();
+  return rows.filter((row) => {
+    if (filters.kind && row.kind !== filters.kind) {
+      return false;
+    }
+    if (filters.direction === "credit" && row.deltaUsd < 0) {
+      return false;
+    }
+    if (filters.direction === "debit" && row.deltaUsd >= 0) {
+      return false;
+    }
+    if (needle && !row.label.toLowerCase().includes(needle)) {
+      return false;
+    }
+    return true;
+  });
+}
+
 export function billingPath(
   query: Record<string, string | undefined> = {},
 ): string {

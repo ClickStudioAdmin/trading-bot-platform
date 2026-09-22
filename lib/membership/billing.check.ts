@@ -6,7 +6,11 @@ import {
   DEFAULT_BILLING_LEDGER_SORT,
   DEFAULT_BILLING_TABLE_DIR,
   parseBillingInvoiceSort,
+  parseBillingLedgerFilters,
   parseBillingLedgerSort,
+  billingLedgerFiltersActive,
+  billingLedgerFilterQuery,
+  filterBillingLedgerRows,
   billingPageLabel,
   paginateBillingRows,
   parseBillingPage,
@@ -141,6 +145,59 @@ assert.deepEqual(parseBillingLedgerSort({ sort: "balance", dir: "asc" }), {
   sort: "balance",
   dir: "asc",
 });
+assert.deepEqual(parseBillingLedgerFilters({}), {
+  q: "",
+  kind: "",
+  direction: "",
+});
+assert.deepEqual(
+  parseBillingLedgerFilters({ q: "plan", kind: "debit_rent", direction: "debit" }),
+  { q: "plan", kind: "debit_rent", direction: "debit" },
+);
+assert.deepEqual(parseBillingLedgerFilters({ kind: "nope", direction: "side" }), {
+  q: "",
+  kind: "",
+  direction: "",
+});
+assert.equal(
+  billingLedgerFiltersActive({ q: "", kind: "", direction: "" }),
+  false,
+);
+assert.equal(
+  billingLedgerFiltersActive({ q: "deposit", kind: "", direction: "" }),
+  true,
+);
+assert.deepEqual(
+  billingLedgerFilterQuery({ q: "plan", kind: "", direction: "credit" }),
+  { q: "plan", kind: undefined, direction: "credit" },
+);
+const ledgerRows = [
+  { kind: "deposit", label: "Deposit", deltaUsd: 100 },
+  { kind: "debit_rent", label: "Plan payment", deltaUsd: -19 },
+  { kind: "adjust", label: "Balance correction", deltaUsd: -5 },
+];
+assert.deepEqual(
+  filterBillingLedgerRows(ledgerRows, { q: "", kind: "", direction: "" }).map(
+    (row) => row.kind,
+  ),
+  ["deposit", "debit_rent", "adjust"],
+);
+assert.deepEqual(
+  filterBillingLedgerRows(ledgerRows, {
+    q: "",
+    kind: "debit_rent",
+    direction: "",
+  }).map((row) => row.kind),
+  ["debit_rent"],
+);
+assert.deepEqual(
+  filterBillingLedgerRows(ledgerRows, {
+    q: "balance",
+    kind: "",
+    direction: "debit",
+  }).map((row) => row.label),
+  ["Balance correction"],
+);
 assert.deepEqual(
   billingTableQueryParams(
     { sort: "issued", dir: "desc" },
