@@ -27,6 +27,7 @@ import {
   affiliateDownlineRowHref,
   affiliateOrgChartNodeHtml,
   affiliateOrgLevelBadge,
+  affiliateOrgEarningsHint,
   affiliateOrgPlanLabel,
   affiliateOrgRunRateLabel,
   affiliateOrgRunRateUsd,
@@ -655,6 +656,14 @@ assert.equal(affiliateOrgPlanLabel("Plus"), "Plus");
 assert.equal(affiliateOrgLevelBadge(0), "You");
 assert.equal(affiliateOrgLevelBadge(2), "L2");
 assert.equal(
+  affiliateOrgEarningsHint(0),
+  "Monthly earnings from entire network",
+);
+assert.equal(
+  affiliateOrgEarningsHint(2),
+  "Amount you earn per month from affiliate",
+);
+assert.equal(
   affiliateOrgRunRateUsd({ planPriceUsd: 20, paid: true, ratePct: 10 }),
   2,
 );
@@ -747,7 +756,12 @@ assert.equal(
   );
   assert.equal(card.includes("Plan"), true);
   assert.equal(card.includes("Plus"), true);
-  assert.equal(card.includes("Monthly Earnings"), true);
+  assert.equal(card.includes("Earnings"), true);
+  assert.equal(card.includes("Monthly Earnings"), false);
+  assert.equal(
+    card.includes("Amount you earn per month from affiliate"),
+    true,
+  );
   assert.equal(card.includes("$2.00"), true);
   assert.equal(card.includes("L1"), true);
   assert.equal(card.includes("Plus · L1"), false);

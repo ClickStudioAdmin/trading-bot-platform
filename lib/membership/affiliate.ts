@@ -371,6 +371,12 @@ export function affiliateOrgLevelBadge(level: number): string {
   return level === 0 ? "You" : `L${level}`;
 }
 
+export function affiliateOrgEarningsHint(level: number): string {
+  return level === 0
+    ? "Monthly earnings from entire network"
+    : "Amount you earn per month from affiliate";
+}
+
 export function affiliateOrgRunRateLabel(
   runRateUsd: number,
   kind: "person" | "root" = "person",
@@ -1613,7 +1619,7 @@ export function affiliateOrgChartNodeHtml(
     <div class="affiliate-org-node-name">${title}</div>
     <div class="affiliate-org-node-grid">
       <span class="affiliate-org-node-label">Plan</span>
-      <span class="affiliate-org-node-label">Monthly Earnings</span>
+      <span class="affiliate-org-node-label" title="${escapeHtmlText(affiliateOrgEarningsHint(row.level))}">Earnings</span>
       <span class="affiliate-org-node-value">${plan}</span>
       <span class="affiliate-org-node-value">${earnings}</span>
     </div>
