@@ -31,7 +31,6 @@ export const botSidebarRemoveClass =
   "inline-flex w-full items-center justify-center gap-2 rounded-control border border-line bg-danger/15 px-4 py-2 text-sm font-medium text-danger disabled:opacity-50";
 export const deskActionBtnClass =
   "inline-flex items-center gap-2 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
-export const deskActionSelectClass = `${deskActionBtnClass} desk-action-select`;
 
 export function BotButtonLead({
   icon,

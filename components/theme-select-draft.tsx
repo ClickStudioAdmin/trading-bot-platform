@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { AppMultiSelect, AppSelect } from "@/components/app-select";
 
-const CLONE = [
-  { value: "", label: "Clone existing bot" },
+const ACTION_MENU = [
+  { value: "", label: "Choose a desk" },
   { value: "dca-btc", label: "DCA · BTCUSDT" },
   { value: "dca-eth", label: "DCA · ETHUSDT" },
   { value: "perps-sol", label: "Perps · SOLUSDT" },
@@ -42,9 +42,9 @@ export function ThemeSelectDraft() {
           <AppSelect
             variant="action"
             className="mt-1"
-            aria-label="Clone existing bot"
+            aria-label="Choose a desk"
             defaultValue=""
-            options={CLONE}
+            options={ACTION_MENU}
           />
         </label>
         <label className="block min-w-[12rem] text-xs text-ink-muted">

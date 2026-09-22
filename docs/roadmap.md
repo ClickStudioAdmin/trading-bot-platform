@@ -28,7 +28,7 @@ Keep building on these; do not reopen them as a phase unless Click asks.
 
 **In progress**
 
-- Desk Automations (C&C, Perps bots, DCA): Theme table of bots, Create / Template / Clone on the toolbar, View/Edit opens the existing bot form (`?edit=`). `#bot-…` still opens that form. Automations is the first desk tab; Positions is second.
+- Desk Automations (C&C, Perps bots, DCA): Theme table of bots, Create / Template on the toolbar, Clone on the row Actions, View/Edit opens the existing bot form (`?edit=`). `#bot-…` still opens that form. Automations is the first desk tab; Positions is second.
 
 **Still locked / do not start until Click asks**
 

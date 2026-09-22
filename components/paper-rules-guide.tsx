@@ -51,8 +51,8 @@ export function PaperRulesGuide({
           detail="Adds another bot card. Each bot has its own name, entry filters, size caps, order types, and exits. Save to apply. A green pulse means a live row is using this bot — you cannot remove it until that row is flat."
         />
         <GuideItem
-          term="Clone existing bot"
-          detail="Copies a saved bot, names it with (copy), and leaves it unsaved until you Save Bots. Change filters or disable it first if you do not want two bots competing for the same pair."
+          term="Clone"
+          detail="On the row Actions. Copies a saved bot, names it with (copy), and leaves it unsaved until you Save. Change filters or disable it first if you do not want two bots competing for the same pair."
         />
         <GuideItem
           term="Two bots, one pair"

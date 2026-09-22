@@ -21,7 +21,6 @@ import {
   botSidebarActionClass,
   botSidebarSaveClass,
   deskActionBtnClass,
-  deskActionSelectClass,
 } from "@/components/bot-form-chrome";
 import { AppCheck } from "@/components/app-check";
 import {
@@ -938,10 +937,6 @@ export function ThemeBotFormDraft() {
             Create New Bot from Template
           </BotButtonLead>
         </button>
-        <AppSelect variant="action" aria-label="Clone existing bot" className={deskActionSelectClass} defaultValue="">
-          <option value="">Clone existing bot</option>
-          <option value="sample">Sample bot</option>
-        </AppSelect>
         <button type="button" className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink">
           Save Bots
         </button>

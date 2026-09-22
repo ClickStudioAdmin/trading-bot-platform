@@ -32,8 +32,8 @@ const CONTRACTS = [
   { value: "DOGEUSDT", label: "DOGEUSDT", icon: "DOGE" },
   { value: "XRPUSDT", label: "XRPUSDT", icon: "XRP" },
 ];
-const CLONE = [
-  { value: "", label: "Clone existing bot" },
+const ACTION_MENU = [
+  { value: "", label: "Choose a desk" },
   { value: "dca-btc", label: "DCA · BTCUSDT" },
   { value: "perps-sol", label: "Perps · SOLUSDT" },
 ];
@@ -174,7 +174,7 @@ export function ThemeFormDraft() {
               variant="action"
               className="mt-1"
               defaultValue=""
-              options={CLONE}
+              options={ACTION_MENU}
             />
           </label>
           <label className="block text-sm text-ink" htmlFor="theme-form-disabled">

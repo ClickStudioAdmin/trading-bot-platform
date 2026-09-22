@@ -26,7 +26,6 @@ import {
   botSidebarRemoveClass,
   botSidebarSaveClass,
   deskActionBtnClass,
-  deskActionSelectClass,
 } from "@/components/bot-form-chrome";
 import { AppCheck } from "@/components/app-check";
 import {
@@ -150,10 +149,8 @@ export function FuturesAutomationsDesk({
   const [layers, setLayers] = useState(() => [...rules].reverse());
   const [extraLibrary, setExtraLibrary] = useState<BacktestLibraryItem[]>([]);
   const library = [...backtestLibrary, ...extraLibrary];
-  const [cloneMenu, setCloneMenu] = useState(0);
   const savedLayers = layers.filter((layer) => layer.id);
   const inUse = new Set(inUseRuleIds);
-  const cloneSources = savedLayers;
   const preferredSymbol = venueId === "hyperliquid" ? "BTC" : "BTCUSDT";
   const defaultSymbol =
     options.find((row) => row.symbol === preferredSymbol)?.symbol ??
@@ -277,30 +274,6 @@ export function FuturesAutomationsDesk({
                     sets={sets}
                     onApplied={appendApplied}
                   />
-                ) : null}
-                {cloneSources.length > 0 ? (
-                  <AppSelect variant="action"
-                    key={cloneMenu}
-                    aria-label="Clone existing bot"
-                    defaultValue=""
-                    onChange={(event) => {
-                      const id = event.target.value;
-                      const source = cloneSources.find((item) => item.id === id);
-                      if (!source) {
-                        return;
-                      }
-                      router.push(automationsNewHref(listHref, source.id));
-                      setCloneMenu((n) => n + 1);
-                    }}
-                    className={deskActionSelectClass}
-                  >
-                    <option value="">Clone existing bot</option>
-                    {cloneSources.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name} · {item.symbol}
-                      </option>
-                    ))}
-                  </AppSelect>
                 ) : null}
               </>
             }

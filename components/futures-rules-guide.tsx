@@ -38,7 +38,7 @@ export function FuturesRulesGuide({
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Create New Bot"
-          detail="Adds a blank bot card. Clone existing bot copies a saved bot, names it with (copy), and leaves it unsaved until you Save Bots. A new clone can fire on the next cross — change the contract or disable it first if you do not want two of the same bot."
+          detail="Adds a blank bot. Clone on the row Actions copies a saved bot, names it with (copy), and leaves it unsaved until you Save. A new clone can fire on the next cross — change the contract or disable it first if you do not want two of the same bot."
         />
         <GuideItem
           term="Skip if this side is already open"

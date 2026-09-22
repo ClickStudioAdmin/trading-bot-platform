@@ -235,15 +235,6 @@ button[aria-busy="true"],
   padding-right: 0.25rem;
 }
 
-select.desk-action-select {
-  appearance: none;
-  padding-right: 2.25rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 12 12'%3E%3Cpath stroke='%23F4F6F8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m2.5 4.5 3.5 3.5 3.5-3.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  background-size: 0.75rem;
-}
-
 /* Light scheme. Live chrome/content wrappers use .theme-light. Theme page preview
    still uses .theme-preview-light. Canvas fill is .theme-preview-canvas so portaled
    panels can inherit light tokens without forcing a page background. */
