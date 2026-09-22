@@ -137,11 +137,11 @@ export default async function AccountSettingsPage({
           >
             <div>
               <p className="text-lg font-semibold tracking-tight">Password</p>
-              <p className="mt-1 text-xs text-ink-muted">
+              <p className="mt-1 text-sm text-ink-muted">
                 Change the password for this login.
               </p>
             </div>
-            <label className="block text-sm text-ink-muted">
+            <label className="block text-sm text-ink">
               Current password
               <input
                 name="currentPassword"
@@ -151,7 +151,7 @@ export default async function AccountSettingsPage({
                 className={fieldClass}
               />
             </label>
-            <label className="block text-sm text-ink-muted">
+            <label className="block text-sm text-ink">
               New password
               <input
                 name="newPassword"
@@ -162,7 +162,7 @@ export default async function AccountSettingsPage({
                 className={fieldClass}
               />
             </label>
-            <label className="block text-sm text-ink-muted">
+            <label className="block text-sm text-ink">
               Confirm new password
               <input
                 name="confirmPassword"
@@ -172,7 +172,7 @@ export default async function AccountSettingsPage({
                 autoComplete="new-password"
                 className={fieldClass}
               />
-              <span className="mt-1 block text-hint text-ink-faint">
+              <span className="mt-1 block text-xs text-ink-muted">
                 At least 8 characters.
               </span>
             </label>
@@ -201,11 +201,11 @@ export default async function AccountSettingsPage({
         >
           <div>
             <p className="text-lg font-semibold tracking-tight">Account Holder</p>
-            <p className="mt-1 text-xs text-ink-muted">
+            <p className="mt-1 text-sm text-ink-muted">
               Name and login email for this account.
             </p>
           </div>
-          <label className="block text-sm text-ink-muted">
+          <label className="block text-sm text-ink">
             Name
             <input
               name="name"
@@ -216,7 +216,7 @@ export default async function AccountSettingsPage({
               className={fieldClass}
             />
           </label>
-          <label className="block text-sm text-ink-muted">
+          <label className="block text-sm text-ink">
             Email
             <input
               type="email"
@@ -225,7 +225,7 @@ export default async function AccountSettingsPage({
               autoComplete="username"
               className={`${fieldClass} text-ink-muted`}
             />
-            <span className="mt-1 block text-hint text-ink-faint">
+            <span className="mt-1 block text-xs text-ink-muted">
               Email is the login. An admin can change it from Members.
             </span>
           </label>
@@ -246,13 +246,13 @@ export default async function AccountSettingsPage({
         >
           <div>
             <p className="text-lg font-semibold tracking-tight">Trader Profile</p>
-            <p className="mt-1 text-xs text-ink-muted">
+            <p className="mt-1 text-sm text-ink-muted">
               Required before you share a desk. Other members see this alias
               and logo, never your email. This is not your affiliate alias —
               that lives on Affiliates → Settings.
             </p>
           </div>
-          <label className="block text-sm text-ink-muted">
+          <label className="block text-sm text-ink">
             Alias
             <input
               name="alias"
@@ -263,12 +263,12 @@ export default async function AccountSettingsPage({
               autoComplete="nickname"
               className={fieldClass}
             />
-            <span className="mt-1 block text-hint text-ink-faint">
+            <span className="mt-1 block text-xs text-ink-muted">
               2–32 characters. Letters, numbers, spaces, _ and -. Start with a letter.
             </span>
           </label>
           <div>
-            <p className="text-sm text-ink-muted">Logo</p>
+            <p className="text-sm text-ink">Logo</p>
             <LogoFileField
               name="logo"
               currentUrl={trader?.logoUrl ?? null}
@@ -276,7 +276,7 @@ export default async function AccountSettingsPage({
               hint="Optional. Square PNG, JPG, or WebP. 1 MB max."
             />
           </div>
-          <label className="block text-sm text-ink-muted">
+          <label className="block text-sm text-ink">
             Bio
             <textarea
               name="bio"
@@ -285,7 +285,7 @@ export default async function AccountSettingsPage({
               rows={3}
               className={fieldClass}
             />
-            <span className="mt-1 block text-hint text-ink-faint">
+            <span className="mt-1 block text-xs text-ink-muted">
               Optional. {TRADER_BIO_MAX} characters.
             </span>
           </label>
@@ -303,7 +303,7 @@ export default async function AccountSettingsPage({
           <section className="mt-6 space-y-3 rounded-card border border-line bg-surface p-5">
             <div>
               <p className="text-lg font-semibold tracking-tight">Copy invites</p>
-              <p className="mt-1 text-xs text-ink-muted">
+              <p className="mt-1 text-sm text-ink-muted">
                 Private grants to follow another desk. They also appear on{" "}
                 <Link href="/account/copy" className="text-accent">
                   Copy desks
@@ -320,7 +320,7 @@ export default async function AccountSettingsPage({
                   <p className="text-sm text-ink">
                     {row.traderAlias ?? "Trader"} · {row.parentName}
                   </p>
-                  <p className="mt-1 text-hint text-ink-faint">
+                  <p className="mt-1 text-xs text-ink-muted">
                     {row.share.status === "active" ? "Following" : "Invited"}
                     {row.sharingEnabled
                       ? ""

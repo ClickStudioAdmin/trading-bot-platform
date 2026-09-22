@@ -1589,7 +1589,7 @@ function ImportModal({
       ) : null}
       {file ? (
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="block text-xs text-ink-muted">
+          <label className="block text-sm text-ink">
             Templates
             {file.templates.length === 0 ? (
               <p className="mt-1 text-sm text-ink-muted">
@@ -1615,7 +1615,7 @@ function ImportModal({
               />
             )}
           </label>
-          <label className="block text-xs text-ink-muted">
+          <label className="block text-sm text-ink">
             Folders
             {file.sets.length === 0 ? (
               <p className="mt-1 text-sm text-ink-muted">
@@ -1831,7 +1831,7 @@ function BulkFolderModal({
         skipped.
       </p>
       {folders.length > 0 && !createFolder ? (
-        <label className="mt-3 block text-xs text-ink-muted">
+        <label className="mt-3 block text-sm text-ink">
           Folder
           <AppSelect
             value={folderId}
@@ -1855,7 +1855,7 @@ function BulkFolderModal({
         Create a new folder
       </label>
       {createFolder ? (
-        <label className="mt-2 block text-xs text-ink-muted">
+        <label className="mt-2 block text-sm text-ink">
           Folder name
           <input
             value={newFolderName}
@@ -1964,7 +1964,7 @@ function TemplateEditModal({
     <>
     <Modal title="Edit template" onClose={onClose}>
       <p className="mt-1 text-hint text-ink-faint">{recipePreview(template.recipe)}</p>
-      <label className="mt-4 block text-xs text-ink-muted">
+      <label className="mt-4 block text-sm text-ink">
         Name
         <input
           value={name}
@@ -1973,7 +1973,7 @@ function TemplateEditModal({
           className={fieldClass}
         />
       </label>
-      <label className="mt-3 block text-xs text-ink-muted">
+      <label className="mt-3 block text-sm text-ink">
         Description
         <textarea
           value={description}
@@ -1990,7 +1990,7 @@ function TemplateEditModal({
         />
       ) : null}
       <fieldset className="mt-3">
-        <legend className="text-xs text-ink-muted">Folders</legend>
+        <legend className="text-sm text-ink">Folders</legend>
         {folders.length === 0 ? (
           <p className="mt-1 text-sm text-ink-muted">
             No folders for this desk type yet. Create one below.
@@ -2028,7 +2028,7 @@ function TemplateEditModal({
         ) : null}
       </fieldset>
       {variant === "admin" && template.visibility === "user" ? (
-        <label className="mt-3 block text-xs text-ink-muted">
+        <label className="mt-3 block text-sm text-ink">
           Publish copy as
           <input
             value={publishName}
@@ -2123,7 +2123,7 @@ function FolderEditModal({
   return (
     <>
     <Modal title="Edit folder" onClose={onClose} wide>
-      <label className="mt-4 block text-xs text-ink-muted">
+      <label className="mt-4 block text-sm text-ink">
         Name
         <input
           value={name}
@@ -2132,7 +2132,7 @@ function FolderEditModal({
           className={fieldClass}
         />
       </label>
-      <label className="mt-3 block text-xs text-ink-muted">
+      <label className="mt-3 block text-sm text-ink">
         Description
         <textarea
           value={description}
@@ -2195,7 +2195,7 @@ function FolderMembership({
 
   return (
     <div className="mt-3">
-      <p className="text-xs text-ink-muted">Templates</p>
+      <p className="text-sm text-ink">Templates</p>
       <div className="mt-1 grid gap-3 sm:grid-cols-2">
         <MembershipColumn
           title="In Folder"
@@ -2319,7 +2319,7 @@ function CreateFolderModal({
           ? "This folder is visible to every member. Name and desk type are enough; you can add templates later."
           : "Name and desk type are enough. You can add templates later."}
       </p>
-      <label className="mt-4 block text-xs text-ink-muted">
+      <label className="mt-4 block text-sm text-ink">
         Name
         <input
           value={name}
@@ -2328,7 +2328,7 @@ function CreateFolderModal({
           className={fieldClass}
         />
       </label>
-      <label className="mt-3 block text-xs text-ink-muted">
+      <label className="mt-3 block text-sm text-ink">
         Desk Type
         <AppSelect
           value={deskType}

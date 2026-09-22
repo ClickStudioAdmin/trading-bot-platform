@@ -323,7 +323,7 @@ export function SaveAsTemplateButton({
               ? "Visible to every member. Confirm the name before publishing."
               : "Saved to your template library. Apply it later on any matching desk."}
           </p>
-          <label className="mt-4 block text-xs text-ink-muted">
+          <label className="mt-4 block text-sm text-ink">
             Name
             <input
               value={name}
@@ -332,7 +332,7 @@ export function SaveAsTemplateButton({
               className={fieldClass}
             />
           </label>
-          <label className="mt-3 block text-xs text-ink-muted">
+          <label className="mt-3 block text-sm text-ink">
             Description
             <textarea
               value={description}
@@ -348,7 +348,7 @@ export function SaveAsTemplateButton({
             />
           ) : null}
           <div className="mt-3">
-            <p className="text-xs text-ink-muted">Add to folder</p>
+            <p className="text-sm text-ink">Add to folder</p>
             {folderGroups.length === 0 ? (
               <p className="mt-1 text-sm text-ink-faint">
                 {platform
@@ -381,7 +381,7 @@ export function SaveAsTemplateButton({
             {platform ? "Create a new platform folder" : "Create a new folder"}
           </label>
           {createFolder ? (
-            <label className="mt-2 block text-xs text-ink-muted">
+            <label className="mt-2 block text-sm text-ink">
               Folder name
               <input
                 value={newFolderName}
@@ -796,7 +796,7 @@ function FolderNode({
         />
         <span>
           <span className="block font-medium">{folder.name}</span>
-          <span className="block text-xs text-ink-muted">
+          <span className="block text-sm text-ink">
             {ids.length === 0
               ? "Empty folder"
               : `${ids.length} template${ids.length === 1 ? "" : "s"}`}
@@ -827,7 +827,7 @@ function FolderNode({
                 />
                 <span>
                   <span className="block">{item.name}</span>
-                  <span className="block text-xs text-ink-muted">
+                  <span className="block text-sm text-ink">
                     {item.preview}
                   </span>
                 </span>

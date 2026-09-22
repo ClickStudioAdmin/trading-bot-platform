@@ -94,8 +94,8 @@ export default async function ThemePage({
           <section>
             <h2 className="text-xl font-semibold tracking-tight">Cards</h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Type scale, card samples, and what is still inconsistent. Card
-              titles, Profile and password labels, and fact rows are live.
+              Card titles, field labels, fact rows, and helpers. Labels are
+              14px ink — white in dark mode.
             </p>
             <div className="mt-5">
               <ThemeCardsDraft />
@@ -234,8 +234,9 @@ export default async function ThemePage({
               Body 14 — primary copy on canvas or surface.
             </p>
             <p className="text-sm text-ink-muted">
-              Card intro / form label 14 muted.
+              Card intro 14 muted.
             </p>
+            <p className="text-sm text-ink">Form label 14</p>
             <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
               Fact label 12
             </p>
@@ -443,7 +444,7 @@ export default async function ThemePage({
             </span>
           </div>
           <div className="mt-4 max-w-md">
-            <label className="text-sm text-ink-muted" htmlFor="theme-search">
+            <label className="text-sm text-ink" htmlFor="theme-search">
               Search
             </label>
             <input

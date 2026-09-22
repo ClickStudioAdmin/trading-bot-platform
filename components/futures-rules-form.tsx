@@ -744,7 +744,7 @@ function RuleCard({
             </AppSelect>
           </BotField>
           {closing ? null : (
-            <label className="flex items-center gap-2 self-end pb-0.5 text-sm text-ink-muted lg:col-span-2">
+            <label className="flex items-center gap-2 self-end pb-0.5 text-sm text-ink lg:col-span-2">
               <AppCheck
                 name={`${prefix}skipIfOpen`}
                 value="on"

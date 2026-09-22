@@ -11,7 +11,7 @@ export const themeCardTitleClass =
 export const themeCardIntroClass = "mt-2 text-sm text-ink-muted";
 export const themeGroupTitleClass = "text-sm font-semibold text-ink";
 export const themeBodyClass = "text-sm text-ink";
-export const themeFormLabelClass = "block text-sm text-ink-muted";
+export const themeFormLabelClass = "block text-sm text-ink";
 export const themeChoiceLabelClass = "text-sm text-ink";
 export const themeHelperClass = "mt-1 block text-xs text-ink-muted";
 export const themeHintClass = "text-hint text-ink-faint";
@@ -77,7 +77,7 @@ const SCALE: {
     sample: "Name",
     cls: themeFormLabelClass,
     px: "14",
-    use: "Bot form, Profile, password, and Theme → Forms. Other field labels are still white or 12px.",
+    use: "Every field label. 14px ink — white in dark mode, dark in light.",
   },
   {
     role: "Fact label",
@@ -122,10 +122,10 @@ export function ThemeCardsDraft() {
       <section className="space-y-4">
         <h2 className="text-xl font-semibold tracking-tight">Type scale</h2>
         <p className="text-sm text-ink-muted">
-          Card titles are live at 18px. Profile and password field labels are
-          live at 14px muted, matching the bot form. Fact rows are 12px
-          uppercase labels and 14px values. Top up keeps the label beside the
-          value. Helpers on Profile are still 13px faint.
+          Card titles are 18px. Field labels are 14px ink — white in dark
+          mode. Card intros are 14px muted. Fact rows are 12px uppercase
+          labels and 14px values, with the label beside the value on Top up.
+          Helpers under fields are 12px muted.
         </p>
         <div className="overflow-hidden rounded-card border border-line bg-surface">
           <table className="w-full text-left text-sm">
@@ -161,69 +161,22 @@ export function ThemeCardsDraft() {
         </h2>
         <ul className="space-y-3 text-sm text-ink-muted">
           <li>
-            <span className="text-ink">Field labels — colour.</span> The bot
-            form, Profile, password, 2FA, Affiliates → Settings, and Theme →
-            Forms use 14px muted labels. Many other fields are the same size
-            but white (<span className="text-ink">ink</span>): sign in, sign
-            up, forgot and reset password, affiliate signup, create campaign,
-            create URL, payout request, admin settings, plans, and email test,
-            desk settings, copy follow and share, close and TP/SL, webhooks,
-            and Request withdraw. Checkbox and radio titles stay white on
-            purpose — that includes the bot form.
+            <span className="text-ink">2FA card titles.</span> Password,
+            Account Holder, Trader Profile, and Copy invites are 18px
+            semibold. The 2FA cards on the password tab are still 14px regular:
+            recovery codes, set up, on, and off.
           </li>
           <li>
-            <span className="text-ink">Field labels — size.</span> These are
-            muted but still 12px: Members, New desk, exchange connect and
-            rename, account rename and delete, backtest queue and save,
-            templates, table filters, and some trailing and TP/SL fields.
-            Theme → Controls selects are 12px too.
+            <span className="text-ink">Group titles.</span> The scale is 14px
+            semibold. Risk caps, Copier requirements, Sizing, and Guards are
+            14px regular ink.
           </li>
           <li>
-            <span className="text-ink">Card intros.</span> Profile, password,
-            Trader Profile, and Copy invites still use 12px under the 18px
-            title. The scale is 14px muted.
-          </li>
-          <li>
-            <span className="text-ink">Helpers.</span> Under a field should be
-            12px muted. Profile and password still use 13px faint. Top-up
-            instructions are a 14px paragraph. Radio notes mix 13px faint and
-            14px muted.
+            <span className="text-ink">Hover fact rows.</span> Billing and Top
+            up use 12px uppercase labels. Account snapshot and copy-equity
+            hovers still use sentence-case labels beside the value.
           </li>
         </ul>
-        <div className="grid gap-5 lg:grid-cols-2">
-          <SampleFrame
-            label="Bot form — muted label"
-            note="Reference. 14px muted, behind the card title."
-          >
-            <Card>
-              <h3 className={themeCardTitleClass}>General</h3>
-              <label className={`${themeFormLabelClass} mt-4`}>
-                Name
-                <input
-                  defaultValue="DCA · BTCUSDT"
-                  readOnly
-                  className={fieldClass}
-                />
-              </label>
-            </Card>
-          </SampleFrame>
-          <SampleFrame
-            label="Other forms — white label"
-            note="Same 14px, but ink. Sign in, admin, and desk settings."
-          >
-            <Card>
-              <h3 className={themeCardTitleClass}>Sign in</h3>
-              <label className="mt-4 block text-sm text-ink">
-                Email
-                <input
-                  defaultValue="you@studio.test"
-                  readOnly
-                  className={fieldClass}
-                />
-              </label>
-            </Card>
-          </SampleFrame>
-        </div>
       </section>
 
       <section className="space-y-4">
@@ -231,8 +184,8 @@ export function ThemeCardsDraft() {
           Profile — live vs scale
         </h2>
         <p className="text-sm text-ink-muted">
-          Title and field labels match. Left is live: the intro is still 12px
-          and the helper is still 13px faint. Right is the scale.
+          Live Account Holder matches the scale: 18px title, 14px muted intro,
+          14px white field labels, 12px muted helper.
         </p>
         <div className="grid gap-5 lg:grid-cols-2">
           <SampleFrame label="Live — Account Holder">
@@ -240,10 +193,10 @@ export function ThemeCardsDraft() {
               <p className="text-lg font-semibold tracking-tight">
                 Account Holder
               </p>
-              <p className="mt-1 text-xs text-ink-muted">
+              <p className="mt-1 text-sm text-ink-muted">
                 Name and login email for this account.
               </p>
-              <label className="mt-4 block text-sm text-ink-muted">
+              <label className="mt-4 block text-sm text-ink">
                 Name
                 <input
                   defaultValue="Click Studio"
@@ -251,14 +204,14 @@ export function ThemeCardsDraft() {
                   className={fieldClass}
                 />
               </label>
-              <label className="mt-4 block text-sm text-ink-muted">
+              <label className="mt-4 block text-sm text-ink">
                 Email
                 <input
                   defaultValue="click.studioadmin@gmail.com"
                   readOnly
                   className={`${fieldClass} text-ink-muted`}
                 />
-                <span className="mt-1 block text-hint text-ink-faint">
+                <span className="mt-1 block text-xs text-ink-muted">
                   Email is the login. An admin can change it from Members.
                 </span>
               </label>
@@ -698,7 +651,7 @@ function BotStepCard() {
               text="Name"
               required
               hint="Shown on Automations. Hover hints stay on the label."
-              className="text-sm text-ink-muted"
+              className="text-sm text-ink"
             />
             <input
               id="theme-card-bot-name"

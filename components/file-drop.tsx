@@ -89,7 +89,7 @@ export function FileDrop({
 
   return (
     <div>
-      {label ? <p className="text-sm text-ink-muted">{label}</p> : null}
+      {label ? <p className="text-sm text-ink">{label}</p> : null}
       <div
         onDragEnter={(event) => {
           event.preventDefault();
@@ -134,7 +134,7 @@ export function FileDrop({
         ) : (
           <p className="text-sm text-ink">{fileName ?? "Drop a file here"}</p>
         )}
-        <p className="mt-1 text-hint text-ink-muted">{hint}</p>
+        <p className="mt-1 text-xs text-ink-muted">{hint}</p>
         <label className={CHOOSE_BTN}>
           Choose file
           <input
@@ -153,7 +153,7 @@ export function FileDrop({
         </label>
       </div>
       {currentUrl && removeName ? (
-        <label className="mt-2 flex items-center gap-2 text-xs text-ink-muted">
+        <label className="mt-2 flex items-center gap-2 text-sm text-ink">
           <AppCheck
             name={removeName}
             checked={remove}

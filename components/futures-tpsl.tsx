@@ -748,11 +748,11 @@ function TpslPriceField({
   const limitLabel = takeProfit ? "Take profit limit" : "Stop loss limit";
   return (
     <div className="space-y-2">
-      <label className="block text-xs text-ink-muted">
+      <label className="block text-sm text-ink">
         Type
         <TpslTypeSelect name={kindName} value={kind} onChange={setKind} />
       </label>
-      <label className="block text-xs text-ink-muted">
+      <label className="block text-sm text-ink">
         {triggerLabel}
         <span className="mt-1 flex gap-1">
           <span className={kind === "percent" ? "relative min-w-0 flex-1" : "contents"}>
@@ -796,7 +796,7 @@ function TpslPriceField({
         ) : null}
       </label>
       {orderType === "limit" ? (
-        <label className="block text-xs text-ink-muted">
+        <label className="block text-sm text-ink">
           {limitLabel}
           <GroupedNumberInput
             name={limitName}
@@ -813,7 +813,7 @@ function TpslPriceField({
         <input type="hidden" name={limitName} value="" />
       )}
       {qtyName ? (
-        <label className="block text-xs text-ink-muted">
+        <label className="block text-sm text-ink">
           Qty
           <GroupedNumberInput
             name={qtyName}
@@ -928,7 +928,7 @@ function TpslDialogRow({
             />
           </span>
           {orderType === "market" ? (
-            <span className="mt-1 block text-hint text-ink-faint">
+            <span className="mt-1 block text-xs text-ink-muted">
               {kind === "percent"
                 ? "Closes at market when this percent from entry hits."
                 : "Closes at market when this price hits."}
@@ -957,7 +957,7 @@ function TpslDialogRow({
             placeholder="Same as trigger"
             className={`${INPUT_CLASS} mt-1`}
           />
-          <span className="mt-1 block text-hint text-ink-faint">
+          <span className="mt-1 block text-xs text-ink-muted">
             Fires at the trigger. The close rests at this price.
           </span>
         </label>

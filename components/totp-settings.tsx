@@ -28,7 +28,7 @@ export function TotpSettings({
       <section className="space-y-4 rounded-card border border-line bg-surface p-5">
         <div>
           <p className="text-sm text-ink">Save these recovery codes</p>
-          <p className="mt-1 text-xs text-ink-muted">
+          <p className="mt-1 text-sm text-ink-muted">
             Each code signs you in once if you lose Google Authenticator. We
             will not show them again.
           </p>
@@ -66,7 +66,7 @@ export function TotpSettings({
       <section className="space-y-4 rounded-card border border-line bg-surface p-5">
         <div>
           <p className="text-sm text-ink">Set up two-factor authentication (2FA)</p>
-          <p className="mt-1 text-xs text-ink-muted">
+          <p className="mt-1 text-sm text-ink-muted">
             Scan the QR code in Google Authenticator, then enter the 6-digit
             code to enable 2FA.
           </p>
@@ -87,7 +87,7 @@ export function TotpSettings({
           </div>
         </div>
         <form action={confirmTotpEnrollAction} className="space-y-3">
-          <label className="block text-sm text-ink-muted">
+          <label className="block text-sm text-ink">
             Code
             <input
               name="code"
@@ -123,14 +123,14 @@ export function TotpSettings({
       <section className="space-y-4 rounded-card border border-line bg-surface p-5">
         <div>
           <p className="text-sm text-ink">Two-factor authentication (2FA) is on</p>
-          <p className="mt-1 text-xs text-ink-muted">
+          <p className="mt-1 text-sm text-ink-muted">
             Sign-in asks for a 6-digit code after your password. Disable it
             with your current password and a code from the app (or a leftover
             recovery code).
           </p>
         </div>
         <form action={disableTotpAction} className="space-y-3">
-          <label className="block text-sm text-ink-muted">
+          <label className="block text-sm text-ink">
             Current password
             <input
               name="currentPassword"
@@ -140,7 +140,7 @@ export function TotpSettings({
               className={fieldClass}
             />
           </label>
-          <label className="block text-sm text-ink-muted">
+          <label className="block text-sm text-ink">
             Code
             <input
               name="code"
@@ -164,7 +164,7 @@ export function TotpSettings({
     <section className="space-y-4 rounded-card border border-line bg-surface p-5">
       <div>
         <p className="text-sm text-ink">Two-factor authentication (2FA)</p>
-        <p className="mt-1 text-xs text-ink-muted">
+        <p className="mt-1 text-sm text-ink-muted">
           Add a 6-digit code after your password at sign-in. Use the Google
           Authenticator app on your phone.
         </p>

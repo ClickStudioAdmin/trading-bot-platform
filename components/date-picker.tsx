@@ -154,7 +154,7 @@ export function DatePicker({
 
   return (
     <div ref={rootRef} className="relative">
-      <p className="text-sm text-ink-muted">{label}</p>
+      <p className="text-sm text-ink">{label}</p>
       <input type="hidden" name={name} value={value} />
       <button
         type="button"

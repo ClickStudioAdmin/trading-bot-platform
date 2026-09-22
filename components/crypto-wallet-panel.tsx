@@ -365,7 +365,7 @@ export function TopUpWallet({
           {heading ? (
             <h2 className="text-lg font-semibold tracking-tight">{heading}</h2>
           ) : null}
-          <p className="text-sm text-ink-muted">
+          <p className="text-xs text-ink-muted">
             Save Crypto as your method to see your deposit address.
           </p>
         </>
@@ -432,7 +432,7 @@ export function TopUpWallet({
             </dd>
           </div>
           {instructions ? (
-            <p className="text-sm text-ink-muted">{instructions}</p>
+            <p className="text-xs text-ink-muted">{instructions}</p>
           ) : null}
           {showCheck ? <CheckDepositButton checkout={checkout} /> : null}
         </>

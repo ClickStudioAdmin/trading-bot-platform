@@ -265,7 +265,7 @@ export function BacktestQueueForm({
         {recipe ? (
           <input type="hidden" name="recipe" value={JSON.stringify(recipe)} />
         ) : null}
-        <label className="block text-xs text-ink-muted">
+        <label className="block text-sm text-ink">
           Bot
           <input
             type="hidden"
@@ -384,7 +384,7 @@ export function BacktestQueueForm({
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-xs text-ink-muted">
+          <label className="block text-sm text-ink">
             Initial account balance
             <GroupedNumberInput
               name="startingBalance"
@@ -394,7 +394,7 @@ export function BacktestQueueForm({
               className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink"
             />
           </label>
-          <label className="block text-xs text-ink-muted">
+          <label className="block text-sm text-ink">
             Leverage
             <GroupedNumberInput
               name="leverage"
@@ -403,14 +403,14 @@ export function BacktestQueueForm({
               allowDecimal
               className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink"
             />
-            <span className="mt-1 block text-hint text-ink-faint">
+            <span className="mt-1 block text-xs text-ink-muted">
               Cash gates on margin (position value ÷ this). Empty is 1×. If
               marked equity hits $0, the account liquidates and the replay
               stops.
             </span>
           </label>
         </div>
-        <label className="block text-xs text-ink-muted">
+        <label className="block text-sm text-ink">
           Venue
           <AppSelect
             name="venue"
@@ -423,7 +423,7 @@ export function BacktestQueueForm({
           </AppSelect>
         </label>
         <div>
-          <p className="text-xs text-ink-muted">Primary pair</p>
+          <p className="text-sm text-ink">Primary pair</p>
           <div className="mt-1">
             <FuturesSymbolSelect
               options={pairs}
@@ -437,10 +437,10 @@ export function BacktestQueueForm({
           </div>
         </div>
         <fieldset>
-          <legend className="text-xs text-ink-muted">
+          <legend className="text-sm text-ink">
             Comparables ({comparables.length}/{BACKTEST_COMPARABLE_CAP})
           </legend>
-          <p className="mt-1 text-hint text-ink-faint">
+          <p className="mt-1 text-xs text-ink-muted">
             Same bot and window on other pairs. Ranked next to the primary.
           </p>
           <AppMultiSelect

@@ -25,7 +25,7 @@ export function AdminMemberForm({
       {memberId !== undefined ? (
         <input type="hidden" name="memberId" value={memberId} />
       ) : null}
-      <label className="block text-xs text-ink-muted" htmlFor="name">
+      <label className="block text-sm text-ink" htmlFor="name">
         Name
         <input
           id="name"
@@ -36,7 +36,7 @@ export function AdminMemberForm({
           className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
         />
       </label>
-      <label className="block text-xs text-ink-muted" htmlFor="email">
+      <label className="block text-sm text-ink" htmlFor="email">
         Email
         <input
           id="email"
@@ -48,7 +48,7 @@ export function AdminMemberForm({
           className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none read-only:text-ink-muted"
         />
       </label>
-      <label className="block text-xs text-ink-muted" htmlFor="password">
+      <label className="block text-sm text-ink" htmlFor="password">
         {mode === "create" ? "Password" : "New password"}
         <input
           id="password"
@@ -59,14 +59,14 @@ export function AdminMemberForm({
           minLength={mode === "create" ? 8 : undefined}
           className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
         />
-        <span className="mt-1 block text-hint text-ink-faint">
+        <span className="mt-1 block text-xs text-ink-muted">
           {mode === "create"
             ? "At least 8 characters. This is the desk password."
             : "Leave blank to keep the current password."}
         </span>
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block text-xs text-ink-muted" htmlFor="role">
+        <label className="block text-sm text-ink" htmlFor="role">
           Role
           <AppSelect
             id="role"
@@ -79,7 +79,7 @@ export function AdminMemberForm({
             <option value="admin">Admin</option>
           </AppSelect>
         </label>
-        <label className="block text-xs text-ink-muted" htmlFor="status">
+        <label className="block text-sm text-ink" htmlFor="status">
           Status
           <AppSelect
             id="status"
@@ -93,7 +93,7 @@ export function AdminMemberForm({
           </AppSelect>
         </label>
       </div>
-      <label className="block text-xs text-ink-muted" htmlFor="planId">
+      <label className="block text-sm text-ink" htmlFor="planId">
         Plan
         <AppSelect
           id="planId"
@@ -109,13 +109,13 @@ export function AdminMemberForm({
             </option>
           ))}
         </AppSelect>
-        <span className="mt-1 block text-hint text-ink-faint">
+        <span className="mt-1 block text-xs text-ink-muted">
           Admin assign. Affiliate earning rates come from this plan. No
           invoice.
         </span>
       </label>
       {mode === "create" ? (
-        <label className="block text-xs text-ink-muted" htmlFor="referralCode">
+        <label className="block text-sm text-ink" htmlFor="referralCode">
           Referral code
           <input
             id="referralCode"
@@ -124,7 +124,7 @@ export function AdminMemberForm({
             maxLength={32}
             className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
           />
-          <span className="mt-1 block text-hint text-ink-faint">
+          <span className="mt-1 block text-xs text-ink-muted">
             Optional first-touch attribution. Must match an enrolled member’s
             code.
           </span>

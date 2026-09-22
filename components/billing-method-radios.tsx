@@ -45,7 +45,7 @@ export function BillingMethodRadios({
         />
         <span>
           {BILLING_METHOD_LABELS.stripe}
-          <span className="mt-1 block text-hint text-ink-faint">
+          <span className="mt-1 block text-xs text-ink-muted">
             Automatic payments handled by Stripe.
           </span>
         </span>
@@ -60,7 +60,7 @@ export function BillingMethodRadios({
           />
           <span>
             {BILLING_METHOD_LABELS.wallet}
-            <span className="mt-1 block text-hint text-ink-faint">
+            <span className="mt-1 block text-xs text-ink-muted">
               Manual payments required to top up your account. Monthly
               payments are deducted from your account balance when due.
             </span>
@@ -80,7 +80,7 @@ export function BillingMethodRadios({
             />
             <span>
               {CRYPTO_CREDIT_DEDUCT_LABEL}
-              <span className="mt-1 block text-hint text-ink-faint">
+              <span className="mt-1 block text-xs text-ink-muted">
                 {CRYPTO_CREDIT_DEDUCT_NOTE}
               </span>
             </span>

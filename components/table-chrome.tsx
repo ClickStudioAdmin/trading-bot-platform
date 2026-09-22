@@ -251,7 +251,7 @@ export function TableFilterField({
   children: ReactNode;
 }) {
   return (
-    <label className={`block text-xs text-ink-muted ${className}`.trim()}>
+    <label className={`block text-sm text-ink ${className}`.trim()}>
       {label}
       {children}
     </label>

@@ -83,7 +83,7 @@ export function ExchangeConnectForm({
         <h2 className="text-lg font-semibold tracking-tight">Connect</h2>
       )}
       {next ? <input type="hidden" name="next" value={next} /> : null}
-      <label className="block text-xs text-ink-muted">
+      <label className="block text-sm text-ink">
         Exchange
         <AppSelect
           name="venue"
@@ -101,7 +101,7 @@ export function ExchangeConnectForm({
           ))}
         </AppSelect>
       </label>
-      <label className="block text-xs text-ink-muted">
+      <label className="block text-sm text-ink">
         Environment
         <AppSelect
           name="environment"
@@ -117,7 +117,7 @@ export function ExchangeConnectForm({
         </AppSelect>
       </label>
       {venue.credentialFields.map((field) => (
-        <label key={field.key} className="block text-xs text-ink-muted">
+        <label key={field.key} className="block text-sm text-ink">
           {field.label}
           <input
             name={field.key}
@@ -129,7 +129,7 @@ export function ExchangeConnectForm({
           />
         </label>
       ))}
-      <label className="block text-xs text-ink-muted">
+      <label className="block text-sm text-ink">
         Label (optional)
         <input name="label" maxLength={40} className={fieldClass} />
       </label>

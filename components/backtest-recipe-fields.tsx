@@ -44,7 +44,7 @@ import { AppSelect } from "@/components/app-select";
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink";
 const invalidFieldClass = `${fieldClass} border-danger`;
-const labelClass = "block text-xs text-ink-muted";
+const labelClass = "block text-sm text-ink";
 
 function issueFor(
   issues: BacktestFieldIssue[],

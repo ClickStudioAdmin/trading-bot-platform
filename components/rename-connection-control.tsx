@@ -40,7 +40,7 @@ export function RenameConnectionControl({
         </p>
         <form action={renameExchangeConnection} className="mt-3 space-y-3">
           <input type="hidden" name="connectionId" value={connectionId} />
-          <label className="block text-xs text-ink-muted">
+          <label className="block text-sm text-ink">
             Label (optional)
             <input
               name="label"

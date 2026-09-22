@@ -1040,7 +1040,7 @@ export function SaveBacktestAsTemplateButton({
               ? "Visible to every member. Does not attach this run or arm a desk."
               : "Saved to your template library and attached to this run. Apply it later on any matching desk."}
           </p>
-          <label className="mt-4 block text-xs text-ink-muted">
+          <label className="mt-4 block text-sm text-ink">
             Name
             <input
               value={name}
@@ -1056,7 +1056,7 @@ export function SaveBacktestAsTemplateButton({
             />
           ) : null}
           <div className="mt-3">
-            <p className="text-xs text-ink-muted">Add to folder</p>
+            <p className="text-sm text-ink">Add to folder</p>
             {folderGroups.length === 0 ? (
               <p className="mt-1 text-sm text-ink-faint">
                 {platform
@@ -1089,7 +1089,7 @@ export function SaveBacktestAsTemplateButton({
             {platform ? "Create a new platform folder" : "Create a new folder"}
           </label>
           {createFolder ? (
-            <label className="mt-2 block text-xs text-ink-muted">
+            <label className="mt-2 block text-sm text-ink">
               Folder name
               <input
                 value={newFolderName}
@@ -1184,7 +1184,7 @@ export function ApplyBacktestButton({
             className="mt-4 space-y-3"
             action={(formData) => void onAdd(formData)}
           >
-            <label className="block text-xs text-ink-muted">
+            <label className="block text-sm text-ink">
               Desk
               <AppSelect
                 name="accountId"
@@ -1198,7 +1198,7 @@ export function ApplyBacktestButton({
                 ))}
               </AppSelect>
             </label>
-            <label className="block text-xs text-ink-muted">
+            <label className="block text-sm text-ink">
               Bot name
               <input
                 value={name}

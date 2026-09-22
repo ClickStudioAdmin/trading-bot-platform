@@ -100,7 +100,7 @@ function SwitchFields({
     );
   }
   return (
-    <label className="block text-xs text-ink-muted">
+    <label className="block text-sm text-ink">
       Switch to
       <AppSelect
         name="switchToAccountId"

@@ -48,7 +48,7 @@ export function FuturesTrailingFields({
       </label>
       {enabled ? (
         <div className={stacked ? "grid gap-3" : "grid gap-3 sm:grid-cols-2"}>
-          <label className="block text-xs text-ink-muted">
+          <label className="block text-sm text-ink">
             Retracement
             <GroupedNumberInput
               name={`${namePrefix}trailingStop`}
@@ -61,7 +61,7 @@ export function FuturesTrailingFields({
             />
           </label>
           <div>
-            <label className="flex items-center gap-2 text-xs text-ink-muted">
+            <label className="flex items-center gap-2 text-sm text-ink">
               <AppCheck
                 name={`${namePrefix}trailingActivation`}
                 value="on"

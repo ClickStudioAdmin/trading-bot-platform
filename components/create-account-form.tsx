@@ -159,7 +159,7 @@ export function CreateAccountForm({
           </p>
         </div>
       ) : (
-        <label className="block text-xs text-ink-muted">
+        <label className="block text-sm text-ink">
           Desk Type
           <AppSelect
             name="deskType"
@@ -183,7 +183,7 @@ export function CreateAccountForm({
           </AppSelect>
         </label>
       )}
-      <label className="block text-xs text-ink-muted">
+      <label className="block text-sm text-ink">
         Name
         <input
           name="name"
@@ -205,7 +205,7 @@ export function CreateAccountForm({
           </p>
         ) : null}
       </label>
-      <label className="block text-xs text-ink-muted">
+      <label className="block text-sm text-ink">
         Mode
         <AppSelect
           name="mode"
@@ -224,7 +224,7 @@ export function CreateAccountForm({
         </AppSelect>
       </label>
       {mode === "paper" && deskType !== "cash_and_carry" && paperVenues.length > 1 ? (
-        <label className="block text-xs text-ink-muted">
+        <label className="block text-sm text-ink">
           Market Data
           <AppSelect
             value={venue}
@@ -241,7 +241,7 @@ export function CreateAccountForm({
       ) : null}
       {mode === "live" ? (
         <div className="space-y-4">
-          <label className="block text-xs text-ink-muted">
+          <label className="block text-sm text-ink">
             Exchange Connection
             <AppSelect
               value={bindChoice}
@@ -263,7 +263,7 @@ export function CreateAccountForm({
           </label>
           {bindChoice === "existing" ? (
             liveKeys.length > 0 ? (
-              <label className="block text-xs text-ink-muted">
+              <label className="block text-sm text-ink">
                 Connection
                 <AppSelect
                   name="exchangeConnectionId"

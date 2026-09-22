@@ -57,7 +57,7 @@ export function AccountRenameControl({
           }}
         >
           <input type="hidden" name="accountId" value={accountId} />
-          <label className="block text-xs text-ink-muted">
+          <label className="block text-sm text-ink">
             Name
             <input
               name="name"

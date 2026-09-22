@@ -37,7 +37,7 @@ export function ThemeSelectDraft() {
         same listbox. Live folder and comparable pickers use multi-select.
       </p>
       <div className="flex flex-wrap items-end gap-4">
-        <label className="block min-w-[12rem] text-xs text-ink-muted">
+        <label className="block min-w-[12rem] text-sm text-ink">
           Action menu
           <AppSelect
             variant="action"
@@ -47,7 +47,7 @@ export function ThemeSelectDraft() {
             options={ACTION_MENU}
           />
         </label>
-        <label className="block min-w-[12rem] text-xs text-ink-muted">
+        <label className="block min-w-[12rem] text-sm text-ink">
           Field
           <AppSelect
             className="mt-1"
@@ -56,7 +56,7 @@ export function ThemeSelectDraft() {
             options={VENUES}
           />
         </label>
-        <label className="block min-w-[12rem] text-xs text-ink-muted">
+        <label className="block min-w-[12rem] text-sm text-ink">
           Searchable
           <AppSelect
             className="mt-1"
@@ -65,7 +65,7 @@ export function ThemeSelectDraft() {
             options={CONTRACTS}
           />
         </label>
-        <label className="block min-w-[12rem] text-xs text-ink-muted">
+        <label className="block min-w-[12rem] text-sm text-ink">
           Multi-select
           <AppMultiSelect
             className="mt-1"

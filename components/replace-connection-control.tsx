@@ -47,7 +47,7 @@ export function ReplaceConnectionControl({
         >
           <input type="hidden" name="connectionId" value={connectionId} />
           {credentialFields.map((field) => (
-            <label key={field.key} className="block text-xs text-ink-muted">
+            <label key={field.key} className="block text-sm text-ink">
               {field.label}
               <input
                 name={field.key}

@@ -107,7 +107,7 @@ export function DeskCopyShareCard({
               defaultValue={listing?.name ?? account.name}
               className={fieldClass}
             />
-            <span className="mt-1 block text-hint text-ink-faint">
+            <span className="mt-1 block text-xs text-ink-muted">
               Shown on Copy desks cards next to your trader alias.
             </span>
           </label>
@@ -158,7 +158,7 @@ export function DeskCopyShareCard({
               <option value="private">Private — invite only</option>
               <option value="public">Public — catalogue</option>
             </AppSelect>
-            <span className="mt-1 block text-hint text-ink-faint">
+            <span className="mt-1 block text-xs text-ink-muted">
               Private stays off the catalogue. Invite members from{" "}
               <Link
                 href={deskHref(FUTURES_PATHS.shared, account.id)}
@@ -186,7 +186,7 @@ export function DeskCopyShareCard({
               ariaLabel="Maximum copy traders"
               className={fieldClass}
             />
-            <span className="mt-1 block text-hint text-ink-faint">
+            <span className="mt-1 block text-xs text-ink-muted">
               {maxFollowersCeiling == null
                 ? "Caps how many desks can copy this one. Empty means no cap."
                 : `Caps how many desks can copy this one. Platform maximum is ${maxFollowersCeiling}. Empty uses that maximum.`}
@@ -218,7 +218,7 @@ export function DeskCopyShareCard({
                   className="mt-0 w-full rounded-control border border-line bg-canvas py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
                 />
               </span>
-              <span className="mt-1 block text-hint text-ink-faint">
+              <span className="mt-1 block text-xs text-ink-muted">
                 Live copiers need at least this much available. Empty means no
                 floor.
               </span>
