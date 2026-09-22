@@ -166,3 +166,85 @@ export function futuresClosedColumnCount(
     FUTURES_CLOSED_OPTIONAL_COLUMNS.filter((id) => visible[id]).length
   );
 }
+
+export const FUTURES_WORKING_OPTIONAL_COLUMNS = [
+  "source",
+  "side",
+  "type",
+  "qty",
+  "limit",
+  "value",
+  "time",
+  "tpsl",
+  "trailing",
+] as const;
+
+export type FuturesWorkingOptionalColumn =
+  (typeof FUTURES_WORKING_OPTIONAL_COLUMNS)[number];
+
+export type FuturesWorkingColumnVisibility = Record<
+  FuturesWorkingOptionalColumn,
+  boolean
+>;
+
+export const FUTURES_WORKING_COLUMNS_KEY = "tbp-columns:futures-working";
+
+export const FUTURES_WORKING_LOCKED_COLUMN_COUNT = 1;
+
+export const FUTURES_WORKING_COLUMN_LABELS: Record<
+  FuturesWorkingOptionalColumn,
+  string
+> = {
+  source: "Source",
+  side: "Side",
+  type: "Type",
+  qty: "Qty",
+  limit: "Limit",
+  value: "Order Value",
+  time: "Open Time",
+  tpsl: "TP/SL",
+  trailing: "Trailing",
+};
+
+export const FUTURES_WORKING_COLUMN_DEFAULTS: FuturesWorkingColumnVisibility = {
+  source: true,
+  side: true,
+  type: true,
+  qty: true,
+  limit: true,
+  value: true,
+  time: true,
+  tpsl: true,
+  trailing: true,
+};
+
+export function parseFuturesWorkingColumns(
+  raw: unknown,
+): FuturesWorkingColumnVisibility {
+  return parseColumnFlags(
+    raw,
+    FUTURES_WORKING_OPTIONAL_COLUMNS,
+    FUTURES_WORKING_COLUMN_DEFAULTS,
+  );
+}
+
+export function parseStoredFuturesWorkingColumns(
+  raw: string | null,
+): FuturesWorkingColumnVisibility {
+  return parseStoredColumnFlags(
+    raw,
+    FUTURES_WORKING_OPTIONAL_COLUMNS,
+    FUTURES_WORKING_COLUMN_DEFAULTS,
+  );
+}
+
+export function futuresWorkingColumnCount(
+  visible: FuturesWorkingColumnVisibility,
+  extra = 0,
+): number {
+  return (
+    FUTURES_WORKING_LOCKED_COLUMN_COUNT +
+    FUTURES_WORKING_OPTIONAL_COLUMNS.filter((id) => visible[id]).length +
+    extra
+  );
+}

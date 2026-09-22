@@ -137,6 +137,49 @@ export function filterFuturesBlotterRows<
   );
 }
 
+export function filterFuturesWorkingRows<
+  T extends {
+    symbol: string;
+    side: string;
+    source: string;
+    ruleName: string | null;
+  },
+>(
+  rows: readonly T[],
+  filters: DeskBlotterFilters,
+  playbooks: readonly {
+    id: string;
+    name: string;
+    symbol: string;
+    direction: string;
+  }[] = [],
+  hintPlaybookId?: (row: T) => string | null | undefined,
+): T[] {
+  if (!deskBlotterFiltersActive(filters)) {
+    return [...rows];
+  }
+  return rows.filter((row) =>
+    matchDeskBlotterRow(
+      {
+        botId: resolveFuturesRowBotId(
+          {
+            ruleId: null,
+            ruleName: row.ruleName,
+            symbol: row.symbol,
+            side: row.side,
+            source: row.source,
+          },
+          playbooks,
+          hintPlaybookId?.(row) ?? null,
+        ),
+        pair: row.symbol,
+        side: row.side,
+      },
+      filters,
+    ),
+  );
+}
+
 export function filterPaperBlotterRows<
   T extends {
     ruleId: number | null;

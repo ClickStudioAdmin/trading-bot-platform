@@ -26,6 +26,7 @@ import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import {
   deskBlotterFiltersActive,
   filterFuturesBlotterRows,
+  filterFuturesWorkingRows,
   parseDeskBlotterFilters,
 } from "@/lib/desk-blotter-filters";
 import { loadFuturesAutomationRules } from "@/lib/futures/automation-load";
@@ -163,6 +164,15 @@ export default async function FuturesPositionsPage({
     playbooks,
     (row) => dcaHints?.[dcaHintKey(row.symbol, row.side)]?.playbookId,
   );
+  const visibleWorking = filterFuturesWorkingRows(
+    desk.working,
+    filters,
+    playbooks,
+    (row) =>
+      dcaHints?.[dcaHintKey(row.symbol, row.side)]?.playbookId ??
+      perpsBots.find((rule) => rule.id && rule.name === row.ruleName)?.id ??
+      null,
+  );
   const testWebhooks = allowSignal
     ? webhooks
     : webhooks.filter((row) => row.kind !== "signal");
@@ -238,9 +248,10 @@ export default async function FuturesPositionsPage({
               fills now. Limit rests until it matches — watch it under Open
               orders. Optional TP/SL and trailing stop attach to that order.
               Add or edit stops on an open row. Market or Limit close is on
-              each open row; both set qty (full row or a slice). Close All and
-              Close All & Cancel All Open Orders sit above the table. Cancel
-              All Open Orders sits above Open orders. Size is token quantity or
+              each open row; both set qty (full row or a slice).               Close All and
+              Close All & Cancel All Open Orders sit above the table when
+              there are positions. Cancel All Open Orders sits on Open
+              orders only when orders are listed. Size is token quantity or
               USDT value (mark for market, limit price for limit).
               {settings.reduceOnly
                 ? " Reduce only is on — Buy and Sell are blocked."
@@ -342,7 +353,8 @@ export default async function FuturesPositionsPage({
 
         <FuturesWorkingOrders
           signedIn={desk.signedIn}
-          working={desk.working}
+          working={visibleWorking}
+          cancelAllCount={desk.working.length}
           next={NEXT}
           exchangeBook={desk.exchangeBook}
           baseCoins={Object.fromEntries(
@@ -354,20 +366,31 @@ export default async function FuturesPositionsPage({
           webhookNames={desk.webhookNames}
           playbookOwnsOrders={dcaBlotter}
           copyDesk={copyDesk}
+          filtersOpen={tableFiltersSuggestOpen(params)}
+          filterBar={
+            <DeskBlotterFilters
+              values={filters}
+              bots={bots}
+              deskId={session?.account.id}
+              clearHref={NEXT}
+            />
+          }
           urgentRefresh={futuresDeskNeedsUrgentRefresh({
             positions: open,
             working: desk.working,
           })}
           emptyMessage={
-            showTicket
-              ? undefined
-              : copyDesk && dcaBlotter
-                ? "No working limits. Copied parent DCA limits appear here."
-                : copyDesk
-                  ? "No working limits. Copied parent limits appear here."
-                  : dcaBlotter
-                    ? "No working limits. Bot orders rest here when they are limits."
-                    : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
+            deskBlotterFiltersActive(filters)
+              ? "No orders match these filters."
+              : showTicket
+                ? undefined
+                : copyDesk && dcaBlotter
+                  ? "No working limits. Copied parent DCA limits appear here."
+                  : copyDesk
+                    ? "No working limits. Copied parent limits appear here."
+                    : dcaBlotter
+                      ? "No working limits. Bot orders rest here when they are limits."
+                      : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
           }
         />
       </div>

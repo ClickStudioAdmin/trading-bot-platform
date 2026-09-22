@@ -13,10 +13,17 @@ import {
   FUTURES_OPEN_OPTIONAL_COLUMNS,
   parseStoredFuturesClosedColumns,
   parseStoredFuturesOpenColumns,
+  parseStoredFuturesWorkingColumns,
+  FUTURES_WORKING_COLUMN_DEFAULTS,
+  FUTURES_WORKING_COLUMN_LABELS,
+  FUTURES_WORKING_COLUMNS_KEY,
+  FUTURES_WORKING_OPTIONAL_COLUMNS,
   type FuturesClosedColumnVisibility,
   type FuturesClosedOptionalColumn,
   type FuturesOpenColumnVisibility,
   type FuturesOpenOptionalColumn,
+  type FuturesWorkingColumnVisibility,
+  type FuturesWorkingOptionalColumn,
 } from "@/lib/futures/columns";
 
 const COLUMN_CHANGE_EVENT = "tbp-columns-change:futures-open";
@@ -149,6 +156,76 @@ export function FuturesClosedColumnPicker({
       columns={FUTURES_CLOSED_OPTIONAL_COLUMNS.map((id) => ({
         id,
         label: FUTURES_CLOSED_COLUMN_LABELS[id],
+      }))}
+    />
+  );
+}
+
+const WORKING_CHANGE_EVENT = "tbp-columns-change:futures-working";
+
+let cachedWorkingRaw: string | null | undefined;
+let cachedWorkingVisible: FuturesWorkingColumnVisibility =
+  FUTURES_WORKING_COLUMN_DEFAULTS;
+
+function subscribeFuturesWorkingColumns(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(WORKING_CHANGE_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(WORKING_CHANGE_EVENT, onStoreChange);
+  };
+}
+
+function readFuturesWorkingColumns(): FuturesWorkingColumnVisibility {
+  const raw = window.localStorage.getItem(FUTURES_WORKING_COLUMNS_KEY);
+  if (raw === cachedWorkingRaw) {
+    return cachedWorkingVisible;
+  }
+  cachedWorkingRaw = raw;
+  cachedWorkingVisible = parseStoredFuturesWorkingColumns(raw);
+  return cachedWorkingVisible;
+}
+
+export function useFuturesWorkingColumns() {
+  const visible = useSyncExternalStore(
+    subscribeFuturesWorkingColumns,
+    readFuturesWorkingColumns,
+    () => FUTURES_WORKING_COLUMN_DEFAULTS,
+  );
+
+  function setColumn(id: FuturesWorkingOptionalColumn, on: boolean) {
+    const next = { ...readFuturesWorkingColumns(), [id]: on };
+    const raw = JSON.stringify(next);
+    window.localStorage.setItem(FUTURES_WORKING_COLUMNS_KEY, raw);
+    cachedWorkingRaw = raw;
+    cachedWorkingVisible = next;
+    window.dispatchEvent(new Event(WORKING_CHANGE_EVENT));
+  }
+
+  return { visible, setColumn };
+}
+
+export function FuturesWorkingColumnPicker({
+  visible,
+  setColumn,
+  hiddenColumns = [],
+  align = "end",
+}: {
+  visible: FuturesWorkingColumnVisibility;
+  setColumn: (id: FuturesWorkingOptionalColumn, on: boolean) => void;
+  hiddenColumns?: readonly FuturesWorkingOptionalColumn[];
+  align?: "start" | "end";
+}) {
+  return (
+    <TableColumnPicker
+      align={align}
+      visible={visible}
+      onToggle={(id, on) => setColumn(id as FuturesWorkingOptionalColumn, on)}
+      columns={FUTURES_WORKING_OPTIONAL_COLUMNS.filter(
+        (id) => !hiddenColumns.includes(id),
+      ).map((id) => ({
+        id,
+        label: FUTURES_WORKING_COLUMN_LABELS[id],
       }))}
     />
   );

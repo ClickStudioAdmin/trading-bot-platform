@@ -5,8 +5,11 @@ import {
   FUTURES_DCA_OPEN_COLUMN_COUNT,
   FUTURES_OPEN_COLUMN_DEFAULTS,
   FUTURES_OPEN_LOCKED_COLUMN_COUNT,
+  FUTURES_WORKING_COLUMN_DEFAULTS,
+  FUTURES_WORKING_LOCKED_COLUMN_COUNT,
   futuresClosedColumnCount,
   futuresOpenColumnCount,
+  futuresWorkingColumnCount,
   parseFuturesClosedColumns,
   parseFuturesOpenColumns,
   parseStoredFuturesOpenColumns,
@@ -66,4 +69,16 @@ assert.equal(
     roe: false,
   }),
   FUTURES_CLOSED_LOCKED_COLUMN_COUNT + 6,
+);
+
+assert.equal(
+  futuresWorkingColumnCount(FUTURES_WORKING_COLUMN_DEFAULTS),
+  FUTURES_WORKING_LOCKED_COLUMN_COUNT + 9,
+);
+assert.equal(
+  futuresWorkingColumnCount(
+    { ...FUTURES_WORKING_COLUMN_DEFAULTS, tpsl: false, trailing: false },
+    1,
+  ),
+  FUTURES_WORKING_LOCKED_COLUMN_COUNT + 7 + 1,
 );

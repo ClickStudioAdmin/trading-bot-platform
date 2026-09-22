@@ -18,9 +18,17 @@ import {
   TablePendingIconAction,
   useClientTable,
 } from "@/components/table-chrome";
+import {
+  FuturesWorkingColumnPicker,
+  useFuturesWorkingColumns,
+} from "@/components/futures-column-picker";
 import { TokenIcon } from "@/components/token-icon";
 import { TpslPair } from "@/components/futures-tpsl";
 import { FuturesCancelAllOrders } from "@/components/futures-close-all";
+import {
+  futuresWorkingColumnCount,
+  type FuturesWorkingColumnVisibility,
+} from "@/lib/futures/columns";
 import { FuturesDeskRefresh } from "@/components/futures-desk-refresh";
 import { FuturesSourceCell } from "@/components/futures-source";
 import { FuturesWorkingEdit } from "@/components/futures-working-edit";
@@ -52,6 +60,9 @@ export function FuturesWorkingOrders({
   copyDesk = false,
   exchangeName = "Bybit",
   urgentRefresh = false,
+  filterBar,
+  filtersOpen = false,
+  cancelAllCount,
 }: {
   signedIn: boolean;
   working: FuturesWorkingOrder[];
@@ -64,9 +75,19 @@ export function FuturesWorkingOrders({
   copyDesk?: boolean;
   exchangeName?: string;
   urgentRefresh?: boolean;
+  filterBar?: ReactNode;
+  filtersOpen?: boolean;
+  cancelAllCount?: number;
 }) {
   const showOrderMeta = !playbookOwnsOrders;
-  const colSpan = showOrderMeta ? 11 : 8;
+  const { visible: storedVisible, setColumn } = useFuturesWorkingColumns();
+  const visible = showOrderMeta
+    ? storedVisible
+    : { ...storedVisible, tpsl: false, trailing: false };
+  const colSpan = futuresWorkingColumnCount(
+    visible,
+    showOrderMeta ? 1 : 0,
+  );
   const rows = sortFuturesWorkingRows(working);
   const compare = useCallback(
     (
@@ -124,17 +145,27 @@ export function FuturesWorkingOrders({
           <span className="text-base font-semibold">({rows.length})</span>
         </h2>
       </div>
-      {showOrderMeta ? (
-        <TableFilterSession
-          actions={
-            <FuturesCancelAllOrders
-              next={next}
-              signedIn={signedIn}
-              workingCount={working.length}
+      <TableFilterSession
+        defaultOpen={filtersOpen}
+        actions={
+          <>
+            <FuturesWorkingColumnPicker
+              visible={visible}
+              setColumn={setColumn}
+              hiddenColumns={showOrderMeta ? [] : ["tpsl", "trailing"]}
             />
-          }
-        />
-      ) : null}
+            {showOrderMeta && working.length > 0 ? (
+              <FuturesCancelAllOrders
+                next={next}
+                signedIn={signedIn}
+                workingCount={cancelAllCount ?? working.length}
+              />
+            ) : null}
+          </>
+        }
+      >
+        {filterBar}
+      </TableFilterSession>
       <TableCard
         pager={
           <TablePager
@@ -153,73 +184,89 @@ export function FuturesWorkingOrders({
                 dir={table.sortDir}
                 onSort={() => table.onSort("contract")}
               />
-              <SortTh
-                label="Source"
-                active={table.sortKey === "source"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("source")}
-              />
-              <SortTh
-                label="Side"
-                active={table.sortKey === "side"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("side")}
-              />
-              <SortTh
-                label="Type"
-                active={table.sortKey === "type"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("type")}
-              />
-              <SortTh
-                label="Qty"
-                active={table.sortKey === "qty"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("qty")}
-              />
-              <SortTh
-                label="Limit"
-                active={table.sortKey === "limit"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("limit")}
-              />
-              <SortTh
-                label="Order Value"
-                active={table.sortKey === "value"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("value")}
-              />
-              <SortTh
-                label="Open Time"
-                active={table.sortKey === "time"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("time")}
-              />
+              {visible.source ? (
+                <SortTh
+                  label="Source"
+                  active={table.sortKey === "source"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("source")}
+                />
+              ) : null}
+              {visible.side ? (
+                <SortTh
+                  label="Side"
+                  active={table.sortKey === "side"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("side")}
+                />
+              ) : null}
+              {visible.type ? (
+                <SortTh
+                  label="Type"
+                  active={table.sortKey === "type"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("type")}
+                />
+              ) : null}
+              {visible.qty ? (
+                <SortTh
+                  label="Qty"
+                  active={table.sortKey === "qty"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("qty")}
+                />
+              ) : null}
+              {visible.limit ? (
+                <SortTh
+                  label="Limit"
+                  active={table.sortKey === "limit"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("limit")}
+                />
+              ) : null}
+              {visible.value ? (
+                <SortTh
+                  label="Order Value"
+                  active={table.sortKey === "value"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("value")}
+                />
+              ) : null}
+              {visible.time ? (
+                <SortTh
+                  label="Open Time"
+                  active={table.sortKey === "time"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("time")}
+                />
+              ) : null}
+              {visible.tpsl ? (
+                <th className="px-4 py-3 font-medium">
+                  <ColumnHint
+                    label="TP/SL"
+                    hint="Stops attached when this limit was placed. They move onto the position when it fills."
+                  />
+                </th>
+              ) : null}
+              {visible.trailing ? (
+                <th className="px-4 py-3 font-medium">
+                  <ColumnHint
+                    label="Trailing"
+                    hint="Retracement attached when this limit was placed. It moves onto the position when it fills."
+                  />
+                </th>
+              ) : null}
               {showOrderMeta ? (
-                <>
-                  <th className="px-4 py-3 font-medium">
-                    <ColumnHint
-                      label="TP/SL"
-                      hint="Stops attached when this limit was placed. They move onto the position when it fills."
-                    />
-                  </th>
-                  <th className="px-4 py-3 font-medium">
-                    <ColumnHint
-                      label="Trailing"
-                      hint="Retracement attached when this limit was placed. It moves onto the position when it fills."
-                    />
-                  </th>
-                  <th className={TABLE_ACTIONS_TH_CLASS}>
-                    <ColumnHint
-                      label="Actions"
-                      hint={
-                        exchangeBook
-                          ? "Edit remaining qty or limit on Bybit, or cancel the rest."
-                          : "Edit remaining qty or limit, or cancel this paper order. No Bybit order."
-                      }
-                    />
-                  </th>
-                </>
+                <th className={TABLE_ACTIONS_TH_CLASS}>
+                  <ColumnHint
+                    label="Actions"
+                    hint={
+                      exchangeBook
+                        ? "Edit remaining qty or limit on Bybit, or cancel the rest."
+                        : "Edit remaining qty or limit, or cancel this paper order. No Bybit order."
+                    }
+                  />
+                </th>
               ) : null}
             </tr>
           </thead>
@@ -252,6 +299,7 @@ export function FuturesWorkingOrders({
                   }
                   webhookNames={webhookNames}
                   showOrderMeta={showOrderMeta}
+                  visible={visible}
                 />
               ))
             )}
@@ -268,12 +316,14 @@ function WorkingRow({
   baseCoin,
   webhookNames,
   showOrderMeta,
+  visible,
 }: {
   row: FuturesWorkingOrder;
   next: string;
   baseCoin: string;
   webhookNames: readonly string[];
   showOrderMeta: boolean;
+  visible: FuturesWorkingColumnVisibility;
 }) {
   const remainingNotional = row.remainingQty * row.limitPrice;
   return (
@@ -287,105 +337,121 @@ function WorkingRow({
           </span>
         </span>
       </td>
-      <td className="px-4 py-3">
-        <FuturesSourceCell
-          source={row.source}
-          ruleName={row.ruleName}
-          webhookNames={webhookNames}
-        />
-      </td>
-      <td
-        className={`px-4 py-3 ${
-          row.action === "sell" ? "text-danger" : "text-success"
-        }`}
-      >
-        {workingSideLabel(row.action)}
-      </td>
-      <td className="px-4 py-3">
-        <span className="flex flex-wrap items-center gap-2">
-          {workingTypeLabel(row)}
-          {!showOrderMeta && row.status === "cancelling" ? (
-            <PendingStatusChip
-              label="Cancelling"
-              hint="Cancel submitted. This order leaves when the venue confirms."
-            />
-          ) : null}
-        </span>
-      </td>
-      <td className="px-4 py-3 tabular-nums">
-        <span title={formatQtyFull(row.remainingQty)}>
-          {formatQty(row.remainingQty)}
-        </span>
-        {row.filledQty > 0 ? (
-          <span
-            className="block text-hint text-ink-faint"
-            title={formatQtyFull(row.filledQty)}
-          >
-            {formatQty(row.filledQty)} filled
-          </span>
-        ) : null}
-      </td>
-      <td className="px-4 py-3 tabular-nums">{formatPrice(row.limitPrice)}</td>
-      <td className="px-4 py-3 tabular-nums">{formatUsd(remainingNotional)}</td>
-      <td className="px-4 py-3 text-ink-muted">
-        <LocalTime at={row.createdAtMs} />
-      </td>
-      {showOrderMeta ? (
-        <>
-          <td className="px-4 py-3">
-            {row.takeProfit === null && row.stopLoss === null ? (
-              <span className="text-ink-faint">—</span>
-            ) : (
-              <TpslPair
-                takeProfit={row.takeProfit}
-                stopLoss={row.stopLoss}
-                mode={row.tpslMode}
-                tpOrderType={row.tpOrderType}
-                slOrderType={row.slOrderType}
-              />
-            )}
-          </td>
-          <td className="px-4 py-3">
-            {row.trailingStop === null ? (
-              <span className="text-ink-faint">—</span>
-            ) : (
-              <span className="tabular-nums">{formatPrice(row.trailingStop)}</span>
-            )}
-          </td>
-          <td className={TABLE_ACTIONS_TD_CLASS}>
-            {row.status === "cancelling" ? (
+      {visible.source ? (
+        <td className="px-4 py-3">
+          <FuturesSourceCell
+            source={row.source}
+            ruleName={row.ruleName}
+            webhookNames={webhookNames}
+          />
+        </td>
+      ) : null}
+      {visible.side ? (
+        <td
+          className={`px-4 py-3 ${
+            row.action === "sell" ? "text-danger" : "text-success"
+          }`}
+        >
+          {workingSideLabel(row.action)}
+        </td>
+      ) : null}
+      {visible.type ? (
+        <td className="px-4 py-3">
+          <span className="flex flex-wrap items-center gap-2">
+            {workingTypeLabel(row)}
+            {!showOrderMeta && row.status === "cancelling" ? (
               <PendingStatusChip
                 label="Cancelling"
                 hint="Cancel submitted. This order leaves when the venue confirms."
               />
-            ) : (
-              <TableActions>
-                <FuturesWorkingEdit
-                  workingId={row.id}
-                  symbol={row.symbol}
-                  action={row.action}
-                  reduceOnly={row.reduceOnly}
-                  remainingQty={row.remainingQty}
-                  filledQty={row.filledQty}
-                  limitPrice={row.limitPrice}
-                  next={next}
-                />
-                <form action={cancelFuturesWorking}>
-                  <input type="hidden" name="next" value={next} />
-                  <input type="hidden" name="workingId" value={row.id} />
-                  <TablePendingIconAction
-                    pendingLabel="Cancelling"
-                    successKey={`working-cancel-${row.id}`}
-                    label="Cancel"
-                    detail="Cancel the remaining size."
-                  >
-                    <IconClose {...TABLE_BTN_ICON} />
-                  </TablePendingIconAction>
-                </form>
-              </TableActions>
-            )}
-          </td>
-        </>
+            ) : null}
+          </span>
+        </td>
+      ) : null}
+      {visible.qty ? (
+        <td className="px-4 py-3 tabular-nums">
+          <span title={formatQtyFull(row.remainingQty)}>
+            {formatQty(row.remainingQty)}
+          </span>
+          {row.filledQty > 0 ? (
+            <span
+              className="block text-hint text-ink-faint"
+              title={formatQtyFull(row.filledQty)}
+            >
+              {formatQty(row.filledQty)} filled
+            </span>
+          ) : null}
+        </td>
+      ) : null}
+      {visible.limit ? (
+        <td className="px-4 py-3 tabular-nums">{formatPrice(row.limitPrice)}</td>
+      ) : null}
+      {visible.value ? (
+        <td className="px-4 py-3 tabular-nums">{formatUsd(remainingNotional)}</td>
+      ) : null}
+      {visible.time ? (
+        <td className="px-4 py-3 text-ink-muted">
+          <LocalTime at={row.createdAtMs} />
+        </td>
+      ) : null}
+      {visible.tpsl ? (
+        <td className="px-4 py-3">
+          {row.takeProfit === null && row.stopLoss === null ? (
+            <span className="text-ink-faint">—</span>
+          ) : (
+            <TpslPair
+              takeProfit={row.takeProfit}
+              stopLoss={row.stopLoss}
+              mode={row.tpslMode}
+              tpOrderType={row.tpOrderType}
+              slOrderType={row.slOrderType}
+            />
+          )}
+        </td>
+      ) : null}
+      {visible.trailing ? (
+        <td className="px-4 py-3">
+          {row.trailingStop === null ? (
+            <span className="text-ink-faint">—</span>
+          ) : (
+            <span className="tabular-nums">{formatPrice(row.trailingStop)}</span>
+          )}
+        </td>
+      ) : null}
+      {showOrderMeta ? (
+        <td className={TABLE_ACTIONS_TD_CLASS}>
+          {row.status === "cancelling" ? (
+            <PendingStatusChip
+              label="Cancelling"
+              hint="Cancel submitted. This order leaves when the venue confirms."
+            />
+          ) : (
+            <TableActions>
+              <FuturesWorkingEdit
+                workingId={row.id}
+                symbol={row.symbol}
+                action={row.action}
+                reduceOnly={row.reduceOnly}
+                remainingQty={row.remainingQty}
+                filledQty={row.filledQty}
+                limitPrice={row.limitPrice}
+                next={next}
+              />
+              <form action={cancelFuturesWorking}>
+                <input type="hidden" name="next" value={next} />
+                <input type="hidden" name="workingId" value={row.id} />
+                <TablePendingIconAction
+                  pendingLabel="Cancelling"
+                  successKey={`working-cancel-${row.id}`}
+                  label="Cancel"
+                  detail="Cancel the remaining size."
+                >
+                  <IconClose {...TABLE_BTN_ICON} />
+                </TablePendingIconAction>
+              </form>
+            </TableActions>
+          )}
+        </td>
       ) : null}
     </tr>
   );

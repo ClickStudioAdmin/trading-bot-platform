@@ -3,6 +3,7 @@ import {
   DESK_BLOTTER_ALL_BOTS_LABEL,
   deskBlotterFiltersActive,
   filterFuturesBlotterRows,
+  filterFuturesWorkingRows,
   filterPaperBlotterRows,
   matchDeskBlotterRow,
   parseDeskBlotterFilters,
@@ -118,6 +119,44 @@ assert.equal(
   ).map((row) => row.symbol).join(","),
   "BTCUSDT",
 );
+assert.equal(
+  filterFuturesWorkingRows(
+    [
+      {
+        symbol: "BTCUSDT",
+        side: "long",
+        source: "engine",
+        ruleName: "Doge bot",
+      },
+      {
+        symbol: "ETHUSDT",
+        side: "short",
+        source: "manual",
+        ruleName: null,
+      },
+    ],
+    { bot: "", pair: "eth", side: "" },
+  )
+    .map((row) => row.symbol)
+    .join(","),
+  "ETHUSDT",
+);
+assert.equal(
+  filterFuturesWorkingRows(
+    [
+      {
+        symbol: "DOGEUSDT",
+        side: "long",
+        source: "engine",
+        ruleName: "Doge bot",
+      },
+    ],
+    { bot: "pb-doge", pair: "", side: "" },
+    playbooks,
+  ).length,
+  1,
+);
+
 assert.equal(
   filterPaperBlotterRows(
     [
