@@ -581,9 +581,9 @@ function ApplyFromLibraryButton({
                   onClick={() => setOpen(false)}
                   className={secondaryBtn}
                 >
-                  {result?.results ? "Close" : "Cancel"}
+                  {result?.results?.length ? "Close" : "Cancel"}
                 </button>
-                {!result?.results ? (
+                {!result?.results?.length ? (
                   <button
                     type="button"
                     disabled={selected.length === 0 || pending}
@@ -598,6 +598,25 @@ function ApplyFromLibraryButton({
                   </button>
                 ) : null}
               </div>
+              {result?.results && result.results.length > 0 ? (
+                <ul className="mt-3 space-y-1 text-sm">
+                  {result.results.map((row) => (
+                    <li
+                      key={row.templateId}
+                      className={row.ok ? "text-success" : "text-danger"}
+                    >
+                      {row.skipped
+                        ? `Skipped ${row.name}`
+                        : row.ok
+                          ? `Applied ${row.name}`
+                          : `${row.name}: ${row.error}`}
+                      {row.notes.length > 0 ? ` — ${row.notes.join(" ")}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <ResultNote result={result} />
+              )}
             </>
           }
         >
@@ -607,25 +626,6 @@ function ApplyFromLibraryButton({
             onToggleTemplate={toggleTemplate}
             onToggleFolder={toggleFolder}
           />
-          {result?.results ? (
-            <ul className="mt-3 space-y-1 text-sm">
-              {result.results.map((row) => (
-                <li
-                  key={row.templateId}
-                  className={row.ok ? "text-success" : "text-danger"}
-                >
-                  {row.skipped
-                    ? `Skipped ${row.name}`
-                    : row.ok
-                      ? `Applied ${row.name}`
-                      : `${row.name}: ${row.error}`}
-                  {row.notes.length > 0 ? ` — ${row.notes.join(" ")}` : ""}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <ResultNote result={result} />
-          )}
         </Modal>
       ) : null}
     </>
