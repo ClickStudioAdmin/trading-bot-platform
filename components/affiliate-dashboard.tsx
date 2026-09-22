@@ -479,7 +479,7 @@ export function AffiliateDashboard({
               {defaultShareUrl ? (
                 <>
                   <div className="mt-4 flex items-center gap-2">
-                    <p className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
+                    <p className="min-w-0 flex-1 break-all rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
                       {defaultShareUrl}
                     </p>
                     <CopyTextButton text={defaultShareUrl} label="Copy URL" />
