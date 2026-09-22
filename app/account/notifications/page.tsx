@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { InboxBulkTable } from "@/components/inbox-bulk-table";
 import { PageHeading } from "@/components/page-heading";
 import { IconFilterClear } from "@/components/icons";
@@ -85,17 +84,6 @@ export default async function AccountNotificationsPage({
   return (
     <div>
       <PageHeading title="Inbox" />
-      <p className="-mt-4 text-sm text-ink-muted">
-        Email copies land here. This badge is unread notices only. Work that
-        still needs doing stays on Overview and Billing. Change what you get on{" "}
-        <Link
-          href="/account/settings?tab=notifications"
-          className="text-accent hover:text-accent-strong"
-        >
-          Settings → Notifications
-        </Link>
-        .
-      </p>
       {list.total === 0 && !filteredEmpty ? (
         <p className="mt-6 rounded-card border border-line bg-surface px-5 py-6 text-sm text-ink-muted">
           No notices yet.
