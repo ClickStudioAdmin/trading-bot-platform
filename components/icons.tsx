@@ -47,6 +47,7 @@ import {
   Moon,
   Save,
   Scan,
+  Search,
   Share2,
   SlidersHorizontal,
   SquareArrowOutUpRight,
@@ -369,6 +370,13 @@ export const LUCIDE_ICONS = [
     lucide: "Scan",
     usedIn: "Affiliate org chart",
     Icon: Scan,
+  },
+  {
+    id: "search",
+    name: "Search",
+    lucide: "Search",
+    usedIn: "Affiliate org chart",
+    Icon: Search,
   },
   {
     id: "share",
@@ -820,6 +828,10 @@ export function IconCollapseAll(props: LucideProps) {
 
 export function IconFit(props: LucideProps) {
   return <Scan aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconSearch(props: LucideProps) {
+  return <Search aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconZoomIn(props: LucideProps) {

@@ -13,6 +13,7 @@ import {
   IconExitMonitor,
   IconFit,
   IconMonitor,
+  IconSearch,
   IconZoomIn,
   IconZoomOut,
 } from "@/components/icons";
@@ -31,9 +32,9 @@ import {
 import { useUiPreferences } from "@/components/ui-preferences";
 import type { AffiliateTreeNode } from "@/lib/membership/affiliate-store";
 
-const control =
-  "rounded-control border border-line px-3 py-1.5 text-xs text-ink hover:border-line-strong disabled:text-ink-faint disabled:hover:border-line";
 const groupRule = "hidden h-6 w-px bg-line sm:block";
+const searchFieldClass =
+  "w-56 rounded-control border border-line bg-canvas py-1.5 pl-8 pr-8 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none [&::-webkit-search-cancel-button]:appearance-none";
 
 export function AffiliateOrgChartFrame({
   nodes,
@@ -193,9 +194,13 @@ export function AffiliateOrgChartFrame({
               }}
             >
               <label className="sr-only" htmlFor={searchId}>
-                Find a person
+                Search name
               </label>
-              <div className="flex gap-1.5">
+              <div className="relative">
+                <IconSearch
+                  size={16}
+                  className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-faint"
+                />
                 <input
                   id={searchId}
                   type="search"
@@ -209,9 +214,9 @@ export function AffiliateOrgChartFrame({
                       : undefined
                   }
                   value={query}
-                  placeholder="Name"
+                  placeholder="Search name"
                   autoComplete="off"
-                  className="w-40 rounded-control border border-line bg-canvas px-2.5 py-1.5 text-xs text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
+                  className={searchFieldClass}
                   onChange={(event) => {
                     setQuery(event.target.value);
                     setOpen(true);
@@ -255,8 +260,13 @@ export function AffiliateOrgChartFrame({
                   }}
                 />
                 {query ? (
-                  <button type="button" className={control} onClick={clearFind}>
-                    Clear
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    className="absolute right-1.5 top-1/2 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-control text-ink-muted hover:text-ink"
+                    onClick={clearFind}
+                  >
+                    <IconClose {...TABLE_BTN_ICON} />
                   </button>
                 ) : null}
               </div>
@@ -264,7 +274,7 @@ export function AffiliateOrgChartFrame({
                 <ul
                   id={listId}
                   role="listbox"
-                  className="absolute z-10 mt-1 max-h-64 w-40 overflow-auto rounded-control border border-line bg-surface-raised py-1"
+                  className="absolute z-10 mt-1 max-h-64 w-56 overflow-auto rounded-control border border-line bg-surface-raised py-1"
                 >
                   {hits.map((hit, index) => (
                     <li key={hit.id} role="presentation">
@@ -292,7 +302,7 @@ export function AffiliateOrgChartFrame({
                 </ul>
               ) : null}
               {open && query.trim() && hits.length === 0 ? (
-                <p className="absolute z-10 mt-1 w-40 rounded-control border border-line bg-surface-raised px-3 py-2 text-xs text-ink-muted">
+                <p className="absolute z-10 mt-1 w-56 rounded-control border border-line bg-surface-raised px-3 py-2 text-xs text-ink-muted">
                   No one matched that.
                 </p>
               ) : null}
