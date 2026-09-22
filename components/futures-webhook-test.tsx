@@ -67,7 +67,9 @@ export function FuturesWebhookTest({
       ) : null}
       {standalone ? (
         <div className="mb-4">
-          <p className="text-sm text-ink">Send a Webhook</p>
+          <p className="text-lg font-semibold tracking-tight text-ink">
+            Send a Webhook
+          </p>
           <p className="mt-1 text-sm text-ink-muted">{help}</p>
         </div>
       ) : null}
@@ -82,7 +84,7 @@ export function FuturesWebhookTest({
       <div className={standalone ? "mt-4 space-y-2" : "mt-4 space-y-2 border-t border-line pt-4"}>
         {standalone ? null : (
           <>
-            <p className="text-sm text-ink">Send a test</p>
+            <p className="text-sm font-semibold text-ink">Send a test</p>
             <p className="text-xs text-ink-muted">{help}</p>
           </>
         )}

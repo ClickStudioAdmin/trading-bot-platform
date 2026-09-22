@@ -302,7 +302,9 @@ export function CopyCatalogueBoard({
                 </div>
                 <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4">
                   <div>
-                    <dt className="text-sm text-ink-faint">Realized [30d]</dt>
+                    <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                      Realized [30d]
+                    </dt>
                     <dd
                       className={`mt-1 text-lg font-semibold tabular-nums ${
                         signedTone(
@@ -316,13 +318,17 @@ export function CopyCatalogueBoard({
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-ink-faint">Win rate [30d]</dt>
+                    <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                      Win rate [30d]
+                    </dt>
                     <dd className="mt-1 text-lg font-semibold tabular-nums text-ink">
                       {winRateLabel(card)}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-ink-faint">Drawdown [30d]</dt>
+                    <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                      Drawdown [30d]
+                    </dt>
                     <dd
                       className={`mt-1 text-lg font-semibold tabular-nums ${drawdownTone(card)}`}
                     >
@@ -330,7 +336,9 @@ export function CopyCatalogueBoard({
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-ink-faint">Followers</dt>
+                    <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                      Followers
+                    </dt>
                     <dd className="mt-1 text-lg font-semibold tabular-nums text-ink">
                       {followersLabel(card)}
                     </dd>

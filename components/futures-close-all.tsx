@@ -233,13 +233,17 @@ function FuturesBulkDialog({
         >
           {showPositions ? (
             <div>
-              <dt className="text-[11px] text-ink-muted">Open positions</dt>
+              <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                Open positions
+              </dt>
               <dd className="mt-0.5 text-sm tabular-nums text-ink">{openCount}</dd>
             </div>
           ) : null}
           {showOrders ? (
             <div>
-              <dt className="text-[11px] text-ink-muted">Working orders</dt>
+              <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                Working orders
+              </dt>
               <dd className="mt-0.5 text-sm tabular-nums text-ink">
                 {workingCount}
               </dd>

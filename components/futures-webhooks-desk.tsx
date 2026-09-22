@@ -90,7 +90,9 @@ export function FuturesWebhooksDesk({
         action={createFuturesWebhookAction}
         className="rounded-card border border-line bg-surface p-5"
       >
-        <p className="text-sm text-ink">Create webhook</p>
+        <p className="text-lg font-semibold tracking-tight text-ink">
+          Create webhook
+        </p>
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <label className="min-w-[12rem] flex-1 text-sm text-ink">
             Name
@@ -183,7 +185,7 @@ export function FuturesWebhooksDesk({
             </p>
           ) : null}
           <div className="space-y-1">
-            <p className="text-sm text-ink">URL</p>
+            <p className="text-sm font-semibold text-ink">URL</p>
             {hook.url ? (
               <span className="flex items-center gap-3">
                 <textarea
@@ -204,7 +206,7 @@ export function FuturesWebhooksDesk({
             )}
           </div>
           <div className="space-y-3">
-            <p className="text-sm text-ink">Payload</p>
+            <p className="text-sm font-semibold text-ink">Payload</p>
             {hook.kind === "signal" ? (
               <>
                 <p className="text-xs text-ink-muted">

@@ -202,7 +202,7 @@ function ExitField({
   allowDecimal?: boolean;
 }) {
   return (
-    <label className="block text-[11px] text-ink-muted">
+    <label className="block text-sm text-ink">
       {label}
       <GroupedNumberInput
         name={name}

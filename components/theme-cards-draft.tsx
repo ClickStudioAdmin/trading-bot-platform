@@ -157,48 +157,6 @@ export function ThemeCardsDraft() {
 
       <section className="space-y-4">
         <h2 className="text-xl font-semibold tracking-tight">
-          What is inconsistent today
-        </h2>
-        <ul className="space-y-3 text-sm text-ink-muted">
-          <li>
-            <span className="text-ink">Card titles.</span> Most cards are 18px
-            semibold. These are still 14px: Create webhook (regular), Send a
-            Webhook (regular), email template samples (semibold), Desk test
-            samples (semibold), and Bot to replay (semibold). Admin shortcut
-            tiles are 14px regular.
-          </li>
-          <li>
-            <span className="text-ink">Group titles.</span> The scale is 14px
-            semibold. Webhook URL and Payload, desk Exchange, and Desk logo
-            are 14px regular.
-          </li>
-          <li>
-            <span className="text-ink">Fact labels.</span> Billing, Top up,
-            checkout, and the account hovers are 12px uppercase. Catalogue
-            tiles use 14px faint. Trader stat tiles use 13px faint. Admin
-            overview rows are sentence-case muted. Close, Close all, TP/SL,
-            and trailing position rows are 11px muted. Backtest highlight
-            hovers are sentence-case muted.
-          </li>
-          <li>
-            <span className="text-ink">Stat values.</span> Stat tiles and
-            Account Balance KPIs are 24px. Trader Followers / desks / first
-            shared are 20px. Catalogue stats stay 18px on purpose.
-          </li>
-          <li>
-            <span className="text-ink">One field label.</span> Paper automation
-            exit fields are 11px muted. Other field labels are 14px ink.
-          </li>
-          <li>
-            <span className="text-ink">Card intros.</span> Profile and the 2FA
-            cards are 14px muted. Email template sample cards use a 13px faint
-            line under the title.
-          </li>
-        </ul>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">
           Profile — live vs scale
         </h2>
         <p className="text-sm text-ink-muted">

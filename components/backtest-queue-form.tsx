@@ -526,8 +526,10 @@ export function BacktestQueueForm({
         <aside className="rounded-card border border-line bg-canvas p-4">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <h3 className="text-sm font-semibold">Bot to replay</h3>
-              <p className="mt-1 text-xs text-ink-muted">
+              <h3 className="text-lg font-semibold tracking-tight text-ink">
+                Bot to replay
+              </h3>
+              <p className="mt-1 text-sm text-ink-muted">
                 {loadedFromRun
                   ? "These are the recipe fields from that run. Edit any of them before you queue."
                   : "Change the replay fields here. Pair and dates on the left are the market window. The replay tape follows the bot."}
@@ -561,7 +563,9 @@ export function BacktestQueueForm({
         </aside>
       ) : (
         <aside className="rounded-card border border-line bg-canvas p-4">
-          <h3 className="text-sm font-semibold">Bot to replay</h3>
+          <h3 className="text-lg font-semibold tracking-tight text-ink">
+            Bot to replay
+          </h3>
           <p className="mt-2 text-sm text-ink-muted">
             Pick a template, or open Backtest from a Perps or DCA bot on
             Automations.

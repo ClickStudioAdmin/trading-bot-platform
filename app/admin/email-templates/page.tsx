@@ -128,10 +128,10 @@ export default async function AdminEmailTemplatesPage({
                   key={id}
                   className="rounded-card border border-line bg-surface p-5"
                 >
-                  <p className="text-sm font-semibold text-ink">
+                  <p className="text-lg font-semibold tracking-tight text-ink">
                     {NOTIFICATION_LABELS[id]}
                   </p>
-                  <p className="mt-1 text-hint text-ink-faint">
+                  <p className="mt-1 text-sm text-ink-muted">
                     {NOTIFICATION_HINTS[id]}
                   </p>
                   <div className="mt-4 overflow-hidden rounded-card border border-line">

@@ -68,20 +68,26 @@ export default async function CopyTraderPage({
       </div>
       <dl className="mb-8 grid gap-4 sm:grid-cols-3">
         <div className="rounded-card border border-line bg-surface p-5">
-          <dt className="text-hint text-ink-faint">Followers</dt>
-          <dd className="mt-1 text-xl font-semibold tabular-nums text-ink">
+          <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+            Followers
+          </dt>
+          <dd className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink">
             {followers}
           </dd>
         </div>
         <div className="rounded-card border border-line bg-surface p-5">
-          <dt className="text-hint text-ink-faint">Visible desks</dt>
-          <dd className="mt-1 text-xl font-semibold tabular-nums text-ink">
+          <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+            Visible desks
+          </dt>
+          <dd className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink">
             {desks.length}
           </dd>
         </div>
         <div className="rounded-card border border-line bg-surface p-5">
-          <dt className="text-hint text-ink-faint">First shared</dt>
-          <dd className="mt-1 text-xl font-semibold tabular-nums text-ink">
+          <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+            First shared
+          </dt>
+          <dd className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink">
             {firstSharedMs ? formatAuDateUtc(firstSharedMs) : "—"}
           </dd>
         </div>

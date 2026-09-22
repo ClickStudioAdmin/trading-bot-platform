@@ -348,7 +348,7 @@ function FuturesCloseDialog({
 function HeaderStat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[11px] text-ink-muted">{label}</dt>
+      <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">{label}</dt>
       <dd className="mt-0.5 text-sm tabular-nums text-ink">{value}</dd>
     </div>
   );

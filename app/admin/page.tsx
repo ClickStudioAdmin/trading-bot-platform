@@ -90,7 +90,7 @@ export default async function AdminOverviewPage() {
             Type and mode are set at create and never change. Two desks on one
             key still share venue margin.
           </p>
-          <p className="mt-4 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+          <p className="mt-4 text-xs uppercase tracking-[0.12em] text-ink-muted">
             Type
           </p>
           <dl className="mt-2 space-y-2 text-sm">
@@ -109,7 +109,7 @@ export default async function AdminOverviewPage() {
             />
             <Row label={formatDeskType("dca")} value={overview.desks.dca} />
           </dl>
-          <p className="mt-4 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+          <p className="mt-4 text-xs uppercase tracking-[0.12em] text-ink-muted">
             Mode
           </p>
           <dl className="mt-2 space-y-2 text-sm">
@@ -322,7 +322,9 @@ function Row({
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <dt className="text-ink-muted">{label}</dt>
+      <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+        {label}
+      </dt>
       <dd className={`tabular-nums ${tone ?? ""}`}>{value}</dd>
     </div>
   );
@@ -342,7 +344,7 @@ function Shortcut({
       href={href}
       className="rounded-card border border-line bg-surface p-4 hover:border-line-strong"
     >
-      <p className="text-sm">{label}</p>
+      <p className="text-lg font-semibold tracking-tight text-ink">{label}</p>
       <p className="mt-1 text-hint text-ink-faint">{hint}</p>
     </Link>
   );

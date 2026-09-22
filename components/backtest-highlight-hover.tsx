@@ -60,7 +60,7 @@ function BacktestHighlightBody({
       ? `${(highlight.winRate * 100).toFixed(1)}%`
       : "—";
   return (
-    <dl className="space-y-1">
+    <dl className="space-y-1 text-sm">
       <HighlightRow
         label="Window"
         value={`${formatAuDateUtc(highlight.fromMs)} – ${formatAuDateUtc(highlight.toMs)}`}
@@ -109,8 +109,10 @@ function HighlightRow({
 }) {
   return (
     <div className="flex justify-between gap-3">
-      <dt className="text-ink-muted">{label}</dt>
-      <dd className={`tabular-nums text-ink ${toneClass ?? ""}`}>{value}</dd>
+      <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+        {label}
+      </dt>
+      <dd className={`text-sm tabular-nums text-ink ${toneClass ?? ""}`}>{value}</dd>
     </div>
   );
 }

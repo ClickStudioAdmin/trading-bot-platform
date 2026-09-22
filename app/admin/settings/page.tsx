@@ -767,7 +767,9 @@ async function NotificationsTab({
 
       {allowDemo ? (
         <section className="mt-6 rounded-card border border-line bg-surface p-5">
-          <h2 className="text-sm font-semibold text-ink">Desk test samples</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-ink">
+            Desk test samples
+          </h2>
           <p className="mt-2 text-sm text-ink-muted">
             Adds sample inbox rows to the signed-in admin and turns on sample
             alert counts so Overview, Billing, and Affiliates look populated.
