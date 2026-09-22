@@ -31,7 +31,7 @@ export function CopyDeskGuardsFields({
     <div className="space-y-4">
       <div>
         <p className="text-sm font-semibold text-ink">Guards</p>
-        <p className="mt-1 text-xs text-ink-muted">
+        <p className="mt-1 text-hint text-ink-muted">
           Sizing follows the parent fill.
           {showReduceOnly ? " Reduce-only blocks new entries." : ""} Max
           daily loss and max drawdown flatten and pause. Max adverse move skips
@@ -52,7 +52,7 @@ export function CopyDeskGuardsFields({
           />
           <span>
             Reduce only
-            <span className="mt-1 block text-xs text-ink-muted">
+            <span className="mt-1 block text-hint text-ink-muted">
               Blocks new copied entries. Close still works.
             </span>
           </span>
@@ -89,7 +89,7 @@ export function CopyDeskGuardsFields({
             %
           </span>
         </span>
-        <span className="mt-1 block text-xs text-ink-muted">
+        <span className="mt-1 block text-hint text-ink-muted">
           From the peak since you followed or last resumed. Uses this desk’s
           equity
           {paper
@@ -113,7 +113,7 @@ export function CopyDeskGuardsFields({
             %
           </span>
         </span>
-        <span className="mt-1 block text-xs text-ink-muted">
+        <span className="mt-1 block text-hint text-ink-muted">
           Skips a new entry when the mark has moved against the parent fill by
           more than this. Closes still copy.
         </span>

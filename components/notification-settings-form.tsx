@@ -168,9 +168,9 @@ function ChannelSettingRow({
     <div className={`${CHANNEL_GRID} border-b border-line px-4 py-3 last:border-b-0`}>
       <div className="pr-4">
         <p className="text-ink">{row.label}</p>
-        <p className="mt-1 text-xs text-ink-muted">{row.hint}</p>
+        <p className="mt-1 text-hint text-ink-muted">{row.hint}</p>
         {row.emailId && !emailDefaultOn(row.emailId) ? (
-          <p className="mt-1 text-xs text-ink-muted">Email defaults off.</p>
+          <p className="mt-1 text-hint text-ink-muted">Email defaults off.</p>
         ) : null}
       </div>
       <div className="flex justify-center">
@@ -230,7 +230,7 @@ function SettingRow({
     <tr className="border-b border-line last:border-b-0">
       <td className="px-4 py-3 pr-4">
         <p className="text-ink">{NOTIFICATION_LABELS[id]}</p>
-        <p className="mt-1 text-xs text-ink-muted">{NOTIFICATION_HINTS[id]}</p>
+        <p className="mt-1 text-hint text-ink-muted">{NOTIFICATION_HINTS[id]}</p>
       </td>
       <td className="px-4 py-3 text-center">
         <SettingsCheck

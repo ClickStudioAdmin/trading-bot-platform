@@ -928,7 +928,7 @@ function TpslDialogRow({
             />
           </span>
           {orderType === "market" ? (
-            <span className="mt-1 block text-xs text-ink-muted">
+            <span className="mt-1 block text-hint text-ink-muted">
               {kind === "percent"
                 ? "Closes at market when this percent from entry hits."
                 : "Closes at market when this price hits."}
@@ -957,7 +957,7 @@ function TpslDialogRow({
             placeholder="Same as trigger"
             className={`${INPUT_CLASS} mt-1`}
           />
-          <span className="mt-1 block text-xs text-ink-muted">
+          <span className="mt-1 block text-hint text-ink-muted">
             Fires at the trigger. The close rests at this price.
           </span>
         </label>

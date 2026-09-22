@@ -178,7 +178,7 @@ export default async function AdminSettingsPage({
                 autoComplete="off"
                 className={BILLING_FIELD_CLASS}
               />
-              <span className="mt-1 block text-xs text-ink-muted">
+              <span className="mt-1 block text-hint text-ink-muted">
                 Shown on mail, the site chrome, and as the Google Authenticator
                 issuer. Do not use a colon.
               </span>
@@ -193,7 +193,7 @@ export default async function AdminSettingsPage({
                 autoComplete="off"
                 className={BILLING_FIELD_CLASS}
               />
-              <span className="mt-1 block text-xs text-ink-muted">
+              <span className="mt-1 block text-hint text-ink-muted">
                 Outbound mail uses this mailbox with the platform name as the
                 display name. It must be on a verified Resend domain.
               </span>
@@ -226,7 +226,7 @@ export default async function AdminSettingsPage({
               />
               <span>
                 Auto tick
-                <span className="mt-1 block text-xs text-ink-muted">
+                <span className="mt-1 block text-hint text-ink-muted">
                   Off by default. Fly is the clock. Turn this on only to nudge
                   Vercel every 5 seconds while an admin tab is open.
                 </span>
@@ -284,7 +284,7 @@ export default async function AdminSettingsPage({
                 defaultValue={copySettings.minActivityDays}
                 className={BILLING_FIELD_CLASS}
               />
-              <span className="mt-1 block text-xs text-ink-muted">
+              <span className="mt-1 block text-hint text-ink-muted">
                 A connected desk needs a first venue fill at least this many
                 days ago before it can be shared. Default 90. Use 0 while
                 testing.
@@ -301,7 +301,7 @@ export default async function AdminSettingsPage({
                 placeholder="No cap"
                 className={BILLING_FIELD_CLASS}
               />
-              <span className="mt-1 block text-xs text-ink-muted">
+              <span className="mt-1 block text-hint text-ink-muted">
                 Pre-fills Maximum copy traders on a new share. If the platform
                 maximum is empty, this number is also the hard cap.
               </span>
@@ -317,7 +317,7 @@ export default async function AdminSettingsPage({
                 placeholder="Same as default"
                 className={BILLING_FIELD_CLASS}
               />
-              <span className="mt-1 block text-xs text-ink-muted">
+              <span className="mt-1 block text-hint text-ink-muted">
                 Hard cap. A desk cannot save a higher number. Empty uses the
                 default as the cap, or no cap if both are empty.
               </span>
@@ -362,7 +362,7 @@ export default async function AdminSettingsPage({
                 defaultValue={affiliateSettings.maxDepth}
                 className={BILLING_FIELD_CLASS}
               />
-              <span className="mt-1 block text-xs text-ink-muted">
+              <span className="mt-1 block text-hint text-ink-muted">
                 Default 2. Hard cap 5. A plan can earn fewer levels than this.
               </span>
             </label>
@@ -376,7 +376,7 @@ export default async function AdminSettingsPage({
                 defaultValue={affiliateSettings.holdDays}
                 className={BILLING_FIELD_CLASS}
               />
-              <span className="mt-1 block text-xs text-ink-muted">
+              <span className="mt-1 block text-hint text-ink-muted">
                 Commission stays pending this many days. Refund in the hold
                 voids it. Use 0 while testing.
               </span>
@@ -392,7 +392,7 @@ export default async function AdminSettingsPage({
                 defaultValue={affiliateSettings.cookieDays}
                 className={BILLING_FIELD_CLASS}
               />
-              <span className="mt-1 block text-xs text-ink-muted">
+              <span className="mt-1 block text-hint text-ink-muted">
                 First-touch referral from ?ref= is stored in a cookie. Default
                 30 days. A later code does not replace it.
               </span>
@@ -413,7 +413,7 @@ export default async function AdminSettingsPage({
               <legend className="text-sm text-ink">
                 Default affiliate rates
               </legend>
-              <p className="text-xs text-ink-muted">
+              <p className="text-hint text-ink-muted">
                 For affiliates who are not platform users. L1–L5 cannot add up
                 to more than 100%.
               </p>
@@ -453,7 +453,7 @@ export default async function AdminSettingsPage({
                 defaultValue={affiliateSettings.downgradeGraceDays}
                 className={BILLING_FIELD_CLASS}
               />
-              <span className="mt-1 block text-xs text-ink-muted">
+              <span className="mt-1 block text-hint text-ink-muted">
                 Saved now. Auto-exit after grace waits for the next membership
                 step.
               </span>
@@ -515,7 +515,7 @@ export default async function AdminSettingsPage({
                   defaultValue={walletMinPayoutUsd}
                   className={BILLING_FIELD_CLASS}
                 />
-                <span className="mt-1 block text-xs text-ink-muted">
+                <span className="mt-1 block text-hint text-ink-muted">
                   Default $100. Leftover Main credit can withdraw at or above
                   this amount when there are no arrears.
                 </span>
@@ -546,7 +546,7 @@ export default async function AdminSettingsPage({
                   inputMode="decimal"
                   className={BILLING_FIELD_CLASS}
                 />
-                <span className="mt-1 block text-xs text-ink-muted">
+                <span className="mt-1 block text-hint text-ink-muted">
                   Warn on Billing & Wallets when a listed chain is at or below
                   this amount. Default 0.005 ETH.
                 </span>

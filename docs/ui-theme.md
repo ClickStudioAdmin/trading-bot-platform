@@ -52,7 +52,7 @@ Light callout and badge tints use a stronger mix than the dark `/10` `/15` washe
 
 ## Type
 
-The scale is on **Theme → Cards** (`/admin/theme?tab=cards`). Live card titles are 18px. Field labels are 14px ink (white in dark mode). Card intros are 14px muted. Helpers under fields are 12px muted.
+The scale is on **Theme → Cards** (`/admin/theme?tab=cards`). Live card titles are 18px. Field labels are 14px ink (white in dark mode). Card intros are 14px muted. Helpers under fields are 13px muted.
 
 | Role | Size | Class | Use |
 | --- | --- | --- | --- |
@@ -63,7 +63,7 @@ The scale is on **Theme → Cards** (`/admin/theme?tab=cards`). Live card titles
 | Card intro | 14px muted | `text-sm text-ink-muted` | Sentence under a card title |
 | Form label | 14px ink | `text-sm text-ink` | Field labels. White in dark mode, dark in light. |
 | Fact label | 12px uppercase | `text-xs uppercase tracking-[0.12em] text-ink-muted` | Read-only keys |
-| Helper | 12px muted | `text-xs text-ink-muted` | Copy under a field, checkbox, or address well |
+| Helper | 13px muted | `text-hint text-ink-muted` | Copy under a field, checkbox, or address well |
 | Hint | 13px faint | `text-hint text-ink-faint` | Hover or inactive only — not field helpers |
 | KPI | 24px | `text-2xl font-semibold tabular-nums` | Balance and stat tiles |
 

@@ -80,7 +80,7 @@ export function TotpSettings({
           />
         </div>
         <div>
-          <p className="text-xs text-ink-muted">Or enter this key manually</p>
+          <p className="text-hint text-ink-muted">Or enter this key manually</p>
           <p className="mt-1 break-all font-mono text-sm text-ink">
             {pending.secret}
           </p>

@@ -172,7 +172,7 @@ export default async function AccountSettingsPage({
                 autoComplete="new-password"
                 className={fieldClass}
               />
-              <span className="mt-1 block text-xs text-ink-muted">
+              <span className="mt-1 block text-hint text-ink-muted">
                 At least 8 characters.
               </span>
             </label>
@@ -225,7 +225,7 @@ export default async function AccountSettingsPage({
               autoComplete="username"
               className={`${fieldClass} text-ink-muted`}
             />
-            <span className="mt-1 block text-xs text-ink-muted">
+            <span className="mt-1 block text-hint text-ink-muted">
               Email is the login. An admin can change it from Members.
             </span>
           </label>
@@ -263,7 +263,7 @@ export default async function AccountSettingsPage({
               autoComplete="nickname"
               className={fieldClass}
             />
-            <span className="mt-1 block text-xs text-ink-muted">
+            <span className="mt-1 block text-hint text-ink-muted">
               2–32 characters. Letters, numbers, spaces, _ and -. Start with a letter.
             </span>
           </label>
@@ -285,7 +285,7 @@ export default async function AccountSettingsPage({
               rows={3}
               className={fieldClass}
             />
-            <span className="mt-1 block text-xs text-ink-muted">
+            <span className="mt-1 block text-hint text-ink-muted">
               Optional. {TRADER_BIO_MAX} characters.
             </span>
           </label>
@@ -320,7 +320,7 @@ export default async function AccountSettingsPage({
                   <p className="text-sm text-ink">
                     {row.traderAlias ?? "Trader"} · {row.parentName}
                   </p>
-                  <p className="mt-1 text-xs text-ink-muted">
+                  <p className="mt-1 text-hint text-ink-muted">
                     {row.share.status === "active" ? "Following" : "Invited"}
                     {row.sharingEnabled
                       ? ""

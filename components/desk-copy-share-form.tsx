@@ -46,7 +46,7 @@ export function DeskCopyShareCard({
     <section className="space-y-4 rounded-card border border-line bg-surface p-5">
       <div>
         <h3 className="text-sm font-medium text-ink">Share this desk</h3>
-        <p className="mt-1 text-xs text-ink-muted">
+        <p className="mt-1 text-hint text-ink-muted">
           Followers copy fills, not recipes. Venue, type, and Live are stamped.
           Email is never shown.
         </p>
@@ -81,7 +81,7 @@ export function DeskCopyShareCard({
               )}
               <span>
                 Enable sharing
-                <span className="mt-1 block text-xs text-ink-muted">
+                <span className="mt-1 block text-hint text-ink-muted">
                   Off keeps these notes saved but hides the desk from invites
                   and the catalogue. Followers then see that this desk is no
                   longer available for following.
@@ -107,7 +107,7 @@ export function DeskCopyShareCard({
               defaultValue={listing?.name ?? account.name}
               className={fieldClass}
             />
-            <span className="mt-1 block text-xs text-ink-muted">
+            <span className="mt-1 block text-hint text-ink-muted">
               Shown on Copy desks cards next to your trader alias.
             </span>
           </label>
@@ -142,7 +142,7 @@ export function DeskCopyShareCard({
             />
             <span>
               Allow new followers
-              <span className="mt-1 block text-xs text-ink-muted">
+              <span className="mt-1 block text-hint text-ink-muted">
                 Off blocks new copy desks. Current followers keep copying.
                 Only applies while sharing is on.
               </span>
@@ -158,7 +158,7 @@ export function DeskCopyShareCard({
               <option value="private">Private — invite only</option>
               <option value="public">Public — catalogue</option>
             </AppSelect>
-            <span className="mt-1 block text-xs text-ink-muted">
+            <span className="mt-1 block text-hint text-ink-muted">
               Private stays off the catalogue. Invite members from{" "}
               <Link
                 href={deskHref(FUTURES_PATHS.shared, account.id)}
@@ -186,7 +186,7 @@ export function DeskCopyShareCard({
               ariaLabel="Maximum copy traders"
               className={fieldClass}
             />
-            <span className="mt-1 block text-xs text-ink-muted">
+            <span className="mt-1 block text-hint text-ink-muted">
               {maxFollowersCeiling == null
                 ? "Caps how many desks can copy this one. Empty means no cap."
                 : `Caps how many desks can copy this one. Platform maximum is ${maxFollowersCeiling}. Empty uses that maximum.`}
@@ -194,7 +194,7 @@ export function DeskCopyShareCard({
           </label>
           <div className="space-y-3 border-t border-line pt-4">
             <p className="text-sm font-semibold text-ink">Copier requirements</p>
-            <p className="text-xs text-ink-muted">
+            <p className="text-hint text-ink-muted">
               Checked when a Live copy desk is enabled or unpaused. Paper
               followers skip this. Mode and leverage stay in the setup notes
               until we can read them from the venue.
@@ -218,7 +218,7 @@ export function DeskCopyShareCard({
                   className="mt-0 w-full rounded-control border border-line bg-canvas py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
                 />
               </span>
-              <span className="mt-1 block text-xs text-ink-muted">
+              <span className="mt-1 block text-hint text-ink-muted">
                 Live copiers need at least this much available. Empty means no
                 floor.
               </span>

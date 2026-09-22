@@ -25,7 +25,7 @@ export function CopySizeFields({
     <div className="space-y-3">
       <div>
         <p className="text-sm font-semibold text-ink">Sizing</p>
-        <p className="mt-1 text-xs text-ink-muted">
+        <p className="mt-1 text-hint text-ink-muted">
           Same formula every time: parent fill × (your book / their available).
           A $10,000 fill on a $100,000 book is 10% of whatever book you pick.
         </p>
@@ -46,7 +46,7 @@ export function CopySizeFields({
         </AppSelect>
       </label>
       {sizeMode === "balance" ? (
-        <p className="text-xs text-ink-muted">
+        <p className="text-hint text-ink-muted">
           {paper
             ? `Paper starts at ${formatCopyPaperStartingUsdt()}. Your book is that plus realized and unrealized P&L.`
             : "Your book is available USDT on the bound key when the fill copies."}
@@ -68,7 +68,7 @@ export function CopySizeFields({
               %
             </span>
           </span>
-          <span className="mt-1 block text-xs text-ink-muted">
+          <span className="mt-1 block text-hint text-ink-muted">
             {paper
               ? `20% of the ${formatCopyPaperStartingUsdt()} paper start is a $2,000 book before P&L. That $10,000 parent fill becomes $200.`
               : "20% of a $10,000 account is a $2,000 book. That $10,000 parent fill becomes $200."}
@@ -91,7 +91,7 @@ export function CopySizeFields({
               className="w-full rounded-control border border-line bg-canvas py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
             />
           </span>
-          <span className="mt-1 block text-xs text-ink-muted">
+          <span className="mt-1 block text-hint text-ink-muted">
             Treat this amount as your book. A $5,000 book turns that $10,000
             parent fill into $500. New copies pause if{" "}
             {paper ? "paper equity" : "available"} drops below this amount

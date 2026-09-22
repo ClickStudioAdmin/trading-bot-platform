@@ -98,7 +98,7 @@ export function ThemeFormDraft() {
               autoComplete="off"
               className={fieldClass}
             />
-            <span className="mt-1 block text-xs text-ink-muted">
+            <span className="mt-1 block text-hint text-ink-muted">
               Helper under the field.
             </span>
           </label>
@@ -230,7 +230,7 @@ export function ThemeFormDraft() {
             />
             <span>
               Card
-              <span className="mt-1 block text-xs text-ink-muted">
+              <span className="mt-1 block text-hint text-ink-muted">
                 Automatic payments.
               </span>
             </span>
@@ -244,7 +244,7 @@ export function ThemeFormDraft() {
             />
             <span>
               Wallet
-              <span className="mt-1 block text-xs text-ink-muted">
+              <span className="mt-1 block text-hint text-ink-muted">
                 Manual top-up. Deductions from Account Balance.
               </span>
             </span>

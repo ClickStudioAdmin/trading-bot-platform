@@ -62,7 +62,7 @@ export default async function ResetPasswordPage({
                 autoComplete="new-password"
                 className={BILLING_FIELD_CLASS}
               />
-              <span className="mt-1 block text-xs text-ink-muted">
+              <span className="mt-1 block text-hint text-ink-muted">
                 At least 8 characters.
               </span>
             </label>

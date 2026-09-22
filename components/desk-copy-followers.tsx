@@ -49,7 +49,7 @@ export function DeskCopyFollowersList({
     <section className="space-y-4 rounded-card border border-line bg-surface p-5">
       <div>
         <h3 className="text-sm font-medium text-ink">Followers</h3>
-        <p className="mt-1 text-xs text-ink-muted">
+        <p className="mt-1 text-hint text-ink-muted">
           Private invites show email. Public followers show user id. {capLabel}.
         </p>
       </div>
@@ -85,7 +85,7 @@ export function DeskCopyFollowersList({
                   >
                     {situation.statusLabel}
                   </span>
-                  <span className="block text-xs text-ink-muted">
+                  <span className="block text-hint text-ink-muted">
                     {situation.sourceLabel}
                   </span>
                   <span className="block text-hint text-ink-faint">
@@ -130,7 +130,7 @@ export function DeskCopyPrivateShareCard({
     <section className="space-y-4 rounded-card border border-line bg-surface p-5">
       <div>
         <h3 className="text-sm font-medium text-ink">Private share</h3>
-        <p className="mt-1 text-xs text-ink-muted">
+        <p className="mt-1 text-hint text-ink-muted">
           Invite a member by email. They must already have a login. No email is
           sent.
         </p>

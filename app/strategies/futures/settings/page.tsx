@@ -287,14 +287,14 @@ export default async function FuturesSettingsPage({
                 />
                 <span>
                   Reduce only
-                  <span className="mt-1 block text-xs text-ink-muted">
+                  <span className="mt-1 block text-hint text-ink-muted">
                     Blocks Buy and Sell. Close still works.
                   </span>
                 </span>
               </label>
               <div className="space-y-3 border-t border-line pt-4">
                 <p className="text-sm font-semibold text-ink">Risk caps</p>
-                <p className="text-xs text-ink-muted">
+                <p className="text-hint text-ink-muted">
                   Empty means no cap. Buy and Sell reject if they would breach.
                   Close is never blocked.
                 </p>
@@ -362,7 +362,7 @@ function PaperLeverageField({
   return (
     <label className="block text-sm text-ink">
       Paper leverage
-      <span className="mt-1 block text-xs text-ink-muted">
+      <span className="mt-1 block text-hint text-ink-muted">
         Used for ROE on Performance (P&L ÷ (notional ÷ this)). Empty
         leaves ROE as —. Does not change size or place venue orders.
         Applies to new trades and as a fallback for older paper closes

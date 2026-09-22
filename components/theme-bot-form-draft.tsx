@@ -2446,7 +2446,7 @@ function ThemeDcaSummary({
               </div>
             ) : null}
             <p
-              className={`text-xs text-ink-muted ${
+              className={`text-hint text-ink-muted ${
                 bothSides ? "pb-2 text-right" : ""
               }`}
             >
@@ -2660,7 +2660,7 @@ function ThemeBotFormReference() {
               Short ladder
             </TabButton>
           </div>
-          <p className="pb-2 text-right text-xs text-ink-muted">
+          <p className="pb-2 text-right text-hint text-ink-muted">
             Summary is based on the current asset price and the parameters
             configured above
           </p>

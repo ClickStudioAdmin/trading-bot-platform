@@ -66,7 +66,7 @@ export function AdminPlanForm({
               defaultValue={plan?.priceUsd ?? 0}
               className={fieldClass}
             />
-            <span className="mt-1 block text-xs text-ink-muted">
+            <span className="mt-1 block text-hint text-ink-muted">
               0 is Free. Seed prices are placeholders until Stripe.
             </span>
           </label>
@@ -94,7 +94,7 @@ export function AdminPlanForm({
                 </option>
               ))}
             </AppSelect>
-            <span className="mt-1 block text-xs text-ink-muted">
+            <span className="mt-1 block text-hint text-ink-muted">
               Public is on the Plans page. Private is assign-only. Draft is not
               published.
             </span>
@@ -108,7 +108,7 @@ export function AdminPlanForm({
               />
               <span>
                 Show this draft on the Plans page for preview
-                <span className="mt-1 block text-xs text-ink-muted">
+                <span className="mt-1 block text-hint text-ink-muted">
                   Admins only. Ignored unless visibility is Draft.
                 </span>
               </span>

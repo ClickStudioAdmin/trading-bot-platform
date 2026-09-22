@@ -403,7 +403,7 @@ export function BacktestQueueForm({
               allowDecimal
               className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink"
             />
-            <span className="mt-1 block text-xs text-ink-muted">
+            <span className="mt-1 block text-hint text-ink-muted">
               Cash gates on margin (position value ÷ this). Empty is 1×. If
               marked equity hits $0, the account liquidates and the replay
               stops.
@@ -440,7 +440,7 @@ export function BacktestQueueForm({
           <legend className="text-sm text-ink">
             Comparables ({comparables.length}/{BACKTEST_COMPARABLE_CAP})
           </legend>
-          <p className="mt-1 text-xs text-ink-muted">
+          <p className="mt-1 text-hint text-ink-muted">
             Same bot and window on other pairs. Ranked next to the primary.
           </p>
           <AppMultiSelect
@@ -458,7 +458,7 @@ export function BacktestQueueForm({
           />
         </fieldset>
         {recipe ? (
-          <p className="text-xs text-ink-muted">
+          <p className="text-hint text-ink-muted">
             {recipe.kind === "dca"
               ? "DCA starts armed. Clips and percent exits decide on close."
               : "Entries fill at bar close. Stops use the adverse wick."}{" "}
@@ -468,7 +468,7 @@ export function BacktestQueueForm({
         {preview.error ? (
           <p className="text-sm text-danger">{preview.error}</p>
         ) : (
-          <p className="text-xs text-ink-muted">
+          <p className="text-hint text-ink-muted">
             Replay tape {DCA_INDICATOR_TIMEFRAME_LABELS[preview.interval]}
             {recipe?.kind === "dca" &&
             (recipe.startKind === "indicator" || recipe.startKind === "trend")

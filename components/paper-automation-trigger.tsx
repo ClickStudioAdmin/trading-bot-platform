@@ -106,7 +106,7 @@ export function PaperAutomationTrigger({
               <p className="text-[11px] uppercase tracking-[0.12em] text-ink-faint">
                 Entry
               </p>
-              <p className="mt-1 text-xs text-ink-muted">
+              <p className="mt-1 text-hint text-ink-muted">
                 {formatCarryEntryWhy(entrySource, automation)}
               </p>
               <TriggerList
@@ -118,7 +118,7 @@ export function PaperAutomationTrigger({
               </p>
               {canEdit ? (
                 <form action={updatePaperCarryExits} className="mt-1 space-y-1.5">
-                  <p className="text-xs text-ink-muted">
+                  <p className="text-hint text-ink-muted">
                     Used by the next tick. Close on the row uses order type
                     only.
                   </p>
@@ -161,7 +161,7 @@ export function PaperAutomationTrigger({
                 </form>
               ) : (
                 <>
-                  <p className="mt-1 text-xs text-ink-muted">
+                  <p className="mt-1 text-hint text-ink-muted">
                     {formatCarryCloseWhy(closeSource, closeReason, automation)}
                   </p>
                   <TriggerList lines={exits} empty="" />
@@ -178,11 +178,11 @@ export function PaperAutomationTrigger({
 function TriggerList({ lines, empty }: { lines: string[]; empty: string }) {
   if (lines.length === 0) {
     return empty ? (
-      <p className="mt-1 text-xs text-ink-muted">{empty}</p>
+      <p className="mt-1 text-hint text-ink-muted">{empty}</p>
     ) : null;
   }
   return (
-    <ul className="mt-1 space-y-0.5 text-xs text-ink-muted">
+    <ul className="mt-1 space-y-0.5 text-hint text-ink-muted">
       {lines.map((line) => (
         <li key={line}>{line}</li>
       ))}

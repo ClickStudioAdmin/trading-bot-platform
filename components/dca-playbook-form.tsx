@@ -1705,7 +1705,7 @@ export function DcaPlaybookForm({
                 </label>
               </>
             ) : (
-              <p className="self-end text-xs text-ink-muted lg:col-span-3">
+              <p className="self-end text-hint text-ink-muted lg:col-span-3">
                 Create a Signal on{" "}
                 <Link href={webhooksHref} className="text-accent">
                   Webhooks
@@ -2679,7 +2679,7 @@ export function DcaPlaybookForm({
             </div>
           ) : null}
           <p
-            className={`text-xs text-ink-muted ${
+            className={`text-hint text-ink-muted ${
               showLadderTabs ? "pb-2 text-right" : ""
             }`}
           >
@@ -2939,7 +2939,7 @@ export function DcaPlaybookForm({
                 })}
               </tbody>
             </table>
-            <p className="border-t border-line px-3 py-2 text-xs text-ink-muted">
+            <p className="border-t border-line px-3 py-2 text-hint text-ink-muted">
               {summary.priceFromLast
                 ? `Prices from last on ${symbol}.`
                 : "Prices indexed from 100 until last is available."}

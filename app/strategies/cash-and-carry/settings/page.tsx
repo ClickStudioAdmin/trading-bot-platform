@@ -121,7 +121,7 @@ export default async function CashAndCarrySettingsPage({
             className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
           />
         </label>
-        <p className="text-xs text-ink-muted">
+        <p className="text-hint text-ink-muted">
           Percent of the top 5 book levels inside 5 bp of impact. 25 means
           a quarter of that in-range book. Manual Size, Dynamic clips, and
           Dynamic exits all use this number.
@@ -133,7 +133,7 @@ export default async function CashAndCarrySettingsPage({
           />
           <span>
             Reduce only
-            <span className="mt-1 block text-xs text-ink-muted">
+            <span className="mt-1 block text-hint text-ink-muted">
               Stops every bot from opening or adding size. Automated
               exits still run unless a bot is Disabled. Manual Open,
               Close, and Unwind still work.

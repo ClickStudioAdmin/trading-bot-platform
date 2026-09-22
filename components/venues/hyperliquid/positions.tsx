@@ -255,7 +255,7 @@ export async function HyperliquidFuturesPositions({
                     defaultSymbol="BTC"
                   />
                 ) : session ? (
-                  <p className="mt-4 text-xs text-ink-muted">
+                  <p className="mt-4 text-hint text-ink-muted">
                     Create a named webhook on{" "}
                     <Link
                       href={deskHref(FUTURES_PATHS.webhooks, session.account.id)}

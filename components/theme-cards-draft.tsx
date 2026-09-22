@@ -13,7 +13,7 @@ export const themeGroupTitleClass = "text-sm font-semibold text-ink";
 export const themeBodyClass = "text-sm text-ink";
 export const themeFormLabelClass = "block text-sm text-ink";
 export const themeChoiceLabelClass = "text-sm text-ink";
-export const themeHelperClass = "mt-1 block text-xs text-ink-muted";
+export const themeHelperClass = "mt-1 block text-hint text-ink-muted";
 export const themeHintClass = "text-hint text-ink-faint";
 export const themeFactLabelClass =
   "text-xs uppercase tracking-[0.12em] text-ink-muted";
@@ -96,8 +96,8 @@ const SCALE: {
   {
     role: "Helper",
     sample: "Email is the login. An admin can change it from Members.",
-    cls: "text-xs text-ink-muted",
-    px: "12",
+    cls: "text-hint text-ink-muted",
+    px: "13",
     use: "Copy under a field, checkbox, or address well.",
   },
   {
@@ -125,7 +125,7 @@ export function ThemeCardsDraft() {
           Card titles are 18px. Field labels are 14px ink — white in dark
           mode. Card intros are 14px muted. Fact rows are 12px uppercase
           labels and 14px values, with the label beside the value on Top up.
-          Helpers under fields are 12px muted.
+          Helpers under fields are 13px muted.
         </p>
         <div className="overflow-hidden rounded-card border border-line bg-surface">
           <table className="w-full text-left text-sm">
@@ -161,7 +161,7 @@ export function ThemeCardsDraft() {
         </h2>
         <p className="text-sm text-ink-muted">
           Live Account Holder matches the scale: 18px title, 14px muted intro,
-          14px white field labels, 12px muted helper.
+          14px white field labels, 13px muted helper.
         </p>
         <div className="grid gap-5 lg:grid-cols-2">
           <SampleFrame label="Live — Account Holder">
@@ -187,7 +187,7 @@ export function ThemeCardsDraft() {
                   readOnly
                   className={`${fieldClass} text-ink-muted`}
                 />
-                <span className="mt-1 block text-xs text-ink-muted">
+                <span className="mt-1 block text-hint text-ink-muted">
                   Email is the login. An admin can change it from Members.
                 </span>
               </label>

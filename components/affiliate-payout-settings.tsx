@@ -56,7 +56,7 @@ export function AffiliatePayoutSettingsForm({
         />
         <span>
           Auto payouts
-          <span className="mt-0.5 block text-xs text-ink-muted">
+          <span className="mt-0.5 block text-hint text-ink-muted">
             When payable is over your amount, open a payout request for the
             full payable. Same path as a manual withdraw.
           </span>
@@ -76,7 +76,7 @@ export function AffiliatePayoutSettingsForm({
           placeholder={(minPayoutUsd + 0.01).toFixed(2)}
           className={BILLING_FIELD_CLASS}
         />
-        <span className="mt-1 block text-xs text-ink-muted">
+        <span className="mt-1 block text-hint text-ink-muted">
           Must be more than the program minimum {formatUsd(minPayoutUsd)}.
         </span>
       </label>

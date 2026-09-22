@@ -241,8 +241,8 @@ export default async function ThemePage({
               Fact label 12
             </p>
             <p className="text-sm text-ink">Fact value 14</p>
-            <p className="text-xs text-ink-muted">
-              Helper 12 muted — under a field.
+            <p className="text-hint text-ink-muted">
+              Helper 13 muted — under a field.
             </p>
             <p className="text-hint text-ink-faint">
               Hint 13 faint — hover or inactive only.

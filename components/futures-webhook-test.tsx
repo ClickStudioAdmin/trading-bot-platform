@@ -85,7 +85,7 @@ export function FuturesWebhookTest({
         {standalone ? null : (
           <>
             <p className="text-sm font-semibold text-ink">Send a test</p>
-            <p className="text-xs text-ink-muted">{help}</p>
+            <p className="text-hint text-ink-muted">{help}</p>
           </>
         )}
         <div className="mt-3 flex flex-wrap items-end gap-x-6 gap-y-4">

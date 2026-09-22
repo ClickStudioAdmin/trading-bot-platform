@@ -258,7 +258,7 @@ function FuturesBulkDialog({
               <AppCheck name="setReduceOnly" />
               <span>
                 {blockNew.label}
-                <span className="mt-1 block text-xs text-ink-muted">
+                <span className="mt-1 block text-hint text-ink-muted">
                   {blockNew.hint}
                 </span>
               </span>

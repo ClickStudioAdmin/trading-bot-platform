@@ -958,7 +958,7 @@ export function AffiliateDashboard({
                     <>
                       On
                       {portal.payoutSettings.autoPayoutUsd != null ? (
-                        <span className="mt-0.5 block text-xs text-ink-muted">
+                        <span className="mt-0.5 block text-hint text-ink-muted">
                           Over {formatUsd(portal.payoutSettings.autoPayoutUsd)}
                         </span>
         ) : null}
@@ -1036,7 +1036,7 @@ export function AffiliateDashboard({
                   autoComplete="nickname"
                   className={BILLING_FIELD_CLASS}
                 />
-                <span className="mt-1 block text-xs text-ink-muted">
+                <span className="mt-1 block text-hint text-ink-muted">
                   2–32 characters. Letters, numbers, spaces, _ and -. Start
                   with a letter.
                 </span>

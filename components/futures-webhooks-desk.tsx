@@ -209,7 +209,7 @@ export function FuturesWebhooksDesk({
             <p className="text-sm font-semibold text-ink">Payload</p>
             {hook.kind === "signal" ? (
               <>
-                <p className="text-xs text-ink-muted">
+                <p className="text-hint text-ink-muted">
                   Signal only arms, disarms, or closes the bot. It does
                   not send buy, sell, or close.
                 </p>
@@ -225,7 +225,7 @@ export function FuturesWebhooksDesk({
               </>
             ) : (
               <>
-                <p className="text-xs text-ink-muted">
+                <p className="text-hint text-ink-muted">
                   Paste one of these into each TradingView alert. The ticker
                   placeholder may be BTCUSDT.P. Sell opens or adds a short.
                   Close exits the open row. Do not use strategy.order.action —
