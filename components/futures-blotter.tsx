@@ -588,10 +588,7 @@ export function ClosedFuturesTrades({
   const colSpan = futuresClosedColumnCount(visible);
   return (
     <section>
-      <SectionHead
-        title="Past Positions"
-        subtitle="Closed futures. Realized is mark-to-market at close."
-      />
+      <SectionHead title="Past Positions" />
       <TableFilterSession
         defaultOpen={filtersOpen}
         actions={

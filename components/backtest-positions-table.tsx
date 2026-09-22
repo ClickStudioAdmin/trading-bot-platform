@@ -483,10 +483,7 @@ function ClosedBacktestPositions({
   const table = useClientTable(filtered, compare);
   return (
     <section>
-      <SectionHead
-        title="Past Positions"
-        subtitle="Closed futures. Click a row to pin that trade on the chart."
-      />
+      <SectionHead title="Past Positions" />
       {cycles.length > 0 ? (
         <CycleFilters
           query={query}

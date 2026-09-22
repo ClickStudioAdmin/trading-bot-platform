@@ -391,10 +391,7 @@ export function ClosedPaperTrades({
   const colSpan = paperClosedColumnCount(visible);
   return (
     <section>
-      <SectionHead
-        title="Past Positions"
-        subtitle="Closed paper carries. Realized P&L uses the same all-in fee model as unrealized."
-      />
+      <SectionHead title="Past Positions" />
       <TableFilterSession
         defaultOpen={filtersOpen}
         actions={

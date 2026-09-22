@@ -235,6 +235,14 @@ button[aria-busy="true"],
   padding-right: 0.25rem;
 }
 
+table:has(> tbody > tr:only-child > td[colspan]) > thead {
+  border-bottom-width: 0;
+}
+
+.overflow-hidden:has(table > tbody > tr:only-child > td[colspan]) > .border-t {
+  border-top-width: 0;
+}
+
 /* Light scheme. Live chrome/content wrappers use .theme-light. Theme page preview
    still uses .theme-preview-light. Canvas fill is .theme-preview-canvas so portaled
    panels can inherit light tokens without forcing a page background. */
