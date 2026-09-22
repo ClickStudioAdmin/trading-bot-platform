@@ -19,7 +19,6 @@ import {
   type BacktestRun,
 } from "@/lib/backtest/model";
 import {
-  canDeleteBacktestRun,
   canReadBacktestRun,
   listBacktestRuns,
   loadBacktestRun,
@@ -124,7 +123,6 @@ export default async function AccountBacktestDetailPage({
       run={run}
       listHref={backtestSavedListHref()}
       applyDesks={applyDesks}
-      canRemove={canDeleteBacktestRun(run, member.id, isAdmin)}
       canAttach={templateActions.canAttach}
       canSaveAs={templateActions.canSaveAs}
       canSaveAsPlatform={templateActions.canSaveAsPlatform}

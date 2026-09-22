@@ -317,7 +317,6 @@ function OpenBacktestPositions({
         />
       ) : null}
       <TableCard
-        className=""
         pager={
           <TablePager
             window={table.window}
@@ -504,7 +503,6 @@ function ClosedBacktestPositions({
         />
       ) : null}
       <TableCard
-        className=""
         pager={
           <TablePager
             window={table.window}

@@ -461,7 +461,6 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
           </TableFilterBar>
       </TableFilterSession>
       <TableCard
-        className=""
         pager={
           <TablePager
             window={table.window}
@@ -1243,12 +1242,10 @@ export function RemoveBacktestButton({
   runId,
   canRemove,
   returnTo = "/account/backtests",
-  inline = false,
 }: {
   runId: string;
   canRemove: boolean;
   returnTo?: string;
-  inline?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -1258,7 +1255,7 @@ export function RemoveBacktestButton({
   }
   return (
     <form
-      className={inline ? "inline" : "inline-flex"}
+      className="inline-flex"
       action={async (formData) => {
         setPending(true);
         setError(null);
@@ -1273,26 +1270,15 @@ export function RemoveBacktestButton({
       }}
     >
       <input type="hidden" name="runId" value={runId} />
-      {inline ? (
-        <TableLabelButton
-          type="submit"
-          variant="danger"
-          disabled={pending}
-          icon={<IconTrash {...TABLE_BTN_ICON} />}
-        >
-          {pending ? "Removing…" : "Remove"}
-        </TableLabelButton>
-      ) : (
-        <TableIconAction
-          type="submit"
-          danger
-          disabled={pending}
-          label="Remove"
-          detail="Delete this backtest run."
-        >
-          <IconTrash {...TABLE_BTN_ICON} />
-        </TableIconAction>
-      )}
+      <TableIconAction
+        type="submit"
+        danger
+        disabled={pending}
+        label="Remove"
+        detail="Delete this backtest run."
+      >
+        <IconTrash {...TABLE_BTN_ICON} />
+      </TableIconAction>
       {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
     </form>
   );

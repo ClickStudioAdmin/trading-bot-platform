@@ -7,7 +7,6 @@ import {
   BacktestRunRefresh,
   BacktestPropertyList,
   BacktestStatsGrid,
-  RemoveBacktestButton,
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
 import { ColumnHint } from "@/components/column-hint";
@@ -15,7 +14,6 @@ import { BacktestRunsTable } from "@/components/backtest-runs-table";
 import { BacktestStudyCharts } from "@/components/backtest-study-charts";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
 import {
-  BACKTEST_FEE_PRESETS,
   backtestAprPct,
   backtestDrawdownCard,
   backtestRerunHref,
@@ -28,7 +26,6 @@ import {
   type BacktestRun,
 } from "@/lib/backtest/model";
 import { recipeParamRows } from "@/lib/backtest/study";
-import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
 import {
   formatCount,
   formatPct,
@@ -215,7 +212,6 @@ export function BacktestRunDetail({
   run,
   listHref,
   applyDesks,
-  canRemove,
   canAttach = false,
   canSaveAs = false,
   canSaveAsPlatform = false,
@@ -235,7 +231,6 @@ export function BacktestRunDetail({
   run: BacktestRun;
   listHref: string;
   applyDesks?: Array<{ id: string; name: string }>;
-  canRemove: boolean;
   canAttach?: boolean;
   canSaveAs?: boolean;
   canSaveAsPlatform?: boolean;
@@ -289,20 +284,6 @@ export function BacktestRunDetail({
               <StatusDot tone={status.tone} pulse={status.pulse} />
               {status.label}
             </div>
-          </div>
-          <p className="mt-2 text-sm text-ink-muted">
-            {run.symbol} · {run.venue} ·{" "}
-            {DCA_INDICATOR_TIMEFRAME_LABELS[run.interval]} · start{" "}
-            {run.startingUsdt.toLocaleString()} · {run.leverage}× ·{" "}
-            {BACKTEST_FEE_PRESETS[run.feePreset].label}
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-            <RemoveBacktestButton
-              runId={run.id}
-              canRemove={canRemove}
-              returnTo={returnTo}
-              inline
-            />
           </div>
         </div>
         <BacktestMatchCard
