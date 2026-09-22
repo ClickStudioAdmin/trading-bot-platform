@@ -873,11 +873,11 @@ function BacktestOrderCards({
             <h3 className="text-lg font-semibold tracking-tight text-ink">
               {orderCardTitle(order)}
             </h3>
-            <p className="text-xs text-ink-muted">
+            <p className="text-sm text-ink-muted">
               <LocalTime at={order.atMs} />
             </p>
           </header>
-          <p className="mt-0.5 text-xs text-ink-muted">
+          <p className="mt-0.5 text-sm text-ink-muted">
             Auto · {recipeName}
           </p>
           <div className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2">
@@ -928,7 +928,7 @@ function BacktestLogList({ cycle }: { cycle: BacktestPositionCycle }) {
             <h3 className="min-w-0 text-lg font-semibold tracking-tight text-ink">
               {log.message}
             </h3>
-            <p className="shrink-0 text-xs text-ink-muted">
+            <p className="shrink-0 text-sm text-ink-muted">
               <LocalTime at={log.atMs} />
             </p>
           </header>
@@ -1045,7 +1045,7 @@ function SectionHead({
 }) {
   return (
     <div className="mb-3">
-      <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
       {subtitle ? <p className="text-sm text-ink-muted">{subtitle}</p> : null}
     </div>
   );

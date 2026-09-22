@@ -140,9 +140,9 @@ export function FuturesWorkingOrders({
     <section>
       <FuturesDeskRefresh urgent={urgent} />
       <div className="mb-3">
-        <h2 className="text-xl font-semibold tracking-tight text-ink">
+        <h2 className="text-lg font-semibold tracking-tight text-ink">
           Open Orders{" "}
-          <span className="text-base font-semibold">({rows.length})</span>
+          <span className="font-semibold">({rows.length})</span>
         </h2>
       </div>
       <TableFilterSession

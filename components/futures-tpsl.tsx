@@ -304,7 +304,7 @@ export function TpslPair({
             {takeProfit === null ? "--" : formatPrice(takeProfit)}
           </span>
           {tpLimited ? (
-            <span className="text-[11px] text-ink-faint">Limit</span>
+            <span className="text-hint text-ink-faint">Limit</span>
           ) : null}
         </span>
         <span className="text-ink-faint">/</span>
@@ -315,12 +315,12 @@ export function TpslPair({
             {stopLoss === null ? "--" : formatPrice(stopLoss)}
           </span>
           {slLimited ? (
-            <span className="text-[11px] text-ink-faint">Limit</span>
+            <span className="text-hint text-ink-faint">Limit</span>
           ) : null}
         </span>
       </span>
       {mode === "partial" ? (
-        <span className="text-[11px] text-ink-faint">Partial</span>
+        <span className="text-hint text-ink-faint">Partial</span>
       ) : null}
     </span>
   );

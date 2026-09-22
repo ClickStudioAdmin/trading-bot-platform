@@ -202,7 +202,7 @@ export async function HyperliquidFuturesPositions({
         </section>
         {showTicket ? (
           <section>
-            <h2 className="text-xl font-semibold tracking-tight">
+            <h2 className="text-lg font-semibold tracking-tight">
               Place an order
             </h2>
             <p className="text-sm text-ink-muted">

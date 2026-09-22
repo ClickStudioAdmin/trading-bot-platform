@@ -57,7 +57,7 @@ export default async function AdminOverviewPage() {
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold tracking-tight">Snapshot</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Snapshot</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             label="Members"

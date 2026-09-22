@@ -292,7 +292,7 @@ function FuturesTrailingDialog({
           <div>
             <div className="flex items-end justify-between gap-2">
               <p className="text-sm text-ink">Retracement</p>
-              <p className="text-[11px] text-ink-faint">By Distance</p>
+              <p className="text-hint text-ink-faint">By Distance</p>
             </div>
             <GroupedNumberInput
               name="trailingStop"

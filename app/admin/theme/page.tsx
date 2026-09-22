@@ -94,8 +94,8 @@ export default async function ThemePage({
           <section>
             <h2 className="text-xl font-semibold tracking-tight">Cards</h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Type scale and each card variation. Labels are 14px ink — white
-              in dark mode.
+              Type scale, what is still off, and each card variation. Labels
+              are 14px ink — white in dark mode.
             </p>
             <div className="mt-5">
               <ThemeCardsDraft />

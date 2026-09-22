@@ -626,7 +626,7 @@ function SectionHead({
       className={`flex items-start justify-between gap-4 ${className}`.trim()}
     >
       <div className="min-w-0">
-        <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
         {subtitle ? <p className="text-sm text-ink-muted">{subtitle}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}

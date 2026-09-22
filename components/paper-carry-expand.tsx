@@ -415,7 +415,7 @@ export function PositionLogList({ logs }: { logs: EventLogRow[] }) {
                 >
                   {formatLogHeadline(log)}
                 </h3>
-                <p className="shrink-0 text-xs text-ink-muted">
+                <p className="shrink-0 text-sm text-ink-muted">
                   <LocalTime at={log.createdAt} />
                 </p>
               </header>
@@ -705,11 +705,11 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
         <h3 className="text-lg font-semibold tracking-tight text-ink">
           {formatOrderHeadline(order)}
         </h3>
-        <p className="text-xs text-ink-muted">
+        <p className="text-sm text-ink-muted">
           <LocalTime at={order.filledAtMs} />
         </p>
       </header>
-      <p className="mt-0.5 text-xs text-ink-muted">{formatOrderWhy(order)}</p>
+      <p className="mt-0.5 text-sm text-ink-muted">{formatOrderWhy(order)}</p>
       {conditions.length > 0 ? (
         <p className="mt-0.5 text-sm text-ink-muted">{conditions.join(" · ")}</p>
       ) : null}
@@ -867,11 +867,11 @@ function CloseOrderCard({
         <h3 className="text-lg font-semibold tracking-tight text-ink">
           {formatOrderHeadline(order)}
         </h3>
-        <p className="text-xs text-ink-muted">
+        <p className="text-sm text-ink-muted">
           <LocalTime at={order.filledAtMs} />
         </p>
       </header>
-      <p className="mt-0.5 text-xs text-ink-muted">{formatCloseOrderWhy(order)}</p>
+      <p className="mt-0.5 text-sm text-ink-muted">{formatCloseOrderWhy(order)}</p>
       <ValueList rows={rows} />
     </article>
   );

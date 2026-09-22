@@ -65,7 +65,7 @@ export default async function CashAndCarryOpportunitiesPage({
           error={firstSearchValue(params.paperError)}
         />
         <section>
-          <h2 className="mb-3 text-xl font-semibold tracking-tight">
+          <h2 className="mb-3 text-lg font-semibold tracking-tight">
             Market snapshot
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

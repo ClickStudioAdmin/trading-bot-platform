@@ -254,7 +254,9 @@ export function CopyCatalogueBoard({
                     >
                       {pnlLabel(card)}
                     </p>
-                    <p className="mt-1 text-hint text-ink-faint">P&L [30d]</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.12em] text-ink-muted">
+                      P&L [30d]
+                    </p>
                   </div>
                   <form action={toggleDeskCopyFavoriteAction}>
                     <input type="hidden" name="accountId" value={card.accountId} />
