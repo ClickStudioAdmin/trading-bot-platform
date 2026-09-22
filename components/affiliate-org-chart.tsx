@@ -7,6 +7,7 @@ import {
   affiliateOrgChartNodeHtml,
   affiliateOrgUserZoomedOut,
   flattenAffiliateOrgChart,
+  type AffiliateOrgDensity,
   type AffiliateOrgLayout,
 } from "@/lib/membership/affiliate";
 import type { AffiliateTreeNode } from "@/lib/membership/affiliate-store";
@@ -22,6 +23,7 @@ export type AffiliateOrgChartApi = {
   findPerson: (id: string) => void;
   clearFind: () => void;
   setLayout: (layout: AffiliateOrgLayout) => void;
+  setDensity: (density: AffiliateOrgDensity) => void;
 };
 
 type OrgChartState = {
@@ -437,6 +439,10 @@ export function AffiliateOrgChart({
         },
         setLayout: (layout: AffiliateOrgLayout) => {
           next.layout(layout).render();
+          fitChart(next, true);
+        },
+        setDensity: (density: AffiliateOrgDensity) => {
+          next.compact(density === "compact").render();
           fitChart(next, true);
         },
         resize: () => {

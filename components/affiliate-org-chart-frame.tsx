@@ -23,16 +23,26 @@ import {
   TableLabelButton,
 } from "@/components/table-chrome";
 import {
+  AFFILIATE_ORG_DEFAULT_DENSITY,
+  AFFILIATE_ORG_DENSITIES,
   AFFILIATE_ORG_LAYOUTS,
+  affiliateOrgDensityLabel,
   affiliateOrgLayoutLabel,
   flattenAffiliateOrgChart,
   searchAffiliateOrgChart,
+  type AffiliateOrgDensity,
   type AffiliateOrgLayout,
 } from "@/lib/membership/affiliate";
 import { useUiPreferences } from "@/components/ui-preferences";
 import type { AffiliateTreeNode } from "@/lib/membership/affiliate-store";
 
 const groupRule = "hidden h-6 w-px bg-line sm:block";
+const pillGroup =
+  "flex w-fit rounded-control border border-line bg-canvas p-0.5";
+const pillOn =
+  "rounded-control bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink";
+const pillOff =
+  "rounded-control px-3 py-1.5 text-xs text-ink-muted hover:text-ink disabled:text-ink-faint";
 const searchFieldClass =
   "w-56 rounded-control border border-line bg-canvas py-1.5 pl-8 pr-8 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none [&::-webkit-search-cancel-button]:appearance-none";
 
@@ -53,6 +63,9 @@ export function AffiliateOrgChartFrame({
   const [active, setActive] = useState(0);
   const [foundId, setFoundId] = useState<string | null>(null);
   const [layout, setLayout] = useState<AffiliateOrgLayout>("top");
+  const [density, setDensity] = useState<AffiliateOrgDensity>(
+    AFFILIATE_ORG_DEFAULT_DENSITY,
+  );
   const searchId = useId();
   const listId = `${searchId}-list`;
   const rows = useMemo(() => flattenAffiliateOrgChart(nodes), [nodes]);
@@ -158,7 +171,7 @@ export function AffiliateOrgChartFrame({
             <div
               role="group"
               aria-label="Chart layout"
-              className="flex w-fit rounded-control border border-line bg-canvas p-0.5"
+              className={pillGroup}
             >
               {AFFILIATE_ORG_LAYOUTS.map((option) => {
                 const selected = layout === option;
@@ -168,17 +181,44 @@ export function AffiliateOrgChartFrame({
                     type="button"
                     disabled={!api}
                     aria-pressed={selected}
-                    className={
-                      selected
-                        ? "rounded-control bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
-                        : "rounded-control px-3 py-1.5 text-xs text-ink-muted hover:text-ink disabled:text-ink-faint"
-                    }
+                    className={selected ? pillOn : pillOff}
                     onClick={() => {
                       setLayout(option);
                       api?.setLayout(option);
                     }}
                   >
                     {affiliateOrgLayoutLabel(option)}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          {nodes.length > 0 ? (
+            <div
+              role="group"
+              aria-label="Chart density. Compact is the default."
+              className={pillGroup}
+            >
+              {AFFILIATE_ORG_DENSITIES.map((option) => {
+                const selected = density === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    disabled={!api}
+                    aria-pressed={selected}
+                    className={selected ? pillOn : pillOff}
+                    onClick={() => {
+                      setDensity(option);
+                      api?.setDensity(option);
+                    }}
+                  >
+                    {affiliateOrgDensityLabel(option)}
+                    {option === AFFILIATE_ORG_DEFAULT_DENSITY ? (
+                      <span className="ml-1 font-normal text-ink-faint">
+                        Default
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}

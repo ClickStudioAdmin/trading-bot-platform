@@ -1397,6 +1397,9 @@ export const AFFILIATE_ORG_ROOT_ID = "you";
 export const AFFILIATE_ORG_MIN_ZOOM = 1.1;
 export const AFFILIATE_ORG_LAYOUTS = ["top", "left", "right", "bottom"] as const;
 export type AffiliateOrgLayout = (typeof AFFILIATE_ORG_LAYOUTS)[number];
+export const AFFILIATE_ORG_DENSITIES = ["compact", "wide"] as const;
+export type AffiliateOrgDensity = (typeof AFFILIATE_ORG_DENSITIES)[number];
+export const AFFILIATE_ORG_DEFAULT_DENSITY: AffiliateOrgDensity = "compact";
 
 export function parseAffiliateOrgLayout(value: unknown): AffiliateOrgLayout {
   const raw = String(value ?? "").trim().toLowerCase();
@@ -1416,6 +1419,16 @@ export function affiliateOrgLayoutLabel(layout: AffiliateOrgLayout): string {
     return "Left";
   }
   return "Top";
+}
+
+export function parseAffiliateOrgDensity(value: unknown): AffiliateOrgDensity {
+  return String(value ?? "").trim().toLowerCase() === "wide"
+    ? "wide"
+    : AFFILIATE_ORG_DEFAULT_DENSITY;
+}
+
+export function affiliateOrgDensityLabel(density: AffiliateOrgDensity): string {
+  return density === "wide" ? "Wide" : "Compact";
 }
 
 export function affiliateOrgUserZoomedOut(
