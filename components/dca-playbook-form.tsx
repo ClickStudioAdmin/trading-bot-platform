@@ -153,7 +153,7 @@ import {
   type BacktestLibraryItem,
   type SavedBacktestMatch,
 } from "@/components/backtest-dialog";
-import { IconPlus } from "@/components/icons";
+import { IconPlus, IconSave } from "@/components/icons";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
 import {
@@ -2580,7 +2580,9 @@ export function DcaPlaybookForm({
                   : undefined)
               }
             >
-              Save
+              <BotButtonLead icon={<IconSave {...botBtnIcon} />}>
+                Save
+              </BotButtonLead>
             </PendingSubmitButton>
             <DeskFormFlash />
           </div>

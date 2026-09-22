@@ -44,6 +44,7 @@ import {
   Rows3,
   RefreshCw,
   Moon,
+  Save,
   Share2,
   SlidersHorizontal,
   SquareArrowOutUpRight,
@@ -344,6 +345,13 @@ export const LUCIDE_ICONS = [
     Icon: RefreshCw,
   },
   {
+    id: "save",
+    name: "Save",
+    lucide: "Save",
+    usedIn: "Bot form Save",
+    Icon: Save,
+  },
+  {
     id: "share",
     name: "Share",
     lucide: "Share2",
@@ -632,6 +640,10 @@ export function IconClose(props: LucideProps) {
 
 export function IconReplace(props: LucideProps) {
   return <RefreshCw aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconSave(props: LucideProps) {
+  return <Save aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconShare(props: LucideProps) {

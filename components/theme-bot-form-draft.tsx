@@ -49,7 +49,7 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import { AppSelect } from "@/components/app-select";
-import { IconBacktest, IconPlus, IconTemplates } from "@/components/icons";
+import { IconBacktest, IconPlus, IconSave, IconTemplates } from "@/components/icons";
 
 const fieldClass = botFieldClass;
 const fieldInvalidClass = botFieldInvalidClass;
@@ -2340,7 +2340,9 @@ export function ThemeBotFormDraft() {
             }
             onClick={saveDraft}
           >
-            Save
+            <BotButtonLead icon={<IconSave {...botBtnIcon} />}>
+              Save
+            </BotButtonLead>
           </button>
         }
       >

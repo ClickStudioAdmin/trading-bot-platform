@@ -85,7 +85,7 @@ import {
 import type { DcaIndicatorStart } from "@/lib/dca/playbook";
 import type { FuturesOrderType, FuturesSide, FuturesTrigger } from "@/lib/futures/model";
 import type { FuturesTpslLevelKind } from "@/lib/futures/tpsl";
-import { IconPlus } from "@/components/icons";
+import { IconPlus, IconSave } from "@/components/icons";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import { perpsFormToSnapshotSource } from "@/lib/templates/recipe";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
@@ -1257,7 +1257,9 @@ function RuleCard({
               className={botSidebarSaveClass}
               disabled={!dirty || requiredMissing}
             >
-              Save
+              <BotButtonLead icon={<IconSave {...botBtnIcon} />}>
+                Save
+              </BotButtonLead>
             </PendingSubmitButton>
             <DeskFormFlash />
           </div>

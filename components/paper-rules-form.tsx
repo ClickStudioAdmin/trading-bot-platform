@@ -52,7 +52,7 @@ import {
   keepFormKeys,
 } from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
-import { IconPlus } from "@/components/icons";
+import { IconPlus, IconSave } from "@/components/icons";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import {
   paperFormToSnapshotSource,
@@ -658,7 +658,9 @@ function RuleRow({
               className={botSidebarSaveClass}
               disabled={!dirty || missing}
             >
-              Save
+              <BotButtonLead icon={<IconSave {...botBtnIcon} />}>
+                Save
+              </BotButtonLead>
             </PendingSubmitButton>
             <DeskFormFlash />
           </div>
