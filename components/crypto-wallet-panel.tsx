@@ -390,12 +390,17 @@ export function TopUpWallet({
               <dd className="text-ink">{token?.symbol ?? "—"}</dd>
               <dt className="text-ink-muted">Address:</dt>
               <dd className="min-w-0">
-                <p className="break-all rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
-                  {address.address}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="min-w-0 flex-1 break-all rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
+                    {address.address}
+                  </p>
+                  <CopyTextButton
+                    text={address.address}
+                    label="Copy address"
+                  />
+                </div>
               </dd>
             </dl>
-            <CopyTextButton text={address.address} label="Copy address" />
           </div>
           <DepositAddressQr value={address.address} />
         </div>
