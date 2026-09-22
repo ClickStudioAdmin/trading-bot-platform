@@ -20,17 +20,19 @@ import {
 import {
   TABLE_BTN_ICON,
   TableIconAction,
-  TableLabelButton,
 } from "@/components/table-chrome";
 import {
   AFFILIATE_ORG_DEFAULT_DENSITY,
+  AFFILIATE_ORG_DEFAULT_EXPAND_LEVEL,
   AFFILIATE_ORG_DENSITIES,
+  AFFILIATE_ORG_EXPAND_LEVELS,
   AFFILIATE_ORG_LAYOUTS,
   affiliateOrgDensityLabel,
   affiliateOrgLayoutLabel,
   flattenAffiliateOrgChart,
   searchAffiliateOrgChart,
   type AffiliateOrgDensity,
+  type AffiliateOrgExpandLevel,
   type AffiliateOrgLayout,
 } from "@/lib/membership/affiliate";
 import { useUiPreferences } from "@/components/ui-preferences";
@@ -65,6 +67,9 @@ export function AffiliateOrgChartFrame({
   const [layout, setLayout] = useState<AffiliateOrgLayout>("top");
   const [density, setDensity] = useState<AffiliateOrgDensity>(
     AFFILIATE_ORG_DEFAULT_DENSITY,
+  );
+  const [expandLevel, setExpandLevel] = useState<AffiliateOrgExpandLevel>(
+    AFFILIATE_ORG_DEFAULT_EXPAND_LEVEL,
   );
   const searchId = useId();
   const listId = `${searchId}-list`;
@@ -219,6 +224,35 @@ export function AffiliateOrgChartFrame({
               })}
             </div>
           ) : null}
+          {nodes.length > 0 ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-ink-muted">Levels</span>
+              <div
+                role="group"
+                aria-label="Chart levels"
+                className={pillGroup}
+              >
+                {AFFILIATE_ORG_EXPAND_LEVELS.map((option) => {
+                  const selected = expandLevel === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      disabled={!api}
+                      aria-pressed={selected}
+                      className={selected ? pillOn : pillOff}
+                      onClick={() => {
+                        setExpandLevel(option);
+                        api?.setExpandLevel(option);
+                      }}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
         {nodes.length > 0 ? (
           <div className="flex min-w-56 flex-1 justify-center">
@@ -348,23 +382,23 @@ export function AffiliateOrgChartFrame({
         ) : null}
         {nodes.length > 0 ? (
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <TableLabelButton
-                variant="secondary"
-                icon={<IconExpandAll {...TABLE_BTN_ICON} />}
+            <div className="flex items-center">
+              <TableIconAction
+                label="Expand all"
+                detail="Open every level of the chart."
                 disabled={!api}
                 onClick={() => api?.expandAll()}
               >
-                Expand all
-              </TableLabelButton>
-              <TableLabelButton
-                variant="secondary"
-                icon={<IconCollapseAll {...TABLE_BTN_ICON} />}
+                <IconExpandAll {...TABLE_BTN_ICON} />
+              </TableIconAction>
+              <TableIconAction
+                label="Collapse all"
+                detail="Close every branch to the root."
                 disabled={!api}
                 onClick={() => api?.collapseAll()}
               >
-                Collapse all
-              </TableLabelButton>
+                <IconCollapseAll {...TABLE_BTN_ICON} />
+              </TableIconAction>
             </div>
             <span className={groupRule} aria-hidden />
             <div className="flex items-center">

@@ -1404,6 +1404,9 @@ export type AffiliateOrgLayout = (typeof AFFILIATE_ORG_LAYOUTS)[number];
 export const AFFILIATE_ORG_DENSITIES = ["compact", "wide"] as const;
 export type AffiliateOrgDensity = (typeof AFFILIATE_ORG_DENSITIES)[number];
 export const AFFILIATE_ORG_DEFAULT_DENSITY: AffiliateOrgDensity = "compact";
+export const AFFILIATE_ORG_EXPAND_LEVELS = [1, 2, 3, 4, 5] as const;
+export type AffiliateOrgExpandLevel = (typeof AFFILIATE_ORG_EXPAND_LEVELS)[number];
+export const AFFILIATE_ORG_DEFAULT_EXPAND_LEVEL: AffiliateOrgExpandLevel = 2;
 
 export function parseAffiliateOrgLayout(value: unknown): AffiliateOrgLayout {
   const raw = String(value ?? "").trim().toLowerCase();
@@ -1433,6 +1436,15 @@ export function parseAffiliateOrgDensity(value: unknown): AffiliateOrgDensity {
 
 export function affiliateOrgDensityLabel(density: AffiliateOrgDensity): string {
   return density === "wide" ? "Wide" : "Compact";
+}
+
+export function parseAffiliateOrgExpandLevel(
+  value: unknown,
+): AffiliateOrgExpandLevel {
+  const n = Number(value);
+  return AFFILIATE_ORG_EXPAND_LEVELS.includes(n as AffiliateOrgExpandLevel)
+    ? (n as AffiliateOrgExpandLevel)
+    : AFFILIATE_ORG_DEFAULT_EXPAND_LEVEL;
 }
 
 export function affiliateOrgUserZoomedOut(

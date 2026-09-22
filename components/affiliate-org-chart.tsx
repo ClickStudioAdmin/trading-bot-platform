@@ -2,12 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import {
+  AFFILIATE_ORG_DEFAULT_EXPAND_LEVEL,
   AFFILIATE_ORG_MIN_ZOOM,
   affiliateOrgAutoZoom,
   affiliateOrgChartNodeHtml,
   affiliateOrgUserZoomedOut,
   flattenAffiliateOrgChart,
   type AffiliateOrgDensity,
+  type AffiliateOrgExpandLevel,
   type AffiliateOrgLayout,
 } from "@/lib/membership/affiliate";
 import type { AffiliateTreeNode } from "@/lib/membership/affiliate-store";
@@ -24,6 +26,7 @@ export type AffiliateOrgChartApi = {
   clearFind: () => void;
   setLayout: (layout: AffiliateOrgLayout) => void;
   setDensity: (density: AffiliateOrgDensity) => void;
+  setExpandLevel: (level: AffiliateOrgExpandLevel) => void;
 };
 
 type OrgChartState = {
@@ -31,6 +34,8 @@ type OrgChartState = {
   layout?: string;
   data?: {
     id?: string;
+    level?: number;
+    _expanded?: boolean;
     _highlighted?: boolean;
     _upToTheRootHighlighted?: boolean;
     _centered?: boolean;
@@ -41,8 +46,12 @@ type OrgChartState = {
     y?: number;
     width?: number;
     height?: number;
+    depth?: number;
+    _expanded?: boolean;
     parent?: unknown;
     data: {
+      level?: number;
+      _expanded?: boolean;
       _highlighted?: boolean;
       _upToTheRootHighlighted?: boolean;
       _centered?: boolean;
@@ -258,6 +267,25 @@ function fitChart(chart: OrgChartHandle, animate: boolean) {
   });
 }
 
+function expandToLevel(chart: OrgChartHandle, level: AffiliateOrgExpandLevel) {
+  const state = chart.getChartState();
+  for (const node of state.allNodes ?? []) {
+    const depth =
+      typeof node.depth === "number"
+        ? node.depth
+        : Number(node.data.level ?? 0);
+    const open = depth < level;
+    node._expanded = open;
+    node.data._expanded = open;
+  }
+  for (const row of state.data ?? []) {
+    const depth = Number(row.level ?? 0);
+    row._expanded = depth < level;
+  }
+  chart.initialExpandLevel(level);
+  chart.render();
+}
+
 function applyChartHeight(chart: OrgChartHandle, host: HTMLElement) {
   const height = Math.max(host.clientHeight, 240);
   const width = Math.max(host.clientWidth, 240);
@@ -353,7 +381,7 @@ export function AffiliateOrgChart({
         .initialZoom(AFFILIATE_ORG_MIN_ZOOM)
         .rootMargin(72)
         .setActiveNodeCentered(false)
-        .initialExpandLevel(2)
+        .initialExpandLevel(AFFILIATE_ORG_DEFAULT_EXPAND_LEVEL)
         .nodeContent((node) => {
           const row = node.data as {
             id: string;
@@ -443,6 +471,10 @@ export function AffiliateOrgChart({
         },
         setDensity: (density: AffiliateOrgDensity) => {
           next.compact(density === "compact").render();
+          fitChart(next, true);
+        },
+        setExpandLevel: (level: AffiliateOrgExpandLevel) => {
+          expandToLevel(next, level);
           fitChart(next, true);
         },
         resize: () => {

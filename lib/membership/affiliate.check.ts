@@ -50,7 +50,9 @@ import {
   affiliateOrgLayoutLabel,
   parseAffiliateOrgDensity,
   affiliateOrgDensityLabel,
+  parseAffiliateOrgExpandLevel,
   AFFILIATE_ORG_DEFAULT_DENSITY,
+  AFFILIATE_ORG_DEFAULT_EXPAND_LEVEL,
   parseAffiliatePortalPage,
   AFFILIATE_PORTAL_PAGE_SIZE,
   generateAffiliateLinkSlug,
@@ -354,6 +356,9 @@ assert.equal(parseAffiliateOrgDensity("nope"), "compact");
 assert.equal(parseAffiliateOrgDensity(null), AFFILIATE_ORG_DEFAULT_DENSITY);
 assert.equal(affiliateOrgDensityLabel("compact"), "Compact");
 assert.equal(affiliateOrgDensityLabel("wide"), "Wide");
+assert.equal(parseAffiliateOrgExpandLevel(2), AFFILIATE_ORG_DEFAULT_EXPAND_LEVEL);
+assert.equal(parseAffiliateOrgExpandLevel(5), 5);
+assert.equal(parseAffiliateOrgExpandLevel("nope"), AFFILIATE_ORG_DEFAULT_EXPAND_LEVEL);
 assert.equal(affiliateNetworkPath("list"), "/affiliates?tab=network");
 assert.equal(
   affiliateNetworkPath("list", 2),
