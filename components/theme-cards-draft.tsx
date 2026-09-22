@@ -157,127 +157,6 @@ export function ThemeCardsDraft() {
 
       <section className="space-y-5">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">Still off</h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            Live on the left. The scale on the right.
-          </p>
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-2">
-          <SampleFrame
-            label="Live — stat note"
-            note="Positions and paper stat tiles. The fact label is already above the number. The note under it is 13px faint."
-          >
-            <Card>
-              <p className={themeFactLabelClass}>Open positions</p>
-              <p className="mt-3 text-2xl font-semibold tracking-tight text-ink">
-                4
-              </p>
-              <p className="mt-2 text-hint text-ink-faint">2 closing</p>
-            </Card>
-          </SampleFrame>
-          <SampleFrame
-            label="Scale — stat note"
-            note="Helper. 13px muted."
-          >
-            <Card>
-              <p className={themeFactLabelClass}>Open positions</p>
-              <p className="mt-3 text-2xl font-semibold tracking-tight text-ink">
-                4
-              </p>
-              <p className="mt-2 text-hint text-ink-muted">2 closing</p>
-            </Card>
-          </SampleFrame>
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-2">
-          <SampleFrame
-            label="Live — line under a title"
-            note="Admin shortcut tiles, gas chain cards, and the engine Last tick / Last scan lines. 13px faint."
-          >
-            <Card>
-              <p className="text-lg font-semibold tracking-tight text-ink">
-                Billing
-              </p>
-              <p className="mt-1 text-hint text-ink-faint">
-                Plans, invoices, and gas wallets
-              </p>
-              <p className={`${themeFactLabelClass} mt-4`}>Last tick</p>
-              <p className="mt-1 text-sm text-ink">12:04</p>
-              <p className="mt-1 text-hint text-ink-faint">
-                heartbeat · worker ok
-              </p>
-            </Card>
-          </SampleFrame>
-          <SampleFrame
-            label="Scale — line under a title"
-            note="The shortcut line is a card intro, 14px muted. The tick line is a helper, 13px muted."
-          >
-            <Card>
-              <p className="text-lg font-semibold tracking-tight text-ink">
-                Billing
-              </p>
-              <p className="mt-1 text-sm text-ink-muted">
-                Plans, invoices, and gas wallets
-              </p>
-              <p className={`${themeFactLabelClass} mt-4`}>Last tick</p>
-              <p className="mt-1 text-sm text-ink">12:04</p>
-              <p className="mt-1 text-hint text-ink-muted">
-                heartbeat · worker ok
-              </p>
-            </Card>
-          </SampleFrame>
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-2">
-          <SampleFrame
-            label="Live — field helper"
-            note="Backtest range note, and the desk-test status line. 13px faint."
-          >
-            <Card>
-              <p className="text-sm text-ink">Range</p>
-              <p className="mt-2 text-hint text-ink-faint">
-                Any range the venue has. Long tapes queue to the engine worker.
-              </p>
-            </Card>
-          </SampleFrame>
-          <SampleFrame
-            label="Scale — field helper"
-            note="Helper. 13px muted."
-          >
-            <Card>
-              <p className="text-sm text-ink">Range</p>
-              <p className="mt-2 text-hint text-ink-muted">
-                Any range the venue has. Long tapes queue to the engine worker.
-              </p>
-            </Card>
-          </SampleFrame>
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-2">
-          <SampleFrame
-            label="Live — row subtitle"
-            note="The second line under a pair, order, or desk name. 13px faint."
-          >
-            <Card>
-              <p className="text-sm font-medium text-ink">BTC</p>
-              <p className="mt-0.5 text-hint text-ink-faint">BTCUSDT</p>
-            </Card>
-          </SampleFrame>
-          <SampleFrame
-            label="Scale — row subtitle"
-            note="Helper. 13px muted."
-          >
-            <Card>
-              <p className="text-sm font-medium text-ink">BTC</p>
-              <p className="mt-0.5 text-hint text-ink-muted">BTCUSDT</p>
-            </Card>
-          </SampleFrame>
-        </div>
-      </section>
-
-      <section className="space-y-5">
-        <div>
           <h2 className="text-xl font-semibold tracking-tight">Card types</h2>
           <p className="mt-1 text-sm text-ink-muted">
             Each card variation on the type scale.
@@ -685,12 +564,12 @@ function StatTile({
         ? "text-danger"
         : tone === "accent"
           ? "text-accent"
-          : "text-ink-faint";
+          : "text-ink-muted";
   return (
     <div className="rounded-card border border-line bg-surface p-5">
       <p className={themeFactLabelClass}>{label}</p>
       <p className={`mt-3 ${themeKpiValueClass}`}>{value}</p>
-      <p className={`mt-2 text-xs ${changeClass}`}>{change}</p>
+      <p className={`mt-2 text-hint ${changeClass}`}>{change}</p>
     </div>
   );
 }

@@ -95,7 +95,7 @@ export function OpenPaperCarryRows({
           <TokenIcon symbol={trade.baseCoin} />
           {trade.baseCoin}
         </span>
-        <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-hint text-ink-faint">
+        <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-hint text-ink-muted">
           {trade.futureSymbol}
         </span>
       </td>
@@ -193,7 +193,7 @@ export function ClosedPaperCarryRows({
           <TokenIcon symbol={trade.baseCoin} />
           {trade.baseCoin}
         </span>
-        <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-hint text-ink-faint">
+        <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-hint text-ink-muted">
           {trade.futureSymbol}
         </span>
       </td>
@@ -425,7 +425,7 @@ export function PositionLogList({ logs }: { logs: EventLogRow[] }) {
           );
         })}
       </div>
-      <p className="mt-2 text-hint text-ink-faint">
+      <p className="mt-2 text-hint text-ink-muted">
         Trade events for this position. Same log as Activity.
       </p>
     </div>

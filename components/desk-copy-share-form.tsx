@@ -52,7 +52,7 @@ export function DeskCopyShareCard({
           Followers copy fills, not recipes. Venue, type, and Live are stamped.
           Email is never shown.
         </p>
-        <p className="mt-2 text-hint text-ink-faint">{stamp}</p>
+        <p className="mt-2 text-hint text-ink-muted">{stamp}</p>
       </div>
       {block ? (
         <p

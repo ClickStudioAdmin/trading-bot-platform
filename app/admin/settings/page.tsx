@@ -584,7 +584,7 @@ export default async function AdminSettingsPage({
                   <h2 className="text-lg font-semibold tracking-tight">
                     {chain.name}
                   </h2>
-                  <p className="mt-1 text-hint text-ink-faint">
+                  <p className="mt-1 text-sm text-ink-muted">
                     {chain.environment} · chain id {chain.chainId} · last scanned{" "}
                     {chain.lastScannedBlock ?? "—"}
                   </p>
@@ -776,7 +776,7 @@ async function NotificationsTab({
             Hidden in production.
           </p>
           {demoActive ? (
-            <p className="mt-2 text-hint text-ink-faint">
+            <p className="mt-2 text-hint text-ink-muted">
               Sample alert counts are on. Off switches still hide a badge.
             </p>
           ) : null}

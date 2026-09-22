@@ -69,7 +69,7 @@ export function CopyDeskDetailsHeader({
             <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
               Followers
             </p>
-            <p className="mt-3 text-2xl font-semibold tracking-tight text-ink">
+            <p className="mt-3 text-2xl font-semibold tabular-nums tracking-tight text-ink">
               {followers}
             </p>
           </div>

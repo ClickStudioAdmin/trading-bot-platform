@@ -200,11 +200,11 @@ function StatTile({
   hint: string;
 }) {
   return (
-    <div className="rounded-card border border-line bg-surface p-4">
+    <div className="rounded-card border border-line bg-surface p-5">
       <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
         <ColumnHint label={label} hint={hint} />
       </p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">
+      <p className="mt-3 text-2xl font-semibold tabular-nums tracking-tight">
         {value}
       </p>
     </div>

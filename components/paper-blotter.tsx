@@ -679,11 +679,11 @@ function StatBlock({
         {hint ? <ColumnHint label={label} hint={hint} /> : label}
       </p>
       <p
-        className={`mt-3 text-2xl font-semibold tracking-tight ${toneClass ?? "text-ink"}`}
+        className={`mt-3 text-2xl font-semibold tabular-nums tracking-tight ${toneClass ?? "text-ink"}`}
       >
         {value}
       </p>
-      {note ? <p className="mt-2 text-hint text-ink-faint">{note}</p> : null}
+      {note ? <p className="mt-2 text-hint text-ink-muted">{note}</p> : null}
     </div>
   );
 }

@@ -297,7 +297,7 @@ export function CopyCatalogueBoard({
                       Public
                     </span>
                   )}
-                  <span className="text-hint text-ink-faint">
+                  <span className="text-hint text-ink-muted">
                     {formatDeskType(card.deskType)} ·{" "}
                     {getVenue(card.venue)?.label ?? card.venue}
                   </span>

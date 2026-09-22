@@ -94,8 +94,8 @@ export default async function ThemePage({
           <section>
             <h2 className="text-xl font-semibold tracking-tight">Cards</h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Type scale, what is still off, and each card variation. Labels
-              are 14px ink — white in dark mode.
+              Type scale and each card variation. Labels are 14px ink — white
+              in dark mode.
             </p>
             <div className="mt-5">
               <ThemeCardsDraft />
@@ -569,15 +569,17 @@ function StatCard({
         ? "text-danger"
         : tone === "accent"
           ? "text-accent"
-          : "text-ink-faint";
+          : "text-ink-muted";
 
   return (
     <div className="rounded-card border border-line bg-surface p-5">
       <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
         {label}
       </p>
-      <p className="mt-3 text-2xl font-semibold tracking-tight">{value}</p>
-      <p className={`mt-2 text-xs ${changeClass}`}>{change}</p>
+      <p className="mt-3 text-2xl font-semibold tabular-nums tracking-tight">
+        {value}
+      </p>
+      <p className={`mt-2 text-hint ${changeClass}`}>{change}</p>
     </div>
   );
 }

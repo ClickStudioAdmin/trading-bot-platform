@@ -379,7 +379,7 @@ export function BacktestQueueForm({
               );
             })}
           </div>
-          <p className="mt-2 text-hint text-ink-faint">
+          <p className="mt-2 text-hint text-ink-muted">
             Any range the venue has. Long tapes queue to the engine worker.
           </p>
         </div>

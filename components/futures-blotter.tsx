@@ -774,7 +774,7 @@ function drawdownCard(input: {
             >
               {giveback}
             </p>
-            <p className="mt-1 text-hint text-ink-muted">Realized giveback</p>
+            <p className="mt-2 text-hint text-ink-muted">Realized giveback</p>
           </div>
           <div>
             <p
@@ -782,7 +782,7 @@ function drawdownCard(input: {
             >
               {worst}
             </p>
-            <p className="mt-1 text-hint text-ink-muted">Max realized loss</p>
+            <p className="mt-2 text-hint text-ink-muted">Max realized loss</p>
           </div>
         </div>
       ),
@@ -1004,7 +1004,7 @@ function OpenFuturesRows({
             <span className="flex items-center gap-2 font-medium">
               <span>{trade.baseCoin}</span>
             </span>
-            <span className="mt-0.5 block truncate text-hint text-ink-faint">
+            <span className="mt-0.5 block truncate text-hint text-ink-muted">
               {trade.symbol}
             </span>
           </span>
@@ -1192,7 +1192,7 @@ function ClosedFuturesRows({
               <span>{baseCoin}</span>
             </span>
             <span
-              className="mt-0.5 block text-hint text-ink-faint"
+              className="mt-0.5 block text-hint text-ink-muted"
               title={trade.qty ? formatQtyFull(trade.qty) : undefined}
             >
               {trade.symbol}
@@ -1434,7 +1434,7 @@ function StatCard({
           </p>
           <div className="mt-3">{content}</div>
           {note ? (
-            <p className="mt-2 text-hint text-ink-faint">{note}</p>
+            <p className="mt-2 text-hint text-ink-muted">{note}</p>
           ) : null}
         </div>
       ) : (
@@ -1469,11 +1469,11 @@ function StatBlock({
         {hint ? <ColumnHint label={label} hint={hint} /> : label}
       </p>
       <p
-        className={`mt-3 text-2xl font-semibold tracking-tight ${toneClass ?? "text-ink"}`}
+        className={`mt-3 text-2xl font-semibold tabular-nums tracking-tight ${toneClass ?? "text-ink"}`}
       >
         {value}
       </p>
-      {note ? <p className="mt-2 text-hint text-ink-faint">{note}</p> : null}
+      {note ? <p className="mt-2 text-hint text-ink-muted">{note}</p> : null}
     </div>
   );
 }

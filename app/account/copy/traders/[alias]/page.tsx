@@ -71,7 +71,7 @@ export default async function CopyTraderPage({
           <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
             Followers
           </dt>
-          <dd className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink">
+          <dd className="mt-3 text-2xl font-semibold tabular-nums tracking-tight text-ink">
             {followers}
           </dd>
         </div>
@@ -79,7 +79,7 @@ export default async function CopyTraderPage({
           <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
             Visible desks
           </dt>
-          <dd className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink">
+          <dd className="mt-3 text-2xl font-semibold tabular-nums tracking-tight text-ink">
             {desks.length}
           </dd>
         </div>
@@ -87,7 +87,7 @@ export default async function CopyTraderPage({
           <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">
             First shared
           </dt>
-          <dd className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink">
+          <dd className="mt-3 text-2xl font-semibold tabular-nums tracking-tight text-ink">
             {firstSharedMs ? formatAuDateUtc(firstSharedMs) : "—"}
           </dd>
         </div>

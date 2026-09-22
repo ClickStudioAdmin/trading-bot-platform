@@ -134,7 +134,7 @@ export default async function AccountOverviewPage() {
                 >
                   {row.title}
                 </Link>
-                <p className="mt-1 text-hint text-ink-faint">
+                <p className="mt-1 text-sm text-ink-muted">
                   <LocalTime at={row.createdAt} />
                 </p>
               </li>
@@ -225,7 +225,7 @@ function StatCard({
       <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
         {label}
       </p>
-      <p className="mt-3 truncate text-2xl font-semibold tracking-tight">
+      <p className="mt-3 truncate text-2xl font-semibold tabular-nums tracking-tight">
         {value}
       </p>
       <p className="mt-2 text-hint text-ink-muted">{hint}</p>

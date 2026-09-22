@@ -177,7 +177,7 @@ export function AdminPlansTable({
                     >
                       {plan.name}
                     </Link>
-                    <p className="mt-0.5 text-hint text-ink-faint">
+                    <p className="mt-0.5 text-hint text-ink-muted">
                       {plan.isDefault ? "Default · " : ""}
                       {`L1 ${plan.affiliateL1Pct}%`}
                     </p>

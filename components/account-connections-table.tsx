@@ -195,12 +195,12 @@ export function AccountConnectionsTable({
                   <td className="px-4 py-3 align-top">
                     <p>{caption.name}</p>
                     {caption.venue ? (
-                      <p className="mt-1 text-hint text-ink-faint">{caption.venue}</p>
+                      <p className="mt-1 text-hint text-ink-muted">{caption.venue}</p>
                     ) : null}
                   </td>
                   <td className="px-4 py-3 align-top">
                     <p>{formatExchangeEnvironmentColumn(row.venue, row.environment)}</p>
-                    <p className="mt-1 flex flex-wrap items-center gap-2 text-hint text-ink-faint">
+                    <p className="mt-1 flex flex-wrap items-center gap-2 text-hint text-ink-muted">
                       <span>Key ••••{row.fingerprint}</span>
                       {row.verifiedAtMs ? (
                         <StatusBadge label="Verified" status="verified" />

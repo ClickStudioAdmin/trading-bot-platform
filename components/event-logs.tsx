@@ -275,7 +275,7 @@ export function EventLogs({
                   <td className="px-4 py-3 align-top">
                     <div>{row.event}</div>
                     {row.strategy ? (
-                      <div className="text-hint text-ink-faint">{row.strategy}</div>
+                      <div className="text-hint text-ink-muted">{row.strategy}</div>
                     ) : null}
                   </td>
                   {showUser ? (

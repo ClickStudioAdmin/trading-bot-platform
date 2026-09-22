@@ -333,7 +333,7 @@ function WorkingRow({
           <TokenIcon symbol={baseCoin} />
           <span className="min-w-0">
             <span className="block font-medium">{baseCoin}</span>
-            <p className="mt-0.5 text-hint text-ink-faint">{row.symbol}</p>
+            <p className="mt-0.5 text-hint text-ink-muted">{row.symbol}</p>
           </span>
         </span>
       </td>
@@ -375,7 +375,7 @@ function WorkingRow({
           </span>
           {row.filledQty > 0 ? (
             <span
-              className="block text-hint text-ink-faint"
+              className="block text-hint text-ink-muted"
               title={formatQtyFull(row.filledQty)}
             >
               {formatQty(row.filledQty)} filled

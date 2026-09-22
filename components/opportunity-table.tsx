@@ -96,7 +96,7 @@ export function OpportunityRows({
               <TokenIcon symbol={row.baseCoin} />
               {row.baseCoin}
             </span>
-            <span className="mt-0.5 block pl-7 text-hint text-ink-faint">
+            <span className="mt-0.5 block pl-7 text-hint text-ink-muted">
               {row.futureSymbol}
             </span>
           </td>

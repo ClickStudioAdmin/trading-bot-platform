@@ -439,7 +439,7 @@ export function AdminPayoutQueueTable({
                       status={payout.status}
                     />
                     {payout.payoutFileId ? (
-                      <span className="mt-1 block text-hint text-ink-faint">
+                      <span className="mt-1 block text-hint text-ink-muted">
                         File {payout.payoutFileId.slice(0, 8)}
                       </span>
                     ) : null}
