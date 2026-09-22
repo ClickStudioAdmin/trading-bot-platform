@@ -43,6 +43,8 @@ export function InboxBulkTable({
   sort,
   unread,
   pager,
+  filterBar,
+  filtersOpen = false,
 }: {
   rows: InboxTableRow[];
   page: number;
@@ -50,6 +52,8 @@ export function InboxBulkTable({
   sort: InboxSortQuery;
   unread: number;
   pager?: ReactNode;
+  filterBar?: ReactNode;
+  filtersOpen?: boolean;
 }) {
   const ids = useMemo(() => rows.map((row) => row.id), [rows]);
   const [selected, setSelected] = useState<number[]>([]);
@@ -70,7 +74,47 @@ export function InboxBulkTable({
 
   return (
     <div>
-      <form>
+      <TableFilterSession
+        defaultOpen={filtersOpen}
+        toolbar={
+          hasSelection ? (
+            <>
+              <TablePendingLabelButton
+                form="inbox-bulk"
+                formAction={markNotificationsReadAction}
+                pendingLabel="Marking…"
+                icon={<IconMailOpen {...TABLE_BTN_ICON} />}
+              >
+                Mark read
+              </TablePendingLabelButton>
+              <TablePendingLabelButton
+                form="inbox-bulk"
+                formAction={markNotificationsUnreadAction}
+                pendingLabel="Marking…"
+                icon={<IconMail {...TABLE_BTN_ICON} />}
+              >
+                Mark unread
+              </TablePendingLabelButton>
+            </>
+          ) : undefined
+        }
+        actions={
+          <TablePendingLabelButton
+            form="inbox-bulk"
+            formAction={markNotificationsReadAction}
+            name="all"
+            value="1"
+            pendingLabel="Marking…"
+            disabled={unread < 1}
+            icon={<IconMarkAllRead {...TABLE_BTN_ICON} />}
+          >
+            Mark all read
+          </TablePendingLabelButton>
+        }
+      >
+        {filterBar}
+      </TableFilterSession>
+      <form id="inbox-bulk">
         <input type="hidden" name="page" value={String(page)} />
         <input type="hidden" name="status" value={filters.status} />
         <input type="hidden" name="scope" value={filters.scope} />
@@ -81,41 +125,7 @@ export function InboxBulkTable({
         {sort.dir !== "desc" ? (
           <input type="hidden" name="dir" value={sort.dir} />
         ) : null}
-        <TableFilterSession
-          toolbar={
-            hasSelection ? (
-              <>
-                <TablePendingLabelButton
-                  formAction={markNotificationsReadAction}
-                  pendingLabel="Marking…"
-                  icon={<IconMailOpen {...TABLE_BTN_ICON} />}
-                >
-                  Mark read
-                </TablePendingLabelButton>
-                <TablePendingLabelButton
-                  formAction={markNotificationsUnreadAction}
-                  pendingLabel="Marking…"
-                  icon={<IconMail {...TABLE_BTN_ICON} />}
-                >
-                  Mark unread
-                </TablePendingLabelButton>
-              </>
-            ) : undefined
-          }
-          actions={
-            <TablePendingLabelButton
-              formAction={markNotificationsReadAction}
-              name="all"
-              value="1"
-              pendingLabel="Marking…"
-              disabled={unread < 1}
-              icon={<IconMarkAllRead {...TABLE_BTN_ICON} />}
-            >
-              Mark all read
-            </TablePendingLabelButton>
-          }
-        />
-        <TableCard className="" pager={pager}>
+        <TableCard pager={pager}>
           <table className="w-full min-w-[42rem] text-left text-sm">
             <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
               <tr>

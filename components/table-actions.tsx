@@ -294,6 +294,7 @@ export function TablePendingLabelButton({
   className?: string;
   name?: string;
   value?: string;
+  form?: string;
   formAction?: (formData: FormData) => void | Promise<void>;
   successKey?: string;
   deskAction?: string;

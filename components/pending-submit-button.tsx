@@ -101,6 +101,7 @@ export function PendingSubmitButton({
   name,
   value,
   formAction,
+  form,
   disabled = false,
   title,
   skipSizeGuard = false,
@@ -114,6 +115,7 @@ export function PendingSubmitButton({
   name?: string;
   value?: string;
   formAction?: (formData: FormData) => void | Promise<void>;
+  form?: string;
   disabled?: boolean;
   title?: string;
   skipSizeGuard?: boolean;
@@ -164,6 +166,7 @@ export function PendingSubmitButton({
       type="submit"
       name={name}
       value={value}
+      form={form}
       formAction={formAction}
       disabled={(desk.active ? desk.pending : pending) || disabled}
       title={title}

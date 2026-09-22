@@ -207,8 +207,8 @@ export function TableFilterSession({
           ) : null}
           {actions || (hasFilters && !show) ? (
             <div className="flex flex-wrap items-center gap-2">
-              {hasFilters && !show ? showButton : null}
               {actions}
+              {hasFilters && !show ? showButton : null}
             </div>
           ) : null}
         </div>
