@@ -2509,9 +2509,9 @@ function ThemeBotFormReference() {
 
       <div className="space-y-2">
         <p className={labelClass}>Empty desk</p>
-        <p className="rounded-card border border-line bg-canvas px-4 py-6 text-sm text-ink-muted">
-          No bots yet. Add a bot to own orders and exits on one contract. Leave
-          this empty if you are not ready to arm.
+        <p className="text-sm text-ink-muted">
+          Empty list keeps the table headers. The message sits in one spanning
+          row, same as every other Theme table.
         </p>
       </div>
 

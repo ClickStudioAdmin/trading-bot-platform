@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AutomationsPageFrame } from "@/components/automations-page-frame";
 import { AutomationsDesk } from "@/components/paper-rules-form";
-import { PaperRulesGuide } from "@/components/paper-rules-guide";
 import { deskHref } from "@/lib/accounts/model";
 import {
   AUTOMATIONS_NEW,
@@ -15,7 +14,6 @@ import { paperAutomationsBotBlotter } from "@/lib/bots/automations-list";
 import { loadPaperRules } from "@/lib/engine/load";
 import { paperConfigToFormValues } from "@/lib/engine/rules";
 import { listPaperCarries } from "@/lib/paper/list";
-import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionContext } from "@/lib/auth/session";
 import { memberIsAdmin } from "@/lib/admin/access";
@@ -37,9 +35,6 @@ export default async function CashAndCarryAutomationsPage({
 }) {
   const params = await searchParams;
   const session = await getSessionContext();
-  const exchangeBook = Boolean(
-    session && accountCanHoldConnections(session.account.mode),
-  );
   const { signedIn, config, inUseRuleIds } = await loadPaperRules();
   const values = paperConfigToFormValues(config);
   const listHref = deskHref(CASH_AND_CARRY_AUTOMATIONS_PATH, session?.account.id);
@@ -120,7 +115,6 @@ export default async function CashAndCarryAutomationsPage({
           to save automations.
         </p>
       )}
-      <PaperRulesGuide exchangeBook={exchangeBook} />
     </AutomationsPageFrame>
   );
 }

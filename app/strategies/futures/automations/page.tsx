@@ -17,7 +17,6 @@ import {
 import { futuresAutomationsBotBlotter } from "@/lib/bots/automations-list";
 import { dcaHintKey, dcaHintsForOpen } from "@/lib/dca/playbook";
 import { futuresPositionIsLive } from "@/lib/futures/pending-close";
-import { FuturesRulesGuide } from "@/components/futures-rules-guide";
 import { dcaPaperBookUsdt } from "@/lib/dca/book";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { loadFuturesPositions, loadLiveFuturesWorking } from "@/lib/futures/list";
@@ -386,7 +385,6 @@ export default async function FuturesAutomationsPage({
           to save automations.
         </p>
       )}
-      <FuturesRulesGuide exchangeBook={exchangeBook} />
     </AutomationsPageFrame>
   );
 }

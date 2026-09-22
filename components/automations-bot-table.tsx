@@ -57,6 +57,13 @@ export function AutomationsBotTable({
 }) {
   const { confirm, dialog } = useConfirmDialog();
   const { visible, setColumn } = useAutomationsColumns();
+  const colSpan =
+    2 +
+    Number(visible.pair) +
+    Number(visible.recipe) +
+    Number(visible.status) +
+    Number(visible.positions) +
+    Number(visible.performance);
 
   async function removeRow(row: AutomationsBotRow) {
     if (!row.onRemove || row.canRemove === false) {
@@ -83,11 +90,6 @@ export function AutomationsBotTable({
         <AutomationsColumnPicker visible={visible} setColumn={setColumn} />
       }
     />
-    {rows.length === 0 ? (
-      <p className="rounded-card border border-line bg-canvas px-4 py-6 text-sm text-ink-muted">
-        {empty}
-      </p>
-    ) : (
     <TableCard className="mt-0">
       <table className="min-w-full text-left text-sm text-ink">
         <thead className="border-b border-line bg-surface-raised text-hint text-ink-muted">
@@ -124,7 +126,17 @@ export function AutomationsBotTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {rows.length === 0 ? (
+            <tr>
+              <td
+                colSpan={colSpan}
+                className="px-4 py-6 text-sm text-ink-muted"
+              >
+                {empty}
+              </td>
+            </tr>
+          ) : (
+          rows.map((row) => (
             <tr key={row.id} className="border-b border-line last:border-b-0">
               <td className="px-4 py-3 pr-8 align-top">
                 <Link
@@ -223,11 +235,11 @@ export function AutomationsBotTable({
                 </TableActions>
               </td>
             </tr>
-          ))}
+          ))
+          )}
         </tbody>
       </table>
     </TableCard>
-    )}
     </>
   );
 }
