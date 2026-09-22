@@ -313,7 +313,7 @@ export const LUCIDE_ICONS = [
     id: "open",
     name: "Open",
     lucide: "SquareArrowOutUpRight",
-    usedIn: "Open and view-details row actions",
+    usedIn: "Open and view-details row actions, View pairs",
     Icon: SquareArrowOutUpRight,
   },
   {

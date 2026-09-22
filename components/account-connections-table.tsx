@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback } from "react";
+import { IconOpen } from "@/components/icons";
 import { RemoveConnectionControl } from "@/components/remove-connection-control";
 import { RenameConnectionControl } from "@/components/rename-connection-control";
 import { ReplaceConnectionControl } from "@/components/replace-connection-control";
@@ -10,9 +11,11 @@ import {
   StatusBadge,
   TABLE_ACTIONS_TD_CLASS,
   TABLE_ACTIONS_TH_CLASS,
+  TABLE_BTN_ICON,
   TABLE_TITLE_CASE_TH_CLASS,
   TableActions,
   TableCard,
+  TableIconAction,
   TablePager,
   useClientTable,
 } from "@/components/table-chrome";
@@ -28,7 +31,8 @@ import {
 } from "@/lib/exchanges/connections";
 import type { ConnectionDeskBind } from "@/lib/exchanges/store";
 import { enabledVenues, getVenue } from "@/lib/exchanges/venues";
-import { exchangePairsHref } from "@/lib/pairs/page";
+import { formatCount } from "@/lib/opportunities/format";
+import { exchangePairCountKey, exchangePairsHref } from "@/lib/pairs/page";
 import {
   compareTableNum,
   compareTableText,
@@ -51,6 +55,7 @@ function compareConnection(
   key: string,
   dir: TableSortDir,
   binds: ConnectionDeskBind[],
+  pairCounts: Record<string, number | null>,
 ): number {
   if (key === "name") {
     return compareTableText(left.label ?? "", right.label ?? "", dir);
@@ -69,16 +74,25 @@ function compareConnection(
       dir,
     ) || compareTableText(boundNames(left, binds), boundNames(right, binds), dir);
   }
+  if (key === "pairs") {
+    return compareTableNum(
+      pairCounts[exchangePairCountKey(left.venue, left.environment)] ?? -1,
+      pairCounts[exchangePairCountKey(right.venue, right.environment)] ?? -1,
+      dir,
+    );
+  }
   return 0;
 }
 
 export function AccountConnectionsTable({
   rows,
   binds,
+  pairCounts,
   canReplace,
 }: {
   rows: ExchangeConnection[];
   binds: ConnectionDeskBind[];
+  pairCounts: Record<string, number | null>;
   canReplace: boolean;
 }) {
   const compare = useCallback(
@@ -87,8 +101,8 @@ export function AccountConnectionsTable({
       right: ExchangeConnection,
       key: string,
       dir: TableSortDir,
-    ) => compareConnection(left, right, key, dir, binds),
-    [binds],
+    ) => compareConnection(left, right, key, dir, binds, pairCounts),
+    [binds, pairCounts],
   );
   const table = useClientTable(rows, compare);
 
@@ -147,6 +161,12 @@ export function AccountConnectionsTable({
               <th className={`px-4 py-3 font-medium ${TABLE_TITLE_CASE_TH_CLASS}`}>
                 Desk Type
               </th>
+              <SortTh
+                label="Pairs"
+                active={table.sortKey === "pairs"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("pairs")}
+              />
               <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
             </tr>
           </thead>
@@ -155,6 +175,8 @@ export function AccountConnectionsTable({
               const used = binds.filter((bind) => bind.connectionId === row.id);
               const inUse = used.length > 0;
               const caption = formatStrategyConnectionCaption(row);
+              const pairCount =
+                pairCounts[exchangePairCountKey(row.venue, row.environment)];
               const removeBlocked = formatConnectionRemoveBlockers(
                 connectionRemoveBlockers({ inUse }),
               );
@@ -171,16 +193,6 @@ export function AccountConnectionsTable({
                   </td>
                   <td className="px-4 py-3 align-top">
                     <p>{formatExchangeEnvironmentColumn(row.venue, row.environment)}</p>
-                    <p className="mt-1">
-                      <Link
-                        href={exchangePairsHref(row.venue, {
-                          environment: row.environment,
-                        })}
-                        className="text-sm text-accent underline underline-offset-2 hover:text-accent-strong"
-                      >
-                        View pairs
-                      </Link>
-                    </p>
                     <p className="mt-1 flex flex-wrap items-center gap-2 text-hint text-ink-faint">
                       <span>Key ••••{row.fingerprint}</span>
                       {row.verifiedAtMs ? (
@@ -216,6 +228,22 @@ export function AccountConnectionsTable({
                     ) : (
                       <span className="text-ink-faint">—</span>
                     )}
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    <div className="flex items-center gap-1.5">
+                      <span className="tabular-nums">
+                        {pairCount == null ? "—" : formatCount(pairCount)}
+                      </span>
+                      <TableIconAction
+                        href={exchangePairsHref(row.venue, {
+                          environment: row.environment,
+                        })}
+                        label="View pairs"
+                        detail="Open this exchange’s available pairs."
+                      >
+                        <IconOpen {...TABLE_BTN_ICON} />
+                      </TableIconAction>
+                    </div>
                   </td>
                   <td className={`${TABLE_ACTIONS_TD_CLASS} align-top`}>
                     <TableActions>

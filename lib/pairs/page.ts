@@ -1,6 +1,8 @@
 import { pathWithDesk, withQuery } from "@/lib/accounts/model";
-import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
+import { loadUsdtLinearPerps, type LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { loadMarketCaps } from "@/lib/market/caps";
+import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
+import { loadHyperliquidLinearPerps } from "@/lib/venues/hyperliquid/market";
 import type { PairFilters } from "@/lib/pairs/filter";
 import {
   compareTableNum,
@@ -147,6 +149,41 @@ export function sortPairRows<T>(
 
 export function exchangePairsPath(venueId: string): string {
   return `/account/exchanges/${encodeURIComponent(venueId)}/pairs`;
+}
+
+export function exchangePairCountKey(
+  venue: string,
+  environment?: string | null,
+): string {
+  return `${venue}:${environment && environment !== "live" ? environment : "live"}`;
+}
+
+export async function loadExchangePairCounts(
+  rows: readonly { venue: string; environment: string | null }[],
+): Promise<Record<string, number | null>> {
+  const unique = new Map<string, { venue: string; environment: string | null }>();
+  for (const row of rows) {
+    const key = exchangePairCountKey(row.venue, row.environment);
+    if (!unique.has(key)) {
+      unique.set(key, row);
+    }
+  }
+  const entries = await Promise.all(
+    [...unique.entries()].map(async ([key, row]) => {
+      try {
+        const pairs =
+          row.venue === "hyperliquid"
+            ? await loadHyperliquidLinearPerps(
+                hyperliquidInfoEnvironment(row.environment),
+              )
+            : await loadUsdtLinearPerps();
+        return [key, pairs.length] as const;
+      } catch {
+        return [key, null] as const;
+      }
+    }),
+  );
+  return Object.fromEntries(entries);
 }
 
 export function exchangePairsHref(

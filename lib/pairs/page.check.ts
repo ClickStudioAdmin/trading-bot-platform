@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { formatMarketCap, marketCapByBase } from "@/lib/market/caps";
 import {
   PAIRS_PAGE_SIZE,
+  exchangePairCountKey,
   exchangePairsHref,
   paginatePairRows,
   pairPageHref,
@@ -129,6 +130,13 @@ assert.equal(
 assert.equal(
   pairPageLabel({ page: 1, total: 51, from: 0, to: 50 }),
   "Showing 1–50 of 51",
+);
+assert.equal(exchangePairCountKey("bybit", null), "bybit:live");
+assert.equal(exchangePairCountKey("bybit", "live"), "bybit:live");
+assert.equal(exchangePairCountKey("bybit", "demo"), "bybit:demo");
+assert.equal(
+  exchangePairCountKey("hyperliquid", "testnet"),
+  "hyperliquid:testnet",
 );
 
 console.log("pair page checks passed");

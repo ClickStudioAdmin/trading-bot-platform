@@ -6,6 +6,7 @@ import {
 } from "@/lib/exchanges/store";
 import { exchangeCredentialsConfigured } from "@/lib/exchanges/encrypt";
 import { enabledVenues } from "@/lib/exchanges/venues";
+import { loadExchangePairCounts } from "@/lib/pairs/page";
 import { ACCOUNT_EXCHANGES_HREF } from "@/lib/site-links";
 
 export async function AccountExchangesPanel({
@@ -27,6 +28,7 @@ export async function AccountExchangesPanel({
     listExchangeConnections(memberId),
     listConnectionDeskBinds(memberId),
   ]);
+  const pairCounts = await loadExchangePairCounts(connections);
   const venues = enabledVenues();
   const canSave = exchangeCredentialsConfigured();
 
@@ -71,6 +73,7 @@ export async function AccountExchangesPanel({
       <AccountConnectionsTable
         rows={connections}
         binds={binds}
+        pairCounts={pairCounts}
         canReplace={canSave}
       />
       {canSave ? (
