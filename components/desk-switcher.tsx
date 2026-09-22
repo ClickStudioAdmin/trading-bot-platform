@@ -12,7 +12,8 @@ import {
   formatDeskVenueCaption,
   type TradingAccount,
 } from "@/lib/accounts/model";
-import { IconChevronDown } from "@/components/icons";
+import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
+import { IconChevronDown, IconPlus } from "@/components/icons";
 import type { ExchangeConnection } from "@/lib/exchanges/connections";
 
 export function DeskSwitcher({
@@ -113,9 +114,11 @@ export function DeskSwitcher({
           <button
             type="button"
             onClick={openCreate}
-            className="block w-full rounded-control px-3 py-2 text-left text-sm text-accent hover:bg-surface-raised hover:text-accent-strong"
+            className="inline-flex w-full items-center gap-2 rounded-control px-3 py-2 text-left text-sm text-accent hover:bg-surface-raised hover:text-accent-strong"
           >
-            Create new desk
+            <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
+              Create new desk
+            </BotButtonLead>
           </button>
           <Link
             href="/account/sub-accounts"

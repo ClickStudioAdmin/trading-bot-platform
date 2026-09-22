@@ -333,7 +333,7 @@ export const LUCIDE_ICONS = [
     id: "plus",
     name: "Plus",
     lucide: "Plus",
-    usedIn: "New item, new member, new plan, add folder",
+    usedIn: "New item, new member, new plan, add folder, create bot, add connection, create desk, create webhook",
     Icon: Plus,
   },
   {
@@ -424,7 +424,7 @@ export const LUCIDE_ICONS = [
     id: "flask-conical",
     name: "Backtesting Tool",
     lucide: "FlaskConical",
-    usedIn: "Header nav",
+    usedIn: "Header nav, desk Backtest",
     Icon: FlaskConical,
   },
   {
@@ -473,7 +473,7 @@ export const LUCIDE_ICONS = [
     id: "layout-template",
     name: "Bot Templates",
     lucide: "LayoutTemplate",
-    usedIn: "Account sidenav",
+    usedIn: "Account sidenav, save as template, create bot from template",
     Icon: LayoutTemplate,
   },
   {

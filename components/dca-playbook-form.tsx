@@ -13,6 +13,8 @@ import {
   BotFormSidebar,
   BotFormSidebarSection,
   BotFormSummaryCard,
+  BotButtonLead,
+  botBtnIcon,
   BotStatusField,
   HintLabel,
   OptionalSection,
@@ -152,6 +154,7 @@ import {
   type BacktestLibraryItem,
   type SavedBacktestMatch,
 } from "@/components/backtest-dialog";
+import { IconPlus } from "@/components/icons";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
 import {
@@ -704,7 +707,9 @@ export function DcaPlaybooksDesk({
                   href={automationsNewHref(listHref)}
                   className={`inline-flex items-center ${addPlaybookClass}`}
                 >
-                  Create New Bot
+                  <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
+                    Create New Bot
+                  </BotButtonLead>
                 </Link>
                 {accountId ? (
                   <DeskTemplateBar

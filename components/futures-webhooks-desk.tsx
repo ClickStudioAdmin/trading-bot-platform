@@ -1,4 +1,6 @@
+import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { CopyTextButton } from "@/components/copy-text-button";
+import { IconPlus } from "@/components/icons";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   createFuturesWebhookAction,
@@ -125,9 +127,11 @@ export function FuturesWebhooksDesk({
           <PendingSubmitButton
             pendingLabel="Creating…"
             successKey="create-futures-webhook"
-            className="rounded-control bg-accent-strong px-3 py-2 text-xs font-medium text-ink"
+            className="inline-flex items-center gap-2 rounded-control bg-accent-strong px-3 py-2 text-xs font-medium text-ink"
           >
-            Create webhook
+            <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
+              Create webhook
+            </BotButtonLead>
           </PendingSubmitButton>
         </div>
       </form>

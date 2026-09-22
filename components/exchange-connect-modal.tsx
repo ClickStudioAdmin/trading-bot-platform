@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { ExchangeConnectForm } from "@/components/exchange-connect-form";
+import { IconPlus } from "@/components/icons";
 import { Modal } from "@/components/template-modals";
 import type { VenueDefinition } from "@/lib/exchanges/venues";
 
@@ -22,9 +24,11 @@ export function ExchangeConnectModal({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-sm text-accent hover:text-accent-strong"
+        className="inline-flex items-center gap-1.5 text-sm text-accent hover:text-accent-strong"
       >
-        Add a connection
+        <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
+          Add a connection
+        </BotButtonLead>
       </button>
       {open ? (
         <Modal title="Add a connection" onClose={() => setOpen(false)}>

@@ -36,6 +36,7 @@ import {
   IconShare,
   IconTrash,
 } from "@/components/icons";
+import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { Modal, StarterPackCheckbox } from "@/components/template-modals";
 import { sliceTablePage, type TableSortDir } from "@/lib/table-chrome";
 import type { BacktestLinkHighlight } from "@/lib/backtest/model";
@@ -1836,9 +1837,15 @@ function BulkFolderModal({
             (createFolder ? !newFolderName.trim() : !folderId)
           }
           onClick={() => void submit()}
-          className={primaryBtn}
+          className={`${primaryBtn} inline-flex items-center gap-2`}
         >
-          {pending ? "Adding…" : "Add"}
+          {pending ? (
+            "Adding…"
+          ) : (
+            <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
+              Add
+            </BotButtonLead>
+          )}
         </button>
       </div>
     </Modal>
@@ -2208,11 +2215,17 @@ function MembershipColumn({
                 onClick={() => onAction(row.id)}
                 className={
                   action === "Remove"
-                    ? "shrink-0 rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10"
-                    : "shrink-0 text-xs font-medium text-success hover:text-success"
+                    ? "inline-flex shrink-0 items-center gap-1 rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10"
+                    : "inline-flex shrink-0 items-center gap-1 text-xs font-medium text-success hover:text-success"
                 }
               >
-                {action}
+                {action === "Add" ? (
+                  <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
+                    Add
+                  </BotButtonLead>
+                ) : (
+                  action
+                )}
               </button>
             </li>
           ))}

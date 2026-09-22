@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { PreviousBacktestLink } from "@/components/bot-form-chrome";
+import {
+  BotButtonLead,
+  botBtnIcon,
+  PreviousBacktestLink,
+} from "@/components/bot-form-chrome";
+import { IconBacktest } from "@/components/icons";
 import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import { seedBacktestDraftAction } from "@/lib/backtest/actions";
@@ -120,7 +125,13 @@ export function BacktestTemplateLink({
           "shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50"
         }
       >
-        {pending ? "Opening…" : "Backtest"}
+        {pending ? (
+          "Opening…"
+        ) : (
+          <BotButtonLead icon={<IconBacktest {...botBtnIcon} />}>
+            Backtest
+          </BotButtonLead>
+        )}
       </button>
       {saved ? (
         <PreviousBacktestLink

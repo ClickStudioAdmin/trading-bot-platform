@@ -22,15 +22,33 @@ export const botSectionTitleClass = "text-sm font-semibold text-ink";
 export const botStepTitleClass = "text-lg font-semibold tracking-tight text-ink";
 export const botRowClass = "grid grid-cols-2 gap-4 lg:grid-cols-4";
 export const botRowClass5 = "grid grid-cols-2 gap-4 lg:grid-cols-5";
+export const botBtnIcon = { size: 14 as const, className: "size-3.5 shrink-0" };
 export const botSidebarSaveClass =
-  "w-full rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50";
+  "inline-flex w-full items-center justify-center gap-2 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50";
 export const botSidebarActionClass =
-  "w-full rounded-control border border-line px-4 py-2 text-left text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50";
+  "inline-flex w-full items-center gap-2 rounded-control border border-line px-4 py-2 text-left text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50";
 export const botSidebarRemoveClass =
-  "w-full rounded-control border border-line bg-danger/15 px-4 py-2 text-sm font-medium text-danger disabled:opacity-50";
+  "inline-flex w-full items-center justify-center gap-2 rounded-control border border-line bg-danger/15 px-4 py-2 text-sm font-medium text-danger disabled:opacity-50";
 export const deskActionBtnClass =
-  "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
+  "inline-flex items-center gap-2 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
 export const deskActionSelectClass = `${deskActionBtnClass} desk-action-select`;
+
+export function BotButtonLead({
+  icon,
+  children,
+}: {
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <>
+      <span className="inline-flex shrink-0 items-center justify-center [&_svg]:max-h-3.5 [&_svg]:max-w-3.5">
+        {icon}
+      </span>
+      <span className="min-w-0 truncate">{children}</span>
+    </>
+  );
+}
 
 export function HintLabel({
   text,

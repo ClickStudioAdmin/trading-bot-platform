@@ -24,7 +24,12 @@ import {
   type TemplateVisibility,
 } from "@/lib/templates/recipe";
 import { formatDeskType } from "@/lib/accounts/model";
-import { deskActionBtnClass } from "@/components/bot-form-chrome";
+import {
+  BotButtonLead,
+  botBtnIcon,
+  deskActionBtnClass,
+} from "@/components/bot-form-chrome";
+import { IconPlus, IconTemplates } from "@/components/icons";
 import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 
 const fieldClass =
@@ -283,12 +288,14 @@ export function SaveAsTemplateButton({
         onClick={() => resetAndOpen(false)}
         className={
           buttonClassName ??
-          "shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
+          "inline-flex shrink-0 items-center gap-1.5 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
         }
       >
-        {savedUser
-          ? `Saved template: ${savedUser.name}`
-          : "Save as template"}
+        <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
+          {savedUser
+            ? `Saved template: ${savedUser.name}`
+            : "Save as template"}
+        </BotButtonLead>
       </button>
       {isAdmin ? (
         <button
@@ -296,12 +303,14 @@ export function SaveAsTemplateButton({
           onClick={() => resetAndOpen(true)}
           className={
             buttonClassName ??
-            "shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
+            "inline-flex shrink-0 items-center gap-1.5 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
           }
         >
-          {savedPlatform
-            ? `Saved platform template: ${savedPlatform.name}`
-            : "Save as platform template"}
+          <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
+            {savedPlatform
+              ? `Saved platform template: ${savedPlatform.name}`
+              : "Save as platform template"}
+          </BotButtonLead>
         </button>
       ) : null}
       {open ? (
@@ -551,7 +560,9 @@ function ApplyFromLibraryButton({
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className={deskActionBtnClass}>
-        Create New Bot from Template
+        <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
+          Create New Bot from Template
+        </BotButtonLead>
       </button>
       {open ? (
         <Modal

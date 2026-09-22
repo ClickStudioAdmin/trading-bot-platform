@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { DeskTypeMark } from "@/components/desk-mark";
+import { IconPlus } from "@/components/icons";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { createTradingAccount } from "@/lib/accounts/actions";
 import {
@@ -313,9 +315,11 @@ export function CreateAccountForm({
         <PendingSubmitButton
           pendingLabel="Creating…"
           disabled={!nameCheck.ok}
-          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          className="inline-flex items-center gap-2 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
         >
-          Create desk
+          <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
+            Create desk
+          </BotButtonLead>
         </PendingSubmitButton>
         {onCancel ? (
           <button

@@ -12,6 +12,8 @@ import {
   BotFormStep,
   BotFormSidebar,
   BotFormSidebarSection,
+  BotButtonLead,
+  botBtnIcon,
   BotStatusField,
   HintLabel,
   OptionalSection,
@@ -84,6 +86,7 @@ import {
 import type { DcaIndicatorStart } from "@/lib/dca/playbook";
 import type { FuturesOrderType, FuturesSide, FuturesTrigger } from "@/lib/futures/model";
 import type { FuturesTpslLevelKind } from "@/lib/futures/tpsl";
+import { IconPlus } from "@/components/icons";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import { perpsFormToSnapshotSource } from "@/lib/templates/recipe";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
@@ -262,7 +265,9 @@ export function FuturesAutomationsDesk({
                   href={automationsNewHref(listHref)}
                   className={`inline-flex items-center ${deskActionBtnClass}`}
                 >
-                  Create New Bot
+                  <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
+                    Create New Bot
+                  </BotButtonLead>
                 </Link>
                 {accountId ? (
                   <DeskTemplateBar

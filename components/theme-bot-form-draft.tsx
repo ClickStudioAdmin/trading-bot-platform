@@ -8,6 +8,8 @@ import {
   BotFormSidebar,
   BotFormSidebarSection,
   BotFormSummaryCard,
+  BotButtonLead,
+  botBtnIcon,
   PreviousBacktestLink,
   BotStatusField,
   botFieldClass,
@@ -48,6 +50,7 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import { AppSelect } from "@/components/app-select";
+import { IconBacktest, IconPlus, IconTemplates } from "@/components/icons";
 
 const fieldClass = botFieldClass;
 const fieldInvalidClass = botFieldInvalidClass;
@@ -926,10 +929,14 @@ export function ThemeBotFormDraft() {
 
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" className={deskBtnClass}>
-          Create New Bot
+          <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
+            Create New Bot
+          </BotButtonLead>
         </button>
         <button type="button" className={deskBtnClass}>
-          Create New Bot from Template
+          <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
+            Create New Bot from Template
+          </BotButtonLead>
         </button>
         <AppSelect variant="action" aria-label="Clone existing bot" className={deskActionSelectClass} defaultValue="">
           <option value="">Clone existing bot</option>
@@ -2344,16 +2351,22 @@ export function ThemeBotFormDraft() {
       >
         <BotFormSidebarSection title="Templates">
           <button type="button" className={botSidebarActionClass}>
-            Save as template
+            <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
+              Save as template
+            </BotButtonLead>
           </button>
           <button type="button" className={botSidebarActionClass}>
-            Save as platform template
+            <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
+              Save as platform template
+            </BotButtonLead>
           </button>
         </BotFormSidebarSection>
         {desk !== "cnc" ? (
           <BotFormSidebarSection title="Backtesting">
             <button type="button" className={botSidebarActionClass}>
-              Backtest
+              <BotButtonLead icon={<IconBacktest {...botBtnIcon} />}>
+                Backtest
+              </BotButtonLead>
             </button>
             <PreviousBacktestLink
               href="/account/backtests/sample"

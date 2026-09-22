@@ -12,6 +12,8 @@ import {
   BotFormStep,
   BotFormSidebar,
   BotFormSidebarSection,
+  BotButtonLead,
+  botBtnIcon,
   BotStatusField,
   OptionalSection,
   botFieldClass,
@@ -51,6 +53,7 @@ import {
   keepFormKeys,
 } from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
+import { IconPlus } from "@/components/icons";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import {
   paperFormToSnapshotSource,
@@ -325,7 +328,9 @@ export function PaperRulesForm({
                   href={automationsNewHref(listHref)}
                   className={`inline-flex items-center ${deskActionBtnClass}`}
                 >
-                  Create New Bot
+                  <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
+                    Create New Bot
+                  </BotButtonLead>
                 </Link>
                 {accountId ? (
                   <DeskTemplateBar

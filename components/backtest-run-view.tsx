@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { IconFilterClear, IconTrash } from "@/components/icons";
+import { IconFilterClear, IconPlus, IconTemplates, IconTrash } from "@/components/icons";
+import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import {
   SortTh,
   TABLE_BTN_ICON,
@@ -938,7 +939,7 @@ export function AttachBacktestButton({
 const saveFieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 const savePrimaryBtn =
-  "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
+  "inline-flex items-center justify-center gap-2 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
 const saveSecondaryBtn =
   "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
 
@@ -1024,9 +1025,11 @@ export function SaveBacktestAsTemplateButton({
             ? "Create an applyable platform template from this run. Does not attach the run or arm a desk."
             : "Create a private library template and attach this run"
         }
-        className="w-full rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent"
       >
-        {platformOnly ? "Save as platform template" : "Save as template"}
+        <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
+          {platformOnly ? "Save as platform template" : "Save as template"}
+        </BotButtonLead>
       </button>
       {open ? (
         <Modal
@@ -1167,9 +1170,11 @@ export function ApplyBacktestButton({
         type="button"
         onClick={resetAndOpen}
         title="Copies the bot onto that desk idle. Does not arm."
-        className="w-full rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent"
       >
-        Add to desk
+        <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
+          Add to desk
+        </BotButtonLead>
       </button>
       {open ? (
         <Modal title="Add to desk" onClose={() => setOpen(false)}>
@@ -1218,7 +1223,13 @@ export function ApplyBacktestButton({
                 disabled={pending || !name.trim()}
                 className={savePrimaryBtn}
               >
-                {pending ? "Copying…" : "Add to desk"}
+                {pending ? (
+                  "Copying…"
+                ) : (
+                  <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
+                    Add to desk
+                  </BotButtonLead>
+                )}
               </button>
             </div>
           </form>
