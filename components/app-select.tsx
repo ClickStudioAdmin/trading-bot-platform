@@ -399,6 +399,44 @@ export function AppMultiSelect({
   );
 }
 
+const SELECT_PANEL_CAP = 224;
+const SELECT_PANEL_GAP = 4;
+const SELECT_PANEL_MARGIN = 8;
+
+export function selectPanelBox(input: {
+  top: number;
+  bottom: number;
+  left: number;
+  width: number;
+  panelHeight: number;
+  viewportWidth: number;
+  viewportHeight: number;
+}): { top: number; left: number; width: number; maxHeight: number } {
+  const width = Math.max(input.width, 176);
+  const left = Math.max(
+    SELECT_PANEL_MARGIN,
+    Math.min(input.left, input.viewportWidth - width - SELECT_PANEL_MARGIN),
+  );
+  const spaceBelow = Math.max(
+    0,
+    input.viewportHeight - input.bottom - SELECT_PANEL_MARGIN,
+  );
+  const spaceAbove = Math.max(0, input.top - SELECT_PANEL_MARGIN);
+  const height = Math.min(Math.max(input.panelHeight, 0), SELECT_PANEL_CAP);
+  const fitsBelow = height + SELECT_PANEL_GAP <= spaceBelow;
+  const fitsAbove = height + SELECT_PANEL_GAP <= spaceAbove;
+  const openBelow = fitsBelow || (!fitsAbove && spaceBelow >= spaceAbove);
+  const maxHeight = Math.min(
+    SELECT_PANEL_CAP,
+    Math.max(0, (openBelow ? spaceBelow : spaceAbove) - SELECT_PANEL_GAP),
+  );
+  const used = height > 0 ? Math.min(height, maxHeight) : 0;
+  const top = openBelow
+    ? input.bottom + SELECT_PANEL_GAP
+    : Math.max(SELECT_PANEL_MARGIN, input.top - SELECT_PANEL_GAP - used);
+  return { top, left, width, maxHeight };
+}
+
 function SelectPanel({
   panelRef,
   listId,
@@ -417,7 +455,12 @@ function SelectPanel({
   children: ReactNode;
 }) {
   const previewClass = useThemePreviewPortalClass();
-  const [box, setBox] = useState({ top: 0, left: 0, width: 220 });
+  const [box, setBox] = useState({
+    top: 0,
+    left: 0,
+    width: 220,
+    maxHeight: SELECT_PANEL_CAP,
+  });
 
   useLayoutEffect(() => {
     function place() {
@@ -426,20 +469,37 @@ function SelectPanel({
         return;
       }
       const rect = trigger.getBoundingClientRect();
-      const width = Math.max(rect.width, 176);
-      const left = Math.min(rect.left, window.innerWidth - width - 8);
-      const below = rect.bottom + 4;
-      const maxHeight = 224;
-      const top =
-        below + maxHeight > window.innerHeight - 8
-          ? Math.max(8, rect.top - maxHeight - 4)
-          : below;
-      setBox({ top, left: Math.max(8, left), width });
+      const next = selectPanelBox({
+        top: rect.top,
+        bottom: rect.bottom,
+        left: rect.left,
+        width: rect.width,
+        panelHeight: panelRef.current?.offsetHeight ?? 0,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      });
+      setBox((current) =>
+        current.top === next.top &&
+        current.left === next.left &&
+        current.width === next.width &&
+        current.maxHeight === next.maxHeight
+          ? current
+          : next,
+      );
     }
     place();
+    const panel = panelRef.current;
+    const observer =
+      panel && typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(place)
+        : null;
+    if (panel && observer) {
+      observer.observe(panel);
+    }
     window.addEventListener("resize", place);
     window.addEventListener("scroll", place, true);
     return () => {
+      observer?.disconnect();
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
@@ -452,8 +512,13 @@ function SelectPanel({
       }}
       id={listId}
       role="listbox"
-      style={{ top: box.top, left: box.left, width: box.width }}
-      className={`fixed z-50 flex max-h-56 flex-col overflow-hidden rounded-card border border-line bg-surface p-1 text-ink ${previewClass}`.trim()}
+      style={{
+        top: box.top,
+        left: box.left,
+        width: box.width,
+        maxHeight: box.maxHeight,
+      }}
+      className={`fixed z-50 flex flex-col overflow-hidden rounded-card border border-line bg-surface p-1 text-ink ${previewClass}`.trim()}
     >
       {searchable ? (
         <input
