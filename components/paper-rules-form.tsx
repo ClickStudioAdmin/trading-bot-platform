@@ -63,6 +63,7 @@ import { AppSelect } from "@/components/app-select";
 import {
   automationsBotBlotterCells,
   botModeLabel,
+  missingById,
   paperBotPair,
   paperBotSummary,
   type AutomationsBotBlotter,
@@ -90,6 +91,7 @@ export function AutomationsDesk({
   clone = null,
   listHref,
   blotter,
+  revealId = null,
 }: {
   values: PaperRulesFormValues;
   inUseRuleIds: number[];
@@ -107,6 +109,7 @@ export function AutomationsDesk({
   clone?: string | null;
   listHref: string;
   blotter?: Record<string, AutomationsBotBlotter>;
+  revealId?: string | null;
 }) {
   return (
     <PaperRulesForm
@@ -122,6 +125,7 @@ export function AutomationsDesk({
       clone={clone}
       listHref={listHref}
       blotter={blotter}
+      revealId={revealId}
     />
   );
 }
@@ -139,6 +143,7 @@ export function PaperRulesForm({
   clone = null,
   listHref,
   blotter,
+  revealId = null,
 }: {
   values: PaperRulesFormValues;
   inUseRuleIds: number[];
@@ -156,6 +161,7 @@ export function PaperRulesForm({
   clone?: string | null;
   listHref: string;
   blotter?: Record<string, AutomationsBotBlotter>;
+  revealId?: string | null;
 }) {
   const router = useRouter();
   const [layers, setLayers] = useState(() => [...values.layers].reverse());
@@ -178,6 +184,19 @@ export function PaperRulesForm({
     setDraft(nextDraft);
   }
   const [inUseIds, setInUseIds] = useState(inUseRuleIds);
+  const missingLayers = missingById(
+    new Set(layers.flatMap((layer) => (layer.id ? [layer.id] : []))),
+    values.layers,
+  );
+  if (missingLayers.length > 0) {
+    setLayers((current) => {
+      const seen = new Set(
+        current.flatMap((layer) => (layer.id ? [layer.id] : [])),
+      );
+      const fresh = missingById(seen, values.layers);
+      return fresh.length === 0 ? current : [...fresh, ...current];
+    });
+  }
   const inUse = new Set(inUseIds);
   const savedLayers = layers.filter((layer) => layer.id);
   const empty = savedLayers.length === 0;
@@ -223,8 +242,9 @@ export function PaperRulesForm({
     router.refresh();
   }
 
-  function leaveToList(saved = false) {
-    router.push(saved ? automationsSavedHref(listHref) : listHref);
+  function leaveToList(saved = false, createdId?: string | null) {
+    router.push(saved ? automationsSavedHref(listHref, createdId) : listHref);
+    router.refresh();
   }
 
   function removeLayer(key: string, id: string) {
@@ -262,9 +282,15 @@ export function PaperRulesForm({
           accountReduceOnly={reduceOnly}
           isAdmin={isAdmin}
           onSaved={(result) => {
+            const previous = new Set(
+              layers.flatMap((layer) => (layer.id ? [layer.id] : [])),
+            );
+            const created = result.layers?.find(
+              (layer) => layer.id && !previous.has(layer.id),
+            );
             applySaveResult(result);
             if (result.ok) {
-              leaveToList(true);
+              leaveToList(true, created?.id);
             }
           }}
           onRemove={() => {
@@ -278,6 +304,7 @@ export function PaperRulesForm({
         <>
           <AutomationsBotTable
             desk="cnc"
+            revealId={revealId}
             toolbar={
               <>
                 <Link

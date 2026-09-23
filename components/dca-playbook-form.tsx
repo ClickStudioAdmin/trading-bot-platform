@@ -61,6 +61,7 @@ import {
   dcaBotPair,
   dcaBotSummary,
   dcaListStatus,
+  missingById,
   type AutomationsBotBlotter,
 } from "@/lib/bots/automations-list";
 import {
@@ -538,6 +539,7 @@ export function DcaPlaybooksDesk({
   clone = null,
   listHref,
   blotter,
+  revealId = null,
 }: {
   playbooks: DcaPlaybook[];
   options: LinearPerp[];
@@ -562,6 +564,7 @@ export function DcaPlaybooksDesk({
   clone?: string | null;
   listHref: string;
   blotter?: Record<string, AutomationsBotBlotter>;
+  revealId?: string | null;
 }) {
   const router = useRouter();
   const [extraLibrary, setExtraLibrary] = useState<BacktestLibraryItem[]>([]);
@@ -592,6 +595,27 @@ export function DcaPlaybooksDesk({
     setDraftEdit(edit);
     setDraftClone(clone);
     setDraft(nextDraft);
+  }
+  const missingPlaybooks = missingById(
+    new Set(savedPlaybooks.map((playbook) => playbook.id)),
+    playbooks,
+  );
+  if (missingPlaybooks.length > 0) {
+    setCards((current) => {
+      const seen = new Set(
+        current.flatMap((card) =>
+          card.playbook?.id ? [card.playbook.id] : [],
+        ),
+      );
+      const fresh = missingById(seen, playbooks);
+      if (fresh.length === 0) {
+        return current;
+      }
+      return [
+        ...fresh.map((playbook) => ({ key: playbook.id, playbook })),
+        ...current,
+      ];
+    });
   }
   const formCard =
     edit === AUTOMATIONS_NEW
@@ -629,8 +653,9 @@ export function DcaPlaybooksDesk({
     router.refresh();
   }
 
-  function leaveToList(saved = false) {
-    router.push(saved ? automationsSavedHref(listHref) : listHref);
+  function leaveToList(saved = false, createdId?: string | null) {
+    router.push(saved ? automationsSavedHref(listHref, createdId) : listHref);
+    router.refresh();
   }
 
   return (
@@ -680,16 +705,11 @@ export function DcaPlaybooksDesk({
               return;
             }
             if (next.playbook) {
-              setCards((current) =>
-                current.map((item) =>
-                  item.key === formCard.key
-                    ? { ...item, playbook: next.playbook ?? null, seed: undefined }
-                    : item,
-                ),
-              );
+              const playbook = next.playbook;
+              setCards((current) => upsertDcaCard(current, playbook));
             }
             if (next.ok) {
-              leaveToList(true);
+              leaveToList(true, next.playbook?.id);
             }
           }}
           onRemoveDraft={
@@ -702,6 +722,7 @@ export function DcaPlaybooksDesk({
         <>
           <AutomationsBotTable
             desk="dca"
+            revealId={revealId}
             toolbar={
               <>
                 <Link
@@ -783,6 +804,18 @@ export function DcaPlaybooksDesk({
       )}
     </div>
   );
+}
+
+function upsertDcaCard(
+  cards: { key: string; playbook: DcaPlaybook | null; seed?: DcaPlaybook }[],
+  playbook: DcaPlaybook,
+) {
+  const next = { key: playbook.id, playbook };
+  const index = cards.findIndex((item) => item.playbook?.id === playbook.id);
+  if (index < 0) {
+    return [next, ...cards];
+  }
+  return cards.map((item, itemIndex) => (itemIndex === index ? next : item));
 }
 
 function resolveDcaDraft(

@@ -33,6 +33,13 @@ assert.equal(
   automationsSavedHref("/strategies/cash-and-carry/automations?desk=desk-1"),
   "/strategies/cash-and-carry/automations?desk=desk-1&saved=1",
 );
+assert.equal(
+  automationsSavedHref(
+    "/strategies/cash-and-carry/automations?desk=desk-1",
+    "bot-9",
+  ),
+  "/strategies/cash-and-carry/automations?desk=desk-1&saved=1&created=bot-9",
+);
 assert.equal(automationsEditTitle({ edit: null }), null);
 assert.equal(automationsEditTitle({ edit: "new" }), "New bot");
 assert.equal(

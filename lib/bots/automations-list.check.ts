@@ -8,6 +8,7 @@ import {
   dcaBotSummary,
   dcaListStatus,
   filterAutomationsBots,
+  missingById,
   futuresAutomationsBotBlotter,
   paperAutomationsBotBlotter,
   paperBotPair,
@@ -19,6 +20,13 @@ import { automationsBotBlotterHref } from "./automations-path";
 import { defaultFuturesAutomationForm } from "@/lib/futures/automation";
 import { paperConfigToFormValues, defaultPaperLayer } from "@/lib/engine/rules";
 import type { DcaPlaybook } from "@/lib/dca/playbook";
+
+assert.deepEqual(
+  missingById(new Set(["a"]), [{ id: "a" }, { id: "b" }, { id: "" }]).map(
+    (row) => row.id,
+  ),
+  ["b"],
+);
 
 assert.equal(botModeLabel("cnc", "reduce_only"), "Reduce only");
 assert.equal(botModeLabel("dca", "stop_adding"), "Stop adding");

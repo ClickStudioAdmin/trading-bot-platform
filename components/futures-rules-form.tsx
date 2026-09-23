@@ -98,6 +98,7 @@ import { AppSelect } from "@/components/app-select";
 import {
   automationsBotBlotterCells,
   botModeLabel,
+  missingById,
   perpsBotPair,
   perpsBotSummary,
   type AutomationsBotBlotter,
@@ -130,6 +131,7 @@ export function FuturesAutomationsDesk({
   clone = null,
   listHref,
   blotter,
+  revealId = null,
 }: {
   rules: FuturesAutomationFormValues[];
   options: LinearPerp[];
@@ -150,6 +152,7 @@ export function FuturesAutomationsDesk({
   clone?: string | null;
   listHref: string;
   blotter?: Record<string, AutomationsBotBlotter>;
+  revealId?: string | null;
 }) {
   const router = useRouter();
   const [layers, setLayers] = useState(() => [...rules].reverse());
@@ -180,6 +183,19 @@ export function FuturesAutomationsDesk({
     setDraftClone(clone);
     setDraft(nextDraft);
   }
+  const missingRules = missingById(
+    new Set(layers.flatMap((layer) => (layer.id ? [layer.id] : []))),
+    rules,
+  );
+  if (missingRules.length > 0) {
+    setLayers((current) => {
+      const seen = new Set(
+        current.flatMap((layer) => (layer.id ? [layer.id] : [])),
+      );
+      const fresh = missingById(seen, rules);
+      return fresh.length === 0 ? current : [...fresh, ...current];
+    });
+  }
   const formLayer =
     edit === AUTOMATIONS_NEW
       ? nextDraft
@@ -206,8 +222,9 @@ export function FuturesAutomationsDesk({
     router.refresh();
   }
 
-  function leaveToList(saved = false) {
-    router.push(saved ? automationsSavedHref(listHref) : listHref);
+  function leaveToList(saved = false, createdId?: string | null) {
+    router.push(saved ? automationsSavedHref(listHref, createdId) : listHref);
+    router.refresh();
   }
 
   function applySaveResult(result: SaveFuturesAutomationsResult) {
@@ -238,9 +255,15 @@ export function FuturesAutomationsDesk({
           savedBacktests={savedBacktests}
           agreementSymbols={agreementSymbols}
           onSaved={(result) => {
+            const previous = new Set(
+              layers.flatMap((layer) => (layer.id ? [layer.id] : [])),
+            );
+            const created = result.forms?.find(
+              (layer) => layer.id && !previous.has(layer.id),
+            );
             applySaveResult(result);
             if (result.ok) {
-              leaveToList(true);
+              leaveToList(true, created?.id);
             }
           }}
           onTemplateSaved={(item) =>
@@ -264,6 +287,7 @@ export function FuturesAutomationsDesk({
         <>
           <AutomationsBotTable
             desk="perps"
+            revealId={revealId}
             toolbar={
               <>
                 <Link

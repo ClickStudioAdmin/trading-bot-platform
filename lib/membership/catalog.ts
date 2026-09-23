@@ -35,7 +35,7 @@ export const PLAN_CAP_KEYS = [
   "max_paper_desks",
   "max_demo_desks",
   "max_live_env_desks",
-  "max_bots_per_desk",
+  "max_bots",
   "max_copy_follows",
   "max_followers_accepted",
   "max_stored_backtests",
@@ -74,7 +74,7 @@ export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
   max_paper_desks: "Paper Trading",
   max_demo_desks: "Exchange Connected - Demo Mode",
   max_live_env_desks: "Exchange Connected - Live Mode",
-  max_bots_per_desk: "Max Bots per Desk",
+  max_bots: "Max Bots",
   max_copy_follows: "Max Desk Copies",
   max_followers_accepted: "Max Followers per Desk",
   max_stored_backtests: "Max Saved Backtests",
@@ -146,6 +146,9 @@ export function parseCaps(value: unknown): PlanCaps {
   const record = value as Record<string, unknown>;
   for (const key of PLAN_CAP_KEYS) {
     next[key] = parseCapValue(record[key]);
+  }
+  if (!("max_bots" in record) && "max_bots_per_desk" in record) {
+    next.max_bots = parseCapValue(record.max_bots_per_desk);
   }
   return next;
 }
@@ -370,7 +373,7 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     title: "Bots & Templates",
     fixedOrder: true,
     rows: [
-      { kind: "cap", key: "max_bots_per_desk", label: "Max Bots per Desk" },
+      { kind: "cap", key: "max_bots", label: "Max Bots" },
       { kind: "feature", key: "extras_templates", label: "Save Templates" },
       { kind: "feature", key: "extras_share_templates", label: "Share Templates" },
       { kind: "feature", key: "extras_import_export_templates", label: "Import / Export Templates" },

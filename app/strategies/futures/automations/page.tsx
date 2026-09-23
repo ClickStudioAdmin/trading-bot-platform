@@ -80,6 +80,7 @@ export default async function FuturesAutomationsPage({
     redirect(deskHomePath(session.account, session.account.id));
   }
   const saved = firstSearchValue(params.saved) === "1";
+  const createdId = firstSearchValue(params.created);
   const error = firstSearchValue(params.error);
   const notice = firstSearchValue(params.notice);
   const requestedEdit = parseAutomationsEdit(firstSearchValue(params.edit));
@@ -233,6 +234,7 @@ export default async function FuturesAutomationsPage({
             clone={clone}
             listHref={listHref}
             blotter={blotter}
+            revealId={createdId}
           />
         </div>
       </AutomationsPageFrame>
@@ -359,6 +361,7 @@ export default async function FuturesAutomationsPage({
           clone={clone}
           listHref={listHref}
           blotter={perpsBlotter}
+          revealId={createdId}
         />
       </div>
     </AutomationsPageFrame>

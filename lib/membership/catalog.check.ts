@@ -39,6 +39,9 @@ assert.equal(parseCaps({ max_demo_desks: 2, max_paper_desks: "nope" }).max_demo_
 assert.equal(parseCaps({ max_demo_desks: 2 }).max_paper_desks, null);
 assert.equal(parseCaps({ max_demo_desks: 1, max_live_env_desks: 3 }).max_demo_desks, 1);
 assert.equal(parseCaps({ max_demo_desks: 1, max_live_env_desks: 3 }).max_live_env_desks, 3);
+assert.equal(parseCaps({ max_bots_per_desk: 3 }).max_bots, 3);
+assert.equal(parseCaps({ max_bots: 10, max_bots_per_desk: 3 }).max_bots, 10);
+assert.equal(parseCaps({ max_bots: null, max_bots_per_desk: 3 }).max_bots, null);
 
 assert.equal(affiliateRatesOk(20, 5, 0), true);
 assert.equal(affiliateRatesOk(80, 20, 1), false);

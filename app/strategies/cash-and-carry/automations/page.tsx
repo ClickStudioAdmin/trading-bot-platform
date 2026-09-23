@@ -37,6 +37,7 @@ export default async function CashAndCarryAutomationsPage({
   const session = await getSessionContext();
   const listHref = deskHref(CASH_AND_CARRY_AUTOMATIONS_PATH, session?.account.id);
   const saved = firstSearchValue(params.saved) === "1";
+  const createdId = firstSearchValue(params.created);
   const error = firstSearchValue(params.error);
   if (!session) {
     return (
@@ -111,6 +112,7 @@ export default async function CashAndCarryAutomationsPage({
             clone={clone}
             listHref={listHref}
             blotter={blotter}
+            revealId={createdId}
           />
         </div>
       ) : (

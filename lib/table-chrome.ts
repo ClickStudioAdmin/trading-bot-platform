@@ -13,6 +13,17 @@ export type TablePageWindow = {
   end: number;
 };
 
+export function tablePageForIndex(
+  index: number,
+  pageSize = TABLE_PAGE_SIZE,
+): number {
+  if (index < 0) {
+    return 1;
+  }
+  const size = Math.max(1, Math.trunc(pageSize));
+  return Math.floor(index / size) + 1;
+}
+
 export function tablePageWindow(
   total: number,
   page: number,

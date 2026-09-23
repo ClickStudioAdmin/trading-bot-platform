@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { AppSelect } from "@/components/app-select";
 import {
   AutomationsColumnPicker,
@@ -44,7 +44,11 @@ import {
 } from "@/lib/bots/automations-list";
 import { statusOptionsFor, type BotDeskKind } from "@/lib/bots/status";
 import { formatCount, formatPct, signedTone } from "@/lib/opportunities/format";
-import { statusToneFor } from "@/lib/table-chrome";
+import {
+  statusToneFor,
+  tablePageForIndex,
+  type TableSortDir,
+} from "@/lib/table-chrome";
 
 export type AutomationsBotRow = {
   id: string;
@@ -129,11 +133,13 @@ export function AutomationsBotTable({
   rows,
   empty,
   toolbar,
+  revealId = null,
 }: {
   desk: BotDeskKind;
   rows: readonly AutomationsBotRow[];
   empty: string;
   toolbar?: ReactNode;
+  revealId?: string | null;
 }) {
   const { confirm, dialog } = useConfirmDialog();
   const { visible, setColumn } = useAutomationsColumns();
@@ -145,6 +151,19 @@ export function AutomationsBotTable({
   const table = useClientTable(filtered, compareAutomationsBot, {
     defaultKey: "name",
   });
+  const revealedId = useRef<string | null>(null);
+  const revealPage = revealPageFor(
+    filtered,
+    revealId ?? null,
+    table.sortKey,
+    table.sortDir,
+  );
+  if (revealId && revealPage != null && revealedId.current !== revealId) {
+    revealedId.current = revealId;
+    if (table.window.page !== revealPage) {
+      table.setPage(revealPage);
+    }
+  }
   const filtersActive = automationsBotFiltersActive(filters);
 
   function changeFilter(key: keyof AutomationsBotFilters, value: string) {
@@ -278,7 +297,12 @@ export function AutomationsBotTable({
             </tr>
           ) : (
           table.pageRows.map((row) => (
-            <tr key={row.id} className="border-b border-line last:border-b-0">
+            <tr
+              key={row.id}
+              className={`border-b border-line last:border-b-0${
+                revealId && row.id === revealId ? " bg-accent/10" : ""
+              }`}
+            >
               <td className="px-4 py-3 pr-8 align-top">
                 <Link
                   href={row.editHref}
@@ -388,4 +412,20 @@ export function AutomationsBotTable({
     </TableCard>
     </>
   );
+}
+
+function revealPageFor(
+  rows: readonly AutomationsBotRow[],
+  revealId: string | null,
+  sortKey: string,
+  sortDir: TableSortDir,
+): number | null {
+  if (!revealId) {
+    return null;
+  }
+  const sorted = [...rows].sort((left, right) =>
+    compareAutomationsBot(left, right, sortKey, sortDir),
+  );
+  const index = sorted.findIndex((row) => row.id === revealId);
+  return index < 0 ? null : tablePageForIndex(index);
 }

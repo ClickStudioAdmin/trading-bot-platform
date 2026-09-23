@@ -53,6 +53,13 @@ export function automationsBotFiltersActive(
   return Boolean(filters.q.trim() || filters.pair.trim() || filters.status);
 }
 
+export function missingById<T extends { id: string | null | undefined }>(
+  currentIds: ReadonlySet<string>,
+  incoming: readonly T[],
+): T[] {
+  return incoming.filter((row) => Boolean(row.id) && !currentIds.has(row.id!));
+}
+
 export function filterAutomationsBots<
   T extends {
     name: string;

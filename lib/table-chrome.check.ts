@@ -7,6 +7,7 @@ import {
   parseTableSortKey,
   sliceTablePage,
   statusToneFor,
+  tablePageForIndex,
   tablePageLabel,
   tablePageWindow,
   tableFiltersOpenStorageKey,
@@ -14,6 +15,11 @@ import {
   tableSortHref,
   toggleTableSortDir,
 } from "./table-chrome";
+
+assert.equal(tablePageForIndex(0), 1);
+assert.equal(tablePageForIndex(19), 1);
+assert.equal(tablePageForIndex(20), 2);
+assert.equal(tablePageForIndex(-1), 1);
 
 assert.deepEqual(tablePageWindow(24, 1), {
   page: 1,

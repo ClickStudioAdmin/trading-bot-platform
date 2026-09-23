@@ -66,7 +66,7 @@ Affiliate: every login is an affiliate (not a plan tick). Referral code, earn mu
 
 ### Resource caps
 
-Max Paper Trading, Exchange Connected - Demo Mode, Exchange Connected - Live Mode, Max Bots per Desk, Max Desk Copies, Max Followers per Desk, Max Saved Backtests, Max Backtest Timeframe in years (limits the date range they can run), optional per-plan earn depth (capped by program max). No per-desk-type counts, no combined max-desks or max Live-desks total, no max exchange connections, and no Paper / Live ticks. Demo covers exchange Demo / Testnet; Live-environment is exchange Live.
+Max Paper Trading, Exchange Connected - Demo Mode, Exchange Connected - Live Mode, Max Bots (across every desk on the login, not per desk), Max Desk Copies, Max Followers per Desk, Max Saved Backtests, Max Backtest Timeframe in years (limits the date range they can run), optional per-plan earn depth (capped by program max). No per-desk-type counts, no combined max-desks or max Live-desks total, no max exchange connections, and no Paper / Live ticks. Demo covers exchange Demo / Testnet; Live-environment is exchange Live.
 
 ### Gates
 
@@ -133,7 +133,7 @@ After grace, a billing worker (same Close / Disable paths as the user) walks **o
 1. Forbidden features (type, Live, venue, copy, …) — exit those desks oldest-first until none remain.
 2. Numeric caps — disable the oldest extras until `assertEntitlement` would pass.
 
-Per desk: cancel working orders, market-exit positions, disable bots, disable the desk. Oldest bot first when only the per-desk bot cap is over. Do not delete ledgers, fills, or history. Engine ticks do not invent a second ruleset; they honour the flags the worker set.
+Per desk: cancel working orders, market-exit positions, disable bots, disable the desk. Oldest bot first across the login when only the Max Bots cap is over. Do not delete ledgers, fills, or history. Engine ticks do not invent a second ruleset; they honour the flags the worker set.
 
 ### Affiliates
 

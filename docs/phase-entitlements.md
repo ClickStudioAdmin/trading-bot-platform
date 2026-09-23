@@ -113,7 +113,7 @@ After grace, a billing worker (same Close / Disable paths as the user) walks **o
 1. Forbidden features (type, Live, venue, copy, …) — exit those desks oldest-first until none remain.
 2. Numeric caps — disable the oldest extras until `assertEntitlement` would pass.
 
-Per desk: cancel working orders, market-exit positions, disable bots, disable the desk. Oldest bot first when only the per-desk bot cap is over. Do not delete ledgers, fills, or history. Engine ticks honour the flags the worker set.
+Per desk: cancel working orders, market-exit positions, disable bots, disable the desk. Oldest bot first across the login when only the Max Bots cap is over. Do not delete ledgers, fills, or history. Engine ticks honour the flags the worker set.
 
 ## Out of scope
 

@@ -65,8 +65,15 @@ export function automationsNewHref(
   );
 }
 
-export function automationsSavedHref(listHref: string): string {
-  return withQuery(listHref, { saved: "1" });
+export function automationsSavedHref(
+  listHref: string,
+  createdId?: string | null,
+): string {
+  const created = String(createdId ?? "").trim();
+  return withQuery(listHref, {
+    saved: "1",
+    ...(created ? { created } : {}),
+  });
 }
 
 export function automationsEditTitle(input: {
