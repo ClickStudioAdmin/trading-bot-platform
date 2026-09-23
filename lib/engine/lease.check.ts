@@ -4,6 +4,7 @@ import {
   releaseEngineDeskFromState,
   tryClaimEngineDeskFromState,
   tryClaimEngineScanFromState,
+  extendLeaseUntilMs,
   venueSlotWaitMs,
   engineLoopMs,
   type DeskLease,
@@ -128,6 +129,31 @@ const scanExpired = tryClaimEngineScanFromState({
   ttlMs: 18_000,
 });
 assert.equal(scanExpired.ok, true);
+
+assert.equal(
+  extendLeaseUntilMs({
+    currentUntilMs: 45_000,
+    requestedUntilMs: 20_000,
+    nowMs: 1_000,
+  }),
+  45_000,
+);
+assert.equal(
+  extendLeaseUntilMs({
+    currentUntilMs: 20_000,
+    requestedUntilMs: 45_000,
+    nowMs: 1_000,
+  }),
+  45_000,
+);
+assert.equal(
+  extendLeaseUntilMs({
+    currentUntilMs: 500,
+    requestedUntilMs: 20_000,
+    nowMs: 1_000,
+  }),
+  20_000,
+);
 
 assert.equal(venueSlotWaitMs(1_200, 1_000), 200);
 assert.equal(venueSlotWaitMs(1_000, 1_000), 0);

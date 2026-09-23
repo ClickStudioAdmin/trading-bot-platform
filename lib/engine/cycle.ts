@@ -24,6 +24,10 @@ import {
 import { mapPool } from "@/lib/engine/pool";
 import { runDcaPlaybookTick } from "@/lib/dca/tick";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
+import {
+  ensureBybitLinearTickerStream,
+  seedBybitLinearTickers,
+} from "@/lib/exchanges/bybit/ticker-stream";
 import type { BybitTicker } from "@/lib/exchanges/bybit/client";
 import { loadDeskTickerMap } from "@/lib/market/desk-tickers";
 import {
@@ -38,7 +42,12 @@ import { scanCarryOpportunities } from "@/lib/opportunities/scan";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 import { runFuturesAutomationTick } from "@/lib/futures/automation-tick";
 import { fanOutCopyFills } from "@/lib/copy/fan-out";
-import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
+import {
+  reconcileOpenFuturesBooks,
+  reconcileOpenFuturesStops,
+  reconcileOpenFuturesVenuePositions,
+  reconcileOpenFuturesWorkingOrders,
+} from "@/lib/futures/reconcile";
 import { writeEventLog } from "@/lib/logs/write";
 import { processOneQueuedBacktest } from "@/lib/backtest/execute";
 import { BACKTEST_VERCEL_BAR_LIMIT } from "@/lib/backtest/model";
@@ -345,11 +354,17 @@ async function loadSharedMarket(input: {
       scan = (await loadStoredOpportunities()).rows;
     }
   }
+  if (input.linear && process.env.TBP_ENGINE_WORKER === "1") {
+    ensureBybitLinearTickerStream();
+  }
   const tickers = input.linear
     ? await fetchBybitTickers("linear").catch(
         () => new Map<string, BybitTicker>(),
       )
     : new Map<string, BybitTicker>();
+  if (input.linear && tickers.size > 0) {
+    seedBybitLinearTickers(tickers);
+  }
   return {
     scan,
     tickers,
@@ -418,7 +433,8 @@ async function runDeskTick(input: {
       }),
     );
   }
-  if (deskType !== "cash_and_carry") {
+  const dcaDesk = deskType === "dca" && !copyDesk;
+  if (deskType !== "cash_and_carry" && !dcaDesk) {
     try {
       await reconcileOpenFuturesBooks({
         accountId: input.accountId,
@@ -432,6 +448,28 @@ async function runDeskTick(input: {
         event: "trade.futures_working_failed",
         message:
           cause instanceof Error ? cause.message : "Working order tick failed",
+        userId,
+        accountId: input.accountId,
+        strategy: FUTURES_STRATEGY_ID,
+      });
+    }
+  }
+  if (dcaDesk) {
+    try {
+      await reconcileOpenFuturesVenuePositions({
+        accountId: input.accountId,
+        userId,
+        tickers,
+      });
+    } catch (cause) {
+      await writeEventLog({
+        level: "error",
+        scope: "strategy",
+        event: "trade.futures_working_failed",
+        message:
+          cause instanceof Error
+            ? cause.message
+            : "Venue position tick failed",
         userId,
         accountId: input.accountId,
         strategy: FUTURES_STRATEGY_ID,
@@ -458,6 +496,18 @@ async function runDeskTick(input: {
       accountId: input.accountId,
       tickers,
       onYield: input.onYield,
+      onBeforeEntries: async () => {
+        await reconcileOpenFuturesWorkingOrders({
+          accountId: input.accountId,
+          userId,
+          tickers,
+        });
+        await reconcileOpenFuturesStops({
+          accountId: input.accountId,
+          userId,
+          tickers,
+        });
+      },
     });
   }
   if (!copyDesk) {

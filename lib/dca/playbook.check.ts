@@ -56,6 +56,7 @@ import {
   dcaCopyName,
   dcaPnlPct,
   dcaSeriesStartEval,
+  dcaPriceExitReason,
   decideDcaTick,
   DEFAULT_DCA_NAME,
   formatDcaNextAdd,
@@ -3115,6 +3116,53 @@ assert.deepEqual(
     exitIfCloses: rsiRising,
   }).action,
   { kind: "close", reason: "stop_loss" },
+);
+assert.equal(
+  dcaPriceExitReason({
+    side: "long",
+    qty: 1,
+    entryPrice: 100,
+    mark: 90,
+    stopLossPct: 5,
+    takeProfitPct: 50,
+  }),
+  "stop_loss",
+);
+assert.equal(
+  dcaPriceExitReason({
+    side: "long",
+    qty: 1,
+    entryPrice: 100,
+    mark: 110,
+    stopLossPct: 5,
+    takeProfitPct: 5,
+  }),
+  "take_profit",
+);
+assert.equal(
+  dcaPriceExitReason({
+    side: "long",
+    qty: 1,
+    entryPrice: 100,
+    mark: 110,
+    stopLossPct: 5,
+    takeProfitPct: 5,
+    takeProfitKind: "atr",
+  }),
+  null,
+);
+assert.equal(
+  dcaPriceExitReason({
+    side: "long",
+    qty: 1,
+    entryPrice: 100,
+    mark: 110,
+    stopLossPct: 5,
+    takeProfitPct: 5,
+    takeProfitOrderType: "limit",
+    tpLimitResting: true,
+  }),
+  null,
 );
 assert.deepEqual(
   decideDcaTick({

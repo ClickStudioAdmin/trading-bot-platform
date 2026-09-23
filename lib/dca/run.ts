@@ -30,6 +30,7 @@ import {
   PENDING_CLOSE_CANCEL_CONCURRENCY,
 } from "@/lib/futures/pending-close";
 import { loadFuturesSettings } from "@/lib/futures/settings";
+import { takeDcaTradeSlot } from "@/lib/dca/trade-slot";
 import { cancelPerpOrdersOnVenueForSymbol } from "@/lib/exchanges/execute";
 import { loadBoundVenueForAccount } from "@/lib/exchanges/live-trade";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
@@ -1485,7 +1486,12 @@ async function syncDcaTrailing(input: {
   }
 }
 
-async function boundConnectionForPlaybook(input: {
+const playbookConnectionCache = new Map<
+  string,
+  { atMs: number; connection: Awaited<ReturnType<typeof loadBoundConnection>> }
+>();
+
+async function loadBoundConnection(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
 }) {
@@ -1505,12 +1511,59 @@ async function boundConnectionForPlaybook(input: {
   return bound.ok ? bound.connection : null;
 }
 
+async function boundConnectionForPlaybook(input: {
+  playbook: DcaPlaybook;
+  mode: TradingAccountMode;
+}) {
+  const hit = playbookConnectionCache.get(input.playbook.accountId);
+  if (hit && Date.now() - hit.atMs < 60_000) {
+    return hit.connection;
+  }
+  const connection = await loadBoundConnection(input);
+  playbookConnectionCache.set(input.playbook.accountId, {
+    atMs: Date.now(),
+    connection,
+  });
+  return connection;
+}
+
 async function flattenSide(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
   side: FuturesSide;
   reason?: string;
+  positionId?: string | null;
+  fast?: boolean;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (input.fast && input.positionId) {
+    const connection = await boundConnectionForPlaybook(input);
+    const plan = dcaFlattenVenuePlan(connection?.venue ?? null);
+    if (plan.useSymbolCancelAll && connection) {
+      await takeDcaTradeSlot();
+      await cancelPerpOrdersOnVenueForSymbol({
+        connection,
+        symbol: input.playbook.symbol,
+      });
+      await takeDcaTradeSlot();
+      const result = await runFuturesCommand({
+        actor: playbookActor(input.playbook, input.mode),
+        command: {
+          kind: "place",
+          action: "flatten",
+          symbol: input.playbook.symbol,
+          positionId: input.positionId,
+          orderType: "market",
+          ...playbookCommandMeta(input.playbook, input.reason),
+          idempotencyKey: dcaFlattenKey(
+            input.playbook.id,
+            input.side,
+            input.positionId,
+          ),
+        },
+      });
+      return result.ok ? { ok: true as const } : result;
+    }
+  }
   const cancelWork = (async () => {
     const connection = await boundConnectionForPlaybook(input);
     const plan = dcaFlattenVenuePlan(connection?.venue ?? null);

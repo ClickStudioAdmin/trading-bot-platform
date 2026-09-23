@@ -2133,6 +2133,64 @@ export function dcaPnlPct(input: {
   return (usdt / (input.qty * input.entryPrice)) * 100;
 }
 
+export function dcaPriceExitReason(input: {
+  side: FuturesSide;
+  qty: number | null;
+  entryPrice: number | null;
+  firstFillPrice?: number | null;
+  mark: number | null;
+  stopLossPct: number | null;
+  stopLossBasis?: DcaExitBasis;
+  takeProfitPct: number | null;
+  takeProfitBasis?: DcaExitBasis;
+  takeProfitKind?: DcaTakeProfitKind | null;
+  takeProfitOrderType?: FuturesOrderType | null;
+  tpLimitResting?: boolean;
+}): "stop_loss" | "take_profit" | null {
+  if (input.qty === null || !(input.qty > 0) || input.mark === null) {
+    return null;
+  }
+  const basisPrice = (basis: DcaExitBasis | undefined): number | null =>
+    basis === "first_entry"
+      ? (input.firstFillPrice ?? input.entryPrice)
+      : input.entryPrice;
+  const pnlAt = (basis: number | null): number | null =>
+    basis === null
+      ? null
+      : dcaPnlPct({
+          side: input.side,
+          qty: input.qty as number,
+          entryPrice: basis,
+          mark: input.mark as number,
+        });
+  const stopPnl = pnlAt(basisPrice(input.stopLossBasis));
+  if (
+    stopPnl !== null &&
+    input.stopLossPct !== null &&
+    stopPnl <= -input.stopLossPct
+  ) {
+    return "stop_loss";
+  }
+  if ((input.takeProfitKind ?? "percent") === "atr") {
+    return null;
+  }
+  const takeProfitPnl = pnlAt(basisPrice(input.takeProfitBasis));
+  if (
+    takeProfitPnl === null ||
+    input.takeProfitPct === null ||
+    takeProfitPnl < input.takeProfitPct
+  ) {
+    return null;
+  }
+  if (
+    (input.takeProfitOrderType ?? "market") === "limit" &&
+    input.tpLimitResting
+  ) {
+    return null;
+  }
+  return "take_profit";
+}
+
 export function dcaDipMet(input: {
   side: FuturesSide;
   lastPrice: number;

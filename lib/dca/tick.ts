@@ -12,7 +12,19 @@ import {
   fetchBybitTickers,
   type BybitTicker,
 } from "@/lib/exchanges/bybit/client";
+import { ENGINE_LEASE_HEARTBEAT_MS, ENGINE_LEASE_TTL_SECONDS } from "@/lib/engine/lease";
+import {
+  releaseEngineDesk,
+  renewEngineDesk,
+  tryClaimEngineDesk,
+} from "@/lib/engine/lease-store";
 import { mapPool } from "@/lib/engine/pool";
+import {
+  ensureBybitLinearTickerStream,
+  noteBybitTickerSymbols,
+  readBybitLinearTickerMap,
+  waitForBybitTicker,
+} from "@/lib/exchanges/bybit/ticker-stream";
 import { warmLinearPerpInstruments } from "@/lib/exchanges/bybit/perp";
 import {
   closedLiveIndicatorBars,
@@ -55,6 +67,7 @@ import {
   dcaNeedsTickBars,
   dcaTickBarTimeframes,
   dcaOpenExitLimits,
+  dcaPriceExitReason,
   dcaShouldFlattenIdleOpen,
   dcaStartListens,
   decideDcaTick,
@@ -87,7 +100,10 @@ import {
 import { loadAccountDcaSyncFailures } from "./sync-failure-store";
 import {
   DCA_TICK_ENTRY_RANK,
+  DCA_TICK_LANE_CONCURRENCY,
+  DCA_TICK_PRICE_CONCURRENCY,
   dcaTickWorkRank,
+  groupDcaTickSymbols,
   orderDcaTickWork,
   type DcaTickWorkKind,
 } from "./tick-order";
@@ -100,11 +116,14 @@ import {
 } from "./store";
 
 const entryCursorByAccount = new Map<string, number>();
+let livePriceExits: (() => Promise<void>) | null = null;
+let liveAccountId: string | null = null;
 
 export async function runDcaPlaybookTick(input?: {
   accountId?: string;
   tickers?: Map<string, BybitTicker>;
   onYield?: () => Promise<void>;
+  onBeforeEntries?: () => Promise<void>;
 }): Promise<{ acted: number }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -174,13 +193,17 @@ export async function runDcaPlaybookTick(input?: {
   const klineCache = new Map<string, CandleBar[]>();
   const bybitDesk = [...accounts.values()].some((row) => row.venue === "bybit");
   if (bybitDesk) {
-    await warmLinearPerpInstruments().catch((error: unknown) => {
-      console.error(
-        "engine instruments",
-        error instanceof Error ? error.message : error,
-      );
-    });
+    noteBybitTickerSymbols(playbooks.map((row) => row.symbol));
+    ensureBybitLinearTickerStream();
   }
+  const instrumentsReady = bybitDesk
+    ? warmLinearPerpInstruments().catch((error: unknown) => {
+        console.error(
+          "engine instruments",
+          error instanceof Error ? error.message : error,
+        );
+      })
+    : Promise.resolve();
   const workingBooks = new Map<
     string,
     { live: FuturesWorkingOrder[]; history: FuturesWorkingOrder[] }
@@ -189,8 +212,9 @@ export async function runDcaPlaybookTick(input?: {
     string,
     Awaited<ReturnType<typeof loadAccountDcaSyncFailures>>
   >();
-  await Promise.all(
-    accountIds.map(async (accountId) => {
+  await Promise.all([
+    instrumentsReady,
+    ...accountIds.map(async (accountId) => {
       const account = accounts.get(accountId);
       if (!account) {
         return;
@@ -212,7 +236,7 @@ export async function runDcaPlaybookTick(input?: {
       });
       failureBooks.set(accountId, failures);
     }),
-  );
+  ]);
   const barJobs: {
     venue: string;
     venueEnvironment: string | null;
@@ -246,7 +270,7 @@ export async function runDcaPlaybookTick(input?: {
       });
     }
   }
-  await mapPool(barJobs, 8, async (job) => {
+  const barsReady = mapPool(barJobs, 8, async (job) => {
     const key = `${job.venue}:${job.symbol}:${job.interval}`;
     const fetched = await loadDeskIndicatorBars({
       venue: job.venue,
@@ -297,6 +321,227 @@ export async function runDcaPlaybookTick(input?: {
   }[] = [];
 
   let acted = 0;
+  const rushed = new Set<string>();
+  const failedFlags = new Set<string>();
+  let flagsFlushed = false;
+  let lastHeartbeat = 0;
+  async function heartbeat(force = false): Promise<void> {
+    const now = Date.now();
+    if (!force && now - lastHeartbeat < ENGINE_LEASE_HEARTBEAT_MS) {
+      return;
+    }
+    lastHeartbeat = now;
+    await input?.onYield?.();
+  }
+  async function runTickItem(item: TickWork): Promise<void> {
+    if (
+      (item.kind === "arm" || item.kind === "clip") &&
+      failedFlags.has(item.playbook.id)
+    ) {
+      return;
+    }
+    if (
+      item.action &&
+      item.action.kind !== "none" &&
+      item.action.kind !== "end_cycle"
+    ) {
+      await logDcaEvent({
+        playbook: item.playbook,
+        side: item.side,
+        positionId: item.positionId,
+        event: "dca.decision",
+        message: dcaDecisionMessage({
+          name: item.playbook.name,
+          kind: item.action.kind,
+          reason: "reason" in item.action ? item.action.reason : null,
+          clipsFilled: item.clipsFilled,
+          maxClips: item.playbook.maxClips,
+          why: item.why,
+        }),
+        data: {
+          kind: item.action.kind,
+          reason: "reason" in item.action ? item.action.reason : null,
+          clipsFilled: item.clipsFilled,
+          maxClips: item.playbook.maxClips,
+          mark: item.mark,
+          last: item.lastPrice,
+          entryPrice: item.entryPrice,
+          tpLimitResting: item.tpLimitResting,
+          ...(item.why ? { why: item.why } : {}),
+        },
+      });
+    }
+    if (item.kind === "flatten") {
+      const flattened = await flattenPlaybook({
+        playbook: item.playbook,
+        mode: item.mode,
+        side: item.side,
+        reason: item.flattenReason,
+      });
+      if (!flattened.ok) {
+        return;
+      }
+      if (item.keepListening) {
+        const kept = await keepListeningAfterFlatten({
+          playbook: item.playbook,
+          side: item.side,
+        });
+        if (kept.ok) {
+          acted += 1;
+        }
+      } else {
+        acted += 1;
+      }
+      return;
+    }
+    if (item.kind === "sync") {
+      await syncDcaPlaybookExits({
+        playbook: item.playbook,
+        mode: item.mode,
+        side: item.side,
+        lastPrice: item.lastPrice,
+        atr: item.atr,
+        cache: item.cache,
+      });
+      await syncDcaPlaybookGrid({
+        playbook: item.playbook,
+        mode: item.mode,
+        side: item.side,
+        atr: item.atr,
+        cache: item.cache,
+      });
+      return;
+    }
+    if (!item.action) {
+      return;
+    }
+    const result = await applyTickAction({
+      playbook: item.playbook,
+      mode: item.mode,
+      side: item.side,
+      lastPrice: item.lastPrice,
+      action: item.action,
+      why: item.why,
+      positionId: item.positionId,
+      fast: item.kind === "close" && Boolean(item.positionId),
+    });
+    if (result.acted) {
+      acted += 1;
+    }
+  }
+  async function runLane(items: TickWork[], concurrency: number): Promise<void> {
+    const chains = groupDcaTickSymbols(
+      items.map((item) => ({ ...item, symbol: item.playbook.symbol })),
+    );
+    await mapPool(chains, concurrency, async (chain) => {
+      for (const item of chain) {
+        await heartbeat();
+        await runTickItem(item);
+      }
+    });
+  }
+  const streamTickers = readBybitLinearTickerMap();
+  async function runPriceExits(): Promise<void> {
+  const priceWork: TickWork[] = [];
+  for (const playbook of playbooks) {
+    const account = accounts.get(playbook.accountId);
+    if (!account || !deskAllowsDcaPlaybooks(account)) {
+      continue;
+    }
+    const ticker =
+      streamTickers.get(playbook.symbol) ?? tickers.get(playbook.symbol) ?? {};
+    const prices = tickerTriggerPrices(ticker);
+    const book = workingBooks.get(playbook.accountId) ?? {
+      live: [],
+      history: [],
+    };
+    const syncCache: DcaSyncCache = {
+      opens,
+      liveWorking: book.live,
+      gridWorking: book.history,
+      recentFailures:
+        failureBooks.get(playbook.accountId)?.get(playbook.id) ?? [],
+    };
+    for (const side of dcaEnabledSides(playbook.direction)) {
+      const leg = dcaLegFor(playbook, side);
+      if (leg.status === "idle" || leg.status === "closing") {
+        continue;
+      }
+      const open = opens.find(
+        (row) =>
+          row.accountId === playbook.accountId &&
+          row.symbol === playbook.symbol &&
+          row.side === side,
+      );
+      if (!open || !(open.qty > 0)) {
+        continue;
+      }
+      const tpLimitResting =
+        dcaOpenExitLimits(book.live, playbook.id, side, "tp").length > 0;
+      const reason = dcaPriceExitReason({
+        side,
+        qty: open.qty,
+        entryPrice: open.entryPrice,
+        firstFillPrice: leg.firstFillPrice,
+        mark: prices.mark,
+        stopLossPct: playbook.stopLossPct,
+        stopLossBasis: playbook.stopLossBasis,
+        takeProfitPct: playbook.takeProfitPct,
+        takeProfitBasis: playbook.takeProfitBasis,
+        takeProfitKind: playbook.takeProfitKind,
+        takeProfitOrderType: playbook.takeProfitOrderType,
+        tpLimitResting,
+      });
+      if (!reason) {
+        continue;
+      }
+      const rushKey = `${playbook.id}:${side}`;
+      if (rushed.has(rushKey)) {
+        continue;
+      }
+      rushed.add(rushKey);
+      open.qty = 0;
+      priceWork.push({
+        rank: dcaTickWorkRank("close"),
+        kind: "close",
+        playbook,
+        mode: account.mode,
+        side,
+        lastPrice: prices.last,
+        atr: null,
+        clipsFilled: leg.clipsFilled,
+        positionId: open.id,
+        entryPrice: open.entryPrice,
+        mark: prices.mark,
+        tpLimitResting,
+        keepListening: false,
+        flattenReason: "",
+        action: { kind: "close", reason },
+        why: "",
+        cache: syncCache,
+      });
+    }
+  }
+  if (priceWork.length > 0) {
+    await heartbeat(true);
+    await runLane(priceWork, DCA_TICK_PRICE_CONCURRENCY);
+  }
+  }
+  livePriceExits = runPriceExits;
+  liveAccountId = input?.accountId ?? playbooks[0]?.accountId ?? null;
+  await runPriceExits();
+  let signalDone = false;
+  const priceLoop = (async () => {
+    while (!signalDone) {
+      await waitForBybitTicker(1_000);
+      if (signalDone) {
+        return;
+      }
+      await runPriceExits();
+    }
+  })();
+  try {
+  await barsReady;
   for (const playbook of playbooks) {
     const listening = dcaEnabledSides(playbook.direction).some((side) => {
       const status = dcaLegFor(playbook, side).status;
@@ -384,6 +629,9 @@ export async function runDcaPlaybookTick(input?: {
         failureBooks.get(playbook.accountId)?.get(playbook.id) ?? [],
     };
     for (const side of dcaEnabledSides(playbook.direction)) {
+      if (rushed.has(`${playbook.id}:${side}`)) {
+        continue;
+      }
       let leg = dcaLegFor(playbook, side);
       if (
         playbook.dcaMode === "order" &&
@@ -697,9 +945,6 @@ export async function runDcaPlaybookTick(input?: {
   );
   entryCursorByAccount.set(cursorKey, planned.nextEntryOffset);
   const ordered = planned.items;
-  let renewedEntries = false;
-  let flagsFlushed = false;
-  const failedFlags = new Set<string>();
   async function flushFlags(): Promise<void> {
     if (flagsFlushed) {
       return;
@@ -720,110 +965,75 @@ export async function runDcaPlaybookTick(input?: {
       }
     });
   }
-  if (ordered.length > 0) {
-    await input?.onYield?.();
+  let index = 0;
+  while (index < ordered.length && (ordered[index]?.rank ?? 0) < DCA_TICK_ENTRY_RANK) {
+    const rank = ordered[index]?.rank ?? 0;
+    const batch: TickWork[] = [];
+    while (index < ordered.length && ordered[index]?.rank === rank) {
+      const row = ordered[index];
+      if (row) {
+        batch.push(row);
+      }
+      index += 1;
+    }
+    await runLane(batch, DCA_TICK_LANE_CONCURRENCY);
   }
-  for (const item of ordered) {
-    if (!renewedEntries && item.rank >= DCA_TICK_ENTRY_RANK) {
-      renewedEntries = true;
-      await flushFlags();
-      await input?.onYield?.();
-    }
-    if (
-      (item.kind === "arm" || item.kind === "clip") &&
-      failedFlags.has(item.playbook.id)
-    ) {
-      continue;
-    }
-    if (
-      item.action &&
-      item.action.kind !== "none" &&
-      item.action.kind !== "end_cycle"
-    ) {
-      await logDcaEvent({
-        playbook: item.playbook,
-        side: item.side,
-        positionId: item.positionId,
-        event: "dca.decision",
-        message: dcaDecisionMessage({
-          name: item.playbook.name,
-          kind: item.action.kind,
-          reason: "reason" in item.action ? item.action.reason : null,
-          clipsFilled: item.clipsFilled,
-          maxClips: item.playbook.maxClips,
-          why: item.why,
-        }),
-        data: {
-          kind: item.action.kind,
-          reason: "reason" in item.action ? item.action.reason : null,
-          clipsFilled: item.clipsFilled,
-          maxClips: item.playbook.maxClips,
-          mark: item.mark,
-          last: item.lastPrice,
-          entryPrice: item.entryPrice,
-          tpLimitResting: item.tpLimitResting,
-          ...(item.why ? { why: item.why } : {}),
-        },
-      });
-    }
-    if (item.kind === "flatten") {
-      const flattened = await flattenPlaybook({
-        playbook: item.playbook,
-        mode: item.mode,
-        side: item.side,
-        reason: item.flattenReason,
-      });
-      if (!flattened.ok) {
-        continue;
+  await flushFlags();
+  await heartbeat(true);
+  await input?.onBeforeEntries?.();
+  while (index < ordered.length) {
+    const rank = ordered[index]?.rank ?? 0;
+    const batch: TickWork[] = [];
+    while (index < ordered.length && ordered[index]?.rank === rank) {
+      const row = ordered[index];
+      if (row) {
+        batch.push(row);
       }
-      if (item.keepListening) {
-        const kept = await keepListeningAfterFlatten({
-          playbook: item.playbook,
-          side: item.side,
-        });
-        if (kept.ok) {
-          acted += 1;
-        }
-      } else {
-        acted += 1;
-      }
-      continue;
+      index += 1;
     }
-    if (item.kind === "sync") {
-      await syncDcaPlaybookExits({
-        playbook: item.playbook,
-        mode: item.mode,
-        side: item.side,
-        lastPrice: item.lastPrice,
-        atr: item.atr,
-        cache: item.cache,
-      });
-      await syncDcaPlaybookGrid({
-        playbook: item.playbook,
-        mode: item.mode,
-        side: item.side,
-        atr: item.atr,
-        cache: item.cache,
-      });
-      continue;
-    }
-    if (!item.action) {
-      continue;
-    }
-    const result = await applyTickAction({
-      playbook: item.playbook,
-      mode: item.mode,
-      side: item.side,
-      lastPrice: item.lastPrice,
-      action: item.action,
-      why: item.why,
-    });
-    if (result.acted) {
-      acted += 1;
-    }
+    await runLane(batch, 1);
   }
   await flushFlags();
   return { acted };
+  } finally {
+    signalDone = true;
+    await priceLoop;
+  }
+}
+
+export async function watchDcaPriceExits(input: {
+  maxMs: number;
+  workerId: string;
+}): Promise<void> {
+  const run = livePriceExits;
+  const accountId = liveAccountId;
+  if (!run || !accountId || input.maxMs <= 0) {
+    return;
+  }
+  const claim = await tryClaimEngineDesk({
+    accountId,
+    workerId: input.workerId,
+    ttlSeconds: ENGINE_LEASE_TTL_SECONDS,
+  });
+  if (claim === "busy") {
+    return;
+  }
+  const started = Date.now();
+  try {
+    while (Date.now() - started < input.maxMs) {
+      await renewEngineDesk({ accountId, workerId: input.workerId });
+      await run();
+      const left = input.maxMs - (Date.now() - started);
+      if (left <= 0) {
+        break;
+      }
+      await waitForBybitTicker(Math.min(1_000, left));
+    }
+  } finally {
+    if (claim === "acquired") {
+      await releaseEngineDesk({ accountId, workerId: input.workerId });
+    }
+  }
 }
 
 function dcaActionWhy(input: {
@@ -901,6 +1111,8 @@ async function applyTickAction(input: {
   lastPrice: number | null;
   action: ReturnType<typeof decideDcaTick>["action"];
   why?: string;
+  positionId?: string | null;
+  fast?: boolean;
 }): Promise<{ acted: boolean }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -1084,6 +1296,8 @@ async function applyTickAction(input: {
     mode: input.mode,
     side: input.side,
     reason: input.why,
+    positionId: input.positionId,
+    fast: input.fast,
   });
   if (!closed.ok) {
     if (isBybitAgreementQuiet(closed.error)) {

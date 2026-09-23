@@ -1,4 +1,6 @@
 import { createServer } from "node:http";
+import { watchDcaPriceExits } from "@/lib/dca/tick";
+import { ensureBybitLinearTickerStream } from "@/lib/exchanges/bybit/ticker-stream";
 import { runEngineCycle } from "./cycle";
 import { listHotEngineAccountIds } from "./hot-desks";
 import {
@@ -47,6 +49,7 @@ async function main(): Promise<void> {
     message: `Engine worker ${workerId} started.`,
     data: { workerId, loopMs: idleMs, indicatorMs },
   });
+  ensureBybitLinearTickerStream();
   console.log(`engine worker started ${workerId}`);
   for (;;) {
     const hot = (await listHotEngineAccountIds()).length > 0;
@@ -76,7 +79,9 @@ async function main(): Promise<void> {
       });
     }
     const wait = loopMs - (Date.now() - started);
-    if (wait > 0) {
+    if (wait > 0 && hot) {
+      await watchDcaPriceExits({ maxMs: wait, workerId });
+    } else if (wait > 0) {
       await sleep(wait);
     }
   }

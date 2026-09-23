@@ -7,6 +7,7 @@ import {
   ENGINE_SCAN_KEY,
   ENGINE_SCAN_TTL_SECONDS,
   ENGINE_VENUE_GAP_MS,
+  extendLeaseUntilMs,
   venueSlotWaitMs,
 } from "./lease";
 
@@ -238,7 +239,17 @@ export async function tryClaimEngineDesk(input: {
   if (occupied && holder !== workerId) {
     return "busy";
   }
-  const until = leaseUntilIso(ttlSeconds);
+  const nowMs = Date.now();
+  const currentUntilMs = new Date(String(current.leased_until)).getTime();
+  const nextUntilMs = extendLeaseUntilMs({
+    currentUntilMs: Number.isFinite(currentUntilMs) ? currentUntilMs : 0,
+    requestedUntilMs: nowMs + Math.max(5, ttlSeconds) * 1000,
+    nowMs,
+  });
+  if (occupied && nextUntilMs === currentUntilMs) {
+    return "held";
+  }
+  const until = new Date(nextUntilMs).toISOString();
   let query = supabase
     .from("engine_desk_leases")
     .update({

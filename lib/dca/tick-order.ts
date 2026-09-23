@@ -1,5 +1,7 @@
 export const DCA_TICK_ENTRY_RANK = 6;
 export const DCA_TICK_ENTRY_BATCH = 8;
+export const DCA_TICK_LANE_CONCURRENCY = 4;
+export const DCA_TICK_PRICE_CONCURRENCY = 10;
 
 export type DcaTickWorkKind =
   | "flatten"
@@ -55,6 +57,26 @@ export function sliceDcaTickEntries<T>(
     }
   }
   return { taken, nextOffset: (start + room) % entries.length };
+}
+
+export function groupDcaTickSymbols<T extends { symbol: string }>(
+  items: readonly T[],
+): T[][] {
+  const groups: T[][] = [];
+  const indexBySymbol = new Map<string, number>();
+  for (const item of items) {
+    const at = indexBySymbol.get(item.symbol);
+    if (at === undefined) {
+      indexBySymbol.set(item.symbol, groups.length);
+      groups.push([item]);
+    } else {
+      const group = groups[at];
+      if (group) {
+        group.push(item);
+      }
+    }
+  }
+  return groups;
 }
 
 export function orderDcaTickWork<T extends { rank: number }>(

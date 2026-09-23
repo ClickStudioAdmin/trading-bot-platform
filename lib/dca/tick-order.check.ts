@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import { reserveDcaTradeSlot } from "./trade-slot";
 import {
   DCA_TICK_ENTRY_BATCH,
+  DCA_TICK_PRICE_CONCURRENCY,
   dcaTickWorkRank,
+  groupDcaTickSymbols,
   orderDcaTickWork,
   sliceDcaTickEntries,
 } from "./tick-order";
@@ -58,5 +61,26 @@ assert.deepEqual(rotated.taken, [
   "arm-2",
 ]);
 assert.equal(rotated.nextOffset, 3);
+
+const chains = groupDcaTickSymbols([
+  { symbol: "BTCUSDT", side: "long" },
+  { symbol: "ETHUSDT", side: "long" },
+  { symbol: "BTCUSDT", side: "short" },
+]);
+assert.equal(chains.length, 2);
+assert.deepEqual(
+  chains[0]?.map((row) => row.side),
+  ["long", "short"],
+);
+assert.deepEqual(
+  chains[1]?.map((row) => row.symbol),
+  ["ETHUSDT"],
+);
+
+const slots = { nextAtMs: 0 };
+assert.equal(reserveDcaTradeSlot(1_000, slots), 1_000);
+assert.equal(reserveDcaTradeSlot(1_000, slots), 1_100);
+assert.equal(reserveDcaTradeSlot(1_050, slots), 1_200);
+assert.equal(DCA_TICK_PRICE_CONCURRENCY, 10);
 
 console.log("dca tick order checks passed");

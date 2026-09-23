@@ -1,4 +1,5 @@
 export const ENGINE_LEASE_TTL_SECONDS = 45;
+export const ENGINE_LEASE_HEARTBEAT_MS = 10_000;
 export const ENGINE_MUTATION_TTL_SECONDS = 20;
 export const ENGINE_CLAIM_BATCH = 4;
 export const ENGINE_HOT_CLAIM_BATCH = 24;
@@ -22,6 +23,20 @@ export function engineLoopMs(input: {
   const idle = Math.max(5_000, Math.floor(input.idleMs ?? ENGINE_LOOP_MS));
   const fast = Math.max(5_000, Math.floor(input.indicatorMs ?? ENGINE_INDICATOR_LOOP_MS));
   return input.indicatorArmed || input.hot ? Math.min(idle, fast) : idle;
+}
+
+export function extendLeaseUntilMs(input: {
+  currentUntilMs: number;
+  requestedUntilMs: number;
+  nowMs: number;
+}): number {
+  if (
+    input.currentUntilMs > input.nowMs &&
+    input.currentUntilMs >= input.requestedUntilMs
+  ) {
+    return input.currentUntilMs;
+  }
+  return input.requestedUntilMs;
 }
 
 export function venueSlotWaitMs(slotStartMs: number, nowMs: number): number {
