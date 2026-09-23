@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback } from "react";
+import { BybitAgreementEnables } from "@/components/bybit-agreement-enable";
 import { ExchangeConnectModal } from "@/components/exchange-connect-modal";
 import { IconOpen } from "@/components/icons";
 import { RemoveConnectionControl } from "@/components/remove-connection-control";
@@ -32,6 +33,7 @@ import {
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
 import type { ConnectionDeskBind } from "@/lib/exchanges/store";
+import type { BybitAgreementOffer } from "@/lib/exchanges/agreement-store";
 import { enabledVenues, getVenue, type VenueDefinition } from "@/lib/exchanges/venues";
 import { formatCount } from "@/lib/opportunities/format";
 import { exchangePairCountKey, exchangePairsHref } from "@/lib/pairs/page";
@@ -90,6 +92,7 @@ export function AccountConnectionsTable({
   rows,
   binds,
   pairCounts,
+  agreements,
   canReplace,
   venues,
   next,
@@ -97,6 +100,7 @@ export function AccountConnectionsTable({
   rows: ExchangeConnection[];
   binds: ConnectionDeskBind[];
   pairCounts: Record<string, number | null>;
+  agreements: BybitAgreementOffer[];
   canReplace: boolean;
   venues: VenueDefinition[];
   next?: string;
@@ -187,6 +191,9 @@ export function AccountConnectionsTable({
               const removeBlocked = formatConnectionRemoveBlockers(
                 connectionRemoveBlockers({ inUse }),
               );
+              const agreement = agreements.find(
+                (offer) => offer.connectionId === row.id,
+              );
               return (
                 <tr
                   key={row.id}
@@ -209,6 +216,15 @@ export function AccountConnectionsTable({
                         <StatusBadge label="Invalid" status="invalid" />
                       ) : null}
                     </p>
+                    {agreement &&
+                    (agreement.kinds.length > 0 ||
+                      agreement.symbols.length > 0) ? (
+                      <BybitAgreementEnables
+                        connectionId={row.id}
+                        kinds={agreement.kinds}
+                        symbols={agreement.symbols}
+                      />
+                    ) : null}
                   </td>
                   <td className="px-4 py-3 align-top">
                     {used.length > 0 ? (

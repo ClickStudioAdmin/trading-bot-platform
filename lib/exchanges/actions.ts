@@ -22,6 +22,8 @@ import {
   updateExchangeConnectionLabel,
 } from "@/lib/exchanges/store";
 import { exclusiveVenueAccountError } from "@/lib/exchanges/venue-account";
+import { enableBybitAgreementChoice } from "@/lib/exchanges/agreement-store";
+import type { BybitAgreementKind } from "@/lib/exchanges/agreement";
 import { verifyExchangeCredentials } from "@/lib/exchanges/verify";
 import {
   parseVenueCredentials,
@@ -50,6 +52,31 @@ function finish(path: string, extra: Record<string, string>): never {
 
 function fail(message: string): never {
   finish(ACCOUNT_EXCHANGES_HREF, { error: message });
+}
+
+function agreementKindsFromForm(formData: FormData): BybitAgreementKind[] {
+  const kinds = new Set<BybitAgreementKind>();
+  for (const value of formData.getAll("agreementKind")) {
+    const kind = String(value);
+    if (kind === "tradfi" || kind === "oil") {
+      kinds.add(kind);
+    }
+  }
+  return [...kinds];
+}
+
+async function enableSavedBybitAgreements(
+  connectionId: string,
+  formData: FormData,
+): Promise<{ ok: true } | { ok: false }> {
+  const kinds = agreementKindsFromForm(formData);
+  for (const kind of kinds) {
+    const enabled = await enableBybitAgreementChoice({ connectionId, kind });
+    if (!enabled.ok) {
+      return { ok: false };
+    }
+  }
+  return { ok: true };
 }
 
 async function rejectTakenVenueAccount(input: {
@@ -251,6 +278,16 @@ export async function saveExchangeConnection(formData: FormData) {
   revalidatePath("/account/sub-accounts");
   revalidatePath("/strategies/futures/settings");
   revalidatePath("/strategies/cash-and-carry/settings");
+  if (venue.id === "bybit") {
+    const enabled = await enableSavedBybitAgreements(written.id, formData);
+    if (!enabled.ok) {
+      finish(next, {
+        saved: "1",
+        error:
+          "The key was saved. Those contracts could not be enabled. Enable them on this connection.",
+      });
+    }
+  }
   finish(next, { saved: "1" });
 }
 

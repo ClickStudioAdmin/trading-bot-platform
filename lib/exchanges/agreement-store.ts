@@ -96,6 +96,41 @@ export async function loadBybitAgreementGate(input: {
   return { symbols, cleared, live: true };
 }
 
+export type BybitAgreementOffer = {
+  connectionId: string;
+  kinds: BybitAgreementKind[];
+  symbols: string[];
+};
+
+export async function loadBybitAgreementOffers(
+  connections: readonly { id: string; venue: string }[],
+): Promise<BybitAgreementOffer[]> {
+  const bybit = connections.filter((row) => row.venue === "bybit");
+  if (bybit.length === 0) {
+    return [];
+  }
+  const gates = await Promise.all(
+    bybit.map((row) =>
+      loadBybitAgreementGate({ connectionId: row.id, live: true }),
+    ),
+  );
+  const blocked = gates.some((gate) => gate.symbols.length > 0);
+  const perps = blocked ? await loadUsdtLinearPerps() : [];
+  const bySymbol = new Map(perps.map((row) => [row.symbol, row]));
+  return bybit.map((row, index) => {
+    const gate = gates[index] ?? { symbols: [], cleared: [], live: true };
+    const symbols = gate.symbols.filter((symbol) => {
+      const pair = bySymbol.get(symbol);
+      const kind = pair ? bybitAgreementKind(pair) : null;
+      return !kind;
+    });
+    const kinds = (["tradfi", "oil"] as const).filter(
+      (kind) => !gate.cleared.includes(kind),
+    );
+    return { connectionId: row.id, kinds: [...kinds], symbols };
+  });
+}
+
 export async function listAgreementSymbols(
   connectionId: string | null | undefined,
 ): Promise<string[]> {

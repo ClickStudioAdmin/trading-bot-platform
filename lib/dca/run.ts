@@ -12,6 +12,7 @@ import {
 } from "@/lib/venues/hyperliquid/desk";
 import { loadHyperliquidInstrument } from "@/lib/venues/hyperliquid/market";
 import { isBybitAgreementQuiet } from "@/lib/exchanges/agreement";
+import { venueAlreadyFlatError } from "@/lib/exchanges/execute";
 import {
   BYBIT_ORDER_LINK_DEAD,
   isBybitOrderLinkQuiet,
@@ -153,6 +154,23 @@ function touchPlaybook(playbook: DcaPlaybook): void {
   playbook.updatedAtMs = Date.now();
 }
 
+const quietFlatSyncKeys = new Set<string>();
+
+function quietFlatSyncKey(
+  playbook: DcaPlaybook,
+  reason: string,
+): string {
+  return `${playbook.id}:${playbook.updatedAtMs}:${reason}`;
+}
+
+function rememberQuietFlatSync(playbook: DcaPlaybook, reason: string) {
+  quietFlatSyncKeys.add(quietFlatSyncKey(playbook, reason));
+}
+
+function hasQuietFlatSync(playbook: DcaPlaybook, reason: string): boolean {
+  return quietFlatSyncKeys.has(quietFlatSyncKey(playbook, reason));
+}
+
 async function logDcaSyncFailed(input: {
   playbook: DcaPlaybook;
   side: FuturesSide;
@@ -164,6 +182,10 @@ async function logDcaSyncFailed(input: {
   qty?: number;
   recent?: DcaSyncFailureStamp[];
 }): Promise<void> {
+  if (venueAlreadyFlatError(input.error)) {
+    rememberQuietFlatSync(input.playbook, input.reason);
+    return;
+  }
   if (isBybitAgreementQuiet(input.error)) {
     return;
   }
@@ -613,6 +635,9 @@ async function restExitLimit(input: {
       });
       return cancelled;
     }
+  }
+  if (hasQuietFlatSync(input.playbook, `rest_${input.kind}`)) {
+    return { ok: true };
   }
   const restKey = dcaExitLimitRestKey(
     input.playbook.id,
@@ -1365,7 +1390,8 @@ async function syncDcaPlaybookExitsUnlocked(input: {
   });
   if (
     dcaExitTpslNeedsVenueSync(current, nextTpsl, instrument) &&
-    !shouldSkipDcaSyncRetry(recentFailures, tpslStamp)
+    !shouldSkipDcaSyncRetry(recentFailures, tpslStamp) &&
+    !hasQuietFlatSync(input.playbook, "set_tpsl")
   ) {
     const set = await runFuturesCommand({
       actor,
@@ -1448,7 +1474,10 @@ async function syncDcaTrailing(input: {
 }): Promise<void> {
   const lastPrice = input.lastPrice;
   if (input.playbook.trailingPct === null || lastPrice === null || !(lastPrice > 0)) {
-    if (input.currentDistance !== null) {
+    if (
+      input.currentDistance !== null &&
+      !hasQuietFlatSync(input.playbook, "clear_trailing")
+    ) {
       const cleared = await runFuturesCommand({
         actor: playbookActor(input.playbook, input.mode),
         command: {
@@ -1495,6 +1524,9 @@ async function syncDcaTrailing(input: {
     sameExitPrice(input.currentDistance, next.distance) &&
     sameExitPrice(input.currentActive, next.activePrice)
   ) {
+    return;
+  }
+  if (hasQuietFlatSync(input.playbook, "set_trailing")) {
     return;
   }
   const set = await runFuturesCommand({

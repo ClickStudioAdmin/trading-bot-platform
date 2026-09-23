@@ -46,6 +46,7 @@ import {
   readPerpOrderOnVenue,
   readPerpPositionOnVenue,
   setPerpTradingStopOnVenue,
+  venueAlreadyFlatError,
 } from "@/lib/exchanges/execute";
 import { loadBoundVenueForAccount } from "@/lib/exchanges/live-trade";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
@@ -562,7 +563,7 @@ async function applyWorkingFill(input: {
       positionIdx: hedgePositionIdx(input.row.side),
       ...combinedVenueTradingStop(tpsl, trailing),
     });
-    if (!set.ok) {
+    if (!set.ok && !venueAlreadyFlatError(set.error)) {
       await writeEventLog({
         level: "warning",
         scope: "trade",

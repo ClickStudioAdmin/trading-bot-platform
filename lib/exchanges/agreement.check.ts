@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   BYBIT_AGREEMENT_NOTE,
+  BYBIT_AGREEMENT_PICKER_NOTE,
   bybitAgreementKind,
   firstOpenPerp,
   isBybitAgreementQuiet,
@@ -27,6 +28,11 @@ assert.equal(
 );
 assert.equal(isBybitAgreementReject(BYBIT_AGREEMENT_NOTE), false);
 assert.equal(isBybitAgreementQuiet(BYBIT_AGREEMENT_NOTE), true);
+assert.equal(
+  BYBIT_AGREEMENT_PICKER_NOTE,
+  "Needs a Bybit agreement. See Exchanges.",
+);
+assert.equal(isBybitAgreementQuiet(BYBIT_AGREEMENT_PICKER_NOTE), false);
 assert.equal(
   isBybitAgreementQuiet(
     "Bybit rejected that order: You must sign the required agreement before trading this contract.",

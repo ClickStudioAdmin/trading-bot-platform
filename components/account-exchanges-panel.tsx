@@ -3,6 +3,7 @@ import {
   listConnectionDeskBinds,
   listExchangeConnections,
 } from "@/lib/exchanges/store";
+import { loadBybitAgreementOffers } from "@/lib/exchanges/agreement-store";
 import { exchangeCredentialsConfigured } from "@/lib/exchanges/encrypt";
 import { enabledVenues } from "@/lib/exchanges/venues";
 import { loadExchangePairCounts } from "@/lib/pairs/page";
@@ -27,7 +28,10 @@ export async function AccountExchangesPanel({
     listExchangeConnections(memberId),
     listConnectionDeskBinds(memberId),
   ]);
-  const pairCounts = await loadExchangePairCounts(connections);
+  const [pairCounts, agreements] = await Promise.all([
+    loadExchangePairCounts(connections),
+    loadBybitAgreementOffers(connections),
+  ]);
   const venues = enabledVenues();
   const canSave = exchangeCredentialsConfigured();
 
@@ -73,6 +77,7 @@ export async function AccountExchangesPanel({
         rows={connections}
         binds={binds}
         pairCounts={pairCounts}
+        agreements={agreements}
         canReplace={canSave}
         venues={venues}
         next={ACCOUNT_EXCHANGES_HREF}

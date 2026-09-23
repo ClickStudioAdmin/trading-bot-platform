@@ -108,6 +108,10 @@ assert.equal(
   ),
   true,
 );
+assert.equal(
+  venueAlreadyFlatError("can not set tp/sl/ts for zero position"),
+  true,
+);
 assert.equal(venueAlreadyFlatError("insufficient balance"), false);
 
 assert.equal(

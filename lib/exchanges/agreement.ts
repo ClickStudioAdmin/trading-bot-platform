@@ -1,5 +1,8 @@
 export const BYBIT_AGREEMENT_NOTE = "Needs a Bybit agreement";
 
+export const BYBIT_AGREEMENT_PICKER_NOTE =
+  "Needs a Bybit agreement. See Exchanges.";
+
 export type BybitAgreementKind = "tradfi" | "oil";
 
 export type BybitAgreementGate = {

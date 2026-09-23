@@ -1,23 +1,19 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { IconChevronDown } from "@/components/icons";
 import { TokenIcon } from "@/components/token-icon";
 import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import {
-  BYBIT_AGREEMENT_NOTE,
+  BYBIT_AGREEMENT_PICKER_NOTE,
   CLOSED_AGREEMENT_GATE,
-  bybitAgreementKind,
-  bybitAgreementKindTitle,
   firstOpenPerp,
   perpNeedsBybitAgreement,
-  symbolNeedsBybitAgreement,
   type BybitAgreementGate,
-  type BybitAgreementKind,
 } from "@/lib/exchanges/agreement";
-import { enableBybitAgreement } from "@/lib/exchanges/agreement-actions";
+import { ACCOUNT_EXCHANGES_HREF } from "@/lib/site-links";
 import {
   formatPerpPairLabel,
   type LinearPerp,
@@ -55,26 +51,10 @@ export function FuturesSymbolSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [box, setBox] = useState({ top: 0, left: 0, width: PANEL_MIN_WIDTH });
-  const router = useRouter();
-  const [pending, startEnable] = useTransition();
-  const [enableError, setEnableError] = useState("");
   const [internal, setInternal] = useState(() =>
     allowEmpty ? "" : firstOpenPerp(options, agreementGate, defaultSymbol),
   );
   const symbol = value ?? internal;
-  const selectedPair =
-    options.find((row) => row.symbol === symbol) ??
-    ({ symbol, baseCoin: "", quoteCoin: "", symbolType: "" } as LinearPerp);
-  const selectedRefused = symbolNeedsBybitAgreement(
-    agreementGate.symbols,
-    symbol,
-  );
-  const lockedKinds = (["tradfi", "oil"] as const).filter(
-    (kind) =>
-      agreementGate.live &&
-      !agreementGate.cleared.includes(kind) &&
-      options.some((row) => bybitAgreementKind(row) === kind),
-  );
 
   const selected = allowEmpty && !symbol
     ? undefined
@@ -190,19 +170,7 @@ export function FuturesSymbolSelect({
     setQuery("");
   }
 
-  function enableKind(kind: BybitAgreementKind | null) {
-    setEnableError("");
-    startEnable(async () => {
-      const result = await enableBybitAgreement(
-        kind ? { kind } : { symbol },
-      );
-      if (!result.ok) {
-        setEnableError(result.error);
-        return;
-      }
-      router.refresh();
-    });
-  }
+  const pickerNote = BYBIT_AGREEMENT_PICKER_NOTE.split("Exchanges");
 
   const panel =
     open && typeof document !== "undefined"
@@ -244,31 +212,48 @@ export function FuturesSymbolSelect({
                   const label = formatPerpPairLabel(row);
                   return (
                     <li key={row.symbol}>
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={active}
-                        aria-disabled={blocked || undefined}
-                        disabled={blocked}
-                        onClick={() => choose(row.symbol)}
-                        className={`flex w-full items-center gap-3 rounded-control px-2 py-1.5 text-left text-sm ${
-                          blocked
-                            ? "cursor-not-allowed"
-                            : active
+                      {blocked ? (
+                        <div
+                          role="option"
+                          aria-selected={false}
+                          aria-disabled="true"
+                          className="flex w-full items-start gap-3 rounded-control px-2 py-1.5 text-left text-sm"
+                        >
+                          <TokenIcon symbol={row.baseCoin} size={18} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-medium text-ink">
+                              {label}
+                            </span>
+                            <span className="block text-hint text-warning">
+                              {pickerNote[0]}
+                              <Link
+                                href={ACCOUNT_EXCHANGES_HREF}
+                                className="text-accent underline underline-offset-2 hover:text-accent-strong"
+                              >
+                                Exchanges
+                              </Link>
+                              {pickerNote[1]}
+                            </span>
+                          </span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={active}
+                          onClick={() => choose(row.symbol)}
+                          className={`flex w-full items-center gap-3 rounded-control px-2 py-1.5 text-left text-sm ${
+                            active
                               ? "bg-surface-raised text-ink"
                               : "text-ink-muted hover:bg-surface-raised hover:text-ink"
-                        }`}
-                      >
-                        <TokenIcon symbol={row.baseCoin} size={18} />
-                        <span className="min-w-0 flex-1 truncate font-medium text-ink">
-                          {label}
-                        </span>
-                        {blocked ? (
-                          <span className="shrink-0 text-hint text-warning">
-                            {BYBIT_AGREEMENT_NOTE}
+                          }`}
+                        >
+                          <TokenIcon symbol={row.baseCoin} size={18} />
+                          <span className="min-w-0 flex-1 truncate font-medium text-ink">
+                            {label}
                           </span>
-                        ) : null}
-                      </button>
+                        </button>
+                      )}
                     </li>
                   );
                 })
@@ -310,54 +295,7 @@ export function FuturesSymbolSelect({
           className="size-3 shrink-0 text-ink-faint"
         />
       </button>
-      {lockedKinds.map((kind) => (
-        <AgreementEnable
-          key={kind}
-          pending={pending}
-          title={bybitAgreementKindTitle(kind)}
-          onEnable={() => enableKind(kind)}
-        />
-      ))}
-      {selectedRefused && !bybitAgreementKind(selectedPair) ? (
-        <AgreementEnable
-          pending={pending}
-          title="This contract"
-          onEnable={() => enableKind(null)}
-        />
-      ) : null}
-      {enableError ? (
-        <p className="mt-1 text-hint text-danger">{enableError}</p>
-      ) : null}
       {panel}
-    </div>
-  );
-}
-
-function AgreementEnable({
-  title,
-  pending,
-  onEnable,
-}: {
-  title: string;
-  pending: boolean;
-  onEnable: () => void;
-}) {
-  const group = title === "This contract";
-  return (
-    <div className="mt-1 flex flex-wrap items-center gap-2">
-      <p className="text-hint text-warning">
-        {group
-          ? "This contract needs a Bybit agreement. Sign on Bybit, then enable it here."
-          : `${title} need a Bybit agreement. Sign on Bybit, then enable them here.`}
-      </p>
-      <button
-        type="button"
-        disabled={pending}
-        onClick={onEnable}
-        className="rounded-control border border-line px-2 py-0.5 text-xs text-ink hover:border-line-strong disabled:opacity-40"
-      >
-        {pending ? "Enabling…" : group ? "Enable this contract" : `Enable ${title.toLowerCase()}`}
-      </button>
     </div>
   );
 }

@@ -945,7 +945,10 @@ async function runPlace(
         orderLinkId: key ?? undefined,
       });
       if (!placed.ok) {
-        if (!isBybitAgreementQuiet(placed.error)) {
+        if (
+          !isBybitAgreementQuiet(placed.error) &&
+          !venueAlreadyFlatError(placed.error)
+        ) {
           await writeEventLog({
             level: "error",
             scope: "trade",
@@ -1077,7 +1080,8 @@ async function runPlace(
     if (!placed.ok) {
       if (
         !isBybitAgreementQuiet(placed.error) &&
-        !isBybitOrderLinkQuiet(placed.error)
+        !isBybitOrderLinkQuiet(placed.error) &&
+        !venueAlreadyFlatError(placed.error)
       ) {
         await writeEventLog({
           level: "error",
@@ -1201,16 +1205,18 @@ async function runPlace(
         trailing,
       });
       if (!set.ok) {
-        await writeEventLog({
-          level: "error",
-          scope: "trade",
-          event: "trade.futures_failed",
-          message: set.error,
-          userId: actor.userId,
-          accountId: actor.accountId,
-          strategy: FUTURES_STRATEGY_ID,
-          data: { symbol, action: "trailing", positionId },
-        });
+        if (!venueAlreadyFlatError(set.error)) {
+          await writeEventLog({
+            level: "error",
+            scope: "trade",
+            event: "trade.futures_failed",
+            message: set.error,
+            userId: actor.userId,
+            accountId: actor.accountId,
+            strategy: FUTURES_STRATEGY_ID,
+            data: { symbol, action: "trailing", positionId },
+          });
+        }
         return fail(set.error);
       }
     }
@@ -1343,16 +1349,18 @@ async function runSetTpsl(
       ...stop,
     });
     if (!set.ok && !isUnchangedTradingStop(set.error)) {
-      await writeEventLog({
-        level: "error",
-        scope: "trade",
-        event: "trade.futures_failed",
-        message: set.error,
-        userId: actor.userId,
-        accountId: actor.accountId,
-        strategy: FUTURES_STRATEGY_ID,
-        data: { symbol, action: "tpsl", positionId: row.id },
-      });
+      if (!venueAlreadyFlatError(set.error)) {
+        await writeEventLog({
+          level: "error",
+          scope: "trade",
+          event: "trade.futures_failed",
+          message: set.error,
+          userId: actor.userId,
+          accountId: actor.accountId,
+          strategy: FUTURES_STRATEGY_ID,
+          data: { symbol, action: "tpsl", positionId: row.id },
+        });
+      }
       return fail(set.error);
     }
   }
@@ -1461,16 +1469,18 @@ async function runSetTrailing(
       trailing: armed,
     });
     if (!set.ok) {
-      await writeEventLog({
-        level: "error",
-        scope: "trade",
-        event: "trade.futures_failed",
-        message: set.error,
-        userId: actor.userId,
-        accountId: actor.accountId,
-        strategy: FUTURES_STRATEGY_ID,
-        data: { symbol, action: "trailing", positionId: row.id },
-      });
+      if (!venueAlreadyFlatError(set.error)) {
+        await writeEventLog({
+          level: "error",
+          scope: "trade",
+          event: "trade.futures_failed",
+          message: set.error,
+          userId: actor.userId,
+          accountId: actor.accountId,
+          strategy: FUTURES_STRATEGY_ID,
+          data: { symbol, action: "trailing", positionId: row.id },
+        });
+      }
       return fail(set.error);
     }
   }
