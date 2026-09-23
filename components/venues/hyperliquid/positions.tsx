@@ -46,11 +46,6 @@ import { futuresOpenBookFromDesk, loadFuturesDesk } from "@/lib/futures/list";
 import { futuresDeskNeedsUrgentRefresh } from "@/lib/futures/pending-close";
 import { markFuturesOpen } from "@/lib/futures/mark";
 import { loadFuturesSettings } from "@/lib/futures/settings";
-import { loadFuturesVenueRisk } from "@/lib/futures/venue-risk-load";
-import {
-  attachFuturesVenueRisk,
-  type FuturesVenueRisk,
-} from "@/lib/futures/venue-risk";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
 import {
@@ -157,22 +152,17 @@ export async function HyperliquidFuturesPositions({
     ...desk.open.map((row) => row.symbol),
     ...desk.working.map((row) => row.symbol),
   ];
-  const deferVenueRisk = botScope && desk.exchangeBook && desk.open.length > 0;
-  const [venueRisk, playbooks] = await Promise.all([
-    botScope || !(desk.exchangeBook && desk.open.length > 0)
-      ? Promise.resolve(new Map<string, FuturesVenueRisk>())
-      : loadFuturesVenueRisk(),
+  const deferVenueRisk = desk.exchangeBook && desk.open.length > 0;
+  const playbooks =
     botScope
-      ? Promise.resolve(scoped?.playbook ? [scoped.playbook] : [])
+      ? scoped?.playbook
+        ? [scoped.playbook]
+        : []
       : dcaBlotter && playbookAccountId
-        ? listDcaPlaybooksForSymbols(playbookAccountId, blotterSymbols)
-        : Promise.resolve([]),
-  ]);
-  const open = attachFuturesVenueRisk(
-    markFuturesOpen(desk.open, tickers, (symbol) =>
-      baseCoinForPerpSymbol(symbol, pairs),
-    ),
-    venueRisk,
+        ? await listDcaPlaybooksForSymbols(playbookAccountId, blotterSymbols)
+        : [];
+  const open = markFuturesOpen(desk.open, tickers, (symbol) =>
+    baseCoinForPerpSymbol(symbol, pairs),
   );
 
   const lastPrices: Record<string, number> = {};
