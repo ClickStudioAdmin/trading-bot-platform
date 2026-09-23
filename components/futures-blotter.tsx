@@ -574,6 +574,7 @@ export function ClosedFuturesTrades({
   filterBar,
   filtersOpen = false,
   emptyMessage,
+  deferFills = false,
 }: {
   signedIn: boolean;
   closed: FuturesDeskPosition[];
@@ -582,6 +583,7 @@ export function ClosedFuturesTrades({
   filterBar?: ReactNode;
   filtersOpen?: boolean;
   emptyMessage?: ReactNode;
+  deferFills?: boolean;
 }) {
   const compare = useCallback(
     (
@@ -734,6 +736,7 @@ export function ClosedFuturesTrades({
                   colSpan={colSpan}
                   webhookNames={webhookNames}
                   fallbackLeverage={fallbackLeverage}
+                  deferFills={deferFills}
                 />
               ))
             )}
@@ -1175,12 +1178,14 @@ function ClosedFuturesRows({
   colSpan,
   webhookNames,
   fallbackLeverage,
+  deferFills = false,
 }: {
   trade: FuturesDeskPosition;
   visible: FuturesClosedColumnVisibility;
   colSpan: number;
   webhookNames: readonly string[];
   fallbackLeverage: number | null;
+  deferFills?: boolean;
 }) {
   const pnlPct =
     trade.notionalUsdt > 0 ? trade.realizedUsdt / trade.notionalUsdt : null;
@@ -1199,17 +1204,26 @@ function ClosedFuturesRows({
     <ExpandableTradeRows
       colSpan={colSpan}
       details={
-        <TradeDetailTabs
-          orders={
-            <FuturesOrderList
-              orders={trade.orders}
-              positionSource={trade.source}
-              positionRuleName={trade.ruleName}
-              webhookNames={webhookNames}
-            />
-          }
-          logs={<PositionLogList logs={trade.logs} />}
-        />
+        deferFills ? (
+          <DeferredPositionFills
+            positionId={trade.id}
+            positionSource={trade.source}
+            positionRuleName={trade.ruleName}
+            webhookNames={webhookNames}
+          />
+        ) : (
+          <TradeDetailTabs
+            orders={
+              <FuturesOrderList
+                orders={trade.orders}
+                positionSource={trade.source}
+                positionRuleName={trade.ruleName}
+                webhookNames={webhookNames}
+              />
+            }
+            logs={<PositionLogList logs={trade.logs} />}
+          />
+        )
       }
     >
       <td className="min-w-0 px-4 py-3">

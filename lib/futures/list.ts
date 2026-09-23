@@ -8,7 +8,7 @@ import {
   parseFuturesWorkingRow,
   type FuturesWorkingOrder,
 } from "./working";
-import { listFuturesOrderWebhookNames } from "./webhook-load";
+import { latestFlattenExitPrices } from "./stats";
 import { getSessionContext } from "@/lib/auth/session";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import {
@@ -48,6 +48,9 @@ async function resolveFuturesListScope(
 
 export async function loadFuturesPositions(input?: {
   status?: "open" | "closed";
+  ruleId?: string;
+  symbol?: string;
+  all?: boolean;
   scope?: FuturesListScope;
 }): Promise<FuturesPosition[]> {
   const resolved = await resolveFuturesListScope(input?.scope);
@@ -60,19 +63,46 @@ export async function loadFuturesPositions(input?: {
     .select("*")
     .eq("account_id", resolved.accountId)
     .eq("user_id", resolved.userId)
-    .order("opened_at", { ascending: false });
+    .order("opened_at", { ascending: false })
+    .order("id", { ascending: false });
   if (input?.status === "closed") {
     query = query.eq("status", "closed");
   } else if (input?.status === "open") {
     query = query.in("status", [...FUTURES_LIVE_POSITION_STATUSES]);
   }
-  const { data, error } = await query;
-  if (error || !data) {
-    return [];
+  const ruleId = input?.ruleId?.trim();
+  const symbol = input?.symbol?.trim();
+  if (ruleId) {
+    query = query.eq("rule_id", ruleId);
   }
-  return data.map((row) =>
-    parseFuturesPositionRow(row as Record<string, unknown>),
-  );
+  if (symbol) {
+    query = query.eq("symbol", symbol);
+  }
+  if (!input?.all) {
+    const { data, error } = await query;
+    if (error || !data) {
+      return [];
+    }
+    return data.map((row) =>
+      parseFuturesPositionRow(row as Record<string, unknown>),
+    );
+  }
+  const rows: FuturesPosition[] = [];
+  for (let from = 0; ; from += FLATTEN_EXIT_PAGE) {
+    const { data, error } = await query.range(from, from + FLATTEN_EXIT_PAGE - 1);
+    if (error || !data || data.length === 0) {
+      break;
+    }
+    rows.push(
+      ...data.map((row) =>
+        parseFuturesPositionRow(row as Record<string, unknown>),
+      ),
+    );
+    if (data.length < FLATTEN_EXIT_PAGE) {
+      break;
+    }
+  }
+  return rows;
 }
 
 export async function loadFuturesOrders(): Promise<FuturesOrder[]> {
@@ -447,4 +477,201 @@ export async function loadOpenFuturesOnSymbol(
   return data.map((row) =>
     parseFuturesPositionRow(row as Record<string, unknown>),
   );
+}
+
+const FLATTEN_EXIT_PAGE = 1000;
+
+async function loadFlattenExitPrices(
+  scope: FuturesListScope,
+): Promise<Map<string, number>> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return new Map();
+  }
+  const rows: { positionId: string; price: number | null; filledAtMs: number }[] =
+    [];
+  for (let from = 0; ; from += FLATTEN_EXIT_PAGE) {
+    const { data, error } = await supabase
+      .from("futures_orders")
+      .select("position_id,price,filled_at")
+      .eq("account_id", scope.accountId)
+      .eq("user_id", scope.userId)
+      .eq("action", "flatten")
+      .order("filled_at", { ascending: true })
+      .range(from, from + FLATTEN_EXIT_PAGE - 1);
+    if (error || !data || data.length === 0) {
+      break;
+    }
+    for (const row of data) {
+      const record = row as {
+        position_id?: unknown;
+        price?: unknown;
+        filled_at?: unknown;
+      };
+      const filledAt = Date.parse(String(record.filled_at ?? ""));
+      rows.push({
+        positionId: String(record.position_id ?? ""),
+        price: Number(record.price),
+        filledAtMs: Number.isFinite(filledAt) ? filledAt : 0,
+      });
+    }
+    if (data.length < FLATTEN_EXIT_PAGE) {
+      break;
+    }
+  }
+  return latestFlattenExitPrices(rows);
+}
+
+async function loadFlattenExitsForPositions(
+  positionIds: readonly string[],
+  scope: FuturesListScope,
+): Promise<Map<string, number>> {
+  const supabase = createServiceClient();
+  const ids = [...new Set(positionIds.map((id) => id.trim()).filter(Boolean))];
+  if (!supabase || ids.length === 0) {
+    return new Map();
+  }
+  const rows: { positionId: string; price: number | null; filledAtMs: number }[] =
+    [];
+  for (let index = 0; index < ids.length; index += 40) {
+    const batch = ids.slice(index, index + 40);
+    const { data, error } = await supabase
+      .from("futures_orders")
+      .select("position_id,price,filled_at")
+      .eq("account_id", scope.accountId)
+      .eq("user_id", scope.userId)
+      .eq("action", "flatten")
+      .in("position_id", batch)
+      .order("filled_at", { ascending: true });
+    if (error || !data) {
+      continue;
+    }
+    for (const row of data) {
+      const record = row as {
+        position_id?: unknown;
+        price?: unknown;
+        filled_at?: unknown;
+      };
+      const filledAt = Date.parse(String(record.filled_at ?? ""));
+      rows.push({
+        positionId: String(record.position_id ?? ""),
+        price: Number(record.price),
+        filledAtMs: Number.isFinite(filledAt) ? filledAt : 0,
+      });
+    }
+  }
+  return latestFlattenExitPrices(rows);
+}
+
+function performancePosition(
+  row: FuturesPosition,
+  exitPrice: number | undefined,
+): FuturesDeskPosition {
+  return {
+    ...row,
+    logs: [],
+    orders:
+      exitPrice != null && exitPrice > 0
+        ? [
+            {
+              id: `${row.id}:exit`,
+              positionId: row.id,
+              action: "flatten",
+              qty: row.qty,
+              price: exitPrice,
+              notionalUsdt: null,
+              venueOrderId: null,
+              venue: row.venue,
+              filledAtMs: row.closedAtMs ?? row.openedAtMs,
+              source: row.source,
+              ruleName: row.ruleName,
+            },
+          ]
+        : [],
+  };
+}
+
+function scopedPositionFilter(filter?: {
+  ruleId?: string;
+  symbol?: string;
+}): { empty: boolean; ruleId?: string; symbol?: string } {
+  if (!filter) {
+    return { empty: false };
+  }
+  const ruleId = filter.ruleId?.trim() ?? "";
+  const symbol = filter.symbol?.trim() ?? "";
+  if (!ruleId && !symbol) {
+    return { empty: true };
+  }
+  return {
+    empty: false,
+    ruleId: ruleId || undefined,
+    symbol: symbol || undefined,
+  };
+}
+
+export async function loadFuturesPerformanceBook(input?: {
+  closed?: { ruleId?: string; symbol?: string };
+  open?: { ruleId?: string; symbol?: string };
+}): Promise<{
+  signedIn: boolean;
+  exchangeBook: boolean;
+  open: FuturesDeskPosition[];
+  closed: FuturesDeskPosition[];
+  webhookNames: string[];
+}> {
+  const session = await getSessionContext();
+  if (!session) {
+    return {
+      signedIn: false,
+      exchangeBook: false,
+      open: [],
+      closed: [],
+      webhookNames: [],
+    };
+  }
+  const scope: FuturesListScope = {
+    accountId: session.account.id,
+    userId: session.member.id,
+  };
+  const closedFilter = scopedPositionFilter(input?.closed);
+  const openFilter = scopedPositionFilter(input?.open);
+  const scoped = Boolean(input?.closed || input?.open);
+  const [closedRows, openRows, deskExits, webhookNames] = await Promise.all([
+    closedFilter.empty
+      ? Promise.resolve([])
+      : loadFuturesPositions({
+          status: "closed",
+          ruleId: closedFilter.ruleId,
+          symbol: closedFilter.symbol,
+          all: true,
+          scope,
+        }),
+    openFilter.empty
+      ? Promise.resolve([])
+      : loadFuturesPositions({
+          status: "open",
+          ruleId: openFilter.ruleId,
+          symbol: openFilter.symbol,
+          all: true,
+          scope,
+        }),
+    scoped || closedFilter.empty
+      ? Promise.resolve(null)
+      : loadFlattenExitPrices(scope),
+    listFuturesOrderWebhookNames(session.account.id),
+  ]);
+  const exits =
+    deskExits ??
+    (await loadFlattenExitsForPositions(
+      closedRows.map((row) => row.id),
+      scope,
+    ));
+  return {
+    signedIn: true,
+    exchangeBook: accountCanHoldConnections(session.account.mode),
+    open: openRows.map((row) => performancePosition(row, undefined)),
+    closed: closedRows.map((row) => performancePosition(row, exits.get(row.id))),
+    webhookNames,
+  };
 }

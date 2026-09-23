@@ -366,3 +366,23 @@ export function flattenExitPrice(orders: FuturesOrder[]): number | null {
   }
   return null;
 }
+
+/** Last filled flatten price per position. Earlier fills lose to a later one. */
+export function latestFlattenExitPrices(
+  rows: readonly {
+    positionId: string;
+    price: number | null;
+    filledAtMs: number;
+  }[],
+): Map<string, number> {
+  const ordered = [...rows].sort((left, right) => left.filledAtMs - right.filledAtMs);
+  const exits = new Map<string, number>();
+  for (const row of ordered) {
+    const id = row.positionId.trim();
+    if (!id || row.price == null || !(row.price > 0)) {
+      continue;
+    }
+    exits.set(id, row.price);
+  }
+  return exits;
+}

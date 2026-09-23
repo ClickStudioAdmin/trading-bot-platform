@@ -9,14 +9,14 @@ import {
 } from "@/components/futures-blotter";
 import { deskHref, deskIsCopy, deskShowsDcaBlotter } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
-import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
+import { listDcaBotOptions, loadDcaPlaybookById } from "@/lib/dca/store";
 import {
   deskBlotterFiltersActive,
   filterFuturesBlotterRows,
   parseDeskBlotterFilters,
 } from "@/lib/desk-blotter-filters";
-import { loadFuturesAutomationRules } from "@/lib/futures/automation-load";
-import { loadFuturesDesk } from "@/lib/futures/list";
+import { listFuturesAutomationRuleOptions } from "@/lib/futures/automation-load";
+import { loadFuturesPerformanceBook } from "@/lib/futures/list";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
@@ -33,8 +33,6 @@ export default async function FuturesPerformancePage({
 }) {
   const params = await searchParams;
   const session = await getSessionContext();
-  const desk = await loadFuturesDesk();
-  const settings = desk.signedIn ? await loadFuturesSettings() : null;
   const filters = parseDeskBlotterFilters(params);
   const deskType = session?.account.deskType ?? "perps";
   const copyDesk = session ? deskIsCopy(session.account) : false;
@@ -44,33 +42,47 @@ export default async function FuturesPerformancePage({
   const recipeAccountId = copyDesk
     ? session?.account.copyOfAccountId
     : session?.account.id;
-  const playbooks =
+  const botScope = Boolean(
+    session &&
+      filters.bot &&
+      recipeAccountId &&
+      (dcaBlotter || deskType === "perps_bots"),
+  );
+  const playbookPromise =
+    botScope && dcaBlotter && recipeAccountId
+      ? loadDcaPlaybookById(filters.bot, recipeAccountId)
+      : Promise.resolve(null);
+  const [desk, botOptions, perpsBots, settings] = await Promise.all([
+    playbookPromise.then((playbook) =>
+      loadFuturesPerformanceBook(
+        botScope
+          ? {
+              closed: { ruleId: filters.bot },
+              open: dcaBlotter
+                ? { symbol: playbook?.symbol ?? "" }
+                : { ruleId: filters.bot },
+            }
+          : undefined,
+      ),
+    ),
     dcaBlotter && recipeAccountId
-      ? await listDcaPlaybooksForAccount(recipeAccountId)
-      : [];
-  const perpsBots =
+      ? listDcaBotOptions(recipeAccountId)
+      : Promise.resolve([]),
     deskType === "perps_bots" && recipeAccountId
-      ? await loadFuturesAutomationRules(recipeAccountId)
-      : [];
-  const bots = dcaBlotter
-    ? playbooks.map((playbook) => ({
-        id: playbook.id,
-        name: playbook.name || playbook.symbol,
-      }))
-    : perpsBots
-        .filter((rule) => rule.id)
-        .map((rule) => ({
-          id: rule.id as string,
-          name: rule.name,
-        }));
+      ? listFuturesAutomationRuleOptions(recipeAccountId)
+      : Promise.resolve([]),
+    session ? loadFuturesSettings(session.account.id) : Promise.resolve(null),
+  ]);
+  const bots = dcaBlotter ? botOptions : perpsBots;
+  const memoryFilters = botScope ? { ...filters, bot: "" } : filters;
   const visibleClosed = filterFuturesBlotterRows(
     desk.closed,
-    filters,
-    playbooks,
+    memoryFilters,
+    [],
     undefined,
     { inferBot: false },
   );
-  const visibleOpen = filterFuturesBlotterRows(desk.open, filters, playbooks);
+  const visibleOpen = filterFuturesBlotterRows(desk.open, memoryFilters);
   const clearHref = deskHref(FUTURES_PATHS.performance, session?.account.id);
   const filterBar = (
     <DeskBlotterFilters
@@ -112,6 +124,7 @@ export default async function FuturesPerformancePage({
         filtersOpen={tableFiltersSuggestOpen(params)}
         filterBar={filterBar}
         emptyMessage={filteredEmpty}
+        deferFills
       />
     </main>
   );

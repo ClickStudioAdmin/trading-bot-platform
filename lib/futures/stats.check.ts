@@ -11,6 +11,7 @@ import {
   peakConcurrentCapitalUsdt,
   effectiveLeverage,
   flattenExitPrice,
+  latestFlattenExitPrices,
   formatTradingDaysNote,
   futuresClosedStats,
   futuresDaysHeld,
@@ -268,6 +269,21 @@ assert.equal(deskPnlPct({ realizedUsdt: 50, startingUsdt: null, capitalUsedUsdt:
 assert.equal(deskPnlPct({ realizedUsdt: 50, capitalUsedUsdt: 0 }), null);
 
 assert.equal(flattenExitPrice([]), null);
+assert.equal(
+  latestFlattenExitPrices([
+    { positionId: "p1", price: 100, filledAtMs: 2 },
+    { positionId: "p1", price: 90, filledAtMs: 1 },
+    { positionId: "p2", price: null, filledAtMs: 3 },
+    { positionId: " ", price: 50, filledAtMs: 4 },
+  ]).get("p1"),
+  100,
+);
+assert.equal(
+  latestFlattenExitPrices([
+    { positionId: "p2", price: null, filledAtMs: 3 },
+  ]).get("p2"),
+  undefined,
+);
 assert.equal(
   flattenExitPrice([
     order({ action: "buy", price: 100 }),
