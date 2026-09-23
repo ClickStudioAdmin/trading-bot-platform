@@ -60,12 +60,11 @@ export function automationsBotReturn(
   const fromBots =
     firstQuery(params?.[AUTOMATIONS_FROM_QUERY]) === AUTOMATIONS_FROM_BOTS &&
     Boolean(focus);
-  const keep = fromBots
-    ? {
-        [AUTOMATIONS_FROM_QUERY]: AUTOMATIONS_FROM_BOTS,
-        [AUTOMATIONS_FOCUS_QUERY]: focus,
-      }
-    : {};
+  const keep: Record<string, string> = {};
+  if (fromBots) {
+    keep[AUTOMATIONS_FROM_QUERY] = AUTOMATIONS_FROM_BOTS;
+    keep[AUTOMATIONS_FOCUS_QUERY] = focus;
+  }
   return {
     backHref: fromBots ? deskHref(listPath, accountId) : null,
     keep,
