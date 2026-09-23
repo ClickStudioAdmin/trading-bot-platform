@@ -437,7 +437,7 @@ function RuleRow({
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
       <BotFormColumns>
       <BotFormCard>
-      <BotFormStep title="General">
+      <BotFormStep title="General" defaultCollapsed={inUse}>
         <BotField label="Name" required>
           <input
             id={`${prefix}name`}
@@ -448,7 +448,11 @@ function RuleRow({
           />
         </BotField>
       </BotFormStep>
-      <BotFormStep title="Entry Conditions" hint="All conditions must be true.">
+      <BotFormStep
+        title="Entry Conditions"
+        hint="All conditions must be true."
+        defaultCollapsed={inUse}
+      >
         <div className={botRowClass}>
           <CarryNumber
             name={`${prefix}minApr`}
@@ -468,7 +472,7 @@ function RuleRow({
           />
         </div>
       </BotFormStep>
-      <BotFormStep title="Position Sizing">
+      <BotFormStep title="Position Sizing" defaultCollapsed={inUse}>
       <BotFormGroup title="Position and Orders">
         <div className={botRowClass}>
           <CarryNumber
@@ -522,7 +526,11 @@ function RuleRow({
         </div>
       </BotFormGroup>
       </BotFormStep>
-      <BotFormStep title="Exit Conditions" hint="Any condition can be true.">
+      <BotFormStep
+        title="Exit Conditions"
+        hint="Any condition can be true."
+        defaultCollapsed={inUse}
+      >
       <BotFormGroup title="Exit" hint="Any condition can be true.">
         <div className={botRowClass}>
           <CarryNumber

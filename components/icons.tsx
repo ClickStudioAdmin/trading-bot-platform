@@ -165,7 +165,7 @@ export const LUCIDE_ICONS = [
     id: "chevron-down",
     name: "Chevron down",
     lucide: "ChevronDown",
-    usedIn: "AppSelect, desk switcher, contract select",
+    usedIn: "AppSelect, desk switcher, contract select, bot form sections",
     Icon: ChevronDown,
   },
   {

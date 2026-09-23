@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ColumnHint } from "@/components/column-hint";
 import { useDeskFormStatus } from "@/components/stay-on-page-form";
@@ -11,7 +11,7 @@ import {
 } from "@/lib/bots/status";
 import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
-import { IconCheck, IconOpen } from "@/components/icons";
+import { IconCheck, IconChevronDown, IconOpen } from "@/components/icons";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 
 export const botFieldClass = BILLING_FIELD_CLASS;
@@ -143,29 +143,56 @@ export function BotFormStep({
   title,
   hint,
   locked = false,
+  defaultCollapsed = false,
   className,
   children,
 }: {
   title: string;
   hint?: string;
   locked?: boolean;
+  /** Start closed. Live bots pass this when the bot owns an open position. */
+  defaultCollapsed?: boolean;
   className?: string;
   children: ReactNode;
 }) {
+  const [open, setOpen] = useState(!defaultCollapsed);
+  const panelId = useId();
   return (
     <section
       className={`min-w-0 overflow-hidden rounded-card border border-line bg-surface${
-        locked ? " pointer-events-none opacity-40" : ""
-      }${className ? ` ${className}` : ""}`}
-      inert={locked || undefined}
-      aria-disabled={locked || undefined}
+        className ? ` ${className}` : ""
+      }`}
     >
       <h3
-        className={`${botStepTitleClass} border-b border-line bg-surface-raised px-5 py-3`}
+        className={`${botStepTitleClass} bg-surface-raised${
+          open ? " border-b border-line" : ""
+        }`}
       >
-        <HintLabel text={title} hint={hint} />
+        <button
+          type="button"
+          className="group flex w-full items-center justify-between gap-3 px-5 py-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((current) => !current)}
+        >
+          <HintLabel text={title} hint={hint} />
+          <IconChevronDown
+            size={16}
+            className={`size-4 shrink-0 text-ink-muted group-hover:text-ink${
+              open ? "" : " -rotate-90"
+            }`}
+          />
+        </button>
       </h3>
-      <div className="px-5 [&>*:not([hidden])]:py-5 [&>*:not([hidden])~*:not([hidden])]:border-t [&>*:not([hidden])~*:not([hidden])]:border-line">
+      <div
+        id={panelId}
+        hidden={!open}
+        className={`px-5 [&>*:not([hidden])]:py-5 [&>*:not([hidden])~*:not([hidden])]:border-t [&>*:not([hidden])~*:not([hidden])]:border-line${
+          locked ? " pointer-events-none opacity-40" : ""
+        }`}
+        inert={locked || undefined}
+        aria-disabled={locked || undefined}
+      >
         {children}
       </div>
     </section>

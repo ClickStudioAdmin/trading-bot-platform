@@ -1451,7 +1451,7 @@ export function DcaPlaybookForm({
           Desk Settings. Take profit and stop still run.
         </p>
       ) : null}
-      <BotFormStep title="General">
+      <BotFormStep title="General" defaultCollapsed={hasOpenPosition}>
         <div className={rowClass}>
           <BotField label="Name" required className="col-span-2">
             <input
@@ -1557,7 +1557,11 @@ export function DcaPlaybookForm({
         </p>
       ) : null}
 
-      <BotFormStep title="Entry Conditions" locked={cycleLocked}>
+      <BotFormStep
+        title="Entry Conditions"
+        locked={cycleLocked}
+        defaultCollapsed={hasOpenPosition}
+      >
       <BotFormGroup locked={cycleLocked}>
         <div className={rowClass}>
           <label className={`${labelClass} lg:col-span-2`}>
@@ -1904,7 +1908,11 @@ export function DcaPlaybookForm({
       ) : null}
 
       </BotFormStep>
-      <BotFormStep title="Position Sizing" locked={cycleLocked}>
+      <BotFormStep
+        title="Position Sizing"
+        locked={cycleLocked}
+        defaultCollapsed={hasOpenPosition}
+      >
       <BotFormGroup title="Maximum Exposure" locked={cycleLocked}>
           <div className={rowClass}>
             <label className={`min-w-0 ${labelClass}`}>
@@ -2245,7 +2253,7 @@ export function DcaPlaybookForm({
           {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         </BotFormGroup>
       </BotFormStep>
-      <BotFormStep title="Exit Conditions">
+      <BotFormStep title="Exit Conditions" defaultCollapsed={hasOpenPosition}>
 
       {!tpOn ? (
         <div hidden>
