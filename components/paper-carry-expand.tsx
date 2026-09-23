@@ -33,7 +33,10 @@ import {
 } from "@/lib/dca/log-copy";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { useEffect, useState } from "react";
-import { loadPaperCarryDetail } from "@/lib/paper/carry-detail-action";
+import {
+  loadPaperCarryDetail,
+  loadPaperCarryLogs,
+} from "@/lib/paper/carry-detail-action";
 import { closeOpenPaperCarry } from "@/lib/paper/actions";
 import { carryPnlPct, clipPnl } from "@/lib/paper/math";
 import {
@@ -95,8 +98,8 @@ export function OpenPaperCarryRows({
           />
         ) : (
           <PositionDetailTabs
+            carryId={trade.id}
             orders={trade.orders}
-            logs={trade.logs}
             entryBasis={trade.entryBasis}
           />
         )
@@ -202,8 +205,8 @@ export function ClosedPaperCarryRows({
           />
         ) : (
           <PositionDetailTabs
+            carryId={trade.id}
             orders={trade.orders}
-            logs={trade.logs}
             entryBasis={trade.entryBasis}
           />
         )
@@ -364,52 +367,74 @@ function DeferredPaperCarryDetail({
   carryId: number;
   entryBasis: number;
 }) {
-  const [detail, setDetail] = useState<{
-    orders: PaperOrderRow[];
-    logs: EventLogRow[];
-  } | null>(null);
+  const [orders, setOrders] = useState<PaperOrderRow[] | null>(null);
   useEffect(() => {
     let dead = false;
     void loadPaperCarryDetail(carryId)
       .then((result) => {
         if (!dead) {
-          setDetail(result);
+          setOrders(result.orders);
         }
       })
       .catch(() => {
         if (!dead) {
-          setDetail({ orders: [], logs: [] });
+          setOrders([]);
         }
       });
     return () => {
       dead = true;
     };
   }, [carryId]);
-  if (!detail) {
+  if (!orders) {
     return <ContainerLoading label="Loading orders" />;
   }
   return (
     <PositionDetailTabs
-      orders={detail.orders}
-      logs={detail.logs}
+      carryId={carryId}
+      orders={orders}
       entryBasis={entryBasis}
     />
   );
 }
 
+function DeferredPaperCarryLogs({ carryId }: { carryId: number }) {
+  const [logs, setLogs] = useState<EventLogRow[] | null>(null);
+  useEffect(() => {
+    let dead = false;
+    void loadPaperCarryLogs(carryId)
+      .then((result) => {
+        if (!dead) {
+          setLogs(result);
+        }
+      })
+      .catch(() => {
+        if (!dead) {
+          setLogs([]);
+        }
+      });
+    return () => {
+      dead = true;
+    };
+  }, [carryId]);
+  if (!logs) {
+    return <ContainerLoading label="Loading logs" />;
+  }
+  return <PositionLogList logs={logs} />;
+}
+
 function PositionDetailTabs({
+  carryId,
   orders,
-  logs,
   entryBasis,
 }: {
+  carryId: number;
   orders: PaperOrderRow[];
-  logs: EventLogRow[];
   entryBasis: number;
 }) {
   return (
     <TradeDetailTabs
       orders={<PaperOrderList orders={orders} entryBasis={entryBasis} />}
-      logs={<PositionLogList logs={logs} />}
+      logs={<DeferredPaperCarryLogs carryId={carryId} />}
     />
   );
 }

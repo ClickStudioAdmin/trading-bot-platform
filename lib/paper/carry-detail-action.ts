@@ -8,15 +8,14 @@ import { createServiceClient } from "@/lib/supabase/admin";
 
 export async function loadPaperCarryDetail(carryId: number): Promise<{
   orders: PaperOrderRow[];
-  logs: EventLogRow[];
 }> {
   const session = await getSessionContext();
   const supabase = createServiceClient();
   const id = Number(carryId);
   if (!session || !supabase || !Number.isFinite(id)) {
-    return { orders: [], logs: [] };
+    return { orders: [] };
   }
-  const [carryResult, orderResult, logs] = await Promise.all([
+  const [carryResult, orderResult] = await Promise.all([
     supabase
       .from("paper_carries")
       .select("*")
@@ -29,20 +28,15 @@ export async function loadPaperCarryDetail(carryId: number): Promise<{
       .eq("account_id", session.account.id)
       .eq("carry_id", id)
       .order("filled_at", { ascending: true }),
-    listEventLogsForAnchors({
-      accountId: session.account.id,
-      field: "carryId",
-      ids: [String(id)],
-    }),
   ]);
   if (carryResult.error || !carryResult.data) {
-    return { orders: [], logs: [] };
+    return { orders: [] };
   }
   let carry;
   try {
     carry = parsePaperCarryRow(carryResult.data as Record<string, unknown>);
   } catch {
-    return { orders: [], logs: [] };
+    return { orders: [] };
   }
   const stored =
     orderResult.error || !orderResult.data
@@ -50,5 +44,20 @@ export async function loadPaperCarryDetail(carryId: number): Promise<{
       : orderResult.data.map((row) =>
           parsePaperOrderRow(row as Record<string, unknown>),
         );
-  return { orders: ordersForCarry(carry, stored), logs };
+  return { orders: ordersForCarry(carry, stored) };
+}
+
+export async function loadPaperCarryLogs(
+  carryId: number,
+): Promise<EventLogRow[]> {
+  const session = await getSessionContext();
+  const id = Number(carryId);
+  if (!session || !Number.isFinite(id)) {
+    return [];
+  }
+  return listEventLogsForAnchors({
+    accountId: session.account.id,
+    field: "carryId",
+    ids: [String(id)],
+  });
 }

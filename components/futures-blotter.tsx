@@ -44,6 +44,7 @@ import { useLiveMarkedOpen } from "@/components/live-ticker";
 import { formatLeverage, attachFuturesVenueRisk, type FuturesVenueRisk } from "@/lib/futures/venue-risk";
 import {
   loadFuturesPositionFills,
+  loadFuturesPositionLogs,
   loadOpenVenueRiskAction,
 } from "@/lib/futures/position-fills-action";
 import type { EventLogRow } from "@/lib/logs/list";
@@ -1023,7 +1024,7 @@ function OpenFuturesRows({
                 webhookNames={webhookNames}
               />
             }
-            logs={<PositionLogList logs={trade.logs} />}
+            logs={<DeferredPositionLogs positionId={trade.id} />}
           />
         )
       }
@@ -1221,7 +1222,7 @@ function ClosedFuturesRows({
                 webhookNames={webhookNames}
               />
             }
-            logs={<PositionLogList logs={trade.logs} />}
+            logs={<DeferredPositionLogs positionId={trade.id} />}
           />
         )
       }
@@ -1325,43 +1326,65 @@ function DeferredPositionFills({
   positionRuleName: string | null;
   webhookNames: readonly string[];
 }) {
-  const [fills, setFills] = useState<{
-    orders: FuturesOrder[];
-    logs: EventLogRow[];
-  } | null>(null);
+  const [orders, setOrders] = useState<FuturesOrder[] | null>(null);
   useEffect(() => {
     let dead = false;
     void loadFuturesPositionFills(positionId)
       .then((result) => {
         if (!dead) {
-          setFills(result);
+          setOrders(result.orders);
         }
       })
       .catch(() => {
         if (!dead) {
-          setFills({ orders: [], logs: [] });
+          setOrders([]);
         }
       });
     return () => {
       dead = true;
     };
   }, [positionId]);
-  if (!fills) {
+  if (!orders) {
     return <ContainerLoading label="Loading orders" />;
   }
   return (
     <TradeDetailTabs
       orders={
         <FuturesOrderList
-          orders={fills.orders}
+          orders={orders}
           positionSource={positionSource}
           positionRuleName={positionRuleName}
           webhookNames={webhookNames}
         />
       }
-      logs={<PositionLogList logs={fills.logs} />}
+      logs={<DeferredPositionLogs positionId={positionId} />}
     />
   );
+}
+
+function DeferredPositionLogs({ positionId }: { positionId: string }) {
+  const [logs, setLogs] = useState<EventLogRow[] | null>(null);
+  useEffect(() => {
+    let dead = false;
+    void loadFuturesPositionLogs(positionId)
+      .then((result) => {
+        if (!dead) {
+          setLogs(result);
+        }
+      })
+      .catch(() => {
+        if (!dead) {
+          setLogs([]);
+        }
+      });
+    return () => {
+      dead = true;
+    };
+  }, [positionId]);
+  if (!logs) {
+    return <ContainerLoading label="Loading logs" />;
+  }
+  return <PositionLogList logs={logs} />;
 }
 
 function FuturesOrderList({

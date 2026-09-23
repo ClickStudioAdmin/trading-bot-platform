@@ -12,13 +12,7 @@ import { latestFlattenExitPrices } from "./stats";
 import { listFuturesOrderWebhookNames } from "./webhook-load";
 import { getSessionContext } from "@/lib/auth/session";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
-import {
-  attachPositionLogs,
-  listEventLogs,
-  listEventLogsForAnchors,
-  mergeEventLogs,
-  type EventLogRow,
-} from "@/lib/logs/list";
+import { type EventLogRow } from "@/lib/logs/list";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   FUTURES_LIVE_POSITION_STATUSES,
@@ -232,34 +226,8 @@ export async function loadFuturesDesk(): Promise<{
     loadLiveFuturesWorking(),
     listFuturesOrderWebhookNames(session.account.id),
   ]);
-  const liveOpenedMs = rows.reduce((oldest, row) => {
-    if (!futuresPositionIsLive(row.status) || !(row.openedAtMs > 0)) {
-      return oldest;
-    }
-    return oldest === 0 ? row.openedAtMs : Math.min(oldest, row.openedAtMs);
-  }, 0);
-  const [recentLogs, anchoredLogs] = await Promise.all([
-    listEventLogs(
-      { scope: "", level: "", event: "" },
-      {
-        accountId: session.account.id,
-        limit: 500,
-        scopes: ["trade", "strategy"],
-        since:
-          liveOpenedMs > 0
-            ? new Date(liveOpenedMs - 60_000).toISOString()
-            : undefined,
-      },
-    ),
-    listEventLogsForAnchors({
-      accountId: session.account.id,
-      field: "positionId",
-      ids: rows.map((row) => row.id),
-    }),
-  ]);
-  const logs = mergeEventLogs(recentLogs, anchoredLogs);
   const withOrders = attachOrders(rows, orders);
-  const withLogs = attachPositionLogs(withOrders, logs);
+  const withLogs = withOrders.map((row) => ({ ...row, logs: [] }));
   return {
     signedIn: true,
     exchangeBook: accountCanHoldConnections(session.account.mode),
