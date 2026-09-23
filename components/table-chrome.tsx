@@ -97,7 +97,8 @@ export function TableCard({
 }) {
   return (
     <div
-      className={`overflow-hidden rounded-card border border-line bg-surface ${className}`.trim()}
+      data-table-card=""
+      className={`scroll-mt-20 overflow-hidden rounded-card border border-line bg-surface ${className}`.trim()}
     >
       <div className="min-w-0 overflow-x-auto">{children}</div>
       {pager ? (
@@ -376,15 +377,20 @@ export function TablePager({
   buttons?: "text" | "icons";
   className?: string;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
   if (window.total === 0) {
     return null;
   }
   const showButtons = window.pageCount > 1;
   const icons = buttons === "icons";
   const items = tablePagerItems(window.page, window.pageCount);
+  function scrollToTable() {
+    scrollPagerTableIntoView(rootRef.current);
+  }
   return (
     <div
-      className={`flex flex-wrap items-center gap-3 text-sm text-ink-muted ${
+      ref={rootRef}
+      className={`flex flex-wrap items-center gap-12 text-sm text-ink-muted ${
         align === "center" ? "justify-center" : "justify-between"
       } ${className}`.trim()}
     >
@@ -401,6 +407,7 @@ export function TablePager({
             onClick={
               onPage ? () => onPage(window.page - 1) : onPrev
             }
+            onScroll={scrollToTable}
             disabled={window.page <= 1}
             icons={icons}
           />
@@ -426,6 +433,7 @@ export function TablePager({
                     ? () => onPage(item)
                     : undefined
                 }
+                onScroll={scrollToTable}
               />
             ),
           )}
@@ -439,6 +447,7 @@ export function TablePager({
             onClick={
               onPage ? () => onPage(window.page + 1) : onNext
             }
+            onScroll={scrollToTable}
             disabled={window.page >= window.pageCount}
             icons={icons}
           />
@@ -448,16 +457,26 @@ export function TablePager({
   );
 }
 
+function scrollPagerTableIntoView(from: HTMLElement | null) {
+  const card = from?.closest("[data-table-card]");
+  if (!(card instanceof HTMLElement)) {
+    return;
+  }
+  card.scrollIntoView({ block: "start" });
+}
+
 function PagerPage({
   page,
   current,
   href,
   onClick,
+  onScroll,
 }: {
   page: number;
   current: boolean;
   href?: string;
   onClick?: () => void;
+  onScroll: () => void;
 }) {
   const className = `inline-flex h-8 min-w-8 items-center justify-center rounded-control border px-2 text-sm tabular-nums ${
     current
@@ -473,7 +492,13 @@ function PagerPage({
   }
   if (href) {
     return (
-      <Link href={href} className={className} aria-label={`Page ${page}`}>
+      <Link
+        href={href}
+        scroll={false}
+        className={className}
+        aria-label={`Page ${page}`}
+        onClick={onScroll}
+      >
         {page}
       </Link>
     );
@@ -483,7 +508,10 @@ function PagerPage({
       type="button"
       className={className}
       aria-label={`Page ${page}`}
-      onClick={onClick}
+      onClick={() => {
+        onClick?.();
+        onScroll();
+      }}
     >
       {page}
     </button>
@@ -494,12 +522,14 @@ function PagerButton({
   kind,
   href,
   onClick,
+  onScroll,
   disabled,
   icons,
 }: {
   kind: "prev" | "next";
   href?: string;
   onClick?: () => void;
+  onScroll: () => void;
   disabled: boolean;
   icons: boolean;
 }) {
@@ -530,7 +560,17 @@ function PagerButton({
   if (href && !disabled) {
     return (
       <>
-        <Link href={href} className={className} onClick={dismiss} {...spoken} {...hover}>
+        <Link
+          href={href}
+          scroll={false}
+          className={className}
+          onClick={() => {
+            dismiss();
+            onScroll();
+          }}
+          {...spoken}
+          {...hover}
+        >
           {body}
         </Link>
         {tooltip}
@@ -545,7 +585,11 @@ function PagerButton({
         className={className}
         onClick={() => {
           dismiss();
+          if (disabled) {
+            return;
+          }
           onClick?.();
+          onScroll();
         }}
         {...spoken}
         {...hover}
