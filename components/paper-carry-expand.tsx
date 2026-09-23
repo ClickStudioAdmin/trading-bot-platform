@@ -12,6 +12,7 @@ import {
   TablePendingIconAction,
 } from "@/components/table-chrome";
 import { PaperAutomationTrigger } from "@/components/paper-automation-trigger";
+import { PnlUsd } from "@/components/pnl-usd";
 import { TokenIcon } from "@/components/token-icon";
 import {
   closedTradeLabel,
@@ -161,9 +162,7 @@ export function OpenPaperCarryRows({
         <td
           className={`px-4 py-3 tabular-nums ${signedTone(trade.unrealizedUsdt)}`}
         >
-          {trade.unrealizedUsdt === null
-            ? "—"
-            : formatSignedUsd(trade.unrealizedUsdt)}
+          <PnlUsd value={trade.unrealizedUsdt} />
         </td>
       ) : null}
       {visible.pnl ? (
@@ -262,9 +261,7 @@ export function ClosedPaperCarryRows({
       ) : null}
       {visible.realized ? (
         <td className={`px-4 py-3 tabular-nums ${signedTone(trade.realizedUsdt)}`}>
-          {trade.realizedUsdt === null
-            ? "—"
-            : formatSignedUsd(trade.realizedUsdt)}
+          <PnlUsd value={trade.realizedUsdt} />
         </td>
       ) : null}
       {visible.pnl ? (

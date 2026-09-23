@@ -14,6 +14,7 @@ import {
 } from "@/components/table-chrome";
 import { LocalTime } from "@/components/local-time";
 import { OpenStats } from "@/components/open-stats";
+import { PnlUsd } from "@/components/pnl-usd";
 import { PositionLogList } from "@/components/paper-carry-expand";
 import { TokenIcon } from "@/components/token-icon";
 import { ExpandableTradeRows, TradeDetailTabs } from "@/components/trade-expand";
@@ -1095,9 +1096,7 @@ function OpenFuturesRows({
         <td
           className={`min-w-0 px-2 py-3 tabular-nums whitespace-nowrap ${signedTone(trade.unrealizedUsdt)}`}
         >
-          {trade.unrealizedUsdt === null
-            ? "—"
-            : formatSignedUsd(trade.unrealizedUsdt)}
+          <PnlUsd value={trade.unrealizedUsdt} />
         </td>
       ) : null}
       {visible.pnl ? (
@@ -1295,7 +1294,7 @@ function ClosedFuturesRows({
       ) : null}
       {visible.realized ? (
         <td className={`px-4 py-3 tabular-nums ${signedTone(trade.realizedUsdt)}`}>
-          {formatSignedUsd(trade.realizedUsdt)}
+          <PnlUsd value={trade.realizedUsdt} />
         </td>
       ) : null}
       {visible.pnl ? (

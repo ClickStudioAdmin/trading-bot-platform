@@ -70,15 +70,53 @@ export function formatQtyFull(value: number): string {
   return String(value);
 }
 
-export function formatSignedUsd(value: number): string {
-  const formatted = `$${Math.abs(Math.round(value)).toLocaleString("en-US")}`;
+function withSignedUsd(absText: string, value: number): string {
   if (value > 0) {
-    return `+${formatted}`;
+    return `+$${absText}`;
   }
   if (value < 0) {
-    return `−${formatted}`;
+    return `−$${absText}`;
   }
-  return formatted;
+  return `$${absText}`;
+}
+
+export function formatSignedUsd(value: number): string {
+  return withSignedUsd(Math.abs(Math.round(value)).toLocaleString("en-US"), value);
+}
+
+/** Row P&L. Amounts under $1 keep up to two decimal places; larger amounts stay whole dollars. */
+export function formatPnlUsd(value: number): string {
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+  if (Math.abs(value) >= 1) {
+    return formatSignedUsd(value);
+  }
+  const cents = Math.round(Math.abs(value) * 100) / 100;
+  if (cents === 0) {
+    return "$0";
+  }
+  return withSignedUsd(
+    cents.toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }),
+    value,
+  );
+}
+
+/** Unrounded P&L for the hover title, up to 8 decimal places. */
+export function formatPnlUsdFull(value: number): string {
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+  return withSignedUsd(
+    Math.abs(value).toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 8,
+    }),
+    value,
+  );
 }
 
 export function signedTone(value: number | null): string {

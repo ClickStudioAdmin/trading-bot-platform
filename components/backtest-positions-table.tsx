@@ -17,6 +17,7 @@ import {
 } from "@/components/table-chrome";
 import { TpslPair } from "@/components/futures-tpsl";
 import { LocalTime } from "@/components/local-time";
+import { PnlUsd } from "@/components/pnl-usd";
 import { TokenIcon } from "@/components/token-icon";
 import { ExpandableTradeRows, TradeDetailTabs } from "@/components/trade-expand";
 import type { BacktestRun, SimulatedOrder } from "@/lib/backtest/model";
@@ -36,7 +37,6 @@ import {
   formatPrice,
   formatQty,
   formatQtyFull,
-  formatSignedUsd,
   formatUsd,
   signedTone,
 } from "@/lib/opportunities/format";
@@ -696,7 +696,7 @@ function OpenBacktestRows({
       <td
         className={`min-w-0 px-2 py-3 tabular-nums whitespace-nowrap ${signedTone(unrealized)}`}
       >
-        {unrealized == null ? "—" : formatSignedUsd(unrealized)}
+        <PnlUsd value={unrealized} />
       </td>
       <td
         className={`min-w-0 px-3 py-3 tabular-nums whitespace-nowrap ${signedTone(pnlPct)}`}
@@ -820,7 +820,7 @@ function ClosedBacktestRows({
         {cycle.exitPrice == null ? "—" : formatPrice(cycle.exitPrice)}
       </td>
       <td className={`px-4 py-3 tabular-nums ${signedTone(cycle.realizedUsdt)}`}>
-        {formatSignedUsd(cycle.realizedUsdt)}
+        <PnlUsd value={cycle.realizedUsdt} />
       </td>
       <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
         {formatPct(pnlPct)}
