@@ -323,6 +323,23 @@ const instrumentCache = new Map<
   string,
   { at: number; row: BybitInstrument | undefined }
 >();
+let linearUniverseAt = 0;
+
+export async function warmLinearPerpInstruments(): Promise<void> {
+  const now = Date.now();
+  if (now - linearUniverseAt < INSTRUMENT_TTL_MS && instrumentCache.size > 0) {
+    return;
+  }
+  const rows = await fetchBybitInstruments("linear");
+  const stamped = Date.now();
+  for (const row of rows) {
+    if (!row.symbol || !isUsdtLinearPerp(row)) {
+      continue;
+    }
+    instrumentCache.set(row.symbol, { at: stamped, row });
+  }
+  linearUniverseAt = stamped;
+}
 
 export async function loadPerpInstrument(
   symbol: string,

@@ -85,7 +85,7 @@ Same key on two desks still shares venue margin **and** rate limits. A per-conne
 
 ### 6. Clock
 
-Fly loop is **20 seconds** when idle, **8 seconds** while any desk is hot (open or closing futures row, armed or closing DCA bot, or an Active Perps rule). Desk mark / P&L paint from Bybit public tickers through `GET /api/market/tickers` every 2 seconds (no private key). Fills and working orders still refresh with the page (~8s). Do not tick faster than the venue budget allows.
+Fly loop is **20 seconds** when idle, **8 seconds** while any desk is hot (open or closing futures row, armed, stop-adding, or closing DCA bot, or an Active Perps rule). Desk mark / P&L paint from Bybit public tickers through `GET /api/market/tickers` every 2 seconds (no private key). Fills and working orders still refresh with the page (~8s). Do not tick faster than the venue budget allows.
 
 ## What this is not
 
@@ -110,11 +110,11 @@ If those pass, adding machines and desks is capacity, not a redesign.
 
 ## Status
 
-Accepted 29 Aug 2026. Implementation started 29 Aug 2026. Parked 29 Aug 2026 — Click left the engine as-is. Do not harden further until Click asks. Next locked item is Hyperliquid when Click starts it.
+Accepted 29 Aug 2026. Implementation started 29 Aug 2026. Parked 29 Aug 2026 — Click left the engine as-is. 23 Sep 2026: Click asked for a fast tick on a desk of about 500 bots. One pass checks every listening bot in memory. Closes, breakeven, and exit sync run before new entries. New entries are capped at 8 per pass so a bar-close burst cannot block the next check. The next pass continues at the next bot, so a rejected order does not keep the same 8 at the front. 15-minute bars stay cached until that bar closes. Bybit instruments load once per minute. Reconcile reads the Bybit position book once per key. The desk lease renews while that pass is acting.
 
 Shipped in repo: `engine_desk_leases` + claim RPCs (`20260829080000_engine_desk_leases.sql`), `runEngineCycle` / per-desk tick, in-memory lease tests, Fly configs (`fly.development.toml`, `fly.production.toml`), worker (`lib/engine/worker.ts`), GitHub **Deploy Engine**. Vercel tick and admin Tick call the same leased cycle (`maxMs` 50s). The 5-minute GitHub POST is off (workflow_dispatch only). Footer **Tick** is the Vercel fallback.
 
-Each Fly loop claims **hot desks first** (open futures rows, armed DCA playbooks, active Perps recipes), then idle books, and ticks up to three claimed desks at once. One linear ticker snapshot is reused for reconcile. Paper desks skip the venue gate. Live market stop / take profit attach on the fill (`placeClip` and GTC reconcile). Indicator **cross** starts latch until the first order so a 5m bar is not missed. The worker loads desk binds without a browser session. Auto tick is off unless an admin turns it on.
+Each Fly loop claims **hot desks first** (open futures rows, armed or stop-adding DCA playbooks, active Perps recipes), then idle books, and ticks up to three claimed desks at once. A claimed hot desk still runs when the loop budget is spent. Idle desks are the ones left for the next loop. Disabled DCA bots with no open position are not walked. One linear ticker snapshot is reused for reconcile. Paper desks skip the venue gate. Live market stop / take profit attach on the fill (`placeClip` and GTC reconcile). Indicator **cross** starts latch until the first order so a 5m bar is not missed. The worker loads desk binds without a browser session. Auto tick is off unless an admin turns it on.
 
 ### What Click does first (development only)
 

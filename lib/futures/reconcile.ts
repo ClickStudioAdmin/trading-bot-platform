@@ -41,6 +41,7 @@ import { fetchBybitTickers, type BybitTicker } from "@/lib/exchanges/bybit/clien
 import {
   amendPerpOrderOnVenue,
   cancelPerpOrderOnVenue,
+  listLinearPositionRisk,
   readPerpOrderOnVenue,
   readPerpPositionOnVenue,
   setPerpTradingStopOnVenue,
@@ -80,12 +81,64 @@ function venueQtyOnSide(
   return venueSide === side ? position.size : 0;
 }
 
+type VenuePositionBook =
+  | { ok: true; byKey: Map<string, BybitLinearPosition> }
+  | { ok: false };
+
 export type ReconcileBooksInput = {
   accountId?: string;
   userId?: string;
   workingId?: string;
   tickers?: Map<string, BybitTicker>;
+  venueBooks?: Map<string, VenuePositionBook>;
 };
+
+async function readCachedVenuePosition(input: {
+  connection: BoundConnectionSecrets;
+  symbol: string;
+  positionIdx: 1 | 2;
+  books: Map<string, VenuePositionBook>;
+}): Promise<
+  { ok: true; position: BybitLinearPosition | null } | { ok: false; error: string }
+> {
+  if (input.connection.venue !== "bybit") {
+    return readPerpPositionOnVenue({
+      connection: input.connection,
+      symbol: input.symbol,
+      positionIdx: input.positionIdx,
+    });
+  }
+  let book = input.books.get(input.connection.id);
+  if (!book) {
+    const listed = await listLinearPositionRisk({ connection: input.connection });
+    if (!listed.ok) {
+      book = { ok: false };
+    } else {
+      const byKey = new Map<string, BybitLinearPosition>();
+      for (const row of listed.positions) {
+        byKey.set(`${row.symbol}:${row.positionIdx}`, {
+          size: row.size,
+          positionIdx: row.positionIdx,
+          takeProfit: null,
+          stopLoss: null,
+        });
+      }
+      book = { ok: true, byKey };
+    }
+    input.books.set(input.connection.id, book);
+  }
+  if (!book.ok) {
+    return readPerpPositionOnVenue({
+      connection: input.connection,
+      symbol: input.symbol,
+      positionIdx: input.positionIdx,
+    });
+  }
+  return {
+    ok: true,
+    position: book.byKey.get(`${input.symbol}:${input.positionIdx}`) ?? null,
+  };
+}
 
 async function defaultReconcileTickers(
   accountId?: string,
@@ -121,8 +174,12 @@ export async function reconcileOpenFuturesBooks(
   if (input?.workingId) {
     return synced + filled;
   }
-  const closed = await reconcileOpenFuturesStops(input);
-  const matched = await reconcileOpenFuturesVenuePositions(input);
+  const venueBooks = input?.venueBooks ?? new Map();
+  const closed = await reconcileOpenFuturesStops({ ...input, venueBooks });
+  const matched = await reconcileOpenFuturesVenuePositions({
+    ...input,
+    venueBooks,
+  });
   return synced + filled + closed + matched;
 }
 
@@ -864,6 +921,7 @@ export async function reconcileOpenFuturesVenuePositions(
     BoundConnectionSecrets | null | undefined
   >();
   const working = await loadOpenReduceOnlyWorking(supabase, input);
+  const books = input?.venueBooks ?? new Map();
   let closed = 0;
   const now = Date.now();
   for (const row of rows) {
@@ -876,10 +934,11 @@ export async function reconcileOpenFuturesVenuePositions(
     if (!live) {
       continue;
     }
-    const venue = await readPerpPositionOnVenue({
+    const venue = await readCachedVenuePosition({
       connection: live,
       symbol: row.symbol,
       positionIdx: hedgePositionIdx(row.side),
+      books,
     });
     if (!venue.ok) {
       continue;
@@ -973,6 +1032,7 @@ export async function reconcileOpenFuturesStops(
     BoundConnectionSecrets | null | undefined
   >();
   const working = await loadOpenReduceOnlyWorking(supabase, input);
+  const books = input?.venueBooks ?? new Map();
   let closed = 0;
   for (const row of rows) {
     const applied = await reconcileOneStop({
@@ -981,6 +1041,7 @@ export async function reconcileOpenFuturesStops(
       tickers,
       connections,
       working,
+      books,
     });
     if (applied) {
       closed += 1;
@@ -995,6 +1056,7 @@ async function reconcileOneStop(input: {
   tickers: Map<string, BybitTicker>;
   connections: Map<string, BoundConnectionSecrets | null | undefined>;
   working: FuturesWorkingOrder[];
+  books: Map<string, VenuePositionBook>;
 }): Promise<boolean> {
   const tpsl = tpslFromRow(input.row);
   const trailing = trailingFromRow(input.row);
@@ -1041,10 +1103,11 @@ async function reconcileOneStop(input: {
       })
     : null;
   if (live) {
-    const venue = await readPerpPositionOnVenue({
+    const venue = await readCachedVenuePosition({
       connection: live,
       symbol: input.row.symbol,
       positionIdx: hedgePositionIdx(input.row.side),
+      books: input.books,
     });
     if (!venue.ok) {
       return false;

@@ -35,6 +35,29 @@ export function hyperliquidCandleInterval(
   return HL_INTERVAL[timeframe];
 }
 
+const barCache = new Map<string, { limit: number; bars: CandleBar[] }>();
+
+export function indicatorBarsAreCurrent(
+  bars: readonly CandleBar[],
+  interval: DcaIndicatorTimeframe,
+  nowMs: number,
+): boolean {
+  const last = bars[bars.length - 1];
+  if (!last) {
+    return false;
+  }
+  return nowMs < last.timeMs + INTERVAL_MS[interval];
+}
+
+function barCacheKey(input: {
+  venue: string;
+  venueEnvironment: string | null;
+  symbol: string;
+  interval: DcaIndicatorTimeframe;
+}): string {
+  return `${input.venue}:${input.venueEnvironment ?? ""}:${input.symbol}:${input.interval}`;
+}
+
 export async function loadDeskIndicatorBars(input: {
   venue: string;
   venueEnvironment: string | null;
@@ -43,9 +66,32 @@ export async function loadDeskIndicatorBars(input: {
   limit?: number;
 }): Promise<CandleBar[]> {
   const limit = input.limit ?? 80;
+  const key = barCacheKey(input);
+  const hit = barCache.get(key);
+  if (
+    hit &&
+    hit.limit >= limit &&
+    indicatorBarsAreCurrent(hit.bars, input.interval, Date.now())
+  ) {
+    return hit.limit === limit ? hit.bars : hit.bars.slice(-limit);
+  }
+  const bars = await fetchDeskIndicatorBars({ ...input, limit });
+  if (bars.length > 0) {
+    barCache.set(key, { limit, bars });
+  }
+  return bars;
+}
+
+async function fetchDeskIndicatorBars(input: {
+  venue: string;
+  venueEnvironment: string | null;
+  symbol: string;
+  interval: DcaIndicatorTimeframe;
+  limit: number;
+}): Promise<CandleBar[]> {
   if (input.venue === "hyperliquid") {
     const endTimeMs = Date.now();
-    const startTimeMs = endTimeMs - INTERVAL_MS[input.interval] * limit;
+    const startTimeMs = endTimeMs - INTERVAL_MS[input.interval] * input.limit;
     const candles = await loadHyperliquidCandles({
       environmentId: hyperliquidInfoEnvironment(input.venueEnvironment),
       symbol: input.symbol,
@@ -55,12 +101,12 @@ export async function loadDeskIndicatorBars(input: {
     });
     return candles
       .filter((row) => row.close > 0 && row.high > 0 && row.low > 0)
-      .slice(-limit);
+      .slice(-input.limit);
   }
   return fetchBybitKlineBars({
     symbol: input.symbol,
     interval: input.interval,
-    limit,
+    limit: input.limit,
   });
 }
 

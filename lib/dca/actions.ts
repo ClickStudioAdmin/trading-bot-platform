@@ -433,7 +433,11 @@ async function saveDcaPlaybookWith(
   if (!saved.ok) {
     return deskActionError(saved.error);
   }
-  if (session.account.mode === "live" && session.account.venue === "bybit") {
+  if (
+    session.account.mode === "live" &&
+    session.account.venue === "bybit" &&
+    parseDcaBotStatus(formData.get("botStatus")) === "active"
+  ) {
     const settings = await loadFuturesSettings(session.account.id);
     await clearAgreementBlock({
       connectionId: settings.connectionId,

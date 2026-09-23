@@ -34,7 +34,8 @@ import { cancelPerpOrdersOnVenueForSymbol } from "@/lib/exchanges/execute";
 import { loadBoundVenueForAccount } from "@/lib/exchanges/live-trade";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { triggerConditionMet } from "@/lib/futures/automation";
-import type { FuturesSide } from "@/lib/futures/model";
+import type { FuturesPosition, FuturesSide } from "@/lib/futures/model";
+import type { FuturesWorkingOrder } from "@/lib/futures/working";
 import type { FuturesTrailing } from "@/lib/futures/trailing";
 import {
   emptyFuturesTpsl,
@@ -103,6 +104,13 @@ import {
 } from "./sync-failure";
 import { loadRecentDcaSyncFailures } from "./sync-failure-store";
 import { isUnchangedWorkingAmend } from "@/lib/futures/working";
+
+export type DcaSyncCache = {
+  opens?: readonly FuturesPosition[];
+  liveWorking?: readonly FuturesWorkingOrder[];
+  gridWorking?: readonly FuturesWorkingOrder[];
+  recentFailures?: readonly DcaSyncFailureStamp[];
+};
 import {
   listDcaPlaybooksForAccount,
   patchDcaLeg,
@@ -472,11 +480,14 @@ async function cancelExitLimit(input: {
   mode: TradingAccountMode;
   side: FuturesSide;
   kind: DcaExitLimitKind;
+  working?: readonly FuturesWorkingOrder[];
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const working = await loadLiveFuturesWorking({
-    accountId: input.playbook.accountId,
-    userId: input.playbook.userId,
-  });
+  const working =
+    input.working ??
+    (await loadLiveFuturesWorking({
+      accountId: input.playbook.accountId,
+      userId: input.playbook.userId,
+    }));
   const rows = dcaOpenExitLimits(
     working,
     input.playbook.id,
@@ -712,6 +723,7 @@ export async function syncDcaPlaybookGrid(input: {
   entryPrice?: number | null;
   status?: DcaStatus;
   atr?: number | null;
+  cache?: DcaSyncCache;
 }): Promise<void> {
   const lockKey = `${input.playbook.id}:${input.side}`;
   const previous = gridSyncLocks.get(lockKey) ?? Promise.resolve();
@@ -736,23 +748,32 @@ async function syncDcaPlaybookGridUnlocked(input: {
   entryPrice?: number | null;
   status?: DcaStatus;
   atr?: number | null;
+  cache?: DcaSyncCache;
 }): Promise<void> {
   const enabled = dcaEnabledSides(input.playbook.direction).includes(
     input.side,
   );
   const leg = dcaLegFor(input.playbook, input.side);
-  const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
-    accountId: input.playbook.accountId,
-    userId: input.playbook.userId,
-  });
+  const opens = input.cache?.opens
+    ? input.cache.opens.filter(
+        (row) =>
+          row.accountId === input.playbook.accountId &&
+          row.symbol === input.playbook.symbol,
+      )
+    : await loadOpenFuturesOnSymbol(input.playbook.symbol, {
+        accountId: input.playbook.accountId,
+        userId: input.playbook.userId,
+      });
   const open = opens.find((row) => row.side === input.side);
-  const working = await loadFuturesWorking(
-    {
-      accountId: input.playbook.accountId,
-      userId: input.playbook.userId,
-    },
-    ["open", "filled"],
-  );
+  const working =
+    input.cache?.gridWorking ??
+    (await loadFuturesWorking(
+      {
+        accountId: input.playbook.accountId,
+        userId: input.playbook.userId,
+      },
+      ["open", "filled"],
+    ));
   const atr = await atrForPlaybook(input.playbook, input.atr);
   const rawPlan = planDcaSafetySync({
     playbookId: input.playbook.id,
@@ -788,12 +809,20 @@ async function syncDcaPlaybookGridUnlocked(input: {
     input.mode === "live"
       ? capDcaSafetySync(rawPlan, DCA_LIVE_GRID_OPS_PER_SYNC)
       : rawPlan;
-  const recentFailures = await loadRecentDcaSyncFailures({
-    accountId: input.playbook.accountId,
-    playbookId: input.playbook.id,
-  });
+  if (
+    plan.cancelIds.length === 0 &&
+    plan.amend.length === 0 &&
+    plan.rest.length === 0
+  ) {
+    return;
+  }
+  const recentFailures = input.cache?.recentFailures
+    ? [...input.cache.recentFailures]
+    : await loadRecentDcaSyncFailures({
+        accountId: input.playbook.accountId,
+        playbookId: input.playbook.id,
+      });
   const actor = playbookActor(input.playbook, input.mode);
-  const instrument = await instrumentForPlaybook(input.playbook);
   for (const workingId of plan.cancelIds) {
     const cancelled = await runFuturesCommand({
       actor,
@@ -809,6 +838,10 @@ async function syncDcaPlaybookGridUnlocked(input: {
       });
     }
   }
+  if (plan.amend.length === 0 && plan.rest.length === 0) {
+    return;
+  }
+  const instrument = await instrumentForPlaybook(input.playbook);
   for (const item of plan.amend) {
     const snapped = instrument
       ? snapPerpSizedLimit({
@@ -1191,6 +1224,7 @@ export async function syncDcaPlaybookExits(input: {
   side: FuturesSide;
   lastPrice: number | null;
   atr?: number | null;
+  cache?: DcaSyncCache;
 }): Promise<void> {
   const lockKey = `${input.playbook.id}:${input.side}:exit`;
   const previous = exitSyncLocks.get(lockKey) ?? Promise.resolve();
@@ -1214,11 +1248,18 @@ async function syncDcaPlaybookExitsUnlocked(input: {
   side: FuturesSide;
   lastPrice: number | null;
   atr?: number | null;
+  cache?: DcaSyncCache;
 }): Promise<void> {
-  const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
-    accountId: input.playbook.accountId,
-    userId: input.playbook.userId,
-  });
+  const opens = input.cache?.opens
+    ? input.cache.opens.filter(
+        (row) =>
+          row.accountId === input.playbook.accountId &&
+          row.symbol === input.playbook.symbol,
+      )
+    : await loadOpenFuturesOnSymbol(input.playbook.symbol, {
+        accountId: input.playbook.accountId,
+        userId: input.playbook.userId,
+      });
   const open = opens.find((row) => row.side === input.side);
   if (!open) {
     return;
@@ -1279,10 +1320,12 @@ async function syncDcaPlaybookExitsUnlocked(input: {
     }
   }
   const actor = playbookActor(input.playbook, input.mode);
-  const recentFailures = await loadRecentDcaSyncFailures({
-    accountId: input.playbook.accountId,
-    playbookId: input.playbook.id,
-  });
+  const recentFailures = input.cache?.recentFailures
+    ? [...input.cache.recentFailures]
+    : await loadRecentDcaSyncFailures({
+        accountId: input.playbook.accountId,
+        playbookId: input.playbook.id,
+      });
   const tpslStamp = dcaSyncFailureStamp({
     playbookId: input.playbook.id,
     playbookUpdatedAtMs: input.playbook.updatedAtMs,
@@ -1329,6 +1372,7 @@ async function syncDcaPlaybookExitsUnlocked(input: {
       mode: input.mode,
       side: input.side,
       kind: "tp",
+      working: input.cache?.liveWorking,
     });
   }
   await cancelExitLimit({
@@ -1336,6 +1380,7 @@ async function syncDcaPlaybookExitsUnlocked(input: {
     mode: input.mode,
     side: input.side,
     kind: "sl",
+    working: input.cache?.liveWorking,
   });
   await syncDcaTrailing({
     playbook: input.playbook,

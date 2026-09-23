@@ -4,11 +4,16 @@ import {
   parseDeskType,
   type TradingAccountMode,
 } from "@/lib/accounts/model";
-import { isBybitAgreementQuiet } from "@/lib/exchanges/agreement";
+import {
+  isBybitAgreementQuiet,
+  isBybitAgreementReject,
+} from "@/lib/exchanges/agreement";
 import {
   fetchBybitTickers,
   type BybitTicker,
 } from "@/lib/exchanges/bybit/client";
+import { mapPool } from "@/lib/engine/pool";
+import { warmLinearPerpInstruments } from "@/lib/exchanges/bybit/perp";
 import {
   closedLiveIndicatorBars,
   loadDeskIndicatorBars,
@@ -25,10 +30,10 @@ import {
 } from "@/lib/dca/indicators";
 import {
   loadFuturesWorking,
-  loadLiveFuturesWorking,
   loadOpenFuturesOnSymbol,
 } from "@/lib/futures/list";
 import { parseFuturesPositionRow } from "@/lib/futures/model";
+import type { FuturesWorkingOrder } from "@/lib/futures/working";
 import { FUTURES_LIVE_POSITION_STATUSES } from "@/lib/futures/pending-close";
 import type { FuturesSide } from "@/lib/futures/model";
 import { tickerTriggerPrices } from "@/lib/futures/tpsl";
@@ -42,6 +47,7 @@ import {
   dcaGridClipCounts,
   dcaIndicatorStartForSide,
   dcaAtrTimeframe,
+  isDcaClipKey,
   dcaLegFor,
   dcaLegIsRunning,
   dcaLiveQtyBlocksCycleEnd,
@@ -76,7 +82,15 @@ import {
   placeClip,
   syncDcaPlaybookExits,
   syncDcaPlaybookGrid,
+  type DcaSyncCache,
 } from "./run";
+import { loadAccountDcaSyncFailures } from "./sync-failure-store";
+import {
+  DCA_TICK_ENTRY_RANK,
+  dcaTickWorkRank,
+  orderDcaTickWork,
+  type DcaTickWorkKind,
+} from "./tick-order";
 import {
   listDcaPlaybooks,
   listDcaPlaybooksForAccount,
@@ -85,9 +99,12 @@ import {
   resetDcaLeg,
 } from "./store";
 
+const entryCursorByAccount = new Map<string, number>();
+
 export async function runDcaPlaybookTick(input?: {
   accountId?: string;
   tickers?: Map<string, BybitTicker>;
+  onYield?: () => Promise<void>;
 }): Promise<{ acted: number }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -155,9 +172,147 @@ export async function runDcaPlaybookTick(input?: {
     parseFuturesPositionRow(row as Record<string, unknown>),
   );
   const klineCache = new Map<string, CandleBar[]>();
+  const bybitDesk = [...accounts.values()].some((row) => row.venue === "bybit");
+  if (bybitDesk) {
+    await warmLinearPerpInstruments().catch((error: unknown) => {
+      console.error(
+        "engine instruments",
+        error instanceof Error ? error.message : error,
+      );
+    });
+  }
+  const workingBooks = new Map<
+    string,
+    { live: FuturesWorkingOrder[]; history: FuturesWorkingOrder[] }
+  >();
+  const failureBooks = new Map<
+    string,
+    Awaited<ReturnType<typeof loadAccountDcaSyncFailures>>
+  >();
+  await Promise.all(
+    accountIds.map(async (accountId) => {
+      const account = accounts.get(accountId);
+      if (!account) {
+        return;
+      }
+      const [rows, failures] = await Promise.all([
+        loadFuturesWorking(
+          { accountId, userId: account.userId },
+          ["open", "filled", "cancelling"],
+        ),
+        loadAccountDcaSyncFailures(accountId),
+      ]);
+      workingBooks.set(accountId, {
+        live: rows.filter(
+          (row) => row.status === "open" || row.status === "cancelling",
+        ),
+        history: rows.filter(
+          (row) => row.status === "open" || row.status === "filled",
+        ),
+      });
+      failureBooks.set(accountId, failures);
+    }),
+  );
+  const barJobs: {
+    venue: string;
+    venueEnvironment: string | null;
+    symbol: string;
+    interval: DcaIndicatorTimeframe;
+    limit: number;
+  }[] = [];
+  const seenBars = new Set<string>();
+  for (const playbook of playbooks) {
+    const account = accounts.get(playbook.accountId);
+    if (!account || !dcaNeedsTickBars(playbook)) {
+      continue;
+    }
+    const wide =
+      playbook.indicatorKind === "supertrend" ||
+      playbook.shortIndicatorKind === "supertrend" ||
+      dcaNeedsAtrBars(playbook) ||
+      dcaPlaybookFilterNeedsWideBars(playbook);
+    for (const interval of dcaTickBarTimeframes(playbook)) {
+      const key = `${account.venue}:${playbook.symbol}:${interval}`;
+      if (seenBars.has(key)) {
+        continue;
+      }
+      seenBars.add(key);
+      barJobs.push({
+        venue: account.venue,
+        venueEnvironment: account.venueEnvironment,
+        symbol: playbook.symbol,
+        interval,
+        limit: wide ? 500 : 80,
+      });
+    }
+  }
+  await mapPool(barJobs, 8, async (job) => {
+    const key = `${job.venue}:${job.symbol}:${job.interval}`;
+    const fetched = await loadDeskIndicatorBars({
+      venue: job.venue,
+      venueEnvironment: job.venueEnvironment,
+      symbol: job.symbol,
+      interval: job.interval,
+      limit: job.limit,
+    }).catch((error: unknown) => {
+      console.error(
+        "engine indicator bars",
+        job.symbol,
+        job.interval,
+        error instanceof Error ? error.message : error,
+      );
+      return [] as CandleBar[];
+    });
+    klineCache.set(key, fetched);
+  });
+
+  type TickWork = {
+    rank: number;
+    kind: DcaTickWorkKind;
+    playbook: DcaPlaybook;
+    mode: TradingAccountMode;
+    side: FuturesSide;
+    lastPrice: number | null;
+    atr: number | null;
+    clipsFilled: number;
+    positionId: string | null;
+    entryPrice: number | null;
+    mark: number | null;
+    tpLimitResting: boolean;
+    keepListening: boolean;
+    flattenReason: string;
+    action: ReturnType<typeof decideDcaTick>["action"] | null;
+    why: string;
+    cache: DcaSyncCache;
+  };
+  const work: TickWork[] = [];
+  const flagWrites: {
+    id: string;
+    patch: {
+      armConditionTrue?: boolean;
+      disarmConditionTrue?: boolean;
+      longIndicatorTrue?: boolean;
+      shortIndicatorTrue?: boolean;
+    };
+  }[] = [];
 
   let acted = 0;
   for (const playbook of playbooks) {
+    const listening = dcaEnabledSides(playbook.direction).some((side) => {
+      const status = dcaLegFor(playbook, side).status;
+      return (
+        status === "armed" || status === "stop_adding" || status === "closing"
+      );
+    });
+    const symbolOpen = opens.some(
+      (row) =>
+        row.accountId === playbook.accountId &&
+        row.symbol === playbook.symbol &&
+        row.qty > 0,
+    );
+    if (!listening && !symbolOpen) {
+      continue;
+    }
     const account = accounts.get(playbook.accountId);
     if (!account || !deskAllowsDcaPlaybooks(account)) {
       continue;
@@ -215,21 +370,19 @@ export async function runDcaPlaybookTick(input?: {
             playbook.atrPeriod,
           )
         : null;
-    const [working, openWorking] = await Promise.all([
-      playbook.dcaMode === "order"
-        ? loadFuturesWorking(
-            {
-              accountId: playbook.accountId,
-              userId: playbook.userId,
-            },
-            ["open", "filled"],
-          )
-        : Promise.resolve([]),
-      loadLiveFuturesWorking({
-        accountId: playbook.accountId,
-        userId: playbook.userId,
-      }),
-    ]);
+    const book = workingBooks.get(playbook.accountId) ?? {
+      live: [],
+      history: [],
+    };
+    const working = book.history;
+    const openWorking = book.live;
+    const syncCache: DcaSyncCache = {
+      opens,
+      liveWorking: book.live,
+      gridWorking: book.history,
+      recentFailures:
+        failureBooks.get(playbook.accountId)?.get(playbook.id) ?? [],
+    };
     for (const side of dcaEnabledSides(playbook.direction)) {
       let leg = dcaLegFor(playbook, side);
       if (
@@ -268,57 +421,53 @@ export async function runDcaPlaybookTick(input?: {
           row.side === side,
       );
       if (leg.status === "closing" || open?.status === "closing") {
-        const flattened = await flattenPlaybook({
+        work.push({
+          rank: dcaTickWorkRank("flatten"),
+          kind: "flatten",
           playbook,
           mode: account.mode,
           side,
-          reason:
+          lastPrice: prices.last,
+          atr,
+          clipsFilled: leg.clipsFilled,
+          positionId: open?.id ?? null,
+          entryPrice: open?.entryPrice ?? null,
+          mark: prices.mark,
+          tpLimitResting: false,
+          keepListening: leg.status === "closing",
+          flattenReason:
             leg.status === "closing" ? "Close requested." : "Close All requested.",
+          action: null,
+          why: "",
+          cache: syncCache,
         });
-        if (!flattened.ok) {
-          continue;
-        }
-        if (leg.status === "closing") {
-          const kept = await keepListeningAfterFlatten({
-            playbook,
-            side,
-          });
-          if (kept.ok) {
-            acted += 1;
-          }
-        } else {
-          acted += 1;
-        }
         continue;
       }
-      await syncDcaPlaybookExits({
-        playbook,
-        mode: account.mode,
-        side,
-        lastPrice: prices.last,
-        atr,
-      });
-      await syncDcaPlaybookGrid({
-        playbook,
-        mode: account.mode,
-        side,
-        atr,
-      });
       if (
         dcaShouldFlattenIdleOpen({
           status: leg.status,
           positionQty: open?.qty ?? null,
         })
       ) {
-        const flattened = await flattenPlaybook({
+        work.push({
+          rank: dcaTickWorkRank("flatten"),
+          kind: "flatten",
           playbook,
           mode: account.mode,
           side,
-          reason: "Bot is disabled.",
+          lastPrice: prices.last,
+          atr,
+          clipsFilled: leg.clipsFilled,
+          positionId: open?.id ?? null,
+          entryPrice: open?.entryPrice ?? null,
+          mark: prices.mark,
+          tpLimitResting: false,
+          keepListening: false,
+          flattenReason: "Bot is disabled.",
+          action: null,
+          why: "",
+          cache: syncCache,
         });
-        if (flattened.ok) {
-          acted += 1;
-        }
         continue;
       }
       if (
@@ -430,26 +579,36 @@ export async function runDcaPlaybookTick(input?: {
         exitIfBars: exitIfSeries.bars,
         triggerPrices: prices,
       });
-      const flags = await patchDcaPlaybook({
-        supabase,
-        id: playbook.id,
-        patch: {
-          armConditionTrue: decision.nextArmTrue,
-          disarmConditionTrue: decision.nextDisarmTrue,
-          ...(side === "long"
-            ? { longIndicatorTrue: decision.nextIndicatorTrue }
-            : { shortIndicatorTrue: decision.nextIndicatorTrue }),
-        },
-      });
-      if (!flags.ok) {
-        continue;
+      const flagPatch: (typeof flagWrites)[number]["patch"] = {};
+      if (decision.nextArmTrue !== playbook.armConditionTrue) {
+        flagPatch.armConditionTrue = decision.nextArmTrue;
+        playbook.armConditionTrue = decision.nextArmTrue;
       }
-      playbook.armConditionTrue = decision.nextArmTrue;
-      playbook.disarmConditionTrue = decision.nextDisarmTrue;
-      if (side === "long") {
+      if (decision.nextDisarmTrue !== playbook.disarmConditionTrue) {
+        flagPatch.disarmConditionTrue = decision.nextDisarmTrue;
+        playbook.disarmConditionTrue = decision.nextDisarmTrue;
+      }
+      if (
+        side === "long" &&
+        decision.nextIndicatorTrue !== playbook.longIndicatorTrue
+      ) {
+        flagPatch.longIndicatorTrue = decision.nextIndicatorTrue;
         playbook.longIndicatorTrue = decision.nextIndicatorTrue;
-      } else {
+      }
+      if (
+        side === "short" &&
+        decision.nextIndicatorTrue !== playbook.shortIndicatorTrue
+      ) {
+        flagPatch.shortIndicatorTrue = decision.nextIndicatorTrue;
         playbook.shortIndicatorTrue = decision.nextIndicatorTrue;
+      }
+      if (Object.keys(flagPatch).length > 0) {
+        const existing = flagWrites.find((row) => row.id === playbook.id);
+        if (existing) {
+          Object.assign(existing.patch, flagPatch);
+        } else {
+          flagWrites.push({ id: playbook.id, patch: flagPatch });
+        }
       }
       const why = dcaActionWhy({
         playbook,
@@ -460,51 +619,210 @@ export async function runDcaPlaybookTick(input?: {
         entryPrice: open?.entryPrice ?? null,
         clipsFilled: leg.clipsFilled,
       });
-      if (
-        decision.action.kind !== "none" &&
-        decision.action.kind !== "end_cycle"
-      ) {
-        await logDcaEvent({
+      const closingNow = decision.action.kind === "close";
+      const needsSync =
+        !closingNow &&
+        (Boolean(open) ||
+          (playbook.dcaMode === "order" &&
+            (dcaLegIsRunning(leg.status) ||
+              working.some(
+                (row) =>
+                  (row.status === "open" || row.status === "cancelling") &&
+                  isDcaClipKey(row.idempotencyKey, playbook.id, side),
+              ))));
+      if (needsSync) {
+        work.push({
+          rank: dcaTickWorkRank("sync"),
+          kind: "sync",
           playbook,
+          mode: account.mode,
           side,
+          lastPrice: prices.last,
+          atr,
+          clipsFilled: leg.clipsFilled,
           positionId: open?.id ?? null,
-          event: "dca.decision",
-          message: dcaDecisionMessage({
-            name: playbook.name,
-            kind: decision.action.kind,
-            reason:
-              "reason" in decision.action ? decision.action.reason : null,
-            clipsFilled: leg.clipsFilled,
-            maxClips: playbook.maxClips,
-            why,
-          }),
-          data: {
-            kind: decision.action.kind,
-            reason:
-              "reason" in decision.action ? decision.action.reason : null,
-            clipsFilled: leg.clipsFilled,
-            maxClips: playbook.maxClips,
-            mark: prices.mark,
-            last: prices.last,
-            entryPrice: open?.entryPrice ?? null,
-            tpLimitResting,
-            ...(why ? { why } : {}),
-          },
+          entryPrice: open?.entryPrice ?? null,
+          mark: prices.mark,
+          tpLimitResting: false,
+          keepListening: false,
+          flattenReason: "",
+          action: null,
+          why: "",
+          cache: syncCache,
         });
       }
-      const result = await applyTickAction({
-        playbook,
-        mode: account.mode,
-        side,
-        lastPrice: prices.last,
-        action: decision.action,
-        why,
-      });
-      if (result.acted) {
-        acted += 1;
+      if (decision.action.kind !== "none") {
+        const kind: DcaTickWorkKind =
+          decision.action.kind === "close"
+            ? "close"
+            : decision.action.kind === "breakeven"
+              ? "breakeven"
+              : decision.action.kind === "disarm"
+                ? "disarm"
+                : decision.action.kind === "stop_adding"
+                  ? "stop_adding"
+                  : decision.action.kind === "end_cycle"
+                    ? "end_cycle"
+                    : decision.action.kind === "clip"
+                      ? "clip"
+                      : "arm";
+        work.push({
+          rank: dcaTickWorkRank(kind),
+          kind,
+          playbook,
+          mode: account.mode,
+          side,
+          lastPrice: prices.last,
+          atr,
+          clipsFilled: leg.clipsFilled,
+          positionId: open?.id ?? null,
+          entryPrice: open?.entryPrice ?? null,
+          mark: prices.mark,
+          tpLimitResting,
+          keepListening: false,
+          flattenReason: "",
+          action: decision.action,
+          why,
+          cache: syncCache,
+        });
       }
     }
   }
+
+  const cursorKey = input?.accountId ?? "all";
+  const planned = orderDcaTickWork(
+    work,
+    undefined,
+    entryCursorByAccount.get(cursorKey) ?? 0,
+  );
+  entryCursorByAccount.set(cursorKey, planned.nextEntryOffset);
+  const ordered = planned.items;
+  let renewedEntries = false;
+  let flagsFlushed = false;
+  const failedFlags = new Set<string>();
+  async function flushFlags(): Promise<void> {
+    if (flagsFlushed) {
+      return;
+    }
+    flagsFlushed = true;
+    if (!supabase) {
+      return;
+    }
+    const client = supabase;
+    await mapPool(flagWrites, 8, async (row) => {
+      const saved = await patchDcaPlaybook({
+        supabase: client,
+        id: row.id,
+        patch: row.patch,
+      });
+      if (!saved.ok) {
+        failedFlags.add(row.id);
+      }
+    });
+  }
+  if (ordered.length > 0) {
+    await input?.onYield?.();
+  }
+  for (const item of ordered) {
+    if (!renewedEntries && item.rank >= DCA_TICK_ENTRY_RANK) {
+      renewedEntries = true;
+      await flushFlags();
+      await input?.onYield?.();
+    }
+    if (
+      (item.kind === "arm" || item.kind === "clip") &&
+      failedFlags.has(item.playbook.id)
+    ) {
+      continue;
+    }
+    if (
+      item.action &&
+      item.action.kind !== "none" &&
+      item.action.kind !== "end_cycle"
+    ) {
+      await logDcaEvent({
+        playbook: item.playbook,
+        side: item.side,
+        positionId: item.positionId,
+        event: "dca.decision",
+        message: dcaDecisionMessage({
+          name: item.playbook.name,
+          kind: item.action.kind,
+          reason: "reason" in item.action ? item.action.reason : null,
+          clipsFilled: item.clipsFilled,
+          maxClips: item.playbook.maxClips,
+          why: item.why,
+        }),
+        data: {
+          kind: item.action.kind,
+          reason: "reason" in item.action ? item.action.reason : null,
+          clipsFilled: item.clipsFilled,
+          maxClips: item.playbook.maxClips,
+          mark: item.mark,
+          last: item.lastPrice,
+          entryPrice: item.entryPrice,
+          tpLimitResting: item.tpLimitResting,
+          ...(item.why ? { why: item.why } : {}),
+        },
+      });
+    }
+    if (item.kind === "flatten") {
+      const flattened = await flattenPlaybook({
+        playbook: item.playbook,
+        mode: item.mode,
+        side: item.side,
+        reason: item.flattenReason,
+      });
+      if (!flattened.ok) {
+        continue;
+      }
+      if (item.keepListening) {
+        const kept = await keepListeningAfterFlatten({
+          playbook: item.playbook,
+          side: item.side,
+        });
+        if (kept.ok) {
+          acted += 1;
+        }
+      } else {
+        acted += 1;
+      }
+      continue;
+    }
+    if (item.kind === "sync") {
+      await syncDcaPlaybookExits({
+        playbook: item.playbook,
+        mode: item.mode,
+        side: item.side,
+        lastPrice: item.lastPrice,
+        atr: item.atr,
+        cache: item.cache,
+      });
+      await syncDcaPlaybookGrid({
+        playbook: item.playbook,
+        mode: item.mode,
+        side: item.side,
+        atr: item.atr,
+        cache: item.cache,
+      });
+      continue;
+    }
+    if (!item.action) {
+      continue;
+    }
+    const result = await applyTickAction({
+      playbook: item.playbook,
+      mode: item.mode,
+      side: item.side,
+      lastPrice: item.lastPrice,
+      action: item.action,
+      why: item.why,
+    });
+    if (result.acted) {
+      acted += 1;
+    }
+  }
+  await flushFlags();
   return { acted };
 }
 
@@ -555,6 +873,27 @@ function dcaActionWhy(input: {
   return "";
 }
 
+async function stopBotForAgreement(input: {
+  playbook: DcaPlaybook;
+  mode: TradingAccountMode;
+  side: FuturesSide;
+  error: string;
+}): Promise<boolean> {
+  if (
+    !isBybitAgreementQuiet(input.error) &&
+    !isBybitAgreementReject(input.error)
+  ) {
+    return false;
+  }
+  await applyDcaVerb({
+    playbook: input.playbook,
+    mode: input.mode,
+    verb: "disarm",
+    side: input.side,
+  });
+  return true;
+}
+
 async function applyTickAction(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
@@ -580,7 +919,25 @@ async function applyTickAction(input: {
       reason: input.why,
     });
     if (!armed.ok) {
-      if (isBybitAgreementQuiet(armed.error)) {
+      if (
+        await stopBotForAgreement({
+          playbook: input.playbook,
+          mode: input.mode,
+          side: input.side,
+          error: armed.error,
+        })
+      ) {
+        if (!isBybitAgreementQuiet(armed.error)) {
+          const why = String(input.why ?? "").trim();
+          await logDcaEvent({
+            playbook: input.playbook,
+            side: input.side,
+            level: "warning",
+            event: "engine.open_failed",
+            message: why ? `${armed.error} Trying: ${why}.` : armed.error,
+            data: { reason: "arm", ...(why ? { why } : {}) },
+          });
+        }
         return { acted: false };
       }
       const why = String(input.why ?? "").trim();
@@ -634,7 +991,25 @@ async function applyTickAction(input: {
       reason: input.why,
     });
     if (!placed.ok) {
-      if (isBybitAgreementQuiet(placed.error)) {
+      if (
+        await stopBotForAgreement({
+          playbook: input.playbook,
+          mode: input.mode,
+          side: input.side,
+          error: placed.error,
+        })
+      ) {
+        if (!isBybitAgreementQuiet(placed.error)) {
+          const why = String(input.why ?? "").trim();
+          await logDcaEvent({
+            playbook: input.playbook,
+            side: input.side,
+            level: "warning",
+            event: "engine.open_failed",
+            message: why ? `${placed.error} Trying: ${why}.` : placed.error,
+            data: { reason: "clip", ...(why ? { why } : {}) },
+          });
+        }
         return { acted: false };
       }
       const why = String(input.why ?? "").trim();

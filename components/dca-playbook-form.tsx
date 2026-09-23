@@ -58,6 +58,7 @@ import {
 } from "@/lib/bots/status";
 import {
   automationsBotBlotterCells,
+  botModeLabel,
   dcaBotPair,
   dcaBotSummary,
   dcaListStatus,
@@ -727,22 +728,34 @@ export function DcaPlaybooksDesk({
               </>
             }
             empty="No bots yet. Create a bot to own orders and exits on one contract. Leave this empty if you are not ready to arm."
-            rows={savedPlaybooks.map((playbook) => ({
+            rows={savedPlaybooks.map((playbook) => {
+              const needsAgreement = symbolNeedsBybitAgreement(
+                agreementSymbols,
+                playbook.symbol,
+              );
+              const flat = !openPositions.some(
+                (row) => row.symbol === playbook.symbol && row.qty > 0,
+              );
+              const agreementOff = needsAgreement && flat;
+              const statusKey = agreementOff
+                ? "disabled"
+                : dcaStatusFromLegs({
+                    armed:
+                      playbook.long.status === "armed" ||
+                      playbook.short.status === "armed",
+                    stopAdding:
+                      playbook.long.status === "stop_adding" ||
+                      playbook.short.status === "stop_adding",
+                  });
+              return {
               id: playbook.id,
               name: playbook.name || "Bot",
               pair: dcaBotPair(playbook),
-              pairNote: symbolNeedsBybitAgreement(agreementSymbols, playbook.symbol)
-                ? BYBIT_AGREEMENT_NOTE
-                : undefined,
-              status: dcaListStatus(playbook),
-              statusKey: dcaStatusFromLegs({
-                armed:
-                  playbook.long.status === "armed" ||
-                  playbook.short.status === "armed",
-                stopAdding:
-                  playbook.long.status === "stop_adding" ||
-                  playbook.short.status === "stop_adding",
-              }),
+              pairNote: needsAgreement ? BYBIT_AGREEMENT_NOTE : undefined,
+              status: agreementOff
+                ? botModeLabel("dca", "disabled")
+                : dcaListStatus(playbook),
+              statusKey,
               summary: dcaBotSummary(playbook),
               canRemove: !dcaPlaybookIsRunning(playbook),
               removeBlocked: "Stop adding or close before removing.",
@@ -767,7 +780,8 @@ export function DcaPlaybooksDesk({
               ),
               editHref: automationsEditHref(listHref, playbook.id),
               cloneHref: automationsNewHref(listHref, playbook.id),
-            }))}
+            };
+            })}
           />
         </>
       )}
@@ -1075,9 +1089,15 @@ export function DcaPlaybookForm({
     (leg) => leg.status === "armed" || leg.status === "closing",
   );
   const stopAdding = liveLegs.some((leg) => leg.status === "stop_adding");
-  const currentStatus: DcaBotStatus = playbook
-    ? dcaStatusFromLegs({ armed, stopAdding })
-    : "disabled";
+  const agreementDisables =
+    Boolean(playbook) &&
+    !hasOpenPosition &&
+    symbolNeedsBybitAgreement(agreementSymbols, playbook?.symbol ?? "");
+  const currentStatus: DcaBotStatus = !playbook
+    ? "disabled"
+    : agreementDisables
+      ? "disabled"
+      : dcaStatusFromLegs({ armed, stopAdding });
   const [status, setStatus] = useState<DcaBotStatus>(currentStatus);
   const statusDirty = status !== currentStatus;
   const cycleLocked = dcaCycleFieldsLocked({

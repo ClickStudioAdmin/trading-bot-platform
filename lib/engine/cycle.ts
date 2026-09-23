@@ -17,6 +17,7 @@ import {
   claimEngineDesks,
   engineWorkerId,
   releaseEngineDesk,
+  renewEngineDesk,
   takeVenueSlot,
   tryClaimEngineScan,
 } from "@/lib/engine/lease-store";
@@ -135,9 +136,14 @@ export async function runEngineCycle(
     if (claimed.length === 0) {
       break;
     }
+    const hotSet = new Set(hotIds);
     await mapPool(claimed, ENGINE_DESK_CONCURRENCY, async (accountId) => {
       done.add(accountId);
-      if (maxMs !== undefined && Date.now() - started >= maxMs) {
+      if (
+        maxMs !== undefined &&
+        Date.now() - started >= maxMs &&
+        !hotSet.has(accountId)
+      ) {
         await releaseEngineDesk({ accountId, workerId });
         return;
       }
@@ -146,6 +152,7 @@ export async function runEngineCycle(
           accountId,
           scan: shared.scan,
           tickers: shared.tickers,
+          onYield: () => renewEngineDesk({ accountId, workerId }),
         });
         stats.opened += desk.opened;
         stats.added += desk.added;
@@ -355,6 +362,7 @@ async function runDeskTick(input: {
   accountId: string;
   scan: ScannedOpportunity[];
   tickers: Map<string, BybitTicker>;
+  onYield?: () => Promise<void>;
 }): Promise<{
   userId: string | null;
   opened: number;
@@ -449,6 +457,7 @@ async function runDeskTick(input: {
     await runDcaPlaybookTick({
       accountId: input.accountId,
       tickers,
+      onYield: input.onYield,
     });
   }
   if (!copyDesk) {

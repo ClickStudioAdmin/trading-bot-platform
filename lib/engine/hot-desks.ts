@@ -55,7 +55,7 @@ export async function listHotEngineAccountIds(): Promise<string[]> {
       .from("dca_playbooks")
       .select("account_id")
       .or(
-        "long_status.eq.armed,short_status.eq.armed,long_status.eq.closing,short_status.eq.closing",
+        "long_status.eq.armed,short_status.eq.armed,long_status.eq.stop_adding,short_status.eq.stop_adding,long_status.eq.closing,short_status.eq.closing",
       ),
     supabase
       .from("futures_automation_rules")

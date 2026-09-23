@@ -257,6 +257,25 @@ export async function tryClaimEngineDesk(input: {
   return occupied ? "held" : "acquired";
 }
 
+export async function renewEngineDesk(input: {
+  accountId: string;
+  workerId: string;
+}): Promise<void> {
+  const supabase = createServiceClient();
+  const workerId = input.workerId.trim();
+  if (!supabase || !workerId) {
+    return;
+  }
+  await supabase
+    .from("engine_desk_leases")
+    .update({
+      leased_until: leaseUntilIso(ENGINE_LEASE_TTL_SECONDS),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("account_id", input.accountId)
+    .eq("worker_id", workerId);
+}
+
 export async function releaseEngineDesk(input: {
   accountId: string;
   workerId?: string;

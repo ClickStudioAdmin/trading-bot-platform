@@ -522,12 +522,14 @@ export async function saveFuturesAutomations(
   if (account.mode === "live" && account.venue === "bybit") {
     const bound = await loadFuturesSettings(account.id);
     await Promise.all(
-      parsed.rules.map((rule) =>
-        clearAgreementBlock({
-          connectionId: bound.connectionId,
-          symbol: rule.symbol,
-        }),
-      ),
+      parsed.rules
+        .filter((rule) => rule.mode === "active")
+        .map((rule) =>
+          clearAgreementBlock({
+            connectionId: bound.connectionId,
+            symbol: rule.symbol,
+          }),
+        ),
     );
   }
   await writeEventLog({

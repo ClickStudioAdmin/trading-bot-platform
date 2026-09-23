@@ -286,15 +286,20 @@ export function FuturesAutomationsDesk({
               </>
             }
             empty="No bots yet. Create a bot to fire Buy, Sell, or Close on a price cross, Indicator, Trend, or a Signal webhook."
-            rows={savedLayers.map((layer) => ({
+            rows={savedLayers.map((layer) => {
+              const agreementOff =
+                !inUse.has(layer.id) &&
+                symbolNeedsBybitAgreement(agreementSymbols, layer.symbol);
+              const statusKey = agreementOff ? "disabled" : layer.mode;
+              return {
               id: layer.id,
               name: layer.name || "Bot",
               pair: perpsBotPair(layer),
               pairNote: symbolNeedsBybitAgreement(agreementSymbols, layer.symbol)
                 ? BYBIT_AGREEMENT_NOTE
                 : undefined,
-              status: botModeLabel("perps", layer.mode),
-              statusKey: layer.mode,
+              status: botModeLabel("perps", statusKey),
+              statusKey,
               summary: perpsBotSummary(layer),
               canRemove: !inUse.has(layer.id),
               removeBlocked:
@@ -320,7 +325,8 @@ export function FuturesAutomationsDesk({
               ),
               editHref: automationsEditHref(listHref, layer.id),
               cloneHref: automationsNewHref(listHref, layer.id),
-            }))}
+            };
+            })}
           />
         </>
       )}
@@ -379,7 +385,11 @@ function RuleCard({
 }) {
   const prefix = "r0_";
   const [dirty, setDirty] = useState(false);
-  const [mode, setMode] = useState(layer.mode);
+  const [mode, setMode] = useState(
+    !inUse && symbolNeedsBybitAgreement(agreementSymbols, layer.symbol)
+      ? "disabled"
+      : layer.mode,
+  );
   const [formAction, setFormAction] = useState(layer.formAction);
   const [orderType, setOrderType] = useState(layer.orderType);
   const [sizeUnit, setSizeUnit] = useState(layer.sizeUnit);
