@@ -2,15 +2,19 @@ import type { Metadata } from "next";
 import { MembershipPlanCards } from "@/components/membership-plan-cards";
 import { PageHeading } from "@/components/page-heading";
 import { publicCatalogPlans } from "@/lib/membership/catalog";
-import { listMembershipPlans } from "@/lib/membership/store";
+import { listCatalogMembershipPlans } from "@/lib/membership/store";
 
 export const metadata: Metadata = {
   title: "Pricing",
   description: "Public membership plans and what each one includes.",
 };
 
+// The catalog is read at request time. Prerendering it runs the query during
+// `next build`, and a slow database fails the deploy after 60 seconds.
+export const dynamic = "force-dynamic";
+
 export default async function PricingPage() {
-  const listed = await listMembershipPlans();
+  const listed = await listCatalogMembershipPlans();
   const plans = listed.ok ? publicCatalogPlans(listed.plans) : [];
 
   return (

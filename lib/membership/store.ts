@@ -90,7 +90,7 @@ async function memberCounts(
   return counts;
 }
 
-export async function listMembershipPlans(): Promise<
+export async function listCatalogMembershipPlans(): Promise<
   { ok: true; plans: MembershipPlan[] } | { ok: false; error: string }
 > {
   const supabase = createServiceClient();
@@ -105,14 +105,33 @@ export async function listMembershipPlans(): Promise<
   if (error || !data) {
     return { ok: false, error: error?.message ?? "Could not load plans." };
   }
-  const rows = data as PlanRow[];
+  return {
+    ok: true,
+    plans: (data as PlanRow[]).map((row) => mapPlan(row)),
+  };
+}
+
+export async function listMembershipPlans(): Promise<
+  { ok: true; plans: MembershipPlan[] } | { ok: false; error: string }
+> {
+  const listed = await listCatalogMembershipPlans();
+  if (!listed.ok) {
+    return listed;
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
   const counts = await memberCounts(
     supabase,
-    rows.map((row) => row.id),
+    listed.plans.map((plan) => plan.id),
   );
   return {
     ok: true,
-    plans: rows.map((row) => mapPlan(row, counts.get(row.id) ?? 0)),
+    plans: listed.plans.map((plan) => ({
+      ...plan,
+      memberCount: counts.get(plan.id) ?? 0,
+    })),
   };
 }
 
