@@ -14,6 +14,7 @@ export type LinearPerp = {
   maxQty: number;
   maxMktQty: number;
   minNotional: number;
+  qtyStep: number;
   minPrice: number;
   tickSize: number;
 };
@@ -183,6 +184,16 @@ export function qtyForPerpNotional(
       error: `Minimum order is $${formatPerpMinQty(minUsdt)} (${formatPerpMinQty(minQty)}${coin}).`,
     };
   }
+  if (
+    sized.ok &&
+    minNotional > 0 &&
+    sized.qty * price + 1e-8 < minNotional
+  ) {
+    return {
+      ok: false,
+      error: `Minimum order value is $${formatPerpMinQty(minNotional)}.`,
+    };
+  }
   return sized;
 }
 
@@ -283,6 +294,7 @@ export function listUsdtLinearPerps(
           row.lotSizeFilter?.minNotionalValue ?? row.lotSizeFilter?.minOrderAmt,
           0,
         ),
+        qtyStep: step,
         minPrice: parseStep(row.priceFilter?.minPrice, 0),
         tickSize,
       };

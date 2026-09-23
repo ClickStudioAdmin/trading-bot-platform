@@ -267,6 +267,27 @@ assert.equal(
   "Entry # 1: Minimum order is $10 (0.1 BTC).",
 );
 assert.equal(
+  dcaLadderMaxOrderError({
+    sides: ["short"],
+    entryPrice: 300,
+    maxClips: 3,
+    maxValue: null,
+    dipPct: 1,
+    clipSize: 6,
+    sizeUnit: "usdt",
+    sizeMultiplier: 1,
+    deviationMultiplier: 1,
+    restGrid: true,
+    maxQty: 100,
+    maxMktQty: 100,
+    minQty: 0.01,
+    minNotional: 5,
+    qtyStep: 0.01,
+    baseCoin: "OKB",
+  }),
+  "Entry # 2: Minimum order value is $5.",
+);
+assert.equal(
   dcaLadderRestPriceError({
     sides: ["long"],
     entryPrice: 0.4,

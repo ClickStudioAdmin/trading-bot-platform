@@ -423,6 +423,7 @@ export type BybitLinearPosition = {
   positionIdx: number;
   takeProfit: number | null;
   stopLoss: number | null;
+  leverage: number | null;
 };
 
 export type BybitLinearRisk = {
@@ -453,6 +454,7 @@ export async function bybitReadLinearPosition(input: {
       positionIdx?: number;
       takeProfit?: string;
       stopLoss?: string;
+      leverage?: string;
     }[];
   }>({
     environmentId: input.environmentId,
@@ -464,9 +466,10 @@ export async function bybitReadLinearPosition(input: {
   if (!listed.ok) {
     return listed;
   }
-  const row = (listed.result.list ?? []).find(
-    (item) => Number(item.positionIdx) === input.positionIdx,
-  );
+  const rows = listed.result.list ?? [];
+  const row =
+    rows.find((item) => Number(item.positionIdx) === input.positionIdx) ??
+    rows.find((item) => Number(item.positionIdx) === 0);
   if (!row) {
     return { ok: true, position: null };
   }
@@ -477,9 +480,10 @@ export async function bybitReadLinearPosition(input: {
     ok: true,
     position: {
       size: size > 0 ? size : 0,
-      positionIdx: input.positionIdx,
+      positionIdx: Number(row.positionIdx) || input.positionIdx,
       takeProfit: takeProfit > 0 ? takeProfit : null,
       stopLoss: stopLoss > 0 ? stopLoss : null,
+      leverage: parseBybitPositive(row.leverage),
     },
   };
 }
@@ -542,6 +546,73 @@ export async function bybitListLinearPositions(input: {
     }
   }
   return { ok: true, positions };
+}
+
+export type BybitLinearExecution = {
+  fillPrice: number;
+  closedQty: number;
+  execTimeMs: number;
+  side: "Buy" | "Sell";
+  stopOrderType: string;
+  orderLinkId: string;
+};
+
+export async function bybitListLinearExecutions(input: {
+  environmentId: string;
+  credentials: BybitPrivateCreds;
+  symbol: string;
+  startTimeMs: number;
+}): Promise<
+  { ok: true; executions: BybitLinearExecution[] } | { ok: false; error: string }
+> {
+  const query = [
+    "category=linear",
+    `symbol=${encodeURIComponent(input.symbol)}`,
+    `startTime=${Math.max(0, Math.floor(input.startTimeMs))}`,
+    "limit=50",
+  ].join("&");
+  const listed = await bybitPrivateRequest<{
+    list?: {
+      side?: string;
+      execPrice?: string;
+      closedSize?: string;
+      execTime?: string;
+      stopOrderType?: string;
+      orderLinkId?: string;
+      execType?: string;
+    }[];
+  }>({
+    environmentId: input.environmentId,
+    credentials: input.credentials,
+    method: "GET",
+    path: "/v5/execution/list",
+    query,
+  });
+  if (!listed.ok) {
+    return listed;
+  }
+  const executions: BybitLinearExecution[] = [];
+  for (const item of listed.result.list ?? []) {
+    if (String(item.execType ?? "Trade") !== "Trade") {
+      continue;
+    }
+    const side = item.side === "Buy" || item.side === "Sell" ? item.side : null;
+    const fillPrice = Number(item.execPrice ?? "");
+    const closedQty = Number(item.closedSize ?? "");
+    const execTimeMs = Number(item.execTime ?? "");
+    if (!side || !(fillPrice > 0) || !(closedQty > 0) || !(execTimeMs > 0)) {
+      continue;
+    }
+    executions.push({
+      fillPrice,
+      closedQty,
+      execTimeMs,
+      side,
+      stopOrderType: String(item.stopOrderType ?? "").trim(),
+      orderLinkId: String(item.orderLinkId ?? "").trim(),
+    });
+  }
+  return { ok: true, executions };
 }
 
 export async function bybitSetTradingStop(input: {

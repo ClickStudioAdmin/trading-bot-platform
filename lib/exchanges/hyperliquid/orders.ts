@@ -427,6 +427,7 @@ export async function readHyperliquidPosition(input: {
         positionIdx: row.size > 0 ? 1 : 2,
         takeProfit: null,
         stopLoss: null,
+        leverage: null,
       },
     };
   } catch {

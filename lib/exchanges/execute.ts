@@ -5,6 +5,7 @@ import {
   bybitCreateLinearLimitOrder,
   bybitCreateMarketOrder,
   bybitEnsureHedgeMode,
+  bybitListLinearExecutions,
   bybitListLinearPositions,
   bybitReadLinearOrder,
   bybitReadLinearPosition,
@@ -12,6 +13,7 @@ import {
   explainHedgeModeError,
   loadCarryInstruments,
   qtyForCarryLegs,
+  type BybitLinearExecution,
   type BybitLinearOrderSnapshot,
   type BybitLinearPosition,
   type BybitLinearRisk,
@@ -495,7 +497,32 @@ export async function amendPerpOrderOnVenue(input: {
 }
 
 export function venueAlreadyFlatError(error: string): boolean {
-  return error.toLowerCase().includes("reduce only order would increase");
+  const text = error.toLowerCase();
+  return (
+    text.includes("reduce only order would increase") ||
+    text.includes("current position is zero") ||
+    text.includes("position is zero") ||
+    text.includes("zero position") ||
+    text.includes("110017")
+  );
+}
+
+export async function listLinearExecutions(input: {
+  connection: BoundConnectionSecrets;
+  symbol: string;
+  startTimeMs: number;
+}): Promise<
+  { ok: true; executions: BybitLinearExecution[] } | { ok: false; error: string }
+> {
+  if (input.connection.venue !== "bybit") {
+    return { ok: true, executions: [] };
+  }
+  return bybitListLinearExecutions({
+    environmentId: input.connection.environment,
+    credentials: creds(input.connection),
+    symbol: input.symbol,
+    startTimeMs: input.startTimeMs,
+  });
 }
 
 export async function readPerpOrderOnVenue(input: {

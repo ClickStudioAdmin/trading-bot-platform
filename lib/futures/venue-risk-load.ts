@@ -1,4 +1,8 @@
-import { listLinearPositionRisk } from "@/lib/exchanges/execute";
+import {
+  listLinearPositionRisk,
+  readPerpPositionOnVenue,
+} from "@/lib/exchanges/execute";
+import { hedgePositionIdx } from "./decide";
 import { loadBoundVenueForAccount } from "@/lib/exchanges/live-trade";
 import type { BoundConnectionSecrets } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
@@ -26,9 +30,21 @@ export async function resolveWriteLeverage(input: {
       const found = mapLinearPositionRisk(listed.positions).get(
         futuresVenueRiskKey(input.symbol, input.side),
       );
-      if (found?.leverage != null) {
+      if (found?.leverage != null && found.leverage > 0) {
         return found.leverage;
       }
+    }
+    const slot = await readPerpPositionOnVenue({
+      connection: input.connection,
+      symbol: input.symbol,
+      positionIdx: hedgePositionIdx(input.side),
+    });
+    if (
+      slot.ok &&
+      slot.position?.leverage != null &&
+      slot.position.leverage > 0
+    ) {
+      return slot.position.leverage;
     }
     return input.current ?? null;
   }

@@ -43,6 +43,7 @@ import {
   armFuturesReduceOnly,
   loadFuturesSettings,
 } from "./settings";
+import { pickClosingFill } from "./venue-close";
 import { resolveWriteLeverage } from "./venue-risk-load";
 import { COPY_RULE_NAME } from "@/lib/copy/decide";
 import { checkFuturesRiskCaps } from "./risk";
@@ -72,6 +73,7 @@ import {
   cancelPerpOrdersOnVenueForSymbol,
   placePerpLimitOnVenue,
   placePerpMarketOnVenue,
+  listLinearExecutions,
   setPerpTradingStopOnVenue,
   venueAlreadyFlatError,
 } from "@/lib/exchanges/execute";
@@ -645,6 +647,22 @@ async function runPlace(
               data: { symbol, action: "flatten", positionId: row.id },
             });
             return fail(placed.error);
+          }
+          const closes = await listLinearExecutions({
+            connection,
+            symbol,
+            startTimeMs: row.openedAtMs,
+          });
+          if (closes.ok) {
+            const picked = pickClosingFill({
+              executions: closes.executions,
+              side: row.side,
+              openedAtMs: row.openedAtMs,
+              qty: row.qty,
+            });
+            if (picked) {
+              fillPrice = picked.fillPrice;
+            }
           }
           venue = connection.venue;
           environment = connection.environment;

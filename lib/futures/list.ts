@@ -9,6 +9,7 @@ import {
   type FuturesWorkingOrder,
 } from "./working";
 import { latestFlattenExitPrices } from "./stats";
+import { listFuturesOrderWebhookNames } from "./webhook-load";
 import { getSessionContext } from "@/lib/auth/session";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import {
@@ -46,23 +47,34 @@ async function resolveFuturesListScope(
   };
 }
 
-export async function loadFuturesPositions(input?: {
-  status?: "open" | "closed";
-  ruleId?: string;
-  symbol?: string;
-  all?: boolean;
-  scope?: FuturesListScope;
-}): Promise<FuturesPosition[]> {
-  const resolved = await resolveFuturesListScope(input?.scope);
-  const supabase = createServiceClient();
-  if (!resolved || !supabase) {
-    return [];
-  }
+const FUTURES_LIST_PAGE = 1000;
+
+type FuturesRowQuery = {
+  eq(column: string, value: string): FuturesRowQuery;
+  in(column: string, values: readonly string[]): FuturesRowQuery;
+  order(column: string, options: { ascending: boolean }): FuturesRowQuery;
+  range(from: number, to: number): FuturesRowQuery;
+  then: PromiseLike<{
+    data: unknown[] | null;
+    error: { message: string } | null;
+  }>["then"];
+};
+
+function futuresPositionQuery(
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
+  scope: FuturesListScope,
+  input?: {
+    status?: "open" | "closed";
+    ruleId?: string;
+    symbol?: string;
+  },
+): FuturesRowQuery {
   let query = supabase
     .from("futures_positions")
-    .select("*")
-    .eq("account_id", resolved.accountId)
-    .eq("user_id", resolved.userId)
+    .select("*") as unknown as FuturesRowQuery;
+  query = query
+    .eq("account_id", scope.accountId)
+    .eq("user_id", scope.userId)
     .order("opened_at", { ascending: false })
     .order("id", { ascending: false });
   if (input?.status === "closed") {
@@ -78,27 +90,46 @@ export async function loadFuturesPositions(input?: {
   if (symbol) {
     query = query.eq("symbol", symbol);
   }
+  return query;
+}
+
+function parsePositionRows(data: unknown[] | null): FuturesPosition[] {
+  return (data ?? []).map((row) =>
+    parseFuturesPositionRow(row as Record<string, unknown>),
+  );
+}
+
+export async function loadFuturesPositions(input?: {
+  status?: "open" | "closed";
+  ruleId?: string;
+  symbol?: string;
+  all?: boolean;
+  scope?: FuturesListScope;
+}): Promise<FuturesPosition[]> {
+  const resolved = await resolveFuturesListScope(input?.scope);
+  const supabase = createServiceClient();
+  if (!resolved || !supabase) {
+    return [];
+  }
   if (!input?.all) {
-    const { data, error } = await query;
+    const { data, error } = await futuresPositionQuery(supabase, resolved, input);
     if (error || !data) {
       return [];
     }
-    return data.map((row) =>
-      parseFuturesPositionRow(row as Record<string, unknown>),
-    );
+    return parsePositionRows(data);
   }
   const rows: FuturesPosition[] = [];
-  for (let from = 0; ; from += FLATTEN_EXIT_PAGE) {
-    const { data, error } = await query.range(from, from + FLATTEN_EXIT_PAGE - 1);
+  for (let from = 0; ; from += FUTURES_LIST_PAGE) {
+    const { data, error } = await futuresPositionQuery(
+      supabase,
+      resolved,
+      input,
+    ).range(from, from + FUTURES_LIST_PAGE - 1);
     if (error || !data || data.length === 0) {
       break;
     }
-    rows.push(
-      ...data.map((row) =>
-        parseFuturesPositionRow(row as Record<string, unknown>),
-      ),
-    );
-    if (data.length < FLATTEN_EXIT_PAGE) {
+    rows.push(...parsePositionRows(data));
+    if (data.length < FUTURES_LIST_PAGE) {
       break;
     }
   }
@@ -479,7 +510,7 @@ export async function loadOpenFuturesOnSymbol(
   );
 }
 
-const FLATTEN_EXIT_PAGE = 1000;
+const FLATTEN_EXIT_PAGE = FUTURES_LIST_PAGE;
 
 async function loadFlattenExitPrices(
   scope: FuturesListScope,

@@ -56,6 +56,7 @@ export function FuturesOrderTicket({
     minQty,
     maxQty,
     minNotional,
+    qtyStep: selected?.qtyStep,
     lastPrice: lastPrices[symbol] ?? null,
     limitPrice,
     orderType,

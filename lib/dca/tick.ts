@@ -8,6 +8,7 @@ import {
   isBybitAgreementQuiet,
   isBybitAgreementReject,
 } from "@/lib/exchanges/agreement";
+import { isExchangeMinimumReject } from "@/lib/exchanges/bybit/ticket-size";
 import {
   fetchBybitTickers,
   type BybitTicker,
@@ -1104,6 +1105,27 @@ async function stopBotForAgreement(input: {
   return true;
 }
 
+async function stopFlatBotForMinimum(input: {
+  playbook: DcaPlaybook;
+  mode: TradingAccountMode;
+  side: FuturesSide;
+  error: string;
+}): Promise<boolean> {
+  if (!isExchangeMinimumReject(input.error)) {
+    return false;
+  }
+  if (dcaLegFor(input.playbook, input.side).clipsFilled > 0) {
+    return false;
+  }
+  await applyDcaVerb({
+    playbook: input.playbook,
+    mode: input.mode,
+    verb: "disarm",
+    side: input.side,
+  });
+  return true;
+}
+
 async function applyTickAction(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
@@ -1132,12 +1154,18 @@ async function applyTickAction(input: {
     });
     if (!armed.ok) {
       if (
-        await stopBotForAgreement({
+        (await stopFlatBotForMinimum({
           playbook: input.playbook,
           mode: input.mode,
           side: input.side,
           error: armed.error,
-        })
+        })) ||
+        (await stopBotForAgreement({
+          playbook: input.playbook,
+          mode: input.mode,
+          side: input.side,
+          error: armed.error,
+        }))
       ) {
         if (!isBybitAgreementQuiet(armed.error)) {
           const why = String(input.why ?? "").trim();
@@ -1203,13 +1231,22 @@ async function applyTickAction(input: {
       reason: input.why,
     });
     if (!placed.ok) {
+      if ("quiet" in placed && placed.quiet) {
+        return { acted: false };
+      }
       if (
-        await stopBotForAgreement({
+        (await stopFlatBotForMinimum({
           playbook: input.playbook,
           mode: input.mode,
           side: input.side,
           error: placed.error,
-        })
+        })) ||
+        (await stopBotForAgreement({
+          playbook: input.playbook,
+          mode: input.mode,
+          side: input.side,
+          error: placed.error,
+        }))
       ) {
         if (!isBybitAgreementQuiet(placed.error)) {
           const why = String(input.why ?? "").trim();

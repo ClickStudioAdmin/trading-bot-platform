@@ -124,6 +124,7 @@ async function rejectDcaMaxOrder(
     maxQty: pair.maxQty,
     minQty: pair.minQty,
     minNotional: pair.minNotional,
+    qtyStep: pair.qtyStep,
     minPrice: pair.minPrice,
     tickSize: pair.tickSize,
     maxMktQty: pair.maxMktQty,

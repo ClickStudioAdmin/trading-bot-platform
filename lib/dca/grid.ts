@@ -832,6 +832,7 @@ export function dcaLadderMaxOrderError(input: {
   baseCoin: string;
   minQty?: number;
   minNotional?: number;
+  qtyStep?: number;
 }): string | null {
   for (const side of input.sides) {
     const hit = dcaFirstOrderOverMaxQty({ ...input, side });
@@ -929,6 +930,7 @@ function dcaLadderMinOrderError(input: {
   baseCoin: string;
   minQty?: number;
   minNotional?: number;
+  qtyStep?: number;
 }): string | null {
   const minQty = input.minQty ?? 0;
   const minNotional = input.minNotional ?? 0;
@@ -966,6 +968,7 @@ function dcaLadderMinOrderError(input: {
         minQty,
         maxQty: cap,
         minNotional,
+        qtyStep: input.qtyStep,
         lastPrice: price,
         limitPrice: String(price),
         orderType,

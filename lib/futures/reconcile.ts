@@ -41,6 +41,7 @@ import { fetchBybitTickers, type BybitTicker } from "@/lib/exchanges/bybit/clien
 import {
   amendPerpOrderOnVenue,
   cancelPerpOrderOnVenue,
+  listLinearExecutions,
   listLinearPositionRisk,
   readPerpOrderOnVenue,
   readPerpPositionOnVenue,
@@ -63,6 +64,13 @@ import {
 import { markFromTicker } from "./math";
 import { selectStrategySettings } from "./settings";
 import { resolveWriteLeverage } from "./venue-risk-load";
+import {
+  attributeClosingFill,
+  pickClosingFill,
+  type VenueCloseKind,
+} from "./venue-close";
+import { dcaFilterForSide } from "@/lib/dca/filters";
+import { listDcaPlaybooksForSymbols } from "@/lib/dca/store";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { BoundConnectionSecrets } from "@/lib/exchanges/store";
 import type { BybitLinearPosition } from "@/lib/exchanges/bybit/orders";
@@ -121,6 +129,7 @@ async function readCachedVenuePosition(input: {
           positionIdx: row.positionIdx,
           takeProfit: null,
           stopLoss: null,
+          leverage: row.leverage,
         });
       }
       book = { ok: true, byKey };
@@ -924,6 +933,31 @@ export async function reconcileOpenFuturesVenuePositions(
   const books = input?.venueBooks ?? new Map();
   let closed = 0;
   const now = Date.now();
+  const exitIfByKey = new Map<string, boolean>();
+  async function playbookHasExitIf(row: {
+    accountId: string;
+    symbol: string;
+    side: FuturesPosition["side"];
+    ruleName: string | null;
+  }): Promise<boolean> {
+    const key = `${row.accountId}:${row.symbol}:${row.side}:${row.ruleName ?? ""}`;
+    const cached = exitIfByKey.get(key);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const playbooks = await listDcaPlaybooksForSymbols(row.accountId, [
+      row.symbol,
+    ]);
+    const named = row.ruleName
+      ? playbooks.filter((playbook) => playbook.name === row.ruleName)
+      : [];
+    const playbook = (named.length > 0 ? named : playbooks)[0];
+    const has = playbook
+      ? dcaFilterForSide(playbook, row.side, "exitIf") != null
+      : false;
+    exitIfByKey.set(key, has);
+    return has;
+  }
   for (const row of rows) {
     const live = await connectionForAccount({
       supabase,
@@ -964,15 +998,48 @@ export async function reconcileOpenFuturesVenuePositions(
       tickers.get(row.symbol) ??
       (await paperTickerForAccount(row.accountId, row.symbol));
     const prices = tickerTriggerPrices(ticker ?? {});
-    const fillPrice = prices.mark ?? prices.last ?? row.entryPrice;
+    const closeQty = row.qty - venueQty;
+    const listed = await listLinearExecutions({
+      connection: live,
+      symbol: row.symbol,
+      startTimeMs: row.openedAtMs,
+    });
+    const picked = listed.ok
+      ? pickClosingFill({
+          executions: listed.executions,
+          side: row.side,
+          openedAtMs: row.openedAtMs,
+          qty: closeQty,
+        })
+      : null;
+    const fillPrice =
+      picked?.fillPrice ?? prices.mark ?? prices.last ?? row.entryPrice;
+    const hasExitIf = picked
+      ? await playbookHasExitIf({
+          accountId: row.accountId,
+          symbol: row.symbol,
+          side: row.side,
+          ruleName: row.ruleName,
+        })
+      : false;
+    const kind: VenueCloseKind = picked
+      ? attributeClosingFill({
+          fillPrice: picked.fillPrice,
+          stopOrderType: picked.stopOrderType,
+          orderLinkId: picked.orderLinkId,
+          takeProfit: row.takeProfit,
+          stopLoss: row.stopLoss,
+          hasExitIf,
+        })
+      : "venue";
     const applied = await closeStopPosition({
       supabase,
       row,
-      qty: row.qty - venueQty,
+      qty: closeQty,
       price: fillPrice,
       venue: live.venue,
       environment: live.environment,
-      kind: "venue",
+      kind,
       remainingTpsl:
         venueQty > 1e-12 ? tpslFromRow(row) : null,
     });
@@ -1243,7 +1310,7 @@ async function closeStopPosition(input: {
   price: number;
   venue: string | null;
   environment: string | null;
-  kind: "take_profit" | "stop_loss" | "trailing" | "venue";
+  kind: VenueCloseKind;
   remainingTpsl: FuturesTpsl | null;
 }): Promise<boolean> {
   const written = await writeFuturesCloseSlice({
@@ -1296,9 +1363,13 @@ async function closeStopPosition(input: {
             : `Take profit reduced ${input.row.symbol} ${input.row.side}`
           : input.kind === "trailing"
             ? `Trailing stop closed ${input.row.symbol} ${input.row.side}`
-            : closed
-              ? `Venue closed ${input.row.symbol} ${input.row.side}`
-              : `Venue reduced ${input.row.symbol} ${input.row.side}`,
+            : input.kind === "exit_if"
+              ? closed
+                ? `Hard exit closed ${input.row.symbol} ${input.row.side}`
+                : `Hard exit reduced ${input.row.symbol} ${input.row.side}`
+              : closed
+                ? `Venue closed ${input.row.symbol} ${input.row.side}`
+                : `Venue reduced ${input.row.symbol} ${input.row.side}`,
       { source: input.row.source, ruleName: input.row.ruleName },
     ),
     userId: input.row.userId,

@@ -1,5 +1,14 @@
 import { floorToStep } from "./qty";
 
+export function isExchangeMinimumReject(error: string): boolean {
+  const text = error.toLowerCase();
+  return (
+    text.includes("minimum order") ||
+    text.includes("minimum size") ||
+    text.includes("below the exchange minimum")
+  );
+}
+
 export function parseTicketSize(raw: string): number | null {
   const qty = Number(String(raw ?? "").replace(/,/g, "").trim());
   if (!(qty > 0) || !Number.isFinite(qty)) {
@@ -42,6 +51,7 @@ export function perpTicketSizeError(input: {
   minQty: number;
   maxQty?: number;
   minNotional: number;
+  qtyStep?: number;
   lastPrice?: number | null;
   limitPrice?: string;
   orderType?: "market" | "limit";
@@ -70,6 +80,17 @@ export function perpTicketSizeError(input: {
         return `Minimum order is $${formatPerpMinQty(minUsdt)} (${formatPerpMinQty(input.minQty)} ${input.baseCoin}).`;
       }
       return `Minimum order value is $${formatPerpMinQty(input.minNotional)}.`;
+    }
+    if (sizePrice && input.qtyStep && input.qtyStep > 0) {
+      const floored = floorToStep(amount / sizePrice, input.qtyStep);
+      const flooredNotional = floored * sizePrice;
+      if (input.minNotional > 0 && flooredNotional + 1e-8 < input.minNotional) {
+        return `Minimum order value is $${formatPerpMinQty(input.minNotional)}.`;
+      }
+      if (input.minQty > 0 && floored + 1e-12 < input.minQty) {
+        const minUsdtAfterFloor = input.minQty * sizePrice;
+        return `Minimum order is $${formatPerpMinQty(minUsdtAfterFloor)} (${formatPerpMinQty(input.minQty)} ${input.baseCoin}).`;
+      }
     }
     if (maxQty > 0 && sizePrice) {
       const qty = amount / sizePrice;

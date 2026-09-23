@@ -702,6 +702,28 @@ assert.equal(
   }),
   "Entry # 2: Minimum limit is $1.",
 );
+assert.equal(
+  dcaConfigMaxOrderError({
+    config: {
+      direction: "long",
+      dcaMode: "position",
+      clipSize: 6,
+      sizeUnit: "usdt",
+      maxClips: 3,
+      maxValue: 20,
+      maxValueKind: "margin",
+      dipPct: null,
+      sizeMultiplier: 1,
+      deviationMultiplier: 1,
+    },
+    lastPrice: 1,
+    maxQty: 0,
+    maxMktQty: 0,
+    baseCoin: "ONDO",
+    leverage: null,
+  }),
+  "Set leverage before using % of available margin.",
+);
 assert.equal(dcaShouldFlattenIdleOpen({ status: "idle", positionQty: 0.1 }), true);
 assert.equal(dcaShouldFlattenIdleOpen({ status: "idle", positionQty: 0 }), false);
 assert.equal(dcaShouldFlattenIdleOpen({ status: "armed", positionQty: 0.1 }), false);

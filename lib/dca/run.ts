@@ -1026,13 +1026,15 @@ async function syncDcaPlaybookGridUnlocked(input: {
   }
 }
 
+const leverageUnavailableLogged = new Set<string>();
+
 async function placeClip(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
   side: FuturesSide;
   lastPrice: number;
   reason?: string;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<{ ok: true } | { ok: false; error: string; quiet?: boolean }> {
   const leg = dcaLegFor(input.playbook, input.side);
   const firstClip = leg.clipsFilled === 0;
   let clipSize = input.playbook.clipSize;
@@ -1064,12 +1066,17 @@ async function placeClip(input: {
       input.playbook.maxValue != null &&
       (leverage == null || !(leverage > 0))
     ) {
+      const quietKey = `${input.playbook.id}:${input.side}`;
+      const quiet = leverageUnavailableLogged.has(quietKey);
+      leverageUnavailableLogged.add(quietKey);
       return {
         ok: false,
+        quiet,
         error:
           "Leverage is unavailable, so % of available margin cannot size this cycle.",
       };
     }
+    leverageUnavailableLogged.delete(`${input.playbook.id}:${input.side}`);
     const sized = dcaCycleClipSize({
       kind: input.playbook.maxValueKind,
       maxValue: input.playbook.maxValue,

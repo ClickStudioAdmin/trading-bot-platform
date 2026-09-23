@@ -371,6 +371,7 @@ async function rejectIfOverMaxOrder(
     maxMktQty: pair.maxMktQty,
     minQty: pair.minQty,
     minNotional: pair.minNotional,
+    qtyStep: pair.qtyStep,
     minPrice: pair.minPrice,
     tickSize: pair.tickSize,
     baseCoin: pair.baseCoin,

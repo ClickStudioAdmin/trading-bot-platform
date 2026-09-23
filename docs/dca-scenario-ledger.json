@@ -3990,7 +3990,7 @@
       "slBasis": "average",
       "expect": "While MACD below is true on 15m, place the first long on the tick if the gate passes. Secondary is off. If the gate is false, stay flat.",
       "symbol": "BCHUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 7.12,
       "playbookId": "2a9cd6e5-f787-4cb6-8c5d-d8cb51b860a4",
       "status": "created"
     },
@@ -4695,7 +4695,7 @@
       "slBasis": "average",
       "expect": "Wait for PxSMA x-above on 15m, then place the first long if the gate passes. Secondary must also be true (SMA below). A sit that is already true does not count.",
       "symbol": "BNBUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 7.9,
       "playbookId": "51f9fded-1703-444f-a6eb-3dfb3f74d5ae",
       "status": "created"
     },
@@ -5260,7 +5260,7 @@
       "slBasis": "average",
       "expect": "Wait for PxSMA x-below on 15m, then place the first long if the gate passes. Secondary must also be true (SMA below). A sit that is already true does not count.",
       "symbol": "BTWUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 9.29,
       "playbookId": "bc343348-cb68-46a4-83a3-0b5a00ca764c",
       "status": "created"
     },
@@ -8050,7 +8050,7 @@
       "slBasis": "average",
       "expect": "While PxEMA above is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (SMA above). If the gate is false, stay flat.",
       "symbol": "DRAMUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.33,
       "playbookId": "8443cafd-a18d-4393-b6a9-251e5630e8be",
       "status": "created"
     },
@@ -8864,7 +8864,7 @@
       "slBasis": "average",
       "expect": "While PxEMA below is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (BB inside). If the gate is false, stay flat.",
       "symbol": "ETHUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 27.49,
       "playbookId": "11c92b11-74ef-44af-b2bc-18afe40d7d3c",
       "status": "created"
     },
@@ -14974,7 +14974,7 @@
       "slBasis": "average",
       "expect": "While ST is bull is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (RSI between). If the gate is false, stay flat.",
       "symbol": "METAUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 7.43,
       "playbookId": "9ed5daae-dc0b-4e40-b83b-4586f162d6a8",
       "status": "created"
     },
@@ -15979,7 +15979,7 @@
       "slBasis": "average",
       "expect": "Enter immediately. Close reason should be take profit (TP ATR avg mkt). Stop is wide at 20%.",
       "symbol": "MUUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 10.98,
       "playbookId": "048519d3-9106-4ffe-9a22-b35facf039a8",
       "status": "created"
     },
@@ -16916,7 +16916,7 @@
       "slBasis": "average",
       "expect": "Enter at market, then rest the remaining adds as GTC limits 1% apart.",
       "symbol": "OKBUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.21,
       "playbookId": "77fdba8b-be13-4de9-922a-ffb27252015a",
       "status": "created"
     },

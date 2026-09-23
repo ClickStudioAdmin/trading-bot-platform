@@ -557,6 +557,7 @@ export function dcaConfigMaxOrderError(input: {
   maxMktQty: number;
   minQty?: number;
   minNotional?: number;
+  qtyStep?: number;
   minPrice?: number;
   tickSize?: number;
   baseCoin: string;
@@ -567,6 +568,13 @@ export function dcaConfigMaxOrderError(input: {
   const { config } = input;
   if (!(config.clipSize > 0)) {
     return null;
+  }
+  if (
+    config.maxValueKind === "margin" &&
+    config.maxValue != null &&
+    !(input.leverage != null && input.leverage > 0)
+  ) {
+    return "Set leverage before using % of available margin.";
   }
   const resolvedMaxValue = dcaResolvedMaxValueUsdt({
     kind: config.maxValueKind,
@@ -598,6 +606,7 @@ export function dcaConfigMaxOrderError(input: {
       maxMktQty: input.maxMktQty,
       minQty: input.minQty ?? 0,
       minNotional: input.minNotional ?? 0,
+      qtyStep: input.qtyStep,
       baseCoin: input.baseCoin,
     });
     if (venue) {

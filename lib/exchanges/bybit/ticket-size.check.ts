@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { formatPerpMinQty, perpEffectiveMaxQty, perpTicketLimitError, perpTicketSizeError } from "./ticket-size";
+import { formatPerpMinQty, isExchangeMinimumReject, perpEffectiveMaxQty, perpTicketLimitError, perpTicketSizeError } from "./ticket-size";
 
 assert.equal(formatPerpMinQty(0.001), "0.001");
 assert.equal(formatPerpMinQty(5), "5");
@@ -70,6 +70,35 @@ assert.equal(
   }),
   "Minimum order value is $5.",
 );
+
+assert.equal(
+  perpTicketSizeError({
+    size: "6",
+    unit: "usdt",
+    minQty: 0.01,
+    minNotional: 5,
+    qtyStep: 0.01,
+    lastPrice: 400,
+    baseCoin: "BCH",
+  }),
+  "Minimum order value is $5.",
+);
+
+assert.equal(
+  perpTicketSizeError({
+    size: "8",
+    unit: "usdt",
+    minQty: 0.01,
+    minNotional: 5,
+    qtyStep: 0.01,
+    lastPrice: 400,
+    baseCoin: "BCH",
+  }),
+  null,
+);
+
+assert.equal(isExchangeMinimumReject("Minimum order value is $5."), true);
+assert.equal(isExchangeMinimumReject("insufficient balance"), false);
 
 assert.equal(
   perpTicketSizeError({

@@ -205,6 +205,38 @@ const notionalTooSmall = qtyForPerpNotional(1, 50_000, {
 });
 assert.equal(notionalTooSmall.ok, false);
 
+const flooredUnderMin = qtyForPerpNotional(6, 400, {
+  symbol: "BCHUSDT",
+  status: "Trading",
+  baseCoin: "BCH",
+  quoteCoin: "USDT",
+  lotSizeFilter: {
+    qtyStep: "0.01",
+    minOrderQty: "0.01",
+    minNotionalValue: "5",
+  },
+});
+assert.equal(flooredUnderMin.ok, false);
+if (!flooredUnderMin.ok) {
+  assert.equal(flooredUnderMin.error, "Minimum order value is $5.");
+}
+
+const flooredClearsMin = qtyForPerpNotional(8, 400, {
+  symbol: "BCHUSDT",
+  status: "Trading",
+  baseCoin: "BCH",
+  quoteCoin: "USDT",
+  lotSizeFilter: {
+    qtyStep: "0.01",
+    minOrderQty: "0.01",
+    minNotionalValue: "5",
+  },
+});
+assert.equal(flooredClearsMin.ok, true);
+if (flooredClearsMin.ok) {
+  assert.equal(flooredClearsMin.qty, 0.02);
+}
+
 const paperCopy = qtyForCopyPaperNotional(7.8, 78_000);
 assert.equal(paperCopy.ok, true);
 if (paperCopy.ok) {

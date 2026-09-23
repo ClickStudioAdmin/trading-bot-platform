@@ -58,6 +58,7 @@ function withSymbol(options: LinearPerp[], symbol: string): LinearPerp[] {
       maxQty: 0,
       maxMktQty: 0,
       minNotional: 0,
+      qtyStep: 0,
       minPrice: 0,
       tickSize: 0,
     },

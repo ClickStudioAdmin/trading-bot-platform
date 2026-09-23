@@ -1136,6 +1136,7 @@ export function DcaPlaybookForm({
     minQty: selectedPair?.minQty ?? 0,
     maxQty: selectedPair?.maxQty ?? 0,
     minNotional: selectedPair?.minNotional ?? 0,
+    qtyStep: selectedPair?.qtyStep,
     lastPrice,
     baseCoin: selectedPair?.baseCoin ?? "Token",
   });
@@ -1160,6 +1161,7 @@ export function DcaPlaybookForm({
     maxMktQty: selectedPair?.maxMktQty ?? 0,
     minQty: selectedPair?.minQty ?? 0,
     minNotional: selectedPair?.minNotional ?? 0,
+    qtyStep: selectedPair?.qtyStep,
     minPrice: selectedPair?.minPrice,
     tickSize: selectedPair?.tickSize,
     baseCoin: selectedPair?.baseCoin ?? "Token",
@@ -1174,8 +1176,15 @@ export function DcaPlaybookForm({
     (asNumber(maxValue) as number) > 100
       ? "Percent must be 100 or less."
       : null;
+  const marginLeverageError =
+    maxValueKind === "margin" &&
+    asNumber(maxValue) != null &&
+    !(leverage != null && leverage > 0)
+      ? "Set leverage before using % of available margin."
+      : null;
   const saveError =
     maxValueOverCap ??
+    marginLeverageError ??
     (asNumber(clipForSave) === null ? null : (sizeError ?? ladderMaxError));
   const saveBlocked = cycleLocked ? null : saveError;
   const restGridEffective = averaging !== "interval" && restGrid;
