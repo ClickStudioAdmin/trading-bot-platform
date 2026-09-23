@@ -451,7 +451,6 @@ function RuleRow({
       <BotFormStep
         title="Entry Conditions"
         hint="All conditions must be true."
-        defaultCollapsed={inUse}
       >
         <div className={botRowClass}>
           <CarryNumber
@@ -472,7 +471,7 @@ function RuleRow({
           />
         </div>
       </BotFormStep>
-      <BotFormStep title="Position Sizing" defaultCollapsed={inUse}>
+      <BotFormStep title="Position Sizing">
       <BotFormGroup title="Position and Orders">
         <div className={botRowClass}>
           <CarryNumber
