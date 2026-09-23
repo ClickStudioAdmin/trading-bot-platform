@@ -221,7 +221,6 @@ function DcaSecondaryEntrySection({
         dense
         allowOff={false}
         gridClass={botRowClass5}
-        whenClass=""
         fieldClass={fieldClass}
         labelClass={labelClass}
       />
@@ -2581,7 +2580,6 @@ export function DcaPlaybookForm({
               dense
               allowOff={false}
               gridClass={botRowClass5}
-              whenClass=""
               fieldClass={fieldClass}
               labelClass={labelClass}
             />
@@ -2608,7 +2606,6 @@ export function DcaPlaybookForm({
               dense
               allowOff={false}
               gridClass={botRowClass5}
-              whenClass=""
               fieldClass={fieldClass}
               labelClass={labelClass}
             />
@@ -2640,7 +2637,6 @@ export function DcaPlaybookForm({
             dense
             allowOff={false}
             gridClass={botRowClass5}
-            whenClass=""
             fieldClass={fieldClass}
             labelClass={labelClass}
           />

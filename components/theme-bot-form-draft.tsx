@@ -430,7 +430,6 @@ function ThemeSecondaryEntry({
         dense
         allowOff={false}
         gridClass={rowClass5}
-        whenClass=""
         fieldClass={fieldClass}
         labelClass={labelClass}
       />
@@ -2087,7 +2086,6 @@ export function ThemeBotFormDraft() {
                     dense
                     allowOff={false}
                     gridClass={rowClass5}
-                    whenClass=""
                     fieldClass={fieldClass}
                     labelClass={labelClass}
                   />
@@ -2114,7 +2112,6 @@ export function ThemeBotFormDraft() {
                     dense
                     allowOff={false}
                     gridClass={rowClass5}
-                    whenClass=""
                     fieldClass={fieldClass}
                     labelClass={labelClass}
                   />
@@ -2147,7 +2144,6 @@ export function ThemeBotFormDraft() {
                   dense
                   allowOff={false}
                   gridClass={rowClass5}
-                  whenClass=""
                   fieldClass={fieldClass}
                   labelClass={labelClass}
                 />

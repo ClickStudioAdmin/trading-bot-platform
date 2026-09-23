@@ -89,7 +89,7 @@ export function DcaFilterBlock({
       fieldClass={fieldClass}
       labelClass={labelClass}
       bare={dense}
-      whenClass={whenClassProp ?? (dense ? "lg:col-span-2" : "col-span-2")}
+      whenClass={whenClassProp ?? "col-span-2"}
     />
   ) : null;
   if (dense) {
@@ -196,7 +196,7 @@ function DcaFilterParamFields({
           ))}
         </AppSelect>
       </label>
-      <label className={`${labelClass} ${whenClass}`}>
+      <label className={`${labelClass} ${whenClass} min-w-[16rem]`}>
         <HintLabel text="When" required />
         <AppSelect
           name={named ? `${prefix}Compare` : undefined}

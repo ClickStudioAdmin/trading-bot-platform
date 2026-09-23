@@ -204,13 +204,13 @@ export function IndicatorStartFields({
   return (
     <>
       {showPairPeriods ? (
-        <div className="col-span-full grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-5">
+        <div className="col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2fr)_6.5rem]">
           {indicatorField}
           {timeframeField}
           {pairFields}
         </div>
       ) : kind === "rsi" ? (
-        <div className="col-span-full grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-5">
+        <div className="col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2fr)_6.5rem]">
           {indicatorField}
           {periodField}
           {timeframeField}
@@ -218,7 +218,13 @@ export function IndicatorStartFields({
           {levelField}
         </div>
       ) : (
-        <div className="col-span-full grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-5">
+        <div
+          className={
+            levelField
+              ? "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2fr)_6.5rem]"
+              : "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2.4fr)]"
+          }
+        >
           {indicatorField}
           {periodField}
           {timeframeField}
@@ -260,7 +266,7 @@ export function TrendStartFields({
   const trendKind = kind === "supertrend" ? kind : "supertrend";
   const whenOptions = dcaIndicatorWhenOptions(trendKind, side, false);
   return (
-    <div className="col-span-full grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-5">
+    <div className="col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_6.5rem_minmax(16rem,2fr)]">
       <label className={labelClass}>
         <HintLabel text="Trend" required />
         <AppSelect

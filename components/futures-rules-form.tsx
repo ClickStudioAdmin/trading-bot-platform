@@ -930,7 +930,6 @@ function RuleCard({
             dense
             allowOff={false}
             gridClass={botRowClass5}
-            whenClass=""
             fieldClass={botFieldClass}
             labelClass={botLabelClass}
           />
@@ -1278,7 +1277,6 @@ function RuleCard({
               dense
               allowOff={false}
               gridClass={botRowClass5}
-              whenClass=""
               fieldClass={botFieldClass}
               labelClass={botLabelClass}
             />
