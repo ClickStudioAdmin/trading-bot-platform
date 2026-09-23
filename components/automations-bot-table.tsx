@@ -498,7 +498,7 @@ export function AutomationsBotTable({
                     <TableIconAction
                       href={row.positionsHref}
                       label="Positions"
-                      detail="Open this bot’s positions."
+                      detail="See this bot’s current positions."
                     >
                       <IconPositions {...TABLE_BTN_ICON} />
                     </TableIconAction>
@@ -516,7 +516,7 @@ export function AutomationsBotTable({
                     <TableIconAction
                       href={row.performanceHref}
                       label="Performance"
-                      detail="Open this bot’s realized ROE."
+                      detail="See this bot’s full performance."
                     >
                       <IconPerformance {...TABLE_BTN_ICON} />
                     </TableIconAction>
