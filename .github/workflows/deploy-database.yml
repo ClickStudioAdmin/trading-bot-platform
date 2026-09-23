@@ -60,7 +60,21 @@ jobs:
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
 
       - name: Push migrations
-        run: supabase db push
+        run: |
+          # The session pooler sometimes drops the first handshake
+          # (connection terminated unexpectedly). Each migration runs in a
+          # transaction, so a failed attempt does not leave a partial schema.
+          for attempt in 1 2 3; do
+            if supabase db push; then
+              exit 0
+            fi
+            status=$?
+            if [ "$attempt" -eq 3 ]; then
+              exit "$status"
+            fi
+            echo "db push failed on attempt ${attempt}. Waiting 20s."
+            sleep 20
+          done
 
   deploy-production:
     name: Apply production migrations
@@ -107,4 +121,15 @@ jobs:
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
 
       - name: Push migrations
-        run: supabase db push
+        run: |
+          for attempt in 1 2 3; do
+            if supabase db push; then
+              exit 0
+            fi
+            status=$?
+            if [ "$attempt" -eq 3 ]; then
+              exit "$status"
+            fi
+            echo "db push failed on attempt ${attempt}. Waiting 20s."
+            sleep 20
+          done
