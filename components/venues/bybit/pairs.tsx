@@ -7,8 +7,7 @@ import {
   type LinearPerp,
 } from "@/lib/exchanges/bybit/perp";
 import {
-  bybitAgreementKind,
-  bybitAgreementKindTitle,
+  perpCategoryLabel,
   perpNeedsBybitAgreement,
   type BybitAgreementGate,
 } from "@/lib/exchanges/agreement";
@@ -25,6 +24,7 @@ import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
 import { formatMarketCap, loadMarketCaps } from "@/lib/market/caps";
 import {
   applyPairFilters,
+  emptyPairFilters,
   pairFilterInputValues,
   pairFiltersAreActive,
   parsePairFilters,
@@ -81,12 +81,11 @@ export async function BybitFuturesPairs({
   ]);
   const { pairs, error } = loaded;
   const visible = applyPairFilters(pairs, filters, (pair) => {
-    const kind = bybitAgreementKind(pair);
+    const category = perpCategoryLabel(pair);
     return {
-      text: `${pair.baseCoin} ${pair.symbol} ${pair.quoteCoin} ${
-        kind ? bybitAgreementKindTitle(kind) : ""
-      }`,
+      text: `${pair.baseCoin} ${pair.symbol} ${pair.quoteCoin} ${category}`,
       base: pair.baseCoin,
+      category,
     };
   });
   const active = pairFiltersAreActive(filters);
@@ -94,10 +93,7 @@ export async function BybitFuturesPairs({
   const ranked = sortPairRows(visible, sort, dir, {
     base: (pair) => pair.baseCoin,
     contract: (pair) => pair.symbol,
-    category: (pair) => {
-      const kind = bybitAgreementKind(pair);
-      return kind ? bybitAgreementKindTitle(kind) : null;
-    },
+    category: (pair) => perpCategoryLabel(pair),
     quote: (pair) => pair.quoteCoin,
     cap: (pair) => caps.get(pair.baseCoin) ?? null,
     status: (pair) =>
@@ -139,11 +135,12 @@ export async function BybitFuturesPairs({
           clearHref={pairPageHref({
             path,
             keep,
-            filters: { q: "", base: "", minDte: null, maxDte: null },
+            filters: emptyPairFilters(),
             page: 1,
           })}
           keep={keep}
           values={pairFilterInputValues(filters)}
+          showCategory
           sort={sort}
           dir={dir}
         />
@@ -215,7 +212,6 @@ export async function BybitFuturesPairs({
             </thead>
             <tbody>
               {list.rows.map((pair) => {
-                const kind = bybitAgreementKind(pair);
                 const disabled = perpNeedsBybitAgreement(gate, pair);
                 return (
                 <tr
@@ -230,11 +226,7 @@ export async function BybitFuturesPairs({
                   </td>
                   <td className="px-4 py-3">{pair.symbol}</td>
                   <td className="px-4 py-3 text-ink-muted">
-                    {kind ? (
-                      bybitAgreementKindTitle(kind)
-                    ) : (
-                      <span className="text-ink-faint">—</span>
-                    )}
+                    {perpCategoryLabel(pair)}
                   </td>
                   <td className="px-4 py-3 text-ink-muted">
                     {pair.quoteCoin}

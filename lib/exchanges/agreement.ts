@@ -36,6 +36,22 @@ export function bybitAgreementKindTitle(kind: BybitAgreementKind): string {
   return kind === "oil" ? "Crude oil contracts" : "Stock and metal contracts";
 }
 
+export const PERP_CATEGORY_CRYPTO = "Crypto";
+
+export const PERP_CATEGORY_OPTIONS = [
+  PERP_CATEGORY_CRYPTO,
+  bybitAgreementKindTitle("tradfi"),
+  bybitAgreementKindTitle("oil"),
+] as const;
+
+export function perpCategoryLabel(input: {
+  symbolType?: string | null;
+  baseCoin?: string | null;
+}): string {
+  const kind = bybitAgreementKind(input);
+  return kind ? bybitAgreementKindTitle(kind) : PERP_CATEGORY_CRYPTO;
+}
+
 export function perpNeedsBybitAgreement(
   gate: BybitAgreementGate | undefined,
   pair: {

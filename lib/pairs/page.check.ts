@@ -111,7 +111,7 @@ assert.equal(
   pairPageHref({
     path: "/account/exchanges/pairs",
     keep: { venue: "bybit", kind: "carry" },
-    filters: { q: "btc", base: "BTC", minDte: null, maxDte: null },
+    filters: { q: "btc", base: "BTC", category: "", minDte: null, maxDte: null },
     page: 2,
   }),
   "/account/exchanges/pairs?venue=bybit&kind=carry&q=btc&base=BTC&page=2",
@@ -120,7 +120,7 @@ assert.equal(
   pairPageHref({
     path: "/account/exchanges/pairs",
     keep: { venue: "bybit", kind: "carry" },
-    filters: { q: "", base: "", minDte: 10, maxDte: 90 },
+    filters: { q: "", base: "", category: "", minDte: 10, maxDte: 90 },
     page: 1,
   }),
   "/account/exchanges/pairs?venue=bybit&kind=carry&minDte=10&maxDte=90",
@@ -129,12 +129,12 @@ assert.equal(
   pairPageHref({
     path: "/account/exchanges/pairs",
     keep: { venue: "bybit" },
-    filters: { q: "", base: "", minDte: null, maxDte: null },
+    filters: { q: "", base: "", category: "Crypto", minDte: null, maxDte: null },
     page: 1,
     sort: "cap",
     dir: "desc",
   }),
-  "/account/exchanges/pairs?venue=bybit",
+  "/account/exchanges/pairs?venue=bybit&category=Crypto",
 );
 assert.equal(
   pairPageLabel({ page: 1, total: 51, from: 0, to: 50 }),

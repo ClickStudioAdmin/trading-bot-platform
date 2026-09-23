@@ -1,13 +1,20 @@
 import { PageHeading } from "@/components/page-heading";
 import { PairFiltersForm } from "@/components/pair-filters";
 import { PairPager } from "@/components/pair-pager";
-import { SortTh, TableCard, TableFilterSession } from "@/components/table-chrome";
+import {
+  SortTh,
+  StatusBadge,
+  TableCard,
+  TableFilterSession,
+} from "@/components/table-chrome";
+import { perpCategoryLabel } from "@/lib/exchanges/agreement";
 import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
 import { TokenIcon } from "@/components/token-icon";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { formatMarketCap, loadMarketCaps } from "@/lib/market/caps";
 import {
   applyPairFilters,
+  emptyPairFilters,
   pairFilterInputValues,
   pairFiltersAreActive,
   parsePairFilters,
@@ -48,18 +55,24 @@ export async function HyperliquidFuturesPairs({
     error = cause instanceof Error ? cause.message : "Hyperliquid request failed";
   }
 
-  const visible = applyPairFilters(pairs, filters, (pair) => ({
-    text: `${pair.baseCoin} ${pair.symbol} ${pair.quoteCoin}`,
-    base: pair.baseCoin,
-  }));
+  const caps = await loadMarketCaps();
+  const visible = applyPairFilters(pairs, filters, (pair) => {
+    const category = perpCategoryLabel(pair);
+    return {
+      text: `${pair.baseCoin} ${pair.symbol} ${pair.quoteCoin} ${category}`,
+      base: pair.baseCoin,
+      category,
+    };
+  });
   const active = pairFiltersAreActive(filters);
   const { sort, dir } = parsePairSort(searchParams, PAIR_SORTS.futures);
-  const caps = await loadMarketCaps();
   const ranked = sortPairRows(visible, sort, dir, {
     base: (pair) => pair.baseCoin,
     contract: (pair) => pair.symbol,
+    category: (pair) => perpCategoryLabel(pair),
     quote: (pair) => pair.quoteCoin,
     cap: (pair) => caps.get(pair.baseCoin) ?? null,
+    status: () => "Enabled",
   });
   const list = paginatePairRows(ranked, searchParams.page);
   const hrefFor = (page: number) =>
@@ -97,11 +110,12 @@ export async function HyperliquidFuturesPairs({
           clearHref={pairPageHref({
             path,
             keep,
-            filters: { q: "", base: "", minDte: null, maxDte: null },
+            filters: emptyPairFilters(),
             page: 1,
           })}
           keep={keep}
           values={pairFilterInputValues(filters)}
+          showCategory
           sort={sort}
           dir={dir}
         />
@@ -146,6 +160,12 @@ export async function HyperliquidFuturesPairs({
                   href={sortHref("contract")}
                 />
                 <SortTh
+                  label="Category"
+                  active={sort === "category"}
+                  dir={dir}
+                  href={sortHref("category")}
+                />
+                <SortTh
                   label="Quote"
                   active={sort === "quote"}
                   dir={dir}
@@ -156,6 +176,12 @@ export async function HyperliquidFuturesPairs({
                   active={sort === "cap"}
                   dir={dir}
                   href={sortHref("cap")}
+                />
+                <SortTh
+                  label="Status"
+                  active={sort === "status"}
+                  dir={dir}
+                  href={sortHref("status")}
                 />
               </tr>
             </thead>
@@ -173,10 +199,16 @@ export async function HyperliquidFuturesPairs({
                   </td>
                   <td className="px-4 py-3">{pair.symbol}</td>
                   <td className="px-4 py-3 text-ink-muted">
+                    {perpCategoryLabel(pair)}
+                  </td>
+                  <td className="px-4 py-3 text-ink-muted">
                     {pair.quoteCoin}
                   </td>
                   <td className="px-4 py-3 tabular-nums text-ink-muted">
                     {formatMarketCap(caps.get(pair.baseCoin) ?? null)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusBadge label="Enabled" status="enabled" />
                   </td>
                 </tr>
               ))}

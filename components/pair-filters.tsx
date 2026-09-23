@@ -7,6 +7,7 @@ import {
   TableLabelButton,
 } from "@/components/table-chrome";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
+import { PERP_CATEGORY_OPTIONS } from "@/lib/exchanges/agreement";
 import type { PairFilterInputs, PairFilters } from "@/lib/pairs/filter";
 import { DESK_QUERY } from "@/lib/accounts/model";
 import type { VenueDefinition } from "@/lib/exchanges/venues";
@@ -39,6 +40,9 @@ export function PairsScopeSelect({
       {filters.q ? <input type="hidden" name="q" value={filters.q} /> : null}
       {filters.base ? (
         <input type="hidden" name="base" value={filters.base} />
+      ) : null}
+      {filters.category ? (
+        <input type="hidden" name="category" value={filters.category} />
       ) : null}
       {filters.minDte !== null ? (
         <input type="hidden" name="minDte" value={String(filters.minDte)} />
@@ -81,6 +85,7 @@ export function PairFiltersForm({
   clearHref,
   values,
   bases,
+  showCategory = false,
   showDte = false,
   deskId,
   keep,
@@ -90,6 +95,7 @@ export function PairFiltersForm({
   clearHref: string;
   values: PairFilterInputs;
   bases?: readonly string[];
+  showCategory?: boolean;
   showDte?: boolean;
   deskId?: string | null;
   keep?: Record<string, string | undefined>;
@@ -149,6 +155,22 @@ export function PairFiltersForm({
           />
         </TableFilterField>
       )}
+      {showCategory ? (
+        <TableFilterField label="Category" className="min-w-[14rem]">
+          <AppSelect
+            name="category"
+            defaultValue={values.category}
+            className={TABLE_FILTER_FIELD_CLASS}
+          >
+            <option value="">All</option>
+            {PERP_CATEGORY_OPTIONS.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </AppSelect>
+        </TableFilterField>
+      ) : null}
       {showDte ? (
         <>
           <TableFilterField label="Min DTE">

@@ -10,6 +10,7 @@ import { CARRY_BASE_COINS, type CarryPair } from "@/lib/exchanges/bybit/universe
 import { formatMarketCap, loadMarketCaps } from "@/lib/market/caps";
 import {
   applyPairFilters,
+  emptyPairFilters,
   pairFilterInputValues,
   pairFiltersAreActive,
   parsePairFilters,
@@ -97,7 +98,7 @@ export async function BybitCarryPairs({
           clearHref={pairPageHref({
             path,
             keep,
-            filters: { q: "", base: "", minDte: null, maxDte: null },
+            filters: emptyPairFilters(),
             page: 1,
           })}
           keep={keep}

@@ -274,6 +274,9 @@ export function pairPageHref(input: {
   if (input.filters.base) {
     extra.base = input.filters.base;
   }
+  if (input.filters.category) {
+    extra.category = input.filters.category;
+  }
   if (input.filters.minDte !== null) {
     extra.minDte = String(input.filters.minDte);
   }
@@ -313,6 +316,7 @@ export function pairSortHref(input: {
       ...keepParams(input.keep),
       q: input.filters.q || undefined,
       base: input.filters.base || undefined,
+      category: input.filters.category || undefined,
       minDte:
         input.filters.minDte !== null ? String(input.filters.minDte) : undefined,
       maxDte:

@@ -3,6 +3,7 @@ import {
   BYBIT_AGREEMENT_NOTE,
   BYBIT_AGREEMENT_PICKER_NOTE,
   bybitAgreementKind,
+  perpCategoryLabel,
   firstOpenPerp,
   isBybitAgreementQuiet,
   isBybitAgreementReject,
@@ -46,6 +47,15 @@ assert.equal(bybitAgreementKind({ symbolType: "stock", baseCoin: "TSLA" }), "tra
 assert.equal(bybitAgreementKind({ symbolType: "commodity", baseCoin: "XAU" }), "tradfi");
 assert.equal(bybitAgreementKind({ symbolType: "commodity", baseCoin: "CL" }), "oil");
 assert.equal(bybitAgreementKind({ symbolType: "", baseCoin: "BTC" }), null);
+assert.equal(perpCategoryLabel({ symbolType: "", baseCoin: "BTC" }), "Crypto");
+assert.equal(
+  perpCategoryLabel({ symbolType: "stock", baseCoin: "TSLA" }),
+  "Stock and metal contracts",
+);
+assert.equal(
+  perpCategoryLabel({ symbolType: "commodity", baseCoin: "CL" }),
+  "Crude oil contracts",
+);
 const gate = { symbols: ["OKLOUSDT"], cleared: ["tradfi"] as const, live: true };
 assert.equal(
   perpNeedsBybitAgreement(gate, {

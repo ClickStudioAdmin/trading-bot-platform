@@ -1,3 +1,5 @@
+import { PERP_CATEGORY_OPTIONS } from "@/lib/exchanges/agreement";
+
 const STABLE_BASE_COINS = new Set([
   "USDT",
   "USDC",
@@ -23,6 +25,7 @@ export function isStableBaseCoin(baseCoin: string): boolean {
 export type PairFilters = {
   q: string;
   base: string;
+  category: string;
   minDte: number | null;
   maxDte: number | null;
 };
@@ -30,6 +33,7 @@ export type PairFilters = {
 export type PairFilterInputs = {
   q: string;
   base: string;
+  category: string;
   minDte: string;
   maxDte: string;
 };
@@ -37,6 +41,7 @@ export type PairFilterInputs = {
 const EMPTY: PairFilters = {
   q: "",
   base: "",
+  category: "",
   minDte: null,
   maxDte: null,
 };
@@ -53,6 +58,7 @@ export function parsePairFilters(
   return {
     q: first(params.q)?.trim() ?? "",
     base: (first(params.base) ?? "").trim().toUpperCase().replace(/[^A-Z0-9]/g, ""),
+    category: parseCategory(first(params.category)),
     minDte: ordered.minDte,
     maxDte: ordered.maxDte,
   };
@@ -62,6 +68,7 @@ export function pairFiltersAreActive(filters: PairFilters): boolean {
   return (
     filters.q !== "" ||
     filters.base !== "" ||
+    filters.category !== "" ||
     filters.minDte !== null ||
     filters.maxDte !== null
   );
@@ -71,6 +78,7 @@ export function pairFilterInputValues(filters: PairFilters): PairFilterInputs {
   return {
     q: filters.q,
     base: filters.base,
+    category: filters.category,
     minDte: filters.minDte === null ? "" : String(filters.minDte),
     maxDte: filters.maxDte === null ? "" : String(filters.maxDte),
   };
@@ -79,14 +87,17 @@ export function pairFilterInputValues(filters: PairFilters): PairFilterInputs {
 export function applyPairFilters<T>(
   rows: T[],
   filters: PairFilters,
-  fields: (row: T) => { text: string; base: string; dte?: number },
+  fields: (row: T) => { text: string; base: string; category?: string; dte?: number },
 ): T[] {
   return rows.filter((row) => {
-    const { text, base, dte } = fields(row);
+    const { text, base, category, dte } = fields(row);
     if (filters.q && !text.toUpperCase().includes(filters.q.toUpperCase())) {
       return false;
     }
     if (filters.base && base.toUpperCase() !== filters.base) {
+      return false;
+    }
+    if (filters.category && category !== filters.category) {
       return false;
     }
     if (filters.minDte !== null && dte !== undefined && dte < filters.minDte) {
@@ -115,6 +126,13 @@ export function uniquePairBases(bases: string[]): string[] {
 
 export function emptyPairFilters(): PairFilters {
   return EMPTY;
+}
+
+function parseCategory(raw: string | undefined): string {
+  const value = raw?.trim() ?? "";
+  return (PERP_CATEGORY_OPTIONS as readonly string[]).includes(value)
+    ? value
+    : "";
 }
 
 function first(value: string | string[] | undefined): string | undefined {

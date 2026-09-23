@@ -23,6 +23,7 @@ const parsed = parsePairFilters({
 });
 assert.equal(parsed.q, "btc");
 assert.equal(parsed.base, "ETH");
+assert.equal(parsed.category, "");
 assert.equal(parsed.minDte, 10);
 assert.equal(parsed.maxDte, 90);
 assert.equal(pairFiltersAreActive(parsed), true);
@@ -80,5 +81,18 @@ assert.deepEqual(uniquePairBases(["SOL", "AAA", "BTC", "ETH"]), [
 ]);
 
 assert.equal(pairFiltersAreActive(parsePairFilters({})), false);
+assert.equal(parsePairFilters({ category: "Crypto" }).category, "Crypto");
+assert.equal(parsePairFilters({ category: "nope" }).category, "");
+assert.equal(
+  applyPairFilters(
+    [
+      { base: "BTC", category: "Crypto" },
+      { base: "TSLA", category: "Stock and metal contracts" },
+    ],
+    parsePairFilters({ category: "Crypto" }),
+    (row) => ({ text: row.base, base: row.base, category: row.category }),
+  ).length,
+  1,
+);
 
 console.log("pair filter checks passed");
