@@ -372,6 +372,7 @@ export type DcaPlaybookPatch = {
   shortIndicatorTrue?: boolean;
   long?: Partial<DcaLegState>;
   short?: Partial<DcaLegState>;
+  touchUpdatedAt?: boolean;
 };
 
 export async function patchDcaPlaybook(input: {
@@ -380,7 +381,7 @@ export async function patchDcaPlaybook(input: {
   patch: DcaPlaybookPatch;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const row: Record<string, unknown> = {};
-  if (input.patch.long || input.patch.short) {
+  if (input.patch.long || input.patch.short || input.patch.touchUpdatedAt) {
     row.updated_at = new Date().toISOString();
   }
   if (input.patch.armConditionTrue !== undefined) {

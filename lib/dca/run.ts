@@ -12,7 +12,11 @@ import {
 } from "@/lib/venues/hyperliquid/desk";
 import { loadHyperliquidInstrument } from "@/lib/venues/hyperliquid/market";
 import { isBybitAgreementQuiet } from "@/lib/exchanges/agreement";
-import { isUnchangedTradingStop } from "@/lib/exchanges/bybit/orders";
+import {
+  BYBIT_ORDER_LINK_DEAD,
+  isBybitOrderLinkQuiet,
+  isUnchangedTradingStop,
+} from "@/lib/exchanges/bybit/orders";
 import {
   loadPerpInstrument,
   snapPerpSizedLimit,
@@ -115,6 +119,7 @@ export type DcaSyncCache = {
 import {
   listDcaPlaybooksForAccount,
   patchDcaLeg,
+  patchDcaPlaybook,
   resetDcaLeg,
   resetDcaPlaybook,
   stampDcaCycleStart,
@@ -1035,6 +1040,7 @@ async function placeClip(input: {
   side: FuturesSide;
   lastPrice: number;
   reason?: string;
+  generationMs?: number;
 }): Promise<{ ok: true } | { ok: false; error: string; quiet?: boolean }> {
   const leg = dcaLegFor(input.playbook, input.side);
   const firstClip = leg.clipsFilled === 0;
@@ -1123,9 +1129,10 @@ async function placeClip(input: {
     input.playbook.sizeMultiplier,
   );
   const generation =
-    firstClip
+    input.generationMs ??
+    (firstClip
       ? input.playbook.updatedAtMs
-      : (leg.lastClipAtMs ?? input.playbook.updatedAtMs);
+      : (leg.lastClipAtMs ?? input.playbook.updatedAtMs));
   const result = await runFuturesCommand({
     actor: playbookActor(input.playbook, input.mode),
     command: {
@@ -1148,6 +1155,22 @@ async function placeClip(input: {
     },
   });
   if (!result.ok) {
+    if (result.error === BYBIT_ORDER_LINK_DEAD && input.generationMs == null) {
+      const bumped = Date.now();
+      input.playbook.updatedAtMs = bumped;
+      const supabase = createServiceClient();
+      if (supabase) {
+        await patchDcaPlaybook({
+          supabase,
+          id: input.playbook.id,
+          patch: { touchUpdatedAt: true },
+        });
+      }
+      return placeClip({ ...input, generationMs: bumped });
+    }
+    if (isBybitOrderLinkQuiet(result.error)) {
+      return { ok: false, error: result.error, quiet: true };
+    }
     return result;
   }
   const supabase = createServiceClient();
@@ -1540,6 +1563,7 @@ async function flattenSide(input: {
   mode: TradingAccountMode;
   side: FuturesSide;
   reason?: string;
+  closeKind?: "take_profit" | "stop_loss" | "exit_if";
   positionId?: string | null;
   fast?: boolean;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -1562,6 +1586,7 @@ async function flattenSide(input: {
           positionId: input.positionId,
           orderType: "market",
           ...playbookCommandMeta(input.playbook, input.reason),
+          ...(input.closeKind ? { closeKind: input.closeKind } : {}),
           idempotencyKey: dcaFlattenKey(
             input.playbook.id,
             input.side,
@@ -1603,6 +1628,7 @@ async function flattenSide(input: {
         positionId: open.id,
         orderType: "market",
         ...playbookCommandMeta(input.playbook, input.reason),
+        ...(input.closeKind ? { closeKind: input.closeKind } : {}),
         idempotencyKey: dcaFlattenKey(input.playbook.id, input.side, open.id),
       },
     });

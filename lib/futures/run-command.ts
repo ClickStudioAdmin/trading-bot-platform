@@ -43,7 +43,12 @@ import {
   armFuturesReduceOnly,
   loadFuturesSettings,
 } from "./settings";
-import { pickClosingFill } from "./venue-close";
+import {
+  attributeClosingFill,
+  futuresCloseMessage,
+  parseKnownCloseKind,
+  pickClosingFill,
+} from "./venue-close";
 import { resolveWriteLeverage } from "./venue-risk-load";
 import { COPY_RULE_NAME } from "@/lib/copy/decide";
 import { checkFuturesRiskCaps } from "./risk";
@@ -56,6 +61,7 @@ import {
   type BybitTicker,
 } from "@/lib/exchanges/bybit/client";
 import {
+  isBybitOrderLinkQuiet,
   isUnchangedTradingStop,
 } from "@/lib/exchanges/bybit/orders";
 import {
@@ -184,6 +190,16 @@ function actorScope(actor: FuturesCommandActor) {
 
 function fail(error: string): { ok: false; error: string } {
   return { ok: false, error };
+}
+
+const loggedPositionWriteFailures = new Set<string>();
+
+function logPositionWriteFailureOnce(stamp: string): boolean {
+  if (loggedPositionWriteFailures.has(stamp)) {
+    return false;
+  }
+  loggedPositionWriteFailures.add(stamp);
+  return true;
 }
 
 function revalidateFutures(kind: FuturesCommand["kind"]) {
@@ -623,6 +639,8 @@ async function runPlace(
       let venue: string | null = null;
       let environment: string | null = null;
       let venueOrderId: string | null = null;
+      let adoptedStop = "";
+      let adoptedLink = "";
       if (connection) {
         const placed = await placePerpMarketOnVenue({
           connection,
@@ -662,6 +680,8 @@ async function runPlace(
             });
             if (picked) {
               fillPrice = picked.fillPrice;
+              adoptedStop = picked.stopOrderType;
+              adoptedLink = picked.orderLinkId;
             }
           }
           venue = connection.venue;
@@ -723,13 +743,29 @@ async function runPlace(
           connection,
         });
       }
+      const namedClose =
+        parseKnownCloseKind(command.closeKind) ??
+        (adoptedStop || adoptedLink
+          ? attributeClosingFill({
+              fillPrice,
+              stopOrderType: adoptedStop,
+              orderLinkId: adoptedLink,
+              takeProfit: row.takeProfit,
+              stopLoss: row.stopLoss,
+              hasExitIf: false,
+            })
+          : null);
+      const closeKind = namedClose === "venue" ? null : namedClose;
       await writeEventLog({
         scope: "trade",
         event: "trade.futures",
         message: withFuturesOrigin(
-          written.remaining <= 1e-12
-            ? `Closed ${symbol} ${row.side}`
-            : `Reduced ${symbol} ${row.side}`,
+          futuresCloseMessage({
+            kind: closeKind,
+            symbol,
+            side: row.side,
+            closed: written.remaining <= 1e-12,
+          }),
           origin,
         ),
         userId: actor.userId,
@@ -737,7 +773,7 @@ async function runPlace(
         strategy: FUTURES_STRATEGY_ID,
         data: {
           symbol,
-          action: "flatten",
+          action: closeKind ?? "flatten",
           qty: qtyNumber,
           live: liveBook,
           positionId: row.id,
@@ -1039,7 +1075,10 @@ async function runPlace(
       orderLinkId: key ?? undefined,
     });
     if (!placed.ok) {
-      if (!isBybitAgreementQuiet(placed.error)) {
+      if (
+        !isBybitAgreementQuiet(placed.error) &&
+        !isBybitOrderLinkQuiet(placed.error)
+      ) {
         await writeEventLog({
           level: "error",
           scope: "trade",
@@ -1129,36 +1168,22 @@ async function runPlace(
   }
 
   if (written.error) {
-    if (liveBook && venueOrderId) {
-      const connectionBound = await live();
-      if (connectionBound.ok && connectionBound.connection) {
-        await placePerpMarketOnVenue({
-          connection: connectionBound.connection,
+    if (logPositionWriteFailureOnce(key ?? `${actor.accountId}:${symbol}`)) {
+      await writeEventLog({
+        level: "error",
+        scope: "trade",
+        event: "trade.futures_failed",
+        message: written.error,
+        userId: actor.userId,
+        accountId: actor.accountId,
+        strategy: FUTURES_STRATEGY_ID,
+        data: {
           symbol,
-          side: decided.orderSide === "Buy" ? "Sell" : "Buy",
-          qty: qtyText,
-          reduceOnly: true,
-          positionIdx: hedgePositionIdx(decided.positionSide),
-          requireHedge:
-            decided.kind === "open" &&
-            opens.some((row) => row.side !== decided.positionSide),
-        });
-      }
+          action: actionParsed.action,
+          positionId: sameSide?.id ?? null,
+        },
+      });
     }
-    await writeEventLog({
-      level: "error",
-      scope: "trade",
-      event: "trade.futures_failed",
-      message: written.error,
-      userId: actor.userId,
-      accountId: actor.accountId,
-      strategy: FUTURES_STRATEGY_ID,
-      data: {
-        symbol,
-        action: actionParsed.action,
-        positionId: sameSide?.id ?? null,
-      },
-    });
     return fail(written.error);
   }
 

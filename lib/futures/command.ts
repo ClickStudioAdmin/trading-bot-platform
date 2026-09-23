@@ -61,6 +61,7 @@ export type FuturesPlaceCommand = {
   ruleId?: unknown;
   ruleName?: unknown;
   reason?: unknown;
+  closeKind?: unknown;
 };
 
 export type FuturesCommand =

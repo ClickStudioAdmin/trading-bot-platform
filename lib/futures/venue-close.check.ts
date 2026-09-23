@@ -1,9 +1,17 @@
 import assert from "node:assert/strict";
 import { venueAlreadyFlatError } from "@/lib/exchanges/execute";
 import {
+  linkedOrderState,
+  isBybitDuplicateOrderLink,
+  isBybitOrderLinkQuiet,
+  BYBIT_ORDER_LINK_RESTING,
+} from "@/lib/exchanges/bybit/orders";
+import {
   attributeClosingFill,
+  closingPositionIdxMatches,
   executionClosedQty,
   executionStopLabel,
+  futuresCloseMessage,
   pickClosingFill,
 } from "./venue-close";
 
@@ -122,7 +130,45 @@ assert.equal(
     stopOrderType: "",
     createType: "",
   }),
-  0,
+  0.4,
 );
+assert.equal(closingPositionIdxMatches("long", 2), false);
+assert.equal(closingPositionIdxMatches("short", 2), true);
+assert.equal(
+  pickClosingFill({
+    side: "long",
+    openedAtMs: 1_000,
+    qty: 1,
+    executions: [
+      {
+        fillPrice: 10,
+        closedQty: 1,
+        execTimeMs: 2_000,
+        side: "Sell",
+        stopOrderType: "",
+        orderLinkId: "",
+        positionIdx: 2,
+      },
+    ],
+  }),
+  null,
+);
+assert.equal(
+  futuresCloseMessage({
+    kind: "take_profit",
+    symbol: "KITEUSDT",
+    side: "long",
+    closed: true,
+  }),
+  "Take profit closed KITEUSDT long",
+);
+assert.equal(linkedOrderState("Cancelled", 0), "dead");
+assert.equal(linkedOrderState("New", 0), "resting");
+assert.equal(linkedOrderState("Cancelled", 0.2), "filled");
+assert.equal(
+  isBybitDuplicateOrderLink("Bybit rejected that order: OrderLinkedID is duplicate"),
+  true,
+);
+assert.equal(isBybitOrderLinkQuiet(BYBIT_ORDER_LINK_RESTING), true);
 
 console.log("venue close checks passed");

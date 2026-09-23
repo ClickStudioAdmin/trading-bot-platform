@@ -19,6 +19,48 @@ export type BybitOrderFill = {
   qty: number | null;
 };
 
+export const BYBIT_ORDER_LINK_RESTING =
+  "That order is already working on Bybit.";
+export const BYBIT_ORDER_LINK_DEAD =
+  "That order link is finished on Bybit.";
+
+export type LinkedOrderState = "filled" | "resting" | "dead";
+
+export function isBybitDuplicateOrderLink(error: string): boolean {
+  return /orderlinkedid is duplicate|order link id is duplicate|\b110072\b/i.test(
+    error,
+  );
+}
+
+export function isBybitOrderLinkQuiet(error: string): boolean {
+  return (
+    error === BYBIT_ORDER_LINK_RESTING ||
+    error === BYBIT_ORDER_LINK_DEAD ||
+    isBybitDuplicateOrderLink(error)
+  );
+}
+
+export function linkedOrderState(
+  status: string,
+  cumExecQty: number,
+): LinkedOrderState {
+  const qty = Number.isFinite(cumExecQty) ? cumExecQty : 0;
+  const name = status.trim();
+  if (qty > 0 || name === "Filled") {
+    return "filled";
+  }
+  if (
+    name === "New" ||
+    name === "PartiallyFilled" ||
+    name === "Untriggered" ||
+    name === "Created" ||
+    name === "Active"
+  ) {
+    return "resting";
+  }
+  return "dead";
+}
+
 type CreateResult = {
   orderId?: string;
   orderLinkId?: string;
@@ -362,6 +404,52 @@ export async function bybitReadLinearOrder(input: {
   return { ok: false, error: "Bybit did not return that order." };
 }
 
+export async function bybitReadLinearOrderByLink(input: {
+  environmentId: string;
+  credentials: BybitPrivateCreds;
+  symbol: string;
+  orderLinkId: string;
+}): Promise<
+  | { ok: true; state: "filled"; fill: BybitOrderFill }
+  | { ok: true; state: "resting" | "dead" | "missing" }
+  | { ok: false; error: string }
+> {
+  const query = [
+    "category=linear",
+    `symbol=${encodeURIComponent(input.symbol)}`,
+    `orderLinkId=${encodeURIComponent(input.orderLinkId)}`,
+  ].join("&");
+  for (const path of ["/v5/order/realtime", "/v5/order/history"] as const) {
+    const listed = await bybitPrivateRequest<{ list?: OrderRow[] }>({
+      environmentId: input.environmentId,
+      credentials: input.credentials,
+      method: "GET",
+      path,
+      query,
+    });
+    const row = listed.ok ? listed.result.list?.[0] : undefined;
+    if (!row) {
+      continue;
+    }
+    const qty = Number(row.cumExecQty ?? "");
+    const state = linkedOrderState(String(row.orderStatus ?? ""), qty);
+    if (state === "filled") {
+      const price = Number(row.avgPrice ?? "");
+      return {
+        ok: true,
+        state,
+        fill: {
+          orderId: String(row.orderId ?? ""),
+          avgPrice: price > 0 ? price : null,
+          qty: qty > 0 ? qty : null,
+        },
+      };
+    }
+    return { ok: true, state };
+  }
+  return { ok: true, state: "missing" };
+}
+
 export async function bybitCancelAllLinearOrders(input: {
   environmentId: string;
   credentials: BybitPrivateCreds;
@@ -559,6 +647,7 @@ export type BybitLinearExecution = {
   side: "Buy" | "Sell";
   stopOrderType: string;
   orderLinkId: string;
+  positionIdx?: number | null;
 };
 
 export async function bybitListLinearExecutions(input: {
@@ -592,6 +681,7 @@ export async function bybitListLinearExecutions(input: {
         createType?: string;
         orderLinkId?: string;
         execType?: string;
+        positionIdx?: number | string;
       }[];
       nextPageCursor?: string;
     }>({
@@ -623,6 +713,9 @@ export async function bybitListLinearExecutions(input: {
       if (!side || !(fillPrice > 0) || !(closedQty > 0) || !(execTimeMs > 0)) {
         continue;
       }
+      const rawIdx = item.positionIdx;
+      const positionIdx =
+        rawIdx == null || rawIdx === "" ? null : Number(rawIdx);
       executions.push({
         fillPrice,
         closedQty,
@@ -630,6 +723,7 @@ export async function bybitListLinearExecutions(input: {
         side,
         stopOrderType,
         orderLinkId: String(item.orderLinkId ?? "").trim(),
+        positionIdx: Number.isFinite(positionIdx) ? positionIdx : null,
       });
     }
     cursor = String(listed.result.nextPageCursor ?? "").trim();

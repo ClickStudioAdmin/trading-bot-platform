@@ -7,6 +7,7 @@ export type ClosingExecution = {
   side: "Buy" | "Sell";
   stopOrderType: string;
   orderLinkId: string;
+  positionIdx?: number | null;
 };
 
 export type VenueCloseKind =
@@ -59,17 +60,20 @@ export function executionClosedQty(input: {
   if (input.closedSize > 0) {
     return input.closedSize;
   }
-  const stop = normalizeStop(
-    executionStopLabel(input.stopOrderType, input.createType ?? ""),
-  );
-  const closingStop =
-    stop.includes("takeprofit") ||
-    stop.includes("stoploss") ||
-    stop.includes("trailing");
-  if (closingStop && input.execQty > 0) {
+  if (input.execQty > 0) {
     return input.execQty;
   }
   return 0;
+}
+
+export function closingPositionIdxMatches(
+  side: FuturesSide,
+  positionIdx: number | null | undefined,
+): boolean {
+  if (positionIdx == null || !Number.isFinite(positionIdx) || positionIdx === 0) {
+    return true;
+  }
+  return side === "long" ? positionIdx === 1 : positionIdx === 2;
 }
 
 export function pickClosingFill(input: {
@@ -83,6 +87,7 @@ export function pickClosingFill(input: {
     .filter(
       (row) =>
         row.side === want &&
+        closingPositionIdxMatches(input.side, row.positionIdx) &&
         row.closedQty > 0 &&
         row.fillPrice > 0 &&
         row.execTimeMs + 5_000 >= input.openedAtMs,
@@ -153,4 +158,45 @@ export function attributeClosingFill(input: {
     return "exit_if";
   }
   return "venue";
+}
+
+export type KnownCloseKind = "take_profit" | "stop_loss" | "exit_if" | "trailing";
+
+export function parseKnownCloseKind(value: unknown): KnownCloseKind | null {
+  if (
+    value === "take_profit" ||
+    value === "stop_loss" ||
+    value === "exit_if" ||
+    value === "trailing"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+export function futuresCloseMessage(input: {
+  kind: KnownCloseKind | VenueCloseKind | null;
+  symbol: string;
+  side: string;
+  closed: boolean;
+}): string {
+  const verb = input.closed ? "closed" : "reduced";
+  if (input.kind === "take_profit") {
+    return `Take profit ${verb} ${input.symbol} ${input.side}`;
+  }
+  if (input.kind === "stop_loss") {
+    return `Stop loss ${verb} ${input.symbol} ${input.side}`;
+  }
+  if (input.kind === "exit_if") {
+    return `Hard exit ${verb} ${input.symbol} ${input.side}`;
+  }
+  if (input.kind === "trailing") {
+    return `Trailing stop ${verb} ${input.symbol} ${input.side}`;
+  }
+  if (input.kind === "venue") {
+    return `Venue ${verb} ${input.symbol} ${input.side}`;
+  }
+  return input.closed
+    ? `Closed ${input.symbol} ${input.side}`
+    : `Reduced ${input.symbol} ${input.side}`;
 }

@@ -66,6 +66,7 @@ import { selectStrategySettings } from "./settings";
 import { resolveWriteLeverage } from "./venue-risk-load";
 import {
   attributeClosingFill,
+  futuresCloseMessage,
   pickClosingFill,
   type VenueCloseKind,
 } from "./venue-close";
@@ -923,8 +924,6 @@ export async function reconcileOpenFuturesVenuePositions(
   const rows = data.map((row) =>
     parseFuturesPositionRow(row as Record<string, unknown>),
   );
-  const tickers =
-    input?.tickers ?? (await defaultReconcileTickers(input?.accountId));
   const connections = new Map<
     string,
     BoundConnectionSecrets | null | undefined
@@ -994,10 +993,6 @@ export async function reconcileOpenFuturesVenuePositions(
     ) {
       continue;
     }
-    const ticker =
-      tickers.get(row.symbol) ??
-      (await paperTickerForAccount(row.accountId, row.symbol));
-    const prices = tickerTriggerPrices(ticker ?? {});
     const closeQty = row.qty - venueQty;
     const listed = await listLinearExecutions({
       connection: live,
@@ -1012,26 +1007,27 @@ export async function reconcileOpenFuturesVenuePositions(
           qty: closeQty,
         })
       : null;
-    const fillPrice =
-      picked?.fillPrice ?? prices.mark ?? prices.last ?? row.entryPrice;
-    const hasExitIf = picked
-      ? await playbookHasExitIf({
-          accountId: row.accountId,
-          symbol: row.symbol,
-          side: row.side,
-          ruleName: row.ruleName,
-        })
-      : false;
-    const kind: VenueCloseKind = picked
-      ? attributeClosingFill({
-          fillPrice: picked.fillPrice,
-          stopOrderType: picked.stopOrderType,
-          orderLinkId: picked.orderLinkId,
-          takeProfit: row.takeProfit,
-          stopLoss: row.stopLoss,
-          hasExitIf,
-        })
-      : "venue";
+    if (!picked) {
+      continue;
+    }
+    const fillPrice = picked.fillPrice;
+    const hasExitIf = await playbookHasExitIf({
+      accountId: row.accountId,
+      symbol: row.symbol,
+      side: row.side,
+      ruleName: row.ruleName,
+    });
+    const kind: VenueCloseKind = attributeClosingFill({
+      fillPrice: picked.fillPrice,
+      stopOrderType: picked.stopOrderType,
+      orderLinkId: picked.orderLinkId,
+      takeProfit: row.takeProfit,
+      stopLoss: row.stopLoss,
+      hasExitIf,
+    });
+    if (kind === "venue" && (row.ruleId || row.ruleName)) {
+      continue;
+    }
     const applied = await closeStopPosition({
       supabase,
       row,
@@ -1353,23 +1349,12 @@ async function closeStopPosition(input: {
     scope: "trade",
     event: "trade.futures",
     message: withFuturesOrigin(
-      input.kind === "stop_loss"
-        ? closed
-          ? `Stop loss closed ${input.row.symbol} ${input.row.side}`
-          : `Stop loss reduced ${input.row.symbol} ${input.row.side}`
-        : input.kind === "take_profit"
-          ? closed
-            ? `Take profit closed ${input.row.symbol} ${input.row.side}`
-            : `Take profit reduced ${input.row.symbol} ${input.row.side}`
-          : input.kind === "trailing"
-            ? `Trailing stop closed ${input.row.symbol} ${input.row.side}`
-            : input.kind === "exit_if"
-              ? closed
-                ? `Hard exit closed ${input.row.symbol} ${input.row.side}`
-                : `Hard exit reduced ${input.row.symbol} ${input.row.side}`
-              : closed
-                ? `Venue closed ${input.row.symbol} ${input.row.side}`
-                : `Venue reduced ${input.row.symbol} ${input.row.side}`,
+      futuresCloseMessage({
+        kind: input.kind,
+        symbol: input.row.symbol,
+        side: input.row.side,
+        closed,
+      }),
       { source: input.row.source, ruleName: input.row.ruleName },
     ),
     userId: input.row.userId,

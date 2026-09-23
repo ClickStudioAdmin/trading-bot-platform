@@ -8,7 +8,11 @@ import {
   bybitListLinearExecutions,
   bybitListLinearPositions,
   bybitReadLinearOrder,
+  bybitReadLinearOrderByLink,
   bybitReadLinearPosition,
+  BYBIT_ORDER_LINK_DEAD,
+  BYBIT_ORDER_LINK_RESTING,
+  isBybitDuplicateOrderLink,
   bybitSetTradingStop,
   explainHedgeModeError,
   loadCarryInstruments,
@@ -303,6 +307,32 @@ export async function placePerpMarketOnVenue(input: {
     orderLinkId: input.orderLinkId,
   });
   if (!created.ok) {
+    if (input.orderLinkId && isBybitDuplicateOrderLink(created.error)) {
+      const existing = await bybitReadLinearOrderByLink({
+        environmentId: input.connection.environment,
+        credentials: creds(input.connection),
+        symbol: input.symbol,
+        orderLinkId: input.orderLinkId,
+      });
+      if (existing.ok && existing.state === "filled") {
+        return {
+          ok: true,
+          fill: {
+            venue: input.connection.venue,
+            environment: input.connection.environment,
+            qty:
+              existing.fill.qty != null ? String(existing.fill.qty) : sized.text,
+            orderId: existing.fill.orderId,
+            price: existing.fill.avgPrice,
+            side: input.side,
+          },
+        };
+      }
+      if (existing.ok && existing.state === "dead") {
+        return { ok: false, error: BYBIT_ORDER_LINK_DEAD };
+      }
+      return { ok: false, error: BYBIT_ORDER_LINK_RESTING };
+    }
     await rememberBybitAgreementReject({
       venue: input.connection.venue,
       connectionId: input.connection.id,

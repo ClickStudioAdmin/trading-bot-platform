@@ -7629,7 +7629,7 @@
       "slBasis": "average",
       "expect": "Wait for PxEMA x-below on 15m, then place the first long if the gate passes. Secondary must also be true (RSI between). A sit that is already true does not count.",
       "symbol": "DDOGUSDT",
-      "clipUsdt": 7.45,
+      "clipUsdt": 7.46,
       "playbookId": "1327c483-eaff-4c6c-a8eb-a82ae4f34355",
       "status": "created"
     },
@@ -9710,7 +9710,7 @@
       "slBasis": "average",
       "expect": "Wait for BB x-bottom on 15m, then place the first long if the gate passes. Secondary must also be true (EMA below). A sit that is already true does not count.",
       "symbol": "FORMSTOCKUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.21,
       "playbookId": "7e1dff26-1549-4dcc-ad62-c0db8453815b",
       "status": "created"
     },
@@ -10205,7 +10205,7 @@
       "slBasis": "average",
       "expect": "While BB above is true on 15m, place the first long on the tick if the gate passes. Secondary is off. If the gate is false, stay flat.",
       "symbol": "GILDUSDT",
-      "clipUsdt": 6.11,
+      "clipUsdt": 6.16,
       "playbookId": "793037c0-028a-4a28-a870-fac5e1dc4b2c",
       "status": "created"
     },

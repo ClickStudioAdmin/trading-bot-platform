@@ -1333,12 +1333,39 @@ async function applyTickAction(input: {
     mode: input.mode,
     side: input.side,
     reason: input.why,
+    closeKind: input.action.reason,
     positionId: input.positionId,
     fast: input.fast,
   });
   if (!closed.ok) {
     if (isBybitAgreementQuiet(closed.error)) {
       return { acted: false };
+    }
+    if (/no longer open/i.test(closed.error)) {
+      await resetDcaLeg({
+        supabase,
+        id: input.playbook.id,
+        side: input.side,
+      });
+      const known = String(input.why ?? "").trim();
+      await logDcaEvent({
+        playbook: input.playbook,
+        side: input.side,
+        event: "dca.closed",
+        message:
+          input.action.reason === "take_profit"
+            ? `${input.playbook.name} hit take profit.`
+            : input.action.reason === "exit_if"
+              ? known
+                ? `${input.playbook.name} Hard Exit hit. ${known}.`
+                : `${input.playbook.name} Hard Exit hit.`
+              : `${input.playbook.name} hit stop loss.`,
+        data: {
+          reason: input.action.reason,
+          ...(known ? { why: known } : {}),
+        },
+      });
+      return { acted: true };
     }
     const why = String(input.why ?? "").trim();
     await logDcaEvent({

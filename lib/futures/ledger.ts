@@ -83,34 +83,44 @@ export async function writeFuturesOpen(input: {
   leverage?: number | null;
 }): Promise<{ ok: true; positionId: string } | { ok: false; error: string }> {
   const source = parseFuturesTradeSource(input.source);
-  const { data, error } = await input.supabase
+  const row = {
+    user_id: input.userId,
+    account_id: input.accountId,
+    symbol: input.symbol,
+    side: input.side,
+    qty: input.qty,
+    entry_price: input.price,
+    notional_usdt: futuresNotionalUsdt(input.qty, input.price),
+    realized_usdt: 0,
+    status: "open",
+    source,
+    rule_name: input.ruleName ?? null,
+    venue: input.venue ?? null,
+    environment: input.environment ?? null,
+    leverage: input.leverage ?? null,
+    ...tpslColumns(input.tpsl),
+    ...trailingColumns(input.trailing),
+  };
+  let inserted = await input.supabase
     .from("futures_positions")
-    .insert({
-      user_id: input.userId,
-      account_id: input.accountId,
-      symbol: input.symbol,
-      side: input.side,
-      qty: input.qty,
-      entry_price: input.price,
-      notional_usdt: futuresNotionalUsdt(input.qty, input.price),
-      realized_usdt: 0,
-      status: "open",
-      source,
-      rule_id: input.ruleId ?? null,
-      rule_name: input.ruleName ?? null,
-      venue: input.venue ?? null,
-      environment: input.environment ?? null,
-      leverage: input.leverage ?? null,
-      ...tpslColumns(input.tpsl),
-      ...trailingColumns(input.trailing),
-    })
+    .insert({ ...row, rule_id: input.ruleId ?? null })
     .select("id")
     .single();
+  if (inserted.error?.code === "23503" && input.ruleId) {
+    inserted = await input.supabase
+      .from("futures_positions")
+      .insert({ ...row, rule_id: null })
+      .select("id")
+      .single();
+  }
+  const { data, error } = inserted;
   if (error || !data) {
-    if (error?.code === "23503") {
-      return { ok: false, error: "Could not write the position." };
-    }
-    return { ok: false, error: error?.message ?? "Could not write the position." };
+    const code = error?.code ? ` (${error.code})` : "";
+    const detail = error?.message ? ` ${error.message}` : "";
+    return {
+      ok: false,
+      error: `Could not write the position.${code}${detail}`.trim(),
+    };
   }
   const positionId = String((data as { id: string }).id);
   const order = await insertFuturesOrder(input.supabase, {
