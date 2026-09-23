@@ -89,7 +89,7 @@ export default async function FuturesAutomationsPage({
   if (!session) {
     return (
       <AutomationsPageFrame
-        listHref={deskHref(FUTURES_PATHS.automations)}
+        listHref={deskHref(FUTURES_PATHS.automations, null)}
         editTitle={null}
       >
         <p className="mt-6 text-sm text-ink-muted">

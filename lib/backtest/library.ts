@@ -39,14 +39,32 @@ export type BacktestDeskBot = {
 
 export function toBacktestLibraryItem(row: {
   id: string;
-  name: string;
-  recipe: { kind: string };
+  name?: string;
+  recipe: { kind: string; name?: string };
   visibility?: string;
+  symbol?: string;
+  parentRunId?: string | null;
 }): BacktestLibraryItem | null {
   if (row.recipe.kind !== "perps" && row.recipe.kind !== "dca") {
     return null;
   }
-  return row as BacktestLibraryItem;
+  const recipeName = String(row.recipe.name ?? "").trim();
+  const name =
+    row.name?.trim() ||
+    (row.symbol
+      ? backtestRunTitle({
+          recipe: { name: recipeName || "Backtest" },
+          symbol: row.symbol,
+          parentRunId: row.parentRunId ?? null,
+        })
+      : recipeName) ||
+    "Backtest";
+  return {
+    id: row.id,
+    name,
+    recipe: row.recipe as BacktestRecipe,
+    ...(row.visibility !== undefined ? { visibility: row.visibility } : {}),
+  };
 }
 
 export function findMatchingBacktestTemplate(
