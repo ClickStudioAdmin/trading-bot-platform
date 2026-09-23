@@ -1,3 +1,4 @@
+import { parseAutomationMode } from "@/lib/engine/decide";
 import {
   blockedFuturesRuleDeletes,
   FUTURES_RULE_IN_USE,
@@ -30,6 +31,31 @@ export async function loadFuturesAutomationRules(
   return data.map((row) =>
     parseFuturesAutomationRow(row as Record<string, unknown>),
   );
+}
+
+export async function loadFuturesNavModes(accountId: string): Promise<{
+  anyLive: boolean;
+  anyActive: boolean;
+}> {
+  const supabase = createServiceClient();
+  const id = accountId.trim();
+  if (!supabase || !id) {
+    return { anyLive: false, anyActive: false };
+  }
+  const { data, error } = await supabase
+    .from("futures_automation_rules")
+    .select("mode")
+    .eq("account_id", id);
+  if (error || !data) {
+    return { anyLive: false, anyActive: false };
+  }
+  const modes = data.map((row) =>
+    parseAutomationMode((row as { mode?: unknown }).mode),
+  );
+  return {
+    anyLive: modes.some((mode) => mode !== "disabled"),
+    anyActive: modes.some((mode) => mode === "active"),
+  };
 }
 
 export async function listFuturesAutomationRuleOptions(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppMultiSelect, AppSelect } from "@/components/app-select";
 import { BacktestRecipeFields } from "@/components/backtest-recipe-fields";
@@ -9,6 +9,7 @@ import { DatePicker } from "@/components/date-picker";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { queueTemplateBacktestAction } from "@/lib/backtest/actions";
+import { loadBacktestDeskBotAction } from "@/lib/backtest/desk-bot-action";
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import {
   BACKTEST_COMPARABLE_CAP,
@@ -27,14 +28,15 @@ import {
 } from "@/lib/backtest/model";
 import {
   canQueueUserBacktest,
-  findMatchingBacktestDeskBot,
   findMatchingBacktestTemplate,
   formatBacktestDeskMatch,
   groupBacktestLibrary,
   type BacktestDeskBot,
+  type BacktestDeskBotOption,
   type BacktestLibraryFolder,
   type BacktestLibraryItem,
 } from "@/lib/backtest/library";
+import { recipesMatchReplayFields } from "@/lib/templates/recipe";
 import { findBacktestableTemplate } from "@/components/backtest-dialog";
 import {
   DCA_INDICATOR_TIMEFRAME_LABELS,
@@ -84,6 +86,7 @@ export function BacktestQueueForm({
   templates,
   folders = [],
   deskBots = [],
+  matchedDeskBot = null,
   selectedTemplateId = "",
   draftId = "",
   seed = null,
@@ -93,7 +96,8 @@ export function BacktestQueueForm({
 }: {
   templates: BacktestLibraryItem[];
   folders?: BacktestLibraryFolder[];
-  deskBots?: BacktestDeskBot[];
+  deskBots?: BacktestDeskBotOption[];
+  matchedDeskBot?: BacktestDeskBot | null;
   selectedTemplateId?: string;
   draftId?: string;
   seed?: BacktestQueueSeed | null;
@@ -102,6 +106,12 @@ export function BacktestQueueForm({
   defaultVenueEnvironment?: string | null;
 }) {
   const router = useRouter();
+  const botRequest = useRef(0);
+  const [pickedDeskBot, setPickedDeskBot] = useState<BacktestDeskBot | null>(
+    matchedDeskBot,
+  );
+  const [botPending, setBotPending] = useState(false);
+  const [botLoadError, setBotLoadError] = useState("");
   const dates = defaultBacktestDates();
   const initialTemplate =
     templates.find((row) => row.id === selectedTemplateId) ?? null;
@@ -181,10 +191,14 @@ export function BacktestQueueForm({
         : null,
     [recipe, sourceTemplateId, templates],
   );
-  const matchingDeskBot = useMemo(
-    () => (recipe ? findMatchingBacktestDeskBot(recipe, deskBots) : null),
-    [deskBots, recipe],
-  );
+  const matchingDeskBot = useMemo(() => {
+    if (!recipe || !pickedDeskBot) {
+      return null;
+    }
+    return recipesMatchReplayFields(recipe, pickedDeskBot.recipe)
+      ? pickedDeskBot
+      : null;
+  }, [pickedDeskBot, recipe]);
   const templateGroups = useMemo(
     () => groupBacktestLibrary(templates, folders),
     [folders, templates],
@@ -282,21 +296,44 @@ export function BacktestQueueForm({
               const desk = deskBots.find((row) => row.id === value);
               const next = templates.find((row) => row.id === value);
               setTemplateId(value);
+              setBotLoadError("");
               if (desk) {
-                const match = findBacktestableTemplate(desk.recipe, templates);
-                setRecipe(desk.recipe);
-                setSourceTemplateId(match?.id ?? "");
-                setSymbol(desk.recipe.symbol);
-                setVenue(
-                  desk.venue === "hyperliquid" ? "hyperliquid" : "bybit",
-                );
-                setVenueEnvironment(desk.venueEnvironment);
-                setComparables((rows) =>
-                  rows.filter((row) => row !== desk.recipe.symbol),
-                );
-                setActiveDraftId("");
+                const ticket = botRequest.current + 1;
+                botRequest.current = ticket;
+                setBotPending(true);
+                setRecipe(null);
+                setPickedDeskBot(null);
+                void loadBacktestDeskBotAction(desk.id).then((result) => {
+                  if (ticket !== botRequest.current) {
+                    return;
+                  }
+                  setBotPending(false);
+                  if (!result.ok) {
+                    setBotLoadError(result.error);
+                    return;
+                  }
+                  const match = findBacktestableTemplate(
+                    result.bot.recipe,
+                    templates,
+                  );
+                  setPickedDeskBot(result.bot);
+                  setRecipe(result.bot.recipe);
+                  setSourceTemplateId(match?.id ?? "");
+                  setSymbol(result.bot.recipe.symbol);
+                  setVenue(
+                    result.bot.venue === "hyperliquid" ? "hyperliquid" : "bybit",
+                  );
+                  setVenueEnvironment(result.bot.venueEnvironment);
+                  setComparables((rows) =>
+                    rows.filter((row) => row !== result.bot.recipe.symbol),
+                  );
+                  setActiveDraftId("");
+                });
                 return;
               }
+              botRequest.current += 1;
+              setBotPending(false);
+              setPickedDeskBot(null);
               if (next) {
                 setRecipe(next.recipe);
                 setSourceTemplateId(next.id);
@@ -320,8 +357,8 @@ export function BacktestQueueForm({
               <optgroup label="Desk automations">
                 {deskBots.map((row) => (
                   <option key={row.id} value={row.id}>
-                    {row.recipe.kind === "dca" ? "DCA" : "Perps"} · {row.name} ·{" "}
-                    {row.recipe.symbol} · {row.deskName}
+                    {row.kind === "dca" ? "DCA" : "Perps"} · {row.name}
+                    {row.symbol ? ` · ${row.symbol}` : ""} · {row.deskName}
                   </option>
                 ))}
               </optgroup>
@@ -337,6 +374,12 @@ export function BacktestQueueForm({
               </optgroup>
             ))}
           </AppSelect>
+          {botPending ? (
+            <p className="mt-2 text-sm text-ink-muted">Loading bot</p>
+          ) : null}
+          {botLoadError ? (
+            <p className="mt-2 text-sm text-danger">{botLoadError}</p>
+          ) : null}
         </label>
         <div>
           <div className="grid gap-3 sm:grid-cols-2">

@@ -20,7 +20,10 @@ import {
 import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import { firstSearchValue } from "@/lib/paper/open";
-import { listDeskBacktestBots } from "@/lib/backtest/desk-bots";
+import {
+  listDeskBacktestBots,
+  matchDeskBacktestBot,
+} from "@/lib/backtest/desk-bots";
 import {
   listApplyableSets,
   listApplyableTemplates,
@@ -87,7 +90,9 @@ export default async function AccountBacktestsPage({
       }),
       listApplyableTemplates({ userId: member.id }),
       listApplyableSets({ userId: member.id }),
-      listDeskBacktestBots(member.id),
+      tab === "new"
+        ? listDeskBacktestBots(member.id)
+        : Promise.resolve([]),
     ]);
   } catch {
     runs = [];
@@ -95,6 +100,10 @@ export default async function AccountBacktestsPage({
     folders = [];
     deskBots = [];
   }
+  const matchedDeskBot =
+    tab === "new" && seed?.recipe
+      ? await matchDeskBacktestBot(member.id, seed.recipe, deskBots)
+      : null;
   const library = templates.flatMap((row) => {
     const item = toBacktestLibraryItem(row);
     if (!item) {
@@ -160,6 +169,7 @@ export default async function AccountBacktestsPage({
           templates={library}
           folders={folders}
           deskBots={deskBots}
+          matchedDeskBot={matchedDeskBot}
           selectedTemplateId={
             selectedTemplateId || seed?.sourceTemplateId || ""
           }

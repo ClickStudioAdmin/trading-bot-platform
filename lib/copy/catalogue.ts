@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import {
   parseDeskType,
   parseTradingAccountRow,
@@ -104,6 +105,20 @@ function sortCards(
   });
 }
 
+let deskStatsBackfillScheduled = false;
+
+function scheduleDeskStatsBackfill(): void {
+  if (deskStatsBackfillScheduled) {
+    return;
+  }
+  deskStatsBackfillScheduled = true;
+  after(() => {
+    void backfillMissingFuturesDeskStats().finally(() => {
+      deskStatsBackfillScheduled = false;
+    });
+  });
+}
+
 export async function loadCopyCatalogue(input: {
   viewerUserId: string;
   tab: CopyCatalogueTab;
@@ -115,7 +130,7 @@ export async function loadCopyCatalogue(input: {
   if (!supabase) {
     return [];
   }
-  await backfillMissingFuturesDeskStats();
+  scheduleDeskStatsBackfill();
   const [
     { data: listingRows },
     { data: shareRows },

@@ -5,11 +5,10 @@ import { deskAllowsPerpsRecipes, deskIsCopy } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
-import { listDeskBacktestBots } from "@/lib/backtest/desk-bots";
+import { matchDeskBacktestBot } from "@/lib/backtest/desk-bots";
 import {
   decideBacktestTemplateActions,
   deskBotAutomationsHref,
-  findMatchingBacktestDeskBot,
   findMatchingBacktestTemplate,
   toBacktestLibraryItem,
 } from "@/lib/backtest/library";
@@ -62,11 +61,11 @@ export default async function AccountBacktestDetailPage({
     redirect(`/account/backtests?${draftParams.toString()}`);
   }
   const ownerId = run.userId ?? member.id;
-  const [source, linked, templates, deskBots, folders] = await Promise.all([
+  const [source, linked, templates, matchingDeskBot, folders] = await Promise.all([
     run.sourceTemplateId ? loadTemplateById(run.sourceTemplateId) : null,
     run.templateId ? loadTemplateById(run.templateId) : null,
     listApplyableTemplates({ userId: ownerId }),
-    run.userId ? listDeskBacktestBots(run.userId) : Promise.resolve([]),
+    run.userId ? matchDeskBacktestBot(run.userId, run.recipe) : null,
     listApplyableSets({ userId: ownerId }),
   ]);
   const library = templates.flatMap((row) => {
@@ -78,7 +77,6 @@ export default async function AccountBacktestDetailPage({
     library,
     run.sourceTemplateId,
   );
-  const matchingDeskBot = findMatchingBacktestDeskBot(run.recipe, deskBots);
   const templateActions = decideBacktestTemplateActions({
     status: run.status,
     ownerUserId: run.userId,

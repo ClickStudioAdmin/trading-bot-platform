@@ -30,6 +30,8 @@ export type BacktestLibraryItem = {
 export type BacktestDeskBot = {
   id: string;
   name: string;
+  symbol: string;
+  kind: "dca" | "perps";
   deskId: string;
   deskName: string;
   recipe: BacktestRecipe;
@@ -126,6 +128,31 @@ export function findMatchingBacktestDeskBot(
   return (
     deskBots.find((row) => recipesMatchReplayFields(recipe, row.recipe)) ??
     null
+  );
+}
+
+export type BacktestDeskBotOption = {
+  id: string;
+  name: string;
+  symbol: string;
+  kind: "dca" | "perps";
+  deskId: string;
+  deskName: string;
+  venue: string;
+  venueEnvironment: string | null;
+};
+
+/** Same symbol and kind. The full recipe is loaded only for these rows. */
+export function deskBacktestBotCandidates<
+  T extends { kind: "dca" | "perps"; symbol: string },
+>(options: readonly T[], recipe: { kind: string; symbol: string }): T[] {
+  const symbol = recipe.symbol.trim().toUpperCase();
+  if (recipe.kind !== "dca" && recipe.kind !== "perps") {
+    return [];
+  }
+  return options.filter(
+    (row) =>
+      row.kind === recipe.kind && row.symbol.trim().toUpperCase() === symbol,
   );
 }
 

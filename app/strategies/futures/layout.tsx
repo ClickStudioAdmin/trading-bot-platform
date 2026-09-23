@@ -8,6 +8,7 @@ import {
   formatDeskVenueCaption,
   navLinksWithDesk,
   pathWithDesk,
+  type TradingAccount,
 } from "@/lib/accounts/model";
 import { pinDeskSearchParam } from "@/lib/accounts/guard";
 import { dcaDeskHasRunningPlaybook } from "@/lib/dca/store";
@@ -15,13 +16,17 @@ import { getSessionContext } from "@/lib/auth/session";
 import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
 import { CopyDeskHeader } from "@/components/copy-desk-header";
 import { HashScroll } from "@/components/hash-scroll";
-import { loadCopyPaperEquityView } from "@/lib/copy/balance";
+import { loadCopyPaperLedger } from "@/lib/copy/balance";
+import { copyPaperEquityView, type CopyPaperEquityView } from "@/lib/copy/decide";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections, getVenue } from "@/lib/exchanges/venues";
+import type { AutomationMode } from "@/lib/engine/decide";
 import { futuresDeskAutomationStatus } from "@/lib/futures/automation";
-import { loadFuturesAutomationRules } from "@/lib/futures/automation-load";
+import { loadFuturesNavModes } from "@/lib/futures/automation-load";
+import { futuresPnlUsdt, markFromTicker } from "@/lib/futures/math";
 import { loadFuturesSettings } from "@/lib/futures/settings";
+import { loadDeskTicker } from "@/lib/market/desk-tickers";
 import {
   COPY_PRIMARY_LINKS,
   FUTURES_PRIMARY_LINKS,
@@ -57,58 +62,201 @@ async function FuturesDeskNavLive({
   );
 }
 
-export default async function FuturesLayout({
-  children,
+function navModes(flags: {
+  anyLive: boolean;
+  anyActive: boolean;
+}): AutomationMode[] {
+  if (flags.anyActive) {
+    return ["active"];
+  }
+  if (flags.anyLive) {
+    return ["reduce_only"];
+  }
+  return ["disabled"];
+}
+
+async function FuturesPaperMarks({
+  nav,
+  realizedUsdt,
+  leverage,
+  open,
+  venue,
+  venueEnvironment,
 }: {
-  children: React.ReactNode;
+  nav: ComponentProps<typeof StrategySubnav>;
+  realizedUsdt: number;
+  leverage: number | null;
+  open: Array<{
+    symbol: string;
+    side: "long" | "short";
+    qty: number;
+    entryPrice: number;
+  }>;
+  venue: string;
+  venueEnvironment: string | null;
 }) {
-  const session = await getSessionContext();
-  if (session && !deskUsesPerpsUi(session.account.deskType)) {
-    redirect(deskHomePath(session.account.deskType, session.account.id));
+  const tickers = new Map<
+    string,
+    { lastPrice?: string; bid1Price?: string; ask1Price?: string }
+  >();
+  await Promise.all(
+    [...new Set(open.map((row) => row.symbol))].map(async (symbol) => {
+      try {
+        const quote = await loadDeskTicker(venue, venueEnvironment, symbol);
+        if (quote) {
+          tickers.set(symbol, quote);
+        }
+      } catch {
+        return;
+      }
+    }),
+  );
+  let unrealizedUsdt = 0;
+  for (const row of open) {
+    const mark = markFromTicker(tickers.get(row.symbol) ?? {});
+    if (mark == null) {
+      continue;
+    }
+    unrealizedUsdt += futuresPnlUsdt({
+      side: row.side,
+      qty: row.qty,
+      entryPrice: row.entryPrice,
+      exitPrice: mark,
+    });
   }
-  if (session) {
-    await pinDeskSearchParam(session);
-  }
-  const deskType = session?.account.deskType ?? "perps";
-  const copyDesk = session ? deskIsCopy(session.account) : false;
-  const venueLabel =
-    (session ? getVenue(session.account.venue)?.label : null) ?? "Bybit";
+  const paperBook: CopyPaperEquityView = copyPaperEquityView({
+    realizedUsdt,
+    unrealizedUsdt,
+    leverage,
+  });
+  return <FuturesDeskNav {...nav} paperBook={paperBook} />;
+}
+
+async function FuturesDeskChrome({
+  session,
+}: {
+  session: NonNullable<Awaited<ReturnType<typeof getSessionContext>>>;
+}) {
+  const deskType = session.account.deskType;
+  const copyDesk = deskIsCopy(session.account);
   const signalFollower = deskType === "signal_follower" && !copyDesk;
   const dca = deskType === "dca" && !copyDesk;
   const perpsBots = deskType === "perps_bots" && !copyDesk;
-  const manualPerps = deskType === "perps" && !copyDesk;
-  const live = Boolean(session && accountCanHoldConnections(session.account.mode));
-  const [settings, rules, connections, paperBook, dcaRunning] = await Promise.all([
-    session ? loadFuturesSettings() : Promise.resolve(null),
-    session
-      ? loadFuturesAutomationRules(session.account.id)
-      : Promise.resolve([]),
-    live && session
+  const live = accountCanHoldConnections(session.account.mode);
+  const [settings, connections, dcaRunning, modes, ledger] = await Promise.all([
+    loadFuturesSettings(),
+    live
       ? listExchangeConnections(session.member.id)
       : Promise.resolve([]),
-    !live && session
-      ? loadCopyPaperEquityView({
-          userId: session.member.id,
-          accountId: session.account.id,
-          venue: session.account.venue,
-          venueEnvironment: session.account.venueEnvironment,
-        })
-      : Promise.resolve(null),
-    dca && session
+    dca
       ? dcaDeskHasRunningPlaybook(session.account.id)
       : Promise.resolve(false),
+    dca
+      ? Promise.resolve({ anyLive: false, anyActive: false })
+      : loadFuturesNavModes(session.account.id),
+    live
+      ? Promise.resolve(null)
+      : loadCopyPaperLedger({
+          userId: session.member.id,
+          accountId: session.account.id,
+        }),
   ]);
   const bound =
-    connections.find((row) => row.id === settings?.connectionId) ?? null;
+    connections.find((row) => row.id === settings.connectionId) ?? null;
   const deskStatus = futuresDeskAutomationStatus({
-    signedIn: Boolean(session),
-    modes: rules.map((rule) => rule.mode),
-    reduceOnly: Boolean(settings?.reduceOnly),
+    signedIn: true,
+    modes: navModes(modes),
+    reduceOnly: settings.reduceOnly,
     liveBook: live,
     bound: Boolean(bound),
   });
-  const automationsRunning = dca ? dcaRunning : deskStatus.automationsRunning;
-  const deskId = session?.account.id ?? null;
+  const nav = futuresNavProps({
+    account: session.account,
+    automationsRunning: dca ? dcaRunning : deskStatus.automationsRunning,
+    reduceOnly: deskStatus.reduceOnly,
+    paperBook: ledger
+      ? copyPaperEquityView({
+          realizedUsdt: ledger.realizedUsdt,
+          unrealizedUsdt: 0,
+          leverage: settings.paperLeverage,
+        })
+      : null,
+    live,
+    bound,
+    boundCaption: bound ? formatStrategyConnectionCaption(bound) : null,
+    connectionsEmpty: connections.length === 0,
+    connectionKnown: true,
+    showIdentity: true,
+  });
+  const warning =
+    live && !bound ? (
+      <div className="mx-auto max-w-7xl px-6 pt-4">
+        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+          This is a Connected Exchange desk. Bind an exchange in Desk
+          Settings before{" "}
+          {copyDesk
+            ? "copied fills can place."
+            : signalFollower
+              ? "TradingView orders can place."
+              : dca || perpsBots
+                ? "the bot can place."
+                : "Buy, Sell, or Close can place orders."}
+        </p>
+      </div>
+    ) : null;
+  const navNode =
+    live && bound ? (
+      <Suspense fallback={<FuturesDeskNav {...nav} />}>
+        <FuturesDeskNavLive
+          userId={session.member.id}
+          connectionId={bound.id}
+          nav={nav}
+        />
+      </Suspense>
+    ) : ledger && ledger.open.length > 0 ? (
+      <Suspense fallback={<FuturesDeskNav {...nav} />}>
+        <FuturesPaperMarks
+          nav={nav}
+          realizedUsdt={ledger.realizedUsdt}
+          leverage={settings.paperLeverage}
+          open={ledger.open}
+          venue={session.account.venue}
+          venueEnvironment={session.account.venueEnvironment}
+        />
+      </Suspense>
+    ) : (
+      <FuturesDeskNav {...nav} />
+    );
+  return (
+    <>
+      {navNode}
+      {warning}
+    </>
+  );
+}
+
+function futuresNavProps(input: {
+  account: TradingAccount | null;
+  automationsRunning?: boolean;
+  reduceOnly?: boolean;
+  paperBook?: CopyPaperEquityView | null;
+  live?: boolean;
+  bound?: {
+    id: string;
+  } | null;
+  connectionsEmpty?: boolean;
+  boundCaption?: ReturnType<typeof formatStrategyConnectionCaption> | null;
+  connectionKnown?: boolean;
+  showIdentity?: boolean;
+}): ComponentProps<typeof StrategySubnav> {
+  const account = input.account;
+  const deskType = account?.deskType ?? "perps";
+  const copyDesk = account ? deskIsCopy(account) : false;
+  const venueLabel = (account ? getVenue(account.venue)?.label : null) ?? "Bybit";
+  const signalFollower = deskType === "signal_follower" && !copyDesk;
+  const perpsBots = deskType === "perps_bots" && !copyDesk;
+  const manualPerps = deskType === "perps" && !copyDesk;
+  const deskId = account?.id ?? null;
   const primaryBase = copyDesk
     ? COPY_PRIMARY_LINKS
     : signalFollower
@@ -138,13 +286,15 @@ export default async function FuturesLayout({
     : signalFollower
       ? FUTURES_PATHS.settings
       : FUTURES_PATHS.automations;
-  const navProps: ComponentProps<typeof StrategySubnav> = {
-    title: session?.account.name ?? formatDeskType(deskType),
-    typeLabel: session && !copyDesk ? formatDeskType(deskType) : undefined,
+  const live = Boolean(input.live);
+  const caption = input.bound ? input.boundCaption : null;
+  return {
+    title: account?.name ?? formatDeskType(deskType),
+    typeLabel: account && !copyDesk ? formatDeskType(deskType) : undefined,
     identity:
-      copyDesk && session ? (
+      input.showIdentity && copyDesk && account ? (
         <CopyDeskHeader
-          account={session.account}
+          account={account}
           next={
             deskId
               ? pathWithDesk(FUTURES_PATHS.positions, deskId)
@@ -157,61 +307,67 @@ export default async function FuturesLayout({
     secondaryLinks,
     automationsHref,
     automationsRunning:
-      copyDesk || signalFollower || manualPerps ? false : automationsRunning,
-    reduceOnly: deskStatus.reduceOnly,
-    paperBook,
+      copyDesk || signalFollower || manualPerps
+        ? false
+        : Boolean(input.automationsRunning),
+    reduceOnly: Boolean(input.reduceOnly),
+    paperBook: input.paperBook ?? null,
     connection: live
-      ? bound
+      ? input.bound && caption
         ? {
-            ...formatStrategyConnectionCaption(bound),
+            ...caption,
             connected: true,
           }
-        : {
-            name: "Connect an exchange",
-            venue: null,
-            connected: false,
-            href:
-              connections.length === 0
+        : input.connectionKnown
+          ? {
+              name: "Connect an exchange",
+              venue: null,
+              connected: false,
+              href: input.connectionsEmpty
                 ? "/account/sub-accounts?tab=exchanges"
                 : settingsHref,
-          }
+            }
+          : {
+              name: account ? formatDeskVenueCaption(account) : venueLabel,
+              venue: null,
+              connected: true,
+              overline: "Market Data",
+            }
       : {
-          name: session ? formatDeskVenueCaption(session.account) : venueLabel,
+          name: account ? formatDeskVenueCaption(account) : venueLabel,
           venue: null,
           connected: true,
           overline: "Market Data",
         },
   };
-  const nav =
-    live && session && bound ? (
-      <Suspense fallback={<FuturesDeskNav {...navProps} />}>
-        <FuturesDeskNavLive
-          userId={session.member.id}
-          connectionId={bound.id}
-          nav={navProps}
-        />
-      </Suspense>
-    ) : (
-      <FuturesDeskNav {...navProps} />
-    );
+}
+
+export default async function FuturesLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await getSessionContext();
+  if (session && !deskUsesPerpsUi(session.account.deskType)) {
+    redirect(deskHomePath(session.account.deskType, session.account.id));
+  }
+  if (session) {
+    await pinDeskSearchParam(session);
+  }
+  const shell = futuresNavProps({
+    account: session?.account ?? null,
+    live: Boolean(session && accountCanHoldConnections(session.account.mode)),
+    connectionsEmpty: true,
+  });
   return (
     <div>
-      {nav}
-      {live && !bound ? (
-        <div className="mx-auto max-w-7xl px-6 pt-4">
-          <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-            This is a Connected Exchange desk. Bind an exchange in Desk
-            Settings before{" "}
-            {copyDesk
-              ? "copied fills can place."
-              : signalFollower
-                ? "TradingView orders can place."
-                : dca || perpsBots
-                  ? "the bot can place."
-                  : "Buy, Sell, or Close can place orders."}
-          </p>
-        </div>
-      ) : null}
+      {session ? (
+        <Suspense fallback={<FuturesDeskNav {...shell} />}>
+          <FuturesDeskChrome session={session} />
+        </Suspense>
+      ) : (
+        <FuturesDeskNav {...shell} />
+      )}
       <HashScroll />
       {children}
     </div>

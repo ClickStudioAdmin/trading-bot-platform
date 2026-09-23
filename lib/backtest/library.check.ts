@@ -3,6 +3,7 @@ import {
   canQueueUserBacktest,
   decideBacktestTemplateActions,
   deskBotAutomationsHref,
+  deskBacktestBotCandidates,
   findMatchingBacktestDeskBot,
   findMatchingSavedBacktest,
   toSavedBacktestMatch,
@@ -227,6 +228,8 @@ assert.equal(
     {
       id: "dca:1",
       name: "Desk dip",
+      symbol: "BTCUSDT",
+      kind: "perps" as const,
       deskId: "desk-1",
       deskName: "Paper",
       recipe: perps,
@@ -243,6 +246,8 @@ assert.equal(
       {
         id: "dca:1",
         name: "Desk dip",
+        symbol: "BTCUSDT",
+        kind: "perps" as const,
         deskId: "desk-1",
         deskName: "Paper",
         recipe: perps,
@@ -360,5 +365,29 @@ assert.equal(marginRecipe?.kind, "dca");
 if (marginRecipe?.kind === "dca") {
   assert.equal(marginRecipe.maxValueKind, "margin");
 }
+
+assert.deepEqual(
+  deskBacktestBotCandidates(
+    [
+      {
+        id: "perps:1",
+        kind: "perps" as const,
+        symbol: "BTCUSDT",
+      },
+      {
+        id: "perps:2",
+        kind: "perps" as const,
+        symbol: "ETHUSDT",
+      },
+      {
+        id: "dca:1",
+        kind: "dca" as const,
+        symbol: "BTCUSDT",
+      },
+    ],
+    perps,
+  ).map((row) => row.id),
+  ["perps:1"],
+);
 
 console.log("backtest library checks passed");

@@ -14,7 +14,9 @@ import {
 import { loadUsableBookShare } from "@/lib/engine/settings";
 import { applyUsableBookShare } from "@/lib/opportunities/capacity";
 import { LastScan } from "@/components/last-scan";
-import { loadOpportunityBook } from "@/lib/opportunities/load";
+import { OpportunityBookRefresh } from "@/components/opportunity-book-refresh";
+import { OPPORTUNITY_FRESH_MS } from "@/lib/opportunities/load";
+import { loadStoredOpportunities } from "@/lib/opportunities/persist";
 import { formatPct, formatUsd, signedTone } from "@/lib/opportunities/format";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getOpportunityPaperProps } from "@/lib/paper/list";
@@ -40,10 +42,15 @@ export default async function CashAndCarryOpportunitiesPage({
       firstSearchValue(params.paper) === "live-opened" ||
       firstSearchValue(params.paper) === "live-added",
   );
-  const book = await loadOpportunityBook(justActed ? "stored" : "fresh");
-  const error = book.error;
-  const scannedAtMs = book.scannedAtMs;
-  const rows = applyUsableBookShare(book.rows, await loadUsableBookShare());
+  const [stored, share] = await Promise.all([
+    loadStoredOpportunities(),
+    loadUsableBookShare(),
+  ]);
+  const scannedAtMs = stored.scannedAtMs;
+  const stale =
+    !justActed &&
+    (scannedAtMs === null || Date.now() - scannedAtMs >= OPPORTUNITY_FRESH_MS);
+  const rows = applyUsableBookShare(stored.rows, share);
 
   const visible = applyOpportunityFilters(rows, filters);
   const active = filtersAreActive(filters);
@@ -58,6 +65,7 @@ export default async function CashAndCarryOpportunitiesPage({
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <div className="space-y-6">
+        <OpportunityBookRefresh stale={stale} />
         <PaperFlash
           opened={firstSearchValue(params.paper) === "opened"}
           liveOpened={firstSearchValue(params.paper) === "live-opened"}
@@ -92,23 +100,17 @@ export default async function CashAndCarryOpportunitiesPage({
             deskId={deskIdFromHref(paper.next)}
           />
         </TableFilterSession>
-        {error ? (
-          <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {error}
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {visible.length === 0 ? (
-              <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
-                {active
-                  ? "No pairs match these filters."
-                  : "No pairs in the current scan."}
-              </p>
-            ) : (
-              <OpportunityTable rows={visible} paper={paper} />
-            )}
-          </div>
-        )}
+        <div className="space-y-2">
+          {visible.length === 0 ? (
+            <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
+              {active
+                ? "No pairs match these filters."
+                : "No pairs in the current scan."}
+            </p>
+          ) : (
+            <OpportunityTable rows={visible} paper={paper} />
+          )}
+        </div>
       </div>
     </main>
   );

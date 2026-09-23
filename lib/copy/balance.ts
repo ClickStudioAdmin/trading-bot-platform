@@ -104,6 +104,42 @@ export async function loadCopyFollowerEquity(input: {
   return Number.isFinite(equity) ? equity : null;
 }
 
+export async function loadCopyPaperLedger(input: {
+  userId: string;
+  accountId: string;
+}): Promise<{
+  realizedUsdt: number;
+  open: Array<{
+    symbol: string;
+    side: FuturesPosition["side"];
+    qty: number;
+    entryPrice: number;
+  }>;
+}> {
+  const positions = await loadFuturesPositions({
+    scope: { accountId: input.accountId, userId: input.userId },
+  });
+  let realizedUsdt = 0;
+  const open: Array<{
+    symbol: string;
+    side: FuturesPosition["side"];
+    qty: number;
+    entryPrice: number;
+  }> = [];
+  for (const row of positions) {
+    realizedUsdt += row.realizedUsdt;
+    if (row.status === "open") {
+      open.push({
+        symbol: row.symbol,
+        side: row.side,
+        qty: row.qty,
+        entryPrice: row.entryPrice,
+      });
+    }
+  }
+  return { realizedUsdt, open };
+}
+
 export async function loadCopyPaperEquityView(input: {
   userId: string;
   accountId: string;

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { AccountSnapshotBody } from "@/components/account-snapshot";
+import { ContainerLoading } from "@/components/container-loading";
 import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
 import { listTradingAccounts } from "@/lib/accounts/store";
@@ -34,21 +36,15 @@ export default async function AccountOverviewPage() {
   if (!member.platformMember) {
     redirect(AFFILIATES_PATH);
   }
-  const accounts = await listTradingAccounts(member.id);
-  const paperCount = accounts.filter((account) => account.mode === "paper").length;
-  const liveCount = accounts.length - paperCount;
-  const [connections, binds] = await Promise.all([
+  const [accounts, connections, binds, chrome, notices] = await Promise.all([
+    listTradingAccounts(member.id),
     listExchangeConnections(member.id),
     listConnectionDeskBinds(member.id),
-  ]);
-  const snapshots = await loadAccountSnapshots(
-    member.id,
-    connections.map((row) => row.id),
-  );
-  const [chrome, notices] = await Promise.all([
     loadMemberNotificationChrome(member.id, true),
     listUserNotifications(member.id, 5),
   ]);
+  const paperCount = accounts.filter((account) => account.mode === "paper").length;
+  const liveCount = accounts.length - paperCount;
   const attention = memberOverviewAttention({
     accounts,
     binds,
@@ -166,18 +162,74 @@ export default async function AccountOverviewPage() {
             No keys on this login yet.
           </p>
         ) : (
-          <ul className="mt-4 divide-y divide-line">
-            {connections.map((row) => (
-              <li key={row.id} className="py-4 first:pt-0 last:pb-0">
-                <ConnectionSnapshot
-                  row={row}
-                  snapshot={snapshots.get(row.id) ?? null}
-                />
-              </li>
-            ))}
-          </ul>
+          <Suspense
+            fallback={<AccountKeyBalanceList connections={connections} />}
+          >
+            <AccountKeyBalances
+              userId={member.id}
+              connections={connections}
+            />
+          </Suspense>
         )}
       </section>
+    </div>
+  );
+}
+
+async function AccountKeyBalances({
+  userId,
+  connections,
+}: {
+  userId: string;
+  connections: ExchangeConnection[];
+}) {
+  const snapshots = await loadAccountSnapshots(
+    userId,
+    connections.map((row) => row.id),
+  );
+  return (
+    <AccountKeyBalanceList connections={connections} snapshots={snapshots} />
+  );
+}
+
+function AccountKeyBalanceList({
+  connections,
+  snapshots,
+}: {
+  connections: ExchangeConnection[];
+  snapshots?: Map<string, AccountSnapshotView>;
+}) {
+  return (
+    <ul className="mt-4 divide-y divide-line">
+      {connections.map((row) => (
+        <li key={row.id} className="py-4 first:pt-0 last:pb-0">
+          {snapshots ? (
+            <ConnectionSnapshot
+              row={row}
+              snapshot={snapshots.get(row.id) ?? null}
+            />
+          ) : (
+            <ConnectionBalancePending row={row} />
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ConnectionBalancePending({ row }: { row: ExchangeConnection }) {
+  const caption = formatStrategyConnectionCaption(row);
+  return (
+    <div>
+      <p className="text-sm">
+        {caption.name}
+        {caption.venue ? (
+          <span className="text-ink-muted"> ({caption.venue})</span>
+        ) : null}
+      </p>
+      <div className="mt-2">
+        <ContainerLoading label="Loading balance" />
+      </div>
     </div>
   );
 }

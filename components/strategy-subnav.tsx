@@ -218,7 +218,11 @@ function HeaderMeta({
   );
   if (href) {
     return (
-      <Link href={href} className={`${className} hover:border-line-strong`}>
+      <Link
+        href={href}
+        prefetch={false}
+        className={`${className} hover:border-line-strong`}
+      >
         {body}
       </Link>
     );
@@ -265,6 +269,7 @@ function SubnavLink({
   return (
     <Link
       href={link.href}
+      prefetch={false}
       className={`-mb-px border-b-2 px-3 py-2 text-sm whitespace-nowrap ${
         active
           ? "border-accent text-ink"

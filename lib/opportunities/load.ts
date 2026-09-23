@@ -5,7 +5,7 @@ import {
 import { scanCarryOpportunities } from "@/lib/opportunities/scan";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 
-const FRESH_MS = 90_000;
+export const OPPORTUNITY_FRESH_MS = 90_000;
 
 export async function loadOpportunityBook(
   preference: "fresh" | "stored",
@@ -21,7 +21,7 @@ export async function loadOpportunityBook(
       : Date.now() - stored.scannedAtMs;
   const useStored =
     stored.rows.length > 0 &&
-    (preference === "stored" || ageMs < FRESH_MS);
+    (preference === "stored" || ageMs < OPPORTUNITY_FRESH_MS);
 
   if (useStored) {
     return { rows: stored.rows, scannedAtMs: stored.scannedAtMs, error: null };
