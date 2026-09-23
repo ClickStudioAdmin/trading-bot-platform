@@ -3,9 +3,7 @@
 import { getSessionContext } from "@/lib/auth/session";
 import {
   listEventLogs,
-  listEventLogsForAnchors,
   logsForPosition,
-  mergeEventLogs,
   type EventLogRow,
 } from "@/lib/logs/list";
 import { loadFuturesOrdersForPositions } from "@/lib/futures/list";
@@ -54,26 +52,19 @@ export async function loadFuturesPositionLogs(
   const closedAtMs = closedRaw
     ? new Date(String(closedRaw)).getTime()
     : Number.NaN;
-  const [anchored, recent] = await Promise.all([
-    listEventLogsForAnchors({
+  const recent = await listEventLogs(
+    { scope: "", level: "", event: "" },
+    {
       accountId: session.account.id,
-      field: "positionId",
-      ids: [id],
-    }),
-    listEventLogs(
-      { scope: "", level: "", event: "" },
-      {
-        accountId: session.account.id,
-        limit: 500,
-        scopes: ["trade", "strategy"],
-        since:
-          Number.isFinite(openedAtMs) && openedAtMs > 0
-            ? new Date(openedAtMs - 60_000).toISOString()
-            : undefined,
-      },
-    ),
-  ]);
-  return logsForPosition(mergeEventLogs(recent, anchored), {
+      limit: 500,
+      scopes: ["trade", "strategy"],
+      since:
+        Number.isFinite(openedAtMs) && openedAtMs > 0
+          ? new Date(openedAtMs - 60_000).toISOString()
+          : undefined,
+    },
+  );
+  return logsForPosition(recent, {
     id,
     symbol: String(row.symbol ?? ""),
     side: String(row.side ?? ""),

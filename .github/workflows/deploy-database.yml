@@ -62,17 +62,23 @@ jobs:
       - name: Push migrations
         run: |
           # The session pooler sometimes drops the first handshake
-          # (connection terminated unexpectedly). Each migration runs in a
-          # transaction, so a failed attempt does not leave a partial schema.
+          # (connection terminated unexpectedly). Retry that only.
+          # Once a migration has started applying, do not push again: a second
+          # attempt waits on the lock from the statement that is still running.
+          set -o pipefail
           for attempt in 1 2 3; do
-            if supabase db push; then
+            if supabase db push 2>&1 | tee "/tmp/db-push-${attempt}.log"; then
               exit 0
             fi
             status=$?
+            if grep -q "Applying migration" "/tmp/db-push-${attempt}.log"; then
+              echo "Migration started applying. Not retrying."
+              exit "$status"
+            fi
             if [ "$attempt" -eq 3 ]; then
               exit "$status"
             fi
-            echo "db push failed on attempt ${attempt}. Waiting 20s."
+            echo "db push failed before applying SQL, attempt ${attempt}. Waiting 20s."
             sleep 20
           done
 
@@ -122,14 +128,22 @@ jobs:
 
       - name: Push migrations
         run: |
+          # Retry a dropped handshake only. Do not start a second push after
+          # "Applying migration": that attempt waits on the lock still held
+          # by the first statement.
+          set -o pipefail
           for attempt in 1 2 3; do
-            if supabase db push; then
+            if supabase db push 2>&1 | tee "/tmp/db-push-${attempt}.log"; then
               exit 0
             fi
             status=$?
+            if grep -q "Applying migration" "/tmp/db-push-${attempt}.log"; then
+              echo "Migration started applying. Not retrying."
+              exit "$status"
+            fi
             if [ "$attempt" -eq 3 ]; then
               exit "$status"
             fi
-            echo "db push failed on attempt ${attempt}. Waiting 20s."
+            echo "db push failed before applying SQL, attempt ${attempt}. Waiting 20s."
             sleep 20
           done

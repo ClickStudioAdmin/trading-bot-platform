@@ -1,7 +1,11 @@
 "use server";
 
 import { getSessionContext } from "@/lib/auth/session";
-import { listEventLogsForAnchors, type EventLogRow } from "@/lib/logs/list";
+import {
+  listEventLogs,
+  logsForCarry,
+  type EventLogRow,
+} from "@/lib/logs/list";
 import { ordersForCarry, parsePaperOrderRow, type PaperOrderRow } from "@/lib/paper/orders";
 import { parsePaperCarryRow } from "@/lib/paper/rows";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -51,13 +55,34 @@ export async function loadPaperCarryLogs(
   carryId: number,
 ): Promise<EventLogRow[]> {
   const session = await getSessionContext();
+  const supabase = createServiceClient();
   const id = Number(carryId);
-  if (!session || !Number.isFinite(id)) {
+  if (!session || !supabase || !Number.isFinite(id)) {
     return [];
   }
-  return listEventLogsForAnchors({
-    accountId: session.account.id,
-    field: "carryId",
-    ids: [String(id)],
-  });
+  const { data, error } = await supabase
+    .from("paper_carries")
+    .select("opened_at")
+    .eq("account_id", session.account.id)
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) {
+    return [];
+  }
+  const openedAtMs = new Date(
+    String((data as { opened_at?: unknown }).opened_at ?? ""),
+  ).getTime();
+  const logs = await listEventLogs(
+    { scope: "", level: "", event: "" },
+    {
+      accountId: session.account.id,
+      limit: 1000,
+      scopes: ["trade", "strategy"],
+      since:
+        Number.isFinite(openedAtMs) && openedAtMs > 0
+          ? new Date(openedAtMs - 60_000).toISOString()
+          : undefined,
+    },
+  );
+  return logsForCarry(logs, id);
 }
