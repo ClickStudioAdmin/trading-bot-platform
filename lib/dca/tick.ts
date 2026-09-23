@@ -4,6 +4,7 @@ import {
   parseDeskType,
   type TradingAccountMode,
 } from "@/lib/accounts/model";
+import { isBybitAgreementQuiet } from "@/lib/exchanges/agreement";
 import {
   fetchBybitTickers,
   type BybitTicker,
@@ -579,6 +580,9 @@ async function applyTickAction(input: {
       reason: input.why,
     });
     if (!armed.ok) {
+      if (isBybitAgreementQuiet(armed.error)) {
+        return { acted: false };
+      }
       const why = String(input.why ?? "").trim();
       await logDcaEvent({
         playbook: input.playbook,
@@ -630,6 +634,9 @@ async function applyTickAction(input: {
       reason: input.why,
     });
     if (!placed.ok) {
+      if (isBybitAgreementQuiet(placed.error)) {
+        return { acted: false };
+      }
       const why = String(input.why ?? "").trim();
       await logDcaEvent({
         playbook: input.playbook,
@@ -704,6 +711,9 @@ async function applyTickAction(input: {
     reason: input.why,
   });
   if (!closed.ok) {
+    if (isBybitAgreementQuiet(closed.error)) {
+      return { acted: false };
+    }
     const why = String(input.why ?? "").trim();
     await logDcaEvent({
       playbook: input.playbook,

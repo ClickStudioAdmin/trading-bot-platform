@@ -35,7 +35,9 @@ import {
 } from "@/lib/dca/run";
 import { afterDeskWork } from "@/lib/ui/after-desk-work";
 import { loadDcaBookUsdt, loadDcaSizingLeverage } from "@/lib/dca/book";
+import { clearAgreementBlock } from "@/lib/exchanges/agreement-store";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
+import { loadFuturesSettings } from "@/lib/futures/settings";
 import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
 import { loadHyperliquidLinearPerps } from "@/lib/venues/hyperliquid/market";
 import {
@@ -430,6 +432,13 @@ async function saveDcaPlaybookWith(
   });
   if (!saved.ok) {
     return deskActionError(saved.error);
+  }
+  if (session.account.mode === "live" && session.account.venue === "bybit") {
+    const settings = await loadFuturesSettings(session.account.id);
+    await clearAgreementBlock({
+      connectionId: settings.connectionId,
+      symbol: config.symbol,
+    });
   }
   await writeEventLog({
     scope: "strategy",

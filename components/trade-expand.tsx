@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { IconChevronRight } from "@/components/icons";
 
 export function ExpandableTradeRows({
@@ -18,6 +18,24 @@ export function ExpandableTradeRows({
 }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [panelWidth, setPanelWidth] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+    const panel = panelRef.current;
+    const scroller = panel?.closest(".overflow-x-auto");
+    if (!(scroller instanceof HTMLElement)) {
+      return;
+    }
+    const measure = () => setPanelWidth(scroller.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(scroller);
+    return () => observer.disconnect();
+  }, [open]);
 
   return (
     <>
@@ -48,8 +66,12 @@ export function ExpandableTradeRows({
       {open ? (
         <tr className="border-b border-line last:border-b-0">
           <td colSpan={colSpan} className="max-w-0 bg-canvas p-0" id={panelId}>
-            <div className="sticky left-0 w-[100cqi] max-w-[100cqi] px-4 py-4">
-              <div className="min-w-0 overflow-hidden">{details}</div>
+            <div
+              ref={panelRef}
+              className="sticky left-0 px-4 py-4"
+              style={panelWidth == null ? undefined : { width: panelWidth }}
+            >
+              <div className="min-w-0">{details}</div>
             </div>
           </td>
         </tr>

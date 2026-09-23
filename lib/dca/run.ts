@@ -11,6 +11,7 @@ import {
   loadDeskVenueContext,
 } from "@/lib/venues/hyperliquid/desk";
 import { loadHyperliquidInstrument } from "@/lib/venues/hyperliquid/market";
+import { isBybitAgreementQuiet } from "@/lib/exchanges/agreement";
 import { isUnchangedTradingStop } from "@/lib/exchanges/bybit/orders";
 import {
   loadPerpInstrument,
@@ -148,6 +149,9 @@ async function logDcaSyncFailed(input: {
   qty?: number;
   recent?: DcaSyncFailureStamp[];
 }): Promise<void> {
+  if (isBybitAgreementQuiet(input.error)) {
+    return;
+  }
   const stamp = dcaSyncFailureStamp({
     playbookId: input.playbook.id,
     playbookUpdatedAtMs: input.playbook.updatedAtMs,

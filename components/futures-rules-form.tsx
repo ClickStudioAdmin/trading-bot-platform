@@ -34,6 +34,10 @@ import {
 } from "@/components/bot-indicator-fields";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
+import {
+  BYBIT_AGREEMENT_NOTE,
+  symbolNeedsBybitAgreement,
+} from "@/lib/exchanges/agreement";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import {
@@ -121,6 +125,7 @@ export function FuturesAutomationsDesk({
   venueEnvironment = null,
   backtestLibrary = [],
   savedBacktests = [],
+  agreementSymbols = [],
   edit = null,
   clone = null,
   listHref,
@@ -140,6 +145,7 @@ export function FuturesAutomationsDesk({
   venueEnvironment?: string | null;
   backtestLibrary?: BacktestLibraryItem[];
   savedBacktests?: readonly SavedBacktestMatch[];
+  agreementSymbols?: readonly string[];
   edit?: string | null;
   clone?: string | null;
   listHref: string;
@@ -230,6 +236,7 @@ export function FuturesAutomationsDesk({
           venueEnvironment={venueEnvironment}
           backtestLibrary={library}
           savedBacktests={savedBacktests}
+          agreementSymbols={agreementSymbols}
           onSaved={(result) => {
             applySaveResult(result);
             if (result.ok) {
@@ -283,6 +290,9 @@ export function FuturesAutomationsDesk({
               id: layer.id,
               name: layer.name || "Bot",
               pair: perpsBotPair(layer),
+              pairNote: symbolNeedsBybitAgreement(agreementSymbols, layer.symbol)
+                ? BYBIT_AGREEMENT_NOTE
+                : undefined,
               status: botModeLabel("perps", layer.mode),
               statusKey: layer.mode,
               summary: perpsBotSummary(layer),
@@ -347,6 +357,7 @@ function RuleCard({
   venueEnvironment = null,
   backtestLibrary = [],
   savedBacktests = [],
+  agreementSymbols = [],
   onTemplateSaved,
 }: {
   layer: FuturesAutomationFormValues;
@@ -363,6 +374,7 @@ function RuleCard({
   venueEnvironment?: string | null;
   backtestLibrary?: BacktestLibraryItem[];
   savedBacktests?: readonly SavedBacktestMatch[];
+  agreementSymbols?: readonly string[];
   onTemplateSaved?: (item: BacktestLibraryItem) => void;
 }) {
   const prefix = "r0_";
@@ -669,7 +681,13 @@ function RuleCard({
               options={options}
               value={symbol}
               onChange={setSymbol}
+              agreementSymbols={agreementSymbols}
             />
+            {symbolNeedsBybitAgreement(agreementSymbols, symbol) ? (
+              <p className="mt-1 text-hint text-warning">
+                Save to try this contract again after you sign on Bybit.
+              </p>
+            ) : null}
           </BotField>
           <BotField label="Action" required>
             <AppSelect

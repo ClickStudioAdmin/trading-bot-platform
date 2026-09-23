@@ -50,6 +50,7 @@ export type AutomationsBotRow = {
   id: string;
   name: string;
   pair: string;
+  pairNote?: string;
   status: string;
   statusKey?: string;
   summary: string;
@@ -288,7 +289,12 @@ export function AutomationsBotTable({
               </td>
               {visible.pair ? (
                 <td className="px-4 py-3 pr-8 align-top text-ink-muted">
-                  {row.pair}
+                  <span>{row.pair}</span>
+                  {row.pairNote ? (
+                    <span className="mt-0.5 block text-hint text-warning">
+                      {row.pairNote}
+                    </span>
+                  ) : null}
                 </td>
               ) : null}
               {visible.recipe ? (

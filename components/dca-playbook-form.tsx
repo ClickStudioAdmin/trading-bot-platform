@@ -37,6 +37,10 @@ import {
 } from "@/components/bot-indicator-fields";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
+import {
+  BYBIT_AGREEMENT_NOTE,
+  symbolNeedsBybitAgreement,
+} from "@/lib/exchanges/agreement";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import {
@@ -530,6 +534,7 @@ export function DcaPlaybooksDesk({
   savedBacktests = [],
   openPositions = [],
   urgentRefresh = false,
+  agreementSymbols = [],
   edit = null,
   clone = null,
   listHref,
@@ -554,6 +559,7 @@ export function DcaPlaybooksDesk({
   savedBacktests?: readonly SavedBacktestMatch[];
   openPositions?: DcaCycleOpen[];
   urgentRefresh?: boolean;
+  agreementSymbols?: readonly string[];
   edit?: string | null;
   clone?: string | null;
   listHref: string;
@@ -657,6 +663,7 @@ export function DcaPlaybooksDesk({
           backtestLibrary={library}
           savedBacktests={savedBacktests}
           openPositions={openPositions}
+          agreementSymbols={agreementSymbols}
           onTemplateSaved={(item) =>
             setExtraLibrary((current) => [
               ...current.filter((row) => row.id !== item.id),
@@ -724,6 +731,9 @@ export function DcaPlaybooksDesk({
               id: playbook.id,
               name: playbook.name || "Bot",
               pair: dcaBotPair(playbook),
+              pairNote: symbolNeedsBybitAgreement(agreementSymbols, playbook.symbol)
+                ? BYBIT_AGREEMENT_NOTE
+                : undefined,
               status: dcaListStatus(playbook),
               statusKey: dcaStatusFromLegs({
                 armed:
@@ -803,6 +813,7 @@ export function DcaPlaybookForm({
   backtestLibrary = [],
   savedBacktests = [],
   openPositions = [],
+  agreementSymbols = [],
   onTemplateSaved,
 }: {
   playbook: DcaPlaybook | null;
@@ -825,6 +836,7 @@ export function DcaPlaybookForm({
   backtestLibrary?: BacktestLibraryItem[];
   savedBacktests?: readonly SavedBacktestMatch[];
   openPositions?: DcaCycleOpen[];
+  agreementSymbols?: readonly string[];
   onTemplateSaved?: (item: BacktestLibraryItem) => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -1486,7 +1498,13 @@ export function DcaPlaybookForm({
                 defaultSymbol={defaultSymbol}
                 value={symbol}
                 onChange={setSymbol}
+                agreementSymbols={agreementSymbols}
               />
+              {symbolNeedsBybitAgreement(agreementSymbols, symbol) ? (
+                <p className="mt-1 text-hint text-warning">
+                  Save to try this contract again after you sign on Bybit.
+                </p>
+              ) : null}
             </label>
             <label
               className={`${labelClass}${

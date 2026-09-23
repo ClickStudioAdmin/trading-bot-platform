@@ -289,6 +289,7 @@ function order(
     price: partial.price,
     notionalUsdt: 100,
     venueOrderId: null,
+    venue: null,
     filledAtMs: 1,
     source: "manual",
     ruleName: null,

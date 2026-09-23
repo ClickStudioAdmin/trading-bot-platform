@@ -15,6 +15,7 @@ import {
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { futuresWebhookOrigin } from "@/lib/futures/webhook";
 import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
+import { listAgreementSymbols } from "@/lib/exchanges/agreement-store";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { firstSearchValue } from "@/lib/paper/open";
 import { withMarketCapRank } from "@/lib/pairs/page";
@@ -57,6 +58,9 @@ export default async function FuturesWebhooksPage({
   const settings = session
     ? await loadFuturesSettings(session.account.id)
     : { connectionId: null };
+  const agreementSymbols = await listAgreementSymbols(
+    session?.account.venue === "bybit" ? settings.connectionId : null,
+  );
   const live = Boolean(
     session && accountCanHoldConnections(session.account.mode),
   );
@@ -192,6 +196,7 @@ export default async function FuturesWebhooksPage({
                 pairs={pairs}
                 lastPrices={lastPrices}
                 defaultSymbol={hl ? "BTC" : undefined}
+                agreementSymbols={agreementSymbols}
               />
               {live && !settings.connectionId ? (
                 <p className="mt-2 text-xs text-warning">

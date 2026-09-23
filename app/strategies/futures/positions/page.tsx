@@ -45,9 +45,13 @@ import { loadFuturesPositionsBotBook } from "@/lib/futures/bot-book";
 import { futuresOpenBookFromDesk, loadFuturesDesk } from "@/lib/futures/list";
 import { futuresDeskNeedsUrgentRefresh } from "@/lib/futures/pending-close";
 import { markFuturesOpen } from "@/lib/futures/mark";
+import { listAgreementSymbols } from "@/lib/exchanges/agreement-store";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { loadFuturesVenueRisk } from "@/lib/futures/venue-risk-load";
-import { attachFuturesVenueRisk } from "@/lib/futures/venue-risk";
+import {
+  attachFuturesVenueRisk,
+  type FuturesVenueRisk,
+} from "@/lib/futures/venue-risk";
 import { firstSearchValue } from "@/lib/paper/open";
 import { withMarketCapRank } from "@/lib/pairs/page";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
@@ -89,42 +93,58 @@ export default async function FuturesPositionsPage({
       recipeAccountId &&
       (dcaBlotter || deskType === "perps_bots"),
   );
+  const showTicket = session
+    ? deskAllowsManualPerpTicket(session.account)
+    : deskAllowsManualPerpTicket(deskType);
+  const allowSignal = session
+    ? deskAllowsSignalWebhooks(session.account)
+    : deskAllowsSignalWebhooks(deskType);
+  const loadCatalog = !botScope || showTicket;
+  const emptyTickers = new Map<
+    string,
+    { lastPrice?: string; bid1Price?: string; ask1Price?: string }
+  >();
   const headerList = headers();
-  const [scoped, fullDesk, settings, webhooks, tickers, pairs] = await Promise.all([
-    botScope && recipeAccountId
-      ? loadFuturesPositionsBotBook({
-          botId: filters.bot,
-          mode: dcaBlotter ? "dca" : "perps",
-          recipeAccountId,
-        })
-      : Promise.resolve(null),
-    botScope ? Promise.resolve(null) : loadFuturesDesk(),
-    session
-      ? loadFuturesSettings(session.account.id)
-      : Promise.resolve({
-          reduceOnly: false,
-          connectionId: null,
-          paperLeverage: null,
-          maxValuePerSymbol: null,
-          maxOpenPositions: null,
-        }),
-    session
-      ? headerList.then((headerStore) =>
-          listFuturesWebhooks({
-            accountId: session.account.id,
-            origin: futuresWebhookOrigin(headerStore),
+  const [scoped, fullDesk, settings, webhooks, tickers, pairs, botOptions, perpsBots] =
+    await Promise.all([
+      botScope && recipeAccountId
+        ? loadFuturesPositionsBotBook({
+            botId: filters.bot,
+            mode: dcaBlotter ? "dca" : "perps",
+            recipeAccountId,
+          })
+        : Promise.resolve(null),
+      botScope ? Promise.resolve(null) : loadFuturesDesk(),
+      session && showTicket
+        ? loadFuturesSettings(session.account.id)
+        : Promise.resolve({
+            reduceOnly: false,
+            connectionId: null,
+            paperLeverage: null,
+            maxValuePerSymbol: null,
+            maxOpenPositions: null,
           }),
-        )
-      : Promise.resolve([]),
-    fetchBybitTickers("linear").catch(
-      () =>
-        new Map<
-          string,
-          { lastPrice?: string; bid1Price?: string; ask1Price?: string }
-        >(),
-    ),
-    loadUsdtLinearPerps().catch(() => []).then(withMarketCapRank),
-  ]);
+      session && showTicket
+        ? headerList.then((headerStore) =>
+            listFuturesWebhooks({
+              accountId: session.account.id,
+              origin: futuresWebhookOrigin(headerStore),
+            }),
+          )
+        : Promise.resolve([]),
+      loadCatalog
+        ? fetchBybitTickers("linear").catch(() => emptyTickers)
+        : Promise.resolve(emptyTickers),
+      loadCatalog
+        ? loadUsdtLinearPerps().catch(() => []).then(withMarketCapRank)
+        : Promise.resolve([]),
+      dcaBlotter && playbookAccountId
+        ? listDcaBotOptions(playbookAccountId)
+        : Promise.resolve([]),
+      deskType === "perps_bots" && recipeAccountId
+        ? loadFuturesAutomationRules(recipeAccountId)
+        : Promise.resolve([]),
+    ]);
   const desk = scoped
     ? scoped.book
     : futuresOpenBookFromDesk(
@@ -140,20 +160,20 @@ export default async function FuturesPositionsPage({
     ...desk.open.map((row) => row.symbol),
     ...desk.working.map((row) => row.symbol),
   ];
-  const [venueRisk, botOptions, playbooks, perpsBots] = await Promise.all([
-    desk.exchangeBook && desk.open.length > 0
-      ? loadFuturesVenueRisk()
-      : Promise.resolve(new Map()),
-    dcaBlotter && playbookAccountId
-      ? listDcaBotOptions(playbookAccountId)
-      : Promise.resolve([]),
-    dcaBlotter && playbookAccountId
-      ? scoped?.playbook
-        ? Promise.resolve([scoped.playbook])
-        : listDcaPlaybooksForSymbols(playbookAccountId, blotterSymbols)
-      : Promise.resolve([]),
-    deskType === "perps_bots" && recipeAccountId
-      ? loadFuturesAutomationRules(recipeAccountId)
+  const deferVenueRisk = botScope && desk.exchangeBook && desk.open.length > 0;
+  const [venueRisk, playbooks, agreementSymbols] = await Promise.all([
+    botScope || !(desk.exchangeBook && desk.open.length > 0)
+      ? Promise.resolve(new Map<string, FuturesVenueRisk>())
+      : loadFuturesVenueRisk(),
+    botScope
+      ? Promise.resolve(scoped?.playbook ? [scoped.playbook] : [])
+      : dcaBlotter && playbookAccountId
+        ? listDcaPlaybooksForSymbols(playbookAccountId, blotterSymbols)
+        : Promise.resolve([]),
+    showTicket
+      ? listAgreementSymbols(
+          session?.account.venue === "bybit" ? settings.connectionId : null,
+        )
       : Promise.resolve([]),
   ]);
   const open = attachFuturesVenueRisk(
@@ -170,16 +190,13 @@ export default async function FuturesPositionsPage({
       lastPrices[symbol] = last;
     }
   }
-  const showTicket = session
-    ? deskAllowsManualPerpTicket(session.account)
-    : deskAllowsManualPerpTicket(deskType);
-  const allowSignal = session
-    ? deskAllowsSignalWebhooks(session.account)
-    : deskAllowsSignalWebhooks(deskType);
+  const hintRows = desk.fillsLoaded
+    ? open
+    : open.map((row) => ({ ...row, orders: undefined }));
   const dcaHints = dcaBlotter
     ? copyDesk
-      ? dcaHintsForCopyOpen(playbooks, open, desk.working)
-      : dcaHintsForOpen(playbooks, open, desk.working)
+      ? dcaHintsForCopyOpen(playbooks, hintRows, desk.working)
+      : dcaHintsForOpen(playbooks, hintRows, desk.working)
     : undefined;
   const bots = dcaBlotter
     ? botOptions
@@ -295,6 +312,7 @@ export default async function FuturesPositionsPage({
                 <FuturesOrderTicket
                   options={pairs}
                   lastPrices={lastPrices}
+                  agreementSymbols={agreementSymbols}
                   actions={
                     <>
                       <PendingSubmitButton
@@ -322,6 +340,7 @@ export default async function FuturesPositionsPage({
                   <FuturesWebhookTest
                     webhooks={testWebhooks}
                     allowSignal={allowSignal}
+                    agreementSymbols={agreementSymbols}
                   />
                 ) : session ? (
                   <p className="mt-4 text-hint text-ink-muted">
@@ -367,6 +386,8 @@ export default async function FuturesPositionsPage({
           hideRowExits={copyDesk}
           copyDesk={copyDesk}
           dcaHints={dcaHints}
+          deferFills={!desk.fillsLoaded}
+          deferVenueRisk={deferVenueRisk}
           emptyMessage={
             deskBlotterFiltersActive(filters)
               ? "No positions match these filters."

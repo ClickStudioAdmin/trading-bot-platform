@@ -50,6 +50,7 @@ export type FuturesOrder = {
   price: number | null;
   notionalUsdt: number | null;
   venueOrderId: string | null;
+  venue: string | null;
   filledAtMs: number;
   source: FuturesTradeSource;
   ruleName: string | null;
@@ -196,6 +197,7 @@ export function parseFuturesOrderRow(
     price: Number(row.price) > 0 ? Number(row.price) : null,
     notionalUsdt: Number(row.notional_usdt) > 0 ? Number(row.notional_usdt) : null,
     venueOrderId: row.venue_order_id ? String(row.venue_order_id) : null,
+    venue: row.venue ? String(row.venue) : null,
     filledAtMs: Number.isFinite(filled) ? filled : 0,
     source: parseFuturesTradeSource(row.source),
     ruleName: String(row.rule_name ?? "").trim() || null,

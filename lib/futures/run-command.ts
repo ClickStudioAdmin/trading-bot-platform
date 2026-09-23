@@ -1,3 +1,4 @@
+import { isBybitAgreementQuiet } from "@/lib/exchanges/agreement";
 import { decideFuturesAction, flattenOrderAction, hedgePositionIdx } from "./decide";
 import {
   insertFuturesWorking,
@@ -889,16 +890,18 @@ async function runPlace(
         orderLinkId: key ?? undefined,
       });
       if (!placed.ok) {
-        await writeEventLog({
-          level: "error",
-          scope: "trade",
-          event: "trade.futures_failed",
-          message: placed.error,
-          userId: actor.userId,
-          accountId: actor.accountId,
-          strategy: FUTURES_STRATEGY_ID,
-          data: { symbol, action: actionParsed.action },
-        });
+        if (!isBybitAgreementQuiet(placed.error)) {
+          await writeEventLog({
+            level: "error",
+            scope: "trade",
+            event: "trade.futures_failed",
+            message: placed.error,
+            userId: actor.userId,
+            accountId: actor.accountId,
+            strategy: FUTURES_STRATEGY_ID,
+            data: { symbol, action: actionParsed.action },
+          });
+        }
         return fail(placed.error);
       }
       venue = connection.venue;
@@ -1017,20 +1020,22 @@ async function runPlace(
       orderLinkId: key ?? undefined,
     });
     if (!placed.ok) {
-      await writeEventLog({
-        level: "error",
-        scope: "trade",
-        event: "trade.futures_failed",
-        message: placed.error,
-        userId: actor.userId,
-        accountId: actor.accountId,
-        strategy: FUTURES_STRATEGY_ID,
-        data: {
-          symbol,
-          action: actionParsed.action,
-          positionId: sameSide?.id ?? null,
-        },
-      });
+      if (!isBybitAgreementQuiet(placed.error)) {
+        await writeEventLog({
+          level: "error",
+          scope: "trade",
+          event: "trade.futures_failed",
+          message: placed.error,
+          userId: actor.userId,
+          accountId: actor.accountId,
+          strategy: FUTURES_STRATEGY_ID,
+          data: {
+            symbol,
+            action: actionParsed.action,
+            positionId: sameSide?.id ?? null,
+          },
+        });
+      }
       return fail(placed.error);
     }
     venue = placed.fill.venue;

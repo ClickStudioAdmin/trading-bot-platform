@@ -36,6 +36,10 @@ import {
   readHyperliquidPosition,
   setHyperliquidTradingStop,
 } from "@/lib/exchanges/hyperliquid/orders";
+import {
+  bybitOpeningAgreementError,
+  rememberBybitAgreementReject,
+} from "@/lib/exchanges/agreement-store";
 import type { BoundConnectionSecrets } from "@/lib/exchanges/store";
 import { WORKING_AMEND_UNCHANGED } from "@/lib/futures/working";
 import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
@@ -256,6 +260,15 @@ export async function placePerpMarketOnVenue(input: {
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot place futures orders yet." };
   }
+  const held = await bybitOpeningAgreementError({
+    venue: input.connection.venue,
+    connectionId: input.connection.id,
+    symbol: input.symbol,
+    reduceOnly: input.reduceOnly,
+  });
+  if (held) {
+    return { ok: false, error: held };
+  }
   const instrument = await loadPerpInstrument(input.symbol);
   if (!instrument) {
     return {
@@ -288,6 +301,13 @@ export async function placePerpMarketOnVenue(input: {
     orderLinkId: input.orderLinkId,
   });
   if (!created.ok) {
+    await rememberBybitAgreementReject({
+      venue: input.connection.venue,
+      connectionId: input.connection.id,
+      symbol: input.symbol,
+      reduceOnly: input.reduceOnly,
+      error: created.error,
+    });
     return { ok: false, error: explainHedgeModeError(created.error) };
   }
   return {
@@ -345,6 +365,15 @@ export async function placePerpLimitOnVenue(input: {
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot place futures orders yet." };
   }
+  const held = await bybitOpeningAgreementError({
+    venue: input.connection.venue,
+    connectionId: input.connection.id,
+    symbol: input.symbol,
+    reduceOnly: input.reduceOnly,
+  });
+  if (held) {
+    return { ok: false, error: held };
+  }
   const instrument = await loadPerpInstrument(input.symbol);
   if (!instrument) {
     return {
@@ -382,6 +411,13 @@ export async function placePerpLimitOnVenue(input: {
     orderLinkId: input.orderLinkId,
   });
   if (!created.ok) {
+    await rememberBybitAgreementReject({
+      venue: input.connection.venue,
+      connectionId: input.connection.id,
+      symbol: input.symbol,
+      reduceOnly: input.reduceOnly,
+      error: created.error,
+    });
     return { ok: false, error: explainHedgeModeError(created.error) };
   }
   return created;

@@ -15,6 +15,7 @@ import {
   futuresEntryConditionMet,
   futuresFilterMet,
 } from "./conditions";
+import { isBybitAgreementQuiet } from "@/lib/exchanges/agreement";
 import { runFuturesCommand } from "./command";
 import { parseFuturesPositionRow, type FuturesPosition } from "./model";
 import { FUTURES_LIVE_POSITION_STATUSES } from "./pending-close";
@@ -230,6 +231,9 @@ export async function runFuturesAutomationTick(input?: {
         reason: reasons,
       });
       if (!result.ok) {
+        if (isBybitAgreementQuiet(result.error)) {
+          continue;
+        }
         await writeEventLog({
           level: "warning",
           scope: "trade",
@@ -451,7 +455,7 @@ export async function fireWebhookAutomationEntries(input: {
       await patchRule(supabase, rule.id, {
         last_fired_at: new Date().toISOString(),
       });
-    } else {
+    } else if (!isBybitAgreementQuiet(result.error)) {
       await writeEventLog({
         level: "warning",
         scope: "trade",

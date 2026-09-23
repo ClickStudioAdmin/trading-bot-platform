@@ -3413,7 +3413,9 @@ export function dcaHintsForCopyOpen(
     if (!playbook) {
       continue;
     }
-    const filled = dcaFilledClipCount(row.orders) ?? 0;
+    const filled =
+      dcaFilledClipCount(row.orders) ??
+      dcaLegFor(playbook, row.side).clipsFilled;
     const planned = dcaPlannedExits({
       side: row.side,
       entryPrice: row.entryPrice ?? null,

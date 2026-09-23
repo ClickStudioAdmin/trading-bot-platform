@@ -24,6 +24,7 @@ import { futuresDeskNeedsUrgentRefresh } from "@/lib/futures/pending-close";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
+import { listAgreementSymbols } from "@/lib/exchanges/agreement-store";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import { HYPERLIQUID_DCA_UI } from "@/lib/dca/ui-policy";
 import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
@@ -81,13 +82,16 @@ export default async function FuturesAutomationsPage({
     const settings = await loadFuturesSettings(session.account.id);
     const hl = session.account.venue === "hyperliquid";
     const env = hyperliquidInfoEnvironment(session.account.venueEnvironment);
-    const [pairs, tickers] = await Promise.all([
+    const [pairs, tickers, agreementSymbols] = await Promise.all([
       hl
         ? loadHyperliquidLinearPerps(env).catch(() => []).then(withMarketCapRank)
         : loadUsdtLinearPerps().catch(() => []).then(withMarketCapRank),
       hl
         ? loadHyperliquidTickerMap(env).catch(() => null)
         : fetchBybitTickers("linear").catch(() => null),
+      hl
+        ? Promise.resolve([] as string[])
+        : listAgreementSymbols(settings.connectionId),
     ]);
     const lastPrices: Record<string, number> = {};
     if (tickers) {
@@ -236,6 +240,7 @@ export default async function FuturesAutomationsPage({
               side: row.side,
               qty: row.qty,
             }))}
+            agreementSymbols={agreementSymbols}
             urgentRefresh={futuresDeskNeedsUrgentRefresh({
               positions: openPositions,
               working: liveWorking,
@@ -264,9 +269,14 @@ export default async function FuturesAutomationsPage({
     : [];
   const hl = session?.account.venue === "hyperliquid";
   const env = hyperliquidInfoEnvironment(session?.account.venueEnvironment);
-  const pairs = hl
-    ? await loadHyperliquidLinearPerps(env).catch(() => []).then(withMarketCapRank)
-    : await loadUsdtLinearPerps().catch(() => []).then(withMarketCapRank);
+  const [pairs, agreementSymbols] = await Promise.all([
+    hl
+      ? loadHyperliquidLinearPerps(env).catch(() => []).then(withMarketCapRank)
+      : loadUsdtLinearPerps().catch(() => []).then(withMarketCapRank),
+    hl
+      ? Promise.resolve([] as string[])
+      : listAgreementSymbols(settings?.connectionId),
+  ]);
   const exchangeBook = Boolean(
     session && accountCanHoldConnections(session.account.mode),
   );
@@ -356,6 +366,7 @@ export default async function FuturesAutomationsPage({
             templates={templates.map(templateToSummary)}
             sets={sets}
             venueId={hl ? "hyperliquid" : "bybit"}
+            agreementSymbols={agreementSymbols}
             quoteLabel={hl ? "USDC" : "USDT"}
             venueEnvironment={session.account.venueEnvironment}
             backtestLibrary={templates

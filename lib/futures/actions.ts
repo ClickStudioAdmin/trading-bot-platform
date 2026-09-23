@@ -28,6 +28,7 @@ import {
   parseOptionalPositive,
   parseOptionalPositiveInt,
 } from "./risk";
+import { clearAgreementBlock } from "@/lib/exchanges/agreement-store";
 import { loadFuturesSettings } from "./settings";
 import { handleFuturesWebhook } from "./webhook-handle";
 import {
@@ -517,6 +518,17 @@ export async function saveFuturesAutomations(
       strategy: FUTURES_STRATEGY_ID,
     });
     return deskActionError(saved.error);
+  }
+  if (account.mode === "live" && account.venue === "bybit") {
+    const bound = await loadFuturesSettings(account.id);
+    await Promise.all(
+      parsed.rules.map((rule) =>
+        clearAgreementBlock({
+          connectionId: bound.connectionId,
+          symbol: rule.symbol,
+        }),
+      ),
+    );
   }
   await writeEventLog({
     scope: "strategy",

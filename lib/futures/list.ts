@@ -344,6 +344,7 @@ export type FuturesOpenBook = {
   webhookNames: string[];
   closeAllOpenCount: number;
   cancelAllWorkingCount: number;
+  fillsLoaded: boolean;
 };
 
 export function futuresOpenBookFromDesk(desk: {
@@ -361,6 +362,7 @@ export function futuresOpenBookFromDesk(desk: {
     webhookNames: desk.webhookNames,
     closeAllOpenCount: desk.open.length,
     cancelAllWorkingCount: desk.working.length,
+    fillsLoaded: true,
   };
 }
 
@@ -372,6 +374,7 @@ const EMPTY_OPEN_BOOK: FuturesOpenBook = {
   webhookNames: [],
   closeAllOpenCount: 0,
   cancelAllWorkingCount: 0,
+  fillsLoaded: false,
 };
 
 export async function loadFuturesBotBook(input: {
@@ -410,49 +413,15 @@ export async function loadFuturesBotBook(input: {
         ? loadLiveFuturesWorkingMatching(query.working, scope)
         : Promise.resolve([]),
     ]);
-  const liveOpenedMs = rows.reduce((oldest, row) => {
-    if (!(row.openedAtMs > 0)) {
-      return oldest;
-    }
-    return oldest === 0 ? row.openedAtMs : Math.min(oldest, row.openedAtMs);
-  }, 0);
-  const [orders, recentLogs, anchoredLogs] = await Promise.all([
-    loadFuturesOrdersForPositions(
-      rows.map((row) => row.id),
-      scope,
-    ),
-    rows.length > 0
-      ? listEventLogs(
-          { scope: "", level: "", event: "" },
-          {
-            accountId: session.account.id,
-            limit: 200,
-            scopes: ["trade", "strategy"],
-            since:
-              liveOpenedMs > 0
-                ? new Date(liveOpenedMs - 60_000).toISOString()
-                : undefined,
-          },
-        )
-      : Promise.resolve([]),
-    listEventLogsForAnchors({
-      accountId: session.account.id,
-      field: "positionId",
-      ids: rows.map((row) => row.id),
-    }),
-  ]);
-  const withLogs = attachPositionLogs(
-    attachOrders(rows, orders),
-    mergeEventLogs(recentLogs, anchoredLogs),
-  );
   return {
     signedIn: true,
     exchangeBook: accountCanHoldConnections(session.account.mode),
-    open: withLogs.filter((row) => futuresPositionIsLive(row.status)),
+    open: rows.map((row) => ({ ...row, orders: [], logs: [] })),
     working,
     webhookNames,
     closeAllOpenCount,
     cancelAllWorkingCount,
+    fillsLoaded: false,
   };
 }
 

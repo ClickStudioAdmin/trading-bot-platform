@@ -19,12 +19,14 @@ export function FuturesOrderTicket({
   actions,
   includeStops = true,
   defaultSymbol = "BTCUSDT",
+  agreementSymbols,
 }: {
   options: LinearPerp[];
   lastPrices?: Record<string, number>;
   actions?: ReactNode;
   includeStops?: boolean;
   defaultSymbol?: string;
+  agreementSymbols?: readonly string[];
 }) {
   const [symbol, setSymbol] = useState(
     () =>
@@ -92,6 +94,7 @@ export function FuturesOrderTicket({
               options={options}
               value={symbol}
               onChange={setSymbol}
+              agreementSymbols={agreementSymbols}
             />
           </div>
           <div className="block text-sm text-ink">

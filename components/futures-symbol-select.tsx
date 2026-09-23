@@ -4,6 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { IconChevronDown } from "@/components/icons";
 import { TokenIcon } from "@/components/token-icon";
 import {
+  BYBIT_AGREEMENT_NOTE,
+  symbolNeedsBybitAgreement,
+} from "@/lib/exchanges/agreement";
+import {
   formatPerpPairLabel,
   type LinearPerp,
 } from "@/lib/exchanges/bybit/perp";
@@ -16,6 +20,7 @@ export function FuturesSymbolSelect({
   name = "symbol",
   allowEmpty = false,
   placeholder = "Select Contract",
+  agreementSymbols,
 }: {
   options: LinearPerp[];
   defaultSymbol?: string;
@@ -24,6 +29,7 @@ export function FuturesSymbolSelect({
   name?: string;
   allowEmpty?: boolean;
   placeholder?: string;
+  agreementSymbols?: readonly string[];
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -33,6 +39,7 @@ export function FuturesSymbolSelect({
     allowEmpty ? "" : pickDefault(options, defaultSymbol),
   );
   const symbol = value ?? internal;
+  const selectedBlocked = symbolNeedsBybitAgreement(agreementSymbols, symbol);
 
   const selected = allowEmpty && !symbol
     ? undefined
@@ -127,6 +134,11 @@ export function FuturesSymbolSelect({
             <span className="min-w-0 truncate font-medium">
               {formatPerpPairLabel(selected)}
             </span>
+            {selectedBlocked ? (
+              <span className="shrink-0 text-hint text-warning">
+                {BYBIT_AGREEMENT_NOTE}
+              </span>
+            ) : null}
           </>
         ) : (
           <span className="text-ink-muted">{placeholder}</span>
@@ -145,7 +157,10 @@ export function FuturesSymbolSelect({
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();
-                const first = filtered[0];
+                const first = filtered.find(
+                  (row) =>
+                    !symbolNeedsBybitAgreement(agreementSymbols, row.symbol),
+                );
                 if (first) {
                   choose(first.symbol);
                 }
@@ -162,6 +177,10 @@ export function FuturesSymbolSelect({
             ) : (
               filtered.map((row) => {
                 const active = row.symbol === selected?.symbol;
+                const blocked = symbolNeedsBybitAgreement(
+                  agreementSymbols,
+                  row.symbol,
+                );
                 return (
                   <li
                     key={row.symbol}
@@ -174,17 +193,30 @@ export function FuturesSymbolSelect({
                       type="button"
                       role="option"
                       aria-selected={active}
+                      aria-disabled={blocked || undefined}
+                      disabled={blocked}
                       onClick={() => choose(row.symbol)}
                       className={`flex w-full items-center gap-4 rounded-control px-2 py-1.5 text-left text-sm ${
-                        active
-                          ? "bg-surface-raised text-ink"
-                          : "text-ink-muted hover:bg-surface-raised hover:text-ink"
+                        blocked
+                          ? "cursor-not-allowed text-ink-faint"
+                          : active
+                            ? "bg-surface-raised text-ink"
+                            : "text-ink-muted hover:bg-surface-raised hover:text-ink"
                       }`}
                     >
                       <TokenIcon symbol={row.baseCoin} size={18} />
-                      <span className="min-w-0 truncate font-medium text-ink">
+                      <span
+                        className={`min-w-0 truncate font-medium ${
+                          blocked ? "text-ink-faint" : "text-ink"
+                        }`}
+                      >
                         {formatPerpPairLabel(row)}
                       </span>
+                      {blocked ? (
+                        <span className="ml-auto shrink-0 text-hint text-warning">
+                          {BYBIT_AGREEMENT_NOTE}
+                        </span>
+                      ) : null}
                     </button>
                   </li>
                 );

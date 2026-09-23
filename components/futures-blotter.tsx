@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
+import { ContainerLoading } from "@/components/container-loading";
 import {
   SortTh,
   TableCard,
@@ -36,10 +37,15 @@ import {
 import type { DcaOpenHint } from "@/lib/dca/playbook";
 import { COPY_PAPER_STARTING_USDT } from "@/lib/copy/decide";
 import { dcaHintKey } from "@/lib/dca/playbook";
-import type { FuturesDeskPosition } from "@/lib/futures/list";
+import { formatVenueLabel } from "@/lib/exchanges/connections";
 import type { MarkedFutures } from "@/lib/futures/mark";
 import { useLiveMarkedOpen } from "@/components/live-ticker";
-import { formatLeverage } from "@/lib/futures/venue-risk";
+import { formatLeverage, attachFuturesVenueRisk, type FuturesVenueRisk } from "@/lib/futures/venue-risk";
+import {
+  loadFuturesPositionFills,
+  loadOpenVenueRiskAction,
+} from "@/lib/futures/position-fills-action";
+import type { EventLogRow } from "@/lib/logs/list";
 import type { FuturesOrder, FuturesTradeSource } from "@/lib/futures/model";
 import {
   formatFuturesOrigin,
@@ -270,6 +276,8 @@ export function OpenFuturesTrades({
   filterBar,
   filtersOpen = false,
   closeAllOpenCount,
+  deferFills = false,
+  deferVenueRisk = false,
 }: {
   signedIn: boolean;
   open: MarkedFutures[];
@@ -290,12 +298,19 @@ export function OpenFuturesTrades({
   filterBar?: ReactNode;
   filtersOpen?: boolean;
   closeAllOpenCount?: number;
+  deferFills?: boolean;
+  deferVenueRisk?: boolean;
 }) {
   const { visible: storedVisible, setColumn } = useFuturesOpenColumns();
   const visible = hideRowExits
     ? { ...storedVisible, tpsl: false, trailing: false }
     : storedVisible;
-  const rows = useLiveMarkedOpen(open);
+  const marked = useLiveMarkedOpen(open);
+  const venueRisk = useDeferredVenueRisk(deferVenueRisk);
+  const rows = useMemo(
+    () => (venueRisk ? attachFuturesVenueRisk(marked, venueRisk) : marked),
+    [marked, venueRisk],
+  );
   const compare = useCallback(
     (left: MarkedFutures, right: MarkedFutures, key: string, dir: TableSortDir) =>
       compareOpenFutures(left, right, key, dir, webhookNames),
@@ -536,6 +551,7 @@ export function OpenFuturesTrades({
                   showDcaColumns={showDcaColumns}
                   playbookOwnsOrders={playbookOwnsOrders}
                   copyDesk={copyDesk}
+                  deferFills={deferFills}
                   dcaHint={
                     dcaHints[dcaHintKey(trade.symbol, trade.side)] ?? null
                   }
@@ -961,6 +977,7 @@ function OpenFuturesRows({
   showDcaColumns,
   playbookOwnsOrders,
   copyDesk,
+  deferFills = false,
   dcaHint,
 }: {
   trade: MarkedFutures;
@@ -971,6 +988,7 @@ function OpenFuturesRows({
   showDcaColumns: boolean;
   playbookOwnsOrders: boolean;
   copyDesk: boolean;
+  deferFills?: boolean;
   dcaHint: DcaOpenHint | null;
 }) {
   const pnlPct =
@@ -984,17 +1002,26 @@ function OpenFuturesRows({
     <ExpandableTradeRows
       colSpan={colSpan}
       details={
-        <TradeDetailTabs
-          orders={
-            <FuturesOrderList
-              orders={trade.orders}
-              positionSource={trade.source}
-              positionRuleName={trade.ruleName}
-              webhookNames={webhookNames}
-            />
-          }
-          logs={<PositionLogList logs={trade.logs} />}
-        />
+        deferFills ? (
+          <DeferredPositionFills
+            positionId={trade.id}
+            positionSource={trade.source}
+            positionRuleName={trade.ruleName}
+            webhookNames={webhookNames}
+          />
+        ) : (
+          <TradeDetailTabs
+            orders={
+              <FuturesOrderList
+                orders={trade.orders}
+                positionSource={trade.source}
+                positionRuleName={trade.ruleName}
+                webhookNames={webhookNames}
+              />
+            }
+            logs={<PositionLogList logs={trade.logs} />}
+          />
+        )
       }
     >
       <td className="min-w-0 px-3 py-3">
@@ -1251,6 +1278,77 @@ function ClosedFuturesRows({
   );
 }
 
+function useDeferredVenueRisk(enabled: boolean) {
+  const [risk, setRisk] = useState<Map<string, FuturesVenueRisk> | null>(null);
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+    let dead = false;
+    void loadOpenVenueRiskAction()
+      .then((record) => {
+        if (!dead) {
+          setRisk(new Map(Object.entries(record)));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      dead = true;
+    };
+  }, [enabled]);
+  return risk;
+}
+
+function DeferredPositionFills({
+  positionId,
+  positionSource,
+  positionRuleName,
+  webhookNames,
+}: {
+  positionId: string;
+  positionSource: FuturesTradeSource;
+  positionRuleName: string | null;
+  webhookNames: readonly string[];
+}) {
+  const [fills, setFills] = useState<{
+    orders: FuturesOrder[];
+    logs: EventLogRow[];
+  } | null>(null);
+  useEffect(() => {
+    let dead = false;
+    void loadFuturesPositionFills(positionId)
+      .then((result) => {
+        if (!dead) {
+          setFills(result);
+        }
+      })
+      .catch(() => {
+        if (!dead) {
+          setFills({ orders: [], logs: [] });
+        }
+      });
+    return () => {
+      dead = true;
+    };
+  }, [positionId]);
+  if (!fills) {
+    return <ContainerLoading label="Loading orders" />;
+  }
+  return (
+    <TradeDetailTabs
+      orders={
+        <FuturesOrderList
+          orders={fills.orders}
+          positionSource={positionSource}
+          positionRuleName={positionRuleName}
+          webhookNames={webhookNames}
+        />
+      }
+      logs={<PositionLogList logs={fills.logs} />}
+    />
+  );
+}
+
 function FuturesOrderList({
   orders,
   positionSource,
@@ -1278,7 +1376,7 @@ function FuturesOrderList({
           source: positionSource,
           ruleName: positionRuleName,
         });
-        const venue = formatFuturesVenueFill(order.venueOrderId);
+        const venue = order.venue ? formatVenueLabel(order.venue) : "Paper";
         return (
           <article
             key={order.id}
@@ -1311,11 +1409,7 @@ function FuturesOrderList({
                   order.notionalUsdt ? formatUsd(order.notionalUsdt) : "—"
                 }
               />
-              <OrderMetric
-                label="Venue"
-                value={venue.value}
-                title={venue.title}
-              />
+              <OrderMetric label="Venue" value={venue} />
             </div>
           </article>
         );
@@ -1324,40 +1418,19 @@ function FuturesOrderList({
   );
 }
 
-function formatFuturesVenueFill(venueOrderId: string | null): {
-  value: string;
-  title?: string;
-} {
-  if (!venueOrderId) {
-    return { value: "Paper" };
-  }
-  if (venueOrderId.length <= 20) {
-    return { value: venueOrderId, title: venueOrderId };
-  }
-  return {
-    value: `${venueOrderId.slice(0, 8)}…`,
-    title: venueOrderId,
-  };
-}
-
 function OrderMetric({
   label,
   value,
-  title,
 }: {
   label: string;
   value: string;
-  title?: string;
 }) {
   return (
     <div className="flex min-w-0 items-center justify-between gap-3 text-sm">
       <span className="shrink-0 text-xs uppercase tracking-[0.12em] text-ink-muted">
         {label}
       </span>
-      <span
-        className="min-w-0 break-all text-right tabular-nums text-ink"
-        title={title ?? value}
-      >
+      <span className="min-w-0 break-all text-right tabular-nums text-ink">
         {value}
       </span>
     </div>
