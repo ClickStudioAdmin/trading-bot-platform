@@ -58,6 +58,13 @@ assert.equal(
 
 assert.equal(parseFuturesClosedColumns({ source: false }).source, false);
 assert.equal(parseFuturesClosedColumns({ source: false }).roe, true);
+assert.equal(FUTURES_CLOSED_COLUMN_DEFAULTS.side, true);
+assert.equal(FUTURES_CLOSED_COLUMN_DEFAULTS.entryExit, true);
+assert.equal(parseFuturesClosedColumns({ side: false }).side, false);
+assert.equal(
+  parseFuturesClosedColumns({ entry: false, exit: false }).entryExit,
+  true,
+);
 assert.equal(
   futuresClosedColumnCount(FUTURES_CLOSED_COLUMN_DEFAULTS),
   FUTURES_CLOSED_LOCKED_COLUMN_COUNT + 8,

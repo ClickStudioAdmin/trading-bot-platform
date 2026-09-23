@@ -216,10 +216,14 @@ function compareClosedFutures(
       dir,
     );
   }
-  if (key === "entry") {
-    return compareTableNum(left.entryPrice, right.entryPrice, dir);
+  if (key === "side") {
+    return compareTableText(left.side, right.side, dir);
   }
-  if (key === "exit") {
+  if (key === "entryExit") {
+    const byEntry = compareTableNum(left.entryPrice, right.entryPrice, dir);
+    if (byEntry !== 0) {
+      return byEntry;
+    }
     return compareNullableNum(
       flattenExitPrice(left.orders),
       flattenExitPrice(right.orders),
@@ -668,20 +672,20 @@ export function ClosedFuturesTrades({
                   onSort={() => table.onSort("days")}
                 />
               ) : null}
-              {visible.entry ? (
+              {visible.side ? (
                 <SortTh
-                  label="Entry"
-                  active={table.sortKey === "entry"}
+                  label="Side"
+                  active={table.sortKey === "side"}
                   dir={table.sortDir}
-                  onSort={() => table.onSort("entry")}
+                  onSort={() => table.onSort("side")}
                 />
               ) : null}
-              {visible.exit ? (
+              {visible.entryExit ? (
                 <SortTh
-                  label="Exit"
-                  active={table.sortKey === "exit"}
+                  label="Entry / Exit"
+                  active={table.sortKey === "entryExit"}
                   dir={table.sortDir}
-                  onSort={() => table.onSort("exit")}
+                  onSort={() => table.onSort("entryExit")}
                 />
               ) : null}
               {visible.realized ? (
@@ -1267,11 +1271,19 @@ function ClosedFuturesRows({
           {held === null ? "—" : held.toFixed(1)}
         </td>
       ) : null}
-      {visible.entry ? (
-        <td className="px-4 py-3 tabular-nums">{formatPrice(trade.entryPrice)}</td>
+      {visible.side ? (
+        <td
+          className={`px-4 py-3 capitalize ${
+            trade.side === "short" ? "text-danger" : "text-success"
+          }`}
+        >
+          {trade.side}
+        </td>
       ) : null}
-      {visible.exit ? (
-        <td className="px-4 py-3 tabular-nums">
+      {visible.entryExit ? (
+        <td className="px-4 py-3 tabular-nums whitespace-nowrap">
+          {formatPrice(trade.entryPrice)}
+          <span className="text-ink-faint"> / </span>
           {exit === null ? "—" : formatPrice(exit)}
         </td>
       ) : null}
