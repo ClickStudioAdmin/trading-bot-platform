@@ -99,8 +99,8 @@ export const AFFILIATE_ONLY_LINKS = [
 export const FUTURES_PRIMARY_LINKS = [
   { href: "/strategies/futures/automations", label: "Bots" },
   { href: "/strategies/futures/positions", label: "Positions" },
-  { href: "/strategies/futures/webhooks", label: "Webhooks" },
   { href: "/strategies/futures/performance", label: "Performance" },
+  { href: "/strategies/futures/webhooks", label: "Webhooks" },
 ] as const;
 
 export const PERPS_PRIMARY_LINKS = [
@@ -111,14 +111,14 @@ export const PERPS_PRIMARY_LINKS = [
 export const PERPS_BOTS_PRIMARY_LINKS = [
   { href: "/strategies/futures/automations", label: "Bots" },
   { href: "/strategies/futures/positions", label: "Positions" },
-  { href: "/strategies/futures/webhooks", label: "Webhooks" },
   { href: "/strategies/futures/performance", label: "Performance" },
+  { href: "/strategies/futures/webhooks", label: "Webhooks" },
 ] as const;
 
 export const SIGNAL_FOLLOWER_PRIMARY_LINKS = [
   { href: "/strategies/futures/positions", label: "Positions" },
-  { href: "/strategies/futures/webhooks", label: "Webhooks" },
   { href: "/strategies/futures/performance", label: "Performance" },
+  { href: "/strategies/futures/webhooks", label: "Webhooks" },
 ] as const;
 
 export const COPY_PRIMARY_LINKS = PERPS_PRIMARY_LINKS;
