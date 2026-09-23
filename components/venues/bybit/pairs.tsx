@@ -1,12 +1,26 @@
 import { PageHeading } from "@/components/page-heading";
 import { PairFiltersForm } from "@/components/pair-filters";
 import { TokenIcon } from "@/components/token-icon";
+import { getSessionMember } from "@/lib/auth/session";
 import {
   loadUsdtLinearPerps,
   type LinearPerp,
 } from "@/lib/exchanges/bybit/perp";
+import {
+  bybitAgreementKind,
+  bybitAgreementKindTitle,
+  perpNeedsBybitAgreement,
+  type BybitAgreementGate,
+} from "@/lib/exchanges/agreement";
+import { loadBybitAgreementGate } from "@/lib/exchanges/agreement-store";
+import { listExchangeConnections } from "@/lib/exchanges/store";
 import { PairPager } from "@/components/pair-pager";
-import { SortTh, TableCard, TableFilterSession } from "@/components/table-chrome";
+import {
+  SortTh,
+  StatusBadge,
+  TableCard,
+  TableFilterSession,
+} from "@/components/table-chrome";
 import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
 import { formatMarketCap, loadMarketCaps } from "@/lib/market/caps";
 import {
@@ -24,40 +38,70 @@ import {
   sortPairRows,
 } from "@/lib/pairs/page";
 
+async function pairsAgreementGate(
+  environment: string,
+): Promise<BybitAgreementGate> {
+  const member = await getSessionMember();
+  if (!member) {
+    return { symbols: [], cleared: [], live: true };
+  }
+  const connections = await listExchangeConnections(member.id);
+  const match = connections.find(
+    (row) => row.venue === "bybit" && row.environment === environment,
+  );
+  return loadBybitAgreementGate({
+    connectionId: match?.id ?? null,
+    live: true,
+  });
+}
+
 export async function BybitFuturesPairs({
   searchParams,
   path,
   keep,
+  environment = "live",
   hideHeading = false,
 }: {
   searchParams: Record<string, string | string[] | undefined>;
   path: string;
   keep?: Record<string, string | undefined>;
+  environment?: string;
   hideHeading?: boolean;
 }) {
   const filters = parsePairFilters(searchParams);
-  let pairs: LinearPerp[] = [];
-  let error: string | null = null;
-
-  try {
-    pairs = await loadUsdtLinearPerps();
-  } catch (cause) {
-    pairs = [];
-    error = cause instanceof Error ? cause.message : "Bybit request failed";
-  }
-
-  const visible = applyPairFilters(pairs, filters, (pair) => ({
-    text: `${pair.baseCoin} ${pair.symbol} ${pair.quoteCoin}`,
-    base: pair.baseCoin,
-  }));
+  const [loaded, gate, caps] = await Promise.all([
+    loadUsdtLinearPerps()
+      .then((rows) => ({ pairs: rows, error: null as string | null }))
+      .catch((cause: unknown) => ({
+        pairs: [] as LinearPerp[],
+        error: cause instanceof Error ? cause.message : "Bybit request failed",
+      })),
+    pairsAgreementGate(environment),
+    loadMarketCaps(),
+  ]);
+  const { pairs, error } = loaded;
+  const visible = applyPairFilters(pairs, filters, (pair) => {
+    const kind = bybitAgreementKind(pair);
+    return {
+      text: `${pair.baseCoin} ${pair.symbol} ${pair.quoteCoin} ${
+        kind ? bybitAgreementKindTitle(kind) : ""
+      }`,
+      base: pair.baseCoin,
+    };
+  });
   const active = pairFiltersAreActive(filters);
   const { sort, dir } = parsePairSort(searchParams, PAIR_SORTS.futures);
-  const caps = await loadMarketCaps();
   const ranked = sortPairRows(visible, sort, dir, {
     base: (pair) => pair.baseCoin,
     contract: (pair) => pair.symbol,
+    category: (pair) => {
+      const kind = bybitAgreementKind(pair);
+      return kind ? bybitAgreementKindTitle(kind) : null;
+    },
     quote: (pair) => pair.quoteCoin,
     cap: (pair) => caps.get(pair.baseCoin) ?? null,
+    status: (pair) =>
+      perpNeedsBybitAgreement(gate, pair) ? "Disabled" : "Enabled",
   });
   const list = paginatePairRows(ranked, searchParams.page);
   const hrefFor = (page: number) =>
@@ -144,6 +188,12 @@ export async function BybitFuturesPairs({
                   href={sortHref("contract")}
                 />
                 <SortTh
+                  label="Category"
+                  active={sort === "category"}
+                  dir={dir}
+                  href={sortHref("category")}
+                />
+                <SortTh
                   label="Quote"
                   active={sort === "quote"}
                   dir={dir}
@@ -155,10 +205,19 @@ export async function BybitFuturesPairs({
                   dir={dir}
                   href={sortHref("cap")}
                 />
+                <SortTh
+                  label="Status"
+                  active={sort === "status"}
+                  dir={dir}
+                  href={sortHref("status")}
+                />
               </tr>
             </thead>
             <tbody>
-              {list.rows.map((pair) => (
+              {list.rows.map((pair) => {
+                const kind = bybitAgreementKind(pair);
+                const disabled = perpNeedsBybitAgreement(gate, pair);
+                return (
                 <tr
                   key={pair.symbol}
                   className="border-b border-line last:border-b-0"
@@ -171,13 +230,27 @@ export async function BybitFuturesPairs({
                   </td>
                   <td className="px-4 py-3">{pair.symbol}</td>
                   <td className="px-4 py-3 text-ink-muted">
+                    {kind ? (
+                      bybitAgreementKindTitle(kind)
+                    ) : (
+                      <span className="text-ink-faint">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-ink-muted">
                     {pair.quoteCoin}
                   </td>
                   <td className="px-4 py-3 tabular-nums text-ink-muted">
                     {formatMarketCap(caps.get(pair.baseCoin) ?? null)}
                   </td>
+                  <td className="px-4 py-3">
+                    <StatusBadge
+                      label={disabled ? "Disabled" : "Enabled"}
+                      status={disabled ? "disabled" : "enabled"}
+                    />
+                  </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </TableCard>

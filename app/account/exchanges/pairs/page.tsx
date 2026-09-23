@@ -114,6 +114,7 @@ export default async function AccountPairsPage({
           searchParams={query}
           path={ACCOUNT_PAIRS_PATH}
           keep={keep}
+          environment={environment}
           hideHeading
         />
       )}

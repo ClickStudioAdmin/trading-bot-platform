@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { formatMarketCap, marketCapByBase } from "@/lib/market/caps";
 import {
+  PAIR_SORTS,
   PAIRS_PAGE_SIZE,
   exchangePairCountKey,
   exchangePairsHref,
@@ -13,6 +14,8 @@ import {
 } from "@/lib/pairs/page";
 
 assert.equal(PAIRS_PAGE_SIZE, 50);
+assert.ok(PAIR_SORTS.futures.includes("category"));
+assert.ok(PAIR_SORTS.futures.includes("status"));
 
 const caps = marketCapByBase([
   { symbol: "btc", market_cap: 2_000_000_000_000 },

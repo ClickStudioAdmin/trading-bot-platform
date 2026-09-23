@@ -25,7 +25,7 @@ export const PAIR_DEFAULT_SORT = "cap";
 export const PAIR_DEFAULT_DIR: TableSortDir = "desc";
 
 export const PAIR_SORTS = {
-  futures: ["base", "contract", "quote", "cap"] as const,
+  futures: ["base", "contract", "category", "quote", "cap", "status"] as const,
   carry: ["base", "spot", "future", "delivery", "dte", "cap"] as const,
 } as const;
 

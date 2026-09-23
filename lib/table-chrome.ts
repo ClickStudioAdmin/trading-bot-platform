@@ -167,6 +167,7 @@ export function statusToneFor(status: string): StatusTone {
   const key = status.trim().toLowerCase().replace(/[\s-]+/g, "_");
   if (
     key === "active" ||
+    key === "enabled" ||
     key === "live" ||
     key === "paid" ||
     key === "payable" ||

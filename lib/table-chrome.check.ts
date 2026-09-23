@@ -43,6 +43,8 @@ assert.ok(compareTableText("b", "a", "asc") > 0);
 assert.ok(compareTableNum(2, 9, "desc") > 0);
 assert.equal(sliceTablePage(["a", "b", "c"], 2, 2).rows.join(""), "c");
 assert.equal(statusToneFor("active"), "success");
+assert.equal(statusToneFor("enabled"), "success");
+assert.equal(statusToneFor("disabled"), "muted");
 assert.equal(statusToneFor("Unpaid"), "warning");
 assert.equal(statusToneFor("error"), "danger");
 assert.equal(statusToneFor("archived"), "muted");
