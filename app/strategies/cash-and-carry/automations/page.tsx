@@ -24,7 +24,7 @@ import {
 } from "@/lib/templates/store";
 
 export const metadata: Metadata = {
-  title: "Automations (bots)",
+  title: "Bots",
   description: "Cash-and-carry bots.",
 };
 

@@ -59,7 +59,7 @@ import {
 } from "@/lib/templates/store";
 
 export const metadata: Metadata = {
-  title: "Automations (bots)",
+  title: "Bots",
   description: "Bots for USDT linear perpetuals.",
 };
 

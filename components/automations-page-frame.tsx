@@ -21,7 +21,7 @@ export function AutomationsPageFrame({
           <PageHeading as="h2" title={editTitle} className="mb-0 min-w-0" />
         </div>
       ) : (
-        <PageHeading as="h2" title="Automations (bots)" />
+        <PageHeading as="h2" title="Bots" />
       )}
       {children}
     </main>
