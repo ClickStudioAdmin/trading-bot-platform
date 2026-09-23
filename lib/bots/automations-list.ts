@@ -302,6 +302,15 @@ export function paperBotPair(): string {
   return "Carry";
 }
 
+/** Base coin for a USDT perp symbol. Cash and Carry has no locked pair. */
+export function botPairBaseCoin(symbol: string): string {
+  const raw = symbol.trim();
+  if (/usdt$/i.test(raw) && raw.length > 4) {
+    return raw.slice(0, -4);
+  }
+  return raw;
+}
+
 export function paperBotSummary(layer: PaperLayerFormValues): string {
   const bits: string[] = [];
   if (layer.minApr.trim()) {

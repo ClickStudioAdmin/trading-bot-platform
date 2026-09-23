@@ -44,6 +44,7 @@ import {
 } from "@/lib/bots/automations-list";
 import { statusOptionsFor, type BotDeskKind } from "@/lib/bots/status";
 import { formatCount, formatPct, signedTone } from "@/lib/opportunities/format";
+import { TokenIcon } from "@/components/token-icon";
 import {
   statusToneFor,
   tablePageForIndex,
@@ -54,6 +55,8 @@ export type AutomationsBotRow = {
   id: string;
   name: string;
   pair: string;
+  /** Set for a locked contract (DCA, Perps). Cash and Carry leaves this empty. */
+  baseCoin?: string;
   pairNote?: string;
   status: string;
   statusKey?: string;
@@ -313,12 +316,7 @@ export function AutomationsBotTable({
               </td>
               {visible.pair ? (
                 <td className="px-4 py-3 pr-8 align-top text-ink-muted">
-                  <span>{row.pair}</span>
-                  {row.pairNote ? (
-                    <span className="mt-0.5 block text-hint text-warning">
-                      {row.pairNote}
-                    </span>
-                  ) : null}
+                  <BotPairCell row={row} />
                 </td>
               ) : null}
               {visible.recipe ? (
@@ -411,6 +409,32 @@ export function AutomationsBotTable({
       </table>
     </TableCard>
     </>
+  );
+}
+
+function BotPairCell({ row }: { row: AutomationsBotRow }) {
+  const note = row.pairNote ? (
+    <span className="mt-0.5 block text-hint text-warning">{row.pairNote}</span>
+  ) : null;
+  if (!row.baseCoin) {
+    return (
+      <>
+        <span>{row.pair}</span>
+        {note}
+      </>
+    );
+  }
+  return (
+    <span className="flex items-start gap-2">
+      <TokenIcon symbol={row.baseCoin} />
+      <span className="min-w-0">
+        <span className="block font-medium text-ink">{row.baseCoin}</span>
+        <span className="mt-0.5 block truncate text-hint text-ink-muted">
+          {row.pair}
+        </span>
+        {note}
+      </span>
+    </span>
   );
 }
 

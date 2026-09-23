@@ -98,6 +98,7 @@ import { AppSelect } from "@/components/app-select";
 import {
   automationsBotBlotterCells,
   botModeLabel,
+  botPairBaseCoin,
   missingById,
   perpsBotPair,
   perpsBotSummary,
@@ -319,6 +320,7 @@ export function FuturesAutomationsDesk({
               id: layer.id,
               name: layer.name || "Bot",
               pair: perpsBotPair(layer),
+              baseCoin: botPairBaseCoin(layer.symbol),
               pairNote: symbolNeedsBybitAgreement(agreementSymbols, layer.symbol)
                 ? BYBIT_AGREEMENT_NOTE
                 : undefined,

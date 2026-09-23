@@ -3,6 +3,7 @@ import {
   automationsBotBlotterCells,
   automationsBotFiltersActive,
   botModeLabel,
+  botPairBaseCoin,
   compareAutomationsBot,
   dcaBotPair,
   dcaBotSummary,
@@ -31,6 +32,9 @@ assert.deepEqual(
 assert.equal(botModeLabel("cnc", "reduce_only"), "Reduce only");
 assert.equal(botModeLabel("dca", "stop_adding"), "Stop adding");
 assert.equal(paperBotPair(), "Carry");
+assert.equal(botPairBaseCoin("TRXUSDT"), "TRX");
+assert.equal(botPairBaseCoin("1000PEPEUSDT"), "1000PEPE");
+assert.equal(botPairBaseCoin("BTC"), "BTC");
 
 const paper = paperConfigToFormValues({
   enabled: false,

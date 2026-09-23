@@ -58,6 +58,7 @@ import {
 import {
   automationsBotBlotterCells,
   botModeLabel,
+  botPairBaseCoin,
   dcaBotPair,
   dcaBotSummary,
   dcaListStatus,
@@ -768,6 +769,7 @@ export function DcaPlaybooksDesk({
               id: playbook.id,
               name: playbook.name || "Bot",
               pair: dcaBotPair(playbook),
+              baseCoin: botPairBaseCoin(playbook.symbol),
               pairNote: needsAgreement ? BYBIT_AGREEMENT_NOTE : undefined,
               status: agreementOff
                 ? botModeLabel("dca", "disabled")
