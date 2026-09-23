@@ -1,6 +1,7 @@
 "use client";
 
 import { ExpandableTradeRows, TradeDetailTabs } from "@/components/trade-expand";
+import { ContainerLoading } from "@/components/container-loading";
 import { ColumnHint } from "@/components/column-hint";
 import { FuturesSourceCell } from "@/components/futures-source";
 import { IconClosePosition, IconUnwind } from "@/components/icons";
@@ -31,6 +32,8 @@ import {
   dcaSyncReasonLabel,
 } from "@/lib/dca/log-copy";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
+import { useEffect, useState } from "react";
+import { loadPaperCarryDetail } from "@/lib/paper/carry-detail-action";
 import { closeOpenPaperCarry } from "@/lib/paper/actions";
 import { carryPnlPct, clipPnl } from "@/lib/paper/math";
 import {
@@ -67,12 +70,14 @@ export function OpenPaperCarryRows({
   hideUnwind = false,
   visible = PAPER_OPEN_COLUMN_DEFAULTS,
   colSpan = 11,
+  deferFills = false,
 }: {
   trade: OpenCarryView;
   next: string;
   hideUnwind?: boolean;
   visible?: PaperOpenColumnVisibility;
   colSpan?: number;
+  deferFills?: boolean;
 }) {
   const pnlPct =
     trade.unrealizedUsdt === null
@@ -83,11 +88,18 @@ export function OpenPaperCarryRows({
     <ExpandableTradeRows
       colSpan={colSpan}
       details={
-        <PositionDetailTabs
-          orders={trade.orders}
-          logs={trade.logs}
-          entryBasis={trade.entryBasis}
-        />
+        deferFills ? (
+          <DeferredPaperCarryDetail
+            carryId={trade.id}
+            entryBasis={trade.entryBasis}
+          />
+        ) : (
+          <PositionDetailTabs
+            orders={trade.orders}
+            logs={trade.logs}
+            entryBasis={trade.entryBasis}
+          />
+        )
       }
     >
       <td className="min-w-0 px-4 py-3">
@@ -167,10 +179,12 @@ export function ClosedPaperCarryRows({
   trade,
   visible,
   colSpan,
+  deferFills = false,
 }: {
   trade: ClosedCarryView;
   visible: PaperClosedColumnVisibility;
   colSpan: number;
+  deferFills?: boolean;
 }) {
   const pnlPct =
     trade.realizedUsdt === null
@@ -181,11 +195,18 @@ export function ClosedPaperCarryRows({
     <ExpandableTradeRows
       colSpan={colSpan}
       details={
-        <PositionDetailTabs
-          orders={trade.orders}
-          logs={trade.logs}
-          entryBasis={trade.entryBasis}
-        />
+        deferFills ? (
+          <DeferredPaperCarryDetail
+            carryId={trade.id}
+            entryBasis={trade.entryBasis}
+          />
+        ) : (
+          <PositionDetailTabs
+            orders={trade.orders}
+            logs={trade.logs}
+            entryBasis={trade.entryBasis}
+          />
+        )
       }
     >
       <td className="min-w-0 px-4 py-3">
@@ -333,6 +354,46 @@ function ClosePaperButton({
         </TablePendingIconAction>
       ) : null}
     </form>
+  );
+}
+
+function DeferredPaperCarryDetail({
+  carryId,
+  entryBasis,
+}: {
+  carryId: number;
+  entryBasis: number;
+}) {
+  const [detail, setDetail] = useState<{
+    orders: PaperOrderRow[];
+    logs: EventLogRow[];
+  } | null>(null);
+  useEffect(() => {
+    let dead = false;
+    void loadPaperCarryDetail(carryId)
+      .then((result) => {
+        if (!dead) {
+          setDetail(result);
+        }
+      })
+      .catch(() => {
+        if (!dead) {
+          setDetail({ orders: [], logs: [] });
+        }
+      });
+    return () => {
+      dead = true;
+    };
+  }, [carryId]);
+  if (!detail) {
+    return <ContainerLoading label="Loading orders" />;
+  }
+  return (
+    <PositionDetailTabs
+      orders={detail.orders}
+      logs={detail.logs}
+      entryBasis={entryBasis}
+    />
   );
 }
 

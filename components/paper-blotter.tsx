@@ -83,6 +83,7 @@ export function OpenPaperTrades({
   filterBar,
   filtersOpen = false,
   emptyMessage,
+  deferFills = false,
 }: {
   signedIn: boolean;
   open: OpenCarryView[];
@@ -94,6 +95,7 @@ export function OpenPaperTrades({
   filterBar?: ReactNode;
   filtersOpen?: boolean;
   emptyMessage?: ReactNode;
+  deferFills?: boolean;
 }) {
   const { visible, setColumn } = usePaperOpenColumns();
   const colSpan = paperOpenColumnCount(visible);
@@ -317,6 +319,7 @@ export function OpenPaperTrades({
                   next={next}
                   visible={visible}
                   colSpan={colSpan}
+                  deferFills={deferFills}
                 />
               ))
             )}
@@ -333,12 +336,14 @@ export function ClosedPaperTrades({
   filterBar,
   filtersOpen = false,
   emptyMessage,
+  deferFills = false,
 }: {
   signedIn: boolean;
   closed: ClosedCarryView[];
   filterBar?: ReactNode;
   filtersOpen?: boolean;
   emptyMessage?: ReactNode;
+  deferFills?: boolean;
 }) {
   const compare = useCallback(
     (left: ClosedCarryView, right: ClosedCarryView, key: string, dir: TableSortDir) => {
@@ -510,6 +515,7 @@ export function ClosedPaperTrades({
                   trade={trade}
                   visible={visible}
                   colSpan={colSpan}
+                  deferFills={deferFills}
                 />
               ))
             )}

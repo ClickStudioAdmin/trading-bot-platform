@@ -14,9 +14,7 @@ import {
   filterPaperBlotterRows,
   parseDeskBlotterFilters,
 } from "@/lib/desk-blotter-filters";
-import { loadPaperRules } from "@/lib/engine/load";
-import { paperConfigToFormValues } from "@/lib/engine/rules";
-import { loadPaperDesk } from "@/lib/paper/list";
+import { loadPaperPerformanceBook, listPaperBotOptions, paperBotRuleId } from "@/lib/paper/list";
 import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
 
 export const metadata: Metadata = {
@@ -31,16 +29,23 @@ export default async function CashAndCarryPerformancePage({
 }) {
   const params = await searchParams;
   const session = await getSessionContext();
-  const desk = await loadPaperDesk([]);
   const filters = parseDeskBlotterFilters(params);
-  const { config } = await loadPaperRules();
-  const bots = paperConfigToFormValues(config)
-    .layers.filter((layer) => layer.id)
-    .map((layer) => ({
-      id: layer.id,
-      name: layer.name || "Bot",
-    }));
-  const visibleClosed = filterPaperBlotterRows(desk.closed, filters);
+  const ruleId = filters.bot ? paperBotRuleId(filters.bot) : undefined;
+  const unknownBot = Boolean(filters.bot) && ruleId == null;
+  const [desk, bots] = await Promise.all([
+    unknownBot
+      ? Promise.resolve({
+          signedIn: Boolean(session),
+          exchangeBook: false,
+          closed: [],
+        })
+      : loadPaperPerformanceBook(ruleId == null ? undefined : { ruleId }),
+    listPaperBotOptions(),
+  ]);
+  const visibleClosed = filterPaperBlotterRows(
+    desk.closed,
+    ruleId == null ? filters : { ...filters, bot: "" },
+  );
   const clearHref = deskHref(
     "/strategies/cash-and-carry/performance",
     session?.account.id,
@@ -77,6 +82,7 @@ export default async function CashAndCarryPerformancePage({
             ? "No positions match these filters."
             : undefined
         }
+        deferFills
       />
     </main>
   );

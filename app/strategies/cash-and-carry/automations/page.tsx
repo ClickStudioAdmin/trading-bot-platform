@@ -13,7 +13,7 @@ import {
 import { paperAutomationsBotBlotter } from "@/lib/bots/automations-list";
 import { loadPaperRules } from "@/lib/engine/load";
 import { paperConfigToFormValues } from "@/lib/engine/rules";
-import { listPaperCarries } from "@/lib/paper/list";
+import { listPaperCarriesFiltered } from "@/lib/paper/list";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionContext } from "@/lib/auth/session";
 import { memberIsAdmin } from "@/lib/admin/access";
@@ -35,11 +35,38 @@ export default async function CashAndCarryAutomationsPage({
 }) {
   const params = await searchParams;
   const session = await getSessionContext();
-  const { signedIn, config, inUseRuleIds } = await loadPaperRules();
-  const values = paperConfigToFormValues(config);
   const listHref = deskHref(CASH_AND_CARRY_AUTOMATIONS_PATH, session?.account.id);
+  const saved = firstSearchValue(params.saved) === "1";
+  const error = firstSearchValue(params.error);
+  if (!session) {
+    return (
+      <AutomationsPageFrame listHref={listHref} editTitle={null}>
+        <p className="mt-6 text-sm text-ink-muted">
+          <Link href="/sign-in" className="text-accent">
+            Sign in
+          </Link>{" "}
+          to save automations.
+        </p>
+      </AutomationsPageFrame>
+    );
+  }
   const requestedEdit = parseAutomationsEdit(firstSearchValue(params.edit));
   const clone = parseAutomationsClone(firstSearchValue(params.clone));
+  const openingForm = Boolean(requestedEdit || clone);
+  const [loaded, templates, sets, paperOpen, paperClosed] = await Promise.all([
+    loadPaperRules(),
+    listApplyableTemplates({
+      userId: session.member.id,
+      deskType: "cash_and_carry",
+    }).catch(() => []),
+    listApplyableSets({
+      userId: session.member.id,
+      deskType: "cash_and_carry",
+    }).catch(() => []),
+    listPaperCarriesFiltered({ status: "open" }),
+    listPaperCarriesFiltered({ status: "closed" }),
+  ]);
+  const values = paperConfigToFormValues(loaded.config);
   const knownEdit =
     requestedEdit &&
     requestedEdit !== AUTOMATIONS_NEW &&
@@ -50,23 +77,6 @@ export default async function CashAndCarryAutomationsPage({
     edit: knownEdit,
     name: values.layers.find((layer) => layer.id === knownEdit)?.name,
   });
-  const saved = firstSearchValue(params.saved) === "1";
-  const error = firstSearchValue(params.error);
-  const templates = session
-    ? await listApplyableTemplates({
-        userId: session.member.id,
-        deskType: "cash_and_carry",
-      })
-    : [];
-  const sets = session
-    ? await listApplyableSets({
-        userId: session.member.id,
-        deskType: "cash_and_carry",
-      })
-    : [];
-  const carries = session ? await listPaperCarries() : [];
-  const paperOpen = carries.filter((row) => row.status !== "closed");
-  const paperClosed = carries.filter((row) => row.status === "closed");
   const blotter = Object.fromEntries(
     values.layers
       .filter((layer) => layer.id)
@@ -86,17 +96,17 @@ export default async function CashAndCarryAutomationsPage({
       {saved ? (
         <p className="mt-4 text-sm text-success">Bots saved.</p>
       ) : null}
-      {signedIn && session ? (
+      {loaded.signedIn ? (
         <div className="mt-6">
           <AutomationsDesk
             values={values}
-            inUseRuleIds={inUseRuleIds}
-            reduceOnly={Boolean(config.reduceOnly)}
+            inUseRuleIds={loaded.inUseRuleIds}
+            reduceOnly={Boolean(loaded.config.reduceOnly)}
             isAdmin={memberIsAdmin(session.member)}
             accountId={session.account.id}
             templates={templates.map(templateToSummary)}
             sets={sets}
-            recipeLibrary={templates}
+            recipeLibrary={openingForm ? templates : []}
             edit={knownEdit}
             clone={clone}
             listHref={listHref}

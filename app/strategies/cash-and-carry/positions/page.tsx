@@ -6,13 +6,12 @@ import {
 import { PageHeading } from "@/components/page-heading";
 import { OpenPaperTrades, PaperOpenStats } from "@/components/paper-blotter";
 import { PaperFlash } from "@/components/paper-flash";
-import { loadPaperRules } from "@/lib/engine/load";
-import { paperConfigToFormValues } from "@/lib/engine/rules";
 import { loadUsableBookShare } from "@/lib/engine/settings";
 import { applyUsableBookShare } from "@/lib/opportunities/capacity";
-import { loadOpportunityBook } from "@/lib/opportunities/load";
+import { loadStoredOpportunities } from "@/lib/opportunities/persist";
 import { firstSearchValue } from "@/lib/paper/open";
-import { loadPaperDesk } from "@/lib/paper/list";
+import { listPaperBotOptions, loadPaperOpenCarryRows, paperBotRuleId } from "@/lib/paper/list";
+import { markOpenCarries } from "@/lib/paper/rows";
 import { deskHref } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
 import {
@@ -38,27 +37,36 @@ export default async function CashAndCarryPositionsPage({
     "/strategies/cash-and-carry/positions",
     session?.account.id,
   );
-  const book = await loadOpportunityBook("stored");
-  const rows = applyUsableBookShare(book.rows, await loadUsableBookShare());
-  const desk = await loadPaperDesk(rows);
   const filters = parseDeskBlotterFilters(params);
-  const { config } = await loadPaperRules();
-  const bots = paperConfigToFormValues(config)
-    .layers.filter((layer) => layer.id)
-    .map((layer) => ({
-      id: layer.id,
-      name: layer.name || "Bot",
-    }));
-  const visibleOpen = filterPaperBlotterRows(desk.open, filters);
+  const ruleId = filters.bot ? paperBotRuleId(filters.bot) : undefined;
+  const unknownBot = Boolean(filters.bot) && ruleId == null;
+  const [book, share, openBook, bots] = await Promise.all([
+    session
+      ? loadStoredOpportunities()
+      : Promise.resolve({ rows: [], scannedAtMs: null }),
+    session ? loadUsableBookShare() : Promise.resolve(1),
+    unknownBot
+      ? Promise.resolve({
+          signedIn: Boolean(session),
+          exchangeBook: false,
+          rows: [],
+          fills: [],
+        })
+      : loadPaperOpenCarryRows(ruleId == null ? undefined : { ruleId }),
+    listPaperBotOptions(),
+  ]);
+  const visibleOpen = filterPaperBlotterRows(
+    markOpenCarries(
+      openBook.rows,
+      applyUsableBookShare(book.rows, share),
+      openBook.fills,
+    ).map((row) => ({ ...row, orders: [], logs: [] })),
+    ruleId == null ? filters : { ...filters, bot: "" },
+  );
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <div className="space-y-6">
-        {book.error ? (
-          <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {book.error}
-          </p>
-        ) : null}
         <PaperFlash
           opened={firstSearchValue(params.paper) === "opened"}
           closed={firstSearchValue(params.paper) === "closed"}
@@ -83,14 +91,15 @@ export default async function CashAndCarryPositionsPage({
             />
           }
         />
-        <PaperOpenStats signedIn={desk.signedIn} open={visibleOpen} />
+        <PaperOpenStats signedIn={openBook.signedIn} open={visibleOpen} />
         </section>
         <OpenPaperTrades
-          signedIn={desk.signedIn}
+          signedIn={openBook.signedIn}
           open={visibleOpen}
           next={next}
           showHeading={false}
-          exchangeBook={desk.exchangeBook}
+          exchangeBook={openBook.exchangeBook}
+          deferFills
           filtersOpen={tableFiltersSuggestOpen(params)}
           filterBar={
             <DeskBlotterFilters

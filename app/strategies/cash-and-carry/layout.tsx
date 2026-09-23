@@ -1,3 +1,4 @@
+import { Suspense, type ComponentProps } from "react";
 import { StrategySubnav } from "@/components/strategy-subnav";
 import {
   deskHomePath,
@@ -9,7 +10,7 @@ import {
 } from "@/lib/accounts/model";
 import { pinDeskSearchParam } from "@/lib/accounts/guard";
 import { getSessionContext } from "@/lib/auth/session";
-import { loadPaperRules } from "@/lib/engine/load";
+import { loadCashAndCarryNavModes } from "@/lib/engine/load";
 import { loadEngineSettings } from "@/lib/engine/settings";
 import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
@@ -20,6 +21,30 @@ import {
   CASH_AND_CARRY_SECONDARY_LINKS,
 } from "@/lib/site-links";
 import { redirect } from "next/navigation";
+
+function CashAndCarryNav(props: ComponentProps<typeof StrategySubnav>) {
+  return <StrategySubnav {...props} />;
+}
+
+async function CashAndCarryNavLive({
+  userId,
+  connectionId,
+  nav,
+}: {
+  userId: string;
+  connectionId: string;
+  nav: ComponentProps<typeof StrategySubnav>;
+}) {
+  const snapshot = await loadAccountSnapshot(userId, connectionId);
+  return (
+    <CashAndCarryNav
+      {...nav}
+      connection={
+        nav.connection ? { ...nav.connection, snapshot } : nav.connection
+      }
+    />
+  );
+}
 
 export default async function CashAndCarryLayout({
   children,
@@ -37,87 +62,79 @@ export default async function CashAndCarryLayout({
   const settingsHref = deskId
     ? pathWithDesk("/strategies/cash-and-carry/settings", deskId)
     : "/strategies/cash-and-carry/settings";
-  const { signedIn, config } = await loadPaperRules();
   const live = Boolean(session && accountCanHoldConnections(session.account.mode));
-  const settings = live ? await loadEngineSettings() : null;
-  const connections =
+  const [modes, settings, connections] = await Promise.all([
+    session
+      ? loadCashAndCarryNavModes(session.account.id)
+      : Promise.resolve({ anyLive: false, anyActive: false }),
+    session ? loadEngineSettings() : Promise.resolve(null),
     live && session
-      ? await listExchangeConnections(session.member.id)
-      : [];
+      ? listExchangeConnections(session.member.id)
+      : Promise.resolve([]),
+  ]);
   const bound =
     connections.find((row) => row.id === settings?.connectionId) ?? null;
-  const snapshot =
-    live && session && bound
-      ? await loadAccountSnapshot(
-          session.member.id,
-          bound.id,
-        )
-      : null;
-  const anyActive = config.layers.some(
-    (layer) => (layer.mode ?? "active") === "active",
-  );
-  const anyLive = config.layers.some(
-    (layer) => (layer.mode ?? "active") !== "disabled",
-  );
-  const accountReduce = Boolean(config.reduceOnly);
-  const automationsOn = signedIn && anyLive;
+  const anyActive = modes.anyActive;
+  const anyLive = modes.anyLive;
+  const accountReduce = Boolean(settings?.reduceOnly);
+  const automationsOn = Boolean(session) && anyLive;
   const engineRunning =
     automationsOn &&
     anyActive &&
     !accountReduce &&
     (!live || Boolean(bound));
+  const navProps: ComponentProps<typeof StrategySubnav> = {
+    title: session?.account.name ?? "Cash and Carry",
+    typeLabel: session ? formatDeskType("cash_and_carry") : undefined,
+    primaryLinks: deskId
+      ? navLinksWithDesk(CASH_AND_CARRY_PRIMARY_LINKS, deskId)
+      : CASH_AND_CARRY_PRIMARY_LINKS,
+    secondaryLinks: deskId
+      ? navLinksWithDesk(CASH_AND_CARRY_SECONDARY_LINKS, deskId)
+      : CASH_AND_CARRY_SECONDARY_LINKS,
+    automationsHref: deskId
+      ? pathWithDesk("/strategies/cash-and-carry/automations", deskId)
+      : "/strategies/cash-and-carry/automations",
+    automationsRunning: engineRunning,
+    reduceOnly: automationsOn && (accountReduce || !anyActive),
+    connection: live
+      ? bound
+        ? {
+            ...formatStrategyConnectionCaption(bound),
+            connected: true,
+          }
+        : {
+            name: "Connect an exchange",
+            venue: null,
+            connected: false,
+            href:
+              connections.length === 0
+                ? "/account/sub-accounts?tab=exchanges"
+                : settingsHref,
+          }
+      : {
+          name: session ? formatDeskVenueCaption(session.account) : "Bybit",
+          venue: null,
+          connected: true,
+          href: settingsHref,
+          overline: "Market Data",
+        },
+  };
+  const nav =
+    live && session && bound ? (
+      <Suspense fallback={<CashAndCarryNav {...navProps} />}>
+        <CashAndCarryNavLive
+          userId={session.member.id}
+          connectionId={bound.id}
+          nav={navProps}
+        />
+      </Suspense>
+    ) : (
+      <CashAndCarryNav {...navProps} />
+    );
   return (
     <div>
-      <StrategySubnav
-        title={session?.account.name ?? "Cash and Carry"}
-        typeLabel={
-          session ? formatDeskType("cash_and_carry") : undefined
-        }
-        primaryLinks={
-          deskId
-            ? navLinksWithDesk(CASH_AND_CARRY_PRIMARY_LINKS, deskId)
-            : CASH_AND_CARRY_PRIMARY_LINKS
-        }
-        secondaryLinks={
-          deskId
-            ? navLinksWithDesk(CASH_AND_CARRY_SECONDARY_LINKS, deskId)
-            : CASH_AND_CARRY_SECONDARY_LINKS
-        }
-        automationsHref={
-          deskId
-            ? pathWithDesk("/strategies/cash-and-carry/automations", deskId)
-            : "/strategies/cash-and-carry/automations"
-        }
-        automationsRunning={engineRunning}
-        reduceOnly={automationsOn && (accountReduce || !anyActive)}
-        connection={
-          live
-            ? bound
-              ? {
-                  ...formatStrategyConnectionCaption(bound),
-                  connected: true,
-                  snapshot,
-                }
-              : {
-                  name: "Connect an exchange",
-                  venue: null,
-                  connected: false,
-                  href:
-                    connections.length === 0
-                      ? "/account/sub-accounts?tab=exchanges"
-                      : settingsHref,
-                }
-            : {
-                name: session
-                  ? formatDeskVenueCaption(session.account)
-                  : "Bybit",
-                venue: null,
-                connected: true,
-                href: settingsHref,
-                overline: "Market Data",
-              }
-        }
-      />
+      {nav}
       {live && !bound ? (
         <div className="mx-auto max-w-7xl px-6 pt-4">
           <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">

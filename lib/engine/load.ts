@@ -1,5 +1,5 @@
 import { defaultPaperConfig, parsePaperRulesRow } from "@/lib/engine/rules";
-import type { PaperEngineConfig } from "@/lib/engine/decide";
+import { parseAutomationMode, type PaperEngineConfig } from "@/lib/engine/decide";
 import { selectPaperEngineSettings } from "@/lib/engine/settings";
 import { getSessionContext } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -55,5 +55,31 @@ export async function loadPaperRules(): Promise<{
       layers,
     },
     inUseRuleIds,
+  };
+}
+
+/** Nav dot only. Modes, not full recipes. */
+export async function loadCashAndCarryNavModes(accountId: string): Promise<{
+  anyLive: boolean;
+  anyActive: boolean;
+}> {
+  const supabase = createServiceClient();
+  const id = accountId.trim();
+  if (!supabase || !id) {
+    return { anyLive: false, anyActive: false };
+  }
+  const { data, error } = await supabase
+    .from("paper_rules")
+    .select("mode")
+    .eq("account_id", id);
+  if (error || !data) {
+    return { anyLive: false, anyActive: false };
+  }
+  const modes = data.map((row) =>
+    parseAutomationMode((row as { mode?: unknown }).mode),
+  );
+  return {
+    anyLive: modes.some((mode) => mode !== "disabled"),
+    anyActive: modes.some((mode) => mode === "active"),
   };
 }
