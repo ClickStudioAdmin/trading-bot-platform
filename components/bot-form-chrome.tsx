@@ -154,16 +154,18 @@ export function BotFormStep({
 }) {
   return (
     <section
-      className={`min-w-0 rounded-card border border-line bg-surface px-5${
+      className={`min-w-0 overflow-hidden rounded-card border border-line bg-surface${
         locked ? " pointer-events-none opacity-40" : ""
       }${className ? ` ${className}` : ""}`}
       inert={locked || undefined}
       aria-disabled={locked || undefined}
     >
-      <h3 className={`${botStepTitleClass} py-5`}>
+      <h3
+        className={`${botStepTitleClass} border-b border-line bg-surface-raised px-5 py-4`}
+      >
         <HintLabel text={title} hint={hint} />
       </h3>
-      <div className="border-t border-line [&>*:not([hidden])]:py-5 [&>*:not([hidden])~*:not([hidden])]:border-t [&>*:not([hidden])~*:not([hidden])]:border-line">
+      <div className="px-5 [&>*:not([hidden])]:py-5 [&>*:not([hidden])~*:not([hidden])]:border-t [&>*:not([hidden])~*:not([hidden])]:border-line">
         {children}
       </div>
     </section>
@@ -393,21 +395,27 @@ export function BotFormSidebar({
   children?: ReactNode;
 }) {
   return (
-    <aside className="flex flex-col gap-4 rounded-card border border-line bg-surface p-5 lg:sticky lg:top-24">
-      <h3 className={botSectionTitleClass}>Status & Save</h3>
-      {status}
-      <div className="space-y-2">
-        {save}
-        {dirty ? (
-          <p className="text-sm text-warning">
-            You have unsaved changes on this bot
-          </p>
+    <aside className="flex flex-col overflow-hidden rounded-card border border-line bg-surface lg:sticky lg:top-24">
+      <h3
+        className={`${botSectionTitleClass} border-b border-line bg-surface-raised px-5 py-4`}
+      >
+        Status & Save
+      </h3>
+      <div className="flex flex-col gap-4 p-5">
+        {status}
+        <div className="space-y-2">
+          {save}
+          {dirty ? (
+            <p className="text-sm text-warning">
+              You have unsaved changes on this bot
+            </p>
+          ) : null}
+          {error ? <p className="text-sm text-danger">{error}</p> : null}
+        </div>
+        {children ? (
+          <div className="flex flex-col">{children}</div>
         ) : null}
-        {error ? <p className="text-sm text-danger">{error}</p> : null}
       </div>
-      {children ? (
-        <div className="flex flex-col">{children}</div>
-      ) : null}
     </aside>
   );
 }

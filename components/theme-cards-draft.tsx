@@ -576,9 +576,13 @@ function StatTile({
 
 function BotStepCard() {
   return (
-    <Card className="p-0">
-      <h3 className={`${themeCardTitleClass} px-5 py-5`}>General</h3>
-      <div className="space-y-4 border-t border-line px-5 py-5">
+    <Card className="overflow-hidden p-0">
+      <h3
+        className={`${themeCardTitleClass} border-b border-line bg-surface-raised px-5 py-4`}
+      >
+        General
+      </h3>
+      <div className="space-y-4 px-5 py-5">
         <p className={themeGroupTitleClass}>Identity</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className={themeFormLabelClass} htmlFor="theme-card-bot-name">
@@ -612,9 +616,14 @@ function BotStepCard() {
 
 function SidebarCard() {
   return (
-    <Card>
-      <h3 className={themeGroupTitleClass}>Status & Save</h3>
-      <label className={`${themeFormLabelClass} mt-4`}>
+    <Card className="overflow-hidden p-0">
+      <h3
+        className={`${themeGroupTitleClass} border-b border-line bg-surface-raised px-5 py-4`}
+      >
+        Status & Save
+      </h3>
+      <div className="p-5">
+      <label className={themeFormLabelClass}>
         Status
         <input defaultValue="Disabled" readOnly className={fieldClass} />
         <span className={themeHelperClass}>
@@ -624,6 +633,7 @@ function SidebarCard() {
       <button type="button" className={`${primaryBtn} mt-4 w-full`}>
         Save
       </button>
+      </div>
     </Card>
   );
 }
