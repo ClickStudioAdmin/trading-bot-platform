@@ -229,7 +229,7 @@ export function TableFilterSession({
     (Boolean(title) && !liftTitle);
   const rowGap = title
     ? filtersVisible
-      ? "mb-0"
+      ? "mt-4 mb-3"
       : "mb-3"
     : filtersVisible
       ? "mt-4"

@@ -533,7 +533,7 @@ export function AffiliateDashboard({
                   <p className="mt-4 text-sm text-ink-muted">No referrals match.</p>
                 ) : (
                   <TableCard
-                    className="mt-0!"
+                    className="mt-4"
                     pager={
                       <AffiliateTablePager
                         tab="network"
@@ -1365,7 +1365,7 @@ function AffiliateListFilters({
       title={title}
       defaultOpen={Boolean(query.q.trim() || query.status)}
     >
-        <LiveGetForm className={title ? "m-0" : "mt-4"}>
+        <LiveGetForm className="mt-4">
           <input type="hidden" name="page" value="1" />
           <input type="hidden" name="tab" value={tab} />
           {query.sort !== defaults.sort ? (
