@@ -437,7 +437,7 @@ function RuleRow({
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
       <BotFormColumns>
       <BotFormCard>
-      <BotFormStep title="General" defaultCollapsed={inUse}>
+      <BotFormStep title="General">
         <BotField label="Name" required>
           <input
             id={`${prefix}name`}
@@ -529,7 +529,6 @@ function RuleRow({
       <BotFormStep
         title="Exit Conditions"
         hint="Any condition can be true."
-        defaultCollapsed={inUse}
       >
       <BotFormGroup title="Exit" hint="Any condition can be true.">
         <div className={botRowClass}>

@@ -166,11 +166,11 @@ export function BotFormStep({
       <h3
         className={`${botStepTitleClass} bg-surface-raised${
           open ? " border-b border-line" : ""
-        }`}
+        }${locked ? " opacity-40" : ""}`}
       >
         <button
           type="button"
-          className="group flex w-full items-center justify-between gap-3 px-5 py-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+          className="group flex w-full items-center justify-between gap-3 border-0 bg-transparent px-5 py-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((current) => !current)}
@@ -187,7 +187,7 @@ export function BotFormStep({
       <div
         id={panelId}
         hidden={!open}
-        className={`px-5 [&>*:not([hidden])]:py-5 [&>*:not([hidden])~*:not([hidden])]:border-t [&>*:not([hidden])~*:not([hidden])]:border-line${
+        className={`bot-step-body px-5${
           locked ? " pointer-events-none opacity-40" : ""
         }`}
         inert={locked || undefined}

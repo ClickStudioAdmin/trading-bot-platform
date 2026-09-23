@@ -1451,7 +1451,7 @@ export function DcaPlaybookForm({
           Desk Settings. Take profit and stop still run.
         </p>
       ) : null}
-      <BotFormStep title="General" defaultCollapsed={hasOpenPosition}>
+      <BotFormStep title="General">
         <div className={rowClass}>
           <BotField label="Name" required className="col-span-2">
             <input
@@ -1465,12 +1465,13 @@ export function DcaPlaybookForm({
               className={fieldClass}
             />
           </BotField>
-          <div
-            className="contents"
+          <label
+            className={`${labelClass}${
+              cycleLocked ? " pointer-events-none opacity-40" : ""
+            }`}
             inert={cycleLocked || undefined}
             aria-disabled={cycleLocked || undefined}
           >
-            <label className={labelClass}>
               <HintLabel text="Contract" required />
               <FuturesSymbolSelect
                 options={options}
@@ -1479,7 +1480,13 @@ export function DcaPlaybookForm({
                 onChange={setSymbol}
               />
             </label>
-            <label className={labelClass}>
+            <label
+              className={`${labelClass}${
+                cycleLocked ? " pointer-events-none opacity-40" : ""
+              }`}
+              inert={cycleLocked || undefined}
+              aria-disabled={cycleLocked || undefined}
+            >
               <HintLabel
                 text="Direction"
                 hint="Long and Short are independent positions and never flatten each other."
@@ -1541,7 +1548,6 @@ export function DcaPlaybookForm({
                 ) : null}
               </AppSelect>
             </label>
-          </div>
         </div>
       </BotFormStep>
       {cycleLocked ? (
@@ -2253,7 +2259,7 @@ export function DcaPlaybookForm({
           {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         </BotFormGroup>
       </BotFormStep>
-      <BotFormStep title="Exit Conditions" defaultCollapsed={hasOpenPosition}>
+      <BotFormStep title="Exit Conditions">
 
       {!tpOn ? (
         <div hidden>

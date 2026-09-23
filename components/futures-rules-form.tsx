@@ -651,7 +651,7 @@ function RuleCard({
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
       <BotFormColumns>
       <BotFormCard>
-      <BotFormStep title="General" defaultCollapsed={inUse}>
+      <BotFormStep title="General">
         <div className={botRowClass}>
           <BotField label="Name" required className="col-span-2">
             <input
@@ -946,7 +946,7 @@ function RuleCard({
       </BotFormStep>
 
       {!closing ? (
-        <BotFormStep title="Exit Conditions" defaultCollapsed={inUse}>
+        <BotFormStep title="Exit Conditions">
           {tpOn || slOn ? (
             <>
               <input type="hidden" name={`${prefix}tpsl`} value="on" />
