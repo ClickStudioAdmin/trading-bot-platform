@@ -240,6 +240,8 @@ export const TABLE_FILTER_CHROME_KEYS = new Set([
   "paper",
   "paperError",
   "bot",
+  "from",
+  "focus",
 ]);
 
 export function tableFiltersOpenStorageKey(input: {

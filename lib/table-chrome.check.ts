@@ -78,6 +78,15 @@ assert.equal(tableFiltersSuggestOpen({ q: "  " }), false);
 assert.equal(tableFiltersSuggestOpen({ status: "unread" }), true);
 assert.equal(tableFiltersSuggestOpen({ paperError: "x" }), false);
 assert.equal(tableFiltersSuggestOpen({ bot: "pb-1" }), false);
+assert.equal(
+  tableFiltersSuggestOpen({
+    desk: "desk-1",
+    bot: "pb-1",
+    from: "bots",
+    focus: "pb-1",
+  }),
+  false,
+);
 assert.equal(tableFiltersSuggestOpen({ bot: "pb-1", pair: "BTC" }), true);
 assert.equal(tableFiltersSuggestOpen({ venue: "bybit", env: "demo" }), false);
 assert.equal(
