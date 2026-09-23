@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { HeaderBar } from "@/components/header-bar";
 import { HeaderChromeLinks, HeaderInboxLink } from "@/components/site-nav";
 import { UiPreferencesMenu } from "@/components/ui-preferences";
@@ -17,10 +18,7 @@ export async function SiteHeader({
   await connection();
   const user = await getSessionMember();
   const verified = Boolean(user?.emailVerifiedAt);
-  const memberChrome =
-    verified && user
-      ? await loadMemberNotificationChrome(user.id, user.platformMember)
-      : null;
+  const platformMember = user?.platformMember === true;
 
   return (
     <HeaderBar
@@ -28,24 +26,76 @@ export async function SiteHeader({
       platformName={platformName}
       platformLogoUrl={platformLogoUrl}
       start={
-        <HeaderChromeLinks
-          signedIn={Boolean(user)}
-          platformMember={user?.platformMember !== false}
-          badges={
-            memberChrome
-              ? { "/account/copy": memberChrome.actions.copyInvite }
-              : undefined
+        <Suspense
+          fallback={
+            <HeaderChromeLinks
+              signedIn={Boolean(user)}
+              platformMember={user?.platformMember !== false}
+            />
           }
-        />
+        >
+          <HeaderStartLinks
+            userId={user?.id ?? ""}
+            platformMember={platformMember}
+            verified={verified}
+            signedIn={Boolean(user)}
+          />
+        </Suspense>
       }
       end={<UiPreferencesMenu />}
     >
       <div className="flex shrink-0 items-center justify-end gap-2">
-        {memberChrome ? <HeaderInboxLink count={memberChrome.inbox} /> : null}
+        {verified && user ? (
+          <Suspense fallback={null}>
+            <HeaderInbox userId={user.id} platformMember={platformMember} />
+          </Suspense>
+        ) : null}
         <UserMenu
           name={user ? memberDisplayName(user.email, user.name) : null}
         />
       </div>
     </HeaderBar>
   );
+}
+
+async function HeaderStartLinks({
+  userId,
+  platformMember,
+  verified,
+  signedIn,
+}: {
+  userId: string;
+  platformMember: boolean;
+  verified: boolean;
+  signedIn: boolean;
+}) {
+  const memberChrome =
+    verified && userId
+      ? await loadMemberNotificationChrome(userId, platformMember)
+      : null;
+  return (
+    <HeaderChromeLinks
+      signedIn={signedIn}
+      platformMember={platformMember || !userId}
+      badges={
+        memberChrome
+          ? { "/account/copy": memberChrome.actions.copyInvite }
+          : undefined
+      }
+    />
+  );
+}
+
+async function HeaderInbox({
+  userId,
+  platformMember,
+}: {
+  userId: string;
+  platformMember: boolean;
+}) {
+  const memberChrome = await loadMemberNotificationChrome(
+    userId,
+    platformMember,
+  );
+  return <HeaderInboxLink count={memberChrome.inbox} />;
 }

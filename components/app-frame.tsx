@@ -1,5 +1,9 @@
-import { cookies } from "next/headers";
-import { AccountSidenavGate } from "@/components/account-sidenav-gate";
+import { Suspense } from "react";
+import { cookies, headers } from "next/headers";
+import {
+  AccountSidenavGate,
+  SignedInNav,
+} from "@/components/account-sidenav-gate";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import {
@@ -7,6 +11,7 @@ import {
   UiRegion,
 } from "@/components/ui-preferences";
 import { listTradingAccounts } from "@/lib/accounts/store";
+import { DESK_PATHNAME_HEADER } from "@/lib/accounts/model";
 import {
   UI_CHROME_COOKIE,
   UI_CONTENT_COOKIE,
@@ -26,31 +31,114 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
   const member = await getSessionMember();
   const desks = member ? await listTradingAccounts(member.id) : [];
   const verified = Boolean(member?.emailVerifiedAt);
-  const chrome =
-    verified && member
-      ? await loadMemberNotificationChrome(member.id, member.platformMember)
-      : null;
   const admin = verified && member ? await getAdminUser() : null;
   const autoTick = admin ? await loadAutoTickEnabled() : false;
-  const adminChrome = admin ? await loadAdminNotificationChrome() : null;
   const appHref = member ? signedInHomePath(member, desks) : null;
   const brand = await loadPlatformBrand();
   const jar = await cookies();
   const chromeScheme = parseUiScheme(jar.get(UI_CHROME_COOKIE)?.value);
   const contentScheme = parseUiScheme(jar.get(UI_CONTENT_COOKIE)?.value);
+  const pathname = (await headers()).get(DESK_PATHNAME_HEADER) ?? "";
+  const adminPath = pathname.startsWith("/admin");
+  const platformMember = member?.platformMember === true;
+  const nav = {
+    desks,
+    platformMember,
+    platformName: brand.name,
+    platformLogoUrl: brand.logoUrl,
+  };
 
   return (
     <UiPreferencesProvider chrome={chromeScheme} content={contentScheme}>
-    <AccountSidenavGate
-      signedIn={Boolean(member)}
-      platformMember={member?.platformMember === true}
+      <AccountSidenavGate
+        signedIn={Boolean(member)}
+        nav={
+          member ? (
+            <Suspense fallback={<SignedInNav {...nav} />}>
+              <SidenavBadges
+                {...nav}
+                userId={member.id}
+                verified={verified}
+                loadAdmin={adminPath && Boolean(admin)}
+              />
+            </Suspense>
+          ) : null
+        }
+      >
+        <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
+          <UiRegion region="chrome">
+            <SiteHeader
+              platformName={brand.name}
+              platformLogoUrl={brand.logoUrl}
+            />
+          </UiRegion>
+          <UiRegion region="content" className="flex flex-1 flex-col">
+            {children}
+          </UiRegion>
+          <UiRegion region="chrome">
+            <Suspense
+              fallback={
+                <SiteFooter
+                  appHref={appHref}
+                  signedIn={Boolean(member)}
+                  admin={admin ? { count: 0, autoTick } : null}
+                  platformName={brand.name}
+                  platformLogoUrl={brand.logoUrl}
+                />
+              }
+            >
+              <FooterChrome
+                appHref={appHref}
+                signedIn={Boolean(member)}
+                isAdmin={Boolean(admin)}
+                autoTick={autoTick}
+                loadAdmin={adminPath && Boolean(admin)}
+                platformName={brand.name}
+                platformLogoUrl={brand.logoUrl}
+              />
+            </Suspense>
+          </UiRegion>
+        </div>
+      </AccountSidenavGate>
+    </UiPreferencesProvider>
+  );
+}
+
+async function SidenavBadges({
+  userId,
+  verified,
+  loadAdmin,
+  desks,
+  platformMember,
+  platformName,
+  platformLogoUrl,
+}: {
+  userId: string;
+  verified: boolean;
+  loadAdmin: boolean;
+  desks: Awaited<ReturnType<typeof listTradingAccounts>>;
+  platformMember: boolean;
+  platformName: string;
+  platformLogoUrl: string | null;
+}) {
+  const [memberChrome, adminChrome] = await Promise.all([
+    verified
+      ? loadMemberNotificationChrome(userId, platformMember)
+      : Promise.resolve(null),
+    loadAdmin ? loadAdminNotificationChrome() : Promise.resolve(null),
+  ]);
+  return (
+    <SignedInNav
       desks={desks}
+      platformMember={platformMember}
+      platformName={platformName}
+      platformLogoUrl={platformLogoUrl}
       badges={
-        chrome
+        memberChrome
           ? {
-              "/account": chrome.overview,
-              "/account/billing": chrome.billing,
-              "/account/sub-accounts": chrome.actions.unboundLive,
+              "/account": memberChrome.overview,
+              "/account/billing": memberChrome.billing,
+              "/account/sub-accounts": memberChrome.actions.unboundLive,
             }
           : undefined
       }
@@ -64,34 +152,39 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
             }
           : undefined
       }
-      platformName={brand.name}
-      platformLogoUrl={brand.logoUrl}
-    >
-      <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
-        <UiRegion region="chrome">
-          <SiteHeader
-            platformName={brand.name}
-            platformLogoUrl={brand.logoUrl}
-          />
-        </UiRegion>
-        <UiRegion region="content" className="flex flex-1 flex-col">
-          {children}
-        </UiRegion>
-        <UiRegion region="chrome">
-          <SiteFooter
-            appHref={appHref}
-            signedIn={Boolean(member)}
-            admin={
-              admin
-                ? { count: adminChrome?.header ?? 0, autoTick }
-                : null
-            }
-            platformName={brand.name}
-            platformLogoUrl={brand.logoUrl}
-          />
-        </UiRegion>
-      </div>
-    </AccountSidenavGate>
-    </UiPreferencesProvider>
+    />
+  );
+}
+
+async function FooterChrome({
+  appHref,
+  signedIn,
+  isAdmin,
+  autoTick,
+  loadAdmin,
+  platformName,
+  platformLogoUrl,
+}: {
+  appHref: string | null;
+  signedIn: boolean;
+  isAdmin: boolean;
+  autoTick: boolean;
+  loadAdmin: boolean;
+  platformName: string;
+  platformLogoUrl: string | null;
+}) {
+  const adminChrome = loadAdmin ? await loadAdminNotificationChrome() : null;
+  return (
+    <SiteFooter
+      appHref={appHref}
+      signedIn={signedIn}
+      admin={
+        isAdmin
+          ? { count: adminChrome?.header ?? 0, autoTick }
+          : null
+      }
+      platformName={platformName}
+      platformLogoUrl={platformLogoUrl}
+    />
   );
 }
