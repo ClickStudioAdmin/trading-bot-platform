@@ -697,6 +697,7 @@ async function runPlace(
         remainingTpsl: tpslFromRow(row),
         idempotencyKey: key,
         source,
+        ruleId,
         ruleName,
         leverage,
       });
@@ -1118,6 +1119,7 @@ async function runPlace(
       trailing: armTrailingAt(trailing, fillPrice),
       idempotencyKey: key,
       source,
+      ruleId,
       ruleName,
       leverage,
     });

@@ -138,6 +138,39 @@ type FuturesClosedBlotterRow = FuturesBlotterRow & {
   closedAtMs: number | null;
 };
 
+type PlaybookOwner = {
+  id: string;
+  name: string;
+  symbol: string;
+  direction: string;
+};
+
+/** Closed rows written before DCA stamped rule_id. One current bot, same name and pair. */
+export function unstampedClosedBotId(
+  row: {
+    ruleId: string | null;
+    ruleName: string | null;
+    symbol: string;
+    side: string;
+  },
+  playbooks: readonly PlaybookOwner[],
+): string | null {
+  if (row.ruleId) {
+    return null;
+  }
+  const name = String(row.ruleName ?? "").trim();
+  if (!name) {
+    return null;
+  }
+  const matches = playbooks.filter((playbook) => {
+    if (playbook.symbol !== row.symbol || playbook.name !== name) {
+      return false;
+    }
+    return playbook.direction === "both" || playbook.direction === row.side;
+  });
+  return matches.length === 1 ? (matches[0]?.id ?? null) : null;
+}
+
 type PaperBlotterRow = {
   ruleId: number | null;
   baseCoin: string;
@@ -174,10 +207,13 @@ export function futuresAutomationsBotBlotter(
     undefined,
     { inferBot: false },
   );
+  const namedRows = closed.filter(
+    (row) => unstampedClosedBotId(row, playbooks) === botId,
+  );
   return {
     positionCount: openRows.length,
     roePct: futuresClosedStats(
-      closedRows as unknown as FuturesPosition[],
+      [...closedRows, ...namedRows] as unknown as FuturesPosition[],
       fallbackLeverage,
     ).roePct,
   };

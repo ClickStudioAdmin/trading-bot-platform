@@ -138,6 +138,7 @@ function playbookCommandMeta(playbook: DcaPlaybook, reason?: string) {
   const trimmed = String(reason ?? "").trim();
   return {
     source: "engine" as const,
+    ruleId: playbook.id,
     ruleName: playbook.name,
     ...(trimmed ? { reason: trimmed } : {}),
   };

@@ -174,6 +174,28 @@ assert.deepEqual(
     ],
     [{ id: "pb-new", name: "Old bot", symbol: "BTCUSDT", direction: "both" }],
   ),
+  { positionCount: 0, roePct: 2 },
+);
+assert.deepEqual(
+  futuresAutomationsBotBlotter(
+    "pb-new",
+    [],
+    [
+      {
+        ruleId: null,
+        ruleName: "Retired bot",
+        symbol: "BTCUSDT",
+        side: "long",
+        source: "engine",
+        realizedUsdt: 20,
+        notionalUsdt: 100,
+        leverage: 10,
+        openedAtMs: 1,
+        closedAtMs: 2,
+      },
+    ],
+    [{ id: "pb-new", name: "Old bot", symbol: "BTCUSDT", direction: "both" }],
+  ),
   { positionCount: 0, roePct: null },
 );
 

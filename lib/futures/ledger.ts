@@ -160,6 +160,7 @@ export async function writeFuturesAdd(input: {
   trailing?: FuturesTrailing | null;
   idempotencyKey?: string | null;
   source?: FuturesTradeSource;
+  ruleId?: string | null;
   ruleName?: string | null;
   leverage?: number | null;
 }): Promise<{ error: string | null }> {
@@ -181,6 +182,7 @@ export async function writeFuturesAdd(input: {
       notional_usdt: futuresNotionalUsdt(qty, entryPrice),
       venue: input.venue ?? input.row.venue,
       environment: input.environment ?? input.row.environment,
+      ...ruleIdStamp(input.row.ruleId, input.ruleId),
       ...(input.leverage != null ? { leverage: input.leverage } : {}),
       ...(input.tpsl ? tpslColumns(input.tpsl) : {}),
       ...(input.trailing ? trailingColumns(input.trailing) : {}),
@@ -219,10 +221,21 @@ export async function writeFuturesAdd(input: {
       price: input.price,
       source: input.source ?? input.row.source,
       ruleName: input.ruleName ?? input.row.ruleName,
-      ruleId: input.row.ruleId,
+      ruleId: input.ruleId ?? input.row.ruleId,
     });
   }
   return order;
+}
+
+function ruleIdStamp(
+  current: string | null | undefined,
+  next: string | null | undefined,
+): { rule_id: string } | Record<string, never> {
+  const ruleId = String(next ?? "").trim();
+  if (!ruleId || String(current ?? "").trim()) {
+    return {};
+  }
+  return { rule_id: ruleId };
 }
 
 export async function writeFuturesFlatten(input: {
@@ -235,6 +248,7 @@ export async function writeFuturesFlatten(input: {
   venueOrderId?: string | null;
   idempotencyKey?: string | null;
   source?: FuturesTradeSource;
+  ruleId?: string | null;
   ruleName?: string | null;
   leverage?: number | null;
 }): Promise<{ error: string | null }> {
@@ -255,6 +269,7 @@ export async function writeFuturesFlatten(input: {
       status: "closed",
       closed_at: new Date().toISOString(),
       realized_usdt: realized,
+      ...ruleIdStamp(input.row.ruleId, input.ruleId),
       ...(input.leverage != null ? { leverage: input.leverage } : {}),
     })
     .eq("id", input.row.id)
@@ -297,7 +312,7 @@ export async function writeFuturesFlatten(input: {
       price: input.price,
       source: input.source ?? input.row.source,
       ruleName: input.ruleName ?? input.row.ruleName,
-      ruleId: input.row.ruleId,
+      ruleId: input.ruleId ?? input.row.ruleId,
     });
   }
   return order;
@@ -316,6 +331,7 @@ export async function writeFuturesCloseSlice(input: {
   remainingTpsl?: FuturesTpsl | null;
   idempotencyKey?: string | null;
   source?: FuturesTradeSource;
+  ruleId?: string | null;
   ruleName?: string | null;
   leverage?: number | null;
 }): Promise<{ error: string | null; remaining: number }> {
@@ -338,6 +354,7 @@ export async function writeFuturesCloseSlice(input: {
       venueOrderId: input.venueOrderId,
       idempotencyKey: input.idempotencyKey,
       source: input.source,
+      ruleId: input.ruleId,
       ruleName: input.ruleName ?? null,
       leverage: input.leverage,
     });
@@ -357,6 +374,7 @@ export async function writeFuturesCloseSlice(input: {
       qty: remaining,
       notional_usdt: futuresNotionalUsdt(remaining, input.row.entryPrice),
       realized_usdt: realized,
+      ...ruleIdStamp(input.row.ruleId, input.ruleId),
       ...(input.leverage != null ? { leverage: input.leverage } : {}),
       ...tpslColumns(input.remainingTpsl ?? null),
     })
@@ -394,7 +412,7 @@ export async function writeFuturesCloseSlice(input: {
       price: input.price,
       source: input.source ?? input.row.source,
       ruleName: input.ruleName ?? input.row.ruleName,
-      ruleId: input.row.ruleId,
+      ruleId: input.ruleId ?? input.row.ruleId,
     });
   }
   return { error: order.error, remaining };

@@ -16,6 +16,7 @@ import {
   filterFuturesBlotterRows,
   parseDeskBlotterFilters,
 } from "@/lib/desk-blotter-filters";
+import { unstampedClosedBotId } from "@/lib/bots/automations-list";
 import { listFuturesAutomationRuleOptions } from "@/lib/futures/automation-load";
 import { loadFuturesPerformanceBook } from "@/lib/futures/list";
 import { loadFuturesSettings } from "@/lib/futures/settings";
@@ -52,22 +53,22 @@ export default async function FuturesPerformancePage({
       recipeAccountId &&
       (dcaBlotter || deskType === "perps_bots"),
   );
-  const playbookPromise =
+  const playbook =
     botScope && dcaBlotter && recipeAccountId
-      ? loadDcaPlaybookById(filters.bot, recipeAccountId)
-      : Promise.resolve(null);
+      ? await loadDcaPlaybookById(filters.bot, recipeAccountId)
+      : null;
   const [desk, botOptions, perpsBots, settings] = await Promise.all([
-    playbookPromise.then((playbook) =>
-      loadFuturesPerformanceBook(
-        botScope
-          ? {
-              closed: { ruleId: filters.bot },
-              open: dcaBlotter
-                ? { symbol: playbook?.symbol ?? "" }
-                : { ruleId: filters.bot },
-            }
-          : undefined,
-      ),
+    loadFuturesPerformanceBook(
+      botScope
+        ? {
+            closed: dcaBlotter
+              ? { symbol: playbook?.symbol ?? "" }
+              : { ruleId: filters.bot },
+            open: dcaBlotter
+              ? { symbol: playbook?.symbol ?? "" }
+              : { ruleId: filters.bot },
+          }
+        : undefined,
     ),
     dcaBlotter && recipeAccountId && !copyDesk
       ? listDcaBotOptions(recipeAccountId)
@@ -79,13 +80,21 @@ export default async function FuturesPerformancePage({
   ]);
   const bots = dcaBlotter ? botOptions : perpsBots;
   const memoryFilters = botScope ? { ...filters, bot: "" } : filters;
-  const visibleClosed = filterFuturesBlotterRows(
+  const scopedClosed = filterFuturesBlotterRows(
     desk.closed,
     memoryFilters,
     [],
     undefined,
     { inferBot: false },
   );
+  const visibleClosed =
+    botScope && dcaBlotter && playbook
+      ? scopedClosed.filter(
+          (row) =>
+            row.ruleId === playbook.id ||
+            unstampedClosedBotId(row, [playbook]) === playbook.id,
+        )
+      : scopedClosed;
   const visibleOpen = filterFuturesBlotterRows(desk.open, memoryFilters);
   const clearHref = deskHref(FUTURES_PATHS.performance, session?.account.id);
   const filterBar = (
