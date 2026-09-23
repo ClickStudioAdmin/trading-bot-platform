@@ -50,7 +50,7 @@ export function BybitAgreementEnables({
   }
 
   return (
-    <div className="mt-2 space-y-2">
+    <div className="mt-2 max-w-52 space-y-2">
       {kinds.map((kind) => (
         <AgreementChoice
           key={kind}
@@ -83,7 +83,7 @@ function AgreementChoice({
       : `Enable ${title.toLowerCase()}`;
   return (
     <div>
-      <p className="text-hint text-warning">
+      <p className="whitespace-normal text-hint text-warning">
         {title} need a Bybit agreement. Sign on Bybit, then enable them here.
       </p>
       <button
@@ -91,7 +91,7 @@ function AgreementChoice({
         disabled={pending}
         aria-pressed={enabled}
         onClick={onEnable}
-        className="mt-1 rounded-control border border-line px-2 py-0.5 text-xs text-ink hover:border-line-strong disabled:opacity-40"
+        className="mt-1 whitespace-normal rounded-control border border-line px-2 py-0.5 text-left text-xs text-ink hover:border-line-strong disabled:opacity-40"
       >
         {label}
       </button>
