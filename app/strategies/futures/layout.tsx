@@ -269,9 +269,16 @@ function futuresNavProps(input: {
   const primaryLinks = deskId
     ? navLinksWithDesk(primaryBase, deskId)
     : primaryBase;
-  const secondaryBase = copyDesk
-    ? FUTURES_SECONDARY_LINKS.filter((link) => link.href !== FUTURES_PATHS.shared)
-    : FUTURES_SECONDARY_LINKS;
+  const showWebhooks = !copyDesk && !manualPerps;
+  const secondaryBase = FUTURES_SECONDARY_LINKS.filter((link) => {
+    if (link.href === FUTURES_PATHS.shared && copyDesk) {
+      return false;
+    }
+    if (link.href === FUTURES_PATHS.webhooks && !showWebhooks) {
+      return false;
+    }
+    return true;
+  });
   const secondaryLinks = deskId
     ? navLinksWithDesk(secondaryBase, deskId)
     : secondaryBase;
