@@ -219,9 +219,15 @@ export function createDeskPath(deskType: DeskType): string {
   return `/account/desks/new?type=${deskType}`;
 }
 
-export function deskHomePath(deskType: DeskType, accountId?: string): string {
-  const base =
-    deskType === "cash_and_carry"
+export function deskHomePath(
+  desk: DeskType | { deskType: DeskType; copyOfAccountId?: string | null },
+  accountId?: string,
+): string {
+  const deskType = typeof desk === "string" ? desk : desk.deskType;
+  const copy = typeof desk !== "string" && deskIsCopy(desk);
+  const base = copy
+    ? "/strategies/futures/positions"
+    : deskType === "cash_and_carry"
       ? "/strategies/cash-and-carry/automations"
       : deskType === "perps_bots" || deskType === "dca"
         ? "/strategies/futures/automations"

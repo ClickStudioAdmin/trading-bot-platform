@@ -597,7 +597,7 @@ export async function createCopyDeskAction(formData: FormData) {
   revalidatePath("/account/copy");
   return deskActionOk(
     "You are following this desk.",
-    goToDesk ? { href: deskHomePath(created.deskType, created.id) } : undefined,
+    goToDesk ? { href: deskHomePath(created, created.id) } : undefined,
   );
 }
 

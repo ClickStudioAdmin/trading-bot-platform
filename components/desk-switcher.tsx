@@ -87,7 +87,7 @@ export function DeskSwitcher({
               return (
                 <Link
                   key={desk.id}
-                  href={deskHomePath(desk.deskType, desk.id)}
+                  href={deskHomePath(desk, desk.id)}
                   aria-current={currentDesk ? "true" : undefined}
                   onClick={() => {
                     if (!currentDesk) {

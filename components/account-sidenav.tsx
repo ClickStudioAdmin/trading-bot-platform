@@ -313,7 +313,7 @@ function DeskNavLink({
   const hint = formatDeskDisplayModeHint(desk);
   return (
     <Link
-      href={deskHomePath(desk.deskType, desk.id)}
+      href={deskHomePath(desk, desk.id)}
       aria-current={current ? "true" : undefined}
       title={`${desk.name} · ${hint}`}
       onClick={() => {

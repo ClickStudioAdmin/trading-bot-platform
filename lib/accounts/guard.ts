@@ -40,7 +40,7 @@ export async function requireCashAndCarrySession(): Promise<SessionContext> {
     redirect("/sign-in");
   }
   if (!deskUsesCashAndCarry(session.account.deskType)) {
-    redirect(deskHomePath(session.account.deskType, session.account.id));
+    redirect(deskHomePath(session.account, session.account.id));
   }
   return session;
 }
@@ -51,7 +51,7 @@ export async function requirePerpsUiSession(): Promise<SessionContext> {
     redirect("/sign-in");
   }
   if (!deskUsesPerpsUi(session.account.deskType)) {
-    redirect(deskHomePath(session.account.deskType, session.account.id));
+    redirect(deskHomePath(session.account, session.account.id));
   }
   return session;
 }

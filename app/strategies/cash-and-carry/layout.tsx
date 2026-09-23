@@ -53,7 +53,7 @@ export default async function CashAndCarryLayout({
 }) {
   const session = await getSessionContext();
   if (session && !deskUsesCashAndCarry(session.account.deskType)) {
-    redirect(deskHomePath(session.account.deskType, session.account.id));
+    redirect(deskHomePath(session.account, session.account.id));
   }
   if (session) {
     await pinDeskSearchParam(session);

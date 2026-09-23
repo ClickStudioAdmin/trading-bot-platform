@@ -91,7 +91,7 @@ export async function switchTradingAccount(formData: FormData) {
   await setActiveAccountId(match.id);
   refreshAccountChrome();
   const next = accountReturnPath(String(formData.get("next") ?? ""));
-  redirect(next ?? deskHomePath(match.deskType, match.id));
+  redirect(next ?? deskHomePath(match, match.id));
 }
 
 export async function createTradingAccount(formData: FormData) {

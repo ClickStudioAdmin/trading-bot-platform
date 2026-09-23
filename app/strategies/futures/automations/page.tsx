@@ -77,7 +77,7 @@ export default async function FuturesAutomationsPage({
     !deskAllowsDcaPlaybooks(session.account) &&
     !deskAllowsPerpsRecipes(session.account)
   ) {
-    redirect(deskHomePath(session.account.deskType, session.account.id));
+    redirect(deskHomePath(session.account, session.account.id));
   }
   const saved = firstSearchValue(params.saved) === "1";
   const error = firstSearchValue(params.error);

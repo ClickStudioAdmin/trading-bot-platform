@@ -349,7 +349,7 @@ export default async function FuturesLayout({
 }) {
   const session = await getSessionContext();
   if (session && !deskUsesPerpsUi(session.account.deskType)) {
-    redirect(deskHomePath(session.account.deskType, session.account.id));
+    redirect(deskHomePath(session.account, session.account.id));
   }
   if (session) {
     await pinDeskSearchParam(session);

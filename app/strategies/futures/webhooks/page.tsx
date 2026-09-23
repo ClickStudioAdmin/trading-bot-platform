@@ -44,7 +44,7 @@ export default async function FuturesWebhooksPage({
     ? deskAllowsOrderWebhooks(session.account)
     : deskAllowsOrderWebhooks(deskType);
   if (session && !allowSignal && !allowOrder) {
-    redirect(deskHomePath(session.account.deskType, session.account.id));
+    redirect(deskHomePath(session.account, session.account.id));
   }
   const webhooks = session
     ? await listFuturesWebhooks({
