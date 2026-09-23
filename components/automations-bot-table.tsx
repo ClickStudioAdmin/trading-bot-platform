@@ -233,13 +233,6 @@ export function AutomationsBotTable({
       <table className="min-w-full text-left text-sm text-ink">
         <thead className={`${TABLE_THEAD_CLASS} text-hint text-ink-muted`}>
           <tr>
-            <SortTh
-              label="Name"
-              className={TABLE_TITLE_CASE_TH_CLASS}
-              active={table.sortKey === "name"}
-              dir={table.sortDir}
-              onSort={() => table.onSort("name")}
-            />
             {visible.pair ? (
               <SortTh
                 label="Pair / Side"
@@ -249,6 +242,13 @@ export function AutomationsBotTable({
                 onSort={() => table.onSort("pair")}
               />
             ) : null}
+            <SortTh
+              label="Name"
+              className={TABLE_TITLE_CASE_TH_CLASS}
+              active={table.sortKey === "name"}
+              dir={table.sortDir}
+              onSort={() => table.onSort("name")}
+            />
             {visible.recipe ? (
               <SortTh
                 label="Recipe"
@@ -306,6 +306,11 @@ export function AutomationsBotTable({
                 revealId && row.id === revealId ? " bg-accent/10" : ""
               }`}
             >
+              {visible.pair ? (
+                <td className="px-4 py-3 pr-8 align-top text-ink-muted">
+                  <BotPairCell row={row} />
+                </td>
+              ) : null}
               <td className="px-4 py-3 pr-8 align-top">
                 <Link
                   href={row.editHref}
@@ -314,11 +319,6 @@ export function AutomationsBotTable({
                   {row.name || "Bot"}
                 </Link>
               </td>
-              {visible.pair ? (
-                <td className="px-4 py-3 pr-8 align-top text-ink-muted">
-                  <BotPairCell row={row} />
-                </td>
-              ) : null}
               {visible.recipe ? (
                 <td className="px-4 py-3 pr-8 align-top text-ink-muted">
                   {row.summary}
@@ -412,6 +412,47 @@ export function AutomationsBotTable({
   );
 }
 
+function pairSideClass(side: string): string {
+  const key = side.trim().toLowerCase();
+  if (key === "long" || key === "buy" || key.endsWith(" long")) {
+    return "text-success";
+  }
+  if (key === "short" || key === "sell" || key.endsWith(" short")) {
+    return "text-danger";
+  }
+  return "text-ink-muted";
+}
+
+function splitPairSide(pair: string): { contract: string; side: string | null } {
+  const mark = " · ";
+  const at = pair.lastIndexOf(mark);
+  if (at < 0) {
+    return { contract: pair, side: null };
+  }
+  return {
+    contract: pair.slice(0, at),
+    side: pair.slice(at + mark.length),
+  };
+}
+
+function BotPairLine({ pair }: { pair: string }) {
+  const { contract, side } = splitPairSide(pair);
+  if (!side) {
+    return (
+      <span className="mt-0.5 block truncate text-hint text-ink-muted">
+        {pair}
+      </span>
+    );
+  }
+  return (
+    <span className="mt-0.5 block truncate text-hint">
+      <span className="text-ink-muted">{contract}</span>
+      <span className="text-ink-muted"> · </span>
+      <span className={pairSideClass(side)}>{side}</span>
+    </span>
+  );
+}
+
 function BotPairCell({ row }: { row: AutomationsBotRow }) {
   const note = row.pairNote ? (
     <span className="mt-0.5 block text-hint text-warning">{row.pairNote}</span>
@@ -429,9 +470,7 @@ function BotPairCell({ row }: { row: AutomationsBotRow }) {
       <TokenIcon symbol={row.baseCoin} />
       <span className="min-w-0">
         <span className="block font-medium text-ink">{row.baseCoin}</span>
-        <span className="mt-0.5 block truncate text-hint text-ink-muted">
-          {row.pair}
-        </span>
+        <BotPairLine pair={row.pair} />
         {note}
       </span>
     </span>
