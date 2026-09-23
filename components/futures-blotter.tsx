@@ -10,6 +10,7 @@ import {
   TableCard,
   TableFilterSession,
   TablePager,
+  TableSectionTitle,
   useClientTable,
 } from "@/components/table-chrome";
 import { LocalTime } from "@/components/local-time";
@@ -269,6 +270,7 @@ export function OpenFuturesTrades({
   open,
   next = FUTURES_PATHS.positions,
   showHeading = true,
+  tableTitle,
   exchangeBook = false,
   emptyMessage,
   showCloseAll = false,
@@ -291,6 +293,7 @@ export function OpenFuturesTrades({
   open: MarkedFutures[];
   next?: string;
   showHeading?: boolean;
+  tableTitle?: string;
   exchangeBook?: boolean;
   emptyMessage?: ReactNode;
   showCloseAll?: boolean;
@@ -332,26 +335,30 @@ export function OpenFuturesTrades({
 
   return (
     <section>
-      {showHeading ? (
-        <div className="mb-3 flex items-end justify-between gap-3">
-          <SectionHead
-            title="Current Positions"
-            subtitle={
-              exchangeBook
-                ? "Open USDT perpetuals on the bound exchange. Close that side on Bybit."
-                : "Open paper futures. Close writes the ledger only — no Bybit order."
-            }
-            className=""
-          />
-          <Link
-            href={positionsHref}
-            className="shrink-0 text-sm text-accent hover:text-accent-strong"
-          >
-            All positions
-          </Link>
-        </div>
-      ) : null}
       <TableFilterSession
+        title={
+          tableTitle ? (
+            <TableSectionTitle title={tableTitle} />
+          ) : showHeading ? (
+            <div className="flex min-w-0 flex-wrap items-end gap-3">
+              <SectionHead
+                title="Current Positions"
+                subtitle={
+                  exchangeBook
+                    ? "Open USDT perpetuals on the bound exchange. Close that side on Bybit."
+                    : "Open paper futures. Close writes the ledger only — no Bybit order."
+                }
+                className=""
+              />
+              <Link
+                href={positionsHref}
+                className="shrink-0 text-sm text-accent hover:text-accent-strong"
+              >
+                All positions
+              </Link>
+            </div>
+          ) : undefined
+        }
         defaultOpen={filtersOpen}
         actions={
           <>
@@ -377,7 +384,9 @@ export function OpenFuturesTrades({
         {filterBar}
       </TableFilterSession>
       <TableCard
-        className="min-w-0 mt-6"
+        className={
+          tableTitle || showHeading ? "min-w-0 mt-0" : "min-w-0 mt-6"
+        }
         pager={
           <TablePager
             window={table.window}
@@ -618,8 +627,8 @@ export function ClosedFuturesTrades({
   const colSpan = futuresClosedColumnCount(visible);
   return (
     <section>
-      <SectionHead title="Past Positions" />
       <TableFilterSession
+        title={<TableSectionTitle title="Past Positions" />}
         defaultOpen={filtersOpen}
         actions={
           <FuturesClosedColumnPicker visible={visible} setColumn={setColumn} />
@@ -628,6 +637,7 @@ export function ClosedFuturesTrades({
         {filterBar}
       </TableFilterSession>
       <TableCard
+        className="mt-0"
         pager={
           <TablePager
             window={table.window}

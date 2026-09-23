@@ -58,7 +58,7 @@ import { withMarketCapRank } from "@/lib/pairs/page";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { HyperliquidFuturesPositions } from "@/components/venues/hyperliquid/positions";
 export const metadata: Metadata = {
-  title: "Current Positions",
+  title: "Positions Snapshot",
   description: "Open USDT perpetual positions.",
 };
 
@@ -286,7 +286,7 @@ export default async function FuturesPositionsPage({
         <LiveTickerScope symbols={open.map((row) => row.symbol)}>
         <section>
         <DeskReturnHeading
-          title={botReturn.titleFor("Current Positions")}
+          title={botReturn.titleFor("Positions Snapshot")}
           backHref={botReturn.backHref}
           className="mb-3"
           actions={
@@ -382,6 +382,7 @@ export default async function FuturesPositionsPage({
           closeAllOpenCount={desk.closeAllOpenCount}
           next={NEXT}
           showHeading={false}
+          tableTitle="Current Positions"
           filtersOpen={tableFiltersSuggestOpen(params)}
           filterBar={
             <DeskBlotterFilters

@@ -136,14 +136,38 @@ function writeFiltersOpen(scope: string, open: boolean) {
   }
 }
 
+export function TableSectionTitle({
+  title,
+  subtitle,
+  count,
+}: {
+  title: string;
+  subtitle?: string;
+  count?: number;
+}) {
+  return (
+    <div className="min-w-0">
+      <h2 className="text-lg font-semibold tracking-tight text-ink">
+        {title}
+        {count != null ? (
+          <span className="font-semibold"> ({count})</span>
+        ) : null}
+      </h2>
+      {subtitle ? <p className="text-sm text-ink-muted">{subtitle}</p> : null}
+    </div>
+  );
+}
+
 export function TableFilterSession({
   children,
+  title,
   toolbar,
   actions,
   defaultOpen = false,
   id,
 }: {
   children?: ReactNode;
+  title?: ReactNode;
   toolbar?: ReactNode;
   actions?: ReactNode;
   defaultOpen?: boolean;
@@ -177,6 +201,9 @@ export function TableFilterSession({
     writeFiltersOpen(scope, false);
   }
   const hasFilters = children != null;
+  const filtersVisible = hasFilters && show;
+  const bulkVisible = Boolean(toolbar);
+  const liftTitle = Boolean(title) && (filtersVisible || bulkVisible);
   const hideButton = (
     <TableLabelButton
       variant="filter"
@@ -195,21 +222,37 @@ export function TableFilterSession({
       Show Filters
     </TableLabelButton>
   );
-  const chrome = Boolean(toolbar) || Boolean(actions) || (hasFilters && !show);
+  const chrome =
+    bulkVisible ||
+    Boolean(actions) ||
+    (hasFilters && !show) ||
+    (Boolean(title) && !liftTitle);
+  const rowGap = title
+    ? filtersVisible
+      ? "mt-4 mb-3"
+      : "mb-3"
+    : filtersVisible
+      ? "mt-4"
+      : hasFilters
+        ? "mt-6"
+        : "mb-3";
   return (
-    <FilterBarEndCtx.Provider value={hasFilters && show ? hideButton : null}>
-      {hasFilters && show ? children : null}
+    <FilterBarEndCtx.Provider value={filtersVisible ? hideButton : null}>
+      {liftTitle ? <div className="mb-3">{title}</div> : null}
+      {filtersVisible ? children : null}
       {chrome ? (
         <div
-          className={`flex flex-wrap items-center gap-2 ${
-            hasFilters && show ? "mt-4" : hasFilters ? "mt-6" : "mb-3"
-          } ${toolbar ? "justify-between" : "justify-end"}`}
+          className={`flex flex-wrap items-center gap-2 ${rowGap} ${
+            toolbar || (title && !liftTitle) ? "justify-between" : "justify-end"
+          }`}
         >
-          {toolbar ? (
+          {title && !liftTitle ? (
+            <div className="min-w-0">{title}</div>
+          ) : toolbar ? (
             <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
           ) : null}
           {actions || (hasFilters && !show) ? (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="ml-auto flex flex-wrap items-center gap-2">
               {actions}
               {hasFilters && !show ? showButton : null}
             </div>

@@ -15,6 +15,7 @@ import {
   TableCard,
   TableFilterSession,
   TablePager,
+  TableSectionTitle,
   TablePendingIconAction,
   useClientTable,
 } from "@/components/table-chrome";
@@ -139,13 +140,8 @@ export function FuturesWorkingOrders({
   return (
     <section>
       <FuturesDeskRefresh urgent={urgent} />
-      <div className="mb-3">
-        <h2 className="text-lg font-semibold tracking-tight text-ink">
-          Open Orders{" "}
-          <span className="font-semibold">({rows.length})</span>
-        </h2>
-      </div>
       <TableFilterSession
+        title={<TableSectionTitle title="Open Orders" count={rows.length} />}
         defaultOpen={filtersOpen}
         actions={
           <>
@@ -167,6 +163,7 @@ export function FuturesWorkingOrders({
         {filterBar}
       </TableFilterSession>
       <TableCard
+        className="mt-0"
         pager={
           <TablePager
             window={table.window}

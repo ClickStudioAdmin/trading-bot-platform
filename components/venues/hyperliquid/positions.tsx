@@ -240,7 +240,7 @@ export async function HyperliquidFuturesPositions({
         >
         <section>
         <DeskReturnHeading
-          title={botReturn.titleFor("Current Positions")}
+          title={botReturn.titleFor("Positions Snapshot")}
           backHref={botReturn.backHref}
           className="mb-3"
           actions={
@@ -337,6 +337,7 @@ export async function HyperliquidFuturesPositions({
             closeAllOpenCount={desk.closeAllOpenCount}
             next={NEXT}
             showHeading={false}
+            tableTitle="Current Positions"
             filtersOpen={tableFiltersSuggestOpen(params)}
             filterBar={
               <DeskBlotterFilters

@@ -12,6 +12,7 @@ import {
   TableFilterField,
   TableFilterSession,
   TableLabelButton,
+  TableSectionTitle,
   TablePager,
   useClientTable,
 } from "@/components/table-chrome";
@@ -294,12 +295,10 @@ function OpenBacktestPositions({
   const table = useClientTable(filtered, compare, { defaultKey: "contract" });
   return (
     <section>
-      <SectionHead
-        title="Open Positions"
-        subtitle="Still open at the end of the replay. Click a row to pin it on the chart."
-      />
       {cycles.length > 0 ? (
         <CycleFilters
+          title="Open Positions"
+          subtitle="Still open at the end of the replay. Click a row to pin it on the chart."
           query={query}
           side={side}
           onQuery={(value) => {
@@ -316,8 +315,14 @@ function OpenBacktestPositions({
             table.setPage(1);
           }}
         />
-      ) : null}
+      ) : (
+        <SectionHead
+          title="Open Positions"
+          subtitle="Still open at the end of the replay. Click a row to pin it on the chart."
+        />
+      )}
       <TableCard
+        className="mt-0"
         pager={
           <TablePager
             window={table.window}
@@ -487,9 +492,9 @@ function ClosedBacktestPositions({
   });
   return (
     <section>
-      <SectionHead title="Past Positions" />
       {cycles.length > 0 ? (
         <CycleFilters
+          title="Past Positions"
           query={query}
           side={side}
           onQuery={(value) => {
@@ -506,8 +511,11 @@ function ClosedBacktestPositions({
             table.setPage(1);
           }}
         />
-      ) : null}
+      ) : (
+        <SectionHead title="Past Positions" />
+      )}
       <TableCard
+        className="mt-0"
         pager={
           <TablePager
             window={table.window}
@@ -972,12 +980,16 @@ function OrderMetric({
 }
 
 function CycleFilters({
+  title,
+  subtitle,
   query,
   side,
   onQuery,
   onSide,
   onClear,
 }: {
+  title: string;
+  subtitle?: string;
   query: string;
   side: CycleSideFilter;
   onQuery: (value: string) => void;
@@ -985,7 +997,9 @@ function CycleFilters({
   onClear: () => void;
 }) {
   return (
-    <TableFilterSession>
+    <TableFilterSession
+      title={<TableSectionTitle title={title} subtitle={subtitle} />}
+    >
         <TableFilterBar className="mb-4">
           <TableFilterField label="Search">
             <input

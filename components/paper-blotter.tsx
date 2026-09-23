@@ -9,6 +9,7 @@ import {
   TableCard,
   TableFilterSession,
   TablePager,
+  TableSectionTitle,
   useClientTable,
 } from "@/components/table-chrome";
 import {
@@ -78,6 +79,7 @@ export function OpenPaperTrades({
   open,
   next = "/strategies/cash-and-carry",
   showHeading = true,
+  tableTitle,
   exchangeBook = false,
   positionsHref = "/strategies/cash-and-carry/positions",
   opportunitiesHref = "/strategies/cash-and-carry/opportunities",
@@ -90,6 +92,7 @@ export function OpenPaperTrades({
   open: OpenCarryView[];
   next?: string;
   showHeading?: boolean;
+  tableTitle?: string;
   exchangeBook?: boolean;
   positionsHref?: string;
   opportunitiesHref?: string;
@@ -153,26 +156,30 @@ export function OpenPaperTrades({
 
   return (
     <section>
-      {showHeading ? (
-        <div className="mb-3 flex items-end justify-between gap-3">
-          <SectionHead
-            title="Current Positions"
-            subtitle={
-              exchangeBook
-                ? "Open cash-and-carry on the bound exchange. Close exits both Bybit legs."
-                : "Open paper carries. Unrealized includes open and close fees on both legs. Close is paper only — no Bybit order."
-            }
-            className=""
-          />
-          <Link
-            href={positionsHref}
-            className="shrink-0 text-sm text-accent hover:text-accent-strong"
-          >
-            All positions
-          </Link>
-        </div>
-      ) : null}
       <TableFilterSession
+        title={
+          tableTitle ? (
+            <TableSectionTitle title={tableTitle} />
+          ) : showHeading ? (
+            <div className="flex min-w-0 flex-wrap items-end gap-3">
+              <SectionHead
+                title="Current Positions"
+                subtitle={
+                  exchangeBook
+                    ? "Open cash-and-carry on the bound exchange. Close exits both Bybit legs."
+                    : "Open paper carries. Unrealized includes open and close fees on both legs. Close is paper only — no Bybit order."
+                }
+                className=""
+              />
+              <Link
+                href={positionsHref}
+                className="shrink-0 text-sm text-accent hover:text-accent-strong"
+              >
+                All positions
+              </Link>
+            </div>
+          ) : undefined
+        }
         defaultOpen={filtersOpen}
         actions={
           <PaperOpenColumnPicker visible={visible} setColumn={setColumn} />
@@ -181,6 +188,7 @@ export function OpenPaperTrades({
         {filterBar}
       </TableFilterSession>
       <TableCard
+        className={tableTitle || showHeading ? "mt-0" : undefined}
         pager={
           <TablePager
             window={table.window}
@@ -401,8 +409,8 @@ export function ClosedPaperTrades({
   const colSpan = paperClosedColumnCount(visible);
   return (
     <section>
-      <SectionHead title="Past Positions" />
       <TableFilterSession
+        title={<TableSectionTitle title="Past Positions" />}
         defaultOpen={filtersOpen}
         actions={
           <PaperClosedColumnPicker visible={visible} setColumn={setColumn} />
@@ -411,6 +419,7 @@ export function ClosedPaperTrades({
         {filterBar}
       </TableFilterSession>
       <TableCard
+        className="mt-0"
         pager={
           <TablePager
             window={table.window}

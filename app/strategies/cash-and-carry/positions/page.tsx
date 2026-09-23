@@ -27,7 +27,7 @@ import {
 import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
 
 export const metadata: Metadata = {
-  title: "Current Positions",
+  title: "Positions Snapshot",
   description: "Open paper cash-and-carry positions.",
 };
 
@@ -97,7 +97,7 @@ export default async function CashAndCarryPositionsPage({
         />
         <section>
         <DeskReturnHeading
-          title={botReturn.titleFor("Current Positions")}
+          title={botReturn.titleFor("Positions Snapshot")}
           backHref={botReturn.backHref}
           className="mb-3"
           actions={
@@ -116,6 +116,7 @@ export default async function CashAndCarryPositionsPage({
           open={visibleOpen}
           next={next}
           showHeading={false}
+          tableTitle="Current Positions"
           exchangeBook={openBook.exchangeBook}
           deferFills
           filtersOpen={tableFiltersSuggestOpen(params)}

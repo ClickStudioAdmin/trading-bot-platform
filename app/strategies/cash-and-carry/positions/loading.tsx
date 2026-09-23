@@ -1,5 +1,4 @@
 import { ContainerLoading } from "@/components/container-loading";
-import { PageHeading } from "@/components/page-heading";
 import { TableCard } from "@/components/table-chrome";
 
 function LoadingStat({ label }: { label: string }) {
@@ -19,12 +18,17 @@ export default function CashAndCarryPositionsLoading() {
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <div className="space-y-6">
-        <PageHeading as="h2" title="Current Positions" className="mb-3" />
+        <h2 className="mb-3 text-lg font-semibold tracking-tight">
+          Positions Snapshot
+        </h2>
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <LoadingStat label="Open value" />
           <LoadingStat label="Unrealized P&L" />
           <LoadingStat label="Open exposure" />
         </section>
+        <h2 className="mb-3 text-lg font-semibold tracking-tight">
+          Current Positions
+        </h2>
         <TableCard className="mt-0 min-w-0">
           <div className="px-5 py-8">
             <ContainerLoading label="Loading positions" />

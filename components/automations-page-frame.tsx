@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { AutomationsHashEdit } from "@/components/automations-hash-edit";
 import { DeskBackLink } from "@/components/desk-back-link";
-import { PageHeading } from "@/components/page-heading";
 
 export function AutomationsPageFrame({
   listHref,
@@ -18,10 +17,12 @@ export function AutomationsPageFrame({
       {editTitle ? (
         <div className="mb-6 flex min-w-0 items-center gap-3">
           <DeskBackLink href={listHref} />
-          <PageHeading as="h2" title={editTitle} className="mb-0 min-w-0" />
+          <h2 className="min-w-0 text-lg font-semibold tracking-tight">
+            {editTitle}
+          </h2>
         </div>
       ) : (
-        <PageHeading as="h2" title="Bots" />
+        <h2 className="mb-6 text-lg font-semibold tracking-tight">Bots</h2>
       )}
       {children}
     </main>

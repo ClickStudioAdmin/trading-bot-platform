@@ -23,6 +23,7 @@ import {
   TableFilterBar,
   TableFilterField,
   TableFilterSession,
+  TableSectionTitle,
   TableActions,
   TableIconAction,
   TableLabelButton,
@@ -221,15 +222,13 @@ export function ThemeTableDraft() {
 
   return (
     <div>
-      <div>
-        <h3 className="text-lg font-semibold tracking-tight">Sample table</h3>
-        <p className="mt-1 text-sm text-ink-muted">
-          Dummy rows only. Filters, sort, paging, and bulk actions work here
-          so you can see the chrome. Live tables omit pieces they do not need.
-        </p>
-      </div>
-
       <TableFilterSession
+        title={
+          <TableSectionTitle
+            title="Sample table"
+            subtitle="Dummy rows only. Filters, sort, paging, and bulk actions work here so you can see the chrome. Live tables omit pieces they do not need."
+          />
+        }
         toolbar={
           selectedCount > 0 ? (
             <>
@@ -350,6 +349,7 @@ export function ThemeTableDraft() {
       {notice ? <p className="mt-4 text-sm text-success">{notice}</p> : null}
 
       <TableCard
+        className="mt-0"
         pager={
           <TablePager
             align="center"
