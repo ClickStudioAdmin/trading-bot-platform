@@ -47,6 +47,83 @@ export const EMPTY_AUTOMATIONS_BOT_FILTERS: AutomationsBotFilters = {
   status: "",
 };
 
+const AUTOMATIONS_SORT_KEYS = new Set([
+  "name",
+  "pair",
+  "recipe",
+  "status",
+  "positions",
+  "performance",
+]);
+
+export type AutomationsListView = {
+  filters: AutomationsBotFilters;
+  sortKey: string;
+  sortDir: TableSortDir;
+  page: number;
+  scrollY: number;
+};
+
+export const DEFAULT_AUTOMATIONS_LIST_VIEW: AutomationsListView = {
+  filters: EMPTY_AUTOMATIONS_BOT_FILTERS,
+  sortKey: "name",
+  sortDir: "asc",
+  page: 1,
+  scrollY: 0,
+};
+
+export function automationsListViewKey(pathname: string, deskId: string): string {
+  return `tbp-automations-list:${pathname}:${deskId}`;
+}
+
+export function parseAutomationsListView(raw: unknown): AutomationsListView | null {
+  if (typeof raw !== "string" || !raw) {
+    return null;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return null;
+  }
+  const row = parsed as Record<string, unknown>;
+  const filters = row.filters;
+  if (!filters || typeof filters !== "object") {
+    return null;
+  }
+  const fields = filters as Record<string, unknown>;
+  if (
+    typeof fields.q !== "string" ||
+    typeof fields.pair !== "string" ||
+    typeof fields.status !== "string" ||
+    typeof row.sortKey !== "string" ||
+    !AUTOMATIONS_SORT_KEYS.has(row.sortKey) ||
+    (row.sortDir !== "asc" && row.sortDir !== "desc") ||
+    typeof row.page !== "number" ||
+    !Number.isInteger(row.page) ||
+    row.page < 1 ||
+    typeof row.scrollY !== "number" ||
+    !Number.isFinite(row.scrollY) ||
+    row.scrollY < 0
+  ) {
+    return null;
+  }
+  return {
+    filters: { q: fields.q, pair: fields.pair, status: fields.status },
+    sortKey: row.sortKey,
+    sortDir: row.sortDir,
+    page: row.page,
+    scrollY: row.scrollY,
+  };
+}
+
+export function serializeAutomationsListView(view: AutomationsListView): string {
+  return JSON.stringify(view);
+}
+
 export function automationsBotFiltersActive(
   filters: AutomationsBotFilters,
 ): boolean {

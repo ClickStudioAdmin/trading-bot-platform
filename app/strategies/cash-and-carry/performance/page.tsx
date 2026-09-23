@@ -7,7 +7,11 @@ import {
   ClosedPaperTrades,
   PaperPerformanceStats,
 } from "@/components/paper-blotter";
-import { deskHref } from "@/lib/accounts/model";
+import {
+  CASH_AND_CARRY_AUTOMATIONS_PATH,
+  automationsBotReturn,
+  automationsReturnHref,
+} from "@/lib/bots/automations-path";
 import { getSessionContext } from "@/lib/auth/session";
 import {
   deskBlotterFiltersActive,
@@ -42,13 +46,21 @@ export default async function CashAndCarryPerformancePage({
       : loadPaperPerformanceBook(ruleId == null ? undefined : { ruleId }),
     listPaperBotOptions(),
   ]);
+  const botReturn = automationsBotReturn(
+    params,
+    bots,
+    filters.bot,
+    CASH_AND_CARRY_AUTOMATIONS_PATH,
+    session?.account.id,
+  );
   const visibleClosed = filterPaperBlotterRows(
     desk.closed,
     ruleId == null ? filters : { ...filters, bot: "" },
   );
-  const clearHref = deskHref(
+  const clearHref = automationsReturnHref(
     "/strategies/cash-and-carry/performance",
     session?.account.id,
+    botReturn.keep,
   );
 
   return (
@@ -56,11 +68,14 @@ export default async function CashAndCarryPerformancePage({
       <PaperPerformanceStats
         signedIn={desk.signedIn}
         closed={visibleClosed}
+        title={botReturn.titleFor("Desk Statistics")}
+        backHref={botReturn.backHref}
         scope={
           <DeskBlotterScopeSelect
             values={filters}
             bots={bots}
             deskId={session?.account.id}
+            keep={botReturn.keep}
           />
         }
       />
@@ -74,6 +89,7 @@ export default async function CashAndCarryPerformancePage({
             bots={bots}
             deskId={session?.account.id}
             clearHref={clearHref}
+            keep={botReturn.keep}
             showSide={false}
           />
         }

@@ -509,6 +509,15 @@ export function useClientTable<T>(
     setPage(1);
   }
 
+  const replaceView = useCallback(
+    (next: { sortKey: string; sortDir: TableSortDir; page: number }) => {
+      setSortKey(next.sortKey);
+      setSortDir(next.sortDir);
+      setPage(next.page);
+    },
+    [],
+  );
+
   return {
     pageRows: sliced.rows,
     window: sliced.window,
@@ -516,6 +525,7 @@ export function useClientTable<T>(
     sortDir,
     onSort,
     setPage,
+    replaceView,
   };
 }
 

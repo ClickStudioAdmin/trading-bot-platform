@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppSelect } from "@/components/app-select";
 import {
   AutomationsColumnPicker,
@@ -35,14 +36,36 @@ import {
   TablePager,
   useClientTable,
 } from "@/components/table-chrome";
+import { DESK_QUERY } from "@/lib/accounts/model";
 import {
+  DEFAULT_AUTOMATIONS_LIST_VIEW,
   EMPTY_AUTOMATIONS_BOT_FILTERS,
   automationsBotFiltersActive,
+  automationsListViewKey,
+  parseAutomationsListView,
+  serializeAutomationsListView,
+  type AutomationsListView,
   compareAutomationsBot,
   filterAutomationsBots,
   type AutomationsBotFilters,
 } from "@/lib/bots/automations-list";
 import { statusOptionsFor, type BotDeskKind } from "@/lib/bots/status";
+
+function readAutomationsListView(key: string): AutomationsListView | null {
+  try {
+    return parseAutomationsListView(window.sessionStorage.getItem(key));
+  } catch {
+    return null;
+  }
+}
+
+function writeAutomationsListView(key: string, view: AutomationsListView) {
+  try {
+    window.sessionStorage.setItem(key, serializeAutomationsListView(view));
+  } catch {
+    // ignore quota / private mode
+  }
+}
 import { formatCount, formatPct, signedTone } from "@/lib/opportunities/format";
 import { TokenIcon } from "@/components/token-icon";
 import { ColumnHint } from "@/components/column-hint";
@@ -150,7 +173,12 @@ export function AutomationsBotTable({
 }) {
   const { confirm, dialog } = useConfirmDialog();
   const { visible, setColumn } = useAutomationsColumns();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const deskId = searchParams.get(DESK_QUERY) ?? "";
+  const storageKey = automationsListViewKey(pathname, deskId);
   const [filters, setFilters] = useState(EMPTY_AUTOMATIONS_BOT_FILTERS);
+  const [restoredKey, setRestoredKey] = useState<string | null>(null);
   const filtered = useMemo(
     () => filterAutomationsBots(rows, filters),
     [filters, rows],
@@ -158,19 +186,144 @@ export function AutomationsBotTable({
   const table = useClientTable(filtered, compareAutomationsBot, {
     defaultKey: "name",
   });
-  const revealedId = useRef<string | null>(null);
+  const appliedKey = useRef<string | null>(null);
+  const pendingScroll = useRef<number | null>(null);
+  const scrolledKey = useRef<string | null>(null);
+  const scrollY = useRef(0);
+  const leaving = useRef(false);
+  const snap = useRef<AutomationsListView>(DEFAULT_AUTOMATIONS_LIST_VIEW);
+
+  useLayoutEffect(() => {
+    if (appliedKey.current === storageKey) {
+      return;
+    }
+    appliedKey.current = storageKey;
+    scrolledKey.current = null;
+    const saved = readAutomationsListView(storageKey);
+    const next = saved ?? DEFAULT_AUTOMATIONS_LIST_VIEW;
+    setFilters(next.filters);
+    table.replaceView({
+      sortKey: next.sortKey,
+      sortDir: next.sortDir,
+      page: next.page,
+    });
+    scrollY.current = next.scrollY;
+    pendingScroll.current = revealId ? null : next.scrollY;
+    leaving.current = false;
+    setRestoredKey(storageKey);
+  }, [revealId, storageKey, table]);
+
+  useEffect(() => {
+    snap.current = {
+      filters,
+      sortKey: table.sortKey,
+      sortDir: table.sortDir,
+      page: table.window.page,
+      scrollY: 0,
+    };
+  }, [filters, table.sortDir, table.sortKey, table.window.page]);
+
+  useLayoutEffect(() => {
+    if (restoredKey !== storageKey || pendingScroll.current == null) {
+      return;
+    }
+    if (scrolledKey.current === storageKey) {
+      return;
+    }
+    scrolledKey.current = storageKey;
+    const y = pendingScroll.current;
+    pendingScroll.current = null;
+    window.scrollTo(0, y);
+    const frame = requestAnimationFrame(() => window.scrollTo(0, y));
+    return () => cancelAnimationFrame(frame);
+  }, [filters, restoredKey, storageKey, table.window.page]);
+
+  useEffect(() => {
+    if (restoredKey !== storageKey) {
+      return;
+    }
+    writeAutomationsListView(storageKey, {
+      filters,
+      sortKey: table.sortKey,
+      sortDir: table.sortDir,
+      page: table.window.page,
+      scrollY: scrollY.current,
+    });
+  }, [
+    filters,
+    restoredKey,
+    storageKey,
+    table.sortDir,
+    table.sortKey,
+    table.window.page,
+  ]);
+
+  useEffect(() => {
+    if (restoredKey !== storageKey) {
+      return;
+    }
+    let frame = 0;
+    const persist = () => {
+      writeAutomationsListView(storageKey, {
+        ...snap.current,
+        scrollY: scrollY.current,
+      });
+    };
+    const onScroll = () => {
+      if (leaving.current) {
+        return;
+      }
+      scrollY.current = window.scrollY;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(persist);
+    };
+    const onClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey ||
+        !(target instanceof Element) ||
+        !target.closest("a")
+      ) {
+        return;
+      }
+      leaving.current = true;
+      scrollY.current = window.scrollY;
+      persist();
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("pagehide", persist);
+    document.addEventListener("click", onClick, true);
+    return () => {
+      cancelAnimationFrame(frame);
+      persist();
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("pagehide", persist);
+      document.removeEventListener("click", onClick, true);
+    };
+  }, [restoredKey, storageKey]);
+
   const revealPage = revealPageFor(
     filtered,
     revealId ?? null,
     table.sortKey,
     table.sortDir,
   );
-  if (revealId && revealPage != null && revealedId.current !== revealId) {
-    revealedId.current = revealId;
+  const revealedToken = useRef<string | null>(null);
+  const revealToken = `${revealId ?? ""}:${filters.q}:${filters.pair}:${filters.status}:${table.sortKey}:${table.sortDir}`;
+  useLayoutEffect(() => {
+    if (!revealId || revealPage == null || revealedToken.current === revealToken) {
+      return;
+    }
+    revealedToken.current = revealToken;
     if (table.window.page !== revealPage) {
       table.setPage(revealPage);
     }
-  }
+  }, [revealId, revealPage, revealToken, table]);
   const filtersActive = automationsBotFiltersActive(filters);
 
   function changeFilter(key: keyof AutomationsBotFilters, value: string) {
@@ -210,6 +363,7 @@ export function AutomationsBotTable({
     <>
     {dialog}
     <TableFilterSession
+      id={deskId}
       actions={
         <>
           {toolbar}

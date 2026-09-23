@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
+import { DeskBackLink } from "@/components/desk-back-link";
 import {
   SortTh,
   TableCard,
@@ -530,10 +531,14 @@ export function PaperPerformanceStats({
   signedIn,
   closed,
   scope,
+  title = "Desk Statistics",
+  backHref = null,
 }: {
   signedIn: boolean;
   closed: PaperCarryRow[];
   scope?: ReactNode;
+  title?: string;
+  backHref?: string | null;
 }) {
   const stats = paperDeskStats([], closed);
   const winRate =
@@ -544,7 +549,8 @@ export function PaperPerformanceStats({
   return (
     <section>
       <SectionHead
-        title="Desk Statistics"
+        title={title}
+        backHref={backHref}
         subtitle={
           signedIn ? undefined : "Sign in to see your paper desk numbers."
         }
@@ -620,20 +626,25 @@ function SectionHead({
   title,
   subtitle,
   action,
+  backHref,
   className = "mb-3",
 }: {
   title: string;
   subtitle?: string;
   action?: ReactNode;
+  backHref?: string | null;
   className?: string;
 }) {
   return (
     <div
       className={`flex items-start justify-between gap-4 ${className}`.trim()}
     >
-      <div className="min-w-0">
-        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-        {subtitle ? <p className="text-sm text-ink-muted">{subtitle}</p> : null}
+      <div className="flex min-w-0 items-center gap-3">
+        {backHref ? <DeskBackLink href={backHref} /> : null}
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+          {subtitle ? <p className="text-sm text-ink-muted">{subtitle}</p> : null}
+        </div>
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>

@@ -11,7 +11,7 @@ import {
   OpenFuturesTrades,
 } from "@/components/futures-blotter";
 import { FuturesWorkingOrders } from "@/components/futures-working";
-import { PageHeading } from "@/components/page-heading";
+import { DeskReturnHeading } from "@/components/desk-return-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { getSessionContext } from "@/lib/auth/session";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
@@ -21,6 +21,10 @@ import {
 } from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { deskAllowsManualPerpTicket, deskAllowsSignalWebhooks, deskHref, deskIsCopy, deskShowsDcaBlotter } from "@/lib/accounts/model";
+import {
+  automationsBotReturn,
+  automationsReturnHref,
+} from "@/lib/bots/automations-path";
 import { DeskBookReconcile } from "@/components/desk-book-reconcile";
 import { dcaHintKey, dcaHintsForCopyOpen, dcaHintsForOpen } from "@/lib/dca/playbook";
 import {
@@ -203,6 +207,18 @@ export default async function FuturesPositionsPage({
           id: rule.id as string,
           name: rule.name,
         }));
+  const botReturn = automationsBotReturn(
+    params,
+    bots,
+    filters.bot,
+    FUTURES_PATHS.automations,
+    session?.account.id,
+  );
+  const clearHref = automationsReturnHref(
+    NEXT_PATH,
+    session?.account.id,
+    botReturn.keep,
+  );
   const visibleOpen = filterFuturesBlotterRows(
     open,
     filters,
@@ -269,15 +285,16 @@ export default async function FuturesPositionsPage({
 
         <LiveTickerScope symbols={open.map((row) => row.symbol)}>
         <section>
-        <PageHeading
-          as="h2"
-          title="Current Positions"
+        <DeskReturnHeading
+          title={botReturn.titleFor("Current Positions")}
+          backHref={botReturn.backHref}
           className="mb-3"
           actions={
             <DeskBlotterScopeSelect
               values={filters}
               bots={bots}
               deskId={session?.account.id}
+              keep={botReturn.keep}
             />
           }
         />
@@ -371,7 +388,8 @@ export default async function FuturesPositionsPage({
               values={filters}
               bots={bots}
               deskId={session?.account.id}
-              clearHref={NEXT}
+              clearHref={clearHref}
+              keep={botReturn.keep}
             />
           }
           exchangeBook={desk.exchangeBook}
@@ -422,7 +440,8 @@ export default async function FuturesPositionsPage({
               values={filters}
               bots={bots}
               deskId={session?.account.id}
-              clearHref={NEXT}
+              clearHref={clearHref}
+              keep={botReturn.keep}
             />
           }
           urgentRefresh={futuresDeskNeedsUrgentRefresh({

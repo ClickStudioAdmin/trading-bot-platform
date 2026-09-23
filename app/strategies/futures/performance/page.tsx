@@ -7,7 +7,11 @@ import {
   ClosedFuturesTrades,
   FuturesPerformanceStats,
 } from "@/components/futures-blotter";
-import { deskHref, deskIsCopy, deskShowsDcaBlotter } from "@/lib/accounts/model";
+import { deskIsCopy, deskShowsDcaBlotter } from "@/lib/accounts/model";
+import {
+  automationsBotReturn,
+  automationsReturnHref,
+} from "@/lib/bots/automations-path";
 import { getSessionContext } from "@/lib/auth/session";
 import { listDcaBotOptions, loadDcaPlaybookById } from "@/lib/dca/store";
 import {
@@ -79,6 +83,13 @@ export default async function FuturesPerformancePage({
     session ? loadFuturesSettings(session.account.id) : Promise.resolve(null),
   ]);
   const bots = dcaBlotter ? botOptions : perpsBots;
+  const botReturn = automationsBotReturn(
+    params,
+    bots,
+    filters.bot,
+    FUTURES_PATHS.automations,
+    session?.account.id,
+  );
   const memoryFilters = botScope ? { ...filters, bot: "" } : filters;
   const scopedClosed = filterFuturesBlotterRows(
     desk.closed,
@@ -96,13 +107,18 @@ export default async function FuturesPerformancePage({
         )
       : scopedClosed;
   const visibleOpen = filterFuturesBlotterRows(desk.open, memoryFilters);
-  const clearHref = deskHref(FUTURES_PATHS.performance, session?.account.id);
+  const clearHref = automationsReturnHref(
+    FUTURES_PATHS.performance,
+    session?.account.id,
+    botReturn.keep,
+  );
   const filterBar = (
     <DeskBlotterFilters
       values={filters}
       bots={bots}
       deskId={session?.account.id}
       clearHref={clearHref}
+      keep={botReturn.keep}
     />
   );
   const filteredEmpty = deskBlotterFiltersActive(filters)
@@ -119,11 +135,14 @@ export default async function FuturesPerformancePage({
         fallbackLeverage={
           desk.exchangeBook ? null : (settings?.paperLeverage ?? null)
         }
+        title={botReturn.titleFor("Desk Statistics")}
+        backHref={botReturn.backHref}
         scope={
           <DeskBlotterScopeSelect
             values={filters}
             bots={bots}
             deskId={session?.account.id}
+            keep={botReturn.keep}
           />
         }
       />

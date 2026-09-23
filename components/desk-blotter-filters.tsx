@@ -14,14 +14,25 @@ import {
   type DeskBlotterFilters,
 } from "@/lib/desk-blotter-filters";
 
+function KeptQuery({ keep }: { keep?: Record<string, string> }) {
+  if (!keep) {
+    return null;
+  }
+  return Object.entries(keep).map(([key, value]) =>
+    value ? <input key={key} type="hidden" name={key} value={value} /> : null,
+  );
+}
+
 export function DeskBlotterScopeSelect({
   values,
   bots,
   deskId,
+  keep,
 }: {
   values: DeskBlotterFilters;
   bots: readonly DeskBlotterBotOption[];
   deskId?: string | null;
+  keep?: Record<string, string>;
 }) {
   if (bots.length === 0) {
     return null;
@@ -29,6 +40,7 @@ export function DeskBlotterScopeSelect({
   return (
     <LiveGetForm bare className="w-[17.5rem] shrink-0">
       {deskId ? <input type="hidden" name={DESK_QUERY} value={deskId} /> : null}
+      <KeptQuery keep={keep} />
       {values.pair ? (
         <input type="hidden" name="pair" value={values.pair} />
       ) : null}
@@ -59,16 +71,19 @@ export function DeskBlotterFilters({
   clearHref,
   deskId,
   showSide = true,
+  keep,
 }: {
   values: DeskBlotterFilters;
   bots: readonly DeskBlotterBotOption[];
   clearHref: string;
   deskId?: string | null;
   showSide?: boolean;
+  keep?: Record<string, string>;
 }) {
   return (
     <LiveGetForm>
       {deskId ? <input type="hidden" name={DESK_QUERY} value={deskId} /> : null}
+      <KeptQuery keep={keep} />
       {bots.length > 0 ? (
         <TableFilterField label="Bot">
           <AppSelect

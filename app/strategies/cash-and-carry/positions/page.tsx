@@ -3,7 +3,7 @@ import {
   DeskBlotterFilters,
   DeskBlotterScopeSelect,
 } from "@/components/desk-blotter-filters";
-import { PageHeading } from "@/components/page-heading";
+import { DeskReturnHeading } from "@/components/desk-return-heading";
 import { OpenPaperTrades, PaperOpenStats } from "@/components/paper-blotter";
 import { PaperFlash } from "@/components/paper-flash";
 import { loadUsableBookShare } from "@/lib/engine/settings";
@@ -13,6 +13,11 @@ import { firstSearchValue } from "@/lib/paper/open";
 import { listPaperBotOptions, loadPaperOpenCarryRows, paperBotRuleId } from "@/lib/paper/list";
 import { markOpenCarries } from "@/lib/paper/rows";
 import { deskHref } from "@/lib/accounts/model";
+import {
+  CASH_AND_CARRY_AUTOMATIONS_PATH,
+  automationsBotReturn,
+  automationsReturnHref,
+} from "@/lib/bots/automations-path";
 import { getSessionContext } from "@/lib/auth/session";
 import {
   deskBlotterFiltersActive,
@@ -55,6 +60,18 @@ export default async function CashAndCarryPositionsPage({
       : loadPaperOpenCarryRows(ruleId == null ? undefined : { ruleId }),
     listPaperBotOptions(),
   ]);
+  const botReturn = automationsBotReturn(
+    params,
+    bots,
+    filters.bot,
+    CASH_AND_CARRY_AUTOMATIONS_PATH,
+    session?.account.id,
+  );
+  const clearHref = automationsReturnHref(
+    "/strategies/cash-and-carry/positions",
+    session?.account.id,
+    botReturn.keep,
+  );
   const visibleOpen = filterPaperBlotterRows(
     markOpenCarries(
       openBook.rows,
@@ -79,15 +96,16 @@ export default async function CashAndCarryPositionsPage({
           error={firstSearchValue(params.paperError)}
         />
         <section>
-        <PageHeading
-          as="h2"
-          title="Current Positions"
+        <DeskReturnHeading
+          title={botReturn.titleFor("Current Positions")}
+          backHref={botReturn.backHref}
           className="mb-3"
           actions={
             <DeskBlotterScopeSelect
               values={filters}
               bots={bots}
               deskId={session?.account.id}
+              keep={botReturn.keep}
             />
           }
         />
@@ -106,7 +124,8 @@ export default async function CashAndCarryPositionsPage({
               values={filters}
               bots={bots}
               deskId={session?.account.id}
-              clearHref={next}
+              clearHref={clearHref}
+              keep={botReturn.keep}
               showSide={false}
             />
           }

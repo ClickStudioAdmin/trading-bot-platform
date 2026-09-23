@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
+import { DeskBackLink } from "@/components/desk-back-link";
 import { ContainerLoading } from "@/components/container-loading";
 import {
   SortTh,
@@ -837,6 +838,8 @@ export function FuturesPerformanceStats({
   openUnrealizedUsdt = null,
   open = [],
   scope,
+  title = "Desk Statistics",
+  backHref = null,
 }: {
   signedIn: boolean;
   closed: FuturesDeskPosition[];
@@ -849,6 +852,8 @@ export function FuturesPerformanceStats({
   openUnrealizedUsdt?: number | null;
   open?: FuturesDeskPosition[];
   scope?: ReactNode;
+  title?: string;
+  backHref?: string | null;
 }) {
   const stats = futuresClosedStats(closed, fallbackLeverage);
   const drawdown = deskWindowStats(closed);
@@ -962,7 +967,8 @@ export function FuturesPerformanceStats({
   return (
     <section>
       <SectionHead
-        title="Desk Statistics"
+        title={title}
+        backHref={backHref}
         subtitle={
           signedIn ? undefined : "Sign in to see this book’s realized numbers."
         }
@@ -1495,20 +1501,25 @@ function SectionHead({
   title,
   subtitle,
   action,
+  backHref,
   className = "mb-3",
 }: {
   title: string;
   subtitle?: string;
   action?: ReactNode;
+  backHref?: string | null;
   className?: string;
 }) {
   return (
     <div
       className={`flex items-start justify-between gap-4 ${className}`.trim()}
     >
-      <div className="min-w-0">
-        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-        {subtitle ? <p className="text-sm text-ink-muted">{subtitle}</p> : null}
+      <div className="flex min-w-0 items-center gap-3">
+        {backHref ? <DeskBackLink href={backHref} /> : null}
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+          {subtitle ? <p className="text-sm text-ink-muted">{subtitle}</p> : null}
+        </div>
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>

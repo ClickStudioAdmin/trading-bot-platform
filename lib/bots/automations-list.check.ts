@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import {
   automationsBotBlotterCells,
   automationsBotFiltersActive,
+  automationsListViewKey,
+  parseAutomationsListView,
+  serializeAutomationsListView,
   botModeLabel,
   botPairBaseCoin,
   compareAutomationsBot,
@@ -17,7 +20,12 @@ import {
   perpsBotPair,
   perpsBotSummary,
 } from "./automations-list";
-import { automationsBotBlotterHref } from "./automations-path";
+import {
+  automationsBotBlotterHref,
+  automationsBotReturn,
+  automationsReturnHref,
+  focusedBotTitle,
+} from "./automations-path";
 import { defaultFuturesAutomationForm } from "@/lib/futures/automation";
 import { paperConfigToFormValues, defaultPaperLayer } from "@/lib/engine/rules";
 import type { DcaPlaybook } from "@/lib/dca/playbook";
@@ -213,7 +221,7 @@ assert.deepEqual(
 
 assert.equal(
   automationsBotBlotterHref("/strategies/futures/positions", "desk-1", "pb-1"),
-  "/strategies/futures/positions?desk=desk-1&bot=pb-1",
+  "/strategies/futures/positions?desk=desk-1&bot=pb-1&from=bots&focus=pb-1",
 );
 assert.deepEqual(
   automationsBotBlotterCells(
@@ -226,8 +234,10 @@ assert.deepEqual(
   {
     positionCount: 2,
     roePct: 0.14,
-    positionsHref: "/strategies/futures/positions?desk=desk-1&bot=pb-1",
-    performanceHref: "/strategies/futures/performance?desk=desk-1&bot=pb-1",
+    positionsHref:
+      "/strategies/futures/positions?desk=desk-1&bot=pb-1&from=bots&focus=pb-1",
+    performanceHref:
+      "/strategies/futures/performance?desk=desk-1&bot=pb-1&from=bots&focus=pb-1",
   },
 );
 
@@ -305,4 +315,88 @@ assert.deepEqual(
     { q: "bot", pair: "", status: "Active" },
   ).map((row) => row.pair),
   ["Carry"],
+);
+
+const bots = [
+  { id: "pb-1", name: "Add 1 ATR" },
+  { id: "pb-2", name: "" },
+];
+assert.equal(
+  focusedBotTitle("Current Positions", bots, "pb-1", "pb-1"),
+  "Current Positions - Add 1 ATR",
+);
+assert.equal(
+  focusedBotTitle("Desk Statistics", bots, "pb-2", "pb-2"),
+  "Desk Statistics - Bot",
+);
+assert.equal(
+  focusedBotTitle("Current Positions", bots, "", "pb-1"),
+  "Current Positions",
+);
+assert.equal(
+  focusedBotTitle("Current Positions", bots, "pb-2", "pb-1"),
+  "Current Positions",
+);
+const arrived = automationsBotReturn(
+  { from: "bots", focus: "pb-1", bot: "pb-1" },
+  bots,
+  "pb-1",
+  "/strategies/futures/automations",
+  "desk-1",
+);
+assert.equal(arrived.backHref, "/strategies/futures/automations?desk=desk-1");
+assert.deepEqual(arrived.keep, { from: "bots", focus: "pb-1" });
+assert.equal(arrived.titleFor("Current Positions"), "Current Positions - Add 1 ATR");
+const switched = automationsBotReturn(
+  { from: "bots", focus: "pb-1", bot: "pb-2" },
+  bots,
+  "pb-2",
+  "/strategies/futures/automations",
+  "desk-1",
+);
+assert.equal(switched.backHref, "/strategies/futures/automations?desk=desk-1");
+assert.equal(switched.titleFor("Current Positions"), "Current Positions");
+assert.equal(
+  automationsBotReturn(null, bots, "", "/strategies/futures/automations", "desk-1")
+    .backHref,
+  null,
+);
+assert.equal(
+  automationsReturnHref(
+    "/strategies/futures/positions",
+    "desk-1",
+    { from: "bots", focus: "pb-1" },
+  ),
+  "/strategies/futures/positions?desk=desk-1&from=bots&focus=pb-1",
+);
+assert.equal(
+  automationsReturnHref("/strategies/futures/positions", "desk-1", {}),
+  "/strategies/futures/positions?desk=desk-1",
+);
+
+const savedView = {
+  filters: { q: "atr", pair: "og", status: "active" },
+  sortKey: "performance",
+  sortDir: "desc" as const,
+  page: 3,
+  scrollY: 840,
+};
+assert.equal(
+  automationsListViewKey("/strategies/futures/automations", "desk-1"),
+  "tbp-automations-list:/strategies/futures/automations:desk-1",
+);
+assert.deepEqual(
+  parseAutomationsListView(serializeAutomationsListView(savedView)),
+  savedView,
+);
+assert.equal(parseAutomationsListView("{"), null);
+assert.equal(
+  parseAutomationsListView(
+    JSON.stringify({ ...savedView, sortKey: "missing" }),
+  ),
+  null,
+);
+assert.equal(
+  parseAutomationsListView(JSON.stringify({ ...savedView, page: 0 })),
+  null,
 );
