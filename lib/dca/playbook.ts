@@ -2247,6 +2247,11 @@ export function dcaClipsFilledFromGrid(input: {
 }): number {
   const floor = input.hasFirstFill ? 1 : 0;
   const fromFilled = floor + Math.max(0, input.filledAdds);
+  if (!input.hasFirstFill) {
+    return input.maxClips === null
+      ? input.filledAdds
+      : Math.min(input.maxClips, input.filledAdds);
+  }
   if (input.maxClips === null) {
     return fromFilled;
   }
@@ -2605,6 +2610,20 @@ export function decideDcaTick(input: {
       positionQty: input.positionQty,
     })
   ) {
+    const levelRestart =
+      !input.reduceOnly &&
+      confirmMet &&
+      (startKind === "indicator" || startKind === "trend") &&
+      !latchCross &&
+      indicatorNow;
+    if (levelRestart) {
+      return {
+        action: { kind: "arm" },
+        nextArmTrue,
+        nextDisarmTrue,
+        nextIndicatorTrue,
+      };
+    }
     return {
       action: { kind: "end_cycle" },
       nextArmTrue,

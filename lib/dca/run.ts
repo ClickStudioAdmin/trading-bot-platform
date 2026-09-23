@@ -1838,16 +1838,33 @@ async function applyDcaVerbUnlocked(input: {
         positionQty: open?.qty ?? null,
       })
     ) {
-      const reset = await resetDcaLeg({
-        supabase,
-        id: playbook.id,
-        side,
-      });
-      if (!reset.ok) {
-        return reset;
+      if (input.forcePlace && dcaStartListens(playbook.startKind)) {
+        const kept = await keepListeningAfterFlatten({ playbook, side });
+        if (!kept.ok) {
+          return kept;
+        }
+        leg = {
+          ...leg,
+          status: "armed",
+          clipsFilled: 0,
+          lastClipPrice: null,
+          lastClipAtMs: null,
+          firstFillPrice: null,
+          breakevenDone: false,
+          cycleMaxValue: null,
+        };
+      } else {
+        const reset = await resetDcaLeg({
+          supabase,
+          id: playbook.id,
+          side,
+        });
+        if (!reset.ok) {
+          return reset;
+        }
+        leg = { ...IDLE_DCA_LEG };
       }
       touchPlaybook(playbook);
-      leg = { ...IDLE_DCA_LEG };
       if (side === "long") {
         playbook.long = leg;
       } else {

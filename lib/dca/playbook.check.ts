@@ -890,6 +890,15 @@ assert.equal(
   1,
 );
 assert.equal(
+  dcaClipsFilledFromGrid({
+    hasFirstFill: false,
+    maxClips: 10,
+    openWorking: 9,
+    filledAdds: 0,
+  }),
+  0,
+);
+assert.equal(
   dcaGridClipCounts(
     [
       { status: "open", idempotencyKey: dcaClipKey(safetyId, "long", 1) },
@@ -2775,6 +2784,52 @@ assert.equal(
     closes: sitTrendBars.map((row) => row.close),
   }).due,
   false,
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 1,
+    positionQty: null,
+    entryPrice: null,
+    startKind: "trend",
+    indicatorKind: "supertrend",
+    indicatorCompare: "gte",
+    bars: sitTrendBars,
+    closes: sitTrendBars.map((row) => row.close),
+  }).action.kind,
+  "arm",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 1,
+    positionQty: null,
+    entryPrice: null,
+    startKind: "trend",
+    indicatorKind: "supertrend",
+    indicatorCompare: "lte",
+    bars: sitTrendBars,
+    closes: sitTrendBars.map((row) => row.close),
+  }).action.kind,
+  "end_cycle",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 1,
+    positionQty: null,
+    entryPrice: null,
+    startKind: "trend",
+    indicatorKind: "supertrend",
+    indicatorCompare: "cross_gte",
+    indicatorConditionTrue: true,
+    bars: [],
+    closes: [],
+  }).action.kind,
+  "end_cycle",
 );
 assert.equal(
   dcaSeriesStartEval({
