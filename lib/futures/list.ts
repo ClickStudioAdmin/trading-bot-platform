@@ -17,7 +17,6 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import {
   FUTURES_LIVE_POSITION_STATUSES,
   FUTURES_LIVE_WORKING_STATUSES,
-  futuresPositionIsLive,
 } from "./pending-close";
 
 export type FuturesListScope = {
@@ -130,26 +129,6 @@ export async function loadFuturesPositions(input?: {
   return rows;
 }
 
-export async function loadFuturesOrders(): Promise<FuturesOrder[]> {
-  const session = await getSessionContext();
-  const supabase = createServiceClient();
-  if (!session || !supabase) {
-    return [];
-  }
-  const { data, error } = await supabase
-    .from("futures_orders")
-    .select("*")
-    .eq("account_id", session.account.id)
-    .eq("user_id", session.member.id)
-    .order("filled_at", { ascending: true });
-  if (error || !data) {
-    return [];
-  }
-  return data.map((row) =>
-    parseFuturesOrderRow(row as Record<string, unknown>),
-  );
-}
-
 export async function loadFuturesWorking(
   scope?: FuturesListScope,
   statuses: readonly string[] = ["open"],
@@ -191,21 +170,10 @@ export type FuturesDeskPosition = FuturesPosition & {
   logs: EventLogRow[];
 };
 
-function attachOrders(
-  rows: FuturesPosition[],
-  orders: FuturesOrder[],
-): (FuturesPosition & { orders: FuturesOrder[] })[] {
-  return rows.map((row) => ({
-    ...row,
-    orders: orders.filter((order) => order.positionId === row.id),
-  }));
-}
-
 export async function loadFuturesDesk(): Promise<{
   signedIn: boolean;
   exchangeBook: boolean;
   open: FuturesDeskPosition[];
-  closed: FuturesDeskPosition[];
   working: FuturesWorkingOrder[];
   webhookNames: string[];
 }> {
@@ -215,24 +183,23 @@ export async function loadFuturesDesk(): Promise<{
       signedIn: false,
       exchangeBook: false,
       open: [],
-      closed: [],
       working: [],
       webhookNames: [],
     };
   }
-  const [rows, orders, working, webhookNames] = await Promise.all([
-    loadFuturesPositions(),
-    loadFuturesOrders(),
-    loadLiveFuturesWorking(),
+  const scope: FuturesListScope = {
+    accountId: session.account.id,
+    userId: session.member.id,
+  };
+  const [rows, working, webhookNames] = await Promise.all([
+    loadFuturesPositions({ status: "open", scope }),
+    loadLiveFuturesWorking(scope),
     listFuturesOrderWebhookNames(session.account.id),
   ]);
-  const withOrders = attachOrders(rows, orders);
-  const withLogs = withOrders.map((row) => ({ ...row, logs: [] }));
   return {
     signedIn: true,
     exchangeBook: accountCanHoldConnections(session.account.mode),
-    open: withLogs.filter((row) => futuresPositionIsLive(row.status)),
-    closed: withLogs.filter((row) => row.status === "closed"),
+    open: rows.map((row) => ({ ...row, orders: [], logs: [] })),
     working,
     webhookNames,
   };
@@ -391,7 +358,7 @@ export function futuresOpenBookFromDesk(desk: {
     webhookNames: desk.webhookNames,
     closeAllOpenCount: desk.open.length,
     cancelAllWorkingCount: desk.working.length,
-    fillsLoaded: true,
+    fillsLoaded: false,
   };
 }
 
