@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { venueAlreadyFlatError } from "@/lib/exchanges/execute";
-import { attributeClosingFill, pickClosingFill } from "./venue-close";
+import {
+  attributeClosingFill,
+  executionClosedQty,
+  executionStopLabel,
+  pickClosingFill,
+} from "./venue-close";
 
 const picked = pickClosingFill({
   side: "long",
@@ -96,5 +101,28 @@ assert.equal(
   true,
 );
 assert.equal(venueAlreadyFlatError("insufficient balance"), false);
+
+assert.equal(
+  executionStopLabel("", "CreateByTakeProfit"),
+  "TakeProfit",
+);
+assert.equal(
+  executionClosedQty({
+    closedSize: 0,
+    execQty: 0.4,
+    stopOrderType: "",
+    createType: "CreateByStopLoss",
+  }),
+  0.4,
+);
+assert.equal(
+  executionClosedQty({
+    closedSize: 0,
+    execQty: 0.4,
+    stopOrderType: "",
+    createType: "",
+  }),
+  0,
+);
 
 console.log("venue close checks passed");

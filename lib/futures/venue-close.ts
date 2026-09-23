@@ -29,6 +29,49 @@ function normalizeStop(raw: string): string {
   return raw.trim().toLowerCase().replace(/[\s_-]/g, "");
 }
 
+export function executionStopLabel(
+  stopOrderType: string,
+  createType = "",
+): string {
+  const stop = stopOrderType.trim();
+  if (stop && normalizeStop(stop) !== "unknown") {
+    return stop;
+  }
+  const created = normalizeStop(createType);
+  if (created.includes("takeprofit")) {
+    return "TakeProfit";
+  }
+  if (created.includes("stoploss")) {
+    return "StopLoss";
+  }
+  if (created.includes("trailing")) {
+    return "TrailingStop";
+  }
+  return stop;
+}
+
+export function executionClosedQty(input: {
+  closedSize: number;
+  execQty: number;
+  stopOrderType: string;
+  createType?: string;
+}): number {
+  if (input.closedSize > 0) {
+    return input.closedSize;
+  }
+  const stop = normalizeStop(
+    executionStopLabel(input.stopOrderType, input.createType ?? ""),
+  );
+  const closingStop =
+    stop.includes("takeprofit") ||
+    stop.includes("stoploss") ||
+    stop.includes("trailing");
+  if (closingStop && input.execQty > 0) {
+    return input.execQty;
+  }
+  return 0;
+}
+
 export function pickClosingFill(input: {
   executions: readonly ClosingExecution[];
   side: FuturesSide;

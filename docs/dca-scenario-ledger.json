@@ -849,7 +849,7 @@
       "slBasis": "average",
       "expect": "While RSI below is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (RSI between). If the gate is false, stay flat.",
       "symbol": "AAPLUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.82,
       "playbookId": "17b3bc76-8bc1-4de5-8101-f11af71bcd37",
       "status": "created"
     },
@@ -884,7 +884,7 @@
       "slBasis": "average",
       "expect": "While RSI below is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (BB above). If the gate is false, stay flat.",
       "symbol": "AAVEUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.07,
       "playbookId": "13b30188-bb13-4579-b42b-b505c4043249",
       "status": "created"
     },
@@ -1098,7 +1098,7 @@
       "slBasis": "average",
       "expect": "While RSI below is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (ST bull). If the gate is false, stay flat.",
       "symbol": "ADBEUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 7.21,
       "playbookId": "2c03edf2-7aa4-468c-9a97-deb73eac775e",
       "status": "created"
     },
@@ -1134,7 +1134,7 @@
       "slBasis": "average",
       "expect": "While RSI below is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (ST bear). If the gate is false, stay flat.",
       "symbol": "ADIUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 7.81,
       "playbookId": "66c305d7-f2fb-426c-aea4-d85ded77e801",
       "status": "created"
     },
@@ -1519,7 +1519,7 @@
       "slBasis": "average",
       "expect": "Wait for RSI x-above on 15m, then place the first long if the gate passes. Secondary must also be true (BB inside). A sit that is already true does not count.",
       "symbol": "AKEUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 9.21,
       "playbookId": "aef88ae9-a8bb-4c7f-94a3-15f9d3ebb115",
       "status": "created"
     },
@@ -1591,7 +1591,7 @@
       "slBasis": "average",
       "expect": "Wait for RSI x-above on 15m, then place the first long if the gate passes. Secondary must also be true (ATR below). A sit that is already true does not count.",
       "symbol": "ALABUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 7.23,
       "playbookId": "5c2651a2-7fc1-4e66-b11d-7e61f813c00a",
       "status": "created"
     },
@@ -1835,7 +1835,7 @@
       "slBasis": "average",
       "expect": "While RSI above is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (SMA above). If the gate is false, stay flat.",
       "symbol": "AMATUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 9.42,
       "playbookId": "1b3bc39e-9a5c-4e79-a83d-dc3dbb225b1f",
       "status": "created"
     },
@@ -1906,7 +1906,7 @@
       "slBasis": "average",
       "expect": "While RSI above is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (RSI below). If the gate is false, stay flat.",
       "symbol": "AMDSTOCKUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.22,
       "playbookId": "476c132e-7724-4146-90a5-fd13476bf46c",
       "status": "created"
     },
@@ -1942,7 +1942,7 @@
       "slBasis": "average",
       "expect": "While RSI above is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (RSI above). If the gate is false, stay flat.",
       "symbol": "AMGNUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 8.18,
       "playbookId": "08d2a248-30aa-4888-8704-7a8a201d9e21",
       "status": "created"
     },
@@ -2049,7 +2049,7 @@
       "slBasis": "average",
       "expect": "While RSI above is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (BB below). If the gate is false, stay flat.",
       "symbol": "ANETUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.18,
       "playbookId": "f9ac5e79-4728-4342-93b0-95868ca9d8d8",
       "status": "created"
     },
@@ -2295,7 +2295,7 @@
       "slBasis": "average",
       "expect": "Wait for MACD x-above on 15m, then place the first long if the gate passes. Secondary is off. A sit that is already true does not count.",
       "symbol": "APPSTOCKUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.61,
       "playbookId": "42ad9ad1-30b1-4f95-a953-febefb9e97ed",
       "status": "created"
     },
@@ -2614,7 +2614,7 @@
       "slBasis": "average",
       "expect": "Wait for MACD x-above on 15m, then place the first long if the gate passes. Secondary must also be true (BB below). A sit that is already true does not count.",
       "symbol": "ARMUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.64,
       "playbookId": "7a0b7eda-5a9e-4325-9365-db5ba72202ca",
       "status": "created"
     },
@@ -3214,7 +3214,7 @@
       "slBasis": "average",
       "expect": "Wait for MACD x-below on 15m, then place the first long if the gate passes. Secondary must also be true (BB inside). A sit that is already true does not count.",
       "symbol": "AVGOUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 7.29,
       "playbookId": "6c5673f3-cfad-4021-863c-02926b61d009",
       "status": "created"
     },
@@ -3990,7 +3990,7 @@
       "slBasis": "average",
       "expect": "While MACD below is true on 15m, place the first long on the tick if the gate passes. Secondary is off. If the gate is false, stay flat.",
       "symbol": "BCHUSDT",
-      "clipUsdt": 7.12,
+      "clipUsdt": 7.14,
       "playbookId": "2a9cd6e5-f787-4cb6-8c5d-d8cb51b860a4",
       "status": "created"
     },
@@ -4274,7 +4274,7 @@
       "slBasis": "average",
       "expect": "While MACD below is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (BB above). If the gate is false, stay flat.",
       "symbol": "BIIBUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.76,
       "playbookId": "357f8ea9-318b-4c61-95d5-00184bd529b7",
       "status": "created"
     },
@@ -5332,7 +5332,7 @@
       "slBasis": "average",
       "expect": "Wait for PxSMA x-below on 15m, then place the first long if the gate passes. Secondary must also be true (RSI above). A sit that is already true does not count.",
       "symbol": "BXUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.24,
       "playbookId": "0af5c45d-1663-4be5-b07e-3cd12b964a25",
       "status": "created"
     },
@@ -5685,7 +5685,7 @@
       "slBasis": "average",
       "expect": "While PxSMA above is true on 15m, place the first long on the tick if the gate passes. Secondary is off. If the gate is false, stay flat.",
       "symbol": "CBRSUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.32,
       "playbookId": "cefd1bdf-d09b-401e-bd9b-f2c27efb2a5a",
       "status": "created"
     },
@@ -6111,7 +6111,7 @@
       "slBasis": "average",
       "expect": "While PxSMA above is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (ATR below). If the gate is false, stay flat.",
       "symbol": "CIENUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 7.38,
       "playbookId": "fbd10cc2-e597-4b22-9d47-72ae575c1e22",
       "status": "created"
     },
@@ -6390,7 +6390,7 @@
       "slBasis": "average",
       "expect": "While PxSMA below is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (SMA below). If the gate is false, stay flat.",
       "symbol": "COHRUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.21,
       "playbookId": "0901152a-9ee0-49b7-af44-3ab28d25c682",
       "status": "created"
     },
@@ -6426,7 +6426,7 @@
       "slBasis": "average",
       "expect": "While PxSMA below is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (RSI below). If the gate is false, stay flat.",
       "symbol": "COINUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.04,
       "playbookId": "fe432352-04c1-4e14-87bd-a1c07621f2de",
       "status": "created"
     },
@@ -6640,7 +6640,7 @@
       "slBasis": "average",
       "expect": "While PxSMA below is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (ATR above). If the gate is false, stay flat.",
       "symbol": "COSTUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 9.02,
       "playbookId": "b6624abb-9a68-473b-a88f-6623986ca563",
       "status": "created"
     },
@@ -6850,7 +6850,7 @@
       "slBasis": "average",
       "expect": "Wait for PxEMA x-above on 15m, then place the first long if the gate passes. Secondary must also be true (EMA above). A sit that is already true does not count.",
       "symbol": "CRMUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 7.04,
       "playbookId": "1fd85dbe-d857-401c-913b-a5139e8cea1c",
       "status": "created"
     },
@@ -6991,7 +6991,7 @@
       "slBasis": "average",
       "expect": "Wait for PxEMA x-above on 15m, then place the first long if the gate passes. Secondary must also be true (RSI below). A sit that is already true does not count.",
       "symbol": "CRWDUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 7.49,
       "playbookId": "7294d6ba-85ee-4087-9db9-976fc632a11f",
       "status": "created"
     },
@@ -7313,7 +7313,7 @@
       "slBasis": "average",
       "expect": "Wait for PxEMA x-above on 15m, then place the first long if the gate passes. Secondary must also be true (ST bull). A sit that is already true does not count.",
       "symbol": "CVXSTOCKUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.09,
       "playbookId": "70c128b5-b49c-4aee-a14a-42dd02055629",
       "status": "created"
     },
@@ -7629,7 +7629,7 @@
       "slBasis": "average",
       "expect": "Wait for PxEMA x-below on 15m, then place the first long if the gate passes. Secondary must also be true (RSI between). A sit that is already true does not count.",
       "symbol": "DDOGUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 7.45,
       "playbookId": "1327c483-eaff-4c6c-a8eb-a82ae4f34355",
       "status": "created"
     },
@@ -8864,7 +8864,7 @@
       "slBasis": "average",
       "expect": "While PxEMA below is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (BB inside). If the gate is false, stay flat.",
       "symbol": "ETHUSDT",
-      "clipUsdt": 27.49,
+      "clipUsdt": 27.5,
       "playbookId": "11c92b11-74ef-44af-b2bc-18afe40d7d3c",
       "status": "created"
     },
@@ -10066,7 +10066,7 @@
       "slBasis": "average",
       "expect": "Wait for BB x-bottom on 15m, then place the first long if the gate passes. Secondary must also be true (ATR below). A sit that is already true does not count.",
       "symbol": "GEUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.41,
       "playbookId": "690357e3-3d8c-4633-a699-fd98f58191e1",
       "status": "created"
     },
@@ -10205,7 +10205,7 @@
       "slBasis": "average",
       "expect": "While BB above is true on 15m, place the first long on the tick if the gate passes. Secondary is off. If the gate is false, stay flat.",
       "symbol": "GILDUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.11,
       "playbookId": "793037c0-028a-4a28-a870-fac5e1dc4b2c",
       "status": "created"
     },
@@ -10275,7 +10275,7 @@
       "slBasis": "average",
       "expect": "While BB above is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (EMA below). If the gate is false, stay flat.",
       "symbol": "GLWUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.41,
       "playbookId": "3e2f49b6-317b-44c9-a9a4-874336b02ccf",
       "status": "created"
     },
@@ -10454,7 +10454,7 @@
       "slBasis": "average",
       "expect": "While BB above is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (RSI between). If the gate is false, stay flat.",
       "symbol": "GOOGLUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 7.06,
       "playbookId": "0c7738b0-a93c-47ec-b313-474fd63c8c1c",
       "status": "created"
     },
@@ -11054,7 +11054,7 @@
       "slBasis": "average",
       "expect": "While BB below is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (BB above). If the gate is false, stay flat.",
       "symbol": "HDUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.13,
       "playbookId": "b1a258d2-3b7a-4342-93e9-b9296dfaf63e",
       "status": "created"
     },
@@ -11370,7 +11370,7 @@
       "slBasis": "average",
       "expect": "Wait for SMA x-above on 15m, then place the first long if the gate passes. Secondary must also be true (EMA above). A sit that is already true does not count.",
       "symbol": "HOODUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.22,
       "playbookId": "1ca5be17-b06e-422e-b929-887cdfde7418",
       "status": "created"
     },
@@ -11761,7 +11761,7 @@
       "slBasis": "average",
       "expect": "Wait for SMA x-above on 15m, then place the first long if the gate passes. Secondary must also be true (ATR below). A sit that is already true does not count.",
       "symbol": "IBMUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.98,
       "playbookId": "14713f88-c0da-44d9-adeb-c4d2717e7167",
       "status": "created"
     },
@@ -12076,7 +12076,7 @@
       "slBasis": "average",
       "expect": "Wait for SMA x-below on 15m, then place the first long if the gate passes. Secondary must also be true (RSI below). A sit that is already true does not count.",
       "symbol": "INTCUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.21,
       "playbookId": "c7cbc89b-643e-4aef-8228-234f07404b41",
       "status": "created"
     },
@@ -12434,7 +12434,7 @@
       "slBasis": "average",
       "expect": "Wait for SMA x-below on 15m, then place the first long if the gate passes. Secondary must also be true (ST bear). A sit that is already true does not count.",
       "symbol": "IRENUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 9.72,
       "playbookId": "6d6810ec-3de4-4e3f-af4f-27a333abc195",
       "status": "created"
     },
@@ -12500,7 +12500,7 @@
       "slBasis": "average",
       "expect": "Wait for EMA x-above on 15m, then place the first long if the gate passes. Secondary must also be true (EMA above). A sit that is already true does not count.",
       "symbol": "ISRGUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 8.04,
       "playbookId": "b582958f-2b2f-43fd-9709-55dd587dcee5",
       "status": "created"
     },
@@ -12749,7 +12749,7 @@
       "slBasis": "average",
       "expect": "Wait for EMA x-above on 15m, then place the first long if the gate passes. Secondary must also be true (BB above). A sit that is already true does not count.",
       "symbol": "JPMUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.84,
       "playbookId": "75862e95-25dd-4593-bc14-2130adfaf56f",
       "status": "created"
     },
@@ -13665,7 +13665,7 @@
       "slBasis": "average",
       "expect": "Wait for ST turns bull on 15m, then place the first long if the gate passes. Secondary must also be true (EMA below). A sit that is already true does not count.",
       "symbol": "LGELECTRONICSUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.11,
       "playbookId": "a6920e59-b4b2-41b4-a39d-2db8b87669b6",
       "status": "created"
     },
@@ -13807,7 +13807,7 @@
       "slBasis": "average",
       "expect": "Wait for ST turns bull on 15m, then place the first long if the gate passes. Secondary must also be true (RSI above). A sit that is already true does not count.",
       "symbol": "LITEUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 9.47,
       "playbookId": "5b60c8ac-d632-4854-b904-c62fda883749",
       "status": "created"
     },
@@ -13879,7 +13879,7 @@
       "slBasis": "average",
       "expect": "Wait for ST turns bull on 15m, then place the first long if the gate passes. Secondary must also be true (BB above). A sit that is already true does not count.",
       "symbol": "LLYUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 11.74,
       "playbookId": "080065d9-fa7d-44e3-a9fe-bb5587d4aa23",
       "status": "created"
     },
@@ -14057,7 +14057,7 @@
       "slBasis": "average",
       "expect": "Wait for ST turns bull on 15m, then place the first long if the gate passes. Secondary must also be true (ATR inside). A sit that is already true does not count.",
       "symbol": "LRCXUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.2,
       "playbookId": "40f5097a-514f-4197-b19e-b6a46fcca794",
       "status": "created"
     },
@@ -14129,7 +14129,7 @@
       "slBasis": "average",
       "expect": "Wait for ST turns bull on 15m, then place the first long if the gate passes. Secondary must also be true (ST bear). A sit that is already true does not count.",
       "symbol": "LTCUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.41,
       "playbookId": "b7b2f0ee-aefe-483b-bf79-4fa1558479ac",
       "status": "created"
     },
@@ -14725,7 +14725,7 @@
       "slBasis": "average",
       "expect": "While ST is bull is true on 15m, place the first long on the tick if the gate passes. Secondary is off. If the gate is false, stay flat.",
       "symbol": "MDBUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 8.59,
       "playbookId": "4a3af1d9-e3f7-4015-afaa-27d589f64750",
       "status": "created"
     },
@@ -15644,7 +15644,7 @@
       "slBasis": "average",
       "expect": "While ST is bear is true on 15m, place the first long on the tick if the gate passes. Secondary must also be true (BB inside). If the gate is false, stay flat.",
       "symbol": "MRKUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.05,
       "playbookId": "9d5a17d4-1e60-4631-9e4b-ca8ce262a938",
       "status": "created"
     },
@@ -16169,7 +16169,7 @@
       "slBasis": "average",
       "expect": "Enter immediately. Flatten with Exit-if when EMA above is true on 15m. Take profit and stop are wide at 20%.",
       "symbol": "NBISUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 7.1,
       "playbookId": "a746b691-4db2-476e-878a-bdee34197a6b",
       "status": "created"
     },
@@ -16346,7 +16346,7 @@
       "slBasis": "average",
       "expect": "Enter immediately. Flatten with Exit-if when RSI above is true on 15m. Take profit and stop are wide at 20%.",
       "symbol": "NETUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 7.09,
       "playbookId": "54122d9a-9ef0-4d45-bb71-1d082b71a924",
       "status": "created"
     },
@@ -16730,7 +16730,7 @@
       "slBasis": "average",
       "expect": "Enter immediately. After 0.5% in favor, trail by 0.4%. Take profit and stop are wide.",
       "symbol": "NVDAUSDT",
-      "clipUsdt": 6,
+      "clipUsdt": 6.87,
       "playbookId": "a2a936fb-6517-4c3c-b233-1863995be982",
       "status": "created"
     },

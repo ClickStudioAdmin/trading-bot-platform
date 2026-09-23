@@ -30,7 +30,6 @@ import {
   deskActionBtnClass,
 } from "@/components/bot-form-chrome";
 import { ColumnHint } from "@/components/column-hint";
-import { FuturesDeskRefresh } from "@/components/futures-desk-refresh";
 import {
   IndicatorStartFields,
   TrendStartFields,
@@ -534,7 +533,6 @@ export function DcaPlaybooksDesk({
   backtestLibrary = [],
   savedBacktests = [],
   openPositions = [],
-  urgentRefresh = false,
   agreementSymbols = [],
   edit = null,
   clone = null,
@@ -559,7 +557,6 @@ export function DcaPlaybooksDesk({
   backtestLibrary?: BacktestLibraryItem[];
   savedBacktests?: readonly SavedBacktestMatch[];
   openPositions?: DcaCycleOpen[];
-  urgentRefresh?: boolean;
   agreementSymbols?: readonly string[];
   edit?: string | null;
   clone?: string | null;
@@ -638,7 +635,6 @@ export function DcaPlaybooksDesk({
 
   return (
     <div className="space-y-3">
-      <FuturesDeskRefresh urgent={urgentRefresh} />
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Reduce only is on. New orders stay blocked until you turn it off in

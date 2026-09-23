@@ -1,4 +1,8 @@
 import { fetchBybitInstruments } from "./client";
+import {
+  executionClosedQty,
+  executionStopLabel,
+} from "@/lib/futures/venue-close";
 import { bybitPrivateRequest, type BybitPrivateCreds } from "./private";
 import {
   floorToStep,
@@ -565,52 +569,73 @@ export async function bybitListLinearExecutions(input: {
 }): Promise<
   { ok: true; executions: BybitLinearExecution[] } | { ok: false; error: string }
 > {
-  const query = [
-    "category=linear",
-    `symbol=${encodeURIComponent(input.symbol)}`,
-    `startTime=${Math.max(0, Math.floor(input.startTimeMs))}`,
-    "limit=50",
-  ].join("&");
-  const listed = await bybitPrivateRequest<{
-    list?: {
-      side?: string;
-      execPrice?: string;
-      closedSize?: string;
-      execTime?: string;
-      stopOrderType?: string;
-      orderLinkId?: string;
-      execType?: string;
-    }[];
-  }>({
-    environmentId: input.environmentId,
-    credentials: input.credentials,
-    method: "GET",
-    path: "/v5/execution/list",
-    query,
-  });
-  if (!listed.ok) {
-    return listed;
-  }
   const executions: BybitLinearExecution[] = [];
-  for (const item of listed.result.list ?? []) {
-    if (String(item.execType ?? "Trade") !== "Trade") {
-      continue;
-    }
-    const side = item.side === "Buy" || item.side === "Sell" ? item.side : null;
-    const fillPrice = Number(item.execPrice ?? "");
-    const closedQty = Number(item.closedSize ?? "");
-    const execTimeMs = Number(item.execTime ?? "");
-    if (!side || !(fillPrice > 0) || !(closedQty > 0) || !(execTimeMs > 0)) {
-      continue;
-    }
-    executions.push({
-      fillPrice,
-      closedQty,
-      execTimeMs,
-      side,
-      stopOrderType: String(item.stopOrderType ?? "").trim(),
-      orderLinkId: String(item.orderLinkId ?? "").trim(),
+  let cursor = "";
+  for (let page = 0; page < 5; page += 1) {
+    const query = [
+      "category=linear",
+      `symbol=${encodeURIComponent(input.symbol)}`,
+      `startTime=${Math.max(0, Math.floor(input.startTimeMs))}`,
+      "limit=100",
+      cursor ? `cursor=${encodeURIComponent(cursor)}` : "",
+    ]
+      .filter(Boolean)
+      .join("&");
+    const listed = await bybitPrivateRequest<{
+      list?: {
+        side?: string;
+        execPrice?: string;
+        execQty?: string;
+        closedSize?: string;
+        execTime?: string;
+        stopOrderType?: string;
+        createType?: string;
+        orderLinkId?: string;
+        execType?: string;
+      }[];
+      nextPageCursor?: string;
+    }>({
+      environmentId: input.environmentId,
+      credentials: input.credentials,
+      method: "GET",
+      path: "/v5/execution/list",
+      query,
     });
+    if (!listed.ok) {
+      return listed;
+    }
+    for (const item of listed.result.list ?? []) {
+      if (String(item.execType ?? "Trade") !== "Trade") {
+        continue;
+      }
+      const side = item.side === "Buy" || item.side === "Sell" ? item.side : null;
+      const fillPrice = Number(item.execPrice ?? "");
+      const stopOrderType = executionStopLabel(
+        String(item.stopOrderType ?? ""),
+        String(item.createType ?? ""),
+      );
+      const closedQty = executionClosedQty({
+        closedSize: Number(item.closedSize ?? ""),
+        execQty: Number(item.execQty ?? ""),
+        stopOrderType,
+      });
+      const execTimeMs = Number(item.execTime ?? "");
+      if (!side || !(fillPrice > 0) || !(closedQty > 0) || !(execTimeMs > 0)) {
+        continue;
+      }
+      executions.push({
+        fillPrice,
+        closedQty,
+        execTimeMs,
+        side,
+        stopOrderType,
+        orderLinkId: String(item.orderLinkId ?? "").trim(),
+      });
+    }
+    cursor = String(listed.result.nextPageCursor ?? "").trim();
+    if (!cursor) {
+      break;
+    }
   }
   return { ok: true, executions };
 }

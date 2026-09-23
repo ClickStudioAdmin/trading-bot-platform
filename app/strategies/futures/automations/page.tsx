@@ -15,12 +15,14 @@ import {
   parseAutomationsEdit,
 } from "@/lib/bots/automations-path";
 import { futuresAutomationsBotBlotter } from "@/lib/bots/automations-list";
-import { dcaHintKey, dcaHintsForOpen } from "@/lib/dca/playbook";
+import { dcaHintKey, dcaHintsForOpen, type DcaPlaybook } from "@/lib/dca/playbook";
 import { futuresPositionIsLive } from "@/lib/futures/pending-close";
 import { dcaPaperBookUsdt } from "@/lib/dca/book";
-import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
-import { loadFuturesPositions, loadLiveFuturesWorking } from "@/lib/futures/list";
-import { futuresDeskNeedsUrgentRefresh } from "@/lib/futures/pending-close";
+import {
+  listDcaPlaybooksForAccount,
+  loadDcaPlaybookById,
+} from "@/lib/dca/store";
+import { loadFuturesPositions } from "@/lib/futures/list";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
@@ -77,86 +79,95 @@ export default async function FuturesAutomationsPage({
   ) {
     redirect(deskHomePath(session.account.deskType, session.account.id));
   }
-  if (session && deskAllowsDcaPlaybooks(session.account)) {
-    const playbooks = await listDcaPlaybooksForAccount(session.account.id);
-    const settings = await loadFuturesSettings(session.account.id);
+  const saved = firstSearchValue(params.saved) === "1";
+  const error = firstSearchValue(params.error);
+  const notice = firstSearchValue(params.notice);
+  const requestedEdit = parseAutomationsEdit(firstSearchValue(params.edit));
+  const clone = parseAutomationsClone(firstSearchValue(params.clone));
+  const openingForm = Boolean(requestedEdit || clone);
+
+  if (!session) {
+    return (
+      <AutomationsPageFrame
+        listHref={deskHref(FUTURES_PATHS.automations)}
+        editTitle={null}
+      >
+        <p className="mt-6 text-sm text-ink-muted">
+          <Link href="/sign-in" className="text-accent">
+            Sign in
+          </Link>{" "}
+          to save automations.
+        </p>
+      </AutomationsPageFrame>
+    );
+  }
+
+  if (deskAllowsDcaPlaybooks(session.account)) {
     const hl = session.account.venue === "hyperliquid";
     const env = hyperliquidInfoEnvironment(session.account.venueEnvironment);
-    const [pairs, tickers, agreementSymbols] = await Promise.all([
-      hl
-        ? loadHyperliquidLinearPerps(env).catch(() => []).then(withMarketCapRank)
-        : loadUsdtLinearPerps().catch(() => []).then(withMarketCapRank),
-      hl
-        ? loadHyperliquidTickerMap(env).catch(() => null)
-        : fetchBybitTickers("linear").catch(() => null),
-      hl
-        ? Promise.resolve([] as string[])
-        : listAgreementSymbols(settings.connectionId),
-    ]);
-    const lastPrices: Record<string, number> = {};
-    if (tickers) {
-      for (const [symbol, row] of tickers) {
-        const last = Number(row.lastPrice);
-        if (last > 0) {
-          lastPrices[symbol] = last;
-        }
-      }
-    }
-    const signalWebhooks = (
-      await listFuturesWebhooks({
-        accountId: session.account.id,
-        origin: futuresWebhookOrigin(await headers()),
-      }).catch(() => [])
-    )
-      .filter((row) => row.kind === "signal")
-      .map((row) => ({ id: row.id, name: row.name }));
-    let availableUsdt: number | null = null;
-    let bookUsdt: number | null = null;
-    let leverage: number | null = accountCanHoldConnections(
-      session.account.mode,
-    )
-      ? null
-      : (settings.paperLeverage ?? null);
-    const [allPositions, liveWorking] = await Promise.all([
-      loadFuturesPositions().catch(() => []),
-      loadLiveFuturesWorking().catch(() => []),
-    ]);
-    const openPositions = allPositions.filter((row) =>
+    const listHref = deskHref(FUTURES_PATHS.automations, session.account.id);
+    const exchangeBook = accountCanHoldConnections(session.account.mode);
+    const editId =
+      requestedEdit && requestedEdit !== AUTOMATIONS_NEW ? requestedEdit : null;
+    const formLoad = openingForm
+      ? await loadDcaAutomationsForm({
+          accountId: session.account.id,
+          userId: session.member.id,
+          hl,
+          env,
+          exchangeBook,
+          editId,
+          cloneId: clone,
+        })
+      : null;
+    const editMissing = Boolean(
+      formLoad &&
+        editId &&
+        !formLoad.playbooks.some((playbook) => playbook.id === editId),
+    );
+    const loaded =
+      formLoad && !editMissing
+        ? formLoad
+        : await loadDcaAutomationsList({
+            accountId: session.account.id,
+            userId: session.member.id,
+          });
+    const {
+      playbooks: loadedPlaybooks,
+      settings,
+      openPositions,
+      closedPositions,
+      templates,
+      sets,
+    } = loaded;
+    const form = formLoad && !editMissing ? formLoad.form : null;
+    const agreementSymbols = hl
+      ? []
+      : await listAgreementSymbols(settings.connectionId);
+    const leverage =
+      form?.leverage ??
+      (exchangeBook ? null : (settings.paperLeverage ?? null));
+    const availableUsdt = form?.availableUsdt ?? null;
+    const bookUsdt = form?.bookUsdt ?? null;
+    const signalWebhooks = form?.signalWebhooks ?? [];
+    const pairs = form?.pairs ?? [];
+    const lastPrices = form?.lastPrices ?? {};
+    const backtestLibrary = (form?.backtestLibrary ?? []).filter(
+      (row): row is NonNullable<typeof row> => Boolean(row),
+    );
+    const savedBacktests = form?.savedBacktests ?? [];
+    const liveOpen = openPositions.filter((row) =>
       futuresPositionIsLive(row.status),
     );
-    const closedPositions = allPositions.filter(
-      (row) => row.status === "closed",
-    );
-    const dcaHints = dcaHintsForOpen(playbooks, openPositions, liveWorking);
-    if (accountCanHoldConnections(session.account.mode) && settings.connectionId) {
-      const connections = await listExchangeConnections(session.member.id);
-      const bound = connections.find((row) => row.id === settings.connectionId);
-      if (bound) {
-        const snapshot = await loadAccountSnapshot(
-          session.member.id,
-          bound.id,
-        ).catch(() => ({ ok: false as const, error: "snapshot" }));
-        if (snapshot.ok) {
-          availableUsdt = snapshot.snapshot.availableBalance;
-          bookUsdt = availableUsdt;
-          leverage = snapshot.snapshot.leverage;
-        }
-      }
-    } else if (!accountCanHoldConnections(session.account.mode)) {
-      const realized = allPositions.reduce(
-        (sum, row) => sum + row.realizedUsdt,
-        0,
-      );
-      bookUsdt = dcaPaperBookUsdt(realized);
-    }
+    const dcaHints = dcaHintsForOpen(loadedPlaybooks, liveOpen);
     const blotter = Object.fromEntries(
-      playbooks.map((playbook) => [
+      loadedPlaybooks.map((playbook) => [
         playbook.id,
         futuresAutomationsBotBlotter(
           playbook.id,
-          openPositions,
+          liveOpen,
           closedPositions,
-          playbooks,
+          loadedPlaybooks,
           (row) =>
             row.side === "long" || row.side === "short"
               ? dcaHints[dcaHintKey(row.symbol, row.side)]?.playbookId
@@ -165,30 +176,16 @@ export default async function FuturesAutomationsPage({
         ),
       ]),
     );
-    const saved = firstSearchValue(params.saved) === "1";
-    const error = firstSearchValue(params.error);
-    const notice = firstSearchValue(params.notice);
-    const listHref = deskHref(FUTURES_PATHS.automations, session.account.id);
-    const requestedEdit = parseAutomationsEdit(firstSearchValue(params.edit));
-    const clone = parseAutomationsClone(firstSearchValue(params.clone));
     const knownEdit =
       requestedEdit &&
       requestedEdit !== AUTOMATIONS_NEW &&
-      !playbooks.some((playbook) => playbook.id === requestedEdit)
+      !loadedPlaybooks.some((playbook) => playbook.id === requestedEdit)
         ? null
         : requestedEdit;
     const editTitle = automationsEditTitle({
       edit: knownEdit,
-      name: playbooks.find((playbook) => playbook.id === knownEdit)?.name,
+      name: loadedPlaybooks.find((playbook) => playbook.id === knownEdit)?.name,
     });
-    const templates = await listApplyableTemplates({
-      userId: session.member.id,
-      deskType: "dca",
-    }).catch(() => []);
-    const sets = await listApplyableSets({
-      userId: session.member.id,
-      deskType: "dca",
-    }).catch(() => []);
     return (
       <AutomationsPageFrame listHref={listHref} editTitle={editTitle}>
         {hl ? (
@@ -207,7 +204,7 @@ export default async function FuturesAutomationsPage({
         ) : null}
         <div className="mt-6">
           <DcaPlaybooksDesk
-            playbooks={playbooks}
+            playbooks={loadedPlaybooks}
             options={pairs}
             signalWebhooks={signalWebhooks}
             availableUsdt={availableUsdt}
@@ -222,29 +219,16 @@ export default async function FuturesAutomationsPage({
             sets={sets}
             policy={hl ? HYPERLIQUID_DCA_UI : undefined}
             venueEnvironment={session.account.venueEnvironment}
-            backtestLibrary={templates
-              .map(toBacktestLibraryItem)
-              .filter((row): row is NonNullable<typeof row> => Boolean(row))}
-            savedBacktests={(
-              await listBacktestRuns({
-                userId: session.member.id,
-                standaloneOnly: true,
-                primaryOnly: true,
-              })
-            ).flatMap((run) => {
-              const match = toSavedBacktestMatch(run);
-              return match ? [match] : [];
-            })}
-            openPositions={openPositions.map((row) => ({
+            backtestLibrary={backtestLibrary.filter(
+              (row): row is NonNullable<typeof row> => Boolean(row),
+            )}
+            savedBacktests={savedBacktests}
+            openPositions={liveOpen.map((row) => ({
               symbol: row.symbol,
               side: row.side,
               qty: row.qty,
             }))}
             agreementSymbols={agreementSymbols}
-            urgentRefresh={futuresDeskNeedsUrgentRefresh({
-              positions: openPositions,
-              working: liveWorking,
-            })}
             edit={knownEdit}
             clone={clone}
             listHref={listHref}
@@ -254,37 +238,51 @@ export default async function FuturesAutomationsPage({
       </AutomationsPageFrame>
     );
   }
-  const settings = session ? await loadFuturesSettings(session.account.id) : null;
-  const rules = session ? await loadFuturesAutomationRules(session.account.id) : [];
-  const inUseRuleIds = session
-    ? await listFuturesAutomationRuleIdsInUse(session.account.id)
-    : [];
-  const triggerWebhooks = session
-    ? (
-        await listFuturesWebhooks({
-          accountId: session.account.id,
-          origin: futuresWebhookOrigin(await headers()),
-        })
-      ).filter((row) => row.kind === "signal")
-    : [];
-  const hl = session?.account.venue === "hyperliquid";
-  const env = hyperliquidInfoEnvironment(session?.account.venueEnvironment);
-  const [pairs, agreementSymbols] = await Promise.all([
-    hl
-      ? loadHyperliquidLinearPerps(env).catch(() => []).then(withMarketCapRank)
-      : loadUsdtLinearPerps().catch(() => []).then(withMarketCapRank),
-    hl
-      ? Promise.resolve([] as string[])
-      : listAgreementSymbols(settings?.connectionId),
-  ]);
-  const exchangeBook = Boolean(
-    session && accountCanHoldConnections(session.account.mode),
-  );
-  const saved = firstSearchValue(params.saved) === "1";
-  const error = firstSearchValue(params.error);
-  const listHref = deskHref(FUTURES_PATHS.automations, session?.account.id);
-  const requestedEdit = parseAutomationsEdit(firstSearchValue(params.edit));
-  const clone = parseAutomationsClone(firstSearchValue(params.clone));
+
+  const hl = session.account.venue === "hyperliquid";
+  const env = hyperliquidInfoEnvironment(session.account.venueEnvironment);
+  const listHref = deskHref(FUTURES_PATHS.automations, session.account.id);
+  const exchangeBook = accountCanHoldConnections(session.account.mode);
+  const origin = openingForm
+    ? futuresWebhookOrigin(await headers())
+    : null;
+  const [settings, rules, inUseRuleIds, perpsOpen, perpsClosed, templates, sets, pairs, triggerWebhooks, backtestRuns] =
+    await Promise.all([
+      loadFuturesSettings(session.account.id),
+      loadFuturesAutomationRules(session.account.id),
+      listFuturesAutomationRuleIdsInUse(session.account.id),
+      loadFuturesPositions({ status: "open" }).catch(() => []),
+      loadFuturesPositions({ status: "closed" }).catch(() => []),
+      listApplyableTemplates({
+        userId: session.member.id,
+        deskType: "perps",
+      }).catch(() => []),
+      listApplyableSets({
+        userId: session.member.id,
+        deskType: "perps",
+      }).catch(() => []),
+      openingForm
+        ? hl
+          ? loadHyperliquidLinearPerps(env).catch(() => []).then(withMarketCapRank)
+          : loadUsdtLinearPerps().catch(() => []).then(withMarketCapRank)
+        : Promise.resolve([]),
+      openingForm && origin
+        ? listFuturesWebhooks({
+            accountId: session.account.id,
+            origin,
+          }).then((rows) => rows.filter((row) => row.kind === "signal"))
+        : Promise.resolve([]),
+      openingForm
+        ? listBacktestRuns({
+            userId: session.member.id,
+            standaloneOnly: true,
+            primaryOnly: true,
+          })
+        : Promise.resolve([]),
+    ]);
+  const agreementSymbols = hl
+    ? []
+    : await listAgreementSymbols(settings.connectionId);
   const knownEdit =
     requestedEdit &&
     requestedEdit !== AUTOMATIONS_NEW &&
@@ -295,24 +293,6 @@ export default async function FuturesAutomationsPage({
     edit: knownEdit,
     name: rules.find((rule) => rule.id === knownEdit)?.name,
   });
-  const templates = session
-    ? await listApplyableTemplates({
-        userId: session.member.id,
-        deskType: "perps",
-      })
-    : [];
-  const sets = session
-    ? await listApplyableSets({
-        userId: session.member.id,
-        deskType: "perps",
-      })
-    : [];
-  const [perpsOpen, perpsClosed] = session
-    ? await Promise.all([
-        loadFuturesPositions({ status: "open" }).catch(() => []),
-        loadFuturesPositions({ status: "closed" }).catch(() => []),
-      ])
-    : [[], []];
   const perpsBlotter = Object.fromEntries(
     rules.flatMap((rule) => {
       if (!rule.id) {
@@ -327,7 +307,7 @@ export default async function FuturesAutomationsPage({
             perpsClosed,
             [],
             undefined,
-            exchangeBook ? null : (settings?.paperLeverage ?? null),
+            exchangeBook ? null : (settings.paperLeverage ?? null),
           ),
         ] as const,
       ];
@@ -344,58 +324,214 @@ export default async function FuturesAutomationsPage({
       {saved ? (
         <p className="mt-4 text-sm text-success">Bots saved.</p>
       ) : null}
-      {settings?.reduceOnly ? (
+      {settings.reduceOnly ? (
         <p className="mt-4 mb-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Reduce only is on. Buy and Sell stay blocked until you turn it off in{" "}
-          <Link href={deskHref(FUTURES_PATHS.settings, session?.account.id)} className="underline">
+          <Link href={deskHref(FUTURES_PATHS.settings, session.account.id)} className="underline">
             Desk Settings
           </Link>
           .
         </p>
       ) : null}
-      {session ? (
-        <div className="mt-6">
-          <FuturesAutomationsDesk
-            rules={rules.map(futuresRuleToForm)}
-            options={pairs}
-            triggerWebhooks={triggerWebhooks}
-            inUseRuleIds={inUseRuleIds}
-            reduceOnly={Boolean(settings?.reduceOnly)}
-            isAdmin={memberIsAdmin(session.member)}
-            accountId={session.account.id}
-            templates={templates.map(templateToSummary)}
-            sets={sets}
-            venueId={hl ? "hyperliquid" : "bybit"}
-            agreementSymbols={agreementSymbols}
-            quoteLabel={hl ? "USDC" : "USDT"}
-            venueEnvironment={session.account.venueEnvironment}
-            backtestLibrary={templates
-              .map(toBacktestLibraryItem)
-              .filter((row): row is NonNullable<typeof row> => Boolean(row))}
-            savedBacktests={(
-              await listBacktestRuns({
-                userId: session.member.id,
-                standaloneOnly: true,
-                primaryOnly: true,
-              })
-            ).flatMap((run) => {
-              const match = toSavedBacktestMatch(run);
-              return match ? [match] : [];
-            })}
-            edit={knownEdit}
-            clone={clone}
-            listHref={listHref}
-            blotter={perpsBlotter}
-          />
-        </div>
-      ) : (
-        <p className="mt-6 text-sm text-ink-muted">
-          <Link href="/sign-in" className="text-accent">
-            Sign in
-          </Link>{" "}
-          to save automations.
-        </p>
-      )}
+      <div className="mt-6">
+        <FuturesAutomationsDesk
+          rules={rules.map(futuresRuleToForm)}
+          options={pairs}
+          triggerWebhooks={triggerWebhooks}
+          inUseRuleIds={inUseRuleIds}
+          reduceOnly={Boolean(settings.reduceOnly)}
+          isAdmin={memberIsAdmin(session.member)}
+          accountId={session.account.id}
+          templates={templates.map(templateToSummary)}
+          sets={sets}
+          venueId={hl ? "hyperliquid" : "bybit"}
+          agreementSymbols={agreementSymbols}
+          quoteLabel={hl ? "USDC" : "USDT"}
+          venueEnvironment={session.account.venueEnvironment}
+          backtestLibrary={backtestRuns
+            .map(toBacktestLibraryItem)
+            .filter((row): row is NonNullable<typeof row> => Boolean(row))}
+          savedBacktests={backtestRuns.flatMap((run) => {
+            const match = toSavedBacktestMatch(run);
+            return match ? [match] : [];
+          })}
+          edit={knownEdit}
+          clone={clone}
+          listHref={listHref}
+          blotter={perpsBlotter}
+        />
+      </div>
     </AutomationsPageFrame>
   );
+}
+
+type DcaListLoad = {
+  playbooks: DcaPlaybook[];
+  settings: Awaited<ReturnType<typeof loadFuturesSettings>>;
+  openPositions: Awaited<ReturnType<typeof loadFuturesPositions>>;
+  closedPositions: Awaited<ReturnType<typeof loadFuturesPositions>>;
+  templates: Awaited<ReturnType<typeof listApplyableTemplates>>;
+  sets: Awaited<ReturnType<typeof listApplyableSets>>;
+};
+
+async function loadDcaAutomationsList(input: {
+  accountId: string;
+  userId: string;
+}): Promise<DcaListLoad> {
+  const [playbooks, settings, openPositions, closedPositions, templates, sets] =
+    await Promise.all([
+      listDcaPlaybooksForAccount(input.accountId),
+      loadFuturesSettings(input.accountId),
+      loadFuturesPositions({ status: "open" }).catch(() => []),
+      loadFuturesPositions({ status: "closed" }).catch(() => []),
+      listApplyableTemplates({
+        userId: input.userId,
+        deskType: "dca",
+      }).catch(() => []),
+      listApplyableSets({
+        userId: input.userId,
+        deskType: "dca",
+      }).catch(() => []),
+    ]);
+  return {
+    playbooks,
+    settings,
+    openPositions,
+    closedPositions,
+    templates,
+    sets,
+  };
+}
+
+type DcaFormLoad = DcaListLoad & {
+  form: {
+    availableUsdt: number | null;
+    bookUsdt: number | null;
+    leverage: number | null;
+    signalWebhooks: { id: string; name: string }[];
+    pairs: Awaited<ReturnType<typeof loadUsdtLinearPerps>>;
+    lastPrices: Record<string, number>;
+    backtestLibrary: ReturnType<typeof toBacktestLibraryItem>[];
+    savedBacktests: NonNullable<ReturnType<typeof toSavedBacktestMatch>>[];
+  };
+};
+
+async function loadDcaAutomationsForm(input: {
+  accountId: string;
+  userId: string;
+  hl: boolean;
+  env: ReturnType<typeof hyperliquidInfoEnvironment>;
+  exchangeBook: boolean;
+  editId: string | null;
+  cloneId: string | null;
+}): Promise<DcaFormLoad> {
+  const origin = futuresWebhookOrigin(await headers());
+  const [
+    settings,
+    pairs,
+    tickers,
+    webhookRows,
+    templates,
+    sets,
+    backtestRuns,
+    edited,
+    cloned,
+    positions,
+    connections,
+  ] = await Promise.all([
+    loadFuturesSettings(input.accountId),
+    input.hl
+      ? loadHyperliquidLinearPerps(input.env).catch(() => []).then(withMarketCapRank)
+      : loadUsdtLinearPerps().catch(() => []).then(withMarketCapRank),
+    input.hl
+      ? loadHyperliquidTickerMap(input.env).catch(() => null)
+      : fetchBybitTickers("linear").catch(() => null),
+    listFuturesWebhooks({
+      accountId: input.accountId,
+      origin,
+    }).catch(() => []),
+    listApplyableTemplates({
+      userId: input.userId,
+      deskType: "dca",
+    }).catch(() => []),
+    listApplyableSets({
+      userId: input.userId,
+      deskType: "dca",
+    }).catch(() => []),
+    listBacktestRuns({
+      userId: input.userId,
+      standaloneOnly: true,
+      primaryOnly: true,
+    }),
+    input.editId
+      ? loadDcaPlaybookById(input.editId, input.accountId)
+      : Promise.resolve(null),
+    input.cloneId && input.cloneId !== input.editId
+      ? loadDcaPlaybookById(input.cloneId, input.accountId)
+      : Promise.resolve(null),
+    loadFuturesPositions().catch(() => []),
+    input.exchangeBook
+      ? listExchangeConnections(input.userId)
+      : Promise.resolve([]),
+  ]);
+  const playbooks = [edited, cloned].filter(
+    (row): row is DcaPlaybook => Boolean(row),
+  );
+  const openPositions = positions.filter((row) =>
+    futuresPositionIsLive(row.status),
+  );
+  const closedPositions = positions.filter((row) => row.status === "closed");
+  let availableUsdt: number | null = null;
+  let bookUsdt: number | null = null;
+  let leverage: number | null = input.exchangeBook
+    ? null
+    : (settings.paperLeverage ?? null);
+  if (input.exchangeBook && settings.connectionId) {
+    const bound = connections.find((row) => row.id === settings.connectionId);
+    if (bound) {
+      const snapshot = await loadAccountSnapshot(input.userId, bound.id).catch(
+        () => ({ ok: false as const, error: "snapshot" }),
+      );
+      if (snapshot.ok) {
+        availableUsdt = snapshot.snapshot.availableBalance;
+        bookUsdt = availableUsdt;
+        leverage = snapshot.snapshot.leverage;
+      }
+    }
+  } else if (!input.exchangeBook) {
+    const realized = positions.reduce((sum, row) => sum + row.realizedUsdt, 0);
+    bookUsdt = dcaPaperBookUsdt(realized);
+  }
+  const lastPrices: Record<string, number> = {};
+  if (tickers) {
+    for (const [symbol, row] of tickers) {
+      const last = Number(row.lastPrice);
+      if (last > 0) {
+        lastPrices[symbol] = last;
+      }
+    }
+  }
+  return {
+    playbooks,
+    settings,
+    openPositions,
+    closedPositions,
+    templates,
+    sets,
+    form: {
+      availableUsdt,
+      bookUsdt,
+      leverage,
+      signalWebhooks: webhookRows
+        .filter((row) => row.kind === "signal")
+        .map((row) => ({ id: row.id, name: row.name })),
+      pairs,
+      lastPrices,
+      backtestLibrary: backtestRuns.map(toBacktestLibraryItem),
+      savedBacktests: backtestRuns.flatMap((run) => {
+        const match = toSavedBacktestMatch(run);
+        return match ? [match] : [];
+      }),
+    },
+  };
 }
