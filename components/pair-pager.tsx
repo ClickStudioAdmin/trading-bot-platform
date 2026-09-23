@@ -1,4 +1,5 @@
 import { TablePager } from "@/components/table-chrome";
+import { tablePageHrefs } from "@/lib/table-chrome";
 
 export function PairPager({
   page,
@@ -30,7 +31,7 @@ export function PairPager({
       }}
       prevHref={prevHref}
       nextHref={nextHref}
-      pageHref={pageHref}
+      pageHrefs={tablePageHrefs(page, pageCount, pageHref)}
       emptyLabel="No pairs."
     />
   );

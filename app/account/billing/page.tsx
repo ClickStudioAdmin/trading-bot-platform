@@ -46,6 +46,7 @@ import {
   compareTableNum,
   compareTableText,
   tableFiltersSuggestOpen,
+  tablePageHrefs,
   tableSortHref,
 } from "@/lib/table-chrome";
 import { ManageSavedCard } from "@/components/manage-saved-card";
@@ -868,13 +869,13 @@ function BillingTablePager({
         page: String(list.page + 1),
         ...extra,
       })}
-      pageHref={(page) =>
+      pageHrefs={tablePageHrefs(list.page, list.pageCount, (page) =>
         billingPath({
           tab,
           page: page > 1 ? String(page) : undefined,
           ...extra,
-        })
-      }
+        }),
+      )}
     />
   );
 }

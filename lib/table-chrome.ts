@@ -81,6 +81,21 @@ export function tablePagerItems(page: number, pageCount: number): TablePagerItem
   return items;
 }
 
+/** Plain page-number URLs for a server page to pass into the client pager. */
+export function tablePageHrefs(
+  page: number,
+  pageCount: number,
+  hrefFor: (page: number) => string,
+): Record<number, string> {
+  const hrefs: Record<number, string> = {};
+  for (const item of tablePagerItems(page, pageCount)) {
+    if (typeof item === "number" && item !== page) {
+      hrefs[item] = hrefFor(item);
+    }
+  }
+  return hrefs;
+}
+
 export function tablePageLabel(input: {
   total: number;
   from: number;

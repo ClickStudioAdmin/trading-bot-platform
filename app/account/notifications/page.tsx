@@ -27,6 +27,7 @@ import {
   countUnreadUserNotifications,
   listUserNotificationPage,
 } from "@/lib/notifications/store";
+import { tablePageHrefs } from "@/lib/table-chrome";
 import { redirect } from "next/navigation";
 import { AppSelect } from "@/components/app-select";
 
@@ -158,7 +159,9 @@ export default async function AccountNotificationsPage({
               window={list}
               prevHref={inboxPath(list.page - 1, filters, sort)}
               nextHref={inboxPath(list.page + 1, filters, sort)}
-              pageHref={(page) => inboxPath(page, filters, sort)}
+              pageHrefs={tablePageHrefs(list.page, list.pageCount, (page) =>
+                inboxPath(page, filters, sort),
+              )}
               emptyLabel="No notices."
             />
           }

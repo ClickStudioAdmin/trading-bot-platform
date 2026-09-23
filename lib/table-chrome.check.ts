@@ -9,6 +9,7 @@ import {
   statusToneFor,
   tablePageForIndex,
   tablePageLabel,
+  tablePageHrefs,
   tablePagerItems,
   tablePageWindow,
   tableFiltersOpenStorageKey,
@@ -42,6 +43,12 @@ assert.deepEqual(tablePagerItems(2, 5), [1, 2, 3, 4, 5]);
 assert.deepEqual(tablePagerItems(1, 12), [1, 2, 3, 4, "gap", 12]);
 assert.deepEqual(tablePagerItems(6, 12), [1, "gap", 5, 6, 7, "gap", 12]);
 assert.deepEqual(tablePagerItems(12, 12), [1, "gap", 9, 10, 11, 12]);
+assert.deepEqual(tablePageHrefs(6, 12, (page) => `#${page}`), {
+  1: "#1",
+  5: "#5",
+  7: "#7",
+  12: "#12",
+});
 assert.equal(parseTablePage("2"), 2);
 assert.equal(parseTablePage("nope"), 1);
 assert.equal(toggleTableSortDir("name", "name", "asc"), "desc");

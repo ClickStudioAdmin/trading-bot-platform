@@ -402,7 +402,7 @@ export function TablePager({
   onPrev,
   onNext,
   onPage,
-  pageHref,
+  pageHrefs,
   emptyLabel,
   align = "center",
   buttons = "icons",
@@ -414,7 +414,7 @@ export function TablePager({
   onPrev?: () => void;
   onNext?: () => void;
   onPage?: (page: number) => void;
-  pageHref?: (page: number) => string;
+  pageHrefs?: Record<number, string>;
   emptyLabel?: string;
   align?: "split" | "center";
   buttons?: "text" | "icons";
@@ -442,11 +442,7 @@ export function TablePager({
         <nav aria-label="Pages" className="flex items-center gap-1">
           <PagerButton
             kind="prev"
-            href={
-              pageHref && window.page > 1
-                ? pageHref(window.page - 1)
-                : prevHref
-            }
+            href={prevHref}
             onClick={
               onPage ? () => onPage(window.page - 1) : onPrev
             }
@@ -469,7 +465,9 @@ export function TablePager({
                 page={item}
                 current={item === window.page}
                 href={
-                  pageHref && item !== window.page ? pageHref(item) : undefined
+                  pageHrefs && item !== window.page
+                    ? pageHrefs[item]
+                    : undefined
                 }
                 onClick={
                   onPage && item !== window.page
@@ -482,11 +480,7 @@ export function TablePager({
           )}
           <PagerButton
             kind="next"
-            href={
-              pageHref && window.page < window.pageCount
-                ? pageHref(window.page + 1)
-                : nextHref
-            }
+            href={nextHref}
             onClick={
               onPage ? () => onPage(window.page + 1) : onNext
             }

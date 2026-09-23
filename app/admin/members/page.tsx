@@ -20,7 +20,11 @@ import {
   memberListHref,
   parseMemberListQuery,
 } from "@/lib/members/query";
-import { tableFiltersSuggestOpen, tablePageWindow } from "@/lib/table-chrome";
+import {
+  tableFiltersSuggestOpen,
+  tablePageHrefs,
+  tablePageWindow,
+} from "@/lib/table-chrome";
 import { AppSelect } from "@/components/app-select";
 
 export const metadata: Metadata = {
@@ -125,7 +129,9 @@ export default async function AdminMembersPage({
             window={window}
             prevHref={memberListHref(query, { page: list.page - 1 })}
             nextHref={memberListHref(query, { page: list.page + 1 })}
-            pageHref={(page) => memberListHref(query, { page })}
+            pageHrefs={tablePageHrefs(window.page, window.pageCount, (page) =>
+              memberListHref(query, { page }),
+            )}
             emptyLabel="No members."
           />
         }

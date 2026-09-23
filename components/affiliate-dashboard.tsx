@@ -53,6 +53,7 @@ import {
 import {
   compareTableNum,
   compareTableText,
+  tablePageHrefs,
   tableSortHref,
 } from "@/lib/table-chrome";
 import {
@@ -1321,7 +1322,7 @@ function AffiliateTablePager({
       window={list}
       prevHref={prevHref}
       nextHref={nextHref}
-      pageHref={hrefFor}
+      pageHrefs={tablePageHrefs(list.page, list.pageCount, hrefFor)}
     />
   );
 }
