@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -141,6 +141,8 @@ function compareBacktestRun(
   return 0;
 }
 
+const BACKTEST_RUN_COLUMNS = 11;
+
 export function BacktestRunsTable({
   runs,
   memberId,
@@ -148,6 +150,7 @@ export function BacktestRunsTable({
   primaryRunId,
   returnTo = "/account/backtests",
   watchRunId,
+  empty = "No runs yet.",
 }: {
   runs: BacktestRun[];
   memberId: string;
@@ -155,6 +158,7 @@ export function BacktestRunsTable({
   primaryRunId?: string;
   returnTo?: string;
   watchRunId?: string;
+  empty?: ReactNode;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -431,18 +435,31 @@ export function BacktestRunsTable({
             </tr>
           </thead>
           <tbody>
-            {table.pageRows.map((row) => (
-              <BacktestRunRow
-                key={row.id}
-                row={row}
-                memberId={memberId}
-                isAdmin={isAdmin}
-                isPrimary={row.id === primaryRunId}
-                returnTo={returnTo}
-                selected={selected.has(row.id)}
-                onToggle={() => toggleRow(row.id)}
-              />
-            ))}
+            {filtered.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={BACKTEST_RUN_COLUMNS}
+                  className="px-4 py-6 text-sm text-ink-muted"
+                >
+                  {query.trim() || status !== "all"
+                    ? "No backtests match these filters."
+                    : empty}
+                </td>
+              </tr>
+            ) : (
+              table.pageRows.map((row) => (
+                <BacktestRunRow
+                  key={row.id}
+                  row={row}
+                  memberId={memberId}
+                  isAdmin={isAdmin}
+                  isPrimary={row.id === primaryRunId}
+                  returnTo={returnTo}
+                  selected={selected.has(row.id)}
+                  onToggle={() => toggleRow(row.id)}
+                />
+              ))
+            )}
           </tbody>
         </table>
       </TableCard>

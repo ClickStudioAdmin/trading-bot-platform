@@ -156,22 +156,24 @@ export default async function AccountBacktestsPage({
         </TabLink>
       </nav>
       {tab === "saved" ? (
-        runs.length === 0 ? (
-          <p className="text-sm text-ink-muted">
-            No runs yet. Queue one from{" "}
-            <Link href="/account/backtests" className="text-accent hover:underline">
-              New Backtest
-            </Link>
-            .
-          </p>
-        ) : (
-          <BacktestRunsTable
-            runs={runs}
-            memberId={member.id}
-            isAdmin={isAdmin}
-            returnTo={backtestSavedListHref()}
-          />
-        )
+        <BacktestRunsTable
+          runs={runs}
+          memberId={member.id}
+          isAdmin={isAdmin}
+          returnTo={backtestSavedListHref()}
+          empty={
+            <>
+              No runs yet. Queue one from{" "}
+              <Link
+                href="/account/backtests"
+                className="text-accent hover:underline"
+              >
+                New Backtest
+              </Link>
+              .
+            </>
+          }
+        />
       ) : (
         <BacktestQueueForm
           templates={library}

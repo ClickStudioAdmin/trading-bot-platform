@@ -31,6 +31,7 @@ import {
   listDcaPlaybooksForSymbols,
 } from "@/lib/dca/store";
 import {
+  blotterFiltersForCopyDesk,
   deskBlotterFiltersActive,
   filterFuturesBlotterRows,
   filterFuturesWorkingRows,
@@ -65,12 +66,15 @@ export async function HyperliquidFuturesPositions({
   const session = await getSessionContext();
   const NEXT = deskHref(NEXT_PATH, session?.account.id);
   const params = await searchParams;
-  const filters = parseDeskBlotterFilters(params);
   const live = Boolean(
     session && accountCanHoldConnections(session.account.mode),
   );
   const deskType = session?.account.deskType ?? "perps";
   const copyDesk = session ? deskIsCopy(session.account) : false;
+  const filters = blotterFiltersForCopyDesk(
+    parseDeskBlotterFilters(params),
+    copyDesk,
+  );
   const dcaBlotter = session
     ? deskShowsDcaBlotter(session.account)
     : deskType === "dca";
@@ -130,10 +134,10 @@ export async function HyperliquidFuturesPositions({
       loadCatalog
         ? loadHyperliquidLinearPerps(env).catch(() => []).then(withMarketCapRank)
         : Promise.resolve([]),
-      dcaBlotter && playbookAccountId
+      dcaBlotter && playbookAccountId && !copyDesk
         ? listDcaBotOptions(playbookAccountId)
         : Promise.resolve([]),
-      deskType === "perps_bots" && recipeAccountId
+      deskType === "perps_bots" && recipeAccountId && !copyDesk
         ? loadFuturesAutomationRules(recipeAccountId)
         : Promise.resolve([]),
     ]);

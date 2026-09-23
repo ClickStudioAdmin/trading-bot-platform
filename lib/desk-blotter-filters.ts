@@ -39,6 +39,17 @@ export function deskBlotterFiltersActive(filters: DeskBlotterFilters): boolean {
   return Boolean(filters.bot || filters.pair || filters.side);
 }
 
+/** Copy followers see the desk book only. A bot query must not narrow it. */
+export function blotterFiltersForCopyDesk(
+  filters: DeskBlotterFilters,
+  copyDesk: boolean,
+): DeskBlotterFilters {
+  if (!copyDesk || !filters.bot) {
+    return filters;
+  }
+  return { ...filters, bot: "" };
+}
+
 export function matchDeskBlotterRow(
   row: {
     botId?: string | null;

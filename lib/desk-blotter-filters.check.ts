@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   DESK_BLOTTER_ALL_BOTS_LABEL,
+  blotterFiltersForCopyDesk,
   deskBlotterFiltersActive,
   filterFuturesBlotterRows,
   filterFuturesWorkingRows,
@@ -24,6 +25,17 @@ assert.deepEqual(
 assert.equal(parseDeskBlotterFilters({ side: "both" }).side, "");
 assert.equal(deskBlotterFiltersActive({ bot: "", pair: "", side: "" }), false);
 assert.equal(deskBlotterFiltersActive({ bot: "pb-1", pair: "", side: "" }), true);
+const scoped = { bot: "pb-1", pair: "BTC", side: "long" as const };
+assert.equal(blotterFiltersForCopyDesk(scoped, false), scoped);
+assert.deepEqual(blotterFiltersForCopyDesk(scoped, true), {
+  bot: "",
+  pair: "BTC",
+  side: "long",
+});
+assert.equal(
+  blotterFiltersForCopyDesk({ bot: "", pair: "", side: "" }, true).bot,
+  "",
+);
 
 const row = { botId: "rule-9", pair: "BTCUSDT · Buy", side: "long" };
 assert.equal(matchDeskBlotterRow(row, { bot: "", pair: "", side: "" }), true);

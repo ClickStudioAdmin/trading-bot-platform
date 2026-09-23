@@ -11,6 +11,7 @@ import { deskHref, deskIsCopy, deskShowsDcaBlotter } from "@/lib/accounts/model"
 import { getSessionContext } from "@/lib/auth/session";
 import { listDcaBotOptions, loadDcaPlaybookById } from "@/lib/dca/store";
 import {
+  blotterFiltersForCopyDesk,
   deskBlotterFiltersActive,
   filterFuturesBlotterRows,
   parseDeskBlotterFilters,
@@ -33,9 +34,12 @@ export default async function FuturesPerformancePage({
 }) {
   const params = await searchParams;
   const session = await getSessionContext();
-  const filters = parseDeskBlotterFilters(params);
   const deskType = session?.account.deskType ?? "perps";
   const copyDesk = session ? deskIsCopy(session.account) : false;
+  const filters = blotterFiltersForCopyDesk(
+    parseDeskBlotterFilters(params),
+    copyDesk,
+  );
   const dcaBlotter = session
     ? deskShowsDcaBlotter(session.account)
     : deskType === "dca";
@@ -65,10 +69,10 @@ export default async function FuturesPerformancePage({
           : undefined,
       ),
     ),
-    dcaBlotter && recipeAccountId
+    dcaBlotter && recipeAccountId && !copyDesk
       ? listDcaBotOptions(recipeAccountId)
       : Promise.resolve([]),
-    deskType === "perps_bots" && recipeAccountId
+    deskType === "perps_bots" && recipeAccountId && !copyDesk
       ? listFuturesAutomationRuleOptions(recipeAccountId)
       : Promise.resolve([]),
     session ? loadFuturesSettings(session.account.id) : Promise.resolve(null),
