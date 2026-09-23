@@ -17,6 +17,7 @@ import {
   botLabelClass,
   botRowClass,
   botRowClass5,
+  botSectionTitleClass,
   botSidebarActionClass,
   botSidebarSaveClass,
   deskActionBtnClass,
@@ -53,7 +54,7 @@ import { IconBacktest, IconPlus, IconSave, IconTemplates } from "@/components/ic
 const fieldClass = botFieldClass;
 const fieldInvalidClass = botFieldInvalidClass;
 const labelClass = botLabelClass;
-const sectionTitleClass = "text-sm font-semibold text-ink-muted";
+const sectionTitleClass = botSectionTitleClass;
 const rowClass = botRowClass;
 const rowClass5 = botRowClass5;
 const headerBtnClass = "rounded-control px-3 py-1.5 text-xs font-medium";
@@ -2314,7 +2315,6 @@ export function ThemeBotFormDraft() {
 
       </BotFormCard>
       <BotFormSidebar
-        titleClassName={sectionTitleClass}
         status={
           <BotStatusField
             desk={desk}
@@ -2347,10 +2347,7 @@ export function ThemeBotFormDraft() {
           </button>
         }
       >
-        <BotFormSidebarSection
-          title="Templates"
-          titleClassName={sectionTitleClass}
-        >
+        <BotFormSidebarSection title="Templates">
           <button type="button" className={botSidebarActionClass}>
             <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
               Save as template
@@ -2363,10 +2360,7 @@ export function ThemeBotFormDraft() {
           </button>
         </BotFormSidebarSection>
         {desk !== "cnc" ? (
-          <BotFormSidebarSection
-            title="Backtesting"
-            titleClassName={sectionTitleClass}
-          >
+          <BotFormSidebarSection title="Backtesting">
             <button type="button" className={botSidebarActionClass}>
               <BotButtonLead icon={<IconBacktest {...botBtnIcon} />}>
                 Backtest

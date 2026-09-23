@@ -677,7 +677,7 @@ export function BacktestRecipeFields({
         {recipe.startKind === "price" && recipe.direction === "both" ? (
           <div className="space-y-4 sm:col-span-2">
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-ink">
+              <p className="text-sm font-semibold text-ink-muted">
                 Long
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -718,7 +718,7 @@ export function BacktestRecipeFields({
               />
             </div>
             <div className="space-y-2 border-t border-line pt-3">
-              <p className="text-sm font-semibold text-ink">
+              <p className="text-sm font-semibold text-ink-muted">
                 Short
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -814,7 +814,7 @@ export function BacktestRecipeFields({
         {recipe.startKind === "indicator" && recipe.direction === "both" ? (
           <div className="space-y-4 sm:col-span-2">
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-ink">
+              <p className="text-sm font-semibold text-ink-muted">
                 Long
               </p>
               <BacktestIndicatorStartFields
@@ -838,7 +838,7 @@ export function BacktestRecipeFields({
               />
             </div>
             <div className="space-y-2 border-t border-line pt-3">
-              <p className="text-sm font-semibold text-ink">
+              <p className="text-sm font-semibold text-ink-muted">
                 Short
               </p>
               <BacktestIndicatorStartFields
@@ -921,7 +921,7 @@ export function BacktestRecipeFields({
         {recipe.startKind === "trend" && recipe.direction === "both" ? (
           <div className="space-y-4 sm:col-span-2">
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-ink">
+              <p className="text-sm font-semibold text-ink-muted">
                 Long
               </p>
               <BacktestTrendStartFields
@@ -943,7 +943,7 @@ export function BacktestRecipeFields({
               />
             </div>
             <div className="space-y-2 border-t border-line pt-3">
-              <p className="text-sm font-semibold text-ink">
+              <p className="text-sm font-semibold text-ink-muted">
                 Short
               </p>
               <BacktestTrendStartFields

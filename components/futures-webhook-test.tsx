@@ -84,7 +84,7 @@ export function FuturesWebhookTest({
       <div className={standalone ? "mt-4 space-y-2" : "mt-4 space-y-2 border-t border-line pt-4"}>
         {standalone ? null : (
           <>
-            <p className="text-sm font-semibold text-ink">Send a test</p>
+            <p className="text-sm font-semibold text-ink-muted">Send a test</p>
             <p className="text-hint text-ink-muted">{help}</p>
           </>
         )}

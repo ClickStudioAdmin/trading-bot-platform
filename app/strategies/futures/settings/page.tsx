@@ -293,7 +293,7 @@ export default async function FuturesSettingsPage({
                 </span>
               </label>
               <div className="space-y-3 border-t border-line pt-4">
-                <p className="text-sm font-semibold text-ink">Risk caps</p>
+                <p className="text-sm font-semibold text-ink-muted">Risk caps</p>
                 <p className="text-hint text-ink-muted">
                   Empty means no cap. Buy and Sell reject if they would breach.
                   Close is never blocked.

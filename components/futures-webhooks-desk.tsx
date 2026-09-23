@@ -185,7 +185,7 @@ export function FuturesWebhooksDesk({
             </p>
           ) : null}
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-ink">URL</p>
+            <p className="text-sm font-semibold text-ink-muted">URL</p>
             {hook.url ? (
               <span className="flex items-center gap-3">
                 <textarea
@@ -206,7 +206,7 @@ export function FuturesWebhooksDesk({
             )}
           </div>
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-ink">Payload</p>
+            <p className="text-sm font-semibold text-ink-muted">Payload</p>
             {hook.kind === "signal" ? (
               <>
                 <p className="text-hint text-ink-muted">

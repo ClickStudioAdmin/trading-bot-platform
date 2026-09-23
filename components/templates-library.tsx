@@ -2231,7 +2231,7 @@ function MembershipColumn({
 }) {
   return (
     <div className="rounded-card border border-line bg-canvas p-3">
-      <p className="text-sm font-semibold text-ink">
+      <p className="text-sm font-semibold text-ink-muted">
         {title}
       </p>
       {rows.length === 0 ? (

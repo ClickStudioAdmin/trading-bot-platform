@@ -30,7 +30,7 @@ export function CopyDeskGuardsFields({
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-sm font-semibold text-ink">Guards</p>
+        <p className="text-sm font-semibold text-ink-muted">Guards</p>
         <p className="mt-1 text-hint text-ink-muted">
           Sizing follows the parent fill.
           {showReduceOnly ? " Reduce-only blocks new entries." : ""} Max
