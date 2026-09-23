@@ -235,14 +235,14 @@ export function ThemeCardsDraft() {
           <div className="lg:col-span-2">
             <SampleFrame
               label="Bot step card"
-              note="18px step title, 14px group, 14px ink labels."
+              note="18px step title. Group is 14px semibold muted. Labels stay 14px ink."
             >
               <BotStepCard />
             </SampleFrame>
           </div>
           <SampleFrame
             label="Sidebar card"
-            note="Status & Save. Group title, not a card title."
+            note="Status & Save. 14px semibold muted, same trial as the step card."
           >
             <SidebarCard />
           </SampleFrame>
@@ -579,7 +579,7 @@ function BotStepCard() {
     <Card className="p-0">
       <h3 className={`${themeCardTitleClass} px-5 py-5`}>General</h3>
       <div className="space-y-4 border-t border-line px-5 py-5">
-        <p className={themeGroupTitleClass}>Identity</p>
+        <p className="text-sm font-semibold text-ink-muted">Identity</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className={themeFormLabelClass} htmlFor="theme-card-bot-name">
             <HintLabel
@@ -613,7 +613,7 @@ function BotStepCard() {
 function SidebarCard() {
   return (
     <Card>
-      <h3 className={themeGroupTitleClass}>Status & Save</h3>
+      <h3 className="text-sm font-semibold text-ink-muted">Status & Save</h3>
       <label className={`${themeFormLabelClass} mt-4`}>
         Status
         <input defaultValue="Disabled" readOnly className={fieldClass} />

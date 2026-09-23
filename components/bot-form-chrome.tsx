@@ -384,17 +384,19 @@ export function BotFormSidebar({
   dirty,
   error,
   save,
+  titleClassName = botSectionTitleClass,
   children,
 }: {
   status: ReactNode;
   dirty: boolean;
   error?: string;
   save: ReactNode;
+  titleClassName?: string;
   children?: ReactNode;
 }) {
   return (
     <aside className="flex flex-col gap-4 rounded-card border border-line bg-surface p-5 lg:sticky lg:top-24">
-      <h3 className={botSectionTitleClass}>Status & Save</h3>
+      <h3 className={titleClassName}>Status & Save</h3>
       {status}
       <div className="space-y-2">
         {save}
@@ -414,14 +416,16 @@ export function BotFormSidebar({
 
 export function BotFormSidebarSection({
   title,
+  titleClassName = botSectionTitleClass,
   children,
 }: {
   title?: string;
+  titleClassName?: string;
   children: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-2 border-t border-line pt-4">
-      {title ? <h4 className={botSectionTitleClass}>{title}</h4> : null}
+      {title ? <h4 className={titleClassName}>{title}</h4> : null}
       {children}
     </div>
   );
