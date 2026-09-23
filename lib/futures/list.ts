@@ -234,6 +234,228 @@ export async function loadOpenFuturesByRuleId(
   );
 }
 
+export function futuresBotBookQuery(input: {
+  symbol?: string | null;
+  ruleId?: string | null;
+  ruleName?: string | null;
+}): {
+  positions: { symbol: string } | { ruleId: string } | null;
+  working: { symbol: string } | { ruleName: string } | null;
+} {
+  const symbol = String(input.symbol ?? "").trim();
+  const ruleId = String(input.ruleId ?? "").trim();
+  const ruleName = String(input.ruleName ?? "").trim();
+  if (!symbol && !ruleId) {
+    return { positions: null, working: null };
+  }
+  return {
+    positions: ruleId ? { ruleId } : { symbol },
+    working: ruleName ? { ruleName } : symbol ? { symbol } : null,
+  };
+}
+
+async function countLiveFuturesRows(
+  table: "futures_positions" | "futures_working_orders",
+  statuses: readonly string[],
+  scope?: FuturesListScope,
+): Promise<number> {
+  const resolved = await resolveFuturesListScope(scope);
+  const supabase = createServiceClient();
+  if (!resolved || !supabase) {
+    return 0;
+  }
+  const { count, error } = await supabase
+    .from(table)
+    .select("id", { count: "exact", head: true })
+    .eq("account_id", resolved.accountId)
+    .eq("user_id", resolved.userId)
+    .in("status", [...statuses]);
+  if (error || count == null) {
+    return 0;
+  }
+  return count;
+}
+
+export async function loadFuturesOrdersForPositions(
+  positionIds: readonly string[],
+  scope?: FuturesListScope,
+): Promise<FuturesOrder[]> {
+  const resolved = await resolveFuturesListScope(scope);
+  const supabase = createServiceClient();
+  const ids = [...new Set(positionIds.map((id) => id.trim()).filter(Boolean))];
+  if (!resolved || !supabase || ids.length === 0) {
+    return [];
+  }
+  const pages: FuturesOrder[] = [];
+  for (let index = 0; index < ids.length; index += 40) {
+    const batch = ids.slice(index, index + 40);
+    const { data, error } = await supabase
+      .from("futures_orders")
+      .select("*")
+      .eq("account_id", resolved.accountId)
+      .eq("user_id", resolved.userId)
+      .in("position_id", batch)
+      .order("filled_at", { ascending: true });
+    if (error || !data) {
+      continue;
+    }
+    pages.push(
+      ...data.map((row) => parseFuturesOrderRow(row as Record<string, unknown>)),
+    );
+  }
+  return pages;
+}
+
+export async function loadLiveFuturesWorkingMatching(
+  filter: { symbol: string } | { ruleName: string },
+  scope?: FuturesListScope,
+): Promise<FuturesWorkingOrder[]> {
+  const resolved = await resolveFuturesListScope(scope);
+  const supabase = createServiceClient();
+  if (!resolved || !supabase) {
+    return [];
+  }
+  let query = supabase
+    .from("futures_working_orders")
+    .select("*")
+    .eq("account_id", resolved.accountId)
+    .eq("user_id", resolved.userId)
+    .in("status", [...FUTURES_LIVE_WORKING_STATUSES])
+    .order("created_at", { ascending: false });
+  if ("ruleName" in filter) {
+    query = query.eq("rule_name", filter.ruleName);
+  } else {
+    query = query.eq("symbol", filter.symbol);
+  }
+  const { data, error } = await query;
+  if (error || !data) {
+    return [];
+  }
+  return data.map((row) =>
+    parseFuturesWorkingRow(row as Record<string, unknown>),
+  );
+}
+
+export type FuturesOpenBook = {
+  signedIn: boolean;
+  exchangeBook: boolean;
+  open: FuturesDeskPosition[];
+  working: FuturesWorkingOrder[];
+  webhookNames: string[];
+  closeAllOpenCount: number;
+  cancelAllWorkingCount: number;
+};
+
+export function futuresOpenBookFromDesk(desk: {
+  signedIn: boolean;
+  exchangeBook: boolean;
+  open: FuturesDeskPosition[];
+  working: FuturesWorkingOrder[];
+  webhookNames: string[];
+}): FuturesOpenBook {
+  return {
+    signedIn: desk.signedIn,
+    exchangeBook: desk.exchangeBook,
+    open: desk.open,
+    working: desk.working,
+    webhookNames: desk.webhookNames,
+    closeAllOpenCount: desk.open.length,
+    cancelAllWorkingCount: desk.working.length,
+  };
+}
+
+const EMPTY_OPEN_BOOK: FuturesOpenBook = {
+  signedIn: false,
+  exchangeBook: false,
+  open: [],
+  working: [],
+  webhookNames: [],
+  closeAllOpenCount: 0,
+  cancelAllWorkingCount: 0,
+};
+
+export async function loadFuturesBotBook(input: {
+  symbol?: string | null;
+  ruleId?: string | null;
+  ruleName?: string | null;
+}): Promise<FuturesOpenBook> {
+  const session = await getSessionContext();
+  if (!session) {
+    return EMPTY_OPEN_BOOK;
+  }
+  const scope: FuturesListScope = {
+    accountId: session.account.id,
+    userId: session.member.id,
+  };
+  const query = futuresBotBookQuery(input);
+  const [closeAllOpenCount, cancelAllWorkingCount, webhookNames, rows, working] =
+    await Promise.all([
+      countLiveFuturesRows(
+        "futures_positions",
+        FUTURES_LIVE_POSITION_STATUSES,
+        scope,
+      ),
+      countLiveFuturesRows(
+        "futures_working_orders",
+        FUTURES_LIVE_WORKING_STATUSES,
+        scope,
+      ),
+      listFuturesOrderWebhookNames(session.account.id),
+      query.positions
+        ? "ruleId" in query.positions
+          ? loadOpenFuturesByRuleId(query.positions.ruleId, scope)
+          : loadOpenFuturesOnSymbol(query.positions.symbol, scope)
+        : Promise.resolve([]),
+      query.working
+        ? loadLiveFuturesWorkingMatching(query.working, scope)
+        : Promise.resolve([]),
+    ]);
+  const liveOpenedMs = rows.reduce((oldest, row) => {
+    if (!(row.openedAtMs > 0)) {
+      return oldest;
+    }
+    return oldest === 0 ? row.openedAtMs : Math.min(oldest, row.openedAtMs);
+  }, 0);
+  const [orders, recentLogs, anchoredLogs] = await Promise.all([
+    loadFuturesOrdersForPositions(
+      rows.map((row) => row.id),
+      scope,
+    ),
+    rows.length > 0
+      ? listEventLogs(
+          { scope: "", level: "", event: "" },
+          {
+            accountId: session.account.id,
+            limit: 200,
+            scopes: ["trade", "strategy"],
+            since:
+              liveOpenedMs > 0
+                ? new Date(liveOpenedMs - 60_000).toISOString()
+                : undefined,
+          },
+        )
+      : Promise.resolve([]),
+    listEventLogsForAnchors({
+      accountId: session.account.id,
+      field: "positionId",
+      ids: rows.map((row) => row.id),
+    }),
+  ]);
+  const withLogs = attachPositionLogs(
+    attachOrders(rows, orders),
+    mergeEventLogs(recentLogs, anchoredLogs),
+  );
+  return {
+    signedIn: true,
+    exchangeBook: accountCanHoldConnections(session.account.mode),
+    open: withLogs.filter((row) => futuresPositionIsLive(row.status)),
+    working,
+    webhookNames,
+    closeAllOpenCount,
+    cancelAllWorkingCount,
+  };
+}
+
 export async function loadOpenFuturesOnSymbol(
   symbol: string,
   scope?: FuturesListScope,

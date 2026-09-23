@@ -32,6 +32,27 @@ export async function loadFuturesAutomationRules(
   );
 }
 
+export async function loadFuturesAutomationRuleById(
+  accountId: string,
+  ruleId: string,
+): Promise<FuturesAutomationRule | null> {
+  const supabase = createServiceClient();
+  const id = ruleId.trim();
+  if (!supabase || !accountId || !id) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("futures_automation_rules")
+    .select("*")
+    .eq("account_id", accountId)
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  return parseFuturesAutomationRow(data as Record<string, unknown>);
+}
+
 export async function listFuturesAutomationRuleIdsInUse(
   accountId: string,
   supabaseClient?: SupabaseClient,

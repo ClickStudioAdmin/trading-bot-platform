@@ -419,7 +419,7 @@ export function PositionLogList({ logs }: { logs: EventLogRow[] }) {
                   <LocalTime at={log.createdAt} />
                 </p>
               </header>
-              <p className="mt-0.5 break-words text-sm text-ink">{log.message}</p>
+              <p className="mt-0.5 break-all text-sm text-ink">{log.message}</p>
               {rows.length > 0 ? <ValueList rows={rows} /> : null}
             </article>
           );
@@ -896,7 +896,7 @@ function ComparePairs({
   const packed = rows.filter((row) => row.left || row.right);
   return (
     <div className="mt-3">
-      <div className="grid grid-cols-2 gap-x-6">
+      <div className="grid min-w-0 grid-cols-2 gap-x-6">
         <p className="text-sm font-semibold text-ink">
           {leftTitle}
         </p>
@@ -908,7 +908,7 @@ function ComparePairs({
         {packed.map((row, index) => (
           <div
             key={`${row.left?.label ?? "empty"}-${row.right?.label ?? "empty"}-${index}`}
-            className="grid grid-cols-2 gap-x-6"
+            className="grid min-w-0 grid-cols-2 gap-x-6"
           >
             <MetricCell row={row.left} />
             <MetricCell row={row.right} />
@@ -939,7 +939,7 @@ function MetricCell({ row }: { row?: MetricRow }) {
   }
   const value = (
     <span
-      className={`min-w-0 break-words text-right tabular-nums ${row.tone === undefined ? "text-ink" : signedTone(row.tone)}`}
+      className={`min-w-0 break-all text-right tabular-nums ${row.tone === undefined ? "text-ink" : signedTone(row.tone)}`}
     >
       {row.value}
     </span>

@@ -41,7 +41,8 @@ import { futuresWebhookOrigin } from "@/lib/futures/webhook";
 import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
 import { headers } from "next/headers";
 import Link from "next/link";
-import { loadFuturesDesk } from "@/lib/futures/list";
+import { loadFuturesPositionsBotBook } from "@/lib/futures/bot-book";
+import { futuresOpenBookFromDesk, loadFuturesDesk } from "@/lib/futures/list";
 import { futuresDeskNeedsUrgentRefresh } from "@/lib/futures/pending-close";
 import { markFuturesOpen } from "@/lib/futures/mark";
 import { loadFuturesSettings } from "@/lib/futures/settings";
@@ -69,12 +70,35 @@ export default async function FuturesPositionsPage({
   }
   const NEXT = deskHref(NEXT_PATH, session?.account.id);
   const params = await searchParams;
+  const filters = parseDeskBlotterFilters(params);
   const live = Boolean(
     session && accountCanHoldConnections(session.account.mode),
   );
+  const deskType = session?.account.deskType ?? "perps";
+  const copyDesk = session ? deskIsCopy(session.account) : false;
+  const dcaBlotter = session
+    ? deskShowsDcaBlotter(session.account)
+    : deskType === "dca";
+  const playbookAccountId = copyDesk
+    ? session?.account.copyOfAccountId
+    : session?.account.id;
+  const recipeAccountId = playbookAccountId ?? session?.account.id;
+  const botScope = Boolean(
+    session &&
+      filters.bot &&
+      recipeAccountId &&
+      (dcaBlotter || deskType === "perps_bots"),
+  );
   const headerList = headers();
-  const [desk, settings, webhooks, tickers, pairs] = await Promise.all([
-    loadFuturesDesk(),
+  const [scoped, fullDesk, settings, webhooks, tickers, pairs] = await Promise.all([
+    botScope && recipeAccountId
+      ? loadFuturesPositionsBotBook({
+          botId: filters.bot,
+          mode: dcaBlotter ? "dca" : "perps",
+          recipeAccountId,
+        })
+      : Promise.resolve(null),
+    botScope ? Promise.resolve(null) : loadFuturesDesk(),
     session
       ? loadFuturesSettings(session.account.id)
       : Promise.resolve({
@@ -101,15 +125,17 @@ export default async function FuturesPositionsPage({
     ),
     loadUsdtLinearPerps().catch(() => []).then(withMarketCapRank),
   ]);
-  const deskType = session?.account.deskType ?? "perps";
-  const copyDesk = session ? deskIsCopy(session.account) : false;
-  const dcaBlotter = session
-    ? deskShowsDcaBlotter(session.account)
-    : deskType === "dca";
-  const playbookAccountId = copyDesk
-    ? session?.account.copyOfAccountId
-    : session?.account.id;
-  const recipeAccountId = playbookAccountId ?? session?.account.id;
+  const desk = scoped
+    ? scoped.book
+    : futuresOpenBookFromDesk(
+        fullDesk ?? {
+          signedIn: false,
+          exchangeBook: false,
+          open: [],
+          working: [],
+          webhookNames: [],
+        },
+      );
   const blotterSymbols = [
     ...desk.open.map((row) => row.symbol),
     ...desk.working.map((row) => row.symbol),
@@ -122,7 +148,9 @@ export default async function FuturesPositionsPage({
       ? listDcaBotOptions(playbookAccountId)
       : Promise.resolve([]),
     dcaBlotter && playbookAccountId
-      ? listDcaPlaybooksForSymbols(playbookAccountId, blotterSymbols)
+      ? scoped?.playbook
+        ? Promise.resolve([scoped.playbook])
+        : listDcaPlaybooksForSymbols(playbookAccountId, blotterSymbols)
       : Promise.resolve([]),
     deskType === "perps_bots" && recipeAccountId
       ? loadFuturesAutomationRules(recipeAccountId)
@@ -153,7 +181,6 @@ export default async function FuturesPositionsPage({
       ? dcaHintsForCopyOpen(playbooks, open, desk.working)
       : dcaHintsForOpen(playbooks, open, desk.working)
     : undefined;
-  const filters = parseDeskBlotterFilters(params);
   const bots = dcaBlotter
     ? botOptions
     : perpsBots
@@ -319,7 +346,7 @@ export default async function FuturesPositionsPage({
         <OpenFuturesTrades
           signedIn={desk.signedIn}
           open={visibleOpen}
-          closeAllOpenCount={open.length}
+          closeAllOpenCount={desk.closeAllOpenCount}
           next={NEXT}
           showHeading={false}
           filtersOpen={tableFiltersSuggestOpen(params)}
@@ -333,7 +360,7 @@ export default async function FuturesPositionsPage({
           }
           exchangeBook={desk.exchangeBook}
           showCloseAll
-          workingCount={desk.working.length}
+          workingCount={desk.cancelAllWorkingCount}
           webhookNames={desk.webhookNames}
           showDcaColumns={dcaBlotter}
           playbookOwnsOrders={dcaBlotter}
@@ -359,7 +386,7 @@ export default async function FuturesPositionsPage({
         <FuturesWorkingOrders
           signedIn={desk.signedIn}
           working={visibleWorking}
-          cancelAllCount={desk.working.length}
+          cancelAllCount={desk.cancelAllWorkingCount}
           next={NEXT}
           exchangeBook={desk.exchangeBook}
           baseCoins={Object.fromEntries(

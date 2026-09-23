@@ -1299,7 +1299,7 @@ function FuturesOrderList({
             <p className="mt-0.5 text-sm text-ink-muted">
               {formatFuturesOrigin({ ...origin, webhookNames })}
             </p>
-            <div className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+            <div className="mt-2 grid min-w-0 grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
               <OrderMetric label="Qty" value={String(order.qty)} />
               <OrderMetric
                 label="Price"
@@ -1355,7 +1355,7 @@ function OrderMetric({
         {label}
       </span>
       <span
-        className="min-w-0 truncate tabular-nums text-ink"
+        className="min-w-0 break-all text-right tabular-nums text-ink"
         title={title ?? value}
       >
         {value}

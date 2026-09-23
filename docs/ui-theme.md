@@ -90,3 +90,7 @@ Geist is the next/font face on `--font-geist` (not a local family named `Geist`)
 ## Motion
 
 Short press on buttons (`scale` + opacity). Server-action submits swap the label for a spinner, then a success check for 1.5s when the work is actually done. Desk Save / Disable return when the app has accepted the work — venue flatten, cancel, and grid sync finish in the background. A DCA row **Close**, Disable, or Close All marks the blotter row **Closing** / **Cancelling** as soon as the desk accepts (warning chip, no Close/Edit/Cancel, no success tick). The row leaves when the venue confirms. While any pending-close row is visible, Positions and Automations refresh about every 2s instead of 8s, and refresh once as soon as that pending state appears. The banner or blotter flash says the desk accepted the close. No decorative animation.
+
+## Loading
+
+A route `loading.tsx` paints the same containers as the loaded page: the page heading, stat cards, and table cards. `ContainerLoading` (`components/container-loading.tsx`) sits inside each container that is still waiting — the same spinner as a submit button. Do not replace the page with one line of loading text under the title. Positions is the reference.

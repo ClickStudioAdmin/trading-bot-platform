@@ -98,7 +98,7 @@ export function TableCard({
     <div
       className={`overflow-hidden rounded-card border border-line bg-surface ${className}`.trim()}
     >
-      <div className="min-w-0 overflow-x-auto">{children}</div>
+      <div className="@container min-w-0 overflow-x-auto">{children}</div>
       {pager ? (
         <div className="border-t border-line px-4 py-3 empty:hidden">{pager}</div>
       ) : null}

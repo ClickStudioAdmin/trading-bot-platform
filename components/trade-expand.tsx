@@ -47,8 +47,10 @@ export function ExpandableTradeRows({
       </tr>
       {open ? (
         <tr className="border-b border-line last:border-b-0">
-          <td colSpan={colSpan} className="max-w-0 bg-canvas px-4 py-4" id={panelId}>
-            <div className="min-w-0">{details}</div>
+          <td colSpan={colSpan} className="max-w-0 bg-canvas p-0" id={panelId}>
+            <div className="sticky left-0 w-[100cqi] max-w-[100cqi] px-4 py-4">
+              <div className="min-w-0 overflow-hidden">{details}</div>
+            </div>
           </td>
         </tr>
       ) : null}
