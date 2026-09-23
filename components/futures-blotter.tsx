@@ -38,6 +38,7 @@ import type { DcaOpenHint } from "@/lib/dca/playbook";
 import { COPY_PAPER_STARTING_USDT } from "@/lib/copy/decide";
 import { dcaHintKey } from "@/lib/dca/playbook";
 import { formatVenueLabel } from "@/lib/exchanges/connections";
+import type { FuturesDeskPosition } from "@/lib/futures/list";
 import type { MarkedFutures } from "@/lib/futures/mark";
 import { useLiveMarkedOpen } from "@/components/live-ticker";
 import { formatLeverage, attachFuturesVenueRisk, type FuturesVenueRisk } from "@/lib/futures/venue-risk";
