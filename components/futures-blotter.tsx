@@ -632,9 +632,9 @@ export function ClosedFuturesTrades({
         <table className="w-full min-w-[52rem] text-left text-sm">
           <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
-              <th className="px-4 py-3 font-medium">
+              <th className="w-10 px-2 py-3 font-medium">
                 <ColumnHint
-                  label="Details"
+                  label={<span className="sr-only">Details</span>}
                   hint="Expand for orders and the event log for this position."
                 />
               </th>
