@@ -8,6 +8,7 @@ export function PairPager({
   to,
   prevHref,
   nextHref,
+  pageHref,
 }: {
   page: number;
   pageCount: number;
@@ -16,6 +17,7 @@ export function PairPager({
   to: number;
   prevHref: string;
   nextHref: string;
+  pageHref: (page: number) => string;
 }) {
   return (
     <TablePager
@@ -28,6 +30,7 @@ export function PairPager({
       }}
       prevHref={prevHref}
       nextHref={nextHref}
+      pageHref={pageHref}
       emptyLabel="No pairs."
     />
   );

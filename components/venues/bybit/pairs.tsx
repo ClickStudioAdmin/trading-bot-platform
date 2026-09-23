@@ -166,6 +166,7 @@ export async function BybitFuturesPairs({
               to={list.to}
               prevHref={hrefFor(list.page - 1)}
               nextHref={hrefFor(list.page + 1)}
+              pageHref={hrefFor}
             />
           }
         >

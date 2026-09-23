@@ -9,6 +9,7 @@ import {
   statusToneFor,
   tablePageForIndex,
   tablePageLabel,
+  tablePagerItems,
   tablePageWindow,
   tableFiltersOpenStorageKey,
   tableFiltersSuggestOpen,
@@ -35,6 +36,12 @@ assert.equal(
   tablePageLabel({ total: 24, from: 11, to: 20 }),
   "Showing 11–20 of 24",
 );
+assert.deepEqual(tablePagerItems(1, 1), [1]);
+assert.deepEqual(tablePagerItems(1, 2), [1, 2]);
+assert.deepEqual(tablePagerItems(2, 5), [1, 2, 3, 4, 5]);
+assert.deepEqual(tablePagerItems(1, 12), [1, 2, 3, 4, "gap", 12]);
+assert.deepEqual(tablePagerItems(6, 12), [1, "gap", 5, 6, 7, "gap", 12]);
+assert.deepEqual(tablePagerItems(12, 12), [1, "gap", 9, 10, 11, 12]);
 assert.equal(parseTablePage("2"), 2);
 assert.equal(parseTablePage("nope"), 1);
 assert.equal(toggleTableSortDir("name", "name", "asc"), "desc");

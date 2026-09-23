@@ -34,6 +34,7 @@ import {
   tableFiltersOpenScopeFromSearch,
   tableFiltersOpenStorageKey,
   tablePageLabel,
+  tablePagerItems,
   toggleTableSortDir,
   type StatusTone,
   type TablePageWindow,
@@ -356,6 +357,8 @@ export function TablePager({
   nextHref,
   onPrev,
   onNext,
+  onPage,
+  pageHref,
   emptyLabel,
   align = "center",
   buttons = "icons",
@@ -366,6 +369,8 @@ export function TablePager({
   nextHref?: string;
   onPrev?: () => void;
   onNext?: () => void;
+  onPage?: (page: number) => void;
+  pageHref?: (page: number) => string;
   emptyLabel?: string;
   align?: "split" | "center";
   buttons?: "text" | "icons";
@@ -376,6 +381,7 @@ export function TablePager({
   }
   const showButtons = window.pageCount > 1;
   const icons = buttons === "icons";
+  const items = tablePagerItems(window.page, window.pageCount);
   return (
     <div
       className={`flex flex-wrap items-center gap-3 text-sm text-ink-muted ${
@@ -384,24 +390,103 @@ export function TablePager({
     >
       <p>{tablePageLabel({ ...window, empty: emptyLabel })}</p>
       {showButtons ? (
-        <div className="flex gap-2">
+        <nav aria-label="Pages" className="flex items-center gap-1">
           <PagerButton
             kind="prev"
-            href={prevHref}
-            onClick={onPrev}
+            href={
+              pageHref && window.page > 1
+                ? pageHref(window.page - 1)
+                : prevHref
+            }
+            onClick={
+              onPage ? () => onPage(window.page - 1) : onPrev
+            }
             disabled={window.page <= 1}
             icons={icons}
           />
+          {items.map((item, index) =>
+            item === "gap" ? (
+              <span
+                key={`gap-${index}`}
+                className="px-1 text-ink-faint"
+                aria-hidden
+              >
+                …
+              </span>
+            ) : (
+              <PagerPage
+                key={item}
+                page={item}
+                current={item === window.page}
+                href={
+                  pageHref && item !== window.page ? pageHref(item) : undefined
+                }
+                onClick={
+                  onPage && item !== window.page
+                    ? () => onPage(item)
+                    : undefined
+                }
+              />
+            ),
+          )}
           <PagerButton
             kind="next"
-            href={nextHref}
-            onClick={onNext}
+            href={
+              pageHref && window.page < window.pageCount
+                ? pageHref(window.page + 1)
+                : nextHref
+            }
+            onClick={
+              onPage ? () => onPage(window.page + 1) : onNext
+            }
             disabled={window.page >= window.pageCount}
             icons={icons}
           />
-        </div>
+        </nav>
       ) : null}
     </div>
+  );
+}
+
+function PagerPage({
+  page,
+  current,
+  href,
+  onClick,
+}: {
+  page: number;
+  current: boolean;
+  href?: string;
+  onClick?: () => void;
+}) {
+  const className = `inline-flex h-8 min-w-8 items-center justify-center rounded-control border px-2 text-sm tabular-nums ${
+    current
+      ? "border-accent bg-accent/15 text-accent"
+      : "border-line text-ink-muted hover:bg-surface-raised hover:text-ink"
+  }`;
+  if (current) {
+    return (
+      <span className={className} aria-current="page">
+        {page}
+      </span>
+    );
+  }
+  if (href) {
+    return (
+      <Link href={href} className={className} aria-label={`Page ${page}`}>
+        {page}
+      </Link>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className={className}
+      aria-label={`Page ${page}`}
+      onClick={onClick}
+    >
+      {page}
+    </button>
   );
 }
 

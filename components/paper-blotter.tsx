@@ -184,6 +184,7 @@ export function OpenPaperTrades({
         pager={
           <TablePager
             window={table.window}
+            onPage={(page) => table.setPage(page)}
             onPrev={() => table.setPage(table.window.page - 1)}
             onNext={() => table.setPage(table.window.page + 1)}
           />
@@ -413,6 +414,7 @@ export function ClosedPaperTrades({
         pager={
           <TablePager
             window={table.window}
+            onPage={(page) => table.setPage(page)}
             onPrev={() => table.setPage(table.window.page - 1)}
             onNext={() => table.setPage(table.window.page + 1)}
           />

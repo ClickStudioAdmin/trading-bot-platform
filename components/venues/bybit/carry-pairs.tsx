@@ -130,6 +130,7 @@ export async function BybitCarryPairs({
               to={list.to}
               prevHref={hrefFor(list.page - 1)}
               nextHref={hrefFor(list.page + 1)}
+              pageHref={hrefFor}
             />
           }
         >

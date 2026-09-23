@@ -868,6 +868,13 @@ function BillingTablePager({
         page: String(list.page + 1),
         ...extra,
       })}
+      pageHref={(page) =>
+        billingPath({
+          tab,
+          page: page > 1 ? String(page) : undefined,
+          ...extra,
+        })
+      }
     />
   );
 }

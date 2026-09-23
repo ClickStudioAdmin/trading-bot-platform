@@ -187,6 +187,7 @@ export function AdminPayoutFilesTable({
         pager={
           <TablePager
             window={table.window}
+            onPage={(page) => table.setPage(page)}
             onPrev={() => table.setPage(table.window.page - 1)}
             onNext={() => table.setPage(table.window.page + 1)}
             emptyLabel="No files match."
@@ -361,6 +362,7 @@ export function AdminPayoutQueueTable({
         pager={
           <TablePager
             window={table.window}
+            onPage={(page) => table.setPage(page)}
             onPrev={() => table.setPage(table.window.page - 1)}
             onNext={() => table.setPage(table.window.page + 1)}
             emptyLabel="No requests match."
@@ -520,6 +522,7 @@ export function AdminPayoutFilePaymentsTable({
         pager={
           <TablePager
             window={table.window}
+            onPage={(page) => table.setPage(page)}
             onPrev={() => table.setPage(table.window.page - 1)}
             onNext={() => table.setPage(table.window.page + 1)}
             emptyLabel="No payments match."

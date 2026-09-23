@@ -141,6 +141,7 @@ export async function HyperliquidFuturesPairs({
               to={list.to}
               prevHref={hrefFor(list.page - 1)}
               nextHref={hrefFor(list.page + 1)}
+              pageHref={hrefFor}
             />
           }
         >

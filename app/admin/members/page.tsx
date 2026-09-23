@@ -125,6 +125,7 @@ export default async function AdminMembersPage({
             window={window}
             prevHref={memberListHref(query, { page: list.page - 1 })}
             nextHref={memberListHref(query, { page: list.page + 1 })}
+            pageHref={(page) => memberListHref(query, { page })}
             emptyLabel="No members."
           />
         }

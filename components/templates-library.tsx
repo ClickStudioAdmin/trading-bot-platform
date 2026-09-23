@@ -928,6 +928,7 @@ export function TemplatesLibrary({
           pager={
             <TablePager
               window={pagedTemplates.window}
+              onPage={(page) => setPage(page)}
               onPrev={() => setPage(pagedTemplates.window.page - 1)}
               onNext={() => setPage(pagedTemplates.window.page + 1)}
             />
@@ -1157,6 +1158,7 @@ export function TemplatesLibrary({
             pager={
               <TablePager
                 window={pagedFolders.window}
+                onPage={(page) => setPage(page)}
                 onPrev={() => setPage(pagedFolders.window.page - 1)}
                 onNext={() => setPage(pagedFolders.window.page + 1)}
               />

@@ -1312,8 +1312,17 @@ function AffiliateTablePager({
     tab === "network"
       ? affiliateNetworkPath("list", list.page + 1, extra)
       : affiliatePortalPagePath(tab, list.page + 1, extra);
+  const hrefFor = (page: number) =>
+    tab === "network"
+      ? affiliateNetworkPath("list", page, extra)
+      : affiliatePortalPagePath(tab, page, extra);
   return (
-    <TablePager window={list} prevHref={prevHref} nextHref={nextHref} />
+    <TablePager
+      window={list}
+      prevHref={prevHref}
+      nextHref={nextHref}
+      pageHref={hrefFor}
+    />
   );
 }
 

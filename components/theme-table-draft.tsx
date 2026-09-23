@@ -167,6 +167,7 @@ export function ThemeTableDraft() {
   const table = useClientTable(filtered, compareSampleRows, {
     defaultKey: "name",
     defaultDir: "asc",
+    pageSize: 5,
   });
   const pageRows = table.pageRows;
   const pageIds = pageRows.map((item) => item.id);
@@ -354,6 +355,7 @@ export function ThemeTableDraft() {
             align="center"
             buttons="icons"
             window={table.window}
+            onPage={(page) => table.setPage(page)}
             onPrev={() => table.setPage(table.window.page - 1)}
             onNext={() => table.setPage(table.window.page + 1)}
           />

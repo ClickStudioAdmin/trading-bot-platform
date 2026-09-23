@@ -46,6 +46,41 @@ export function tablePageWindow(
   };
 }
 
+export type TablePagerItem = number | "gap";
+
+/** Page buttons: every page when there are seven or fewer, otherwise the ends plus the pages around the current one. */
+export function tablePagerItems(page: number, pageCount: number): TablePagerItem[] {
+  const count = Math.max(1, Math.trunc(pageCount) || 1);
+  const current = Math.min(Math.max(1, Math.trunc(page) || 1), count);
+  if (count <= 7) {
+    return Array.from({ length: count }, (_, index) => index + 1);
+  }
+  const pages = new Set<number>([1, count, current, current - 1, current + 1]);
+  if (current <= 3) {
+    pages.add(2);
+    pages.add(3);
+    pages.add(4);
+  }
+  if (current >= count - 2) {
+    pages.add(count - 1);
+    pages.add(count - 2);
+    pages.add(count - 3);
+  }
+  const sorted = [...pages]
+    .filter((item) => item >= 1 && item <= count)
+    .sort((left, right) => left - right);
+  const items: TablePagerItem[] = [];
+  for (let index = 0; index < sorted.length; index += 1) {
+    const item = sorted[index]!;
+    const previous = sorted[index - 1];
+    if (previous != null && item - previous > 1) {
+      items.push("gap");
+    }
+    items.push(item);
+  }
+  return items;
+}
+
 export function tablePageLabel(input: {
   total: number;
   from: number;

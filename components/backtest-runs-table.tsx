@@ -357,6 +357,7 @@ export function BacktestRunsTable({
         pager={
           <TablePager
             window={table.window}
+            onPage={(page) => table.setPage(page)}
             onPrev={() => table.setPage(table.window.page - 1)}
             onNext={() => table.setPage(table.window.page + 1)}
           />
