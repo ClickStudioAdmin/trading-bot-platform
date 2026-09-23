@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   createContext,
   type FormEvent,
+  type MouseEvent,
   type ReactNode,
   useCallback,
   useContext,
@@ -421,14 +422,30 @@ export function TablePager({
   className?: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const flight = useRef(0);
+  const router = useRouter();
   if (window.total === 0) {
     return null;
   }
   const showButtons = window.pageCount > 1;
   const icons = buttons === "icons";
   const items = tablePagerItems(window.page, window.pageCount);
-  function scrollToTable() {
-    scrollPagerTableIntoView(rootRef.current);
+  function showPage(apply: () => void) {
+    const id = flight.current + 1;
+    flight.current = id;
+    void scrollTableSlowly(rootRef.current).then(() => {
+      if (flight.current !== id) {
+        return;
+      }
+      apply();
+    });
+  }
+  function followHref(event: MouseEvent<HTMLElement>, href: string) {
+    if (!isPlainLeftClick(event)) {
+      return;
+    }
+    event.preventDefault();
+    showPage(() => router.push(href));
   }
   return (
     <div
@@ -443,10 +460,17 @@ export function TablePager({
           <PagerButton
             kind="prev"
             href={prevHref}
-            onClick={
-              onPage ? () => onPage(window.page - 1) : onPrev
+            onFollow={
+              prevHref ? (event) => followHref(event, prevHref) : undefined
             }
-            onScroll={scrollToTable}
+            onClick={
+              prevHref
+                ? undefined
+                : () =>
+                    showPage(() =>
+                      onPage ? onPage(window.page - 1) : onPrev?.(),
+                    )
+            }
             disabled={window.page <= 1}
             icons={icons}
           />
@@ -469,22 +493,33 @@ export function TablePager({
                     ? pageHrefs[item]
                     : undefined
                 }
-                onClick={
-                  onPage && item !== window.page
-                    ? () => onPage(item)
+                onFollow={
+                  pageHrefs && item !== window.page
+                    ? (event) => followHref(event, pageHrefs[item] ?? "")
                     : undefined
                 }
-                onScroll={scrollToTable}
+                onClick={
+                  !pageHrefs && onPage && item !== window.page
+                    ? () => showPage(() => onPage(item))
+                    : undefined
+                }
               />
             ),
           )}
           <PagerButton
             kind="next"
             href={nextHref}
-            onClick={
-              onPage ? () => onPage(window.page + 1) : onNext
+            onFollow={
+              nextHref ? (event) => followHref(event, nextHref) : undefined
             }
-            onScroll={scrollToTable}
+            onClick={
+              nextHref
+                ? undefined
+                : () =>
+                    showPage(() =>
+                      onPage ? onPage(window.page + 1) : onNext?.(),
+                    )
+            }
             disabled={window.page >= window.pageCount}
             icons={icons}
           />
@@ -494,26 +529,92 @@ export function TablePager({
   );
 }
 
-function scrollPagerTableIntoView(from: HTMLElement | null) {
+function isPlainLeftClick(event: MouseEvent<HTMLElement>): boolean {
+  return (
+    event.button === 0 &&
+    !event.metaKey &&
+    !event.ctrlKey &&
+    !event.shiftKey &&
+    !event.altKey
+  );
+}
+
+function scrollableParent(node: HTMLElement): HTMLElement | null {
+  let current = node.parentElement;
+  while (current && current !== document.body) {
+    const style = getComputedStyle(current);
+    const overflow = `${style.overflowY} ${style.overflow}`;
+    if (
+      /(auto|scroll)/.test(overflow) &&
+      current.scrollHeight > current.clientHeight + 1
+    ) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  return null;
+}
+
+function scrollTableSlowly(from: HTMLElement | null): Promise<void> {
   const card = from?.closest("[data-table-card]");
   if (!(card instanceof HTMLElement)) {
-    return;
+    return Promise.resolve();
   }
-  card.scrollIntoView({ block: "start" });
+  const margin = Number.parseFloat(getComputedStyle(card).scrollMarginTop) || 0;
+  const parent = scrollableParent(card);
+  const start = parent ? parent.scrollTop : window.scrollY;
+  const top = parent
+    ? parent.scrollTop +
+      card.getBoundingClientRect().top -
+      parent.getBoundingClientRect().top -
+      margin
+    : window.scrollY + card.getBoundingClientRect().top - margin;
+  const distance = top - start;
+  if (Math.abs(distance) < 2) {
+    return Promise.resolve();
+  }
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (parent) {
+      parent.scrollTop = top;
+    } else {
+      window.scrollTo(0, top);
+    }
+    return Promise.resolve();
+  }
+  const duration = Math.min(1100, Math.max(550, Math.abs(distance) * 0.55));
+  const started = performance.now();
+  return new Promise((resolve) => {
+    function frame(now: number) {
+      const t = Math.min(1, (now - started) / duration);
+      const eased = t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2;
+      const next = start + distance * eased;
+      if (parent) {
+        parent.scrollTop = next;
+      } else {
+        window.scrollTo(0, next);
+      }
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        resolve();
+      }
+    }
+    requestAnimationFrame(frame);
+  });
 }
 
 function PagerPage({
   page,
   current,
   href,
+  onFollow,
   onClick,
-  onScroll,
 }: {
   page: number;
   current: boolean;
   href?: string;
+  onFollow?: (event: MouseEvent<HTMLElement>) => void;
   onClick?: () => void;
-  onScroll: () => void;
 }) {
   const className = `inline-flex h-8 min-w-8 items-center justify-center rounded-control border px-2 text-sm tabular-nums ${
     current
@@ -534,7 +635,7 @@ function PagerPage({
         scroll={false}
         className={className}
         aria-label={`Page ${page}`}
-        onClick={onScroll}
+        onClick={onFollow}
       >
         {page}
       </Link>
@@ -545,10 +646,7 @@ function PagerPage({
       type="button"
       className={className}
       aria-label={`Page ${page}`}
-      onClick={() => {
-        onClick?.();
-        onScroll();
-      }}
+      onClick={() => onClick?.()}
     >
       {page}
     </button>
@@ -558,15 +656,15 @@ function PagerPage({
 function PagerButton({
   kind,
   href,
+  onFollow,
   onClick,
-  onScroll,
   disabled,
   icons,
 }: {
   kind: "prev" | "next";
   href?: string;
+  onFollow?: (event: MouseEvent<HTMLElement>) => void;
   onClick?: () => void;
-  onScroll: () => void;
   disabled: boolean;
   icons: boolean;
 }) {
@@ -601,9 +699,9 @@ function PagerButton({
           href={href}
           scroll={false}
           className={className}
-          onClick={() => {
+          onClick={(event) => {
             dismiss();
-            onScroll();
+            onFollow?.(event);
           }}
           {...spoken}
           {...hover}
@@ -626,7 +724,6 @@ function PagerButton({
             return;
           }
           onClick?.();
-          onScroll();
         }}
         {...spoken}
         {...hover}
