@@ -165,6 +165,7 @@ export function AccountConnectionsTable({
               />
               <SortTh
                 label="Bound desks"
+                className="pl-10!"
                 active={table.sortKey === "desks"}
                 dir={table.sortDir}
                 onSort={() => table.onSort("desks")}
@@ -223,7 +224,7 @@ export function AccountConnectionsTable({
                       />
                     ) : null}
                   </td>
-                  <td className="px-4 py-3 align-top">
+                  <td className="py-3 pr-4 pl-10 align-top">
                     {used.length > 0 ? (
                       <span className="flex flex-col gap-1 text-ink-muted">
                         {used.map((bind) => (
