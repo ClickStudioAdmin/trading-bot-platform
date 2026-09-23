@@ -45,6 +45,8 @@ export function futuresDaysHeld(
 
 const MS_PER_DAY = 86_400_000;
 const DAYS_PER_YEAR = 365.25;
+/** 10,000%. A one-day book compounded for a year blows past this and is not an APR. */
+const MAX_ANNUALIZED_RETURN = 100;
 
 function utcDayStartMs(atMs: number): number {
   const date = new Date(atMs);
@@ -97,7 +99,11 @@ export function annualizeReturnPct(
   ) {
     return null;
   }
-  return (1 + periodReturn) ** (DAYS_PER_YEAR / days) - 1;
+  const apr = (1 + periodReturn) ** (DAYS_PER_YEAR / days) - 1;
+  if (!Number.isFinite(apr) || Math.abs(apr) > MAX_ANNUALIZED_RETURN) {
+    return null;
+  }
+  return apr;
 }
 
 export function formatTradingDaysNote(days: number | null): string | undefined {

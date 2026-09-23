@@ -927,7 +927,7 @@ export function FuturesPerformanceStats({
       label: "APR",
       value: signedIn && aprPct != null ? formatPct(aprPct) : "—",
       toneClass: signedTone(signedIn ? aprPct : null),
-      hint: "Compound annualization of P&L over the calendar span of this book (first close to last close). Short windows inflate APR.",
+      hint: "Compound annualization of P&L from the first close to the last close. Not shown when a short window would push the rate above 9,999%.",
       note: "Annualized P&L",
     },
   ];

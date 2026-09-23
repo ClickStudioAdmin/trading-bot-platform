@@ -99,7 +99,7 @@ assert.equal(geared.onNotionalPct, 0.075);
 assert.equal(geared.roePct, 0.75);
 assert.equal(geared.roeTradeCount, 2);
 assert.equal(geared.tradingDays, 1);
-assert.equal(geared.aprPct, 1.75 ** 365.25 - 1);
+assert.equal(geared.aprPct, null);
 
 const partialRoe = futuresClosedStats([
   closed({ id: "1", realizedUsdt: 20, notionalUsdt: 100, leverage: 10 }),
@@ -140,6 +140,7 @@ assert.ok(
 );
 assert.equal(annualizeReturnPct(null, 10), null);
 assert.equal(annualizeReturnPct(-1, 10), null);
+assert.equal(annualizeReturnPct(0.2146, 1), null);
 assert.equal(formatTradingDaysNote(null), undefined);
 assert.equal(formatTradingDaysNote(1), "1 day trading");
 assert.equal(formatTradingDaysNote(47), "47 days trading");

@@ -500,7 +500,7 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
           label="APR"
           value={empty || apr == null ? "—" : formatPct(apr)}
           toneClass={signedTone(empty ? null : apr)}
-          hint="Compound annualization of account return over the replay window. Short windows inflate APR."
+          hint="Compound annualization of account return over the replay window. Not shown when a short window would push the rate above 9,999%."
           note="Annualized account return"
         />
       </div>
