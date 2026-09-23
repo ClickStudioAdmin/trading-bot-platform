@@ -84,7 +84,7 @@ export function formatSignedUsd(value: number): string {
   return withSignedUsd(Math.abs(Math.round(value)).toLocaleString("en-US"), value);
 }
 
-/** Row P&L. Amounts under $1 keep up to two decimal places; larger amounts stay whole dollars. */
+/** Row P&L. Amounts under $1 keep up to two decimal places. A non-zero amount that rounds to $0.00 shows <$0.00. Larger amounts stay whole dollars. */
 export function formatPnlUsd(value: number): string {
   if (!Number.isFinite(value)) {
     return "—";
@@ -94,7 +94,7 @@ export function formatPnlUsd(value: number): string {
   }
   const cents = Math.round(Math.abs(value) * 100) / 100;
   if (cents === 0) {
-    return "$0";
+    return value === 0 ? "$0" : "<$0.00";
   }
   return withSignedUsd(
     cents.toLocaleString("en-US", {
