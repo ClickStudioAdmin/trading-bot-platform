@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { AffiliateArchiveButton } from "@/components/affiliate-archive-button";
 import { ColumnHint } from "@/components/column-hint";
@@ -498,41 +499,31 @@ export function AffiliateDashboard({
 
       {tab === "network" ? (
         <div className="mt-6">
-          <div className="flex justify-end">
-            <div
-              role="tablist"
-              aria-label="Network view"
-              className="flex w-fit rounded-control border border-line bg-surface p-0.5"
-            >
-              <NetworkViewLink
-                href={affiliateNetworkPath("list", page, queryExtra)}
-                selected={view === "list"}
-              >
-                List
-              </NetworkViewLink>
-              <NetworkViewLink
-                href={affiliateNetworkPath("chart")}
-                selected={view === "chart"}
-              >
-                Chart
-              </NetworkViewLink>
+          {view === "chart" || portal.downline.length === 0 ? (
+            <div className="mb-4">
+              <NetworkViewSwitch page={page} view={view} extra={queryExtra} />
             </div>
-          </div>
+          ) : null}
           {view === "chart" ? (
-            <div className="mt-4">
-              <AffiliateOrgChartFrame
-                nodes={portal.tree}
-                rootPlanName={portal.rates.planName}
-              />
-            </div>
+            <AffiliateOrgChartFrame
+              nodes={portal.tree}
+              rootPlanName={portal.rates.planName}
+            />
           ) : (
             portal.downline.length === 0 ? (
-              <p className="mt-4 text-sm text-ink-muted">No referrals yet.</p>
+              <p className="text-sm text-ink-muted">No referrals yet.</p>
             ) : (
-              <div className="mt-4">
+              <div>
                 <AffiliateListFilters
                   tab="network"
                   query={tableQuery}
+                  title={
+                    <NetworkViewSwitch
+                      page={page}
+                      view={view}
+                      extra={queryExtra}
+                    />
+                  }
                   statusOptions={[
                     { value: "paid", label: "Paid" },
                     { value: "signup", label: "Signup" },
@@ -542,7 +533,7 @@ export function AffiliateDashboard({
                   <p className="mt-4 text-sm text-ink-muted">No referrals match.</p>
                 ) : (
                   <TableCard
-                    className="mt-4"
+                    className="mt-0"
                     pager={
                       <AffiliateTablePager
                         tab="network"
@@ -1361,17 +1352,20 @@ function AffiliateListFilters({
   tab,
   query,
   statusOptions,
+  title,
 }: {
   tab: AffiliatePortalTab;
   query: AffiliateListQuery;
   statusOptions: { value: string; label: string }[];
+  title?: ReactNode;
 }) {
   const defaults = affiliateListDefaults(tab);
   return (
     <TableFilterSession
+      title={title}
       defaultOpen={Boolean(query.q.trim() || query.status)}
     >
-        <LiveGetForm className="mt-4">
+        <LiveGetForm className={title ? "mt-0" : "mt-4"}>
           <input type="hidden" name="page" value="1" />
           <input type="hidden" name="tab" value={tab} />
           {query.sort !== defaults.sort ? (
@@ -1410,6 +1404,37 @@ function AffiliateListFilters({
           </TableLabelButton>
         </LiveGetForm>
     </TableFilterSession>
+  );
+}
+
+function NetworkViewSwitch({
+  page,
+  view,
+  extra,
+}: {
+  page: number;
+  view: AffiliateNetworkView;
+  extra: Record<string, string>;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Network view"
+      className="flex w-fit rounded-control border border-line bg-surface p-0.5"
+    >
+      <NetworkViewLink
+        href={affiliateNetworkPath("list", page, extra)}
+        selected={view === "list"}
+      >
+        List
+      </NetworkViewLink>
+      <NetworkViewLink
+        href={affiliateNetworkPath("chart")}
+        selected={view === "chart"}
+      >
+        Chart
+      </NetworkViewLink>
+    </div>
   );
 }
 
