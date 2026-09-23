@@ -1,8 +1,6 @@
 "use client";
 
 import { useRef, useState, useTransition, type FormEvent } from "react";
-import { BybitAgreementEnables } from "@/components/bybit-agreement-enable";
-import type { BybitAgreementKind } from "@/lib/exchanges/agreement";
 import {
   ButtonBusyIcon,
   PendingSubmitButton,
@@ -22,13 +20,11 @@ export function ExchangeConnectForm({
   next,
   compact = false,
   hideTitle = false,
-  enabledKinds = [],
 }: {
   venues: VenueDefinition[];
   next?: string;
   compact?: boolean;
   hideTitle?: boolean;
-  enabledKinds?: readonly BybitAgreementKind[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [venueId, setVenueId] = useState(venues[0]?.id ?? "");
@@ -36,10 +32,6 @@ export function ExchangeConnectForm({
     { ok: true } | { ok: false; error: string } | null
   >(null);
   const [checking, startCheck] = useTransition();
-  const [pickedKinds, setPickedKinds] = useState<BybitAgreementKind[]>([]);
-  const agreementKinds = [
-    ...new Set<BybitAgreementKind>([...enabledKinds, ...pickedKinds]),
-  ];
   const venue = venues.find((item) => item.id === venueId) ?? venues[0];
   if (!venue) {
     return null;
@@ -100,7 +92,6 @@ export function ExchangeConnectForm({
           value={venue.id}
           onChange={(event) => {
             setVenueId(event.target.value);
-            setPickedKinds([]);
             setCheck(null);
           }}
           className={fieldClass}
@@ -144,24 +135,6 @@ export function ExchangeConnectForm({
         Label (optional)
         <input name="label" maxLength={40} className={fieldClass} />
       </label>
-      {venue.id === "bybit" ? (
-        <>
-          {agreementKinds.map((kind) => (
-            <input key={kind} type="hidden" name="agreementKind" value={kind} />
-          ))}
-          <BybitAgreementEnables
-            kinds={["tradfi", "oil"]}
-            selectedKinds={agreementKinds}
-            persist="login"
-            layout="wide"
-            onToggleKind={(kind) => {
-              setPickedKinds((current) =>
-                current.includes(kind) ? current : [...current, kind],
-              );
-            }}
-          />
-        </>
-      ) : null}
       <p className="text-sm text-ink-muted">
         {venue.id === "hyperliquid"
           ? "Paste the account address and an approved agent private key. Check the connection, then save. Create the agent in Hyperliquid — this app does not generate keys. The secret is encrypted and is not shown again."
