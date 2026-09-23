@@ -1687,11 +1687,11 @@ export function ThemeBotFormDraft() {
               </>
             ) : null}
             {averaging === "interval" ? (
-              <div>
+              <div className="col-span-2">
                 <p className={labelClass}>
                   <HintLabel text="Add every" required />
                 </p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-[minmax(8.5rem,1.4fr)_minmax(5rem,0.8fr)] gap-2">
                   <AppSelect
                     className={fieldClass}
                     value={intervalUnit}
