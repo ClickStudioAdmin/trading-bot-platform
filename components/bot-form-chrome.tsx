@@ -435,8 +435,7 @@ export function PreviousBacktestLink({
   name: string;
 }) {
   return (
-    <div className="flex flex-col gap-1 pt-1">
-      <p className={botLabelClass}>Previous Backtests</p>
+    <div className="pt-1">
       <Link
         href={href}
         target="_blank"
