@@ -7,6 +7,11 @@ import { FuturesTrailingFields } from "@/components/futures-trailing";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import {
+  CLOSED_AGREEMENT_GATE,
+  firstOpenPerp,
+  type BybitAgreementGate,
+} from "@/lib/exchanges/agreement";
+import {
   formatPerpMinQty,
   perpEffectiveMaxQty,
   perpTicketLimitError,
@@ -19,20 +24,17 @@ export function FuturesOrderTicket({
   actions,
   includeStops = true,
   defaultSymbol = "BTCUSDT",
-  agreementSymbols,
+  agreementGate = CLOSED_AGREEMENT_GATE,
 }: {
   options: LinearPerp[];
   lastPrices?: Record<string, number>;
   actions?: ReactNode;
   includeStops?: boolean;
   defaultSymbol?: string;
-  agreementSymbols?: readonly string[];
+  agreementGate?: BybitAgreementGate;
 }) {
-  const [symbol, setSymbol] = useState(
-    () =>
-      options.find((row) => row.symbol === defaultSymbol)?.symbol ??
-      options[0]?.symbol ??
-      defaultSymbol,
+  const [symbol, setSymbol] = useState(() =>
+    firstOpenPerp(options, agreementGate, defaultSymbol),
   );
   const [unit, setUnit] = useState<"qty" | "usdt">("qty");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
@@ -95,7 +97,7 @@ export function FuturesOrderTicket({
               options={options}
               value={symbol}
               onChange={setSymbol}
-              agreementSymbols={agreementSymbols}
+              agreementGate={agreementGate}
             />
           </div>
           <div className="block text-sm text-ink">

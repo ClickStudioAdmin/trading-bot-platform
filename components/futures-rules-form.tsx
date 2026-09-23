@@ -36,7 +36,10 @@ import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import {
   BYBIT_AGREEMENT_NOTE,
+  CLOSED_AGREEMENT_GATE,
+  firstOpenPerp,
   symbolNeedsBybitAgreement,
+  type BybitAgreementGate,
 } from "@/lib/exchanges/agreement";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { useConfirmDialog } from "@/components/confirm-modal";
@@ -128,7 +131,7 @@ export function FuturesAutomationsDesk({
   venueEnvironment = null,
   backtestLibrary = [],
   savedBacktests = [],
-  agreementSymbols = [],
+  agreementGate = CLOSED_AGREEMENT_GATE,
   edit = null,
   clone = null,
   listHref,
@@ -149,7 +152,7 @@ export function FuturesAutomationsDesk({
   venueEnvironment?: string | null;
   backtestLibrary?: BacktestLibraryItem[];
   savedBacktests?: readonly SavedBacktestMatch[];
-  agreementSymbols?: readonly string[];
+  agreementGate?: BybitAgreementGate;
   edit?: string | null;
   clone?: string | null;
   listHref: string;
@@ -255,7 +258,7 @@ export function FuturesAutomationsDesk({
           venueEnvironment={venueEnvironment}
           backtestLibrary={library}
           savedBacktests={savedBacktests}
-          agreementSymbols={agreementSymbols}
+          agreementGate={agreementGate}
           onSaved={(result) => {
             const previous = new Set(
               layers.flatMap((layer) => (layer.id ? [layer.id] : [])),
@@ -315,14 +318,14 @@ export function FuturesAutomationsDesk({
             rows={savedLayers.map((layer) => {
               const agreementOff =
                 !inUse.has(layer.id) &&
-                symbolNeedsBybitAgreement(agreementSymbols, layer.symbol);
+                symbolNeedsBybitAgreement(agreementGate.symbols, layer.symbol);
               const statusKey = agreementOff ? "disabled" : layer.mode;
               return {
               id: layer.id,
               name: layer.name || "Bot",
               pair: perpsBotPair(layer),
               baseCoin: botPairBaseCoin(layer.symbol),
-              pairNote: symbolNeedsBybitAgreement(agreementSymbols, layer.symbol)
+              pairNote: symbolNeedsBybitAgreement(agreementGate.symbols, layer.symbol)
                 ? BYBIT_AGREEMENT_NOTE
                 : undefined,
               status: botModeLabel("perps", statusKey),
@@ -391,7 +394,7 @@ function RuleCard({
   venueEnvironment = null,
   backtestLibrary = [],
   savedBacktests = [],
-  agreementSymbols = [],
+  agreementGate = CLOSED_AGREEMENT_GATE,
   onTemplateSaved,
 }: {
   layer: FuturesAutomationFormValues;
@@ -408,13 +411,13 @@ function RuleCard({
   venueEnvironment?: string | null;
   backtestLibrary?: BacktestLibraryItem[];
   savedBacktests?: readonly SavedBacktestMatch[];
-  agreementSymbols?: readonly string[];
+  agreementGate?: BybitAgreementGate;
   onTemplateSaved?: (item: BacktestLibraryItem) => void;
 }) {
   const prefix = "r0_";
   const [dirty, setDirty] = useState(false);
   const [mode, setMode] = useState(
-    !inUse && symbolNeedsBybitAgreement(agreementSymbols, layer.symbol)
+    !inUse && symbolNeedsBybitAgreement(agreementGate.symbols, layer.symbol)
       ? "disabled"
       : layer.mode,
   );
@@ -424,7 +427,11 @@ function RuleCard({
   const [size, setSize] = useState(layer.size);
   const [limitPrice, setLimitPrice] = useState(layer.limitPrice);
   const [triggerPrice, setTriggerPrice] = useState(layer.triggerPrice);
-  const [symbol, setSymbol] = useState(layer.symbol);
+  const [symbol, setSymbol] = useState(() =>
+    layer.id
+      ? layer.symbol
+      : firstOpenPerp(options, agreementGate, layer.symbol),
+  );
   const [entrySource, setEntrySource] = useState(layer.entrySource);
   const [webhookId, setWebhookId] = useState(layer.webhookId);
   const entrySide: FuturesSide = formAction === "sell" ? "short" : "long";
@@ -719,13 +726,8 @@ function RuleCard({
               options={options}
               value={symbol}
               onChange={setSymbol}
-              agreementSymbols={agreementSymbols}
+              agreementGate={agreementGate}
             />
-            {symbolNeedsBybitAgreement(agreementSymbols, symbol) ? (
-              <p className="mt-1 text-hint text-warning">
-                Save to try this contract again after you sign on Bybit.
-              </p>
-            ) : null}
           </BotField>
           <BotField label="Action" required>
             <AppSelect

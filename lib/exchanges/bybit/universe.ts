@@ -38,6 +38,7 @@ export type BybitInstrument = {
     minPrice?: string;
     maxPrice?: string;
   };
+  symbolType?: string;
 };
 
 export type CarryPair = {

@@ -46,7 +46,8 @@ import { loadFuturesPositionsBotBook } from "@/lib/futures/bot-book";
 import { futuresOpenBookFromDesk, loadFuturesDesk } from "@/lib/futures/list";
 import { futuresDeskNeedsUrgentRefresh } from "@/lib/futures/pending-close";
 import { markFuturesOpen } from "@/lib/futures/mark";
-import { listAgreementSymbols } from "@/lib/exchanges/agreement-store";
+import { loadBybitAgreementGate } from "@/lib/exchanges/agreement-store";
+import { CLOSED_AGREEMENT_GATE } from "@/lib/exchanges/agreement";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { firstSearchValue } from "@/lib/paper/open";
 import { withMarketCapRank } from "@/lib/pairs/page";
@@ -160,17 +161,20 @@ export default async function FuturesPositionsPage({
     ...desk.working.map((row) => row.symbol),
   ];
   const deferVenueRisk = desk.exchangeBook && desk.open.length > 0;
-  const [playbooks, agreementSymbols] = await Promise.all([
+  const [playbooks, agreementGate] = await Promise.all([
     botScope
       ? Promise.resolve(scoped?.playbook ? [scoped.playbook] : [])
       : dcaBlotter && playbookAccountId
         ? listDcaPlaybooksForSymbols(playbookAccountId, blotterSymbols)
         : Promise.resolve([]),
     showTicket
-      ? listAgreementSymbols(
-          session?.account.venue === "bybit" ? settings.connectionId : null,
-        )
-      : Promise.resolve([]),
+      ? loadBybitAgreementGate({
+          connectionId: settings.connectionId,
+          live:
+            session?.account.venue === "bybit" &&
+            accountCanHoldConnections(session.account.mode),
+        })
+      : Promise.resolve(CLOSED_AGREEMENT_GATE),
   ]);
   const open = markFuturesOpen(desk.open, tickers, (symbol) =>
     baseCoinForPerpSymbol(symbol, pairs),
@@ -305,7 +309,7 @@ export default async function FuturesPositionsPage({
                 <FuturesOrderTicket
                   options={pairs}
                   lastPrices={lastPrices}
-                  agreementSymbols={agreementSymbols}
+                  agreementGate={agreementGate}
                   actions={
                     <>
                       <PendingSubmitButton
@@ -333,7 +337,7 @@ export default async function FuturesPositionsPage({
                   <FuturesWebhookTest
                     webhooks={testWebhooks}
                     allowSignal={allowSignal}
-                    agreementSymbols={agreementSymbols}
+                    agreementGate={agreementGate}
                   />
                 ) : session ? (
                   <p className="mt-4 text-hint text-ink-muted">

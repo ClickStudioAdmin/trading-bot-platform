@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { IconChevronDown } from "@/components/icons";
 import { TokenIcon } from "@/components/token-icon";
 import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import {
   BYBIT_AGREEMENT_NOTE,
+  CLOSED_AGREEMENT_GATE,
+  bybitAgreementKind,
+  bybitAgreementKindTitle,
+  firstOpenPerp,
+  perpNeedsBybitAgreement,
   symbolNeedsBybitAgreement,
+  type BybitAgreementGate,
+  type BybitAgreementKind,
 } from "@/lib/exchanges/agreement";
+import { enableBybitAgreement } from "@/lib/exchanges/agreement-actions";
 import {
   formatPerpPairLabel,
   type LinearPerp,
@@ -27,7 +36,7 @@ export function FuturesSymbolSelect({
   name = "symbol",
   allowEmpty = false,
   placeholder = "Select Contract",
-  agreementSymbols,
+  agreementGate = CLOSED_AGREEMENT_GATE,
 }: {
   options: LinearPerp[];
   defaultSymbol?: string;
@@ -36,7 +45,7 @@ export function FuturesSymbolSelect({
   name?: string;
   allowEmpty?: boolean;
   placeholder?: string;
-  agreementSymbols?: readonly string[];
+  agreementGate?: BybitAgreementGate;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -46,11 +55,26 @@ export function FuturesSymbolSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [box, setBox] = useState({ top: 0, left: 0, width: PANEL_MIN_WIDTH });
+  const router = useRouter();
+  const [pending, startEnable] = useTransition();
+  const [enableError, setEnableError] = useState("");
   const [internal, setInternal] = useState(() =>
-    allowEmpty ? "" : pickDefault(options, defaultSymbol),
+    allowEmpty ? "" : firstOpenPerp(options, agreementGate, defaultSymbol),
   );
   const symbol = value ?? internal;
-  const selectedBlocked = symbolNeedsBybitAgreement(agreementSymbols, symbol);
+  const selectedPair =
+    options.find((row) => row.symbol === symbol) ??
+    ({ symbol, baseCoin: "", quoteCoin: "", symbolType: "" } as LinearPerp);
+  const selectedRefused = symbolNeedsBybitAgreement(
+    agreementGate.symbols,
+    symbol,
+  );
+  const lockedKinds = (["tradfi", "oil"] as const).filter(
+    (kind) =>
+      agreementGate.live &&
+      !agreementGate.cleared.includes(kind) &&
+      options.some((row) => bybitAgreementKind(row) === kind),
+  );
 
   const selected = allowEmpty && !symbol
     ? undefined
@@ -166,6 +190,20 @@ export function FuturesSymbolSelect({
     setQuery("");
   }
 
+  function enableKind(kind: BybitAgreementKind | null) {
+    setEnableError("");
+    startEnable(async () => {
+      const result = await enableBybitAgreement(
+        kind ? { kind } : { symbol },
+      );
+      if (!result.ok) {
+        setEnableError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
   const panel =
     open && typeof document !== "undefined"
       ? createPortal(
@@ -182,8 +220,7 @@ export function FuturesSymbolSelect({
                 if (event.key === "Enter") {
                   event.preventDefault();
                   const first = filtered.find(
-                    (row) =>
-                      !symbolNeedsBybitAgreement(agreementSymbols, row.symbol),
+                    (row) => !perpNeedsBybitAgreement(agreementGate, row),
                   );
                   if (first) {
                     choose(first.symbol);
@@ -203,10 +240,7 @@ export function FuturesSymbolSelect({
               ) : (
                 filtered.map((row) => {
                   const active = row.symbol === selected?.symbol;
-                  const blocked = symbolNeedsBybitAgreement(
-                    agreementSymbols,
-                    row.symbol,
-                  );
+                  const blocked = perpNeedsBybitAgreement(agreementGate, row);
                   const label = formatPerpPairLabel(row);
                   return (
                     <li key={row.symbol}>
@@ -276,17 +310,54 @@ export function FuturesSymbolSelect({
           className="size-3 shrink-0 text-ink-faint"
         />
       </button>
-      {selectedBlocked ? (
-        <p className="mt-1 text-hint text-warning">{BYBIT_AGREEMENT_NOTE}</p>
+      {lockedKinds.map((kind) => (
+        <AgreementEnable
+          key={kind}
+          pending={pending}
+          title={bybitAgreementKindTitle(kind)}
+          onEnable={() => enableKind(kind)}
+        />
+      ))}
+      {selectedRefused && !bybitAgreementKind(selectedPair) ? (
+        <AgreementEnable
+          pending={pending}
+          title="This contract"
+          onEnable={() => enableKind(null)}
+        />
+      ) : null}
+      {enableError ? (
+        <p className="mt-1 text-hint text-danger">{enableError}</p>
       ) : null}
       {panel}
     </div>
   );
 }
 
-function pickDefault(options: LinearPerp[], preferred: string): string {
-  if (options.some((row) => row.symbol === preferred)) {
-    return preferred;
-  }
-  return options[0]?.symbol ?? preferred;
+function AgreementEnable({
+  title,
+  pending,
+  onEnable,
+}: {
+  title: string;
+  pending: boolean;
+  onEnable: () => void;
+}) {
+  const group = title === "This contract";
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-2">
+      <p className="text-hint text-warning">
+        {group
+          ? "This contract needs a Bybit agreement. Sign on Bybit, then enable it here."
+          : `${title} need a Bybit agreement. Sign on Bybit, then enable them here.`}
+      </p>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={onEnable}
+        className="rounded-control border border-line px-2 py-0.5 text-xs text-ink hover:border-line-strong disabled:opacity-40"
+      >
+        {pending ? "Enabling…" : group ? "Enable this contract" : `Enable ${title.toLowerCase()}`}
+      </button>
+    </div>
+  );
 }

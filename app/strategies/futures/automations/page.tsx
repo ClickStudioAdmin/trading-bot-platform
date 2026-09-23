@@ -26,7 +26,8 @@ import { loadFuturesPositions } from "@/lib/futures/list";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
-import { listAgreementSymbols } from "@/lib/exchanges/agreement-store";
+import { loadBybitAgreementGate } from "@/lib/exchanges/agreement-store";
+import { CLOSED_AGREEMENT_GATE } from "@/lib/exchanges/agreement";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import { HYPERLIQUID_DCA_UI } from "@/lib/dca/ui-policy";
 import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
@@ -142,9 +143,12 @@ export default async function FuturesAutomationsPage({
       sets,
     } = loaded;
     const form = formLoad && !editMissing ? formLoad.form : null;
-    const agreementSymbols = hl
-      ? []
-      : await listAgreementSymbols(settings.connectionId);
+    const agreementGate = hl
+      ? CLOSED_AGREEMENT_GATE
+      : await loadBybitAgreementGate({
+          connectionId: settings.connectionId,
+          live: exchangeBook && session.account.venue === "bybit",
+        });
     const leverage =
       form?.leverage ??
       (exchangeBook ? null : (settings.paperLeverage ?? null));
@@ -229,7 +233,7 @@ export default async function FuturesAutomationsPage({
               side: row.side,
               qty: row.qty,
             }))}
-            agreementSymbols={agreementSymbols}
+            agreementGate={agreementGate}
             edit={knownEdit}
             clone={clone}
             listHref={listHref}
@@ -282,9 +286,12 @@ export default async function FuturesAutomationsPage({
           })
         : Promise.resolve([]),
     ]);
-  const agreementSymbols = hl
-    ? []
-    : await listAgreementSymbols(settings.connectionId);
+  const agreementGate = hl
+    ? CLOSED_AGREEMENT_GATE
+    : await loadBybitAgreementGate({
+        connectionId: settings.connectionId,
+        live: exchangeBook && session.account.venue === "bybit",
+      });
   const knownEdit =
     requestedEdit &&
     requestedEdit !== AUTOMATIONS_NEW &&
@@ -347,7 +354,7 @@ export default async function FuturesAutomationsPage({
           templates={templates.map(templateToSummary)}
           sets={sets}
           venueId={hl ? "hyperliquid" : "bybit"}
-          agreementSymbols={agreementSymbols}
+          agreementGate={agreementGate}
           quoteLabel={hl ? "USDC" : "USDT"}
           venueEnvironment={session.account.venueEnvironment}
           backtestLibrary={backtestRuns

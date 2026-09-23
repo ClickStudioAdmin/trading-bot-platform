@@ -10,6 +10,7 @@ export type LinearPerp = {
   symbol: string;
   baseCoin: string;
   quoteCoin: string;
+  symbolType?: string;
   minQty: number;
   maxQty: number;
   maxMktQty: number;
@@ -287,6 +288,7 @@ export function listUsdtLinearPerps(
         symbol: row.symbol,
         baseCoin: row.baseCoin,
         quoteCoin: row.quoteCoin || row.settleCoin || "USDT",
+        symbolType: String(row.symbolType ?? "").trim().toLowerCase(),
         minQty: Math.max(lotMin(row, step), step),
         maxQty: lotMax(row),
         maxMktQty: lotMaxMkt(row),

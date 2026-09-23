@@ -35,7 +35,8 @@ import {
 } from "@/lib/dca/run";
 import { afterDeskWork } from "@/lib/ui/after-desk-work";
 import { loadDcaBookUsdt, loadDcaSizingLeverage } from "@/lib/dca/book";
-import { clearAgreementBlock } from "@/lib/exchanges/agreement-store";
+import { rejectUnsignedBybitSymbol } from "@/lib/exchanges/agreement-store";
+import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
@@ -410,6 +411,20 @@ async function saveDcaPlaybookWith(
     return deskActionError(parsed.error);
   }
   const { config, cycleLocked } = parsed;
+  const agreementSettings = await loadFuturesSettings(session.account.id);
+  const unsigned = await rejectUnsignedBybitSymbol({
+    live:
+      accountCanHoldConnections(session.account.mode) &&
+      session.account.venue === "bybit",
+    venue: session.account.venue,
+    connectionId: agreementSettings.connectionId,
+    symbol: config.symbol,
+    previousSymbol: existing?.symbol ?? null,
+    active: parseDcaBotStatus(formData.get("botStatus")) === "active",
+  });
+  if (unsigned) {
+    return deskActionError(unsigned);
+  }
   if (!cycleLocked) {
     const overMax = await rejectIfOverMaxOrder(
       config,
@@ -433,17 +448,6 @@ async function saveDcaPlaybookWith(
   });
   if (!saved.ok) {
     return deskActionError(saved.error);
-  }
-  if (
-    session.account.mode === "live" &&
-    session.account.venue === "bybit" &&
-    parseDcaBotStatus(formData.get("botStatus")) === "active"
-  ) {
-    const settings = await loadFuturesSettings(session.account.id);
-    await clearAgreementBlock({
-      connectionId: settings.connectionId,
-      symbol: config.symbol,
-    });
   }
   await writeEventLog({
     scope: "strategy",

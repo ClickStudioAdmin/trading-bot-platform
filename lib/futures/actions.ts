@@ -28,7 +28,7 @@ import {
   parseOptionalPositive,
   parseOptionalPositiveInt,
 } from "./risk";
-import { clearAgreementBlock } from "@/lib/exchanges/agreement-store";
+import { rejectUnsignedBybitSymbol } from "@/lib/exchanges/agreement-store";
 import { loadFuturesSettings } from "./settings";
 import { handleFuturesWebhook } from "./webhook-handle";
 import {
@@ -489,6 +489,26 @@ export async function saveFuturesAutomations(
   if (!parsed.ok) {
     return deskActionError(parsed.error);
   }
+  if (accountCanHoldConnections(account.mode) && account.venue === "bybit") {
+    const bound = await loadFuturesSettings(account.id);
+    const stored = await loadFuturesAutomationRules(account.id);
+    const previousSymbol = new Map(
+      stored.flatMap((rule) => (rule.id ? [[rule.id, rule.symbol] as const] : [])),
+    );
+    for (const rule of parsed.rules) {
+      const unsigned = await rejectUnsignedBybitSymbol({
+        live: true,
+        venue: account.venue,
+        connectionId: bound.connectionId,
+        symbol: rule.symbol,
+        previousSymbol: rule.id ? (previousSymbol.get(rule.id) ?? null) : null,
+        active: rule.mode === "active",
+      });
+      if (unsigned) {
+        return deskActionError(unsigned);
+      }
+    }
+  }
   const supabase = createServiceClient();
   if (!supabase) {
     return deskActionError("Auth is not configured.");
@@ -518,19 +538,6 @@ export async function saveFuturesAutomations(
       strategy: FUTURES_STRATEGY_ID,
     });
     return deskActionError(saved.error);
-  }
-  if (account.mode === "live" && account.venue === "bybit") {
-    const bound = await loadFuturesSettings(account.id);
-    await Promise.all(
-      parsed.rules
-        .filter((rule) => rule.mode === "active")
-        .map((rule) =>
-          clearAgreementBlock({
-            connectionId: bound.connectionId,
-            symbol: rule.symbol,
-          }),
-        ),
-    );
   }
   await writeEventLog({
     scope: "strategy",

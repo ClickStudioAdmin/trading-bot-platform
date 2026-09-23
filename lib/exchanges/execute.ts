@@ -44,6 +44,7 @@ import {
 } from "@/lib/exchanges/hyperliquid/orders";
 import {
   bybitOpeningAgreementError,
+  noteBybitAgreementTraded,
   rememberBybitAgreementReject,
 } from "@/lib/exchanges/agreement-store";
 import type { BoundConnectionSecrets } from "@/lib/exchanges/store";
@@ -315,6 +316,12 @@ export async function placePerpMarketOnVenue(input: {
         orderLinkId: input.orderLinkId,
       });
       if (existing.ok && existing.state === "filled") {
+        await noteBybitAgreementTraded({
+          venue: input.connection.venue,
+          connectionId: input.connection.id,
+          symbol: input.symbol,
+          reduceOnly: input.reduceOnly,
+        });
         return {
           ok: true,
           fill: {
@@ -342,6 +349,12 @@ export async function placePerpMarketOnVenue(input: {
     });
     return { ok: false, error: explainHedgeModeError(created.error) };
   }
+  await noteBybitAgreementTraded({
+    venue: input.connection.venue,
+    connectionId: input.connection.id,
+    symbol: input.symbol,
+    reduceOnly: input.reduceOnly,
+  });
   return {
     ok: true,
     fill: {

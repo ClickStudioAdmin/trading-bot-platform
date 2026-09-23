@@ -5,6 +5,10 @@ import { FuturesOrderTicket } from "@/components/futures-order-ticket";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { testFuturesWebhook } from "@/lib/futures/actions";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
+import {
+  CLOSED_AGREEMENT_GATE,
+  type BybitAgreementGate,
+} from "@/lib/exchanges/agreement";
 import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
 import { AppSelect } from "@/components/app-select";
 
@@ -18,7 +22,7 @@ export function FuturesWebhookTest({
   pairs = [],
   lastPrices = {},
   defaultSymbol,
-  agreementSymbols,
+  agreementGate = CLOSED_AGREEMENT_GATE,
 }: {
   webhooks: Pick<FuturesWebhookRow, "id" | "name" | "kind">[];
   allowSignal?: boolean;
@@ -29,7 +33,7 @@ export function FuturesWebhookTest({
   pairs?: LinearPerp[];
   lastPrices?: Record<string, number>;
   defaultSymbol?: string;
-  agreementSymbols?: readonly string[];
+  agreementGate?: BybitAgreementGate;
 }) {
   const [webhookId, setWebhookId] = useState(webhooks[0]?.id ?? "");
   const selected = useMemo(
@@ -81,7 +85,7 @@ export function FuturesWebhookTest({
           lastPrices={lastPrices}
           includeStops={false}
           defaultSymbol={defaultSymbol}
-          agreementSymbols={agreementSymbols}
+          agreementGate={agreementGate}
         />
       ) : null}
       <div className={standalone ? "mt-4 space-y-2" : "mt-4 space-y-2 border-t border-line pt-4"}>

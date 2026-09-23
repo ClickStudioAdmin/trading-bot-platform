@@ -38,7 +38,10 @@ import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import {
   BYBIT_AGREEMENT_NOTE,
+  CLOSED_AGREEMENT_GATE,
+  firstOpenPerp,
   symbolNeedsBybitAgreement,
+  type BybitAgreementGate,
 } from "@/lib/exchanges/agreement";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { useConfirmDialog } from "@/components/confirm-modal";
@@ -536,7 +539,7 @@ export function DcaPlaybooksDesk({
   backtestLibrary = [],
   savedBacktests = [],
   openPositions = [],
-  agreementSymbols = [],
+  agreementGate = CLOSED_AGREEMENT_GATE,
   edit = null,
   clone = null,
   listHref,
@@ -561,7 +564,7 @@ export function DcaPlaybooksDesk({
   backtestLibrary?: BacktestLibraryItem[];
   savedBacktests?: readonly SavedBacktestMatch[];
   openPositions?: DcaCycleOpen[];
-  agreementSymbols?: readonly string[];
+  agreementGate?: BybitAgreementGate;
   edit?: string | null;
   clone?: string | null;
   listHref: string;
@@ -687,7 +690,7 @@ export function DcaPlaybooksDesk({
           backtestLibrary={library}
           savedBacktests={savedBacktests}
           openPositions={openPositions}
-          agreementSymbols={agreementSymbols}
+          agreementGate={agreementGate}
           onTemplateSaved={(item) =>
             setExtraLibrary((current) => [
               ...current.filter((row) => row.id !== item.id),
@@ -749,7 +752,7 @@ export function DcaPlaybooksDesk({
             empty="No bots yet. Create a bot to own orders and exits on one contract. Leave this empty if you are not ready to arm."
             rows={savedPlaybooks.map((playbook) => {
               const needsAgreement = symbolNeedsBybitAgreement(
-                agreementSymbols,
+                agreementGate.symbols,
                 playbook.symbol,
               );
               const flat = !openPositions.some(
@@ -860,7 +863,7 @@ export function DcaPlaybookForm({
   backtestLibrary = [],
   savedBacktests = [],
   openPositions = [],
-  agreementSymbols = [],
+  agreementGate = CLOSED_AGREEMENT_GATE,
   onTemplateSaved,
 }: {
   playbook: DcaPlaybook | null;
@@ -883,7 +886,7 @@ export function DcaPlaybookForm({
   backtestLibrary?: BacktestLibraryItem[];
   savedBacktests?: readonly SavedBacktestMatch[];
   openPositions?: DcaCycleOpen[];
-  agreementSymbols?: readonly string[];
+  agreementGate?: BybitAgreementGate;
   onTemplateSaved?: (item: BacktestLibraryItem) => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -1099,7 +1102,11 @@ export function DcaPlaybookForm({
     options.find((row) => row.symbol === policy.defaultSymbol)?.symbol ??
     options[0]?.symbol ??
     policy.defaultSymbol;
-  const [symbol, setSymbol] = useState(defaultSymbol);
+  const [symbol, setSymbol] = useState(() =>
+    source
+      ? defaultSymbol
+      : firstOpenPerp(options, agreementGate, defaultSymbol),
+  );
   const [formTick, setFormTick] = useState(0);
   const [touched, setTouched] = useState(false);
   useEffect(() => {
@@ -1125,7 +1132,7 @@ export function DcaPlaybookForm({
   const agreementDisables =
     Boolean(playbook) &&
     !hasOpenPosition &&
-    symbolNeedsBybitAgreement(agreementSymbols, playbook?.symbol ?? "");
+    symbolNeedsBybitAgreement(agreementGate.symbols, playbook?.symbol ?? "");
   const currentStatus: DcaBotStatus = !playbook
     ? "disabled"
     : agreementDisables
@@ -1560,13 +1567,8 @@ export function DcaPlaybookForm({
                 defaultSymbol={defaultSymbol}
                 value={symbol}
                 onChange={setSymbol}
-                agreementSymbols={agreementSymbols}
+                agreementGate={agreementGate}
               />
-              {symbolNeedsBybitAgreement(agreementSymbols, symbol) ? (
-                <p className="mt-1 text-hint text-warning">
-                  Save to try this contract again after you sign on Bybit.
-                </p>
-              ) : null}
             </label>
             <label
               className={`${labelClass}${
