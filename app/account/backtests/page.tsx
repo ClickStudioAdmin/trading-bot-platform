@@ -100,10 +100,18 @@ export default async function AccountBacktestsPage({
     folders = [];
     deskBots = [];
   }
-  const matchedDeskBot =
-    tab === "new" && seed?.recipe
-      ? await matchDeskBacktestBot(member.id, seed.recipe, deskBots)
-      : null;
+  let matchedDeskBot: Awaited<ReturnType<typeof matchDeskBacktestBot>> = null;
+  if (tab === "new" && seed?.recipe) {
+    try {
+      matchedDeskBot = await matchDeskBacktestBot(
+        member.id,
+        seed.recipe,
+        deskBots,
+      );
+    } catch {
+      matchedDeskBot = null;
+    }
+  }
   const library = templates.flatMap((row) => {
     const item = toBacktestLibraryItem(row);
     if (!item) {
