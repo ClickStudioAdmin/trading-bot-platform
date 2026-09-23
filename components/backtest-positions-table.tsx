@@ -49,7 +49,7 @@ import { AppSelect } from "@/components/app-select";
 
 const OPEN_COL_SPAN_DCA = 14;
 const OPEN_COL_SPAN = 13;
-const CLOSED_COL_SPAN = 11;
+const CLOSED_COL_SPAN = 10;
 
 type CycleSideFilter = "" | "long" | "short";
 
@@ -172,10 +172,11 @@ function compareClosedCycle(
       dir,
     );
   }
-  if (key === "entry") {
-    return compareTableNum(left.entryPrice, right.entryPrice, dir);
-  }
-  if (key === "exit") {
+  if (key === "entryExit") {
+    const byEntry = compareTableNum(left.entryPrice, right.entryPrice, dir);
+    if (byEntry !== 0) {
+      return byEntry;
+    }
     return compareNullableNum(left.exitPrice, right.exitPrice, dir);
   }
   if (key === "realized") {
@@ -530,12 +531,6 @@ function ClosedBacktestPositions({
                 onSort={() => table.onSort("contract")}
               />
               <SortTh
-                label="Side"
-                active={table.sortKey === "side"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("side")}
-              />
-              <SortTh
                 label="Value"
                 active={table.sortKey === "value"}
                 dir={table.sortDir}
@@ -554,16 +549,16 @@ function ClosedBacktestPositions({
                 onSort={() => table.onSort("days")}
               />
               <SortTh
-                label="Entry"
-                active={table.sortKey === "entry"}
+                label="Side"
+                active={table.sortKey === "side"}
                 dir={table.sortDir}
-                onSort={() => table.onSort("entry")}
+                onSort={() => table.onSort("side")}
               />
               <SortTh
-                label="Exit"
-                active={table.sortKey === "exit"}
+                label="Entry / Exit"
+                active={table.sortKey === "entryExit"}
                 dir={table.sortDir}
-                onSort={() => table.onSort("exit")}
+                onSort={() => table.onSort("entryExit")}
               />
               <SortTh
                 label="Realized"
@@ -795,13 +790,6 @@ function ClosedBacktestRows({
           </span>
         </span>
       </td>
-      <td
-        className={`px-4 py-3 capitalize ${
-          cycle.side === "short" ? "text-danger" : "text-success"
-        }`}
-      >
-        {cycle.side}
-      </td>
       <td className="px-4 py-3 tabular-nums text-ink-muted">
         {formatUsd(cycle.notionalUsdt)}
       </td>
@@ -815,8 +803,16 @@ function ClosedBacktestRows({
       <td className="px-4 py-3 tabular-nums text-ink-muted">
         {held === null ? "—" : held.toFixed(1)}
       </td>
-      <td className="px-4 py-3 tabular-nums">{formatPrice(cycle.entryPrice)}</td>
-      <td className="px-4 py-3 tabular-nums">
+      <td
+        className={`px-4 py-3 capitalize ${
+          cycle.side === "short" ? "text-danger" : "text-success"
+        }`}
+      >
+        {cycle.side}
+      </td>
+      <td className="px-4 py-3 tabular-nums whitespace-nowrap">
+        {formatPrice(cycle.entryPrice)}
+        <span className="text-ink-faint"> / </span>
         {cycle.exitPrice == null ? "—" : formatPrice(cycle.exitPrice)}
       </td>
       <td className={`px-4 py-3 tabular-nums ${signedTone(cycle.realizedUsdt)}`}>
