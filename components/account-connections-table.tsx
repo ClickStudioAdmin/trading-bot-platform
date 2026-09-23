@@ -33,6 +33,7 @@ import {
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
 import type { ConnectionDeskBind } from "@/lib/exchanges/store";
+import type { BybitAgreementKind } from "@/lib/exchanges/agreement";
 import type { BybitAgreementOffer } from "@/lib/exchanges/agreement-store";
 import { enabledVenues, getVenue, type VenueDefinition } from "@/lib/exchanges/venues";
 import { formatCount } from "@/lib/opportunities/format";
@@ -115,8 +116,20 @@ export function AccountConnectionsTable({
     [binds, pairCounts],
   );
   const table = useClientTable(rows, compare, { defaultKey: "name" });
+  const enabledAgreementKinds = (
+    ["tradfi", "oil"] as const satisfies readonly BybitAgreementKind[]
+  ).filter(
+    (kind) =>
+      agreements.length > 0 &&
+      agreements.every((offer) => !offer.kinds.includes(kind)),
+  );
   const addAction = canReplace ? (
-    <ExchangeConnectModal venues={venues} next={next} trigger="toolbar" />
+    <ExchangeConnectModal
+      venues={venues}
+      next={next}
+      trigger="toolbar"
+      enabledKinds={enabledAgreementKinds}
+    />
   ) : null;
 
   return (

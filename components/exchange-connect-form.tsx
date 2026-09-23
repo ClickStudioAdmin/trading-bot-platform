@@ -22,11 +22,13 @@ export function ExchangeConnectForm({
   next,
   compact = false,
   hideTitle = false,
+  enabledKinds = [],
 }: {
   venues: VenueDefinition[];
   next?: string;
   compact?: boolean;
   hideTitle?: boolean;
+  enabledKinds?: readonly BybitAgreementKind[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [venueId, setVenueId] = useState(venues[0]?.id ?? "");
@@ -34,9 +36,10 @@ export function ExchangeConnectForm({
     { ok: true } | { ok: false; error: string } | null
   >(null);
   const [checking, startCheck] = useTransition();
-  const [agreementKinds, setAgreementKinds] = useState<BybitAgreementKind[]>(
-    [],
-  );
+  const [pickedKinds, setPickedKinds] = useState<BybitAgreementKind[]>([]);
+  const agreementKinds = [
+    ...new Set<BybitAgreementKind>([...enabledKinds, ...pickedKinds]),
+  ];
   const venue = venues.find((item) => item.id === venueId) ?? venues[0];
   if (!venue) {
     return null;
@@ -97,7 +100,7 @@ export function ExchangeConnectForm({
           value={venue.id}
           onChange={(event) => {
             setVenueId(event.target.value);
-            setAgreementKinds([]);
+            setPickedKinds([]);
             setCheck(null);
           }}
           className={fieldClass}
@@ -149,11 +152,11 @@ export function ExchangeConnectForm({
           <BybitAgreementEnables
             kinds={["tradfi", "oil"]}
             selectedKinds={agreementKinds}
+            persist="login"
+            layout="wide"
             onToggleKind={(kind) => {
-              setAgreementKinds((current) =>
-                current.includes(kind)
-                  ? current.filter((item) => item !== kind)
-                  : [...current, kind],
+              setPickedKinds((current) =>
+                current.includes(kind) ? current : [...current, kind],
               );
             }}
           />
