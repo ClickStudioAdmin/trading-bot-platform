@@ -245,7 +245,7 @@ export function AutomationsBotTable({
             </th>
             {visible.pair ? (
               <SortTh
-                label="Pair / Side"
+                label="Pair"
                 className={TABLE_TITLE_CASE_TH_CLASS}
                 active={table.sortKey === "pair"}
                 dir={table.sortDir}
@@ -261,7 +261,7 @@ export function AutomationsBotTable({
             />
             {visible.recipe ? (
               <SortTh
-                label="Recipe"
+                label="Side / Recipe"
                 className={TABLE_TITLE_CASE_TH_CLASS}
                 active={table.sortKey === "recipe"}
                 dir={table.sortDir}
@@ -331,8 +331,8 @@ export function AutomationsBotTable({
                 </Link>
               </td>
               {visible.recipe ? (
-                <td className="px-4 py-3 pr-8 align-top text-ink-muted">
-                  {row.summary}
+                <td className="px-4 py-3 pr-8 align-top">
+                  <BotRecipeCell row={row} />
                 </td>
               ) : null}
               {visible.status ? (
@@ -486,18 +486,24 @@ function splitPairSide(pair: string): { contract: string; side: string | null } 
 
 function BotPairLine({ pair }: { pair: string }) {
   const { contract, side } = splitPairSide(pair);
+  return (
+    <span className="mt-0.5 block truncate text-hint text-ink-muted">
+      {side ? contract : pair}
+    </span>
+  );
+}
+
+function BotRecipeCell({ row }: { row: AutomationsBotRow }) {
+  const { side } = splitPairSide(row.pair);
   if (!side) {
-    return (
-      <span className="mt-0.5 block truncate text-hint text-ink-muted">
-        {pair}
-      </span>
-    );
+    return <span className="text-ink-muted">{row.summary}</span>;
   }
   return (
-    <span className="mt-0.5 block truncate text-hint">
-      <span className="text-ink-muted">{contract}</span>
-      <span className="text-ink-muted"> · </span>
-      <span className={pairSideClass(side)}>{side}</span>
+    <span className="block min-w-0">
+      <span className={`block font-medium ${pairSideClass(side)}`}>{side}</span>
+      <span className="mt-0.5 block truncate text-hint text-ink-muted">
+        {row.summary}
+      </span>
     </span>
   );
 }

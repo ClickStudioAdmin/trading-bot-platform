@@ -25,8 +25,8 @@ export const AUTOMATIONS_COLUMN_LABELS: Record<
   AutomationsOptionalColumn,
   string
 > = {
-  pair: "Pair / Side",
-  recipe: "Recipe",
+  pair: "Pair",
+  recipe: "Side / Recipe",
   status: "Status",
   positions: "Positions",
   performance: "Performance",
