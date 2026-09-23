@@ -277,6 +277,7 @@ export function PaperRulesForm({
       ) : (
         <>
           <AutomationsBotTable
+            desk="cnc"
             toolbar={
               <>
                 <Link

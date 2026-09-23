@@ -256,6 +256,7 @@ export function FuturesAutomationsDesk({
       ) : (
         <>
           <AutomationsBotTable
+            desk="perps"
             toolbar={
               <>
                 <Link

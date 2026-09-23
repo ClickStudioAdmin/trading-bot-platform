@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { AppSelect } from "@/components/app-select";
 import {
   AutomationsColumnPicker,
   useAutomationsColumns,
@@ -9,6 +10,7 @@ import {
 import { useConfirmDialog } from "@/components/confirm-modal";
 import {
   IconCopy,
+  IconFilterClear,
   IconPencil,
   IconPerformance,
   IconPositions,
@@ -20,16 +22,27 @@ import {
   TABLE_ACTIONS_TD_CLASS,
   TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
+  TABLE_FILTER_FIELD_CLASS,
   TABLE_THEAD_CLASS,
   TABLE_TITLE_CASE_TH_CLASS,
   TableActions,
   TableCard,
+  TableFilterBar,
+  TableFilterField,
   TableFilterSession,
   TableIconAction,
+  TableLabelButton,
   TablePager,
   useClientTable,
 } from "@/components/table-chrome";
-import { compareAutomationsBot } from "@/lib/bots/automations-list";
+import {
+  EMPTY_AUTOMATIONS_BOT_FILTERS,
+  automationsBotFiltersActive,
+  compareAutomationsBot,
+  filterAutomationsBots,
+  type AutomationsBotFilters,
+} from "@/lib/bots/automations-list";
+import { statusOptionsFor, type BotDeskKind } from "@/lib/bots/status";
 import { formatCount, formatPct, signedTone } from "@/lib/opportunities/format";
 import { statusToneFor } from "@/lib/table-chrome";
 
@@ -51,20 +64,97 @@ export type AutomationsBotRow = {
   onRemove?: () => void | Promise<void>;
 };
 
+function AutomationsBotFiltersBar({
+  desk,
+  values,
+  onChange,
+  onClear,
+}: {
+  desk: BotDeskKind;
+  values: AutomationsBotFilters;
+  onChange: (key: keyof AutomationsBotFilters, value: string) => void;
+  onClear: () => void;
+}) {
+  const statuses = statusOptionsFor(desk);
+  return (
+    <TableFilterBar>
+      <TableFilterField label="Name">
+        <input
+          type="search"
+          value={values.q}
+          onChange={(event) => onChange("q", event.target.value)}
+          placeholder="Bot name"
+          autoComplete="off"
+          className={TABLE_FILTER_FIELD_CLASS}
+        />
+      </TableFilterField>
+      <TableFilterField label="Pair">
+        <input
+          type="search"
+          value={values.pair}
+          onChange={(event) => onChange("pair", event.target.value)}
+          placeholder="Contract or side"
+          autoComplete="off"
+          className={TABLE_FILTER_FIELD_CLASS}
+        />
+      </TableFilterField>
+      <TableFilterField label="Status">
+        <AppSelect
+          value={values.status}
+          onChange={(event) => onChange("status", event.target.value)}
+          className={TABLE_FILTER_FIELD_CLASS}
+        >
+          <option value="">All</option>
+          {statuses.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </AppSelect>
+      </TableFilterField>
+      <TableLabelButton
+        variant="filter"
+        icon={<IconFilterClear {...TABLE_BTN_ICON} />}
+        onClick={onClear}
+      >
+        Clear
+      </TableLabelButton>
+    </TableFilterBar>
+  );
+}
+
 export function AutomationsBotTable({
+  desk,
   rows,
   empty,
   toolbar,
 }: {
+  desk: BotDeskKind;
   rows: readonly AutomationsBotRow[];
   empty: string;
   toolbar?: ReactNode;
 }) {
   const { confirm, dialog } = useConfirmDialog();
   const { visible, setColumn } = useAutomationsColumns();
-  const table = useClientTable(rows, compareAutomationsBot, {
+  const [filters, setFilters] = useState(EMPTY_AUTOMATIONS_BOT_FILTERS);
+  const filtered = useMemo(
+    () => filterAutomationsBots(rows, filters),
+    [filters, rows],
+  );
+  const table = useClientTable(filtered, compareAutomationsBot, {
     defaultKey: "name",
   });
+  const filtersActive = automationsBotFiltersActive(filters);
+
+  function changeFilter(key: keyof AutomationsBotFilters, value: string) {
+    setFilters((current) => ({ ...current, [key]: value }));
+    table.setPage(1);
+  }
+
+  function clearFilters() {
+    setFilters(EMPTY_AUTOMATIONS_BOT_FILTERS);
+    table.setPage(1);
+  }
   const colSpan =
     2 +
     Number(visible.pair) +
@@ -99,7 +189,14 @@ export function AutomationsBotTable({
           <AutomationsColumnPicker visible={visible} setColumn={setColumn} />
         </>
       }
-    />
+    >
+      <AutomationsBotFiltersBar
+        desk={desk}
+        values={filters}
+        onChange={changeFilter}
+        onClear={clearFilters}
+      />
+    </TableFilterSession>
     <TableCard
       className="mt-0"
       pager={
@@ -169,13 +266,13 @@ export function AutomationsBotTable({
           </tr>
         </thead>
         <tbody>
-          {rows.length === 0 ? (
+          {filtered.length === 0 ? (
             <tr>
               <td
                 colSpan={colSpan}
                 className="px-4 py-6 text-sm text-ink-muted"
               >
-                {empty}
+                {filtersActive ? "No bots match these filters." : empty}
               </td>
             </tr>
           ) : (

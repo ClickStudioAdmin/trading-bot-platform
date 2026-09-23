@@ -35,6 +35,52 @@ export type AutomationsBotSortRow = {
   roePct: number | null;
 };
 
+export type AutomationsBotFilters = {
+  q: string;
+  pair: string;
+  status: string;
+};
+
+export const EMPTY_AUTOMATIONS_BOT_FILTERS: AutomationsBotFilters = {
+  q: "",
+  pair: "",
+  status: "",
+};
+
+export function automationsBotFiltersActive(
+  filters: AutomationsBotFilters,
+): boolean {
+  return Boolean(filters.q.trim() || filters.pair.trim() || filters.status);
+}
+
+export function filterAutomationsBots<
+  T extends {
+    name: string;
+    pair: string;
+    status: string;
+    statusKey?: string;
+  },
+>(rows: readonly T[], filters: AutomationsBotFilters): T[] {
+  const q = filters.q.trim().toLowerCase();
+  const pair = filters.pair.trim().toLowerCase();
+  const status = filters.status.trim();
+  if (!q && !pair && !status) {
+    return [...rows];
+  }
+  return rows.filter((row) => {
+    if (q && !(row.name || "Bot").toLowerCase().includes(q)) {
+      return false;
+    }
+    if (pair && !row.pair.toLowerCase().includes(pair)) {
+      return false;
+    }
+    if (status && (row.statusKey ?? row.status) !== status) {
+      return false;
+    }
+    return true;
+  });
+}
+
 export function compareAutomationsBot(
   left: AutomationsBotSortRow,
   right: AutomationsBotSortRow,

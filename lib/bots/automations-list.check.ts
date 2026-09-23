@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import {
   automationsBotBlotterCells,
+  automationsBotFiltersActive,
   botModeLabel,
   compareAutomationsBot,
   dcaBotPair,
   dcaBotSummary,
   dcaListStatus,
+  filterAutomationsBots,
   futuresAutomationsBotBlotter,
   paperAutomationsBotBlotter,
   paperBotPair,
@@ -218,3 +220,55 @@ assert.ok(compareAutomationsBot(alpha, beta, "recipe", "asc") < 0);
 assert.ok(compareAutomationsBot(alpha, beta, "positions", "desc") < 0);
 assert.ok(compareAutomationsBot(alpha, beta, "performance", "asc") < 0);
 assert.ok(compareAutomationsBot(beta, alpha, "performance", "asc") > 0);
+
+const filterRows = [
+  { ...alpha, statusKey: "disabled" },
+  { ...beta, statusKey: "active" },
+  {
+    name: "Gamma",
+    pair: "SOLUSDT · Both",
+    status: "Stop adding",
+    statusKey: "stop_adding",
+    summary: "Immediate",
+    positionCount: 1,
+    roePct: 0,
+  },
+];
+assert.equal(automationsBotFiltersActive({ q: "", pair: "", status: "" }), false);
+assert.equal(automationsBotFiltersActive({ q: " ", pair: "", status: "" }), false);
+assert.equal(automationsBotFiltersActive({ q: "", pair: "btc", status: "" }), true);
+assert.deepEqual(
+  filterAutomationsBots(filterRows, { q: "", pair: "", status: "" }).map(
+    (row) => row.name,
+  ),
+  ["Alpha", "Beta", "Gamma"],
+);
+assert.deepEqual(
+  filterAutomationsBots(filterRows, { q: "alp", pair: "", status: "" }).map(
+    (row) => row.name,
+  ),
+  ["Alpha"],
+);
+assert.deepEqual(
+  filterAutomationsBots(filterRows, { q: "", pair: "long", status: "" }).map(
+    (row) => row.name,
+  ),
+  ["Alpha"],
+);
+assert.deepEqual(
+  filterAutomationsBots(filterRows, { q: "", pair: "sol", status: "stop_adding" }).map(
+    (row) => row.name,
+  ),
+  ["Gamma"],
+);
+assert.deepEqual(
+  filterAutomationsBots(filterRows, { q: "beta", pair: "eth", status: "" }),
+  [],
+);
+assert.deepEqual(
+  filterAutomationsBots(
+    [{ name: "", pair: "Carry", status: "Active" }],
+    { q: "bot", pair: "", status: "Active" },
+  ).map((row) => row.pair),
+  ["Carry"],
+);

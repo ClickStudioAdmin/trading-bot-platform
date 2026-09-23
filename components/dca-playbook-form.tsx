@@ -698,6 +698,7 @@ export function DcaPlaybooksDesk({
       ) : (
         <>
           <AutomationsBotTable
+            desk="dca"
             toolbar={
               <>
                 <Link
