@@ -26,22 +26,26 @@ export function SignedInNav({
   const pathname = usePathname();
   const admin = pathname.startsWith("/admin");
   return (
-    <UiRegion region="chrome" className="shrink-0">
-      {admin ? (
-        <AdminSidenav
-          badges={adminBadges}
-          platformName={platformName}
-          platformLogoUrl={platformLogoUrl}
-        />
-      ) : (
-        <AccountSidenav
-          desks={desks}
-          platformMember={platformMember}
-          badges={badges}
-          platformName={platformName}
-          platformLogoUrl={platformLogoUrl}
-        />
-      )}
+    <UiRegion region="chrome" className="flex w-72 shrink-0 flex-col">
+      <div className="flex flex-1 flex-col border-r border-line bg-surface">
+        <div className="sticky top-0 z-20 h-dvh overflow-y-auto">
+          {admin ? (
+            <AdminSidenav
+              badges={adminBadges}
+              platformName={platformName}
+              platformLogoUrl={platformLogoUrl}
+            />
+          ) : (
+            <AccountSidenav
+              desks={desks}
+              platformMember={platformMember}
+              badges={badges}
+              platformName={platformName}
+              platformLogoUrl={platformLogoUrl}
+            />
+          )}
+        </div>
+      </div>
     </UiRegion>
   );
 }
