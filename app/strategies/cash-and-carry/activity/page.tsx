@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EventLogs } from "@/components/event-logs";
-import { PageHeading } from "@/components/page-heading";
 import { deskHref } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
 import { listEventLogs, parseEventLogFilters } from "@/lib/logs/list";
@@ -25,7 +24,9 @@ export default async function CashAndCarryActivityPage({
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-      <PageHeading as="h2" title="Activity" />
+      {session ? null : (
+        <h2 className="mb-6 text-lg font-semibold tracking-tight">Activity</h2>
+      )}
       {session ? (
         <EventLogs
           rows={rows}
@@ -37,6 +38,7 @@ export default async function CashAndCarryActivityPage({
           showUser={false}
           scopes={["strategy", "trade"]}
           hidden={{ desk: session.account.id }}
+          title="Activity"
         />
       ) : (
         <p className="text-sm text-ink-muted">

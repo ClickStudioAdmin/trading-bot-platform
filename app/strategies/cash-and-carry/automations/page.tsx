@@ -42,6 +42,7 @@ export default async function CashAndCarryAutomationsPage({
   if (!session) {
     return (
       <AutomationsPageFrame listHref={listHref} editTitle={null}>
+        <h2 className="text-lg font-semibold tracking-tight">Bots</h2>
         <p className="mt-6 text-sm text-ink-muted">
           <Link href="/sign-in" className="text-accent">
             Sign in

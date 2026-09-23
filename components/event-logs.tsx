@@ -14,6 +14,7 @@ import {
   TableFilterSession,
   TableLabelButton,
   TablePager,
+  TableSectionTitle,
   useClientTable,
 } from "@/components/table-chrome";
 import { eventLogOptionsForScopes } from "@/lib/logs/events";
@@ -73,6 +74,7 @@ export function EventLogs({
   scopes,
   accounts,
   hidden,
+  title,
 }: {
   rows: EventLogRow[];
   filters: EventLogFilters;
@@ -81,6 +83,7 @@ export function EventLogs({
   scopes: Array<"system" | "strategy" | "trade">;
   accounts?: { id: string; label: string }[];
   hidden?: { desk?: string };
+  title?: string;
 }) {
   const showAccount = Boolean(accounts);
   const columns = 5 + (showUser ? 1 : 0) + (showAccount ? 1 : 0);
@@ -104,6 +107,7 @@ export function EventLogs({
   return (
     <>
       <TableFilterSession
+        title={title ? <TableSectionTitle title={title} /> : undefined}
         defaultOpen={Boolean(
           filters.scope || filters.level || filters.event || filters.account,
         )}
@@ -184,6 +188,7 @@ export function EventLogs({
       </TableFilterSession>
 
       <TableCard
+        className={title ? "mt-0" : undefined}
         pager={
           <TablePager
             window={table.window}

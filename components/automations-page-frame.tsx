@@ -21,9 +21,7 @@ export function AutomationsPageFrame({
             {editTitle}
           </h2>
         </div>
-      ) : (
-        <h2 className="mb-6 text-lg font-semibold tracking-tight">Bots</h2>
-      )}
+      ) : null}
       {children}
     </main>
   );

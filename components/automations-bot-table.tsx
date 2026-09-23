@@ -34,6 +34,7 @@ import {
   TableIconAction,
   TableLabelButton,
   TablePager,
+  TableSectionTitle,
   useClientTable,
 } from "@/components/table-chrome";
 import { DESK_QUERY } from "@/lib/accounts/model";
@@ -364,6 +365,7 @@ export function AutomationsBotTable({
     {dialog}
     <TableFilterSession
       id={deskId}
+      title={<TableSectionTitle title="Bots" />}
       actions={
         <>
           {toolbar}

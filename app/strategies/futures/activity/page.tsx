@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EventLogs } from "@/components/event-logs";
-import { PageHeading } from "@/components/page-heading";
 import { deskHref, deskIsCopy } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
 import { listEventLogs, parseEventLogFilters } from "@/lib/logs/list";
@@ -29,7 +28,9 @@ export default async function FuturesActivityPage({
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-      <PageHeading as="h2" title="Activity" />
+      {session ? null : (
+        <h2 className="mb-6 text-lg font-semibold tracking-tight">Activity</h2>
+      )}
       {copyDesk ? (
         <p className="mb-4 text-sm text-ink-muted">
           Parent and copy events for this desk: followed, paused, resumed,
@@ -46,6 +47,7 @@ export default async function FuturesActivityPage({
           showUser={false}
           scopes={["strategy", "trade"]}
           hidden={{ desk: session.account.id }}
+          title="Activity"
         />
       ) : (
         <p className="text-sm text-ink-muted">
