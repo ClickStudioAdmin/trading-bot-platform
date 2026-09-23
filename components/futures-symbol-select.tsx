@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { IconChevronDown } from "@/components/icons";
 import { TokenIcon } from "@/components/token-icon";
+import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import {
   BYBIT_AGREEMENT_NOTE,
   symbolNeedsBybitAgreement,
@@ -11,6 +13,11 @@ import {
   formatPerpPairLabel,
   type LinearPerp,
 } from "@/lib/exchanges/bybit/perp";
+
+const PANEL_GAP = 4;
+const PANEL_MARGIN = 8;
+const PANEL_MAX_HEIGHT = 288;
+const PANEL_MIN_WIDTH = 352;
 
 export function FuturesSymbolSelect({
   options,
@@ -32,9 +39,13 @@ export function FuturesSymbolSelect({
   agreementSymbols?: readonly string[];
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const previewClass = useThemePreviewPortalClass();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [box, setBox] = useState({ top: 0, left: 0, width: PANEL_MIN_WIDTH });
   const [internal, setInternal] = useState(() =>
     allowEmpty ? "" : pickDefault(options, defaultSymbol),
   );
@@ -67,10 +78,15 @@ export function FuturesSymbolSelect({
       if (!open) {
         return;
       }
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-        setQuery("");
+      const target = event.target as Node;
+      if (
+        rootRef.current?.contains(target) ||
+        panelRef.current?.contains(target)
+      ) {
+        return;
       }
+      setOpen(false);
+      setQuery("");
     }
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -90,6 +106,41 @@ export function FuturesSymbolSelect({
     if (open) {
       searchRef.current?.focus();
     }
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+    function place() {
+      const trigger = buttonRef.current;
+      if (!trigger) {
+        return;
+      }
+      const rect = trigger.getBoundingClientRect();
+      const width = Math.max(rect.width, PANEL_MIN_WIDTH);
+      const left = Math.max(
+        PANEL_MARGIN,
+        Math.min(rect.left, window.innerWidth - width - PANEL_MARGIN),
+      );
+      const spaceBelow = window.innerHeight - rect.bottom - PANEL_MARGIN;
+      const top =
+        spaceBelow < 160 && rect.top > spaceBelow
+          ? Math.max(PANEL_MARGIN, rect.top - PANEL_GAP - PANEL_MAX_HEIGHT)
+          : rect.bottom + PANEL_GAP;
+      setBox((current) =>
+        current.top === top && current.left === left && current.width === width
+          ? current
+          : { top, left, width },
+      );
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
   }, [open]);
 
   if (options.length === 0) {
@@ -115,10 +166,90 @@ export function FuturesSymbolSelect({
     setQuery("");
   }
 
+  const panel =
+    open && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            ref={panelRef}
+            style={{ top: box.top, left: box.left, width: box.width }}
+            className={`fixed z-50 flex max-h-72 flex-col overflow-hidden rounded-card border border-line bg-surface p-2 text-ink ${previewClass}`.trim()}
+          >
+            <input
+              ref={searchRef}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  const first = filtered.find(
+                    (row) =>
+                      !symbolNeedsBybitAgreement(agreementSymbols, row.symbol),
+                  );
+                  if (first) {
+                    choose(first.symbol);
+                  }
+                }
+              }}
+              placeholder={`Search ${options.length} pairs`}
+              autoComplete="off"
+              spellCheck={false}
+              className="mb-2 w-full shrink-0 rounded-control border border-line bg-canvas px-3 py-1.5 text-sm text-ink focus:border-line-strong focus:outline-none"
+            />
+            <ul role="listbox" className="min-h-0 flex-1 overflow-y-auto">
+              {filtered.length === 0 ? (
+                <li className="px-2 py-2 text-sm text-ink-muted">
+                  No matching pairs
+                </li>
+              ) : (
+                filtered.map((row) => {
+                  const active = row.symbol === selected?.symbol;
+                  const blocked = symbolNeedsBybitAgreement(
+                    agreementSymbols,
+                    row.symbol,
+                  );
+                  const label = formatPerpPairLabel(row);
+                  return (
+                    <li key={row.symbol}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={active}
+                        aria-disabled={blocked || undefined}
+                        disabled={blocked}
+                        onClick={() => choose(row.symbol)}
+                        className={`flex w-full items-center gap-3 rounded-control px-2 py-1.5 text-left text-sm ${
+                          blocked
+                            ? "cursor-not-allowed"
+                            : active
+                              ? "bg-surface-raised text-ink"
+                              : "text-ink-muted hover:bg-surface-raised hover:text-ink"
+                        }`}
+                      >
+                        <TokenIcon symbol={row.baseCoin} size={18} />
+                        <span className="min-w-0 flex-1 truncate font-medium text-ink">
+                          {label}
+                        </span>
+                        {blocked ? (
+                          <span className="shrink-0 text-hint text-warning">
+                            {BYBIT_AGREEMENT_NOTE}
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <div ref={rootRef} className="relative mt-1">
       <input type="hidden" name={name} value={selected?.symbol ?? symbol} />
       <button
+        ref={buttonRef}
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -126,105 +257,29 @@ export function FuturesSymbolSelect({
           setOpen((current) => !current);
           setQuery("");
         }}
-        className="flex w-full items-center gap-4 rounded-control border border-line bg-canvas px-3 py-2 text-left text-sm text-ink hover:border-line-strong focus:border-line-strong focus:outline-none"
+        className="flex w-full items-center gap-2 rounded-control border border-line bg-canvas px-3 py-2 text-left text-sm text-ink hover:border-line-strong focus:border-line-strong focus:outline-none"
       >
         {selected ? (
           <>
             <TokenIcon symbol={selected.baseCoin} size={18} />
-            <span className="min-w-0 truncate font-medium">
+            <span className="min-w-0 flex-1 truncate font-medium">
               {formatPerpPairLabel(selected)}
             </span>
-            {selectedBlocked ? (
-              <span className="shrink-0 text-hint text-warning">
-                {BYBIT_AGREEMENT_NOTE}
-              </span>
-            ) : null}
           </>
         ) : (
-          <span className="text-ink-muted">{placeholder}</span>
+          <span className="min-w-0 flex-1 truncate text-ink-muted">
+            {placeholder}
+          </span>
         )}
         <IconChevronDown
           size={12}
-          className="ml-auto size-3 shrink-0 text-ink-faint"
+          className="size-3 shrink-0 text-ink-faint"
         />
       </button>
-      {open ? (
-        <div className="absolute z-[60] mt-1 w-full min-w-[16rem] rounded-card border border-line bg-surface p-2">
-          <input
-            ref={searchRef}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                const first = filtered.find(
-                  (row) =>
-                    !symbolNeedsBybitAgreement(agreementSymbols, row.symbol),
-                );
-                if (first) {
-                  choose(first.symbol);
-                }
-              }
-            }}
-            placeholder={`Search ${options.length} pairs`}
-            autoComplete="off"
-            spellCheck={false}
-            className="mb-2 w-full rounded-control border border-line bg-canvas px-3 py-1.5 text-sm text-ink focus:border-line-strong focus:outline-none"
-          />
-          <ul role="listbox" className="max-h-72 overflow-y-auto">
-            {filtered.length === 0 ? (
-              <li className="px-2 py-2 text-sm text-ink-muted">No matching pairs</li>
-            ) : (
-              filtered.map((row) => {
-                const active = row.symbol === selected?.symbol;
-                const blocked = symbolNeedsBybitAgreement(
-                  agreementSymbols,
-                  row.symbol,
-                );
-                return (
-                  <li
-                    key={row.symbol}
-                    style={{
-                      contentVisibility: "auto",
-                      containIntrinsicSize: "0 36px",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={active}
-                      aria-disabled={blocked || undefined}
-                      disabled={blocked}
-                      onClick={() => choose(row.symbol)}
-                      className={`flex w-full items-center gap-4 rounded-control px-2 py-1.5 text-left text-sm ${
-                        blocked
-                          ? "cursor-not-allowed text-ink-faint"
-                          : active
-                            ? "bg-surface-raised text-ink"
-                            : "text-ink-muted hover:bg-surface-raised hover:text-ink"
-                      }`}
-                    >
-                      <TokenIcon symbol={row.baseCoin} size={18} />
-                      <span
-                        className={`min-w-0 truncate font-medium ${
-                          blocked ? "text-ink-faint" : "text-ink"
-                        }`}
-                      >
-                        {formatPerpPairLabel(row)}
-                      </span>
-                      {blocked ? (
-                        <span className="ml-auto shrink-0 text-hint text-warning">
-                          {BYBIT_AGREEMENT_NOTE}
-                        </span>
-                      ) : null}
-                    </button>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-        </div>
+      {selectedBlocked ? (
+        <p className="mt-1 text-hint text-warning">{BYBIT_AGREEMENT_NOTE}</p>
       ) : null}
+      {panel}
     </div>
   );
 }
