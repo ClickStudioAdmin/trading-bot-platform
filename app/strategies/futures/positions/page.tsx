@@ -21,8 +21,12 @@ import {
 } from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { deskAllowsManualPerpTicket, deskAllowsSignalWebhooks, deskHref, deskIsCopy, deskShowsDcaBlotter } from "@/lib/accounts/model";
+import { DeskBookReconcile } from "@/components/desk-book-reconcile";
 import { dcaHintKey, dcaHintsForCopyOpen, dcaHintsForOpen } from "@/lib/dca/playbook";
-import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
+import {
+  listDcaBotOptions,
+  listDcaPlaybooksForSymbols,
+} from "@/lib/dca/store";
 import {
   deskBlotterFiltersActive,
   filterFuturesBlotterRows,
@@ -40,7 +44,6 @@ import Link from "next/link";
 import { loadFuturesDesk } from "@/lib/futures/list";
 import { futuresDeskNeedsUrgentRefresh } from "@/lib/futures/pending-close";
 import { markFuturesOpen } from "@/lib/futures/mark";
-import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { loadFuturesVenueRisk } from "@/lib/futures/venue-risk-load";
 import { attachFuturesVenueRisk } from "@/lib/futures/venue-risk";
@@ -66,32 +69,29 @@ export default async function FuturesPositionsPage({
   }
   const NEXT = deskHref(NEXT_PATH, session?.account.id);
   const params = await searchParams;
-  if (session) {
-    await reconcileOpenFuturesBooks({
-      accountId: session.account.id,
-      userId: session.member.id,
-    });
-  }
-  const desk = await loadFuturesDesk();
-  const settings = session
-    ? await loadFuturesSettings(session.account.id)
-    : {
-        reduceOnly: false,
-        connectionId: null,
-        paperLeverage: null,
-        maxValuePerSymbol: null,
-        maxOpenPositions: null,
-      };
-  const webhooks = session
-    ? await listFuturesWebhooks({
-        accountId: session.account.id,
-        origin: futuresWebhookOrigin(await headers()),
-      })
-    : [];
   const live = Boolean(
     session && accountCanHoldConnections(session.account.mode),
   );
-  const [tickers, pairs, venueRisk] = await Promise.all([
+  const headerList = headers();
+  const [desk, settings, webhooks, tickers, pairs] = await Promise.all([
+    loadFuturesDesk(),
+    session
+      ? loadFuturesSettings(session.account.id)
+      : Promise.resolve({
+          reduceOnly: false,
+          connectionId: null,
+          paperLeverage: null,
+          maxValuePerSymbol: null,
+          maxOpenPositions: null,
+        }),
+    session
+      ? headerList.then((headerStore) =>
+          listFuturesWebhooks({
+            accountId: session.account.id,
+            origin: futuresWebhookOrigin(headerStore),
+          }),
+        )
+      : Promise.resolve([]),
     fetchBybitTickers("linear").catch(
       () =>
         new Map<
@@ -100,9 +100,33 @@ export default async function FuturesPositionsPage({
         >(),
     ),
     loadUsdtLinearPerps().catch(() => []).then(withMarketCapRank),
+  ]);
+  const deskType = session?.account.deskType ?? "perps";
+  const copyDesk = session ? deskIsCopy(session.account) : false;
+  const dcaBlotter = session
+    ? deskShowsDcaBlotter(session.account)
+    : deskType === "dca";
+  const playbookAccountId = copyDesk
+    ? session?.account.copyOfAccountId
+    : session?.account.id;
+  const recipeAccountId = playbookAccountId ?? session?.account.id;
+  const blotterSymbols = [
+    ...desk.open.map((row) => row.symbol),
+    ...desk.working.map((row) => row.symbol),
+  ];
+  const [venueRisk, botOptions, playbooks, perpsBots] = await Promise.all([
     desk.exchangeBook && desk.open.length > 0
       ? loadFuturesVenueRisk()
       : Promise.resolve(new Map()),
+    dcaBlotter && playbookAccountId
+      ? listDcaBotOptions(playbookAccountId)
+      : Promise.resolve([]),
+    dcaBlotter && playbookAccountId
+      ? listDcaPlaybooksForSymbols(playbookAccountId, blotterSymbols)
+      : Promise.resolve([]),
+    deskType === "perps_bots" && recipeAccountId
+      ? loadFuturesAutomationRules(recipeAccountId)
+      : Promise.resolve([]),
   ]);
   const open = attachFuturesVenueRisk(
     markFuturesOpen(desk.open, tickers, (symbol) =>
@@ -118,40 +142,20 @@ export default async function FuturesPositionsPage({
       lastPrices[symbol] = last;
     }
   }
-  const deskType = session?.account.deskType ?? "perps";
   const showTicket = session
     ? deskAllowsManualPerpTicket(session.account)
     : deskAllowsManualPerpTicket(deskType);
   const allowSignal = session
     ? deskAllowsSignalWebhooks(session.account)
     : deskAllowsSignalWebhooks(deskType);
-  const copyDesk = session ? deskIsCopy(session.account) : false;
-  const dcaBlotter = session
-    ? deskShowsDcaBlotter(session.account)
-    : deskType === "dca";
-  const playbookAccountId = copyDesk
-    ? session?.account.copyOfAccountId
-    : session?.account.id;
-  const playbooks =
-    dcaBlotter && playbookAccountId
-      ? await listDcaPlaybooksForAccount(playbookAccountId)
-      : [];
   const dcaHints = dcaBlotter
     ? copyDesk
       ? dcaHintsForCopyOpen(playbooks, open, desk.working)
       : dcaHintsForOpen(playbooks, open, desk.working)
     : undefined;
   const filters = parseDeskBlotterFilters(params);
-  const recipeAccountId = playbookAccountId ?? session?.account.id;
-  const perpsBots =
-    deskType === "perps_bots" && recipeAccountId
-      ? await loadFuturesAutomationRules(recipeAccountId)
-      : [];
   const bots = dcaBlotter
-    ? playbooks.map((playbook) => ({
-        id: playbook.id,
-        name: playbook.name || playbook.symbol,
-      }))
+    ? botOptions
     : perpsBots
         .filter((rule) => rule.id)
         .map((rule) => ({
@@ -179,6 +183,7 @@ export default async function FuturesPositionsPage({
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
+      {session ? <DeskBookReconcile accountId={session.account.id} /> : null}
       <div className="space-y-6">
         <FuturesFlash
           opened={firstSearchValue(params.paper) === "opened"}

@@ -129,7 +129,7 @@ Apply template onto an HL desk: remap `BTCUSDT` → `BTC` when the base matches;
 2. Router → Hyperliquid module → signed `order` (EIP-712) as the agent. Market = aggressive IOC limit. GTC = `limit.tif = Gtc`. Reduce-only = `r`.
 3. Idempotency → 128-bit hex **cloid**. Receipts table unchanged.
 4. Working rows on `futures_working_orders`. TP/SL via trigger orders once proven on **Testnet**. Trailing: native if the spike says yes, else TBP tick like paper.
-5. Reconcile from `info` on Positions load and the engine tick.
+5. Reconcile from `info` after Positions paints, and on the engine tick. The blotter opens from the ledger.
 6. Leverage / liq / balance chip from `clearinghouseState` — only fields that exist. Do not fake Bybit Unified.
 7. DCA indicators: HL `candleSnapshot` on HL desks. Bybit klines stay on Bybit desks.
 8. Nonce: serialize per agent so tick and click cannot collide.

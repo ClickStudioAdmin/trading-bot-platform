@@ -145,6 +145,86 @@ export async function listDcaPlaybooksForAccount(
     .filter((row): row is DcaPlaybook => Boolean(row));
 }
 
+export async function dcaDeskHasRunningPlaybook(
+  accountId: string,
+  supabaseClient?: SupabaseClient,
+): Promise<boolean> {
+  const supabase = supabaseClient ?? createServiceClient();
+  if (!supabase) {
+    return false;
+  }
+  const { data, error } = await supabase
+    .from("dca_playbooks")
+    .select("id")
+    .eq("account_id", accountId)
+    .or(
+      "long_status.eq.armed,long_status.eq.stop_adding,short_status.eq.armed,short_status.eq.stop_adding",
+    )
+    .limit(1);
+  if (error || !data) {
+    return false;
+  }
+  return data.length > 0;
+}
+
+export async function listDcaBotOptions(
+  accountId: string,
+  supabaseClient?: SupabaseClient,
+): Promise<{ id: string; name: string }[]> {
+  const supabase = supabaseClient ?? createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from("dca_playbooks")
+    .select("id,name,symbol")
+    .eq("account_id", accountId)
+    .order("created_at", { ascending: true });
+  if (error || !data) {
+    return [];
+  }
+  return data.map((row) => ({
+    id: String(row.id),
+    name: String(row.name || row.symbol || "Bot"),
+  }));
+}
+
+export async function listDcaPlaybooksForSymbols(
+  accountId: string,
+  symbols: readonly string[],
+  supabaseClient?: SupabaseClient,
+): Promise<DcaPlaybook[]> {
+  const unique = [...new Set(symbols.map((symbol) => symbol.trim()).filter(Boolean))];
+  const supabase = supabaseClient ?? createServiceClient();
+  if (!supabase || unique.length === 0) {
+    return [];
+  }
+  const pages = await Promise.all(
+    chunkSymbols(unique).map(async (chunk) => {
+      const { data, error } = await supabase
+        .from("dca_playbooks")
+        .select("*")
+        .eq("account_id", accountId)
+        .in("symbol", chunk);
+      if (error || !data) {
+        return [];
+      }
+      return data
+        .map((row) => parseDcaPlaybookRow(row as Record<string, unknown>))
+        .filter((row): row is DcaPlaybook => Boolean(row));
+    }),
+  );
+  return pages.flat();
+}
+
+function chunkSymbols(symbols: readonly string[]): string[][] {
+  const chunks: string[][] = [];
+  for (let index = 0; index < symbols.length; index += 80) {
+    chunks.push(symbols.slice(index, index + 80));
+  }
+  return chunks;
+}
+
 export async function loadDcaPlaybookById(
   id: string,
   accountId: string,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AutomationsBotTable } from "@/components/automations-bot-table";
 import {
   BotField,
@@ -157,7 +157,6 @@ import { IconPlus, IconSave } from "@/components/icons";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
 import {
-  dcaFormMatchesPlaybook,
   dcaFormToSnapshotSource,
   readFormControl,
   snapshotDcaRecipe,
@@ -837,9 +836,7 @@ export function DcaPlaybookForm({
       : (source?.direction ?? "long"),
   );
   const [startKind, setStartKind] = useState<DcaStartKind>(
-    source?.startKind && source.startKind !== "immediate"
-      ? source.startKind
-      : "indicator",
+    source?.startKind ?? "indicator",
   );
   const [averaging, setAveraging] = useState<DcaAveragingKind>(() =>
     source ? dcaAveragingKind(source) : "dip",
@@ -1376,11 +1373,21 @@ export function DcaPlaybookForm({
     slMissing ||
     breakevenMissing ||
     (!cycleLocked && !parsedLive.ok && !parseConstraint);
+  const liveRecipeKey =
+    liveConfig == null ? null : JSON.stringify(snapshotDcaRecipe(liveConfig));
+  const [loadedRecipe, setLoadedRecipe] = useState<string | null>(null);
+  const loadedRecipeSet = useRef(false);
+  useLayoutEffect(() => {
+    if (!playbook || formTick < 1 || loadedRecipeSet.current || liveRecipeKey == null) {
+      return;
+    }
+    loadedRecipeSet.current = true;
+    setLoadedRecipe(liveRecipeKey);
+  }, [formTick, liveRecipeKey, playbook]);
   const dirty =
     statusDirty ||
     (playbook
-      ? (formTick > 0 && !dcaFormMatchesPlaybook(playbook, liveConfig)) ||
-        (touched && requiredMissing)
+      ? loadedRecipe != null && liveRecipeKey !== loadedRecipe
       : touched);
   const constraintBlocked = cycleLocked
     ? null
@@ -1621,6 +1628,9 @@ export function DcaPlaybookForm({
               }}
               className={fieldClass}
             >
+              {startKind === "immediate" ? (
+                <option value="immediate">Immediate</option>
+              ) : null}
               <option value="indicator">Indicator</option>
               <option value="trend">Trend</option>
               <option value="price">Price Cross</option>

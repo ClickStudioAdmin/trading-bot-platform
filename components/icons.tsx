@@ -1,6 +1,7 @@
 import {
   Archive,
   ArchiveRestore,
+  ArrowLeft,
   ArrowLeftRight,
   Ban,
   Camera,
@@ -84,6 +85,13 @@ export type LucideIconEntry = {
 
 /** Add a Lucide icon here before using it. Import from this file, never `lucide-react`. */
 export const LUCIDE_ICONS = [
+  {
+    id: "arrow-left",
+    name: "Back",
+    lucide: "ArrowLeft",
+    usedIn: "Bot form title, back to the automations list",
+    Icon: ArrowLeft,
+  },
   {
     id: "arrow-left-right",
     name: "Cash and Carry",
@@ -584,6 +592,10 @@ export function IconMarkAllRead(props: LucideProps) {
 
 export function IconChevronDown(props: LucideProps) {
   return <ChevronDown aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconArrowLeft(props: LucideProps) {
+  return <ArrowLeft aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconChevronLeft(props: LucideProps) {
