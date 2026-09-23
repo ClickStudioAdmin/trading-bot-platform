@@ -229,7 +229,7 @@ export default async function ThemePage({
               Page title 24
             </p>
             <p className="text-lg font-semibold tracking-tight">Card title 18</p>
-            <p className="text-sm font-semibold text-ink-muted">Group title 14</p>
+            <p className="text-sm font-semibold text-ink">Group title 14</p>
             <p className="text-sm text-ink">
               Body 14 — primary copy on canvas or surface.
             </p>

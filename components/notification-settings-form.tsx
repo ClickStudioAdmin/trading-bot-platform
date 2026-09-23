@@ -37,7 +37,7 @@ export function MemberNotificationSettingsForm({
     <form action={action} className="mx-auto mt-6 w-[60%] space-y-6">
       {groups.map((group) => (
         <section key={group.id} className="space-y-3">
-          <h2 className="text-sm font-semibold text-ink-muted">{group.label}</h2>
+          <h2 className="text-sm font-semibold text-ink">{group.label}</h2>
           <TableCard className="">
             <table className="w-full min-w-[28rem] text-left text-sm">
               <thead className={TABLE_THEAD_CLASS}>
@@ -103,7 +103,7 @@ export function AdminChannelSettingsForm({
           <h2 className="text-lg font-semibold tracking-tight">{list.label}</h2>
           {list.groups.map((group) => (
             <div key={group.id} className="space-y-3">
-              <h3 className="text-sm font-semibold text-ink-muted">{group.label}</h3>
+              <h3 className="text-sm font-semibold text-ink">{group.label}</h3>
               <TableCard className="">
                 <div className="min-w-[32rem] text-sm">
                   <div

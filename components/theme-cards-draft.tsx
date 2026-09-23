@@ -9,7 +9,7 @@ import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 export const themeCardTitleClass =
   "text-lg font-semibold tracking-tight text-ink";
 export const themeCardIntroClass = "mt-2 text-sm text-ink-muted";
-export const themeGroupTitleClass = "text-sm font-semibold text-ink-muted";
+export const themeGroupTitleClass = "text-sm font-semibold text-ink";
 export const themeBodyClass = "text-sm text-ink";
 export const themeFormLabelClass = "block text-sm text-ink";
 export const themeChoiceLabelClass = "text-sm text-ink";
@@ -235,7 +235,7 @@ export function ThemeCardsDraft() {
           <div className="lg:col-span-2">
             <SampleFrame
               label="Bot step card"
-              note="18px step title, 14px muted group, 14px ink labels."
+              note="18px step title, 14px group, 14px ink labels."
             >
               <BotStepCard />
             </SampleFrame>

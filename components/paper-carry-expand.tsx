@@ -897,10 +897,10 @@ function ComparePairs({
   return (
     <div className="mt-3">
       <div className="grid grid-cols-2 gap-x-6">
-        <p className="text-sm font-semibold text-ink-muted">
+        <p className="text-sm font-semibold text-ink">
           {leftTitle}
         </p>
-        <p className="text-sm font-semibold text-ink-muted">
+        <p className="text-sm font-semibold text-ink">
           {rightTitle}
         </p>
       </div>

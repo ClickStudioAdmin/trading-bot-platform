@@ -18,7 +18,7 @@ export const botFieldClass = BILLING_FIELD_CLASS;
 export const botFieldInvalidClass =
   "mt-1 w-full min-w-0 rounded-control border border-danger bg-canvas px-3 py-2 text-sm text-ink focus:border-danger focus:outline-none";
 export const botLabelClass = "block text-sm text-ink";
-export const botSectionTitleClass = "text-sm font-semibold text-ink-muted";
+export const botSectionTitleClass = "text-sm font-semibold text-ink";
 export const botStepTitleClass = "text-lg font-semibold tracking-tight text-ink";
 export const botRowClass = "grid grid-cols-2 gap-4 lg:grid-cols-4";
 export const botRowClass5 = "grid grid-cols-2 gap-4 lg:grid-cols-5";
