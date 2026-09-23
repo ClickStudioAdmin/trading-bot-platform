@@ -50,11 +50,11 @@ assert.equal(bybitAgreementKind({ symbolType: "", baseCoin: "BTC" }), null);
 assert.equal(perpCategoryLabel({ symbolType: "", baseCoin: "BTC" }), "Crypto");
 assert.equal(
   perpCategoryLabel({ symbolType: "stock", baseCoin: "TSLA" }),
-  "Stock and metal contracts",
+  "Stock and metal",
 );
 assert.equal(
   perpCategoryLabel({ symbolType: "commodity", baseCoin: "CL" }),
-  "Crude oil contracts",
+  "Crude oil",
 );
 const gate = { symbols: ["OKLOUSDT"], cleared: ["tradfi"] as const, live: true };
 assert.equal(

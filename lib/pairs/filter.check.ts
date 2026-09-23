@@ -87,7 +87,7 @@ assert.equal(
   applyPairFilters(
     [
       { base: "BTC", category: "Crypto" },
-      { base: "TSLA", category: "Stock and metal contracts" },
+      { base: "TSLA", category: "Stock and metal" },
     ],
     parsePairFilters({ category: "Crypto" }),
     (row) => ({ text: row.base, base: row.base, category: row.category }),

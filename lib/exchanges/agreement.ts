@@ -38,10 +38,14 @@ export function bybitAgreementKindTitle(kind: BybitAgreementKind): string {
 
 export const PERP_CATEGORY_CRYPTO = "Crypto";
 
+export function perpCategoryName(kind: BybitAgreementKind): string {
+  return kind === "oil" ? "Crude oil" : "Stock and metal";
+}
+
 export const PERP_CATEGORY_OPTIONS = [
   PERP_CATEGORY_CRYPTO,
-  bybitAgreementKindTitle("tradfi"),
-  bybitAgreementKindTitle("oil"),
+  perpCategoryName("tradfi"),
+  perpCategoryName("oil"),
 ] as const;
 
 export function perpCategoryLabel(input: {
@@ -49,7 +53,7 @@ export function perpCategoryLabel(input: {
   baseCoin?: string | null;
 }): string {
   const kind = bybitAgreementKind(input);
-  return kind ? bybitAgreementKindTitle(kind) : PERP_CATEGORY_CRYPTO;
+  return kind ? perpCategoryName(kind) : PERP_CATEGORY_CRYPTO;
 }
 
 export function perpNeedsBybitAgreement(

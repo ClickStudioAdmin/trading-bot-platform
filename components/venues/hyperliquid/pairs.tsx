@@ -160,12 +160,6 @@ export async function HyperliquidFuturesPairs({
                   href={sortHref("contract")}
                 />
                 <SortTh
-                  label="Category"
-                  active={sort === "category"}
-                  dir={dir}
-                  href={sortHref("category")}
-                />
-                <SortTh
                   label="Quote"
                   active={sort === "quote"}
                   dir={dir}
@@ -176,6 +170,12 @@ export async function HyperliquidFuturesPairs({
                   active={sort === "cap"}
                   dir={dir}
                   href={sortHref("cap")}
+                />
+                <SortTh
+                  label="Category"
+                  active={sort === "category"}
+                  dir={dir}
+                  href={sortHref("category")}
                 />
                 <SortTh
                   label="Status"
@@ -199,13 +199,13 @@ export async function HyperliquidFuturesPairs({
                   </td>
                   <td className="px-4 py-3">{pair.symbol}</td>
                   <td className="px-4 py-3 text-ink-muted">
-                    {perpCategoryLabel(pair)}
-                  </td>
-                  <td className="px-4 py-3 text-ink-muted">
                     {pair.quoteCoin}
                   </td>
                   <td className="px-4 py-3 tabular-nums text-ink-muted">
                     {formatMarketCap(caps.get(pair.baseCoin) ?? null)}
+                  </td>
+                  <td className="px-4 py-3 text-ink-muted">
+                    {perpCategoryLabel(pair)}
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge label="Enabled" status="enabled" />
