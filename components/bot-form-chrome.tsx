@@ -161,7 +161,7 @@ export function BotFormStep({
       aria-disabled={locked || undefined}
     >
       <h3
-        className={`${botStepTitleClass} border-b border-line bg-surface-raised px-5 py-4`}
+        className={`${botStepTitleClass} border-b border-line bg-surface-raised px-5 py-3`}
       >
         <HintLabel text={title} hint={hint} />
       </h3>

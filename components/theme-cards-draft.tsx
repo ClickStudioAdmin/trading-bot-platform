@@ -578,7 +578,7 @@ function BotStepCard() {
   return (
     <Card className="overflow-hidden p-0">
       <h3
-        className={`${themeCardTitleClass} border-b border-line bg-surface-raised px-5 py-4`}
+        className={`${themeCardTitleClass} border-b border-line bg-surface-raised px-5 py-3`}
       >
         General
       </h3>
