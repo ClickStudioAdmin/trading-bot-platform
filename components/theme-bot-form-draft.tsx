@@ -2,7 +2,9 @@
 
 import { useState, type ReactNode } from "react";
 import {
+  BotFormCard,
   BotFormColumns,
+  BotFormStep,
   BotFormSidebar,
   BotFormSidebarSection,
   BotFormSummaryCard,
@@ -16,7 +18,6 @@ import {
   botRowClass,
   botRowClass5,
   botSectionTitleClass,
-  botStepTitleClass,
   botSidebarActionClass,
   botSidebarSaveClass,
   deskActionBtnClass,
@@ -240,29 +241,6 @@ function OptionalSection({
         <HintLabel text={title} hint={hint} className={sectionTitleClass} />
       </div>
       {enabled ? children : null}
-    </section>
-  );
-}
-
-function DraftStep({
-  title,
-  hint,
-  children,
-}: {
-  title: string;
-  hint?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section>
-      <h3
-        className={`${botStepTitleClass} border-b border-line bg-surface-raised px-5 py-4`}
-      >
-        <HintLabel text={title} hint={hint} />
-      </h3>
-      <div className="px-5 [&>*:not([hidden])]:py-5 [&>*:not([hidden])~*:not([hidden])]:border-t [&>*:not([hidden])~*:not([hidden])]:border-line">
-        {children}
-      </div>
     </section>
   );
 }
@@ -1004,8 +982,8 @@ export function ThemeBotFormDraft() {
       </div>
 
       <BotFormColumns>
-      <div className="min-w-0 overflow-hidden rounded-card border border-line bg-surface">
-        <DraftStep title="General">
+      <BotFormCard>
+        <BotFormStep title="General">
         <div className={rowClass}>
           <Field label="Name" required className="col-span-2">
             <input
@@ -1081,11 +1059,11 @@ export function ThemeBotFormDraft() {
             </>
           ) : null}
         </div>
-        </DraftStep>
+        </BotFormStep>
 
         {desk !== "cnc" ? (
         <>
-        <DraftStep title="Entry Conditions">
+        <BotFormStep title="Entry Conditions">
         <Group>
           <div className={rowClass}>
             {desk === "perps" ? (
@@ -1427,9 +1405,9 @@ export function ThemeBotFormDraft() {
               onEnabled={setConfirmOn}
             />
         ) : null}
-        </DraftStep>
+        </BotFormStep>
 
-        <DraftStep title="Position Sizing">
+        <BotFormStep title="Position Sizing">
         {desk === "dca" && !closing ? (
           <Group title="Maximum Exposure">
             <div className={rowClass}>
@@ -1814,10 +1792,10 @@ export function ThemeBotFormDraft() {
           </div>
         </Group>
         ) : null}
-        </DraftStep>
+        </BotFormStep>
 
         {!closing ? (
-          <DraftStep title="Exit Conditions">
+          <BotFormStep title="Exit Conditions">
             <OptionalSection
               title="Take profit"
               enabled={tpOn}
@@ -2173,12 +2151,12 @@ export function ThemeBotFormDraft() {
               </OptionalSection>
             )}
 
-          </DraftStep>
+          </BotFormStep>
         ) : null}
         </>
         ) : (
           <>
-            <DraftStep title="Entry Conditions" hint="All conditions must be true.">
+            <BotFormStep title="Entry Conditions" hint="All conditions must be true.">
               <div className={rowClass}>
                 <Field label="Min APR %">
                   <OffNumber value={minApr} onChange={setMinApr} />
@@ -2198,9 +2176,9 @@ export function ThemeBotFormDraft() {
                   />
                 </Field>
               </div>
-            </DraftStep>
+            </BotFormStep>
 
-            <DraftStep title="Position Sizing">
+            <BotFormStep title="Position Sizing">
             <Group title="Position and Orders">
               <div className={rowClass}>
                 <Field label="Max Position Size">
@@ -2266,9 +2244,9 @@ export function ThemeBotFormDraft() {
                 ) : null}
               </div>
             </Group>
-            </DraftStep>
+            </BotFormStep>
 
-            <DraftStep title="Exit Conditions" hint="Any condition can be true.">
+            <BotFormStep title="Exit Conditions" hint="Any condition can be true.">
             <Group title="Exit" hint="Any condition can be true.">
               <div className={rowClass}>
                 <Field label="DTE ≤">
@@ -2331,11 +2309,11 @@ export function ThemeBotFormDraft() {
                 </Field>
               </div>
             </OptionalSection>
-            </DraftStep>
+            </BotFormStep>
           </>
         )}
 
-      </div>
+      </BotFormCard>
       <BotFormSidebar
         status={
           <BotStatusField
