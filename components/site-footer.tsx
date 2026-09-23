@@ -4,12 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AdminTickButton } from "@/components/admin-tick-button";
 import { SiteLogo } from "@/components/site-logo";
-import { HeaderAdminLink } from "@/components/site-nav";
 import { formatDeskType, type DeskType } from "@/lib/accounts/model";
 import { usesSignedInAppChrome } from "@/lib/site-links";
 
 export type FooterAdminChrome = {
-  count: number;
   autoTick: boolean;
 };
 
@@ -154,10 +152,5 @@ function FooterAdminTools({ admin }: { admin?: FooterAdminChrome | null }) {
   if (!admin) {
     return null;
   }
-  return (
-    <div className="flex shrink-0 items-center gap-2">
-      <HeaderAdminLink count={admin.count} />
-      <AdminTickButton autoTick={admin.autoTick} notePlacement="above" />
-    </div>
-  );
+  return <AdminTickButton autoTick={admin.autoTick} notePlacement="above" />;
 }

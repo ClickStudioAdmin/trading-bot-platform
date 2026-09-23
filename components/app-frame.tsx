@@ -70,33 +70,21 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
             <SiteHeader
               platformName={brand.name}
               platformLogoUrl={brand.logoUrl}
+              isAdmin={Boolean(admin)}
+              loadAdminAlerts={adminPath && Boolean(admin)}
             />
           </UiRegion>
           <UiRegion region="content" className="flex flex-1 flex-col">
             {children}
           </UiRegion>
           <UiRegion region="chrome">
-            <Suspense
-              fallback={
-                <SiteFooter
-                  appHref={appHref}
-                  signedIn={Boolean(member)}
-                  admin={admin ? { count: 0, autoTick } : null}
-                  platformName={brand.name}
-                  platformLogoUrl={brand.logoUrl}
-                />
-              }
-            >
-              <FooterChrome
-                appHref={appHref}
-                signedIn={Boolean(member)}
-                isAdmin={Boolean(admin)}
-                autoTick={autoTick}
-                loadAdmin={adminPath && Boolean(admin)}
-                platformName={brand.name}
-                platformLogoUrl={brand.logoUrl}
-              />
-            </Suspense>
+            <SiteFooter
+              appHref={appHref}
+              signedIn={Boolean(member)}
+              admin={admin ? { autoTick } : null}
+              platformName={brand.name}
+              platformLogoUrl={brand.logoUrl}
+            />
           </UiRegion>
         </div>
       </AccountSidenavGate>
@@ -156,35 +144,3 @@ async function SidenavBadges({
   );
 }
 
-async function FooterChrome({
-  appHref,
-  signedIn,
-  isAdmin,
-  autoTick,
-  loadAdmin,
-  platformName,
-  platformLogoUrl,
-}: {
-  appHref: string | null;
-  signedIn: boolean;
-  isAdmin: boolean;
-  autoTick: boolean;
-  loadAdmin: boolean;
-  platformName: string;
-  platformLogoUrl: string | null;
-}) {
-  const adminChrome = loadAdmin ? await loadAdminNotificationChrome() : null;
-  return (
-    <SiteFooter
-      appHref={appHref}
-      signedIn={signedIn}
-      admin={
-        isAdmin
-          ? { count: adminChrome?.header ?? 0, autoTick }
-          : null
-      }
-      platformName={platformName}
-      platformLogoUrl={platformLogoUrl}
-    />
-  );
-}

@@ -134,17 +134,6 @@ export function HeaderBrowseLinks({
   );
 }
 
-export function HeaderAdminLink({ count = 0 }: { count?: number }) {
-  const pathname = usePathname();
-  const active = pathname === "/admin" || pathname.startsWith("/admin/");
-  return (
-    <Link href="/admin" className={`${navItemClass(active)} flex items-center gap-2`}>
-      <span>Admin</span>
-      <NavBadge count={count} />
-    </Link>
-  );
-}
-
 export function HeaderInboxLink({ count = 0 }: { count?: number }) {
   const pathname = usePathname();
   const active =

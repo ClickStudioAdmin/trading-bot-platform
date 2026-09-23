@@ -5,15 +5,22 @@ import { UiPreferencesMenu } from "@/components/ui-preferences";
 import { UserMenu } from "@/components/user-menu";
 import { getSessionMember } from "@/lib/auth/session";
 import { memberDisplayName } from "@/lib/members/sync";
-import { loadMemberNotificationChrome } from "@/lib/notifications/badges";
+import {
+  loadAdminNotificationChrome,
+  loadMemberNotificationChrome,
+} from "@/lib/notifications/badges";
 import { connection } from "next/server";
 
 export async function SiteHeader({
   platformName,
   platformLogoUrl,
+  isAdmin = false,
+  loadAdminAlerts = false,
 }: {
   platformName?: string;
   platformLogoUrl?: string | null;
+  isAdmin?: boolean;
+  loadAdminAlerts?: boolean;
 }) {
   await connection();
   const user = await getSessionMember();
@@ -50,8 +57,10 @@ export async function SiteHeader({
             <HeaderInbox userId={user.id} platformMember={platformMember} />
           </Suspense>
         ) : null}
-        <UserMenu
+        <HeaderUserMenu
           name={user ? memberDisplayName(user.email, user.name) : null}
+          isAdmin={isAdmin}
+          loadAdminAlerts={loadAdminAlerts}
         />
       </div>
     </HeaderBar>
@@ -84,6 +93,30 @@ async function HeaderStartLinks({
       }
     />
   );
+}
+
+function HeaderUserMenu({
+  name,
+  isAdmin,
+  loadAdminAlerts,
+}: {
+  name: string | null;
+  isAdmin: boolean;
+  loadAdminAlerts: boolean;
+}) {
+  if (loadAdminAlerts && name) {
+    return (
+      <Suspense fallback={<UserMenu name={name} isAdmin />}>
+        <AdminUserMenu name={name} />
+      </Suspense>
+    );
+  }
+  return <UserMenu name={name} isAdmin={isAdmin} />;
+}
+
+async function AdminUserMenu({ name }: { name: string }) {
+  const chrome = await loadAdminNotificationChrome();
+  return <UserMenu name={name} isAdmin alertCount={chrome.header} />;
 }
 
 async function HeaderInbox({

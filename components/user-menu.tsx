@@ -1,12 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { IconUser } from "@/components/icons";
+import { NavBadge } from "@/components/nav-badge";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { HEADER_CHIP_CLASS } from "@/components/site-nav";
 import { signOut } from "@/lib/auth/actions";
 
-export function UserMenu({ name }: { name: string | null }) {
+export function UserMenu({
+  name,
+  isAdmin = false,
+  alertCount = 0,
+}: {
+  name: string | null;
+  isAdmin?: boolean;
+  alertCount?: number;
+}) {
   if (!name) {
     return (
       <div className="flex items-center gap-2">
@@ -47,8 +57,25 @@ export function UserMenu({ name }: { name: string | null }) {
               Sign out
             </PendingSubmitButton>
           </form>
+          {isAdmin ? <AdminMenuLink count={alertCount} /> : null}
         </div>
       </div>
     </div>
+  );
+}
+
+function AdminMenuLink({ count }: { count: number }) {
+  const pathname = usePathname();
+  const active = pathname === "/admin" || pathname.startsWith("/admin/");
+  return (
+    <Link
+      href="/admin"
+      className={`mt-0.5 flex w-full items-center justify-between gap-2 rounded-control px-2 py-2 text-left text-sm hover:bg-surface-raised hover:text-ink ${
+        active ? "bg-surface-raised text-ink" : "text-ink-muted"
+      }`}
+    >
+      <span>Admin</span>
+      <NavBadge count={count} />
+    </Link>
   );
 }
