@@ -75,7 +75,7 @@ Cards: `bg-surface`, `border-line`, radius 16px, padding 20–24px. No heavy dro
 
 ## Layout
 
-Desk chrome (header, footer, strategy nav, strategy pages, `/account`, `/admin`) uses `max-w-7xl` (~1280px). Narrow forms stay `max-w-lg` or `max-w-3xl`. Signed-in admins open **Admin** from the user menu, under Sign out. Footer **Tick** stays in the footer. Positions Snapshot and Desk Statistics use the 18px section title (`text-lg`). Bots, Activity, and Current Positions sit on the table row at that same size, with the page buttons. Past Positions uses that same size.
+Desk chrome (header, footer, strategy nav, strategy pages, `/account`, `/admin`) uses `max-w-7xl` (~1280px). The desk type sits under the desk name. The exchange connection chip keeps a little extra space above the desk tabs. Narrow forms stay `max-w-lg` or `max-w-3xl`. Signed-in admins open **Admin** from the user menu, under Sign out. Footer **Tick** stays in the footer. Positions Snapshot and Desk Statistics use the 18px section title (`text-lg`). Bots, Activity, and Current Positions sit on the table row at that same size, with the page buttons. Past Positions uses that same size.
 
 Breadcrumbs (`components/breadcrumbs.tsx`) are for pages that are not a nav item — a list row, create, or edit. Sample on **Theme**. Live on backtest results, copy trader/desk, checkout, admin member/plan edit and create, and payout files. Hint size, muted parent links, faint current page, chevron separators. Sit in the top-left of the page, above the title. Do not add them on pages already in a sidenav, header, or desk subnav.
 

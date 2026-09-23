@@ -73,12 +73,12 @@ export function StrategySubnav({
             <div>{identity}</div>
           ) : (
             <>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <div>
                 <h1 className="min-w-0 text-2xl font-semibold tracking-tight">
                   {title}
                 </h1>
                 {typeLabel ? (
-                  <p className="text-sm font-medium text-ink-muted">
+                  <p className="mt-1 text-sm font-medium text-ink-muted">
                     {typeLabel}
                   </p>
                 ) : null}
@@ -90,7 +90,7 @@ export function StrategySubnav({
           )}
         </div>
         {connection || status ? (
-          <div className="flex shrink-0 items-start justify-end gap-2">
+          <div className="mb-2 flex shrink-0 items-start justify-end gap-2">
             {connection ? (
               <MarketDataChip
                 connection={connection}
