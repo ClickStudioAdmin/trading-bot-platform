@@ -11,13 +11,11 @@ import { enableBybitAgreement } from "@/lib/exchanges/agreement-actions";
 export function BybitAgreementEnables({
   connectionId,
   kinds,
-  symbols = [],
   selectedKinds = [],
   onToggleKind,
 }: {
   connectionId?: string;
   kinds: readonly BybitAgreementKind[];
-  symbols?: readonly string[];
   selectedKinds?: readonly BybitAgreementKind[];
   onToggleKind?: (kind: BybitAgreementKind) => void;
 }) {
@@ -26,25 +24,21 @@ export function BybitAgreementEnables({
   const [error, setError] = useState("");
   const [pending, startEnable] = useTransition();
 
-  if (kinds.length === 0 && symbols.length === 0) {
+  if (kinds.length === 0) {
     return null;
   }
 
-  function enable(input: { kind?: BybitAgreementKind; symbol?: string }) {
+  function enable(kind: BybitAgreementKind) {
     if (!connectionId) {
-      if (input.kind) {
-        onToggleKind?.(input.kind);
-      }
+      onToggleKind?.(kind);
       return;
     }
-    const key = input.kind ?? input.symbol ?? "";
     setError("");
-    setPendingKey(key);
+    setPendingKey(kind);
     startEnable(async () => {
       const result = await enableBybitAgreement({
         connectionId,
-        kind: input.kind,
-        symbol: input.symbol,
+        kind,
       });
       setPendingKey("");
       if (!result.ok) {
@@ -63,16 +57,7 @@ export function BybitAgreementEnables({
           title={bybitAgreementKindTitle(kind)}
           pending={pending && pendingKey === kind}
           enabled={selectedKinds.includes(kind)}
-          onEnable={() => enable({ kind })}
-        />
-      ))}
-      {symbols.map((symbol) => (
-        <AgreementChoice
-          key={symbol}
-          title={symbol}
-          single
-          pending={pending && pendingKey === symbol}
-          onEnable={() => enable({ symbol })}
+          onEnable={() => enable(kind)}
         />
       ))}
       {error ? <p className="text-hint text-danger">{error}</p> : null}
@@ -82,13 +67,11 @@ export function BybitAgreementEnables({
 
 function AgreementChoice({
   title,
-  single = false,
   pending,
   enabled = false,
   onEnable,
 }: {
   title: string;
-  single?: boolean;
   pending: boolean;
   enabled?: boolean;
   onEnable: () => void;
@@ -97,15 +80,11 @@ function AgreementChoice({
     ? "Enabled"
     : pending
       ? "Enabling…"
-      : single
-        ? "Enable this contract"
-        : `Enable ${title.toLowerCase()}`;
+      : `Enable ${title.toLowerCase()}`;
   return (
     <div>
       <p className="text-hint text-warning">
-        {single
-          ? `${title} needs a Bybit agreement. Sign on Bybit, then enable it here.`
-          : `${title} need a Bybit agreement. Sign on Bybit, then enable them here.`}
+        {title} need a Bybit agreement. Sign on Bybit, then enable them here.
       </p>
       <button
         type="button"

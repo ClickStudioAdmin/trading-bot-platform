@@ -216,13 +216,10 @@ export function AccountConnectionsTable({
                         <StatusBadge label="Invalid" status="invalid" />
                       ) : null}
                     </p>
-                    {agreement &&
-                    (agreement.kinds.length > 0 ||
-                      agreement.symbols.length > 0) ? (
+                    {agreement && agreement.kinds.length > 0 ? (
                       <BybitAgreementEnables
                         connectionId={row.id}
                         kinds={agreement.kinds}
-                        symbols={agreement.symbols}
                       />
                     ) : null}
                   </td>

@@ -217,7 +217,7 @@ export function FuturesSymbolSelect({
                           role="option"
                           aria-selected={false}
                           aria-disabled="true"
-                          className="flex w-full items-start gap-3 rounded-control px-2 py-1.5 text-left text-sm"
+                          className="flex w-full cursor-not-allowed items-start gap-3 rounded-control px-2 py-1.5 text-left text-sm"
                         >
                           <TokenIcon symbol={row.baseCoin} size={18} />
                           <span className="min-w-0 flex-1">
@@ -228,7 +228,7 @@ export function FuturesSymbolSelect({
                               {pickerNote[0]}
                               <Link
                                 href={ACCOUNT_EXCHANGES_HREF}
-                                className="text-accent underline underline-offset-2 hover:text-accent-strong"
+                                className="cursor-not-allowed text-accent underline underline-offset-2 hover:text-accent-strong"
                               >
                                 Exchanges
                               </Link>
