@@ -9,12 +9,14 @@ export function ExpandableTradeRows({
   children,
   selected = false,
   onSelect,
+  detailName = "position details",
 }: {
   colSpan: number;
   details: ReactNode;
   children: ReactNode;
   selected?: boolean;
   onSelect?: () => void;
+  detailName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -52,7 +54,7 @@ export function ExpandableTradeRows({
             className="inline-flex h-8 w-8 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
             aria-expanded={open}
             aria-controls={open ? panelId : undefined}
-            aria-label={open ? "Hide position details" : "Show position details"}
+            aria-label={open ? `Hide ${detailName}` : `Show ${detailName}`}
             onClick={(event) => {
               event.stopPropagation();
               setOpen((current) => !current);

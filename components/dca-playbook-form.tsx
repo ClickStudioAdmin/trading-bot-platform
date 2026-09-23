@@ -65,6 +65,7 @@ import {
   missingById,
   type AutomationsBotBlotter,
 } from "@/lib/bots/automations-list";
+import { dcaBotConfig } from "@/lib/bots/bot-config";
 import {
   AUTOMATIONS_NEW,
   automationsEditHref,
@@ -776,6 +777,7 @@ export function DcaPlaybooksDesk({
                 : dcaListStatus(playbook),
               statusKey,
               summary: dcaBotSummary(playbook),
+              config: dcaBotConfig(playbook),
               canRemove: !dcaPlaybookIsRunning(playbook),
               removeBlocked: "Stop adding or close before removing.",
               onRemove: async () => {

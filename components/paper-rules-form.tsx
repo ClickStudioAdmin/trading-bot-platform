@@ -68,6 +68,7 @@ import {
   paperBotSummary,
   type AutomationsBotBlotter,
 } from "@/lib/bots/automations-list";
+import { paperBotConfig } from "@/lib/bots/bot-config";
 import { deskHref } from "@/lib/accounts/model";
 import {
   AUTOMATIONS_NEW,
@@ -334,6 +335,7 @@ export function PaperRulesForm({
               status: botModeLabel("cnc", layer.mode),
               statusKey: layer.mode,
               summary: paperBotSummary(layer),
+              config: paperBotConfig(layer),
               canRemove: !(
                 Number.isFinite(Number(layer.id)) &&
                 inUse.has(Number(layer.id))

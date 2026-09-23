@@ -45,6 +45,9 @@ import {
 import { statusOptionsFor, type BotDeskKind } from "@/lib/bots/status";
 import { formatCount, formatPct, signedTone } from "@/lib/opportunities/format";
 import { TokenIcon } from "@/components/token-icon";
+import { ColumnHint } from "@/components/column-hint";
+import { ExpandableTradeRows } from "@/components/trade-expand";
+import type { BotConfigSection } from "@/lib/bots/bot-config";
 import {
   statusToneFor,
   tablePageForIndex,
@@ -61,6 +64,7 @@ export type AutomationsBotRow = {
   status: string;
   statusKey?: string;
   summary: string;
+  config: readonly BotConfigSection[];
   positionCount: number;
   roePct: number | null;
   positionsHref: string;
@@ -179,7 +183,7 @@ export function AutomationsBotTable({
     table.setPage(1);
   }
   const colSpan =
-    2 +
+    3 +
     Number(visible.pair) +
     Number(visible.recipe) +
     Number(visible.status) +
@@ -233,6 +237,12 @@ export function AutomationsBotTable({
       <table className="min-w-full text-left text-sm text-ink">
         <thead className={`${TABLE_THEAD_CLASS} text-hint text-ink-muted`}>
           <tr>
+            <th className="w-10 px-2 py-3 font-medium">
+              <ColumnHint
+                label={<span className="sr-only">Details</span>}
+                hint="Expand for this bot’s configuration."
+              />
+            </th>
             {visible.pair ? (
               <SortTh
                 label="Pair / Side"
@@ -300,11 +310,12 @@ export function AutomationsBotTable({
             </tr>
           ) : (
           table.pageRows.map((row) => (
-            <tr
+            <ExpandableTradeRows
               key={row.id}
-              className={`border-b border-line last:border-b-0${
-                revealId && row.id === revealId ? " bg-accent/10" : ""
-              }`}
+              colSpan={colSpan}
+              detailName="bot configuration"
+              selected={Boolean(revealId && row.id === revealId)}
+              details={<BotConfigPanel sections={row.config} />}
             >
               {visible.pair ? (
                 <td className="px-4 py-3 pr-8 align-top text-ink-muted">
@@ -402,13 +413,51 @@ export function AutomationsBotTable({
                   ) : null}
                 </TableActions>
               </td>
-            </tr>
+            </ExpandableTradeRows>
           ))
           )}
         </tbody>
       </table>
     </TableCard>
     </>
+  );
+}
+
+function BotConfigPanel({
+  sections,
+}: {
+  sections: readonly BotConfigSection[];
+}) {
+  if (sections.length === 0) {
+    return (
+      <p className="text-sm text-ink-muted">No configuration saved.</p>
+    );
+  }
+  return (
+    <div className="grid gap-6 sm:grid-cols-2">
+      {sections.map((section) => (
+        <section key={section.title} className="min-w-0">
+          <h3 className="text-sm font-semibold text-ink">{section.title}</h3>
+          <dl className="mt-2 space-y-1.5">
+            {section.lines.map((line) => (
+              <div
+                key={line.label}
+                className="grid grid-cols-[minmax(0,9.5rem)_minmax(0,1fr)] gap-3 text-sm"
+              >
+                <dt className="text-ink-muted">{line.label}</dt>
+                <dd
+                  className={
+                    line.value === "Off" ? "text-ink-muted" : "text-ink"
+                  }
+                >
+                  {line.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ))}
+    </div>
   );
 }
 

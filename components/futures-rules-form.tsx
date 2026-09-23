@@ -104,6 +104,7 @@ import {
   perpsBotSummary,
   type AutomationsBotBlotter,
 } from "@/lib/bots/automations-list";
+import { perpsBotConfig } from "@/lib/bots/bot-config";
 import {
   AUTOMATIONS_NEW,
   automationsEditHref,
@@ -327,6 +328,7 @@ export function FuturesAutomationsDesk({
               status: botModeLabel("perps", statusKey),
               statusKey,
               summary: perpsBotSummary(layer),
+              config: perpsBotConfig(layer),
               canRemove: !inUse.has(layer.id),
               removeBlocked:
                 "This bot has an open position. Close that row before removing it.",
