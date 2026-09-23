@@ -6,9 +6,9 @@ import {
 export const AUTOMATIONS_OPTIONAL_COLUMNS = [
   "pair",
   "recipe",
-  "status",
   "positions",
   "performance",
+  "status",
 ] as const;
 
 export type AutomationsOptionalColumn =

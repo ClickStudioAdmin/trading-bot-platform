@@ -268,15 +268,6 @@ export function AutomationsBotTable({
                 onSort={() => table.onSort("recipe")}
               />
             ) : null}
-            {visible.status ? (
-              <SortTh
-                label="Status"
-                className={TABLE_TITLE_CASE_TH_CLASS}
-                active={table.sortKey === "status"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("status")}
-              />
-            ) : null}
             {visible.positions ? (
               <SortTh
                 label="Positions"
@@ -293,6 +284,15 @@ export function AutomationsBotTable({
                 active={table.sortKey === "performance"}
                 dir={table.sortDir}
                 onSort={() => table.onSort("performance")}
+              />
+            ) : null}
+            {visible.status ? (
+              <SortTh
+                label="Status"
+                className={TABLE_TITLE_CASE_TH_CLASS}
+                active={table.sortKey === "status"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("status")}
               />
             ) : null}
             <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
@@ -335,14 +335,6 @@ export function AutomationsBotTable({
                   <BotRecipeCell row={row} />
                 </td>
               ) : null}
-              {visible.status ? (
-                <td className="px-4 py-3 pr-8 align-top">
-                  <StatusBadge
-                    label={row.status}
-                    tone={statusToneFor(row.statusKey ?? row.status)}
-                  />
-                </td>
-              ) : null}
               {visible.positions ? (
                 <td className="px-4 py-3 pr-8 align-top">
                   <div className="flex items-center gap-1.5">
@@ -375,6 +367,14 @@ export function AutomationsBotTable({
                       <IconPerformance {...TABLE_BTN_ICON} />
                     </TableIconAction>
                   </div>
+                </td>
+              ) : null}
+              {visible.status ? (
+                <td className="px-4 py-3 pr-8 align-top">
+                  <StatusBadge
+                    label={row.status}
+                    tone={statusToneFor(row.statusKey ?? row.status)}
+                  />
                 </td>
               ) : null}
               <td className={`${TABLE_ACTIONS_TD_CLASS} align-top`}>
