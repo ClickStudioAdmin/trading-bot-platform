@@ -27,6 +27,9 @@ export default async function CashAndCarryActivityPage({
       {session ? null : (
         <h2 className="mb-6 text-lg font-semibold tracking-tight">Activity</h2>
       )}
+      {filters.bot ? (
+        <p className="mb-4 text-sm text-ink-muted">Showing this bot’s activity.</p>
+      ) : null}
       {session ? (
         <EventLogs
           rows={rows}

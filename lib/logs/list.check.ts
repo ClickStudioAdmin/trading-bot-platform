@@ -26,6 +26,9 @@ assert.equal(empty.scope, "");
 assert.equal(empty.level, "");
 assert.equal(empty.event, "");
 assert.equal(empty.account, "");
+assert.equal(empty.bot, "");
+assert.equal(parseEventLogFilters({ bot: "pb-1" }).bot, "pb-1");
+assert.equal(parseEventLogFilters({ bot: "bad id" }).bot, "");
 assert.equal(
   parseEventLogFilters({ account: "acc-1" }).account,
   "acc-1",

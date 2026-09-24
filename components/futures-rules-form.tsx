@@ -352,6 +352,7 @@ export function FuturesAutomationsDesk({
                 blotter,
                 FUTURES_PATHS.positions,
                 FUTURES_PATHS.performance,
+                FUTURES_PATHS.activity,
                 accountId,
               ),
               editHref: automationsEditHref(listHref, layer.id),

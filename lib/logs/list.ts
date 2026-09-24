@@ -67,6 +67,11 @@ export async function listEventLogs(
   if (filters.event.trim()) {
     query = query.eq("event", filters.event.trim());
   }
+  if (filters.bot) {
+    query = query.or(
+      `data->>playbookId.eq.${filters.bot},data->>ruleId.eq.${filters.bot}`,
+    );
+  }
 
   const { data, error } = await query;
   if (error || !data) {

@@ -39,6 +39,9 @@ export default async function FuturesActivityPage({
           reduce-only, adverse move, and the rest).
         </p>
       ) : null}
+      {filters.bot ? (
+        <p className="mb-4 text-sm text-ink-muted">Showing this bot’s activity.</p>
+      ) : null}
       {session ? (
         <EventLogs
           rows={rows}

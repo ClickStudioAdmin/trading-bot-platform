@@ -799,6 +799,7 @@ export function DcaPlaybooksDesk({
                 blotter,
                 FUTURES_PATHS.positions,
                 FUTURES_PATHS.performance,
+                FUTURES_PATHS.activity,
                 accountId,
               ),
               editHref: automationsEditHref(listHref, playbook.id),

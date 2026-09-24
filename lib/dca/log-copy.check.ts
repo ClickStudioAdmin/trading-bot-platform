@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import {
   dcaDecisionMessage,
+  dcaDisarmedMessage,
   dcaEntryLabel,
+  dcaExitClosedMessage,
   dcaSyncFailedHeadline,
   dcaSyncFailedMessage,
   dcaSyncReasonLabel,
@@ -79,6 +81,44 @@ assert.equal(
     why: "Supertrend 10 × 3 turns bearish · 15m",
   }),
   "DCA Test - SOL Hard Exit hit. Flattening. Supertrend 10 × 3 turns bearish · 15m.",
+);
+
+assert.equal(
+  dcaExitClosedMessage({
+    name: "KMNO",
+    reason: "take_profit",
+    listens: true,
+  }),
+  "KMNO hit take profit. Waiting for the next start.",
+);
+assert.equal(
+  dcaExitClosedMessage({
+    name: "MYX",
+    reason: "end_cycle",
+    listens: false,
+  }),
+  "MYX position closed. Bot is idle.",
+);
+assert.equal(
+  dcaExitClosedMessage({
+    name: "NEAR",
+    reason: "exit_if",
+    listens: false,
+    why: "Price is above SMA 21 · 15m.",
+  }),
+  "NEAR Hard Exit hit. Price is above SMA 21 · 15m. Bot is idle.",
+);
+assert.equal(
+  dcaDisarmedMessage({
+    name: "IBM",
+    leftOpen: false,
+    reason: "Minimum order value is $5.",
+  }),
+  "Disabled IBM. Minimum order value is $5.",
+);
+assert.equal(
+  dcaDisarmedMessage({ name: "IBM", leftOpen: false }),
+  "Disarmed IBM.",
 );
 
 console.log("dca log-copy checks passed");
