@@ -174,6 +174,21 @@ export function parseKnownCloseKind(value: unknown): KnownCloseKind | null {
   return null;
 }
 
+export function resolveVenueShrinkKind(input: {
+  tickerKind: VenueCloseKind;
+  fillKind: VenueCloseKind | null;
+  botOwned: boolean;
+}): VenueCloseKind | null {
+  if (input.tickerKind !== "venue") {
+    return input.tickerKind;
+  }
+  const kind = input.fillKind ?? "venue";
+  if (kind === "venue" && input.botOwned) {
+    return null;
+  }
+  return kind;
+}
+
 export function futuresCloseMessage(input: {
   kind: KnownCloseKind | VenueCloseKind | null;
   symbol: string;
