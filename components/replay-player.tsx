@@ -328,6 +328,19 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     () => groupReplayEventsByPosition(visibleEvents, run.orders),
     [visibleEvents, run.orders],
   );
+  const eventStripRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const root = eventStripRef.current;
+    if (!root) {
+      return;
+    }
+    const strips = root.matches("[data-event-strip]")
+      ? [root]
+      : [...root.querySelectorAll<HTMLElement>("[data-event-strip]")];
+    for (const node of strips) {
+      node.scrollLeft = node.scrollWidth;
+    }
+  }, [visibleEvents.length, eventLanes]);
   const currentEvent = visibleEvents[visibleEvents.length - 1] ?? null;
   const stats = replayPlayStats(visibleOrders, run.startingUsdt);
   const cycles = groupBacktestOrdersIntoCycles(visibleOrders);
@@ -1153,13 +1166,13 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         </button>
         {eventGroups.length > 0 ? (
           eventLanes ? (
-            <div className="mt-3 space-y-2">
+            <div ref={eventStripRef} className="mt-3 space-y-2">
               {eventGroups.map((group) => (
                 <div key={group.id} className="flex items-center gap-3">
                   <span className="w-14 shrink-0 text-[10px] uppercase tracking-wide text-ink-faint">
                     {group.label}
                   </span>
-                  <div className="flex min-w-0 gap-2 overflow-x-auto pb-1">
+                  <div data-event-strip="" className="flex min-w-0 gap-2 overflow-x-auto pb-1">
                     {group.events.map((row, index) => (
                       <EventChipButton
                         key={`${row.atMs}-${row.reason}-${index}`}
@@ -1173,7 +1186,11 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               ))}
             </div>
           ) : (
-            <div className="mt-3 flex items-end gap-3 overflow-x-auto pb-1">
+            <div
+              ref={eventStripRef}
+              data-event-strip=""
+              className="mt-3 flex items-end gap-3 overflow-x-auto pb-1"
+            >
               {eventGroups.map((group) => (
                 <div key={group.id} className="flex shrink-0 flex-col">
                   {group.side ? (
