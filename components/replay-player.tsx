@@ -882,11 +882,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     <>
       <section
         className={`w-full min-w-0 overflow-hidden rounded-card border border-line bg-canvas ${
-          fillViewport
-            ? "flex min-h-[420px] flex-1 flex-col"
-            : positionsRight
-              ? ""
-              : "min-h-[420px]"
+          fillViewport || positionsRight
+            ? "flex min-h-0 flex-1 flex-col"
+            : "min-h-[420px]"
         }`}
       >
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
@@ -957,15 +955,13 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             </div>
           </div>
         </div>
-        <div className={`relative ${fillViewport ? "min-h-[420px] min-w-0 flex-1" : ""}`}>
+        <div className={`relative ${fillViewport || positionsRight ? "min-h-[12rem] min-w-0 flex-1" : ""}`}>
           <div
             ref={hostRef}
             className={
-              fillViewport
-                ? "absolute inset-0 min-h-[420px]"
-                : positionsRight
-                  ? "h-[28rem] w-full min-w-0"
-                  : "h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
+              fillViewport || positionsRight
+                ? "absolute inset-0"
+                : "h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
             }
           />
           {loading ? (
