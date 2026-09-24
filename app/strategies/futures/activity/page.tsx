@@ -108,6 +108,7 @@ export default async function FuturesActivityPage({
           scopes={["strategy", "trade"]}
           hidden={{ desk: session.account.id }}
           keep={botReturn.keep}
+          bots={bots}
         />
       ) : (
         <p className="text-sm text-ink-muted">

@@ -17,6 +17,10 @@ import {
   TableSectionTitle,
   useClientTable,
 } from "@/components/table-chrome";
+import {
+  DESK_BLOTTER_ALL_BOTS_LABEL,
+  type DeskBlotterBotOption,
+} from "@/lib/desk-blotter-filters";
 import { eventLogOptionsForScopes } from "@/lib/logs/events";
 import type { EventLogFilters, EventLogRow } from "@/lib/logs/list";
 import { compareTableText, type TableSortDir } from "@/lib/table-chrome";
@@ -75,6 +79,7 @@ export function EventLogs({
   accounts,
   hidden,
   keep,
+  bots,
   title,
 }: {
   rows: EventLogRow[];
@@ -85,6 +90,7 @@ export function EventLogs({
   accounts?: { id: string; label: string }[];
   hidden?: { desk?: string };
   keep?: Record<string, string>;
+  bots?: readonly DeskBlotterBotOption[];
   title?: string;
 }) {
   const showAccount = Boolean(accounts);
@@ -119,7 +125,23 @@ export function EventLogs({
             {hidden?.desk ? (
               <input type="hidden" name="desk" value={hidden.desk} />
             ) : null}
-            {filters.bot ? (
+            {bots && bots.length > 0 ? (
+              <TableFilterField label="Bot">
+                <AppSelect
+                  key={filters.bot || "desk"}
+                  name="bot"
+                  defaultValue={filters.bot ?? ""}
+                  className={TABLE_FILTER_FIELD_CLASS}
+                >
+                  <option value="">{DESK_BLOTTER_ALL_BOTS_LABEL}</option>
+                  {bots.map((bot) => (
+                    <option key={bot.id} value={bot.id}>
+                      {bot.name || "Bot"}
+                    </option>
+                  ))}
+                </AppSelect>
+              </TableFilterField>
+            ) : filters.bot ? (
               <input type="hidden" name="bot" value={filters.bot} />
             ) : null}
             {keep
