@@ -34,6 +34,7 @@ import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
 import { formatPrice, formatQty, signedTone } from "@/lib/opportunities/format";
 import {
   IconChevronRight,
+  IconClose,
   IconCollapse,
   IconExitMonitor,
   IconExpand,
@@ -149,6 +150,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(2);
   const [openOrderKey, setOpenOrderKey] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<ReplayEvent | null>(null);
+  const selectedRef = useRef<ReplayEvent | null>(null);
+  selectedRef.current = selectedEvent;
+  const ordersRef = useRef(run.orders);
+  ordersRef.current = run.orders;
   const [tip, setTip] = useState<{ x: number; y: number; text: string } | null>(
     null,
   );
@@ -362,6 +367,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   }
 
   function showEvent(event: ReplayEvent) {
+    if (selectedEvent === event) {
+      setSelectedEvent(null);
+      return;
+    }
     revealChart();
     setSelectedEvent(event);
     setCursor((current) => ({ ...current, playing: false }));
@@ -516,7 +525,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         drawn.push({ lines, dots, oscillator });
       }
       const markers = charts.createSeriesMarkers(candleSeries, []);
-      function paint(index: number) {
+      function paint(index: number, follow = true) {
         const end = Math.max(0, Math.min(index, candles.length - 1));
         const shown = candles.slice(0, end + 1);
         candleSeries.setData(
@@ -583,33 +592,44 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           }
           row.dots.setData(dots as never);
         });
-        chart.timeScale().setVisibleLogicalRange({
-          from: end - 96,
-          to: end + 8,
-        });
-        markers.setMarkers(
-          events
-            .filter((row) => row.kind === "fill" && row.atMs <= at)
-            .map((row) => {
-              let barMs = row.atMs;
-              for (const candle of candles) {
-                if (candle.timeMs <= row.atMs) {
-                  barMs = candle.timeMs;
-                } else {
-                  break;
-                }
+        if (follow) {
+          chart.timeScale().setVisibleLogicalRange({
+            from: end - 96,
+            to: end + 8,
+          });
+        }
+        const selected = selectedRef.current;
+        const plotted = events
+          .filter((row) => row.kind === "fill" && row.atMs <= at)
+          .map((row) => {
+            let barMs = row.atMs;
+            for (const candle of candles) {
+              if (candle.timeMs <= row.atMs) {
+                barMs = candle.timeMs;
+              } else {
+                break;
               }
-              return {
+            }
+            const selectedSame =
+              selected != null &&
+              selected.atMs === row.atMs &&
+              selected.reason === row.reason &&
+              selected.side === row.side &&
+              selected.orderIndex === row.orderIndex;
+            return {
               time: Math.floor(barMs / 1000) as never,
-              position: row.side === "short" ? "aboveBar" : "belowBar",
-              color: row.reason === "take_profit"
-                ? "#A78BFA"
-                : row.reason === "stop" || row.reason === "trailing"
-                  ? "#F5B942"
-                  : row.side === "short"
-                    ? "#F07167"
-                    : "#34D399",
-              shape: row.side === "short" ? "arrowDown" : "arrowUp",
+              position: row.side === "short" ? "aboveBar" as const : "belowBar" as const,
+              color: selectedSame
+                ? "#F4F4F5"
+                : row.reason === "take_profit"
+                  ? "#A78BFA"
+                  : row.reason === "stop" || row.reason === "trailing"
+                    ? "#F5B942"
+                    : row.side === "short"
+                      ? "#F07167"
+                      : "#34D399",
+              shape: row.side === "short" ? "arrowDown" as const : "arrowUp" as const,
+              size: selectedSame ? 2 : 1,
               text: row.reason === "entry"
                 ? "Entry"
                 : row.reason === "clip"
@@ -622,8 +642,26 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                         ? "Liq"
                         : "Exit",
             };
-            }),
-        );
+          });
+        if (selected && selected.atMs <= at) {
+          let barMs = selected.atMs;
+          for (const candle of candles) {
+            if (candle.timeMs <= selected.atMs) {
+              barMs = candle.timeMs;
+            } else {
+              break;
+            }
+          }
+          plotted.push({
+            time: Math.floor(barMs / 1000) as never,
+            position: selected.side === "short" ? "belowBar" : "aboveBar",
+            color: "#F4F4F5",
+            shape: selected.side === "short" ? "arrowUp" : "arrowDown",
+            size: 2,
+            text: "Selected",
+          });
+        }
+        markers.setMarkers(plotted);
       }
       chart.subscribeCrosshairMove((param) => {
         const time = typeof param.time === "number" ? param.time : null;
@@ -659,6 +697,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           return bar != null && Math.floor(bar / 1000) === time;
         });
         if (match) {
+          if (selectedRef.current === match) {
+            setSelectedEvent(null);
+            return;
+          }
           setSelectedEvent(match);
         }
       });
@@ -668,7 +710,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         __paint?: (index: number) => void;
         __focus?: (index: number) => void;
       };
-      host.__paint = (index) => paintRef.current(index);
+      host.__paint = (index, follow = true) => paintRef.current(index, follow);
       host.__focus = (index) => {
         const at = Math.max(0, Math.min(index, candles.length - 1));
         chart.timeScale().setVisibleLogicalRange({
@@ -711,6 +753,15 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       | null;
     node?.__paint?.(head);
   }, [head]);
+
+  useEffect(() => {
+    const node = hostRef.current as
+      | (HTMLDivElement & {
+          __paint?: (index: number, follow?: boolean) => void;
+        })
+      | null;
+    node?.__paint?.(headRef.current, false);
+  }, [selectedEvent]);
 
   const positionRows = useMemo(
     () => [...cycles.open, ...cycles.closed],
@@ -1158,7 +1209,11 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       </section>
 
       {selectedEvent ? (
-        <EventParameters run={run} event={selectedEvent} />
+        <EventParameters
+          run={run}
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+        />
       ) : null}
 
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -1223,14 +1278,26 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
 function EventParameters({
   run,
   event,
+  onClose,
 }: {
   run: BacktestRun;
   event: ReplayEvent;
+  onClose: () => void;
 }) {
   const sections = eventParameterSections(run.recipe, event);
   return (
     <section className="rounded-card border border-line bg-surface px-4 py-3">
-      <h2 className="text-sm font-semibold text-ink">Parameters met</h2>
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="text-sm font-semibold text-ink">Parameters met</h2>
+        <button
+          type="button"
+          className="inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
+          aria-label="Close parameters"
+          onClick={onClose}
+        >
+          <IconClose size={16} className="size-4" />
+        </button>
+      </div>
       <p className="mt-1 text-sm text-ink">{event.text}</p>
       <div className="mt-3 grid gap-3 md:grid-cols-2">
         {sections.map((section) => (
