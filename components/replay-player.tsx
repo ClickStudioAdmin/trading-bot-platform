@@ -826,6 +826,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           className="mt-0 flex h-full flex-1 flex-col"
           pager={
             <TablePager
+              scroll={false}
               window={positionTable.window}
               onPage={(page) => positionTable.setPage(page)}
               onPrev={() => positionTable.setPage(positionTable.window.page - 1)}
