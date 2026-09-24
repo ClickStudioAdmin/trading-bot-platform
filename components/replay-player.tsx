@@ -160,6 +160,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const headRef = useRef(0);
+  const focusRef = useRef<number | null>(null);
   const [playback, setPlayback] = useState({ key: "", started: false });
   const [expanded, setExpanded] = useState(false);
   const [monitorFull, setMonitorFull] = useState(false);
@@ -334,6 +335,20 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     }
     root.scrollLeft = root.scrollWidth;
   }, [visibleEvents.length]);
+  useEffect(() => {
+    const root = eventStripRef.current;
+    const chip = root?.querySelector<HTMLElement>("[data-selected-event]");
+    if (!root || !chip) {
+      return;
+    }
+    const strip = root.getBoundingClientRect();
+    const box = chip.getBoundingClientRect();
+    if (box.left < strip.left) {
+      root.scrollLeft -= strip.left - box.left;
+    } else if (box.right > strip.right) {
+      root.scrollLeft += box.right - strip.right;
+    }
+  }, [selectedEvent, eventGroups]);
   const currentEvent = visibleEvents[visibleEvents.length - 1] ?? null;
   const stats = replayPlayStats(visibleOrders, run.startingUsdt);
   const series = useMemo(
@@ -371,18 +386,38 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     }));
   }
 
+  function focusChart(index: number) {
+    focusRef.current = index;
+    const host = hostRef.current as
+      | (HTMLDivElement & { __focus?: (index: number) => void })
+      | null;
+    host?.__focus?.(index);
+  }
+
   function showEvent(event: ReplayEvent) {
     if (selectedEvent === event) {
       setSelectedEvent(null);
+      focusRef.current = null;
       return;
     }
     revealChart();
     setSelectedEvent(event);
     setCursor((current) => ({ ...current, playing: false }));
-    const host = hostRef.current as
-      | (HTMLDivElement & { __focus?: (index: number) => void })
-      | null;
-    host?.__focus?.(candleIndexAt(candles, event.atMs));
+    focusChart(candleIndexAt(candles, event.atMs));
+  }
+
+  function showTrade(cycle: BacktestPositionCycle & { tradeNumber: number }) {
+    const order = cycle.orders[0];
+    if (!order) {
+      return;
+    }
+    const event = eventForOrder(events, order, run.orders.indexOf(order));
+    revealChart();
+    setCursor((current) => ({ ...current, playing: false }));
+    if (event) {
+      setSelectedEvent(event);
+    }
+    focusChart(candleIndexAt(candles, event?.atMs ?? cycle.openedAtMs));
   }
 
   useEffect(() => {
@@ -723,6 +758,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           to: at + 48,
         });
       };
+      if (focusRef.current != null) {
+        host.__focus(focusRef.current);
+      }
       const observer = new ResizeObserver(() => {
         chart.applyOptions({
           width: node.clientWidth,
@@ -879,6 +917,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                     events={events}
                     orders={run.orders}
                     onToggle={() => setOpenOrderKey(open ? null : cycle.id)}
+                    onShow={() => showTrade(cycle)}
                   />
                 );
               })}
@@ -1317,6 +1356,7 @@ function EventChipButton({
   return (
     <button
       type="button"
+      data-selected-event={selected ? "" : undefined}
       className={`shrink-0 rounded-control border px-2 py-1 text-xs ${
         selected ? "border-accent text-ink" : "border-line text-ink-muted hover:text-ink"
       }`}
@@ -1390,17 +1430,28 @@ function CycleRows({
   events,
   orders,
   onToggle,
+  onShow,
 }: {
   cycle: BacktestPositionCycle & { tradeNumber: number };
   open: boolean;
   events: ReplayEvent[];
   orders: BacktestRun["orders"];
   onToggle: () => void;
+  onShow: () => void;
 }) {
   return (
     <>
       <tr className="border-b border-line last:border-b-0">
-        <td className="px-4 py-3 text-ink-muted">{cycle.tradeNumber}</td>
+        <td className="px-4 py-3">
+          <button
+            type="button"
+            className="text-accent hover:underline"
+            aria-label={`Show trade ${cycle.tradeNumber}`}
+            onClick={onShow}
+          >
+            {cycle.tradeNumber}
+          </button>
+        </td>
         <td className="px-4 py-3 capitalize text-ink">{cycle.side}</td>
         <td className="px-4 py-3 text-ink-muted">
           {cycle.status === "open" ? "Open" : "Closed"}
