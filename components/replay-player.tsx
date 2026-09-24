@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { BacktestChartIntervalBar } from "@/components/backtest-chart-interval";
@@ -39,6 +39,9 @@ import {
   IconMonitor,
   IconPlay,
 } from "@/components/icons";
+import { SortTh, TableCard, TablePager, useClientTable } from "@/components/table-chrome";
+import { compareTableNum, compareTableText, type TableSortDir } from "@/lib/table-chrome";
+import type { BacktestPositionCycle } from "@/lib/backtest/positions";
 
 const SPEEDS = [1, 2, 4, 8] as const;
 const EMPTY_CANDLES: CandleBar[] = [];
@@ -672,56 +675,114 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     node?.__paint?.(head);
   }, [head]);
 
+  const positionRows = useMemo(
+    () => [...cycles.open, ...cycles.closed],
+    [cycles.open, cycles.closed],
+  );
+  const comparePositions = useCallback(
+    (left: BacktestPositionCycle, right: BacktestPositionCycle, key: string, dir: TableSortDir) => {
+      if (key === "side") {
+        return compareTableText(left.side, right.side, dir);
+      }
+      if (key === "status") {
+        return compareTableText(left.status, right.status, dir);
+      }
+      if (key === "entry") {
+        return compareTableNum(left.entryPrice, right.entryPrice, dir);
+      }
+      if (key === "exit") {
+        return compareTableNum(left.exitPrice ?? -1, right.exitPrice ?? -1, dir);
+      }
+      if (key === "realized") {
+        return compareTableNum(left.realizedUsdt, right.realizedUsdt, dir);
+      }
+      return 0;
+    },
+    [],
+  );
+  const positionTable = useClientTable(positionRows, comparePositions, {
+    pageSize: 20,
+    defaultKey: "entry",
+    defaultDir: "asc",
+  });
+
   const positions = (
-    <section className="space-y-3">
-      <h2 className="text-sm font-semibold text-ink">Positions</h2>
-      {cycles.open.length === 0 && cycles.closed.length === 0 ? (
+    <section className="min-w-0 space-y-3">
+      <h2 className="text-lg font-semibold tracking-tight text-ink">Positions</h2>
+      {positionRows.length === 0 ? (
         <p className="text-sm text-ink-muted">No fills yet at this point in the replay.</p>
       ) : (
-        <div className="overflow-x-auto rounded-card border border-line">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="border-b border-line text-xs text-ink-faint">
+        <TableCard
+          className="mt-0"
+          pager={
+            <TablePager
+              window={positionTable.window}
+              onPage={(page) => positionTable.setPage(page)}
+              onPrev={() => positionTable.setPage(positionTable.window.page - 1)}
+              onNext={() => positionTable.setPage(positionTable.window.page + 1)}
+            />
+          }
+        >
+          <table className="w-full min-w-[36rem] text-left text-sm">
+            <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
               <tr>
-                <th className="px-3 py-2 font-medium">Side</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium">Entry</th>
-                <th className="px-3 py-2 font-medium">Exit</th>
-                <th className="px-3 py-2 font-medium">Realized</th>
+                <SortTh
+                  label="Side"
+                  active={positionTable.sortKey === "side"}
+                  dir={positionTable.sortDir}
+                  onSort={() => positionTable.onSort("side")}
+                />
+                <SortTh
+                  label="Status"
+                  active={positionTable.sortKey === "status"}
+                  dir={positionTable.sortDir}
+                  onSort={() => positionTable.onSort("status")}
+                />
+                <SortTh
+                  label="Entry"
+                  active={positionTable.sortKey === "entry"}
+                  dir={positionTable.sortDir}
+                  onSort={() => positionTable.onSort("entry")}
+                />
+                <SortTh
+                  label="Exit"
+                  active={positionTable.sortKey === "exit"}
+                  dir={positionTable.sortDir}
+                  onSort={() => positionTable.onSort("exit")}
+                />
+                <SortTh
+                  label="Realized"
+                  active={positionTable.sortKey === "realized"}
+                  dir={positionTable.sortDir}
+                  onSort={() => positionTable.onSort("realized")}
+                />
               </tr>
             </thead>
             <tbody>
-              {[...cycles.open, ...cycles.closed].map((cycle) => {
-                const key = cycle.id;
-                const open = openOrderKey === key;
+              {positionTable.pageRows.map((cycle) => {
+                const open = openOrderKey === cycle.id;
                 return (
                   <CycleRows
-                    key={key}
+                    key={cycle.id}
                     cycle={cycle}
                     open={open}
                     events={events}
                     orders={run.orders}
-                    onToggle={() => setOpenOrderKey(open ? null : key)}
+                    onToggle={() => setOpenOrderKey(open ? null : cycle.id)}
                   />
                 );
               })}
             </tbody>
           </table>
-        </div>
+        </TableCard>
       )}
     </section>
   );
 
   const header = (
-      <div className="flex shrink-0 flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{run.symbol} replay</h1>
-          <p className="mt-1 text-sm text-ink-muted">
-            {run.replayEvents
-              ? "Play the run. Each event names the rule that allowed it."
-              : "This run was saved before event reasons. Play still shows the fills. Run it again for the full sentences."}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3 text-sm">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{run.symbol} replay</h1>
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-3 text-sm">
           <div className="flex items-center gap-1" role="group" aria-label="Positions layout">
             <button
               type="button"
@@ -812,8 +873,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const chartColumn = (
     <>
       <section
-        className={`overflow-hidden rounded-card border border-line bg-canvas ${
-          fillViewport ? "flex min-h-[420px] flex-1 flex-col" : ""
+        className={`w-full min-w-0 overflow-hidden rounded-card border border-line bg-canvas ${
+          fillViewport ? "flex min-h-[420px] flex-1 flex-col" : "min-h-[420px]"
         }`}
       >
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
@@ -888,7 +949,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           <div
             ref={hostRef}
             className={
-              fillViewport ? "absolute inset-0" : "h-[min(62vh,640px)] w-full"
+              fillViewport
+              ? "absolute inset-0 min-h-[420px]"
+              : "h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
             }
           />
           {loading ? (
@@ -1021,7 +1084,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
 
   const body = positionsRight ? (
     <div
-      className={`grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,32rem)] ${
+      className={`grid items-stretch gap-4 lg:grid-cols-[minmax(24rem,1fr)_42rem] ${
         fillViewport ? "min-h-0 flex-1" : ""
       }`}
     >
@@ -1182,16 +1245,16 @@ function CycleRows({
 }) {
   return (
     <>
-      <tr className="border-b border-line">
-        <td className="px-3 py-2 capitalize text-ink">{cycle.side}</td>
-        <td className="px-3 py-2 text-ink-muted">
+      <tr className="border-b border-line last:border-b-0">
+        <td className="px-4 py-3 capitalize text-ink">{cycle.side}</td>
+        <td className="px-4 py-3 text-ink-muted">
           {cycle.status === "open" ? "Open" : "Closed"}
         </td>
-        <td className="px-3 py-2 text-ink">{formatPrice(cycle.entryPrice)}</td>
-        <td className="px-3 py-2 text-ink">
+        <td className="px-4 py-3 text-ink">{formatPrice(cycle.entryPrice)}</td>
+        <td className="px-4 py-3 text-ink">
           {cycle.exitPrice == null ? "—" : formatPrice(cycle.exitPrice)}
         </td>
-        <td className={`px-3 py-2 ${signedTone(cycle.realizedUsdt)}`}>
+        <td className={`px-4 py-3 ${signedTone(cycle.realizedUsdt)}`}>
           {money(cycle.realizedUsdt)}
           <button
             type="button"
@@ -1207,8 +1270,8 @@ function CycleRows({
             const orderIndex = orders.indexOf(order);
             const event = eventForOrder(events, order, orderIndex);
             return (
-              <tr key={`${order.atMs}-${order.reason}-${order.price}`} className="bg-surface">
-                <td colSpan={5} className="px-3 py-2 text-sm text-ink-muted">
+              <tr key={`${order.atMs}-${order.reason}-${order.price}`} className="border-b border-line bg-surface-raised last:border-b-0">
+                <td colSpan={5} className="px-4 py-3 text-sm text-ink-muted">
                   <span className="text-ink">
                     {order.reason ?? "fill"} · {formatQty(order.qty)} @ {formatPrice(order.price)}
                   </span>
