@@ -886,12 +886,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             : ""
       }`}
     >
-      {positionRows.length === 0 ? (
-        <p className="text-sm text-ink-muted">No fills yet at this point in the replay.</p>
-      ) : (
-        <TableCard
-          className="mt-0 flex h-full flex-1 flex-col"
-          pager={
+      <TableCard
+        className="mt-0 flex h-full flex-1 flex-col"
+        pager={
+          positionRows.length === 0 ? undefined : (
             <TablePager
               scroll={false}
               window={positionTable.window}
@@ -899,51 +897,59 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               onPrev={() => positionTable.setPage(positionTable.window.page - 1)}
               onNext={() => positionTable.setPage(positionTable.window.page + 1)}
             />
-          }
-        >
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
+          )
+        }
+      >
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
+            <tr>
+              <SortTh
+                label="#"
+                active={positionTable.sortKey === "number"}
+                dir={positionTable.sortDir}
+                onSort={() => positionTable.onSort("number")}
+              />
+              <SortTh
+                label="Side"
+                active={positionTable.sortKey === "side"}
+                dir={positionTable.sortDir}
+                onSort={() => positionTable.onSort("side")}
+              />
+              <SortTh
+                label="Status"
+                active={positionTable.sortKey === "status"}
+                dir={positionTable.sortDir}
+                onSort={() => positionTable.onSort("status")}
+              />
+              <SortTh
+                label="Entry"
+                active={positionTable.sortKey === "entry"}
+                dir={positionTable.sortDir}
+                onSort={() => positionTable.onSort("entry")}
+              />
+              <SortTh
+                label="Exit"
+                active={positionTable.sortKey === "exit"}
+                dir={positionTable.sortDir}
+                onSort={() => positionTable.onSort("exit")}
+              />
+              <SortTh
+                label="Realized"
+                active={positionTable.sortKey === "realized"}
+                dir={positionTable.sortDir}
+                onSort={() => positionTable.onSort("realized")}
+              />
+            </tr>
+          </thead>
+          <tbody>
+            {positionRows.length === 0 ? (
               <tr>
-                <SortTh
-                  label="#"
-                  active={positionTable.sortKey === "number"}
-                  dir={positionTable.sortDir}
-                  onSort={() => positionTable.onSort("number")}
-                />
-                <SortTh
-                  label="Side"
-                  active={positionTable.sortKey === "side"}
-                  dir={positionTable.sortDir}
-                  onSort={() => positionTable.onSort("side")}
-                />
-                <SortTh
-                  label="Status"
-                  active={positionTable.sortKey === "status"}
-                  dir={positionTable.sortDir}
-                  onSort={() => positionTable.onSort("status")}
-                />
-                <SortTh
-                  label="Entry"
-                  active={positionTable.sortKey === "entry"}
-                  dir={positionTable.sortDir}
-                  onSort={() => positionTable.onSort("entry")}
-                />
-                <SortTh
-                  label="Exit"
-                  active={positionTable.sortKey === "exit"}
-                  dir={positionTable.sortDir}
-                  onSort={() => positionTable.onSort("exit")}
-                />
-                <SortTh
-                  label="Realized"
-                  active={positionTable.sortKey === "realized"}
-                  dir={positionTable.sortDir}
-                  onSort={() => positionTable.onSort("realized")}
-                />
+                <td colSpan={6} className="px-4 py-8 text-center text-sm text-ink-muted">
+                  No fills yet at this point in the replay.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {positionTable.pageRows.map((cycle) => {
+            ) : (
+              positionTable.pageRows.map((cycle) => {
                 const open = openOrderKey === cycle.id;
                 return (
                   <CycleRows
@@ -956,11 +962,11 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                     onShow={() => showTrade(cycle)}
                   />
                 );
-              })}
-            </tbody>
-          </table>
-        </TableCard>
-      )}
+              })
+            )}
+          </tbody>
+        </table>
+      </TableCard>
     </section>
   );
 
