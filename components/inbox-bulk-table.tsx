@@ -27,6 +27,31 @@ import {
   type InboxSortQuery,
 } from "@/lib/notifications/inbox";
 
+function InboxReturnFields({
+  page,
+  filters,
+  sort,
+}: {
+  page: number;
+  filters: InboxFilters;
+  sort: InboxSortQuery;
+}) {
+  return (
+    <>
+      <input type="hidden" name="page" value={String(page)} />
+      <input type="hidden" name="status" value={filters.status} />
+      <input type="hidden" name="scope" value={filters.scope} />
+      <input type="hidden" name="event" value={filters.event} />
+      {sort.sort !== "date" ? (
+        <input type="hidden" name="sort" value={sort.sort} />
+      ) : null}
+      {sort.dir !== "desc" ? (
+        <input type="hidden" name="dir" value={sort.dir} />
+      ) : null}
+    </>
+  );
+}
+
 export type InboxTableRow = {
   id: number;
   title: string;
@@ -100,10 +125,8 @@ export function InboxBulkTable({
         }
         actions={
           <TablePendingLabelButton
-            form="inbox-bulk"
+            form="inbox-mark-all"
             formAction={markNotificationsReadAction}
-            name="all"
-            value="1"
             pendingLabel="Marking…"
             disabled={unread < 1}
             icon={<IconMarkAllRead {...TABLE_BTN_ICON} />}
@@ -114,17 +137,12 @@ export function InboxBulkTable({
       >
         {filterBar}
       </TableFilterSession>
+      <form id="inbox-mark-all" action={markNotificationsReadAction} className="hidden">
+        <input type="hidden" name="all" value="1" />
+        <InboxReturnFields page={page} filters={filters} sort={sort} />
+      </form>
       <form id="inbox-bulk">
-        <input type="hidden" name="page" value={String(page)} />
-        <input type="hidden" name="status" value={filters.status} />
-        <input type="hidden" name="scope" value={filters.scope} />
-        <input type="hidden" name="event" value={filters.event} />
-        {sort.sort !== "date" ? (
-          <input type="hidden" name="sort" value={sort.sort} />
-        ) : null}
-        {sort.dir !== "desc" ? (
-          <input type="hidden" name="dir" value={sort.dir} />
-        ) : null}
+        <InboxReturnFields page={page} filters={filters} sort={sort} />
         <TableCard pager={pager}>
           <table className="w-full min-w-[42rem] text-left text-sm">
             <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
@@ -251,16 +269,7 @@ export function InboxBulkTable({
             }
           >
             <input type="hidden" name="id" value={row.id} />
-            <input type="hidden" name="page" value={String(page)} />
-            <input type="hidden" name="status" value={filters.status} />
-            <input type="hidden" name="scope" value={filters.scope} />
-            <input type="hidden" name="event" value={filters.event} />
-            {sort.sort !== "date" ? (
-              <input type="hidden" name="sort" value={sort.sort} />
-            ) : null}
-            {sort.dir !== "desc" ? (
-              <input type="hidden" name="dir" value={sort.dir} />
-            ) : null}
+            <InboxReturnFields page={page} filters={filters} sort={sort} />
           </form>
         </div>
       ))}
