@@ -3,8 +3,10 @@
 import { requirePerpsUiSession } from "@/lib/accounts/guard";
 import type { TradingAccountMode } from "@/lib/accounts/model";
 import {
+  bulkActionBlockReason,
   bulkModeFor,
   dcaSaveVerb,
+  dcaStatusFromLegs,
   parseBotBulkAction,
   parseBulkBotIds,
   parseDcaBotStatus,
@@ -516,13 +518,34 @@ export async function setDcaBotModesAction(
   }
   const selected = parseDcaBotStatus(bulkModeFor("dca", bulk));
   const agreementSettings = await loadFuturesSettings(session.account.id);
+  const loaded = (
+    await Promise.all(
+      ids.map((id) => loadDcaPlaybookById(id, session.account.id)),
+    )
+  ).filter((playbook): playbook is DcaPlaybook => Boolean(playbook));
+  if (loaded.length !== ids.length) {
+    return deskActionError("That bot was not found.");
+  }
+  const blocked = bulkActionBlockReason(
+    bulk,
+    loaded.map((playbook) => ({
+      name: playbook.name,
+      statusKey: dcaStatusFromLegs({
+        armed:
+          playbook.long.status === "armed" ||
+          playbook.short.status === "armed",
+        stopAdding:
+          playbook.long.status === "stop_adding" ||
+          playbook.short.status === "stop_adding",
+      }),
+    })),
+  );
+  if (blocked) {
+    return deskActionError(blocked);
+  }
   const playbooks: DcaPlaybook[] = [];
   let closing = false;
-  for (const id of ids) {
-    const playbook = await loadDcaPlaybookById(id, session.account.id);
-    if (!playbook) {
-      return deskActionError("That bot was not found.");
-    }
+  for (const playbook of loaded) {
     const opens = await loadOpenFuturesOnSymbol(playbook.symbol, {
       accountId: session.account.id,
       userId: session.member.id,

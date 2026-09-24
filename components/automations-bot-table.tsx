@@ -56,6 +56,7 @@ import {
   type AutomationsBotFilters,
 } from "@/lib/bots/automations-list";
 import {
+  bulkActionBlockReason,
   disableConfirmMessageFor,
   disableConfirmTitleFor,
   statusOptionsFor,
@@ -390,6 +391,11 @@ export function AutomationsBotTable({
     if (!onBulkStatus || selectedRows.length === 0 || bulkPending) {
       return;
     }
+    const blocked = bulkActionBlockReason(action, selectedRows);
+    if (blocked) {
+      setBulkError(blocked);
+      return;
+    }
     if (action === "disable") {
       const ok = await confirm({
         title: disableConfirmTitleFor(selectedRows.length),
@@ -443,30 +449,40 @@ export function AutomationsBotTable({
             <p className="text-sm text-ink-muted">
               {selectedRows.length} selected
             </p>
-            <TableLabelButton
-              variant="bulk"
-              icon={<IconPlay {...TABLE_BTN_ICON} />}
-              disabled={bulkPending}
-              onClick={() => void runBulk("enable")}
-            >
-              Enable
-            </TableLabelButton>
-            <TableLabelButton
-              variant="bulk"
-              icon={<IconPause {...TABLE_BTN_ICON} />}
-              disabled={bulkPending}
-              onClick={() => void runBulk("stop_adding")}
-            >
-              Stop Adding
-            </TableLabelButton>
-            <TableLabelButton
-              variant="bulk"
-              icon={<IconDisable {...TABLE_BTN_ICON} />}
-              disabled={bulkPending}
-              onClick={() => void runBulk("disable")}
-            >
-              Disable
-            </TableLabelButton>
+            {(
+              [
+                ["enable", "Enable", <IconPlay key="enable" {...TABLE_BTN_ICON} />],
+                [
+                  "stop_adding",
+                  "Stop Adding",
+                  <IconPause key="stop" {...TABLE_BTN_ICON} />,
+                ],
+                [
+                  "disable",
+                  "Disable",
+                  <IconDisable key="disable" {...TABLE_BTN_ICON} />,
+                ],
+              ] as const
+            ).map(([action, label, icon]) => {
+              const reason = bulkActionBlockReason(action, selectedRows);
+              return (
+                <span
+                  key={action}
+                  title={reason ?? undefined}
+                  className="inline-flex"
+                >
+                  <TableLabelButton
+                    variant="bulk"
+                    icon={icon}
+                    className={reason ? "pointer-events-none" : ""}
+                    disabled={bulkPending || Boolean(reason)}
+                    onClick={() => void runBulk(action)}
+                  >
+                    {label}
+                  </TableLabelButton>
+                </span>
+              );
+            })}
           </>
         ) : undefined
       }

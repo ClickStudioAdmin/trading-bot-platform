@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  bulkActionBlockReason,
   bulkModeFor,
   flattenOwnedRuleIds,
   parseBotBulkAction,
@@ -204,6 +205,13 @@ export async function setPaperBotModesAction(
   );
   if (selected.length !== ids.length) {
     return deskActionError("That bot was not found.");
+  }
+  const blocked = bulkActionBlockReason(
+    bulk,
+    selected.map((layer) => ({ name: layer.name, statusKey: layer.mode })),
+  );
+  if (blocked) {
+    return deskActionError(blocked);
   }
   const updated = selected.map((layer) => ({ ...layer, mode }));
   const saved = await upsertPaperRules({

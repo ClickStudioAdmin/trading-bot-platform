@@ -189,6 +189,45 @@ export function parseBulkBotIds(formData: FormData): string[] {
   ];
 }
 
+export function botCanTakeBulkAction(
+  statusKey: string | null | undefined,
+  action: BotBulkAction,
+): boolean {
+  const status =
+    statusKey === "active" ||
+    statusKey === "stop_adding" ||
+    statusKey === "reduce_only"
+      ? statusKey
+      : "disabled";
+  if (action === "enable") {
+    return status !== "active";
+  }
+  if (action === "disable") {
+    return status !== "disabled";
+  }
+  return status === "active";
+}
+
+export function bulkActionBlockReason(
+  action: BotBulkAction,
+  rows: readonly { name?: string | null; statusKey?: string | null }[],
+): string | null {
+  const blocked = rows.filter(
+    (row) => !botCanTakeBulkAction(row.statusKey, action),
+  );
+  if (blocked.length === 0) {
+    return null;
+  }
+  const names = blocked.map((row) => row.name?.trim() || "Bot").join(", ");
+  if (action === "stop_adding") {
+    return `Stop Adding can’t include ${names}. Only an Active bot can stop adding.`;
+  }
+  if (action === "enable") {
+    return `Enable can’t include ${names}. Those bots are already Active.`;
+  }
+  return `Disable can’t include ${names}. Those bots are already Disabled.`;
+}
+
 export function bulkModeFor(
   desk: BotDeskKind,
   action: BotBulkAction,

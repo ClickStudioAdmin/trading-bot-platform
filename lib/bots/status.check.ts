@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import {
   dcaSaveVerb,
   dcaStatusFromLegs,
+  botCanTakeBulkAction,
+  bulkActionBlockReason,
   bulkModeFor,
   disableConfirmMessage,
   disableConfirmMessageFor,
@@ -131,6 +133,28 @@ assert.equal(parseBotBulkAction("nope"), null);
 assert.equal(bulkModeFor("dca", "stop_adding"), "stop_adding");
 assert.equal(bulkModeFor("perps", "stop_adding"), "reduce_only");
 assert.equal(bulkModeFor("cnc", "disable"), "disabled");
+assert.equal(botCanTakeBulkAction("active", "stop_adding"), true);
+assert.equal(botCanTakeBulkAction("disabled", "stop_adding"), false);
+assert.equal(botCanTakeBulkAction("reduce_only", "stop_adding"), false);
+assert.equal(botCanTakeBulkAction("stop_adding", "enable"), true);
+assert.equal(botCanTakeBulkAction("active", "enable"), false);
+assert.equal(botCanTakeBulkAction("disabled", "disable"), false);
+assert.equal(botCanTakeBulkAction("reduce_only", "disable"), true);
+assert.equal(
+  bulkActionBlockReason("stop_adding", [
+    { name: "Alpha", statusKey: "active" },
+    { name: "Beta", statusKey: "disabled" },
+  ]),
+  "Stop Adding can’t include Beta. Only an Active bot can stop adding.",
+);
+assert.equal(
+  bulkActionBlockReason("enable", [{ name: "Alpha", statusKey: "disabled" }]),
+  null,
+);
+assert.equal(
+  bulkActionBlockReason("enable", [{ name: "Alpha", statusKey: "active" }]),
+  "Enable can’t include Alpha. Those bots are already Active.",
+);
 const bulkIds = new FormData();
 bulkIds.append("id", "a");
 bulkIds.append("id", "a");

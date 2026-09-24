@@ -12,6 +12,7 @@ import {
   upsertFuturesAutomationRules,
 } from "./automation-load";
 import {
+  bulkActionBlockReason,
   bulkModeFor,
   flattenOwnedRuleIds,
   parseBotBulkAction,
@@ -639,6 +640,13 @@ export async function setFuturesBotModesAction(
   );
   if (selected.length !== ids.length) {
     return deskActionError("That bot was not found.");
+  }
+  const blocked = bulkActionBlockReason(
+    bulk,
+    selected.map((rule) => ({ name: rule.name, statusKey: rule.mode })),
+  );
+  if (blocked) {
+    return deskActionError(blocked);
   }
   if (
     mode === "active" &&
