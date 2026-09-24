@@ -707,8 +707,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   });
 
   const positions = (
-    <section className="min-w-0 space-y-3">
-      <h2 className="text-lg font-semibold tracking-tight text-ink">Positions</h2>
+    <section className="min-w-0">
       {positionRows.length === 0 ? (
         <p className="text-sm text-ink-muted">No fills yet at this point in the replay.</p>
       ) : (
