@@ -859,8 +859,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       const rowH = row instanceof HTMLElement ? row.getBoundingClientRect().height : 44;
       const headH = head instanceof HTMLElement ? head.getBoundingClientRect().height : 40;
       const pagerH = pager instanceof HTMLElement ? pager.getBoundingClientRect().height : 45;
-      const top = Math.max(0, node.getBoundingClientRect().top);
-      const available = Math.max(0, window.innerHeight - top - 24);
+      const fixed = 46.5 * (Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16);
+      const available = fillViewport ? node.clientHeight : fixed;
       const next = Math.max(
         1,
         Math.floor((available - headH - pagerH - 2) / Math.max(rowH, 1)),
@@ -868,9 +868,17 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       setFittedPageSize((current) => (current === next ? current : next));
     }
     fit();
+    if (!fillViewport) {
+      return;
+    }
+    const observer = new ResizeObserver(fit);
+    observer.observe(node);
     window.addEventListener("resize", fit);
-    return () => window.removeEventListener("resize", fit);
-  }, [fitPage, positionsRight, positionRows.length]);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", fit);
+    };
+  }, [fitPage, fillViewport, positionsRight, positionRows.length]);
   const positionTable = useClientTable(positionRows, comparePositions, {
     pageSize,
     defaultKey: "number",
@@ -882,9 +890,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       ref={positionsRef}
       className={`flex min-w-0 flex-col ${
         positionsRight
-          ? "h-full min-h-0"
+          ? `h-full ${fillViewport ? "min-h-0 overflow-hidden" : "min-h-[46.5rem]"}`
           : fillViewport
-            ? "min-h-0 flex-1"
+            ? "min-h-0 flex-1 overflow-hidden"
             : ""
       }`}
     >
