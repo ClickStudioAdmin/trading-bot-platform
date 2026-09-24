@@ -840,9 +840,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   );
   const positionsRef = useRef<HTMLElement | null>(null);
   const [fittedPageSize, setFittedPageSize] = useState(15);
-  const pageSize = fillViewport ? fittedPageSize : 15;
+  const fitPage = positionsRight || fillViewport;
+  const pageSize = fitPage ? fittedPageSize : 15;
   useEffect(() => {
-    if (!fillViewport) {
+    if (!fitPage) {
       return;
     }
     const section = positionsRef.current;
@@ -851,24 +852,25 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     }
     const node: HTMLElement = section;
     function fit() {
-      const row = node.querySelector("tbody tr");
+      const row = node.querySelector("tbody tr td:not([colspan])")?.parentElement;
       const head = node.querySelector("thead");
       const card = node.querySelector("[data-table-card]");
       const pager = card?.lastElementChild;
       const rowH = row instanceof HTMLElement ? row.getBoundingClientRect().height : 44;
       const headH = head instanceof HTMLElement ? head.getBoundingClientRect().height : 40;
       const pagerH = pager instanceof HTMLElement ? pager.getBoundingClientRect().height : 45;
+      const top = Math.max(0, node.getBoundingClientRect().top);
+      const available = Math.max(0, window.innerHeight - top - 24);
       const next = Math.max(
         1,
-        Math.floor((node.clientHeight - headH - pagerH - 2) / Math.max(rowH, 1)),
+        Math.floor((available - headH - pagerH - 2) / Math.max(rowH, 1)),
       );
       setFittedPageSize((current) => (current === next ? current : next));
     }
-    const observer = new ResizeObserver(fit);
-    observer.observe(section);
     fit();
-    return () => observer.disconnect();
-  }, [fillViewport, positionsRight]);
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [fitPage, positionsRight, positionRows.length]);
   const positionTable = useClientTable(positionRows, comparePositions, {
     pageSize,
     defaultKey: "number",
@@ -880,7 +882,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       ref={positionsRef}
       className={`flex min-w-0 flex-col ${
         positionsRight
-          ? `h-full ${fillViewport ? "min-h-0" : "min-h-[46.5rem]"}`
+          ? "h-full min-h-0"
           : fillViewport
             ? "min-h-0 flex-1"
             : ""
