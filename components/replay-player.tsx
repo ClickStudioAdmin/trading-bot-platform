@@ -708,12 +708,12 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   });
 
   const positions = (
-    <section className="min-w-0">
+    <section className="flex h-full min-w-0 flex-col">
       {positionRows.length === 0 ? (
         <p className="text-sm text-ink-muted">No fills yet at this point in the replay.</p>
       ) : (
         <TableCard
-          className="mt-0"
+          className="mt-0 flex h-full flex-1 flex-col"
           pager={
             <TablePager
               window={positionTable.window}
@@ -874,7 +874,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     <>
       <section
         className={`w-full min-w-0 overflow-hidden rounded-card border border-line bg-canvas ${
-          fillViewport ? "flex min-h-[420px] flex-1 flex-col" : "min-h-[420px]"
+          fillViewport || positionsRight
+            ? "flex min-h-[420px] flex-1 flex-col"
+            : "min-h-[420px]"
         }`}
       >
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
@@ -945,13 +947,13 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             </div>
           </div>
         </div>
-        <div className={`relative ${fillViewport ? "min-h-0 flex-1" : ""}`}>
+        <div className={`relative ${fillViewport || positionsRight ? "min-h-[420px] min-w-0 flex-1" : ""}`}>
           <div
             ref={hostRef}
             className={
-              fillViewport
-              ? "absolute inset-0 min-h-[420px]"
-              : "h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
+              fillViewport || positionsRight
+                ? "absolute inset-0 min-h-[420px]"
+                : "h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
             }
           />
           {loading ? (
@@ -1088,24 +1090,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         fillViewport ? "min-h-0 flex-1" : ""
       }`}
     >
-      <div
-        className={
-          fillViewport
-            ? "flex min-h-0 min-w-0 flex-col gap-4 overflow-auto"
-            : "min-w-0 space-y-4"
-        }
-      >
+      <div className="flex h-full min-h-0 min-w-0 flex-col gap-4">
         {chartColumn}
       </div>
-      <div
-        className={
-          fillViewport
-            ? "min-h-0 min-w-0 overflow-auto"
-            : "min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-8rem)] lg:overflow-auto"
-        }
-      >
-        {positions}
-      </div>
+      <div className="flex h-full min-w-0 flex-col">{positions}</div>
     </div>
   ) : (
     <div
