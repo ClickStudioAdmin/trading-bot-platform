@@ -24,7 +24,7 @@ import {
   type BacktestRun,
   type ReplayEvent,
 } from "@/lib/backtest/model";
-import { groupBacktestOrdersIntoCycles } from "@/lib/backtest/positions";
+import { listBacktestCycles } from "@/lib/backtest/positions";
 import {
   DCA_INDICATOR_TIMEFRAME_LABELS,
   type DcaIndicatorTimeframe,
@@ -343,7 +343,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   }, [visibleEvents.length, eventLanes]);
   const currentEvent = visibleEvents[visibleEvents.length - 1] ?? null;
   const stats = replayPlayStats(visibleOrders, run.startingUsdt);
-  const cycles = groupBacktestOrdersIntoCycles(visibleOrders);
   const series = useMemo(
     () => replayChartSeries(run.recipe, candles),
     [run.recipe, candles],
@@ -777,11 +776,18 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   }, [selectedEvent]);
 
   const positionRows = useMemo(
-    () => [...cycles.open, ...cycles.closed],
-    [cycles.open, cycles.closed],
+    () =>
+      listBacktestCycles(visibleOrders).map((cycle, index) => ({
+        ...cycle,
+        tradeNumber: index + 1,
+      })),
+    [visibleOrders],
   );
   const comparePositions = useCallback(
-    (left: BacktestPositionCycle, right: BacktestPositionCycle, key: string, dir: TableSortDir) => {
+    (left: (typeof positionRows)[number], right: (typeof positionRows)[number], key: string, dir: TableSortDir) => {
+      if (key === "number") {
+        return compareTableNum(left.tradeNumber, right.tradeNumber, dir);
+      }
       if (key === "side") {
         return compareTableText(left.side, right.side, dir);
       }
@@ -803,8 +809,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   );
   const positionTable = useClientTable(positionRows, comparePositions, {
     pageSize: 15,
-    defaultKey: "entry",
-    defaultDir: "asc",
+    defaultKey: "number",
+    defaultDir: "desc",
   });
 
   const positions = (
@@ -826,6 +832,12 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
               <tr>
+                <SortTh
+                  label="#"
+                  active={positionTable.sortKey === "number"}
+                  dir={positionTable.sortDir}
+                  onSort={() => positionTable.onSort("number")}
+                />
                 <SortTh
                   label="Side"
                   active={positionTable.sortKey === "side"}
@@ -1169,7 +1181,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             <div ref={eventStripRef} className="mt-3 space-y-2">
               {eventGroups.map((group) => (
                 <div key={group.id} className="flex items-center gap-3">
-                  <span className="w-14 shrink-0 text-[10px] uppercase tracking-wide text-ink-faint">
+                  <span className="w-16 shrink-0 text-[10px] uppercase tracking-wide text-ink-faint">
                     {group.label}
                   </span>
                   <div data-event-strip="" className="flex min-w-0 gap-2 overflow-x-auto pb-1">
@@ -1424,7 +1436,7 @@ function CycleRows({
   orders,
   onToggle,
 }: {
-  cycle: ReturnType<typeof groupBacktestOrdersIntoCycles>["closed"][number];
+  cycle: BacktestPositionCycle & { tradeNumber: number };
   open: boolean;
   events: ReplayEvent[];
   orders: BacktestRun["orders"];
@@ -1433,6 +1445,7 @@ function CycleRows({
   return (
     <>
       <tr className="border-b border-line last:border-b-0">
+        <td className="px-4 py-3 text-ink-muted">{cycle.tradeNumber}</td>
         <td className="px-4 py-3 capitalize text-ink">{cycle.side}</td>
         <td className="px-4 py-3 text-ink-muted">
           {cycle.status === "open" ? "Open" : "Closed"}
@@ -1466,7 +1479,7 @@ function CycleRows({
             const event = eventForOrder(events, order, orderIndex);
             return (
               <tr key={`${order.atMs}-${order.reason}-${order.price}`} className="border-b border-line bg-surface-raised last:border-b-0">
-                <td colSpan={5} className="px-4 py-3 text-sm text-ink-muted">
+                <td colSpan={6} className="px-4 py-3 text-sm text-ink-muted">
                   <span className="text-ink">
                     {order.reason ?? "fill"} · {formatQty(order.qty)} @ {formatPrice(order.price)}
                   </span>

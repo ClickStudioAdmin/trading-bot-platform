@@ -15,6 +15,7 @@ export function groupReplayEventsByPosition(
 ): ReplayEventGroup[] {
   const cycles = listBacktestCycles(orders);
   const cycleByOrder = new Map<number, (typeof cycles)[number]>();
+  const numberByCycle = new Map(cycles.map((cycle, index) => [cycle.id, index + 1]));
   for (const cycle of cycles) {
     for (const order of cycle.orders) {
       const index = orders.indexOf(order);
@@ -31,11 +32,9 @@ export function groupReplayEventsByPosition(
         ? cycleByOrder.get(event.orderIndex)
         : undefined;
     const id = cycle?.id ?? `loose-${event.atMs}-${event.reason}-${event.side}`;
-    const label = cycle
-      ? cycle.side === "short"
-        ? "Short"
-        : "Long"
-      : "Skipped";
+    const tradeNumber = cycle ? numberByCycle.get(cycle.id) : undefined;
+    const sideLabel = cycle ? (cycle.side === "short" ? "Short" : "Long") : "Skipped";
+    const label = tradeNumber == null ? sideLabel : `${tradeNumber} ${sideLabel}`;
     const side = cycle?.side ?? null;
     const previous = groups[groups.length - 1];
     if (previous && previous.id === id) {

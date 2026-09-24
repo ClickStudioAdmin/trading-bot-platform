@@ -55,14 +55,14 @@ const events = [
 
 const groups = groupReplayEventsByPosition(events, orders);
 assert.equal(groups.length, 3);
-assert.equal(groups[0]?.label, "Long");
+assert.equal(groups[0]?.label, "1 Long");
 assert.deepEqual(
   groups[0]?.events.map((row) => row.reason),
   ["entry", "clip", "take_profit"],
 );
 assert.equal(groups[1]?.label, "Skipped");
 assert.equal(groups[1]?.events.length, 1);
-assert.equal(groups[2]?.label, "Short");
+assert.equal(groups[2]?.label, "2 Short");
 assert.deepEqual(
   groups[2]?.events.map((row) => row.reason),
   ["entry", "stop"],
