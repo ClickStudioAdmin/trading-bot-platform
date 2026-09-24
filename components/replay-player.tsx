@@ -32,6 +32,7 @@ import { loadBacktestDisplayCandles } from "@/lib/charts/load-backtest-candles";
 import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
 import { formatPrice, formatQty, signedTone } from "@/lib/opportunities/format";
 import {
+  IconChevronRight,
   IconCollapse,
   IconExitMonitor,
   IconExpand,
@@ -722,7 +723,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             />
           }
         >
-          <table className="w-full min-w-[36rem] text-left text-sm">
+          <table className="w-full text-left text-sm">
             <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
               <tr>
                 <SortTh
@@ -1083,7 +1084,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
 
   const body = positionsRight ? (
     <div
-      className={`grid items-stretch gap-4 lg:grid-cols-[minmax(24rem,1fr)_42rem] ${
+      className={`grid items-stretch gap-4 lg:grid-cols-[minmax(24rem,1fr)_32rem] ${
         fillViewport ? "min-h-0 flex-1" : ""
       }`}
     >
@@ -1254,14 +1255,22 @@ function CycleRows({
           {cycle.exitPrice == null ? "—" : formatPrice(cycle.exitPrice)}
         </td>
         <td className={`px-4 py-3 ${signedTone(cycle.realizedUsdt)}`}>
-          {money(cycle.realizedUsdt)}
-          <button
-            type="button"
-            className="ml-3 text-xs text-accent hover:underline"
-            onClick={onToggle}
-          >
-            {open ? "Hide orders" : "Orders"}
-          </button>
+          <span className="inline-flex items-center gap-2">
+            {money(cycle.realizedUsdt)}
+            <button
+              type="button"
+              className="inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
+              aria-expanded={open}
+              aria-label={open ? "Hide orders" : "Show orders"}
+              title={open ? "Hide orders" : "Show orders"}
+              onClick={onToggle}
+            >
+              <IconChevronRight
+                size={16}
+                className={`size-4 ${open ? "rotate-90" : ""}`}
+              />
+            </button>
+          </span>
         </td>
       </tr>
       {open
