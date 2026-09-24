@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { BacktestChartIntervalBar } from "@/components/backtest-chart-interval";
 import {
@@ -30,9 +31,52 @@ import {
 import { loadBacktestDisplayCandles } from "@/lib/charts/load-backtest-candles";
 import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
 import { formatPrice, formatQty, signedTone } from "@/lib/opportunities/format";
+import {
+  IconCollapse,
+  IconExitMonitor,
+  IconExpand,
+  IconLoader,
+  IconMonitor,
+  IconPlay,
+} from "@/components/icons";
 
 const SPEEDS = [1, 2, 4, 8] as const;
 const EMPTY_CANDLES: CandleBar[] = [];
+const FRAME_ICON = { size: 16, className: "size-4" } as const;
+
+type WebkitFullscreenDocument = Document & {
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void>;
+};
+
+type WebkitFullscreenElement = HTMLElement & {
+  webkitRequestFullscreen?: () => Promise<void>;
+};
+
+function monitorFullscreenElement(): Element | null {
+  const doc = document as WebkitFullscreenDocument;
+  return document.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
+}
+
+function requestMonitorFullscreen(node: HTMLElement) {
+  const el = node as WebkitFullscreenElement;
+  const request =
+    el.requestFullscreen?.bind(el) ?? el.webkitRequestFullscreen?.bind(el);
+  if (!request) {
+    return Promise.reject(new Error("Fullscreen is not available."));
+  }
+  return request();
+}
+
+function exitMonitorFullscreen() {
+  const doc = document as WebkitFullscreenDocument;
+  const exit =
+    document.exitFullscreen?.bind(document) ?? doc.webkitExitFullscreen?.bind(doc);
+  if (!exit) {
+    return Promise.resolve();
+  }
+  return exit();
+}
 
 function money(value: number): string {
   const abs = Math.abs(value);
@@ -104,22 +148,71 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     null,
   );
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
   const headRef = useRef(0);
+  const [playback, setPlayback] = useState({ key: "", started: false });
+  const [expanded, setExpanded] = useState(false);
+  const [monitorFull, setMonitorFull] = useState(false);
+  const [positionsRight, setPositionsRight] = useState(false);
 
   const loadKey = `${run.id}:${interval}`;
   const candles = load.key === loadKey ? load.candles : EMPTY_CANDLES
   const loading = load.key !== loadKey;
   const error = load.key === loadKey ? load.error : null;
   const candleKey = `${loadKey}:${candles.length}:${candles[0]?.timeMs ?? 0}`;
-  const firstFill = events.find((row) => row.kind === "fill");
-  const startHead = firstFill ? candleIndexAt(candles, firstFill.atMs) : 0;
+  const startHead = 0;
   const [cursor, setCursor] = useState({ key: "", head: 0, playing: false });
   if (cursor.key !== candleKey) {
     setCursor({ key: candleKey, head: startHead, playing: false });
   }
   const head = cursor.key === candleKey ? cursor.head : startHead;
   const playing = cursor.key === candleKey ? cursor.playing : false;
+  if (playback.key !== candleKey) {
+    setPlayback({ key: candleKey, started: false });
+  }
+  const started = playback.key === candleKey ? playback.started : false;
   headRef.current = head;
+  const fillViewport = expanded || monitorFull;
+
+  function revealChart() {
+    setPlayback({ key: candleKey, started: true });
+  }
+
+  useEffect(() => {
+    function syncFs() {
+      const node = frameRef.current;
+      setMonitorFull(node != null && monitorFullscreenElement() === node);
+    }
+    document.addEventListener("fullscreenchange", syncFs);
+    document.addEventListener("webkitfullscreenchange", syncFs);
+    return () => {
+      document.removeEventListener("fullscreenchange", syncFs);
+      document.removeEventListener("webkitfullscreenchange", syncFs);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!expanded || monitorFull) {
+      return;
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape" && !monitorFullscreenElement()) {
+        setExpanded(false);
+      }
+    }
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [expanded, monitorFull]);
+
+  function beginPlayback() {
+    revealChart();
+    setCursor((current) => ({ ...current, playing: true, head: 0 }));
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -182,15 +275,22 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       }
       if (event.key === " ") {
         event.preventDefault();
+        if (!started) {
+          beginPlayback();
+          return;
+        }
         setCursor((current) => ({ ...current, playing: !current.playing }));
       } else if (event.key === "ArrowRight" && event.shiftKey) {
         event.preventDefault();
+        revealChart();
         jumpEvent(1);
       } else if (event.key === "ArrowLeft" && event.shiftKey) {
         event.preventDefault();
+        revealChart();
         jumpEvent(-1);
       } else if (event.key === "ArrowRight") {
         event.preventDefault();
+        revealChart();
         setCursor((current) => ({
           ...current,
           playing: false,
@@ -198,6 +298,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         }));
       } else if (event.key === "ArrowLeft") {
         event.preventDefault();
+        revealChart();
         setCursor((current) => ({
           ...current,
           playing: false,
@@ -242,6 +343,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     if (!event) {
       return;
     }
+    revealChart();
     setCursor((current) => ({
       ...current,
       playing: false,
@@ -251,7 +353,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
 
   useEffect(() => {
     const host = hostRef.current;
-    if (!host || candles.length === 0) {
+    if (!started || !host || candles.length === 0) {
       return;
     }
     let disposed = false;
@@ -461,6 +563,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           }
           row.dots.setData(dots as never);
         });
+        chart.timeScale().setVisibleLogicalRange({
+          from: end - 96,
+          to: end + 8,
+        });
         markers.setMarkers(
           events
             .filter((row) => row.kind === "fill" && row.atMs <= at)
@@ -557,7 +663,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       disposed = true;
       cleanup();
     };
-  }, [candles, series, events]);
+  }, [candles, series, events, started]);
 
   useEffect(() => {
     const node = hostRef.current as
@@ -566,9 +672,47 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     node?.__paint?.(head);
   }, [head]);
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+  const positions = (
+    <section className="space-y-3">
+      <h2 className="text-sm font-semibold text-ink">Positions</h2>
+      {cycles.open.length === 0 && cycles.closed.length === 0 ? (
+        <p className="text-sm text-ink-muted">No fills yet at this point in the replay.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-card border border-line">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead className="border-b border-line text-xs text-ink-faint">
+              <tr>
+                <th className="px-3 py-2 font-medium">Side</th>
+                <th className="px-3 py-2 font-medium">Status</th>
+                <th className="px-3 py-2 font-medium">Entry</th>
+                <th className="px-3 py-2 font-medium">Exit</th>
+                <th className="px-3 py-2 font-medium">Realized</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...cycles.open, ...cycles.closed].map((cycle) => {
+                const key = cycle.id;
+                const open = openOrderKey === key;
+                return (
+                  <CycleRows
+                    key={key}
+                    cycle={cycle}
+                    open={open}
+                    events={events}
+                    orders={run.orders}
+                    onToggle={() => setOpenOrderKey(open ? null : key)}
+                  />
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+
+  const header = (
+      <div className="flex shrink-0 flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{run.symbol} replay</h1>
           <p className="mt-1 text-sm text-ink-muted">
@@ -577,7 +721,81 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               : "This run was saved before event reasons. Play still shows the fills. Run it again for the full sentences."}
           </p>
         </div>
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <div className="flex items-center gap-1" role="group" aria-label="Positions layout">
+            <button
+              type="button"
+              aria-pressed={!positionsRight}
+              className={`rounded-control px-2 py-1 text-xs ${
+                positionsRight
+                  ? "text-ink-muted hover:text-ink"
+                  : "bg-accent-strong text-ink"
+              }`}
+              onClick={() => setPositionsRight(false)}
+            >
+              Positions below
+            </button>
+            <button
+              type="button"
+              aria-pressed={positionsRight}
+              className={`rounded-control px-2 py-1 text-xs ${
+                positionsRight
+                  ? "bg-accent-strong text-ink"
+                  : "text-ink-muted hover:text-ink"
+              }`}
+              onClick={() => setPositionsRight(true)}
+            >
+              Positions right
+            </button>
+          </div>
+          {monitorFull ? null : (
+            <button
+              type="button"
+              title={expanded ? "Exit browser fill" : "Fill browser"}
+              aria-label={expanded ? "Exit browser fill" : "Fill browser"}
+              className="inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
+              onClick={() => setExpanded((current) => !current)}
+            >
+              {expanded ? (
+                <IconCollapse {...FRAME_ICON} />
+              ) : (
+                <IconExpand {...FRAME_ICON} />
+              )}
+            </button>
+          )}
+          <button
+            type="button"
+            title={monitorFull ? "Exit full screen" : "Full screen"}
+            aria-label={monitorFull ? "Exit full screen" : "Full screen"}
+            className="inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
+            onClick={() => {
+              const node = frameRef.current;
+              if (!node) {
+                return;
+              }
+              if (monitorFullscreenElement() === node) {
+                void exitMonitorFullscreen();
+                return;
+              }
+              setMonitorFull(true);
+              window.requestAnimationFrame(() => {
+                const next = frameRef.current;
+                if (!next) {
+                  setMonitorFull(false);
+                  return;
+                }
+                void requestMonitorFullscreen(next).catch(() => {
+                  setMonitorFull(false);
+                });
+              });
+            }}
+          >
+            {monitorFull ? (
+              <IconExitMonitor {...FRAME_ICON} />
+            ) : (
+              <IconMonitor {...FRAME_ICON} />
+            )}
+          </button>
           <Link
             href={`/account/backtests/${run.id}`}
             className="text-accent hover:underline"
@@ -589,8 +807,15 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           </Link>
         </div>
       </div>
+  );
 
-      <section className="overflow-hidden rounded-card border border-line bg-canvas">
+  const chartColumn = (
+    <>
+      <section
+        className={`overflow-hidden rounded-card border border-line bg-canvas ${
+          fillViewport ? "flex min-h-[420px] flex-1 flex-col" : ""
+        }`}
+      >
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
           <BacktestChartIntervalBar
             run={run}
@@ -607,6 +832,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             <TransportButton
               label="Step back"
               onClick={() => {
+                revealChart();
                 setCursor((current) => ({
                   ...current,
                   playing: false,
@@ -617,15 +843,20 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             <button
               type="button"
               className="rounded-control bg-accent-strong px-3 py-1 text-sm text-ink"
-              onClick={() =>
-                setCursor((current) => ({ ...current, playing: !current.playing }))
-              }
+              onClick={() => {
+                if (!started) {
+                  beginPlayback();
+                  return;
+                }
+                setCursor((current) => ({ ...current, playing: !current.playing }));
+              }}
             >
               {playing ? "Pause" : "Play"}
             </button>
             <TransportButton
               label="Step forward"
               onClick={() => {
+                revealChart();
                 setCursor((current) => ({
                   ...current,
                   playing: false,
@@ -653,9 +884,40 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             </div>
           </div>
         </div>
-        <div className="relative">
-          <div ref={hostRef} className="h-[min(62vh,640px)] w-full" />
-          {tip ? (
+        <div className={`relative ${fillViewport ? "min-h-0 flex-1" : ""}`}>
+          <div
+            ref={hostRef}
+            className={
+              fillViewport ? "absolute inset-0" : "h-[min(62vh,640px)] w-full"
+            }
+          />
+          {loading ? (
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              role="status"
+              aria-label="Loading candles"
+            >
+              <IconLoader className="size-16 animate-spin text-accent" />
+            </div>
+          ) : null}
+          {!loading && candles.length === 0 ? (
+            <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-base text-ink-muted">
+              {error ?? "No candles in that window."}
+            </div>
+          ) : null}
+          {!loading && candles.length > 0 && !started ? (
+            <button
+              type="button"
+              className="absolute inset-0 flex items-center justify-center"
+              aria-label="Play replay"
+              onClick={beginPlayback}
+            >
+              <span className="flex size-28 items-center justify-center rounded-full bg-accent-strong text-ink">
+                <IconPlay size={52} className="ml-1 size-12" />
+              </span>
+            </button>
+          ) : null}
+          {tip && started ? (
             <div
               className="pointer-events-none absolute z-10 max-w-sm rounded-control border border-line bg-surface-raised px-3 py-2 text-xs text-ink shadow-none"
               style={{
@@ -667,11 +929,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             </div>
           ) : null}
         </div>
-        {candles.length === 0 ? (
-          <p className="px-3 py-6 text-sm text-ink-muted">
-            {loading ? "Loading candles…" : (error ?? "No candles in that window.")}
-          </p>
-        ) : (
+        {started && candles.length > 0 ? (
           <label className="flex items-center gap-3 border-t border-line px-3 py-2 text-xs text-ink-muted">
             <span className="shrink-0">
               {head + 1} / {candles.length}
@@ -692,7 +950,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               }}
             />
           </label>
-        )}
+        ) : null}
       </section>
 
       {timeframeNote ? (
@@ -725,6 +983,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                     : "border-line text-ink-muted hover:text-ink"
                 }`}
                 onClick={() => {
+                  revealChart();
                   setSelectedEvent(row);
                   setCursor((current) => ({
                     ...current,
@@ -757,45 +1016,64 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         />
         <Stat label="Drawdown" value={money(-stats.maxDrawdownUsdt)} />
       </dl>
+    </>
+  );
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-ink">Positions</h2>
-        {cycles.open.length === 0 && cycles.closed.length === 0 ? (
-          <p className="text-sm text-ink-muted">No fills yet at this point in the replay.</p>
-        ) : (
-          <div className="overflow-x-auto rounded-card border border-line">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="border-b border-line text-xs text-ink-faint">
-                <tr>
-                  <th className="px-3 py-2 font-medium">Side</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium">Entry</th>
-                  <th className="px-3 py-2 font-medium">Exit</th>
-                  <th className="px-3 py-2 font-medium">Realized</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...cycles.open, ...cycles.closed].map((cycle) => {
-                  const key = cycle.id;
-                  const open = openOrderKey === key;
-                  return (
-                    <CycleRows
-                      key={key}
-                      cycle={cycle}
-                      open={open}
-                      events={events}
-                      orders={run.orders}
-                      onToggle={() => setOpenOrderKey(open ? null : key)}
-                    />
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+  const body = positionsRight ? (
+    <div
+      className={`grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,32rem)] ${
+        fillViewport ? "min-h-0 flex-1" : ""
+      }`}
+    >
+      <div
+        className={
+          fillViewport
+            ? "flex min-h-0 min-w-0 flex-col gap-4 overflow-auto"
+            : "min-w-0 space-y-4"
+        }
+      >
+        {chartColumn}
+      </div>
+      <div
+        className={
+          fillViewport
+            ? "min-h-0 min-w-0 overflow-auto"
+            : "min-w-0 xl:sticky xl:top-4 xl:max-h-[calc(100dvh-8rem)] xl:overflow-auto"
+        }
+      >
+        {positions}
+      </div>
+    </div>
+  ) : (
+    <div
+      className={
+        fillViewport ? "flex min-h-0 flex-1 flex-col gap-4 overflow-auto" : "space-y-4"
+      }
+    >
+      {chartColumn}
+      {positions}
     </div>
   );
+
+  const frame = (
+    <div
+      ref={frameRef}
+      className={
+        expanded && !monitorFull
+          ? "fixed inset-0 z-50 flex h-dvh w-full flex-col gap-4 overflow-hidden bg-canvas p-4"
+          : monitorFull
+            ? "flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden bg-canvas p-4"
+            : "space-y-4"
+      }
+    >
+      {header}
+      {body}
+    </div>
+  );
+
+  return expanded && typeof document !== "undefined"
+    ? createPortal(frame, document.body)
+    : frame;
 }
 
 function EventParameters({
