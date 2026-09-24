@@ -92,6 +92,12 @@ Same `<DeskChart>`, candle API, and overlay renderer. Chart toolbar has **Fill b
 
 Replay still does **not** persist trailing peak across clips. Indicator start uses an 80-bar warmup window. Last / mark / index on price starts all read the bar close. Position logs are synthesized from fills — replay does not write `event_logs` or `futures_*`. Open Positions **Unrealized** and **P&L %** are per open cycle at the last tape close (`stats.lastPrice`). Direction **Both** can show two rows at once; each uses that same mark. Older runs without `lastPrice` recover the mark from combined `markUsdt` when net qty is not zero.
 
+## Replay page
+
+A finished run can open **Replay** at `/account/backtests/[runId]/replay`. The report page stays the results page. Replay is a second view of the same row. New Backtest still queues the run and still opens the report. Queued, running, failed, and cancelled runs do not play.
+
+The chart is the top of the page: candles, the recipe indicator (price lines or an RSI / MACD pane), and fill marks up to the playhead. Play, pause, step, speed, and the scrubber reveal the future only as the playhead moves. The event under the chart, and each order inside a position row, use the same sentence. That sentence is written in the tick that placed or skipped the order and stored on `backtest_runs.replay_events`. `orders` and `stats` are unchanged. A run saved before that column plays from `orders` with a shorter sentence. Migration: `supabase/migrations/20260924120000_backtest_replay_events.sql`.
+
 ## Out of scope (still)
 
 - TV Strategy / webhook-only recipes.

@@ -1092,6 +1092,152 @@ export function indicatorStartMet(input: {
   return false;
 }
 
+export function rsiSeries(closes: number[], period = 14): (number | null)[] {
+  const out: (number | null)[] = Array(closes.length).fill(null);
+  if (period < 1 || closes.length < period + 1) {
+    return out;
+  }
+  let gain = 0;
+  let loss = 0;
+  for (let i = 1; i <= period; i += 1) {
+    const delta = (closes[i] ?? 0) - (closes[i - 1] ?? 0);
+    if (delta >= 0) {
+      gain += delta;
+    } else {
+      loss -= delta;
+    }
+  }
+  gain /= period;
+  loss /= period;
+  out[period] = loss === 0 ? 100 : 100 - 100 / (1 + gain / loss);
+  for (let i = period + 1; i < closes.length; i += 1) {
+    const delta = (closes[i] ?? 0) - (closes[i - 1] ?? 0);
+    const up = delta > 0 ? delta : 0;
+    const down = delta < 0 ? -delta : 0;
+    gain = (gain * (period - 1) + up) / period;
+    loss = (loss * (period - 1) + down) / period;
+    out[i] = loss === 0 ? 100 : 100 - 100 / (1 + gain / loss);
+  }
+  return out;
+}
+
+export function macdSeries(closes: number[]): {
+  macd: (number | null)[];
+  signal: (number | null)[];
+  histogram: (number | null)[];
+} {
+  const empty = {
+    macd: Array<number | null>(closes.length).fill(null),
+    signal: Array<number | null>(closes.length).fill(null),
+    histogram: Array<number | null>(closes.length).fill(null),
+  };
+  const fast = emaValues(closes, 12);
+  const slow = emaValues(closes, 26);
+  if (fast.length === 0 || slow.length === 0) {
+    return empty;
+  }
+  const slowStart = closes.length - slow.length;
+  const alignedFast = fast.slice(fast.length - slow.length);
+  const macdLine = alignedFast.map((value, i) => value - (slow[i] ?? 0));
+  const signal = emaValues(macdLine, 9);
+  const signalStart = slowStart + (macdLine.length - signal.length);
+  for (let i = 0; i < macdLine.length; i += 1) {
+    empty.macd[slowStart + i] = macdLine[i] ?? null;
+  }
+  for (let i = 0; i < signal.length; i += 1) {
+    const at = signalStart + i;
+    empty.signal[at] = signal[i] ?? null;
+    const macd = empty.macd[at];
+    empty.histogram[at] =
+      macd == null || signal[i] == null ? null : macd - signal[i];
+  }
+  return empty;
+}
+
+export function bollingerSeries(
+  closes: number[],
+  period: number,
+  stddev = DCA_BB_STDDEV,
+): Array<{ mid: number; upper: number; lower: number } | null> {
+  const out: Array<{ mid: number; upper: number; lower: number } | null> =
+    Array(closes.length).fill(null);
+  if (period < 2) {
+    return out;
+  }
+  for (let i = period - 1; i < closes.length; i += 1) {
+    out[i] = bollingerBands(closes.slice(0, i + 1), period, stddev);
+  }
+  return out;
+}
+
+export type SupertrendPoint = { line: number; dir: 1 | -1 };
+
+export function supertrendSeries(
+  bars: SupertrendBar[],
+  period: number,
+  multiplier: number,
+): Array<SupertrendPoint | null> {
+  const out: Array<SupertrendPoint | null> = Array(bars.length).fill(null);
+  const atr = atrValues(bars, period);
+  if (atr.length === 0) {
+    return out;
+  }
+  let lower = 0;
+  let upper = 0;
+  let line = 0;
+  let dir: 1 | -1 = -1;
+  let started = false;
+  for (let i = 0; i < bars.length; i += 1) {
+    const a = atr[i];
+    const bar = bars[i];
+    if (a == null || bar == null) {
+      continue;
+    }
+    const hl2 = (bar.high + bar.low) / 2;
+    let nextLower = hl2 - multiplier * a;
+    let nextUpper = hl2 + multiplier * a;
+    if (!started) {
+      lower = nextLower;
+      upper = nextUpper;
+      dir = -1;
+      line = upper;
+      started = true;
+      out[i] = { line, dir };
+      continue;
+    }
+    const prevClose = bars[i - 1]?.close ?? bar.close;
+    const prevLower = lower;
+    const prevUpper = upper;
+    const prevLine = line;
+    nextLower =
+      nextLower > prevLower || prevClose < prevLower ? nextLower : prevLower;
+    nextUpper =
+      nextUpper < prevUpper || prevClose > prevUpper ? nextUpper : prevUpper;
+    if (prevLine === prevUpper) {
+      dir = bar.close > nextUpper ? 1 : -1;
+    } else {
+      dir = bar.close < nextLower ? -1 : 1;
+    }
+    lower = nextLower;
+    upper = nextUpper;
+    line = dir === 1 ? lower : upper;
+    out[i] = { line, dir };
+  }
+  return out;
+}
+
+export function alignedAverage(
+  closes: number[],
+  values: number[],
+): (number | null)[] {
+  const out: (number | null)[] = Array(closes.length).fill(null);
+  const start = closes.length - values.length;
+  for (let i = 0; i < values.length; i += 1) {
+    out[start + i] = values[i] ?? null;
+  }
+  return out;
+}
+
 export function maPairCrossed(
   fast: number[],
   slow: number[],

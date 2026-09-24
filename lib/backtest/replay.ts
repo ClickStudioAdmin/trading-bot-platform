@@ -37,6 +37,9 @@ import {
   type BacktestStats,
   type SimulatedOrder,
 } from "./model";
+import { fillSentence, skippedEntrySentence } from "./events";
+import type { ReplayEvent } from "./model";
+import { filterBecause, indicatorBecause, priceStartBecause } from "./explain";
 
 export function canBacktestPerpsRecipe(
   recipe: PerpsTemplateRecipe,
@@ -176,10 +179,10 @@ export function replayPerpsPriceCross(input: {
   feeRate: number;
   startingUsdt: number;
   leverage?: number;
-}): { orders: SimulatedOrder[]; stats: BacktestStats } {
+}): { orders: SimulatedOrder[]; stats: BacktestStats; events: ReplayEvent[] } {
   const allowed = canBacktestPerpsRecipe(input.recipe);
   if (!allowed.ok) {
-    return { orders: [], stats: emptyBacktestStats(input.startingUsdt) };
+    return { orders: [], stats: emptyBacktestStats(input.startingUsdt), events: [] };
   }
   const { action, closeSide } = recipeAction(input.recipe);
   const tape = backtestTapeInterval(input.recipe, 1, 2);
@@ -191,6 +194,7 @@ export function replayPerpsPriceCross(input: {
   let wasTrue = false;
   let open: OpenSim | null = null;
   const orders: SimulatedOrder[] = [];
+  const events: ReplayEvent[] = [];
   let realized = 0;
   let wins = 0;
   let trades = 0;
@@ -201,7 +205,30 @@ export function replayPerpsPriceCross(input: {
   let barsIn = 0;
   let liquidated = false;
 
-  function flattenOpen(atMs: number, fill: number, reason: BacktestFillReason) {
+  function remember(order: SimulatedOrder, because?: string) {
+    const orderIndex = orders.length;
+    orders.push(order);
+    events.push({
+      atMs: order.atMs,
+      kind: "fill",
+      reason: order.reason ?? "close",
+      orderIndex,
+      side: order.side,
+      text: fillSentence({
+        reason: order.reason ?? "close",
+        side: order.side,
+        price: order.price,
+        because,
+      }),
+    });
+  }
+
+  function flattenOpen(
+    atMs: number,
+    fill: number,
+    reason: BacktestFillReason,
+    because?: string,
+  ) {
     if (!open) {
       return;
     }
@@ -215,16 +242,19 @@ export function replayPerpsPriceCross(input: {
     } else {
       grossLoss += Math.abs(pnl);
     }
-    orders.push({
-      atMs,
-      action: "flatten",
-      side: open.side,
-      qty: open.qty,
-      price: fill,
-      feeUsdt: fee,
-      realizedUsdt: pnl,
-      reason,
-    });
+    remember(
+      {
+        atMs,
+        action: "flatten",
+        side: open.side,
+        qty: open.qty,
+        price: fill,
+        feeUsdt: fee,
+        realizedUsdt: pnl,
+        reason,
+      },
+      because,
+    );
     open = null;
   }
 
@@ -328,7 +358,12 @@ export function replayPerpsPriceCross(input: {
           barsByTimeframe,
         })
       ) {
-        flattenOpen(bar.timeMs, price, "exit_if");
+        flattenOpen(
+          bar.timeMs,
+          price,
+          "exit_if",
+          filterBecause(input.recipe.exitIf, open.side, "Exit if"),
+        );
       }
       if (
         open &&
@@ -424,18 +459,22 @@ export function replayPerpsPriceCross(input: {
             ? backtestMarginUsdt(open.qty * open.entry, leverage)
             : 0;
           const available = input.startingUsdt + realized - locked;
+          const because = perpsEntryBecause(side, price, barsByTimeframe);
           if (backtestMarginUsdt(qty * price, leverage) + fee <= available) {
             realized -= fee;
-            orders.push({
-              atMs: bar.timeMs,
-              action,
-              side,
-              qty,
-              price,
-              feeUsdt: fee,
-              realizedUsdt: -fee,
-              reason: "entry",
-            });
+            remember(
+              {
+                atMs: bar.timeMs,
+                action,
+                side,
+                qty,
+                price,
+                feeUsdt: fee,
+                realizedUsdt: -fee,
+                reason: "entry",
+              },
+              because,
+            );
             open = mergeSimPosition(
               open,
               side,
@@ -444,6 +483,15 @@ export function replayPerpsPriceCross(input: {
               input.recipe.tpsl,
               input.recipe.trailing,
             );
+          } else {
+            events.push({
+              atMs: bar.timeMs,
+              kind: "skipped",
+              reason: "entry",
+              orderIndex: null,
+              side,
+              text: skippedEntrySentence(side, because),
+            });
           }
         }
       }
@@ -456,8 +504,49 @@ export function replayPerpsPriceCross(input: {
     ? unrealized(open.side, open.qty, open.entry, last.close)
     : 0;
 
+  function perpsEntryBecause(
+    side: FuturesSide,
+    price: number,
+    barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>,
+  ): string {
+    if (input.recipe.entrySource === "price") {
+      const level = Number(String(input.recipe.triggerPrice).replace(/,/g, ""));
+      return priceStartBecause(
+        {
+          triggerBy: input.recipe.triggerBy,
+          compare: input.recipe.triggerCompare,
+          price: level,
+        },
+        price,
+      );
+    }
+    const start = input.recipe.indicator;
+    if (!start) {
+      return "";
+    }
+    const bars = barsByTimeframe.get(start.timeframe) ?? [];
+    return [
+      indicatorBecause({
+        kind: start.kind,
+        compare: start.compare,
+        level: start.level,
+        period: start.period,
+        slowPeriod: start.slowPeriod,
+        multiplier: start.multiplier ?? null,
+        timeframe: start.timeframe,
+        side,
+        closes: bars.map((row) => row.close),
+        bars,
+      }),
+      filterBecause(input.recipe.confirm, side, "Confirm"),
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
   return {
     orders,
+    events,
     stats: finishBacktestStats({
       trades,
       wins,

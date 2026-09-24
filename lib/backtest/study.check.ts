@@ -58,6 +58,7 @@ const run: BacktestRun = {
   feePreset: "vip0_taker",
   feeRate: 0,
   status: "done",
+  replayEvents: null,
   recipe: seed,
   stats: {
     trades: 1,
