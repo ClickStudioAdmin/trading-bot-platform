@@ -754,7 +754,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       disposed = true;
       cleanup();
     };
-  }, [candles, series, events, started]);
+  }, [candles, series, events, started, positionsRight, fillViewport]);
 
   useEffect(() => {
     const node = hostRef.current as
@@ -1267,25 +1267,28 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     </>
   );
 
-  const body = positionsRight ? (
-    <div
-      className={`grid items-stretch gap-4 lg:grid-cols-[minmax(24rem,1fr)_32rem] ${
-        fillViewport ? "min-h-0 flex-1" : ""
-      }`}
-    >
-      <div className="flex h-full min-h-0 min-w-0 flex-col gap-4">
-        {chartColumn}
-      </div>
-      <div className="flex h-full min-w-0 flex-col">{positions}</div>
-    </div>
-  ) : (
+  const body = (
     <div
       className={
-        fillViewport ? "flex min-h-0 flex-1 flex-col gap-4 overflow-auto" : "space-y-4"
+        positionsRight
+          ? `grid items-stretch gap-4 lg:grid-cols-[minmax(24rem,1fr)_32rem] ${
+              fillViewport ? "min-h-0 flex-1" : ""
+            }`
+          : fillViewport
+            ? "flex min-h-0 flex-1 flex-col gap-4 overflow-auto"
+            : "space-y-4"
       }
     >
-      {chartColumn}
-      {positions}
+      <div
+        className={
+          positionsRight ? "flex h-full min-h-0 min-w-0 flex-col gap-4" : "min-w-0"
+        }
+      >
+        {chartColumn}
+      </div>
+      <div className={positionsRight ? "flex h-full min-w-0 flex-col" : "min-w-0"}>
+        {positions}
+      </div>
     </div>
   );
 
