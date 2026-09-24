@@ -19,6 +19,7 @@ import {
   type BacktestStatus,
   type SimulatedOrder,
 } from "./model";
+import { parseReplayEvents } from "./events";
 
 function asTime(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -146,6 +147,7 @@ export function parseBacktestRunRow(
     recipe,
     stats: parseStats(row.stats),
     orders: parseSimulatedOrders(row.orders),
+    replayEvents: parseReplayEvents(row.replay_events),
     error: row.error ? String(row.error) : null,
     createdAtMs: asTime(row.created_at),
     finishedAtMs: row.finished_at ? asTime(row.finished_at) : null,
@@ -241,6 +243,7 @@ export async function updateBacktestRun(
     status: BacktestStatus;
     stats?: BacktestStats | null;
     orders?: SimulatedOrder[];
+    replayEvents?: BacktestRun["replayEvents"];
     error?: string | null;
     finished?: boolean;
   },
@@ -249,21 +252,40 @@ export async function updateBacktestRun(
   if (!supabase) {
     return null;
   }
-  const { data, error } = await supabase
+  const columns = {
+    status: patch.status,
+    ...(patch.stats !== undefined ? { stats: patch.stats } : {}),
+    ...(patch.orders !== undefined ? { orders: patch.orders } : {}),
+    ...(patch.replayEvents !== undefined
+      ? { replay_events: patch.replayEvents }
+      : {}),
+    ...(patch.error !== undefined ? { error: patch.error } : {}),
+    ...(patch.finished ? { finished_at: new Date().toISOString() } : {}),
+  };
+  const first = await supabase
     .from("backtest_runs")
-    .update({
-      status: patch.status,
-      ...(patch.stats !== undefined ? { stats: patch.stats } : {}),
-      ...(patch.orders !== undefined ? { orders: patch.orders } : {}),
-      ...(patch.error !== undefined ? { error: patch.error } : {}),
-      ...(patch.finished
-        ? { finished_at: new Date().toISOString() }
-        : {}),
-    })
+    .update(columns)
     .eq("id", id)
     .in("status", ["queued", "running"])
     .select("*")
     .maybeSingle();
+  const missingColumn =
+    first.error != null && /replay_events/i.test(first.error.message);
+  const { data, error } = missingColumn
+    ? await supabase
+        .from("backtest_runs")
+        .update({
+          status: patch.status,
+          ...(patch.stats !== undefined ? { stats: patch.stats } : {}),
+          ...(patch.orders !== undefined ? { orders: patch.orders } : {}),
+          ...(patch.error !== undefined ? { error: patch.error } : {}),
+          ...(patch.finished ? { finished_at: new Date().toISOString() } : {}),
+        })
+        .eq("id", id)
+        .in("status", ["queued", "running"])
+        .select("*")
+        .maybeSingle()
+    : first;
   if (error || !data) {
     return null;
   }

@@ -412,6 +412,7 @@ export function TablePager({
   align = "center",
   buttons = "icons",
   className = "",
+  scroll = true,
 }: {
   window: Pick<TablePageWindow, "page" | "pageCount" | "total" | "from" | "to">;
   prevHref?: string;
@@ -424,6 +425,7 @@ export function TablePager({
   align?: "split" | "center";
   buttons?: "text" | "icons";
   className?: string;
+  scroll?: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const flight = useRef(0);
@@ -435,6 +437,10 @@ export function TablePager({
   const icons = buttons === "icons";
   const items = tablePagerItems(window.page, window.pageCount);
   function showPage(apply: () => void) {
+    if (!scroll) {
+      apply();
+      return;
+    }
     const id = flight.current + 1;
     flight.current = id;
     void scrollTableSlowly(rootRef.current).then(() => {

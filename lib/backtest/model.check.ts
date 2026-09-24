@@ -544,6 +544,7 @@ const seeded = backtestQueueSeedFromRun({
   } as import("./model").BacktestRecipe,
   stats: null,
   orders: [],
+  replayEvents: null,
   error: null,
   createdAtMs: 1,
   finishedAtMs: 2,

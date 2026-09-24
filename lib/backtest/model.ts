@@ -64,6 +64,21 @@ export const BACKTEST_FILL_REASONS = [
 ] as const;
 export type BacktestFillReason = (typeof BACKTEST_FILL_REASONS)[number];
 
+export type ReplayEventKind = "fill" | "skipped";
+
+export type ReplayFact = { role: string; detail: string };
+
+export type ReplayEvent = {
+  atMs: number;
+  kind: ReplayEventKind;
+  reason: BacktestFillReason;
+  orderIndex: number | null;
+  side: "long" | "short";
+  clipIndex?: number;
+  text: string;
+  facts?: ReplayFact[];
+};
+
 export type SimulatedOrder = {
   atMs: number;
   action: "buy" | "sell" | "flatten";
@@ -127,6 +142,7 @@ export type BacktestRun = {
   recipe: BacktestRecipe;
   stats: BacktestStats | null;
   orders: SimulatedOrder[];
+  replayEvents: ReplayEvent[] | null;
   error: string | null;
   createdAtMs: number;
   finishedAtMs: number | null;

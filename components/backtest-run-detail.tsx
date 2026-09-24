@@ -329,12 +329,22 @@ export function BacktestRunDetail({
         <section>
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="text-lg font-semibold">Parameters</h2>
-            <Link
-              href={backtestRerunHref(run.id)}
-              className="text-sm text-accent hover:underline"
-            >
-              Load into new backtest
-            </Link>
+            <span className="flex flex-wrap gap-3">
+              {complete ? (
+                <Link
+                  href={`/account/backtests/${run.id}/replay`}
+                  className="text-sm text-accent hover:underline"
+                >
+                  Replay
+                </Link>
+              ) : null}
+              <Link
+                href={backtestRerunHref(run.id)}
+                className="text-sm text-accent hover:underline"
+              >
+                Load into new backtest
+              </Link>
+            </span>
           </div>
           <BacktestPropertyList rows={params} />
         </section>

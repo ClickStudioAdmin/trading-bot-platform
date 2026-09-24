@@ -82,6 +82,7 @@ export async function executeBacktestRun(
       status: "done",
       stats: replayed.stats,
       orders: replayed.orders,
+      replayEvents: replayed.events,
       error: null,
       finished: true,
     });
