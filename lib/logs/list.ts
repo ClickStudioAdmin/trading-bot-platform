@@ -217,13 +217,46 @@ export function logBelongsToPosition(
   return logInPositionWindow(log, position);
 }
 
+const THIN_FILL_EVENTS = new Set([
+  "trade.opened",
+  "trade.added",
+  "trade.closed",
+  "trade.unwound",
+]);
+
+/** Drop the short fill line when a richer futures line already records that fill. */
+export function withoutDuplicateFillLogs(
+  logs: readonly EventLogRow[],
+): EventLogRow[] {
+  const rich = logs.filter((row) => row.event === "trade.futures");
+  return logs.filter((row) => {
+    if (!THIN_FILL_EVENTS.has(row.event)) {
+      return true;
+    }
+    const positionId = stringLogField(row.data.positionId);
+    const at = Date.parse(row.createdAt);
+    return !rich.some((other) => {
+      const otherPosition = stringLogField(other.data.positionId);
+      if (!positionId || positionId !== otherPosition) {
+        return false;
+      }
+      const otherAt = Date.parse(other.createdAt);
+      return (
+        Number.isFinite(at) &&
+        Number.isFinite(otherAt) &&
+        Math.abs(otherAt - at) < 20_000
+      );
+    });
+  });
+}
+
 export function logsForPosition(
   logs: EventLogRow[],
   position: PositionLogAnchor | string,
 ): EventLogRow[] {
   const anchor =
     typeof position === "string" ? { id: position } : position;
-  return logs
+  return withoutDuplicateFillLogs(logs)
     .filter((log) => logBelongsToPosition(log, anchor))
     .sort(
       (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id - a.id,

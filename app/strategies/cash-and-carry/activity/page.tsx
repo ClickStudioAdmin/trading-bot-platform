@@ -3,7 +3,11 @@ import Link from "next/link";
 import { EventLogs } from "@/components/event-logs";
 import { deskHref } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
-import { listEventLogs, parseEventLogFilters } from "@/lib/logs/list";
+import {
+  listEventLogs,
+  parseEventLogFilters,
+  withoutDuplicateFillLogs,
+} from "@/lib/logs/list";
 
 export const metadata: Metadata = {
   title: "Activity",
@@ -18,9 +22,11 @@ export default async function CashAndCarryActivityPage({
   const params = await searchParams;
   const session = await getSessionContext();
   const filters = parseEventLogFilters(params);
-  const rows = session
-    ? await listEventLogs(filters, { accountId: session.account.id })
-    : [];
+  const rows = withoutDuplicateFillLogs(
+    session
+      ? await listEventLogs(filters, { accountId: session.account.id })
+      : [],
+  );
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">

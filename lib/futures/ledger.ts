@@ -141,20 +141,6 @@ export async function writeFuturesOpen(input: {
   if (order.error) {
     return { ok: false, error: order.error };
   }
-  await logFuturesFill({
-    event: "trade.opened",
-    message: `Opened ${input.symbol} ${input.side}`,
-    userId: input.userId,
-    accountId: input.accountId,
-    positionId,
-    symbol: input.symbol,
-    side: input.side,
-    qty: input.qty,
-    price: input.price,
-    source: source,
-    ruleName: input.ruleName ?? null,
-    ruleId: input.ruleId ?? null,
-  });
   return { ok: true, positionId };
 }
 
@@ -218,22 +204,6 @@ export async function writeFuturesAdd(input: {
     source: input.source,
     ruleName: input.ruleName ?? null,
   });
-  if (!order.error) {
-    await logFuturesFill({
-      event: "trade.added",
-      message: `Added ${input.row.symbol} ${input.row.side}`,
-      userId: input.row.userId,
-      accountId: input.row.accountId,
-      positionId: input.row.id,
-      symbol: input.row.symbol,
-      side: input.row.side,
-      qty: input.qty,
-      price: input.price,
-      source: input.source ?? input.row.source,
-      ruleName: input.ruleName ?? input.row.ruleName,
-      ruleId: input.ruleId ?? input.row.ruleId,
-    });
-  }
   return order;
 }
 
@@ -310,20 +280,6 @@ export async function writeFuturesFlatten(input: {
     } catch {
       // Snapshot must not block the flatten.
     }
-    await logFuturesFill({
-      event: "trade.closed",
-      message: `Closed ${input.row.symbol} ${input.row.side}`,
-      userId: input.row.userId,
-      accountId: input.row.accountId,
-      positionId: input.row.id,
-      symbol: input.row.symbol,
-      side: input.row.side,
-      qty: input.qty,
-      price: input.price,
-      source: input.source ?? input.row.source,
-      ruleName: input.ruleName ?? input.row.ruleName,
-      ruleId: input.ruleId ?? input.row.ruleId,
-    });
   }
   return order;
 }
@@ -409,22 +365,6 @@ export async function writeFuturesCloseSlice(input: {
     source: input.source,
     ruleName: input.ruleName ?? null,
   });
-  if (!order.error) {
-    await logFuturesFill({
-      event: "trade.unwound",
-      message: `Reduced ${input.row.symbol} ${input.row.side}`,
-      userId: input.row.userId,
-      accountId: input.row.accountId,
-      positionId: input.row.id,
-      symbol: input.row.symbol,
-      side: input.row.side,
-      qty: closeQty,
-      price: input.price,
-      source: input.source ?? input.row.source,
-      ruleName: input.ruleName ?? input.row.ruleName,
-      ruleId: input.ruleId ?? input.row.ruleId,
-    });
-  }
   return { error: order.error, remaining };
 }
 
@@ -572,38 +512,4 @@ export async function patchFuturesTrailingPeak(input: {
     .eq("account_id", input.row.accountId)
     .eq("status", "open");
   return { error: error?.message ?? null };
-}
-
-async function logFuturesFill(input: {
-  event: "trade.opened" | "trade.added" | "trade.closed" | "trade.unwound";
-  message: string;
-  userId: string;
-  accountId: string;
-  positionId: string;
-  symbol: string;
-  side: FuturesSide;
-  qty: number;
-  price: number;
-  source: FuturesTradeSource;
-  ruleName: string | null;
-  ruleId: string | null;
-}): Promise<void> {
-  await writeEventLog({
-    scope: "trade",
-    event: input.event,
-    message: input.message,
-    userId: input.userId,
-    accountId: input.accountId,
-    strategy: FUTURES_STRATEGY_ID,
-    data: {
-      positionId: input.positionId,
-      symbol: input.symbol,
-      side: input.side,
-      qty: input.qty,
-      price: input.price,
-      source: input.source,
-      ruleName: input.ruleName,
-      ruleId: input.ruleId,
-    },
-  });
 }
