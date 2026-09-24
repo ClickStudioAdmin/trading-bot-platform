@@ -849,17 +849,18 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     if (!section) {
       return;
     }
+    const node: HTMLElement = section;
     function fit() {
-      const row = section.querySelector("tbody tr");
-      const head = section.querySelector("thead");
-      const card = section.querySelector("[data-table-card]");
+      const row = node.querySelector("tbody tr");
+      const head = node.querySelector("thead");
+      const card = node.querySelector("[data-table-card]");
       const pager = card?.lastElementChild;
       const rowH = row instanceof HTMLElement ? row.getBoundingClientRect().height : 44;
       const headH = head instanceof HTMLElement ? head.getBoundingClientRect().height : 40;
       const pagerH = pager instanceof HTMLElement ? pager.getBoundingClientRect().height : 45;
       const next = Math.max(
         1,
-        Math.floor((section.clientHeight - headH - pagerH - 2) / Math.max(rowH, 1)),
+        Math.floor((node.clientHeight - headH - pagerH - 2) / Math.max(rowH, 1)),
       );
       setFittedPageSize((current) => (current === next ? current : next));
     }
