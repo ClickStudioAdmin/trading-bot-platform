@@ -74,6 +74,7 @@ export function EventLogs({
   scopes,
   accounts,
   hidden,
+  keep,
   title,
 }: {
   rows: EventLogRow[];
@@ -83,6 +84,7 @@ export function EventLogs({
   scopes: Array<"system" | "strategy" | "trade">;
   accounts?: { id: string; label: string }[];
   hidden?: { desk?: string };
+  keep?: Record<string, string>;
   title?: string;
 }) {
   const showAccount = Boolean(accounts);
@@ -120,6 +122,13 @@ export function EventLogs({
             {filters.bot ? (
               <input type="hidden" name="bot" value={filters.bot} />
             ) : null}
+            {keep
+              ? Object.entries(keep).map(([key, value]) =>
+                  value ? (
+                    <input key={key} type="hidden" name={key} value={value} />
+                  ) : null,
+                )
+              : null}
             {accounts ? (
               <TableFilterField label="Account">
                 <AppSelect
