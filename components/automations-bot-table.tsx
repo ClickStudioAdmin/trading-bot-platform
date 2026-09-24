@@ -58,7 +58,6 @@ import {
 import {
   disableConfirmMessageFor,
   disableConfirmTitleFor,
-  disableNeedsConfirm,
   statusOptionsFor,
   type BotBulkAction,
   type BotDeskKind,
@@ -391,10 +390,7 @@ export function AutomationsBotTable({
     if (!onBulkStatus || selectedRows.length === 0 || bulkPending) {
       return;
     }
-    if (
-      action === "disable" &&
-      selectedRows.some((row) => disableNeedsConfirm(Boolean(row.ownsOpen)))
-    ) {
+    if (action === "disable") {
       const ok = await confirm({
         title: disableConfirmTitleFor(selectedRows.length),
         message: disableConfirmMessageFor(desk, selectedRows.length),
