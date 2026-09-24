@@ -1301,7 +1301,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     >
       <div
         className={
-          positionsRight ? "flex h-full min-h-0 min-w-0 flex-col gap-4" : "min-w-0"
+          positionsRight
+            ? "flex h-full min-h-0 min-w-0 flex-col gap-4"
+            : "flex min-w-0 flex-col gap-4"
         }
       >
         {chartColumn}
