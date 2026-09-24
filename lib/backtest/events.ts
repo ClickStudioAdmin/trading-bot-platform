@@ -100,9 +100,26 @@ export function parseReplayEvents(raw: unknown): ReplayEvent[] | null {
       side: row.side === "short" ? "short" : "long",
       clipIndex: parseBacktestClipIndex(row.clipIndex),
       text,
+      facts: parseFacts(row.facts),
     });
   }
   return rows;
+}
+
+function parseFacts(raw: unknown): { role: string; detail: string }[] | undefined {
+  if (!Array.isArray(raw)) {
+    return undefined;
+  }
+  const facts = raw.flatMap((item) => {
+    if (item == null || typeof item !== "object") {
+      return [];
+    }
+    const row = item as Record<string, unknown>;
+    const role = String(row.role ?? "").trim();
+    const detail = String(row.detail ?? "").trim();
+    return role && detail ? [{ role, detail }] : [];
+  });
+  return facts.length > 0 ? facts : undefined;
 }
 
 export function eventForOrder(

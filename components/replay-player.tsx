@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { BacktestChartIntervalBar } from "@/components/backtest-chart-interval";
-import { replayChartSeries } from "@/lib/backtest/chart-series";
+import {
+  indicatorRolesForReason,
+  replayChartSeries,
+} from "@/lib/backtest/chart-series";
+import { eventParameterSections } from "@/lib/backtest/event-pane";
 import { eventForOrder, eventsFromOrders } from "@/lib/backtest/events";
 import {
   eventsThrough,
@@ -95,6 +99,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   }>({ key: "", candles: [], error: null });
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(2);
   const [openOrderKey, setOpenOrderKey] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<ReplayEvent | null>(null);
+  const [tip, setTip] = useState<{ x: number; y: number; text: string } | null>(
+    null,
+  );
   const hostRef = useRef<HTMLDivElement | null>(null);
   const headRef = useRef(0);
 
@@ -211,13 +219,15 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     () => replayChartSeries(run.recipe, candles),
     [run.recipe, candles],
   );
-  const signalLabel = series.signalTimeframe
-    ? DCA_INDICATOR_TIMEFRAME_LABELS[series.signalTimeframe]
-    : null;
   const chartLabel = DCA_INDICATOR_TIMEFRAME_LABELS[interval];
+  const otherTimeframes = series.layers
+    .map((layer) =>
+      layer.timeframe ? DCA_INDICATOR_TIMEFRAME_LABELS[layer.timeframe] : "",
+    )
+    .filter((label) => label && label !== chartLabel);
   const timeframeNote =
-    signalLabel && signalLabel !== chartLabel
-      ? `This bot decided on ${signalLabel}. The lines on this ${chartLabel} chart are recalculated on these candles.`
+    otherTimeframes.length > 0
+      ? `Conditions on ${Array.from(new Set(otherTimeframes)).join(", ")} are drawn on these ${chartLabel} candles.`
       : null;
 
   function jumpEvent(direction: 1 | -1) {
@@ -282,61 +292,106 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         wickUpColor: "#34D399",
         wickDownColor: "#F07167",
       });
-      const priceSeries = series.price.map((plot) =>
-        chart.addSeries(charts.LineSeries, {
-          color: plot.color,
-          lineWidth: 2,
-          priceLineVisible: false,
-          lastValueVisible: false,
-          title: plot.title,
-        }),
-      );
-      const oscillatorSeries: {
-        rsi: ReturnType<typeof chart.addSeries> | null;
-        macd: ReturnType<typeof chart.addSeries> | null;
-        signal: ReturnType<typeof chart.addSeries> | null;
-        histogram: ReturnType<typeof chart.addSeries> | null;
-      } = { rsi: null, macd: null, signal: null, histogram: null };
-      if (series.oscillator) {
-        chart.addPane();
-        if (series.oscillator.rsi) {
-          oscillatorSeries.rsi = chart.addSeries(
+      const drawn: Array<{
+        lines: ReturnType<typeof chart.addSeries>[];
+        dots: ReturnType<typeof chart.addSeries>;
+        oscillator: {
+          rsi: ReturnType<typeof chart.addSeries> | null;
+          macd: ReturnType<typeof chart.addSeries> | null;
+          signal: ReturnType<typeof chart.addSeries> | null;
+          histogram: ReturnType<typeof chart.addSeries> | null;
+        };
+      }> = [];
+      let paneCursor = 0;
+      for (const layer of series.layers) {
+        let pane = 0;
+        if (layer.pane === "oscillator") {
+          chart.addPane();
+          paneCursor += 1;
+          pane = paneCursor;
+          chart.panes()[pane]?.setHeight(68);
+        }
+        const lines = layer.price.map((plot) =>
+          chart.addSeries(
+            charts.LineSeries,
+            {
+              color: plot.color,
+              lineWidth: 2,
+              priceLineVisible: false,
+              lastValueVisible: false,
+              title: plot.title,
+            },
+            pane,
+          ),
+        );
+        const oscillator = {
+          rsi: null as ReturnType<typeof chart.addSeries> | null,
+          macd: null as ReturnType<typeof chart.addSeries> | null,
+          signal: null as ReturnType<typeof chart.addSeries> | null,
+          histogram: null as ReturnType<typeof chart.addSeries> | null,
+        };
+        if (layer.oscillator?.rsi) {
+          oscillator.rsi = chart.addSeries(
             charts.LineSeries,
             {
               color: "#A78BFA",
               lineWidth: 2,
               priceLineVisible: false,
-              title: series.oscillator.title,
+              title: layer.title,
             },
-            1,
+            pane,
           );
-          if (series.oscillator.level != null) {
-            oscillatorSeries.rsi.createPriceLine({
-              price: series.oscillator.level,
+          for (const level of layer.oscillator.levels) {
+            oscillator.rsi.createPriceLine({
+              price: level,
               color: "#F5B942",
               lineWidth: 1,
               lineStyle: charts.LineStyle.Dashed,
-              title: String(series.oscillator.level),
+              title: String(level),
             });
           }
         }
-        if (series.oscillator.histogram) {
-          oscillatorSeries.histogram = chart.addSeries(
+        if (layer.oscillator?.histogram) {
+          oscillator.histogram = chart.addSeries(
             charts.HistogramSeries,
             { priceLineVisible: false, title: "Histogram" },
-            1,
+            pane,
           );
-          oscillatorSeries.macd = chart.addSeries(
+          oscillator.macd = chart.addSeries(
             charts.LineSeries,
-            { color: "#A78BFA", lineWidth: 2, priceLineVisible: false, title: "MACD" },
-            1,
+            {
+              color: "#A78BFA",
+              lineWidth: 2,
+              priceLineVisible: false,
+              title: "MACD",
+            },
+            pane,
           );
-          oscillatorSeries.signal = chart.addSeries(
+          oscillator.signal = chart.addSeries(
             charts.LineSeries,
-            { color: "#F5B942", lineWidth: 2, priceLineVisible: false, title: "Signal" },
-            1,
+            {
+              color: "#F5B942",
+              lineWidth: 2,
+              priceLineVisible: false,
+              title: "Signal",
+            },
+            pane,
           );
         }
+        const dots = chart.addSeries(
+          charts.LineSeries,
+          {
+            color: "#F5B942",
+            lineVisible: false,
+            pointMarkersVisible: true,
+            pointMarkersRadius: 4,
+            priceLineVisible: false,
+            lastValueVisible: false,
+            crosshairMarkerVisible: false,
+          },
+          pane,
+        );
+        drawn.push({ lines, dots, oscillator });
       }
       const markers = charts.createSeriesMarkers(candleSeries, []);
       function paint(index: number) {
@@ -351,31 +406,61 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             close: row.close,
           })),
         );
-        series.price.forEach((plot, plotIndex) => {
-          priceSeries[plotIndex]?.setData(
-            lineData(candles, plot.values, end) as never,
-          );
-        });
-        if (series.oscillator?.rsi && oscillatorSeries.rsi) {
-          oscillatorSeries.rsi.setData(
-            lineData(candles, series.oscillator.rsi, end) as never,
-          );
-        }
-        if (series.oscillator?.histogram && oscillatorSeries.histogram) {
-          oscillatorSeries.histogram.setData(
-            lineData(candles, series.oscillator.histogram, end).map((row) => ({
-              ...row,
-              color: (row.value ?? 0) >= 0 ? "#34D399" : "#F07167",
-            })) as never,
-          );
-          oscillatorSeries.macd?.setData(
-            lineData(candles, series.oscillator.macd ?? [], end) as never,
-          );
-          oscillatorSeries.signal?.setData(
-            lineData(candles, series.oscillator.signal ?? [], end) as never,
-          );
-        }
         const at = candles[end]?.timeMs ?? 0;
+        series.layers.forEach((layer, layerIndex) => {
+          const row = drawn[layerIndex];
+          if (!row) {
+            return;
+          }
+          layer.price.forEach((plot, plotIndex) => {
+            row.lines[plotIndex]?.setData(
+              lineData(candles, plot.values, end) as never,
+            );
+          });
+          if (layer.oscillator?.rsi && row.oscillator.rsi) {
+            row.oscillator.rsi.setData(
+              lineData(candles, layer.oscillator.rsi, end) as never,
+            );
+          }
+          if (layer.oscillator?.histogram && row.oscillator.histogram) {
+            row.oscillator.histogram.setData(
+              lineData(candles, layer.oscillator.histogram, end).map((point) => ({
+                ...point,
+                color: (point.value ?? 0) >= 0 ? "#34D399" : "#F07167",
+              })) as never,
+            );
+            row.oscillator.macd?.setData(
+              lineData(candles, layer.oscillator.macd ?? [], end) as never,
+            );
+            row.oscillator.signal?.setData(
+              lineData(candles, layer.oscillator.signal ?? [], end) as never,
+            );
+          }
+          const dots: Array<{ time: number; value: number }> = [];
+          const seen = new Set<number>();
+          for (const item of events) {
+            if (item.atMs > at) {
+              continue;
+            }
+            const roles = indicatorRolesForReason(item.reason);
+            if (!roles.some((role) => layer.roles.includes(role))) {
+              continue;
+            }
+            const index = candleIndexAt(candles, item.atMs);
+            const value = layer.dotValues[index];
+            const timeMs = candles[index]?.timeMs;
+            if (value == null || timeMs == null) {
+              continue;
+            }
+            const time = Math.floor(timeMs / 1000);
+            if (seen.has(time)) {
+              continue;
+            }
+            seen.add(time);
+            dots.push({ time, value });
+          }
+          row.dots.setData(dots as never);
+        });
         markers.setMarkers(
           events
             .filter((row) => row.kind === "fill" && row.atMs <= at)
@@ -414,6 +499,43 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             }),
         );
       }
+      chart.subscribeCrosshairMove((param) => {
+        const time = typeof param.time === "number" ? param.time : null;
+        if (!param.point || time == null) {
+          setTip(null);
+          return;
+        }
+        const texts = events
+          .filter((item) => {
+            const index = candleIndexAt(candles, item.atMs);
+            const bar = candles[index]?.timeMs;
+            return bar != null && Math.floor(bar / 1000) === time;
+          })
+          .map((item) => item.text);
+        if (texts.length === 0) {
+          setTip(null);
+          return;
+        }
+        setTip({
+          x: param.point.x,
+          y: param.point.y,
+          text: texts[texts.length - 1] ?? "",
+        });
+      });
+      chart.subscribeClick((param) => {
+        const time = typeof param.time === "number" ? param.time : null;
+        if (time == null) {
+          return;
+        }
+        const match = events.find((item) => {
+          const index = candleIndexAt(candles, item.atMs);
+          const bar = candles[index]?.timeMs;
+          return bar != null && Math.floor(bar / 1000) === time;
+        });
+        if (match) {
+          setSelectedEvent(match);
+        }
+      });
       paint(headRef.current);
       const paintRef = { current: paint };
       (node as HTMLDivElement & { __paint?: (index: number) => void }).__paint =
@@ -531,7 +653,20 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             </div>
           </div>
         </div>
-        <div ref={hostRef} className="h-[min(62vh,640px)] w-full" />
+        <div className="relative">
+          <div ref={hostRef} className="h-[min(62vh,640px)] w-full" />
+          {tip ? (
+            <div
+              className="pointer-events-none absolute z-10 max-w-sm rounded-control border border-line bg-surface-raised px-3 py-2 text-xs text-ink shadow-none"
+              style={{
+                left: Math.min(tip.x + 12, 520),
+                top: Math.max(8, tip.y - 36),
+              }}
+            >
+              {tip.text}
+            </div>
+          ) : null}
+        </div>
         {candles.length === 0 ? (
           <p className="px-3 py-6 text-sm text-ink-muted">
             {loading ? "Loading candles…" : (error ?? "No candles in that window.")}
@@ -566,9 +701,18 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
 
       <section className="rounded-card border border-line bg-surface px-4 py-3">
         <p className="text-xs uppercase tracking-wide text-ink-faint">Event</p>
-        <p className="mt-1 text-sm text-ink">
+        <button
+          type="button"
+          className="mt-1 text-left text-sm text-ink"
+          disabled={!currentEvent}
+          onClick={() => {
+            if (currentEvent) {
+              setSelectedEvent(currentEvent);
+            }
+          }}
+        >
           {currentEvent?.text ?? "Press play. Events appear here as the run reaches them."}
-        </p>
+        </button>
         {visibleEvents.length > 1 ? (
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
             {visibleEvents.slice(-12).map((row, index) => (
@@ -576,11 +720,12 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                 key={`${row.atMs}-${row.reason}-${index}`}
                 type="button"
                 className={`shrink-0 rounded-control border px-2 py-1 text-xs ${
-                  row === currentEvent
+                  selectedEvent === row
                     ? "border-accent text-ink"
                     : "border-line text-ink-muted hover:text-ink"
                 }`}
                 onClick={() => {
+                  setSelectedEvent(row);
                   setCursor((current) => ({
                     ...current,
                     playing: false,
@@ -594,6 +739,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           </div>
         ) : null}
       </section>
+
+      {selectedEvent ? (
+        <EventParameters run={run} event={selectedEvent} />
+      ) : null}
 
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Trades" value={String(stats.trades)} />
@@ -646,6 +795,40 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         )}
       </section>
     </div>
+  );
+}
+
+function EventParameters({
+  run,
+  event,
+}: {
+  run: BacktestRun;
+  event: ReplayEvent;
+}) {
+  const sections = eventParameterSections(run.recipe, event);
+  return (
+    <section className="rounded-card border border-line bg-surface px-4 py-3">
+      <h2 className="text-sm font-semibold text-ink">Parameters met</h2>
+      <p className="mt-1 text-sm text-ink">{event.text}</p>
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        {sections.map((section) => (
+          <div key={section.role} className="rounded-control border border-line px-3 py-2">
+            <p className="text-xs uppercase tracking-wide text-ink-faint">{section.role}</p>
+            {section.detail ? (
+              <p className="mt-1 text-sm text-ink">{section.detail}</p>
+            ) : null}
+            <dl className="mt-2 space-y-1">
+              {section.params.map((param) => (
+                <div key={param.label} className="flex justify-between gap-3 text-sm">
+                  <dt className="text-ink-muted">{param.label}</dt>
+                  <dd className="text-right text-ink">{param.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

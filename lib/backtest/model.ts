@@ -66,6 +66,8 @@ export type BacktestFillReason = (typeof BACKTEST_FILL_REASONS)[number];
 
 export type ReplayEventKind = "fill" | "skipped";
 
+export type ReplayFact = { role: string; detail: string };
+
 export type ReplayEvent = {
   atMs: number;
   kind: ReplayEventKind;
@@ -74,6 +76,7 @@ export type ReplayEvent = {
   side: "long" | "short";
   clipIndex?: number;
   text: string;
+  facts?: ReplayFact[];
 };
 
 export type SimulatedOrder = {

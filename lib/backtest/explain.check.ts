@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { replayChartSeries } from "./chart-series";
+import { eventParameterSections } from "./event-pane";
+import type { BacktestRecipe, ReplayEvent } from "./model";
 import { rsiSeries, rsiValue } from "@/lib/dca/indicators";
 import { fillSentence, parseReplayEvents, skippedEntrySentence } from "./events";
 import { indicatorBecause } from "./explain";
@@ -83,3 +86,60 @@ const stats = replayPlayStats(
 assert.equal(stats.trades, 1);
 assert.equal(stats.winRate, 1);
 assert.equal(stats.realizedUsdt, 7);
+
+const recipe = {
+  kind: "dca",
+  startKind: "indicator",
+  indicatorKind: "rsi",
+  indicatorPeriod: 14,
+  indicatorTimeframe: "15",
+  indicatorCompare: "cross_lte",
+  indicatorLevel: 30,
+  confirm: {
+    kind: "supertrend",
+    timeframe: "240",
+    compare: "gte",
+    level: null,
+    period: 10,
+    multiplier: 3,
+  },
+  exitIf: {
+    kind: "supertrend",
+    timeframe: "240",
+    compare: "lte",
+    level: null,
+    period: 10,
+    multiplier: 3,
+  },
+} as BacktestRecipe;
+const bars = Array.from({ length: 30 }, (_, index) => ({
+  timeMs: 1_000 + index * 60_000,
+  open: 100 + index,
+  high: 102 + index,
+  low: 99 + index,
+  close: 101 + index,
+}));
+const layers = replayChartSeries(recipe, bars).layers;
+assert.equal(layers.length, 2);
+assert.equal(layers.some((row) => row.pane === "oscillator" && row.title.includes("RSI")), true);
+assert.equal(
+  layers.some(
+    (row) =>
+      row.pane === "price" &&
+      row.title.includes("Supertrend") &&
+      row.roles.includes("Secondary entry") &&
+      row.roles.includes("Hard exit"),
+  ),
+  true,
+);
+const entryEvent: ReplayEvent = {
+  atMs: 1_000,
+  kind: "fill",
+  reason: "entry",
+  orderIndex: 0,
+  side: "long",
+  text: "Entry long at 100. RSI crossed below 30.",
+};
+const sections = eventParameterSections(recipe, entryEvent);
+assert.equal(sections.some((row) => row.role === "Entry" && row.params.some((param) => param.value === "14")), true);
+assert.equal(sections.some((row) => row.role === "Secondary entry" && row.params.some((param) => param.label === "Multiplier" && param.value === "3")), true);
