@@ -84,7 +84,11 @@ export function StatusBadge({
   status?: string;
 }) {
   const resolved = tone ?? statusToneFor(status ?? label);
-  return <span className={BADGE_TONE[resolved]}>{formatStatusLabel(label)}</span>;
+  return (
+    <span className={`${BADGE_TONE[resolved]} whitespace-nowrap`}>
+      {formatStatusLabel(label)}
+    </span>
+  );
 }
 
 export function TableCard({

@@ -516,6 +516,9 @@ export async function setDcaBotModesAction(
   if (!bulk || ids.length === 0) {
     return deskActionError("Select at least one bot.");
   }
+  if (bulk === "delete") {
+    return deleteDcaBots(session.member.id, session.account.id, ids);
+  }
   const selected = parseDcaBotStatus(bulkModeFor("dca", bulk));
   const agreementSettings = await loadFuturesSettings(session.account.id);
   const loaded = (
@@ -603,6 +606,52 @@ export async function setDcaBotModesAction(
     notice: closing ? "Bot saved. Closing positions…" : "Bot saved.",
     playbooks,
   };
+}
+
+async function deleteDcaBots(
+  userId: string,
+  accountId: string,
+  ids: string[],
+): Promise<DcaDeskActionResult> {
+  const loaded = (
+    await Promise.all(ids.map((id) => loadDcaPlaybookById(id, accountId)))
+  ).filter((playbook): playbook is DcaPlaybook => Boolean(playbook));
+  if (loaded.length !== ids.length) {
+    return deskActionError("That bot was not found.");
+  }
+  const blocked = loaded.filter((playbook) => dcaPlaybookIsRunning(playbook));
+  if (blocked.length > 0) {
+    const names = blocked.map((playbook) => playbook.name.trim() || "Bot").join(", ");
+    return deskActionError(
+      `Delete can’t include ${names}. Stop adding or close before deleting.`,
+    );
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return deskActionError("Auth is not configured.");
+  }
+  for (const playbook of loaded) {
+    const deleted = await deleteDcaPlaybook({
+      supabase,
+      id: playbook.id,
+      accountId,
+    });
+    if (!deleted.ok) {
+      return deskActionError(deleted.error);
+    }
+  }
+  await writeEventLog({
+    scope: "strategy",
+    event: "dca.deleted",
+    message: `Removed ${ids.length} DCA bot${ids.length === 1 ? "" : "s"}`,
+    userId,
+    accountId,
+    strategy: FUTURES_STRATEGY_ID,
+    data: { ids },
+  });
+  revalidatePath(FUTURES_PATHS.automations);
+  revalidatePath(FUTURES_PATHS.positions);
+  return { ok: true, notice: "Bot removed." };
 }
 
 export async function deleteDcaPlaybookAction(

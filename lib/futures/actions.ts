@@ -7,6 +7,7 @@ import {
 } from "./automation";
 import {
   futuresAutomationsAreRunning,
+  listFuturesAutomationRuleIdsInUse,
   loadFuturesAutomationRules,
   saveFuturesAutomationRules,
   upsertFuturesAutomationRules,
@@ -633,6 +634,9 @@ export async function setFuturesBotModesAction(
   if (!bulk || ids.length === 0) {
     return deskActionError("Select at least one bot.");
   }
+  if (bulk === "delete") {
+    return deleteFuturesBots(user.id, account.id, ids);
+  }
   const mode = parseAutomationMode(bulkModeFor("perps", bulk));
   const existing = await loadFuturesAutomationRules(account.id);
   const selected = existing.filter(
@@ -747,6 +751,59 @@ export async function setFuturesBotModesAction(
   return {
     ok: true,
     notice: closing ? "Bot saved. Closing positions…" : "Bot saved.",
+    forms: rules.map(futuresRuleToForm),
+  };
+}
+
+async function deleteFuturesBots(
+  userId: string,
+  accountId: string,
+  ids: string[],
+): Promise<SaveFuturesAutomationsResult> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return deskActionError("Auth is not configured.");
+  }
+  const existing = await loadFuturesAutomationRules(accountId);
+  const selected = existing.filter((rule) => rule.id && ids.includes(rule.id));
+  if (selected.length !== ids.length) {
+    return deskActionError("That bot was not found.");
+  }
+  const inUse = new Set(
+    await listFuturesAutomationRuleIdsInUse(accountId, supabase),
+  );
+  const blocked = selected.filter((rule) => rule.id && inUse.has(rule.id));
+  if (blocked.length > 0) {
+    const names = blocked.map((rule) => rule.name.trim() || "Bot").join(", ");
+    return deskActionError(
+      `Delete can’t include ${names}. Close an open position before deleting.`,
+    );
+  }
+  const drop = new Set(ids);
+  const saved = await saveFuturesAutomationRules({
+    supabase,
+    userId,
+    accountId,
+    rules: existing.filter((rule) => !rule.id || !drop.has(rule.id)),
+  });
+  if (!saved.ok) {
+    return deskActionError(saved.error);
+  }
+  await writeEventLog({
+    scope: "strategy",
+    event: "automations.deleted",
+    message: `Removed ${ids.length} futures bot${ids.length === 1 ? "" : "s"}`,
+    userId,
+    accountId,
+    strategy: FUTURES_STRATEGY_ID,
+    data: { ids },
+  });
+  revalidatePath(FUTURES_PATHS.automations);
+  revalidatePath(FUTURES_PATHS.positions);
+  const rules = await loadFuturesAutomationRules(accountId);
+  return {
+    ok: true,
+    notice: "Bot removed.",
     forms: rules.map(futuresRuleToForm),
   };
 }

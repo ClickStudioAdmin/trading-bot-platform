@@ -4,6 +4,7 @@ import {
   dcaStatusFromLegs,
   botCanTakeBulkAction,
   bulkActionBlockReason,
+  bulkDeleteBlockReason,
   bulkModeFor,
   disableConfirmMessage,
   disableConfirmMessageFor,
@@ -129,7 +130,19 @@ assert.equal(
   "Disabled closes every position these bots own and turns them off.",
 );
 assert.equal(parseBotBulkAction("enable"), "enable");
+assert.equal(parseBotBulkAction("delete"), "delete");
 assert.equal(parseBotBulkAction("nope"), null);
+assert.equal(
+  bulkDeleteBlockReason([
+    { name: "Alpha", canRemove: true },
+    { name: "Beta", canRemove: false },
+  ]),
+  "Delete can’t include Beta. Close an open position, or stop a running bot, before deleting.",
+);
+assert.equal(
+  bulkDeleteBlockReason([{ name: "Alpha", canRemove: true }]),
+  null,
+);
 assert.equal(bulkModeFor("dca", "stop_adding"), "stop_adding");
 assert.equal(bulkModeFor("perps", "stop_adding"), "reduce_only");
 assert.equal(bulkModeFor("cnc", "disable"), "disabled");

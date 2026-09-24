@@ -194,6 +194,9 @@ export async function setPaperBotModesAction(
   if (!bulk || ids.length === 0) {
     return deskActionError("Select at least one bot.");
   }
+  if (bulk === "delete") {
+    return deletePaperBots(user.id, account.id, ids);
+  }
   const mode = parseAutomationMode(bulkModeFor("cnc", bulk));
   const supabase = createServiceClient();
   if (!supabase) {
@@ -276,6 +279,78 @@ export async function setPaperBotModesAction(
   return {
     ok: true,
     notice: closing ? "Bot saved. Closing carries…" : "Bot saved.",
+    layers: paperConfigToFormValues(next.config).layers,
+    inUseRuleIds: next.inUseRuleIds,
+    reduceOnly: next.config.reduceOnly,
+  };
+}
+
+async function deletePaperBots(
+  userId: string,
+  accountId: string,
+  ids: string[],
+): Promise<SavePaperRulesResult> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return deskActionError("Auth is not configured.");
+  }
+  const loaded = await loadPaperRules();
+  const selected = loaded.config.layers.filter(
+    (layer) => layer.id != null && ids.includes(String(layer.id)),
+  );
+  if (selected.length !== ids.length) {
+    return deskActionError("That bot was not found.");
+  }
+  const blocked = selected.filter(
+    (layer) => layer.id != null && loaded.inUseRuleIds.includes(layer.id),
+  );
+  if (blocked.length > 0) {
+    const names = blocked.map((layer) => layer.name.trim() || "Bot").join(", ");
+    return deskActionError(
+      `Delete can’t include ${names}. Close an open position before deleting.`,
+    );
+  }
+  const drop = new Set(ids);
+  const remaining = loaded.config.layers.filter(
+    (layer) => layer.id == null || !drop.has(String(layer.id)),
+  );
+  const saved = await replacePaperRules({
+    supabase,
+    userId,
+    accountId,
+    layers: remaining,
+  });
+  if (!saved.ok) {
+    return deskActionError(saved.error);
+  }
+  const enabled = remaining.some((layer) => layer.mode !== "disabled");
+  const { error: settingsError } = await supabase
+    .from("paper_engine_settings")
+    .upsert({
+      user_id: userId,
+      account_id: accountId,
+      enabled,
+      ...(remaining.length === 0 ? { reduce_only: false } : {}),
+      updated_at: new Date().toISOString(),
+    });
+  if (settingsError) {
+    return deskActionError(settingsError.message);
+  }
+  await writeEventLog({
+    scope: "strategy",
+    event: "automations.deleted",
+    message: `Removed ${ids.length} cash-and-carry bot${ids.length === 1 ? "" : "s"}`,
+    userId,
+    accountId,
+    strategy: "cash-and-carry",
+    data: { ids },
+  });
+  revalidatePath(AUTOMATIONS_PATH);
+  revalidatePath("/strategies/cash-and-carry");
+  const next = await loadPaperRules();
+  return {
+    ok: true,
+    notice: "Bot removed.",
     layers: paperConfigToFormValues(next.config).layers,
     inUseRuleIds: next.inUseRuleIds,
     reduceOnly: next.config.reduceOnly,

@@ -168,11 +168,18 @@ export function disableConfirmMessageFor(
   return "Disabled closes every position this bot owns and turns it off.";
 }
 
-export type BotBulkAction = "enable" | "stop_adding" | "disable";
+export type BotBulkAction = "enable" | "stop_adding" | "disable" | "delete";
+
+export type BotStatusBulkAction = Exclude<BotBulkAction, "delete">;
 
 export function parseBotBulkAction(raw: unknown): BotBulkAction | null {
   const value = String(raw ?? "").trim();
-  if (value === "enable" || value === "stop_adding" || value === "disable") {
+  if (
+    value === "enable" ||
+    value === "stop_adding" ||
+    value === "disable" ||
+    value === "delete"
+  ) {
     return value;
   }
   return null;
@@ -191,7 +198,7 @@ export function parseBulkBotIds(formData: FormData): string[] {
 
 export function botCanTakeBulkAction(
   statusKey: string | null | undefined,
-  action: BotBulkAction,
+  action: BotStatusBulkAction,
 ): boolean {
   const status =
     statusKey === "active" ||
@@ -208,8 +215,19 @@ export function botCanTakeBulkAction(
   return status === "active";
 }
 
+export function bulkDeleteBlockReason(
+  rows: readonly { name?: string | null; canRemove?: boolean }[],
+): string | null {
+  const blocked = rows.filter((row) => row.canRemove === false);
+  if (blocked.length === 0) {
+    return null;
+  }
+  const names = blocked.map((row) => row.name?.trim() || "Bot").join(", ");
+  return `Delete can’t include ${names}. Close an open position, or stop a running bot, before deleting.`;
+}
+
 export function bulkActionBlockReason(
-  action: BotBulkAction,
+  action: BotStatusBulkAction,
   rows: readonly { name?: string | null; statusKey?: string | null }[],
 ): string | null {
   const blocked = rows.filter(
@@ -230,7 +248,7 @@ export function bulkActionBlockReason(
 
 export function bulkModeFor(
   desk: BotDeskKind,
-  action: BotBulkAction,
+  action: BotStatusBulkAction,
 ): "active" | "reduce_only" | "stop_adding" | "disabled" {
   if (action === "enable") {
     return "active";
