@@ -840,6 +840,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   );
   const positionsRef = useRef<HTMLElement | null>(null);
   const [fittedPageSize, setFittedPageSize] = useState(15);
+  const [columnMin, setColumnMin] = useState<number | null>(null);
   const fitPage = positionsRight || fillViewport;
   const pageSize = fitPage ? fittedPageSize : 15;
   useEffect(() => {
@@ -856,13 +857,14 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       const head = node.querySelector("thead");
       const card = node.querySelector("[data-table-card]");
       const pager = card?.lastElementChild;
-      const rowH = row instanceof HTMLElement ? row.getBoundingClientRect().height : 44;
+      const rowH = row instanceof HTMLElement ? row.getBoundingClientRect().height : 52;
       const headH = head instanceof HTMLElement ? head.getBoundingClientRect().height : 40;
       const pagerH = pager instanceof HTMLElement ? pager.getBoundingClientRect().height : 45;
-      const fixed = 46.5 * (Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16);
-      const available = fillViewport ? node.clientHeight : fixed;
+      const slot = headH + pagerH + rowH * 15 + 2;
+      setColumnMin(slot);
+      const available = fillViewport ? Math.max(node.clientHeight, slot) : slot;
       const next = Math.max(
-        1,
+        15,
         Math.floor((available - headH - pagerH - 2) / Math.max(rowH, 1)),
       );
       setFittedPageSize((current) => (current === next ? current : next));
@@ -890,11 +892,16 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       ref={positionsRef}
       className={`flex min-w-0 flex-col ${
         positionsRight
-          ? `h-full ${fillViewport ? "min-h-0 overflow-hidden" : "min-h-[46.5rem]"}`
+          ? `h-full ${fillViewport ? "min-h-0 overflow-hidden" : "min-h-[54rem]"}`
           : fillViewport
             ? "min-h-0 flex-1 overflow-hidden"
             : ""
       }`}
+      style={
+        positionsRight && !fillViewport && columnMin != null
+          ? { minHeight: columnMin }
+          : undefined
+      }
     >
       <TableCard
         className="mt-0 flex h-full flex-1 flex-col"
