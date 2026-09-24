@@ -57,6 +57,7 @@ import {
 } from "@/lib/bots/automations-list";
 import {
   bulkActionBlockReason,
+  bulkDeleteBlockReason,
   disableConfirmMessageFor,
   disableConfirmTitleFor,
   statusOptionsFor,
@@ -391,12 +392,26 @@ export function AutomationsBotTable({
     if (!onBulkStatus || selectedRows.length === 0 || bulkPending) {
       return;
     }
-    const blocked = bulkActionBlockReason(action, selectedRows);
+    const blocked =
+      action === "delete"
+        ? bulkDeleteBlockReason(selectedRows)
+        : bulkActionBlockReason(action, selectedRows);
     if (blocked) {
       setBulkError(blocked);
       return;
     }
-    if (action === "disable") {
+    if (action === "delete") {
+      const ok = await confirm({
+        title:
+          selectedRows.length > 1 ? "Delete these bots?" : "Delete this bot?",
+        message: "This cannot be undone.",
+        confirmLabel: "Delete",
+        danger: true,
+      });
+      if (!ok) {
+        return;
+      }
+    } else if (action === "disable") {
       const ok = await confirm({
         title: disableConfirmTitleFor(selectedRows.length),
         message: disableConfirmMessageFor(desk, selectedRows.length),
@@ -462,9 +477,13 @@ export function AutomationsBotTable({
                   "Disable",
                   <IconDisable key="disable" {...TABLE_BTN_ICON} />,
                 ],
+                ["delete", "Delete", <IconTrash key="delete" {...TABLE_BTN_ICON} />],
               ] as const
             ).map(([action, label, icon]) => {
-              const reason = bulkActionBlockReason(action, selectedRows);
+              const reason =
+                action === "delete"
+                  ? bulkDeleteBlockReason(selectedRows)
+                  : bulkActionBlockReason(action, selectedRows);
               return (
                 <span
                   key={action}
@@ -472,7 +491,7 @@ export function AutomationsBotTable({
                   className="inline-flex"
                 >
                   <TableLabelButton
-                    variant="bulk"
+                    variant={action === "delete" ? "danger" : "bulk"}
                     icon={icon}
                     className={reason ? "pointer-events-none" : ""}
                     disabled={bulkPending || Boolean(reason)}
