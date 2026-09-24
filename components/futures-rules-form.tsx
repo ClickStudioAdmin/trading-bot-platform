@@ -50,6 +50,7 @@ import {
 } from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
+  botDeleteAllowed,
   disableConfirmMessage,
   disableConfirmTitle,
   disableNeedsConfirm,
@@ -356,10 +357,12 @@ export function FuturesAutomationsDesk({
               statusKey,
               summary: perpsBotSummary(layer),
               config: perpsBotConfig(layer),
-              canRemove: !inUse.has(layer.id),
+              canRemove:
+                botDeleteAllowed(statusKey) && !inUse.has(layer.id),
               ownsOpen: inUse.has(layer.id),
-              removeBlocked:
-                "This bot has an open position. Close that row before removing it.",
+              removeBlocked: botDeleteAllowed(statusKey)
+                ? "This bot has an open position. Close that row before removing it."
+                : "Disable this bot before deleting it.",
               onRemove: async () => {
                 const data = new FormData();
                 data.set("ruleId", layer.id);

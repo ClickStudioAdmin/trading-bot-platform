@@ -215,6 +215,16 @@ export function botCanTakeBulkAction(
   return status === "active";
 }
 
+export function botDeleteAllowed(
+  statusKey: string | null | undefined,
+): boolean {
+  return (
+    statusKey !== "active" &&
+    statusKey !== "stop_adding" &&
+    statusKey !== "reduce_only"
+  );
+}
+
 export function bulkDeleteBlockReason(
   rows: readonly { name?: string | null; canRemove?: boolean }[],
 ): string | null {
@@ -223,7 +233,7 @@ export function bulkDeleteBlockReason(
     return null;
   }
   const names = blocked.map((row) => row.name?.trim() || "Bot").join(", ");
-  return `Delete can’t include ${names}. Close an open position, or stop a running bot, before deleting.`;
+  return `Delete can’t include ${names}. Disable this bot before deleting it.`;
 }
 
 export function bulkActionBlockReason(

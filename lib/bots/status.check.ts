@@ -3,6 +3,7 @@ import {
   dcaSaveVerb,
   dcaStatusFromLegs,
   botCanTakeBulkAction,
+  botDeleteAllowed,
   bulkActionBlockReason,
   bulkDeleteBlockReason,
   bulkModeFor,
@@ -137,8 +138,12 @@ assert.equal(
     { name: "Alpha", canRemove: true },
     { name: "Beta", canRemove: false },
   ]),
-  "Delete can’t include Beta. Close an open position, or stop a running bot, before deleting.",
+  "Delete can’t include Beta. Disable this bot before deleting it.",
 );
+assert.equal(botDeleteAllowed("active"), false);
+assert.equal(botDeleteAllowed("stop_adding"), false);
+assert.equal(botDeleteAllowed("reduce_only"), false);
+assert.equal(botDeleteAllowed("disabled"), true);
 assert.equal(
   bulkDeleteBlockReason([{ name: "Alpha", canRemove: true }]),
   null,

@@ -38,6 +38,7 @@ import {
   type PaperRulesFormValues,
 } from "@/lib/engine/rules";
 import {
+  botDeleteAllowed,
   disableConfirmMessage,
   disableConfirmTitle,
   disableNeedsConfirm,
@@ -361,15 +362,18 @@ export function PaperRulesForm({
               statusKey: layer.mode,
               summary: paperBotSummary(layer),
               config: paperBotConfig(layer),
-              canRemove: !(
-                Number.isFinite(Number(layer.id)) &&
-                inUse.has(Number(layer.id))
-              ),
+              canRemove:
+                botDeleteAllowed(layer.mode) &&
+                !(
+                  Number.isFinite(Number(layer.id)) &&
+                  inUse.has(Number(layer.id))
+                ),
               ownsOpen:
                 Number.isFinite(Number(layer.id)) &&
                 inUse.has(Number(layer.id)),
-              removeBlocked:
-                "This bot has an open position. Close that row before removing it.",
+              removeBlocked: botDeleteAllowed(layer.mode)
+                ? "This bot has an open position. Close that row before removing it."
+                : "Disable this bot before deleting it.",
               onRemove: async () => {
                 const data = new FormData();
                 data.set("ruleId", layer.id);

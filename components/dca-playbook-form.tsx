@@ -52,6 +52,7 @@ import {
 import { ChevronIcon, TabButton } from "@/components/trade-expand";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
+  botDeleteAllowed,
   dcaStatusFromLegs,
   disableConfirmMessage,
   disableConfirmTitle,
@@ -805,9 +806,12 @@ export function DcaPlaybooksDesk({
               statusKey,
               summary: dcaBotSummary(playbook),
               config: dcaBotConfig(playbook),
-              canRemove: !dcaPlaybookIsRunning(playbook),
+              canRemove:
+                botDeleteAllowed(statusKey) && !dcaPlaybookIsRunning(playbook),
               ownsOpen,
-              removeBlocked: "Stop adding or close before removing.",
+              removeBlocked: botDeleteAllowed(statusKey)
+                ? "Stop adding or close before removing."
+                : "Disable this bot before deleting it.",
               onRemove: async () => {
                 const data = new FormData();
                 data.set("playbookId", playbook.id);
