@@ -2,9 +2,14 @@ import assert from "node:assert/strict";
 import {
   dcaSaveVerb,
   dcaStatusFromLegs,
+  bulkModeFor,
   disableConfirmMessage,
+  disableConfirmMessageFor,
   disableConfirmTitle,
+  disableConfirmTitleFor,
   disableNeedsConfirm,
+  parseBotBulkAction,
+  parseBulkBotIds,
   flattenOwnedRuleIds,
   parseDcaBotStatus,
 } from "./status";
@@ -116,3 +121,18 @@ assert.equal(
   disableConfirmMessage("cnc"),
   "Disabled closes every carry this bot owns and turns it off.",
 );
+assert.equal(disableConfirmTitleFor(2), "Disable these bots?");
+assert.equal(
+  disableConfirmMessageFor("perps", 2),
+  "Disabled closes every position these bots own and turns them off.",
+);
+assert.equal(parseBotBulkAction("enable"), "enable");
+assert.equal(parseBotBulkAction("nope"), null);
+assert.equal(bulkModeFor("dca", "stop_adding"), "stop_adding");
+assert.equal(bulkModeFor("perps", "stop_adding"), "reduce_only");
+assert.equal(bulkModeFor("cnc", "disable"), "disabled");
+const bulkIds = new FormData();
+bulkIds.append("id", "a");
+bulkIds.append("id", "a");
+bulkIds.append("id", " b ");
+assert.deepEqual(parseBulkBotIds(bulkIds), ["a", "b"]);

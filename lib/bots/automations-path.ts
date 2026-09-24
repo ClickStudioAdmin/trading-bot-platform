@@ -130,6 +130,19 @@ export function automationsNewHref(
   );
 }
 
+export function automationsStayEditHref(
+  listHref: string,
+  botId: string,
+  notice?: string | null,
+): string {
+  const extra: Record<string, string> = { saved: "1" };
+  const text = String(notice ?? "").trim();
+  if (text) {
+    extra.notice = text;
+  }
+  return automationsEditHref(listHref, botId, extra);
+}
+
 export function automationsSavedHref(
   listHref: string,
   createdId?: string | null,

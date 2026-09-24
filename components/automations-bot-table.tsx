@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
 import {
   AutomationsColumnPicker,
@@ -12,8 +13,11 @@ import { useConfirmDialog } from "@/components/confirm-modal";
 import {
   IconActivity,
   IconCopy,
+  IconDisable,
   IconFilterClear,
+  IconPause,
   IconPencil,
+  IconPlay,
   IconPerformance,
   IconPositions,
   IconTrash,
@@ -51,7 +55,14 @@ import {
   filterAutomationsBots,
   type AutomationsBotFilters,
 } from "@/lib/bots/automations-list";
-import { statusOptionsFor, type BotDeskKind } from "@/lib/bots/status";
+import {
+  disableConfirmMessageFor,
+  disableConfirmTitleFor,
+  disableNeedsConfirm,
+  statusOptionsFor,
+  type BotBulkAction,
+  type BotDeskKind,
+} from "@/lib/bots/status";
 
 function readAutomationsListView(key: string): AutomationsListView | null {
   try {
@@ -99,6 +110,7 @@ export type AutomationsBotRow = {
   cloneHref?: string;
   canRemove?: boolean;
   removeBlocked?: string;
+  ownsOpen?: boolean;
   onRemove?: () => void | Promise<void>;
 };
 
@@ -167,14 +179,22 @@ export function AutomationsBotTable({
   empty,
   toolbar,
   revealId = null,
+  onBulkStatus,
 }: {
   desk: BotDeskKind;
   rows: readonly AutomationsBotRow[];
   empty: string;
   toolbar?: ReactNode;
   revealId?: string | null;
+  onBulkStatus?: (
+    ids: string[],
+    action: BotBulkAction,
+  ) => Promise<{ ok: boolean; error?: string }>;
 }) {
   const { confirm, dialog } = useConfirmDialog();
+  const [selected, setSelected] = useState<string[]>([]);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const [bulkPending, setBulkPending] = useState(false);
   const { visible, setColumn } = useAutomationsColumns();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -339,12 +359,65 @@ export function AutomationsBotTable({
     table.setPage(1);
   }
   const colSpan =
-    3 +
+    4 +
     Number(visible.pair) +
     Number(visible.recipe) +
     Number(visible.status) +
     Number(visible.positions) +
     Number(visible.performance);
+
+  const pageIds = table.pageRows.map((row) => row.id);
+  const allPageSelected =
+    pageIds.length > 0 && pageIds.every((id) => selected.includes(id));
+  const selectedRows = rows.filter((row) => selected.includes(row.id));
+
+  function toggleAll() {
+    setSelected((current) =>
+      allPageSelected
+        ? current.filter((id) => !pageIds.includes(id))
+        : [...new Set([...current, ...pageIds])],
+    );
+  }
+
+  function toggleOne(id: string) {
+    setSelected((current) =>
+      current.includes(id)
+        ? current.filter((value) => value !== id)
+        : [...current, id],
+    );
+  }
+
+  async function runBulk(action: BotBulkAction) {
+    if (!onBulkStatus || selectedRows.length === 0 || bulkPending) {
+      return;
+    }
+    if (
+      action === "disable" &&
+      selectedRows.some((row) => disableNeedsConfirm(Boolean(row.ownsOpen)))
+    ) {
+      const ok = await confirm({
+        title: disableConfirmTitleFor(selectedRows.length),
+        message: disableConfirmMessageFor(desk, selectedRows.length),
+        confirmLabel: "Disable",
+        danger: true,
+      });
+      if (!ok) {
+        return;
+      }
+    }
+    setBulkPending(true);
+    setBulkError(null);
+    const result = await onBulkStatus(
+      selectedRows.map((row) => row.id),
+      action,
+    );
+    setBulkPending(false);
+    if (!result.ok) {
+      setBulkError(result.error ?? "That did not work.");
+      return;
+    }
+    setSelected([]);
+  }
 
   async function removeRow(row: AutomationsBotRow) {
     if (!row.onRemove || row.canRemove === false) {
@@ -368,6 +441,39 @@ export function AutomationsBotTable({
     <TableFilterSession
       id={deskId}
       title={<TableSectionTitle title="Bots" />}
+      toolbar={
+        selectedRows.length > 0 ? (
+          <>
+            <p className="text-sm text-ink-muted">
+              {selectedRows.length} selected
+            </p>
+            <TableLabelButton
+              variant="bulk"
+              icon={<IconPlay {...TABLE_BTN_ICON} />}
+              disabled={bulkPending}
+              onClick={() => void runBulk("enable")}
+            >
+              Enable
+            </TableLabelButton>
+            <TableLabelButton
+              variant="bulk"
+              icon={<IconPause {...TABLE_BTN_ICON} />}
+              disabled={bulkPending}
+              onClick={() => void runBulk("stop_adding")}
+            >
+              Stop Adding
+            </TableLabelButton>
+            <TableLabelButton
+              variant="bulk"
+              icon={<IconDisable {...TABLE_BTN_ICON} />}
+              disabled={bulkPending}
+              onClick={() => void runBulk("disable")}
+            >
+              Disable
+            </TableLabelButton>
+          </>
+        ) : undefined
+      }
       actions={
         <>
           {toolbar}
@@ -382,6 +488,11 @@ export function AutomationsBotTable({
         onClear={clearFilters}
       />
     </TableFilterSession>
+    {bulkError ? (
+      <p className="mb-3 text-sm text-danger" role="alert">
+        {bulkError}
+      </p>
+    ) : null}
     <TableCard
       className="mt-0"
       pager={
@@ -396,6 +507,19 @@ export function AutomationsBotTable({
       <table className="min-w-full text-left text-sm text-ink">
         <thead className={`${TABLE_THEAD_CLASS} text-hint text-ink-muted`}>
           <tr>
+            <th className="w-10 px-4 py-3 font-medium">
+              <AppCheck
+                checked={allPageSelected}
+                indeterminate={
+                  !allPageSelected &&
+                  pageIds.some((id) => selected.includes(id))
+                }
+                onChange={toggleAll}
+                disabled={pageIds.length === 0}
+                aria-label="Select all bots on this page"
+                className=""
+              />
+            </th>
             <th className="w-10 px-2 py-3 font-medium">
               <ColumnHint
                 label={<span className="sr-only">Details</span>}
@@ -474,6 +598,14 @@ export function AutomationsBotTable({
               colSpan={colSpan}
               detailName="bot configuration"
               selected={Boolean(revealId && row.id === revealId)}
+              leading={
+                <AppCheck
+                  checked={selected.includes(row.id)}
+                  onChange={() => toggleOne(row.id)}
+                  aria-label={`Select ${row.name || "Bot"}`}
+                  className=""
+                />
+              }
               details={<BotConfigPanel sections={row.config} />}
             >
               {visible.pair ? (

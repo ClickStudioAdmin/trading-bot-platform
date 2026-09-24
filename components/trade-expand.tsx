@@ -10,6 +10,7 @@ export function ExpandableTradeRows({
   selected = false,
   onSelect,
   detailName = "position details",
+  leading,
 }: {
   colSpan: number;
   details: ReactNode;
@@ -17,6 +18,7 @@ export function ExpandableTradeRows({
   selected?: boolean;
   onSelect?: () => void;
   detailName?: string;
+  leading?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -48,6 +50,7 @@ export function ExpandableTradeRows({
         aria-current={selected ? "true" : undefined}
         onClick={onSelect}
       >
+        {leading ? <td className="w-10 px-4 py-3">{leading}</td> : null}
         <td className="w-10 px-2 py-3">
           <button
             type="button"

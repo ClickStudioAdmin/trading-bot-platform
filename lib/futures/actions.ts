@@ -11,7 +11,13 @@ import {
   saveFuturesAutomationRules,
   upsertFuturesAutomationRules,
 } from "./automation-load";
-import { flattenOwnedRuleIds } from "@/lib/bots/status";
+import {
+  bulkModeFor,
+  flattenOwnedRuleIds,
+  parseBotBulkAction,
+  parseBulkBotIds,
+} from "@/lib/bots/status";
+import { parseAutomationMode } from "@/lib/engine/decide";
 import { loadOpenFuturesByRuleId, loadFuturesPositions, loadLiveFuturesWorking } from "./list";
 import {
   markFuturesPendingClose,
@@ -609,6 +615,130 @@ export async function saveFuturesAutomations(
       : one
         ? "Bot saved."
         : "Bots saved.",
+    forms: rules.map(futuresRuleToForm),
+  };
+}
+
+export async function setFuturesBotModesAction(
+  formData: FormData,
+): Promise<SaveFuturesAutomationsResult> {
+  const session = await requirePerpsUiSession();
+  const { member: user, account } = session;
+  if (!deskAllowsPerpsRecipes(account)) {
+    return deskActionError("This desk is not a Perps bots desk.");
+  }
+  const bulk = parseBotBulkAction(formData.get("bulk"));
+  const ids = parseBulkBotIds(formData);
+  if (!bulk || ids.length === 0) {
+    return deskActionError("Select at least one bot.");
+  }
+  const mode = parseAutomationMode(bulkModeFor("perps", bulk));
+  const existing = await loadFuturesAutomationRules(account.id);
+  const selected = existing.filter(
+    (rule) => rule.id && ids.includes(rule.id),
+  );
+  if (selected.length !== ids.length) {
+    return deskActionError("That bot was not found.");
+  }
+  if (
+    mode === "active" &&
+    accountCanHoldConnections(account.mode) &&
+    account.venue === "bybit"
+  ) {
+    const bound = await loadFuturesSettings(account.id);
+    for (const rule of selected) {
+      const unsigned = await rejectUnsignedBybitSymbol({
+        live: true,
+        venue: account.venue,
+        connectionId: bound.connectionId,
+        symbol: rule.symbol,
+        previousSymbol: rule.symbol,
+        active: true,
+      });
+      if (unsigned) {
+        return deskActionError(unsigned);
+      }
+    }
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return deskActionError("Auth is not configured.");
+  }
+  const updated = selected.map((rule) => ({ ...rule, mode }));
+  const saved = await upsertFuturesAutomationRules({
+    supabase,
+    userId: user.id,
+    accountId: account.id,
+    rules: updated,
+  });
+  if (!saved.ok) {
+    return deskActionError(saved.error);
+  }
+  const closing = flattenOwnedRuleIds(updated).length > 0;
+  if (closing) {
+    const ownedPositions = (
+      await Promise.all(
+        flattenOwnedRuleIds(updated).map((rule) =>
+          loadOpenFuturesByRuleId(String(rule.id), {
+            accountId: account.id,
+            userId: user.id,
+          }),
+        ),
+      )
+    )
+      .flat()
+      .filter((row) => row.status === "open");
+    const working = (
+      await loadLiveFuturesWorking({
+        accountId: account.id,
+        userId: user.id,
+      })
+    ).filter((row) => row.status === "open");
+    const marked = await markFuturesPendingClose({
+      accountId: account.id,
+      userId: user.id,
+      positionIds: selectIds(ownedPositions),
+      workingIds: selectIds(workingOwnedByPerpsDisable(working, ownedPositions)),
+    });
+    if (!marked.ok) {
+      return deskActionError(marked.error);
+    }
+    afterDeskWork("perps-flatten", async () => {
+      const flattenErrors = await flattenOwnedFuturesRules({
+        userId: user.id,
+        accountId: account.id,
+        mode: account.mode,
+        rules: updated,
+      });
+      if (flattenErrors) {
+        await writeEventLog({
+          level: "error",
+          scope: "trade",
+          event: "engine.close_failed",
+          message: flattenErrors,
+          userId: user.id,
+          accountId: account.id,
+          strategy: FUTURES_STRATEGY_ID,
+        });
+      }
+      revalidatePath(FUTURES_PATHS.positions);
+    });
+  }
+  await writeEventLog({
+    scope: "strategy",
+    event: "automations.saved",
+    message: `Set ${ids.length} futures bot${ids.length === 1 ? "" : "s"} to ${mode}`,
+    userId: user.id,
+    accountId: account.id,
+    strategy: FUTURES_STRATEGY_ID,
+    data: { ids, mode },
+  });
+  revalidatePath(FUTURES_PATHS.automations);
+  revalidatePath(FUTURES_PATHS.positions);
+  const rules = await loadFuturesAutomationRules(account.id);
+  return {
+    ok: true,
+    notice: closing ? "Bot saved. Closing positions…" : "Bot saved.",
     forms: rules.map(futuresRuleToForm),
   };
 }

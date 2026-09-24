@@ -2,7 +2,13 @@
 
 import { requirePerpsUiSession } from "@/lib/accounts/guard";
 import type { TradingAccountMode } from "@/lib/accounts/model";
-import { dcaSaveVerb, parseDcaBotStatus } from "@/lib/bots/status";
+import {
+  bulkModeFor,
+  dcaSaveVerb,
+  parseBotBulkAction,
+  parseBulkBotIds,
+  parseDcaBotStatus,
+} from "@/lib/bots/status";
 import {
   dcaConfigMaxOrderError,
   dcaEnabledSides,
@@ -60,6 +66,7 @@ import { redirect } from "next/navigation";
 
 export type DcaDeskActionResult = DeskActionResult & {
   playbook?: DcaPlaybook;
+  playbooks?: DcaPlaybook[];
   deletedId?: string;
 };
 
@@ -492,6 +499,86 @@ async function saveDcaPlaybookWith(
       ? "Saved take profit and stops. Cycle settings stay locked while a position is open."
       : "Bot saved.",
     playbook: saved.playbook,
+  };
+}
+
+export async function setDcaBotModesAction(
+  formData: FormData,
+): Promise<DcaDeskActionResult> {
+  const session = await requirePerpsUiSession();
+  if (!deskAllowsDcaPlaybooks(session.account)) {
+    return deskActionError("This desk is not a DCA desk.");
+  }
+  const bulk = parseBotBulkAction(formData.get("bulk"));
+  const ids = parseBulkBotIds(formData);
+  if (!bulk || ids.length === 0) {
+    return deskActionError("Select at least one bot.");
+  }
+  const selected = parseDcaBotStatus(bulkModeFor("dca", bulk));
+  const agreementSettings = await loadFuturesSettings(session.account.id);
+  const playbooks: DcaPlaybook[] = [];
+  let closing = false;
+  for (const id of ids) {
+    const playbook = await loadDcaPlaybookById(id, session.account.id);
+    if (!playbook) {
+      return deskActionError("That bot was not found.");
+    }
+    const opens = await loadOpenFuturesOnSymbol(playbook.symbol, {
+      accountId: session.account.id,
+      userId: session.member.id,
+    });
+    const running = dcaPlaybookIsRunning(playbook);
+    const armed = dcaEnabledSides(playbook.direction).some(
+      (side) => dcaLegFor(playbook, side).status === "armed",
+    );
+    const hasOpenPosition = dcaPlaybookHasOpenCycle(playbook, opens);
+    const verb = dcaSaveVerb({
+      selected,
+      running,
+      armed,
+      hasOpenPosition,
+    });
+    if (verb === "arm") {
+      const unsigned = await rejectUnsignedBybitSymbol({
+        live:
+          accountCanHoldConnections(session.account.mode) &&
+          session.account.venue === "bybit",
+        venue: session.account.venue,
+        connectionId: agreementSettings.connectionId,
+        symbol: playbook.symbol,
+        previousSymbol: playbook.symbol,
+        active: true,
+      });
+      if (unsigned) {
+        return deskActionError(unsigned);
+      }
+    }
+    if (verb === "save") {
+      playbooks.push(playbook);
+      continue;
+    }
+    if (verb === "close-playbook") {
+      closing = true;
+    }
+    const result = await acceptDcaVerb({
+      playbook,
+      mode: session.account.mode,
+      verb,
+      userId: session.member.id,
+      accountId: session.account.id,
+      ownsOpen: hasOpenPosition,
+    });
+    if (!result.ok || !result.playbook) {
+      return result.ok
+        ? deskActionError("That bot was not found.")
+        : result;
+    }
+    playbooks.push(result.playbook);
+  }
+  return {
+    ok: true,
+    notice: closing ? "Bot saved. Closing positions…" : "Bot saved.",
+    playbooks,
   };
 }
 

@@ -332,7 +332,7 @@ export default async function FuturesAutomationsPage({
         </p>
       ) : null}
       {saved ? (
-        <p className="mt-4 text-sm text-success">Bots saved.</p>
+        <p className="mt-4 text-sm text-success">{notice || "Bot saved."}</p>
       ) : null}
       {settings.reduceOnly ? (
         <p className="mt-4 mb-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">

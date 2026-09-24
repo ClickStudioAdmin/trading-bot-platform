@@ -26,6 +26,7 @@ import {
 import {
   deletePaperRuleAction,
   savePaperRules,
+  setPaperBotModesAction,
   type SavePaperRulesResult,
 } from "@/lib/engine/actions";
 import { parseAutomationMode } from "@/lib/engine/decide";
@@ -77,7 +78,7 @@ import {
   CASH_AND_CARRY_POSITIONS_PATH,
   automationsEditHref,
   automationsNewHref,
-  automationsSavedHref,
+  automationsStayEditHref,
 } from "@/lib/bots/automations-path";
 
 export function AutomationsDesk({
@@ -244,8 +245,17 @@ export function PaperRulesForm({
     router.refresh();
   }
 
-  function leaveToList(saved = false, createdId?: string | null) {
-    router.push(saved ? automationsSavedHref(listHref, createdId) : listHref);
+  function leaveToList() {
+    router.push(listHref);
+    router.refresh();
+  }
+
+  function stayOnEdit(botId: string | null | undefined, notice?: string | null) {
+    const id = String(botId ?? "").trim();
+    if (!id) {
+      return;
+    }
+    router.replace(automationsStayEditHref(listHref, id, notice));
     router.refresh();
   }
 
@@ -292,7 +302,7 @@ export function PaperRulesForm({
             );
             applySaveResult(result);
             if (result.ok) {
-              leaveToList(true, created?.id);
+              stayOnEdit(created?.id ?? formLayer.id, result.notice);
             }
           }}
           onRemove={() => {
@@ -329,6 +339,20 @@ export function PaperRulesForm({
               </>
             }
             empty="No bots yet. Create a bot to start the engine, or leave this empty if you only trade by hand."
+            onBulkStatus={async (ids, action) => {
+              const data = new FormData();
+              data.set("bulk", action);
+              for (const id of ids) {
+                data.append("id", id);
+              }
+              const result = await setPaperBotModesAction(data);
+              if (result.ok) {
+                applySaveResult(result);
+              }
+              return result.ok
+                ? { ok: true }
+                : { ok: false, error: result.error };
+            }}
             rows={savedLayers.map((layer) => ({
               id: layer.id,
               name: layer.name || "Bot",
@@ -341,6 +365,9 @@ export function PaperRulesForm({
                 Number.isFinite(Number(layer.id)) &&
                 inUse.has(Number(layer.id))
               ),
+              ownsOpen:
+                Number.isFinite(Number(layer.id)) &&
+                inUse.has(Number(layer.id)),
               removeBlocked:
                 "This bot has an open position. Close that row before removing it.",
               onRemove: async () => {

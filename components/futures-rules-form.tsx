@@ -58,6 +58,7 @@ import { parseAutomationMode } from "@/lib/engine/decide";
 import {
   deleteFuturesAutomationAction,
   saveFuturesAutomations,
+  setFuturesBotModesAction,
   type SaveFuturesAutomationsResult,
 } from "@/lib/futures/actions";
 import {
@@ -112,7 +113,7 @@ import {
   AUTOMATIONS_NEW,
   automationsEditHref,
   automationsNewHref,
-  automationsSavedHref,
+  automationsStayEditHref,
 } from "@/lib/bots/automations-path";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
@@ -227,8 +228,17 @@ export function FuturesAutomationsDesk({
     router.refresh();
   }
 
-  function leaveToList(saved = false, createdId?: string | null) {
-    router.push(saved ? automationsSavedHref(listHref, createdId) : listHref);
+  function leaveToList() {
+    router.push(listHref);
+    router.refresh();
+  }
+
+  function stayOnEdit(botId: string | null | undefined, notice?: string | null) {
+    const id = String(botId ?? "").trim();
+    if (!id) {
+      return;
+    }
+    router.replace(automationsStayEditHref(listHref, id, notice));
     router.refresh();
   }
 
@@ -268,7 +278,7 @@ export function FuturesAutomationsDesk({
             );
             applySaveResult(result);
             if (result.ok) {
-              leaveToList(true, created?.id);
+              stayOnEdit(created?.id ?? formLayer.id, result.notice);
             }
           }}
           onTemplateSaved={(item) =>
@@ -315,6 +325,20 @@ export function FuturesAutomationsDesk({
               </>
             }
             empty="No bots yet. Create a bot to fire Buy, Sell, or Close on a price cross, Indicator, Trend, or a Signal webhook."
+            onBulkStatus={async (ids, action) => {
+              const data = new FormData();
+              data.set("bulk", action);
+              for (const id of ids) {
+                data.append("id", id);
+              }
+              const result = await setFuturesBotModesAction(data);
+              if (result.ok) {
+                applySaveResult(result);
+              }
+              return result.ok
+                ? { ok: true }
+                : { ok: false, error: result.error };
+            }}
             rows={savedLayers.map((layer) => {
               const agreementOff =
                 !inUse.has(layer.id) &&
@@ -333,6 +357,7 @@ export function FuturesAutomationsDesk({
               summary: perpsBotSummary(layer),
               config: perpsBotConfig(layer),
               canRemove: !inUse.has(layer.id),
+              ownsOpen: inUse.has(layer.id),
               removeBlocked:
                 "This bot has an open position. Close that row before removing it.",
               onRemove: async () => {

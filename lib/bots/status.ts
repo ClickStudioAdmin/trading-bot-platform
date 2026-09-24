@@ -142,12 +142,62 @@ export function disableNeedsConfirm(ownsOpen: boolean): boolean {
 }
 
 export function disableConfirmTitle(): string {
-  return "Disable this bot?";
+  return disableConfirmTitleFor(1);
+}
+
+export function disableConfirmTitleFor(count: number): string {
+  return count > 1 ? "Disable these bots?" : "Disable this bot?";
 }
 
 export function disableConfirmMessage(desk: BotDeskKind): string {
+  return disableConfirmMessageFor(desk, 1);
+}
+
+export function disableConfirmMessageFor(
+  desk: BotDeskKind,
+  count: number,
+): string {
+  if (count > 1) {
+    return desk === "cnc"
+      ? "Disabled closes every carry these bots own and turns them off."
+      : "Disabled closes every position these bots own and turns them off.";
+  }
   if (desk === "cnc") {
     return "Disabled closes every carry this bot owns and turns it off.";
   }
   return "Disabled closes every position this bot owns and turns it off.";
+}
+
+export type BotBulkAction = "enable" | "stop_adding" | "disable";
+
+export function parseBotBulkAction(raw: unknown): BotBulkAction | null {
+  const value = String(raw ?? "").trim();
+  if (value === "enable" || value === "stop_adding" || value === "disable") {
+    return value;
+  }
+  return null;
+}
+
+export function parseBulkBotIds(formData: FormData): string[] {
+  return [
+    ...new Set(
+      formData
+        .getAll("id")
+        .map((value) => String(value).trim())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+export function bulkModeFor(
+  desk: BotDeskKind,
+  action: BotBulkAction,
+): "active" | "reduce_only" | "stop_adding" | "disabled" {
+  if (action === "enable") {
+    return "active";
+  }
+  if (action === "disable") {
+    return "disabled";
+  }
+  return desk === "dca" ? "stop_adding" : "reduce_only";
 }
