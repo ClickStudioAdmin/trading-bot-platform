@@ -787,7 +787,18 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
 
   const header = (
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{run.symbol} replay</h1>
+        <div className="flex flex-wrap items-baseline gap-4">
+          <h1 className="text-2xl font-semibold tracking-tight">{run.symbol} replay</h1>
+          <Link
+            href={`/account/backtests/${run.id}`}
+            className="text-sm text-accent hover:underline"
+          >
+            Report
+          </Link>
+          <Link href={backtestRerunHref(run.id)} className="text-sm text-accent hover:underline">
+            Load into new backtest
+          </Link>
+        </div>
         <div className="ml-auto flex flex-wrap items-center justify-end gap-3 text-sm">
           <div className="flex items-center gap-1" role="group" aria-label="Positions layout">
             <button
@@ -863,15 +874,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               <IconMonitor {...FRAME_ICON} />
             )}
           </button>
-          <Link
-            href={`/account/backtests/${run.id}`}
-            className="text-accent hover:underline"
-          >
-            Report
-          </Link>
-          <Link href={backtestRerunHref(run.id)} className="text-accent hover:underline">
-            Load into new backtest
-          </Link>
         </div>
       </div>
   );
