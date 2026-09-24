@@ -547,8 +547,8 @@ export function AutomationsBotTable({
                   </TableIconAction>
                   <TableIconAction
                     href={row.editHref}
-                    label="Edit"
-                    detail="Modify the bot’s parameters/status."
+                    label="Modify the bot’s parameters & status"
+                    detail=""
                   >
                     <IconPencil {...TABLE_BTN_ICON} />
                   </TableIconAction>

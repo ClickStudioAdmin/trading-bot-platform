@@ -49,9 +49,11 @@ export function TableHint({
       }}
     >
       <span className="block text-ink">{label}</span>
-      <span className="mt-0.5 block whitespace-pre-line text-ink-muted">
-        {detail}
-      </span>
+      {detail ? (
+        <span className="mt-0.5 block whitespace-pre-line text-ink-muted">
+          {detail}
+        </span>
+      ) : null}
     </span>,
     document.body,
   );
@@ -162,7 +164,7 @@ export const TableIconAction = forwardRef<
   const mark = `${
     danger ? TABLE_ICON_ACTION_DANGER_CLASS : TABLE_ICON_ACTION_CLASS
   } ${className}`.trim();
-  const spoken = `${label}. ${detail}`;
+  const spoken = detail ? `${label}. ${detail}` : label;
   if (href) {
     return (
       <>
