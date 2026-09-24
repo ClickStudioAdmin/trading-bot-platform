@@ -361,6 +361,16 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     }));
   }
 
+  function showEvent(event: ReplayEvent) {
+    revealChart();
+    setSelectedEvent(event);
+    setCursor((current) => ({ ...current, playing: false }));
+    const host = hostRef.current as
+      | (HTMLDivElement & { __focus?: (index: number) => void })
+      | null;
+    host?.__focus?.(candleIndexAt(candles, event.atMs));
+  }
+
   useEffect(() => {
     const host = hostRef.current;
     if (!started || !host || candles.length === 0) {
@@ -654,8 +664,18 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       });
       paint(headRef.current);
       const paintRef = { current: paint };
-      (node as HTMLDivElement & { __paint?: (index: number) => void }).__paint =
-        (index) => paintRef.current(index);
+      const host = node as HTMLDivElement & {
+        __paint?: (index: number) => void;
+        __focus?: (index: number) => void;
+      };
+      host.__paint = (index) => paintRef.current(index);
+      host.__focus = (index) => {
+        const at = Math.max(0, Math.min(index, candles.length - 1));
+        chart.timeScale().setVisibleLogicalRange({
+          from: at - 48,
+          to: at + 48,
+        });
+      };
       const observer = new ResizeObserver(() => {
         chart.applyOptions({
           width: node.clientWidth,
@@ -665,7 +685,14 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       observer.observe(node);
       cleanup = () => {
         observer.disconnect();
-        delete (node as HTMLDivElement & { __paint?: (index: number) => void }).__paint;
+        delete (node as HTMLDivElement & {
+          __paint?: (index: number) => void;
+          __focus?: (index: number) => void;
+        }).__paint;
+        delete (node as HTMLDivElement & {
+          __paint?: (index: number) => void;
+          __focus?: (index: number) => void;
+        }).__focus;
         chart.remove();
       };
     });
@@ -677,7 +704,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
 
   useEffect(() => {
     const node = hostRef.current as
-      | (HTMLDivElement & { __paint?: (index: number) => void })
+      | (HTMLDivElement & {
+          __paint?: (index: number) => void;
+          __focus?: (index: number) => void;
+        })
       | null;
     node?.__paint?.(head);
   }, [head]);
@@ -1084,15 +1114,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                         key={`${row.atMs}-${row.reason}-${index}`}
                         row={row}
                         selected={selectedEvent === row}
-                        onSelect={() => {
-                          revealChart();
-                          setSelectedEvent(row);
-                          setCursor((current) => ({
-                            ...current,
-                            playing: false,
-                            head: candleIndexAt(candles, row.atMs),
-                          }));
-                        }}
+                        onSelect={() => showEvent(row)}
                       />
                     ))}
                   </div>
@@ -1124,15 +1146,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                         key={`${row.atMs}-${row.reason}-${index}`}
                         row={row}
                         selected={selectedEvent === row}
-                        onSelect={() => {
-                          revealChart();
-                          setSelectedEvent(row);
-                          setCursor((current) => ({
-                            ...current,
-                            playing: false,
-                            head: candleIndexAt(candles, row.atMs),
-                          }));
-                        }}
+                        onSelect={() => showEvent(row)}
                       />
                     ))}
                   </div>
