@@ -69,6 +69,7 @@ import {
   attributeClosingFill,
   futuresCloseMessage,
   pickClosingFill,
+  resolveVenueShrinkKind,
   type VenueCloseKind,
 } from "./venue-close";
 import { dcaFilterForSide } from "@/lib/dca/filters";
@@ -1180,13 +1181,67 @@ async function reconcileOneStop(input: {
     if (venueSize + 1e-12 >= input.row.qty) {
       return false;
     }
-    const kind = slHit
+    let kind: VenueCloseKind = slHit
       ? slHit.kind
       : trail?.hit
         ? "trailing"
         : tpHit
           ? tpHit.kind
           : "venue";
+    let fillPrice =
+      slHit?.price ??
+      (trail?.hit ? trail.fillPrice : null) ??
+      tpHit?.price ??
+      prices.mark ??
+      prices.last ??
+      input.row.entryPrice;
+    if (kind === "venue") {
+      const listed = await listLinearExecutions({
+        connection: live,
+        symbol: input.row.symbol,
+        startTimeMs: input.row.openedAtMs,
+      });
+      const picked = listed.ok
+        ? pickClosingFill({
+            executions: listed.executions,
+            side: input.row.side,
+            openedAtMs: input.row.openedAtMs,
+            qty: input.row.qty - venueSize,
+          })
+        : null;
+      let fillKind: VenueCloseKind | null = null;
+      if (picked) {
+        const playbooks = await listDcaPlaybooksForSymbols(input.row.accountId, [
+          input.row.symbol,
+        ]);
+        const named = input.row.ruleName
+          ? playbooks.filter((playbook) => playbook.name === input.row.ruleName)
+          : [];
+        const playbook = (named.length > 0 ? named : playbooks)[0];
+        fillKind = attributeClosingFill({
+          fillPrice: picked.fillPrice,
+          stopOrderType: picked.stopOrderType,
+          orderLinkId: picked.orderLinkId,
+          takeProfit: input.row.takeProfit,
+          stopLoss: input.row.stopLoss,
+          hasExitIf: playbook
+            ? dcaFilterForSide(playbook, input.row.side, "exitIf") != null
+            : false,
+        });
+        if (fillKind !== "venue") {
+          fillPrice = picked.fillPrice;
+        }
+      }
+      const resolved = resolveVenueShrinkKind({
+        tickerKind: "venue",
+        fillKind,
+        botOwned: Boolean(input.row.ruleId || input.row.ruleName),
+      });
+      if (resolved == null) {
+        return false;
+      }
+      kind = resolved;
+    }
     if (
       kind === "venue" &&
       !shouldFlattenLedgerToVenue({
@@ -1204,13 +1259,6 @@ async function reconcileOneStop(input: {
     ) {
       return false;
     }
-    const fillPrice =
-      slHit?.price ??
-      (trail?.hit ? trail.fillPrice : null) ??
-      tpHit?.price ??
-      prices.mark ??
-      prices.last ??
-      input.row.entryPrice;
     const remainingTpsl =
       venueSize <= 1e-12 || !tpsl
         ? null

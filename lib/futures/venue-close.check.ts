@@ -13,6 +13,7 @@ import {
   executionStopLabel,
   futuresCloseMessage,
   pickClosingFill,
+  resolveVenueShrinkKind,
 } from "./venue-close";
 
 const picked = pickClosingFill({
@@ -174,5 +175,37 @@ assert.equal(
   true,
 );
 assert.equal(isBybitOrderLinkQuiet(BYBIT_ORDER_LINK_RESTING), true);
+assert.equal(
+  resolveVenueShrinkKind({
+    tickerKind: "venue",
+    fillKind: "take_profit",
+    botOwned: true,
+  }),
+  "take_profit",
+);
+assert.equal(
+  resolveVenueShrinkKind({
+    tickerKind: "stop_loss",
+    fillKind: null,
+    botOwned: true,
+  }),
+  "stop_loss",
+);
+assert.equal(
+  resolveVenueShrinkKind({
+    tickerKind: "venue",
+    fillKind: "venue",
+    botOwned: true,
+  }),
+  null,
+);
+assert.equal(
+  resolveVenueShrinkKind({
+    tickerKind: "venue",
+    fillKind: null,
+    botOwned: false,
+  }),
+  "venue",
+);
 
 console.log("venue close checks passed");
