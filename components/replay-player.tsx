@@ -1497,7 +1497,7 @@ function CycleRows({
         <td className="px-4 py-3">
           <button
             type="button"
-            className="text-accent hover:underline"
+            className="text-ink hover:underline"
             aria-label={`Show trade ${cycle.tradeNumber}`}
             onClick={onShow}
           >
