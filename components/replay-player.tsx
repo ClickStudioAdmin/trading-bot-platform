@@ -838,16 +838,51 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     },
     [],
   );
+  const positionsRef = useRef<HTMLElement | null>(null);
+  const [fittedPageSize, setFittedPageSize] = useState(15);
+  const pageSize = fillViewport ? fittedPageSize : 15;
+  useEffect(() => {
+    if (!fillViewport) {
+      return;
+    }
+    const section = positionsRef.current;
+    if (!section) {
+      return;
+    }
+    function fit() {
+      const row = section.querySelector("tbody tr");
+      const head = section.querySelector("thead");
+      const card = section.querySelector("[data-table-card]");
+      const pager = card?.lastElementChild;
+      const rowH = row instanceof HTMLElement ? row.getBoundingClientRect().height : 44;
+      const headH = head instanceof HTMLElement ? head.getBoundingClientRect().height : 40;
+      const pagerH = pager instanceof HTMLElement ? pager.getBoundingClientRect().height : 45;
+      const next = Math.max(
+        1,
+        Math.floor((section.clientHeight - headH - pagerH - 2) / Math.max(rowH, 1)),
+      );
+      setFittedPageSize((current) => (current === next ? current : next));
+    }
+    const observer = new ResizeObserver(fit);
+    observer.observe(section);
+    fit();
+    return () => observer.disconnect();
+  }, [fillViewport, positionsRight]);
   const positionTable = useClientTable(positionRows, comparePositions, {
-    pageSize: 15,
+    pageSize,
     defaultKey: "number",
     defaultDir: "desc",
   });
 
   const positions = (
     <section
+      ref={positionsRef}
       className={`flex min-w-0 flex-col ${
-        positionsRight ? `h-full ${fillViewport ? "" : "min-h-[46.5rem]"}` : ""
+        positionsRight
+          ? `h-full ${fillViewport ? "min-h-0" : "min-h-[46.5rem]"}`
+          : fillViewport
+            ? "min-h-0 flex-1"
+            : ""
       }`}
     >
       {positionRows.length === 0 ? (
@@ -1271,7 +1306,15 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       >
         {chartColumn}
       </div>
-      <div className={positionsRight ? "flex h-full min-w-0 flex-col" : "min-w-0"}>
+      <div
+        className={
+          positionsRight
+            ? "flex h-full min-w-0 flex-col"
+            : fillViewport
+              ? "flex min-h-0 min-w-0 flex-1 flex-col"
+              : "min-w-0"
+        }
+      >
         {positions}
       </div>
     </div>
