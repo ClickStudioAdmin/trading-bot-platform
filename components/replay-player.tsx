@@ -164,8 +164,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const [expanded, setExpanded] = useState(false);
   const [monitorFull, setMonitorFull] = useState(false);
   const [positionsRight, setPositionsRight] = useState(false);
-  const [eventLanes, setEventLanes] = useState(false);
-
   const loadKey = `${run.id}:${interval}`;
   const candles = load.key === loadKey ? load.candles : EMPTY_CANDLES
   const loading = load.key !== loadKey;
@@ -334,13 +332,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     if (!root) {
       return;
     }
-    const strips = root.matches("[data-event-strip]")
-      ? [root]
-      : [...root.querySelectorAll<HTMLElement>("[data-event-strip]")];
-    for (const node of strips) {
-      node.scrollLeft = node.scrollWidth;
-    }
-  }, [visibleEvents.length, eventLanes]);
+    root.scrollLeft = root.scrollWidth;
+  }, [visibleEvents.length]);
   const currentEvent = visibleEvents[visibleEvents.length - 1] ?? null;
   const stats = replayPlayStats(visibleOrders, run.startingUsdt);
   const series = useMemo(
@@ -1144,33 +1137,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       ) : null}
 
       <section className="rounded-card border border-line bg-surface px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs uppercase tracking-wide text-ink-faint">Event</p>
-          {visibleEvents.length > 1 ? (
-            <div className="flex items-center gap-1" role="group" aria-label="Event layout">
-              <button
-                type="button"
-                aria-pressed={!eventLanes}
-                className={`rounded-control px-2 py-1 text-xs ${
-                  eventLanes ? "text-ink-muted hover:text-ink" : "bg-accent-strong text-ink"
-                }`}
-                onClick={() => setEventLanes(false)}
-              >
-                Grouped
-              </button>
-              <button
-                type="button"
-                aria-pressed={eventLanes}
-                className={`rounded-control px-2 py-1 text-xs ${
-                  eventLanes ? "bg-accent-strong text-ink" : "text-ink-muted hover:text-ink"
-                }`}
-                onClick={() => setEventLanes(true)}
-              >
-                Lanes
-              </button>
-            </div>
-          ) : null}
-        </div>
+        <p className="text-xs uppercase tracking-wide text-ink-faint">Event</p>
         <button
           type="button"
           className="mt-1 text-left text-sm text-ink"
@@ -1184,63 +1151,41 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           {currentEvent?.text ?? "Press play. Events appear here as the run reaches them."}
         </button>
         {eventGroups.length > 0 ? (
-          eventLanes ? (
-            <div ref={eventStripRef} className="mt-3 space-y-2">
-              {eventGroups.map((group) => (
-                <div key={group.id} className="flex items-center gap-3">
-                  <span className="w-16 shrink-0 text-[10px] uppercase tracking-wide text-ink-faint">
-                    {group.label}
-                  </span>
-                  <div data-event-strip="" className="flex min-w-0 gap-2 overflow-x-auto pb-1">
-                    {group.events.map((row, index) => (
-                      <EventChipButton
-                        key={`${row.atMs}-${row.reason}-${index}`}
-                        row={row}
-                        selected={selectedEvent === row}
-                        onSelect={() => showEvent(row)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div
-              ref={eventStripRef}
-              data-event-strip=""
-              className="mt-3 flex items-end gap-3 overflow-x-auto pb-1"
-            >
-              {eventGroups.map((group) => (
-                <div key={group.id} className="flex shrink-0 flex-col">
-                  {group.side ? (
-                    <div className="mb-1 flex items-end gap-1 px-0.5">
-                      <span className="h-2 w-px bg-line-strong" />
-                      <span className="h-px min-w-4 flex-1 bg-line-strong" />
-                      <span className="text-[10px] uppercase tracking-wide text-ink-faint">
-                        {group.label}
-                      </span>
-                      <span className="h-px min-w-4 flex-1 bg-line-strong" />
-                      <span className="h-2 w-px bg-line-strong" />
-                    </div>
-                  ) : (
-                    <span className="mb-1 text-[10px] uppercase tracking-wide text-ink-faint">
+          <div
+            ref={eventStripRef}
+            data-event-strip=""
+            className="mt-3 flex items-end gap-3 overflow-x-auto pb-1"
+          >
+            {eventGroups.map((group) => (
+              <div key={group.id} className="flex shrink-0 flex-col">
+                {group.side ? (
+                  <div className="mb-1 flex items-end gap-1 px-0.5">
+                    <span className="h-2 w-px bg-line-strong" />
+                    <span className="h-px min-w-4 flex-1 bg-line-strong" />
+                    <span className="text-[10px] uppercase tracking-wide text-ink-faint">
                       {group.label}
                     </span>
-                  )}
-                  <div className="flex gap-2">
-                    {group.events.map((row, index) => (
-                      <EventChipButton
-                        key={`${row.atMs}-${row.reason}-${index}`}
-                        row={row}
-                        selected={selectedEvent === row}
-                        onSelect={() => showEvent(row)}
-                      />
-                    ))}
+                    <span className="h-px min-w-4 flex-1 bg-line-strong" />
+                    <span className="h-2 w-px bg-line-strong" />
                   </div>
+                ) : (
+                  <span className="mb-1 text-[10px] uppercase tracking-wide text-ink-faint">
+                    {group.label}
+                  </span>
+                )}
+                <div className="flex gap-2">
+                  {group.events.map((row, index) => (
+                    <EventChipButton
+                      key={`${row.atMs}-${row.reason}-${index}`}
+                      row={row}
+                      selected={selectedEvent === row}
+                      onSelect={() => showEvent(row)}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
-          )
+              </div>
+            ))}
+          </div>
         ) : null}
       </section>
 
