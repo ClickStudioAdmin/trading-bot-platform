@@ -102,7 +102,7 @@ import {
 } from "./playbook";
 import { formatDcaStartReasons } from "@/lib/bots/condition-copy";
 import { dcaFilterForSide, dcaFilterMet, dcaPlaybookFilterNeedsWideBars } from "./filters";
-import { dcaSyncFailedMessage } from "./log-copy";
+import { dcaDisarmedMessage, dcaSyncFailedMessage } from "./log-copy";
 import {
   dcaSyncFailureStamp,
   shouldSkipDcaSyncRetry,
@@ -1832,13 +1832,19 @@ async function applyDcaVerbUnlocked(input: {
     if (!changed) {
       return { ok: true, message: "Bot is idle." };
     }
+    const disarmReason =
+      input.reason?.trim() ||
+      (input.source === "webhook" ? "Signal webhook" : "");
     await logDcaEvent({
       playbook: input.playbook,
+      level: disarmReason ? "warning" : "info",
       event: "dca.disarmed",
-      message: leftOpen
-        ? `Stopped adding on ${input.playbook.name}. Position stays open.`
-        : `Disarmed ${input.playbook.name}.`,
-      data: { sides, leftOpen },
+      message: dcaDisarmedMessage({
+        name: input.playbook.name,
+        leftOpen,
+        reason: disarmReason,
+      }),
+      data: { sides, leftOpen, ...(disarmReason ? { why: disarmReason } : {}) },
     });
     return {
       ok: true,

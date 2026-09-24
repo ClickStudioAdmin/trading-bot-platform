@@ -14,6 +14,8 @@ export const CASH_AND_CARRY_POSITIONS_PATH =
   "/strategies/cash-and-carry/positions";
 export const CASH_AND_CARRY_PERFORMANCE_PATH =
   "/strategies/cash-and-carry/performance";
+export const CASH_AND_CARRY_ACTIVITY_PATH =
+  "/strategies/cash-and-carry/activity";
 
 export function automationsBotBlotterHref(
   path: string,

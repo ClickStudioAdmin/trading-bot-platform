@@ -323,12 +323,14 @@ export function automationsBotBlotterCells(
   blotter: Record<string, AutomationsBotBlotter> | undefined,
   positionsPath: string,
   performancePath: string,
+  activityPath: string,
   accountId?: string,
 ): {
   positionCount: number;
   roePct: number | null;
   positionsHref: string;
   performanceHref: string;
+  activityHref: string;
 } {
   const stats = blotter?.[botId] ?? EMPTY_AUTOMATIONS_BOT_BLOTTER;
   return {
@@ -340,6 +342,7 @@ export function automationsBotBlotterCells(
       accountId,
       botId,
     ),
+    activityHref: automationsBotBlotterHref(activityPath, accountId, botId),
   };
 }
 

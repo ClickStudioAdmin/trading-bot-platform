@@ -5,6 +5,7 @@ export type EventLogFilters = {
   level: string;
   event: string;
   account?: string;
+  bot?: string;
 };
 
 export function parseEventLogFilters(
@@ -15,5 +16,11 @@ export function parseEventLogFilters(
     level: firstSearchValue(params.level) ?? "",
     event: firstSearchValue(params.event) ?? "",
     account: firstSearchValue(params.account) ?? "",
+    bot: eventLogBotId(firstSearchValue(params.bot) ?? ""),
   };
+}
+
+export function eventLogBotId(raw: string): string {
+  const id = raw.trim();
+  return /^[A-Za-z0-9_-]{1,80}$/.test(id) ? id : "";
 }

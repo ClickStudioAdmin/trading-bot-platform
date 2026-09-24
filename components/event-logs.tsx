@@ -117,6 +117,9 @@ export function EventLogs({
             {hidden?.desk ? (
               <input type="hidden" name="desk" value={hidden.desk} />
             ) : null}
+            {filters.bot ? (
+              <input type="hidden" name="bot" value={filters.bot} />
+            ) : null}
             {accounts ? (
               <TableFilterField label="Account">
                 <AppSelect

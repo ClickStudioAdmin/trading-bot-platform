@@ -738,6 +738,10 @@ export function IconPerformance(props: LucideProps) {
   return <ChartLine aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
+export function IconActivity(props: LucideProps) {
+  return <FileText aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
 export function IconPositions(props: LucideProps) {
   return <Rows3 aria-hidden strokeWidth={STROKE} {...props} />;
 }

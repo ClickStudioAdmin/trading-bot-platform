@@ -72,6 +72,7 @@ import { paperBotConfig } from "@/lib/bots/bot-config";
 import { deskHref } from "@/lib/accounts/model";
 import {
   AUTOMATIONS_NEW,
+  CASH_AND_CARRY_ACTIVITY_PATH,
   CASH_AND_CARRY_PERFORMANCE_PATH,
   CASH_AND_CARRY_POSITIONS_PATH,
   automationsEditHref,
@@ -359,6 +360,7 @@ export function PaperRulesForm({
                 blotter,
                 CASH_AND_CARRY_POSITIONS_PATH,
                 CASH_AND_CARRY_PERFORMANCE_PATH,
+                CASH_AND_CARRY_ACTIVITY_PATH,
                 accountId,
               ),
               editHref: automationsEditHref(listHref, layer.id),

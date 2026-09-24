@@ -86,7 +86,7 @@ import {
   formatHardExitReason,
   formatPriceCrossReason,
 } from "@/lib/bots/condition-copy";
-import { dcaDecisionMessage } from "./log-copy";
+import { dcaDecisionMessage, dcaExitClosedMessage } from "./log-copy";
 import {
   applyDcaVerb,
   flattenPlaybook,
@@ -113,7 +113,6 @@ import {
   listDcaPlaybooksForAccount,
   patchDcaLeg,
   patchDcaPlaybook,
-  resetDcaLeg,
 } from "./store";
 
 const entryCursorByAccount = new Map<string, number>();
@@ -382,17 +381,39 @@ export async function runDcaPlaybookTick(input?: {
       if (!flattened.ok) {
         return;
       }
-      if (item.keepListening) {
-        const kept = await keepListeningAfterFlatten({
-          playbook: item.playbook,
-          side: item.side,
-        });
-        if (kept.ok) {
-          acted += 1;
-        }
-      } else {
-        acted += 1;
+      const kept = item.keepListening
+        ? await keepListeningAfterFlatten({
+            playbook: item.playbook,
+            side: item.side,
+          })
+        : { ok: true as const };
+      if (!kept.ok) {
+        return;
       }
+      acted += 1;
+      const why = item.flattenReason.trim();
+      const listens =
+        item.keepListening && dcaStartListens(item.playbook.startKind);
+      await logDcaEvent({
+        playbook: item.playbook,
+        side: item.side,
+        positionId: item.positionId,
+        event: "dca.closed",
+        message: item.keepListening
+          ? dcaExitClosedMessage({
+              name: item.playbook.name,
+              reason: "flatten",
+              listens,
+              why,
+            })
+          : why
+            ? `${item.playbook.name} position closed. ${why}`
+            : `${item.playbook.name} position closed.`,
+        data: {
+          reason: why || "flatten",
+          listening: listens,
+        },
+      });
       return;
     }
     if (item.kind === "sync") {
@@ -1101,6 +1122,9 @@ async function stopBotForAgreement(input: {
     mode: input.mode,
     verb: "disarm",
     side: input.side,
+    reason: isBybitAgreementQuiet(input.error)
+      ? "Needs a Bybit agreement. See Exchanges."
+      : input.error,
   });
   return true;
 }
@@ -1122,6 +1146,7 @@ async function stopFlatBotForMinimum(input: {
     mode: input.mode,
     verb: "disarm",
     side: input.side,
+    reason: input.error,
   });
   return true;
 }
@@ -1198,6 +1223,7 @@ async function applyTickAction(input: {
       mode: input.mode,
       verb: "disarm",
       side: input.side,
+      reason: input.why,
     });
     return { acted: disarmed.ok };
   }
@@ -1314,14 +1340,17 @@ async function applyTickAction(input: {
     if (!kept.ok) {
       return { acted: false };
     }
+    const listens = dcaStartListens(input.playbook.startKind);
     await logDcaEvent({
       playbook: input.playbook,
       side: input.side,
       event: "dca.closed",
-      message: dcaStartListens(input.playbook.startKind)
-        ? `${input.playbook.name} position closed. Waiting for the next start.`
-        : `${input.playbook.name} position closed. Bot is idle.`,
-      data: { reason: "end_cycle" },
+      message: dcaExitClosedMessage({
+        name: input.playbook.name,
+        reason: "end_cycle",
+        listens,
+      }),
+      data: { reason: "end_cycle", listening: listens },
     });
     return { acted: true };
   }
@@ -1342,26 +1371,28 @@ async function applyTickAction(input: {
       return { acted: false };
     }
     if (/no longer open/i.test(closed.error)) {
-      await resetDcaLeg({
-        supabase,
-        id: input.playbook.id,
+      const kept = await keepListeningAfterFlatten({
+        playbook: input.playbook,
         side: input.side,
       });
+      if (!kept.ok) {
+        return { acted: false };
+      }
+      const listens = dcaStartListens(input.playbook.startKind);
       const known = String(input.why ?? "").trim();
       await logDcaEvent({
         playbook: input.playbook,
         side: input.side,
         event: "dca.closed",
-        message:
-          input.action.reason === "take_profit"
-            ? `${input.playbook.name} hit take profit.`
-            : input.action.reason === "exit_if"
-              ? known
-                ? `${input.playbook.name} Hard Exit hit. ${known}.`
-                : `${input.playbook.name} Hard Exit hit.`
-              : `${input.playbook.name} hit stop loss.`,
+        message: dcaExitClosedMessage({
+          name: input.playbook.name,
+          reason: input.action.reason,
+          listens,
+          why: known,
+        }),
         data: {
           reason: input.action.reason,
+          listening: listens,
           ...(known ? { why: known } : {}),
         },
       });
@@ -1381,26 +1412,28 @@ async function applyTickAction(input: {
     });
     return { acted: false };
   }
-  await resetDcaLeg({
-    supabase,
-    id: input.playbook.id,
+  const kept = await keepListeningAfterFlatten({
+    playbook: input.playbook,
     side: input.side,
   });
+  if (!kept.ok) {
+    return { acted: false };
+  }
+  const listens = dcaStartListens(input.playbook.startKind);
   const why = String(input.why ?? "").trim();
   await logDcaEvent({
     playbook: input.playbook,
     side: input.side,
     event: "dca.closed",
-    message:
-      input.action.reason === "take_profit"
-        ? `${input.playbook.name} hit take profit.`
-        : input.action.reason === "exit_if"
-          ? why
-            ? `${input.playbook.name} Hard Exit hit. ${why}.`
-            : `${input.playbook.name} Hard Exit hit.`
-          : `${input.playbook.name} hit stop loss.`,
+    message: dcaExitClosedMessage({
+      name: input.playbook.name,
+      reason: input.action.reason,
+      listens,
+      why,
+    }),
     data: {
       reason: input.action.reason,
+      listening: listens,
       ...(why ? { why } : {}),
     },
   });
