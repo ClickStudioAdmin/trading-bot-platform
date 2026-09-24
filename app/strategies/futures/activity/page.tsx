@@ -3,7 +3,11 @@ import Link from "next/link";
 import { EventLogs } from "@/components/event-logs";
 import { deskHref, deskIsCopy } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
-import { listEventLogs, parseEventLogFilters } from "@/lib/logs/list";
+import {
+  listEventLogs,
+  parseEventLogFilters,
+  withoutDuplicateFillLogs,
+} from "@/lib/logs/list";
 import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 
 export const metadata: Metadata = {
@@ -25,6 +29,7 @@ export default async function FuturesActivityPage({
         await listEventLogs(filters, { accountId: session.account.id })
       ).filter((row) => row.strategy === FUTURES_STRATEGY_ID)
     : [];
+  const visible = withoutDuplicateFillLogs(rows);
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -44,7 +49,7 @@ export default async function FuturesActivityPage({
       ) : null}
       {session ? (
         <EventLogs
-          rows={rows}
+          rows={visible}
           filters={filters}
           clearHref={deskHref(FUTURES_PATHS.activity, session.account.id)}
           showUser={false}
