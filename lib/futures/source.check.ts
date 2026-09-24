@@ -8,15 +8,15 @@ import {
   withFuturesOrigin,
 } from "./source";
 
-assert.equal(formatFuturesSourceKind("engine"), "Auto");
+assert.equal(formatFuturesSourceKind("engine"), "Bot");
 assert.equal(formatFuturesSourceKind("manual"), "Manual");
 assert.equal(formatFuturesSourceKind("webhook"), "Webhook");
 assert.equal(formatFuturesOrigin({ source: "manual" }), "Manual");
-assert.equal(formatFuturesOrigin({ source: "engine" }), "Auto");
+assert.equal(formatFuturesOrigin({ source: "engine" }), "Bot");
 assert.equal(formatFuturesOrigin({ source: "webhook" }), "Webhook");
 assert.equal(
   formatFuturesOrigin({ source: "engine", ruleName: "DCA 1INCH" }),
-  "Auto · DCA 1INCH",
+  "Bot · DCA 1INCH",
 );
 assert.equal(
   formatFuturesOrigin({ source: "webhook", ruleName: "Custom TV Strategy" }),
@@ -42,11 +42,11 @@ assert.equal(
 );
 assert.equal(
   formatFuturesSourceKind("engine", "DCA 1INCH", ["Custom TV Strategy"]),
-  "Auto",
+  "Bot",
 );
 assert.equal(
   formatFuturesSourceKind("engine", "Custom TV Strategy"),
-  "Auto",
+  "Bot",
 );
 assert.equal(formatFuturesSourceKind("engine", "TradingView", []), "Webhook");
 assert.equal(
@@ -67,7 +67,7 @@ assert.equal(
     source: "engine",
     ruleName: "DCA 1INCH",
   }),
-  "Opened BTCUSDT long · Auto · DCA 1INCH",
+  "Opened BTCUSDT long · Bot · DCA 1INCH",
 );
 assert.equal(
   withFuturesOrigin("Opened BTCUSDT long", {
@@ -75,7 +75,7 @@ assert.equal(
     ruleName: "Sample bot",
     reason: "RSI 14 crosses below 30 · 15m",
   }),
-  "Opened BTCUSDT long · Auto · Sample bot. RSI 14 crosses below 30 · 15m",
+  "Opened BTCUSDT long · Bot · Sample bot. RSI 14 crosses below 30 · 15m",
 );
 assert.deepEqual(
   futuresOriginLog({
