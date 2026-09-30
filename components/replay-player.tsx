@@ -1545,12 +1545,13 @@ function placeReplayLanes(
       });
     });
     const tradeNumber = /^(\d+)/.exec(group.label)?.[1];
-    const endX = xEnd ?? xStart;
-    const showLabel = open && endX != null && endX >= 0 && endX <= width;
+    const visibleLeft = Math.max(0, Math.min(width, left));
+    const visibleRight = Math.max(0, Math.min(width, right));
+    const onScreen = right >= 0 && left <= width && visibleRight >= visibleLeft;
     placed.push({
       id: group.id,
       side,
-      label: showLabel
+      label: onScreen
         ? tradeNumber == null
           ? group.label
           : `Position #${tradeNumber}`
@@ -1558,7 +1559,7 @@ function placeReplayLanes(
       above,
       x0: left,
       x1: right,
-      labelX: endX ?? 0,
+      labelX: (visibleLeft + visibleRight) / 2,
       marks,
     });
   }
@@ -1586,8 +1587,8 @@ function ReplaySideLanes({
         const y = (px: number) =>
           lane.side === "short" ? `calc(50% + ${px}px)` : px;
         const barTop = y(28);
-        const eventTop = y(lane.above ? 14 : 40);
-        const labelTop = y(lane.above ? 0 : 54);
+        const eventTop = y(lane.above ? 14 : 42);
+        const labelTop = y(0);
         const ink = lane.side === "short" ? "text-danger" : "text-success";
         return (
           <div key={lane.id}>
