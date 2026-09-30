@@ -6,6 +6,7 @@ import {
   placeLaneCaption,
   replayLaneStillOpen,
   replayMarkerInPositionFocus,
+  replayPositionVisibleRange,
 } from "./event-groups";
 import type { ReplayEvent, SimulatedOrder } from "./model";
 
@@ -127,5 +128,16 @@ assert.equal(replayMarkerInPositionFocus(1, positionFocus), true);
 assert.equal(replayMarkerInPositionFocus(3, positionFocus), false);
 assert.equal(replayMarkerInPositionFocus(null, positionFocus), false);
 assert.equal(replayMarkerInPositionFocus(4, null), true);
+
+const onScreen = { from: 0, to: 100 };
+assert.equal(replayPositionVisibleRange(10, 40, onScreen), null);
+const panned = replayPositionVisibleRange(90, 110, onScreen);
+assert.deepEqual(panned, { from: 10, to: 110 });
+assert.equal(panned && panned.to - panned.from, 100);
+const zoomed = replayPositionVisibleRange(0, 200, onScreen);
+assert.ok(zoomed);
+assert.ok(zoomed.from < 0);
+assert.ok(zoomed.to > 200);
+assert.ok(zoomed.to - zoomed.from > 100);
 
 console.log("event-groups.check: ok");

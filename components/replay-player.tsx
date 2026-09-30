@@ -17,6 +17,7 @@ import {
   replayLaneLabelWidth,
   replayLaneStillOpen,
   replayMarkerInPositionFocus,
+  replayPositionVisibleRange,
   type ReplayEventGroup,
   type ReplayLaneLabelBox,
 } from "@/lib/backtest/event-groups";
@@ -888,14 +889,16 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         });
       };
       host.__focusRange = (from, to) => {
-        const start = Math.max(0, Math.min(from, to));
-        const end = Math.max(start, Math.max(from, to));
-        const span = Math.max(1, end - start);
-        const pad = Math.max(4, Math.round(span * 0.08));
-        chart.timeScale().setVisibleLogicalRange({
-          from: start - pad,
-          to: end + pad,
-        });
+        const scale = chart.timeScale();
+        const next = replayPositionVisibleRange(
+          from,
+          to,
+          scale.getVisibleLogicalRange(),
+        );
+        if (!next) {
+          return;
+        }
+        scale.setVisibleLogicalRange(next);
       };
       host.__pan = (dx, origin) => {
         const scale = chart.timeScale();

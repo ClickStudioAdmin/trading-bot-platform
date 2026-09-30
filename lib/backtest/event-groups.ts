@@ -148,3 +148,41 @@ export function placeLaneCaption(
   }
   return { x: start, clear: false };
 }
+
+export type ReplayLogicalRange = { from: number; to: number };
+
+/** Keep the current zoom when a position already fits. Return null when it is already fully on screen. */
+export function replayPositionVisibleRange(
+  positionFrom: number,
+  positionTo: number,
+  visible: ReplayLogicalRange | null,
+): ReplayLogicalRange | null {
+  const start = Math.min(positionFrom, positionTo);
+  const end = Math.max(positionFrom, positionTo);
+  const span = Math.max(1, end - start);
+  const fitted = (): ReplayLogicalRange => {
+    const pad = Math.max(4, Math.round(span * 0.08));
+    return { from: start - pad, to: end + pad };
+  };
+  if (!visible || !(visible.to > visible.from)) {
+    return fitted();
+  }
+  const view = visible.to - visible.from;
+  if (start >= visible.from && end <= visible.to) {
+    return null;
+  }
+  if (span <= view) {
+    let from = visible.from;
+    let to = visible.to;
+    if (start < from) {
+      from = start;
+      to = start + view;
+    }
+    if (end > to) {
+      to = end;
+      from = end - view;
+    }
+    return { from, to };
+  }
+  return fitted();
+}
