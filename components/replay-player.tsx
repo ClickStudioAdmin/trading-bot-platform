@@ -9,11 +9,7 @@ import {
   replayChartSeries,
 } from "@/lib/backtest/chart-series";
 import { eventParameterSections } from "@/lib/backtest/event-pane";
-import {
-  groupReplayEventsByPosition,
-  replayLaneStillOpen,
-  type ReplayEventGroup,
-} from "@/lib/backtest/event-groups";
+import { groupReplayEventsByPosition } from "@/lib/backtest/event-groups";
 import { eventForOrder, eventsFromOrders } from "@/lib/backtest/events";
 import {
   eventsThrough,
@@ -170,15 +166,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const [monitorFull, setMonitorFull] = useState(false);
   const [positionsRight, setPositionsRight] = useState(false);
   const [sideLanes, setSideLanes] = useState(false);
-  const [laneFrame, setLaneFrame] = useState(0);
-  const sideLanesRef = useRef(false);
-  const laneSyncRef = useRef<() => void>(() => {});
-  sideLanesRef.current = sideLanes;
-  laneSyncRef.current = () => {
-    if (sideLanesRef.current) {
-      setLaneFrame((frame) => frame + 1);
-    }
-  };
   const loadKey = `${run.id}:${interval}`;
   const candles = load.key === loadKey ? load.candles : EMPTY_CANDLES
   const loading = load.key !== loadKey;
@@ -347,20 +334,29 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     if (!root) {
       return;
     }
-    root.scrollLeft = root.scrollWidth;
-  }, [visibleEvents.length]);
+    const strips = root.matches("[data-event-strip]")
+      ? [root]
+      : [...root.querySelectorAll<HTMLElement>("[data-event-strip]")];
+    for (const node of strips) {
+      node.scrollLeft = node.scrollWidth;
+    }
+  }, [visibleEvents.length, sideLanes]);
   useEffect(() => {
     const root = eventStripRef.current;
     const chip = root?.querySelector<HTMLElement>("[data-selected-event]");
     if (!root || !chip) {
       return;
     }
-    const strip = root.getBoundingClientRect();
+    const strip = chip.closest("[data-event-strip]");
+    if (!(strip instanceof HTMLElement)) {
+      return;
+    }
+    const frame = strip.getBoundingClientRect();
     const box = chip.getBoundingClientRect();
-    if (box.left < strip.left) {
-      root.scrollLeft -= strip.left - box.left;
-    } else if (box.right > strip.right) {
-      root.scrollLeft += box.right - strip.right;
+    if (box.left < frame.left) {
+      strip.scrollLeft -= frame.left - box.left;
+    } else if (box.right > frame.right) {
+      strip.scrollLeft += box.right - frame.right;
     }
   }, [selectedEvent, eventGroups]);
   const currentEvent = visibleEvents[visibleEvents.length - 1] ?? null;
@@ -763,7 +759,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       const host = node as HTMLDivElement & {
         __paint?: (index: number) => void;
         __focus?: (index: number) => void;
-        __laneX?: (index: number) => number | null;
       };
       host.__paint = (index, follow = true) => paintRef.current(index, follow);
       host.__focus = (index) => {
@@ -773,16 +768,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           to: at + 48,
         });
       };
-      host.__laneX = (index) => {
-        const x = chart.timeScale().logicalToCoordinate(index as never);
-        return x == null ? null : Number(x);
-      };
-      const onLaneRange = () => laneSyncRef.current();
-      chart.timeScale().subscribeVisibleLogicalRangeChange(onLaneRange);
       if (focusRef.current != null) {
         host.__focus(focusRef.current);
       }
-      laneSyncRef.current();
       const observer = new ResizeObserver(() => {
         chart.applyOptions({
           width: node.clientWidth,
@@ -792,20 +780,14 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       observer.observe(node);
       cleanup = () => {
         observer.disconnect();
-        chart.timeScale().unsubscribeVisibleLogicalRangeChange(onLaneRange);
         delete (node as HTMLDivElement & {
           __paint?: (index: number) => void;
           __focus?: (index: number) => void;
-          __laneX?: (index: number) => number | null;
         }).__paint;
         delete (node as HTMLDivElement & {
           __paint?: (index: number) => void;
           __focus?: (index: number) => void;
-          __laneX?: (index: number) => number | null;
         }).__focus;
-        delete (node as HTMLDivElement & {
-          __laneX?: (index: number) => number | null;
-        }).__laneX;
         chart.remove();
       };
     });
@@ -833,12 +815,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       | null;
     node?.__paint?.(headRef.current, false);
   }, [selectedEvent]);
-
-  useEffect(() => {
-    if (sideLanes) {
-      laneSyncRef.current();
-    }
-  }, [sideLanes, head, visibleEvents.length]);
 
   const positionRows = useMemo(
     () =>
@@ -1114,14 +1090,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       </div>
   );
 
-  const laneX = (
-    hostRef.current as { __laneX?: (index: number) => number | null } | null
-  )?.__laneX;
-  const replayLanes =
-    sideLanes && started && laneFrame >= 0 && laneX
-      ? placeReplayLanes(eventGroups, candles, throughMs, laneX)
-      : null;
-
   const chartColumn = (
     <>
       <section
@@ -1248,7 +1216,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             </div>
           ) : null}
         </div>
-        {replayLanes ? <ReplaySideLanes lanes={replayLanes} selected={selectedEvent} onSelect={showEvent} /> : null}
         {started && candles.length > 0 ? (
           <label className="flex items-center gap-3 border-t border-line px-3 py-2 text-xs text-ink-muted">
             <span className="shrink-0">
@@ -1303,42 +1270,46 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         >
           {currentEvent?.text ?? "Press play. Events appear here as the run reaches them."}
         </button>
-        {!sideLanes && eventGroups.length > 0 ? (
-          <div
-            ref={eventStripRef}
-            data-event-strip=""
-            className="mt-3 flex items-end gap-3 overflow-x-auto pb-1"
-          >
-            {eventGroups.map((group) => (
-              <div key={group.id} className="flex shrink-0 flex-col">
-                {group.side ? (
-                  <div className="mb-1 flex items-end gap-1 px-0.5">
-                    <span className="h-2 w-px bg-line-strong" />
-                    <span className="h-px min-w-4 flex-1 bg-line-strong" />
-                    <span className="text-[10px] uppercase tracking-wide text-ink-faint">
-                      {group.label}
-                    </span>
-                    <span className="h-px min-w-4 flex-1 bg-line-strong" />
-                    <span className="h-2 w-px bg-line-strong" />
-                  </div>
-                ) : (
-                  <span className="mb-1 text-[10px] uppercase tracking-wide text-ink-faint">
-                    {group.label}
+        {eventGroups.length > 0 ? (
+          sideLanes ? (
+            <div ref={eventStripRef} className="mt-3 space-y-2">
+              {(["long", "short"] as const).map((side) => (
+                <div key={side} className="flex items-end gap-3">
+                  <span
+                    className={`w-12 shrink-0 pb-1 text-[10px] uppercase tracking-wide ${
+                      side === "short" ? "text-danger" : "text-success"
+                    }`}
+                  >
+                    {side}
                   </span>
-                )}
-                <div className="flex gap-2">
-                  {group.events.map((row, index) => (
-                    <EventChipButton
-                      key={`${row.atMs}-${row.reason}-${index}`}
-                      row={row}
-                      selected={selectedEvent === row}
-                      onSelect={() => showEvent(row)}
+                  <div
+                    data-event-strip=""
+                    className="flex min-w-0 items-end gap-3 overflow-x-auto pb-1"
+                  >
+                    <EventTradeGroups
+                      groups={eventGroups.filter(
+                        (group) => (group.side ?? group.events[0]?.side) === side,
+                      )}
+                      selected={selectedEvent}
+                      onSelect={showEvent}
                     />
-                  ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div
+              ref={eventStripRef}
+              data-event-strip=""
+              className="mt-3 flex items-end gap-3 overflow-x-auto pb-1"
+            >
+              <EventTradeGroups
+                groups={eventGroups}
+                selected={selectedEvent}
+                onSelect={showEvent}
+              />
+            </div>
+          )
         ) : null}
       </section>
 
@@ -1491,115 +1462,49 @@ function EventChipButton({
   );
 }
 
-function placeReplayLanes(
-  groups: ReplayEventGroup[],
-  candles: CandleBar[],
-  throughMs: number,
-  xOf: (index: number) => number | null,
-): ReplayLaneDraw[] {
-  const placed: ReplayLaneDraw[] = [];
-  for (const group of groups) {
-    if (group.side == null || group.events.length === 0) {
-      continue;
-    }
-    const start = group.events[0];
-    if (!start) {
-      continue;
-    }
-    const open = replayLaneStillOpen(group.events);
-    const endMs = open ? throughMs : (group.events[group.events.length - 1]?.atMs ?? start.atMs);
-    const xStart = xOf(candleIndexAt(candles, start.atMs));
-    const xEnd = xOf(candleIndexAt(candles, endMs));
-    if (xStart == null && xEnd == null) {
-      continue;
-    }
-    const left = Math.min(xStart ?? xEnd ?? 0, xEnd ?? xStart ?? 0);
-    const right = Math.max(xStart ?? xEnd ?? 0, xEnd ?? xStart ?? 0);
-    const marks: ReplayLaneMark[] = [];
-    group.events.forEach((row, index) => {
-      const x = xOf(candleIndexAt(candles, row.atMs));
-      if (x == null) {
-        return;
-      }
-      marks.push({
-        key: `${row.atMs}-${row.reason}-${index}`,
-        x,
-        label: eventChip(row),
-        event: row,
-      });
-    });
-    placed.push({ id: group.id, side: group.side, x0: left, x1: right, marks });
-  }
-  return placed;
-}
-
-function ReplaySideLanes({
-  lanes,
+function EventTradeGroups({
+  groups,
   selected,
   onSelect,
 }: {
-  lanes: ReplayLaneDraw[];
+  groups: ReturnType<typeof groupReplayEventsByPosition>;
   selected: ReplayEvent | null;
   onSelect: (event: ReplayEvent) => void;
 }) {
   return (
-    <div
-      className="relative h-[5.5rem] overflow-hidden border-t border-line"
-      aria-label="Long and short lanes"
-    >
-      <span className="pointer-events-none absolute left-2 top-1 text-[10px] uppercase tracking-wide text-success">
-        Long
-      </span>
-      <span className="pointer-events-none absolute left-2 top-[calc(50%+4px)] text-[10px] uppercase tracking-wide text-danger">
-        Short
-      </span>
-      {lanes.map((lane) => {
-        const barTop = lane.side === "long" ? 16 : "calc(50% + 16px)";
-        const labelTop = lane.side === "long" ? 24 : "calc(50% + 24px)";
-        const bar =
-          lane.side === "short" ? "bg-danger/25" : "bg-success/25";
-        const ink = lane.side === "short" ? "text-danger" : "text-success";
-        return (
-          <div key={lane.id}>
-            <div
-              className={`absolute h-1.5 rounded-full ${bar}`}
-              style={{ left: lane.x0, width: Math.max(4, lane.x1 - lane.x0), top: barTop }}
-            />
-            {lane.marks.map((mark) => (
-              <button
-                key={mark.key}
-                type="button"
-                data-selected-event={selected === mark.event ? "" : undefined}
-                className={`absolute -translate-x-1/2 whitespace-nowrap text-[10px] leading-none ${ink} ${
-                  selected === mark.event ? "underline" : ""
-                }`}
-                style={{ left: mark.x, top: labelTop }}
-                onClick={() => onSelect(mark.event)}
-              >
-                {mark.label}
-              </button>
+    <>
+      {groups.map((group) => (
+        <div key={group.id} className="flex shrink-0 flex-col">
+          {group.side ? (
+            <div className="mb-1 flex items-end gap-1 px-0.5">
+              <span className="h-2 w-px bg-line-strong" />
+              <span className="h-px min-w-4 flex-1 bg-line-strong" />
+              <span className="text-[10px] uppercase tracking-wide text-ink-faint">
+                {group.label}
+              </span>
+              <span className="h-px min-w-4 flex-1 bg-line-strong" />
+              <span className="h-2 w-px bg-line-strong" />
+            </div>
+          ) : (
+            <span className="mb-1 text-[10px] uppercase tracking-wide text-ink-faint">
+              {group.label}
+            </span>
+          )}
+          <div className="flex gap-2">
+            {group.events.map((row, index) => (
+              <EventChipButton
+                key={`${row.atMs}-${row.reason}-${index}`}
+                row={row}
+                selected={selected === row}
+                onSelect={() => onSelect(row)}
+              />
             ))}
           </div>
-        );
-      })}
-    </div>
+        </div>
+      ))}
+    </>
   );
 }
-
-type ReplayLaneMark = {
-  key: string;
-  x: number;
-  label: string;
-  event: ReplayEvent;
-};
-
-type ReplayLaneDraw = {
-  id: string;
-  side: "long" | "short";
-  x0: number;
-  x1: number;
-  marks: ReplayLaneMark[];
-};
 
 function eventChip(row: ReplayEvent): string {
   if (row.kind === "skipped") {
