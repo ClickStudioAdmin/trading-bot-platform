@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   coalesceReplayPositions,
+  fitLaneCaption,
   groupReplayEventsByPosition,
   placeLaneCaption,
   replayLaneStillOpen,
@@ -107,6 +108,10 @@ const stillOpen = coalesceReplayPositions(
   groupReplayEventsByPosition(interleavedEvents.slice(0, 4), interleavedOrders),
 );
 assert.equal(replayLaneStillOpen(stillOpen[0]?.events ?? []), true);
+
+assert.equal(fitLaneCaption("Position #3", 40), "#3");
+assert.equal(fitLaneCaption("Position #4", 200), "Position #4");
+assert.equal(fitLaneCaption("Skipped", 10), "Skipped");
 
 const captions: { x: number; width: number }[] = [];
 const firstCaption = placeLaneCaption(40, 78, 0, 80, captions);

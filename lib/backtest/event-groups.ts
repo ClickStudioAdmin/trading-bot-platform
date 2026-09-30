@@ -103,6 +103,14 @@ export function replayLaneLabelsOverlap(
   return leftStart < rightEnd + gap && leftEnd > rightStart - gap;
 }
 
+export function fitLaneCaption(label: string, barWidth: number): string {
+  const brief = label.replace(/^Position /, "");
+  if (brief !== label && barWidth < replayLaneLabelWidth(label)) {
+    return brief;
+  }
+  return label;
+}
+
 export function placeLaneCaption(
   preferred: number,
   width: number,

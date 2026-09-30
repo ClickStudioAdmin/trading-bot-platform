@@ -11,6 +11,7 @@ import {
 import { eventParameterSections } from "@/lib/backtest/event-pane";
 import {
   coalesceReplayPositions,
+  fitLaneCaption,
   groupReplayEventsByPosition,
   placeLaneCaption,
   replayLaneLabelWidth,
@@ -1571,14 +1572,30 @@ function settleReplayLaneText(lanes: ReplayLaneDraw[], width: number): void {
       }
       const minX = Math.max(0, Math.min(lane.x0, lane.x1));
       const maxX = Math.min(width, Math.max(lane.x0, lane.x1));
-      const placed = placeLaneCaption(
+      const brief = lane.label.replace(/^Position /, "");
+      let text = fitLaneCaption(lane.label, Math.max(0, maxX - minX));
+      let placed = placeLaneCaption(
         lane.labelX,
-        replayLaneLabelWidth(lane.label),
+        replayLaneLabelWidth(text),
         minX,
         maxX,
         captions,
       );
-      captions.push({ x: placed.x, width: replayLaneLabelWidth(lane.label) });
+      if (!placed.clear && text !== brief) {
+        const shorter = placeLaneCaption(
+          lane.labelX,
+          replayLaneLabelWidth(brief),
+          minX,
+          maxX,
+          captions,
+        );
+        if (shorter.clear) {
+          text = brief;
+          placed = shorter;
+        }
+      }
+      captions.push({ x: placed.x, width: replayLaneLabelWidth(text) });
+      lane.label = text;
       lane.labelX = placed.x;
     }
   }
