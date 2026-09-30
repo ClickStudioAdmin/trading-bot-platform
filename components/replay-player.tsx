@@ -1463,19 +1463,11 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             </button>
           ) : null}
           {positionFocus ? (
-            <div
-              className="absolute left-3 top-3 z-20 flex items-center gap-2 rounded-control border border-line bg-surface px-2.5 py-1 text-xs text-ink"
-              role="status"
-            >
-              <span>Viewing Position #{positionFocus.number}</span>
-              <button
-                type="button"
-                className="inline-flex size-5 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
-                aria-label="Show all positions"
-                onClick={() => setPositionFocus(null)}
-              >
-                <IconClose size={14} />
-              </button>
+            <div className="absolute left-3 top-3 z-20" role="status">
+              <ViewingPositionNotice
+                number={positionFocus.number}
+                onClose={() => setPositionFocus(null)}
+              />
             </div>
           ) : null}
           {tip && started ? (
@@ -1519,8 +1511,16 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       ) : null}
 
       <section className="rounded-card border border-line bg-surface px-4 py-3">
-        <div className="flex items-center justify-between gap-2">
+        <div className="relative flex items-center justify-between gap-2">
           <p className="text-xs uppercase tracking-wide text-ink-faint">Events</p>
+          {positionFocus ? (
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+              <ViewingPositionNotice
+                number={positionFocus.number}
+                onClose={() => setPositionFocus(null)}
+              />
+            </div>
+          ) : null}
           <button
             type="button"
             aria-pressed={sideLanes}
@@ -1690,6 +1690,28 @@ function EventParameters({
         ))}
       </div>
     </section>
+  );
+}
+
+function ViewingPositionNotice({
+  number,
+  onClose,
+}: {
+  number: number;
+  onClose: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-2 rounded-control border border-line bg-surface px-2.5 py-1 text-xs text-ink">
+      <span>Viewing Position #{number}</span>
+      <button
+        type="button"
+        className="inline-flex size-5 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
+        aria-label="Show all positions"
+        onClick={onClose}
+      >
+        <IconClose size={14} />
+      </button>
+    </div>
   );
 }
 
