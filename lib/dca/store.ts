@@ -2,7 +2,6 @@ import { filterColumns } from "./filters";
 import {
   dcaPlaybookConflict,
   dcaPlaybookIsRunning,
-  parseDcaClipGeneration,
   parseDcaPlaybookRow,
   type DcaLegState,
   type DcaPlaybook,
@@ -82,7 +81,6 @@ function idleLegColumns(prefix: "long" | "short"): Record<string, unknown> {
     [`${prefix}_last_clip_at`]: null,
     [`${prefix}_first_fill_price`]: null,
     [`${prefix}_breakeven_done`]: false,
-    [`${prefix}_clip_generation`]: null,
   };
 }
 
@@ -115,12 +113,6 @@ function legColumns(
   }
   if (patch.cycleMaxValue !== undefined) {
     row[`${prefix}_cycle_max_value`] = patch.cycleMaxValue;
-  }
-  if (patch.clipGenerationMs !== undefined) {
-    row[`${prefix}_clip_generation`] =
-      patch.clipGenerationMs === null
-        ? null
-        : Math.max(0, Math.floor(patch.clipGenerationMs));
   }
   return row;
 }
@@ -471,7 +463,6 @@ export async function resetDcaLeg(input: {
       firstFillPrice: null,
       breakevenDone: false,
       cycleMaxValue: null,
-      clipGenerationMs: null,
     },
   });
 }
@@ -496,7 +487,6 @@ export async function resetDcaPlaybook(input: {
         firstFillPrice: null,
         breakevenDone: false,
         cycleMaxValue: null,
-        clipGenerationMs: null,
       },
       short: {
         status: "idle",
@@ -506,7 +496,6 @@ export async function resetDcaPlaybook(input: {
         firstFillPrice: null,
         breakevenDone: false,
         cycleMaxValue: null,
-        clipGenerationMs: null,
       },
     },
   });
@@ -528,106 +517,4 @@ export async function dcaPlaybooksAreRunning(
     )
     .limit(1);
   return (data ?? []).length > 0;
-}
-
-function clipGenerationColumn(side: FuturesSide): string {
-  return `${side}_clip_generation`;
-}
-
-/**
- * One generation per cycle. The first writer stores it; a second writer
- * in the same cycle reads that value back and reuses the order link.
- */
-export async function claimDcaClipGeneration(input: {
-  supabase: SupabaseClient;
-  id: string;
-  side: FuturesSide;
-  generationMs: number;
-}): Promise<{ ok: true; generationMs: number } | { ok: false; error: string }> {
-  const column = clipGenerationColumn(input.side);
-  const generation = Math.max(0, Math.floor(input.generationMs));
-  const { data, error } = await input.supabase
-    .from("dca_playbooks")
-    .update({ [column]: generation })
-    .eq("id", input.id)
-    .is(column, null)
-    .select(column)
-    .maybeSingle();
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-  const claimed = parseDcaClipGeneration(
-    (data as Record<string, unknown> | null)?.[column],
-  );
-  if (claimed != null) {
-    return { ok: true, generationMs: claimed };
-  }
-  return readDcaClipGeneration(input);
-}
-
-/** Replace a dead first-clip generation. If another writer already did, use theirs. */
-export async function renewDcaClipGeneration(input: {
-  supabase: SupabaseClient;
-  id: string;
-  side: FuturesSide;
-  previousMs: number | null;
-  generationMs: number;
-}): Promise<{ ok: true; generationMs: number } | { ok: false; error: string }> {
-  const column = clipGenerationColumn(input.side);
-  const generation = Math.max(0, Math.floor(input.generationMs));
-  if (input.previousMs == null) {
-    return claimDcaClipGeneration(input);
-  }
-  const { data, error } = await input.supabase
-    .from("dca_playbooks")
-    .update({ [column]: generation })
-    .eq("id", input.id)
-    .eq(column, Math.floor(input.previousMs))
-    .select(column)
-    .maybeSingle();
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-  const renewed = parseDcaClipGeneration(
-    (data as Record<string, unknown> | null)?.[column],
-  );
-  if (renewed != null) {
-    return { ok: true, generationMs: renewed };
-  }
-  const current = await readDcaClipGeneration(input);
-  if (current.ok && current.generationMs !== Math.floor(input.previousMs)) {
-    return current;
-  }
-  const { error: forceError } = await input.supabase
-    .from("dca_playbooks")
-    .update({ [column]: generation })
-    .eq("id", input.id);
-  if (forceError) {
-    return { ok: false, error: forceError.message };
-  }
-  const after = await readDcaClipGeneration(input);
-  return after.ok ? after : { ok: true, generationMs: generation };
-}
-
-async function readDcaClipGeneration(input: {
-  supabase: SupabaseClient;
-  id: string;
-  side: FuturesSide;
-}): Promise<{ ok: true; generationMs: number } | { ok: false; error: string }> {
-  const column = clipGenerationColumn(input.side);
-  const { data, error } = await input.supabase
-    .from("dca_playbooks")
-    .select(column)
-    .eq("id", input.id)
-    .maybeSingle();
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-  const generation = parseDcaClipGeneration(
-    (data as Record<string, unknown> | null)?.[column],
-  );
-  if (generation == null) {
-    return { ok: false, error: "Could not store the order link." };
-  }
-  return { ok: true, generationMs: generation };
 }

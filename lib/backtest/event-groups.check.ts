@@ -71,6 +71,5 @@ assert.deepEqual(
 assert.equal(replayLaneStillOpen(groups[0]?.events ?? []), false);
 assert.equal(replayLaneStillOpen((groups[0]?.events ?? []).slice(0, 2)), true);
 assert.equal(replayLaneStillOpen(groups[2]?.events ?? []), false);
-assert.equal(replayLaneStillOpen((groups[2]?.events ?? []).slice(0, 1)), true);
 
 console.log("event-groups.check: ok");

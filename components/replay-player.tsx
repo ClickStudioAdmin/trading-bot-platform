@@ -807,7 +807,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       if (focusRef.current != null) {
         host.__focus(focusRef.current);
       }
-      laneSyncRef.current();
       const observer = new ResizeObserver(() => {
         chart.applyOptions({
           width: node.clientWidth,

@@ -1298,9 +1298,6 @@ async function applyTickAction(input: {
       });
       return { acted: false };
     }
-    if (placed.skipped) {
-      return { acted: false };
-    }
     return { acted: true };
   }
   if (input.action.kind === "end_cycle") {
