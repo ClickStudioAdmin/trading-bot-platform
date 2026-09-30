@@ -349,6 +349,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     [visibleEvents, run.orders],
   );
   const eventStripRef = useRef<HTMLDivElement | null>(null);
+  const lanePanRef = useRef<{ x: number; from: number; to: number } | null>(null);
   useEffect(() => {
     const root = eventStripRef.current;
     if (!root) {
@@ -361,24 +362,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       node.scrollLeft = node.scrollWidth;
     }
   }, [visibleEvents.length, sideLanes]);
-  useEffect(() => {
-    const root = eventStripRef.current;
-    const chip = root?.querySelector<HTMLElement>("[data-selected-event]");
-    if (!root || !chip) {
-      return;
-    }
-    const strip = chip.closest("[data-event-strip]");
-    if (!(strip instanceof HTMLElement)) {
-      return;
-    }
-    const frame = strip.getBoundingClientRect();
-    const box = chip.getBoundingClientRect();
-    if (box.left < frame.left) {
-      strip.scrollLeft -= frame.left - box.left;
-    } else if (box.right > frame.right) {
-      strip.scrollLeft += box.right - frame.right;
-    }
-  }, [selectedEvent, eventGroups]);
   const stats = replayPlayStats(visibleOrders, run.startingUsdt);
   const series = useMemo(
     () => replayChartSeries(run.recipe, candles),
@@ -426,13 +409,54 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   function showEvent(event: ReplayEvent) {
     if (selectedEvent === event) {
       setSelectedEvent(null);
-      focusRef.current = null;
       return;
     }
-    revealChart();
     setSelectedEvent(event);
     setCursor((current) => ({ ...current, playing: false }));
-    focusChart(candleIndexAt(candles, event.atMs));
+  }
+
+  function onLanePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.button !== 0) {
+      return;
+    }
+    if (event.target instanceof Element && event.target.closest("button")) {
+      return;
+    }
+    const host = hostRef.current as
+      | (HTMLDivElement & {
+          __pan?: (
+            dx: number,
+            origin: { from: number; to: number } | null,
+          ) => { from: number; to: number } | null;
+        })
+      | null;
+    const origin = host?.__pan?.(0, null);
+    if (!origin) {
+      return;
+    }
+    lanePanRef.current = { x: event.clientX, from: origin.from, to: origin.to };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setCursor((current) => ({ ...current, playing: false }));
+  }
+
+  function onLanePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const pan = lanePanRef.current;
+    if (!pan) {
+      return;
+    }
+    const host = hostRef.current as
+      | (HTMLDivElement & {
+          __pan?: (
+            dx: number,
+            origin: { from: number; to: number } | null,
+          ) => { from: number; to: number } | null;
+        })
+      | null;
+    host?.__pan?.(event.clientX - pan.x, pan);
+  }
+
+  function onLanePointerUp() {
+    lanePanRef.current = null;
   }
 
   function showTrade(cycle: BacktestPositionCycle & { tradeNumber: number }) {
@@ -769,6 +793,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         __paint?: (index: number) => void;
         __focus?: (index: number) => void;
         __laneX?: (index: number) => number | null;
+        __pan?: (
+          dx: number,
+          origin: { from: number; to: number } | null,
+        ) => { from: number; to: number } | null;
       };
       host.__paint = (index, follow = true) => paintRef.current(index, follow);
       host.__focus = (index) => {
@@ -777,6 +805,23 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           from: at - 48,
           to: at + 48,
         });
+      };
+      host.__pan = (dx, origin) => {
+        const scale = chart.timeScale();
+        const width = scale.width();
+        const range = origin ?? scale.getVisibleLogicalRange();
+        if (!range || width === 0) {
+          return null;
+        }
+        if (origin) {
+          const span = origin.to - origin.from;
+          const shift = (dx / width) * span;
+          scale.setVisibleLogicalRange({
+            from: origin.from - shift,
+            to: origin.to - shift,
+          });
+        }
+        return { from: range.from, to: range.to };
       };
       host.__laneX = (index) => {
         const scale = chart.timeScale();
@@ -815,10 +860,15 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           __paint?: (index: number) => void;
           __focus?: (index: number) => void;
           __laneX?: (index: number) => number | null;
+          __pan?: (
+            dx: number,
+            origin: { from: number; to: number } | null,
+          ) => { from: number; to: number } | null;
         };
         delete chartHost.__paint;
         delete chartHost.__focus;
         delete chartHost.__laneX;
+        delete chartHost.__pan;
         chart.remove();
       };
     });
@@ -1311,7 +1361,14 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         </div>
         {eventGroups.length > 0 ? (
           sideLanes ? (
-            <div ref={laneTrackRef} className="relative -mx-4 mt-3 h-[11rem] overflow-hidden">
+            <div
+              ref={laneTrackRef}
+              className="relative -mx-4 mt-3 h-[11rem] cursor-grab touch-none select-none overflow-hidden active:cursor-grabbing"
+              onPointerDown={onLanePointerDown}
+              onPointerMove={onLanePointerMove}
+              onPointerUp={onLanePointerUp}
+              onPointerCancel={onLanePointerUp}
+            >
               <ReplaySideLanes
                 lanes={placedLanes}
                 selected={selectedEvent}
@@ -1637,7 +1694,7 @@ function ReplaySideLanes({
                   key={mark.key}
                   type="button"
                   data-selected-event={selectedMark ? "" : undefined}
-                  className={`absolute z-10 -translate-x-1/2 whitespace-nowrap text-[10px] leading-none text-ink ${
+                  className={`absolute z-10 -translate-x-1/2 cursor-pointer whitespace-nowrap text-[10px] leading-none text-ink ${
                     selectedMark ? "underline" : ""
                   }`}
                   style={{ left: mark.x, top: eventTop }}
