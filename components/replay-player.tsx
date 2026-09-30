@@ -937,6 +937,15 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       };
       const onLaneRange = () => laneSyncRef.current();
       chart.timeScale().subscribeVisibleLogicalRangeChange(onLaneRange);
+      function onChartWheel(event: WheelEvent) {
+        if (event.deltaY === 0) {
+          return;
+        }
+        setCursor((current) =>
+          current.playing ? { ...current, playing: false } : current,
+        );
+      }
+      node.addEventListener("wheel", onChartWheel, { passive: true });
       if (focusSpanRef.current) {
         host.__focusRange?.(focusSpanRef.current.from, focusSpanRef.current.to);
       } else if (focusRef.current != null) {
@@ -951,6 +960,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       observer.observe(node);
       cleanup = () => {
         observer.disconnect();
+        node.removeEventListener("wheel", onChartWheel);
         chart.timeScale().unsubscribeVisibleLogicalRangeChange(onLaneRange);
         const chartHost = node as HTMLDivElement & {
           __paint?: (index: number) => void;
