@@ -1636,13 +1636,12 @@ function ReplaySideLanes({
                   key={mark.key}
                   type="button"
                   data-selected-event={selectedMark ? "" : undefined}
-                  className={`absolute z-10 flex -translate-x-1/2 items-center gap-0.5 whitespace-nowrap text-[10px] leading-none ${replayMarkTone(mark.event, selectedMark)} ${
+                  className={`absolute z-10 -translate-x-1/2 whitespace-nowrap text-[10px] leading-none ${replayMarkTone(mark.event, selectedMark)} ${
                     selectedMark ? "underline" : ""
                   }`}
                   style={{ left: mark.x, top: eventTop }}
                   onClick={() => onSelect(mark.event)}
                 >
-                  <LaneArrow up={mark.event.side !== "short"} />
                   {mark.label}
                 </button>
               );
@@ -1749,14 +1748,6 @@ function replayMarkTone(row: ReplayEvent, selected: boolean): string {
     return "text-warning";
   }
   return row.side === "short" ? "text-danger" : "text-success";
-}
-
-function LaneArrow({ up }: { up: boolean }) {
-  return (
-    <svg viewBox="0 0 8 8" className="size-2 shrink-0" aria-hidden="true">
-      <path d={up ? "M4 0 L8 8 H0 Z" : "M0 0 H8 L4 8 Z"} fill="currentColor" />
-    </svg>
-  );
 }
 
 function eventChip(row: ReplayEvent): string {
