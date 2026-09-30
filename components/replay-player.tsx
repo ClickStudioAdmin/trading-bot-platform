@@ -1521,7 +1521,13 @@ function CycleRows({
             {cycle.tradeNumber}
           </button>
         </td>
-        <td className="px-4 py-3 capitalize text-ink">{cycle.side}</td>
+        <td
+          className={`px-4 py-3 capitalize ${
+            cycle.side === "short" ? "text-danger" : "text-success"
+          }`}
+        >
+          {cycle.side}
+        </td>
         <td className="px-4 py-3 text-ink-muted">
           {cycle.status === "open" ? "Open" : "Closed"}
         </td>
