@@ -1530,16 +1530,32 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               />
             </div>
           ) : null}
-          <button
-            type="button"
-            aria-pressed={sideLanes}
-            className={`rounded-control px-2 py-1 text-xs ${
-              sideLanes ? "bg-accent-strong text-ink" : "text-ink-muted hover:text-ink"
-            }`}
-            onClick={() => setSideLanes((current) => !current)}
+          <div
+            role="group"
+            aria-label="Event layout"
+            className="flex shrink-0 rounded-full border border-line bg-canvas p-0.5"
           >
-            Lanes
-          </button>
+            <button
+              type="button"
+              aria-pressed={!sideLanes}
+              className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs ${
+                sideLanes ? "text-ink-muted hover:text-ink" : "bg-accent-strong text-ink"
+              }`}
+              onClick={() => setSideLanes(false)}
+            >
+              Continuous Events
+            </button>
+            <button
+              type="button"
+              aria-pressed={sideLanes}
+              className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs ${
+                sideLanes ? "bg-accent-strong text-ink" : "text-ink-muted hover:text-ink"
+              }`}
+              onClick={() => setSideLanes(true)}
+            >
+              Event Lanes
+            </button>
+          </div>
         </div>
         {eventGroups.length > 0 ? (
           sideLanes ? (
