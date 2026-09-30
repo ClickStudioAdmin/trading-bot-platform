@@ -70,12 +70,14 @@ function AdminMenuLink({ count }: { count: number }) {
   return (
     <Link
       href="/admin"
-      className={`mt-0.5 flex w-full items-center justify-between gap-2 rounded-control px-2 py-2 text-left text-sm hover:bg-surface-raised hover:text-ink ${
+      className={`relative mt-0.5 flex w-full items-center justify-center rounded-control px-2 py-2 text-sm hover:bg-surface-raised hover:text-ink ${
         active ? "bg-surface-raised text-ink" : "text-ink-muted"
       }`}
     >
       <span>Admin</span>
-      <NavBadge count={count} />
+      <span className="absolute right-2 top-1/2 -translate-y-1/2">
+        <NavBadge count={count} />
+      </span>
     </Link>
   );
 }
