@@ -170,6 +170,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const frameRef = useRef<HTMLDivElement | null>(null);
   const headRef = useRef(0);
   const focusRef = useRef<number | null>(null);
+  const focusSpanRef = useRef<{ from: number; to: number } | null>(null);
   const [playback, setPlayback] = useState({ key: "", started: false });
   const [expanded, setExpanded] = useState(false);
   const [monitorFull, setMonitorFull] = useState(false);
@@ -398,12 +399,24 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     }));
   }
 
-  function focusChart(index: number) {
-    focusRef.current = index;
+  function focusSpan(fromMs: number, toMs: number) {
+    if (candles.length === 0) {
+      return;
+    }
+    const from = candleIndexAt(candles, Math.min(fromMs, toMs));
+    const to = candleIndexAt(candles, Math.max(fromMs, toMs));
+    focusRef.current = null;
+    focusSpanRef.current = { from, to };
     const host = hostRef.current as
-      | (HTMLDivElement & { __focus?: (index: number) => void })
+      | (HTMLDivElement & { __focusRange?: (from: number, to: number) => void })
       | null;
-    host?.__focus?.(index);
+    host?.__focusRange?.(from, to);
+  }
+
+  function showPosition(fromMs: number, toMs: number) {
+    revealChart();
+    setCursor((current) => ({ ...current, playing: false }));
+    focusSpan(fromMs, toMs);
   }
 
   function showEvent(event: ReplayEvent) {
@@ -470,7 +483,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     if (event) {
       setSelectedEvent(event);
     }
-    focusChart(candleIndexAt(candles, event?.atMs ?? cycle.openedAtMs));
+    showPosition(cycle.openedAtMs, cycle.closedAtMs ?? throughMs);
   }
 
   useEffect(() => {
@@ -792,6 +805,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       const host = node as HTMLDivElement & {
         __paint?: (index: number) => void;
         __focus?: (index: number) => void;
+        __focusRange?: (from: number, to: number) => void;
         __laneX?: (index: number) => number | null;
         __pan?: (
           dx: number,
@@ -804,6 +818,16 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         chart.timeScale().setVisibleLogicalRange({
           from: at - 48,
           to: at + 48,
+        });
+      };
+      host.__focusRange = (from, to) => {
+        const start = Math.max(0, Math.min(from, to));
+        const end = Math.max(start, Math.max(from, to));
+        const span = Math.max(1, end - start);
+        const pad = Math.max(4, Math.round(span * 0.08));
+        chart.timeScale().setVisibleLogicalRange({
+          from: start - pad,
+          to: end + pad,
         });
       };
       host.__pan = (dx, origin) => {
@@ -843,7 +867,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       };
       const onLaneRange = () => laneSyncRef.current();
       chart.timeScale().subscribeVisibleLogicalRangeChange(onLaneRange);
-      if (focusRef.current != null) {
+      if (focusSpanRef.current) {
+        host.__focusRange?.(focusSpanRef.current.from, focusSpanRef.current.to);
+      } else if (focusRef.current != null) {
         host.__focus(focusRef.current);
       }
       const observer = new ResizeObserver(() => {
@@ -859,6 +885,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         const chartHost = node as HTMLDivElement & {
           __paint?: (index: number) => void;
           __focus?: (index: number) => void;
+          __focusRange?: (from: number, to: number) => void;
           __laneX?: (index: number) => number | null;
           __pan?: (
             dx: number,
@@ -867,6 +894,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         };
         delete chartHost.__paint;
         delete chartHost.__focus;
+        delete chartHost.__focusRange;
         delete chartHost.__laneX;
         delete chartHost.__pan;
         chart.remove();
@@ -1373,6 +1401,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                 lanes={placedLanes}
                 selected={selectedEvent}
                 onSelect={showEvent}
+                onShowPosition={showPosition}
               />
             </div>
           ) : (
@@ -1383,8 +1412,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             >
               <EventTradeGroups
                 groups={eventGroups}
+                throughMs={throughMs}
                 selected={selectedEvent}
                 onSelect={showEvent}
+                onShowPosition={showPosition}
               />
             </div>
           )
@@ -1598,6 +1629,8 @@ function placeReplayLanes(
       x0: left,
       x1: right,
       labelX: (visibleLeft + visibleRight) / 2,
+      fromMs: start.atMs,
+      toMs: endMs,
       marks,
     });
   }
@@ -1649,10 +1682,12 @@ function ReplaySideLanes({
   lanes,
   selected,
   onSelect,
+  onShowPosition,
 }: {
   lanes: ReplayLaneDraw[];
   selected: ReplayEvent | null;
   onSelect: (event: ReplayEvent) => void;
+  onShowPosition: (fromMs: number, toMs: number) => void;
 }) {
   return (
     <div className="relative h-full w-full" aria-label="Long and short lanes">
@@ -1680,12 +1715,14 @@ function ReplaySideLanes({
               }}
             />
             {lane.label ? (
-              <span
-                className="pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap text-[10px] leading-none text-ink"
+              <button
+                type="button"
+                className="absolute z-10 -translate-x-1/2 cursor-pointer whitespace-nowrap text-[10px] leading-none text-ink hover:underline"
                 style={{ left: lane.labelX, top: labelTop }}
+                onClick={() => onShowPosition(lane.fromMs, lane.toMs)}
               >
                 {lane.label}
-              </span>
+              </button>
             ) : null}
             {lane.marks.map((mark) => {
               const selectedMark = selected === mark.event;
@@ -1726,36 +1763,53 @@ type ReplayLaneDraw = {
   x0: number;
   x1: number;
   labelX: number;
+  fromMs: number;
+  toMs: number;
   marks: ReplayLaneMark[];
 };
 
 function EventTradeGroups({
   groups,
+  throughMs,
   selected,
   onSelect,
+  onShowPosition,
 }: {
   groups: ReturnType<typeof groupReplayEventsByPosition>;
+  throughMs: number;
   selected: ReplayEvent | null;
   onSelect: (event: ReplayEvent) => void;
+  onShowPosition: (fromMs: number, toMs: number) => void;
 }) {
   return (
     <>
-      {groups.map((group) => (
+      {groups.map((group) => {
+        const span = positionGroupSpan(groups, group.id, throughMs);
+        const title = (
+          <button
+            type="button"
+            className="text-[10px] tracking-wide text-ink-faint hover:text-ink hover:underline"
+            onClick={() => {
+              if (span) {
+                onShowPosition(span.fromMs, span.toMs);
+              }
+            }}
+          >
+            {positionGroupLabel(group.label)}
+          </button>
+        );
+        return (
         <div key={group.id} className="flex shrink-0 flex-col">
           {group.side ? (
             <div className="mb-1 flex items-end gap-1 px-0.5">
               <span className="h-2 w-px bg-line-strong" />
               <span className="h-px min-w-4 flex-1 bg-line-strong" />
-              <span className="text-[10px] tracking-wide text-ink-faint">
-                {positionGroupLabel(group.label)}
-              </span>
+              {title}
               <span className="h-px min-w-4 flex-1 bg-line-strong" />
               <span className="h-2 w-px bg-line-strong" />
             </div>
           ) : (
-            <span className="mb-1 text-[10px] tracking-wide text-ink-faint">
-              {positionGroupLabel(group.label)}
-            </span>
+            <span className="mb-1">{title}</span>
           )}
           <div className="flex gap-2">
             {group.events.map((row, index) => (
@@ -1768,9 +1822,38 @@ function EventTradeGroups({
             ))}
           </div>
         </div>
-      ))}
+        );
+      })}
     </>
   );
+}
+
+function positionGroupSpan(
+  groups: ReplayEventGroup[],
+  id: string,
+  throughMs: number,
+): { fromMs: number; toMs: number } | null {
+  let fromMs = Number.POSITIVE_INFINITY;
+  let toMs = 0;
+  let open = false;
+  let found = false;
+  for (const group of groups) {
+    if (group.id !== id) {
+      continue;
+    }
+    found = true;
+    if (replayLaneStillOpen(group.events)) {
+      open = true;
+    }
+    for (const event of group.events) {
+      fromMs = Math.min(fromMs, event.atMs);
+      toMs = Math.max(toMs, event.atMs);
+    }
+  }
+  if (!found) {
+    return null;
+  }
+  return { fromMs, toMs: open ? Math.max(toMs, throughMs) : toMs };
 }
 
 function positionGroupLabel(label: string): string {
