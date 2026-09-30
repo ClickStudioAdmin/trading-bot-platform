@@ -10,10 +10,14 @@ import {
 } from "@/lib/backtest/chart-series";
 import { eventParameterSections } from "@/lib/backtest/event-pane";
 import {
+  chooseReplayLaneSlot,
   coalesceReplayPositions,
   groupReplayEventsByPosition,
+  placeLaneCaption,
+  replayLaneLabelWidth,
   replayLaneStillOpen,
   type ReplayEventGroup,
+  type ReplayLaneLabelBox,
 } from "@/lib/backtest/event-groups";
 import { eventForOrder, eventsFromOrders } from "@/lib/backtest/events";
 import {
@@ -1334,10 +1338,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           sideLanes ? (
             <div className="-mx-4 mt-3 flex h-[11rem]">
               <div className="relative w-14 shrink-0">
-                <span className="pointer-events-none absolute left-2 top-[26px] text-[10px] uppercase leading-none tracking-wide text-success">
+                <span className="pointer-events-none absolute left-2 top-[34px] text-[10px] uppercase leading-none tracking-wide text-success">
                   Long
                 </span>
-                <span className="pointer-events-none absolute left-2 top-[calc(50%+26px)] text-[10px] uppercase leading-none tracking-wide text-danger">
+                <span className="pointer-events-none absolute left-2 top-[calc(50%+34px)] text-[10px] uppercase leading-none tracking-wide text-danger">
                   Short
                 </span>
               </div>
@@ -1554,6 +1558,7 @@ function placeReplayLanes(
         x,
         label: eventChip(row),
         event: row,
+        slot: 0,
       });
     });
     const tradeNumber = /^(\d+)/.exec(group.label)?.[1];
@@ -1575,7 +1580,44 @@ function placeReplayLanes(
       marks,
     });
   }
+  settleReplayLaneText(placed, width);
   return placed;
+}
+
+function settleReplayLaneText(lanes: ReplayLaneDraw[], width: number): void {
+  for (const side of ["long", "short"] as const) {
+    const rows = lanes.filter((lane) => lane.side === side);
+    const slots: ReplayLaneLabelBox[][] = [[], [], [], []];
+    const marks = rows
+      .flatMap((lane) => lane.marks.map((mark) => ({ mark, above: lane.above })))
+      .sort((left, right) => left.mark.x - right.mark.x);
+    for (const item of marks) {
+      item.mark.slot = chooseReplayLaneSlot(
+        item.mark.x,
+        replayLaneLabelWidth(item.mark.label),
+        item.above,
+        slots,
+      );
+    }
+    const captions: ReplayLaneLabelBox[] = [];
+    const ordered = [...rows].sort((left, right) => left.labelX - right.labelX);
+    for (const lane of ordered) {
+      if (!lane.label) {
+        continue;
+      }
+      const minX = Math.max(0, Math.min(lane.x0, lane.x1));
+      const maxX = Math.min(width, Math.max(lane.x0, lane.x1));
+      const placed = placeLaneCaption(
+        lane.labelX,
+        replayLaneLabelWidth(lane.label),
+        minX,
+        maxX,
+        captions,
+      );
+      captions.push({ x: placed.x, width: replayLaneLabelWidth(lane.label) });
+      lane.labelX = placed.x;
+    }
+  }
 }
 
 function ReplaySideLanes({
@@ -1592,18 +1634,19 @@ function ReplaySideLanes({
       {lanes.map((lane) => {
         const y = (px: number) =>
           lane.side === "short" ? `calc(50% + ${px}px)` : px;
-        const barTop = y(28);
-        const eventTop = y(lane.above ? 14 : 42);
-        const labelTop = y(0);
+        const barTop = y(30);
+        const labelTop = y(34);
+        const eventTops = [14, 52, 0, 66];
         const ink = lane.side === "short" ? "text-danger" : "text-success";
         return (
           <div key={lane.id}>
             <div
-              className="absolute h-1.5 rounded-full"
+              className="absolute rounded-full"
               style={{
                 left: lane.x0,
                 width: Math.max(4, lane.x1 - lane.x0),
                 top: barTop,
+                height: 18,
                 backgroundColor:
                   lane.side === "short"
                     ? "color-mix(in srgb, var(--color-danger) 30%, var(--color-surface))"
@@ -1612,7 +1655,7 @@ function ReplaySideLanes({
             />
             {lane.label ? (
               <span
-                className="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap text-[10px] leading-none tracking-wide text-ink-muted"
+                className="pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap text-[10px] leading-none text-ink"
                 style={{ left: lane.labelX, top: labelTop }}
               >
                 {lane.label}
@@ -1623,10 +1666,10 @@ function ReplaySideLanes({
                 key={mark.key}
                 type="button"
                 data-selected-event={selected === mark.event ? "" : undefined}
-                className={`absolute -translate-x-1/2 whitespace-nowrap text-[10px] leading-none ${ink} ${
+                className={`absolute z-10 -translate-x-1/2 whitespace-nowrap text-[10px] leading-none ${ink} ${
                   selected === mark.event ? "underline" : ""
                 }`}
-                style={{ left: mark.x, top: eventTop }}
+                style={{ left: mark.x, top: y(eventTops[mark.slot] ?? 14) }}
                 onClick={() => onSelect(mark.event)}
               >
                 {mark.label}
@@ -1644,6 +1687,7 @@ type ReplayLaneMark = {
   x: number;
   label: string;
   event: ReplayEvent;
+  slot: number;
 };
 
 type ReplayLaneDraw = {

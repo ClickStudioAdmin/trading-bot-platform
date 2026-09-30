@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import {
+  chooseReplayLaneSlot,
   coalesceReplayPositions,
   groupReplayEventsByPosition,
+  placeLaneCaption,
   replayLaneStillOpen,
 } from "./event-groups";
 import type { ReplayEvent, SimulatedOrder } from "./model";
@@ -106,5 +108,18 @@ const stillOpen = coalesceReplayPositions(
   groupReplayEventsByPosition(interleavedEvents.slice(0, 4), interleavedOrders),
 );
 assert.equal(replayLaneStillOpen(stillOpen[0]?.events ?? []), true);
+
+const slots: { x: number; width: number }[][] = [[], [], [], []];
+assert.equal(chooseReplayLaneSlot(100, 70, true, slots), 0);
+assert.equal(chooseReplayLaneSlot(130, 70, true, slots), 1);
+assert.equal(chooseReplayLaneSlot(150, 70, true, slots), 2);
+
+const captions: { x: number; width: number }[] = [];
+const firstCaption = placeLaneCaption(40, 78, 0, 80, captions);
+assert.equal(firstCaption.clear, true);
+captions.push({ x: firstCaption.x, width: 78 });
+const secondCaption = placeLaneCaption(100, 78, 90, 140, captions);
+assert.equal(secondCaption.clear, true);
+assert.ok(secondCaption.x >= 90);
 
 console.log("event-groups.check: ok");

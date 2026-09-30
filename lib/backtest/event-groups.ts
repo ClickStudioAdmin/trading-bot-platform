@@ -81,3 +81,75 @@ export function replayLaneStillOpen(events: ReplayEvent[]): boolean {
   }
   return true;
 }
+
+export type ReplayLaneLabelBox = {
+  x: number;
+  width: number;
+};
+
+export function replayLaneLabelWidth(text: string): number {
+  return Math.ceil(text.length * 6.2 + 8);
+}
+
+export function replayLaneLabelsOverlap(
+  left: ReplayLaneLabelBox,
+  right: ReplayLaneLabelBox,
+  gap = 6,
+): boolean {
+  const leftStart = left.x - left.width / 2;
+  const leftEnd = left.x + left.width / 2;
+  const rightStart = right.x - right.width / 2;
+  const rightEnd = right.x + right.width / 2;
+  return leftStart < rightEnd + gap && leftEnd > rightStart - gap;
+}
+
+/** 0 above the bar, 1 below, 2 further above, 3 further below. */
+export function chooseReplayLaneSlot(
+  x: number,
+  width: number,
+  preferAbove: boolean,
+  slots: ReplayLaneLabelBox[][],
+): number {
+  const order = preferAbove ? [0, 1, 2, 3] : [1, 0, 3, 2];
+  const box = { x, width };
+  for (const slot of order) {
+    const row = slots[slot];
+    if (!row) {
+      continue;
+    }
+    if (!row.some((placed) => replayLaneLabelsOverlap(box, placed))) {
+      row.push(box);
+      return slot;
+    }
+  }
+  const fallback = order[order.length - 1] ?? 0;
+  slots[fallback]?.push(box);
+  return fallback;
+}
+
+export function placeLaneCaption(
+  preferred: number,
+  width: number,
+  minX: number,
+  maxX: number,
+  placed: ReplayLaneLabelBox[],
+): { x: number; clear: boolean } {
+  const lo = Math.min(minX, maxX);
+  const hi = Math.max(minX, maxX);
+  const clamp = (value: number) => Math.min(hi, Math.max(lo, value));
+  const start = clamp(preferred);
+  const fits = (x: number) =>
+    !placed.some((row) => replayLaneLabelsOverlap({ x, width }, row));
+  if (fits(start)) {
+    return { x: start, clear: true };
+  }
+  const span = hi - lo + width;
+  for (let step = 8; step <= span; step += 8) {
+    for (const candidate of [clamp(start + step), clamp(start - step)]) {
+      if (fits(candidate)) {
+        return { x: candidate, clear: true };
+      }
+    }
+  }
+  return { x: start, clear: false };
+}
