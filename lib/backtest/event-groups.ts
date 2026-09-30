@@ -55,6 +55,23 @@ export function groupReplayEventsByPosition(
   return groups;
 }
 
+/** One lane per position. Chip groups stay in time order, so the same position can be split when the other side trades in between. */
+export function coalesceReplayPositions(groups: ReplayEventGroup[]): ReplayEventGroup[] {
+  const merged: ReplayEventGroup[] = [];
+  const byId = new Map<string, ReplayEventGroup>();
+  for (const group of groups) {
+    const existing = byId.get(group.id);
+    if (existing) {
+      existing.events.push(...group.events);
+      continue;
+    }
+    const copy = { ...group, events: [...group.events] };
+    byId.set(group.id, copy);
+    merged.push(copy);
+  }
+  return merged;
+}
+
 export function replayLaneStillOpen(events: ReplayEvent[]): boolean {
   for (let index = events.length - 1; index >= 0; index -= 1) {
     const row = events[index];

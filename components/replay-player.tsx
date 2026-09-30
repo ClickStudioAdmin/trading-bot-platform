@@ -10,6 +10,7 @@ import {
 } from "@/lib/backtest/chart-series";
 import { eventParameterSections } from "@/lib/backtest/event-pane";
 import {
+  coalesceReplayPositions,
   groupReplayEventsByPosition,
   replayLaneStillOpen,
   type ReplayEventGroup,
@@ -1510,7 +1511,7 @@ function placeReplayLanes(
 ): ReplayLaneDraw[] {
   const placed: ReplayLaneDraw[] = [];
   const sideIndex = { long: 0, short: 0 };
-  for (const group of groups) {
+  for (const group of coalesceReplayPositions(groups)) {
     const side = group.side ?? group.events[0]?.side ?? null;
     if (side == null || group.events.length === 0) {
       continue;
@@ -1530,8 +1531,6 @@ function placeReplayLanes(
     }
     const left = Math.min(xStart ?? xEnd ?? 0, xEnd ?? xStart ?? 0);
     const right = Math.max(xStart ?? xEnd ?? 0, xEnd ?? xStart ?? 0);
-    const visibleLeft = Math.max(0, Math.min(width, left));
-    const visibleRight = Math.max(0, Math.min(width, right));
     const marks: ReplayLaneMark[] = [];
     group.events.forEach((row, index) => {
       const x = xOf(candleIndexAt(candles, row.atMs));
@@ -1546,14 +1545,20 @@ function placeReplayLanes(
       });
     });
     const tradeNumber = /^(\d+)/.exec(group.label)?.[1];
+    const endX = xEnd ?? xStart;
+    const showLabel = open && endX != null && endX >= 0 && endX <= width;
     placed.push({
       id: group.id,
       side,
-      label: tradeNumber == null ? group.label : `Position #${tradeNumber}`,
+      label: showLabel
+        ? tradeNumber == null
+          ? group.label
+          : `Position #${tradeNumber}`
+        : "",
       above,
       x0: left,
       x1: right,
-      labelX: (visibleLeft + visibleRight) / 2,
+      labelX: endX ?? 0,
       marks,
     });
   }
@@ -1591,12 +1596,14 @@ function ReplaySideLanes({
               className={`absolute h-1.5 rounded-full ${bar}`}
               style={{ left: lane.x0, width: Math.max(4, lane.x1 - lane.x0), top: barTop }}
             />
-            <span
-              className="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap text-[10px] leading-none tracking-wide text-ink-muted"
-              style={{ left: lane.labelX, top: labelTop }}
-            >
-              {lane.label}
-            </span>
+            {lane.label ? (
+              <span
+                className="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap text-[10px] leading-none tracking-wide text-ink-muted"
+                style={{ left: lane.labelX, top: labelTop }}
+              >
+                {lane.label}
+              </span>
+            ) : null}
             {lane.marks.map((mark) => (
               <button
                 key={mark.key}
