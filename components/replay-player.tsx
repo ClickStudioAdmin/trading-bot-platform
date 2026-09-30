@@ -1232,8 +1232,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             ref={hostRef}
             className={
               fillViewport || positionsRight
-                ? "absolute inset-0"
-                : "h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
+                ? `absolute inset-y-0 right-0 ${sideLanes ? "left-14" : "left-0"}`
+                : sideLanes
+                  ? "ml-14 h-[min(62vh,640px)] min-h-[420px] w-[calc(100%-3.5rem)] min-w-0"
+                  : "h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
             }
           />
           {loading ? (
@@ -1330,12 +1332,22 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         </button>
         {eventGroups.length > 0 ? (
           sideLanes ? (
-            <div ref={laneTrackRef} className="relative -mx-4 mt-3 h-[11rem] overflow-hidden">
-              <ReplaySideLanes
-                lanes={placedLanes}
-                selected={selectedEvent}
-                onSelect={showEvent}
-              />
+            <div className="-mx-4 mt-3 flex h-[11rem]">
+              <div className="relative w-14 shrink-0">
+                <span className="pointer-events-none absolute left-2 top-[26px] text-[10px] uppercase leading-none tracking-wide text-success">
+                  Long
+                </span>
+                <span className="pointer-events-none absolute left-2 top-[calc(50%+26px)] text-[10px] uppercase leading-none tracking-wide text-danger">
+                  Short
+                </span>
+              </div>
+              <div ref={laneTrackRef} className="relative min-w-0 flex-1 overflow-hidden">
+                <ReplaySideLanes
+                  lanes={placedLanes}
+                  selected={selectedEvent}
+                  onSelect={showEvent}
+                />
+              </div>
             </div>
           ) : (
             <div
@@ -1577,12 +1589,6 @@ function ReplaySideLanes({
 }) {
   return (
     <div className="relative h-full w-full" aria-label="Long and short lanes">
-      <span className="pointer-events-none absolute left-2 top-[26px] z-10 bg-surface px-1 text-[10px] uppercase leading-none tracking-wide text-success">
-        Long
-      </span>
-      <span className="pointer-events-none absolute left-2 top-[calc(50%+26px)] z-10 bg-surface px-1 text-[10px] uppercase leading-none tracking-wide text-danger">
-        Short
-      </span>
       {lanes.map((lane) => {
         const y = (px: number) =>
           lane.side === "short" ? `calc(50% + ${px}px)` : px;
