@@ -10,7 +10,6 @@ import {
 } from "@/lib/backtest/chart-series";
 import { eventParameterSections } from "@/lib/backtest/event-pane";
 import {
-  chooseReplayLaneSlot,
   coalesceReplayPositions,
   groupReplayEventsByPosition,
   placeLaneCaption,
@@ -700,17 +699,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                       : "#34D399",
               shape: row.side === "short" ? "arrowDown" as const : "arrowUp" as const,
               size: selectedSame ? 2 : 1,
-              text: row.reason === "entry"
-                ? "Entry"
-                : row.reason === "clip"
-                  ? "Add"
-                  : row.reason === "take_profit"
-                    ? "TP"
-                    : row.reason === "stop"
-                      ? "SL"
-                      : row.reason === "liquidation"
-                        ? "Liq"
-                        : "Exit",
+              text: replayMarkLabel(row),
             };
           });
         if (selected && selected.atMs <= at) {
@@ -1556,9 +1545,8 @@ function placeReplayLanes(
       marks.push({
         key: `${row.atMs}-${row.reason}-${index}`,
         x,
-        label: eventChip(row),
+        label: replayMarkLabel(row),
         event: row,
-        slot: 0,
       });
     });
     const tradeNumber = /^(\d+)/.exec(group.label)?.[1];
@@ -1587,18 +1575,6 @@ function placeReplayLanes(
 function settleReplayLaneText(lanes: ReplayLaneDraw[], width: number): void {
   for (const side of ["long", "short"] as const) {
     const rows = lanes.filter((lane) => lane.side === side);
-    const slots: ReplayLaneLabelBox[][] = [[], [], [], []];
-    const marks = rows
-      .flatMap((lane) => lane.marks.map((mark) => ({ mark, above: lane.above })))
-      .sort((left, right) => left.mark.x - right.mark.x);
-    for (const item of marks) {
-      item.mark.slot = chooseReplayLaneSlot(
-        item.mark.x,
-        replayLaneLabelWidth(item.mark.label),
-        item.above,
-        slots,
-      );
-    }
     const captions: ReplayLaneLabelBox[] = [];
     const ordered = [...rows].sort((left, right) => left.labelX - right.labelX);
     for (const lane of ordered) {
@@ -1636,8 +1612,7 @@ function ReplaySideLanes({
           lane.side === "short" ? `calc(50% + ${px}px)` : px;
         const barTop = y(30);
         const labelTop = y(34);
-        const eventTops = [14, 52, 0, 66];
-        const ink = lane.side === "short" ? "text-danger" : "text-success";
+        const eventTop = y(lane.above ? 12 : 52);
         return (
           <div key={lane.id}>
             <div
@@ -1661,20 +1636,24 @@ function ReplaySideLanes({
                 {lane.label}
               </span>
             ) : null}
-            {lane.marks.map((mark) => (
-              <button
-                key={mark.key}
-                type="button"
-                data-selected-event={selected === mark.event ? "" : undefined}
-                className={`absolute z-10 -translate-x-1/2 whitespace-nowrap text-[10px] leading-none ${ink} ${
-                  selected === mark.event ? "underline" : ""
-                }`}
-                style={{ left: mark.x, top: y(eventTops[mark.slot] ?? 14) }}
-                onClick={() => onSelect(mark.event)}
-              >
-                {mark.label}
-              </button>
-            ))}
+            {lane.marks.map((mark) => {
+              const selectedMark = selected === mark.event;
+              return (
+                <button
+                  key={mark.key}
+                  type="button"
+                  data-selected-event={selectedMark ? "" : undefined}
+                  className={`absolute z-10 flex -translate-x-1/2 items-center gap-0.5 whitespace-nowrap text-[10px] leading-none ${replayMarkTone(mark.event, selectedMark)} ${
+                    selectedMark ? "underline" : ""
+                  }`}
+                  style={{ left: mark.x, top: eventTop }}
+                  onClick={() => onSelect(mark.event)}
+                >
+                  <LaneArrow up={mark.event.side !== "short"} />
+                  {mark.label}
+                </button>
+              );
+            })}
           </div>
         );
       })}
@@ -1687,7 +1666,6 @@ type ReplayLaneMark = {
   x: number;
   label: string;
   event: ReplayEvent;
-  slot: number;
 };
 
 type ReplayLaneDraw = {
@@ -1742,6 +1720,49 @@ function EventTradeGroups({
         </div>
       ))}
     </>
+  );
+}
+
+function replayMarkLabel(row: ReplayEvent): string {
+  if (row.kind === "skipped") {
+    return "Skipped";
+  }
+  if (row.reason === "entry") {
+    return "Entry";
+  }
+  if (row.reason === "clip") {
+    return "Add";
+  }
+  if (row.reason === "take_profit") {
+    return "TP";
+  }
+  if (row.reason === "stop") {
+    return "SL";
+  }
+  if (row.reason === "liquidation") {
+    return "Liq";
+  }
+  return "Exit";
+}
+
+function replayMarkTone(row: ReplayEvent, selected: boolean): string {
+  if (selected) {
+    return "text-ink";
+  }
+  if (row.reason === "take_profit") {
+    return "text-accent";
+  }
+  if (row.reason === "stop" || row.reason === "trailing") {
+    return "text-warning";
+  }
+  return row.side === "short" ? "text-danger" : "text-success";
+}
+
+function LaneArrow({ up }: { up: boolean }) {
+  return (
+    <svg viewBox="0 0 8 8" className="size-2 shrink-0" aria-hidden="true">
+      <path d={up ? "M4 0 L8 8 H0 Z" : "M0 0 H8 L4 8 Z"} fill="currentColor" />
+    </svg>
   );
 }
 
