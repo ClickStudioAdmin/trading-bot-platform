@@ -1545,6 +1545,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               <ReplaySideLanes
                 lanes={placedLanes}
                 selected={selectedEvent}
+                positionFocus={positionFocus}
                 onSelect={showEvent}
                 onShowPosition={showPosition}
               />
@@ -1559,6 +1560,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                 groups={eventGroups}
                 throughMs={throughMs}
                 selected={selectedEvent}
+                positionFocus={positionFocus}
                 onSelect={showEvent}
                 onShowPosition={showPosition}
               />
@@ -1787,6 +1789,9 @@ function placeReplayLanes(
     placed.push({
       id: group.id,
       tradeNumber: tradeNumber == null ? null : Number(tradeNumber),
+      orderIndexes: group.events.flatMap((row) =>
+        row.orderIndex == null ? [] : [row.orderIndex],
+      ),
       side,
       label: onScreen
         ? tradeNumber == null
@@ -1849,11 +1854,13 @@ function settleReplayLaneText(lanes: ReplayLaneDraw[], width: number): void {
 function ReplaySideLanes({
   lanes,
   selected,
+  positionFocus,
   onSelect,
   onShowPosition,
 }: {
   lanes: ReplayLaneDraw[];
   selected: ReplayEvent | null;
+  positionFocus: ChartPositionFocus | null;
   onSelect: (event: ReplayEvent) => void;
   onShowPosition: (hit: PositionHit) => void;
 }) {
@@ -1867,8 +1874,11 @@ function ReplaySideLanes({
         const barTop = y(30);
         const labelTop = y(34);
         const eventTop = y(lane.above ? 12 : 52);
+        const dimmed =
+          positionFocus != null &&
+          !positionMatchesFocus(positionFocus, lane.orderIndexes);
         return (
-          <div key={lane.id}>
+          <div key={lane.id} className={dimmed ? "opacity-40 hover:opacity-70" : undefined}>
             <div
               className="absolute rounded-full"
               style={{
@@ -1933,6 +1943,7 @@ type ReplayLaneMark = {
 type ReplayLaneDraw = {
   id: string;
   tradeNumber: number | null;
+  orderIndexes: number[];
   side: "long" | "short";
   label: string;
   above: boolean;
@@ -1944,16 +1955,25 @@ type ReplayLaneDraw = {
   marks: ReplayLaneMark[];
 };
 
+function positionMatchesFocus(
+  focus: ChartPositionFocus,
+  orderIndexes: readonly number[],
+): boolean {
+  return orderIndexes.some((index) => focus.orders.has(index));
+}
+
 function EventTradeGroups({
   groups,
   throughMs,
   selected,
+  positionFocus,
   onSelect,
   onShowPosition,
 }: {
   groups: ReturnType<typeof groupReplayEventsByPosition>;
   throughMs: number;
   selected: ReplayEvent | null;
+  positionFocus: ChartPositionFocus | null;
   onSelect: (event: ReplayEvent) => void;
   onShowPosition: (hit: PositionHit) => void;
 }) {
@@ -1961,16 +1981,25 @@ function EventTradeGroups({
     <>
       {groups.map((group) => {
         const span = positionGroupSpan(groups, group.id, throughMs);
+        const tradeNumber = /^(\d+)/.exec(group.label)?.[1];
+        const number = tradeNumber == null ? null : Number(tradeNumber);
+        const dimmed =
+          positionFocus != null &&
+          !positionMatchesFocus(
+            positionFocus,
+            group.events.flatMap((event) =>
+              event.orderIndex == null ? [] : [event.orderIndex],
+            ),
+          );
         const title = (
           <button
             type="button"
             className="text-[10px] tracking-wide text-ink-faint hover:text-ink hover:underline"
             onClick={() => {
               if (span) {
-                const tradeNumber = /^(\d+)/.exec(group.label)?.[1];
                 onShowPosition({
                   id: group.id,
-                  number: tradeNumber == null ? null : Number(tradeNumber),
+                  number,
                   fromMs: span.fromMs,
                   toMs: span.toMs,
                 });
@@ -1981,7 +2010,10 @@ function EventTradeGroups({
           </button>
         );
         return (
-        <div key={group.id} className="flex shrink-0 flex-col">
+        <div
+          key={group.id}
+          className={`flex shrink-0 flex-col ${dimmed ? "opacity-40 hover:opacity-70" : ""}`}
+        >
           {group.side ? (
             <div className="mb-1 flex items-end gap-1 px-0.5">
               <span className="h-2 w-px bg-line-strong" />
