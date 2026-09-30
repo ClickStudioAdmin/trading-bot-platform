@@ -379,7 +379,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       strip.scrollLeft += box.right - frame.right;
     }
   }, [selectedEvent, eventGroups]);
-  const currentEvent = visibleEvents[visibleEvents.length - 1] ?? null;
   const stats = replayPlayStats(visibleOrders, run.startingUsdt);
   const series = useMemo(
     () => replayChartSeries(run.recipe, candles),
@@ -1310,18 +1309,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             Lanes
           </button>
         </div>
-        <button
-          type="button"
-          className="mt-1 text-left text-sm text-ink"
-          disabled={!currentEvent}
-          onClick={() => {
-            if (currentEvent) {
-              setSelectedEvent(currentEvent);
-            }
-          }}
-        >
-          {currentEvent?.text ?? "Press play. Events appear here as the run reaches them."}
-        </button>
         {eventGroups.length > 0 ? (
           sideLanes ? (
             <div ref={laneTrackRef} className="relative -mx-4 mt-3 h-[11rem] overflow-hidden">
