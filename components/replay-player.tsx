@@ -1478,7 +1478,7 @@ function EventChipButton({
       }`}
       onClick={onSelect}
     >
-      {eventChip(row)}
+      {replayMarkLabel(row)}
     </button>
   );
 }
@@ -1689,15 +1689,15 @@ function EventTradeGroups({
             <div className="mb-1 flex items-end gap-1 px-0.5">
               <span className="h-2 w-px bg-line-strong" />
               <span className="h-px min-w-4 flex-1 bg-line-strong" />
-              <span className="text-[10px] uppercase tracking-wide text-ink-faint">
-                {group.label}
+              <span className="text-[10px] tracking-wide text-ink-faint">
+                {positionGroupLabel(group.label)}
               </span>
               <span className="h-px min-w-4 flex-1 bg-line-strong" />
               <span className="h-2 w-px bg-line-strong" />
             </div>
           ) : (
-            <span className="mb-1 text-[10px] uppercase tracking-wide text-ink-faint">
-              {group.label}
+            <span className="mb-1 text-[10px] tracking-wide text-ink-faint">
+              {positionGroupLabel(group.label)}
             </span>
           )}
           <div className="flex gap-2">
@@ -1714,6 +1714,11 @@ function EventTradeGroups({
       ))}
     </>
   );
+}
+
+function positionGroupLabel(label: string): string {
+  const tradeNumber = /^(\d+)/.exec(label)?.[1];
+  return tradeNumber == null ? label : `Position #${tradeNumber}`;
 }
 
 function replayMarkLabel(row: ReplayEvent): string {
@@ -1749,28 +1754,6 @@ function replayMarkTone(row: ReplayEvent, selected: boolean): string {
     return "text-warning";
   }
   return row.side === "short" ? "text-danger" : "text-success";
-}
-
-function eventChip(row: ReplayEvent): string {
-  if (row.kind === "skipped") {
-    return "Skipped";
-  }
-  if (row.reason === "entry") {
-    return `Entry ${row.side}`;
-  }
-  if (row.reason === "clip") {
-    return `Add ${row.clipIndex ?? ""}`.trim();
-  }
-  if (row.reason === "take_profit") {
-    return "Take profit";
-  }
-  if (row.reason === "stop") {
-    return "Stop";
-  }
-  if (row.reason === "liquidation") {
-    return "Liquidation";
-  }
-  return "Exit";
 }
 
 function TransportButton({
