@@ -1612,6 +1612,7 @@ function ReplaySideLanes({
 }) {
   return (
     <div className="relative h-full w-full" aria-label="Long and short lanes">
+      <div className="pointer-events-none absolute inset-x-0 top-1/2 h-px bg-line" />
       {lanes.map((lane) => {
         const y = (px: number) =>
           lane.side === "short" ? `calc(50% + ${px}px)` : px;
