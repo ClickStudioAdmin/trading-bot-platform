@@ -6,6 +6,7 @@ import {
   replayPerpsPriceCross,
 } from "./replay";
 
+async function main(): Promise<void> {
 const base: PerpsTemplateRecipe = {
   kind: "perps",
   name: "Long cross",
@@ -61,7 +62,7 @@ const bars = [
   { timeMs: 4_000, open: 109, high: 109, low: 95, close: 96 },
 ];
 
-const opened = replayPerpsPriceCross({
+const opened = await replayPerpsPriceCross({
   bars,
   recipe: base,
   feeRate: 0.001,
@@ -79,7 +80,7 @@ const flatten: PerpsTemplateRecipe = {
   formAction: "close_long",
   skipIfOpen: false,
 };
-const closed = replayPerpsPriceCross({
+const closed = await replayPerpsPriceCross({
   bars: [
     { timeMs: 1_000, open: 90, high: 92, low: 89, close: 91 },
     { timeMs: 2_000, open: 101, high: 101, low: 101, close: 101 },
@@ -91,7 +92,7 @@ const closed = replayPerpsPriceCross({
 assert.equal(closed.orders.length, 0);
 assert.equal(closed.stats.trades, 0);
 
-const both = replayPerpsPriceCross({
+const both = await replayPerpsPriceCross({
   bars: [
     { timeMs: 1_000, open: 99, high: 99, low: 99, close: 99 },
     { timeMs: 2_000, open: 100, high: 100, low: 100, close: 100 },
@@ -110,7 +111,7 @@ const both = replayPerpsPriceCross({
 assert.equal(both.orders.length, 1);
 assert.equal(both.stats.openQty, 1);
 
-const withTp = replayPerpsPriceCross({
+const withTp = await replayPerpsPriceCross({
   bars: [
     { timeMs: 1_000, open: 99, high: 99, low: 99, close: 99 },
     { timeMs: 2_000, open: 101, high: 101, low: 101, close: 101 },
@@ -143,7 +144,7 @@ assert.equal(withTp.orders[1]?.price, 110);
 assert.equal(withTp.stats.trades, 1);
 assert.equal(withTp.stats.openQty, 0);
 
-const withPctTp = replayPerpsPriceCross({
+const withPctTp = await replayPerpsPriceCross({
   bars: [
     { timeMs: 1_000, open: 99, high: 99, low: 99, close: 99 },
     { timeMs: 2_000, open: 101, high: 101, low: 101, close: 101 },
@@ -172,7 +173,7 @@ const withPctTp = replayPerpsPriceCross({
 assert.equal(withPctTp.orders[1]?.reason, "take_profit");
 assert.equal(withPctTp.orders[1]?.price, 103.02);
 
-const withSl = replayPerpsPriceCross({
+const withSl = await replayPerpsPriceCross({
   bars: [
     { timeMs: 1_000, open: 99, high: 99, low: 99, close: 99 },
     { timeMs: 2_000, open: 101, high: 101, low: 101, close: 101 },
@@ -200,7 +201,7 @@ const withSl = replayPerpsPriceCross({
 assert.equal(withSl.orders[1]?.action, "flatten");
 assert.equal(withSl.orders[1]?.price, 95);
 
-const broke = replayPerpsPriceCross({
+const broke = await replayPerpsPriceCross({
   bars: [
     { timeMs: 1_000, open: 99, high: 99, low: 99, close: 99 },
     { timeMs: 2_000, open: 101, high: 101, low: 101, close: 101 },
@@ -213,7 +214,7 @@ assert.equal(broke.orders.length, 0);
 assert.equal(broke.stats.startingUsdt, 50);
 assert.equal(broke.stats.endingUsdt, 50);
 
-const geared = replayPerpsPriceCross({
+const geared = await replayPerpsPriceCross({
   bars: [
     { timeMs: 1_000, open: 99, high: 99, low: 99, close: 99 },
     { timeMs: 2_000, open: 101, high: 101, low: 101, close: 101 },
@@ -225,7 +226,7 @@ const geared = replayPerpsPriceCross({
 });
 assert.ok(geared.orders.length > 0);
 
-const wiped = replayPerpsPriceCross({
+const wiped = await replayPerpsPriceCross({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
     { timeMs: 2_000, open: 100, high: 100, low: 89, close: 92 },
@@ -246,7 +247,7 @@ assert.equal(
   false,
 );
 
-const confirmBlocked = replayPerpsPriceCross({
+const confirmBlocked = await replayPerpsPriceCross({
   bars,
   recipe: {
     ...base,
@@ -265,3 +266,9 @@ const confirmBlocked = replayPerpsPriceCross({
 assert.equal(confirmBlocked.orders.length, 0);
 
 console.log("backtest replay checks passed");
+}
+
+main().catch((cause: unknown) => {
+  console.error(cause);
+  process.exit(1);
+});

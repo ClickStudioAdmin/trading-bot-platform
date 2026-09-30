@@ -24,7 +24,7 @@ import {
   BACKTEST_FEE_PRESETS,
   DEFAULT_LEVERAGE,
   DEFAULT_STARTING_USDT,
-  backtestShouldRunInline,
+  backtestPageCanRun,
   backtestTapeInterval,
   comparableBacktestName,
   defaultBacktestDates,
@@ -312,8 +312,12 @@ export async function queueTemplateBacktestAction(
       recipe: comparableRecipe,
     });
   }
-  const bars = estimateBacktestBars(range.fromMs, range.toMs, interval);
-  const inline = backtestShouldRunInline(bars, 1 + comparables.length);
+  const inline = backtestPageCanRun({
+    fromMs: range.fromMs,
+    toMs: range.toMs,
+    interval,
+    comparableSymbols: comparables,
+  });
   if (inline) {
     const result = await executeBacktestRun(run.id);
     const children = await listBacktestRuns({ parentRunId: run.id, limit: 20 });
@@ -348,7 +352,7 @@ export async function nudgeBacktestRunAction(
   ) {
     return { ok: true, runId: run.id };
   }
-  if (run.status === "running") {
+  if (run.status === "running" || !backtestPageCanRun(run)) {
     return { ok: true, runId: run.id };
   }
   const claimed = await claimBacktestRunById(run.id);
@@ -358,7 +362,7 @@ export async function nudgeBacktestRunAction(
   const result = await executeBacktestRun(claimed.id);
   const children = await listBacktestRuns({ parentRunId: claimed.id, limit: 20 });
   for (const child of children) {
-    if (child.status === "queued") {
+    if (child.status === "queued" && backtestPageCanRun(child)) {
       await executeBacktestRun(child.id);
     }
   }

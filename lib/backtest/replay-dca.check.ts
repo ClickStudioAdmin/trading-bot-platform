@@ -3,6 +3,7 @@ import { parseDcaPlaybookForm } from "@/lib/dca/playbook";
 import { snapshotDcaRecipe } from "@/lib/templates/recipe";
 import { canBacktestDcaRecipe, replayDcaPlaybook } from "./replay-dca";
 
+async function main(): Promise<void> {
 const form = new FormData();
 form.set("name", "Immediate long");
 form.set("symbol", "BTCUSDT");
@@ -33,7 +34,7 @@ assert.equal(
   false,
 );
 
-const opened = replayDcaPlaybook({
+const opened = await replayDcaPlaybook({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
     { timeMs: 2_000, open: 100, high: 101, low: 99, close: 100 },
@@ -51,7 +52,7 @@ assert.equal(opened.stats.openSide, "long");
 assert.equal(opened.stats.openQty, 1);
 assert.equal(opened.stats.trades, 0);
 
-const closed = replayDcaPlaybook({
+const closed = await replayDcaPlaybook({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
     { timeMs: 2_000, open: 111, high: 111, low: 111, close: 111 },
@@ -69,7 +70,7 @@ assert.equal(closed.stats.trades, 1);
 assert.equal(closed.stats.openQty, 0);
 assert.ok((closed.stats.realizedUsdt ?? 0) > 0);
 
-const sameBarExit = replayDcaPlaybook({
+const sameBarExit = await replayDcaPlaybook({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
     { timeMs: 2_000, open: 111, high: 111, low: 111, close: 111 },
@@ -111,7 +112,7 @@ function parseRecipe(direction: "long" | "short" | "both", extra?: FormData) {
   return snapshotDcaRecipe(parsedRow.config);
 }
 
-const bothImmediate = replayDcaPlaybook({
+const bothImmediate = await replayDcaPlaybook({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
     { timeMs: 2_000, open: 100, high: 100, low: 100, close: 100 },
@@ -144,7 +145,7 @@ priceBoth.set("armPrice", "100");
 priceBoth.set("shortArmTriggerBy", "last");
 priceBoth.set("shortArmCompare", "lte");
 priceBoth.set("shortArmPrice", "90");
-const bothPrice = replayDcaPlaybook({
+const bothPrice = await replayDcaPlaybook({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
     { timeMs: 2_000, open: 101, high: 101, low: 101, close: 101 },
@@ -169,7 +170,7 @@ bothOverlapForm.set("armPrice", "100");
 bothOverlapForm.set("shortArmTriggerBy", "last");
 bothOverlapForm.set("shortArmCompare", "lte");
 bothOverlapForm.set("shortArmPrice", "101");
-const bothOverlap = replayDcaPlaybook({
+const bothOverlap = await replayDcaPlaybook({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
     { timeMs: 2_000, open: 100, high: 100, low: 100, close: 100 },
@@ -200,7 +201,7 @@ bothFlipForm.set("armPrice", "100");
 bothFlipForm.set("shortArmTriggerBy", "last");
 bothFlipForm.set("shortArmCompare", "lte");
 bothFlipForm.set("shortArmPrice", "90");
-const bothFlip = replayDcaPlaybook({
+const bothFlip = await replayDcaPlaybook({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
     { timeMs: 2_000, open: 111, high: 111, low: 111, close: 111 },
@@ -238,7 +239,7 @@ rsiBothForm.set("shortIndicatorTimeframe", "15");
 rsiBothForm.set("shortIndicatorCompare", "cross_gte");
 rsiBothForm.set("shortIndicatorLevel", "70");
 const rsiDumpCloses = [...Array(19).fill(100), 1];
-const rsiBoth = replayDcaPlaybook({
+const rsiBoth = await replayDcaPlaybook({
   bars: rsiDumpCloses.map((close, index) => ({
     timeMs: (index + 1) * 60_000,
     open: close,
@@ -274,7 +275,7 @@ assert.equal(percentParsed.ok, true);
 if (!percentParsed.ok) {
   throw new Error("expected percent DCA parse");
 }
-const compounded = replayDcaPlaybook({
+const compounded = await replayDcaPlaybook({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
     { timeMs: 2_000, open: 110, high: 110, low: 110, close: 110 },
@@ -306,7 +307,7 @@ assert.equal(marginParsed.ok, true);
 if (!marginParsed.ok) {
   throw new Error("expected margin DCA parse");
 }
-const marginReplay = replayDcaPlaybook({
+const marginReplay = await replayDcaPlaybook({
   bars: [{ timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 }],
   recipe: snapshotDcaRecipe(marginParsed.config),
   feeRate: 0,
@@ -330,7 +331,7 @@ assert.equal(liqParsed.ok, true);
 if (!liqParsed.ok) {
   throw new Error("expected liq DCA parse");
 }
-const liqReplay = replayDcaPlaybook({
+const liqReplay = await replayDcaPlaybook({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
     { timeMs: 2_000, open: 100, high: 100, low: 89, close: 92 },
@@ -351,7 +352,7 @@ assert.equal(
   false,
 );
 
-const slSaves = replayDcaPlaybook({
+const slSaves = await replayDcaPlaybook({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
     { timeMs: 2_000, open: 100, high: 100, low: 89, close: 92 },
@@ -382,7 +383,7 @@ assert.equal(stopParsed.ok, true);
 if (!stopParsed.ok) {
   throw new Error("expected stop DCA parse");
 }
-const stopped = replayDcaPlaybook({
+const stopped = await replayDcaPlaybook({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
     { timeMs: 2_000, open: 100, high: 111, low: 94, close: 111 },
@@ -414,7 +415,7 @@ if (!gridParsed.ok) {
 }
 assert.equal(gridParsed.config.dcaMode, "order");
 const gridRecipe = snapshotDcaRecipe(gridParsed.config);
-const sameBarLow = replayDcaPlaybook({
+const sameBarLow = await replayDcaPlaybook({
   bars: [{ timeMs: 1_000, open: 100, high: 100, low: 90, close: 100 }],
   recipe: gridRecipe,
   feeRate: 0,
@@ -422,7 +423,7 @@ const sameBarLow = replayDcaPlaybook({
 });
 assert.equal(sameBarLow.orders.length, 1);
 assert.equal(sameBarLow.orders[0]?.reason, "entry");
-const gridFilled = replayDcaPlaybook({
+const gridFilled = await replayDcaPlaybook({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
     { timeMs: 2_000, open: 100, high: 100, low: 89, close: 100 },
@@ -452,7 +453,7 @@ if (!limitTpParsed.ok) {
   throw new Error("expected limit TP parse");
 }
 const limitTpRecipe = snapshotDcaRecipe(limitTpParsed.config);
-const entryBarWick = replayDcaPlaybook({
+const entryBarWick = await replayDcaPlaybook({
   bars: [{ timeMs: 1_000, open: 100, high: 111, low: 100, close: 100 }],
   recipe: limitTpRecipe,
   feeRate: 0,
@@ -460,7 +461,7 @@ const entryBarWick = replayDcaPlaybook({
 });
 assert.equal(entryBarWick.orders.length, 1);
 assert.equal(entryBarWick.stats.openSide, "long");
-const limitTpHit = replayDcaPlaybook({
+const limitTpHit = await replayDcaPlaybook({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
     { timeMs: 2_000, open: 100, high: 111, low: 100, close: 105 },
@@ -492,7 +493,7 @@ assert.equal(gridTpParsed.ok, true);
 if (!gridTpParsed.ok) {
   throw new Error("expected grid TP parse");
 }
-const gridTp = replayDcaPlaybook({
+const gridTp = await replayDcaPlaybook({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
     { timeMs: 2_000, open: 100, high: 101.5, low: 98.9, close: 100 },
@@ -529,7 +530,7 @@ const atrWarmup = Array.from({ length: 48 }, (_, index) => ({
   low: 99,
   close: 100,
 }));
-const atrClosed = replayDcaPlaybook({
+const atrClosed = await replayDcaPlaybook({
   bars: [
     ...atrWarmup,
     { timeMs: 49_000, open: 104, high: 104, low: 104, close: 104 },
@@ -550,7 +551,7 @@ const atrLongTape = Array.from({ length: 2500 }, (_, index) => ({
   close: 100,
 }));
 const atrLongStarted = Date.now();
-const atrLong = replayDcaPlaybook({
+const atrLong = await replayDcaPlaybook({
   bars: atrLongTape,
   recipe: snapshotDcaRecipe(atrTpReplayParsed.config),
   feeRate: 0,
@@ -586,7 +587,7 @@ const risingReplay = Array.from({ length: 20 }, (_, index) => {
     close: price,
   };
 });
-const confirmBlocked = replayDcaPlaybook({
+const confirmBlocked = await replayDcaPlaybook({
   bars: risingReplay,
   recipe: snapshotDcaRecipe(confirmBlockParsed.config),
   feeRate: 0,
@@ -611,7 +612,7 @@ assert.equal(exitIfParsed.ok, true);
 if (!exitIfParsed.ok) {
   throw new Error("expected Exit-if parse");
 }
-const exitIfReplay = replayDcaPlaybook({
+const exitIfReplay = await replayDcaPlaybook({
   bars: risingReplay,
   recipe: snapshotDcaRecipe(exitIfParsed.config),
   feeRate: 0,
@@ -644,7 +645,7 @@ assert.equal(bothConfirmParsed.ok, true);
 if (!bothConfirmParsed.ok) {
   throw new Error("expected Dual confirm parse");
 }
-const bothConfirmReplay = replayDcaPlaybook({
+const bothConfirmReplay = await replayDcaPlaybook({
   bars: risingReplay,
   recipe: snapshotDcaRecipe(bothConfirmParsed.config),
   feeRate: 0,
@@ -657,3 +658,9 @@ assert.equal(
 assert.equal(bothConfirmReplay.orders[0]?.side, "long");
 
 console.log("dca backtest replay checks passed");
+}
+
+main().catch((cause: unknown) => {
+  console.error(cause);
+  process.exit(1);
+});
