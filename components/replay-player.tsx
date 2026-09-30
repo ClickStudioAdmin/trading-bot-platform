@@ -1329,7 +1329,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         </button>
         {eventGroups.length > 0 ? (
           sideLanes ? (
-            <div ref={laneTrackRef} className="relative -mx-4 mt-3 h-[6.5rem] overflow-hidden">
+            <div ref={laneTrackRef} className="relative -mx-4 mt-3 h-[7.5rem] overflow-hidden">
               <ReplaySideLanes
                 lanes={placedLanes}
                 selected={selectedEvent}
@@ -1573,9 +1573,9 @@ function ReplaySideLanes({
         Short
       </span>
       {lanes.map((lane) => {
-        const barTop = lane.side === "long" ? 18 : "calc(50% + 18px)";
-        const labelTop = lane.side === "long" ? 4 : "calc(50% + 4px)";
-        const eventTop = lane.side === "long" ? 28 : "calc(50% + 28px)";
+        const barTop = lane.side === "long" ? 8 : "calc(50% + 8px)";
+        const eventTop = lane.side === "long" ? 18 : "calc(50% + 18px)";
+        const labelTop = lane.side === "long" ? 32 : "calc(50% + 32px)";
         const bar = lane.side === "short" ? "bg-danger/30" : "bg-success/30";
         const ink = lane.side === "short" ? "text-danger" : "text-success";
         return (
