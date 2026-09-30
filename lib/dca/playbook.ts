@@ -96,6 +96,8 @@ export type DcaLegState = {
   firstFillPrice: number | null;
   breakevenDone: boolean;
   cycleMaxValue: number | null;
+  /** Epoch ms stamped on the first clip's order link for this cycle. Null until claimed. */
+  clipGenerationMs: number | null;
 };
 
 export type DcaPlaybookConfig = {
@@ -176,6 +178,7 @@ export const IDLE_DCA_LEG: DcaLegState = {
   firstFillPrice: null,
   breakevenDone: false,
   cycleMaxValue: null,
+  clipGenerationMs: null,
 };
 
 export type DcaTickAction =
@@ -1951,6 +1954,7 @@ function parseLeg(
     firstFillPrice: asPositiveOrNull(row[`${prefix}_first_fill_price`]),
     breakevenDone: Boolean(row[`${prefix}_breakeven_done`]),
     cycleMaxValue: asPositiveOrNull(row[`${prefix}_cycle_max_value`]),
+    clipGenerationMs: parseDcaClipGeneration(row[`${prefix}_clip_generation`]),
   };
 }
 
@@ -2971,6 +2975,86 @@ export function dcaClipRestKey(
 ): string {
   const generation = Math.max(0, Math.floor(generationMs));
   return `${dcaClipKey(playbookId, side, clipIndex)}x${generation}`;
+}
+
+export function parseDcaClipGeneration(raw: unknown): number | null {
+  if (raw == null || raw === "") {
+    return null;
+  }
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) {
+    return null;
+  }
+  return Math.floor(value);
+}
+
+export type DcaClipSendDecision =
+  | { send: true; clipIndex: number }
+  | { send: false; clipsFilled: number };
+
+/**
+ * Last check before a market clip. Uses the clip count and position read
+ * at send time. A first clip into an open position, or a clip past the
+ * stored cap, does not send. The returned count is what to store so the
+ * next tick sees the cap.
+ */
+export function dcaClipSendGuard(input: {
+  storedClipsFilled: number;
+  maxClips: number | null;
+  openQty: number;
+  clipIndex: number;
+}): DcaClipSendDecision {
+  const stored = Math.max(
+    0,
+    Math.floor(Number.isFinite(input.storedClipsFilled) ? input.storedClipsFilled : 0),
+  );
+  const index = Math.max(
+    0,
+    Math.floor(Number.isFinite(input.clipIndex) ? input.clipIndex : 0),
+  );
+  const open = Number(input.openQty) > 0;
+  const max =
+    input.maxClips != null &&
+    Number.isFinite(input.maxClips) &&
+    input.maxClips > 0
+      ? Math.floor(input.maxClips)
+      : null;
+  if (stored > index) {
+    return { send: false, clipsFilled: stored };
+  }
+  if (open && index === 0) {
+    const filled = Math.max(stored, 1);
+    return {
+      send: false,
+      clipsFilled: max != null ? Math.min(max, filled) : filled,
+    };
+  }
+  if (max != null && (stored >= max || index >= max)) {
+    return { send: false, clipsFilled: Math.max(stored, max) };
+  }
+  return { send: true, clipIndex: index };
+}
+
+/** Reuse the cycle's first-clip generation. A new one only when renewing a dead link. */
+export function dcaFirstClipGenerationMs(input: {
+  storedGenerationMs: number | null;
+  nowMs: number;
+  renew: boolean;
+}): number {
+  const now = Math.max(0, Math.floor(Number.isFinite(input.nowMs) ? input.nowMs : 0));
+  const stored = parseDcaClipGeneration(input.storedGenerationMs);
+  if (!input.renew && stored != null) {
+    return stored;
+  }
+  return now;
+}
+
+/** A dead first-clip link is replaced only while that side is still flat. */
+export function dcaRenewFirstClipLink(input: {
+  orderLinkDead: boolean;
+  openQty: number;
+}): boolean {
+  return input.orderLinkDead && !(Number(input.openQty) > 0);
 }
 
 export function dcaClipCycleKey(
