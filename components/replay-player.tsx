@@ -16,6 +16,7 @@ import {
   placeLaneCaption,
   replayLaneLabelWidth,
   replayLaneStillOpen,
+  replayMarkerInPositionFocus,
   type ReplayEventGroup,
   type ReplayLaneLabelBox,
 } from "@/lib/backtest/event-groups";
@@ -32,6 +33,7 @@ import {
   backtestRerunHref,
   type BacktestRun,
   type ReplayEvent,
+  type SimulatedOrder,
 } from "@/lib/backtest/model";
 import { listBacktestCycles } from "@/lib/backtest/positions";
 import {
@@ -161,6 +163,15 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const [selectedEvent, setSelectedEvent] = useState<ReplayEvent | null>(null);
   const selectedRef = useRef<ReplayEvent | null>(null);
   selectedRef.current = selectedEvent;
+  const [positionFocus, setPositionFocus] = useState<ChartPositionFocus | null>(
+    null,
+  );
+  const positionFocusRef = useRef<ChartPositionFocus | null>(null);
+  positionFocusRef.current = positionFocus;
+  const cycleById = useMemo(() => {
+    const cycles = listBacktestCycles(run.orders);
+    return new Map(cycles.map((cycle) => [cycle.id, cycle]));
+  }, [run.orders]);
   const ordersRef = useRef(run.orders);
   ordersRef.current = run.orders;
   const [tip, setTip] = useState<{ x: number; y: number; text: string } | null>(
@@ -413,10 +424,38 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     host?.__focusRange?.(from, to);
   }
 
-  function showPosition(fromMs: number, toMs: number) {
+  function viewPosition(
+    fromMs: number,
+    toMs: number,
+    focus: { number: number; orders: readonly SimulatedOrder[] } | null,
+  ) {
     revealChart();
     setCursor((current) => ({ ...current, playing: false }));
     focusSpan(fromMs, toMs);
+    if (!focus) {
+      return;
+    }
+    const orders = new Set<number>();
+    for (const order of focus.orders) {
+      const index = run.orders.indexOf(order);
+      if (index >= 0) {
+        orders.add(index);
+      }
+    }
+    if (orders.size > 0) {
+      setPositionFocus({ number: focus.number, orders });
+    }
+  }
+
+  function showPosition(hit: PositionHit) {
+    const cycle = cycleById.get(hit.id);
+    viewPosition(
+      hit.fromMs,
+      hit.toMs,
+      hit.number != null && cycle
+        ? { number: hit.number, orders: cycle.orders }
+        : null,
+    );
   }
 
   function showEvent(event: ReplayEvent) {
@@ -478,12 +517,13 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       return;
     }
     const event = eventForOrder(events, order, run.orders.indexOf(order));
-    revealChart();
-    setCursor((current) => ({ ...current, playing: false }));
     if (event) {
       setSelectedEvent(event);
     }
-    showPosition(cycle.openedAtMs, cycle.closedAtMs ?? throughMs);
+    viewPosition(cycle.openedAtMs, cycle.closedAtMs ?? throughMs, {
+      number: cycle.tradeNumber,
+      orders: cycle.orders,
+    });
   }
 
   useEffect(() => {
@@ -705,8 +745,14 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           });
         }
         const selected = selectedRef.current;
+        const focusOrders = positionFocusRef.current?.orders ?? null;
         const plotted = events
-          .filter((row) => row.kind === "fill" && row.atMs <= at)
+          .filter(
+            (row) =>
+              row.kind === "fill" &&
+              row.atMs <= at &&
+              replayMarkerInPositionFocus(row.orderIndex, focusOrders),
+          )
           .map((row) => {
             let barMs = row.atMs;
             for (const candle of candles) {
@@ -739,7 +785,11 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               text: replayMarkLabel(row),
             };
           });
-        if (selected && selected.atMs <= at) {
+        if (
+          selected &&
+          selected.atMs <= at &&
+          replayMarkerInPositionFocus(selected.orderIndex, focusOrders)
+        ) {
           let barMs = selected.atMs;
           for (const candle of candles) {
             if (candle.timeMs <= selected.atMs) {
@@ -769,7 +819,14 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           .filter((item) => {
             const index = candleIndexAt(candles, item.atMs);
             const bar = candles[index]?.timeMs;
-            return bar != null && Math.floor(bar / 1000) === time;
+            return (
+              bar != null &&
+              Math.floor(bar / 1000) === time &&
+              replayMarkerInPositionFocus(
+                item.orderIndex,
+                positionFocusRef.current?.orders ?? null,
+              )
+            );
           })
           .map((item) => item.text);
         if (texts.length === 0) {
@@ -790,7 +847,14 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         const match = events.find((item) => {
           const index = candleIndexAt(candles, item.atMs);
           const bar = candles[index]?.timeMs;
-          return bar != null && Math.floor(bar / 1000) === time;
+          return (
+            bar != null &&
+            Math.floor(bar / 1000) === time &&
+            replayMarkerInPositionFocus(
+              item.orderIndex,
+              positionFocusRef.current?.orders ?? null,
+            )
+          );
         });
         if (match) {
           if (selectedRef.current === match) {
@@ -977,7 +1041,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         })
       | null;
     node?.__paint?.(headRef.current, false);
-  }, [selectedEvent]);
+  }, [selectedEvent, positionFocus]);
 
   useEffect(() => {
     if (!sideLanes) {
@@ -1387,6 +1451,22 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               </span>
             </button>
           ) : null}
+          {positionFocus ? (
+            <div
+              className="absolute left-3 top-3 z-20 flex items-center gap-2 rounded-control border border-line bg-surface px-2.5 py-1 text-xs text-ink"
+              role="status"
+            >
+              <span>Viewing Position #{positionFocus.number}</span>
+              <button
+                type="button"
+                className="inline-flex size-5 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
+                aria-label="Show all positions"
+                onClick={() => setPositionFocus(null)}
+              >
+                <IconClose size={14} />
+              </button>
+            </div>
+          ) : null}
           {tip && started ? (
             <div
               className="pointer-events-none absolute z-10 max-w-sm rounded-control border border-line bg-surface-raised px-3 py-2 text-xs text-ink shadow-none"
@@ -1673,6 +1753,7 @@ function placeReplayLanes(
     const onScreen = right >= 0 && left <= width && visibleRight >= visibleLeft;
     placed.push({
       id: group.id,
+      tradeNumber: tradeNumber == null ? null : Number(tradeNumber),
       side,
       label: onScreen
         ? tradeNumber == null
@@ -1741,7 +1822,7 @@ function ReplaySideLanes({
   lanes: ReplayLaneDraw[];
   selected: ReplayEvent | null;
   onSelect: (event: ReplayEvent) => void;
-  onShowPosition: (fromMs: number, toMs: number) => void;
+  onShowPosition: (hit: PositionHit) => void;
 }) {
   return (
     <div className="relative h-full w-full" aria-label="Long and short lanes">
@@ -1773,7 +1854,14 @@ function ReplaySideLanes({
                 type="button"
                 className="absolute z-10 -translate-x-1/2 cursor-pointer whitespace-nowrap text-[10px] leading-none text-ink hover:underline"
                 style={{ left: lane.labelX, top: labelTop }}
-                onClick={() => onShowPosition(lane.fromMs, lane.toMs)}
+                onClick={() =>
+                  onShowPosition({
+                    id: lane.id,
+                    number: lane.tradeNumber,
+                    fromMs: lane.fromMs,
+                    toMs: lane.toMs,
+                  })
+                }
               >
                 {lane.label}
               </button>
@@ -1811,6 +1899,7 @@ type ReplayLaneMark = {
 
 type ReplayLaneDraw = {
   id: string;
+  tradeNumber: number | null;
   side: "long" | "short";
   label: string;
   above: boolean;
@@ -1833,7 +1922,7 @@ function EventTradeGroups({
   throughMs: number;
   selected: ReplayEvent | null;
   onSelect: (event: ReplayEvent) => void;
-  onShowPosition: (fromMs: number, toMs: number) => void;
+  onShowPosition: (hit: PositionHit) => void;
 }) {
   return (
     <>
@@ -1845,7 +1934,13 @@ function EventTradeGroups({
             className="text-[10px] tracking-wide text-ink-faint hover:text-ink hover:underline"
             onClick={() => {
               if (span) {
-                onShowPosition(span.fromMs, span.toMs);
+                const tradeNumber = /^(\d+)/.exec(group.label)?.[1];
+                onShowPosition({
+                  id: group.id,
+                  number: tradeNumber == null ? null : Number(tradeNumber),
+                  fromMs: span.fromMs,
+                  toMs: span.toMs,
+                });
               }
             }}
           >
@@ -1909,6 +2004,18 @@ function positionGroupSpan(
   }
   return { fromMs, toMs: open ? Math.max(toMs, throughMs) : toMs };
 }
+
+type ChartPositionFocus = {
+  number: number;
+  orders: Set<number>;
+};
+
+type PositionHit = {
+  id: string;
+  number: number | null;
+  fromMs: number;
+  toMs: number;
+};
 
 function positionGroupLabel(label: string): string {
   const tradeNumber = /^(\d+)/.exec(label)?.[1];

@@ -72,6 +72,17 @@ export function coalesceReplayPositions(groups: ReplayEventGroup[]): ReplayEvent
   return merged;
 }
 
+/** Chart marks for other positions hide while one position is in focus. A null focus shows every mark. */
+export function replayMarkerInPositionFocus(
+  orderIndex: number | null,
+  focus: ReadonlySet<number> | null,
+): boolean {
+  if (focus == null) {
+    return true;
+  }
+  return orderIndex != null && focus.has(orderIndex);
+}
+
 export function replayLaneStillOpen(events: ReplayEvent[]): boolean {
   for (let index = events.length - 1; index >= 0; index -= 1) {
     const row = events[index];

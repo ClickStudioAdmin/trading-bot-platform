@@ -5,6 +5,7 @@ import {
   groupReplayEventsByPosition,
   placeLaneCaption,
   replayLaneStillOpen,
+  replayMarkerInPositionFocus,
 } from "./event-groups";
 import type { ReplayEvent, SimulatedOrder } from "./model";
 
@@ -120,5 +121,11 @@ captions.push({ x: firstCaption.x, width: 78 });
 const secondCaption = placeLaneCaption(100, 78, 90, 140, captions);
 assert.equal(secondCaption.clear, true);
 assert.ok(secondCaption.x >= 90);
+
+const positionFocus = new Set([0, 1, 2]);
+assert.equal(replayMarkerInPositionFocus(1, positionFocus), true);
+assert.equal(replayMarkerInPositionFocus(3, positionFocus), false);
+assert.equal(replayMarkerInPositionFocus(null, positionFocus), false);
+assert.equal(replayMarkerInPositionFocus(4, null), true);
 
 console.log("event-groups.check: ok");
