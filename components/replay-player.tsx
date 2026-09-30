@@ -1297,7 +1297,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
 
       <section className="rounded-card border border-line bg-surface px-4 py-3">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs uppercase tracking-wide text-ink-faint">Event</p>
+          <p className="text-xs uppercase tracking-wide text-ink-faint">Events</p>
           <button
             type="button"
             aria-pressed={sideLanes}
