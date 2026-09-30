@@ -513,13 +513,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   }
 
   function showTrade(cycle: BacktestPositionCycle & { tradeNumber: number }) {
-    const order = cycle.orders[0];
-    if (!order) {
+    if (cycle.orders.length === 0) {
       return;
-    }
-    const event = eventForOrder(events, order, run.orders.indexOf(order));
-    if (event) {
-      setSelectedEvent(event);
     }
     viewPosition(cycle.openedAtMs, cycle.closedAtMs ?? throughMs, {
       number: cycle.tradeNumber,
