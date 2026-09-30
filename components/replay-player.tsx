@@ -1225,10 +1225,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             ref={hostRef}
             className={
               fillViewport || positionsRight
-                ? `absolute inset-y-0 right-0 ${sideLanes ? "left-14" : "left-0"}`
-                : sideLanes
-                  ? "ml-14 h-[min(62vh,640px)] min-h-[420px] w-[calc(100%-3.5rem)] min-w-0"
-                  : "h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
+                ? "absolute inset-0"
+                : "h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
             }
           />
           {loading ? (
@@ -1325,22 +1323,12 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         </button>
         {eventGroups.length > 0 ? (
           sideLanes ? (
-            <div className="-mx-4 mt-3 flex h-[11rem]">
-              <div className="relative w-14 shrink-0">
-                <span className="pointer-events-none absolute left-2 top-[34px] text-[10px] uppercase leading-none tracking-wide text-success">
-                  Long
-                </span>
-                <span className="pointer-events-none absolute left-2 top-[calc(50%+34px)] text-[10px] uppercase leading-none tracking-wide text-danger">
-                  Short
-                </span>
-              </div>
-              <div ref={laneTrackRef} className="relative min-w-0 flex-1 overflow-hidden">
-                <ReplaySideLanes
-                  lanes={placedLanes}
-                  selected={selectedEvent}
-                  onSelect={showEvent}
-                />
-              </div>
+            <div ref={laneTrackRef} className="relative -mx-4 mt-3 h-[11rem] overflow-hidden">
+              <ReplaySideLanes
+                lanes={placedLanes}
+                selected={selectedEvent}
+                onSelect={showEvent}
+              />
             </div>
           ) : (
             <div
