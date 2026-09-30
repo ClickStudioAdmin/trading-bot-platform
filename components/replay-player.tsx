@@ -1694,7 +1694,7 @@ function ReplaySideLanes({
                   key={mark.key}
                   type="button"
                   data-selected-event={selectedMark ? "" : undefined}
-                  className={`absolute z-10 -translate-x-1/2 cursor-pointer whitespace-nowrap text-[10px] leading-none text-ink ${
+                  className={`absolute z-10 -translate-x-1/2 cursor-pointer whitespace-nowrap text-[10px] leading-none text-ink-muted ${
                     selectedMark ? "underline" : ""
                   }`}
                   style={{ left: mark.x, top: eventTop }}
