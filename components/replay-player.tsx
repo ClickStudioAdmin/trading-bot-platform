@@ -460,6 +460,12 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   }
 
   function showEvent(event: ReplayEvent) {
+    if (
+      positionFocus &&
+      (event.orderIndex == null || !positionFocus.orders.has(event.orderIndex))
+    ) {
+      setPositionFocus(null);
+    }
     if (selectedEvent === event) {
       setSelectedEvent(null);
       return;
