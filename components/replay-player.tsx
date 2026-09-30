@@ -51,6 +51,7 @@ import {
   IconExpand,
   IconLoader,
   IconMonitor,
+  IconPause,
   IconPlay,
 } from "@/components/icons";
 import { SortTh, TableCard, TablePager, useClientTable } from "@/components/table-chrome";
@@ -1358,7 +1359,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             />
             <button
               type="button"
-              className="rounded-control bg-accent-strong px-3 py-1 text-sm text-ink"
+              className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-3 py-1 text-sm text-ink"
               onClick={() => {
                 if (!started) {
                   beginPlayback();
@@ -1367,6 +1368,11 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                 setCursor((current) => ({ ...current, playing: !current.playing }));
               }}
             >
+              {playing ? (
+                <IconPause size={14} className="size-3.5 fill-current" />
+              ) : (
+                <IconPlay size={14} className="size-3.5 fill-current" />
+              )}
               {playing ? "Pause" : "Play"}
             </button>
             <TransportButton
