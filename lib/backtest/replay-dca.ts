@@ -46,6 +46,9 @@ import {
   backtestTapeInterval,
   yieldBacktestReplay,
 } from "./model";
+import { fillSentence, skippedEntrySentence } from "./events";
+import type { ReplayEvent } from "./model";
+import { filterBecause, indicatorBecause, priceStartBecause } from "./explain";
 
 export function canBacktestDcaRecipe(
   recipe: DcaTemplateRecipe,
@@ -113,14 +116,14 @@ export async function replayDcaPlaybook(input: {
   feeRate: number;
   startingUsdt: number;
   leverage?: number;
-}): Promise<{ orders: SimulatedOrder[]; stats: BacktestStats }> {
+}): Promise<{ orders: SimulatedOrder[]; stats: BacktestStats; events: ReplayEvent[] }> {
   const allowed = canBacktestDcaRecipe(input.recipe);
   if (!allowed.ok) {
-    return { orders: [], stats: emptyBacktestStats(input.startingUsdt) };
+    return { orders: [], stats: emptyBacktestStats(input.startingUsdt), events: [] };
   }
   const built = dcaRecipeToConfig(input.recipe, { venue: "bybit" });
   if (!built.ok) {
-    return { orders: [], stats: emptyBacktestStats(input.startingUsdt) };
+    return { orders: [], stats: emptyBacktestStats(input.startingUsdt), events: [] };
   }
   const config = {
     ...built.config,
@@ -133,6 +136,7 @@ export async function replayDcaPlaybook(input: {
     short: emptyLeg(),
   };
   const orders: SimulatedOrder[] = [];
+  const events: ReplayEvent[] = [];
   let realized = 0;
   let wins = 0;
   let trades = 0;
@@ -162,12 +166,36 @@ export async function replayDcaPlaybook(input: {
       )
     : null;
 
+  function remember(
+    order: SimulatedOrder,
+    because?: string,
+  ) {
+    const orderIndex = orders.length;
+    orders.push(order);
+    events.push({
+      atMs: order.atMs,
+      kind: "fill",
+      reason: order.reason ?? "close",
+      orderIndex,
+      side: order.side,
+      clipIndex: order.clipIndex,
+      text: fillSentence({
+        reason: order.reason ?? "close",
+        side: order.side,
+        price: order.price,
+        clipIndex: order.clipIndex,
+        because,
+      }),
+    });
+  }
+
   function flatten(
     side: FuturesSide,
     atMs: number,
     fill: number,
     rearm: boolean,
     reason: BacktestFillReason,
+    because?: string,
   ) {
     const leg = legs[side];
     if (!(leg.qty > 0)) {
@@ -184,16 +212,19 @@ export async function replayDcaPlaybook(input: {
     } else {
       grossLoss += Math.abs(pnl);
     }
-    orders.push({
-      atMs,
-      action: "flatten",
-      side,
-      qty: leg.qty,
-      price: fill,
-      feeUsdt: fee,
-      realizedUsdt: pnl,
-      reason,
-    });
+    remember(
+      {
+        atMs,
+        action: "flatten",
+        side,
+        qty: leg.qty,
+        price: fill,
+        feeUsdt: fee,
+        realizedUsdt: pnl,
+        reason,
+      },
+      because,
+    );
     legs[side] = rearm ? emptyLeg() : { ...emptyLeg(), status: "idle" };
   }
 
@@ -237,7 +268,12 @@ export async function replayDcaPlaybook(input: {
     ]);
   }
 
-  function addClip(side: FuturesSide, atMs: number, price: number) {
+  function addClip(
+    side: FuturesSide,
+    atMs: number,
+    price: number,
+    because?: string,
+  ) {
     const leg = legs[side];
     const firstClip = leg.clipsFilled === 0;
     const leverage = normalizeBacktestLeverage(input.leverage);
@@ -274,22 +310,36 @@ export async function replayDcaPlaybook(input: {
     );
     const available = input.startingUsdt + realized - locked;
     if (backtestMarginUsdt(qty * price, leverage) + fee > available) {
+      if (firstClip) {
+        events.push({
+          atMs,
+          kind: "skipped",
+          reason: "entry",
+          orderIndex: null,
+          side,
+          clipIndex: 1,
+          text: skippedEntrySentence(side, because),
+        });
+      }
       return;
     }
     realized -= fee;
     const action = side === "short" ? "sell" : "buy";
     const clipIndex = leg.clipsFilled + 1;
-    orders.push({
-      atMs,
-      action,
-      side,
-      qty,
-      price,
-      feeUsdt: fee,
-      realizedUsdt: -fee,
-      reason: firstClip ? "entry" : "clip",
-      clipIndex,
-    });
+    remember(
+      {
+        atMs,
+        action,
+        side,
+        qty,
+        price,
+        feeUsdt: fee,
+        realizedUsdt: -fee,
+        reason: firstClip ? "entry" : "clip",
+        clipIndex,
+      },
+      firstClip ? because : undefined,
+    );
     const nextQty = leg.qty + qty;
     const entry =
       nextQty > 0 ? (leg.entry * leg.qty + price * qty) / nextQty : price;
@@ -616,21 +666,28 @@ export async function replayDcaPlaybook(input: {
         continue;
       }
       if (decision.action.kind === "arm" || decision.action.kind === "clip") {
-        addClip(side, bar.timeMs, price);
+        const because =
+          live.clipsFilled === 0 ? dcaEntryBecause(side) : undefined;
+        addClip(side, bar.timeMs, price, because);
         if (starting) {
           startedThisBar = true;
         }
       } else if (decision.action.kind === "close") {
+        const closeReason =
+          decision.action.reason === "stop_loss"
+            ? "stop"
+            : decision.action.reason === "exit_if"
+              ? "exit_if"
+              : "take_profit";
         flatten(
           side,
           bar.timeMs,
           price,
           true,
-          decision.action.reason === "stop_loss"
-            ? "stop"
-            : decision.action.reason === "exit_if"
-              ? "exit_if"
-              : "take_profit",
+          closeReason,
+          closeReason === "exit_if"
+            ? filterBecause(exitIf, side, "Exit if")
+            : undefined,
         );
         closedThisBar = true;
       } else if (decision.action.kind === "disarm") {
@@ -687,8 +744,49 @@ export async function replayDcaPlaybook(input: {
     }
   }
 
+  function dcaEntryBecause(side: FuturesSide): string {
+    if (config.startKind === "immediate") {
+      return "Immediate start.";
+    }
+    if (config.startKind === "price") {
+      const last = closes[closes.length - 1] ?? 0;
+      return priceStartBecause(dcaArmTriggerForSide(config, side), last);
+    }
+    const indicatorStart = dcaIndicatorStartForSide(config, side);
+    if (!indicatorStart) {
+      return "";
+    }
+    const tapeInterval = backtestTapeInterval(input.recipe, 1, 2);
+    const sampledCloses = resampleClosesForTimeframe(
+      closes.slice(-80),
+      tapeInterval,
+      indicatorStart.timeframe,
+    );
+    const sampledBars = resampleBarsForTimeframe(
+      ohlc.slice(-80),
+      tapeInterval,
+      indicatorStart.timeframe,
+    );
+    const confirm = dcaFilterForSide(config, side, "confirm");
+    return [indicatorBecause({
+      kind: indicatorStart.kind,
+      compare: indicatorStart.compare,
+      level: indicatorStart.level,
+      period: indicatorStart.period,
+      slowPeriod: indicatorStart.slowPeriod,
+      multiplier: indicatorStart.multiplier ?? null,
+      timeframe: indicatorStart.timeframe,
+      side,
+      closes: sampledCloses,
+      bars: sampledBars,
+    }), filterBecause(confirm, side, "Confirm")]
+      .filter(Boolean)
+      .join(" ");
+  }
+
   return {
     orders,
+    events,
     stats: finishBacktestStats({
       trades,
       wins,
