@@ -781,6 +781,28 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               text: replayMarkLabel(row),
             };
           });
+        if (
+          selected &&
+          selected.atMs <= at &&
+          replayMarkerInPositionFocus(selected.orderIndex, focusOrders)
+        ) {
+          let barMs = selected.atMs;
+          for (const candle of candles) {
+            if (candle.timeMs <= selected.atMs) {
+              barMs = candle.timeMs;
+            } else {
+              break;
+            }
+          }
+          plotted.push({
+            time: Math.floor(barMs / 1000) as never,
+            position: selected.side === "short" ? "belowBar" : "aboveBar",
+            color: "#F4F4F5",
+            shape: selected.side === "short" ? "arrowUp" : "arrowDown",
+            size: 2,
+            text: "",
+          });
+        }
         markers.setMarkers(plotted);
       }
       chart.subscribeCrosshairMove((param) => {
