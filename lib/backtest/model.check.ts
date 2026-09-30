@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import {
   backtestLinkHighlight,
+  backtestDrainMaxBars,
+  backtestPageCanRun,
   backtestShouldRunInline,
   estimateBacktestBars,
   formatBacktestReturnPct,
@@ -281,6 +283,41 @@ assert.equal(backtestShouldRunInline(800, 2), true);
 assert.equal(backtestShouldRunInline(2000, 1), true);
 assert.equal(backtestShouldRunInline(4000, 1), false);
 assert.equal(backtestShouldRunInline(800, 5), false);
+assert.equal(
+  backtestPageCanRun({
+    fromMs: Date.UTC(2026, 0, 1),
+    toMs: Date.UTC(2026, 0, 2),
+    interval: "60",
+  }),
+  true,
+);
+assert.equal(
+  backtestPageCanRun({
+    fromMs: Date.UTC(2021, 8, 25),
+    toMs: Date.UTC(2026, 8, 24),
+    interval: "5",
+  }),
+  false,
+);
+assert.equal(
+  backtestPageCanRun({
+    fromMs: Date.UTC(2021, 8, 25),
+    toMs: Date.UTC(2026, 8, 24),
+    interval: "15",
+  }),
+  false,
+);
+assert.equal(
+  backtestPageCanRun({
+    fromMs: Date.UTC(2026, 0, 1),
+    toMs: Date.UTC(2026, 0, 2),
+    interval: "60",
+    comparableSymbols: ["ETHUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT"],
+  }),
+  false,
+);
+assert.equal(backtestDrainMaxBars("cycle"), 3000);
+assert.equal(backtestDrainMaxBars("worker"), 0);
 assert.deepEqual(parseComparableSymbols("ETHUSDT, SOLUSDT, BTCUSDT", "BTCUSDT"), [
   "ETHUSDT",
   "SOLUSDT",

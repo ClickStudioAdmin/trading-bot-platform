@@ -2,15 +2,27 @@ import type { CandleBar } from "@/lib/market/candles";
 import { loadBacktestCandles } from "@/lib/market/desk-klines";
 import {
   BACKTEST_CANDLE_LIMIT,
+  BACKTEST_INLINE_BAR_LIMIT,
   BACKTEST_VERCEL_BAR_LIMIT,
+  estimateBacktestBars,
 } from "./model";
 import { canBacktestDcaRecipe, replayDcaPlaybook } from "./replay-dca";
 import { canBacktestPerpsRecipe, replayPerpsPriceCross } from "./replay";
 import {
   claimQueuedBacktestRun,
   loadBacktestRun,
+  touchBacktestClaim,
   updateBacktestRun,
 } from "./store";
+
+const BACKTEST_CLAIM_HEARTBEAT_MS = 60_000;
+
+function startClaimHeartbeat(runId: string): () => void {
+  const timer = setInterval(() => {
+    void touchBacktestClaim(runId).catch(() => {});
+  }, BACKTEST_CLAIM_HEARTBEAT_MS);
+  return () => clearInterval(timer);
+}
 
 export type BacktestExecuteResult = {
   ok: boolean;
@@ -30,6 +42,13 @@ export async function executeBacktestRun(
     return { ok: false, error: "Queue this draft before it can run." };
   }
   await updateBacktestRun(runId, { status: "running" });
+  const bars = estimateBacktestBars(run.fromMs, run.toMs, run.interval);
+  if (bars > BACKTEST_INLINE_BAR_LIMIT) {
+    console.log(
+      `backtest long run ${runId} bars=${bars} ${run.symbol} ${run.interval}`,
+    );
+  }
+  const stopHeartbeat = startClaimHeartbeat(runId);
   try {
     const allowed =
       run.recipe.kind === "dca"
@@ -64,14 +83,14 @@ export async function executeBacktestRun(
     }
     const replayed =
       run.recipe.kind === "dca"
-        ? replayDcaPlaybook({
+        ? await replayDcaPlaybook({
             bars: candles,
             recipe: run.recipe,
             feeRate: run.feeRate,
             startingUsdt: run.startingUsdt,
             leverage: run.leverage,
           })
-        : replayPerpsPriceCross({
+        : await replayPerpsPriceCross({
             bars: candles,
             recipe: run.recipe,
             feeRate: run.feeRate,
@@ -94,6 +113,8 @@ export async function executeBacktestRun(
       finished: true,
     });
     return { ok: false, error: "Replay failed.", runId };
+  } finally {
+    stopHeartbeat();
   }
 }
 

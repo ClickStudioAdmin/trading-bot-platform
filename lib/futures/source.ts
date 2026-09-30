@@ -27,11 +27,11 @@ export function formatFuturesSourceKind(
   source: FuturesTradeSource,
   ruleName?: string | null,
   webhookNames?: readonly string[],
-): "Auto" | "Manual" | "Webhook" {
+): "Bot" | "Manual" | "Webhook" {
   if (isFuturesWebhookOrigin(source, ruleName, webhookNames)) {
     return "Webhook";
   }
-  return source === "engine" ? "Auto" : "Manual";
+  return source === "engine" ? "Bot" : "Manual";
 }
 
 export function formatFuturesOrigin(input: {
@@ -45,7 +45,7 @@ export function formatFuturesOrigin(input: {
     input.webhookNames,
   );
   const name = String(input.ruleName ?? "").trim();
-  if ((kind === "Auto" || kind === "Webhook") && name) {
+  if ((kind === "Bot" || kind === "Webhook") && name) {
     return `${kind} · ${name}`;
   }
   return kind;

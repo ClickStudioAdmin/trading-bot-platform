@@ -576,6 +576,18 @@ export async function deleteBacktestRun(id: string): Promise<
   return { ok: true };
 }
 
+export async function touchBacktestClaim(id: string): Promise<void> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return;
+  }
+  await supabase
+    .from("backtest_runs")
+    .update({ claimed_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "running");
+}
+
 export async function claimBacktestRunById(
   id: string,
 ): Promise<BacktestRun | null> {

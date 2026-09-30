@@ -8,6 +8,9 @@ import {
 import { hyperliquidCoin } from "@/lib/exchanges/hyperliquid/wire";
 import type { BoundConnectionSecrets } from "@/lib/exchanges/store";
 import { insertFuturesWorking, writeFuturesOpen } from "@/lib/futures/ledger";
+import { withFuturesOrigin } from "@/lib/futures/source";
+import { writeEventLog } from "@/lib/logs/write";
+import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { parseFuturesPositionRow } from "@/lib/futures/model";
 import { parseFuturesWorkingRow } from "@/lib/futures/working";
 import { emptyFuturesTpsl } from "@/lib/futures/tpsl";
@@ -181,6 +184,26 @@ export async function syncHyperliquidVenuePositions(input: {
     if (!created.ok) {
       continue;
     }
+    await writeEventLog({
+      scope: "trade",
+      event: "trade.futures",
+      message: withFuturesOrigin(`Opened ${symbol} ${side}`, {
+        source: "manual",
+        reason: "Copied from the Hyperliquid position.",
+      }),
+      userId: input.userId,
+      accountId: input.accountId,
+      strategy: FUTURES_STRATEGY_ID,
+      data: {
+        positionId: created.positionId,
+        symbol,
+        side,
+        qty,
+        action: side === "long" ? "buy" : "sell",
+        source: "manual",
+        reason: "Copied from the Hyperliquid position.",
+      },
+    });
     added += 1;
     await input.supabase
       .from("futures_working_orders")

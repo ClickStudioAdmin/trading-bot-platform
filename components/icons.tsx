@@ -39,6 +39,7 @@ import {
   LoaderCircle,
   Mail,
   MailOpen,
+  Pause,
   Pencil,
   Play,
   Plus,
@@ -324,10 +325,17 @@ export const LUCIDE_ICONS = [
     Icon: Pencil,
   },
   {
+    id: "pause",
+    name: "Stop adding",
+    lucide: "Pause",
+    usedIn: "Bot table bulk stop adding",
+    Icon: Pause,
+  },
+  {
     id: "play",
     name: "Play",
     lucide: "Play",
-    usedIn: "Create desk placeholder",
+    usedIn: "Create desk placeholder, bot table bulk enable",
     Icon: Play,
   },
   {
@@ -670,6 +678,10 @@ export function IconPencil(props: LucideProps) {
   return <Pencil aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
+export function IconPause(props: LucideProps) {
+  return <Pause aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
 export function IconPlay(props: LucideProps) {
   return <Play aria-hidden strokeWidth={STROKE} {...props} />;
 }
@@ -736,6 +748,10 @@ export function IconDca(props: LucideProps) {
 
 export function IconPerformance(props: LucideProps) {
   return <ChartLine aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconActivity(props: LucideProps) {
+  return <FileText aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconPositions(props: LucideProps) {

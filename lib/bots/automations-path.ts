@@ -14,6 +14,8 @@ export const CASH_AND_CARRY_POSITIONS_PATH =
   "/strategies/cash-and-carry/positions";
 export const CASH_AND_CARRY_PERFORMANCE_PATH =
   "/strategies/cash-and-carry/performance";
+export const CASH_AND_CARRY_ACTIVITY_PATH =
+  "/strategies/cash-and-carry/activity";
 
 export function automationsBotBlotterHref(
   path: string,
@@ -126,6 +128,19 @@ export function automationsNewHref(
     AUTOMATIONS_NEW,
     clone ? { [AUTOMATIONS_CLONE_QUERY]: clone } : {},
   );
+}
+
+export function automationsStayEditHref(
+  listHref: string,
+  botId: string,
+  notice?: string | null,
+): string {
+  const extra: Record<string, string> = { saved: "1" };
+  const text = String(notice ?? "").trim();
+  if (text) {
+    extra.notice = text;
+  }
+  return automationsEditHref(listHref, botId, extra);
 }
 
 export function automationsSavedHref(

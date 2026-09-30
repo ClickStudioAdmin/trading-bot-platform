@@ -5,6 +5,7 @@ import {
   automationsEditTitle,
   automationsNewHref,
   automationsSavedHref,
+  automationsStayEditHref,
   parseAutomationsClone,
   parseAutomationsEdit,
   parseBotHashId,
@@ -39,6 +40,14 @@ assert.equal(
     "bot-9",
   ),
   "/strategies/cash-and-carry/automations?desk=desk-1&saved=1&created=bot-9",
+);
+assert.equal(
+  automationsStayEditHref(
+    "/strategies/futures/automations?desk=desk-1",
+    "pb-1",
+    "Bot saved.",
+  ),
+  "/strategies/futures/automations?desk=desk-1&edit=pb-1&saved=1&notice=Bot+saved.",
 );
 assert.equal(automationsEditTitle({ edit: null }), null);
 assert.equal(automationsEditTitle({ edit: "new" }), "New bot");

@@ -52,6 +52,7 @@ import {
 import { ChevronIcon, TabButton } from "@/components/trade-expand";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
+  botDeleteAllowed,
   dcaStatusFromLegs,
   disableConfirmMessage,
   disableConfirmTitle,
@@ -73,10 +74,11 @@ import {
   AUTOMATIONS_NEW,
   automationsEditHref,
   automationsNewHref,
-  automationsSavedHref,
+  automationsStayEditHref,
 } from "@/lib/bots/automations-path";
 import {
   deleteDcaPlaybookAction,
+  setDcaBotModesAction,
   runDcaArmAction,
   runDcaClosePlaybookAction,
   runDcaDisarmAction,
@@ -657,8 +659,17 @@ export function DcaPlaybooksDesk({
     router.refresh();
   }
 
-  function leaveToList(saved = false, createdId?: string | null) {
-    router.push(saved ? automationsSavedHref(listHref, createdId) : listHref);
+  function leaveToList() {
+    router.push(listHref);
+    router.refresh();
+  }
+
+  function stayOnEdit(botId: string | null | undefined, notice?: string | null) {
+    const id = String(botId ?? "").trim();
+    if (!id) {
+      return;
+    }
+    router.replace(automationsStayEditHref(listHref, id, notice));
     router.refresh();
   }
 
@@ -713,7 +724,7 @@ export function DcaPlaybooksDesk({
               setCards((current) => upsertDcaCard(current, playbook));
             }
             if (next.ok) {
-              leaveToList(true, next.playbook?.id);
+              stayOnEdit(next.playbook?.id, next.notice);
             }
           }}
           onRemoveDraft={
@@ -749,14 +760,29 @@ export function DcaPlaybooksDesk({
               </>
             }
             empty="No bots yet. Create a bot to own orders and exits on one contract. Leave this empty if you are not ready to arm."
+            onBulkStatus={async (ids, action) => {
+              const data = new FormData();
+              data.set("bulk", action);
+              for (const id of ids) {
+                data.append("id", id);
+              }
+              const result = await setDcaBotModesAction(data);
+              if (result.ok) {
+                for (const playbook of result.playbooks ?? []) {
+                  setCards((current) => upsertDcaCard(current, playbook));
+                }
+              }
+              return result.ok
+                ? { ok: true }
+                : { ok: false, error: result.error };
+            }}
             rows={savedPlaybooks.map((playbook) => {
               const needsAgreement = symbolNeedsBybitAgreement(
                 agreementGate.symbols,
                 playbook.symbol,
               );
-              const flat = !openPositions.some(
-                (row) => row.symbol === playbook.symbol && row.qty > 0,
-              );
+              const ownsOpen = dcaPlaybookHasOpenCycle(playbook, openPositions);
+              const flat = !ownsOpen;
               const agreementOff = needsAgreement && flat;
               const statusKey = agreementOff
                 ? "disabled"
@@ -780,8 +806,12 @@ export function DcaPlaybooksDesk({
               statusKey,
               summary: dcaBotSummary(playbook),
               config: dcaBotConfig(playbook),
-              canRemove: !dcaPlaybookIsRunning(playbook),
-              removeBlocked: "Stop adding or close before removing.",
+              canRemove:
+                botDeleteAllowed(statusKey) && !dcaPlaybookIsRunning(playbook),
+              ownsOpen,
+              removeBlocked: botDeleteAllowed(statusKey)
+                ? "Stop adding or close before removing."
+                : "Disable this bot before deleting it.",
               onRemove: async () => {
                 const data = new FormData();
                 data.set("playbookId", playbook.id);
@@ -799,6 +829,7 @@ export function DcaPlaybooksDesk({
                 blotter,
                 FUTURES_PATHS.positions,
                 FUTURES_PATHS.performance,
+                FUTURES_PATHS.activity,
                 accountId,
               ),
               editHref: automationsEditHref(listHref, playbook.id),

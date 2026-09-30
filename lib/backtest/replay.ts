@@ -36,6 +36,7 @@ import {
   type BacktestFillReason,
   type BacktestStats,
   type SimulatedOrder,
+  yieldBacktestReplay,
 } from "./model";
 import { fillSentence, skippedEntrySentence } from "./events";
 import type { ReplayEvent } from "./model";
@@ -173,13 +174,13 @@ function replayBarsByTimeframe(
   return map;
 }
 
-export function replayPerpsPriceCross(input: {
+export async function replayPerpsPriceCross(input: {
   bars: CandleBar[];
   recipe: PerpsTemplateRecipe;
   feeRate: number;
   startingUsdt: number;
   leverage?: number;
-}): { orders: SimulatedOrder[]; stats: BacktestStats; events: ReplayEvent[] } {
+}): Promise<{ orders: SimulatedOrder[]; stats: BacktestStats; events: ReplayEvent[] }> {
   const allowed = canBacktestPerpsRecipe(input.recipe);
   if (!allowed.ok) {
     return { orders: [], stats: emptyBacktestStats(input.startingUsdt), events: [] };
@@ -277,7 +278,10 @@ export function replayPerpsPriceCross(input: {
     }
   }
 
+  let barIndex = 0;
   for (const bar of input.bars) {
+    barIndex += 1;
+    await yieldBacktestReplay(barIndex);
     const price = bar.close;
     if (!(price > 0)) {
       continue;

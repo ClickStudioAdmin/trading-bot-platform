@@ -229,6 +229,7 @@ assert.deepEqual(
     { "pb-1": { positionCount: 2, roePct: 0.14 } },
     "/strategies/futures/positions",
     "/strategies/futures/performance",
+    "/strategies/futures/activity",
     "desk-1",
   ),
   {
@@ -238,6 +239,8 @@ assert.deepEqual(
       "/strategies/futures/positions?desk=desk-1&bot=pb-1&from=bots&focus=pb-1",
     performanceHref:
       "/strategies/futures/performance?desk=desk-1&bot=pb-1&from=bots&focus=pb-1",
+    activityHref:
+      "/strategies/futures/activity?desk=desk-1&bot=pb-1&from=bots&focus=pb-1",
   },
 );
 

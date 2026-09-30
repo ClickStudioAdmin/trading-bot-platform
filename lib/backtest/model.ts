@@ -586,6 +586,34 @@ export function backtestShouldRunInline(
   return bars <= BACKTEST_INLINE_BAR_LIMIT && pairCount <= 4;
 }
 
+export function backtestPageCanRun(input: {
+  fromMs: number;
+  toMs: number;
+  interval: DcaIndicatorTimeframe;
+  comparableSymbols?: readonly string[] | null;
+}): boolean {
+  return backtestShouldRunInline(
+    estimateBacktestBars(input.fromMs, input.toMs, input.interval),
+    1 + (input.comparableSymbols?.length ?? 0),
+  );
+}
+
+/** Desk-cycle drain stays inside the short-job cap. The Fly loop passes 0 (any length). */
+export function backtestDrainMaxBars(where: "cycle" | "worker"): number {
+  return where === "cycle" ? BACKTEST_VERCEL_BAR_LIMIT : 0;
+}
+
+const BACKTEST_REPLAY_YIELD_EVERY = 2_000;
+
+export async function yieldBacktestReplay(barIndex: number): Promise<void> {
+  if (barIndex <= 0 || barIndex % BACKTEST_REPLAY_YIELD_EVERY !== 0) {
+    return;
+  }
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
 export function parseComparableSymbols(
   raw: unknown,
   primary: string,

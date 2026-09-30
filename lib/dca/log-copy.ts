@@ -184,6 +184,56 @@ export function dcaDecisionMessage(input: {
   return withWhy(`${name} ${input.kind}.`);
 }
 
+export function dcaAfterExitLine(listens: boolean): string {
+  return listens ? "Waiting for the next start." : "Bot is idle.";
+}
+
+export function dcaExitClosedMessage(input: {
+  name: string;
+  reason: string;
+  listens: boolean;
+  why?: string | null;
+}): string {
+  const name = input.name.trim() || "Bot";
+  const status = dcaAfterExitLine(input.listens);
+  const why = String(input.why ?? "").trim().replace(/\.$/, "");
+  if (input.reason === "take_profit") {
+    return `${name} hit take profit. ${status}`;
+  }
+  if (input.reason === "stop_loss") {
+    return `${name} hit stop loss. ${status}`;
+  }
+  if (input.reason === "exit_if") {
+    return why
+      ? `${name} Hard Exit hit. ${why}. ${status}`
+      : `${name} Hard Exit hit. ${status}`;
+  }
+  if (input.reason === "end_cycle") {
+    return `${name} position closed. ${status}`;
+  }
+  const detail = why || input.reason.trim();
+  return detail
+    ? `${name} position closed. ${detail.replace(/\.$/, "")}. ${status}`
+    : `${name} position closed. ${status}`;
+}
+
+export function dcaDisarmedMessage(input: {
+  name: string;
+  leftOpen: boolean;
+  reason?: string | null;
+}): string {
+  const name = input.name.trim() || "Bot";
+  const reason = String(input.reason ?? "").trim().replace(/\.+$/, "");
+  if (input.leftOpen) {
+    const base = `Stopped adding on ${name}. Position stays open.`;
+    return reason ? `${base} ${reason}.` : base;
+  }
+  if (reason) {
+    return `Disabled ${name}. ${reason}.`;
+  }
+  return `Disarmed ${name}.`;
+}
+
 function formatLogPrice(value: number | null | undefined): string | null {
   if (value === null || value === undefined || !Number.isFinite(value) || !(value > 0)) {
     return null;

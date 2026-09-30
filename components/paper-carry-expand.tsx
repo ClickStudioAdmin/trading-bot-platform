@@ -718,7 +718,42 @@ function formatLogHeadline(log: EventLogRow): string {
       return label;
     }
   }
+  if (log.event === "trade.futures" || log.event === "trade.futures_failed") {
+    return futuresFillTitle(log.message, log.event === "trade.futures_failed");
+  }
+  if (log.event === "dca.disarmed") {
+    return log.message.startsWith("Disabled ") ? "Disabled" : "Stopped adding";
+  }
+  if (log.event === "dca.closed") {
+    return closedDecisionTitle(log.message);
+  }
   return formatLogEvent(log.event);
+}
+
+function futuresFillTitle(message: string, failed: boolean): string {
+  const text = message.trim();
+  if (failed) {
+    return "Could not trade";
+  }
+  if (text.startsWith("Opened ")) return "Opened";
+  if (text.startsWith("Added ")) return "Added";
+  if (text.startsWith("Take profit ")) return "Take profit";
+  if (text.startsWith("Stop loss ")) return "Stop loss";
+  if (text.startsWith("Hard exit ")) return "Hard Exit";
+  if (text.startsWith("Trailing stop ")) return "Trailing stop";
+  if (text.startsWith("Venue ")) return "Venue close";
+  if (text.startsWith("Reduced ")) return "Reduced";
+  if (text.startsWith("Closed ")) return "Closed";
+  return "Trade";
+}
+
+function closedDecisionTitle(message: string): string {
+  if (/take profit/i.test(message)) return "Take profit";
+  if (/stop loss/i.test(message)) return "Stop loss";
+  if (/Hard Exit/i.test(message)) return "Hard Exit";
+  if (/Bot is idle/i.test(message)) return "Idle";
+  if (/Waiting for the next start/i.test(message)) return "Still armed";
+  return "Closed";
 }
 
 function formatLogEvent(event: string): string {

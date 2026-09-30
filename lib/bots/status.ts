@@ -142,12 +142,129 @@ export function disableNeedsConfirm(ownsOpen: boolean): boolean {
 }
 
 export function disableConfirmTitle(): string {
-  return "Disable this bot?";
+  return disableConfirmTitleFor(1);
+}
+
+export function disableConfirmTitleFor(count: number): string {
+  return count > 1 ? "Disable these bots?" : "Disable this bot?";
 }
 
 export function disableConfirmMessage(desk: BotDeskKind): string {
+  return disableConfirmMessageFor(desk, 1);
+}
+
+export function disableConfirmMessageFor(
+  desk: BotDeskKind,
+  count: number,
+): string {
+  if (count > 1) {
+    return desk === "cnc"
+      ? "Disabled closes every carry these bots own and turns them off."
+      : "Disabled closes every position these bots own and turns them off.";
+  }
   if (desk === "cnc") {
     return "Disabled closes every carry this bot owns and turns it off.";
   }
   return "Disabled closes every position this bot owns and turns it off.";
+}
+
+export type BotBulkAction = "enable" | "stop_adding" | "disable" | "delete";
+
+export type BotStatusBulkAction = Exclude<BotBulkAction, "delete">;
+
+export function parseBotBulkAction(raw: unknown): BotBulkAction | null {
+  const value = String(raw ?? "").trim();
+  if (
+    value === "enable" ||
+    value === "stop_adding" ||
+    value === "disable" ||
+    value === "delete"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+export function parseBulkBotIds(formData: FormData): string[] {
+  return [
+    ...new Set(
+      formData
+        .getAll("id")
+        .map((value) => String(value).trim())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+export function botCanTakeBulkAction(
+  statusKey: string | null | undefined,
+  action: BotStatusBulkAction,
+): boolean {
+  const status =
+    statusKey === "active" ||
+    statusKey === "stop_adding" ||
+    statusKey === "reduce_only"
+      ? statusKey
+      : "disabled";
+  if (action === "enable") {
+    return status !== "active";
+  }
+  if (action === "disable") {
+    return status !== "disabled";
+  }
+  return status === "active";
+}
+
+export function botDeleteAllowed(
+  statusKey: string | null | undefined,
+): boolean {
+  return (
+    statusKey !== "active" &&
+    statusKey !== "stop_adding" &&
+    statusKey !== "reduce_only"
+  );
+}
+
+export function bulkDeleteBlockReason(
+  rows: readonly { name?: string | null; canRemove?: boolean }[],
+): string | null {
+  const blocked = rows.filter((row) => row.canRemove === false);
+  if (blocked.length === 0) {
+    return null;
+  }
+  const names = blocked.map((row) => row.name?.trim() || "Bot").join(", ");
+  return `Delete can’t include ${names}. Disable this bot before deleting it.`;
+}
+
+export function bulkActionBlockReason(
+  action: BotStatusBulkAction,
+  rows: readonly { name?: string | null; statusKey?: string | null }[],
+): string | null {
+  const blocked = rows.filter(
+    (row) => !botCanTakeBulkAction(row.statusKey, action),
+  );
+  if (blocked.length === 0) {
+    return null;
+  }
+  const names = blocked.map((row) => row.name?.trim() || "Bot").join(", ");
+  if (action === "stop_adding") {
+    return `Stop Adding can’t include ${names}. Only an Active bot can stop adding.`;
+  }
+  if (action === "enable") {
+    return `Enable can’t include ${names}. Those bots are already Active.`;
+  }
+  return `Disable can’t include ${names}. Those bots are already Disabled.`;
+}
+
+export function bulkModeFor(
+  desk: BotDeskKind,
+  action: BotStatusBulkAction,
+): "active" | "reduce_only" | "stop_adding" | "disabled" {
+  if (action === "enable") {
+    return "active";
+  }
+  if (action === "disable") {
+    return "disabled";
+  }
+  return desk === "dca" ? "stop_adding" : "reduce_only";
 }

@@ -26,6 +26,7 @@ import {
 import {
   deletePaperRuleAction,
   savePaperRules,
+  setPaperBotModesAction,
   type SavePaperRulesResult,
 } from "@/lib/engine/actions";
 import { parseAutomationMode } from "@/lib/engine/decide";
@@ -37,6 +38,7 @@ import {
   type PaperRulesFormValues,
 } from "@/lib/engine/rules";
 import {
+  botDeleteAllowed,
   disableConfirmMessage,
   disableConfirmTitle,
   disableNeedsConfirm,
@@ -72,11 +74,12 @@ import { paperBotConfig } from "@/lib/bots/bot-config";
 import { deskHref } from "@/lib/accounts/model";
 import {
   AUTOMATIONS_NEW,
+  CASH_AND_CARRY_ACTIVITY_PATH,
   CASH_AND_CARRY_PERFORMANCE_PATH,
   CASH_AND_CARRY_POSITIONS_PATH,
   automationsEditHref,
   automationsNewHref,
-  automationsSavedHref,
+  automationsStayEditHref,
 } from "@/lib/bots/automations-path";
 
 export function AutomationsDesk({
@@ -243,8 +246,17 @@ export function PaperRulesForm({
     router.refresh();
   }
 
-  function leaveToList(saved = false, createdId?: string | null) {
-    router.push(saved ? automationsSavedHref(listHref, createdId) : listHref);
+  function leaveToList() {
+    router.push(listHref);
+    router.refresh();
+  }
+
+  function stayOnEdit(botId: string | null | undefined, notice?: string | null) {
+    const id = String(botId ?? "").trim();
+    if (!id) {
+      return;
+    }
+    router.replace(automationsStayEditHref(listHref, id, notice));
     router.refresh();
   }
 
@@ -291,7 +303,7 @@ export function PaperRulesForm({
             );
             applySaveResult(result);
             if (result.ok) {
-              leaveToList(true, created?.id);
+              stayOnEdit(created?.id ?? formLayer.id, result.notice);
             }
           }}
           onRemove={() => {
@@ -328,6 +340,20 @@ export function PaperRulesForm({
               </>
             }
             empty="No bots yet. Create a bot to start the engine, or leave this empty if you only trade by hand."
+            onBulkStatus={async (ids, action) => {
+              const data = new FormData();
+              data.set("bulk", action);
+              for (const id of ids) {
+                data.append("id", id);
+              }
+              const result = await setPaperBotModesAction(data);
+              if (result.ok) {
+                applySaveResult(result);
+              }
+              return result.ok
+                ? { ok: true }
+                : { ok: false, error: result.error };
+            }}
             rows={savedLayers.map((layer) => ({
               id: layer.id,
               name: layer.name || "Bot",
@@ -336,12 +362,18 @@ export function PaperRulesForm({
               statusKey: layer.mode,
               summary: paperBotSummary(layer),
               config: paperBotConfig(layer),
-              canRemove: !(
+              canRemove:
+                botDeleteAllowed(layer.mode) &&
+                !(
+                  Number.isFinite(Number(layer.id)) &&
+                  inUse.has(Number(layer.id))
+                ),
+              ownsOpen:
                 Number.isFinite(Number(layer.id)) &&
-                inUse.has(Number(layer.id))
-              ),
-              removeBlocked:
-                "This bot has an open position. Close that row before removing it.",
+                inUse.has(Number(layer.id)),
+              removeBlocked: botDeleteAllowed(layer.mode)
+                ? "This bot has an open position. Close that row before removing it."
+                : "Disable this bot before deleting it.",
               onRemove: async () => {
                 const data = new FormData();
                 data.set("ruleId", layer.id);
@@ -359,6 +391,7 @@ export function PaperRulesForm({
                 blotter,
                 CASH_AND_CARRY_POSITIONS_PATH,
                 CASH_AND_CARRY_PERFORMANCE_PATH,
+                CASH_AND_CARRY_ACTIVITY_PATH,
                 accountId,
               ),
               editHref: automationsEditHref(listHref, layer.id),

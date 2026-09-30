@@ -8,7 +8,9 @@ import {
   eventLogJsonInFilter,
   logsForCarry,
   mergeEventLogs,
+  logsForPosition,
   positionIdFromLogData,
+  withoutDuplicateFillLogs,
   type EventLogRow,
 } from "./list";
 
@@ -26,6 +28,9 @@ assert.equal(empty.scope, "");
 assert.equal(empty.level, "");
 assert.equal(empty.event, "");
 assert.equal(empty.account, "");
+assert.equal(empty.bot, "");
+assert.equal(parseEventLogFilters({ bot: "pb-1" }).bot, "pb-1");
+assert.equal(parseEventLogFilters({ bot: "bad id" }).bot, "");
 assert.equal(
   parseEventLogFilters({ account: "acc-1" }).account,
   "acc-1",
@@ -164,6 +169,22 @@ const byPosition = attachPositionLogs(
 );
 assert.equal(byPosition[0]?.logs.length, 1);
 assert.equal(byPosition[1]?.logs.length, 0);
+
+const opened = sample(20, null, "2026-09-24T14:41:10.000Z");
+opened.event = "trade.opened";
+opened.message = "Opened FFUSDT long";
+opened.data = { positionId: "pos-ff" };
+const futuresOpen = sample(21, null, "2026-09-24T14:41:10.200Z");
+futuresOpen.event = "trade.futures";
+futuresOpen.message =
+  "Opened FFUSDT long · Auto · BB x-top · SMA above. Price crosses above top BB 20 · 15m";
+futuresOpen.data = { positionId: "pos-ff" };
+const kept = withoutDuplicateFillLogs([opened, futuresOpen]);
+assert.deepEqual(kept.map((row) => row.id), [21]);
+assert.equal(
+  logsForPosition([opened, futuresOpen], "pos-ff").length,
+  1,
+);
 
 const fallback = attachPositionLogs(
   [

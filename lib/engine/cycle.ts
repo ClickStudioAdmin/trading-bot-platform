@@ -50,7 +50,7 @@ import {
 } from "@/lib/futures/reconcile";
 import { writeEventLog } from "@/lib/logs/write";
 import { processOneQueuedBacktest } from "@/lib/backtest/execute";
-import { BACKTEST_VERCEL_BAR_LIMIT } from "@/lib/backtest/model";
+import { backtestDrainMaxBars } from "@/lib/backtest/model";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { releaseDueCommissions } from "@/lib/membership/affiliate-store";
 import { runMembershipBillingCycle } from "@/lib/membership/billing-cycle-store";
@@ -85,8 +85,6 @@ export async function runEngineCycle(
   const batchSize = options?.batchSize ?? ENGINE_CLAIM_BATCH;
   const started = Date.now();
   const maxMs = options?.maxMs;
-  const flyWorker = process.env.TBP_ENGINE_WORKER === "1";
-
   async function drainQueuedBacktest(maxBars?: number) {
     try {
       await processOneQueuedBacktest(
@@ -189,9 +187,7 @@ export async function runEngineCycle(
 
   stats.users = users.size;
   if (maxMs === undefined || Date.now() - started < maxMs) {
-    await drainQueuedBacktest(
-      flyWorker ? undefined : BACKTEST_VERCEL_BAR_LIMIT,
-    );
+    await drainQueuedBacktest(backtestDrainMaxBars("cycle"));
   }
   if (maxMs === undefined || Date.now() - started < maxMs) {
     await watchBillingDeposits(workerId);
