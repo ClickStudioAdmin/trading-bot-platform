@@ -1637,7 +1637,7 @@ function ReplaySideLanes({
                   key={mark.key}
                   type="button"
                   data-selected-event={selectedMark ? "" : undefined}
-                  className={`absolute z-10 -translate-x-1/2 whitespace-nowrap text-[10px] leading-none ${replayMarkTone(mark.event, selectedMark)} ${
+                  className={`absolute z-10 -translate-x-1/2 whitespace-nowrap text-[10px] leading-none text-ink ${
                     selectedMark ? "underline" : ""
                   }`}
                   style={{ left: mark.x, top: eventTop }}
@@ -1741,19 +1741,6 @@ function replayMarkLabel(row: ReplayEvent): string {
     return "Liq";
   }
   return "Exit";
-}
-
-function replayMarkTone(row: ReplayEvent, selected: boolean): string {
-  if (selected) {
-    return "text-ink";
-  }
-  if (row.reason === "take_profit") {
-    return "text-accent";
-  }
-  if (row.reason === "stop" || row.reason === "trailing") {
-    return "text-warning";
-  }
-  return row.side === "short" ? "text-danger" : "text-success";
 }
 
 function TransportButton({
