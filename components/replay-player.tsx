@@ -1588,13 +1588,20 @@ function ReplaySideLanes({
         const barTop = y(28);
         const eventTop = y(lane.above ? 14 : 40);
         const labelTop = y(lane.above ? 0 : 54);
-        const bar = lane.side === "short" ? "bg-danger/30" : "bg-success/30";
         const ink = lane.side === "short" ? "text-danger" : "text-success";
         return (
           <div key={lane.id}>
             <div
-              className={`absolute h-1.5 rounded-full ${bar}`}
-              style={{ left: lane.x0, width: Math.max(4, lane.x1 - lane.x0), top: barTop }}
+              className="absolute h-1.5 rounded-full"
+              style={{
+                left: lane.x0,
+                width: Math.max(4, lane.x1 - lane.x0),
+                top: barTop,
+                backgroundColor:
+                  lane.side === "short"
+                    ? "color-mix(in srgb, var(--color-danger) 30%, var(--color-surface))"
+                    : "color-mix(in srgb, var(--color-success) 30%, var(--color-surface))",
+              }}
             />
             {lane.label ? (
               <span
