@@ -811,6 +811,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           dx: number,
           origin: { from: number; to: number } | null,
         ) => { from: number; to: number } | null;
+        __wheel?: (x: number, deltaY: number, deltaMode: number) => void;
       };
       host.__paint = (index, follow = true) => paintRef.current(index, follow);
       host.__focus = (index) => {
@@ -846,6 +847,33 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           });
         }
         return { from: range.from, to: range.to };
+      };
+      host.__wheel = (x, deltaY, deltaMode) => {
+        const scale = chart.timeScale();
+        const range = scale.getVisibleLogicalRange();
+        const width = scale.width();
+        if (!range || width === 0 || deltaY === 0) {
+          return;
+        }
+        const scrollSpeed = deltaMode === 1 ? 32 : deltaMode === 2 ? 120 : 1;
+        const adjusted = -(scrollSpeed * deltaY) / 100;
+        if (adjusted === 0) {
+          return;
+        }
+        const zoomScale = Math.sign(adjusted) * Math.min(1, Math.abs(adjusted));
+        const factor = 1 + zoomScale / 10;
+        if (factor <= 0) {
+          return;
+        }
+        const span = range.to - range.from;
+        const point = Math.max(1, Math.min(x, width));
+        const anchor = range.from + (point / width) * span;
+        const nextSpan = span / factor;
+        const left = span === 0 ? 0 : (anchor - range.from) / span;
+        scale.setVisibleLogicalRange({
+          from: anchor - left * nextSpan,
+          to: anchor + (1 - left) * nextSpan,
+        });
       };
       host.__laneX = (index) => {
         const scale = chart.timeScale();
@@ -891,12 +919,14 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             dx: number,
             origin: { from: number; to: number } | null,
           ) => { from: number; to: number } | null;
+          __wheel?: (x: number, deltaY: number, deltaMode: number) => void;
         };
         delete chartHost.__paint;
         delete chartHost.__focus;
         delete chartHost.__focusRange;
         delete chartHost.__laneX;
         delete chartHost.__pan;
+        delete chartHost.__wheel;
         chart.remove();
       };
     });
@@ -905,6 +935,30 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       cleanup();
     };
   }, [candles, series, events, started, positionsRight, fillViewport]);
+
+  useEffect(() => {
+    const track = laneTrackRef.current;
+    if (!sideLanes || !track) {
+      return;
+    }
+    const node: HTMLDivElement = track;
+    function onWheel(event: WheelEvent) {
+      if (!event.cancelable) {
+        return;
+      }
+      event.preventDefault();
+      const host = hostRef.current as
+        | (HTMLDivElement & {
+            __wheel?: (x: number, deltaY: number, deltaMode: number) => void;
+          })
+        | null;
+      const rect = node.getBoundingClientRect();
+      host?.__wheel?.(event.clientX - rect.left, event.deltaY, event.deltaMode);
+      setCursor((current) => ({ ...current, playing: false }));
+    }
+    node.addEventListener("wheel", onWheel, { passive: false });
+    return () => node.removeEventListener("wheel", onWheel);
+  }, [sideLanes, eventGroups.length]);
 
   useEffect(() => {
     const node = hostRef.current as
