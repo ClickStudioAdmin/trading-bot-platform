@@ -1,6 +1,15 @@
 import type { FuturesSide } from "@/lib/futures/model";
-import type { ReplayEvent, SimulatedOrder } from "./model";
+import type { BacktestFillReason, ReplayEvent, SimulatedOrder } from "./model";
 import { listBacktestCycles } from "./positions";
+
+const LANE_EXIT_REASONS = new Set<BacktestFillReason>([
+  "take_profit",
+  "stop",
+  "exit_if",
+  "trailing",
+  "close",
+  "liquidation",
+]);
 
 export type ReplayEventGroup = {
   id: string;
@@ -44,4 +53,14 @@ export function groupReplayEventsByPosition(
     groups.push({ id, side, label, events: [event] });
   }
   return groups;
+}
+
+export function replayLaneStillOpen(events: ReplayEvent[]): boolean {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const row = events[index];
+    if (row?.kind === "fill") {
+      return !LANE_EXIT_REASONS.has(row.reason);
+    }
+  }
+  return true;
 }
