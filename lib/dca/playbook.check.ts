@@ -11,10 +11,6 @@ import {
   dcaClipKey,
   dcaClipCycleKey,
   dcaClipRestKey,
-  dcaClipSendGuard,
-  dcaFirstClipGenerationMs,
-  dcaRenewFirstClipLink,
-  parseDcaClipGeneration,
   dcaConfigMarginError,
   dcaConfigMaxOrderError,
   dcaCycleEnded,
@@ -119,124 +115,6 @@ assert.equal(parseDcaExitLimitKind("d11111111lsl"), "sl");
 assert.equal(parseDcaExitLimitKind("d11111111ltp847291"), "tp");
 assert.equal(parseDcaClipIndex("d11111111ltp847291"), null);
 assert.equal(parseDcaClipIndex("d11111111l10x847291"), 10);
-assert.equal(parseDcaClipGeneration(null), null);
-assert.equal(parseDcaClipGeneration(""), null);
-assert.equal(parseDcaClipGeneration("1700000000000"), 1_700_000_000_000);
-assert.equal(parseDcaClipGeneration(1_700_000_000_000.9), 1_700_000_000_000);
-assert.equal(parseDcaClipGeneration(-1), null);
-assert.deepEqual(
-  dcaClipSendGuard({
-    storedClipsFilled: 0,
-    maxClips: 1,
-    openQty: 0,
-    clipIndex: 0,
-  }),
-  { send: true, clipIndex: 0 },
-);
-assert.deepEqual(
-  dcaClipSendGuard({
-    storedClipsFilled: 0,
-    maxClips: 1,
-    openQty: 18.6,
-    clipIndex: 0,
-  }),
-  { send: false, clipsFilled: 1 },
-);
-assert.deepEqual(
-  dcaClipSendGuard({
-    storedClipsFilled: 0,
-    maxClips: 3,
-    openQty: 50,
-    clipIndex: 0,
-  }),
-  { send: false, clipsFilled: 1 },
-);
-assert.deepEqual(
-  dcaClipSendGuard({
-    storedClipsFilled: 1,
-    maxClips: 1,
-    openQty: 37.2,
-    clipIndex: 0,
-  }),
-  { send: false, clipsFilled: 1 },
-);
-assert.deepEqual(
-  dcaClipSendGuard({
-    storedClipsFilled: 1,
-    maxClips: 1,
-    openQty: 0,
-    clipIndex: 0,
-  }),
-  { send: false, clipsFilled: 1 },
-);
-assert.deepEqual(
-  dcaClipSendGuard({
-    storedClipsFilled: 1,
-    maxClips: 3,
-    openQty: 77,
-    clipIndex: 1,
-  }),
-  { send: true, clipIndex: 1 },
-);
-assert.deepEqual(
-  dcaClipSendGuard({
-    storedClipsFilled: 3,
-    maxClips: 3,
-    openQty: 10,
-    clipIndex: 3,
-  }),
-  { send: false, clipsFilled: 3 },
-);
-assert.deepEqual(
-  dcaClipSendGuard({
-    storedClipsFilled: 2,
-    maxClips: null,
-    openQty: 4,
-    clipIndex: 0,
-  }),
-  { send: false, clipsFilled: 2 },
-);
-const firstClipId = "11111111-1111-4111-8111-111111111111";
-const stableGeneration = dcaFirstClipGenerationMs({
-  storedGenerationMs: 1_700_000_000_000,
-  nowMs: 1_800_000_000_000,
-  renew: false,
-});
-assert.equal(stableGeneration, 1_700_000_000_000);
-assert.equal(
-  dcaClipRestKey(firstClipId, "long", 0, stableGeneration),
-  dcaClipRestKey(firstClipId, "long", 0, 1_700_000_000_000),
-);
-assert.notEqual(
-  dcaClipRestKey(firstClipId, "long", 0, stableGeneration),
-  dcaClipRestKey(
-    firstClipId,
-    "long",
-    0,
-    dcaFirstClipGenerationMs({
-      storedGenerationMs: 1_700_000_000_000,
-      nowMs: 1_800_000_000_000,
-      renew: true,
-    }),
-  ),
-);
-assert.equal(
-  dcaFirstClipGenerationMs({
-    storedGenerationMs: null,
-    nowMs: 1_800_000_000_000,
-    renew: false,
-  }),
-  1_800_000_000_000,
-);
-assert.equal(dcaRenewFirstClipLink({ orderLinkDead: true, openQty: 0 }), true);
-assert.equal(
-  dcaRenewFirstClipLink({ orderLinkDead: true, openQty: 18.6 }),
-  false,
-);
-assert.equal(
-  dcaRenewFirstClipLink({ orderLinkDead: false, openQty: 0 }),
-  false,
-);
 assert.equal(
   parseDcaClipIndex(
     dcaClipCycleKey(
@@ -2017,7 +1895,6 @@ assert.equal(
       firstFillPrice: null,
       breakevenDone: false,
       cycleMaxValue: null,
-      clipGenerationMs: null,
     },
     short: {
       status: "idle",
@@ -2027,7 +1904,6 @@ assert.equal(
       firstFillPrice: null,
       breakevenDone: false,
       cycleMaxValue: null,
-      clipGenerationMs: null,
     },
   }),
   false,
@@ -2108,7 +1984,6 @@ if (row) {
     firstFillPrice: null,
     breakevenDone: false,
     cycleMaxValue: null,
-    clipGenerationMs: null,
   };
   assert.equal(
     dcaPlaybookHoldsCycle({
@@ -2145,7 +2020,6 @@ assert.equal(
       firstFillPrice: null,
       breakevenDone: false,
       cycleMaxValue: null,
-      clipGenerationMs: null,
     },
     short: {
       status: "idle",
@@ -2155,7 +2029,6 @@ assert.equal(
       firstFillPrice: null,
       breakevenDone: false,
       cycleMaxValue: null,
-      clipGenerationMs: null,
     },
   }),
   false,

@@ -70,10 +70,7 @@ import {
   dcaClipAction,
   dcaClipCycleKey,
   dcaClipRestKey,
-  dcaClipSendGuard,
   dcaCycleClipSize,
-  dcaFirstClipGenerationMs,
-  dcaRenewFirstClipLink,
   dcaMaxValueUsesBook,
   capDcaSafetySync,
   DCA_LIVE_GRID_OPS_PER_SYNC,
@@ -100,7 +97,6 @@ import {
   planDcaExitLimitSync,
   planDcaSafetySync,
   type DcaExitLimitKind,
-  type DcaLegState,
   type DcaPlaybook,
   type DcaStatus,
 } from "./playbook";
@@ -122,12 +118,9 @@ export type DcaSyncCache = {
   recentFailures?: readonly DcaSyncFailureStamp[];
 };
 import {
-  claimDcaClipGeneration,
   listDcaPlaybooksForAccount,
-  loadDcaPlaybookById,
   patchDcaLeg,
   patchDcaPlaybook,
-  renewDcaClipGeneration,
   resetDcaLeg,
   resetDcaPlaybook,
   stampDcaCycleStart,
@@ -1066,118 +1059,6 @@ async function syncDcaPlaybookGridUnlocked(input: {
 
 const leverageUnavailableLogged = new Set<string>();
 
-function writePlaybookLeg(
-  playbook: DcaPlaybook,
-  side: FuturesSide,
-  leg: DcaLegState,
-): void {
-  if (side === "long") {
-    playbook.long = leg;
-  } else {
-    playbook.short = leg;
-  }
-}
-
-type ClipSendGate =
-  | { ok: false; error: string }
-  | { ok: true; skipped: true }
-  | { ok: true; skipped: false; openQty: number; clipIndex: number };
-
-/** Re-read the stored clip count and the open position, then apply the send guard. */
-async function gateDcaClipSend(input: {
-  playbook: DcaPlaybook;
-  side: FuturesSide;
-  clipIndex?: number;
-}): Promise<ClipSendGate> {
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return { ok: false, error: "Auth is not configured." };
-  }
-  const fresh = await loadDcaPlaybookById(
-    input.playbook.id,
-    input.playbook.accountId,
-    supabase,
-  );
-  if (!fresh) {
-    return { ok: false, error: "That bot was not found." };
-  }
-  const opens = await loadOpenFuturesOnSymbol(fresh.symbol, {
-    accountId: fresh.accountId,
-    userId: fresh.userId,
-  });
-  const openQty = Number(
-    opens.find((row) => row.side === input.side)?.qty ?? 0,
-  );
-  const stored = dcaLegFor(fresh, input.side);
-  writePlaybookLeg(input.playbook, input.side, stored);
-  const decision = dcaClipSendGuard({
-    storedClipsFilled: stored.clipsFilled,
-    maxClips: input.playbook.maxClips,
-    openQty,
-    clipIndex: input.clipIndex ?? stored.clipsFilled,
-  });
-  if (decision.send) {
-    return { ok: true, skipped: false, openQty, clipIndex: decision.clipIndex };
-  }
-  if (stored.clipsFilled !== decision.clipsFilled) {
-    const patched = await patchDcaLeg({
-      supabase,
-      id: input.playbook.id,
-      side: input.side,
-      patch: { clipsFilled: decision.clipsFilled },
-    });
-    if (!patched.ok) {
-      return patched;
-    }
-    writePlaybookLeg(input.playbook, input.side, {
-      ...stored,
-      clipsFilled: decision.clipsFilled,
-    });
-  }
-  return { ok: true, skipped: true };
-}
-
-async function resolveFirstClipGeneration(input: {
-  playbook: DcaPlaybook;
-  side: FuturesSide;
-  generationMs?: number;
-}): Promise<{ ok: true; generationMs: number } | { ok: false; error: string }> {
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return { ok: false, error: "Auth is not configured." };
-  }
-  const leg = dcaLegFor(input.playbook, input.side);
-  if (leg.clipGenerationMs != null) {
-    return {
-      ok: true,
-      generationMs: dcaFirstClipGenerationMs({
-        storedGenerationMs: leg.clipGenerationMs,
-        nowMs: input.generationMs ?? leg.clipGenerationMs,
-        renew: false,
-      }),
-    };
-  }
-  const generation = dcaFirstClipGenerationMs({
-    storedGenerationMs: null,
-    nowMs: input.generationMs ?? Date.now(),
-    renew: true,
-  });
-  const stored = await claimDcaClipGeneration({
-    supabase,
-    id: input.playbook.id,
-    side: input.side,
-    generationMs: generation,
-  });
-  if (!stored.ok) {
-    return stored;
-  }
-  writePlaybookLeg(input.playbook, input.side, {
-    ...dcaLegFor(input.playbook, input.side),
-    clipGenerationMs: stored.generationMs,
-  });
-  return stored;
-}
-
 async function placeClip(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
@@ -1185,20 +1066,9 @@ async function placeClip(input: {
   lastPrice: number;
   reason?: string;
   generationMs?: number;
-}): Promise<
-  { ok: true; skipped?: boolean } | { ok: false; error: string; quiet?: boolean }
-> {
-  const opened = await gateDcaClipSend({
-    playbook: input.playbook,
-    side: input.side,
-  });
-  if (!opened.ok) {
-    return opened;
-  }
-  if (opened.skipped) {
-    return { ok: true, skipped: true };
-  }
-  const firstClip = opened.clipIndex === 0;
+}): Promise<{ ok: true } | { ok: false; error: string; quiet?: boolean }> {
+  const leg = dcaLegFor(input.playbook, input.side);
+  const firstClip = leg.clipsFilled === 0;
   let clipSize = input.playbook.clipSize;
   if (firstClip && dcaMaxValueUsesBook(input.playbook.maxValueKind)) {
     const book = await loadDcaBookUsdt({
@@ -1278,41 +1148,16 @@ async function placeClip(input: {
       };
     }
   }
-  const clipIndex = opened.clipIndex;
-  const held = await gateDcaClipSend({
-    playbook: input.playbook,
-    side: input.side,
-    clipIndex,
-  });
-  if (!held.ok) {
-    return held;
-  }
-  if (held.skipped) {
-    return { ok: true, skipped: true };
-  }
-  const live = dcaLegFor(input.playbook, input.side);
   const size = dcaClipSizeAt(
-    clipIndex,
+    leg.clipsFilled,
     clipSize,
     input.playbook.sizeMultiplier,
   );
-  let generation: number;
-  if (clipIndex === 0) {
-    const resolved = await resolveFirstClipGeneration({
-      playbook: input.playbook,
-      side: input.side,
-      generationMs: input.generationMs,
-    });
-    if (!resolved.ok) {
-      return resolved;
-    }
-    generation = resolved.generationMs;
-  } else {
-    generation =
-      input.generationMs ??
-      live.lastClipAtMs ??
-      input.playbook.updatedAtMs;
-  }
+  const generation =
+    input.generationMs ??
+    (firstClip
+      ? input.playbook.updatedAtMs
+      : (leg.lastClipAtMs ?? input.playbook.updatedAtMs));
   const result = await runFuturesCommand({
     actor: playbookActor(input.playbook, input.mode),
     command: {
@@ -1325,53 +1170,17 @@ async function placeClip(input: {
       idempotencyKey: dcaClipRestKey(
         input.playbook.id,
         input.side,
-        clipIndex,
+        leg.clipsFilled,
         generation,
       ),
       ...playbookCommandMeta(input.playbook, input.reason),
-      trailing: clipIndex === 0
+      trailing: firstClip
         ? clipTrailing(input.playbook, input.side, input.lastPrice)
         : null,
     },
   });
   if (!result.ok) {
     if (result.error === BYBIT_ORDER_LINK_DEAD && input.generationMs == null) {
-      if (clipIndex === 0) {
-        const again = await gateDcaClipSend({
-          playbook: input.playbook,
-          side: input.side,
-          clipIndex: 0,
-        });
-        if (!again.ok) {
-          return again;
-        }
-        if (again.skipped) {
-          return { ok: true, skipped: true };
-        }
-        if (
-          !dcaRenewFirstClipLink({
-            orderLinkDead: true,
-            openQty: again.openQty,
-          })
-        ) {
-          return { ok: true, skipped: true };
-        }
-        const supabase = createServiceClient();
-        if (!supabase) {
-          return { ok: false, error: "Auth is not configured." };
-        }
-        const renewed = await renewDcaClipGeneration({
-          supabase,
-          id: input.playbook.id,
-          side: input.side,
-          previousMs: generation,
-          generationMs: Date.now(),
-        });
-        if (!renewed.ok) {
-          return renewed;
-        }
-        return placeClip({ ...input, generationMs: renewed.generationMs });
-      }
       const bumped = Date.now();
       input.playbook.updatedAtMs = bumped;
       const supabase = createServiceClient();
@@ -1393,30 +1202,21 @@ async function placeClip(input: {
   if (!supabase) {
     return { ok: false, error: "Auth is not configured." };
   }
-  const filledAt = Date.now();
   const patched = await patchDcaLeg({
     supabase,
     id: input.playbook.id,
     side: input.side,
     patch: {
       status: "armed",
-      clipsFilled: clipIndex + 1,
+      clipsFilled: leg.clipsFilled + 1,
       lastClipPrice: input.lastPrice,
-      lastClipAtMs: filledAt,
-      firstFillPrice: clipIndex === 0 ? input.lastPrice : live.firstFillPrice,
+      lastClipAtMs: Date.now(),
+      firstFillPrice: firstClip ? input.lastPrice : leg.firstFillPrice,
     },
   });
   if (!patched.ok) {
     return patched;
   }
-  writePlaybookLeg(input.playbook, input.side, {
-    ...dcaLegFor(input.playbook, input.side),
-    status: "armed",
-    clipsFilled: clipIndex + 1,
-    lastClipPrice: input.lastPrice,
-    lastClipAtMs: filledAt,
-    firstFillPrice: clipIndex === 0 ? input.lastPrice : live.firstFillPrice,
-  });
   await syncDcaPlaybookExits({
     playbook: input.playbook,
     mode: input.mode,
@@ -1428,9 +1228,9 @@ async function placeClip(input: {
     mode: input.mode,
     side: input.side,
     status: "armed",
-    entryPrice: clipIndex === 0
+    entryPrice: firstClip
       ? input.lastPrice
-      : (live.firstFillPrice ?? input.lastPrice),
+      : (leg.firstFillPrice ?? input.lastPrice),
   });
   return { ok: true };
 }
@@ -1891,7 +1691,6 @@ export async function keepListeningAfterFlatten(input: {
         firstFillPrice: null,
         breakevenDone: false,
         cycleMaxValue: null,
-        clipGenerationMs: null,
       },
     });
   }
@@ -2227,7 +2026,6 @@ async function applyDcaVerbUnlocked(input: {
           firstFillPrice: null,
           breakevenDone: false,
           cycleMaxValue: null,
-          clipGenerationMs: null,
         };
       } else {
         const reset = await resetDcaLeg({
@@ -2318,38 +2116,20 @@ async function applyDcaVerbUnlocked(input: {
       }
       break;
     }
-    if (clip.skipped) {
-      const synced = dcaLegFor(playbook, side);
-      if (
-        synced.status !== "armed" &&
-        synced.status !== "stop_adding" &&
-        synced.status !== "closing"
-      ) {
-        const patched = await patchDcaLeg({
-          supabase,
-          id: playbook.id,
-          side,
-          patch: { status: "armed" },
-        });
-        if (!patched.ok) {
-          return patched;
-        }
-        writePlaybookLeg(playbook, side, { ...synced, status: "armed" });
-      }
-      already += 1;
-      continue;
-    }
     placed += 1;
-    const synced = dcaLegFor(playbook, side);
     const nextLeg = {
-      ...synced,
+      ...leg,
       status: "armed" as const,
-      clipsFilled: Math.max(synced.clipsFilled, leg.clipsFilled + 1),
+      clipsFilled: leg.clipsFilled + 1,
       lastClipPrice: lastPrice,
-      lastClipAtMs: synced.lastClipAtMs ?? Date.now(),
-      firstFillPrice: synced.firstFillPrice ?? lastPrice,
+      lastClipAtMs: Date.now(),
+      firstFillPrice: lastPrice,
     };
-    writePlaybookLeg(playbook, side, nextLeg);
+    if (side === "long") {
+      playbook.long = nextLeg;
+    } else {
+      playbook.short = nextLeg;
+    }
   }
 
   if (skippedIdle === sides.length) {
