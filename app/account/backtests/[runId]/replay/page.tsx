@@ -64,7 +64,7 @@ export default async function AccountBacktestReplayPage({
           { label: "Replay" },
         ]}
       />
-      <ReplayPlayer run={run} />
+      <ReplayPlayer key={run.id} run={run} />
     </div>
   );
 }

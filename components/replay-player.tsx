@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { BacktestChartIntervalBar } from "@/components/backtest-chart-interval";
 import {
   indicatorRolesForReason,
   indicatorStyleTargets,
   replayChartSeries,
+  replayIndicatorCatalog,
   replayIndicatorLegend,
+  type IndicatorInput,
   type IndicatorStyleTarget,
+  type ReplayReferenceInputs,
 } from "@/lib/backtest/chart-series";
 import {
   REPLAY_INDICATOR_STYLE_KEY,
@@ -22,7 +24,28 @@ import {
   type IndicatorLineStyle,
   type IndicatorStyleMap,
 } from "@/lib/backtest/indicator-style";
+import {
+  ChartContextMenu,
+  type ChartContextMenuState,
+} from "@/components/chart-context-menu";
 import { ReplayIndicatorLegend } from "@/components/replay-indicator-legend";
+import { ReplayChartBar } from "@/components/replay-chart-bar";
+import type { ChartSnapshot } from "@/components/chart-screenshot";
+import {
+  REPLAY_CHART_APPEARANCE_KEY,
+  mergeReplayChartAppearance,
+  parseReplayChartAppearance,
+  patchReplayChartAppearance,
+  clearReplayChartFields,
+  colorWithOpacity,
+  pickReplayChartFields,
+  replayGridPaint,
+  resetReplayChartFields,
+  saveReplayChartAppearance,
+  serializeReplayChartAppearance,
+  type ReplayChartAppearance,
+  type ReplayChartAppearancePatch,
+} from "@/lib/backtest/chart-appearance";
 import { eventParameterSections } from "@/lib/backtest/event-pane";
 import {
   coalesceReplayPositions,
@@ -56,6 +79,7 @@ import {
   DCA_INDICATOR_TIMEFRAME_LABELS,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import { attachRightAxisWheel } from "@/lib/charts/interact";
 import { loadBacktestDisplayCandles } from "@/lib/charts/load-backtest-candles";
 import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
 import { formatPrice, formatQty, signedTone } from "@/lib/opportunities/format";
@@ -121,6 +145,31 @@ function money(value: number): string {
   return value < 0 ? `−$${text}` : `$${text}`;
 }
 
+function readStoredChartAppearance(): ReplayChartAppearance | null {
+  try {
+    return parseReplayChartAppearance(
+      window.localStorage.getItem(REPLAY_CHART_APPEARANCE_KEY),
+    );
+  } catch {
+    return null;
+  }
+}
+
+function appearanceColor(
+  node: HTMLElement,
+  token: string | null,
+  fallbackName: string,
+  fallbackHex: string,
+  opacity = 100,
+): string {
+  const base = !token
+    ? cssVar(node, fallbackName, fallbackHex)
+    : token.startsWith("#")
+      ? token
+      : cssVar(node, `--color-${token}`, fallbackHex);
+  return opacity >= 100 ? base : colorWithOpacity(base, opacity);
+}
+
 function readStoredIndicatorStyles(): IndicatorStyleMap {
   try {
     return parseIndicatorStyles(
@@ -141,10 +190,12 @@ function styledLineColor(
   style: IndicatorLineStyle,
   fallback: string,
 ): string {
-  if (!style.color) {
-    return fallback;
-  }
-  return cssVar(node, `--color-${style.color}`, fallback);
+  const base = !style.color
+    ? fallback
+    : style.color.startsWith("#")
+      ? style.color
+      : cssVar(node, `--color-${style.color}`, fallback);
+  return style.opacity >= 100 ? base : colorWithOpacity(base, style.opacity);
 }
 
 function candleIndexAt(candles: CandleBar[], atMs: number): number {
@@ -211,6 +262,21 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     setGlobalStyles(readStoredIndicatorStyles());
   }
   const savedStyles = globalStyles ?? {};
+  const [sessionAppearance, setSessionAppearance] = useState<ReplayChartAppearancePatch>({});
+  const [savedAppearance, setSavedAppearance] = useState<ReplayChartAppearance | null | undefined>(
+    undefined,
+  );
+  if (savedAppearance === undefined && typeof window !== "undefined") {
+    setSavedAppearance(readStoredChartAppearance());
+  }
+  const chartAppearance = mergeReplayChartAppearance(
+    savedAppearance ?? null,
+    sessionAppearance,
+  );
+  const chartAppearanceRef = useRef(chartAppearance);
+  chartAppearanceRef.current = chartAppearance;
+  const chartShotRef = useRef<ChartSnapshot | null>(null);
+  const applyAppearanceRef = useRef<(() => void) | null>(null);
   const indicatorStyleStateRef = useRef({
     session: {} as IndicatorStyleMap,
     saved: {} as IndicatorStyleMap,
@@ -246,6 +312,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     null,
   );
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const resetChartRef = useRef<(() => void) | null>(null);
+  const resetPriceRef = useRef<(() => void) | null>(null);
+  const [chartMenu, setChartMenu] = useState<ChartContextMenuState>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const headRef = useRef(0);
   const focusRef = useRef<number | null>(null);
@@ -443,9 +512,15 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     }
   }, [visibleEvents.length, sideLanes]);
   const stats = replayPlayStats(visibleOrders, run.startingUsdt);
+  const [references, setReferences] = useState<string[]>([]);
+  const [referenceInputs, setReferenceInputs] = useState<ReplayReferenceInputs>({});
   const series = useMemo(
-    () => replayChartSeries(run.recipe, candles),
-    [run.recipe, candles],
+    () => replayChartSeries(run.recipe, candles, references, referenceInputs),
+    [run.recipe, candles, references, referenceInputs],
+  );
+  const indicatorChoices = useMemo(
+    () => replayIndicatorCatalog(run.recipe),
+    [run.recipe],
   );
   const legendRows = useMemo(
     () => replayIndicatorLegend(series.layers, legendIndex ?? head),
@@ -464,6 +539,17 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       names[layer.id] = layer.title;
     }
     return names;
+  }, [series.layers]);
+  const indicatorInputs = useMemo(() => {
+    const fields: Record<string, IndicatorInput[]> = {};
+    const locked: Record<string, boolean> = {};
+    const timeframes: Record<string, string> = {};
+    for (const layer of series.layers) {
+      fields[layer.id] = layer.inputs;
+      locked[layer.id] = layer.inputsLocked;
+      timeframes[layer.id] = layer.timeframeLabel;
+    }
+    return { fields, locked, timeframes };
   }, [series.layers]);
   useEffect(() => {
     if (globalStyles === null) {
@@ -657,6 +743,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         width: node.clientWidth,
         height: node.clientHeight,
       });
+      chartShotRef.current = chart;
       const candleSeries = chart.addSeries(charts.CandlestickSeries, {
         upColor: "#34D399",
         downColor: "#F07167",
@@ -664,6 +751,13 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         borderDownColor: "#F07167",
         wickUpColor: "#34D399",
         wickDownColor: "#F07167",
+      });
+      const closeSeries = chart.addSeries(charts.LineSeries, {
+        color: cssVar(node, "--color-accent", "#A78BFA"),
+        lineWidth: 2,
+        visible: false,
+        priceLineVisible: true,
+        lastValueVisible: true,
       });
       const drawn: Array<{
         lines: ReturnType<typeof chart.addSeries>[];
@@ -795,20 +889,38 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         );
         drawn.push({ lines, dots, oscillator });
       }
+      let initialRange: { from: number; to: number } | null = null;
+      function resetPriceScales() {
+        for (const pane of chart.panes()) {
+          pane.priceScale("right").setAutoScale(true);
+        }
+      }
+      resetChartRef.current = () => {
+        if (initialRange) {
+          chart.timeScale().setVisibleLogicalRange(initialRange);
+        }
+        resetPriceScales();
+      };
+      resetPriceRef.current = resetPriceScales;
       const markers = charts.createSeriesMarkers(candleSeries, []);
+      const lineMarkers = charts.createSeriesMarkers(closeSeries, []);
       function paint(index: number, follow = true) {
         const end = Math.max(0, Math.min(index, candles.length - 1));
         const shown = candles.slice(0, end + 1);
-        candleSeries.setData(
-          shown.map((row) => ({
-            time: Math.floor(row.timeMs / 1000) as never,
-            open: row.open,
-            high: row.high,
-            low: row.low,
-            close: row.close,
-          })),
-        );
+        const bars = shown.map((row) => ({
+          time: Math.floor(row.timeMs / 1000) as never,
+          open: row.open,
+          high: row.high,
+          low: row.low,
+          close: row.close,
+        }));
+        candleSeries.setData(bars);
+        closeSeries.setData(bars.map((row) => ({ time: row.time, value: row.close })));
+        const lineMode = chartAppearanceRef.current.series === "line";
+        candleSeries.applyOptions({ visible: !lineMode });
+        closeSeries.applyOptions({ visible: lineMode });
         const at = candles[end]?.timeMs ?? 0;
+        const focusOrders = positionFocusRef.current?.orders ?? null;
         series.layers.forEach((layer, layerIndex) => {
           const row = drawn[layerIndex];
           if (!row) {
@@ -858,6 +970,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             if (!roles.some((role) => layer.roles.includes(role))) {
               continue;
             }
+            if (!replayMarkerInPositionFocus(item.orderIndex, focusOrders)) {
+              continue;
+            }
             const index = candleIndexAt(candles, item.atMs);
             const value = layer.dotValues[index];
             const timeMs = candles[index]?.timeMs;
@@ -874,13 +989,13 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           row.dots.setData(dots as never);
         });
         if (follow) {
-          chart.timeScale().setVisibleLogicalRange({
-            from: end - 96,
-            to: end + 8,
-          });
+          const next = { from: end - 96, to: end + 8 };
+          chart.timeScale().setVisibleLogicalRange(next);
+          if (!initialRange) {
+            initialRange = next;
+          }
         }
         const selected = selectedRef.current;
-        const focusOrders = positionFocusRef.current?.orders ?? null;
         const plotted = events
           .filter(
             (row) =>
@@ -942,7 +1057,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             text: "",
           });
         }
-        markers.setMarkers(plotted);
+        markers.setMarkers(lineMode ? [] : plotted);
+        lineMarkers.setMarkers(lineMode ? plotted : []);
       }
       chart.subscribeCrosshairMove((param) => {
         const time = typeof param.time === "number" ? param.time : null;
@@ -1022,6 +1138,56 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           });
         }
       }
+      function applyAppearance() {
+        const look = chartAppearanceRef.current;
+        const background = appearanceColor(
+          node,
+          look.background,
+          "--color-canvas",
+          "#0B0E14",
+          look.backgroundOpacity,
+        );
+        const grid = replayGridPaint(
+          appearanceColor(node, look.grid, "--color-line", "#2A313C"),
+          look.gridOpacity,
+        );
+        const up = appearanceColor(
+          node,
+          look.up,
+          "--color-success",
+          "#34D399",
+          look.upOpacity,
+        );
+        const down = appearanceColor(
+          node,
+          look.down,
+          "--color-danger",
+          "#F07167",
+          look.downOpacity,
+        );
+        chart.applyOptions({
+          layout: {
+            background: { type: charts.ColorType.Solid, color: background },
+          },
+          grid: {
+            vertLines: grid,
+            horzLines: grid,
+          },
+        });
+        candleSeries.applyOptions({
+          upColor: up,
+          downColor: down,
+          borderUpColor: up,
+          borderDownColor: down,
+          wickUpColor: up,
+          wickDownColor: down,
+          visible: look.series !== "line",
+        });
+        closeSeries.applyOptions({ visible: look.series === "line" });
+        paint(headRef.current, false);
+      }
+      applyAppearanceRef.current = applyAppearance;
+      applyAppearance();
       applyIndicatorStylesRef.current = applyIndicatorStyles;
       applyIndicatorStyles();
       paint(headRef.current);
@@ -1129,7 +1295,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           current.playing ? { ...current, playing: false } : current,
         );
       }
-      node.addEventListener("wheel", onChartWheel, { passive: true });
+      node.addEventListener("wheel", onChartWheel, { capture: true, passive: true });
+      const detachAxisWheel = attachRightAxisWheel(node, () => chart);
       if (focusSpanRef.current) {
         host.__focusRange?.(focusSpanRef.current.from, focusSpanRef.current.to);
       } else if (focusRef.current != null) {
@@ -1144,7 +1311,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       observer.observe(node);
       cleanup = () => {
         observer.disconnect();
-        node.removeEventListener("wheel", onChartWheel);
+        node.removeEventListener("wheel", onChartWheel, { capture: true });
+        detachAxisWheel();
         chart.timeScale().unsubscribeVisibleLogicalRangeChange(onLaneRange);
         const chartHost = node as HTMLDivElement & {
           __paint?: (index: number) => void;
@@ -1164,6 +1332,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         delete chartHost.__pan;
         delete chartHost.__wheel;
         applyIndicatorStylesRef.current = null;
+        applyAppearanceRef.current = null;
+        resetChartRef.current = null;
+        resetPriceRef.current = null;
+        chartShotRef.current = null;
         drawnIndicatorsRef.current.clear();
         chart.remove();
       };
@@ -1173,6 +1345,25 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       cleanup();
     };
   }, [candles, series, events, started, positionsRight, fillViewport]);
+
+  useEffect(() => {
+    if (savedAppearance === undefined) {
+      return;
+    }
+    if (savedAppearance === null) {
+      window.localStorage.removeItem(REPLAY_CHART_APPEARANCE_KEY);
+      return;
+    }
+    window.localStorage.setItem(
+      REPLAY_CHART_APPEARANCE_KEY,
+      serializeReplayChartAppearance(savedAppearance),
+    );
+  }, [savedAppearance]);
+
+  const appearanceKey = serializeReplayChartAppearance(chartAppearance);
+  useEffect(() => {
+    applyAppearanceRef.current?.();
+  }, [appearanceKey]);
 
   useEffect(() => {
     applyIndicatorStylesRef.current?.();
@@ -1526,14 +1717,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           positionsRight ? "flex min-h-0 flex-1 flex-col" : "min-h-[420px]"
         }`}
       >
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
-          <BacktestChartIntervalBar
-            run={run}
-            interval={interval}
-            onChange={(value) => {
-              setInterval(value);
-            }}
-          />
+        <div className="flex flex-wrap items-center justify-end gap-2 border-b border-line px-3 py-2">
           <div className="flex flex-wrap items-center gap-1">
             <TransportButton
               label="Previous event"
@@ -1599,6 +1783,37 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             </div>
           </div>
         </div>
+        <ReplayChartBar
+          run={run}
+          interval={interval}
+          onInterval={setInterval}
+          appearance={chartAppearance}
+          onChange={(patch) => {
+            setSessionAppearance((current) => patchReplayChartAppearance(current, patch));
+          }}
+          onSave={(fields) => {
+            const patch = pickReplayChartFields(sessionAppearance, fields);
+            setSavedAppearance((saved) => saveReplayChartAppearance(saved ?? null, patch));
+            setSessionAppearance((current) => clearReplayChartFields(current, fields));
+          }}
+          onReset={(fields) => {
+            setSessionAppearance((current) => clearReplayChartFields(current, fields));
+            setSavedAppearance((saved) => resetReplayChartFields(saved ?? null, fields));
+          }}
+          getChart={() => chartShotRef.current}
+          screenshotName={`${run.symbol}-replay.png`}
+          indicators={indicatorChoices}
+          references={references}
+          onToggleReference={(id, enabled) => {
+            setReferences((current) =>
+              enabled
+                ? current.includes(id)
+                  ? current
+                  : [...current, id]
+                : current.filter((row) => row !== id),
+            );
+          }}
+        />
         <div
           className={`relative ${
             positionsRight ? "min-h-[12rem] min-w-0 flex-1" : ""
@@ -1611,6 +1826,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                 ? "absolute inset-0"
                 : "h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
             }
+            onContextMenu={(event) => {
+              event.preventDefault();
+              setChartMenu({ x: event.clientX, y: event.clientY });
+            }}
           />
           {loading ? (
             <div
@@ -1643,9 +1862,11 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               rows={legendRows}
               targets={styleTargets}
               names={styleNames}
+              inputs={indicatorInputs.fields}
+              inputsLocked={indicatorInputs.locked}
+              timeframes={indicatorInputs.timeframes}
               session={sessionStyles}
               saved={savedStyles}
-              belowNotice={positionFocus != null}
               onChange={(layerId, lineId, style) => {
                 setSessionStyles((current) =>
                   writeIndicatorLineStyle(current, layerId, lineId, style),
@@ -1661,16 +1882,42 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                 setSessionStyles((current) => resetIndicatorStyle(current, layerId));
                 setGlobalStyles((current) => resetIndicatorStyle(current ?? {}, layerId));
               }}
+              onInput={(layerId, inputId, value) => {
+                if (!layerId.startsWith("ref:")) {
+                  return;
+                }
+                const kind = layerId.slice(4) as keyof ReplayReferenceInputs;
+                setReferenceInputs((current) => ({
+                  ...current,
+                  [kind]: { ...current[kind], [inputId]: value },
+                }));
+              }}
             />
           ) : null}
           {positionFocus ? (
-            <div className="absolute left-3 top-3 z-20" role="status">
+            <div className="absolute right-24 top-2 z-20" role="status">
               <ViewingPositionNotice
                 number={positionFocus.number}
                 onClose={() => setPositionFocus(null)}
               />
             </div>
           ) : null}
+          <ChartContextMenu
+            menu={chartMenu}
+            onClose={() => setChartMenu(null)}
+            onResetChart={() => {
+              setCursor((current) =>
+                current.playing ? { ...current, playing: false } : current,
+              );
+              resetChartRef.current?.();
+            }}
+            onResetPrice={() => {
+              setCursor((current) =>
+                current.playing ? { ...current, playing: false } : current,
+              );
+              resetPriceRef.current?.();
+            }}
+          />
           {tip && started ? (
             <div
               className="pointer-events-none absolute z-10 max-w-sm rounded-control border border-line bg-surface-raised px-3 py-2 text-xs text-ink shadow-none"

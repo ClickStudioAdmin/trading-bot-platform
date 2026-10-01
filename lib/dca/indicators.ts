@@ -1121,7 +1121,12 @@ export function rsiSeries(closes: number[], period = 14): (number | null)[] {
   return out;
 }
 
-export function macdSeries(closes: number[]): {
+export function macdSeries(
+  closes: number[],
+  fastPeriod = 12,
+  slowPeriod = 26,
+  signalPeriod = 9,
+): {
   macd: (number | null)[];
   signal: (number | null)[];
   histogram: (number | null)[];
@@ -1131,18 +1136,22 @@ export function macdSeries(closes: number[]): {
     signal: Array<number | null>(closes.length).fill(null),
     histogram: Array<number | null>(closes.length).fill(null),
   };
-  const fast = emaValues(closes, 12);
-  const slow = emaValues(closes, 26);
+  const fast = emaValues(closes, fastPeriod);
+  const slow = emaValues(closes, slowPeriod);
   if (fast.length === 0 || slow.length === 0) {
     return empty;
   }
+  const fastStart = closes.length - fast.length;
   const slowStart = closes.length - slow.length;
-  const alignedFast = fast.slice(fast.length - slow.length);
-  const macdLine = alignedFast.map((value, i) => value - (slow[i] ?? 0));
-  const signal = emaValues(macdLine, 9);
-  const signalStart = slowStart + (macdLine.length - signal.length);
+  const lineStart = Math.max(fastStart, slowStart);
+  const macdLine: number[] = [];
+  for (let i = lineStart; i < closes.length; i += 1) {
+    macdLine.push((fast[i - fastStart] ?? 0) - (slow[i - slowStart] ?? 0));
+  }
+  const signal = emaValues(macdLine, signalPeriod);
+  const signalStart = lineStart + (macdLine.length - signal.length);
   for (let i = 0; i < macdLine.length; i += 1) {
-    empty.macd[slowStart + i] = macdLine[i] ?? null;
+    empty.macd[lineStart + i] = macdLine[i] ?? null;
   }
   for (let i = 0; i < signal.length; i += 1) {
     const at = signalStart + i;

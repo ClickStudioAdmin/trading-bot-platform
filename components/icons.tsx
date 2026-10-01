@@ -5,6 +5,7 @@ import {
   ArrowLeftRight,
   Ban,
   Camera,
+  ChartCandlestick,
   ChartColumn,
   ChartLine,
   Check,
@@ -39,6 +40,7 @@ import {
   LoaderCircle,
   Mail,
   MailOpen,
+  Palette,
   Pause,
   Pencil,
   Play,
@@ -772,6 +774,18 @@ export function IconSignal(props: LucideProps) {
 
 export function IconCamera(props: LucideProps) {
   return <Camera aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconChartBars(props: LucideProps) {
+  return <ChartCandlestick aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconChartLine(props: LucideProps) {
+  return <ChartLine aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconPalette(props: LucideProps) {
+  return <Palette aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconExpand(props: LucideProps) {

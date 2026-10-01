@@ -6,7 +6,7 @@ import {
   ChartContextMenu,
   type ChartContextMenuState,
 } from "@/components/chart-context-menu";
-import { ChartScreenshotControls } from "@/components/desk-chart";
+import { ChartScreenshotControls } from "@/components/chart-screenshot";
 import {
   attachRightAxisWheel,
   CHART_SCALE_OPTIONS,
