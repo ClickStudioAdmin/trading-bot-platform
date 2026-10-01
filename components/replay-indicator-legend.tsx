@@ -136,7 +136,7 @@ export function ReplayIndicatorLegend({
                   disabled
                   value={timeframes[openId] ?? "Chart"}
                   aria-label="Timeframe"
-                  className="w-28 rounded-control border border-line bg-surface px-2 py-1 text-right text-sm text-ink-faint"
+                  className="w-28 rounded-control border border-line bg-surface px-2 py-1 text-right text-xs text-ink-faint"
                 />
               </SettingRow>
               {openInputs.map((field) => (
@@ -192,7 +192,7 @@ export function ReplayIndicatorLegend({
                                 key={width}
                                 type="button"
                                 aria-pressed={style.lineWidth === width}
-                                className={`rounded-control px-2 py-0.5 text-sm ${
+                                className={`rounded-control px-2 py-0.5 text-xs ${
                                   style.lineWidth === width
                                     ? "bg-accent-strong text-ink"
                                     : "text-ink-muted hover:text-ink"
@@ -246,7 +246,7 @@ function SettingRow({
   htmlFor?: string;
   children: ReactNode;
 }) {
-  const className = `text-sm ${muted ? "text-ink-faint" : "text-ink"}`;
+  const className = `text-xs ${muted ? "text-ink-faint" : "text-ink"}`;
   return (
     <div className="flex min-h-8 items-center justify-between gap-4">
       {htmlFor ? (
@@ -284,7 +284,7 @@ function IndicatorNumberField({
         {...(locked
           ? { value: field.value, onChange: () => undefined }
           : { defaultValue: field.value })}
-        className={`w-28 rounded-control border border-line bg-surface px-2 py-1 text-right text-sm ${
+        className={`w-28 rounded-control border border-line bg-surface px-2 py-1 text-right text-xs ${
           locked ? "text-ink-faint" : "text-ink"
         }`}
         onBlur={(event) => {

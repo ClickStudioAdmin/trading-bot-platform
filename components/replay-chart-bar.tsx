@@ -163,7 +163,7 @@ export function ReplayChartBar({
                   onChange={(down, downOpacity) => onChange({ down, downOpacity })}
                 />
               </SettingRow>
-              <p className="text-sm text-ink-faint">Wicks use the body colour.</p>
+              <p className="text-xs text-ink-faint">Wicks use the body colour.</p>
             </div>
             <PanelActions
               divided
@@ -264,7 +264,7 @@ function Panel({
 function SettingRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex min-h-8 items-center justify-between gap-4">
-      <span className="text-sm text-ink">{label}</span>
+      <span className="text-xs text-ink">{label}</span>
       {children}
     </div>
   );
