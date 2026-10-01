@@ -406,3 +406,99 @@ export function replayChartSeries(
   }
   return { layers };
 }
+
+export type ReplayIndicatorLegendValue = {
+  color: string;
+  text: string;
+};
+
+export type ReplayIndicatorLegendRow = {
+  id: string;
+  name: string;
+  values: ReplayIndicatorLegendValue[];
+};
+
+function legendNumber(value: number): string {
+  const abs = Math.abs(value);
+  const digits = abs >= 1000 ? 2 : abs >= 1 ? 4 : 8;
+  return value.toLocaleString("en-US", {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: 0,
+  });
+}
+
+function valueAt(values: (number | null)[], index: number): number | null {
+  if (values.length === 0) {
+    return null;
+  }
+  const at = Math.max(0, Math.min(index, values.length - 1));
+  for (let i = at; i >= 0; i -= 1) {
+    const value = values[i];
+    if (value != null && Number.isFinite(value)) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function plotCaption(plotTitle: string, layerTitle: string): string {
+  if (plotTitle === layerTitle) {
+    return "";
+  }
+  if (plotTitle.startsWith(`${layerTitle} `)) {
+    return plotTitle.slice(layerTitle.length).trim();
+  }
+  return plotTitle;
+}
+
+/** Active indicators for the chart corner, with the reading at one bar. */
+export function replayIndicatorLegend(
+  layers: IndicatorLayer[],
+  index: number,
+): ReplayIndicatorLegendRow[] {
+  const rows: ReplayIndicatorLegendRow[] = [];
+  for (const layer of layers) {
+    const values: ReplayIndicatorLegendValue[] = [];
+    for (const plot of layer.price) {
+      const value = valueAt(plot.values, index);
+      if (value == null) {
+        continue;
+      }
+      const caption = plotCaption(plot.title, layer.title);
+      values.push({
+        color: plot.color,
+        text: caption ? `${caption} ${legendNumber(value)}` : legendNumber(value),
+      });
+    }
+    const oscillator = layer.oscillator;
+    if (oscillator?.rsi) {
+      const value = valueAt(oscillator.rsi, index);
+      if (value != null) {
+        values.push({ color: "#A78BFA", text: legendNumber(value) });
+      }
+    }
+    if (oscillator?.macd) {
+      const value = valueAt(oscillator.macd, index);
+      if (value != null) {
+        values.push({ color: "#A78BFA", text: legendNumber(value) });
+      }
+    }
+    if (oscillator?.signal) {
+      const value = valueAt(oscillator.signal, index);
+      if (value != null) {
+        values.push({ color: "#F5B942", text: legendNumber(value) });
+      }
+    }
+    if (oscillator?.histogram) {
+      const value = valueAt(oscillator.histogram, index);
+      if (value != null) {
+        values.push({
+          color: value >= 0 ? "#34D399" : "#F07167",
+          text: legendNumber(value),
+        });
+      }
+    }
+    rows.push({ id: layer.id, name: layer.title, values });
+  }
+  return rows;
+}
