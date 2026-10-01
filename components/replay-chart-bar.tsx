@@ -11,6 +11,7 @@ import { IconChartBars, IconChartLine, IconClose, IconPalette } from "@/componen
 import { Modal } from "@/components/template-modals";
 import type { ReplayIndicatorChoice } from "@/lib/backtest/chart-series";
 import {
+  defaultReplayChartAppearance,
   REPLAY_BAR_FIELDS,
   REPLAY_CANVAS_FIELDS,
   type ReplayChartAppearance,
@@ -138,6 +139,7 @@ export function ReplayChartBar({
                   opacity={appearance.gridOpacity}
                   fallback="var(--color-line)"
                   pickerHex="#2A313C"
+                  defaultOpacity={defaultReplayChartAppearance().gridOpacity}
                   onChange={(grid, gridOpacity) => onChange({ grid, gridOpacity })}
                 />
               </SettingRow>

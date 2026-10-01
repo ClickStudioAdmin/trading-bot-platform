@@ -40,7 +40,7 @@ export function defaultReplayChartAppearance(): ReplayChartAppearance {
     upOpacity: 100,
     downOpacity: 100,
     backgroundOpacity: 100,
-    gridOpacity: 100,
+    gridOpacity: 30,
   };
 }
 
@@ -212,7 +212,10 @@ function normalizeAppearance(value: object): ReplayChartAppearance {
     upOpacity: clampChartOpacity(row.upOpacity),
     downOpacity: clampChartOpacity(row.downOpacity),
     backgroundOpacity: clampChartOpacity(row.backgroundOpacity),
-    gridOpacity: clampChartOpacity(row.gridOpacity),
+    gridOpacity:
+      row.gridOpacity === undefined
+        ? defaultReplayChartAppearance().gridOpacity
+        : clampChartOpacity(row.gridOpacity),
   });
 }
 

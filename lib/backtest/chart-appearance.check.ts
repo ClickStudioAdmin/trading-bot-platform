@@ -14,7 +14,8 @@ import {
 } from "./chart-appearance";
 
 assert.equal(defaultReplayChartAppearance().series, "candles");
-assert.equal(defaultReplayChartAppearance().gridOpacity, 100);
+assert.equal(defaultReplayChartAppearance().gridOpacity, 30);
+assert.equal(parseReplayChartAppearance(JSON.stringify({}))?.gridOpacity, 30);
 assert.equal(parseReplayChartAppearance(JSON.stringify({ series: "line" }))?.series, "line");
 assert.equal(parseReplayChartAppearance(JSON.stringify({ series: "bars" }))?.series, "candles");
 assert.equal(parseReplayChartAppearance(null), null);
@@ -69,5 +70,6 @@ assert.deepEqual(replayGridPaint("#2A313C", 100), { color: "#2A313C", visible: t
 assert.deepEqual(replayGridPaint("#2A313C", 0), { color: "#2A313C", visible: false });
 assert.equal(replayGridPaint("#2A313C", 50).visible, true);
 assert.equal(replayGridPaint("#2A313C", 50).color, "rgba(42, 49, 60, 0.5)");
+assert.equal(replayGridPaint("#2A313C", 30).color, "rgba(42, 49, 60, 0.3)");
 
 console.log("chart-appearance.check: ok");

@@ -18,6 +18,7 @@ export function ChartColorPicker({
   fallback,
   pickerHex,
   showLabel = true,
+  defaultOpacity = 100,
   onChange,
 }: {
   label: string;
@@ -26,6 +27,7 @@ export function ChartColorPicker({
   fallback: string;
   pickerHex?: string;
   showLabel?: boolean;
+  defaultOpacity?: number;
   onChange: (color: string | null, opacity: number) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -85,7 +87,7 @@ export function ChartColorPicker({
                   <button
                     type="button"
                     className="rounded-control px-1.5 py-0.5 text-xs text-ink-muted hover:text-ink"
-                    onClick={() => onChange(null, 100)}
+                    onClick={() => onChange(null, defaultOpacity)}
                   >
                     Default
                   </button>
