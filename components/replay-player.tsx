@@ -9,7 +9,9 @@ import {
   replayChartSeries,
   replayIndicatorCatalog,
   replayIndicatorLegend,
+  type IndicatorInput,
   type IndicatorStyleTarget,
+  type ReplayReferenceInputs,
 } from "@/lib/backtest/chart-series";
 import {
   REPLAY_INDICATOR_STYLE_KEY,
@@ -511,9 +513,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   }, [visibleEvents.length, sideLanes]);
   const stats = replayPlayStats(visibleOrders, run.startingUsdt);
   const [references, setReferences] = useState<string[]>([]);
+  const [referenceInputs, setReferenceInputs] = useState<ReplayReferenceInputs>({});
   const series = useMemo(
-    () => replayChartSeries(run.recipe, candles, references),
-    [run.recipe, candles, references],
+    () => replayChartSeries(run.recipe, candles, references, referenceInputs),
+    [run.recipe, candles, references, referenceInputs],
   );
   const indicatorChoices = useMemo(
     () => replayIndicatorCatalog(run.recipe),
@@ -536,6 +539,17 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       names[layer.id] = layer.title;
     }
     return names;
+  }, [series.layers]);
+  const indicatorInputs = useMemo(() => {
+    const fields: Record<string, IndicatorInput[]> = {};
+    const locked: Record<string, boolean> = {};
+    const timeframes: Record<string, string> = {};
+    for (const layer of series.layers) {
+      fields[layer.id] = layer.inputs;
+      locked[layer.id] = layer.inputsLocked;
+      timeframes[layer.id] = layer.timeframeLabel;
+    }
+    return { fields, locked, timeframes };
   }, [series.layers]);
   useEffect(() => {
     if (globalStyles === null) {
@@ -1848,6 +1862,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               rows={legendRows}
               targets={styleTargets}
               names={styleNames}
+              inputs={indicatorInputs.fields}
+              inputsLocked={indicatorInputs.locked}
+              timeframes={indicatorInputs.timeframes}
               session={sessionStyles}
               saved={savedStyles}
               onChange={(layerId, lineId, style) => {
@@ -1864,6 +1881,16 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               onReset={(layerId) => {
                 setSessionStyles((current) => resetIndicatorStyle(current, layerId));
                 setGlobalStyles((current) => resetIndicatorStyle(current ?? {}, layerId));
+              }}
+              onInput={(layerId, inputId, value) => {
+                if (!layerId.startsWith("ref:")) {
+                  return;
+                }
+                const kind = layerId.slice(4) as keyof ReplayReferenceInputs;
+                setReferenceInputs((current) => ({
+                  ...current,
+                  [kind]: { ...current[kind], [inputId]: value },
+                }));
               }}
             />
           ) : null}

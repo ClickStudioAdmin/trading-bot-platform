@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import { ChartColorPicker } from "@/components/chart-color-picker";
-import { IconChevronDown, IconClose, IconUiPrefs } from "@/components/icons";
-import type { ReplayIndicatorLegendRow } from "@/lib/backtest/chart-series";
+import { IconChevronDown, IconUiPrefs } from "@/components/icons";
+import { Modal } from "@/components/template-modals";
+import type {
+  IndicatorInput,
+  ReplayIndicatorLegendRow,
+} from "@/lib/backtest/chart-series";
 import type { IndicatorStyleTarget } from "@/lib/backtest/chart-series";
 import { colorWithOpacity } from "@/lib/backtest/chart-appearance";
 import {
@@ -16,24 +20,35 @@ export function ReplayIndicatorLegend({
   rows,
   targets,
   names,
+  inputs,
+  inputsLocked,
+  timeframes,
   session,
   saved,
   onChange,
   onSaveGlobal,
   onReset,
+  onInput,
 }: {
   rows: ReplayIndicatorLegendRow[];
   targets: Record<string, IndicatorStyleTarget[]>;
   names: Record<string, string>;
+  inputs: Record<string, IndicatorInput[]>;
+  inputsLocked: Record<string, boolean>;
+  timeframes: Record<string, string>;
   session: IndicatorStyleMap;
   saved: IndicatorStyleMap;
   onChange: (layerId: string, lineId: string, style: IndicatorLineStyle) => void;
   onSaveGlobal: (layerId: string) => void;
   onReset: (layerId: string) => void;
+  onInput: (layerId: string, inputId: IndicatorInput["id"], value: number) => void;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [shown, setShown] = useState(true);
+  const [tab, setTab] = useState<"inputs" | "style">("inputs");
   const openTargets = openId ? targets[openId] : null;
+  const openInputs = openId ? inputs[openId] : null;
+  const locked = openId ? (inputsLocked[openId] ?? true) : true;
   return (
     <>
       <div
@@ -45,9 +60,12 @@ export function ReplayIndicatorLegend({
             <button
               type="button"
               className="pointer-events-auto mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-control text-ink-faint hover:bg-surface-raised hover:text-ink"
-              aria-label={`Style ${row.name}`}
+              aria-label={`Settings ${row.name}`}
               aria-expanded={openId === row.id}
-              onClick={() => setOpenId((current) => (current === row.id ? null : row.id))}
+              onClick={() => {
+                setTab("inputs");
+                setOpenId((current) => (current === row.id ? null : row.id));
+              }}
             >
               <IconUiPrefs size={12} className="size-3" />
             </button>
@@ -85,91 +103,177 @@ export function ReplayIndicatorLegend({
           />
         </button>
       </div>
-      {shown && openId && openTargets ? (
-        <div
-          className="absolute left-14 top-2 z-30 w-80 rounded-card border border-line bg-surface p-3"
+      {shown && openId && openTargets && openInputs ? (
+        <Modal
+          title={names[openId] ?? "Indicator"}
+          onClose={() => setOpenId(null)}
+          elevated
         >
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-semibold text-ink">{names[openId] ?? "Indicator"}</p>
-            <button
-              type="button"
-              className="inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
-              aria-label="Close style"
-              onClick={() => setOpenId(null)}
-            >
-              <IconClose size={16} className="size-4" />
-            </button>
+          <div className="mt-4 flex border-b border-line" role="tablist" aria-label="Indicator settings">
+            {(["inputs", "style"] as const).map((id) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={tab === id}
+                className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+                  tab === id
+                    ? "border-ink text-ink"
+                    : "border-transparent text-ink-muted hover:text-ink"
+                }`}
+                onClick={() => setTab(id)}
+              >
+                {id === "inputs" ? "Inputs" : "Style"}
+              </button>
+            ))}
           </div>
-          <div className="mt-3 space-y-3">
-            {openTargets.map((line) => {
-              const style = indicatorLineStyle(session, saved, openId, line.id);
-              return (
-                <div key={line.id}>
-                  <label className="flex items-center gap-2 text-xs text-ink">
-                    <input
-                      type="checkbox"
-                      className="accent-accent"
-                      checked={style.visible}
-                      onChange={(event) =>
-                        onChange(openId, line.id, { ...style, visible: event.target.checked })
-                      }
-                    />
-                    {line.label}
-                  </label>
-                  <div className="mt-1">
-                    <ChartColorPicker
-                      label={line.label}
-                      showLabel={false}
-                      color={style.color}
-                      opacity={style.opacity}
-                      fallback={line.defaultColor}
-                      onChange={(color, opacity) =>
-                        onChange(openId, line.id, { ...style, color, opacity })
-                      }
-                    />
-                  </div>
-                  {line.id === "histogram" ? null : (
-                    <div className="mt-1 flex gap-1" role="group" aria-label={`${line.label} width`}>
-                      {([1, 2, 3] as const).map((width) => (
-                        <button
-                          key={width}
-                          type="button"
-                          aria-pressed={style.lineWidth === width}
-                          className={`rounded-control px-2 py-0.5 text-xs ${
-                            style.lineWidth === width
-                              ? "bg-accent-strong text-ink"
-                              : "text-ink-muted hover:text-ink"
-                          }`}
-                          onClick={() => onChange(openId, line.id, { ...style, lineWidth: width })}
-                        >
-                          {width}px
-                        </button>
-                      ))}
+          {tab === "inputs" ? (
+            <div className="mt-4 space-y-3" role="tabpanel">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-ink-faint">Timeframe</span>
+                <input
+                  type="text"
+                  readOnly
+                  disabled
+                  value={timeframes[openId] ?? "Chart"}
+                  aria-label="Timeframe"
+                  className="w-28 rounded-control border border-line bg-surface px-2 py-1 text-right text-sm text-ink-faint"
+                />
+              </div>
+              {openInputs.map((field) => (
+                <IndicatorNumberField
+                  key={field.id}
+                  field={field}
+                  locked={locked}
+                  onCommit={(value) => onInput(openId, field.id, value)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-4" role="tabpanel">
+              <div className="space-y-3">
+                {openTargets.map((line) => {
+                  const style = indicatorLineStyle(session, saved, openId, line.id);
+                  return (
+                    <div key={line.id}>
+                      <label className="flex items-center gap-2 text-xs text-ink">
+                        <input
+                          type="checkbox"
+                          className="accent-accent"
+                          checked={style.visible}
+                          onChange={(event) =>
+                            onChange(openId, line.id, { ...style, visible: event.target.checked })
+                          }
+                        />
+                        {line.label}
+                      </label>
+                      <div className="mt-1">
+                        <ChartColorPicker
+                          label={line.label}
+                          showLabel={false}
+                          color={style.color}
+                          opacity={style.opacity}
+                          fallback={line.defaultColor}
+                          onChange={(color, opacity) =>
+                            onChange(openId, line.id, { ...style, color, opacity })
+                          }
+                        />
+                      </div>
+                      {line.id === "histogram" ? null : (
+                        <div className="mt-1 flex gap-1" role="group" aria-label={`${line.label} width`}>
+                          {([1, 2, 3] as const).map((width) => (
+                            <button
+                              key={width}
+                              type="button"
+                              aria-pressed={style.lineWidth === width}
+                              className={`rounded-control px-2 py-0.5 text-xs ${
+                                style.lineWidth === width
+                                  ? "bg-accent-strong text-ink"
+                                  : "text-ink-muted hover:text-ink"
+                              }`}
+                              onClick={() => onChange(openId, line.id, { ...style, lineWidth: width })}
+                            >
+                              {width}px
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:text-ink"
-              onClick={() => onSaveGlobal(openId)}
-            >
-              Save as global
-            </button>
-            <button
-              type="button"
-              className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:text-ink"
-              onClick={() => onReset(openId)}
-            >
-              Reset to default
-            </button>
-          </div>
-        </div>
+                  );
+                })}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:text-ink"
+                  onClick={() => onSaveGlobal(openId)}
+                >
+                  Save as global
+                </button>
+                <button
+                  type="button"
+                  className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:text-ink"
+                  onClick={() => onReset(openId)}
+                >
+                  Reset to default
+                </button>
+              </div>
+            </div>
+          )}
+        </Modal>
       ) : null}
     </>
+  );
+}
+
+function IndicatorNumberField({
+  field,
+  locked,
+  onCommit,
+}: {
+  field: IndicatorInput;
+  locked: boolean;
+  onCommit: (value: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <label
+        htmlFor={`indicator-input-${field.id}`}
+        className={`text-sm ${locked ? "text-ink-faint" : "text-ink"}`}
+      >
+        {field.label}
+      </label>
+      <input
+        id={`indicator-input-${field.id}`}
+        key={locked ? "locked" : `${field.id}-${field.value}`}
+        type="number"
+        inputMode="decimal"
+        disabled={locked}
+        min={field.min}
+        max={field.max}
+        step={field.step}
+        {...(locked
+          ? { value: field.value, onChange: () => undefined }
+          : { defaultValue: field.value })}
+        className={`w-28 rounded-control border border-line bg-surface px-2 py-1 text-right text-sm ${
+          locked ? "text-ink-faint" : "text-ink"
+        }`}
+        onBlur={(event) => {
+          if (locked) {
+            return;
+          }
+          const parsed = Number(event.currentTarget.value);
+          if (Number.isFinite(parsed)) {
+            onCommit(parsed);
+          }
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.currentTarget.blur();
+          }
+        }}
+      />
+    </div>
   );
 }
 
@@ -185,4 +289,3 @@ function legendPaint(style: IndicatorLineStyle, fallback: string): string {
   }
   return `color-mix(in srgb, var(--color-${style.color}) ${style.opacity}%, transparent)`;
 }
-
