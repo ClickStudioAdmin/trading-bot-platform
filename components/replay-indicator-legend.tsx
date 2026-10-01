@@ -55,37 +55,41 @@ export function ReplayIndicatorLegend({
         className="pointer-events-none absolute left-2 top-2 z-10 flex max-w-[70%] flex-col"
         aria-label="Active indicators"
       >
-        {shown ? rows.map((row) => (
-          <div key={row.id} className="flex items-start gap-1">
-            <button
-              type="button"
-              className="pointer-events-auto mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-control text-ink-faint hover:bg-surface-raised hover:text-ink"
-              aria-label={`Settings ${row.name}`}
-              aria-expanded={openId === row.id}
-              onClick={() => {
-                setTab("inputs");
-                setOpenId((current) => (current === row.id ? null : row.id));
-              }}
-            >
-              <IconUiPrefs size={12} className="size-3" />
-            </button>
-            <p className="text-[11px] leading-4 text-ink-muted [text-shadow:0_1px_1px_var(--color-canvas),0_0_2px_var(--color-canvas)]">
-              {row.name}
-              {row.values.flatMap((value) => {
-                const style = indicatorLineStyle(session, saved, row.id, value.id);
-                if (!style.visible) {
-                  return [];
-                }
-                return [{ id: value.id, color: legendPaint(style, value.color), text: value.text }];
-              }).map((value, index) => (
-                <span key={value.id} style={{ color: value.color }}>
-                  {index === 0 ? " - " : ", "}
-                  {value.text}
-                </span>
-              ))}
-            </p>
+        {shown && rows.length > 0 ? (
+          <div className="rounded-control bg-canvas/50 px-1.5 py-1">
+            {rows.map((row) => (
+              <div key={row.id} className="flex items-start gap-1">
+                <button
+                  type="button"
+                  className="pointer-events-auto mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-control text-ink-faint hover:bg-surface-raised hover:text-ink"
+                  aria-label={`Settings ${row.name}`}
+                  aria-expanded={openId === row.id}
+                  onClick={() => {
+                    setTab("inputs");
+                    setOpenId((current) => (current === row.id ? null : row.id));
+                  }}
+                >
+                  <IconUiPrefs size={12} className="size-3" />
+                </button>
+                <p className="text-[11px] leading-4 text-ink-muted [text-shadow:0_1px_1px_var(--color-canvas),0_0_2px_var(--color-canvas)]">
+                  {row.name}
+                  {row.values.flatMap((value) => {
+                    const style = indicatorLineStyle(session, saved, row.id, value.id);
+                    if (!style.visible) {
+                      return [];
+                    }
+                    return [{ id: value.id, color: legendPaint(style, value.color), text: value.text }];
+                  }).map((value, index) => (
+                    <span key={value.id} style={{ color: value.color }}>
+                      {index === 0 ? " - " : ", "}
+                      {value.text}
+                    </span>
+                  ))}
+                </p>
+              </div>
+            ))}
           </div>
-        )) : null}
+        ) : null}
         <button
           type="button"
           className="pointer-events-auto mt-1 inline-flex size-6 items-center justify-center rounded-control border border-line-strong bg-surface text-ink hover:bg-surface-raised"
