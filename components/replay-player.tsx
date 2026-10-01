@@ -7,6 +7,7 @@ import { BacktestChartIntervalBar } from "@/components/backtest-chart-interval";
 import {
   indicatorRolesForReason,
   replayChartSeries,
+  replayIndicatorLegend,
 } from "@/lib/backtest/chart-series";
 import { eventParameterSections } from "@/lib/backtest/event-pane";
 import {
@@ -168,6 +169,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const [positionFocus, setPositionFocus] = useState<ChartPositionFocus | null>(
     null,
   );
+  const [legendIndex, setLegendIndex] = useState<number | null>(null);
   const positionFocusRef = useRef<ChartPositionFocus | null>(null);
   positionFocusRef.current = positionFocus;
   const cycleById = useMemo(() => {
@@ -380,6 +382,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const series = useMemo(
     () => replayChartSeries(run.recipe, candles),
     [run.recipe, candles],
+  );
+  const legendRows = useMemo(
+    () => replayIndicatorLegend(series.layers, legendIndex ?? head),
+    [series.layers, legendIndex, head],
   );
   const chartLabel = DCA_INDICATOR_TIMEFRAME_LABELS[interval];
   const otherTimeframes = series.layers
@@ -599,7 +605,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               lineWidth: 2,
               priceLineVisible: false,
               lastValueVisible: false,
-              title: plot.title,
             },
             pane,
           ),
@@ -617,7 +622,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               color: "#A78BFA",
               lineWidth: 2,
               priceLineVisible: false,
-              title: layer.title,
             },
             pane,
           );
@@ -634,7 +638,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         if (layer.oscillator?.histogram) {
           oscillator.histogram = chart.addSeries(
             charts.HistogramSeries,
-            { priceLineVisible: false, title: "Histogram" },
+            { priceLineVisible: false },
             pane,
           );
           oscillator.macd = chart.addSeries(
@@ -643,7 +647,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               color: "#A78BFA",
               lineWidth: 2,
               priceLineVisible: false,
-              title: "MACD",
             },
             pane,
           );
@@ -653,7 +656,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               color: "#F5B942",
               lineWidth: 2,
               priceLineVisible: false,
-              title: "Signal",
             },
             pane,
           );
@@ -816,8 +818,13 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         const time = typeof param.time === "number" ? param.time : null;
         if (!param.point || time == null) {
           setTip(null);
+          setLegendIndex(null);
           return;
         }
+        const barIndex = candles.findIndex(
+          (row) => Math.floor(row.timeMs / 1000) === time,
+        );
+        setLegendIndex(barIndex >= 0 ? barIndex : null);
         const texts = events
           .filter((item) => {
             const index = candleIndexAt(candles, item.atMs);
@@ -1468,6 +1475,29 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                 <IconPlay size={52} className="ml-1 size-12" />
               </span>
             </button>
+          ) : null}
+          {legendRows.length > 0 && started ? (
+            <div
+              className={`pointer-events-none absolute left-2 z-10 flex max-w-[70%] flex-col ${
+                positionFocus ? "top-11" : "top-2"
+              }`}
+              aria-label="Active indicators"
+            >
+              {legendRows.map((row) => (
+                <p
+                  key={row.id}
+                  className="text-[11px] leading-4 text-ink-muted [text-shadow:0_1px_1px_var(--color-canvas),0_0_2px_var(--color-canvas)]"
+                >
+                  {row.name}
+                  {row.values.map((value, index) => (
+                    <span key={`${row.id}-${index}`} style={{ color: value.color }}>
+                      {" "}
+                      {value.text}
+                    </span>
+                  ))}
+                </p>
+              ))}
+            </div>
           ) : null}
           {positionFocus ? (
             <div className="absolute left-3 top-3 z-20" role="status">
