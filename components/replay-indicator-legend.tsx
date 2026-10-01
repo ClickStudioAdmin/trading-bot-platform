@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IconClose, IconUiPrefs } from "@/components/icons";
+import { IconChevronDown, IconClose, IconUiPrefs } from "@/components/icons";
 import type { ReplayIndicatorLegendRow } from "@/lib/backtest/chart-series";
 import type { IndicatorStyleTarget } from "@/lib/backtest/chart-series";
 import {
@@ -43,6 +43,7 @@ export function ReplayIndicatorLegend({
   onReset: (layerId: string) => void;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [shown, setShown] = useState(true);
   const openTargets = openId ? targets[openId] : null;
   return (
     <>
@@ -52,7 +53,22 @@ export function ReplayIndicatorLegend({
         }`}
         aria-label="Active indicators"
       >
-        {rows.map((row) => (
+        <button
+          type="button"
+          className="pointer-events-auto mb-1 inline-flex size-5 items-center justify-center rounded-control text-ink-faint hover:bg-surface-raised hover:text-ink"
+          aria-expanded={shown}
+          aria-label={shown ? "Hide indicators" : "Show indicators"}
+          onClick={() => {
+            setShown((current) => !current);
+            setOpenId(null);
+          }}
+        >
+          <IconChevronDown
+            size={12}
+            className={`size-3 ${shown ? "rotate-180" : ""}`}
+          />
+        </button>
+        {shown ? rows.map((row) => (
           <div key={row.id} className="flex items-start gap-1">
             <button
               type="button"
@@ -80,11 +96,11 @@ export function ReplayIndicatorLegend({
               })}
             </p>
           </div>
-        ))}
+        )) : null}
       </div>
-      {openId && openTargets ? (
+      {shown && openId && openTargets ? (
         <div
-          className={`absolute left-2 z-30 w-80 rounded-card border border-line bg-surface p-3 ${
+          className={`absolute left-14 z-30 w-80 rounded-card border border-line bg-surface p-3 ${
             belowNotice ? "top-11" : "top-2"
           }`}
         >
