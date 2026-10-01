@@ -345,6 +345,10 @@ export type SweepRecipeOptions = {
   compound?: boolean;
   bookUsdt?: number;
   name?: string;
+  maxValueKind?: "percent" | "margin";
+  maxValue?: string;
+  dipPct?: string;
+  maxClips?: string;
 };
 
 export function buildRecipe(
@@ -381,11 +385,11 @@ export function buildRecipe(
   form.set("sizeUnit", "usdt");
   form.set("averaging", "dip");
   form.set("restGrid", "1");
-  form.set("dipPct", "1");
-  form.set("maxClips", "4");
-  if (options.compound) {
-    form.set("maxValueKind", "percent");
-    form.set("maxValue", "4");
+  form.set("dipPct", options.dipPct ?? "1");
+  form.set("maxClips", options.maxClips ?? "4");
+  if (options.compound || options.maxValue != null) {
+    form.set("maxValueKind", options.maxValueKind ?? "percent");
+    form.set("maxValue", options.maxValue ?? "4");
     form.set("accountBookUsdt", String(options.bookUsdt ?? DEFAULT_STARTING_USDT));
     form.set("accountLeverage", String(DEFAULT_LEVERAGE));
   } else {
