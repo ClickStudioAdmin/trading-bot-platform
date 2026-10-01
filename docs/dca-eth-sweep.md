@@ -2,7 +2,7 @@
 
 Study Click asked for on 1 Oct 2026. Paper replay only. Same engine as `/account/backtests` (`replayDcaPlaybook`). No live orders, no desk arming, no change to the research wizard.
 
-Runs are saved on the admin login `click.studio.admin@gmail.com` in the development database, so they show under Saved Backtests. They are ordinary runs (no `study_id`), because study rows are hidden from that list.
+Runs are saved on the admin login `click.studio.admin@gmail.com` in the development database, so they show under Saved Backtests. They are ordinary runs (no `study_id`), because study rows are hidden from that list. Bot names are capped at 40 characters, so a saved run is named `ETH {entry} · {exit}` and, when a secondary is attached, `ETH {entry} · {exit} · {secondary}`. The codes are the tables below.
 
 ## Question
 
@@ -65,6 +65,8 @@ Basis is average entry. Stop and the percent take profit that is not the cell un
 | Secondary on the 40 | Off |
 
 Bybit is the usual ETHUSDT desk, and 15m is the usual indicator tape. This environment cannot call Bybit’s public REST (CloudFront rejects the region). Hyperliquid is the other venue the replay already loads. Its 15m history stops near 52 days, so a one-year window does not fit. 4h ETH on Hyperliquid covers that year (about 2,200 bars) and is a legal bot timeframe, so the saved run, the fills, and the chart use one tape.
+
+Replay parses the recipe with the run’s venue. A Hyperliquid coin is not a Bybit USDT symbol, and forcing Bybit parse drops the run before the first bar.
 
 ## Steps
 

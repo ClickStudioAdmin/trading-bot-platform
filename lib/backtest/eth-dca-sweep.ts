@@ -329,8 +329,12 @@ function recipeName(
   exit: ExitSpec,
   secondary: SecondarySpec | null,
 ): string {
-  const extra = secondary ? ` · ${secondary.name}` : "";
-  return `ETH DCA · ${entry.name} · ${exit.name}${extra}`;
+  const extra = secondary ? ` · ${secondary.id}` : "";
+  const name = `ETH ${entry.id} · ${exit.id}${extra}`;
+  if (name.length > 40) {
+    throw new Error(`Name is ${name.length} characters: ${name}`);
+  }
+  return name;
 }
 
 function buildRecipe(
@@ -441,6 +445,10 @@ function usd(value: number): string {
   return `${sign}$${Math.abs(value).toFixed(2)}`;
 }
 
+function dollars(value: number): string {
+  return `$${Math.abs(value).toFixed(2)}`;
+}
+
 function betterNet(left: Row, right: Row): Row {
   if (left.liquidated !== right.liquidated) {
     return left.liquidated ? right : left;
@@ -516,6 +524,7 @@ async function main(): Promise<void> {
           feeRate: BACKTEST_FEE_PRESETS.vip0_taker.rate,
           startingUsdt: DEFAULT_STARTING_USDT,
           leverage: DEFAULT_LEVERAGE,
+          venue: "hyperliquid",
         });
         const scored = measure(result.orders, result.stats);
         const row: Row = {
@@ -559,6 +568,7 @@ async function main(): Promise<void> {
           feeRate: BACKTEST_FEE_PRESETS.vip0_taker.rate,
           startingUsdt: DEFAULT_STARTING_USDT,
           leverage: DEFAULT_LEVERAGE,
+          venue: "hyperliquid",
         });
         saves.push({
           row: bestNet,
@@ -606,7 +616,7 @@ function renderMarkdown(input: {
   lines.push("# ETH DCA sweep results");
   lines.push("");
   lines.push(
-    `Hyperliquid ETH, 4h, ${input.dates.from} to ${input.dates.to} (${input.bars} bars). Starting balance $10,000, leverage 10×, fee 6 bps. ${input.replayed} replays in ${input.elapsedSec}s. Plan: [dca-eth-sweep.md](dca-eth-sweep.md).`,
+    `Hyperliquid ETH, 4h, ${input.dates.from} to ${input.dates.to} (${input.bars} bars). Starting balance $10,000, leverage 10×, fee 6 bps. ${input.replayed} replays in ${input.elapsedSec}s. Plan: [dca-eth-sweep.md](dca-eth-sweep.md). Paper fills on that tape only.`,
   );
   lines.push("");
   lines.push("Secondary was off on these rankings. Gross win adds up winning closes and leaves losing closes out.");
@@ -653,7 +663,7 @@ function renderMarkdown(input: {
         base,
       );
       lines.push(
-        `| ${entry.name} | ${exit.name} | ${usd(base.net)} | ${usd(base.grossWin)} | ${usd(base.grossLoss)} | ${base.trades} | ${labelPick(bestNet)} | ${usd(bestNet.net)} | ${labelPick(grossPick)} | ${usd(grossPick.grossWin)} | ${labelPick(lossPick)} | ${usd(lossPick.grossLoss)} |`,
+        `| ${entry.name} | ${exit.name} | ${usd(base.net)} | ${usd(base.grossWin)} | ${dollars(base.grossLoss)} | ${base.trades} | ${labelPick(bestNet)} | ${usd(bestNet.net)} | ${labelPick(grossPick)} | ${usd(grossPick.grossWin)} | ${labelPick(lossPick)} | ${dollars(lossPick.grossLoss)} |`,
       );
     }
   }
@@ -661,7 +671,7 @@ function renderMarkdown(input: {
   lines.push("## Saved runs");
   lines.push("");
   lines.push(
-    "Base runs, plus a secondary variant when it beat that cell’s net, are on the admin account under Saved Backtests. Names start with `ETH DCA`.",
+    "Base runs, plus a secondary variant when it beat that cell’s net, are on the admin account under Saved Backtests. Names look like `ETH rsi-xb · tp-pct-mkt`.",
   );
   lines.push("");
   if (input.savedIds.size === 0) {
@@ -691,7 +701,7 @@ function rankTable(rows: Row[]): string {
     const win = row.trades > 0 ? `${(row.winRate * 100).toFixed(0)}%` : "—";
     const flag = row.liquidated ? " liquidated" : "";
     lines.push(
-      `| ${index + 1} | ${row.entryName} | ${row.exitName}${flag} | ${usd(row.net)} | ${usd(row.grossWin)} | ${usd(row.grossLoss)} | ${row.trades} | ${win} | ${usd(row.maxDrawdownUsdt)} |`,
+      `| ${index + 1} | ${row.entryName} | ${row.exitName}${flag} | ${usd(row.net)} | ${usd(row.grossWin)} | ${dollars(row.grossLoss)} | ${row.trades} | ${win} | ${dollars(row.maxDrawdownUsdt)} |`,
     );
   });
   return lines.join("\n");
@@ -736,7 +746,7 @@ async function saveRuns(
     const name = String(
       (row.recipe as { name?: string } | null)?.name ?? "",
     );
-    if (name.startsWith("ETH DCA ·") && row.id) {
+    if (/^ETH [a-z0-9-]+ · /.test(name) && row.id) {
       byName.set(name, String(row.id));
     }
   }
