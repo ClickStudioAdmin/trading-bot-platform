@@ -1,25 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { ChartColorPicker } from "@/components/chart-color-picker";
 import { IconChevronDown, IconClose, IconUiPrefs } from "@/components/icons";
 import type { ReplayIndicatorLegendRow } from "@/lib/backtest/chart-series";
 import type { IndicatorStyleTarget } from "@/lib/backtest/chart-series";
+import { colorWithOpacity } from "@/lib/backtest/chart-appearance";
 import {
-  INDICATOR_STYLE_COLORS,
   indicatorLineStyle,
   type IndicatorLineStyle,
-  type IndicatorStyleColor,
   type IndicatorStyleMap,
 } from "@/lib/backtest/indicator-style";
-
-const SWATCH: Record<IndicatorStyleColor, string> = {
-  accent: "bg-accent",
-  warning: "bg-warning",
-  success: "bg-success",
-  danger: "bg-danger",
-  "ink-muted": "bg-ink-muted",
-  "ink-faint": "bg-ink-faint",
-};
 
 export function ReplayIndicatorLegend({
   rows,
@@ -67,8 +58,7 @@ export function ReplayIndicatorLegend({
                 if (!style.visible) {
                   return [];
                 }
-                const color = style.color ? `var(--color-${style.color})` : value.color;
-                return [{ id: value.id, color, text: value.text }];
+                return [{ id: value.id, color: legendPaint(style, value.color), text: value.text }];
               }).map((value, index) => (
                 <span key={value.id} style={{ color: value.color }}>
                   {index === 0 ? " - " : ", "}
@@ -126,22 +116,17 @@ export function ReplayIndicatorLegend({
                     />
                     {line.label}
                   </label>
-                  <div className="mt-1 flex flex-wrap items-center gap-1" role="group" aria-label={`${line.label} color`}>
-                    <Swatch
-                      label="Default"
-                      selected={style.color == null}
-                      className="bg-surface-raised"
-                      onClick={() => onChange(openId, line.id, { ...style, color: null })}
+                  <div className="mt-1">
+                    <ChartColorPicker
+                      label={line.label}
+                      showLabel={false}
+                      color={style.color}
+                      opacity={style.opacity}
+                      fallback={line.defaultColor}
+                      onChange={(color, opacity) =>
+                        onChange(openId, line.id, { ...style, color, opacity })
+                      }
                     />
-                    {INDICATOR_STYLE_COLORS.map((swatch) => (
-                      <Swatch
-                        key={swatch.id}
-                        label={swatch.label}
-                        selected={style.color === swatch.id}
-                        className={SWATCH[swatch.id]}
-                        onClick={() => onChange(openId, line.id, { ...style, color: swatch.id })}
-                      />
-                    ))}
                   </div>
                   {line.id === "histogram" ? null : (
                     <div className="mt-1 flex gap-1" role="group" aria-label={`${line.label} width`}>
@@ -188,27 +173,16 @@ export function ReplayIndicatorLegend({
   );
 }
 
-function Swatch({
-  label,
-  selected,
-  className,
-  onClick,
-}: {
-  label: string;
-  selected: boolean;
-  className: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      aria-pressed={selected}
-      className={`size-4 rounded-full border ${
-        selected ? "border-ink" : "border-line"
-      } ${className}`}
-      onClick={onClick}
-    />
-  );
+function legendPaint(style: IndicatorLineStyle, fallback: string): string {
+  if (!style.color) {
+    return style.opacity >= 100 ? fallback : colorWithOpacity(fallback, style.opacity);
+  }
+  if (style.color.startsWith("#")) {
+    return style.opacity >= 100 ? style.color : colorWithOpacity(style.color, style.opacity);
+  }
+  if (style.opacity >= 100) {
+    return `var(--color-${style.color})`;
+  }
+  return `color-mix(in srgb, var(--color-${style.color}) ${style.opacity}%, transparent)`;
 }
 

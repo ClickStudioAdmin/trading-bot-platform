@@ -24,6 +24,15 @@ assert.equal(
   parseReplayChartAppearance(JSON.stringify({ grid: "accent", gridOpacity: 40 }))?.grid,
   "accent",
 );
+assert.equal(
+  parseReplayChartAppearance(JSON.stringify({ up: "#A1B", upOpacity: 40 }))?.up,
+  "#aa11bb",
+);
+assert.equal(
+  parseReplayChartAppearance(JSON.stringify({ up: "#A1B", upOpacity: 40 }))?.upOpacity,
+  40,
+);
+assert.equal(parseReplayChartAppearance(JSON.stringify({}))?.backgroundOpacity, 100);
 
 const saved = parseReplayChartAppearance(
   JSON.stringify({ up: "success", grid: "ink-muted", gridOpacity: 40 }),

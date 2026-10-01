@@ -1,22 +1,27 @@
-import type { IndicatorStyleColor } from "@/lib/backtest/indicator-style";
-import { INDICATOR_STYLE_COLORS } from "@/lib/backtest/indicator-style";
+import { clampChartOpacity, normalizeChartColor } from "@/lib/backtest/chart-color";
 
 export const REPLAY_CHART_APPEARANCE_KEY = "tbp.replay.chart-appearance";
 
-const COLOR_IDS = new Set<string>(INDICATOR_STYLE_COLORS.map((row) => row.id));
-
 export type ReplayChartAppearance = {
-  up: IndicatorStyleColor | null;
-  down: IndicatorStyleColor | null;
-  background: IndicatorStyleColor | null;
-  grid: IndicatorStyleColor | null;
+  up: string | null;
+  down: string | null;
+  background: string | null;
+  grid: string | null;
+  upOpacity: number;
+  downOpacity: number;
+  backgroundOpacity: number;
   gridOpacity: number;
 };
 
 export type ReplayChartAppearancePatch = Partial<ReplayChartAppearance>;
 
-export const REPLAY_BAR_FIELDS = ["up", "down"] as const;
-export const REPLAY_CANVAS_FIELDS = ["background", "grid", "gridOpacity"] as const;
+export const REPLAY_BAR_FIELDS = ["up", "down", "upOpacity", "downOpacity"] as const;
+export const REPLAY_CANVAS_FIELDS = [
+  "background",
+  "grid",
+  "backgroundOpacity",
+  "gridOpacity",
+] as const;
 
 export function defaultReplayChartAppearance(): ReplayChartAppearance {
   return {
@@ -24,16 +29,15 @@ export function defaultReplayChartAppearance(): ReplayChartAppearance {
     down: null,
     background: null,
     grid: null,
+    upOpacity: 100,
+    downOpacity: 100,
+    backgroundOpacity: 100,
     gridOpacity: 100,
   };
 }
 
 export function clampGridOpacity(value: unknown): number {
-  const amount = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(amount)) {
-    return 100;
-  }
-  return Math.max(0, Math.min(100, Math.round(amount)));
+  return clampChartOpacity(value);
 }
 
 export function colorWithOpacity(color: string, opacityPercent: number): string {
@@ -156,19 +160,28 @@ export function resetReplayChartFields(
 function cleanPatch(patch: ReplayChartAppearancePatch): ReplayChartAppearancePatch {
   const next: ReplayChartAppearancePatch = {};
   if ("up" in patch) {
-    next.up = colorId(patch.up);
+    next.up = normalizeChartColor(patch.up);
   }
   if ("down" in patch) {
-    next.down = colorId(patch.down);
+    next.down = normalizeChartColor(patch.down);
   }
   if ("background" in patch) {
-    next.background = colorId(patch.background);
+    next.background = normalizeChartColor(patch.background);
   }
   if ("grid" in patch) {
-    next.grid = colorId(patch.grid);
+    next.grid = normalizeChartColor(patch.grid);
+  }
+  if ("upOpacity" in patch) {
+    next.upOpacity = clampChartOpacity(patch.upOpacity);
+  }
+  if ("downOpacity" in patch) {
+    next.downOpacity = clampChartOpacity(patch.downOpacity);
+  }
+  if ("backgroundOpacity" in patch) {
+    next.backgroundOpacity = clampChartOpacity(patch.backgroundOpacity);
   }
   if ("gridOpacity" in patch) {
-    next.gridOpacity = clampGridOpacity(patch.gridOpacity);
+    next.gridOpacity = clampChartOpacity(patch.gridOpacity);
   }
   return next;
 }
@@ -176,18 +189,15 @@ function cleanPatch(patch: ReplayChartAppearancePatch): ReplayChartAppearancePat
 function normalizeAppearance(value: object): ReplayChartAppearance {
   const row = value as Partial<ReplayChartAppearance>;
   return mergeReplayChartAppearance(null, {
-    up: colorId(row.up),
-    down: colorId(row.down),
-    background: colorId(row.background),
-    grid: colorId(row.grid),
-    gridOpacity: clampGridOpacity(row.gridOpacity),
+    up: normalizeChartColor(row.up),
+    down: normalizeChartColor(row.down),
+    background: normalizeChartColor(row.background),
+    grid: normalizeChartColor(row.grid),
+    upOpacity: clampChartOpacity(row.upOpacity),
+    downOpacity: clampChartOpacity(row.downOpacity),
+    backgroundOpacity: clampChartOpacity(row.backgroundOpacity),
+    gridOpacity: clampChartOpacity(row.gridOpacity),
   });
-}
-
-function colorId(value: unknown): IndicatorStyleColor | null {
-  return typeof value === "string" && COLOR_IDS.has(value)
-    ? (value as IndicatorStyleColor)
-    : null;
 }
 
 function sameAppearance(left: ReplayChartAppearance, right: ReplayChartAppearance): boolean {
@@ -196,6 +206,9 @@ function sameAppearance(left: ReplayChartAppearance, right: ReplayChartAppearanc
     left.down === right.down &&
     left.background === right.background &&
     left.grid === right.grid &&
+    left.upOpacity === right.upOpacity &&
+    left.downOpacity === right.downOpacity &&
+    left.backgroundOpacity === right.backgroundOpacity &&
     left.gridOpacity === right.gridOpacity
   );
 }

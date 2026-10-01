@@ -1,18 +1,18 @@
+import {
+  clampChartOpacity,
+  normalizeChartColor,
+} from "@/lib/backtest/chart-color";
+
+export {
+  INDICATOR_STYLE_COLORS,
+  type IndicatorStyleColor,
+} from "@/lib/backtest/chart-color";
+
 export const REPLAY_INDICATOR_STYLE_KEY = "tbp.replay.indicator-styles";
 
-export const INDICATOR_STYLE_COLORS = [
-  { id: "accent", label: "Purple" },
-  { id: "warning", label: "Gold" },
-  { id: "success", label: "Green" },
-  { id: "danger", label: "Red" },
-  { id: "ink-muted", label: "Grey" },
-  { id: "ink-faint", label: "Faint" },
-] as const;
-
-export type IndicatorStyleColor = (typeof INDICATOR_STYLE_COLORS)[number]["id"];
-
 export type IndicatorLineStyle = {
-  color: IndicatorStyleColor | null;
+  color: string | null;
+  opacity: number;
   lineWidth: 1 | 2 | 3;
   visible: boolean;
 };
@@ -23,10 +23,8 @@ export type IndicatorStyleOverride = {
 
 export type IndicatorStyleMap = Record<string, IndicatorStyleOverride>;
 
-const COLOR_IDS = new Set<string>(INDICATOR_STYLE_COLORS.map((row) => row.id));
-
 export function defaultIndicatorLineStyle(): IndicatorLineStyle {
-  return { color: null, lineWidth: 2, visible: true };
+  return { color: null, opacity: 100, lineWidth: 2, visible: true };
 }
 
 export function parseIndicatorStyles(raw: string | null): IndicatorStyleMap {
@@ -62,10 +60,10 @@ export function indicatorLineStyle(
   layerId: string,
   lineId: string,
 ): IndicatorLineStyle {
-  return (
+  return completeLineStyle(
     session[layerId]?.lines[lineId] ??
-    saved[layerId]?.lines[lineId] ??
-    defaultIndicatorLineStyle()
+      saved[layerId]?.lines[lineId] ??
+      defaultIndicatorLineStyle(),
   );
 }
 
@@ -80,7 +78,7 @@ export function writeIndicatorLineStyle(
     [layerId]: {
       lines: {
         ...(map[layerId]?.lines ?? {}),
-        [lineId]: style,
+        [lineId]: completeLineStyle(style),
       },
     },
   };
@@ -132,18 +130,28 @@ function lineStyle(value: unknown): IndicatorLineStyle | null {
   if (!value || typeof value !== "object") {
     return null;
   }
-  const row = value as { color?: unknown; lineWidth?: unknown; visible?: unknown };
-  const color =
-    row.color == null
-      ? null
-      : typeof row.color === "string" && COLOR_IDS.has(row.color)
-        ? (row.color as IndicatorStyleColor)
-        : null;
+  const row = value as {
+    color?: unknown;
+    opacity?: unknown;
+    lineWidth?: unknown;
+    visible?: unknown;
+  };
   const width = row.lineWidth;
   const lineWidth = width === 1 || width === 2 || width === 3 ? width : 2;
   return {
-    color,
+    color: normalizeChartColor(row.color),
+    opacity: row.opacity == null ? 100 : clampChartOpacity(row.opacity),
     lineWidth,
     visible: row.visible !== false,
+  };
+}
+
+function completeLineStyle(style: IndicatorLineStyle): IndicatorLineStyle {
+  const width = style.lineWidth;
+  return {
+    color: normalizeChartColor(style.color),
+    opacity: clampChartOpacity(style.opacity),
+    lineWidth: width === 1 || width === 2 || width === 3 ? width : 2,
+    visible: style.visible !== false,
   };
 }

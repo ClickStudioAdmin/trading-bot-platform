@@ -31,6 +31,7 @@ import {
   parseReplayChartAppearance,
   patchReplayChartAppearance,
   clearReplayChartFields,
+  colorWithOpacity,
   pickReplayChartFields,
   replayGridPaint,
   resetReplayChartFields,
@@ -153,8 +154,14 @@ function appearanceColor(
   token: string | null,
   fallbackName: string,
   fallbackHex: string,
+  opacity = 100,
 ): string {
-  return cssVar(node, token ? `--color-${token}` : fallbackName, fallbackHex);
+  const base = !token
+    ? cssVar(node, fallbackName, fallbackHex)
+    : token.startsWith("#")
+      ? token
+      : cssVar(node, `--color-${token}`, fallbackHex);
+  return opacity >= 100 ? base : colorWithOpacity(base, opacity);
 }
 
 function readStoredIndicatorStyles(): IndicatorStyleMap {
@@ -177,10 +184,12 @@ function styledLineColor(
   style: IndicatorLineStyle,
   fallback: string,
 ): string {
-  if (!style.color) {
-    return fallback;
-  }
-  return cssVar(node, `--color-${style.color}`, fallback);
+  const base = !style.color
+    ? fallback
+    : style.color.startsWith("#")
+      ? style.color
+      : cssVar(node, `--color-${style.color}`, fallback);
+  return style.opacity >= 100 ? base : colorWithOpacity(base, style.opacity);
 }
 
 function candleIndexAt(candles: CandleBar[], atMs: number): number {
@@ -1089,13 +1098,26 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           look.background,
           "--color-canvas",
           "#0B0E14",
+          look.backgroundOpacity,
         );
         const grid = replayGridPaint(
           appearanceColor(node, look.grid, "--color-line", "#2A313C"),
           look.gridOpacity,
         );
-        const up = appearanceColor(node, look.up, "--color-success", "#34D399");
-        const down = appearanceColor(node, look.down, "--color-danger", "#F07167");
+        const up = appearanceColor(
+          node,
+          look.up,
+          "--color-success",
+          "#34D399",
+          look.upOpacity,
+        );
+        const down = appearanceColor(
+          node,
+          look.down,
+          "--color-danger",
+          "#F07167",
+          look.downOpacity,
+        );
         chart.applyOptions({
           layout: {
             background: { type: charts.ColorType.Solid, color: background },

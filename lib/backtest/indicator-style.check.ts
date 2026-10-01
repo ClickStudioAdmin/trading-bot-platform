@@ -10,7 +10,7 @@ import {
 } from "./indicator-style";
 
 const fallback = defaultIndicatorLineStyle();
-assert.deepEqual(fallback, { color: null, lineWidth: 2, visible: true });
+assert.deepEqual(fallback, { color: null, opacity: 100, lineWidth: 2, visible: true });
 assert.deepEqual(parseIndicatorStyles(null), {});
 assert.deepEqual(parseIndicatorStyles("not json"), {});
 assert.deepEqual(parseIndicatorStyles(JSON.stringify({ bad: { nope: 1 } })), {});
@@ -27,17 +27,32 @@ const saved = parseIndicatorStyles(
 );
 assert.deepEqual(saved.layer?.lines.mid, {
   color: "accent",
+  opacity: 100,
   lineWidth: 3,
   visible: false,
 });
 assert.deepEqual(saved.layer?.lines.upper, {
   color: null,
+  opacity: 100,
+  lineWidth: 2,
+  visible: true,
+});
+
+const painted = parseIndicatorStyles(
+  JSON.stringify({
+    layer: { lines: { mid: { color: "#A1B", opacity: 65.2, lineWidth: 2, visible: true } } },
+  }),
+);
+assert.deepEqual(painted.layer?.lines.mid, {
+  color: "#aa11bb",
+  opacity: 65,
   lineWidth: 2,
   visible: true,
 });
 
 const session = writeIndicatorLineStyle({}, "layer", "mid", {
   color: "danger",
+  opacity: 100,
   lineWidth: 1,
   visible: true,
 });

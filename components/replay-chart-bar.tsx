@@ -6,6 +6,7 @@ import {
   ChartScreenshotControls,
   type ChartSnapshot,
 } from "@/components/chart-screenshot";
+import { ChartColorPicker } from "@/components/chart-color-picker";
 import { IconChartBars, IconClose, IconPalette } from "@/components/icons";
 import { Modal } from "@/components/template-modals";
 import type { ReplayIndicatorChoice } from "@/lib/backtest/chart-series";
@@ -15,21 +16,8 @@ import {
   type ReplayChartAppearance,
   type ReplayChartAppearancePatch,
 } from "@/lib/backtest/chart-appearance";
-import {
-  INDICATOR_STYLE_COLORS,
-  type IndicatorStyleColor,
-} from "@/lib/backtest/indicator-style";
 import type { BacktestRun } from "@/lib/backtest/model";
 import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
-
-const SWATCH: Record<IndicatorStyleColor, string> = {
-  accent: "bg-accent",
-  warning: "bg-warning",
-  success: "bg-success",
-  danger: "bg-danger",
-  "ink-muted": "bg-ink-muted",
-  "ink-faint": "bg-ink-faint",
-};
 
 const TOOL_BUTTON =
   "inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink";
@@ -105,15 +93,21 @@ export function ReplayChartBar({
       </div>
       {open === "bars" ? (
         <Panel title="Bar settings" onClose={() => setOpen(null)}>
-          <ColorRow
+          <ChartColorPicker
             label="Up"
-            value={appearance.up}
-            onChange={(up) => onChange({ up })}
+            color={appearance.up}
+            opacity={appearance.upOpacity}
+            fallback="var(--color-success)"
+            pickerHex="#34D399"
+            onChange={(up, upOpacity) => onChange({ up, upOpacity })}
           />
-          <ColorRow
+          <ChartColorPicker
             label="Down"
-            value={appearance.down}
-            onChange={(down) => onChange({ down })}
+            color={appearance.down}
+            opacity={appearance.downOpacity}
+            fallback="var(--color-danger)"
+            pickerHex="#F07167"
+            onChange={(down, downOpacity) => onChange({ down, downOpacity })}
           />
           <p className="text-xs text-ink-faint">Wicks use the body colour.</p>
           <PanelActions
@@ -124,30 +118,24 @@ export function ReplayChartBar({
       ) : null}
       {open === "canvas" ? (
         <Panel title="Canvas styles" onClose={() => setOpen(null)}>
-          <ColorRow
+          <ChartColorPicker
             label="Background"
-            value={appearance.background}
-            onChange={(background) => onChange({ background })}
+            color={appearance.background}
+            opacity={appearance.backgroundOpacity}
+            fallback="var(--color-canvas)"
+            pickerHex="#0B0E14"
+            onChange={(background, backgroundOpacity) =>
+              onChange({ background, backgroundOpacity })
+            }
           />
-          <ColorRow
+          <ChartColorPicker
             label="Grid"
-            value={appearance.grid}
-            onChange={(grid) => onChange({ grid })}
+            color={appearance.grid}
+            opacity={appearance.gridOpacity}
+            fallback="var(--color-line)"
+            pickerHex="#2A313C"
+            onChange={(grid, gridOpacity) => onChange({ grid, gridOpacity })}
           />
-          <label className="block text-xs text-ink">
-            Grid opacity
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={5}
-              value={appearance.gridOpacity}
-              aria-valuetext={`${appearance.gridOpacity}%`}
-              className="mt-1 w-full accent-accent"
-              onChange={(event) => onChange({ gridOpacity: Number(event.target.value) })}
-            />
-          </label>
-          <p className="text-xs text-ink-faint">{appearance.gridOpacity}%</p>
           <PanelActions
             onSave={() => onSave(REPLAY_CANVAS_FIELDS)}
             onReset={() => onReset(REPLAY_CANVAS_FIELDS)}
@@ -217,61 +205,6 @@ function Panel({
       </div>
       <div className="mt-3 space-y-3">{children}</div>
     </div>
-  );
-}
-
-function ColorRow({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: IndicatorStyleColor | null;
-  onChange: (value: IndicatorStyleColor | null) => void;
-}) {
-  return (
-    <div>
-      <p className="text-xs text-ink">{label}</p>
-      <div className="mt-1 flex flex-wrap items-center gap-1" role="group" aria-label={`${label} colour`}>
-        <Swatch
-          label="Default"
-          selected={value == null}
-          className="bg-surface-raised"
-          onClick={() => onChange(null)}
-        />
-        {INDICATOR_STYLE_COLORS.map((swatch) => (
-          <Swatch
-            key={swatch.id}
-            label={swatch.label}
-            selected={value === swatch.id}
-            className={SWATCH[swatch.id]}
-            onClick={() => onChange(swatch.id)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Swatch({
-  label,
-  selected,
-  className,
-  onClick,
-}: {
-  label: string;
-  selected: boolean;
-  className: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      aria-pressed={selected}
-      className={`size-4 rounded-full border ${selected ? "border-ink" : "border-line"} ${className}`}
-      onClick={onClick}
-    />
   );
 }
 
