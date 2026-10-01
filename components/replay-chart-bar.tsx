@@ -115,45 +115,62 @@ export function ReplayChartBar({
       ) : null}
       {open === "canvas" ? (
         <Panel title="Canvas styles" onClose={() => setOpen(null)}>
-          <ChartColorPicker
-            label="Background"
-            color={appearance.background}
-            opacity={appearance.backgroundOpacity}
-            fallback="var(--color-canvas)"
-            pickerHex="#0B0E14"
-            onChange={(background, backgroundOpacity) =>
-              onChange({ background, backgroundOpacity })
-            }
-          />
-          <ChartColorPicker
-            label="Grid"
-            color={appearance.grid}
-            opacity={appearance.gridOpacity}
-            fallback="var(--color-line)"
-            pickerHex="#2A313C"
-            onChange={(grid, gridOpacity) => onChange({ grid, gridOpacity })}
-          />
-          <ChartColorPicker
-            label="Up candle"
-            color={appearance.up}
-            opacity={appearance.upOpacity}
-            fallback="var(--color-success)"
-            pickerHex="#34D399"
-            onChange={(up, upOpacity) => onChange({ up, upOpacity })}
-          />
-          <ChartColorPicker
-            label="Down candle"
-            color={appearance.down}
-            opacity={appearance.downOpacity}
-            fallback="var(--color-danger)"
-            pickerHex="#F07167"
-            onChange={(down, downOpacity) => onChange({ down, downOpacity })}
-          />
-          <p className="text-xs text-ink-faint">Wicks use the body colour.</p>
-          <PanelActions
-            onSave={() => onSave(REPLAY_CANVAS_FIELDS)}
-            onReset={() => onReset(REPLAY_CANVAS_FIELDS)}
-          />
+          <div>
+            <div className="space-y-3">
+              <SettingRow label="Background">
+                <ChartColorPicker
+                  label="Background"
+                  showLabel={false}
+                  color={appearance.background}
+                  opacity={appearance.backgroundOpacity}
+                  fallback="var(--color-canvas)"
+                  pickerHex="#0B0E14"
+                  onChange={(background, backgroundOpacity) =>
+                    onChange({ background, backgroundOpacity })
+                  }
+                />
+              </SettingRow>
+              <SettingRow label="Grid">
+                <ChartColorPicker
+                  label="Grid"
+                  showLabel={false}
+                  color={appearance.grid}
+                  opacity={appearance.gridOpacity}
+                  fallback="var(--color-line)"
+                  pickerHex="#2A313C"
+                  onChange={(grid, gridOpacity) => onChange({ grid, gridOpacity })}
+                />
+              </SettingRow>
+              <SettingRow label="Up candle">
+                <ChartColorPicker
+                  label="Up candle"
+                  showLabel={false}
+                  color={appearance.up}
+                  opacity={appearance.upOpacity}
+                  fallback="var(--color-success)"
+                  pickerHex="#34D399"
+                  onChange={(up, upOpacity) => onChange({ up, upOpacity })}
+                />
+              </SettingRow>
+              <SettingRow label="Down candle">
+                <ChartColorPicker
+                  label="Down candle"
+                  showLabel={false}
+                  color={appearance.down}
+                  opacity={appearance.downOpacity}
+                  fallback="var(--color-danger)"
+                  pickerHex="#F07167"
+                  onChange={(down, downOpacity) => onChange({ down, downOpacity })}
+                />
+              </SettingRow>
+              <p className="text-sm text-ink-faint">Wicks use the body colour.</p>
+            </div>
+            <PanelActions
+              divided
+              onSave={() => onSave(REPLAY_CANVAS_FIELDS)}
+              onReset={() => onReset(REPLAY_CANVAS_FIELDS)}
+            />
+          </div>
         </Panel>
       ) : null}
       {indicatorsOpen ? (
@@ -244,19 +261,42 @@ function Panel({
   );
 }
 
-function PanelActions({ onSave, onReset }: { onSave: () => void; onReset: () => void }) {
+function SettingRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex min-h-8 items-center justify-between gap-4">
+      <span className="text-sm text-ink">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function PanelActions({
+  onSave,
+  onReset,
+  divided = false,
+}: {
+  onSave: () => void;
+  onReset: () => void;
+  divided?: boolean;
+}) {
+  return (
+    <div
+      className={`flex flex-wrap gap-2 ${divided ? "mt-4 border-t border-line pt-4" : ""}`}
+    >
       <button
         type="button"
-        className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:text-ink"
+        className={`rounded-control border border-line px-2 py-1 text-ink-muted hover:text-ink ${
+          divided ? "text-sm" : "text-xs"
+        }`}
         onClick={onSave}
       >
         Save as global
       </button>
       <button
         type="button"
-        className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:text-ink"
+        className={`rounded-control border border-line px-2 py-1 text-ink-muted hover:text-ink ${
+          divided ? "text-sm" : "text-xs"
+        }`}
         onClick={onReset}
       >
         Reset to default
