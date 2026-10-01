@@ -53,21 +53,6 @@ export function ReplayIndicatorLegend({
         }`}
         aria-label="Active indicators"
       >
-        <button
-          type="button"
-          className="pointer-events-auto mb-1 inline-flex size-5 items-center justify-center rounded-control text-ink-faint hover:bg-surface-raised hover:text-ink"
-          aria-expanded={shown}
-          aria-label={shown ? "Hide indicators" : "Show indicators"}
-          onClick={() => {
-            setShown((current) => !current);
-            setOpenId(null);
-          }}
-        >
-          <IconChevronDown
-            size={12}
-            className={`size-3 ${shown ? "rotate-180" : ""}`}
-          />
-        </button>
         {shown ? rows.map((row) => (
           <div key={row.id} className="flex items-start gap-1">
             <button
@@ -97,6 +82,22 @@ export function ReplayIndicatorLegend({
             </p>
           </div>
         )) : null}
+        <button
+          type="button"
+          className="pointer-events-auto mt-1 inline-flex size-6 items-center justify-center rounded-control border border-line-strong bg-surface text-ink hover:bg-surface-raised"
+          aria-expanded={shown}
+          aria-label={shown ? "Hide indicators" : "Show indicators"}
+          onClick={() => {
+            setShown((current) => !current);
+            setOpenId(null);
+          }}
+        >
+          <IconChevronDown
+            size={16}
+            strokeWidth={2.25}
+            className={`size-4 ${shown ? "rotate-180" : ""}`}
+          />
+        </button>
       </div>
       {shown && openId && openTargets ? (
         <div
