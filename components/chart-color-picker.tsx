@@ -57,7 +57,7 @@ export function ChartColorPicker({
       {showLabel ? <p className="text-xs text-ink">{label}</p> : null}
       <button
         type="button"
-        className="mt-1 inline-flex size-7 items-center justify-center rounded-control border border-line-strong bg-surface p-0.5"
+        className={`${showLabel ? "mt-1 " : ""}inline-flex size-7 items-center justify-center rounded-control border border-line-strong bg-surface p-0.5`}
         aria-label={`${label} colour`}
         aria-expanded={open}
         aria-haspopup="dialog"

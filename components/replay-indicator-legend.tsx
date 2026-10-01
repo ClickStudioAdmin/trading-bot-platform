@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ChartColorPicker } from "@/components/chart-color-picker";
 import { IconChevronDown, IconUiPrefs } from "@/components/icons";
 import { Modal } from "@/components/template-modals";
@@ -129,8 +129,7 @@ export function ReplayIndicatorLegend({
           </div>
           {tab === "inputs" ? (
             <div className="mt-4 space-y-3" role="tabpanel">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-ink-faint">Timeframe</span>
+              <SettingRow label="Timeframe" muted>
                 <input
                   type="text"
                   readOnly
@@ -139,7 +138,7 @@ export function ReplayIndicatorLegend({
                   aria-label="Timeframe"
                   className="w-28 rounded-control border border-line bg-surface px-2 py-1 text-right text-sm text-ink-faint"
                 />
-              </div>
+              </SettingRow>
               {openInputs.map((field) => (
                 <IndicatorNumberField
                   key={field.id}
@@ -151,25 +150,31 @@ export function ReplayIndicatorLegend({
             </div>
           ) : (
             <div className="mt-4" role="tabpanel">
-              <div className="space-y-3">
-                {openTargets.map((line) => {
+              <div className="space-y-4">
+                {openTargets.map((line, index) => {
                   const style = indicatorLineStyle(session, saved, openId, line.id);
                   return (
-                    <div key={line.id}>
-                      <label className="flex items-center gap-2 text-xs text-ink">
+                    <section
+                      key={line.id}
+                      className={index > 0 ? "space-y-3 border-t border-line pt-4" : "space-y-3"}
+                    >
+                      {openTargets.length > 1 ? (
+                        <h3 className="text-sm font-semibold text-ink">{line.label}</h3>
+                      ) : null}
+                      <SettingRow label="Visible">
                         <input
                           type="checkbox"
-                          className="accent-accent"
+                          className="size-4 accent-accent"
                           checked={style.visible}
+                          aria-label={`${line.label} visible`}
                           onChange={(event) =>
                             onChange(openId, line.id, { ...style, visible: event.target.checked })
                           }
                         />
-                        {line.label}
-                      </label>
-                      <div className="mt-1">
+                      </SettingRow>
+                      <SettingRow label="Colour">
                         <ChartColorPicker
-                          label={line.label}
+                          label={`${line.label} colour`}
                           showLabel={false}
                           color={style.color}
                           opacity={style.opacity}
@@ -178,41 +183,45 @@ export function ReplayIndicatorLegend({
                             onChange(openId, line.id, { ...style, color, opacity })
                           }
                         />
-                      </div>
+                      </SettingRow>
                       {line.id === "histogram" ? null : (
-                        <div className="mt-1 flex gap-1" role="group" aria-label={`${line.label} width`}>
-                          {([1, 2, 3] as const).map((width) => (
-                            <button
-                              key={width}
-                              type="button"
-                              aria-pressed={style.lineWidth === width}
-                              className={`rounded-control px-2 py-0.5 text-xs ${
-                                style.lineWidth === width
-                                  ? "bg-accent-strong text-ink"
-                                  : "text-ink-muted hover:text-ink"
-                              }`}
-                              onClick={() => onChange(openId, line.id, { ...style, lineWidth: width })}
-                            >
-                              {width}px
-                            </button>
-                          ))}
-                        </div>
+                        <SettingRow label="Line width">
+                          <div className="flex gap-1" role="group" aria-label={`${line.label} line width`}>
+                            {([1, 2, 3] as const).map((width) => (
+                              <button
+                                key={width}
+                                type="button"
+                                aria-pressed={style.lineWidth === width}
+                                className={`rounded-control px-2 py-0.5 text-sm ${
+                                  style.lineWidth === width
+                                    ? "bg-accent-strong text-ink"
+                                    : "text-ink-muted hover:text-ink"
+                                }`}
+                                onClick={() =>
+                                  onChange(openId, line.id, { ...style, lineWidth: width })
+                                }
+                              >
+                                {width}px
+                              </button>
+                            ))}
+                          </div>
+                        </SettingRow>
                       )}
-                    </div>
+                    </section>
                   );
                 })}
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-2 border-t border-line pt-4">
                 <button
                   type="button"
-                  className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:text-ink"
+                  className="rounded-control border border-line px-2 py-1 text-sm text-ink-muted hover:text-ink"
                   onClick={() => onSaveGlobal(openId)}
                 >
                   Save as global
                 </button>
                 <button
                   type="button"
-                  className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:text-ink"
+                  className="rounded-control border border-line px-2 py-1 text-sm text-ink-muted hover:text-ink"
                   onClick={() => onReset(openId)}
                 >
                   Reset to default
@@ -226,6 +235,32 @@ export function ReplayIndicatorLegend({
   );
 }
 
+function SettingRow({
+  label,
+  muted = false,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  muted?: boolean;
+  htmlFor?: string;
+  children: ReactNode;
+}) {
+  const className = `text-sm ${muted ? "text-ink-faint" : "text-ink"}`;
+  return (
+    <div className="flex min-h-8 items-center justify-between gap-4">
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className={className}>
+          {label}
+        </label>
+      ) : (
+        <span className={className}>{label}</span>
+      )}
+      {children}
+    </div>
+  );
+}
+
 function IndicatorNumberField({
   field,
   locked,
@@ -236,13 +271,7 @@ function IndicatorNumberField({
   onCommit: (value: number) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <label
-        htmlFor={`indicator-input-${field.id}`}
-        className={`text-sm ${locked ? "text-ink-faint" : "text-ink"}`}
-      >
-        {field.label}
-      </label>
+    <SettingRow label={field.label} muted={locked} htmlFor={`indicator-input-${field.id}`}>
       <input
         id={`indicator-input-${field.id}`}
         key={locked ? "locked" : `${field.id}-${field.value}`}
@@ -273,7 +302,7 @@ function IndicatorNumberField({
           }
         }}
       />
-    </div>
+    </SettingRow>
   );
 }
 
