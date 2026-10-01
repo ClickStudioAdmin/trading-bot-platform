@@ -27,7 +27,6 @@ export function ReplayIndicatorLegend({
   names,
   session,
   saved,
-  belowNotice,
   onChange,
   onSaveGlobal,
   onReset,
@@ -37,7 +36,6 @@ export function ReplayIndicatorLegend({
   names: Record<string, string>;
   session: IndicatorStyleMap;
   saved: IndicatorStyleMap;
-  belowNotice: boolean;
   onChange: (layerId: string, lineId: string, style: IndicatorLineStyle) => void;
   onSaveGlobal: (layerId: string) => void;
   onReset: (layerId: string) => void;
@@ -48,9 +46,7 @@ export function ReplayIndicatorLegend({
   return (
     <>
       <div
-        className={`pointer-events-none absolute left-2 z-10 flex max-w-[70%] flex-col ${
-          belowNotice ? "top-11" : "top-2"
-        }`}
+        className="pointer-events-none absolute left-2 top-2 z-10 flex max-w-[70%] flex-col"
         aria-label="Active indicators"
       >
         {shown ? rows.map((row) => (
@@ -101,9 +97,7 @@ export function ReplayIndicatorLegend({
       </div>
       {shown && openId && openTargets ? (
         <div
-          className={`absolute left-14 z-30 w-80 rounded-card border border-line bg-surface p-3 ${
-            belowNotice ? "top-11" : "top-2"
-          }`}
+          className="absolute left-14 top-2 z-30 w-80 rounded-card border border-line bg-surface p-3"
         >
           <div className="flex items-start justify-between gap-2">
             <p className="text-sm font-semibold text-ink">{names[openId] ?? "Indicator"}</p>

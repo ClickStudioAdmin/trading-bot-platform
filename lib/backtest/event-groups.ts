@@ -72,7 +72,7 @@ export function coalesceReplayPositions(groups: ReplayEventGroup[]): ReplayEvent
   return merged;
 }
 
-/** Chart marks for other positions hide while one position is in focus. A null focus shows every mark. */
+/** Chart fill marks and indicator dots for other positions hide while one position is in focus. A null focus shows every mark. */
 export function replayMarkerInPositionFocus(
   orderIndex: number | null,
   focus: ReadonlySet<number> | null,

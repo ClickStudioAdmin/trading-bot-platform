@@ -866,6 +866,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           })),
         );
         const at = candles[end]?.timeMs ?? 0;
+        const focusOrders = positionFocusRef.current?.orders ?? null;
         series.layers.forEach((layer, layerIndex) => {
           const row = drawn[layerIndex];
           if (!row) {
@@ -915,6 +916,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             if (!roles.some((role) => layer.roles.includes(role))) {
               continue;
             }
+            if (!replayMarkerInPositionFocus(item.orderIndex, focusOrders)) {
+              continue;
+            }
             const index = candleIndexAt(candles, item.atMs);
             const value = layer.dotValues[index];
             const timeMs = candles[index]?.timeMs;
@@ -937,7 +941,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           });
         }
         const selected = selectedRef.current;
-        const focusOrders = positionFocusRef.current?.orders ?? null;
         const plotted = events
           .filter(
             (row) =>
@@ -1783,7 +1786,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               names={styleNames}
               session={sessionStyles}
               saved={savedStyles}
-              belowNotice={positionFocus != null}
               onChange={(layerId, lineId, style) => {
                 setSessionStyles((current) =>
                   writeIndicatorLineStyle(current, layerId, lineId, style),
@@ -1802,7 +1804,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             />
           ) : null}
           {positionFocus ? (
-            <div className="absolute left-3 top-3 z-20" role="status">
+            <div className="absolute right-24 top-2 z-20" role="status">
               <ViewingPositionNotice
                 number={positionFocus.number}
                 onClose={() => setPositionFocus(null)}
