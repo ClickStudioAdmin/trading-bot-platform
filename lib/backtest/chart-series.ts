@@ -106,6 +106,7 @@ function specKey(input: {
   slowPeriod: number | null;
   multiplier: number | null;
   timeframe: DcaIndicatorTimeframe | null;
+  role: string;
 }): string {
   return [
     input.kind,
@@ -113,7 +114,34 @@ function specKey(input: {
     input.slowPeriod ?? "",
     input.multiplier ?? "",
     input.timeframe ?? "",
+    input.role,
   ].join("|");
+}
+
+export function indicatorConditionLabel(role: string): string {
+  if (role === "Entry") {
+    return "Long entry";
+  }
+  if (role === "Secondary entry") {
+    return "Long secondary entry";
+  }
+  if (role === "Hard exit") {
+    return "Long hard exit";
+  }
+  return role;
+}
+
+function conditionColor(role: string, color: string): string {
+  if (!role.startsWith("Short")) {
+    return color;
+  }
+  if (color === LINE.ema || color === LINE.trendUp) {
+    return LINE.trendDown;
+  }
+  if (color === LINE.mid) {
+    return LINE.slow;
+  }
+  return color;
 }
 
 function fromFilter(spec: DcaFilterSpec | null | undefined, role: string): Spec | null {
@@ -127,6 +155,7 @@ function fromFilter(spec: DcaFilterSpec | null | undefined, role: string): Spec 
       slowPeriod: null,
       multiplier: spec.multiplier,
       timeframe: spec.timeframe,
+      role,
     }),
     kind: spec.kind,
     roles: [role],
@@ -152,6 +181,7 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
           slowPeriod: recipe.indicatorSlowPeriod ?? null,
           multiplier: recipe.indicatorMultiplier ?? null,
           timeframe: recipe.indicatorTimeframe,
+          role: "Entry",
         }),
         kind: recipe.indicatorKind,
         roles: ["Entry"],
@@ -170,6 +200,7 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
           slowPeriod: recipe.shortIndicatorSlowPeriod ?? null,
           multiplier: recipe.shortIndicatorMultiplier ?? null,
           timeframe: recipe.shortIndicatorTimeframe ?? null,
+          role: "Short entry",
         }),
         kind: recipe.shortIndicatorKind,
         roles: ["Short entry"],
@@ -199,6 +230,7 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
         slowPeriod: start.slowPeriod,
         multiplier: start.multiplier ?? null,
         timeframe: start.timeframe,
+        role: "Entry",
       }),
       kind: start.kind,
       roles: ["Entry"],
@@ -237,7 +269,7 @@ function layerTitle(spec: Spec): string {
     name = spec.kind === "ema_cross" ? "EMA cross" : "SMA cross";
   }
   const where = tf ? ` · ${tf}` : "";
-  const roles = spec.roles.join(", ");
+  const roles = spec.roles.map(indicatorConditionLabel).join(", ");
   return `${name}${period && spec.kind === "atr_band" ? "" : ""}${where} · ${roles}`;
 }
 
@@ -268,6 +300,8 @@ export function replayChartSeries(
   const layers: IndicatorLayer[] = [];
   for (const spec of specs) {
     const title = layerTitle(spec);
+    const role = spec.roles[0] ?? "";
+    const tone = (color: string) => conditionColor(role, color);
     const price: PricePlot[] = [];
     let oscillator: OscillatorPlot | null = null;
     let dotValues: (number | null)[] = closes.map(() => null);
@@ -304,7 +338,7 @@ export function replayChartSeries(
           ? alignedAverage(closes, emaValues(closes, period))
           : alignedAverage(closes, smaValues(closes, period));
       dotValues = values;
-      price.push({ id: spec.key, title, color: LINE.ema, values });
+      price.push({ id: spec.key, title, color: tone(LINE.ema), values });
     } else if (spec.kind === "ema_cross" || spec.kind === "sma_cross") {
       const fast = spec.period ?? DEFAULT_DCA_CROSS_FAST_PERIOD;
       const slow = spec.slowPeriod ?? DEFAULT_DCA_CROSS_SLOW_PERIOD;
@@ -316,13 +350,13 @@ export function replayChartSeries(
       price.push({
         id: `${spec.key}-fast`,
         title: `${name} ${fast}`,
-        color: LINE.ema,
+        color: tone(LINE.ema),
         values: fastValues,
       });
       price.push({
         id: `${spec.key}-slow`,
         title: `${name} ${slow}`,
-        color: LINE.slow,
+        color: tone(LINE.slow),
         values: slowValues,
       });
     } else if (spec.kind === "bb") {
@@ -332,19 +366,19 @@ export function replayChartSeries(
       price.push({
         id: `${spec.key}-upper`,
         title: `${title} upper`,
-        color: LINE.upper,
+        color: tone(LINE.upper),
         values: bands.map((row) => row?.upper ?? null),
       });
       price.push({
         id: `${spec.key}-mid`,
         title,
-        color: LINE.mid,
+        color: tone(LINE.mid),
         values: bands.map((row) => row?.mid ?? null),
       });
       price.push({
         id: `${spec.key}-lower`,
         title: `${title} lower`,
-        color: LINE.lower,
+        color: tone(LINE.lower),
         values: bands.map((row) => row?.lower ?? null),
       });
     } else if (spec.kind === "supertrend") {
@@ -355,13 +389,13 @@ export function replayChartSeries(
       price.push({
         id: `${spec.key}-up`,
         title,
-        color: LINE.trendUp,
+        color: tone(LINE.trendUp),
         values: series.map((row) => (row && row.dir === 1 ? row.line : null)),
       });
       price.push({
         id: `${spec.key}-down`,
         title,
-        color: LINE.trendDown,
+        color: tone(LINE.trendDown),
         values: series.map((row) => (row && row.dir === -1 ? row.line : null)),
       });
     } else if (spec.kind === "atr_band") {
@@ -373,13 +407,13 @@ export function replayChartSeries(
       price.push({
         id: `${spec.key}-mid`,
         title,
-        color: LINE.mid,
+        color: tone(LINE.mid),
         values: mid,
       });
       price.push({
         id: `${spec.key}-upper`,
         title: `${title} upper`,
-        color: LINE.upper,
+        color: tone(LINE.upper),
         values: mid.map((value, index) =>
           value == null || atr[index] == null ? null : value + atr[index] * multiplier,
         ),
@@ -387,7 +421,7 @@ export function replayChartSeries(
       price.push({
         id: `${spec.key}-lower`,
         title: `${title} lower`,
-        color: LINE.lower,
+        color: tone(LINE.lower),
         values: mid.map((value, index) =>
           value == null || atr[index] == null ? null : value - atr[index] * multiplier,
         ),
@@ -408,6 +442,7 @@ export function replayChartSeries(
 }
 
 export type ReplayIndicatorLegendValue = {
+  id: string;
   color: string;
   text: string;
 };
@@ -441,6 +476,58 @@ function valueAt(values: (number | null)[], index: number): number | null {
   return null;
 }
 
+export type IndicatorStyleTarget = {
+  id: string;
+  label: string;
+  defaultColor: string;
+};
+
+function stylePartLabel(id: string): string {
+  if (id.endsWith("-up")) {
+    return "Up";
+  }
+  if (id.endsWith("-down")) {
+    return "Down";
+  }
+  if (id.endsWith("-mid")) {
+    return "Middle";
+  }
+  if (id.endsWith("-upper")) {
+    return "Upper";
+  }
+  if (id.endsWith("-lower")) {
+    return "Lower";
+  }
+  if (id.endsWith("-fast")) {
+    return "Fast";
+  }
+  if (id.endsWith("-slow")) {
+    return "Slow";
+  }
+  return "Line";
+}
+
+export function indicatorStyleTargets(layer: IndicatorLayer): IndicatorStyleTarget[] {
+  const targets: IndicatorStyleTarget[] = layer.price.map((plot) => ({
+    id: plot.id,
+    label: plotCaption(plot.title, layer.title) || stylePartLabel(plot.id),
+    defaultColor: plot.color,
+  }));
+  if (layer.oscillator?.rsi) {
+    targets.push({ id: "rsi", label: "RSI", defaultColor: "#A78BFA" });
+  }
+  if (layer.oscillator?.macd) {
+    targets.push({ id: "macd", label: "MACD", defaultColor: "#A78BFA" });
+  }
+  if (layer.oscillator?.signal) {
+    targets.push({ id: "signal", label: "Signal", defaultColor: "#F5B942" });
+  }
+  if (layer.oscillator?.histogram) {
+    targets.push({ id: "histogram", label: "Histogram", defaultColor: "#34D399" });
+  }
+  return targets;
+}
+
 function plotCaption(plotTitle: string, layerTitle: string): string {
   if (plotTitle === layerTitle) {
     return "";
@@ -466,6 +553,7 @@ export function replayIndicatorLegend(
       }
       const caption = plotCaption(plot.title, layer.title);
       values.push({
+        id: plot.id,
         color: plot.color,
         text: caption ? `${caption} ${legendNumber(value)}` : legendNumber(value),
       });
@@ -474,25 +562,26 @@ export function replayIndicatorLegend(
     if (oscillator?.rsi) {
       const value = valueAt(oscillator.rsi, index);
       if (value != null) {
-        values.push({ color: "#A78BFA", text: legendNumber(value) });
+        values.push({ id: "rsi", color: "#A78BFA", text: legendNumber(value) });
       }
     }
     if (oscillator?.macd) {
       const value = valueAt(oscillator.macd, index);
       if (value != null) {
-        values.push({ color: "#A78BFA", text: legendNumber(value) });
+        values.push({ id: "macd", color: "#A78BFA", text: legendNumber(value) });
       }
     }
     if (oscillator?.signal) {
       const value = valueAt(oscillator.signal, index);
       if (value != null) {
-        values.push({ color: "#F5B942", text: legendNumber(value) });
+        values.push({ id: "signal", color: "#F5B942", text: legendNumber(value) });
       }
     }
     if (oscillator?.histogram) {
       const value = valueAt(oscillator.histogram, index);
       if (value != null) {
         values.push({
+          id: "histogram",
           color: value >= 0 ? "#34D399" : "#F07167",
           text: legendNumber(value),
         });

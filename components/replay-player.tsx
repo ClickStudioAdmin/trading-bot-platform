@@ -6,9 +6,23 @@ import Link from "next/link";
 import { BacktestChartIntervalBar } from "@/components/backtest-chart-interval";
 import {
   indicatorRolesForReason,
+  indicatorStyleTargets,
   replayChartSeries,
   replayIndicatorLegend,
+  type IndicatorStyleTarget,
 } from "@/lib/backtest/chart-series";
+import {
+  REPLAY_INDICATOR_STYLE_KEY,
+  indicatorLineStyle,
+  parseIndicatorStyles,
+  resetIndicatorStyle,
+  saveIndicatorStyleGlobal,
+  serializeIndicatorStyles,
+  writeIndicatorLineStyle,
+  type IndicatorLineStyle,
+  type IndicatorStyleMap,
+} from "@/lib/backtest/indicator-style";
+import { ReplayIndicatorLegend } from "@/components/replay-indicator-legend";
 import { eventParameterSections } from "@/lib/backtest/event-pane";
 import {
   coalesceReplayPositions,
@@ -107,9 +121,30 @@ function money(value: number): string {
   return value < 0 ? `−$${text}` : `$${text}`;
 }
 
+function readStoredIndicatorStyles(): IndicatorStyleMap {
+  try {
+    return parseIndicatorStyles(
+      window.localStorage.getItem(REPLAY_INDICATOR_STYLE_KEY),
+    );
+  } catch {
+    return {};
+  }
+}
+
 function cssVar(node: HTMLElement, name: string, fallback: string): string {
   const value = getComputedStyle(node).getPropertyValue(name).trim();
   return value || fallback;
+}
+
+function styledLineColor(
+  node: HTMLElement,
+  style: IndicatorLineStyle,
+  fallback: string,
+): string {
+  if (!style.color) {
+    return fallback;
+  }
+  return cssVar(node, `--color-${style.color}`, fallback);
 }
 
 function candleIndexAt(candles: CandleBar[], atMs: number): number {
@@ -170,6 +205,35 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     null,
   );
   const [legendIndex, setLegendIndex] = useState<number | null>(null);
+  const [sessionStyles, setSessionStyles] = useState<IndicatorStyleMap>({});
+  const [globalStyles, setGlobalStyles] = useState<IndicatorStyleMap | null>(null);
+  if (globalStyles === null && typeof window !== "undefined") {
+    setGlobalStyles(readStoredIndicatorStyles());
+  }
+  const savedStyles = globalStyles ?? {};
+  const indicatorStyleStateRef = useRef({
+    session: {} as IndicatorStyleMap,
+    saved: {} as IndicatorStyleMap,
+  });
+  indicatorStyleStateRef.current = {
+    session: sessionStyles,
+    saved: savedStyles,
+  };
+  const drawnIndicatorsRef = useRef<
+    Map<
+      string,
+      {
+        kind: "line" | "histogram";
+        defaultColor: string;
+        applyOptions: (options: {
+          color?: string;
+          lineWidth?: 1 | 2 | 3;
+          visible?: boolean;
+        }) => void;
+      }
+    >
+  >(new Map());
+  const applyIndicatorStylesRef = useRef<(() => void) | null>(null);
   const positionFocusRef = useRef<ChartPositionFocus | null>(null);
   positionFocusRef.current = positionFocus;
   const cycleById = useMemo(() => {
@@ -387,6 +451,29 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     () => replayIndicatorLegend(series.layers, legendIndex ?? head),
     [series.layers, legendIndex, head],
   );
+  const styleTargets = useMemo(() => {
+    const targets: Record<string, IndicatorStyleTarget[]> = {};
+    for (const layer of series.layers) {
+      targets[layer.id] = indicatorStyleTargets(layer);
+    }
+    return targets;
+  }, [series.layers]);
+  const styleNames = useMemo(() => {
+    const names: Record<string, string> = {};
+    for (const layer of series.layers) {
+      names[layer.id] = layer.title;
+    }
+    return names;
+  }, [series.layers]);
+  useEffect(() => {
+    if (globalStyles === null) {
+      return;
+    }
+    window.localStorage.setItem(
+      REPLAY_INDICATOR_STYLE_KEY,
+      serializeIndicatorStyles(globalStyles),
+    );
+  }, [globalStyles]);
   const chartLabel = DCA_INDICATOR_TIMEFRAME_LABELS[interval];
   const otherTimeframes = series.layers
     .map((layer) =>
@@ -589,6 +676,27 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         };
       }> = [];
       let paneCursor = 0;
+      const drawnIndicators = drawnIndicatorsRef.current;
+      drawnIndicators.clear();
+      function rememberIndicator(
+        layerId: string,
+        lineId: string,
+        kind: "line" | "histogram",
+        defaultColor: string,
+        seriesApi: {
+          applyOptions: (options: {
+            color?: string;
+            lineWidth?: 1 | 2 | 3;
+            visible?: boolean;
+          }) => void;
+        },
+      ) {
+        drawnIndicators.set(`${layerId}\0${lineId}`, {
+          kind,
+          defaultColor,
+          applyOptions: (options) => seriesApi.applyOptions(options),
+        });
+      }
       for (const layer of series.layers) {
         let pane = 0;
         if (layer.pane === "oscillator") {
@@ -597,8 +705,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           pane = paneCursor;
           chart.panes()[pane]?.setHeight(68);
         }
-        const lines = layer.price.map((plot) =>
-          chart.addSeries(
+        const lines = layer.price.map((plot) => {
+          const line = chart.addSeries(
             charts.LineSeries,
             {
               color: plot.color,
@@ -607,8 +715,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               lastValueVisible: false,
             },
             pane,
-          ),
-        );
+          );
+          rememberIndicator(layer.id, plot.id, "line", plot.color, line);
+          return line;
+        });
         const oscillator = {
           rsi: null as ReturnType<typeof chart.addSeries> | null,
           macd: null as ReturnType<typeof chart.addSeries> | null,
@@ -625,6 +735,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             },
             pane,
           );
+          rememberIndicator(layer.id, "rsi", "line", "#A78BFA", oscillator.rsi);
           for (const level of layer.oscillator.levels) {
             oscillator.rsi.createPriceLine({
               price: level,
@@ -641,6 +752,13 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             { priceLineVisible: false },
             pane,
           );
+          rememberIndicator(
+            layer.id,
+            "histogram",
+            "histogram",
+            "#34D399",
+            oscillator.histogram,
+          );
           oscillator.macd = chart.addSeries(
             charts.LineSeries,
             {
@@ -650,6 +768,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             },
             pane,
           );
+          rememberIndicator(layer.id, "macd", "line", "#A78BFA", oscillator.macd);
           oscillator.signal = chart.addSeries(
             charts.LineSeries,
             {
@@ -659,6 +778,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             },
             pane,
           );
+          rememberIndicator(layer.id, "signal", "line", "#F5B942", oscillator.signal);
         }
         const dots = chart.addSeries(
           charts.LineSeries,
@@ -705,11 +825,21 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             );
           }
           if (layer.oscillator?.histogram && row.oscillator.histogram) {
+            const histogramStyle = indicatorLineStyle(
+              indicatorStyleStateRef.current.session,
+              indicatorStyleStateRef.current.saved,
+              layer.id,
+              "histogram",
+            );
             row.oscillator.histogram.setData(
-              lineData(candles, layer.oscillator.histogram, end).map((point) => ({
-                ...point,
-                color: (point.value ?? 0) >= 0 ? "#34D399" : "#F07167",
-              })) as never,
+              lineData(candles, layer.oscillator.histogram, end).map((point) => {
+                const value = point.value ?? 0;
+                const sign = value >= 0 ? "#34D399" : "#F07167";
+                return {
+                  ...point,
+                  color: styledLineColor(node, histogramStyle, sign),
+                };
+              }) as never,
             );
             row.oscillator.macd?.setData(
               lineData(candles, layer.oscillator.macd ?? [], end) as never,
@@ -874,6 +1004,26 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           setSelectedEvent(match);
         }
       });
+      function applyIndicatorStyles() {
+        const { session, saved } = indicatorStyleStateRef.current;
+        for (const [key, row] of drawnIndicatorsRef.current) {
+          const split = key.indexOf("\0");
+          const layerId = key.slice(0, split);
+          const lineId = key.slice(split + 1);
+          const style = indicatorLineStyle(session, saved, layerId, lineId);
+          if (row.kind === "histogram") {
+            row.applyOptions({ visible: style.visible });
+            continue;
+          }
+          row.applyOptions({
+            color: styledLineColor(node, style, row.defaultColor),
+            lineWidth: style.lineWidth,
+            visible: style.visible,
+          });
+        }
+      }
+      applyIndicatorStylesRef.current = applyIndicatorStyles;
+      applyIndicatorStyles();
       paint(headRef.current);
       const paintRef = { current: paint };
       const host = node as HTMLDivElement & {
@@ -1013,6 +1163,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         delete chartHost.__laneX;
         delete chartHost.__pan;
         delete chartHost.__wheel;
+        applyIndicatorStylesRef.current = null;
+        drawnIndicatorsRef.current.clear();
         chart.remove();
       };
     });
@@ -1021,6 +1173,16 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       cleanup();
     };
   }, [candles, series, events, started, positionsRight, fillViewport]);
+
+  useEffect(() => {
+    applyIndicatorStylesRef.current?.();
+    const node = hostRef.current as
+      | (HTMLDivElement & {
+          __paint?: (index: number, follow?: boolean) => void;
+        })
+      | null;
+    node?.__paint?.(headRef.current, false);
+  }, [sessionStyles, globalStyles]);
 
   useEffect(() => {
     const track = laneTrackRef.current;
@@ -1477,27 +1639,29 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             </button>
           ) : null}
           {legendRows.length > 0 && started ? (
-            <div
-              className={`pointer-events-none absolute left-2 z-10 flex max-w-[70%] flex-col ${
-                positionFocus ? "top-11" : "top-2"
-              }`}
-              aria-label="Active indicators"
-            >
-              {legendRows.map((row) => (
-                <p
-                  key={row.id}
-                  className="text-[11px] leading-4 text-ink-muted [text-shadow:0_1px_1px_var(--color-canvas),0_0_2px_var(--color-canvas)]"
-                >
-                  {row.name}
-                  {row.values.map((value, index) => (
-                    <span key={`${row.id}-${index}`} style={{ color: value.color }}>
-                      {" "}
-                      {value.text}
-                    </span>
-                  ))}
-                </p>
-              ))}
-            </div>
+            <ReplayIndicatorLegend
+              rows={legendRows}
+              targets={styleTargets}
+              names={styleNames}
+              session={sessionStyles}
+              saved={savedStyles}
+              belowNotice={positionFocus != null}
+              onChange={(layerId, lineId, style) => {
+                setSessionStyles((current) =>
+                  writeIndicatorLineStyle(current, layerId, lineId, style),
+                );
+              }}
+              onSaveGlobal={(layerId) => {
+                setGlobalStyles((saved) =>
+                  saveIndicatorStyleGlobal(saved ?? {}, sessionStyles, layerId),
+                );
+                setSessionStyles((current) => resetIndicatorStyle(current, layerId));
+              }}
+              onReset={(layerId) => {
+                setSessionStyles((current) => resetIndicatorStyle(current, layerId));
+                setGlobalStyles((current) => resetIndicatorStyle(current ?? {}, layerId));
+              }}
+            />
           ) : null}
           {positionFocus ? (
             <div className="absolute left-3 top-3 z-20" role="status">
