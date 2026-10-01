@@ -120,15 +120,27 @@ const bars = Array.from({ length: 30 }, (_, index) => ({
   close: 101 + index,
 }));
 const layers = replayChartSeries(recipe, bars).layers;
-assert.equal(layers.length, 2);
+assert.equal(layers.length, 3);
 assert.equal(layers.some((row) => row.pane === "oscillator" && row.title.includes("RSI")), true);
 assert.equal(
   layers.some(
     (row) =>
       row.pane === "price" &&
       row.title.includes("Supertrend") &&
+      row.title.includes("Long secondary entry") &&
       row.roles.includes("Secondary entry") &&
-      row.roles.includes("Hard exit"),
+      !row.roles.includes("Hard exit"),
+  ),
+  true,
+);
+assert.equal(
+  layers.some(
+    (row) =>
+      row.pane === "price" &&
+      row.title.includes("Supertrend") &&
+      row.title.includes("Long hard exit") &&
+      row.roles.includes("Hard exit") &&
+      !row.roles.includes("Secondary entry"),
   ),
   true,
 );
