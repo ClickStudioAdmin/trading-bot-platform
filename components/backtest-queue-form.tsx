@@ -42,6 +42,17 @@ import {
   DCA_INDICATOR_TIMEFRAME_LABELS,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import {
+  candleAvailabilityNotice,
+  candleHistoryBlockedMessage,
+  candleRangeError,
+  candleRangesDoNotOverlap,
+  candleVenueLabel,
+  limitingCandleSpan,
+  maxCandleRangeDates,
+  missingCandleHistoryMessage,
+  type CandleSpan,
+} from "@/lib/market/candle-availability";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
 
@@ -235,6 +246,141 @@ export function BacktestQueueForm({
     };
   }, [comparables.length, fromDate, recipe, toDate]);
 
+  const historySymbols = useMemo(() => {
+    const rows = [symbol, ...comparables]
+      .map((row) => row.trim().toUpperCase())
+      .filter((row) => row.length > 0);
+    return [...new Set(rows)];
+  }, [comparables, symbol]);
+  const historyKey = historySymbols.join(",");
+  const [history, setHistory] = useState<
+    | { status: "idle" }
+    | { status: "error"; key: string; message: string }
+    | { status: "ready"; key: string; spans: CandleSpan[] }
+  >({ status: "idle" });
+
+  useEffect(() => {
+    if (!symbol.trim() || historySymbols.length === 0) {
+      return;
+    }
+    const controller = new AbortController();
+    const key = historyKey;
+    const fetchIntervalLabel = DCA_INDICATOR_TIMEFRAME_LABELS[preview.interval];
+    const fetchVenueLabel = candleVenueLabel(venue);
+    void Promise.all(
+      historySymbols.map(async (row) => {
+        const params = new URLSearchParams({
+          venue,
+          symbol: row,
+          interval: preview.interval,
+        });
+        if (venueEnvironment && venue === "hyperliquid") {
+          params.set("env", venueEnvironment);
+        }
+        const response = await fetch(`/api/market/candle-range?${params}`, {
+          signal: controller.signal,
+        });
+        const body = (await response.json()) as {
+          error?: string;
+          earliestMs?: number;
+          latestMs?: number;
+          symbol?: string;
+        };
+        if (!response.ok || body.earliestMs == null || body.latestMs == null) {
+          throw new Error(
+            body.error ??
+              missingCandleHistoryMessage({
+                venueLabel: fetchVenueLabel,
+                symbol: row,
+                intervalLabel: fetchIntervalLabel,
+              }),
+          );
+        }
+        return {
+          symbol: body.symbol ?? row,
+          earliestMs: body.earliestMs,
+          latestMs: body.latestMs,
+        };
+      }),
+    )
+      .then((spans) => {
+        if (!controller.signal.aborted) {
+          setHistory({ status: "ready", key, spans });
+        }
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+        const message =
+          error instanceof Error && error.name === "AbortError"
+            ? ""
+            : error instanceof Error && error.message
+              ? error.message
+              : candleHistoryBlockedMessage({
+                  venueLabel: fetchVenueLabel,
+                  symbol: historySymbols[0] ?? symbol,
+                  intervalLabel: fetchIntervalLabel,
+                });
+        if (message) {
+          setHistory({ status: "error", key, message });
+        }
+      });
+    return () => controller.abort();
+  }, [historyKey, historySymbols, preview.interval, symbol, venue, venueEnvironment]);
+
+  const historyView =
+    !symbol.trim() || historySymbols.length === 0
+      ? { status: "idle" as const }
+      : history.status !== "idle" && history.key === historyKey
+        ? history
+        : { status: "loading" as const };
+  const historyLimit =
+    historyView.status === "ready" ? limitingCandleSpan(historyView.spans) : null;
+  const intervalLabel = DCA_INDICATOR_TIMEFRAME_LABELS[preview.interval];
+  const venueLabel = candleVenueLabel(venue);
+  const historyNotice =
+    historyView.status === "ready" && historyLimit
+      ? candleAvailabilityNotice({
+          span: historyLimit,
+          intervalLabel,
+          venueLabel,
+          primarySymbol: symbol.trim().toUpperCase(),
+        })
+      : null;
+  const historyRangeError = (() => {
+    if (historyView.status === "error") {
+      return historyView.message;
+    }
+    if (historyView.status === "loading") {
+      return null;
+    }
+    if (historyView.status === "ready" && !historyLimit) {
+      return candleRangesDoNotOverlap(intervalLabel, venueLabel);
+    }
+    if (!historyLimit || preview.error) {
+      return null;
+    }
+    const range = parseBacktestDates(fromDate, toDate);
+    if (!range.ok) {
+      return null;
+    }
+    return candleRangeError({
+      fromMs: range.fromMs,
+      toMs: range.toMs,
+      earliestMs: historyLimit.earliestMs,
+      latestMs: historyLimit.latestMs,
+      symbol: historyLimit.symbol,
+      intervalLabel,
+      venueLabel,
+    });
+  })();
+  const maxRange =
+    historyLimit != null ? maxCandleRangeDates(historyLimit, dates.to) : null;
+  const maxRangeSelected = Boolean(
+    maxRange && fromDate === maxRange.from && toDate === maxRange.to,
+  );
+
   const pairChanged =
     recipe != null &&
     symbol.trim().toUpperCase() !== recipe.symbol.trim().toUpperCase();
@@ -387,6 +533,7 @@ export function BacktestQueueForm({
               label="Start date"
               name="fromDate"
               value={fromDate}
+              min={maxRange?.from}
               max={toDate}
               onChange={setFromDate}
             />
@@ -400,6 +547,24 @@ export function BacktestQueueForm({
             />
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={!maxRange}
+              onClick={() => {
+                if (!maxRange) {
+                  return;
+                }
+                setFromDate(maxRange.from);
+                setToDate(maxRange.to);
+              }}
+              className={
+                maxRangeSelected
+                  ? "rounded-control border border-success bg-success/15 px-2 py-1 text-xs text-success"
+                  : "rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:border-line-strong hover:text-ink disabled:opacity-50"
+              }
+            >
+              Max range
+            </button>
             {BACKTEST_WINDOW_PRESETS.map((row) => {
               const selected =
                 matchingBacktestWindowDays(fromDate, toDate) === row.days;
@@ -423,9 +588,18 @@ export function BacktestQueueForm({
               );
             })}
           </div>
-          <p className="mt-2 text-hint text-ink-muted">
-            Any range the venue has. Long tapes queue to the engine worker.
-          </p>
+          {historyView.status === "loading" ? (
+            <p className="mt-2 text-sm text-ink-muted">
+              Checking how far back {symbol.trim().toUpperCase()} {intervalLabel}{" "}
+              goes on {venueLabel}.
+            </p>
+          ) : null}
+          {historyNotice ? (
+            <p className="mt-2 text-sm text-ink-muted">{historyNotice}</p>
+          ) : null}
+          {historyRangeError ? (
+            <p className="mt-2 text-sm text-danger">{historyRangeError}</p>
+          ) : null}
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm text-ink">
@@ -552,6 +726,9 @@ export function BacktestQueueForm({
           disabled={
             pending ||
             Boolean(preview.error) ||
+            Boolean(historyRangeError) ||
+            historyView.status === "loading" ||
+            historyView.status === "idle" ||
             !queueAllowed.ok ||
             recipeFieldIssues.length > 0
           }
