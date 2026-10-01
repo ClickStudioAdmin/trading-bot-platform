@@ -116,12 +116,15 @@ export async function replayDcaPlaybook(input: {
   feeRate: number;
   startingUsdt: number;
   leverage?: number;
+  venue?: string;
 }): Promise<{ orders: SimulatedOrder[]; stats: BacktestStats; events: ReplayEvent[] }> {
   const allowed = canBacktestDcaRecipe(input.recipe);
   if (!allowed.ok) {
     return { orders: [], stats: emptyBacktestStats(input.startingUsdt), events: [] };
   }
-  const built = dcaRecipeToConfig(input.recipe, { venue: "bybit" });
+  const built = dcaRecipeToConfig(input.recipe, {
+    venue: input.venue === "hyperliquid" ? "hyperliquid" : "bybit",
+  });
   if (!built.ok) {
     return { orders: [], stats: emptyBacktestStats(input.startingUsdt), events: [] };
   }
