@@ -780,6 +780,10 @@ export function IconChartBars(props: LucideProps) {
   return <ChartCandlestick aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
+export function IconChartLine(props: LucideProps) {
+  return <ChartLine aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
 export function IconPalette(props: LucideProps) {
   return <Palette aria-hidden strokeWidth={STROKE} {...props} />;
 }

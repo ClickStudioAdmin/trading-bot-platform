@@ -13,7 +13,10 @@ import {
   REPLAY_CANVAS_FIELDS,
 } from "./chart-appearance";
 
+assert.equal(defaultReplayChartAppearance().series, "candles");
 assert.equal(defaultReplayChartAppearance().gridOpacity, 100);
+assert.equal(parseReplayChartAppearance(JSON.stringify({ series: "line" }))?.series, "line");
+assert.equal(parseReplayChartAppearance(JSON.stringify({ series: "bars" }))?.series, "candles");
 assert.equal(parseReplayChartAppearance(null), null);
 assert.equal(parseReplayChartAppearance("{"), null);
 assert.equal(
@@ -47,19 +50,17 @@ assert.equal(global.background, "accent");
 assert.equal(global.gridOpacity, 25);
 assert.equal(global.up, "success");
 
-assert.equal(resetReplayChartFields(global, REPLAY_CANVAS_FIELDS)?.up, "success");
-assert.equal(resetReplayChartFields(global, REPLAY_CANVAS_FIELDS)?.gridOpacity, 100);
+assert.equal(resetReplayChartFields(global, REPLAY_CANVAS_FIELDS), null);
 assert.equal(
-  resetReplayChartFields({ ...defaultReplayChartAppearance(), up: "danger" }, REPLAY_BAR_FIELDS),
+  resetReplayChartFields({ ...defaultReplayChartAppearance(), series: "line" }, REPLAY_BAR_FIELDS),
   null,
 );
-assert.deepEqual(clearReplayChartFields({ up: "danger", gridOpacity: 20 }, REPLAY_BAR_FIELDS), {
+assert.deepEqual(clearReplayChartFields({ series: "line", gridOpacity: 20 }, REPLAY_BAR_FIELDS), {
   gridOpacity: 20,
 });
-assert.deepEqual(
-  pickReplayChartFields({ up: "danger", gridOpacity: 20 }, REPLAY_BAR_FIELDS),
-  { up: "danger" },
-);
+assert.deepEqual(pickReplayChartFields({ series: "line", gridOpacity: 20 }, REPLAY_BAR_FIELDS), {
+  series: "line",
+});
 
 assert.equal(colorWithOpacity("#34D399", 100), "rgba(52, 211, 153, 1)");
 assert.equal(colorWithOpacity("#abc", 50), "rgba(170, 187, 204, 0.5)");

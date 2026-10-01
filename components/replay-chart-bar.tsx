@@ -7,7 +7,7 @@ import {
   type ChartSnapshot,
 } from "@/components/chart-screenshot";
 import { ChartColorPicker } from "@/components/chart-color-picker";
-import { IconChartBars, IconClose, IconPalette } from "@/components/icons";
+import { IconChartBars, IconChartLine, IconClose, IconPalette } from "@/components/icons";
 import { Modal } from "@/components/template-modals";
 import type { ReplayIndicatorChoice } from "@/lib/backtest/chart-series";
 import {
@@ -93,23 +93,20 @@ export function ReplayChartBar({
       </div>
       {open === "bars" ? (
         <Panel title="Bar settings" onClose={() => setOpen(null)}>
-          <ChartColorPicker
-            label="Up"
-            color={appearance.up}
-            opacity={appearance.upOpacity}
-            fallback="var(--color-success)"
-            pickerHex="#34D399"
-            onChange={(up, upOpacity) => onChange({ up, upOpacity })}
-          />
-          <ChartColorPicker
-            label="Down"
-            color={appearance.down}
-            opacity={appearance.downOpacity}
-            fallback="var(--color-danger)"
-            pickerHex="#F07167"
-            onChange={(down, downOpacity) => onChange({ down, downOpacity })}
-          />
-          <p className="text-xs text-ink-faint">Wicks use the body colour.</p>
+          <div role="listbox" aria-label="Chart type" className="space-y-1">
+            <SeriesChoice
+              label="Candles"
+              selected={appearance.series === "candles"}
+              onClick={() => onChange({ series: "candles" })}
+              icon={<IconChartBars size={16} className="size-4" />}
+            />
+            <SeriesChoice
+              label="Line"
+              selected={appearance.series === "line"}
+              onClick={() => onChange({ series: "line" })}
+              icon={<IconChartLine size={16} className="size-4" />}
+            />
+          </div>
           <PanelActions
             onSave={() => onSave(REPLAY_BAR_FIELDS)}
             onReset={() => onReset(REPLAY_BAR_FIELDS)}
@@ -136,6 +133,23 @@ export function ReplayChartBar({
             pickerHex="#2A313C"
             onChange={(grid, gridOpacity) => onChange({ grid, gridOpacity })}
           />
+          <ChartColorPicker
+            label="Up candle"
+            color={appearance.up}
+            opacity={appearance.upOpacity}
+            fallback="var(--color-success)"
+            pickerHex="#34D399"
+            onChange={(up, upOpacity) => onChange({ up, upOpacity })}
+          />
+          <ChartColorPicker
+            label="Down candle"
+            color={appearance.down}
+            opacity={appearance.downOpacity}
+            fallback="var(--color-danger)"
+            pickerHex="#F07167"
+            onChange={(down, downOpacity) => onChange({ down, downOpacity })}
+          />
+          <p className="text-xs text-ink-faint">Wicks use the body colour.</p>
           <PanelActions
             onSave={() => onSave(REPLAY_CANVAS_FIELDS)}
             onReset={() => onReset(REPLAY_CANVAS_FIELDS)}
@@ -178,6 +192,33 @@ export function ReplayChartBar({
         </Modal>
       ) : null}
     </div>
+  );
+}
+
+function SeriesChoice({
+  label,
+  selected,
+  onClick,
+  icon,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+  icon: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={selected}
+      className={`flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-sm ${
+        selected ? "bg-surface-raised text-ink" : "text-ink-muted hover:bg-surface-raised hover:text-ink"
+      }`}
+      onClick={onClick}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 

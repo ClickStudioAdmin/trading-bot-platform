@@ -731,6 +731,13 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         wickUpColor: "#34D399",
         wickDownColor: "#F07167",
       });
+      const closeSeries = chart.addSeries(charts.LineSeries, {
+        color: cssVar(node, "--color-accent", "#A78BFA"),
+        lineWidth: 2,
+        visible: false,
+        priceLineVisible: true,
+        lastValueVisible: true,
+      });
       const drawn: Array<{
         lines: ReturnType<typeof chart.addSeries>[];
         dots: ReturnType<typeof chart.addSeries>;
@@ -862,18 +869,22 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         drawn.push({ lines, dots, oscillator });
       }
       const markers = charts.createSeriesMarkers(candleSeries, []);
+      const lineMarkers = charts.createSeriesMarkers(closeSeries, []);
       function paint(index: number, follow = true) {
         const end = Math.max(0, Math.min(index, candles.length - 1));
         const shown = candles.slice(0, end + 1);
-        candleSeries.setData(
-          shown.map((row) => ({
-            time: Math.floor(row.timeMs / 1000) as never,
-            open: row.open,
-            high: row.high,
-            low: row.low,
-            close: row.close,
-          })),
-        );
+        const bars = shown.map((row) => ({
+          time: Math.floor(row.timeMs / 1000) as never,
+          open: row.open,
+          high: row.high,
+          low: row.low,
+          close: row.close,
+        }));
+        candleSeries.setData(bars);
+        closeSeries.setData(bars.map((row) => ({ time: row.time, value: row.close })));
+        const lineMode = chartAppearanceRef.current.series === "line";
+        candleSeries.applyOptions({ visible: !lineMode });
+        closeSeries.applyOptions({ visible: lineMode });
         const at = candles[end]?.timeMs ?? 0;
         const focusOrders = positionFocusRef.current?.orders ?? null;
         series.layers.forEach((layer, layerIndex) => {
@@ -1011,7 +1022,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             text: "",
           });
         }
-        markers.setMarkers(plotted);
+        markers.setMarkers(lineMode ? [] : plotted);
+        lineMarkers.setMarkers(lineMode ? plotted : []);
       }
       chart.subscribeCrosshairMove((param) => {
         const time = typeof param.time === "number" ? param.time : null;
@@ -1134,7 +1146,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           borderDownColor: down,
           wickUpColor: up,
           wickDownColor: down,
+          visible: look.series !== "line",
         });
+        closeSeries.applyOptions({ visible: look.series === "line" });
+        paint(headRef.current, false);
       }
       applyAppearanceRef.current = applyAppearance;
       applyAppearance();

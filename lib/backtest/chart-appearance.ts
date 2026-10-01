@@ -2,7 +2,10 @@ import { clampChartOpacity, normalizeChartColor } from "@/lib/backtest/chart-col
 
 export const REPLAY_CHART_APPEARANCE_KEY = "tbp.replay.chart-appearance";
 
+export type ReplayPriceSeries = "candles" | "line";
+
 export type ReplayChartAppearance = {
+  series: ReplayPriceSeries;
   up: string | null;
   down: string | null;
   background: string | null;
@@ -15,16 +18,21 @@ export type ReplayChartAppearance = {
 
 export type ReplayChartAppearancePatch = Partial<ReplayChartAppearance>;
 
-export const REPLAY_BAR_FIELDS = ["up", "down", "upOpacity", "downOpacity"] as const;
+export const REPLAY_BAR_FIELDS = ["series"] as const;
 export const REPLAY_CANVAS_FIELDS = [
   "background",
   "grid",
   "backgroundOpacity",
   "gridOpacity",
+  "up",
+  "down",
+  "upOpacity",
+  "downOpacity",
 ] as const;
 
 export function defaultReplayChartAppearance(): ReplayChartAppearance {
   return {
+    series: "candles",
     up: null,
     down: null,
     background: null,
@@ -34,6 +42,10 @@ export function defaultReplayChartAppearance(): ReplayChartAppearance {
     backgroundOpacity: 100,
     gridOpacity: 100,
   };
+}
+
+export function normalizePriceSeries(value: unknown): ReplayPriceSeries {
+  return value === "line" ? "line" : "candles";
 }
 
 export function clampGridOpacity(value: unknown): number {
@@ -159,6 +171,9 @@ export function resetReplayChartFields(
 
 function cleanPatch(patch: ReplayChartAppearancePatch): ReplayChartAppearancePatch {
   const next: ReplayChartAppearancePatch = {};
+  if ("series" in patch) {
+    next.series = normalizePriceSeries(patch.series);
+  }
   if ("up" in patch) {
     next.up = normalizeChartColor(patch.up);
   }
@@ -189,6 +204,7 @@ function cleanPatch(patch: ReplayChartAppearancePatch): ReplayChartAppearancePat
 function normalizeAppearance(value: object): ReplayChartAppearance {
   const row = value as Partial<ReplayChartAppearance>;
   return mergeReplayChartAppearance(null, {
+    series: normalizePriceSeries(row.series),
     up: normalizeChartColor(row.up),
     down: normalizeChartColor(row.down),
     background: normalizeChartColor(row.background),
@@ -202,6 +218,7 @@ function normalizeAppearance(value: object): ReplayChartAppearance {
 
 function sameAppearance(left: ReplayChartAppearance, right: ReplayChartAppearance): boolean {
   return (
+    left.series === right.series &&
     left.up === right.up &&
     left.down === right.down &&
     left.background === right.background &&
