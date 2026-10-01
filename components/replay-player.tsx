@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { BacktestChartIntervalBar } from "@/components/backtest-chart-interval";
 import {
   indicatorRolesForReason,
   indicatorStyleTargets,
@@ -23,6 +22,22 @@ import {
   type IndicatorStyleMap,
 } from "@/lib/backtest/indicator-style";
 import { ReplayIndicatorLegend } from "@/components/replay-indicator-legend";
+import { ReplayChartBar } from "@/components/replay-chart-bar";
+import type { ChartSnapshot } from "@/components/chart-screenshot";
+import {
+  REPLAY_CHART_APPEARANCE_KEY,
+  mergeReplayChartAppearance,
+  parseReplayChartAppearance,
+  patchReplayChartAppearance,
+  clearReplayChartFields,
+  pickReplayChartFields,
+  replayGridPaint,
+  resetReplayChartFields,
+  saveReplayChartAppearance,
+  serializeReplayChartAppearance,
+  type ReplayChartAppearance,
+  type ReplayChartAppearancePatch,
+} from "@/lib/backtest/chart-appearance";
 import { eventParameterSections } from "@/lib/backtest/event-pane";
 import {
   coalesceReplayPositions,
@@ -121,6 +136,25 @@ function money(value: number): string {
   return value < 0 ? `−$${text}` : `$${text}`;
 }
 
+function readStoredChartAppearance(): ReplayChartAppearance | null {
+  try {
+    return parseReplayChartAppearance(
+      window.localStorage.getItem(REPLAY_CHART_APPEARANCE_KEY),
+    );
+  } catch {
+    return null;
+  }
+}
+
+function appearanceColor(
+  node: HTMLElement,
+  token: string | null,
+  fallbackName: string,
+  fallbackHex: string,
+): string {
+  return cssVar(node, token ? `--color-${token}` : fallbackName, fallbackHex);
+}
+
 function readStoredIndicatorStyles(): IndicatorStyleMap {
   try {
     return parseIndicatorStyles(
@@ -211,6 +245,21 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     setGlobalStyles(readStoredIndicatorStyles());
   }
   const savedStyles = globalStyles ?? {};
+  const [sessionAppearance, setSessionAppearance] = useState<ReplayChartAppearancePatch>({});
+  const [savedAppearance, setSavedAppearance] = useState<ReplayChartAppearance | null | undefined>(
+    undefined,
+  );
+  if (savedAppearance === undefined && typeof window !== "undefined") {
+    setSavedAppearance(readStoredChartAppearance());
+  }
+  const chartAppearance = mergeReplayChartAppearance(
+    savedAppearance ?? null,
+    sessionAppearance,
+  );
+  const chartAppearanceRef = useRef(chartAppearance);
+  chartAppearanceRef.current = chartAppearance;
+  const chartShotRef = useRef<ChartSnapshot | null>(null);
+  const applyAppearanceRef = useRef<(() => void) | null>(null);
   const indicatorStyleStateRef = useRef({
     session: {} as IndicatorStyleMap,
     saved: {} as IndicatorStyleMap,
@@ -657,6 +706,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         width: node.clientWidth,
         height: node.clientHeight,
       });
+      chartShotRef.current = chart;
       const candleSeries = chart.addSeries(charts.CandlestickSeries, {
         upColor: "#34D399",
         downColor: "#F07167",
@@ -1022,6 +1072,40 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           });
         }
       }
+      function applyAppearance() {
+        const look = chartAppearanceRef.current;
+        const background = appearanceColor(
+          node,
+          look.background,
+          "--color-canvas",
+          "#0B0E14",
+        );
+        const grid = replayGridPaint(
+          appearanceColor(node, look.grid, "--color-line", "#2A313C"),
+          look.gridOpacity,
+        );
+        const up = appearanceColor(node, look.up, "--color-success", "#34D399");
+        const down = appearanceColor(node, look.down, "--color-danger", "#F07167");
+        chart.applyOptions({
+          layout: {
+            background: { type: charts.ColorType.Solid, color: background },
+          },
+          grid: {
+            vertLines: grid,
+            horzLines: grid,
+          },
+        });
+        candleSeries.applyOptions({
+          upColor: up,
+          downColor: down,
+          borderUpColor: up,
+          borderDownColor: down,
+          wickUpColor: up,
+          wickDownColor: down,
+        });
+      }
+      applyAppearanceRef.current = applyAppearance;
+      applyAppearance();
       applyIndicatorStylesRef.current = applyIndicatorStyles;
       applyIndicatorStyles();
       paint(headRef.current);
@@ -1164,6 +1248,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         delete chartHost.__pan;
         delete chartHost.__wheel;
         applyIndicatorStylesRef.current = null;
+        applyAppearanceRef.current = null;
+        chartShotRef.current = null;
         drawnIndicatorsRef.current.clear();
         chart.remove();
       };
@@ -1173,6 +1259,25 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       cleanup();
     };
   }, [candles, series, events, started, positionsRight, fillViewport]);
+
+  useEffect(() => {
+    if (savedAppearance === undefined) {
+      return;
+    }
+    if (savedAppearance === null) {
+      window.localStorage.removeItem(REPLAY_CHART_APPEARANCE_KEY);
+      return;
+    }
+    window.localStorage.setItem(
+      REPLAY_CHART_APPEARANCE_KEY,
+      serializeReplayChartAppearance(savedAppearance),
+    );
+  }, [savedAppearance]);
+
+  const appearanceKey = serializeReplayChartAppearance(chartAppearance);
+  useEffect(() => {
+    applyAppearanceRef.current?.();
+  }, [appearanceKey]);
 
   useEffect(() => {
     applyIndicatorStylesRef.current?.();
@@ -1526,14 +1631,27 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           positionsRight ? "flex min-h-0 flex-1 flex-col" : "min-h-[420px]"
         }`}
       >
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
-          <BacktestChartIntervalBar
-            run={run}
-            interval={interval}
-            onChange={(value) => {
-              setInterval(value);
-            }}
-          />
+        <ReplayChartBar
+          run={run}
+          interval={interval}
+          onInterval={setInterval}
+          appearance={chartAppearance}
+          onChange={(patch) => {
+            setSessionAppearance((current) => patchReplayChartAppearance(current, patch));
+          }}
+          onSave={(fields) => {
+            const patch = pickReplayChartFields(sessionAppearance, fields);
+            setSavedAppearance((saved) => saveReplayChartAppearance(saved ?? null, patch));
+            setSessionAppearance((current) => clearReplayChartFields(current, fields));
+          }}
+          onReset={(fields) => {
+            setSessionAppearance((current) => clearReplayChartFields(current, fields));
+            setSavedAppearance((saved) => resetReplayChartFields(saved ?? null, fields));
+          }}
+          getChart={() => chartShotRef.current}
+          screenshotName={`${run.symbol}-replay.png`}
+        />
+        <div className="flex flex-wrap items-center justify-end gap-2 border-b border-line px-3 py-2">
           <div className="flex flex-wrap items-center gap-1">
             <TransportButton
               label="Previous event"
