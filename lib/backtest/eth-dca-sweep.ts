@@ -32,7 +32,7 @@ const ADMIN_EMAIL = "click.studio.admin@gmail.com";
 const TIMEFRAME = "240";
 const RESULTS_PATH = "docs/dca-eth-sweep-results.md";
 
-type EntrySpec = {
+export type EntrySpec = {
   id: string;
   name: string;
   startKind: DcaStartKind;
@@ -44,7 +44,7 @@ type EntrySpec = {
   mult?: string;
 };
 
-type ExitSpec = {
+export type ExitSpec = {
   id: string;
   name: string;
   tpKind: "percent" | "atr";
@@ -55,7 +55,7 @@ type ExitSpec = {
   trail: boolean;
 };
 
-type SecondarySpec = {
+export type SecondarySpec = {
   id: string;
   name: string;
   kind: DcaFilterKind;
@@ -83,7 +83,7 @@ type Row = {
   winRate: number;
 };
 
-const ENTRIES: EntrySpec[] = [
+export const ENTRIES: EntrySpec[] = [
   {
     id: "rsi-xb",
     name: "RSI crosses below 30",
@@ -154,7 +154,7 @@ const ENTRIES: EntrySpec[] = [
   },
 ];
 
-const EXITS: ExitSpec[] = [
+export const EXITS: ExitSpec[] = [
   {
     id: "tp-pct-mkt",
     name: "TP 2% market",
@@ -207,7 +207,7 @@ const EXITS: ExitSpec[] = [
   },
 ];
 
-const SECONDARIES: SecondarySpec[] = [
+export const SECONDARIES: SecondarySpec[] = [
   {
     id: "ema-above",
     name: "EMA above",
@@ -337,19 +337,33 @@ function recipeName(
   return name;
 }
 
-function buildRecipe(
+export type SweepRecipeOptions = {
+  timeframe?: string;
+  venue?: "bybit" | "hyperliquid";
+  symbol?: string;
+  direction?: "long" | "short";
+  compound?: boolean;
+  bookUsdt?: number;
+  name?: string;
+};
+
+export function buildRecipe(
   entry: EntrySpec,
   exit: ExitSpec,
   secondary: SecondarySpec | null,
+  options: SweepRecipeOptions = {},
 ): DcaTemplateRecipe {
+  const timeframe = options.timeframe ?? TIMEFRAME;
+  const venue = options.venue ?? "hyperliquid";
+  const symbol = options.symbol ?? (venue === "hyperliquid" ? "ETH" : "ETHUSDT");
   const form = new FormData();
-  form.set("name", recipeName(entry, exit, secondary));
-  form.set("deskVenue", "hyperliquid");
-  form.set("symbol", "ETH");
-  form.set("direction", "long");
+  form.set("name", options.name ?? recipeName(entry, exit, secondary));
+  form.set("deskVenue", venue);
+  form.set("symbol", symbol);
+  form.set("direction", options.direction ?? "long");
   form.set("startKind", entry.startKind);
   form.set("indicatorKind", entry.kind);
-  form.set("indicatorTimeframe", TIMEFRAME);
+  form.set("indicatorTimeframe", timeframe);
   form.set("indicatorCompare", entry.compare);
   if (entry.level != null) {
     form.set("indicatorLevel", entry.level);
@@ -369,7 +383,14 @@ function buildRecipe(
   form.set("restGrid", "1");
   form.set("dipPct", "1");
   form.set("maxClips", "4");
-  form.set("maxType", "orders");
+  if (options.compound) {
+    form.set("maxValueKind", "percent");
+    form.set("maxValue", "4");
+    form.set("accountBookUsdt", String(options.bookUsdt ?? DEFAULT_STARTING_USDT));
+    form.set("accountLeverage", String(DEFAULT_LEVERAGE));
+  } else {
+    form.set("maxType", "orders");
+  }
   form.set("spacingKind", "percent");
   form.set("sizeMultiplier", "1");
   form.set("deviationMultiplier", "1");
@@ -392,7 +413,7 @@ function buildRecipe(
   }
   if (secondary) {
     form.set("confirmKind", secondary.kind);
-    form.set("confirmTimeframe", TIMEFRAME);
+    form.set("confirmTimeframe", timeframe);
     form.set("confirmCompare", secondary.compare);
     if (secondary.period) {
       form.set("confirmPeriod", secondary.period);
@@ -407,7 +428,7 @@ function buildRecipe(
       form.set("confirmMultiplier", secondary.mult);
     }
   }
-  const parsed = parseDcaPlaybookForm(form, "hyperliquid");
+  const parsed = parseDcaPlaybookForm(form, venue);
   if (!parsed.ok) {
     throw new Error(
       `${entry.id} ${exit.id} ${secondary?.id ?? "off"}: ${parsed.error}`,
@@ -798,7 +819,10 @@ async function saveRuns(
   return ids;
 }
 
-main().catch((error: unknown) => {
-  console.error(error);
-  process.exit(1);
-});
+const sweepEntry = process.argv[1]?.replaceAll("\\", "/") ?? "";
+if (sweepEntry.endsWith("eth-dca-sweep.ts")) {
+  main().catch((error: unknown) => {
+    console.error(error);
+    process.exit(1);
+  });
+}
