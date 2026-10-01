@@ -52,4 +52,6 @@ APY is (1 + 1,369.41 / 10,000) ^ (365.25 / days) − 1 over 2016-10-01 to 2026-0
 
 Running the same two bots as separate half-books ($5,000 each, still one $10,000 start) realized +$692.76, ending equity $10,693.50, APY +0.67%. Splitting the cash in half cuts the clip in half, so the dollar profit is about half. The shared bot is the combined test.
 
+Larger ladders on these same signals are in [dca-eth-account-max.md](dca-eth-account-max.md).
+
 Paper fills on this Coinbase tape only. The one-year Hyperliquid runs stay on the admin account. These 10-year fills are not saved there, because that chart would reload Hyperliquid or Bybit candles and would not match this tape.
