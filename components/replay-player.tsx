@@ -22,6 +22,10 @@ import {
   type IndicatorLineStyle,
   type IndicatorStyleMap,
 } from "@/lib/backtest/indicator-style";
+import {
+  ChartContextMenu,
+  type ChartContextMenuState,
+} from "@/components/chart-context-menu";
 import { ReplayIndicatorLegend } from "@/components/replay-indicator-legend";
 import { ReplayChartBar } from "@/components/replay-chart-bar";
 import type { ChartSnapshot } from "@/components/chart-screenshot";
@@ -306,6 +310,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     null,
   );
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const resetChartRef = useRef<(() => void) | null>(null);
+  const resetPriceRef = useRef<(() => void) | null>(null);
+  const [chartMenu, setChartMenu] = useState<ChartContextMenuState>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const headRef = useRef(0);
   const focusRef = useRef<number | null>(null);
@@ -868,6 +875,19 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         );
         drawn.push({ lines, dots, oscillator });
       }
+      let initialRange: { from: number; to: number } | null = null;
+      function resetPriceScales() {
+        for (const pane of chart.panes()) {
+          pane.priceScale("right").setAutoScale(true);
+        }
+      }
+      resetChartRef.current = () => {
+        if (initialRange) {
+          chart.timeScale().setVisibleLogicalRange(initialRange);
+        }
+        resetPriceScales();
+      };
+      resetPriceRef.current = resetPriceScales;
       const markers = charts.createSeriesMarkers(candleSeries, []);
       const lineMarkers = charts.createSeriesMarkers(closeSeries, []);
       function paint(index: number, follow = true) {
@@ -955,10 +975,11 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           row.dots.setData(dots as never);
         });
         if (follow) {
-          chart.timeScale().setVisibleLogicalRange({
-            from: end - 96,
-            to: end + 8,
-          });
+          const next = { from: end - 96, to: end + 8 };
+          chart.timeScale().setVisibleLogicalRange(next);
+          if (!initialRange) {
+            initialRange = next;
+          }
         }
         const selected = selectedRef.current;
         const plotted = events
@@ -1298,6 +1319,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         delete chartHost.__wheel;
         applyIndicatorStylesRef.current = null;
         applyAppearanceRef.current = null;
+        resetChartRef.current = null;
+        resetPriceRef.current = null;
         chartShotRef.current = null;
         drawnIndicatorsRef.current.clear();
         chart.remove();
@@ -1789,6 +1812,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                 ? "absolute inset-0"
                 : "h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
             }
+            onContextMenu={(event) => {
+              event.preventDefault();
+              setChartMenu({ x: event.clientX, y: event.clientY });
+            }}
           />
           {loading ? (
             <div
@@ -1848,6 +1875,22 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               />
             </div>
           ) : null}
+          <ChartContextMenu
+            menu={chartMenu}
+            onClose={() => setChartMenu(null)}
+            onResetChart={() => {
+              setCursor((current) =>
+                current.playing ? { ...current, playing: false } : current,
+              );
+              resetChartRef.current?.();
+            }}
+            onResetPrice={() => {
+              setCursor((current) =>
+                current.playing ? { ...current, playing: false } : current,
+              );
+              resetPriceRef.current?.();
+            }}
+          />
           {tip && started ? (
             <div
               className="pointer-events-none absolute z-10 max-w-sm rounded-control border border-line bg-surface-raised px-3 py-2 text-xs text-ink shadow-none"
