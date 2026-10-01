@@ -626,6 +626,40 @@ export function indicatorStyleTargets(layer: IndicatorLayer): IndicatorStyleTarg
   return targets;
 }
 
+function legendPartLabel(id: string, caption: string): string {
+  const part = caption.toLowerCase();
+  if (part === "upper" || id.endsWith("-upper") || id === "upper") {
+    return "Upper";
+  }
+  if (part === "lower" || id.endsWith("-lower") || id === "lower") {
+    return "Lower";
+  }
+  if (
+    part === "mid" ||
+    part === "middle" ||
+    id.endsWith("-mid") ||
+    id === "mid"
+  ) {
+    return "Middle";
+  }
+  if (part === "up" || id.endsWith("-up")) {
+    return "Up";
+  }
+  if (part === "down" || id.endsWith("-down")) {
+    return "Down";
+  }
+  if (part === "fast" || id.endsWith("-fast")) {
+    return "Fast";
+  }
+  if (part === "slow" || id.endsWith("-slow")) {
+    return "Slow";
+  }
+  if (!caption || part === "line") {
+    return "";
+  }
+  return caption.charAt(0).toUpperCase() + caption.slice(1);
+}
+
 function plotCaption(plotTitle: string, layerTitle: string): string {
   if (plotTitle === layerTitle) {
     return "";
@@ -649,11 +683,11 @@ export function replayIndicatorLegend(
       if (value == null) {
         continue;
       }
-      const caption = plotCaption(plot.title, layer.title);
+      const label = legendPartLabel(plot.id, plotCaption(plot.title, layer.title));
       values.push({
         id: plot.id,
         color: plot.color,
-        text: caption ? `${caption} ${legendNumber(value)}` : legendNumber(value),
+        text: label ? `${label} ${legendNumber(value)}` : legendNumber(value),
       });
     }
     const oscillator = layer.oscillator;
@@ -666,13 +700,13 @@ export function replayIndicatorLegend(
     if (oscillator?.macd) {
       const value = valueAt(oscillator.macd, index);
       if (value != null) {
-        values.push({ id: "macd", color: "#A78BFA", text: legendNumber(value) });
+        values.push({ id: "macd", color: "#A78BFA", text: `MACD ${legendNumber(value)}` });
       }
     }
     if (oscillator?.signal) {
       const value = valueAt(oscillator.signal, index);
       if (value != null) {
-        values.push({ id: "signal", color: "#F5B942", text: legendNumber(value) });
+        values.push({ id: "signal", color: "#F5B942", text: `Signal ${legendNumber(value)}` });
       }
     }
     if (oscillator?.histogram) {
@@ -681,7 +715,7 @@ export function replayIndicatorLegend(
         values.push({
           id: "histogram",
           color: value >= 0 ? "#34D399" : "#F07167",
-          text: legendNumber(value),
+          text: `Histogram ${legendNumber(value)}`,
         });
       }
     }

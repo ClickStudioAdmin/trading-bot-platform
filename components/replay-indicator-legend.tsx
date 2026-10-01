@@ -81,19 +81,19 @@ export function ReplayIndicatorLegend({
             </button>
             <p className="text-[11px] leading-4 text-ink-muted [text-shadow:0_1px_1px_var(--color-canvas),0_0_2px_var(--color-canvas)]">
               {row.name}
-              {row.values.map((value) => {
+              {row.values.flatMap((value) => {
                 const style = indicatorLineStyle(session, saved, row.id, value.id);
                 if (!style.visible) {
-                  return null;
+                  return [];
                 }
                 const color = style.color ? `var(--color-${style.color})` : value.color;
-                return (
-                  <span key={value.id} style={{ color }}>
-                    {" "}
-                    {value.text}
-                  </span>
-                );
-              })}
+                return [{ id: value.id, color, text: value.text }];
+              }).map((value, index) => (
+                <span key={value.id} style={{ color: value.color }}>
+                  {index === 0 ? " - " : ", "}
+                  {value.text}
+                </span>
+              ))}
             </p>
           </div>
         )) : null}

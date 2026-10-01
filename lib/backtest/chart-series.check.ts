@@ -44,9 +44,45 @@ assert.equal(rows.length, 1);
 assert.equal(rows[0]?.name, "BB 20 · 6h · Secondary entry");
 assert.deepEqual(
   rows[0]?.values.map((value) => value.text),
-  ["upper 110", "100", "lower 90"],
+  ["Upper 110", "Middle 100", "Lower 90"],
 );
 assert.deepEqual(replayIndicatorLegend([layer], 0)[0]?.values, []);
+
+const single = replayIndicatorLegend(
+  [
+    {
+      ...layer,
+      id: "sma",
+      title: "SMA 21 · 6h · Long entry",
+      price: [
+        {
+          id: "sma",
+          title: "SMA 21 · 6h · Long entry",
+          color: "#A78BFA",
+          values: [1727.68],
+        },
+      ],
+    },
+  ],
+  0,
+);
+assert.deepEqual(single[0]?.values.map((value) => value.text), ["1,727.68"]);
+
+const trend = replayIndicatorLegend(
+  [
+    {
+      ...layer,
+      id: "st",
+      title: "Supertrend 10 × 3 · 4h · Long entry",
+      price: [
+        { id: "st-up", title: "Supertrend 10 × 3 · 4h · Long entry", color: "#34D399", values: [12] },
+        { id: "st-down", title: "Supertrend 10 × 3 · 4h · Long entry", color: "#F07167", values: [9] },
+      ],
+    },
+  ],
+  0,
+);
+assert.deepEqual(trend[0]?.values.map((value) => value.text), ["Up 12", "Down 9"]);
 
 assert.equal(indicatorConditionLabel("Entry"), "Long entry");
 assert.equal(indicatorConditionLabel("Secondary entry"), "Long secondary entry");
