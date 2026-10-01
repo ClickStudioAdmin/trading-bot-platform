@@ -144,7 +144,9 @@ const catalogRecipe = {
 } as BacktestRecipe;
 const catalog = replayIndicatorCatalog(catalogRecipe);
 assert.equal(catalog.find((row) => row.id === "rsi")?.locked, true);
-assert.equal(catalog.find((row) => row.id === "rsi")?.usage.includes("Long entry"), true);
+assert.equal(catalog.find((row) => row.id === "rsi")?.label, "RSI");
+assert.equal(catalog.find((row) => row.id === "rsi")?.label.includes("Long entry"), false);
+assert.equal(new Set(catalog.map((row) => row.id)).size, catalog.length);
 assert.equal(catalog.find((row) => row.id === "supertrend")?.locked, true);
 assert.equal(catalog.find((row) => row.id === "macd")?.locked, false);
 assert.equal(catalog.find((row) => row.id === "atr_band")?.locked, false);

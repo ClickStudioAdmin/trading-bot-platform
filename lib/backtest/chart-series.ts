@@ -292,7 +292,6 @@ export type ReplayIndicatorChoice = {
   id: ReplayIndicatorId;
   label: string;
   locked: boolean;
-  usage: string;
 };
 
 const REPLAY_INDICATOR_CATALOG: { id: ReplayIndicatorId; label: string }[] = [];
@@ -313,16 +312,11 @@ for (const row of [
 export function replayIndicatorCatalog(recipe: BacktestRecipe): ReplayIndicatorChoice[] {
   const specs = specsFromRecipe(recipe);
   return REPLAY_INDICATOR_CATALOG.map((row) => {
-    const used = specs.filter((spec) => spec.kind === row.id);
-    const usage = used
-      .flatMap((spec) => spec.roles.map(indicatorConditionLabel))
-      .filter((label, index, all) => all.indexOf(label) === index)
-      .join(", ");
+    const used = specs.some((spec) => spec.kind === row.id);
     return {
       id: row.id,
       label: row.label,
-      locked: used.length > 0,
-      usage,
+      locked: used,
     };
   });
 }

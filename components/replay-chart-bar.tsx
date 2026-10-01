@@ -178,12 +178,7 @@ export function ReplayChartBar({
                       disabled={row.locked}
                       onChange={(event) => onToggleReference(row.id, event.target.checked)}
                     />
-                    <span>
-                      {row.label}
-                      {row.locked && row.usage ? (
-                        <span className="text-ink-faint"> · {row.usage}</span>
-                      ) : null}
-                    </span>
+                    <span>{row.label}</span>
                   </label>
                 </li>
               );
