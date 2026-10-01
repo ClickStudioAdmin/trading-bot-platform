@@ -7,6 +7,8 @@ import {
   type ChartSnapshot,
 } from "@/components/chart-screenshot";
 import { IconChartBars, IconClose, IconPalette } from "@/components/icons";
+import { Modal } from "@/components/template-modals";
+import type { ReplayIndicatorChoice } from "@/lib/backtest/chart-series";
 import {
   REPLAY_BAR_FIELDS,
   REPLAY_CANVAS_FIELDS,
@@ -42,6 +44,9 @@ export function ReplayChartBar({
   onReset,
   getChart,
   screenshotName,
+  indicators,
+  references,
+  onToggleReference,
 }: {
   run: BacktestRun;
   interval: DcaIndicatorTimeframe;
@@ -52,11 +57,29 @@ export function ReplayChartBar({
   onReset: (fields: readonly (keyof ReplayChartAppearance)[]) => void;
   getChart: () => ChartSnapshot | null;
   screenshotName: string;
+  indicators: ReplayIndicatorChoice[];
+  references: readonly string[];
+  onToggleReference: (id: string, enabled: boolean) => void;
 }) {
   const [open, setOpen] = useState<"bars" | "canvas" | null>(null);
+  const [indicatorsOpen, setIndicatorsOpen] = useState(false);
   return (
     <div className="relative z-20 flex flex-wrap items-center justify-between gap-2 border-b border-line px-2 py-1">
-      <BacktestChartIntervalBar run={run} interval={interval} onChange={onInterval} />
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <BacktestChartIntervalBar run={run} interval={interval} onChange={onInterval} />
+        <button
+          type="button"
+          className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:text-ink"
+          aria-haspopup="dialog"
+          aria-expanded={indicatorsOpen}
+          onClick={() => {
+            setOpen(null);
+            setIndicatorsOpen(true);
+          }}
+        >
+          Indicators
+        </button>
+      </div>
       <div className="ml-auto flex items-center gap-0.5">
         <button
           type="button"
@@ -130,6 +153,41 @@ export function ReplayChartBar({
             onReset={() => onReset(REPLAY_CANVAS_FIELDS)}
           />
         </Panel>
+      ) : null}
+      {indicatorsOpen ? (
+        <Modal title="Indicators" onClose={() => setIndicatorsOpen(false)} elevated>
+          <p className="mt-2 text-sm text-ink-muted">
+            Strategy indicators stay on. Anything else is a visual reference only.
+          </p>
+          <ul className="mt-4 space-y-2">
+            {indicators.map((row) => {
+              const checked = row.locked || references.includes(row.id);
+              return (
+                <li key={row.id}>
+                  <label
+                    className={`flex items-start gap-2 text-sm ${
+                      row.locked ? "text-ink-faint" : "text-ink"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 accent-accent disabled:opacity-60"
+                      checked={checked}
+                      disabled={row.locked}
+                      onChange={(event) => onToggleReference(row.id, event.target.checked)}
+                    />
+                    <span>
+                      {row.label}
+                      {row.locked && row.usage ? (
+                        <span className="text-ink-faint"> · {row.usage}</span>
+                      ) : null}
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        </Modal>
       ) : null}
     </div>
   );

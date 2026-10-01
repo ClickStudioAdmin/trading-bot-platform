@@ -4,6 +4,7 @@ import {
   indicatorConditionLabel,
   indicatorStyleTargets,
   replayChartSeries,
+  replayIndicatorCatalog,
   replayIndicatorLegend,
   type IndicatorLayer,
 } from "./chart-series";
@@ -89,5 +90,37 @@ assert.equal(
   indicatorStyleTargets(split[0]!).some((target) => target.label === "Middle"),
   true,
 );
+
+const catalogRecipe = {
+  kind: "dca",
+  startKind: "indicator",
+  indicatorKind: "rsi",
+  indicatorPeriod: 14,
+  indicatorTimeframe: "15",
+  confirm: {
+    kind: "supertrend",
+    timeframe: "240",
+    compare: "gte",
+    level: null,
+    period: 10,
+    multiplier: 3,
+  },
+} as BacktestRecipe;
+const catalog = replayIndicatorCatalog(catalogRecipe);
+assert.equal(catalog.find((row) => row.id === "rsi")?.locked, true);
+assert.equal(catalog.find((row) => row.id === "rsi")?.usage.includes("Long entry"), true);
+assert.equal(catalog.find((row) => row.id === "supertrend")?.locked, true);
+assert.equal(catalog.find((row) => row.id === "macd")?.locked, false);
+assert.equal(catalog.find((row) => row.id === "atr_band")?.locked, false);
+assert.equal(catalog.some((row) => row.id === "ema_cross"), true);
+
+const withReference = replayChartSeries(
+  catalogRecipe,
+  [{ timeMs: 60_000, open: 10, high: 12, low: 9, close: 11 }],
+  ["macd", "rsi", "nope"],
+).layers;
+assert.equal(withReference.some((row) => row.roles.includes("Reference") && row.title.includes("MACD")), true);
+assert.equal(withReference.filter((row) => row.title.includes("RSI")).length, 1);
+assert.equal(withReference.some((row) => row.roles.includes("Reference") && row.title.includes("RSI")), false);
 
 console.log("chart-series.check: ok");

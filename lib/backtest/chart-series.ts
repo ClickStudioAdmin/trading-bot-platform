@@ -9,6 +9,8 @@ import {
   DEFAULT_DCA_CROSS_SLOW_PERIOD,
   DEFAULT_DCA_MA_PERIOD,
   DEFAULT_DCA_RSI_PERIOD,
+  DCA_INDICATOR_KIND_OPTIONS,
+  DCA_TREND_KIND_OPTIONS,
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
   DEFAULT_DCA_SUPERTREND_PERIOD,
   emaValues,
@@ -20,6 +22,7 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import {
+  DCA_FILTER_KIND_OPTIONS,
   DEFAULT_DCA_ATR_BAND_MULT,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
@@ -283,11 +286,106 @@ export function indicatorRolesForReason(reason: BacktestFillReason): string[] {
   return [];
 }
 
+export type ReplayIndicatorId = DcaIndicatorKind | "atr_band";
+
+export type ReplayIndicatorChoice = {
+  id: ReplayIndicatorId;
+  label: string;
+  locked: boolean;
+  usage: string;
+};
+
+const REPLAY_INDICATOR_CATALOG: { id: ReplayIndicatorId; label: string }[] = [];
+const seenIndicatorIds = new Set<string>();
+for (const row of [
+  ...DCA_INDICATOR_KIND_OPTIONS,
+  ...DCA_TREND_KIND_OPTIONS,
+  ...DCA_FILTER_KIND_OPTIONS,
+]) {
+  if (seenIndicatorIds.has(row.value)) {
+    continue;
+  }
+  seenIndicatorIds.add(row.value);
+  REPLAY_INDICATOR_CATALOG.push({ id: row.value, label: row.label });
+}
+
+/** Every drawable indicator. Strategy rows stay on and cannot be removed. */
+export function replayIndicatorCatalog(recipe: BacktestRecipe): ReplayIndicatorChoice[] {
+  const specs = specsFromRecipe(recipe);
+  return REPLAY_INDICATOR_CATALOG.map((row) => {
+    const used = specs.filter((spec) => spec.kind === row.id);
+    const usage = used
+      .flatMap((spec) => spec.roles.map(indicatorConditionLabel))
+      .filter((label, index, all) => all.indexOf(label) === index)
+      .join(", ");
+    return {
+      id: row.id,
+      label: row.label,
+      locked: used.length > 0,
+      usage,
+    };
+  });
+}
+
+function referenceSpec(kind: ReplayIndicatorId): Spec {
+  const period =
+    kind === "macd"
+      ? null
+      : kind === "bb"
+        ? DEFAULT_DCA_BB_PERIOD
+        : kind === "rsi"
+          ? DEFAULT_DCA_RSI_PERIOD
+          : kind === "supertrend" || kind === "atr_band"
+            ? DEFAULT_DCA_SUPERTREND_PERIOD
+            : kind === "ema_cross" || kind === "sma_cross"
+              ? DEFAULT_DCA_CROSS_FAST_PERIOD
+              : DEFAULT_DCA_MA_PERIOD;
+  const slowPeriod =
+    kind === "ema_cross" || kind === "sma_cross" ? DEFAULT_DCA_CROSS_SLOW_PERIOD : null;
+  const multiplier =
+    kind === "supertrend"
+      ? DEFAULT_DCA_SUPERTREND_MULTIPLIER
+      : kind === "atr_band"
+        ? DEFAULT_DCA_ATR_BAND_MULT
+        : null;
+  return {
+    key: specKey({
+      kind,
+      period,
+      slowPeriod,
+      multiplier,
+      timeframe: null,
+      role: "Reference",
+    }),
+    kind,
+    roles: ["Reference"],
+    period,
+    slowPeriod,
+    multiplier,
+    levels: [],
+    timeframe: null,
+  };
+}
+
+function addReferenceSpecs(specs: Spec[], references: readonly string[]) {
+  const used = new Set(specs.map((spec) => spec.kind));
+  const allowed = new Set(REPLAY_INDICATOR_CATALOG.map((row) => row.id));
+  for (const id of references) {
+    if (!allowed.has(id as ReplayIndicatorId) || used.has(id as ReplayIndicatorId)) {
+      continue;
+    }
+    used.add(id as ReplayIndicatorId);
+    addSpec(specs, referenceSpec(id as ReplayIndicatorId));
+  }
+}
+
 export function replayChartSeries(
   recipe: BacktestRecipe,
   candles: CandleBar[],
+  references: readonly string[] = [],
 ): ReplayChartSeries {
   const specs = specsFromRecipe(recipe);
+  addReferenceSpecs(specs, references);
   if (candles.length === 0 || specs.length === 0) {
     return { layers: [] };
   }

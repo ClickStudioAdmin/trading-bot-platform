@@ -7,6 +7,7 @@ import {
   indicatorRolesForReason,
   indicatorStyleTargets,
   replayChartSeries,
+  replayIndicatorCatalog,
   replayIndicatorLegend,
   type IndicatorStyleTarget,
 } from "@/lib/backtest/chart-series";
@@ -492,9 +493,14 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     }
   }, [visibleEvents.length, sideLanes]);
   const stats = replayPlayStats(visibleOrders, run.startingUsdt);
+  const [references, setReferences] = useState<string[]>([]);
   const series = useMemo(
-    () => replayChartSeries(run.recipe, candles),
-    [run.recipe, candles],
+    () => replayChartSeries(run.recipe, candles, references),
+    [run.recipe, candles, references],
+  );
+  const indicatorChoices = useMemo(
+    () => replayIndicatorCatalog(run.recipe),
+    [run.recipe],
   );
   const legendRows = useMemo(
     () => replayIndicatorLegend(series.layers, legendIndex ?? head),
@@ -1650,6 +1656,17 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           }}
           getChart={() => chartShotRef.current}
           screenshotName={`${run.symbol}-replay.png`}
+          indicators={indicatorChoices}
+          references={references}
+          onToggleReference={(id, enabled) => {
+            setReferences((current) =>
+              enabled
+                ? current.includes(id)
+                  ? current
+                  : [...current, id]
+                : current.filter((row) => row !== id),
+            );
+          }}
         />
         <div className="flex flex-wrap items-center justify-end gap-2 border-b border-line px-3 py-2">
           <div className="flex flex-wrap items-center gap-1">
