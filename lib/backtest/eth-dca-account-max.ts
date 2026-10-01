@@ -48,13 +48,14 @@ const SIZES: SizeSpec[] = [
   { kind: "margin", value: 20 },
   { kind: "margin", value: 30 },
   { kind: "margin", value: 40 },
+  { kind: "margin", value: 50 },
   { kind: "margin", value: 60 },
   { kind: "margin", value: 80 },
 ];
 
 const TAKE_PROFITS = ["1", "2", "3", "5", "8"];
 const STOP_LOSSES = ["3", "5", "8", "12"];
-const CLIPS = [1, 2, 4, 8];
+const CLIPS = [2, 4, 8];
 const DIPS = [0.5, 1, 2, 3];
 
 type SizeKind = "percent" | "margin";
@@ -113,13 +114,20 @@ function findById<T extends { id: string }>(rows: T[], id: string): T {
   return row;
 }
 
+function money(value: number): string {
+  return Math.abs(value).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 function usd(value: number): string {
   const sign = value > 0 ? "+" : value < 0 ? "−" : "";
-  return `${sign}$${Math.abs(value).toFixed(2)}`;
+  return `${sign}$${money(value)}`;
 }
 
 function dollars(value: number): string {
-  return `$${Math.abs(value).toFixed(2)}`;
+  return `$${money(value)}`;
 }
 
 function pct(value: number | null): string {
@@ -396,8 +404,8 @@ function describe(row: Row): string {
 
 function table(rows: Row[]): string {
   const lines = [
-    "| Size | Exit | Ladder | Realized | Ending | APY | Max DD | Trades | Liquidated |",
-    "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |",
+    "| Side | Size | Exit | Ladder | Realized | Ending | APY | Max DD | Trades | Liquidated |",
+    "| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |",
   ];
   for (const row of rows) {
     const exit = row.tp.startsWith("ATR")
@@ -405,7 +413,7 @@ function table(rows: Row[]): string {
       : `TP ${row.tp}% ${row.orderType} / SL ${row.sl}%`;
     const ladder = `${row.clips} × ${row.dip}%${row.extra ? ` ${row.extra}` : ""}`;
     lines.push(
-      `| ${sizeLabel(row.sizeKind, row.sizeValue)} | ${exit} | ${ladder} | ${usd(row.realized)} | ${dollars(row.ending)} | ${pct(row.apy)} | ${dollars(row.drawdown)} | ${row.trades} | ${row.liquidated ? "yes" : "no"} |`,
+      `| ${row.side} | ${sizeLabel(row.sizeKind, row.sizeValue)} | ${exit} | ${ladder} | ${usd(row.realized)} | ${dollars(row.ending)} | ${pct(row.apy)} | ${dollars(row.drawdown)} | ${row.trades} | ${row.liquidated ? "yes" : "no"} |`,
     );
   }
   return lines.join("\n");
@@ -418,6 +426,7 @@ function render(input: {
   baseline: Row;
   best: Row;
   calm: Row | null;
+  contained: Row | null;
   busy: Row | null;
   sizeBest: Row;
   top: Row[];
@@ -443,15 +452,44 @@ function render(input: {
   lines.push("");
   lines.push(`Settings: ${describe(input.best)}.`);
   lines.push("");
+  const fullLadder =
+    input.best.sizeKind === "margin"
+      ? (input.best.sizeValue / 100) * DEFAULT_LEVERAGE
+      : input.best.sizeValue / 100;
+  const tpPct = Number(input.best.tp);
+  const slPct = Number(input.best.sl);
+  if (Number.isFinite(tpPct) && Number.isFinite(slPct) && input.best.clips > 0) {
+    lines.push(
+      `A full ladder is ${fullLadder.toFixed(2)}× the cash book in notional. The first clip is ${(fullLadder / input.best.clips).toFixed(2)}× the book. If the whole ladder is on, a ${tpPct}% take profit is about ${(tpPct * fullLadder).toFixed(0)}% of the book and a ${slPct}% stop is about ${(slPct * fullLadder).toFixed(0)}% of the book. Closed profit changes the next clip.`,
+    );
+    lines.push("");
+  }
+  const open = input.best.ending - DEFAULT_STARTING_USDT - input.best.realized;
+  if (Math.abs(open) >= 1) {
+    lines.push(`Ending equity includes ${usd(open)} of open profit on the last bar.`);
+    lines.push("");
+  }
   lines.push(
-    `That is ${scale.toFixed(2)}× the +$1,369.41 baseline. Full-ladder notional is ${notional.toFixed(1)}× the baseline 4% ladder. ${
+    `That is ${scale.toLocaleString("en-US", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}× the +$1,369.41 baseline. Full-ladder notional is ${notional.toFixed(1)}× the baseline 4% ladder. ${
       input.best.side === "both"
         ? "The long side is still price crossing above SMA 21 with price inside the Bollinger bands. The short side is still price crossing below EMA 21 with price above SMA 21."
         : `This result is ${input.best.side} only${input.best.extra ? ` (${input.best.extra})` : ""}.`
     }`,
   );
   lines.push("");
-  if (input.calm && input.calm !== input.best) {
+  if (input.best.drawdown > input.best.realized) {
+    lines.push(
+      `The max drawdown is larger than the profit kept. The book was higher during the tape and gave that extra back.`,
+    );
+    lines.push("");
+  }
+  if (input.contained && input.contained !== input.best) {
+    lines.push(
+      `Highest realized whose max drawdown stays within the $10,000 start: ${usd(input.contained.realized)}, APY ${pct(input.contained.apy)}, drawdown ${dollars(input.contained.drawdown)}. Settings: ${describe(input.contained)}.`,
+    );
+    lines.push("");
+  }
+  if (input.calm && input.calm !== input.best && input.calm !== input.contained) {
     lines.push(
       `Highest realized with max drawdown at or under 25% of the $10,000 start: ${usd(input.calm.realized)}, APY ${pct(input.calm.apy)}, drawdown ${dollars(input.calm.drawdown)}. Settings: ${describe(input.calm)}.`,
     );
@@ -589,6 +627,28 @@ async function main(): Promise<void> {
         );
       }
     }
+  }
+
+  const account100 = rows.find(
+    (row) =>
+      row.sizeKind === "percent" &&
+      row.sizeValue === 100 &&
+      row.tp === "2" &&
+      row.sl === "5",
+  );
+  const margin10 = rows.find(
+    (row) =>
+      row.sizeKind === "margin" &&
+      row.sizeValue === 10 &&
+      row.tp === "2" &&
+      row.sl === "5",
+  );
+  if (
+    !account100 ||
+    !margin10 ||
+    Math.abs(account100.realized - margin10.realized) > 1
+  ) {
+    throw new Error("100% of account did not match 10% of margin.");
   }
 
   const gridBest = bestOf(rows, (row) => !row.liquidated);
@@ -899,6 +959,10 @@ async function main(): Promise<void> {
 
   const pool = [...rows, ...sides, ...signals, ...probes, ...followUps];
   const winner = bestOf(pool, (row) => !row.liquidated) ?? best;
+  const contained = bestOf(
+    pool,
+    (row) => !row.liquidated && row.drawdown <= DEFAULT_STARTING_USDT,
+  );
   const calm = bestOf(
     pool,
     (row) => !row.liquidated && row.drawdown <= DEFAULT_STARTING_USDT * 0.25,
@@ -934,6 +998,7 @@ async function main(): Promise<void> {
     baseline,
     best: winner,
     calm,
+    contained,
     busy,
     sizeBest,
     top,
