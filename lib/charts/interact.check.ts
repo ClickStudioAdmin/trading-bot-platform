@@ -4,6 +4,7 @@ import {
   fullLogicalRange,
   isOverRightPriceScale,
   padLogicalRange,
+  paneIndexAtY,
   wheelZoomFactor,
   zoomPriceRange,
 } from "./interact";
@@ -34,6 +35,15 @@ const host = {
 } as HTMLElement;
 assert.equal(isOverRightPriceScale(host, 60, 370), true);
 assert.equal(isOverRightPriceScale(host, 60, 300), false);
+
+const bands = [
+  { top: 0, bottom: 120 },
+  { top: 128, bottom: 180 },
+];
+assert.equal(paneIndexAtY(bands, 40), 0);
+assert.equal(paneIndexAtY(bands, 150), 1);
+assert.equal(paneIndexAtY(bands, 124), null);
+assert.equal(paneIndexAtY(bands, 190), null);
 
 const padded = padLogicalRange({ from: 10, to: 20 }, 8, 12);
 assert.deepEqual(padded, { from: 2, to: 32 });

@@ -72,6 +72,7 @@ import {
   DCA_INDICATOR_TIMEFRAME_LABELS,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import { attachRightAxisWheel } from "@/lib/charts/interact";
 import { loadBacktestDisplayCandles } from "@/lib/charts/load-backtest-candles";
 import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
 import { formatPrice, formatQty, signedTone } from "@/lib/opportunities/format";
@@ -1219,7 +1220,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           current.playing ? { ...current, playing: false } : current,
         );
       }
-      node.addEventListener("wheel", onChartWheel, { passive: true });
+      node.addEventListener("wheel", onChartWheel, { capture: true, passive: true });
+      const detachAxisWheel = attachRightAxisWheel(node, () => chart);
       if (focusSpanRef.current) {
         host.__focusRange?.(focusSpanRef.current.from, focusSpanRef.current.to);
       } else if (focusRef.current != null) {
@@ -1234,7 +1236,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       observer.observe(node);
       cleanup = () => {
         observer.disconnect();
-        node.removeEventListener("wheel", onChartWheel);
+        node.removeEventListener("wheel", onChartWheel, { capture: true });
+        detachAxisWheel();
         chart.timeScale().unsubscribeVisibleLogicalRangeChange(onLaneRange);
         const chartHost = node as HTMLDivElement & {
           __paint?: (index: number) => void;
