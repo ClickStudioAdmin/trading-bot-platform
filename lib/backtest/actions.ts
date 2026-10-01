@@ -3,6 +3,12 @@
 import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
 import { parseCandleSymbol, parseCandleVenue } from "@/lib/market/candles";
+import {
+  candleHistoryBlockedMessage,
+  candleVenueLabel,
+  intervalHistoryLabel,
+} from "@/lib/market/candle-availability";
+import { backtestCandleHistoryError } from "@/lib/market/candle-range";
 import type { BacktestRecipe } from "./model";
 import {
   canQueueUserBacktest,
@@ -251,6 +257,28 @@ export async function queueTemplateBacktestAction(
   const feePreset = parseFeePreset(formData.get("feePreset"));
   const venueEnvironment =
     String(formData.get("venueEnvironment") ?? "").trim() || null;
+  try {
+    const historyError = await backtestCandleHistoryError({
+      venue,
+      venueEnvironment,
+      interval,
+      fromMs: range.fromMs,
+      toMs: range.toMs,
+      symbols: [symbol, ...comparables],
+    });
+    if (historyError) {
+      return { ok: false, error: historyError };
+    }
+  } catch {
+    return {
+      ok: false,
+      error: candleHistoryBlockedMessage({
+        venueLabel: candleVenueLabel(venue),
+        symbol,
+        intervalLabel: intervalHistoryLabel(interval),
+      }),
+    };
+  }
   const sourceTemplateId = await resolveSourceTemplateId(
     String(formData.get("sourceTemplateId") ?? pickedTemplateId),
     queuedRecipe,
