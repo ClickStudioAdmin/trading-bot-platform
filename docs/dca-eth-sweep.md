@@ -126,3 +126,5 @@ npx tsx lib/backtest/eth-dca-sweep.ts
 ```
 
 The script writes `docs/dca-eth-sweep-results.md` and inserts the admin runs. It does not arm a desk.
+
+The same grid on ten years of ETH, including the short mirror and a compounded long-and-short book, is in [dca-eth-sweep-10y.md](dca-eth-sweep-10y.md). Reproduce with `npx tsx lib/backtest/eth-dca-sweep-10y.ts`. Those fills stay off the admin account: the saved-run chart would reload Hyperliquid or Bybit candles and would not match the Coinbase tape.
