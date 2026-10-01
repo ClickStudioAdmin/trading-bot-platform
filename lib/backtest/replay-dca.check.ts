@@ -657,6 +657,34 @@ assert.equal(
 );
 assert.equal(bothConfirmReplay.orders[0]?.side, "long");
 
+const hlForm = new FormData();
+hlForm.set("name", "HL ETH");
+hlForm.set("deskVenue", "hyperliquid");
+hlForm.set("symbol", "ETH");
+hlForm.set("direction", "long");
+hlForm.set("startKind", "immediate");
+hlForm.set("clipSize", "100");
+hlForm.set("sizeUnit", "usdt");
+hlForm.set("takeProfitPct", "10");
+const hlParsed = parseDcaPlaybookForm(hlForm, "hyperliquid");
+assert.equal(hlParsed.ok, true);
+if (!hlParsed.ok) {
+  throw new Error("expected Hyperliquid DCA parse");
+}
+const hlReplay = await replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 100, high: 100, low: 100, close: 100 },
+  ],
+  recipe: snapshotDcaRecipe(hlParsed.config),
+  feeRate: 0,
+  startingUsdt: 10_000,
+  venue: "hyperliquid",
+});
+assert.equal(hlReplay.orders[0]?.reason, "entry");
+assert.equal(hlReplay.orders[0]?.side, "long");
+assert.ok((hlReplay.orders[0]?.qty ?? 0) > 0);
+
 console.log("dca backtest replay checks passed");
 }
 
