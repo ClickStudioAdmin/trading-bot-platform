@@ -1724,11 +1724,94 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   );
 
   const header = (
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-baseline gap-4">
-          <h1 className="text-2xl font-semibold tracking-tight">{run.symbol} replay</h1>
+      <div className="flex shrink-0 flex-wrap items-center gap-3">
+        <h1 className="shrink-0 text-2xl font-semibold tracking-tight">{run.symbol} replay</h1>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
+          <div
+            className="inline-flex overflow-hidden rounded-control border border-line"
+            role="group"
+            aria-label="Back"
+          >
+            <TransportButton
+              label="Previous event"
+              icon={<IconSkipBack size={16} className="size-4" />}
+              onClick={() => jumpEvent(-1)}
+            />
+            <TransportButton
+              label="Step back"
+              icon={<IconStepBack size={16} className="size-4" />}
+              divided
+              onClick={() => {
+                revealChart();
+                setCursor((current) => ({
+                  ...current,
+                  playing: false,
+                  head: Math.max(0, current.head - 1),
+                }));
+              }}
+            />
+          </div>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-3 py-1 text-sm text-ink"
+            onClick={() => {
+              if (!started) {
+                beginPlayback();
+                return;
+              }
+              setCursor((current) => ({ ...current, playing: !current.playing }));
+            }}
+          >
+            {playing ? (
+              <IconPause size={14} className="size-3.5 fill-current" />
+            ) : (
+              <IconPlay size={14} className="size-3.5 fill-current" />
+            )}
+            {playing ? "Pause" : "Play"}
+          </button>
+          <div
+            className="inline-flex overflow-hidden rounded-control border border-line"
+            role="group"
+            aria-label="Forward"
+          >
+            <TransportButton
+              label="Step forward"
+              icon={<IconStepForward size={16} className="size-4" />}
+              onClick={() => {
+                revealChart();
+                setCursor((current) => ({
+                  ...current,
+                  playing: false,
+                  head: Math.min(candles.length - 1, current.head + 1),
+                }));
+              }}
+            />
+            <TransportButton
+              label="Next event"
+              icon={<IconSkipForward size={16} className="size-4" />}
+              divided
+              onClick={() => jumpEvent(1)}
+            />
+          </div>
+          <div className="flex items-center gap-1" role="group" aria-label="Speed">
+            {SPEEDS.map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={speed === value}
+                className={`rounded-control px-2 py-1 text-xs ${
+                  speed === value
+                    ? "bg-accent-strong text-ink"
+                    : "text-ink-muted hover:text-ink"
+                }`}
+                onClick={() => setSpeed(value)}
+              >
+                {value}×
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-3 text-sm">
+        <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-3 text-sm">
           <button
             type="button"
             title="Page layout settings"
@@ -1835,93 +1918,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           positionsRight ? "flex min-h-0 flex-1 flex-col" : "min-h-[420px]"
         }`}
       >
-        <div className="flex flex-wrap items-center justify-end gap-2 border-b border-line px-3 py-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <div
-              className="inline-flex overflow-hidden rounded-control border border-line"
-              role="group"
-              aria-label="Back"
-            >
-              <TransportButton
-                label="Previous event"
-                icon={<IconSkipBack size={16} className="size-4" />}
-                onClick={() => jumpEvent(-1)}
-              />
-              <TransportButton
-                label="Step back"
-                icon={<IconStepBack size={16} className="size-4" />}
-                divided
-                onClick={() => {
-                  revealChart();
-                  setCursor((current) => ({
-                    ...current,
-                    playing: false,
-                    head: Math.max(0, current.head - 1),
-                  }));
-                }}
-              />
-            </div>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-3 py-1 text-sm text-ink"
-              onClick={() => {
-                if (!started) {
-                  beginPlayback();
-                  return;
-                }
-                setCursor((current) => ({ ...current, playing: !current.playing }));
-              }}
-            >
-              {playing ? (
-                <IconPause size={14} className="size-3.5 fill-current" />
-              ) : (
-                <IconPlay size={14} className="size-3.5 fill-current" />
-              )}
-              {playing ? "Pause" : "Play"}
-            </button>
-            <div
-              className="inline-flex overflow-hidden rounded-control border border-line"
-              role="group"
-              aria-label="Forward"
-            >
-              <TransportButton
-                label="Step forward"
-                icon={<IconStepForward size={16} className="size-4" />}
-                onClick={() => {
-                  revealChart();
-                  setCursor((current) => ({
-                    ...current,
-                    playing: false,
-                    head: Math.min(candles.length - 1, current.head + 1),
-                  }));
-                }}
-              />
-              <TransportButton
-                label="Next event"
-                icon={<IconSkipForward size={16} className="size-4" />}
-                divided
-                onClick={() => jumpEvent(1)}
-              />
-            </div>
-            <div className="flex items-center gap-1" role="group" aria-label="Speed">
-              {SPEEDS.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={speed === value}
-                  className={`rounded-control px-2 py-1 text-xs ${
-                    speed === value
-                      ? "bg-accent-strong text-ink"
-                      : "text-ink-muted hover:text-ink"
-                  }`}
-                  onClick={() => setSpeed(value)}
-                >
-                  {value}×
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
         <ReplayChartBar
           run={run}
           interval={interval}
