@@ -132,7 +132,6 @@ function specKey(input: {
   slowPeriod: number | null;
   multiplier: number | null;
   timeframe: DcaIndicatorTimeframe | null;
-  role: string;
 }): string {
   return [
     input.kind,
@@ -140,7 +139,6 @@ function specKey(input: {
     input.slowPeriod ?? "",
     input.multiplier ?? "",
     input.timeframe ?? "",
-    input.role,
   ].join("|");
 }
 
@@ -181,7 +179,6 @@ function fromFilter(spec: DcaFilterSpec | null | undefined, role: string): Spec 
       slowPeriod: null,
       multiplier: spec.multiplier,
       timeframe: spec.timeframe,
-      role,
     }),
     kind: spec.kind,
     roles: [role],
@@ -207,7 +204,6 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
           slowPeriod: recipe.indicatorSlowPeriod ?? null,
           multiplier: recipe.indicatorMultiplier ?? null,
           timeframe: recipe.indicatorTimeframe,
-          role: "Entry",
         }),
         kind: recipe.indicatorKind,
         roles: ["Entry"],
@@ -226,7 +222,6 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
           slowPeriod: recipe.shortIndicatorSlowPeriod ?? null,
           multiplier: recipe.shortIndicatorMultiplier ?? null,
           timeframe: recipe.shortIndicatorTimeframe ?? null,
-          role: "Short entry",
         }),
         kind: recipe.shortIndicatorKind,
         roles: ["Short entry"],
@@ -256,7 +251,6 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
         slowPeriod: start.slowPeriod,
         multiplier: start.multiplier ?? null,
         timeframe: start.timeframe,
-        role: "Entry",
       }),
       kind: start.kind,
       roles: ["Entry"],
@@ -507,7 +501,6 @@ function referenceSpec(
       slowPeriod,
       multiplier,
       timeframe: null,
-      role: "Reference",
     }),
     kind,
     roles: ["Reference"],

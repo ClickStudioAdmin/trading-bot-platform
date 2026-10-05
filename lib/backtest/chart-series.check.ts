@@ -116,23 +116,38 @@ const split = replayChartSeries(
   } as BacktestRecipe,
   [{ timeMs: 1_000, open: 10, high: 12, low: 9, close: 11 }],
 ).layers;
-assert.equal(split.length, 2);
+assert.equal(split.length, 1);
 assert.equal(split[0]?.title.includes("Long entry"), true);
-assert.equal(split[1]?.title.includes("Short secondary entry"), true);
+assert.equal(split[0]?.title.includes("Short secondary entry"), true);
 assert.equal(split[0]?.roles.includes("Entry"), true);
-assert.equal(split[1]?.roles.includes("Short secondary entry"), true);
-const longMid = split[0]?.price.find((plot) => plot.id.endsWith("-mid"));
-const shortMid = split[1]?.price.find((plot) => plot.id.endsWith("-mid"));
-const longUpper = split[0]?.price.find((plot) => plot.id.endsWith("-upper"));
-const shortUpper = split[1]?.price.find((plot) => plot.id.endsWith("-upper"));
-assert.equal(longMid?.color, "#6B7382");
-assert.equal(shortMid?.color, "#F5B942");
-assert.equal(longUpper?.color, "#9AA3B2");
-assert.equal(shortUpper?.color, "#9AA3B2");
+assert.equal(split[0]?.roles.includes("Short secondary entry"), true);
+assert.equal(replayIndicatorLegend(split, 0).length, 1);
+const mid = split[0]?.price.find((plot) => plot.id.endsWith("-mid"));
+const upper = split[0]?.price.find((plot) => plot.id.endsWith("-upper"));
+assert.equal(mid?.color, "#6B7382");
+assert.equal(upper?.color, "#9AA3B2");
 assert.equal(
   indicatorStyleTargets(split[0]!).some((target) => target.label === "Middle"),
   true,
 );
+
+const otherTimeframe = replayChartSeries(
+  {
+    kind: "dca",
+    startKind: "indicator",
+    indicatorKind: "sma",
+    indicatorPeriod: 21,
+    indicatorTimeframe: "360",
+    shortIndicatorKind: "sma",
+    shortIndicatorPeriod: 21,
+    shortIndicatorTimeframe: "15",
+  } as BacktestRecipe,
+  [{ timeMs: 1_000, open: 10, high: 12, low: 9, close: 11 }],
+).layers;
+assert.equal(otherTimeframe.length, 2);
+assert.equal(otherTimeframe[0]?.timeframe, "360");
+assert.equal(otherTimeframe[1]?.timeframe, "15");
+assert.equal(replayIndicatorLegend(otherTimeframe, 0).length, 2);
 
 const catalogRecipe = {
   kind: "dca",
