@@ -1946,14 +1946,18 @@ export function ReplayPlayer({
             <Modal title="Page Layout Settings" onClose={() => setLayoutOpen(false)}>
               <div className="mt-4 flex min-h-8 items-center justify-between gap-4">
                 <span className="text-xs text-ink">Display Positions</span>
-                <div role="group" aria-label="Display Positions" className="flex gap-1">
+                <div
+                  role="group"
+                  aria-label="Display Positions"
+                  className="flex rounded-control border border-line p-0.5"
+                >
                   <button
                     type="button"
                     aria-pressed={!positionsRight}
-                    className={`rounded-control px-2 py-0.5 text-xs ${
+                    className={`inline-flex items-center justify-center rounded-control px-2.5 py-1.5 text-xs font-medium ${
                       positionsRight
                         ? "text-ink-muted hover:text-ink"
-                        : "bg-accent-strong text-ink"
+                        : "bg-surface-raised text-ink"
                     }`}
                     onClick={() => setPositionsRight(false)}
                   >
@@ -1962,9 +1966,9 @@ export function ReplayPlayer({
                   <button
                     type="button"
                     aria-pressed={positionsRight}
-                    className={`rounded-control px-2 py-0.5 text-xs ${
+                    className={`inline-flex items-center justify-center rounded-control px-2.5 py-1.5 text-xs font-medium ${
                       positionsRight
-                        ? "bg-accent-strong text-ink"
+                        ? "bg-surface-raised text-ink"
                         : "text-ink-muted hover:text-ink"
                     }`}
                     onClick={() => setPositionsRight(true)}
