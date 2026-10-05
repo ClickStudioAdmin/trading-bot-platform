@@ -1827,12 +1827,12 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             >
               <TransportButton
                 label="Previous event"
-                icon={<IconSkipBack size={14} className="size-3.5" />}
+                icon={<IconSkipBack size={16} className="size-4" />}
                 onClick={() => jumpEvent(-1)}
               />
               <TransportButton
                 label="Step back"
-                icon={<IconStepBack size={14} className="size-3.5" />}
+                icon={<IconStepBack size={16} className="size-4" />}
                 divided
                 onClick={() => {
                   revealChart();
@@ -1869,7 +1869,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             >
               <TransportButton
                 label="Step forward"
-                icon={<IconStepForward size={14} className="size-3.5" />}
+                icon={<IconStepForward size={16} className="size-4" />}
                 onClick={() => {
                   revealChart();
                   setCursor((current) => ({
@@ -1881,7 +1881,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               />
               <TransportButton
                 label="Next event"
-                icon={<IconSkipForward size={14} className="size-3.5" />}
+                icon={<IconSkipForward size={16} className="size-4" />}
                 divided
                 onClick={() => jumpEvent(1)}
               />
@@ -2682,13 +2682,14 @@ function TransportButton({
   return (
     <button
       type="button"
-      className={`inline-flex items-center gap-1.5 px-2 py-1 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink ${
+      title={label}
+      aria-label={label}
+      className={`inline-flex size-8 items-center justify-center text-ink-muted hover:bg-surface-raised hover:text-ink ${
         divided ? "border-l border-line" : ""
       }`}
       onClick={onClick}
     >
       {icon}
-      {label}
     </button>
   );
 }
