@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   indicatorRolesForReason,
   indicatorStyleTargets,
+  oscillatorPaneStretch,
   replayChartSeries,
   replayIndicatorCatalog,
   replayIndicatorLegend,
@@ -812,7 +813,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           chart.addPane();
           paneCursor += 1;
           pane = paneCursor;
-          chart.panes()[pane]?.setHeight(68);
         }
         const lines = layer.price.map((plot) => {
           const line = chart.addSeries(
@@ -1356,10 +1356,26 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             : tops,
         );
       }
+      function sizeOscillatorPanes() {
+        const panes = chart.panes();
+        const weights = oscillatorPaneStretch(
+          panes.reduce((sum, pane) => sum + pane.getHeight(), 0),
+          panes.length - 1,
+        );
+        if (!weights) {
+          return;
+        }
+        panes[0]?.setStretchFactor(weights.price);
+        for (let index = 1; index < panes.length; index += 1) {
+          panes[index]?.setStretchFactor(weights.oscillator);
+        }
+      }
+      sizeOscillatorPanes();
       requestAnimationFrame(() => {
         if (disposed) {
           return;
         }
+        sizeOscillatorPanes();
         for (const pane of chart.panes()) {
           const element = pane.getHTMLElement();
           if (element) {

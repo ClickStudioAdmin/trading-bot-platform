@@ -905,6 +905,24 @@ function rowsByIndicatorName(
   return groups.flat();
 }
 
+const OSCILLATOR_PANE_HEIGHT = 120;
+const PRICE_PANE_FLOOR = 160;
+
+/** Stretch weights so every oscillator pane starts at the same height. */
+export function oscillatorPaneStretch(
+  totalHeight: number,
+  oscillatorCount: number,
+): { price: number; oscillator: number } | null {
+  if (oscillatorCount < 1 || totalHeight <= 0) {
+    return null;
+  }
+  const room = Math.max(0, totalHeight - PRICE_PANE_FLOOR);
+  const fitted = Math.floor(room / oscillatorCount);
+  const oscillator = Math.min(OSCILLATOR_PANE_HEIGHT, Math.max(30, fitted));
+  const price = Math.max(1, totalHeight - oscillator * oscillatorCount);
+  return { price, oscillator };
+}
+
 /** Price rows for one indicator stay together. Oscillator rows stay in pane order. */
 export function groupReplayIndicatorRows(
   rows: ReplayIndicatorLegendRow[],

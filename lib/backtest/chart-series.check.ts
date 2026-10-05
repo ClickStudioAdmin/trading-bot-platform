@@ -7,6 +7,7 @@ import {
   replayChartSeries,
   replayIndicatorCatalog,
   groupReplayIndicatorRows,
+  oscillatorPaneStretch,
   replayIndicatorLegend,
   type IndicatorLayer,
 } from "./chart-series";
@@ -371,5 +372,17 @@ assert.equal(
     ?.inputs.find((field) => field.id === "multiplier")?.value,
   1.3,
 );
+
+const widePanes = oscillatorPaneStretch(600, 2);
+assert.equal(widePanes?.oscillator, 120);
+assert.equal(widePanes?.price, 360);
+const tightPanes = oscillatorPaneStretch(280, 2);
+assert.equal(tightPanes?.oscillator, 60);
+assert.equal(tightPanes?.price, 160);
+const onePane = oscillatorPaneStretch(600, 1);
+assert.equal(onePane?.oscillator, 120);
+assert.equal(onePane?.price, 480);
+assert.equal(oscillatorPaneStretch(0, 2), null);
+assert.equal(oscillatorPaneStretch(400, 0), null);
 
 console.log("chart-series.check: ok");
