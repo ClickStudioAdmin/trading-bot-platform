@@ -401,10 +401,10 @@ export function ReplayPlayer({
   const [monitorFull, setMonitorFull] = useState(false);
   const [positionsRight, setPositionsRight] = useState(preferences?.positionsRight ?? false);
   const [layoutOpen, setLayoutOpen] = useState(false);
-  const [sideLanes, setSideLanes] = useState(false);
+  const [sideLanes, setSideLanes] = useState(true);
   const [laneFrame, setLaneFrame] = useState(0);
   const [placedLanes, setPlacedLanes] = useState<ReplayLaneDraw[]>([]);
-  const sideLanesRef = useRef(false);
+  const sideLanesRef = useRef(true);
   const laneSyncRef = useRef<() => void>(() => {});
   const laneTrackRef = useRef<HTMLDivElement | null>(null);
   sideLanesRef.current = sideLanes;
