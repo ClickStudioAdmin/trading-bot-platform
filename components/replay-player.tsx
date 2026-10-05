@@ -1681,6 +1681,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                     key={cycle.id}
                     cycle={cycle}
                     open={open}
+                    viewing={positionFocus?.number === cycle.tradeNumber}
                     events={events}
                     orders={run.orders}
                     onToggle={() => setOpenOrderKey(open ? null : cycle.id)}
@@ -2689,6 +2690,7 @@ function Stat({
 function CycleRows({
   cycle,
   open,
+  viewing,
   events,
   orders,
   onToggle,
@@ -2696,6 +2698,7 @@ function CycleRows({
 }: {
   cycle: BacktestPositionCycle & { tradeNumber: number };
   open: boolean;
+  viewing: boolean;
   events: ReplayEvent[];
   orders: BacktestRun["orders"];
   onToggle: () => void;
@@ -2703,7 +2706,10 @@ function CycleRows({
 }) {
   return (
     <>
-      <tr className="border-b border-line last:border-b-0">
+      <tr
+        className={`border-b border-line last:border-b-0 ${viewing ? "bg-accent/15" : ""}`}
+        aria-current={viewing ? "true" : undefined}
+      >
         <td className="px-4 py-3">
           <button
             type="button"
