@@ -157,7 +157,36 @@ assert.equal(new Set(catalog.map((row) => row.id)).size, catalog.length);
 assert.equal(catalog.find((row) => row.id === "supertrend")?.locked, true);
 assert.equal(catalog.find((row) => row.id === "macd")?.locked, false);
 assert.equal(catalog.find((row) => row.id === "atr_band")?.locked, false);
-assert.equal(catalog.some((row) => row.id === "ema_cross"), true);
+assert.equal(catalog.find((row) => row.id === "sma")?.label, "Simple Moving Average");
+assert.equal(catalog.find((row) => row.id === "ema")?.label, "Exponential Moving Average");
+assert.equal(catalog.some((row) => row.id === "ema_cross" || row.id === "sma_cross"), false);
+
+const crossRecipe = {
+  kind: "dca",
+  startKind: "indicator",
+  indicatorKind: "sma_cross",
+  indicatorPeriod: 9,
+  indicatorSlowPeriod: 21,
+  indicatorTimeframe: "60",
+  confirm: {
+    kind: "ema",
+    timeframe: "60",
+    compare: "gte",
+    level: null,
+    period: 21,
+    multiplier: null,
+  },
+} as BacktestRecipe;
+const crossCatalog = replayIndicatorCatalog(crossRecipe);
+assert.equal(crossCatalog.filter((row) => row.label.includes("Moving Average")).length, 2);
+assert.equal(crossCatalog.find((row) => row.id === "sma")?.locked, true);
+assert.equal(crossCatalog.find((row) => row.id === "ema")?.locked, true);
+const crossLayers = replayChartSeries(
+  crossRecipe,
+  [{ timeMs: 60_000, open: 10, high: 12, low: 9, close: 11 }],
+  ["sma", "ema"],
+).layers;
+assert.equal(crossLayers.some((row) => row.id === "ref:sma" || row.id === "ref:ema"), false);
 
 const withReference = replayChartSeries(
   catalogRecipe,

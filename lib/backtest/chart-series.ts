@@ -11,8 +11,6 @@ import {
   DEFAULT_DCA_CROSS_SLOW_PERIOD,
   DEFAULT_DCA_MA_PERIOD,
   DEFAULT_DCA_RSI_PERIOD,
-  DCA_INDICATOR_KIND_OPTIONS,
-  DCA_TREND_KIND_OPTIONS,
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
   DEFAULT_DCA_SUPERTREND_PERIOD,
   emaValues,
@@ -24,7 +22,6 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import {
-  DCA_FILTER_KIND_OPTIONS,
   DEFAULT_DCA_ATR_BAND_MULT,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
@@ -326,31 +323,28 @@ export type ReplayIndicatorChoice = {
   locked: boolean;
 };
 
-const REPLAY_INDICATOR_CATALOG: { id: ReplayIndicatorId; label: string }[] = [];
-const seenIndicatorIds = new Set<string>();
-for (const row of [
-  ...DCA_INDICATOR_KIND_OPTIONS,
-  ...DCA_TREND_KIND_OPTIONS,
-  ...DCA_FILTER_KIND_OPTIONS,
-]) {
-  if (seenIndicatorIds.has(row.value)) {
-    continue;
-  }
-  seenIndicatorIds.add(row.value);
-  REPLAY_INDICATOR_CATALOG.push({ id: row.value, label: row.label });
-}
+const REPLAY_INDICATOR_CATALOG: {
+  id: ReplayIndicatorId;
+  label: string;
+  kinds: readonly ReplayIndicatorId[];
+}[] = [
+  { id: "rsi", label: "RSI", kinds: ["rsi"] },
+  { id: "macd", label: "MACD", kinds: ["macd"] },
+  { id: "sma", label: "Simple Moving Average", kinds: ["sma", "sma_cross"] },
+  { id: "ema", label: "Exponential Moving Average", kinds: ["ema", "ema_cross"] },
+  { id: "bb", label: "Price vs BB", kinds: ["bb"] },
+  { id: "supertrend", label: "Supertrend", kinds: ["supertrend"] },
+  { id: "atr_band", label: "ATR band", kinds: ["atr_band"] },
+];
 
 /** Every drawable indicator. Strategy rows stay on and cannot be removed. */
 export function replayIndicatorCatalog(recipe: BacktestRecipe): ReplayIndicatorChoice[] {
   const specs = specsFromRecipe(recipe);
-  return REPLAY_INDICATOR_CATALOG.map((row) => {
-    const used = specs.some((spec) => spec.kind === row.id);
-    return {
-      id: row.id,
-      label: row.label,
-      locked: used,
-    };
-  });
+  return REPLAY_INDICATOR_CATALOG.map((row) => ({
+    id: row.id,
+    label: row.label,
+    locked: specs.some((spec) => row.kinds.includes(spec.kind)),
+  }));
 }
 
 const LENGTH_RANGE = {
@@ -534,13 +528,13 @@ function addReferenceSpecs(
   inputs: ReplayReferenceInputs,
 ) {
   const used = new Set(specs.map((spec) => spec.kind));
-  const allowed = new Set(REPLAY_INDICATOR_CATALOG.map((row) => row.id));
   for (const id of references) {
-    if (!allowed.has(id as ReplayIndicatorId) || used.has(id as ReplayIndicatorId)) {
+    const row = REPLAY_INDICATOR_CATALOG.find((item) => item.id === id);
+    if (!row || row.kinds.some((kind) => used.has(kind))) {
       continue;
     }
-    used.add(id as ReplayIndicatorId);
-    addSpec(specs, referenceSpec(id as ReplayIndicatorId, inputs[id as ReplayIndicatorId]));
+    used.add(row.id);
+    addSpec(specs, referenceSpec(row.id, inputs[row.id]));
   }
 }
 
