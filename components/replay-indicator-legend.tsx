@@ -199,7 +199,7 @@ export function ReplayIndicatorLegend({
                         />
                       </SettingRow>
                       {line.id === "histogram" ? null : (
-                        <SettingRow label="Line width">
+                        <SettingRow label="Line Width">
                           <div className="flex gap-1" role="group" aria-label={`${line.label} line width`}>
                             {([1, 2, 3] as const).map((width) => (
                               <button

@@ -151,10 +151,11 @@ const mid = split[0]?.price.find((plot) => plot.id.endsWith("-mid"));
 const upper = split[0]?.price.find((plot) => plot.id.endsWith("-upper"));
 assert.equal(mid?.color, "#6B7382");
 assert.equal(upper?.color, "#9AA3B2");
-assert.equal(
-  indicatorStyleTargets(split[0]!).some((target) => target.label === "Middle"),
-  true,
+assert.deepEqual(
+  indicatorStyleTargets(split[0]!).map((target) => target.label),
+  ["Upper", "Middle", "Lower"],
 );
+assert.equal(split[0]?.inputs.find((field) => field.id === "stddev")?.label, "Std Dev");
 
 const otherTimeframe = replayChartSeries(
   {
@@ -289,6 +290,7 @@ assert.equal(catalog.find((row) => row.id === "atr_band")?.locked, false);
 assert.equal(catalog.find((row) => row.id === "sma")?.label, "Simple Moving Average");
 assert.equal(catalog.find((row) => row.id === "ema")?.label, "Exponential Moving Average");
 assert.equal(catalog.find((row) => row.id === "bb")?.label, "Bollinger Bands");
+assert.equal(catalog.find((row) => row.id === "atr_band")?.label, "ATR Band");
 assert.equal(catalog.some((row) => row.id === "ema_cross" || row.id === "sma_cross"), false);
 
 const crossRecipe = {
@@ -317,6 +319,19 @@ const crossLayers = replayChartSeries(
   ["sma", "ema"],
 ).layers;
 assert.equal(crossLayers.some((row) => row.id === "ref:sma" || row.id === "ref:ema"), false);
+assert.equal(crossLayers.some((row) => row.title.startsWith("SMA Cross")), true);
+assert.deepEqual(
+  indicatorStyleTargets(crossLayers.find((row) => row.title.startsWith("SMA Cross"))!).map(
+    (target) => target.label,
+  ),
+  ["SMA 9", "SMA 21"],
+);
+assert.deepEqual(
+  crossLayers
+    .find((row) => row.title.startsWith("SMA Cross"))
+    ?.inputs.map((field) => field.label),
+  ["Fast Length", "Slow Length"],
+);
 
 const withReference = replayChartSeries(
   catalogRecipe,
@@ -368,6 +383,31 @@ assert.equal(referenceMacd?.inputsLocked, false);
 assert.equal(referenceMacd?.inputs.find((field) => field.id === "length")?.value, 8);
 assert.equal(referenceMacd?.inputs.find((field) => field.id === "slowLength")?.value, 20);
 assert.equal(referenceMacd?.inputs.find((field) => field.id === "signal")?.value, 5);
+assert.deepEqual(
+  referenceMacd?.inputs.map((field) => field.label),
+  ["Fast Length", "Slow Length", "Signal"],
+);
+assert.deepEqual(
+  indicatorStyleTargets(referenceMacd!).map((target) => target.label),
+  ["MACD", "Signal", "Histogram"],
+);
+const bandAndTrend = replayChartSeries(bare, bars, ["atr_band", "supertrend"]).layers;
+const atrBand = bandAndTrend.find((row) => row.id === "ref:atr_band");
+const supertrend = bandAndTrend.find((row) => row.id === "ref:supertrend");
+assert.equal(atrBand?.title.startsWith("ATR Band "), true);
+assert.deepEqual(
+  indicatorStyleTargets(atrBand!).map((target) => target.label),
+  ["Middle", "Upper", "Lower"],
+);
+assert.deepEqual(
+  atrBand?.inputs.map((field) => field.label),
+  ["Length", "Multiplier"],
+);
+assert.equal(supertrend?.title.startsWith("Supertrend "), true);
+assert.deepEqual(
+  indicatorStyleTargets(supertrend!).map((target) => target.label),
+  ["Up", "Down"],
+);
 assert.deepEqual(referenceMacd?.oscillator?.macd, macdSeries(closes, 8, 20, 5).macd);
 const sameMacd = replayChartSeries(bare, bars, ["macd"], {
   macd: { length: 10, slowLength: 21, signal: 7 },

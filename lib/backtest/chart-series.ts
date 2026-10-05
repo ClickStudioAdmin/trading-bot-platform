@@ -282,11 +282,11 @@ function layerTitle(spec: Spec): string {
   } else if (spec.kind === "bb") {
     name = `BB ${spec.period ?? DEFAULT_DCA_BB_PERIOD}`;
   } else if (spec.kind === "atr_band") {
-    name = `ATR band ${spec.period ?? DEFAULT_DCA_SUPERTREND_PERIOD}`;
+    name = `ATR Band ${spec.period ?? DEFAULT_DCA_SUPERTREND_PERIOD}`;
   } else if (spec.kind === "ema" || spec.kind === "sma") {
     name = `${spec.kind.toUpperCase()} ${spec.period ?? DEFAULT_DCA_MA_PERIOD}`;
   } else if (spec.kind === "ema_cross" || spec.kind === "sma_cross") {
-    name = spec.kind === "ema_cross" ? "EMA cross" : "SMA cross";
+    name = spec.kind === "ema_cross" ? "EMA Cross" : "SMA Cross";
   }
   const where = tf ? ` · ${tf}` : "";
   const roles = spec.roles.map(indicatorConditionLabel).join(", ");
@@ -345,7 +345,7 @@ const REPLAY_INDICATOR_CATALOG: {
   { id: "ema", label: "Exponential Moving Average", kinds: ["ema", "ema_cross"] },
   { id: "bb", label: "Bollinger Bands", kinds: ["bb"] },
   { id: "supertrend", label: "Supertrend", kinds: ["supertrend"] },
-  { id: "atr_band", label: "ATR band", kinds: ["atr_band"] },
+  { id: "atr_band", label: "ATR Band", kinds: ["atr_band"] },
 ];
 
 /** Every drawable indicator. Strategy rows stay on and cannot be removed. */
@@ -407,7 +407,7 @@ function indicatorInputs(spec: Spec): IndicatorInput[] {
       indicatorField("length", "Length", spec.period ?? DEFAULT_DCA_BB_PERIOD, LENGTH_RANGE),
       indicatorField(
         "stddev",
-        "StdDev",
+        "Std Dev",
         spec.reference ? (spec.stddev ?? DCA_BB_STDDEV) : DCA_BB_STDDEV,
         FACTOR_RANGE,
       ),
@@ -417,13 +417,13 @@ function indicatorInputs(spec: Spec): IndicatorInput[] {
     return [
       indicatorField(
         "length",
-        "Fast length",
+        "Fast Length",
         spec.period ?? DEFAULT_DCA_CROSS_FAST_PERIOD,
         LENGTH_RANGE,
       ),
       indicatorField(
         "slowLength",
-        "Slow length",
+        "Slow Length",
         spec.slowPeriod ?? DEFAULT_DCA_CROSS_SLOW_PERIOD,
         LENGTH_RANGE,
       ),
@@ -466,8 +466,8 @@ function indicatorInputs(spec: Spec): IndicatorInput[] {
     const slow = spec.reference ? (spec.slowPeriod ?? MACD_SLOW) : MACD_SLOW;
     const signal = spec.reference ? (spec.signal ?? MACD_SIGNAL) : MACD_SIGNAL;
     return [
-      indicatorField("length", "Fast length", fast, LENGTH_RANGE),
-      indicatorField("slowLength", "Slow length", slow, LENGTH_RANGE),
+      indicatorField("length", "Fast Length", fast, LENGTH_RANGE),
+      indicatorField("slowLength", "Slow Length", slow, LENGTH_RANGE),
       indicatorField("signal", "Signal", signal, LENGTH_RANGE),
     ];
   }
@@ -760,6 +760,15 @@ export type IndicatorStyleTarget = {
   defaultColor: string;
 };
 
+function titleCaseLabel(value: string): string {
+  return value
+    .split(/\s+/)
+    .map((word) =>
+      word.length === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1),
+    )
+    .join(" ");
+}
+
 function stylePartLabel(id: string): string {
   if (id.endsWith("-up")) {
     return "Up";
@@ -788,7 +797,9 @@ function stylePartLabel(id: string): string {
 export function indicatorStyleTargets(layer: IndicatorLayer): IndicatorStyleTarget[] {
   const targets: IndicatorStyleTarget[] = layer.price.map((plot) => ({
     id: plot.id,
-    label: plotCaption(plot.title, layer.title) || stylePartLabel(plot.id),
+    label: titleCaseLabel(
+      plotCaption(plot.title, layer.title) || stylePartLabel(plot.id),
+    ),
     defaultColor: plot.color,
   }));
   if (layer.oscillator?.rsi) {
