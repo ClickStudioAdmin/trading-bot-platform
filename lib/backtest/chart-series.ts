@@ -711,6 +711,7 @@ export type ReplayIndicatorLegendRow = {
   id: string;
   name: string;
   values: ReplayIndicatorLegendValue[];
+  pane: "price" | "oscillator";
 };
 
 function legendNumber(value: number): string {
@@ -881,7 +882,7 @@ export function replayIndicatorLegend(
         });
       }
     }
-    rows.push({ id: layer.id, name: layer.title, values });
+    rows.push({ id: layer.id, name: layer.title, values, pane: layer.pane });
   }
   return rows;
 }

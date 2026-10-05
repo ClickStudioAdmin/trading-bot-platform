@@ -29,6 +29,7 @@ export function ReplayIndicatorLegend({
   onSaveGlobal,
   onReset,
   onInput,
+  paneTops = [],
 }: {
   rows: ReplayIndicatorLegendRow[];
   targets: Record<string, IndicatorStyleTarget[]>;
@@ -42,6 +43,7 @@ export function ReplayIndicatorLegend({
   onSaveGlobal: (layerId: string) => void;
   onReset: (layerId: string) => void;
   onInput: (layerId: string, inputId: IndicatorInput["id"], value: number) => void;
+  paneTops?: number[];
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [shown, setShown] = useState(true);
@@ -49,44 +51,28 @@ export function ReplayIndicatorLegend({
   const openTargets = openId ? targets[openId] : null;
   const openInputs = openId ? inputs[openId] : null;
   const locked = openId ? (inputsLocked[openId] ?? true) : true;
+  const priceRows = rows.filter((row) => row.pane !== "oscillator");
+  const paneRows = rows.filter((row) => row.pane === "oscillator");
   return (
     <>
       <div
         className="pointer-events-none absolute left-2 top-2 z-10 flex max-w-[70%] flex-col"
         aria-label="Active indicators"
       >
-        {shown && rows.length > 0 ? (
+        {shown && priceRows.length > 0 ? (
           <div className="rounded-control bg-canvas/50 px-1.5 py-1">
-            {rows.map((row) => (
-              <div key={row.id} className="flex items-start gap-1">
-                <button
-                  type="button"
-                  className="pointer-events-auto mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-control text-ink-faint hover:bg-surface-raised hover:text-ink"
-                  aria-label={`Settings ${row.name}`}
-                  aria-expanded={openId === row.id}
-                  onClick={() => {
-                    setTab("inputs");
-                    setOpenId((current) => (current === row.id ? null : row.id));
-                  }}
-                >
-                  <IconUiPrefs size={12} className="size-3" />
-                </button>
-                <p className="text-[11px] leading-4 text-ink-muted [text-shadow:0_1px_1px_var(--color-canvas),0_0_2px_var(--color-canvas)]">
-                  {row.name}
-                  {row.values.flatMap((value) => {
-                    const style = indicatorLineStyle(session, saved, row.id, value.id);
-                    if (!style.visible) {
-                      return [];
-                    }
-                    return [{ id: value.id, color: legendPaint(style, value.color), text: value.text }];
-                  }).map((value, index) => (
-                    <span key={value.id} style={{ color: value.color }}>
-                      {index === 0 ? " - " : ", "}
-                      {value.text}
-                    </span>
-                  ))}
-                </p>
-              </div>
+            {priceRows.map((row) => (
+              <LegendLine
+                key={row.id}
+                row={row}
+                session={session}
+                saved={saved}
+                openId={openId}
+                onOpen={(id) => {
+                  setTab("inputs");
+                  setOpenId((current) => (current === id ? null : id));
+                }}
+              />
             ))}
           </div>
         ) : null}
@@ -107,6 +93,32 @@ export function ReplayIndicatorLegend({
           />
         </button>
       </div>
+      {shown
+        ? paneRows.map((row, index) => {
+            const top = paneTops[index];
+            if (top == null) {
+              return null;
+            }
+            return (
+              <div
+                key={row.id}
+                className="pointer-events-none absolute left-2 z-10 max-w-[70%] rounded-control bg-canvas/50 px-1.5 py-0.5"
+                style={{ top: top + 4 }}
+              >
+                <LegendLine
+                  row={row}
+                  session={session}
+                  saved={saved}
+                  openId={openId}
+                  onOpen={(id) => {
+                    setTab("inputs");
+                    setOpenId((current) => (current === id ? null : id));
+                  }}
+                />
+              </div>
+            );
+          })
+        : null}
       {shown && openId && openTargets && openInputs ? (
         <Modal
           title={names[openId] ?? "Indicator"}
@@ -307,6 +319,49 @@ function IndicatorNumberField({
         }}
       />
     </SettingRow>
+  );
+}
+
+function LegendLine({
+  row,
+  session,
+  saved,
+  openId,
+  onOpen,
+}: {
+  row: ReplayIndicatorLegendRow;
+  session: IndicatorStyleMap;
+  saved: IndicatorStyleMap;
+  openId: string | null;
+  onOpen: (id: string) => void;
+}) {
+  return (
+    <div className="flex items-start gap-1">
+      <button
+        type="button"
+        className="pointer-events-auto mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-control text-ink-faint hover:bg-surface-raised hover:text-ink"
+        aria-label={`Settings ${row.name}`}
+        aria-expanded={openId === row.id}
+        onClick={() => onOpen(row.id)}
+      >
+        <IconUiPrefs size={12} className="size-3" />
+      </button>
+      <p className="text-[11px] leading-4 text-ink-muted [text-shadow:0_1px_1px_var(--color-canvas),0_0_2px_var(--color-canvas)]">
+        {row.name}
+        {row.values.flatMap((value) => {
+          const style = indicatorLineStyle(session, saved, row.id, value.id);
+          if (!style.visible) {
+            return [];
+          }
+          return [{ id: value.id, color: legendPaint(style, value.color), text: value.text }];
+        }).map((value, index) => (
+          <span key={value.id} style={{ color: value.color }}>
+            {index === 0 ? " - " : ", "}
+            {value.text}
+          </span>
+        ))}
+      </p>
+    </div>
   );
 }
 

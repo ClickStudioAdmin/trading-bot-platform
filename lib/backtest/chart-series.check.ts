@@ -149,6 +149,51 @@ assert.equal(otherTimeframe[0]?.timeframe, "360");
 assert.equal(otherTimeframe[1]?.timeframe, "15");
 assert.equal(replayIndicatorLegend(otherTimeframe, 0).length, 2);
 
+const paneLegend = replayIndicatorLegend(
+  replayChartSeries(
+    {
+      kind: "dca",
+      startKind: "indicator",
+      indicatorKind: "sma",
+      indicatorPeriod: 21,
+      indicatorTimeframe: "60",
+      confirm: {
+        kind: "rsi",
+        timeframe: "60",
+        compare: "lte",
+        level: 30,
+        period: 14,
+        multiplier: null,
+      },
+      shortConfirm: {
+        kind: "macd",
+        timeframe: "60",
+        compare: "gte",
+        level: 0,
+        period: null,
+        multiplier: null,
+      },
+    } as BacktestRecipe,
+    Array.from({ length: 40 }, (_, index) => ({
+      timeMs: index * 60_000,
+      open: 100 + index,
+      high: 102 + index,
+      low: 99 + index,
+      close: 101 + index,
+    })),
+  ).layers,
+  39,
+);
+assert.deepEqual(
+  paneLegend.map((row) => row.pane),
+  ["price", "oscillator", "oscillator"],
+);
+assert.equal(paneLegend.filter((row) => row.pane === "price").length, 1);
+assert.equal(paneLegend[1]?.name.includes("RSI"), true);
+assert.equal(paneLegend[2]?.name.includes("MACD"), true);
+assert.equal(paneLegend[1]?.values.length > 0, true);
+assert.equal(paneLegend[2]?.values.some((value) => value.text.startsWith("MACD")), true);
+
 const catalogRecipe = {
   kind: "dca",
   startKind: "indicator",
