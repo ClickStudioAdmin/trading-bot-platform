@@ -338,7 +338,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const [playback, setPlayback] = useState({ key: "", started: false });
   const [expanded, setExpanded] = useState(false);
   const [monitorFull, setMonitorFull] = useState(false);
-  const [positionsRight, setPositionsRight] = useState(false);
+  const [positionsAbove, setPositionsAbove] = useState(false);
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [sideLanes, setSideLanes] = useState(false);
   const [laneFrame, setLaneFrame] = useState(0);
@@ -1449,7 +1449,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       disposed = true;
       cleanup();
     };
-  }, [candles, series, events, started, positionsRight, fillViewport, deferredReferences]);
+  }, [candles, series, events, started, fillViewport, deferredReferences]);
 
   useEffect(() => {
     if (savedAppearance === undefined) {
@@ -1577,11 +1577,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   );
   const positionsRef = useRef<HTMLElement | null>(null);
   const [fittedPageSize, setFittedPageSize] = useState(15);
-  const [columnMin, setColumnMin] = useState<number | null>(null);
-  const fitPage = positionsRight || fillViewport;
-  const pageSize = fitPage ? fittedPageSize : 15;
+  const pageSize = fillViewport ? fittedPageSize : 15;
   useEffect(() => {
-    if (!fitPage) {
+    if (!fillViewport) {
       return;
     }
     const section = positionsRef.current;
@@ -1598,8 +1596,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       const headH = head instanceof HTMLElement ? head.getBoundingClientRect().height : 40;
       const pagerH = pager instanceof HTMLElement ? pager.getBoundingClientRect().height : 45;
       const slot = headH + pagerH + rowH * 15 + 2;
-      setColumnMin(slot);
-      const available = fillViewport ? Math.max(node.clientHeight, slot) : slot;
+      const available = Math.max(node.clientHeight, slot);
       const next = Math.max(
         15,
         Math.floor((available - headH - pagerH - 2) / Math.max(rowH, 1)),
@@ -1607,9 +1604,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       setFittedPageSize((current) => (current === next ? current : next));
     }
     fit();
-    if (!fillViewport) {
-      return;
-    }
     const observer = new ResizeObserver(fit);
     observer.observe(node);
     window.addEventListener("resize", fit);
@@ -1617,7 +1611,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       observer.disconnect();
       window.removeEventListener("resize", fit);
     };
-  }, [fitPage, fillViewport, positionsRight, positionRows.length]);
+  }, [fillViewport, positionRows.length]);
   const positionTable = useClientTable(positionRows, comparePositions, {
     pageSize,
     defaultKey: "number",
@@ -1627,16 +1621,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const positions = (
     <section
       ref={positionsRef}
-      className={`flex min-w-0 flex-col ${
-        positionsRight
-          ? `h-full ${fillViewport ? "min-h-0 overflow-hidden" : "min-h-[54rem]"}`
-          : ""
-      }`}
-      style={
-        positionsRight && !fillViewport && columnMin != null
-          ? { minHeight: columnMin }
-          : undefined
-      }
+      className="flex min-w-0 flex-col"
     >
       <TableCard
         className="mt-0 flex h-full flex-1 flex-col"
@@ -1741,18 +1726,38 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           </button>
           {layoutOpen ? (
             <Modal title="Page Layout Settings" onClose={() => setLayoutOpen(false)}>
-              <div className="mt-4 space-y-2" role="group" aria-label="Positions layout">
-                <p className="text-xs text-ink">Positions</p>
-                <LayoutChoice
-                  label="Positions below"
-                  pressed={!positionsRight}
-                  onClick={() => setPositionsRight(false)}
-                />
-                <LayoutChoice
-                  label="Positions right"
-                  pressed={positionsRight}
-                  onClick={() => setPositionsRight(true)}
-                />
+              <div className="mt-4">
+                <p className="text-xs text-ink">Display Positions</p>
+                <div
+                  role="group"
+                  aria-label="Display Positions"
+                  className="mt-2 flex rounded-full border border-line bg-canvas p-0.5"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={positionsAbove}
+                    className={`flex-1 whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${
+                      positionsAbove
+                        ? "bg-accent-strong text-ink"
+                        : "text-ink-muted hover:text-ink"
+                    }`}
+                    onClick={() => setPositionsAbove(true)}
+                  >
+                    Above Chart
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={!positionsAbove}
+                    className={`flex-1 whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${
+                      positionsAbove
+                        ? "text-ink-muted hover:text-ink"
+                        : "bg-accent-strong text-ink"
+                    }`}
+                    onClick={() => setPositionsAbove(false)}
+                  >
+                    Below Chart
+                  </button>
+                </div>
               </div>
             </Modal>
           ) : null}
@@ -1811,9 +1816,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const chartColumn = (
     <>
       <section
-        className={`w-full min-w-0 overflow-hidden rounded-card border border-line bg-canvas ${
-          positionsRight ? "flex min-h-0 flex-1 flex-col" : "min-h-[420px]"
-        }`}
+        className="min-h-[420px] w-full min-w-0 overflow-hidden rounded-card border border-line bg-canvas"
       >
         <div className="flex flex-wrap items-center justify-end gap-2 border-b border-line px-3 py-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -1934,18 +1937,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             );
           }}
         />
-        <div
-          className={`relative ${
-            positionsRight ? "min-h-[12rem] min-w-0 flex-1" : ""
-          }`}
-        >
+        <div className="relative">
           <div
             ref={hostRef}
-            className={
-              positionsRight
-                ? "absolute inset-0"
-                : "h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
-            }
+            className="h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
             onContextMenu={(event) => {
               event.preventDefault();
               setChartMenu({ x: event.clientX, y: event.clientY });
@@ -2181,33 +2176,14 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const body = (
     <div
       className={
-        positionsRight
-          ? `grid items-stretch gap-4 lg:grid-cols-[minmax(24rem,1fr)_32rem] ${
-              fillViewport ? "min-h-0 flex-1" : ""
-            }`
-          : fillViewport
-            ? "flex min-h-0 flex-1 flex-col gap-4 overflow-auto"
-            : "space-y-4"
+        fillViewport
+          ? "flex min-h-0 flex-1 flex-col gap-4 overflow-auto"
+          : "space-y-4"
       }
     >
-      <div
-        className={
-          positionsRight
-            ? "flex h-full min-h-0 min-w-0 flex-col gap-4"
-            : "flex min-w-0 flex-col gap-4"
-        }
-      >
-        {chartColumn}
-      </div>
-      <div
-        className={
-          positionsRight
-            ? "flex h-full min-w-0 flex-col"
-            : "min-w-0"
-        }
-      >
-        {positions}
-      </div>
+      {positionsAbove ? <div className="min-w-0">{positions}</div> : null}
+      <div className="flex min-w-0 flex-col gap-4">{chartColumn}</div>
+      {positionsAbove ? null : <div className="min-w-0">{positions}</div>}
     </div>
   );
 
@@ -2690,31 +2666,6 @@ function replayMarkLabel(row: ReplayEvent): string {
     return "Liq";
   }
   return "Exit";
-}
-
-function LayoutChoice({
-  label,
-  pressed,
-  onClick,
-}: {
-  label: string;
-  pressed: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      className={`flex w-full items-center rounded-control border px-3 py-2 text-left text-sm ${
-        pressed
-          ? "border-accent bg-accent/15 text-ink"
-          : "border-line text-ink-muted hover:text-ink"
-      }`}
-      onClick={onClick}
-    >
-      {label}
-    </button>
-  );
 }
 
 function TransportButton({
