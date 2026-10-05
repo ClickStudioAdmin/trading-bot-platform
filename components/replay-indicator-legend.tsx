@@ -337,15 +337,6 @@ function LegendLine({
 }) {
   return (
     <div className="flex items-start gap-1">
-      <button
-        type="button"
-        className="pointer-events-auto mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-control text-ink-faint hover:bg-surface-raised hover:text-ink"
-        aria-label={`Settings ${row.name}`}
-        aria-expanded={openId === row.id}
-        onClick={() => onOpen(row.id)}
-      >
-        <IconUiPrefs size={12} className="size-3" />
-      </button>
       <p className="text-[11px] leading-4 text-ink-muted [text-shadow:0_1px_1px_var(--color-canvas),0_0_2px_var(--color-canvas)]">
         {row.name}
         {row.values.flatMap((value) => {
@@ -361,6 +352,15 @@ function LegendLine({
           </span>
         ))}
       </p>
+      <button
+        type="button"
+        className="pointer-events-auto mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-control text-ink-faint hover:bg-surface-raised hover:text-ink"
+        aria-label={`Settings ${row.name}`}
+        aria-expanded={openId === row.id}
+        onClick={() => onOpen(row.id)}
+      >
+        <IconUiPrefs size={12} className="size-3" />
+      </button>
     </div>
   );
 }
