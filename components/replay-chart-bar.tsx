@@ -7,7 +7,7 @@ import {
   type ChartSnapshot,
 } from "@/components/chart-screenshot";
 import { ChartColorPicker } from "@/components/chart-color-picker";
-import { IconChartBars, IconChartLine, IconClose, IconPalette } from "@/components/icons";
+import { IconChartBars, IconChartLine, IconClose, IconLoader, IconPalette } from "@/components/icons";
 import { Modal } from "@/components/template-modals";
 import type { ReplayIndicatorChoice } from "@/lib/backtest/chart-series";
 import {
@@ -35,6 +35,7 @@ export function ReplayChartBar({
   screenshotName,
   indicators,
   references,
+  appliedReferences,
   onToggleReference,
 }: {
   run: BacktestRun;
@@ -48,6 +49,7 @@ export function ReplayChartBar({
   screenshotName: string;
   indicators: ReplayIndicatorChoice[];
   references: readonly string[];
+  appliedReferences: readonly string[];
   onToggleReference: (id: string, enabled: boolean) => void;
 }) {
   const [open, setOpen] = useState<"bars" | "canvas" | null>(null);
@@ -183,6 +185,9 @@ export function ReplayChartBar({
           <ul className="mt-4 space-y-2">
             {indicators.map((row) => {
               const checked = row.locked || references.includes(row.id);
+              const loading =
+                !row.locked &&
+                references.includes(row.id) !== appliedReferences.includes(row.id);
               return (
                 <li key={row.id}>
                   <label
@@ -198,6 +203,15 @@ export function ReplayChartBar({
                       onChange={(event) => onToggleReference(row.id, event.target.checked)}
                     />
                     <span>{row.label}</span>
+                    {loading ? (
+                      <span
+                        className="mt-0.5 inline-flex"
+                        role="status"
+                        aria-label={`Loading ${row.label}`}
+                      >
+                        <IconLoader className="size-3.5 shrink-0 animate-spin text-ink-muted" />
+                      </span>
+                    ) : null}
                   </label>
                 </li>
               );

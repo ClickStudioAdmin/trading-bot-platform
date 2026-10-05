@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
@@ -208,6 +208,14 @@ function candleIndexAt(candles: CandleBar[], atMs: number): number {
     }
   }
   return index;
+}
+
+function sameReferenceIds(left: readonly string[], right: readonly string[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  const seen = new Set(left);
+  return right.every((id) => seen.has(id));
 }
 
 function lineData(
@@ -514,10 +522,12 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   }, [visibleEvents.length, sideLanes]);
   const stats = replayPlayStats(visibleOrders, run.startingUsdt);
   const [references, setReferences] = useState<string[]>([]);
+  const deferredReferences = useDeferredValue(references);
+  const [appliedReferences, setAppliedReferences] = useState<string[]>([]);
   const [referenceInputs, setReferenceInputs] = useState<ReplayReferenceInputs>({});
   const series = useMemo(
-    () => replayChartSeries(run.recipe, candles, references, referenceInputs),
-    [run.recipe, candles, references, referenceInputs],
+    () => replayChartSeries(run.recipe, candles, deferredReferences, referenceInputs),
+    [run.recipe, candles, deferredReferences, referenceInputs],
   );
   const indicatorChoices = useMemo(
     () => replayIndicatorCatalog(run.recipe),
@@ -710,8 +720,12 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   }
 
   useEffect(() => {
+    const paintedReferences = deferredReferences;
     const host = hostRef.current;
     if (!started || !host || candles.length === 0) {
+      setAppliedReferences((current) =>
+        sameReferenceIds(current, paintedReferences) ? current : paintedReferences,
+      );
       return;
     }
     let disposed = false;
@@ -1197,6 +1211,11 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       applyIndicatorStylesRef.current = applyIndicatorStyles;
       applyIndicatorStyles();
       paint(headRef.current);
+      if (!disposed) {
+        setAppliedReferences((current) =>
+          sameReferenceIds(current, paintedReferences) ? current : paintedReferences,
+        );
+      }
       const paintRef = { current: paint };
       const host = node as HTMLDivElement & {
         __paint?: (index: number) => void;
@@ -1383,7 +1402,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       disposed = true;
       cleanup();
     };
-  }, [candles, series, events, started, positionsRight, fillViewport]);
+  }, [candles, series, events, started, positionsRight, fillViewport, deferredReferences]);
 
   useEffect(() => {
     if (savedAppearance === undefined) {
@@ -1843,6 +1862,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           screenshotName={`${run.symbol}-replay.png`}
           indicators={indicatorChoices}
           references={references}
+          appliedReferences={appliedReferences}
           onToggleReference={(id, enabled) => {
             setReferences((current) =>
               enabled
