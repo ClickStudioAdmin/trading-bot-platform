@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { AutoscaleInfo } from "lightweight-charts";
 import {
@@ -18,10 +18,8 @@ import {
 import {
   REPLAY_INDICATOR_STYLE_KEY,
   indicatorLineStyle,
-  parseIndicatorStyles,
   resetIndicatorStyle,
   saveIndicatorStyleGlobal,
-  serializeIndicatorStyles,
   writeIndicatorLineStyle,
   type IndicatorLineStyle,
   type IndicatorStyleMap,
@@ -36,7 +34,6 @@ import type { ChartSnapshot } from "@/components/chart-screenshot";
 import {
   REPLAY_CHART_APPEARANCE_KEY,
   mergeReplayChartAppearance,
-  parseReplayChartAppearance,
   patchReplayChartAppearance,
   clearReplayChartFields,
   colorWithOpacity,
@@ -48,6 +45,16 @@ import {
   type ReplayChartAppearance,
   type ReplayChartAppearancePatch,
 } from "@/lib/backtest/chart-appearance";
+import { saveReplayViewPreferencesAction } from "@/lib/backtest/replay-preferences-action";
+import {
+  REPLAY_VIEW_FALLBACK_KEY,
+  defaultReplayViewPreferences,
+  mergeReplayIndicatorStyles,
+  parseReplayViewPreferences,
+  replayViewFromLocal,
+  serializeReplayViewPreferences,
+  type ReplayViewPreferences,
+} from "@/lib/backtest/replay-preferences";
 import { eventParameterSections } from "@/lib/backtest/event-pane";
 import {
   coalesceReplayPositions,
@@ -152,13 +159,57 @@ function money(value: number): string {
   return value < 0 ? `−$${text}` : `$${text}`;
 }
 
-function readStoredChartAppearance(): ReplayChartAppearance | null {
+let cachedLocalReplayRaw: string | null = null;
+let cachedLocalReplayView: ReplayViewPreferences | null = null;
+const emptyLocalReplayView = defaultReplayViewPreferences(null);
+
+function readLocalReplayView(): ReplayViewPreferences {
   try {
-    return parseReplayChartAppearance(
-      window.localStorage.getItem(REPLAY_CHART_APPEARANCE_KEY),
+    const fallback = window.localStorage.getItem(REPLAY_VIEW_FALLBACK_KEY);
+    const appearance = window.localStorage.getItem(REPLAY_CHART_APPEARANCE_KEY);
+    const styles = window.localStorage.getItem(REPLAY_INDICATOR_STYLE_KEY);
+    const raw = `${fallback ?? ""}\n${appearance ?? ""}\n${styles ?? ""}`;
+    if (cachedLocalReplayView && cachedLocalReplayRaw === raw) {
+      return cachedLocalReplayView;
+    }
+    cachedLocalReplayRaw = raw;
+    cachedLocalReplayView = replayViewFromLocal(fallback, appearance, styles);
+    return cachedLocalReplayView;
+  } catch {
+    return emptyLocalReplayView;
+  }
+}
+
+function subscribeReplayPreferences() {
+  return () => {};
+}
+
+function serverReplayPreferences(): ReplayViewPreferences | null {
+  return null;
+}
+
+function writeStoredReplayView(snapshot: ReplayViewPreferences) {
+  cachedLocalReplayRaw = null;
+  cachedLocalReplayView = null;
+  try {
+    window.localStorage.setItem(
+      REPLAY_VIEW_FALLBACK_KEY,
+      serializeReplayViewPreferences(snapshot),
     );
   } catch {
-    return null;
+    // Private mode still keeps the settings for this visit.
+  }
+}
+
+function clearStoredReplayView() {
+  cachedLocalReplayRaw = null;
+  cachedLocalReplayView = null;
+  try {
+    window.localStorage.removeItem(REPLAY_VIEW_FALLBACK_KEY);
+    window.localStorage.removeItem(REPLAY_CHART_APPEARANCE_KEY);
+    window.localStorage.removeItem(REPLAY_INDICATOR_STYLE_KEY);
+  } catch {
+    // Ignore storage failures.
   }
 }
 
@@ -175,16 +226,6 @@ function appearanceColor(
       ? token
       : cssVar(node, `--color-${token}`, fallbackHex);
   return opacity >= 100 ? base : colorWithOpacity(base, opacity);
-}
-
-function readStoredIndicatorStyles(): IndicatorStyleMap {
-  try {
-    return parseIndicatorStyles(
-      window.localStorage.getItem(REPLAY_INDICATOR_STYLE_KEY),
-    );
-  } catch {
-    return {};
-  }
 }
 
 function cssVar(node: HTMLElement, name: string, fallback: string): string {
@@ -251,12 +292,20 @@ function lineData(
   return rows;
 }
 
-export function ReplayPlayer({ run }: { run: BacktestRun }) {
+export function ReplayPlayer({
+  run,
+  preferences,
+}: {
+  run: BacktestRun;
+  preferences: ReplayViewPreferences | null;
+}) {
   const events = useMemo(
     () => run.replayEvents ?? eventsFromOrders(run.orders),
     [run.replayEvents, run.orders],
   );
-  const [interval, setInterval] = useState<DcaIndicatorTimeframe>(run.interval);
+  const [interval, setInterval] = useState<DcaIndicatorTimeframe>(
+    preferences?.chartInterval ?? run.interval,
+  );
   const [load, setLoad] = useState<{
     key: string;
     candles: CandleBar[];
@@ -272,18 +321,25 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   );
   const [legendIndex, setLegendIndex] = useState<number | null>(null);
   const [sessionStyles, setSessionStyles] = useState<IndicatorStyleMap>({});
-  const [globalStyles, setGlobalStyles] = useState<IndicatorStyleMap | null>(null);
-  if (globalStyles === null && typeof window !== "undefined") {
-    setGlobalStyles(readStoredIndicatorStyles());
-  }
-  const savedStyles = globalStyles ?? {};
-  const [sessionAppearance, setSessionAppearance] = useState<ReplayChartAppearancePatch>({});
-  const [savedAppearance, setSavedAppearance] = useState<ReplayChartAppearance | null | undefined>(
-    undefined,
+  const [globalStyles, setGlobalStyles] = useState<IndicatorStyleMap>(
+    preferences?.indicatorStyles ?? {},
   );
-  if (savedAppearance === undefined && typeof window !== "undefined") {
-    setSavedAppearance(readStoredChartAppearance());
-  }
+  const savedStyles = globalStyles;
+  const [sessionAppearance, setSessionAppearance] = useState<ReplayChartAppearancePatch>({});
+  const [savedAppearance, setSavedAppearance] = useState<ReplayChartAppearance | null>(
+    preferences?.chartAppearance ?? null,
+  );
+  const localSnapshot = useSyncExternalStore(
+    subscribeReplayPreferences,
+    readLocalReplayView,
+    serverReplayPreferences,
+  );
+  const [prefsReady, setPrefsReady] = useState(preferences != null);
+  const [retryKey, setRetryKey] = useState<string | null>(null);
+  const saveGenRef = useRef(0);
+  const savedSnapshotRef = useRef<string | null>(null);
+  const baselineReadyRef = useRef(false);
+  const retryTimerRef = useRef<number | null>(null);
   const chartAppearance = mergeReplayChartAppearance(
     savedAppearance ?? null,
     sessionAppearance,
@@ -343,7 +399,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const [playback, setPlayback] = useState({ key: "", started: false });
   const [expanded, setExpanded] = useState(false);
   const [monitorFull, setMonitorFull] = useState(false);
-  const [positionsRight, setPositionsRight] = useState(false);
+  const [positionsRight, setPositionsRight] = useState(preferences?.positionsRight ?? false);
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [sideLanes, setSideLanes] = useState(false);
   const [laneFrame, setLaneFrame] = useState(0);
@@ -534,10 +590,14 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     }
   }, [visibleEvents.length, sideLanes]);
   const stats = replayPlayStats(visibleOrders, run.startingUsdt);
-  const [references, setReferences] = useState<string[]>([]);
+  const [references, setReferences] = useState<string[]>(
+    preferences?.referenceIndicators ?? [],
+  );
   const deferredReferences = useDeferredValue(references);
   const [appliedReferences, setAppliedReferences] = useState<string[]>([]);
-  const [referenceInputs, setReferenceInputs] = useState<ReplayReferenceInputs>({});
+  const [referenceInputs, setReferenceInputs] = useState<ReplayReferenceInputs>(
+    preferences?.referenceInputs ?? {},
+  );
   const series = useMemo(
     () => replayChartSeries(run.recipe, candles, deferredReferences, referenceInputs),
     [run.recipe, candles, deferredReferences, referenceInputs],
@@ -575,15 +635,80 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     }
     return { fields, locked, timeframes };
   }, [series.layers]);
+  if (!preferences && localSnapshot && !prefsReady) {
+    setPositionsRight(localSnapshot.positionsRight);
+    if (localSnapshot.chartInterval) {
+      setInterval(localSnapshot.chartInterval);
+    }
+    setReferences(localSnapshot.referenceIndicators);
+    setReferenceInputs(localSnapshot.referenceInputs);
+    setSavedAppearance(localSnapshot.chartAppearance);
+    setGlobalStyles(localSnapshot.indicatorStyles);
+    setPrefsReady(true);
+  }
+  const viewSnapshotKey = serializeReplayViewPreferences({
+    positionsRight,
+    chartAppearance,
+    indicatorStyles: mergeReplayIndicatorStyles(savedStyles, sessionStyles),
+    referenceIndicators: references,
+    referenceInputs,
+    chartInterval: interval,
+  });
   useEffect(() => {
-    if (globalStyles === null) {
+    if (!prefsReady) {
       return;
     }
-    window.localStorage.setItem(
-      REPLAY_INDICATOR_STYLE_KEY,
-      serializeIndicatorStyles(globalStyles),
-    );
-  }, [globalStyles]);
+    if (!baselineReadyRef.current) {
+      baselineReadyRef.current = true;
+      if (preferences) {
+        savedSnapshotRef.current = viewSnapshotKey;
+        clearStoredReplayView();
+        return;
+      }
+      const defaults = serializeReplayViewPreferences(
+        defaultReplayViewPreferences(run.interval),
+      );
+      if (viewSnapshotKey === defaults) {
+        savedSnapshotRef.current = viewSnapshotKey;
+        return;
+      }
+    }
+    if (viewSnapshotKey === savedSnapshotRef.current) {
+      return;
+    }
+    const gen = ++saveGenRef.current;
+    const snapshot = parseReplayViewPreferences(JSON.parse(viewSnapshotKey));
+    const timer = window.setTimeout(() => {
+      void saveReplayViewPreferencesAction(snapshot).then((result) => {
+        if (gen !== saveGenRef.current) {
+          return;
+        }
+        if (result.ok) {
+          savedSnapshotRef.current = viewSnapshotKey;
+          clearStoredReplayView();
+          return;
+        }
+        writeStoredReplayView(snapshot);
+        if (retryKey === viewSnapshotKey) {
+          return;
+        }
+        if (retryTimerRef.current != null) {
+          window.clearTimeout(retryTimerRef.current);
+        }
+        retryTimerRef.current = window.setTimeout(() => {
+          retryTimerRef.current = null;
+          setRetryKey(viewSnapshotKey);
+        }, 5000);
+      });
+    }, 400);
+    return () => {
+      window.clearTimeout(timer);
+      if (retryTimerRef.current != null) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, [prefsReady, preferences, retryKey, run.interval, viewSnapshotKey]);
   const chartLabel = DCA_INDICATOR_TIMEFRAME_LABELS[interval];
   const otherTimeframes = series.layers
     .map((layer) =>
@@ -1455,20 +1580,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       cleanup();
     };
   }, [candles, series, events, started, positionsRight, fillViewport, deferredReferences]);
-
-  useEffect(() => {
-    if (savedAppearance === undefined) {
-      return;
-    }
-    if (savedAppearance === null) {
-      window.localStorage.removeItem(REPLAY_CHART_APPEARANCE_KEY);
-      return;
-    }
-    window.localStorage.setItem(
-      REPLAY_CHART_APPEARANCE_KEY,
-      serializeReplayChartAppearance(savedAppearance),
-    );
-  }, [savedAppearance]);
 
   const appearanceKey = serializeReplayChartAppearance(chartAppearance);
   useEffect(() => {
