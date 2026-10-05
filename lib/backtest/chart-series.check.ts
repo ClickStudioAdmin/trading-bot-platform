@@ -191,20 +191,14 @@ const paneLegend = replayIndicatorLegend(
       indicatorKind: "sma",
       indicatorPeriod: 21,
       indicatorTimeframe: "60",
+      shortIndicatorKind: "macd",
+      shortIndicatorTimeframe: "60",
       confirm: {
         kind: "rsi",
         timeframe: "60",
         compare: "lte",
         level: 30,
         period: 14,
-        multiplier: null,
-      },
-      shortConfirm: {
-        kind: "macd",
-        timeframe: "60",
-        compare: "gte",
-        level: 0,
-        period: null,
         multiplier: null,
       },
     } as BacktestRecipe,
@@ -223,10 +217,10 @@ assert.deepEqual(
   ["price", "oscillator", "oscillator"],
 );
 assert.equal(paneLegend.filter((row) => row.pane === "price").length, 1);
-assert.equal(paneLegend[1]?.name.includes("RSI"), true);
-assert.equal(paneLegend[2]?.name.includes("MACD"), true);
-assert.equal(paneLegend[1]?.values.length > 0, true);
-assert.equal(paneLegend[2]?.values.some((value) => value.text.startsWith("MACD")), true);
+assert.equal(paneLegend[1]?.name.includes("MACD"), true);
+assert.equal(paneLegend[2]?.name.includes("RSI"), true);
+assert.equal(paneLegend[1]?.values.some((value) => value.text.startsWith("MACD")), true);
+assert.equal(paneLegend[2]?.values.length > 0, true);
 
 const catalogRecipe = {
   kind: "dca",
