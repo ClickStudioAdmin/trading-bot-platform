@@ -1840,7 +1840,11 @@ export function ReplayPlayer({
   );
 
   const header = (
-      <div className="flex shrink-0 flex-wrap items-center gap-3">
+      <div
+        className={`flex shrink-0 flex-wrap items-center gap-3 ${
+          fillViewport ? "" : "sticky top-0 z-30 bg-canvas"
+        }`}
+      >
         <h1 className="shrink-0 text-2xl font-semibold tracking-tight">{run.symbol} replay</h1>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
           <div
