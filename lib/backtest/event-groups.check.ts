@@ -4,12 +4,9 @@ import {
   fitLaneCaption,
   groupReplayEventsByPosition,
   placeLaneCaption,
-  replayEventLabelWidth,
-  replayLaneLabelsOverlap,
   replayLaneStillOpen,
   replayMarkerInPositionFocus,
   replayPositionVisibleRange,
-  separateLaneLabels,
 } from "./event-groups";
 import type { ReplayEvent, SimulatedOrder } from "./model";
 
@@ -142,72 +139,5 @@ assert.ok(zoomed);
 assert.ok(zoomed.from < 0);
 assert.ok(zoomed.to > 200);
 assert.ok(zoomed.to - zoomed.from > 100);
-
-function labelsStayApart(
-  boxes: { x: number; width: number }[],
-  placed: number[],
-  gap: number,
-): void {
-  const row = boxes
-    .map((box, index) => ({ x: placed[index] ?? box.x, width: box.width }))
-    .sort((left, right) => left.x - right.x);
-  for (let index = 1; index < row.length; index += 1) {
-    const previous = row[index - 1];
-    const current = row[index];
-    if (!previous || !current) {
-      continue;
-    }
-    assert.equal(replayLaneLabelsOverlap(previous, current, gap), false);
-  }
-}
-
-const apart = [
-  { x: 40, width: replayEventLabelWidth("Entry") },
-  { x: 220, width: replayEventLabelWidth("SL") },
-];
-const apartPlaced = separateLaneLabels(apart, 8);
-assert.deepEqual(apartPlaced, [40, 220]);
-
-const stacked = [
-  { x: 180, width: replayEventLabelWidth("Entry") },
-  { x: 184, width: replayEventLabelWidth("SL") },
-];
-const stackedPlaced = separateLaneLabels(stacked, 8);
-labelsStayApart(stacked, stackedPlaced, 8);
-assert.ok(Math.abs((stackedPlaced[0]! + stackedPlaced[1]!) / 2 - 182) < 1);
-
-const crowded = ["Entry", "Add", "TP"].map((label, index) => ({
-  x: 300 + index,
-  width: replayEventLabelWidth(label),
-}));
-const crowdedPlaced = separateLaneLabels(crowded, 8);
-labelsStayApart(crowded, crowdedPlaced, 8);
-
-const mixed = [
-  { x: 40, width: replayEventLabelWidth("Entry") },
-  { x: 42, width: replayEventLabelWidth("SL") },
-  { x: 400, width: replayEventLabelWidth("TP") },
-];
-const mixedPlaced = separateLaneLabels(mixed, 8);
-labelsStayApart(mixed, mixedPlaced, 8);
-assert.equal(mixedPlaced[2], 400);
-
-const clipped = separateLaneLabels(
-  [
-    { x: 4, width: replayEventLabelWidth("Entry") },
-    { x: 8, width: replayEventLabelWidth("SL") },
-  ],
-  8,
-  { min: 0, max: 240 },
-);
-labelsStayApart(
-  [
-    { x: 4, width: replayEventLabelWidth("Entry") },
-    { x: 8, width: replayEventLabelWidth("SL") },
-  ],
-  clipped,
-  8,
-);
-assert.ok(clipped[0]! - replayEventLabelWidth("Entry") / 2 >= -0.01);
 
 console.log("event-groups.check: ok");

@@ -54,9 +54,7 @@ import {
   fitLaneCaption,
   groupReplayEventsByPosition,
   placeLaneCaption,
-  replayEventLabelWidth,
   replayLaneLabelWidth,
-  separateLaneLabels,
   replayLaneStillOpen,
   replayMarkerInPositionFocus,
   replayPositionVisibleRange,
@@ -2384,7 +2382,6 @@ function placeReplayLanes(
       marks.push({
         key: `${row.atMs}-${row.reason}-${index}`,
         x,
-        labelX: x,
         label: replayMarkLabel(row),
         event: row,
       });
@@ -2415,30 +2412,7 @@ function placeReplayLanes(
     });
   }
   settleReplayLaneText(placed, width);
-  settleReplayLaneMarks(placed, width);
   return placed;
-}
-
-function settleReplayLaneMarks(lanes: ReplayLaneDraw[], width: number): void {
-  const bounds = width > 0 ? { min: 0, max: width } : undefined;
-  for (const side of ["long", "short"] as const) {
-    for (const above of [true, false]) {
-      const marks = lanes
-        .filter((lane) => lane.side === side && lane.above === above)
-        .flatMap((lane) => lane.marks);
-      if (marks.length === 0) {
-        continue;
-      }
-      const placed = separateLaneLabels(
-        marks.map((mark) => ({ x: mark.x, width: replayEventLabelWidth(mark.label) })),
-        8,
-        bounds,
-      );
-      marks.forEach((mark, index) => {
-        mark.labelX = placed[index] ?? mark.x;
-      });
-    }
-  }
 }
 
 function settleReplayLaneText(lanes: ReplayLaneDraw[], width: number): void {
@@ -2549,7 +2523,7 @@ function ReplaySideLanes({
                   className={`absolute z-10 -translate-x-1/2 cursor-pointer whitespace-nowrap text-xs leading-none ${
                     selectedMark ? "text-ink underline" : "text-ink-muted"
                   }`}
-                  style={{ left: mark.labelX, top: eventTop }}
+                  style={{ left: mark.x, top: eventTop }}
                   onClick={() => onSelect(mark.event)}
                 >
                   {mark.label}
@@ -2566,7 +2540,6 @@ function ReplaySideLanes({
 type ReplayLaneMark = {
   key: string;
   x: number;
-  labelX: number;
   label: string;
   event: ReplayEvent;
 };
