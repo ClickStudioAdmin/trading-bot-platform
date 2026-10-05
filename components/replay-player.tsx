@@ -819,13 +819,17 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           signal: null as ReturnType<typeof chart.addSeries> | null,
           histogram: null as ReturnType<typeof chart.addSeries> | null,
         };
+        const hiddenScaleLabel = {
+          priceLineVisible: false,
+          lastValueVisible: false,
+        };
         if (layer.oscillator?.rsi) {
           oscillator.rsi = chart.addSeries(
             charts.LineSeries,
             {
               color: "#A78BFA",
               lineWidth: 2,
-              priceLineVisible: false,
+              ...hiddenScaleLabel,
             },
             pane,
           );
@@ -836,14 +840,15 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               color: "#F5B942",
               lineWidth: 1,
               lineStyle: charts.LineStyle.Dashed,
-              title: String(level),
+              axisLabelVisible: false,
+              title: "",
             });
           }
         }
         if (layer.oscillator?.histogram) {
           oscillator.histogram = chart.addSeries(
             charts.HistogramSeries,
-            { priceLineVisible: false },
+            hiddenScaleLabel,
             pane,
           );
           rememberIndicator(
@@ -858,7 +863,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             {
               color: "#A78BFA",
               lineWidth: 2,
-              priceLineVisible: false,
+              ...hiddenScaleLabel,
             },
             pane,
           );
@@ -868,7 +873,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             {
               color: "#F5B942",
               lineWidth: 2,
-              priceLineVisible: false,
+              ...hiddenScaleLabel,
             },
             pane,
           );
