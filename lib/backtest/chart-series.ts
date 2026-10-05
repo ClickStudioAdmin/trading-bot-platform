@@ -884,5 +884,24 @@ export function replayIndicatorLegend(
     }
     rows.push({ id: layer.id, name: layer.title, values, pane: layer.pane });
   }
-  return rows;
+  return groupReplayIndicatorRows(rows);
+}
+
+/** Same indicator, including another timeframe, stays on consecutive rows. */
+export function groupReplayIndicatorRows(
+  rows: ReplayIndicatorLegendRow[],
+): ReplayIndicatorLegendRow[] {
+  const groups: ReplayIndicatorLegendRow[][] = [];
+  const index = new Map<string, number>();
+  for (const row of rows) {
+    const key = row.name.split(" · ")[0] ?? row.name;
+    const at = index.get(key);
+    if (at == null) {
+      index.set(key, groups.length);
+      groups.push([row]);
+    } else {
+      groups[at]?.push(row);
+    }
+  }
+  return groups.flat();
 }

@@ -320,7 +320,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     null,
   );
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const [oscillatorTops, setOscillatorTops] = useState<number[]>([]);
   const resetChartRef = useRef<(() => void) | null>(null);
   const resetPriceRef = useRef<(() => void) | null>(null);
   const [chartMenu, setChartMenu] = useState<ChartContextMenuState>(null);
@@ -1332,43 +1331,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           width: node.clientWidth,
           height: node.clientHeight,
         });
-        publishOscillatorTops();
       });
       observer.observe(node);
-      const paneObserver = new ResizeObserver(() => {
-        publishOscillatorTops();
-      });
-      function publishOscillatorTops() {
-        const hostTop = node.getBoundingClientRect().top;
-        const tops = chart.panes().slice(1).flatMap((pane) => {
-          const element = pane.getHTMLElement();
-          if (!element) {
-            return [];
-          }
-          return [Math.round(element.getBoundingClientRect().top - hostTop)];
-        });
-        setOscillatorTops((current) =>
-          current.length === tops.length && current.every((value, index) => value === tops[index])
-            ? current
-            : tops,
-        );
-      }
-      requestAnimationFrame(() => {
-        if (disposed) {
-          return;
-        }
-        for (const pane of chart.panes()) {
-          const element = pane.getHTMLElement();
-          if (element) {
-            paneObserver.observe(element);
-          }
-        }
-        publishOscillatorTops();
-      });
       cleanup = () => {
         observer.disconnect();
-        paneObserver.disconnect();
-        setOscillatorTops([]);
         node.removeEventListener("wheel", onChartWheel, { capture: true });
         detachAxisWheel();
         chart.timeScale().unsubscribeVisibleLogicalRangeChange(onLaneRange);
@@ -1926,7 +1892,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               timeframes={indicatorInputs.timeframes}
               session={sessionStyles}
               saved={savedStyles}
-              paneTops={oscillatorTops}
               onChange={(layerId, lineId, style) => {
                 setSessionStyles((current) =>
                   writeIndicatorLineStyle(current, layerId, lineId, style),

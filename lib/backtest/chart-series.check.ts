@@ -149,6 +149,40 @@ assert.equal(otherTimeframe[0]?.timeframe, "360");
 assert.equal(otherTimeframe[1]?.timeframe, "15");
 assert.equal(replayIndicatorLegend(otherTimeframe, 0).length, 2);
 
+const separated = replayIndicatorLegend(
+  replayChartSeries(
+    {
+      kind: "dca",
+      startKind: "indicator",
+      indicatorKind: "sma",
+      indicatorPeriod: 21,
+      indicatorTimeframe: "360",
+      confirm: {
+        kind: "ema",
+        timeframe: "360",
+        compare: "gte",
+        level: null,
+        period: 21,
+        multiplier: null,
+      },
+      shortConfirm: {
+        kind: "sma",
+        timeframe: "15",
+        compare: "lte",
+        level: null,
+        period: 21,
+        multiplier: null,
+      },
+    } as BacktestRecipe,
+    [{ timeMs: 1_000, open: 10, high: 12, low: 9, close: 11 }],
+  ).layers,
+  0,
+);
+assert.deepEqual(
+  separated.map((row) => row.name.split(" · ").slice(0, 2).join(" · ")),
+  ["SMA 21 · 6h", "SMA 21 · 15m", "EMA 21 · 6h"],
+);
+
 const paneLegend = replayIndicatorLegend(
   replayChartSeries(
     {
