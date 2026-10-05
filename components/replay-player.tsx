@@ -2,6 +2,7 @@
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import type { AutoscaleInfo } from "lightweight-charts";
 import {
   indicatorRolesForReason,
   indicatorStyleTargets,
@@ -773,7 +774,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         borderDownColor: "#F07167",
         wickUpColor: "#34D399",
         wickDownColor: "#F07167",
-        autoscaleInfoProvider: (original) => {
+        autoscaleInfoProvider: (original: () => AutoscaleInfo | null) => {
           const logical = chart.timeScale().getVisibleLogicalRange();
           if (!logical) {
             return original();
