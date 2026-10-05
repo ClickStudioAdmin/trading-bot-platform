@@ -293,12 +293,29 @@ function layerTitle(spec: Spec): string {
   return `${name}${period && spec.kind === "atr_band" ? "" : ""}${where} · ${roles}`;
 }
 
-export function indicatorRolesForReason(reason: BacktestFillReason): string[] {
+/** Entry dots that side's trigger and its secondary condition. The other side stays off. */
+export function indicatorRolesForReason(
+  reason: BacktestFillReason,
+  side: "long" | "short",
+  rolesPresent: readonly string[],
+): string[] {
   if (reason === "entry") {
-    return ["Entry", "Secondary entry", "Short entry", "Short secondary entry"];
+    const entry =
+      side === "short" && rolesPresent.includes("Short entry") ? "Short entry" : "Entry";
+    const secondary =
+      side === "short" && rolesPresent.includes("Short secondary entry")
+        ? "Short secondary entry"
+        : rolesPresent.includes("Secondary entry") &&
+            (side === "long" || !rolesPresent.includes("Short secondary entry"))
+          ? "Secondary entry"
+          : null;
+    return secondary == null ? [entry] : [entry, secondary];
   }
   if (reason === "exit_if") {
-    return ["Hard exit", "Short hard exit"];
+    if (side === "short" && rolesPresent.includes("Short hard exit")) {
+      return ["Short hard exit"];
+    }
+    return ["Hard exit"];
   }
   return [];
 }

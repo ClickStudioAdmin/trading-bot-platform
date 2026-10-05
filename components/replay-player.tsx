@@ -982,11 +982,12 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           }
           const dots: Array<{ time: number; value: number }> = [];
           const seen = new Set<number>();
+          const rolesPresent = series.layers.flatMap((row) => row.roles);
           for (const item of events) {
             if (item.atMs > at) {
               continue;
             }
-            const roles = indicatorRolesForReason(item.reason);
+            const roles = indicatorRolesForReason(item.reason, item.side, rolesPresent);
             if (!roles.some((role) => layer.roles.includes(role))) {
               continue;
             }

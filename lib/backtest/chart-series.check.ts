@@ -3,6 +3,7 @@ import type { BacktestRecipe } from "./model";
 import { macdSeries, rsiSeries } from "@/lib/dca/indicators";
 import {
   indicatorConditionLabel,
+  indicatorRolesForReason,
   indicatorStyleTargets,
   replayChartSeries,
   replayIndicatorCatalog,
@@ -99,6 +100,28 @@ assert.equal(indicatorConditionLabel("Hard exit"), "Long hard exit");
 assert.equal(indicatorConditionLabel("Short entry"), "Short entry");
 assert.equal(indicatorConditionLabel("Short secondary entry"), "Short secondary entry");
 assert.equal(indicatorConditionLabel("Short hard exit"), "Short hard exit");
+
+const screenshotRoles = ["Entry", "Short secondary entry", "Short entry", "Secondary entry"];
+assert.deepEqual(indicatorRolesForReason("entry", "short", screenshotRoles), [
+  "Short entry",
+  "Short secondary entry",
+]);
+assert.deepEqual(indicatorRolesForReason("entry", "long", screenshotRoles), [
+  "Entry",
+  "Secondary entry",
+]);
+assert.equal(
+  indicatorRolesForReason("entry", "short", screenshotRoles).includes("Secondary entry"),
+  false,
+);
+assert.deepEqual(indicatorRolesForReason("entry", "short", ["Entry", "Secondary entry"]), [
+  "Entry",
+  "Secondary entry",
+]);
+assert.deepEqual(indicatorRolesForReason("exit_if", "short", ["Hard exit", "Short hard exit"]), [
+  "Short hard exit",
+]);
+assert.deepEqual(indicatorRolesForReason("exit_if", "short", ["Hard exit"]), ["Hard exit"]);
 
 const split = replayChartSeries(
   {
