@@ -94,7 +94,7 @@ Replay still does **not** persist trailing peak across clips. Indicator start us
 
 ## Replay page
 
-A finished run can open **Replay** at `/account/backtests/[runId]/replay`. The report page stays the results page. Replay is a second view of the same row. New Backtest still queues the run and still opens the report. Queued, running, failed, and cancelled runs do not play.
+A finished run can open **Replay** at `/account/backtests/[runId]/replay`. The report page stays the results page. Replay does not show Report or Load into new backtest. Replay is a second view of the same row. New Backtest still queues the run and still opens the report. Queued, running, failed, and cancelled runs do not play.
 
 The page starts with a large play control in the middle of the chart. Candles stay hidden until Play, step, or an event jump. While candles load, a large spinner sits in that same spot. Fill browser covers the window; Full screen uses the monitor. The chart keeps its normal height in that window, and the page scrolls for the events and positions. A page layout icon opens Page Layout Settings. Positions can sit under the chart or in a column on the right. The side column matches the chart column. Beside the chart, the positions column is at least tall enough for 15 rows, and the number of rows scales up when the column is taller. Fill browser and full screen keep the viewport height and scale the row count the same way. Switching Positions below and Positions right while playback is running keeps the chart on the new host.
 
