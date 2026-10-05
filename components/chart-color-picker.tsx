@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { useModalPortalHost } from "@/components/template-modals";
 import {
   CHART_COLOR_PALETTE,
   chartColorInputHex,
@@ -32,6 +33,7 @@ export function ChartColorPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [place, setPlace] = useState({ top: 0, left: 0 });
+  const portalHost = useModalPortalHost();
   const chosen = normalizeChartColor(color);
   const preview = swatchCss(chosen, fallback);
 
@@ -67,19 +69,19 @@ export function ChartColorPicker({
       >
         <SwatchFill color={preview} opacity={opacity} />
       </button>
-      {open
+      {open && portalHost
         ? createPortal(
             <>
               <button
                 type="button"
-                className="fixed inset-0 z-40 cursor-default"
+                className="fixed inset-0 z-[70] cursor-default"
                 aria-label="Close colour"
                 onClick={() => setOpen(false)}
               />
               <div
                 role="dialog"
                 aria-label={`${label} colour`}
-                className="fixed z-50 rounded-card border border-line bg-surface p-2"
+                className="fixed z-[70] rounded-card border border-line bg-surface p-2"
                 style={{ top: place.top, left: place.left, width: POPOVER_WIDTH }}
               >
                 <div className="mb-2 flex items-center justify-between gap-2">
@@ -138,7 +140,7 @@ export function ChartColorPicker({
                 <p className="text-xs text-ink-faint">{opacity}%</p>
               </div>
             </>,
-            document.body,
+            portalHost,
           )
         : null}
     </div>

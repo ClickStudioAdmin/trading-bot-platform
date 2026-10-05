@@ -102,7 +102,7 @@ import {
   IconStepBack,
   IconStepForward,
 } from "@/components/icons";
-import { Modal } from "@/components/template-modals";
+import { Modal, ModalHost } from "@/components/template-modals";
 import { SortTh, TableCard, TablePager, useClientTable } from "@/components/table-chrome";
 import { compareTableNum, compareTableText, type TableSortDir } from "@/lib/table-chrome";
 import type { BacktestPositionCycle } from "@/lib/backtest/positions";
@@ -334,6 +334,11 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const resetPriceRef = useRef<(() => void) | null>(null);
   const [chartMenu, setChartMenu] = useState<ChartContextMenuState>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
+  const [overlayHost, setOverlayHost] = useState<HTMLDivElement | null>(null);
+  const bindFrame = useCallback((node: HTMLDivElement | null) => {
+    frameRef.current = node;
+    setOverlayHost((current) => (current === node ? current : node));
+  }, []);
   const headRef = useRef(0);
   const focusRef = useRef<number | null>(null);
   const focusSpanRef = useRef<{ from: number; to: number } | null>(null);
@@ -2228,8 +2233,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   );
 
   const frame = (
+    <ModalHost host={overlayHost}>
     <div
-      ref={frameRef}
+      ref={bindFrame}
       className={
         expanded && !monitorFull
           ? "fixed inset-0 z-50 flex h-dvh w-full flex-col gap-4 overflow-hidden bg-canvas p-4"
@@ -2241,6 +2247,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       {header}
       {body}
     </div>
+    </ModalHost>
   );
 
   return expanded && typeof document !== "undefined"
