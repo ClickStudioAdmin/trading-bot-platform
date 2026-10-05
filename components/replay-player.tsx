@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
@@ -94,6 +94,10 @@ import {
   IconMonitor,
   IconPause,
   IconPlay,
+  IconSkipBack,
+  IconSkipForward,
+  IconStepBack,
+  IconStepForward,
 } from "@/components/icons";
 import { SortTh, TableCard, TablePager, useClientTable } from "@/components/table-chrome";
 import { compareTableNum, compareTableText, type TableSortDir } from "@/lib/table-chrome";
@@ -1797,22 +1801,31 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         }`}
       >
         <div className="flex flex-wrap items-center justify-end gap-2 border-b border-line px-3 py-2">
-          <div className="flex flex-wrap items-center gap-1">
-            <TransportButton
-              label="Previous event"
-              onClick={() => jumpEvent(-1)}
-            />
-            <TransportButton
-              label="Step back"
-              onClick={() => {
-                revealChart();
-                setCursor((current) => ({
-                  ...current,
-                  playing: false,
-                  head: Math.max(0, current.head - 1),
-                }));
-              }}
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              className="inline-flex overflow-hidden rounded-control border border-line"
+              role="group"
+              aria-label="Back"
+            >
+              <TransportButton
+                label="Previous event"
+                icon={<IconSkipBack size={14} className="size-3.5" />}
+                onClick={() => jumpEvent(-1)}
+              />
+              <TransportButton
+                label="Step back"
+                icon={<IconStepBack size={14} className="size-3.5" />}
+                divided
+                onClick={() => {
+                  revealChart();
+                  setCursor((current) => ({
+                    ...current,
+                    playing: false,
+                    head: Math.max(0, current.head - 1),
+                  }));
+                }}
+              />
+            </div>
             <button
               type="button"
               className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-3 py-1 text-sm text-ink"
@@ -1831,19 +1844,31 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               )}
               {playing ? "Pause" : "Play"}
             </button>
-            <TransportButton
-              label="Step forward"
-              onClick={() => {
-                revealChart();
-                setCursor((current) => ({
-                  ...current,
-                  playing: false,
-                  head: Math.min(candles.length - 1, current.head + 1),
-                }));
-              }}
-            />
-            <TransportButton label="Next event" onClick={() => jumpEvent(1)} />
-            <div className="ml-2 flex items-center gap-1" role="group" aria-label="Speed">
+            <div
+              className="inline-flex overflow-hidden rounded-control border border-line"
+              role="group"
+              aria-label="Forward"
+            >
+              <TransportButton
+                label="Step forward"
+                icon={<IconStepForward size={14} className="size-3.5" />}
+                onClick={() => {
+                  revealChart();
+                  setCursor((current) => ({
+                    ...current,
+                    playing: false,
+                    head: Math.min(candles.length - 1, current.head + 1),
+                  }));
+                }}
+              />
+              <TransportButton
+                label="Next event"
+                icon={<IconSkipForward size={14} className="size-3.5" />}
+                divided
+                onClick={() => jumpEvent(1)}
+              />
+            </div>
+            <div className="flex items-center gap-1" role="group" aria-label="Speed">
               {SPEEDS.map((value) => (
                 <button
                   key={value}
@@ -2654,17 +2679,24 @@ function replayMarkLabel(row: ReplayEvent): string {
 
 function TransportButton({
   label,
+  icon,
+  divided = false,
   onClick,
 }: {
   label: string;
+  icon: ReactNode;
+  divided?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
-      className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:text-ink"
+      className={`inline-flex items-center gap-1.5 px-2 py-1 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink ${
+        divided ? "border-l border-line" : ""
+      }`}
       onClick={onClick}
     >
+      {icon}
       {label}
     </button>
   );
