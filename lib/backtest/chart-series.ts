@@ -332,7 +332,7 @@ const REPLAY_INDICATOR_CATALOG: {
   { id: "macd", label: "MACD", kinds: ["macd"] },
   { id: "sma", label: "Simple Moving Average", kinds: ["sma", "sma_cross"] },
   { id: "ema", label: "Exponential Moving Average", kinds: ["ema", "ema_cross"] },
-  { id: "bb", label: "Price vs BB", kinds: ["bb"] },
+  { id: "bb", label: "Bollinger Bands", kinds: ["bb"] },
   { id: "supertrend", label: "Supertrend", kinds: ["supertrend"] },
   { id: "atr_band", label: "ATR band", kinds: ["atr_band"] },
 ];

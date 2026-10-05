@@ -159,6 +159,7 @@ assert.equal(catalog.find((row) => row.id === "macd")?.locked, false);
 assert.equal(catalog.find((row) => row.id === "atr_band")?.locked, false);
 assert.equal(catalog.find((row) => row.id === "sma")?.label, "Simple Moving Average");
 assert.equal(catalog.find((row) => row.id === "ema")?.label, "Exponential Moving Average");
+assert.equal(catalog.find((row) => row.id === "bb")?.label, "Bollinger Bands");
 assert.equal(catalog.some((row) => row.id === "ema_cross" || row.id === "sma_cross"), false);
 
 const crossRecipe = {
