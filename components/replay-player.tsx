@@ -1829,17 +1829,13 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           </button>
           {layoutOpen ? (
             <Modal title="Page Layout Settings" onClose={() => setLayoutOpen(false)}>
-              <div className="mt-4">
-                <p className="text-xs text-ink">Display Positions</p>
-                <div
-                  role="group"
-                  aria-label="Display Positions"
-                  className="mt-2 flex rounded-full border border-line bg-canvas p-0.5"
-                >
+              <div className="mt-4 flex min-h-8 items-center justify-between gap-4">
+                <span className="text-xs text-ink">Display Positions</span>
+                <div role="group" aria-label="Display Positions" className="flex gap-1">
                   <button
                     type="button"
                     aria-pressed={!positionsRight}
-                    className={`flex-1 whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${
+                    className={`rounded-control px-2 py-0.5 text-xs ${
                       positionsRight
                         ? "text-ink-muted hover:text-ink"
                         : "bg-accent-strong text-ink"
@@ -1851,7 +1847,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                   <button
                     type="button"
                     aria-pressed={positionsRight}
-                    className={`flex-1 whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${
+                    className={`rounded-control px-2 py-0.5 text-xs ${
                       positionsRight
                         ? "bg-accent-strong text-ink"
                         : "text-ink-muted hover:text-ink"
