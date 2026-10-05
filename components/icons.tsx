@@ -30,6 +30,7 @@ import {
   Layers,
   LayoutDashboard,
   LayoutGrid,
+  LayoutPanelTop,
   LayoutTemplate,
   ListFilter,
   Maximize2,
@@ -576,6 +577,13 @@ export const LUCIDE_ICONS = [
     Icon: LayoutGrid,
   },
   {
+    id: "layout-panel-top",
+    name: "Page layout",
+    lucide: "LayoutPanelTop",
+    usedIn: "Replay page layout settings",
+    Icon: LayoutPanelTop,
+  },
+  {
     id: "layout-template",
     name: "Bot Templates",
     lucide: "LayoutTemplate",
@@ -882,6 +890,10 @@ export function IconBilling(props: LucideProps) {
 
 export function IconDesks(props: LucideProps) {
   return <LayoutGrid aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconPageLayout(props: LucideProps) {
+  return <LayoutPanelTop aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconTemplates(props: LucideProps) {

@@ -93,6 +93,7 @@ import {
   IconExpand,
   IconLoader,
   IconMonitor,
+  IconPageLayout,
   IconPause,
   IconPlay,
   IconSkipBack,
@@ -100,6 +101,7 @@ import {
   IconStepBack,
   IconStepForward,
 } from "@/components/icons";
+import { Modal } from "@/components/template-modals";
 import { SortTh, TableCard, TablePager, useClientTable } from "@/components/table-chrome";
 import { compareTableNum, compareTableText, type TableSortDir } from "@/lib/table-chrome";
 import type { BacktestPositionCycle } from "@/lib/backtest/positions";
@@ -338,6 +340,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   const [expanded, setExpanded] = useState(false);
   const [monitorFull, setMonitorFull] = useState(false);
   const [positionsRight, setPositionsRight] = useState(false);
+  const [layoutOpen, setLayoutOpen] = useState(false);
   const [sideLanes, setSideLanes] = useState(false);
   const [laneFrame, setLaneFrame] = useState(0);
   const [placedLanes, setPlacedLanes] = useState<ReplayLaneDraw[]>([]);
@@ -1736,32 +1739,33 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           </Link>
         </div>
         <div className="ml-auto flex flex-wrap items-center justify-end gap-3 text-sm">
-          <div className="flex items-center gap-1" role="group" aria-label="Positions layout">
-            <button
-              type="button"
-              aria-pressed={!positionsRight}
-              className={`rounded-control px-2 py-1 text-xs ${
-                positionsRight
-                  ? "text-ink-muted hover:text-ink"
-                  : "bg-accent-strong text-ink"
-              }`}
-              onClick={() => setPositionsRight(false)}
-            >
-              Positions below
-            </button>
-            <button
-              type="button"
-              aria-pressed={positionsRight}
-              className={`rounded-control px-2 py-1 text-xs ${
-                positionsRight
-                  ? "bg-accent-strong text-ink"
-                  : "text-ink-muted hover:text-ink"
-              }`}
-              onClick={() => setPositionsRight(true)}
-            >
-              Positions right
-            </button>
-          </div>
+          <button
+            type="button"
+            title="Page layout settings"
+            aria-label="Page layout settings"
+            aria-expanded={layoutOpen}
+            className="inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
+            onClick={() => setLayoutOpen(true)}
+          >
+            <IconPageLayout {...FRAME_ICON} />
+          </button>
+          {layoutOpen ? (
+            <Modal title="Page Layout Settings" onClose={() => setLayoutOpen(false)}>
+              <div className="mt-4 space-y-2" role="group" aria-label="Positions layout">
+                <p className="text-xs text-ink">Positions</p>
+                <LayoutChoice
+                  label="Positions below"
+                  pressed={!positionsRight}
+                  onClick={() => setPositionsRight(false)}
+                />
+                <LayoutChoice
+                  label="Positions right"
+                  pressed={positionsRight}
+                  onClick={() => setPositionsRight(true)}
+                />
+              </div>
+            </Modal>
+          ) : null}
           {monitorFull ? null : (
             <button
               type="button"
@@ -2696,6 +2700,31 @@ function replayMarkLabel(row: ReplayEvent): string {
     return "Liq";
   }
   return "Exit";
+}
+
+function LayoutChoice({
+  label,
+  pressed,
+  onClick,
+}: {
+  label: string;
+  pressed: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      className={`flex w-full items-center rounded-control border px-3 py-2 text-left text-sm ${
+        pressed
+          ? "border-accent bg-accent/15 text-ink"
+          : "border-line text-ink-muted hover:text-ink"
+      }`}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
 }
 
 function TransportButton({
