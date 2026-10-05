@@ -6,6 +6,7 @@ import {
   indicatorStyleTargets,
   replayChartSeries,
   replayIndicatorCatalog,
+  groupReplayIndicatorRows,
   replayIndicatorLegend,
   type IndicatorLayer,
 } from "./chart-series";
@@ -221,6 +222,22 @@ assert.equal(paneLegend[1]?.name.includes("MACD"), true);
 assert.equal(paneLegend[2]?.name.includes("RSI"), true);
 assert.equal(paneLegend[1]?.values.some((value) => value.text.startsWith("MACD")), true);
 assert.equal(paneLegend[2]?.values.length > 0, true);
+
+const paneOrder = groupReplayIndicatorRows([
+  { id: "rsi-6h", name: "RSI 14 · 6h · Long entry", values: [], pane: "oscillator" },
+  { id: "sma-6h", name: "SMA 21 · 6h · Long entry", values: [], pane: "price" },
+  { id: "macd", name: "MACD · 6h · Long entry", values: [], pane: "oscillator" },
+  { id: "sma-15", name: "SMA 21 · 15m · Short entry", values: [], pane: "price" },
+  { id: "rsi-15", name: "RSI 14 · 15m · Short entry", values: [], pane: "oscillator" },
+]);
+assert.deepEqual(
+  paneOrder.filter((row) => row.pane !== "oscillator").map((row) => row.id),
+  ["sma-6h", "sma-15"],
+);
+assert.deepEqual(
+  paneOrder.filter((row) => row.pane === "oscillator").map((row) => row.id),
+  ["rsi-6h", "macd", "rsi-15"],
+);
 
 const catalogRecipe = {
   kind: "dca",

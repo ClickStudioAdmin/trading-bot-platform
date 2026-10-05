@@ -29,6 +29,7 @@ export function ReplayIndicatorLegend({
   onSaveGlobal,
   onReset,
   onInput,
+  paneTops = [],
 }: {
   rows: ReplayIndicatorLegendRow[];
   targets: Record<string, IndicatorStyleTarget[]>;
@@ -42,6 +43,7 @@ export function ReplayIndicatorLegend({
   onSaveGlobal: (layerId: string) => void;
   onReset: (layerId: string) => void;
   onInput: (layerId: string, inputId: IndicatorInput["id"], value: number) => void;
+  paneTops?: number[];
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [shown, setShown] = useState(true);
@@ -49,25 +51,28 @@ export function ReplayIndicatorLegend({
   const openTargets = openId ? targets[openId] : null;
   const openInputs = openId ? inputs[openId] : null;
   const locked = openId ? (inputsLocked[openId] ?? true) : true;
+  const priceRows = rows.filter((row) => row.pane !== "oscillator");
+  const paneRows = rows.filter((row) => row.pane === "oscillator");
+  const openLegend = (id: string) => {
+    setTab("inputs");
+    setOpenId((current) => (current === id ? null : id));
+  };
   return (
     <>
       <div
         className="pointer-events-none absolute left-2 top-2 z-10 flex max-w-[70%] flex-col"
         aria-label="Active indicators"
       >
-        {shown && rows.length > 0 ? (
+        {shown && priceRows.length > 0 ? (
           <div className="rounded-control bg-canvas/50 px-1.5 py-1">
-            {rows.map((row) => (
+            {priceRows.map((row) => (
               <LegendLine
                 key={row.id}
                 row={row}
                 session={session}
                 saved={saved}
                 openId={openId}
-                onOpen={(id) => {
-                  setTab("inputs");
-                  setOpenId((current) => (current === id ? null : id));
-                }}
+                onOpen={openLegend}
               />
             ))}
           </div>
@@ -89,6 +94,29 @@ export function ReplayIndicatorLegend({
           />
         </button>
       </div>
+      {shown
+        ? paneRows.map((row, index) => {
+            const top = paneTops[index];
+            if (top == null) {
+              return null;
+            }
+            return (
+              <div
+                key={row.id}
+                className="pointer-events-none absolute left-2 z-10 max-w-[70%] rounded-control bg-canvas/50 px-1.5 py-0.5"
+                style={{ top: top + 4 }}
+              >
+                <LegendLine
+                  row={row}
+                  session={session}
+                  saved={saved}
+                  openId={openId}
+                  onOpen={openLegend}
+                />
+              </div>
+            );
+          })
+        : null}
       {shown && openId && openTargets && openInputs ? (
         <Modal
           title={names[openId] ?? "Indicator"}

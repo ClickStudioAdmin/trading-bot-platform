@@ -887,8 +887,7 @@ export function replayIndicatorLegend(
   return groupReplayIndicatorRows(rows);
 }
 
-/** Same indicator, including another timeframe, stays on consecutive rows. */
-export function groupReplayIndicatorRows(
+function rowsByIndicatorName(
   rows: ReplayIndicatorLegendRow[],
 ): ReplayIndicatorLegendRow[] {
   const groups: ReplayIndicatorLegendRow[][] = [];
@@ -904,4 +903,20 @@ export function groupReplayIndicatorRows(
     }
   }
   return groups.flat();
+}
+
+/** Price rows for one indicator stay together. Oscillator rows stay in pane order. */
+export function groupReplayIndicatorRows(
+  rows: ReplayIndicatorLegendRow[],
+): ReplayIndicatorLegendRow[] {
+  const price: ReplayIndicatorLegendRow[] = [];
+  const oscillators: ReplayIndicatorLegendRow[] = [];
+  for (const row of rows) {
+    if (row.pane === "oscillator") {
+      oscillators.push(row);
+    } else {
+      price.push(row);
+    }
+  }
+  return [...rowsByIndicatorName(price), ...oscillators];
 }
