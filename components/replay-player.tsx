@@ -7,6 +7,7 @@ import {
   indicatorRolesForReason,
   indicatorStyleTargets,
   oscillatorPaneStretch,
+  visiblePriceBounds,
   replayChartSeries,
   replayIndicatorCatalog,
   replayIndicatorLegend,
@@ -771,6 +772,20 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         borderDownColor: "#F07167",
         wickUpColor: "#34D399",
         wickDownColor: "#F07167",
+        autoscaleInfoProvider: (original) => {
+          const logical = chart.timeScale().getVisibleLogicalRange();
+          if (!logical) {
+            return original();
+          }
+          const plots = series.layers
+            .filter((layer) => layer.pane === "price")
+            .flatMap((layer) => layer.price.map((plot) => plot.values));
+          const priceRange = visiblePriceBounds(candles, plots, logical.from, logical.to);
+          if (!priceRange) {
+            return original();
+          }
+          return { priceRange, margins: original()?.margins };
+        },
       });
       const closeSeries = chart.addSeries(charts.LineSeries, {
         color: cssVar(node, "--color-accent", "#A78BFA"),
@@ -826,6 +841,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               lineWidth: 2,
               priceLineVisible: false,
               lastValueVisible: false,
+              ...(pane === 0 ? { autoscaleInfoProvider: () => null } : {}),
             },
             pane,
           );
@@ -908,6 +924,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             priceLineVisible: false,
             lastValueVisible: false,
             crosshairMarkerVisible: false,
+            ...(pane === 0 ? { autoscaleInfoProvider: () => null } : {}),
           },
           pane,
         );
@@ -1337,6 +1354,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           width: node.clientWidth,
           height: node.clientHeight,
         });
+        sizeOscillatorPanes(false);
         publishOscillatorTops();
       });
       observer.observe(node);
@@ -1361,13 +1379,16 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             : tops,
         );
       }
-      function sizeOscillatorPanes() {
+      function sizeOscillatorPanes(force: boolean) {
         const panes = chart.panes();
-        const weights = oscillatorPaneStretch(
-          panes.reduce((sum, pane) => sum + pane.getHeight(), 0),
-          panes.length - 1,
-        );
+        const oscillatorCount = panes.length - 1;
+        const total = node.clientHeight;
+        const weights = oscillatorPaneStretch(total, oscillatorCount);
         if (!weights) {
+          return;
+        }
+        const priceHeight = panes[0]?.getHeight() ?? 0;
+        if (!force && priceHeight > 0 && priceHeight / total >= 0.5) {
           return;
         }
         panes[0]?.setStretchFactor(weights.price);
@@ -1375,12 +1396,12 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           panes[index]?.setStretchFactor(weights.oscillator);
         }
       }
-      sizeOscillatorPanes();
+      sizeOscillatorPanes(true);
       requestAnimationFrame(() => {
         if (disposed) {
           return;
         }
-        sizeOscillatorPanes();
+        sizeOscillatorPanes(true);
         for (const pane of chart.panes()) {
           const element = pane.getHTMLElement();
           if (element) {

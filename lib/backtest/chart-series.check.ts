@@ -9,6 +9,7 @@ import {
   replayIndicatorCatalog,
   groupReplayIndicatorRows,
   oscillatorPaneStretch,
+  visiblePriceBounds,
   replayIndicatorLegend,
   type IndicatorLayer,
 } from "./chart-series";
@@ -447,5 +448,21 @@ assert.equal(onePane?.oscillator, 120);
 assert.equal(onePane?.price, 480);
 assert.equal(oscillatorPaneStretch(0, 2), null);
 assert.equal(oscillatorPaneStretch(400, 0), null);
+const crowded = oscillatorPaneStretch(600, 4);
+assert.equal(crowded?.oscillator, 75);
+assert.ok((crowded?.price ?? 0) >= 300);
+
+const bounds = visiblePriceBounds(
+  [
+    { high: 10, low: 8 },
+    { high: 3400, low: 3000 },
+    { high: 12, low: 9 },
+  ],
+  [[100, 3400, 11]],
+  2,
+  2,
+);
+assert.deepEqual(bounds, { minValue: 9, maxValue: 12 });
+assert.equal(visiblePriceBounds([], [], 0, 1), null);
 
 console.log("chart-series.check: ok");

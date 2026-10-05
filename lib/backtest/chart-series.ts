@@ -936,7 +936,7 @@ function rowsByIndicatorName(
 const OSCILLATOR_PANE_HEIGHT = 120;
 const PRICE_PANE_FLOOR = 160;
 
-/** Stretch weights so every oscillator pane starts at the same height. */
+/** Stretch weights so every oscillator pane starts at the same height. The price pane keeps at least half the chart. */
 export function oscillatorPaneStretch(
   totalHeight: number,
   oscillatorCount: number,
@@ -944,11 +944,53 @@ export function oscillatorPaneStretch(
   if (oscillatorCount < 1 || totalHeight <= 0) {
     return null;
   }
-  const room = Math.max(0, totalHeight - PRICE_PANE_FLOOR);
+  const priceFloor = Math.max(
+    Math.floor(totalHeight / 2),
+    Math.min(PRICE_PANE_FLOOR, totalHeight),
+  );
+  const room = Math.max(0, totalHeight - priceFloor);
   const fitted = Math.floor(room / oscillatorCount);
   const oscillator = Math.min(OSCILLATOR_PANE_HEIGHT, Math.max(30, fitted));
-  const price = Math.max(1, totalHeight - oscillator * oscillatorCount);
+  const price = Math.max(priceFloor, totalHeight - oscillator * oscillatorCount);
   return { price, oscillator };
+}
+
+/** Candle and price-line bounds for the visible bar indexes, ignoring bars outside that window. */
+export function visiblePriceBounds(
+  candles: readonly { high: number; low: number }[],
+  plots: readonly (readonly (number | null)[])[],
+  from: number,
+  to: number,
+): { minValue: number; maxValue: number } | null {
+  if (candles.length === 0 || !(to >= from)) {
+    return null;
+  }
+  const start = Math.max(0, Math.floor(from));
+  const end = Math.min(candles.length - 1, Math.ceil(to));
+  let min = Infinity;
+  let max = -Infinity;
+  for (let index = start; index <= end; index += 1) {
+    const bar = candles[index];
+    if (bar) {
+      if (Number.isFinite(bar.low)) {
+        min = Math.min(min, bar.low);
+      }
+      if (Number.isFinite(bar.high)) {
+        max = Math.max(max, bar.high);
+      }
+    }
+    for (const plot of plots) {
+      const value = plot[index];
+      if (value != null && Number.isFinite(value)) {
+        min = Math.min(min, value);
+        max = Math.max(max, value);
+      }
+    }
+  }
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    return null;
+  }
+  return { minValue: min, maxValue: max };
 }
 
 /** Price rows for one indicator stay together. Oscillator rows stay in pane order. */
