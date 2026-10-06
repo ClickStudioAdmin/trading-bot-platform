@@ -67,6 +67,7 @@ Parked or not in V1. Keep the docs. Click picks the next one when V1 is done (or
 - **Hedged DCA as its own managing playbook** — unless Click wants it instead of the webhook path
 - **Adaptive DCA wave 3 (cooldown)** — [phase-adaptive.md](phase-adaptive.md). Waves 1–2 are on the playbook
 - **Admin backtest studies / research wizard** — [phase-backtesting.md](phase-backtesting.md)
+- **Consolidate back testing and optimization** — [phase-backtest-optimize.md](phase-backtest-optimize.md)
 - **More chart homes** — Automations / Pairs / Activity chart buttons
 - **Change-email flow**
 - **SMS 2FA, passkeys, WebAuthn**
