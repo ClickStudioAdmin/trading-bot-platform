@@ -258,6 +258,24 @@ function candleIndexAt(candles: CandleBar[], atMs: number): number {
   return index;
 }
 
+/** Pixels under the side-by-side grid: layout padding plus the site footer. */
+function replayFrameReserve(grid: HTMLElement): number {
+  const footer = document.querySelector("footer");
+  const column = footer?.parentElement ?? null;
+  let below = 0;
+  let parent = grid.parentElement;
+  while (parent && parent !== column) {
+    const style = getComputedStyle(parent);
+    below +=
+      (Number.parseFloat(style.paddingBottom) || 0) +
+      (Number.parseFloat(style.borderBottomWidth) || 0) +
+      (Number.parseFloat(style.marginBottom) || 0);
+    parent = parent.parentElement;
+  }
+  const footerH = footer instanceof HTMLElement ? footer.getBoundingClientRect().height : 0;
+  return Math.ceil(below + footerH) + 1;
+}
+
 function sameReferenceIds(left: readonly string[], right: readonly string[]): boolean {
   if (left.length !== right.length) {
     return false;
@@ -1709,19 +1727,28 @@ export function ReplayPlayer({
         return;
       }
       const top = node.getBoundingClientRect().top + window.scrollY;
-      const next = Math.max(360, Math.floor(window.innerHeight - top - 32));
+      const next = Math.max(
+        360,
+        Math.floor(window.innerHeight - top - replayFrameReserve(node)),
+      );
       setSideGridHeight((current) => (current === next ? current : next));
     }
     measure();
     media.addEventListener("change", measure);
     window.addEventListener("resize", measure);
+    const footer = document.querySelector("footer");
+    const observer = new ResizeObserver(measure);
+    if (footer instanceof HTMLElement) {
+      observer.observe(footer);
+    }
     return () => {
       media.removeEventListener("change", measure);
       window.removeEventListener("resize", measure);
+      observer.disconnect();
     };
   }, [positionsRight, fillViewport]);
-  useEffect(() => {
-    if (!capPositions) {
+  useLayoutEffect(() => {
+    if (!capPositions || openOrderKey) {
       return;
     }
     const section = positionsRef.current;
@@ -1730,13 +1757,13 @@ export function ReplayPlayer({
     }
     const node: HTMLElement = section;
     function fit() {
-      const row = node.querySelector("tbody tr td:not([colspan])")?.parentElement;
-      const head = node.querySelector("thead");
-      const pager = node.querySelector("[data-table-pager]");
+      const body = node.querySelector("[data-table-body]");
+      const box = body instanceof HTMLElement ? body : node;
+      const row = box.querySelector("tbody tr td:not([colspan])")?.parentElement;
+      const head = box.querySelector("thead");
       const rowH = row instanceof HTMLElement ? row.getBoundingClientRect().height : 52;
       const headH = head instanceof HTMLElement ? head.getBoundingClientRect().height : 40;
-      const pagerH = pager instanceof HTMLElement ? pager.getBoundingClientRect().height : 0;
-      const next = replayPositionsPageSize(node.clientHeight, headH, pagerH, rowH);
+      const next = replayPositionsPageSize(box.clientHeight, headH, 0, rowH);
       if (next == null) {
         return;
       }
@@ -1750,7 +1777,7 @@ export function ReplayPlayer({
       observer.disconnect();
       window.removeEventListener("resize", fit);
     };
-  }, [capPositions, positionRows.length, sideGridHeight, fillViewport]);
+  }, [capPositions, positionRows.length, sideGridHeight, fillViewport, openOrderKey]);
   const positionTable = useClientTable(positionRows, comparePositions, {
     pageSize,
     defaultKey: "number",
@@ -1771,7 +1798,11 @@ export function ReplayPlayer({
             : "mt-0"
         }
         bodyClassName={
-          capPositions ? "min-h-0 flex-1 overflow-auto" : "min-w-0 overflow-x-auto"
+          capPositions
+            ? openOrderKey
+              ? "min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
+              : "min-h-0 flex-1 overflow-hidden"
+            : "min-w-0 overflow-x-auto"
         }
         pager={
           positionRows.length === 0 ? undefined : (
@@ -2337,7 +2368,7 @@ export function ReplayPlayer({
       ref={sideGridRef}
       className={
         positionsRight
-          ? `grid items-stretch gap-4 lg:grid-cols-[minmax(24rem,1fr)_32rem] ${
+          ? `grid items-stretch gap-4 lg:grid-cols-[minmax(24rem,1fr)_34rem] ${
               fillViewport || sideGridHeight != null ? "min-h-0 overflow-hidden" : ""
             } ${fillViewport ? "flex-1" : ""}`
           : fillViewport

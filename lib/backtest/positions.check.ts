@@ -238,6 +238,8 @@ assert.equal(
 assert.equal(replayPositionsPageSize(0, 40, 48, 52), null);
 assert.equal(replayPositionsPageSize(800, 40, 48, 52), 13);
 assert.equal(replayPositionsPageSize(100, 40, 48, 52), 1);
-assert.equal(replayPositionsPageSize(2000, 40, 40, 40), 47);
+assert.equal(replayPositionsPageSize(2000, 40, 40, 40), 48);
+assert.equal(replayPositionsPageSize(40 + 52 * 3, 40, 0, 52), 3);
+assert.equal(replayPositionsPageSize(40 + 48 + 104, 40, 48, 52.2), 1);
 
 console.log("backtest positions checks passed");
