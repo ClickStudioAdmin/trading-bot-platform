@@ -8,6 +8,7 @@ import {
   groupBacktestOrdersIntoCycles,
   listBacktestCycles,
   plannedExitsForBacktestCycle,
+  replayPositionsPageSize,
 } from "./positions";
 import type { BacktestRecipe, SimulatedOrder } from "./model";
 
@@ -233,5 +234,10 @@ assert.equal(
   }),
   null,
 );
+
+assert.equal(replayPositionsPageSize(0, 40, 48, 52), null);
+assert.equal(replayPositionsPageSize(800, 40, 48, 52), 13);
+assert.equal(replayPositionsPageSize(100, 40, 48, 52), 1);
+assert.equal(replayPositionsPageSize(2000, 40, 40, 40), 47);
 
 console.log("backtest positions checks passed");

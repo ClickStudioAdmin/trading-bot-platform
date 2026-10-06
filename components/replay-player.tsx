@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { AutoscaleInfo } from "lightweight-charts";
 import {
@@ -90,7 +90,7 @@ import {
   type ReplayEvent,
   type SimulatedOrder,
 } from "@/lib/backtest/model";
-import { listBacktestCycles } from "@/lib/backtest/positions";
+import { listBacktestCycles, replayPositionsPageSize } from "@/lib/backtest/positions";
 import {
   DCA_INDICATOR_TIMEFRAME_LABELS,
   type DcaIndicatorTimeframe,
@@ -490,6 +490,10 @@ export function ReplayPlayer({
   const started = playback.key === candleKey ? playback.started : false;
   headRef.current = head;
   const fillViewport = expanded || monitorFull;
+  const sideGridRef = useRef<HTMLDivElement | null>(null);
+  const [sideBySide, setSideBySide] = useState(false);
+  const [sideGridHeight, setSideGridHeight] = useState<number | null>(null);
+  const capPositions = (positionsRight && sideBySide) || fillViewport;
 
   function revealChart() {
     setPlayback({ key: candleKey, started: true });
@@ -1816,12 +1820,35 @@ export function ReplayPlayer({
     [],
   );
   const positionsRef = useRef<HTMLElement | null>(null);
-  const [fittedPageSize, setFittedPageSize] = useState(15);
-  const [columnMin, setColumnMin] = useState<number | null>(null);
-  const fitPage = positionsRight || fillViewport;
-  const pageSize = fitPage ? fittedPageSize : 15;
+  const [fittedPageSize, setFittedPageSize] = useState(8);
+  const pageSize = capPositions ? fittedPageSize : 15;
+  useLayoutEffect(() => {
+    if (!positionsRight || fillViewport) {
+      return;
+    }
+    const media = window.matchMedia("(min-width: 1024px)");
+    function measure() {
+      const wide = media.matches;
+      setSideBySide(wide);
+      const node = sideGridRef.current;
+      if (!wide || !node) {
+        setSideGridHeight(null);
+        return;
+      }
+      const top = node.getBoundingClientRect().top + window.scrollY;
+      const next = Math.max(360, Math.floor(window.innerHeight - top - 32));
+      setSideGridHeight((current) => (current === next ? current : next));
+    }
+    measure();
+    media.addEventListener("change", measure);
+    window.addEventListener("resize", measure);
+    return () => {
+      media.removeEventListener("change", measure);
+      window.removeEventListener("resize", measure);
+    };
+  }, [positionsRight, fillViewport]);
   useEffect(() => {
-    if (!fitPage) {
+    if (!capPositions) {
       return;
     }
     const section = positionsRef.current;
@@ -1832,24 +1859,17 @@ export function ReplayPlayer({
     function fit() {
       const row = node.querySelector("tbody tr td:not([colspan])")?.parentElement;
       const head = node.querySelector("thead");
-      const card = node.querySelector("[data-table-card]");
-      const pager = card?.lastElementChild;
+      const pager = node.querySelector("[data-table-pager]");
       const rowH = row instanceof HTMLElement ? row.getBoundingClientRect().height : 52;
       const headH = head instanceof HTMLElement ? head.getBoundingClientRect().height : 40;
-      const pagerH = pager instanceof HTMLElement ? pager.getBoundingClientRect().height : 45;
-      const slot = headH + pagerH + rowH * 15 + 2;
-      setColumnMin(slot);
-      const available = fillViewport ? Math.max(node.clientHeight, slot) : slot;
-      const next = Math.max(
-        15,
-        Math.floor((available - headH - pagerH - 2) / Math.max(rowH, 1)),
-      );
+      const pagerH = pager instanceof HTMLElement ? pager.getBoundingClientRect().height : 0;
+      const next = replayPositionsPageSize(node.clientHeight, headH, pagerH, rowH);
+      if (next == null) {
+        return;
+      }
       setFittedPageSize((current) => (current === next ? current : next));
     }
     fit();
-    if (!fillViewport) {
-      return;
-    }
     const observer = new ResizeObserver(fit);
     observer.observe(node);
     window.addEventListener("resize", fit);
@@ -1857,7 +1877,7 @@ export function ReplayPlayer({
       observer.disconnect();
       window.removeEventListener("resize", fit);
     };
-  }, [fitPage, fillViewport, positionsRight, positionRows.length]);
+  }, [capPositions, positionRows.length, sideGridHeight, fillViewport]);
   const positionTable = useClientTable(positionRows, comparePositions, {
     pageSize,
     defaultKey: "number",
@@ -1868,18 +1888,18 @@ export function ReplayPlayer({
     <section
       ref={positionsRef}
       className={`flex min-w-0 flex-col ${
-        positionsRight
-          ? `h-full ${fillViewport ? "min-h-0 overflow-hidden" : "min-h-[54rem]"}`
-          : ""
+        capPositions ? "h-full min-h-0 overflow-hidden" : ""
       }`}
-      style={
-        positionsRight && !fillViewport && columnMin != null
-          ? { minHeight: columnMin }
-          : undefined
-      }
     >
       <TableCard
-        className="mt-0 flex h-full flex-1 flex-col"
+        className={
+          capPositions
+            ? "mt-0 flex h-full min-h-0 flex-1 flex-col overflow-hidden"
+            : "mt-0"
+        }
+        bodyClassName={
+          capPositions ? "min-h-0 flex-1 overflow-auto" : "min-w-0 overflow-x-auto"
+        }
         pager={
           positionRows.length === 0 ? undefined : (
             <TablePager
@@ -2197,7 +2217,7 @@ export function ReplayPlayer({
         />
         <div
           className={`relative ${
-            positionsRight ? "min-h-[12rem] min-w-0 flex-1" : ""
+            positionsRight ? (capPositions ? "min-h-0 min-w-0 flex-1" : "min-h-[12rem] min-w-0 flex-1") : ""
           }`}
         >
           <div
@@ -2441,20 +2461,28 @@ export function ReplayPlayer({
 
   const body = (
     <div
+      ref={sideGridRef}
       className={
         positionsRight
           ? `grid items-stretch gap-4 lg:grid-cols-[minmax(24rem,1fr)_32rem] ${
-              fillViewport ? "min-h-0 flex-1" : ""
-            }`
+              fillViewport || sideGridHeight != null ? "min-h-0 overflow-hidden" : ""
+            } ${fillViewport ? "flex-1" : ""}`
           : fillViewport
             ? "flex min-h-0 flex-1 flex-col gap-4 overflow-auto"
             : "space-y-4"
+      }
+      style={
+        positionsRight && sideBySide && !fillViewport && sideGridHeight != null
+          ? { height: sideGridHeight }
+          : undefined
       }
     >
       <div
         className={
           positionsRight
-            ? "flex h-full min-h-0 min-w-0 flex-col gap-4"
+            ? capPositions
+              ? "flex h-full min-h-0 min-w-0 flex-col gap-4 overflow-hidden"
+              : "flex h-full min-h-0 min-w-0 flex-col gap-4"
             : "flex min-w-0 flex-col gap-4"
         }
       >
@@ -2462,7 +2490,11 @@ export function ReplayPlayer({
       </div>
       <div
         className={
-          positionsRight ? "flex h-full min-w-0 flex-col" : "min-w-0"
+          positionsRight
+            ? capPositions
+              ? "flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
+              : "flex h-full min-w-0 flex-col"
+            : "min-w-0"
         }
       >
         {positions}
