@@ -1841,7 +1841,7 @@ export function ReplayPlayer({
 
   const header = (
       <div
-        className={`flex shrink-0 flex-wrap items-center gap-3 ${
+        className={`flex shrink-0 flex-wrap items-center gap-3 py-3 ${
           fillViewport ? "" : "sticky top-0 z-30 bg-canvas"
         }`}
       >
