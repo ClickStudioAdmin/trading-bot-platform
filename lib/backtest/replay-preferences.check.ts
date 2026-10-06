@@ -4,6 +4,7 @@ import {
   defaultReplayViewPreferences,
   mergeReplayIndicatorStyles,
   parseReplayViewPreferences,
+  replayIntervalRow,
   replayViewFromLocal,
   serializeReplayViewPreferences,
 } from "./replay-preferences";
@@ -32,6 +33,7 @@ const parsed = parseReplayViewPreferences({
 
 assert.equal(parsed.positionsRight, false);
 assert.equal("chartInterval" in parsed, false);
+assert.deepEqual(parsed.favoriteIntervals, []);
 assert.deepEqual(parsed.referenceIndicators, ["rsi", "ema", "atr_band"]);
 assert.deepEqual(parsed.referenceInputs.rsi, { length: 400, signal: 2 });
 assert.deepEqual(parsed.referenceInputs.bb, { length: 2, stddev: 50 });
@@ -50,7 +52,24 @@ assert.deepEqual(parsed.indicatorStyles["ref:bb"]?.lines["ref:bb-upper"], {
 assert.equal(parsed.indicatorStyles["ref:bb"]?.lines[""], undefined);
 
 const defaults = defaultReplayViewPreferences();
+assert.deepEqual(defaults.favoriteIntervals, []);
 assert.deepEqual(defaults.chartAppearance, defaultReplayChartAppearance());
+assert.deepEqual(
+  parseReplayViewPreferences({
+    favoriteIntervals: ["D", "5", "5", "weekly", "15", "120"],
+  }).favoriteIntervals,
+  ["5", "120"],
+);
+assert.deepEqual(replayIntervalRow([], "240"), ["15", "60", "240", "D"]);
+assert.deepEqual(replayIntervalRow(["120", "5"], "30"), [
+  "5",
+  "15",
+  "30",
+  "60",
+  "120",
+  "240",
+  "D",
+]);
 assert.equal(parseReplayViewPreferences(null).positionsRight, false);
 assert.equal("chartInterval" in parseReplayViewPreferences({ chartInterval: "60" }), false);
 
@@ -77,6 +96,7 @@ const fallback = replayViewFromLocal(
   JSON.stringify({
     positionsRight: true,
     chartInterval: "60",
+    favoriteIntervals: ["30", "15", "nope"],
     referenceIndicators: ["macd"],
     chartAppearance: { series: "line" },
     indicatorStyles: {},
@@ -87,6 +107,7 @@ const fallback = replayViewFromLocal(
 );
 assert.equal(fallback.positionsRight, true);
 assert.equal("chartInterval" in fallback, false);
+assert.deepEqual(fallback.favoriteIntervals, ["30"]);
 assert.equal(fallback.chartAppearance.series, "line");
 assert.deepEqual(fallback.referenceIndicators, ["macd"]);
 

@@ -304,6 +304,9 @@ export function ReplayPlayer({
     [run.replayEvents, run.orders],
   );
   const [interval, setInterval] = useState<DcaIndicatorTimeframe>(run.interval);
+  const [favoriteIntervals, setFavoriteIntervals] = useState<DcaIndicatorTimeframe[]>(
+    preferences?.favoriteIntervals ?? [],
+  );
   const [load, setLoad] = useState<{
     key: string;
     candles: CandleBar[];
@@ -635,6 +638,7 @@ export function ReplayPlayer({
   }, [series.layers]);
   if (!preferences && localSnapshot && !prefsReady) {
     setPositionsRight(localSnapshot.positionsRight);
+    setFavoriteIntervals(localSnapshot.favoriteIntervals);
     setReferences(localSnapshot.referenceIndicators);
     setReferenceInputs(localSnapshot.referenceInputs);
     setSavedAppearance(localSnapshot.chartAppearance);
@@ -647,6 +651,7 @@ export function ReplayPlayer({
     indicatorStyles: mergeReplayIndicatorStyles(savedStyles, sessionStyles),
     referenceIndicators: references,
     referenceInputs,
+    favoriteIntervals,
   });
   useEffect(() => {
     if (!prefsReady) {
@@ -2031,9 +2036,10 @@ export function ReplayPlayer({
         }`}
       >
         <ReplayChartBar
-          run={run}
           interval={interval}
           onInterval={setInterval}
+          favoriteIntervals={favoriteIntervals}
+          onFavoriteIntervals={setFavoriteIntervals}
           appearance={chartAppearance}
           onChange={(patch) => {
             setSessionAppearance((current) => patchReplayChartAppearance(current, patch));

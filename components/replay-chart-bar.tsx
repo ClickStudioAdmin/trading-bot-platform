@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { BacktestChartIntervalBar } from "@/components/backtest-chart-interval";
+import { ReplayChartIntervalControl } from "@/components/replay-chart-interval";
 import {
   ChartScreenshotControls,
   type ChartSnapshot,
@@ -17,16 +17,16 @@ import {
   type ReplayChartAppearance,
   type ReplayChartAppearancePatch,
 } from "@/lib/backtest/chart-appearance";
-import type { BacktestRun } from "@/lib/backtest/model";
 import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 
 const TOOL_BUTTON =
   "inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink";
 
 export function ReplayChartBar({
-  run,
   interval,
   onInterval,
+  favoriteIntervals,
+  onFavoriteIntervals,
   appearance,
   onChange,
   onSave,
@@ -38,9 +38,10 @@ export function ReplayChartBar({
   appliedReferences,
   onToggleReference,
 }: {
-  run: BacktestRun;
   interval: DcaIndicatorTimeframe;
   onInterval: (value: DcaIndicatorTimeframe) => void;
+  favoriteIntervals: readonly DcaIndicatorTimeframe[];
+  onFavoriteIntervals: (value: DcaIndicatorTimeframe[]) => void;
   appearance: ReplayChartAppearance;
   onChange: (patch: ReplayChartAppearancePatch) => void;
   onSave: (fields: readonly (keyof ReplayChartAppearance)[]) => void;
@@ -57,7 +58,12 @@ export function ReplayChartBar({
   return (
     <div className="relative z-20 flex flex-wrap items-center justify-between gap-2 border-b border-line px-2 py-1">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <BacktestChartIntervalBar run={run} interval={interval} onChange={onInterval} />
+        <ReplayChartIntervalControl
+          interval={interval}
+          onInterval={onInterval}
+          favorites={favoriteIntervals}
+          onFavorites={onFavoriteIntervals}
+        />
         <button
           type="button"
           className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:text-ink"

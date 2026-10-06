@@ -16,6 +16,9 @@ import {
 import {
   DCA_INDICATOR_PERIOD_MAX,
   DCA_INDICATOR_PERIOD_MIN,
+  DCA_INDICATOR_TIMEFRAMES,
+  parseDcaIndicatorTimeframe,
+  type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 
 export const REPLAY_VIEW_FALLBACK_KEY = "tbp.replay.view-preferences";
@@ -36,13 +39,33 @@ const STYLE_ID = /^[a-z0-9_.:|-]{1,120}$/i;
 const MAX_STYLE_LAYERS = 48;
 const MAX_STYLE_LINES = 16;
 
+/** Timeframes that always sit on the replay chart bar. */
+export const REPLAY_INTERVAL_ROW_DEFAULTS = [
+  "15",
+  "60",
+  "240",
+  "D",
+] as const satisfies readonly DcaIndicatorTimeframe[];
+
+const REPLAY_INTERVAL_ROW_DEFAULT_SET = new Set<string>(REPLAY_INTERVAL_ROW_DEFAULTS);
+
 export type ReplayViewPreferences = {
   positionsRight: boolean;
   chartAppearance: ReplayChartAppearance;
   indicatorStyles: IndicatorStyleMap;
   referenceIndicators: ReplayIndicatorId[];
   referenceInputs: ReplayReferenceInputs;
+  favoriteIntervals: DcaIndicatorTimeframe[];
 };
+
+/** Default row, plus favourites, plus the interval the chart is drawing. */
+export function replayIntervalRow(
+  favorites: readonly DcaIndicatorTimeframe[],
+  active: DcaIndicatorTimeframe,
+): DcaIndicatorTimeframe[] {
+  const show = new Set<string>([...REPLAY_INTERVAL_ROW_DEFAULTS, ...favorites, active]);
+  return DCA_INDICATOR_TIMEFRAMES.filter((row) => show.has(row));
+}
 
 export function defaultReplayViewPreferences(): ReplayViewPreferences {
   return {
@@ -51,6 +74,7 @@ export function defaultReplayViewPreferences(): ReplayViewPreferences {
     indicatorStyles: {},
     referenceIndicators: [],
     referenceInputs: {},
+    favoriteIntervals: [],
   };
 }
 
@@ -62,6 +86,7 @@ export function parseReplayViewPreferences(raw: unknown): ReplayViewPreferences 
     indicatorStyles: stylesFrom(row.indicatorStyles),
     referenceIndicators: referenceIdsFrom(row.referenceIndicators),
     referenceInputs: referenceInputsFrom(row.referenceInputs),
+    favoriteIntervals: favoriteIntervalsFrom(row.favoriteIntervals),
   };
 }
 
@@ -73,6 +98,7 @@ export function serializeReplayViewPreferences(value: unknown): string {
     indicatorStyles: sortedStyles(row.indicatorStyles),
     referenceIndicators: row.referenceIndicators,
     referenceInputs: row.referenceInputs,
+    favoriteIntervals: row.favoriteIntervals,
   });
 }
 
@@ -167,6 +193,18 @@ function stylesFrom(value: unknown): IndicatorStyleMap {
 
 function sortedStyles(map: IndicatorStyleMap): IndicatorStyleMap {
   return stylesFrom(map);
+}
+
+function favoriteIntervalsFrom(value: unknown): DcaIndicatorTimeframe[] {
+  const raw = Array.isArray(value) ? value : [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    const interval = parseDcaIndicatorTimeframe(item);
+    if (interval && !REPLAY_INTERVAL_ROW_DEFAULT_SET.has(interval)) {
+      seen.add(interval);
+    }
+  }
+  return DCA_INDICATOR_TIMEFRAMES.filter((row) => seen.has(row));
 }
 
 function referenceIdsFrom(value: unknown): ReplayIndicatorId[] {
