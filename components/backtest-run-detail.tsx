@@ -10,6 +10,7 @@ import {
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
 import { ColumnHint } from "@/components/column-hint";
+import { IconPlay } from "@/components/icons";
 import { BacktestRunsTable } from "@/components/backtest-runs-table";
 import { BacktestStudyCharts } from "@/components/backtest-study-charts";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
@@ -265,24 +266,35 @@ export function BacktestRunDetail({
       />
       <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-6">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {backtestRunTitle(run)}
-          </h1>
-          <div
-            className={`mt-2 flex items-center gap-2 text-sm ${
-              status.tone === "warning"
-                ? "text-warning"
-                : status.tone === "danger"
-                  ? "text-danger"
-                  : status.tone === "faint"
-                    ? "text-ink-muted"
-                    : "text-success"
-            }`}
-          >
-            <StatusDot tone={status.tone} pulse={status.pulse} />
-            {status.label}
+        <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-3xl font-semibold tracking-tight">
+              {backtestRunTitle(run)}
+            </h1>
+            <div
+              className={`mt-2 flex items-center gap-2 text-sm ${
+                status.tone === "warning"
+                  ? "text-warning"
+                  : status.tone === "danger"
+                    ? "text-danger"
+                    : status.tone === "faint"
+                      ? "text-ink-muted"
+                      : "text-success"
+              }`}
+            >
+              <StatusDot tone={status.tone} pulse={status.pulse} />
+              {status.label}
+            </div>
           </div>
+          {complete ? (
+            <Link
+              href={`/account/backtests/${run.id}/replay`}
+              className="inline-flex shrink-0 items-center gap-3 rounded-control bg-accent-strong px-5 py-3 text-xl font-medium text-ink hover:bg-accent"
+            >
+              <IconPlay size={48} className="ml-1 size-12 fill-current" />
+              Replay
+            </Link>
+          ) : null}
         </div>
         <BacktestMatchCard
           runId={run.id}
@@ -329,22 +341,12 @@ export function BacktestRunDetail({
         <section>
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="text-lg font-semibold">Parameters</h2>
-            <span className="flex flex-wrap gap-3">
-              {complete ? (
-                <Link
-                  href={`/account/backtests/${run.id}/replay`}
-                  className="text-sm text-accent hover:underline"
-                >
-                  Replay
-                </Link>
-              ) : null}
-              <Link
-                href={backtestRerunHref(run.id)}
-                className="text-sm text-accent hover:underline"
-              >
-                Load into new backtest
-              </Link>
-            </span>
+            <Link
+              href={backtestRerunHref(run.id)}
+              className="text-sm text-accent hover:underline"
+            >
+              Load into new backtest
+            </Link>
           </div>
           <BacktestPropertyList rows={params} />
         </section>
