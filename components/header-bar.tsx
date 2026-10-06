@@ -29,7 +29,7 @@ export function HeaderBar({
       (signedIn && isAffiliatePortalPath(pathname)));
 
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-surface/90 backdrop-blur-sm">
+    <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur-sm">
       <div className="relative">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-3 pr-16">
           <div className="flex min-w-0 items-center gap-4">

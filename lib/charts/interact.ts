@@ -58,15 +58,36 @@ export function focusedLogicalRange(
   };
 }
 
+export type PriceScaleApi = {
+  width: () => number;
+  getVisibleRange: () => PriceRange | null;
+  setVisibleRange: (range: PriceRange) => void;
+  setAutoScale: (on: boolean) => void;
+};
+
+export type ChartPaneView = {
+  getHTMLElement: () => HTMLElement | null;
+  priceScale: (id: string) => PriceScaleApi;
+};
+
 export type ChartViewApi = {
   timeScale: () => { fitContent: () => void };
-  priceScale: (id: string) => {
-    width: () => number;
-    getVisibleRange: () => PriceRange | null;
-    setVisibleRange: (range: PriceRange) => void;
-    setAutoScale: (on: boolean) => void;
-  };
+  priceScale: (id: string) => PriceScaleApi;
+  panes?: () => ChartPaneView[];
 };
+
+export type VerticalBand = { top: number; bottom: number };
+
+/** Pane under the pointer, or null when the pointer is on the time axis. */
+export function paneIndexAtY(bands: VerticalBand[], clientY: number): number | null {
+  for (let index = 0; index < bands.length; index += 1) {
+    const band = bands[index];
+    if (band && clientY >= band.top && clientY <= band.bottom) {
+      return index;
+    }
+  }
+  return null;
+}
 
 export function zoomPriceRange(
   range: PriceRange,
@@ -115,6 +136,39 @@ export function resetPriceScale(chart: ChartViewApi): void {
   chart.priceScale("right").setAutoScale(true);
 }
 
+function rightScaleAtPointer(
+  chart: ChartViewApi,
+  host: HTMLElement,
+  event: WheelEvent,
+): { scale: PriceScaleApi; top: number; bottom: number } | null {
+  const panes = chart.panes?.() ?? [];
+  const bands = panes.map((pane) => {
+    const box = pane.getHTMLElement()?.getBoundingClientRect();
+    return box ? { top: box.top, bottom: box.bottom, pane } : null;
+  });
+  if (bands.some((band) => band != null)) {
+    const index = paneIndexAtY(
+      bands.map((band) => band ?? { top: Number.NaN, bottom: Number.NaN }),
+      event.clientY,
+    );
+    const hit = index == null ? null : bands[index];
+    if (!hit) {
+      return null;
+    }
+    const scale = hit.pane.priceScale("right");
+    if (!isOverRightPriceScale(host, scale.width(), event.clientX)) {
+      return null;
+    }
+    return { scale, top: hit.top, bottom: hit.bottom };
+  }
+  const scale = chart.priceScale("right");
+  if (!isOverRightPriceScale(host, scale.width(), event.clientX)) {
+    return null;
+  }
+  const rect = host.getBoundingClientRect();
+  return { scale, top: rect.top, bottom: rect.bottom };
+}
+
 export function attachRightAxisWheel(
   host: HTMLElement,
   getChart: () => ChartViewApi | null,
@@ -124,8 +178,8 @@ export function attachRightAxisWheel(
     if (!chart) {
       return;
     }
-    const axisWidth = chart.priceScale("right").width();
-    if (!isOverRightPriceScale(host, axisWidth, event.clientX)) {
+    const hit = rightScaleAtPointer(chart, host, event);
+    if (!hit) {
       return;
     }
     event.preventDefault();
@@ -133,19 +187,18 @@ export function attachRightAxisWheel(
     if (event.deltaY === 0) {
       return;
     }
-    const range = chart.priceScale("right").getVisibleRange();
+    const range = hit.scale.getVisibleRange();
     if (!range) {
       return;
     }
-    const rect = host.getBoundingClientRect();
-    const ratio =
-      rect.height > 0 ? (rect.bottom - event.clientY) / rect.height : 0.5;
+    const height = hit.bottom - hit.top;
+    const ratio = height > 0 ? (hit.bottom - event.clientY) / height : 0.5;
     const next = zoomPriceRange(range, wheelZoomFactor(event.deltaY), ratio);
     if (!next) {
       return;
     }
-    chart.priceScale("right").setAutoScale(false);
-    chart.priceScale("right").setVisibleRange(next);
+    hit.scale.setAutoScale(false);
+    hit.scale.setVisibleRange(next);
   }
   host.addEventListener("wheel", onWheel, { passive: false, capture: true });
   return () =>

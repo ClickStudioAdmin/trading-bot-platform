@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AppMultiSelect } from "@/components/app-select";
 import { AppCheck } from "@/components/app-check";
@@ -29,7 +29,7 @@ import {
   botBtnIcon,
   deskActionBtnClass,
 } from "@/components/bot-form-chrome";
-import { IconPlus, IconTemplates } from "@/components/icons";
+import { IconTemplates } from "@/components/icons";
 import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 
 const fieldClass =
@@ -60,6 +60,36 @@ export function StarterPackCheckbox({
 const modalStack: number[] = [];
 let nextModalId = 0;
 
+const ModalHostContext = createContext<HTMLElement | null>(null);
+
+/** Replay fill-browser and full screen paint above the page. Dialogs inside this host stay on that layer. */
+export function ModalHost({
+  host,
+  children,
+}: {
+  host: HTMLElement | null;
+  children: ReactNode;
+}) {
+  return <ModalHostContext.Provider value={host}>{children}</ModalHostContext.Provider>;
+}
+
+export function useModalPortalHost(): HTMLElement | null {
+  const host = useContext(ModalHostContext);
+  if (typeof document === "undefined") {
+    return host;
+  }
+  const fullscreen = document.fullscreenElement;
+  if (fullscreen instanceof HTMLElement) {
+    return fullscreen;
+  }
+  const webkit = (document as Document & { webkitFullscreenElement?: Element | null })
+    .webkitFullscreenElement;
+  if (webkit instanceof HTMLElement) {
+    return webkit;
+  }
+  return host ?? document.body;
+}
+
 export function Modal({
   title,
   onClose,
@@ -78,6 +108,7 @@ export function Modal({
   elevated?: boolean;
 }) {
   const previewClass = useThemePreviewPortalClass();
+  const portalHost = useModalPortalHost();
   useEffect(() => {
     const id = ++nextModalId;
     modalStack.push(id);
@@ -95,7 +126,7 @@ export function Modal({
       }
     };
   }, [onClose]);
-  if (typeof document === "undefined") {
+  if (typeof document === "undefined" || !portalHost) {
     return null;
   }
   return createPortal(
@@ -140,7 +171,7 @@ export function Modal({
         )}
       </div>
     </div>,
-    document.body,
+    portalHost,
   );
 }
 

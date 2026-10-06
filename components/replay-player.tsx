@@ -1,28 +1,60 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
-import { BacktestChartIntervalBar } from "@/components/backtest-chart-interval";
+import type { AutoscaleInfo } from "lightweight-charts";
 import {
   indicatorRolesForReason,
   indicatorStyleTargets,
+  oscillatorPaneStretch,
+  visiblePriceBounds,
   replayChartSeries,
+  replayIndicatorCatalog,
   replayIndicatorLegend,
+  type IndicatorInput,
   type IndicatorStyleTarget,
+  type ReplayReferenceInputs,
 } from "@/lib/backtest/chart-series";
 import {
   REPLAY_INDICATOR_STYLE_KEY,
   indicatorLineStyle,
-  parseIndicatorStyles,
   resetIndicatorStyle,
   saveIndicatorStyleGlobal,
-  serializeIndicatorStyles,
   writeIndicatorLineStyle,
   type IndicatorLineStyle,
   type IndicatorStyleMap,
 } from "@/lib/backtest/indicator-style";
+import {
+  ChartContextMenu,
+  type ChartContextMenuState,
+} from "@/components/chart-context-menu";
 import { ReplayIndicatorLegend } from "@/components/replay-indicator-legend";
+import { ReplayChartBar } from "@/components/replay-chart-bar";
+import type { ChartSnapshot } from "@/components/chart-screenshot";
+import {
+  REPLAY_CHART_APPEARANCE_KEY,
+  mergeReplayChartAppearance,
+  patchReplayChartAppearance,
+  clearReplayChartFields,
+  colorWithOpacity,
+  pickReplayChartFields,
+  replayGridPaint,
+  resetReplayChartFields,
+  saveReplayChartAppearance,
+  serializeReplayChartAppearance,
+  type ReplayChartAppearance,
+  type ReplayChartAppearancePatch,
+} from "@/lib/backtest/chart-appearance";
+import { saveReplayViewPreferencesAction } from "@/lib/backtest/replay-preferences-action";
+import {
+  REPLAY_VIEW_FALLBACK_KEY,
+  defaultReplayViewPreferences,
+  mergeReplayIndicatorStyles,
+  parseReplayViewPreferences,
+  replayViewFromLocal,
+  serializeReplayViewPreferences,
+  type ReplayViewPreferences,
+} from "@/lib/backtest/replay-preferences";
 import { eventParameterSections } from "@/lib/backtest/event-pane";
 import {
   coalesceReplayPositions,
@@ -46,7 +78,6 @@ import {
 } from "@/lib/backtest/play";
 import {
   backtestChartFetchBounds,
-  backtestRerunHref,
   type BacktestRun,
   type ReplayEvent,
   type SimulatedOrder,
@@ -56,6 +87,7 @@ import {
   DCA_INDICATOR_TIMEFRAME_LABELS,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import { attachRightAxisWheel } from "@/lib/charts/interact";
 import { loadBacktestDisplayCandles } from "@/lib/charts/load-backtest-candles";
 import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
 import { formatPrice, formatQty, signedTone } from "@/lib/opportunities/format";
@@ -67,9 +99,15 @@ import {
   IconExpand,
   IconLoader,
   IconMonitor,
+  IconPageLayout,
   IconPause,
   IconPlay,
+  IconSkipBack,
+  IconSkipForward,
+  IconStepBack,
+  IconStepForward,
 } from "@/components/icons";
+import { Modal, ModalHost } from "@/components/template-modals";
 import { SortTh, TableCard, TablePager, useClientTable } from "@/components/table-chrome";
 import { compareTableNum, compareTableText, type TableSortDir } from "@/lib/table-chrome";
 import type { BacktestPositionCycle } from "@/lib/backtest/positions";
@@ -121,14 +159,73 @@ function money(value: number): string {
   return value < 0 ? `−$${text}` : `$${text}`;
 }
 
-function readStoredIndicatorStyles(): IndicatorStyleMap {
+let cachedLocalReplayRaw: string | null = null;
+let cachedLocalReplayView: ReplayViewPreferences | null = null;
+const emptyLocalReplayView = defaultReplayViewPreferences();
+
+function readLocalReplayView(): ReplayViewPreferences {
   try {
-    return parseIndicatorStyles(
-      window.localStorage.getItem(REPLAY_INDICATOR_STYLE_KEY),
+    const fallback = window.localStorage.getItem(REPLAY_VIEW_FALLBACK_KEY);
+    const appearance = window.localStorage.getItem(REPLAY_CHART_APPEARANCE_KEY);
+    const styles = window.localStorage.getItem(REPLAY_INDICATOR_STYLE_KEY);
+    const raw = `${fallback ?? ""}\n${appearance ?? ""}\n${styles ?? ""}`;
+    if (cachedLocalReplayView && cachedLocalReplayRaw === raw) {
+      return cachedLocalReplayView;
+    }
+    cachedLocalReplayRaw = raw;
+    cachedLocalReplayView = replayViewFromLocal(fallback, appearance, styles);
+    return cachedLocalReplayView;
+  } catch {
+    return emptyLocalReplayView;
+  }
+}
+
+function subscribeReplayPreferences() {
+  return () => {};
+}
+
+function serverReplayPreferences(): ReplayViewPreferences | null {
+  return null;
+}
+
+function writeStoredReplayView(snapshot: ReplayViewPreferences) {
+  cachedLocalReplayRaw = null;
+  cachedLocalReplayView = null;
+  try {
+    window.localStorage.setItem(
+      REPLAY_VIEW_FALLBACK_KEY,
+      serializeReplayViewPreferences(snapshot),
     );
   } catch {
-    return {};
+    // Private mode still keeps the settings for this visit.
   }
+}
+
+function clearStoredReplayView() {
+  cachedLocalReplayRaw = null;
+  cachedLocalReplayView = null;
+  try {
+    window.localStorage.removeItem(REPLAY_VIEW_FALLBACK_KEY);
+    window.localStorage.removeItem(REPLAY_CHART_APPEARANCE_KEY);
+    window.localStorage.removeItem(REPLAY_INDICATOR_STYLE_KEY);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function appearanceColor(
+  node: HTMLElement,
+  token: string | null,
+  fallbackName: string,
+  fallbackHex: string,
+  opacity = 100,
+): string {
+  const base = !token
+    ? cssVar(node, fallbackName, fallbackHex)
+    : token.startsWith("#")
+      ? token
+      : cssVar(node, `--color-${token}`, fallbackHex);
+  return opacity >= 100 ? base : colorWithOpacity(base, opacity);
 }
 
 function cssVar(node: HTMLElement, name: string, fallback: string): string {
@@ -141,10 +238,12 @@ function styledLineColor(
   style: IndicatorLineStyle,
   fallback: string,
 ): string {
-  if (!style.color) {
-    return fallback;
-  }
-  return cssVar(node, `--color-${style.color}`, fallback);
+  const base = !style.color
+    ? fallback
+    : style.color.startsWith("#")
+      ? style.color
+      : cssVar(node, `--color-${style.color}`, fallback);
+  return style.opacity >= 100 ? base : colorWithOpacity(base, style.opacity);
 }
 
 function candleIndexAt(candles: CandleBar[], atMs: number): number {
@@ -157,6 +256,14 @@ function candleIndexAt(candles: CandleBar[], atMs: number): number {
     }
   }
   return index;
+}
+
+function sameReferenceIds(left: readonly string[], right: readonly string[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  const seen = new Set(left);
+  return right.every((id) => seen.has(id));
 }
 
 function lineData(
@@ -185,12 +292,21 @@ function lineData(
   return rows;
 }
 
-export function ReplayPlayer({ run }: { run: BacktestRun }) {
+export function ReplayPlayer({
+  run,
+  preferences,
+}: {
+  run: BacktestRun;
+  preferences: ReplayViewPreferences | null;
+}) {
   const events = useMemo(
     () => run.replayEvents ?? eventsFromOrders(run.orders),
     [run.replayEvents, run.orders],
   );
   const [interval, setInterval] = useState<DcaIndicatorTimeframe>(run.interval);
+  const [favoriteIntervals, setFavoriteIntervals] = useState<DcaIndicatorTimeframe[]>(
+    preferences?.favoriteIntervals ?? [],
+  );
   const [load, setLoad] = useState<{
     key: string;
     candles: CandleBar[];
@@ -206,11 +322,33 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   );
   const [legendIndex, setLegendIndex] = useState<number | null>(null);
   const [sessionStyles, setSessionStyles] = useState<IndicatorStyleMap>({});
-  const [globalStyles, setGlobalStyles] = useState<IndicatorStyleMap | null>(null);
-  if (globalStyles === null && typeof window !== "undefined") {
-    setGlobalStyles(readStoredIndicatorStyles());
-  }
-  const savedStyles = globalStyles ?? {};
+  const [globalStyles, setGlobalStyles] = useState<IndicatorStyleMap>(
+    preferences?.indicatorStyles ?? {},
+  );
+  const savedStyles = globalStyles;
+  const [sessionAppearance, setSessionAppearance] = useState<ReplayChartAppearancePatch>({});
+  const [savedAppearance, setSavedAppearance] = useState<ReplayChartAppearance | null>(
+    preferences?.chartAppearance ?? null,
+  );
+  const localSnapshot = useSyncExternalStore(
+    subscribeReplayPreferences,
+    readLocalReplayView,
+    serverReplayPreferences,
+  );
+  const [prefsReady, setPrefsReady] = useState(preferences != null);
+  const [retryKey, setRetryKey] = useState<string | null>(null);
+  const saveGenRef = useRef(0);
+  const savedSnapshotRef = useRef<string | null>(null);
+  const baselineReadyRef = useRef(false);
+  const retryTimerRef = useRef<number | null>(null);
+  const chartAppearance = mergeReplayChartAppearance(
+    savedAppearance ?? null,
+    sessionAppearance,
+  );
+  const chartAppearanceRef = useRef(chartAppearance);
+  chartAppearanceRef.current = chartAppearance;
+  const chartShotRef = useRef<ChartSnapshot | null>(null);
+  const applyAppearanceRef = useRef<(() => void) | null>(null);
   const indicatorStyleStateRef = useRef({
     session: {} as IndicatorStyleMap,
     saved: {} as IndicatorStyleMap,
@@ -246,18 +384,28 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     null,
   );
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const [oscillatorTops, setOscillatorTops] = useState<number[]>([]);
+  const resetChartRef = useRef<(() => void) | null>(null);
+  const resetPriceRef = useRef<(() => void) | null>(null);
+  const [chartMenu, setChartMenu] = useState<ChartContextMenuState>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
+  const [overlayHost, setOverlayHost] = useState<HTMLDivElement | null>(null);
+  const bindFrame = useCallback((node: HTMLDivElement | null) => {
+    frameRef.current = node;
+    setOverlayHost((current) => (current === node ? current : node));
+  }, []);
   const headRef = useRef(0);
   const focusRef = useRef<number | null>(null);
   const focusSpanRef = useRef<{ from: number; to: number } | null>(null);
   const [playback, setPlayback] = useState({ key: "", started: false });
   const [expanded, setExpanded] = useState(false);
   const [monitorFull, setMonitorFull] = useState(false);
-  const [positionsRight, setPositionsRight] = useState(false);
-  const [sideLanes, setSideLanes] = useState(false);
+  const [positionsRight, setPositionsRight] = useState(preferences?.positionsRight ?? false);
+  const [layoutOpen, setLayoutOpen] = useState(false);
+  const [sideLanes, setSideLanes] = useState(true);
   const [laneFrame, setLaneFrame] = useState(0);
   const [placedLanes, setPlacedLanes] = useState<ReplayLaneDraw[]>([]);
-  const sideLanesRef = useRef(false);
+  const sideLanesRef = useRef(true);
   const laneSyncRef = useRef<() => void>(() => {});
   const laneTrackRef = useRef<HTMLDivElement | null>(null);
   sideLanesRef.current = sideLanes;
@@ -443,9 +591,21 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     }
   }, [visibleEvents.length, sideLanes]);
   const stats = replayPlayStats(visibleOrders, run.startingUsdt);
+  const [references, setReferences] = useState<string[]>(
+    preferences?.referenceIndicators ?? [],
+  );
+  const deferredReferences = useDeferredValue(references);
+  const [appliedReferences, setAppliedReferences] = useState<string[]>([]);
+  const [referenceInputs, setReferenceInputs] = useState<ReplayReferenceInputs>(
+    preferences?.referenceInputs ?? {},
+  );
   const series = useMemo(
-    () => replayChartSeries(run.recipe, candles),
-    [run.recipe, candles],
+    () => replayChartSeries(run.recipe, candles, deferredReferences, referenceInputs),
+    [run.recipe, candles, deferredReferences, referenceInputs],
+  );
+  const indicatorChoices = useMemo(
+    () => replayIndicatorCatalog(run.recipe),
+    [run.recipe],
   );
   const legendRows = useMemo(
     () => replayIndicatorLegend(series.layers, legendIndex ?? head),
@@ -465,15 +625,87 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
     }
     return names;
   }, [series.layers]);
+  const indicatorInputs = useMemo(() => {
+    const fields: Record<string, IndicatorInput[]> = {};
+    const locked: Record<string, boolean> = {};
+    const timeframes: Record<string, string> = {};
+    for (const layer of series.layers) {
+      fields[layer.id] = layer.inputs;
+      locked[layer.id] = layer.inputsLocked;
+      timeframes[layer.id] = layer.timeframeLabel;
+    }
+    return { fields, locked, timeframes };
+  }, [series.layers]);
+  if (!preferences && localSnapshot && !prefsReady) {
+    setPositionsRight(localSnapshot.positionsRight);
+    setFavoriteIntervals(localSnapshot.favoriteIntervals);
+    setReferences(localSnapshot.referenceIndicators);
+    setReferenceInputs(localSnapshot.referenceInputs);
+    setSavedAppearance(localSnapshot.chartAppearance);
+    setGlobalStyles(localSnapshot.indicatorStyles);
+    setPrefsReady(true);
+  }
+  const viewSnapshotKey = serializeReplayViewPreferences({
+    positionsRight,
+    chartAppearance,
+    indicatorStyles: mergeReplayIndicatorStyles(savedStyles, sessionStyles),
+    referenceIndicators: references,
+    referenceInputs,
+    favoriteIntervals,
+  });
   useEffect(() => {
-    if (globalStyles === null) {
+    if (!prefsReady) {
       return;
     }
-    window.localStorage.setItem(
-      REPLAY_INDICATOR_STYLE_KEY,
-      serializeIndicatorStyles(globalStyles),
-    );
-  }, [globalStyles]);
+    if (!baselineReadyRef.current) {
+      baselineReadyRef.current = true;
+      if (preferences) {
+        savedSnapshotRef.current = viewSnapshotKey;
+        clearStoredReplayView();
+        return;
+      }
+      const defaults = serializeReplayViewPreferences(defaultReplayViewPreferences());
+      if (viewSnapshotKey === defaults) {
+        savedSnapshotRef.current = viewSnapshotKey;
+        return;
+      }
+    }
+    if (viewSnapshotKey === savedSnapshotRef.current) {
+      return;
+    }
+    const gen = ++saveGenRef.current;
+    const snapshot = parseReplayViewPreferences(JSON.parse(viewSnapshotKey));
+    const timer = window.setTimeout(() => {
+      void saveReplayViewPreferencesAction(snapshot).then((result) => {
+        if (gen !== saveGenRef.current) {
+          return;
+        }
+        if (result.ok) {
+          savedSnapshotRef.current = viewSnapshotKey;
+          clearStoredReplayView();
+          return;
+        }
+        writeStoredReplayView(snapshot);
+        if (retryKey === viewSnapshotKey) {
+          return;
+        }
+        if (retryTimerRef.current != null) {
+          window.clearTimeout(retryTimerRef.current);
+        }
+        retryTimerRef.current = window.setTimeout(() => {
+          retryTimerRef.current = null;
+          setRetryKey(viewSnapshotKey);
+        }, 5000);
+      });
+    }, 400);
+    return () => {
+      window.clearTimeout(timer);
+      if (retryTimerRef.current != null) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, [prefsReady, preferences, retryKey, viewSnapshotKey]);
   const chartLabel = DCA_INDICATOR_TIMEFRAME_LABELS[interval];
   const otherTimeframes = series.layers
     .map((layer) =>
@@ -623,8 +855,12 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   }
 
   useEffect(() => {
+    const paintedReferences = deferredReferences;
     const host = hostRef.current;
     if (!started || !host || candles.length === 0) {
+      setAppliedReferences((current) =>
+        sameReferenceIds(current, paintedReferences) ? current : paintedReferences,
+      );
       return;
     }
     let disposed = false;
@@ -657,6 +893,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         width: node.clientWidth,
         height: node.clientHeight,
       });
+      chartShotRef.current = chart;
       const candleSeries = chart.addSeries(charts.CandlestickSeries, {
         upColor: "#34D399",
         downColor: "#F07167",
@@ -664,6 +901,27 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         borderDownColor: "#F07167",
         wickUpColor: "#34D399",
         wickDownColor: "#F07167",
+        autoscaleInfoProvider: (original: () => AutoscaleInfo | null) => {
+          const logical = chart.timeScale().getVisibleLogicalRange();
+          if (!logical) {
+            return original();
+          }
+          const plots = series.layers
+            .filter((layer) => layer.pane === "price")
+            .flatMap((layer) => layer.price.map((plot) => plot.values));
+          const priceRange = visiblePriceBounds(candles, plots, logical.from, logical.to);
+          if (!priceRange) {
+            return original();
+          }
+          return { priceRange, margins: original()?.margins };
+        },
+      });
+      const closeSeries = chart.addSeries(charts.LineSeries, {
+        color: cssVar(node, "--color-accent", "#A78BFA"),
+        lineWidth: 2,
+        visible: false,
+        priceLineVisible: true,
+        lastValueVisible: true,
       });
       const drawn: Array<{
         lines: ReturnType<typeof chart.addSeries>[];
@@ -703,7 +961,6 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           chart.addPane();
           paneCursor += 1;
           pane = paneCursor;
-          chart.panes()[pane]?.setHeight(68);
         }
         const lines = layer.price.map((plot) => {
           const line = chart.addSeries(
@@ -713,6 +970,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               lineWidth: 2,
               priceLineVisible: false,
               lastValueVisible: false,
+              ...(pane === 0 ? { autoscaleInfoProvider: () => null } : {}),
             },
             pane,
           );
@@ -725,13 +983,17 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           signal: null as ReturnType<typeof chart.addSeries> | null,
           histogram: null as ReturnType<typeof chart.addSeries> | null,
         };
+        const hiddenScaleLabel = {
+          priceLineVisible: false,
+          lastValueVisible: false,
+        };
         if (layer.oscillator?.rsi) {
           oscillator.rsi = chart.addSeries(
             charts.LineSeries,
             {
               color: "#A78BFA",
               lineWidth: 2,
-              priceLineVisible: false,
+              ...hiddenScaleLabel,
             },
             pane,
           );
@@ -742,14 +1004,15 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               color: "#F5B942",
               lineWidth: 1,
               lineStyle: charts.LineStyle.Dashed,
-              title: String(level),
+              axisLabelVisible: false,
+              title: "",
             });
           }
         }
         if (layer.oscillator?.histogram) {
           oscillator.histogram = chart.addSeries(
             charts.HistogramSeries,
-            { priceLineVisible: false },
+            hiddenScaleLabel,
             pane,
           );
           rememberIndicator(
@@ -764,7 +1027,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             {
               color: "#A78BFA",
               lineWidth: 2,
-              priceLineVisible: false,
+              ...hiddenScaleLabel,
             },
             pane,
           );
@@ -774,7 +1037,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             {
               color: "#F5B942",
               lineWidth: 2,
-              priceLineVisible: false,
+              ...hiddenScaleLabel,
             },
             pane,
           );
@@ -790,25 +1053,44 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             priceLineVisible: false,
             lastValueVisible: false,
             crosshairMarkerVisible: false,
+            ...(pane === 0 ? { autoscaleInfoProvider: () => null } : {}),
           },
           pane,
         );
         drawn.push({ lines, dots, oscillator });
       }
+      let initialRange: { from: number; to: number } | null = null;
+      function resetPriceScales() {
+        for (const pane of chart.panes()) {
+          pane.priceScale("right").setAutoScale(true);
+        }
+      }
+      resetChartRef.current = () => {
+        if (initialRange) {
+          chart.timeScale().setVisibleLogicalRange(initialRange);
+        }
+        resetPriceScales();
+      };
+      resetPriceRef.current = resetPriceScales;
       const markers = charts.createSeriesMarkers(candleSeries, []);
+      const lineMarkers = charts.createSeriesMarkers(closeSeries, []);
       function paint(index: number, follow = true) {
         const end = Math.max(0, Math.min(index, candles.length - 1));
         const shown = candles.slice(0, end + 1);
-        candleSeries.setData(
-          shown.map((row) => ({
-            time: Math.floor(row.timeMs / 1000) as never,
-            open: row.open,
-            high: row.high,
-            low: row.low,
-            close: row.close,
-          })),
-        );
+        const bars = shown.map((row) => ({
+          time: Math.floor(row.timeMs / 1000) as never,
+          open: row.open,
+          high: row.high,
+          low: row.low,
+          close: row.close,
+        }));
+        candleSeries.setData(bars);
+        closeSeries.setData(bars.map((row) => ({ time: row.time, value: row.close })));
+        const lineMode = chartAppearanceRef.current.series === "line";
+        candleSeries.applyOptions({ visible: !lineMode });
+        closeSeries.applyOptions({ visible: lineMode });
         const at = candles[end]?.timeMs ?? 0;
+        const focusOrders = positionFocusRef.current?.orders ?? null;
         series.layers.forEach((layer, layerIndex) => {
           const row = drawn[layerIndex];
           if (!row) {
@@ -850,12 +1132,16 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           }
           const dots: Array<{ time: number; value: number }> = [];
           const seen = new Set<number>();
+          const rolesPresent = series.layers.flatMap((row) => row.roles);
           for (const item of events) {
             if (item.atMs > at) {
               continue;
             }
-            const roles = indicatorRolesForReason(item.reason);
+            const roles = indicatorRolesForReason(item.reason, item.side, rolesPresent);
             if (!roles.some((role) => layer.roles.includes(role))) {
+              continue;
+            }
+            if (!replayMarkerInPositionFocus(item.orderIndex, focusOrders)) {
               continue;
             }
             const index = candleIndexAt(candles, item.atMs);
@@ -874,13 +1160,13 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           row.dots.setData(dots as never);
         });
         if (follow) {
-          chart.timeScale().setVisibleLogicalRange({
-            from: end - 96,
-            to: end + 8,
-          });
+          const next = { from: end - 96, to: end + 8 };
+          chart.timeScale().setVisibleLogicalRange(next);
+          if (!initialRange) {
+            initialRange = next;
+          }
         }
         const selected = selectedRef.current;
-        const focusOrders = positionFocusRef.current?.orders ?? null;
         const plotted = events
           .filter(
             (row) =>
@@ -942,7 +1228,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
             text: "",
           });
         }
-        markers.setMarkers(plotted);
+        markers.setMarkers(lineMode ? [] : plotted);
+        lineMarkers.setMarkers(lineMode ? plotted : []);
       }
       chart.subscribeCrosshairMove((param) => {
         const time = typeof param.time === "number" ? param.time : null;
@@ -1022,9 +1309,64 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           });
         }
       }
+      function applyAppearance() {
+        const look = chartAppearanceRef.current;
+        const background = appearanceColor(
+          node,
+          look.background,
+          "--color-canvas",
+          "#0B0E14",
+          look.backgroundOpacity,
+        );
+        const grid = replayGridPaint(
+          appearanceColor(node, look.grid, "--color-line", "#2A313C"),
+          look.gridOpacity,
+        );
+        const up = appearanceColor(
+          node,
+          look.up,
+          "--color-success",
+          "#34D399",
+          look.upOpacity,
+        );
+        const down = appearanceColor(
+          node,
+          look.down,
+          "--color-danger",
+          "#F07167",
+          look.downOpacity,
+        );
+        chart.applyOptions({
+          layout: {
+            background: { type: charts.ColorType.Solid, color: background },
+          },
+          grid: {
+            vertLines: grid,
+            horzLines: grid,
+          },
+        });
+        candleSeries.applyOptions({
+          upColor: up,
+          downColor: down,
+          borderUpColor: up,
+          borderDownColor: down,
+          wickUpColor: up,
+          wickDownColor: down,
+          visible: look.series !== "line",
+        });
+        closeSeries.applyOptions({ visible: look.series === "line" });
+        paint(headRef.current, false);
+      }
+      applyAppearanceRef.current = applyAppearance;
+      applyAppearance();
       applyIndicatorStylesRef.current = applyIndicatorStyles;
       applyIndicatorStyles();
       paint(headRef.current);
+      if (!disposed) {
+        setAppliedReferences((current) =>
+          sameReferenceIds(current, paintedReferences) ? current : paintedReferences,
+        );
+      }
       const paintRef = { current: paint };
       const host = node as HTMLDivElement & {
         __paint?: (index: number) => void;
@@ -1129,7 +1471,8 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           current.playing ? { ...current, playing: false } : current,
         );
       }
-      node.addEventListener("wheel", onChartWheel, { passive: true });
+      node.addEventListener("wheel", onChartWheel, { capture: true, passive: true });
+      const detachAxisWheel = attachRightAxisWheel(node, () => chart);
       if (focusSpanRef.current) {
         host.__focusRange?.(focusSpanRef.current.from, focusSpanRef.current.to);
       } else if (focusRef.current != null) {
@@ -1140,11 +1483,68 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           width: node.clientWidth,
           height: node.clientHeight,
         });
+        sizeOscillatorPanes(false);
+        publishOscillatorTops();
       });
       observer.observe(node);
+      const paneObserver = new ResizeObserver(() => {
+        publishOscillatorTops();
+      });
+      function publishOscillatorTops() {
+        const hostTop = node.getBoundingClientRect().top;
+        const tops = chart
+          .panes()
+          .slice(1)
+          .flatMap((pane) => {
+            const element = pane.getHTMLElement();
+            if (!element) {
+              return [];
+            }
+            return [Math.round(element.getBoundingClientRect().top - hostTop)];
+          });
+        setOscillatorTops((current) =>
+          current.length === tops.length && current.every((value, index) => value === tops[index])
+            ? current
+            : tops,
+        );
+      }
+      function sizeOscillatorPanes(force: boolean) {
+        const panes = chart.panes();
+        const oscillatorCount = panes.length - 1;
+        const total = node.clientHeight;
+        const weights = oscillatorPaneStretch(total, oscillatorCount);
+        if (!weights) {
+          return;
+        }
+        const priceHeight = panes[0]?.getHeight() ?? 0;
+        if (!force && priceHeight > 0 && priceHeight / total >= 0.5) {
+          return;
+        }
+        panes[0]?.setStretchFactor(weights.price);
+        for (let index = 1; index < panes.length; index += 1) {
+          panes[index]?.setStretchFactor(weights.oscillator);
+        }
+      }
+      sizeOscillatorPanes(true);
+      requestAnimationFrame(() => {
+        if (disposed) {
+          return;
+        }
+        sizeOscillatorPanes(true);
+        for (const pane of chart.panes()) {
+          const element = pane.getHTMLElement();
+          if (element) {
+            paneObserver.observe(element);
+          }
+        }
+        publishOscillatorTops();
+      });
       cleanup = () => {
         observer.disconnect();
-        node.removeEventListener("wheel", onChartWheel);
+        paneObserver.disconnect();
+        setOscillatorTops([]);
+        node.removeEventListener("wheel", onChartWheel, { capture: true });
+        detachAxisWheel();
         chart.timeScale().unsubscribeVisibleLogicalRangeChange(onLaneRange);
         const chartHost = node as HTMLDivElement & {
           __paint?: (index: number) => void;
@@ -1164,6 +1564,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
         delete chartHost.__pan;
         delete chartHost.__wheel;
         applyIndicatorStylesRef.current = null;
+        applyAppearanceRef.current = null;
+        resetChartRef.current = null;
+        resetPriceRef.current = null;
+        chartShotRef.current = null;
         drawnIndicatorsRef.current.clear();
         chart.remove();
       };
@@ -1172,7 +1576,12 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       disposed = true;
       cleanup();
     };
-  }, [candles, series, events, started, positionsRight, fillViewport]);
+  }, [candles, series, events, started, positionsRight, fillViewport, deferredReferences]);
+
+  const appearanceKey = serializeReplayChartAppearance(chartAppearance);
+  useEffect(() => {
+    applyAppearanceRef.current?.();
+  }, [appearanceKey]);
 
   useEffect(() => {
     applyIndicatorStylesRef.current?.();
@@ -1412,6 +1821,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                     key={cycle.id}
                     cycle={cycle}
                     open={open}
+                    viewing={positionFocus?.number === cycle.tradeNumber}
                     events={events}
                     orders={run.orders}
                     onToggle={() => setOpenOrderKey(open ? null : cycle.id)}
@@ -1427,46 +1837,145 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   );
 
   const header = (
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-baseline gap-4">
-          <h1 className="text-2xl font-semibold tracking-tight">{run.symbol} replay</h1>
-          <Link
-            href={`/account/backtests/${run.id}`}
-            className="text-sm text-accent hover:underline"
+      <div
+        className={`flex shrink-0 flex-wrap items-center gap-3 py-3 ${
+          fillViewport ? "" : "sticky top-0 z-30 bg-canvas"
+        }`}
+      >
+        <h1 className="shrink-0 text-2xl font-semibold tracking-tight">{run.symbol} replay</h1>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
+          <div
+            className="inline-flex overflow-hidden rounded-control border border-line"
+            role="group"
+            aria-label="Back"
           >
-            Report
-          </Link>
-          <Link href={backtestRerunHref(run.id)} className="text-sm text-accent hover:underline">
-            Load into new backtest
-          </Link>
-        </div>
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-3 text-sm">
-          <div className="flex items-center gap-1" role="group" aria-label="Positions layout">
-            <button
-              type="button"
-              aria-pressed={!positionsRight}
-              className={`rounded-control px-2 py-1 text-xs ${
-                positionsRight
-                  ? "text-ink-muted hover:text-ink"
-                  : "bg-accent-strong text-ink"
-              }`}
-              onClick={() => setPositionsRight(false)}
-            >
-              Positions below
-            </button>
-            <button
-              type="button"
-              aria-pressed={positionsRight}
-              className={`rounded-control px-2 py-1 text-xs ${
-                positionsRight
-                  ? "bg-accent-strong text-ink"
-                  : "text-ink-muted hover:text-ink"
-              }`}
-              onClick={() => setPositionsRight(true)}
-            >
-              Positions right
-            </button>
+            <TransportButton
+              label="Previous event"
+              icon={<IconSkipBack size={16} className="size-4" />}
+              onClick={() => jumpEvent(-1)}
+            />
+            <TransportButton
+              label="Step back"
+              icon={<IconStepBack size={16} className="size-4" />}
+              divided
+              onClick={() => {
+                revealChart();
+                setCursor((current) => ({
+                  ...current,
+                  playing: false,
+                  head: Math.max(0, current.head - 1),
+                }));
+              }}
+            />
           </div>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-3 py-1 text-sm text-ink"
+            onClick={() => {
+              if (!started) {
+                beginPlayback();
+                return;
+              }
+              setCursor((current) => ({ ...current, playing: !current.playing }));
+            }}
+          >
+            {playing ? (
+              <IconPause size={14} className="size-3.5 fill-current" />
+            ) : (
+              <IconPlay size={14} className="size-3.5 fill-current" />
+            )}
+            {playing ? "Pause" : "Play"}
+          </button>
+          <div
+            className="inline-flex overflow-hidden rounded-control border border-line"
+            role="group"
+            aria-label="Forward"
+          >
+            <TransportButton
+              label="Step forward"
+              icon={<IconStepForward size={16} className="size-4" />}
+              onClick={() => {
+                revealChart();
+                setCursor((current) => ({
+                  ...current,
+                  playing: false,
+                  head: Math.min(candles.length - 1, current.head + 1),
+                }));
+              }}
+            />
+            <TransportButton
+              label="Next event"
+              icon={<IconSkipForward size={16} className="size-4" />}
+              divided
+              onClick={() => jumpEvent(1)}
+            />
+          </div>
+          <div className="flex items-center gap-1" role="group" aria-label="Speed">
+            {SPEEDS.map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={speed === value}
+                className={`rounded-control px-2 py-1 text-xs ${
+                  speed === value
+                    ? "bg-accent-strong text-ink"
+                    : "text-ink-muted hover:text-ink"
+                }`}
+                onClick={() => setSpeed(value)}
+              >
+                {value}×
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-3 text-sm">
+          <button
+            type="button"
+            title="Page layout settings"
+            aria-label="Page layout settings"
+            aria-expanded={layoutOpen}
+            className="inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
+            onClick={() => setLayoutOpen(true)}
+          >
+            <IconPageLayout {...FRAME_ICON} />
+          </button>
+          {layoutOpen ? (
+            <Modal title="Page Layout Settings" onClose={() => setLayoutOpen(false)}>
+              <div className="mt-4 flex min-h-8 items-center justify-between gap-4">
+                <span className="text-xs text-ink">Display Positions</span>
+                <div
+                  role="group"
+                  aria-label="Display Positions"
+                  className="flex rounded-control border border-line p-0.5"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={!positionsRight}
+                    className={`inline-flex items-center justify-center rounded-control px-2.5 py-1.5 text-xs font-medium ${
+                      positionsRight
+                        ? "text-ink-muted hover:text-ink"
+                        : "bg-surface-raised text-ink"
+                    }`}
+                    onClick={() => setPositionsRight(false)}
+                  >
+                    Below Chart
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={positionsRight}
+                    className={`inline-flex items-center justify-center rounded-control px-2.5 py-1.5 text-xs font-medium ${
+                      positionsRight
+                        ? "bg-surface-raised text-ink"
+                        : "text-ink-muted hover:text-ink"
+                    }`}
+                    onClick={() => setPositionsRight(true)}
+                  >
+                    Right of Chart
+                  </button>
+                </div>
+              </div>
+            </Modal>
+          ) : null}
           {monitorFull ? null : (
             <button
               type="button"
@@ -1526,79 +2035,39 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
           positionsRight ? "flex min-h-0 flex-1 flex-col" : "min-h-[420px]"
         }`}
       >
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
-          <BacktestChartIntervalBar
-            run={run}
-            interval={interval}
-            onChange={(value) => {
-              setInterval(value);
-            }}
-          />
-          <div className="flex flex-wrap items-center gap-1">
-            <TransportButton
-              label="Previous event"
-              onClick={() => jumpEvent(-1)}
-            />
-            <TransportButton
-              label="Step back"
-              onClick={() => {
-                revealChart();
-                setCursor((current) => ({
-                  ...current,
-                  playing: false,
-                  head: Math.max(0, current.head - 1),
-                }));
-              }}
-            />
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-3 py-1 text-sm text-ink"
-              onClick={() => {
-                if (!started) {
-                  beginPlayback();
-                  return;
-                }
-                setCursor((current) => ({ ...current, playing: !current.playing }));
-              }}
-            >
-              {playing ? (
-                <IconPause size={14} className="size-3.5 fill-current" />
-              ) : (
-                <IconPlay size={14} className="size-3.5 fill-current" />
-              )}
-              {playing ? "Pause" : "Play"}
-            </button>
-            <TransportButton
-              label="Step forward"
-              onClick={() => {
-                revealChart();
-                setCursor((current) => ({
-                  ...current,
-                  playing: false,
-                  head: Math.min(candles.length - 1, current.head + 1),
-                }));
-              }}
-            />
-            <TransportButton label="Next event" onClick={() => jumpEvent(1)} />
-            <div className="ml-2 flex items-center gap-1" role="group" aria-label="Speed">
-              {SPEEDS.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={speed === value}
-                  className={`rounded-control px-2 py-1 text-xs ${
-                    speed === value
-                      ? "bg-accent-strong text-ink"
-                      : "text-ink-muted hover:text-ink"
-                  }`}
-                  onClick={() => setSpeed(value)}
-                >
-                  {value}×
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        <ReplayChartBar
+          interval={interval}
+          onInterval={setInterval}
+          favoriteIntervals={favoriteIntervals}
+          onFavoriteIntervals={setFavoriteIntervals}
+          appearance={chartAppearance}
+          onChange={(patch) => {
+            setSessionAppearance((current) => patchReplayChartAppearance(current, patch));
+          }}
+          onSave={(fields) => {
+            const patch = pickReplayChartFields(sessionAppearance, fields);
+            setSavedAppearance((saved) => saveReplayChartAppearance(saved ?? null, patch));
+            setSessionAppearance((current) => clearReplayChartFields(current, fields));
+          }}
+          onReset={(fields) => {
+            setSessionAppearance((current) => clearReplayChartFields(current, fields));
+            setSavedAppearance((saved) => resetReplayChartFields(saved ?? null, fields));
+          }}
+          getChart={() => chartShotRef.current}
+          screenshotName={`${run.symbol}-replay.png`}
+          indicators={indicatorChoices}
+          references={references}
+          appliedReferences={appliedReferences}
+          onToggleReference={(id, enabled) => {
+            setReferences((current) =>
+              enabled
+                ? current.includes(id)
+                  ? current
+                  : [...current, id]
+                : current.filter((row) => row !== id),
+            );
+          }}
+        />
         <div
           className={`relative ${
             positionsRight ? "min-h-[12rem] min-w-0 flex-1" : ""
@@ -1611,6 +2080,10 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                 ? "absolute inset-0"
                 : "h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
             }
+            onContextMenu={(event) => {
+              event.preventDefault();
+              setChartMenu({ x: event.clientX, y: event.clientY });
+            }}
           />
           {loading ? (
             <div
@@ -1643,9 +2116,12 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
               rows={legendRows}
               targets={styleTargets}
               names={styleNames}
+              inputs={indicatorInputs.fields}
+              inputsLocked={indicatorInputs.locked}
+              timeframes={indicatorInputs.timeframes}
               session={sessionStyles}
               saved={savedStyles}
-              belowNotice={positionFocus != null}
+              paneTops={oscillatorTops}
               onChange={(layerId, lineId, style) => {
                 setSessionStyles((current) =>
                   writeIndicatorLineStyle(current, layerId, lineId, style),
@@ -1661,16 +2137,42 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
                 setSessionStyles((current) => resetIndicatorStyle(current, layerId));
                 setGlobalStyles((current) => resetIndicatorStyle(current ?? {}, layerId));
               }}
+              onInput={(layerId, inputId, value) => {
+                if (!layerId.startsWith("ref:")) {
+                  return;
+                }
+                const kind = layerId.slice(4) as keyof ReplayReferenceInputs;
+                setReferenceInputs((current) => ({
+                  ...current,
+                  [kind]: { ...current[kind], [inputId]: value },
+                }));
+              }}
             />
           ) : null}
           {positionFocus ? (
-            <div className="absolute left-3 top-3 z-20" role="status">
+            <div className="absolute right-24 top-2 z-20" role="status">
               <ViewingPositionNotice
                 number={positionFocus.number}
                 onClose={() => setPositionFocus(null)}
               />
             </div>
           ) : null}
+          <ChartContextMenu
+            menu={chartMenu}
+            onClose={() => setChartMenu(null)}
+            onResetChart={() => {
+              setCursor((current) =>
+                current.playing ? { ...current, playing: false } : current,
+              );
+              resetChartRef.current?.();
+            }}
+            onResetPrice={() => {
+              setCursor((current) =>
+                current.playing ? { ...current, playing: false } : current,
+              );
+              resetPriceRef.current?.();
+            }}
+          />
           {tip && started ? (
             <div
               className="pointer-events-none absolute z-10 max-w-sm rounded-control border border-line bg-surface-raised px-3 py-2 text-xs text-ink shadow-none"
@@ -1713,7 +2215,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
 
       <section className="rounded-card border border-line bg-surface px-4 py-3">
         <div className="relative flex items-center justify-between gap-2">
-          <p className="text-xs uppercase tracking-wide text-ink-faint">Events</p>
+          <p className="text-xs uppercase tracking-wide text-ink-faint">Positions & Events</p>
           {positionFocus ? (
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
               <ViewingPositionNotice
@@ -1833,9 +2335,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       </div>
       <div
         className={
-          positionsRight
-            ? "flex h-full min-w-0 flex-col"
-            : "min-w-0"
+          positionsRight ? "flex h-full min-w-0 flex-col" : "min-w-0"
         }
       >
         {positions}
@@ -1844,8 +2344,9 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
   );
 
   const frame = (
+    <ModalHost host={overlayHost}>
     <div
-      ref={frameRef}
+      ref={bindFrame}
       className={
         expanded && !monitorFull
           ? "fixed inset-0 z-50 flex h-dvh w-full flex-col gap-4 overflow-hidden bg-canvas p-4"
@@ -1857,6 +2358,7 @@ export function ReplayPlayer({ run }: { run: BacktestRun }) {
       {header}
       {body}
     </div>
+    </ModalHost>
   );
 
   return expanded && typeof document !== "undefined"
@@ -2326,18 +2828,26 @@ function replayMarkLabel(row: ReplayEvent): string {
 
 function TransportButton({
   label,
+  icon,
+  divided = false,
   onClick,
 }: {
   label: string;
+  icon: ReactNode;
+  divided?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
-      className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:text-ink"
+      title={label}
+      aria-label={label}
+      className={`inline-flex size-8 items-center justify-center text-ink-muted hover:bg-surface-raised hover:text-ink ${
+        divided ? "border-l border-line" : ""
+      }`}
       onClick={onClick}
     >
-      {label}
+      {icon}
     </button>
   );
 }
@@ -2362,6 +2872,7 @@ function Stat({
 function CycleRows({
   cycle,
   open,
+  viewing,
   events,
   orders,
   onToggle,
@@ -2369,6 +2880,7 @@ function CycleRows({
 }: {
   cycle: BacktestPositionCycle & { tradeNumber: number };
   open: boolean;
+  viewing: boolean;
   events: ReplayEvent[];
   orders: BacktestRun["orders"];
   onToggle: () => void;
@@ -2376,7 +2888,10 @@ function CycleRows({
 }) {
   return (
     <>
-      <tr className="border-b border-line last:border-b-0">
+      <tr
+        className={`border-b border-line last:border-b-0 ${viewing ? "bg-accent/15" : ""}`}
+        aria-current={viewing ? "true" : undefined}
+      >
         <td className="px-4 py-3">
           <button
             type="button"

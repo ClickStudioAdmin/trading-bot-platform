@@ -6,6 +6,7 @@ import { ReplayPlayer } from "@/components/replay-player";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
 import { backtestRunTitle, backtestSavedListHref } from "@/lib/backtest/model";
+import { loadReplayViewPreferences } from "@/lib/backtest/replay-preferences-store";
 import { canReadBacktestRun, loadBacktestRun } from "@/lib/backtest/store";
 
 export const metadata: Metadata = {
@@ -64,7 +65,11 @@ export default async function AccountBacktestReplayPage({
           { label: "Replay" },
         ]}
       />
-      <ReplayPlayer run={run} />
+      <ReplayPlayer
+        key={run.id}
+        run={run}
+        preferences={await loadReplayViewPreferences(member.id)}
+      />
     </div>
   );
 }

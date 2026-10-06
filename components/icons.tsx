@@ -5,6 +5,7 @@ import {
   ArrowLeftRight,
   Ban,
   Camera,
+  ChartCandlestick,
   ChartColumn,
   ChartLine,
   Check,
@@ -29,6 +30,7 @@ import {
   Layers,
   LayoutDashboard,
   LayoutGrid,
+  LayoutPanelTop,
   LayoutTemplate,
   ListFilter,
   Maximize2,
@@ -39,6 +41,7 @@ import {
   LoaderCircle,
   Mail,
   MailOpen,
+  Palette,
   Pause,
   Pencil,
   Play,
@@ -51,7 +54,11 @@ import {
   Scan,
   Search,
   Share2,
+  SkipBack,
+  SkipForward,
   SlidersHorizontal,
+  StepBack,
+  StepForward,
   SquareArrowOutUpRight,
   Sun,
   Star,
@@ -328,15 +335,43 @@ export const LUCIDE_ICONS = [
     id: "pause",
     name: "Stop adding",
     lucide: "Pause",
-    usedIn: "Bot table bulk stop adding",
+    usedIn: "Bot table bulk stop adding, replay pause",
     Icon: Pause,
   },
   {
     id: "play",
     name: "Play",
     lucide: "Play",
-    usedIn: "Create desk placeholder, bot table bulk enable",
+    usedIn: "Create desk placeholder, bot table bulk enable, replay play",
     Icon: Play,
+  },
+  {
+    id: "skip-back",
+    name: "Previous event",
+    lucide: "SkipBack",
+    usedIn: "Replay previous event",
+    Icon: SkipBack,
+  },
+  {
+    id: "skip-forward",
+    name: "Next event",
+    lucide: "SkipForward",
+    usedIn: "Replay next event",
+    Icon: SkipForward,
+  },
+  {
+    id: "step-back",
+    name: "Step back",
+    lucide: "StepBack",
+    usedIn: "Replay step back",
+    Icon: StepBack,
+  },
+  {
+    id: "step-forward",
+    name: "Step forward",
+    lucide: "StepForward",
+    usedIn: "Replay step forward",
+    Icon: StepForward,
   },
   {
     id: "open",
@@ -542,6 +577,13 @@ export const LUCIDE_ICONS = [
     Icon: LayoutGrid,
   },
   {
+    id: "layout-panel-top",
+    name: "Page layout",
+    lucide: "LayoutPanelTop",
+    usedIn: "Replay page layout settings",
+    Icon: LayoutPanelTop,
+  },
+  {
     id: "layout-template",
     name: "Bot Templates",
     lucide: "LayoutTemplate",
@@ -686,6 +728,22 @@ export function IconPlay(props: LucideProps) {
   return <Play aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
+export function IconSkipBack(props: LucideProps) {
+  return <SkipBack aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconSkipForward(props: LucideProps) {
+  return <SkipForward aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconStepBack(props: LucideProps) {
+  return <StepBack aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconStepForward(props: LucideProps) {
+  return <StepForward aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
 export function IconPlus(props: LucideProps) {
   return <Plus aria-hidden strokeWidth={STROKE} {...props} />;
 }
@@ -774,6 +832,18 @@ export function IconCamera(props: LucideProps) {
   return <Camera aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
+export function IconChartBars(props: LucideProps) {
+  return <ChartCandlestick aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconChartLine(props: LucideProps) {
+  return <ChartLine aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconPalette(props: LucideProps) {
+  return <Palette aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
 export function IconExpand(props: LucideProps) {
   return <Maximize2 aria-hidden strokeWidth={STROKE} {...props} />;
 }
@@ -820,6 +890,10 @@ export function IconBilling(props: LucideProps) {
 
 export function IconDesks(props: LucideProps) {
   return <LayoutGrid aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconPageLayout(props: LucideProps) {
+  return <LayoutPanelTop aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconTemplates(props: LucideProps) {

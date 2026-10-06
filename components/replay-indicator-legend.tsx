@@ -1,203 +1,377 @@
 "use client";
 
-import { useState } from "react";
-import { IconClose, IconUiPrefs } from "@/components/icons";
-import type { ReplayIndicatorLegendRow } from "@/lib/backtest/chart-series";
+import { useState, type ReactNode } from "react";
+import { ChartColorPicker } from "@/components/chart-color-picker";
+import { IconChevronDown, IconUiPrefs } from "@/components/icons";
+import { Modal } from "@/components/template-modals";
+import type {
+  IndicatorInput,
+  ReplayIndicatorLegendRow,
+} from "@/lib/backtest/chart-series";
 import type { IndicatorStyleTarget } from "@/lib/backtest/chart-series";
+import { colorWithOpacity } from "@/lib/backtest/chart-appearance";
 import {
-  INDICATOR_STYLE_COLORS,
   indicatorLineStyle,
   type IndicatorLineStyle,
-  type IndicatorStyleColor,
   type IndicatorStyleMap,
 } from "@/lib/backtest/indicator-style";
-
-const SWATCH: Record<IndicatorStyleColor, string> = {
-  accent: "bg-accent",
-  warning: "bg-warning",
-  success: "bg-success",
-  danger: "bg-danger",
-  "ink-muted": "bg-ink-muted",
-  "ink-faint": "bg-ink-faint",
-};
 
 export function ReplayIndicatorLegend({
   rows,
   targets,
   names,
+  inputs,
+  inputsLocked,
+  timeframes,
   session,
   saved,
-  belowNotice,
   onChange,
   onSaveGlobal,
   onReset,
+  onInput,
+  paneTops = [],
 }: {
   rows: ReplayIndicatorLegendRow[];
   targets: Record<string, IndicatorStyleTarget[]>;
   names: Record<string, string>;
+  inputs: Record<string, IndicatorInput[]>;
+  inputsLocked: Record<string, boolean>;
+  timeframes: Record<string, string>;
   session: IndicatorStyleMap;
   saved: IndicatorStyleMap;
-  belowNotice: boolean;
   onChange: (layerId: string, lineId: string, style: IndicatorLineStyle) => void;
   onSaveGlobal: (layerId: string) => void;
   onReset: (layerId: string) => void;
+  onInput: (layerId: string, inputId: IndicatorInput["id"], value: number) => void;
+  paneTops?: number[];
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [shown, setShown] = useState(true);
+  const [tab, setTab] = useState<"inputs" | "style">("inputs");
   const openTargets = openId ? targets[openId] : null;
+  const openInputs = openId ? inputs[openId] : null;
+  const locked = openId ? (inputsLocked[openId] ?? true) : true;
+  const priceRows = rows.filter((row) => row.pane !== "oscillator");
+  const paneRows = rows.filter((row) => row.pane === "oscillator");
+  const openLegend = (id: string) => {
+    setTab("inputs");
+    setOpenId((current) => (current === id ? null : id));
+  };
   return (
     <>
       <div
-        className={`pointer-events-none absolute left-2 z-10 flex max-w-[70%] flex-col ${
-          belowNotice ? "top-11" : "top-2"
-        }`}
+        className="pointer-events-none absolute left-2 top-2 z-10 flex max-w-[70%] flex-col"
         aria-label="Active indicators"
       >
-        {rows.map((row) => (
-          <div key={row.id} className="flex items-start gap-1">
-            <button
-              type="button"
-              className="pointer-events-auto mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-control text-ink-faint hover:bg-surface-raised hover:text-ink"
-              aria-label={`Style ${row.name}`}
-              aria-expanded={openId === row.id}
-              onClick={() => setOpenId((current) => (current === row.id ? null : row.id))}
-            >
-              <IconUiPrefs size={12} className="size-3" />
-            </button>
-            <p className="text-[11px] leading-4 text-ink-muted [text-shadow:0_1px_1px_var(--color-canvas),0_0_2px_var(--color-canvas)]">
-              {row.name}
-              {row.values.map((value) => {
-                const style = indicatorLineStyle(session, saved, row.id, value.id);
-                if (!style.visible) {
-                  return null;
-                }
-                const color = style.color ? `var(--color-${style.color})` : value.color;
-                return (
-                  <span key={value.id} style={{ color }}>
-                    {" "}
-                    {value.text}
-                  </span>
-                );
-              })}
-            </p>
+        {shown && priceRows.length > 0 ? (
+          <div className="rounded-control bg-canvas/50 px-1.5 py-1">
+            {priceRows.map((row) => (
+              <LegendLine
+                key={row.id}
+                row={row}
+                session={session}
+                saved={saved}
+                openId={openId}
+                onOpen={openLegend}
+              />
+            ))}
           </div>
-        ))}
-      </div>
-      {openId && openTargets ? (
-        <div
-          className={`absolute left-2 z-30 w-80 rounded-card border border-line bg-surface p-3 ${
-            belowNotice ? "top-11" : "top-2"
-          }`}
+        ) : null}
+        <button
+          type="button"
+          className="pointer-events-auto mt-1 inline-flex size-6 items-center justify-center rounded-control border border-line-strong bg-surface text-ink hover:bg-surface-raised"
+          aria-expanded={shown}
+          aria-label={shown ? "Hide indicators" : "Show indicators"}
+          onClick={() => {
+            setShown((current) => !current);
+            setOpenId(null);
+          }}
         >
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-semibold text-ink">{names[openId] ?? "Indicator"}</p>
-            <button
-              type="button"
-              className="inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
-              aria-label="Close style"
-              onClick={() => setOpenId(null)}
-            >
-              <IconClose size={16} className="size-4" />
-            </button>
+          <IconChevronDown
+            size={16}
+            strokeWidth={2.25}
+            className={`size-4 ${shown ? "rotate-180" : ""}`}
+          />
+        </button>
+      </div>
+      {shown
+        ? paneRows.map((row, index) => {
+            const top = paneTops[index];
+            if (top == null) {
+              return null;
+            }
+            return (
+              <div
+                key={row.id}
+                className="pointer-events-none absolute left-2 z-10 max-w-[70%] rounded-control bg-canvas/50 px-1.5 py-0.5"
+                style={{ top: top + 4 }}
+              >
+                <LegendLine
+                  row={row}
+                  session={session}
+                  saved={saved}
+                  openId={openId}
+                  onOpen={openLegend}
+                />
+              </div>
+            );
+          })
+        : null}
+      {shown && openId && openTargets && openInputs ? (
+        <Modal
+          title={names[openId] ?? "Indicator"}
+          onClose={() => setOpenId(null)}
+          elevated
+        >
+          <div className="mt-4 flex border-b border-line" role="tablist" aria-label="Indicator settings">
+            {(["inputs", "style"] as const).map((id) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={tab === id}
+                className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+                  tab === id
+                    ? "border-ink text-ink"
+                    : "border-transparent text-ink-muted hover:text-ink"
+                }`}
+                onClick={() => setTab(id)}
+              >
+                {id === "inputs" ? "Inputs" : "Style"}
+              </button>
+            ))}
           </div>
-          <div className="mt-3 space-y-3">
-            {openTargets.map((line) => {
-              const style = indicatorLineStyle(session, saved, openId, line.id);
-              return (
-                <div key={line.id}>
-                  <label className="flex items-center gap-2 text-xs text-ink">
-                    <input
-                      type="checkbox"
-                      className="accent-accent"
-                      checked={style.visible}
-                      onChange={(event) =>
-                        onChange(openId, line.id, { ...style, visible: event.target.checked })
-                      }
-                    />
-                    {line.label}
-                  </label>
-                  <div className="mt-1 flex flex-wrap items-center gap-1" role="group" aria-label={`${line.label} color`}>
-                    <Swatch
-                      label="Default"
-                      selected={style.color == null}
-                      className="bg-surface-raised"
-                      onClick={() => onChange(openId, line.id, { ...style, color: null })}
-                    />
-                    {INDICATOR_STYLE_COLORS.map((swatch) => (
-                      <Swatch
-                        key={swatch.id}
-                        label={swatch.label}
-                        selected={style.color === swatch.id}
-                        className={SWATCH[swatch.id]}
-                        onClick={() => onChange(openId, line.id, { ...style, color: swatch.id })}
-                      />
-                    ))}
-                  </div>
-                  {line.id === "histogram" ? null : (
-                    <div className="mt-1 flex gap-1" role="group" aria-label={`${line.label} width`}>
-                      {([1, 2, 3] as const).map((width) => (
-                        <button
-                          key={width}
-                          type="button"
-                          aria-pressed={style.lineWidth === width}
-                          className={`rounded-control px-2 py-0.5 text-xs ${
-                            style.lineWidth === width
-                              ? "bg-accent-strong text-ink"
-                              : "text-ink-muted hover:text-ink"
-                          }`}
-                          onClick={() => onChange(openId, line.id, { ...style, lineWidth: width })}
-                        >
-                          {width}px
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:text-ink"
-              onClick={() => onSaveGlobal(openId)}
-            >
-              Save as global
-            </button>
-            <button
-              type="button"
-              className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:text-ink"
-              onClick={() => onReset(openId)}
-            >
-              Reset to default
-            </button>
-          </div>
-        </div>
+          {tab === "inputs" ? (
+            <div className="mt-4 space-y-3" role="tabpanel">
+              <SettingRow label="Timeframe" muted>
+                <input
+                  type="text"
+                  readOnly
+                  disabled
+                  value={timeframes[openId] ?? "Chart"}
+                  aria-label="Timeframe"
+                  className="w-28 rounded-control border border-line bg-surface px-2 py-1 text-right text-xs text-ink-faint"
+                />
+              </SettingRow>
+              {openInputs.map((field) => (
+                <IndicatorNumberField
+                  key={field.id}
+                  field={field}
+                  locked={locked}
+                  onCommit={(value) => onInput(openId, field.id, value)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-4" role="tabpanel">
+              <div className="space-y-4">
+                {openTargets.map((line, index) => {
+                  const style = indicatorLineStyle(session, saved, openId, line.id);
+                  return (
+                    <section
+                      key={line.id}
+                      className={index > 0 ? "space-y-3 border-t border-line pt-4" : "space-y-3"}
+                    >
+                      {openTargets.length > 1 ? (
+                        <h3 className="text-sm font-semibold text-ink">{line.label}</h3>
+                      ) : null}
+                      <SettingRow label="Visible">
+                        <input
+                          type="checkbox"
+                          className="size-4 accent-accent"
+                          checked={style.visible}
+                          aria-label={`${line.label} visible`}
+                          onChange={(event) =>
+                            onChange(openId, line.id, { ...style, visible: event.target.checked })
+                          }
+                        />
+                      </SettingRow>
+                      <SettingRow label="Colour">
+                        <ChartColorPicker
+                          label={`${line.label} colour`}
+                          showLabel={false}
+                          color={style.color}
+                          opacity={style.opacity}
+                          fallback={line.defaultColor}
+                          onChange={(color, opacity) =>
+                            onChange(openId, line.id, { ...style, color, opacity })
+                          }
+                        />
+                      </SettingRow>
+                      {line.id === "histogram" ? null : (
+                        <SettingRow label="Line Width">
+                          <div className="flex gap-1" role="group" aria-label={`${line.label} line width`}>
+                            {([1, 2, 3] as const).map((width) => (
+                              <button
+                                key={width}
+                                type="button"
+                                aria-pressed={style.lineWidth === width}
+                                className={`rounded-control px-2 py-0.5 text-xs ${
+                                  style.lineWidth === width
+                                    ? "bg-accent-strong text-ink"
+                                    : "text-ink-muted hover:text-ink"
+                                }`}
+                                onClick={() =>
+                                  onChange(openId, line.id, { ...style, lineWidth: width })
+                                }
+                              >
+                                {width}px
+                              </button>
+                            ))}
+                          </div>
+                        </SettingRow>
+                      )}
+                    </section>
+                  );
+                })}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2 border-t border-line pt-4">
+                <button
+                  type="button"
+                  className="rounded-control border border-line px-2 py-1 text-sm text-ink-muted hover:text-ink"
+                  onClick={() => onSaveGlobal(openId)}
+                >
+                  Save as global
+                </button>
+                <button
+                  type="button"
+                  className="rounded-control border border-line px-2 py-1 text-sm text-ink-muted hover:text-ink"
+                  onClick={() => onReset(openId)}
+                >
+                  Reset to default
+                </button>
+              </div>
+            </div>
+          )}
+        </Modal>
       ) : null}
     </>
   );
 }
 
-function Swatch({
+function SettingRow({
   label,
-  selected,
-  className,
-  onClick,
+  muted = false,
+  htmlFor,
+  children,
 }: {
   label: string;
-  selected: boolean;
-  className: string;
-  onClick: () => void;
+  muted?: boolean;
+  htmlFor?: string;
+  children: ReactNode;
 }) {
+  const className = `text-xs ${muted ? "text-ink-faint" : "text-ink"}`;
   return (
-    <button
-      type="button"
-      aria-label={label}
-      aria-pressed={selected}
-      className={`size-4 rounded-full border ${
-        selected ? "border-ink" : "border-line"
-      } ${className}`}
-      onClick={onClick}
-    />
+    <div className="flex min-h-8 items-center justify-between gap-4">
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className={className}>
+          {label}
+        </label>
+      ) : (
+        <span className={className}>{label}</span>
+      )}
+      {children}
+    </div>
   );
 }
 
+function IndicatorNumberField({
+  field,
+  locked,
+  onCommit,
+}: {
+  field: IndicatorInput;
+  locked: boolean;
+  onCommit: (value: number) => void;
+}) {
+  return (
+    <SettingRow label={field.label} muted={locked} htmlFor={`indicator-input-${field.id}`}>
+      <input
+        id={`indicator-input-${field.id}`}
+        key={locked ? "locked" : `${field.id}-${field.value}`}
+        type="number"
+        inputMode="decimal"
+        disabled={locked}
+        min={field.min}
+        max={field.max}
+        step={field.step}
+        {...(locked
+          ? { value: field.value, onChange: () => undefined }
+          : { defaultValue: field.value })}
+        className={`w-28 rounded-control border border-line bg-surface px-2 py-1 text-right text-xs ${
+          locked ? "text-ink-faint" : "text-ink"
+        }`}
+        onBlur={(event) => {
+          if (locked) {
+            return;
+          }
+          const parsed = Number(event.currentTarget.value);
+          if (Number.isFinite(parsed)) {
+            onCommit(parsed);
+          }
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.currentTarget.blur();
+          }
+        }}
+      />
+    </SettingRow>
+  );
+}
+
+function LegendLine({
+  row,
+  session,
+  saved,
+  openId,
+  onOpen,
+}: {
+  row: ReplayIndicatorLegendRow;
+  session: IndicatorStyleMap;
+  saved: IndicatorStyleMap;
+  openId: string | null;
+  onOpen: (id: string) => void;
+}) {
+  return (
+    <div className="flex items-start gap-1">
+      <p className="text-[11px] leading-4 text-ink-muted [text-shadow:0_1px_1px_var(--color-canvas),0_0_2px_var(--color-canvas)]">
+        {row.name}
+        {row.values.flatMap((value) => {
+          const style = indicatorLineStyle(session, saved, row.id, value.id);
+          if (!style.visible) {
+            return [];
+          }
+          return [{ id: value.id, color: legendPaint(style, value.color), text: value.text }];
+        }).map((value, index) => (
+          <span key={value.id} style={{ color: value.color }}>
+            {index === 0 ? " - " : ", "}
+            {value.text}
+          </span>
+        ))}
+      </p>
+      <button
+        type="button"
+        className="pointer-events-auto mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-control text-ink-faint hover:bg-surface-raised hover:text-ink"
+        aria-label={`Settings ${row.name}`}
+        aria-expanded={openId === row.id}
+        onClick={() => onOpen(row.id)}
+      >
+        <IconUiPrefs size={12} className="size-3" />
+      </button>
+    </div>
+  );
+}
+
+function legendPaint(style: IndicatorLineStyle, fallback: string): string {
+  if (!style.color) {
+    return style.opacity >= 100 ? fallback : colorWithOpacity(fallback, style.opacity);
+  }
+  if (style.color.startsWith("#")) {
+    return style.opacity >= 100 ? style.color : colorWithOpacity(style.color, style.opacity);
+  }
+  if (style.opacity >= 100) {
+    return `var(--color-${style.color})`;
+  }
+  return `color-mix(in srgb, var(--color-${style.color}) ${style.opacity}%, transparent)`;
+}

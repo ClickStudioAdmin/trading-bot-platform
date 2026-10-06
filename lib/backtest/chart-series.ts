@@ -3,6 +3,8 @@ import {
   atrValues,
   bollingerSeries,
   DCA_BB_STDDEV,
+  DCA_INDICATOR_PERIOD_MAX,
+  DCA_INDICATOR_PERIOD_MIN,
   DCA_INDICATOR_TIMEFRAME_LABELS,
   DEFAULT_DCA_BB_PERIOD,
   DEFAULT_DCA_CROSS_FAST_PERIOD,
@@ -52,6 +54,27 @@ export type IndicatorLayer = {
   oscillator: OscillatorPlot | null;
   /** Value used to place a condition dot. */
   dotValues: (number | null)[];
+  inputs: IndicatorInput[];
+  /** Strategy inputs stay visible and cannot be edited. */
+  inputsLocked: boolean;
+  /** Shown on the Inputs tab. References follow the chart candles. */
+  timeframeLabel: string;
+};
+
+export type IndicatorInputId =
+  | "length"
+  | "slowLength"
+  | "multiplier"
+  | "signal"
+  | "stddev";
+
+export type IndicatorInput = {
+  id: IndicatorInputId;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
 };
 
 export type ReplayChartSeries = {
@@ -75,6 +98,9 @@ type Spec = {
   period: number | null;
   slowPeriod: number | null;
   multiplier: number | null;
+  signal?: number | null;
+  stddev?: number | null;
+  reference?: boolean;
   levels: number[];
   timeframe: DcaIndicatorTimeframe | null;
 };
@@ -106,7 +132,6 @@ function specKey(input: {
   slowPeriod: number | null;
   multiplier: number | null;
   timeframe: DcaIndicatorTimeframe | null;
-  role: string;
 }): string {
   return [
     input.kind,
@@ -114,7 +139,6 @@ function specKey(input: {
     input.slowPeriod ?? "",
     input.multiplier ?? "",
     input.timeframe ?? "",
-    input.role,
   ].join("|");
 }
 
@@ -155,7 +179,6 @@ function fromFilter(spec: DcaFilterSpec | null | undefined, role: string): Spec 
       slowPeriod: null,
       multiplier: spec.multiplier,
       timeframe: spec.timeframe,
-      role,
     }),
     kind: spec.kind,
     roles: [role],
@@ -181,7 +204,6 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
           slowPeriod: recipe.indicatorSlowPeriod ?? null,
           multiplier: recipe.indicatorMultiplier ?? null,
           timeframe: recipe.indicatorTimeframe,
-          role: "Entry",
         }),
         kind: recipe.indicatorKind,
         roles: ["Entry"],
@@ -200,7 +222,6 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
           slowPeriod: recipe.shortIndicatorSlowPeriod ?? null,
           multiplier: recipe.shortIndicatorMultiplier ?? null,
           timeframe: recipe.shortIndicatorTimeframe ?? null,
-          role: "Short entry",
         }),
         kind: recipe.shortIndicatorKind,
         roles: ["Short entry"],
@@ -230,7 +251,6 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
         slowPeriod: start.slowPeriod,
         multiplier: start.multiplier ?? null,
         timeframe: start.timeframe,
-        role: "Entry",
       }),
       kind: start.kind,
       roles: ["Entry"],
@@ -262,32 +282,280 @@ function layerTitle(spec: Spec): string {
   } else if (spec.kind === "bb") {
     name = `BB ${spec.period ?? DEFAULT_DCA_BB_PERIOD}`;
   } else if (spec.kind === "atr_band") {
-    name = `ATR band ${spec.period ?? DEFAULT_DCA_SUPERTREND_PERIOD}`;
+    name = `ATR Band ${spec.period ?? DEFAULT_DCA_SUPERTREND_PERIOD}`;
   } else if (spec.kind === "ema" || spec.kind === "sma") {
     name = `${spec.kind.toUpperCase()} ${spec.period ?? DEFAULT_DCA_MA_PERIOD}`;
   } else if (spec.kind === "ema_cross" || spec.kind === "sma_cross") {
-    name = spec.kind === "ema_cross" ? "EMA cross" : "SMA cross";
+    name = spec.kind === "ema_cross" ? "EMA Cross" : "SMA Cross";
   }
   const where = tf ? ` · ${tf}` : "";
   const roles = spec.roles.map(indicatorConditionLabel).join(", ");
   return `${name}${period && spec.kind === "atr_band" ? "" : ""}${where} · ${roles}`;
 }
 
-export function indicatorRolesForReason(reason: BacktestFillReason): string[] {
+/** Entry dots that side's trigger and its secondary condition. The other side stays off. */
+export function indicatorRolesForReason(
+  reason: BacktestFillReason,
+  side: "long" | "short",
+  rolesPresent: readonly string[],
+): string[] {
   if (reason === "entry") {
-    return ["Entry", "Secondary entry", "Short entry", "Short secondary entry"];
+    const entry =
+      side === "short" && rolesPresent.includes("Short entry") ? "Short entry" : "Entry";
+    const secondary =
+      side === "short" && rolesPresent.includes("Short secondary entry")
+        ? "Short secondary entry"
+        : rolesPresent.includes("Secondary entry") &&
+            (side === "long" || !rolesPresent.includes("Short secondary entry"))
+          ? "Secondary entry"
+          : null;
+    return secondary == null ? [entry] : [entry, secondary];
   }
   if (reason === "exit_if") {
-    return ["Hard exit", "Short hard exit"];
+    if (side === "short" && rolesPresent.includes("Short hard exit")) {
+      return ["Short hard exit"];
+    }
+    return ["Hard exit"];
   }
   return [];
+}
+
+export type ReplayIndicatorId = DcaIndicatorKind | "atr_band";
+
+export type ReplayReferenceSettings = Partial<Record<IndicatorInputId, number>>;
+
+export type ReplayReferenceInputs = Partial<
+  Record<ReplayIndicatorId, ReplayReferenceSettings>
+>;
+
+export type ReplayIndicatorChoice = {
+  id: ReplayIndicatorId;
+  label: string;
+  locked: boolean;
+};
+
+const REPLAY_INDICATOR_CATALOG: {
+  id: ReplayIndicatorId;
+  label: string;
+  kinds: readonly ReplayIndicatorId[];
+}[] = [
+  { id: "rsi", label: "RSI", kinds: ["rsi"] },
+  { id: "macd", label: "MACD", kinds: ["macd"] },
+  { id: "sma", label: "Simple Moving Average", kinds: ["sma", "sma_cross"] },
+  { id: "ema", label: "Exponential Moving Average", kinds: ["ema", "ema_cross"] },
+  { id: "bb", label: "Bollinger Bands", kinds: ["bb"] },
+  { id: "supertrend", label: "Supertrend", kinds: ["supertrend"] },
+  { id: "atr_band", label: "ATR Band", kinds: ["atr_band"] },
+];
+
+/** Every drawable indicator. Strategy rows stay on and cannot be removed. */
+export function replayIndicatorCatalog(recipe: BacktestRecipe): ReplayIndicatorChoice[] {
+  const specs = specsFromRecipe(recipe);
+  return REPLAY_INDICATOR_CATALOG.map((row) => ({
+    id: row.id,
+    label: row.label,
+    locked: specs.some((spec) => row.kinds.includes(spec.kind)),
+  }));
+}
+
+const LENGTH_RANGE = {
+  min: DCA_INDICATOR_PERIOD_MIN,
+  max: DCA_INDICATOR_PERIOD_MAX,
+  step: 1,
+};
+const FACTOR_RANGE = { min: 0.1, max: 50, step: 0.1 };
+const MACD_FAST = 12;
+const MACD_SLOW = 26;
+const MACD_SIGNAL = 9;
+
+function clampLength(value: number | undefined, fallback: number): number {
+  const raw = value == null || !Number.isFinite(value) ? fallback : value;
+  return Math.min(
+    DCA_INDICATOR_PERIOD_MAX,
+    Math.max(DCA_INDICATOR_PERIOD_MIN, Math.round(raw)),
+  );
+}
+
+function clampFactor(value: number | undefined, fallback: number): number {
+  const raw = value == null || !Number.isFinite(value) ? fallback : value;
+  const rounded = Math.round(raw * 10) / 10;
+  return Math.min(FACTOR_RANGE.max, Math.max(FACTOR_RANGE.min, rounded));
+}
+
+function indicatorField(
+  id: IndicatorInputId,
+  label: string,
+  value: number,
+  range: { min: number; max: number; step: number },
+): IndicatorInput {
+  return { id, label, value, min: range.min, max: range.max, step: range.step };
+}
+
+function indicatorInputs(spec: Spec): IndicatorInput[] {
+  if (spec.kind === "rsi") {
+    return [
+      indicatorField("length", "Length", spec.period ?? DEFAULT_DCA_RSI_PERIOD, LENGTH_RANGE),
+    ];
+  }
+  if (spec.kind === "ema" || spec.kind === "sma") {
+    return [
+      indicatorField("length", "Length", spec.period ?? DEFAULT_DCA_MA_PERIOD, LENGTH_RANGE),
+    ];
+  }
+  if (spec.kind === "bb") {
+    return [
+      indicatorField("length", "Length", spec.period ?? DEFAULT_DCA_BB_PERIOD, LENGTH_RANGE),
+      indicatorField(
+        "stddev",
+        "Std Dev",
+        spec.reference ? (spec.stddev ?? DCA_BB_STDDEV) : DCA_BB_STDDEV,
+        FACTOR_RANGE,
+      ),
+    ];
+  }
+  if (spec.kind === "ema_cross" || spec.kind === "sma_cross") {
+    return [
+      indicatorField(
+        "length",
+        "Fast Length",
+        spec.period ?? DEFAULT_DCA_CROSS_FAST_PERIOD,
+        LENGTH_RANGE,
+      ),
+      indicatorField(
+        "slowLength",
+        "Slow Length",
+        spec.slowPeriod ?? DEFAULT_DCA_CROSS_SLOW_PERIOD,
+        LENGTH_RANGE,
+      ),
+    ];
+  }
+  if (spec.kind === "supertrend") {
+    return [
+      indicatorField(
+        "length",
+        "Length",
+        spec.period ?? DEFAULT_DCA_SUPERTREND_PERIOD,
+        LENGTH_RANGE,
+      ),
+      indicatorField(
+        "multiplier",
+        "Multiplier",
+        spec.multiplier ?? DEFAULT_DCA_SUPERTREND_MULTIPLIER,
+        FACTOR_RANGE,
+      ),
+    ];
+  }
+  if (spec.kind === "atr_band") {
+    return [
+      indicatorField(
+        "length",
+        "Length",
+        spec.period ?? DEFAULT_DCA_SUPERTREND_PERIOD,
+        LENGTH_RANGE,
+      ),
+      indicatorField(
+        "multiplier",
+        "Multiplier",
+        spec.multiplier ?? DEFAULT_DCA_ATR_BAND_MULT,
+        FACTOR_RANGE,
+      ),
+    ];
+  }
+  if (spec.kind === "macd") {
+    const fast = spec.reference ? (spec.period ?? MACD_FAST) : MACD_FAST;
+    const slow = spec.reference ? (spec.slowPeriod ?? MACD_SLOW) : MACD_SLOW;
+    const signal = spec.reference ? (spec.signal ?? MACD_SIGNAL) : MACD_SIGNAL;
+    return [
+      indicatorField("length", "Fast Length", fast, LENGTH_RANGE),
+      indicatorField("slowLength", "Slow Length", slow, LENGTH_RANGE),
+      indicatorField("signal", "Signal", signal, LENGTH_RANGE),
+    ];
+  }
+  return [];
+}
+
+function chartTimeframeLabel(spec: Spec): string {
+  if (!spec.timeframe || spec.reference) {
+    return "Chart";
+  }
+  return DCA_INDICATOR_TIMEFRAME_LABELS[spec.timeframe];
+}
+
+function referenceSpec(
+  kind: ReplayIndicatorId,
+  settings: ReplayReferenceSettings = {},
+): Spec {
+  const period =
+    kind === "macd"
+      ? clampLength(settings.length, MACD_FAST)
+      : kind === "bb"
+        ? clampLength(settings.length, DEFAULT_DCA_BB_PERIOD)
+        : kind === "rsi"
+          ? clampLength(settings.length, DEFAULT_DCA_RSI_PERIOD)
+          : kind === "supertrend" || kind === "atr_band"
+            ? clampLength(settings.length, DEFAULT_DCA_SUPERTREND_PERIOD)
+            : kind === "ema_cross" || kind === "sma_cross"
+              ? clampLength(settings.length, DEFAULT_DCA_CROSS_FAST_PERIOD)
+              : clampLength(settings.length, DEFAULT_DCA_MA_PERIOD);
+  const slowPeriod =
+    kind === "macd"
+      ? clampLength(settings.slowLength, MACD_SLOW)
+      : kind === "ema_cross" || kind === "sma_cross"
+        ? clampLength(settings.slowLength, DEFAULT_DCA_CROSS_SLOW_PERIOD)
+        : null;
+  const multiplier =
+    kind === "supertrend"
+      ? clampFactor(settings.multiplier, DEFAULT_DCA_SUPERTREND_MULTIPLIER)
+      : kind === "atr_band"
+        ? clampFactor(settings.multiplier, DEFAULT_DCA_ATR_BAND_MULT)
+        : null;
+  const signal = kind === "macd" ? clampLength(settings.signal, MACD_SIGNAL) : null;
+  const stddev = kind === "bb" ? clampFactor(settings.stddev, DCA_BB_STDDEV) : null;
+  return {
+    key: specKey({
+      kind,
+      period,
+      slowPeriod,
+      multiplier,
+      timeframe: null,
+    }),
+    kind,
+    roles: ["Reference"],
+    period,
+    slowPeriod,
+    multiplier,
+    signal,
+    stddev,
+    reference: true,
+    levels: [],
+    timeframe: null,
+  };
+}
+
+function addReferenceSpecs(
+  specs: Spec[],
+  references: readonly string[],
+  inputs: ReplayReferenceInputs,
+) {
+  const used = new Set(specs.map((spec) => spec.kind));
+  for (const id of references) {
+    const row = REPLAY_INDICATOR_CATALOG.find((item) => item.id === id);
+    if (!row || row.kinds.some((kind) => used.has(kind))) {
+      continue;
+    }
+    used.add(row.id);
+    addSpec(specs, referenceSpec(row.id, inputs[row.id]));
+  }
 }
 
 export function replayChartSeries(
   recipe: BacktestRecipe,
   candles: CandleBar[],
+  references: readonly string[] = [],
+  referenceInputs: ReplayReferenceInputs = {},
 ): ReplayChartSeries {
   const specs = specsFromRecipe(recipe);
+  addReferenceSpecs(specs, references, referenceInputs);
   if (candles.length === 0 || specs.length === 0) {
     return { layers: [] };
   }
@@ -302,6 +570,8 @@ export function replayChartSeries(
     const title = layerTitle(spec);
     const role = spec.roles[0] ?? "";
     const tone = (color: string) => conditionColor(role, color);
+    const layerId = spec.reference ? `ref:${spec.kind}` : spec.key;
+    const plotId = (suffix: string) => `${layerId}-${suffix}`;
     const price: PricePlot[] = [];
     let oscillator: OscillatorPlot | null = null;
     let dotValues: (number | null)[] = closes.map(() => null);
@@ -320,7 +590,10 @@ export function replayChartSeries(
         histogram: null,
       };
     } else if (spec.kind === "macd") {
-      const series = macdSeries(closes);
+      const fast = spec.reference ? (spec.period ?? MACD_FAST) : MACD_FAST;
+      const slow = spec.reference ? (spec.slowPeriod ?? MACD_SLOW) : MACD_SLOW;
+      const signalPeriod = spec.reference ? (spec.signal ?? MACD_SIGNAL) : MACD_SIGNAL;
+      const series = macdSeries(closes, fast, slow, signalPeriod);
       pane = "oscillator";
       dotValues = series.histogram;
       oscillator = {
@@ -338,7 +611,7 @@ export function replayChartSeries(
           ? alignedAverage(closes, emaValues(closes, period))
           : alignedAverage(closes, smaValues(closes, period));
       dotValues = values;
-      price.push({ id: spec.key, title, color: tone(LINE.ema), values });
+      price.push({ id: layerId, title, color: tone(LINE.ema), values });
     } else if (spec.kind === "ema_cross" || spec.kind === "sma_cross") {
       const fast = spec.period ?? DEFAULT_DCA_CROSS_FAST_PERIOD;
       const slow = spec.slowPeriod ?? DEFAULT_DCA_CROSS_SLOW_PERIOD;
@@ -348,35 +621,36 @@ export function replayChartSeries(
       const slowValues = alignedAverage(closes, series(closes, slow));
       dotValues = fastValues;
       price.push({
-        id: `${spec.key}-fast`,
+        id: plotId("fast"),
         title: `${name} ${fast}`,
         color: tone(LINE.ema),
         values: fastValues,
       });
       price.push({
-        id: `${spec.key}-slow`,
+        id: plotId("slow"),
         title: `${name} ${slow}`,
         color: tone(LINE.slow),
         values: slowValues,
       });
     } else if (spec.kind === "bb") {
       const period = spec.period ?? DEFAULT_DCA_BB_PERIOD;
-      const bands = bollingerSeries(closes, period, DCA_BB_STDDEV);
+      const stddev = spec.reference ? (spec.stddev ?? DCA_BB_STDDEV) : DCA_BB_STDDEV;
+      const bands = bollingerSeries(closes, period, stddev);
       dotValues = bands.map((row) => row?.mid ?? null);
       price.push({
-        id: `${spec.key}-upper`,
+        id: plotId("upper"),
         title: `${title} upper`,
         color: tone(LINE.upper),
         values: bands.map((row) => row?.upper ?? null),
       });
       price.push({
-        id: `${spec.key}-mid`,
+        id: plotId("mid"),
         title,
         color: tone(LINE.mid),
         values: bands.map((row) => row?.mid ?? null),
       });
       price.push({
-        id: `${spec.key}-lower`,
+        id: plotId("lower"),
         title: `${title} lower`,
         color: tone(LINE.lower),
         values: bands.map((row) => row?.lower ?? null),
@@ -387,13 +661,13 @@ export function replayChartSeries(
       const series = supertrendSeries(bars, period, multiplier);
       dotValues = series.map((row) => row?.line ?? null);
       price.push({
-        id: `${spec.key}-up`,
+        id: plotId("up"),
         title,
         color: tone(LINE.trendUp),
         values: series.map((row) => (row && row.dir === 1 ? row.line : null)),
       });
       price.push({
-        id: `${spec.key}-down`,
+        id: plotId("down"),
         title,
         color: tone(LINE.trendDown),
         values: series.map((row) => (row && row.dir === -1 ? row.line : null)),
@@ -405,13 +679,13 @@ export function replayChartSeries(
       const atr = atrValues(bars, period);
       dotValues = mid;
       price.push({
-        id: `${spec.key}-mid`,
+        id: plotId("mid"),
         title,
         color: tone(LINE.mid),
         values: mid,
       });
       price.push({
-        id: `${spec.key}-upper`,
+        id: plotId("upper"),
         title: `${title} upper`,
         color: tone(LINE.upper),
         values: mid.map((value, index) =>
@@ -419,7 +693,7 @@ export function replayChartSeries(
         ),
       });
       price.push({
-        id: `${spec.key}-lower`,
+        id: plotId("lower"),
         title: `${title} lower`,
         color: tone(LINE.lower),
         values: mid.map((value, index) =>
@@ -428,7 +702,7 @@ export function replayChartSeries(
       });
     }
     layers.push({
-      id: spec.key,
+      id: layerId,
       title,
       roles: spec.roles,
       timeframe: spec.timeframe,
@@ -436,6 +710,9 @@ export function replayChartSeries(
       price,
       oscillator,
       dotValues,
+      inputs: indicatorInputs(spec),
+      inputsLocked: spec.reference !== true,
+      timeframeLabel: chartTimeframeLabel(spec),
     });
   }
   return { layers };
@@ -451,6 +728,7 @@ export type ReplayIndicatorLegendRow = {
   id: string;
   name: string;
   values: ReplayIndicatorLegendValue[];
+  pane: "price" | "oscillator";
 };
 
 function legendNumber(value: number): string {
@@ -482,6 +760,15 @@ export type IndicatorStyleTarget = {
   defaultColor: string;
 };
 
+function titleCaseLabel(value: string): string {
+  return value
+    .split(/\s+/)
+    .map((word) =>
+      word.length === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1),
+    )
+    .join(" ");
+}
+
 function stylePartLabel(id: string): string {
   if (id.endsWith("-up")) {
     return "Up";
@@ -510,7 +797,9 @@ function stylePartLabel(id: string): string {
 export function indicatorStyleTargets(layer: IndicatorLayer): IndicatorStyleTarget[] {
   const targets: IndicatorStyleTarget[] = layer.price.map((plot) => ({
     id: plot.id,
-    label: plotCaption(plot.title, layer.title) || stylePartLabel(plot.id),
+    label: titleCaseLabel(
+      plotCaption(plot.title, layer.title) || stylePartLabel(plot.id),
+    ),
     defaultColor: plot.color,
   }));
   if (layer.oscillator?.rsi) {
@@ -526,6 +815,40 @@ export function indicatorStyleTargets(layer: IndicatorLayer): IndicatorStyleTarg
     targets.push({ id: "histogram", label: "Histogram", defaultColor: "#34D399" });
   }
   return targets;
+}
+
+function legendPartLabel(id: string, caption: string): string {
+  const part = caption.toLowerCase();
+  if (part === "upper" || id.endsWith("-upper") || id === "upper") {
+    return "Upper";
+  }
+  if (part === "lower" || id.endsWith("-lower") || id === "lower") {
+    return "Lower";
+  }
+  if (
+    part === "mid" ||
+    part === "middle" ||
+    id.endsWith("-mid") ||
+    id === "mid"
+  ) {
+    return "Middle";
+  }
+  if (part === "up" || id.endsWith("-up")) {
+    return "Up";
+  }
+  if (part === "down" || id.endsWith("-down")) {
+    return "Down";
+  }
+  if (part === "fast" || id.endsWith("-fast")) {
+    return "Fast";
+  }
+  if (part === "slow" || id.endsWith("-slow")) {
+    return "Slow";
+  }
+  if (!caption || part === "line") {
+    return "";
+  }
+  return caption.charAt(0).toUpperCase() + caption.slice(1);
 }
 
 function plotCaption(plotTitle: string, layerTitle: string): string {
@@ -551,11 +874,11 @@ export function replayIndicatorLegend(
       if (value == null) {
         continue;
       }
-      const caption = plotCaption(plot.title, layer.title);
+      const label = legendPartLabel(plot.id, plotCaption(plot.title, layer.title));
       values.push({
         id: plot.id,
         color: plot.color,
-        text: caption ? `${caption} ${legendNumber(value)}` : legendNumber(value),
+        text: label ? `${label} ${legendNumber(value)}` : legendNumber(value),
       });
     }
     const oscillator = layer.oscillator;
@@ -568,13 +891,13 @@ export function replayIndicatorLegend(
     if (oscillator?.macd) {
       const value = valueAt(oscillator.macd, index);
       if (value != null) {
-        values.push({ id: "macd", color: "#A78BFA", text: legendNumber(value) });
+        values.push({ id: "macd", color: "#A78BFA", text: `MACD ${legendNumber(value)}` });
       }
     }
     if (oscillator?.signal) {
       const value = valueAt(oscillator.signal, index);
       if (value != null) {
-        values.push({ id: "signal", color: "#F5B942", text: legendNumber(value) });
+        values.push({ id: "signal", color: "#F5B942", text: `Signal ${legendNumber(value)}` });
       }
     }
     if (oscillator?.histogram) {
@@ -583,11 +906,105 @@ export function replayIndicatorLegend(
         values.push({
           id: "histogram",
           color: value >= 0 ? "#34D399" : "#F07167",
-          text: legendNumber(value),
+          text: `Histogram ${legendNumber(value)}`,
         });
       }
     }
-    rows.push({ id: layer.id, name: layer.title, values });
+    rows.push({ id: layer.id, name: layer.title, values, pane: layer.pane });
   }
-  return rows;
+  return groupReplayIndicatorRows(rows);
+}
+
+function rowsByIndicatorName(
+  rows: ReplayIndicatorLegendRow[],
+): ReplayIndicatorLegendRow[] {
+  const groups: ReplayIndicatorLegendRow[][] = [];
+  const index = new Map<string, number>();
+  for (const row of rows) {
+    const key = row.name.split(" · ")[0] ?? row.name;
+    const at = index.get(key);
+    if (at == null) {
+      index.set(key, groups.length);
+      groups.push([row]);
+    } else {
+      groups[at]?.push(row);
+    }
+  }
+  return groups.flat();
+}
+
+const OSCILLATOR_PANE_HEIGHT = 120;
+const PRICE_PANE_FLOOR = 160;
+
+/** Stretch weights so every oscillator pane starts at the same height. The price pane keeps at least half the chart. */
+export function oscillatorPaneStretch(
+  totalHeight: number,
+  oscillatorCount: number,
+): { price: number; oscillator: number } | null {
+  if (oscillatorCount < 1 || totalHeight <= 0) {
+    return null;
+  }
+  const priceFloor = Math.max(
+    Math.floor(totalHeight / 2),
+    Math.min(PRICE_PANE_FLOOR, totalHeight),
+  );
+  const room = Math.max(0, totalHeight - priceFloor);
+  const fitted = Math.floor(room / oscillatorCount);
+  const oscillator = Math.min(OSCILLATOR_PANE_HEIGHT, Math.max(30, fitted));
+  const price = Math.max(priceFloor, totalHeight - oscillator * oscillatorCount);
+  return { price, oscillator };
+}
+
+/** Candle and price-line bounds for the visible bar indexes, ignoring bars outside that window. */
+export function visiblePriceBounds(
+  candles: readonly { high: number; low: number }[],
+  plots: readonly (readonly (number | null)[])[],
+  from: number,
+  to: number,
+): { minValue: number; maxValue: number } | null {
+  if (candles.length === 0 || !(to >= from)) {
+    return null;
+  }
+  const start = Math.max(0, Math.floor(from));
+  const end = Math.min(candles.length - 1, Math.ceil(to));
+  let min = Infinity;
+  let max = -Infinity;
+  for (let index = start; index <= end; index += 1) {
+    const bar = candles[index];
+    if (bar) {
+      if (Number.isFinite(bar.low)) {
+        min = Math.min(min, bar.low);
+      }
+      if (Number.isFinite(bar.high)) {
+        max = Math.max(max, bar.high);
+      }
+    }
+    for (const plot of plots) {
+      const value = plot[index];
+      if (value != null && Number.isFinite(value)) {
+        min = Math.min(min, value);
+        max = Math.max(max, value);
+      }
+    }
+  }
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    return null;
+  }
+  return { minValue: min, maxValue: max };
+}
+
+/** Price rows for one indicator stay together. Oscillator rows stay in pane order. */
+export function groupReplayIndicatorRows(
+  rows: ReplayIndicatorLegendRow[],
+): ReplayIndicatorLegendRow[] {
+  const price: ReplayIndicatorLegendRow[] = [];
+  const oscillators: ReplayIndicatorLegendRow[] = [];
+  for (const row of rows) {
+    if (row.pane === "oscillator") {
+      oscillators.push(row);
+    } else {
+      price.push(row);
+    }
+  }
+  return [...rowsByIndicatorName(price), ...oscillators];
 }
