@@ -72,6 +72,27 @@ export function groupBacktestOrdersIntoCycles(
   return { open, closed };
 }
 
+/**
+ * How many position rows fit in a bounded column.
+ * Returns null until the column has a height. A short column still shows one row.
+ */
+export function replayPositionsPageSize(
+  available: number,
+  head: number,
+  pager: number,
+  row: number,
+): number | null {
+  if (!(available > 0)) {
+    return null;
+  }
+  const rowH = Math.max(row, 1);
+  const room = available - Math.max(head, 0) - Math.max(pager, 0) - 2;
+  if (room < rowH) {
+    return 1;
+  }
+  return Math.floor(room / rowH);
+}
+
 export function listBacktestCycles(
   orders: SimulatedOrder[],
 ): BacktestPositionCycle[] {

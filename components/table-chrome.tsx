@@ -95,19 +95,23 @@ export function TableCard({
   children,
   pager,
   className = "mt-6",
+  bodyClassName = "min-w-0 overflow-x-auto",
 }: {
   children: ReactNode;
   pager?: ReactNode;
   className?: string;
+  bodyClassName?: string;
 }) {
   return (
     <div
       data-table-card=""
       className={`scroll-mt-20 overflow-hidden rounded-card border border-line bg-surface ${className}`.trim()}
     >
-      <div className="min-w-0 overflow-x-auto">{children}</div>
+      <div className={bodyClassName}>{children}</div>
       {pager ? (
-        <div className="border-t border-line px-4 py-3 empty:hidden">{pager}</div>
+        <div data-table-pager="" className="border-t border-line px-4 py-3 empty:hidden">
+          {pager}
+        </div>
       ) : null}
     </div>
   );
