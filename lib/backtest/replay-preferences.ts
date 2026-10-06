@@ -16,8 +16,6 @@ import {
 import {
   DCA_INDICATOR_PERIOD_MAX,
   DCA_INDICATOR_PERIOD_MIN,
-  parseDcaIndicatorTimeframe,
-  type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 
 export const REPLAY_VIEW_FALLBACK_KEY = "tbp.replay.view-preferences";
@@ -44,32 +42,26 @@ export type ReplayViewPreferences = {
   indicatorStyles: IndicatorStyleMap;
   referenceIndicators: ReplayIndicatorId[];
   referenceInputs: ReplayReferenceInputs;
-  chartInterval: DcaIndicatorTimeframe | null;
 };
 
-export function defaultReplayViewPreferences(
-  chartInterval: DcaIndicatorTimeframe | null = null,
-): ReplayViewPreferences {
+export function defaultReplayViewPreferences(): ReplayViewPreferences {
   return {
     positionsRight: false,
     chartAppearance: defaultReplayChartAppearance(),
     indicatorStyles: {},
     referenceIndicators: [],
     referenceInputs: {},
-    chartInterval,
   };
 }
 
 export function parseReplayViewPreferences(raw: unknown): ReplayViewPreferences {
   const row = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-  const chartInterval = parseDcaIndicatorTimeframe(row.chartInterval);
   return {
     positionsRight: row.positionsRight === true,
     chartAppearance: appearanceFrom(row.chartAppearance),
     indicatorStyles: stylesFrom(row.indicatorStyles),
     referenceIndicators: referenceIdsFrom(row.referenceIndicators),
     referenceInputs: referenceInputsFrom(row.referenceInputs),
-    chartInterval,
   };
 }
 
@@ -81,7 +73,6 @@ export function serializeReplayViewPreferences(value: unknown): string {
     indicatorStyles: sortedStyles(row.indicatorStyles),
     referenceIndicators: row.referenceIndicators,
     referenceInputs: row.referenceInputs,
-    chartInterval: row.chartInterval,
   });
 }
 
@@ -119,7 +110,7 @@ export function replayViewFromLocal(
       // Fall through to the older appearance and style keys.
     }
   }
-  const defaults = defaultReplayViewPreferences(null);
+  const defaults = defaultReplayViewPreferences();
   const appearance = parseReplayChartAppearance(appearanceRaw);
   let styles: IndicatorStyleMap = {};
   if (stylesRaw) {

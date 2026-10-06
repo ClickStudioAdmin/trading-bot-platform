@@ -161,7 +161,7 @@ function money(value: number): string {
 
 let cachedLocalReplayRaw: string | null = null;
 let cachedLocalReplayView: ReplayViewPreferences | null = null;
-const emptyLocalReplayView = defaultReplayViewPreferences(null);
+const emptyLocalReplayView = defaultReplayViewPreferences();
 
 function readLocalReplayView(): ReplayViewPreferences {
   try {
@@ -303,9 +303,7 @@ export function ReplayPlayer({
     () => run.replayEvents ?? eventsFromOrders(run.orders),
     [run.replayEvents, run.orders],
   );
-  const [interval, setInterval] = useState<DcaIndicatorTimeframe>(
-    preferences?.chartInterval ?? run.interval,
-  );
+  const [interval, setInterval] = useState<DcaIndicatorTimeframe>(run.interval);
   const [load, setLoad] = useState<{
     key: string;
     candles: CandleBar[];
@@ -637,9 +635,6 @@ export function ReplayPlayer({
   }, [series.layers]);
   if (!preferences && localSnapshot && !prefsReady) {
     setPositionsRight(localSnapshot.positionsRight);
-    if (localSnapshot.chartInterval) {
-      setInterval(localSnapshot.chartInterval);
-    }
     setReferences(localSnapshot.referenceIndicators);
     setReferenceInputs(localSnapshot.referenceInputs);
     setSavedAppearance(localSnapshot.chartAppearance);
@@ -652,7 +647,6 @@ export function ReplayPlayer({
     indicatorStyles: mergeReplayIndicatorStyles(savedStyles, sessionStyles),
     referenceIndicators: references,
     referenceInputs,
-    chartInterval: interval,
   });
   useEffect(() => {
     if (!prefsReady) {
@@ -665,9 +659,7 @@ export function ReplayPlayer({
         clearStoredReplayView();
         return;
       }
-      const defaults = serializeReplayViewPreferences(
-        defaultReplayViewPreferences(run.interval),
-      );
+      const defaults = serializeReplayViewPreferences(defaultReplayViewPreferences());
       if (viewSnapshotKey === defaults) {
         savedSnapshotRef.current = viewSnapshotKey;
         return;
@@ -708,7 +700,7 @@ export function ReplayPlayer({
         retryTimerRef.current = null;
       }
     };
-  }, [prefsReady, preferences, retryKey, run.interval, viewSnapshotKey]);
+  }, [prefsReady, preferences, retryKey, viewSnapshotKey]);
   const chartLabel = DCA_INDICATOR_TIMEFRAME_LABELS[interval];
   const otherTimeframes = series.layers
     .map((layer) =>

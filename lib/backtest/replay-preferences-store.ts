@@ -14,7 +14,7 @@ export async function loadReplayViewPreferences(
   const { data, error } = await supabase
     .from("replay_view_preferences")
     .select(
-      "positions_right, chart_appearance, indicator_styles, reference_indicators, reference_inputs, chart_interval",
+      "positions_right, chart_appearance, indicator_styles, reference_indicators, reference_inputs",
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -27,7 +27,6 @@ export async function loadReplayViewPreferences(
     indicatorStyles: data.indicator_styles,
     referenceIndicators: data.reference_indicators,
     referenceInputs: data.reference_inputs,
-    chartInterval: data.chart_interval,
   });
 }
 
@@ -48,7 +47,6 @@ export async function saveReplayViewPreferences(
       indicator_styles: prefs.indicatorStyles,
       reference_indicators: prefs.referenceIndicators,
       reference_inputs: prefs.referenceInputs,
-      chart_interval: prefs.chartInterval,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" },

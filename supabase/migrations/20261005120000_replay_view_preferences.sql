@@ -8,7 +8,6 @@ create table public.replay_view_preferences (
     indicator_styles jsonb not null default '{}'::jsonb,
     reference_indicators text[] not null default '{}',
     reference_inputs jsonb not null default '{}'::jsonb,
-    chart_interval text,
     updated_at timestamptz not null default now(),
     constraint replay_view_preferences_appearance_object
         check (jsonb_typeof(chart_appearance) = 'object'),
@@ -28,11 +27,6 @@ create table public.replay_view_preferences (
             and reference_indicators <@ array[
                 'rsi', 'macd', 'sma', 'ema', 'bb', 'supertrend', 'atr_band'
             ]::text[]
-        ),
-    constraint replay_view_preferences_interval
-        check (
-            chart_interval is null
-            or chart_interval in ('5', '15', '30', '60', '120', '240', '360', '720', 'D')
         )
 );
 

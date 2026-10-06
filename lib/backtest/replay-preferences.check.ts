@@ -31,7 +31,7 @@ const parsed = parseReplayViewPreferences({
 });
 
 assert.equal(parsed.positionsRight, false);
-assert.equal(parsed.chartInterval, null);
+assert.equal("chartInterval" in parsed, false);
 assert.deepEqual(parsed.referenceIndicators, ["rsi", "ema", "atr_band"]);
 assert.deepEqual(parsed.referenceInputs.rsi, { length: 400, signal: 2 });
 assert.deepEqual(parsed.referenceInputs.bb, { length: 2, stddev: 50 });
@@ -49,11 +49,10 @@ assert.deepEqual(parsed.indicatorStyles["ref:bb"]?.lines["ref:bb-upper"], {
 });
 assert.equal(parsed.indicatorStyles["ref:bb"]?.lines[""], undefined);
 
-const defaults = defaultReplayViewPreferences("15");
-assert.equal(defaults.chartInterval, "15");
+const defaults = defaultReplayViewPreferences();
 assert.deepEqual(defaults.chartAppearance, defaultReplayChartAppearance());
 assert.equal(parseReplayViewPreferences(null).positionsRight, false);
-assert.equal(parseReplayViewPreferences("nope").chartInterval, null);
+assert.equal("chartInterval" in parseReplayViewPreferences({ chartInterval: "60" }), false);
 
 const merged = mergeReplayIndicatorStyles(
   { "ref:rsi": { lines: { rsi: { color: "accent", opacity: 100, lineWidth: 2, visible: true } } } },
@@ -87,7 +86,7 @@ const fallback = replayViewFromLocal(
   null,
 );
 assert.equal(fallback.positionsRight, true);
-assert.equal(fallback.chartInterval, "60");
+assert.equal("chartInterval" in fallback, false);
 assert.equal(fallback.chartAppearance.series, "line");
 assert.deepEqual(fallback.referenceIndicators, ["macd"]);
 
