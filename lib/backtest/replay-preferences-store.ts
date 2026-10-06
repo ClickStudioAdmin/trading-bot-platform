@@ -1,6 +1,8 @@
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
+  parseReplayRunIndicators,
   parseReplayViewPreferences,
+  type ReplayRunIndicators,
   type ReplayViewPreferences,
 } from "@/lib/backtest/replay-preferences";
 
@@ -14,7 +16,7 @@ export async function loadReplayViewPreferences(
   const { data, error } = await supabase
     .from("replay_view_preferences")
     .select(
-      "positions_right, chart_appearance, indicator_styles, reference_indicators, reference_inputs, favorite_intervals",
+      "positions_right, chart_appearance, indicator_styles, favorite_intervals",
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -25,8 +27,6 @@ export async function loadReplayViewPreferences(
     positionsRight: data.positions_right === true,
     chartAppearance: data.chart_appearance,
     indicatorStyles: data.indicator_styles,
-    referenceIndicators: data.reference_indicators,
-    referenceInputs: data.reference_inputs,
     favoriteIntervals: data.favorite_intervals,
   });
 }
@@ -46,12 +46,56 @@ export async function saveReplayViewPreferences(
       positions_right: prefs.positionsRight,
       chart_appearance: prefs.chartAppearance,
       indicator_styles: prefs.indicatorStyles,
-      reference_indicators: prefs.referenceIndicators,
-      reference_inputs: prefs.referenceInputs,
       favorite_intervals: prefs.favoriteIntervals,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" },
+  );
+  return !error;
+}
+
+export async function loadReplayRunIndicators(
+  userId: string,
+  runId: string,
+): Promise<ReplayRunIndicators | null> {
+  const supabase = createServiceClient();
+  if (!supabase || !userId || !runId) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("replay_run_indicators")
+    .select("reference_indicators, reference_inputs")
+    .eq("user_id", userId)
+    .eq("run_id", runId)
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  return parseReplayRunIndicators({
+    referenceIndicators: data.reference_indicators,
+    referenceInputs: data.reference_inputs,
+  });
+}
+
+export async function saveReplayRunIndicators(
+  userId: string,
+  runId: string,
+  raw: unknown,
+): Promise<boolean> {
+  const supabase = createServiceClient();
+  if (!supabase || !userId || !runId) {
+    return false;
+  }
+  const indicators = parseReplayRunIndicators(raw);
+  const { error } = await supabase.from("replay_run_indicators").upsert(
+    {
+      user_id: userId,
+      run_id: runId,
+      reference_indicators: indicators.referenceIndicators,
+      reference_inputs: indicators.referenceInputs,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,run_id" },
   );
   return !error;
 }

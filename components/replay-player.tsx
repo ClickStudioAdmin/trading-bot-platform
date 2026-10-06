@@ -45,14 +45,22 @@ import {
   type ReplayChartAppearance,
   type ReplayChartAppearancePatch,
 } from "@/lib/backtest/chart-appearance";
-import { saveReplayViewPreferencesAction } from "@/lib/backtest/replay-preferences-action";
+import {
+  saveReplayRunIndicatorsAction,
+  saveReplayViewPreferencesAction,
+} from "@/lib/backtest/replay-preferences-action";
 import {
   REPLAY_VIEW_FALLBACK_KEY,
+  defaultReplayRunIndicators,
   defaultReplayViewPreferences,
   mergeReplayIndicatorStyles,
+  parseReplayRunIndicators,
   parseReplayViewPreferences,
+  replayRunIndicatorsStorageKey,
   replayViewFromLocal,
+  serializeReplayRunIndicators,
   serializeReplayViewPreferences,
+  type ReplayRunIndicators,
   type ReplayViewPreferences,
 } from "@/lib/backtest/replay-preferences";
 import { eventParameterSections } from "@/lib/backtest/event-pane";
@@ -213,6 +221,54 @@ function clearStoredReplayView() {
   }
 }
 
+const emptyRunIndicators = defaultReplayRunIndicators();
+let cachedRunIndicatorsId: string | null = null;
+let cachedRunIndicatorsRaw: string | null = null;
+let cachedRunIndicators: ReplayRunIndicators = emptyRunIndicators;
+
+function readLocalRunIndicators(runId: string): ReplayRunIndicators {
+  try {
+    const raw = window.localStorage.getItem(replayRunIndicatorsStorageKey(runId));
+    const token = raw ?? "";
+    if (cachedRunIndicatorsId === runId && cachedRunIndicatorsRaw === token) {
+      return cachedRunIndicators;
+    }
+    cachedRunIndicatorsId = runId;
+    cachedRunIndicatorsRaw = token;
+    cachedRunIndicators = raw ? parseReplayRunIndicators(JSON.parse(raw)) : emptyRunIndicators;
+    return cachedRunIndicators;
+  } catch {
+    return emptyRunIndicators;
+  }
+}
+
+function serverRunIndicators(): ReplayRunIndicators | null {
+  return null;
+}
+
+function writeStoredRunIndicators(runId: string, snapshot: ReplayRunIndicators) {
+  cachedRunIndicatorsId = null;
+  cachedRunIndicatorsRaw = null;
+  try {
+    window.localStorage.setItem(
+      replayRunIndicatorsStorageKey(runId),
+      serializeReplayRunIndicators(snapshot),
+    );
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function clearStoredRunIndicators(runId: string) {
+  cachedRunIndicatorsId = null;
+  cachedRunIndicatorsRaw = null;
+  try {
+    window.localStorage.removeItem(replayRunIndicatorsStorageKey(runId));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 function appearanceColor(
   node: HTMLElement,
   token: string | null,
@@ -295,9 +351,11 @@ function lineData(
 export function ReplayPlayer({
   run,
   preferences,
+  runIndicators,
 }: {
   run: BacktestRun;
   preferences: ReplayViewPreferences | null;
+  runIndicators: ReplayRunIndicators | null;
 }) {
   const events = useMemo(
     () => run.replayEvents ?? eventsFromOrders(run.orders),
@@ -592,13 +650,24 @@ export function ReplayPlayer({
   }, [visibleEvents.length, sideLanes]);
   const stats = replayPlayStats(visibleOrders, run.startingUsdt);
   const [references, setReferences] = useState<string[]>(
-    preferences?.referenceIndicators ?? [],
+    runIndicators?.referenceIndicators ?? [],
   );
   const deferredReferences = useDeferredValue(references);
   const [appliedReferences, setAppliedReferences] = useState<string[]>([]);
   const [referenceInputs, setReferenceInputs] = useState<ReplayReferenceInputs>(
-    preferences?.referenceInputs ?? {},
+    runIndicators?.referenceInputs ?? {},
   );
+  const localRunIndicators = useSyncExternalStore(
+    subscribeReplayPreferences,
+    () => readLocalRunIndicators(run.id),
+    serverRunIndicators,
+  );
+  const [indicatorsReady, setIndicatorsReady] = useState(runIndicators != null);
+  const [indicatorRetryKey, setIndicatorRetryKey] = useState<string | null>(null);
+  const indicatorSaveGenRef = useRef(0);
+  const savedIndicatorSnapshotRef = useRef<string | null>(null);
+  const indicatorBaselineReadyRef = useRef(false);
+  const indicatorRetryTimerRef = useRef<number | null>(null);
   const series = useMemo(
     () => replayChartSeries(run.recipe, candles, deferredReferences, referenceInputs),
     [run.recipe, candles, deferredReferences, referenceInputs],
@@ -639,19 +708,24 @@ export function ReplayPlayer({
   if (!preferences && localSnapshot && !prefsReady) {
     setPositionsRight(localSnapshot.positionsRight);
     setFavoriteIntervals(localSnapshot.favoriteIntervals);
-    setReferences(localSnapshot.referenceIndicators);
-    setReferenceInputs(localSnapshot.referenceInputs);
     setSavedAppearance(localSnapshot.chartAppearance);
     setGlobalStyles(localSnapshot.indicatorStyles);
     setPrefsReady(true);
+  }
+  if (!runIndicators && localRunIndicators && !indicatorsReady) {
+    setReferences(localRunIndicators.referenceIndicators);
+    setReferenceInputs(localRunIndicators.referenceInputs);
+    setIndicatorsReady(true);
   }
   const viewSnapshotKey = serializeReplayViewPreferences({
     positionsRight,
     chartAppearance,
     indicatorStyles: mergeReplayIndicatorStyles(savedStyles, sessionStyles),
+    favoriteIntervals,
+  });
+  const indicatorSnapshotKey = serializeReplayRunIndicators({
     referenceIndicators: references,
     referenceInputs,
-    favoriteIntervals,
   });
   useEffect(() => {
     if (!prefsReady) {
@@ -706,6 +780,59 @@ export function ReplayPlayer({
       }
     };
   }, [prefsReady, preferences, retryKey, viewSnapshotKey]);
+  useEffect(() => {
+    if (!indicatorsReady) {
+      return;
+    }
+    if (!indicatorBaselineReadyRef.current) {
+      indicatorBaselineReadyRef.current = true;
+      if (runIndicators) {
+        savedIndicatorSnapshotRef.current = indicatorSnapshotKey;
+        clearStoredRunIndicators(run.id);
+        return;
+      }
+      const defaults = serializeReplayRunIndicators(defaultReplayRunIndicators());
+      if (indicatorSnapshotKey === defaults) {
+        savedIndicatorSnapshotRef.current = indicatorSnapshotKey;
+        return;
+      }
+    }
+    if (indicatorSnapshotKey === savedIndicatorSnapshotRef.current) {
+      return;
+    }
+    const gen = ++indicatorSaveGenRef.current;
+    const snapshot = parseReplayRunIndicators(JSON.parse(indicatorSnapshotKey));
+    const timer = window.setTimeout(() => {
+      void saveReplayRunIndicatorsAction(run.id, snapshot).then((result) => {
+        if (gen !== indicatorSaveGenRef.current) {
+          return;
+        }
+        if (result.ok) {
+          savedIndicatorSnapshotRef.current = indicatorSnapshotKey;
+          clearStoredRunIndicators(run.id);
+          return;
+        }
+        writeStoredRunIndicators(run.id, snapshot);
+        if (indicatorRetryKey === indicatorSnapshotKey) {
+          return;
+        }
+        if (indicatorRetryTimerRef.current != null) {
+          window.clearTimeout(indicatorRetryTimerRef.current);
+        }
+        indicatorRetryTimerRef.current = window.setTimeout(() => {
+          indicatorRetryTimerRef.current = null;
+          setIndicatorRetryKey(indicatorSnapshotKey);
+        }, 5000);
+      });
+    }, 400);
+    return () => {
+      window.clearTimeout(timer);
+      if (indicatorRetryTimerRef.current != null) {
+        window.clearTimeout(indicatorRetryTimerRef.current);
+        indicatorRetryTimerRef.current = null;
+      }
+    };
+  }, [indicatorRetryKey, indicatorSnapshotKey, indicatorsReady, run.id, runIndicators]);
   const chartLabel = DCA_INDICATOR_TIMEFRAME_LABELS[interval];
   const otherTimeframes = series.layers
     .map((layer) =>

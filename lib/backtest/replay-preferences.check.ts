@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import { defaultReplayChartAppearance } from "./chart-appearance";
 import {
+  defaultReplayRunIndicators,
   defaultReplayViewPreferences,
   mergeReplayIndicatorStyles,
+  parseReplayRunIndicators,
   parseReplayViewPreferences,
   replayIntervalRow,
   replayViewFromLocal,
+  serializeReplayRunIndicators,
   serializeReplayViewPreferences,
 } from "./replay-preferences";
 
@@ -33,12 +36,23 @@ const parsed = parseReplayViewPreferences({
 
 assert.equal(parsed.positionsRight, false);
 assert.equal("chartInterval" in parsed, false);
+assert.equal("referenceIndicators" in parsed, false);
 assert.deepEqual(parsed.favoriteIntervals, []);
-assert.deepEqual(parsed.referenceIndicators, ["rsi", "ema", "atr_band"]);
-assert.deepEqual(parsed.referenceInputs.rsi, { length: 400, signal: 2 });
-assert.deepEqual(parsed.referenceInputs.bb, { length: 2, stddev: 50 });
-assert.equal(parsed.referenceInputs.macd, undefined);
-assert.equal("nope" in parsed.referenceInputs, false);
+const runIndicators = parseReplayRunIndicators({
+  referenceIndicators: ["nope", "ema", "rsi", "rsi", "atr_band"],
+  referenceInputs: {
+    nope: { length: 10 },
+    rsi: { length: 900, slowLength: "fast", signal: 0 },
+    bb: { stddev: 80.04, length: 1.2 },
+    macd: { multiplier: "wide" },
+  },
+});
+assert.deepEqual(runIndicators.referenceIndicators, ["rsi", "ema", "atr_band"]);
+assert.deepEqual(runIndicators.referenceInputs.rsi, { length: 400, signal: 2 });
+assert.deepEqual(runIndicators.referenceInputs.bb, { length: 2, stddev: 50 });
+assert.equal(runIndicators.referenceInputs.macd, undefined);
+assert.equal("nope" in runIndicators.referenceInputs, false);
+assert.deepEqual(defaultReplayRunIndicators().referenceIndicators, []);
 assert.equal(parsed.chartAppearance.series, "candles");
 assert.equal(parsed.chartAppearance.gridOpacity, 100);
 assert.equal(parsed.chartAppearance.up, null);
@@ -107,11 +121,23 @@ const fallback = replayViewFromLocal(
 );
 assert.equal(fallback.positionsRight, true);
 assert.equal("chartInterval" in fallback, false);
+assert.equal("referenceIndicators" in fallback, false);
 assert.deepEqual(fallback.favoriteIntervals, ["30"]);
 assert.equal(fallback.chartAppearance.series, "line");
-assert.deepEqual(fallback.referenceIndicators, ["macd"]);
+assert.deepEqual(
+  parseReplayRunIndicators(JSON.parse(JSON.stringify({ referenceIndicators: ["macd"] })))
+    .referenceIndicators,
+  ["macd"],
+);
 
 const again = parseReplayViewPreferences(JSON.parse(serializeReplayViewPreferences(parsed)));
 assert.equal(serializeReplayViewPreferences(parsed), serializeReplayViewPreferences(again));
+const indicatorsAgain = parseReplayRunIndicators(
+  JSON.parse(serializeReplayRunIndicators(runIndicators)),
+);
+assert.equal(
+  serializeReplayRunIndicators(runIndicators),
+  serializeReplayRunIndicators(indicatorsAgain),
+);
 
 console.log("replay-preferences.check: ok");

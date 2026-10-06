@@ -22,6 +22,7 @@ import {
 } from "@/lib/dca/indicators";
 
 export const REPLAY_VIEW_FALLBACK_KEY = "tbp.replay.view-preferences";
+export const REPLAY_RUN_INDICATORS_KEY_PREFIX = "tbp.replay.run-indicators.";
 
 const REFERENCE_IDS = [
   "rsi",
@@ -53,9 +54,13 @@ export type ReplayViewPreferences = {
   positionsRight: boolean;
   chartAppearance: ReplayChartAppearance;
   indicatorStyles: IndicatorStyleMap;
+  favoriteIntervals: DcaIndicatorTimeframe[];
+};
+
+/** Indicators a member added on one replay, plus the inputs for those lines. */
+export type ReplayRunIndicators = {
   referenceIndicators: ReplayIndicatorId[];
   referenceInputs: ReplayReferenceInputs;
-  favoriteIntervals: DcaIndicatorTimeframe[];
 };
 
 /** Default row, plus favourites, plus the interval the chart is drawing. */
@@ -72,10 +77,19 @@ export function defaultReplayViewPreferences(): ReplayViewPreferences {
     positionsRight: false,
     chartAppearance: defaultReplayChartAppearance(),
     indicatorStyles: {},
-    referenceIndicators: [],
-    referenceInputs: {},
     favoriteIntervals: [],
   };
+}
+
+export function defaultReplayRunIndicators(): ReplayRunIndicators {
+  return {
+    referenceIndicators: [],
+    referenceInputs: {},
+  };
+}
+
+export function replayRunIndicatorsStorageKey(runId: string): string {
+  return `${REPLAY_RUN_INDICATORS_KEY_PREFIX}${runId}`;
 }
 
 export function parseReplayViewPreferences(raw: unknown): ReplayViewPreferences {
@@ -84,9 +98,15 @@ export function parseReplayViewPreferences(raw: unknown): ReplayViewPreferences 
     positionsRight: row.positionsRight === true,
     chartAppearance: appearanceFrom(row.chartAppearance),
     indicatorStyles: stylesFrom(row.indicatorStyles),
+    favoriteIntervals: favoriteIntervalsFrom(row.favoriteIntervals),
+  };
+}
+
+export function parseReplayRunIndicators(raw: unknown): ReplayRunIndicators {
+  const row = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  return {
     referenceIndicators: referenceIdsFrom(row.referenceIndicators),
     referenceInputs: referenceInputsFrom(row.referenceInputs),
-    favoriteIntervals: favoriteIntervalsFrom(row.favoriteIntervals),
   };
 }
 
@@ -96,9 +116,15 @@ export function serializeReplayViewPreferences(value: unknown): string {
     positionsRight: row.positionsRight,
     chartAppearance: row.chartAppearance,
     indicatorStyles: sortedStyles(row.indicatorStyles),
+    favoriteIntervals: row.favoriteIntervals,
+  });
+}
+
+export function serializeReplayRunIndicators(value: unknown): string {
+  const row = parseReplayRunIndicators(value);
+  return JSON.stringify({
     referenceIndicators: row.referenceIndicators,
     referenceInputs: row.referenceInputs,
-    favoriteIntervals: row.favoriteIntervals,
   });
 }
 
