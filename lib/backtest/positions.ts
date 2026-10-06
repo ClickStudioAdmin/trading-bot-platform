@@ -75,6 +75,7 @@ export function groupBacktestOrdersIntoCycles(
 /**
  * How many position rows fit in a bounded column.
  * Returns null until the column has a height. A short column still shows one row.
+ * Row height rounds up so a fractional row stays inside the box.
  */
 export function replayPositionsPageSize(
   available: number,
@@ -85,8 +86,8 @@ export function replayPositionsPageSize(
   if (!(available > 0)) {
     return null;
   }
-  const rowH = Math.max(row, 1);
-  const room = available - Math.max(head, 0) - Math.max(pager, 0) - 2;
+  const rowH = Math.max(Math.ceil(row - 1e-6), 1);
+  const room = Math.floor(available - Math.max(head, 0) - Math.max(pager, 0));
   if (room < rowH) {
     return 1;
   }

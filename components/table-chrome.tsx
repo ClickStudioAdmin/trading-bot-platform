@@ -107,7 +107,9 @@ export function TableCard({
       data-table-card=""
       className={`scroll-mt-20 overflow-hidden rounded-card border border-line bg-surface ${className}`.trim()}
     >
-      <div className={bodyClassName}>{children}</div>
+      <div data-table-body="" className={bodyClassName}>
+        {children}
+      </div>
       {pager ? (
         <div data-table-pager="" className="border-t border-line px-4 py-3 empty:hidden">
           {pager}
