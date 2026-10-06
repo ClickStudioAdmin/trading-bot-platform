@@ -453,7 +453,7 @@ export function ReplayPlayer({
   const sideGridRef = useRef<HTMLDivElement | null>(null);
   const [sideBySide, setSideBySide] = useState(false);
   const [sideGridHeight, setSideGridHeight] = useState<number | null>(null);
-  const capPositions = (positionsRight && sideBySide) || fillViewport;
+  const capPositions = positionsRight && (sideBySide || fillViewport);
 
   function revealChart() {
     setPlayback({ key: candleKey, started: true });
@@ -1890,7 +1890,7 @@ export function ReplayPlayer({
   const header = (
       <div
         className={`flex shrink-0 flex-wrap items-center gap-3 py-3 ${
-          fillViewport ? "" : "sticky top-0 z-30 bg-canvas"
+          fillViewport && positionsRight ? "" : "sticky top-0 z-30 bg-canvas"
         }`}
       >
         <h1 className="shrink-0 text-2xl font-semibold tracking-tight">{run.symbol} replay</h1>
@@ -2371,9 +2371,7 @@ export function ReplayPlayer({
           ? `grid items-stretch gap-4 lg:grid-cols-[minmax(24rem,1fr)_34rem] ${
               fillViewport || sideGridHeight != null ? "min-h-0 overflow-hidden" : ""
             } ${fillViewport ? "flex-1" : ""}`
-          : fillViewport
-            ? "flex min-h-0 flex-1 flex-col gap-4 overflow-auto"
-            : "space-y-4"
+          : "space-y-4"
       }
       style={
         positionsRight && sideBySide && !fillViewport && sideGridHeight != null
@@ -2411,11 +2409,15 @@ export function ReplayPlayer({
     <div
       ref={bindFrame}
       className={
-        expanded && !monitorFull
-          ? "fixed inset-0 z-50 flex h-dvh w-full flex-col gap-4 overflow-hidden bg-canvas p-4"
-          : monitorFull
-            ? "flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden bg-canvas p-4"
-            : "space-y-4"
+        !fillViewport
+          ? "space-y-4"
+          : positionsRight
+            ? expanded && !monitorFull
+              ? "fixed inset-0 z-50 flex h-dvh w-full flex-col gap-4 overflow-hidden bg-canvas p-4"
+              : "flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden bg-canvas p-4"
+            : expanded && !monitorFull
+              ? "fixed inset-0 z-50 space-y-4 overflow-y-auto bg-canvas p-4"
+              : "h-full space-y-4 overflow-y-auto bg-canvas p-4"
       }
     >
       {header}
