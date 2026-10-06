@@ -476,7 +476,9 @@ export function ReplayPlayer({
   const [playback, setPlayback] = useState({ key: "", started: false });
   const [expanded, setExpanded] = useState(false);
   const [monitorFull, setMonitorFull] = useState(false);
-  const [positionsRight, setPositionsRight] = useState(preferences?.positionsRight ?? false);
+  const [positionsRight, setPositionsRight] = useState(
+    preferences?.positionsRight ?? defaultReplayViewPreferences().positionsRight,
+  );
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [sideLanes, setSideLanes] = useState(true);
   const [laneFrame, setLaneFrame] = useState(0);

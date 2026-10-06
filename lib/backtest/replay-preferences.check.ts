@@ -84,7 +84,9 @@ assert.deepEqual(replayIntervalRow(["120", "5"], "30"), [
   "240",
   "D",
 ]);
-assert.equal(parseReplayViewPreferences(null).positionsRight, false);
+assert.equal(parseReplayViewPreferences(null).positionsRight, true);
+assert.equal(parseReplayViewPreferences({ positionsRight: false }).positionsRight, false);
+assert.equal(defaultReplayViewPreferences().positionsRight, true);
 assert.equal("chartInterval" in parseReplayViewPreferences({ chartInterval: "60" }), false);
 
 const merged = mergeReplayIndicatorStyles(
@@ -104,7 +106,7 @@ const local = replayViewFromLocal(
 assert.equal(local.chartAppearance.series, "line");
 assert.equal(local.chartAppearance.grid, "accent");
 assert.equal(local.indicatorStyles["ref:sma"]?.lines["ref:sma-mid"]?.color, "warning");
-assert.equal(local.positionsRight, false);
+assert.equal(local.positionsRight, true);
 
 const fallback = replayViewFromLocal(
   JSON.stringify({

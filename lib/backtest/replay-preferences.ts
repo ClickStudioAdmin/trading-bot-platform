@@ -74,7 +74,7 @@ export function replayIntervalRow(
 
 export function defaultReplayViewPreferences(): ReplayViewPreferences {
   return {
-    positionsRight: false,
+    positionsRight: true,
     chartAppearance: defaultReplayChartAppearance(),
     indicatorStyles: {},
     favoriteIntervals: [],
@@ -95,7 +95,7 @@ export function replayRunIndicatorsStorageKey(runId: string): string {
 export function parseReplayViewPreferences(raw: unknown): ReplayViewPreferences {
   const row = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   return {
-    positionsRight: row.positionsRight === true,
+    positionsRight: row.positionsRight == null ? true : row.positionsRight === true,
     chartAppearance: appearanceFrom(row.chartAppearance),
     indicatorStyles: stylesFrom(row.indicatorStyles),
     favoriteIntervals: favoriteIntervalsFrom(row.favoriteIntervals),
