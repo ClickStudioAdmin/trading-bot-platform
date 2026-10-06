@@ -342,7 +342,7 @@ export const LUCIDE_ICONS = [
     id: "play",
     name: "Play",
     lucide: "Play",
-    usedIn: "Create desk placeholder, bot table bulk enable, replay play, report Replay",
+    usedIn: "Create desk placeholder, bot table bulk enable, replay play, report Replay, saved backtests Replay",
     Icon: Play,
   },
   {

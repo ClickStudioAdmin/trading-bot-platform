@@ -5,7 +5,7 @@ import { useConfirmDialog } from "@/components/confirm-modal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RemoveBacktestButton } from "@/components/backtest-run-view";
-import { IconClose, IconFilterClear, IconTrash } from "@/components/icons";
+import { IconClose, IconFilterClear, IconPlay, IconTrash } from "@/components/icons";
 import {
   SortTh,
   StatusBadge,
@@ -19,6 +19,7 @@ import {
   TableFilterBar,
   TableFilterField,
   TableFilterSession,
+  TableIconAction,
   TableLabelButton,
   TablePager,
   useClientTable,
@@ -560,6 +561,18 @@ function BacktestRunRow({
       </td>
       <td className={TABLE_ACTIONS_TD_CLASS}>
         <TableActions>
+          {row.status === "done" ? (
+            <TableIconAction
+              href={`/account/backtests/${row.id}/replay`}
+              label="Replay"
+              detail="Open this run on the replay page."
+            >
+              <IconPlay
+                {...TABLE_BTN_ICON}
+                className="size-3.5 shrink-0 fill-current"
+              />
+            </TableIconAction>
+          ) : null}
           <RemoveBacktestButton
             runId={row.id}
             canRemove={canRemove}

@@ -26,7 +26,7 @@ User
 
 Site header **Backtesting Tool** (`/account/backtests`). Two tabs: **New Backtest** (queue form) and **Saved Backtests** (`?tab=saved`, the run list). The saved list and a run’s Comparables table have row checkboxes and bulk **Delete** (confirm). Same owner/admin rule as row **Remove**. The saved list pages **25** runs (`?tab=saved&page=`). **Load into new backtest**, drafts, and template links open the New tab. **All backtests** on a run opens Saved.
 
-Each run has its own **detail page**: parameters, stats, desk-style open / past positions (expand for orders and synthesized logs), account-impact timeline, and an inline chart. The Saved list shows name, type, contract, comps, days, win rate, ROE, APR, status, and Actions. Name opens the detail page in this tab. Old `?run=` URLs redirect.
+Each run has its own **detail page**: parameters, stats, desk-style open / past positions (expand for orders and synthesized logs), account-impact timeline, and an inline chart. The Saved list shows name, type, contract, comps, days, win rate, ROE, APR, status, and Actions. A finished run’s Actions include a Replay icon that opens `/account/backtests/[runId]/replay`. The same icon is on a Comparables row. Queued, running, failed, and cancelled rows do not show it. Name opens the detail page in this tab. Old `?run=` URLs redirect.
 
 ## Locked for this slice
 
@@ -95,7 +95,7 @@ Replay still does **not** persist trailing peak across clips. Indicator start us
 
 ## Replay page
 
-A finished run opens **Replay** from the report header (large play icon) at `/account/backtests/[runId]/replay`. The report page stays the results page. Replay does not show Report or Load into new backtest. Replay is a second view of the same row. New Backtest still queues the run and still opens the report. Queued, running, failed, and cancelled runs do not play.
+A finished run opens **Replay** from the report header (large play icon) or from the Replay icon on the Saved list and Comparables table, at `/account/backtests/[runId]/replay`. The report page stays the results page. Replay does not show Report or Load into new backtest. Replay is a second view of the same row. New Backtest still queues the run and still opens the report. Queued, running, failed, and cancelled runs do not play.
 
 The page starts with a large play control in the middle of the chart. Candles stay hidden until Play, step, or an event jump. While candles load, a large spinner sits in that same spot. Fill browser covers the window; Full screen uses the monitor. Indicators, indicator settings, and page layout open on that layer. The chart keeps its normal height in that window, and the page scrolls for the events and positions. A page layout icon opens Page Layout Settings. Display Positions uses the same segmented control as the theme options, for Below Chart or Right of Chart, and that choice is saved on the login. The table starts to the right of the chart. The side column matches the chart column. Beside the chart, the positions column stays on screen with the chart and the events, and the window does not scroll. The table pages to the rows that fit, and shows more when the column is taller. Expanded orders scroll inside the table. Fill browser and full screen fit the viewport the same way when the table is beside the chart. Below the chart, those views keep 15 rows and the page scrolls. Switching that toggle while playback is running keeps the chart on the new host.
 
