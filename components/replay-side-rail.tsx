@@ -382,10 +382,12 @@ export function ReplayVariantSelect({
   run,
   family,
   rootId,
+  onBeforeNavigate,
 }: {
   run: BacktestRun;
   family: BacktestRun[];
   rootId: string;
+  onBeforeNavigate?: () => void;
 }) {
   const router = useRouter();
   const { confirm, dialog } = useConfirmDialog();
@@ -532,7 +534,10 @@ export function ReplayVariantSelect({
               href={`/account/backtests/${rootId}/replay`}
               label="Original"
               selected={run.id === rootId}
-              onChoose={() => setOpen(false)}
+              onChoose={() => {
+                onBeforeNavigate?.();
+                setOpen(false);
+              }}
             />
             {waiting.map((row) => (
               <li key={row.token} className="px-3 py-2">
@@ -590,7 +595,10 @@ export function ReplayVariantSelect({
                   href={`/account/backtests/${row.id}/replay`}
                   label={label}
                   selected={run.id === row.id}
-                  onChoose={() => setOpen(false)}
+                  onChoose={() => {
+                    onBeforeNavigate?.();
+                    setOpen(false);
+                  }}
                   trailing={remove}
                 />
               );

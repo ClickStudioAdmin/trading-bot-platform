@@ -616,6 +616,16 @@ export function ReplayPlayer({
     };
   }, [run, interval]);
 
+  const playTimerRef = useRef<number | null>(null);
+  function stopPlayback() {
+    if (playTimerRef.current != null) {
+      window.clearInterval(playTimerRef.current);
+      playTimerRef.current = null;
+    }
+    setCursor((current) =>
+      current.playing ? { ...current, playing: false } : current,
+    );
+  }
   useEffect(() => {
     if (!playing || candles.length === 0) {
       return;
@@ -631,7 +641,13 @@ export function ReplayPlayer({
         };
       });
     }, 280);
-    return () => window.clearInterval(timer);
+    playTimerRef.current = timer;
+    return () => {
+      window.clearInterval(timer);
+      if (playTimerRef.current === timer) {
+        playTimerRef.current = null;
+      }
+    };
   }, [playing, speed, candles.length]);
 
   useEffect(() => {
@@ -2111,7 +2127,12 @@ export function ReplayPlayer({
           <h1 className="shrink-0 text-2xl font-semibold tracking-tight">
             {run.symbol} replay
           </h1>
-          <ReplayVariantSelect run={run} family={family} rootId={rootId} />
+          <ReplayVariantSelect
+            run={run}
+            family={family}
+            rootId={rootId}
+            onBeforeNavigate={stopPlayback}
+          />
         </div>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
           <div
