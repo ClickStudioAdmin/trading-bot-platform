@@ -6,7 +6,51 @@ type BybitBody<T> = {
   result?: T;
 };
 
-async function bybitGet<T>(
+const BYBIT_PUBLIC_ATTEMPTS = 4;
+
+class BybitPublicError extends Error {
+  readonly retryable: boolean;
+
+  constructor(message: string, retryable: boolean) {
+    super(message);
+    this.name = "BybitPublicError";
+    this.retryable = retryable;
+  }
+}
+
+/** Rate limits and brief venue outages are worth another try. A blocked IP is not. */
+export function bybitPublicCallShouldRetry(input: {
+  httpStatus?: number | null;
+  retCode?: number | null;
+  retMsg?: string | null;
+  networkError?: boolean;
+}): boolean {
+  if (input.networkError) {
+    return true;
+  }
+  const status = input.httpStatus ?? 0;
+  if (status === 408 || status === 429 || status >= 500) {
+    return true;
+  }
+  const code = input.retCode ?? 0;
+  if (code === 10006 || code === 10016 || code === 10018) {
+    return true;
+  }
+  const msg = (input.retMsg ?? "").toLowerCase();
+  return (
+    msg.includes("too many") ||
+    msg.includes("rate limit") ||
+    msg.includes("system error")
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function bybitGetOnce<T>(
   path: string,
   params: Record<string, string>,
 ): Promise<T> {
@@ -15,27 +59,80 @@ async function bybitGet<T>(
     url.searchParams.set(key, value);
   }
 
-  const response = await fetch(url, {
-    method: "GET",
-    cache: "no-store",
-    headers: {
-      Accept: "application/json",
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+  } catch (cause) {
+    const message =
+      cause instanceof Error && cause.message
+        ? cause.message
+        : `Bybit ${path} failed`;
+    throw new BybitPublicError(message, true);
+  }
   if (!response.ok) {
     if (response.status === 403) {
-      throw new Error(
+      throw new BybitPublicError(
         `Bybit HTTP 403 on ${path}. Bybit blocks many US cloud IPs. Vercel functions must run in Sydney (syd1).`,
+        false,
       );
     }
-    throw new Error(`Bybit HTTP ${response.status} on ${path}`);
+    throw new BybitPublicError(
+      `Bybit HTTP ${response.status} on ${path}`,
+      bybitPublicCallShouldRetry({ httpStatus: response.status }),
+    );
   }
 
-  const body = (await response.json()) as BybitBody<T>;
+  let body: BybitBody<T>;
+  try {
+    body = (await response.json()) as BybitBody<T>;
+  } catch {
+    throw new BybitPublicError(`Bybit ${path}: unreadable response`, true);
+  }
   if (body.retCode !== 0 || !body.result) {
-    throw new Error(`Bybit ${path}: ${body.retMsg || body.retCode}`);
+    const retMsg = body.retMsg || String(body.retCode);
+    throw new BybitPublicError(
+      `Bybit ${path}: ${retMsg}`,
+      bybitPublicCallShouldRetry({
+        retCode: body.retCode,
+        retMsg,
+      }),
+    );
   }
   return body.result;
+}
+
+async function bybitGet<T>(
+  path: string,
+  params: Record<string, string>,
+): Promise<T> {
+  let last: BybitPublicError | null = null;
+  for (let attempt = 0; attempt < BYBIT_PUBLIC_ATTEMPTS; attempt += 1) {
+    try {
+      return await bybitGetOnce<T>(path, params);
+    } catch (cause) {
+      const error =
+        cause instanceof BybitPublicError
+          ? cause
+          : new BybitPublicError(
+              cause instanceof Error && cause.message
+                ? cause.message
+                : `Bybit ${path} failed`,
+              true,
+            );
+      last = error;
+      if (!error.retryable || attempt === BYBIT_PUBLIC_ATTEMPTS - 1) {
+        throw error;
+      }
+      await sleep(200 * 2 ** attempt);
+    }
+  }
+  throw last ?? new BybitPublicError(`Bybit ${path} failed`, false);
 }
 
 type InstrumentsResult = {
