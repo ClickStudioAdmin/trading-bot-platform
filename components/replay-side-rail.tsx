@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
+import { useConfirmDialog } from "@/components/confirm-modal";
 import {
   ApplyBacktestButton,
   BacktestPropertyList,
@@ -23,8 +24,12 @@ import {
   IconLoader,
   IconPerformance,
   IconPositions,
+  IconTrash,
 } from "@/components/icons";
-import { nudgeBacktestRunAction } from "@/lib/backtest/actions";
+import {
+  deleteBacktestAction,
+  nudgeBacktestRunAction,
+} from "@/lib/backtest/actions";
 import { recipeParamRows } from "@/lib/backtest/library";
 import {
   backtestQueueSeedFromRun,
@@ -32,10 +37,7 @@ import {
   isoDateUtc,
   type BacktestRun,
 } from "@/lib/backtest/model";
-import {
-  backtestVariantChangeLabel,
-  completedBacktestVariantIds,
-} from "@/lib/backtest/variant-label";
+import { completedBacktestVariantIds } from "@/lib/backtest/variant-label";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
 
 const RAIL_KEY = "tbp-replay-rail";
@@ -372,8 +374,8 @@ function RailButton({
   );
 }
 
-function variantSummary(root: BacktestRun, row: BacktestRun): string {
-  return backtestVariantChangeLabel(root, row) || backtestRunTitle(row);
+function variantName(row: BacktestRun): string {
+  return row.recipe.name.trim() || "Backtest";
 }
 
 export function ReplayVariantSelect({
@@ -385,7 +387,8 @@ export function ReplayVariantSelect({
   family: BacktestRun[];
   rootId: string;
 }) {
-  const root = family.find((row) => row.id === rootId) ?? run;
+  const router = useRouter();
+  const { confirm, dialog } = useConfirmDialog();
   const variants = family
     .filter((row) => row.id !== rootId)
     .slice()
@@ -398,17 +401,17 @@ export function ReplayVariantSelect({
   const pending =
     waiting.length > 0 ||
     variants.some((row) => row.status === "queued" || row.status === "running");
-  const selected =
-    run.id === rootId ? "Original" : variantSummary(root, run);
+  const selected = run.id === rootId ? "Original" : variantName(run);
   const [open, setOpen] = useState(false);
   const [finished, setFinished] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const primed = useRef(false);
   const seenPending = useRef<Set<string>>(new Set());
   const seenOptimistic = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    const base = family.find((row) => row.id === rootId) ?? run;
     const pendingIds = new Set(
       family
         .filter(
@@ -441,13 +444,39 @@ export function ReplayVariantSelect({
     seenOptimistic.current = optimisticIds;
     if (justDone.length === 1) {
       const row = family.find((item) => item.id === justDone[0]);
-      setFinished(
-        row ? `${variantSummary(base, row)} finished.` : "Backtest finished.",
-      );
+      setFinished(row ? `${variantName(row)} finished.` : "Backtest finished.");
     } else if (justDone.length > 1) {
       setFinished(`${justDone.length} backtests finished.`);
     }
-  }, [family, optimistic, rootId, run]);
+  }, [family, optimistic, rootId]);
+
+  async function removeVariant(row: BacktestRun) {
+    const name = variantName(row);
+    const ok = await confirm({
+      title: `Delete ${name}?`,
+      message: "This cannot be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) {
+      return;
+    }
+    setDeletingId(row.id);
+    setDeleteError(null);
+    const data = new FormData();
+    data.set("runId", row.id);
+    const result = await deleteBacktestAction(data);
+    setDeletingId(null);
+    if (!result.ok) {
+      setDeleteError(result.error ?? "Could not delete that backtest.");
+      return;
+    }
+    setOpen(false);
+    if (run.id === row.id) {
+      router.push(`/account/backtests/${rootId}/replay`);
+    }
+    router.refresh();
+  }
 
   useEffect(() => {
     if (!open) {
@@ -473,12 +502,14 @@ export function ReplayVariantSelect({
 
   return (
     <div className="flex min-w-0 shrink items-center gap-2">
+      {dialog}
       <div ref={menuRef} className="relative min-w-0">
         <button
           type="button"
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-label={pending ? "Backtest variant, pending" : "Backtest variant"}
+          title={selected}
           onClick={() => setOpen((value) => !value)}
           className="inline-flex max-w-64 items-center gap-2 rounded-control border border-line bg-canvas px-3 py-1.5 text-left text-sm text-ink hover:border-line-strong"
         >
@@ -495,7 +526,7 @@ export function ReplayVariantSelect({
           <ul
             role="listbox"
             aria-label="Backtest variants"
-            className="absolute left-0 top-full z-40 mt-1 max-h-80 w-72 overflow-auto rounded-card border border-line bg-surface py-1"
+            className="absolute left-0 top-full z-40 mt-1 max-h-80 w-80 overflow-auto rounded-card border border-line bg-surface py-1"
           >
             <VariantOption
               href={`/account/backtests/${rootId}/replay`}
@@ -516,22 +547,34 @@ export function ReplayVariantSelect({
             ))}
             {variants.map((row) => {
               const active = row.status === "queued" || row.status === "running";
-              const label = variantSummary(root, row);
+              const label = variantName(row);
+              const remove = (
+                <VariantDeleteButton
+                  label={label}
+                  pending={deletingId === row.id}
+                  onDelete={() => void removeVariant(row)}
+                />
+              );
               if (row.status !== "done") {
                 return (
                   <li key={row.id} className="px-3 py-2">
                     <span className="flex items-center justify-between gap-2 text-sm text-ink">
-                      <span className="min-w-0 truncate">{label}</span>
-                      {active ? (
-                        <span className="inline-flex shrink-0 items-center gap-1 text-xs text-warning">
-                          <IconLoader className="size-3.5 animate-spin" />
-                          Pending
-                        </span>
-                      ) : (
-                        <span className="shrink-0 text-xs capitalize text-danger">
-                          {row.status}
-                        </span>
-                      )}
+                      <span className="min-w-0 truncate" title={label}>
+                        {label}
+                      </span>
+                      <span className="inline-flex shrink-0 items-center gap-1">
+                        {active ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-warning">
+                            <IconLoader className="size-3.5 animate-spin" />
+                            Pending
+                          </span>
+                        ) : (
+                          <span className="text-xs capitalize text-danger">
+                            {row.status}
+                          </span>
+                        )}
+                        {remove}
+                      </span>
                     </span>
                     {row.status === "failed" && row.error ? (
                       <span className="mt-1 block text-xs text-danger">
@@ -548,9 +591,13 @@ export function ReplayVariantSelect({
                   label={label}
                   selected={run.id === row.id}
                   onChoose={() => setOpen(false)}
+                  trailing={remove}
                 />
               );
             })}
+            {deleteError ? (
+              <li className="px-3 py-2 text-xs text-danger">{deleteError}</li>
+            ) : null}
           </ul>
         ) : null}
       </div>
@@ -576,24 +623,55 @@ function VariantOption({
   label,
   selected,
   onChoose,
+  trailing,
 }: {
   href: string;
   label: string;
   selected: boolean;
   onChoose: () => void;
+  trailing?: ReactNode;
 }) {
   return (
-    <li role="option" aria-selected={selected}>
+    <li
+      role="option"
+      aria-selected={selected}
+      className={`flex items-center gap-1 pr-1 ${
+        selected ? "bg-surface-raised" : ""
+      }`}
+    >
       <Link
         href={href}
+        title={label}
         onClick={onChoose}
-        className={`block truncate px-3 py-2 text-sm hover:bg-surface-raised ${
-          selected ? "bg-surface-raised text-ink" : "text-ink"
-        }`}
+        className="min-w-0 flex-1 truncate px-3 py-2 text-sm text-ink hover:bg-surface-raised"
       >
         {label}
       </Link>
+      {trailing}
     </li>
+  );
+}
+
+function VariantDeleteButton({
+  label,
+  pending,
+  onDelete,
+}: {
+  label: string;
+  pending: boolean;
+  onDelete: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={`Delete ${label}`}
+      title="Delete"
+      disabled={pending}
+      onClick={onDelete}
+      className="inline-flex size-7 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-danger disabled:opacity-40"
+    >
+      <IconTrash className="size-3.5" />
+    </button>
   );
 }
 
