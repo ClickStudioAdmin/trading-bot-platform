@@ -289,9 +289,9 @@ export function BacktestRunDetail({
           {complete ? (
             <Link
               href={`/account/backtests/${run.id}/replay`}
-              className="inline-flex shrink-0 items-center gap-3 rounded-control bg-accent-strong px-5 py-3 text-xl font-medium text-ink hover:bg-accent"
+              className="inline-flex shrink-0 items-center gap-2 rounded-control bg-accent-strong px-4 py-2 text-base font-medium text-ink hover:bg-accent"
             >
-              <IconPlay size={48} className="ml-1 size-12 fill-current" />
+              <IconPlay size={28} className="ml-0.5 size-7 fill-current" />
               Replay
             </Link>
           ) : null}
