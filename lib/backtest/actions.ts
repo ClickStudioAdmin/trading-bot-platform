@@ -351,12 +351,14 @@ export async function queueTemplateBacktestAction(
       recipe: comparableRecipe,
     });
   }
-  const inline = backtestPageCanRun({
-    fromMs: range.fromMs,
-    toMs: range.toMs,
-    interval,
-    comparableSymbols: comparables,
-  });
+  const inline =
+    !linkedParentId &&
+    backtestPageCanRun({
+      fromMs: range.fromMs,
+      toMs: range.toMs,
+      interval,
+      comparableSymbols: comparables,
+    });
   if (inline) {
     const result = await executeBacktestRun(run.id);
     const children = await listBacktestRuns({ parentRunId: run.id, limit: 20 });

@@ -38,6 +38,59 @@ import type { AutomationTemplateSet } from "@/lib/templates/store";
 const RAIL_KEY = "tbp-replay-rail";
 const RAIL_EVENT = "tbp-replay-rail";
 
+type OptimisticVariant = { token: string; runId: string | null };
+
+let optimisticVariants: OptimisticVariant[] = [];
+const optimisticListeners = new Set<() => void>();
+const emptyOptimistic: OptimisticVariant[] = [];
+
+function publishOptimistic(next: OptimisticVariant[]) {
+  optimisticVariants = next;
+  for (const listener of optimisticListeners) {
+    listener();
+  }
+}
+
+function subscribeOptimistic(onStoreChange: () => void) {
+  optimisticListeners.add(onStoreChange);
+  return () => optimisticListeners.delete(onStoreChange);
+}
+
+export function beginOptimisticVariant(): string {
+  const token = `${Date.now()}-${optimisticVariants.length}`;
+  publishOptimistic([...optimisticVariants, { token, runId: null }]);
+  return token;
+}
+
+export function resolveOptimisticVariant(token: string, runId: string) {
+  publishOptimistic(
+    optimisticVariants.map((row) =>
+      row.token === token ? { token, runId } : row,
+    ),
+  );
+}
+
+export function clearOptimisticVariant(token: string) {
+  publishOptimistic(optimisticVariants.filter((row) => row.token !== token));
+}
+
+export function dropCoveredOptimisticVariants(runIds: ReadonlySet<string>) {
+  const next = optimisticVariants.filter(
+    (row) => row.runId == null || !runIds.has(row.runId),
+  );
+  if (next.length !== optimisticVariants.length) {
+    publishOptimistic(next);
+  }
+}
+
+export function useOptimisticVariants(): OptimisticVariant[] {
+  return useSyncExternalStore(
+    subscribeOptimistic,
+    () => optimisticVariants,
+    () => emptyOptimistic,
+  );
+}
+
 export type ReplayRailPanel = "positions" | "parameters" | "statistics" | "closed";
 
 function railSnapshot(): ReplayRailPanel {
@@ -172,7 +225,7 @@ function ParametersBody({
   applyDesks: Array<{ id: string; name: string }>;
 }) {
   const router = useRouter();
-  const nudged = useRef(new Set<string>());
+  const pendingToken = useRef<string | null>(null);
   const [modifying, setModifying] = useState(false);
   const root = family.find((row) => row.id === rootId) ?? run;
   const variants = family
@@ -193,32 +246,6 @@ function ParametersBody({
     { label: "Window start", value: isoDateUtc(run.fromMs) },
     { label: "Window end", value: isoDateUtc(run.toMs) },
   ];
-
-  useEffect(() => {
-    const pending = family.filter(
-      (row) =>
-        row.id !== rootId &&
-        (row.status === "queued" || row.status === "running"),
-    );
-    if (pending.length === 0) {
-      return;
-    }
-    for (const row of pending) {
-      if (row.status !== "queued" || nudged.current.has(row.id)) {
-        continue;
-      }
-      nudged.current.add(row.id);
-      void nudgeBacktestRunAction(row.id).finally(() => {
-        router.refresh();
-      });
-    }
-    const timer = window.setInterval(() => {
-      if (!document.hidden) {
-        router.refresh();
-      }
-    }, 5_000);
-    return () => window.clearInterval(timer);
-  }, [family, rootId, router]);
 
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-auto p-4">
@@ -261,7 +288,24 @@ function ParametersBody({
             seed={seed}
             loadedFromRun
             variantParentId={rootId}
-            onVariantQueued={() => {
+            onVariantPending={() => {
+              if (pendingToken.current) {
+                clearOptimisticVariant(pendingToken.current);
+              }
+              pendingToken.current = beginOptimisticVariant();
+              writeRail("parameters");
+            }}
+            onVariantFailed={() => {
+              if (pendingToken.current) {
+                clearOptimisticVariant(pendingToken.current);
+                pendingToken.current = null;
+              }
+            }}
+            onVariantQueued={(runId) => {
+              if (pendingToken.current) {
+                resolveOptimisticVariant(pendingToken.current, runId);
+                pendingToken.current = null;
+              }
               setModifying(false);
               writeRail("parameters");
               router.refresh();
@@ -340,6 +384,10 @@ function VariantList({
   folders: AutomationTemplateSet[];
   applyDesks: Array<{ id: string; name: string }>;
 }) {
+  const known = new Set(variants.map((row) => row.id));
+  const waiting = useOptimisticVariants().filter(
+    (row) => row.runId == null || !known.has(row.runId),
+  );
   return (
     <div className="space-y-2">
       <h3 className="text-sm font-semibold text-ink">Variants</h3>
@@ -353,6 +401,18 @@ function VariantList({
           folders={folders}
           applyDesks={applyDesks}
         />
+        {waiting.map((row) => (
+          <li
+            key={row.token}
+            className="rounded-control border border-line bg-canvas p-3"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-medium text-ink">New backtest</p>
+              <IconLoader className="size-4 shrink-0 animate-spin text-warning" />
+            </div>
+            <p className="mt-1 text-xs text-warning">Pending</p>
+          </li>
+        ))}
         {variants.map((row) => (
           <VariantRow
             key={row.id}
@@ -366,7 +426,7 @@ function VariantList({
           />
         ))}
       </ul>
-      {variants.length === 0 ? (
+      {variants.length === 0 && waiting.length === 0 ? (
         <p className="text-sm text-ink-muted">
           No variants yet. Modify to run one in the background.
         </p>
@@ -395,6 +455,7 @@ function VariantRow({
   const onScreen = row.id === screenId;
   const active = row.status === "queued" || row.status === "running";
   const done = row.status === "done";
+  const statusLabel = active ? "Pending" : row.status;
   const realized = row.stats ? signedMoney(row.stats.realizedUsdt) : null;
   return (
     <li className="rounded-control border border-line bg-canvas p-3">
@@ -405,7 +466,7 @@ function VariantRow({
         ) : null}
       </div>
       <p className="mt-1 text-xs text-ink-muted">
-        {row.status}
+        {statusLabel}
         {realized ? ` · ${realized}` : ""}
       </p>
       {row.status === "failed" && row.error ? (
@@ -460,6 +521,61 @@ function VariantRow({
       ) : null}
     </li>
   );
+}
+
+export function ReplayVariantWatcher({
+  family,
+  rootId,
+}: {
+  family: BacktestRun[];
+  rootId: string;
+}) {
+  const router = useRouter();
+  const nudged = useRef(new Set<string>());
+  const optimistic = useOptimisticVariants();
+
+  useEffect(() => {
+    dropCoveredOptimisticVariants(new Set(family.map((row) => row.id)));
+  }, [family]);
+
+  useEffect(() => {
+    const pending = family.filter(
+      (row) =>
+        row.id !== rootId &&
+        (row.status === "queued" || row.status === "running"),
+    );
+    const known = new Set(family.map((row) => row.id));
+    const waiting = optimistic.some(
+      (row) => row.runId == null || !known.has(row.runId),
+    );
+    if (pending.length === 0 && !waiting) {
+      return;
+    }
+    for (const row of pending) {
+      if (row.status !== "queued" || nudged.current.has(row.id)) {
+        continue;
+      }
+      nudged.current.add(row.id);
+      void nudgeBacktestRunAction(row.id).finally(() => {
+        router.refresh();
+      });
+    }
+    const timer = window.setInterval(() => {
+      if (!document.hidden) {
+        router.refresh();
+      }
+    }, 5_000);
+    return () => window.clearInterval(timer);
+  }, [family, optimistic, rootId, router]);
+
+  return null;
+}
+
+export function useUnresolvedOptimisticCount(runIds: readonly string[]): number {
+  const optimistic = useOptimisticVariants();
+  const known = new Set(runIds);
+  return optimistic.filter((row) => row.runId == null || !known.has(row.runId))
+    .length;
 }
 
 function signedMoney(value: number): string {

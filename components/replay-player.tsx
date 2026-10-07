@@ -117,7 +117,9 @@ import {
 import {
   ReplayRailBody,
   ReplayRailNav,
+  ReplayVariantWatcher,
   useReplayRail,
+  useUnresolvedOptimisticCount,
 } from "@/components/replay-side-rail";
 import { backtestVariantsStillRunning } from "@/lib/backtest/variant-label";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
@@ -499,7 +501,9 @@ export function ReplayPlayer({
   );
   const rail = useReplayRail();
   const sidePanel = rail !== "closed";
-  const variantRunning = backtestVariantsStillRunning(family, rootId);
+  const variantRunning =
+    backtestVariantsStillRunning(family, rootId) +
+    useUnresolvedOptimisticCount(family.map((row) => row.id));
   const [sideLanes, setSideLanes] = useState(true);
   const [laneFrame, setLaneFrame] = useState(0);
   const [placedLanes, setPlacedLanes] = useState<ReplayLaneDraw[]>([]);
@@ -2575,6 +2579,7 @@ export function ReplayPlayer({
           />
         </aside>
       ) : null}
+      <ReplayVariantWatcher family={family} rootId={rootId} />
       <ReplayRailNav
         panel={rail}
         runningCount={variantRunning}

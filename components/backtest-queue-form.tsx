@@ -105,7 +105,9 @@ export function BacktestQueueForm({
   defaultVenue = "bybit",
   defaultVenueEnvironment = null,
   variantParentId = "",
+  onVariantPending,
   onVariantQueued,
+  onVariantFailed,
 }: {
   templates: BacktestLibraryItem[];
   folders?: BacktestLibraryFolder[];
@@ -118,7 +120,9 @@ export function BacktestQueueForm({
   defaultVenue?: string;
   defaultVenueEnvironment?: string | null;
   variantParentId?: string;
+  onVariantPending?: () => void;
   onVariantQueued?: (runId: string) => void;
+  onVariantFailed?: () => void;
 }) {
   const variant = variantParentId.trim().length > 0;
   const router = useRouter();
@@ -424,9 +428,15 @@ export function BacktestQueueForm({
         action={async (formData) => {
           setPending(true);
           setError(null);
+          if (variant) {
+            onVariantPending?.();
+          }
           const result = await queueTemplateBacktestAction(formData);
           setPending(false);
           if (!result.ok) {
+            if (variant) {
+              onVariantFailed?.();
+            }
             setError(result.error ?? "Could not queue that backtest.");
             return;
           }
