@@ -285,9 +285,19 @@ export async function queueTemplateBacktestAction(
     auth.member.id,
     auth.isAdmin,
   );
+  const requestedParentId = String(formData.get("parentRunId") ?? "").trim();
+  let linkedParentId: string | null = null;
+  if (requestedParentId) {
+    const parent = await loadBacktestRun(requestedParentId);
+    if (!parent || !canReadBacktestRun(parent, auth.member.id, auth.isAdmin)) {
+      return { ok: false, error: "That backtest was not found." };
+    }
+    linkedParentId = parent.parentRunId ?? parent.id;
+  }
   const draftId = String(formData.get("draftId") ?? "").trim();
   const draft = draftId ? await loadBacktestRun(draftId) : null;
   const canPromote =
+    !linkedParentId &&
     draft &&
     draft.status === "draft" &&
     draft.userId === auth.member.id;
@@ -311,6 +321,7 @@ export async function queueTemplateBacktestAction(
     ? await promoteDraftBacktestRun(draft.id, queuedFields)
     : await insertBacktestRun({
         userId: auth.member.id,
+        parentRunId: linkedParentId,
         ...queuedFields,
       });
   if (!run) {
@@ -354,8 +365,14 @@ export async function queueTemplateBacktestAction(
         await executeBacktestRun(child.id);
       }
     }
+    if (linkedParentId) {
+      revalidateBacktests(`/account/backtests/${linkedParentId}`);
+    }
     revalidateBacktests(`/account/backtests/${run.id}`);
-    return result;
+    return { ...result, runId: result.runId ?? run.id };
+  }
+  if (linkedParentId) {
+    revalidateBacktests(`/account/backtests/${linkedParentId}`);
   }
   revalidateBacktests(`/account/backtests/${run.id}`);
   return { ok: true, runId: run.id };

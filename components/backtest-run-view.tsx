@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { IconFilterClear, IconPlus, IconTemplates, IconTrash } from "@/components/icons";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import {
@@ -658,12 +665,16 @@ export function BacktestInlineChart({
   onIntervalChange,
   focusCycleId = null,
   onFocusCycleId,
+  stageRef = null,
+  onStageFill,
 }: {
   run: BacktestRun;
   interval: DcaIndicatorTimeframe;
   onIntervalChange: (value: DcaIndicatorTimeframe) => void;
   focusCycleId?: string | null;
   onFocusCycleId?: (id: string | null) => void;
+  stageRef?: RefObject<HTMLElement | null> | null;
+  onStageFill?: (filling: boolean) => void;
 }) {
   const [candles, setCandles] = useState<CandleBar[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -758,6 +769,8 @@ export function BacktestInlineChart({
         backtestOverlayForRun(run, { focusCycleId, includeAdds }),
         candles,
       )}
+      stageRef={stageRef}
+      onStageFill={onStageFill}
     />
   );
 }

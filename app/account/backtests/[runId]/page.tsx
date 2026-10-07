@@ -154,13 +154,13 @@ async function loadComparableFamily(
     }
     const children = await listBacktestRuns({
       parentRunId: parent.id,
-      limit: 20,
+      limit: 40,
     });
     return { primary: parent, children };
   }
   const children = await listBacktestRuns({
     parentRunId: run.id,
-    limit: 20,
+    limit: 40,
   });
   if (children.length === 0) {
     return null;
