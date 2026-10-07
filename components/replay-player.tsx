@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { AutoscaleInfo } from "lightweight-charts";
 import {
@@ -676,7 +676,8 @@ export function ReplayPlayer({
   const [references, setReferences] = useState<string[]>(
     runIndicators?.referenceIndicators ?? [],
   );
-  const deferredReferences = useDeferredValue(references);
+  const referencesRef = useRef(references);
+  referencesRef.current = references;
   const [appliedReferences, setAppliedReferences] = useState<string[]>([]);
   const [referenceInputs, setReferenceInputs] = useState<ReplayReferenceInputs>(
     runIndicators?.referenceInputs ?? {},
@@ -693,9 +694,12 @@ export function ReplayPlayer({
   const indicatorBaselineReadyRef = useRef(false);
   const indicatorRetryTimerRef = useRef<number | null>(null);
   const series = useMemo(
-    () => replayChartSeries(run.recipe, candles, deferredReferences, referenceInputs),
-    [run.recipe, candles, deferredReferences, referenceInputs],
+    () => replayChartSeries(run.recipe, candles, references, referenceInputs),
+    [run.recipe, candles, references, referenceInputs],
   );
+  const seriesRef = useRef(series);
+  seriesRef.current = series;
+  const syncIndicatorsRef = useRef<(() => void) | null>(null);
   const indicatorChoices = useMemo(
     () => replayIndicatorCatalog(run.recipe),
     [run.recipe],
@@ -1006,7 +1010,7 @@ export function ReplayPlayer({
   }
 
   useEffect(() => {
-    const paintedReferences = deferredReferences;
+    const paintedReferences = referencesRef.current;
     const host = hostRef.current;
     if (!started || !host || candles.length === 0) {
       setAppliedReferences((current) =>
@@ -1057,7 +1061,7 @@ export function ReplayPlayer({
           if (!logical) {
             return original();
           }
-          const plots = series.layers
+          const plots = seriesRef.current.layers
             .filter((layer) => layer.pane === "price")
             .flatMap((layer) => layer.price.map((plot) => plot.values));
           const priceRange = visiblePriceBounds(candles, plots, logical.from, logical.to);
@@ -1074,7 +1078,7 @@ export function ReplayPlayer({
         priceLineVisible: true,
         lastValueVisible: true,
       });
-      const drawn: Array<{
+      let drawn: Array<{
         lines: ReturnType<typeof chart.addSeries>[];
         dots: ReturnType<typeof chart.addSeries>;
         oscillator: {
@@ -1085,8 +1089,8 @@ export function ReplayPlayer({
         };
       }> = [];
       let paneCursor = 0;
+      let indicatorApis: Array<ReturnType<typeof chart.addSeries>> = [];
       const drawnIndicators = drawnIndicatorsRef.current;
-      drawnIndicators.clear();
       function rememberIndicator(
         layerId: string,
         lineId: string,
@@ -1106,7 +1110,18 @@ export function ReplayPlayer({
           applyOptions: (options) => seriesApi.applyOptions(options),
         });
       }
-      for (const layer of series.layers) {
+      function mountIndicators() {
+        for (const api of indicatorApis) {
+          chart.removeSeries(api);
+        }
+        indicatorApis = [];
+        while (chart.panes().length > 1) {
+          chart.removePane(chart.panes().length - 1);
+        }
+        paneCursor = 0;
+        drawn = [];
+        drawnIndicators.clear();
+        for (const layer of seriesRef.current.layers) {
         let pane = 0;
         if (layer.pane === "oscillator") {
           chart.addPane();
@@ -1126,6 +1141,7 @@ export function ReplayPlayer({
             pane,
           );
           rememberIndicator(layer.id, plot.id, "line", plot.color, line);
+          indicatorApis.push(line);
           return line;
         });
         const oscillator = {
@@ -1149,6 +1165,7 @@ export function ReplayPlayer({
             pane,
           );
           rememberIndicator(layer.id, "rsi", "line", "#A78BFA", oscillator.rsi);
+          indicatorApis.push(oscillator.rsi);
           for (const level of layer.oscillator.levels) {
             oscillator.rsi.createPriceLine({
               price: level,
@@ -1173,6 +1190,7 @@ export function ReplayPlayer({
             "#34D399",
             oscillator.histogram,
           );
+          indicatorApis.push(oscillator.histogram);
           oscillator.macd = chart.addSeries(
             charts.LineSeries,
             {
@@ -1183,6 +1201,7 @@ export function ReplayPlayer({
             pane,
           );
           rememberIndicator(layer.id, "macd", "line", "#A78BFA", oscillator.macd);
+          indicatorApis.push(oscillator.macd);
           oscillator.signal = chart.addSeries(
             charts.LineSeries,
             {
@@ -1193,6 +1212,7 @@ export function ReplayPlayer({
             pane,
           );
           rememberIndicator(layer.id, "signal", "line", "#F5B942", oscillator.signal);
+          indicatorApis.push(oscillator.signal);
         }
         const dots = chart.addSeries(
           charts.LineSeries,
@@ -1208,8 +1228,11 @@ export function ReplayPlayer({
           },
           pane,
         );
+        indicatorApis.push(dots);
         drawn.push({ lines, dots, oscillator });
       }
+      }
+      mountIndicators();
       let initialRange: { from: number; to: number } | null = null;
       function resetPriceScales() {
         for (const pane of chart.panes()) {
@@ -1225,24 +1248,12 @@ export function ReplayPlayer({
       resetPriceRef.current = resetPriceScales;
       const markers = charts.createSeriesMarkers(candleSeries, []);
       const lineMarkers = charts.createSeriesMarkers(closeSeries, []);
-      function paint(index: number, follow = true) {
-        const end = Math.max(0, Math.min(index, candles.length - 1));
-        const shown = candles.slice(0, end + 1);
-        const bars = shown.map((row) => ({
-          time: Math.floor(row.timeMs / 1000) as never,
-          open: row.open,
-          high: row.high,
-          low: row.low,
-          close: row.close,
-        }));
-        candleSeries.setData(bars);
-        closeSeries.setData(bars.map((row) => ({ time: row.time, value: row.close })));
-        const lineMode = chartAppearanceRef.current.series === "line";
-        candleSeries.applyOptions({ visible: !lineMode });
-        closeSeries.applyOptions({ visible: lineMode });
-        const at = candles[end]?.timeMs ?? 0;
-        const focusOrders = positionFocusRef.current?.orders ?? null;
-        series.layers.forEach((layer, layerIndex) => {
+      function paintIndicators(
+        end: number,
+        at = candles[end]?.timeMs ?? 0,
+        focusOrders = positionFocusRef.current?.orders ?? null,
+      ) {
+        seriesRef.current.layers.forEach((layer, layerIndex) => {
           const row = drawn[layerIndex];
           if (!row) {
             return;
@@ -1283,7 +1294,7 @@ export function ReplayPlayer({
           }
           const dots: Array<{ time: number; value: number }> = [];
           const seen = new Set<number>();
-          const rolesPresent = series.layers.flatMap((row) => row.roles);
+          const rolesPresent = seriesRef.current.layers.flatMap((item) => item.roles);
           for (const item of events) {
             if (item.atMs > at) {
               continue;
@@ -1310,6 +1321,25 @@ export function ReplayPlayer({
           }
           row.dots.setData(dots as never);
         });
+      }
+      function paint(index: number, follow = true) {
+        const end = Math.max(0, Math.min(index, candles.length - 1));
+        const shown = candles.slice(0, end + 1);
+        const bars = shown.map((row) => ({
+          time: Math.floor(row.timeMs / 1000) as never,
+          open: row.open,
+          high: row.high,
+          low: row.low,
+          close: row.close,
+        }));
+        candleSeries.setData(bars);
+        closeSeries.setData(bars.map((row) => ({ time: row.time, value: row.close })));
+        const lineMode = chartAppearanceRef.current.series === "line";
+        candleSeries.applyOptions({ visible: !lineMode });
+        closeSeries.applyOptions({ visible: lineMode });
+        const at = candles[end]?.timeMs ?? 0;
+        const focusOrders = positionFocusRef.current?.orders ?? null;
+        paintIndicators(end, at, focusOrders);
         if (follow) {
           const next = { from: end - 96, to: end + 8 };
           chart.timeScale().setVisibleLogicalRange(next);
@@ -1514,8 +1544,9 @@ export function ReplayPlayer({
       applyIndicatorStyles();
       paint(headRef.current);
       if (!disposed) {
+        const nextIds = referencesRef.current;
         setAppliedReferences((current) =>
-          sameReferenceIds(current, paintedReferences) ? current : paintedReferences,
+          sameReferenceIds(current, nextIds) ? current : nextIds,
         );
       }
       const paintRef = { current: paint };
@@ -1677,6 +1708,27 @@ export function ReplayPlayer({
         }
       }
       sizeOscillatorPanes(true);
+      syncIndicatorsRef.current = () => {
+        if (disposed) {
+          return;
+        }
+        mountIndicators();
+        applyIndicatorStyles();
+        paintIndicators(headRef.current);
+        sizeOscillatorPanes(true);
+        paneObserver.disconnect();
+        for (const pane of chart.panes()) {
+          const element = pane.getHTMLElement();
+          if (element) {
+            paneObserver.observe(element);
+          }
+        }
+        publishOscillatorTops();
+        const nextIds = referencesRef.current;
+        setAppliedReferences((current) =>
+          sameReferenceIds(current, nextIds) ? current : nextIds,
+        );
+      };
       requestAnimationFrame(() => {
         if (disposed) {
           return;
@@ -1715,6 +1767,7 @@ export function ReplayPlayer({
         delete chartHost.__pan;
         delete chartHost.__wheel;
         applyIndicatorStylesRef.current = null;
+        syncIndicatorsRef.current = null;
         applyAppearanceRef.current = null;
         resetChartRef.current = null;
         resetPriceRef.current = null;
@@ -1727,7 +1780,13 @@ export function ReplayPlayer({
       disposed = true;
       cleanup();
     };
-  }, [candles, series, events, started, positionsRight, fillViewport, deferredReferences]);
+  }, [candles, events, started, positionsRight, fillViewport]);
+
+  // Draw the new indicator on the open chart. A deferred update is postponed
+  // for the whole playback and the line never appears until a refresh.
+  useLayoutEffect(() => {
+    syncIndicatorsRef.current?.();
+  }, [indicatorSnapshotKey]);
 
   const appearanceKey = serializeReplayChartAppearance(chartAppearance);
   useEffect(() => {
