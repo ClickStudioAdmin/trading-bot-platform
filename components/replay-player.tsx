@@ -2507,41 +2507,39 @@ export function ReplayPlayer({
           onClose={() => setSelectedEvent(null)}
         />
       ) : null}
+
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label="Trades" value={String(stats.trades)} />
+        <Stat
+          label="Win rate"
+          value={stats.winRate == null ? "—" : `${(stats.winRate * 100).toFixed(0)}%`}
+        />
+        <Stat
+          label="Realized"
+          value={money(stats.realizedUsdt)}
+          tone={signedTone(stats.realizedUsdt)}
+        />
+        <Stat label="Drawdown" value={money(-stats.maxDrawdownUsdt)} />
+      </dl>
     </>
   );
 
-  const playbackStats = (
-    <dl className="grid grid-cols-2 gap-3">
-      <Stat label="Trades" value={String(stats.trades)} />
-      <Stat
-        label="Win rate"
-        value={stats.winRate == null ? "—" : `${(stats.winRate * 100).toFixed(0)}%`}
-      />
-      <Stat
-        label="Realized"
-        value={money(stats.realizedUsdt)}
-        tone={signedTone(stats.realizedUsdt)}
-      />
-      <Stat label="Drawdown" value={money(-stats.maxDrawdownUsdt)} />
-    </dl>
-  );
-
   const railNavClass = fillViewport
-    ? "flex shrink-0 flex-row border-t border-line bg-surface lg:w-12 lg:flex-col lg:border-l lg:border-t-0 lg:py-2"
-    : "fixed inset-x-0 bottom-0 z-40 flex h-12 flex-row border-t border-line bg-surface lg:static lg:z-auto lg:h-auto lg:w-12 lg:flex-col lg:border-l lg:border-t-0 lg:py-2";
+    ? "flex shrink-0 flex-row items-center border-t border-line bg-surface lg:w-12 lg:flex-col lg:border-0 lg:bg-transparent lg:py-1"
+    : "fixed inset-x-0 bottom-0 z-40 flex h-12 flex-row items-center border-t border-line bg-surface lg:static lg:z-auto lg:h-auto lg:w-12 lg:flex-col lg:border-0 lg:bg-transparent lg:py-1";
   const railPanelClass = fillViewport
-    ? "flex max-h-[46%] min-h-0 w-full flex-col overflow-hidden border-t border-line bg-surface lg:max-h-none lg:w-[min(34rem,42vw)] lg:border-l lg:border-t-0"
-    : "fixed inset-x-0 bottom-12 top-16 z-30 flex flex-col overflow-hidden border-t border-line bg-surface lg:static lg:inset-auto lg:z-auto lg:max-h-none lg:w-[min(34rem,42vw)] lg:border-l lg:border-t-0";
+    ? "flex max-h-[46%] min-h-0 min-w-0 flex-col lg:h-full lg:max-h-none"
+    : "fixed inset-x-0 bottom-12 top-16 z-30 flex min-h-0 flex-col overflow-auto bg-canvas lg:static lg:inset-auto lg:z-auto lg:h-full lg:overflow-visible lg:bg-transparent";
 
   const body = (
     <div
       ref={sideGridRef}
       className={
         sidePanel
-          ? `grid items-stretch lg:grid-cols-[minmax(16rem,1fr)_minmax(18rem,34rem)_3rem] ${
+          ? `grid items-stretch gap-4 lg:grid-cols-[minmax(16rem,1fr)_minmax(18rem,34rem)_3rem] ${
               fillViewport || sideGridHeight != null ? "min-h-0 overflow-hidden" : ""
             } ${fillViewport ? "flex-1" : "max-lg:pb-14"}`
-          : `grid items-stretch lg:grid-cols-[minmax(0,1fr)_3rem] ${
+          : `grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_3rem] ${
               fillViewport ? "min-h-0 flex-1 overflow-hidden" : "max-lg:pb-14"
             }`
       }
@@ -2570,7 +2568,6 @@ export function ReplayPlayer({
             family={family}
             rootId={rootId}
             positions={positions}
-            playbackStats={playbackStats}
             allowKeep={allowKeep}
             allowKeepPlatform={allowKeepPlatform}
             folders={folders}

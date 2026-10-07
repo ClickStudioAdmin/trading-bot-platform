@@ -115,7 +115,6 @@ export function ReplayRailBody({
   family,
   rootId,
   positions,
-  playbackStats,
   allowKeep,
   allowKeepPlatform,
   folders,
@@ -126,26 +125,19 @@ export function ReplayRailBody({
   family: BacktestRun[];
   rootId: string;
   positions: ReactNode;
-  playbackStats: ReactNode;
   allowKeep: boolean;
   allowKeepPlatform: boolean;
   folders: AutomationTemplateSet[];
   applyDesks: Array<{ id: string; name: string }>;
 }) {
   if (panel === "positions") {
-    return <div className="min-h-0 flex-1 overflow-auto">{positions}</div>;
+    return positions;
   }
   if (panel === "statistics") {
     return (
-      <div className="min-h-0 flex-1 space-y-6 overflow-auto p-4">
-        <section>
-          <h2 className="mb-3 text-lg font-semibold">Through the playhead</h2>
-          {playbackStats}
-        </section>
-        <section>
-          <h2 className="mb-3 text-lg font-semibold">Full run</h2>
-          <BacktestStatsGrid run={run} />
-        </section>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <h2 className="mb-3 text-lg font-semibold">Performance</h2>
+        <BacktestStatsGrid run={run} />
       </div>
     );
   }
