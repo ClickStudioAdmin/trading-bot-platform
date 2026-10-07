@@ -2529,10 +2529,10 @@ export function ReplayPlayer({
   );
 
   const railNavClass = fillViewport
-    ? "flex shrink-0 flex-row items-center border-t border-line bg-surface lg:w-12 lg:flex-col lg:border-0 lg:bg-transparent lg:py-1"
-    : "fixed inset-x-0 bottom-0 z-40 flex h-12 flex-row items-center border-t border-line bg-surface lg:static lg:z-auto lg:h-auto lg:w-12 lg:flex-col lg:border-0 lg:bg-transparent lg:py-1";
+    ? "absolute bottom-0 right-0 top-0 z-40 flex w-12 flex-col items-center bg-canvas py-2 max-lg:inset-x-0 max-lg:top-auto max-lg:h-12 max-lg:w-auto max-lg:flex-row max-lg:border-t max-lg:border-line max-lg:bg-surface"
+    : "fixed z-40 flex bg-canvas max-lg:inset-x-0 max-lg:bottom-0 max-lg:h-12 max-lg:flex-row max-lg:items-center max-lg:border-t max-lg:border-line max-lg:bg-surface lg:bottom-0 lg:right-0 lg:top-16 lg:w-12 lg:flex-col lg:items-center lg:py-2";
   const railPanelClass = fillViewport
-    ? "flex max-h-[46%] min-h-0 min-w-0 flex-col lg:h-full lg:max-h-none"
+    ? "flex max-h-[46%] min-h-0 min-w-0 flex-col overflow-hidden lg:h-full lg:max-h-none"
     : "fixed inset-x-0 bottom-12 top-16 z-30 flex min-h-0 flex-col overflow-auto bg-canvas lg:static lg:inset-auto lg:z-auto lg:h-full lg:overflow-visible lg:bg-transparent";
 
   const body = (
@@ -2540,12 +2540,12 @@ export function ReplayPlayer({
       ref={sideGridRef}
       className={
         sidePanel
-          ? `grid items-stretch gap-4 lg:grid-cols-[minmax(16rem,1fr)_minmax(18rem,34rem)_3rem] ${
+          ? `grid items-stretch gap-4 lg:grid-cols-[minmax(24rem,1fr)_34rem] ${
               fillViewport || sideGridHeight != null ? "min-h-0 overflow-hidden" : ""
             } ${fillViewport ? "flex-1" : "max-lg:pb-14"}`
-          : `grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_3rem] ${
-              fillViewport ? "min-h-0 flex-1 overflow-hidden" : "max-lg:pb-14"
-            }`
+          : fillViewport
+            ? "min-h-0 flex-1 overflow-hidden"
+            : "max-lg:pb-14"
       }
       style={
         sidePanel && sideBySide && !fillViewport && sideGridHeight != null
@@ -2579,12 +2579,6 @@ export function ReplayPlayer({
           />
         </aside>
       ) : null}
-      <ReplayVariantWatcher family={family} rootId={rootId} />
-      <ReplayRailNav
-        panel={rail}
-        runningCount={variantRunning}
-        className={railNavClass}
-      />
     </div>
   );
 
@@ -2597,15 +2591,21 @@ export function ReplayPlayer({
           ? "space-y-4"
           : sidePanel
             ? expanded && !monitorFull
-              ? "fixed inset-0 z-50 flex h-dvh w-full flex-col gap-4 overflow-hidden bg-canvas p-4"
-              : "flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden bg-canvas p-4"
+              ? "fixed inset-0 z-50 flex h-dvh w-full flex-col gap-4 overflow-hidden bg-canvas p-4 pr-16"
+              : "flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden bg-canvas p-4 pr-16"
             : expanded && !monitorFull
-              ? "fixed inset-0 z-50 flex h-dvh w-full flex-col overflow-hidden bg-canvas p-4"
-              : "flex h-full min-h-0 w-full flex-col overflow-hidden bg-canvas p-4"
+              ? "fixed inset-0 z-50 flex h-dvh w-full flex-col overflow-hidden bg-canvas p-4 pr-16"
+              : "flex h-full min-h-0 w-full flex-col overflow-hidden bg-canvas p-4 pr-16"
       }
     >
       {header}
       {body}
+      <ReplayVariantWatcher family={family} rootId={rootId} />
+      <ReplayRailNav
+        panel={rail}
+        runningCount={variantRunning}
+        className={railNavClass}
+      />
     </div>
     </ModalHost>
   );
