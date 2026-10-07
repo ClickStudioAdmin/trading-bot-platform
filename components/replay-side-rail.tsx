@@ -1,15 +1,16 @@
 "use client";
 
-import Link from "next/link";
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   useSyncExternalStore,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
-import { flushSync } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
 import { useConfirmDialog } from "@/components/confirm-modal";
@@ -475,7 +476,11 @@ export function ReplayVariantSelect({
   const [finished, setFinished] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuBox, setMenuBox] = useState<{ top: number; left: number } | null>(
+    null,
+  );
+  const menuRef = useRef<HTMLUListElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const primed = useRef(false);
   const seenPending = useRef<Set<string>>(new Set());
   const seenOptimistic = useRef<Set<string>>(new Set());
@@ -547,14 +552,49 @@ export function ReplayVariantSelect({
     router.refresh();
   }
 
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+    function place() {
+      const node = buttonRef.current;
+      if (!node) {
+        return;
+      }
+      const rect = node.getBoundingClientRect();
+      setMenuBox({ top: rect.bottom + 4, left: rect.left });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
+
+  function openVariant(href: string, selected: boolean) {
+    if (selected) {
+      setOpen(false);
+      return;
+    }
+    onBeforeNavigate?.();
+    window.location.assign(href);
+  }
+
   useEffect(() => {
     if (!open) {
       return;
     }
     function onPointer(event: MouseEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        setOpen(false);
+      const target = event.target as Node;
+      if (
+        menuRef.current?.contains(target) ||
+        buttonRef.current?.contains(target)
+      ) {
+        return;
       }
+      setOpen(false);
     }
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -572,8 +612,9 @@ export function ReplayVariantSelect({
   return (
     <div className="flex min-w-0 shrink items-center gap-2">
       {dialog}
-      <div ref={menuRef} className="relative min-w-0">
+      <div className="relative min-w-0">
         <button
+          ref={buttonRef}
           type="button"
           aria-haspopup="listbox"
           aria-expanded={open}
@@ -591,20 +632,20 @@ export function ReplayVariantSelect({
           ) : null}
           <IconChevronDown className="size-4 shrink-0 text-ink-muted" />
         </button>
-        {open ? (
+        {open && menuBox
+          ? createPortal(
           <ul
+            ref={menuRef}
             role="listbox"
             aria-label="Backtest variants"
-            className="absolute left-0 top-full z-40 mt-1 max-h-80 w-80 overflow-auto rounded-card border border-line bg-surface py-1"
+            className="fixed z-[80] max-h-80 w-80 overflow-auto rounded-card border border-line bg-surface py-1"
+            style={{ top: menuBox.top, left: menuBox.left }}
           >
             <VariantOption
               href={`/account/backtests/${rootId}/replay`}
               label="Original"
               selected={run.id === rootId}
-              onChoose={() => {
-                onBeforeNavigate?.();
-                setOpen(false);
-              }}
+              onOpen={() => openVariant(`/account/backtests/${rootId}/replay`, run.id === rootId)}
             />
             {waiting.map((row) => (
               <li key={row.token} className="px-3 py-2">
@@ -662,10 +703,12 @@ export function ReplayVariantSelect({
                   href={`/account/backtests/${row.id}/replay`}
                   label={label}
                   selected={run.id === row.id}
-                  onChoose={() => {
-                    onBeforeNavigate?.();
-                    setOpen(false);
-                  }}
+                  onOpen={() =>
+                    openVariant(
+                      `/account/backtests/${row.id}/replay`,
+                      run.id === row.id,
+                    )
+                  }
                   trailing={remove}
                 />
               );
@@ -673,8 +716,10 @@ export function ReplayVariantSelect({
             {deleteError ? (
               <li className="px-3 py-2 text-xs text-danger">{deleteError}</li>
             ) : null}
-          </ul>
-        ) : null}
+          </ul>,
+          document.body,
+        )
+          : null}
       </div>
       {finished ? (
         <p className="flex max-w-64 items-center gap-2 text-sm text-success">
@@ -693,17 +738,27 @@ export function ReplayVariantSelect({
   );
 }
 
+function variantClickModified(event: ReactMouseEvent<HTMLAnchorElement>) {
+  return (
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  );
+}
+
 function VariantOption({
   href,
   label,
   selected,
-  onChoose,
+  onOpen,
   trailing,
 }: {
   href: string;
   label: string;
   selected: boolean;
-  onChoose: () => void;
+  onOpen: () => void;
   trailing?: ReactNode;
 }) {
   return (
@@ -714,14 +769,27 @@ function VariantOption({
         selected ? "bg-surface-raised" : ""
       }`}
     >
-      <Link
+      <a
         href={href}
         title={label}
-        onClick={onChoose}
+        onMouseDown={(event) => {
+          if (variantClickModified(event)) {
+            return;
+          }
+          event.preventDefault();
+          onOpen();
+        }}
+        onClick={(event) => {
+          if (variantClickModified(event)) {
+            return;
+          }
+          event.preventDefault();
+          onOpen();
+        }}
         className="min-w-0 flex-1 truncate px-3 py-2 text-sm text-ink hover:bg-surface-raised"
       >
         {label}
-      </Link>
+      </a>
       {trailing}
     </li>
   );
