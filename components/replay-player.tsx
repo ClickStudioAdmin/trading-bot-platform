@@ -2529,13 +2529,14 @@ export function ReplayPlayer({
   );
 
   const railNavClass = fillViewport
-    ? "absolute bottom-0 right-0 top-0 z-40 flex w-12 flex-col items-center bg-canvas py-2 max-lg:inset-x-0 max-lg:top-auto max-lg:h-12 max-lg:w-auto max-lg:flex-row max-lg:border-t max-lg:border-line max-lg:bg-surface"
-    : "fixed z-40 flex bg-canvas max-lg:inset-x-0 max-lg:bottom-0 max-lg:h-12 max-lg:flex-row max-lg:items-center max-lg:border-t max-lg:border-line max-lg:bg-surface lg:bottom-0 lg:right-0 lg:top-16 lg:w-12 lg:flex-col lg:items-center lg:py-2";
+    ? "absolute top-0 z-40 flex items-center max-lg:inset-x-0 max-lg:h-12 max-lg:flex-row max-lg:border-t max-lg:border-line max-lg:bg-surface lg:left-[calc(100%+1rem)] lg:w-12 lg:flex-col lg:py-1"
+    : "z-40 flex items-center max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:h-12 max-lg:flex-row max-lg:border-t max-lg:border-line max-lg:bg-surface lg:absolute lg:left-[calc(100%+1rem)] lg:top-0 lg:w-12 lg:flex-col lg:py-1";
   const railPanelClass = fillViewport
     ? "flex max-h-[46%] min-h-0 min-w-0 flex-col overflow-hidden lg:h-full lg:max-h-none"
     : "fixed inset-x-0 bottom-12 top-16 z-30 flex min-h-0 flex-col overflow-auto bg-canvas lg:static lg:inset-auto lg:z-auto lg:h-full lg:overflow-visible lg:bg-transparent";
 
   const body = (
+    <div className={fillViewport ? "relative min-h-0 flex-1" : "relative"}>
     <div
       ref={sideGridRef}
       className={
@@ -2580,6 +2581,12 @@ export function ReplayPlayer({
         </aside>
       ) : null}
     </div>
+    <ReplayRailNav
+      panel={rail}
+      runningCount={variantRunning}
+      className={railNavClass}
+    />
+    </div>
   );
 
   const frame = (
@@ -2601,11 +2608,6 @@ export function ReplayPlayer({
       {header}
       {body}
       <ReplayVariantWatcher family={family} rootId={rootId} />
-      <ReplayRailNav
-        panel={rail}
-        runningCount={variantRunning}
-        className={railNavClass}
-      />
     </div>
     </ModalHost>
   );
