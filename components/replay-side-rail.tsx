@@ -9,6 +9,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
 import { useConfirmDialog } from "@/components/confirm-modal";
@@ -29,6 +30,7 @@ import {
 import {
   deleteBacktestAction,
   nudgeBacktestRunAction,
+  pollReplayFamilyAction,
 } from "@/lib/backtest/actions";
 import { recipeParamRows } from "@/lib/backtest/library";
 import {
@@ -37,7 +39,12 @@ import {
   isoDateUtc,
   type BacktestRun,
 } from "@/lib/backtest/model";
-import { completedBacktestVariantIds } from "@/lib/backtest/variant-label";
+import {
+  completedBacktestVariantIds,
+  mergeReplayVariantRows,
+  sameReplayVariantRows,
+  type ReplayVariantRow,
+} from "@/lib/backtest/variant-label";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
 
 const RAIL_KEY = "tbp-replay-rail";
@@ -86,6 +93,62 @@ export function dropCoveredOptimisticVariants(runIds: ReadonlySet<string>) {
   if (next.length !== optimisticVariants.length) {
     publishOptimistic(next);
   }
+}
+
+type FamilyPoll = { rootId: string; rows: ReplayVariantRow[] };
+
+let familyPoll: FamilyPoll | null = null;
+const familyPollListeners = new Set<() => void>();
+
+function publishFamilyPoll(next: FamilyPoll) {
+  if (
+    familyPoll &&
+    familyPoll.rootId === next.rootId &&
+    sameReplayVariantRows(familyPoll.rows, next.rows)
+  ) {
+    return;
+  }
+  familyPoll = next;
+  for (const listener of familyPollListeners) {
+    listener();
+  }
+}
+
+function subscribeFamilyPoll(onStoreChange: () => void) {
+  familyPollListeners.add(onStoreChange);
+  return () => familyPollListeners.delete(onStoreChange);
+}
+
+function familyPollSnapshot(): FamilyPoll | null {
+  return familyPoll;
+}
+
+function familyRows(family: BacktestRun[]): ReplayVariantRow[] {
+  return family.map((row) => ({
+    id: row.id,
+    status: row.status,
+    name: row.recipe.name.trim() || "Backtest",
+    error: row.error,
+    createdAtMs: row.createdAtMs,
+  }));
+}
+
+export function useReplayVariantRows(
+  rootId: string,
+  family: BacktestRun[],
+): ReplayVariantRow[] {
+  const poll = useSyncExternalStore(
+    subscribeFamilyPoll,
+    familyPollSnapshot,
+    () => null,
+  );
+  const base = useMemo(() => familyRows(family), [family]);
+  return useMemo(() => {
+    if (!poll || poll.rootId !== rootId) {
+      return base;
+    }
+    return mergeReplayVariantRows(base, poll.rows);
+  }, [base, poll, rootId]);
 }
 
 export function useOptimisticVariants(): OptimisticVariant[] {
@@ -391,19 +454,23 @@ export function ReplayVariantSelect({
 }) {
   const router = useRouter();
   const { confirm, dialog } = useConfirmDialog();
-  const variants = family
+  const rows = useReplayVariantRows(rootId, family);
+  const variants = rows
     .filter((row) => row.id !== rootId)
     .slice()
     .sort((left, right) => left.createdAtMs - right.createdAtMs);
   const optimistic = useOptimisticVariants();
-  const known = new Set(family.map((row) => row.id));
+  const known = new Set(rows.map((row) => row.id));
   const waiting = optimistic.filter(
     (row) => row.runId == null || !known.has(row.runId),
   );
   const pending =
     waiting.length > 0 ||
     variants.some((row) => row.status === "queued" || row.status === "running");
-  const selected = run.id === rootId ? "Original" : variantName(run);
+  const selected =
+    run.id === rootId
+      ? "Original"
+      : (rows.find((row) => row.id === run.id)?.name ?? variantName(run));
   const [open, setOpen] = useState(false);
   const [finished, setFinished] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -415,7 +482,7 @@ export function ReplayVariantSelect({
 
   useEffect(() => {
     const pendingIds = new Set(
-      family
+      rows
         .filter(
           (row) =>
             row.id !== rootId &&
@@ -429,7 +496,7 @@ export function ReplayVariantSelect({
         .filter((id): id is string => id != null),
     );
     const doneIds = new Set(
-      family
+      rows
         .filter((row) => row.id !== rootId && row.status === "done")
         .map((row) => row.id),
     );
@@ -445,15 +512,15 @@ export function ReplayVariantSelect({
     seenPending.current = pendingIds;
     seenOptimistic.current = optimisticIds;
     if (justDone.length === 1) {
-      const row = family.find((item) => item.id === justDone[0]);
-      setFinished(row ? `${variantName(row)} finished.` : "Backtest finished.");
+      const row = rows.find((item) => item.id === justDone[0]);
+      setFinished(row ? `${row.name} finished.` : "Backtest finished.");
     } else if (justDone.length > 1) {
       setFinished(`${justDone.length} backtests finished.`);
     }
-  }, [family, optimistic, rootId]);
+  }, [optimistic, rootId, rows]);
 
-  async function removeVariant(row: BacktestRun) {
-    const name = variantName(row);
+  async function removeVariant(row: ReplayVariantRow) {
+    const name = row.name;
     const ok = await confirm({
       title: `Delete ${name}?`,
       message: "This cannot be undone.",
@@ -552,7 +619,7 @@ export function ReplayVariantSelect({
             ))}
             {variants.map((row) => {
               const active = row.status === "queued" || row.status === "running";
-              const label = variantName(row);
+              const label = row.name;
               const remove = (
                 <VariantDeleteButton
                   label={label}
@@ -690,26 +757,36 @@ export function ReplayVariantWatcher({
   family: BacktestRun[];
   rootId: string;
 }) {
-  const router = useRouter();
   const nudged = useRef(new Set<string>());
   const optimistic = useOptimisticVariants();
+  const rows = useReplayVariantRows(rootId, family);
 
   useEffect(() => {
-    dropCoveredOptimisticVariants(new Set(family.map((row) => row.id)));
-  }, [family]);
+    dropCoveredOptimisticVariants(new Set(rows.map((row) => row.id)));
+  }, [rows]);
 
   useEffect(() => {
-    const pending = family.filter(
+    const pending = rows.filter(
       (row) =>
         row.id !== rootId &&
         (row.status === "queued" || row.status === "running"),
     );
-    const known = new Set(family.map((row) => row.id));
+    const known = new Set(rows.map((row) => row.id));
     const waiting = optimistic.some(
       (row) => row.runId == null || !known.has(row.runId),
     );
     if (pending.length === 0 && !waiting) {
       return;
+    }
+    let cancelled = false;
+    async function poll() {
+      const result = await pollReplayFamilyAction(rootId);
+      if (cancelled || !result.ok) {
+        return;
+      }
+      flushSync(() => {
+        publishFamilyPoll({ rootId, rows: result.rows });
+      });
     }
     for (const row of pending) {
       if (row.status !== "queued" || nudged.current.has(row.id)) {
@@ -717,16 +794,20 @@ export function ReplayVariantWatcher({
       }
       nudged.current.add(row.id);
       void nudgeBacktestRunAction(row.id).finally(() => {
-        router.refresh();
+        void poll();
       });
     }
+    void poll();
     const timer = window.setInterval(() => {
       if (!document.hidden) {
-        router.refresh();
+        void poll();
       }
-    }, 5_000);
-    return () => window.clearInterval(timer);
-  }, [family, optimistic, rootId, router]);
+    }, 2_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [optimistic, rootId, rows]);
 
   return null;
 }

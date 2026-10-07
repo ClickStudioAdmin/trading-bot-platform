@@ -9,7 +9,7 @@ import {
   intervalHistoryLabel,
 } from "@/lib/market/candle-availability";
 import { backtestCandleHistoryError } from "@/lib/market/candle-range";
-import type { BacktestRecipe } from "./model";
+import type { BacktestRecipe, BacktestRun } from "./model";
 import {
   canQueueUserBacktest,
   parseBacktestRecipeJson,
@@ -378,6 +378,58 @@ export async function queueTemplateBacktestAction(
   }
   revalidateBacktests(`/account/backtests/${run.id}`);
   return { ok: true, runId: run.id };
+}
+
+export async function pollReplayFamilyAction(rootId: string): Promise<
+  | {
+      ok: true;
+      rows: Array<{
+        id: string;
+        status: BacktestRun["status"];
+        name: string;
+        error: string | null;
+        createdAtMs: number;
+      }>;
+    }
+  | { ok: false; error: string }
+> {
+  const auth = await requireMember();
+  if (!auth.ok) {
+    return auth;
+  }
+  const requested = await loadBacktestRun(rootId);
+  if (
+    !requested ||
+    !canReadBacktestRun(requested, auth.member.id, auth.isAdmin)
+  ) {
+    return { ok: false, error: "That backtest was not found." };
+  }
+  const headId = requested.parentRunId ?? requested.id;
+  const head =
+    headId === requested.id ? requested : await loadBacktestRun(headId);
+  if (!head || !canReadBacktestRun(head, auth.member.id, auth.isAdmin)) {
+    return { ok: false, error: "That backtest was not found." };
+  }
+  const children = await listBacktestRuns({ parentRunId: head.id, limit: 40 });
+  const rows = [head];
+  for (const child of children) {
+    if (
+      child.id !== head.id &&
+      canReadBacktestRun(child, auth.member.id, auth.isAdmin)
+    ) {
+      rows.push(child);
+    }
+  }
+  return {
+    ok: true,
+    rows: rows.map((row) => ({
+      id: row.id,
+      status: row.status,
+      name: row.recipe.name.trim() || "Backtest",
+      error: row.error,
+      createdAtMs: row.createdAtMs,
+    })),
+  };
 }
 
 export async function nudgeBacktestRunAction(

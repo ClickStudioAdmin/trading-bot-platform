@@ -5,6 +5,8 @@ import {
   backtestVariantChangeLabel,
   backtestVariantsStillRunning,
   completedBacktestVariantIds,
+  mergeReplayVariantRows,
+  sameReplayVariantRows,
 } from "./variant-label";
 
 function recipe(stop: string) {
@@ -98,5 +100,50 @@ assert.deepEqual(
   }),
   [],
 );
+
+const familyRows = [
+  {
+    id: "root",
+    status: "done",
+    name: "Original",
+    error: null,
+    createdAtMs: 1,
+  },
+  {
+    id: "child",
+    status: "queued",
+    name: "Next",
+    error: null,
+    createdAtMs: 2,
+  },
+];
+const polled = [
+  familyRows[0],
+  {
+    id: "child",
+    status: "done",
+    name: "Next",
+    error: null,
+    createdAtMs: 2,
+  },
+  {
+    id: "fresh",
+    status: "running",
+    name: "Fresh",
+    error: null,
+    createdAtMs: 3,
+  },
+];
+assert.deepEqual(mergeReplayVariantRows(familyRows, null), familyRows);
+assert.deepEqual(
+  mergeReplayVariantRows(familyRows, polled).map((row) => [row.id, row.status]),
+  [
+    ["root", "done"],
+    ["child", "done"],
+    ["fresh", "running"],
+  ],
+);
+assert.equal(sameReplayVariantRows(familyRows, familyRows), true);
+assert.equal(sameReplayVariantRows(familyRows, polled), false);
 
 console.log("backtest variant label checks passed");

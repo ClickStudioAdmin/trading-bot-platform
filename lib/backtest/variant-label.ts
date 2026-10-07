@@ -67,6 +67,45 @@ export function backtestVariantChangeLabel(
   return shown;
 }
 
+export type ReplayVariantRow = {
+  id: string;
+  status: string;
+  name: string;
+  error: string | null;
+  createdAtMs: number;
+};
+
+export function mergeReplayVariantRows(
+  family: ReplayVariantRow[],
+  poll: ReplayVariantRow[] | null,
+): ReplayVariantRow[] {
+  if (!poll) {
+    return family;
+  }
+  const seen = new Set(poll.map((row) => row.id));
+  return [...poll, ...family.filter((row) => !seen.has(row.id))];
+}
+
+export function sameReplayVariantRows(
+  left: ReplayVariantRow[],
+  right: ReplayVariantRow[],
+): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((row, index) => {
+    const other = right[index];
+    return (
+      other != null &&
+      row.id === other.id &&
+      row.status === other.status &&
+      row.name === other.name &&
+      row.error === other.error &&
+      row.createdAtMs === other.createdAtMs
+    );
+  });
+}
+
 export function completedBacktestVariantIds(input: {
   primed: boolean;
   previousPendingIds: ReadonlySet<string>;
