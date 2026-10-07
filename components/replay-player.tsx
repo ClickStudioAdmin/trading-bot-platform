@@ -2254,7 +2254,7 @@ export function ReplayPlayer({
     <>
       <section
         className={`w-full min-w-0 overflow-hidden rounded-card border border-line bg-canvas ${
-          sidePanel ? "flex min-h-0 flex-1 flex-col" : "min-h-[420px]"
+          sidePanel || fillViewport ? "flex min-h-0 flex-1 flex-col" : "min-h-[420px]"
         }`}
       >
         <ReplayChartBar
@@ -2292,13 +2292,17 @@ export function ReplayPlayer({
         />
         <div
           className={`relative ${
-            sidePanel ? (capPositions ? "min-h-0 min-w-0 flex-1" : "min-h-[12rem] min-w-0 flex-1") : ""
+            sidePanel || fillViewport
+              ? fillViewport || capPositions
+                ? "min-h-0 min-w-0 flex-1"
+                : "min-h-[12rem] min-w-0 flex-1"
+              : ""
           }`}
         >
           <div
             ref={hostRef}
             className={
-              sidePanel
+              sidePanel || fillViewport
                 ? "absolute inset-0"
                 : "h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
             }
@@ -2542,16 +2546,24 @@ export function ReplayPlayer({
     : "fixed inset-x-0 bottom-12 top-16 z-30 flex min-h-0 flex-col overflow-auto bg-canvas lg:static lg:inset-auto lg:z-auto lg:h-full lg:overflow-visible lg:bg-transparent";
 
   const body = (
-    <div className={fillViewport ? "relative min-h-0 flex-1" : "relative"}>
+    <div
+      className={
+        fillViewport ? "relative flex min-h-0 flex-1 flex-col" : "relative"
+      }
+    >
     <div
       ref={sideGridRef}
       className={
         sidePanel
           ? `grid items-stretch gap-4 lg:grid-cols-[minmax(24rem,1fr)_34rem] ${
-              fillViewport || sideGridHeight != null ? "min-h-0 overflow-hidden" : ""
-            } ${fillViewport ? "flex-1" : "max-lg:pb-14"}`
+              fillViewport
+                ? "min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden"
+                : sideGridHeight != null
+                  ? "min-h-0 overflow-hidden"
+                  : "max-lg:pb-14"
+            }`
           : fillViewport
-            ? "min-h-0 flex-1 overflow-hidden"
+            ? "flex min-h-0 flex-1 flex-col overflow-hidden"
             : "max-lg:pb-14"
       }
       style={
@@ -2566,7 +2578,9 @@ export function ReplayPlayer({
             ? capPositions
               ? "flex h-full min-h-0 min-w-0 flex-col gap-4 overflow-hidden"
               : "flex h-full min-h-0 min-w-0 flex-col gap-4"
-            : "flex min-w-0 flex-col gap-4"
+            : fillViewport
+              ? "flex h-full min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-hidden"
+              : "flex min-w-0 flex-col gap-4"
         }
       >
         {chartColumn}
