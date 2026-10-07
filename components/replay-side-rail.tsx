@@ -19,9 +19,9 @@ import {
 } from "@/components/backtest-run-view";
 import {
   IconActivity,
+  IconChevronDown,
   IconLoader,
   IconPerformance,
-  IconPlay,
   IconPositions,
 } from "@/components/icons";
 import { nudgeBacktestRunAction } from "@/lib/backtest/actions";
@@ -32,7 +32,10 @@ import {
   isoDateUtc,
   type BacktestRun,
 } from "@/lib/backtest/model";
-import { backtestVariantChangeLabel } from "@/lib/backtest/variant-label";
+import {
+  backtestVariantChangeLabel,
+  completedBacktestVariantIds,
+} from "@/lib/backtest/variant-label";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
 
 const RAIL_KEY = "tbp-replay-rail";
@@ -165,7 +168,6 @@ export function ReplayRailNav({
 export function ReplayRailBody({
   panel,
   run,
-  family,
   rootId,
   positions,
   allowKeep,
@@ -175,7 +177,6 @@ export function ReplayRailBody({
 }: {
   panel: Exclude<ReplayRailPanel, "closed">;
   run: BacktestRun;
-  family: BacktestRun[];
   rootId: string;
   positions: ReactNode;
   allowKeep: boolean;
@@ -197,7 +198,6 @@ export function ReplayRailBody({
   return (
     <ParametersBody
       run={run}
-      family={family}
       rootId={rootId}
       allowKeep={allowKeep}
       allowKeepPlatform={allowKeepPlatform}
@@ -209,7 +209,6 @@ export function ReplayRailBody({
 
 function ParametersBody({
   run,
-  family,
   rootId,
   allowKeep,
   allowKeepPlatform,
@@ -217,7 +216,6 @@ function ParametersBody({
   applyDesks,
 }: {
   run: BacktestRun;
-  family: BacktestRun[];
   rootId: string;
   allowKeep: boolean;
   allowKeepPlatform: boolean;
@@ -227,11 +225,7 @@ function ParametersBody({
   const router = useRouter();
   const pendingToken = useRef<string | null>(null);
   const [modifying, setModifying] = useState(false);
-  const root = family.find((row) => row.id === rootId) ?? run;
-  const variants = family
-    .filter((row) => row.id !== rootId)
-    .slice()
-    .sort((left, right) => left.createdAtMs - right.createdAtMs);
+  const variant = run.id !== rootId;
   const seed = useMemo(() => {
     const next = backtestQueueSeedFromRun(run);
     return { ...next, comparables: [] as string[] };
@@ -249,24 +243,6 @@ function ParametersBody({
 
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-auto p-4">
-      {run.id !== rootId ? (
-        <Link
-          href={`/account/backtests/${rootId}/replay`}
-          onClick={() => writeRail("parameters")}
-          className="text-sm text-accent hover:underline"
-        >
-          Back to original
-        </Link>
-      ) : null}
-      <VariantList
-        root={root}
-        variants={variants}
-        screenId={run.id}
-        allowKeep={allowKeep}
-        allowKeepPlatform={allowKeepPlatform}
-        folders={folders}
-        applyDesks={applyDesks}
-      />
       {modifying ? (
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
@@ -281,7 +257,7 @@ function ParametersBody({
           </div>
           <p className="text-sm text-ink-muted">
             This saves a new run linked to the original. Playback stays on
-            this replay until you choose Play.
+            this replay until you select that variant.
           </p>
           <BacktestQueueForm
             templates={[]}
@@ -293,7 +269,6 @@ function ParametersBody({
                 clearOptimisticVariant(pendingToken.current);
               }
               pendingToken.current = beginOptimisticVariant();
-              writeRail("parameters");
             }}
             onVariantFailed={() => {
               if (pendingToken.current) {
@@ -307,7 +282,6 @@ function ParametersBody({
                 pendingToken.current = null;
               }
               setModifying(false);
-              writeRail("parameters");
               router.refresh();
             }}
           />
@@ -325,6 +299,37 @@ function ParametersBody({
             </button>
           </div>
           <BacktestPropertyList rows={paramRows} />
+          {variant && run.status === "done" ? (
+            <div className="space-y-2 border-t border-line pt-3">
+              <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                Keep
+              </p>
+              <SaveBacktestAsTemplateButton
+                runId={run.id}
+                defaultName={backtestRunTitle(run)}
+                deskType={run.deskType}
+                folders={folders}
+                canSaveAs={allowKeep}
+                canSaveAsPlatform={false}
+              />
+              {allowKeepPlatform ? (
+                <SaveBacktestAsTemplateButton
+                  runId={run.id}
+                  defaultName={backtestRunTitle(run)}
+                  deskType={run.deskType}
+                  folders={folders}
+                  canSaveAs={false}
+                  canSaveAsPlatform
+                  variant="secondary"
+                />
+              ) : null}
+              <ApplyBacktestButton
+                runId={run.id}
+                defaultName={backtestRunTitle(run)}
+                desks={applyDesks}
+              />
+            </div>
+          ) : null}
         </div>
       )}
     </div>
@@ -367,158 +372,227 @@ function RailButton({
   );
 }
 
-function VariantList({
-  root,
-  variants,
-  screenId,
-  allowKeep,
-  allowKeepPlatform,
-  folders,
-  applyDesks,
+function variantSummary(root: BacktestRun, row: BacktestRun): string {
+  return backtestVariantChangeLabel(root, row) || backtestRunTitle(row);
+}
+
+export function ReplayVariantSelect({
+  run,
+  family,
+  rootId,
 }: {
-  root: BacktestRun;
-  variants: BacktestRun[];
-  screenId: string;
-  allowKeep: boolean;
-  allowKeepPlatform: boolean;
-  folders: AutomationTemplateSet[];
-  applyDesks: Array<{ id: string; name: string }>;
+  run: BacktestRun;
+  family: BacktestRun[];
+  rootId: string;
 }) {
-  const known = new Set(variants.map((row) => row.id));
-  const waiting = useOptimisticVariants().filter(
+  const root = family.find((row) => row.id === rootId) ?? run;
+  const variants = family
+    .filter((row) => row.id !== rootId)
+    .slice()
+    .sort((left, right) => left.createdAtMs - right.createdAtMs);
+  const optimistic = useOptimisticVariants();
+  const known = new Set(family.map((row) => row.id));
+  const waiting = optimistic.filter(
     (row) => row.runId == null || !known.has(row.runId),
   );
+  const pending =
+    waiting.length > 0 ||
+    variants.some((row) => row.status === "queued" || row.status === "running");
+  const selected =
+    run.id === rootId ? "Original" : variantSummary(root, run);
+  const [open, setOpen] = useState(false);
+  const [finished, setFinished] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const primed = useRef(false);
+  const seenPending = useRef<Set<string>>(new Set());
+  const seenOptimistic = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const base = family.find((row) => row.id === rootId) ?? run;
+    const pendingIds = new Set(
+      family
+        .filter(
+          (row) =>
+            row.id !== rootId &&
+            (row.status === "queued" || row.status === "running"),
+        )
+        .map((row) => row.id),
+    );
+    const optimisticIds = new Set(
+      optimistic
+        .map((row) => row.runId)
+        .filter((id): id is string => id != null),
+    );
+    const doneIds = new Set(
+      family
+        .filter((row) => row.id !== rootId && row.status === "done")
+        .map((row) => row.id),
+    );
+    const justDone = completedBacktestVariantIds({
+      primed: primed.current,
+      previousPendingIds: seenPending.current,
+      previousOptimisticIds: seenOptimistic.current,
+      pendingIds,
+      optimisticIds,
+      doneIds,
+    });
+    primed.current = true;
+    seenPending.current = pendingIds;
+    seenOptimistic.current = optimisticIds;
+    if (justDone.length === 1) {
+      const row = family.find((item) => item.id === justDone[0]);
+      setFinished(
+        row ? `${variantSummary(base, row)} finished.` : "Backtest finished.",
+      );
+    } else if (justDone.length > 1) {
+      setFinished(`${justDone.length} backtests finished.`);
+    }
+  }, [family, optimistic, rootId, run]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    function onPointer(event: MouseEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-ink">Variants</h3>
-      <ul className="space-y-2">
-        <VariantRow
-          row={root}
-          summary="Original"
-          screenId={screenId}
-          allowKeep={allowKeep}
-          allowKeepPlatform={allowKeepPlatform}
-          folders={folders}
-          applyDesks={applyDesks}
-        />
-        {waiting.map((row) => (
-          <li
-            key={row.token}
-            className="rounded-control border border-line bg-canvas p-3"
+    <div className="flex min-w-0 shrink items-center gap-2">
+      <div ref={menuRef} className="relative min-w-0">
+        <button
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-label={pending ? "Backtest variant, pending" : "Backtest variant"}
+          onClick={() => setOpen((value) => !value)}
+          className="inline-flex max-w-64 items-center gap-2 rounded-control border border-line bg-canvas px-3 py-1.5 text-left text-sm text-ink hover:border-line-strong"
+        >
+          <span className="min-w-0 truncate">{selected}</span>
+          {pending ? (
+            <span className="inline-flex shrink-0 items-center gap-1 text-xs text-warning">
+              <IconLoader className="size-3.5 animate-spin" />
+              Pending
+            </span>
+          ) : null}
+          <IconChevronDown className="size-4 shrink-0 text-ink-muted" />
+        </button>
+        {open ? (
+          <ul
+            role="listbox"
+            aria-label="Backtest variants"
+            className="absolute left-0 top-full z-40 mt-1 max-h-80 w-72 overflow-auto rounded-card border border-line bg-surface py-1"
           >
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-sm font-medium text-ink">New backtest</p>
-              <IconLoader className="size-4 shrink-0 animate-spin text-warning" />
-            </div>
-            <p className="mt-1 text-xs text-warning">Pending</p>
-          </li>
-        ))}
-        {variants.map((row) => (
-          <VariantRow
-            key={row.id}
-            row={row}
-            summary={backtestVariantChangeLabel(root, row)}
-            screenId={screenId}
-            allowKeep={allowKeep}
-            allowKeepPlatform={allowKeepPlatform}
-            folders={folders}
-            applyDesks={applyDesks}
-          />
-        ))}
-      </ul>
-      {variants.length === 0 && waiting.length === 0 ? (
-        <p className="text-sm text-ink-muted">
-          No variants yet. Modify to run one in the background.
+            <VariantOption
+              href={`/account/backtests/${rootId}/replay`}
+              label="Original"
+              selected={run.id === rootId}
+              onChoose={() => setOpen(false)}
+            />
+            {waiting.map((row) => (
+              <li key={row.token} className="px-3 py-2">
+                <span className="flex items-center justify-between gap-2 text-sm text-ink">
+                  New backtest
+                  <span className="inline-flex items-center gap-1 text-xs text-warning">
+                    <IconLoader className="size-3.5 animate-spin" />
+                    Pending
+                  </span>
+                </span>
+              </li>
+            ))}
+            {variants.map((row) => {
+              const active = row.status === "queued" || row.status === "running";
+              const label = variantSummary(root, row);
+              if (row.status !== "done") {
+                return (
+                  <li key={row.id} className="px-3 py-2">
+                    <span className="flex items-center justify-between gap-2 text-sm text-ink">
+                      <span className="min-w-0 truncate">{label}</span>
+                      {active ? (
+                        <span className="inline-flex shrink-0 items-center gap-1 text-xs text-warning">
+                          <IconLoader className="size-3.5 animate-spin" />
+                          Pending
+                        </span>
+                      ) : (
+                        <span className="shrink-0 text-xs capitalize text-danger">
+                          {row.status}
+                        </span>
+                      )}
+                    </span>
+                    {row.status === "failed" && row.error ? (
+                      <span className="mt-1 block text-xs text-danger">
+                        {row.error}
+                      </span>
+                    ) : null}
+                  </li>
+                );
+              }
+              return (
+                <VariantOption
+                  key={row.id}
+                  href={`/account/backtests/${row.id}/replay`}
+                  label={label}
+                  selected={run.id === row.id}
+                  onChoose={() => setOpen(false)}
+                />
+              );
+            })}
+          </ul>
+        ) : null}
+      </div>
+      {finished ? (
+        <p className="flex max-w-64 items-center gap-2 text-sm text-success">
+          <span>{finished}</span>
+          <button
+            type="button"
+            aria-label="Dismiss finished notice"
+            onClick={() => setFinished(null)}
+            className="text-ink-muted hover:text-ink"
+          >
+            Dismiss
+          </button>
         </p>
       ) : null}
     </div>
   );
 }
 
-function VariantRow({
-  row,
-  summary,
-  screenId,
-  allowKeep,
-  allowKeepPlatform,
-  folders,
-  applyDesks,
+function VariantOption({
+  href,
+  label,
+  selected,
+  onChoose,
 }: {
-  row: BacktestRun;
-  summary: string;
-  screenId: string;
-  allowKeep: boolean;
-  allowKeepPlatform: boolean;
-  folders: AutomationTemplateSet[];
-  applyDesks: Array<{ id: string; name: string }>;
+  href: string;
+  label: string;
+  selected: boolean;
+  onChoose: () => void;
 }) {
-  const onScreen = row.id === screenId;
-  const active = row.status === "queued" || row.status === "running";
-  const done = row.status === "done";
-  const statusLabel = active ? "Pending" : row.status;
-  const realized = row.stats ? signedMoney(row.stats.realizedUsdt) : null;
   return (
-    <li className="rounded-control border border-line bg-canvas p-3">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium text-ink">{summary}</p>
-        {active ? (
-          <IconLoader className="size-4 shrink-0 animate-spin text-warning" />
-        ) : null}
-      </div>
-      <p className="mt-1 text-xs text-ink-muted">
-        {statusLabel}
-        {realized ? ` · ${realized}` : ""}
-      </p>
-      {row.status === "failed" && row.error ? (
-        <p className="mt-1 text-xs text-danger">{row.error}</p>
-      ) : null}
-      {done ? (
-        <div className="mt-2 space-y-2">
-          {onScreen ? (
-            <p className="text-xs text-success">On screen</p>
-          ) : (
-            <Link
-              href={`/account/backtests/${row.id}/replay`}
-              onClick={() => writeRail("parameters")}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
-            >
-              <IconPlay className="size-4 fill-current" />
-              Play
-            </Link>
-          )}
-          {onScreen ? null : (
-            <>
-              <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-                Keep
-              </p>
-              <SaveBacktestAsTemplateButton
-                runId={row.id}
-                defaultName={backtestRunTitle(row)}
-                deskType={row.deskType}
-                folders={folders}
-                canSaveAs={allowKeep}
-                canSaveAsPlatform={false}
-              />
-              {allowKeepPlatform ? (
-                <SaveBacktestAsTemplateButton
-                  runId={row.id}
-                  defaultName={backtestRunTitle(row)}
-                  deskType={row.deskType}
-                  folders={folders}
-                  canSaveAs={false}
-                  canSaveAsPlatform
-                  variant="secondary"
-                />
-              ) : null}
-              <ApplyBacktestButton
-                runId={row.id}
-                defaultName={backtestRunTitle(row)}
-                desks={applyDesks}
-              />
-            </>
-          )}
-        </div>
-      ) : null}
+    <li role="option" aria-selected={selected}>
+      <Link
+        href={href}
+        onClick={onChoose}
+        className={`block truncate px-3 py-2 text-sm hover:bg-surface-raised ${
+          selected ? "bg-surface-raised text-ink" : "text-ink"
+        }`}
+      >
+        {label}
+      </Link>
     </li>
   );
 }
@@ -576,18 +650,4 @@ export function useUnresolvedOptimisticCount(runIds: readonly string[]): number 
   const known = new Set(runIds);
   return optimistic.filter((row) => row.runId == null || !known.has(row.runId))
     .length;
-}
-
-function signedMoney(value: number): string {
-  const text = Math.abs(value).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  if (value > 0) {
-    return `+$${text}`;
-  }
-  if (value < 0) {
-    return `−$${text}`;
-  }
-  return `$${text}`;
 }

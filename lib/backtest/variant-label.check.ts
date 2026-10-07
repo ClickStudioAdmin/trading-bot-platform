@@ -4,6 +4,7 @@ import { snapshotDcaRecipe } from "@/lib/templates/recipe";
 import {
   backtestVariantChangeLabel,
   backtestVariantsStillRunning,
+  completedBacktestVariantIds,
 } from "./variant-label";
 
 function recipe(stop: string) {
@@ -59,6 +60,43 @@ assert.equal(
 assert.equal(
   backtestVariantsStillRunning([{ id: "root", status: "running" }], "root"),
   0,
+);
+
+const pending = new Set(["a"]);
+const optimistic = new Set(["b"]);
+const done = new Set(["a", "b", "c"]);
+assert.deepEqual(
+  completedBacktestVariantIds({
+    primed: false,
+    previousPendingIds: pending,
+    previousOptimisticIds: optimistic,
+    pendingIds: new Set(),
+    optimisticIds: new Set(),
+    doneIds: done,
+  }),
+  [],
+);
+assert.deepEqual(
+  completedBacktestVariantIds({
+    primed: true,
+    previousPendingIds: pending,
+    previousOptimisticIds: optimistic,
+    pendingIds: new Set(),
+    optimisticIds: new Set(),
+    doneIds: done,
+  }),
+  ["a", "b"],
+);
+assert.deepEqual(
+  completedBacktestVariantIds({
+    primed: true,
+    previousPendingIds: pending,
+    previousOptimisticIds: optimistic,
+    pendingIds: pending,
+    optimisticIds: new Set(["b"]),
+    doneIds: done,
+  }),
+  [],
 );
 
 console.log("backtest variant label checks passed");

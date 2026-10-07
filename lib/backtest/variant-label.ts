@@ -67,6 +67,37 @@ export function backtestVariantChangeLabel(
   return shown;
 }
 
+export function completedBacktestVariantIds(input: {
+  primed: boolean;
+  previousPendingIds: ReadonlySet<string>;
+  previousOptimisticIds: ReadonlySet<string>;
+  pendingIds: ReadonlySet<string>;
+  optimisticIds: ReadonlySet<string>;
+  doneIds: ReadonlySet<string>;
+}): string[] {
+  if (!input.primed) {
+    return [];
+  }
+  const done: string[] = [];
+  for (const id of input.previousPendingIds) {
+    if (!input.pendingIds.has(id) && input.doneIds.has(id)) {
+      done.push(id);
+    }
+  }
+  for (const id of input.previousOptimisticIds) {
+    if (
+      input.optimisticIds.has(id) ||
+      input.pendingIds.has(id) ||
+      done.includes(id) ||
+      !input.doneIds.has(id)
+    ) {
+      continue;
+    }
+    done.push(id);
+  }
+  return done;
+}
+
 export function backtestVariantsStillRunning(
   rows: Array<{ id: string; status: string }>,
   rootId: string,

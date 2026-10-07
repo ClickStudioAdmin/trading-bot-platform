@@ -117,6 +117,7 @@ import {
 import {
   ReplayRailBody,
   ReplayRailNav,
+  ReplayVariantSelect,
   ReplayVariantWatcher,
   useReplayRail,
   useUnresolvedOptimisticCount,
@@ -2101,11 +2102,16 @@ export function ReplayPlayer({
 
   const header = (
       <div
-        className={`flex shrink-0 flex-wrap items-center gap-3 py-3 ${
-          fillViewport && sidePanel ? "" : "sticky top-0 z-30 bg-canvas"
+        className={`relative z-30 flex shrink-0 flex-wrap items-center gap-3 py-3 ${
+          fillViewport && sidePanel ? "" : "sticky top-0 bg-canvas"
         }`}
       >
-        <h1 className="shrink-0 text-2xl font-semibold tracking-tight">{run.symbol} replay</h1>
+        <div className="flex min-w-0 shrink items-center gap-3">
+          <h1 className="shrink-0 text-2xl font-semibold tracking-tight">
+            {run.symbol} replay
+          </h1>
+          <ReplayVariantSelect run={run} family={family} rootId={rootId} />
+        </div>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
           <div
             className="inline-flex overflow-hidden rounded-control border border-line"
@@ -2570,7 +2576,6 @@ export function ReplayPlayer({
           <ReplayRailBody
             panel={rail}
             run={run}
-            family={family}
             rootId={rootId}
             positions={positions}
             allowKeep={allowKeep}
