@@ -538,7 +538,8 @@ export function ReplayPlayer({
   const sideGridRef = useRef<HTMLDivElement | null>(null);
   const [sideBySide, setSideBySide] = useState(false);
   const [sideGridHeight, setSideGridHeight] = useState<number | null>(null);
-  const capPositions = rail === "positions" && (sideBySide || fillViewport);
+  const capColumn = sidePanel && (sideBySide || fillViewport);
+  const capPositions = rail === "positions" && capColumn;
 
   function revealChart() {
     setPlayback({ key: candleKey, started: true });
@@ -2293,7 +2294,7 @@ export function ReplayPlayer({
         <div
           className={`relative ${
             sidePanel || fillViewport
-              ? fillViewport || capPositions
+              ? fillViewport || capColumn
                 ? "min-h-0 min-w-0 flex-1"
                 : "min-h-[12rem] min-w-0 flex-1"
               : ""
@@ -2542,8 +2543,8 @@ export function ReplayPlayer({
     ? "absolute top-0 z-40 flex items-center max-lg:inset-x-0 max-lg:h-12 max-lg:flex-row max-lg:border-t max-lg:border-line max-lg:bg-surface lg:left-[calc(100%+1rem)] lg:w-12 lg:flex-col lg:py-1"
     : "z-40 flex items-center max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:h-12 max-lg:flex-row max-lg:border-t max-lg:border-line max-lg:bg-surface lg:absolute lg:left-[calc(100%+1rem)] lg:top-0 lg:w-12 lg:flex-col lg:py-1";
   const railPanelClass = fillViewport
-    ? "flex max-h-[46%] min-h-0 min-w-0 flex-col overflow-hidden lg:h-full lg:max-h-none"
-    : "fixed inset-x-0 bottom-12 top-16 z-30 flex min-h-0 flex-col overflow-auto bg-canvas lg:static lg:inset-auto lg:z-auto lg:h-full lg:overflow-visible lg:bg-transparent";
+    ? "flex h-full max-h-[46%] min-h-0 min-w-0 flex-col overflow-hidden lg:max-h-none"
+    : "fixed inset-x-0 bottom-12 top-16 z-30 flex min-h-0 flex-col overflow-auto bg-canvas lg:static lg:inset-auto lg:z-auto lg:h-full lg:min-h-0 lg:overflow-hidden lg:bg-transparent";
 
   const body = (
     <div
@@ -2559,7 +2560,7 @@ export function ReplayPlayer({
               fillViewport
                 ? "min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden"
                 : sideGridHeight != null
-                  ? "min-h-0 overflow-hidden"
+                  ? "min-h-0 grid-rows-[minmax(0,1fr)] overflow-hidden"
                   : "max-lg:pb-14"
             }`
           : fillViewport
@@ -2575,7 +2576,7 @@ export function ReplayPlayer({
       <div
         className={
           sidePanel
-            ? capPositions
+            ? capColumn
               ? "flex h-full min-h-0 min-w-0 flex-col gap-4 overflow-hidden"
               : "flex h-full min-h-0 min-w-0 flex-col gap-4"
             : fillViewport

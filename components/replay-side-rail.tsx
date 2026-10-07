@@ -191,7 +191,7 @@ export function ReplayRailBody({
   }
   if (panel === "statistics") {
     return (
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div className="h-full min-h-0 flex-1 overflow-auto">
         <h2 className="mb-3 text-lg font-semibold">Performance</h2>
         <BacktestStatsGrid run={run} />
       </div>
@@ -244,7 +244,7 @@ function ParametersBody({
   ];
 
   return (
-    <div className="min-h-0 flex-1 space-y-4 overflow-auto p-4">
+    <div className="h-full min-h-0 flex-1 space-y-4 overflow-auto p-4">
       {modifying ? (
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
