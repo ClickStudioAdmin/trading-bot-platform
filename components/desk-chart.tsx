@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-  type RefObject,
-} from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   ChartContextMenu,
@@ -86,8 +80,6 @@ export function DeskChart({
   status = null,
   visibleRange = null,
   viewKey = 0,
-  stageRef = null,
-  onStageFill,
 }: {
   candles: CandleBar[];
   overlay: ChartOverlay;
@@ -99,9 +91,6 @@ export function DeskChart({
   status?: string | null;
   visibleRange?: { fromSec: number; toSec: number } | null;
   viewKey?: number;
-  /** When set, fill and full screen cover this element so a side rail stays visible. */
-  stageRef?: RefObject<HTMLElement | null> | null;
-  onStageFill?: (filling: boolean) => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
@@ -112,7 +101,6 @@ export function DeskChart({
   const [expanded, setExpanded] = useState(false);
   const [monitorFull, setMonitorFull] = useState(false);
   const [viewportH, setViewportH] = useState(0);
-  const shareStage = stageRef != null;
   const fillViewport = expanded || monitorFull;
   const frameHeight =
     fillViewport && viewportH > CHART_TOOLBAR_H ? viewportH : height;
@@ -120,7 +108,7 @@ export function DeskChart({
 
   useEffect(() => {
     function syncFs() {
-      const node = stageRef?.current ?? frameRef.current;
+      const node = frameRef.current;
       const on = node != null && monitorFullscreenElement() === node;
       setMonitorFull(on);
       if (on) {
@@ -133,11 +121,7 @@ export function DeskChart({
       document.removeEventListener("fullscreenchange", syncFs);
       document.removeEventListener("webkitfullscreenchange", syncFs);
     };
-  }, [stageRef]);
-
-  useEffect(() => {
-    onStageFill?.(fillViewport);
-  }, [fillViewport, onStageFill]);
+  }, []);
 
   useEffect(() => {
     if (!expanded && !monitorFull) {
@@ -296,13 +280,11 @@ export function DeskChart({
     <div
       ref={frameRef}
       className={
-        shareStage && fillViewport
-          ? "desk-chart-frame flex h-full min-h-0 w-full flex-1 flex-col bg-canvas"
-          : expanded && !monitorFull
-            ? "desk-chart-frame fixed inset-0 z-50 flex h-dvh w-full flex-col bg-canvas"
-            : monitorFull
-              ? "desk-chart-frame flex h-full w-full flex-col bg-canvas"
-              : "desk-chart-frame flex w-full flex-col overflow-hidden rounded-card border border-line bg-canvas"
+        expanded && !monitorFull
+          ? "desk-chart-frame fixed inset-0 z-50 flex h-dvh w-full flex-col bg-canvas"
+          : monitorFull
+            ? "desk-chart-frame flex h-full w-full flex-col bg-canvas"
+            : "desk-chart-frame flex w-full flex-col overflow-hidden rounded-card border border-line bg-canvas"
       }
       style={fillViewport ? undefined : { height }}
     >
@@ -336,7 +318,7 @@ export function DeskChart({
             aria-pressed={monitorFull}
             className={SHOT_BUTTON}
             onClick={() => {
-              const node = stageRef?.current ?? frameRef.current;
+              const node = frameRef.current;
               if (!node) {
                 return;
               }
@@ -347,7 +329,7 @@ export function DeskChart({
               setViewportH(window.innerHeight);
               setMonitorFull(true);
               window.requestAnimationFrame(() => {
-                const next = stageRef?.current ?? frameRef.current;
+                const next = frameRef.current;
                 if (!next) {
                   setMonitorFull(false);
                   return;
@@ -399,7 +381,7 @@ export function DeskChart({
     </div>
   );
 
-  if (expanded && !shareStage && typeof document !== "undefined") {
+  if (expanded && typeof document !== "undefined") {
     return (
       <>
         <div className="w-full" style={{ height }} aria-hidden />

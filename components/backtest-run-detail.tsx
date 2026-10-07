@@ -5,24 +5,28 @@ import {
   ApplyBacktestButton,
   AttachBacktestButton,
   BacktestRunRefresh,
+  BacktestPropertyList,
   BacktestStatsGrid,
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
 import { ColumnHint } from "@/components/column-hint";
 import { IconPlay } from "@/components/icons";
 import { BacktestRunsTable } from "@/components/backtest-runs-table";
-import { BacktestStudio } from "@/components/backtest-studio";
+import { BacktestStudyCharts } from "@/components/backtest-study-charts";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
 import {
   backtestAprPct,
   backtestDrawdownCard,
+  backtestRerunHref,
   backtestRoePct,
   backtestRunWasLiquidated,
   backtestRunTitle,
   backtestWindowDays,
+  formatBacktestReturnPct,
   realizedReturnPct,
   type BacktestRun,
 } from "@/lib/backtest/model";
+import { recipeParamRows } from "@/lib/backtest/study";
 import {
   formatCount,
   formatPct,
@@ -244,6 +248,7 @@ export function BacktestRunDetail({
   comparables?: BacktestRun[];
   comparablePrimary?: BacktestRun | null;
 }) {
+  const params = recipeParamRows(run.recipe);
   const complete = run.status === "done";
   const pendingMessage = incompleteRunMessage(run);
   const status = backtestStatusTone(run.status);
@@ -259,7 +264,7 @@ export function BacktestRunDetail({
           { label: backtestRunTitle(run) },
         ]}
       />
-      <div className="space-y-6 pb-14 lg:pb-0">
+      <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
@@ -310,6 +315,8 @@ export function BacktestRunDetail({
         />
       </div>
 
+      <BacktestHeaderStats run={run} />
+
       {run.error ? <p className="text-sm text-danger">{run.error}</p> : null}
       {run.status === "queued" || run.status === "running" ? (
         <p
@@ -330,30 +337,49 @@ export function BacktestRunDetail({
         </p>
       ) : null}
 
-      <BacktestStudio
-        key={run.id}
-        run={run}
-        family={studioFamily(run, comparablePrimary, comparables)}
-        rootId={comparablePrimary?.id ?? run.id}
-        pendingMessage={complete ? null : pendingMessage}
-        allowKeep={run.userId === memberId}
-        allowKeepPlatform={isAdmin}
-        folders={folders}
-        applyDesks={applyDesks ?? []}
-        statistics={
-          <div className="space-y-6">
-            <BacktestHeaderStats run={run} />
-            <section>
-              <h2 className="mb-3 text-lg font-semibold">Performance</h2>
-              {complete ? (
-                <BacktestStatsGrid run={run} />
-              ) : (
-                <SectionPlaceholder message={pendingMessage} />
-              )}
-            </section>
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <section>
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-lg font-semibold">Parameters</h2>
+            <Link
+              href={backtestRerunHref(run.id)}
+              className="text-sm text-accent hover:underline"
+            >
+              Load into new backtest
+            </Link>
           </div>
-        }
-      />
+          <BacktestPropertyList rows={params} />
+        </section>
+        <div className="space-y-6">
+          <section>
+            <h2 className="mb-3 text-lg font-semibold">Performance</h2>
+            {complete ? (
+              <BacktestStatsGrid run={run} />
+            ) : (
+              <SectionPlaceholder message={pendingMessage} />
+            )}
+          </section>
+        </div>
+      </div>
+
+      {complete ? (
+        <BacktestStudyCharts run={run} />
+      ) : (
+        <>
+          <section>
+            <h2 className="mb-2 text-lg font-semibold">Account impact</h2>
+            <SectionPlaceholder message={pendingMessage} />
+          </section>
+          <section>
+            <h2 className="mb-2 text-lg font-semibold">Chart</h2>
+            <SectionPlaceholder message={pendingMessage} />
+          </section>
+          <section>
+            <h2 className="mb-2 text-lg font-semibold">Open Positions</h2>
+            <SectionPlaceholder message={pendingMessage} />
+          </section>
+        </>
+      )}
 
       {comparablePrimary && comparables.length > 0 ? (
         <section>
@@ -374,24 +400,6 @@ export function BacktestRunDetail({
       </div>
     </>
   );
-}
-
-function studioFamily(
-  run: BacktestRun,
-  primary: BacktestRun | null,
-  children: BacktestRun[],
-): BacktestRun[] {
-  const root = primary ?? run;
-  const rows = [root];
-  for (const child of children) {
-    if (child.id !== root.id && !rows.some((row) => row.id === child.id)) {
-      rows.push(child);
-    }
-  }
-  if (!rows.some((row) => row.id === run.id)) {
-    rows.push(run);
-  }
-  return rows;
 }
 
 function incompleteRunMessage(run: BacktestRun): string {
