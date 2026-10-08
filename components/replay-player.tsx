@@ -2134,6 +2134,7 @@ export function ReplayPlayer({
             family={family}
             rootId={rootId}
             onBeforeNavigate={stopPlayback}
+            onPlayHere={beginPlayback}
           />
         </div>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">

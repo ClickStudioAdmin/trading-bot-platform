@@ -23,8 +23,10 @@ import {
 import {
   IconActivity,
   IconChevronDown,
+  IconClose,
   IconLoader,
   IconPerformance,
+  IconPlay,
   IconPositions,
   IconTrash,
 } from "@/components/icons";
@@ -442,16 +444,24 @@ function variantName(row: BacktestRun): string {
   return row.recipe.name.trim() || "Backtest";
 }
 
+type FinishedNotice = {
+  text: string;
+  playLabel: string;
+  runId: string;
+};
+
 export function ReplayVariantSelect({
   run,
   family,
   rootId,
   onBeforeNavigate,
+  onPlayHere,
 }: {
   run: BacktestRun;
   family: BacktestRun[];
   rootId: string;
   onBeforeNavigate?: () => void;
+  onPlayHere?: () => void;
 }) {
   const router = useRouter();
   const { confirm, dialog } = useConfirmDialog();
@@ -473,7 +483,7 @@ export function ReplayVariantSelect({
       ? "Original"
       : (rows.find((row) => row.id === run.id)?.name ?? variantName(run));
   const [open, setOpen] = useState(false);
-  const [finished, setFinished] = useState<string | null>(null);
+  const [finished, setFinished] = useState<FinishedNotice | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [menuBox, setMenuBox] = useState<{ top: number; left: number } | null>(
@@ -518,9 +528,19 @@ export function ReplayVariantSelect({
     seenOptimistic.current = optimisticIds;
     if (justDone.length === 1) {
       const row = rows.find((item) => item.id === justDone[0]);
-      setFinished(row ? `${row.name} finished.` : "Backtest finished.");
+      const name = row?.name || "Backtest";
+      setFinished({
+        text: `${name} finished.`,
+        playLabel: `Play ${name}`,
+        runId: justDone[0] ?? "",
+      });
     } else if (justDone.length > 1) {
-      setFinished(`${justDone.length} backtests finished.`);
+      const runId = justDone[justDone.length - 1] ?? "";
+      setFinished({
+        text: `${justDone.length} backtests finished.`,
+        playLabel: "Play the latest finished backtest",
+        runId,
+      });
     }
   }, [optimistic, rootId, rows]);
 
@@ -722,17 +742,39 @@ export function ReplayVariantSelect({
           : null}
       </div>
       {finished ? (
-        <p className="flex max-w-64 items-center gap-2 text-sm text-success">
-          <span>{finished}</span>
+        <div
+          role="status"
+          className="inline-flex min-w-0 max-w-72 items-center rounded-control border border-success/40 bg-success/15 text-sm text-success"
+        >
+          <button
+            type="button"
+            title={finished.playLabel}
+            aria-label={finished.playLabel}
+            onClick={() => {
+              if (finished.runId === run.id) {
+                onPlayHere?.();
+                setFinished(null);
+                return;
+              }
+              openVariant(
+                `/account/backtests/${finished.runId}/replay`,
+                false,
+              );
+            }}
+            className="inline-flex min-w-0 items-center gap-1.5 rounded-control py-1 pl-2 pr-1.5 hover:bg-success/20"
+          >
+            <IconPlay size={14} className="size-3.5 shrink-0 fill-current" />
+            <span className="truncate">{finished.text}</span>
+          </button>
           <button
             type="button"
             aria-label="Dismiss finished notice"
             onClick={() => setFinished(null)}
-            className="text-ink-muted hover:text-ink"
+            className="mr-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-control hover:bg-success/20"
           >
-            Dismiss
+            <IconClose size={14} className="size-3.5" />
           </button>
-        </p>
+        </div>
       ) : null}
     </div>
   );
