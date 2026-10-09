@@ -18,6 +18,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { IconChevronDown, IconClose } from "@/components/icons";
+import { useModalPortalHost } from "@/components/portal-host";
 import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import { TokenIcon } from "@/components/token-icon";
 
@@ -94,6 +95,7 @@ export function AppSelect({
   searchable?: boolean;
 }) {
   const liveSubmit = useContext(LiveFilterSubmit);
+  const portalHost = useModalPortalHost();
   const listId = useId();
   const triggerId = id ?? listId;
   const hiddenRef = useRef<HTMLInputElement>(null);
@@ -202,7 +204,7 @@ export function AppSelect({
         <OptionLabel option={selected} />
         <Chevron open={open} />
       </button>
-      {open
+      {open && portalHost
         ? createPortal(
             <SelectPanel
               panelRef={panelRef}
@@ -222,7 +224,7 @@ export function AppSelect({
                 />
               )}
             </SelectPanel>,
-            document.body,
+            portalHost,
           )
         : null}
     </span>
@@ -249,6 +251,7 @@ export function AppMultiSelect({
   max?: number;
 }) {
   const listId = useId();
+  const portalHost = useModalPortalHost();
   const triggerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -373,7 +376,7 @@ export function AppMultiSelect({
           <Chevron open={open} />
         </span>
       </div>
-      {open
+      {open && portalHost
         ? createPortal(
             <SelectPanel
               panelRef={panelRef}
@@ -392,7 +395,7 @@ export function AppMultiSelect({
                 }
               />
             </SelectPanel>,
-            document.body,
+            portalHost,
           )
         : null}
     </>

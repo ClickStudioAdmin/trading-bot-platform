@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { isoDateUtc } from "@/lib/backtest/model";
 import { AppSelect } from "@/components/app-select";
+import { useModalPortalHost } from "@/components/portal-host";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const MONTHS = [
@@ -86,23 +88,26 @@ export function DatePicker({
   label: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const portalHost = useModalPortalHost();
+  const [box, setBox] = useState({ top: 0, left: 0 });
   const [open, setOpen] = useState(false);
   const selected = parseIso(value) ?? new Date();
   const [cursor, setCursor] = useState({
     year: selected.getUTCFullYear(),
     month: selected.getUTCMonth(),
   });
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
+  const cursorKey = open ? value : "";
+  const [cursorKeySeen, setCursorKeySeen] = useState(cursorKey);
+  if (open && cursorKey !== cursorKeySeen) {
     const next = parseIso(value) ?? new Date();
+    setCursorKeySeen(cursorKey);
     setCursor({
       year: next.getUTCFullYear(),
       month: next.getUTCMonth(),
     });
-  }, [open, value]);
+  }
 
   useEffect(() => {
     if (!open) {
@@ -110,7 +115,10 @@ export function DatePicker({
     }
     function onDoc(event: MouseEvent) {
       const target = event.target as Node;
-      if (rootRef.current?.contains(target)) {
+      if (
+        rootRef.current?.contains(target) ||
+        panelRef.current?.contains(target)
+      ) {
         return;
       }
       if (target instanceof Element && target.closest('[role="listbox"]')) {
@@ -131,7 +139,37 @@ export function DatePicker({
     };
   }, [open]);
 
-  const today = isoDateUtc(Date.now());
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+    function place() {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (!rect) {
+        return;
+      }
+      const width = 288;
+      const height = panelRef.current?.offsetHeight ?? 320;
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+      const below = rect.bottom + 4;
+      const top =
+        below + height > window.innerHeight - 8
+          ? Math.max(8, rect.top - height - 4)
+          : below;
+      setBox((current) =>
+        current.top === top && current.left === left ? current : { top, left },
+      );
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open, cursor.month, cursor.year]);
+
+  const [today] = useState(() => isoDateUtc(Date.now()));
   const maxDate = max ?? today;
   const minYear = min ? Number(min.slice(0, 4)) : new Date().getUTCFullYear() - 20;
   const maxYear = Number(maxDate.slice(0, 4));
@@ -157,6 +195,7 @@ export function DatePicker({
       <p className="text-sm text-ink">{label}</p>
       <input type="hidden" name={name} value={value} />
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-haspopup="dialog"
@@ -168,11 +207,14 @@ export function DatePicker({
           ▾
         </span>
       </button>
-      {open ? (
+      {open && portalHost
+        ? createPortal(
         <div
+          ref={panelRef}
           role="dialog"
           aria-label={label}
-          className="absolute z-30 mt-1 w-72 rounded-card border border-line bg-surface-raised p-3 shadow-none"
+          style={{ top: box.top, left: box.left }}
+          className="fixed z-[70] w-72 rounded-card border border-line bg-surface-raised p-3 shadow-none"
         >
           <div className="mb-2 flex items-center gap-2">
             <button
@@ -254,8 +296,10 @@ export function DatePicker({
               );
             })}
           </div>
-        </div>
-      ) : null}
+        </div>,
+        portalHost,
+        )
+        : null}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { IconChevronDown } from "@/components/icons";
 import { TokenIcon } from "@/components/token-icon";
+import { useModalPortalHost } from "@/components/portal-host";
 import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import {
   BYBIT_AGREEMENT_PICKER_NOTE,
@@ -48,6 +49,7 @@ export function FuturesSymbolSelect({
   const panelRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const previewClass = useThemePreviewPortalClass();
+  const portalHost = useModalPortalHost();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [box, setBox] = useState({ top: 0, left: 0, width: PANEL_MIN_WIDTH });
@@ -173,7 +175,7 @@ export function FuturesSymbolSelect({
   const pickerNote = BYBIT_AGREEMENT_PICKER_NOTE.split("Exchanges");
 
   const panel =
-    open && typeof document !== "undefined"
+    open && portalHost
       ? createPortal(
           <div
             ref={panelRef}
@@ -260,7 +262,7 @@ export function FuturesSymbolSelect({
               )}
             </ul>
           </div>,
-          document.body,
+          portalHost,
         )
       : null;
 

@@ -1,6 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { ModalHost, useModalPortalHost } from "@/components/portal-host";
+
+export { ModalHost, useModalPortalHost };
 import { createPortal } from "react-dom";
 import { AppMultiSelect } from "@/components/app-select";
 import { AppCheck, AppRadio } from "@/components/app-check";
@@ -93,36 +96,6 @@ export function StarterPackCheckbox({
 
 const modalStack: number[] = [];
 let nextModalId = 0;
-
-const ModalHostContext = createContext<HTMLElement | null>(null);
-
-/** Replay fill-browser and full screen paint above the page. Dialogs inside this host stay on that layer. */
-export function ModalHost({
-  host,
-  children,
-}: {
-  host: HTMLElement | null;
-  children: ReactNode;
-}) {
-  return <ModalHostContext.Provider value={host}>{children}</ModalHostContext.Provider>;
-}
-
-export function useModalPortalHost(): HTMLElement | null {
-  const host = useContext(ModalHostContext);
-  if (typeof document === "undefined") {
-    return host;
-  }
-  const fullscreen = document.fullscreenElement;
-  if (fullscreen instanceof HTMLElement) {
-    return fullscreen;
-  }
-  const webkit = (document as Document & { webkitFullscreenElement?: Element | null })
-    .webkitFullscreenElement;
-  if (webkit instanceof HTMLElement) {
-    return webkit;
-  }
-  return host ?? document.body;
-}
 
 export function Modal({
   title,

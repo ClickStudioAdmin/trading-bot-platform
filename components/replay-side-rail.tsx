@@ -12,6 +12,7 @@ import {
 } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
+import { useModalPortalHost } from "@/components/portal-host";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import {
@@ -453,6 +454,7 @@ export function ReplayVariantSelect({
   onPlayHere?: () => void;
 }) {
   const router = useRouter();
+  const portalHost = useModalPortalHost();
   const { confirm, dialog } = useConfirmDialog();
   const rows = useReplayVariantRows(rootId, family);
   const variants = rows
@@ -641,7 +643,7 @@ export function ReplayVariantSelect({
           ) : null}
           <IconChevronDown className="size-4 shrink-0 text-ink-muted" />
         </button>
-        {open && menuBox
+        {open && menuBox && portalHost
           ? createPortal(
           <ul
             ref={menuRef}
@@ -726,7 +728,7 @@ export function ReplayVariantSelect({
               <li className="px-3 py-2 text-xs text-danger">{deleteError}</li>
             ) : null}
           </ul>,
-          document.body,
+          portalHost,
         )
           : null}
       </div>
