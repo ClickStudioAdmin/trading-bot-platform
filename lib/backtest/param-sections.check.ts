@@ -68,9 +68,10 @@ const listed = backtestListedSections(dca, {
   fromMs: Date.UTC(2021, 9, 2),
   toMs: Date.UTC(2024, 0, 1),
 });
-assert.equal(listed.at(-1)?.title, "Market window");
+assert.equal(listed[0]?.title, "Market window");
+assert.equal(listed[1]?.title, "General");
 assert.deepEqual(
-  listed.at(-1)?.groups[0]?.rows.map((row) => row.label),
+  listed[0]?.groups[0]?.rows.map((row) => row.label),
   ["Start date", "End date", "Initial account balance", "Leverage"],
 );
 

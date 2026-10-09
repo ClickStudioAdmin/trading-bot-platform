@@ -770,7 +770,6 @@ export function backtestListedSections(
   window: BacktestWindowFields,
 ): ParamSection[] {
   return [
-    ...recipeParamSections(recipe),
     {
       title: "Market window",
       groups: [
@@ -787,6 +786,7 @@ export function backtestListedSections(
         },
       ],
     },
+    ...recipeParamSections(recipe),
   ];
 }
 
