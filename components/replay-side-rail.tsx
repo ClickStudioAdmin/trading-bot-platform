@@ -304,13 +304,12 @@ function ParametersBody({
     toMs: run.toMs,
   });
 
+  const showKeep = variant && run.status === "done";
+
   return (
-    <div
-      className={`h-full min-h-0 flex-1 overflow-auto ${
-        modifying ? "" : "space-y-4 p-4"
-      }`}
-    >
+    <div className="flex h-full min-h-0 flex-1 flex-col">
       {modifying ? (
+        <div className="min-h-0 flex-1 overflow-auto">
           <BacktestQueueForm
             templates={[]}
             seed={seed}
@@ -344,51 +343,56 @@ function ParametersBody({
               router.refresh();
             }}
           />
+        </div>
       ) : (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">Parameters</h2>
-            <button
-              type="button"
-              onClick={() => setModifying(true)}
-              className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent"
-            >
-              Modify
-            </button>
+        <>
+          <div className="min-h-0 flex-1 space-y-3 overflow-auto p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">Parameters</h2>
+              <button
+                type="button"
+                onClick={() => setModifying(true)}
+                className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent"
+              >
+                Modify
+              </button>
+            </div>
+            <BacktestParameterSections sections={paramSections} />
           </div>
-          <BacktestParameterSections sections={paramSections} />
-          {variant && run.status === "done" ? (
-            <div className="space-y-2 border-t border-line pt-3">
+          {showKeep ? (
+            <div className="shrink-0 border-t border-line bg-canvas px-4 py-3">
               <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
                 Keep
               </p>
-              <SaveBacktestAsTemplateButton
-                runId={run.id}
-                defaultName={backtestRunTitle(run)}
-                deskType={run.deskType}
-                folders={folders}
-                canSaveAs={allowKeep}
-                canSaveAsPlatform={false}
-              />
-              {allowKeepPlatform ? (
+              <div className="mt-2 w-1/2 space-y-2">
                 <SaveBacktestAsTemplateButton
                   runId={run.id}
                   defaultName={backtestRunTitle(run)}
                   deskType={run.deskType}
                   folders={folders}
-                  canSaveAs={false}
-                  canSaveAsPlatform
-                  variant="secondary"
+                  canSaveAs={allowKeep}
+                  canSaveAsPlatform={false}
                 />
-              ) : null}
-              <ApplyBacktestButton
-                runId={run.id}
-                defaultName={backtestRunTitle(run)}
-                desks={applyDesks}
-              />
+                {allowKeepPlatform ? (
+                  <SaveBacktestAsTemplateButton
+                    runId={run.id}
+                    defaultName={backtestRunTitle(run)}
+                    deskType={run.deskType}
+                    folders={folders}
+                    canSaveAs={false}
+                    canSaveAsPlatform
+                    variant="secondary"
+                  />
+                ) : null}
+                <ApplyBacktestButton
+                  runId={run.id}
+                  defaultName={backtestRunTitle(run)}
+                  desks={applyDesks}
+                />
+              </div>
             </div>
           ) : null}
-        </div>
+        </>
       )}
     </div>
   );
