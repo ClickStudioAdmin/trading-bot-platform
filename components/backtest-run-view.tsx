@@ -1239,11 +1239,11 @@ export function ApplyBacktestButton({
         className="inline-flex w-full items-center justify-center gap-2 rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent"
       >
         <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
-          Add to desk
+          Create New Bot
         </BotButtonLead>
       </button>
       {open ? (
-        <Modal title="Add to desk" onClose={() => setOpen(false)}>
+        <Modal title="Create New Bot" onClose={() => setOpen(false)}>
           <p className="mt-1 text-sm text-ink-muted">
             Copies this recipe onto the desk idle. Does not arm.
           </p>
@@ -1293,7 +1293,7 @@ export function ApplyBacktestButton({
                   "Copying…"
                 ) : (
                   <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
-                    Add to desk
+                    Create New Bot
                   </BotButtonLead>
                 )}
               </button>
