@@ -257,7 +257,7 @@ export function ReplayRailBody({
   }
   if (panel === "statistics") {
     return (
-      <div className="h-full min-h-0 flex-1 overflow-auto">
+      <div className="h-full min-h-0 flex-1 overflow-auto pr-3">
         <h2 className="mb-3 text-lg font-semibold">Performance</h2>
         <BacktestStatsGrid run={run} />
       </div>
@@ -310,7 +310,7 @@ function ParametersBody({
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
       {modifying ? (
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className="min-h-0 flex-1 overflow-auto pr-3">
           <BacktestQueueForm
             templates={[]}
             seed={seed}
@@ -347,7 +347,7 @@ function ParametersBody({
         </div>
       ) : (
         <>
-          <div className="min-h-0 flex-1 overflow-auto">
+          <div className="min-h-0 flex-1 overflow-auto pr-3">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Parameters</h2>
               <button
