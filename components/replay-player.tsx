@@ -107,7 +107,6 @@ import {
   IconExpand,
   IconLoader,
   IconMonitor,
-  IconPageLayout,
   IconPause,
   IconPlay,
   IconSkipBack,
@@ -115,7 +114,18 @@ import {
   IconStepBack,
   IconStepForward,
 } from "@/components/icons";
-import { Modal, ModalHost } from "@/components/template-modals";
+import {
+  ReplayRailBody,
+  ReplayRailNav,
+  ReplayVariantSelect,
+  ReplayVariantWatcher,
+  useReplayRail,
+  useReplayVariantRows,
+  useUnresolvedOptimisticCount,
+} from "@/components/replay-side-rail";
+import { backtestVariantsStillRunning } from "@/lib/backtest/variant-label";
+import type { AutomationTemplateSet } from "@/lib/templates/store";
+import { ModalHost } from "@/components/template-modals";
 import { SortTh, TableCard, TablePager, useClientTable } from "@/components/table-chrome";
 import { compareTableNum, compareTableText, type TableSortDir } from "@/lib/table-chrome";
 import type { BacktestPositionCycle } from "@/lib/backtest/positions";
@@ -370,10 +380,22 @@ export function ReplayPlayer({
   run,
   preferences,
   runIndicators,
+  family,
+  rootId,
+  allowKeep,
+  allowKeepPlatform,
+  folders,
+  applyDesks,
 }: {
   run: BacktestRun;
   preferences: ReplayViewPreferences | null;
   runIndicators: ReplayRunIndicators | null;
+  family: BacktestRun[];
+  rootId: string;
+  allowKeep: boolean;
+  allowKeepPlatform: boolean;
+  folders: AutomationTemplateSet[];
+  applyDesks: Array<{ id: string; name: string }>;
 }) {
   const events = useMemo(
     () => run.replayEvents ?? eventsFromOrders(run.orders),
@@ -479,7 +501,12 @@ export function ReplayPlayer({
   const [positionsRight, setPositionsRight] = useState(
     preferences?.positionsRight ?? defaultReplayViewPreferences().positionsRight,
   );
-  const [layoutOpen, setLayoutOpen] = useState(false);
+  const rail = useReplayRail();
+  const sidePanel = rail !== "closed";
+  const variantRows = useReplayVariantRows(rootId, family);
+  const variantRunning =
+    backtestVariantsStillRunning(variantRows, rootId) +
+    useUnresolvedOptimisticCount(variantRows.map((row) => row.id));
   const [sideLanes, setSideLanes] = useState(true);
   const [laneFrame, setLaneFrame] = useState(0);
   const [placedLanes, setPlacedLanes] = useState<ReplayLaneDraw[]>([]);
@@ -513,7 +540,8 @@ export function ReplayPlayer({
   const sideGridRef = useRef<HTMLDivElement | null>(null);
   const [sideBySide, setSideBySide] = useState(false);
   const [sideGridHeight, setSideGridHeight] = useState<number | null>(null);
-  const capPositions = positionsRight && (sideBySide || fillViewport);
+  const capColumn = sidePanel && (sideBySide || fillViewport);
+  const capPositions = rail === "positions" && capColumn;
 
   function revealChart() {
     setPlayback({ key: candleKey, started: true });
@@ -590,6 +618,16 @@ export function ReplayPlayer({
     };
   }, [run, interval]);
 
+  const playTimerRef = useRef<number | null>(null);
+  function stopPlayback() {
+    if (playTimerRef.current != null) {
+      window.clearInterval(playTimerRef.current);
+      playTimerRef.current = null;
+    }
+    setCursor((current) =>
+      current.playing ? { ...current, playing: false } : current,
+    );
+  }
   useEffect(() => {
     if (!playing || candles.length === 0) {
       return;
@@ -605,7 +643,13 @@ export function ReplayPlayer({
         };
       });
     }, 280);
-    return () => window.clearInterval(timer);
+    playTimerRef.current = timer;
+    return () => {
+      window.clearInterval(timer);
+      if (playTimerRef.current === timer) {
+        playTimerRef.current = null;
+      }
+    };
   }, [playing, speed, candles.length]);
 
   useEffect(() => {
@@ -1780,7 +1824,7 @@ export function ReplayPlayer({
       disposed = true;
       cleanup();
     };
-  }, [candles, events, started, positionsRight, fillViewport]);
+  }, [candles, events, started, sidePanel, fillViewport]);
 
   // Draw the new indicator on the open chart. A deferred update is postponed
   // for the whole playback and the line never appears until a refresh.
@@ -1902,7 +1946,7 @@ export function ReplayPlayer({
   const [fittedPageSize, setFittedPageSize] = useState(8);
   const pageSize = capPositions ? fittedPageSize : 15;
   useLayoutEffect(() => {
-    if (!positionsRight || fillViewport) {
+    if (!sidePanel || fillViewport) {
       return;
     }
     const media = window.matchMedia("(min-width: 1024px)");
@@ -1934,7 +1978,7 @@ export function ReplayPlayer({
       window.removeEventListener("resize", measure);
       observer.disconnect();
     };
-  }, [positionsRight, fillViewport]);
+  }, [sidePanel, fillViewport]);
   useLayoutEffect(() => {
     if (!capPositions || openOrderKey) {
       return;
@@ -2077,11 +2121,22 @@ export function ReplayPlayer({
 
   const header = (
       <div
-        className={`flex shrink-0 flex-wrap items-center gap-3 py-3 ${
-          fillViewport && positionsRight ? "" : "sticky top-0 z-30 bg-canvas"
+        className={`relative z-30 flex shrink-0 flex-wrap items-center gap-3 py-3 ${
+          fillViewport && sidePanel ? "" : "sticky top-0 bg-canvas"
         }`}
       >
-        <h1 className="shrink-0 text-2xl font-semibold tracking-tight">{run.symbol} replay</h1>
+        <div className="flex min-w-0 shrink items-center gap-3">
+          <h1 className="shrink-0 text-2xl font-semibold tracking-tight">
+            {run.symbol} replay
+          </h1>
+          <ReplayVariantSelect
+            run={run}
+            family={family}
+            rootId={rootId}
+            onBeforeNavigate={stopPlayback}
+            onPlayHere={beginPlayback}
+          />
+        </div>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
           <div
             className="inline-flex overflow-hidden rounded-control border border-line"
@@ -2168,53 +2223,6 @@ export function ReplayPlayer({
           </div>
         </div>
         <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-3 text-sm">
-          <button
-            type="button"
-            title="Page layout settings"
-            aria-label="Page layout settings"
-            aria-expanded={layoutOpen}
-            className="inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
-            onClick={() => setLayoutOpen(true)}
-          >
-            <IconPageLayout {...FRAME_ICON} />
-          </button>
-          {layoutOpen ? (
-            <Modal title="Page Layout Settings" onClose={() => setLayoutOpen(false)}>
-              <div className="mt-4 flex min-h-8 items-center justify-between gap-4">
-                <span className="text-xs text-ink">Display Positions</span>
-                <div
-                  role="group"
-                  aria-label="Display Positions"
-                  className="flex rounded-control border border-line p-0.5"
-                >
-                  <button
-                    type="button"
-                    aria-pressed={!positionsRight}
-                    className={`inline-flex items-center justify-center rounded-control px-2.5 py-1.5 text-xs font-medium ${
-                      positionsRight
-                        ? "text-ink-muted hover:text-ink"
-                        : "bg-surface-raised text-ink"
-                    }`}
-                    onClick={() => setPositionsRight(false)}
-                  >
-                    Below Chart
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={positionsRight}
-                    className={`inline-flex items-center justify-center rounded-control px-2.5 py-1.5 text-xs font-medium ${
-                      positionsRight
-                        ? "bg-surface-raised text-ink"
-                        : "text-ink-muted hover:text-ink"
-                    }`}
-                    onClick={() => setPositionsRight(true)}
-                  >
-                    Right of Chart
-                  </button>
-                </div>
-              </div>
-            </Modal>
-          ) : null}
           {monitorFull ? null : (
             <button
               type="button"
@@ -2271,7 +2279,7 @@ export function ReplayPlayer({
     <>
       <section
         className={`w-full min-w-0 overflow-hidden rounded-card border border-line bg-canvas ${
-          positionsRight ? "flex min-h-0 flex-1 flex-col" : "min-h-[420px]"
+          sidePanel || fillViewport ? "flex min-h-0 flex-1 flex-col" : "min-h-[420px]"
         }`}
       >
         <ReplayChartBar
@@ -2309,13 +2317,17 @@ export function ReplayPlayer({
         />
         <div
           className={`relative ${
-            positionsRight ? (capPositions ? "min-h-0 min-w-0 flex-1" : "min-h-[12rem] min-w-0 flex-1") : ""
+            sidePanel || fillViewport
+              ? fillViewport || capColumn
+                ? "min-h-0 min-w-0 flex-1"
+                : "min-h-[12rem] min-w-0 flex-1"
+              : ""
           }`}
         >
           <div
             ref={hostRef}
             className={
-              positionsRight
+              sidePanel || fillViewport
                 ? "absolute inset-0"
                 : "h-[min(62vh,640px)] min-h-[420px] w-full min-w-0"
             }
@@ -2551,44 +2563,73 @@ export function ReplayPlayer({
     </>
   );
 
+  const railNavClass = fillViewport
+    ? "absolute top-0 z-40 flex items-center max-lg:inset-x-0 max-lg:h-12 max-lg:flex-row max-lg:border-t max-lg:border-line max-lg:bg-surface lg:left-[calc(100%+1rem)] lg:w-12 lg:flex-col lg:py-1"
+    : "z-40 flex items-center max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:h-12 max-lg:flex-row max-lg:border-t max-lg:border-line max-lg:bg-surface lg:absolute lg:left-[calc(100%+1rem)] lg:top-0 lg:w-12 lg:flex-col lg:py-1";
+  const railPanelClass = fillViewport
+    ? "flex h-full max-h-[46%] min-h-0 min-w-0 flex-col overflow-hidden lg:max-h-none"
+    : "fixed inset-x-0 bottom-12 top-16 z-30 flex min-h-0 flex-col overflow-auto bg-canvas lg:static lg:inset-auto lg:z-auto lg:h-full lg:min-h-0 lg:overflow-hidden lg:bg-transparent";
+
   const body = (
+    <div
+      className={
+        fillViewport ? "relative flex min-h-0 flex-1 flex-col" : "relative"
+      }
+    >
     <div
       ref={sideGridRef}
       className={
-        positionsRight
+        sidePanel
           ? `grid items-stretch gap-4 lg:grid-cols-[minmax(24rem,1fr)_34rem] ${
-              fillViewport || sideGridHeight != null ? "min-h-0 overflow-hidden" : ""
-            } ${fillViewport ? "flex-1" : ""}`
-          : "space-y-4"
+              fillViewport
+                ? "min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden"
+                : sideGridHeight != null
+                  ? "min-h-0 grid-rows-[minmax(0,1fr)] overflow-hidden"
+                  : "max-lg:pb-14"
+            }`
+          : fillViewport
+            ? "flex min-h-0 flex-1 flex-col overflow-hidden"
+            : "max-lg:pb-14"
       }
       style={
-        positionsRight && sideBySide && !fillViewport && sideGridHeight != null
+        sidePanel && sideBySide && !fillViewport && sideGridHeight != null
           ? { height: sideGridHeight }
           : undefined
       }
     >
       <div
         className={
-          positionsRight
-            ? capPositions
+          sidePanel
+            ? capColumn
               ? "flex h-full min-h-0 min-w-0 flex-col gap-4 overflow-hidden"
               : "flex h-full min-h-0 min-w-0 flex-col gap-4"
-            : "flex min-w-0 flex-col gap-4"
+            : fillViewport
+              ? "flex h-full min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-hidden"
+              : "flex min-w-0 flex-col gap-4"
         }
       >
         {chartColumn}
       </div>
-      <div
-        className={
-          positionsRight
-            ? capPositions
-              ? "flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
-              : "flex h-full min-w-0 flex-col"
-            : "min-w-0"
-        }
-      >
-        {positions}
-      </div>
+      {rail !== "closed" ? (
+        <aside className={railPanelClass}>
+          <ReplayRailBody
+            panel={rail}
+            run={run}
+            rootId={rootId}
+            positions={positions}
+            allowKeep={allowKeep}
+            allowKeepPlatform={allowKeepPlatform}
+            folders={folders}
+            applyDesks={applyDesks}
+          />
+        </aside>
+      ) : null}
+    </div>
+    <ReplayRailNav
+      panel={rail}
+      runningCount={variantRunning}
+      className={railNavClass}
+    />
     </div>
   );
 
@@ -2599,17 +2640,18 @@ export function ReplayPlayer({
       className={
         !fillViewport
           ? "space-y-4"
-          : positionsRight
+          : sidePanel
             ? expanded && !monitorFull
-              ? "fixed inset-0 z-50 flex h-dvh w-full flex-col gap-4 overflow-hidden bg-canvas p-4"
-              : "flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden bg-canvas p-4"
+              ? "fixed inset-0 z-50 flex h-dvh w-full flex-col gap-4 overflow-hidden bg-canvas p-4 pr-16"
+              : "flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden bg-canvas p-4 pr-16"
             : expanded && !monitorFull
-              ? "fixed inset-0 z-50 space-y-4 overflow-y-auto bg-canvas p-4"
-              : "h-full space-y-4 overflow-y-auto bg-canvas p-4"
+              ? "fixed inset-0 z-50 flex h-dvh w-full flex-col overflow-hidden bg-canvas p-4 pr-16"
+              : "flex h-full min-h-0 w-full flex-col overflow-hidden bg-canvas p-4 pr-16"
       }
     >
       {header}
       {body}
+      <ReplayVariantWatcher family={family} rootId={rootId} />
     </div>
     </ModalHost>
   );

@@ -104,6 +104,10 @@ export function BacktestQueueForm({
   loadedFromRun = false,
   defaultVenue = "bybit",
   defaultVenueEnvironment = null,
+  variantParentId = "",
+  onVariantPending,
+  onVariantQueued,
+  onVariantFailed,
 }: {
   templates: BacktestLibraryItem[];
   folders?: BacktestLibraryFolder[];
@@ -115,7 +119,12 @@ export function BacktestQueueForm({
   loadedFromRun?: boolean;
   defaultVenue?: string;
   defaultVenueEnvironment?: string | null;
+  variantParentId?: string;
+  onVariantPending?: () => void;
+  onVariantQueued?: (runId: string) => void;
+  onVariantFailed?: () => void;
 }) {
+  const variant = variantParentId.trim().length > 0;
   const router = useRouter();
   const botRequest = useRef(0);
   const [pickedDeskBot, setPickedDeskBot] = useState<BacktestDeskBot | null>(
@@ -390,25 +399,49 @@ export function BacktestQueueForm({
 
   return (
     <section
-      id="replay"
-      className="mb-8 rounded-card border border-line bg-surface p-5"
+      id={variant ? undefined : "replay"}
+      className={
+        variant
+          ? ""
+          : "mb-8 rounded-card border border-line bg-surface p-5"
+      }
     >
-      <h2 className="text-lg font-semibold">New backtest</h2>
+      {variant ? null : (
+        <h2 className="text-lg font-semibold">New backtest</h2>
+      )}
+      {variant ? null : (
       <p className="mt-1 text-sm text-ink-muted">
         {loadedFromRun
           ? "Parameters loaded from the previous run. Tweak them and queue a new one."
           : "Pick a desk bot or a library template. Edit the replay fields, then queue. Long windows go to the engine worker."}
       </p>
-      <div className="mt-4 grid items-start gap-6 lg:grid-cols-2">
+      )}
+      <div
+        className={
+          variant
+            ? "space-y-4"
+            : "mt-4 grid items-start gap-6 lg:grid-cols-2"
+        }
+      >
       <form
         className="space-y-3"
         action={async (formData) => {
           setPending(true);
           setError(null);
+          if (variant) {
+            onVariantPending?.();
+          }
           const result = await queueTemplateBacktestAction(formData);
           setPending(false);
           if (!result.ok) {
+            if (variant) {
+              onVariantFailed?.();
+            }
             setError(result.error ?? "Could not queue that backtest.");
+            return;
+          }
+          if (variant && result.runId && onVariantQueued) {
+            onVariantQueued(result.runId);
             return;
           }
           router.push(
@@ -419,13 +452,17 @@ export function BacktestQueueForm({
           router.refresh();
         }}
       >
-        {activeDraftId ? (
+        {variant ? (
+          <input type="hidden" name="parentRunId" value={variantParentId} />
+        ) : null}
+        {activeDraftId && !variant ? (
           <input type="hidden" name="draftId" value={activeDraftId} />
         ) : null}
         <input type="hidden" name="sourceTemplateId" value={sourceTemplateId} />
         {recipe ? (
           <input type="hidden" name="recipe" value={JSON.stringify(recipe)} />
         ) : null}
+        {variant ? null : (
         <label className="block text-sm text-ink">
           Bot
           <input
@@ -527,6 +564,7 @@ export function BacktestQueueForm({
             <p className="mt-2 text-sm text-danger">{botLoadError}</p>
           ) : null}
         </label>
+        )}
         <div>
           <div className="grid gap-3 sm:grid-cols-2">
             <DatePicker
@@ -654,6 +692,7 @@ export function BacktestQueueForm({
             />
           </div>
         </div>
+        {variant ? null : (
         <fieldset>
           <legend className="text-sm text-ink">
             Comparables ({comparables.length}/{BACKTEST_COMPARABLE_CAP})
@@ -675,6 +714,7 @@ export function BacktestQueueForm({
             }))}
           />
         </fieldset>
+        )}
         {recipe ? (
           <p className="text-hint text-ink-muted">
             {recipe.kind === "dca"
@@ -738,9 +778,13 @@ export function BacktestQueueForm({
             ? preview.inline
               ? "Running…"
               : "Queuing…"
-            : preview.inline
-              ? "Run backtest"
-              : "Queue backtest"}
+            : variant
+              ? preview.inline
+                ? "Run variant"
+                : "Queue variant"
+              : preview.inline
+                ? "Run backtest"
+                : "Queue backtest"}
         </button>
       </form>
       {recipe ? (

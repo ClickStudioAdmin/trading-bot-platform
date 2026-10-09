@@ -9,7 +9,7 @@ import {
   intervalHistoryLabel,
 } from "@/lib/market/candle-availability";
 import { backtestCandleHistoryError } from "@/lib/market/candle-range";
-import type { BacktestRecipe } from "./model";
+import type { BacktestRecipe, BacktestRun } from "./model";
 import {
   canQueueUserBacktest,
   parseBacktestRecipeJson,
@@ -285,9 +285,19 @@ export async function queueTemplateBacktestAction(
     auth.member.id,
     auth.isAdmin,
   );
+  const requestedParentId = String(formData.get("parentRunId") ?? "").trim();
+  let linkedParentId: string | null = null;
+  if (requestedParentId) {
+    const parent = await loadBacktestRun(requestedParentId);
+    if (!parent || !canReadBacktestRun(parent, auth.member.id, auth.isAdmin)) {
+      return { ok: false, error: "That backtest was not found." };
+    }
+    linkedParentId = parent.parentRunId ?? parent.id;
+  }
   const draftId = String(formData.get("draftId") ?? "").trim();
   const draft = draftId ? await loadBacktestRun(draftId) : null;
   const canPromote =
+    !linkedParentId &&
     draft &&
     draft.status === "draft" &&
     draft.userId === auth.member.id;
@@ -311,6 +321,7 @@ export async function queueTemplateBacktestAction(
     ? await promoteDraftBacktestRun(draft.id, queuedFields)
     : await insertBacktestRun({
         userId: auth.member.id,
+        parentRunId: linkedParentId,
         ...queuedFields,
       });
   if (!run) {
@@ -340,12 +351,14 @@ export async function queueTemplateBacktestAction(
       recipe: comparableRecipe,
     });
   }
-  const inline = backtestPageCanRun({
-    fromMs: range.fromMs,
-    toMs: range.toMs,
-    interval,
-    comparableSymbols: comparables,
-  });
+  const inline =
+    !linkedParentId &&
+    backtestPageCanRun({
+      fromMs: range.fromMs,
+      toMs: range.toMs,
+      interval,
+      comparableSymbols: comparables,
+    });
   if (inline) {
     const result = await executeBacktestRun(run.id);
     const children = await listBacktestRuns({ parentRunId: run.id, limit: 20 });
@@ -354,11 +367,69 @@ export async function queueTemplateBacktestAction(
         await executeBacktestRun(child.id);
       }
     }
+    if (linkedParentId) {
+      revalidateBacktests(`/account/backtests/${linkedParentId}`);
+    }
     revalidateBacktests(`/account/backtests/${run.id}`);
-    return result;
+    return { ...result, runId: result.runId ?? run.id };
+  }
+  if (linkedParentId) {
+    revalidateBacktests(`/account/backtests/${linkedParentId}`);
   }
   revalidateBacktests(`/account/backtests/${run.id}`);
   return { ok: true, runId: run.id };
+}
+
+export async function pollReplayFamilyAction(rootId: string): Promise<
+  | {
+      ok: true;
+      rows: Array<{
+        id: string;
+        status: BacktestRun["status"];
+        name: string;
+        error: string | null;
+        createdAtMs: number;
+      }>;
+    }
+  | { ok: false; error: string }
+> {
+  const auth = await requireMember();
+  if (!auth.ok) {
+    return auth;
+  }
+  const requested = await loadBacktestRun(rootId);
+  if (
+    !requested ||
+    !canReadBacktestRun(requested, auth.member.id, auth.isAdmin)
+  ) {
+    return { ok: false, error: "That backtest was not found." };
+  }
+  const headId = requested.parentRunId ?? requested.id;
+  const head =
+    headId === requested.id ? requested : await loadBacktestRun(headId);
+  if (!head || !canReadBacktestRun(head, auth.member.id, auth.isAdmin)) {
+    return { ok: false, error: "That backtest was not found." };
+  }
+  const children = await listBacktestRuns({ parentRunId: head.id, limit: 40 });
+  const rows = [head];
+  for (const child of children) {
+    if (
+      child.id !== head.id &&
+      canReadBacktestRun(child, auth.member.id, auth.isAdmin)
+    ) {
+      rows.push(child);
+    }
+  }
+  return {
+    ok: true,
+    rows: rows.map((row) => ({
+      id: row.id,
+      status: row.status,
+      name: row.recipe.name.trim() || "Backtest",
+      error: row.error,
+      createdAtMs: row.createdAtMs,
+    })),
+  };
 }
 
 export async function nudgeBacktestRunAction(

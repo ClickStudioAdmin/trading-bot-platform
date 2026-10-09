@@ -6,6 +6,7 @@ import {
   BACKTEST_VERCEL_BAR_LIMIT,
   estimateBacktestBars,
 } from "./model";
+import { backtestFailureMessage } from "./failure";
 import { canBacktestDcaRecipe, replayDcaPlaybook } from "./replay-dca";
 import { canBacktestPerpsRecipe, replayPerpsPriceCross } from "./replay";
 import {
@@ -106,13 +107,15 @@ export async function executeBacktestRun(
       finished: true,
     });
     return { ok: true, runId };
-  } catch {
+  } catch (cause) {
+    console.error(`backtest replay failed ${runId}`, cause);
+    const error = backtestFailureMessage(cause);
     await updateBacktestRun(runId, {
       status: "failed",
-      error: "Replay failed.",
+      error,
       finished: true,
     });
-    return { ok: false, error: "Replay failed.", runId };
+    return { ok: false, error, runId };
   } finally {
     stopHeartbeat();
   }
