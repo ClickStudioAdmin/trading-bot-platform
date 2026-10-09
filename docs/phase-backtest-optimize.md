@@ -18,7 +18,7 @@ Each place keeps its own actions around the form:
 - New Backtest: pair, dates, balance, leverage, comparables, and Queue. Picking a desk bot or a library template stays here.
 - Replay: Run, Reset, and Keep.
 
-The panel matches the bot form sections: General, Entry Conditions, Position Sizing, and Exit Conditions, with the same labels and order. Parameter lists on the replay and the report use that same order, with Market window first. On replay Modify, that card holds the window fields, and those bot sections stack under it. Run, Reset, and Keep on candles already loaded are still parked. The embedded form does not arm a desk.
+The panel matches the bot form sections: General, Entry Conditions, Position Sizing, and Exit Conditions, with the same labels and order. Parameter lists on the replay and the report use that same order, with Market window first. On replay Modify, the window fields sit in the Modify card and those bot sections stack under it. Queue variant, Cancel, and the Edited badge stay in a pinned header. Edited appears only after a field changes. Run, Reset, and Keep on candles already loaded are still parked. The embedded form does not arm a desk.
 
 ## Replay
 

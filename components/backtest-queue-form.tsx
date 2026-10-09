@@ -20,6 +20,7 @@ import {
   DEFAULT_STARTING_USDT,
   backtestShouldRunInline,
   backtestTapeInterval,
+  backtestVariantEdited,
   backtestWindowEndingToday,
   defaultBacktestDates,
   estimateBacktestBars,
@@ -130,6 +131,7 @@ export function BacktestQueueForm({
   onVariantPending,
   onVariantQueued,
   onVariantFailed,
+  onVariantCancel,
   variantLeading = null,
 }: {
   templates: BacktestLibraryItem[];
@@ -146,6 +148,7 @@ export function BacktestQueueForm({
   onVariantPending?: () => void;
   onVariantQueued?: (runId: string) => void;
   onVariantFailed?: () => void;
+  onVariantCancel?: () => void;
   variantLeading?: ReactNode;
 }) {
   const variant = variantParentId.trim().length > 0;
@@ -192,6 +195,25 @@ export function BacktestQueueForm({
       true,
     ),
   );
+  const [variantOrigin] = useState(() => ({
+    fromDate: seed?.fromDate ?? dates.from,
+    toDate: seed?.toDate ?? dates.to,
+    startingBalance: formatGroupedNumberInput(
+      String(seed?.startingUsdt ?? DEFAULT_STARTING_USDT),
+      true,
+    ),
+    leverage: formatGroupedNumberInput(
+      String(seed?.leverage ?? DEFAULT_LEVERAGE),
+      true,
+    ),
+    venue: (seed?.venue ?? defaultVenue) === "hyperliquid" ? "hyperliquid" : "bybit",
+    venueEnvironment: seed?.venueEnvironment ?? defaultVenueEnvironment,
+    symbol: (seed?.symbol ?? initialTemplate?.recipe.symbol ?? "")
+      .trim()
+      .toUpperCase(),
+  }));
+  const [variantRecipeBaseline, setVariantRecipeBaseline] =
+    useState<BacktestRecipe | null>(null);
   const [activeDraftId, setActiveDraftId] = useState(draftId);
   const [venueEnvironment, setVenueEnvironment] = useState(
     seed?.venueEnvironment ?? defaultVenueEnvironment,
@@ -421,6 +443,41 @@ export function BacktestQueueForm({
   const queueAllowed = recipe
     ? canQueueUserBacktest(recipe)
     : { ok: false as const, error: "Load a bot or pick a template to backtest." };
+  const submitDisabled =
+    pending ||
+    Boolean(preview.error) ||
+    Boolean(historyRangeError) ||
+    historyView.status === "loading" ||
+    historyView.status === "idle" ||
+    !queueAllowed.ok ||
+    recipeFieldIssues.length > 0;
+  const submitLabel = pending
+    ? preview.inline
+      ? "Running…"
+      : "Queuing…"
+    : variant
+      ? preview.inline
+        ? "Run variant"
+        : "Queue variant"
+      : preview.inline
+        ? "Run backtest"
+        : "Queue backtest";
+  const variantDirty =
+    variant &&
+    backtestVariantEdited({
+      origin: variantOrigin,
+      current: {
+        fromDate,
+        toDate,
+        startingBalance,
+        leverage,
+        venue,
+        venueEnvironment,
+        symbol,
+      },
+      baselineRecipe: variantRecipeBaseline,
+      recipe,
+    });
 
   return (
     <section
@@ -431,6 +488,35 @@ export function BacktestQueueForm({
           : "mb-8 rounded-card border border-line bg-surface p-5"
       }
     >
+      {variant ? (
+        <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-canvas px-4 py-3">
+          <h2 className="text-lg font-semibold text-ink">Modify</h2>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {variantDirty ? (
+              <p className="rounded-control bg-warning/15 px-2 py-0.5 text-xs text-warning">
+                Edited
+              </p>
+            ) : null}
+            <button
+              type="submit"
+              form="backtest-variant-queue"
+              disabled={submitDisabled}
+              className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
+            >
+              {submitLabel}
+            </button>
+            {onVariantCancel ? (
+              <button
+                type="button"
+                onClick={onVariantCancel}
+                className="text-sm text-ink-muted hover:text-ink"
+              >
+                Cancel
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       {variant ? null : (
         <h2 className="text-lg font-semibold">New backtest</h2>
       )}
@@ -444,12 +530,13 @@ export function BacktestQueueForm({
       <div
         className={
           variant
-            ? "space-y-4"
+            ? "space-y-4 p-4"
             : "mt-4 grid min-w-0 items-start gap-6 lg:grid-cols-2 [&>*]:min-w-0"
         }
       >
       <VariantShell variant={variant} leading={variantLeading}>
       <form
+        id={variant ? "backtest-variant-queue" : undefined}
         className="@container min-w-0 space-y-3"
         action={async (formData) => {
           setPending(true);
@@ -787,54 +874,20 @@ export function BacktestQueueForm({
           </p>
         ))}
         {error ? <p className="text-sm text-danger">{error}</p> : null}
+        {variant ? null : (
         <button
           type="submit"
-          disabled={
-            pending ||
-            Boolean(preview.error) ||
-            Boolean(historyRangeError) ||
-            historyView.status === "loading" ||
-            historyView.status === "idle" ||
-            !queueAllowed.ok ||
-            recipeFieldIssues.length > 0
-          }
+          disabled={submitDisabled}
           className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
         >
-          {pending
-            ? preview.inline
-              ? "Running…"
-              : "Queuing…"
-            : variant
-              ? preview.inline
-                ? "Run variant"
-                : "Queue variant"
-              : preview.inline
-                ? "Run backtest"
-                : "Queue backtest"}
+          {submitLabel}
         </button>
+        )}
       </form>
-      {variant &&
-      recipe &&
-      (pairChanged ||
-        Boolean(matchingTemplate) ||
-        Boolean(matchingDeskBot) ||
-        editedAway) ? (
-        <div className="mt-4 space-y-2">
-          <BacktestOriginBadges
-            templateName={matchingTemplate?.name ?? null}
-            deskLabel={
-              matchingDeskBot
-                ? formatBacktestDeskMatch(matchingDeskBot)
-                : null
-            }
-            edited={editedAway}
-          />
-          {pairChanged ? (
-            <p className="text-xs text-warning">
-              Primary pair is {symbol}. The bot was saved on {recipe.symbol}.
-            </p>
-          ) : null}
-        </div>
+      {variant && recipe && pairChanged ? (
+        <p className="mt-4 text-xs text-warning">
+          Primary pair is {symbol}. The bot was saved on {recipe.symbol}.
+        </p>
       ) : null}
       </VariantShell>
       {recipe ? (
@@ -901,6 +954,9 @@ export function BacktestQueueForm({
                     ? current
                     : messages,
                 );
+                if (variant) {
+                  setVariantRecipeBaseline((current) => current ?? next);
+                }
                 setRecipe((current) => {
                   if (
                     current &&

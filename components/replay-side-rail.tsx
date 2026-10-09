@@ -305,30 +305,23 @@ function ParametersBody({
   });
 
   return (
-    <div className="h-full min-h-0 flex-1 space-y-4 overflow-auto p-4">
+    <div
+      className={`h-full min-h-0 flex-1 overflow-auto ${
+        modifying ? "" : "space-y-4 p-4"
+      }`}
+    >
       {modifying ? (
           <BacktestQueueForm
             templates={[]}
             seed={seed}
             loadedFromRun
             variantParentId={rootId}
+            onVariantCancel={() => setModifying(false)}
             variantLeading={
-              <>
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-ink">Modify</h2>
-                  <button
-                    type="button"
-                    onClick={() => setModifying(false)}
-                    className="text-sm text-ink-muted hover:text-ink"
-                  >
-                    Cancel
-                  </button>
-                </div>
-                <p className="mt-1 text-sm text-ink-muted">
-                  This saves a new run linked to the original. Playback stays on
-                  this replay until you select that variant.
-                </p>
-              </>
+              <p className="text-sm text-ink-muted">
+                This saves a new run linked to the original. Playback stays on
+                this replay until you select that variant.
+              </p>
             }
             onVariantPending={() => {
               if (pendingToken.current) {

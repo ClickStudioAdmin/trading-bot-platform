@@ -208,6 +208,45 @@ function backtestSymbolKey(symbol: string): string {
   return symbol.trim().toUpperCase();
 }
 
+export type BacktestVariantFieldSnapshot = {
+  fromDate: string;
+  toDate: string;
+  startingBalance: string;
+  leverage: string;
+  venue: string;
+  venueEnvironment: string | null;
+  symbol: string;
+};
+
+/** True after a Modify field differs from the opened run. The first form publish is the baseline, not an edit. */
+export function backtestVariantEdited(input: {
+  origin: BacktestVariantFieldSnapshot;
+  current: BacktestVariantFieldSnapshot;
+  baselineRecipe: BacktestRecipe | null;
+  recipe: BacktestRecipe | null;
+}): boolean {
+  const { origin, current } = input;
+  if (
+    current.fromDate !== origin.fromDate ||
+    current.toDate !== origin.toDate ||
+    current.startingBalance !== origin.startingBalance ||
+    current.leverage !== origin.leverage ||
+    current.venue !== origin.venue ||
+    (current.venueEnvironment ?? "") !== (origin.venueEnvironment ?? "") ||
+    backtestSymbolKey(current.symbol) !== backtestSymbolKey(origin.symbol)
+  ) {
+    return true;
+  }
+  const baseline = input.baselineRecipe;
+  const recipe = input.recipe;
+  if (!baseline || !recipe) {
+    return false;
+  }
+  return (
+    baseline.name !== recipe.name || !recipesMatchReplayFields(baseline, recipe)
+  );
+}
+
 /** Same bot and market window on another contract. A parameter or window change is a variation. */
 export function isBacktestComparableChild(
   primary: BacktestRun,

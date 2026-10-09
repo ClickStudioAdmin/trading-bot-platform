@@ -31,6 +31,7 @@ import {
   backtestRoePct,
   backtestRunTitle,
   comparableBacktestName,
+  backtestVariantEdited,
   isBacktestComparableChild,
   splitBacktestFamily,
   completedBacktestNotionalUsdt,
@@ -667,6 +668,52 @@ assert.deepEqual(
 assert.deepEqual(
   family.variations.map((row) => row.id),
   ["var-123"],
+);
+
+const variantOrigin = {
+  fromDate: "2021-10-02",
+  toDate: "2026-10-01",
+  startingBalance: "10,000",
+  leverage: "10",
+  venue: "bybit",
+  venueEnvironment: null,
+  symbol: "ETHUSDT",
+};
+assert.equal(
+  backtestVariantEdited({
+    origin: variantOrigin,
+    current: variantOrigin,
+    baselineRecipe: null,
+    recipe: familyRecipe,
+  }),
+  false,
+);
+assert.equal(
+  backtestVariantEdited({
+    origin: variantOrigin,
+    current: variantOrigin,
+    baselineRecipe: familyRecipe,
+    recipe: familyRecipe,
+  }),
+  false,
+);
+assert.equal(
+  backtestVariantEdited({
+    origin: variantOrigin,
+    current: { ...variantOrigin, leverage: "4" },
+    baselineRecipe: familyRecipe,
+    recipe: familyRecipe,
+  }),
+  true,
+);
+assert.equal(
+  backtestVariantEdited({
+    origin: variantOrigin,
+    current: variantOrigin,
+    baselineRecipe: familyRecipe,
+    recipe: { ...familyRecipe, name: "My Winning Strategy 123" },
+  }),
+  true,
 );
 
 console.log("backtest model checks passed");
