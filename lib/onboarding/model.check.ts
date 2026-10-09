@@ -13,8 +13,11 @@ import {
   makeSetupDesk,
   onboardingFolders,
   parseSetupDraft,
-  setupSteps,
+  activeSetupScreen,
+  botsEmptyNote,
   requiresSetupGate,
+  setupScreenId,
+  setupScreens,
   shouldOfferTour,
   showsBotStep,
   starterTemplateAllowed,
@@ -176,12 +179,39 @@ assert.equal(showsBotStep([
   makeSetupDesk({ deskType: "perps", mode: "paper", takenNames: [] }),
   makeSetupDesk({ deskType: "signal_follower", mode: "paper", takenNames: ["Perps Paper"] }),
 ], [dcaFolder]), false);
-assert.deepEqual(setupSteps({ desks: [paper, connected], folders: [dcaFolder, perpsFolder] }), [
-  "desks",
-  "exchanges",
-  "bots",
-  "tour",
+const both = setupScreens({
+  desks: [paper, connected],
+  folders: [dcaFolder, perpsFolder],
+});
+assert.deepEqual(both.map((screen) => setupScreenId(screen)), [
+  "desks:desks",
+  "desks:exchanges",
+  "bots:" + connected.key,
+  "bots:" + paper.key,
+  "tour:tour",
 ]);
+assert.deepEqual(
+  setupScreens({ desks: [], folders: [dcaFolder] }).map((screen) => setupScreenId(screen)),
+  ["desks:desks", "bots:empty", "tour:tour"],
+);
+assert.equal(
+  setupScreenId(activeSetupScreen(both, "desks:exchanges")),
+  "desks:exchanges",
+);
+assert.equal(
+  setupScreenId(activeSetupScreen(
+    setupScreens({ desks: [paper], folders: [dcaFolder] }),
+    "desks:exchanges",
+  )),
+  "desks:desks",
+);
+assert.match(botsEmptyNote([]), /no starter bots/i);
+assert.match(
+  botsEmptyNote([
+    makeSetupDesk({ deskType: "perps", mode: "paper", takenNames: [] }),
+  ]),
+  /ticket/i,
+);
 assert.equal(
   starterTemplateAllowed({
     folders: [loose],

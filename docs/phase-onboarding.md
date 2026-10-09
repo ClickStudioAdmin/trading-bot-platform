@@ -40,7 +40,7 @@ Skip setup is inside the modal, before any desk is written. Skipping closes the 
 
 ## Steps
 
-The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. A step label sits above the card: Desks, then Exchanges if needed, then Bots if needed, then Tour. **Back** returns to the previous step without deleting a key already saved. **Skip setup** discards the desk draft, leaves saved keys on Exchanges (unbound), marks setup skipped, closes the modal, and lands on Overview.
+The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. The step list always shows **1. Desks**, **2. Bots**, and **3. Tour**. Sub-steps sit under the current step. Exchanges is a sub-step of Desks, after the desk table, and only when a Connected cell is ticked. Each desk that has starter folders is a sub-step of Bots. **Back** returns to the previous sub-step without deleting a key already saved. **Skip setup** discards the desk draft, leaves saved keys on Exchanges (unbound), marks setup skipped, closes the modal, and lands on Overview.
 
 ### 1. Desks
 
@@ -59,7 +59,7 @@ Table, one row per type that exists today:
 Short line under the type uses the existing choice copy (ticket vs bots vs alerts vs app-owned orders vs spot + dated future).
 
 - Unticked means that type+mode is not created.
-- Zero ticks is valid. Continue goes to the tour question (no exchange step, no bot step).
+- Zero ticks is valid. Continue goes to Bots, which says there is nothing to load, then Tour. Exchanges stays hidden.
 - Each ticked cell shows an editable name, default `{Type} Paper` or `{Type} Connected`, max 40 characters, unique on the login (and unique inside the draft). Same validator as Manage desks.
 - Paper on a type with more than one market (not Cash and Carry) shows **Market data** (Bybit or Hyperliquid). Default Bybit. Cash and Carry paper stays Bybit.
 - Connected Cash and Carry is Bybit only. Other connected types pick the venue on the next step.
@@ -68,9 +68,9 @@ Short line under the type uses the existing choice copy (ticket vs bots vs alert
 
 When V1 item 5 gates exist, a cell the plan cannot create is visible and disabled, with the same Upgrade (or verify / 2FA) line as Manage desks. Cap copy matches create desk (“You have 2 of 2 desks”). The server still rejects. Do not hide a type.
 
-### 2. Exchanges
+### Exchanges (sub-step of Desks)
 
-Shown only when at least one Connected cell is ticked.
+Sub-step of Desks. Shown only when at least one Connected cell is ticked. The main step list stays on **1. Desks** while this sub-step is open.
 
 One block per connected desk, in table order. Each block:
 
@@ -89,13 +89,11 @@ Plain line on the step: two connected desks need two keys. One key cannot feed t
 
 Paper rows do not appear here.
 
-### 3. Bots
+### 2. Bots
 
-Shown only when Finish will create at least one **DCA**, **Perps bots**, or **Cash and Carry** desk, and at least one platform folder for one of those types has **Include in Starter Pack** on.
+Always step 2. One sub-step per new desk that has a matching starter folder. The member moves through those desks with Continue.
 
-If the member only chose Perps and/or TradingView Strategy, skip this step. The done summary says those desks have no starter bots (ticket, or alerts).
-
-If they chose an automated type but no flagged folder matches, skip this step. Do not show an empty required picker.
+If they chose no desks, only Perps and/or TradingView Strategy, or an automated type with no flagged folder, the step still appears and says there is nothing to load. Do not show an empty required picker. The done summary still says ticket and alert desks have no starter bots.
 
 Source:
 
@@ -116,7 +114,7 @@ Picker:
 
 Apply runs on Finish, after the desks exist, through the same server apply used by Automations. Results are applied / skipped / failed per template. Successes stay. No rollback of siblings. No orders.
 
-### 4. Tour
+### 3. Tour
 
 Question: “Want a short tour of the platform?”
 
@@ -225,7 +223,7 @@ Stop after each until Click says go. Do not start inside item 4 or item 5.
 - A key with withdrawal permission never saves.
 - The bot list contains only templates from flagged platform folders. A template with its own flag and no flagged folder is absent.
 - Apply leaves DCA idle and Perps / Cash and Carry disabled. No order rows.
-- TradingView Strategy and Perps do not get a bot step.
+- TradingView Strategy and Perps still show step 2, with nothing to load.
 - Finish retry does not insert a second desk or a second bot.
 - Tour decline does not start the overlay. Skip tour persists. A missing desk omits the desk steps.
 - A gated cell does not create that desk when the server rejects.

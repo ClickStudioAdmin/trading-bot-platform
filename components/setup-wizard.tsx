@@ -24,13 +24,19 @@ import {
   connectedSetupName,
   connectedVenuesFor,
   defaultEnvironmentId,
+  SETUP_MAIN_STEPS,
+  activeSetupScreen,
+  botsEmptyNote,
   foldersForDesk,
   makeSetupDesk,
   paperVenuesFor,
   setupDeskKey,
+  setupScreenId,
+  setupScreens,
   setupStepLabel,
-  setupSteps,
+  setupSubstepLabel,
   validateSetupNames,
+  type SetupScreen,
   type SetupConnection,
   type SetupDesk,
   type SetupDraft,
@@ -58,15 +64,23 @@ export function SetupWizard({
   const [desks, setDesks] = useState<SetupDesk[]>(initialDraft.desks);
   const [applied] = useState<string[]>(initialDraft.applied);
   const [keys, setKeys] = useState(connections);
-  const [stepIndex, setStepIndex] = useState(0);
+  const [screenId, setScreenId] = useState("desks:desks");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const steps = useMemo(
-    () => setupSteps({ desks, folders }),
+  const screens = useMemo(
+    () => setupScreens({ desks, folders }),
     [desks, folders],
   );
-  const safeIndex = Math.min(stepIndex, Math.max(steps.length - 1, 0));
-  const step = steps[safeIndex] ?? "desks";
+  const screen = activeSetupScreen(screens, screenId);
+  const screenIndex = screens.findIndex(
+    (item) => setupScreenId(item) === setupScreenId(screen),
+  );
+  const previous = screenIndex > 0 ? screens[screenIndex - 1] : null;
+  const next =
+    screenIndex >= 0 && screenIndex < screens.length - 1
+      ? screens[screenIndex + 1]
+      : null;
+  const substeps = screens.filter((item) => item.main === screen.main);
 
   function draft(): SetupDraft {
     return {
@@ -111,13 +125,13 @@ export function SetupWizard({
     });
   }
 
-  function persist(nextIndex: number) {
+  function persist(target: SetupScreen) {
     const names = validateSetupNames(desks, existingNames);
     if (!names.ok) {
       setError(names.error);
       return;
     }
-    if (step === "exchanges") {
+    if (screen.main === "desks" && screen.sub === "exchanges") {
       const missing = desks.find(
         (desk) => desk.mode === "live" && !desk.bindLater && !desk.connectionId,
       );
@@ -133,7 +147,7 @@ export function SetupWizard({
         setError(saved.error);
         return;
       }
-      setStepIndex(nextIndex);
+      setScreenId(setupScreenId(target));
     });
   }
 
@@ -156,24 +170,47 @@ export function SetupWizard({
 
   return (
     <div className="space-y-6">
-      <ol className="flex flex-wrap gap-2 text-sm">
-        {steps.map((item, index) => (
-          <li
-            key={item}
-            className={
-              item === step ? "font-medium text-ink" : "text-ink-faint"
-            }
-          >
-            {index + 1}. {setupStepLabel(item)}
-          </li>
-        ))}
-      </ol>
+      <div className="space-y-2">
+        <ol className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          {SETUP_MAIN_STEPS.map((item, index) => (
+            <li
+              key={item}
+              className={
+                item === screen.main
+                  ? "font-medium text-ink"
+                  : index < SETUP_MAIN_STEPS.indexOf(screen.main)
+                    ? "text-ink-muted"
+                    : "text-ink-faint"
+              }
+              aria-current={item === screen.main ? "step" : undefined}
+            >
+              {index + 1}. {setupStepLabel(item)}
+            </li>
+          ))}
+        </ol>
+        {substeps.length > 1 ? (
+          <ol className="flex flex-wrap gap-x-4 gap-y-1 pl-4 text-sm">
+            {substeps.map((item) => (
+              <li
+                key={setupScreenId(item)}
+                className={
+                  setupScreenId(item) === setupScreenId(screen)
+                    ? "font-medium text-ink"
+                    : "text-ink-muted"
+                }
+              >
+                {setupSubstepLabel(item, desks)}
+              </li>
+            ))}
+          </ol>
+        ) : null}
+      </div>
       {error ? (
         <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
       ) : null}
-      {step === "desks" ? (
+      {screen.main === "desks" && screen.sub === "desks" ? (
         <DeskStep
           desks={desks}
           existingNames={existingNames}
@@ -181,7 +218,7 @@ export function SetupWizard({
           onChange={updateDesk}
         />
       ) : null}
-      {step === "exchanges" ? (
+      {screen.main === "desks" && screen.sub === "exchanges" ? (
         <ExchangeStep
           desks={desks.filter((desk) => desk.mode === "live")}
           keys={keys}
@@ -197,10 +234,22 @@ export function SetupWizard({
           takenNames={takenNames}
         />
       ) : null}
-      {step === "bots" ? (
-        <BotStep desks={desks} folders={folders} onChange={updateDesk} />
+      {screen.main === "bots" && screen.sub === "empty" ? (
+        <section className="rounded-card border border-line bg-surface p-5">
+          <h2 className="text-lg font-semibold tracking-tight">
+            Load starter bots?
+          </h2>
+          <p className="mt-2 text-sm text-ink-muted">{botsEmptyNote(desks)}</p>
+        </section>
       ) : null}
-      {step === "tour" ? (
+      {screen.main === "bots" && screen.sub === "desk" ? (
+        <BotStep
+          desk={desks.find((desk) => desk.key === screen.deskKey) ?? null}
+          folders={folders}
+          onChange={updateDesk}
+        />
+      ) : null}
+      {screen.main === "tour" ? (
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">
             Want a short tour of the platform?
@@ -230,23 +279,23 @@ export function SetupWizard({
         </section>
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
-        {safeIndex > 0 ? (
+        {previous ? (
           <button
             type="button"
             onClick={() => {
               setError(null);
-              setStepIndex(Math.max(0, safeIndex - 1));
+              setScreenId(setupScreenId(previous));
             }}
             className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
           >
             Back
           </button>
         ) : null}
-        {step !== "tour" ? (
+        {next ? (
           <button
             type="button"
             disabled={pending}
-            onClick={() => persist(Math.min(safeIndex + 1, steps.length - 1))}
+            onClick={() => persist(next)}
             className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
             {pending ? "Saving…" : "Continue"}
@@ -707,15 +756,17 @@ function SetupKeyForm({
 }
 
 function BotStep({
-  desks,
+  desk,
   folders,
   onChange,
 }: {
-  desks: SetupDesk[];
+  desk: SetupDesk | null;
   folders: StarterFolder[];
   onChange: (key: string, patch: Partial<SetupDesk>) => void;
 }) {
-  const rows = desks.filter((desk) => foldersForDesk(folders, desk.deskType).length > 0);
+  if (!desk) {
+    return null;
+  }
   return (
     <section className="space-y-4">
       <div className="rounded-card border border-line bg-surface p-5">
@@ -728,11 +779,10 @@ function BotStep({
           Nothing trades until you arm or enable them.
         </p>
       </div>
-      {rows.map((desk) => (
-        <div key={desk.key} className="rounded-card border border-line bg-surface p-5">
-          <h3 className="text-sm font-semibold text-ink">{desk.name}</h3>
-          <div className="mt-3 space-y-4">
-            {foldersForDesk(folders, desk.deskType).map((folder) => {
+      <div className="rounded-card border border-line bg-surface p-5">
+        <h3 className="text-sm font-semibold text-ink">{desk.name}</h3>
+        <div className="mt-3 space-y-4">
+          {foldersForDesk(folders, desk.deskType).map((folder) => {
               const ids = folder.templates.map((template) => template.id);
               const selected = ids.filter((id) => desk.templateIds.includes(id));
               const all = selected.length === ids.length;
@@ -785,7 +835,6 @@ function BotStep({
             })}
           </div>
         </div>
-      ))}
     </section>
   );
 }

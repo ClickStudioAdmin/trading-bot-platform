@@ -36,6 +36,13 @@ export type OnboardingTour =
   | "skipped";
 export type SetupTourChoice = "yes" | "not_now";
 export type SetupStep = "desks" | "exchanges" | "bots" | "tour";
+export const SETUP_MAIN_STEPS = ["desks", "bots", "tour"] as const;
+export type SetupMainStep = (typeof SETUP_MAIN_STEPS)[number];
+export type SetupScreen =
+  | { main: "desks"; sub: "desks" | "exchanges" }
+  | { main: "bots"; sub: "empty" }
+  | { main: "bots"; sub: "desk"; deskKey: string }
+  | { main: "tour"; sub: "tour" };
 export type StarterVisibility = "platform" | "user" | "backtested";
 export type StarterDeskType = "dca" | "perps" | "cash_and_carry";
 
@@ -517,19 +524,76 @@ export function showsBotStep(
   );
 }
 
-export function setupSteps(input: {
+export function starterBotDesks(
+  desks: readonly SetupDesk[],
+  folders: readonly StarterFolder[],
+): SetupDesk[] {
+  const rows: SetupDesk[] = [];
+  for (const deskType of ONBOARDING_DESK_TYPES) {
+    for (const mode of ["paper", "live"] as const) {
+      const desk = desks.find(
+        (row) => row.deskType === deskType && row.mode === mode,
+      );
+      if (desk && foldersForDesk(folders, desk.deskType).length > 0) {
+        rows.push(desk);
+      }
+    }
+  }
+  return rows;
+}
+
+export function setupScreens(input: {
   desks: readonly SetupDesk[];
   folders: readonly StarterFolder[];
-}): SetupStep[] {
-  const steps: SetupStep[] = ["desks"];
+}): SetupScreen[] {
+  const screens: SetupScreen[] = [{ main: "desks", sub: "desks" }];
   if (showsExchangeStep(input.desks)) {
-    steps.push("exchanges");
+    screens.push({ main: "desks", sub: "exchanges" });
   }
-  if (showsBotStep(input.desks, input.folders)) {
-    steps.push("bots");
+  const bots = starterBotDesks(input.desks, input.folders);
+  if (bots.length === 0) {
+    screens.push({ main: "bots", sub: "empty" });
+  } else {
+    for (const desk of bots) {
+      screens.push({ main: "bots", sub: "desk", deskKey: desk.key });
+    }
   }
-  steps.push("tour");
-  return steps;
+  screens.push({ main: "tour", sub: "tour" });
+  return screens;
+}
+
+export function setupScreenId(screen: SetupScreen): string {
+  if (screen.main === "bots" && screen.sub === "desk") {
+    return `bots:${screen.deskKey}`;
+  }
+  return `${screen.main}:${screen.sub}`;
+}
+
+export function activeSetupScreen(
+  screens: readonly SetupScreen[],
+  screenId: string,
+): SetupScreen {
+  const found = screens.find((screen) => setupScreenId(screen) === screenId);
+  if (found) {
+    return found;
+  }
+  if (screenId.startsWith("bots:")) {
+    const bots = screens.find((screen) => screen.main === "bots");
+    if (bots) {
+      return bots;
+    }
+  }
+  return screens[0];
+}
+
+export function botsEmptyNote(desks: readonly SetupDesk[]): string {
+  if (desks.length === 0) {
+    return "No desks are selected, so there are no starter bots to load.";
+  }
+  if (!desks.some((desk) => deskSupportsStarterBots(desk.deskType))) {
+    return "Perps is the ticket. TradingView Strategy takes alerts. Those desks do not load starter bots.";
+  }
+  return "No starter folders are marked for these desks.";
 }
 
 export function desksStillToCreate(desks: readonly SetupDesk[]): SetupDesk[] {
@@ -780,14 +844,30 @@ export function buildTourSteps(desks: readonly TourDesk[]): TourStep[] {
   return steps;
 }
 
-export function setupStepLabel(step: SetupStep): string {
+export function setupStepLabel(step: SetupMainStep): string {
   if (step === "desks") {
     return "Desks";
   }
-  if (step === "exchanges") {
+  if (step === "bots") {
+    return "Bots";
+  }
+  return "Tour";
+}
+
+export function setupSubstepLabel(
+  screen: SetupScreen,
+  desks: readonly SetupDesk[],
+): string {
+  if (screen.main === "desks" && screen.sub === "exchanges") {
     return "Exchanges";
   }
-  if (step === "bots") {
+  if (screen.main === "desks") {
+    return "Desks";
+  }
+  if (screen.main === "bots" && screen.sub === "desk") {
+    return desks.find((desk) => desk.key === screen.deskKey)?.name ?? "Bots";
+  }
+  if (screen.main === "bots") {
     return "Bots";
   }
   return "Tour";
