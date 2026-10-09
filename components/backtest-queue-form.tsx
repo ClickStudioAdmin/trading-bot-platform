@@ -422,11 +422,11 @@ export function BacktestQueueForm({
         className={
           variant
             ? "space-y-4"
-            : "mt-4 grid items-start gap-6 lg:grid-cols-2"
+            : "mt-4 grid min-w-0 items-start gap-6 lg:grid-cols-2 [&>*]:min-w-0"
         }
       >
       <form
-        className="space-y-3"
+        className="@container min-w-0 space-y-3"
         action={async (formData) => {
           setPending(true);
           setError(null);
@@ -568,7 +568,7 @@ export function BacktestQueueForm({
         </label>
         )}
         <div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid min-w-0 gap-3 @min-[22rem]:grid-cols-2 [&>*]:min-w-0">
             <DatePicker
               label="Start date"
               name="fromDate"
@@ -641,7 +641,7 @@ export function BacktestQueueForm({
             <p className="mt-2 text-sm text-danger">{historyRangeError}</p>
           ) : null}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid min-w-0 gap-3 @min-[22rem]:grid-cols-2 [&>*]:min-w-0">
           <label className="block text-sm text-ink">
             Initial account balance
             <GroupedNumberInput
@@ -790,7 +790,7 @@ export function BacktestQueueForm({
         </button>
       </form>
       {recipe ? (
-        <aside className="rounded-card border border-line bg-canvas p-4">
+        <aside className="min-w-0 rounded-card border border-line bg-canvas p-4">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <h3 className="text-lg font-semibold tracking-tight text-ink">
@@ -867,7 +867,7 @@ export function BacktestQueueForm({
           </div>
         </aside>
       ) : (
-        <aside className="rounded-card border border-line bg-canvas p-4">
+        <aside className="min-w-0 rounded-card border border-line bg-canvas p-4">
           <h3 className="text-lg font-semibold tracking-tight text-ink">
             Bot to replay
           </h3>

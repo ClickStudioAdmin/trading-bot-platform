@@ -1,6 +1,12 @@
 "use client";
 
-import { HintLabel, botFieldClass, botLabelClass } from "@/components/bot-form-chrome";
+import {
+  HintLabel,
+  botFieldClass,
+  botCompactRowClass,
+  botLabelClass,
+  useBotColumnLayout,
+} from "@/components/bot-form-chrome";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   DCA_INDICATOR_KIND_OPTIONS,
@@ -185,6 +191,8 @@ export function IndicatorStartFields({
       />
     </label>
   ) : null;
+  const column = useBotColumnLayout();
+  const compactGrid = `col-span-full ${botCompactRowClass}`;
   const levelField = dcaIndicatorShowsLevel(kind, compare, level) ? (
     <label className={labelClass}>
       <HintLabel
@@ -204,13 +212,25 @@ export function IndicatorStartFields({
   return (
     <>
       {showPairPeriods ? (
-        <div className="col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2fr)_6.5rem]">
+        <div
+          className={
+            column
+              ? compactGrid
+              : "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2fr)_6.5rem]"
+          }
+        >
           {indicatorField}
           {timeframeField}
           {pairFields}
         </div>
       ) : kind === "rsi" ? (
-        <div className="col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2fr)_6.5rem]">
+        <div
+          className={
+            column
+              ? compactGrid
+              : "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2fr)_6.5rem]"
+          }
+        >
           {indicatorField}
           {periodField}
           {timeframeField}
@@ -220,9 +240,11 @@ export function IndicatorStartFields({
       ) : (
         <div
           className={
-            levelField
-              ? "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2fr)_6.5rem]"
-              : "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2.4fr)]"
+            column
+              ? compactGrid
+              : levelField
+                ? "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2fr)_6.5rem]"
+                : "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2.4fr)]"
           }
         >
           {indicatorField}
@@ -264,9 +286,16 @@ export function TrendStartFields({
   onMultiplierChange: (next: string) => void;
 }) {
   const trendKind = kind === "supertrend" ? kind : "supertrend";
+  const column = useBotColumnLayout();
   const whenOptions = dcaIndicatorWhenOptions(trendKind, side, false);
   return (
-    <div className="col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_6.5rem_minmax(16rem,2fr)]">
+    <div
+      className={
+        column
+          ? `col-span-full ${botCompactRowClass}`
+          : "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_6.5rem_minmax(16rem,2fr)]"
+      }
+    >
       <label className={labelClass}>
         <HintLabel text="Trend" required />
         <AppSelect

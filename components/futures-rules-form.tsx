@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AutomationsBotTable } from "@/components/automations-bot-table";
 import {
   BotField,
+  BotColumnLayout,
   BotFormCard,
   BotFormColumns,
   BotFormGroup,
@@ -18,6 +19,7 @@ import {
   HintLabel,
   OptionalSection,
   OrderTypePill,
+  botCompactRowClass,
   botFieldClass,
   botLabelClass,
   botRowClass,
@@ -456,6 +458,10 @@ function RuleCard({
 }) {
   const prefix = "r0_";
   const formRef = useRef<HTMLFormElement>(null);
+  const fieldRow = embedded ? botCompactRowClass : botRowClass;
+  const fieldRow5 = embedded ? botCompactRowClass : botRowClass5;
+  const nameSpan = embedded ? "col-span-full" : "col-span-2";
+  const pairSpan = embedded ? "col-span-full" : "lg:col-span-2";
   const [dirty, setDirty] = useState(false);
   const [mode, setMode] = useState(
     !inUse && symbolNeedsBybitAgreement(agreementGate.symbols, layer.symbol)
@@ -828,9 +834,14 @@ function RuleCard({
         }
         return true;
       }}
-      className="space-y-5 scroll-mt-24"
+      className={
+        embedded
+          ? "@container min-w-0 space-y-5 scroll-mt-24"
+          : "space-y-5 scroll-mt-24"
+      }
       id={layer.id ? `bot-${layer.id}` : undefined}
     >
+      <BotColumnLayout enabled={embedded}>
       <input type="hidden" name="saveScope" value="one" />
       <input type="hidden" name="ruleCount" value="1" />
       <input type="hidden" name="deskVenue" value={venueId} />
@@ -838,8 +849,8 @@ function RuleCard({
       <BotFormColumns single={embedded}>
       <BotFormCard>
       <BotFormStep title="General">
-        <div className={botRowClass}>
-          <BotField label="Name" required className="col-span-2">
+        <div className={fieldRow}>
+          <BotField label="Name" required className={nameSpan}>
             <input
               id={`${prefix}name`}
               name={`${prefix}name`}
@@ -895,7 +906,7 @@ function RuleCard({
 
       <BotFormStep title="Entry Conditions" defaultCollapsed={inUse}>
       <BotFormGroup>
-        <div className={botRowClass}>
+        <div className={fieldRow}>
           <BotField label="Initial Order Trigger" required>
             <input type="hidden" name={`${prefix}entrySource`} value={entrySource} />
             <AppSelect
@@ -931,7 +942,9 @@ function RuleCard({
             </AppSelect>
           </BotField>
           {closing ? null : (
-            <label className="flex items-center gap-2 self-end pb-0.5 text-sm text-ink lg:col-span-2">
+            <label
+              className={`flex items-center gap-2 self-end pb-0.5 text-sm text-ink ${pairSpan}`}
+            >
               <AppCheck
                 name={`${prefix}skipIfOpen`}
                 value="on"
@@ -947,7 +960,7 @@ function RuleCard({
       </BotFormGroup>
 
       <BotFormGroup>
-        <div className={botRowClass5}>
+        <div className={fieldRow5}>
           {entrySource === "indicator" && !closing ? (
             <IndicatorStartFields
               side={entrySide}
@@ -981,7 +994,7 @@ function RuleCard({
               onMultiplierChange={setIndicatorMultiplier}
             />
           ) : webhookEntry ? (
-            <BotField label="Webhook" className="lg:col-span-2" required>
+            <BotField label="Webhook" className={pairSpan} required>
               <AppSelect
                 name={`${prefix}webhookId`}
                 value={webhookId}
@@ -1057,7 +1070,7 @@ function RuleCard({
             named
             dense
             allowOff={false}
-            gridClass={botRowClass5}
+            gridClass={fieldRow5}
             fieldClass={botFieldClass}
             labelClass={botLabelClass}
           />
@@ -1067,7 +1080,7 @@ function RuleCard({
 
       <BotFormStep title="Position Sizing" defaultCollapsed={inUse}>
       <BotFormGroup title={closing ? undefined : "Order Size"}>
-        <div className={botRowClass}>
+        <div className={fieldRow}>
           <BotField
             label={closing ? "Qty to close" : "Size"}
             hint={closing ? "Empty closes the whole row." : undefined}
@@ -1148,7 +1161,7 @@ function RuleCard({
             enabled={tpOn}
             onEnabled={setTpOn}
           >
-            <div className={botRowClass5}>
+            <div className={fieldRow5}>
               <BotField label="Type" required>
                 <AppSelect
                   name={`${prefix}tpKind`}
@@ -1232,7 +1245,7 @@ function RuleCard({
             {trailOn ? (
               <input type="hidden" name={`${prefix}trailing`} value="on" />
             ) : null}
-            <div className={botRowClass}>
+            <div className={fieldRow}>
               <BotField label="Retracement" required>
                 <GroupedNumberInput
                   name={`${prefix}trailingStop`}
@@ -1258,7 +1271,7 @@ function RuleCard({
             enabled={slOn}
             onEnabled={setSlOn}
           >
-            <div className={botRowClass5}>
+            <div className={fieldRow5}>
               <BotField label="Type" required>
                 <AppSelect
                   name={`${prefix}slKind`}
@@ -1353,7 +1366,7 @@ function RuleCard({
             enabled={breakevenOn}
             onEnabled={setBreakevenOn}
           >
-            <div className={botRowClass}>
+            <div className={fieldRow}>
               <BotField label="Move stop to breakeven at %" required>
                 <span className="relative mt-0.5 block">
                   <GroupedNumberInput
@@ -1404,7 +1417,7 @@ function RuleCard({
               named
               dense
               allowOff={false}
-              gridClass={botRowClass5}
+              gridClass={fieldRow5}
               fieldClass={botFieldClass}
               labelClass={botLabelClass}
             />
@@ -1499,6 +1512,7 @@ function RuleCard({
       </BotFormSidebar>
       )}
       </BotFormColumns>
+      </BotColumnLayout>
     </StayOnPageForm>
     {dialog}
     </>
