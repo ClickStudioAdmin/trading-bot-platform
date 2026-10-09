@@ -159,25 +159,14 @@ function BacktestMatchCard({
             Results Attached
           </p>
         ) : null}
-        {canSaveAs ? (
+        {canSaveAs || canSaveAsPlatform ? (
           <SaveBacktestAsTemplateButton
             runId={runId}
             defaultName={defaultName}
             deskType={deskType}
             folders={folders}
-            canSaveAs
-            canSaveAsPlatform={false}
-          />
-        ) : null}
-        {canSaveAsPlatform ? (
-          <SaveBacktestAsTemplateButton
-            runId={runId}
-            defaultName={defaultName}
-            deskType={deskType}
-            folders={folders}
-            canSaveAs={false}
-            canSaveAsPlatform
-            variant="secondary"
+            canSaveAs={canSaveAs}
+            canSaveAsPlatform={canSaveAsPlatform}
           />
         ) : null}
       </MatchPanel>

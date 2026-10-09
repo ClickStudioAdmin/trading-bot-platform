@@ -98,6 +98,7 @@ import { DeskChart } from "@/components/desk-chart";
 import {
   Modal,
   StarterPackCheckbox,
+  TemplateAudienceFields,
   saveFolderGroups,
 } from "@/components/template-modals";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
@@ -1003,7 +1004,6 @@ export function SaveBacktestAsTemplateButton({
   folders = [],
   canSaveAs,
   canSaveAsPlatform,
-  variant = "primary",
 }: {
   runId: string;
   defaultName: string;
@@ -1011,7 +1011,6 @@ export function SaveBacktestAsTemplateButton({
   folders?: AutomationTemplateSet[];
   canSaveAs: boolean;
   canSaveAsPlatform: boolean;
-  variant?: "primary" | "secondary";
 }) {
   const router = useRouter();
   const platformOnly = !canSaveAs && canSaveAsPlatform;
@@ -1040,6 +1039,18 @@ export function SaveBacktestAsTemplateButton({
     setError(null);
     setOpen(true);
   }
+
+  function chooseAudience(next: boolean) {
+    setPlatform(next);
+    setFolderIds([]);
+    setCreateFolder(false);
+    setNewFolderName("");
+    if (!next) {
+      setStarterPack(false);
+    }
+  }
+
+  const canChoose = canSaveAs && canSaveAsPlatform;
 
   async function onSave() {
     setPending(true);
@@ -1076,24 +1087,26 @@ export function SaveBacktestAsTemplateButton({
         title={
           platformOnly
             ? "Create an applyable platform template from this run. Does not attach the run or arm a desk."
-            : "Create a private library template and attach this run"
+            : canChoose
+              ? "Save this run as your template, or publish a platform template."
+              : "Create a private library template and attach this run"
         }
         className="inline-flex w-full items-center justify-center gap-2 rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent"
       >
         <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
-          {platformOnly ? "Save as platform template" : "Save as template"}
+          Save as template
         </BotButtonLead>
       </button>
       {open ? (
-        <Modal
-          title={platform ? "Save as platform template" : "Save as template"}
-          onClose={() => setOpen(false)}
-        >
+        <Modal title="Save as template" onClose={() => setOpen(false)}>
           <p className="mt-1 text-sm text-ink-muted">
             {platform
               ? "Visible to every member. Does not attach this run or arm a desk."
               : "Saved to your template library and attached to this run. Apply it later on any matching desk."}
           </p>
+          {canChoose ? (
+            <TemplateAudienceFields platform={platform} onChange={chooseAudience} />
+          ) : null}
           <label className="mt-4 block text-sm text-ink">
             Name
             <input

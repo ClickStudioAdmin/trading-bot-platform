@@ -2352,11 +2352,6 @@ export function ThemeBotFormDraft() {
               Save as template
             </BotButtonLead>
           </button>
-          <button type="button" className={botSidebarActionClass}>
-            <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
-              Save as platform template
-            </BotButtonLead>
-          </button>
         </BotFormSidebarSection>
         {desk !== "cnc" ? (
           <BotFormSidebarSection title="Backtesting">

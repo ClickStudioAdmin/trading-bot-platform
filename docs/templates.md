@@ -150,7 +150,7 @@ Tokens from [ui-theme.md](ui-theme.md).
 
 - Header: **Create New Bot**, **Create New Bot from Template**. One picker is a single folder tree: **Platform**, **Shared**, and **My templates** as top-level folders. Named folders and loose templates nest under that scope. Tick a folder or individual templates, then apply to **this** desk. DCA apply uses each template’s saved contract. Bots list newest first. New, cloned, and applied bots land at the top.
 - Per-bot Save and Status stay on the page. They do not reload or jump the scroll. C&C book Reduce only lives on Desk Settings.
-- Each bot card: **Save as template**. Name, description, **Add to folder** as a checkbox list of **your** folders (this desk type). **Save as platform template** lists **platform folders** only. Tick one or more, and/or **Create a new folder**.
+- Each bot card: **Save as template**. Name, description, **Add to folder**. Tick one or more, and/or **Create a new folder**. Admins choose **User template** or **Platform template** in that dialog. A user template lists that member’s folders. A platform template lists platform folders only.
 - TradingView Strategy desk: no Create New Bot from Template. Webhook tokens are not templates.
 
 ### `/account/templates` (every member)
@@ -172,7 +172,7 @@ Admin nav next to Members / Logs. Members who are not admins get the usual admin
 - **Edit** to rename, description, **Include in Starter Pack**, and folder membership (platform templates only) on the **Folders** tab or from a template’s Edit dialog. Row **Delete** (confirm) is on each platform template and folder. The Templates table **Starter Pack** column ticks if the template’s own flag is on **or** it sits in a folder whose flag is on. Edit still shows only the template’s own flag.
 - **Unpublish** removes the platform row. Members will no longer see it. User copies are unchanged.
 - **Add New Folder** opens a modal. Create a platform folder from platform templates of one desk type.
-- Add a new platform row with **Save as platform template** from a desk the admin owns. That dialog and Edit both include **Include in Starter Pack**. **Add New Folder** on admin can set the same flag.
+- Add a new platform row from **Save as template** on a desk the admin owns, choosing **Platform template**. That dialog and Edit both include **Include in Starter Pack**. **Add New Folder** on admin can set the same flag.
 - **Export all** downloads the platform catalog (templates and folders). Bulk **Export** downloads the selected platform templates (with the folders they sit in) or selected folders (with their templates). **Import** still creates user-owned copies for the signed-in admin.
 
 Admin does **not** rewrite a user’s `recipe` JSON in place. Support path: save a platform snapshot from Automations, then edit that snapshot. Prevents a silent change to what the member thinks they saved.
@@ -183,7 +183,7 @@ Admin does **not** rewrite a user’s `recipe` JSON in place. Support path: save
 | --- | --- | --- |
 | Save bot as my template | Yes | Yes |
 | Save / edit / delete platform template or folder | No | Yes |
-| Save as platform template from a desk | No | Yes |
+| Save as a platform template from a desk | No | Yes, inside Save as template |
 | Rename / describe / delete another member’s user template or folder | No | No (not listed on `/admin/templates`) |
 | See another member’s user templates on `/account/templates` | No, unless shared | No, unless shared |
 | Share a user template/folder by email | Own rows | Own rows |
