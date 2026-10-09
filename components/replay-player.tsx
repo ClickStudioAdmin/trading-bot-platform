@@ -2019,11 +2019,11 @@ export function ReplayPlayer({
   const positions = (
     <section
       ref={positionsRef}
-      className={`flex min-w-0 flex-col gap-3 p-4 ${
+      className={`flex min-w-0 flex-col ${
         capPositions ? "h-full min-h-0 overflow-hidden" : ""
       }`}
     >
-      <h2 className="shrink-0 text-lg font-semibold">Positions</h2>
+      <h2 className="mb-3 shrink-0 text-lg font-semibold">Positions</h2>
       <TableCard
         className={
           capPositions

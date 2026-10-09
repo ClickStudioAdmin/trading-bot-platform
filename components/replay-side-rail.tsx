@@ -346,8 +346,8 @@ function ParametersBody({
         </div>
       ) : (
         <>
-          <div className="min-h-0 flex-1 space-y-3 overflow-auto p-4">
-            <div className="flex items-center justify-between gap-3">
+          <div className="min-h-0 flex-1 overflow-auto">
+            <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Parameters</h2>
               <button
                 type="button"
@@ -360,7 +360,7 @@ function ParametersBody({
             <BacktestParameterSections sections={paramSections} />
           </div>
           {showKeep ? (
-            <div className="shrink-0 border-t border-line bg-canvas px-4 py-3">
+            <div className="shrink-0 border-t border-line bg-canvas py-3">
               <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
                 Keep
               </p>
