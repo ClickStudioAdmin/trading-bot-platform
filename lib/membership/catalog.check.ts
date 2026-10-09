@@ -129,9 +129,26 @@ if (parsed.ok) {
   assert.equal(parsed.values.priceUsd, 29);
   assert.equal(parsed.values.features.desk_dca, true);
   assert.equal(parsed.values.features.desk_scale_in, false);
+  assert.equal(parsed.values.features.replay_backtests, false);
+  assert.equal(parsed.values.features.replay_chart_indicators, false);
+  assert.equal(parsed.values.features.replay_strategy_optimization, false);
   assert.equal(parsed.values.caps.max_paper_desks, 4);
   assert.equal(parsed.values.caps.max_demo_desks, null);
   assert.equal(parsed.values.affiliateL1Pct, 10);
+}
+
+const replayPlan = new FormData();
+replayPlan.set("name", "Replay");
+replayPlan.set("visibility", "public");
+replayPlan.set("feature_replay_backtests", "1");
+replayPlan.set("feature_replay_chart_indicators", "on");
+replayPlan.set("feature_replay_strategy_optimization", "true");
+const replayParsed = parsePlanForm(replayPlan);
+assert.equal(replayParsed.ok, true);
+if (replayParsed.ok) {
+  assert.equal(replayParsed.values.features.replay_backtests, true);
+  assert.equal(replayParsed.values.features.replay_chart_indicators, true);
+  assert.equal(replayParsed.values.features.replay_strategy_optimization, true);
 }
 
 const overRates = new FormData();
@@ -254,6 +271,7 @@ assert.deepEqual(
     "Webhooks",
     "Copy Trading",
     "Backtesting",
+    "Replay Studio",
     "Affiliates",
   ],
 );
@@ -326,6 +344,19 @@ assert.ok(backtesting);
 assert.equal(backtesting.fixedOrder, true);
 assert.equal(backtesting.rows[0].kind, "feature");
 assert.equal(backtesting.rows[0].key, "research_backtest");
+const replayStudio = PLAN_COMPARE_SECTIONS.find(
+  (section) => section.title === "Replay Studio",
+);
+assert.ok(replayStudio);
+assert.equal(replayStudio.fixedOrder, true);
+assert.deepEqual(
+  replayStudio.rows.map((row) => row.key),
+  [
+    "replay_backtests",
+    "replay_chart_indicators",
+    "replay_strategy_optimization",
+  ],
+);
 const affiliates = PLAN_COMPARE_SECTIONS.find(
   (section) => section.title === "Affiliates",
 );
