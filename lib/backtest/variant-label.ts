@@ -36,17 +36,17 @@ export function backtestVariantChanges(
   }
   if (base.startingUsdt !== next.startingUsdt) {
     changes.push(
-      `Initial balance ${money(base.startingUsdt)} → ${money(next.startingUsdt)}`,
+      `Initial account balance ${money(base.startingUsdt)} → ${money(next.startingUsdt)}`,
     );
   }
   if (base.fromMs !== next.fromMs) {
     changes.push(
-      `Window start ${isoDateUtc(base.fromMs)} → ${isoDateUtc(next.fromMs)}`,
+      `Start date ${isoDateUtc(base.fromMs)} → ${isoDateUtc(next.fromMs)}`,
     );
   }
   if (base.toMs !== next.toMs) {
     changes.push(
-      `Window end ${isoDateUtc(base.toMs)} → ${isoDateUtc(next.toMs)}`,
+      `End date ${isoDateUtc(base.toMs)} → ${isoDateUtc(next.toMs)}`,
     );
   }
   return changes;

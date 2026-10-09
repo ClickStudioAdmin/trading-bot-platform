@@ -172,6 +172,7 @@ import {
   dcaFormToSnapshotSource,
   readFormControl,
   snapshotDcaRecipe,
+  type DcaTemplateRecipe,
 } from "@/lib/templates/recipe";
 import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
 import {
@@ -895,6 +896,10 @@ export function DcaPlaybookForm({
   openPositions = [],
   agreementGate = CLOSED_AGREEMENT_GATE,
   onTemplateSaved,
+  embedded = false,
+  onRecipeChange,
+  controlledSymbol,
+  onSymbolChange,
 }: {
   playbook: DcaPlaybook | null;
   seed?: DcaPlaybook | null;
@@ -918,6 +923,14 @@ export function DcaPlaybookForm({
   openPositions?: DcaCycleOpen[];
   agreementGate?: BybitAgreementGate;
   onTemplateSaved?: (item: BacktestLibraryItem) => void;
+  /** Replay and New Backtest. Hides desk save and publishes the recipe. */
+  embedded?: boolean;
+  onRecipeChange?: (result: {
+    recipe: DcaTemplateRecipe | null;
+    error: string | null;
+  }) => void;
+  controlledSymbol?: string;
+  onSymbolChange?: (symbol: string) => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const { confirm: askConfirm, dialog } = useConfirmDialog();
@@ -1132,11 +1145,18 @@ export function DcaPlaybookForm({
     options.find((row) => row.symbol === policy.defaultSymbol)?.symbol ??
     options[0]?.symbol ??
     policy.defaultSymbol;
-  const [symbol, setSymbol] = useState(() =>
+  const [symbolState, setSymbolState] = useState(() =>
     source
       ? defaultSymbol
       : firstOpenPerp(options, agreementGate, defaultSymbol),
   );
+  const symbol = controlledSymbol?.trim() ? controlledSymbol : symbolState;
+  function setSymbol(next: string) {
+    setSymbolState(next);
+    if (next !== symbol) {
+      onSymbolChange?.(next);
+    }
+  }
   const [formTick, setFormTick] = useState(0);
   const [touched, setTouched] = useState(false);
   useEffect(() => {
@@ -1486,6 +1506,33 @@ export function DcaPlaybookForm({
     (!cycleLocked && !parsedLive.ok && !parseConstraint);
   const liveRecipeKey =
     liveConfig == null ? null : JSON.stringify(snapshotDcaRecipe(liveConfig));
+  const onRecipeChangeRef = useRef(onRecipeChange);
+  useEffect(() => {
+    onRecipeChangeRef.current = onRecipeChange;
+    if (!embedded || formTick < 1 || !onRecipeChangeRef.current) {
+      return;
+    }
+    const parsed = parseDcaPlaybookForm(snapshotForm(), policy.venueId);
+    if (!parsed.ok) {
+      onRecipeChangeRef.current({ recipe: null, error: parsed.error });
+      return;
+    }
+    const missing =
+      tpMissing ||
+      trailMissing ||
+      slMissing ||
+      breakevenMissing ||
+      Boolean(confirm && !dcaFilterComplete(confirm)) ||
+      (direction === "both" &&
+        Boolean(shortConfirm && !dcaFilterComplete(shortConfirm))) ||
+      Boolean(exitIf && !dcaFilterComplete(exitIf)) ||
+      (direction === "both" &&
+        Boolean(shortExitIf && !dcaFilterComplete(shortExitIf)));
+    onRecipeChangeRef.current({
+      recipe: snapshotDcaRecipe(parsed.config),
+      error: missing ? "Fill required fields before saving." : null,
+    });
+  }, [embedded, formTick, liveRecipeKey, onRecipeChange]);
   const [loadedRecipe, setLoadedRecipe] = useState<string | null>(null);
   const loadedRecipeSet = useRef(false);
   useLayoutEffect(() => {
@@ -1540,6 +1587,9 @@ export function DcaPlaybookForm({
         setFormTick((tick) => tick + 1);
       }}
       guard={async (event) => {
+        if (embedded) {
+          return false;
+        }
         const submitter = (event.nativeEvent as SubmitEvent).submitter as
           | HTMLElement
           | null;
@@ -1562,7 +1612,7 @@ export function DcaPlaybookForm({
       <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
       <input type="hidden" name="deskVenue" value={policy.venueId} />
       <input type="hidden" name="botStatus" value={status} />
-      <BotFormColumns>
+      <BotFormColumns single={embedded}>
       <BotFormCard>
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
@@ -2676,6 +2726,7 @@ export function DcaPlaybookForm({
       </BotFormStep>
 
       </BotFormCard>
+      {embedded ? null : (
       <BotFormSidebar
         status={
           <BotStatusField
@@ -2762,6 +2813,7 @@ export function DcaPlaybookForm({
           <BotFormSidebarSection>{removeControl}</BotFormSidebarSection>
         ) : null}
       </BotFormSidebar>
+      )}
       </BotFormColumns>
       {running ? (
         <div className="py-4">

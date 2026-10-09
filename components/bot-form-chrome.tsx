@@ -382,9 +382,21 @@ export function BotStatusField({
   );
 }
 
-export function BotFormColumns({ children }: { children: ReactNode }) {
+export function BotFormColumns({
+  children,
+  single = false,
+}: {
+  children: ReactNode;
+  single?: boolean;
+}) {
   return (
-    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <div
+      className={
+        single
+          ? "grid items-start gap-5"
+          : "grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]"
+      }
+    >
       {children}
     </div>
   );

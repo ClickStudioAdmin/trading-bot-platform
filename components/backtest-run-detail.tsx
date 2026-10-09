@@ -5,7 +5,7 @@ import {
   ApplyBacktestButton,
   AttachBacktestButton,
   BacktestRunRefresh,
-  BacktestPropertyList,
+  BacktestParameterSections,
   BacktestStatsGrid,
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
@@ -26,7 +26,7 @@ import {
   realizedReturnPct,
   type BacktestRun,
 } from "@/lib/backtest/model";
-import { recipeParamRows } from "@/lib/backtest/study";
+import { backtestListedSections } from "@/lib/backtest/param-sections";
 import {
   formatCount,
   formatPct,
@@ -248,7 +248,12 @@ export function BacktestRunDetail({
   comparables?: BacktestRun[];
   comparablePrimary?: BacktestRun | null;
 }) {
-  const params = recipeParamRows(run.recipe);
+  const params = backtestListedSections(run.recipe, {
+    leverage: run.leverage,
+    startingUsdt: run.startingUsdt,
+    fromMs: run.fromMs,
+    toMs: run.toMs,
+  });
   const complete = run.status === "done";
   const pendingMessage = incompleteRunMessage(run);
   const status = backtestStatusTone(run.status);
@@ -348,7 +353,7 @@ export function BacktestRunDetail({
               Load into new backtest
             </Link>
           </div>
-          <BacktestPropertyList rows={params} />
+          <BacktestParameterSections sections={params} />
         </section>
         <div className="space-y-6">
           <section>

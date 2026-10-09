@@ -10,7 +10,7 @@ One recipe form in three places. From a finished replay, edit that form and run 
 
 The desk bot, New Backtest, and the replay panel render one recipe form. A new field, label, or validation change is made there once and shows in all three.
 
-Today the desk forms (`components/dca-playbook-form.tsx`, `components/futures-rules-form.tsx`) and New Backtest (`components/backtest-recipe-fields.tsx`) are two copies. Filter blocks already share `DcaFilterBlock`. The rest of the recipe moves into the shared form. The replay panel joins that form. It does not become a third copy.
+New Backtest and replay Modify mount the desk forms (`components/dca-playbook-form.tsx`, `components/futures-rules-form.tsx`) through `components/bot-recipe-editor.tsx`. That mount hides Save, Arm, and the template sidebar, and it does not write a desk. A field change in the desk form is the same change on those two screens.
 
 Each place keeps its own actions around the form:
 
@@ -18,7 +18,7 @@ Each place keeps its own actions around the form:
 - New Backtest: pair, dates, balance, leverage, comparables, and Queue. Picking a desk bot or a library template stays here.
 - Replay: Run, Reset, and Keep.
 
-The panel matches the bot form sections: General, Entry Conditions, Position Sizing, and Exit Conditions, with the same labels and order. The live desk form is not mounted on Replay. That form writes to a desk and can arm a bot.
+The panel matches the bot form sections: General, Entry Conditions, Position Sizing, and Exit Conditions, with the same labels and order. Parameter lists on the replay and the report use that same order. Run, Reset, and Keep on candles already loaded are still parked. The embedded form does not arm a desk.
 
 ## Replay
 

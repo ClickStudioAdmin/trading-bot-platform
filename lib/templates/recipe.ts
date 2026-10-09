@@ -11,12 +11,15 @@ import {
 import {
   dcaAveragingKind,
   dcaIntervalParts,
+  IDLE_DCA_LEG,
   parseDcaPlaybookForm,
+  type DcaPlaybook,
   type DcaPlaybookConfig,
 } from "@/lib/dca/playbook";
 import type { PaperEngineLayer } from "@/lib/engine/decide";
 import { parsePaperRulesForm, type PaperLayerFormValues } from "@/lib/engine/rules";
 import {
+  defaultFuturesAutomationForm,
   parseFuturesAutomationForm,
   writeAutomationExitsToForm,
   type FuturesAutomationFormValues,
@@ -368,6 +371,103 @@ export function snapshotPerpsRecipe(
     exitIf: rule.exitIf ?? null,
     breakevenActivationPct: rule.breakevenActivationPct ?? null,
     breakevenOffsetPct: rule.breakevenOffsetPct ?? null,
+  };
+}
+
+export function dcaRecipePlaybookSeed(recipe: DcaTemplateRecipe): DcaPlaybook {
+  return {
+    id: "",
+    userId: "",
+    accountId: "",
+    updatedAtMs: 0,
+    name: recipe.name,
+    symbol: recipe.symbol,
+    direction: recipe.direction,
+    startKind: recipe.startKind,
+    webhookId: null,
+    dcaMode: recipe.dcaMode,
+    clipSize: recipe.clipSize,
+    sizeUnit: recipe.sizeUnit,
+    maxClips: recipe.maxClips,
+    maxValue: recipe.maxValue,
+    maxValueKind: recipe.maxValueKind,
+    dipPct: recipe.dipPct,
+    intervalMinutes: recipe.intervalMinutes,
+    sizeMultiplier: recipe.sizeMultiplier,
+    deviationMultiplier: recipe.deviationMultiplier,
+    spacingKind: recipe.spacingKind ?? "percent",
+    atrPeriod: recipe.atrPeriod ?? null,
+    atrSpacingMult: recipe.atrSpacingMult ?? null,
+    takeProfitKind: recipe.takeProfitKind ?? "percent",
+    takeProfitAtrMult: recipe.takeProfitAtrMult ?? null,
+    takeProfitPct: recipe.takeProfitPct,
+    stopLossPct: recipe.stopLossPct,
+    takeProfitBasis: recipe.takeProfitBasis,
+    stopLossBasis: recipe.stopLossBasis,
+    takeProfitOrderType: recipe.takeProfitOrderType,
+    stopLossOrderType: "market",
+    breakevenActivationPct: recipe.breakevenActivationPct,
+    breakevenOffsetPct: recipe.breakevenOffsetPct,
+    trailingTriggerPct: recipe.trailingTriggerPct,
+    trailingPct: recipe.trailingPct,
+    armTrigger: recipe.armTrigger,
+    shortArmTrigger: recipe.shortArmTrigger ?? null,
+    disarmTrigger: null,
+    indicatorKind: recipe.indicatorKind,
+    indicatorTimeframe: recipe.indicatorTimeframe,
+    indicatorCompare: recipe.indicatorCompare,
+    indicatorLevel: recipe.indicatorLevel,
+    indicatorPeriod: recipe.indicatorPeriod ?? null,
+    indicatorSlowPeriod: recipe.indicatorSlowPeriod ?? null,
+    indicatorMultiplier: recipe.indicatorMultiplier ?? null,
+    shortIndicatorKind: recipe.shortIndicatorKind ?? null,
+    shortIndicatorTimeframe: recipe.shortIndicatorTimeframe ?? null,
+    shortIndicatorCompare: recipe.shortIndicatorCompare ?? null,
+    shortIndicatorLevel: recipe.shortIndicatorLevel ?? null,
+    shortIndicatorPeriod: recipe.shortIndicatorPeriod ?? null,
+    shortIndicatorSlowPeriod: recipe.shortIndicatorSlowPeriod ?? null,
+    shortIndicatorMultiplier: recipe.shortIndicatorMultiplier ?? null,
+    confirm: recipe.confirm ?? null,
+    shortConfirm: recipe.shortConfirm ?? null,
+    exitIf: recipe.exitIf ?? null,
+    shortExitIf: recipe.shortExitIf ?? null,
+    long: IDLE_DCA_LEG,
+    short: IDLE_DCA_LEG,
+    armConditionTrue: false,
+    disarmConditionTrue: false,
+    longIndicatorTrue: false,
+    shortIndicatorTrue: false,
+  };
+}
+
+export function perpsRecipeFormSeed(
+  recipe: PerpsTemplateRecipe,
+): FuturesAutomationFormValues {
+  return {
+    ...defaultFuturesAutomationForm(0, recipe.symbol),
+    name: recipe.name,
+    symbol: recipe.symbol,
+    formAction: recipe.formAction,
+    orderType: recipe.orderType,
+    sizeUnit: recipe.sizeUnit,
+    size: recipe.size,
+    limitPrice: recipe.limitPrice,
+    entrySource: recipe.entrySource,
+    triggerBy: recipe.triggerBy,
+    triggerCompare: recipe.triggerCompare,
+    triggerPrice: recipe.triggerPrice,
+    skipIfOpen: recipe.skipIfOpen,
+    tpsl: recipe.tpsl,
+    trailing: recipe.trailing,
+    indicator: recipe.indicator ?? null,
+    confirm: recipe.confirm ?? null,
+    exitIf: recipe.exitIf ?? null,
+    breakevenActivationPct:
+      recipe.breakevenActivationPct == null
+        ? ""
+        : String(recipe.breakevenActivationPct),
+    breakevenOffsetPct:
+      recipe.breakevenOffsetPct == null ? "" : String(recipe.breakevenOffsetPct),
   };
 }
 

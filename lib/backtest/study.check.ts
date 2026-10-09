@@ -24,8 +24,8 @@ if (!parsed.ok) {
 const seed = snapshotDcaRecipe(parsed.config);
 const preview = recipeParamRows(seed);
 assert.equal(
-  preview.find((row) => row.label === "Start")?.value,
-  "Manual",
+  preview.find((row) => row.label === "Initial Order Trigger")?.value,
+  "Immediate",
 );
 assert.equal(
   preview.find((row) => row.label === "Direction")?.value,
@@ -33,11 +33,15 @@ assert.equal(
 );
 assert.equal(
   preview.find((row) => row.label === "Max value")?.value,
-  "—",
+  "No max value",
 );
 assert.equal(
-  preview.find((row) => row.label === "Initial Order Size")?.value,
-  "1 qty",
+  preview.find((row) => row.label === "Order size")?.value,
+  "1",
+);
+assert.equal(
+  preview.find((row) => row.label === "Size unit")?.value,
+  "Token qty",
 );
 
 const run: BacktestRun = {

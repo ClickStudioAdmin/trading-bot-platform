@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppMultiSelect, AppSelect } from "@/components/app-select";
-import { BacktestRecipeFields } from "@/components/backtest-recipe-fields";
+import { BotRecipeEditor } from "@/components/bot-recipe-editor";
 import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
@@ -31,6 +31,7 @@ import {
   findMatchingBacktestTemplate,
   formatBacktestDeskMatch,
   groupBacktestLibrary,
+  userBacktestFieldIssues,
   type BacktestDeskBot,
   type BacktestDeskBotOption,
   type BacktestLibraryFolder,
@@ -127,6 +128,7 @@ export function BacktestQueueForm({
   const variant = variantParentId.trim().length > 0;
   const router = useRouter();
   const botRequest = useRef(0);
+  const formIssueRef = useRef<string | null>(null);
   const [pickedDeskBot, setPickedDeskBot] = useState<BacktestDeskBot | null>(
     matchedDeskBot,
   );
@@ -816,13 +818,51 @@ export function BacktestQueueForm({
             </p>
           ) : null}
           <div className="mt-4">
-            <BacktestRecipeFields
-              key={
-                sourceTemplateId || draftId || (loadedFromRun ? "rerun" : "current")
-              }
+            <BotRecipeEditor
+              key={`${recipe.kind}:${venue}:${sourceTemplateId}:${pickedDeskBot?.id ?? ""}:${draftId}:${loadedFromRun ? "rerun" : "current"}`}
               recipe={recipe}
-              onIssuesChange={setRecipeFieldIssues}
-              onChange={setRecipe}
+              options={withSymbol(pairs, recipe.symbol || symbol)}
+              venue={venue}
+              symbol={symbol || recipe.symbol}
+              onSymbolChange={setSymbol}
+              onIssuesChange={(issues) => {
+                formIssueRef.current = issues[0] ?? null;
+                setRecipeFieldIssues((current) =>
+                  current.length === issues.length &&
+                  current.every((issue, index) => issue === issues[index])
+                    ? current
+                    : issues,
+                );
+              }}
+              onChange={(next) => {
+                const replayIssue = userBacktestFieldIssues(next)[0]?.message;
+                const messages = [formIssueRef.current, replayIssue].filter(
+                  (issue): issue is string => Boolean(issue),
+                );
+                setRecipeFieldIssues((current) =>
+                  current.length === messages.length &&
+                  current.every((issue, index) => issue === messages[index])
+                    ? current
+                    : messages,
+                );
+                setRecipe((current) => {
+                  if (
+                    current &&
+                    current.name === next.name &&
+                    recipesMatchReplayFields(current, next)
+                  ) {
+                    return current;
+                  }
+                  return next;
+                });
+                if (
+                  next.symbol &&
+                  next.symbol.trim().toUpperCase() !==
+                    symbol.trim().toUpperCase()
+                ) {
+                  setSymbol(next.symbol);
+                }
+              }}
             />
           </div>
         </aside>

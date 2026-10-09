@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AutomationsBotTable } from "@/components/automations-bot-table";
@@ -76,7 +76,10 @@ import {
   type BacktestLibraryItem,
   type SavedBacktestMatch,
 } from "@/components/backtest-dialog";
-import { snapshotPerpsRecipe } from "@/lib/templates/recipe";
+import {
+  snapshotPerpsRecipe,
+  type PerpsTemplateRecipe,
+} from "@/lib/templates/recipe";
 import {
   dcaFilterComplete,
   dcaFilterSpecForKind,
@@ -425,6 +428,10 @@ function RuleCard({
   savedBacktests = [],
   agreementGate = CLOSED_AGREEMENT_GATE,
   onTemplateSaved,
+  embedded = false,
+  onRecipeChange,
+  controlledSymbol,
+  onSymbolChange,
 }: {
   layer: FuturesAutomationFormValues;
   options: LinearPerp[];
@@ -442,8 +449,13 @@ function RuleCard({
   savedBacktests?: readonly SavedBacktestMatch[];
   agreementGate?: BybitAgreementGate;
   onTemplateSaved?: (item: BacktestLibraryItem) => void;
+  embedded?: boolean;
+  onRecipeChange?: (recipe: PerpsTemplateRecipe, error: string | null) => void;
+  controlledSymbol?: string;
+  onSymbolChange?: (symbol: string) => void;
 }) {
   const prefix = "r0_";
+  const formRef = useRef<HTMLFormElement>(null);
   const [dirty, setDirty] = useState(false);
   const [mode, setMode] = useState(
     !inUse && symbolNeedsBybitAgreement(agreementGate.symbols, layer.symbol)
@@ -456,11 +468,19 @@ function RuleCard({
   const [size, setSize] = useState(layer.size);
   const [limitPrice, setLimitPrice] = useState(layer.limitPrice);
   const [triggerPrice, setTriggerPrice] = useState(layer.triggerPrice);
-  const [symbol, setSymbol] = useState(() =>
-    layer.id
+  const [symbolState, setSymbolState] = useState(() =>
+    embedded || layer.id
       ? layer.symbol
       : firstOpenPerp(options, agreementGate, layer.symbol),
   );
+  const symbol = controlledSymbol?.trim() ? controlledSymbol : symbolState;
+  const [formTick, setFormTick] = useState(0);
+  function setSymbol(next: string) {
+    setSymbolState(next);
+    if (next !== symbol) {
+      onSymbolChange?.(next);
+    }
+  }
   const [entrySource, setEntrySource] = useState(layer.entrySource);
   const [webhookId, setWebhookId] = useState(layer.webhookId);
   const entrySide: FuturesSide = formAction === "sell" ? "short" : "long";
@@ -663,6 +683,24 @@ function RuleCard({
     confirmMissing ||
     exitIfMissing ||
     !parsedLive.ok;
+  function controlValue(name: string, fallback: string): string {
+    const named = formRef.current?.elements.namedItem(name);
+    if (
+      named instanceof HTMLInputElement ||
+      named instanceof HTMLSelectElement ||
+      named instanceof HTMLTextAreaElement
+    ) {
+      return named.value;
+    }
+    return fallback;
+  }
+  function controlChecked(name: string, fallback: boolean): boolean {
+    const named = formRef.current?.elements.namedItem(name);
+    if (named instanceof HTMLInputElement && named.type === "checkbox") {
+      return named.checked;
+    }
+    return fallback;
+  }
   function liveRecipe() {
     return snapshotPerpsRecipe({
       name: layer.name,
@@ -701,12 +739,67 @@ function RuleCard({
         : Number(breakevenOffsetPct.replace(/,/g, "")) || 0,
     });
   }
+  const publishError = !parsedLive.ok
+    ? parsedLive.error
+    : requiredMissing
+      ? "Fill required fields before saving."
+      : null;
+  useEffect(() => {
+    if (!embedded) {
+      return;
+    }
+    const triggerBy = controlValue(`${prefix}triggerBy`, layer.triggerBy);
+    const triggerCompare = controlValue(
+      `${prefix}triggerCompare`,
+      layer.triggerCompare,
+    );
+    const recipe = snapshotPerpsRecipe({
+      name: controlValue(`${prefix}name`, layer.name).trim() || layer.name,
+      symbol,
+      action:
+        formAction === "sell"
+          ? "sell"
+          : formAction === "close_long" || formAction === "close_short"
+            ? "flatten"
+            : "buy",
+      closeSide:
+        formAction === "close_short"
+          ? "short"
+          : formAction === "close_long"
+            ? "long"
+            : null,
+      orderType,
+      sizeUnit,
+      size: Number(size.replace(/,/g, "")) || null,
+      limitPrice: Number(limitPrice.replace(/,/g, "")) || null,
+      entrySource,
+      triggerBy: triggerBy === "mark" || triggerBy === "index" ? triggerBy : "last",
+      triggerCompare: triggerCompare === "lte" ? "lte" : "gte",
+      triggerPrice: Number(triggerPrice.replace(/,/g, "")) || 0,
+      skipIfOpen: controlChecked(`${prefix}skipIfOpen`, layer.skipIfOpen),
+      tpsl,
+      trailing,
+      indicator: liveIndicator(),
+      confirm: closing ? null : confirm,
+      exitIf: closing ? null : exitIf,
+      breakevenActivationPct: closing || !breakevenOn
+        ? null
+        : Number(breakevenActivationPct.replace(/,/g, "")) || null,
+      breakevenOffsetPct: closing || !breakevenOn
+        ? null
+        : Number(breakevenOffsetPct.replace(/,/g, "")) || 0,
+    });
+    onRecipeChange?.(recipe, publishError);
+    // formTick advances on each edit, so this effect reads the latest fields.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embedded, formTick, publishError, onRecipeChange, symbol]);
 
   const { confirm: askConfirm, dialog } = useConfirmDialog();
 
   return (
     <>
     <StayOnPageForm
+      ref={formRef}
       action={saveFuturesAutomations}
       onResult={(result) => {
         onSaved(result);
@@ -714,8 +807,14 @@ function RuleCard({
           setDirty(false);
         }
       }}
-      onChange={() => setDirty(true)}
+      onChange={() => {
+        setDirty(true);
+        setFormTick((tick) => tick + 1);
+      }}
       guard={async () => {
+        if (embedded) {
+          return false;
+        }
         if (requiredMissing) {
           return false;
         }
@@ -736,7 +835,7 @@ function RuleCard({
       <input type="hidden" name="ruleCount" value="1" />
       <input type="hidden" name="deskVenue" value={venueId} />
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
-      <BotFormColumns>
+      <BotFormColumns single={embedded}>
       <BotFormCard>
       <BotFormStep title="General">
         <div className={botRowClass}>
@@ -1314,6 +1413,7 @@ function RuleCard({
       ) : null}
 
       </BotFormCard>
+      {embedded ? null : (
       <BotFormSidebar
         status={
           <BotStatusField
@@ -1397,9 +1497,47 @@ function RuleCard({
           </BotFormSidebarSection>
         )}
       </BotFormSidebar>
+      )}
       </BotFormColumns>
     </StayOnPageForm>
     {dialog}
     </>
+  );
+}
+
+export function PerpsRecipeForm({
+  seed,
+  options,
+  quoteLabel,
+  venueId,
+  onRecipeChange,
+  controlledSymbol,
+  onSymbolChange,
+}: {
+  seed: FuturesAutomationFormValues;
+  options: LinearPerp[];
+  quoteLabel: string;
+  venueId: string;
+  onRecipeChange: (recipe: PerpsTemplateRecipe, error: string | null) => void;
+  controlledSymbol?: string;
+  onSymbolChange?: (symbol: string) => void;
+}) {
+  return (
+    <RuleCard
+      embedded
+      layer={seed}
+      options={options}
+      triggerWebhooks={[]}
+      accountReduceOnly={false}
+      inUse={false}
+      isAdmin={false}
+      onRemove={() => {}}
+      onSaved={() => {}}
+      quoteLabel={quoteLabel}
+      venueId={venueId}
+      onRecipeChange={onRecipeChange}
+      controlledSymbol={controlledSymbol}
+      onSymbolChange={onSymbolChange}
+    />
   );
 }

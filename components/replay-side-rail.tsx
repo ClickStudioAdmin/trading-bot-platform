@@ -16,7 +16,7 @@ import { BacktestQueueForm } from "@/components/backtest-queue-form";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import {
   ApplyBacktestButton,
-  BacktestPropertyList,
+  BacktestParameterSections,
   BacktestStatsGrid,
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
@@ -35,11 +35,10 @@ import {
   nudgeBacktestRunAction,
   pollReplayFamilyAction,
 } from "@/lib/backtest/actions";
-import { recipeParamRows } from "@/lib/backtest/library";
+import { backtestListedSections } from "@/lib/backtest/param-sections";
 import {
   backtestQueueSeedFromRun,
   backtestRunTitle,
-  isoDateUtc,
   type BacktestRun,
 } from "@/lib/backtest/model";
 import {
@@ -298,16 +297,12 @@ function ParametersBody({
     const next = backtestQueueSeedFromRun(run);
     return { ...next, comparables: [] as string[] };
   }, [run]);
-  const paramRows = [
-    ...recipeParamRows(run.recipe),
-    { label: "Leverage", value: `${run.leverage}×` },
-    {
-      label: "Initial balance",
-      value: `$${run.startingUsdt.toLocaleString()}`,
-    },
-    { label: "Window start", value: isoDateUtc(run.fromMs) },
-    { label: "Window end", value: isoDateUtc(run.toMs) },
-  ];
+  const paramSections = backtestListedSections(run.recipe, {
+    leverage: run.leverage,
+    startingUsdt: run.startingUsdt,
+    fromMs: run.fromMs,
+    toMs: run.toMs,
+  });
 
   return (
     <div className="h-full min-h-0 flex-1 space-y-4 overflow-auto p-4">
@@ -366,7 +361,7 @@ function ParametersBody({
               Modify
             </button>
           </div>
-          <BacktestPropertyList rows={paramRows} />
+          <BacktestParameterSections sections={paramSections} />
           {variant && run.status === "done" ? (
             <div className="space-y-2 border-t border-line pt-3">
               <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
