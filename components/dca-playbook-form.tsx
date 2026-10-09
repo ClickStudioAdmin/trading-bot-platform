@@ -1643,7 +1643,15 @@ export function DcaPlaybookForm({
         </p>
       ) : null}
       <BotFormStep title="General">
+        {embedded ? (
+          <input
+            type="hidden"
+            name="name"
+            defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
+          />
+        ) : null}
         <div className={fieldRowClass}>
+          {embedded ? null : (
           <BotField label="Name" required className={nameSpan}>
             <input
               name="name"
@@ -1656,6 +1664,7 @@ export function DcaPlaybookForm({
               className={fieldClass}
             />
           </BotField>
+          )}
           <label
             className={`${labelClass}${
               cycleLocked ? " pointer-events-none opacity-40" : ""

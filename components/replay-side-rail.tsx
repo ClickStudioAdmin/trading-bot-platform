@@ -130,7 +130,7 @@ function familyRows(family: BacktestRun[]): ReplayVariantRow[] {
   return family.map((row) => ({
     id: row.id,
     status: row.status,
-    name: row.recipe.name.trim() || "Backtest",
+    name: backtestRunTitle(row),
     error: row.error,
     createdAtMs: row.createdAtMs,
   }));
@@ -299,6 +299,7 @@ function ParametersBody({
     return { ...next, comparables: [] as string[] };
   }, [run]);
   const paramSections = backtestListedSections(run.recipe, {
+    name: backtestRunTitle(run),
     leverage: run.leverage,
     startingUsdt: run.startingUsdt,
     fromMs: run.fromMs,
@@ -431,7 +432,7 @@ function RailButton({
 }
 
 function variantName(row: BacktestRun): string {
-  return row.recipe.name.trim() || "Backtest";
+  return backtestRunTitle(row);
 }
 
 type FinishedNotice = {

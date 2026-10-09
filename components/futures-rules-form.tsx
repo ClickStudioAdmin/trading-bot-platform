@@ -853,7 +853,15 @@ function RuleCard({
       <BotFormColumns single={embedded}>
       <BotFormCard>
       <BotFormStep title="General">
+        {embedded ? (
+          <input
+            type="hidden"
+            name={`${prefix}name`}
+            defaultValue={layer.name}
+          />
+        ) : null}
         <div className={fieldRow}>
+          {embedded ? null : (
           <BotField label="Name" required className={nameSpan}>
             <input
               id={`${prefix}name`}
@@ -863,6 +871,7 @@ function RuleCard({
               className={botFieldClass}
             />
           </BotField>
+          )}
           <BotField label="Contract" required>
             <FuturesSymbolSelect
               name={`${prefix}symbol`}

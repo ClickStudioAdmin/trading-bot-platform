@@ -54,6 +54,10 @@ function backtestListTitle(
   row: BacktestRun,
   mode: "family" | "recipe",
 ): string {
+  const stored = row.name?.trim();
+  if (stored) {
+    return stored;
+  }
   if (mode === "recipe") {
     return row.recipe.name.trim() || "Backtest";
   }

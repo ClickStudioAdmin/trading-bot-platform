@@ -83,6 +83,7 @@ export type SavedBacktestMatch = {
 
 export function toSavedBacktestMatch(run: {
   id: string;
+  name?: string | null;
   status: string;
   recipe: BacktestRecipe;
   symbol: string;

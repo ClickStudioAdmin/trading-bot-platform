@@ -15,10 +15,10 @@ New Backtest and replay Modify mount the desk forms (`components/dca-playbook-fo
 Each place keeps its own actions around the form:
 
 - Desk: Save, Arm, and the template sidebar. The desk form can lock fields while a cycle is open.
-- New Backtest: pair, dates, balance, leverage, comparables, and Queue. Picking a desk bot or a library template stays here.
+- New Backtest: backtest name, dates, balance, leverage, venue, comparables, and Queue. Picking a desk bot or a library template stays here. Contract stays in General.
 - Replay: Run, Reset, and Keep.
 
-The panel matches the bot form sections: General, Entry Conditions, Position Sizing, and Exit Conditions, with the same labels and order. Parameter lists on the replay and the report use that same order, with Market window first. On replay Modify, the window fields sit in the Modify card and those bot sections stack under it. Queue variant, Cancel, and the Edited badge stay in a pinned header. Queue variant stays disabled, and Edited stays hidden, until a field changes. Run, Reset, and Keep on candles already loaded are still parked. The embedded form does not arm a desk.
+The panel matches the bot form sections: General, Entry Conditions, Position Sizing, and Exit Conditions, with the same labels and order. On New Backtest and replay Modify, Name in the window card is the backtest title. General on those two screens omits the bot name. Contract in General is the only pair field, and its options follow the venue in that card. Parameter lists on the replay and the report use that same order, with Market window first (including the backtest name). On replay Modify, the window fields sit in the Modify card and those bot sections stack under it. Queue variant, Cancel, and the Edited badge stay in a pinned header. Queue variant stays disabled, and Edited stays hidden, until a field changes. Run, Reset, and Keep on candles already loaded are still parked. The embedded form does not arm a desk.
 
 ## Replay
 

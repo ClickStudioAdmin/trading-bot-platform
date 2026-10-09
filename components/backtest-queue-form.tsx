@@ -6,13 +6,13 @@ import { AppMultiSelect, AppSelect } from "@/components/app-select";
 import { BotRecipeEditor } from "@/components/bot-recipe-editor";
 import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
-import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { queueTemplateBacktestAction } from "@/lib/backtest/actions";
 import { loadBacktestDeskBotAction } from "@/lib/backtest/desk-bot-action";
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import {
   BACKTEST_COMPARABLE_CAP,
+  BACKTEST_NAME_MAX,
   BACKTEST_FEE_PRESETS,
   BACKTEST_LONG_TAPE_BARS,
   BACKTEST_WINDOW_PRESETS,
@@ -84,6 +84,7 @@ function withSymbol(options: LinearPerp[], symbol: string): LinearPerp[] {
 
 export type BacktestQueueSeed = {
   recipe: BacktestRecipe;
+  name: string;
   sourceTemplateId: string;
   fromDate: string;
   toDate: string;
@@ -175,6 +176,12 @@ export function BacktestQueueForm({
   const [symbol, setSymbol] = useState(
     seed?.symbol ?? initialTemplate?.recipe.symbol ?? "",
   );
+  const [backtestName, setBacktestName] = useState(
+    seed?.name?.trim() ||
+      seed?.recipe.name?.trim() ||
+      initialTemplate?.recipe.name?.trim() ||
+      "",
+  );
   const [comparables, setComparables] = useState<string[]>(
     seed?.comparables ?? [],
   );
@@ -196,6 +203,11 @@ export function BacktestQueueForm({
     ),
   );
   const [variantOrigin, setVariantOrigin] = useState(() => ({
+    name:
+      seed?.name?.trim() ||
+      seed?.recipe.name?.trim() ||
+      initialTemplate?.recipe.name?.trim() ||
+      "",
     fromDate: seed?.fromDate ?? dates.from,
     toDate: seed?.toDate ?? dates.to,
     startingBalance: formatGroupedNumberInput(
@@ -448,6 +460,7 @@ export function BacktestQueueForm({
     backtestVariantEdited({
       origin: variantOrigin,
       current: {
+        name: backtestName,
         fromDate,
         toDate,
         startingBalance,
@@ -467,6 +480,7 @@ export function BacktestQueueForm({
     historyView.status === "idle" ||
     !queueAllowed.ok ||
     recipeFieldIssues.length > 0 ||
+    !backtestName.trim() ||
     (variant && !variantDirty);
   const submitLabel = pending
     ? preview.inline
@@ -576,6 +590,17 @@ export function BacktestQueueForm({
         {recipe ? (
           <input type="hidden" name="recipe" value={JSON.stringify(recipe)} />
         ) : null}
+        <input type="hidden" name="symbol" value={symbol} />
+        <label className="block text-sm text-ink">
+          Name
+          <input
+            name="backtestName"
+            value={backtestName}
+            maxLength={BACKTEST_NAME_MAX}
+            onChange={(event) => setBacktestName(event.target.value)}
+            className={BILLING_FIELD_CLASS}
+          />
+        </label>
         {variant ? null : (
         <label className="block text-sm text-ink">
           Bot
@@ -615,6 +640,14 @@ export function BacktestQueueForm({
                   );
                   setPickedDeskBot(result.bot);
                   setRecipe(result.bot.recipe);
+                  setBacktestName((current) => {
+                    const previous = (recipe?.name ?? "").trim();
+                    const typed = current.trim();
+                    if (!typed || typed === previous) {
+                      return result.bot.recipe.name;
+                    }
+                    return current;
+                  });
                   setSourceTemplateId(match?.id ?? "");
                   setSymbol(result.bot.recipe.symbol);
                   setVenue(
@@ -633,6 +666,14 @@ export function BacktestQueueForm({
               setPickedDeskBot(null);
               if (next) {
                 setRecipe(next.recipe);
+                setBacktestName((current) => {
+                  const previous = (recipe?.name ?? "").trim();
+                  const typed = current.trim();
+                  if (!typed || typed === previous) {
+                    return next.recipe.name;
+                  }
+                  return current;
+                });
                 setSourceTemplateId(next.id);
                 setSymbol(next.recipe.symbol);
                 setComparables((rows) =>
@@ -792,20 +833,6 @@ export function BacktestQueueForm({
             <option value="hyperliquid">Hyperliquid</option>
           </AppSelect>
         </label>
-        <div>
-          <p className="text-sm text-ink">Primary pair</p>
-          <div className="mt-1">
-            <FuturesSymbolSelect
-              options={pairs}
-              value={symbol}
-              onChange={(next) => {
-                setSymbol(next);
-                setComparables((rows) => rows.filter((row) => row !== next));
-              }}
-              name="symbol"
-            />
-          </div>
-        </div>
         {variant ? null : (
         <fieldset>
           <legend className="text-sm text-ink">
@@ -887,7 +914,7 @@ export function BacktestQueueForm({
       </form>
       {variant && recipe && pairChanged ? (
         <p className="mt-4 text-xs text-warning">
-          Primary pair is {symbol}. The bot was saved on {recipe.symbol}.
+          Contract is {symbol}. The bot was saved on {recipe.symbol}.
         </p>
       ) : null}
       </VariantShell>
@@ -908,7 +935,7 @@ export function BacktestQueueForm({
               <p className="mt-1 text-sm text-ink-muted">
                 {loadedFromRun
                   ? "These are the recipe fields from that run. Edit any of them before you queue."
-                  : "Change the replay fields here. Pair and dates on the left are the market window. The replay tape follows the bot."}
+                  : "Change the replay fields here. Name, dates, and venue on the left are the market window. Contract in General is the pair. The replay tape follows the bot."}
               </p>
             </div>
             <BacktestOriginBadges
@@ -924,7 +951,7 @@ export function BacktestQueueForm({
           )}
           {variant || !pairChanged ? null : (
             <p className="mt-2 text-xs text-warning">
-              Primary pair is {symbol}. The bot was saved on {recipe.symbol}.
+              Contract is {symbol}. The bot was saved on {recipe.symbol}.
             </p>
           )}
           <div className={variant ? undefined : "mt-4"}>
@@ -934,7 +961,10 @@ export function BacktestQueueForm({
               options={withSymbol(pairs, recipe.symbol || symbol)}
               venue={venue}
               symbol={symbol || recipe.symbol}
-              onSymbolChange={setSymbol}
+              onSymbolChange={(next) => {
+                setSymbol(next);
+                setComparables((rows) => rows.filter((row) => row !== next));
+              }}
               onIssuesChange={(issues) => {
                 formIssueRef.current = issues[0] ?? null;
                 setRecipeFieldIssues((current) =>
@@ -985,6 +1015,9 @@ export function BacktestQueueForm({
                 ) {
                   const nextSymbol = next.symbol;
                   setSymbol(nextSymbol);
+                  setComparables((rows) =>
+                    rows.filter((row) => row !== nextSymbol),
+                  );
                   if (variant && !fromUser) {
                     setVariantOrigin((current) => ({
                       ...current,

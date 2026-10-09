@@ -63,6 +63,7 @@ assert.equal(
 );
 
 const listed = backtestListedSections(dca, {
+  name: "October ETH",
   leverage: 10,
   startingUsdt: 10000,
   fromMs: Date.UTC(2021, 9, 2),
@@ -72,7 +73,12 @@ assert.equal(listed[0]?.title, "Market window");
 assert.equal(listed[1]?.title, "General");
 assert.deepEqual(
   listed[0]?.groups[0]?.rows.map((row) => row.label),
-  ["Start date", "End date", "Initial account balance", "Leverage"],
+  ["Name", "Start date", "End date", "Initial account balance", "Leverage"],
+);
+assert.equal(listed[0]?.groups[0]?.rows[0]?.value, "October ETH");
+assert.deepEqual(
+  listed[1]?.groups[0]?.rows.map((row) => row.label),
+  ["Contract", "Direction"],
 );
 
 const perps = snapshotPerpsRecipe({

@@ -105,6 +105,7 @@ const run: BacktestRun = {
   finishedAtMs: 4_000,
   parentRunId: null,
   comparableSymbols: [],
+  name: null,
 };
 const timeline = buildEquityTimeline(run);
 assert.equal(timeline[0]?.equityUsdt, 10_000);

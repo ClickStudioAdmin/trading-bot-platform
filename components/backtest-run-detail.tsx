@@ -239,6 +239,7 @@ export function BacktestRunDetail({
   comparablePrimary?: BacktestRun | null;
 }) {
   const params = backtestListedSections(run.recipe, {
+    name: backtestRunTitle(run),
     leverage: run.leverage,
     startingUsdt: run.startingUsdt,
     fromMs: run.fromMs,

@@ -31,6 +31,8 @@ import {
   backtestRoePct,
   backtestRunTitle,
   comparableBacktestName,
+  parseBacktestName,
+  readBacktestName,
   backtestVariantEdited,
   isBacktestComparableChild,
   splitBacktestFamily,
@@ -590,6 +592,7 @@ const seeded = backtestQueueSeedFromRun({
   finishedAtMs: 2,
   parentRunId: null,
   comparableSymbols: ["SOLUSDT"],
+  name: "October ETH",
 });
 assert.equal(seeded.fromDate, "2021-01-01");
 assert.equal(seeded.toDate, "2026-01-01");
@@ -599,6 +602,7 @@ assert.equal(seeded.interval, "15");
 assert.equal(seeded.symbol, "ETHUSDT");
 assert.equal(seeded.sourceTemplateId, "tmpl-1");
 assert.deepEqual(seeded.comparables, ["SOLUSDT"]);
+assert.equal(seeded.name, "October ETH");
 
 assert.equal(comparableBacktestName("DCA Test - SOL", "XRPUSDT"), "DCA Test - SOL · XRPUSDT");
 assert.equal(comparableBacktestName("DCA Test - XRPUSDT", "XRPUSDT"), "DCA Test - XRPUSDT");
@@ -618,6 +622,32 @@ assert.equal(
   }),
   "DCA Test - SOL",
 );
+assert.equal(
+  backtestRunTitle({
+    name: "October ETH",
+    recipe: { name: "My Winning Strategy" },
+    symbol: "ETHUSDT",
+    parentRunId: null,
+  }),
+  "October ETH",
+);
+assert.equal(
+  backtestRunTitle({
+    name: "   ",
+    recipe: { name: "My Winning Strategy" },
+    symbol: "ETHUSDT",
+    parentRunId: "parent-1",
+  }),
+  "My Winning Strategy · ETHUSDT",
+);
+assert.equal(readBacktestName("  October   ETH  "), "October ETH");
+assert.equal(readBacktestName(""), null);
+const parsedBacktestName = parseBacktestName("  October   ETH  ");
+assert.equal(parsedBacktestName.ok, true);
+if (parsedBacktestName.ok) {
+  assert.equal(parsedBacktestName.name, "October ETH");
+}
+assert.equal(parseBacktestName("   ").ok, false);
 
 const familyRecipe = {
   kind: "dca",
@@ -671,6 +701,7 @@ assert.deepEqual(
 );
 
 const variantOrigin = {
+  name: "October ETH",
   fromDate: "2021-10-02",
   toDate: "2026-10-01",
   startingBalance: "10,000",
@@ -712,6 +743,15 @@ assert.equal(
     current: variantOrigin,
     baselineRecipe: familyRecipe,
     recipe: { ...familyRecipe, name: "My Winning Strategy 123" },
+  }),
+  true,
+);
+assert.equal(
+  backtestVariantEdited({
+    origin: variantOrigin,
+    current: { ...variantOrigin, name: "October ETH short" },
+    baselineRecipe: familyRecipe,
+    recipe: familyRecipe,
   }),
   true,
 );

@@ -30,6 +30,7 @@ export type ParamGroup = { title?: string; rows: ParamRow[] };
 export type ParamSection = { title: string; groups: ParamGroup[] };
 
 export type BacktestWindowFields = {
+  name?: string | null;
   leverage: number;
   startingUsdt: number;
   fromMs: number;
@@ -765,16 +766,33 @@ export function recipeParamSections(recipe: BacktestRecipe): ParamSection[] {
   return [];
 }
 
+function listedBotSections(recipe: BacktestRecipe): ParamSection[] {
+  return recipeParamSections(recipe).map((section) => {
+    if (section.title !== "General") {
+      return section;
+    }
+    return {
+      ...section,
+      groups: section.groups.map((group) => ({
+        ...group,
+        rows: group.rows.filter((row) => row.label !== "Name"),
+      })),
+    };
+  });
+}
+
 export function backtestListedSections(
   recipe: BacktestRecipe,
   window: BacktestWindowFields,
 ): ParamSection[] {
+  const title = window.name?.trim() || recipe.name.trim() || "Backtest";
   return [
     {
       title: "Market window",
       groups: [
         {
           rows: [
+            { label: "Name", value: title },
             { label: "Start date", value: isoDateUtc(window.fromMs) },
             { label: "End date", value: isoDateUtc(window.toMs) },
             {
@@ -786,7 +804,7 @@ export function backtestListedSections(
         },
       ],
     },
-    ...recipeParamSections(recipe),
+    ...listedBotSections(recipe),
   ];
 }
 

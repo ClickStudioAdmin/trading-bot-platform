@@ -149,6 +149,8 @@ export type BacktestRun = {
   finishedAtMs: number | null;
   parentRunId: string | null;
   comparableSymbols: string[];
+  /** Run title. Null on rows saved before the backtest name existed. */
+  name: string | null;
 };
 
 export type EquityPoint = {
@@ -181,6 +183,33 @@ export function isoDateUtc(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
+export const BACKTEST_NAME_MAX = 80;
+
+/** Stored run title. Empty and missing values stay unset so older rows keep the recipe fallback. */
+export function readBacktestName(raw: unknown): string | null {
+  if (raw == null) {
+    return null;
+  }
+  const name = String(raw).trim().replace(/\s+/g, " ");
+  if (!name) {
+    return null;
+  }
+  return name.slice(0, BACKTEST_NAME_MAX);
+}
+
+export function parseBacktestName(
+  raw: unknown,
+): { ok: true; name: string } | { ok: false; error: string } {
+  const name = String(raw ?? "").trim().replace(/\s+/g, " ");
+  if (name.length < 1) {
+    return { ok: false, error: "Enter a backtest name." };
+  }
+  if (name.length > BACKTEST_NAME_MAX) {
+    return { ok: false, error: "Name must be 80 characters or fewer." };
+  }
+  return { ok: true, name };
+}
+
 export function comparableBacktestName(name: string, symbol: string): string {
   const base = name.trim() || "Backtest";
   const pair = symbol.trim();
@@ -194,10 +223,15 @@ export function comparableBacktestName(name: string, symbol: string): string {
 }
 
 export function backtestRunTitle(run: {
+  name?: string | null;
   recipe: { name: string };
   symbol: string;
   parentRunId: string | null;
 }): string {
+  const stored = readBacktestName(run.name);
+  if (stored) {
+    return stored;
+  }
   if (!run.parentRunId) {
     return run.recipe.name.trim() || "Backtest";
   }
@@ -209,6 +243,7 @@ function backtestSymbolKey(symbol: string): string {
 }
 
 export type BacktestVariantFieldSnapshot = {
+  name: string;
   fromDate: string;
   toDate: string;
   startingBalance: string;
@@ -227,6 +262,7 @@ export function backtestVariantEdited(input: {
 }): boolean {
   const { origin, current } = input;
   if (
+    current.name.trim() !== origin.name.trim() ||
     current.fromDate !== origin.fromDate ||
     current.toDate !== origin.toDate ||
     current.startingBalance !== origin.startingBalance ||
@@ -388,6 +424,7 @@ export function backtestQueueSeedFromRun(run: BacktestRun): {
 } {
   return {
     recipe: run.recipe,
+    name: backtestRunTitle(run),
     sourceTemplateId: run.sourceTemplateId ?? "",
     fromDate: isoDateUtc(run.fromMs),
     toDate: isoDateUtc(run.toMs),
