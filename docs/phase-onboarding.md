@@ -1,6 +1,6 @@
 # Onboarding wizard
 
-**V1 item 6** ([roadmap.md](roadmap.md)). Not the current phase. Do not implement until Click starts this item. Identity, 2FA, and UI refinement are accepted. Account blotter lists are V1 item 4 ([phase-account-blotter.md](phase-account-blotter.md)). Entitlements / plan gates are V1 item 5 ([phase-entitlements.md](phase-entitlements.md)). This file is the design to build when item 6 starts. Locked 9 Oct 2026 from Click’s setup outline.
+**V1 item 6** ([roadmap.md](roadmap.md)). Click asked to build this on 9 Oct 2026, ahead of the locked order. Item 4 (account blotter) and item 5 (entitlements) are not closed by this work. Identity, 2FA, and UI refinement are accepted. This file is the design that implementation follows. Plan gates are still item 5: the wizard calls the same create and apply actions, and the blocked-cell check stays empty until those gates exist.
 
 The first-desk `/welcome` wizard was **removed** on 16 Sep 2026. Verified new users land on Overview. `/welcome` stays a redirect to the signed-in home. This phase does **not** put that wall back.
 
@@ -121,7 +121,7 @@ Apply runs on Finish, after the desks exist, through the same server apply used 
 Question: “Want a short tour of the platform?”
 
 - **Yes** — Finish writes the draft, then the tour starts on Overview.
-- **Not now** — Finish writes the draft, land on Overview (or the first new desk’s home if any desk was created and they did not ask for the tour). Overview keeps **Take the tour**.
+- **Not now** — Finish writes the draft and lands on Overview, with the setup summary and **Take the tour**. The last desk created becomes the active desk.
 
 Finish is the only write for desks and bots. The button label is **Finish setup**. While it runs: save any not-yet-saved state, create desks in table order, bind the chosen connections, apply the chosen templates, then set setup completed.
 

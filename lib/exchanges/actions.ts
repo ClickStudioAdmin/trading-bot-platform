@@ -14,24 +14,25 @@ import {
 } from "@/lib/exchanges/encrypt";
 import {
   deleteExchangeConnection,
-  findExchangeConnectionByVenueAccount,
   getExchangeConnectionForUser,
   insertExchangeConnection,
   listConnectionDeskBinds,
   updateExchangeConnectionCredentials,
   updateExchangeConnectionLabel,
 } from "@/lib/exchanges/store";
-import { exclusiveVenueAccountError } from "@/lib/exchanges/venue-account";
+import {
+  readConnectForm,
+  rejectTakenVenueAccount,
+} from "@/lib/exchanges/member-connection";
 import { verifyExchangeCredentials } from "@/lib/exchanges/verify";
 import {
   parseVenueCredentials,
   parseVenueEnvironment,
-  parseConnectionVenueId,
   parseVenueId,
 } from "@/lib/exchanges/venues";
 import { writeEventLog } from "@/lib/logs/write";
 import { withQuery } from "@/lib/accounts/model";
-import { getSessionContext } from "@/lib/auth/session";
+import { getSessionContext, getSessionMember } from "@/lib/auth/session";
 import { ACCOUNT_EXCHANGES_HREF } from "@/lib/site-links";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -52,75 +53,11 @@ function fail(message: string): never {
   finish(ACCOUNT_EXCHANGES_HREF, { error: message });
 }
 
-async function rejectTakenVenueAccount(input: {
-  userId: string;
-  venueId: string;
-  environment: string;
-  venueAccountId: string;
-  exceptConnectionId?: string;
-}): Promise<string | null> {
-  const existing = await findExchangeConnectionByVenueAccount({
-    userId: input.userId,
-    venue: input.venueId,
-    environment: input.environment,
-    venueAccountId: input.venueAccountId,
-    exceptConnectionId: input.exceptConnectionId,
-  });
-  return exclusiveVenueAccountError({
-    venueId: input.venueId,
-    existing,
-  });
-}
-
-function readConnectForm(formData: FormData) {
-  const venue = parseConnectionVenueId(formData.get("venue"));
-  if (!venue.ok) {
-    return venue;
-  }
-  const environment = parseVenueEnvironment(
-    venue.venue,
-    formData.get("environment"),
-  );
-  if (!environment.ok) {
-    return environment;
-  }
-  const labeled = parseConnectionLabel(formData.get("label"));
-  if (!labeled.ok) {
-    return labeled;
-  }
-  const credentials: Record<string, string> = {};
-  for (const field of venue.venue.credentialFields) {
-    credentials[field.key] = String(formData.get(field.key) ?? "");
-  }
-  const parsed = parseVenueCredentials(venue.venue, credentials);
-  if (!parsed.ok) {
-    return parsed;
-  }
-  const fingerprint = keyFingerprint(parsed.credentials, venue.venue);
-  if (!fingerprint) {
-    return {
-      ok: false as const,
-      error:
-        venue.venue.id === "hyperliquid"
-          ? "Agent private key is not a valid key."
-          : "API key is too short to save.",
-    };
-  }
-  return {
-    ok: true as const,
-    venue: venue.venue,
-    environment: environment.environment,
-    label: labeled.label,
-    credentials: parsed.credentials,
-    fingerprint,
-  };
-}
-
 export async function checkExchangeConnection(
   formData: FormData,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const session = await getSessionContext();
-  if (!session) {
+  const member = await getSessionMember();
+  if (!member?.emailVerifiedAt) {
     return { ok: false, error: "Sign in to check a connection." };
   }
   const parsed = readConnectForm(formData);
@@ -136,7 +73,7 @@ export async function checkExchangeConnection(
     return verified;
   }
   const taken = await rejectTakenVenueAccount({
-    userId: session.member.id,
+    userId: member.id,
     venueId: parsed.venue.id,
     environment: parsed.environment.id,
     venueAccountId: verified.venueAccountId,
