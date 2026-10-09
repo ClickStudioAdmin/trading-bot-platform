@@ -411,6 +411,7 @@ export function parseBacktestRunIds(raw: unknown): string[] {
 
 export function backtestQueueSeedFromRun(run: BacktestRun): {
   recipe: BacktestRecipe;
+  name: string;
   sourceTemplateId: string;
   fromDate: string;
   toDate: string;

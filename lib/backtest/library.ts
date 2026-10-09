@@ -30,7 +30,7 @@ export type BacktestDeskBot = {
 
 export function toBacktestLibraryItem(row: {
   id: string;
-  name?: string;
+  name?: string | null;
   recipe: { kind: string; name?: string };
   visibility?: string;
   symbol?: string;
