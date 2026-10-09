@@ -6,6 +6,7 @@ import Link from "next/link";
 import { IconChevronDown } from "@/components/icons";
 import { TokenIcon } from "@/components/token-icon";
 import { useModalPortalHost } from "@/components/portal-host";
+import { useDeskFormStatus } from "@/components/stay-on-page-form";
 import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import {
   BYBIT_AGREEMENT_PICKER_NOTE,
@@ -50,6 +51,7 @@ export function FuturesSymbolSelect({
   const searchRef = useRef<HTMLInputElement>(null);
   const previewClass = useThemePreviewPortalClass();
   const portalHost = useModalPortalHost();
+  const { markDirty } = useDeskFormStatus();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [box, setBox] = useState({ top: 0, left: 0, width: PANEL_MIN_WIDTH });
@@ -154,7 +156,10 @@ export function FuturesSymbolSelect({
       <input
         name={name}
         value={value ?? (allowEmpty ? "" : defaultSymbol)}
-        onChange={(event) => onChange?.(event.target.value.toUpperCase())}
+        onChange={(event) => {
+          markDirty();
+          onChange?.(event.target.value.toUpperCase());
+        }}
         placeholder={allowEmpty ? placeholder : undefined}
         autoComplete="off"
         spellCheck={false}
@@ -164,6 +169,9 @@ export function FuturesSymbolSelect({
   }
 
   function choose(next: string) {
+    if (next !== symbol) {
+      markDirty();
+    }
     onChange?.(next);
     if (value === undefined) {
       setInternal(next);

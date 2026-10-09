@@ -27,7 +27,7 @@ export function BotRecipeEditor({
   venue: string;
   symbol: string;
   onSymbolChange: (symbol: string) => void;
-  onChange: (recipe: BacktestRecipe) => void;
+  onChange: (recipe: BacktestRecipe, fromUser?: boolean) => void;
   onIssuesChange: (issues: string[]) => void;
 }) {
   if (recipe.kind === "perps") {
@@ -73,7 +73,7 @@ function DcaRecipeMount({
   venue: string;
   symbol: string;
   onSymbolChange: (symbol: string) => void;
-  onChange: (recipe: BacktestRecipe) => void;
+  onChange: (recipe: BacktestRecipe, fromUser?: boolean) => void;
   onIssuesChange: (issues: string[]) => void;
 }) {
   const [seed] = useState(() => dcaRecipePlaybookSeed(recipe));
@@ -91,7 +91,7 @@ function DcaRecipeMount({
       onRecipeChange={(result) => {
         onIssuesChange(result.error ? [result.error] : []);
         if (result.recipe) {
-          onChange(result.recipe);
+          onChange(result.recipe, result.fromUser);
         }
       }}
     />
@@ -112,7 +112,7 @@ function PerpsRecipeMount({
   venue: string;
   symbol: string;
   onSymbolChange: (symbol: string) => void;
-  onChange: (recipe: BacktestRecipe) => void;
+  onChange: (recipe: BacktestRecipe, fromUser?: boolean) => void;
   onIssuesChange: (issues: string[]) => void;
 }) {
   const [seed] = useState(() => perpsRecipeFormSeed(recipe));
@@ -125,9 +125,9 @@ function PerpsRecipeMount({
       venueId={venue === "hyperliquid" ? "hyperliquid" : "bybit"}
       controlledSymbol={symbol}
       onSymbolChange={onSymbolChange}
-      onRecipeChange={(next, error) => {
+      onRecipeChange={(next, error, fromUser) => {
         onIssuesChange(error ? [error] : []);
-        onChange(next);
+        onChange(next, fromUser);
       }}
     />
   );

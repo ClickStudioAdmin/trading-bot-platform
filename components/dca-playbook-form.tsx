@@ -932,6 +932,7 @@ export function DcaPlaybookForm({
   onRecipeChange?: (result: {
     recipe: DcaTemplateRecipe | null;
     error: string | null;
+    fromUser: boolean;
   }) => void;
   controlledSymbol?: string;
   onSymbolChange?: (symbol: string) => void;
@@ -1518,7 +1519,11 @@ export function DcaPlaybookForm({
     }
     const parsed = parseDcaPlaybookForm(snapshotForm(), policy.venueId);
     if (!parsed.ok) {
-      onRecipeChangeRef.current({ recipe: null, error: parsed.error });
+      onRecipeChangeRef.current({
+        recipe: null,
+        error: parsed.error,
+        fromUser: touched,
+      });
       return;
     }
     const missing =
@@ -1535,6 +1540,7 @@ export function DcaPlaybookForm({
     onRecipeChangeRef.current({
       recipe: snapshotDcaRecipe(parsed.config),
       error: missing ? "Fill required fields before saving." : null,
+      fromUser: touched,
     });
   }, [embedded, formTick, liveRecipeKey, onRecipeChange]);
   const [loadedRecipe, setLoadedRecipe] = useState<string | null>(null);

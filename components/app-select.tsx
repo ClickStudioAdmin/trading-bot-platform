@@ -19,6 +19,7 @@ import {
 import { createPortal } from "react-dom";
 import { IconChevronDown, IconClose } from "@/components/icons";
 import { useModalPortalHost } from "@/components/portal-host";
+import { useDeskFormStatus } from "@/components/stay-on-page-form";
 import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import { TokenIcon } from "@/components/token-icon";
 
@@ -96,6 +97,7 @@ export function AppSelect({
 }) {
   const liveSubmit = useContext(LiveFilterSubmit);
   const portalHost = useModalPortalHost();
+  const { markDirty } = useDeskFormStatus();
   const listId = useId();
   const triggerId = id ?? listId;
   const hiddenRef = useRef<HTMLInputElement>(null);
@@ -155,11 +157,15 @@ export function AppSelect({
   }, [close, open]);
 
   function pick(next: string) {
+    const changed = next !== current;
     if (value == null) {
       setUncontrolled(next);
     }
     if (hiddenRef.current) {
       hiddenRef.current.value = next;
+    }
+    if (changed) {
+      markDirty();
     }
     const input = hiddenRef.current;
     if (input && onChange) {

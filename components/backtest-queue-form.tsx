@@ -195,7 +195,7 @@ export function BacktestQueueForm({
       true,
     ),
   );
-  const [variantOrigin] = useState(() => ({
+  const [variantOrigin, setVariantOrigin] = useState(() => ({
     fromDate: seed?.fromDate ?? dates.from,
     toDate: seed?.toDate ?? dates.to,
     startingBalance: formatGroupedNumberInput(
@@ -443,25 +443,6 @@ export function BacktestQueueForm({
   const queueAllowed = recipe
     ? canQueueUserBacktest(recipe)
     : { ok: false as const, error: "Load a bot or pick a template to backtest." };
-  const submitDisabled =
-    pending ||
-    Boolean(preview.error) ||
-    Boolean(historyRangeError) ||
-    historyView.status === "loading" ||
-    historyView.status === "idle" ||
-    !queueAllowed.ok ||
-    recipeFieldIssues.length > 0;
-  const submitLabel = pending
-    ? preview.inline
-      ? "Running…"
-      : "Queuing…"
-    : variant
-      ? preview.inline
-        ? "Run variant"
-        : "Queue variant"
-      : preview.inline
-        ? "Run backtest"
-        : "Queue backtest";
   const variantDirty =
     variant &&
     backtestVariantEdited({
@@ -478,6 +459,26 @@ export function BacktestQueueForm({
       baselineRecipe: variantRecipeBaseline,
       recipe,
     });
+  const submitDisabled =
+    pending ||
+    Boolean(preview.error) ||
+    Boolean(historyRangeError) ||
+    historyView.status === "loading" ||
+    historyView.status === "idle" ||
+    !queueAllowed.ok ||
+    recipeFieldIssues.length > 0 ||
+    (variant && !variantDirty);
+  const submitLabel = pending
+    ? preview.inline
+      ? "Running…"
+      : "Queuing…"
+    : variant
+      ? preview.inline
+        ? "Run variant"
+        : "Queue variant"
+      : preview.inline
+        ? "Run backtest"
+        : "Queue backtest";
 
   return (
     <section
@@ -943,7 +944,7 @@ export function BacktestQueueForm({
                     : issues,
                 );
               }}
-              onChange={(next) => {
+              onChange={(next, fromUser) => {
                 const replayIssue = userBacktestFieldIssues(next)[0]?.message;
                 const messages = [formIssueRef.current, replayIssue].filter(
                   (issue): issue is string => Boolean(issue),
@@ -954,8 +955,18 @@ export function BacktestQueueForm({
                     ? current
                     : messages,
                 );
-                if (variant) {
-                  setVariantRecipeBaseline((current) => current ?? next);
+                if (variant && !fromUser) {
+                  setVariantRecipeBaseline((current) =>
+                    current &&
+                    current.name === next.name &&
+                    recipesMatchReplayFields(current, next)
+                      ? current
+                      : next,
+                  );
+                } else if (variant) {
+                  setVariantRecipeBaseline(
+                    (current) => current ?? seed?.recipe ?? next,
+                  );
                 }
                 setRecipe((current) => {
                   if (
@@ -972,7 +983,14 @@ export function BacktestQueueForm({
                   next.symbol.trim().toUpperCase() !==
                     symbol.trim().toUpperCase()
                 ) {
-                  setSymbol(next.symbol);
+                  const nextSymbol = next.symbol;
+                  setSymbol(nextSymbol);
+                  if (variant && !fromUser) {
+                    setVariantOrigin((current) => ({
+                      ...current,
+                      symbol: nextSymbol.trim().toUpperCase(),
+                    }));
+                  }
                 }
               }}
             />

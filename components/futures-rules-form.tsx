@@ -452,7 +452,11 @@ function RuleCard({
   agreementGate?: BybitAgreementGate;
   onTemplateSaved?: (item: BacktestLibraryItem) => void;
   embedded?: boolean;
-  onRecipeChange?: (recipe: PerpsTemplateRecipe, error: string | null) => void;
+  onRecipeChange?: (
+    recipe: PerpsTemplateRecipe,
+    error: string | null,
+    fromUser?: boolean,
+  ) => void;
   controlledSymbol?: string;
   onSymbolChange?: (symbol: string) => void;
 }) {
@@ -795,7 +799,7 @@ function RuleCard({
         ? null
         : Number(breakevenOffsetPct.replace(/,/g, "")) || 0,
     });
-    onRecipeChange?.(recipe, publishError);
+    onRecipeChange?.(recipe, publishError, dirty);
     // formTick advances on each edit, so this effect reads the latest fields.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [embedded, formTick, publishError, onRecipeChange, symbol]);
@@ -1532,7 +1536,11 @@ export function PerpsRecipeForm({
   options: LinearPerp[];
   quoteLabel: string;
   venueId: string;
-  onRecipeChange: (recipe: PerpsTemplateRecipe, error: string | null) => void;
+  onRecipeChange: (
+    recipe: PerpsTemplateRecipe,
+    error: string | null,
+    fromUser?: boolean,
+  ) => void;
   controlledSymbol?: string;
   onSymbolChange?: (symbol: string) => void;
 }) {
