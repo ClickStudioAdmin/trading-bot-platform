@@ -364,31 +364,37 @@ function ParametersBody({
               <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
                 Keep
               </p>
-              <div className="mt-2 w-1/2 space-y-2">
-                <SaveBacktestAsTemplateButton
-                  runId={run.id}
-                  defaultName={backtestRunTitle(run)}
-                  deskType={run.deskType}
-                  folders={folders}
-                  canSaveAs={allowKeep}
-                  canSaveAsPlatform={false}
-                />
-                {allowKeepPlatform ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                <div className="w-[calc(50%-0.25rem)] min-w-0">
                   <SaveBacktestAsTemplateButton
                     runId={run.id}
                     defaultName={backtestRunTitle(run)}
                     deskType={run.deskType}
                     folders={folders}
-                    canSaveAs={false}
-                    canSaveAsPlatform
-                    variant="secondary"
+                    canSaveAs={allowKeep}
+                    canSaveAsPlatform={false}
                   />
+                </div>
+                {allowKeepPlatform ? (
+                  <div className="w-[calc(50%-0.25rem)] min-w-0">
+                    <SaveBacktestAsTemplateButton
+                      runId={run.id}
+                      defaultName={backtestRunTitle(run)}
+                      deskType={run.deskType}
+                      folders={folders}
+                      canSaveAs={false}
+                      canSaveAsPlatform
+                      variant="secondary"
+                    />
+                  </div>
                 ) : null}
-                <ApplyBacktestButton
-                  runId={run.id}
-                  defaultName={backtestRunTitle(run)}
-                  desks={applyDesks}
-                />
+                <div className="w-[calc(50%-0.25rem)] min-w-0">
+                  <ApplyBacktestButton
+                    runId={run.id}
+                    defaultName={backtestRunTitle(run)}
+                    desks={applyDesks}
+                  />
+                </div>
               </div>
             </div>
           ) : null}
