@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AppMultiSelect, AppSelect } from "@/components/app-select";
 import { BotRecipeEditor } from "@/components/bot-recipe-editor";
@@ -95,6 +95,26 @@ export type BacktestQueueSeed = {
   comparables: string[];
 };
 
+function VariantShell({
+  variant,
+  leading,
+  children,
+}: {
+  variant: boolean;
+  leading?: ReactNode;
+  children: ReactNode;
+}) {
+  if (!variant) {
+    return children;
+  }
+  return (
+    <div className="min-w-0 rounded-card border border-line bg-surface p-5">
+      {leading}
+      <div className={leading ? "mt-4" : undefined}>{children}</div>
+    </div>
+  );
+}
+
 export function BacktestQueueForm({
   templates,
   folders = [],
@@ -110,6 +130,7 @@ export function BacktestQueueForm({
   onVariantPending,
   onVariantQueued,
   onVariantFailed,
+  variantLeading = null,
 }: {
   templates: BacktestLibraryItem[];
   folders?: BacktestLibraryFolder[];
@@ -125,6 +146,7 @@ export function BacktestQueueForm({
   onVariantPending?: () => void;
   onVariantQueued?: (runId: string) => void;
   onVariantFailed?: () => void;
+  variantLeading?: ReactNode;
 }) {
   const variant = variantParentId.trim().length > 0;
   const router = useRouter();
@@ -426,6 +448,7 @@ export function BacktestQueueForm({
             : "mt-4 grid min-w-0 items-start gap-6 lg:grid-cols-2 [&>*]:min-w-0"
         }
       >
+      <VariantShell variant={variant} leading={variantLeading}>
       <form
         className="@container min-w-0 space-y-3"
         action={async (formData) => {
@@ -790,8 +813,39 @@ export function BacktestQueueForm({
                 : "Queue backtest"}
         </button>
       </form>
+      {variant &&
+      recipe &&
+      (pairChanged ||
+        Boolean(matchingTemplate) ||
+        Boolean(matchingDeskBot) ||
+        editedAway) ? (
+        <div className="mt-4 space-y-2">
+          <BacktestOriginBadges
+            templateName={matchingTemplate?.name ?? null}
+            deskLabel={
+              matchingDeskBot
+                ? formatBacktestDeskMatch(matchingDeskBot)
+                : null
+            }
+            edited={editedAway}
+          />
+          {pairChanged ? (
+            <p className="text-xs text-warning">
+              Primary pair is {symbol}. The bot was saved on {recipe.symbol}.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      </VariantShell>
       {recipe ? (
-        <aside className="min-w-0 rounded-card border border-line bg-canvas p-4">
+        <aside
+          className={
+            variant
+              ? "min-w-0"
+              : "min-w-0 rounded-card border border-line bg-canvas p-4"
+          }
+        >
+          {variant ? null : (
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <h3 className="text-lg font-semibold tracking-tight text-ink">
@@ -813,12 +867,13 @@ export function BacktestQueueForm({
               edited={editedAway}
             />
           </div>
-          {pairChanged ? (
+          )}
+          {variant || !pairChanged ? null : (
             <p className="mt-2 text-xs text-warning">
               Primary pair is {symbol}. The bot was saved on {recipe.symbol}.
             </p>
-          ) : null}
-          <div className="mt-4">
+          )}
+          <div className={variant ? undefined : "mt-4"}>
             <BotRecipeEditor
               key={`${recipe.kind}:${venue}:${sourceTemplateId}:${pickedDeskBot?.id ?? ""}:${draftId}:${loadedFromRun ? "rerun" : "current"}`}
               recipe={recipe}
@@ -867,7 +922,7 @@ export function BacktestQueueForm({
             />
           </div>
         </aside>
-      ) : (
+      ) : variant ? null : (
         <aside className="min-w-0 rounded-card border border-line bg-canvas p-4">
           <h3 className="text-lg font-semibold tracking-tight text-ink">
             Bot to replay
