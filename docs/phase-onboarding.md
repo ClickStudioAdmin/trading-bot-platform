@@ -2,11 +2,11 @@
 
 **V1 item 6** ([roadmap.md](roadmap.md)). Click asked to build this on 9 Oct 2026, ahead of the locked order. Item 4 (account blotter) and item 5 (entitlements) are not closed by this work. Identity, 2FA, and UI refinement are accepted. This file is the design that implementation follows. Plan gates are still item 5: the wizard calls the same create and apply actions, and the blocked-cell check stays empty until those gates exist.
 
-The first-desk `/welcome` wizard was **removed** on 16 Sep 2026. Verified new users land on Overview. `/welcome` stays a redirect to the signed-in home. This phase does **not** put that wall back.
+The first-desk `/welcome` wizard was **removed** on 16 Sep 2026. `/welcome` stays a redirect to the signed-in home. First-run setup is a modal on the signed-in app, not that route.
 
 ## Shipped today
 
-New members start with zero desks. After they confirm email they land on Overview (`/account`). They create a desk from Manage desks when they want. After the first desk exists, at least one must remain.
+New members start with zero desks. After they confirm email they land on Overview (`/account`). Until this wizard, they created a desk from Manage desks when they wanted. After the first desk exists, at least one must remain. The modal below is what a new member sees instead of an open Overview.
 
 Platform templates and folders can be flagged **Include in Starter Pack** on `/admin/templates`. That flag does **not** copy or apply anything yet. Stored JSON is still a `recipe`. See [templates.md](templates.md).
 
@@ -14,21 +14,21 @@ Create desk (`/account/desks/new`, Manage desks) already picks one type, a name,
 
 ## Purpose
 
-Optional first-run setup for a verified platform member who still has **zero desks**. It asks four things, then writes the initial account:
+First-run setup for a verified platform member who has not finished or skipped it. The signed-in app stays closed until they do. It asks four things, then writes the initial account:
 
 1. Which desks to create, as a type × mode table.
 2. Exchange keys, only if any chosen desk is Connected.
 3. Which starter bots to load, only from platform folders an admin has flagged.
 4. Whether they want a short guided tour.
 
-Skip is always available before any desk is written. Skipping leaves the product as it is today: Overview, zero desks, create later from Manage desks.
+Skip setup is inside the modal, before any desk is written. Skipping closes the modal and leaves Overview with zero desks. Creating a desk from Manage desks is not available while the modal is open.
 
 ## Locked decisions
 
 | # | Choice | Decision |
 | --- | --- | --- |
-| 1 | Entry | `/account/setup`, linked from an Overview card while setup is unfinished. The rest of the account stays usable. No redirect lock. Affiliate-only logins never see it. |
-| 2 | Who | Verified platform member, zero desks, setup not skipped or completed. Creating a desk from Manage desks before Finish marks setup skipped. Members who already have desks are not put through the wizard. |
+| 1 | Entry | A modal over the signed-in app. Header, sidenav, and page links do not work until Finish or Skip. Other app routes redirect to Overview, where the modal stays open. Affiliate-only logins never see it. `/account/setup` redirects to Overview. |
+| 2 | Who | Verified platform member whose setup is not skipped or completed. A member with desks and no setup row is left alone. Creating a desk outside the wizard marks setup skipped. A Finish retry that already created desks keeps the modal until setup is completed or skipped. |
 | 3 | Desk grid | One row per desk type. Columns are **Paper** and **Connected**. A tick is one desk. Both columns may be ticked (two desks). No quantity field. More desks come later from Manage desks. |
 | 4 | Demo vs Live | Not a third column. Connected is `mode = live`. Demo vs Live is the key’s venue environment, chosen on the exchange step. Display mode stays Paper / Demo / Live as today. |
 | 5 | When rows are written | Desk names and ticks stay a draft until **Finish**. API secrets are never stored in that draft. A key the member saves on the exchange step is written immediately through the existing connection action (verify, trade-only, encrypt). The draft keeps the connection id only. |
@@ -40,7 +40,7 @@ Skip is always available before any desk is written. Skipping leaves the product
 
 ## Steps
 
-Chrome is the signed-in account shell. Tokens from [ui-theme.md](ui-theme.md). A step label sits above the card: Desks, then Exchanges if needed, then Bots if needed, then Tour. **Back** returns to the previous step without deleting a key already saved. **Skip setup** discards the desk draft, leaves saved keys on Exchanges (unbound), marks setup skipped, and lands on Overview.
+The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. A step label sits above the card: Desks, then Exchanges if needed, then Bots if needed, then Tour. **Back** returns to the previous step without deleting a key already saved. **Skip setup** discards the desk draft, leaves saved keys on Exchanges (unbound), marks setup skipped, closes the modal, and lands on Overview.
 
 ### 1. Desks
 
@@ -197,10 +197,9 @@ Each ticked cell and each Finish create goes through the same entitlement check 
 
 ## UI
 
-- `/account/setup` uses account chrome, `max-w-7xl` for the table, cards `bg-surface` `border-line`.
+- The modal uses `bg-surface` `border-line`. The desk table scrolls inside the dialog. Cards inside the steps use the same surface.
 - Checkboxes and the Theme table pattern. No new colours. Paper / Demo / Live dots may use the existing `mode-paper`, `mode-demo`, and `mode-live` tokens.
-- Overview card while `status = pending`: “Set up your account” → `/account/setup`, plus Skip.
-- After decline or complete, the card goes away. **Take the tour** remains until the tour is completed or skipped.
+- The modal is the only setup entry. It closes on Finish or Skip. **Take the tour** on Overview remains until the tour is completed or skipped.
 - Light and dark follow header UI preferences. Do not put light tokens on `html` / `body`.
 
 ## Micro-steps
@@ -219,7 +218,7 @@ Stop after each until Click says go. Do not start inside item 4 or item 5.
 
 ## Tests
 
-- Skip leaves zero desks and does not show the card again.
+- Skip leaves zero desks and does not show the modal again.
 - Ticking DCA Paper and Perps bots Connected creates those two modes and no others. Names that collide are rejected before Finish.
 - Connected with bind later inserts `mode = live` and no connection.
 - Two connected rows cannot select the same connection id.

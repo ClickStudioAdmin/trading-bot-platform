@@ -580,16 +580,22 @@ export function statusAfterExternalDesk(
   return status;
 }
 
-export function shouldShowSetupCard(input: {
+export function requiresSetupGate(input: {
   platformMember: boolean;
+  emailVerified: boolean;
   deskCount: number;
   status: OnboardingStatus | null;
 }): boolean {
-  return (
-    input.platformMember &&
-    input.deskCount === 0 &&
-    (input.status === null || input.status === "pending")
-  );
+  if (!input.platformMember || !input.emailVerified) {
+    return false;
+  }
+  if (input.status === "skipped" || input.status === "completed") {
+    return false;
+  }
+  if (input.status === "pending" || input.status === "finishing") {
+    return true;
+  }
+  return input.deskCount === 0;
 }
 
 export function shouldOfferTour(input: {

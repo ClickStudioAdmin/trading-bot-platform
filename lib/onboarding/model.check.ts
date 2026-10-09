@@ -14,8 +14,8 @@ import {
   onboardingFolders,
   parseSetupDraft,
   setupSteps,
+  requiresSetupGate,
   shouldOfferTour,
-  shouldShowSetupCard,
   showsBotStep,
   starterTemplateAllowed,
   statusAfterExternalDesk,
@@ -40,21 +40,54 @@ const folder = (
 const dcaPaper = (): SetupDesk =>
   makeSetupDesk({ deskType: "dca", mode: "paper", takenNames: [] });
 
-assert.equal(shouldShowSetupCard({
+assert.equal(requiresSetupGate({
   platformMember: true,
+  emailVerified: true,
   deskCount: 0,
   status: null,
 }), true);
-assert.equal(shouldShowSetupCard({
+assert.equal(requiresSetupGate({
+  platformMember: false,
+  emailVerified: true,
+  deskCount: 0,
+  status: null,
+}), false);
+assert.equal(requiresSetupGate({
   platformMember: true,
+  emailVerified: false,
+  deskCount: 0,
+  status: null,
+}), false);
+assert.equal(requiresSetupGate({
+  platformMember: true,
+  emailVerified: true,
   deskCount: 0,
   status: "skipped",
 }), false);
-assert.equal(shouldShowSetupCard({
+assert.equal(requiresSetupGate({
   platformMember: true,
+  emailVerified: true,
+  deskCount: 0,
+  status: "completed",
+}), false);
+assert.equal(requiresSetupGate({
+  platformMember: true,
+  emailVerified: true,
+  deskCount: 1,
+  status: null,
+}), false);
+assert.equal(requiresSetupGate({
+  platformMember: true,
+  emailVerified: true,
   deskCount: 1,
   status: "pending",
-}), false);
+}), true);
+assert.equal(requiresSetupGate({
+  platformMember: true,
+  emailVerified: true,
+  deskCount: 0,
+  status: "finishing",
+}), true);
 assert.equal(statusAfterExternalDesk(null), "skipped");
 assert.equal(statusAfterExternalDesk("pending"), "skipped");
 assert.equal(statusAfterExternalDesk("completed"), "completed");

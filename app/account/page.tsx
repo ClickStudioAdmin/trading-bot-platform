@@ -26,12 +26,10 @@ import { resolveInboxHref } from "@/lib/notifications/hrefs";
 import { listUserNotifications } from "@/lib/notifications/store";
 import {
   dismissSetupSummary,
-  skipSetup,
   startPlatformTour,
 } from "@/lib/onboarding/actions";
 import {
   shouldOfferTour,
-  shouldShowSetupCard,
   shouldShowSummary,
 } from "@/lib/onboarding/model";
 import { loadMemberOnboarding } from "@/lib/onboarding/store";
@@ -73,37 +71,6 @@ export default async function AccountOverviewPage() {
       <div>
         <PageHeading title="Overview" tour="overview" />
       </div>
-      {shouldShowSetupCard({
-        platformMember: true,
-        deskCount: accounts.length,
-        status: onboarding?.status ?? null,
-      }) ? (
-        <section className="rounded-card border border-line bg-surface p-5">
-          <h2 className="text-lg font-semibold tracking-tight">
-            Set up your account
-          </h2>
-          <p className="mt-2 text-sm text-ink-muted">
-            Create desks, connect a trade-only key, and load starter bots.
-            You can skip this and add a desk later.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link
-              href="/account/setup"
-              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-            >
-              Set up your account
-            </Link>
-            <form action={skipSetup}>
-              <button
-                type="submit"
-                className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-              >
-                Skip
-              </button>
-            </form>
-          </div>
-        </section>
-      ) : null}
       {shouldShowSummary(onboarding?.draft.summary ?? null) &&
       onboarding?.draft.summary ? (
         <section className="rounded-card border border-line bg-surface p-5">
