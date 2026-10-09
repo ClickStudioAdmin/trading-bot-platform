@@ -8,12 +8,14 @@ export function PageHeading({
   as = "h1",
   className = "mb-6",
   actions,
+  tour,
 }: {
   overline?: string;
   title: string;
   as?: "h1" | "h2";
   className?: string;
   actions?: ReactNode;
+  tour?: string;
 }) {
   const headingClass = `font-semibold tracking-tight ${
     overline ? "mt-2" : ""
@@ -21,6 +23,7 @@ export function PageHeading({
 
   return (
     <div
+      data-tour={tour}
       className={`flex items-end justify-between gap-3 ${className}`.trim()}
     >
       <div className="min-w-0">

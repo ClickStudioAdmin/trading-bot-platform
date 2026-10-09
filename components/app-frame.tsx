@@ -1,4 +1,7 @@
 import { Suspense } from "react";
+import { PlatformTour } from "@/components/platform-tour";
+import { buildTourSteps } from "@/lib/onboarding/model";
+import { loadMemberOnboarding } from "@/lib/onboarding/store";
 import { cookies, headers } from "next/headers";
 import {
   AccountSidenavGate,
@@ -29,7 +32,14 @@ import { loadPlatformBrand } from "@/lib/platform/brand";
 
 export async function AppFrame({ children }: { children: React.ReactNode }) {
   const member = await getSessionMember();
-  const desks = member ? await listTradingAccounts(member.id) : [];
+  const [desks, onboarding] = member
+    ? await Promise.all([
+        listTradingAccounts(member.id),
+        member.emailVerifiedAt && member.platformMember
+          ? loadMemberOnboarding(member.id)
+          : Promise.resolve(null),
+      ])
+    : [[], null];
   const verified = Boolean(member?.emailVerifiedAt);
   const admin = verified && member ? await getAdminUser() : null;
   const autoTick = admin ? await loadAutoTickEnabled() : false;
@@ -88,6 +98,14 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
           </UiRegion>
         </div>
       </AccountSidenavGate>
+      {onboarding?.tour === "in_progress" ? (
+        <Suspense fallback={null}>
+          <PlatformTour
+            steps={buildTourSteps(desks)}
+            initialStep={onboarding.tourStep}
+          />
+        </Suspense>
+      ) : null}
     </UiPreferencesProvider>
   );
 }
