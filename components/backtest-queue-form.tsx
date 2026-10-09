@@ -55,6 +55,7 @@ import {
   type CandleSpan,
 } from "@/lib/market/candle-availability";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
+import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
 
 function withSymbol(options: LinearPerp[], symbol: string): LinearPerp[] {
@@ -529,7 +530,7 @@ export function BacktestQueueForm({
                 setActiveDraftId("");
               }
             }}
-            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
+            className={BILLING_FIELD_CLASS}
           >
             <option value="">
               {loadedFromRun && recipe
@@ -649,7 +650,7 @@ export function BacktestQueueForm({
               value={startingBalance}
               onChange={setStartingBalance}
               allowDecimal
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink"
+              className={`${BILLING_FIELD_CLASS} tabular-nums`}
             />
           </label>
           <label className="block text-sm text-ink">
@@ -659,14 +660,14 @@ export function BacktestQueueForm({
               value={leverage}
               onChange={setLeverage}
               allowDecimal
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink"
+              className={`${BILLING_FIELD_CLASS} tabular-nums`}
             />
-            <span className="mt-1 block text-hint text-ink-muted">
-              Cash gates on margin (position value ÷ this). Empty is 1×. If
-              marked equity hits $0, the account liquidates and the replay
-              stops.
-            </span>
           </label>
+          <p className="text-hint text-ink-muted @min-[22rem]:col-span-2">
+            Cash gates on margin (position value ÷ this). Empty is 1×. If
+            marked equity hits $0, the account liquidates and the replay
+            stops.
+          </p>
         </div>
         <label className="block text-sm text-ink">
           Venue
@@ -674,7 +675,7 @@ export function BacktestQueueForm({
             name="venue"
             value={venue}
             onChange={(event) => setVenue(event.target.value)}
-            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
+            className={BILLING_FIELD_CLASS}
           >
             <option value="bybit">Bybit</option>
             <option value="hyperliquid">Hyperliquid</option>

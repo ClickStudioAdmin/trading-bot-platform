@@ -307,9 +307,9 @@ function ParametersBody({
   return (
     <div className="h-full min-h-0 flex-1 space-y-4 overflow-auto p-4">
       {modifying ? (
-        <div className="space-y-3">
+        <div className="min-w-0 rounded-card border border-line bg-surface p-5">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">Modify</h2>
+            <h2 className="text-lg font-semibold text-ink">Modify</h2>
             <button
               type="button"
               onClick={() => setModifying(false)}
@@ -318,10 +318,11 @@ function ParametersBody({
               Cancel
             </button>
           </div>
-          <p className="text-sm text-ink-muted">
+          <p className="mt-1 text-sm text-ink-muted">
             This saves a new run linked to the original. Playback stays on
             this replay until you select that variant.
           </p>
+          <div className="mt-4">
           <BacktestQueueForm
             templates={[]}
             seed={seed}
@@ -348,6 +349,7 @@ function ParametersBody({
               router.refresh();
             }}
           />
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
