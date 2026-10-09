@@ -49,7 +49,7 @@ import {
 } from "@/lib/backtest/variant-label";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
 
-const RAIL_KEY = "tbp-replay-rail";
+const RAIL_KEY = "tbp-replay-rail-v2";
 const RAIL_EVENT = "tbp-replay-rail";
 
 type OptimisticVariant = { token: string; runId: string | null };
@@ -173,11 +173,11 @@ function railSnapshot(): ReplayRailPanel {
   ) {
     return raw;
   }
-  return "positions";
+  return "parameters";
 }
 
 function railServerSnapshot(): ReplayRailPanel {
-  return "positions";
+  return "parameters";
 }
 
 function subscribeRail(onStoreChange: () => void) {
@@ -210,17 +210,17 @@ export function ReplayRailNav({
   return (
     <nav aria-label="Replay panels" className={className}>
       <RailButton
-        label="Positions"
-        pressed={panel === "positions"}
-        onClick={() => selectReplayRail("positions", panel)}
-        icon={<IconPositions className="size-5" />}
-      />
-      <RailButton
         label="Parameters"
         pressed={panel === "parameters"}
         onClick={() => selectReplayRail("parameters", panel)}
         badge={runningCount}
         icon={<IconActivity className="size-5" />}
+      />
+      <RailButton
+        label="Positions"
+        pressed={panel === "positions"}
+        onClick={() => selectReplayRail("positions", panel)}
+        icon={<IconPositions className="size-5" />}
       />
       <RailButton
         label="Statistics"
