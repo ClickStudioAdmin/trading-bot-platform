@@ -142,6 +142,29 @@ export function buildEquityTimeline(
   return points;
 }
 
+/** Cumulative realized profit as a step series. Profit stays put until the close that locks it. */
+export function realizedPnlSeries(
+  points: readonly Pick<EquityPoint, "atMs" | "realizedUsdt">[],
+): Array<{ time: number; value: number }> {
+  let last = 0;
+  let previous: number | null = null;
+  const series: Array<{ time: number; value: number }> = [];
+  for (const row of points) {
+    let time = Math.max(1, Math.floor(row.atMs / 1000));
+    if (time <= last) {
+      time = last + 1;
+    }
+    if (previous != null && row.realizedUsdt !== previous && time - 1 > last) {
+      series.push({ time: time - 1, value: previous });
+      last = time - 1;
+    }
+    series.push({ time, value: row.realizedUsdt });
+    last = time;
+    previous = row.realizedUsdt;
+  }
+  return series;
+}
+
 export function maxDrawdownFromEquity(
   points: readonly Pick<EquityPoint, "equityUsdt">[],
 ): { maxDrawdownUsdt: number; maxDrawdownPct: number | null } {

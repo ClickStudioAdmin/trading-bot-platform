@@ -18,7 +18,7 @@ import {
   backtestChartFetchBounds,
   type BacktestRun,
 } from "@/lib/backtest/model";
-import { buildEquityTimeline } from "@/lib/backtest/study";
+import { buildEquityTimeline, realizedPnlSeries } from "@/lib/backtest/study";
 import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { loadBacktestDisplayCandles } from "@/lib/charts/load-backtest-candles";
 import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
@@ -29,20 +29,6 @@ function money(value: number): string {
   return value.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  });
-}
-
-function toSeriesPoints(
-  points: Array<{ atMs: number; equityUsdt: number }>,
-): Array<{ time: number; value: number }> {
-  let last = 0;
-  return points.map((row) => {
-    let time = Math.max(1, Math.floor(row.atMs / 1000));
-    if (time <= last) {
-      time = last + 1;
-    }
-    last = time;
-    return { time, value: row.equityUsdt };
   });
 }
 
@@ -97,7 +83,8 @@ export function BacktestEquityPanel({
     () => buildEquityTimeline(run, candles),
     [run, candles],
   );
-  const up = (points.at(-1)?.equityUsdt ?? 0) >= run.startingUsdt;
+  const realized = points.at(-1)?.realizedUsdt ?? 0;
+  const up = realized >= 0;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -106,7 +93,7 @@ export function BacktestEquityPanel({
     }
     let disposed = false;
     let cleanup = () => {};
-    const seriesPoints = toSeriesPoints(points);
+    const seriesPoints = realizedPnlSeries(points);
     const line = up ? "#34D399" : "#F07167";
     const fill = up ? "rgba(52, 211, 153, 0.22)" : "rgba(240, 113, 103, 0.22)";
 
@@ -142,7 +129,8 @@ export function BacktestEquityPanel({
           horzLine: { color: "#3A4352", labelBackgroundColor: "#1C222C" },
         },
         localization: {
-          priceFormatter: (value: number) => `$${money(value)}`,
+          priceFormatter: (value: number) =>
+            `${value < 0 ? "−" : ""}$${money(Math.abs(value))}`,
         },
         width: host.clientWidth,
         height: HEIGHT,
@@ -152,6 +140,7 @@ export function BacktestEquityPanel({
         topColor: fill,
         bottomColor: "rgba(11, 14, 20, 0)",
         lineWidth: 2,
+        lineType: charts.LineType.WithSteps,
         priceLineVisible: true,
         lastValueVisible: true,
         priceFormat: {
@@ -167,8 +156,7 @@ export function BacktestEquityPanel({
         })),
       );
       series.createPriceLine({
-        price: run.startingUsdt,
-        title: "Start",
+        price: 0,
         color: "#9AA3B2",
         lineWidth: 1,
         lineStyle: charts.LineStyle.Dashed,
@@ -195,11 +183,8 @@ export function BacktestEquityPanel({
       disposed = true;
       cleanup();
     };
-  }, [points, run.startingUsdt, up]);
+  }, [points, up]);
 
-  const start = points[0]?.equityUsdt ?? run.startingUsdt;
-  const end = points.at(-1)?.equityUsdt ?? start;
-  const change = end - start;
   const empty = points.length === 0;
 
   return (
@@ -216,14 +201,15 @@ export function BacktestEquityPanel({
           <div className="flex items-center gap-3">
             <p
               className={`text-sm font-medium tabular-nums ${
-                change >= 0 ? "text-success" : "text-danger"
+                realized >= 0 ? "text-success" : "text-danger"
               }`}
             >
-              {change >= 0 ? "+" : "−"}${money(Math.abs(change))} · ${money(end)}
+              {realized > 0 ? "+" : realized < 0 ? "−" : ""}$
+              {money(Math.abs(realized))}
             </p>
             <ChartScreenshotControls
               getChart={() => chartRef.current}
-              filename={`${run.symbol}-equity.png`}
+              filename={`${run.symbol}-pnl.png`}
             />
           </div>
         )}

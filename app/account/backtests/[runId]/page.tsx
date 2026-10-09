@@ -30,7 +30,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Backtest",
-  description: "Parameters, trades, account impact, and chart for one run.",
+  description: "Parameters, trades, realized P&L, and chart for one run.",
 };
 
 export const maxDuration = 60;

@@ -373,7 +373,7 @@ export function BacktestRunDetail({
       ) : (
         <>
           <section>
-            <h2 className="mb-2 text-lg font-semibold">Account impact</h2>
+            <h2 className="mb-2 text-lg font-semibold">P&L (realized profit)</h2>
             <SectionPlaceholder message={pendingMessage} />
           </section>
           <section>
