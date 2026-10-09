@@ -1,9 +1,12 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { ModalHost, useModalPortalHost } from "@/components/portal-host";
+
+export { ModalHost, useModalPortalHost };
 import { createPortal } from "react-dom";
 import { AppMultiSelect } from "@/components/app-select";
-import { AppCheck } from "@/components/app-check";
+import { AppCheck, AppRadio } from "@/components/app-check";
 import { PanelCloseButton } from "@/components/panel-close-button";
 import {
   applyTemplateAction,
@@ -39,6 +42,40 @@ const primaryBtn =
 const secondaryBtn =
   "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
 
+export function TemplateAudienceFields({
+  platform,
+  onChange,
+}: {
+  platform: boolean;
+  onChange: (platform: boolean) => void;
+}) {
+  return (
+    <fieldset className="mt-4">
+      <legend className="text-sm text-ink">Save as</legend>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+        <label className="inline-flex items-center gap-2 text-sm text-ink">
+          <AppRadio
+            name="templateAudience"
+            value="user"
+            checked={!platform}
+            onChange={() => onChange(false)}
+          />
+          User template
+        </label>
+        <label className="inline-flex items-center gap-2 text-sm text-ink">
+          <AppRadio
+            name="templateAudience"
+            value="platform"
+            checked={platform}
+            onChange={() => onChange(true)}
+          />
+          Platform template
+        </label>
+      </div>
+    </fieldset>
+  );
+}
+
 export function StarterPackCheckbox({
   checked,
   onChange,
@@ -59,36 +96,6 @@ export function StarterPackCheckbox({
 
 const modalStack: number[] = [];
 let nextModalId = 0;
-
-const ModalHostContext = createContext<HTMLElement | null>(null);
-
-/** Replay fill-browser and full screen paint above the page. Dialogs inside this host stay on that layer. */
-export function ModalHost({
-  host,
-  children,
-}: {
-  host: HTMLElement | null;
-  children: ReactNode;
-}) {
-  return <ModalHostContext.Provider value={host}>{children}</ModalHostContext.Provider>;
-}
-
-export function useModalPortalHost(): HTMLElement | null {
-  const host = useContext(ModalHostContext);
-  if (typeof document === "undefined") {
-    return host;
-  }
-  const fullscreen = document.fullscreenElement;
-  if (fullscreen instanceof HTMLElement) {
-    return fullscreen;
-  }
-  const webkit = (document as Document & { webkitFullscreenElement?: Element | null })
-    .webkitFullscreenElement;
-  if (webkit instanceof HTMLElement) {
-    return webkit;
-  }
-  return host ?? document.body;
-}
 
 export function Modal({
   title,
@@ -257,10 +264,10 @@ export function SaveAsTemplateButton({
 
   const folderGroups = saveFolderGroups(folders, kind, platform);
 
-  function resetAndOpen(asPlatform: boolean) {
+  function resetAndOpen() {
     setName(defaultName);
     setDescription("");
-    setPlatform(asPlatform);
+    setPlatform(false);
     setReplace(false);
     setFolderIds([]);
     setCreateFolder(false);
@@ -268,6 +275,16 @@ export function SaveAsTemplateButton({
     setStarterPack(false);
     setResult(null);
     setOpen(true);
+  }
+
+  function chooseAudience(next: boolean) {
+    setPlatform(next);
+    setFolderIds([]);
+    setCreateFolder(false);
+    setNewFolderName("");
+    if (!next) {
+      setStarterPack(false);
+    }
   }
 
   async function onSave() {
@@ -316,7 +333,7 @@ export function SaveAsTemplateButton({
     <>
       <button
         type="button"
-        onClick={() => resetAndOpen(false)}
+        onClick={() => resetAndOpen()}
         className={
           buttonClassName ??
           "inline-flex shrink-0 items-center gap-1.5 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
@@ -328,25 +345,9 @@ export function SaveAsTemplateButton({
             : "Save as template"}
         </BotButtonLead>
       </button>
-      {isAdmin ? (
-        <button
-          type="button"
-          onClick={() => resetAndOpen(true)}
-          className={
-            buttonClassName ??
-            "inline-flex shrink-0 items-center gap-1.5 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
-          }
-        >
-          <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
-            {savedPlatform
-              ? `Saved platform template: ${savedPlatform.name}`
-              : "Save as platform template"}
-          </BotButtonLead>
-        </button>
-      ) : null}
       {open ? (
         <Modal
-          title={platform ? "Save as platform template" : "Save as template"}
+          title="Save as template"
           onClose={() => setOpen(false)}
         >
           <p className="mt-1 text-sm text-ink-muted">
@@ -354,6 +355,14 @@ export function SaveAsTemplateButton({
               ? "Visible to every member. Confirm the name before publishing."
               : "Saved to your template library. Apply it later on any matching desk."}
           </p>
+          {isAdmin ? (
+            <TemplateAudienceFields platform={platform} onChange={chooseAudience} />
+          ) : null}
+          {platform && savedPlatform ? (
+            <p className="mt-2 text-sm text-ink-muted">
+              Already saved as {savedPlatform.name}.
+            </p>
+          ) : null}
           <label className="mt-4 block text-sm text-ink">
             Name
             <input

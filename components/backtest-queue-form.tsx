@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AppMultiSelect, AppSelect } from "@/components/app-select";
-import { BacktestRecipeFields } from "@/components/backtest-recipe-fields";
+import { BotRecipeEditor } from "@/components/bot-recipe-editor";
 import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
-import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { queueTemplateBacktestAction } from "@/lib/backtest/actions";
 import { loadBacktestDeskBotAction } from "@/lib/backtest/desk-bot-action";
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import {
   BACKTEST_COMPARABLE_CAP,
+  BACKTEST_NAME_MAX,
   BACKTEST_FEE_PRESETS,
   BACKTEST_LONG_TAPE_BARS,
   BACKTEST_WINDOW_PRESETS,
@@ -20,6 +20,7 @@ import {
   DEFAULT_STARTING_USDT,
   backtestShouldRunInline,
   backtestTapeInterval,
+  backtestVariantEdited,
   backtestWindowEndingToday,
   defaultBacktestDates,
   estimateBacktestBars,
@@ -31,6 +32,7 @@ import {
   findMatchingBacktestTemplate,
   formatBacktestDeskMatch,
   groupBacktestLibrary,
+  userBacktestFieldIssues,
   type BacktestDeskBot,
   type BacktestDeskBotOption,
   type BacktestLibraryFolder,
@@ -54,6 +56,7 @@ import {
   type CandleSpan,
 } from "@/lib/market/candle-availability";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
+import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
 
 function withSymbol(options: LinearPerp[], symbol: string): LinearPerp[] {
@@ -81,6 +84,7 @@ function withSymbol(options: LinearPerp[], symbol: string): LinearPerp[] {
 
 export type BacktestQueueSeed = {
   recipe: BacktestRecipe;
+  name: string;
   sourceTemplateId: string;
   fromDate: string;
   toDate: string;
@@ -92,6 +96,26 @@ export type BacktestQueueSeed = {
   venueEnvironment: string | null;
   comparables: string[];
 };
+
+function VariantShell({
+  variant,
+  leading,
+  children,
+}: {
+  variant: boolean;
+  leading?: ReactNode;
+  children: ReactNode;
+}) {
+  if (!variant) {
+    return children;
+  }
+  return (
+    <div className="min-w-0 rounded-card border border-line bg-surface p-5">
+      {leading}
+      <div className={leading ? "mt-4" : undefined}>{children}</div>
+    </div>
+  );
+}
 
 export function BacktestQueueForm({
   templates,
@@ -108,6 +132,8 @@ export function BacktestQueueForm({
   onVariantPending,
   onVariantQueued,
   onVariantFailed,
+  onVariantCancel,
+  variantLeading = null,
 }: {
   templates: BacktestLibraryItem[];
   folders?: BacktestLibraryFolder[];
@@ -123,10 +149,13 @@ export function BacktestQueueForm({
   onVariantPending?: () => void;
   onVariantQueued?: (runId: string) => void;
   onVariantFailed?: () => void;
+  onVariantCancel?: () => void;
+  variantLeading?: ReactNode;
 }) {
   const variant = variantParentId.trim().length > 0;
   const router = useRouter();
   const botRequest = useRef(0);
+  const formIssueRef = useRef<string | null>(null);
   const [pickedDeskBot, setPickedDeskBot] = useState<BacktestDeskBot | null>(
     matchedDeskBot,
   );
@@ -146,6 +175,12 @@ export function BacktestQueueForm({
   );
   const [symbol, setSymbol] = useState(
     seed?.symbol ?? initialTemplate?.recipe.symbol ?? "",
+  );
+  const [backtestName, setBacktestName] = useState(
+    seed?.name?.trim() ||
+      seed?.recipe.name?.trim() ||
+      initialTemplate?.recipe.name?.trim() ||
+      "",
   );
   const [comparables, setComparables] = useState<string[]>(
     seed?.comparables ?? [],
@@ -167,6 +202,30 @@ export function BacktestQueueForm({
       true,
     ),
   );
+  const [variantOrigin, setVariantOrigin] = useState(() => ({
+    name:
+      seed?.name?.trim() ||
+      seed?.recipe.name?.trim() ||
+      initialTemplate?.recipe.name?.trim() ||
+      "",
+    fromDate: seed?.fromDate ?? dates.from,
+    toDate: seed?.toDate ?? dates.to,
+    startingBalance: formatGroupedNumberInput(
+      String(seed?.startingUsdt ?? DEFAULT_STARTING_USDT),
+      true,
+    ),
+    leverage: formatGroupedNumberInput(
+      String(seed?.leverage ?? DEFAULT_LEVERAGE),
+      true,
+    ),
+    venue: (seed?.venue ?? defaultVenue) === "hyperliquid" ? "hyperliquid" : "bybit",
+    venueEnvironment: seed?.venueEnvironment ?? defaultVenueEnvironment,
+    symbol: (seed?.symbol ?? initialTemplate?.recipe.symbol ?? "")
+      .trim()
+      .toUpperCase(),
+  }));
+  const [variantRecipeBaseline, setVariantRecipeBaseline] =
+    useState<BacktestRecipe | null>(null);
   const [activeDraftId, setActiveDraftId] = useState(draftId);
   const [venueEnvironment, setVenueEnvironment] = useState(
     seed?.venueEnvironment ?? defaultVenueEnvironment,
@@ -396,6 +455,44 @@ export function BacktestQueueForm({
   const queueAllowed = recipe
     ? canQueueUserBacktest(recipe)
     : { ok: false as const, error: "Load a bot or pick a template to backtest." };
+  const variantDirty =
+    variant &&
+    backtestVariantEdited({
+      origin: variantOrigin,
+      current: {
+        name: backtestName,
+        fromDate,
+        toDate,
+        startingBalance,
+        leverage,
+        venue,
+        venueEnvironment,
+        symbol,
+      },
+      baselineRecipe: variantRecipeBaseline,
+      recipe,
+    });
+  const submitDisabled =
+    pending ||
+    Boolean(preview.error) ||
+    Boolean(historyRangeError) ||
+    historyView.status === "loading" ||
+    historyView.status === "idle" ||
+    !queueAllowed.ok ||
+    recipeFieldIssues.length > 0 ||
+    !backtestName.trim() ||
+    (variant && !variantDirty);
+  const submitLabel = pending
+    ? preview.inline
+      ? "Running…"
+      : "Queuing…"
+    : variant
+      ? preview.inline
+        ? "Run variant"
+        : "Queue variant"
+      : preview.inline
+        ? "Run backtest"
+        : "Queue backtest";
 
   return (
     <section
@@ -406,6 +503,35 @@ export function BacktestQueueForm({
           : "mb-8 rounded-card border border-line bg-surface p-5"
       }
     >
+      {variant ? (
+        <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-canvas px-4 py-3">
+          <h2 className="text-lg font-semibold text-ink">Modify</h2>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {variantDirty ? (
+              <p className="rounded-control bg-warning/15 px-2 py-0.5 text-xs text-warning">
+                Edited
+              </p>
+            ) : null}
+            <button
+              type="submit"
+              form="backtest-variant-queue"
+              disabled={submitDisabled}
+              className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
+            >
+              {submitLabel}
+            </button>
+            {onVariantCancel ? (
+              <button
+                type="button"
+                onClick={onVariantCancel}
+                className="text-sm text-ink-muted hover:text-ink"
+              >
+                Cancel
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       {variant ? null : (
         <h2 className="text-lg font-semibold">New backtest</h2>
       )}
@@ -419,12 +545,14 @@ export function BacktestQueueForm({
       <div
         className={
           variant
-            ? "space-y-4"
-            : "mt-4 grid items-start gap-6 lg:grid-cols-2"
+            ? "space-y-4 p-4"
+            : "mt-4 grid min-w-0 items-start gap-6 lg:grid-cols-2 [&>*]:min-w-0"
         }
       >
+      <VariantShell variant={variant} leading={variantLeading}>
       <form
-        className="space-y-3"
+        id={variant ? "backtest-variant-queue" : undefined}
+        className="@container min-w-0 space-y-3"
         action={async (formData) => {
           setPending(true);
           setError(null);
@@ -462,6 +590,17 @@ export function BacktestQueueForm({
         {recipe ? (
           <input type="hidden" name="recipe" value={JSON.stringify(recipe)} />
         ) : null}
+        <input type="hidden" name="symbol" value={symbol} />
+        <label className="block text-sm text-ink">
+          Name
+          <input
+            name="backtestName"
+            value={backtestName}
+            maxLength={BACKTEST_NAME_MAX}
+            onChange={(event) => setBacktestName(event.target.value)}
+            className={BILLING_FIELD_CLASS}
+          />
+        </label>
         {variant ? null : (
         <label className="block text-sm text-ink">
           Bot
@@ -501,6 +640,14 @@ export function BacktestQueueForm({
                   );
                   setPickedDeskBot(result.bot);
                   setRecipe(result.bot.recipe);
+                  setBacktestName((current) => {
+                    const previous = (recipe?.name ?? "").trim();
+                    const typed = current.trim();
+                    if (!typed || typed === previous) {
+                      return result.bot.recipe.name;
+                    }
+                    return current;
+                  });
                   setSourceTemplateId(match?.id ?? "");
                   setSymbol(result.bot.recipe.symbol);
                   setVenue(
@@ -519,6 +666,14 @@ export function BacktestQueueForm({
               setPickedDeskBot(null);
               if (next) {
                 setRecipe(next.recipe);
+                setBacktestName((current) => {
+                  const previous = (recipe?.name ?? "").trim();
+                  const typed = current.trim();
+                  if (!typed || typed === previous) {
+                    return next.recipe.name;
+                  }
+                  return current;
+                });
                 setSourceTemplateId(next.id);
                 setSymbol(next.recipe.symbol);
                 setComparables((rows) =>
@@ -527,7 +682,7 @@ export function BacktestQueueForm({
                 setActiveDraftId("");
               }
             }}
-            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
+            className={BILLING_FIELD_CLASS}
           >
             <option value="">
               {loadedFromRun && recipe
@@ -566,7 +721,7 @@ export function BacktestQueueForm({
         </label>
         )}
         <div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid min-w-0 gap-3 @min-[22rem]:grid-cols-2 [&>*]:min-w-0">
             <DatePicker
               label="Start date"
               name="fromDate"
@@ -639,7 +794,7 @@ export function BacktestQueueForm({
             <p className="mt-2 text-sm text-danger">{historyRangeError}</p>
           ) : null}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid min-w-0 gap-3 @min-[22rem]:grid-cols-2 [&>*]:min-w-0">
           <label className="block text-sm text-ink">
             Initial account balance
             <GroupedNumberInput
@@ -647,7 +802,7 @@ export function BacktestQueueForm({
               value={startingBalance}
               onChange={setStartingBalance}
               allowDecimal
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink"
+              className={`${BILLING_FIELD_CLASS} tabular-nums`}
             />
           </label>
           <label className="block text-sm text-ink">
@@ -657,14 +812,14 @@ export function BacktestQueueForm({
               value={leverage}
               onChange={setLeverage}
               allowDecimal
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink"
+              className={`${BILLING_FIELD_CLASS} tabular-nums`}
             />
-            <span className="mt-1 block text-hint text-ink-muted">
-              Cash gates on margin (position value ÷ this). Empty is 1×. If
-              marked equity hits $0, the account liquidates and the replay
-              stops.
-            </span>
           </label>
+          <p className="text-hint text-ink-muted @min-[22rem]:col-span-2">
+            Cash gates on margin (position value ÷ this). Empty is 1×. If
+            marked equity hits $0, the account liquidates and the replay
+            stops.
+          </p>
         </div>
         <label className="block text-sm text-ink">
           Venue
@@ -672,26 +827,12 @@ export function BacktestQueueForm({
             name="venue"
             value={venue}
             onChange={(event) => setVenue(event.target.value)}
-            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
+            className={BILLING_FIELD_CLASS}
           >
             <option value="bybit">Bybit</option>
             <option value="hyperliquid">Hyperliquid</option>
           </AppSelect>
         </label>
-        <div>
-          <p className="text-sm text-ink">Primary pair</p>
-          <div className="mt-1">
-            <FuturesSymbolSelect
-              options={pairs}
-              value={symbol}
-              onChange={(next) => {
-                setSymbol(next);
-                setComparables((rows) => rows.filter((row) => row !== next));
-              }}
-              name="symbol"
-            />
-          </div>
-        </div>
         {variant ? null : (
         <fieldset>
           <legend className="text-sm text-ink">
@@ -761,34 +902,31 @@ export function BacktestQueueForm({
           </p>
         ))}
         {error ? <p className="text-sm text-danger">{error}</p> : null}
+        {variant ? null : (
         <button
           type="submit"
-          disabled={
-            pending ||
-            Boolean(preview.error) ||
-            Boolean(historyRangeError) ||
-            historyView.status === "loading" ||
-            historyView.status === "idle" ||
-            !queueAllowed.ok ||
-            recipeFieldIssues.length > 0
-          }
+          disabled={submitDisabled}
           className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
         >
-          {pending
-            ? preview.inline
-              ? "Running…"
-              : "Queuing…"
-            : variant
-              ? preview.inline
-                ? "Run variant"
-                : "Queue variant"
-              : preview.inline
-                ? "Run backtest"
-                : "Queue backtest"}
+          {submitLabel}
         </button>
+        )}
       </form>
+      {variant && recipe && pairChanged ? (
+        <p className="mt-4 text-xs text-warning">
+          Contract is {symbol}. The bot was saved on {recipe.symbol}.
+        </p>
+      ) : null}
+      </VariantShell>
       {recipe ? (
-        <aside className="rounded-card border border-line bg-canvas p-4">
+        <aside
+          className={
+            variant
+              ? "min-w-0"
+              : "min-w-0 rounded-card border border-line bg-canvas p-4"
+          }
+        >
+          {variant ? null : (
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <h3 className="text-lg font-semibold tracking-tight text-ink">
@@ -797,7 +935,7 @@ export function BacktestQueueForm({
               <p className="mt-1 text-sm text-ink-muted">
                 {loadedFromRun
                   ? "These are the recipe fields from that run. Edit any of them before you queue."
-                  : "Change the replay fields here. Pair and dates on the left are the market window. The replay tape follows the bot."}
+                  : "Change the replay fields here. Name, dates, and venue on the left are the market window. Contract in General is the pair. The replay tape follows the bot."}
               </p>
             </div>
             <BacktestOriginBadges
@@ -810,24 +948,89 @@ export function BacktestQueueForm({
               edited={editedAway}
             />
           </div>
-          {pairChanged ? (
+          )}
+          {variant || !pairChanged ? null : (
             <p className="mt-2 text-xs text-warning">
-              Primary pair is {symbol}. The bot was saved on {recipe.symbol}.
+              Contract is {symbol}. The bot was saved on {recipe.symbol}.
             </p>
-          ) : null}
-          <div className="mt-4">
-            <BacktestRecipeFields
-              key={
-                sourceTemplateId || draftId || (loadedFromRun ? "rerun" : "current")
-              }
+          )}
+          <div className={variant ? undefined : "mt-4"}>
+            <BotRecipeEditor
+              key={`${recipe.kind}:${venue}:${sourceTemplateId}:${pickedDeskBot?.id ?? ""}:${draftId}:${loadedFromRun ? "rerun" : "current"}`}
               recipe={recipe}
-              onIssuesChange={setRecipeFieldIssues}
-              onChange={setRecipe}
+              options={withSymbol(pairs, recipe.symbol || symbol)}
+              venue={venue}
+              symbol={symbol || recipe.symbol}
+              onSymbolChange={(next) => {
+                setSymbol(next);
+                setComparables((rows) => rows.filter((row) => row !== next));
+              }}
+              onIssuesChange={(issues) => {
+                formIssueRef.current = issues[0] ?? null;
+                setRecipeFieldIssues((current) =>
+                  current.length === issues.length &&
+                  current.every((issue, index) => issue === issues[index])
+                    ? current
+                    : issues,
+                );
+              }}
+              onChange={(next, fromUser) => {
+                const replayIssue = userBacktestFieldIssues(next)[0]?.message;
+                const messages = [formIssueRef.current, replayIssue].filter(
+                  (issue): issue is string => Boolean(issue),
+                );
+                setRecipeFieldIssues((current) =>
+                  current.length === messages.length &&
+                  current.every((issue, index) => issue === messages[index])
+                    ? current
+                    : messages,
+                );
+                if (variant && !fromUser) {
+                  setVariantRecipeBaseline((current) =>
+                    current &&
+                    current.name === next.name &&
+                    recipesMatchReplayFields(current, next)
+                      ? current
+                      : next,
+                  );
+                } else if (variant) {
+                  setVariantRecipeBaseline(
+                    (current) => current ?? seed?.recipe ?? next,
+                  );
+                }
+                setRecipe((current) => {
+                  if (
+                    current &&
+                    current.name === next.name &&
+                    recipesMatchReplayFields(current, next)
+                  ) {
+                    return current;
+                  }
+                  return next;
+                });
+                if (
+                  next.symbol &&
+                  next.symbol.trim().toUpperCase() !==
+                    symbol.trim().toUpperCase()
+                ) {
+                  const nextSymbol = next.symbol;
+                  setSymbol(nextSymbol);
+                  setComparables((rows) =>
+                    rows.filter((row) => row !== nextSymbol),
+                  );
+                  if (variant && !fromUser) {
+                    setVariantOrigin((current) => ({
+                      ...current,
+                      symbol: nextSymbol.trim().toUpperCase(),
+                    }));
+                  }
+                }
+              }}
             />
           </div>
         </aside>
-      ) : (
-        <aside className="rounded-card border border-line bg-canvas p-4">
+      ) : variant ? null : (
+        <aside className="min-w-0 rounded-card border border-line bg-canvas p-4">
           <h3 className="text-lg font-semibold tracking-tight text-ink">
             Bot to replay
           </h3>

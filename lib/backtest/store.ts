@@ -10,6 +10,7 @@ import {
   parseBacktestFillReason,
   normalizeBacktestLeverage,
   parseFeePreset,
+  readBacktestName,
   type BacktestDeskType,
   type BacktestLinkHighlight,
   type BacktestFeePreset,
@@ -153,7 +154,25 @@ export function parseBacktestRunRow(
     finishedAtMs: row.finished_at ? asTime(row.finished_at) : null,
     parentRunId: row.parent_run_id ? String(row.parent_run_id) : null,
     comparableSymbols: parseComparableSymbolList(row.comparable_symbols),
+    name: readBacktestName(row.name),
   };
+}
+
+function unknownBacktestColumn(message: string, column: string): boolean {
+  const text = message.toLowerCase();
+  return (
+    text.includes(column.toLowerCase()) &&
+    (text.includes("schema cache") || text.includes("does not exist"))
+  );
+}
+
+function withoutColumn(
+  row: Record<string, unknown>,
+  column: string,
+): Record<string, unknown> {
+  const next = { ...row };
+  delete next[column];
+  return next;
 }
 
 function parseComparableSymbolList(raw: unknown): string[] {
@@ -180,6 +199,7 @@ export async function insertBacktestRun(input: {
   feeRate: number;
   startingUsdt: number;
   leverage?: number;
+  name?: string | null;
   recipe: BacktestRecipe;
   status?: BacktestStatus;
   stats?: BacktestStats | null;
@@ -211,6 +231,7 @@ export async function insertBacktestRun(input: {
     fee_rate: input.feeRate,
     starting_balance_usdt: input.startingUsdt,
     leverage: normalizeBacktestLeverage(input.leverage),
+    name: readBacktestName(input.name),
     status: input.status ?? "queued",
     recipe: input.recipe,
     stats: input.stats ?? null,
@@ -218,23 +239,30 @@ export async function insertBacktestRun(input: {
     error: input.error ?? null,
     ...(input.finished ? { finished_at: new Date().toISOString() } : {}),
   };
-  const first = await supabase.from("backtest_runs").insert(columns).select("*").single();
-  if (!first.error && first.data) {
-    return parseBacktestRunRow(first.data as Record<string, unknown>);
-  }
-  if (!first.error || !/leverage/i.test(first.error.message)) {
+  let payload: Record<string, unknown> = columns;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const result = await supabase
+      .from("backtest_runs")
+      .insert(payload)
+      .select("*")
+      .single();
+    if (!result.error && result.data) {
+      return parseBacktestRunRow(result.data as Record<string, unknown>);
+    }
+    if (!result.error) {
+      return null;
+    }
+    if ("name" in payload && unknownBacktestColumn(result.error.message, "name")) {
+      payload = withoutColumn(payload, "name");
+      continue;
+    }
+    if ("leverage" in payload && /leverage/i.test(result.error.message)) {
+      payload = withoutColumn(payload, "leverage");
+      continue;
+    }
     return null;
   }
-  const { leverage: _leverage, ...withoutLeverage } = columns;
-  const retry = await supabase
-    .from("backtest_runs")
-    .insert(withoutLeverage)
-    .select("*")
-    .single();
-  if (retry.error || !retry.data) {
-    return null;
-  }
-  return parseBacktestRunRow(retry.data as Record<string, unknown>);
+  return null;
 }
 
 export async function updateBacktestRun(
@@ -307,6 +335,7 @@ export async function promoteDraftBacktestRun(
     feeRate: number;
     startingUsdt: number;
     leverage: number;
+    name?: string | null;
     recipe: BacktestRecipe;
     comparableSymbols: string[];
   },
@@ -329,38 +358,38 @@ export async function promoteDraftBacktestRun(
     fee_rate: patch.feeRate,
     starting_balance_usdt: patch.startingUsdt,
     leverage: normalizeBacktestLeverage(patch.leverage),
+    name: readBacktestName(patch.name),
     recipe: patch.recipe,
     comparable_symbols: patch.comparableSymbols,
     status: "queued",
     error: null,
   };
-  const first = await supabase
-    .from("backtest_runs")
-    .update(columns)
-    .eq("id", id)
-    .eq("status", "draft")
-    .select("*")
-    .maybeSingle();
-  if (!first.error && first.data) {
-    return parseBacktestRunRow(first.data as Record<string, unknown>);
-  }
-  if (!first.error || !/leverage/i.test(first.error.message)) {
-    return first.data
-      ? parseBacktestRunRow(first.data as Record<string, unknown>)
-      : null;
-  }
-  const { leverage: _leverage, ...withoutLeverage } = columns;
-  const { data, error } = await supabase
-    .from("backtest_runs")
-    .update(withoutLeverage)
-    .eq("id", id)
-    .eq("status", "draft")
-    .select("*")
-    .maybeSingle();
-  if (error || !data) {
+  let payload: Record<string, unknown> = columns;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const result = await supabase
+      .from("backtest_runs")
+      .update(payload)
+      .eq("id", id)
+      .eq("status", "draft")
+      .select("*")
+      .maybeSingle();
+    if (!result.error && result.data) {
+      return parseBacktestRunRow(result.data as Record<string, unknown>);
+    }
+    if (!result.error) {
+      return null;
+    }
+    if ("name" in payload && unknownBacktestColumn(result.error.message, "name")) {
+      payload = withoutColumn(payload, "name");
+      continue;
+    }
+    if ("leverage" in payload && /leverage/i.test(result.error.message)) {
+      payload = withoutColumn(payload, "leverage");
+      continue;
+    }
     return null;
   }
-  return parseBacktestRunRow(data as Record<string, unknown>);
+  return null;
 }
 
 export async function linkBacktestRunTemplate(

@@ -34,6 +34,8 @@ import {
   backtestTapeInterval,
   comparableBacktestName,
   defaultBacktestDates,
+  parseBacktestName,
+  backtestRunTitle,
   estimateBacktestBars,
   parseBacktestDates,
   parseComparableSymbols,
@@ -175,6 +177,7 @@ export async function seedBacktestDraftAction(
     feeRate: BACKTEST_FEE_PRESETS.vip0_taker.rate,
     startingUsdt: DEFAULT_STARTING_USDT,
     leverage: DEFAULT_LEVERAGE,
+    name: recipe.name.trim() || "Backtest",
     recipe,
     status: "draft",
   });
@@ -246,6 +249,14 @@ export async function queueTemplateBacktestAction(
   const venue = parseCandleVenue(formData.get("venue")) ?? "bybit";
   const symbol =
     parseCandleSymbol(formData.get("symbol") ?? recipe.symbol) ?? recipe.symbol;
+  const named = parseBacktestName(
+    formData.has("backtestName")
+      ? formData.get("backtestName")
+      : recipe.name.trim() || "Backtest",
+  );
+  if (!named.ok) {
+    return named;
+  }
   const queuedRecipe = { ...recipe, symbol };
   const comparables = parseComparableSymbols(
     [
@@ -314,6 +325,7 @@ export async function queueTemplateBacktestAction(
     feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
     startingUsdt: balance.startingUsdt,
     leverage: leverage.leverage,
+    name: named.name,
     recipe: queuedRecipe,
     comparableSymbols: comparables,
   };
@@ -331,7 +343,6 @@ export async function queueTemplateBacktestAction(
     const comparableRecipe = {
       ...queuedRecipe,
       symbol: comparable,
-      name: comparableBacktestName(queuedRecipe.name, comparable),
     };
     await insertBacktestRun({
       userId: auth.member.id,
@@ -348,6 +359,7 @@ export async function queueTemplateBacktestAction(
       feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
       startingUsdt: balance.startingUsdt,
       leverage: leverage.leverage,
+      name: comparableBacktestName(named.name, comparable),
       recipe: comparableRecipe,
     });
   }
@@ -425,7 +437,7 @@ export async function pollReplayFamilyAction(rootId: string): Promise<
     rows: rows.map((row) => ({
       id: row.id,
       status: row.status,
-      name: row.recipe.name.trim() || "Backtest",
+      name: backtestRunTitle(row),
       error: row.error,
       createdAtMs: row.createdAtMs,
     })),

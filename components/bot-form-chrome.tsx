@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { createContext, useContext, useId, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ColumnHint } from "@/components/column-hint";
 import { useDeskFormStatus } from "@/components/stay-on-page-form";
@@ -22,6 +22,29 @@ export const botSectionTitleClass = "text-sm font-semibold text-ink";
 export const botStepTitleClass = "text-lg font-semibold tracking-tight text-ink";
 export const botRowClass = "grid grid-cols-2 gap-4 lg:grid-cols-4";
 export const botRowClass5 = "grid grid-cols-2 gap-4 lg:grid-cols-5";
+/** Backtest columns only. The desk form keeps botRowClass. */
+export const botCompactRowClass =
+  "grid min-w-0 grid-cols-1 gap-3 @min-[22rem]:grid-cols-2 [&>*]:min-w-0";
+
+const BotColumnLayoutContext = createContext(false);
+
+export function BotColumnLayout({
+  enabled,
+  children,
+}: {
+  enabled: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <BotColumnLayoutContext.Provider value={enabled}>
+      {children}
+    </BotColumnLayoutContext.Provider>
+  );
+}
+
+export function useBotColumnLayout(): boolean {
+  return useContext(BotColumnLayoutContext);
+}
 export const botBtnIcon = { size: 14 as const, className: "size-3.5 shrink-0" };
 export const botSidebarSaveClass =
   "inline-flex w-full items-center justify-center gap-2 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50";
@@ -382,9 +405,21 @@ export function BotStatusField({
   );
 }
 
-export function BotFormColumns({ children }: { children: ReactNode }) {
+export function BotFormColumns({
+  children,
+  single = false,
+}: {
+  children: ReactNode;
+  single?: boolean;
+}) {
   return (
-    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <div
+      className={
+        single
+          ? "grid items-start gap-5"
+          : "grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]"
+      }
+    >
       {children}
     </div>
   );

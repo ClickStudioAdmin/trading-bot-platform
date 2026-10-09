@@ -98,6 +98,7 @@ import { DeskChart } from "@/components/desk-chart";
 import {
   Modal,
   StarterPackCheckbox,
+  TemplateAudienceFields,
   saveFolderGroups,
 } from "@/components/template-modals";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
@@ -273,6 +274,59 @@ export function BacktestCurrentTrades({ run }: { run: BacktestRun }) {
         },
       ]}
     />
+  );
+}
+
+export function BacktestParameterSections({
+  sections,
+}: {
+  sections: Array<{
+    title: string;
+    groups: Array<{
+      title?: string;
+      rows: Array<{ label: string; value: string }>;
+    }>;
+  }>;
+}) {
+  return (
+    <div className="space-y-4">
+      {sections.map((section) => (
+        <section key={section.title}>
+          <h3 className="mb-2 text-sm font-semibold text-ink">{section.title}</h3>
+          <div className="overflow-hidden rounded-card border border-line bg-surface">
+            {section.groups.map((group, index) => (
+              <div
+                key={`${group.title ?? "fields"}-${index}`}
+                className={index > 0 ? "border-t border-line" : undefined}
+              >
+                {group.title ? (
+                  <p className="bg-surface-raised px-5 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
+                    {group.title}
+                  </p>
+                ) : null}
+                {group.rows.length > 0 ? (
+                  <dl className="divide-y divide-line">
+                    {group.rows.map((row, rowIndex) => (
+                      <div
+                        key={`${row.label}-${rowIndex}`}
+                        className="flex items-baseline justify-between gap-4 px-5 py-2.5"
+                      >
+                        <dt className="shrink-0 text-xs uppercase tracking-[0.12em] text-ink-muted">
+                          {row.label}
+                        </dt>
+                        <dd className="min-w-0 text-right text-sm font-medium tabular-nums">
+                          {row.value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
   );
 }
 
@@ -950,7 +1004,6 @@ export function SaveBacktestAsTemplateButton({
   folders = [],
   canSaveAs,
   canSaveAsPlatform,
-  variant = "primary",
 }: {
   runId: string;
   defaultName: string;
@@ -958,7 +1011,6 @@ export function SaveBacktestAsTemplateButton({
   folders?: AutomationTemplateSet[];
   canSaveAs: boolean;
   canSaveAsPlatform: boolean;
-  variant?: "primary" | "secondary";
 }) {
   const router = useRouter();
   const platformOnly = !canSaveAs && canSaveAsPlatform;
@@ -987,6 +1039,18 @@ export function SaveBacktestAsTemplateButton({
     setError(null);
     setOpen(true);
   }
+
+  function chooseAudience(next: boolean) {
+    setPlatform(next);
+    setFolderIds([]);
+    setCreateFolder(false);
+    setNewFolderName("");
+    if (!next) {
+      setStarterPack(false);
+    }
+  }
+
+  const canChoose = canSaveAs && canSaveAsPlatform;
 
   async function onSave() {
     setPending(true);
@@ -1023,24 +1087,26 @@ export function SaveBacktestAsTemplateButton({
         title={
           platformOnly
             ? "Create an applyable platform template from this run. Does not attach the run or arm a desk."
-            : "Create a private library template and attach this run"
+            : canChoose
+              ? "Save this run as your template, or publish a platform template."
+              : "Create a private library template and attach this run"
         }
         className="inline-flex w-full items-center justify-center gap-2 rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent"
       >
         <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
-          {platformOnly ? "Save as platform template" : "Save as template"}
+          Save as template
         </BotButtonLead>
       </button>
       {open ? (
-        <Modal
-          title={platform ? "Save as platform template" : "Save as template"}
-          onClose={() => setOpen(false)}
-        >
+        <Modal title="Save as template" onClose={() => setOpen(false)}>
           <p className="mt-1 text-sm text-ink-muted">
             {platform
               ? "Visible to every member. Does not attach this run or arm a desk."
               : "Saved to your template library and attached to this run. Apply it later on any matching desk."}
           </p>
+          {canChoose ? (
+            <TemplateAudienceFields platform={platform} onChange={chooseAudience} />
+          ) : null}
           <label className="mt-4 block text-sm text-ink">
             Name
             <input
@@ -1173,11 +1239,11 @@ export function ApplyBacktestButton({
         className="inline-flex w-full items-center justify-center gap-2 rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent"
       >
         <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
-          Add to desk
+          Create New Bot
         </BotButtonLead>
       </button>
       {open ? (
-        <Modal title="Add to desk" onClose={() => setOpen(false)}>
+        <Modal title="Create New Bot" onClose={() => setOpen(false)}>
           <p className="mt-1 text-sm text-ink-muted">
             Copies this recipe onto the desk idle. Does not arm.
           </p>
@@ -1227,7 +1293,7 @@ export function ApplyBacktestButton({
                   "Copying…"
                 ) : (
                   <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
-                    Add to desk
+                    Create New Bot
                   </BotButtonLead>
                 )}
               </button>

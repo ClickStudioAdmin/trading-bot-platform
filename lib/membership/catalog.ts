@@ -19,6 +19,9 @@ export const PLAN_FEATURE_KEYS = [
   "copy_catalogue",
   "research_backtest",
   "research_backtest_attach_templates",
+  "replay_backtests",
+  "replay_chart_indicators",
+  "replay_strategy_optimization",
   "signals_inbound_webhooks",
   "extras_advanced_dca",
   "extras_templates",
@@ -61,6 +64,9 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   copy_catalogue: "Desk Sharing - Public",
   research_backtest: "Backtesting Tool",
   research_backtest_attach_templates: "Attach Results to Bot Template",
+  replay_backtests: "Replay Backtests",
+  replay_chart_indicators: "Add Additional Chart Indicators",
+  replay_strategy_optimization: "Strategy Optimization",
   signals_inbound_webhooks: "Inbound TradingView / Signal webhooks",
   extras_advanced_dca: "Advanced DCA (Confirm, Exit-if, ATR)",
   extras_templates: "Save Templates",
@@ -404,6 +410,23 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
       { kind: "feature", key: "research_backtest_attach_templates", label: "Attach Results to Bot Template" },
       { kind: "cap", key: "max_backtest_years", label: "Max Backtest Timeframe" },
       { kind: "cap", key: "max_stored_backtests", label: "Max Saved Backtests" },
+    ],
+  },
+  {
+    title: "Replay Studio",
+    fixedOrder: true,
+    rows: [
+      { kind: "feature", key: "replay_backtests", label: "Replay Backtests" },
+      {
+        kind: "feature",
+        key: "replay_chart_indicators",
+        label: "Add Additional Chart Indicators",
+      },
+      {
+        kind: "feature",
+        key: "replay_strategy_optimization",
+        label: "Strategy Optimization",
+      },
     ],
   },
   {

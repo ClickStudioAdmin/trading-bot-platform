@@ -2023,10 +2023,11 @@ export function ReplayPlayer({
         capPositions ? "h-full min-h-0 overflow-hidden" : ""
       }`}
     >
+      <h2 className="mb-3 shrink-0 text-lg font-semibold">Positions</h2>
       <TableCard
         className={
           capPositions
-            ? "mt-0 flex h-full min-h-0 flex-1 flex-col overflow-hidden"
+            ? "mt-0 flex min-h-0 flex-1 flex-col overflow-hidden"
             : "mt-0"
         }
         bodyClassName={

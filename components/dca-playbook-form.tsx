@@ -6,6 +6,7 @@ import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "re
 import { AutomationsBotTable } from "@/components/automations-bot-table";
 import {
   BotField,
+  BotColumnLayout,
   BotFormCard,
   BotFormColumns,
   BotFormGroup,
@@ -19,10 +20,12 @@ import {
   HintLabel,
   OptionalSection,
   OrderTypePill,
+  botCompactRowClass,
   botFieldClass,
   botLabelClass,
   botRowClass,
   botRowClass5,
+  useBotColumnLayout,
   botSectionTitleClass,
   botSidebarActionClass,
   botSidebarRemoveClass,
@@ -172,6 +175,7 @@ import {
   dcaFormToSnapshotSource,
   readFormControl,
   snapshotDcaRecipe,
+  type DcaTemplateRecipe,
 } from "@/lib/templates/recipe";
 import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
 import {
@@ -203,6 +207,7 @@ function DcaSecondaryEntrySection({
   onChange: (next: DcaFilterSpec | null) => void;
   locked?: boolean;
 }) {
+  const column = useBotColumnLayout();
   return (
     <OptionalSection
       title="Secondary Entry Condition"
@@ -222,7 +227,7 @@ function DcaSecondaryEntrySection({
         named
         dense
         allowOff={false}
-        gridClass={botRowClass5}
+        gridClass={column ? botCompactRowClass : botRowClass5}
         fieldClass={fieldClass}
         labelClass={labelClass}
       />
@@ -895,6 +900,10 @@ export function DcaPlaybookForm({
   openPositions = [],
   agreementGate = CLOSED_AGREEMENT_GATE,
   onTemplateSaved,
+  embedded = false,
+  onRecipeChange,
+  controlledSymbol,
+  onSymbolChange,
 }: {
   playbook: DcaPlaybook | null;
   seed?: DcaPlaybook | null;
@@ -918,6 +927,15 @@ export function DcaPlaybookForm({
   openPositions?: DcaCycleOpen[];
   agreementGate?: BybitAgreementGate;
   onTemplateSaved?: (item: BacktestLibraryItem) => void;
+  /** Replay and New Backtest. Hides desk save and publishes the recipe. */
+  embedded?: boolean;
+  onRecipeChange?: (result: {
+    recipe: DcaTemplateRecipe | null;
+    error: string | null;
+    fromUser: boolean;
+  }) => void;
+  controlledSymbol?: string;
+  onSymbolChange?: (symbol: string) => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const { confirm: askConfirm, dialog } = useConfirmDialog();
@@ -1132,11 +1150,18 @@ export function DcaPlaybookForm({
     options.find((row) => row.symbol === policy.defaultSymbol)?.symbol ??
     options[0]?.symbol ??
     policy.defaultSymbol;
-  const [symbol, setSymbol] = useState(() =>
+  const [symbolState, setSymbolState] = useState(() =>
     source
       ? defaultSymbol
       : firstOpenPerp(options, agreementGate, defaultSymbol),
   );
+  const symbol = controlledSymbol?.trim() ? controlledSymbol : symbolState;
+  function setSymbol(next: string) {
+    setSymbolState(next);
+    if (next !== symbol) {
+      onSymbolChange?.(next);
+    }
+  }
   const [formTick, setFormTick] = useState(0);
   const [touched, setTouched] = useState(false);
   useEffect(() => {
@@ -1486,6 +1511,38 @@ export function DcaPlaybookForm({
     (!cycleLocked && !parsedLive.ok && !parseConstraint);
   const liveRecipeKey =
     liveConfig == null ? null : JSON.stringify(snapshotDcaRecipe(liveConfig));
+  const onRecipeChangeRef = useRef(onRecipeChange);
+  useEffect(() => {
+    onRecipeChangeRef.current = onRecipeChange;
+    if (!embedded || formTick < 1 || !onRecipeChangeRef.current) {
+      return;
+    }
+    const parsed = parseDcaPlaybookForm(snapshotForm(), policy.venueId);
+    if (!parsed.ok) {
+      onRecipeChangeRef.current({
+        recipe: null,
+        error: parsed.error,
+        fromUser: touched,
+      });
+      return;
+    }
+    const missing =
+      tpMissing ||
+      trailMissing ||
+      slMissing ||
+      breakevenMissing ||
+      Boolean(confirm && !dcaFilterComplete(confirm)) ||
+      (direction === "both" &&
+        Boolean(shortConfirm && !dcaFilterComplete(shortConfirm))) ||
+      Boolean(exitIf && !dcaFilterComplete(exitIf)) ||
+      (direction === "both" &&
+        Boolean(shortExitIf && !dcaFilterComplete(shortExitIf)));
+    onRecipeChangeRef.current({
+      recipe: snapshotDcaRecipe(parsed.config),
+      error: missing ? "Fill required fields before saving." : null,
+      fromUser: touched,
+    });
+  }, [embedded, formTick, liveRecipeKey, onRecipeChange]);
   const [loadedRecipe, setLoadedRecipe] = useState<string | null>(null);
   const loadedRecipeSet = useRef(false);
   useLayoutEffect(() => {
@@ -1519,6 +1576,13 @@ export function DcaPlaybookForm({
       Remove
     </button>
   ) : null;
+  const fieldRowClass = embedded ? botCompactRowClass : rowClass;
+  const fieldRowClass5 = embedded ? botCompactRowClass : botRowClass5;
+  const nameSpan = embedded ? "col-span-full" : "col-span-2";
+  const pairSpan = embedded ? "col-span-full" : "lg:col-span-2";
+  const blockSpan = embedded
+    ? "col-span-full space-y-4"
+    : "space-y-4 sm:col-span-2 lg:col-span-4";
 
   return (
     <>
@@ -1540,6 +1604,9 @@ export function DcaPlaybookForm({
         setFormTick((tick) => tick + 1);
       }}
       guard={async (event) => {
+        if (embedded) {
+          return false;
+        }
         const submitter = (event.nativeEvent as SubmitEvent).submitter as
           | HTMLElement
           | null;
@@ -1557,12 +1624,17 @@ export function DcaPlaybookForm({
         }
         return true;
       }}
-      className="space-y-5 scroll-mt-24"
+      className={
+        embedded
+          ? "@container min-w-0 space-y-5 scroll-mt-24"
+          : "space-y-5 scroll-mt-24"
+      }
     >
+      <BotColumnLayout enabled={embedded}>
       <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
       <input type="hidden" name="deskVenue" value={policy.venueId} />
       <input type="hidden" name="botStatus" value={status} />
-      <BotFormColumns>
+      <BotFormColumns single={embedded}>
       <BotFormCard>
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
@@ -1571,8 +1643,16 @@ export function DcaPlaybookForm({
         </p>
       ) : null}
       <BotFormStep title="General">
-        <div className={rowClass}>
-          <BotField label="Name" required className="col-span-2">
+        {embedded ? (
+          <input
+            type="hidden"
+            name="name"
+            defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
+          />
+        ) : null}
+        <div className={fieldRowClass}>
+          {embedded ? null : (
+          <BotField label="Name" required className={nameSpan}>
             <input
               name="name"
               defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
@@ -1584,6 +1664,7 @@ export function DcaPlaybookForm({
               className={fieldClass}
             />
           </BotField>
+          )}
           <label
             className={`${labelClass}${
               cycleLocked ? " pointer-events-none opacity-40" : ""
@@ -1689,8 +1770,8 @@ export function DcaPlaybookForm({
         defaultCollapsed={hasOpenPosition}
       >
       <BotFormGroup locked={cycleLocked}>
-        <div className={rowClass}>
-          <label className={`${labelClass} lg:col-span-2`}>
+        <div className={fieldRowClass}>
+          <label className={`${labelClass} ${pairSpan}`}>
             <HintLabel text="Initial Order Trigger" required />
             <AppSelect
               name="startKind"
@@ -1753,12 +1834,12 @@ export function DcaPlaybookForm({
       </BotFormGroup>
 
       <BotFormGroup locked={cycleLocked}>
-        <div className={rowClass}>
+        <div className={fieldRowClass}>
           {startKind === "price" && direction === "both" ? (
-            <div className="space-y-4 sm:col-span-2 lg:col-span-4">
+            <div className={blockSpan}>
               <div className="space-y-4">
                 <p className={sectionTitleClass}>Long</p>
-                <div className={rowClass}>
+                <div className={fieldRowClass}>
                   <TriggerFields
                     prefix="arm"
                     triggerBy={source?.armTrigger?.triggerBy ?? "last"}
@@ -1777,7 +1858,7 @@ export function DcaPlaybookForm({
               </div>
               <div className="space-y-4 border-t border-line pt-4">
                 <p className={sectionTitleClass}>Short</p>
-                <div className={rowClass}>
+                <div className={fieldRowClass}>
                   <TriggerFields
                     prefix="shortArm"
                     triggerBy={
@@ -1822,7 +1903,7 @@ export function DcaPlaybookForm({
           {startKind === "webhook" ? (
             signalWebhooks.length > 0 ? (
               <>
-                <label className={`${labelClass} lg:col-span-2`}>
+                <label className={`${labelClass} ${pairSpan}`}>
                   <HintLabel text="Signal Webhook" required />
                   <AppSelect
                     name="webhookId"
@@ -1838,7 +1919,11 @@ export function DcaPlaybookForm({
                 </label>
               </>
             ) : (
-              <p className="self-end text-hint text-ink-muted lg:col-span-3">
+              <p
+                className={`self-end text-hint text-ink-muted ${
+                  embedded ? "col-span-full" : "lg:col-span-3"
+                }`}
+              >
                 Create a Signal on{" "}
                 <Link href={webhooksHref} className="text-accent">
                   Webhooks
@@ -1849,10 +1934,10 @@ export function DcaPlaybookForm({
             )
           ) : null}
           {startKind === "indicator" && direction === "both" ? (
-            <div className="space-y-4 sm:col-span-2 lg:col-span-4">
+            <div className={blockSpan}>
               <div className="space-y-4">
                 <p className={sectionTitleClass}>Long</p>
-                <div className={rowClass}>
+                <div className={fieldRowClass}>
                   <IndicatorStartFields
                     side="long"
                     prefix="indicator"
@@ -1880,7 +1965,7 @@ export function DcaPlaybookForm({
               </div>
               <div className="space-y-4 border-t border-line pt-4">
                 <p className={sectionTitleClass}>Short</p>
-                <div className={rowClass}>
+                <div className={fieldRowClass}>
                   <IndicatorStartFields
                     side="short"
                     prefix="shortIndicator"
@@ -1929,10 +2014,10 @@ export function DcaPlaybookForm({
             </>
           ) : null}
           {startKind === "trend" && direction === "both" ? (
-            <div className="space-y-4 sm:col-span-2 lg:col-span-4">
+            <div className={blockSpan}>
               <div className="space-y-4">
                 <p className={sectionTitleClass}>Long</p>
-                <div className={rowClass}>
+                <div className={fieldRowClass}>
                   <TrendStartFields
                     side="long"
                     prefix="indicator"
@@ -1958,7 +2043,7 @@ export function DcaPlaybookForm({
               </div>
               <div className="space-y-4 border-t border-line pt-4">
                 <p className={sectionTitleClass}>Short</p>
-                <div className={rowClass}>
+                <div className={fieldRowClass}>
                   <TrendStartFields
                     side="short"
                     prefix="shortIndicator"
@@ -2043,7 +2128,7 @@ export function DcaPlaybookForm({
         defaultCollapsed={hasOpenPosition}
       >
       <BotFormGroup title="Maximum Exposure" locked={cycleLocked}>
-          <div className={rowClass}>
+          <div className={fieldRowClass}>
             <label className={`min-w-0 ${labelClass}`}>
               Max orders
               <GroupedNumberInput
@@ -2124,7 +2209,7 @@ export function DcaPlaybookForm({
           ) : null}
         </BotFormGroup>
         <BotFormGroup title="Initial Order Size" locked={cycleLocked}>
-          <div className={rowClass}>
+          <div className={fieldRowClass}>
             {budgetSizesClip ? (
               <input type="hidden" name="sizeUnit" value="usdt" />
             ) : (
@@ -2187,8 +2272,8 @@ export function DcaPlaybookForm({
           hint="This method applies to every add after the first fill. The step next to Spacing is the first add; later adds use the same method."
           locked={cycleLocked}
         >
-          <div className={botRowClass5}>
-            <label className={`${labelClass} lg:col-span-2`}>
+          <div className={fieldRowClass5}>
+            <label className={`${labelClass} ${pairSpan}`}>
               <HintLabel text="Averaging" required />
               <AppSelect
                 name="averaging"
@@ -2269,11 +2354,17 @@ export function DcaPlaybookForm({
               </>
             ) : null}
             {averaging === "interval" ? (
-              <div className="col-span-2">
+              <div className={nameSpan}>
                 <p className={labelClass}>
                   <HintLabel text="Add every" required />
                 </p>
-                <div className="grid grid-cols-[minmax(8.5rem,1.4fr)_minmax(5rem,0.8fr)] gap-2">
+                <div
+                  className={
+                    embedded
+                      ? "grid min-w-0 grid-cols-1 gap-2 @min-[22rem]:grid-cols-2"
+                      : "grid grid-cols-[minmax(8.5rem,1.4fr)_minmax(5rem,0.8fr)] gap-2"
+                  }
+                >
                   <AppSelect
                     name="intervalUnit"
                     value={intervalUnit}
@@ -2323,7 +2414,13 @@ export function DcaPlaybookForm({
           hint="How size and distance grow after the first add. 1 keeps later adds the same as the first add."
           locked={cycleLocked}
         >
-          <div className="flex flex-wrap items-end gap-3">
+          <div
+            className={
+              embedded
+                ? "grid min-w-0 gap-3"
+                : "flex flex-wrap items-end gap-3"
+            }
+          >
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -2346,7 +2443,7 @@ export function DcaPlaybookForm({
                 Martingale
               </button>
             </div>
-            <label className={`${labelClass} min-w-40 flex-1`}>
+            <label className={`${labelClass}${embedded ? " w-full min-w-0" : " min-w-40 flex-1"}`}>
               <HintLabel
                 text="Order size multiplier"
                 hint="1 keeps every clip the same size. 1.5 means each later clip is 1.5× the last."
@@ -2364,7 +2461,7 @@ export function DcaPlaybookForm({
                 }`}
               />
             </label>
-            <label className={`${labelClass} min-w-40 flex-1`}>
+            <label className={`${labelClass}${embedded ? " w-full min-w-0" : " min-w-40 flex-1"}`}>
               <HintLabel
                 text="Price deviation multiplier"
                 hint="1 keeps every add the same distance. Above 1 widens each later step. Does not replace Initial Price Deviation or ATR spacing."
@@ -2403,7 +2500,7 @@ export function DcaPlaybookForm({
           }
         }}
       >
-          <div className={rowClass}>
+          <div className={fieldRowClass}>
           <label className={labelClass}>
             <HintLabel text="Basis" required />
             <AppSelect
@@ -2497,7 +2594,7 @@ export function DcaPlaybookForm({
         enabled={trailOn}
         onEnabled={setTrailOn}
       >
-        <div className={rowClass}>
+        <div className={fieldRowClass}>
           <BotField
             label="Trigger %"
             hint="Trail starts after price moves this %."
@@ -2532,7 +2629,7 @@ export function DcaPlaybookForm({
         enabled={slOn}
         onEnabled={setSlOn}
       >
-        <div className={rowClass}>
+        <div className={fieldRowClass}>
           <label className={labelClass}>
             <HintLabel text="Basis" required />
             <AppSelect
@@ -2569,7 +2666,7 @@ export function DcaPlaybookForm({
         enabled={breakevenOn}
         onEnabled={setBreakevenOn}
       >
-        <div className={rowClass}>
+        <div className={fieldRowClass}>
           <BotField label="Move stop to breakeven at %" required>
             <PercentInput
               name="breakevenActivationPct"
@@ -2610,7 +2707,7 @@ export function DcaPlaybookForm({
               named
               dense
               allowOff={false}
-              gridClass={botRowClass5}
+              gridClass={fieldRowClass5}
               fieldClass={fieldClass}
               labelClass={labelClass}
             />
@@ -2636,7 +2733,7 @@ export function DcaPlaybookForm({
               named
               dense
               allowOff={false}
-              gridClass={botRowClass5}
+              gridClass={fieldRowClass5}
               fieldClass={fieldClass}
               labelClass={labelClass}
             />
@@ -2667,7 +2764,7 @@ export function DcaPlaybookForm({
             named
             dense
             allowOff={false}
-            gridClass={botRowClass5}
+            gridClass={fieldRowClass5}
             fieldClass={fieldClass}
             labelClass={labelClass}
           />
@@ -2676,6 +2773,7 @@ export function DcaPlaybookForm({
       </BotFormStep>
 
       </BotFormCard>
+      {embedded ? null : (
       <BotFormSidebar
         status={
           <BotStatusField
@@ -2762,8 +2860,9 @@ export function DcaPlaybookForm({
           <BotFormSidebarSection>{removeControl}</BotFormSidebarSection>
         ) : null}
       </BotFormSidebar>
+      )}
       </BotFormColumns>
-      {running ? (
+      {embedded ? null : running ? (
         <div className="py-4">
           {ladderMaxError && !ladderOpen ? (
             <SizeGuardNote message={ladderMaxError} />
@@ -2779,7 +2878,7 @@ export function DcaPlaybookForm({
           </button>
         </div>
       ) : null}
-      {!running || ladderOpen ? (
+      {!embedded && (!running || ladderOpen) ? (
       <BotFormSummaryCard className="space-y-3">
         <h3 className={sectionTitleClass}>Summary</h3>
         {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
@@ -3120,6 +3219,7 @@ export function DcaPlaybookForm({
         </div>
       </BotFormSummaryCard>
       ) : null}
+      </BotColumnLayout>
     </StayOnPageForm>
     {dialog}
     </>

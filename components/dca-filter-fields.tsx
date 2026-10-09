@@ -1,6 +1,6 @@
 "use client";
 
-import { HintLabel } from "@/components/bot-form-chrome";
+import { HintLabel, useBotColumnLayout } from "@/components/bot-form-chrome";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   DCA_FILTER_KIND_OPTIONS,
@@ -133,6 +133,7 @@ function DcaFilterParamFields({
   bare?: boolean;
   whenClass?: string;
 }) {
+  const column = useBotColumnLayout();
   const whenOptions = dcaFilterWhenOptions(spec.kind, side);
   const whenValue = dcaFilterWhenValue(spec.compare);
   const showLevel = spec.kind === "rsi" && spec.compare !== "between";
@@ -196,7 +197,13 @@ function DcaFilterParamFields({
           ))}
         </AppSelect>
       </label>
-      <label className={`${labelClass} ${whenClass} min-w-[16rem]`}>
+      <label
+        className={
+          column
+            ? `${labelClass} col-span-full min-w-0`
+            : `${labelClass} ${whenClass} min-w-[16rem]`
+        }
+      >
         <HintLabel text="When" required />
         <AppSelect
           name={named ? `${prefix}Compare` : undefined}

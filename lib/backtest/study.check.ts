@@ -4,6 +4,7 @@ import { snapshotDcaRecipe } from "@/lib/templates/recipe";
 import {
   buildEquityTimeline,
   maxDrawdownFromEquity,
+  realizedPnlSeries,
   recipeParamRows,
 } from "./study";
 import type { BacktestRun } from "./model";
@@ -24,8 +25,8 @@ if (!parsed.ok) {
 const seed = snapshotDcaRecipe(parsed.config);
 const preview = recipeParamRows(seed);
 assert.equal(
-  preview.find((row) => row.label === "Start")?.value,
-  "Manual",
+  preview.find((row) => row.label === "Initial Order Trigger")?.value,
+  "Immediate",
 );
 assert.equal(
   preview.find((row) => row.label === "Direction")?.value,
@@ -33,11 +34,15 @@ assert.equal(
 );
 assert.equal(
   preview.find((row) => row.label === "Max value")?.value,
-  "—",
+  "No max value",
 );
 assert.equal(
-  preview.find((row) => row.label === "Initial Order Size")?.value,
-  "1 qty",
+  preview.find((row) => row.label === "Order size")?.value,
+  "1",
+);
+assert.equal(
+  preview.find((row) => row.label === "Size unit")?.value,
+  "Token qty",
 );
 
 const run: BacktestRun = {
@@ -100,12 +105,26 @@ const run: BacktestRun = {
   finishedAtMs: 4_000,
   parentRunId: null,
   comparableSymbols: [],
+  name: null,
 };
 const timeline = buildEquityTimeline(run);
 assert.equal(timeline[0]?.equityUsdt, 10_000);
 assert.equal(timeline[1]?.equityUsdt, 10_000);
 assert.equal(timeline[2]?.equityUsdt, 10_090);
 assert.ok((timeline.at(-1)?.equityUsdt ?? 0) >= 10_090);
+assert.equal(timeline[0]?.realizedUsdt, 0);
+assert.equal(timeline[1]?.realizedUsdt, 0);
+assert.equal(timeline[2]?.realizedUsdt, 90);
+const stepped = realizedPnlSeries([
+  { atMs: 1_000, realizedUsdt: 0 },
+  { atMs: 2_000_000, realizedUsdt: 0 },
+  { atMs: 5_000_000, realizedUsdt: 90 },
+]);
+assert.deepEqual(
+  stepped.map((point) => point.value),
+  [0, 0, 0, 90],
+);
+assert.equal(stepped.at(-1)!.time - stepped.at(-2)!.time, 1);
 
 const openRun: BacktestRun = {
   ...run,
@@ -141,6 +160,11 @@ const marked = buildEquityTimeline(openRun, [
 assert.equal(marked[1]?.equityUsdt, 10_000);
 assert.equal(marked[2]?.equityUsdt, 9_990);
 assert.equal(marked[3]?.equityUsdt, 9_980);
+assert.equal(marked[1]?.realizedUsdt, 0);
+assert.equal(marked[2]?.realizedUsdt, 0);
+assert.equal(marked[3]?.realizedUsdt, 0);
+assert.ok(marked.every((point) => point.realizedUsdt === 0));
+assert.ok(marked.some((point) => point.equityUsdt < openRun.startingUsdt));
 const markedDd = maxDrawdownFromEquity(marked);
 assert.equal(markedDd.maxDrawdownUsdt, 20);
 assert.equal(markedDd.maxDrawdownPct, 20 / 10_000);

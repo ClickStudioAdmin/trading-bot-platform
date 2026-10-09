@@ -4,6 +4,7 @@ import { isoDateUtc, type BacktestRecipe } from "@/lib/backtest/model";
 type VariantSnapshot = {
   id?: string;
   status?: string;
+  name?: string | null;
   recipe: BacktestRecipe;
   leverage: number;
   startingUsdt: number;
@@ -22,6 +23,11 @@ export function backtestVariantChanges(
   next: VariantSnapshot,
 ): string[] {
   const changes: string[] = [];
+  const beforeName = base.name?.trim() ?? "";
+  const nextName = next.name?.trim() ?? "";
+  if (beforeName && nextName && beforeName !== nextName) {
+    changes.push(`Name ${beforeName} → ${nextName}`);
+  }
   const before = new Map(
     recipeParamRows(base.recipe).map((row) => [row.label, row.value]),
   );
@@ -36,17 +42,17 @@ export function backtestVariantChanges(
   }
   if (base.startingUsdt !== next.startingUsdt) {
     changes.push(
-      `Initial balance ${money(base.startingUsdt)} → ${money(next.startingUsdt)}`,
+      `Initial account balance ${money(base.startingUsdt)} → ${money(next.startingUsdt)}`,
     );
   }
   if (base.fromMs !== next.fromMs) {
     changes.push(
-      `Window start ${isoDateUtc(base.fromMs)} → ${isoDateUtc(next.fromMs)}`,
+      `Start date ${isoDateUtc(base.fromMs)} → ${isoDateUtc(next.fromMs)}`,
     );
   }
   if (base.toMs !== next.toMs) {
     changes.push(
-      `Window end ${isoDateUtc(base.toMs)} → ${isoDateUtc(next.toMs)}`,
+      `End date ${isoDateUtc(base.toMs)} → ${isoDateUtc(next.toMs)}`,
     );
   }
   return changes;

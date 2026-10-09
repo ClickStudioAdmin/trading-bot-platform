@@ -12,11 +12,12 @@ import {
 } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
+import { useModalPortalHost } from "@/components/portal-host";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import {
   ApplyBacktestButton,
-  BacktestPropertyList,
+  BacktestParameterSections,
   BacktestStatsGrid,
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
@@ -35,11 +36,10 @@ import {
   nudgeBacktestRunAction,
   pollReplayFamilyAction,
 } from "@/lib/backtest/actions";
-import { recipeParamRows } from "@/lib/backtest/library";
+import { backtestListedSections } from "@/lib/backtest/param-sections";
 import {
   backtestQueueSeedFromRun,
   backtestRunTitle,
-  isoDateUtc,
   type BacktestRun,
 } from "@/lib/backtest/model";
 import {
@@ -50,7 +50,7 @@ import {
 } from "@/lib/backtest/variant-label";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
 
-const RAIL_KEY = "tbp-replay-rail";
+const RAIL_KEY = "tbp-replay-rail-v2";
 const RAIL_EVENT = "tbp-replay-rail";
 
 type OptimisticVariant = { token: string; runId: string | null };
@@ -130,7 +130,7 @@ function familyRows(family: BacktestRun[]): ReplayVariantRow[] {
   return family.map((row) => ({
     id: row.id,
     status: row.status,
-    name: row.recipe.name.trim() || "Backtest",
+    name: backtestRunTitle(row),
     error: row.error,
     createdAtMs: row.createdAtMs,
   }));
@@ -174,11 +174,11 @@ function railSnapshot(): ReplayRailPanel {
   ) {
     return raw;
   }
-  return "positions";
+  return "parameters";
 }
 
 function railServerSnapshot(): ReplayRailPanel {
-  return "positions";
+  return "parameters";
 }
 
 function subscribeRail(onStoreChange: () => void) {
@@ -211,17 +211,17 @@ export function ReplayRailNav({
   return (
     <nav aria-label="Replay panels" className={className}>
       <RailButton
-        label="Positions"
-        pressed={panel === "positions"}
-        onClick={() => selectReplayRail("positions", panel)}
-        icon={<IconPositions className="size-5" />}
-      />
-      <RailButton
         label="Parameters"
         pressed={panel === "parameters"}
         onClick={() => selectReplayRail("parameters", panel)}
         badge={runningCount}
         icon={<IconActivity className="size-5" />}
+      />
+      <RailButton
+        label="Positions"
+        pressed={panel === "positions"}
+        onClick={() => selectReplayRail("positions", panel)}
+        icon={<IconPositions className="size-5" />}
       />
       <RailButton
         label="Statistics"
@@ -257,7 +257,7 @@ export function ReplayRailBody({
   }
   if (panel === "statistics") {
     return (
-      <div className="h-full min-h-0 flex-1 overflow-auto">
+      <div className="h-full min-h-0 flex-1 overflow-auto pr-3">
         <h2 className="mb-3 text-lg font-semibold">Performance</h2>
         <BacktestStatsGrid run={run} />
       </div>
@@ -298,40 +298,32 @@ function ParametersBody({
     const next = backtestQueueSeedFromRun(run);
     return { ...next, comparables: [] as string[] };
   }, [run]);
-  const paramRows = [
-    ...recipeParamRows(run.recipe),
-    { label: "Leverage", value: `${run.leverage}×` },
-    {
-      label: "Initial balance",
-      value: `$${run.startingUsdt.toLocaleString()}`,
-    },
-    { label: "Window start", value: isoDateUtc(run.fromMs) },
-    { label: "Window end", value: isoDateUtc(run.toMs) },
-  ];
+  const paramSections = backtestListedSections(run.recipe, {
+    name: backtestRunTitle(run),
+    leverage: run.leverage,
+    startingUsdt: run.startingUsdt,
+    fromMs: run.fromMs,
+    toMs: run.toMs,
+  });
+
+  const showKeep = variant && run.status === "done";
 
   return (
-    <div className="h-full min-h-0 flex-1 space-y-4 overflow-auto p-4">
+    <div className="flex h-full min-h-0 flex-1 flex-col">
       {modifying ? (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">Modify</h2>
-            <button
-              type="button"
-              onClick={() => setModifying(false)}
-              className="text-sm text-ink-muted hover:text-ink"
-            >
-              Cancel
-            </button>
-          </div>
-          <p className="text-sm text-ink-muted">
-            This saves a new run linked to the original. Playback stays on
-            this replay until you select that variant.
-          </p>
+        <div className="min-h-0 flex-1 overflow-auto pr-3">
           <BacktestQueueForm
             templates={[]}
             seed={seed}
             loadedFromRun
             variantParentId={rootId}
+            onVariantCancel={() => setModifying(false)}
+            variantLeading={
+              <p className="text-sm text-ink-muted">
+                This saves a new run linked to the original. Playback stays on
+                this replay until you select that variant.
+              </p>
+            }
             onVariantPending={() => {
               if (pendingToken.current) {
                 clearOptimisticVariant(pendingToken.current);
@@ -355,50 +347,49 @@ function ParametersBody({
           />
         </div>
       ) : (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">Parameters</h2>
-            <button
-              type="button"
-              onClick={() => setModifying(true)}
-              className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent"
-            >
-              Modify
-            </button>
+        <>
+          <div className="min-h-0 flex-1 overflow-auto pr-3">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">Parameters</h2>
+              <button
+                type="button"
+                onClick={() => setModifying(true)}
+                className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent"
+              >
+                Modify
+              </button>
+            </div>
+            <BacktestParameterSections sections={paramSections} />
           </div>
-          <BacktestPropertyList rows={paramRows} />
-          {variant && run.status === "done" ? (
-            <div className="space-y-2 border-t border-line pt-3">
+          {showKeep ? (
+            <div className="shrink-0 border-t border-line bg-canvas py-3">
               <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
                 Keep
               </p>
-              <SaveBacktestAsTemplateButton
-                runId={run.id}
-                defaultName={backtestRunTitle(run)}
-                deskType={run.deskType}
-                folders={folders}
-                canSaveAs={allowKeep}
-                canSaveAsPlatform={false}
-              />
-              {allowKeepPlatform ? (
-                <SaveBacktestAsTemplateButton
-                  runId={run.id}
-                  defaultName={backtestRunTitle(run)}
-                  deskType={run.deskType}
-                  folders={folders}
-                  canSaveAs={false}
-                  canSaveAsPlatform
-                  variant="secondary"
-                />
-              ) : null}
-              <ApplyBacktestButton
-                runId={run.id}
-                defaultName={backtestRunTitle(run)}
-                desks={applyDesks}
-              />
+              <div className="mt-2 flex flex-wrap gap-2">
+                {allowKeep || allowKeepPlatform ? (
+                  <div className="w-[calc(50%-0.25rem)] min-w-0">
+                    <SaveBacktestAsTemplateButton
+                      runId={run.id}
+                      defaultName={backtestRunTitle(run)}
+                      deskType={run.deskType}
+                      folders={folders}
+                      canSaveAs={allowKeep}
+                      canSaveAsPlatform={allowKeepPlatform}
+                    />
+                  </div>
+                ) : null}
+                <div className="w-[calc(50%-0.25rem)] min-w-0">
+                  <ApplyBacktestButton
+                    runId={run.id}
+                    defaultName={backtestRunTitle(run)}
+                    desks={applyDesks}
+                  />
+                </div>
+              </div>
             </div>
           ) : null}
-        </div>
+        </>
       )}
     </div>
   );
@@ -441,7 +432,7 @@ function RailButton({
 }
 
 function variantName(row: BacktestRun): string {
-  return row.recipe.name.trim() || "Backtest";
+  return backtestRunTitle(row);
 }
 
 type FinishedNotice = {
@@ -464,6 +455,7 @@ export function ReplayVariantSelect({
   onPlayHere?: () => void;
 }) {
   const router = useRouter();
+  const portalHost = useModalPortalHost();
   const { confirm, dialog } = useConfirmDialog();
   const rows = useReplayVariantRows(rootId, family);
   const variants = rows
@@ -652,7 +644,7 @@ export function ReplayVariantSelect({
           ) : null}
           <IconChevronDown className="size-4 shrink-0 text-ink-muted" />
         </button>
-        {open && menuBox
+        {open && menuBox && portalHost
           ? createPortal(
           <ul
             ref={menuRef}
@@ -737,7 +729,7 @@ export function ReplayVariantSelect({
               <li className="px-3 py-2 text-xs text-danger">{deleteError}</li>
             ) : null}
           </ul>,
-          document.body,
+          portalHost,
         )
           : null}
       </div>

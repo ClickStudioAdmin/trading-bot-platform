@@ -58,6 +58,8 @@ Copy: Copy other Trader's Desks, Max Desk Copies, Desk Sharing - Public, Desk Sh
 
 Research: Backtesting Tool; Attach Results to Bot Template (Plus and Pro).
 
+Replay Studio: Replay Backtests, Add Additional Chart Indicators, and Strategy Optimization. Each is off until an admin enables it on the plan.
+
 Signals and extras: inbound TradingView / Signal webhooks; Save Templates; Share Templates (on for existing plans); Import / Export Templates (Plus and Pro). Advanced DCA stays off the public catalog for now.
 
 Affiliate: every login is an affiliate (not a plan tick). Referral code, earn multi-level, see downline stats. **Deduct Plan Payment from Earnings** stays a catalog tick. The member opt-in is a Crypto payment-method sub-setting on Billing (not Account Settings). Payable only — pending cannot move. Billing **transfers** the shortfall Affiliate → Main, then debits Main. That is still a paid subscription invoice: **upstream affiliates still earn** their L1–L5 on it. Not comp. The paying member does not earn on their own invoice.

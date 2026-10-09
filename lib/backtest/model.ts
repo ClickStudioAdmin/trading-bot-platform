@@ -12,9 +12,10 @@ import {
   finerDcaIndicatorTimeframe,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
-import type {
-  DcaTemplateRecipe,
-  PerpsTemplateRecipe,
+import {
+  recipesMatchReplayFields,
+  type DcaTemplateRecipe,
+  type PerpsTemplateRecipe,
 } from "@/lib/templates/recipe";
 
 export type BacktestRecipe = PerpsTemplateRecipe | DcaTemplateRecipe;
@@ -148,6 +149,8 @@ export type BacktestRun = {
   finishedAtMs: number | null;
   parentRunId: string | null;
   comparableSymbols: string[];
+  /** Run title. Null on rows saved before the backtest name existed. */
+  name: string | null;
 };
 
 export type EquityPoint = {
@@ -180,6 +183,33 @@ export function isoDateUtc(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
+export const BACKTEST_NAME_MAX = 80;
+
+/** Stored run title. Empty and missing values stay unset so older rows keep the recipe fallback. */
+export function readBacktestName(raw: unknown): string | null {
+  if (raw == null) {
+    return null;
+  }
+  const name = String(raw).trim().replace(/\s+/g, " ");
+  if (!name) {
+    return null;
+  }
+  return name.slice(0, BACKTEST_NAME_MAX);
+}
+
+export function parseBacktestName(
+  raw: unknown,
+): { ok: true; name: string } | { ok: false; error: string } {
+  const name = String(raw ?? "").trim().replace(/\s+/g, " ");
+  if (name.length < 1) {
+    return { ok: false, error: "Enter a backtest name." };
+  }
+  if (name.length > BACKTEST_NAME_MAX) {
+    return { ok: false, error: "Name must be 80 characters or fewer." };
+  }
+  return { ok: true, name };
+}
+
 export function comparableBacktestName(name: string, symbol: string): string {
   const base = name.trim() || "Backtest";
   const pair = symbol.trim();
@@ -193,14 +223,112 @@ export function comparableBacktestName(name: string, symbol: string): string {
 }
 
 export function backtestRunTitle(run: {
+  name?: string | null;
   recipe: { name: string };
   symbol: string;
   parentRunId: string | null;
 }): string {
+  const stored = readBacktestName(run.name);
+  if (stored) {
+    return stored;
+  }
   if (!run.parentRunId) {
     return run.recipe.name.trim() || "Backtest";
   }
   return comparableBacktestName(run.recipe.name, run.symbol);
+}
+
+function backtestSymbolKey(symbol: string): string {
+  return symbol.trim().toUpperCase();
+}
+
+export type BacktestVariantFieldSnapshot = {
+  name: string;
+  fromDate: string;
+  toDate: string;
+  startingBalance: string;
+  leverage: string;
+  venue: string;
+  venueEnvironment: string | null;
+  symbol: string;
+};
+
+/** True after a Modify field differs from the opened run. The first form publish is the baseline, not an edit. */
+export function backtestVariantEdited(input: {
+  origin: BacktestVariantFieldSnapshot;
+  current: BacktestVariantFieldSnapshot;
+  baselineRecipe: BacktestRecipe | null;
+  recipe: BacktestRecipe | null;
+}): boolean {
+  const { origin, current } = input;
+  if (
+    current.name.trim() !== origin.name.trim() ||
+    current.fromDate !== origin.fromDate ||
+    current.toDate !== origin.toDate ||
+    current.startingBalance !== origin.startingBalance ||
+    current.leverage !== origin.leverage ||
+    current.venue !== origin.venue ||
+    (current.venueEnvironment ?? "") !== (origin.venueEnvironment ?? "") ||
+    backtestSymbolKey(current.symbol) !== backtestSymbolKey(origin.symbol)
+  ) {
+    return true;
+  }
+  const baseline = input.baselineRecipe;
+  const recipe = input.recipe;
+  if (!baseline || !recipe) {
+    return false;
+  }
+  return (
+    baseline.name !== recipe.name || !recipesMatchReplayFields(baseline, recipe)
+  );
+}
+
+/** Same bot and market window on another contract. A parameter or window change is a variation. */
+export function isBacktestComparableChild(
+  primary: BacktestRun,
+  child: BacktestRun,
+): boolean {
+  if (!child.parentRunId || child.parentRunId !== primary.id) {
+    return false;
+  }
+  const pair = backtestSymbolKey(child.symbol);
+  if (!pair || pair === backtestSymbolKey(primary.symbol)) {
+    return false;
+  }
+  if (
+    child.fromMs !== primary.fromMs ||
+    child.toMs !== primary.toMs ||
+    child.startingUsdt !== primary.startingUsdt ||
+    child.leverage !== primary.leverage ||
+    child.venue !== primary.venue ||
+    child.interval !== primary.interval ||
+    child.feePreset !== primary.feePreset
+  ) {
+    return false;
+  }
+  return recipesMatchReplayFields(
+    { ...primary.recipe, symbol: "" },
+    { ...child.recipe, symbol: "" },
+  );
+}
+
+export function splitBacktestFamily(
+  primary: BacktestRun,
+  children: readonly BacktestRun[],
+): { comparables: BacktestRun[]; variations: BacktestRun[] } {
+  const comparables: BacktestRun[] = [];
+  const variations: BacktestRun[] = [];
+  for (const child of children) {
+    if (child.id === primary.id) {
+      continue;
+    }
+    if (isBacktestComparableChild(primary, child)) {
+      comparables.push(child);
+    } else {
+      variations.push(child);
+    }
+  }
+  return { comparables, variations };
 }
 
 export function backtestRerunHref(runId: string): string {
@@ -283,6 +411,7 @@ export function parseBacktestRunIds(raw: unknown): string[] {
 
 export function backtestQueueSeedFromRun(run: BacktestRun): {
   recipe: BacktestRecipe;
+  name: string;
   sourceTemplateId: string;
   fromDate: string;
   toDate: string;
@@ -296,6 +425,7 @@ export function backtestQueueSeedFromRun(run: BacktestRun): {
 } {
   return {
     recipe: run.recipe,
+    name: backtestRunTitle(run),
     sourceTemplateId: run.sourceTemplateId ?? "",
     fromDate: isoDateUtc(run.fromMs),
     toDate: isoDateUtc(run.toMs),

@@ -5,7 +5,7 @@ import {
   ApplyBacktestButton,
   AttachBacktestButton,
   BacktestRunRefresh,
-  BacktestPropertyList,
+  BacktestParameterSections,
   BacktestStatsGrid,
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
@@ -22,11 +22,12 @@ import {
   backtestRunWasLiquidated,
   backtestRunTitle,
   backtestWindowDays,
+  splitBacktestFamily,
   formatBacktestReturnPct,
   realizedReturnPct,
   type BacktestRun,
 } from "@/lib/backtest/model";
-import { recipeParamRows } from "@/lib/backtest/study";
+import { backtestListedSections } from "@/lib/backtest/param-sections";
 import {
   formatCount,
   formatPct,
@@ -158,25 +159,14 @@ function BacktestMatchCard({
             Results Attached
           </p>
         ) : null}
-        {canSaveAs ? (
+        {canSaveAs || canSaveAsPlatform ? (
           <SaveBacktestAsTemplateButton
             runId={runId}
             defaultName={defaultName}
             deskType={deskType}
             folders={folders}
-            canSaveAs
-            canSaveAsPlatform={false}
-          />
-        ) : null}
-        {canSaveAsPlatform ? (
-          <SaveBacktestAsTemplateButton
-            runId={runId}
-            defaultName={defaultName}
-            deskType={deskType}
-            folders={folders}
-            canSaveAs={false}
-            canSaveAsPlatform
-            variant="secondary"
+            canSaveAs={canSaveAs}
+            canSaveAsPlatform={canSaveAsPlatform}
           />
         ) : null}
       </MatchPanel>
@@ -248,7 +238,13 @@ export function BacktestRunDetail({
   comparables?: BacktestRun[];
   comparablePrimary?: BacktestRun | null;
 }) {
-  const params = recipeParamRows(run.recipe);
+  const params = backtestListedSections(run.recipe, {
+    name: backtestRunTitle(run),
+    leverage: run.leverage,
+    startingUsdt: run.startingUsdt,
+    fromMs: run.fromMs,
+    toMs: run.toMs,
+  });
   const complete = run.status === "done";
   const pendingMessage = incompleteRunMessage(run);
   const status = backtestStatusTone(run.status);
@@ -348,7 +344,7 @@ export function BacktestRunDetail({
               Load into new backtest
             </Link>
           </div>
-          <BacktestPropertyList rows={params} />
+          <BacktestParameterSections sections={params} />
         </section>
         <div className="space-y-6">
           <section>
@@ -367,7 +363,7 @@ export function BacktestRunDetail({
       ) : (
         <>
           <section>
-            <h2 className="mb-2 text-lg font-semibold">Account impact</h2>
+            <h2 className="mb-2 text-lg font-semibold">P&L (realized profit)</h2>
             <SectionPlaceholder message={pendingMessage} />
           </section>
           <section>
@@ -381,23 +377,76 @@ export function BacktestRunDetail({
         </>
       )}
 
-      {comparablePrimary && comparables.length > 0 ? (
-        <section>
-          <h2 className="mb-3 text-lg font-semibold">Comparables</h2>
+      {comparablePrimary ? (
+        <BacktestFamilyTables
+          primary={comparablePrimary}
+          related={comparables}
+          memberId={memberId}
+          isAdmin={isAdmin}
+          returnTo={`${listHref}/${run.id}`}
+          watchRunId={run.id}
+        />
+      ) : null}
+      </div>
+    </>
+  );
+}
+
+function BacktestFamilyTables({
+  primary,
+  related,
+  memberId,
+  isAdmin,
+  returnTo,
+  watchRunId,
+}: {
+  primary: BacktestRun;
+  related: BacktestRun[];
+  memberId: string;
+  isAdmin: boolean;
+  returnTo: string;
+  watchRunId: string;
+}) {
+  const family = splitBacktestFamily(primary, related);
+  return (
+    <>
+      {family.comparables.length > 0 ? (
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold">Comparables</h2>
+          <p className="mb-3 mt-1 text-sm text-ink-muted">
+            Same bot and window on other pairs.
+          </p>
           <BacktestRunsTable
-            runs={[
-              comparablePrimary,
-              ...comparables.filter((row) => row.id !== comparablePrimary.id),
-            ]}
+            runs={[primary, ...family.comparables]}
             memberId={memberId}
             isAdmin={isAdmin}
-            primaryRunId={comparablePrimary.id}
-            returnTo={`${listHref}/${run.id}`}
-            watchRunId={run.id}
+            primaryRunId={primary.id}
+            primaryBadge="Primary Pair"
+            returnTo={returnTo}
+            watchRunId={watchRunId}
           />
         </section>
       ) : null}
-      </div>
+      {family.variations.length > 0 ? (
+        <section>
+          <h2 className="text-lg font-semibold">Variations</h2>
+          <p className="mb-3 mt-1 text-sm text-ink-muted">
+            Changes to the bot, dates, balance, or leverage. Ranked against
+            the original run.
+          </p>
+          <BacktestRunsTable
+            runs={[primary, ...family.variations]}
+            memberId={memberId}
+            isAdmin={isAdmin}
+            primaryRunId={primary.id}
+            primaryBadge="Original"
+            childBadge="Variation"
+            titleMode="recipe"
+            returnTo={returnTo}
+            watchRunId={watchRunId}
+          />
+        </section>
+      ) : null}
     </>
   );
 }

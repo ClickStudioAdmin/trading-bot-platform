@@ -1,24 +1,13 @@
 import { deskPath } from "@/lib/accounts/model";
 import { backtestRunTitle, type BacktestRecipe } from "@/lib/backtest/model";
-import { dcaFilterLabel } from "@/lib/dca/filters";
-import { formatDcaIndicatorStartLabel } from "@/lib/dca/indicators";
-import { formatGroupedNumberInput } from "@/lib/paper/open";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import {
   parseTemplateRecipe,
   recipesMatchReplayFields,
   templateIsLibraryRow,
   TEMPLATE_RECIPE_VERSION,
-  type DcaTemplateRecipe,
   type TemplateVisibility,
 } from "@/lib/templates/recipe";
-
-function formatParamNumber(value: number | string | null | undefined): string {
-  if (value == null || value === "") {
-    return "";
-  }
-  return formatGroupedNumberInput(String(value), true);
-}
 
 export type BacktestLibraryItem = {
   id: string;
@@ -41,7 +30,7 @@ export type BacktestDeskBot = {
 
 export function toBacktestLibraryItem(row: {
   id: string;
-  name?: string;
+  name?: string | null;
   recipe: { kind: string; name?: string };
   visibility?: string;
   symbol?: string;
@@ -94,6 +83,7 @@ export type SavedBacktestMatch = {
 
 export function toSavedBacktestMatch(run: {
   id: string;
+  name?: string | null;
   status: string;
   recipe: BacktestRecipe;
   symbol: string;
@@ -456,216 +446,4 @@ export function decideBacktestTemplateActions(input: {
   };
 }
 
-function compareMark(compare: string): string {
-  if (compare === "lte" || compare === "cross_lte") {
-    return "≤";
-  }
-  if (compare === "gte" || compare === "cross_gte") {
-    return "≥";
-  }
-  return compare;
-}
-
-function dcaIndicatorSideLabel(input: {
-  kind: DcaTemplateRecipe["indicatorKind"];
-  compare: DcaTemplateRecipe["indicatorCompare"];
-  level: number | null | undefined;
-  period?: number | null;
-  slowPeriod?: number | null;
-  multiplier?: number | null;
-  timeframe: DcaTemplateRecipe["indicatorTimeframe"];
-  side: "long" | "short";
-}): string {
-  return formatDcaIndicatorStartLabel({
-    kind: input.kind,
-    compare: input.compare,
-    level: input.level,
-    period: input.period,
-    slowPeriod: input.slowPeriod,
-    multiplier: input.multiplier,
-    timeframe: input.timeframe,
-    side: input.side,
-  });
-}
-
-function dcaStartLabel(recipe: DcaTemplateRecipe): string {
-  if (recipe.startKind === "immediate") {
-    return "Manual";
-  }
-  if (recipe.startKind === "webhook") {
-    return "Signal";
-  }
-  if (recipe.startKind === "price" && recipe.armTrigger) {
-    const long = `Price ${compareMark(recipe.armTrigger.compare)} ${recipe.armTrigger.price}`;
-    if (recipe.direction === "both" && recipe.shortArmTrigger) {
-      return `${long} / Price ${compareMark(recipe.shortArmTrigger.compare)} ${recipe.shortArmTrigger.price}`;
-    }
-    return long;
-  }
-  if (recipe.startKind === "indicator" || recipe.startKind === "trend") {
-    const long = dcaIndicatorSideLabel({
-      kind: recipe.indicatorKind,
-      compare: recipe.indicatorCompare,
-      level: recipe.indicatorLevel,
-      period: recipe.indicatorPeriod,
-      slowPeriod: recipe.indicatorSlowPeriod,
-      multiplier: recipe.indicatorMultiplier,
-      timeframe: recipe.indicatorTimeframe,
-      side: recipe.direction === "short" ? "short" : "long",
-    });
-    if (recipe.direction === "both" && recipe.shortIndicatorKind) {
-      return `${long} / ${dcaIndicatorSideLabel({
-        kind: recipe.shortIndicatorKind,
-        compare: recipe.shortIndicatorCompare ?? null,
-        level: recipe.shortIndicatorLevel,
-        period: recipe.shortIndicatorPeriod ?? recipe.indicatorPeriod,
-        slowPeriod:
-          recipe.shortIndicatorSlowPeriod ?? recipe.indicatorSlowPeriod,
-        multiplier:
-          recipe.shortIndicatorMultiplier ?? recipe.indicatorMultiplier,
-        timeframe: recipe.shortIndicatorTimeframe ?? null,
-        side: "short",
-      })}`;
-    }
-    return long;
-  }
-  return recipe.startKind;
-}
-
-export function recipeParamRows(
-  recipe: BacktestRecipe,
-): Array<{ label: string; value: string }> {
-  if (recipe.kind === "dca") {
-    return [
-      { label: "Type", value: "DCA" },
-      { label: "Name", value: recipe.name },
-      { label: "Contract", value: recipe.symbol },
-      {
-        label: "Direction",
-        value:
-          recipe.direction === "both"
-            ? "Both"
-            : recipe.direction === "short"
-              ? "Short"
-              : "Long",
-      },
-      { label: "Start", value: dcaStartLabel(recipe) },
-      {
-        label: "Confirm",
-        value:
-          recipe.direction === "both" && recipe.shortConfirm
-            ? `${dcaFilterLabel(recipe.confirm)} / ${dcaFilterLabel(recipe.shortConfirm)}`
-            : dcaFilterLabel(recipe.confirm),
-      },
-      {
-        label: "Initial Order Size",
-        value: `${formatParamNumber(recipe.clipSize)} ${recipe.sizeUnit}`,
-      },
-      {
-        label: "Size multiplier",
-        value: formatParamNumber(recipe.sizeMultiplier),
-      },
-      {
-        label: "Averaging",
-        value:
-          recipe.spacingKind === "atr" && recipe.atrSpacingMult != null
-            ? `${formatParamNumber(recipe.atrSpacingMult)} ATR${
-                recipe.atrPeriod != null ? ` ${recipe.atrPeriod}` : ""
-              }`
-            : recipe.dipPct != null
-              ? `${formatParamNumber(recipe.dipPct)}% dip`
-              : recipe.intervalMinutes != null
-                ? `${recipe.intervalMinutes}m`
-                : recipe.dcaMode,
-      },
-      {
-        label: "Max clips",
-        value: recipe.maxClips == null ? "—" : String(recipe.maxClips),
-      },
-      {
-        label: "Max value",
-        value:
-          recipe.maxValue == null
-            ? "—"
-            : recipe.maxValueKind === "percent"
-              ? `${formatParamNumber(recipe.maxValue)}% of account`
-              : recipe.maxValueKind === "margin"
-                ? `${formatParamNumber(recipe.maxValue)}% of available margin`
-                : `${formatParamNumber(recipe.maxValue)} USDT`,
-      },
-      {
-        label: "Take profit",
-        value:
-          recipe.takeProfitKind === "atr" && recipe.takeProfitAtrMult != null
-            ? `${formatParamNumber(recipe.takeProfitAtrMult)} ATR`
-            : recipe.takeProfitPct == null
-              ? "Off"
-              : `${formatParamNumber(recipe.takeProfitPct)}%`,
-      },
-      {
-        label: "Stop",
-        value: recipe.stopLossPct == null ? "Off" : `${recipe.stopLossPct}%`,
-      },
-      {
-        label: "Exit-if",
-        value:
-          recipe.direction === "both" && recipe.shortExitIf
-            ? `${dcaFilterLabel(recipe.exitIf)} / ${dcaFilterLabel(recipe.shortExitIf)}`
-            : dcaFilterLabel(recipe.exitIf),
-      },
-      {
-        label: "Trailing",
-        value: recipe.trailingPct == null ? "Off" : `${recipe.trailingPct}%`,
-      },
-    ];
-  }
-  return [
-    { label: "Type", value: "Perps" },
-    { label: "Name", value: recipe.name },
-    { label: "Contract", value: recipe.symbol },
-    {
-      label: "Action",
-      value:
-        recipe.formAction === "sell"
-          ? "Sell"
-          : recipe.formAction === "close_long"
-            ? "Close long"
-            : recipe.formAction === "close_short"
-              ? "Close short"
-              : "Buy",
-    },
-    {
-      label: "Size",
-      value: `${formatParamNumber(recipe.size)} ${recipe.sizeUnit}`,
-    },
-    {
-      label: "When",
-      value: `${compareMark(recipe.triggerCompare)} ${formatParamNumber(recipe.triggerPrice)}`,
-    },
-    {
-      label: "Take profit",
-      value:
-        recipe.tpsl?.takeProfit == null
-          ? "Off"
-          : recipe.tpsl.tpKind === "percent"
-            ? `${recipe.tpsl.takeProfit}%`
-            : String(recipe.tpsl.takeProfit),
-    },
-    {
-      label: "Stop",
-      value:
-        recipe.tpsl?.stopLoss == null
-          ? "Off"
-          : recipe.tpsl.slKind === "percent"
-            ? `${recipe.tpsl.stopLoss}%`
-            : String(recipe.tpsl.stopLoss),
-    },
-    {
-      label: "Trailing",
-      value:
-        recipe.trailing?.distance == null
-          ? "Off"
-          : String(recipe.trailing.distance),
-    },
-  ];
-}
+export { recipeParamRows } from "@/lib/backtest/param-sections";

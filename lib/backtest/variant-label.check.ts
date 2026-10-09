@@ -44,9 +44,16 @@ const next = {
 
 assert.equal(
   backtestVariantChangeLabel(base, next),
-  "Stop 5% → 4% · Leverage 10× → 5×",
+  "Stop loss % 5% → 4% · Leverage 10× → 5×",
 );
 assert.equal(backtestVariantChangeLabel(base, base), "Same parameters");
+assert.equal(
+  backtestVariantChangeLabel(
+    { ...base, name: "October ETH" },
+    { ...next, name: "October ETH short" },
+  ),
+  "Name October ETH → October ETH short · Stop loss % 5% → 4% · Leverage 10× → 5×",
+);
 assert.equal(
   backtestVariantsStillRunning(
     [
