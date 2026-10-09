@@ -50,6 +50,16 @@ function statusLabel(status: string): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+function backtestListTitle(
+  row: BacktestRun,
+  mode: "family" | "recipe",
+): string {
+  if (mode === "recipe") {
+    return row.recipe.name.trim() || "Backtest";
+  }
+  return backtestRunTitle(row);
+}
+
 const STATUS_FILTERS: Array<BacktestStatus | "all"> = [
   "all",
   "queued",
@@ -149,6 +159,9 @@ export function BacktestRunsTable({
   memberId,
   isAdmin,
   primaryRunId,
+  primaryBadge = "Primary Pair",
+  childBadge,
+  titleMode = "family",
   returnTo = "/account/backtests",
   watchRunId,
   empty = "No runs yet.",
@@ -157,6 +170,9 @@ export function BacktestRunsTable({
   memberId: string;
   isAdmin: boolean;
   primaryRunId?: string;
+  primaryBadge?: string;
+  childBadge?: string;
+  titleMode?: "family" | "recipe";
   returnTo?: string;
   watchRunId?: string;
   empty?: ReactNode;
@@ -179,7 +195,7 @@ export function BacktestRunsTable({
         return true;
       }
       const hay = [
-        backtestRunTitle(row),
+        backtestListTitle(row, titleMode),
         row.symbol,
         row.deskType === "dca" ? "dca" : "perps",
         row.status,
@@ -188,11 +204,19 @@ export function BacktestRunsTable({
         .toLowerCase();
       return hay.includes(needle);
     });
-  }, [query, runs, status]);
+  }, [query, runs, status, titleMode]);
   const compare = useCallback(
-    (left: BacktestRun, right: BacktestRun, key: string, dir: TableSortDir) =>
-      compareBacktestRun(left, right, key, dir),
-    [],
+    (left: BacktestRun, right: BacktestRun, key: string, dir: TableSortDir) => {
+      if (key === "name") {
+        return compareTableText(
+          backtestListTitle(left, titleMode),
+          backtestListTitle(right, titleMode),
+          dir,
+        );
+      }
+      return compareBacktestRun(left, right, key, dir);
+    },
+    [titleMode],
   );
   const table = useClientTable(filtered, compare, { defaultKey: "name" });
   const removableIds = table.pageRows
@@ -456,6 +480,9 @@ export function BacktestRunsTable({
                   memberId={memberId}
                   isAdmin={isAdmin}
                   isPrimary={row.id === primaryRunId}
+                  primaryBadge={primaryBadge}
+                  childBadge={childBadge}
+                  titleMode={titleMode}
                   returnTo={returnTo}
                   selected={selected.has(row.id)}
                   onToggle={() => toggleRow(row.id)}
@@ -474,6 +501,9 @@ function BacktestRunRow({
   memberId,
   isAdmin,
   isPrimary,
+  primaryBadge,
+  childBadge,
+  titleMode,
   returnTo,
   selected,
   onToggle,
@@ -482,12 +512,15 @@ function BacktestRunRow({
   memberId: string;
   isAdmin: boolean;
   isPrimary: boolean;
+  primaryBadge: string;
+  childBadge?: string;
+  titleMode: "family" | "recipe";
   returnTo: string;
   selected: boolean;
   onToggle: () => void;
 }) {
   const href = `/account/backtests/${row.id}`;
-  const title = backtestRunTitle(row);
+  const title = backtestListTitle(row, titleMode);
   const days = backtestWindowDays(row.fromMs, row.toMs);
   const canRemove = canDeleteBacktestRun(row, memberId, isAdmin);
   const winRate =
@@ -524,7 +557,11 @@ function BacktestRunRow({
           </Link>
           {isPrimary ? (
             <span className="rounded-control bg-accent/15 px-1.5 py-0.5 text-[11px] font-medium text-accent">
-              Primary Pair
+              {primaryBadge}
+            </span>
+          ) : childBadge ? (
+            <span className="rounded-control bg-surface-raised px-1.5 py-0.5 text-[11px] font-medium text-ink-muted">
+              {childBadge}
             </span>
           ) : null}
           {backtestRunWasLiquidated(row.orders) ? (

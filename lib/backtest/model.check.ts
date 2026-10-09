@@ -31,6 +31,8 @@ import {
   backtestRoePct,
   backtestRunTitle,
   comparableBacktestName,
+  isBacktestComparableChild,
+  splitBacktestFamily,
   completedBacktestNotionalUsdt,
   backtestRerunHref,
   backtestSavedListHref,
@@ -614,6 +616,57 @@ assert.equal(
     parentRunId: null,
   }),
   "DCA Test - SOL",
+);
+
+const familyRecipe = {
+  kind: "dca",
+  name: "My Winning Strategy",
+  symbol: "ETHUSDT",
+} as import("./model").BacktestRecipe;
+const familyPrimary = {
+  id: "primary",
+  parentRunId: null,
+  symbol: "ETHUSDT",
+  recipe: familyRecipe,
+  comparableSymbols: ["SOLUSDT"],
+  fromMs: Date.UTC(2021, 0, 1),
+  toMs: Date.UTC(2026, 0, 1),
+  startingUsdt: 1000,
+  leverage: 5,
+  venue: "bybit",
+  interval: "15",
+  feePreset: "vip0_taker",
+} as unknown as import("./model").BacktestRun;
+const familyComparable = {
+  ...familyPrimary,
+  id: "comp-sol",
+  parentRunId: "primary",
+  symbol: "SOLUSDT",
+  recipe: { ...familyRecipe, symbol: "SOLUSDT", name: "My Winning Strategy · SOLUSDT" },
+  comparableSymbols: [],
+} as import("./model").BacktestRun;
+const familyVariation = {
+  ...familyPrimary,
+  id: "var-123",
+  parentRunId: "primary",
+  recipe: { ...familyRecipe, name: "My Winning Strategy 123" },
+  leverage: 4,
+  comparableSymbols: [],
+} as import("./model").BacktestRun;
+assert.equal(isBacktestComparableChild(familyPrimary, familyComparable), true);
+assert.equal(isBacktestComparableChild(familyPrimary, familyVariation), false);
+const family = splitBacktestFamily(familyPrimary, [
+  familyComparable,
+  familyVariation,
+  familyPrimary,
+]);
+assert.deepEqual(
+  family.comparables.map((row) => row.id),
+  ["comp-sol"],
+);
+assert.deepEqual(
+  family.variations.map((row) => row.id),
+  ["var-123"],
 );
 
 console.log("backtest model checks passed");

@@ -12,9 +12,10 @@ import {
   finerDcaIndicatorTimeframe,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
-import type {
-  DcaTemplateRecipe,
-  PerpsTemplateRecipe,
+import {
+  recipesMatchReplayFields,
+  type DcaTemplateRecipe,
+  type PerpsTemplateRecipe,
 } from "@/lib/templates/recipe";
 
 export type BacktestRecipe = PerpsTemplateRecipe | DcaTemplateRecipe;
@@ -201,6 +202,58 @@ export function backtestRunTitle(run: {
     return run.recipe.name.trim() || "Backtest";
   }
   return comparableBacktestName(run.recipe.name, run.symbol);
+}
+
+function backtestSymbolKey(symbol: string): string {
+  return symbol.trim().toUpperCase();
+}
+
+/** Same bot and market window on another contract. A parameter or window change is a variation. */
+export function isBacktestComparableChild(
+  primary: BacktestRun,
+  child: BacktestRun,
+): boolean {
+  if (!child.parentRunId || child.parentRunId !== primary.id) {
+    return false;
+  }
+  const pair = backtestSymbolKey(child.symbol);
+  if (!pair || pair === backtestSymbolKey(primary.symbol)) {
+    return false;
+  }
+  if (
+    child.fromMs !== primary.fromMs ||
+    child.toMs !== primary.toMs ||
+    child.startingUsdt !== primary.startingUsdt ||
+    child.leverage !== primary.leverage ||
+    child.venue !== primary.venue ||
+    child.interval !== primary.interval ||
+    child.feePreset !== primary.feePreset
+  ) {
+    return false;
+  }
+  return recipesMatchReplayFields(
+    { ...primary.recipe, symbol: "" },
+    { ...child.recipe, symbol: "" },
+  );
+}
+
+export function splitBacktestFamily(
+  primary: BacktestRun,
+  children: readonly BacktestRun[],
+): { comparables: BacktestRun[]; variations: BacktestRun[] } {
+  const comparables: BacktestRun[] = [];
+  const variations: BacktestRun[] = [];
+  for (const child of children) {
+    if (child.id === primary.id) {
+      continue;
+    }
+    if (isBacktestComparableChild(primary, child)) {
+      comparables.push(child);
+    } else {
+      variations.push(child);
+    }
+  }
+  return { comparables, variations };
 }
 
 export function backtestRerunHref(runId: string): string {

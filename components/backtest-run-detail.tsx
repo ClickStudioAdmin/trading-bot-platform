@@ -22,6 +22,7 @@ import {
   backtestRunWasLiquidated,
   backtestRunTitle,
   backtestWindowDays,
+  splitBacktestFamily,
   formatBacktestReturnPct,
   realizedReturnPct,
   type BacktestRun,
@@ -386,23 +387,76 @@ export function BacktestRunDetail({
         </>
       )}
 
-      {comparablePrimary && comparables.length > 0 ? (
-        <section>
-          <h2 className="mb-3 text-lg font-semibold">Comparables</h2>
+      {comparablePrimary ? (
+        <BacktestFamilyTables
+          primary={comparablePrimary}
+          related={comparables}
+          memberId={memberId}
+          isAdmin={isAdmin}
+          returnTo={`${listHref}/${run.id}`}
+          watchRunId={run.id}
+        />
+      ) : null}
+      </div>
+    </>
+  );
+}
+
+function BacktestFamilyTables({
+  primary,
+  related,
+  memberId,
+  isAdmin,
+  returnTo,
+  watchRunId,
+}: {
+  primary: BacktestRun;
+  related: BacktestRun[];
+  memberId: string;
+  isAdmin: boolean;
+  returnTo: string;
+  watchRunId: string;
+}) {
+  const family = splitBacktestFamily(primary, related);
+  return (
+    <>
+      {family.comparables.length > 0 ? (
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold">Comparables</h2>
+          <p className="mb-3 mt-1 text-sm text-ink-muted">
+            Same bot and window on other pairs.
+          </p>
           <BacktestRunsTable
-            runs={[
-              comparablePrimary,
-              ...comparables.filter((row) => row.id !== comparablePrimary.id),
-            ]}
+            runs={[primary, ...family.comparables]}
             memberId={memberId}
             isAdmin={isAdmin}
-            primaryRunId={comparablePrimary.id}
-            returnTo={`${listHref}/${run.id}`}
-            watchRunId={run.id}
+            primaryRunId={primary.id}
+            primaryBadge="Primary Pair"
+            returnTo={returnTo}
+            watchRunId={watchRunId}
           />
         </section>
       ) : null}
-      </div>
+      {family.variations.length > 0 ? (
+        <section>
+          <h2 className="text-lg font-semibold">Variations</h2>
+          <p className="mb-3 mt-1 text-sm text-ink-muted">
+            Changes to the bot, dates, balance, or leverage. Ranked against
+            the original run.
+          </p>
+          <BacktestRunsTable
+            runs={[primary, ...family.variations]}
+            memberId={memberId}
+            isAdmin={isAdmin}
+            primaryRunId={primary.id}
+            primaryBadge="Original"
+            childBadge="Variation"
+            titleMode="recipe"
+            returnTo={returnTo}
+            watchRunId={watchRunId}
+          />
+        </section>
+      ) : null}
     </>
   );
 }
