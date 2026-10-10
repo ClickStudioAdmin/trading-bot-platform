@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import {
+  AUTOMATED_DESK_TYPES,
+  MANUAL_DESK_TYPES,
+} from "@/lib/accounts/model";
 import { judgeBybitApiKey } from "@/lib/exchanges/bybit/permissions";
 import {
   allocateSetupName,
@@ -11,6 +15,7 @@ import {
   emptySetupDraft,
   foldersForDesk,
   makeSetupDesk,
+  ONBOARDING_DESK_TYPES,
   onboardingFolders,
   parseSetupDraft,
   activeSetupScreen,
@@ -220,6 +225,14 @@ const paperSet = applyDeskSetupChoice({
   takenNames: [],
 });
 assert.equal(paperSet.length, 5);
+assert.deepEqual(ONBOARDING_DESK_TYPES, [
+  ...AUTOMATED_DESK_TYPES,
+  ...MANUAL_DESK_TYPES,
+]);
+assert.deepEqual(
+  paperSet.map((desk) => desk.deskType),
+  [...ONBOARDING_DESK_TYPES],
+);
 assert.equal(paperSet.every((desk) => desk.mode === "paper"), true);
 assert.equal(applyDeskSetupChoice({
   choice: "none",

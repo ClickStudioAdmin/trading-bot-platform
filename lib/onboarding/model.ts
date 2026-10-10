@@ -1,6 +1,8 @@
 import {
+  AUTOMATED_DESK_TYPES,
   deskNameTaken,
   formatDeskType,
+  MANUAL_DESK_TYPES,
   parseDeskTypeChoice,
   pathWithDesk,
   validateNewDeskName,
@@ -20,12 +22,10 @@ import {
 
 export const SETUP_PATH = "/account/setup";
 
+/** Same order as the account sidebar: automated desks, then manual Perps. */
 export const ONBOARDING_DESK_TYPES: DeskType[] = [
-  "cash_and_carry",
-  "perps",
-  "perps_bots",
-  "signal_follower",
-  "dca",
+  ...AUTOMATED_DESK_TYPES,
+  ...MANUAL_DESK_TYPES,
 ];
 
 export type OnboardingStatus = "pending" | "finishing" | "skipped" | "completed";

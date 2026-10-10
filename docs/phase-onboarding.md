@@ -54,15 +54,15 @@ Choosing again with Back replaces the draft selection. Nothing is inserted until
 
 Question on the table, when they choose to select manually: “Create a few desks now?”
 
-Table, one row per type that exists today:
+Table, one row per type that exists today, in the same order as the account sidebar (automated desks, then the manual Perps desk):
 
 | Desk | Paper | Connected |
 | --- | --- | --- |
-| Cash and Carry | tick | tick |
-| Perps | tick | tick |
 | Perps bots | tick | tick |
-| TradingView Strategy | tick | tick |
 | DCA | tick | tick |
+| Cash and Carry | tick | tick |
+| TradingView Strategy | tick | tick |
+| Perps | tick | tick |
 
 Short line under the type uses the existing choice copy (ticket vs bots vs alerts vs app-owned orders vs spot + dated future).
 
