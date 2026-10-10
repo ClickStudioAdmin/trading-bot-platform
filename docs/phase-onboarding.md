@@ -209,7 +209,7 @@ Each ticked cell and each Finish create goes through the same entitlement check 
 
 ## UI
 
-- The modal uses `bg-surface` `border-line` and the account width (`max-w-7xl`). Desks, Bots, and Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. Sub-steps share the row under it. The step content scrolls inside the dialog. Back and Continue stay visible at the bottom. Cards inside the steps use the same surface.
+- The modal uses `bg-surface` `border-line` and two thirds of the account width (`max-w-7xl` is 80rem). Desks, Bots, and Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. Sub-steps share the row under it. The step content scrolls inside the dialog. Back and Continue stay visible at the bottom. Cards inside the steps use the same surface.
 - Desk and bot choices are full-width sections. The selected section uses the accent border. The desk table still uses checkboxes and the Theme table pattern. No new colours. Paper / Demo / Live dots may use the existing `mode-paper`, `mode-demo`, and `mode-live` tokens.
 - The modal is the only setup entry. It closes when the tour step is finished. **Take the tour** on Overview remains until the tour is completed or skipped. **Platform Tour** in the account sidenav stays available.
 - The tour card uses `bg-surface` with a `bg-plan-header` bar. The bar reads Tour and the step count. The heading is the instruction. The primary button is **Next**. No new colours.
