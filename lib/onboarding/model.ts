@@ -106,7 +106,11 @@ export type SetupConnection = {
 
 export type TourStep = {
   id: string;
+  /** Place name on the spotlighted control and on the Next button. */
   title: string;
+  /** Instruction shown as the card heading. */
+  headline: string;
+  /** Extra detail under the heading. Empty when the headline is enough. */
   body: string;
   href: string;
   target: string;
@@ -1050,21 +1054,24 @@ export function buildTourSteps(desks: readonly TourDesk[]): TourStep[] {
     {
       id: "overview",
       title: "Overview",
-      body: "Overview in the account menu. This is the home after sign-in.",
+      headline: "This is your home.",
+      body: "",
       href: "/account",
       target: "overview",
     },
     {
       id: "manage-desks",
       title: "Manage desks",
-      body: "Desks are created here. Type and mode stay as they were set.",
+      headline: "Desks are created here.",
+      body: "Type and mode stay as they were set.",
       href: ACCOUNT_DESKS_HREF,
       target: "manage-desks",
     },
     {
       id: "exchanges",
       title: "Exchanges",
-      body: "Keys are trade-only. One key binds one desk. Demo and Live are the key’s environment.",
+      headline: "Keys are trade-only.",
+      body: "One key binds one desk. Demo and Live are the key’s environment.",
       href: ACCOUNT_EXCHANGES_HREF,
       target: "exchanges",
     },
@@ -1073,7 +1080,8 @@ export function buildTourSteps(desks: readonly TourDesk[]): TourStep[] {
     steps.push({
       id: "desk-list",
       title: "Your desks",
-      body: "Open a desk from this list. Paper, Demo, and Live are marked here.",
+      headline: "Open a desk from this list.",
+      body: "Paper, Demo, and Live are marked here.",
       href: "/account",
       target: "desk-list",
     });
@@ -1086,7 +1094,8 @@ export function buildTourSteps(desks: readonly TourDesk[]): TourStep[] {
     steps.push({
       id: "bots",
       title: "Bots",
-      body: "Bots loaded in setup are idle or disabled. Arm or Enable is a separate action. The app places orders only after that.",
+      headline: "Bots loaded in setup are idle or disabled.",
+      body: "Arm or Enable is a separate action. The app places orders only after that.",
       href: pathWithDesk(home, bot.id),
       target: "bots",
     });
@@ -1094,7 +1103,8 @@ export function buildTourSteps(desks: readonly TourDesk[]): TourStep[] {
     steps.push({
       id: "webhooks",
       title: "Webhooks",
-      body: "Alerts arrive here. Setup does not turn them on.",
+      headline: "Alerts arrive here.",
+      body: "Setup does not turn them on.",
       href: pathWithDesk("/strategies/futures/webhooks", signal.id),
       target: "webhooks",
     });
@@ -1112,14 +1122,16 @@ export function buildTourSteps(desks: readonly TourDesk[]): TourStep[] {
       {
         id: "positions",
         title: "Positions",
-        body: "Open positions for this desk.",
+        headline: "Open positions for this desk.",
+        body: "",
         href: pathWithDesk(positions, any.id),
         target: "positions",
       },
       {
         id: "desk-settings",
         title: "Desk settings",
-        body: "Bind a key if this desk is still unbound, and set desk limits.",
+        headline: "Bind a key and set desk limits.",
+        body: "Do this if the desk is still unbound.",
         href: pathWithDesk(settings, any.id),
         target: "desk-settings",
       },
@@ -1128,7 +1140,8 @@ export function buildTourSteps(desks: readonly TourDesk[]): TourStep[] {
   steps.push({
     id: "templates",
     title: "Bot templates",
-    body: "This is your library. Starter bots in setup came only from platform folders an admin marked Include in Starter Pack.",
+    headline: "This is your library.",
+    body: "Starter bots in setup came only from platform folders an admin marked Include in Starter Pack.",
     href: "/account/templates",
     target: "templates",
   });
