@@ -53,7 +53,7 @@ export default async function ManageSubAccountsPage({
 
   return (
     <div>
-      <PageHeading title="Manage Desks" />
+      <PageHeading title="Manage Desks" tour="manage-desks" />
       <nav
         aria-label="Manage Desks"
         className="mt-5 flex flex-wrap border-b border-line"
@@ -61,7 +61,11 @@ export default async function ManageSubAccountsPage({
         <TabLink href={ACCOUNT_DESKS_HREF} selected={tab === "desks"}>
           Desks
         </TabLink>
-        <TabLink href={ACCOUNT_EXCHANGES_HREF} selected={tab === "exchanges"}>
+        <TabLink
+          href={ACCOUNT_EXCHANGES_HREF}
+          selected={tab === "exchanges"}
+          tour="exchanges"
+        >
           Exchanges
         </TabLink>
       </nav>
@@ -153,14 +157,17 @@ function TabLink({
   href,
   selected,
   children,
+  tour,
 }: {
   href: string;
   selected: boolean;
   children: string;
+  tour?: string;
 }) {
   return (
     <Link
       href={href}
+      data-tour={tour}
       className={`-mb-px border-b-2 px-3 py-2 text-sm ${
         selected
           ? "border-accent text-ink"

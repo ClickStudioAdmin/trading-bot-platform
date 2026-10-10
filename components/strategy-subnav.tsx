@@ -7,6 +7,7 @@ import { AccountSnapshotHover } from "@/components/account-snapshot";
 import { CopyPaperEquityHover } from "@/components/copy-paper-equity";
 import type { CopyPaperEquityView } from "@/lib/copy/decide";
 import type { AccountSnapshotView } from "@/lib/exchanges/account-view";
+import { tourTargetForPath } from "@/lib/onboarding/model";
 import {
   CASH_AND_CARRY_PRIMARY_LINKS,
   CASH_AND_CARRY_SECONDARY_LINKS,
@@ -265,6 +266,7 @@ function SubnavLink({
     <Link
       href={link.href}
       prefetch={false}
+      data-tour={tourTargetForPath(link.href) ?? undefined}
       className={`-mb-px border-b-2 px-3 py-2 text-sm whitespace-nowrap ${
         active
           ? "border-accent text-ink"

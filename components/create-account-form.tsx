@@ -20,6 +20,10 @@ import {
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
 import {
+  foldersForDesk,
+  type StarterFolder,
+} from "@/lib/onboarding/model";
+import {
   getVenue,
   venueAllowsDeskType,
   venuesForDeskType,
@@ -49,6 +53,7 @@ export function CreateAccountForm({
   lockType = false,
   hideTitle = false,
   onCancel,
+  starterFolders = [],
 }: {
   connections: ExchangeConnection[];
   sharedConnectionIds?: string[];
@@ -60,6 +65,7 @@ export function CreateAccountForm({
   lockType?: boolean;
   hideTitle?: boolean;
   onCancel?: () => void;
+  starterFolders?: StarterFolder[];
 }) {
   const [deskType, setDeskType] = useState<DeskType>(
     initialDeskType ?? "cash_and_carry",
@@ -69,6 +75,8 @@ export function CreateAccountForm({
   const [connectionId, setConnectionId] = useState("");
   const [paperVenue, setPaperVenue] = useState("bybit");
   const [name, setName] = useState("");
+  const [addStarter, setAddStarter] = useState(false);
+  const [starterIds, setStarterIds] = useState<string[]>([]);
   const liveKeys = useMemo(
     () =>
       connections.filter((row) => {
@@ -168,6 +176,8 @@ export function CreateAccountForm({
               const nextType = event.target.value as DeskType;
               setDeskType(nextType);
               setConnectionId("");
+              setAddStarter(false);
+              setStarterIds([]);
               const allowed = venuesForDeskType(nextType);
               if (!allowed.some((row) => row.id === paperVenue)) {
                 setPaperVenue(allowed[0]?.id ?? "bybit");
@@ -306,6 +316,18 @@ export function CreateAccountForm({
           {warningKind ? <SharedKeyWarning kind={warningKind} /> : null}
         </div>
       ) : null}
+      <StarterBots
+        folders={foldersForDesk(starterFolders, deskType)}
+        enabled={addStarter}
+        selected={starterIds}
+        onEnabled={(next) => {
+          setAddStarter(next);
+          if (!next) {
+            setStarterIds([]);
+          }
+        }}
+        onSelected={setStarterIds}
+      />
       <p className="text-sm text-ink-muted">
         Type and mode are set at create and never change. Paper Trading uses
         that market’s public marks and fills on the in-app ledger. Connected
@@ -332,5 +354,69 @@ export function CreateAccountForm({
         ) : null}
       </div>
     </form>
+  );
+}
+
+function StarterBots({
+  folders,
+  enabled,
+  selected,
+  onEnabled,
+  onSelected,
+}: {
+  folders: StarterFolder[];
+  enabled: boolean;
+  selected: string[];
+  onEnabled: (next: boolean) => void;
+  onSelected: (ids: string[]) => void;
+}) {
+  if (folders.length === 0) {
+    return null;
+  }
+  return (
+    <fieldset className="space-y-3">
+      <label className="inline-flex items-center gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(event) => onEnabled(event.target.checked)}
+        />
+        Add starter bots
+      </label>
+      {enabled ? (
+        <div className="space-y-3 pl-1">
+          {folders.map((folder) => (
+            <div key={folder.id}>
+              <p className="text-sm font-medium text-ink">{folder.name}</p>
+              <ul className="mt-1 space-y-1">
+                {folder.templates.map((template) => (
+                  <li key={template.id}>
+                    <label className="inline-flex items-center gap-2 text-sm text-ink">
+                      <input
+                        type="checkbox"
+                        name="starterTemplateId"
+                        value={template.id}
+                        checked={selected.includes(template.id)}
+                        onChange={() => {
+                          onSelected(
+                            selected.includes(template.id)
+                              ? selected.filter((id) => id !== template.id)
+                              : [...selected, template.id],
+                          );
+                        }}
+                      />
+                      {template.name}
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          <p className="text-hint text-ink-muted">
+            Loaded idle or disabled. Nothing trades until you arm or enable.
+          </p>
+        </div>
+      ) : null}
+    </fieldset>
   );
 }

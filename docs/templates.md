@@ -169,7 +169,7 @@ Admin nav next to Members / Logs. Members who are not admins get the usual admin
 
 **Templates** and **Folders** list **platform** rows only. No user templates, user folders, Scope filter, or owner column. Inbound **Shared Templates / Shared Folders** live on `/account/templates`, not here.
 
-- **Edit** to rename, description, **Include in Starter Pack**, and folder membership (platform templates only) on the **Folders** tab or from a template’s Edit dialog. Row **Delete** (confirm) is on each platform template and folder. The Templates table **Starter Pack** column ticks if the template’s own flag is on **or** it sits in a folder whose flag is on. Edit still shows only the template’s own flag.
+- **Edit** to rename, description, **Include in Starter Pack**, and folder membership (platform templates only) on the **Folders** tab or from a template’s Edit dialog. Row **Delete** (confirm) is on each platform template and folder. The Templates table **Starter Pack** column ticks if the template’s own flag is on **or** it sits in a folder whose flag is on. Edit still shows only the template’s own flag. Onboarding (V1 item 6) offers bots only from **folders** with this flag. A template’s own flag does not put it in the wizard. See [phase-onboarding.md](phase-onboarding.md).
 - **Unpublish** removes the platform row. Members will no longer see it. User copies are unchanged.
 - **Add New Folder** opens a modal. Create a platform folder from platform templates of one desk type.
 - Add a new platform row from **Save as template** on a desk the admin owns, choosing **Platform template**. That dialog and Edit both include **Include in Starter Pack**. **Add New Folder** on admin can set the same flag.
@@ -229,7 +229,7 @@ Stop after acceptance. Do not start Fly.io, Hyperliquid, scale-in, or backup kli
 - Marketplace
 - Fly.io, private APIs from the browser
 - Scale-in / position builder (V2)
-- Starter Pack delivery to new members and CTA on new desk (V1 item 6; [phase-onboarding.md](phase-onboarding.md))
+- Onboarding delivery (V1 item 6). The wizard applies templates only from platform folders flagged Include in Starter Pack, idle or disabled, and never copies them into the member library. See [phase-onboarding.md](phase-onboarding.md).
 - Plans, payments, and affiliates (shipped; [phase-membership.md](phase-membership.md))
 - Hyperliquid leftover desk-test (V1 system test); MEXC (V2) ([phase-hyperliquid.md](phase-hyperliquid.md))
 - Copy leftover desk-test (V1 system test); Hedged DCA (V2) ([phase-copy-trading.md](phase-copy-trading.md))

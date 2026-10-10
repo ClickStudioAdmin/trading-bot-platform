@@ -106,7 +106,7 @@ export function AccountSidenav({
         </div>
       ) : null}
       {platformMember ? (
-        <>
+        <div data-tour="desk-list">
           <DeskGroup
             className="mt-5"
             label="Automated desks"
@@ -136,7 +136,7 @@ export function AccountSidenav({
             creating={createDeskType === "perps"}
             modeFilter={modeFilter.value}
           />
-        </>
+        </div>
       ) : null}
     </aside>
   );

@@ -16,6 +16,7 @@ import {
 } from "@/lib/exchanges/store";
 import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
 import { requireVerifiedEmail } from "@/lib/auth/session";
+import { listOnboardingFolders } from "@/lib/onboarding/catalog";
 import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
 
@@ -41,6 +42,7 @@ export default async function NewDeskPage({
   const error = firstSearchValue(params.error);
   const accounts = await listTradingAccounts(member.id);
   const connections = await listExchangeConnections(member.id);
+  const starterFolders = await listOnboardingFolders();
   const sharedConnectionIds = connectionIdsBoundToOtherDesks(
     await listConnectionDeskBinds(member.id),
   );
@@ -65,6 +67,7 @@ export default async function NewDeskPage({
           initialDeskType={typed.deskType}
           lockType
           hideTitle
+          starterFolders={starterFolders}
         />
         <CreateDeskDetails deskType={typed.deskType} />
       </div>

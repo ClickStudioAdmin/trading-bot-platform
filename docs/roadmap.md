@@ -47,7 +47,7 @@ Stop after each item until Click says go.
 | 3 | **UI refinement and cleanup** | **Accepted 21 Sep 2026.** Light is live (chrome vs content). Isolation shipped 19 Sep 2026. Breadcrumbs on orphans. `/account/book` removed. |
 | 4 | **Account Positions, Bots, and Automations lists** | **Current.** Started 21 Sep 2026. Spec: [phase-account-blotter.md](phase-account-blotter.md). Isolation already in repo (item 3). Desk Automations list first; account Positions / Bots wait until Click asks. Virtual lots stay V2. |
 | 5 | **Entitlements and plan / 2FA gates** | `assertEntitlement`, visible/disabled + Upgrade, a plan may require verified email and/or 2FA, downgrade grace. Spec: [phase-entitlements.md](phase-entitlements.md) (gates). |
-| 6 | **Onboarding wizards and Starter Packs** | Reimagine first-run and new-desk. Starter Packs copy/apply idle, never arm. Spec: [phase-onboarding.md](phase-onboarding.md). |
+| 6 | **Onboarding wizards and Starter Packs** | Blocking first-run modal: desk type × mode, exchange keys, idle bots from admin starter folders, then an optional guided tour. The app stays closed until Finish or Skip. Never arm. Spec: [phase-onboarding.md](phase-onboarding.md). |
 | 7 | **Full system test and refinement** | Whole product, **including Hyperliquid** leftover desk-test and copy leftover desk-test. Fix what Click finds. Not a new feature phase. |
 | 8 | **Front-end website** | Marketing / public site, not desk chrome. |
 | 9 | **Invite friends to test** | Closed testers before the public soft launch. |

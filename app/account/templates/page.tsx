@@ -32,6 +32,7 @@ export default async function AccountTemplatesPage({
   );
 
   return (
+    <div data-tour="templates">
     <TemplatesLibrary
       variant="account"
       title="Bot Templates"
@@ -42,5 +43,6 @@ export default async function AccountTemplatesPage({
       linkedBacktests={linkedBacktests}
       initialTab={parseLibraryTab(params.tab)}
     />
+    </div>
   );
 }

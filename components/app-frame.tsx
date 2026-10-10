@@ -1,4 +1,9 @@
 import { Suspense } from "react";
+import { PlatformTour } from "@/components/platform-tour";
+import { SetupGate } from "@/components/setup-gate";
+import { SetupModalFallback } from "@/components/setup-modal";
+import { buildTourSteps, requiresSetupGate } from "@/lib/onboarding/model";
+import { loadMemberOnboarding } from "@/lib/onboarding/store";
 import { cookies, headers } from "next/headers";
 import {
   AccountSidenavGate,
@@ -21,6 +26,8 @@ import { getAdminUser } from "@/lib/admin/access";
 import { loadAutoTickEnabled } from "@/lib/admin/settings";
 import { signedInHomePath } from "@/lib/auth/onboarding";
 import { getSessionMember } from "@/lib/auth/session";
+import { usesSignedInAppChrome } from "@/lib/site-links";
+import { redirect } from "next/navigation";
 import {
   loadAdminNotificationChrome,
   loadMemberNotificationChrome,
@@ -29,7 +36,14 @@ import { loadPlatformBrand } from "@/lib/platform/brand";
 
 export async function AppFrame({ children }: { children: React.ReactNode }) {
   const member = await getSessionMember();
-  const desks = member ? await listTradingAccounts(member.id) : [];
+  const [desks, onboarding] = member
+    ? await Promise.all([
+        listTradingAccounts(member.id),
+        member.emailVerifiedAt && member.platformMember
+          ? loadMemberOnboarding(member.id)
+          : Promise.resolve(null),
+      ])
+    : [[], null];
   const verified = Boolean(member?.emailVerifiedAt);
   const admin = verified && member ? await getAdminUser() : null;
   const autoTick = admin ? await loadAutoTickEnabled() : false;
@@ -41,6 +55,19 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
   const pathname = (await headers()).get(DESK_PATHNAME_HEADER) ?? "";
   const adminPath = pathname.startsWith("/admin");
   const platformMember = member?.platformMember === true;
+  const needsSetup = requiresSetupGate({
+    platformMember,
+    emailVerified: verified,
+    deskCount: desks.length,
+    status: onboarding?.status ?? null,
+  });
+  if (
+    needsSetup &&
+    pathname !== "/account" &&
+    usesSignedInAppChrome(pathname, true)
+  ) {
+    redirect("/account");
+  }
   const nav = {
     desks,
     platformMember,
@@ -50,44 +77,64 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
 
   return (
     <UiPreferencesProvider chrome={chromeScheme} content={contentScheme}>
-      <AccountSidenavGate
-        signedIn={Boolean(member)}
-        nav={
-          member ? (
-            <Suspense fallback={<SignedInNav {...nav} />}>
-              <SidenavBadges
-                {...nav}
-                userId={member.id}
-                verified={verified}
-                loadAdmin={adminPath && Boolean(admin)}
-              />
-            </Suspense>
-          ) : null
-        }
+      <div
+        inert={needsSetup ? true : undefined}
+        className={needsSetup ? "h-dvh overflow-hidden" : undefined}
       >
-        <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
-          <UiRegion region="chrome">
-            <SiteHeader
-              platformName={brand.name}
-              platformLogoUrl={brand.logoUrl}
-              isAdmin={Boolean(admin)}
-              loadAdminAlerts={adminPath && Boolean(admin)}
-            />
-          </UiRegion>
-          <UiRegion region="content" className="flex flex-1 flex-col">
-            {children}
-          </UiRegion>
-          <UiRegion region="chrome">
-            <SiteFooter
-              appHref={appHref}
-              signedIn={Boolean(member)}
-              admin={admin ? { autoTick } : null}
-              platformName={brand.name}
-              platformLogoUrl={brand.logoUrl}
-            />
-          </UiRegion>
-        </div>
-      </AccountSidenavGate>
+        <AccountSidenavGate
+          signedIn={Boolean(member)}
+          nav={
+            member ? (
+              <Suspense fallback={<SignedInNav {...nav} />}>
+                <SidenavBadges
+                  {...nav}
+                  userId={member.id}
+                  verified={verified}
+                  loadAdmin={adminPath && Boolean(admin)}
+                />
+              </Suspense>
+            ) : null
+          }
+        >
+          <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
+            <UiRegion region="chrome">
+              <SiteHeader
+                platformName={brand.name}
+                platformLogoUrl={brand.logoUrl}
+                isAdmin={Boolean(admin)}
+                loadAdminAlerts={adminPath && Boolean(admin)}
+              />
+            </UiRegion>
+            <UiRegion region="content" className="flex flex-1 flex-col">
+              {children}
+            </UiRegion>
+            <UiRegion region="chrome">
+              <SiteFooter
+                appHref={appHref}
+                signedIn={Boolean(member)}
+                admin={admin ? { autoTick } : null}
+                platformName={brand.name}
+                platformLogoUrl={brand.logoUrl}
+              />
+            </UiRegion>
+          </div>
+        </AccountSidenavGate>
+      </div>
+      {needsSetup && member ? (
+        <UiRegion region="content" className="contents">
+          <Suspense fallback={<SetupModalFallback />}>
+            <SetupGate userId={member.id} />
+          </Suspense>
+        </UiRegion>
+      ) : null}
+      {onboarding?.tour === "in_progress" && !needsSetup ? (
+        <Suspense fallback={null}>
+          <PlatformTour
+            steps={buildTourSteps(desks)}
+            initialStep={onboarding.tourStep}
+          />
+        </Suspense>
+      ) : null}
     </UiPreferencesProvider>
   );
 }

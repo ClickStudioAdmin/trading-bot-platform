@@ -15,6 +15,7 @@ import {
   DESK_NAME_TAKEN,
   otherDeskNames,
   parseDeskNameChange,
+  withQuery,
 } from "@/lib/accounts/model";
 import { parseBoundConnectionId } from "@/lib/exchanges/connections";
 import { listExchangeConnections } from "@/lib/exchanges/store";
@@ -23,6 +24,10 @@ import {
   parseStoredVenueEnvironment,
 } from "@/lib/exchanges/venues";
 import { writeEventLog } from "@/lib/logs/write";
+import { listOnboardingFolders } from "@/lib/onboarding/catalog";
+import { starterTemplateAllowed } from "@/lib/onboarding/model";
+import { skipOnboardingForExternalDesk } from "@/lib/onboarding/store";
+import { applyTemplateToDesk } from "@/lib/templates/apply";
 import {
   getSessionContext,
   requireVerifiedEmail,
@@ -166,6 +171,39 @@ export async function createTradingAccount(formData: FormData) {
       return fail(bound.error);
     }
   }
+  const starterIds = [
+    ...new Set(
+      formData
+        .getAll("starterTemplateId")
+        .map((value) => String(value).trim())
+        .filter(Boolean),
+    ),
+  ];
+  const starterErrors: string[] = [];
+  if (starterIds.length > 0) {
+    const folders = await listOnboardingFolders();
+    for (const templateId of starterIds) {
+      if (
+        !starterTemplateAllowed({
+          folders,
+          deskType: choice.deskType,
+          templateId,
+        })
+      ) {
+        starterErrors.push("That starter bot is not available.");
+        continue;
+      }
+      const applied = await applyTemplateToDesk({
+        userId: member.id,
+        accountId: created.id,
+        templateId,
+      });
+      if (!applied.ok) {
+        starterErrors.push(applied.error ?? "Could not load that bot.");
+      }
+    }
+  }
+  await skipOnboardingForExternalDesk(member.id);
   await writeEventLog({
     scope: "system",
     event: "account.created",
@@ -183,7 +221,12 @@ export async function createTradingAccount(formData: FormData) {
   });
   await setActiveAccountId(created.id);
   refreshAccountChrome();
-  redirect(deskHomePath(created.deskType, created.id));
+  const home = deskHomePath(created.deskType, created.id);
+  redirect(
+    starterErrors.length > 0
+      ? withQuery(home, { error: [...new Set(starterErrors)].join(" ") })
+      : home,
+  );
 }
 
 export async function deleteTradingAccount(formData: FormData) {

@@ -24,6 +24,15 @@ import {
 } from "@/lib/notifications/badges";
 import { resolveInboxHref } from "@/lib/notifications/hrefs";
 import { listUserNotifications } from "@/lib/notifications/store";
+import {
+  dismissSetupSummary,
+  startPlatformTour,
+} from "@/lib/onboarding/actions";
+import {
+  shouldOfferTour,
+  shouldShowSummary,
+} from "@/lib/onboarding/model";
+import { loadMemberOnboarding } from "@/lib/onboarding/store";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -36,12 +45,14 @@ export default async function AccountOverviewPage() {
   if (!member.platformMember) {
     redirect(AFFILIATES_PATH);
   }
-  const [accounts, connections, binds, chrome, notices] = await Promise.all([
+  const [accounts, connections, binds, chrome, notices, onboarding] =
+    await Promise.all([
     listTradingAccounts(member.id),
     listExchangeConnections(member.id),
     listConnectionDeskBinds(member.id),
     loadMemberNotificationChrome(member.id, true),
     listUserNotifications(member.id, 5),
+    loadMemberOnboarding(member.id),
   ]);
   const paperCount = accounts.filter((account) => account.mode === "paper").length;
   const liveCount = accounts.length - paperCount;
@@ -58,8 +69,49 @@ export default async function AccountOverviewPage() {
   return (
     <div className="space-y-8">
       <div>
-        <PageHeading title="Overview" />
+        <PageHeading title="Overview" tour="overview" />
       </div>
+      {shouldShowSummary(onboarding?.draft.summary ?? null) &&
+      onboarding?.draft.summary ? (
+        <section className="rounded-card border border-line bg-surface p-5">
+          <h2 className="text-lg font-semibold tracking-tight">Setup finished</h2>
+          <ul className="mt-3 space-y-2 text-sm text-ink">
+            {onboarding.draft.summary.desks.map((row) => (
+              <li key={`desk-${row.name}`}>
+                {row.name}
+                <span className="text-ink-muted"> — {row.detail}</span>
+              </li>
+            ))}
+            {onboarding.draft.summary.bots.map((row) => (
+              <li key={`bot-${row.name}-${row.detail}`}>
+                {row.name}
+                <span className="text-ink-muted"> — {row.detail}</span>
+              </li>
+            ))}
+          </ul>
+          <form action={dismissSetupSummary} className="mt-4">
+            <button
+              type="submit"
+              className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            >
+              Dismiss
+            </button>
+          </form>
+        </section>
+      ) : null}
+      {shouldOfferTour({
+        platformMember: true,
+        tour: onboarding?.tour ?? null,
+      }) && onboarding?.tour !== "in_progress" ? (
+        <form action={startPlatformTour}>
+          <button
+            type="submit"
+            className="text-sm text-accent hover:text-accent-strong"
+          >
+            Take the tour
+          </button>
+        </form>
+      ) : null}
 
       <section className="grid gap-4 sm:grid-cols-2">
         <StatCard
