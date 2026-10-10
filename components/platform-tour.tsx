@@ -297,7 +297,7 @@ function TourDim({
       <rect
         width="100%"
         height="100%"
-        fill="rgba(0, 0, 0, 0.62)"
+        fill="rgba(0, 0, 0, 0.45)"
         mask="url(#platform-tour-dim)"
       />
       {hole ? (
