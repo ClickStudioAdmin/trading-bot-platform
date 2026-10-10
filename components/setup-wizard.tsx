@@ -312,7 +312,7 @@ export function SetupWizard({
             {
               value: "none",
               title: "Don't add any desks, I'll do it later",
-              detail: "Manage desks can add them after setup.",
+              detail: "You can add them later from Manage desks.",
             },
           ]}
           onChange={(value) => {
