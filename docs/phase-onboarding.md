@@ -145,7 +145,7 @@ Done summary (Overview card that dismisses, or the first tour step): desks creat
 
 A small overlay in the app. No tour library. Steps are a fixed list in code, not an admin CMS. Each step spotlights one existing region (`data-tour` on that control), with a title and one or two sentences. Controls: Back, Next, Skip tour. Skip marks the tour skipped. The last step marks it completed.
 
-Progress is stored per member (step index plus not started / in progress / completed / skipped / declined). Refresh resumes the current step. Completing or skipping never shows the offer modal again. **Take the tour** on Overview starts or resumes until the tour is completed or skipped from the overlay.
+Progress is stored per member (step index plus not started / in progress / completed / skipped / declined). Refresh resumes the current step. Completing or skipping never shows the offer modal again. **Take the tour** on Overview starts or resumes until the tour is completed or skipped from the overlay. **Platform Tour** stays at the bottom of the account sidenav for every platform member and starts the tour again from the first step, including after it was completed or skipped.
 
 Steps that do not apply are omitted (no desk yet, no bot desk, no TradingView desk).
 
@@ -211,7 +211,7 @@ Each ticked cell and each Finish create goes through the same entitlement check 
 
 - The modal uses `bg-surface` `border-line` and the account width (`max-w-7xl`). Desks, Bots, and Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. Sub-steps share the row under it. The step content scrolls inside the dialog. Back and Continue stay visible at the bottom. Cards inside the steps use the same surface.
 - Desk and bot choices are full-width sections. The selected section uses the accent border. The desk table still uses checkboxes and the Theme table pattern. No new colours. Paper / Demo / Live dots may use the existing `mode-paper`, `mode-demo`, and `mode-live` tokens.
-- The modal is the only setup entry. It closes when the tour step is finished. **Take the tour** on Overview remains until the tour is completed or skipped.
+- The modal is the only setup entry. It closes when the tour step is finished. **Take the tour** on Overview remains until the tour is completed or skipped. **Platform Tour** in the account sidenav stays available.
 - Light and dark follow header UI preferences. Do not put light tokens on `html` / `body`.
 
 ## Micro-steps

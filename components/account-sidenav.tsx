@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { DeskTypeMark } from "@/components/desk-mark";
 import { SiteLogo } from "@/components/site-logo";
@@ -31,9 +31,10 @@ import {
 import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { upgradeAffiliateToPlatformAction } from "@/lib/membership/affiliate-actions";
-import { IconChevronDown } from "@/components/icons";
+import { IconChevronDown, IconTour } from "@/components/icons";
 import { NavBadge } from "@/components/nav-badge";
 import { NAV_ACTIVE_CLASS, NAV_IDLE_CLASS, NavItemIcon } from "@/components/site-nav";
+import { startPlatformTour } from "@/lib/onboarding/actions";
 import { ACCOUNT_DESK_LINKS, AFFILIATE_ONLY_LINKS } from "@/lib/site-links";
 
 export function AccountSidenav({
@@ -64,7 +65,7 @@ export function AccountSidenav({
   ).length;
 
   return (
-    <aside className="flex flex-col px-4 py-6">
+    <aside className="flex min-h-full flex-col px-4 pt-6">
       <div className="mb-6">
         <SiteLogo
           linked={!platformMember}
@@ -137,6 +138,20 @@ export function AccountSidenav({
             modeFilter={modeFilter.value}
           />
         </div>
+      ) : null}
+      {platformMember ? (
+        <form
+          action={startPlatformTour}
+          className="sticky bottom-0 z-10 mt-auto -mx-4 bg-surface px-4 py-3"
+        >
+          <button
+            type="submit"
+            className="flex items-center gap-2 rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+          >
+            <IconTour size={16} className="size-4 shrink-0" />
+            Platform Tour
+          </button>
+        </form>
       ) : null}
     </aside>
   );
@@ -381,19 +396,24 @@ function DeskModeDot({
 }
 
 const DESK_MODE_FILTER_KEY = "tbp-desk-mode-filter";
+const DESK_MODE_FILTER_EVENT = "tbp-desk-mode-filter-change";
 
 function useDeskModeFilter() {
-  const [value, setValue] = useState<DeskModeFilter>("all");
-
-  useEffect(() => {
-    setValue(parseDeskModeFilter(window.localStorage.getItem(DESK_MODE_FILTER_KEY)));
-  }, []);
+  const value = useSyncExternalStore(
+    (onStoreChange) => {
+      window.addEventListener(DESK_MODE_FILTER_EVENT, onStoreChange);
+      return () =>
+        window.removeEventListener(DESK_MODE_FILTER_EVENT, onStoreChange);
+    },
+    () => parseDeskModeFilter(window.localStorage.getItem(DESK_MODE_FILTER_KEY)),
+    () => "all" as DeskModeFilter,
+  );
 
   return {
     value,
     setValue(next: DeskModeFilter) {
-      setValue(next);
       window.localStorage.setItem(DESK_MODE_FILTER_KEY, next);
+      window.dispatchEvent(new Event(DESK_MODE_FILTER_EVENT));
     },
   };
 }
@@ -453,19 +473,24 @@ function DeskModeFilterBar({
 
 const ACCOUNT_NAV_OPEN_KEY = "tbp-account-nav-open";
 
-function useAccountNavOpen() {
-  const [open, setOpen] = useState(true);
+const ACCOUNT_NAV_EVENT = "tbp-account-nav-change";
 
-  useEffect(() => {
-    setOpen(window.localStorage.getItem(ACCOUNT_NAV_OPEN_KEY) !== "0");
-  }, []);
+function useAccountNavOpen() {
+  const open = useSyncExternalStore(
+    (onStoreChange) => {
+      window.addEventListener(ACCOUNT_NAV_EVENT, onStoreChange);
+      return () => window.removeEventListener(ACCOUNT_NAV_EVENT, onStoreChange);
+    },
+    () => window.localStorage.getItem(ACCOUNT_NAV_OPEN_KEY) !== "0",
+    () => true,
+  );
 
   return {
     open,
     toggle() {
       const next = !open;
-      setOpen(next);
       window.localStorage.setItem(ACCOUNT_NAV_OPEN_KEY, next ? "1" : "0");
+      window.dispatchEvent(new Event(ACCOUNT_NAV_EVENT));
     },
   };
 }
