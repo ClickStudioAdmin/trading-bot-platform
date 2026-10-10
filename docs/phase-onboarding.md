@@ -40,7 +40,7 @@ There is no Skip setup. The member goes through Desks, Bots, and Tour. Each step
 
 ## Steps
 
-The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. The step list always shows **1. Desks**, **2. Bots**, and **3. Tour**. Each of Desks and Bots starts with a choice. Sub-steps sit under the current step. Exchanges is a sub-step of Desks, after the manual desk table, and only when a Connected cell is ticked. Each desk that has starter folders is a sub-step of Bots when they choose to pick bots themselves. **Back** returns to the previous sub-step and can change the choice until they continue to the tour. Desks and bots are written then, before the tour question, so the tour can show those desks and bots. There is no Skip setup. Doing nothing is a choice on each step.
+The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. The step list always shows **1. Desks**, **2. Bots**, and **3. Tour**. There is no second row of sub-step labels. Each of Desks and Bots starts with a choice. Exchanges follows the manual desk table, and only when a Connected cell is ticked, while the step list stays on Desks. Each desk that has starter folders is a sub-step of Bots when they choose to pick bots themselves. **Back** returns to the previous sub-step and can change the choice until they continue to the tour. Desks and bots are written then, before the tour question, so the tour can show those desks and bots. There is no Skip setup. Doing nothing is a choice on each step.
 
 ### 1. Desks
 

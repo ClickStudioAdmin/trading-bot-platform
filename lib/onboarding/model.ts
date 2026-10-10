@@ -973,22 +973,3 @@ export function setupStepLabel(step: SetupMainStep): string {
   }
   return "Tour";
 }
-
-export function setupSubstepLabel(
-  screen: SetupScreen,
-  desks: readonly SetupDesk[],
-): string {
-  if (screen.sub === "choice") {
-    return "Choose";
-  }
-  if (screen.main === "desks" && screen.sub === "exchanges") {
-    return "Exchanges";
-  }
-  if (screen.main === "desks") {
-    return "Desks";
-  }
-  if (screen.main === "bots" && screen.sub === "desk") {
-    return desks.find((desk) => desk.key === screen.deskKey)?.name ?? "Bots";
-  }
-  return "Bots";
-}

@@ -36,7 +36,6 @@ import {
   setupScreenId,
   setupScreens,
   setupStepLabel,
-  setupSubstepLabel,
   starterBotDesks,
   validateSetupNames,
   type BotSetupChoice,
@@ -51,15 +50,7 @@ import {
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 
-function SetupProgress({
-  screen,
-  substeps,
-  desks,
-}: {
-  screen: SetupScreen;
-  substeps: SetupScreen[];
-  desks: readonly SetupDesk[];
-}) {
+function SetupProgress({ screen }: { screen: SetupScreen }) {
   const currentIndex = SETUP_MAIN_STEPS.indexOf(screen.main);
   return (
     <div className="shrink-0 border-b border-line px-5 py-4">
@@ -120,28 +111,6 @@ function SetupProgress({
           );
         })}
       </ol>
-      {substeps.length > 1 ? (
-        <ol aria-label="Setup sub-steps" className="mt-3 flex gap-2">
-          {substeps.map((item) => {
-            const current = setupScreenId(item) === setupScreenId(screen);
-            const label = setupSubstepLabel(item, desks);
-            return (
-              <li
-                key={setupScreenId(item)}
-                title={label}
-                aria-current={current ? "step" : undefined}
-                className={
-                  current
-                    ? "min-w-0 flex-1 truncate rounded-control border border-accent bg-accent/10 px-3 py-1.5 text-center text-sm font-medium text-ink"
-                    : "min-w-0 flex-1 truncate rounded-control border border-line px-3 py-1.5 text-center text-sm text-ink-muted"
-                }
-              >
-                {label}
-              </li>
-            );
-          })}
-        </ol>
-      ) : null}
     </div>
   );
 }
@@ -189,8 +158,6 @@ export function SetupWizard({
     screenIndex >= 0 && screenIndex < screens.length - 1
       ? screens[screenIndex + 1]
       : null;
-  const substeps = screens.filter((item) => item.main === screen.main);
-
   function draft(overrides?: Partial<SetupDraft>): SetupDraft {
     return {
       desks,
@@ -386,7 +353,7 @@ export function SetupWizard({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <SetupProgress screen={screen} substeps={substeps} desks={desks} />
+      <SetupProgress screen={screen} />
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-4">
       {screen.main === "desks" && screen.sub === "choice" ? (
         <ChoiceStep
