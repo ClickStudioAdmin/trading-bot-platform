@@ -143,7 +143,7 @@ Done summary (Overview card that dismisses, or the first tour step): desks creat
 
 ## Guided tour
 
-A small overlay in the app. No tour library. Steps are a fixed list in code, not an admin CMS. Each step spotlights one existing region (`data-tour` on that control), with a title and one or two sentences. An arrow runs from the card to that region. The region stays undimmed inside a purple ring. The rest of the app is dimmed. Overview, Manage Desks, and Bot Templates spotlight the account sidenav item, and the Account group opens if it was collapsed. Controls: Back, Next, Skip tour. Skip marks the tour skipped. The last step marks it completed.
+A small overlay in the app. No tour library. Steps are a fixed list in code, not an admin CMS. Each step spotlights one existing region (`data-tour` on that control), with a title and one or two sentences. An arrow runs from the card to that control. The same dim layer covers the header, sidebar, and page on every step. Only that control stays undimmed, inside a purple ring. A step never spotlights a whole page. Overview, Manage Desks, and Bot Templates spotlight the account sidenav item, and the Account group opens if it was collapsed. Controls: Back, Next, Skip tour. Skip marks the tour skipped. The last step marks it completed.
 
 Progress is stored per member (step index plus not started / in progress / completed / skipped / declined). Refresh resumes the current step. Completing or skipping never shows the offer modal again. **Take the tour** on Overview starts or resumes until the tour is completed or skipped from the overlay.
 

@@ -881,6 +881,20 @@ export function tourTargetForAccountHref(href: string): string | null {
 
 export const OPEN_ACCOUNT_NAV_EVENT = "tbp-open-account-nav";
 
+/** Prefer a sidenav control over a page-sized wrapper, then the smallest match. */
+export function pickTourTarget<T extends { area: number; inAside: boolean }>(
+  nodes: readonly T[],
+): T | null {
+  const aside = nodes.filter((node) => node.inAside);
+  const pool = aside.length > 0 ? aside : nodes;
+  return pool.reduce<T | null>((best, node) => {
+    if (!best || node.area < best.area) {
+      return node;
+    }
+    return best;
+  }, null);
+}
+
 export type TourRect = {
   top: number;
   left: number;

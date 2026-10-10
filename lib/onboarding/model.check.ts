@@ -9,6 +9,7 @@ import {
   appliesStillToRun,
   blockedSetupDesks,
   buildTourSteps,
+  pickTourTarget,
   placeTourCard,
   tourTargetForAccountHref,
   connectionReuseError,
@@ -390,6 +391,20 @@ const belowHeading = placeTourCard({
 assert.equal(belowHeading.side, "below");
 assert.ok(belowHeading.top >= 80 + 48);
 assert.equal(belowHeading.arrowTo.y, 80 + 48);
+assert.equal(
+  pickTourTarget([
+    { id: "page", area: 900 * 700, inAside: false },
+    { id: "nav", area: 240 * 36, inAside: true },
+  ])?.id,
+  "nav",
+);
+assert.equal(
+  pickTourTarget([
+    { id: "wide", area: 800 * 48, inAside: false },
+    { id: "tab", area: 72 * 32, inAside: false },
+  ])?.id,
+  "tab",
+);
 
 const withdrawal = judgeBybitApiKey({
   permissions: { Wallet: ["Withdraw"], ContractTrade: ["Order"] },

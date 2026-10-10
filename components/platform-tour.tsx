@@ -9,6 +9,7 @@ import {
   skipPlatformTour,
 } from "@/lib/onboarding/actions";
 import {
+  pickTourTarget,
   placeTourCard,
   type TourCardPlace,
   type TourStep,
@@ -30,7 +31,8 @@ export function PlatformTour({
   const [index, setIndex] = useState(() =>
     Math.min(Math.max(initialStep, 0), Math.max(steps.length - 1, 0)),
   );
-  const [box, setBox] = useState<{
+  const [spot, setSpot] = useState<{
+    id: string;
     top: number;
     left: number;
     width: number;
@@ -40,6 +42,7 @@ export function PlatformTour({
   const [hidden, setHidden] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const step = steps[index];
+  const box = spot && step && spot.id === step.id ? spot : null;
 
   useEffect(() => {
     if (!step) {
@@ -70,12 +73,13 @@ export function PlatformTour({
         return;
       }
       if (!target) {
-        setBox(null);
+        setSpot(null);
         return;
       }
       target.scrollIntoView({ block: "nearest", inline: "nearest" });
       const rect = target.getBoundingClientRect();
-      setBox({
+      setSpot({
+        id: step.id,
         top: rect.top,
         left: rect.left,
         width: rect.width,
@@ -123,22 +127,8 @@ export function PlatformTour({
     : null;
 
   return (
-    <div className="fixed inset-0 z-[70]">
-      {box ? (
-        <div
-          className="pointer-events-none fixed rounded-control"
-          style={{
-            top: box.top - 6,
-            left: box.left - 6,
-            width: box.width + 12,
-            height: box.height + 12,
-            boxShadow:
-              "0 0 0 2px var(--color-accent), 0 0 0 9999px rgba(0, 0, 0, 0.62)",
-          }}
-        />
-      ) : (
-        <div className="absolute inset-0 bg-black/55" />
-      )}
+    <div className="fixed inset-0 z-[100]">
+      <TourDim box={box} />
       {place ? <TourArrow place={place} /> : null}
       <div
         ref={cardRef}
@@ -222,6 +212,61 @@ export function PlatformTour({
   );
 }
 
+function TourDim({
+  box,
+}: {
+  box: { top: number; left: number; width: number; height: number } | null;
+}) {
+  const hole = box
+    ? {
+        x: box.left - 6,
+        y: box.top - 6,
+        width: box.width + 12,
+        height: box.height + 12,
+      }
+    : null;
+  return (
+    <svg
+      aria-hidden
+      className="pointer-events-none absolute inset-0 h-full w-full"
+    >
+      <defs>
+        <mask id="platform-tour-dim">
+          <rect width="100%" height="100%" fill="white" />
+          {hole ? (
+            <rect
+              x={hole.x}
+              y={hole.y}
+              width={hole.width}
+              height={hole.height}
+              rx="8"
+              fill="black"
+            />
+          ) : null}
+        </mask>
+      </defs>
+      <rect
+        width="100%"
+        height="100%"
+        fill="rgba(0, 0, 0, 0.62)"
+        mask="url(#platform-tour-dim)"
+      />
+      {hole ? (
+        <rect
+          x={hole.x}
+          y={hole.y}
+          width={hole.width}
+          height={hole.height}
+          rx="8"
+          fill="none"
+          stroke="var(--color-accent)"
+          strokeWidth="2"
+        />
+      ) : null}
+    </svg>
+  );
+}
+
 function TourArrow({ place }: { place: TourCardPlace }) {
   const pad = 28;
   const minX = Math.min(place.arrowFrom.x, place.arrowTo.x) - pad;
@@ -262,11 +307,20 @@ function TourArrow({ place }: { place: TourCardPlace }) {
 function findTourTarget(id: string): HTMLElement | null {
   const nodes = [
     ...document.querySelectorAll<HTMLElement>(`[data-tour="${id}"]`),
-  ].filter((node) => {
+  ].flatMap((node) => {
     const rect = node.getBoundingClientRect();
-    return rect.width > 8 && rect.height > 8;
+    if (rect.width <= 8 || rect.height <= 8) {
+      return [];
+    }
+    return [
+      {
+        node,
+        area: rect.width * rect.height,
+        inAside: Boolean(node.closest("aside")),
+      },
+    ];
   });
-  return nodes.find((node) => node.closest("aside")) ?? nodes[0] ?? null;
+  return pickTourTarget(nodes)?.node ?? null;
 }
 
 function samePlace(href: string, current: string): boolean {
