@@ -65,17 +65,23 @@ jobs:
           # (connection terminated unexpectedly). Retry that only.
           # Once a migration has started applying, do not push again: a second
           # attempt waits on the lock from the statement that is still running.
+          # Capture the CLI status before any `if`. An `if` that does not run
+          # its body exits 0, which used to mark a refused push as success.
           set -o pipefail
           for attempt in 1 2 3; do
-            if supabase db push 2>&1 | tee "/tmp/db-push-${attempt}.log"; then
+            set +e
+            supabase db push 2>&1 | tee "/tmp/db-push-${attempt}.log"
+            status=${PIPESTATUS[0]}
+            set -e
+            if [ "$status" -eq 0 ]; then
               exit 0
             fi
-            status=$?
             if grep -q "Applying migration" "/tmp/db-push-${attempt}.log"; then
               echo "Migration started applying. Not retrying."
               exit "$status"
             fi
             if [ "$attempt" -eq 3 ]; then
+              echo "db push failed."
               exit "$status"
             fi
             echo "db push failed before applying SQL, attempt ${attempt}. Waiting 20s."
@@ -131,17 +137,23 @@ jobs:
           # Retry a dropped handshake only. Do not start a second push after
           # "Applying migration": that attempt waits on the lock still held
           # by the first statement.
+          # Capture the CLI status before any `if`. An `if` that does not run
+          # its body exits 0, which used to mark a refused push as success.
           set -o pipefail
           for attempt in 1 2 3; do
-            if supabase db push 2>&1 | tee "/tmp/db-push-${attempt}.log"; then
+            set +e
+            supabase db push 2>&1 | tee "/tmp/db-push-${attempt}.log"
+            status=${PIPESTATUS[0]}
+            set -e
+            if [ "$status" -eq 0 ]; then
               exit 0
             fi
-            status=$?
             if grep -q "Applying migration" "/tmp/db-push-${attempt}.log"; then
               echo "Migration started applying. Not retrying."
               exit "$status"
             fi
             if [ "$attempt" -eq 3 ]; then
+              echo "db push failed."
               exit "$status"
             fi
             echo "db push failed before applying SQL, attempt ${attempt}. Waiting 20s."
