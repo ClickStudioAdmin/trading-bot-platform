@@ -237,7 +237,7 @@ export function TourCard({
               className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink"
               onClick={onNext}
             >
-              Next: {nextTitle}
+              Next
             </button>
           ) : (
             <button
