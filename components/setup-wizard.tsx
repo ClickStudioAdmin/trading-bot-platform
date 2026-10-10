@@ -5,7 +5,6 @@ import {
   formatDeskType,
   formatDeskTypeChoice,
 } from "@/lib/accounts/model";
-import { IconCheck } from "@/components/icons";
 import { AppSelect } from "@/components/app-select";
 import { checkExchangeConnection } from "@/lib/exchanges/actions";
 import {
@@ -644,11 +643,6 @@ function ChoiceStep({
                   {option.detail}
                 </span>
               </span>
-              {selected ? (
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-strong text-ink">
-                  <IconCheck size={16} />
-                </span>
-              ) : null}
             </label>
           );
         })}
