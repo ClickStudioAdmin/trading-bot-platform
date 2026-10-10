@@ -222,6 +222,8 @@ export async function completeMemberOnboarding(input: {
 }): Promise<MemberOnboarding | null> {
   const draft: SetupDraft = {
     desks: [],
+    deskChoice: null,
+    botChoice: null,
     tourChoice: input.tour === "in_progress" ? "yes" : "not_now",
     applied: input.applied,
     summary: input.summary,

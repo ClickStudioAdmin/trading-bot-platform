@@ -40,11 +40,19 @@ Skip setup is inside the modal, before any desk is written. Skipping closes the 
 
 ## Steps
 
-The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. The step list always shows **1. Desks**, **2. Bots**, and **3. Tour**. Sub-steps sit under the current step. Exchanges is a sub-step of Desks, after the desk table, and only when a Connected cell is ticked. Each desk that has starter folders is a sub-step of Bots. **Back** returns to the previous sub-step without deleting a key already saved. **Skip setup** discards the desk draft, leaves saved keys on Exchanges (unbound), marks setup skipped, closes the modal, and lands on Overview.
+The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. The step list always shows **1. Desks**, **2. Bots**, and **3. Tour**. Each of Desks and Bots starts with a choice. Sub-steps sit under the current step. Exchanges is a sub-step of Desks, after the manual desk table, and only when a Connected cell is ticked. Each desk that has starter folders is a sub-step of Bots when they choose to pick bots themselves. **Back** returns to the previous sub-step and can change the choice. Desks and bots are written only when they finish the tour step. **Skip setup** discards the desk draft, leaves saved keys on Exchanges (unbound), marks setup skipped, closes the modal, and lands on Overview.
 
 ### 1. Desks
 
-Question: “Create a few desks now?”
+The first sub-step asks how to add desks:
+
+1. Create a Paper Trading desk for each strategy type. Quickest way to see every desk type. Skips the table and the exchange sub-step.
+2. Manually select desk types and modes. Opens the table below. Connected desks then get the exchange sub-step.
+3. Don't add any desks. Skips the table. Bots then says bots need a desk, with Back or continue to the tour.
+
+Choosing again with Back replaces the draft selection. Nothing is inserted until the tour step.
+
+Question on the table, when they choose to select manually: “Create a few desks now?”
 
 Table, one row per type that exists today:
 
@@ -91,9 +99,15 @@ Paper rows do not appear here.
 
 ### 2. Bots
 
-Always step 2. One sub-step per new desk that has a matching starter folder. The member moves through those desks with Continue.
+Always step 2. It starts with the same kind of choice as desks:
 
-If they chose no desks, only Perps and/or TradingView Strategy, or an automated type with no flagged folder, the step still appears and says there is nothing to load. Do not show an empty required picker. The done summary still says ticket and alert desks have no starter bots.
+1. Load starter bots onto each desk.
+2. Manually select starter bots. One sub-step per new desk that has a matching starter folder.
+3. Don't add any bots.
+
+If they chose no desks, this step does not offer those three. It says bots need a desk, with Back or continue to the tour.
+
+If they chose only Perps and/or TradingView Strategy, or an automated type with no flagged folder, the choice still appears and says there is nothing to load. Do not show an empty required picker. The done summary still says ticket and alert desks have no starter bots. Bot rows are applied only when they finish the tour step.
 
 Source:
 

@@ -39,8 +39,8 @@ export type SetupStep = "desks" | "exchanges" | "bots" | "tour";
 export const SETUP_MAIN_STEPS = ["desks", "bots", "tour"] as const;
 export type SetupMainStep = (typeof SETUP_MAIN_STEPS)[number];
 export type SetupScreen =
-  | { main: "desks"; sub: "desks" | "exchanges" }
-  | { main: "bots"; sub: "empty" }
+  | { main: "desks"; sub: "choice" | "desks" | "exchanges" }
+  | { main: "bots"; sub: "choice" | "blocked" | "empty" }
   | { main: "bots"; sub: "desk"; deskKey: string }
   | { main: "tour"; sub: "tour" };
 export type StarterVisibility = "platform" | "user" | "backtested";
@@ -81,8 +81,13 @@ export type SetupSummary = {
   dismissed: boolean;
 };
 
+export type DeskSetupChoice = "all_paper" | "manual" | "none";
+export type BotSetupChoice = "all" | "manual" | "none";
+
 export type SetupDraft = {
   desks: SetupDesk[];
+  deskChoice: DeskSetupChoice | null;
+  botChoice: BotSetupChoice | null;
   tourChoice: SetupTourChoice | null;
   applied: string[];
   summary: SetupSummary | null;
@@ -125,7 +130,14 @@ const SECRET_KEYS = new Set([
 ]);
 
 export function emptySetupDraft(): SetupDraft {
-  return { desks: [], tourChoice: null, applied: [], summary: null };
+  return {
+    desks: [],
+    deskChoice: null,
+    botChoice: null,
+    tourChoice: null,
+    applied: [],
+    summary: null,
+  };
 }
 
 export function setupDeskKey(deskType: DeskType, mode: "paper" | "live"): string {
@@ -331,7 +343,31 @@ export function parseSetupDraft(
     ? body.applied.map((item) => String(item ?? "").trim()).filter(Boolean).slice(0, 200)
     : [];
   const summary = parseSummary(body.summary);
-  return { ok: true, draft: { desks, tourChoice, applied, summary } };
+  return {
+    ok: true,
+    draft: {
+      desks,
+      deskChoice: parseDeskSetupChoice(body.deskChoice),
+      botChoice: parseBotSetupChoice(body.botChoice),
+      tourChoice,
+      applied,
+      summary,
+    },
+  };
+}
+
+function parseDeskSetupChoice(value: unknown): DeskSetupChoice | null {
+  if (value === "all_paper" || value === "manual" || value === "none") {
+    return value;
+  }
+  return null;
+}
+
+function parseBotSetupChoice(value: unknown): BotSetupChoice | null {
+  if (value === "all" || value === "manual" || value === "none") {
+    return value;
+  }
+  return null;
 }
 
 function parseSetupDesk(
@@ -542,20 +578,100 @@ export function starterBotDesks(
   return rows;
 }
 
+export function paperDesksForEachType(input: {
+  existing: readonly SetupDesk[];
+  takenNames: readonly string[];
+}): SetupDesk[] {
+  const rows: SetupDesk[] = [];
+  const taken = [...input.takenNames];
+  for (const deskType of ONBOARDING_DESK_TYPES) {
+    const previous = input.existing.find(
+      (desk) => desk.deskType === deskType && desk.mode === "paper",
+    );
+    if (previous) {
+      rows.push(previous);
+      taken.push(previous.name);
+      continue;
+    }
+    const desk = makeSetupDesk({
+      deskType,
+      mode: "paper",
+      takenNames: taken,
+    });
+    rows.push(desk);
+    taken.push(desk.name);
+  }
+  return rows;
+}
+
+export function applyDeskSetupChoice(input: {
+  choice: DeskSetupChoice;
+  desks: readonly SetupDesk[];
+  takenNames: readonly string[];
+}): SetupDesk[] {
+  if (input.choice === "all_paper") {
+    return paperDesksForEachType({
+      existing: input.desks,
+      takenNames: input.takenNames,
+    });
+  }
+  if (input.choice === "none") {
+    return [];
+  }
+  return [...input.desks];
+}
+
+export function applyBotSetupChoice(input: {
+  choice: BotSetupChoice;
+  desks: readonly SetupDesk[];
+  folders: readonly StarterFolder[];
+}): SetupDesk[] {
+  if (input.choice === "none") {
+    return input.desks.map((desk) => ({ ...desk, templateIds: [] }));
+  }
+  if (input.choice === "all") {
+    return input.desks.map((desk) => ({
+      ...desk,
+      templateIds: foldersForDesk(input.folders, desk.deskType).flatMap(
+        (folder) => folder.templates.map((template) => template.id),
+      ),
+    }));
+  }
+  return [...input.desks];
+}
+
 export function setupScreens(input: {
   desks: readonly SetupDesk[];
   folders: readonly StarterFolder[];
+  deskChoice: DeskSetupChoice | null;
+  botChoice: BotSetupChoice | null;
 }): SetupScreen[] {
-  const screens: SetupScreen[] = [{ main: "desks", sub: "desks" }];
-  if (showsExchangeStep(input.desks)) {
-    screens.push({ main: "desks", sub: "exchanges" });
+  const screens: SetupScreen[] = [{ main: "desks", sub: "choice" }];
+  if (input.deskChoice === null) {
+    return screens;
   }
-  const bots = starterBotDesks(input.desks, input.folders);
-  if (bots.length === 0) {
-    screens.push({ main: "bots", sub: "empty" });
+  if (input.deskChoice === "manual") {
+    screens.push({ main: "desks", sub: "desks" });
+    if (showsExchangeStep(input.desks)) {
+      screens.push({ main: "desks", sub: "exchanges" });
+    }
+  }
+  const noDesks =
+    input.deskChoice === "none" ||
+    (input.deskChoice === "manual" && input.desks.length === 0);
+  if (noDesks) {
+    screens.push({ main: "bots", sub: "blocked" });
   } else {
-    for (const desk of bots) {
-      screens.push({ main: "bots", sub: "desk", deskKey: desk.key });
+    screens.push({ main: "bots", sub: "choice" });
+    if (input.botChoice === "manual") {
+      const bots = starterBotDesks(input.desks, input.folders);
+      if (bots.length === 0) {
+        screens.push({ main: "bots", sub: "empty" });
+      } else {
+        for (const desk of bots) {
+          screens.push({ main: "bots", sub: "desk", deskKey: desk.key });
+        }
+      }
     }
   }
   screens.push({ main: "tour", sub: "tour" });
@@ -858,6 +974,9 @@ export function setupSubstepLabel(
   screen: SetupScreen,
   desks: readonly SetupDesk[],
 ): string {
+  if (screen.sub === "choice") {
+    return "Choose";
+  }
   if (screen.main === "desks" && screen.sub === "exchanges") {
     return "Exchanges";
   }
@@ -867,8 +986,5 @@ export function setupSubstepLabel(
   if (screen.main === "bots" && screen.sub === "desk") {
     return desks.find((desk) => desk.key === screen.deskKey)?.name ?? "Bots";
   }
-  if (screen.main === "bots") {
-    return "Bots";
-  }
-  return "Tour";
+  return "Bots";
 }

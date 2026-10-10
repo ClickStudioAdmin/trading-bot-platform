@@ -5,6 +5,7 @@ import {
   formatDeskType,
   formatDeskTypeChoice,
 } from "@/lib/accounts/model";
+import { AppRadio } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
 import { checkExchangeConnection } from "@/lib/exchanges/actions";
 import {
@@ -26,6 +27,8 @@ import {
   defaultEnvironmentId,
   SETUP_MAIN_STEPS,
   activeSetupScreen,
+  applyBotSetupChoice,
+  applyDeskSetupChoice,
   botsEmptyNote,
   foldersForDesk,
   makeSetupDesk,
@@ -35,11 +38,14 @@ import {
   setupScreens,
   setupStepLabel,
   setupSubstepLabel,
+  starterBotDesks,
   validateSetupNames,
+  type BotSetupChoice,
+  type DeskSetupChoice,
+  type SetupDraft,
   type SetupScreen,
   type SetupConnection,
   type SetupDesk,
-  type SetupDraft,
   type StarterFolder,
 } from "@/lib/onboarding/model";
 
@@ -62,14 +68,20 @@ export function SetupWizard({
   folders: StarterFolder[];
 }) {
   const [desks, setDesks] = useState<SetupDesk[]>(initialDraft.desks);
+  const [deskChoice, setDeskChoice] = useState<DeskSetupChoice | null>(
+    initialDraft.deskChoice,
+  );
+  const [botChoice, setBotChoice] = useState<BotSetupChoice | null>(
+    initialDraft.botChoice,
+  );
   const [applied] = useState<string[]>(initialDraft.applied);
   const [keys, setKeys] = useState(connections);
-  const [screenId, setScreenId] = useState("desks:desks");
+  const [screenId, setScreenId] = useState("desks:choice");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const screens = useMemo(
-    () => setupScreens({ desks, folders }),
-    [desks, folders],
+    () => setupScreens({ desks, folders, deskChoice, botChoice }),
+    [botChoice, deskChoice, desks, folders],
   );
   const screen = activeSetupScreen(screens, screenId);
   const screenIndex = screens.findIndex(
@@ -82,12 +94,15 @@ export function SetupWizard({
       : null;
   const substeps = screens.filter((item) => item.main === screen.main);
 
-  function draft(): SetupDraft {
+  function draft(overrides?: Partial<SetupDraft>): SetupDraft {
     return {
       desks,
+      deskChoice,
+      botChoice,
       tourChoice: null,
       applied,
       summary: null,
+      ...overrides,
     };
   }
 
@@ -125,14 +140,15 @@ export function SetupWizard({
     });
   }
 
-  function persist(target: SetupScreen) {
-    const names = validateSetupNames(desks, existingNames);
+  function persist(target: SetupScreen, snapshot?: SetupDraft) {
+    const body = snapshot ?? draft();
+    const names = validateSetupNames(body.desks, existingNames);
     if (!names.ok) {
       setError(names.error);
       return;
     }
     if (screen.main === "desks" && screen.sub === "exchanges") {
-      const missing = desks.find(
+      const missing = body.desks.find(
         (desk) => desk.mode === "live" && !desk.bindLater && !desk.connectionId,
       );
       if (missing) {
@@ -142,13 +158,79 @@ export function SetupWizard({
     }
     setError(null);
     startTransition(async () => {
-      const saved = await saveSetupDraft(JSON.stringify(draft()));
+      const saved = await saveSetupDraft(JSON.stringify(body));
       if (!saved.ok) {
         setError(saved.error);
         return;
       }
       setScreenId(setupScreenId(target));
     });
+  }
+
+  function continueForward() {
+    if (screen.main === "desks" && screen.sub === "choice") {
+      if (!deskChoice) {
+        setError("Choose how to add desks.");
+        return;
+      }
+      const nextDesks = applyDeskSetupChoice({
+        choice: deskChoice,
+        desks,
+        takenNames: existingNames,
+      });
+      const nextBotChoice = deskChoice === "none" ? null : botChoice;
+      const planned = setupScreens({
+        desks: nextDesks,
+        folders,
+        deskChoice,
+        botChoice: nextBotChoice,
+      });
+      const target = planned.find((item) => setupScreenId(item) !== "desks:choice");
+      if (!target) {
+        return;
+      }
+      setDesks(nextDesks);
+      setBotChoice(nextBotChoice);
+      persist(
+        target,
+        draft({
+          desks: nextDesks,
+          deskChoice,
+          botChoice: nextBotChoice,
+        }),
+      );
+      return;
+    }
+    if (screen.main === "bots" && screen.sub === "choice") {
+      if (!botChoice) {
+        setError("Choose how to add bots.");
+        return;
+      }
+      const nextDesks = applyBotSetupChoice({
+        choice: botChoice,
+        desks,
+        folders,
+      });
+      const planned = setupScreens({
+        desks: nextDesks,
+        folders,
+        deskChoice,
+        botChoice,
+      });
+      const index = planned.findIndex(
+        (item) => setupScreenId(item) === "bots:choice",
+      );
+      const target = planned[index + 1];
+      if (!target) {
+        return;
+      }
+      setDesks(nextDesks);
+      persist(target, draft({ desks: nextDesks, botChoice }));
+      return;
+    }
+    if (next) {
+      persist(next);
+    }
   }
 
   function finish(tourChoice: "yes" | "not_now") {
@@ -210,6 +292,35 @@ export function SetupWizard({
           {error}
         </p>
       ) : null}
+      {screen.main === "desks" && screen.sub === "choice" ? (
+        <ChoiceStep
+          title="Add desks now?"
+          intro="You can change this later with Back. Desks are created when you finish the tour step."
+          name="desk-setup-choice"
+          value={deskChoice}
+          options={[
+            {
+              value: "all_paper",
+              title: "Create a Paper Trading desk for each strategy type",
+              detail: "Quickest way to see all desk types in action.",
+            },
+            {
+              value: "manual",
+              title: "Manually select desk types and modes",
+              detail: "Pick Paper, Connected, or both for each type.",
+            },
+            {
+              value: "none",
+              title: "Don't add any desks, I'll do it later",
+              detail: "Manage desks can add them after setup.",
+            },
+          ]}
+          onChange={(value) => {
+            setError(null);
+            setDeskChoice(value as DeskSetupChoice);
+          }}
+        />
+      ) : null}
       {screen.main === "desks" && screen.sub === "desks" ? (
         <DeskStep
           desks={desks}
@@ -234,6 +345,51 @@ export function SetupWizard({
           takenNames={takenNames}
         />
       ) : null}
+      {screen.main === "bots" && screen.sub === "blocked" ? (
+        <section className="rounded-card border border-line bg-surface p-5">
+          <h2 className="text-lg font-semibold tracking-tight">
+            Load starter bots?
+          </h2>
+          <p className="mt-2 text-sm text-ink-muted">
+            You can&apos;t add bots without desks. Go back to add desks, or
+            continue to the tour. Nothing is created until you finish that step.
+          </p>
+        </section>
+      ) : null}
+      {screen.main === "bots" && screen.sub === "choice" ? (
+        <ChoiceStep
+          title="Load starter bots?"
+          intro="Starter bots stay idle or disabled. Nothing is created until you finish the tour step."
+          note={
+            starterBotDesks(desks, folders).length === 0
+              ? botsEmptyNote(desks)
+              : null
+          }
+          name="bot-setup-choice"
+          value={botChoice}
+          options={[
+            {
+              value: "all",
+              title: "Load starter bots onto each desk",
+              detail: "Quickest way to see the starter bots in action.",
+            },
+            {
+              value: "manual",
+              title: "Manually select starter bots",
+              detail: "Choose folders and bots for each desk.",
+            },
+            {
+              value: "none",
+              title: "Don't add any bots, I'll do it later",
+              detail: "You can add bots on the desk after setup.",
+            },
+          ]}
+          onChange={(value) => {
+            setError(null);
+            setBotChoice(value as BotSetupChoice);
+          }}
+        />
+      ) : null}
       {screen.main === "bots" && screen.sub === "empty" ? (
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">
@@ -256,7 +412,8 @@ export function SetupWizard({
           </h2>
           <p className="mt-2 text-sm text-ink-muted">
             The tour points at Overview, desks, keys, bots, positions, and
-            settings. It does not arm a bot or place an order.
+            settings. It does not arm a bot or place an order. Desks and bots
+            are created when you finish this step. Back can still change them.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button
@@ -295,10 +452,14 @@ export function SetupWizard({
           <button
             type="button"
             disabled={pending}
-            onClick={() => persist(next)}
+            onClick={continueForward}
             className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
-            {pending ? "Saving…" : "Continue"}
+            {pending
+              ? "Saving…"
+              : screen.main === "bots" && screen.sub === "blocked"
+                ? "Continue to the tour"
+                : "Continue"}
           </button>
         ) : null}
         <button
@@ -310,6 +471,52 @@ export function SetupWizard({
         </button>
       </div>
     </div>
+  );
+}
+
+function ChoiceStep({
+  title,
+  intro,
+  note,
+  name,
+  value,
+  options,
+  onChange,
+}: {
+  title: string;
+  intro: string;
+  note?: string | null;
+  name: string;
+  value: string | null;
+  options: { value: string; title: string; detail: string }[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <section className="rounded-card border border-line bg-surface p-5">
+      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+      <p className="mt-2 text-sm text-ink-muted">{intro}</p>
+      {note ? <p className="mt-2 text-sm text-ink-muted">{note}</p> : null}
+      <fieldset className="mt-4 space-y-3">
+        <legend className="sr-only">{title}</legend>
+        {options.map((option) => (
+          <label
+            key={option.value}
+            className="flex items-start gap-3 text-sm text-ink"
+          >
+            <AppRadio
+              name={name}
+              value={option.value}
+              checked={value === option.value}
+              onChange={() => onChange(option.value)}
+            />
+            <span>
+              <span className="font-medium">{option.title}</span>
+              <span className="mt-1 block text-ink-muted">{option.detail}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+    </section>
   );
 }
 

@@ -33,9 +33,7 @@ export async function SetupGate({ userId }: { userId: string }) {
     redirect("/account");
   }
 
-  const draft = onboarding?.draft.desks.length
-    ? onboarding.draft
-    : emptySetupDraft();
+  const draft = onboarding?.draft ?? emptySetupDraft();
 
   return (
     <SetupModal>

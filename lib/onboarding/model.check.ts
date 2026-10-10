@@ -14,6 +14,8 @@ import {
   onboardingFolders,
   parseSetupDraft,
   activeSetupScreen,
+  applyBotSetupChoice,
+  applyDeskSetupChoice,
   botsEmptyNote,
   requiresSetupGate,
   setupScreenId,
@@ -182,28 +184,74 @@ assert.equal(showsBotStep([
 const both = setupScreens({
   desks: [paper, connected],
   folders: [dcaFolder, perpsFolder],
+  deskChoice: "manual",
+  botChoice: "manual",
 });
 assert.deepEqual(both.map((screen) => setupScreenId(screen)), [
+  "desks:choice",
   "desks:desks",
   "desks:exchanges",
+  "bots:choice",
   "bots:" + connected.key,
   "bots:" + paper.key,
   "tour:tour",
 ]);
 assert.deepEqual(
-  setupScreens({ desks: [], folders: [dcaFolder] }).map((screen) => setupScreenId(screen)),
-  ["desks:desks", "bots:empty", "tour:tour"],
+  setupScreens({
+    desks: [],
+    folders: [dcaFolder],
+    deskChoice: "none",
+    botChoice: null,
+  }).map((screen) => setupScreenId(screen)),
+  ["desks:choice", "bots:blocked", "tour:tour"],
 );
+assert.deepEqual(
+  setupScreens({
+    desks: [paper],
+    folders: [dcaFolder],
+    deskChoice: "all_paper",
+    botChoice: "all",
+  }).map((screen) => setupScreenId(screen)),
+  ["desks:choice", "bots:choice", "tour:tour"],
+);
+const paperSet = applyDeskSetupChoice({
+  choice: "all_paper",
+  desks: [connected],
+  takenNames: [],
+});
+assert.equal(paperSet.length, 5);
+assert.equal(paperSet.every((desk) => desk.mode === "paper"), true);
+assert.equal(applyDeskSetupChoice({
+  choice: "none",
+  desks: paperSet,
+  takenNames: [],
+}).length, 0);
+const withBots = applyBotSetupChoice({
+  choice: "all",
+  desks: [paper, connected],
+  folders: [dcaFolder, perpsFolder],
+});
+assert.deepEqual(withBots[0]?.templateIds, [dcaFolder.templates[0].id]);
+assert.equal(applyBotSetupChoice({
+  choice: "none",
+  desks: withBots,
+  folders: [dcaFolder],
+}).every((desk) => desk.templateIds.length === 0), true);
 assert.equal(
   setupScreenId(activeSetupScreen(both, "desks:exchanges")),
   "desks:exchanges",
 );
 assert.equal(
   setupScreenId(activeSetupScreen(
-    setupScreens({ desks: [paper], folders: [dcaFolder] }),
+    setupScreens({
+      desks: [paper],
+      folders: [dcaFolder],
+      deskChoice: "all_paper",
+      botChoice: null,
+    }),
     "desks:exchanges",
   )),
-  "desks:desks",
+  "desks:choice",
 );
 assert.match(botsEmptyNote([]), /no starter bots/i);
 assert.match(
