@@ -31,9 +31,10 @@ import {
 import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { upgradeAffiliateToPlatformAction } from "@/lib/membership/affiliate-actions";
-import { IconChevronDown } from "@/components/icons";
+import { IconChevronDown, IconTour } from "@/components/icons";
 import { NavBadge } from "@/components/nav-badge";
 import { NAV_ACTIVE_CLASS, NAV_IDLE_CLASS, NavItemIcon } from "@/components/site-nav";
+import { startPlatformTour } from "@/lib/onboarding/actions";
 import {
   OPEN_ACCOUNT_NAV_EVENT,
   tourTargetForAccountHref,
@@ -68,7 +69,7 @@ export function AccountSidenav({
   ).length;
 
   return (
-    <aside className="flex flex-col px-4 py-6">
+    <aside className="flex min-h-full flex-col px-4 pt-6">
       <div className="mb-6">
         <SiteLogo
           linked={!platformMember}
@@ -141,6 +142,20 @@ export function AccountSidenav({
             modeFilter={modeFilter.value}
           />
         </div>
+      ) : null}
+      {platformMember ? (
+        <form
+          action={startPlatformTour}
+          className="sticky bottom-0 z-10 mt-auto -mx-4 bg-surface px-4 py-3"
+        >
+          <button
+            type="submit"
+            className="flex items-center gap-2 rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+          >
+            <IconTour size={16} className="size-4 shrink-0" />
+            Platform Tour
+          </button>
+        </form>
       ) : null}
     </aside>
   );
