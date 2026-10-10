@@ -6,6 +6,7 @@ import {
   formatDeskTypeChoice,
 } from "@/lib/accounts/model";
 import { AppSelect } from "@/components/app-select";
+import { IconCheck } from "@/components/icons";
 import { checkExchangeConnection } from "@/lib/exchanges/actions";
 import {
   formatEnvironmentLabel,
@@ -539,8 +540,9 @@ function TourReady({
 }) {
   const bots = createdStarterBots({ desks, folders, applied });
   return (
-    <section className="rounded-card border border-success/30 bg-success/10 p-5">
-      <h2 className="text-lg font-semibold tracking-tight text-success">
+    <section className="rounded-card border border-line bg-surface p-5">
+      <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+        <IconCheck size={20} className="size-5 shrink-0 text-success" aria-hidden />
         Your account is ready.
       </h2>
       <p className="mt-2 text-sm text-ink">
