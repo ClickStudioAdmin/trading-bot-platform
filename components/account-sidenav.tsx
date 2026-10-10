@@ -333,6 +333,7 @@ function DeskNavLink({
   return (
     <Link
       href={deskHomePath(desk, desk.id)}
+      data-tour-desk={desk.id}
       aria-current={current ? "true" : undefined}
       title={`${desk.name} · ${hint}`}
       onClick={() => {

@@ -3,6 +3,7 @@ import {
   deskNameTaken,
   formatDeskType,
   MANUAL_DESK_TYPES,
+  DESK_QUERY,
   parseDeskTypeChoice,
   pathWithDesk,
   validateNewDeskName,
@@ -866,6 +867,22 @@ export function tourTargetForPath(href: string): string | null {
     return "desk-settings";
   }
   return null;
+}
+
+const DESK_NAV_TARGETS = new Set([
+  "bots",
+  "webhooks",
+  "positions",
+  "desk-settings",
+]);
+
+/** Desk id for the sidebar row that stays lit on a desk page. */
+export function tourDeskId(step: { target: string; href: string }): string | null {
+  if (!DESK_NAV_TARGETS.has(step.target)) {
+    return null;
+  }
+  const id = new URL(step.href, "http://local").searchParams.get(DESK_QUERY);
+  return id || null;
 }
 
 /** Account sidenav rows the tour should open and spotlight. */

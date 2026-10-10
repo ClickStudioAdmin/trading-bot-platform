@@ -11,6 +11,7 @@ import {
   buildTourSteps,
   pickTourTarget,
   placeTourCard,
+  tourDeskId,
   tourTargetForAccountHref,
   connectionReuseError,
   desksStillToCreate,
@@ -377,6 +378,21 @@ assert.equal(tourTargetForAccountHref("/account"), "overview");
 assert.equal(tourTargetForAccountHref("/account/sub-accounts"), "manage-desks");
 assert.equal(tourTargetForAccountHref("/account/templates"), "templates");
 assert.equal(tourTargetForAccountHref("/account/billing"), null);
+const deskSettings = botTour.find((step) => step.id === "desk-settings");
+const bots = botTour.find((step) => step.id === "bots");
+assert.equal(deskSettings ? tourDeskId(deskSettings) : null, accountId);
+assert.equal(bots ? tourDeskId(bots) : null, accountId);
+assert.equal(
+  tourDeskId(botTour.find((step) => step.id === "positions")!),
+  accountId,
+);
+assert.equal(tourDeskId(botTour.find((step) => step.id === "desk-list")!), null);
+assert.equal(tourDeskId(noDeskTour[0]!), null);
+assert.equal(tourDeskId(noDeskTour[1]!), null);
+assert.equal(
+  tourDeskId(signalTour.find((step) => step.id === "webhooks")!),
+  "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+);
 
 const besideNav = placeTourCard({
   target: { top: 120, left: 16, width: 240, height: 36 },
