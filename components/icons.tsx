@@ -17,6 +17,7 @@ import {
   CircleDot,
   CircleOff,
   CircleX,
+  Compass,
   Copy,
   Download,
   FileText,
@@ -169,6 +170,13 @@ export const LUCIDE_ICONS = [
     lucide: "CircleX",
     usedIn: "Blotter close",
     Icon: CircleX,
+  },
+  {
+    id: "compass",
+    name: "Platform Tour",
+    lucide: "Compass",
+    usedIn: "Account sidenav, replay the platform tour",
+    Icon: Compass,
   },
   {
     id: "circle-dot",
@@ -638,6 +646,10 @@ export function IconCheck(props: LucideProps) {
 
 export function IconMarkAllRead(props: LucideProps) {
   return <CheckCheck aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconTour(props: LucideProps) {
+  return <Compass aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconChevronDown(props: LucideProps) {
