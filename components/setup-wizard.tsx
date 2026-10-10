@@ -29,6 +29,7 @@ import {
   applyBotSetupChoice,
   applyDeskSetupChoice,
   botsEmptyNote,
+  createdStarterBots,
   foldersForDesk,
   makeSetupDesk,
   paperVenuesFor,
@@ -470,43 +471,14 @@ export function SetupWizard({
         />
       ) : null}
       {screen.main === "tour" ? (
-        <section className="rounded-card border border-line bg-surface p-5">
-          <h2 className="text-lg font-semibold tracking-tight">
-            Want a short tour of the platform?
-          </h2>
-          <p className="mt-2 text-sm text-ink-muted">
-            {desks.length === 0
-              ? "No desks were added. The tour still walks through Overview, keys, and templates. It does not place an order."
-              : desks.some((desk) => desk.templateIds.length > 0)
-                ? "Your desks and starter bots are already created. The tour shows them in the sidebar and on the desk. It does not arm a bot or place an order."
-                : "Your desks are already created. The tour shows them in the sidebar. It does not place an order."}
-          </p>
-          {desks.length > 0 ? (
-            <ul className="mt-3 space-y-1 text-sm text-ink">
-              {desks.map((desk) => (
-                <li key={desk.key}>{desk.name}</li>
-              ))}
-            </ul>
-          ) : null}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => finish("yes")}
-              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-            >
-              {pending ? "Finishing…" : "Yes, start the tour"}
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => finish("not_now")}
-              className="rounded-control border border-line px-4 py-2 text-sm text-ink"
-            >
-              Not now
-            </button>
-          </div>
-        </section>
+        <TourReady
+          desks={desks}
+          folders={folders}
+          applied={applied}
+          pending={pending}
+          onStart={() => finish("yes")}
+          onLater={() => finish("not_now")}
+        />
       ) : null}
       </div>
       <div className="shrink-0 border-t border-line bg-surface px-5 py-4">
@@ -547,6 +519,79 @@ export function SetupWizard({
         </div>
       </div>
     </div>
+  );
+}
+
+function TourReady({
+  desks,
+  folders,
+  applied,
+  pending,
+  onStart,
+  onLater,
+}: {
+  desks: SetupDesk[];
+  folders: StarterFolder[];
+  applied: string[];
+  pending: boolean;
+  onStart: () => void;
+  onLater: () => void;
+}) {
+  const bots = createdStarterBots({ desks, folders, applied });
+  return (
+    <section className="rounded-card border border-success/30 bg-success/10 p-5">
+      <h2 className="text-lg font-semibold tracking-tight text-success">
+        Your account is ready.
+      </h2>
+      <p className="mt-2 text-sm text-ink">
+        {desks.length === 0
+          ? "No desks or bots were added. Nothing is trading."
+          : "Nothing is armed, and nothing is trading."}
+      </p>
+      {desks.length > 0 ? (
+        <div className="mt-4">
+          <h3 className="text-sm font-medium text-ink">Desks</h3>
+          <ul className="mt-1 space-y-1 text-sm text-ink">
+            {desks.map((desk) => (
+              <li key={desk.key}>{desk.name}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {bots.length > 0 ? (
+        <div className="mt-4">
+          <h3 className="text-sm font-medium text-ink">Bots</h3>
+          <ul className="mt-1 space-y-1 text-sm text-ink">
+            {bots.map((bot) => (
+              <li key={`${bot.deskName}:${bot.templateId}`}>
+                {bot.botName}
+                <span className="text-ink-muted"> · {bot.deskName}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : desks.length > 0 ? (
+        <p className="mt-4 text-sm text-ink-muted">No starter bots were loaded.</p>
+      ) : null}
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={onStart}
+          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+        >
+          {pending ? "Finishing…" : "Start the Tour now"}
+        </button>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={onLater}
+          className="rounded-control border border-line px-4 py-2 text-sm text-ink"
+        >
+          Not now
+        </button>
+      </div>
+    </section>
   );
 }
 

@@ -724,6 +724,37 @@ export function desksStillToCreate(desks: readonly SetupDesk[]): SetupDesk[] {
   return desks.filter((desk) => !desk.accountId);
 }
 
+export function createdStarterBots(input: {
+  desks: readonly SetupDesk[];
+  folders: readonly StarterFolder[];
+  applied: readonly string[];
+}): { deskName: string; botName: string; templateId: string }[] {
+  const done = new Set(input.applied);
+  const names = new Map<string, string>();
+  for (const folder of input.folders) {
+    for (const template of folder.templates) {
+      names.set(template.id, template.name);
+    }
+  }
+  const rows: { deskName: string; botName: string; templateId: string }[] = [];
+  for (const desk of input.desks) {
+    if (!desk.accountId) {
+      continue;
+    }
+    for (const templateId of desk.templateIds) {
+      if (!done.has(applyKey(desk.accountId, templateId))) {
+        continue;
+      }
+      rows.push({
+        deskName: desk.name,
+        botName: names.get(templateId) ?? "Starter bot",
+        templateId,
+      });
+    }
+  }
+  return rows;
+}
+
 export function applyKey(accountId: string, templateId: string): string {
   return `${accountId}:${templateId}`;
 }
