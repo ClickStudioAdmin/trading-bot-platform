@@ -9,6 +9,8 @@ import {
   appliesStillToRun,
   blockedSetupDesks,
   buildTourSteps,
+  placeTourCard,
+  tourTargetForAccountHref,
   connectionReuseError,
   desksStillToCreate,
   draftHasSecret,
@@ -364,6 +366,30 @@ const signalTour = buildTourSteps([
 ]);
 assert.equal(signalTour.some((step) => step.id === "webhooks"), true);
 assert.equal(signalTour.some((step) => step.id === "bots"), false);
+assert.equal(tourTargetForAccountHref("/account"), "overview");
+assert.equal(tourTargetForAccountHref("/account/sub-accounts"), "manage-desks");
+assert.equal(tourTargetForAccountHref("/account/templates"), "templates");
+assert.equal(tourTargetForAccountHref("/account/billing"), null);
+
+const besideNav = placeTourCard({
+  target: { top: 120, left: 16, width: 240, height: 36 },
+  card: { width: 352, height: 180 },
+  viewport: { width: 1280, height: 800 },
+});
+assert.equal(besideNav.side, "right");
+assert.ok(besideNav.left >= 16 + 240);
+assert.equal(besideNav.arrowTo.x, 16 + 240);
+assert.equal(besideNav.arrowTo.y, 120 + 18);
+assert.ok(besideNav.arrowFrom.x > besideNav.arrowTo.x);
+
+const belowHeading = placeTourCard({
+  target: { top: 80, left: 320, width: 900, height: 48 },
+  card: { width: 352, height: 180 },
+  viewport: { width: 1280, height: 800 },
+});
+assert.equal(belowHeading.side, "below");
+assert.ok(belowHeading.top >= 80 + 48);
+assert.equal(belowHeading.arrowTo.y, 80 + 48);
 
 const withdrawal = judgeBybitApiKey({
   permissions: { Wallet: ["Withdraw"], ContractTrade: ["Order"] },

@@ -864,6 +864,163 @@ export function tourTargetForPath(href: string): string | null {
   return null;
 }
 
+/** Account sidenav rows the tour should open and spotlight. */
+export function tourTargetForAccountHref(href: string): string | null {
+  const path = href.split("?")[0] ?? href;
+  if (path === "/account") {
+    return "overview";
+  }
+  if (path === "/account/sub-accounts") {
+    return "manage-desks";
+  }
+  if (path === "/account/templates") {
+    return "templates";
+  }
+  return null;
+}
+
+export const OPEN_ACCOUNT_NAV_EVENT = "tbp-open-account-nav";
+
+export type TourRect = {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+};
+
+export type TourCardPlace = {
+  top: number;
+  left: number;
+  side: "right" | "left" | "below" | "above";
+  arrowFrom: { x: number; y: number };
+  arrowTo: { x: number; y: number };
+};
+
+function clamp(value: number, min: number, max: number): number {
+  if (max < min) {
+    return min;
+  }
+  return Math.min(Math.max(value, min), max);
+}
+
+function rectsClear(a: TourRect, b: TourRect, gap: number): boolean {
+  return (
+    a.left + a.width + gap <= b.left ||
+    b.left + b.width + gap <= a.left ||
+    a.top + a.height + gap <= b.top ||
+    b.top + b.height + gap <= a.top
+  );
+}
+
+/** Puts the tour card beside the spotlight and aims an arrow at that region. */
+export function placeTourCard(input: {
+  target: TourRect;
+  card: { width: number; height: number };
+  viewport: { width: number; height: number };
+  gap?: number;
+  margin?: number;
+}): TourCardPlace {
+  const gap = input.gap ?? 18;
+  const margin = input.margin ?? 16;
+  const { target, card, viewport } = input;
+  const targetCx = target.left + target.width / 2;
+  const targetCy = target.top + target.height / 2;
+  const candidates: {
+    side: TourCardPlace["side"];
+    top: number;
+    left: number;
+  }[] = [
+    {
+      side: "right",
+      top: targetCy - card.height / 2,
+      left: target.left + target.width + gap,
+    },
+    {
+      side: "left",
+      top: targetCy - card.height / 2,
+      left: target.left - gap - card.width,
+    },
+    {
+      side: "below",
+      top: target.top + target.height + gap,
+      left: targetCx - card.width / 2,
+    },
+    {
+      side: "above",
+      top: target.top - gap - card.height,
+      left: targetCx - card.width / 2,
+    },
+  ];
+  const fitted = candidates.find((item) => {
+    const placed: TourRect = {
+      top: item.top,
+      left: item.left,
+      width: card.width,
+      height: card.height,
+    };
+    return (
+      item.left >= margin &&
+      item.top >= margin &&
+      item.left + card.width <= viewport.width - margin &&
+      item.top + card.height <= viewport.height - margin &&
+      rectsClear(placed, target, gap - 1)
+    );
+  });
+  const chosen = fitted ?? candidates[0];
+  const left = clamp(
+    chosen.left,
+    margin,
+    viewport.width - margin - card.width,
+  );
+  const top = clamp(
+    chosen.top,
+    margin,
+    viewport.height - margin - card.height,
+  );
+  const cardBox: TourRect = {
+    top,
+    left,
+    width: card.width,
+    height: card.height,
+  };
+  const alongY = clamp(targetCy, top + 24, top + card.height - 24);
+  const alongX = clamp(targetCx, left + 24, left + card.width - 24);
+  if (chosen.side === "right") {
+    return {
+      top,
+      left,
+      side: "right",
+      arrowFrom: { x: cardBox.left, y: alongY },
+      arrowTo: { x: target.left + target.width, y: targetCy },
+    };
+  }
+  if (chosen.side === "left") {
+    return {
+      top,
+      left,
+      side: "left",
+      arrowFrom: { x: cardBox.left + cardBox.width, y: alongY },
+      arrowTo: { x: target.left, y: targetCy },
+    };
+  }
+  if (chosen.side === "above") {
+    return {
+      top,
+      left,
+      side: "above",
+      arrowFrom: { x: alongX, y: cardBox.top + cardBox.height },
+      arrowTo: { x: targetCx, y: target.top },
+    };
+  }
+  return {
+    top,
+    left,
+    side: "below",
+    arrowFrom: { x: alongX, y: cardBox.top },
+    arrowTo: { x: targetCx, y: target.top + target.height },
+  };
+}
+
 function isCopy(desk: TourDesk): boolean {
   return Boolean(desk.copyOfAccountId);
 }
@@ -879,7 +1036,7 @@ export function buildTourSteps(desks: readonly TourDesk[]): TourStep[] {
     {
       id: "overview",
       title: "Overview",
-      body: "This is the account home after sign-in.",
+      body: "Overview in the account menu. This is the home after sign-in.",
       href: "/account",
       target: "overview",
     },

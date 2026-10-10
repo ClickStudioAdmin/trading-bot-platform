@@ -143,7 +143,7 @@ Done summary (Overview card that dismisses, or the first tour step): desks creat
 
 ## Guided tour
 
-A small overlay in the app. No tour library. Steps are a fixed list in code, not an admin CMS. Each step spotlights one existing region (`data-tour` on that control), with a title and one or two sentences. Controls: Back, Next, Skip tour. Skip marks the tour skipped. The last step marks it completed.
+A small overlay in the app. No tour library. Steps are a fixed list in code, not an admin CMS. Each step spotlights one existing region (`data-tour` on that control), with a title and one or two sentences. An arrow runs from the card to that region. The region stays undimmed inside a purple ring. The rest of the app is dimmed. Overview, Manage Desks, and Bot Templates spotlight the account sidenav item, and the Account group opens if it was collapsed. Controls: Back, Next, Skip tour. Skip marks the tour skipped. The last step marks it completed.
 
 Progress is stored per member (step index plus not started / in progress / completed / skipped / declined). Refresh resumes the current step. Completing or skipping never shows the offer modal again. **Take the tour** on Overview starts or resumes until the tour is completed or skipped from the overlay.
 
@@ -151,7 +151,7 @@ Steps that do not apply are omitted (no desk yet, no bot desk, no TradingView de
 
 | # | Focus | When | What to say |
 | --- | --- | --- | --- |
-| 1 | Overview | Always | This is the account home after sign-in. |
+| 1 | Overview in the account menu | Always | Overview in the account menu. This is the home after sign-in. |
 | 2 | Manage Desks | Always | Desks are created here. Type and mode stay as they were set. |
 | 3 | Exchanges (Manage desks, Exchanges tab) | Always | Keys are trade-only. One key binds one desk. Demo and Live are the key’s environment, not a separate desk type. |
 | 4 | Desk list in the sidenav | They have a desk | Open a desk from this list. Paper, Demo, and Live are marked here. |
