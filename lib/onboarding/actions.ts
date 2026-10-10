@@ -133,13 +133,67 @@ export async function saveSetupConnection(formData: FormData): Promise<
   return { ok: true, connection: written.connection };
 }
 
+/** Create desks and load starter bots, then leave setup pending so the tour can show them. */
+export async function createSetupBeforeTour(
+  raw: string,
+): Promise<{ ok: true; draft: SetupDraft } | { ok: false; error: string }> {
+  const member = await requirePlatformMember();
+  const prepared = await materializeSetup(member.id, raw);
+  if (!prepared.ok) {
+    return prepared;
+  }
+  const saved = await saveOnboardingDraft(member.id, prepared.draft);
+  if (!saved) {
+    return { ok: false, error: "Could not save setup." };
+  }
+  refreshSetupChrome();
+  return { ok: true, draft: prepared.draft };
+}
+
 export async function finishSetup(raw: string): Promise<{ ok: false; error: string }> {
   const member = await requirePlatformMember();
+  const prepared = await materializeSetup(member.id, raw);
+  if (!prepared.ok) {
+    return prepared;
+  }
+  const working = prepared.draft;
+  const tour = working.tourChoice === "yes" ? "in_progress" : "declined";
+  const done = await completeMemberOnboarding({
+    userId: member.id,
+    summary: working.summary ?? {
+      desks: working.desks.map((desk) => ({
+        name: desk.name,
+        detail: deskSummaryDetail(desk),
+      })),
+      bots: [],
+      dismissed: false,
+    },
+    tour,
+    createdAccountIds: working.desks
+      .map((desk) => desk.accountId)
+      .filter((id): id is string => Boolean(id)),
+    applied: working.applied,
+  });
+  if (!done) {
+    return { ok: false, error: "Could not finish setup." };
+  }
+  const last = [...working.desks].reverse().find((desk) => desk.accountId);
+  if (last?.accountId) {
+    await setActiveAccountId(last.accountId);
+  }
+  refreshSetupChrome();
+  redirect("/account");
+}
+
+async function materializeSetup(
+  userId: string,
+  raw: string,
+): Promise<{ ok: true; draft: SetupDraft } | { ok: false; error: string }> {
   const parsed = parseSetupDraft(raw);
   if (!parsed.ok) {
     return parsed;
   }
-  const accounts = await listTradingAccounts(member.id);
+  const accounts = await listTradingAccounts(userId);
   const ownedIds = new Set(
     parsed.draft.desks
       .map((desk) => desk.accountId)
@@ -147,11 +201,11 @@ export async function finishSetup(raw: string): Promise<{ ok: false; error: stri
   );
   const foreign = accounts.filter((account) => !ownedIds.has(account.id));
   if (foreign.length > 0 && ownedIds.size === 0) {
-    await skipMemberOnboarding(member.id);
+    await skipMemberOnboarding(userId);
     refreshSetupChrome();
     redirect("/account");
   }
-  const claimed = await claimOnboardingFinish(member.id);
+  const claimed = await claimOnboardingFinish(userId);
   if (!claimed.ok) {
     if (claimed.done) {
       redirect("/account");
@@ -160,7 +214,7 @@ export async function finishSetup(raw: string): Promise<{ ok: false; error: stri
   }
   const draft = mergeClaimedDraft(parsed.draft, claimed.row.draft);
   const folders = await listOnboardingFolders();
-  const binds = await listConnectionDeskBinds(member.id);
+  const binds = await listConnectionDeskBinds(userId);
   const boundConnectionIds = binds
     .filter((bind) => !ownedIds.has(bind.accountId))
     .map((bind) => bind.connectionId);
@@ -174,17 +228,17 @@ export async function finishSetup(raw: string): Promise<{ ok: false; error: stri
     boundConnectionIds,
   });
   if (!ready.ok) {
-    await saveOnboardingDraft(member.id, draft);
+    await saveOnboardingDraft(userId, draft);
     return ready;
   }
   const working = ready.draft;
-  const connections = await listExchangeConnections(member.id);
+  const connections = await listExchangeConnections(userId);
   for (const desk of desksStillToCreate(working.desks)) {
     let connectionId: string | null = null;
     if (desk.mode === "live" && desk.connectionId && !desk.bindLater) {
       const match = connections.find((row) => row.id === desk.connectionId);
       if (!match || match.status !== "active") {
-        await saveOnboardingDraft(member.id, working);
+        await saveOnboardingDraft(userId, working);
         return { ok: false, error: "Pick an exchange key saved on this login." };
       }
       const fit = connectionFitsDesk({
@@ -194,13 +248,13 @@ export async function finishSetup(raw: string): Promise<{ ok: false; error: stri
         connectionEnvironment: match.environment,
       });
       if (!fit.ok) {
-        await saveOnboardingDraft(member.id, working);
+        await saveOnboardingDraft(userId, working);
         return fit;
       }
       connectionId = match.id;
     }
     const created = await insertTradingAccount(
-      member.id,
+      userId,
       desk.name,
       desk.mode,
       desk.deskType,
@@ -210,17 +264,17 @@ export async function finishSetup(raw: string): Promise<{ ok: false; error: stri
       },
     );
     if (!created) {
-      await saveOnboardingDraft(member.id, working);
+      await saveOnboardingDraft(userId, working);
       return {
         ok: false,
         error: "Could not create that desk. The name may already be in use.",
       };
     }
     desk.accountId = created.id;
-    await saveOnboardingProgress({ userId: member.id, draft: working });
+    await saveOnboardingProgress({ userId, draft: working });
     if (connectionId) {
       const bound = await bindConnectionToDesk({
-        userId: member.id,
+        userId,
         accountId: created.id,
         deskType: desk.deskType,
         connectionId,
@@ -228,7 +282,7 @@ export async function finishSetup(raw: string): Promise<{ ok: false; error: stri
         venueEnvironment: created.venueEnvironment,
       });
       if (bound.error) {
-        await saveOnboardingDraft(member.id, working);
+        await saveOnboardingDraft(userId, working);
         return { ok: false, error: bound.error };
       }
     }
@@ -236,7 +290,7 @@ export async function finishSetup(raw: string): Promise<{ ok: false; error: stri
       scope: "system",
       event: "account.created",
       message: `Created ${desk.mode} desk ${desk.name}`,
-      userId: member.id,
+      userId,
       accountId: created.id,
       data: {
         mode: desk.mode,
@@ -248,10 +302,10 @@ export async function finishSetup(raw: string): Promise<{ ok: false; error: stri
         ...(connectionId ? { exchangeConnectionId: connectionId } : {}),
       },
     });
-    await saveOnboardingProgress({ userId: member.id, draft: working });
+    await saveOnboardingProgress({ userId, draft: working });
   }
 
-  const botLines: SetupSummary["bots"] = [];
+  const botLines: SetupSummary["bots"] = [...(working.summary?.bots ?? [])];
   for (const item of appliesStillToRun(working.desks, working.applied)) {
     if (
       !starterTemplateAllowed({
@@ -266,7 +320,7 @@ export async function finishSetup(raw: string): Promise<{ ok: false; error: stri
       continue;
     }
     const result = await applyTemplateToDesk({
-      userId: member.id,
+      userId,
       accountId: item.accountId,
       templateId: item.templateId,
     });
@@ -284,10 +338,18 @@ export async function finishSetup(raw: string): Promise<{ ok: false; error: stri
         detail: result.error ?? "Could not load that bot.",
       });
     }
-    await saveOnboardingProgress({ userId: member.id, draft: working });
+    working.summary = {
+      desks: working.desks.map((desk) => ({
+        name: desk.name,
+        detail: deskSummaryDetail(desk),
+      })),
+      bots: botLines,
+      dismissed: false,
+    };
+    await saveOnboardingProgress({ userId, draft: working });
   }
 
-  const summary: SetupSummary = {
+  working.summary = {
     desks: working.desks.map((desk) => ({
       name: desk.name,
       detail: deskSummaryDetail(desk),
@@ -295,25 +357,9 @@ export async function finishSetup(raw: string): Promise<{ ok: false; error: stri
     bots: botLines,
     dismissed: false,
   };
-  const tour = working.tourChoice === "yes" ? "in_progress" : "declined";
-  const done = await completeMemberOnboarding({
-    userId: member.id,
-    summary,
-    tour,
-    createdAccountIds: working.desks
-      .map((desk) => desk.accountId)
-      .filter((id): id is string => Boolean(id)),
-    applied: working.applied,
-  });
-  if (!done) {
-    return { ok: false, error: "Could not finish setup." };
-  }
-  const last = [...working.desks].reverse().find((desk) => desk.accountId);
-  if (last?.accountId) {
-    await setActiveAccountId(last.accountId);
-  }
-  refreshSetupChrome();
-  redirect("/account");
+  working.readyForTour = true;
+  await saveOnboardingProgress({ userId, draft: working });
+  return { ok: true, draft: working };
 }
 
 function deskSummaryDetail(desk: SetupDraft["desks"][number]): string {
@@ -332,16 +378,18 @@ function deskSummaryDetail(desk: SetupDraft["desks"][number]): string {
 }
 
 function mergeClaimedDraft(submitted: SetupDraft, stored: SetupDraft): SetupDraft {
+  const applied = [...new Set([...submitted.applied, ...stored.applied])];
+  const summary = submitted.summary ?? stored.summary;
+  const readyForTour = submitted.readyForTour || stored.readyForTour;
   if (stored.desks.length === 0) {
-    return {
-      ...submitted,
-      applied: [...new Set([...submitted.applied, ...stored.applied])],
-    };
+    return { ...submitted, applied, summary, readyForTour };
   }
   const storedByKey = new Map(stored.desks.map((desk) => [desk.key, desk]));
   return {
     ...submitted,
-    applied: [...new Set([...submitted.applied, ...stored.applied])],
+    applied,
+    summary,
+    readyForTour,
     desks: submitted.desks.map((desk) => {
       const previous = storedByKey.get(desk.key);
       if (!previous?.accountId) {

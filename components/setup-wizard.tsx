@@ -14,6 +14,7 @@ import {
 } from "@/lib/exchanges/connections";
 import { getVenue } from "@/lib/exchanges/venues";
 import {
+  createSetupBeforeTour,
   finishSetup,
   saveSetupConnection,
   saveSetupDraft,
@@ -169,9 +170,12 @@ export function SetupWizard({
   const [botChoice, setBotChoice] = useState<BotSetupChoice | null>(
     initialDraft.botChoice,
   );
-  const [applied] = useState<string[]>(initialDraft.applied);
+  const [applied, setApplied] = useState<string[]>(initialDraft.applied);
+  const [readyForTour, setReadyForTour] = useState(initialDraft.readyForTour);
   const [keys, setKeys] = useState(connections);
-  const [screenId, setScreenId] = useState("desks:choice");
+  const [screenId, setScreenId] = useState(
+    initialDraft.readyForTour ? "tour:tour" : "desks:choice",
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const screens = useMemo(
@@ -197,6 +201,7 @@ export function SetupWizard({
       tourChoice: null,
       applied,
       summary: null,
+      readyForTour,
       ...overrides,
     };
   }
@@ -262,6 +267,42 @@ export function SetupWizard({
     });
   }
 
+  function openTour(snapshot?: SetupDraft) {
+    const body = snapshot ?? draft();
+    const names = validateSetupNames(body.desks, existingNames);
+    if (!names.ok) {
+      setError(names.error);
+      return;
+    }
+    const missing = body.desks.find(
+      (desk) => desk.mode === "live" && !desk.bindLater && !desk.connectionId,
+    );
+    if (missing) {
+      setError(`Choose a key for ${missing.name}, or bind it later.`);
+      return;
+    }
+    setError(null);
+    startTransition(async () => {
+      const created = await createSetupBeforeTour(JSON.stringify(body));
+      if (!created.ok) {
+        setError(created.error);
+        return;
+      }
+      setDesks(created.draft.desks);
+      setApplied(created.draft.applied);
+      setReadyForTour(true);
+      setScreenId("tour:tour");
+    });
+  }
+
+  function advance(target: SetupScreen, snapshot?: SetupDraft) {
+    if (target.main === "tour") {
+      openTour(snapshot);
+      return;
+    }
+    persist(target, snapshot);
+  }
+
   function continueForward() {
     if (screen.main === "desks" && screen.sub === "choice") {
       if (!deskChoice) {
@@ -286,7 +327,7 @@ export function SetupWizard({
       }
       setDesks(nextDesks);
       setBotChoice(nextBotChoice);
-      persist(
+      advance(
         target,
         draft({
           desks: nextDesks,
@@ -320,11 +361,11 @@ export function SetupWizard({
         return;
       }
       setDesks(nextDesks);
-      persist(target, draft({ desks: nextDesks, botChoice }));
+      advance(target, draft({ desks: nextDesks, botChoice }));
       return;
     }
     if (next) {
-      persist(next);
+      advance(next);
     }
   }
 
@@ -352,7 +393,7 @@ export function SetupWizard({
       {screen.main === "desks" && screen.sub === "choice" ? (
         <ChoiceStep
           title="Add desks now?"
-          intro="You can change this later with Back. Desks are created when you finish the tour step."
+          intro="You can change this with Back until you continue to the tour. Desks and bots are created then, so the tour can show them."
           name="desk-setup-choice"
           value={deskChoice}
           options={[
@@ -409,14 +450,15 @@ export function SetupWizard({
           </h2>
           <p className="mt-2 text-sm text-ink-muted">
             You can&apos;t add bots without desks. Go back to add desks, or
-            continue to the tour. Nothing is created until you finish that step.
+            continue to the tour. Desks are created when you continue, before
+            the tour.
           </p>
         </section>
       ) : null}
       {screen.main === "bots" && screen.sub === "choice" ? (
         <ChoiceStep
           title="Load starter bots?"
-          intro="Starter bots stay idle or disabled. Nothing is created until you finish the tour step."
+          intro="Starter bots stay idle or disabled. Desks and bots are created before the tour, so the tour can show them."
           note={
             starterBotDesks(desks, folders).length === 0
               ? botsEmptyNote(desks)
@@ -468,10 +510,19 @@ export function SetupWizard({
             Want a short tour of the platform?
           </h2>
           <p className="mt-2 text-sm text-ink-muted">
-            The tour points at Overview, desks, keys, bots, positions, and
-            settings. It does not arm a bot or place an order. Desks and bots
-            are created when you finish this step. Back can still change them.
+            {desks.length === 0
+              ? "No desks were added. The tour still walks through Overview, keys, and templates. It does not place an order."
+              : desks.some((desk) => desk.templateIds.length > 0)
+                ? "Your desks and starter bots are already created. The tour shows them in the sidebar and on the desk. It does not arm a bot or place an order."
+                : "Your desks are already created. The tour shows them in the sidebar. It does not place an order."}
           </p>
+          {desks.length > 0 ? (
+            <ul className="mt-3 space-y-1 text-sm text-ink">
+              {desks.map((desk) => (
+                <li key={desk.key}>{desk.name}</li>
+              ))}
+            </ul>
+          ) : null}
           <div className="mt-4 flex flex-wrap gap-2">
             <button
               type="button"
@@ -500,7 +551,7 @@ export function SetupWizard({
           </p>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
-        {previous ? (
+        {previous && !readyForTour ? (
           <button
             type="button"
             onClick={() => {
@@ -520,19 +571,23 @@ export function SetupWizard({
             className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
             {pending
-              ? "Saving…"
+              ? next?.main === "tour"
+                ? "Creating…"
+                : "Saving…"
               : screen.main === "bots" && screen.sub === "blocked"
                 ? "Continue to the tour"
                 : "Continue"}
           </button>
         ) : null}
-        <button
-          type="button"
-          onClick={() => startTransition(() => skipSetup())}
-          className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-        >
-          Skip setup
-        </button>
+        {readyForTour ? null : (
+          <button
+            type="button"
+            onClick={() => startTransition(() => skipSetup())}
+            className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+          >
+            Skip setup
+          </button>
+        )}
         </div>
       </div>
     </div>

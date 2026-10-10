@@ -227,6 +227,7 @@ export async function completeMemberOnboarding(input: {
     tourChoice: input.tour === "in_progress" ? "yes" : "not_now",
     applied: input.applied,
     summary: input.summary,
+    readyForTour: false,
   };
   return writeRow(input.userId, {
     status: "completed",

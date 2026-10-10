@@ -91,6 +91,8 @@ export type SetupDraft = {
   tourChoice: SetupTourChoice | null;
   applied: string[];
   summary: SetupSummary | null;
+  /** Desks and bots are already written. The tour step can show them. */
+  readyForTour: boolean;
 };
 
 export type SetupConnection = {
@@ -137,6 +139,7 @@ export function emptySetupDraft(): SetupDraft {
     tourChoice: null,
     applied: [],
     summary: null,
+    readyForTour: false,
   };
 }
 
@@ -352,6 +355,7 @@ export function parseSetupDraft(
       tourChoice,
       applied,
       summary,
+      readyForTour: body.readyForTour === true,
     },
   };
 }

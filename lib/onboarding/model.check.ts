@@ -316,6 +316,12 @@ assert.equal(refused.ok, false);
 
 assert.equal(draftHasSecret({ desks: [{ apiSecret: "x" }] }), true);
 const secretDraft = parseSetupDraft({ apiKey: "nope", desks: [] });
+const readyDraft = parseSetupDraft({ readyForTour: true });
+assert.equal(readyDraft.ok, true);
+if (readyDraft.ok) {
+  assert.equal(readyDraft.draft.readyForTour, true);
+}
+assert.equal(emptySetupDraft().readyForTour, false);
 assert.equal(secretDraft.ok, false);
 
 const liveLater = validateSetupForFinish({

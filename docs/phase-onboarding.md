@@ -40,7 +40,7 @@ Skip setup is inside the modal, before any desk is written. Skipping closes the 
 
 ## Steps
 
-The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. The step list always shows **1. Desks**, **2. Bots**, and **3. Tour**. Each of Desks and Bots starts with a choice. Sub-steps sit under the current step. Exchanges is a sub-step of Desks, after the manual desk table, and only when a Connected cell is ticked. Each desk that has starter folders is a sub-step of Bots when they choose to pick bots themselves. **Back** returns to the previous sub-step and can change the choice. Desks and bots are written only when they finish the tour step. **Skip setup** discards the desk draft, leaves saved keys on Exchanges (unbound), marks setup skipped, closes the modal, and lands on Overview.
+The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. The step list always shows **1. Desks**, **2. Bots**, and **3. Tour**. Each of Desks and Bots starts with a choice. Sub-steps sit under the current step. Exchanges is a sub-step of Desks, after the manual desk table, and only when a Connected cell is ticked. Each desk that has starter folders is a sub-step of Bots when they choose to pick bots themselves. **Back** returns to the previous sub-step and can change the choice until they continue to the tour. Desks and bots are written then, before the tour question, so the tour can show those desks and bots. **Skip setup** before that discards the desk draft, leaves saved keys on Exchanges (unbound), marks setup skipped, closes the modal, and lands on Overview.
 
 ### 1. Desks
 
@@ -50,7 +50,7 @@ The first sub-step asks how to add desks:
 2. Manually select desk types and modes. Opens the table below. Connected desks then get the exchange sub-step.
 3. Don't add any desks. Skips the table. Bots then says bots need a desk, with Back or continue to the tour.
 
-Choosing again with Back replaces the draft selection. Nothing is inserted until the tour step.
+Choosing again with Back replaces the draft selection. Nothing is inserted until they continue to the tour.
 
 Question on the table, when they choose to select manually: “Create a few desks now?”
 
@@ -107,7 +107,7 @@ Always step 2. It starts with the same kind of choice as desks:
 
 If they chose no desks, this step does not offer those three. It says bots need a desk, with Back or continue to the tour.
 
-If they chose only Perps and/or TradingView Strategy, or an automated type with no flagged folder, the choice still appears and says there is nothing to load. Do not show an empty required picker. The done summary still says ticket and alert desks have no starter bots. Bot rows are applied only when they finish the tour step.
+If they chose only Perps and/or TradingView Strategy, or an automated type with no flagged folder, the choice still appears and says there is nothing to load. Do not show an empty required picker. The done summary still says ticket and alert desks have no starter bots. Bot rows are applied when they continue to the tour, after the desks exist.
 
 Source:
 
@@ -126,16 +126,16 @@ Picker:
 - Perps bots and Cash and Carry stack as they do today. Name collisions get the existing ` (from template)` suffix.
 - Empty selection on this step is valid (“don’t load bots”).
 
-Apply runs on Finish, after the desks exist, through the same server apply used by Automations. Results are applied / skipped / failed per template. Successes stay. No rollback of siblings. No orders.
+Apply runs when they continue to the tour, after the desks exist, through the same server apply used by Automations. Results are applied / skipped / failed per template. Successes stay. No rollback of siblings. No orders.
 
 ### 3. Tour
 
-Question: “Want a short tour of the platform?”
+Continuing to this step writes the desks and bots first. The modal stays up. Question: “Want a short tour of the platform?”
 
-- **Yes** — Finish writes the draft, then the tour starts on Overview.
-- **Not now** — Finish writes the draft and lands on Overview, with the setup summary and **Take the tour**. The last desk created becomes the active desk.
+- **Yes** — Setup is marked completed and the tour starts on Overview. The tour includes the new desks and, when a starter bot was loaded, that desk’s Bots page.
+- **Not now** — Setup is marked completed and lands on Overview, with the setup summary and **Take the tour**. The last desk created becomes the active desk.
 
-Finish is the only write for desks and bots. The button label is **Finish setup**. While it runs: save any not-yet-saved state, create desks in table order, bind the chosen connections, apply the chosen templates, then set setup completed.
+Back is not offered after the desks are written. Skip setup is only on the earlier steps. A retry does not create a second copy.
 
 Partial failure: desks and binds already committed stay. The setup row records created desk ids and which template applies succeeded, so a retry does not create a second copy. Keys already saved stay on the login. The member sees which step failed in the same words the underlying action already returns.
 
