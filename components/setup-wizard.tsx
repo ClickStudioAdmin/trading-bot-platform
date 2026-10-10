@@ -5,7 +5,7 @@ import {
   formatDeskType,
   formatDeskTypeChoice,
 } from "@/lib/accounts/model";
-import { AppRadio } from "@/components/app-check";
+import { IconCheck } from "@/components/icons";
 import { AppSelect } from "@/components/app-select";
 import { checkExchangeConnection } from "@/lib/exchanges/actions";
 import {
@@ -616,26 +616,43 @@ function ChoiceStep({
       <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
       <p className="mt-2 text-sm text-ink-muted">{intro}</p>
       {note ? <p className="mt-2 text-sm text-ink-muted">{note}</p> : null}
-      <fieldset className="mt-4 space-y-3">
-        <legend className="sr-only">{title}</legend>
-        {options.map((option) => (
-          <label
-            key={option.value}
-            className="flex items-start gap-3 text-sm text-ink"
-          >
-            <AppRadio
-              name={name}
-              value={option.value}
-              checked={value === option.value}
-              onChange={() => onChange(option.value)}
-            />
-            <span>
-              <span className="font-medium">{option.title}</span>
-              <span className="mt-1 block text-ink-muted">{option.detail}</span>
-            </span>
-          </label>
-        ))}
-      </fieldset>
+      <div role="radiogroup" aria-label={title} className="mt-4 flex flex-col gap-3">
+        {options.map((option) => {
+          const selected = value === option.value;
+          return (
+            <label
+              key={option.value}
+              className={
+                selected
+                  ? "flex cursor-pointer items-center gap-4 rounded-card border border-accent bg-accent/10 px-5 py-4 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
+                  : "flex cursor-pointer items-center gap-4 rounded-card border border-line bg-canvas px-5 py-4 hover:border-line-strong hover:bg-surface-raised has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
+              }
+            >
+              <input
+                type="radio"
+                name={name}
+                value={option.value}
+                checked={selected}
+                onChange={() => onChange(option.value)}
+                className="sr-only"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-ink">
+                  {option.title}
+                </span>
+                <span className="mt-1 block text-sm text-ink-muted">
+                  {option.detail}
+                </span>
+              </span>
+              {selected ? (
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-strong text-ink">
+                  <IconCheck size={16} />
+                </span>
+              ) : null}
+            </label>
+          );
+        })}
+      </div>
     </section>
   );
 }
