@@ -7,8 +7,10 @@ import {
 } from "./email";
 import {
   consumeEmailToken,
+  consumeEmailVerifyCode,
   issueEmailToken,
   type EmailTokenPurpose,
+  type EmailVerifyCodeStatus,
 } from "./email-tokens";
 
 export async function markEmailVerified(userId: string): Promise<boolean> {
@@ -39,7 +41,7 @@ export async function sendMemberAuthLink(
   }
   const notice =
     purpose === "verify"
-      ? verifyEmailNotice(issued.raw)
+      ? verifyEmailNotice(issued.raw, issued.code ?? "")
       : resetPasswordNotice(issued.raw);
   const sent = await sendAuthEmail({ to: email, notice });
   await writeEventLog({
@@ -48,7 +50,7 @@ export async function sendMemberAuthLink(
       purpose === "verify" ? "member.verify_email_sent" : "member.reset_email_sent",
     message:
       purpose === "verify"
-        ? "Sent email confirmation link"
+        ? "Sent email confirmation"
         : "Sent password reset link",
     userId,
     data: { email, status: sent.ok ? "sent" : sent.error },
@@ -61,4 +63,11 @@ export async function consumeMemberAuthLink(
   purpose: EmailTokenPurpose,
 ): Promise<{ userId: string } | null> {
   return consumeEmailToken(raw, purpose);
+}
+
+export async function consumeMemberVerifyCode(
+  userId: string,
+  rawCode: string,
+): Promise<EmailVerifyCodeStatus> {
+  return consumeEmailVerifyCode(userId, rawCode);
 }

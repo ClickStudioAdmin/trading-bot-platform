@@ -6,6 +6,8 @@ export type NotificationNotice = {
   paragraphs: string[];
   actionLabel: string;
   actionUrl: string;
+  /** Signup verify mail only. Six digits, shown so the reader can copy them. */
+  code?: string;
 };
 
 function notice(

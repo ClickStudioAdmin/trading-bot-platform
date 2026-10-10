@@ -68,6 +68,22 @@ export function NoticeEmail({
             {paragraph}
           </p>
         ))}
+        {notice.code?.trim() ? (
+          <>
+            <p
+              className="mt-4 text-xs uppercase tracking-[0.08em]"
+              style={{ color: "#6b7280" }}
+            >
+              Confirmation code
+            </p>
+            <p
+              className="mt-1.5 font-mono text-2xl font-semibold tracking-[0.35em]"
+              style={{ color: "#111827" }}
+            >
+              {notice.code.trim()}
+            </p>
+          </>
+        ) : null}
         <p className="mt-4">
           <span
             className="inline-block rounded-control px-3 py-1.5 text-sm font-medium"

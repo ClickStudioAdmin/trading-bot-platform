@@ -3,10 +3,14 @@ import { namedPageMetadata } from "@/lib/platform/metadata";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { resendVerifyEmailAction } from "@/lib/auth/actions";
+import {
+  confirmVerifyCodeAction,
+  resendVerifyEmailAction,
+} from "@/lib/auth/actions";
 import { signedInHomePath } from "@/lib/auth/onboarding";
 import { getSessionMember } from "@/lib/auth/session";
 import { listTradingAccounts } from "@/lib/accounts/store";
+import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import { firstSearchValue } from "@/lib/paper/open";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -38,9 +42,9 @@ export default async function VerifyAccountPage({
         Check your email
       </h1>
       <p className="mt-3 text-sm text-ink-muted">
-        We sent a confirmation link to{" "}
-        <span className="text-ink">{member.email}</span>. Confirm that address
-        before you use the app.
+        We sent a confirmation to{" "}
+        <span className="text-ink">{member.email}</span>. Enter the code below,
+        or click the link in that message.
       </p>
       <section className="mt-8 rounded-card border border-line bg-surface p-5">
         {error ? (
@@ -54,10 +58,40 @@ export default async function VerifyAccountPage({
             asking again.
           </p>
         ) : null}
-        <form action={resendVerifyEmailAction}>
+        <form action={confirmVerifyCodeAction} className="space-y-3">
+          <label className="block text-sm text-ink" htmlFor="code">
+            Confirmation code
+            <input
+              id="code"
+              name="code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              autoFocus
+              required
+              maxLength={12}
+              className={BILLING_FIELD_CLASS}
+            />
+          </label>
+          <p className="text-hint text-ink-muted">
+            The 6-digit code from the email. Spaces are fine.
+          </p>
+          <PendingSubmitButton
+            pendingLabel="Confirming…"
+            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          >
+            Confirm email
+          </PendingSubmitButton>
+        </form>
+        <form
+          action={resendVerifyEmailAction}
+          className="mt-5 border-t border-line pt-4"
+        >
           <PendingSubmitButton
             pendingLabel="Sending…"
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            className="rounded-control border border-line px-4 py-2 text-sm font-medium text-ink"
           >
             Resend confirmation
           </PendingSubmitButton>

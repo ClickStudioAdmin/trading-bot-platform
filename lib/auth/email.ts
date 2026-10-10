@@ -1,3 +1,4 @@
+import { normalizeEmailVerifyCode } from "@/lib/auth/email-tokens";
 import {
   appBaseUrl,
   escapeNoticeHtml,
@@ -16,15 +17,22 @@ export const AUTH_EMAIL_FOOTER =
 export const AUTH_MAIL_ALWAYS_OK =
   "If that login exists, we sent a link.";
 
-export function verifyEmailNotice(token: string): NotificationNotice {
+export function verifyEmailNotice(token: string, code = ""): NotificationNotice {
+  const normalized = normalizeEmailVerifyCode(code);
   return {
     subject: "Confirm your email",
-    paragraphs: [
-      "We received a signup for this address. Click the button to confirm it.",
-      "The link expires in 24 hours.",
-    ],
+    paragraphs: normalized
+      ? [
+          "We received a signup for this address. Click the button to confirm it, or enter this code on the Check your email page.",
+          "The link and code expire in 24 hours.",
+        ]
+      : [
+          "We received a signup for this address. Click the button to confirm it.",
+          "The link expires in 24 hours.",
+        ],
     actionLabel: "Confirm email",
     actionUrl: `/verify-email?token=${encodeURIComponent(token)}`,
+    ...(normalized ? { code: normalized } : {}),
   };
 }
 
