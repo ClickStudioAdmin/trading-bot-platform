@@ -52,6 +52,101 @@ import {
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 
+function SetupProgress({
+  screen,
+  substeps,
+  desks,
+}: {
+  screen: SetupScreen;
+  substeps: SetupScreen[];
+  desks: readonly SetupDesk[];
+}) {
+  const currentIndex = SETUP_MAIN_STEPS.indexOf(screen.main);
+  return (
+    <div className="shrink-0 border-b border-line px-5 py-4">
+      <ol aria-label="Setup steps" className="flex w-full items-center">
+        {SETUP_MAIN_STEPS.map((item, index) => {
+          const state =
+            index < currentIndex
+              ? "done"
+              : index === currentIndex
+                ? "current"
+                : "upcoming";
+          const last = index === SETUP_MAIN_STEPS.length - 1;
+          return (
+            <li
+              key={item}
+              className={
+                last
+                  ? "flex min-w-0 items-center"
+                  : "flex min-w-0 flex-1 items-center"
+              }
+              aria-current={state === "current" ? "step" : undefined}
+            >
+              <span className="flex min-w-0 items-center gap-2.5">
+                <span
+                  className={
+                    state === "current"
+                      ? "flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-strong text-sm font-medium text-ink"
+                      : state === "done"
+                        ? "flex size-7 shrink-0 items-center justify-center rounded-full border border-accent text-sm font-medium text-accent"
+                        : "flex size-7 shrink-0 items-center justify-center rounded-full border border-line text-sm font-medium text-ink-faint"
+                  }
+                >
+                  {index + 1}
+                </span>
+                <span
+                  className={
+                    state === "current"
+                      ? "truncate text-sm font-medium text-ink"
+                      : state === "done"
+                        ? "truncate text-sm text-ink-muted"
+                        : "truncate text-sm text-ink-faint"
+                  }
+                >
+                  {setupStepLabel(item)}
+                </span>
+              </span>
+              {last ? null : (
+                <span
+                  aria-hidden
+                  className={
+                    index < currentIndex
+                      ? "mx-4 h-px min-w-6 flex-1 bg-accent"
+                      : "mx-4 h-px min-w-6 flex-1 bg-line"
+                  }
+                />
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      {substeps.length > 1 ? (
+        <ol aria-label="Setup sub-steps" className="mt-3 flex gap-2">
+          {substeps.map((item) => {
+            const current = setupScreenId(item) === setupScreenId(screen);
+            const label = setupSubstepLabel(item, desks);
+            return (
+              <li
+                key={setupScreenId(item)}
+                title={label}
+                aria-current={current ? "step" : undefined}
+                className={
+                  current
+                    ? "min-w-0 flex-1 truncate rounded-control border border-accent bg-accent/10 px-3 py-1.5 text-center text-sm font-medium text-ink"
+                    : "min-w-0 flex-1 truncate rounded-control border border-line px-3 py-1.5 text-center text-sm text-ink-muted"
+                }
+              >
+                {label}
+              </li>
+            );
+          })}
+        </ol>
+      ) : null}
+    </div>
+  );
+}
+
 type BindChoice = "later" | "existing" | "new";
 
 export function SetupWizard({
@@ -252,42 +347,8 @@ export function SetupWizard({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      <SetupProgress screen={screen} substeps={substeps} desks={desks} />
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-4">
-      <div className="space-y-2">
-        <ol className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-          {SETUP_MAIN_STEPS.map((item, index) => (
-            <li
-              key={item}
-              className={
-                item === screen.main
-                  ? "font-medium text-ink"
-                  : index < SETUP_MAIN_STEPS.indexOf(screen.main)
-                    ? "text-ink-muted"
-                    : "text-ink-faint"
-              }
-              aria-current={item === screen.main ? "step" : undefined}
-            >
-              {index + 1}. {setupStepLabel(item)}
-            </li>
-          ))}
-        </ol>
-        {substeps.length > 1 ? (
-          <ol className="flex flex-wrap gap-x-4 gap-y-1 pl-4 text-sm">
-            {substeps.map((item) => (
-              <li
-                key={setupScreenId(item)}
-                className={
-                  setupScreenId(item) === setupScreenId(screen)
-                    ? "font-medium text-ink"
-                    : "text-ink-muted"
-                }
-              >
-                {setupSubstepLabel(item, desks)}
-              </li>
-            ))}
-          </ol>
-        ) : null}
-      </div>
       {screen.main === "desks" && screen.sub === "choice" ? (
         <ChoiceStep
           title="Add desks now?"

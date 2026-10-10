@@ -209,7 +209,7 @@ Each ticked cell and each Finish create goes through the same entitlement check 
 
 ## UI
 
-- The modal uses `bg-surface` `border-line`. The step content scrolls inside the dialog. Back, Continue, and Skip stay visible at the bottom. Cards inside the steps use the same surface.
+- The modal uses `bg-surface` `border-line` and the account width (`max-w-7xl`). Desks, Bots, and Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. Sub-steps share the row under it. The step content scrolls inside the dialog. Back, Continue, and Skip stay visible at the bottom. Cards inside the steps use the same surface.
 - Checkboxes and the Theme table pattern. No new colours. Paper / Demo / Live dots may use the existing `mode-paper`, `mode-demo`, and `mode-live` tokens.
 - The modal is the only setup entry. It closes on Finish or Skip. **Take the tour** on Overview remains until the tour is completed or skipped.
 - Light and dark follow header UI preferences. Do not put light tokens on `html` / `body`.

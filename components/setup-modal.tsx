@@ -64,7 +64,7 @@ export function SetupModal({ children }: { children: ReactNode }) {
           aria-labelledby="setup-gate-title"
           aria-describedby="setup-gate-intro"
           tabIndex={-1}
-          className="flex max-h-[min(90dvh,52rem)] w-full max-w-6xl flex-col overflow-hidden rounded-card border border-line bg-surface outline-none"
+          className="flex max-h-[min(90dvh,52rem)] w-full max-w-7xl flex-col overflow-hidden rounded-card border border-line bg-surface outline-none"
         >
         <div className="shrink-0 border-b border-line px-5 py-4">
           <h2
