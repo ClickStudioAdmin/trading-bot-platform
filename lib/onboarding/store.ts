@@ -105,6 +105,7 @@ async function writeRow(
     .select("*")
     .single();
   if (error || !data) {
+    console.error("member_onboarding write failed", error?.message ?? "no row");
     return null;
   }
   return parseRow(data as Record<string, unknown>);

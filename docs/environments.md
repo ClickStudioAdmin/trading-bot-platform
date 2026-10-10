@@ -37,6 +37,8 @@ You do not run Supabase or Vercel CLI. GitHub Actions applies migrations. Vercel
 - `develop` runs **Apply development migrations** against GitHub Environment `development` and the development Supabase project.
 - `main` runs **Apply production migrations** against GitHub Environment `production` and the production Supabase project.
 
+A migration file that has already been applied has to stay in `supabase/migrations/`. If the remote history lists a version the repo no longer has, `supabase db push` refuses every later file. The job fails in that case. It does not report success.
+
 [`.github/workflows/paper-engine-tick.yml`](../.github/workflows/paper-engine-tick.yml) is **Run workflow** only. Fly is the scheduler. The development job always runs. The production job runs only from `main`.
 
 Development secrets use separate names so a missing development secret fails the job instead of falling back to production.
