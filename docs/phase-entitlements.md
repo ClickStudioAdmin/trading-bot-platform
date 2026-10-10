@@ -18,7 +18,7 @@ Prove the login (verified email; later optional 2FA) then, in V1 item 5, gate pr
 
 | V1 | Step | Who | Done when |
 | --- | --- | --- | --- |
-| 1 | Email verification + forgot password | Agent | Signup (platform and affiliate) creates the login, signs them in, and mails a one-time verify link. Unverified logins hit a **verify wall** (below). Public forgot-password mails a one-time reset link. Existing members are grandfathered verified. First-desk `/welcome` wizard removed; verified new users land on `/account`. **Accepted 17 Sep 2026.** |
+| 1 | Email verification + forgot password | Agent | Signup (platform and affiliate) creates the login, signs them in, and mails a one-time verify link plus a 6-digit code. Unverified logins hit a **verify wall** (below). Public forgot-password mails a one-time reset link. Existing members are grandfathered verified. First-desk `/welcome` wizard removed; verified new users land on `/account`. **Accepted 17 Sep 2026.** Code entry added on the verify wall after that acceptance. |
 | 5a | Entitlements + Upgrade UX | Agent | `assertEntitlement` on create desk, Live, copy, backtest, caps, and identity flags. A plan may **require** verified email and/or 2FA (admin plan flag). Controls disable; page/inline **Upgrade** (or “Turn on 2FA”) names the cheapest public plan that unlocks it. Cap notice: “You have 2 of 2 desks. Upgrade to add another.” Server actions reject. Billing page already exists. Stop. |
 | 5b | Downgrade grace | Agent | Entitlements change at period end. Admin grace days (default 7, already saved on `/admin/affiliates`). Banner + operable extras. After grace, billing worker Close/Disable **oldest desk first**: forbidden features, then numeric caps. Upgrade during grace cancels the sweep. Ledgers stay. Stop. |
 | 5c | Desk test | Click | Free gates visible/disabled. A plan that requires 2FA. Upgrade Stripe test. Crypto top-up + leftover debit. Affiliate list/chart/stats. Hold then withdraw. Downgrade grace then oldest-first exit. Archive a used plan (cannot delete). |
@@ -37,13 +37,14 @@ TBP already has email/password on `members` and a signed session cookie. There i
 
 1. Public `/sign-up` and affiliate `/affiliates` signup stay as they are: create the row, hash the password, create the session.
 2. New rows have `email_verified_at` null.
-3. Send a one-time link to that address: `{APP_BASE_URL}/verify-email?token=…`.
+3. Send a one-time link and a 6-digit code to that address. The link is `{APP_BASE_URL}/verify-email?token=…`. The code is entered on `/account/verify`.
 4. Land them on `/account/verify` (“Check your email”), not Overview and not the affiliate portal.
 5. Later sign-in with an unverified login also lands on `/account/verify`. Password can still be used to sign in — we do not lock them out of the session.
 6. The mail link opens `/verify-email?token=` and asks them to click **Confirm email** (mail scanners cannot consume the token). That sets `email_verified_at`, consumes the token, then sends them on: `/account` if they have no desk, else desk home; affiliate-only to `/affiliates`.
-7. Resend from `/account/verify` (rate-limited). Same always-ok copy if we add a public “didn’t get it” later.
+7. On `/account/verify` they can paste or type the same code and click **Confirm email**. Same result as the link. The code is checked only for that signed-in login. Five wrong codes lock further guesses; the link in that mail still works. A resend replaces both.
+8. Resend from `/account/verify` (rate-limited). Same always-ok copy if we add a public “didn’t get it” later.
 
-**Tokens.** Table `member_email_tokens`: `id`, `user_id`, `purpose` (`verify` | `reset`), `token_hash`, `expires_at`, `used_at`. Store SHA-256 of a random secret, never the raw token. Verify link lasts **24 hours**. One unused token per user+purpose — a resend replaces the old one. Service-role only. Never `NEXT_PUBLIC_`.
+**Tokens.** Table `member_email_tokens`: `id`, `user_id`, `purpose` (`verify` | `reset`), `token_hash`, `code_hash` (verify only), `code_attempts`, `expires_at`, `used_at`. Store SHA-256 of the link secret and of the code, never the raw values. Verify link and code last **24 hours**. One unused token per user+purpose — a resend replaces the old one and issues a new code. Service-role only. Never `NEXT_PUBLIC_`.
 
 **Who is already verified**
 

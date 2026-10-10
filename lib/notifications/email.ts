@@ -62,17 +62,21 @@ export function escapeNoticeHtml(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
+function noticeCodeText(code: string | undefined): string | null {
+  const value = code?.trim();
+  return value ? value : null;
+}
+
 export function noticeEmailText(
   notice: NotificationNotice,
   input: { footer?: string; actionHref: string },
 ): string {
-  const lines = [
-    notice.subject,
-    "",
-    ...notice.paragraphs,
-    "",
-    `${notice.actionLabel}: ${input.actionHref}`,
-  ];
+  const lines = [notice.subject, "", ...notice.paragraphs];
+  const code = noticeCodeText(notice.code);
+  if (code) {
+    lines.push("", `Confirmation code: ${code}`);
+  }
+  lines.push("", `${notice.actionLabel}: ${input.actionHref}`);
   if (input.footer) {
     lines.push("", input.footer);
   }
@@ -95,6 +99,10 @@ export function noticeEmailHtml(
         `<p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:${INK_MUTED}">${escapeNoticeHtml(paragraph)}</p>`,
     )
     .join("");
+  const code = noticeCodeText(notice.code);
+  const codeBlock = code
+    ? `<p style="margin:16px 0 0;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:${INK_FAINT}">Confirmation code</p><p style="margin:6px 0 0;font-size:28px;line-height:1.2;letter-spacing:0.35em;font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:${INK}">${escapeNoticeHtml(code)}</p>`
+    : "";
   const footer = input.footer
     ? `<p style="margin:16px 0 0;font-size:12px;line-height:1.4;color:${INK_FAINT}">${memberFooterHtml(input.footer, input.baseUrl)}</p>`
     : "";
@@ -115,6 +123,7 @@ export function noticeEmailHtml(
               <p style="margin:0;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:${INK_FAINT}">${brand}</p>
               <h1 style="margin:12px 0 0;font-size:18px;line-height:1.3;color:${INK}">${escapeNoticeHtml(notice.subject)}</h1>
               ${paragraphs}
+              ${codeBlock}
               <p style="margin:16px 0 0;">
                 <a href="${escapeNoticeHtml(input.actionHref)}" style="display:inline-block;background:${ACCENT_STRONG};color:${ON_ACCENT};text-decoration:none;padding:8px 12px;border-radius:8px;font-size:14px;font-weight:500;">${escapeNoticeHtml(notice.actionLabel)}</a>
               </p>

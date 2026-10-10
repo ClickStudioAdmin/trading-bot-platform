@@ -19,8 +19,10 @@ import {
 } from "@/lib/auth/session";
 import { loadMemberTotp, memberTotpEnabled } from "@/lib/auth/totp-store";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { emailVerifyCodeError } from "@/lib/auth/email-tokens";
 import {
   consumeMemberAuthLink,
+  consumeMemberVerifyCode,
   markEmailVerified,
   sendMemberAuthLink,
 } from "@/lib/auth/verify";
@@ -297,25 +299,50 @@ export async function signedInMember() {
 
 const VERIFY_EMAIL_FAIL = `${VERIFY_PATH}?error=${encodeURIComponent("That confirmation link is invalid or has expired.")}`;
 
+async function finishEmailVerified(userId: string, method: "link" | "code") {
+  await markEmailVerified(userId);
+  await writeEventLog({
+    scope: "system",
+    event: "member.email_verified",
+    message: "Confirmed email",
+    userId,
+    data: { method },
+  });
+  const session = await getSessionMember();
+  if (session?.id === userId) {
+    revalidatePath("/", "layout");
+    await redirectAfterSignIn(userId);
+  }
+  redirect(`${SIGN_IN_PATH}?verified=1`);
+}
+
 export async function confirmVerifyEmailAction(formData: FormData) {
   const token = String(formData.get("token") ?? "");
   const consumed = await consumeMemberAuthLink(token, "verify");
   if (!consumed) {
     redirect(VERIFY_EMAIL_FAIL);
   }
-  await markEmailVerified(consumed.userId);
-  await writeEventLog({
-    scope: "system",
-    event: "member.email_verified",
-    message: "Confirmed email",
-    userId: consumed.userId,
-  });
-  const session = await getSessionMember();
-  if (session?.id === consumed.userId) {
-    revalidatePath("/", "layout");
-    await redirectAfterSignIn(consumed.userId);
+  await finishEmailVerified(consumed.userId, "link");
+}
+
+export async function confirmVerifyCodeAction(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect(SIGN_IN_PATH);
   }
-  redirect(`${SIGN_IN_PATH}?verified=1`);
+  if (member.emailVerifiedAt) {
+    await redirectAfterSignIn(member.id);
+  }
+  const result = await consumeMemberVerifyCode(
+    member.id,
+    String(formData.get("code") ?? ""),
+  );
+  if (result !== "ok") {
+    redirect(
+      `${VERIFY_PATH}?error=${encodeURIComponent(emailVerifyCodeError(result))}`,
+    );
+  }
+  await finishEmailVerified(member.id, "code");
 }
 
 export async function resendVerifyEmailAction() {
