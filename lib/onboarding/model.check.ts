@@ -355,6 +355,12 @@ assert.deepEqual(noDeskTour.map((step) => step.id), [
   "exchanges",
   "templates",
 ]);
+assert.equal(noDeskTour[0]?.title, "Overview");
+assert.equal(noDeskTour[0]?.headline, "This is your home.");
+assert.equal(noDeskTour[1]?.title, "Manage desks");
+assert.ok(
+  noDeskTour.every((step) => step.headline.length > 0 && step.headline !== step.title),
+);
 const botTour = buildTourSteps([
   { id: accountId, deskType: "dca" },
   { id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd", deskType: "signal_follower" },

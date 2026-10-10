@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type Ref } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { revealAccountNav } from "@/components/account-sidenav";
 import {
@@ -16,7 +16,7 @@ import {
 } from "@/lib/onboarding/model";
 
 const ACCOUNT_NAV_TARGETS = new Set(["overview", "manage-desks", "templates"]);
-const CARD_ESTIMATE = { width: 352, height: 196 };
+const CARD_ESTIMATE = { width: 352, height: 248 };
 
 export function PlatformTour({
   steps,
@@ -125,73 +125,125 @@ export function PlatformTour({
         viewport: { width: window.innerWidth, height: window.innerHeight },
       })
     : null;
+  const nextStep = steps[index + 1];
 
   return (
     <div className="fixed inset-0 z-[100]">
       <TourDim box={box} />
       {place ? <TourArrow place={place} /> : null}
-      <div
-        ref={cardRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="platform-tour-title"
-        className="absolute z-10 w-[min(22rem,calc(100vw-2rem))] rounded-card border border-line bg-surface p-4"
-        style={
-          place
-            ? { top: place.top, left: place.left }
-            : {
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-              }
-        }
-      >
-        <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-          {index + 1} of {steps.length}
+      <TourCard
+        cardRef={cardRef}
+        step={step}
+        index={index}
+        total={steps.length}
+        nextTitle={nextStep?.title ?? null}
+        showTargetHint={!box}
+        place={place}
+        onBack={() => {
+          const next = index - 1;
+          setIndex(next);
+          void setPlatformTourStep(next);
+        }}
+        onNext={() => {
+          const next = index + 1;
+          setIndex(next);
+          void setPlatformTourStep(next);
+        }}
+        onDone={() => {
+          setHidden(true);
+          void completePlatformTour();
+        }}
+        onSkip={() => {
+          setHidden(true);
+          void skipPlatformTour();
+        }}
+      />
+    </div>
+  );
+}
+
+export function TourCard({
+  cardRef,
+  step,
+  index,
+  total,
+  nextTitle,
+  showTargetHint,
+  place,
+  onBack,
+  onNext,
+  onDone,
+  onSkip,
+}: {
+  cardRef?: Ref<HTMLDivElement>;
+  step: TourStep;
+  index: number;
+  total: number;
+  nextTitle: string | null;
+  showTargetHint: boolean;
+  place: TourCardPlace | null;
+  onBack: () => void;
+  onNext: () => void;
+  onDone: () => void;
+  onSkip: () => void;
+}) {
+  return (
+    <div
+      ref={cardRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="platform-tour-title"
+      className="absolute z-10 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-card border border-line bg-surface"
+      style={
+        place
+          ? { top: place.top, left: place.left }
+          : {
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+            }
+      }
+    >
+      <div className="border-b border-line bg-plan-header px-4 py-2.5 text-ink">
+        <p className="text-xs font-medium">
+          Tour · {index + 1} of {total}
         </p>
-        <h2 id="platform-tour-title" className="mt-1 text-lg font-semibold tracking-tight">
-          {step.title}
+      </div>
+      <div className="p-4">
+        <h2 id="platform-tour-title" className="text-lg font-semibold tracking-tight text-ink">
+          {step.headline}
         </h2>
-        <p className="mt-2 text-sm text-ink-muted">{step.body}</p>
-        {box ? null : (
+        {step.body ? (
+          <p className="mt-2 text-sm text-ink-muted">{step.body}</p>
+        ) : null}
+        {showTargetHint ? (
           <p className="mt-2 text-hint text-ink-faint">
             Look for {step.title} in the navigation.
           </p>
-        )}
-        <div className="mt-4 flex flex-wrap gap-2">
+        ) : null}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           {index > 0 ? (
             <button
               type="button"
               className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-              onClick={() => {
-                const next = index - 1;
-                setIndex(next);
-                void setPlatformTourStep(next);
-              }}
+              onClick={onBack}
             >
               Back
             </button>
           ) : null}
-          {index < steps.length - 1 ? (
+          {nextTitle ? (
             <button
               type="button"
               className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink"
-              onClick={() => {
-                const next = index + 1;
-                setIndex(next);
-                void setPlatformTourStep(next);
-              }}
+              onClick={onNext}
             >
-              Next
+              Next: {nextTitle}
             </button>
           ) : (
             <button
               type="button"
               className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink"
-              onClick={() => {
-                setHidden(true);
-                void completePlatformTour();
-              }}
+              onClick={onDone}
             >
               Done
             </button>
@@ -199,10 +251,7 @@ export function PlatformTour({
           <button
             type="button"
             className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-            onClick={() => {
-              setHidden(true);
-              void skipPlatformTour();
-            }}
+            onClick={onSkip}
           >
             Skip tour
           </button>

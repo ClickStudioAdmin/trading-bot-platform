@@ -143,7 +143,7 @@ Done summary (Overview card that dismisses, or the first tour step): desks creat
 
 ## Guided tour
 
-A small overlay in the app. No tour library. Steps are a fixed list in code, not an admin CMS. Each step spotlights one existing region (`data-tour` on that control), with a title and one or two sentences. An arrow runs from the card to that control. The same dim layer covers the header, sidebar, and page on every step. Only that control stays undimmed, inside a purple ring. A step never spotlights a whole page. Overview, Manage Desks, and Bot Templates spotlight the account sidenav item, and the Account group opens if it was collapsed. Controls: Back, Next, Skip tour. Skip marks the tour skipped. The last step marks it completed.
+A small overlay in the app. No tour library. Steps are a fixed list in code, not an admin CMS. Each step spotlights one existing region (`data-tour` on that control). The card is a `surface` panel with a `plan-header` bar that reads **Tour · n of total**. The heading is the instruction. The place name stays on the spotlighted control, and the primary button names the next stop (**Next: Manage desks**). The last step is **Done**. **Back** and **Skip tour** stay text buttons. An arrow runs from the card to the control. The same dim layer covers the header, sidebar, and page on every step. Only that control stays undimmed, inside a purple ring. A step never spotlights a whole page. Overview, Manage Desks, and Bot Templates spotlight the account sidenav item, and the Account group opens if it was collapsed. Skip marks the tour skipped. The last step marks it completed.
 
 Progress is stored per member (step index plus not started / in progress / completed / skipped / declined). Refresh resumes the current step. Completing or skipping never shows the offer modal again. **Take the tour** on Overview starts or resumes until the tour is completed or skipped from the overlay.
 
@@ -151,15 +151,15 @@ Steps that do not apply are omitted (no desk yet, no bot desk, no TradingView de
 
 | # | Focus | When | What to say |
 | --- | --- | --- | --- |
-| 1 | Overview in the account menu | Always | Overview in the account menu. This is the home after sign-in. |
+| 1 | Overview in the account menu | Always | This is your home. |
 | 2 | Manage Desks | Always | Desks are created here. Type and mode stay as they were set. |
-| 3 | Exchanges (Manage desks, Exchanges tab) | Always | Keys are trade-only. One key binds one desk. Demo and Live are the key’s environment, not a separate desk type. |
+| 3 | Exchanges (Manage desks, Exchanges tab) | Always | Keys are trade-only. One key binds one desk. Demo and Live are the key’s environment. |
 | 4 | Desk list in the sidenav | They have a desk | Open a desk from this list. Paper, Demo, and Live are marked here. |
 | 5 | Bots on that desk | A new or existing DCA, Perps bots, or Cash and Carry desk | Bots loaded in setup are idle or disabled. Arm or Enable is a separate action. The app places orders only after that. |
 | 6 | Webhooks | A TradingView Strategy desk, and step 5 did not run | Alerts arrive here. Setup does not turn them on. |
 | 7 | Positions | They have a desk | Open positions for this desk. |
-| 8 | Desk Settings | They have a desk | Bind a key if this desk is still unbound, and set desk limits. |
-| 9 | Bot Templates | Always | Personal library. Starter bots in setup came only from platform folders an admin marked Include in Starter Pack. |
+| 8 | Desk Settings | They have a desk | Bind a key and set desk limits. Do this if the desk is still unbound. |
+| 9 | Bot Templates | Always | This is your library. Starter bots in setup came only from platform folders an admin marked Include in Starter Pack. |
 
 The tour walks to the route that owns the target, then spotlights it. It does not open a bot form, bind a key, or change a mode. Narrow widths: if the target is off-screen or inside a collapsed group, show the same copy in a card and point at the control by name.
 
@@ -212,6 +212,7 @@ Each ticked cell and each Finish create goes through the same entitlement check 
 - The modal uses `bg-surface` `border-line` and the account width (`max-w-7xl`). Desks, Bots, and Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. Sub-steps share the row under it. The step content scrolls inside the dialog. Back and Continue stay visible at the bottom. Cards inside the steps use the same surface.
 - Desk and bot choices are full-width sections. The selected section uses the accent border. The desk table still uses checkboxes and the Theme table pattern. No new colours. Paper / Demo / Live dots may use the existing `mode-paper`, `mode-demo`, and `mode-live` tokens.
 - The modal is the only setup entry. It closes when the tour step is finished. **Take the tour** on Overview remains until the tour is completed or skipped.
+- The tour card uses `bg-surface` with a `bg-plan-header` bar. The bar reads Tour and the step count. The heading is the instruction. **Next** names the following place. No new colours.
 - Light and dark follow header UI preferences. Do not put light tokens on `html` / `body`.
 
 ## Micro-steps
