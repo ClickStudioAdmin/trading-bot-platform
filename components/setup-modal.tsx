@@ -77,7 +77,7 @@ export function SetupModal({ children }: { children: ReactNode }) {
             Finish these steps before using the platform.
           </p>
         </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {children}
           </div>
         </div>

@@ -251,7 +251,8 @@ export function SetupWizard({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-4">
       <div className="space-y-2">
         <ol className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
           {SETUP_MAIN_STEPS.map((item, index) => (
@@ -287,11 +288,6 @@ export function SetupWizard({
           </ol>
         ) : null}
       </div>
-      {error ? (
-        <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-          {error}
-        </p>
-      ) : null}
       {screen.main === "desks" && screen.sub === "choice" ? (
         <ChoiceStep
           title="Add desks now?"
@@ -435,7 +431,14 @@ export function SetupWizard({
           </div>
         </section>
       ) : null}
-      <div className="flex flex-wrap items-center gap-2">
+      </div>
+      <div className="shrink-0 border-t border-line bg-surface px-5 py-4">
+        {error ? (
+          <p className="mb-3 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+            {error}
+          </p>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
         {previous ? (
           <button
             type="button"
@@ -469,6 +472,7 @@ export function SetupWizard({
         >
           Skip setup
         </button>
+        </div>
       </div>
     </div>
   );
