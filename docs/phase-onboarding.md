@@ -67,7 +67,7 @@ Table, one row per type that exists today:
 Short line under the type uses the existing choice copy (ticket vs bots vs alerts vs app-owned orders vs spot + dated future).
 
 - Unticked means that type+mode is not created.
-- Zero ticks is valid. Continue goes to Bots, which says there is nothing to load, then Tour. Exchanges stays hidden.
+- Zero ticks is valid on the manual table. Continue goes to Bots, which says bots need a desk, then the tour. Exchanges stays hidden.
 - Each ticked cell shows an editable name, default `{Type} Paper` or `{Type} Connected`, max 40 characters, unique on the login (and unique inside the draft). Same validator as Manage desks.
 - Paper on a type with more than one market (not Cash and Carry) shows **Market data** (Bybit or Hyperliquid). Default Bybit. Cash and Carry paper stays Bybit.
 - Connected Cash and Carry is Bybit only. Other connected types pick the venue on the next step.
