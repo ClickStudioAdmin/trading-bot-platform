@@ -17,7 +17,6 @@ import {
   finishSetup,
   saveSetupConnection,
   saveSetupDraft,
-  skipSetup,
 } from "@/lib/onboarding/actions";
 import {
   ONBOARDING_DESK_TYPES,
@@ -578,15 +577,6 @@ export function SetupWizard({
                 : "Continue"}
           </button>
         ) : null}
-        {readyForTour ? null : (
-          <button
-            type="button"
-            onClick={() => startTransition(() => skipSetup())}
-            className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-          >
-            Skip setup
-          </button>
-        )}
         </div>
       </div>
     </div>

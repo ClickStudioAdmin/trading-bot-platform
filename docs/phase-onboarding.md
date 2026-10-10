@@ -21,13 +21,13 @@ First-run setup for a verified platform member who has not finished or skipped i
 3. Which starter bots to load, only from platform folders an admin has flagged.
 4. Whether they want a short guided tour.
 
-Skip setup is inside the modal, before any desk is written. Skipping closes the modal and leaves Overview with zero desks. Creating a desk from Manage desks is not available while the modal is open.
+There is no Skip setup. The member goes through Desks, Bots, and Tour. Each step can do nothing: no desks, no bots, or Not now on the tour. Creating a desk from Manage desks is not available while the modal is open.
 
 ## Locked decisions
 
 | # | Choice | Decision |
 | --- | --- | --- |
-| 1 | Entry | A modal over the signed-in app. Header, sidenav, and page links do not work until Finish or Skip. Other app routes redirect to Overview, where the modal stays open. Affiliate-only logins never see it. `/account/setup` redirects to Overview. |
+| 1 | Entry | A modal over the signed-in app. Header, sidenav, and page links do not work until the tour step is finished. Other app routes redirect to Overview, where the modal stays open. Affiliate-only logins never see it. `/account/setup` redirects to Overview. |
 | 2 | Who | Verified platform member whose setup is not skipped or completed. A member with desks and no setup row is left alone. Creating a desk outside the wizard marks setup skipped. A Finish retry that already created desks keeps the modal until setup is completed or skipped. |
 | 3 | Desk grid | One row per desk type. Columns are **Paper** and **Connected**. A tick is one desk. Both columns may be ticked (two desks). No quantity field. More desks come later from Manage desks. |
 | 4 | Demo vs Live | Not a third column. Connected is `mode = live`. Demo vs Live is the key’s venue environment, chosen on the exchange step. Display mode stays Paper / Demo / Live as today. |
@@ -40,7 +40,7 @@ Skip setup is inside the modal, before any desk is written. Skipping closes the 
 
 ## Steps
 
-The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. The step list always shows **1. Desks**, **2. Bots**, and **3. Tour**. Each of Desks and Bots starts with a choice. Sub-steps sit under the current step. Exchanges is a sub-step of Desks, after the manual desk table, and only when a Connected cell is ticked. Each desk that has starter folders is a sub-step of Bots when they choose to pick bots themselves. **Back** returns to the previous sub-step and can change the choice until they continue to the tour. Desks and bots are written then, before the tour question, so the tour can show those desks and bots. **Skip setup** before that discards the desk draft, leaves saved keys on Exchanges (unbound), marks setup skipped, closes the modal, and lands on Overview.
+The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. The step list always shows **1. Desks**, **2. Bots**, and **3. Tour**. Each of Desks and Bots starts with a choice. Sub-steps sit under the current step. Exchanges is a sub-step of Desks, after the manual desk table, and only when a Connected cell is ticked. Each desk that has starter folders is a sub-step of Bots when they choose to pick bots themselves. **Back** returns to the previous sub-step and can change the choice until they continue to the tour. Desks and bots are written then, before the tour question, so the tour can show those desks and bots. There is no Skip setup. Doing nothing is a choice on each step.
 
 ### 1. Desks
 
@@ -135,7 +135,7 @@ Continuing to this step writes the desks and bots first. The modal stays up. Que
 - **Yes** — Setup is marked completed and the tour starts on Overview. The tour includes the new desks and, when a starter bot was loaded, that desk’s Bots page.
 - **Not now** — Setup is marked completed and lands on Overview, with the setup summary and **Take the tour**. The last desk created becomes the active desk.
 
-Back is not offered after the desks are written. Skip setup is only on the earlier steps. A retry does not create a second copy.
+Back is not offered after the desks are written. There is no Skip setup. A retry does not create a second copy.
 
 Partial failure: desks and binds already committed stay. The setup row records created desk ids and which template applies succeeded, so a retry does not create a second copy. Keys already saved stay on the login. The member sees which step failed in the same words the underlying action already returns.
 
@@ -209,9 +209,9 @@ Each ticked cell and each Finish create goes through the same entitlement check 
 
 ## UI
 
-- The modal uses `bg-surface` `border-line` and the account width (`max-w-7xl`). Desks, Bots, and Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. Sub-steps share the row under it. The step content scrolls inside the dialog. Back, Continue, and Skip stay visible at the bottom. Cards inside the steps use the same surface.
+- The modal uses `bg-surface` `border-line` and the account width (`max-w-7xl`). Desks, Bots, and Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. Sub-steps share the row under it. The step content scrolls inside the dialog. Back and Continue stay visible at the bottom. Cards inside the steps use the same surface.
 - Desk and bot choices are full-width sections. The selected section uses the accent border. The desk table still uses checkboxes and the Theme table pattern. No new colours. Paper / Demo / Live dots may use the existing `mode-paper`, `mode-demo`, and `mode-live` tokens.
-- The modal is the only setup entry. It closes on Finish or Skip. **Take the tour** on Overview remains until the tour is completed or skipped.
+- The modal is the only setup entry. It closes when the tour step is finished. **Take the tour** on Overview remains until the tour is completed or skipped.
 - Light and dark follow header UI preferences. Do not put light tokens on `html` / `body`.
 
 ## Micro-steps

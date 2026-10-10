@@ -76,13 +76,6 @@ export async function saveSetupDraft(
   return { ok: true };
 }
 
-export async function skipSetup(): Promise<void> {
-  const member = await requirePlatformMember();
-  await skipMemberOnboarding(member.id);
-  refreshSetupChrome();
-  redirect("/account");
-}
-
 export async function saveSetupConnection(formData: FormData): Promise<
   | {
       ok: true;
