@@ -35,6 +35,10 @@ import { IconChevronDown, IconTour } from "@/components/icons";
 import { NavBadge } from "@/components/nav-badge";
 import { NAV_ACTIVE_CLASS, NAV_IDLE_CLASS, NavItemIcon } from "@/components/site-nav";
 import { startPlatformTour } from "@/lib/onboarding/actions";
+import {
+  OPEN_ACCOUNT_NAV_EVENT,
+  tourTargetForAccountHref,
+} from "@/lib/onboarding/model";
 import { ACCOUNT_DESK_LINKS, AFFILIATE_ONLY_LINKS } from "@/lib/site-links";
 
 export function AccountSidenav({
@@ -473,15 +477,24 @@ function DeskModeFilterBar({
 
 const ACCOUNT_NAV_OPEN_KEY = "tbp-account-nav-open";
 
-const ACCOUNT_NAV_EVENT = "tbp-account-nav-change";
+export function revealAccountNav(): void {
+  window.localStorage.setItem(ACCOUNT_NAV_OPEN_KEY, "1");
+  window.dispatchEvent(new Event(OPEN_ACCOUNT_NAV_EVENT));
+}
+
+function accountNavOpenSnapshot(): boolean {
+  return window.localStorage.getItem(ACCOUNT_NAV_OPEN_KEY) !== "0";
+}
+
+function subscribeAccountNavOpen(onStoreChange: () => void): () => void {
+  window.addEventListener(OPEN_ACCOUNT_NAV_EVENT, onStoreChange);
+  return () => window.removeEventListener(OPEN_ACCOUNT_NAV_EVENT, onStoreChange);
+}
 
 function useAccountNavOpen() {
   const open = useSyncExternalStore(
-    (onStoreChange) => {
-      window.addEventListener(ACCOUNT_NAV_EVENT, onStoreChange);
-      return () => window.removeEventListener(ACCOUNT_NAV_EVENT, onStoreChange);
-    },
-    () => window.localStorage.getItem(ACCOUNT_NAV_OPEN_KEY) !== "0",
+    subscribeAccountNavOpen,
+    accountNavOpenSnapshot,
     () => true,
   );
 
@@ -490,7 +503,7 @@ function useAccountNavOpen() {
     toggle() {
       const next = !open;
       window.localStorage.setItem(ACCOUNT_NAV_OPEN_KEY, next ? "1" : "0");
-      window.dispatchEvent(new Event(ACCOUNT_NAV_EVENT));
+      window.dispatchEvent(new Event(OPEN_ACCOUNT_NAV_EVENT));
     },
   };
 }
@@ -557,10 +570,12 @@ function NavGroup({
             const active = link.exact
               ? pathname === linkPath
               : pathname === linkPath || pathname.startsWith(`${linkPath}/`);
+            const tour = tourTargetForAccountHref(link.href);
             return (
               <Link
                 key={link.href}
                 href={link.href}
+                data-tour={tour ?? undefined}
                 className={`flex items-center justify-between gap-2 rounded-control px-3 py-1.5 text-sm ${
                   active ? NAV_ACTIVE_CLASS : NAV_IDLE_CLASS
                 }`}

@@ -40,7 +40,7 @@ There is no Skip setup. The member goes through Desks, Bots, and Tour. Each step
 
 ## Steps
 
-The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. The step list always shows **1. Desks**, **2. Bots**, and **3. Tour**. Each of Desks and Bots starts with a choice. Sub-steps sit under the current step. Exchanges is a sub-step of Desks, after the manual desk table, and only when a Connected cell is ticked. Each desk that has starter folders is a sub-step of Bots when they choose to pick bots themselves. **Back** returns to the previous sub-step and can change the choice until they continue to the tour. Desks and bots are written then, before the tour question, so the tour can show those desks and bots. There is no Skip setup. Doing nothing is a choice on each step.
+The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. The step list always shows **1. Desks**, **2. Bots**, and **3. Tour**. There is no second row of sub-step labels. Each of Desks and Bots starts with a choice. Exchanges follows the manual desk table, and only when a Connected cell is ticked, while the step list stays on Desks. Each desk that has starter folders is a sub-step of Bots when they choose to pick bots themselves. **Back** returns to the previous sub-step and can change the choice until they continue to the tour. Desks and bots are written then, before the tour question, so the tour can show those desks and bots. There is no Skip setup. Doing nothing is a choice on each step.
 
 ### 1. Desks
 
@@ -143,7 +143,7 @@ Done summary (Overview card that dismisses, or the first tour step): desks creat
 
 ## Guided tour
 
-A small overlay in the app. No tour library. Steps are a fixed list in code, not an admin CMS. Each step spotlights one existing region (`data-tour` on that control), with a title and one or two sentences. Controls: Back, Next, Skip tour. Skip marks the tour skipped. The last step marks it completed.
+A small overlay in the app. No tour library. Steps are a fixed list in code, not an admin CMS. Each step spotlights one existing region (`data-tour` on that control), with a title and one or two sentences. An arrow runs from the card to that control. The same dim layer covers the header, sidebar, and page on every step. Only that control stays undimmed, inside a purple ring. A step never spotlights a whole page. Overview, Manage Desks, and Bot Templates spotlight the account sidenav item, and the Account group opens if it was collapsed. Controls: Back, Next, Skip tour. Skip marks the tour skipped. The last step marks it completed.
 
 Progress is stored per member (step index plus not started / in progress / completed / skipped / declined). Refresh resumes the current step. Completing or skipping never shows the offer modal again. **Take the tour** on Overview starts or resumes until the tour is completed or skipped from the overlay. **Platform Tour** stays at the bottom of the account sidenav for every platform member and starts the tour again from the first step, including after it was completed or skipped.
 
@@ -151,7 +151,7 @@ Steps that do not apply are omitted (no desk yet, no bot desk, no TradingView de
 
 | # | Focus | When | What to say |
 | --- | --- | --- | --- |
-| 1 | Overview | Always | This is the account home after sign-in. |
+| 1 | Overview in the account menu | Always | Overview in the account menu. This is the home after sign-in. |
 | 2 | Manage Desks | Always | Desks are created here. Type and mode stay as they were set. |
 | 3 | Exchanges (Manage desks, Exchanges tab) | Always | Keys are trade-only. One key binds one desk. Demo and Live are the key’s environment, not a separate desk type. |
 | 4 | Desk list in the sidenav | They have a desk | Open a desk from this list. Paper, Demo, and Live are marked here. |
