@@ -130,9 +130,9 @@ Apply runs when they continue to the tour, after the desks exist, through the sa
 
 ### 3. Tour
 
-Continuing to this step writes the desks and bots first. The modal stays up. Question: “Want a short tour of the platform?”
+Continuing to this step writes the desks and bots first. The modal stays up and shows a success message listing the desks and the bots that were loaded. It does not ask the tour question on this screen.
 
-- **Yes** — Setup is marked completed and the tour starts on Overview. The tour includes the new desks and, when a starter bot was loaded, that desk’s Bots page.
+- **Start the Tour now** — Setup is marked completed and the tour starts on Overview. The tour includes the new desks and, when a starter bot was loaded, that desk’s Bots page.
 - **Not now** — Setup is marked completed and lands on Overview, with the setup summary and **Take the tour**. The last desk created becomes the active desk.
 
 Back is not offered after the desks are written. There is no Skip setup. A retry does not create a second copy.

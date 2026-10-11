@@ -14,6 +14,7 @@ import {
   tourDeskId,
   tourTargetForAccountHref,
   connectionReuseError,
+  createdStarterBots,
   desksStillToCreate,
   draftHasSecret,
   emptySetupDraft,
@@ -134,6 +135,37 @@ const created = desksStillToCreate([
 ]);
 assert.equal(created.length, 1);
 assert.equal(created[0]?.key, connected.key);
+const starterId = "11111111-1111-4111-8111-111111111111";
+const createdDeskId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+assert.deepEqual(
+  createdStarterBots({
+    desks: [
+      {
+        ...paper,
+        name: "DCA Paper",
+        accountId: createdDeskId,
+        templateIds: [starterId],
+      },
+    ],
+    folders: [folder({ id: "dca-pack", deskType: "dca" })],
+    applied: [`${createdDeskId}:${starterId}`],
+  }),
+  [{ deskName: "DCA Paper", botName: "BTC", templateId: starterId }],
+);
+assert.deepEqual(
+  createdStarterBots({
+    desks: [
+      {
+        ...paper,
+        accountId: createdDeskId,
+        templateIds: [starterId],
+      },
+    ],
+    folders: [],
+    applied: [],
+  }),
+  [],
+);
 
 const sameKey = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 assert.match(
