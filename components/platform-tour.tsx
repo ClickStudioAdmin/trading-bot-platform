@@ -11,6 +11,7 @@ import {
 import {
   pickTourTarget,
   placeTourCard,
+  tourDeskId,
   type TourCardPlace,
   type TourStep,
 } from "@/lib/onboarding/model";
@@ -33,16 +34,16 @@ export function PlatformTour({
   );
   const [spot, setSpot] = useState<{
     id: string;
-    top: number;
-    left: number;
-    width: number;
-    height: number;
+    target: TourRect | null;
+    desk: TourRect | null;
   } | null>(null);
   const [cardSize, setCardSize] = useState(CARD_ESTIMATE);
   const [hidden, setHidden] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const step = steps[index];
-  const box = spot && step && spot.id === step.id ? spot : null;
+  const live = spot && step && spot.id === step.id ? spot : null;
+  const box = live?.target ?? null;
+  const deskBox = live?.desk ?? null;
 
   useEffect(() => {
     if (!step) {
@@ -65,25 +66,26 @@ export function PlatformTour({
         revealAccountNav();
       }
       const target = findTourTarget(step.target);
+      const deskId = tourDeskId(step);
+      const desk = deskId ? findTourDesk(deskId) : null;
       const waitingForNav =
         ACCOUNT_NAV_TARGETS.has(step.target) && !target?.closest("aside");
-      if ((!target || waitingForNav) && tries < 20) {
+      const waitingForDesk = Boolean(deskId) && !desk;
+      if ((!target || waitingForNav || waitingForDesk) && tries < 20) {
         tries += 1;
         frame = window.setTimeout(measure, 50);
         return;
       }
-      if (!target) {
+      if (!target && !desk) {
         setSpot(null);
         return;
       }
-      target.scrollIntoView({ block: "nearest", inline: "nearest" });
-      const rect = target.getBoundingClientRect();
+      desk?.scrollIntoView({ block: "nearest", inline: "nearest" });
+      target?.scrollIntoView({ block: "nearest", inline: "nearest" });
       setSpot({
         id: step.id,
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
+        target: target ? rectOf(target) : null,
+        desk: desk ? rectOf(desk) : null,
       });
     };
     measure();
@@ -129,7 +131,7 @@ export function PlatformTour({
 
   return (
     <div className="fixed inset-0 z-[100]">
-      <TourDim box={box} />
+      <TourDim holes={[box, deskBox].filter((hole) => hole !== null)} />
       {place ? <TourArrow place={place} /> : null}
       <TourCard
         cardRef={cardRef}
@@ -261,19 +263,25 @@ export function TourCard({
   );
 }
 
-function TourDim({
-  box,
-}: {
-  box: { top: number; left: number; width: number; height: number } | null;
-}) {
-  const hole = box
-    ? {
-        x: box.left - 6,
-        y: box.top - 6,
-        width: box.width + 12,
-        height: box.height + 12,
-      }
-    : null;
+type TourRect = { top: number; left: number; width: number; height: number };
+
+function rectOf(node: HTMLElement): TourRect {
+  const rect = node.getBoundingClientRect();
+  return {
+    top: rect.top,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height,
+  };
+}
+
+function TourDim({ holes }: { holes: TourRect[] }) {
+  const padded = holes.map((box) => ({
+    x: box.left - 6,
+    y: box.top - 6,
+    width: box.width + 12,
+    height: box.height + 12,
+  }));
   return (
     <svg
       aria-hidden
@@ -282,8 +290,9 @@ function TourDim({
       <defs>
         <mask id="platform-tour-dim">
           <rect width="100%" height="100%" fill="white" />
-          {hole ? (
+          {padded.map((hole) => (
             <rect
+              key={`${hole.x}-${hole.y}`}
               x={hole.x}
               y={hole.y}
               width={hole.width}
@@ -291,7 +300,7 @@ function TourDim({
               rx="8"
               fill="black"
             />
-          ) : null}
+          ))}
         </mask>
       </defs>
       <rect
@@ -300,8 +309,9 @@ function TourDim({
         fill="rgba(0, 0, 0, 0.45)"
         mask="url(#platform-tour-dim)"
       />
-      {hole ? (
+      {padded.map((hole) => (
         <rect
+          key={`${hole.x}-${hole.y}`}
           x={hole.x}
           y={hole.y}
           width={hole.width}
@@ -311,7 +321,7 @@ function TourDim({
           stroke="var(--color-accent)"
           strokeWidth="2"
         />
-      ) : null}
+      ))}
     </svg>
   );
 }
@@ -351,6 +361,20 @@ function TourArrow({ place }: { place: TourCardPlace }) {
       />
     </svg>
   );
+}
+
+function findTourDesk(id: string): HTMLElement | null {
+  const node = document.querySelector<HTMLElement>(
+    `[data-tour-desk="${CSS.escape(id)}"]`,
+  );
+  if (!node) {
+    return null;
+  }
+  const rect = node.getBoundingClientRect();
+  if (rect.width <= 8 || rect.height <= 8) {
+    return null;
+  }
+  return node;
 }
 
 function findTourTarget(id: string): HTMLElement | null {
