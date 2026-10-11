@@ -3,6 +3,7 @@ import { namedPageMetadata } from "@/lib/platform/metadata";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { VerifyCodeInput } from "@/components/verify-code-input";
 import {
   confirmVerifyCodeAction,
   resendVerifyEmailAction,
@@ -61,22 +62,10 @@ export default async function VerifyAccountPage({
         <form action={confirmVerifyCodeAction} className="space-y-3">
           <label className="block text-sm text-ink" htmlFor="code">
             Confirmation code
-            <input
-              id="code"
-              name="code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-              autoFocus
-              required
-              maxLength={12}
-              className={BILLING_FIELD_CLASS}
-            />
+            <VerifyCodeInput className={BILLING_FIELD_CLASS} />
           </label>
           <p className="text-hint text-ink-muted">
-            The 6-digit code from the email. Spaces are fine.
+            The 6-digit code from the email.
           </p>
           <PendingSubmitButton
             pendingLabel="Confirming…"

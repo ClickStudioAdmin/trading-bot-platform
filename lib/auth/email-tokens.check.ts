@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import {
+  clampVerifyCodeDigits,
+  VERIFY_CODE_DIGIT_LIMIT,
+} from "./verify-code-digits";
+import {
   AUTH_MAIL_COOLDOWN_MS,
   authMailIsCoolingDown,
   decideEmailVerifyCode,
@@ -42,6 +46,12 @@ assert.equal(
 );
 
 assert.equal(EMAIL_VERIFY_CODE_LENGTH, 6);
+assert.equal(VERIFY_CODE_DIGIT_LIMIT, 6);
+assert.equal(clampVerifyCodeDigits("4821937"), "482193");
+assert.equal(clampVerifyCodeDigits("482 193 extra"), "482193");
+assert.equal(clampVerifyCodeDigits("12ab345678"), "123456");
+assert.equal(clampVerifyCodeDigits("123"), "123");
+assert.equal(clampVerifyCodeDigits(""), "");
 assert.equal(EMAIL_VERIFY_CODE_MAX_ATTEMPTS, 5);
 for (let i = 0; i < 30; i += 1) {
   assert.match(newEmailVerifyCode(), /^\d{6}$/);
