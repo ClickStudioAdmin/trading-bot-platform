@@ -2,14 +2,26 @@ import { deskDisplayMode, type TradingAccountMode } from "@/lib/accounts/model";
 import {
   formatBacktestTimeframe,
   formatPlanCap,
+  planAffiliateRate,
   PLAN_COMPARE_SECTIONS,
   type MembershipPlan,
+  type PlanAffiliateRates,
   type PlanCapKey,
+  type PlanCompareRow,
 } from "@/lib/membership/catalog";
 
-export type PlanPrivilegeGroup = {
+export type PlanOverviewLine = {
+  key: string;
+  label: string;
+  text: string;
+  included: boolean;
+  over: boolean;
+  note: string | null;
+};
+
+export type PlanOverviewGroup = {
   title: string;
-  items: string[];
+  lines: PlanOverviewLine[];
 };
 
 export type PlanUsageCounts = {
@@ -22,15 +34,7 @@ export type PlanUsageCounts = {
   max_stored_backtests: number;
 };
 
-export type PlanUsageRow = {
-  key: PlanCapKey;
-  label: string;
-  text: string;
-  over: boolean;
-  note: string | null;
-};
-
-type PlanSlice = Pick<MembershipPlan, "features" | "caps">;
+type OverviewPlan = Pick<MembershipPlan, "features" | "caps"> & PlanAffiliateRates;
 
 const COUNTED_CAPS = new Set<PlanCapKey>([
   "max_paper_desks",
@@ -89,77 +93,102 @@ export function planDeskCounts(
   return counts;
 }
 
-export function overviewPlanPrivileges(plan: PlanSlice): PlanPrivilegeGroup[] {
-  const groups: PlanPrivilegeGroup[] = [];
-  for (const section of PLAN_COMPARE_SECTIONS) {
-    const items = section.rows
-      .filter((row) => row.kind === "feature" && plan.features[row.key])
-      .map((row) => row.label);
-    if (items.length > 0) {
-      groups.push({ title: section.title, items });
-    }
-  }
-  return groups;
+export function overviewPlanGroups(
+  plan: OverviewPlan,
+  usage: PlanUsageCounts,
+): PlanOverviewGroup[] {
+  return PLAN_COMPARE_SECTIONS.map((section) => ({
+    title: section.title,
+    lines: section.rows.map((row) => overviewLine(plan, row, usage)),
+  }));
 }
 
-function sharingOff(plan: PlanSlice): boolean {
+function sharingOff(plan: OverviewPlan): boolean {
   return !plan.features.copy_share && !plan.features.copy_catalogue;
 }
 
-export function overviewPlanUsage(
-  plan: PlanSlice,
+function overviewLine(
+  plan: OverviewPlan,
+  row: PlanCompareRow,
   usage: PlanUsageCounts,
-): PlanUsageRow[] {
-  const rows: PlanUsageRow[] = [];
-  for (const section of PLAN_COMPARE_SECTIONS) {
-    for (const row of section.rows) {
-      if (row.kind !== "cap") {
-        continue;
-      }
-      rows.push(usageRow(plan, row.key, row.label, usage));
-    }
+): PlanOverviewLine {
+  const key = `${row.kind}:${row.key}`;
+  if (row.kind === "feature") {
+    const on = plan.features[row.key];
+    return {
+      key,
+      label: row.label,
+      text: on ? "Included" : "Not included",
+      included: on,
+      over: false,
+      note: null,
+    };
   }
-  return rows;
+  if (row.kind === "rate") {
+    const pct = planAffiliateRate(plan, row.key);
+    return {
+      key,
+      label: row.label,
+      text: pct === 0 ? "Not included" : `${pct}%`,
+      included: false,
+      over: false,
+      note: null,
+    };
+  }
+  return usageLine(plan, key, row.key, row.label, usage);
 }
 
-function usageRow(
-  plan: PlanSlice,
-  key: PlanCapKey,
+function usageLine(
+  plan: OverviewPlan,
+  key: string,
+  cap: PlanCapKey,
   label: string,
   usage: PlanUsageCounts,
-): PlanUsageRow {
-  const limit = plan.caps[key];
-  if (
-    key === "max_followers_accepted" &&
-    sharingOff(plan)
-  ) {
-    return { key, label, text: "Not included", over: false, note: null };
+): PlanOverviewLine {
+  const limit = plan.caps[cap];
+  if (cap === "max_followers_accepted" && sharingOff(plan)) {
+    return {
+      key,
+      label,
+      text: "Not included",
+      included: false,
+      over: false,
+      note: null,
+    };
   }
-  if (!COUNTED_CAPS.has(key)) {
+  if (!COUNTED_CAPS.has(cap)) {
     return {
       key,
       label,
       text:
         limit === 0
           ? "Not included"
-          : key === "max_backtest_years"
+          : cap === "max_backtest_years"
             ? formatBacktestTimeframe(limit)
             : formatPlanCap(limit),
+      included: false,
       over: false,
       note: null,
     };
   }
-  const used = usage[key as keyof PlanUsageCounts] ?? 0;
+  const used = usage[cap as keyof PlanUsageCounts] ?? 0;
   if (limit === 0 && used === 0) {
-    return { key, label, text: "Not included", over: false, note: null };
+    return {
+      key,
+      label,
+      text: "Not included",
+      included: false,
+      over: false,
+      note: null,
+    };
   }
   const limitText = limit == null ? "Unlimited" : String(limit);
   return {
     key,
     label,
     text: `${used} of ${limitText}`,
+    included: false,
     over: limit != null && used > limit,
-    note:
-      key === "max_followers_accepted" ? "Highest on one desk" : null,
+    note: cap === "max_followers_accepted" ? "Highest on one desk" : null,
   };
 }

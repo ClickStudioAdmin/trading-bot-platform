@@ -7,6 +7,7 @@ import {
   LiveMainWallet,
 } from "@/components/crypto-wallet-panel";
 import { DeskTypeMark } from "@/components/desk-mark";
+import { IconCheck } from "@/components/icons";
 import { ContainerLoading } from "@/components/container-loading";
 import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
@@ -55,10 +56,8 @@ import {
 import { getMemberBilling } from "@/lib/membership/billing-store";
 import { planIsArchived } from "@/lib/membership/catalog";
 import {
-  overviewPlanPrivileges,
-  overviewPlanUsage,
-  type PlanPrivilegeGroup,
-  type PlanUsageRow,
+  overviewPlanGroups,
+  type PlanOverviewGroup,
 } from "@/lib/membership/plan-overview";
 import { loadPlanUsageCounts } from "@/lib/membership/plan-usage";
 import { getMembershipPlan } from "@/lib/membership/store";
@@ -310,10 +309,7 @@ export default async function AccountOverviewPage() {
       ) : null}
 
       {planRecord && planUsage ? (
-        <PlanPrivileges
-          groups={overviewPlanPrivileges(planRecord)}
-          usage={overviewPlanUsage(planRecord, planUsage)}
-        />
+        <PlanPrivileges groups={overviewPlanGroups(planRecord, planUsage)} />
       ) : null}
 
       <section>
@@ -657,14 +653,7 @@ function ConnectionSnapshot({
   );
 }
 
-function PlanPrivileges({
-  groups,
-  usage,
-}: {
-  groups: PlanPrivilegeGroup[];
-  usage: PlanUsageRow[];
-}) {
-  const rows = usage.filter((row) => row.text !== "Not included");
+function PlanPrivileges({ groups }: { groups: PlanOverviewGroup[] }) {
   return (
     <section className="rounded-card border border-line bg-surface p-5">
       <h2 className="text-lg font-semibold tracking-tight">
@@ -673,62 +662,42 @@ function PlanPrivileges({
       <p className="mt-1 text-sm text-ink-muted">
         What this plan includes, and how much of each maximum is in use.
       </p>
-      <div className="mt-4 grid gap-6 lg:grid-cols-2">
-        <div>
-          <h3 className="text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
-            Included
-          </h3>
-          {groups.length === 0 ? (
-            <p className="mt-2 text-sm text-ink-muted">
-              This plan has no extra privileges.
-            </p>
-          ) : (
-            <div className="mt-3 space-y-4">
-              {groups.map((group) => (
-                <div key={group.title}>
-                  <p className="text-sm font-semibold text-ink">{group.title}</p>
-                  <ul className="mt-1 space-y-1">
-                    {group.items.map((item) => (
-                      <li key={item} className="text-sm text-ink-muted">
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
+      <div className="mt-5 columns-1 gap-x-10 sm:columns-2 xl:columns-3">
+        {groups.map((group) => (
+          <div key={group.title} className="mb-6 break-inside-avoid">
+            <h3 className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
+              {group.title}
+            </h3>
+            <dl className="mt-2 space-y-1.5">
+              {group.lines.map((line) => (
+                <div key={line.key}>
+                  <div className="flex items-baseline justify-between gap-3 text-sm">
+                    <dt className="text-ink">{line.label}</dt>
+                    <dd
+                      className={`tabular-nums ${
+                        line.over ? "text-warning" : "text-ink-muted"
+                      }`}
+                    >
+                      {line.included ? (
+                        <span
+                          className="inline-flex text-success"
+                          aria-label="Included"
+                        >
+                          <IconCheck size={16} className="size-4" />
+                        </span>
+                      ) : (
+                        line.text
+                      )}
+                    </dd>
+                  </div>
+                  {line.note ? (
+                    <p className="text-hint text-ink-muted">{line.note}</p>
+                  ) : null}
                 </div>
               ))}
-            </div>
-          )}
-        </div>
-        <div>
-          <h3 className="text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
-            Usage
-          </h3>
-          {rows.length === 0 ? (
-            <p className="mt-2 text-sm text-ink-muted">
-              This plan has no numeric maximums.
-            </p>
-          ) : (
-          <dl className="mt-3 space-y-3">
-            {rows.map((row) => (
-              <div key={row.key}>
-                <div className="flex items-baseline justify-between gap-3 text-sm">
-                  <dt className="text-ink">{row.label}</dt>
-                  <dd
-                    className={`tabular-nums ${
-                      row.over ? "text-warning" : "text-ink-muted"
-                    }`}
-                  >
-                    {row.text}
-                  </dd>
-                </div>
-                {row.note ? (
-                  <p className="text-hint text-ink-muted">{row.note}</p>
-                ) : null}
-              </div>
-            ))}
-          </dl>
-          )}
-        </div>
+            </dl>
+          </div>
+        ))}
       </div>
     </section>
   );
