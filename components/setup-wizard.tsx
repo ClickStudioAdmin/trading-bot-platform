@@ -1129,10 +1129,10 @@ function DeskStep({
               <th className="whitespace-nowrap px-3 py-2 font-medium">Type</th>
               <th className="px-3 py-2 font-medium">Name</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Mode</th>
-              <th className="whitespace-nowrap px-3 py-2 font-medium">Market</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">
                 Environment
               </th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">Market</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Key</th>
               <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
             </tr>
@@ -1161,11 +1161,11 @@ function DeskStep({
                     <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
                       {details.mode}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
-                      {details.market}
-                    </td>
                     <td className="px-3 py-2 text-ink-muted">
                       <DeskDetailValue value={details.environment} />
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
+                      {details.market}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
                       <DeskDetailValue value={details.key} />
