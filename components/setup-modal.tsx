@@ -62,21 +62,9 @@ export function SetupModal({ children }: { children: ReactNode }) {
           role="dialog"
           aria-modal="true"
           aria-labelledby="setup-gate-title"
-          aria-describedby="setup-gate-intro"
           tabIndex={-1}
           className="flex max-h-[min(90dvh,52rem)] w-full max-w-[calc(80rem*2/3)] flex-col overflow-hidden rounded-card border border-line bg-surface outline-none"
         >
-        <div className="shrink-0 border-b border-line px-5 py-4">
-          <h2
-            id="setup-gate-title"
-            className="text-lg font-semibold tracking-tight"
-          >
-            Set up your account
-          </h2>
-          <p id="setup-gate-intro" className="mt-1 text-sm text-ink-muted">
-            Finish these steps before using the platform.
-          </p>
-        </div>
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {children}
           </div>

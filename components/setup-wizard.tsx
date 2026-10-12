@@ -382,6 +382,19 @@ export function SetupWizard({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {screen.main === "intro" ? null : (
+        <div className="shrink-0 border-b border-line px-5 py-4">
+          <h2
+            id="setup-gate-title"
+            className="text-lg font-semibold tracking-tight"
+          >
+            Set up your account
+          </h2>
+          <p className="mt-1 text-sm text-ink-muted">
+            Finish these steps before using the platform.
+          </p>
+        </div>
+      )}
       {screen.main === "intro" ? null : <SetupProgress screen={screen} />}
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-4">
       {screen.main === "intro" ? (
@@ -598,7 +611,10 @@ function IntroStep({
     "mt-4 flex aspect-video w-full flex-col items-center justify-center rounded-card border border-line bg-canvas px-6 text-center";
   return (
     <section className="rounded-card border border-line bg-surface p-5">
-      <h2 className="text-lg font-semibold tracking-tight">
+      <h2
+        id="setup-gate-title"
+        className="text-lg font-semibold tracking-tight"
+      >
         Watch a short overview
       </h2>
       <p className="mt-2 text-sm text-ink-muted">
