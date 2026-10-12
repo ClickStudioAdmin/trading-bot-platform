@@ -229,13 +229,11 @@ function readTrials(
     trials.features[key] = { days };
   }
   for (const key of PLAN_CAP_KEYS) {
-    const limitRaw = readString(formData, `trial_limit_${key}`);
-    const daysRaw = readString(formData, `trial_days_${key}`);
-    if (limitRaw === "" && daysRaw === "") {
+    if (!readCheckbox(formData, `trial_on_${key}`)) {
       continue;
     }
-    const limit = parseTrialLimit(limitRaw);
-    const days = parseTrialDays(daysRaw);
+    const limit = parseTrialLimit(readString(formData, `trial_limit_${key}`));
+    const days = parseTrialDays(readString(formData, `trial_days_${key}`));
     if (limit === null || days === null) {
       return {
         ok: false,
@@ -247,7 +245,7 @@ function readTrials(
     if (standing == null) {
       return {
         ok: false,
-        error: "Clear the trial limit when the standing cap is already unlimited.",
+        error: "Turn off Free trial when the standing cap is already unlimited.",
       };
     }
     if (limit <= standing) {
