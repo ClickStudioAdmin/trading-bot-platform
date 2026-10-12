@@ -600,12 +600,6 @@ export function SetupWizard({
       {screen.main === "bots" && screen.sub === "choice" ? (
         <ChoiceStep
           title="Load starter bots?"
-          intro="Choose Initial Status to start a bot. Desks and bots are created when you click Create, so the tour can show them."
-          note={
-            starterBotDesks(desks, folders).length === 0
-              ? botsEmptyNote(desks)
-              : null
-          }
           name="bot-setup-choice"
           value={botChoice}
           options={[
@@ -998,15 +992,13 @@ function ReadySummary({
 function ChoiceStep({
   title,
   intro,
-  note,
   name,
   value,
   options,
   onChange,
 }: {
   title: string;
-  intro: string;
-  note?: string | null;
+  intro?: string;
   name: string;
   value: string | null;
   options: { value: string; title: string; detail: string; icon: ReactNode }[];
@@ -1015,8 +1007,7 @@ function ChoiceStep({
   return (
     <section>
       <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-      <p className="mt-2 text-sm text-ink-muted">{intro}</p>
-      {note ? <p className="mt-2 text-sm text-ink-muted">{note}</p> : null}
+      {intro ? <p className="mt-2 text-sm text-ink-muted">{intro}</p> : null}
       <div role="radiogroup" aria-label={title} className="mt-4 flex flex-col gap-3">
         {options.map((option) => {
           const selected = value === option.value;
