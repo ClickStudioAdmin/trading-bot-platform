@@ -144,7 +144,7 @@ function overviewLine(
       return {
         key,
         label: row.label,
-        text: clock.phase === "ended" ? "Trial ended" : `${offer.days}-day trial`,
+        text: clock.phase === "ended" ? "Trial ended" : `${offer.days} day trial`,
         included: false,
         over: false,
         note: null,

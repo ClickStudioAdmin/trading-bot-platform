@@ -101,7 +101,7 @@ const activeMark = trialMark({
   nowMs: now,
 });
 assert.equal(activeMark?.phase, "active");
-assert.equal(activeMark?.label, "14-Day Trial");
+assert.equal(activeMark?.label, "14 Day Trial");
 assert.equal(activeMark?.keepStanding, false);
 
 const storedMark = trialMark({

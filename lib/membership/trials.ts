@@ -292,7 +292,7 @@ function trialLabel(offer: TrialOffer, row: PlanCompareRow, ended: boolean): str
         : String(offer.limit);
     return titleCaseWords(amount);
   }
-  return titleCaseWords(`${offer.days}-day trial`);
+  return titleCaseWords(`${offer.days} day trial`);
 }
 
 function titleCaseWords(text: string): string {

@@ -193,7 +193,7 @@ const openTrials = overviewPlanGroups(trialPlan, usage, {
 });
 assert.equal(
   line(openTrials, "Backtesting", "feature:research_backtest").text,
-  "14-day trial",
+  "14 day trial",
 );
 assert.equal(
   line(openTrials, "Backtesting", "feature:research_backtest").trial?.phase,
