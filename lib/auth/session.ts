@@ -206,6 +206,11 @@ export async function createSession(userId: string): Promise<void> {
   }
 }
 
+export async function clearActiveAccountId(): Promise<void> {
+  const store = await cookies();
+  store.delete(ACCOUNT_COOKIE);
+}
+
 export async function setActiveAccountId(accountId: string): Promise<void> {
   const store = await cookies();
   const expiresAtMs = Date.now() + SESSION_DAYS * 86_400_000;

@@ -23,6 +23,7 @@ import {
 } from "@/lib/exchanges/store";
 import { listFuturesConnectionIds } from "@/lib/futures/settings";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
+import { devResetDeskOrder } from "@/lib/onboarding/model";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -434,6 +435,40 @@ export async function deleteTradingAccountRow(
   const blocks = usage.get(accountId)?.blocks ?? ["last"];
   if (blocks.length > 0) {
     return { error: `${formatDeleteBlockers(blocks)}.` };
+  }
+  return teardownTradingAccount(supabase, userId, accountId);
+}
+
+/** Removes every desk on the login, including the last one and any open rows. */
+export async function teardownAllTradingAccounts(
+  userId: string,
+): Promise<{ error: string | null }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { error: "Auth is not configured." };
+  }
+  const accounts = await listTradingAccounts(userId);
+  for (const account of devResetDeskOrder(accounts)) {
+    const removed = await teardownTradingAccount(supabase, userId, account.id);
+    if (removed.error) {
+      return removed;
+    }
+  }
+  return { error: null };
+}
+
+async function teardownTradingAccount(
+  supabase: SupabaseClient,
+  userId: string,
+  accountId: string,
+): Promise<{ error: string | null }> {
+  const { error: receiptError } = await supabase
+    .from("futures_command_receipts")
+    .delete()
+    .eq("account_id", accountId)
+    .eq("user_id", userId);
+  if (receiptError) {
+    return { error: receiptError.message };
   }
   const { error: unbindError } = await supabase
     .from("paper_engine_settings")

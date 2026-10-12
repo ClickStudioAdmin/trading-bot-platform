@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSyncExternalStore, type ReactNode } from "react";
+import { useActionState, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { DeskTypeMark } from "@/components/desk-mark";
 import { SiteLogo } from "@/components/site-logo";
@@ -29,12 +29,13 @@ import {
   type TradingAccount,
 } from "@/lib/accounts/model";
 import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
+import { useConfirmDialog } from "@/components/confirm-modal";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { upgradeAffiliateToPlatformAction } from "@/lib/membership/affiliate-actions";
 import { IconChevronDown, IconTour } from "@/components/icons";
 import { NavBadge } from "@/components/nav-badge";
 import { NAV_ACTIVE_CLASS, NAV_IDLE_CLASS, NavItemIcon } from "@/components/site-nav";
-import { startPlatformTour } from "@/lib/onboarding/actions";
+import { resetDevAccount, startPlatformTour } from "@/lib/onboarding/actions";
 import {
   OPEN_ACCOUNT_NAV_EVENT,
   tourTargetForAccountHref,
@@ -47,12 +48,14 @@ export function AccountSidenav({
   badges = {},
   platformName,
   platformLogoUrl,
+  allowDevReset = false,
 }: {
   desks: TradingAccount[];
   platformMember: boolean;
   badges?: Record<string, number>;
   platformName?: string;
   platformLogoUrl?: string | null;
+  allowDevReset?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -144,20 +147,57 @@ export function AccountSidenav({
         </div>
       ) : null}
       {platformMember ? (
-        <form
-          action={startPlatformTour}
-          className="sticky bottom-0 z-10 mt-auto -mx-4 bg-surface px-4 py-3"
-        >
-          <button
-            type="submit"
-            className="flex items-center gap-2 rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-          >
-            <IconTour size={16} className="size-4 shrink-0" />
-            Platform Tour
-          </button>
-        </form>
+        <div className="sticky bottom-0 z-10 mt-auto -mx-4 bg-surface px-4 py-3">
+          {allowDevReset ? <DevResetAccount /> : null}
+          <form action={startPlatformTour}>
+            <button
+              type="submit"
+              className="flex items-center gap-2 rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            >
+              <IconTour size={16} className="size-4 shrink-0" />
+              Platform Tour
+            </button>
+          </form>
+        </div>
       ) : null}
     </aside>
+  );
+}
+
+function DevResetAccount() {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [state, action, pending] = useActionState(resetDevAccount, null);
+  const { confirm, dialog } = useConfirmDialog();
+  return (
+    <>
+      <form ref={formRef} action={action}>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => {
+            void confirm({
+              title: "Reset account",
+              message:
+                "This removes every desk, exchange key, and setup progress on this login. Your sign-in stays, and the setup wizard opens again.",
+              confirmLabel: "Reset Account",
+              danger: true,
+            }).then((ok) => {
+              if (ok) {
+                formRef.current?.requestSubmit();
+              }
+            });
+          }}
+          className="flex items-center gap-2 rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40"
+        >
+          <span aria-hidden className="size-4 shrink-0" />
+          {pending ? "Resetting…" : "Reset Account"}
+        </button>
+        {state?.error ? (
+          <p className="px-3 pb-1 text-xs text-danger">{state.error}</p>
+        ) : null}
+      </form>
+      {dialog}
+    </>
   );
 }
 

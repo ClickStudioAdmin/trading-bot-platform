@@ -191,6 +191,20 @@ export async function updateExchangeConnectionCredentials(input: {
   return { error: null };
 }
 
+export async function deleteMemberExchangeConnections(
+  userId: string,
+): Promise<{ error: string | null }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { error: "Auth is not configured." };
+  }
+  const { error } = await supabase
+    .from("exchange_connections")
+    .delete()
+    .eq("user_id", userId);
+  return { error: error?.message ?? null };
+}
+
 export async function deleteExchangeConnection(input: {
   userId: string;
   connectionId: string;
