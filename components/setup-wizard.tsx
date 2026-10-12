@@ -7,7 +7,6 @@ import { ModalHost } from "@/components/portal-host";
 import {
   formatAccountModeChoice,
   formatDeskType,
-  formatDeskTypeChoice,
   type DeskType,
 } from "@/lib/accounts/model";
 import { AppCheck } from "@/components/app-check";
@@ -203,7 +202,6 @@ export function SetupWizard({
   const [introSeen, setIntroSeen] = useState(initialDraft.introSeen);
   const [playing, setPlaying] = useState(false);
   const [deskEditor, setDeskEditor] = useState<{
-    deskType: DeskType;
     desk: SetupDesk | null;
   } | null>(null);
   const [screenId, setScreenId] = useState<string>(() =>
@@ -549,14 +547,14 @@ export function SetupWizard({
           options={[
             {
               value: "all_paper",
-              title: "Create a Paper Trading desk for each strategy type",
+              title: "Add a Paper Trading desk for each strategy type",
               detail: "Quickest way to see all desk types in action.",
               icon: <IconDesks {...CHOICE_ICON} />,
             },
             {
               value: "manual",
               title: "Manually select desk types and modes",
-              detail: "Create each desk, then review the details before you continue.",
+              detail: "Add each desk, then review the details before you continue.",
               icon: <IconPencil {...CHOICE_ICON} />,
             },
             {
@@ -576,8 +574,8 @@ export function SetupWizard({
         <DeskStep
           desks={desks}
           existingNames={existingNames}
-          onCreate={(deskType) => setDeskEditor({ deskType, desk: null })}
-          onEdit={(desk) => setDeskEditor({ deskType: desk.deskType, desk })}
+          onCreate={() => setDeskEditor({ desk: null })}
+          onEdit={(desk) => setDeskEditor({ desk })}
           onRemove={removeDesk}
         />
       ) : null}
@@ -785,7 +783,6 @@ export function SetupWizard({
     {dialog}
     {deskEditor ? (
       <CreateDeskDialog
-        deskType={deskEditor.deskType}
         desk={deskEditor.desk}
         takenNames={takenNames(deskEditor.desk?.key)}
         takenKeys={desks
@@ -1099,12 +1096,6 @@ function DeskDetailValue({ value }: { value: string }) {
   return value;
 }
 
-function desksForType(desks: readonly SetupDesk[], deskType: DeskType): SetupDesk[] {
-  return (["paper", "live"] as const).flatMap((mode) =>
-    desks.filter((row) => row.deskType === deskType && row.mode === mode),
-  );
-}
-
 function DeskStep({
   desks,
   existingNames,
@@ -1114,101 +1105,97 @@ function DeskStep({
 }: {
   desks: SetupDesk[];
   existingNames: string[];
-  onCreate: (deskType: DeskType) => void;
+  onCreate: () => void;
   onEdit: (desk: SetupDesk) => void;
   onRemove: (key: string) => void;
 }) {
   return (
     <section>
-      <h2 className="text-lg font-semibold tracking-tight">
-        Create a few desks now?
-      </h2>
-      <ul className="mt-4 text-sm">
-        {ONBOARDING_DESK_TYPES.map((deskType) => {
-          const added = desksForType(desks, deskType);
-          return (
-            <li key={deskType} className="border-b border-line py-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <p className="min-w-0 flex-1 font-medium text-ink">
-                  {formatDeskType(deskType)}
-                </p>
-                <TableLabelButton
-                  variant="secondary"
-                  icon={<IconPlus {...TABLE_BTN_ICON} />}
-                  onClick={() => onCreate(deskType)}
-                  className="shrink-0"
-                >
-                  Create Desk
-                </TableLabelButton>
-              </div>
-              {added.length > 0 ? (
-                <div className="mt-3 overflow-x-auto rounded-card border border-line">
-                  <table className="w-full text-left text-sm">
-                    <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
-                      <tr>
-                        <th className="px-3 py-2 font-medium">Name</th>
-                        <th className="whitespace-nowrap px-3 py-2 font-medium">Mode</th>
-                        <th className="whitespace-nowrap px-3 py-2 font-medium">Market</th>
-                        <th className="whitespace-nowrap px-3 py-2 font-medium">
-                          Environment
-                        </th>
-                        <th className="whitespace-nowrap px-3 py-2 font-medium">Key</th>
-                        <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {added.map((desk) => {
-                        const details = setupDeskDetails(desk);
-                        return (
-                          <tr
-                            key={desk.key}
-                            className="border-b border-line last:border-b-0"
-                          >
-                            <td className="px-3 py-2 text-ink" title={desk.name}>
-                              {desk.name}
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
-                              {details.mode}
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
-                              {details.market}
-                            </td>
-                            <td className="px-3 py-2 text-ink-muted">
-                              <DeskDetailValue value={details.environment} />
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
-                              <DeskDetailValue value={details.key} />
-                            </td>
-                            <td className={TABLE_ACTIONS_TD_CLASS}>
-                              <TableActions>
-                                <TableIconAction
-                                  label="Edit"
-                                  detail="Change this desk."
-                                  onClick={() => onEdit(desk)}
-                                >
-                                  <IconPencil {...TABLE_BTN_ICON} />
-                                </TableIconAction>
-                                <TableIconAction
-                                  label="Remove"
-                                  detail="Drop this desk from setup."
-                                  danger
-                                  onClick={() => onRemove(desk.key)}
-                                >
-                                  <IconTrash {...TABLE_BTN_ICON} />
-                                </TableIconAction>
-                              </TableActions>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold tracking-tight">Add desks now?</h2>
+        <TableLabelButton
+          variant="secondary"
+          icon={<IconPlus {...TABLE_BTN_ICON} />}
+          onClick={onCreate}
+          className="shrink-0"
+        >
+          Add Desk
+        </TableLabelButton>
+      </div>
+      <div className="mt-4 overflow-x-auto rounded-card border border-line">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
+            <tr>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">Type</th>
+              <th className="px-3 py-2 font-medium">Name</th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">Mode</th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">Market</th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">
+                Environment
+              </th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">Key</th>
+              <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {desks.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-3 py-4 text-ink-muted">
+                  No desks yet.
+                </td>
+              </tr>
+            ) : (
+              desks.map((desk) => {
+                const details = setupDeskDetails(desk);
+                return (
+                  <tr
+                    key={desk.key}
+                    className="border-b border-line last:border-b-0"
+                  >
+                    <td className="whitespace-nowrap px-3 py-2 text-ink">
+                      {formatDeskType(desk.deskType)}
+                    </td>
+                    <td className="px-3 py-2 text-ink" title={desk.name}>
+                      {desk.name}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
+                      {details.mode}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
+                      {details.market}
+                    </td>
+                    <td className="px-3 py-2 text-ink-muted">
+                      <DeskDetailValue value={details.environment} />
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
+                      <DeskDetailValue value={details.key} />
+                    </td>
+                    <td className={TABLE_ACTIONS_TD_CLASS}>
+                      <TableActions>
+                        <TableIconAction
+                          label="Edit"
+                          detail="Change this desk."
+                          onClick={() => onEdit(desk)}
+                        >
+                          <IconPencil {...TABLE_BTN_ICON} />
+                        </TableIconAction>
+                        <TableIconAction
+                          label="Remove"
+                          detail="Drop this desk from setup."
+                          danger
+                          onClick={() => onRemove(desk.key)}
+                        >
+                          <IconTrash {...TABLE_BTN_ICON} />
+                        </TableIconAction>
+                      </TableActions>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
       <p className="mt-3 text-hint text-ink-muted">
         Add nothing to continue without desks. Perps is the ticket. TradingView
         Strategy takes alerts. Those desks do not load starter bots.
@@ -1219,27 +1206,27 @@ function DeskStep({
 }
 
 function CreateDeskDialog({
-  deskType,
   desk,
   takenNames,
   takenKeys,
   onClose,
   onSave,
 }: {
-  deskType: DeskType;
   desk: SetupDesk | null;
   takenNames: string[];
   takenKeys: string[];
   onClose: () => void;
   onSave: (desk: SetupDesk) => void;
 }) {
+  const initialType = desk?.deskType ?? ONBOARDING_DESK_TYPES[0];
   const seed =
     desk ??
     makeSetupDesk({
-      deskType,
+      deskType: initialType,
       mode: "paper",
       takenNames,
     });
+  const [deskType, setDeskType] = useState<DeskType>(initialType);
   const [mode, setMode] = useState(seed.mode);
   const [name, setName] = useState(seed.name);
   const [nameEdited, setNameEdited] = useState(Boolean(desk?.nameEdited));
@@ -1279,15 +1266,37 @@ function CreateDeskDialog({
   }, [host, onClose]);
 
   function suggestedName(
+    nextType: DeskType,
     nextMode: "paper" | "live",
     nextVenue: string,
     nextEnvironment: string | null,
   ) {
     const base =
       nextMode === "live"
-        ? connectedSetupName(deskType, nextVenue, nextEnvironment)
-        : defaultSetupName(deskType, "paper");
+        ? connectedSetupName(nextType, nextVenue, nextEnvironment)
+        : defaultSetupName(nextType, "paper");
     return allocateSetupName(base, takenNames);
+  }
+
+  function selectDeskType(raw: string) {
+    if (!ONBOARDING_DESK_TYPES.includes(raw as DeskType)) {
+      return;
+    }
+    const nextType = raw as DeskType;
+    const allowed =
+      mode === "paper" ? paperVenuesFor(nextType) : connectedVenuesFor(nextType);
+    const nextVenue =
+      allowed.find((item) => item.id === venue)?.id ?? allowed[0]?.id ?? "bybit";
+    const nextEnvironment =
+      mode === "live" ? defaultEnvironmentId(nextVenue) : null;
+    setDeskType(nextType);
+    setVenue(nextVenue);
+    setEnvironmentId(nextEnvironment);
+    setConnectionId(null);
+    setChoice("later");
+    if (!nameEdited) {
+      setName(suggestedName(nextType, mode, nextVenue, nextEnvironment));
+    }
   }
 
   function selectMode(nextMode: "paper" | "live") {
@@ -1307,7 +1316,7 @@ function CreateDeskDialog({
     setConnectionId(null);
     setChoice("later");
     if (!nameEdited) {
-      setName(suggestedName(nextMode, nextVenue, nextEnvironment));
+      setName(suggestedName(deskType, nextMode, nextVenue, nextEnvironment));
     }
   }
 
@@ -1318,7 +1327,7 @@ function CreateDeskDialog({
     setEnvironmentId(nextEnvironment);
     setConnectionId(null);
     if (!nameEdited && mode === "live") {
-      setName(suggestedName("live", nextVenue, nextEnvironment));
+      setName(suggestedName(deskType, "live", nextVenue, nextEnvironment));
     }
   }
 
@@ -1326,7 +1335,7 @@ function CreateDeskDialog({
     setEnvironmentId(nextEnvironment);
     setConnectionId(null);
     if (!nameEdited && mode === "live") {
-      setName(suggestedName("live", venue, nextEnvironment));
+      setName(suggestedName(deskType, "live", venue, nextEnvironment));
     }
   }
 
@@ -1379,13 +1388,24 @@ function CreateDeskDialog({
             <IconClose size={14} className="size-3.5" />
           </button>
           <h2 id="create-desk-title" className="pr-8 text-lg font-semibold text-ink">
-            {desk ? "Edit desk" : "Create desk"}
+            {desk ? "Edit desk" : "Add desk"}
           </h2>
-          <p className="mt-1 pr-8 text-sm text-ink-muted">
-            {formatDeskTypeChoice(deskType)}
-          </p>
         </div>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
+          <label className="block text-sm text-ink">
+            Desk type
+            <AppSelect
+              value={deskType}
+              onChange={(event) => selectDeskType(event.target.value)}
+              className={fieldClass}
+            >
+              {ONBOARDING_DESK_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {formatDeskType(type)}
+                </option>
+              ))}
+            </AppSelect>
+          </label>
           <label className="block text-sm text-ink">
             Name
             <input
