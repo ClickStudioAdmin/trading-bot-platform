@@ -1,5 +1,6 @@
 import {
   PLAN_COMPARE_SECTIONS,
+  formatBacktestTimeframe,
   type PlanCapKey,
   type PlanCaps,
   type PlanCompareRow,
@@ -264,10 +265,10 @@ export function trialMark(input: {
     return null;
   }
   const ended = phase === "ended";
-  const keepStanding = input.row.kind === "cap" && standingVisible(input.plan, input.row);
+  const keepStanding = ended && input.row.kind === "cap" && standingVisible(input.plan, input.row);
   return {
     phase,
-    label: trialLabel(offer, ended),
+    label: trialLabel(offer, input.row, ended),
     endsAt: input.grant?.endsAt ?? null,
     keepStanding,
   };
@@ -280,12 +281,16 @@ export function grantForKey(
   return grants.find((grant) => grant.key === key) ?? null;
 }
 
-function trialLabel(offer: TrialOffer, ended: boolean): string {
+function trialLabel(offer: TrialOffer, row: PlanCompareRow, ended: boolean): string {
   if (ended) {
     return "Trial ended";
   }
-  if (offer.limit != null) {
-    return `${offer.limit} · ${offer.days}-day trial`;
+  if (offer.limit != null && row.kind === "cap") {
+    const amount =
+      row.key === "max_backtest_years"
+        ? formatBacktestTimeframe(offer.limit)
+        : String(offer.limit);
+    return `${amount} · trial`;
   }
   return `${offer.days}-day trial`;
 }
