@@ -23,6 +23,7 @@ export function AppCheck({
   onChange,
   indeterminate = false,
   className = "mt-0.5",
+  title,
   "aria-label": ariaLabel,
 }: {
   name?: string;
@@ -33,6 +34,7 @@ export function AppCheck({
   onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
   indeterminate?: boolean;
   className?: string;
+  title?: string;
   "aria-label"?: string;
 }) {
   const ref = useRef<HTMLInputElement>(null);
@@ -53,6 +55,7 @@ export function AppCheck({
         defaultChecked={defaultChecked}
         disabled={disabled}
         onChange={onChange}
+        title={title}
         aria-label={ariaLabel}
         className="peer absolute inset-0 z-10 cursor-pointer opacity-0 disabled:cursor-not-allowed"
       />

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { AppCheck } from "@/components/app-check";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { DeskTypeMark } from "@/components/desk-mark";
 import { IconPlus } from "@/components/icons";
@@ -377,9 +378,9 @@ function StarterBots({
   return (
     <fieldset className="space-y-3">
       <label className="inline-flex items-center gap-2 text-sm text-ink">
-        <input
-          type="checkbox"
+        <AppCheck
           checked={enabled}
+          className=""
           onChange={(event) => onEnabled(event.target.checked)}
         />
         Add starter bots
@@ -395,11 +396,11 @@ function StarterBots({
                 {folder.templates.map((template) => (
                   <li key={template.id}>
                     <label className="inline-flex items-center gap-2 text-sm text-ink">
-                      <input
-                        type="checkbox"
+                      <AppCheck
                         name="starterTemplateId"
                         value={template.id}
                         checked={selected.includes(template.id)}
+                        className=""
                         onChange={() => {
                           onSelected(
                             selected.includes(template.id)

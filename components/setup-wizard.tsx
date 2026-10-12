@@ -10,6 +10,7 @@ import {
   formatDeskTypeChoice,
   type DeskType,
 } from "@/lib/accounts/model";
+import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
 import {
   IconArrowLeft,
@@ -1785,9 +1786,9 @@ function BotStep({
                           <span className="text-ink-faint">—</span>
                         ) : index === 0 ? (
                           <label className="inline-flex items-center gap-2">
-                            <input
-                              type="checkbox"
+                            <AppCheck
                               checked={all}
+                              className=""
                               onChange={() => {
                                 if (all) {
                                   choose(
@@ -1811,9 +1812,9 @@ function BotStep({
                     ) : null}
                     <td className="px-3 py-2 text-ink">
                       <label className="inline-flex items-center gap-2">
-                        <input
-                          type="checkbox"
+                        <AppCheck
                           checked={desk.templateIds.includes(template.id)}
+                          className=""
                           onChange={() => {
                             const next = new Set(desk.templateIds);
                             if (next.has(template.id)) {
@@ -1885,11 +1886,11 @@ function StarterInitialStatus({
   const canStart = setupDeskCanStartBots(desk);
   const armed = selected && desk.armTemplateIds.includes(templateId);
   return (
-    <input
-      type="checkbox"
+    <AppCheck
       aria-label={`Initial status for ${templateName}`}
       checked={armed}
       disabled={!selected || !canStart}
+      className=""
       title={
         canStart
           ? desk.deskType === "dca"
