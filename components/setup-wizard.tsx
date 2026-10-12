@@ -1124,6 +1124,9 @@ function DeskStep({
           Add Desk
         </TableLabelButton>
       </div>
+      <p className="mt-1 text-hint text-ink-muted">
+        Add nothing to continue without desks.
+      </p>
       <div className="mt-4 overflow-x-auto rounded-card border border-line">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
@@ -1198,9 +1201,6 @@ function DeskStep({
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-hint text-ink-muted">
-        Add nothing to continue without desks.
-      </p>
       <NameHint desks={desks} existingNames={existingNames} />
     </section>
   );

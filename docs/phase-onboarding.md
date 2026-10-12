@@ -52,7 +52,7 @@ The first sub-step asks how to add desks:
 
 Choosing again with Back replaces the draft selection. Nothing is inserted until they click **Create** on Review.
 
-Question on the list, when they choose to select manually: “Add desks now?”
+Question on the list, when they choose to select manually: “Add desks now?” The line “Add nothing to continue without desks.” sits under that title, above the table.
 
 One table. **Add Desk** sits at the top. Columns are type, name, mode, environment, market, and key. An empty table says no desks yet. Types are Perps bots, DCA, Cash and Carry, TradingView Strategy, and Perps, chosen in the sub-modal.
 
