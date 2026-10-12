@@ -592,9 +592,6 @@ export function SetupWizard({
           folders={folders}
           applied={applied}
           issues={summary?.issues ?? []}
-          pending={pending}
-          onStart={() => finish("yes")}
-          onLater={() => finish("not_now")}
         />
       ) : null}
       </div>
@@ -605,6 +602,7 @@ export function SetupWizard({
           </p>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
+        {readyForTour ? null : (
         <button
           type="button"
           disabled={pending}
@@ -613,6 +611,7 @@ export function SetupWizard({
         >
           {pending && resetting ? "Resetting…" : "Reset Wizard"}
         </button>
+        )}
         <div className="ml-auto flex flex-wrap items-center gap-2">
         {screen.main === "intro" ? (
           <>
@@ -667,6 +666,26 @@ export function SetupWizard({
                 ? "Create"
                 : "Continue"}
           </button>
+        ) : null}
+        {screen.main === "tour" ? (
+          <>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => finish("not_now")}
+              className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
+            >
+              Not now
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => finish("yes")}
+              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            >
+              {pending ? "Finishing…" : "Start the Tour now"}
+            </button>
+          </>
         ) : null}
         </div>
         </div>
@@ -782,17 +801,11 @@ function TourReady({
   folders,
   applied,
   issues,
-  pending,
-  onStart,
-  onLater,
 }: {
   desks: SetupDesk[];
   folders: StarterFolder[];
   applied: string[];
   issues: SetupIssue[];
-  pending: boolean;
-  onStart: () => void;
-  onLater: () => void;
 }) {
   const rows = readyDeskRows({ desks, folders, applied });
   return (
@@ -875,24 +888,6 @@ function TourReady({
           </table>
         </div>
       ) : null}
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={pending}
-          onClick={onStart}
-          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-        >
-          {pending ? "Finishing…" : "Start the Tour now"}
-        </button>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={onLater}
-          className="rounded-control border border-line px-4 py-2 text-sm text-ink"
-        >
-          Not now
-        </button>
-      </div>
     </section>
   );
 }
