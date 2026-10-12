@@ -10,6 +10,15 @@ import {
 export const TRIAL_DAYS_MIN = 1;
 export const TRIAL_DAYS_MAX = 365;
 
+const NO_TRIAL_KEYS = new Set<string>([
+  "affiliate_max_depth",
+  "affiliate_pay_subscription",
+]);
+
+export function rowAllowsTrial(row: PlanCompareRow): boolean {
+  return row.kind !== "rate" && !NO_TRIAL_KEYS.has(row.key);
+}
+
 export type FeatureTrialSetting = { days: number };
 export type CapTrialSetting = { days: number; limit: number };
 
@@ -77,7 +86,13 @@ export function parsePlanTrials(value: unknown): PlanTrials {
   };
   if (record.features && typeof record.features === "object" && !Array.isArray(record.features)) {
     for (const [key, raw] of Object.entries(record.features)) {
-      if (!isFeatureKey(key) || !raw || typeof raw !== "object" || Array.isArray(raw)) {
+      if (
+        !isFeatureKey(key) ||
+        NO_TRIAL_KEYS.has(key) ||
+        !raw ||
+        typeof raw !== "object" ||
+        Array.isArray(raw)
+      ) {
         continue;
       }
       const days = parseTrialDays((raw as { days?: unknown }).days);
@@ -89,7 +104,13 @@ export function parsePlanTrials(value: unknown): PlanTrials {
   }
   if (record.caps && typeof record.caps === "object" && !Array.isArray(record.caps)) {
     for (const [key, raw] of Object.entries(record.caps)) {
-      if (!isCapKey(key) || !raw || typeof raw !== "object" || Array.isArray(raw)) {
+      if (
+        !isCapKey(key) ||
+        NO_TRIAL_KEYS.has(key) ||
+        !raw ||
+        typeof raw !== "object" ||
+        Array.isArray(raw)
+      ) {
         continue;
       }
       const days = parseTrialDays((raw as { days?: unknown }).days);
@@ -119,7 +140,7 @@ export function featureTrialOffer(
   plan: TrialPlan,
   key: PlanFeatureKey,
 ): TrialOffer | null {
-  if (plan.features[key]) {
+  if (NO_TRIAL_KEYS.has(key) || plan.features[key]) {
     return null;
   }
   const setting = plan.trials?.features[key];
@@ -133,6 +154,9 @@ export function capTrialOffer(
   plan: TrialPlan,
   key: PlanCapKey,
 ): TrialOffer | null {
+  if (NO_TRIAL_KEYS.has(key)) {
+    return null;
+  }
   const setting = plan.trials?.caps[key];
   if (!setting) {
     return null;

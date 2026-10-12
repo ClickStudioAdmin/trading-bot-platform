@@ -216,7 +216,7 @@ function readTrials(
 ): { ok: true; trials: PlanTrials } | { ok: false; error: string } {
   const trials = emptyPlanTrials();
   for (const key of PLAN_FEATURE_KEYS) {
-    if (!readCheckbox(formData, `trial_on_${key}`)) {
+    if (key === "affiliate_pay_subscription" || !readCheckbox(formData, `trial_on_${key}`)) {
       continue;
     }
     const days = parseTrialDays(readString(formData, `trial_days_${key}`));
@@ -229,7 +229,7 @@ function readTrials(
     trials.features[key] = { days };
   }
   for (const key of PLAN_CAP_KEYS) {
-    if (!readCheckbox(formData, `trial_on_${key}`)) {
+    if (key === "affiliate_max_depth" || !readCheckbox(formData, `trial_on_${key}`)) {
       continue;
     }
     const limit = parseTrialLimit(readString(formData, `trial_limit_${key}`));
@@ -252,12 +252,6 @@ function readTrials(
       return {
         ok: false,
         error: "A trial limit has to be higher than the standing cap.",
-      };
-    }
-    if (key === "affiliate_max_depth" && limit > AFFILIATE_LEVEL_MAX) {
-      return {
-        ok: false,
-        error: `A trial earn depth cannot be more than ${AFFILIATE_LEVEL_MAX}.`,
       };
     }
     trials.caps[key] = { days, limit };
