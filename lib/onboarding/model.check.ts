@@ -30,8 +30,8 @@ import {
   devAccountResetAllowed,
   devResetDeskOrder,
   requiresSetupGate,
+  setupDeskDetails,
   setupDeskFromDetails,
-  setupDeskReviewLine,
   setupScreenId,
   setupScreens,
   setupStepLabel,
@@ -135,18 +135,34 @@ assert.equal(connected.mode, "live");
 assert.equal(connected.bindLater, true);
 assert.equal(connected.environmentId, "live");
 assert.notEqual(paper.name.toLowerCase(), connected.name.toLowerCase());
-assert.equal(setupDeskReviewLine(paper), "Paper · Bybit");
-assert.equal(
-  setupDeskReviewLine(connected),
-  "Connected · Bybit · Live · Bind later",
-);
-assert.equal(
-  setupDeskReviewLine({
+assert.deepEqual(setupDeskDetails(paper), {
+  mode: "Paper",
+  market: "Bybit",
+  environment: "—",
+  key: "—",
+});
+assert.deepEqual(setupDeskDetails(connected), {
+  mode: "Connected",
+  market: "Bybit",
+  environment: "Live",
+  key: "Bind later",
+});
+assert.deepEqual(
+  setupDeskDetails({
     ...connected,
     bindLater: false,
     connectionId: "11111111-1111-4111-8111-111111111111",
   }),
-  "Connected · Bybit · Live · Key saved",
+  {
+    mode: "Connected",
+    market: "Bybit",
+    environment: "Live",
+    key: "Key saved",
+  },
+);
+assert.equal(
+  setupDeskDetails({ ...connected, bindLater: false, connectionId: null }).key,
+  "Key needed",
 );
 const detailed = setupDeskFromDetails({
   deskType: "dca",
