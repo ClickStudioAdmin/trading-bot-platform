@@ -488,7 +488,7 @@ export function SetupWizard({
             {
               value: "manual",
               title: "Manually select starter bots",
-              detail: "Choose folders and bots for each desk.",
+              detail: "Pick the folders and bots for every desk together.",
             },
             {
               value: "none",
@@ -510,12 +510,8 @@ export function SetupWizard({
           <p className="mt-2 text-sm text-ink-muted">{botsEmptyNote(desks)}</p>
         </section>
       ) : null}
-      {screen.main === "bots" && screen.sub === "desk" ? (
-        <BotStep
-          desk={desks.find((desk) => desk.key === screen.deskKey) ?? null}
-          folders={folders}
-          onChange={updateDesk}
-        />
+      {screen.main === "bots" && screen.sub === "pick" ? (
+        <BotStep desks={desks} folders={folders} onChange={updateDesk} />
       ) : null}
       {screen.main === "tour" ? (
         <TourReady
@@ -1469,111 +1465,121 @@ function SetupKeyForm({
 }
 
 function BotStep({
-  desk,
+  desks,
   folders,
   onChange,
 }: {
-  desk: SetupDesk | null;
+  desks: SetupDesk[];
   folders: StarterFolder[];
   onChange: (key: string, patch: Partial<SetupDesk>) => void;
 }) {
-  if (!desk) {
-    return null;
-  }
+  const rows = starterBotDesks(desks, folders);
   return (
-    <section className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold tracking-tight">
-          Load starter bots?
-        </h2>
-        <p className="mt-2 text-sm text-ink-muted">
-          These are platform templates and folders marked Include in Starter Pack.
-          DCA bots stay idle. Perps bots and Cash and Carry stay disabled.
-          Nothing trades until you arm or enable them.
-        </p>
-      </div>
-      <div>
-        <h3 className="text-sm font-semibold text-ink">{desk.name}</h3>
-        <div className="mt-3 space-y-4">
-          {foldersForDesk(folders, desk.deskType).map((folder) => {
-              const ids = folder.templates.map((template) => template.id);
-              const selected = ids.filter((id) => desk.templateIds.includes(id));
-              const all = selected.length === ids.length;
-              if (folder.loose) {
-                return (
-                  <ul key={folder.id} className="space-y-1">
-                    {folder.templates.map((template) => (
-                      <li key={template.id}>
-                        <label className="inline-flex items-center gap-2 text-sm text-ink">
-                          <input
-                            type="checkbox"
-                            checked={desk.templateIds.includes(template.id)}
-                            onChange={() => {
-                              const next = new Set(desk.templateIds);
-                              if (next.has(template.id)) {
-                                next.delete(template.id);
-                              } else {
-                                next.add(template.id);
+    <section>
+      <h2 className="text-lg font-semibold tracking-tight">
+        Load starter bots?
+      </h2>
+      <p className="mt-2 text-sm text-ink-muted">
+        These are platform templates and folders marked Include in Starter Pack.
+        DCA bots stay idle. Perps bots and Cash and Carry stay disabled.
+        Nothing trades until you arm or enable them.
+      </p>
+      <ul className="mt-4">
+        {rows.map((desk) => {
+          const details = setupDeskDetails(desk);
+          return (
+            <li key={desk.key} className="border-b border-line py-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-sm font-semibold text-ink">{desk.name}</h3>
+                <p className="shrink-0 text-xs text-ink-faint">
+                  {details.mode} · {formatDeskType(desk.deskType)}
+                </p>
+              </div>
+              <div className="mt-3 space-y-4">
+                {foldersForDesk(folders, desk.deskType).map((folder) => {
+                  const ids = folder.templates.map((template) => template.id);
+                  const selected = ids.filter((id) =>
+                    desk.templateIds.includes(id),
+                  );
+                  const all = selected.length === ids.length;
+                  if (folder.loose) {
+                    return (
+                      <ul key={folder.id} className="space-y-1">
+                        {folder.templates.map((template) => (
+                          <li key={template.id}>
+                            <label className="inline-flex items-center gap-2 text-sm text-ink">
+                              <input
+                                type="checkbox"
+                                checked={desk.templateIds.includes(template.id)}
+                                onChange={() => {
+                                  const next = new Set(desk.templateIds);
+                                  if (next.has(template.id)) {
+                                    next.delete(template.id);
+                                  } else {
+                                    next.add(template.id);
+                                  }
+                                  onChange(desk.key, { templateIds: [...next] });
+                                }}
+                              />
+                              {template.name}
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  }
+                  return (
+                    <fieldset key={folder.id}>
+                      <label className="inline-flex items-center gap-2 text-sm font-medium text-ink">
+                        <input
+                          type="checkbox"
+                          checked={all && ids.length > 0}
+                          onChange={() => {
+                            const next = new Set(desk.templateIds);
+                            if (all) {
+                              for (const id of ids) {
+                                next.delete(id);
                               }
-                              onChange(desk.key, { templateIds: [...next] });
-                            }}
-                          />
-                          {template.name}
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-                );
-              }
-              return (
-                <fieldset key={folder.id}>
-                  <label className="inline-flex items-center gap-2 text-sm font-medium text-ink">
-                    <input
-                      type="checkbox"
-                      checked={all && ids.length > 0}
-                      onChange={() => {
-                        const next = new Set(desk.templateIds);
-                        if (all) {
-                          for (const id of ids) {
-                            next.delete(id);
-                          }
-                        } else {
-                          for (const id of ids) {
-                            next.add(id);
-                          }
-                        }
-                        onChange(desk.key, { templateIds: [...next] });
-                      }}
-                    />
-                    {folder.name}
-                  </label>
-                  <ul className="mt-2 space-y-1 pl-6">
-                    {folder.templates.map((template) => (
-                      <li key={template.id}>
-                        <label className="inline-flex items-center gap-2 text-sm text-ink">
-                          <input
-                            type="checkbox"
-                            checked={desk.templateIds.includes(template.id)}
-                            onChange={() => {
-                              const next = new Set(desk.templateIds);
-                              if (next.has(template.id)) {
-                                next.delete(template.id);
-                              } else {
-                                next.add(template.id);
+                            } else {
+                              for (const id of ids) {
+                                next.add(id);
                               }
-                              onChange(desk.key, { templateIds: [...next] });
-                            }}
-                          />
-                          {template.name}
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-                </fieldset>
-              );
-            })}
-          </div>
-        </div>
+                            }
+                            onChange(desk.key, { templateIds: [...next] });
+                          }}
+                        />
+                        {folder.name}
+                      </label>
+                      <ul className="mt-2 space-y-1 pl-6">
+                        {folder.templates.map((template) => (
+                          <li key={template.id}>
+                            <label className="inline-flex items-center gap-2 text-sm text-ink">
+                              <input
+                                type="checkbox"
+                                checked={desk.templateIds.includes(template.id)}
+                                onChange={() => {
+                                  const next = new Set(desk.templateIds);
+                                  if (next.has(template.id)) {
+                                    next.delete(template.id);
+                                  } else {
+                                    next.add(template.id);
+                                  }
+                                  onChange(desk.key, { templateIds: [...next] });
+                                }}
+                              />
+                              {template.name}
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                    </fieldset>
+                  );
+                })}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

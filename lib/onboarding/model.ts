@@ -42,8 +42,7 @@ export type SetupMainStep = (typeof SETUP_MAIN_STEPS)[number];
 export type SetupScreen =
   | { main: "intro"; sub: "video" }
   | { main: "desks"; sub: "choice" | "desks" | "exchanges" }
-  | { main: "bots"; sub: "choice" | "blocked" | "empty" }
-  | { main: "bots"; sub: "desk"; deskKey: string }
+  | { main: "bots"; sub: "choice" | "blocked" | "empty" | "pick" }
   | { main: "tour"; sub: "tour" };
 export type StarterVisibility = "platform" | "user" | "backtested";
 export type StarterDeskType = "dca" | "perps" | "cash_and_carry";
@@ -886,9 +885,7 @@ export function setupScreens(input: {
       if (bots.length === 0) {
         screens.push({ main: "bots", sub: "empty" });
       } else {
-        for (const desk of bots) {
-          screens.push({ main: "bots", sub: "desk", deskKey: desk.key });
-        }
+        screens.push({ main: "bots", sub: "pick" });
       }
     }
   }
@@ -897,9 +894,6 @@ export function setupScreens(input: {
 }
 
 export function setupScreenId(screen: SetupScreen): string {
-  if (screen.main === "bots" && screen.sub === "desk") {
-    return `bots:${screen.deskKey}`;
-  }
   return `${screen.main}:${screen.sub}`;
 }
 

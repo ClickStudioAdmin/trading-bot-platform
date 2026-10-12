@@ -36,6 +36,7 @@ import {
   setupDeskFromDetails,
   setupScreenId,
   setupScreens,
+  starterBotDesks,
   setupStepLabel,
   shouldOfferTour,
   showsBotStep,
@@ -440,13 +441,18 @@ const both = setupScreens({
   deskChoice: "manual",
   botChoice: "manual",
 });
+assert.deepEqual(
+  starterBotDesks([paper, connected], [dcaFolder, perpsFolder]).map(
+    (desk) => desk.key,
+  ),
+  [connected.key, paper.key],
+);
 assert.deepEqual(both.map((screen) => setupScreenId(screen)), [
   "intro:video",
   "desks:choice",
   "desks:desks",
   "bots:choice",
-  "bots:" + connected.key,
-  "bots:" + paper.key,
+  "bots:pick",
   "tour:tour",
 ]);
 const needsKey = { ...connected, bindLater: false, connectionId: null };
