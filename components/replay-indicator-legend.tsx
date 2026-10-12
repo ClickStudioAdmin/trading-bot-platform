@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { AppCheck } from "@/components/app-check";
 import { ChartColorPicker } from "@/components/chart-color-picker";
 import { IconChevronDown, IconUiPrefs } from "@/components/icons";
 import { Modal } from "@/components/template-modals";
@@ -176,10 +177,9 @@ export function ReplayIndicatorLegend({
                         <h3 className="text-sm font-semibold text-ink">{line.label}</h3>
                       ) : null}
                       <SettingRow label="Visible">
-                        <input
-                          type="checkbox"
-                          className="size-4 accent-accent"
+                        <AppCheck
                           checked={style.visible}
+                          className=""
                           aria-label={`${line.label} visible`}
                           onChange={(event) =>
                             onChange(openId, line.id, { ...style, visible: event.target.checked })

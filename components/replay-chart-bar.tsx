@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { AppCheck } from "@/components/app-check";
 import { ReplayChartIntervalControl } from "@/components/replay-chart-interval";
 import {
   ChartScreenshotControls,
@@ -201,11 +202,10 @@ export function ReplayChartBar({
                       row.locked ? "text-ink-faint" : "text-ink"
                     }`}
                   >
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 accent-accent disabled:opacity-60"
+                    <AppCheck
                       checked={checked}
                       disabled={row.locked}
+                      aria-label={row.label}
                       onChange={(event) => onToggleReference(row.id, event.target.checked)}
                     />
                     <span>{row.label}</span>

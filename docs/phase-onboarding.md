@@ -33,7 +33,7 @@ There is no Skip setup. The member goes through Add Desks, Add Bots, Review, and
 | 4 | Demo vs Live | Not a third column. Connected is `mode = live`. Demo vs Live is the key’s venue environment, chosen on the exchange step. Display mode stays Paper / Demo / Live as today. |
 | 5 | When rows are written | Desk names and details stay a draft until **Create** on Review. API secrets are never stored in that draft. A key the member saves in the create modal, or on the exchange step, is written immediately through the existing connection action (verify, trade-only, encrypt). The draft keeps the connection id only. |
 | 6 | Keys | Same rules as Exchanges and create desk. Trade-only, no withdrawal permission. Server verifies. Browser never sees the secret again. One connection binds one desk. **Bind later** is allowed per connected desk. |
-| 7 | Starter bots | Admin marks **Include in Starter Pack** on a platform folder or on a platform template. The wizard lists every template in a flagged folder, and every flagged template that is not already in one of those folders. Apply uses today’s apply path. A bot stays DCA **idle** or Perps bots / Cash and Carry **disabled** unless the member ticks **Enable** on that bot. The label is Enable for every starter bot. Perps bots and Cash and Carry use the desk enable action. DCA still runs the desk arm action under that tick, and an immediate start can place the first order. A Connected desk with no key cannot start a bot. |
+| 7 | Starter bots | Admin marks **Include in Starter Pack** on a platform folder or on a platform template. The wizard lists every template in a flagged folder, and every flagged template that is not already in one of those folders. Apply uses today’s apply path. A bot stays DCA **idle** or Perps bots / Cash and Carry **disabled** unless the member ticks **Initial Status** on that bot. That column is the start tick for every starter bot. Perps bots and Cash and Carry use the desk enable action. DCA still runs the desk arm action under that tick, and an immediate start can place the first order. A Connected desk with no key cannot start a bot. |
 | 8 | Library copy | Apply onto the new desks only. Do not also copy those rows into the member’s template library. |
 | 9 | Tour | Asked after the other steps, including when they created nothing. Yes starts the tour after Finish. Not now lands on Overview. The tour only explains. It never presses Enable or an order button. |
 | 10 | New desk later | Manage desks create stays the current form. When starter folders exist for that type, the form offers **Add starter bots** (same idle / disabled apply). Not a second full wizard. |
@@ -112,10 +112,8 @@ Admin already sets both flags on `/admin/templates` (**Include in Starter Pack**
 
 Picker:
 
-- One page, grouped by the new desk (name, type, Paper or Connected).
-- Under each desk, list matching flagged folders, then flagged templates that are not in those folders. Ticking a folder selects its templates. The member can untick a template inside the folder. A flagged template on its own is one tick.
-- A folder for the wrong desk type is not shown on that desk.
-- Each selected bot has **Enable**. It is clear by default. Ticking it starts that bot when setup creates it. For a DCA bot, that tick runs the desk arm action, so an immediate start can place the first order. A Connected desk without a saved key leaves the tick unavailable.
+- One table. Each bot is a row. Columns are Desk, Bot, Mode, and Type. A starter folder adds a Folder column. Ticking that folder selects its templates. The member can untick a template inside the folder. A flagged template on its own shows an em dash in Folder. A folder for the wrong desk type is not shown.
+- **Initial Status** is the last column. It is clear by default. Ticking it starts that bot when setup creates it. For a DCA bot, that tick runs the desk arm action, so an immediate start can place the first order. A Connected desk without a saved key leaves the tick unavailable.
 - DCA uses each template’s saved contract. If two selected templates share a contract on the same desk, the second is skipped at apply and named in the summary. Do not ask them to remap contracts in this wizard.
 - Perps bots and Cash and Carry stack as they do today. Name collisions get the existing ` (from template)` suffix.
 - Empty selection on this step is valid (“don’t load bots”).
@@ -124,11 +122,11 @@ Apply runs when they click **Create** on Review, after the desks exist, through 
 
 ### 3. Review
 
-One page after Add Bots. A table lists each desk and the starter bots that will be loaded on it. A bot ticked Enable shows **Enabled** beside its name. A desk with no bots shows an em dash. No desks shows that nothing will be created. **Back** returns to Add Bots. **Create** writes the desks and bots.
+One page after Add Bots. A table lists each desk and the starter bots that will be loaded on it. A bot ticked Initial Status shows **Enabled** beside its name. A desk with no bots shows an em dash. No desks shows that nothing will be created. **Back** returns to Add Bots. **Create** writes the desks and bots.
 
 ### 4. Take a Tour
 
-This step opens after **Create**. The modal stays up and shows a table of each desk and the bots loaded on it. A bot ticked Enable shows **Enabled** beside its name. A desk with no starter bots shows an em dash. It does not ask the tour question on this screen. When a bot fails to load, or a ticked bot does not start, that error is listed on this step and the screen does not say the account is ready. A failure that stops the write stays on the current step, in the footer.
+This step opens after **Create**. The modal stays up and shows a table of each desk and the bots loaded on it. A bot ticked Initial Status shows **Enabled** beside its name. A desk with no starter bots shows an em dash. It does not ask the tour question on this screen. When a bot fails to load, or a ticked bot does not start, that error is listed on this step and the screen does not say the account is ready. A failure that stops the write stays on the current step, in the footer.
 
 **Not now** and **Start the Tour now** sit on the right of the footer, in the same place as Back and Create. **Not now** is the text button. **Start the Tour now** is the primary button.
 
