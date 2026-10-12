@@ -346,7 +346,7 @@ export const LUCIDE_ICONS = [
     id: "pencil",
     name: "Pencil",
     lucide: "Pencil",
-    usedIn: "Edit, view/edit bot, rename, TP/SL, trailing",
+    usedIn: "Edit, view/edit bot, rename, TP/SL, trailing, setup wizard manual choice",
     Icon: Pencil,
   },
   {
@@ -374,7 +374,7 @@ export const LUCIDE_ICONS = [
     id: "skip-forward",
     name: "Next event",
     lucide: "SkipForward",
-    usedIn: "Replay next event, setup wizard Skip",
+    usedIn: "Replay next event, setup wizard Skip and later choice",
     Icon: SkipForward,
   },
   {
@@ -598,7 +598,7 @@ export const LUCIDE_ICONS = [
     id: "layout-grid",
     name: "Manage Desks",
     lucide: "LayoutGrid",
-    usedIn: "Account sidenav",
+    usedIn: "Account sidenav, setup wizard all-desks choice",
     Icon: LayoutGrid,
   },
   {
@@ -612,7 +612,7 @@ export const LUCIDE_ICONS = [
     id: "layout-template",
     name: "Bot Templates",
     lucide: "LayoutTemplate",
-    usedIn: "Account sidenav, save as template, create bot from template",
+    usedIn: "Account sidenav, save as template, create bot from template, setup wizard load-bots choice",
     Icon: LayoutTemplate,
   },
   {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import { ModalHost } from "@/components/portal-host";
@@ -17,12 +17,14 @@ import {
   IconArrowRight,
   IconCheck,
   IconClose,
+  IconDesks,
   IconPencil,
   IconPlay,
   IconPlus,
   IconReset,
   IconSave,
   IconSkipForward,
+  IconTemplates,
   IconTour,
   IconTrash,
 } from "@/components/icons";
@@ -83,6 +85,7 @@ import {
 } from "@/lib/onboarding/model";
 
 const WIZARD_ICON = { size: 14 as const, className: "size-3.5 shrink-0" };
+const CHOICE_ICON = { size: 20 as const, className: "size-5 shrink-0" };
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -530,16 +533,19 @@ export function SetupWizard({
               value: "all_paper",
               title: "Create a Paper Trading desk for each strategy type",
               detail: "Quickest way to see all desk types in action.",
+              icon: <IconDesks {...CHOICE_ICON} />,
             },
             {
               value: "manual",
               title: "Manually select desk types and modes",
               detail: "Create each desk, then review the details before you continue.",
+              icon: <IconPencil {...CHOICE_ICON} />,
             },
             {
               value: "none",
               title: "Don't add any desks, I'll do it later",
               detail: "You can add them later from Manage desks.",
+              icon: <IconSkipForward {...CHOICE_ICON} />,
             },
           ]}
           onChange={(value) => {
@@ -591,17 +597,20 @@ export function SetupWizard({
               value: "all",
               title: "Load starter bots onto each desk",
               detail: "Quickest way to see the starter bots in action.",
+              icon: <IconTemplates {...CHOICE_ICON} />,
             },
             {
               value: "manual",
               title: "Manually select starter bots",
               detail:
                 "Pick the folders and bots for every desk together, and which of those bots to start.",
+              icon: <IconPencil {...CHOICE_ICON} />,
             },
             {
               value: "none",
               title: "Don't add any bots, I'll do it later",
               detail: "You can add bots on the desk after setup.",
+              icon: <IconSkipForward {...CHOICE_ICON} />,
             },
           ]}
           onChange={(value) => {
@@ -965,7 +974,7 @@ function ChoiceStep({
   note?: string | null;
   name: string;
   value: string | null;
-  options: { value: string; title: string; detail: string }[];
+  options: { value: string; title: string; detail: string; icon: ReactNode }[];
   onChange: (value: string) => void;
 }) {
   return (
@@ -993,6 +1002,15 @@ function ChoiceStep({
                 onChange={() => onChange(option.value)}
                 className="sr-only"
               />
+              <span
+                className={
+                  selected
+                    ? "flex size-10 shrink-0 items-center justify-center rounded-control bg-accent/15 text-ink"
+                    : "flex size-10 shrink-0 items-center justify-center rounded-control bg-surface-raised text-ink-muted"
+                }
+              >
+                {option.icon}
+              </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold text-ink">
                   {option.title}
