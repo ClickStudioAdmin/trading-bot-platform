@@ -249,12 +249,18 @@ function PlanCell({
     grant: current ? grantForKey(trialGrants, block.row.key) : null,
     nowMs,
   });
-  return (
-    <div className="flex flex-col items-center justify-center gap-1 px-3 py-2">
-      {mark && !mark.keepStanding ? null : (
-        <CompareMark cell={comparePlanCell(plan, block.row)} />
-      )}
-      {mark ? (
+  if (mark?.keepStanding) {
+    return (
+      <div className="flex items-center justify-center px-3 py-2">
+        <PlanTrialHint phase={mark.phase} endsAt={mark.endsAt}>
+          <CompareMark cell={comparePlanCell(plan, block.row)} />
+        </PlanTrialHint>
+      </div>
+    );
+  }
+  if (mark) {
+    return (
+      <div className="flex items-center justify-center px-3 py-2">
         <PlanTrialHint
           phase={mark.phase}
           endsAt={mark.endsAt}
@@ -262,7 +268,12 @@ function PlanCell({
         >
           {mark.label}
         </PlanTrialHint>
-      ) : null}
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center justify-center px-3 py-2">
+      <CompareMark cell={comparePlanCell(plan, block.row)} />
     </div>
   );
 }

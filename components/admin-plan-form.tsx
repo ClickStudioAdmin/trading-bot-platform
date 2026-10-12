@@ -8,7 +8,7 @@ import {
   type MembershipPlan,
   type PlanCompareRow,
 } from "@/lib/membership/catalog";
-import { TRIAL_DAYS_MAX, TRIAL_DAYS_MIN } from "@/lib/membership/trials";
+import { TRIAL_DAYS_MAX, TRIAL_DAYS_MIN, rowAllowsTrial } from "@/lib/membership/trials";
 import {
   createMembershipPlanAction,
   updateMembershipPlanAction,
@@ -133,6 +133,9 @@ export function AdminPlanForm({
       {adminPlanSections().map((section) => {
         const hasCaps = section.rows.some((row) => row.kind === "cap");
         const hasRates = section.rows.some((row) => row.kind === "rate");
+        const trialRows = section.rows.filter(rowAllowsTrial);
+        const hasTrialCaps = trialRows.some((row) => row.kind === "cap");
+        const hasTrialFeatures = trialRows.some((row) => row.kind === "feature");
         return (
           <section
             key={section.title}
@@ -143,14 +146,16 @@ export function AdminPlanForm({
             </h2>
             {hasCaps ? (
               <p className="mt-1 text-sm text-ink-muted">
-                Empty means unlimited. A trial limit has to be higher than that
-                number, and it applies only until the trial ends.
+                Empty means unlimited.
+                {hasTrialCaps
+                  ? " A trial limit has to be higher than that number, and it applies only until the trial ends."
+                  : ""}
               </p>
             ) : null}
-            {hasCaps || section.rows.some((row) => row.kind === "feature") ? (
+            {hasTrialCaps || hasTrialFeatures ? (
               <p className="mt-1 text-sm text-ink-muted">
                 Free trial sits on the right.
-                {section.rows.some((row) => row.kind === "feature")
+                {hasTrialFeatures
                   ? " A ticked feature is already included, so its trial stays unused until you clear the tick."
                   : ""}
               </p>
@@ -187,6 +192,33 @@ function AdminPlanRow({
   row: PlanCompareRow;
   plan?: MembershipPlan;
 }) {
+  if ((row.kind === "feature" || row.kind === "cap") && !rowAllowsTrial(row)) {
+    if (row.kind === "feature") {
+      return (
+        <label className="flex items-start gap-2 text-sm text-ink">
+          <AppCheck
+            name={`feature_${row.key}`}
+            value="1"
+            defaultChecked={plan?.features[row.key] ?? false}
+          />
+          <span>{row.label}</span>
+        </label>
+      );
+    }
+    return (
+      <label className="block max-w-xs text-sm text-ink">
+        {row.label}
+        <input
+          name={`cap_${row.key}`}
+          type="number"
+          min={0}
+          step={1}
+          defaultValue={plan?.caps[row.key] ?? ""}
+          className={fieldClass}
+        />
+      </label>
+    );
+  }
   if (row.kind === "feature") {
     const trial = plan?.trials.features[row.key];
     return (
@@ -229,8 +261,8 @@ function AdminPlanRow({
   if (row.kind === "cap") {
     const trial = plan?.trials.caps[row.key];
     return (
-      <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,20rem)_auto]">
-        <label className="block text-sm text-ink">
+      <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <label className="block max-w-xs text-sm text-ink">
           {row.label}
           <input
             name={`cap_${row.key}`}
@@ -241,8 +273,17 @@ function AdminPlanRow({
             className={fieldClass}
           />
         </label>
-        <div className="flex flex-wrap items-end gap-3 text-sm text-ink">
-          <label className="block">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-ink">
+          <label className="inline-flex items-center gap-2">
+            <AppCheck
+              name={`trial_on_${row.key}`}
+              value="1"
+              defaultChecked={Boolean(trial)}
+              aria-label={`Free trial for ${row.label}`}
+            />
+            Free trial
+          </label>
+          <label className="inline-flex items-center gap-2">
             Trial limit
             <input
               name={`trial_limit_${row.key}`}
@@ -251,10 +292,10 @@ function AdminPlanRow({
               step={1}
               defaultValue={trial?.limit ?? ""}
               aria-label={`${row.label} trial limit`}
-              className={`${trialFieldClass} mt-1 w-24`}
+              className={`${trialFieldClass} w-24`}
             />
           </label>
-          <label className="block">
+          <label className="inline-flex items-center gap-2">
             Days
             <input
               name={`trial_days_${row.key}`}
@@ -264,7 +305,7 @@ function AdminPlanRow({
               step={1}
               defaultValue={trial?.days ?? ""}
               aria-label={`${row.label} trial days`}
-              className={`${trialFieldClass} mt-1`}
+              className={trialFieldClass}
             />
           </label>
         </div>

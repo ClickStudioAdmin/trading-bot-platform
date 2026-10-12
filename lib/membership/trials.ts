@@ -1,5 +1,6 @@
 import {
   PLAN_COMPARE_SECTIONS,
+  formatBacktestTimeframe,
   type PlanCapKey,
   type PlanCaps,
   type PlanCompareRow,
@@ -9,6 +10,15 @@ import {
 
 export const TRIAL_DAYS_MIN = 1;
 export const TRIAL_DAYS_MAX = 365;
+
+const NO_TRIAL_KEYS = new Set<string>([
+  "affiliate_max_depth",
+  "affiliate_pay_subscription",
+]);
+
+export function rowAllowsTrial(row: PlanCompareRow): boolean {
+  return row.kind !== "rate" && !NO_TRIAL_KEYS.has(row.key);
+}
 
 export type FeatureTrialSetting = { days: number };
 export type CapTrialSetting = { days: number; limit: number };
@@ -77,7 +87,13 @@ export function parsePlanTrials(value: unknown): PlanTrials {
   };
   if (record.features && typeof record.features === "object" && !Array.isArray(record.features)) {
     for (const [key, raw] of Object.entries(record.features)) {
-      if (!isFeatureKey(key) || !raw || typeof raw !== "object" || Array.isArray(raw)) {
+      if (
+        !isFeatureKey(key) ||
+        NO_TRIAL_KEYS.has(key) ||
+        !raw ||
+        typeof raw !== "object" ||
+        Array.isArray(raw)
+      ) {
         continue;
       }
       const days = parseTrialDays((raw as { days?: unknown }).days);
@@ -89,7 +105,13 @@ export function parsePlanTrials(value: unknown): PlanTrials {
   }
   if (record.caps && typeof record.caps === "object" && !Array.isArray(record.caps)) {
     for (const [key, raw] of Object.entries(record.caps)) {
-      if (!isCapKey(key) || !raw || typeof raw !== "object" || Array.isArray(raw)) {
+      if (
+        !isCapKey(key) ||
+        NO_TRIAL_KEYS.has(key) ||
+        !raw ||
+        typeof raw !== "object" ||
+        Array.isArray(raw)
+      ) {
         continue;
       }
       const days = parseTrialDays((raw as { days?: unknown }).days);
@@ -119,7 +141,7 @@ export function featureTrialOffer(
   plan: TrialPlan,
   key: PlanFeatureKey,
 ): TrialOffer | null {
-  if (plan.features[key]) {
+  if (NO_TRIAL_KEYS.has(key) || plan.features[key]) {
     return null;
   }
   const setting = plan.trials?.features[key];
@@ -133,6 +155,9 @@ export function capTrialOffer(
   plan: TrialPlan,
   key: PlanCapKey,
 ): TrialOffer | null {
+  if (NO_TRIAL_KEYS.has(key)) {
+    return null;
+  }
   const setting = plan.trials?.caps[key];
   if (!setting) {
     return null;
@@ -240,10 +265,10 @@ export function trialMark(input: {
     return null;
   }
   const ended = phase === "ended";
-  const keepStanding = input.row.kind === "cap" && standingVisible(input.plan, input.row);
+  const keepStanding = ended && input.row.kind === "cap" && standingVisible(input.plan, input.row);
   return {
     phase,
-    label: trialLabel(offer, ended),
+    label: trialLabel(offer, input.row, ended),
     endsAt: input.grant?.endsAt ?? null,
     keepStanding,
   };
@@ -256,12 +281,16 @@ export function grantForKey(
   return grants.find((grant) => grant.key === key) ?? null;
 }
 
-function trialLabel(offer: TrialOffer, ended: boolean): string {
+function trialLabel(offer: TrialOffer, row: PlanCompareRow, ended: boolean): string {
   if (ended) {
     return "Trial ended";
   }
-  if (offer.limit != null) {
-    return `${offer.limit} · ${offer.days}-day trial`;
+  if (offer.limit != null && row.kind === "cap") {
+    const amount =
+      row.key === "max_backtest_years"
+        ? formatBacktestTimeframe(offer.limit)
+        : String(offer.limit);
+    return `${amount} · trial`;
   }
   return `${offer.days}-day trial`;
 }

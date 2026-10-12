@@ -43,9 +43,16 @@ assert.equal(
 );
 assert.equal(
   parsePlanTrials({
-    caps: { max_stored_backtests: { days: 14, limit: 3 } },
-  }).caps.max_stored_backtests?.limit,
-  3,
+    features: { affiliate_pay_subscription: { days: 14 } },
+    caps: { affiliate_max_depth: { days: 14, limit: 5 } },
+  }).features.affiliate_pay_subscription,
+  undefined,
+);
+assert.equal(
+  parsePlanTrials({
+    caps: { affiliate_max_depth: { days: 14, limit: 5 } },
+  }).caps.affiliate_max_depth,
+  undefined,
 );
 
 const offers = planTrialOffers(plan);
@@ -97,6 +104,15 @@ assert.equal(activeMark?.phase, "active");
 assert.equal(activeMark?.label, "14-day trial");
 assert.equal(activeMark?.keepStanding, false);
 
+const storedMark = trialMark({
+  plan,
+  row: { kind: "cap", key: "max_stored_backtests", label: "Max Saved Backtests" },
+  grant: { endsAt: "2026-10-15T00:00:00.000Z" },
+  nowMs: now,
+});
+assert.equal(storedMark?.label, "3 · trial");
+assert.equal(storedMark?.keepStanding, false);
+
 const offerMark = trialMark({
   plan,
   row: { kind: "feature", key: "replay_backtests", label: "Replay Backtests" },
@@ -122,6 +138,7 @@ form.set("trial_days_research_backtest", "14");
 form.set("trial_on_replay_backtests", "1");
 form.set("trial_days_replay_backtests", "14");
 form.set("cap_max_stored_backtests", "0");
+form.set("trial_on_max_stored_backtests", "1");
 form.set("trial_limit_max_stored_backtests", "3");
 form.set("trial_days_max_stored_backtests", "14");
 const parsed = parsePlanForm(form);
@@ -142,8 +159,43 @@ const lowLimit = new FormData();
 lowLimit.set("name", "Free");
 lowLimit.set("visibility", "public");
 lowLimit.set("cap_max_paper_desks", "2");
+lowLimit.set("trial_on_max_paper_desks", "1");
 lowLimit.set("trial_limit_max_paper_desks", "2");
 lowLimit.set("trial_days_max_paper_desks", "14");
 assert.equal(parsePlanForm(lowLimit).ok, false);
+
+const ignoredCap = new FormData();
+ignoredCap.set("name", "Free");
+ignoredCap.set("visibility", "public");
+ignoredCap.set("cap_max_paper_desks", "2");
+ignoredCap.set("trial_limit_max_paper_desks", "2");
+ignoredCap.set("trial_days_max_paper_desks", "14");
+const ignored = parsePlanForm(ignoredCap);
+assert.equal(ignored.ok, true);
+if (ignored.ok) {
+  assert.equal(ignored.values.trials.caps.max_paper_desks, undefined);
+}
+
+const affiliate = new FormData();
+affiliate.set("name", "Free");
+affiliate.set("visibility", "public");
+affiliate.set("cap_affiliate_max_depth", "3");
+affiliate.set("trial_on_affiliate_max_depth", "1");
+affiliate.set("trial_limit_affiliate_max_depth", "5");
+affiliate.set("trial_days_affiliate_max_depth", "14");
+affiliate.set("feature_affiliate_pay_subscription", "1");
+affiliate.set("trial_on_affiliate_pay_subscription", "1");
+affiliate.set("trial_days_affiliate_pay_subscription", "14");
+const affiliateParsed = parsePlanForm(affiliate);
+assert.equal(affiliateParsed.ok, true);
+if (affiliateParsed.ok) {
+  assert.equal(affiliateParsed.values.trials.caps.affiliate_max_depth, undefined);
+  assert.equal(
+    affiliateParsed.values.trials.features.affiliate_pay_subscription,
+    undefined,
+  );
+  assert.equal(affiliateParsed.values.features.affiliate_pay_subscription, true);
+  assert.equal(affiliateParsed.values.caps.affiliate_max_depth, 3);
+}
 
 console.log("membership trial checks passed");
