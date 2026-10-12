@@ -31,6 +31,7 @@ import {
   botsEmptyNote,
   devAccountResetAllowed,
   devResetDeskOrder,
+  setupWizardResetPlan,
   requiresSetupGate,
   allocateSetupDeskKey,
   setupDeskDetails,
@@ -125,6 +126,57 @@ assert.deepEqual(
     { id: "copy", copyOfAccountId: "parent" },
   ]).map((desk) => desk.id),
   ["copy", "parent"],
+);
+const wizardDesk = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const otherDesk = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const wizardKey = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const otherKey = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+assert.deepEqual(
+  setupWizardResetPlan({
+    ownedAccountIds: [wizardDesk],
+    createdAccountIds: [wizardDesk],
+    draftAccountIds: [wizardDesk],
+    ownedConnectionIds: [wizardKey],
+    draftConnectionIds: [wizardKey],
+    binds: [{ connectionId: wizardKey, accountId: wizardDesk }],
+  }),
+  { accountIds: [wizardDesk], connectionIds: [wizardKey] },
+);
+assert.deepEqual(
+  setupWizardResetPlan({
+    ownedAccountIds: [otherDesk, wizardDesk],
+    createdAccountIds: [wizardDesk, "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"],
+    draftAccountIds: [],
+    ownedConnectionIds: [otherKey, wizardKey],
+    draftConnectionIds: [wizardKey],
+    binds: [
+      { connectionId: otherKey, accountId: otherDesk },
+      { connectionId: wizardKey, accountId: wizardDesk },
+    ],
+  }),
+  { accountIds: [wizardDesk], connectionIds: [wizardKey] },
+);
+assert.deepEqual(
+  setupWizardResetPlan({
+    ownedAccountIds: [],
+    createdAccountIds: [],
+    draftAccountIds: [],
+    ownedConnectionIds: [wizardKey],
+    draftConnectionIds: [],
+    binds: [],
+  }),
+  { accountIds: [], connectionIds: [wizardKey] },
+);
+assert.deepEqual(
+  setupWizardResetPlan({
+    ownedAccountIds: [otherDesk],
+    createdAccountIds: [],
+    draftAccountIds: [],
+    ownedConnectionIds: [otherKey],
+    draftConnectionIds: [otherKey],
+    binds: [{ connectionId: otherKey, accountId: otherDesk }],
+  }),
+  { accountIds: [], connectionIds: [] },
 );
 
 const paper = dcaPaper();

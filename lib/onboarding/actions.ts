@@ -5,6 +5,7 @@ import {
   insertTradingAccount,
   listTradingAccounts,
   teardownAllTradingAccounts,
+  teardownTradingAccountsById,
 } from "@/lib/accounts/store";
 import {
   deskDisplayMode,
@@ -19,6 +20,7 @@ import {
 import { createMemberExchangeConnection } from "@/lib/exchanges/member-connection";
 import { connectionFitsDesk } from "@/lib/exchanges/venues";
 import {
+  deleteExchangeConnection,
   deleteMemberExchangeConnections,
   listConnectionDeskBinds,
   listExchangeConnections,
@@ -29,7 +31,9 @@ import {
   appliesStillToRun,
   desksStillToCreate,
   devAccountResetAllowed,
+  emptySetupDraft,
   parseSetupDraft,
+  setupWizardResetPlan,
   starterTemplateAllowed,
   validateSetupForFinish,
   type SetupDraft,
@@ -41,6 +45,7 @@ import {
   completeMemberOnboarding,
   dismissOnboardingSummary,
   loadMemberOnboarding,
+  resetMemberOnboardingDraft,
   saveOnboardingDraft,
   saveOnboardingProgress,
   setOnboardingTour,
@@ -427,6 +432,57 @@ export async function resetDevAccount(
   await clearActiveAccountId();
   refreshSetupChrome();
   redirect("/account");
+}
+
+/** Clears this setup and returns the wizard to the explainer. */
+export async function resetSetupWizard(): Promise<
+  { ok: true } | { ok: false; error: string }
+> {
+  const member = await requirePlatformMember();
+  const row = await loadMemberOnboarding(member.id);
+  if (row && row.status !== "pending" && row.status !== "finishing") {
+    return { ok: false, error: "Setup is already finished." };
+  }
+  const [accounts, connections, binds] = await Promise.all([
+    listTradingAccounts(member.id),
+    listExchangeConnections(member.id),
+    listConnectionDeskBinds(member.id),
+  ]);
+  const draft = row?.draft ?? emptySetupDraft();
+  const plan = setupWizardResetPlan({
+    ownedAccountIds: accounts.map((account) => account.id),
+    createdAccountIds: row?.createdAccountIds ?? [],
+    draftAccountIds: draft.desks
+      .map((desk) => desk.accountId)
+      .filter((id): id is string => Boolean(id)),
+    ownedConnectionIds: connections.map((connection) => connection.id),
+    draftConnectionIds: draft.desks
+      .map((desk) => desk.connectionId)
+      .filter((id): id is string => Boolean(id)),
+    binds,
+  });
+  const removed = await teardownTradingAccountsById(member.id, plan.accountIds);
+  if (removed.error) {
+    return { ok: false, error: removed.error };
+  }
+  for (const connectionId of plan.connectionIds) {
+    const deleted = await deleteExchangeConnection({
+      userId: member.id,
+      connectionId,
+    });
+    if (deleted.error) {
+      return { ok: false, error: deleted.error };
+    }
+  }
+  if (plan.accountIds.length > 0) {
+    await clearActiveAccountId();
+  }
+  const saved = await resetMemberOnboardingDraft(member.id);
+  if (!saved) {
+    return { ok: false, error: "Could not reset setup." };
+  }
+  refreshSetupChrome();
+  return { ok: true };
 }
 
 export async function startPlatformTour(): Promise<void> {

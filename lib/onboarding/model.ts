@@ -1044,6 +1044,38 @@ export function devResetDeskOrder<T extends { copyOfAccountId?: string | null }>
   ];
 }
 
+/** Desks and keys Reset Wizard may remove. Other desks on the login stay. */
+export function setupWizardResetPlan(input: {
+  ownedAccountIds: readonly string[];
+  createdAccountIds: readonly string[];
+  draftAccountIds: readonly string[];
+  ownedConnectionIds: readonly string[];
+  draftConnectionIds: readonly string[];
+  binds: readonly { connectionId: string; accountId: string }[];
+}): { accountIds: string[]; connectionIds: string[] } {
+  const ownedAccounts = new Set(input.ownedAccountIds);
+  const removeAccounts = new Set<string>();
+  for (const id of [...input.createdAccountIds, ...input.draftAccountIds]) {
+    if (ownedAccounts.has(id)) {
+      removeAccounts.add(id);
+    }
+  }
+  const remaining = input.ownedAccountIds.filter((id) => !removeAccounts.has(id));
+  const ownedConnections = new Set(input.ownedConnectionIds);
+  const boundToRemaining = new Set(
+    input.binds
+      .filter((bind) => !removeAccounts.has(bind.accountId))
+      .map((bind) => bind.connectionId),
+  );
+  const drafted = [...new Set(input.draftConnectionIds)].filter(
+    (id) => ownedConnections.has(id) && !boundToRemaining.has(id),
+  );
+  return {
+    accountIds: input.ownedAccountIds.filter((id) => removeAccounts.has(id)),
+    connectionIds: remaining.length === 0 ? [...input.ownedConnectionIds] : drafted,
+  };
+}
+
 export function requiresSetupGate(input: {
   platformMember: boolean;
   emailVerified: boolean;
