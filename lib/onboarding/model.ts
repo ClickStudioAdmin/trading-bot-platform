@@ -110,8 +110,10 @@ export type SetupDraft = {
   tourChoice: SetupTourChoice | null;
   applied: string[];
   summary: SetupSummary | null;
-  /** Desks and bots are already written. The tour step can show them. */
+  /** Desks and bots are already written. Review shows the result until Continue. */
   readyForTour: boolean;
+  /** Continue was clicked on Review. A refresh stays on the tour question. */
+  tourPromptSeen: boolean;
   /** The explainer was skipped or finished. A refresh stays on the setup steps. */
   introSeen: boolean;
 };
@@ -165,6 +167,7 @@ export function emptySetupDraft(): SetupDraft {
     applied: [],
     summary: null,
     readyForTour: false,
+    tourPromptSeen: false,
     introSeen: false,
   };
 }
@@ -590,6 +593,7 @@ export function parseSetupDraft(
       applied,
       summary,
       readyForTour: body.readyForTour === true,
+      tourPromptSeen: body.tourPromptSeen === true,
       introSeen: body.introSeen === true,
     },
   };
@@ -1010,6 +1014,18 @@ export function setupScreens(input: {
 
 export function setupScreenId(screen: SetupScreen): string {
   return `${screen.main}:${screen.sub}`;
+}
+
+/** After Create, a refresh stays on Review until Continue. */
+export function setupResumeScreenId(draft: {
+  readyForTour: boolean;
+  tourPromptSeen: boolean;
+  introSeen: boolean;
+}): "tour:tour" | "review:review" | "desks:choice" | "intro:video" {
+  if (draft.readyForTour) {
+    return draft.tourPromptSeen ? "tour:tour" : "review:review";
+  }
+  return draft.introSeen ? "desks:choice" : "intro:video";
 }
 
 export function activeSetupScreen(
