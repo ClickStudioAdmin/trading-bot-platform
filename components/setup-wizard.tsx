@@ -1507,7 +1507,7 @@ function BotStep({
           Load starter bots?
         </h2>
         <p className="mt-2 text-sm text-ink-muted">
-          These are platform folders an admin marked Include in Starter Pack.
+          These are platform templates and folders marked Include in Starter Pack.
           DCA bots stay idle. Perps bots and Cash and Carry stay disabled.
           Nothing trades until you arm or enable them.
         </p>
@@ -1519,6 +1519,32 @@ function BotStep({
               const ids = folder.templates.map((template) => template.id);
               const selected = ids.filter((id) => desk.templateIds.includes(id));
               const all = selected.length === ids.length;
+              if (folder.loose) {
+                return (
+                  <ul key={folder.id} className="space-y-1">
+                    {folder.templates.map((template) => (
+                      <li key={template.id}>
+                        <label className="inline-flex items-center gap-2 text-sm text-ink">
+                          <input
+                            type="checkbox"
+                            checked={desk.templateIds.includes(template.id)}
+                            onChange={() => {
+                              const next = new Set(desk.templateIds);
+                              if (next.has(template.id)) {
+                                next.delete(template.id);
+                              } else {
+                                next.add(template.id);
+                              }
+                              onChange(desk.key, { templateIds: [...next] });
+                            }}
+                          />
+                          {template.name}
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                );
+              }
               return (
                 <fieldset key={folder.id}>
                   <label className="inline-flex items-center gap-2 text-sm font-medium text-ink">

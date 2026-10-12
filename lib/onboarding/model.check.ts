@@ -6,6 +6,7 @@ import {
 import { judgeBybitApiKey } from "@/lib/exchanges/bybit/permissions";
 import {
   allocateSetupName,
+  appendLooseStarterTemplates,
   appliesStillToRun,
   blockedSetupDesks,
   buildTourSteps,
@@ -333,6 +334,51 @@ const perpsFolder = folder({
 });
 const offered = onboardingFolders([loose, userFolder, dcaFolder, perpsFolder]);
 assert.deepEqual(offered.map((row) => row.id), ["dca-pack", "perps-pack"]);
+const flaggedId = "55555555-5555-4555-8555-555555555555";
+const withLoose = appendLooseStarterTemplates(
+  [loose, userFolder, dcaFolder],
+  [
+    {
+      id: flaggedId,
+      name: "DCA God - BTC",
+      visibility: "platform",
+      deskType: "dca",
+      starterPack: true,
+    },
+    {
+      id: dcaFolder.templates[0].id,
+      name: "Already in folder",
+      visibility: "platform",
+      deskType: "dca",
+      starterPack: true,
+    },
+    {
+      id: "66666666-6666-4666-8666-666666666666",
+      name: "User flag",
+      visibility: "user",
+      deskType: "dca",
+      starterPack: true,
+    },
+    {
+      id: "77777777-7777-4777-8777-777777777777",
+      name: "Unflagged",
+      visibility: "platform",
+      deskType: "dca",
+      starterPack: false,
+    },
+  ],
+);
+assert.deepEqual(withLoose.map((row) => row.id), ["dca-pack", "loose:dca"]);
+assert.deepEqual(withLoose[1]?.templates.map((template) => template.id), [flaggedId]);
+assert.equal(
+  starterTemplateAllowed({
+    folders: withLoose,
+    deskType: "dca",
+    templateId: flaggedId,
+  }),
+  true,
+);
+assert.equal(foldersForDesk(withLoose, "dca").length, 2);
 assert.equal(offered[1]?.templates.length, 1);
 assert.equal(foldersForDesk([loose, dcaFolder], "signal_follower").length, 0);
 assert.equal(foldersForDesk([perpsFolder], "perps").length, 0);

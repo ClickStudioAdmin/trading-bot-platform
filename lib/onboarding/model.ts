@@ -60,7 +60,14 @@ export type StarterFolder = {
   deskType: StarterDeskType;
   visibility: StarterVisibility;
   starterPack: boolean;
+  /** Flagged templates that are not already inside a starter-pack folder. */
+  loose?: boolean;
   templates: StarterTemplate[];
+};
+
+export type StarterLooseTemplate = StarterTemplate & {
+  deskType: StarterDeskType;
+  starterPack: boolean;
 };
 
 export type SetupDesk = {
@@ -635,6 +642,51 @@ export function onboardingFolders(folders: readonly StarterFolder[]): StarterFol
       ),
     }))
     .filter((folder) => folder.templates.length > 0);
+}
+
+const LOOSE_STARTER_DESK_TYPES: readonly StarterDeskType[] = [
+  "dca",
+  "perps",
+  "cash_and_carry",
+];
+
+/** Platform templates flagged Include in Starter Pack, outside a flagged folder. */
+export function appendLooseStarterTemplates(
+  folders: readonly StarterFolder[],
+  templates: readonly StarterLooseTemplate[],
+): StarterFolder[] {
+  const offered = onboardingFolders(folders);
+  const included = new Set(
+    offered.flatMap((folder) => folder.templates.map((template) => template.id)),
+  );
+  const loose = templates.filter(
+    (template) =>
+      template.visibility === "platform" &&
+      template.starterPack &&
+      !included.has(template.id),
+  );
+  const groups = LOOSE_STARTER_DESK_TYPES.flatMap((deskType) => {
+    const rows = loose.filter((template) => template.deskType === deskType);
+    if (rows.length === 0) {
+      return [];
+    }
+    return [
+      {
+        id: `loose:${deskType}`,
+        name: "",
+        deskType,
+        visibility: "platform" as const,
+        starterPack: true,
+        loose: true,
+        templates: rows.map((template) => ({
+          id: template.id,
+          name: template.name,
+          visibility: template.visibility,
+        })),
+      },
+    ];
+  });
+  return [...offered, ...groups];
 }
 
 export function foldersForDesk(
@@ -1315,7 +1367,7 @@ export function buildTourSteps(desks: readonly TourDesk[]): TourStep[] {
     id: "templates",
     title: "Bot templates",
     headline: "This is your library.",
-    body: "Starter bots in setup came only from platform folders an admin marked Include in Starter Pack.",
+    body: "Starter bots in setup came from platform templates and folders marked Include in Starter Pack.",
     href: "/account/templates",
     target: "templates",
   });

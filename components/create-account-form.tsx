@@ -387,7 +387,9 @@ function StarterBots({
         <div className="space-y-3 pl-1">
           {folders.map((folder) => (
             <div key={folder.id}>
-              <p className="text-sm font-medium text-ink">{folder.name}</p>
+              {folder.loose ? null : (
+                <p className="text-sm font-medium text-ink">{folder.name}</p>
+              )}
               <ul className="mt-1 space-y-1">
                 {folder.templates.map((template) => (
                   <li key={template.id}>
