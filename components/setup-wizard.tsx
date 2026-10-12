@@ -9,7 +9,15 @@ import {
   type DeskType,
 } from "@/lib/accounts/model";
 import { AppSelect } from "@/components/app-select";
-import { IconCheck, IconClose, IconPlay } from "@/components/icons";
+import { IconCheck, IconClose, IconPencil, IconPlay, IconPlus, IconTrash } from "@/components/icons";
+import {
+  TABLE_ACTIONS_TD_CLASS,
+  TABLE_ACTIONS_TH_CLASS,
+  TABLE_BTN_ICON,
+  TableActions,
+  TableIconAction,
+  TableLabelButton,
+} from "@/components/table-chrome";
 import { checkExchangeConnection } from "@/lib/exchanges/actions";
 import { getVenue } from "@/lib/exchanges/venues";
 import {
@@ -819,15 +827,16 @@ function DeskStep({
                     {formatDeskTypeChoice(deskType)}
                   </p>
                 </div>
-                <button
-                  type="button"
+                <TableLabelButton
+                  variant="secondary"
+                  icon={<IconPlus {...TABLE_BTN_ICON} />}
                   disabled={full}
                   title={full ? "Paper and Connected are already added" : undefined}
                   onClick={() => onCreate(deskType)}
-                  className="shrink-0 rounded-control border border-line bg-surface-raised px-3 py-1.5 text-sm font-medium text-ink hover:border-line-strong disabled:cursor-not-allowed disabled:text-ink-faint"
+                  className="shrink-0"
                 >
                   Create Desk
-                </button>
+                </TableLabelButton>
               </div>
               {added.length > 0 ? (
                 <div className="mt-3 overflow-x-auto rounded-card border border-line">
@@ -841,9 +850,7 @@ function DeskStep({
                           Environment
                         </th>
                         <th className="whitespace-nowrap px-3 py-2 font-medium">Key</th>
-                        <th className="whitespace-nowrap px-3 py-2 text-right font-medium">
-                          Actions
-                        </th>
+                        <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -869,23 +876,24 @@ function DeskStep({
                             <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
                               <DeskDetailValue value={details.key} />
                             </td>
-                            <td className="px-3 py-2 text-right">
-                              <div className="flex justify-end gap-1">
-                                <button
-                                  type="button"
+                            <td className={TABLE_ACTIONS_TD_CLASS}>
+                              <TableActions>
+                                <TableIconAction
+                                  label="Edit"
+                                  detail="Change this desk."
                                   onClick={() => onEdit(desk)}
-                                  className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
                                 >
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
+                                  <IconPencil {...TABLE_BTN_ICON} />
+                                </TableIconAction>
+                                <TableIconAction
+                                  label="Remove"
+                                  detail="Drop this desk from setup."
+                                  danger
                                   onClick={() => onRemove(desk.key)}
-                                  className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
                                 >
-                                  Remove
-                                </button>
-                              </div>
+                                  <IconTrash {...TABLE_BTN_ICON} />
+                                </TableIconAction>
+                              </TableActions>
                             </td>
                           </tr>
                         );
