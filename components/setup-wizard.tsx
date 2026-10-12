@@ -1814,9 +1814,9 @@ function BotStep({
           <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               <th className="px-3 py-2 font-medium">Desk</th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">Type</th>
               <th className="px-3 py-2 font-medium">Bot</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Mode</th>
-              <th className="whitespace-nowrap px-3 py-2 font-medium">Type</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">
                 Initial Status
               </th>
@@ -1844,6 +1844,9 @@ function BotStep({
                     className="border-b border-line last:border-b-0"
                   >
                     <td className="px-3 py-2 text-ink">{desk.name}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
+                      {deskType}
+                    </td>
                     <td className="px-3 py-2 text-ink">
                       <label className="inline-flex items-center gap-2">
                         <AppCheck
@@ -1869,9 +1872,6 @@ function BotStep({
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
                       {details.mode}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
-                      {deskType}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2">
                       <StarterInitialStatus

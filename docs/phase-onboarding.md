@@ -112,7 +112,7 @@ Admin already sets both flags on `/admin/templates` (**Include in Starter Pack**
 
 Picker:
 
-- One table. Each bot is a row, including every bot in a starter folder. Columns are Desk, Bot, Mode, and Type. There is no folder column and no folder tick. A folder for the wrong desk type is not shown.
+- One table. Each bot is a row, including every bot in a starter folder. Columns are Desk, Type, Bot, and Mode. There is no folder column and no folder tick. A folder for the wrong desk type is not shown.
 - **Initial Status** is the last column, a dropdown. DCA offers Idle and Armed. Perps bots and Cash and Carry offer Disabled and Active. Idle and Disabled are the default. Armed and Active start that bot when setup creates it. For a DCA bot, Armed runs the desk arm action, so an immediate start can place the first order. A Connected desk without a saved key cannot choose the start status.
 - DCA uses each template’s saved contract. If two selected templates share a contract on the same desk, the second is skipped at apply and named in the summary. Do not ask them to remap contracts in this wizard.
 - Perps bots and Cash and Carry stack as they do today. Name collisions get the existing ` (from template)` suffix.
