@@ -54,7 +54,7 @@ Choosing again with Back replaces the draft selection. Nothing is inserted until
 
 Question on the list, when they choose to select manually: “Create a few desks now?”
 
-One row per type that exists today, in the same order as the account sidebar (automated desks, then the manual Perps desk): Perps bots, DCA, Cash and Carry, TradingView Strategy, Perps. The short line under the type uses the existing choice copy (ticket vs bots vs alerts vs app-owned orders vs spot + dated future). **Create Desk** sits beside the type.
+One row per type that exists today, in the same order as the account sidebar (automated desks, then the manual Perps desk): Perps bots, DCA, Cash and Carry, TradingView Strategy, Perps. The type name stands alone. **Create Desk** sits beside the type.
 
 The sub-modal asks for the details, then closes back to the list:
 
@@ -62,7 +62,7 @@ The sub-modal asks for the details, then closes back to the list:
 - Mode: Paper or Connected. One of each per type. The mode already added is disabled.
 - Paper on a type with more than one market (not Cash and Carry) shows **Market data** (Bybit or Hyperliquid). Default Bybit. Cash and Carry paper stays Bybit.
 - Connected shows **Exchange** and **Environment** (Live or Demo / Testnet). Connected Cash and Carry is Bybit only. Then **Bind later** or **Add a trade-only key**. A key is checked and encrypted before the desk is added. The secret is not stored in the draft.
-- **Add desk** closes the modal. That desk appears in a table under its type. Columns are name, mode, market, environment, and key. Paper leaves environment and key blank. **Edit** reopens the modal. **Remove** drops that desk.
+- **Add desk** closes the modal. That desk appears in a table under its type. Columns are name, mode, market, environment, and key. Paper leaves environment and key blank. The pencil **Edit** reopens the modal. The trash **Remove** drops that desk.
 
 - An empty list is valid. Continue goes to Bots, which says bots need a desk, then the tour. Exchanges stays hidden.
 - Perps is the ticket desk. TradingView Strategy has no bot recipes. The list does not promise bots for those rows.
@@ -201,7 +201,7 @@ Each desk added from the sub-modal and each Finish create goes through the same 
 
 ## UI
 
-- The modal uses `bg-surface` `border-line` and two thirds of the account width (`max-w-7xl` is 80rem). It is the only card. Step copy sits in the dialog, not in a second surface box. The account title bar and the footer use `bg-surface-raised`, the same grey as table headers. One line sits under the account title and the step list. One line sits above the footer buttons. The step content is padded `px-6 py-5`, the same on the top and the bottom. Add Desks, Add Bots, and Take a Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. The step content scrolls inside the dialog. Choice rows keep a border so the selected row can use the accent. The desk list is one row per type, with **Create Desk** on the row. Added desks sit in a table under that type, with columns for name, mode, market, environment, and key. The create sub-modal uses `bg-surface` and `border-line`, with the same grey header and footer. The video screen uses that same header bar for **Watch a short overview**, without the step list. Its frame is `bg-canvas` with `border-line` and the play icon. Skip and Watch or Continue use the same footer buttons.
+- The modal uses `bg-surface` `border-line` and two thirds of the account width (`max-w-7xl` is 80rem). It is the only card. Step copy sits in the dialog, not in a second surface box. The account title bar and the footer use `bg-surface-raised`, the same grey as table headers. One line sits under the account title and the step list. One line sits above the footer buttons. The step content is padded `px-6 py-5`, the same on the top and the bottom. Add Desks, Add Bots, and Take a Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. The step content scrolls inside the dialog. Choice rows keep a border so the selected row can use the accent. The desk list is one row per type. **Create Desk** is the standard plus button. Added desks sit in a table under that type, with columns for name, mode, market, environment, and key. Edit and Remove are the pencil and trash icon actions. The create sub-modal uses `bg-surface` and `border-line`, with the same grey header and footer. The video screen uses that same header bar for **Watch a short overview**, without the step list. Its frame is `bg-canvas` with `border-line` and the play icon. Skip and Watch or Continue use the same footer buttons.
 - Desk and bot choices are full-width sections. The selected section uses the accent border. Desk rows keep a bottom rule. No new colours. Paper / Demo / Live dots may use the existing `mode-paper`, `mode-demo`, and `mode-live` tokens.
 - The modal is the only setup entry. It closes when the tour step is finished. **Take the tour** on Overview remains until the tour is completed or skipped. **Platform Tour** in the account sidenav stays available.
 - The tour card uses `bg-surface` with a `bg-plan-header` bar. The bar reads Tour and the step count. The heading is the instruction. The primary button is **Next**. No new colours.
