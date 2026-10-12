@@ -101,7 +101,7 @@ const activeMark = trialMark({
   nowMs: now,
 });
 assert.equal(activeMark?.phase, "active");
-assert.equal(activeMark?.label, "14-day trial");
+assert.equal(activeMark?.label, "14-Day Trial");
 assert.equal(activeMark?.keepStanding, false);
 
 const storedMark = trialMark({
@@ -110,8 +110,32 @@ const storedMark = trialMark({
   grant: { endsAt: "2026-10-15T00:00:00.000Z" },
   nowMs: now,
 });
-assert.equal(storedMark?.label, "3 · trial");
+assert.equal(storedMark?.label, "3");
 assert.equal(storedMark?.keepStanding, false);
+
+const yearMark = trialMark({
+  plan: {
+    ...plan,
+    caps: { ...plan.caps, max_backtest_years: 0 },
+    trials: {
+      ...plan.trials,
+      caps: { ...plan.trials.caps, max_backtest_years: { days: 14, limit: 1 } },
+    },
+  },
+  row: { kind: "cap", key: "max_backtest_years", label: "Max Backtest Timeframe" },
+  grant: null,
+  nowMs: now,
+});
+assert.equal(yearMark?.label, "1 Year");
+
+const endedMark = trialMark({
+  plan,
+  row: { kind: "feature", key: "replay_backtests", label: "Replay Backtests" },
+  grant: { endsAt: "2026-10-01T00:00:00.000Z" },
+  nowMs: now,
+});
+assert.equal(endedMark?.phase, "ended");
+assert.equal(endedMark?.label, "Trial Ended");
 
 const offerMark = trialMark({
   plan,
