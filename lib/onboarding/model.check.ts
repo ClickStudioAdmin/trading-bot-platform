@@ -229,6 +229,7 @@ const both = setupScreens({
   botChoice: "manual",
 });
 assert.deepEqual(both.map((screen) => setupScreenId(screen)), [
+  "intro:video",
   "desks:choice",
   "desks:desks",
   "desks:exchanges",
@@ -240,11 +241,20 @@ assert.deepEqual(both.map((screen) => setupScreenId(screen)), [
 assert.deepEqual(
   setupScreens({
     desks: [],
+    folders: [],
+    deskChoice: null,
+    botChoice: null,
+  }).map((screen) => setupScreenId(screen)),
+  ["intro:video", "desks:choice"],
+);
+assert.deepEqual(
+  setupScreens({
+    desks: [],
     folders: [dcaFolder],
     deskChoice: "none",
     botChoice: null,
   }).map((screen) => setupScreenId(screen)),
-  ["desks:choice", "bots:blocked", "tour:tour"],
+  ["intro:video", "desks:choice", "bots:blocked", "tour:tour"],
 );
 assert.deepEqual(
   setupScreens({
@@ -253,7 +263,7 @@ assert.deepEqual(
     deskChoice: "all_paper",
     botChoice: "all",
   }).map((screen) => setupScreenId(screen)),
-  ["desks:choice", "bots:choice", "tour:tour"],
+  ["intro:video", "desks:choice", "bots:choice", "tour:tour"],
 );
 const paperSet = applyDeskSetupChoice({
   choice: "all_paper",
@@ -300,7 +310,7 @@ assert.equal(
     }),
     "desks:exchanges",
   )),
-  "desks:choice",
+  "intro:video",
 );
 assert.match(botsEmptyNote([]), /no starter bots/i);
 assert.match(
@@ -358,6 +368,17 @@ if (readyDraft.ok) {
   assert.equal(readyDraft.draft.readyForTour, true);
 }
 assert.equal(emptySetupDraft().readyForTour, false);
+assert.equal(emptySetupDraft().introSeen, false);
+const introDraft = parseSetupDraft({ introSeen: true });
+assert.equal(introDraft.ok, true);
+if (introDraft.ok) {
+  assert.equal(introDraft.draft.introSeen, true);
+}
+const introIgnored = parseSetupDraft({ introSeen: "yes" });
+assert.equal(introIgnored.ok, true);
+if (introIgnored.ok) {
+  assert.equal(introIgnored.draft.introSeen, false);
+}
 assert.equal(secretDraft.ok, false);
 
 const liveLater = validateSetupForFinish({
