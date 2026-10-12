@@ -69,14 +69,8 @@ import { loadMemberNotificationChrome } from "@/lib/notifications/badges";
 import { listMemberCriticalAccountIds } from "@/lib/notifications/critical";
 import { resolveInboxHref } from "@/lib/notifications/hrefs";
 import { listUserNotifications } from "@/lib/notifications/store";
-import {
-  dismissSetupSummary,
-  startPlatformTour,
-} from "@/lib/onboarding/actions";
-import {
-  shouldOfferTour,
-  shouldShowSummary,
-} from "@/lib/onboarding/model";
+import { dismissSetupSummary } from "@/lib/onboarding/actions";
+import { shouldShowSummary } from "@/lib/onboarding/model";
 import { loadMemberOnboarding } from "@/lib/onboarding/store";
 import { formatPnlUsd } from "@/lib/opportunities/format";
 import { ACCOUNT_DESKS_HREF, ACCOUNT_EXCHANGES_HREF } from "@/lib/site-links";
@@ -211,19 +205,6 @@ export default async function AccountOverviewPage() {
             </button>
           </form>
         </section>
-      ) : null}
-      {shouldOfferTour({
-        platformMember: true,
-        tour: onboarding?.tour ?? null,
-      }) && onboarding?.tour !== "in_progress" ? (
-        <form action={startPlatformTour}>
-          <button
-            type="submit"
-            className="text-sm text-accent hover:text-accent-strong"
-          >
-            Take the tour
-          </button>
-        </form>
       ) : null}
 
       <section

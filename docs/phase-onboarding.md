@@ -35,7 +35,7 @@ There is no Skip setup. The member goes through Add Desks, Add Bots, and Take a 
 | 6 | Keys | Same rules as Exchanges and create desk. Trade-only, no withdrawal permission. Server verifies. Browser never sees the secret again. One connection binds one desk. **Bind later** is allowed per connected desk. |
 | 7 | Starter bots | Admin marks **Include in Starter Pack** on a platform folder or on a platform template. The wizard lists every template in a flagged folder, and every flagged template that is not already in one of those folders. Apply uses today’s apply path: DCA **idle**, Perps bots and Cash and Carry **disabled**. Never arm, never enable the engine, never place orders. |
 | 8 | Library copy | Apply onto the new desks only. Do not also copy those rows into the member’s template library. |
-| 9 | Tour | Asked after the other steps, including when they created nothing. Yes starts the tour after Finish. Not now still leaves **Take the tour** on Overview. The tour only explains. It never presses Arm, Enable, or an order button. |
+| 9 | Tour | Asked after the other steps, including when they created nothing. Yes starts the tour after Finish. Not now lands on Overview. The tour only explains. It never presses Arm, Enable, or an order button. |
 | 10 | New desk later | Manage desks create stays the current form. When starter folders exist for that type, the form offers **Add starter bots** (same idle / disabled apply). Not a second full wizard. |
 
 ## Steps
@@ -126,7 +126,7 @@ Apply runs when they continue to the tour, after the desks exist, through the sa
 Continuing to this step writes the desks and bots first. The modal stays up and shows a success message listing the desks and the bots that were loaded. It does not ask the tour question on this screen.
 
 - **Start the Tour now** — Setup is marked completed and the tour starts on Overview. The tour includes the new desks and, when a starter bot was loaded, that desk’s Bots page.
-- **Not now** — Setup is marked completed and lands on Overview, with the setup summary and **Take the tour**. The last desk created becomes the active desk.
+- **Not now** — Setup is marked completed and lands on Overview, with the setup summary. The last desk created becomes the active desk.
 
 Back is not offered after the desks are written. There is no Skip setup. A retry does not create a second copy.
 
@@ -138,7 +138,7 @@ Done summary (Overview card that dismisses, or the first tour step): desks creat
 
 A small overlay in the app. No tour library. Steps are a fixed list in code, not an admin CMS. Each step spotlights one existing region (`data-tour` on that control). The card is a `surface` panel with a `plan-header` bar that reads **Tour · n of total**. The heading is the instruction. The place name stays on the spotlighted control. The primary button is **Next**. The last step is **Done**. **Back** and **Skip tour** stay text buttons. An arrow runs from the card to the control. The same dim layer covers the header, sidebar, and page on every step. That control stays undimmed, inside a purple ring. On Bots, Webhooks, Positions, and Desk Settings, that desk's sidebar row stays undimmed too. The arrow still points only at the step's control. A step never spotlights a whole page. Overview, Manage Desks, and Bot Templates spotlight the account sidenav item, and the Account group opens if it was collapsed. Skip marks the tour skipped. The last step marks it completed.
 
-Progress is stored per member (step index plus not started / in progress / completed / skipped / declined). Refresh resumes the current step. Completing or skipping never shows the offer modal again. **Take the tour** on Overview starts or resumes until the tour is completed or skipped from the overlay. **Platform Tour** stays at the bottom of the account sidenav for every platform member and starts the tour again from the first step, including after it was completed or skipped.
+Progress is stored per member (step index plus not started / in progress / completed / skipped / declined). Refresh resumes the current step. Completing or skipping never shows the offer modal again. **Platform Tour** stays at the bottom of the account sidenav for every platform member and starts the tour again from the first step, including after it was completed or skipped.
 
 Steps that do not apply are omitted (no desk yet, no bot desk, no TradingView desk).
 
@@ -204,7 +204,7 @@ Each desk added from the sub-modal and each Finish create goes through the same 
 
 - The modal uses `bg-surface` `border-line` and two thirds of the account width (`max-w-7xl` is 80rem). It is the only card. Step copy sits in the dialog, not in a second surface box. The account title bar and the footer use `bg-surface-raised`, the same grey as table headers. One line sits under the account title and the step list. One line sits above the footer buttons. The step content is padded `px-6 py-5`, the same on the top and the bottom. Add Desks, Add Bots, and Take a Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. The step content scrolls inside the dialog. Choice rows keep a border so the selected row can use the accent. The desk list is one row per type. **Create Desk** is the standard plus button. Added desks sit in a table under that type, with columns for name, mode, market, environment, and key. Edit and Remove are the pencil and trash icon actions. The create sub-modal uses `bg-surface` and `border-line`, with the same grey header and footer. The video screen uses that same header bar for **Watch a short overview**, without the step list. Its frame is `bg-canvas` with `border-line` and the play icon. Skip and Watch or Continue use the same footer buttons.
 - Desk and bot choices are full-width sections. The selected section uses the accent border. Desk rows keep a bottom rule. No new colours. Paper / Demo / Live dots may use the existing `mode-paper`, `mode-demo`, and `mode-live` tokens.
-- The modal is the only setup entry. It closes when the tour step is finished. **Take the tour** on Overview remains until the tour is completed or skipped. **Platform Tour** in the account sidenav stays available.
+- The modal is the only setup entry. It closes when the tour step is finished. **Platform Tour** in the account sidenav stays available.
 - The tour card uses `bg-surface` with a `bg-plan-header` bar. The bar reads Tour and the step count. The heading is the instruction. The primary button is **Next**. No new colours.
 - Light and dark follow header UI preferences. Do not put light tokens on `html` / `body`.
 
@@ -223,7 +223,7 @@ Stop after each until Click says go. Do not start inside item 4 or item 6.
 | 3 | Exchanges | Connected desks only. New trade-only key, or bind later. No existing-connection picker. Secrets not in the draft. |
 | 4 | Finish desks | Finish creates and binds. Retry does not duplicate. Summary lists bound vs bind later. |
 | 5 | Starter bots | Flagged folders only. Apply idle / disabled. TV and Perps ticket skip the step. Failures listed, siblings kept. |
-| 6 | Tour | Offer, overlay, persistence, Take the tour, conditional steps. |
+| 6 | Tour | Offer, overlay, persistence, Platform Tour, conditional steps. |
 | 7 | New desk | Optional **Add starter bots** on the existing create form. |
 
 ## Tests
