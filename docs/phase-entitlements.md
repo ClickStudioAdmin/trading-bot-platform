@@ -143,7 +143,7 @@ Editing an existing bot, template, listing, or backtest does not consume another
 
 #### Feature trials
 
-Admin can put a free trial on the right of each plan-editor row. A checkbox row gets a **Free trial** tick and a day count (1–365). A cap gets the same tick, a **trial limit** (higher than the standing cap), and the same day count. The tick is what turns the trial on. Affiliate percents have no trial. A ticked feature is already included, so its trial is stored and unused. An unlimited cap cannot also have a trial limit.
+Admin can put a free trial on the right of each plan-editor row. A checkbox row gets a **Free trial** tick and a day count (1–365). A cap gets the same tick, a **trial limit** (higher than the standing cap), and the same day count. The tick is what turns the trial on. Affiliate percents, Earning Depth, and Deduct Plan Payment from Earnings have no trial. A ticked feature is already included, so its trial is stored and unused. An unlimited cap cannot also have a trial limit.
 
 `membership_plans.trials` holds that config. `member_feature_trials` holds one clock per login and row. The clock starts the first time Overview or Plans loads while that row is a trial on the current plan. It does not restart if they leave the plan and come back, and changing the day count does not move an existing end. Plans and Overview show the row as temporary (dashed warning). Hover says the end date. On a plan they are not on, hover says the end date starts when that plan applies.
 

@@ -43,9 +43,16 @@ assert.equal(
 );
 assert.equal(
   parsePlanTrials({
-    caps: { max_stored_backtests: { days: 14, limit: 3 } },
-  }).caps.max_stored_backtests?.limit,
-  3,
+    features: { affiliate_pay_subscription: { days: 14 } },
+    caps: { affiliate_max_depth: { days: 14, limit: 5 } },
+  }).features.affiliate_pay_subscription,
+  undefined,
+);
+assert.equal(
+  parsePlanTrials({
+    caps: { affiliate_max_depth: { days: 14, limit: 5 } },
+  }).caps.affiliate_max_depth,
+  undefined,
 );
 
 const offers = planTrialOffers(plan);
@@ -158,6 +165,28 @@ const ignored = parsePlanForm(ignoredCap);
 assert.equal(ignored.ok, true);
 if (ignored.ok) {
   assert.equal(ignored.values.trials.caps.max_paper_desks, undefined);
+}
+
+const affiliate = new FormData();
+affiliate.set("name", "Free");
+affiliate.set("visibility", "public");
+affiliate.set("cap_affiliate_max_depth", "3");
+affiliate.set("trial_on_affiliate_max_depth", "1");
+affiliate.set("trial_limit_affiliate_max_depth", "5");
+affiliate.set("trial_days_affiliate_max_depth", "14");
+affiliate.set("feature_affiliate_pay_subscription", "1");
+affiliate.set("trial_on_affiliate_pay_subscription", "1");
+affiliate.set("trial_days_affiliate_pay_subscription", "14");
+const affiliateParsed = parsePlanForm(affiliate);
+assert.equal(affiliateParsed.ok, true);
+if (affiliateParsed.ok) {
+  assert.equal(affiliateParsed.values.trials.caps.affiliate_max_depth, undefined);
+  assert.equal(
+    affiliateParsed.values.trials.features.affiliate_pay_subscription,
+    undefined,
+  );
+  assert.equal(affiliateParsed.values.features.affiliate_pay_subscription, true);
+  assert.equal(affiliateParsed.values.caps.affiliate_max_depth, 3);
 }
 
 console.log("membership trial checks passed");

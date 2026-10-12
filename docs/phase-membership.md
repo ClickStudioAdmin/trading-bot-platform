@@ -52,7 +52,7 @@ Recommend **Chart free, backtest paid**. Scale-in feature flag stays off until V
 
 ### Features (on / off)
 
-Desk types are ticks, not per-type counts. **Manual Desk Types:** Perps. **Automated Desk Types:** Perps, DCA, Cash & Carry, TradingView Strategy. Scale-in stays off the catalog until that desk type exists. Positions Chart and Starter Pack apply are not plan features. Each editor row can also offer a free trial (a tick and days, and a higher cap while that clock runs). The member clock and the after-trial read-versus-create rule are in [phase-entitlements.md](phase-entitlements.md).
+Desk types are ticks, not per-type counts. **Manual Desk Types:** Perps. **Automated Desk Types:** Perps, DCA, Cash & Carry, TradingView Strategy. Scale-in stays off the catalog until that desk type exists. Positions Chart and Starter Pack apply are not plan features. Each editor row outside Affiliates can also offer a free trial (a tick and days, and a higher cap while that clock runs). The member clock and the after-trial read-versus-create rule are in [phase-entitlements.md](phase-entitlements.md).
 
 Copy: Copy other Trader's Desks, Max Desk Copies, Desk Sharing - Public, Desk Sharing - Private.
 

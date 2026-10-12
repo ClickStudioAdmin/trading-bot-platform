@@ -8,7 +8,7 @@ import {
   type MembershipPlan,
   type PlanCompareRow,
 } from "@/lib/membership/catalog";
-import { TRIAL_DAYS_MAX, TRIAL_DAYS_MIN } from "@/lib/membership/trials";
+import { TRIAL_DAYS_MAX, TRIAL_DAYS_MIN, rowAllowsTrial } from "@/lib/membership/trials";
 import {
   createMembershipPlanAction,
   updateMembershipPlanAction,
@@ -133,6 +133,9 @@ export function AdminPlanForm({
       {adminPlanSections().map((section) => {
         const hasCaps = section.rows.some((row) => row.kind === "cap");
         const hasRates = section.rows.some((row) => row.kind === "rate");
+        const trialRows = section.rows.filter(rowAllowsTrial);
+        const hasTrialCaps = trialRows.some((row) => row.kind === "cap");
+        const hasTrialFeatures = trialRows.some((row) => row.kind === "feature");
         return (
           <section
             key={section.title}
@@ -143,14 +146,16 @@ export function AdminPlanForm({
             </h2>
             {hasCaps ? (
               <p className="mt-1 text-sm text-ink-muted">
-                Empty means unlimited. A trial limit has to be higher than that
-                number, and it applies only until the trial ends.
+                Empty means unlimited.
+                {hasTrialCaps
+                  ? " A trial limit has to be higher than that number, and it applies only until the trial ends."
+                  : ""}
               </p>
             ) : null}
-            {hasCaps || section.rows.some((row) => row.kind === "feature") ? (
+            {hasTrialCaps || hasTrialFeatures ? (
               <p className="mt-1 text-sm text-ink-muted">
                 Free trial sits on the right.
-                {section.rows.some((row) => row.kind === "feature")
+                {hasTrialFeatures
                   ? " A ticked feature is already included, so its trial stays unused until you clear the tick."
                   : ""}
               </p>
@@ -187,6 +192,33 @@ function AdminPlanRow({
   row: PlanCompareRow;
   plan?: MembershipPlan;
 }) {
+  if ((row.kind === "feature" || row.kind === "cap") && !rowAllowsTrial(row)) {
+    if (row.kind === "feature") {
+      return (
+        <label className="flex items-start gap-2 text-sm text-ink">
+          <AppCheck
+            name={`feature_${row.key}`}
+            value="1"
+            defaultChecked={plan?.features[row.key] ?? false}
+          />
+          <span>{row.label}</span>
+        </label>
+      );
+    }
+    return (
+      <label className="block max-w-xs text-sm text-ink">
+        {row.label}
+        <input
+          name={`cap_${row.key}`}
+          type="number"
+          min={0}
+          step={1}
+          defaultValue={plan?.caps[row.key] ?? ""}
+          className={fieldClass}
+        />
+      </label>
+    );
+  }
   if (row.kind === "feature") {
     const trial = plan?.trials.features[row.key];
     return (
