@@ -122,6 +122,7 @@ form.set("trial_days_research_backtest", "14");
 form.set("trial_on_replay_backtests", "1");
 form.set("trial_days_replay_backtests", "14");
 form.set("cap_max_stored_backtests", "0");
+form.set("trial_on_max_stored_backtests", "1");
 form.set("trial_limit_max_stored_backtests", "3");
 form.set("trial_days_max_stored_backtests", "14");
 const parsed = parsePlanForm(form);
@@ -142,8 +143,21 @@ const lowLimit = new FormData();
 lowLimit.set("name", "Free");
 lowLimit.set("visibility", "public");
 lowLimit.set("cap_max_paper_desks", "2");
+lowLimit.set("trial_on_max_paper_desks", "1");
 lowLimit.set("trial_limit_max_paper_desks", "2");
 lowLimit.set("trial_days_max_paper_desks", "14");
 assert.equal(parsePlanForm(lowLimit).ok, false);
+
+const ignoredCap = new FormData();
+ignoredCap.set("name", "Free");
+ignoredCap.set("visibility", "public");
+ignoredCap.set("cap_max_paper_desks", "2");
+ignoredCap.set("trial_limit_max_paper_desks", "2");
+ignoredCap.set("trial_days_max_paper_desks", "14");
+const ignored = parsePlanForm(ignoredCap);
+assert.equal(ignored.ok, true);
+if (ignored.ok) {
+  assert.equal(ignored.values.trials.caps.max_paper_desks, undefined);
+}
 
 console.log("membership trial checks passed");

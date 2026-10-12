@@ -229,8 +229,8 @@ function AdminPlanRow({
   if (row.kind === "cap") {
     const trial = plan?.trials.caps[row.key];
     return (
-      <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,20rem)_auto]">
-        <label className="block text-sm text-ink">
+      <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <label className="block max-w-xs text-sm text-ink">
           {row.label}
           <input
             name={`cap_${row.key}`}
@@ -241,8 +241,17 @@ function AdminPlanRow({
             className={fieldClass}
           />
         </label>
-        <div className="flex flex-wrap items-end gap-3 text-sm text-ink">
-          <label className="block">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-ink">
+          <label className="inline-flex items-center gap-2">
+            <AppCheck
+              name={`trial_on_${row.key}`}
+              value="1"
+              defaultChecked={Boolean(trial)}
+              aria-label={`Free trial for ${row.label}`}
+            />
+            Free trial
+          </label>
+          <label className="inline-flex items-center gap-2">
             Trial limit
             <input
               name={`trial_limit_${row.key}`}
@@ -251,10 +260,10 @@ function AdminPlanRow({
               step={1}
               defaultValue={trial?.limit ?? ""}
               aria-label={`${row.label} trial limit`}
-              className={`${trialFieldClass} mt-1 w-24`}
+              className={`${trialFieldClass} w-24`}
             />
           </label>
-          <label className="block">
+          <label className="inline-flex items-center gap-2">
             Days
             <input
               name={`trial_days_${row.key}`}
@@ -264,7 +273,7 @@ function AdminPlanRow({
               step={1}
               defaultValue={trial?.days ?? ""}
               aria-label={`${row.label} trial days`}
-              className={`${trialFieldClass} mt-1`}
+              className={trialFieldClass}
             />
           </label>
         </div>
