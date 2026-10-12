@@ -1815,8 +1815,8 @@ function BotStep({
             <tr>
               <th className="px-3 py-2 font-medium">Desk</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Type</th>
-              <th className="px-3 py-2 font-medium">Bots</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Mode</th>
+              <th className="px-3 py-2 font-medium">Bots</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">
                 Initial Status
               </th>
@@ -1849,6 +1849,9 @@ function BotStep({
                   <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
                     {deskType}
                   </td>
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
+                    {details.mode}
+                  </td>
                   <td className="px-3 py-2 align-top text-ink">
                     <ul className="space-y-2">
                       {templates.map((template) => (
@@ -1877,9 +1880,6 @@ function BotStep({
                         </li>
                       ))}
                     </ul>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
-                    {details.mode}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 align-top">
                     <ul className="space-y-2">
