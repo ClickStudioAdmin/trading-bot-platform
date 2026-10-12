@@ -33,7 +33,7 @@ There is no Skip setup. The member goes through Add Desks, Add Bots, and Take a 
 | 4 | Demo vs Live | Not a third column. Connected is `mode = live`. Demo vs Live is the key’s venue environment, chosen on the exchange step. Display mode stays Paper / Demo / Live as today. |
 | 5 | When rows are written | Desk names and details stay a draft until **Finish**. API secrets are never stored in that draft. A key the member saves in the create modal, or on the exchange step, is written immediately through the existing connection action (verify, trade-only, encrypt). The draft keeps the connection id only. |
 | 6 | Keys | Same rules as Exchanges and create desk. Trade-only, no withdrawal permission. Server verifies. Browser never sees the secret again. One connection binds one desk. **Bind later** is allowed per connected desk. |
-| 7 | Starter bots | Admin chooses **platform folders** with the existing **Include in Starter Pack** flag. The wizard lists only templates inside those folders. A template’s own flag does not put it in the wizard. Apply uses today’s apply path: DCA **idle**, Perps bots and Cash and Carry **disabled**. Never arm, never enable the engine, never place orders. |
+| 7 | Starter bots | Admin marks **Include in Starter Pack** on a platform folder or on a platform template. The wizard lists every template in a flagged folder, and every flagged template that is not already in one of those folders. Apply uses today’s apply path: DCA **idle**, Perps bots and Cash and Carry **disabled**. Never arm, never enable the engine, never place orders. |
 | 8 | Library copy | Apply onto the new desks only. Do not also copy those rows into the member’s template library. |
 | 9 | Tour | Asked after the other steps, including when they created nothing. Yes starts the tour after Finish. Not now still leaves **Take the tour** on Overview. The tour only explains. It never presses Arm, Enable, or an order button. |
 | 10 | New desk later | Manage desks create stays the current form. When starter folders exist for that type, the form offers **Add starter bots** (same idle / disabled apply). Not a second full wizard. |
@@ -99,20 +99,21 @@ Always step 2. It starts with the same kind of choice as desks:
 
 If they chose no desks, this step does not offer those three. It says bots need a desk, with Back or continue to the tour.
 
-If they chose only Perps and/or TradingView Strategy, or an automated type with no flagged folder, the choice still appears and says there is nothing to load. Do not show an empty required picker. The done summary still says ticket and alert desks have no starter bots. Bot rows are applied when they continue to the tour, after the desks exist.
+If they chose only Perps and/or TradingView Strategy, or an automated type with no flagged folder or template, the choice still appears and says there is nothing to load. Do not show an empty required picker. The done summary still says ticket and alert desks have no starter bots. Bot rows are applied when they continue to the tour, after the desks exist.
 
 Source:
 
 - Platform folders (`automation_template_sets`, `visibility = platform`, `starter_pack = true`) whose `desk_type` matches a desk this run will create.
 - Templates are the folder’s items, platform only, in folder order.
-- User folders, shared folders, loose platform templates, and backtested rows are not listed, even if a template’s own `starter_pack` flag is on.
+- Platform templates (`automation_templates`, `visibility = platform`, `starter_pack = true`) that are not already in one of those folders. They are listed on their own, under the matching desk type.
+- User folders, shared folders, and backtested rows are not listed.
 
-Admin already sets the folder flag on `/admin/templates` (**Add New Folder** / **Edit**, **Include in Starter Pack**). No new admin screen. Put the templates in a folder, then flag the folder. That is the onboarding catalog. The template-level flag stays on the admin form for the existing column; the wizard ignores it.
+Admin already sets both flags on `/admin/templates` (**Include in Starter Pack** on a folder or on a template). No new admin screen. A flagged template does not need to sit in a flagged folder.
 
 Picker:
 
 - Group by the new desk (name, type, Paper or Connected).
-- Under each desk, list matching flagged folders. Ticking a folder selects its templates. The member can untick a template inside the folder.
+- Under each desk, list matching flagged folders, then flagged templates that are not in those folders. Ticking a folder selects its templates. The member can untick a template inside the folder. A flagged template on its own is one tick.
 - A folder for the wrong desk type is not shown on that desk.
 - DCA uses each template’s saved contract. If two selected templates share a contract on the same desk, the second is skipped at apply and named in the summary. Do not ask them to remap contracts in this wizard.
 - Perps bots and Cash and Carry stack as they do today. Name collisions get the existing ` (from template)` suffix.
@@ -151,7 +152,7 @@ Steps that do not apply are omitted (no desk yet, no bot desk, no TradingView de
 | 6 | Webhooks | A TradingView Strategy desk, and step 5 did not run | Alerts arrive here. Setup does not turn them on. |
 | 7 | Positions | They have a desk | Open positions for this desk. |
 | 8 | Desk Settings | They have a desk | Bind a key and set desk limits. Do this if the desk is still unbound. |
-| 9 | Bot Templates | Always | This is your library. Starter bots in setup came only from platform folders an admin marked Include in Starter Pack. |
+| 9 | Bot Templates | Always | This is your library. Starter bots in setup came from platform templates and folders marked Include in Starter Pack. |
 
 The tour walks to the route that owns the target, then spotlights it. It does not open a bot form, bind a key, or change a mode. Narrow widths: if the target is off-screen or inside a collapsed group, show the same copy in a card and point at the control by name.
 
@@ -186,7 +187,7 @@ Add a row to [database.md](database.md) in the same change as the migration.
 
 - Reuse `createTradingAccount`, `saveExchangeConnection`, and template apply. Do not add a second create path with weaker checks.
 - Assert the signed-in member owns every desk and connection id in the draft.
-- Starter query is platform folders with `starter_pack` only. Reject a template id that is not an item of such a folder.
+- Starter query is platform folders with `starter_pack`, plus platform templates with their own `starter_pack` that are not already in one of those folders. Reject any other template id.
 - Never trust the browser for plan, 2FA, bind, or “this bot may arm”.
 - Never call private exchange APIs from the browser. Verify stays on the server.
 - Do not create a Demo Account automatically.
