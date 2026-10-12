@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SavedBillingMethodForm } from "@/components/billing-method-radios";
 import { PageHeading } from "@/components/page-heading";
+import { PlanPrivileges } from "@/components/plan-privileges";
 import { getSessionMember } from "@/lib/auth/session";
+import { listTradingAccounts } from "@/lib/accounts/store";
 import { IconFilterClear } from "@/components/icons";
 import { AppSelect } from "@/components/app-select";
 import {
@@ -77,8 +79,11 @@ import {
   pendingMainWithdrawUsd,
   walletBookBalances,
 } from "@/lib/membership/wallet-store";
-import { formatPlanPrice, planIsArchived } from "@/lib/membership/catalog";
+import { formatPlanPrice, planIsArchived, type MembershipPlan } from "@/lib/membership/catalog";
+import { overviewPlanGroups } from "@/lib/membership/plan-overview";
+import { loadPlanUsageCounts } from "@/lib/membership/plan-usage";
 import { getMembershipPlan } from "@/lib/membership/store";
+import { ensureMemberTrialGrants } from "@/lib/membership/trial-store";
 import {
   loadStripeCardOnFile,
   stripePublishableConfigured,
@@ -231,6 +236,10 @@ export default async function AccountBillingPage({
     member.id,
     member.platformMember,
   );
+  const privilegeGroups =
+    tab === "overview" && plan
+      ? await loadPrivilegeGroups(member.id, plan)
+      : null;
   const tabCounts = memberBillingTabCounts(chrome.actions);
 
   return (
@@ -335,6 +344,7 @@ export default async function AccountBillingPage({
       ) : null}
 
       {tab === "overview" ? (
+        <>
         <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">
@@ -420,6 +430,12 @@ export default async function AccountBillingPage({
           </LiveMainWallet>
         </section>
         </div>
+        {privilegeGroups ? (
+          <div className="mt-5">
+            <PlanPrivileges groups={privilegeGroups} />
+          </div>
+        ) : null}
+        </>
       ) : tab === "method" ? (
         <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">
           <section className="rounded-card border border-line bg-surface p-5">
@@ -827,6 +843,22 @@ export default async function AccountBillingPage({
       )}
     </div>
   );
+}
+
+async function loadPrivilegeGroups(userId: string, plan: MembershipPlan) {
+  const accounts = await listTradingAccounts(userId);
+  const [usage, granted] = await Promise.all([
+    loadPlanUsageCounts({
+      userId,
+      accountIds: accounts.map((account) => account.id),
+      desks: accounts,
+    }),
+    ensureMemberTrialGrants({ userId, plan }),
+  ]);
+  return overviewPlanGroups(plan, usage, {
+    grants: granted.ok ? granted.grants : [],
+    nowMs: granted.ok ? granted.nowMs : 0,
+  });
 }
 
 function BillingTablePager({
