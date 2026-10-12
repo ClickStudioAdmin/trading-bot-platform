@@ -621,7 +621,7 @@ export function SetupWizard({
               value: "manual",
               title: "Manually select starter bots",
               detail:
-                "Pick the folders and bots for every desk together, and which of those bots to start.",
+                "Pick the bots for every desk together, and which of those bots to start.",
               icon: <IconPencil {...CHOICE_ICON} />,
             },
             {
@@ -1799,41 +1799,36 @@ function BotStep({
   onChange: (key: string, patch: Partial<SetupDesk>) => void;
 }) {
   const rows = starterBotDesks(desks, folders);
-  const showFolder = rows.some((desk) =>
-    foldersForDesk(folders, desk.deskType).some((folder) => !folder.loose),
-  );
   return (
     <section>
       <h2 className="text-lg font-semibold tracking-tight">
         Load starter bots?
       </h2>
       <p className="mt-2 text-sm text-ink-muted">
-        These are platform templates and folders marked Include in Starter Pack.
-        Choose Initial Status to start a bot when setup finishes. Idle and
-        Disabled leave the bot off.
+        These starter bots are marked Include in Starter Pack. Choose Initial
+        Status to start a bot when setup finishes. Idle and Disabled leave the
+        bot off.
       </p>
       <div className="mt-4 overflow-x-auto rounded-card border border-line">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               <th className="px-3 py-2 font-medium">Desk</th>
-              {showFolder ? (
-                <th className="whitespace-nowrap px-3 py-2 font-medium">
-                  Folder
-                </th>
-              ) : null}
-              <th className="px-3 py-2 font-medium">Bot</th>
-              <th className="whitespace-nowrap px-3 py-2 font-medium">Mode</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Type</th>
+              <th className="px-3 py-2 font-medium">Bots</th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">Mode</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">
                 Initial Status
               </th>
             </tr>
           </thead>
           <tbody>
-            {rows.flatMap((desk) => {
+            {rows.map((desk) => {
               const details = setupDeskDetails(desk);
               const deskType = formatDeskType(desk.deskType);
+              const templates = foldersForDesk(folders, desk.deskType).flatMap(
+                (folder) => folder.templates,
+              );
               function choose(templateIds: string[]) {
                 onChange(desk.key, {
                   templateIds,
@@ -1845,88 +1840,63 @@ function BotStep({
                   }),
                 });
               }
-              return foldersForDesk(folders, desk.deskType).flatMap((folder) => {
-                const ids = folder.templates.map((template) => template.id);
-                const selectedCount = ids.filter((id) =>
-                  desk.templateIds.includes(id),
-                ).length;
-                const all = ids.length > 0 && selectedCount === ids.length;
-                return folder.templates.map((template, index) => (
-                  <tr
-                    key={`${desk.key}:${template.id}`}
-                    className="border-b border-line last:border-b-0"
-                  >
-                    <td className="px-3 py-2 text-ink">{desk.name}</td>
-                    {showFolder ? (
-                      <td className="whitespace-nowrap px-3 py-2 text-ink">
-                        {folder.loose ? (
-                          <span className="text-ink-faint">—</span>
-                        ) : index === 0 ? (
+              return (
+                <tr
+                  key={desk.key}
+                  className="border-b border-line last:border-b-0"
+                >
+                  <td className="px-3 py-2 align-top text-ink">{desk.name}</td>
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
+                    {deskType}
+                  </td>
+                  <td className="px-3 py-2 align-top text-ink">
+                    <ul className="space-y-2">
+                      {templates.map((template) => (
+                        <li key={template.id} className="flex min-h-10 items-center">
                           <label className="inline-flex items-center gap-2">
                             <AppCheck
-                              checked={all}
+                              checked={desk.templateIds.includes(template.id)}
                               className=""
                               onChange={() => {
-                                if (all) {
-                                  choose(
-                                    desk.templateIds.filter(
-                                      (id) => !ids.includes(id),
-                                    ),
-                                  );
-                                  return;
+                                const next = new Set(desk.templateIds);
+                                if (next.has(template.id)) {
+                                  next.delete(template.id);
+                                } else {
+                                  next.add(template.id);
                                 }
-                                choose([
-                                  ...new Set([...desk.templateIds, ...ids]),
-                                ]);
+                                choose([...next]);
                               }}
                             />
-                            {folder.name}
+                            <TemplateNameWithParameters
+                              name={template.name}
+                              recipe={template.recipe}
+                              templateId={template.id}
+                              nameClassName=""
+                            />
                           </label>
-                        ) : (
-                          <span className="text-ink-muted">{folder.name}</span>
-                        )}
-                      </td>
-                    ) : null}
-                    <td className="px-3 py-2 text-ink">
-                      <label className="inline-flex items-center gap-2">
-                        <AppCheck
-                          checked={desk.templateIds.includes(template.id)}
-                          className=""
-                          onChange={() => {
-                            const next = new Set(desk.templateIds);
-                            if (next.has(template.id)) {
-                              next.delete(template.id);
-                            } else {
-                              next.add(template.id);
-                            }
-                            choose([...next]);
-                          }}
-                        />
-                        <TemplateNameWithParameters
-                          name={template.name}
-                          recipe={template.recipe}
-                          templateId={template.id}
-                          nameClassName=""
-                        />
-                      </label>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
-                      {details.mode}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
-                      {deskType}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2">
-                      <StarterInitialStatus
-                        desk={desk}
-                        templateId={template.id}
-                        templateName={template.name}
-                        onChange={onChange}
-                      />
-                    </td>
-                  </tr>
-                ));
-              });
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
+                    {details.mode}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 align-top">
+                    <ul className="space-y-2">
+                      {templates.map((template) => (
+                        <li key={template.id} className="flex min-h-10 items-center">
+                          <StarterInitialStatus
+                            desk={desk}
+                            templateId={template.id}
+                            templateName={template.name}
+                            onChange={onChange}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+                </tr>
+              );
             })}
           </tbody>
         </table>
