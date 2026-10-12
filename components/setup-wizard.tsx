@@ -371,21 +371,32 @@ export function SetupWizard({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {screen.main === "intro" ? null : (
-        <div className="shrink-0 border-b border-line px-5 py-4">
-          <h2
-            id="setup-gate-title"
-            className="text-lg font-semibold tracking-tight"
-          >
-            Set up your account
-          </h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            Finish these steps before using the platform.
-          </p>
-          <SetupProgress screen={screen} />
-        </div>
-      )}
-      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-4">
+      <div className="shrink-0 border-b border-line bg-surface-raised px-6 py-4">
+        {screen.main === "intro" ? (
+          <>
+            <h2
+              id="setup-gate-title"
+              className="text-lg font-semibold tracking-tight"
+            >
+              Watch a short overview
+            </h2>
+            <p className="mt-1 text-sm text-ink-muted">
+              Watch the video, or skip it and go straight to setup.
+            </p>
+          </>
+        ) : (
+          <>
+            <h2
+              id="setup-gate-title"
+              className="text-lg font-semibold tracking-tight"
+            >
+              Set up your account
+            </h2>
+            <SetupProgress screen={screen} />
+          </>
+        )}
+      </div>
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
       {screen.main === "intro" ? (
         <IntroStep playing={playing} onWatch={() => setPlaying(true)} />
       ) : null}
@@ -505,7 +516,7 @@ export function SetupWizard({
         />
       ) : null}
       </div>
-      <div className="shrink-0 border-t border-line px-5 py-4">
+      <div className="shrink-0 border-t border-line bg-surface-raised px-6 py-4">
         {error ? (
           <p className="mb-3 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}
@@ -518,7 +529,7 @@ export function SetupWizard({
               type="button"
               disabled={pending}
               onClick={enterSetup}
-              className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+              className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
             >
               Skip
             </button>
@@ -545,7 +556,7 @@ export function SetupWizard({
               setError(null);
               setScreenId(setupScreenId(previous));
             }}
-            className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
           >
             Back
           </button>
@@ -588,18 +599,9 @@ function IntroStep({
     </>
   );
   const frameClass =
-    "mt-4 flex aspect-video w-full flex-col items-center justify-center rounded-card border border-line bg-canvas px-6 text-center";
+    "flex aspect-video w-full flex-col items-center justify-center rounded-card border border-line bg-canvas px-6 text-center";
   return (
     <section>
-      <h2
-        id="setup-gate-title"
-        className="text-lg font-semibold tracking-tight"
-      >
-        Watch a short overview
-      </h2>
-      <p className="mt-2 text-sm text-ink-muted">
-        Watch the video, or skip it and go straight to setup.
-      </p>
       {playing ? (
         <div className={frameClass}>{frame}</div>
       ) : (

@@ -21,7 +21,7 @@ First-run setup for a verified platform member who has not finished or skipped i
 3. Which starter bots to load, only from platform folders an admin has flagged.
 4. Whether they want a short guided tour.
 
-There is no Skip setup. The member goes through Desks, Bots, and Tour. Each step can do nothing: no desks, no bots, or Not now on the tour. Creating a desk from Manage desks is not available while the modal is open.
+There is no Skip setup. The member goes through Add Desks, Add Bots, and Take a Tour. Each step can do nothing: no desks, no bots, or Not now on the tour. Creating a desk from Manage desks is not available while the modal is open.
 
 ## Locked decisions
 
@@ -40,9 +40,9 @@ There is no Skip setup. The member goes through Desks, Bots, and Tour. Each step
 
 ## Steps
 
-The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. Before the numbered steps, the modal shows a placeholder for an explainer video. The step list stays hidden there, and so does **Set up your account**. **Watch a short overview** is the title on that screen. **Watch** starts the placeholder. There is no video file yet. **Skip**, or **Continue** after watching, opens Desks and stores that the video was passed, so a refresh during setup does not show it again. **Back** from the first Desks screen returns to the video. When desks and bots are already written and only the tour step is left, the video stays hidden. The step list always shows **1. Desks**, **2. Bots**, and **3. Tour**. There is no second row of sub-step labels. Each of Desks and Bots starts with a choice. Exchanges follows the manual desk table, and only when a Connected cell is ticked, while the step list stays on Desks. Each desk that has starter folders is a sub-step of Bots when they choose to pick bots themselves. **Back** returns to the previous sub-step and can change the choice until they continue to the tour. Desks and bots are written then, before the tour question, so the tour can show those desks and bots. There is no Skip setup. Doing nothing is a choice on each step.
+The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. Before the numbered steps, the modal shows a placeholder for an explainer video. The step list stays hidden there. **Watch a short overview** sits in the same grey header bar as **Set up your account** on the later steps. **Watch** starts the placeholder. There is no video file yet. **Skip**, or **Continue** after watching, opens Desks and stores that the video was passed, so a refresh during setup does not show it again. **Back** from the first Desks screen returns to the video. When desks and bots are already written and only the tour step is left, the video stays hidden. The step list always shows **1. Add Desks**, **2. Add Bots**, and **3. Take a Tour**. There is no second row of sub-step labels. Each of Add Desks and Add Bots starts with a choice. Exchanges follows the manual desk table, and only when a Connected cell is ticked, while the step list stays on Add Desks. Each desk that has starter folders is a sub-step of Bots when they choose to pick bots themselves. **Back** returns to the previous sub-step and can change the choice until they continue to the tour. Desks and bots are written then, before the tour question, so the tour can show those desks and bots. There is no Skip setup. Doing nothing is a choice on each step.
 
-### 1. Desks
+### 1. Add Desks
 
 The first sub-step asks how to add desks:
 
@@ -78,7 +78,7 @@ When V1 item 6 gates exist, a cell the plan cannot create is visible and disable
 
 ### Exchanges (sub-step of Desks)
 
-Sub-step of Desks. Shown only when at least one Connected cell is ticked. The main step list stays on **1. Desks** while this sub-step is open.
+Sub-step of Desks. Shown only when at least one Connected cell is ticked. The main step list stays on **1. Add Desks** while this sub-step is open.
 
 One block per connected desk, in table order. Each block:
 
@@ -95,7 +95,7 @@ Plain line on the step: two connected desks need two keys. One key cannot feed t
 
 Paper rows do not appear here.
 
-### 2. Bots
+### 2. Add Bots
 
 Always step 2. It starts with the same kind of choice as desks:
 
@@ -126,7 +126,7 @@ Picker:
 
 Apply runs when they continue to the tour, after the desks exist, through the same server apply used by Automations. Results are applied / skipped / failed per template. Successes stay. No rollback of siblings. No orders.
 
-### 3. Tour
+### 3. Take a Tour
 
 Continuing to this step writes the desks and bots first. The modal stays up and shows a success message listing the desks and the bots that were loaded. It does not ask the tour question on this screen.
 
@@ -207,7 +207,7 @@ Each ticked cell and each Finish create goes through the same create and apply a
 
 ## UI
 
-- The modal uses `bg-surface` `border-line` and two thirds of the account width (`max-w-7xl` is 80rem). It is the only card. Step copy sits in the dialog, not in a second surface box. One line sits under the account title and the step list. One line sits above the footer buttons. Desks, Bots, and Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. The step content scrolls inside the dialog. Choice rows keep a border so the selected row can use the accent. The desk table keeps its row rules. The video screen hides the account title and the step list. Its frame is `bg-canvas` with `border-line` and the play icon. Skip and Watch or Continue use the same footer buttons.
+- The modal uses `bg-surface` `border-line` and two thirds of the account width (`max-w-7xl` is 80rem). It is the only card. Step copy sits in the dialog, not in a second surface box. The account title bar and the footer use `bg-surface-raised`, the same grey as table headers. One line sits under the account title and the step list. One line sits above the footer buttons. The step content is padded `px-6 py-5`, the same on the top and the bottom. Add Desks, Add Bots, and Take a Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. The step content scrolls inside the dialog. Choice rows keep a border so the selected row can use the accent. The desk table keeps its row rules. The video screen uses that same header bar for **Watch a short overview**, without the step list. Its frame is `bg-canvas` with `border-line` and the play icon. Skip and Watch or Continue use the same footer buttons.
 - Desk and bot choices are full-width sections. The selected section uses the accent border. The desk table still uses checkboxes and the Theme table pattern. No new colours. Paper / Demo / Live dots may use the existing `mode-paper`, `mode-demo`, and `mode-live` tokens.
 - The modal is the only setup entry. It closes when the tour step is finished. **Take the tour** on Overview remains until the tour is completed or skipped. **Platform Tour** in the account sidenav stays available.
 - The tour card uses `bg-surface` with a `bg-plan-header` bar. The bar reads Tour and the step count. The heading is the instruction. The primary button is **Next**. No new colours.
