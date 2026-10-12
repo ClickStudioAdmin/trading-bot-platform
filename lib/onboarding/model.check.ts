@@ -34,6 +34,8 @@ import {
   devResetDeskOrder,
   setupWizardResetPlan,
   requiresSetupGate,
+  setupCloseSkipsCreate,
+  tourAfterSetupClose,
   allocateSetupDeskKey,
   setupDeskDetails,
   setupDeskFromDetails,
@@ -763,6 +765,29 @@ if (readyDraft.ok) {
   assert.equal(readyDraft.draft.readyForTour, true);
 }
 assert.equal(emptySetupDraft().readyForTour, false);
+assert.equal(
+  setupCloseSkipsCreate({ status: "pending", readyForTour: true }),
+  true,
+);
+assert.equal(
+  setupCloseSkipsCreate({ status: "finishing", readyForTour: false }),
+  true,
+);
+assert.equal(
+  setupCloseSkipsCreate({ status: "completed", readyForTour: false }),
+  true,
+);
+assert.equal(
+  setupCloseSkipsCreate({ status: "pending", readyForTour: false }),
+  false,
+);
+assert.equal(
+  setupCloseSkipsCreate({ status: "skipped", readyForTour: true }),
+  false,
+);
+assert.equal(tourAfterSetupClose("yes"), "in_progress");
+assert.equal(tourAfterSetupClose("not_now"), "declined");
+assert.equal(tourAfterSetupClose(null), "declined");
 assert.equal(setupStepLabel("desks"), "Add Desks");
 assert.equal(setupStepLabel("bots"), "Add Bots");
 assert.equal(setupStepLabel("review"), "Review");
