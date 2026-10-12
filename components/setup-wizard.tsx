@@ -401,9 +401,6 @@ export function SetupWizard({
             >
               Set up your account
             </h2>
-            <p className="mt-1 text-sm text-ink-muted">
-              Finish these steps before using the platform.
-            </p>
             <SetupProgress screen={screen} />
           </>
         )}
