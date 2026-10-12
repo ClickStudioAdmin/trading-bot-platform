@@ -29,6 +29,7 @@ export type AppSelectOption = {
   disabled?: boolean;
   icon?: string;
   group?: string;
+  aside?: ReactNode;
 };
 
 export type AppSelectChangeEvent = ChangeEvent<HTMLInputElement>;
@@ -136,7 +137,8 @@ export function AppSelect({
       const target = event.target as Node;
       if (
         triggerRef.current?.contains(target) ||
-        panelRef.current?.contains(target)
+        panelRef.current?.contains(target) ||
+        isTemplateParametersTarget(target)
       ) {
         return;
       }
@@ -310,7 +312,8 @@ export function AppMultiSelect({
       const target = event.target as Node;
       if (
         triggerRef.current?.contains(target) ||
-        panelRef.current?.contains(target)
+        panelRef.current?.contains(target) ||
+        isTemplateParametersTarget(target)
       ) {
         return;
       }
@@ -565,23 +568,33 @@ function OptionList({
           {option.group}
         </p>
       ) : null;
+    const optionButton = (
+      <button
+        type="button"
+        role="option"
+        aria-selected={on}
+        disabled={option.disabled || (!on && disableUnselected)}
+        onClick={() => onPick(option.value)}
+        className={
+          on
+            ? "flex w-full min-w-0 flex-1 rounded-control bg-accent/15 px-3 py-2 text-left text-sm text-ink disabled:opacity-40"
+            : "flex w-full min-w-0 flex-1 rounded-control px-3 py-2 text-left text-sm text-ink hover:bg-surface-raised disabled:opacity-40"
+        }
+      >
+        <OptionLabel option={option} />
+      </button>
+    );
     return (
       <Fragment key={option.value || `empty-${index}`}>
         {heading}
-        <button
-          type="button"
-          role="option"
-          aria-selected={on}
-          disabled={option.disabled || (!on && disableUnselected)}
-          onClick={() => onPick(option.value)}
-          className={
-            on
-              ? "flex w-full rounded-control bg-accent/15 px-3 py-2 text-left text-sm text-ink disabled:opacity-40"
-              : "flex w-full rounded-control px-3 py-2 text-left text-sm text-ink hover:bg-surface-raised disabled:opacity-40"
-          }
-        >
-          <OptionLabel option={option} />
-        </button>
+        {option.aside ? (
+          <div className="flex items-start gap-1">
+            {optionButton}
+            <span className="shrink-0 pt-1.5 pr-1">{option.aside}</span>
+          </div>
+        ) : (
+          optionButton
+        )}
       </Fragment>
     );
   });
@@ -636,6 +649,13 @@ function flattenLabel(node: ReactNode): string {
     return flattenLabel((node.props as { children?: ReactNode }).children);
   }
   return "";
+}
+
+function isTemplateParametersTarget(target: Node): boolean {
+  return (
+    target instanceof Element &&
+    Boolean(target.closest("[data-template-parameters]"))
+  );
 }
 
 function OptionLabel({

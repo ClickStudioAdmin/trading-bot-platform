@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { AppMultiSelect, AppSelect } from "@/components/app-select";
+import { AppMultiSelect, AppSelect, type AppSelectOption } from "@/components/app-select";
+import { TemplateParametersButton } from "@/components/template-parameters-tip";
 import { BotRecipeEditor } from "@/components/bot-recipe-editor";
 import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
@@ -58,6 +59,19 @@ import {
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
+
+function templateOptionValue(groupId: string, templateId: string): string {
+  return `template:${groupId}:${templateId}`;
+}
+
+function templateIdFromOption(value: string): string | null {
+  if (!value.startsWith("template:")) {
+    return null;
+  }
+  const rest = value.slice("template:".length);
+  const sep = rest.indexOf(":");
+  return sep >= 0 ? rest.slice(sep + 1) : null;
+}
 
 function withSymbol(options: LinearPerp[], symbol: string): LinearPerp[] {
   const needle = symbol.trim().toUpperCase();
@@ -285,6 +299,45 @@ export function BacktestQueueForm({
     () => groupBacktestLibrary(templates, folders),
     [folders, templates],
   );
+  const botOptions = useMemo((): AppSelectOption[] => {
+    const placeholder =
+      loadedFromRun && recipe
+        ? "Loaded from previous run"
+        : recipe && !templateId
+          ? "Loaded from Automations"
+          : "Pick a desk bot or template";
+    return [
+      { value: "", label: placeholder },
+      ...deskBots.map((row) => ({
+        value: row.id,
+        group: "Desk automations",
+        label: `${row.kind === "dca" ? "DCA" : "Perps"} · ${row.name}${
+          row.symbol ? ` · ${row.symbol}` : ""
+        } · ${row.deskName}`,
+      })),
+      ...templateGroups.flatMap((group) =>
+        group.items.map((row) => ({
+          value: templateOptionValue(group.id, row.id),
+          group: group.label,
+          label: `${row.recipe.kind === "dca" ? "DCA" : "Perps"} · ${row.name} · ${row.recipe.symbol}`,
+          aside: (
+            <TemplateParametersButton
+              name={row.name}
+              recipe={row.recipe}
+              templateId={row.id}
+            />
+          ),
+        })),
+      ),
+    ];
+  }, [deskBots, loadedFromRun, recipe, templateGroups, templateId]);
+  const pickedTemplate =
+    templates.find((row) => row.id === templateId) ?? null;
+  const selectValue =
+    botOptions.find(
+      (option) => templateIdFromOption(option.value) === templateId,
+    )?.value ??
+    (deskBots.some((row) => row.id === templateId) ? templateId : "");
   const editedAway = Boolean(
     recipe &&
       (sourceTemplateId || templateId || loadedFromRun) &&
@@ -614,13 +667,19 @@ export function BacktestQueueForm({
               templates.some((row) => row.id === templateId) ? templateId : ""
             }
           />
+          <span className="mt-1 flex items-start gap-2">
+          <span className="min-w-0 flex-1">
           <AppSelect
-            value={templateId}
+            value={selectValue}
+            options={botOptions}
             onChange={(event) => {
               const value = event.target.value;
+              const pickedId = templateIdFromOption(value);
               const desk = deskBots.find((row) => row.id === value);
-              const next = templates.find((row) => row.id === value);
-              setTemplateId(value);
+              const next = pickedId
+                ? templates.find((row) => row.id === pickedId)
+                : undefined;
+              setTemplateId(pickedId ?? (desk ? value : ""));
               setBotLoadError("");
               if (desk) {
                 const ticket = botRequest.current + 1;
@@ -686,35 +745,17 @@ export function BacktestQueueForm({
               }
             }}
             className={BILLING_FIELD_CLASS}
-          >
-            <option value="">
-              {loadedFromRun && recipe
-                ? "Loaded from previous run"
-                : recipe && !templateId
-                  ? "Loaded from Automations"
-                  : "Pick a desk bot or template"}
-            </option>
-            {deskBots.length > 0 ? (
-              <optgroup label="Desk automations">
-                {deskBots.map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {row.kind === "dca" ? "DCA" : "Perps"} · {row.name}
-                    {row.symbol ? ` · ${row.symbol}` : ""} · {row.deskName}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-            {templateGroups.map((group) => (
-              <optgroup key={group.id} label={group.label}>
-                {group.items.map((row) => (
-                  <option key={`${group.id}:${row.id}`} value={row.id}>
-                    {row.recipe.kind === "dca" ? "DCA" : "Perps"} · {row.name} ·{" "}
-                    {row.recipe.symbol}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </AppSelect>
+          />
+          </span>
+          {pickedTemplate && matchingTemplate?.id !== pickedTemplate.id ? (
+            <TemplateParametersButton
+              name={pickedTemplate.name}
+              recipe={pickedTemplate.recipe}
+              templateId={pickedTemplate.id}
+              className="mt-2"
+            />
+          ) : null}
+          </span>
           {botPending ? (
             <p className="mt-2 text-sm text-ink-muted">Loading bot</p>
           ) : null}
@@ -943,6 +984,8 @@ export function BacktestQueueForm({
             </div>
             <BacktestOriginBadges
               templateName={matchingTemplate?.name ?? null}
+              templateRecipe={matchingTemplate?.recipe ?? null}
+              templateId={matchingTemplate?.id ?? null}
               deskLabel={
                 matchingDeskBot
                   ? formatBacktestDeskMatch(matchingDeskBot)

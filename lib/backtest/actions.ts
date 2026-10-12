@@ -36,6 +36,7 @@ import {
   defaultBacktestDates,
   parseBacktestName,
   backtestRunTitle,
+  type TemplateBacktestLink,
   estimateBacktestBars,
   parseBacktestDates,
   parseComparableSymbols,
@@ -52,6 +53,7 @@ import {
   deleteBacktestRun,
   insertBacktestRun,
   linkBacktestRunTemplate,
+  listAttachedBacktestLinks,
   listBacktestRuns,
   loadBacktestRun,
   promoteDraftBacktestRun,
@@ -517,6 +519,20 @@ export async function applyBacktestToDeskAction(
     runId: run.id,
     notes: result.notes,
   };
+}
+
+export async function attachedBacktestLinksAction(
+  templateId: string,
+): Promise<TemplateBacktestLink[]> {
+  const auth = await requireMember();
+  if (!auth.ok) {
+    return [];
+  }
+  return listAttachedBacktestLinks(
+    String(templateId ?? ""),
+    auth.member.id,
+    auth.isAdmin,
+  );
 }
 
 export async function attachBacktestToTemplateAction(

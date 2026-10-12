@@ -28,6 +28,7 @@ import {
   FolderPlus,
   Handshake,
   Inbox,
+  Info,
   Landmark,
   Layers,
   LayoutDashboard,
@@ -642,6 +643,13 @@ export const LUCIDE_ICONS = [
     usedIn: "Header account menu",
     Icon: User,
   },
+  {
+    id: "info",
+    name: "Parameters",
+    lucide: "Info",
+    usedIn: "Template parameter preview",
+    Icon: Info,
+  },
 ] as const satisfies readonly LucideIconEntry[];
 
 export function IconArchive(props: LucideProps) {
@@ -938,6 +946,10 @@ export function IconTemplates(props: LucideProps) {
 
 export function IconInbox(props: LucideProps) {
   return <Inbox aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconInfo(props: LucideProps) {
+  return <Info aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconUiPrefs(props: LucideProps) {

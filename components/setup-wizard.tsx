@@ -25,6 +25,7 @@ import {
   IconTour,
   IconTrash,
 } from "@/components/icons";
+import { TemplateNameWithParameters } from "@/components/template-parameters-tip";
 import {
   TABLE_ACTIONS_TD_CLASS,
   TABLE_ACTIONS_TH_CLASS,
@@ -828,7 +829,12 @@ function ReviewStep({
                       <ul className="space-y-1">
                         {row.bots.map((bot) => (
                           <li key={bot.templateId}>
-                            {bot.name}
+                            <TemplateNameWithParameters
+                              name={bot.name}
+                              recipe={starterRecipe(folders, bot.templateId)}
+                              templateId={bot.templateId}
+                              nameClassName=""
+                            />
                             {bot.start ? (
                               <span className="text-ink-muted"> · {bot.start}</span>
                             ) : null}
@@ -922,7 +928,12 @@ function TourReady({
                               : null;
                           return (
                             <li key={bot.templateId}>
-                              {bot.name}
+                              <TemplateNameWithParameters
+                                name={bot.name}
+                                recipe={starterRecipe(folders, bot.templateId)}
+                                templateId={bot.templateId}
+                                nameClassName=""
+                              />
                               {started ? (
                                 <span className="text-ink-muted"> · {started}</span>
                               ) : null}
@@ -1805,6 +1816,16 @@ function BotStep({
   );
 }
 
+function starterRecipe(folders: readonly StarterFolder[], templateId: string) {
+  for (const folder of folders) {
+    const match = folder.templates.find((row) => row.id === templateId);
+    if (match?.recipe) {
+      return match.recipe;
+    }
+  }
+  return null;
+}
+
 function StarterTemplateChoice({
   desk,
   template,
@@ -1836,7 +1857,12 @@ function StarterTemplateChoice({
             onChoose([...next]);
           }}
         />
-        {template.name}
+        <TemplateNameWithParameters
+          name={template.name}
+          recipe={template.recipe}
+          templateId={template.id}
+          nameClassName=""
+        />
       </label>
       {verb ? (
         <label

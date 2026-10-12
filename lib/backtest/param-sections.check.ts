@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
 import { parseDcaPlaybookForm } from "@/lib/dca/playbook";
-import { snapshotDcaRecipe, snapshotPerpsRecipe } from "@/lib/templates/recipe";
+import { defaultPaperLayer } from "@/lib/engine/rules";
+import {
+  snapshotDcaRecipe,
+  snapshotPaperRecipe,
+  snapshotPerpsRecipe,
+} from "@/lib/templates/recipe";
 import {
   backtestListedSections,
   recipeParamRows,
   recipeParamSections,
+  templateParamSections,
 } from "./param-sections";
 
 function dcaSeed() {
@@ -141,6 +147,44 @@ assert.equal(
 assert.equal(
   recipeParamRows(closeRecipe).find((row) => row.label === "Qty to close")?.value,
   "All",
+);
+
+assert.deepEqual(templateParamSections(dca), recipeParamSections(dca));
+
+const paper = snapshotPaperRecipe({
+  ...defaultPaperLayer(0),
+  name: "Core carry",
+  sizeType: "fixed",
+  exitSizeType: "fixed",
+  notionalUsdt: 250,
+  minNetApr: 0.1,
+  minDte: 7,
+  maxOpenCount: 2,
+  stopLossPct: -0.02,
+});
+const paperSections = templateParamSections(paper);
+assert.deepEqual(
+  paperSections.map((section) => section.title),
+  ["General", "Entry Conditions", "Position Sizing", "Exit Conditions"],
+);
+const paperRows = paperSections.flatMap((section) =>
+  section.groups.flatMap((group) => group.rows),
+);
+assert.equal(paperRows.find((row) => row.label === "Name")?.value, "Core carry");
+assert.equal(paperRows.find((row) => row.label === "Min APR %")?.value, "10%");
+assert.equal(paperRows.find((row) => row.label === "Min DTE")?.value, "7");
+assert.equal(paperRows.find((row) => row.label === "Max DTE")?.value, "Off");
+assert.equal(
+  paperRows.find((row) => row.label === "Order size (USDT)")?.value,
+  "250",
+);
+assert.equal(
+  paperRows.find((row) => row.label === "Take profit")?.value,
+  "Off",
+);
+assert.equal(
+  paperRows.find((row) => row.label === "Stop loss %")?.value,
+  "2%",
 );
 
 console.log("backtest param section checks passed");

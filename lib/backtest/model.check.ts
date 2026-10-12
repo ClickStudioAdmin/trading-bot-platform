@@ -30,6 +30,7 @@ import {
   backtestQueueSeedFromRun,
   backtestRoePct,
   backtestRunTitle,
+  templateBacktestLinks,
   comparableBacktestName,
   parseBacktestName,
   readBacktestName,
@@ -416,6 +417,85 @@ assert.equal(highlight.realizedUsdt, 22);
 assert.equal(highlight.returnPct, 0.022);
 assert.equal(highlight.roePct, 0.22);
 assert.ok(highlight.aprPct != null && highlight.aprPct > 0);
+
+const attachedRows = [
+  {
+    id: "older",
+    userId: "owner",
+    status: "done" as const,
+    name: "Dip 2024",
+    symbol: "BTCUSDT",
+    recipeName: "Dip buyer",
+    parentRunId: null,
+    fromMs: Date.UTC(2024, 0, 1),
+    toMs: Date.UTC(2024, 6, 1),
+    createdAtMs: 1,
+  },
+  {
+    id: "newer",
+    userId: "owner",
+    status: "done" as const,
+    name: null,
+    symbol: "BTCUSDT",
+    recipeName: "Dip buyer",
+    parentRunId: null,
+    fromMs: Date.UTC(2025, 0, 1),
+    toMs: Date.UTC(2025, 6, 1),
+    createdAtMs: 2,
+  },
+  {
+    id: "queued",
+    userId: "owner",
+    status: "queued" as const,
+    name: "Still running",
+    symbol: "BTCUSDT",
+    recipeName: "Dip buyer",
+    parentRunId: null,
+    fromMs: Date.UTC(2025, 0, 1),
+    toMs: Date.UTC(2025, 6, 1),
+    createdAtMs: 3,
+  },
+  {
+    id: "other",
+    userId: "someone-else",
+    status: "done" as const,
+    name: "Private",
+    symbol: "ETHUSDT",
+    recipeName: "Breakout",
+    parentRunId: null,
+    fromMs: Date.UTC(2023, 0, 1),
+    toMs: Date.UTC(2023, 6, 1),
+    createdAtMs: 4,
+  },
+  {
+    id: "published",
+    userId: null,
+    status: "done" as const,
+    name: "Published",
+    symbol: "ETHUSDT",
+    recipeName: "Breakout",
+    parentRunId: "parent",
+    fromMs: Date.UTC(2022, 0, 1),
+    toMs: Date.UTC(2022, 6, 1),
+    createdAtMs: 0,
+  },
+];
+const ownerLinks = templateBacktestLinks(attachedRows, "owner", false);
+assert.deepEqual(
+  ownerLinks.map((row) => row.runId),
+  ["newer", "older", "published"],
+);
+assert.equal(ownerLinks[0]?.name, "Dip buyer");
+assert.equal(ownerLinks[1]?.name, "Dip 2024");
+assert.equal(ownerLinks[2]?.name, "Published");
+assert.deepEqual(
+  templateBacktestLinks(attachedRows, "someone-else", false).map((row) => row.runId),
+  ["other", "published"],
+);
+assert.deepEqual(
+  templateBacktestLinks(attachedRows, "stranger", true).map((row) => row.runId),
+  ["other", "newer", "older", "published"],
+);
 const closedClip = [
   {
     atMs: 1,
