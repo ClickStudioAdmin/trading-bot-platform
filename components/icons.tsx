@@ -68,6 +68,7 @@ import {
   Star,
   Trash2,
   Triangle,
+  TriangleAlert,
   TrendingUp,
   Undo2,
   UnfoldVertical,
@@ -518,6 +519,13 @@ export const LUCIDE_ICONS = [
     Icon: Triangle,
   },
   {
+    id: "triangle-alert",
+    name: "Warning",
+    lucide: "TriangleAlert",
+    usedIn: "Privileges and usage when a cap is within 10% of its limit",
+    Icon: TriangleAlert,
+  },
+  {
     id: "trending-up",
     name: "Perps",
     lucide: "TrendingUp",
@@ -842,6 +850,10 @@ export function IconBybit(props: LucideProps) {
 
 export function IconHyperliquid(props: LucideProps) {
   return <Triangle aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconWarning(props: LucideProps) {
+  return <TriangleAlert strokeWidth={STROKE} {...props} />;
 }
 
 export function IconDca(props: LucideProps) {

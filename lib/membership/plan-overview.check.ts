@@ -3,6 +3,7 @@ import { emptyCaps, emptyFeatures, PLAN_COMPARE_SECTIONS } from "./catalog";
 import {
   overviewPlanGroups,
   planDeskCounts,
+  usageNearLimit,
   type PlanOverviewGroup,
   type PlanUsageCounts,
 } from "./plan-overview";
@@ -85,7 +86,7 @@ assert.equal(
 );
 assert.equal(
   line(groups, "Maximum Desks (any type)", "cap:max_paper_desks").over,
-  false,
+  true,
 );
 assert.equal(
   line(groups, "Maximum Desks (any type)", "cap:max_demo_desks").text,
@@ -116,6 +117,13 @@ assert.equal(
 );
 assert.equal(line(groups, "Backtesting", "cap:max_stored_backtests").text, "3 of 3");
 assert.equal(line(groups, "Backtesting", "cap:max_backtest_years").text, "2 years");
+assert.equal(usageNearLimit(8, 10), false);
+assert.equal(usageNearLimit(9, 10), true);
+assert.equal(usageNearLimit(67, 75), false);
+assert.equal(usageNearLimit(68, 75), true);
+assert.equal(usageNearLimit(496, 75), true);
+assert.equal(usageNearLimit(4, null), false);
+assert.equal(usageNearLimit(0, 0), false);
 assert.equal(line(groups, "Affiliates", "cap:affiliate_max_depth").text, "3");
 assert.equal(line(groups, "Affiliates", "rate:l1").text, "20%");
 assert.equal(line(groups, "Affiliates", "rate:l2").text, "Not included");

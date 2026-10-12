@@ -61,6 +61,17 @@ const COUNTED_CAPS = new Set<PlanCapKey>([
   "max_stored_backtests",
 ]);
 
+/** True once usage is within 10% of a finite cap, including past that cap. */
+export function usageNearLimit(used: number, limit: number | null): boolean {
+  if (limit == null) {
+    return false;
+  }
+  if (limit <= 0) {
+    return used > 0;
+  }
+  return used * 10 >= limit * 9;
+}
+
 export function emptyPlanUsageCounts(): PlanUsageCounts {
   return {
     max_paper_desks: 0,
@@ -290,7 +301,7 @@ function usageLine(
     label,
     text: `${used} of ${limitText}${activeTrial ? " · trial" : ""}`,
     included: false,
-    over: limit != null && used > limit,
+    over: usageNearLimit(used, limit),
     note: cap === "max_followers_accepted" ? "Highest on one desk" : null,
     trial,
   };
