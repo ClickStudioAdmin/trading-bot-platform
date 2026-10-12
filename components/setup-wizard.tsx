@@ -1815,7 +1815,7 @@ function BotStep({
             <tr>
               <th className="px-3 py-2 font-medium">Desk</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Type</th>
-              <th className="px-3 py-2 font-medium">Bot</th>
+              <th className="px-3 py-2 font-medium">Bots</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Mode</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">
                 Initial Status
@@ -1823,9 +1823,12 @@ function BotStep({
             </tr>
           </thead>
           <tbody>
-            {rows.flatMap((desk) => {
+            {rows.map((desk) => {
               const details = setupDeskDetails(desk);
               const deskType = formatDeskType(desk.deskType);
+              const templates = foldersForDesk(folders, desk.deskType).flatMap(
+                (folder) => folder.templates,
+              );
               function choose(templateIds: string[]) {
                 onChange(desk.key, {
                   templateIds,
@@ -1837,52 +1840,62 @@ function BotStep({
                   }),
                 });
               }
-              return foldersForDesk(folders, desk.deskType).flatMap((folder) =>
-                folder.templates.map((template) => (
-                  <tr
-                    key={`${desk.key}:${template.id}`}
-                    className="border-b border-line last:border-b-0"
-                  >
-                    <td className="px-3 py-2 text-ink">{desk.name}</td>
-                    <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
-                      {deskType}
-                    </td>
-                    <td className="px-3 py-2 text-ink">
-                      <label className="inline-flex items-center gap-2">
-                        <AppCheck
-                          checked={desk.templateIds.includes(template.id)}
-                          className=""
-                          onChange={() => {
-                            const next = new Set(desk.templateIds);
-                            if (next.has(template.id)) {
-                              next.delete(template.id);
-                            } else {
-                              next.add(template.id);
-                            }
-                            choose([...next]);
-                          }}
-                        />
-                        <TemplateNameWithParameters
-                          name={template.name}
-                          recipe={template.recipe}
-                          templateId={template.id}
-                          nameClassName=""
-                        />
-                      </label>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
-                      {details.mode}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2">
-                      <StarterInitialStatus
-                        desk={desk}
-                        templateId={template.id}
-                        templateName={template.name}
-                        onChange={onChange}
-                      />
-                    </td>
-                  </tr>
-                )),
+              return (
+                <tr
+                  key={desk.key}
+                  className="border-b border-line last:border-b-0"
+                >
+                  <td className="px-3 py-2 align-top text-ink">{desk.name}</td>
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
+                    {deskType}
+                  </td>
+                  <td className="px-3 py-2 align-top text-ink">
+                    <ul className="space-y-2">
+                      {templates.map((template) => (
+                        <li key={template.id} className="flex min-h-10 items-center">
+                          <label className="inline-flex items-center gap-2">
+                            <AppCheck
+                              checked={desk.templateIds.includes(template.id)}
+                              className=""
+                              onChange={() => {
+                                const next = new Set(desk.templateIds);
+                                if (next.has(template.id)) {
+                                  next.delete(template.id);
+                                } else {
+                                  next.add(template.id);
+                                }
+                                choose([...next]);
+                              }}
+                            />
+                            <TemplateNameWithParameters
+                              name={template.name}
+                              recipe={template.recipe}
+                              templateId={template.id}
+                              nameClassName=""
+                            />
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
+                    {details.mode}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 align-top">
+                    <ul className="space-y-2">
+                      {templates.map((template) => (
+                        <li key={template.id} className="flex min-h-10 items-center">
+                          <StarterInitialStatus
+                            desk={desk}
+                            templateId={template.id}
+                            templateName={template.name}
+                            onChange={onChange}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+                </tr>
               );
             })}
           </tbody>
