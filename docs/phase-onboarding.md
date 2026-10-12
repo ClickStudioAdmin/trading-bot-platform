@@ -99,7 +99,7 @@ Always step 2. It starts with the same kind of choice as desks:
 
 If they chose no desks, this step does not offer those three. It says bots need a desk, with Back or continue to Review.
 
-If they chose only Perps and/or TradingView Strategy, or an automated type with no flagged folder or template, the choice still appears and says there is nothing to load. Do not show an empty required picker. The done summary still says ticket and alert desks have no starter bots. Bot rows are applied when they click **Create**, after the desks exist.
+The Load starter bots choice has no line under the title. If they chose only Perps and/or TradingView Strategy, or an automated type with no flagged folder or template, the same three choices still appear. Choosing manual then says there is nothing to load. Do not show an empty required picker. The done summary still says ticket and alert desks have no starter bots. Bot rows are applied when they click **Create**, after the desks exist.
 
 Source:
 
