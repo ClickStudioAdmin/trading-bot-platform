@@ -161,3 +161,53 @@ assert.equal(line(closed, "Copy Trading", "cap:max_followers_accepted").note, nu
 assert.equal(line(closed, "Backtesting", "cap:max_backtest_years").text, "Not included");
 assert.ok(closed.find((group) => group.title === "Replay Studio"));
 assert.equal(closed.length, PLAN_COMPARE_SECTIONS.length);
+
+const trialFeatures = emptyFeatures();
+const trialCaps = emptyCaps();
+trialCaps.max_stored_backtests = 0;
+trialCaps.max_backtest_years = 1;
+const trialPlan = {
+  features: trialFeatures,
+  caps: trialCaps,
+  trials: {
+    features: { research_backtest: { days: 14 }, replay_backtests: { days: 14 } },
+    caps: {
+      max_stored_backtests: { days: 14, limit: 3 },
+      max_backtest_years: { days: 14, limit: 3 },
+    },
+  },
+  affiliateL1Pct: 0,
+  affiliateL2Pct: 0,
+  affiliateL3Pct: 0,
+  affiliateL4Pct: 0,
+  affiliateL5Pct: 0,
+};
+const openTrials = overviewPlanGroups(trialPlan, usage, {
+  grants: [
+    { key: "research_backtest", startedAt: "2026-10-01T00:00:00.000Z", endsAt: "2026-10-15T00:00:00.000Z" },
+    { key: "replay_backtests", startedAt: "2026-09-01T00:00:00.000Z", endsAt: "2026-09-15T00:00:00.000Z" },
+    { key: "max_stored_backtests", startedAt: "2026-10-01T00:00:00.000Z", endsAt: "2026-10-15T00:00:00.000Z" },
+    { key: "max_backtest_years", startedAt: "2026-09-01T00:00:00.000Z", endsAt: "2026-09-15T00:00:00.000Z" },
+  ],
+  nowMs: Date.parse("2026-10-09T00:00:00.000Z"),
+});
+assert.equal(
+  line(openTrials, "Backtesting", "feature:research_backtest").text,
+  "14-day trial",
+);
+assert.equal(
+  line(openTrials, "Backtesting", "feature:research_backtest").trial?.phase,
+  "active",
+);
+assert.equal(
+  line(openTrials, "Replay Studio", "feature:replay_backtests").text,
+  "Trial ended",
+);
+assert.equal(
+  line(openTrials, "Backtesting", "cap:max_stored_backtests").text,
+  "3 of 3 · trial",
+);
+const years = line(openTrials, "Backtesting", "cap:max_backtest_years");
+assert.equal(years.text, "1 year");
+assert.equal(years.trial?.phase, "ended");
+assert.equal(years.trial?.emphasize, false);

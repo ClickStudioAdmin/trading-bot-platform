@@ -7,6 +7,7 @@ import {
   getMemberPlanId,
   listMembershipPlans,
 } from "@/lib/membership/store";
+import { ensureMemberTrialGrants } from "@/lib/membership/trial-store";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -29,6 +30,15 @@ export default async function AccountPlansPage() {
         includePreviewDrafts: member.role === "admin",
       })
     : [];
+  const current = currentPlanId
+    ? plans.find((plan) => plan.id === currentPlanId) ?? null
+    : null;
+  const granted = current
+    ? await ensureMemberTrialGrants({
+        userId: member.id,
+        plan: current,
+      })
+    : null;
   return (
     <div>
       <PageHeading title="Plans" />
@@ -41,6 +51,8 @@ export default async function AccountPlansPage() {
         plans={plans}
         currentPlanId={currentPlanId}
         checkout
+        trialGrants={granted?.ok ? granted.grants : []}
+        nowMs={granted?.ok ? granted.nowMs : 0}
       />
     </div>
   );

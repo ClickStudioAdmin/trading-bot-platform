@@ -11,6 +11,12 @@ import {
   type PlanCompareCell,
   type PlanCompareRow,
 } from "@/lib/membership/catalog";
+import { PlanTrialHint, trialEmphasisClass } from "@/components/plan-trial-hint";
+import {
+  grantForKey,
+  trialMark,
+  type MemberTrialGrant,
+} from "@/lib/membership/trials";
 
 type CompareBlock =
   | { type: "header" }
@@ -38,11 +44,15 @@ export function MembershipPlanCards({
   currentPlanId,
   checkout = false,
   joinHref = null,
+  trialGrants = [],
+  nowMs,
 }: {
   plans: MembershipPlan[];
   currentPlanId: string | null;
   checkout?: boolean;
   joinHref?: string | null;
+  trialGrants?: readonly MemberTrialGrant[];
+  nowMs: number;
 }) {
   if (plans.length === 0) {
     return (
@@ -97,6 +107,8 @@ export function MembershipPlanCards({
                   current={current}
                   checkout={checkout}
                   joinHref={joinHref}
+                  trialGrants={current ? trialGrants : []}
+                  nowMs={nowMs}
                 />
               ))}
             </div>
@@ -143,12 +155,16 @@ function PlanCell({
   current,
   checkout,
   joinHref,
+  trialGrants,
+  nowMs,
 }: {
   block: CompareBlock;
   plan: MembershipPlan;
   current: boolean;
   checkout: boolean;
   joinHref: string | null;
+  trialGrants: readonly MemberTrialGrant[];
+  nowMs: number;
 }) {
   if (block.type === "header") {
     return (
@@ -227,9 +243,26 @@ function PlanCell({
       </div>
     );
   }
+  const mark = trialMark({
+    plan,
+    row: block.row,
+    grant: current ? grantForKey(trialGrants, block.row.key) : null,
+    nowMs,
+  });
   return (
-    <div className="flex items-center justify-center px-3 py-2">
-      <CompareMark cell={comparePlanCell(plan, block.row)} />
+    <div className="flex flex-col items-center justify-center gap-1 px-3 py-2">
+      {mark && !mark.keepStanding ? null : (
+        <CompareMark cell={comparePlanCell(plan, block.row)} />
+      )}
+      {mark ? (
+        <PlanTrialHint
+          phase={mark.phase}
+          endsAt={mark.endsAt}
+          className={`text-center text-xs font-medium ${trialEmphasisClass(mark.phase)}`}
+        >
+          {mark.label}
+        </PlanTrialHint>
+      ) : null}
     </div>
   );
 }

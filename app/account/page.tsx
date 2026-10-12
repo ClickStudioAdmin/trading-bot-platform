@@ -8,6 +8,7 @@ import {
 } from "@/components/crypto-wallet-panel";
 import { DeskTypeMark } from "@/components/desk-mark";
 import { IconCheck } from "@/components/icons";
+import { PlanTrialHint, trialEmphasisClass } from "@/components/plan-trial-hint";
 import { ContainerLoading } from "@/components/container-loading";
 import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
@@ -54,13 +55,15 @@ import {
   type SubscriptionStatus,
 } from "@/lib/membership/billing";
 import { getMemberBilling } from "@/lib/membership/billing-store";
-import { planIsArchived } from "@/lib/membership/catalog";
+import { planIsArchived, type MembershipPlan } from "@/lib/membership/catalog";
 import {
   overviewPlanGroups,
   type PlanOverviewGroup,
 } from "@/lib/membership/plan-overview";
 import { loadPlanUsageCounts } from "@/lib/membership/plan-usage";
 import { getMembershipPlan } from "@/lib/membership/store";
+import { ensureMemberTrialGrants } from "@/lib/membership/trial-store";
+import type { MemberTrialGrant } from "@/lib/membership/trials";
 import {
   pendingMainWithdrawUsd,
   walletBookBalances,
@@ -136,11 +139,11 @@ export default async function AccountOverviewPage() {
   const futuresIds = inPlay
     .filter((desk) => desk.deskType !== "cash_and_carry")
     .map((desk) => desk.id);
-  const [deskStats, planResult, books, pendingWithdrawUsd, planUsage] =
+  const [deskStats, planBundle, books, pendingWithdrawUsd, planUsage] =
     await Promise.all([
       loadFuturesDeskStats(futuresIds),
       billing?.planId
-        ? getMembershipPlan(billing.planId)
+        ? loadPlanWithTrials(member.id, billing.planId)
         : Promise.resolve(null),
       billing ? walletBookBalances(member.id) : Promise.resolve(null),
       billing ? pendingMainWithdrawUsd(member.id) : Promise.resolve(0),
@@ -152,7 +155,9 @@ export default async function AccountOverviewPage() {
           })
         : Promise.resolve(null),
     ]);
-  const planRecord = planResult?.ok ? planResult.plan : null;
+  const planRecord = planBundle?.plan ?? null;
+  const trialGrants = planBundle?.grants ?? [];
+  const trialNowMs = planBundle?.nowMs ?? 0;
   const subscription = billing
     ? memberSubscriptionSummary({
         planName: planRecord?.name ?? null,
@@ -308,7 +313,12 @@ export default async function AccountOverviewPage() {
       ) : null}
 
       {planRecord && planUsage ? (
-        <PlanPrivileges groups={overviewPlanGroups(planRecord, planUsage)} />
+        <PlanPrivileges
+          groups={overviewPlanGroups(planRecord, planUsage, {
+            grants: trialGrants,
+            nowMs: trialNowMs,
+          })}
+        />
       ) : null}
 
       <section>
@@ -674,7 +684,11 @@ function PlanPrivileges({ groups }: { groups: PlanOverviewGroup[] }) {
                     <dt className="text-ink">{line.label}</dt>
                     <dd
                       className={`tabular-nums ${
-                        line.over ? "text-warning" : "text-ink-muted"
+                        line.trial?.emphasize
+                          ? ""
+                          : line.over
+                            ? "text-warning"
+                            : "text-ink-muted"
                       }`}
                     >
                       {line.included ? (
@@ -684,6 +698,18 @@ function PlanPrivileges({ groups }: { groups: PlanOverviewGroup[] }) {
                         >
                           <IconCheck size={16} className="size-4" />
                         </span>
+                      ) : line.trial ? (
+                        <PlanTrialHint
+                          phase={line.trial.phase}
+                          endsAt={line.trial.endsAt}
+                          className={
+                            line.trial.emphasize
+                              ? trialEmphasisClass(line.trial.phase)
+                              : undefined
+                          }
+                        >
+                          {line.text}
+                        </PlanTrialHint>
                       ) : (
                         line.text
                       )}
@@ -700,6 +726,29 @@ function PlanPrivileges({ groups }: { groups: PlanOverviewGroup[] }) {
       </div>
     </section>
   );
+}
+
+async function loadPlanWithTrials(
+  userId: string,
+  planId: string,
+): Promise<{
+  plan: MembershipPlan;
+  grants: MemberTrialGrant[];
+  nowMs: number;
+} | null> {
+  const loaded = await getMembershipPlan(planId);
+  if (!loaded.ok) {
+    return null;
+  }
+  const granted = await ensureMemberTrialGrants({
+    userId,
+    plan: loaded.plan,
+  });
+  return {
+    plan: loaded.plan,
+    grants: granted.ok ? granted.grants : [],
+    nowMs: granted.ok ? granted.nowMs : 0,
+  };
 }
 
 function subscriptionStatusClass(status: SubscriptionStatus | null): string {

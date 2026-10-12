@@ -25,6 +25,7 @@ import {
   type MembershipPlan,
 } from "./catalog";
 import { clonePlanValues, parsePlanForm, parsePlanId } from "./form";
+import { emptyPlanTrials } from "./trials";
 
 assert.equal(emptyFeatures().desk_dca, false);
 assert.equal(emptyCaps().max_demo_desks, null);
@@ -191,6 +192,7 @@ const archived: MembershipPlan = {
   affiliateL5Pct: 0,
   features: emptyFeatures(),
   caps: emptyCaps(),
+  trials: emptyPlanTrials(),
   createdAt: "2026-09-11T00:00:00Z",
   updatedAt: "2026-09-11T00:00:00Z",
   memberCount: 0,
