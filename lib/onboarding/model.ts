@@ -81,6 +81,8 @@ export type SetupDesk = {
   connectionId: string | null;
   bindLater: boolean;
   templateIds: string[];
+  /** Selected templates to arm or enable when setup creates them. */
+  armTemplateIds: string[];
   accountId: string | null;
 };
 
@@ -216,6 +218,50 @@ export function starterDeskTypeFor(deskType: DeskType): StarterDeskType | null {
   return null;
 }
 
+/** DCA arms. Perps bots and Cash and Carry enable. Other desks have no starter bots. */
+export function starterStartVerb(deskType: DeskType): "Arm" | "Enable" | null {
+  if (deskType === "dca") {
+    return "Arm";
+  }
+  if (deskType === "perps_bots" || deskType === "cash_and_carry") {
+    return "Enable";
+  }
+  return null;
+}
+
+export function starterStartedWord(deskType: DeskType): "Armed" | "Enabled" | null {
+  const verb = starterStartVerb(deskType);
+  if (verb === "Arm") {
+    return "Armed";
+  }
+  if (verb === "Enable") {
+    return "Enabled";
+  }
+  return null;
+}
+
+/** A Connected desk can start a bot only after a key is saved. */
+export function setupDeskCanStartBots(desk: {
+  mode: "paper" | "live";
+  connectionId: string | null;
+}): boolean {
+  return desk.mode === "paper" || Boolean(desk.connectionId);
+}
+
+/** Arm ticks that still match a selected template on a desk that can start bots. */
+export function keptArmTemplateIds(desk: {
+  mode: "paper" | "live";
+  connectionId: string | null;
+  templateIds: readonly string[];
+  armTemplateIds: readonly string[];
+}): string[] {
+  if (!setupDeskCanStartBots(desk)) {
+    return [];
+  }
+  const selected = new Set(desk.templateIds);
+  return desk.armTemplateIds.filter((id) => selected.has(id));
+}
+
 export function defaultSetupName(deskType: DeskType, mode: "paper" | "live"): string {
   const suffix = mode === "paper" ? "Paper" : "Connected";
   return `${formatDeskType(deskType)} ${suffix}`.slice(0, 40).trim();
@@ -311,6 +357,7 @@ export function makeSetupDesk(input: {
     connectionId: null,
     bindLater: input.mode === "live",
     templateIds: [],
+    armTemplateIds: [],
     accountId: null,
   };
 }
@@ -413,6 +460,13 @@ export function setupDeskFromDetails(input: {
       connectionId,
       bindLater: input.mode === "live" && !connectionId,
       templateIds: previous?.templateIds ?? [],
+      armTemplateIds: keptArmTemplateIds({
+        mode: input.mode,
+        connectionId,
+        templateIds: previous?.deskType === input.deskType ? (previous?.templateIds ?? []) : [],
+        armTemplateIds:
+          previous?.deskType === input.deskType ? (previous?.armTemplateIds ?? []) : [],
+      }),
       accountId: previous?.key === key ? previous.accountId : null,
     },
   };
@@ -583,6 +637,7 @@ function parseSetupDesk(
     !takenKeys.includes(row.key)
       ? row.key
       : allocateSetupDeskKey(typed.deskType, mode, takenKeys);
+  const templateIds = asStringList(row.templateIds, 40);
   return {
     ok: true,
     desk: {
@@ -595,7 +650,13 @@ function parseSetupDesk(
       environmentId,
       connectionId,
       bindLater: mode === "paper" ? false : row.bindLater !== false && !connectionId,
-      templateIds: asStringList(row.templateIds, 40),
+      templateIds,
+      armTemplateIds: keptArmTemplateIds({
+        mode,
+        connectionId,
+        templateIds,
+        armTemplateIds: asStringList(row.armTemplateIds, 40),
+      }),
       accountId,
     },
   };
@@ -842,7 +903,11 @@ export function applyBotSetupChoice(input: {
   folders: readonly StarterFolder[];
 }): SetupDesk[] {
   if (input.choice === "none") {
-    return input.desks.map((desk) => ({ ...desk, templateIds: [] }));
+    return input.desks.map((desk) => ({
+      ...desk,
+      templateIds: [],
+      armTemplateIds: [],
+    }));
   }
   if (input.choice === "all") {
     return input.desks.map((desk) => ({
@@ -850,9 +915,13 @@ export function applyBotSetupChoice(input: {
       templateIds: foldersForDesk(input.folders, desk.deskType).flatMap(
         (folder) => folder.templates.map((template) => template.id),
       ),
+      armTemplateIds: [],
     }));
   }
-  return [...input.desks];
+  return input.desks.map((desk) => ({
+    ...desk,
+    armTemplateIds: keptArmTemplateIds(desk),
+  }));
 }
 
 export function setupScreens(input: {
@@ -1086,7 +1155,11 @@ export function validateSetupForFinish(input: {
   if (reuse) {
     return { ok: false, error: reuse };
   }
-  for (const desk of input.draft.desks) {
+  const desks = input.draft.desks.map((desk) => ({
+    ...desk,
+    armTemplateIds: keptArmTemplateIds(desk),
+  }));
+  for (const desk of desks) {
     if (desk.mode === "live" && !desk.bindLater && !desk.connectionId) {
       return {
         ok: false,
@@ -1108,7 +1181,7 @@ export function validateSetupForFinish(input: {
       }
     }
   }
-  return { ok: true, draft: input.draft };
+  return { ok: true, draft: { ...input.draft, desks } };
 }
 
 export function tourTargetForPath(href: string): string | null {
@@ -1370,8 +1443,8 @@ export function buildTourSteps(desks: readonly TourDesk[]): TourStep[] {
     steps.push({
       id: "bots",
       title: "Bots",
-      headline: "Bots loaded in setup are idle or disabled.",
-      body: "Arm or Enable is a separate action. The app places orders only after that.",
+      headline: "Bots stay idle or disabled unless you ticked Arm or Enable.",
+      body: "That tick starts the bot. The app places orders only after a bot is armed or enabled.",
       href: pathWithDesk(home, bot.id),
       target: "bots",
     });

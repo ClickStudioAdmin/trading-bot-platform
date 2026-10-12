@@ -20,6 +20,7 @@ import {
   draftHasSecret,
   emptySetupDraft,
   foldersForDesk,
+  keptArmTemplateIds,
   makeSetupDesk,
   ONBOARDING_DESK_TYPES,
   onboardingFolders,
@@ -39,6 +40,7 @@ import {
   setupStepLabel,
   shouldOfferTour,
   showsBotStep,
+  starterStartVerb,
   starterTemplateAllowed,
   statusAfterExternalDesk,
   validateSetupForFinish,
@@ -518,7 +520,42 @@ assert.equal(applyBotSetupChoice({
   choice: "none",
   desks: withBots,
   folders: [dcaFolder],
-}).every((desk) => desk.templateIds.length === 0), true);
+}).every((desk) => desk.templateIds.length === 0 && desk.armTemplateIds.length === 0), true);
+const armId = dcaFolder.templates[0].id;
+const armedPaper = {
+  ...paper,
+  templateIds: [armId],
+  armTemplateIds: [armId, "not-selected"],
+};
+assert.deepEqual(
+  applyBotSetupChoice({
+    choice: "all",
+    desks: [armedPaper],
+    folders: [dcaFolder],
+  })[0]?.armTemplateIds,
+  [],
+);
+assert.deepEqual(
+  applyBotSetupChoice({
+    choice: "manual",
+    desks: [armedPaper],
+    folders: [dcaFolder],
+  })[0]?.armTemplateIds,
+  [armId],
+);
+assert.deepEqual(
+  keptArmTemplateIds({
+    mode: "live",
+    connectionId: null,
+    templateIds: [armId],
+    armTemplateIds: [armId],
+  }),
+  [],
+);
+assert.equal(starterStartVerb("dca"), "Arm");
+assert.equal(starterStartVerb("perps_bots"), "Enable");
+assert.equal(starterStartVerb("cash_and_carry"), "Enable");
+assert.equal(starterStartVerb("perps"), null);
 assert.equal(
   setupScreenId(
     activeSetupScreen(

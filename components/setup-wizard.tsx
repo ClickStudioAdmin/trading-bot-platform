@@ -40,12 +40,16 @@ import {
   botsEmptyNote,
   createdStarterBots,
   foldersForDesk,
+  keptArmTemplateIds,
   makeSetupDesk,
   paperVenuesFor,
   setupDeskDetails,
   setupDeskFromDetails,
   setupScreenId,
+  setupDeskCanStartBots,
   setupScreens,
+  starterStartedWord,
+  starterStartVerb,
   setupStepLabel,
   starterBotDesks,
   validateSetupNames,
@@ -488,7 +492,7 @@ export function SetupWizard({
             {
               value: "manual",
               title: "Manually select starter bots",
-              detail: "Choose folders and bots for each desk.",
+              detail: "Choose folders and bots for each desk, and which of those bots to start.",
             },
             {
               value: "none",
@@ -682,12 +686,23 @@ function TourReady({
         <div className="mt-4">
           <h3 className="text-sm font-medium text-ink">Bots</h3>
           <ul className="mt-1 space-y-1 text-sm text-ink">
-            {bots.map((bot) => (
-              <li key={`${bot.deskName}:${bot.templateId}`}>
-                {bot.botName}
-                <span className="text-ink-muted"> · {bot.deskName}</span>
-              </li>
-            ))}
+            {bots.map((bot) => {
+              const home = desks.find((row) => row.name === bot.deskName);
+              const started =
+                home && home.armTemplateIds.includes(bot.templateId)
+                  ? starterStartedWord(home.deskType)
+                  : null;
+              return (
+                <li key={`${bot.deskName}:${bot.templateId}`}>
+                  {bot.botName}
+                  <span className="text-ink-muted">
+                    {" "}
+                    · {bot.deskName}
+                    {started ? ` · ${started}` : ""}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : desks.length > 0 ? (
@@ -1480,6 +1495,7 @@ function BotStep({
   if (!desk) {
     return null;
   }
+  const current = desk;
   return (
     <section className="space-y-4">
       <div>
@@ -1488,8 +1504,9 @@ function BotStep({
         </h2>
         <p className="mt-2 text-sm text-ink-muted">
           These are platform templates and folders marked Include in Starter Pack.
-          DCA bots stay idle. Perps bots and Cash and Carry stay disabled.
-          Nothing trades until you arm or enable them.
+          Tick Arm on a DCA bot, or Enable on a Perps bots or Cash and Carry bot,
+          to start it when setup finishes. Leave it clear and the bot stays idle
+          or disabled.
         </p>
       </div>
       <div>
@@ -1499,28 +1516,28 @@ function BotStep({
               const ids = folder.templates.map((template) => template.id);
               const selected = ids.filter((id) => desk.templateIds.includes(id));
               const all = selected.length === ids.length;
+              function choose(templateIds: string[]) {
+                onChange(current.key, {
+                  templateIds,
+                  armTemplateIds: keptArmTemplateIds({
+                    mode: current.mode,
+                    connectionId: current.connectionId,
+                    templateIds,
+                    armTemplateIds: current.armTemplateIds,
+                  }),
+                });
+              }
               if (folder.loose) {
                 return (
                   <ul key={folder.id} className="space-y-1">
                     {folder.templates.map((template) => (
-                      <li key={template.id}>
-                        <label className="inline-flex items-center gap-2 text-sm text-ink">
-                          <input
-                            type="checkbox"
-                            checked={desk.templateIds.includes(template.id)}
-                            onChange={() => {
-                              const next = new Set(desk.templateIds);
-                              if (next.has(template.id)) {
-                                next.delete(template.id);
-                              } else {
-                                next.add(template.id);
-                              }
-                              onChange(desk.key, { templateIds: [...next] });
-                            }}
-                          />
-                          {template.name}
-                        </label>
-                      </li>
+                      <StarterTemplateChoice
+                        key={template.id}
+                        desk={desk}
+                        template={template}
+                        onChoose={choose}
+                        onChange={onChange}
+                      />
                     ))}
                   </ul>
                 );
@@ -1532,41 +1549,24 @@ function BotStep({
                       type="checkbox"
                       checked={all && ids.length > 0}
                       onChange={() => {
-                        const next = new Set(desk.templateIds);
                         if (all) {
-                          for (const id of ids) {
-                            next.delete(id);
-                          }
-                        } else {
-                          for (const id of ids) {
-                            next.add(id);
-                          }
+                          choose(desk.templateIds.filter((id) => !ids.includes(id)));
+                          return;
                         }
-                        onChange(desk.key, { templateIds: [...next] });
+                        choose([...new Set([...desk.templateIds, ...ids])]);
                       }}
                     />
                     {folder.name}
                   </label>
                   <ul className="mt-2 space-y-1 pl-6">
                     {folder.templates.map((template) => (
-                      <li key={template.id}>
-                        <label className="inline-flex items-center gap-2 text-sm text-ink">
-                          <input
-                            type="checkbox"
-                            checked={desk.templateIds.includes(template.id)}
-                            onChange={() => {
-                              const next = new Set(desk.templateIds);
-                              if (next.has(template.id)) {
-                                next.delete(template.id);
-                              } else {
-                                next.add(template.id);
-                              }
-                              onChange(desk.key, { templateIds: [...next] });
-                            }}
-                          />
-                          {template.name}
-                        </label>
-                      </li>
+                      <StarterTemplateChoice
+                        key={template.id}
+                        desk={desk}
+                        template={template}
+                        onChoose={choose}
+                        onChange={onChange}
+                      />
                     ))}
                   </ul>
                 </fieldset>
@@ -1575,5 +1575,74 @@ function BotStep({
           </div>
         </div>
     </section>
+  );
+}
+
+function StarterTemplateChoice({
+  desk,
+  template,
+  onChoose,
+  onChange,
+}: {
+  desk: SetupDesk;
+  template: StarterFolder["templates"][number];
+  onChoose: (templateIds: string[]) => void;
+  onChange: (key: string, patch: Partial<SetupDesk>) => void;
+}) {
+  const verb = starterStartVerb(desk.deskType);
+  const selected = desk.templateIds.includes(template.id);
+  const canStart = setupDeskCanStartBots(desk);
+  const armed = selected && desk.armTemplateIds.includes(template.id);
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+      <label className="inline-flex items-center gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => {
+            const next = new Set(desk.templateIds);
+            if (next.has(template.id)) {
+              next.delete(template.id);
+            } else {
+              next.add(template.id);
+            }
+            onChoose([...next]);
+          }}
+        />
+        {template.name}
+      </label>
+      {verb ? (
+        <label
+          className={
+            selected && canStart
+              ? "inline-flex items-center gap-2 text-sm text-ink-muted"
+              : "inline-flex items-center gap-2 text-sm text-ink-faint"
+          }
+          title={
+            canStart
+              ? verb === "Arm"
+                ? "Arm this bot when setup finishes. An immediate start can place the first order."
+                : "Enable this bot when setup finishes."
+              : "Bind a key before this bot can start."
+          }
+        >
+          <input
+            type="checkbox"
+            checked={armed}
+            disabled={!selected || !canStart}
+            onChange={() => {
+              const next = new Set(desk.armTemplateIds);
+              if (next.has(template.id)) {
+                next.delete(template.id);
+              } else {
+                next.add(template.id);
+              }
+              onChange(desk.key, { armTemplateIds: [...next] });
+            }}
+          />
+          {verb}
+        </label>
+      ) : null}
+    </li>
   );
 }
