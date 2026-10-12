@@ -28,14 +28,7 @@ assert.equal(CRITICAL_LOG_EVENTS.includes("trade.futures_working_failed"), true)
 assert.equal(
   criticalDeskHref({
     id: "11111111-1111-4111-8111-111111111111",
-    userId: "u",
-    name: "Live",
-    mode: "live",
     deskType: "dca",
-    venue: "bybit",
-    venueEnvironment: "demo",
-    copyOfAccountId: null,
-    createdAtMs: 0,
   }).includes("/strategies/futures/activity"),
   true,
 );

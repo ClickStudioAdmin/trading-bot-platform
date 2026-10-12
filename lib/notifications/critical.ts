@@ -147,18 +147,26 @@ export async function watchOperatorGasWallets(): Promise<number> {
   return low;
 }
 
-export async function countMemberDeskCritical(
+export async function listMemberCriticalAccountIds(
   userId: string,
   liveAccountIds: readonly string[],
-): Promise<number> {
+): Promise<string[]> {
   if (!userId || liveAccountIds.length === 0) {
-    return 0;
+    return [];
   }
   const ids = await loadCriticalAccountIds({
     userId,
     accountIds: liveAccountIds,
   });
-  return ids.size;
+  return [...ids];
+}
+
+export async function countMemberDeskCritical(
+  userId: string,
+  liveAccountIds: readonly string[],
+): Promise<number> {
+  const ids = await listMemberCriticalAccountIds(userId, liveAccountIds);
+  return ids.length;
 }
 
 export async function countAdminDeskCritical(): Promise<number> {

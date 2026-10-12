@@ -1,4 +1,4 @@
-import { pathWithDesk, type TradingAccount } from "@/lib/accounts/model";
+import { pathWithDesk, type DeskType } from "@/lib/accounts/model";
 import { getVenue } from "@/lib/exchanges/venues";
 
 export const CRITICAL_LOG_EVENTS = [
@@ -23,7 +23,10 @@ export function repeatingOrderShouldNotify(recentCount: number): boolean {
   return recentCount >= 2;
 }
 
-export function criticalDeskHref(desk: TradingAccount): string {
+export function criticalDeskHref(desk: {
+  id: string;
+  deskType: DeskType;
+}): string {
   const base =
     desk.deskType === "cash_and_carry"
       ? "/strategies/cash-and-carry/activity"

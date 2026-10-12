@@ -10,7 +10,7 @@ import {
   type TradingAccountMode,
 } from "@/lib/accounts/model";
 import { memberDisplayName } from "@/lib/members/sync";
-import { parseAutomationMode } from "@/lib/engine/decide";
+import { countArmedRules } from "@/lib/accounts/overview";
 import { selectPaperEngineSettings } from "@/lib/engine/settings";
 import {
   connectionFitsDesk,
@@ -277,6 +277,7 @@ export type AccountUsage = {
   carryOpenCount: number;
   futuresOpenCount: number;
   workingCount: number;
+  botsOn: number;
   automationsRunning: boolean;
   reduceOnly: boolean;
   strategyConnectionId: string | null;
@@ -295,6 +296,7 @@ export async function loadAccountUsage(
       carryOpenCount: 0,
       futuresOpenCount: 0,
       workingCount: 0,
+      botsOn: 0,
       automationsRunning: false,
       reduceOnly: false,
       strategyConnectionId: null,
@@ -364,24 +366,29 @@ export async function loadAccountUsage(
       .filter((row) => Boolean(row.reduce_only))
       .map((row) => String(row.account_id)),
   );
-  const runningIds = new Set<string>();
-  for (const row of ruleRows) {
+  const ruleModes = new Map<string, unknown[]>();
+  function pushRuleMode(row: Record<string, unknown>) {
     const id = String(row.account_id ?? "");
-    if (id && parseAutomationMode(row.mode) !== "disabled") {
-      runningIds.add(id);
+    if (!id) {
+      return;
     }
+    const modes = ruleModes.get(id) ?? [];
+    modes.push(row.mode);
+    ruleModes.set(id, modes);
+  }
+  for (const row of ruleRows) {
+    pushRuleMode(row);
   }
   for (const row of futuresRuleRows) {
-    const id = String(row.account_id ?? "");
-    if (id && parseAutomationMode(row.mode) !== "disabled") {
-      runningIds.add(id);
-    }
+    pushRuleMode(row);
   }
+  const dcaBotCount = new Map<string, number>();
   for (const row of dcaRows.data ?? []) {
     const id = String((row as { account_id?: string }).account_id ?? "");
-    if (id) {
-      runningIds.add(id);
+    if (!id) {
+      continue;
     }
+    dcaBotCount.set(id, (dcaBotCount.get(id) ?? 0) + 1);
   }
   const connectionByAccount = new Map<string, string>();
   for (const row of settings) {
@@ -396,13 +403,17 @@ export async function loadAccountUsage(
     const futures = futuresOpenCount.get(account.id) ?? 0;
     const working = workingCount.get(account.id) ?? 0;
     const opens = carries + futures;
-    const automationsRunning = runningIds.has(account.id);
+    const botsOn =
+      countArmedRules(ruleModes.get(account.id) ?? []) +
+      (dcaBotCount.get(account.id) ?? 0);
+    const automationsRunning = botsOn > 0;
     const reduceOnly = reduceOnlyIds.has(account.id);
     usage.set(account.id, {
       openCount: opens,
       carryOpenCount: carries,
       futuresOpenCount: futures,
       workingCount: working,
+      botsOn,
       automationsRunning,
       reduceOnly,
       strategyConnectionId: connectionByAccount.get(account.id) ?? null,
