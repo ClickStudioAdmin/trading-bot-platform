@@ -59,8 +59,7 @@ function SetupProgress({
 }) {
   const currentIndex = SETUP_MAIN_STEPS.indexOf(screen.main);
   return (
-    <div className="shrink-0 border-b border-line px-5 py-4">
-      <ol aria-label="Setup steps" className="flex w-full items-center">
+    <ol aria-label="Setup steps" className="mt-4 flex w-full items-center">
         {SETUP_MAIN_STEPS.map((item, index) => {
           const state =
             index < currentIndex
@@ -116,8 +115,7 @@ function SetupProgress({
             </li>
           );
         })}
-      </ol>
-    </div>
+    </ol>
   );
 }
 
@@ -393,9 +391,9 @@ export function SetupWizard({
           <p className="mt-1 text-sm text-ink-muted">
             Finish these steps before using the platform.
           </p>
+          <SetupProgress screen={screen} />
         </div>
       )}
-      {screen.main === "intro" ? null : <SetupProgress screen={screen} />}
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-4">
       {screen.main === "intro" ? (
         <IntroStep playing={playing} onWatch={() => setPlaying(true)} />
@@ -454,7 +452,7 @@ export function SetupWizard({
         />
       ) : null}
       {screen.main === "bots" && screen.sub === "blocked" ? (
-        <section className="rounded-card border border-line bg-surface p-5">
+        <section>
           <h2 className="text-lg font-semibold tracking-tight">
             Load starter bots?
           </h2>
@@ -500,7 +498,7 @@ export function SetupWizard({
         />
       ) : null}
       {screen.main === "bots" && screen.sub === "empty" ? (
-        <section className="rounded-card border border-line bg-surface p-5">
+        <section>
           <h2 className="text-lg font-semibold tracking-tight">
             Load starter bots?
           </h2>
@@ -525,7 +523,7 @@ export function SetupWizard({
         />
       ) : null}
       </div>
-      <div className="shrink-0 border-t border-line bg-surface px-5 py-4">
+      <div className="shrink-0 border-t border-line px-5 py-4">
         {error ? (
           <p className="mb-3 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}
@@ -610,7 +608,7 @@ function IntroStep({
   const frameClass =
     "mt-4 flex aspect-video w-full flex-col items-center justify-center rounded-card border border-line bg-canvas px-6 text-center";
   return (
-    <section className="rounded-card border border-line bg-surface p-5">
+    <section>
       <h2
         id="setup-gate-title"
         className="text-lg font-semibold tracking-tight"
@@ -648,7 +646,7 @@ function TourReady({
 }) {
   const bots = createdStarterBots({ desks, folders, applied });
   return (
-    <section className="rounded-card border border-line bg-surface p-5">
+    <section>
       <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
         <IconCheck size={20} className="size-5 shrink-0 text-success" aria-hidden />
         Your account is ready.
@@ -723,7 +721,7 @@ function ChoiceStep({
   onChange: (value: string) => void;
 }) {
   return (
-    <section className="rounded-card border border-line bg-surface p-5">
+    <section>
       <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
       <p className="mt-2 text-sm text-ink-muted">{intro}</p>
       {note ? <p className="mt-2 text-sm text-ink-muted">{note}</p> : null}
@@ -775,7 +773,7 @@ function DeskStep({
   onChange: (key: string, patch: Partial<SetupDesk>) => void;
 }) {
   return (
-    <section className="rounded-card border border-line bg-surface p-5">
+    <section>
       <h2 className="text-lg font-semibold tracking-tight">
         Create a few desks now?
       </h2>
@@ -909,7 +907,7 @@ function ExchangeStep({
 }) {
   return (
     <section className="space-y-4">
-      <div className="rounded-card border border-line bg-surface p-5">
+      <div>
         <h2 className="text-lg font-semibold tracking-tight">
           Connect the exchange desks
         </h2>
@@ -984,7 +982,7 @@ function ExchangeDesk({
   );
 
   return (
-    <div className="rounded-card border border-line bg-surface p-5">
+    <div>
       <h3 className="text-sm font-semibold text-ink">
         {desk.name}
         <span className="ml-2 font-normal text-ink-muted">
@@ -1219,7 +1217,7 @@ function BotStep({
   }
   return (
     <section className="space-y-4">
-      <div className="rounded-card border border-line bg-surface p-5">
+      <div>
         <h2 className="text-lg font-semibold tracking-tight">
           Load starter bots?
         </h2>
@@ -1229,7 +1227,7 @@ function BotStep({
           Nothing trades until you arm or enable them.
         </p>
       </div>
-      <div className="rounded-card border border-line bg-surface p-5">
+      <div>
         <h3 className="text-sm font-semibold text-ink">{desk.name}</h3>
         <div className="mt-3 space-y-4">
           {foldersForDesk(folders, desk.deskType).map((folder) => {
