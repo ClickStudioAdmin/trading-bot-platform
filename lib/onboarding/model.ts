@@ -273,11 +273,19 @@ export function makeSetupDesk(input: {
   };
 }
 
-export function setupDeskReviewLine(desk: SetupDesk): string {
+export type SetupDeskDetails = {
+  mode: "Paper" | "Connected";
+  market: string;
+  environment: string;
+  key: string;
+};
+
+/** Column values for a desk already added under its type. */
+export function setupDeskDetails(desk: SetupDesk): SetupDeskDetails {
   const venue = getVenue(desk.venue);
-  const venueLabel = venue?.label ?? desk.venue;
+  const market = venue?.label ?? desk.venue;
   if (desk.mode === "paper") {
-    return `Paper · ${venueLabel}`;
+    return { mode: "Paper", market, environment: "—", key: "—" };
   }
   const environment =
     venue?.environments.find((item) => item.id === desk.environmentId)?.label ??
@@ -287,7 +295,7 @@ export function setupDeskReviewLine(desk: SetupDesk): string {
     : desk.bindLater
       ? "Bind later"
       : "Key needed";
-  return `Connected · ${venueLabel} · ${environment} · ${key}`;
+  return { mode: "Connected", market, environment, key };
 }
 
 export function setupDeskFromDetails(input: {

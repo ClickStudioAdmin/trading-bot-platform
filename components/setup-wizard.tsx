@@ -34,9 +34,9 @@ import {
   foldersForDesk,
   makeSetupDesk,
   paperVenuesFor,
+  setupDeskDetails,
   setupDeskFromDetails,
   setupDeskKey,
-  setupDeskReviewLine,
   setupScreenId,
   setupScreens,
   setupStepLabel,
@@ -770,6 +770,13 @@ function ChoiceStep({
   );
 }
 
+function DeskDetailValue({ value }: { value: string }) {
+  if (value === "—") {
+    return <span className="text-ink-faint">—</span>;
+  }
+  return value;
+}
+
 function desksForType(desks: readonly SetupDesk[], deskType: DeskType): SetupDesk[] {
   return (["paper", "live"] as const).flatMap((mode) => {
     const desk = desks.find((row) => row.key === setupDeskKey(deskType, mode));
@@ -796,8 +803,8 @@ function DeskStep({
         Create a few desks now?
       </h2>
       <p className="mt-2 text-sm text-ink-muted">
-        Create Desk opens the details for that type. Each desk you add sits
-        under its type. Type and mode stay fixed after setup.
+        Create Desk opens the details for that type. Each desk you add is a
+        row in the table under its type. Type and mode stay fixed after setup.
       </p>
       <ul className="mt-4 text-sm">
         {ONBOARDING_DESK_TYPES.map((deskType) => {
@@ -823,37 +830,69 @@ function DeskStep({
                 </button>
               </div>
               {added.length > 0 ? (
-                <ul className="mt-3 space-y-3">
-                  {added.map((desk) => (
-                    <li
-                      key={desk.key}
-                      className="flex flex-col gap-2 sm:flex-row sm:items-center"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-ink">{desk.name}</p>
-                        <p className="mt-1 text-ink-muted">
-                          {setupDeskReviewLine(desk)}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => onEdit(desk)}
-                          className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onRemove(desk.key)}
-                          className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <div className="mt-3 overflow-x-auto rounded-card border border-line">
+                  <table className="w-full text-left text-sm">
+                    <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">Name</th>
+                        <th className="whitespace-nowrap px-3 py-2 font-medium">Mode</th>
+                        <th className="whitespace-nowrap px-3 py-2 font-medium">Market</th>
+                        <th className="whitespace-nowrap px-3 py-2 font-medium">
+                          Environment
+                        </th>
+                        <th className="whitespace-nowrap px-3 py-2 font-medium">Key</th>
+                        <th className="whitespace-nowrap px-3 py-2 text-right font-medium">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {added.map((desk) => {
+                        const details = setupDeskDetails(desk);
+                        return (
+                          <tr
+                            key={desk.key}
+                            className="border-b border-line last:border-b-0"
+                          >
+                            <td className="px-3 py-2 text-ink" title={desk.name}>
+                              {desk.name}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
+                              {details.mode}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
+                              {details.market}
+                            </td>
+                            <td className="px-3 py-2 text-ink-muted">
+                              <DeskDetailValue value={details.environment} />
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
+                              <DeskDetailValue value={details.key} />
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <div className="flex justify-end gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => onEdit(desk)}
+                                  className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => onRemove(desk.key)}
+                                  className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               ) : null}
             </li>
           );
