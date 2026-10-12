@@ -44,7 +44,6 @@ import {
   paperVenuesFor,
   setupDeskDetails,
   setupDeskFromDetails,
-  setupDeskKey,
   setupScreenId,
   setupScreens,
   setupStepLabel,
@@ -598,13 +597,9 @@ export function SetupWizard({
         deskType={deskEditor.deskType}
         desk={deskEditor.desk}
         takenNames={takenNames(deskEditor.desk?.key)}
-        takenModes={desks
-          .filter(
-            (row) =>
-              row.deskType === deskEditor.deskType &&
-              row.key !== deskEditor.desk?.key,
-          )
-          .map((row) => row.mode)}
+        takenKeys={desks
+          .filter((row) => row.key !== deskEditor.desk?.key)
+          .map((row) => row.key)}
         onClose={() => setDeskEditor(null)}
         onSave={(desk) => {
           upsertDesk(desk, deskEditor.desk?.key ?? null);
@@ -786,10 +781,9 @@ function DeskDetailValue({ value }: { value: string }) {
 }
 
 function desksForType(desks: readonly SetupDesk[], deskType: DeskType): SetupDesk[] {
-  return (["paper", "live"] as const).flatMap((mode) => {
-    const desk = desks.find((row) => row.key === setupDeskKey(deskType, mode));
-    return desk ? [desk] : [];
-  });
+  return (["paper", "live"] as const).flatMap((mode) =>
+    desks.filter((row) => row.deskType === deskType && row.mode === mode),
+  );
 }
 
 function DeskStep({
@@ -813,7 +807,6 @@ function DeskStep({
       <ul className="mt-4 text-sm">
         {ONBOARDING_DESK_TYPES.map((deskType) => {
           const added = desksForType(desks, deskType);
-          const full = added.length === 2;
           return (
             <li key={deskType} className="border-b border-line py-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -823,8 +816,6 @@ function DeskStep({
                 <TableLabelButton
                   variant="secondary"
                   icon={<IconPlus {...TABLE_BTN_ICON} />}
-                  disabled={full}
-                  title={full ? "Paper and Connected are already added" : undefined}
                   onClick={() => onCreate(deskType)}
                   className="shrink-0"
                 >
@@ -912,14 +903,14 @@ function CreateDeskDialog({
   deskType,
   desk,
   takenNames,
-  takenModes,
+  takenKeys,
   onClose,
   onSave,
 }: {
   deskType: DeskType;
   desk: SetupDesk | null;
   takenNames: string[];
-  takenModes: Array<"paper" | "live">;
+  takenKeys: string[];
   onClose: () => void;
   onSave: (desk: SetupDesk) => void;
 }) {
@@ -927,7 +918,7 @@ function CreateDeskDialog({
     desk ??
     makeSetupDesk({
       deskType,
-      mode: takenModes.includes("paper") ? "live" : "paper",
+      mode: "paper",
       takenNames,
     });
   const [mode, setMode] = useState(seed.mode);
@@ -1021,14 +1012,6 @@ function CreateDeskDialog({
   }
 
   function save() {
-    if (takenModes.includes(mode)) {
-      setError(
-        mode === "paper"
-          ? "Paper is already in this setup."
-          : "Connected is already in this setup.",
-      );
-      return;
-    }
     const result = setupDeskFromDetails({
       deskType,
       mode,
@@ -1038,6 +1021,7 @@ function CreateDeskDialog({
       bindLater: mode !== "live" || choice !== "new",
       connectionId: mode === "live" && choice === "new" ? connectionId : null,
       takenNames,
+      takenKeys,
       previous: desk,
     });
     if (!result.ok) {
@@ -1105,12 +1089,8 @@ function CreateDeskDialog({
               }
               className={fieldClass}
             >
-              <option value="paper" disabled={takenModes.includes("paper")}>
-                {formatAccountModeChoice("paper")}
-              </option>
-              <option value="live" disabled={takenModes.includes("live")}>
-                {formatAccountModeChoice("live")}
-              </option>
+              <option value="paper">{formatAccountModeChoice("paper")}</option>
+              <option value="live">{formatAccountModeChoice("live")}</option>
             </AppSelect>
           </label>
           {showMarket ? (
