@@ -35,6 +35,7 @@ import {
   setupWizardResetPlan,
   requiresSetupGate,
   setupCloseSkipsCreate,
+  setupResumeScreenId,
   tourAfterSetupClose,
   allocateSetupDeskKey,
   setupDeskDetails,
@@ -777,6 +778,8 @@ const readyDraft = parseSetupDraft({ readyForTour: true });
 assert.equal(readyDraft.ok, true);
 if (readyDraft.ok) {
   assert.equal(readyDraft.draft.readyForTour, true);
+  assert.equal(readyDraft.draft.tourPromptSeen, false);
+  assert.equal(setupResumeScreenId(readyDraft.draft), "review:review");
 }
 assert.equal(emptySetupDraft().readyForTour, false);
 assert.equal(
@@ -807,6 +810,51 @@ assert.equal(setupStepLabel("bots"), "Add Bots");
 assert.equal(setupStepLabel("review"), "Review");
 assert.equal(setupStepLabel("tour"), "Take a Tour");
 assert.equal(emptySetupDraft().introSeen, false);
+assert.equal(emptySetupDraft().tourPromptSeen, false);
+assert.equal(
+  setupResumeScreenId({
+    readyForTour: false,
+    tourPromptSeen: false,
+    introSeen: false,
+  }),
+  "intro:video",
+);
+assert.equal(
+  setupResumeScreenId({
+    readyForTour: false,
+    tourPromptSeen: false,
+    introSeen: true,
+  }),
+  "desks:choice",
+);
+assert.equal(
+  setupResumeScreenId({
+    readyForTour: true,
+    tourPromptSeen: false,
+    introSeen: true,
+  }),
+  "review:review",
+);
+assert.equal(
+  setupResumeScreenId({
+    readyForTour: true,
+    tourPromptSeen: true,
+    introSeen: true,
+  }),
+  "tour:tour",
+);
+const promptDraft = parseSetupDraft({ readyForTour: true, tourPromptSeen: true });
+assert.equal(promptDraft.ok, true);
+if (promptDraft.ok) {
+  assert.equal(promptDraft.draft.tourPromptSeen, true);
+  assert.equal(setupResumeScreenId(promptDraft.draft), "tour:tour");
+}
+const promptIgnored = parseSetupDraft({ tourPromptSeen: "yes" });
+assert.equal(promptIgnored.ok, true);
+if (promptIgnored.ok) {
+  assert.equal(promptIgnored.draft.tourPromptSeen, false);
+  assert.equal(setupResumeScreenId(promptIgnored.draft), "intro:video");
+}
 const issueDraft = parseSetupDraft({
   summary: {
     desks: [{ name: "DCA Paper", detail: "Paper" }],

@@ -264,6 +264,7 @@ export async function completeMemberOnboarding(input: {
     applied: input.applied,
     summary: input.summary,
     readyForTour: false,
+    tourPromptSeen: false,
     introSeen: false,
   };
   return writeRow(input.userId, {

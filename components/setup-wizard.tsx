@@ -66,6 +66,7 @@ import {
   setupDeskDetails,
   setupDeskFromDetails,
   setupScreenId,
+  setupResumeScreenId,
   setupDeskCanStartBots,
   setupReviewRows,
   setupScreens,
@@ -198,18 +199,15 @@ export function SetupWizard({
   const [applied, setApplied] = useState<string[]>(initialDraft.applied);
   const [summary, setSummary] = useState(initialDraft.summary);
   const [readyForTour, setReadyForTour] = useState(initialDraft.readyForTour);
+  const [tourPromptSeen, setTourPromptSeen] = useState(initialDraft.tourPromptSeen);
   const [introSeen, setIntroSeen] = useState(initialDraft.introSeen);
   const [playing, setPlaying] = useState(false);
   const [deskEditor, setDeskEditor] = useState<{
     deskType: DeskType;
     desk: SetupDesk | null;
   } | null>(null);
-  const [screenId, setScreenId] = useState(
-    initialDraft.readyForTour
-      ? "tour:tour"
-      : initialDraft.introSeen
-        ? "desks:choice"
-        : "intro:video",
+  const [screenId, setScreenId] = useState<string>(() =>
+    setupResumeScreenId(initialDraft),
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -237,6 +235,7 @@ export function SetupWizard({
       applied,
       summary,
       readyForTour,
+      tourPromptSeen,
       introSeen,
       ...overrides,
     };
@@ -341,6 +340,24 @@ export function SetupWizard({
         setApplied(created.draft.applied);
         setSummary(created.draft.summary);
         setReadyForTour(true);
+        setScreenId("review:review");
+      } catch (error) {
+        setError(wizardActionError(error));
+      }
+    });
+  }
+
+  function continueToTour() {
+    const snapshot = draft({ readyForTour: true, tourPromptSeen: true });
+    setError(null);
+    startTransition(async () => {
+      try {
+        const saved = await saveSetupDraft(JSON.stringify(snapshot));
+        if (!saved.ok) {
+          setError(saved.error);
+          return;
+        }
+        setTourPromptSeen(true);
         setScreenId("tour:tour");
       } catch (error) {
         setError(wizardActionError(error));
@@ -449,6 +466,7 @@ export function SetupWizard({
           setBotChoice(null);
           setApplied([]);
           setReadyForTour(false);
+          setTourPromptSeen(false);
           setIntroSeen(false);
           setPlaying(false);
           setDeskEditor(null);
@@ -631,16 +649,18 @@ export function SetupWizard({
         <BotStep desks={desks} folders={folders} onChange={updateDesk} />
       ) : null}
       {screen.main === "review" ? (
-        <ReviewStep desks={desks} folders={folders} />
+        readyForTour ? (
+          <ReadySummary
+            desks={desks}
+            folders={folders}
+            applied={applied}
+            issues={summary?.issues ?? []}
+          />
+        ) : (
+          <ReviewStep desks={desks} folders={folders} />
+        )
       ) : null}
-      {screen.main === "tour" ? (
-        <TourReady
-          desks={desks}
-          folders={folders}
-          applied={applied}
-          issues={summary?.issues ?? []}
-        />
-      ) : null}
+      {screen.main === "tour" ? <TourAsk /> : null}
       </div>
       <div className="shrink-0 border-t border-line bg-surface-raised px-6 py-4">
         {error ? (
@@ -703,7 +723,9 @@ export function SetupWizard({
             Back
           </button>
         ) : null}
-        {screen.main !== "intro" && next ? (
+        {screen.main !== "intro" &&
+        next &&
+        !(screen.main === "review" && readyForTour) ? (
           <button
             type="button"
             disabled={pending}
@@ -721,6 +743,17 @@ export function SetupWizard({
             {screen.main === "review" ? null : (
               <IconArrowRight {...WIZARD_ICON} />
             )}
+          </button>
+        ) : null}
+        {screen.main === "review" && readyForTour ? (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={continueToTour}
+            className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          >
+            {pending ? "Saving…" : "Continue"}
+            <IconArrowRight {...WIZARD_ICON} />
           </button>
         ) : null}
         {screen.main === "tour" ? (
@@ -853,7 +886,19 @@ function ReviewStep({
   );
 }
 
-function TourReady({
+function TourAsk() {
+  return (
+    <section>
+      <h2 className="text-lg font-semibold tracking-tight">Take a tour?</h2>
+      <p className="mt-2 text-sm text-ink-muted">
+        Walk through Overview, desks, and bots. Start it now, or leave it for
+        later from Platform Tour.
+      </p>
+    </section>
+  );
+}
+
+function ReadySummary({
   desks,
   folders,
   applied,
