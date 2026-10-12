@@ -394,7 +394,7 @@ export function SetupWizard({
           <SetupProgress screen={screen} />
         </div>
       )}
-      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-6">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
       {screen.main === "intro" ? (
         <IntroStep playing={playing} onWatch={() => setPlaying(true)} />
       ) : null}
