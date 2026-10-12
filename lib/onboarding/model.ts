@@ -301,7 +301,7 @@ export function setupDeskFromDetails(input: {
   takenNames: readonly string[];
   previous?: SetupDesk | null;
 }): { ok: true; desk: SetupDesk } | { ok: false; error: string } {
-  const named = validateNewDeskName(input.name, input.takenNames);
+  const named = validateNewDeskName(input.name, [...input.takenNames]);
   if (!named.ok) {
     return named;
   }

@@ -10,10 +10,10 @@ export function SetupModal({ children }: { children: ReactNode }) {
   const [host, setHost] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const node = host;
-    if (!node) {
+    if (!host) {
       return;
     }
+    const node = host;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     node.querySelector<HTMLElement>("[role='dialog']")?.focus();
