@@ -454,12 +454,30 @@ export async function deleteTradingAccountRow(
 export async function teardownAllTradingAccounts(
   userId: string,
 ): Promise<{ error: string | null }> {
+  const accounts = await listTradingAccounts(userId);
+  return teardownTradingAccountsById(
+    userId,
+    accounts.map((account) => account.id),
+  );
+}
+
+/** Removes these desks on the login, including the last one and any open rows. */
+export async function teardownTradingAccountsById(
+  userId: string,
+  accountIds: readonly string[],
+): Promise<{ error: string | null }> {
+  if (accountIds.length === 0) {
+    return { error: null };
+  }
   const supabase = createServiceClient();
   if (!supabase) {
     return { error: "Auth is not configured." };
   }
+  const wanted = new Set(accountIds);
   const accounts = await listTradingAccounts(userId);
-  for (const account of devResetDeskOrder(accounts)) {
+  for (const account of devResetDeskOrder(
+    accounts.filter((row) => wanted.has(row.id)),
+  )) {
     const removed = await teardownTradingAccount(supabase, userId, account.id);
     if (removed.error) {
       return removed;

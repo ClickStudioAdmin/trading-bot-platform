@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useConfirmDialog } from "@/components/confirm-modal";
 import { ModalHost } from "@/components/portal-host";
 import {
   formatAccountModeChoice,
@@ -23,6 +24,7 @@ import { getVenue } from "@/lib/exchanges/venues";
 import {
   createSetupBeforeTour,
   finishSetup,
+  resetSetupWizard,
   saveSetupConnection,
   saveSetupDraft,
 } from "@/lib/onboarding/actions";
@@ -168,6 +170,8 @@ export function SetupWizard({
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [resetting, setResetting] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
   const screens = useMemo(
     () => setupScreens({ desks, folders, deskChoice, botChoice }),
     [botChoice, deskChoice, desks, folders],
@@ -362,6 +366,42 @@ export function SetupWizard({
     if (next) {
       advance(next);
     }
+  }
+
+  function restartWizard() {
+    void confirm({
+      title: "Reset wizard",
+      message:
+        "This clears your choices and starts the wizard from the beginning. Desks, bots, and keys created in this setup are removed.",
+      confirmLabel: "Reset Wizard",
+      danger: true,
+    }).then((ok) => {
+      if (!ok) {
+        return;
+      }
+      setError(null);
+      setResetting(true);
+      startTransition(async () => {
+        try {
+          const result = await resetSetupWizard();
+          if (!result.ok) {
+            setError(result.error);
+            return;
+          }
+          setDesks([]);
+          setDeskChoice(null);
+          setBotChoice(null);
+          setApplied([]);
+          setReadyForTour(false);
+          setIntroSeen(false);
+          setPlaying(false);
+          setDeskEditor(null);
+          setScreenId("intro:video");
+        } finally {
+          setResetting(false);
+        }
+      });
+    });
   }
 
   function finish(tourChoice: "yes" | "not_now") {
@@ -593,9 +633,18 @@ export function SetupWizard({
                 : "Continue"}
           </button>
         ) : null}
+        <button
+          type="button"
+          disabled={pending}
+          onClick={restartWizard}
+          className="ml-auto rounded-control border border-line bg-surface px-4 py-2 text-sm font-medium text-ink-muted hover:border-line-strong hover:text-ink disabled:opacity-40"
+        >
+          {pending && resetting ? "Resetting…" : "Reset Wizard"}
+        </button>
         </div>
       </div>
     </div>
+    {dialog}
     {deskEditor ? (
       <CreateDeskDialog
         deskType={deskEditor.deskType}

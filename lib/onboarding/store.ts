@@ -133,6 +133,27 @@ export async function saveOnboardingDraft(
   });
 }
 
+export async function resetMemberOnboardingDraft(
+  userId: string,
+): Promise<MemberOnboarding | null> {
+  const existing = await loadMemberOnboarding(userId);
+  if (
+    existing &&
+    existing.status !== "pending" &&
+    existing.status !== "finishing"
+  ) {
+    return null;
+  }
+  return writeRow(userId, {
+    status: "pending",
+    draft: emptySetupDraft(),
+    created_account_ids: [],
+    applied_template_keys: [],
+    tour: null,
+    tour_step: 0,
+  });
+}
+
 export async function clearMemberOnboarding(
   userId: string,
 ): Promise<{ error: string | null }> {
