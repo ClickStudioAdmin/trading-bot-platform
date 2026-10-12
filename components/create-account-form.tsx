@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { DeskTypeMark } from "@/components/desk-mark";
 import { IconPlus } from "@/components/icons";
+import { TemplateNameWithParameters } from "@/components/template-parameters-tip";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { createTradingAccount } from "@/lib/accounts/actions";
 import {
@@ -407,7 +408,11 @@ function StarterBots({
                           );
                         }}
                       />
-                      {template.name}
+                      <TemplateNameWithParameters
+                        name={template.name}
+                        recipe={template.recipe}
+                        nameClassName=""
+                      />
                     </label>
                   </li>
                 ))}

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import { BacktestHighlightHover } from "@/components/backtest-highlight-hover";
 import { PageHeading } from "@/components/page-heading";
 import {
@@ -18,13 +19,16 @@ import {
   TableFilterBar,
   TableFilterField,
   TableFilterSession,
-  TableHint,
   TableIconAction,
   TableLabelButton,
   TablePager,
-  useActionHint,
 } from "@/components/table-chrome";
 import { AppCheck } from "@/components/app-check";
+import {
+  TemplateNameWithParameters,
+  TemplateParametersButton,
+} from "@/components/template-parameters-tip";
+import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import {
   IconCheck,
   IconClose,
@@ -62,7 +66,7 @@ import {
   type TemplateActionResult,
 } from "@/lib/templates/actions";
 import type { LibraryTab } from "@/lib/templates/library-tab";
-import type { TemplateDeskType } from "@/lib/templates/recipe";
+import type { TemplateDeskType, TemplateRecipe } from "@/lib/templates/recipe";
 import { recipePreview } from "@/lib/templates/recipe";
 import type {
   AutomationTemplate,
@@ -145,42 +149,120 @@ function sharedCountLabel(peers: { email: string }[]): string {
 
 const FOLDER_TEMPLATE_PREVIEW = 5;
 
-function FolderTemplateNames({ names }: { names: string[] }) {
-  if (names.length === 0) {
+type FolderTemplateEntry = {
+  id: string;
+  name: string;
+  recipe: TemplateRecipe | null;
+};
+
+function FolderTemplateNames({ items }: { items: FolderTemplateEntry[] }) {
+  if (items.length === 0) {
     return "—";
   }
-  const preview = names.slice(0, FOLDER_TEMPLATE_PREVIEW);
+  const preview = items.slice(0, FOLDER_TEMPLATE_PREVIEW);
   return (
     <div className="flex flex-col gap-0.5">
-      {preview.map((name, index) => (
-        <span key={`${index}-${name}`} className="break-words">
-          {name}
-        </span>
+      {preview.map((item) => (
+        <TemplateNameWithParameters
+          key={item.id}
+          name={item.name}
+          recipe={item.recipe}
+        />
       ))}
-      {names.length > FOLDER_TEMPLATE_PREVIEW ? (
-        <FolderTemplatesSeeAll names={names} />
+      {items.length > FOLDER_TEMPLATE_PREVIEW ? (
+        <FolderTemplatesSeeAll items={items} />
       ) : null}
     </div>
   );
 }
 
-function FolderTemplatesSeeAll({ names }: { names: string[] }) {
-  const { box, tip } = useActionHint();
+function FolderTemplatesSeeAll({ items }: { items: FolderTemplateEntry[] }) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [box, setBox] = useState<DOMRect | null>(null);
+  const previewClass = useThemePreviewPortalClass();
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    function onPointer(event: MouseEvent) {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+      if (
+        buttonRef.current?.contains(target) ||
+        panelRef.current?.contains(target)
+      ) {
+        return;
+      }
+      if (
+        target instanceof Element &&
+        target.closest("[data-template-parameters]")
+      ) {
+        return;
+      }
+      setOpen(false);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   return (
     <>
       <button
+        ref={buttonRef}
         type="button"
+        aria-expanded={open}
         className="w-fit text-left text-sm text-accent underline underline-offset-2 hover:text-accent-strong"
-        {...tip}
+        onMouseEnter={(event) => {
+          setBox(event.currentTarget.getBoundingClientRect());
+          setOpen(true);
+        }}
+        onClick={() => {
+          setBox(buttonRef.current?.getBoundingClientRect() ?? null);
+          setOpen((current) => !current);
+        }}
       >
         See All
       </button>
-      <TableHint
-        box={box}
-        label="Templates"
-        detail={names.join("\n")}
-        className="max-w-sm"
-      />
+      {open && box && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={panelRef}
+              data-template-parameters=""
+              className={`fixed z-[80] max-h-72 w-72 overflow-auto rounded-control border border-line bg-surface-raised px-3 py-2 text-left text-sm font-normal normal-case tracking-normal text-ink ${previewClass}`.trim()}
+              style={{
+                top: box.bottom + 8,
+                left: Math.max(12, Math.min(box.left, window.innerWidth - 300)),
+              }}
+            >
+              <p className="text-ink">Templates</p>
+              <ul className="mt-1 space-y-1">
+                {items.map((item) => (
+                  <li key={item.id}>
+                    <TemplateNameWithParameters
+                      name={item.name}
+                      recipe={item.recipe}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
@@ -316,6 +398,14 @@ export function TemplatesLibrary({
     }
     return [...byId.values()];
   }, [sets, sharedSets]);
+
+  const recipes = useMemo(() => {
+    const map = new Map<string, TemplateRecipe>();
+    for (const row of [...templates, ...sharedTemplates]) {
+      map.set(row.id, row.recipe);
+    }
+    return map;
+  }, [sharedTemplates, templates]);
 
   const needle = query.trim().toLowerCase();
 
@@ -1018,7 +1108,10 @@ export function TemplatesLibrary({
                     </td>
                   )}
                   <td className="px-4 py-3 font-medium text-ink">
-                    {row.name}
+                    <TemplateNameWithParameters
+                      name={row.name}
+                      recipe={row.recipe}
+                    />
                   </td>
                   <td className="px-4 py-3 text-ink-muted">
                     {folderLabel(foldersHolding(row.id, knownFolders))}
@@ -1252,7 +1345,11 @@ export function TemplatesLibrary({
                     ) : null}
                     <td className="px-4 py-3 text-ink-muted">
                       <FolderTemplateNames
-                        names={row.items.map((item) => item.name)}
+                        items={row.items.map((item) => ({
+                          id: item.templateId,
+                          name: item.name,
+                          recipe: recipes.get(item.templateId) ?? null,
+                        }))}
                       />
                     </td>
                     {showSharedWith ? (
@@ -1422,6 +1519,7 @@ export function TemplatesLibrary({
           kind="template"
           name={sharingTemplate.name}
           id={sharingTemplate.id}
+          recipe={sharingTemplate.recipe}
           peers={sharingTemplate.sharedWith}
           onClose={() => setSharingTemplateId(null)}
           onResult={(result) => {
@@ -1613,6 +1711,12 @@ function ImportModal({
                   value: row.id,
                   label: `${row.name} · ${formatTemplateDeskType(row.deskType)}`,
                   disabled: lockedTemplateIds.has(row.id),
+                  aside: (
+                    <TemplateParametersButton
+                      name={row.name}
+                      recipe={row.recipe}
+                    />
+                  ),
                 }))}
               />
             )}
@@ -1676,6 +1780,7 @@ function ShareModal({
   name,
   id,
   peers,
+  recipe = null,
   onClose,
   onResult,
 }: {
@@ -1683,6 +1788,7 @@ function ShareModal({
   name: string;
   id: string;
   peers: { userId: string; email: string }[];
+  recipe?: TemplateRecipe | null;
   onClose: () => void;
   onResult: (result: TemplateActionResult) => void;
 }) {
@@ -1744,8 +1850,15 @@ function ShareModal({
       onClose={onClose}
     >
       <p className="mt-1 text-sm text-ink-muted">
-        Grant {name} to another member by email. They can apply it on their
-        desks. This is a grant, not a copy.
+        Grant{" "}
+        <span className="inline-flex items-center gap-1">
+          {name}
+          {kind === "template" ? (
+            <TemplateParametersButton name={name} recipe={recipe} />
+          ) : null}
+        </span>{" "}
+        to another member by email. They can apply it on their desks. This is
+        a grant, not a copy.
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
         <input
@@ -1967,7 +2080,13 @@ function TemplateEditModal({
     <Modal title="Edit template" onClose={onClose}>
       <p className="mt-1 text-hint text-ink-muted">{recipePreview(template.recipe)}</p>
       <label className="mt-4 block text-sm text-ink">
-        Name
+        <span className="inline-flex items-center gap-1">
+          Name
+          <TemplateParametersButton
+            name={template.name}
+            recipe={template.recipe}
+          />
+        </span>
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
@@ -2246,7 +2365,12 @@ function MembershipColumn({
               className="flex items-center justify-between gap-2 rounded-control border border-line bg-surface-raised px-2 py-1.5"
             >
               <span className="min-w-0 text-sm text-ink">
-                <span className="block truncate">{row.name}</span>
+                <TemplateNameWithParameters
+                  name={row.name}
+                  recipe={row.recipe}
+                  className="min-w-0"
+                  nameClassName="block truncate"
+                />
                 {row.visibility === "platform" ? (
                   <span className="text-hint text-ink-muted">Platform</span>
                 ) : null}

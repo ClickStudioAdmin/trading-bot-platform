@@ -26,6 +26,7 @@ import {
   type TemplateRecipe,
   type TemplateVisibility,
 } from "@/lib/templates/recipe";
+import { TemplateNameWithParameters } from "@/components/template-parameters-tip";
 import { formatDeskType } from "@/lib/accounts/model";
 import {
   BotButtonLead,
@@ -676,6 +677,7 @@ type PickerItem = {
   templateId: string;
   name: string;
   preview: string;
+  recipe: TemplateRecipe | null;
 };
 
 type PickerFolder = {
@@ -686,7 +688,10 @@ type PickerFolder = {
   sharedByEmail: string | null;
 };
 
-function asPickerFolder(folder: AutomationTemplateSet): PickerFolder {
+function asPickerFolder(
+  folder: AutomationTemplateSet,
+  recipes: Map<string, TemplateRecipe>,
+): PickerFolder {
   return {
     id: folder.id,
     name: folder.name,
@@ -694,6 +699,7 @@ function asPickerFolder(folder: AutomationTemplateSet): PickerFolder {
       templateId: item.templateId,
       name: item.name,
       preview: item.preview,
+      recipe: recipes.get(item.templateId) ?? null,
     })),
     folders: [],
     sharedByEmail: folder.sharedByEmail,
@@ -704,6 +710,7 @@ function templatesAsItems(rows: TemplateSummary[]): PickerItem[] {
   return rows.map((row) => ({
     templateId: row.id,
     name: row.name,
+    recipe: row.recipe,
     preview: [
       row.preview,
       row.sharedByEmail ? `Shared by ${row.sharedByEmail}` : "",
@@ -727,6 +734,7 @@ function libraryTree(
   templates: TemplateSummary[],
   sets: AutomationTemplateSet[],
 ): PickerFolder[] {
+  const recipes = new Map(templates.map((row) => [row.id, row.recipe]));
   const scopes = [
     {
       key: "platform",
@@ -748,7 +756,9 @@ function libraryTree(
     },
   ] as const;
   return scopes.flatMap((scope) => {
-    const nested = sets.filter((folder) => scope.match(folder)).map(asPickerFolder);
+    const nested = sets
+      .filter((folder) => scope.match(folder))
+      .map((folder) => asPickerFolder(folder, recipes));
     const filed = new Set(
       nested.flatMap((folder) => folder.items.map((item) => item.templateId)),
     );
@@ -865,8 +875,11 @@ function FolderNode({
                   checked={selectedIds.has(item.templateId)}
                   onChange={() => onToggleTemplate(item.templateId)}
                 />
-                <span>
-                  <span className="block">{item.name}</span>
+                <span className="min-w-0">
+                  <TemplateNameWithParameters
+                    name={item.name}
+                    recipe={item.recipe}
+                  />
                   <span className="block text-sm text-ink">
                     {item.preview}
                   </span>

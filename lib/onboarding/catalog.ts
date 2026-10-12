@@ -24,6 +24,7 @@ export async function listOnboardingFolders(): Promise<StarterFolder[]> {
     visibility: starterVisibility(template.visibility),
     deskType: template.deskType,
     starterPack: template.starterPack,
+    recipe: template.recipe,
   }));
   return appendLooseStarterTemplates(
     sets.map((set) => ({
@@ -36,6 +37,8 @@ export async function listOnboardingFolders(): Promise<StarterFolder[]> {
         id: item.templateId,
         name: item.name,
         visibility: starterVisibility(item.visibility),
+        recipe:
+          templates.find((row) => row.id === item.templateId)?.recipe ?? null,
       })),
     })),
     loose,

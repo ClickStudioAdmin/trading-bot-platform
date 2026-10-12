@@ -68,6 +68,7 @@ export type TemplateSummary = {
   visibility: TemplateVisibility;
   deskType: TemplateDeskType;
   preview: string;
+  recipe: TemplateRecipe;
   ownerEmail: string | null;
   sharedByEmail: string | null;
   updatedAtMs: number;
@@ -183,6 +184,7 @@ export function templateToSummary(row: AutomationTemplate): TemplateSummary {
     visibility: row.visibility,
     deskType: row.deskType,
     preview: recipePreview(row.recipe),
+    recipe: row.recipe,
     ownerEmail: row.ownerEmail,
     sharedByEmail: row.sharedByEmail,
     updatedAtMs: row.updatedAtMs,

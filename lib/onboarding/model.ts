@@ -20,6 +20,7 @@ import {
   ACCOUNT_DESKS_HREF,
   ACCOUNT_EXCHANGES_HREF,
 } from "@/lib/site-links";
+import type { TemplateRecipe } from "@/lib/templates/recipe";
 
 export const SETUP_PATH = "/account/setup";
 
@@ -52,6 +53,7 @@ export type StarterTemplate = {
   id: string;
   name: string;
   visibility: StarterVisibility;
+  recipe?: TemplateRecipe | null;
 };
 
 export type StarterFolder = {
@@ -806,6 +808,7 @@ export function appendLooseStarterTemplates(
           id: template.id,
           name: template.name,
           visibility: template.visibility,
+          ...(template.recipe ? { recipe: template.recipe } : {}),
         })),
       },
     ];

@@ -21,7 +21,12 @@ import {
 } from "@/lib/dca/indicators";
 import { dcaAveragingKind, dcaIntervalParts } from "@/lib/dca/playbook";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
-import type { DcaTemplateRecipe, PerpsTemplateRecipe } from "@/lib/templates/recipe";
+import type {
+  DcaTemplateRecipe,
+  PaperTemplateRecipe,
+  PerpsTemplateRecipe,
+  TemplateRecipe,
+} from "@/lib/templates/recipe";
 
 export type ParamRow = { label: string; value: string };
 
@@ -764,6 +769,118 @@ export function recipeParamSections(recipe: BacktestRecipe): ParamSection[] {
     return perpsSections(recipe);
   }
   return [];
+}
+
+function paperPercent(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) {
+    return "Off";
+  }
+  return pct(Number((Math.abs(value) * 100).toPrecision(12)));
+}
+
+function paperUsdt(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) {
+    return "Off";
+  }
+  return `${num(value)} USDT`;
+}
+
+function paperSections(recipe: PaperTemplateRecipe): ParamSection[] {
+  const dynamic = recipe.sizeType === "dynamic";
+  const exitDynamic = recipe.exitSizeType !== "fixed";
+  const sizing: ParamRow[] = [
+    {
+      label: "Max Position Size",
+      value: paperUsdt(recipe.maxOpenNotionalUsdt),
+    },
+    {
+      label: "Max pairs",
+      value: recipe.maxOpenCount == null ? "Off" : num(recipe.maxOpenCount),
+    },
+    {
+      label: "Order Type",
+      value: dynamic ? "Dynamic (scale in)" : "Fixed",
+    },
+  ];
+  if (!dynamic) {
+    sizing.push(
+      { label: "Order size (USDT)", value: num(recipe.notionalUsdt) },
+      { label: "Min usable book", value: paperUsdt(recipe.minCapacityUsdt) },
+    );
+  }
+  if (dynamic || exitDynamic) {
+    sizing.push({
+      label: "Min Order Size",
+      value: paperUsdt(recipe.minSizeUsdt),
+    });
+  }
+  return [
+    {
+      title: "General",
+      groups: [{ rows: [{ label: "Name", value: recipe.name || "—" }] }],
+    },
+    {
+      title: "Entry Conditions",
+      groups: [
+        {
+          rows: [
+            { label: "Min APR %", value: paperPercent(recipe.minNetApr) },
+            {
+              label: "Min DTE",
+              value: recipe.minDte == null ? "Off" : num(recipe.minDte),
+            },
+            {
+              label: "Max DTE",
+              value: recipe.maxDte == null ? "Off" : num(recipe.maxDte),
+            },
+          ],
+        },
+      ],
+    },
+    {
+      title: "Position Sizing",
+      groups: [{ title: "Position and Orders", rows: sizing }],
+    },
+    {
+      title: "Exit Conditions",
+      groups: [
+        {
+          title: "Exit",
+          rows: [
+            {
+              label: "DTE ≤",
+              value:
+                recipe.closeMaxDte == null ? "Off" : num(recipe.closeMaxDte),
+            },
+            {
+              label: "APR % below",
+              value: paperPercent(recipe.closeMinNetApr),
+            },
+            {
+              label: "Order Type",
+              value:
+                recipe.exitSizeType === "fixed"
+                  ? "Fixed (entire position)"
+                  : "Dynamic (scale out)",
+            },
+          ],
+        },
+        optionalGroup("Take profit", recipe.takeProfitPct != null, [
+          { label: "Take profit %", value: paperPercent(recipe.takeProfitPct) },
+        ]),
+        optionalGroup("Stop loss", recipe.stopLossPct != null, [
+          { label: "Stop loss %", value: paperPercent(recipe.stopLossPct) },
+        ]),
+      ],
+    },
+  ];
+}
+
+export function templateParamSections(recipe: TemplateRecipe): ParamSection[] {
+  if (recipe.kind === "cash_and_carry") {
+    return paperSections(recipe);
+  }
+  return recipeParamSections(recipe);
 }
 
 function listedBotSections(recipe: BacktestRecipe): ParamSection[] {
