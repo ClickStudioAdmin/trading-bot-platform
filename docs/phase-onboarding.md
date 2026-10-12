@@ -122,7 +122,7 @@ Apply runs when they click **Create** on Review, after the desks exist, through 
 
 ### 3. Review
 
-One page after Add Bots. Before Create, a table lists each desk and the starter bots that will be loaded on it. Each bot lists Disabled or Active. A desk with no bots shows an em dash. No desks shows that nothing will be created. **Back** returns to Add Bots. **Create** writes the desks and bots and stays on Review.
+One page after Add Bots. Before Create, a table lists each desk and the starter bots that will be loaded on it. Each bot lists Disabled or Active. A desk with no bots shows an em dash. The line “These desks and bots are created when you click Create.” shows only when that table has rows. No desks shows that nothing will be created. **Back** returns to Add Bots. **Create** writes the desks and bots and stays on Review.
 
 After Create, Review shows the result. The heading is **Your account is ready.**, or **Setup finished with errors.** when a bot failed to load or a ticked bot did not start. The same table lists what was written. Each bot lists Disabled or Active. A failure that stops the write stays on Review before that result, in the footer. **Continue** does not write again. Back and Reset Wizard stay hidden.
 
