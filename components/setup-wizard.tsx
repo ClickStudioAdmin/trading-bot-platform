@@ -621,7 +621,7 @@ export function SetupWizard({
               value: "manual",
               title: "Manually select starter bots",
               detail:
-                "Pick the folders and bots for every desk together, and which of those bots to start.",
+                "Pick the bots for every desk together, and which of those bots to start.",
               icon: <IconPencil {...CHOICE_ICON} />,
             },
             {
@@ -1799,29 +1799,21 @@ function BotStep({
   onChange: (key: string, patch: Partial<SetupDesk>) => void;
 }) {
   const rows = starterBotDesks(desks, folders);
-  const showFolder = rows.some((desk) =>
-    foldersForDesk(folders, desk.deskType).some((folder) => !folder.loose),
-  );
   return (
     <section>
       <h2 className="text-lg font-semibold tracking-tight">
         Load starter bots?
       </h2>
       <p className="mt-2 text-sm text-ink-muted">
-        These are platform templates and folders marked Include in Starter Pack.
-        Choose Initial Status to start a bot when setup finishes. Idle and
-        Disabled leave the bot off.
+        These starter bots are marked Include in Starter Pack. Choose Initial
+        Status to start a bot when setup finishes. Idle and Disabled leave the
+        bot off.
       </p>
       <div className="mt-4 overflow-x-auto rounded-card border border-line">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               <th className="px-3 py-2 font-medium">Desk</th>
-              {showFolder ? (
-                <th className="whitespace-nowrap px-3 py-2 font-medium">
-                  Folder
-                </th>
-              ) : null}
               <th className="px-3 py-2 font-medium">Bot</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Mode</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Type</th>
@@ -1845,48 +1837,13 @@ function BotStep({
                   }),
                 });
               }
-              return foldersForDesk(folders, desk.deskType).flatMap((folder) => {
-                const ids = folder.templates.map((template) => template.id);
-                const selectedCount = ids.filter((id) =>
-                  desk.templateIds.includes(id),
-                ).length;
-                const all = ids.length > 0 && selectedCount === ids.length;
-                return folder.templates.map((template, index) => (
+              return foldersForDesk(folders, desk.deskType).flatMap((folder) =>
+                folder.templates.map((template) => (
                   <tr
                     key={`${desk.key}:${template.id}`}
                     className="border-b border-line last:border-b-0"
                   >
                     <td className="px-3 py-2 text-ink">{desk.name}</td>
-                    {showFolder ? (
-                      <td className="whitespace-nowrap px-3 py-2 text-ink">
-                        {folder.loose ? (
-                          <span className="text-ink-faint">—</span>
-                        ) : index === 0 ? (
-                          <label className="inline-flex items-center gap-2">
-                            <AppCheck
-                              checked={all}
-                              className=""
-                              onChange={() => {
-                                if (all) {
-                                  choose(
-                                    desk.templateIds.filter(
-                                      (id) => !ids.includes(id),
-                                    ),
-                                  );
-                                  return;
-                                }
-                                choose([
-                                  ...new Set([...desk.templateIds, ...ids]),
-                                ]);
-                              }}
-                            />
-                            {folder.name}
-                          </label>
-                        ) : (
-                          <span className="text-ink-muted">{folder.name}</span>
-                        )}
-                      </td>
-                    ) : null}
                     <td className="px-3 py-2 text-ink">
                       <label className="inline-flex items-center gap-2">
                         <AppCheck
@@ -1925,8 +1882,8 @@ function BotStep({
                       />
                     </td>
                   </tr>
-                ));
-              });
+                )),
+              );
             })}
           </tbody>
         </table>
