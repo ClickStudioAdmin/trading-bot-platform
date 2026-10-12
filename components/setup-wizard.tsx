@@ -598,12 +598,14 @@ export function SetupWizard({
         />
       ) : null}
       </div>
+      {readyForTour && !error ? null : (
       <div className="shrink-0 border-t border-line bg-surface-raised px-6 py-4">
         {error ? (
           <p className="mb-3 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}
           </p>
         ) : null}
+        {readyForTour ? null : (
         <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -670,7 +672,9 @@ export function SetupWizard({
         ) : null}
         </div>
         </div>
+        )}
       </div>
+      )}
     </div>
     {dialog}
     {deskEditor ? (
