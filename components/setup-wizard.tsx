@@ -1114,7 +1114,7 @@ function DeskStep({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold tracking-tight">Add desks now?</h2>
         <TableLabelButton
-          variant="secondary"
+          variant="primary"
           icon={<IconPlus {...TABLE_BTN_ICON} />}
           onClick={onCreate}
           className="shrink-0"
