@@ -207,6 +207,10 @@ Each desk added from the sub-modal and each Finish create goes through the same 
 - The tour card uses `bg-surface` with a `bg-plan-header` bar. The bar reads Tour and the step count. The heading is the instruction. The primary button is **Next**. No new colours.
 - Light and dark follow header UI preferences. Do not put light tokens on `html` / `body`.
 
+## Development reset
+
+Outside production, **Reset Account** sits above **Platform Tour** in the account sidenav. It is hidden when `VERCEL_ENV` is `production`, and the server action refuses there too. It deletes every desk on this login, including open paper rows and copy desks, then the exchange keys, then the onboarding row. The sign-in, plan, and template library stay. The setup wizard opens again.
+
 ## Micro-steps
 
 Stop after each until Click says go. Do not start inside item 4 or item 6.

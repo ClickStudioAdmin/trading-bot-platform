@@ -133,6 +133,20 @@ export async function saveOnboardingDraft(
   });
 }
 
+export async function clearMemberOnboarding(
+  userId: string,
+): Promise<{ error: string | null }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { error: "Auth is not configured." };
+  }
+  const { error } = await supabase
+    .from("member_onboarding")
+    .delete()
+    .eq("user_id", userId);
+  return { error: error?.message ?? null };
+}
+
 export async function skipMemberOnboarding(
   userId: string,
 ): Promise<MemberOnboarding | null> {

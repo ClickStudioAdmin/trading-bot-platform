@@ -899,6 +899,25 @@ export function statusAfterExternalDesk(
   return status;
 }
 
+/** Development and preview only. Production deployments never offer this. */
+export function devAccountResetAllowed(
+  env: { VERCEL_ENV?: string | undefined } = {
+    VERCEL_ENV: process.env.VERCEL_ENV,
+  },
+): boolean {
+  return env.VERCEL_ENV !== "production";
+}
+
+/** Copy desks reference a parent, so they have to go first. */
+export function devResetDeskOrder<T extends { copyOfAccountId?: string | null }>(
+  desks: readonly T[],
+): T[] {
+  return [
+    ...desks.filter((desk) => desk.copyOfAccountId),
+    ...desks.filter((desk) => !desk.copyOfAccountId),
+  ];
+}
+
 export function requiresSetupGate(input: {
   platformMember: boolean;
   emailVerified: boolean;

@@ -4,6 +4,7 @@ import {
   bindConnectionToDesk,
   insertTradingAccount,
   listTradingAccounts,
+  teardownAllTradingAccounts,
 } from "@/lib/accounts/store";
 import {
   deskDisplayMode,
@@ -11,12 +12,14 @@ import {
 } from "@/lib/accounts/model";
 import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
 import {
+  clearActiveAccountId,
   requireVerifiedEmail,
   setActiveAccountId,
 } from "@/lib/auth/session";
 import { createMemberExchangeConnection } from "@/lib/exchanges/member-connection";
 import { connectionFitsDesk } from "@/lib/exchanges/venues";
 import {
+  deleteMemberExchangeConnections,
   listConnectionDeskBinds,
   listExchangeConnections,
 } from "@/lib/exchanges/store";
@@ -25,6 +28,7 @@ import { listOnboardingFolders } from "@/lib/onboarding/catalog";
 import {
   appliesStillToRun,
   desksStillToCreate,
+  devAccountResetAllowed,
   parseSetupDraft,
   starterTemplateAllowed,
   validateSetupForFinish,
@@ -33,6 +37,7 @@ import {
 } from "@/lib/onboarding/model";
 import {
   claimOnboardingFinish,
+  clearMemberOnboarding,
   completeMemberOnboarding,
   dismissOnboardingSummary,
   loadMemberOnboarding,
@@ -397,6 +402,31 @@ export async function dismissSetupSummary(): Promise<void> {
   const member = await requirePlatformMember();
   await dismissOnboardingSummary(member.id);
   revalidatePath("/account");
+}
+
+export async function resetDevAccount(
+  previous: { error: string } | null,
+): Promise<{ error: string } | null> {
+  void previous;
+  if (!devAccountResetAllowed()) {
+    return { error: "Reset is only available outside production." };
+  }
+  const member = await requirePlatformMember();
+  const desks = await teardownAllTradingAccounts(member.id);
+  if (desks.error) {
+    return { error: desks.error };
+  }
+  const keys = await deleteMemberExchangeConnections(member.id);
+  if (keys.error) {
+    return { error: keys.error };
+  }
+  const setup = await clearMemberOnboarding(member.id);
+  if (setup.error) {
+    return { error: setup.error };
+  }
+  await clearActiveAccountId();
+  refreshSetupChrome();
+  redirect("/account");
 }
 
 export async function startPlatformTour(): Promise<void> {

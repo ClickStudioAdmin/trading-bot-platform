@@ -27,6 +27,8 @@ import {
   applyBotSetupChoice,
   applyDeskSetupChoice,
   botsEmptyNote,
+  devAccountResetAllowed,
+  devResetDeskOrder,
   requiresSetupGate,
   setupDeskFromDetails,
   setupDeskReviewLine,
@@ -109,6 +111,17 @@ assert.equal(requiresSetupGate({
 assert.equal(statusAfterExternalDesk(null), "skipped");
 assert.equal(statusAfterExternalDesk("pending"), "skipped");
 assert.equal(statusAfterExternalDesk("completed"), "completed");
+assert.equal(devAccountResetAllowed({ VERCEL_ENV: "production" }), false);
+assert.equal(devAccountResetAllowed({ VERCEL_ENV: "preview" }), true);
+assert.equal(devAccountResetAllowed({ VERCEL_ENV: "development" }), true);
+assert.equal(devAccountResetAllowed({}), true);
+assert.deepEqual(
+  devResetDeskOrder([
+    { id: "parent", copyOfAccountId: null },
+    { id: "copy", copyOfAccountId: "parent" },
+  ]).map((desk) => desk.id),
+  ["copy", "parent"],
+);
 
 const paper = dcaPaper();
 const connected = makeSetupDesk({

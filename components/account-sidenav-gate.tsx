@@ -15,6 +15,7 @@ export function SignedInNav({
   adminBadges,
   platformName,
   platformLogoUrl,
+  allowDevReset = false,
 }: {
   desks: TradingAccount[];
   platformMember: boolean;
@@ -22,6 +23,7 @@ export function SignedInNav({
   adminBadges?: Record<string, number>;
   platformName?: string;
   platformLogoUrl?: string | null;
+  allowDevReset?: boolean;
 }) {
   const pathname = usePathname();
   const admin = pathname.startsWith("/admin");
@@ -42,6 +44,7 @@ export function SignedInNav({
               badges={badges}
               platformName={platformName}
               platformLogoUrl={platformLogoUrl}
+              allowDevReset={allowDevReset}
             />
           )}
         </div>

@@ -2,7 +2,11 @@ import { Suspense } from "react";
 import { PlatformTour } from "@/components/platform-tour";
 import { SetupGate } from "@/components/setup-gate";
 import { SetupModalFallback } from "@/components/setup-modal";
-import { buildTourSteps, requiresSetupGate } from "@/lib/onboarding/model";
+import {
+  buildTourSteps,
+  devAccountResetAllowed,
+  requiresSetupGate,
+} from "@/lib/onboarding/model";
 import { loadMemberOnboarding } from "@/lib/onboarding/store";
 import { cookies, headers } from "next/headers";
 import {
@@ -73,6 +77,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
     platformMember,
     platformName: brand.name,
     platformLogoUrl: brand.logoUrl,
+    allowDevReset: platformMember && devAccountResetAllowed(),
   };
 
   return (
@@ -147,6 +152,7 @@ async function SidenavBadges({
   platformMember,
   platformName,
   platformLogoUrl,
+  allowDevReset,
 }: {
   userId: string;
   verified: boolean;
@@ -155,6 +161,7 @@ async function SidenavBadges({
   platformMember: boolean;
   platformName: string;
   platformLogoUrl: string | null;
+  allowDevReset: boolean;
 }) {
   const [memberChrome, adminChrome] = await Promise.all([
     verified
@@ -168,6 +175,7 @@ async function SidenavBadges({
       platformMember={platformMember}
       platformName={platformName}
       platformLogoUrl={platformLogoUrl}
+      allowDevReset={allowDevReset}
       badges={
         memberChrome
           ? {
