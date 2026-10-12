@@ -123,16 +123,16 @@ Apply runs when they continue to the tour, after the desks exist, through the sa
 
 ### 3. Take a Tour
 
-Continuing to this step writes the desks and bots first. The modal stays up and shows a table of each desk and the bots loaded on it. A desk with no starter bots shows an em dash. It does not ask the tour question on this screen.
+Continuing to this step writes the desks and bots first. The modal stays up and shows a table of each desk and the bots loaded on it. A desk with no starter bots shows an em dash. It does not ask the tour question on this screen. When a bot fails to load, that error is listed on this step and the screen does not say the account is ready. A failure that stops the write stays on the current step, in the footer.
 
 - **Start the Tour now** — Setup is marked completed and the tour starts on Overview. The tour includes the new desks and, when a starter bot was loaded, that desk’s Bots page.
 - **Not now** — Setup is marked completed and lands on Overview, with the setup summary. The last desk created becomes the active desk.
 
 Back is not offered after the desks are written. There is no Skip setup. A retry does not create a second copy.
 
-Partial failure: desks and binds already committed stay. The setup row records created desk ids and which template applies succeeded, so a retry does not create a second copy. Keys already saved stay on the login. The member sees which step failed in the same words the underlying action already returns.
+Partial failure: desks and binds already committed stay. The setup row records created desk ids and which template applies succeeded, so a retry does not create a second copy. Keys already saved stay on the login. Each failed bot is named on the wizard, with the same words the apply action returned. The ready screen and the Overview card say setup finished with errors. They do not use the success heading while any error is present.
 
-Done summary (Overview card that dismisses, or the first tour step): desks created, which connected desks are bound vs bind-later, bots loaded and that they are idle or disabled, and that nothing is trading.
+Done summary (Overview card that dismisses, or the first tour step): desks created, which connected desks are bound vs bind-later, bots loaded and that they are idle or disabled, and that nothing is trading. Errors from this setup are listed above that.
 
 ## Guided tour
 

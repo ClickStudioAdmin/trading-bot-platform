@@ -52,6 +52,7 @@ import {
   type BotSetupChoice,
   type DeskSetupChoice,
   type SetupDraft,
+  type SetupIssue,
   type SetupScreen,
   type SetupConnection,
   type SetupDesk,
@@ -60,6 +61,12 @@ import {
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+
+function wizardActionError(error: unknown): string {
+  const message =
+    error instanceof Error ? error.message.replace(/\s+/g, " ").trim() : "";
+  return (message || "Could not finish setup.").slice(0, 180);
+}
 
 function SetupProgress({
   screen,
@@ -147,6 +154,7 @@ export function SetupWizard({
     initialDraft.botChoice,
   );
   const [applied, setApplied] = useState<string[]>(initialDraft.applied);
+  const [summary, setSummary] = useState(initialDraft.summary);
   const [readyForTour, setReadyForTour] = useState(initialDraft.readyForTour);
   const [introSeen, setIntroSeen] = useState(initialDraft.introSeen);
   const [playing, setPlaying] = useState(false);
@@ -183,7 +191,7 @@ export function SetupWizard({
       botChoice,
       tourChoice: null,
       applied,
-      summary: null,
+      summary,
       readyForTour,
       introSeen,
       ...overrides,
@@ -194,13 +202,17 @@ export function SetupWizard({
     const snapshot = draft({ introSeen: true });
     setError(null);
     startTransition(async () => {
-      const saved = await saveSetupDraft(JSON.stringify(snapshot));
-      if (!saved.ok) {
-        setError(saved.error);
-        return;
+      try {
+        const saved = await saveSetupDraft(JSON.stringify(snapshot));
+        if (!saved.ok) {
+          setError(saved.error);
+          return;
+        }
+        setIntroSeen(true);
+        setScreenId("desks:choice");
+      } catch (error) {
+        setError(wizardActionError(error));
       }
-      setIntroSeen(true);
-      setScreenId("desks:choice");
     });
   }
 
@@ -246,12 +258,16 @@ export function SetupWizard({
     }
     setError(null);
     startTransition(async () => {
-      const saved = await saveSetupDraft(JSON.stringify(body));
-      if (!saved.ok) {
-        setError(saved.error);
-        return;
+      try {
+        const saved = await saveSetupDraft(JSON.stringify(body));
+        if (!saved.ok) {
+          setError(saved.error);
+          return;
+        }
+        setScreenId(setupScreenId(target));
+      } catch (error) {
+        setError(wizardActionError(error));
       }
-      setScreenId(setupScreenId(target));
     });
   }
 
@@ -271,15 +287,20 @@ export function SetupWizard({
     }
     setError(null);
     startTransition(async () => {
-      const created = await createSetupBeforeTour(JSON.stringify(body));
-      if (!created.ok) {
-        setError(created.error);
-        return;
+      try {
+        const created = await createSetupBeforeTour(JSON.stringify(body));
+        if (!created.ok) {
+          setError(created.error);
+          return;
+        }
+        setDesks(created.draft.desks);
+        setApplied(created.draft.applied);
+        setSummary(created.draft.summary);
+        setReadyForTour(true);
+        setScreenId("tour:tour");
+      } catch (error) {
+        setError(wizardActionError(error));
       }
-      setDesks(created.draft.desks);
-      setApplied(created.draft.applied);
-      setReadyForTour(true);
-      setScreenId("tour:tour");
     });
   }
 
@@ -367,11 +388,15 @@ export function SetupWizard({
     }
     setError(null);
     startTransition(async () => {
-      const result = await finishSetup(
-        JSON.stringify({ ...draft(), tourChoice }),
-      );
-      if (result && !result.ok) {
-        setError(result.error);
+      try {
+        const result = await finishSetup(
+          JSON.stringify({ ...draft(), tourChoice }),
+        );
+        if (result && !result.ok) {
+          setError(result.error);
+        }
+      } catch (error) {
+        setError(wizardActionError(error));
       }
     });
   }
@@ -518,6 +543,7 @@ export function SetupWizard({
           desks={desks}
           folders={folders}
           applied={applied}
+          issues={summary?.issues ?? []}
           pending={pending}
           onStart={() => finish("yes")}
           onLater={() => finish("not_now")}
@@ -641,6 +667,7 @@ function TourReady({
   desks,
   folders,
   applied,
+  issues,
   pending,
   onStart,
   onLater,
@@ -648,6 +675,7 @@ function TourReady({
   desks: SetupDesk[];
   folders: StarterFolder[];
   applied: string[];
+  issues: SetupIssue[];
   pending: boolean;
   onStart: () => void;
   onLater: () => void;
@@ -655,15 +683,40 @@ function TourReady({
   const rows = readyDeskRows({ desks, folders, applied });
   return (
     <section>
-      <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-        <IconCheck size={20} className="size-5 shrink-0 text-success" aria-hidden />
-        Your account is ready.
-      </h2>
-      <p className="mt-2 text-sm text-ink">
-        {desks.length === 0
-          ? "No desks or bots were added. Nothing is trading."
-          : "Nothing is armed, and nothing is trading."}
-      </p>
+      {issues.length > 0 ? (
+        <>
+          <h2 className="text-lg font-semibold tracking-tight">
+            Setup finished with errors.
+          </h2>
+          <ul className="mt-3 space-y-2">
+            {issues.map((issue) => (
+              <li
+                key={`${issue.name}:${issue.message}`}
+                className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+              >
+                <span className="font-medium text-ink">{issue.name}</span>
+                {" — "}
+                {issue.message}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-sm text-ink-muted">
+            Desks that were created are listed below. Loaded bots stay idle or disabled.
+          </p>
+        </>
+      ) : (
+        <>
+          <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+            <IconCheck size={20} className="size-5 shrink-0 text-success" aria-hidden />
+            Your account is ready.
+          </h2>
+          <p className="mt-2 text-sm text-ink">
+            {desks.length === 0
+              ? "No desks or bots were added. Nothing is trading."
+              : "Nothing is armed, and nothing is trading."}
+          </p>
+        </>
+      )}
       {rows.length > 0 ? (
         <div className="mt-4 overflow-x-auto rounded-card border border-line">
           <table className="w-full text-left text-sm">
