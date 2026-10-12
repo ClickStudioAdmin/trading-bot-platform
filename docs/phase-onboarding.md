@@ -122,9 +122,9 @@ Apply runs when they click **Create** on Review, after the desks exist, through 
 
 ### 3. Review
 
-One page after Add Bots. Before Create, a table lists each desk and the starter bots that will be loaded on it. A bot set to Armed or Active shows that word in the Initial Status column. A desk with no bots shows an em dash. No desks shows that nothing will be created. **Back** returns to Add Bots. **Create** writes the desks and bots and stays on Review.
+One page after Add Bots. Before Create, a table lists each desk and the starter bots that will be loaded on it. Each bot lists its Initial Status: Idle or Armed for DCA, Disabled or Active for Perps bots and Cash and Carry. A desk with no bots shows an em dash. No desks shows that nothing will be created. **Back** returns to Add Bots. **Create** writes the desks and bots and stays on Review.
 
-After Create, Review shows the result. The heading is **Your account is ready.**, or **Setup finished with errors.** when a bot failed to load or a ticked bot did not start. The same table lists what was written. A bot set to Armed or Active shows that word in the Initial Status column. A failure that stops the write stays on Review before that result, in the footer. **Continue** does not write again. Back and Reset Wizard stay hidden.
+After Create, Review shows the result. The heading is **Your account is ready.**, or **Setup finished with errors.** when a bot failed to load or a ticked bot did not start. The same table lists what was written. Each bot lists its Initial Status: Idle or Armed for DCA, Disabled or Active for Perps bots and Cash and Carry. A failure that stops the write stays on Review before that result, in the footer. **Continue** does not write again. Back and Reset Wizard stay hidden.
 
 ### 4. Take a Tour
 

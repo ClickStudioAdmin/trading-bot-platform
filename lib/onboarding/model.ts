@@ -262,11 +262,20 @@ export function setupInitialStatusChoices(
   return null;
 }
 
-export function starterStartedWord(deskType: DeskType): string | null {
+/** The status word Review lists for a bot. Rest is Idle or Disabled. Start is Armed or Active. */
+export function starterStatusWord(
+  deskType: DeskType,
+  started: boolean,
+): string | null {
+  const value: SetupInitialStatus = started ? "start" : "rest";
   return (
-    setupInitialStatusChoices(deskType)?.find((choice) => choice.value === "start")
+    setupInitialStatusChoices(deskType)?.find((choice) => choice.value === value)
       ?.label ?? null
   );
+}
+
+export function starterStartedWord(deskType: DeskType): string | null {
+  return starterStatusWord(deskType, true);
 }
 
 /** A Connected desk can start a bot only after a key is saved. */
@@ -1073,7 +1082,6 @@ export function setupReviewRows(input: {
     }
   }
   return input.desks.map((desk) => {
-    const started = starterStartedWord(desk.deskType);
     const armed = new Set(desk.armTemplateIds);
     return {
       key: desk.key,
@@ -1081,7 +1089,7 @@ export function setupReviewRows(input: {
       bots: desk.templateIds.map((templateId) => ({
         templateId,
         name: names.get(templateId) ?? "Starter bot",
-        start: armed.has(templateId) ? started : null,
+        start: starterStatusWord(desk.deskType, armed.has(templateId)),
       })),
     };
   });
