@@ -228,7 +228,7 @@ Stop after acceptance. Do not start Fly.io, Hyperliquid, scale-in, or backup kli
 - In-place edit of another member’s `recipe` JSON
 - Marketplace
 - Fly.io, private APIs from the browser
-- Scale-in / position builder (V2)
+- Strategy Builder and the other bot structures (V1 item 7). Replaces the parked position builder / scale-in desk. See [roadmap.md](roadmap.md).
 - Onboarding delivery (V1 item 5). The wizard applies templates only from platform folders flagged Include in Starter Pack, idle or disabled, and never copies them into the member library. See [phase-onboarding.md](phase-onboarding.md).
 - Plans, payments, and affiliates (shipped; [phase-membership.md](phase-membership.md))
 - Hyperliquid leftover desk-test (V1 system test); MEXC (V2) ([phase-hyperliquid.md](phase-hyperliquid.md))

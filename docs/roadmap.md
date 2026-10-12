@@ -1,6 +1,6 @@
 # Roadmap
 
-Click locked this V1 / V2 split **16 Sep 2026**. On **12 Oct 2026** Click swapped onboarding with entitlements, and invite-friends with the front-end website, and inserted production deploy and live configuration as item 7 (system test and everything after it moved down one). Do not reorder V1 again or start a later V1 item until Click says go. V2 has **no order** — do not start any V2 item until Click picks one.
+Click locked this V1 / V2 split **16 Sep 2026**. On **12 Oct 2026** Click swapped onboarding with entitlements, and invite-friends with the front-end website, inserted production deploy and live configuration before system test, and inserted Strategy Builder and bot-structure refinement before that deploy. Do not reorder V1 again or start a later V1 item until Click says go. V2 has **no order** — do not start any V2 item until Click picks one.
 
 Phases **1–11** are shipped. See [master-spec.md](master-spec.md) and [phase-11.md](phase-11.md). Older phase files still say “roadmap 2” / “roadmap 5”; those numbers are historical. **This file is the plan.**
 
@@ -48,12 +48,13 @@ Stop after each item until Click says go.
 | 4 | **Account Positions, Bots, and Automations lists** | **Current.** Started 21 Sep 2026. Spec: [phase-account-blotter.md](phase-account-blotter.md). Isolation already in repo (item 3). Desk Automations list first; account Positions / Bots wait until Click asks. Virtual lots stay V2. |
 | 5 | **Onboarding wizards and Starter Packs** | Blocking first-run modal: desk type × mode, exchange keys, idle bots from admin starter folders, then an optional guided tour. The app stays closed until Finish or Skip. Never arm. Click is building this now. Spec: [phase-onboarding.md](phase-onboarding.md). |
 | 6 | **Entitlements and plan / 2FA gates** | `assertEntitlement`, visible/disabled + Upgrade, a plan may require 2FA, downgrade grace. Gate map scoped 9 Oct 2026. Spec: [phase-entitlements.md](phase-entitlements.md) (gates). |
-| 7 | **Production deploy and live configuration** | Deploy the production build: merge `develop` to `main` so Vercel Production, production Supabase migrations, and Fly `tbp-engine` ship. Configure every live account and integration on production only — Stripe live, Resend, mainnet billing HD and gas, exchange and billing keys, session and cron secrets, `APP_BASE_URL`. Develop secrets stay off production. See [environments.md](environments.md). |
-| 8 | **Full system test and refinement** | On that production build. Whole product, **including Hyperliquid** leftover desk-test and copy leftover desk-test. Fix what Click finds. Not a new feature phase. |
-| 9 | **Invite friends to test** | Closed testers before the public soft launch. |
-| 10 | **Front-end website** | Marketing / public site, not desk chrome. |
-| 11 | **Explainer videos, docs, support** | User-facing help (videos, platform docs, tickets or equivalent). Distinct from these engineering phase files. |
-| 12 | **Soft launch / beta and promote affiliates** | Public beta. Push the affiliate program. |
+| 7 | **Strategy Builder and bot structures** | Implement the Strategy Builder plan on Perps bots (`perps_bots`): one playbook per contract and side. Entry, additional exposure, and exit are And/Or condition stacks. The app places the first order, later adds, and the exit. Signals only arm. Then refine the other managing playbooks (DCA and Cash and Carry) to that structure. This replaces the parked position builder / scale-in desk. Write `docs/phase-strategy-builder.md` when this item starts. |
+| 8 | **Production deploy and live configuration** | Deploy the production build: merge `develop` to `main` so Vercel Production, production Supabase migrations, and Fly `tbp-engine` ship. Configure every live account and integration on production only — Stripe live, Resend, mainnet billing HD and gas, exchange and billing keys, session and cron secrets, `APP_BASE_URL`. Develop secrets stay off production. See [environments.md](environments.md). |
+| 9 | **Full system test and refinement** | On that production build. Whole product, **including Hyperliquid** leftover desk-test and copy leftover desk-test. Fix what Click finds. Not a new feature phase. |
+| 10 | **Invite friends to test** | Closed testers before the public soft launch. |
+| 11 | **Front-end website** | Marketing / public site, not desk chrome. |
+| 12 | **Explainer videos, docs, support** | User-facing help (videos, platform docs, tickets or equivalent). Distinct from these engineering phase files. |
+| 13 | **Soft launch / beta and promote affiliates** | Public beta. Push the affiliate program. |
 
 ## V2 (consideration, no order)
 
@@ -61,7 +62,6 @@ Parked or not in V1. Keep the docs. Click picks the next one when V1 is done (or
 
 - **Internal (and maybe external) webhooks; event-driven bot signals** — cross-desk hedge path (example: DCA 5 opens → Perps bot hedge)
 - **Backup market data** — failover when Bybit public klines fail ([master-spec.md](master-spec.md))
-- **New desk type: position builder / scale-in**
 - **Other exchanges** — MEXC, XT, further CEXes. Write `phase-mexc.md` (or equivalent) when that item starts
 - **Admin roles** — [phase-admin-roles.md](phase-admin-roles.md). Operator mail stays every admin until then
 - **Paper auto-switch** — [phase-auto-switch.md](phase-auto-switch.md)
