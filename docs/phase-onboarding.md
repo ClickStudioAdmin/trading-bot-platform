@@ -40,7 +40,7 @@ There is no Skip setup. The member goes through Add Desks, Add Bots, Review, and
 
 ## Steps
 
-The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. Before the numbered steps, the modal shows a placeholder for an explainer video. The step list stays hidden there. **Watch a short overview** sits in the same grey header bar as **Set up your account** on the later steps. **Watch** starts the placeholder. There is no video file yet. **Skip**, or **Continue** after watching, opens Desks and stores that the video was passed, so a refresh during setup does not show it again. **Back** from the first Desks screen returns to the video. When desks and bots are already written and only the tour step is left, the video stays hidden. The step list always shows **1. Add Desks**, **2. Add Bots**, **3. Review**, and **4. Take a Tour**. There is no second row of sub-step labels. Each of Add Desks and Add Bots starts with a choice. **Create Desk** opens a sub-modal on the manual list. Exchanges stays on Add Desks and opens only when a Connected desk still needs a key. Each desk that has starter folders is a sub-step of Bots when they choose to pick bots themselves. **Back** returns to the previous sub-step and can change the choice until they click **Create**. Review lists every desk and the bots that will be loaded on it. Desks and bots are written then, before the tour, so the tour can show them. There is no Skip setup. Doing nothing is a choice on each step.
+The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. Before the numbered steps, the modal shows a placeholder for an explainer video. The step list stays hidden there. **Watch a short overview** sits in the same grey header bar as **Set up your account** on the later steps. **Watch** starts the placeholder. There is no video file yet. **Skip**, or **Continue** after watching, opens Desks and stores that the video was passed, so a refresh during setup does not show it again. **Back** from the first Desks screen returns to the video. When desks and bots are already written and only the tour step is left, the video stays hidden. The step list always shows **1. Add Desks**, **2. Add Bots**, **3. Review**, and **4. Take a Tour**. There is no second row of sub-step labels. Each of Add Desks and Add Bots starts with a choice. **Create Desk** opens a sub-modal on the manual list. Exchanges stays on Add Desks and opens only when a Connected desk still needs a key. When they choose to pick bots themselves, every desk with starter folders or flagged templates is listed on the same Add Bots page. **Back** returns to the previous sub-step and can change the choice until they click **Create**. Review lists every desk and the bots that will be loaded on it. Desks and bots are written then, before the tour, so the tour can show them. There is no Skip setup. Doing nothing is a choice on each step.
 
 ### 1. Add Desks
 
@@ -94,7 +94,7 @@ Paper rows do not appear here.
 Always step 2. It starts with the same kind of choice as desks:
 
 1. Load starter bots onto each desk.
-2. Manually select starter bots. One sub-step per new desk that has a matching starter folder.
+2. Manually select starter bots. Every new desk that has a matching starter folder or flagged template is listed on this same page.
 3. Don't add any bots.
 
 If they chose no desks, this step does not offer those three. It says bots need a desk, with Back or continue to Review.
@@ -112,7 +112,7 @@ Admin already sets both flags on `/admin/templates` (**Include in Starter Pack**
 
 Picker:
 
-- Group by the new desk (name, type, Paper or Connected).
+- One page, grouped by the new desk (name, type, Paper or Connected).
 - Under each desk, list matching flagged folders, then flagged templates that are not in those folders. Ticking a folder selects its templates. The member can untick a template inside the folder. A flagged template on its own is one tick.
 - A folder for the wrong desk type is not shown on that desk.
 - Each selected bot has **Arm** (DCA) or **Enable** (Perps bots and Cash and Carry). It is clear by default. Ticking it starts that bot when setup creates it. An armed DCA bot can place its first order when the start is immediate. A Connected desk without a saved key leaves the tick unavailable.
@@ -128,7 +128,7 @@ One page after Add Bots. A table lists each desk and the starter bots that will 
 
 ### 4. Take a Tour
 
-This step opens after **Create**. The modal stays up and shows a success message listing the desks and the bots that were loaded. It does not ask the tour question on this screen.
+This step opens after **Create**. The modal stays up and shows a table of each desk and the bots loaded on it. A bot ticked Arm or Enable shows that word beside its name. A desk with no starter bots shows an em dash. It does not ask the tour question on this screen.
 
 - **Start the Tour now** — Setup is marked completed and the tour starts on Overview. The tour includes the new desks and, when a starter bot was loaded, that desk’s Bots page.
 - **Not now** — Setup is marked completed and lands on Overview, with the setup summary. The last desk created becomes the active desk.
@@ -238,7 +238,7 @@ Stop after each until Click says go. Do not start inside item 4 or item 6.
 - Connected with bind later inserts `mode = live` and no connection.
 - Two connected rows cannot select the same connection id.
 - A key with withdrawal permission never saves.
-- The bot list contains only templates from flagged platform folders. A template with its own flag and no flagged folder is absent.
+- The manual bot page lists every created desk that has starter content. It contains templates from flagged platform folders, plus flagged platform templates that are not already in those folders.
 - Apply leaves a bot idle or disabled when Arm or Enable is clear. A ticked bot uses the desk arm or enable action. An unticked bot creates no order.
 - TradingView Strategy and Perps still show step 2, with nothing to load.
 - Finish retry does not insert a second desk or a second bot.

@@ -42,8 +42,7 @@ export type SetupMainStep = (typeof SETUP_MAIN_STEPS)[number];
 export type SetupScreen =
   | { main: "intro"; sub: "video" }
   | { main: "desks"; sub: "choice" | "desks" | "exchanges" }
-  | { main: "bots"; sub: "choice" | "blocked" | "empty" }
-  | { main: "bots"; sub: "desk"; deskKey: string }
+  | { main: "bots"; sub: "choice" | "blocked" | "empty" | "pick" }
   | { main: "review"; sub: "review" }
   | { main: "tour"; sub: "tour" };
 export type StarterVisibility = "platform" | "user" | "backtested";
@@ -956,9 +955,7 @@ export function setupScreens(input: {
       if (bots.length === 0) {
         screens.push({ main: "bots", sub: "empty" });
       } else {
-        for (const desk of bots) {
-          screens.push({ main: "bots", sub: "desk", deskKey: desk.key });
-        }
+        screens.push({ main: "bots", sub: "pick" });
       }
     }
   }
@@ -970,9 +967,6 @@ export function setupScreens(input: {
 }
 
 export function setupScreenId(screen: SetupScreen): string {
-  if (screen.main === "bots" && screen.sub === "desk") {
-    return `bots:${screen.deskKey}`;
-  }
   return `${screen.main}:${screen.sub}`;
 }
 
@@ -1043,7 +1037,7 @@ export function createdStarterBots(input: {
   desks: readonly SetupDesk[];
   folders: readonly StarterFolder[];
   applied: readonly string[];
-}): { deskName: string; botName: string; templateId: string }[] {
+}): { deskKey: string; deskName: string; botName: string; templateId: string }[] {
   const done = new Set(input.applied);
   const names = new Map<string, string>();
   for (const folder of input.folders) {
@@ -1051,7 +1045,12 @@ export function createdStarterBots(input: {
       names.set(template.id, template.name);
     }
   }
-  const rows: { deskName: string; botName: string; templateId: string }[] = [];
+  const rows: {
+    deskKey: string;
+    deskName: string;
+    botName: string;
+    templateId: string;
+  }[] = [];
   for (const desk of input.desks) {
     if (!desk.accountId) {
       continue;
@@ -1061,6 +1060,7 @@ export function createdStarterBots(input: {
         continue;
       }
       rows.push({
+        deskKey: desk.key,
         deskName: desk.name,
         botName: names.get(templateId) ?? "Starter bot",
         templateId,
@@ -1068,6 +1068,22 @@ export function createdStarterBots(input: {
     }
   }
   return rows;
+}
+
+/** One row per created desk, with the starter bots that loaded on it. */
+export function readyDeskRows(input: {
+  desks: readonly SetupDesk[];
+  folders: readonly StarterFolder[];
+  applied: readonly string[];
+}): { key: string; name: string; bots: { templateId: string; name: string }[] }[] {
+  const loaded = createdStarterBots(input);
+  return input.desks.map((desk) => ({
+    key: desk.key,
+    name: desk.name,
+    bots: loaded
+      .filter((bot) => bot.deskKey === desk.key)
+      .map((bot) => ({ templateId: bot.templateId, name: bot.botName })),
+  }));
 }
 
 export function applyKey(accountId: string, templateId: string): string {

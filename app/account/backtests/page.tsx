@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
 import { BacktestRunRefresh } from "@/components/backtest-run-view";
@@ -61,17 +60,7 @@ export default async function AccountBacktestsPage({
       {pendingRun ? (
         <BacktestRunRefresh active runId={pendingRun.id} />
       ) : null}
-      <PageHeading
-        title="Backtesting Tool"
-        actions={
-          <Link
-            href="/account/templates"
-            className="text-sm text-accent hover:underline"
-          >
-            Bot Templates
-          </Link>
-        }
-      />
+      <PageHeading title="Backtesting Tool" />
       <BacktestRunsTable
         runs={runs}
         memberId={member.id}
