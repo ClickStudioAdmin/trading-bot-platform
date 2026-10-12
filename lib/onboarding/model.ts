@@ -497,7 +497,8 @@ export function setupDeskFromDetails(input: {
       environmentId,
       connectionId,
       bindLater: input.mode === "live" && !connectionId,
-      templateIds: previous?.templateIds ?? [],
+      templateIds:
+        previous?.deskType === input.deskType ? (previous?.templateIds ?? []) : [],
       armTemplateIds: keptArmTemplateIds({
         mode: input.mode,
         connectionId,

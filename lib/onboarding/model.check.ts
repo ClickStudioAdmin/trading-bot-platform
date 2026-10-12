@@ -240,6 +240,27 @@ const detailed = setupDeskFromDetails({
   previous: null,
 });
 assert.equal(detailed.ok, true);
+const switchedType = setupDeskFromDetails({
+  deskType: "perps_bots",
+  mode: "paper",
+  name: "Perps bots Paper",
+  venue: "bybit",
+  environmentId: null,
+  bindLater: false,
+  connectionId: null,
+  takenNames: [],
+  previous: {
+    ...makeSetupDesk({ deskType: "dca", mode: "paper", takenNames: [] }),
+    templateIds: ["bot"],
+    armTemplateIds: ["bot"],
+  },
+});
+assert.equal(switchedType.ok, true);
+if (switchedType.ok) {
+  assert.equal(switchedType.desk.deskType, "perps_bots");
+  assert.deepEqual(switchedType.desk.templateIds, []);
+  assert.deepEqual(switchedType.desk.armTemplateIds, []);
+}
 if (detailed.ok) {
   assert.equal(detailed.desk.venue, "hyperliquid");
   assert.equal(detailed.desk.key, "dca:paper");

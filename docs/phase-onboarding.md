@@ -16,7 +16,7 @@ Create desk (`/account/desks/new`, Manage desks) already picks one type, a name,
 
 First-run setup for a verified platform member who has not finished or skipped it. The signed-in app stays closed until they do. It asks four things, then writes the initial account:
 
-1. Which desks to add, from a list of types. **Add Desk** opens the details.
+1. Which desks to add. **Add Desk** opens the details, including the desk type.
 2. Exchange keys, only if any chosen desk is Connected.
 3. Which starter bots to load, only from platform folders an admin has flagged.
 4. Whether they want a short guided tour.
@@ -29,7 +29,7 @@ There is no Skip setup. The member goes through Add Desks, Add Bots, Review, and
 | --- | --- | --- |
 | 1 | Entry | A modal over the signed-in app. Header, sidenav, and page links do not work until the tour step is finished. Other app routes redirect to Overview, where the modal stays open. Affiliate-only logins never see it. `/account/setup` redirects to Overview. |
 | 2 | Who | Verified platform member whose setup is not skipped or completed. A member with desks and no setup row is left alone. Creating a desk outside the wizard marks setup skipped. A Finish retry that already created desks keeps the modal until setup is completed or skipped. |
-| 3 | Desk list | One row per desk type, with **Add Desk** beside the type. The button opens a sub-modal for the name, mode, market or exchange, environment, and key. Several desks of one type are allowed, including more than one Paper desk and more than one Connected desk. No quantity field. Added desks appear in a table under that type, with columns for the name, mode, market, environment, and key, before Continue. The plan desk cap is the limit once item 6 gates exist. |
+| 3 | Desk list | One table for every desk. **Add Desk** sits at the top and opens a sub-modal. The member picks the desk type there, then the name, mode, market or exchange, environment, and key. Several desks of one type are allowed, including more than one Paper desk and more than one Connected desk. No quantity field. Columns are type, name, mode, market, environment, and key. The plan desk cap is the limit once item 6 gates exist. |
 | 4 | Demo vs Live | Not a third column. Connected is `mode = live`. Demo vs Live is the key’s venue environment, chosen on the exchange step. Display mode stays Paper / Demo / Live as today. |
 | 5 | When rows are written | Desk names and details stay a draft until **Create** on Review. API secrets are never stored in that draft. A key the member saves in the create modal, or on the exchange step, is written immediately through the existing connection action (verify, trade-only, encrypt). The draft keeps the connection id only. |
 | 6 | Keys | Same rules as Exchanges and create desk. Trade-only, no withdrawal permission. Server verifies. Browser never sees the secret again. One connection binds one desk. **Bind later** is allowed per connected desk. |
@@ -47,22 +47,22 @@ The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and E
 The first sub-step asks how to add desks:
 
 1. Add a Paper Trading desk for each strategy type. Quickest way to see every desk type. Skips the list and the exchange sub-step.
-2. Manually select desk types and modes. Opens the list below. **Add Desk** beside each type opens the sub-modal.
+2. Manually select desk types and modes. Opens one table. **Add Desk** at the top opens the sub-modal, where the member picks the type.
 3. Don't add any desks. Skips the list. Bots then says bots need a desk, with Back or continue to Review.
 
 Choosing again with Back replaces the draft selection. Nothing is inserted until they click **Create** on Review.
 
 Question on the list, when they choose to select manually: “Add desks now?”
 
-One row per type that exists today, in the same order as the account sidebar (automated desks, then the manual Perps desk): Perps bots, DCA, Cash and Carry, TradingView Strategy, Perps. The type name stands alone. **Add Desk** sits beside the type.
+One table. **Add Desk** sits at the top. Columns are type, name, mode, market, environment, and key. An empty table says no desks yet. Types are Perps bots, DCA, Cash and Carry, TradingView Strategy, and Perps, chosen in the sub-modal.
 
-The sub-modal asks for the details, then closes back to the list:
+The sub-modal asks for the details, then closes back to the table:
 
-- Name, default `{Type} Paper` or `{Type} {Venue}`, max 40 characters, unique on the login (and unique inside the draft). Same validator as Manage desks.
+- Desk type, then name. The name defaults to `{Type} Paper` or `{Type} {Venue}`, max 40 characters, unique on the login (and unique inside the draft). Same validator as Manage desks. Changing the type updates the suggested name until the member edits it.
 - Mode: Paper or Connected. Another desk of the same mode can be added. The suggested name stays unique.
 - Paper on a type with more than one market (not Cash and Carry) shows **Market data** (Bybit or Hyperliquid). Default Bybit. Cash and Carry paper stays Bybit.
 - Connected shows **Exchange** and **Environment** (Live or Demo / Testnet). Connected Cash and Carry is Bybit only. Then **Bind later** or **Add a trade-only key**. A key is checked and encrypted before the desk is added. The secret is not stored in the draft.
-- **Add desk** closes the modal. That desk appears in a table under its type. Columns are name, mode, market, environment, and key. Paper leaves environment and key blank. The pencil **Edit** reopens the modal. The trash **Remove** drops that desk.
+- **Add desk** closes the modal. That desk is a row in the one table. Paper leaves environment and key blank. The pencil **Edit** reopens the modal, including the type. The trash **Remove** drops that desk. Changing the type drops starter bots already chosen for the previous type.
 
 - An empty list is valid. Continue goes to Bots, which says bots need a desk, then the tour. Exchanges stays hidden.
 - Perps is the ticket desk. TradingView Strategy has no bot recipes. The list does not promise bots for those rows.
@@ -209,7 +209,7 @@ Each desk added from the sub-modal and each Finish create goes through the same 
 
 ## UI
 
-- The modal uses `bg-surface` `border-line` and two thirds of the account width (`max-w-7xl` is 80rem). It is the only card. Step copy sits in the dialog, not in a second surface box. The account title bar and the footer use `bg-surface-raised`, the same grey as table headers. One line sits under the account title and the step list. One line sits above the footer buttons. The step content is padded `px-6 py-5`, the same on the top and the bottom. Add Desks, Add Bots, Review, and Take a Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. The step content scrolls inside the dialog. Choice rows keep a border so the selected row can use the accent. Each Add Desks and Add Bots choice has an icon before the title. The desk list is one row per type. **Add Desk** is the standard plus button. Added desks sit in a table under that type, with columns for name, mode, market, environment, and key. Edit and Remove are the pencil and trash icon actions. The create sub-modal uses `bg-surface` and `border-line`, with the same grey header and footer. The video screen uses that same header bar for **Watch a short overview**, without the step list. Its frame is `bg-canvas` with `border-line` and the play icon. Skip and Watch or Continue use the same footer buttons. **Reset Wizard** is the secondary button (`bg-surface`, `border-line`, `text-ink-muted`) on the left of that footer before the desks are written. It stays hidden after Create, on the Review result and on Take a Tour. Back, Continue, and Create sit on the right. After Create, Review uses Continue. On Take a Tour, **Not now** and **Start the Tour now** use that same right side. Each footer label has an icon before the word, except Continue, whose arrow sits after the word.
+- The modal uses `bg-surface` `border-line` and two thirds of the account width (`max-w-7xl` is 80rem). It is the only card. Step copy sits in the dialog, not in a second surface box. The account title bar and the footer use `bg-surface-raised`, the same grey as table headers. One line sits under the account title and the step list. One line sits above the footer buttons. The step content is padded `px-6 py-5`, the same on the top and the bottom. Add Desks, Add Bots, Review, and Take a Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. The step content scrolls inside the dialog. Choice rows keep a border so the selected row can use the accent. Each Add Desks and Add Bots choice has an icon before the title. The desk list is one table. **Add Desk** is the standard plus button at the top. Columns are type, name, mode, market, environment, and key. The sub-modal asks for the desk type. Edit and Remove are the pencil and trash icon actions. The create sub-modal uses `bg-surface` and `border-line`, with the same grey header and footer. The video screen uses that same header bar for **Watch a short overview**, without the step list. Its frame is `bg-canvas` with `border-line` and the play icon. Skip and Watch or Continue use the same footer buttons. **Reset Wizard** is the secondary button (`bg-surface`, `border-line`, `text-ink-muted`) on the left of that footer before the desks are written. It stays hidden after Create, on the Review result and on Take a Tour. Back, Continue, and Create sit on the right. After Create, Review uses Continue. On Take a Tour, **Not now** and **Start the Tour now** use that same right side. Each footer label has an icon before the word, except Continue, whose arrow sits after the word.
 - Desk and bot choices are full-width sections. The selected section uses the accent border. Desk rows keep a bottom rule. No new colours. Paper / Demo / Live dots may use the existing `mode-paper`, `mode-demo`, and `mode-live` tokens.
 - The modal is the only setup entry. It closes when the tour step is finished. **Platform Tour** in the account sidenav stays available.
 - The tour card uses `bg-surface` with a `bg-plan-header` bar. The bar reads Tour and the step count. The heading is the instruction. The primary button is **Next**. No new colours.
