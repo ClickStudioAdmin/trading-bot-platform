@@ -16,7 +16,7 @@ Create desk (`/account/desks/new`, Manage desks) already picks one type, a name,
 
 First-run setup for a verified platform member who has not finished or skipped it. The signed-in app stays closed until they do. It asks four things, then writes the initial account:
 
-1. Which desks to create, as a type × mode table.
+1. Which desks to create, from a list of types. **Create Desk** opens the details.
 2. Exchange keys, only if any chosen desk is Connected.
 3. Which starter bots to load, only from platform folders an admin has flagged.
 4. Whether they want a short guided tour.
@@ -29,9 +29,9 @@ There is no Skip setup. The member goes through Add Desks, Add Bots, and Take a 
 | --- | --- | --- |
 | 1 | Entry | A modal over the signed-in app. Header, sidenav, and page links do not work until the tour step is finished. Other app routes redirect to Overview, where the modal stays open. Affiliate-only logins never see it. `/account/setup` redirects to Overview. |
 | 2 | Who | Verified platform member whose setup is not skipped or completed. A member with desks and no setup row is left alone. Creating a desk outside the wizard marks setup skipped. A Finish retry that already created desks keeps the modal until setup is completed or skipped. |
-| 3 | Desk grid | One row per desk type. Columns are **Paper** and **Connected**. A tick is one desk. Both columns may be ticked (two desks). No quantity field. More desks come later from Manage desks. |
+| 3 | Desk list | One row per desk type, with **Create Desk** beside the type. The button opens a sub-modal for the name, mode, market or exchange, environment, and key. One Paper desk and one Connected desk per type. No quantity field. Added desks are reviewed on the list before Continue. More desks come later from Manage desks. |
 | 4 | Demo vs Live | Not a third column. Connected is `mode = live`. Demo vs Live is the key’s venue environment, chosen on the exchange step. Display mode stays Paper / Demo / Live as today. |
-| 5 | When rows are written | Desk names and ticks stay a draft until **Finish**. API secrets are never stored in that draft. A key the member saves on the exchange step is written immediately through the existing connection action (verify, trade-only, encrypt). The draft keeps the connection id only. |
+| 5 | When rows are written | Desk names and details stay a draft until **Finish**. API secrets are never stored in that draft. A key the member saves in the create modal, or on the exchange step, is written immediately through the existing connection action (verify, trade-only, encrypt). The draft keeps the connection id only. |
 | 6 | Keys | Same rules as Exchanges and create desk. Trade-only, no withdrawal permission. Server verifies. Browser never sees the secret again. One connection binds one desk. **Bind later** is allowed per connected desk. |
 | 7 | Starter bots | Admin chooses **platform folders** with the existing **Include in Starter Pack** flag. The wizard lists only templates inside those folders. A template’s own flag does not put it in the wizard. Apply uses today’s apply path: DCA **idle**, Perps bots and Cash and Carry **disabled**. Never arm, never enable the engine, never place orders. |
 | 8 | Library copy | Apply onto the new desks only. Do not also copy those rows into the member’s template library. |
@@ -40,47 +40,41 @@ There is no Skip setup. The member goes through Add Desks, Add Bots, and Take a 
 
 ## Steps
 
-The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. Before the numbered steps, the modal shows a placeholder for an explainer video. The step list stays hidden there. **Watch a short overview** sits in the same grey header bar as **Set up your account** on the later steps. **Watch** starts the placeholder. There is no video file yet. **Skip**, or **Continue** after watching, opens Desks and stores that the video was passed, so a refresh during setup does not show it again. **Back** from the first Desks screen returns to the video. When desks and bots are already written and only the tour step is left, the video stays hidden. The step list always shows **1. Add Desks**, **2. Add Bots**, and **3. Take a Tour**. There is no second row of sub-step labels. Each of Add Desks and Add Bots starts with a choice. Exchanges follows the manual desk table, and only when a Connected cell is ticked, while the step list stays on Add Desks. Each desk that has starter folders is a sub-step of Bots when they choose to pick bots themselves. **Back** returns to the previous sub-step and can change the choice until they continue to the tour. Desks and bots are written then, before the tour question, so the tour can show those desks and bots. There is no Skip setup. Doing nothing is a choice on each step.
+The steps sit in a modal. Tokens from [ui-theme.md](ui-theme.md). Backdrop and Escape do not close it. Before the numbered steps, the modal shows a placeholder for an explainer video. The step list stays hidden there. **Watch a short overview** sits in the same grey header bar as **Set up your account** on the later steps. **Watch** starts the placeholder. There is no video file yet. **Skip**, or **Continue** after watching, opens Desks and stores that the video was passed, so a refresh during setup does not show it again. **Back** from the first Desks screen returns to the video. When desks and bots are already written and only the tour step is left, the video stays hidden. The step list always shows **1. Add Desks**, **2. Add Bots**, and **3. Take a Tour**. There is no second row of sub-step labels. Each of Add Desks and Add Bots starts with a choice. **Create Desk** opens a sub-modal on the manual list. Exchanges stays on Add Desks and opens only when a Connected desk still needs a key. Each desk that has starter folders is a sub-step of Bots when they choose to pick bots themselves. **Back** returns to the previous sub-step and can change the choice until they continue to the tour. Desks and bots are written then, before the tour question, so the tour can show those desks and bots. There is no Skip setup. Doing nothing is a choice on each step.
 
 ### 1. Add Desks
 
 The first sub-step asks how to add desks:
 
-1. Create a Paper Trading desk for each strategy type. Quickest way to see every desk type. Skips the table and the exchange sub-step.
-2. Manually select desk types and modes. Opens the table below. Connected desks then get the exchange sub-step.
-3. Don't add any desks. Skips the table. Bots then says bots need a desk, with Back or continue to the tour.
+1. Create a Paper Trading desk for each strategy type. Quickest way to see every desk type. Skips the list and the exchange sub-step.
+2. Manually select desk types and modes. Opens the list below. **Create Desk** beside each type opens the sub-modal.
+3. Don't add any desks. Skips the list. Bots then says bots need a desk, with Back or continue to the tour.
 
 Choosing again with Back replaces the draft selection. Nothing is inserted until they continue to the tour.
 
-Question on the table, when they choose to select manually: “Create a few desks now?”
+Question on the list, when they choose to select manually: “Create a few desks now?”
 
-Table, one row per type that exists today, in the same order as the account sidebar (automated desks, then the manual Perps desk):
+One row per type that exists today, in the same order as the account sidebar (automated desks, then the manual Perps desk): Perps bots, DCA, Cash and Carry, TradingView Strategy, Perps. The short line under the type uses the existing choice copy (ticket vs bots vs alerts vs app-owned orders vs spot + dated future). **Create Desk** sits beside the type.
 
-| Desk | Paper | Connected |
-| --- | --- | --- |
-| Perps bots | tick | tick |
-| DCA | tick | tick |
-| Cash and Carry | tick | tick |
-| TradingView Strategy | tick | tick |
-| Perps | tick | tick |
+The sub-modal asks for the details, then closes back to the list:
 
-Short line under the type uses the existing choice copy (ticket vs bots vs alerts vs app-owned orders vs spot + dated future).
+- Name, default `{Type} Paper` or `{Type} {Venue}`, max 40 characters, unique on the login (and unique inside the draft). Same validator as Manage desks.
+- Mode: Paper or Connected. One of each per type. The mode already added is disabled.
+- Paper on a type with more than one market (not Cash and Carry) shows **Market data** (Bybit or Hyperliquid). Default Bybit. Cash and Carry paper stays Bybit.
+- Connected shows **Exchange** and **Environment** (Live or Demo / Testnet). Connected Cash and Carry is Bybit only. Then **Bind later** or **Add a trade-only key**. A key is checked and encrypted before the desk is added. The secret is not stored in the draft.
+- **Add desk** closes the modal. The list shows a review: name, type, mode, market or exchange, environment, and whether the key is saved or bind-later. **Edit** reopens the modal. **Remove** drops that desk.
 
-- Unticked means that type+mode is not created.
-- Zero ticks is valid on the manual table. Continue goes to Bots, which says bots need a desk, then the tour. Exchanges stays hidden.
-- The grid is ticks only, one row per type. Each ticked desk is a row under the grid with an editable name, default `{Type} Paper` or `{Type} Connected`, max 40 characters, unique on the login (and unique inside the draft). Same validator as Manage desks.
-- Paper on a type with more than one market (not Cash and Carry) shows **Market data** beside the name (Bybit or Hyperliquid). Default Bybit. Cash and Carry paper stays Bybit.
-- Connected Cash and Carry is Bybit only. Other connected types pick the venue on the next step.
-- Perps is the ticket desk. TradingView Strategy has no bot recipes. The table does not promise bots for those rows.
+- An empty list is valid. Continue goes to Bots, which says bots need a desk, then the tour. Exchanges stays hidden.
+- Perps is the ticket desk. TradingView Strategy has no bot recipes. The list does not promise bots for those rows.
 - Copy desks are not offered here.
 
-When V1 item 6 gates exist, a cell the plan cannot create is visible and disabled, with the same Upgrade (or verify / 2FA) line as Manage desks. Cap copy matches create desk (“You have 2 of 2 desks”). The server still rejects. Do not hide a type.
+When V1 item 6 gates exist, a type the plan cannot create is visible and disabled, with the same Upgrade (or verify / 2FA) line as Manage desks. Cap copy matches create desk (“You have 2 of 2 desks”). The server still rejects. Do not hide a type.
 
 ### Exchanges (sub-step of Desks)
 
-Sub-step of Desks. Shown only when at least one Connected cell is ticked. The main step list stays on **1. Add Desks** while this sub-step is open.
+Sub-step of Desks. Shown only when a Connected desk was added without a saved key and without **Bind later**. The main step list stays on **1. Add Desks** while this sub-step is open. The create modal is the usual place for the exchange, the environment, and the key.
 
-One block per connected desk, in table order. Each block:
+One block per connected desk, in list order. Each block:
 
 - Desk name and type (read-only).
 - Venue, limited to venues that allow that desk type and connections. Cash and Carry: Bybit. Others: Bybit and Hyperliquid.
@@ -177,7 +171,7 @@ Migration when this item starts. Service role writes. The browser never selects 
 
 - `user_id` uuid primary key, references the member
 - `status` `pending` \| `skipped` \| `completed`
-- `draft` jsonb null — ticked desks, names, paper venue, connection ids, bind-later flags, selected template ids per desk. No secrets.
+- `draft` jsonb null — desks added in the sub-modal, names, paper venue, connection ids, bind-later flags, selected template ids per desk. No secrets.
 - `created_account_ids` uuid[] — desks this run already inserted, for retry
 - `applied_template_keys` text[] — desk id + template id already applied, for retry
 - `tour` `declined` \| `in_progress` \| `completed` \| `skipped` null
@@ -203,12 +197,12 @@ Add a row to [database.md](database.md) in the same change as the migration.
 
 Item 6 comes after this wizard. This wizard does not add plan features or caps.
 
-Each ticked cell and each Finish create goes through the same create and apply actions as Manage desks (desk type, paper, live, non-Bybit venue, desk caps). Bot apply respects the bot cap. When item 6 gates exist, a cell the plan cannot create stays on screen, disabled, with Upgrade, and server actions reject. Until those gates ship, the blocked-cell check stays empty and these actions still run so the gates attach in one place later.
+Each desk added from the sub-modal and each Finish create goes through the same create and apply actions as Manage desks (desk type, paper, live, non-Bybit venue, desk caps). Bot apply respects the bot cap. When item 6 gates exist, a type the plan cannot create stays on screen, disabled, with Upgrade, and server actions reject. Until those gates ship, the blocked-cell check stays empty and these actions still run so the gates attach in one place later.
 
 ## UI
 
-- The modal uses `bg-surface` `border-line` and two thirds of the account width (`max-w-7xl` is 80rem). It is the only card. Step copy sits in the dialog, not in a second surface box. The account title bar and the footer use `bg-surface-raised`, the same grey as table headers. One line sits under the account title and the step list. One line sits above the footer buttons. The step content is padded `px-6 py-5`, the same on the top and the bottom. Add Desks, Add Bots, and Take a Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. The step content scrolls inside the dialog. Choice rows keep a border so the selected row can use the accent. The desk grid is one row per type, ticks only. Each ticked desk is a row under that grid. The video screen uses that same header bar for **Watch a short overview**, without the step list. Its frame is `bg-canvas` with `border-line` and the play icon. Skip and Watch or Continue use the same footer buttons.
-- Desk and bot choices are full-width sections. The selected section uses the accent border. The desk table still uses checkboxes and the Theme table pattern. No new colours. Paper / Demo / Live dots may use the existing `mode-paper`, `mode-demo`, and `mode-live` tokens.
+- The modal uses `bg-surface` `border-line` and two thirds of the account width (`max-w-7xl` is 80rem). It is the only card. Step copy sits in the dialog, not in a second surface box. The account title bar and the footer use `bg-surface-raised`, the same grey as table headers. One line sits under the account title and the step list. One line sits above the footer buttons. The step content is padded `px-6 py-5`, the same on the top and the bottom. Add Desks, Add Bots, and Take a Tour span that width: a numbered mark, the label, and a line between steps. The current step uses the accent fill. The step content scrolls inside the dialog. Choice rows keep a border so the selected row can use the accent. The desk list is one row per type, with **Create Desk** on the row. Added desks are a review under that list. The create sub-modal uses `bg-surface` and `border-line`, with the same grey header and footer. The video screen uses that same header bar for **Watch a short overview**, without the step list. Its frame is `bg-canvas` with `border-line` and the play icon. Skip and Watch or Continue use the same footer buttons.
+- Desk and bot choices are full-width sections. The selected section uses the accent border. Desk rows keep a bottom rule. No new colours. Paper / Demo / Live dots may use the existing `mode-paper`, `mode-demo`, and `mode-live` tokens.
 - The modal is the only setup entry. It closes when the tour step is finished. **Take the tour** on Overview remains until the tour is completed or skipped. **Platform Tour** in the account sidenav stays available.
 - The tour card uses `bg-surface` with a `bg-plan-header` bar. The bar reads Tour and the step count. The heading is the instruction. The primary button is **Next**. No new colours.
 - Light and dark follow header UI preferences. Do not put light tokens on `html` / `body`.
@@ -220,7 +214,7 @@ Stop after each until Click says go. Do not start inside item 4 or item 6.
 | # | Step | Done when |
 | --- | --- | --- |
 | 1 | State | Migration + database.md. Pending / skipped / completed. Skip with zero desks. A desk created outside the wizard marks skipped. |
-| 2 | Desk draft | Table, names, paper market data, disabled cells when gates say so. Nothing written until Finish except the draft json. |
+| 2 | Desk draft | Create Desk sub-modal, names, paper market data, disabled rows when gates say so. Nothing written until Finish except the draft json. |
 | 3 | Exchanges | Connected desks only. New trade-only key, or bind later. No existing-connection picker. Secrets not in the draft. |
 | 4 | Finish desks | Finish creates and binds. Retry does not duplicate. Summary lists bound vs bind later. |
 | 5 | Starter bots | Flagged folders only. Apply idle / disabled. TV and Perps ticket skip the step. Failures listed, siblings kept. |
@@ -230,7 +224,7 @@ Stop after each until Click says go. Do not start inside item 4 or item 6.
 ## Tests
 
 - Skip leaves zero desks and does not show the modal again.
-- Ticking DCA Paper and Perps bots Connected creates those two modes and no others. Names that collide are rejected before Finish.
+- Adding DCA Paper and Perps bots Connected creates those two modes and no others. Names that collide are rejected before Finish.
 - Connected with bind later inserts `mode = live` and no connection.
 - Two connected rows cannot select the same connection id.
 - A key with withdrawal permission never saves.

@@ -273,6 +273,95 @@ export function makeSetupDesk(input: {
   };
 }
 
+export function setupDeskReviewLine(desk: SetupDesk): string {
+  const venue = getVenue(desk.venue);
+  const venueLabel = venue?.label ?? desk.venue;
+  if (desk.mode === "paper") {
+    return `Paper · ${venueLabel}`;
+  }
+  const environment =
+    venue?.environments.find((item) => item.id === desk.environmentId)?.label ??
+    "Live";
+  const key = desk.connectionId
+    ? "Key saved"
+    : desk.bindLater
+      ? "Bind later"
+      : "Key needed";
+  return `Connected · ${venueLabel} · ${environment} · ${key}`;
+}
+
+export function setupDeskFromDetails(input: {
+  deskType: DeskType;
+  mode: "paper" | "live";
+  name: string;
+  venue: string;
+  environmentId: string | null;
+  bindLater: boolean;
+  connectionId: string | null;
+  takenNames: readonly string[];
+  previous?: SetupDesk | null;
+}): { ok: true; desk: SetupDesk } | { ok: false; error: string } {
+  const named = validateNewDeskName(input.name, input.takenNames);
+  if (!named.ok) {
+    return named;
+  }
+  const allowed =
+    input.mode === "paper"
+      ? paperVenuesFor(input.deskType)
+      : connectedVenuesFor(input.deskType);
+  const venue = allowed.find((item) => item.id === input.venue) ?? null;
+  if (!venue || !venueAllowsDeskType(venue, input.deskType)) {
+    return {
+      ok: false,
+      error: `${getVenue(input.venue)?.label ?? "That exchange"} cannot run ${formatDeskType(input.deskType)}.`,
+    };
+  }
+  let environmentId: string | null = null;
+  if (input.mode === "live") {
+    const environment = parseVenueEnvironment(venue, input.environmentId);
+    if (!environment.ok) {
+      return environment;
+    }
+    environmentId = environment.environment.id;
+  }
+  const previous = input.previous ?? null;
+  const bindingChanged = Boolean(
+    previous &&
+      (previous.mode !== "live" ||
+        previous.venue !== venue.id ||
+        previous.environmentId !== environmentId),
+  );
+  const connectionId =
+    input.mode !== "live" || input.bindLater
+      ? null
+      : bindingChanged
+        ? null
+        : input.connectionId;
+  if (input.mode === "live" && !input.bindLater && !connectionId) {
+    return {
+      ok: false,
+      error: "Save a trade-only key, or bind it later.",
+    };
+  }
+  const key = setupDeskKey(input.deskType, input.mode);
+  return {
+    ok: true,
+    desk: {
+      key,
+      deskType: input.deskType,
+      mode: input.mode,
+      name: named.name,
+      nameEdited: true,
+      venue: venue.id,
+      environmentId,
+      connectionId,
+      bindLater: input.mode === "live" && !connectionId,
+      templateIds: previous?.templateIds ?? [],
+      accountId: previous?.key === key ? previous.accountId : null,
+    },
+  };
+}
+
 export function draftHasSecret(value: unknown): boolean {
   if (Array.isArray(value)) {
     return value.some((item) => draftHasSecret(item));
@@ -562,7 +651,9 @@ export function starterTemplateAllowed(input: {
 }
 
 export function showsExchangeStep(desks: readonly SetupDesk[]): boolean {
-  return desks.some((desk) => desk.mode === "live");
+  return desks.some(
+    (desk) => desk.mode === "live" && !desk.bindLater && !desk.connectionId,
+  );
 }
 
 export function showsBotStep(

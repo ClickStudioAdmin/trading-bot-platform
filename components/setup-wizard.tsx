@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
+  formatAccountModeChoice,
   formatDeskType,
   formatDeskTypeChoice,
+  type DeskType,
 } from "@/lib/accounts/model";
 import { AppSelect } from "@/components/app-select";
-import { IconCheck, IconPlay } from "@/components/icons";
+import { IconCheck, IconClose, IconPlay } from "@/components/icons";
 import { checkExchangeConnection } from "@/lib/exchanges/actions";
 import { getVenue } from "@/lib/exchanges/venues";
 import {
@@ -21,6 +23,7 @@ import {
   connectedSetupName,
   connectedVenuesFor,
   defaultEnvironmentId,
+  defaultSetupName,
   SETUP_MAIN_STEPS,
   activeSetupScreen,
   applyBotSetupChoice,
@@ -30,7 +33,9 @@ import {
   foldersForDesk,
   makeSetupDesk,
   paperVenuesFor,
+  setupDeskFromDetails,
   setupDeskKey,
+  setupDeskReviewLine,
   setupScreenId,
   setupScreens,
   setupStepLabel,
@@ -137,6 +142,10 @@ export function SetupWizard({
   const [readyForTour, setReadyForTour] = useState(initialDraft.readyForTour);
   const [introSeen, setIntroSeen] = useState(initialDraft.introSeen);
   const [playing, setPlaying] = useState(false);
+  const [deskEditor, setDeskEditor] = useState<{
+    deskType: DeskType;
+    desk: SetupDesk | null;
+  } | null>(null);
   const [screenId, setScreenId] = useState(
     initialDraft.readyForTour
       ? "tour:tour"
@@ -200,25 +209,15 @@ export function SetupWizard({
     );
   }
 
-  function toggle(deskType: SetupDesk["deskType"], mode: "paper" | "live") {
-    const key = setupDeskKey(deskType, mode);
-    setDesks((current) => {
-      const exists = current.some((desk) => desk.key === key);
-      if (exists) {
-        return current.filter((desk) => desk.key !== key);
-      }
-      return [
-        ...current,
-        makeSetupDesk({
-          deskType,
-          mode,
-          takenNames: [
-            ...existingNames,
-            ...current.map((desk) => desk.name),
-          ],
-        }),
-      ];
-    });
+  function upsertDesk(desk: SetupDesk, previousKey: string | null) {
+    setDesks((current) => [
+      ...current.filter((row) => row.key !== previousKey && row.key !== desk.key),
+      desk,
+    ]);
+  }
+
+  function removeDesk(key: string) {
+    setDesks((current) => current.filter((row) => row.key !== key));
   }
 
   function persist(target: SetupScreen, snapshot?: SetupDraft) {
@@ -370,7 +369,11 @@ export function SetupWizard({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <>
+    <div
+      className="flex min-h-0 flex-1 flex-col"
+      inert={deskEditor ? true : undefined}
+    >
       <div className="shrink-0 border-b border-line bg-surface-raised px-6 py-4">
         {screen.main === "intro" ? (
           <>
@@ -415,7 +418,7 @@ export function SetupWizard({
             {
               value: "manual",
               title: "Manually select desk types and modes",
-              detail: "Pick Paper, Connected, or both for each type.",
+              detail: "Create each desk, then review the details before you continue.",
             },
             {
               value: "none",
@@ -433,8 +436,9 @@ export function SetupWizard({
         <DeskStep
           desks={desks}
           existingNames={existingNames}
-          onToggle={toggle}
-          onChange={updateDesk}
+          onCreate={(deskType) => setDeskEditor({ deskType, desk: null })}
+          onEdit={(desk) => setDeskEditor({ deskType: desk.deskType, desk })}
+          onRemove={removeDesk}
         />
       ) : null}
       {screen.main === "desks" && screen.sub === "exchanges" ? (
@@ -580,6 +584,26 @@ export function SetupWizard({
         </div>
       </div>
     </div>
+    {deskEditor ? (
+      <CreateDeskDialog
+        deskType={deskEditor.deskType}
+        desk={deskEditor.desk}
+        takenNames={takenNames(deskEditor.desk?.key)}
+        takenModes={desks
+          .filter(
+            (row) =>
+              row.deskType === deskEditor.deskType &&
+              row.key !== deskEditor.desk?.key,
+          )
+          .map((row) => row.mode)}
+        onClose={() => setDeskEditor(null)}
+        onSave={(desk) => {
+          upsertDesk(desk, deskEditor.desk?.key ?? null);
+          setDeskEditor(null);
+        }}
+      />
+    ) : null}
+    </>
   );
 }
 
@@ -745,137 +769,414 @@ function ChoiceStep({
   );
 }
 
+function orderedSetupDesks(desks: readonly SetupDesk[]): SetupDesk[] {
+  return ONBOARDING_DESK_TYPES.flatMap((deskType) =>
+    (["paper", "live"] as const).flatMap((mode) => {
+      const desk = desks.find((row) => row.key === setupDeskKey(deskType, mode));
+      return desk ? [desk] : [];
+    }),
+  );
+}
+
 function DeskStep({
   desks,
   existingNames,
-  onToggle,
-  onChange,
+  onCreate,
+  onEdit,
+  onRemove,
 }: {
   desks: SetupDesk[];
   existingNames: string[];
-  onToggle: (deskType: SetupDesk["deskType"], mode: "paper" | "live") => void;
-  onChange: (key: string, patch: Partial<SetupDesk>) => void;
+  onCreate: (deskType: DeskType) => void;
+  onEdit: (desk: SetupDesk) => void;
+  onRemove: (key: string) => void;
 }) {
+  const ordered = orderedSetupDesks(desks);
   return (
     <section>
       <h2 className="text-lg font-semibold tracking-tight">
         Create a few desks now?
       </h2>
       <p className="mt-2 text-sm text-ink-muted">
-        Each tick is one desk. Type and mode stay fixed after setup. Paper
-        uses public marks and the in-app ledger. Connected uses a trade-only
-        key, or you can bind that key later.
+        Create Desk opens the details for that type. You can review every desk
+        before you continue. Type and mode stay fixed after setup.
       </p>
-      <table className="mt-4 w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-line text-ink-muted">
-            <th className="py-2 pr-3 font-medium">Desk</th>
-            <th className="w-28 px-3 py-2 text-center font-medium">Paper</th>
-            <th className="w-28 px-3 py-2 text-center font-medium">Connected</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ONBOARDING_DESK_TYPES.map((deskType) => (
-            <tr key={deskType} className="border-b border-line">
-              <td className="py-3 pr-3 align-middle">
+      <ul className="mt-4 text-sm">
+        {ONBOARDING_DESK_TYPES.map((deskType) => {
+          const modes = desks
+            .filter((row) => row.deskType === deskType)
+            .map((row) => row.mode);
+          const full = modes.includes("paper") && modes.includes("live");
+          return (
+            <li
+              key={deskType}
+              className="flex flex-col gap-3 border-b border-line py-3 sm:flex-row sm:items-center"
+            >
+              <div className="min-w-0 flex-1">
                 <p className="font-medium text-ink">{formatDeskType(deskType)}</p>
-                <p className="mt-1 text-ink-muted">
+                <p className="mt-1 text-sm text-ink-muted">
                   {formatDeskTypeChoice(deskType)}
                 </p>
-              </td>
-              {(["paper", "live"] as const).map((mode) => {
-                const key = setupDeskKey(deskType, mode);
-                const ticked = desks.some((row) => row.key === key);
-                const modeLabel = mode === "paper" ? "Paper" : "Connected";
-                return (
-                  <td key={mode} className="px-3 py-3 text-center align-middle">
-                    <input
-                      type="checkbox"
-                      aria-label={`${formatDeskType(deskType)} ${modeLabel}`}
-                      checked={ticked}
-                      onChange={() => onToggle(deskType, mode)}
-                      className="size-4"
-                    />
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {desks.length > 0 ? (
-        <div className="mt-5 space-y-4">
-          {ONBOARDING_DESK_TYPES.flatMap((deskType) =>
-            (["paper", "live"] as const).flatMap((mode) => {
-              const desk = desks.find(
-                (row) => row.key === setupDeskKey(deskType, mode),
-              );
-              return desk ? [desk] : [];
-            }),
-          ).map((desk) => {
-            const venues =
-              desk.mode === "paper" ? paperVenuesFor(desk.deskType) : [];
-            const showMarket = venues.length > 1;
-            return (
-              <div key={desk.key}>
-                <p className="text-sm font-medium text-ink">
-                  {formatDeskType(desk.deskType)}
-                  <span className="font-normal text-ink-muted">
-                    {" "}
-                    · {desk.mode === "paper" ? "Paper" : "Connected"}
-                  </span>
-                </p>
-                <div
-                  className={
-                    showMarket
-                      ? "mt-2 grid gap-3 sm:grid-cols-2"
-                      : "mt-2 sm:max-w-sm"
-                  }
-                >
-                  <label className="block text-sm text-ink">
-                    Name
-                    <input
-                      value={desk.name}
-                      maxLength={40}
-                      onChange={(event) =>
-                        onChange(desk.key, {
-                          name: event.target.value,
-                          nameEdited: true,
-                        })
-                      }
-                      className={fieldClass}
-                    />
-                  </label>
-                  {showMarket ? (
-                    <label className="block text-sm text-ink">
-                      Market data
-                      <AppSelect
-                        value={desk.venue}
-                        onChange={(event) =>
-                          onChange(desk.key, { venue: event.target.value })
-                        }
-                        className={fieldClass}
-                      >
-                        {venues.map((venue) => (
-                          <option key={venue.id} value={venue.id}>
-                            {venue.label}
-                          </option>
-                        ))}
-                      </AppSelect>
-                    </label>
-                  ) : null}
-                </div>
               </div>
-            );
-          })}
+              <button
+                type="button"
+                disabled={full}
+                title={full ? "Paper and Connected are already added" : undefined}
+                onClick={() => onCreate(deskType)}
+                className="shrink-0 rounded-control border border-line bg-surface-raised px-3 py-1.5 text-sm font-medium text-ink hover:border-line-strong disabled:cursor-not-allowed disabled:text-ink-faint"
+              >
+                Create Desk
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {ordered.length > 0 ? (
+        <div className="mt-6">
+          <h3 className="text-sm font-semibold text-ink">Review</h3>
+          <p className="mt-1 text-sm text-ink-muted">
+            These desks are created when you continue to the tour.
+          </p>
+          <ul className="mt-3 text-sm">
+            {ordered.map((desk) => (
+              <li
+                key={desk.key}
+                className="flex flex-col gap-3 border-b border-line py-3 sm:flex-row sm:items-center"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-ink">{desk.name}</p>
+                  <p className="mt-1 text-sm text-ink-muted">
+                    {formatDeskType(desk.deskType)} · {setupDeskReviewLine(desk)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onEdit(desk)}
+                    className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onRemove(desk.key)}
+                    className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
       <p className="mt-3 text-hint text-ink-muted">
-        Leave every box clear to continue without desks. Perps is the ticket.
-        TradingView Strategy takes alerts. Those desks do not load starter bots.
+        Add nothing to continue without desks. Perps is the ticket. TradingView
+        Strategy takes alerts. Those desks do not load starter bots.
       </p>
       <NameHint desks={desks} existingNames={existingNames} />
     </section>
+  );
+}
+
+function CreateDeskDialog({
+  deskType,
+  desk,
+  takenNames,
+  takenModes,
+  onClose,
+  onSave,
+}: {
+  deskType: DeskType;
+  desk: SetupDesk | null;
+  takenNames: string[];
+  takenModes: Array<"paper" | "live">;
+  onClose: () => void;
+  onSave: (desk: SetupDesk) => void;
+}) {
+  const seed =
+    desk ??
+    makeSetupDesk({
+      deskType,
+      mode: takenModes.includes("paper") ? "live" : "paper",
+      takenNames,
+    });
+  const [mode, setMode] = useState(seed.mode);
+  const [name, setName] = useState(seed.name);
+  const [nameEdited, setNameEdited] = useState(Boolean(desk?.nameEdited));
+  const [venue, setVenue] = useState(seed.venue);
+  const [environmentId, setEnvironmentId] = useState(seed.environmentId);
+  const [choice, setChoice] = useState<BindChoice>(
+    desk && !desk.bindLater ? "new" : "later",
+  );
+  const [connectionId, setConnectionId] = useState<string | null>(
+    desk?.connectionId ?? null,
+  );
+  const [error, setError] = useState<string | null>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const paperVenues = paperVenuesFor(deskType);
+  const liveVenues = connectedVenuesFor(deskType);
+  const showMarket = mode === "paper" && paperVenues.length > 1;
+  const venueDef = getVenue(venue);
+
+  useEffect(() => {
+    nameRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "Escape") {
+        return;
+      }
+      event.preventDefault();
+      onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  function suggestedName(
+    nextMode: "paper" | "live",
+    nextVenue: string,
+    nextEnvironment: string | null,
+  ) {
+    const base =
+      nextMode === "live"
+        ? connectedSetupName(deskType, nextVenue, nextEnvironment)
+        : defaultSetupName(deskType, "paper");
+    return allocateSetupName(base, takenNames);
+  }
+
+  function selectMode(nextMode: "paper" | "live") {
+    const nextVenue =
+      nextMode === "paper"
+        ? (paperVenues.find((item) => item.id === venue)?.id ??
+          paperVenues[0]?.id ??
+          "bybit")
+        : (liveVenues.find((item) => item.id === venue)?.id ??
+          liveVenues[0]?.id ??
+          "bybit");
+    const nextEnvironment =
+      nextMode === "live" ? defaultEnvironmentId(nextVenue) : null;
+    setMode(nextMode);
+    setVenue(nextVenue);
+    setEnvironmentId(nextEnvironment);
+    setConnectionId(null);
+    setChoice("later");
+    if (!nameEdited) {
+      setName(suggestedName(nextMode, nextVenue, nextEnvironment));
+    }
+  }
+
+  function selectVenue(nextVenue: string) {
+    const nextEnvironment =
+      mode === "live" ? defaultEnvironmentId(nextVenue) : null;
+    setVenue(nextVenue);
+    setEnvironmentId(nextEnvironment);
+    setConnectionId(null);
+    if (!nameEdited && mode === "live") {
+      setName(suggestedName("live", nextVenue, nextEnvironment));
+    }
+  }
+
+  function selectEnvironment(nextEnvironment: string) {
+    setEnvironmentId(nextEnvironment);
+    setConnectionId(null);
+    if (!nameEdited && mode === "live") {
+      setName(suggestedName("live", venue, nextEnvironment));
+    }
+  }
+
+  function save() {
+    if (takenModes.includes(mode)) {
+      setError(
+        mode === "paper"
+          ? "Paper is already in this setup."
+          : "Connected is already in this setup.",
+      );
+      return;
+    }
+    const result = setupDeskFromDetails({
+      deskType,
+      mode,
+      name,
+      venue,
+      environmentId,
+      bindLater: mode !== "live" || choice !== "new",
+      connectionId: mode === "live" && choice === "new" ? connectionId : null,
+      takenNames,
+      previous: desk,
+    });
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    onSave(result.desk);
+  }
+
+  return (
+    <div
+      data-setup-submodal
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-canvas/70 p-4"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-desk-title"
+        className="flex max-h-[min(90dvh,40rem)] w-full max-w-lg flex-col overflow-hidden rounded-card border border-line bg-surface"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="relative shrink-0 border-b border-line bg-surface-raised px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute right-3 top-3 inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface hover:text-ink"
+          >
+            <IconClose size={14} className="size-3.5" />
+          </button>
+          <h2 id="create-desk-title" className="pr-8 text-lg font-semibold text-ink">
+            {desk ? "Edit desk" : "Create desk"}
+          </h2>
+          <p className="mt-1 pr-8 text-sm text-ink-muted">
+            {formatDeskTypeChoice(deskType)}
+          </p>
+        </div>
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
+          <label className="block text-sm text-ink">
+            Name
+            <input
+              ref={nameRef}
+              value={name}
+              maxLength={40}
+              onChange={(event) => {
+                setName(event.target.value);
+                setNameEdited(true);
+              }}
+              className={fieldClass}
+            />
+          </label>
+          <label className="block text-sm text-ink">
+            Mode
+            <AppSelect
+              value={mode}
+              onChange={(event) =>
+                selectMode(event.target.value === "live" ? "live" : "paper")
+              }
+              className={fieldClass}
+            >
+              <option value="paper" disabled={takenModes.includes("paper")}>
+                {formatAccountModeChoice("paper")}
+              </option>
+              <option value="live" disabled={takenModes.includes("live")}>
+                {formatAccountModeChoice("live")}
+              </option>
+            </AppSelect>
+          </label>
+          {showMarket ? (
+            <label className="block text-sm text-ink">
+              Market data
+              <AppSelect
+                value={venue}
+                onChange={(event) => selectVenue(event.target.value)}
+                className={fieldClass}
+              >
+                {paperVenues.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </AppSelect>
+            </label>
+          ) : null}
+          {mode === "live" ? (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-sm text-ink">
+                  Exchange
+                  <AppSelect
+                    value={venue}
+                    onChange={(event) => selectVenue(event.target.value)}
+                    className={fieldClass}
+                  >
+                    {liveVenues.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </AppSelect>
+                </label>
+                <label className="block text-sm text-ink">
+                  Environment
+                  <AppSelect
+                    value={environmentId ?? ""}
+                    onChange={(event) => selectEnvironment(event.target.value)}
+                    className={fieldClass}
+                  >
+                    {(venueDef?.environments ?? []).map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </AppSelect>
+                </label>
+              </div>
+              <label className="block text-sm text-ink">
+                Key
+                <AppSelect
+                  value={choice}
+                  onChange={(event) => {
+                    const next = event.target.value === "new" ? "new" : "later";
+                    setChoice(next);
+                    setConnectionId(null);
+                  }}
+                  className={fieldClass}
+                >
+                  <option value="later">Bind later in Desk Settings</option>
+                  <option value="new">Add a trade-only key</option>
+                </AppSelect>
+              </label>
+              {choice === "new" && connectionId ? (
+                <p className="text-sm text-success">
+                  Key saved. It is bound to this desk when you finish.
+                </p>
+              ) : null}
+              {choice === "new" && !connectionId && venueDef ? (
+                <SetupKeyForm
+                  venueId={venueDef.id}
+                  environmentId={environmentId ?? defaultEnvironmentId(venueDef.id)}
+                  onSaved={(connection) => {
+                    setConnectionId(connection.id);
+                    setVenue(connection.venue);
+                    setEnvironmentId(connection.environment);
+                    setChoice("new");
+                  }}
+                />
+              ) : null}
+            </>
+          ) : null}
+          {error ? <p className="text-sm text-danger">{error}</p> : null}
+        </div>
+        <div className="flex shrink-0 gap-2 border-t border-line bg-surface-raised px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={save}
+            disabled={mode === "live" && choice === "new" && !connectionId}
+            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:opacity-40"
+          >
+            {desk ? "Save" : "Add desk"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

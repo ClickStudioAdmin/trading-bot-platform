@@ -20,6 +20,9 @@ export function SetupModal({ children }: { children: ReactNode }) {
 
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
+        if (node.querySelector("[data-setup-submodal]")) {
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
         return;
@@ -28,7 +31,8 @@ export function SetupModal({ children }: { children: ReactNode }) {
         return;
       }
       const items = [...node.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-        (element) => !element.hasAttribute("disabled"),
+        (element) =>
+          !element.hasAttribute("disabled") && element.closest("[inert]") == null,
       );
       if (items.length === 0) {
         event.preventDefault();
