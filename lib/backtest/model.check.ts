@@ -37,6 +37,8 @@ import {
   isBacktestComparableChild,
   splitBacktestFamily,
   completedBacktestNotionalUsdt,
+  backtestListEntryHref,
+  backtestNewHref,
   backtestRerunHref,
   backtestSavedListHref,
   paginateBacktestList,
@@ -538,11 +540,36 @@ assert.equal(openBacktestPositionLabel(split.open), "long 0.5000");
 
 assert.equal(
   backtestRerunHref("run-abc"),
-  "/account/backtests?rerun=run-abc#replay",
+  "/account/backtests/new?rerun=run-abc#replay",
 );
-assert.equal(backtestSavedListHref(), "/account/backtests?tab=saved");
-assert.equal(backtestSavedListHref(1), "/account/backtests?tab=saved");
-assert.equal(backtestSavedListHref(2), "/account/backtests?tab=saved&page=2");
+assert.equal(backtestNewHref(), "/account/backtests/new");
+assert.equal(
+  backtestNewHref({ draft: "d1", venue: "bybit", env: "demo", template: "" }),
+  "/account/backtests/new?draft=d1&venue=bybit&env=demo",
+);
+assert.equal(backtestSavedListHref(), "/account/backtests");
+assert.equal(backtestSavedListHref(1), "/account/backtests");
+assert.equal(backtestSavedListHref(2), "/account/backtests?page=2");
+assert.equal(backtestListEntryHref(null), null);
+assert.equal(backtestListEntryHref({ page: "2" }), null);
+assert.equal(backtestListEntryHref({ tab: "saved" }), "/account/backtests");
+assert.equal(
+  backtestListEntryHref({ tab: "saved", page: "2" }),
+  "/account/backtests?page=2",
+);
+assert.equal(backtestListEntryHref({ tab: "new" }), "/account/backtests/new");
+assert.equal(
+  backtestListEntryHref({
+    tab: "saved",
+    rerun: "run-abc",
+    venue: "bybit",
+  }),
+  "/account/backtests/new?rerun=run-abc&venue=bybit#replay",
+);
+assert.equal(
+  backtestListEntryHref({ draft: "d1", env: "demo" }),
+  "/account/backtests/new?draft=d1&env=demo",
+);
 assert.equal(parseBacktestListPage("2"), 2);
 assert.equal(parseBacktestListPage("0"), 1);
 assert.equal(parseBacktestListPage("nope"), 1);

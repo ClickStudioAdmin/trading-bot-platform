@@ -10,7 +10,7 @@ import { IconBacktest } from "@/components/icons";
 import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import { seedBacktestDraftAction } from "@/lib/backtest/actions";
-import type { BacktestRecipe } from "@/lib/backtest/model";
+import { backtestNewHref, type BacktestRecipe } from "@/lib/backtest/model";
 import { recipesMatchForBacktest } from "@/lib/templates/recipe";
 import {
   canQueueUserBacktest,
@@ -110,11 +110,11 @@ export function BacktestTemplateLink({
               return;
             }
             window.open(
-              `/account/backtests?draft=${result.runId}&venue=${encodeURIComponent(venueId)}${
-                venueEnvironment
-                  ? `&env=${encodeURIComponent(venueEnvironment)}`
-                  : ""
-              }`,
+              backtestNewHref({
+                draft: result.runId,
+                venue: venueId,
+                env: venueEnvironment,
+              }),
               "_blank",
               "noreferrer",
             );

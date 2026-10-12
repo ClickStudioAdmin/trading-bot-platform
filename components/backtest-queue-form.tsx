@@ -134,6 +134,7 @@ export function BacktestQueueForm({
   onVariantFailed,
   onVariantCancel,
   variantLeading = null,
+  showTitle = true,
 }: {
   templates: BacktestLibraryItem[];
   folders?: BacktestLibraryFolder[];
@@ -151,6 +152,8 @@ export function BacktestQueueForm({
   onVariantFailed?: () => void;
   onVariantCancel?: () => void;
   variantLeading?: ReactNode;
+  /** Page chrome owns the title on the create page. Replay variants stay untitled here. */
+  showTitle?: boolean;
 }) {
   const variant = variantParentId.trim().length > 0;
   const router = useRouter();
@@ -532,11 +535,11 @@ export function BacktestQueueForm({
           </div>
         </div>
       ) : null}
-      {variant ? null : (
+      {variant || !showTitle ? null : (
         <h2 className="text-lg font-semibold">New backtest</h2>
       )}
       {variant ? null : (
-      <p className="mt-1 text-sm text-ink-muted">
+      <p className={showTitle ? "mt-1 text-sm text-ink-muted" : "text-sm text-ink-muted"}>
         {loadedFromRun
           ? "Parameters loaded from the previous run. Tweak them and queue a new one."
           : "Pick a desk bot or a library template. Edit the replay fields, then queue. Long windows go to the engine worker."}

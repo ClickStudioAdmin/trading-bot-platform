@@ -13,6 +13,7 @@ import {
   toBacktestLibraryItem,
 } from "@/lib/backtest/library";
 import {
+  backtestNewHref,
   backtestSavedListHref,
   type BacktestRecipe,
   type BacktestRun,
@@ -51,14 +52,13 @@ export default async function AccountBacktestDetailPage({
     notFound();
   }
   if (run.status === "draft") {
-    const draftParams = new URLSearchParams({
-      draft: run.id,
-      venue: run.venue,
-    });
-    if (run.venueEnvironment) {
-      draftParams.set("env", run.venueEnvironment);
-    }
-    redirect(`/account/backtests?${draftParams.toString()}`);
+    redirect(
+      backtestNewHref({
+        draft: run.id,
+        venue: run.venue,
+        env: run.venueEnvironment,
+      }),
+    );
   }
   const ownerId = run.userId ?? member.id;
   const [source, linked, templates, matchingDeskBot, folders] = await Promise.all([

@@ -8,6 +8,7 @@ import { listTradingAccounts } from "@/lib/accounts/store";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
 import {
+  backtestNewHref,
   backtestRunTitle,
   backtestSavedListHref,
   type BacktestRun,
@@ -44,7 +45,7 @@ export default async function AccountBacktestReplayPage({
     notFound();
   }
   if (run.status === "draft") {
-    redirect(`/account/backtests?draft=${run.id}`);
+    redirect(backtestNewHref({ draft: run.id }));
   }
   const listHref = backtestSavedListHref();
   if (run.status !== "done") {
