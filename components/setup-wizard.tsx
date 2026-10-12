@@ -674,12 +674,9 @@ export function SetupWizard({
               }}
               className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
             >
-              {playing ? (
-                <IconArrowRight {...WIZARD_ICON} />
-              ) : (
-                <IconPlay {...WIZARD_ICON} />
-              )}
+              {playing ? null : <IconPlay {...WIZARD_ICON} />}
               {pending ? "Saving…" : playing ? "Continue" : "Watch"}
+              {playing ? <IconArrowRight {...WIZARD_ICON} /> : null}
             </button>
           </>
         ) : null}
@@ -703,11 +700,7 @@ export function SetupWizard({
             onClick={continueForward}
             className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
-            {screen.main === "review" ? (
-              <IconPlus {...WIZARD_ICON} />
-            ) : (
-              <IconArrowRight {...WIZARD_ICON} />
-            )}
+            {screen.main === "review" ? <IconPlus {...WIZARD_ICON} /> : null}
             {pending
               ? next?.main === "tour"
                 ? "Creating…"
@@ -715,6 +708,9 @@ export function SetupWizard({
               : screen.main === "review"
                 ? "Create"
                 : "Continue"}
+            {screen.main === "review" ? null : (
+              <IconArrowRight {...WIZARD_ICON} />
+            )}
           </button>
         ) : null}
         {screen.main === "tour" ? (
