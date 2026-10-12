@@ -33,7 +33,7 @@ There is no Skip setup. The member goes through Add Desks, Add Bots, Review, and
 | 4 | Demo vs Live | Not a third column. Connected is `mode = live`. Demo vs Live is the key’s venue environment, chosen on the exchange step. Display mode stays Paper / Demo / Live as today. |
 | 5 | When rows are written | Desk names and details stay a draft until **Create** on Review. API secrets are never stored in that draft. A key the member saves in the create modal, or on the exchange step, is written immediately through the existing connection action (verify, trade-only, encrypt). The draft keeps the connection id only. |
 | 6 | Keys | Same rules as Exchanges and create desk. Trade-only, no withdrawal permission. Server verifies. Browser never sees the secret again. One connection binds one desk. **Bind later** is allowed per connected desk. |
-| 7 | Starter bots | Admin marks **Include in Starter Pack** on a platform folder or on a platform template. The wizard lists every template in a flagged folder, and every flagged template that is not already in one of those folders. Apply uses today’s apply path. A bot stays DCA **idle** or Perps bots / Cash and Carry **disabled** unless **Initial Status** is set to start it. DCA offers Idle and Armed. Perps bots and Cash and Carry offer Disabled and Active. Armed runs the desk arm action, so an immediate start can place the first order. Active uses the desk enable action. A Connected desk without a key cannot choose the start status. |
+| 7 | Starter bots | Admin marks **Include in Starter Pack** on a platform folder or on a platform template. The wizard lists every template in a flagged folder, and every flagged template that is not already in one of those folders. Apply uses today’s apply path. A bot stays **Disabled** unless **Initial Status** is **Active**. Every bot uses those two words. For a DCA bot, Active runs the desk arm action, so an immediate start can place the first order. Perps bots and Cash and Carry use the desk enable action. Setup does not offer Stop adding or Reduce only. A Connected desk without a key cannot choose Active. |
 | 8 | Library copy | Apply onto the new desks only. Do not also copy those rows into the member’s template library. |
 | 9 | Tour | Asked on Take a Tour, after Continue on Review, including when they created nothing. Yes starts the tour. Not now lands on Overview. The tour only explains. It never presses Enable or an order button. |
 | 10 | New desk later | Manage desks create stays the current form. When starter folders exist for that type, the form offers **Add starter bots** (same idle / disabled apply). Not a second full wizard. |
@@ -113,7 +113,7 @@ Admin already sets both flags on `/admin/templates` (**Include in Starter Pack**
 Picker:
 
 - One table. One row per desk, the same shape as Review. Columns are Desk, Type, Mode, and Bots. The bots for that desk are listed together in the Bots column, each with its own tick. There is no folder column and no folder tick. A folder for the wrong desk type is not shown.
-- **Initial Status** is the last column. Each bot has its own dropdown, lined up with that bot. DCA offers Idle and Armed. Perps bots and Cash and Carry offer Disabled and Active. Idle and Disabled are the default. Armed and Active start that bot when setup creates it. For a DCA bot, Armed runs the desk arm action, so an immediate start can place the first order. A Connected desk without a saved key cannot choose the start status.
+- **Initial Status** is the last column. Each bot has its own dropdown, lined up with that bot. Every bot offers Disabled and Active. Disabled is the default. Active starts that bot when setup creates it. For a DCA bot, Active runs the desk arm action, so an immediate start can place the first order. A Connected desk without a saved key cannot choose Active.
 - DCA uses each template’s saved contract. If two selected templates share a contract on the same desk, the second is skipped at apply and named in the summary. Do not ask them to remap contracts in this wizard.
 - Perps bots and Cash and Carry stack as they do today. Name collisions get the existing ` (from template)` suffix.
 - Empty selection on this step is valid (“don’t load bots”).
@@ -122,9 +122,9 @@ Apply runs when they click **Create** on Review, after the desks exist, through 
 
 ### 3. Review
 
-One page after Add Bots. Before Create, a table lists each desk and the starter bots that will be loaded on it. Each bot lists its Initial Status: Idle or Armed for DCA, Disabled or Active for Perps bots and Cash and Carry. A desk with no bots shows an em dash. No desks shows that nothing will be created. **Back** returns to Add Bots. **Create** writes the desks and bots and stays on Review.
+One page after Add Bots. Before Create, a table lists each desk and the starter bots that will be loaded on it. Each bot lists Disabled or Active. A desk with no bots shows an em dash. No desks shows that nothing will be created. **Back** returns to Add Bots. **Create** writes the desks and bots and stays on Review.
 
-After Create, Review shows the result. The heading is **Your account is ready.**, or **Setup finished with errors.** when a bot failed to load or a ticked bot did not start. The same table lists what was written. Each bot lists its Initial Status: Idle or Armed for DCA, Disabled or Active for Perps bots and Cash and Carry. A failure that stops the write stays on Review before that result, in the footer. **Continue** does not write again. Back and Reset Wizard stay hidden.
+After Create, Review shows the result. The heading is **Your account is ready.**, or **Setup finished with errors.** when a bot failed to load or a ticked bot did not start. The same table lists what was written. Each bot lists Disabled or Active. A failure that stops the write stays on Review before that result, in the footer. **Continue** does not write again. Back and Reset Wizard stay hidden.
 
 ### 4. Take a Tour
 
@@ -155,7 +155,7 @@ Steps that do not apply are omitted (no desk yet, no bot desk, no TradingView de
 | 2 | Manage Desks | Always | Desks are created here. Type and mode stay as they were set. |
 | 3 | Exchanges (Manage desks, Exchanges tab) | Always | Keys are trade-only. One key binds one desk. Demo and Live are the key’s environment. |
 | 4 | Desk list in the sidenav | They have a desk | Open a desk from this list. Paper, Demo, and Live are marked here. |
-| 5 | Bots on that desk | A new or existing DCA, Perps bots, or Cash and Carry desk | Bots stay idle or disabled unless Initial Status is Armed or Active. The app places orders only after that. |
+| 5 | Bots on that desk | A new or existing DCA, Perps bots, or Cash and Carry desk | Bots stay Disabled unless Initial Status is Active. The app places orders only after that. |
 | 6 | Webhooks | A TradingView Strategy desk, and step 5 did not run | Alerts arrive here. Setup does not turn them on. |
 | 7 | Positions | They have a desk | Open positions for this desk. |
 | 8 | Desk Settings | They have a desk | Bind a key and set desk limits. Do this if the desk is still unbound. |
@@ -169,7 +169,7 @@ Copy, Backtesting, Billing, and Admin are not tour stops. Those stay header or a
 
 Manage desks → create one desk stays the current form (type, name, mode, market data or key).
 
-If the member’s plan allows templates and a flagged starter folder exists for that type, add one optional control: **Add starter bots**. Default off. On lists those starter bots for this desk only, and applies idle or disabled after the desk is created. Perps and TradingView Strategy do not show it.
+If the member’s plan allows templates and a flagged starter folder exists for that type, add one optional control: **Add starter bots**. Default off. On lists those starter bots for this desk only, and applies Disabled after the desk is created. Perps and TradingView Strategy do not show it.
 
 ## Data
 
@@ -198,7 +198,7 @@ Add a row to [database.md](database.md) in the same change as the migration.
 - Never trust the browser for plan, 2FA, bind, or whether a bot may start.
 - Never call private exchange APIs from the browser. Verify stays on the server.
 - Do not create a Demo Account automatically.
-- Do not edit ledgers. Setup inserts desks, connections, and bots. A bot stays idle or disabled unless Initial Status is Armed or Active. Perps bots and Cash and Carry use the desk enable action. DCA still runs the desk arm action, and it can place an order.
+- Do not edit ledgers. Setup inserts desks, connections, and bots. A bot stays Disabled unless Initial Status is Active. Perps bots and Cash and Carry use the desk enable action. DCA still runs the desk arm action, and it can place an order.
 - Idempotent Finish: a second submit returns the desks already stored on the onboarding row.
 
 ## Entitlements
@@ -243,7 +243,7 @@ Stop after each until Click says go. Do not start inside item 4 or item 6.
 - Two connected rows cannot select the same connection id.
 - A key with withdrawal permission never saves.
 - The manual bot page lists every created desk that has starter content. It contains templates from flagged platform folders, plus flagged platform templates that are not already in those folders.
-- Apply leaves a bot idle or disabled when Initial Status is Idle or Disabled. Armed and Active start the bot. For DCA, Armed is the arm action. Idle and Disabled create no order.
+- Apply leaves a bot Disabled when Initial Status is Disabled. Active starts the bot. For DCA, Active is the arm action. Disabled creates no order.
 - TradingView Strategy and Perps still show step 2, with nothing to load.
 - Finish retry does not insert a second desk or a second bot.
 - Tour decline does not start the overlay. Skip tour persists. A missing desk omits the desk steps.

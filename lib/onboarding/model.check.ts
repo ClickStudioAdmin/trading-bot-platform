@@ -655,21 +655,16 @@ assert.equal(starterStartVerb("dca"), "Enable");
 assert.equal(starterStartVerb("perps_bots"), "Enable");
 assert.equal(starterStartVerb("cash_and_carry"), "Enable");
 assert.equal(starterStartVerb("perps"), null);
-assert.deepEqual(setupInitialStatusChoices("dca"), [
-  { value: "rest", label: "Idle" },
-  { value: "start", label: "Armed" },
-]);
-assert.deepEqual(setupInitialStatusChoices("perps_bots"), [
+const botStatusChoices = [
   { value: "rest", label: "Disabled" },
   { value: "start", label: "Active" },
-]);
-assert.deepEqual(setupInitialStatusChoices("cash_and_carry"), [
-  { value: "rest", label: "Disabled" },
-  { value: "start", label: "Active" },
-]);
+];
+assert.deepEqual(setupInitialStatusChoices("dca"), botStatusChoices);
+assert.deepEqual(setupInitialStatusChoices("perps_bots"), botStatusChoices);
+assert.deepEqual(setupInitialStatusChoices("cash_and_carry"), botStatusChoices);
 assert.equal(setupInitialStatusChoices("perps"), null);
-assert.equal(starterStatusWord("dca", false), "Idle");
-assert.equal(starterStatusWord("dca", true), "Armed");
+assert.equal(starterStatusWord("dca", false), "Disabled");
+assert.equal(starterStatusWord("dca", true), "Active");
 assert.equal(starterStatusWord("cash_and_carry", false), "Disabled");
 assert.equal(starterStatusWord("perps_bots", true), "Active");
 assert.equal(starterStatusWord("perps", false), null);
@@ -699,7 +694,7 @@ assert.deepEqual(
     {
       key: paper.key,
       name: "DCA Paper",
-      bots: [{ templateId: armId, name: "BTC", start: "Armed" }],
+      bots: [{ templateId: armId, name: "BTC", start: "Active" }],
     },
     { key: reviewCarry.key, name: reviewCarry.name, bots: [] },
   ],
@@ -711,7 +706,7 @@ assert.equal(
     ],
     folders: [folder({ id: "dca-pack", deskType: "dca" })],
   })[0]?.bots[0]?.start,
-  "Idle",
+  "Disabled",
 );
 assert.equal(
   setupScreenId(

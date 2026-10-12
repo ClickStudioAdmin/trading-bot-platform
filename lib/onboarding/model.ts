@@ -243,17 +243,15 @@ export function starterStartVerb(deskType: DeskType): "Enable" | null {
 
 export type SetupInitialStatus = "rest" | "start";
 
-/** Statuses setup can apply. DCA rests idle or arms. The other desks rest disabled or go active. */
+/** Statuses setup can apply. The bot screens call these Disabled and Active. */
 export function setupInitialStatusChoices(
   deskType: DeskType,
 ): readonly { value: SetupInitialStatus; label: string }[] | null {
-  if (deskType === "dca") {
-    return [
-      { value: "rest", label: "Idle" },
-      { value: "start", label: "Armed" },
-    ];
-  }
-  if (deskType === "perps_bots" || deskType === "cash_and_carry") {
+  if (
+    deskType === "dca" ||
+    deskType === "perps_bots" ||
+    deskType === "cash_and_carry"
+  ) {
     return [
       { value: "rest", label: "Disabled" },
       { value: "start", label: "Active" },
@@ -262,7 +260,7 @@ export function setupInitialStatusChoices(
   return null;
 }
 
-/** The status word Review lists for a bot. Rest is Idle or Disabled. Start is Armed or Active. */
+/** The status word Review lists for a bot. Rest is Disabled. Start is Active. */
 export function starterStatusWord(
   deskType: DeskType,
   started: boolean,
@@ -1614,8 +1612,8 @@ export function buildTourSteps(desks: readonly TourDesk[]): TourStep[] {
     steps.push({
       id: "bots",
       title: "Bots",
-      headline: "Bots stay idle or disabled unless Initial Status starts them.",
-      body: "Armed and Active start the bot. The app places orders only after that.",
+      headline: "Bots stay Disabled unless Initial Status is Active.",
+      body: "Active starts the bot. The app places orders only after that.",
       href: pathWithDesk(home, bot.id),
       target: "bots",
     });
