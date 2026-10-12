@@ -1,6 +1,6 @@
 # Onboarding wizard
 
-**V1 item 6** ([roadmap.md](roadmap.md)). Click asked to build this on 9 Oct 2026, ahead of the locked order. Item 4 (account blotter) and item 5 (entitlements) are not closed by this work. Identity, 2FA, and UI refinement are accepted. This file is the design that implementation follows. Plan gates are still item 5: the wizard calls the same create and apply actions, and the blocked-cell check stays empty until those gates exist.
+**V1 item 5** ([roadmap.md](roadmap.md)). Click asked to build this on 9 Oct 2026. On 12 Oct 2026 Click moved it to item 5, ahead of entitlements. Item 4 (account blotter) is not closed by this work. Identity, 2FA, and UI refinement are accepted. This file is the design that implementation follows. Plan gates are item 6: the wizard calls the same create and apply actions, and the blocked-cell check stays empty until those gates exist.
 
 The first-desk `/welcome` wizard was **removed** on 16 Sep 2026. `/welcome` stays a redirect to the signed-in home. First-run setup is a modal on the signed-in app, not that route.
 
@@ -74,7 +74,7 @@ Short line under the type uses the existing choice copy (ticket vs bots vs alert
 - Perps is the ticket desk. TradingView Strategy has no bot recipes. The table does not promise bots for those rows.
 - Copy desks are not offered here.
 
-When V1 item 5 gates exist, a cell the plan cannot create is visible and disabled, with the same Upgrade (or verify / 2FA) line as Manage desks. Cap copy matches create desk (“You have 2 of 2 desks”). The server still rejects. Do not hide a type.
+When V1 item 6 gates exist, a cell the plan cannot create is visible and disabled, with the same Upgrade (or verify / 2FA) line as Manage desks. Cap copy matches create desk (“You have 2 of 2 desks”). The server still rejects. Do not hide a type.
 
 ### Exchanges (sub-step of Desks)
 
@@ -203,9 +203,9 @@ Add a row to [database.md](database.md) in the same change as the migration.
 
 ## Entitlements
 
-Item 5 is expected to be in place first. This item consumes it. It does not add plan features or caps.
+Item 6 comes after this wizard. This wizard does not add plan features or caps.
 
-Each ticked cell and each Finish create goes through the same entitlement check as Manage desks (desk type, paper, live, non-Bybit venue, desk caps). Bot apply respects the bot cap. A disabled cell stays on screen with Upgrade. Server actions reject. If item 5 has not shipped when this starts, still call the create and apply actions so the gates attach in one place later.
+Each ticked cell and each Finish create goes through the same create and apply actions as Manage desks (desk type, paper, live, non-Bybit venue, desk caps). Bot apply respects the bot cap. When item 6 gates exist, a cell the plan cannot create stays on screen, disabled, with Upgrade, and server actions reject. Until those gates ship, the blocked-cell check stays empty and these actions still run so the gates attach in one place later.
 
 ## UI
 
@@ -217,7 +217,7 @@ Each ticked cell and each Finish create goes through the same entitlement check 
 
 ## Micro-steps
 
-Stop after each until Click says go. Do not start inside item 4 or item 5.
+Stop after each until Click says go. Do not start inside item 4 or item 6.
 
 | # | Step | Done when |
 | --- | --- | --- |
@@ -250,7 +250,7 @@ Stop after each until Click says go. Do not start inside item 4 or item 5.
 - Auto-arm, auto-enable, marketplace, or copying starter rows into the member library
 - Admin-edited tour scripts, videos, or a help center (V1 item 10)
 - Account-wide Positions / Bots (item 4, still waiting on Click)
-- Building plan gates (item 5). This wizard only calls them
+- Building plan gates (item 6). This wizard only calls them
 - Copy desks, scale-in, MEXC, paper auto-switch
 - Changing type or mode after create
 - Private exchange calls from the browser

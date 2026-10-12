@@ -1,6 +1,6 @@
 # Roadmap
 
-Click locked this V1 / V2 split **16 Sep 2026**. Do not reorder V1 or start a later V1 item until Click says go. V2 has **no order** — do not start any V2 item until Click picks one.
+Click locked this V1 / V2 split **16 Sep 2026**. On **12 Oct 2026** Click swapped onboarding with entitlements, and invite-friends with the front-end website. Do not reorder V1 again or start a later V1 item until Click says go. V2 has **no order** — do not start any V2 item until Click picks one.
 
 Phases **1–11** are shipped. See [master-spec.md](master-spec.md) and [phase-11.md](phase-11.md). Older phase files still say “roadmap 2” / “roadmap 5”; those numbers are historical. **This file is the plan.**
 
@@ -24,7 +24,7 @@ Keep building on these; do not reopen them as a phase unless Click asks.
 
 ## Current (V1 item 4)
 
-**Account Positions, Bots, and Automations lists.** Started 21 Sep 2026. Work only what Click asks. Spec: [phase-account-blotter.md](phase-account-blotter.md). Isolation already shipped in item 3 — this item is the directory UI only.
+**Account Positions, Bots, and Automations lists.** Started 21 Sep 2026. Work only what Click asks. Spec: [phase-account-blotter.md](phase-account-blotter.md). Isolation already shipped in item 3 — this item is the directory UI only. Next is onboarding (item 5). Click is building that now. Entitlements stay item 6.
 
 **In progress**
 
@@ -34,7 +34,7 @@ Keep building on these; do not reopen them as a phase unless Click asks.
 
 - Account-wide Positions and Bots sidenav lists.
 - Virtual lots / same-pair stacking / mixed desk types. Typed desks stay one type, one bind, one UI. Virtual deals stay V2.
-- Entitlements / plan gates (item 5) and onboarding (item 6).
+- Entitlements / plan gates (item 6).
 
 ## V1 (locked order)
 
@@ -46,11 +46,11 @@ Stop after each item until Click says go.
 | 2 | **2FA** | **Accepted 17 Sep 2026.** Settings enroll + sign-in challenge only. Google Authenticator TOTP, recovery codes shown once. **Not** a plan gate yet. Spec: [phase-2fa.md](phase-2fa.md). |
 | 3 | **UI refinement and cleanup** | **Accepted 21 Sep 2026.** Light is live (chrome vs content). Isolation shipped 19 Sep 2026. Breadcrumbs on orphans. `/account/book` removed. |
 | 4 | **Account Positions, Bots, and Automations lists** | **Current.** Started 21 Sep 2026. Spec: [phase-account-blotter.md](phase-account-blotter.md). Isolation already in repo (item 3). Desk Automations list first; account Positions / Bots wait until Click asks. Virtual lots stay V2. |
-| 5 | **Entitlements and plan / 2FA gates** | `assertEntitlement`, visible/disabled + Upgrade, a plan may require verified email and/or 2FA, downgrade grace. Spec: [phase-entitlements.md](phase-entitlements.md) (gates). |
-| 6 | **Onboarding wizards and Starter Packs** | Blocking first-run modal: desk type × mode, exchange keys, idle bots from admin starter folders, then an optional guided tour. The app stays closed until Finish or Skip. Never arm. Spec: [phase-onboarding.md](phase-onboarding.md). |
+| 5 | **Onboarding wizards and Starter Packs** | Blocking first-run modal: desk type × mode, exchange keys, idle bots from admin starter folders, then an optional guided tour. The app stays closed until Finish or Skip. Never arm. Click is building this now. Spec: [phase-onboarding.md](phase-onboarding.md). |
+| 6 | **Entitlements and plan / 2FA gates** | `assertEntitlement`, visible/disabled + Upgrade, a plan may require verified email and/or 2FA, downgrade grace. Spec: [phase-entitlements.md](phase-entitlements.md) (gates). |
 | 7 | **Full system test and refinement** | Whole product, **including Hyperliquid** leftover desk-test and copy leftover desk-test. Fix what Click finds. Not a new feature phase. |
-| 8 | **Front-end website** | Marketing / public site, not desk chrome. |
-| 9 | **Invite friends to test** | Closed testers before the public soft launch. |
+| 8 | **Invite friends to test** | Closed testers before the public soft launch. |
+| 9 | **Front-end website** | Marketing / public site, not desk chrome. |
 | 10 | **Explainer videos, docs, support** | User-facing help (videos, platform docs, tickets or equivalent). Distinct from these engineering phase files. |
 | 11 | **Soft launch / beta and promote affiliates** | Public beta. Push the affiliate program. |
 
