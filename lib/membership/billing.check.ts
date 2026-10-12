@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { formatLocalDate } from "@/lib/time/display";
 import {
   billingPath,
   billingTableQueryParams,
@@ -30,6 +31,7 @@ import {
   resolveBillingCycle,
   BILLING_METHOD_LABELS,
   billingMethodPriceNote,
+  memberSubscriptionSummary,
   invoiceMethodLabel,
   hasUsableStripeSubscription,
   showManageCardForm,
@@ -49,6 +51,65 @@ assert.equal(BILLING_METHOD_LABELS.wallet, "Crypto");
 assert.equal(billingMethodPriceNote("wallet"), "Crypto (account balance)");
 assert.equal(billingMethodPriceNote("stripe"), "Credit Card (Stripe)");
 assert.equal(billingMethodPriceNote(null), "—");
+const dueAt = Date.parse("2026-10-16T00:00:00.000Z");
+const paidSummary = memberSubscriptionSummary({
+  planName: "Plus",
+  archived: false,
+  priceUsd: 29,
+  method: "wallet",
+  status: "active",
+  periodEnd: new Date(dueAt).toISOString(),
+  nowMs: Date.parse("2026-10-01T00:00:00.000Z"),
+});
+assert.equal(paidSummary.plan, "Plus");
+assert.equal(paidSummary.price, "$29 / month");
+assert.equal(paidSummary.method, "Crypto (account balance)");
+assert.equal(paidSummary.statusLabel, "Active");
+assert.equal(paidSummary.nextDue, `${formatLocalDate(dueAt)} · 15 days left`);
+assert.equal(
+  memberSubscriptionSummary({
+    planName: "Plus",
+    archived: true,
+    priceUsd: 0,
+    method: null,
+    status: "none",
+    periodEnd: null,
+  }).plan,
+  "Plus · Legacy",
+);
+assert.equal(
+  memberSubscriptionSummary({
+    planName: "Free",
+    archived: false,
+    priceUsd: 0,
+    method: "stripe",
+    status: "active",
+    periodEnd: new Date(dueAt).toISOString(),
+  }).nextDue,
+  "Not required",
+);
+assert.equal(
+  memberSubscriptionSummary({
+    planName: null,
+    archived: false,
+    priceUsd: 49,
+    method: "stripe",
+    status: "past_due",
+    periodEnd: null,
+  }).nextDue,
+  "No end date set.",
+);
+assert.equal(
+  memberSubscriptionSummary({
+    planName: null,
+    archived: false,
+    priceUsd: 49,
+    method: "stripe",
+    status: "past_due",
+    periodEnd: null,
+  }).statusLabel,
+  "Past due",
+);
 assert.equal(parseBillingMethod("stripe"), "stripe");
 assert.equal(parseBillingMethod("wallet"), "wallet");
 assert.equal(parseBillingMethod("comp"), null);

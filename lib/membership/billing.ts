@@ -4,10 +4,12 @@ import {
   type TableSortDir,
 } from "../table-chrome";
 import {
+  formatPlanPrice,
   planIsArchived,
   planIsDraft,
   type MembershipPlan,
 } from "./catalog";
+import { formatLocalDate } from "@/lib/time/display";
 import {
   WALLET_PERIOD_MS,
   roundUsd,
@@ -32,6 +34,50 @@ export function billingMethodPriceNote(method: BillingMethod | null): string {
     return BILLING_METHOD_LABELS.stripe;
   }
   return "—";
+}
+
+export type MemberSubscriptionSummary = {
+  plan: string;
+  price: string;
+  method: string;
+  nextDue: string;
+  status: SubscriptionStatus | null;
+  statusLabel: string;
+};
+
+export function memberSubscriptionSummary(input: {
+  planName: string | null;
+  archived: boolean;
+  priceUsd: number | null;
+  method: BillingMethod | null;
+  status: SubscriptionStatus | null;
+  periodEnd: string | null;
+  nowMs?: number;
+}): MemberSubscriptionSummary {
+  const paid = input.priceUsd != null && input.priceUsd >= 0.01;
+  const cycle = paid
+    ? resolveBillingCycle({
+        periodEnd: input.periodEnd,
+        nowMs: input.nowMs,
+      })
+    : null;
+  const planName = input.planName?.trim() || "";
+  return {
+    plan: planName
+      ? input.archived
+        ? `${planName} · Legacy`
+        : planName
+      : "—",
+    price: input.priceUsd == null ? "—" : formatPlanPrice(input.priceUsd),
+    method: billingMethodPriceNote(input.method),
+    nextDue: !paid
+      ? "Not required"
+      : cycle
+        ? `${formatLocalDate(cycle.endMs)} · ${formatRemainingCycle(cycle.remainingMs)}`
+        : "No end date set.",
+    status: input.status,
+    statusLabel: input.status ? SUBSCRIPTION_STATUS_LABELS[input.status] : "—",
+  };
 }
 
 export const CRYPTO_CREDIT_DEDUCT_LABEL =

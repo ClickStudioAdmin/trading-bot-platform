@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AccountSnapshotBody } from "@/components/account-snapshot";
+import {
+  LiveAccountBalanceSummary,
+  LiveMainWallet,
+} from "@/components/crypto-wallet-panel";
 import { DeskTypeMark } from "@/components/desk-mark";
 import { ContainerLoading } from "@/components/container-loading";
 import { LocalTime } from "@/components/local-time";
@@ -43,8 +47,18 @@ import {
   listConnectionDeskBinds,
   listExchangeConnections,
 } from "@/lib/exchanges/store";
+import {
+  billingPath,
+  memberSubscriptionSummary,
+  type SubscriptionStatus,
+} from "@/lib/membership/billing";
 import { getMemberBilling } from "@/lib/membership/billing-store";
+import { planIsArchived } from "@/lib/membership/catalog";
 import { getMembershipPlan } from "@/lib/membership/store";
+import {
+  pendingMainWithdrawUsd,
+  walletBookBalances,
+} from "@/lib/membership/wallet-store";
 import { loadMemberNotificationChrome } from "@/lib/notifications/badges";
 import { listMemberCriticalAccountIds } from "@/lib/notifications/critical";
 import { resolveInboxHref } from "@/lib/notifications/hrefs";
@@ -64,7 +78,7 @@ import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Overview",
-  description: "Desks, positions, bots, and keys on this login.",
+  description: "Desks, positions, bots, billing, and keys on this login.",
 };
 
 const MODE_DOT: Record<DeskDisplayMode, string> = {
@@ -122,13 +136,25 @@ export default async function AccountOverviewPage() {
   const futuresIds = inPlay
     .filter((desk) => desk.deskType !== "cash_and_carry")
     .map((desk) => desk.id);
-  const [deskStats, plan] = await Promise.all([
+  const [deskStats, planResult, books, pendingWithdrawUsd] = await Promise.all([
     loadFuturesDeskStats(futuresIds),
     billing?.planId
       ? getMembershipPlan(billing.planId)
       : Promise.resolve(null),
+    billing ? walletBookBalances(member.id) : Promise.resolve(null),
+    billing ? pendingMainWithdrawUsd(member.id) : Promise.resolve(0),
   ]);
-  const planName = plan?.ok ? plan.plan.name : null;
+  const planRecord = planResult?.ok ? planResult.plan : null;
+  const subscription = billing
+    ? memberSubscriptionSummary({
+        planName: planRecord?.name ?? null,
+        archived: planRecord ? planIsArchived(planRecord) : false,
+        priceUsd: planRecord?.priceUsd ?? null,
+        method: billing.billingMethod,
+        status: billing.subscriptionStatus,
+        periodEnd: billing.periodEnd,
+      })
+    : null;
   const attention = overviewPageAttention({
     accounts,
     binds,
@@ -142,21 +168,7 @@ export default async function AccountOverviewPage() {
   return (
     <div className="space-y-8">
       <div>
-        <PageHeading
-          title="Overview"
-          tour="overview"
-          className={planName ? "mb-2" : undefined}
-        />
-        {planName ? (
-          <p className="text-sm">
-            <Link
-              href="/account/billing"
-              className="text-accent hover:text-accent-strong"
-            >
-              {planName}
-            </Link>
-          </p>
-        ) : null}
+        <PageHeading title="Overview" tour="overview" />
       </div>
       {shouldShowSummary(onboarding?.draft.summary ?? null) &&
       onboarding?.draft.summary ? (
@@ -222,6 +234,65 @@ export default async function AccountOverviewPage() {
           </ul>
         )}
       </section>
+
+      {subscription && books ? (
+        <section className="grid items-start gap-4 lg:grid-cols-2">
+          <div className="rounded-card border border-line bg-surface p-5">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <h2 className="text-lg font-semibold tracking-tight">
+                Subscription Details
+              </h2>
+              <Link
+                href="/account/billing"
+                className="text-sm text-accent hover:text-accent-strong"
+              >
+                Billing & Account
+              </Link>
+            </div>
+            <div className="mt-3 grid gap-4 sm:grid-cols-2">
+              <Fact label="Current plan" value={subscription.plan} />
+              <Fact
+                label="Status"
+                value={subscription.statusLabel}
+                valueClass={subscriptionStatusClass(subscription.status)}
+              />
+              <Fact label="Monthly payment" value={subscription.price} />
+              <Fact label="Payment method" value={subscription.method} />
+              <Fact label="Next payment due" value={subscription.nextDue} />
+            </div>
+            <p className="mt-4">
+              <Link
+                href="/account/plans"
+                className="text-sm text-accent hover:text-accent-strong"
+              >
+                Plans
+              </Link>
+            </p>
+          </div>
+          <div className="rounded-card border border-line bg-surface p-5">
+            <LiveMainWallet
+              initialMainUsd={books.main}
+              initialPendingWithdrawUsd={pendingWithdrawUsd}
+              pollBalance
+            >
+              <h2 className="text-lg font-semibold tracking-tight">
+                Account Balance
+              </h2>
+              <LiveAccountBalanceSummary
+                cycleDueUsd={planRecord?.priceUsd ?? 0}
+              />
+              <p className="mt-4">
+                <Link
+                  href={billingPath({ tab: "wallet" })}
+                  className="text-sm text-accent hover:text-accent-strong"
+                >
+                  Manage Account Balance
+                </Link>
+              </p>
+            </LiveMainWallet>
+          </div>
+        </section>
+      ) : null}
 
       <section>
         <h2 className="text-lg font-semibold tracking-tight">Trading now</h2>
@@ -560,6 +631,35 @@ function ConnectionSnapshot({
           <p className="text-ink-muted">Could not read the unified account.</p>
         )}
       </div>
+    </div>
+  );
+}
+
+function subscriptionStatusClass(status: SubscriptionStatus | null): string {
+  if (status === "past_due") {
+    return "text-warning";
+  }
+  if (status === "canceled") {
+    return "text-danger";
+  }
+  return "text-ink";
+}
+
+function Fact({
+  label,
+  value,
+  valueClass = "text-ink",
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+}) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+        {label}
+      </p>
+      <p className={`mt-1 text-sm ${valueClass}`}>{value}</p>
     </div>
   );
 }
