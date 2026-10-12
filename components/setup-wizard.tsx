@@ -766,91 +766,110 @@ function DeskStep({
         uses public marks and the in-app ledger. Connected uses a trade-only
         key, or you can bind that key later.
       </p>
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[40rem] text-left text-sm">
-          <thead>
-            <tr className="border-b border-line text-ink-muted">
-              <th className="py-2 pr-3 font-medium">Desk</th>
-              <th className="py-2 pr-3 font-medium">Paper</th>
-              <th className="py-2 font-medium">Connected</th>
+      <table className="mt-4 w-full text-left text-sm">
+        <thead>
+          <tr className="border-b border-line text-ink-muted">
+            <th className="py-2 pr-3 font-medium">Desk</th>
+            <th className="w-28 px-3 py-2 text-center font-medium">Paper</th>
+            <th className="w-28 px-3 py-2 text-center font-medium">Connected</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ONBOARDING_DESK_TYPES.map((deskType) => (
+            <tr key={deskType} className="border-b border-line">
+              <td className="py-3 pr-3 align-middle">
+                <p className="font-medium text-ink">{formatDeskType(deskType)}</p>
+                <p className="mt-1 text-ink-muted">
+                  {formatDeskTypeChoice(deskType)}
+                </p>
+              </td>
+              {(["paper", "live"] as const).map((mode) => {
+                const key = setupDeskKey(deskType, mode);
+                const ticked = desks.some((row) => row.key === key);
+                const modeLabel = mode === "paper" ? "Paper" : "Connected";
+                return (
+                  <td key={mode} className="px-3 py-3 text-center align-middle">
+                    <input
+                      type="checkbox"
+                      aria-label={`${formatDeskType(deskType)} ${modeLabel}`}
+                      checked={ticked}
+                      onChange={() => onToggle(deskType, mode)}
+                      className="size-4"
+                    />
+                  </td>
+                );
+              })}
             </tr>
-          </thead>
-          <tbody>
-            {ONBOARDING_DESK_TYPES.map((deskType) => (
-              <tr key={deskType} className="border-b border-line align-top">
-                <td className="py-3 pr-3">
-                  <p className="font-medium text-ink">{formatDeskType(deskType)}</p>
-                  <p className="mt-1 text-ink-muted">
-                    {formatDeskTypeChoice(deskType)}
-                  </p>
-                </td>
-                {(["paper", "live"] as const).map((mode) => {
-                  const key = setupDeskKey(deskType, mode);
-                  const desk = desks.find((row) => row.key === key) ?? null;
-                  const venues =
-                    mode === "paper"
-                      ? paperVenuesFor(deskType)
-                      : connectedVenuesFor(deskType);
-                  return (
-                    <td key={mode} className="py-3 pr-3">
-                      <label className="inline-flex items-center gap-2 text-ink">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(desk)}
-                          onChange={() => onToggle(deskType, mode)}
-                        />
-                        {mode === "paper" ? "Paper" : "Connected"}
-                      </label>
-                      {desk ? (
-                        <div className="mt-2 space-y-2">
-                          <label className="block text-ink">
-                            Name
-                            <input
-                              value={desk.name}
-                              maxLength={40}
-                              onChange={(event) =>
-                                onChange(key, {
-                                  name: event.target.value,
-                                  nameEdited: true,
-                                })
-                              }
-                              className={fieldClass}
-                            />
-                          </label>
-                          {mode === "paper" && venues.length > 1 ? (
-                            <label className="block text-ink">
-                              Market data
-                              <AppSelect
-                                value={desk.venue}
-                                onChange={(event) =>
-                                  onChange(key, { venue: event.target.value })
-                                }
-                                className={fieldClass}
-                              >
-                                {venues.map((venue) => (
-                                  <option key={venue.id} value={venue.id}>
-                                    {venue.label}
-                                  </option>
-                                ))}
-                              </AppSelect>
-                            </label>
-                          ) : null}
-                          {mode === "live" ? (
-                            <p className="text-hint text-ink-muted">
-                              {venues.map((venue) => venue.label).join(" or ")} on
-                              the next step.
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
+      {desks.length > 0 ? (
+        <div className="mt-5 space-y-4">
+          {ONBOARDING_DESK_TYPES.flatMap((deskType) =>
+            (["paper", "live"] as const).flatMap((mode) => {
+              const desk = desks.find(
+                (row) => row.key === setupDeskKey(deskType, mode),
+              );
+              return desk ? [desk] : [];
+            }),
+          ).map((desk) => {
+            const venues =
+              desk.mode === "paper" ? paperVenuesFor(desk.deskType) : [];
+            const showMarket = venues.length > 1;
+            return (
+              <div key={desk.key}>
+                <p className="text-sm font-medium text-ink">
+                  {formatDeskType(desk.deskType)}
+                  <span className="font-normal text-ink-muted">
+                    {" "}
+                    · {desk.mode === "paper" ? "Paper" : "Connected"}
+                  </span>
+                </p>
+                <div
+                  className={
+                    showMarket
+                      ? "mt-2 grid gap-3 sm:grid-cols-2"
+                      : "mt-2 sm:max-w-sm"
+                  }
+                >
+                  <label className="block text-sm text-ink">
+                    Name
+                    <input
+                      value={desk.name}
+                      maxLength={40}
+                      onChange={(event) =>
+                        onChange(desk.key, {
+                          name: event.target.value,
+                          nameEdited: true,
+                        })
+                      }
+                      className={fieldClass}
+                    />
+                  </label>
+                  {showMarket ? (
+                    <label className="block text-sm text-ink">
+                      Market data
+                      <AppSelect
+                        value={desk.venue}
+                        onChange={(event) =>
+                          onChange(desk.key, { venue: event.target.value })
+                        }
+                        className={fieldClass}
+                      >
+                        {venues.map((venue) => (
+                          <option key={venue.id} value={venue.id}>
+                            {venue.label}
+                          </option>
+                        ))}
+                      </AppSelect>
+                    </label>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
       <p className="mt-3 text-hint text-ink-muted">
         Leave every box clear to continue without desks. Perps is the ticket.
         TradingView Strategy takes alerts. Those desks do not load starter bots.
