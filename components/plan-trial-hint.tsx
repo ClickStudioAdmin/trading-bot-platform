@@ -29,6 +29,15 @@ export function trialEmphasisClass(phase: TrialPhase | "offer"): string {
   return "border-b border-dashed border-warning text-warning";
 }
 
+export function trialBadgeClass(phase: TrialPhase | "offer"): string {
+  const shape =
+    "inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-medium";
+  if (phase === "ended") {
+    return `${shape} bg-surface-raised text-ink-faint`;
+  }
+  return `${shape} bg-warning/15 text-warning`;
+}
+
 function TrialEndCopy({
   phase,
   endsAt,

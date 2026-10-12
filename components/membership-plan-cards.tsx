@@ -11,7 +11,7 @@ import {
   type PlanCompareCell,
   type PlanCompareRow,
 } from "@/lib/membership/catalog";
-import { PlanTrialHint, trialEmphasisClass } from "@/components/plan-trial-hint";
+import { PlanTrialHint, trialBadgeClass } from "@/components/plan-trial-hint";
 import {
   grantForKey,
   trialMark,
@@ -264,7 +264,7 @@ function PlanCell({
         <PlanTrialHint
           phase={mark.phase}
           endsAt={mark.endsAt}
-          className={`text-center text-xs font-medium ${trialEmphasisClass(mark.phase)}`}
+          className={trialBadgeClass(mark.phase)}
         >
           {mark.label}
         </PlanTrialHint>

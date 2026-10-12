@@ -283,16 +283,23 @@ export function grantForKey(
 
 function trialLabel(offer: TrialOffer, row: PlanCompareRow, ended: boolean): string {
   if (ended) {
-    return "Trial ended";
+    return titleCaseWords("Trial ended");
   }
   if (offer.limit != null && row.kind === "cap") {
     const amount =
       row.key === "max_backtest_years"
         ? formatBacktestTimeframe(offer.limit)
         : String(offer.limit);
-    return `${amount} · trial`;
+    return titleCaseWords(`${amount} · trial`);
   }
-  return `${offer.days}-day trial`;
+  return titleCaseWords(`${offer.days}-day trial`);
+}
+
+function titleCaseWords(text: string): string {
+  return text.replace(
+    /(^|[\s-])([a-z])/g,
+    (_match, boundary: string, letter: string) => boundary + letter.toUpperCase(),
+  );
 }
 
 function standingVisible(plan: TrialPlan, row: PlanCompareRow): boolean {
