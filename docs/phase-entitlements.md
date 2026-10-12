@@ -141,6 +141,14 @@ Result is allow, or a reason:
 
 Editing an existing bot, template, listing, or backtest does not consume another cap. Creating, cloning, importing, queueing, and arming a new one does.
 
+#### Feature trials
+
+Admin can put a free trial on the right of each plan-editor row. A checkbox row gets a **Free trial** tick and a day count (1–365). A cap gets a **trial limit** (higher than the standing cap) and the same day count. Affiliate percents have no trial. A ticked feature is already included, so its trial is stored and unused. An unlimited cap cannot also have a trial limit.
+
+`membership_plans.trials` holds that config. `member_feature_trials` holds one clock per login and row. The clock starts the first time Overview or Plans loads while that row is a trial on the current plan. It does not restart if they leave the plan and come back, and changing the day count does not move an existing end. Plans and Overview show the row as temporary (dashed warning). Hover says the end date. On a plan they are not on, hover says the end date starts when that plan applies.
+
+While the clock is open, 6a treats the feature as on and the cap as the trial limit. The disabled-control line is a trial line: “Backtesting Tool is in a free trial until {date}.” After `ends_at`, the initiate actions in the matrix reject: “Your free trial of {label} ended on {date}.” Saved work stays readable. A saved backtest and its existing replay stay open. Queue, attach, a new replay variant, and any other create in the matrix do not. The same split applies to every trialed row: open what they already have, refuse new work. Do not delete the trial rows or the work they produced.
+
 #### Gate matrix (6a)
 
 Desk display mode is already `deskDisplayMode` in `lib/accounts/model.ts`: paper; live with `demo` or `testnet` environment; otherwise live. Bybit create often stores a null environment until a key is bound. Count and reject using the environment chosen on the form, or the bound key’s environment when that is what the action writes. Binding a key that moves a desk from Demo to Live re-checks the Live cap and rejects the bind when it would go over.

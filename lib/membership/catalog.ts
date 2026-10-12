@@ -1,3 +1,5 @@
+import type { PlanTrials } from "@/lib/membership/trials";
+
 export const PLAN_NAME_MAX = 40;
 export const AFFILIATE_LEVEL_MAX = 5;
 export const AFFILIATE_RATE_KEYS = ["l1", "l2", "l3", "l4", "l5"] as const;
@@ -115,6 +117,7 @@ export type MembershipPlan = {
   affiliateL5Pct: number;
   features: PlanFeatures;
   caps: PlanCaps;
+  trials: PlanTrials;
   createdAt: string;
   updatedAt: string;
   memberCount: number;

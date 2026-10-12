@@ -33,6 +33,7 @@ export default async function PricingPage() {
         plans={plans}
         currentPlanId={null}
         joinHref="/sign-up"
+        nowMs={0}
       />
     </main>
   );

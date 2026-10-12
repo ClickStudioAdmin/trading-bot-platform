@@ -16,6 +16,12 @@ import {
   type PlanFeatures,
   type PlanVisibility,
 } from "./catalog";
+import {
+  emptyPlanTrials,
+  parseTrialDays,
+  parseTrialLimit,
+  type PlanTrials,
+} from "./trials";
 
 export type PlanFormValues = {
   name: string;
@@ -33,6 +39,7 @@ export type PlanFormValues = {
   affiliateL5Pct: number;
   features: PlanFeatures;
   caps: PlanCaps;
+  trials: PlanTrials;
 };
 
 export type PlanFormResult =
@@ -56,6 +63,10 @@ export function clonePlanValues(plan: MembershipPlan): PlanFormValues {
     affiliateL5Pct: plan.affiliateL5Pct,
     features: { ...plan.features },
     caps: { ...plan.caps },
+    trials: {
+      features: { ...plan.trials.features },
+      caps: { ...plan.trials.caps },
+    },
   };
 }
 
@@ -171,6 +182,11 @@ export function parsePlanForm(formData: FormData): PlanFormResult {
     caps[key] = parsed;
   }
 
+  const trials = readTrials(formData, caps);
+  if (!trials.ok) {
+    return trials;
+  }
+
   return {
     ok: true,
     values: {
@@ -189,8 +205,66 @@ export function parsePlanForm(formData: FormData): PlanFormResult {
       affiliateL5Pct: l5,
       features,
       caps,
+      trials: trials.trials,
     },
   };
+}
+
+function readTrials(
+  formData: FormData,
+  caps: PlanCaps,
+): { ok: true; trials: PlanTrials } | { ok: false; error: string } {
+  const trials = emptyPlanTrials();
+  for (const key of PLAN_FEATURE_KEYS) {
+    if (!readCheckbox(formData, `trial_on_${key}`)) {
+      continue;
+    }
+    const days = parseTrialDays(readString(formData, `trial_days_${key}`));
+    if (days === null) {
+      return {
+        ok: false,
+        error: "A free trial needs a whole number of days from 1 to 365.",
+      };
+    }
+    trials.features[key] = { days };
+  }
+  for (const key of PLAN_CAP_KEYS) {
+    const limitRaw = readString(formData, `trial_limit_${key}`);
+    const daysRaw = readString(formData, `trial_days_${key}`);
+    if (limitRaw === "" && daysRaw === "") {
+      continue;
+    }
+    const limit = parseTrialLimit(limitRaw);
+    const days = parseTrialDays(daysRaw);
+    if (limit === null || days === null) {
+      return {
+        ok: false,
+        error:
+          "A trial limit needs a whole number of 1 or more and a trial length from 1 to 365 days.",
+      };
+    }
+    const standing = caps[key];
+    if (standing == null) {
+      return {
+        ok: false,
+        error: "Clear the trial limit when the standing cap is already unlimited.",
+      };
+    }
+    if (limit <= standing) {
+      return {
+        ok: false,
+        error: "A trial limit has to be higher than the standing cap.",
+      };
+    }
+    if (key === "affiliate_max_depth" && limit > AFFILIATE_LEVEL_MAX) {
+      return {
+        ok: false,
+        error: `A trial earn depth cannot be more than ${AFFILIATE_LEVEL_MAX}.`,
+      };
+    }
+    trials.caps[key] = { days, limit };
+  }
+  return { ok: true, trials };
 }
 
 export function parsePlanId(value: string): string | null {

@@ -9,6 +9,7 @@ import {
   type MembershipPlan,
 } from "./catalog";
 import { clonePlanValues, type PlanFormValues } from "./form";
+import { parsePlanTrials } from "./trials";
 
 type PlanRow = {
   id: string;
@@ -29,13 +30,14 @@ type PlanRow = {
   affiliate_l5_pct: number | string;
   features: unknown;
   caps: unknown;
+  trials?: unknown;
   created_at: string;
   updated_at: string;
   member_count?: number | string | null;
 };
 
 const PLAN_COLUMNS =
-  "id, slug, name, sort_order, public, visibility, preview, archived_at, is_default, price_usd, stripe_price_id, affiliate_l1_pct, affiliate_l2_pct, affiliate_l3_pct, affiliate_l4_pct, affiliate_l5_pct, features, caps, created_at, updated_at";
+  "id, slug, name, sort_order, public, visibility, preview, archived_at, is_default, price_usd, stripe_price_id, affiliate_l1_pct, affiliate_l2_pct, affiliate_l3_pct, affiliate_l4_pct, affiliate_l5_pct, features, caps, trials, created_at, updated_at";
 
 function asNumber(value: number | string): number {
   return typeof value === "number" ? value : Number(value);
@@ -62,6 +64,7 @@ function mapPlan(row: PlanRow, memberCount = 0): MembershipPlan {
     affiliateL5Pct: asNumber(row.affiliate_l5_pct ?? 0),
     features: parseFeatures(row.features),
     caps: parseCaps(row.caps),
+    trials: parsePlanTrials(row.trials),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     memberCount,
@@ -277,6 +280,7 @@ export async function saveMembershipPlan(input: {
     affiliate_l5_pct: input.values.affiliateL5Pct,
     features: input.values.features,
     caps: input.values.caps,
+    trials: input.values.trials,
     updated_at: now,
   };
 
