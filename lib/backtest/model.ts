@@ -332,7 +332,7 @@ export function splitBacktestFamily(
 }
 
 export function backtestRerunHref(runId: string): string {
-  return `/account/backtests?rerun=${encodeURIComponent(runId)}#replay`;
+  return backtestNewHref({ rerun: runId }, "replay");
 }
 
 export const BACKTEST_SAVED_PAGE_SIZE = 20;
@@ -344,9 +344,59 @@ export function parseBacktestListPage(raw: unknown): number {
 
 export function backtestSavedListHref(page = 1): string {
   if (page <= 1) {
-    return "/account/backtests?tab=saved";
+    return "/account/backtests";
   }
-  return `/account/backtests?tab=saved&page=${page}`;
+  return `/account/backtests?page=${page}`;
+}
+
+function backtestSearchParam(raw: unknown): string {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return String(value ?? "").trim();
+}
+
+/** Create-page URL. Empty query values are omitted. */
+export function backtestNewHref(
+  query: Record<string, string | null | undefined> = {},
+  hash?: string,
+): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    const text = String(value ?? "").trim();
+    if (text) {
+      params.set(key, text);
+    }
+  }
+  const search = params.toString();
+  const path = search
+    ? `/account/backtests/new?${search}`
+    : "/account/backtests/new";
+  const fragment = String(hash ?? "").replace(/^#/, "").trim();
+  return fragment ? `${path}#${fragment}` : path;
+}
+
+/**
+ * Old list URLs that still mean the create page or the saved tab.
+ * Returns null when the request should stay on the run list.
+ */
+export function backtestListEntryHref(
+  params: Record<string, string | string[] | undefined> | null | undefined,
+): string | null {
+  const template = backtestSearchParam(params?.template);
+  const draft = backtestSearchParam(params?.draft);
+  const rerun = backtestSearchParam(params?.rerun);
+  const venue = backtestSearchParam(params?.venue);
+  const env = backtestSearchParam(params?.env);
+  const tab = backtestSearchParam(params?.tab);
+  if (template || draft || rerun || tab === "new") {
+    return backtestNewHref(
+      { template, draft, rerun, venue, env },
+      rerun ? "replay" : undefined,
+    );
+  }
+  if (tab === "saved") {
+    return backtestSavedListHref(parseBacktestListPage(params?.page));
+  }
+  return null;
 }
 
 export function paginateBacktestList<T>(

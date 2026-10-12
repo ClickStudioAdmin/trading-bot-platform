@@ -5,7 +5,18 @@ import { useConfirmDialog } from "@/components/confirm-modal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RemoveBacktestButton } from "@/components/backtest-run-view";
-import { IconClose, IconFilterClear, IconPlay, IconTrash } from "@/components/icons";
+import {
+  BotButtonLead,
+  botBtnIcon,
+  deskActionBtnClass,
+} from "@/components/bot-form-chrome";
+import {
+  IconClose,
+  IconFilterClear,
+  IconPlay,
+  IconPlus,
+  IconTrash,
+} from "@/components/icons";
 import {
   SortTh,
   StatusBadge,
@@ -169,6 +180,7 @@ export function BacktestRunsTable({
   returnTo = "/account/backtests",
   watchRunId,
   empty = "No runs yet.",
+  createHref,
 }: {
   runs: BacktestRun[];
   memberId: string;
@@ -180,6 +192,8 @@ export function BacktestRunsTable({
   returnTo?: string;
   watchRunId?: string;
   empty?: ReactNode;
+  /** List page only. Comparables and variations omit it. */
+  createHref?: string;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -334,6 +348,18 @@ export function BacktestRunsTable({
                 Clear
               </TableLabelButton>
             </>
+          ) : undefined
+        }
+        actions={
+          createHref ? (
+            <Link
+              href={createHref}
+              className={`inline-flex items-center ${deskActionBtnClass}`}
+            >
+              <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
+                Create
+              </BotButtonLead>
+            </Link>
           ) : undefined
         }
       >
