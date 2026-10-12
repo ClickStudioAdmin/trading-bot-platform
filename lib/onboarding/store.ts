@@ -229,6 +229,7 @@ export async function completeMemberOnboarding(input: {
     applied: input.applied,
     summary: input.summary,
     readyForTour: false,
+    introSeen: false,
   };
   return writeRow(input.userId, {
     status: "completed",

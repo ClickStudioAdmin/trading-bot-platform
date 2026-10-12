@@ -40,6 +40,7 @@ export type SetupStep = "desks" | "exchanges" | "bots" | "tour";
 export const SETUP_MAIN_STEPS = ["desks", "bots", "tour"] as const;
 export type SetupMainStep = (typeof SETUP_MAIN_STEPS)[number];
 export type SetupScreen =
+  | { main: "intro"; sub: "video" }
   | { main: "desks"; sub: "choice" | "desks" | "exchanges" }
   | { main: "bots"; sub: "choice" | "blocked" | "empty" }
   | { main: "bots"; sub: "desk"; deskKey: string }
@@ -94,6 +95,8 @@ export type SetupDraft = {
   summary: SetupSummary | null;
   /** Desks and bots are already written. The tour step can show them. */
   readyForTour: boolean;
+  /** The explainer was skipped or finished. A refresh stays on the setup steps. */
+  introSeen: boolean;
 };
 
 export type SetupConnection = {
@@ -145,6 +148,7 @@ export function emptySetupDraft(): SetupDraft {
     applied: [],
     summary: null,
     readyForTour: false,
+    introSeen: false,
   };
 }
 
@@ -361,6 +365,7 @@ export function parseSetupDraft(
       applied,
       summary,
       readyForTour: body.readyForTour === true,
+      introSeen: body.introSeen === true,
     },
   };
 }
@@ -655,7 +660,10 @@ export function setupScreens(input: {
   deskChoice: DeskSetupChoice | null;
   botChoice: BotSetupChoice | null;
 }): SetupScreen[] {
-  const screens: SetupScreen[] = [{ main: "desks", sub: "choice" }];
+  const screens: SetupScreen[] = [
+    { main: "intro", sub: "video" },
+    { main: "desks", sub: "choice" },
+  ];
   if (input.deskChoice === null) {
     return screens;
   }

@@ -6,7 +6,7 @@ import {
   formatDeskTypeChoice,
 } from "@/lib/accounts/model";
 import { AppSelect } from "@/components/app-select";
-import { IconCheck } from "@/components/icons";
+import { IconCheck, IconPlay } from "@/components/icons";
 import { checkExchangeConnection } from "@/lib/exchanges/actions";
 import {
   formatEnvironmentLabel,
@@ -52,7 +52,11 @@ import {
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 
-function SetupProgress({ screen }: { screen: SetupScreen }) {
+function SetupProgress({
+  screen,
+}: {
+  screen: Exclude<SetupScreen, { main: "intro" }>;
+}) {
   const currentIndex = SETUP_MAIN_STEPS.indexOf(screen.main);
   return (
     <div className="shrink-0 border-b border-line px-5 py-4">
@@ -141,9 +145,15 @@ export function SetupWizard({
   );
   const [applied, setApplied] = useState<string[]>(initialDraft.applied);
   const [readyForTour, setReadyForTour] = useState(initialDraft.readyForTour);
+  const [introSeen, setIntroSeen] = useState(initialDraft.introSeen);
+  const [playing, setPlaying] = useState(false);
   const [keys, setKeys] = useState(connections);
   const [screenId, setScreenId] = useState(
-    initialDraft.readyForTour ? "tour:tour" : "desks:choice",
+    initialDraft.readyForTour
+      ? "tour:tour"
+      : initialDraft.introSeen
+        ? "desks:choice"
+        : "intro:video",
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -169,8 +179,23 @@ export function SetupWizard({
       applied,
       summary: null,
       readyForTour,
+      introSeen,
       ...overrides,
     };
+  }
+
+  function enterSetup() {
+    const snapshot = draft({ introSeen: true });
+    setError(null);
+    startTransition(async () => {
+      const saved = await saveSetupDraft(JSON.stringify(snapshot));
+      if (!saved.ok) {
+        setError(saved.error);
+        return;
+      }
+      setIntroSeen(true);
+      setScreenId("desks:choice");
+    });
   }
 
   function takenNames(exceptKey?: string) {
@@ -288,7 +313,9 @@ export function SetupWizard({
         deskChoice,
         botChoice: nextBotChoice,
       });
-      const target = planned.find((item) => setupScreenId(item) !== "desks:choice");
+      const target = planned.find(
+        (item) => item.main !== "intro" && setupScreenId(item) !== "desks:choice",
+      );
       if (!target) {
         return;
       }
@@ -355,8 +382,11 @@ export function SetupWizard({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <SetupProgress screen={screen} />
+      {screen.main === "intro" ? null : <SetupProgress screen={screen} />}
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-4">
+      {screen.main === "intro" ? (
+        <IntroStep playing={playing} onWatch={() => setPlaying(true)} />
+      ) : null}
       {screen.main === "desks" && screen.sub === "choice" ? (
         <ChoiceStep
           title="Add desks now?"
@@ -489,7 +519,33 @@ export function SetupWizard({
           </p>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
-        {previous && !readyForTour ? (
+        {screen.main === "intro" ? (
+          <>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={enterSetup}
+              className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            >
+              Skip
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                if (playing) {
+                  enterSetup();
+                  return;
+                }
+                setPlaying(true);
+              }}
+              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            >
+              {pending ? "Saving…" : playing ? "Continue" : "Watch"}
+            </button>
+          </>
+        ) : null}
+        {screen.main !== "intro" && previous && !readyForTour ? (
           <button
             type="button"
             onClick={() => {
@@ -501,7 +557,7 @@ export function SetupWizard({
             Back
           </button>
         ) : null}
-        {next ? (
+        {screen.main !== "intro" && next ? (
           <button
             type="button"
             disabled={pending}
@@ -520,6 +576,42 @@ export function SetupWizard({
         </div>
       </div>
     </div>
+  );
+}
+
+function IntroStep({
+  playing,
+  onWatch,
+}: {
+  playing: boolean;
+  onWatch: () => void;
+}) {
+  const frame = (
+    <>
+      <IconPlay size={28} className="mx-auto size-10 text-ink-muted" />
+      <p className="mt-3 text-sm font-medium text-ink">
+        {playing ? "The explainer video will play here." : "Explainer video"}
+      </p>
+    </>
+  );
+  const frameClass =
+    "mt-4 flex aspect-video w-full flex-col items-center justify-center rounded-card border border-line bg-canvas px-6 text-center";
+  return (
+    <section className="rounded-card border border-line bg-surface p-5">
+      <h2 className="text-lg font-semibold tracking-tight">
+        Watch a short overview
+      </h2>
+      <p className="mt-2 text-sm text-ink-muted">
+        Watch the video, or skip it and go straight to setup.
+      </p>
+      {playing ? (
+        <div className={frameClass}>{frame}</div>
+      ) : (
+        <button type="button" onClick={onWatch} className={frameClass}>
+          {frame}
+        </button>
+      )}
+    </section>
   );
 }
 
