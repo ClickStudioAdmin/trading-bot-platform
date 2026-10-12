@@ -48,6 +48,7 @@ import {
   shouldOfferTour,
   showsBotStep,
   setupInitialStatusChoices,
+  starterStatusWord,
   starterStartVerb,
   starterTemplateAllowed,
   statusAfterExternalDesk,
@@ -667,6 +668,11 @@ assert.deepEqual(setupInitialStatusChoices("cash_and_carry"), [
   { value: "start", label: "Active" },
 ]);
 assert.equal(setupInitialStatusChoices("perps"), null);
+assert.equal(starterStatusWord("dca", false), "Idle");
+assert.equal(starterStatusWord("dca", true), "Armed");
+assert.equal(starterStatusWord("cash_and_carry", false), "Disabled");
+assert.equal(starterStatusWord("perps_bots", true), "Active");
+assert.equal(starterStatusWord("perps", false), null);
 assert.equal(
   setupScreens({
     desks: [paper],
@@ -697,6 +703,15 @@ assert.deepEqual(
     },
     { key: reviewCarry.key, name: reviewCarry.name, bots: [] },
   ],
+);
+assert.equal(
+  setupReviewRows({
+    desks: [
+      { ...paper, name: "DCA Paper", templateIds: [armId], armTemplateIds: [] },
+    ],
+    folders: [folder({ id: "dca-pack", deskType: "dca" })],
+  })[0]?.bots[0]?.start,
+  "Idle",
 );
 assert.equal(
   setupScreenId(

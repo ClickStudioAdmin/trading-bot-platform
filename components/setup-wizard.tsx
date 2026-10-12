@@ -71,7 +71,7 @@ import {
   setupReviewRows,
   setupScreens,
   setupInitialStatusChoices,
-  starterStartedWord,
+  starterStatusWord,
   setupStepLabel,
   starterBotDesks,
   validateSetupNames,
@@ -963,10 +963,12 @@ function ReadySummary({
                 const desk = desks.find((item) => item.key === row.key);
                 const bots = row.bots.map((bot) => ({
                   ...bot,
-                  start:
-                    desk && desk.armTemplateIds.includes(bot.templateId)
-                      ? starterStartedWord(desk.deskType)
-                      : null,
+                  start: desk
+                    ? starterStatusWord(
+                        desk.deskType,
+                        desk.armTemplateIds.includes(bot.templateId),
+                      )
+                    : null,
                 }));
                 return (
                 <tr key={row.key} className="border-b border-line last:border-b-0">
