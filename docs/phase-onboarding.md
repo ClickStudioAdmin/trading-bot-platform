@@ -123,7 +123,7 @@ Apply runs when they continue to the tour, after the desks exist, through the sa
 
 ### 3. Take a Tour
 
-Continuing to this step writes the desks and bots first. The modal stays up and shows a success message listing the desks and the bots that were loaded. It does not ask the tour question on this screen.
+Continuing to this step writes the desks and bots first. The modal stays up and shows a table of each desk and the bots loaded on it. A desk with no starter bots shows an em dash. It does not ask the tour question on this screen.
 
 - **Start the Tour now** — Setup is marked completed and the tour starts on Overview. The tour includes the new desks and, when a starter bot was loaded, that desk’s Bots page.
 - **Not now** — Setup is marked completed and lands on Overview, with the setup summary. The last desk created becomes the active desk.

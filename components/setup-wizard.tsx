@@ -38,7 +38,7 @@ import {
   applyBotSetupChoice,
   applyDeskSetupChoice,
   botsEmptyNote,
-  createdStarterBots,
+  readyDeskRows,
   foldersForDesk,
   makeSetupDesk,
   paperVenuesFor,
@@ -652,7 +652,7 @@ function TourReady({
   onStart: () => void;
   onLater: () => void;
 }) {
-  const bots = createdStarterBots({ desks, folders, applied });
+  const rows = readyDeskRows({ desks, folders, applied });
   return (
     <section>
       <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
@@ -664,30 +664,35 @@ function TourReady({
           ? "No desks or bots were added. Nothing is trading."
           : "Nothing is armed, and nothing is trading."}
       </p>
-      {desks.length > 0 ? (
-        <div className="mt-4">
-          <h3 className="text-sm font-medium text-ink">Desks</h3>
-          <ul className="mt-1 space-y-1 text-sm text-ink">
-            {desks.map((desk) => (
-              <li key={desk.key}>{desk.name}</li>
-            ))}
-          </ul>
+      {rows.length > 0 ? (
+        <div className="mt-4 overflow-x-auto rounded-card border border-line">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
+              <tr>
+                <th className="px-3 py-2 font-medium">Desk</th>
+                <th className="px-3 py-2 font-medium">Bots</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.key} className="border-b border-line last:border-b-0">
+                  <td className="px-3 py-2 align-top text-ink">{row.name}</td>
+                  <td className="px-3 py-2 align-top text-ink">
+                    {row.bots.length === 0 ? (
+                      <span className="text-ink-faint">—</span>
+                    ) : (
+                      <ul className="space-y-1">
+                        {row.bots.map((bot) => (
+                          <li key={bot.templateId}>{bot.name}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      ) : null}
-      {bots.length > 0 ? (
-        <div className="mt-4">
-          <h3 className="text-sm font-medium text-ink">Bots</h3>
-          <ul className="mt-1 space-y-1 text-sm text-ink">
-            {bots.map((bot) => (
-              <li key={`${bot.deskName}:${bot.templateId}`}>
-                {bot.botName}
-                <span className="text-ink-muted"> · {bot.deskName}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : desks.length > 0 ? (
-        <p className="mt-4 text-sm text-ink-muted">No starter bots were loaded.</p>
       ) : null}
       <div className="mt-4 flex flex-wrap gap-2">
         <button
