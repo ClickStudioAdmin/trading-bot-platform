@@ -238,8 +238,32 @@ export function starterStartVerb(deskType: DeskType): "Enable" | null {
   return null;
 }
 
-export function starterStartedWord(deskType: DeskType): "Enabled" | null {
-  return starterStartVerb(deskType) === "Enable" ? "Enabled" : null;
+export type SetupInitialStatus = "rest" | "start";
+
+/** Statuses setup can apply. DCA rests idle or arms. The other desks rest disabled or go active. */
+export function setupInitialStatusChoices(
+  deskType: DeskType,
+): readonly { value: SetupInitialStatus; label: string }[] | null {
+  if (deskType === "dca") {
+    return [
+      { value: "rest", label: "Idle" },
+      { value: "start", label: "Armed" },
+    ];
+  }
+  if (deskType === "perps_bots" || deskType === "cash_and_carry") {
+    return [
+      { value: "rest", label: "Disabled" },
+      { value: "start", label: "Active" },
+    ];
+  }
+  return null;
+}
+
+export function starterStartedWord(deskType: DeskType): string | null {
+  return (
+    setupInitialStatusChoices(deskType)?.find((choice) => choice.value === "start")
+      ?.label ?? null
+  );
 }
 
 /** A Connected desk can start a bot only after a key is saved. */
@@ -1022,7 +1046,7 @@ export function setupReviewRows(input: {
 }): {
   key: string;
   name: string;
-  bots: { templateId: string; name: string; start: "Enabled" | null }[];
+  bots: { templateId: string; name: string; start: string | null }[];
 }[] {
   const names = new Map<string, string>();
   for (const folder of input.folders) {
@@ -1566,8 +1590,8 @@ export function buildTourSteps(desks: readonly TourDesk[]): TourStep[] {
     steps.push({
       id: "bots",
       title: "Bots",
-      headline: "Bots stay idle or disabled unless you ticked Enable.",
-      body: "That tick starts the bot. The app places orders only after a bot is enabled.",
+      headline: "Bots stay idle or disabled unless Initial Status starts them.",
+      body: "Armed and Active start the bot. The app places orders only after that.",
       href: pathWithDesk(home, bot.id),
       target: "bots",
     });

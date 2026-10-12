@@ -69,8 +69,8 @@ import {
   setupDeskCanStartBots,
   setupReviewRows,
   setupScreens,
+  setupInitialStatusChoices,
   starterStartedWord,
-  starterStartVerb,
   setupStepLabel,
   starterBotDesks,
   validateSetupNames,
@@ -584,7 +584,7 @@ export function SetupWizard({
       {screen.main === "bots" && screen.sub === "choice" ? (
         <ChoiceStep
           title="Load starter bots?"
-          intro="Tick Initial Status on a bot to start it. Desks and bots are created when you click Create, so the tour can show them."
+          intro="Choose Initial Status to start a bot. Desks and bots are created when you click Create, so the tour can show them."
           note={
             starterBotDesks(desks, folders).length === 0
               ? botsEmptyNote(desks)
@@ -822,29 +822,23 @@ function ReviewStep({
               <tr>
                 <th className="px-3 py-2 font-medium">Desk</th>
                 <th className="px-3 py-2 font-medium">Bots</th>
+                <th className="whitespace-nowrap px-3 py-2 font-medium">
+                  Initial Status
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.key} className="border-b border-line last:border-b-0">
                   <td className="px-3 py-2 align-top text-ink">{row.name}</td>
-                  <td className="px-3 py-2 align-top text-ink">
+                  <BotNameCell bots={row.bots} folders={folders} />
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
                     {row.bots.length === 0 ? (
                       <span className="text-ink-faint">—</span>
                     ) : (
                       <ul className="space-y-1">
                         {row.bots.map((bot) => (
-                          <li key={bot.templateId}>
-                            <TemplateNameWithParameters
-                              name={bot.name}
-                              recipe={starterRecipe(folders, bot.templateId)}
-                              templateId={bot.templateId}
-                              nameClassName=""
-                            />
-                            {bot.start ? (
-                              <span className="text-ink-muted"> · {bot.start}</span>
-                            ) : null}
-                          </li>
+                          <li key={bot.templateId}>{bot.start ?? "—"}</li>
                         ))}
                       </ul>
                     )}
@@ -891,7 +885,7 @@ function TourReady({
             ))}
           </ul>
           <p className="mt-3 text-sm text-ink-muted">
-            Desks that were created are listed below. Loaded bots stay idle or disabled unless you ticked Enable.
+            Desks that were created are listed below. Loaded bots stay idle or disabled unless Initial Status starts them.
           </p>
         </>
       ) : (
@@ -903,7 +897,7 @@ function TourReady({
           <p className="mt-2 text-sm text-ink">
             {desks.length === 0
               ? "No desks or bots were added. Nothing is trading."
-              : "Loaded bots stay idle or disabled unless you ticked Enable."}
+              : "Loaded bots stay idle or disabled unless Initial Status starts them."}
           </p>
         </>
       )}
@@ -914,38 +908,33 @@ function TourReady({
               <tr>
                 <th className="px-3 py-2 font-medium">Desk</th>
                 <th className="px-3 py-2 font-medium">Bots</th>
+                <th className="whitespace-nowrap px-3 py-2 font-medium">
+                  Initial Status
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => {
                 const desk = desks.find((item) => item.key === row.key);
+                const bots = row.bots.map((bot) => ({
+                  ...bot,
+                  start:
+                    desk && desk.armTemplateIds.includes(bot.templateId)
+                      ? starterStartedWord(desk.deskType)
+                      : null,
+                }));
                 return (
                 <tr key={row.key} className="border-b border-line last:border-b-0">
                   <td className="px-3 py-2 align-top text-ink">{row.name}</td>
-                  <td className="px-3 py-2 align-top text-ink">
-                    {row.bots.length === 0 ? (
+                  <BotNameCell bots={bots} folders={folders} />
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
+                    {bots.length === 0 ? (
                       <span className="text-ink-faint">—</span>
                     ) : (
                       <ul className="space-y-1">
-                        {row.bots.map((bot) => {
-                          const started =
-                            desk && desk.armTemplateIds.includes(bot.templateId)
-                              ? starterStartedWord(desk.deskType)
-                              : null;
-                          return (
-                            <li key={bot.templateId}>
-                              <TemplateNameWithParameters
-                                name={bot.name}
-                                recipe={starterRecipe(folders, bot.templateId)}
-                                templateId={bot.templateId}
-                                nameClassName=""
-                              />
-                              {started ? (
-                                <span className="text-ink-muted"> · {started}</span>
-                              ) : null}
-                            </li>
-                          );
-                        })}
+                        {bots.map((bot) => (
+                          <li key={bot.templateId}>{bot.start ?? "—"}</li>
+                        ))}
                       </ul>
                     )}
                   </td>
@@ -1024,6 +1013,35 @@ function ChoiceStep({
         })}
       </div>
     </section>
+  );
+}
+
+function BotNameCell({
+  bots,
+  folders,
+}: {
+  bots: { templateId: string; name: string }[];
+  folders: StarterFolder[];
+}) {
+  return (
+    <td className="px-3 py-2 align-top text-ink">
+      {bots.length === 0 ? (
+        <span className="text-ink-faint">—</span>
+      ) : (
+        <ul className="space-y-1">
+          {bots.map((bot) => (
+            <li key={bot.templateId}>
+              <TemplateNameWithParameters
+                name={bot.name}
+                recipe={starterRecipe(folders, bot.templateId)}
+                templateId={bot.templateId}
+                nameClassName=""
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+    </td>
   );
 }
 
@@ -1746,8 +1764,8 @@ function BotStep({
       </h2>
       <p className="mt-2 text-sm text-ink-muted">
         These are platform templates and folders marked Include in Starter Pack.
-        Tick Initial Status to start a bot when setup finishes. Leave it clear
-        and the bot stays idle or disabled.
+        Choose Initial Status to start a bot when setup finishes. Idle and
+        Disabled leave the bot off.
       </p>
       <div className="mt-4 overflow-x-auto rounded-card border border-line">
         <table className="w-full text-left text-sm">
@@ -1893,34 +1911,41 @@ function StarterInitialStatus({
   templateName: string;
   onChange: (key: string, patch: Partial<SetupDesk>) => void;
 }) {
-  if (!starterStartVerb(desk.deskType)) {
+  const choices = setupInitialStatusChoices(desk.deskType);
+  if (!choices) {
     return <span className="text-ink-faint">—</span>;
   }
   const selected = desk.templateIds.includes(templateId);
   const canStart = setupDeskCanStartBots(desk);
-  const armed = selected && desk.armTemplateIds.includes(templateId);
+  const started = selected && desk.armTemplateIds.includes(templateId);
+  const title = !selected
+    ? "Select the bot first."
+    : canStart
+      ? desk.deskType === "dca"
+        ? "Armed starts this bot when setup finishes. An immediate start can place the first order."
+        : "Active starts this bot when setup finishes."
+      : "Bind a key before this bot can start.";
   return (
-    <AppCheck
-      aria-label={`Initial status for ${templateName}`}
-      checked={armed}
-      disabled={!selected || !canStart}
-      className=""
-      title={
-        canStart
-          ? desk.deskType === "dca"
-            ? "Start this bot when setup finishes. An immediate start can place the first order."
-            : "Start this bot when setup finishes."
-          : "Bind a key before this bot can start."
-      }
-      onChange={() => {
-        const next = new Set(desk.armTemplateIds);
-        if (next.has(templateId)) {
-          next.delete(templateId);
-        } else {
-          next.add(templateId);
-        }
-        onChange(desk.key, { armTemplateIds: [...next] });
-      }}
-    />
+    <span title={title} className="block min-w-32">
+      <AppSelect
+        aria-label={`Initial status for ${templateName}`}
+        value={started ? "start" : "rest"}
+        disabled={!selected || !canStart}
+        options={choices.map((choice) => ({
+          value: choice.value,
+          label: choice.label,
+        }))}
+        onChange={(event) => {
+          const next = new Set(desk.armTemplateIds);
+          if (event.target.value === "start") {
+            next.add(templateId);
+          } else {
+            next.delete(templateId);
+          }
+          onChange(desk.key, { armTemplateIds: [...next] });
+        }}
+        className="w-full"
+      />
+    </span>
   );
 }
