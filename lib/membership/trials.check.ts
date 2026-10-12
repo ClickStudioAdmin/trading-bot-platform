@@ -104,6 +104,15 @@ assert.equal(activeMark?.phase, "active");
 assert.equal(activeMark?.label, "14-day trial");
 assert.equal(activeMark?.keepStanding, false);
 
+const storedMark = trialMark({
+  plan,
+  row: { kind: "cap", key: "max_stored_backtests", label: "Max Saved Backtests" },
+  grant: { endsAt: "2026-10-15T00:00:00.000Z" },
+  nowMs: now,
+});
+assert.equal(storedMark?.label, "3 · trial");
+assert.equal(storedMark?.keepStanding, false);
+
 const offerMark = trialMark({
   plan,
   row: { kind: "feature", key: "replay_backtests", label: "Replay Backtests" },
