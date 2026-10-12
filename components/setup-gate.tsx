@@ -1,11 +1,6 @@
 import { SetupModal } from "@/components/setup-modal";
 import { SetupWizard } from "@/components/setup-wizard";
 import { listTradingAccounts } from "@/lib/accounts/store";
-import { connectionIdsBoundToOtherDesks } from "@/lib/exchanges/connections";
-import {
-  listConnectionDeskBinds,
-  listExchangeConnections,
-} from "@/lib/exchanges/store";
 import { listOnboardingFolders } from "@/lib/onboarding/catalog";
 import { emptySetupDraft } from "@/lib/onboarding/model";
 import {
@@ -15,10 +10,8 @@ import {
 import { redirect } from "next/navigation";
 
 export async function SetupGate({ userId }: { userId: string }) {
-  const [accounts, connections, binds, folders, onboarding] = await Promise.all([
+  const [accounts, folders, onboarding] = await Promise.all([
     listTradingAccounts(userId),
-    listExchangeConnections(userId),
-    listConnectionDeskBinds(userId),
     listOnboardingFolders(),
     loadMemberOnboarding(userId),
   ]);
@@ -42,15 +35,6 @@ export async function SetupGate({ userId }: { userId: string }) {
         existingNames={accounts
           .filter((account) => !draftIds.has(account.id))
           .map((account) => account.name)}
-        connections={connections.map((row) => ({
-          id: row.id,
-          venue: row.venue,
-          environment: row.environment,
-          label: row.label,
-          fingerprint: row.fingerprint,
-          status: row.status,
-        }))}
-        sharedConnectionIds={connectionIdsBoundToOtherDesks(binds)}
         folders={folders}
       />
     </SetupModal>
