@@ -1206,10 +1206,10 @@ export function buildTourSteps(desks: readonly TourDesk[]): TourStep[] {
 
 export function setupStepLabel(step: SetupMainStep): string {
   if (step === "desks") {
-    return "Desks";
+    return "Add Desks";
   }
   if (step === "bots") {
-    return "Bots";
+    return "Add Bots";
   }
-  return "Tour";
+  return "Take a Tour";
 }

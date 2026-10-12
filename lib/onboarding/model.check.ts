@@ -30,6 +30,7 @@ import {
   requiresSetupGate,
   setupScreenId,
   setupScreens,
+  setupStepLabel,
   shouldOfferTour,
   showsBotStep,
   starterTemplateAllowed,
@@ -368,6 +369,9 @@ if (readyDraft.ok) {
   assert.equal(readyDraft.draft.readyForTour, true);
 }
 assert.equal(emptySetupDraft().readyForTour, false);
+assert.equal(setupStepLabel("desks"), "Add Desks");
+assert.equal(setupStepLabel("bots"), "Add Bots");
+assert.equal(setupStepLabel("tour"), "Take a Tour");
 assert.equal(emptySetupDraft().introSeen, false);
 const introDraft = parseSetupDraft({ introSeen: true });
 assert.equal(introDraft.ok, true);
