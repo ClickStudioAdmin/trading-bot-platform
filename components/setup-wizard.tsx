@@ -930,7 +930,7 @@ function ReadySummary({
             ))}
           </ul>
           <p className="mt-3 text-sm text-ink-muted">
-            Desks that were created are listed below. Loaded bots stay idle or disabled unless Initial Status starts them.
+            Desks that were created are listed below. Loaded bots stay Disabled unless Initial Status is Active.
           </p>
         </>
       ) : (
@@ -942,7 +942,7 @@ function ReadySummary({
           <p className="mt-2 text-sm text-ink">
             {desks.length === 0
               ? "No desks or bots were added. Nothing is trading."
-              : "Loaded bots stay idle or disabled unless Initial Status starts them."}
+              : "Loaded bots stay Disabled unless Initial Status is Active."}
           </p>
         </>
       )}
@@ -1808,8 +1808,7 @@ function BotStep({
       </h2>
       <p className="mt-2 text-sm text-ink-muted">
         These starter bots are marked Include in Starter Pack. Choose Initial
-        Status to start a bot when setup finishes. Idle and Disabled leave the
-        bot off.
+        Status to start a bot when setup finishes. Disabled leaves the bot off.
       </p>
       <div className="mt-4 overflow-x-auto rounded-card border border-line">
         <table className="w-full text-left text-sm">
@@ -1939,8 +1938,8 @@ function StarterInitialStatus({
     ? "Select the bot first."
     : canStart
       ? desk.deskType === "dca"
-        ? "Armed starts this bot when setup finishes. An immediate start can place the first order."
-        : "Active starts this bot when setup finishes."
+      ? "Active starts this bot when setup finishes. An immediate start can place the first order."
+      : "Active starts this bot when setup finishes."
       : "Bind a key before this bot can start.";
   return (
     <span title={title} className="block min-w-32">
