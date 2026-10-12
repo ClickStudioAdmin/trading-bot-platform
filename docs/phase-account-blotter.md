@@ -50,4 +50,4 @@ Stop. Do not start entitlements, onboarding, virtual positions, or mixed desk ty
 
 ## After this
 
-V1 item 5 is entitlements / plan gates ([phase-entitlements.md](phase-entitlements.md)). Then onboarding (item 6).
+V1 item 5 is onboarding ([phase-onboarding.md](phase-onboarding.md)). Then entitlements / plan gates (item 6).
