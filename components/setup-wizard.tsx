@@ -1197,8 +1197,7 @@ function DeskStep({
         </table>
       </div>
       <p className="mt-3 text-hint text-ink-muted">
-        Add nothing to continue without desks. Perps is the ticket. TradingView
-        Strategy takes alerts. Those desks do not load starter bots.
+        Add nothing to continue without desks.
       </p>
       <NameHint desks={desks} existingNames={existingNames} />
     </section>

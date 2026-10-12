@@ -65,7 +65,7 @@ The sub-modal asks for the details, then closes back to the table:
 - **Add desk** closes the modal. That desk is a row in the one table. Paper leaves environment and key blank. The pencil **Edit** reopens the modal, including the type. The trash **Remove** drops that desk. Changing the type drops starter bots already chosen for the previous type.
 
 - An empty list is valid. Continue goes to Bots, which says bots need a desk, then the tour. Exchanges stays hidden.
-- Perps is the ticket desk. TradingView Strategy has no bot recipes. The list does not promise bots for those rows.
+- Perps is the ticket desk. TradingView Strategy has no bot recipes.
 - Copy desks are not offered here.
 
 When V1 item 6 gates exist, a type the plan cannot create is visible and disabled, with the same Upgrade (or verify / 2FA) line as Manage desks. Cap copy matches create desk (“You have 2 of 2 desks”). The server still rejects. Do not hide a type.
