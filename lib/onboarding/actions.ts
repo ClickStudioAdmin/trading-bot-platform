@@ -26,6 +26,7 @@ import {
   listExchangeConnections,
 } from "@/lib/exchanges/store";
 import { writeEventLog } from "@/lib/logs/write";
+import { startAppliedStarterBot } from "@/lib/onboarding/arm";
 import { listOnboardingFolders } from "@/lib/onboarding/catalog";
 import {
   appliesStillToRun,
@@ -329,11 +330,32 @@ async function materializeSetup(
     });
     if (result.ok) {
       working.applied.push(item.key);
+      const desk = working.desks.find((row) => row.accountId === item.accountId);
+      const start =
+        !result.skipped &&
+        result.applied &&
+        desk?.armTemplateIds.includes(item.templateId);
+      let detail = result.skipped
+        ? "Skipped"
+        : "Loaded idle or disabled. Nothing is trading.";
+      if (start && desk && result.applied) {
+        const started = await startAppliedStarterBot({
+          userId,
+          desk,
+          applied: result.applied,
+        });
+        if (started.ok) {
+          detail = started.detail;
+        } else {
+          desk.armTemplateIds = desk.armTemplateIds.filter(
+            (id) => id !== item.templateId,
+          );
+          detail = `Loaded, but not started. ${started.error}`;
+        }
+      }
       botLines.push({
         name: result.name,
-        detail: result.skipped
-          ? "Skipped"
-          : "Loaded idle or disabled. Nothing is trading.",
+        detail,
       });
     } else {
       botLines.push({
