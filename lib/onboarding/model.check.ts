@@ -646,7 +646,7 @@ assert.deepEqual(
   }),
   [],
 );
-assert.equal(starterStartVerb("dca"), "Arm");
+assert.equal(starterStartVerb("dca"), "Enable");
 assert.equal(starterStartVerb("perps_bots"), "Enable");
 assert.equal(starterStartVerb("cash_and_carry"), "Enable");
 assert.equal(starterStartVerb("perps"), null);
@@ -676,7 +676,7 @@ assert.deepEqual(
     {
       key: paper.key,
       name: "DCA Paper",
-      bots: [{ templateId: armId, name: "BTC", start: "Armed" }],
+      bots: [{ templateId: armId, name: "BTC", start: "Enabled" }],
     },
     { key: reviewCarry.key, name: reviewCarry.name, bots: [] },
   ],

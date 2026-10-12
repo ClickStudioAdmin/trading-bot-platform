@@ -224,26 +224,20 @@ export function starterDeskTypeFor(deskType: DeskType): StarterDeskType | null {
   return null;
 }
 
-/** DCA arms. Perps bots and Cash and Carry enable. Other desks have no starter bots. */
-export function starterStartVerb(deskType: DeskType): "Arm" | "Enable" | null {
-  if (deskType === "dca") {
-    return "Arm";
-  }
-  if (deskType === "perps_bots" || deskType === "cash_and_carry") {
+/** Starter bots use Enable. DCA still runs the desk arm action under that tick. */
+export function starterStartVerb(deskType: DeskType): "Enable" | null {
+  if (
+    deskType === "dca" ||
+    deskType === "perps_bots" ||
+    deskType === "cash_and_carry"
+  ) {
     return "Enable";
   }
   return null;
 }
 
-export function starterStartedWord(deskType: DeskType): "Armed" | "Enabled" | null {
-  const verb = starterStartVerb(deskType);
-  if (verb === "Arm") {
-    return "Armed";
-  }
-  if (verb === "Enable") {
-    return "Enabled";
-  }
-  return null;
+export function starterStartedWord(deskType: DeskType): "Enabled" | null {
+  return starterStartVerb(deskType) === "Enable" ? "Enabled" : null;
 }
 
 /** A Connected desk can start a bot only after a key is saved. */
@@ -1025,7 +1019,7 @@ export function setupReviewRows(input: {
 }): {
   key: string;
   name: string;
-  bots: { templateId: string; name: string; start: "Armed" | "Enabled" | null }[];
+  bots: { templateId: string; name: string; start: "Enabled" | null }[];
 }[] {
   const names = new Map<string, string>();
   for (const folder of input.folders) {
@@ -1548,8 +1542,8 @@ export function buildTourSteps(desks: readonly TourDesk[]): TourStep[] {
     steps.push({
       id: "bots",
       title: "Bots",
-      headline: "Bots stay idle or disabled unless you ticked Arm or Enable.",
-      body: "That tick starts the bot. The app places orders only after a bot is armed or enabled.",
+      headline: "Bots stay idle or disabled unless you ticked Enable.",
+      body: "That tick starts the bot. The app places orders only after a bot is enabled.",
       href: pathWithDesk(home, bot.id),
       target: "bots",
     });

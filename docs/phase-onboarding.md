@@ -33,9 +33,9 @@ There is no Skip setup. The member goes through Add Desks, Add Bots, Review, and
 | 4 | Demo vs Live | Not a third column. Connected is `mode = live`. Demo vs Live is the key’s venue environment, chosen on the exchange step. Display mode stays Paper / Demo / Live as today. |
 | 5 | When rows are written | Desk names and details stay a draft until **Create** on Review. API secrets are never stored in that draft. A key the member saves in the create modal, or on the exchange step, is written immediately through the existing connection action (verify, trade-only, encrypt). The draft keeps the connection id only. |
 | 6 | Keys | Same rules as Exchanges and create desk. Trade-only, no withdrawal permission. Server verifies. Browser never sees the secret again. One connection binds one desk. **Bind later** is allowed per connected desk. |
-| 7 | Starter bots | Admin marks **Include in Starter Pack** on a platform folder or on a platform template. The wizard lists every template in a flagged folder, and every flagged template that is not already in one of those folders. Apply uses today’s apply path. A bot stays DCA **idle** or Perps bots / Cash and Carry **disabled** unless the member ticks **Arm** or **Enable** on that bot. That tick uses the same arm or enable action as the desk. A Connected desk with no key cannot start a bot. |
+| 7 | Starter bots | Admin marks **Include in Starter Pack** on a platform folder or on a platform template. The wizard lists every template in a flagged folder, and every flagged template that is not already in one of those folders. Apply uses today’s apply path. A bot stays DCA **idle** or Perps bots / Cash and Carry **disabled** unless the member ticks **Enable** on that bot. The label is Enable for every starter bot. Perps bots and Cash and Carry use the desk enable action. DCA still runs the desk arm action under that tick, and an immediate start can place the first order. A Connected desk with no key cannot start a bot. |
 | 8 | Library copy | Apply onto the new desks only. Do not also copy those rows into the member’s template library. |
-| 9 | Tour | Asked after the other steps, including when they created nothing. Yes starts the tour after Finish. Not now lands on Overview. The tour only explains. It never presses Arm, Enable, or an order button. |
+| 9 | Tour | Asked after the other steps, including when they created nothing. Yes starts the tour after Finish. Not now lands on Overview. The tour only explains. It never presses Enable or an order button. |
 | 10 | New desk later | Manage desks create stays the current form. When starter folders exist for that type, the form offers **Add starter bots** (same idle / disabled apply). Not a second full wizard. |
 
 ## Steps
@@ -115,7 +115,7 @@ Picker:
 - One page, grouped by the new desk (name, type, Paper or Connected).
 - Under each desk, list matching flagged folders, then flagged templates that are not in those folders. Ticking a folder selects its templates. The member can untick a template inside the folder. A flagged template on its own is one tick.
 - A folder for the wrong desk type is not shown on that desk.
-- Each selected bot has **Arm** (DCA) or **Enable** (Perps bots and Cash and Carry). It is clear by default. Ticking it starts that bot when setup creates it. An armed DCA bot can place its first order when the start is immediate. A Connected desk without a saved key leaves the tick unavailable.
+- Each selected bot has **Enable**. It is clear by default. Ticking it starts that bot when setup creates it. For a DCA bot, that tick runs the desk arm action, so an immediate start can place the first order. A Connected desk without a saved key leaves the tick unavailable.
 - DCA uses each template’s saved contract. If two selected templates share a contract on the same desk, the second is skipped at apply and named in the summary. Do not ask them to remap contracts in this wizard.
 - Perps bots and Cash and Carry stack as they do today. Name collisions get the existing ` (from template)` suffix.
 - Empty selection on this step is valid (“don’t load bots”).
@@ -124,11 +124,11 @@ Apply runs when they click **Create** on Review, after the desks exist, through 
 
 ### 3. Review
 
-One page after Add Bots. A table lists each desk and the starter bots that will be loaded on it. A bot ticked Arm or Enable shows that word beside its name. A desk with no bots shows an em dash. No desks shows that nothing will be created. **Back** returns to Add Bots. **Create** writes the desks and bots.
+One page after Add Bots. A table lists each desk and the starter bots that will be loaded on it. A bot ticked Enable shows **Enabled** beside its name. A desk with no bots shows an em dash. No desks shows that nothing will be created. **Back** returns to Add Bots. **Create** writes the desks and bots.
 
 ### 4. Take a Tour
 
-This step opens after **Create**. The modal stays up and shows a table of each desk and the bots loaded on it. A bot ticked Arm or Enable shows that word beside its name. A desk with no starter bots shows an em dash. It does not ask the tour question on this screen. When a bot fails to load, or a ticked bot does not start, that error is listed on this step and the screen does not say the account is ready. A failure that stops the write stays on the current step, in the footer.
+This step opens after **Create**. The modal stays up and shows a table of each desk and the bots loaded on it. A bot ticked Enable shows **Enabled** beside its name. A desk with no starter bots shows an em dash. It does not ask the tour question on this screen. When a bot fails to load, or a ticked bot does not start, that error is listed on this step and the screen does not say the account is ready. A failure that stops the write stays on the current step, in the footer.
 
 - **Start the Tour now** — Setup is marked completed and the tour starts on Overview. The tour includes the new desks and, when a starter bot was loaded, that desk’s Bots page.
 - **Not now** — Setup is marked completed and lands on Overview, with the setup summary. The last desk created becomes the active desk.
@@ -137,7 +137,7 @@ Back is not offered after the desks are written. There is no Skip setup. A retry
 
 Partial failure: desks and binds already committed stay. The setup row records created desk ids and which template applies succeeded, so a retry does not create a second copy. Keys already saved stay on the login. Each failed bot is named on the wizard, with the same words the apply action returned. The ready screen and the Overview card say setup finished with errors. They do not use the success heading while any error is present.
 
-Done summary (Overview card that dismisses, or the first tour step): desks created, which connected desks are bound vs bind-later, bots loaded, and whether each one stayed idle or was armed or enabled. Errors from this setup are listed above that.
+Done summary (Overview card that dismisses, or the first tour step): desks created, which connected desks are bound vs bind-later, bots loaded, and whether each one stayed idle or was enabled. Errors from this setup are listed above that.
 
 ## Guided tour
 
@@ -153,7 +153,7 @@ Steps that do not apply are omitted (no desk yet, no bot desk, no TradingView de
 | 2 | Manage Desks | Always | Desks are created here. Type and mode stay as they were set. |
 | 3 | Exchanges (Manage desks, Exchanges tab) | Always | Keys are trade-only. One key binds one desk. Demo and Live are the key’s environment. |
 | 4 | Desk list in the sidenav | They have a desk | Open a desk from this list. Paper, Demo, and Live are marked here. |
-| 5 | Bots on that desk | A new or existing DCA, Perps bots, or Cash and Carry desk | Bots stay idle or disabled unless Arm or Enable was ticked in setup. The app places orders only after a bot is armed or enabled. |
+| 5 | Bots on that desk | A new or existing DCA, Perps bots, or Cash and Carry desk | Bots stay idle or disabled unless Enable was ticked in setup. The app places orders only after a bot is enabled. |
 | 6 | Webhooks | A TradingView Strategy desk, and step 5 did not run | Alerts arrive here. Setup does not turn them on. |
 | 7 | Positions | They have a desk | Open positions for this desk. |
 | 8 | Desk Settings | They have a desk | Bind a key and set desk limits. Do this if the desk is still unbound. |
@@ -193,10 +193,10 @@ Add a row to [database.md](database.md) in the same change as the migration.
 - Reuse `createTradingAccount`, `saveExchangeConnection`, and template apply. Do not add a second create path with weaker checks.
 - Assert the signed-in member owns every desk and connection id in the draft.
 - Starter query is platform folders with `starter_pack`, plus platform templates with their own `starter_pack` that are not already in one of those folders. Reject any other template id.
-- Never trust the browser for plan, 2FA, bind, or “this bot may arm”.
+- Never trust the browser for plan, 2FA, bind, or whether a bot may start.
 - Never call private exchange APIs from the browser. Verify stays on the server.
 - Do not create a Demo Account automatically.
-- Do not edit ledgers. Setup inserts desks, connections, and bots. A bot stays idle or disabled unless the member ticked Arm or Enable. That tick is the desk’s arm or enable action, and it can place an order.
+- Do not edit ledgers. Setup inserts desks, connections, and bots. A bot stays idle or disabled unless the member ticked Enable. Perps bots and Cash and Carry use the desk enable action. DCA still runs the desk arm action, and it can place an order.
 - Idempotent Finish: a second submit returns the desks already stored on the onboarding row.
 
 ## Entitlements
@@ -241,7 +241,7 @@ Stop after each until Click says go. Do not start inside item 4 or item 6.
 - Two connected rows cannot select the same connection id.
 - A key with withdrawal permission never saves.
 - The manual bot page lists every created desk that has starter content. It contains templates from flagged platform folders, plus flagged platform templates that are not already in those folders.
-- Apply leaves a bot idle or disabled when Arm or Enable is clear. A ticked bot uses the desk arm or enable action. An unticked bot creates no order.
+- Apply leaves a bot idle or disabled when Enable is clear. A ticked bot uses the desk enable action. For DCA that is the arm action. An unticked bot creates no order.
 - TradingView Strategy and Perps still show step 2, with nothing to load.
 - Finish retry does not insert a second desk or a second bot.
 - Tour decline does not start the overlay. Skip tour persists. A missing desk omits the desk steps.

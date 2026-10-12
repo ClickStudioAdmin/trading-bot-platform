@@ -540,7 +540,7 @@ export function SetupWizard({
       {screen.main === "bots" && screen.sub === "choice" ? (
         <ChoiceStep
           title="Load starter bots?"
-          intro="Tick Arm or Enable on a bot to start it. Desks and bots are created when you click Create, so the tour can show them."
+          intro="Tick Enable on a bot to start it. Desks and bots are created when you click Create, so the tour can show them."
           note={
             starterBotDesks(desks, folders).length === 0
               ? botsEmptyNote(desks)
@@ -815,7 +815,7 @@ function TourReady({
             ))}
           </ul>
           <p className="mt-3 text-sm text-ink-muted">
-            Desks that were created are listed below. Loaded bots stay idle or disabled unless you ticked Arm or Enable.
+            Desks that were created are listed below. Loaded bots stay idle or disabled unless you ticked Enable.
           </p>
         </>
       ) : (
@@ -827,7 +827,7 @@ function TourReady({
           <p className="mt-2 text-sm text-ink">
             {desks.length === 0
               ? "No desks or bots were added. Nothing is trading."
-              : "Loaded bots stay idle or disabled unless you ticked Arm or Enable."}
+              : "Loaded bots stay idle or disabled unless you ticked Enable."}
           </p>
         </>
       )}
@@ -1667,9 +1667,8 @@ function BotStep({
       </h2>
       <p className="mt-2 text-sm text-ink-muted">
         These are platform templates and folders marked Include in Starter Pack.
-        Tick Arm on a DCA bot, or Enable on a Perps bots or Cash and Carry bot,
-        to start it when setup finishes. Leave it clear and the bot stays idle
-        or disabled.
+        Tick Enable to start a bot when setup finishes. Leave it clear and the
+        bot stays idle or disabled.
       </p>
       <ul className="mt-4">
         {rows.map((desk) => {
@@ -1798,8 +1797,8 @@ function StarterTemplateChoice({
           }
           title={
             canStart
-              ? verb === "Arm"
-                ? "Arm this bot when setup finishes. An immediate start can place the first order."
+              ? desk.deskType === "dca"
+                ? "Enable this bot when setup finishes. An immediate start can place the first order."
                 : "Enable this bot when setup finishes."
               : "Bind a key before this bot can start."
           }
