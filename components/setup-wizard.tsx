@@ -10,7 +10,20 @@ import {
   type DeskType,
 } from "@/lib/accounts/model";
 import { AppSelect } from "@/components/app-select";
-import { IconCheck, IconClose, IconPencil, IconPlay, IconPlus, IconTrash } from "@/components/icons";
+import {
+  IconArrowLeft,
+  IconArrowRight,
+  IconCheck,
+  IconClose,
+  IconPencil,
+  IconPlay,
+  IconPlus,
+  IconReset,
+  IconSave,
+  IconSkipForward,
+  IconTour,
+  IconTrash,
+} from "@/components/icons";
 import {
   TABLE_ACTIONS_TD_CLASS,
   TABLE_ACTIONS_TH_CLASS,
@@ -65,6 +78,8 @@ import {
   type SetupDesk,
   type StarterFolder,
 } from "@/lib/onboarding/model";
+
+const WIZARD_ICON = { size: 14 as const, className: "size-3.5 shrink-0" };
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -607,8 +622,9 @@ export function SetupWizard({
           type="button"
           disabled={pending}
           onClick={restartWizard}
-          className="rounded-control border border-line bg-surface px-4 py-2 text-sm font-medium text-ink-muted hover:border-line-strong hover:text-ink disabled:opacity-40"
+          className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-4 py-2 text-sm font-medium text-ink-muted hover:border-line-strong hover:text-ink disabled:opacity-40"
         >
+          <IconReset {...WIZARD_ICON} />
           {pending && resetting ? "Resetting…" : "Reset Wizard"}
         </button>
         )}
@@ -619,8 +635,9 @@ export function SetupWizard({
               type="button"
               disabled={pending}
               onClick={enterSetup}
-              className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
+              className="inline-flex items-center gap-1.5 rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
             >
+              <IconSkipForward {...WIZARD_ICON} />
               Skip
             </button>
             <button
@@ -633,8 +650,13 @@ export function SetupWizard({
                 }
                 setPlaying(true);
               }}
-              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+              className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
             >
+              {playing ? (
+                <IconArrowRight {...WIZARD_ICON} />
+              ) : (
+                <IconPlay {...WIZARD_ICON} />
+              )}
               {pending ? "Saving…" : playing ? "Continue" : "Watch"}
             </button>
           </>
@@ -646,8 +668,9 @@ export function SetupWizard({
               setError(null);
               setScreenId(setupScreenId(previous));
             }}
-            className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
+            className="inline-flex items-center gap-1.5 rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
           >
+            <IconArrowLeft {...WIZARD_ICON} />
             Back
           </button>
         ) : null}
@@ -656,8 +679,13 @@ export function SetupWizard({
             type="button"
             disabled={pending}
             onClick={continueForward}
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
+            {screen.main === "review" ? (
+              <IconPlus {...WIZARD_ICON} />
+            ) : (
+              <IconArrowRight {...WIZARD_ICON} />
+            )}
             {pending
               ? next?.main === "tour"
                 ? "Creating…"
@@ -673,16 +701,18 @@ export function SetupWizard({
               type="button"
               disabled={pending}
               onClick={() => finish("not_now")}
-              className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
+              className="inline-flex items-center gap-1.5 rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
             >
+              <IconClose {...WIZARD_ICON} />
               Not now
             </button>
             <button
               type="button"
               disabled={pending}
               onClick={() => finish("yes")}
-              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+              className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
             >
+              <IconTour {...WIZARD_ICON} />
               {pending ? "Finishing…" : "Start the Tour now"}
             </button>
           </>
@@ -1358,16 +1388,18 @@ function CreateDeskDialog({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
+            className="inline-flex items-center gap-1.5 rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
           >
+            <IconClose {...WIZARD_ICON} />
             Cancel
           </button>
           <button
             type="button"
             onClick={save}
             disabled={mode === "live" && choice === "new" && !connectionId}
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:opacity-40"
           >
+            {desk ? <IconSave {...WIZARD_ICON} /> : <IconPlus {...WIZARD_ICON} />}
             {desk ? "Save" : "Add desk"}
           </button>
         </div>
@@ -1629,15 +1661,17 @@ function SetupKeyForm({
               setMessage(checked.ok ? "Connection checks out." : checked.error);
             });
           }}
-          className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink"
+          className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink"
         >
+          <IconCheck {...WIZARD_ICON} />
           {pending ? "Checking…" : "Check connection"}
         </button>
         <button
           type="submit"
           disabled={pending}
-          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
         >
+          <IconSave {...WIZARD_ICON} />
           Save key
         </button>
       </div>
