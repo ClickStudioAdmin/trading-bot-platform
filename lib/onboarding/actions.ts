@@ -64,6 +64,21 @@ function refreshSetupChrome() {
   revalidatePath("/account/templates");
 }
 
+function isNextRedirect(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    String((error as { digest?: unknown }).digest).startsWith("NEXT_REDIRECT")
+  );
+}
+
+function setupErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  const clean = message.replace(/\s+/g, " ").trim();
+  return (clean || "Could not finish setup.").slice(0, 180);
+}
+
 async function requirePlatformMember() {
   const member = await requireVerifiedEmail();
   if (!member.platformMember) {
@@ -141,20 +156,38 @@ export async function saveSetupConnection(formData: FormData): Promise<
 export async function createSetupBeforeTour(
   raw: string,
 ): Promise<{ ok: true; draft: SetupDraft } | { ok: false; error: string }> {
-  const member = await requirePlatformMember();
-  const prepared = await materializeSetup(member.id, raw);
-  if (!prepared.ok) {
-    return prepared;
+  try {
+    const member = await requirePlatformMember();
+    const prepared = await materializeSetup(member.id, raw);
+    if (!prepared.ok) {
+      return prepared;
+    }
+    const saved = await saveOnboardingDraft(member.id, prepared.draft);
+    if (!saved) {
+      return { ok: false, error: "Could not save setup." };
+    }
+    refreshSetupChrome();
+    return { ok: true, draft: prepared.draft };
+  } catch (error) {
+    if (isNextRedirect(error)) {
+      throw error;
+    }
+    return { ok: false, error: setupErrorMessage(error) };
   }
-  const saved = await saveOnboardingDraft(member.id, prepared.draft);
-  if (!saved) {
-    return { ok: false, error: "Could not save setup." };
-  }
-  refreshSetupChrome();
-  return { ok: true, draft: prepared.draft };
 }
 
 export async function finishSetup(raw: string): Promise<{ ok: false; error: string }> {
+  try {
+    return await finishSetupNow(raw);
+  } catch (error) {
+    if (isNextRedirect(error)) {
+      throw error;
+    }
+    return { ok: false, error: setupErrorMessage(error) };
+  }
+}
+
+async function finishSetupNow(raw: string): Promise<{ ok: false; error: string }> {
   const member = await requirePlatformMember();
   const prepared = await materializeSetup(member.id, raw);
   if (!prepared.ok) {
@@ -170,6 +203,7 @@ export async function finishSetup(raw: string): Promise<{ ok: false; error: stri
         detail: deskSummaryDetail(desk),
       })),
       bots: [],
+      issues: [],
       dismissed: false,
     },
     tour,
@@ -310,6 +344,7 @@ async function materializeSetup(
   }
 
   const botLines: SetupSummary["bots"] = [...(working.summary?.bots ?? [])];
+  const issues: SetupSummary["issues"] = [];
   for (const item of appliesStillToRun(working.desks, working.applied)) {
     if (
       !starterTemplateAllowed({
@@ -320,15 +355,30 @@ async function materializeSetup(
         templateId: item.templateId,
       })
     ) {
-      botLines.push({ name: item.deskName, detail: "That starter bot is not available." });
+      issues.push({
+        name: item.deskName,
+        message: "That starter bot is not available.",
+      });
       continue;
     }
-    const result = await applyTemplateToDesk({
-      userId,
-      accountId: item.accountId,
-      templateId: item.templateId,
-    });
-    if (result.ok) {
+    let result: Awaited<ReturnType<typeof applyTemplateToDesk>>;
+    try {
+      result = await applyTemplateToDesk({
+        userId,
+        accountId: item.accountId,
+        templateId: item.templateId,
+      });
+    } catch (error) {
+      if (isNextRedirect(error)) {
+        throw error;
+      }
+      issues.push({
+        name: item.deskName,
+        message: setupErrorMessage(error),
+      });
+      continue;
+    }
+    if (result.ok && !result.skipped) {
       working.applied.push(item.key);
       const desk = working.desks.find((row) => row.accountId === item.accountId);
       const start =
@@ -351,6 +401,10 @@ async function materializeSetup(
             (id) => id !== item.templateId,
           );
           detail = `Loaded, but not started. ${started.error}`;
+          issues.push({
+            name: `${desk.name} · ${result.name}`,
+            message: detail,
+          });
         }
       }
       botLines.push({
@@ -358,9 +412,10 @@ async function materializeSetup(
         detail,
       });
     } else {
-      botLines.push({
-        name: result.name,
-        detail: result.error ?? "Could not load that bot.",
+      const botName = result.name && result.name !== "Skipped" ? result.name : item.deskName;
+      issues.push({
+        name: botName === item.deskName ? item.deskName : `${item.deskName} · ${botName}`,
+        message: result.error ?? "Could not load that bot.",
       });
     }
     working.summary = {
@@ -369,6 +424,7 @@ async function materializeSetup(
         detail: deskSummaryDetail(desk),
       })),
       bots: botLines,
+      issues,
       dismissed: false,
     };
     await saveOnboardingProgress({ userId, draft: working });
@@ -380,6 +436,7 @@ async function materializeSetup(
       detail: deskSummaryDetail(desk),
     })),
     bots: botLines,
+    issues,
     dismissed: false,
   };
   working.readyForTour = true;

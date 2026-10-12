@@ -768,6 +768,27 @@ assert.equal(setupStepLabel("bots"), "Add Bots");
 assert.equal(setupStepLabel("review"), "Review");
 assert.equal(setupStepLabel("tour"), "Take a Tour");
 assert.equal(emptySetupDraft().introSeen, false);
+const issueDraft = parseSetupDraft({
+  summary: {
+    desks: [{ name: "DCA Paper", detail: "Paper" }],
+    bots: [],
+    issues: [{ name: "DCA Paper · BTC", message: "A bot already covers that contract." }],
+    dismissed: false,
+  },
+});
+assert.equal(issueDraft.ok, true);
+if (issueDraft.ok) {
+  assert.deepEqual(issueDraft.draft.summary?.issues, [
+    { name: "DCA Paper · BTC", message: "A bot already covers that contract." },
+  ]);
+}
+const legacySummary = parseSetupDraft({
+  summary: { desks: [], bots: [], dismissed: false },
+});
+assert.equal(legacySummary.ok, true);
+if (legacySummary.ok) {
+  assert.deepEqual(legacySummary.draft.summary?.issues, []);
+}
 const introDraft = parseSetupDraft({ introSeen: true });
 assert.equal(introDraft.ok, true);
 if (introDraft.ok) {

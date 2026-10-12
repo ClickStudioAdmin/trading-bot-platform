@@ -181,7 +181,25 @@ export default async function AccountOverviewPage() {
       {shouldShowSummary(onboarding?.draft.summary ?? null) &&
       onboarding?.draft.summary ? (
         <section className="rounded-card border border-line bg-surface p-5">
-          <h2 className="text-lg font-semibold tracking-tight">Setup finished</h2>
+          <h2 className="text-lg font-semibold tracking-tight">
+            {onboarding.draft.summary.issues.length > 0
+              ? "Setup finished with errors"
+              : "Setup finished"}
+          </h2>
+          {onboarding.draft.summary.issues.length > 0 ? (
+            <ul className="mt-3 space-y-2">
+              {onboarding.draft.summary.issues.map((issue) => (
+                <li
+                  key={`${issue.name}:${issue.message}`}
+                  className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+                >
+                  <span className="font-medium text-ink">{issue.name}</span>
+                  {" — "}
+                  {issue.message}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <ul className="mt-3 space-y-2 text-sm text-ink">
             {onboarding.draft.summary.desks.map((row) => (
               <li key={`desk-${row.name}`}>

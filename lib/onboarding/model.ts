@@ -86,9 +86,15 @@ export type SetupDesk = {
   accountId: string | null;
 };
 
+export type SetupIssue = {
+  name: string;
+  message: string;
+};
+
 export type SetupSummary = {
   desks: { name: string; detail: string }[];
   bots: { name: string; detail: string }[];
+  issues: SetupIssue[];
   dismissed: boolean;
 };
 
@@ -681,9 +687,24 @@ function parseSummary(raw: unknown): SetupSummary | null {
       return name ? [{ name, detail }] : [];
     });
   };
+  const issues = (value: unknown): SetupIssue[] => {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value.slice(0, 40).flatMap((item) => {
+      if (!item || typeof item !== "object") {
+        return [];
+      }
+      const row = item as Record<string, unknown>;
+      const name = String(row.name ?? "").trim().slice(0, 80);
+      const message = String(row.message ?? "").trim().slice(0, 180);
+      return name && message ? [{ name, message }] : [];
+    });
+  };
   return {
     desks: lines(body.desks),
     bots: lines(body.bots),
+    issues: issues(body.issues),
     dismissed: body.dismissed === true,
   };
 }
