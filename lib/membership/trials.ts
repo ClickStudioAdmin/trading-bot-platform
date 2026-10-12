@@ -290,7 +290,7 @@ function trialLabel(offer: TrialOffer, row: PlanCompareRow, ended: boolean): str
       row.key === "max_backtest_years"
         ? formatBacktestTimeframe(offer.limit)
         : String(offer.limit);
-    return titleCaseWords(`${amount} · trial`);
+    return titleCaseWords(amount);
   }
   return titleCaseWords(`${offer.days}-day trial`);
 }

@@ -110,7 +110,7 @@ const storedMark = trialMark({
   grant: { endsAt: "2026-10-15T00:00:00.000Z" },
   nowMs: now,
 });
-assert.equal(storedMark?.label, "3 · Trial");
+assert.equal(storedMark?.label, "3");
 assert.equal(storedMark?.keepStanding, false);
 
 const yearMark = trialMark({
@@ -126,7 +126,7 @@ const yearMark = trialMark({
   grant: null,
   nowMs: now,
 });
-assert.equal(yearMark?.label, "1 Year · Trial");
+assert.equal(yearMark?.label, "1 Year");
 
 const endedMark = trialMark({
   plan,
