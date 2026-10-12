@@ -8,10 +8,6 @@ import {
 import { AppSelect } from "@/components/app-select";
 import { IconCheck, IconPlay } from "@/components/icons";
 import { checkExchangeConnection } from "@/lib/exchanges/actions";
-import {
-  formatEnvironmentLabel,
-  formatVenueLabel,
-} from "@/lib/exchanges/connections";
 import { getVenue } from "@/lib/exchanges/venues";
 import {
   createSetupBeforeTour,
@@ -119,19 +115,15 @@ function SetupProgress({
   );
 }
 
-type BindChoice = "later" | "existing" | "new";
+type BindChoice = "later" | "new";
 
 export function SetupWizard({
   initialDraft,
   existingNames,
-  connections,
-  sharedConnectionIds,
   folders,
 }: {
   initialDraft: SetupDraft;
   existingNames: string[];
-  connections: SetupConnection[];
-  sharedConnectionIds: string[];
   folders: StarterFolder[];
 }) {
   const [desks, setDesks] = useState<SetupDesk[]>(initialDraft.desks);
@@ -145,7 +137,6 @@ export function SetupWizard({
   const [readyForTour, setReadyForTour] = useState(initialDraft.readyForTour);
   const [introSeen, setIntroSeen] = useState(initialDraft.introSeen);
   const [playing, setPlaying] = useState(false);
-  const [keys, setKeys] = useState(connections);
   const [screenId, setScreenId] = useState(
     initialDraft.readyForTour
       ? "tour:tour"
@@ -438,16 +429,7 @@ export function SetupWizard({
       {screen.main === "desks" && screen.sub === "exchanges" ? (
         <ExchangeStep
           desks={desks.filter((desk) => desk.mode === "live")}
-          keys={keys}
-          sharedConnectionIds={sharedConnectionIds}
           onChange={updateDesk}
-          onKey={(connection) =>
-            setKeys((current) =>
-              current.some((row) => row.id === connection.id)
-                ? current
-                : [...current, connection],
-            )
-          }
           takenNames={takenNames}
         />
       ) : null}
@@ -892,17 +874,11 @@ function NameHint({
 
 function ExchangeStep({
   desks,
-  keys,
-  sharedConnectionIds,
   onChange,
-  onKey,
   takenNames,
 }: {
   desks: SetupDesk[];
-  keys: SetupConnection[];
-  sharedConnectionIds: string[];
   onChange: (key: string, patch: Partial<SetupDesk>) => void;
-  onKey: (connection: SetupConnection) => void;
   takenNames: (exceptKey?: string) => string[];
 }) {
   return (
@@ -921,13 +897,6 @@ function ExchangeStep({
         <ExchangeDesk
           key={desk.key}
           desk={desk}
-          keys={keys}
-          takenIds={[
-            ...sharedConnectionIds,
-            ...desks
-              .filter((row) => row.key !== desk.key && row.connectionId)
-              .map((row) => row.connectionId as string),
-          ]}
           onChange={(patch) => {
             const next = { ...desk, ...patch };
             if (
@@ -946,7 +915,6 @@ function ExchangeStep({
             }
             onChange(desk.key, next);
           }}
-          onKey={onKey}
         />
       ))}
     </section>
@@ -955,31 +923,14 @@ function ExchangeStep({
 
 function ExchangeDesk({
   desk,
-  keys,
-  takenIds,
   onChange,
-  onKey,
 }: {
   desk: SetupDesk;
-  keys: SetupConnection[];
-  takenIds: string[];
   onChange: (patch: Partial<SetupDesk>) => void;
-  onKey: (connection: SetupConnection) => void;
 }) {
   const venues = connectedVenuesFor(desk.deskType);
   const venue = getVenue(desk.venue) ?? venues[0];
-  const choice: BindChoice = desk.connectionId
-    ? "existing"
-    : desk.bindLater
-      ? "later"
-      : "new";
-  const matching = keys.filter(
-    (row) =>
-      row.status === "active" &&
-      row.venue === desk.venue &&
-      row.environment === desk.environmentId &&
-      (row.id === desk.connectionId || !takenIds.includes(row.id)),
-  );
+  const choice: BindChoice = desk.bindLater ? "later" : "new";
 
   return (
     <div>
@@ -1047,47 +998,19 @@ function ExchangeDesk({
           className={fieldClass}
         >
           <option value="later">Bind later in Desk Settings</option>
-          <option value="existing">Select an existing connection</option>
           <option value="new">Add a trade-only key</option>
         </AppSelect>
       </label>
-      {choice === "existing" ? (
-        matching.length > 0 ? (
-          <label className="mt-3 block text-sm text-ink">
-            Connection
-            <AppSelect
-              value={desk.connectionId ?? ""}
-              onChange={(event) =>
-                onChange({
-                  connectionId: event.target.value || null,
-                  bindLater: !event.target.value,
-                })
-              }
-              className={fieldClass}
-            >
-              <option value="">Choose a connection</option>
-              {matching.map((row) => (
-                <option key={row.id} value={row.id}>
-                  {formatVenueLabel(row.venue)}{" "}
-                  {formatEnvironmentLabel(row.venue, row.environment)}
-                  {row.label ? ` · ${row.label}` : ""} · ••••{row.fingerprint}
-                </option>
-              ))}
-            </AppSelect>
-          </label>
-        ) : (
-          <p className="mt-3 text-sm text-ink-muted">
-            No free key matches this exchange and environment. Add one, or bind
-            later.
-          </p>
-        )
+      {choice === "new" && desk.connectionId ? (
+        <p className="mt-3 text-sm text-success">
+          Key saved. It is bound to this desk when you finish.
+        </p>
       ) : null}
-      {choice === "new" && venue ? (
+      {choice === "new" && !desk.connectionId && venue ? (
         <SetupKeyForm
           venueId={venue.id}
           environmentId={desk.environmentId ?? defaultEnvironmentId(venue.id)}
           onSaved={(connection) => {
-            onKey(connection);
             onChange({
               connectionId: connection.id,
               bindLater: false,

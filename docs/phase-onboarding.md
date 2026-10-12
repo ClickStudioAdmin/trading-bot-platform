@@ -85,9 +85,7 @@ One block per connected desk, in table order. Each block:
 - Desk name and type (read-only).
 - Venue, limited to venues that allow that desk type and connections. Cash and Carry: Bybit. Others: Bybit and Hyperliquid.
 - Environment: that venue’s Live or Demo / Testnet. This is what makes the desk display as Live or Demo.
-- Then one of: **Select an existing connection**, **Add a trade-only key**, or **Bind later**.
-
-Existing connections are the member’s active keys for that venue and environment that are not already bound and not already chosen for another desk in this draft. The picker hides a key that fails `applyDeskBindRules`, same as create desk.
+- Then one of: **Add a trade-only key**, or **Bind later**. There is no existing-connection picker. First-run setup has no keys yet, and a key saved here belongs to that desk.
 
 Add a key uses the current Exchanges form and `saveExchangeConnection`: check, reject withdrawal permission, encrypt, store on the login. The secret is not written into the setup draft. A failed verify stays on this step; the desk is not created yet. After a successful save, that connection is selected for this desk.
 
@@ -223,7 +221,7 @@ Stop after each until Click says go. Do not start inside item 4 or item 6.
 | --- | --- | --- |
 | 1 | State | Migration + database.md. Pending / skipped / completed. Skip with zero desks. A desk created outside the wizard marks skipped. |
 | 2 | Desk draft | Table, names, paper market data, disabled cells when gates say so. Nothing written until Finish except the draft json. |
-| 3 | Exchanges | Connected desks only. Existing key, new trade-only key, or bind later. One key cannot be chosen twice. Secrets not in the draft. |
+| 3 | Exchanges | Connected desks only. New trade-only key, or bind later. No existing-connection picker. Secrets not in the draft. |
 | 4 | Finish desks | Finish creates and binds. Retry does not duplicate. Summary lists bound vs bind later. |
 | 5 | Starter bots | Flagged folders only. Apply idle / disabled. TV and Perps ticket skip the step. Failures listed, siblings kept. |
 | 6 | Tour | Offer, overlay, persistence, Take the tour, conditional steps. |
