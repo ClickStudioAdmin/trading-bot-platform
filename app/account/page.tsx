@@ -54,6 +54,13 @@ import {
 } from "@/lib/membership/billing";
 import { getMemberBilling } from "@/lib/membership/billing-store";
 import { planIsArchived } from "@/lib/membership/catalog";
+import {
+  overviewPlanPrivileges,
+  overviewPlanUsage,
+  type PlanPrivilegeGroup,
+  type PlanUsageRow,
+} from "@/lib/membership/plan-overview";
+import { loadPlanUsageCounts } from "@/lib/membership/plan-usage";
 import { getMembershipPlan } from "@/lib/membership/store";
 import {
   pendingMainWithdrawUsd,
@@ -136,14 +143,22 @@ export default async function AccountOverviewPage() {
   const futuresIds = inPlay
     .filter((desk) => desk.deskType !== "cash_and_carry")
     .map((desk) => desk.id);
-  const [deskStats, planResult, books, pendingWithdrawUsd] = await Promise.all([
-    loadFuturesDeskStats(futuresIds),
-    billing?.planId
-      ? getMembershipPlan(billing.planId)
-      : Promise.resolve(null),
-    billing ? walletBookBalances(member.id) : Promise.resolve(null),
-    billing ? pendingMainWithdrawUsd(member.id) : Promise.resolve(0),
-  ]);
+  const [deskStats, planResult, books, pendingWithdrawUsd, planUsage] =
+    await Promise.all([
+      loadFuturesDeskStats(futuresIds),
+      billing?.planId
+        ? getMembershipPlan(billing.planId)
+        : Promise.resolve(null),
+      billing ? walletBookBalances(member.id) : Promise.resolve(null),
+      billing ? pendingMainWithdrawUsd(member.id) : Promise.resolve(0),
+      billing
+        ? loadPlanUsageCounts({
+            userId: member.id,
+            accountIds: accounts.map((account) => account.id),
+            desks: accounts,
+          })
+        : Promise.resolve(null),
+    ]);
   const planRecord = planResult?.ok ? planResult.plan : null;
   const subscription = billing
     ? memberSubscriptionSummary({
@@ -292,6 +307,13 @@ export default async function AccountOverviewPage() {
             </LiveMainWallet>
           </div>
         </section>
+      ) : null}
+
+      {planRecord && planUsage ? (
+        <PlanPrivileges
+          groups={overviewPlanPrivileges(planRecord)}
+          usage={overviewPlanUsage(planRecord, planUsage)}
+        />
       ) : null}
 
       <section>
@@ -632,6 +654,83 @@ function ConnectionSnapshot({
         )}
       </div>
     </div>
+  );
+}
+
+function PlanPrivileges({
+  groups,
+  usage,
+}: {
+  groups: PlanPrivilegeGroup[];
+  usage: PlanUsageRow[];
+}) {
+  const rows = usage.filter((row) => row.text !== "Not included");
+  return (
+    <section className="rounded-card border border-line bg-surface p-5">
+      <h2 className="text-lg font-semibold tracking-tight">
+        Privileges and usage
+      </h2>
+      <p className="mt-1 text-sm text-ink-muted">
+        What this plan includes, and how much of each maximum is in use.
+      </p>
+      <div className="mt-4 grid gap-6 lg:grid-cols-2">
+        <div>
+          <h3 className="text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+            Included
+          </h3>
+          {groups.length === 0 ? (
+            <p className="mt-2 text-sm text-ink-muted">
+              This plan has no extra privileges.
+            </p>
+          ) : (
+            <div className="mt-3 space-y-4">
+              {groups.map((group) => (
+                <div key={group.title}>
+                  <p className="text-sm font-semibold text-ink">{group.title}</p>
+                  <ul className="mt-1 space-y-1">
+                    {group.items.map((item) => (
+                      <li key={item} className="text-sm text-ink-muted">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div>
+          <h3 className="text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+            Usage
+          </h3>
+          {rows.length === 0 ? (
+            <p className="mt-2 text-sm text-ink-muted">
+              This plan has no numeric maximums.
+            </p>
+          ) : (
+          <dl className="mt-3 space-y-3">
+            {rows.map((row) => (
+              <div key={row.key}>
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <dt className="text-ink">{row.label}</dt>
+                  <dd
+                    className={`tabular-nums ${
+                      row.over ? "text-warning" : "text-ink-muted"
+                    }`}
+                  >
+                    {row.text}
+                  </dd>
+                </div>
+                {row.note ? (
+                  <p className="text-hint text-ink-muted">{row.note}</p>
+                ) : null}
+              </div>
+            ))}
+          </dl>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
