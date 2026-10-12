@@ -54,7 +54,7 @@ Choosing again with Back replaces the draft selection. Nothing is inserted until
 
 Question on the list, when they choose to select manually: “Create a few desks now?”
 
-One row per type that exists today, in the same order as the account sidebar (automated desks, then the manual Perps desk): Perps bots, DCA, Cash and Carry, TradingView Strategy, Perps. The short line under the type uses the existing choice copy (ticket vs bots vs alerts vs app-owned orders vs spot + dated future). **Create Desk** sits beside the type.
+One row per type that exists today, in the same order as the account sidebar (automated desks, then the manual Perps desk): Perps bots, DCA, Cash and Carry, TradingView Strategy, Perps. The type name stands alone. **Create Desk** sits beside the type.
 
 The sub-modal asks for the details, then closes back to the list:
 

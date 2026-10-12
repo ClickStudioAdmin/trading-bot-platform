@@ -810,10 +810,6 @@ function DeskStep({
       <h2 className="text-lg font-semibold tracking-tight">
         Create a few desks now?
       </h2>
-      <p className="mt-2 text-sm text-ink-muted">
-        Create Desk opens the details for that type. Each desk you add is a
-        row in the table under its type. Type and mode stay fixed after setup.
-      </p>
       <ul className="mt-4 text-sm">
         {ONBOARDING_DESK_TYPES.map((deskType) => {
           const added = desksForType(desks, deskType);
@@ -821,12 +817,9 @@ function DeskStep({
           return (
             <li key={deskType} className="border-b border-line py-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-ink">{formatDeskType(deskType)}</p>
-                  <p className="mt-1 text-sm text-ink-muted">
-                    {formatDeskTypeChoice(deskType)}
-                  </p>
-                </div>
+                <p className="min-w-0 flex-1 font-medium text-ink">
+                  {formatDeskType(deskType)}
+                </p>
                 <TableLabelButton
                   variant="secondary"
                   icon={<IconPlus {...TABLE_BTN_ICON} />}
