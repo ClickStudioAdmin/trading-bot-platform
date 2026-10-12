@@ -665,7 +665,7 @@ function PlanPrivileges({ groups }: { groups: PlanOverviewGroup[] }) {
       <div className="mt-5 columns-1 gap-x-10 sm:columns-2 xl:columns-3">
         {groups.map((group) => (
           <div key={group.title} className="mb-6 break-inside-avoid">
-            <h3 className="text-xs font-medium uppercase tracking-[0.16em] text-ink">
+            <h3 className="text-xs uppercase tracking-[0.12em] text-ink-muted">
               {group.title}
             </h3>
             <dl className="mt-2 space-y-1.5">
