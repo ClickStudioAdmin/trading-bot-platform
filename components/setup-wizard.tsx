@@ -47,6 +47,7 @@ import {
   setupDeskFromDetails,
   setupScreenId,
   setupDeskCanStartBots,
+  setupReviewRows,
   setupScreens,
   starterStartedWord,
   starterStartVerb,
@@ -418,7 +419,7 @@ export function SetupWizard({
       {screen.main === "desks" && screen.sub === "choice" ? (
         <ChoiceStep
           title="Add desks now?"
-          intro="You can change this with Back until you continue to the tour. Desks and bots are created then, so the tour can show them."
+          intro="You can change this with Back until you click Create. Desks and bots are created then, so the tour can show them."
           name="desk-setup-choice"
           value={deskChoice}
           options={[
@@ -467,15 +468,14 @@ export function SetupWizard({
           </h2>
           <p className="mt-2 text-sm text-ink-muted">
             You can&apos;t add bots without desks. Go back to add desks, or
-            continue to the tour. Desks are created when you continue, before
-            the tour.
+            continue to Review. Nothing is created until you click Create.
           </p>
         </section>
       ) : null}
       {screen.main === "bots" && screen.sub === "choice" ? (
         <ChoiceStep
           title="Load starter bots?"
-          intro="Starter bots stay idle or disabled. Desks and bots are created before the tour, so the tour can show them."
+          intro="Tick Arm or Enable on a bot to start it. Desks and bots are created when you click Create, so the tour can show them."
           note={
             starterBotDesks(desks, folders).length === 0
               ? botsEmptyNote(desks)
@@ -520,6 +520,9 @@ export function SetupWizard({
           folders={folders}
           onChange={updateDesk}
         />
+      ) : null}
+      {screen.main === "review" ? (
+        <ReviewStep desks={desks} folders={folders} />
       ) : null}
       {screen.main === "tour" ? (
         <TourReady
@@ -588,8 +591,8 @@ export function SetupWizard({
               ? next?.main === "tour"
                 ? "Creating…"
                 : "Saving…"
-              : screen.main === "bots" && screen.sub === "blocked"
-                ? "Continue to the tour"
+              : screen.main === "review"
+                ? "Create"
                 : "Continue"}
           </button>
         ) : null}
@@ -640,6 +643,61 @@ function IntroStep({
         <button type="button" onClick={onWatch} className={frameClass}>
           {frame}
         </button>
+      )}
+    </section>
+  );
+}
+
+function ReviewStep({
+  desks,
+  folders,
+}: {
+  desks: SetupDesk[];
+  folders: StarterFolder[];
+}) {
+  const rows = setupReviewRows({ desks, folders });
+  return (
+    <section>
+      <h2 className="text-lg font-semibold tracking-tight">Review</h2>
+      <p className="mt-2 text-sm text-ink-muted">
+        These desks and bots are created when you click Create.
+      </p>
+      {rows.length === 0 ? (
+        <p className="mt-4 text-sm text-ink-muted">No desks or bots will be created.</p>
+      ) : (
+        <div className="mt-4 overflow-x-auto rounded-card border border-line">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
+              <tr>
+                <th className="px-3 py-2 font-medium">Desk</th>
+                <th className="px-3 py-2 font-medium">Bots</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.key} className="border-b border-line last:border-b-0">
+                  <td className="px-3 py-2 align-top text-ink">{row.name}</td>
+                  <td className="px-3 py-2 align-top text-ink">
+                    {row.bots.length === 0 ? (
+                      <span className="text-ink-faint">—</span>
+                    ) : (
+                      <ul className="space-y-1">
+                        {row.bots.map((bot) => (
+                          <li key={bot.templateId}>
+                            {bot.name}
+                            {bot.start ? (
+                              <span className="text-ink-muted"> · {bot.start}</span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

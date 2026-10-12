@@ -37,13 +37,14 @@ export type OnboardingTour =
   | "skipped";
 export type SetupTourChoice = "yes" | "not_now";
 export type SetupStep = "desks" | "exchanges" | "bots" | "tour";
-export const SETUP_MAIN_STEPS = ["desks", "bots", "tour"] as const;
+export const SETUP_MAIN_STEPS = ["desks", "bots", "review", "tour"] as const;
 export type SetupMainStep = (typeof SETUP_MAIN_STEPS)[number];
 export type SetupScreen =
   | { main: "intro"; sub: "video" }
   | { main: "desks"; sub: "choice" | "desks" | "exchanges" }
   | { main: "bots"; sub: "choice" | "blocked" | "empty" }
   | { main: "bots"; sub: "desk"; deskKey: string }
+  | { main: "review"; sub: "review" }
   | { main: "tour"; sub: "tour" };
 export type StarterVisibility = "platform" | "user" | "backtested";
 export type StarterDeskType = "dca" | "perps" | "cash_and_carry";
@@ -961,6 +962,9 @@ export function setupScreens(input: {
       }
     }
   }
+  if (noDesks || input.botChoice !== null) {
+    screens.push({ main: "review", sub: "review" });
+  }
   screens.push({ main: "tour", sub: "tour" });
   return screens;
 }
@@ -997,6 +1001,38 @@ export function botsEmptyNote(desks: readonly SetupDesk[]): string {
     return "Perps is the ticket. TradingView Strategy takes alerts. Those desks do not load starter bots.";
   }
   return "No starter folders are marked for these desks.";
+}
+
+/** Desks and the starter bots Review shows before Create. */
+export function setupReviewRows(input: {
+  desks: readonly SetupDesk[];
+  folders: readonly StarterFolder[];
+}): {
+  key: string;
+  name: string;
+  bots: { templateId: string; name: string; start: "Armed" | "Enabled" | null }[];
+}[] {
+  const names = new Map<string, string>();
+  for (const folder of input.folders) {
+    for (const template of folder.templates) {
+      if (!names.has(template.id)) {
+        names.set(template.id, template.name);
+      }
+    }
+  }
+  return input.desks.map((desk) => {
+    const started = starterStartedWord(desk.deskType);
+    const armed = new Set(desk.armTemplateIds);
+    return {
+      key: desk.key,
+      name: desk.name,
+      bots: desk.templateIds.map((templateId) => ({
+        templateId,
+        name: names.get(templateId) ?? "Starter bot",
+        start: armed.has(templateId) ? started : null,
+      })),
+    };
+  });
 }
 
 export function desksStillToCreate(desks: readonly SetupDesk[]): SetupDesk[] {
@@ -1503,6 +1539,9 @@ export function setupStepLabel(step: SetupMainStep): string {
   }
   if (step === "bots") {
     return "Add Bots";
+  }
+  if (step === "review") {
+    return "Review";
   }
   return "Take a Tour";
 }

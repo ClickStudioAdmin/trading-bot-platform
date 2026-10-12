@@ -36,6 +36,7 @@ import {
   setupDeskDetails,
   setupDeskFromDetails,
   setupScreenId,
+  setupReviewRows,
   setupScreens,
   setupStepLabel,
   shouldOfferTour,
@@ -449,6 +450,7 @@ assert.deepEqual(both.map((screen) => setupScreenId(screen)), [
   "bots:choice",
   "bots:" + connected.key,
   "bots:" + paper.key,
+  "review:review",
   "tour:tour",
 ]);
 const needsKey = { ...connected, bindLater: false, connectionId: null };
@@ -479,7 +481,7 @@ assert.deepEqual(
     deskChoice: "none",
     botChoice: null,
   }).map((screen) => setupScreenId(screen)),
-  ["intro:video", "desks:choice", "bots:blocked", "tour:tour"],
+  ["intro:video", "desks:choice", "bots:blocked", "review:review", "tour:tour"],
 );
 assert.deepEqual(
   setupScreens({
@@ -488,7 +490,7 @@ assert.deepEqual(
     deskChoice: "all_paper",
     botChoice: "all",
   }).map((screen) => setupScreenId(screen)),
-  ["intro:video", "desks:choice", "bots:choice", "tour:tour"],
+  ["intro:video", "desks:choice", "bots:choice", "review:review", "tour:tour"],
 );
 const paperSet = applyDeskSetupChoice({
   choice: "all_paper",
@@ -556,6 +558,37 @@ assert.equal(starterStartVerb("dca"), "Arm");
 assert.equal(starterStartVerb("perps_bots"), "Enable");
 assert.equal(starterStartVerb("cash_and_carry"), "Enable");
 assert.equal(starterStartVerb("perps"), null);
+assert.equal(
+  setupScreens({
+    desks: [paper],
+    folders: [dcaFolder],
+    deskChoice: "manual",
+    botChoice: null,
+  }).some((screen) => setupScreenId(screen) === "review:review"),
+  false,
+);
+const reviewCarry = makeSetupDesk({
+  deskType: "cash_and_carry",
+  mode: "paper",
+  takenNames: ["DCA Paper"],
+});
+assert.deepEqual(
+  setupReviewRows({
+    desks: [
+      { ...paper, name: "DCA Paper", templateIds: [armId], armTemplateIds: [armId] },
+      reviewCarry,
+    ],
+    folders: [folder({ id: "dca-pack", deskType: "dca" })],
+  }),
+  [
+    {
+      key: paper.key,
+      name: "DCA Paper",
+      bots: [{ templateId: armId, name: "BTC", start: "Armed" }],
+    },
+    { key: reviewCarry.key, name: reviewCarry.name, bots: [] },
+  ],
+);
 assert.equal(
   setupScreenId(
     activeSetupScreen(
@@ -640,6 +673,7 @@ if (readyDraft.ok) {
 assert.equal(emptySetupDraft().readyForTour, false);
 assert.equal(setupStepLabel("desks"), "Add Desks");
 assert.equal(setupStepLabel("bots"), "Add Bots");
+assert.equal(setupStepLabel("review"), "Review");
 assert.equal(setupStepLabel("tour"), "Take a Tour");
 assert.equal(emptySetupDraft().introSeen, false);
 const introDraft = parseSetupDraft({ introSeen: true });
