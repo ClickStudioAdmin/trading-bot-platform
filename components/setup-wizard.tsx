@@ -769,13 +769,11 @@ function ChoiceStep({
   );
 }
 
-function orderedSetupDesks(desks: readonly SetupDesk[]): SetupDesk[] {
-  return ONBOARDING_DESK_TYPES.flatMap((deskType) =>
-    (["paper", "live"] as const).flatMap((mode) => {
-      const desk = desks.find((row) => row.key === setupDeskKey(deskType, mode));
-      return desk ? [desk] : [];
-    }),
-  );
+function desksForType(desks: readonly SetupDesk[], deskType: DeskType): SetupDesk[] {
+  return (["paper", "live"] as const).flatMap((mode) => {
+    const desk = desks.find((row) => row.key === setupDeskKey(deskType, mode));
+    return desk ? [desk] : [];
+  });
 }
 
 function DeskStep({
@@ -791,85 +789,75 @@ function DeskStep({
   onEdit: (desk: SetupDesk) => void;
   onRemove: (key: string) => void;
 }) {
-  const ordered = orderedSetupDesks(desks);
   return (
     <section>
       <h2 className="text-lg font-semibold tracking-tight">
         Create a few desks now?
       </h2>
       <p className="mt-2 text-sm text-ink-muted">
-        Create Desk opens the details for that type. You can review every desk
-        before you continue. Type and mode stay fixed after setup.
+        Create Desk opens the details for that type. Each desk you add sits
+        under its type. Type and mode stay fixed after setup.
       </p>
       <ul className="mt-4 text-sm">
         {ONBOARDING_DESK_TYPES.map((deskType) => {
-          const modes = desks
-            .filter((row) => row.deskType === deskType)
-            .map((row) => row.mode);
-          const full = modes.includes("paper") && modes.includes("live");
+          const added = desksForType(desks, deskType);
+          const full = added.length === 2;
           return (
-            <li
-              key={deskType}
-              className="flex flex-col gap-3 border-b border-line py-3 sm:flex-row sm:items-center"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="font-medium text-ink">{formatDeskType(deskType)}</p>
-                <p className="mt-1 text-sm text-ink-muted">
-                  {formatDeskTypeChoice(deskType)}
-                </p>
+            <li key={deskType} className="border-b border-line py-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-ink">{formatDeskType(deskType)}</p>
+                  <p className="mt-1 text-sm text-ink-muted">
+                    {formatDeskTypeChoice(deskType)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={full}
+                  title={full ? "Paper and Connected are already added" : undefined}
+                  onClick={() => onCreate(deskType)}
+                  className="shrink-0 rounded-control border border-line bg-surface-raised px-3 py-1.5 text-sm font-medium text-ink hover:border-line-strong disabled:cursor-not-allowed disabled:text-ink-faint"
+                >
+                  Create Desk
+                </button>
               </div>
-              <button
-                type="button"
-                disabled={full}
-                title={full ? "Paper and Connected are already added" : undefined}
-                onClick={() => onCreate(deskType)}
-                className="shrink-0 rounded-control border border-line bg-surface-raised px-3 py-1.5 text-sm font-medium text-ink hover:border-line-strong disabled:cursor-not-allowed disabled:text-ink-faint"
-              >
-                Create Desk
-              </button>
+              {added.length > 0 ? (
+                <ul className="mt-3 space-y-3">
+                  {added.map((desk) => (
+                    <li
+                      key={desk.key}
+                      className="flex flex-col gap-2 sm:flex-row sm:items-center"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-ink">{desk.name}</p>
+                        <p className="mt-1 text-ink-muted">
+                          {setupDeskReviewLine(desk)}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onEdit(desk)}
+                          className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onRemove(desk.key)}
+                          className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </li>
           );
         })}
       </ul>
-      {ordered.length > 0 ? (
-        <div className="mt-6">
-          <h3 className="text-sm font-semibold text-ink">Review</h3>
-          <p className="mt-1 text-sm text-ink-muted">
-            These desks are created when you continue to the tour.
-          </p>
-          <ul className="mt-3 text-sm">
-            {ordered.map((desk) => (
-              <li
-                key={desk.key}
-                className="flex flex-col gap-3 border-b border-line py-3 sm:flex-row sm:items-center"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-ink">{desk.name}</p>
-                  <p className="mt-1 text-sm text-ink-muted">
-                    {formatDeskType(desk.deskType)} · {setupDeskReviewLine(desk)}
-                  </p>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onEdit(desk)}
-                    className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onRemove(desk.key)}
-                    className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
       <p className="mt-3 text-hint text-ink-muted">
         Add nothing to continue without desks. Perps is the ticket. TradingView
         Strategy takes alerts. Those desks do not load starter bots.
