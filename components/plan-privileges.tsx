@@ -1,6 +1,6 @@
-import { IconCheck } from "@/components/icons";
+import { IconCheck, IconWarning } from "@/components/icons";
 import { PlanTrialHint, trialEmphasisClass } from "@/components/plan-trial-hint";
-import type { PlanOverviewGroup } from "@/lib/membership/plan-overview";
+import type { PlanOverviewGroup, PlanOverviewLine } from "@/lib/membership/plan-overview";
 
 export function PlanPrivileges({ groups }: { groups: PlanOverviewGroup[] }) {
   return (
@@ -24,11 +24,7 @@ export function PlanPrivileges({ groups }: { groups: PlanOverviewGroup[] }) {
                     <dt className="text-ink">{line.label}</dt>
                     <dd
                       className={`tabular-nums ${
-                        line.trial?.emphasize
-                          ? ""
-                          : line.over
-                            ? "text-warning"
-                            : "text-ink-muted"
+                        line.trial?.emphasize && !line.over ? "" : "text-ink-muted"
                       }`}
                     >
                       {line.included ? (
@@ -38,20 +34,8 @@ export function PlanPrivileges({ groups }: { groups: PlanOverviewGroup[] }) {
                         >
                           <IconCheck size={16} className="size-4" />
                         </span>
-                      ) : line.trial ? (
-                        <PlanTrialHint
-                          phase={line.trial.phase}
-                          endsAt={line.trial.endsAt}
-                          className={
-                            line.trial.emphasize
-                              ? trialEmphasisClass(line.trial.phase)
-                              : undefined
-                          }
-                        >
-                          {line.text}
-                        </PlanTrialHint>
                       ) : (
-                        line.text
+                        <UsageValue line={line} />
                       )}
                     </dd>
                   </div>
@@ -65,5 +49,37 @@ export function PlanPrivileges({ groups }: { groups: PlanOverviewGroup[] }) {
         ))}
       </div>
     </section>
+  );
+}
+
+function UsageValue({ line }: { line: PlanOverviewLine }) {
+  const value = line.over ? (
+    <span className="inline-flex items-center gap-1.5">
+      <IconWarning
+        className="size-3.5 shrink-0 text-warning"
+        aria-label="Within 10% of this limit"
+      />
+      <span>{line.text}</span>
+    </span>
+  ) : (
+    line.text
+  );
+  if (!line.trial) {
+    return value;
+  }
+  return (
+    <PlanTrialHint
+      phase={line.trial.phase}
+      endsAt={line.trial.endsAt}
+      className={
+        line.over
+          ? undefined
+          : line.trial.emphasize
+            ? trialEmphasisClass(line.trial.phase)
+            : undefined
+      }
+    >
+      {value}
+    </PlanTrialHint>
   );
 }

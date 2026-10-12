@@ -51,6 +51,8 @@ type OverviewPlan = Pick<MembershipPlan, "features" | "caps"> &
   Partial<Pick<MembershipPlan, "trials">> &
   PlanAffiliateRates;
 
+const NOT_INCLUDED = "—";
+
 const COUNTED_CAPS = new Set<PlanCapKey>([
   "max_paper_desks",
   "max_demo_desks",
@@ -60,6 +62,17 @@ const COUNTED_CAPS = new Set<PlanCapKey>([
   "max_followers_accepted",
   "max_stored_backtests",
 ]);
+
+/** True once usage is within 10% of a finite cap, including past that cap. */
+export function usageNearLimit(used: number, limit: number | null): boolean {
+  if (limit == null) {
+    return false;
+  }
+  if (limit <= 0) {
+    return used > 0;
+  }
+  return used * 10 >= limit * 9;
+}
 
 export function emptyPlanUsageCounts(): PlanUsageCounts {
   return {
@@ -158,7 +171,7 @@ function overviewLine(
     return {
       key,
       label: row.label,
-      text: on ? "Included" : "Not included",
+      text: on ? "Included" : NOT_INCLUDED,
       included: on,
       over: false,
       note: null,
@@ -170,7 +183,7 @@ function overviewLine(
     return {
       key,
       label: row.label,
-      text: pct === 0 ? "Not included" : `${pct}%`,
+      text: pct === 0 ? NOT_INCLUDED : `${pct}%`,
       included: false,
       over: false,
       note: null,
@@ -226,7 +239,7 @@ function usageLine(
     return {
       key,
       label,
-      text: "Not included",
+      text: NOT_INCLUDED,
       included: false,
       over: false,
       note: null,
@@ -253,7 +266,7 @@ function usageLine(
       text: closed
         ? trial?.phase === "ended"
           ? "Trial ended"
-          : "Not included"
+          : NOT_INCLUDED
         : trial?.phase === "active"
           ? `${amount} · trial`
           : amount,
@@ -276,7 +289,7 @@ function usageLine(
     return {
       key,
       label,
-      text: trial?.phase === "ended" ? "Trial ended" : "Not included",
+      text: trial?.phase === "ended" ? "Trial ended" : NOT_INCLUDED,
       included: false,
       over: false,
       note: null,
@@ -290,7 +303,7 @@ function usageLine(
     label,
     text: `${used} of ${limitText}${activeTrial ? " · trial" : ""}`,
     included: false,
-    over: limit != null && used > limit,
+    over: usageNearLimit(used, limit),
     note: cap === "max_followers_accepted" ? "Highest on one desk" : null,
     trial,
   };
