@@ -12,8 +12,11 @@ import { createPortal } from "react-dom";
 import { BacktestParameterSections } from "@/components/backtest-parameter-sections";
 import { IconInfo } from "@/components/icons";
 import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
+import { attachedBacktestLinksAction } from "@/lib/backtest/actions";
 import { templateParamSections } from "@/lib/backtest/param-sections";
+import type { TemplateBacktestLink } from "@/lib/backtest/model";
 import type { TemplateRecipe } from "@/lib/templates/recipe";
+import { formatAuDateUtc } from "@/lib/time/display";
 
 const POPUP_WIDTH = 416;
 const POPUP_MAX_HEIGHT = 560;
@@ -21,13 +24,25 @@ const POPUP_MAX_HEIGHT = 560;
 export function TemplateParametersButton({
   name,
   recipe,
+  templateId = null,
+  backtests = null,
   className = "",
 }: {
   name: string;
   recipe: TemplateRecipe | null | undefined;
+  templateId?: string | null;
+  /** When set, skip the lookup and show these runs. Null loads attached runs for `templateId`. */
+  backtests?: TemplateBacktestLink[] | null;
   className?: string;
 }) {
   const sections = recipe ? templateParamSections(recipe) : [];
+  const requestId = useRef<string | null>(null);
+  const [loadedBacktests, setLoadedBacktests] = useState<
+    TemplateBacktestLink[] | null
+  >(null);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const shownBacktests =
+    backtests ?? (loadedFor === templateId ? loadedBacktests : null);
   const popupId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -58,6 +73,29 @@ export function TemplateParametersButton({
   }
 
   useEffect(() => () => clearClose(), []);
+
+  function loadBacktests() {
+    if (!templateId || backtests || requestId.current === templateId) {
+      return;
+    }
+    const id = templateId;
+    requestId.current = id;
+    void attachedBacktestLinksAction(id)
+      .then((rows) => {
+        if (requestId.current !== id) {
+          return;
+        }
+        setLoadedFor(id);
+        setLoadedBacktests(rows);
+      })
+      .catch(() => {
+        if (requestId.current !== id) {
+          return;
+        }
+        setLoadedFor(id);
+        setLoadedBacktests([]);
+      });
+  }
 
   useLayoutEffect(() => {
     if (!open) {
@@ -105,7 +143,7 @@ export function TemplateParametersButton({
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [open, sections.length]);
+  }, [open, sections.length, shownBacktests?.length]);
 
   useEffect(() => {
     if (!open) {
@@ -147,6 +185,7 @@ export function TemplateParametersButton({
   function onEnter() {
     clearClose();
     setOpen(true);
+    loadBacktests();
   }
 
   function onClick(event: ReactMouseEvent<HTMLButtonElement>) {
@@ -160,6 +199,7 @@ export function TemplateParametersButton({
     }
     pinned.current = true;
     setOpen(true);
+    loadBacktests();
   }
 
   return (
@@ -205,6 +245,38 @@ export function TemplateParametersButton({
               ) : (
                 <p className="text-sm text-ink-muted">No parameters stored.</p>
               )}
+              {shownBacktests && shownBacktests.length > 0 ? (
+                <section className="mt-4">
+                  <h3 className="mb-2 text-sm font-semibold text-ink">
+                    Backtests
+                  </h3>
+                  <ul className="overflow-hidden rounded-card border border-line bg-surface">
+                    {shownBacktests.map((run) => (
+                      <li
+                        key={run.runId}
+                        className="border-b border-line last:border-b-0"
+                      >
+                        <a
+                          href={`/account/backtests/${run.runId}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          data-template-parameters=""
+                          onMouseDown={(event) => event.stopPropagation()}
+                          onClick={(event) => event.stopPropagation()}
+                          className="flex items-baseline justify-between gap-4 px-5 py-2.5 text-sm font-medium text-accent hover:underline"
+                        >
+                          <span className="min-w-0 text-left break-words">
+                            {run.name}
+                          </span>
+                          <span className="shrink-0 text-right text-xs font-normal tabular-nums text-ink-muted">
+                            {formatAuDateUtc(run.fromMs)} – {formatAuDateUtc(run.toMs)}
+                          </span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
             </div>,
             document.body,
           )
@@ -216,18 +288,27 @@ export function TemplateParametersButton({
 export function TemplateNameWithParameters({
   name,
   recipe,
+  templateId = null,
+  backtests = null,
   className = "",
   nameClassName = "min-w-0 break-words",
 }: {
   name: string;
   recipe: TemplateRecipe | null | undefined;
+  templateId?: string | null;
+  backtests?: TemplateBacktestLink[] | null;
   className?: string;
   nameClassName?: string;
 }) {
   return (
     <span className={`inline-flex max-w-full items-start gap-1 ${className}`.trim()}>
       <span className={nameClassName}>{name}</span>
-      <TemplateParametersButton name={name} recipe={recipe} />
+      <TemplateParametersButton
+        name={name}
+        recipe={recipe}
+        templateId={templateId}
+        backtests={backtests}
+      />
     </span>
   );
 }

@@ -867,11 +867,13 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
 export function BacktestOriginBadges({
   templateName,
   templateRecipe = null,
+  templateId = null,
   deskLabel,
   edited = false,
 }: {
   templateName: string | null;
   templateRecipe?: TemplateRecipe | null;
+  templateId?: string | null;
   deskLabel: string | null;
   edited?: boolean;
 }) {
@@ -883,7 +885,11 @@ export function BacktestOriginBadges({
       {templateName ? (
         <p className="inline-flex items-center gap-1 rounded-control bg-success/15 px-2 py-0.5 text-xs text-success">
           Template · {templateName}
-          <TemplateParametersButton name={templateName} recipe={templateRecipe} />
+          <TemplateParametersButton
+            name={templateName}
+            recipe={templateRecipe}
+            templateId={templateId}
+          />
         </p>
       ) : null}
       {deskLabel ? (

@@ -4,6 +4,10 @@ import { parseDcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { parseTemplateRecipe } from "@/lib/templates/recipe";
 import {
   backtestLinkHighlight,
+  memberCanReadBacktestRun,
+  templateBacktestLinks,
+  type AttachedBacktestRow,
+  type TemplateBacktestLink,
   estimateBacktestBars,
   parseBacktestStatus,
   parseBacktestClipIndex,
@@ -535,10 +539,59 @@ export function canReadBacktestRun(
   userId: string,
   isAdmin: boolean,
 ): boolean {
-  if (isAdmin) {
-    return true;
+  return memberCanReadBacktestRun(run, userId, isAdmin);
+}
+
+export async function listAttachedBacktestLinks(
+  templateId: string,
+  viewerId: string,
+  isAdmin: boolean,
+): Promise<TemplateBacktestLink[]> {
+  const id = templateId.trim();
+  if (!id) {
+    return [];
   }
-  return run.userId === userId || run.userId === null;
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from("backtest_runs")
+    .select(
+      "id, user_id, name, symbol, parent_run_id, from_ms, to_ms, created_at, recipe, status",
+    )
+    .eq("template_id", id)
+    .eq("status", "done")
+    .order("created_at", { ascending: false });
+  if (error || !data) {
+    return [];
+  }
+  const rows: AttachedBacktestRow[] = [];
+  for (const item of data) {
+    const row = item as Record<string, unknown>;
+    const status = parseBacktestStatus(row.status);
+    if (!status) {
+      continue;
+    }
+    const recipe = row.recipe;
+    const recipeName =
+      recipe && typeof recipe === "object" && "name" in recipe
+        ? String((recipe as { name: unknown }).name ?? "")
+        : "";
+    rows.push({
+      id: String(row.id),
+      userId: row.user_id ? String(row.user_id) : null,
+      status,
+      name: readBacktestName(row.name),
+      symbol: String(row.symbol ?? ""),
+      recipeName,
+      parentRunId: row.parent_run_id ? String(row.parent_run_id) : null,
+      fromMs: Number(row.from_ms) || 0,
+      toMs: Number(row.to_ms) || 0,
+      createdAtMs: asTime(row.created_at),
+    });
+  }
+  return templateBacktestLinks(rows, viewerId, isAdmin);
 }
 
 export { canDeleteBacktestRun } from "./model";

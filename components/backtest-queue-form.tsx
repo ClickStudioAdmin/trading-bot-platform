@@ -321,7 +321,11 @@ export function BacktestQueueForm({
           group: group.label,
           label: `${row.recipe.kind === "dca" ? "DCA" : "Perps"} · ${row.name} · ${row.recipe.symbol}`,
           aside: (
-            <TemplateParametersButton name={row.name} recipe={row.recipe} />
+            <TemplateParametersButton
+              name={row.name}
+              recipe={row.recipe}
+              templateId={row.id}
+            />
           ),
         })),
       ),
@@ -747,6 +751,7 @@ export function BacktestQueueForm({
             <TemplateParametersButton
               name={pickedTemplate.name}
               recipe={pickedTemplate.recipe}
+              templateId={pickedTemplate.id}
               className="mt-2"
             />
           ) : null}
@@ -980,6 +985,7 @@ export function BacktestQueueForm({
             <BacktestOriginBadges
               templateName={matchingTemplate?.name ?? null}
               templateRecipe={matchingTemplate?.recipe ?? null}
+              templateId={matchingTemplate?.id ?? null}
               deskLabel={
                 matchingDeskBot
                   ? formatBacktestDeskMatch(matchingDeskBot)

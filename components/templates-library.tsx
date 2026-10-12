@@ -167,6 +167,7 @@ function FolderTemplateNames({ items }: { items: FolderTemplateEntry[] }) {
           key={item.id}
           name={item.name}
           recipe={item.recipe}
+          templateId={item.id}
         />
       ))}
       {items.length > FOLDER_TEMPLATE_PREVIEW ? (
@@ -255,6 +256,7 @@ function FolderTemplatesSeeAll({ items }: { items: FolderTemplateEntry[] }) {
                     <TemplateNameWithParameters
                       name={item.name}
                       recipe={item.recipe}
+                      templateId={item.id}
                     />
                   </li>
                 ))}
@@ -1111,6 +1113,7 @@ export function TemplatesLibrary({
                     <TemplateNameWithParameters
                       name={row.name}
                       recipe={row.recipe}
+                      templateId={row.id}
                     />
                   </td>
                   <td className="px-4 py-3 text-ink-muted">
@@ -1715,6 +1718,7 @@ function ImportModal({
                     <TemplateParametersButton
                       name={row.name}
                       recipe={row.recipe}
+                      templateId={row.id}
                     />
                   ),
                 }))}
@@ -1854,7 +1858,11 @@ function ShareModal({
         <span className="inline-flex items-center gap-1">
           {name}
           {kind === "template" ? (
-            <TemplateParametersButton name={name} recipe={recipe} />
+            <TemplateParametersButton
+              name={name}
+              recipe={recipe}
+              templateId={id}
+            />
           ) : null}
         </span>{" "}
         to another member by email. They can apply it on their desks. This is
@@ -2085,6 +2093,7 @@ function TemplateEditModal({
           <TemplateParametersButton
             name={template.name}
             recipe={template.recipe}
+            templateId={template.id}
           />
         </span>
         <input
@@ -2368,6 +2377,7 @@ function MembershipColumn({
                 <TemplateNameWithParameters
                   name={row.name}
                   recipe={row.recipe}
+                  templateId={row.id}
                   className="min-w-0"
                   nameClassName="block truncate"
                 />

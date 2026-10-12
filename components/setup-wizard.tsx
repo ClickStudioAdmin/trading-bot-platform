@@ -762,6 +762,7 @@ function ReviewStep({
                             <TemplateNameWithParameters
                               name={bot.name}
                               recipe={starterRecipe(folders, bot.templateId)}
+                              templateId={bot.templateId}
                               nameClassName=""
                             />
                             {bot.start ? (
@@ -866,6 +867,7 @@ function TourReady({
                               <TemplateNameWithParameters
                                 name={bot.name}
                                 recipe={starterRecipe(folders, bot.templateId)}
+                                templateId={bot.templateId}
                                 nameClassName=""
                               />
                               {started ? (
@@ -1808,6 +1810,7 @@ function StarterTemplateChoice({
         <TemplateNameWithParameters
           name={template.name}
           recipe={template.recipe}
+          templateId={template.id}
           nameClassName=""
         />
       </label>

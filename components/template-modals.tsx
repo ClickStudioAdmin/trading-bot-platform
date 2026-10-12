@@ -879,6 +879,7 @@ function FolderNode({
                   <TemplateNameWithParameters
                     name={item.name}
                     recipe={item.recipe}
+                    templateId={item.templateId}
                   />
                   <span className="block text-sm text-ink">
                     {item.preview}

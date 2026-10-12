@@ -1214,6 +1214,68 @@ export type BacktestLinkHighlight = {
   aprPct: number | null;
 };
 
+/** Same read rule as a backtest report: the owner, an admin, or a published run. */
+export function memberCanReadBacktestRun(
+  run: { userId: string | null },
+  userId: string,
+  isAdmin: boolean,
+): boolean {
+  if (isAdmin) {
+    return true;
+  }
+  return run.userId === userId || run.userId === null;
+}
+
+export type TemplateBacktestLink = {
+  runId: string;
+  name: string;
+  fromMs: number;
+  toMs: number;
+};
+
+export type AttachedBacktestRow = {
+  id: string;
+  userId: string | null;
+  status: BacktestStatus;
+  name: string | null;
+  symbol: string;
+  recipeName: string;
+  parentRunId: string | null;
+  fromMs: number;
+  toMs: number;
+  createdAtMs: number;
+};
+
+/** Finished runs attached to one template, newest first, that this member can open. */
+export function templateBacktestLinks(
+  rows: AttachedBacktestRow[],
+  viewerId: string,
+  isAdmin: boolean,
+): TemplateBacktestLink[] {
+  return rows
+    .filter(
+      (row) =>
+        row.status === "done" &&
+        memberCanReadBacktestRun(
+          { userId: row.userId },
+          viewerId,
+          isAdmin,
+        ),
+    )
+    .sort((a, b) => b.createdAtMs - a.createdAtMs)
+    .map((row) => ({
+      runId: row.id,
+      name: backtestRunTitle({
+        name: row.name,
+        recipe: { name: row.recipeName },
+        symbol: row.symbol,
+        parentRunId: row.parentRunId,
+      }),
+      fromMs: row.fromMs,
+      toMs: row.toMs,
+    }));
+}
+
 export function backtestLinkHighlight(
   run: Pick<
     BacktestRun,
