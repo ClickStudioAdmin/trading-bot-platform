@@ -605,6 +605,15 @@ export function SetupWizard({
           </p>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={restartWizard}
+          className="rounded-control border border-line bg-surface px-4 py-2 text-sm font-medium text-ink-muted hover:border-line-strong hover:text-ink disabled:opacity-40"
+        >
+          {pending && resetting ? "Resetting…" : "Reset Wizard"}
+        </button>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
         {screen.main === "intro" ? (
           <>
             <button
@@ -659,14 +668,7 @@ export function SetupWizard({
                 : "Continue"}
           </button>
         ) : null}
-        <button
-          type="button"
-          disabled={pending}
-          onClick={restartWizard}
-          className="ml-auto rounded-control border border-line bg-surface px-4 py-2 text-sm font-medium text-ink-muted hover:border-line-strong hover:text-ink disabled:opacity-40"
-        >
-          {pending && resetting ? "Resetting…" : "Reset Wizard"}
-        </button>
+        </div>
         </div>
       </div>
     </div>
