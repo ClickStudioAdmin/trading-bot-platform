@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import { ModalHost } from "@/components/portal-host";
 import {
@@ -10,7 +11,20 @@ import {
   type DeskType,
 } from "@/lib/accounts/model";
 import { AppSelect } from "@/components/app-select";
-import { IconCheck, IconClose, IconPencil, IconPlay, IconPlus, IconTrash } from "@/components/icons";
+import {
+  IconArrowLeft,
+  IconArrowRight,
+  IconCheck,
+  IconClose,
+  IconPencil,
+  IconPlay,
+  IconPlus,
+  IconReset,
+  IconSave,
+  IconSkipForward,
+  IconTour,
+  IconTrash,
+} from "@/components/icons";
 import { TemplateNameWithParameters } from "@/components/template-parameters-tip";
 import {
   TABLE_ACTIONS_TD_CLASS,
@@ -67,8 +81,23 @@ import {
   type StarterFolder,
 } from "@/lib/onboarding/model";
 
+const WIZARD_ICON = { size: 14 as const, className: "size-3.5 shrink-0" };
+
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+
+function isActionRedirect(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+  if (
+    "digest" in error &&
+    String((error as { digest?: unknown }).digest).startsWith("NEXT_REDIRECT")
+  ) {
+    return true;
+  }
+  return error instanceof Error && error.message === "NEXT_REDIRECT";
+}
 
 function wizardActionError(error: unknown): string {
   const message =
@@ -154,6 +183,7 @@ export function SetupWizard({
   existingNames: string[];
   folders: StarterFolder[];
 }) {
+  const router = useRouter();
   const [desks, setDesks] = useState<SetupDesk[]>(initialDraft.desks);
   const [deskChoice, setDeskChoice] = useState<DeskSetupChoice | null>(
     initialDraft.deskChoice,
@@ -438,10 +468,16 @@ export function SetupWizard({
         const result = await finishSetup(
           JSON.stringify({ ...draft(), tourChoice }),
         );
-        if (result && !result.ok) {
+        if (!result.ok) {
           setError(result.error);
+          return;
         }
+        router.refresh();
       } catch (error) {
+        if (isActionRedirect(error)) {
+          router.refresh();
+          return;
+        }
         setError(wizardActionError(error));
       }
     });
@@ -593,9 +629,6 @@ export function SetupWizard({
           folders={folders}
           applied={applied}
           issues={summary?.issues ?? []}
-          pending={pending}
-          onStart={() => finish("yes")}
-          onLater={() => finish("not_now")}
         />
       ) : null}
       </div>
@@ -606,14 +639,17 @@ export function SetupWizard({
           </p>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
+        {readyForTour ? null : (
         <button
           type="button"
           disabled={pending}
           onClick={restartWizard}
-          className="rounded-control border border-line bg-surface px-4 py-2 text-sm font-medium text-ink-muted hover:border-line-strong hover:text-ink disabled:opacity-40"
+          className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-4 py-2 text-sm font-medium text-ink-muted hover:border-line-strong hover:text-ink disabled:opacity-40"
         >
+          <IconReset {...WIZARD_ICON} />
           {pending && resetting ? "Resetting…" : "Reset Wizard"}
         </button>
+        )}
         <div className="ml-auto flex flex-wrap items-center gap-2">
         {screen.main === "intro" ? (
           <>
@@ -621,8 +657,9 @@ export function SetupWizard({
               type="button"
               disabled={pending}
               onClick={enterSetup}
-              className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
+              className="inline-flex items-center gap-1.5 rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
             >
+              <IconSkipForward {...WIZARD_ICON} />
               Skip
             </button>
             <button
@@ -635,8 +672,13 @@ export function SetupWizard({
                 }
                 setPlaying(true);
               }}
-              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+              className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
             >
+              {playing ? (
+                <IconArrowRight {...WIZARD_ICON} />
+              ) : (
+                <IconPlay {...WIZARD_ICON} />
+              )}
               {pending ? "Saving…" : playing ? "Continue" : "Watch"}
             </button>
           </>
@@ -648,8 +690,9 @@ export function SetupWizard({
               setError(null);
               setScreenId(setupScreenId(previous));
             }}
-            className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
+            className="inline-flex items-center gap-1.5 rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
           >
+            <IconArrowLeft {...WIZARD_ICON} />
             Back
           </button>
         ) : null}
@@ -658,8 +701,13 @@ export function SetupWizard({
             type="button"
             disabled={pending}
             onClick={continueForward}
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
+            {screen.main === "review" ? (
+              <IconPlus {...WIZARD_ICON} />
+            ) : (
+              <IconArrowRight {...WIZARD_ICON} />
+            )}
             {pending
               ? next?.main === "tour"
                 ? "Creating…"
@@ -668,6 +716,28 @@ export function SetupWizard({
                 ? "Create"
                 : "Continue"}
           </button>
+        ) : null}
+        {screen.main === "tour" ? (
+          <>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => finish("not_now")}
+              className="inline-flex items-center gap-1.5 rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
+            >
+              <IconClose {...WIZARD_ICON} />
+              Not now
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => finish("yes")}
+              className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            >
+              <IconTour {...WIZARD_ICON} />
+              {pending ? "Finishing…" : "Start the Tour now"}
+            </button>
+          </>
         ) : null}
         </div>
         </div>
@@ -788,17 +858,11 @@ function TourReady({
   folders,
   applied,
   issues,
-  pending,
-  onStart,
-  onLater,
 }: {
   desks: SetupDesk[];
   folders: StarterFolder[];
   applied: string[];
   issues: SetupIssue[];
-  pending: boolean;
-  onStart: () => void;
-  onLater: () => void;
 }) {
   const rows = readyDeskRows({ desks, folders, applied });
   return (
@@ -886,24 +950,6 @@ function TourReady({
           </table>
         </div>
       ) : null}
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={pending}
-          onClick={onStart}
-          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-        >
-          {pending ? "Finishing…" : "Start the Tour now"}
-        </button>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={onLater}
-          className="rounded-control border border-line px-4 py-2 text-sm text-ink"
-        >
-          Not now
-        </button>
-      </div>
     </section>
   );
 }
@@ -1374,16 +1420,18 @@ function CreateDeskDialog({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
+            className="inline-flex items-center gap-1.5 rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
           >
+            <IconClose {...WIZARD_ICON} />
             Cancel
           </button>
           <button
             type="button"
             onClick={save}
             disabled={mode === "live" && choice === "new" && !connectionId}
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:opacity-40"
           >
+            {desk ? <IconSave {...WIZARD_ICON} /> : <IconPlus {...WIZARD_ICON} />}
             {desk ? "Save" : "Add desk"}
           </button>
         </div>
@@ -1645,15 +1693,17 @@ function SetupKeyForm({
               setMessage(checked.ok ? "Connection checks out." : checked.error);
             });
           }}
-          className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink"
+          className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink"
         >
+          <IconCheck {...WIZARD_ICON} />
           {pending ? "Checking…" : "Check connection"}
         </button>
         <button
           type="submit"
           disabled={pending}
-          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
         >
+          <IconSave {...WIZARD_ICON} />
           Save key
         </button>
       </div>

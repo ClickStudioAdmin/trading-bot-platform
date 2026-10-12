@@ -3,6 +3,7 @@ import {
   ArchiveRestore,
   ArrowLeft,
   ArrowLeftRight,
+  ArrowRight,
   Ban,
   Camera,
   ChartCandlestick,
@@ -49,8 +50,9 @@ import {
   Play,
   Plus,
   Radio,
-  Rows3,
   RefreshCw,
+  RotateCcw,
+  Rows3,
   Moon,
   Save,
   Scan,
@@ -99,8 +101,15 @@ export const LUCIDE_ICONS = [
     id: "arrow-left",
     name: "Back",
     lucide: "ArrowLeft",
-    usedIn: "Bot form title, back to the automations list",
+    usedIn: "Bot form title, back to the automations list, setup wizard Back",
     Icon: ArrowLeft,
+  },
+  {
+    id: "arrow-right",
+    name: "Continue",
+    lucide: "ArrowRight",
+    usedIn: "Setup wizard Continue",
+    Icon: ArrowRight,
   },
   {
     id: "arrow-left-right",
@@ -155,7 +164,7 @@ export const LUCIDE_ICONS = [
     id: "check",
     name: "Check",
     lucide: "Check",
-    usedIn: "Pending submit, checkboxes, starter pack, plan compare, chart copied",
+    usedIn: "Pending submit, checkboxes, starter pack, plan compare, chart copied, setup wizard Check connection",
     Icon: Check,
   },
   {
@@ -176,7 +185,7 @@ export const LUCIDE_ICONS = [
     id: "compass",
     name: "Platform Tour",
     lucide: "Compass",
-    usedIn: "Account sidenav, replay the platform tour",
+    usedIn: "Account sidenav, replay the platform tour, setup wizard Start the Tour now",
     Icon: Compass,
   },
   {
@@ -351,7 +360,7 @@ export const LUCIDE_ICONS = [
     id: "play",
     name: "Play",
     lucide: "Play",
-    usedIn: "Create desk placeholder, bot table bulk enable, replay play, report Replay, saved backtests Replay",
+    usedIn: "Create desk placeholder, bot table bulk enable, replay play, report Replay, saved backtests Replay, setup wizard Watch",
     Icon: Play,
   },
   {
@@ -365,7 +374,7 @@ export const LUCIDE_ICONS = [
     id: "skip-forward",
     name: "Next event",
     lucide: "SkipForward",
-    usedIn: "Replay next event",
+    usedIn: "Replay next event, setup wizard Skip",
     Icon: SkipForward,
   },
   {
@@ -407,7 +416,7 @@ export const LUCIDE_ICONS = [
     id: "plus",
     name: "Plus",
     lucide: "Plus",
-    usedIn: "New item, new member, new plan, add folder, create bot, add connection, create desk, create webhook",
+    usedIn: "New item, new member, new plan, add folder, create bot, add connection, create desk, create webhook, setup wizard Create",
     Icon: Plus,
   },
   {
@@ -418,10 +427,17 @@ export const LUCIDE_ICONS = [
     Icon: RefreshCw,
   },
   {
+    id: "rotate-ccw",
+    name: "Reset",
+    lucide: "RotateCcw",
+    usedIn: "Setup wizard Reset Wizard",
+    Icon: RotateCcw,
+  },
+  {
     id: "save",
     name: "Save",
     lucide: "Save",
-    usedIn: "Bot form Save",
+    usedIn: "Bot form Save, setup wizard Save",
     Icon: Save,
   },
   {
@@ -477,7 +493,7 @@ export const LUCIDE_ICONS = [
     id: "x",
     name: "Close",
     lucide: "X",
-    usedIn: "AppSelect pills, panel close, cancel order, clear selection",
+    usedIn: "AppSelect pills, panel close, cancel order, clear selection, setup wizard Not now and Cancel",
     Icon: X,
   },
   {
@@ -668,6 +684,10 @@ export function IconArrowLeft(props: LucideProps) {
   return <ArrowLeft aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
+export function IconArrowRight(props: LucideProps) {
+  return <ArrowRight aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
 export function IconChevronLeft(props: LucideProps) {
   return <ChevronLeft aria-hidden strokeWidth={STROKE} {...props} />;
 }
@@ -790,6 +810,10 @@ export function IconClose(props: LucideProps) {
 
 export function IconReplace(props: LucideProps) {
   return <RefreshCw aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconReset(props: LucideProps) {
+  return <RotateCcw aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconSave(props: LucideProps) {

@@ -34,8 +34,10 @@ import {
   devAccountResetAllowed,
   emptySetupDraft,
   parseSetupDraft,
+  setupCloseSkipsCreate,
   setupWizardResetPlan,
   starterTemplateAllowed,
+  tourAfterSetupClose,
   validateSetupForFinish,
   type SetupDraft,
   type SetupSummary,
@@ -176,7 +178,9 @@ export async function createSetupBeforeTour(
   }
 }
 
-export async function finishSetup(raw: string): Promise<{ ok: false; error: string }> {
+export async function finishSetup(
+  raw: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     return await finishSetupNow(raw);
   } catch (error) {
@@ -187,14 +191,30 @@ export async function finishSetup(raw: string): Promise<{ ok: false; error: stri
   }
 }
 
-async function finishSetupNow(raw: string): Promise<{ ok: false; error: string }> {
+async function finishSetupNow(
+  raw: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const member = await requirePlatformMember();
-  const prepared = await materializeSetup(member.id, raw);
-  if (!prepared.ok) {
-    return prepared;
+  const parsed = parseSetupDraft(raw);
+  if (!parsed.ok) {
+    return parsed;
   }
-  const working = prepared.draft;
-  const tour = working.tourChoice === "yes" ? "in_progress" : "declined";
+  const existing = await loadMemberOnboarding(member.id);
+  const skipCreate = setupCloseSkipsCreate({
+    status: existing?.status ?? null,
+    readyForTour: existing?.draft.readyForTour === true,
+  });
+  let working: SetupDraft;
+  if (skipCreate && existing) {
+    working = mergeClaimedDraft(parsed.draft, existing.draft);
+  } else {
+    const prepared = await materializeSetup(member.id, raw);
+    if (!prepared.ok) {
+      return prepared;
+    }
+    working = prepared.draft;
+  }
+  const tour = tourAfterSetupClose(parsed.draft.tourChoice);
   const done = await completeMemberOnboarding({
     userId: member.id,
     summary: working.summary ?? {
@@ -220,7 +240,7 @@ async function finishSetupNow(raw: string): Promise<{ ok: false; error: string }
     await setActiveAccountId(last.accountId);
   }
   refreshSetupChrome();
-  redirect("/account");
+  return { ok: true };
 }
 
 async function materializeSetup(
