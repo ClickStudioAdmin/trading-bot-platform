@@ -938,7 +938,7 @@ export function createdStarterBots(input: {
   desks: readonly SetupDesk[];
   folders: readonly StarterFolder[];
   applied: readonly string[];
-}): { deskName: string; botName: string; templateId: string }[] {
+}): { deskKey: string; deskName: string; botName: string; templateId: string }[] {
   const done = new Set(input.applied);
   const names = new Map<string, string>();
   for (const folder of input.folders) {
@@ -946,7 +946,12 @@ export function createdStarterBots(input: {
       names.set(template.id, template.name);
     }
   }
-  const rows: { deskName: string; botName: string; templateId: string }[] = [];
+  const rows: {
+    deskKey: string;
+    deskName: string;
+    botName: string;
+    templateId: string;
+  }[] = [];
   for (const desk of input.desks) {
     if (!desk.accountId) {
       continue;
@@ -956,6 +961,7 @@ export function createdStarterBots(input: {
         continue;
       }
       rows.push({
+        deskKey: desk.key,
         deskName: desk.name,
         botName: names.get(templateId) ?? "Starter bot",
         templateId,
@@ -963,6 +969,22 @@ export function createdStarterBots(input: {
     }
   }
   return rows;
+}
+
+/** One row per created desk, with the starter bots that loaded on it. */
+export function readyDeskRows(input: {
+  desks: readonly SetupDesk[];
+  folders: readonly StarterFolder[];
+  applied: readonly string[];
+}): { key: string; name: string; bots: { templateId: string; name: string }[] }[] {
+  const loaded = createdStarterBots(input);
+  return input.desks.map((desk) => ({
+    key: desk.key,
+    name: desk.name,
+    bots: loaded
+      .filter((bot) => bot.deskKey === desk.key)
+      .map((bot) => ({ templateId: bot.templateId, name: bot.botName })),
+  }));
 }
 
 export function applyKey(accountId: string, templateId: string): string {

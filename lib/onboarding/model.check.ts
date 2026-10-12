@@ -16,6 +16,7 @@ import {
   tourTargetForAccountHref,
   connectionReuseError,
   createdStarterBots,
+  readyDeskRows,
   desksStillToCreate,
   draftHasSecret,
   emptySetupDraft,
@@ -317,7 +318,40 @@ assert.deepEqual(
     folders: [folder({ id: "dca-pack", deskType: "dca" })],
     applied: [`${createdDeskId}:${starterId}`],
   }),
-  [{ deskName: "DCA Paper", botName: "BTC", templateId: starterId }],
+  [{
+    deskKey: paper.key,
+    deskName: "DCA Paper",
+    botName: "BTC",
+    templateId: starterId,
+  }],
+);
+const carry = makeSetupDesk({
+  deskType: "cash_and_carry",
+  mode: "paper",
+  takenNames: ["DCA Paper"],
+});
+assert.deepEqual(
+  readyDeskRows({
+    desks: [
+      {
+        ...paper,
+        name: "DCA Paper",
+        accountId: createdDeskId,
+        templateIds: [starterId],
+      },
+      {
+        ...carry,
+        accountId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        templateIds: [],
+      },
+    ],
+    folders: [folder({ id: "dca-pack", deskType: "dca" })],
+    applied: [`${createdDeskId}:${starterId}`],
+  }),
+  [
+    { key: paper.key, name: "DCA Paper", bots: [{ templateId: starterId, name: "BTC" }] },
+    { key: carry.key, name: carry.name, bots: [] },
+  ],
 );
 assert.deepEqual(
   createdStarterBots({
