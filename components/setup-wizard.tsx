@@ -577,7 +577,7 @@ export function SetupWizard({
       {screen.main === "bots" && screen.sub === "choice" ? (
         <ChoiceStep
           title="Load starter bots?"
-          intro="Tick Enable on a bot to start it. Desks and bots are created when you click Create, so the tour can show them."
+          intro="Tick Initial Status on a bot to start it. Desks and bots are created when you click Create, so the tour can show them."
           note={
             starterBotDesks(desks, folders).length === 0
               ? botsEmptyNote(desks)
@@ -1721,6 +1721,9 @@ function BotStep({
   onChange: (key: string, patch: Partial<SetupDesk>) => void;
 }) {
   const rows = starterBotDesks(desks, folders);
+  const showFolder = rows.some((desk) =>
+    foldersForDesk(folders, desk.deskType).some((folder) => !folder.loose),
+  );
   return (
     <section>
       <h2 className="text-lg font-semibold tracking-tight">
@@ -1728,90 +1731,128 @@ function BotStep({
       </h2>
       <p className="mt-2 text-sm text-ink-muted">
         These are platform templates and folders marked Include in Starter Pack.
-        Tick Enable to start a bot when setup finishes. Leave it clear and the
-        bot stays idle or disabled.
+        Tick Initial Status to start a bot when setup finishes. Leave it clear
+        and the bot stays idle or disabled.
       </p>
-      <ul className="mt-4">
-        {rows.map((desk) => {
-          const details = setupDeskDetails(desk);
-          function choose(templateIds: string[]) {
-            onChange(desk.key, {
-              templateIds,
-              armTemplateIds: keptArmTemplateIds({
-                mode: desk.mode,
-                connectionId: desk.connectionId,
-                templateIds,
-                armTemplateIds: desk.armTemplateIds,
-              }),
-            });
-          }
-          return (
-            <li key={desk.key} className="border-b border-line py-4">
-              <div className="flex items-baseline justify-between gap-3">
-                <h3 className="text-sm font-semibold text-ink">{desk.name}</h3>
-                <p className="shrink-0 text-xs text-ink-faint">
-                  {details.mode} · {formatDeskType(desk.deskType)}
-                </p>
-              </div>
-              <div className="mt-3 space-y-4">
-                {foldersForDesk(folders, desk.deskType).map((folder) => {
-                  const ids = folder.templates.map((template) => template.id);
-                  const selected = ids.filter((id) =>
-                    desk.templateIds.includes(id),
-                  );
-                  const all = selected.length === ids.length;
-                  if (folder.loose) {
-                    return (
-                      <ul key={folder.id} className="space-y-1">
-                        {folder.templates.map((template) => (
-                          <StarterTemplateChoice
-                            key={template.id}
-                            desk={desk}
-                            template={template}
-                            onChoose={choose}
-                            onChange={onChange}
-                          />
-                        ))}
-                      </ul>
-                    );
-                  }
-                  return (
-                    <fieldset key={folder.id}>
-                      <label className="inline-flex items-center gap-2 text-sm font-medium text-ink">
+      <div className="mt-4 overflow-x-auto rounded-card border border-line">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
+            <tr>
+              <th className="px-3 py-2 font-medium">Desk</th>
+              {showFolder ? (
+                <th className="whitespace-nowrap px-3 py-2 font-medium">
+                  Folder
+                </th>
+              ) : null}
+              <th className="px-3 py-2 font-medium">Bot</th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">Mode</th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">Type</th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">
+                Initial Status
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.flatMap((desk) => {
+              const details = setupDeskDetails(desk);
+              const deskType = formatDeskType(desk.deskType);
+              function choose(templateIds: string[]) {
+                onChange(desk.key, {
+                  templateIds,
+                  armTemplateIds: keptArmTemplateIds({
+                    mode: desk.mode,
+                    connectionId: desk.connectionId,
+                    templateIds,
+                    armTemplateIds: desk.armTemplateIds,
+                  }),
+                });
+              }
+              return foldersForDesk(folders, desk.deskType).flatMap((folder) => {
+                const ids = folder.templates.map((template) => template.id);
+                const selectedCount = ids.filter((id) =>
+                  desk.templateIds.includes(id),
+                ).length;
+                const all = ids.length > 0 && selectedCount === ids.length;
+                return folder.templates.map((template, index) => (
+                  <tr
+                    key={`${desk.key}:${template.id}`}
+                    className="border-b border-line last:border-b-0"
+                  >
+                    <td className="px-3 py-2 text-ink">{desk.name}</td>
+                    {showFolder ? (
+                      <td className="whitespace-nowrap px-3 py-2 text-ink">
+                        {folder.loose ? (
+                          <span className="text-ink-faint">—</span>
+                        ) : index === 0 ? (
+                          <label className="inline-flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={all}
+                              onChange={() => {
+                                if (all) {
+                                  choose(
+                                    desk.templateIds.filter(
+                                      (id) => !ids.includes(id),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                choose([
+                                  ...new Set([...desk.templateIds, ...ids]),
+                                ]);
+                              }}
+                            />
+                            {folder.name}
+                          </label>
+                        ) : (
+                          <span className="text-ink-muted">{folder.name}</span>
+                        )}
+                      </td>
+                    ) : null}
+                    <td className="px-3 py-2 text-ink">
+                      <label className="inline-flex items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={all && ids.length > 0}
+                          checked={desk.templateIds.includes(template.id)}
                           onChange={() => {
-                            if (all) {
-                              choose(
-                                desk.templateIds.filter((id) => !ids.includes(id)),
-                              );
-                              return;
+                            const next = new Set(desk.templateIds);
+                            if (next.has(template.id)) {
+                              next.delete(template.id);
+                            } else {
+                              next.add(template.id);
                             }
-                            choose([...new Set([...desk.templateIds, ...ids])]);
+                            choose([...next]);
                           }}
                         />
-                        {folder.name}
+                        <TemplateNameWithParameters
+                          name={template.name}
+                          recipe={template.recipe}
+                          templateId={template.id}
+                          nameClassName=""
+                        />
                       </label>
-                      <ul className="mt-2 space-y-1 pl-6">
-                        {folder.templates.map((template) => (
-                          <StarterTemplateChoice
-                            key={template.id}
-                            desk={desk}
-                            template={template}
-                            onChoose={choose}
-                            onChange={onChange}
-                          />
-                        ))}
-                      </ul>
-                    </fieldset>
-                  );
-                })}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
+                      {details.mode}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
+                      {deskType}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2">
+                      <StarterInitialStatus
+                        desk={desk}
+                        templateId={template.id}
+                        templateName={template.name}
+                        onChange={onChange}
+                      />
+                    </td>
+                  </tr>
+                ));
+              });
+            })}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
@@ -1826,76 +1867,45 @@ function starterRecipe(folders: readonly StarterFolder[], templateId: string) {
   return null;
 }
 
-function StarterTemplateChoice({
+function StarterInitialStatus({
   desk,
-  template,
-  onChoose,
+  templateId,
+  templateName,
   onChange,
 }: {
   desk: SetupDesk;
-  template: StarterFolder["templates"][number];
-  onChoose: (templateIds: string[]) => void;
+  templateId: string;
+  templateName: string;
   onChange: (key: string, patch: Partial<SetupDesk>) => void;
 }) {
-  const verb = starterStartVerb(desk.deskType);
-  const selected = desk.templateIds.includes(template.id);
+  if (!starterStartVerb(desk.deskType)) {
+    return <span className="text-ink-faint">—</span>;
+  }
+  const selected = desk.templateIds.includes(templateId);
   const canStart = setupDeskCanStartBots(desk);
-  const armed = selected && desk.armTemplateIds.includes(template.id);
+  const armed = selected && desk.armTemplateIds.includes(templateId);
   return (
-    <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-      <label className="inline-flex items-center gap-2 text-sm text-ink">
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={() => {
-            const next = new Set(desk.templateIds);
-            if (next.has(template.id)) {
-              next.delete(template.id);
-            } else {
-              next.add(template.id);
-            }
-            onChoose([...next]);
-          }}
-        />
-        <TemplateNameWithParameters
-          name={template.name}
-          recipe={template.recipe}
-          templateId={template.id}
-          nameClassName=""
-        />
-      </label>
-      {verb ? (
-        <label
-          className={
-            selected && canStart
-              ? "inline-flex items-center gap-2 text-sm text-ink-muted"
-              : "inline-flex items-center gap-2 text-sm text-ink-faint"
-          }
-          title={
-            canStart
-              ? desk.deskType === "dca"
-                ? "Enable this bot when setup finishes. An immediate start can place the first order."
-                : "Enable this bot when setup finishes."
-              : "Bind a key before this bot can start."
-          }
-        >
-          <input
-            type="checkbox"
-            checked={armed}
-            disabled={!selected || !canStart}
-            onChange={() => {
-              const next = new Set(desk.armTemplateIds);
-              if (next.has(template.id)) {
-                next.delete(template.id);
-              } else {
-                next.add(template.id);
-              }
-              onChange(desk.key, { armTemplateIds: [...next] });
-            }}
-          />
-          {verb}
-        </label>
-      ) : null}
-    </li>
+    <input
+      type="checkbox"
+      aria-label={`Initial status for ${templateName}`}
+      checked={armed}
+      disabled={!selected || !canStart}
+      title={
+        canStart
+          ? desk.deskType === "dca"
+            ? "Start this bot when setup finishes. An immediate start can place the first order."
+            : "Start this bot when setup finishes."
+          : "Bind a key before this bot can start."
+      }
+      onChange={() => {
+        const next = new Set(desk.armTemplateIds);
+        if (next.has(templateId)) {
+          next.delete(templateId);
+        } else {
+          next.add(templateId);
+        }
+        onChange(desk.key, { armTemplateIds: [...next] });
+      }}
+    />
   );
 }
