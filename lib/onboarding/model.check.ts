@@ -28,6 +28,8 @@ import {
   applyDeskSetupChoice,
   botsEmptyNote,
   requiresSetupGate,
+  setupDeskFromDetails,
+  setupDeskReviewLine,
   setupScreenId,
   setupScreens,
   setupStepLabel,
@@ -120,6 +122,94 @@ assert.equal(connected.mode, "live");
 assert.equal(connected.bindLater, true);
 assert.equal(connected.environmentId, "live");
 assert.notEqual(paper.name.toLowerCase(), connected.name.toLowerCase());
+assert.equal(setupDeskReviewLine(paper), "Paper · Bybit");
+assert.equal(
+  setupDeskReviewLine(connected),
+  "Connected · Bybit · Live · Bind later",
+);
+assert.equal(
+  setupDeskReviewLine({
+    ...connected,
+    bindLater: false,
+    connectionId: "11111111-1111-4111-8111-111111111111",
+  }),
+  "Connected · Bybit · Live · Key saved",
+);
+const detailed = setupDeskFromDetails({
+  deskType: "dca",
+  mode: "paper",
+  name: "DCA Hyper",
+  venue: "hyperliquid",
+  environmentId: null,
+  bindLater: false,
+  connectionId: null,
+  takenNames: [],
+  previous: null,
+});
+assert.equal(detailed.ok, true);
+if (detailed.ok) {
+  assert.equal(detailed.desk.venue, "hyperliquid");
+  assert.equal(detailed.desk.key, "dca:paper");
+  assert.equal(detailed.desk.nameEdited, true);
+  assert.equal(detailed.desk.environmentId, null);
+}
+assert.equal(
+  setupDeskFromDetails({
+    deskType: "dca",
+    mode: "paper",
+    name: "DCA Hyper",
+    venue: "bybit",
+    environmentId: null,
+    bindLater: false,
+    connectionId: null,
+    takenNames: ["DCA Hyper"],
+    previous: null,
+  }).ok,
+  false,
+);
+assert.equal(
+  setupDeskFromDetails({
+    deskType: "cash_and_carry",
+    mode: "live",
+    name: "Carry",
+    venue: "hyperliquid",
+    environmentId: "live",
+    bindLater: true,
+    connectionId: null,
+    takenNames: [],
+    previous: null,
+  }).ok,
+  false,
+);
+const withKey = setupDeskFromDetails({
+  deskType: "dca",
+  mode: "live",
+  name: "DCA Bybit Demo",
+  venue: "bybit",
+  environmentId: "demo",
+  bindLater: false,
+  connectionId: "11111111-1111-4111-8111-111111111111",
+  takenNames: [],
+  previous: null,
+});
+assert.equal(withKey.ok, true);
+if (withKey.ok) {
+  assert.equal(withKey.desk.environmentId, "demo");
+  assert.equal(withKey.desk.bindLater, false);
+  assert.equal(withKey.desk.connectionId, "11111111-1111-4111-8111-111111111111");
+}
+const moved = setupDeskFromDetails({
+  deskType: "dca",
+  mode: "live",
+  name: "DCA Bybit Demo",
+  venue: "bybit",
+  environmentId: "live",
+  bindLater: false,
+  connectionId: "11111111-1111-4111-8111-111111111111",
+  takenNames: [],
+  previous: withKey.ok ? withKey.desk : null,
+});
+assert.equal(moved.ok, false);
 
 const named = validateSetupNames(
   [
@@ -233,12 +323,23 @@ assert.deepEqual(both.map((screen) => setupScreenId(screen)), [
   "intro:video",
   "desks:choice",
   "desks:desks",
-  "desks:exchanges",
   "bots:choice",
   "bots:" + connected.key,
   "bots:" + paper.key,
   "tour:tour",
 ]);
+const needsKey = { ...connected, bindLater: false, connectionId: null };
+assert.equal(
+  setupScreens({
+    desks: [needsKey],
+    folders: [],
+    deskChoice: "manual",
+    botChoice: null,
+  })
+    .map((screen) => setupScreenId(screen))
+    .includes("desks:exchanges"),
+  true,
+);
 assert.deepEqual(
   setupScreens({
     desks: [],
@@ -298,7 +399,17 @@ assert.equal(applyBotSetupChoice({
   folders: [dcaFolder],
 }).every((desk) => desk.templateIds.length === 0), true);
 assert.equal(
-  setupScreenId(activeSetupScreen(both, "desks:exchanges")),
+  setupScreenId(
+    activeSetupScreen(
+      setupScreens({
+        desks: [needsKey],
+        folders: [],
+        deskChoice: "manual",
+        botChoice: null,
+      }),
+      "desks:exchanges",
+    ),
+  ),
   "desks:exchanges",
 );
 assert.equal(

@@ -10,16 +10,19 @@ export function SetupModal({ children }: { children: ReactNode }) {
   const [host, setHost] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const node = host;
-    if (!node) {
+    if (!host) {
       return;
     }
+    const node = host;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     node.querySelector<HTMLElement>("[role='dialog']")?.focus();
 
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
+        if (node.querySelector("[data-setup-submodal]")) {
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
         return;
@@ -28,7 +31,8 @@ export function SetupModal({ children }: { children: ReactNode }) {
         return;
       }
       const items = [...node.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-        (element) => !element.hasAttribute("disabled"),
+        (element) =>
+          !element.hasAttribute("disabled") && element.closest("[inert]") == null,
       );
       if (items.length === 0) {
         event.preventDefault();
