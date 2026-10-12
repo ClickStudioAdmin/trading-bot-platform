@@ -357,7 +357,7 @@ export function BacktestRunsTable({
               className={`inline-flex items-center ${deskActionBtnClass}`}
             >
               <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
-                Create
+                Create New Backtest
               </BotButtonLead>
             </Link>
           ) : undefined
