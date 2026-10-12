@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { ModalHost } from "@/components/portal-host";
 import {
   formatAccountModeChoice,
   formatDeskType,
@@ -902,6 +903,7 @@ function CreateDeskDialog({
   );
   const [error, setError] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
   const paperVenues = paperVenuesFor(deskType);
   const liveVenues = connectedVenuesFor(deskType);
   const showMarket = mode === "paper" && paperVenues.length > 1;
@@ -916,12 +918,15 @@ function CreateDeskDialog({
       if (event.key !== "Escape") {
         return;
       }
+      if (host?.querySelector("[role='listbox']")) {
+        return;
+      }
       event.preventDefault();
       onClose();
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [host, onClose]);
 
   function suggestedName(
     nextMode: "paper" | "live",
@@ -1004,10 +1009,16 @@ function CreateDeskDialog({
 
   return (
     <div
+      ref={setHost}
       data-setup-submodal
       className="fixed inset-0 z-[90] flex items-center justify-center bg-canvas/70 p-4"
-      onClick={onClose}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
     >
+      <ModalHost host={host}>
       <div
         role="dialog"
         aria-modal="true"
@@ -1164,6 +1175,7 @@ function CreateDeskDialog({
           </button>
         </div>
       </div>
+      </ModalHost>
     </div>
   );
 }
