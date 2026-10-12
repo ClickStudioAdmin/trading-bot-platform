@@ -1196,6 +1196,27 @@ export function setupWizardResetPlan(input: {
   };
 }
 
+/** Create already wrote the desks. Closing setup must not claim or create again. */
+export function setupCloseSkipsCreate(input: {
+  status: OnboardingStatus | null;
+  readyForTour: boolean;
+}): boolean {
+  if (input.status === "skipped") {
+    return false;
+  }
+  if (input.status === "completed" || input.status === "finishing") {
+    return true;
+  }
+  return input.readyForTour;
+}
+
+/** Start the Tour now opens the tour. Not now, or a missing choice, does not. */
+export function tourAfterSetupClose(
+  choice: SetupTourChoice | null,
+): "in_progress" | "declined" {
+  return choice === "yes" ? "in_progress" : "declined";
+}
+
 export function requiresSetupGate(input: {
   platformMember: boolean;
   emailVerified: boolean;

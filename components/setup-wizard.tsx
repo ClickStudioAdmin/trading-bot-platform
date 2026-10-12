@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import { ModalHost } from "@/components/portal-host";
 import {
@@ -83,6 +84,19 @@ const WIZARD_ICON = { size: 14 as const, className: "size-3.5 shrink-0" };
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+
+function isActionRedirect(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+  if (
+    "digest" in error &&
+    String((error as { digest?: unknown }).digest).startsWith("NEXT_REDIRECT")
+  ) {
+    return true;
+  }
+  return error instanceof Error && error.message === "NEXT_REDIRECT";
+}
 
 function wizardActionError(error: unknown): string {
   const message =
@@ -168,6 +182,7 @@ export function SetupWizard({
   existingNames: string[];
   folders: StarterFolder[];
 }) {
+  const router = useRouter();
   const [desks, setDesks] = useState<SetupDesk[]>(initialDraft.desks);
   const [deskChoice, setDeskChoice] = useState<DeskSetupChoice | null>(
     initialDraft.deskChoice,
@@ -452,10 +467,16 @@ export function SetupWizard({
         const result = await finishSetup(
           JSON.stringify({ ...draft(), tourChoice }),
         );
-        if (result && !result.ok) {
+        if (!result.ok) {
           setError(result.error);
+          return;
         }
+        router.refresh();
       } catch (error) {
+        if (isActionRedirect(error)) {
+          router.refresh();
+          return;
+        }
         setError(wizardActionError(error));
       }
     });

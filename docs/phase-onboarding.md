@@ -132,7 +132,7 @@ This step opens after **Create**. The modal stays up and shows a table of each d
 
 **Not now** and **Start the Tour now** sit on the right of the footer, in the same place as Back and Create. **Not now** is the text button. **Start the Tour now** is the primary button.
 
-- **Start the Tour now** — Setup is marked completed and the tour starts on Overview. The tour includes the new desks and, when a starter bot was loaded, that desk’s Bots page.
+- **Start the Tour now** — Setup is marked completed and the wizard closes straight into the tour on Overview. It does not pass through another step or an error. The tour includes the new desks and, when a starter bot was loaded, that desk’s Bots page. A click here does not run Create again.
 - **Not now** — Setup is marked completed and lands on Overview, with the setup summary. The last desk created becomes the active desk.
 
 Back and Reset Wizard are not offered after the desks are written. There is no Skip setup. A retry does not create a second copy.
