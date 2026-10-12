@@ -51,6 +51,8 @@ type OverviewPlan = Pick<MembershipPlan, "features" | "caps"> &
   Partial<Pick<MembershipPlan, "trials">> &
   PlanAffiliateRates;
 
+const NOT_INCLUDED = "—";
+
 const COUNTED_CAPS = new Set<PlanCapKey>([
   "max_paper_desks",
   "max_demo_desks",
@@ -169,7 +171,7 @@ function overviewLine(
     return {
       key,
       label: row.label,
-      text: on ? "Included" : "Not included",
+      text: on ? "Included" : NOT_INCLUDED,
       included: on,
       over: false,
       note: null,
@@ -181,7 +183,7 @@ function overviewLine(
     return {
       key,
       label: row.label,
-      text: pct === 0 ? "Not included" : `${pct}%`,
+      text: pct === 0 ? NOT_INCLUDED : `${pct}%`,
       included: false,
       over: false,
       note: null,
@@ -237,7 +239,7 @@ function usageLine(
     return {
       key,
       label,
-      text: "Not included",
+      text: NOT_INCLUDED,
       included: false,
       over: false,
       note: null,
@@ -264,7 +266,7 @@ function usageLine(
       text: closed
         ? trial?.phase === "ended"
           ? "Trial ended"
-          : "Not included"
+          : NOT_INCLUDED
         : trial?.phase === "active"
           ? `${amount} · trial`
           : amount,
@@ -287,7 +289,7 @@ function usageLine(
     return {
       key,
       label,
-      text: trial?.phase === "ended" ? "Trial ended" : "Not included",
+      text: trial?.phase === "ended" ? "Trial ended" : NOT_INCLUDED,
       included: false,
       over: false,
       note: null,

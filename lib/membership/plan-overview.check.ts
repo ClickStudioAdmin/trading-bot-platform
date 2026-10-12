@@ -65,11 +65,11 @@ assert.equal(line(groups, "Manual Desk Types", "feature:desk_perps").included, t
 assert.equal(line(groups, "Manual Desk Types", "feature:desk_perps").text, "Included");
 assert.equal(
   line(groups, "Automated Desk Types", "feature:desk_cash_and_carry").text,
-  "Not included",
+  "—",
 );
 assert.equal(
   line(groups, "Replay Studio", "feature:replay_backtests").text,
-  "Not included",
+  "—",
 );
 assert.equal(
   line(groups, "Replay Studio", "feature:replay_chart_indicators").included,
@@ -77,7 +77,7 @@ assert.equal(
 );
 assert.equal(
   line(groups, "Replay Studio", "feature:replay_strategy_optimization").text,
-  "Not included",
+  "—",
 );
 
 assert.equal(
@@ -126,7 +126,7 @@ assert.equal(usageNearLimit(4, null), false);
 assert.equal(usageNearLimit(0, 0), false);
 assert.equal(line(groups, "Affiliates", "cap:affiliate_max_depth").text, "3");
 assert.equal(line(groups, "Affiliates", "rate:l1").text, "20%");
-assert.equal(line(groups, "Affiliates", "rate:l2").text, "Not included");
+assert.equal(line(groups, "Affiliates", "rate:l2").text, "—");
 
 assert.deepEqual(
   planDeskCounts([
@@ -159,14 +159,14 @@ const closed = overviewPlanGroups(
 );
 assert.equal(
   line(closed, "Maximum Desks (any type)", "cap:max_paper_desks").text,
-  "Not included",
+  "—",
 );
 assert.equal(
   line(closed, "Copy Trading", "cap:max_followers_accepted").text,
-  "Not included",
+  "—",
 );
 assert.equal(line(closed, "Copy Trading", "cap:max_followers_accepted").note, null);
-assert.equal(line(closed, "Backtesting", "cap:max_backtest_years").text, "Not included");
+assert.equal(line(closed, "Backtesting", "cap:max_backtest_years").text, "—");
 assert.ok(closed.find((group) => group.title === "Replay Studio"));
 assert.equal(closed.length, PLAN_COMPARE_SECTIONS.length);
 
