@@ -122,11 +122,11 @@ Apply runs when they click **Create** on Review, after the desks exist, through 
 
 ### 3. Review
 
-One page after Add Bots. A table lists each desk and the starter bots that will be loaded on it. A bot set to Armed or Active shows that word beside its name. A desk with no bots shows an em dash. No desks shows that nothing will be created. **Back** returns to Add Bots. **Create** writes the desks and bots.
+One page after Add Bots. A table lists each desk and the starter bots that will be loaded on it. A bot set to Armed or Active shows that word in the Initial Status column. A desk with no bots shows an em dash. No desks shows that nothing will be created. **Back** returns to Add Bots. **Create** writes the desks and bots.
 
 ### 4. Take a Tour
 
-This step opens after **Create**. The modal stays up and shows a table of each desk and the bots loaded on it. A bot set to Armed or Active shows that word beside its name. A desk with no starter bots shows an em dash. It does not ask the tour question on this screen. When a bot fails to load, or a ticked bot does not start, that error is listed on this step and the screen does not say the account is ready. A failure that stops the write stays on the current step, in the footer.
+This step opens after **Create**. The modal stays up and shows a table of each desk and the bots loaded on it. A bot set to Armed or Active shows that word in the Initial Status column. A desk with no starter bots shows an em dash. It does not ask the tour question on this screen. When a bot fails to load, or a ticked bot does not start, that error is listed on this step and the screen does not say the account is ready. A failure that stops the write stays on the current step, in the footer.
 
 **Not now** and **Start the Tour now** sit on the right of the footer, in the same place as Back and Create. **Not now** is the text button. **Start the Tour now** is the primary button.
 

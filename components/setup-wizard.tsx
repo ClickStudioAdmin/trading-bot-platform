@@ -822,29 +822,23 @@ function ReviewStep({
               <tr>
                 <th className="px-3 py-2 font-medium">Desk</th>
                 <th className="px-3 py-2 font-medium">Bots</th>
+                <th className="whitespace-nowrap px-3 py-2 font-medium">
+                  Initial Status
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.key} className="border-b border-line last:border-b-0">
                   <td className="px-3 py-2 align-top text-ink">{row.name}</td>
-                  <td className="px-3 py-2 align-top text-ink">
+                  <BotNameCell bots={row.bots} folders={folders} />
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
                     {row.bots.length === 0 ? (
                       <span className="text-ink-faint">—</span>
                     ) : (
                       <ul className="space-y-1">
                         {row.bots.map((bot) => (
-                          <li key={bot.templateId}>
-                            <TemplateNameWithParameters
-                              name={bot.name}
-                              recipe={starterRecipe(folders, bot.templateId)}
-                              templateId={bot.templateId}
-                              nameClassName=""
-                            />
-                            {bot.start ? (
-                              <span className="text-ink-muted"> · {bot.start}</span>
-                            ) : null}
-                          </li>
+                          <li key={bot.templateId}>{bot.start ?? "—"}</li>
                         ))}
                       </ul>
                     )}
@@ -914,38 +908,33 @@ function TourReady({
               <tr>
                 <th className="px-3 py-2 font-medium">Desk</th>
                 <th className="px-3 py-2 font-medium">Bots</th>
+                <th className="whitespace-nowrap px-3 py-2 font-medium">
+                  Initial Status
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => {
                 const desk = desks.find((item) => item.key === row.key);
+                const bots = row.bots.map((bot) => ({
+                  ...bot,
+                  start:
+                    desk && desk.armTemplateIds.includes(bot.templateId)
+                      ? starterStartedWord(desk.deskType)
+                      : null,
+                }));
                 return (
                 <tr key={row.key} className="border-b border-line last:border-b-0">
                   <td className="px-3 py-2 align-top text-ink">{row.name}</td>
-                  <td className="px-3 py-2 align-top text-ink">
-                    {row.bots.length === 0 ? (
+                  <BotNameCell bots={bots} folders={folders} />
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
+                    {bots.length === 0 ? (
                       <span className="text-ink-faint">—</span>
                     ) : (
                       <ul className="space-y-1">
-                        {row.bots.map((bot) => {
-                          const started =
-                            desk && desk.armTemplateIds.includes(bot.templateId)
-                              ? starterStartedWord(desk.deskType)
-                              : null;
-                          return (
-                            <li key={bot.templateId}>
-                              <TemplateNameWithParameters
-                                name={bot.name}
-                                recipe={starterRecipe(folders, bot.templateId)}
-                                templateId={bot.templateId}
-                                nameClassName=""
-                              />
-                              {started ? (
-                                <span className="text-ink-muted"> · {started}</span>
-                              ) : null}
-                            </li>
-                          );
-                        })}
+                        {bots.map((bot) => (
+                          <li key={bot.templateId}>{bot.start ?? "—"}</li>
+                        ))}
                       </ul>
                     )}
                   </td>
@@ -1024,6 +1013,35 @@ function ChoiceStep({
         })}
       </div>
     </section>
+  );
+}
+
+function BotNameCell({
+  bots,
+  folders,
+}: {
+  bots: { templateId: string; name: string }[];
+  folders: StarterFolder[];
+}) {
+  return (
+    <td className="px-3 py-2 align-top text-ink">
+      {bots.length === 0 ? (
+        <span className="text-ink-faint">—</span>
+      ) : (
+        <ul className="space-y-1">
+          {bots.map((bot) => (
+            <li key={bot.templateId}>
+              <TemplateNameWithParameters
+                name={bot.name}
+                recipe={starterRecipe(folders, bot.templateId)}
+                templateId={bot.templateId}
+                nameClassName=""
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+    </td>
   );
 }
 
