@@ -254,6 +254,7 @@ export function TableLabelButton({
   onClick,
   type = "button",
   disabled = false,
+  title,
   className = "",
 }: {
   icon: ReactNode;
@@ -263,20 +264,27 @@ export function TableLabelButton({
   onClick?: () => void;
   type?: "button" | "submit";
   disabled?: boolean;
+  title?: string;
   className?: string;
 }) {
   const mark = `${TABLE_LABEL_BTN_CLASS[variant]} ${className}`.trim();
   const leading = <LabelIcon>{icon}</LabelIcon>;
   if (href) {
     return (
-      <Link href={href} className={mark}>
+      <Link href={href} title={title} className={mark}>
         {leading}
         {children}
       </Link>
     );
   }
   return (
-    <button type={type} disabled={disabled} onClick={onClick} className={mark}>
+    <button
+      type={type}
+      disabled={disabled}
+      title={title}
+      onClick={onClick}
+      className={mark}
+    >
       {leading}
       {children}
     </button>
