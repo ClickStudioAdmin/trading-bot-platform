@@ -17,6 +17,7 @@ import {
   IconCheck,
   IconClose,
   IconDesks,
+  IconLoader,
   IconPencil,
   IconPlay,
   IconPlus,
@@ -730,7 +731,14 @@ export function SetupWizard({
             onClick={continueForward}
             className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
-            {screen.main === "review" ? <IconPlus {...WIZARD_ICON} /> : null}
+            {pending && next?.main === "tour" ? (
+              <IconLoader
+                {...WIZARD_ICON}
+                className="size-3.5 shrink-0 animate-spin"
+              />
+            ) : screen.main === "review" ? (
+              <IconPlus {...WIZARD_ICON} />
+            ) : null}
             {pending
               ? next?.main === "tour"
                 ? "Creating…"
