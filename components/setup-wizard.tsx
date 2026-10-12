@@ -381,7 +381,7 @@ export function SetupWizard({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {screen.main === "intro" ? null : (
-        <div className="shrink-0 border-b border-line px-5 py-4">
+        <div className="shrink-0 border-b border-line bg-surface-raised px-6 py-4">
           <h2
             id="setup-gate-title"
             className="text-lg font-semibold tracking-tight"
@@ -394,7 +394,7 @@ export function SetupWizard({
           <SetupProgress screen={screen} />
         </div>
       )}
-      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-4">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-6">
       {screen.main === "intro" ? (
         <IntroStep playing={playing} onWatch={() => setPlaying(true)} />
       ) : null}
@@ -523,7 +523,7 @@ export function SetupWizard({
         />
       ) : null}
       </div>
-      <div className="shrink-0 border-t border-line px-5 py-4">
+      <div className="shrink-0 border-t border-line bg-surface-raised px-6 py-4">
         {error ? (
           <p className="mb-3 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}
@@ -536,7 +536,7 @@ export function SetupWizard({
               type="button"
               disabled={pending}
               onClick={enterSetup}
-              className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+              className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
             >
               Skip
             </button>
@@ -563,7 +563,7 @@ export function SetupWizard({
               setError(null);
               setScreenId(setupScreenId(previous));
             }}
-            className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface hover:text-ink"
           >
             Back
           </button>
