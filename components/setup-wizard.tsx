@@ -549,14 +549,14 @@ export function SetupWizard({
           options={[
             {
               value: "all_paper",
-              title: "Create a Paper Trading desk for each strategy type",
+              title: "Add a Paper Trading desk for each strategy type",
               detail: "Quickest way to see all desk types in action.",
               icon: <IconDesks {...CHOICE_ICON} />,
             },
             {
               value: "manual",
               title: "Manually select desk types and modes",
-              detail: "Create each desk, then review the details before you continue.",
+              detail: "Add each desk, then review the details before you continue.",
               icon: <IconPencil {...CHOICE_ICON} />,
             },
             {
@@ -1121,7 +1121,7 @@ function DeskStep({
   return (
     <section>
       <h2 className="text-lg font-semibold tracking-tight">
-        Create a few desks now?
+        Add desks now?
       </h2>
       <ul className="mt-4 text-sm">
         {ONBOARDING_DESK_TYPES.map((deskType) => {
@@ -1138,7 +1138,7 @@ function DeskStep({
                   onClick={() => onCreate(deskType)}
                   className="shrink-0"
                 >
-                  Create Desk
+                  Add Desk
                 </TableLabelButton>
               </div>
               {added.length > 0 ? (
@@ -1379,7 +1379,7 @@ function CreateDeskDialog({
             <IconClose size={14} className="size-3.5" />
           </button>
           <h2 id="create-desk-title" className="pr-8 text-lg font-semibold text-ink">
-            {desk ? "Edit desk" : "Create desk"}
+            {desk ? "Edit desk" : "Add desk"}
           </h2>
           <p className="mt-1 pr-8 text-sm text-ink-muted">
             {formatDeskTypeChoice(deskType)}
