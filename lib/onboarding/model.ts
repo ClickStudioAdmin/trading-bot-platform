@@ -152,8 +152,43 @@ export function emptySetupDraft(): SetupDraft {
   };
 }
 
-export function setupDeskKey(deskType: DeskType, mode: "paper" | "live"): string {
-  return `${deskType}:${mode}`;
+export function setupDeskKey(
+  deskType: DeskType,
+  mode: "paper" | "live",
+  index = 1,
+): string {
+  return index <= 1 ? `${deskType}:${mode}` : `${deskType}:${mode}:${index}`;
+}
+
+export function allocateSetupDeskKey(
+  deskType: DeskType,
+  mode: "paper" | "live",
+  takenKeys: readonly string[],
+): string {
+  const taken = new Set(takenKeys);
+  for (let index = 1; index < 100; index += 1) {
+    const key = setupDeskKey(deskType, mode, index);
+    if (!taken.has(key)) {
+      return key;
+    }
+  }
+  return setupDeskKey(deskType, mode, 99);
+}
+
+function setupDeskKeyMatches(
+  key: string,
+  deskType: DeskType,
+  mode: "paper" | "live",
+): boolean {
+  if (key === setupDeskKey(deskType, mode)) {
+    return true;
+  }
+  const prefix = `${deskType}:${mode}:`;
+  if (!key.startsWith(prefix)) {
+    return false;
+  }
+  const index = Number(key.slice(prefix.length));
+  return Number.isInteger(index) && index >= 2 && index <= 99 && String(index) === key.slice(prefix.length);
 }
 
 export function deskSupportsStarterBots(deskType: DeskType): boolean {
@@ -307,6 +342,7 @@ export function setupDeskFromDetails(input: {
   bindLater: boolean;
   connectionId: string | null;
   takenNames: readonly string[];
+  takenKeys?: readonly string[];
   previous?: SetupDesk | null;
 }): { ok: true; desk: SetupDesk } | { ok: false; error: string } {
   const named = validateNewDeskName(input.name, [...input.takenNames]);
@@ -351,7 +387,12 @@ export function setupDeskFromDetails(input: {
       error: "Save a trade-only key, or bind it later.",
     };
   }
-  const key = setupDeskKey(input.deskType, input.mode);
+  const key =
+    previous &&
+    previous.deskType === input.deskType &&
+    previous.mode === input.mode
+      ? previous.key
+      : allocateSetupDeskKey(input.deskType, input.mode, input.takenKeys ?? []);
   return {
     ok: true,
     desk: {
@@ -431,17 +472,17 @@ export function parseSetupDraft(
   }
   const body = raw as Record<string, unknown>;
   const rows = Array.isArray(body.desks) ? body.desks : [];
-  if (rows.length > 10) {
-    return { ok: false, error: "Choose at most one desk per type and mode." };
+  if (rows.length > 40) {
+    return { ok: false, error: "Add fewer desks in this setup." };
   }
   const desks: SetupDesk[] = [];
   for (const row of rows) {
-    const parsed = parseSetupDesk(row);
+    const parsed = parseSetupDesk(
+      row,
+      desks.map((desk) => desk.key),
+    );
     if (!parsed.ok) {
       return parsed;
-    }
-    if (desks.some((desk) => desk.key === parsed.desk.key)) {
-      return { ok: false, error: "Each type and mode can be chosen once." };
     }
     desks.push(parsed.desk);
   }
@@ -483,6 +524,7 @@ function parseBotSetupChoice(value: unknown): BotSetupChoice | null {
 
 function parseSetupDesk(
   raw: unknown,
+  takenKeys: readonly string[],
 ): { ok: true; desk: SetupDesk } | { ok: false; error: string } {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return { ok: false, error: "Choose a desk type." };
@@ -528,10 +570,16 @@ function parseSetupDesk(
   if (row.accountId && !accountId) {
     return { ok: false, error: "Setup could not be read." };
   }
+  const key =
+    typeof row.key === "string" &&
+    setupDeskKeyMatches(row.key, typed.deskType, mode) &&
+    !takenKeys.includes(row.key)
+      ? row.key
+      : allocateSetupDeskKey(typed.deskType, mode, takenKeys);
   return {
     ok: true,
     desk: {
-      key: setupDeskKey(typed.deskType, mode),
+      key,
       deskType: typed.deskType,
       mode,
       name: named.name,
@@ -679,12 +727,14 @@ export function starterBotDesks(
 ): SetupDesk[] {
   const rows: SetupDesk[] = [];
   for (const deskType of ONBOARDING_DESK_TYPES) {
+    if (foldersForDesk(folders, deskType).length === 0) {
+      continue;
+    }
     for (const mode of ["paper", "live"] as const) {
-      const desk = desks.find(
-        (row) => row.deskType === deskType && row.mode === mode,
-      );
-      if (desk && foldersForDesk(folders, desk.deskType).length > 0) {
-        rows.push(desk);
+      for (const desk of desks) {
+        if (desk.deskType === deskType && desk.mode === mode) {
+          rows.push(desk);
+        }
       }
     }
   }

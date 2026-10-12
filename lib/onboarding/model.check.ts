@@ -30,6 +30,7 @@ import {
   devAccountResetAllowed,
   devResetDeskOrder,
   requiresSetupGate,
+  allocateSetupDeskKey,
   setupDeskDetails,
   setupDeskFromDetails,
   setupScreenId,
@@ -179,6 +180,51 @@ assert.equal(detailed.ok, true);
 if (detailed.ok) {
   assert.equal(detailed.desk.venue, "hyperliquid");
   assert.equal(detailed.desk.key, "dca:paper");
+  const second = setupDeskFromDetails({
+    deskType: "dca",
+    mode: "paper",
+    name: "DCA Paper 2",
+    venue: "bybit",
+    environmentId: null,
+    bindLater: false,
+    connectionId: null,
+    takenNames: ["DCA Hyper"],
+    takenKeys: [detailed.desk.key],
+    previous: null,
+  });
+  assert.equal(second.ok, true);
+  if (second.ok) {
+    assert.equal(second.desk.key, "dca:paper:2");
+    assert.equal(
+      allocateSetupDeskKey("dca", "paper", [detailed.desk.key, second.desk.key]),
+      "dca:paper:3",
+    );
+  }
+  const repeated = parseSetupDraft({
+    desks: [
+      {
+        deskType: "dca",
+        mode: "paper",
+        name: "DCA Hyper",
+        venue: "hyperliquid",
+        key: "dca:paper",
+      },
+      {
+        deskType: "dca",
+        mode: "paper",
+        name: "DCA Paper 2",
+        venue: "bybit",
+        key: "dca:paper:2",
+      },
+    ],
+  });
+  assert.equal(repeated.ok, true);
+  if (repeated.ok) {
+    assert.deepEqual(
+      repeated.draft.desks.map((desk) => desk.key),
+      ["dca:paper", "dca:paper:2"],
+    );
+  }
   assert.equal(detailed.desk.nameEdited, true);
   assert.equal(detailed.desk.environmentId, null);
 }

@@ -29,7 +29,7 @@ There is no Skip setup. The member goes through Add Desks, Add Bots, and Take a 
 | --- | --- | --- |
 | 1 | Entry | A modal over the signed-in app. Header, sidenav, and page links do not work until the tour step is finished. Other app routes redirect to Overview, where the modal stays open. Affiliate-only logins never see it. `/account/setup` redirects to Overview. |
 | 2 | Who | Verified platform member whose setup is not skipped or completed. A member with desks and no setup row is left alone. Creating a desk outside the wizard marks setup skipped. A Finish retry that already created desks keeps the modal until setup is completed or skipped. |
-| 3 | Desk list | One row per desk type, with **Create Desk** beside the type. The button opens a sub-modal for the name, mode, market or exchange, environment, and key. One Paper desk and one Connected desk per type. No quantity field. Added desks appear in a table under that type, with columns for the name, mode, market, environment, and key, before Continue. More desks come later from Manage desks. |
+| 3 | Desk list | One row per desk type, with **Create Desk** beside the type. The button opens a sub-modal for the name, mode, market or exchange, environment, and key. Several desks of one type are allowed, including more than one Paper desk and more than one Connected desk. No quantity field. Added desks appear in a table under that type, with columns for the name, mode, market, environment, and key, before Continue. The plan desk cap is the limit once item 6 gates exist. |
 | 4 | Demo vs Live | Not a third column. Connected is `mode = live`. Demo vs Live is the key’s venue environment, chosen on the exchange step. Display mode stays Paper / Demo / Live as today. |
 | 5 | When rows are written | Desk names and details stay a draft until **Finish**. API secrets are never stored in that draft. A key the member saves in the create modal, or on the exchange step, is written immediately through the existing connection action (verify, trade-only, encrypt). The draft keeps the connection id only. |
 | 6 | Keys | Same rules as Exchanges and create desk. Trade-only, no withdrawal permission. Server verifies. Browser never sees the secret again. One connection binds one desk. **Bind later** is allowed per connected desk. |
@@ -59,7 +59,7 @@ One row per type that exists today, in the same order as the account sidebar (au
 The sub-modal asks for the details, then closes back to the list:
 
 - Name, default `{Type} Paper` or `{Type} {Venue}`, max 40 characters, unique on the login (and unique inside the draft). Same validator as Manage desks.
-- Mode: Paper or Connected. One of each per type. The mode already added is disabled.
+- Mode: Paper or Connected. Another desk of the same mode can be added. The suggested name stays unique.
 - Paper on a type with more than one market (not Cash and Carry) shows **Market data** (Bybit or Hyperliquid). Default Bybit. Cash and Carry paper stays Bybit.
 - Connected shows **Exchange** and **Environment** (Live or Demo / Testnet). Connected Cash and Carry is Bybit only. Then **Bind later** or **Add a trade-only key**. A key is checked and encrypted before the desk is added. The secret is not stored in the draft.
 - **Add desk** closes the modal. That desk appears in a table under its type. Columns are name, mode, market, environment, and key. Paper leaves environment and key blank. The pencil **Edit** reopens the modal. The trash **Remove** drops that desk.
