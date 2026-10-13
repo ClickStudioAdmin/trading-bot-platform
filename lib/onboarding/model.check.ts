@@ -47,6 +47,7 @@ import {
   setupStepLabel,
   shouldOfferTour,
   showsBotStep,
+  starterArmIdsAfterSelection,
   setupInitialStatusChoices,
   starterStatusWord,
   starterStartVerb,
@@ -636,6 +637,8 @@ const withBots = applyBotSetupChoice({
   folders: [dcaFolder, perpsFolder],
 });
 assert.deepEqual(withBots[0]?.templateIds, [dcaFolder.templates[0].id]);
+assert.deepEqual(withBots[0]?.armTemplateIds, [dcaFolder.templates[0].id]);
+assert.deepEqual(withBots[1]?.armTemplateIds, []);
 assert.equal(applyBotSetupChoice({
   choice: "none",
   desks: withBots,
@@ -653,6 +656,41 @@ assert.deepEqual(
     desks: [armedPaper],
     folders: [dcaFolder],
   })[0]?.armTemplateIds,
+  [armId],
+);
+assert.deepEqual(
+  applyBotSetupChoice({
+    choice: "all",
+    desks: [{ ...armedPaper, mode: "live", connectionId: null }],
+    folders: [dcaFolder],
+  })[0]?.armTemplateIds,
+  [],
+);
+assert.deepEqual(
+  starterArmIdsAfterSelection(
+    { ...paper, templateIds: [], armTemplateIds: [] },
+    [armId],
+  ),
+  [armId],
+);
+assert.deepEqual(
+  starterArmIdsAfterSelection(
+    { ...paper, templateIds: [armId], armTemplateIds: [] },
+    [armId, "22222222-2222-4222-8222-222222222222"],
+  ),
+  ["22222222-2222-4222-8222-222222222222"],
+);
+assert.deepEqual(
+  starterArmIdsAfterSelection(
+    {
+      ...paper,
+      mode: "live",
+      connectionId: null,
+      templateIds: [],
+      armTemplateIds: [],
+    },
+    [armId],
+  ),
   [],
 );
 assert.deepEqual(
