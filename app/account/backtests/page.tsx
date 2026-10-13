@@ -41,12 +41,21 @@ export default async function AccountBacktestsPage({
   const isAdmin = memberIsAdmin(member);
   let runs: Awaited<ReturnType<typeof listBacktestRuns>> = [];
   try {
-    runs = await listBacktestRuns({
-      userId: member.id,
-      standaloneOnly: true,
-      primaryOnly: true,
-      limit: 2000,
-    });
+    const [primaries, children] = await Promise.all([
+      listBacktestRuns({
+        userId: member.id,
+        standaloneOnly: true,
+        primaryOnly: true,
+        limit: 2000,
+      }),
+      listBacktestRuns({
+        userId: member.id,
+        standaloneOnly: true,
+        childrenOnly: true,
+        limit: 2000,
+      }),
+    ]);
+    runs = [...primaries, ...children];
   } catch {
     runs = [];
   }
@@ -67,6 +76,7 @@ export default async function AccountBacktestsPage({
         isAdmin={isAdmin}
         returnTo={backtestSavedListHref()}
         createHref={backtestNewHref()}
+        nestChildren
         empty="No backtests yet. Create one to replay a desk bot or a library template."
       />
     </main>

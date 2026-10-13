@@ -12,6 +12,7 @@ import {
 } from "@/components/bot-form-chrome";
 import {
   IconClose,
+  IconCornerDownRight,
   IconFilterClear,
   IconPlay,
   IconPlus,
@@ -45,9 +46,13 @@ import {
   backtestSavedListHref,
   backtestWindowDays,
   canDeleteBacktestRun,
+  filterSavedBacktestFamilies,
   formatBacktestReturnPct,
+  savedBacktestFamilies,
   type BacktestRun,
   type BacktestStatus,
+  type SavedBacktestChildRole,
+  type SavedBacktestFamily,
 } from "@/lib/backtest/model";
 import { formatCount, signedTone } from "@/lib/opportunities/format";
 import {
@@ -181,6 +186,7 @@ export function BacktestRunsTable({
   watchRunId,
   empty = "No runs yet.",
   createHref,
+  nestChildren = false,
 }: {
   runs: BacktestRun[];
   memberId: string;
@@ -194,6 +200,8 @@ export function BacktestRunsTable({
   empty?: ReactNode;
   /** List page only. Comparables and variations omit it. */
   createHref?: string;
+  /** Saved list. Comparables and variations render under the parent. */
+  nestChildren?: boolean;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -203,12 +211,12 @@ export function BacktestRunsTable({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const { confirm, dialog } = useConfirmDialog();
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return runs.filter((row) => {
+  const matchesRun = useCallback(
+    (row: BacktestRun) => {
       if (status !== "all" && row.status !== status) {
         return false;
       }
+      const needle = query.trim().toLowerCase();
       if (!needle) {
         return true;
       }
@@ -221,8 +229,28 @@ export function BacktestRunsTable({
         .join(" ")
         .toLowerCase();
       return hay.includes(needle);
-    });
-  }, [query, runs, status, titleMode]);
+    },
+    [query, status, titleMode],
+  );
+  const filteredFamilies = useMemo(() => {
+    if (!nestChildren) {
+      return [] as SavedBacktestFamily[];
+    }
+    return filterSavedBacktestFamilies(savedBacktestFamilies(runs), matchesRun);
+  }, [matchesRun, nestChildren, runs]);
+  const familyByHead = useMemo(() => {
+    const map = new Map<string, SavedBacktestFamily>();
+    for (const family of filteredFamilies) {
+      map.set(family.head.id, family);
+    }
+    return map;
+  }, [filteredFamilies]);
+  const filtered = useMemo(() => {
+    if (nestChildren) {
+      return filteredFamilies.map((family) => family.head);
+    }
+    return runs.filter(matchesRun);
+  }, [filteredFamilies, matchesRun, nestChildren, runs]);
   const compare = useCallback(
     (left: BacktestRun, right: BacktestRun, key: string, dir: TableSortDir) => {
       if (key === "name") {
@@ -237,12 +265,30 @@ export function BacktestRunsTable({
     [titleMode],
   );
   const table = useClientTable(filtered, compare, { defaultKey: "name" });
-  const removableIds = table.pageRows
-    .filter((row) => canDeleteBacktestRun(row, memberId, isAdmin))
-    .map((row) => row.id);
-  const listedRemovableIds = filtered
-    .filter((row) => canDeleteBacktestRun(row, memberId, isAdmin))
-    .map((row) => row.id);
+  const rowsUnder = useCallback(
+    (head: BacktestRun) => {
+      if (!nestChildren) {
+        return [{ row: head, childRole: null as SavedBacktestChildRole | null }];
+      }
+      const family = familyByHead.get(head.id);
+      return [
+        { row: head, childRole: null as SavedBacktestChildRole | null },
+        ...(family?.children ?? []).map((child) => ({
+          row: child.run,
+          childRole: child.role,
+        })),
+      ];
+    },
+    [familyByHead, nestChildren],
+  );
+  const pageEntries = table.pageRows.flatMap(rowsUnder);
+  const listedEntries = filtered.flatMap(rowsUnder);
+  const removableIds = pageEntries
+    .filter((entry) => canDeleteBacktestRun(entry.row, memberId, isAdmin))
+    .map((entry) => entry.row.id);
+  const listedRemovableIds = listedEntries
+    .filter((entry) => canDeleteBacktestRun(entry.row, memberId, isAdmin))
+    .map((entry) => entry.row.id);
   const allSelected =
     removableIds.length > 0 && removableIds.every((id) => selected.has(id));
   const selectedCount = [...selected].filter((id) =>
@@ -503,19 +549,20 @@ export function BacktestRunsTable({
                 </td>
               </tr>
             ) : (
-              table.pageRows.map((row) => (
+              pageEntries.map((entry) => (
                 <BacktestRunRow
-                  key={row.id}
-                  row={row}
+                  key={entry.row.id}
+                  row={entry.row}
                   memberId={memberId}
                   isAdmin={isAdmin}
-                  isPrimary={row.id === primaryRunId}
+                  isPrimary={entry.row.id === primaryRunId}
                   primaryBadge={primaryBadge}
                   childBadge={childBadge}
+                  childRole={entry.childRole}
                   titleMode={titleMode}
                   returnTo={returnTo}
-                  selected={selected.has(row.id)}
-                  onToggle={() => toggleRow(row.id)}
+                  selected={selected.has(entry.row.id)}
+                  onToggle={() => toggleRow(entry.row.id)}
                 />
               ))
             )}
@@ -533,6 +580,7 @@ function BacktestRunRow({
   isPrimary,
   primaryBadge,
   childBadge,
+  childRole,
   titleMode,
   returnTo,
   selected,
@@ -544,6 +592,7 @@ function BacktestRunRow({
   isPrimary: boolean;
   primaryBadge: string;
   childBadge?: string;
+  childRole: SavedBacktestChildRole | null;
   titleMode: "family" | "recipe";
   returnTo: string;
   selected: boolean;
@@ -568,8 +617,18 @@ function BacktestRunRow({
         row.toMs,
       )
     : null;
+  const childLabel =
+    childRole === "comparable"
+      ? "Comparable"
+      : childRole === "variation"
+        ? "Variation"
+        : null;
   return (
-    <tr className="border-b border-line last:border-b-0">
+    <tr
+      className={`border-b border-line last:border-b-0 ${
+        childRole ? "bg-canvas" : ""
+      }`}
+    >
       <td className="px-4 py-3">
         {canRemove ? (
           <AppCheck
@@ -581,11 +640,22 @@ function BacktestRunRow({
         ) : null}
       </td>
       <td className="px-4 py-3">
-        <span className="inline-flex flex-wrap items-center gap-2">
+        <span
+          className={`inline-flex flex-wrap items-center gap-2 ${
+            childRole ? "pl-4" : ""
+          }`}
+        >
+          {childRole ? (
+            <IconCornerDownRight className="size-3.5 shrink-0 text-ink-faint" />
+          ) : null}
           <Link href={href} className="text-accent hover:underline">
             {title}
           </Link>
-          {isPrimary ? (
+          {childLabel ? (
+            <span className="rounded-control bg-surface-raised px-1.5 py-0.5 text-[11px] font-medium text-ink-muted">
+              {childLabel}
+            </span>
+          ) : isPrimary ? (
             <span className="rounded-control bg-accent/15 px-1.5 py-0.5 text-[11px] font-medium text-accent">
               {primaryBadge}
             </span>
