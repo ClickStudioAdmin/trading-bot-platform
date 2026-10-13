@@ -47,14 +47,21 @@ assert.deepEqual(
     { mode: "paper", venue: "bybit", venueEnvironment: null },
     null,
   ),
-  { exchange: "Bybit", venue: null, environment: "Paper" },
+  { exchange: "Bybit", connection: null, environment: "Paper" },
 );
 assert.deepEqual(
   deskExchangeView(
     { mode: "live", venue: "bybit", venueEnvironment: "demo" },
     { label: "Main Demo Account", venue: "bybit", environment: "demo" },
   ),
-  { exchange: "Main Demo Account", venue: "Bybit", environment: "Demo" },
+  { exchange: "Bybit", connection: "Main Demo Account", environment: "Demo" },
+);
+assert.deepEqual(
+  deskExchangeView(
+    { mode: "live", venue: "bybit", venueEnvironment: "demo" },
+    { label: "Bybit", venue: "bybit", environment: "demo" },
+  ),
+  { exchange: "Bybit", connection: null, environment: "Demo" },
 );
 assert.deepEqual(
   deskExchangeView(
@@ -66,8 +73,8 @@ assert.deepEqual(
     },
   ),
   {
-    exchange: "Hyper - Test Agent",
-    venue: "Hyperliquid",
+    exchange: "Hyperliquid",
+    connection: "Hyper - Test Agent",
     environment: "Hyperliquid Testnet (demo)",
   },
 );
@@ -76,7 +83,7 @@ assert.deepEqual(
     { mode: "live", venue: "bybit", venueEnvironment: "demo" },
     null,
   ),
-  { exchange: null, venue: null, environment: "Demo" },
+  { exchange: null, connection: null, environment: "Demo" },
 );
 
 function account(
@@ -163,8 +170,8 @@ const manual = row(
 const rows = [cloud, paper, manual];
 
 assert.equal(cloud.status, "active");
-assert.equal(cloud.exchange, "Main Demo Account");
-assert.equal(cloud.venue, "Bybit");
+assert.equal(cloud.exchange, "Bybit");
+assert.equal(cloud.connection, "Main Demo Account");
 assert.equal(cloud.environment, "Demo");
 assert.deepEqual(cloud.detailLines, [
   "1 Open position",
@@ -197,9 +204,9 @@ assert.deepEqual(
 assert.deepEqual(
   filterDeskList(rows, {
     ...EMPTY_DESK_LIST_FILTERS,
-    exchange: "Main Demo Account",
+    exchange: "Bybit",
   }).map((item) => item.account.id),
-  ["cloud"],
+  ["cloud", "paper"],
 );
 assert.deepEqual(
   filterDeskList(rows, { ...EMPTY_DESK_LIST_FILTERS, environment: "Paper" }).map(
@@ -233,17 +240,19 @@ assert.equal(
 );
 
 assert.deepEqual(deskListFilterChoices(rows).types, ["dca", "perps"]);
-assert.deepEqual(deskListFilterChoices(rows).exchanges, [
-  "—",
-  "Bybit",
-  "Main Demo Account",
-]);
+assert.deepEqual(deskListFilterChoices(rows).exchanges, ["—", "Bybit"]);
 assert.deepEqual(deskListFilterChoices(rows).environments, ["—", "Demo", "Paper"]);
 
 assert.ok(
   compareDeskList(cloud, paper, "details", "asc") > 0,
   "more open positions sort after fewer when ascending",
 );
+assert.ok(
+  compareDeskList(cloud, paper, "exchange", "asc") > 0,
+  "the same exchange sorts by connection name",
+);
+assert.equal(paper.exchange, "Bybit");
+assert.equal(paper.connection, null);
 assert.ok(compareDeskList(paper, manual, "status", "asc") < 0);
 
 console.log("desk-list.check: ok");
