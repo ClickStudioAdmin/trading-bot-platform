@@ -676,7 +676,6 @@ function ApplyFromLibraryButton({
 type PickerItem = {
   templateId: string;
   name: string;
-  preview: string;
   recipe: TemplateRecipe | null;
 };
 
@@ -698,7 +697,6 @@ function asPickerFolder(
     items: folder.items.map((item) => ({
       templateId: item.templateId,
       name: item.name,
-      preview: item.preview,
       recipe: recipes.get(item.templateId) ?? null,
     })),
     folders: [],
@@ -711,13 +709,6 @@ function templatesAsItems(rows: TemplateSummary[]): PickerItem[] {
     templateId: row.id,
     name: row.name,
     recipe: row.recipe,
-    preview: [
-      row.preview,
-      row.sharedByEmail ? `Shared by ${row.sharedByEmail}` : "",
-      row.description ?? "",
-    ]
-      .filter(Boolean)
-      .join(" · "),
   }));
 }
 
@@ -870,7 +861,7 @@ function FolderNode({
           ))}
           {folder.items.map((item) => (
             <li key={`${folder.id}-${item.templateId}`}>
-              <label className="flex items-start gap-2 text-sm text-ink">
+              <label className="flex items-center gap-2 text-sm text-ink">
                 <AppCheck
                   checked={selectedIds.has(item.templateId)}
                   onChange={() => onToggleTemplate(item.templateId)}
@@ -881,9 +872,6 @@ function FolderNode({
                     recipe={item.recipe}
                     templateId={item.templateId}
                   />
-                  <span className="block text-sm text-ink">
-                    {item.preview}
-                  </span>
                 </span>
               </label>
             </li>
