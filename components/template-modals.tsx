@@ -641,12 +641,12 @@ function ApplyFromLibraryButton({
         className={deskActionBtnClass}
       >
         <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
-          Create New Bot from Template
+          Create Bot from Template
         </BotButtonLead>
       </button>
       {open ? (
         <Modal
-          title="Create New Bot from Template"
+          title="Create Bot from Template"
           onClose={() => setOpen(false)}
           wide
           sticky={
