@@ -312,8 +312,8 @@ function DeskRow({
         {row.exchange ? (
           <>
             <p>{row.exchange}</p>
-            {row.venue ? (
-              <p className="mt-1 text-hint text-ink-muted">{row.venue}</p>
+            {row.connection ? (
+              <p className="mt-1 text-hint text-ink-muted">{row.connection}</p>
             ) : null}
           </>
         ) : (

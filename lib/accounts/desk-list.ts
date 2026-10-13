@@ -46,7 +46,7 @@ export type DeskListRow = {
   blocks: readonly AccountDeleteBlock[];
   status: DeskListStatus;
   exchange: string | null;
-  venue: string | null;
+  connection: string | null;
   environment: string | null;
   detailLines: readonly [string, string, string];
 };
@@ -126,10 +126,10 @@ export function boundDeskConnection<T extends { id: string }>(
 export function deskExchangeView(
   account: Pick<TradingAccount, "mode" | "venue" | "venueEnvironment">,
   connection: Pick<ExchangeConnection, "label" | "venue" | "environment"> | null,
-): { exchange: string | null; venue: string | null; environment: string | null } {
+): { exchange: string | null; connection: string | null; environment: string | null } {
   const venueId = connection?.venue || account.venue;
   const environmentId = connection?.environment || account.venueEnvironment;
-  const venueLabel = venueId ? formatVenueLabel(venueId) : "";
+  const exchange = venueId ? formatVenueLabel(venueId) : "";
   const label = connection?.label?.trim() || "";
   const environment = environmentId
     ? formatEnvironmentLabel(venueId, environmentId)
@@ -137,11 +137,11 @@ export function deskExchangeView(
       ? "Paper"
       : null;
   if (account.mode === "live" && !connection) {
-    return { exchange: null, venue: null, environment };
+    return { exchange: null, connection: null, environment };
   }
   return {
-    exchange: label || venueLabel || null,
-    venue: label && venueLabel && label !== venueLabel ? venueLabel : null,
+    exchange: exchange || label || null,
+    connection: label && exchange && label !== exchange ? label : null,
     environment,
   };
 }
@@ -167,7 +167,7 @@ export function buildDeskListRow(
     blocks,
     status: deskListStatus(botsOn),
     exchange: place.exchange,
-    venue: place.venue,
+    connection: place.connection,
     environment: place.environment,
     detailLines: deskDetailLines({ openCount, botCount, workingCount }),
   };
@@ -267,7 +267,7 @@ export function compareDeskList(
         deskListOptionValue(right.exchange),
         dir,
       ) ||
-      compareTableText(left.venue ?? "", right.venue ?? "", dir)
+      compareTableText(left.connection ?? "", right.connection ?? "", dir)
     );
   }
   if (key === "environment") {
