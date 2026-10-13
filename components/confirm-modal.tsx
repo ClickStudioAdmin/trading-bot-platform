@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { AppCheck } from "@/components/app-check";
 import { Modal } from "@/components/template-modals";
+
+export type ConfirmCheckbox = {
+  label: string;
+  hint?: string;
+  /** Written by the dialog as the box is toggled. Start this false. */
+  checked: boolean;
+};
 
 export type ConfirmOptions = {
   title: string;
@@ -9,6 +17,7 @@ export type ConfirmOptions = {
   confirmLabel?: string;
   cancelLabel?: string;
   danger?: boolean;
+  checkbox?: ConfirmCheckbox;
 };
 
 type Pending = ConfirmOptions & {
@@ -29,10 +38,15 @@ export function ConfirmModal({
   confirmLabel = "Continue",
   cancelLabel = "Cancel",
   danger = false,
+  checkbox,
+  checked = false,
+  onCheckedChange,
   onConfirm,
   onCancel,
 }: ConfirmOptions & {
   open: boolean;
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -42,6 +56,22 @@ export function ConfirmModal({
   return (
     <Modal title={title} onClose={onCancel} elevated>
       <p className="mt-2 text-sm text-ink-muted">{message}</p>
+      {checkbox ? (
+        <label className="mt-4 flex items-start gap-2 text-sm text-ink">
+          <AppCheck
+            checked={checked}
+            onChange={(event) => onCheckedChange?.(event.target.checked)}
+          />
+          <span>
+            {checkbox.label}
+            {checkbox.hint ? (
+              <span className="mt-1 block text-hint text-ink-muted">
+                {checkbox.hint}
+              </span>
+            ) : null}
+          </span>
+        </label>
+      ) : null}
       <div className="mt-5 flex justify-end gap-2">
         <button
           type="button"
@@ -66,13 +96,23 @@ export function ConfirmModal({
 
 export function useConfirmDialog() {
   const [pending, setPending] = useState<Pending | null>(null);
+  const [checked, setChecked] = useState(false);
   const pendingRef = useRef<Pending | null>(null);
 
   const close = useCallback((ok: boolean) => {
     const current = pendingRef.current;
     pendingRef.current = null;
     setPending(null);
+    setChecked(false);
     current?.resolve(ok);
+  }, []);
+
+  const onCheckedChange = useCallback((next: boolean) => {
+    setChecked(next);
+    const current = pendingRef.current;
+    if (current?.checkbox) {
+      current.checkbox.checked = next;
+    }
   }, []);
 
   const confirm = useCallback((options: ConfirmOptions) => {
@@ -80,8 +120,12 @@ export function useConfirmDialog() {
       if (pendingRef.current) {
         pendingRef.current.resolve(false);
       }
+      if (options.checkbox) {
+        options.checkbox.checked = false;
+      }
       const next = { ...options, resolve };
       pendingRef.current = next;
+      setChecked(false);
       setPending(next);
     });
   }, []);
@@ -94,6 +138,9 @@ export function useConfirmDialog() {
       confirmLabel={pending?.confirmLabel}
       cancelLabel={pending?.cancelLabel}
       danger={pending?.danger}
+      checkbox={pending?.checkbox}
+      checked={checked}
+      onCheckedChange={onCheckedChange}
       onConfirm={() => close(true)}
       onCancel={() => close(false)}
     />

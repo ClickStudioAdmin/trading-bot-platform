@@ -30,6 +30,7 @@ import {
   deleteSetShare,
   deleteTemplate,
   deleteTemplateSet,
+  loadTemplatesByIds,
   deleteTemplateShare,
   hasDirectTemplateShare,
   findMemberByEmail,
@@ -57,6 +58,7 @@ import {
   type AutomationTemplate,
   type AutomationTemplateSet,
 } from "./store";
+import { templateIdsDeletedWithFolder } from "./folder-delete";
 import {
   buildTemplateLibraryFile,
   parseShareEmail,
@@ -792,6 +794,7 @@ export async function bulkLibraryAction(
     return { ok: false, error: "Only admins can publish or unpublish." };
   }
   const notes: string[] = [];
+  const removedFolders: AutomationTemplateSet[] = [];
   let done = 0;
 
   if (kind === "template" && op === "add-to-folder") {
@@ -920,7 +923,16 @@ export async function bulkLibraryAction(
         notes.push(`Skipped “${folder.name}”: ${deleted.error}`);
         continue;
       }
+      removedFolders.push(folder);
       done += 1;
+    }
+    if (op === "delete" && formDeletesTemplates(formData) && removedFolders.length > 0) {
+      const removed = await deleteTemplatesInFolders({
+        folders: removedFolders,
+        actorId: auth.member.id,
+        isAdmin: auth.isAdmin,
+      });
+      notes.push(...removed.notes);
     }
   }
 
@@ -1276,6 +1288,65 @@ export async function updateTemplateSetAction(
   return { ok: true };
 }
 
+function formDeletesTemplates(formData: FormData): boolean {
+  return String(formData.get("deleteTemplates") ?? "").trim() === "1";
+}
+
+async function deleteTemplatesInFolders(input: {
+  folders: AutomationTemplateSet[];
+  actorId: string;
+  isAdmin: boolean;
+}): Promise<{ notes: string[] }> {
+  const notes: string[] = [];
+  const loaded = await loadTemplatesByIds(
+    input.folders.flatMap((folder) =>
+      folder.items.map((item) => item.templateId),
+    ),
+  );
+  const byId = new Map(loaded.map((template) => [template.id, template]));
+  const deleteIds = new Set<string>();
+  for (const folder of input.folders) {
+    const templates = folder.items
+      .map((item) => byId.get(item.templateId))
+      .filter((template): template is AutomationTemplate => Boolean(template));
+    for (const id of templateIdsDeletedWithFolder({
+      folderVisibility: folder.visibility,
+      folderUserId: folder.userId,
+      actorId: input.actorId,
+      isAdmin: input.isAdmin,
+      templates,
+    })) {
+      deleteIds.add(id);
+    }
+  }
+  let deletedCount = 0;
+  for (const id of deleteIds) {
+    const template = byId.get(id);
+    if (!template) {
+      continue;
+    }
+    const deleted = await deleteTemplate(id);
+    if (!deleted.ok) {
+      notes.push(`Kept “${template.name}”: ${deleted.error}`);
+      continue;
+    }
+    deletedCount += 1;
+    await writeEventLog({
+      scope: "strategy",
+      event: "template.deleted",
+      message: `Deleted template ${template.name}`,
+      userId: input.actorId,
+      data: { template_id: id, desk_type: template.deskType },
+    });
+  }
+  if (deletedCount > 0) {
+    notes.unshift(
+      `Deleted ${deletedCount} template${deletedCount === 1 ? "" : "s"}.`,
+    );
+  }
+  return { notes };
+}
+
 export async function deleteTemplateSetAction(
   formData: FormData,
 ): Promise<TemplateActionResult> {
@@ -1295,8 +1366,17 @@ export async function deleteTemplateSetAction(
   if (!deleted.ok) {
     return deleted;
   }
+  const notes = formDeletesTemplates(formData)
+    ? (
+        await deleteTemplatesInFolders({
+          folders: [set],
+          actorId: auth.member.id,
+          isAdmin: auth.isAdmin,
+        })
+      ).notes
+    : [];
   revalidateTemplateSurfaces();
-  return { ok: true };
+  return notes.length > 0 ? { ok: true, notes } : { ok: true };
 }
 
 export async function shareTemplateAction(
