@@ -36,15 +36,18 @@ import {
   TableFilterBar,
   TableFilterField,
   TableFilterSession,
+  TableHint,
   TableIconAction,
   TableLabelButton,
   TablePager,
+  useActionHint,
   useClientTable,
 } from "@/components/table-chrome";
 import { AppCheck } from "@/components/app-check";
 import { deleteBacktestRunsAction } from "@/lib/backtest/actions";
 import {
   backtestAprPct,
+  backtestNewHref,
   backtestRoePct,
   backtestRunTitle,
   backtestRunWasLiquidated,
@@ -53,6 +56,7 @@ import {
   canDeleteBacktestRun,
   filterSavedBacktestFamilies,
   formatBacktestReturnPct,
+  savedBacktestChildBadge,
   savedBacktestFamilies,
   savedBacktestListRows,
   type BacktestRun,
@@ -604,10 +608,12 @@ export function BacktestRunsTable({
               </tr>
             ) : (
               pageEntries.map((entry) => {
-                const childCount =
+                const childBadgeSummary =
                   entry.role == null
-                    ? (familyByHead.get(entry.run.id)?.children.length ?? 0)
-                    : 0;
+                    ? savedBacktestChildBadge(
+                        familyByHead.get(entry.run.id)?.children ?? [],
+                      )
+                    : null;
                 return (
                   <BacktestRunRow
                     key={entry.run.id}
@@ -618,13 +624,14 @@ export function BacktestRunsTable({
                     primaryBadge={primaryBadge}
                     childBadge={childBadge}
                     childRole={entry.role}
+                    childSummary={childBadgeSummary}
                     familyExpanded={
-                      childCount > 0
+                      childBadgeSummary
                         ? !collapsedFamilies.has(entry.run.id)
                         : null
                     }
                     onToggleFamily={
-                      childCount > 0
+                      childBadgeSummary
                         ? () => toggleFamily(entry.run.id)
                         : undefined
                     }
@@ -651,6 +658,7 @@ function BacktestRunRow({
   primaryBadge,
   childBadge,
   childRole,
+  childSummary,
   familyExpanded,
   onToggleFamily,
   titleMode,
@@ -665,6 +673,7 @@ function BacktestRunRow({
   primaryBadge: string;
   childBadge?: string;
   childRole: SavedBacktestChildRole | null;
+  childSummary: { total: number; label: string } | null;
   /** Null when this row has no children. */
   familyExpanded: boolean | null;
   onToggleFamily?: () => void;
@@ -673,7 +682,15 @@ function BacktestRunRow({
   selected: boolean;
   onToggle: () => void;
 }) {
-  const href = `/account/backtests/${row.id}`;
+  const href =
+    row.status === "draft"
+      ? backtestNewHref({
+          draft: row.id,
+          venue: row.venue,
+          env: row.venueEnvironment,
+        })
+      : `/account/backtests/${row.id}`;
+  const childHint = useActionHint();
   const title = backtestListTitle(row, titleMode);
   const days = backtestWindowDays(row.fromMs, row.toMs);
   const canRemove = canDeleteBacktestRun(row, memberId, isAdmin);
@@ -738,6 +755,25 @@ function BacktestRunRow({
                 <IconChevronRight className="size-3.5" />
               )}
             </button>
+          ) : null}
+          {childSummary ? (
+            <>
+              <button
+                type="button"
+                className="rounded-control bg-surface-raised px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-ink-muted hover:text-ink"
+                aria-expanded={familyExpanded ?? undefined}
+                aria-label={`${childSummary.label}. ${
+                  familyExpanded
+                    ? `Hide children of ${title}`
+                    : `Show children of ${title}`
+                }`}
+                onClick={onToggleFamily}
+                {...childHint.tip}
+              >
+                {childSummary.total}
+              </button>
+              <TableHint box={childHint.box} label={childSummary.label} detail="" />
+            </>
           ) : null}
           {childRole ? (
             <IconCornerDownRight className="size-3.5 shrink-0 text-ink-faint" />
