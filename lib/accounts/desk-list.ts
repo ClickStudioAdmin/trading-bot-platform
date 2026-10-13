@@ -88,8 +88,8 @@ export function deskDetailLines(input: {
   workingCount: number;
 }): readonly [string, string, string] {
   return [
-    countLine(input.openCount, "Open position", "Open positions"),
     countLine(input.botCount, "Bot", "Bots"),
+    countLine(input.openCount, "Open position", "Open positions"),
     countLine(input.workingCount, "Open order", "Open orders"),
   ];
 }
@@ -279,8 +279,8 @@ export function compareDeskList(
   }
   if (key === "details") {
     return (
-      compareTableNum(left.openCount, right.openCount, dir) ||
       compareTableNum(left.botCount, right.botCount, dir) ||
+      compareTableNum(left.openCount, right.openCount, dir) ||
       compareTableNum(left.workingCount, right.workingCount, dir)
     );
   }

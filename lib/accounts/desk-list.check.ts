@@ -22,18 +22,18 @@ assert.equal(dcaLegStatusesOn("closing", "idle"), false);
 assert.equal(dcaLegStatusesOn("idle", "idle"), false);
 
 assert.deepEqual(deskDetailLines({ openCount: 0, botCount: 0, workingCount: 0 }), [
-  "0 Open positions",
   "0 Bots",
+  "0 Open positions",
   "0 Open orders",
 ]);
 assert.deepEqual(deskDetailLines({ openCount: 1, botCount: 1, workingCount: 1 }), [
-  "1 Open position",
   "1 Bot",
+  "1 Open position",
   "1 Open order",
 ]);
 assert.deepEqual(deskDetailLines({ openCount: 2, botCount: 488, workingCount: 3 }), [
-  "2 Open positions",
   "488 Bots",
+  "2 Open positions",
   "3 Open orders",
 ]);
 
@@ -167,8 +167,8 @@ assert.equal(cloud.exchange, "Main Demo Account");
 assert.equal(cloud.venue, "Bybit");
 assert.equal(cloud.environment, "Demo");
 assert.deepEqual(cloud.detailLines, [
-  "1 Open position",
   "488 Bots",
+  "1 Open position",
   "2 Open orders",
 ]);
 assert.equal(paper.environment, "Paper");
@@ -242,7 +242,35 @@ assert.deepEqual(deskListFilterChoices(rows).environments, ["—", "Demo", "Pape
 
 assert.ok(
   compareDeskList(cloud, paper, "details", "asc") > 0,
-  "more open positions sort after fewer when ascending",
+  "more bots sort after fewer when ascending",
+);
+const fewerBots = row(
+  account({ id: "fewer", name: "Fewer", deskType: "dca", mode: "paper" }),
+  { botCount: 2, openCount: 5, workingCount: 9 },
+);
+const moreBots = row(
+  account({ id: "more", name: "More", deskType: "dca", mode: "paper" }),
+  { botCount: 10, openCount: 0, workingCount: 0 },
+);
+assert.ok(
+  compareDeskList(moreBots, fewerBots, "details", "asc") > 0,
+  "bot count sorts ahead of open positions",
+);
+const sameBotsMorePositions = row(
+  account({ id: "same-bots", name: "Same bots", deskType: "dca", mode: "paper" }),
+  { botCount: 10, openCount: 3, workingCount: 0 },
+);
+assert.ok(
+  compareDeskList(sameBotsMorePositions, moreBots, "details", "asc") > 0,
+  "equal bots sort by open positions",
+);
+const sameCountsMoreOrders = row(
+  account({ id: "orders", name: "Orders", deskType: "dca", mode: "paper" }),
+  { botCount: 10, openCount: 0, workingCount: 2 },
+);
+assert.ok(
+  compareDeskList(sameCountsMoreOrders, moreBots, "details", "asc") > 0,
+  "equal bots and positions sort by open orders",
 );
 assert.ok(compareDeskList(paper, manual, "status", "asc") < 0);
 
