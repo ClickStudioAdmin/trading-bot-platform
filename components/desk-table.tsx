@@ -322,7 +322,7 @@ function DeskRow({
       </td>
       <td className="px-4 py-3 pr-8 align-top text-ink-muted">
         {row.environment ? (
-          row.environment
+          <span title={row.environmentTitle ?? undefined}>{row.environment}</span>
         ) : (
           <span className="text-ink-faint">—</span>
         )}

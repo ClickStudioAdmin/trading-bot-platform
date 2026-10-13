@@ -48,6 +48,8 @@ export type DeskListRow = {
   exchange: string | null;
   venue: string | null;
   environment: string | null;
+  /** Venue-specific environment name, when it is longer than the column label. */
+  environmentTitle: string | null;
   detailLines: readonly [string, string, string];
 };
 
@@ -126,23 +128,51 @@ export function boundDeskConnection<T extends { id: string }>(
 export function deskExchangeView(
   account: Pick<TradingAccount, "mode" | "venue" | "venueEnvironment">,
   connection: Pick<ExchangeConnection, "label" | "venue" | "environment"> | null,
-): { exchange: string | null; venue: string | null; environment: string | null } {
+): {
+  exchange: string | null;
+  venue: string | null;
+  environment: string | null;
+  environmentTitle: string | null;
+} {
   const venueId = connection?.venue || account.venue;
   const environmentId = connection?.environment || account.venueEnvironment;
   const venueLabel = venueId ? formatVenueLabel(venueId) : "";
   const label = connection?.label?.trim() || "";
-  const environment = environmentId
-    ? formatEnvironmentLabel(venueId, environmentId)
-    : account.mode === "paper"
-      ? "Paper"
-      : null;
+  const place = deskEnvironmentNames(account.mode, venueId, environmentId);
   if (account.mode === "live" && !connection) {
-    return { exchange: null, venue: null, environment };
+    return { exchange: null, venue: null, ...place };
   }
   return {
     exchange: label || venueLabel || null,
     venue: label && venueLabel && label !== venueLabel ? venueLabel : null,
+    ...place,
+  };
+}
+
+/** Column label is Demo, Live, or Paper. Hover keeps a longer venue name. */
+function deskEnvironmentNames(
+  mode: TradingAccount["mode"],
+  venueId: string,
+  environmentId: string | null,
+): { environment: string | null; environmentTitle: string | null } {
+  const id = String(environmentId ?? "").trim();
+  if (!id) {
+    return {
+      environment: mode === "paper" ? "Paper" : null,
+      environmentTitle: null,
+    };
+  }
+  const full = formatEnvironmentLabel(venueId, id).replace(/ \(demo\)$/i, "");
+  const key = id.toLowerCase();
+  const environment =
+    key === "demo" || key === "testnet"
+      ? "Demo"
+      : key === "live" || key === "mainnet" || key === "production"
+        ? "Live"
+        : full;
+  return {
     environment,
+    environmentTitle: full === environment ? null : full,
   };
 }
 
@@ -169,6 +199,7 @@ export function buildDeskListRow(
     exchange: place.exchange,
     venue: place.venue,
     environment: place.environment,
+    environmentTitle: place.environmentTitle,
     detailLines: deskDetailLines({ openCount, botCount, workingCount }),
   };
 }
