@@ -854,6 +854,8 @@ function ReviewStep({
             <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
               <tr>
                 <th className="px-3 py-2 font-medium">Desk</th>
+                <th className="whitespace-nowrap px-3 py-2 font-medium">Type</th>
+                <th className="whitespace-nowrap px-3 py-2 font-medium">Mode</th>
                 <th className="px-3 py-2 font-medium">Bots</th>
                 <th className="whitespace-nowrap px-3 py-2 font-medium">
                   Initial Status
@@ -861,9 +863,18 @@ function ReviewStep({
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {rows.map((row) => {
+                const desk = desks.find((item) => item.key === row.key);
+                const details = desk ? setupDeskDetails(desk) : null;
+                return (
                 <tr key={row.key} className="border-b border-line last:border-b-0">
                   <td className="px-3 py-2 align-top text-ink">{row.name}</td>
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
+                    {desk ? formatDeskType(desk.deskType) : "—"}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
+                    {details?.mode ?? "—"}
+                  </td>
                   <BotNameCell bots={row.bots} folders={folders} />
                   <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
                     {row.bots.length === 0 ? (
@@ -877,7 +888,8 @@ function ReviewStep({
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -953,6 +965,8 @@ function ReadySummary({
             <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
               <tr>
                 <th className="px-3 py-2 font-medium">Desk</th>
+                <th className="whitespace-nowrap px-3 py-2 font-medium">Type</th>
+                <th className="whitespace-nowrap px-3 py-2 font-medium">Mode</th>
                 <th className="px-3 py-2 font-medium">Bots</th>
                 <th className="whitespace-nowrap px-3 py-2 font-medium">
                   Initial Status
@@ -974,6 +988,12 @@ function ReadySummary({
                 return (
                 <tr key={row.key} className="border-b border-line last:border-b-0">
                   <td className="px-3 py-2 align-top text-ink">{row.name}</td>
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
+                    {desk ? formatDeskType(desk.deskType) : "—"}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
+                    {desk ? setupDeskDetails(desk).mode : "—"}
+                  </td>
                   <BotNameCell bots={bots} folders={folders} />
                   <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
                     {bots.length === 0 ? (

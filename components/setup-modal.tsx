@@ -67,7 +67,7 @@ export function SetupModal({ children }: { children: ReactNode }) {
           aria-modal="true"
           aria-labelledby="setup-gate-title"
           tabIndex={-1}
-          className="flex max-h-[min(90dvh,52rem)] w-full max-w-[calc(80rem*2/3)] flex-col overflow-hidden rounded-card border border-line bg-surface outline-none"
+          className="flex max-h-[min(90dvh,52rem)] w-full max-w-[calc(80rem*3/4)] flex-col overflow-hidden rounded-card border border-line bg-surface outline-none"
         >
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {children}
