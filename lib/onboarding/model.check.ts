@@ -437,6 +437,26 @@ assert.deepEqual(
   ],
 );
 assert.deepEqual(
+  readyDeskRows({
+    desks: [
+      {
+        ...carry,
+        accountId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        templateIds: [],
+      },
+      {
+        ...paper,
+        name: "DCA Paper",
+        accountId: createdDeskId,
+        templateIds: [starterId],
+      },
+    ],
+    folders: [folder({ id: "dca-pack", deskType: "dca" })],
+    applied: [`${createdDeskId}:${starterId}`],
+  }).map((row) => row.name),
+  ["DCA Paper", carry.name],
+);
+assert.deepEqual(
   createdStarterBots({
     desks: [
       {
@@ -757,6 +777,22 @@ assert.deepEqual(
     },
     { key: reviewCarry.key, name: reviewCarry.name, bots: [] },
   ],
+);
+const reviewPerps = makeSetupDesk({
+  deskType: "perps",
+  mode: "paper",
+  takenNames: ["DCA Paper", reviewCarry.name],
+});
+assert.deepEqual(
+  setupReviewRows({
+    desks: [
+      reviewPerps,
+      { ...paper, name: "DCA Paper", templateIds: [armId], armTemplateIds: [armId] },
+      reviewCarry,
+    ],
+    folders: [folder({ id: "dca-pack", deskType: "dca" })],
+  }).map((row) => row.name),
+  ["DCA Paper", reviewPerps.name, reviewCarry.name],
 );
 assert.equal(
   setupReviewRows({

@@ -1103,7 +1103,7 @@ export function setupReviewRows(input: {
       }
     }
   }
-  return input.desks.map((desk) => {
+  const rows = input.desks.map((desk) => {
     const armed = new Set(desk.armTemplateIds);
     return {
       key: desk.key,
@@ -1115,6 +1115,10 @@ export function setupReviewRows(input: {
       })),
     };
   });
+  return [
+    ...rows.filter((row) => row.bots.length > 0),
+    ...rows.filter((row) => row.bots.length === 0),
+  ];
 }
 
 export function desksStillToCreate(desks: readonly SetupDesk[]): SetupDesk[] {
@@ -1165,13 +1169,17 @@ export function readyDeskRows(input: {
   applied: readonly string[];
 }): { key: string; name: string; bots: { templateId: string; name: string }[] }[] {
   const loaded = createdStarterBots(input);
-  return input.desks.map((desk) => ({
+  const rows = input.desks.map((desk) => ({
     key: desk.key,
     name: desk.name,
     bots: loaded
       .filter((bot) => bot.deskKey === desk.key)
       .map((bot) => ({ templateId: bot.templateId, name: bot.botName })),
   }));
+  return [
+    ...rows.filter((row) => row.bots.length > 0),
+    ...rows.filter((row) => row.bots.length === 0),
+  ];
 }
 
 export function applyKey(accountId: string, templateId: string): string {
