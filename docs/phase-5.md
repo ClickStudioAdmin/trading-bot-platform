@@ -15,7 +15,7 @@ Complete. Accepted after desk testing. Phase 7 is complete — [phase-7.md](phas
 - `trading_accounts` plus `account_id` on settings, rules, carries, orders, and event logs
 - Backfill one Demo Account (paper) per member
 - `tbp_account` cookie; account switch and manage link in the user menu
-- `/account` desk area with a left nav: Desk Overview, Settings, Manage sub-accounts (`/account/sub-accounts`); current book Overview (`/account/book`) and Exchanges. Desk Overview is login and books. Book Overview is positions, automations, and keys. Create, rename, and delete live on Manage sub-accounts. The last account cannot be deleted. Delete is blocked while the book has open or closing positions or automations are on
+- `/account` desk area with a left nav: Desk Overview, Settings, Manage sub-accounts (`/account/sub-accounts`); current book Overview (`/account/book`) and Exchanges. Desk Overview is login and books. Book Overview is positions, automations, and keys. Create, rename, disable, and delete live on Manage sub-accounts. Disable desk confirms, then turns every bot off, including a DCA bot that is already closing, and closes open positions (working orders cancel with that close). A listening DCA bot stays off after that close. It does not delete the desk or its history. The last account cannot be deleted. Delete is blocked while the book has open or closing positions or automations are on
 - Tick loops accounts. Paper uses the Phase 4 paper ledger. Live is skipped
 
 ## Runtime

@@ -210,6 +210,7 @@ export default async function FuturesAutomationsPage({
         ) : null}
         <div className="mt-6">
           <DcaPlaybooksDesk
+            key={session.account.id}
             playbooks={loadedPlaybooks}
             options={pairs}
             signalWebhooks={signalWebhooks}
@@ -345,6 +346,7 @@ export default async function FuturesAutomationsPage({
       ) : null}
       <div className="mt-6">
         <FuturesAutomationsDesk
+          key={session.account.id}
           rules={rules.map(futuresRuleToForm)}
           options={pairs}
           triggerWebhooks={triggerWebhooks}

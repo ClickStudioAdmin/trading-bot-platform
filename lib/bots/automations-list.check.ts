@@ -13,6 +13,7 @@ import {
   dcaListStatus,
   filterAutomationsBots,
   missingById,
+  rowsForDesk,
   futuresAutomationsBotBlotter,
   paperAutomationsBotBlotter,
   paperBotPair,
@@ -35,6 +36,44 @@ assert.deepEqual(
     (row) => row.id,
   ),
   ["b"],
+);
+
+assert.deepEqual(
+  rowsForDesk({
+    deskChanged: false,
+    current: [{ id: "cloud-1" }, { id: "cloud-2" }],
+    incoming: [{ id: "cloud-2" }, { id: "cloud-3" }],
+    id: (row) => row.id,
+  }).map((row) => row.id),
+  ["cloud-3", "cloud-1", "cloud-2"],
+);
+assert.deepEqual(
+  rowsForDesk({
+    deskChanged: true,
+    current: [{ id: "cloud-1" }, { id: "cloud-2" }],
+    incoming: [{ id: "hyper-1" }],
+    id: (row) => row.id,
+  }).map((row) => row.id),
+  ["hyper-1"],
+);
+assert.deepEqual(
+  rowsForDesk({
+    deskChanged: true,
+    current: [{ id: "cloud-1" }],
+    incoming: [],
+    id: (row) => row.id,
+  }),
+  [],
+);
+const sameDesk = [{ id: "cloud-1" }];
+assert.equal(
+  rowsForDesk({
+    deskChanged: false,
+    current: sameDesk,
+    incoming: [{ id: "cloud-1" }],
+    id: (row) => row.id,
+  }),
+  sameDesk,
 );
 
 assert.equal(botModeLabel("cnc", "reduce_only"), "Reduce only");
