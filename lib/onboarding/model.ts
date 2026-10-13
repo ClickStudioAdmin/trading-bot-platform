@@ -1093,6 +1093,8 @@ export function setupReviewRows(input: {
 }): {
   key: string;
   name: string;
+  deskType: DeskType | null;
+  mode: string | null;
   bots: { templateId: string; name: string; start: string | null }[];
 }[] {
   const names = new Map<string, string>();
@@ -1108,6 +1110,8 @@ export function setupReviewRows(input: {
     return {
       key: desk.key,
       name: desk.name,
+      deskType: desk.deskType,
+      mode: setupDeskDetails(desk).mode,
       bots: desk.templateIds.map((templateId) => ({
         templateId,
         name: names.get(templateId) ?? "Starter bot",
@@ -1115,9 +1119,23 @@ export function setupReviewRows(input: {
       })),
     };
   });
+  const present = new Set(input.desks.map((desk) => desk.deskType));
+  const missing =
+    input.desks.length === 0
+      ? []
+      : ONBOARDING_DESK_TYPES.filter((deskType) => !present.has(deskType)).map(
+          (deskType) => ({
+            key: `type:${deskType}`,
+            name: "—",
+            deskType,
+            mode: null,
+            bots: [],
+          }),
+        );
   return [
     ...rows.filter((row) => row.bots.length > 0),
     ...rows.filter((row) => row.bots.length === 0),
+    ...missing,
   ];
 }
 

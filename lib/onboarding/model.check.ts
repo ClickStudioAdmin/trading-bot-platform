@@ -773,11 +773,29 @@ assert.deepEqual(
     {
       key: paper.key,
       name: "DCA Paper",
+      deskType: "dca",
+      mode: "Paper",
       bots: [{ templateId: armId, name: "BTC", start: "Active" }],
     },
-    { key: reviewCarry.key, name: reviewCarry.name, bots: [] },
+    {
+      key: reviewCarry.key,
+      name: reviewCarry.name,
+      deskType: "cash_and_carry",
+      mode: "Paper",
+      bots: [],
+    },
+    { key: "type:perps_bots", name: "—", deskType: "perps_bots", mode: null, bots: [] },
+    {
+      key: "type:signal_follower",
+      name: "—",
+      deskType: "signal_follower",
+      mode: null,
+      bots: [],
+    },
+    { key: "type:perps", name: "—", deskType: "perps", mode: null, bots: [] },
   ],
 );
+assert.deepEqual(setupReviewRows({ desks: [], folders: [] }), []);
 const reviewPerps = makeSetupDesk({
   deskType: "perps",
   mode: "paper",
@@ -791,8 +809,14 @@ assert.deepEqual(
       reviewCarry,
     ],
     folders: [folder({ id: "dca-pack", deskType: "dca" })],
-  }).map((row) => row.name),
-  ["DCA Paper", reviewPerps.name, reviewCarry.name],
+  }).map((row) => row.key),
+  [
+    paper.key,
+    reviewPerps.key,
+    reviewCarry.key,
+    "type:perps_bots",
+    "type:signal_follower",
+  ],
 );
 assert.equal(
   setupReviewRows({
