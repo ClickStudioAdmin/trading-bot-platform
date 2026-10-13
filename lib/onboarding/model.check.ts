@@ -755,8 +755,14 @@ assert.deepEqual(
       name: "DCA Paper",
       bots: [{ templateId: armId, name: "BTC", start: "Active" }],
     },
-    { key: reviewCarry.key, name: reviewCarry.name, bots: [] },
   ],
+);
+assert.deepEqual(
+  setupReviewRows({
+    desks: [reviewCarry],
+    folders: [],
+  }),
+  [],
 );
 assert.equal(
   setupReviewRows({

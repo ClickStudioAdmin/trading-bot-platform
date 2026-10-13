@@ -1103,17 +1103,22 @@ export function setupReviewRows(input: {
       }
     }
   }
-  return input.desks.map((desk) => {
+  return input.desks.flatMap((desk) => {
+    if (desk.templateIds.length === 0) {
+      return [];
+    }
     const armed = new Set(desk.armTemplateIds);
-    return {
-      key: desk.key,
-      name: desk.name,
-      bots: desk.templateIds.map((templateId) => ({
-        templateId,
-        name: names.get(templateId) ?? "Starter bot",
-        start: starterStatusWord(desk.deskType, armed.has(templateId)),
-      })),
-    };
+    return [
+      {
+        key: desk.key,
+        name: desk.name,
+        bots: desk.templateIds.map((templateId) => ({
+          templateId,
+          name: names.get(templateId) ?? "Starter bot",
+          start: starterStatusWord(desk.deskType, armed.has(templateId)),
+        })),
+      },
+    ];
   });
 }
 

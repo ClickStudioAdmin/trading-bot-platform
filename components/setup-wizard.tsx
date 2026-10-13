@@ -842,13 +842,14 @@ function ReviewStep({
   return (
     <section>
       <h2 className="text-lg font-semibold tracking-tight">Review</h2>
-      {rows.length === 0 ? (
+      {desks.length === 0 ? (
         <p className="mt-2 text-sm text-ink-muted">No desks or bots will be created.</p>
       ) : (
         <>
           <p className="mt-2 text-sm text-ink-muted">
             These desks and bots are created when you click Create.
           </p>
+        {rows.length > 0 ? (
         <div className="mt-4 overflow-x-auto rounded-card border border-line">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
@@ -881,6 +882,7 @@ function ReviewStep({
             </tbody>
           </table>
         </div>
+        ) : null}
         </>
       )}
     </section>
