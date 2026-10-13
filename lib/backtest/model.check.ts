@@ -37,6 +37,8 @@ import {
   backtestVariantEdited,
   isBacktestComparableChild,
   splitBacktestFamily,
+  savedBacktestFamilies,
+  filterSavedBacktestFamilies,
   completedBacktestNotionalUsdt,
   backtestListEntryHref,
   backtestNewHref,
@@ -806,6 +808,85 @@ assert.deepEqual(
   family.variations.map((row) => row.id),
   ["var-123"],
 );
+
+const olderComparable = {
+  ...familyComparable,
+  id: "comp-old",
+  symbol: "XRPUSDT",
+  recipe: { ...familyRecipe, symbol: "XRPUSDT" },
+  createdAtMs: 10,
+} as import("./model").BacktestRun;
+const newerComparable = {
+  ...familyComparable,
+  id: "comp-new",
+  createdAtMs: 20,
+} as import("./model").BacktestRun;
+const datedVariation = {
+  ...familyVariation,
+  createdAtMs: 5,
+} as import("./model").BacktestRun;
+const grandchild = {
+  ...familyVariation,
+  id: "grand",
+  parentRunId: "var-123",
+  leverage: 3,
+  createdAtMs: 30,
+} as import("./model").BacktestRun;
+const orphanChild = {
+  ...familyVariation,
+  id: "orphan",
+  parentRunId: "missing-parent",
+  createdAtMs: 1,
+} as import("./model").BacktestRun;
+const otherPrimary = {
+  ...familyPrimary,
+  id: "other",
+  symbol: "BTCUSDT",
+  createdAtMs: 3,
+} as import("./model").BacktestRun;
+const savedFamilies = savedBacktestFamilies([
+  newerComparable,
+  datedVariation,
+  familyPrimary,
+  olderComparable,
+  grandchild,
+  orphanChild,
+  otherPrimary,
+]);
+assert.deepEqual(
+  savedFamilies.map((row) => row.head.id),
+  ["primary", "orphan", "other"],
+);
+assert.deepEqual(
+  savedFamilies[0]?.children.map((row) => [row.run.id, row.role]),
+  [
+    ["comp-old", "comparable"],
+    ["comp-new", "comparable"],
+    ["var-123", "variation"],
+    ["grand", "variation"],
+  ],
+);
+assert.deepEqual(savedFamilies[1]?.children, []);
+const childMatch = filterSavedBacktestFamilies(
+  savedFamilies,
+  (row) => row.id === "comp-new",
+);
+assert.deepEqual(
+  childMatch.map((row) => row.head.id),
+  ["primary"],
+);
+assert.deepEqual(
+  childMatch[0]?.children.map((row) => row.run.id),
+  ["comp-new"],
+);
+const parentMatch = filterSavedBacktestFamilies(
+  savedFamilies,
+  (row) => row.id === "primary",
+);
+assert.equal(parentMatch.length, 1);
+assert.deepEqual(parentMatch[0]?.children, []);
+const noneMatch = filterSavedBacktestFamilies(savedFamilies, () => false);
+assert.deepEqual(noneMatch, []);
 
 const variantOrigin = {
   name: "October ETH",

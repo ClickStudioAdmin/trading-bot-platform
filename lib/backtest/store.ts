@@ -438,6 +438,7 @@ export async function listBacktestRuns(input: {
   publishedOnly?: boolean;
   standaloneOnly?: boolean;
   primaryOnly?: boolean;
+  childrenOnly?: boolean;
   parentRunId?: string;
   studyId?: string;
   limit?: number;
@@ -463,6 +464,9 @@ export async function listBacktestRuns(input: {
   if (input.primaryOnly) {
     query = query.is("parent_run_id", null);
   }
+  if (input.childrenOnly) {
+    query = query.not("parent_run_id", "is", null);
+  }
   if (input.parentRunId) {
     query = query.eq("parent_run_id", input.parentRunId);
   }
@@ -476,7 +480,14 @@ export async function listBacktestRuns(input: {
         .filter((row): row is BacktestRun => Boolean(row))
     : [];
   if (error || rows.length === 0) {
-    if (error && (input.standaloneOnly || input.primaryOnly || input.studyId || input.parentRunId)) {
+    if (
+      error &&
+      (input.standaloneOnly ||
+        input.primaryOnly ||
+        input.childrenOnly ||
+        input.studyId ||
+        input.parentRunId)
+    ) {
       const fallback = await supabase
         .from("backtest_runs")
         .select("*")
@@ -499,6 +510,7 @@ function filterBacktestRuns(
     publishedOnly?: boolean;
     standaloneOnly?: boolean;
     primaryOnly?: boolean;
+    childrenOnly?: boolean;
     parentRunId?: string;
     studyId?: string;
   },
@@ -525,6 +537,9 @@ function filterBacktestRuns(
       return false;
     }
     if (input.primaryOnly && row.parentRunId) {
+      return false;
+    }
+    if (input.childrenOnly && !row.parentRunId) {
       return false;
     }
     if (row.status === "draft") {

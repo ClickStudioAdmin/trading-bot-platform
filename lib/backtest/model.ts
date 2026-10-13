@@ -331,6 +331,99 @@ export function splitBacktestFamily(
   return { comparables, variations };
 }
 
+export type SavedBacktestChildRole = "comparable" | "variation";
+
+export type SavedBacktestFamily = {
+  head: BacktestRun;
+  children: Array<{ run: BacktestRun; role: SavedBacktestChildRole }>;
+};
+
+function savedBacktestRoot(
+  row: BacktestRun,
+  byId: ReadonlyMap<string, BacktestRun>,
+): BacktestRun {
+  let current = row;
+  const seen = new Set<string>();
+  while (current.parentRunId && !seen.has(current.id)) {
+    seen.add(current.id);
+    const parent = byId.get(current.parentRunId);
+    if (!parent) {
+      break;
+    }
+    current = parent;
+  }
+  return current;
+}
+
+function savedBacktestChildRole(
+  primary: BacktestRun,
+  child: BacktestRun,
+): SavedBacktestChildRole {
+  const linked =
+    child.parentRunId === primary.id
+      ? child
+      : { ...child, parentRunId: primary.id };
+  return isBacktestComparableChild(primary, linked) ? "comparable" : "variation";
+}
+
+function compareSavedBacktestChildren(
+  left: { run: BacktestRun; role: SavedBacktestChildRole },
+  right: { run: BacktestRun; role: SavedBacktestChildRole },
+): number {
+  if (left.role !== right.role) {
+    return left.role === "comparable" ? -1 : 1;
+  }
+  return (
+    left.run.createdAtMs - right.run.createdAtMs ||
+    left.run.id.localeCompare(right.run.id)
+  );
+}
+
+/** Parents first. Comparables and variations sit under the loaded root, oldest first. A child whose parent is not in the set stays its own row. */
+export function savedBacktestFamilies(
+  runs: readonly BacktestRun[],
+): SavedBacktestFamily[] {
+  const byId = new Map(runs.map((row) => [row.id, row]));
+  const grouped = new Map<string, BacktestRun[]>();
+  const heads: BacktestRun[] = [];
+  const seenHeads = new Set<string>();
+  for (const row of runs) {
+    const root = savedBacktestRoot(row, byId);
+    if (root.id === row.id) {
+      if (!seenHeads.has(row.id)) {
+        seenHeads.add(row.id);
+        heads.push(row);
+      }
+      continue;
+    }
+    const list = grouped.get(root.id) ?? [];
+    list.push(row);
+    grouped.set(root.id, list);
+  }
+  return heads.map((head) => ({
+    head,
+    children: (grouped.get(head.id) ?? [])
+      .map((run) => ({ run, role: savedBacktestChildRole(head, run) }))
+      .sort(compareSavedBacktestChildren),
+  }));
+}
+
+/** Keep a parent when it matches, or when a child does. Children that miss the filter stay off the list. */
+export function filterSavedBacktestFamilies(
+  families: readonly SavedBacktestFamily[],
+  matches: (run: BacktestRun) => boolean,
+): SavedBacktestFamily[] {
+  const visible: SavedBacktestFamily[] = [];
+  for (const family of families) {
+    const children = family.children.filter((child) => matches(child.run));
+    if (!matches(family.head) && children.length === 0) {
+      continue;
+    }
+    visible.push({ head: family.head, children });
+  }
+  return visible;
+}
+
 export function backtestRerunHref(runId: string): string {
   return backtestNewHref({ rerun: runId }, "replay");
 }

@@ -20,6 +20,7 @@ import {
   CircleX,
   Compass,
   Copy,
+  CornerDownRight,
   Download,
   FileText,
   FilterX,
@@ -229,6 +230,13 @@ export const LUCIDE_ICONS = [
     lucide: "CircleOff",
     usedIn: "Table bulk disable",
     Icon: CircleOff,
+  },
+  {
+    id: "corner-down-right",
+    name: "Nested row",
+    lucide: "CornerDownRight",
+    usedIn: "Saved backtests, comparable and variation rows",
+    Icon: CornerDownRight,
   },
   {
     id: "copy",
@@ -694,6 +702,10 @@ export function IconChevronLeft(props: LucideProps) {
 
 export function IconChevronRight(props: LucideProps) {
   return <ChevronRight aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconCornerDownRight(props: LucideProps) {
+  return <CornerDownRight aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconChevronsUp(props: LucideProps) {
