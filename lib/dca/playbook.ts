@@ -5,7 +5,6 @@ import {
   parseFuturesQty,
   parseFuturesSide,
   parseFuturesSizeUnit,
-  parseFuturesSymbol,
   parseFuturesOrderType,
   type FuturesOrderType,
   type FuturesSide,
@@ -1956,11 +1955,12 @@ function parseLeg(
 
 export function parseDcaPlaybookRow(
   row: Record<string, unknown>,
+  venue?: string,
 ): DcaPlaybook | null {
   const id = String(row.id ?? "").trim();
   const userId = String(row.user_id ?? "").trim();
   const accountId = String(row.account_id ?? "").trim();
-  const symbol = parseFuturesSymbol(row.symbol);
+  const symbol = parseDeskFuturesSymbol(venue ?? "bybit", row.symbol);
   const direction =
     parseDcaDirection(row.direction) ?? parseFuturesSide(row.side);
   const sizeUnit = parseFuturesSizeUnit(row.size_unit);

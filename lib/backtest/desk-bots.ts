@@ -194,10 +194,10 @@ async function recipeForBot(
     return null;
   }
   if (parsed.kind === "dca") {
-    const playbook = parseDcaPlaybookRow(record);
+    const playbook = parseDcaPlaybookRow(record, desk.venue);
     return playbook ? botFromPlaybook(playbook, desk) : null;
   }
-  return botFromRule(parseFuturesAutomationRow(record), desk);
+  return botFromRule(parseFuturesAutomationRow(record, desk.venue), desk);
 }
 
 async function loadCandidateRecipes(
@@ -227,8 +227,8 @@ async function loadCandidateRecipes(
   }
   const bots: BacktestDeskBot[] = [];
   for (const row of playbooks) {
-    const playbook = parseDcaPlaybookRow(row);
-    const option = playbook ? desks.get(playbook.accountId) : undefined;
+    const option = desks.get(String(row.account_id ?? ""));
+    const playbook = option ? parseDcaPlaybookRow(row, option.venue) : null;
     if (!playbook || !option) {
       continue;
     }
@@ -240,7 +240,7 @@ async function loadCandidateRecipes(
   for (const row of rules) {
     const option = desks.get(String(row.account_id ?? ""));
     const bot = option
-      ? botFromRule(parseFuturesAutomationRow(row), option)
+      ? botFromRule(parseFuturesAutomationRow(row, option.venue), option)
       : null;
     if (bot && canQueueUserBacktest(bot.recipe).ok) {
       bots.push(bot);

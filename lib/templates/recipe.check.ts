@@ -187,6 +187,29 @@ assert.equal(parseTemplateRecipe({ name: "x" }, "dca", 1).ok, false);
 assert.equal(parseTemplateRecipe(snapshot, "dca", 2).ok, false);
 assert.equal(parseTemplateRecipe(snapshot, "perps", 1).ok, false);
 
+const hlCoin = { ...snapshot, symbol: "ETH" };
+const hlParsed = parseTemplateRecipe(hlCoin, "dca", 1, "hyperliquid");
+assert.equal(hlParsed.ok, true);
+if (hlParsed.ok && hlParsed.recipe.kind === "dca") {
+  assert.equal(hlParsed.recipe.symbol, "ETH");
+}
+const hlInferred = parseTemplateRecipe(hlCoin, "dca", 1);
+assert.equal(hlInferred.ok, true);
+if (hlInferred.ok && hlInferred.recipe.kind === "dca") {
+  assert.equal(hlInferred.recipe.symbol, "ETH");
+}
+assert.equal(parseTemplateRecipe(hlCoin, "dca", 1, "bybit").ok, false);
+const bybitParsed = parseTemplateRecipe(snapshot, "dca", 1, "bybit");
+assert.equal(bybitParsed.ok, true);
+if (bybitParsed.ok && bybitParsed.recipe.kind === "dca") {
+  assert.equal(bybitParsed.recipe.symbol, "ETHUSDT");
+}
+const hlFromPair = parseTemplateRecipe(snapshot, "dca", 1, "hyperliquid");
+assert.equal(hlFromPair.ok, true);
+if (hlFromPair.ok && hlFromPair.recipe.kind === "dca") {
+  assert.equal(hlFromPair.recipe.symbol, "ETH");
+}
+
 const perps = snapshotPerpsRecipe({
   name: "Buy dip",
   symbol: "BTCUSDT",
@@ -256,6 +279,21 @@ assert.equal(
 assert.equal("mode" in perps, false);
 assert.equal("webhookId" in perps, false);
 assert.equal(recipeHasRuntimeKeys(perps), false);
+const hlPerps = parseTemplateRecipe(
+  { ...perps, symbol: "ETH" },
+  "perps",
+  1,
+  "hyperliquid",
+);
+assert.equal(hlPerps.ok, true);
+if (hlPerps.ok && hlPerps.recipe.kind === "perps") {
+  assert.equal(hlPerps.recipe.symbol, "ETH");
+}
+assert.equal(
+  parseTemplateRecipe({ ...perps, symbol: "ETH" }, "perps", 1, "bybit").ok,
+  false,
+);
+assert.equal(parseTemplateRecipe(perps, "perps", 1, "bybit").ok, true);
 const perpsRule = perpsRecipeToRule(perps, { sortOrder: 3 });
 assert.equal(perpsRule.ok, true);
 if (perpsRule.ok) {

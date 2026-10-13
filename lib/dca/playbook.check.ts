@@ -1842,6 +1842,33 @@ const row = parseDcaPlaybookRow({
   long_last_clip_at: "2026-08-27T00:00:00.000Z",
   long_first_fill_price: "101",
 });
+const hlDeskRow = parseDcaPlaybookRow(
+  {
+    id: "pb-hl",
+    user_id: "user-1",
+    account_id: "acc-1",
+    name: "HL DCA",
+    symbol: "ETH",
+    direction: "long",
+    clip_size: "0.01",
+    size_unit: "qty",
+  },
+  "hyperliquid",
+);
+assert.equal(hlDeskRow?.symbol, "ETH");
+assert.equal(
+  parseDcaPlaybookRow({
+    id: "pb-hl",
+    user_id: "user-1",
+    account_id: "acc-1",
+    name: "HL DCA",
+    symbol: "ETH",
+    direction: "long",
+    clip_size: "0.01",
+    size_unit: "qty",
+  }),
+  null,
+);
 assert.equal(row?.name, "Desk DCA");
 assert.equal(row?.direction, "long");
 assert.equal(row?.long.clipsFilled, 2);

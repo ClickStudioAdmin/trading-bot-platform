@@ -657,6 +657,41 @@ assert.equal(
 );
 assert.equal(bothConfirmReplay.orders[0]?.side, "long");
 
+const hlForm = new FormData();
+hlForm.set("name", "HL coin");
+hlForm.set("symbol", "ETH");
+hlForm.set("direction", "long");
+hlForm.set("startKind", "immediate");
+hlForm.set("clipSize", "1");
+hlForm.set("sizeUnit", "qty");
+hlForm.set("takeProfitPct", "10");
+const hlParsed = parseDcaPlaybookForm(hlForm, "hyperliquid");
+assert.equal(hlParsed.ok, true);
+if (!hlParsed.ok) {
+  throw new Error("expected Hyperliquid DCA parse");
+}
+const hlRecipe = snapshotDcaRecipe(hlParsed.config);
+const hlBars = [
+  { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+  { timeMs: 2_000, open: 100, high: 101, low: 99, close: 100 },
+];
+const hlReplay = await replayDcaPlaybook({
+  bars: hlBars,
+  recipe: hlRecipe,
+  feeRate: 0,
+  startingUsdt: 10_000,
+  venue: "hyperliquid",
+});
+assert.equal(hlReplay.orders.length, 1);
+assert.equal(hlReplay.orders[0]?.action, "buy");
+const hlAsBybit = await replayDcaPlaybook({
+  bars: hlBars,
+  recipe: hlRecipe,
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(hlAsBybit.orders.length, 0);
+
 console.log("dca backtest replay checks passed");
 }
 

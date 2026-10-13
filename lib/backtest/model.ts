@@ -17,6 +17,7 @@ import {
   type DcaTemplateRecipe,
   type PerpsTemplateRecipe,
 } from "@/lib/templates/recipe";
+import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 
 export type BacktestRecipe = PerpsTemplateRecipe | DcaTemplateRecipe;
 export type BacktestDeskType = "perps" | "dca";
@@ -943,21 +944,34 @@ export async function yieldBacktestReplay(barIndex: number): Promise<void> {
   });
 }
 
+function normalizeBacktestContract(raw: string, venue?: string): string | null {
+  if (venue) {
+    const parsed = parseDeskFuturesSymbol(venue, raw);
+    return parsed.ok ? parsed.symbol : null;
+  }
+  const symbol = raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (symbol.length < 2 || symbol.length > 32) {
+    return null;
+  }
+  return symbol;
+}
+
 export function parseComparableSymbols(
   raw: unknown,
   primary: string,
+  venue?: string,
 ): string[] {
   const parts = Array.isArray(raw)
     ? raw.map((row) => String(row ?? ""))
     : String(raw ?? "").split(/[\s,]+/);
+  const primarySymbol =
+    normalizeBacktestContract(primary, venue) ??
+    primary.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
   const seen = new Set<string>();
   const rows: string[] = [];
   for (const part of parts) {
-    const symbol = part.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-    if (symbol.length < 2 || symbol.length > 32) {
-      continue;
-    }
-    if (symbol === primary || seen.has(symbol)) {
+    const symbol = normalizeBacktestContract(part, venue);
+    if (!symbol || symbol === primarySymbol || seen.has(symbol)) {
       continue;
     }
     seen.add(symbol);

@@ -14,6 +14,7 @@ import {
   parseBacktestFillReason,
   normalizeBacktestLeverage,
   parseFeePreset,
+  parseComparableSymbols,
   readBacktestName,
   type BacktestDeskType,
   type BacktestLinkHighlight,
@@ -105,8 +106,9 @@ function parseStats(raw: unknown): BacktestStats | null {
 function parseRecipe(
   raw: unknown,
   deskType: BacktestDeskType,
+  venue: string,
 ): BacktestRecipe | null {
-  const parsed = parseTemplateRecipe(raw, deskType, 1);
+  const parsed = parseTemplateRecipe(raw, deskType, 1, venue);
   if (!parsed.ok) {
     return null;
   }
@@ -123,7 +125,8 @@ export function parseBacktestRunRow(
   const interval = parseDcaIndicatorTimeframe(row.interval);
   const deskType: BacktestDeskType =
     row.desk_type === "dca" ? "dca" : "perps";
-  const recipe = parseRecipe(row.recipe, deskType);
+  const venue = String(row.venue ?? "bybit");
+  const recipe = parseRecipe(row.recipe, deskType, venue);
   if (!status || !interval || !recipe) {
     return null;
   }
@@ -136,11 +139,11 @@ export function parseBacktestRunRow(
       : null,
     studyId: row.study_id ? String(row.study_id) : null,
     deskType,
-    venue: String(row.venue ?? "bybit"),
+    venue,
     venueEnvironment: row.venue_environment
       ? String(row.venue_environment)
       : null,
-    symbol: String(row.symbol ?? recipe.symbol),
+    symbol: recipe.symbol,
     interval,
     fromMs: Number(row.from_ms) || 0,
     toMs: Number(row.to_ms) || 0,
@@ -157,7 +160,11 @@ export function parseBacktestRunRow(
     createdAtMs: asTime(row.created_at),
     finishedAtMs: row.finished_at ? asTime(row.finished_at) : null,
     parentRunId: row.parent_run_id ? String(row.parent_run_id) : null,
-    comparableSymbols: parseComparableSymbolList(row.comparable_symbols),
+    comparableSymbols: parseComparableSymbols(
+      parseComparableSymbolList(row.comparable_symbols),
+      recipe.symbol,
+      venue,
+    ),
     name: readBacktestName(row.name),
   };
 }
