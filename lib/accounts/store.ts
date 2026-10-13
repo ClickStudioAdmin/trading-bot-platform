@@ -10,6 +10,7 @@ import {
   type TradingAccountMode,
 } from "@/lib/accounts/model";
 import { memberDisplayName } from "@/lib/members/sync";
+import { dcaLegStatusesOn } from "@/lib/accounts/desk-list";
 import { countArmedRules } from "@/lib/accounts/overview";
 import { selectPaperEngineSettings } from "@/lib/engine/settings";
 import {
@@ -277,6 +278,9 @@ export type AccountUsage = {
   carryOpenCount: number;
   futuresOpenCount: number;
   workingCount: number;
+  /** Every saved bot, including ones that are off. */
+  botCount: number;
+  /** Armed rules, plus DCA playbooks with a leg armed or stop-adding. */
   botsOn: number;
   automationsRunning: boolean;
   reduceOnly: boolean;
@@ -296,6 +300,7 @@ export async function loadAccountUsage(
       carryOpenCount: 0,
       futuresOpenCount: 0,
       workingCount: 0,
+      botCount: 0,
       botsOn: 0,
       automationsRunning: false,
       reduceOnly: false,
@@ -340,11 +345,8 @@ export async function loadAccountUsage(
     listFuturesConnectionIds(supabase, accountIds),
     supabase
       .from("dca_playbooks")
-      .select("account_id")
-      .in("account_id", accountIds)
-      .or(
-        "long_status.in.(armed,stop_adding),short_status.in.(armed,stop_adding)",
-      ),
+      .select("account_id, long_status, short_status")
+      .in("account_id", accountIds),
   ]);
   const carryOpenCount = new Map<string, number>();
   const futuresOpenCount = new Map<string, number>();
@@ -383,12 +385,21 @@ export async function loadAccountUsage(
     pushRuleMode(row);
   }
   const dcaBotCount = new Map<string, number>();
+  const dcaBotsOn = new Map<string, number>();
   for (const row of dcaRows.data ?? []) {
-    const id = String((row as { account_id?: string }).account_id ?? "");
+    const typed = row as {
+      account_id?: string;
+      long_status?: string;
+      short_status?: string;
+    };
+    const id = String(typed.account_id ?? "");
     if (!id) {
       continue;
     }
     dcaBotCount.set(id, (dcaBotCount.get(id) ?? 0) + 1);
+    if (dcaLegStatusesOn(typed.long_status, typed.short_status)) {
+      dcaBotsOn.set(id, (dcaBotsOn.get(id) ?? 0) + 1);
+    }
   }
   const connectionByAccount = new Map<string, string>();
   for (const row of settings) {
@@ -403,9 +414,9 @@ export async function loadAccountUsage(
     const futures = futuresOpenCount.get(account.id) ?? 0;
     const working = workingCount.get(account.id) ?? 0;
     const opens = carries + futures;
-    const botsOn =
-      countArmedRules(ruleModes.get(account.id) ?? []) +
-      (dcaBotCount.get(account.id) ?? 0);
+    const rules = ruleModes.get(account.id) ?? [];
+    const botsOn = countArmedRules(rules) + (dcaBotsOn.get(account.id) ?? 0);
+    const botCount = rules.length + (dcaBotCount.get(account.id) ?? 0);
     const automationsRunning = botsOn > 0;
     const reduceOnly = reduceOnlyIds.has(account.id);
     usage.set(account.id, {
@@ -413,6 +424,7 @@ export async function loadAccountUsage(
       carryOpenCount: carries,
       futuresOpenCount: futures,
       workingCount: working,
+      botCount,
       botsOn,
       automationsRunning,
       reduceOnly,
