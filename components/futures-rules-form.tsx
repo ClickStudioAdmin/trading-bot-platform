@@ -109,7 +109,7 @@ import {
   automationsBotBlotterCells,
   botModeLabel,
   botPairBaseCoin,
-  missingById,
+  rowsForDesk,
   perpsBotPair,
   perpsBotSummary,
   type AutomationsBotBlotter,
@@ -170,7 +170,22 @@ export function FuturesAutomationsDesk({
   const [layers, setLayers] = useState(() => [...rules].reverse());
   const [extraLibrary, setExtraLibrary] = useState<BacktestLibraryItem[]>([]);
   const library = [...backtestLibrary, ...extraLibrary];
-  const savedLayers = layers.filter((layer) => layer.id);
+  const [deskId, setDeskId] = useState(accountId ?? "");
+  const deskChanged = (accountId ?? "") !== deskId;
+  const visibleLayers = rowsForDesk({
+    deskChanged,
+    current: layers,
+    incoming: [...rules].reverse(),
+    id: (layer) => layer.id,
+  });
+  if (deskChanged) {
+    setDeskId(accountId ?? "");
+    setLayers([...visibleLayers]);
+    setExtraLibrary([]);
+  } else if (visibleLayers !== layers) {
+    setLayers([...visibleLayers]);
+  }
+  const savedLayers = visibleLayers.filter((layer) => layer.id);
   const inUse = new Set(inUseRuleIds);
   const preferredSymbol = venueId === "hyperliquid" ? "BTC" : "BTCUSDT";
   const defaultSymbol =
@@ -195,24 +210,11 @@ export function FuturesAutomationsDesk({
     setDraftClone(clone);
     setDraft(nextDraft);
   }
-  const missingRules = missingById(
-    new Set(layers.flatMap((layer) => (layer.id ? [layer.id] : []))),
-    rules,
-  );
-  if (missingRules.length > 0) {
-    setLayers((current) => {
-      const seen = new Set(
-        current.flatMap((layer) => (layer.id ? [layer.id] : [])),
-      );
-      const fresh = missingById(seen, rules);
-      return fresh.length === 0 ? current : [...fresh, ...current];
-    });
-  }
   const formLayer =
     edit === AUTOMATIONS_NEW
       ? nextDraft
       : edit
-        ? layers.find((layer) => layer.id === edit) ?? null
+        ? visibleLayers.find((layer) => layer.id === edit) ?? null
         : null;
   const showForm = Boolean(formLayer);
 

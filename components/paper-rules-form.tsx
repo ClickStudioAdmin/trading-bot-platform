@@ -65,7 +65,7 @@ import { AppSelect } from "@/components/app-select";
 import {
   automationsBotBlotterCells,
   botModeLabel,
-  missingById,
+  rowsForDesk,
   paperBotPair,
   paperBotSummary,
   type AutomationsBotBlotter,
@@ -169,6 +169,7 @@ export function PaperRulesForm({
 }) {
   const router = useRouter();
   const [layers, setLayers] = useState(() => [...values.layers].reverse());
+  const [deskId, setDeskId] = useState(accountId ?? "");
   const [draft, setDraft] = useState(() =>
     edit === AUTOMATIONS_NEW
       ? resolvePaperDraft(values.layers, clone)
@@ -176,6 +177,21 @@ export function PaperRulesForm({
   );
   const [draftEdit, setDraftEdit] = useState(edit);
   const [draftClone, setDraftClone] = useState(clone);
+  const [inUseIds, setInUseIds] = useState(inUseRuleIds);
+  const deskChanged = (accountId ?? "") !== deskId;
+  const visibleLayers = rowsForDesk({
+    deskChanged,
+    current: layers,
+    incoming: [...values.layers].reverse(),
+    id: (layer) => layer.id,
+  });
+  if (deskChanged) {
+    setDeskId(accountId ?? "");
+    setLayers([...visibleLayers]);
+    setInUseIds(inUseRuleIds);
+  } else if (visibleLayers !== layers) {
+    setLayers([...visibleLayers]);
+  }
   const nextDraft =
     edit !== draftEdit || clone !== draftClone
       ? edit === AUTOMATIONS_NEW
@@ -187,28 +203,14 @@ export function PaperRulesForm({
     setDraftClone(clone);
     setDraft(nextDraft);
   }
-  const [inUseIds, setInUseIds] = useState(inUseRuleIds);
-  const missingLayers = missingById(
-    new Set(layers.flatMap((layer) => (layer.id ? [layer.id] : []))),
-    values.layers,
-  );
-  if (missingLayers.length > 0) {
-    setLayers((current) => {
-      const seen = new Set(
-        current.flatMap((layer) => (layer.id ? [layer.id] : [])),
-      );
-      const fresh = missingById(seen, values.layers);
-      return fresh.length === 0 ? current : [...fresh, ...current];
-    });
-  }
-  const inUse = new Set(inUseIds);
-  const savedLayers = layers.filter((layer) => layer.id);
+  const inUse = new Set(deskChanged ? inUseRuleIds : inUseIds);
+  const savedLayers = visibleLayers.filter((layer) => layer.id);
   const empty = savedLayers.length === 0;
   const formLayer =
     edit === AUTOMATIONS_NEW
       ? nextDraft
       : edit
-        ? layers.find((layer) => layer.id === edit) ?? null
+        ? visibleLayers.find((layer) => layer.id === edit) ?? null
         : null;
   const showForm = Boolean(formLayer);
 

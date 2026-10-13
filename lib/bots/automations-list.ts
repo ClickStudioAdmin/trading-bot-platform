@@ -137,6 +137,35 @@ export function missingById<T extends { id: string | null | undefined }>(
   return incoming.filter((row) => Boolean(row.id) && !currentIds.has(row.id!));
 }
 
+/**
+ * The bots list keeps local rows and prepends ones the server just added.
+ * A desk change replaces the list. The previous desk's bots must not stay on screen.
+ */
+export function rowsForDesk<T>(input: {
+  deskChanged: boolean;
+  current: readonly T[];
+  incoming: readonly T[];
+  id: (row: T) => string | null | undefined;
+}): readonly T[] {
+  if (input.deskChanged) {
+    return input.incoming;
+  }
+  const seen = new Set(
+    input.current.flatMap((row) => {
+      const id = input.id(row);
+      return id ? [id] : [];
+    }),
+  );
+  const fresh = missingById(
+    seen,
+    input.incoming.map((row) => ({ id: input.id(row), row })),
+  ).map((item) => item.row);
+  if (fresh.length === 0) {
+    return input.current;
+  }
+  return [...fresh, ...input.current];
+}
+
 export function filterAutomationsBots<
   T extends {
     name: string;
