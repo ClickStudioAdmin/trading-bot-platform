@@ -480,6 +480,7 @@ export async function listBacktestRuns(input: {
   childrenOnly?: boolean;
   parentRunId?: string;
   studyId?: string;
+  includeDrafts?: boolean;
   limit?: number;
 }): Promise<BacktestRun[]> {
   const supabase = createServiceClient();
@@ -489,9 +490,11 @@ export async function listBacktestRuns(input: {
   let query = supabase
     .from("backtest_runs")
     .select("*")
-    .neq("status", "draft")
     .order("created_at", { ascending: false })
     .limit(input.limit ?? 80);
+  if (!input.includeDrafts) {
+    query = query.neq("status", "draft");
+  }
   if (input.publishedOnly) {
     query = query.is("user_id", null);
   } else if (input.userId) {
@@ -527,12 +530,15 @@ export async function listBacktestRuns(input: {
         input.studyId ||
         input.parentRunId)
     ) {
-      const fallback = await supabase
+      let fallbackQuery = supabase
         .from("backtest_runs")
         .select("*")
-        .neq("status", "draft")
         .order("created_at", { ascending: false })
         .limit(input.limit ?? 80);
+      if (!input.includeDrafts) {
+        fallbackQuery = fallbackQuery.neq("status", "draft");
+      }
+      const fallback = await fallbackQuery;
       const parsed = (fallback.data ?? [])
         .map((row) => parseBacktestRunRow(row as Record<string, unknown>))
         .filter((row): row is BacktestRun => Boolean(row));
@@ -552,6 +558,7 @@ function filterBacktestRuns(
     childrenOnly?: boolean;
     parentRunId?: string;
     studyId?: string;
+    includeDrafts?: boolean;
   },
 ): BacktestRun[] {
   return rows.filter((row) => {
@@ -581,7 +588,7 @@ function filterBacktestRuns(
     if (input.childrenOnly && !row.parentRunId) {
       return false;
     }
-    if (row.status === "draft") {
+    if (!input.includeDrafts && row.status === "draft") {
       return false;
     }
     return true;

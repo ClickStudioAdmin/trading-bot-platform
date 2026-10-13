@@ -38,6 +38,7 @@ import {
   comparableSymbolsAfterDetach,
   isBacktestComparableChild,
   splitBacktestFamily,
+  savedBacktestChildBadge,
   savedBacktestFamilies,
   filterSavedBacktestFamilies,
   savedBacktestListRows,
@@ -820,6 +821,22 @@ assert.deepEqual(
   family.variations.map((row) => row.id),
   ["var-123"],
 );
+assert.deepEqual(
+  savedBacktestChildBadge([
+    { role: "comparable" },
+    { role: "variation" },
+  ]),
+  { total: 2, label: "1 comparable, 1 variation" },
+);
+assert.deepEqual(
+  savedBacktestChildBadge([
+    { role: "variation" },
+    { role: "variation" },
+    { role: "variation" },
+  ]),
+  { total: 3, label: "3 variations" },
+);
+assert.equal(savedBacktestChildBadge([]), null);
 
 const olderComparable = {
   ...familyComparable,

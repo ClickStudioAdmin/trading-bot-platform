@@ -47,12 +47,14 @@ export default async function AccountBacktestsPage({
         userId: member.id,
         standaloneOnly: true,
         primaryOnly: true,
+        includeDrafts: true,
         limit: 2000,
       }),
       listBacktestRuns({
         userId: member.id,
         standaloneOnly: true,
         childrenOnly: true,
+        includeDrafts: true,
         limit: 2000,
       }),
     ]);

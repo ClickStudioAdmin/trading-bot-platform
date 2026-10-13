@@ -383,6 +383,34 @@ function compareSavedBacktestChildren(
   );
 }
 
+/** Count badge for a parent. Hover text lists comparables, then variations. */
+export function savedBacktestChildBadge(
+  children: readonly { role: SavedBacktestChildRole }[],
+): { total: number; label: string } | null {
+  let comparables = 0;
+  let variations = 0;
+  for (const child of children) {
+    if (child.role === "comparable") {
+      comparables += 1;
+    } else {
+      variations += 1;
+    }
+  }
+  const parts: string[] = [];
+  if (comparables > 0) {
+    parts.push(
+      comparables === 1 ? "1 comparable" : `${comparables} comparables`,
+    );
+  }
+  if (variations > 0) {
+    parts.push(variations === 1 ? "1 variation" : `${variations} variations`);
+  }
+  if (parts.length === 0) {
+    return null;
+  }
+  return { total: comparables + variations, label: parts.join(", ") };
+}
+
 /** Parents first. Comparables and variations sit under the loaded root, oldest first. A child whose parent is not in the set stays its own row. */
 export function savedBacktestFamilies(
   runs: readonly BacktestRun[],
