@@ -301,10 +301,7 @@ function DeskRow({
     <tr className="border-b border-line last:border-b-0">
       <td className="px-4 py-3 pr-8 align-top">{account.name}</td>
       <td className="px-4 py-3 pr-8 align-top">
-        <p className="flex items-center gap-2">
-          <DeskTypeMark deskType={account.deskType} />
-          <span>{formatDeskType(account.deskType)}</span>
-        </p>
+        <p>{formatDeskType(account.deskType)}</p>
         {account.copyOfAccountId ? (
           <p className="mt-1 text-hint text-ink-muted">Copy</p>
         ) : null}
