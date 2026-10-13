@@ -7,6 +7,7 @@ import { getSessionMember } from "@/lib/auth/session";
 import { memberIsAdmin } from "@/lib/admin/access";
 import {
   backtestListEntryHref,
+  backtestListSnapshot,
   backtestNewHref,
   backtestSavedListHref,
 } from "@/lib/backtest/model";
@@ -55,7 +56,7 @@ export default async function AccountBacktestsPage({
         limit: 2000,
       }),
     ]);
-    runs = [...primaries, ...children];
+    runs = [...primaries, ...children].map(backtestListSnapshot);
   } catch {
     runs = [];
   }

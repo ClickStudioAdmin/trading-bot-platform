@@ -39,6 +39,8 @@ import {
   splitBacktestFamily,
   savedBacktestFamilies,
   filterSavedBacktestFamilies,
+  savedBacktestListRows,
+  backtestListSnapshot,
   completedBacktestNotionalUsdt,
   backtestListEntryHref,
   backtestNewHref,
@@ -713,15 +715,16 @@ assert.equal(seeded.sourceTemplateId, "tmpl-1");
 assert.deepEqual(seeded.comparables, ["SOLUSDT"]);
 assert.equal(seeded.name, "October ETH");
 
-assert.equal(comparableBacktestName("DCA Test - SOL", "XRPUSDT"), "DCA Test - SOL · XRPUSDT");
-assert.equal(comparableBacktestName("DCA Test - XRPUSDT", "XRPUSDT"), "DCA Test - XRPUSDT");
+assert.equal(comparableBacktestName("DCA Test - SOL"), "DCA Test - SOL");
+assert.equal(comparableBacktestName("DCA Test - XRPUSDT"), "DCA Test - XRPUSDT");
+assert.equal(comparableBacktestName("   "), "Backtest");
 assert.equal(
   backtestRunTitle({
     recipe: { name: "DCA Test - SOL" },
     symbol: "XRPUSDT",
     parentRunId: "parent-1",
   }),
-  "DCA Test - SOL · XRPUSDT",
+  "DCA Test - SOL",
 );
 assert.equal(
   backtestRunTitle({
@@ -747,7 +750,7 @@ assert.equal(
     symbol: "ETHUSDT",
     parentRunId: "parent-1",
   }),
-  "My Winning Strategy · ETHUSDT",
+  "My Winning Strategy",
 );
 assert.equal(readBacktestName("  October   ETH  "), "October ETH");
 assert.equal(readBacktestName(""), null);
@@ -887,6 +890,50 @@ assert.equal(parentMatch.length, 1);
 assert.deepEqual(parentMatch[0]?.children, []);
 const noneMatch = filterSavedBacktestFamilies(savedFamilies, () => false);
 assert.deepEqual(noneMatch, []);
+const openList = savedBacktestListRows(savedFamilies);
+assert.deepEqual(
+  openList.map((row) => [row.run.id, row.role]),
+  [
+    ["primary", null],
+    ["comp-old", "comparable"],
+    ["comp-new", "comparable"],
+    ["var-123", "variation"],
+    ["grand", "variation"],
+    ["orphan", null],
+    ["other", null],
+  ],
+);
+const collapsedList = savedBacktestListRows(savedFamilies, new Set(["primary"]));
+assert.deepEqual(
+  collapsedList.map((row) => row.run.id),
+  ["primary", "orphan", "other"],
+);
+const listOrder = (
+  reason: "liquidation" | "stop",
+): import("./model").SimulatedOrder => ({
+  atMs: 1,
+  action: "sell",
+  side: "long",
+  qty: 1,
+  price: 1,
+  feeUsdt: 0,
+  realizedUsdt: null,
+  reason,
+});
+const liquidatedSnapshot = backtestListSnapshot({
+  ...familyPrimary,
+  orders: [listOrder("liquidation")],
+  replayEvents: [],
+});
+assert.equal(liquidatedSnapshot.orders[0]?.reason, "liquidation");
+assert.equal(liquidatedSnapshot.orders.length, 1);
+assert.equal(liquidatedSnapshot.replayEvents, null);
+const quietSnapshot = backtestListSnapshot({
+  ...familyPrimary,
+  orders: [listOrder("stop")],
+  replayEvents: [],
+});
+assert.deepEqual(quietSnapshot.orders, []);
 
 const variantOrigin = {
   name: "October ETH",

@@ -1093,6 +1093,8 @@ export function setupReviewRows(input: {
 }): {
   key: string;
   name: string;
+  deskType: DeskType | null;
+  mode: string | null;
   bots: { templateId: string; name: string; start: string | null }[];
 }[] {
   const names = new Map<string, string>();
@@ -1103,23 +1105,38 @@ export function setupReviewRows(input: {
       }
     }
   }
-  return input.desks.flatMap((desk) => {
-    if (desk.templateIds.length === 0) {
-      return [];
-    }
+  const rows = input.desks.map((desk) => {
     const armed = new Set(desk.armTemplateIds);
-    return [
-      {
-        key: desk.key,
-        name: desk.name,
-        bots: desk.templateIds.map((templateId) => ({
-          templateId,
-          name: names.get(templateId) ?? "Starter bot",
-          start: starterStatusWord(desk.deskType, armed.has(templateId)),
-        })),
-      },
-    ];
+    return {
+      key: desk.key,
+      name: desk.name,
+      deskType: desk.deskType,
+      mode: setupDeskDetails(desk).mode,
+      bots: desk.templateIds.map((templateId) => ({
+        templateId,
+        name: names.get(templateId) ?? "Starter bot",
+        start: starterStatusWord(desk.deskType, armed.has(templateId)),
+      })),
+    };
   });
+  const present = new Set(input.desks.map((desk) => desk.deskType));
+  const missing =
+    input.desks.length === 0
+      ? []
+      : ONBOARDING_DESK_TYPES.filter((deskType) => !present.has(deskType)).map(
+          (deskType) => ({
+            key: `type:${deskType}`,
+            name: "—",
+            deskType,
+            mode: null,
+            bots: [],
+          }),
+        );
+  return [
+    ...rows.filter((row) => row.bots.length > 0),
+    ...rows.filter((row) => row.bots.length === 0),
+    ...missing,
+  ];
 }
 
 export function desksStillToCreate(desks: readonly SetupDesk[]): SetupDesk[] {
@@ -1170,13 +1187,17 @@ export function readyDeskRows(input: {
   applied: readonly string[];
 }): { key: string; name: string; bots: { templateId: string; name: string }[] }[] {
   const loaded = createdStarterBots(input);
-  return input.desks.map((desk) => ({
+  const rows = input.desks.map((desk) => ({
     key: desk.key,
     name: desk.name,
     bots: loaded
       .filter((bot) => bot.deskKey === desk.key)
       .map((bot) => ({ templateId: bot.templateId, name: bot.botName })),
   }));
+  return [
+    ...rows.filter((row) => row.bots.length > 0),
+    ...rows.filter((row) => row.bots.length === 0),
+  ];
 }
 
 export function applyKey(accountId: string, templateId: string): string {

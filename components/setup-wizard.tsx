@@ -842,14 +842,13 @@ function ReviewStep({
   return (
     <section>
       <h2 className="text-lg font-semibold tracking-tight">Review</h2>
-      {desks.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="mt-2 text-sm text-ink-muted">No desks or bots will be created.</p>
       ) : (
         <>
           <p className="mt-2 text-sm text-ink-muted">
             These desks and bots are created when you click Create.
           </p>
-        {rows.length > 0 ? (
         <div className="mt-4 overflow-x-auto rounded-card border border-line">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
@@ -865,16 +864,14 @@ function ReviewStep({
             </thead>
             <tbody>
               {rows.map((row) => {
-                const desk = desks.find((item) => item.key === row.key);
-                const details = desk ? setupDeskDetails(desk) : null;
                 return (
                 <tr key={row.key} className="border-b border-line last:border-b-0">
                   <td className="px-3 py-2 align-top text-ink">{row.name}</td>
                   <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
-                    {desk ? formatDeskType(desk.deskType) : "—"}
+                    {row.deskType ? formatDeskType(row.deskType) : "—"}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
-                    {details?.mode ?? "—"}
+                    {row.mode ?? "—"}
                   </td>
                   <BotNameCell bots={row.bots} folders={folders} />
                   <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
@@ -894,7 +891,6 @@ function ReviewStep({
             </tbody>
           </table>
         </div>
-        ) : null}
         </>
       )}
     </section>
