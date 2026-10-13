@@ -31,7 +31,7 @@ export function trialEmphasisClass(phase: TrialPhase | "offer"): string {
 
 export function trialBadgeClass(phase: TrialPhase | "offer"): string {
   const shape =
-    "inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-base font-semibold tabular-nums";
+    "inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-sm font-semibold tabular-nums";
   if (phase === "ended") {
     return `${shape} bg-surface-raised text-ink-faint`;
   }
