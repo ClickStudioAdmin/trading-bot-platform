@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ModalHost, useModalPortalHost } from "@/components/portal-host";
 
 export { ModalHost, useModalPortalHost };
@@ -519,14 +519,21 @@ function ApplyFromLibraryButton({
   onApplied?: (items: AppliedDeskItem[]) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<PickerTab>("mine");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<TemplateActionResult | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const selected = templates.filter((row) => selectedIds.has(row.id));
   const tree = libraryTree(
     templates.filter((row) => row.deskType === deskType),
     sets.filter((row) => row.deskType === deskType),
   );
+
+  function selectTab(next: PickerTab) {
+    setTab(next);
+    panelRef.current?.parentElement?.scrollTo({ top: 0 });
+  }
 
   function toggleTemplate(id: string) {
     setResult(null);
@@ -600,7 +607,14 @@ function ApplyFromLibraryButton({
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={deskActionBtnClass}>
+      <button
+        type="button"
+        onClick={() => {
+          setTab("mine");
+          setOpen(true);
+        }}
+        className={deskActionBtnClass}
+      >
         <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
           Create New Bot from Template
         </BotButtonLead>
@@ -661,22 +675,57 @@ function ApplyFromLibraryButton({
             </>
           }
         >
-          <LibraryTree
-            folders={tree}
-            selectedIds={selectedIds}
-            onToggleTemplate={toggleTemplate}
-            onToggleFolder={toggleFolder}
-          />
+          <div ref={panelRef}>
+            <nav
+              role="tablist"
+              aria-label="Template source"
+              className="sticky top-0 z-10 -mx-5 -mt-4 mb-3 flex border-b border-line bg-surface-raised px-5"
+            >
+              <PickerTabButton
+                selected={tab === "mine"}
+                controls="template-picker-mine"
+                onClick={() => selectTab("mine")}
+              >
+                My Templates
+              </PickerTabButton>
+              <PickerTabButton
+                selected={tab === "platform"}
+                controls="template-picker-platform"
+                onClick={() => selectTab("platform")}
+              >
+                Platform Templates
+              </PickerTabButton>
+            </nav>
+            <ScopePanel
+              id={tab === "mine" ? "template-picker-mine" : "template-picker-platform"}
+              scope={tab === "mine" ? tree.mine : tree.platform}
+              empty={
+                tab === "mine"
+                  ? "None yet. Save a bot as a template from a card."
+                  : "No platform templates for this desk."
+              }
+              selectedIds={selectedIds}
+              onToggleTemplate={toggleTemplate}
+              onToggleFolder={toggleFolder}
+            />
+          </div>
         </Modal>
       ) : null}
     </>
   );
 }
 
+type PickerTab = "mine" | "platform";
+
 type PickerItem = {
   templateId: string;
   name: string;
   recipe: TemplateRecipe | null;
+};
+
+type PickerScope = {
+  folders: PickerFolder[];
+  loose: PickerItem[];
 };
 
 type PickerFolder = {
@@ -721,87 +770,160 @@ function folderTemplateIds(folder: PickerFolder): string[] {
   ];
 }
 
+function scopeContent(
+  templates: TemplateSummary[],
+  sets: AutomationTemplateSet[],
+  recipes: Map<string, TemplateRecipe>,
+  match: (row: { visibility: string; sharedByEmail: string | null }) => boolean,
+): PickerScope {
+  const folders = sets
+    .filter((folder) => match(folder))
+    .map((folder) => asPickerFolder(folder, recipes));
+  const filed = new Set(
+    folders.flatMap((folder) => folder.items.map((item) => item.templateId)),
+  );
+  return {
+    folders,
+    loose: templatesAsItems(
+      templates.filter((row) => match(row) && !filed.has(row.id)),
+    ),
+  };
+}
+
 function libraryTree(
   templates: TemplateSummary[],
   sets: AutomationTemplateSet[],
-): PickerFolder[] {
+): { mine: PickerScope; platform: PickerScope } {
   const recipes = new Map(templates.map((row) => [row.id, row.recipe]));
-  const scopes = [
-    {
-      key: "platform",
-      label: "Platform",
-      match: (row: { visibility: string; sharedByEmail: string | null }) =>
-        row.visibility === "platform",
+  const mine = scopeContent(
+    templates,
+    sets,
+    recipes,
+    (row) => row.visibility === "user" && !row.sharedByEmail,
+  );
+  const shared = scopeContent(templates, sets, recipes, (row) =>
+    Boolean(row.sharedByEmail),
+  );
+  return {
+    mine: {
+      folders: [...mine.folders, ...shared.folders],
+      loose: [...mine.loose, ...shared.loose],
     },
-    {
-      key: "shared",
-      label: "Shared",
-      match: (row: { visibility: string; sharedByEmail: string | null }) =>
-        Boolean(row.sharedByEmail),
-    },
-    {
-      key: "mine",
-      label: "My templates",
-      match: (row: { visibility: string; sharedByEmail: string | null }) =>
-        row.visibility === "user" && !row.sharedByEmail,
-    },
-  ] as const;
-  return scopes.flatMap((scope) => {
-    const nested = sets
-      .filter((folder) => scope.match(folder))
-      .map((folder) => asPickerFolder(folder, recipes));
-    const filed = new Set(
-      nested.flatMap((folder) => folder.items.map((item) => item.templateId)),
-    );
-    const loose = templates.filter(
-      (row) => scope.match(row) && !filed.has(row.id),
-    );
-    if (nested.length === 0 && loose.length === 0) {
-      return [];
-    }
-    return [
-      {
-        id: `scope-${scope.key}`,
-        name: scope.label,
-        items: templatesAsItems(loose),
-        folders: nested,
-        sharedByEmail: null,
-      },
-    ];
-  });
+    platform: scopeContent(
+      templates,
+      sets,
+      recipes,
+      (row) => row.visibility === "platform",
+    ),
+  };
 }
 
-function LibraryTree({
-  folders,
+function PickerTabButton({
+  selected,
+  controls,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  controls: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={selected}
+      aria-controls={controls}
+      onClick={onClick}
+      className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+        selected
+          ? "border-accent text-ink"
+          : "border-transparent text-ink-muted hover:text-ink"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ScopePanel({
+  id,
+  scope,
+  empty,
   selectedIds,
   onToggleTemplate,
   onToggleFolder,
 }: {
-  folders: PickerFolder[];
+  id: string;
+  scope: PickerScope;
+  empty: string;
   selectedIds: Set<string>;
   onToggleTemplate: (id: string) => void;
   onToggleFolder: (ids: string[]) => void;
 }) {
-  if (folders.length === 0) {
+  if (scope.folders.length === 0 && scope.loose.length === 0) {
     return (
-      <p className="mt-3 text-sm text-ink-muted">
-        None yet. Save a bot as a template from a card.
+      <p id={id} role="tabpanel" className="text-sm text-ink-muted">
+        {empty}
       </p>
     );
   }
   return (
-    <ul className="space-y-1">
-      {folders.map((folder) => (
-        <FolderNode
-          key={folder.id}
-          folder={folder}
-          nested={false}
-          selectedIds={selectedIds}
-          onToggleTemplate={onToggleTemplate}
-          onToggleFolder={onToggleFolder}
+    <div
+      id={id}
+      role="tabpanel"
+      className="rounded-control border border-line bg-canvas px-3 py-2"
+    >
+      <ul className="space-y-1">
+        {scope.folders.map((folder) => (
+          <FolderNode
+            key={folder.id}
+            folder={folder}
+            nested
+            selectedIds={selectedIds}
+            onToggleTemplate={onToggleTemplate}
+            onToggleFolder={onToggleFolder}
+          />
+        ))}
+        {scope.loose.map((item) => (
+          <TemplatePick
+            key={item.templateId}
+            item={item}
+            selectedIds={selectedIds}
+            onToggleTemplate={onToggleTemplate}
+          />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function TemplatePick({
+  item,
+  selectedIds,
+  onToggleTemplate,
+}: {
+  item: PickerItem;
+  selectedIds: Set<string>;
+  onToggleTemplate: (id: string) => void;
+}) {
+  return (
+    <li>
+      <label className="flex items-center gap-2 text-sm text-ink">
+        <AppCheck
+          checked={selectedIds.has(item.templateId)}
+          onChange={() => onToggleTemplate(item.templateId)}
         />
-      ))}
-    </ul>
+        <span className="min-w-0">
+          <TemplateNameWithParameters
+            name={item.name}
+            recipe={item.recipe}
+            templateId={item.templateId}
+          />
+        </span>
+      </label>
+    </li>
   );
 }
 
@@ -860,21 +982,12 @@ function FolderNode({
             />
           ))}
           {folder.items.map((item) => (
-            <li key={`${folder.id}-${item.templateId}`}>
-              <label className="flex items-center gap-2 text-sm text-ink">
-                <AppCheck
-                  checked={selectedIds.has(item.templateId)}
-                  onChange={() => onToggleTemplate(item.templateId)}
-                />
-                <span className="min-w-0">
-                  <TemplateNameWithParameters
-                    name={item.name}
-                    recipe={item.recipe}
-                    templateId={item.templateId}
-                  />
-                </span>
-              </label>
-            </li>
+            <TemplatePick
+              key={`${folder.id}-${item.templateId}`}
+              item={item}
+              selectedIds={selectedIds}
+              onToggleTemplate={onToggleTemplate}
+            />
           ))}
         </ul>
       ) : null}
