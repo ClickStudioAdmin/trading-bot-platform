@@ -2,7 +2,8 @@
 
 import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
-import { parseCandleSymbol, parseCandleVenue } from "@/lib/market/candles";
+import { parseCandleVenue } from "@/lib/market/candles";
+import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 import {
   candleHistoryBlockedMessage,
   candleVenueLabel,
@@ -160,11 +161,16 @@ export async function seedBacktestDraftAction(
   }
   const interval = backtestTapeInterval(recipe, range.fromMs, range.toMs);
   const venue = parseCandleVenue(formData.get("venue")) ?? "bybit";
+  const contract = parseDeskFuturesSymbol(venue, recipe.symbol);
+  if (!contract.ok) {
+    return contract;
+  }
+  const storedRecipe = { ...recipe, symbol: contract.symbol };
   const venueEnvironment =
     String(formData.get("venueEnvironment") ?? "").trim() || null;
   const sourceTemplateId = await resolveSourceTemplateId(
     String(formData.get("sourceTemplateId") ?? ""),
-    recipe,
+    storedRecipe,
     auth.member.id,
     auth.isAdmin,
   );
@@ -174,7 +180,7 @@ export async function seedBacktestDraftAction(
     sourceTemplateId,
     venue,
     venueEnvironment,
-    symbol: recipe.symbol,
+    symbol: contract.symbol,
     interval,
     fromMs: range.fromMs,
     toMs: range.toMs,
@@ -182,8 +188,8 @@ export async function seedBacktestDraftAction(
     feeRate: BACKTEST_FEE_PRESETS.vip0_taker.rate,
     startingUsdt: DEFAULT_STARTING_USDT,
     leverage: DEFAULT_LEVERAGE,
-    name: recipe.name.trim() || "Backtest",
-    recipe,
+    name: storedRecipe.name.trim() || "Backtest",
+    recipe: storedRecipe,
     status: "draft",
   });
   if (!run) {
@@ -252,8 +258,12 @@ export async function queueTemplateBacktestAction(
     return leverage;
   }
   const venue = parseCandleVenue(formData.get("venue")) ?? "bybit";
-  const symbol =
-    parseCandleSymbol(formData.get("symbol") ?? recipe.symbol) ?? recipe.symbol;
+  const rawSymbol = String(formData.get("symbol") ?? "").trim() || recipe.symbol;
+  const contract = parseDeskFuturesSymbol(venue, rawSymbol);
+  if (!contract.ok) {
+    return contract;
+  }
+  const symbol = contract.symbol;
   const named = parseBacktestName(
     formData.has("backtestName")
       ? formData.get("backtestName")
@@ -269,6 +279,7 @@ export async function queueTemplateBacktestAction(
       String(formData.get("comparables") ?? ""),
     ],
     symbol,
+    venue,
   );
   const feePreset = parseFeePreset(formData.get("feePreset"));
   const venueEnvironment =

@@ -336,6 +336,14 @@ assert.deepEqual(parseComparableSymbols("ETHUSDT, SOLUSDT, BTCUSDT", "BTCUSDT"),
   "ETHUSDT",
   "SOLUSDT",
 ]);
+assert.deepEqual(
+  parseComparableSymbols("ETH, ETHUSDT, SOLUSDT", "BTCUSDT", "bybit"),
+  ["ETHUSDT", "SOLUSDT"],
+);
+assert.deepEqual(
+  parseComparableSymbols("ETHUSDT, SOL, BTC", "BTC", "hyperliquid"),
+  ["ETH", "SOL"],
+);
 
 assert.equal(formatBacktestReturnPct(0.000617), "0.06%");
 assert.equal(formatBacktestReturnPct(null), "—");

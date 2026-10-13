@@ -90,6 +90,7 @@ export async function executeBacktestRun(
             feeRate: run.feeRate,
             startingUsdt: run.startingUsdt,
             leverage: run.leverage,
+            venue: run.venue,
           })
         : await replayPerpsPriceCross({
             bars: candles,

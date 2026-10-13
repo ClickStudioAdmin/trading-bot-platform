@@ -26,6 +26,7 @@ import {
   type FuturesAutomationRule,
 } from "@/lib/futures/automation";
 import { writeFuturesConditionFormFields } from "@/lib/futures/conditions";
+import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 
 export const TEMPLATE_RECIPE_VERSION = 1;
 export const TEMPLATE_NAME_MAX = 80;
@@ -492,10 +493,25 @@ export function snapshotPaperRecipe(layer: PaperEngineLayer): PaperTemplateRecip
   };
 }
 
+/** Bybit pairs stay Bybit. A coin such as ETH is a Hyperliquid contract when the caller did not name a venue. */
+function venueForRecipeSymbol(symbol: unknown, venue?: string): string {
+  if (venue) {
+    return venue;
+  }
+  if (parseDeskFuturesSymbol("bybit", symbol).ok) {
+    return "bybit";
+  }
+  if (parseDeskFuturesSymbol("hyperliquid", symbol).ok) {
+    return "hyperliquid";
+  }
+  return "bybit";
+}
+
 export function parseTemplateRecipe(
   raw: unknown,
   deskType: TemplateDeskType,
   recipeVersion: number,
+  venue?: string,
 ): { ok: true; recipe: TemplateRecipe } | { ok: false; error: string } {
   if (recipeVersion !== TEMPLATE_RECIPE_VERSION) {
     return { ok: false, error: STALE_TEMPLATE_ERROR };
@@ -509,16 +525,17 @@ export function parseTemplateRecipe(
     return { ok: false, error: STALE_TEMPLATE_ERROR };
   }
   if (deskType === "dca") {
-    return parseDcaTemplateRecipe(row);
+    return parseDcaTemplateRecipe(row, venue);
   }
   if (deskType === "perps") {
-    return parsePerpsTemplateRecipe(row);
+    return parsePerpsTemplateRecipe(row, venue);
   }
   return parsePaperTemplateRecipe(row);
 }
 
 function parseDcaTemplateRecipe(
   row: Record<string, unknown>,
+  venue?: string,
 ): { ok: true; recipe: DcaTemplateRecipe } | { ok: false; error: string } {
   if (typeof row.symbol !== "string" || typeof row.clipSize !== "number") {
     return { ok: false, error: STALE_TEMPLATE_ERROR };
@@ -529,6 +546,7 @@ function parseDcaTemplateRecipe(
       : undefined;
   const built = dcaRecipeToConfig(row as unknown as DcaTemplateRecipe, {
     webhookId: placeholderWebhook,
+    venue: venueForRecipeSymbol(row.symbol, venue),
   });
   if (!built.ok) {
     return built;
@@ -538,6 +556,7 @@ function parseDcaTemplateRecipe(
 
 function parsePerpsTemplateRecipe(
   row: Record<string, unknown>,
+  venue?: string,
 ): { ok: true; recipe: PerpsTemplateRecipe } | { ok: false; error: string } {
   if (typeof row.symbol !== "string" || typeof row.name !== "string") {
     return { ok: false, error: STALE_TEMPLATE_ERROR };
@@ -572,7 +591,10 @@ function parsePerpsTemplateRecipe(
     breakevenActivationPct: asNullableNumber(row.breakevenActivationPct),
     breakevenOffsetPct: asNullableNumber(row.breakevenOffsetPct),
   };
-  const built = perpsRecipeToRule(recipe, { sortOrder: 0 });
+  const built = perpsRecipeToRule(recipe, {
+    sortOrder: 0,
+    venue: venueForRecipeSymbol(recipe.symbol, venue),
+  });
   if (!built.ok) {
     return built;
   }
