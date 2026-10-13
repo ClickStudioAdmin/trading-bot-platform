@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback } from "react";
+import { Fragment, useCallback } from "react";
 import { BybitAgreementEnables } from "@/components/bybit-agreement-enable";
 import { ExchangeConnectModal } from "@/components/exchange-connect-modal";
 import { IconOpen } from "@/components/icons";
@@ -196,10 +196,15 @@ export function AccountConnectionsTable({
               const agreement = agreements.find(
                 (offer) => offer.connectionId === row.id,
               );
+              const showAgreement = Boolean(agreement && agreement.kinds.length > 0);
               return (
+                <Fragment key={row.id}>
                 <tr
-                  key={row.id}
-                  className="border-b border-line last:border-b-0"
+                  className={
+                    showAgreement
+                      ? undefined
+                      : "border-b border-line last:border-b-0"
+                  }
                 >
                   <td className="px-4 py-3 align-top">
                     <p>{caption.name}</p>
@@ -218,12 +223,6 @@ export function AccountConnectionsTable({
                         <StatusBadge label="Invalid" status="invalid" />
                       ) : null}
                     </p>
-                    {agreement && agreement.kinds.length > 0 ? (
-                      <BybitAgreementEnables
-                        connectionId={row.id}
-                        kinds={agreement.kinds}
-                      />
-                    ) : null}
                   </td>
                   <td className="py-3 pr-4 pl-10 align-top">
                     {used.length > 0 ? (
@@ -290,6 +289,17 @@ export function AccountConnectionsTable({
                     </TableActions>
                   </td>
                 </tr>
+                {showAgreement && agreement ? (
+                  <tr className="border-b border-line last:border-b-0">
+                    <td colSpan={6} className="px-4 pb-3">
+                      <BybitAgreementEnables
+                        connectionId={row.id}
+                        kinds={agreement.kinds}
+                      />
+                    </td>
+                  </tr>
+                ) : null}
+                </Fragment>
               );
             })}
           </tbody>
