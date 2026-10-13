@@ -3,9 +3,11 @@ import {
   dcaPlaybookConflict,
   dcaPlaybookIsRunning,
   parseDcaPlaybookRow,
+  parseDcaStatus,
   type DcaLegState,
   type DcaPlaybook,
   type DcaPlaybookConfig,
+  type DcaStatus,
 } from "./playbook";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -433,24 +435,66 @@ export async function stampDcaCycleStart(input: {
   return { ok: true };
 }
 
+export async function readDcaLegStatus(input: {
+  supabase: SupabaseClient;
+  id: string;
+  side: FuturesSide;
+}): Promise<{ ok: true; status: DcaStatus | null } | { ok: false; error: string }> {
+  const { data, error } = await input.supabase
+    .from("dca_playbooks")
+    .select("long_status, short_status")
+    .eq("id", input.id)
+    .maybeSingle();
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  if (!data) {
+    return { ok: true, status: null };
+  }
+  const column = input.side === "long" ? "long_status" : "short_status";
+  return {
+    ok: true,
+    status: parseDcaStatus((data as Record<string, unknown>)[column]),
+  };
+}
+
 export async function patchDcaLeg(input: {
   supabase: SupabaseClient;
   id: string;
   side: FuturesSide;
   patch: Partial<DcaLegState>;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
-  return patchDcaPlaybook({
-    supabase: input.supabase,
-    id: input.id,
-    patch: { [input.side]: input.patch },
-  });
+  /** Do not overwrite a leg that is already idle. */
+  unlessIdle?: boolean;
+}): Promise<{ ok: true; updated: boolean } | { ok: false; error: string }> {
+  if (!input.unlessIdle) {
+    const patched = await patchDcaPlaybook({
+      supabase: input.supabase,
+      id: input.id,
+      patch: { [input.side]: input.patch },
+    });
+    return patched.ok ? { ok: true, updated: true } : patched;
+  }
+  const row: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+    ...legColumns(input.side, input.patch),
+  };
+  const { data, error } = await input.supabase
+    .from("dca_playbooks")
+    .update(row)
+    .eq("id", input.id)
+    .neq(`${input.side}_status`, "idle")
+    .select("id");
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, updated: (data ?? []).length > 0 };
 }
 
 export async function resetDcaLeg(input: {
   supabase: SupabaseClient;
   id: string;
   side: FuturesSide;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<{ ok: true; updated: boolean } | { ok: false; error: string }> {
   return patchDcaLeg({
     supabase: input.supabase,
     id: input.id,

@@ -886,6 +886,22 @@ export function dcaPlaybookIsRunning(
   return dcaLegIsRunning(playbook.long.status) || dcaLegIsRunning(playbook.short.status);
 }
 
+/** Either leg is still on. Closing counts: Disable desk must idle it too. */
+export function dcaPlaybookLeavesIdle(playbook: {
+  long: { status: DcaStatus };
+  short: { status: DcaStatus };
+}): boolean {
+  return playbook.long.status !== "idle" || playbook.short.status !== "idle";
+}
+
+/**
+ * A listening start arms again after a flatten. An idle leg stays idle so
+ * Disable desk is not undone by a tick that still has the old cycle in memory.
+ */
+export function dcaFlattenRearms(status: DcaStatus): boolean {
+  return status !== "idle";
+}
+
 /** Saved bot still owns a cycle (Active, Stop adding, or Closing). Not the Status dropdown. */
 export function dcaPlaybookHoldsCycle(
   playbook: Pick<DcaPlaybook, "direction" | "long" | "short">,
