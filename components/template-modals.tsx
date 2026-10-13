@@ -999,26 +999,25 @@ function FolderNode({
           : "rounded-control border border-line bg-canvas px-3 py-2"
       }
     >
-      <label className="flex items-start gap-2 text-sm text-ink">
+      <label className="flex items-center gap-2 text-sm text-ink">
         <AppCheck
           checked={ids.length > 0 && selectedCount === ids.length}
           indeterminate={selectedCount > 0 && selectedCount < ids.length}
           onChange={() => onToggleFolder(ids)}
         />
-        <span>
-          <span className="block font-medium">{folder.name}</span>
-          <span className="block text-sm text-ink">
-            {ids.length === 0
-              ? "Empty folder"
-              : `${ids.length} template${ids.length === 1 ? "" : "s"}`}
-            {folder.sharedByEmail
-              ? ` · Shared by ${folder.sharedByEmail}`
-              : ""}
-          </span>
+        <span className="min-w-0">
+          <span className="font-medium">{folder.name}</span>
+          <span> ({ids.length})</span>
+          {folder.sharedByEmail ? (
+            <span className="text-ink-muted">
+              {" "}
+              · Shared by {folder.sharedByEmail}
+            </span>
+          ) : null}
         </span>
       </label>
       {hasChildren ? (
-        <ul className="mt-2 ml-6 space-y-1 border-l border-line pl-3">
+        <ul className="mt-1 ml-6 space-y-1 border-l border-line pl-3">
           {folder.folders.map((child) => (
             <FolderNode
               key={child.id}
