@@ -70,7 +70,6 @@ import {
   dcaOpenExitLimits,
   dcaPriceExitReason,
   dcaShouldFlattenIdleOpen,
-  dcaStartListens,
   decideDcaTick,
   dcaTickValueCapUsdt,
   type DcaPlaybook,
@@ -386,14 +385,13 @@ export async function runDcaPlaybookTick(input?: {
             playbook: item.playbook,
             side: item.side,
           })
-        : { ok: true as const };
+        : { ok: true as const, armed: false };
       if (!kept.ok) {
         return;
       }
       acted += 1;
       const why = item.flattenReason.trim();
-      const listens =
-        item.keepListening && dcaStartListens(item.playbook.startKind);
+      const listens = kept.armed;
       await logDcaEvent({
         playbook: item.playbook,
         side: item.side,
@@ -1176,6 +1174,7 @@ async function applyTickAction(input: {
       side: input.side,
       forcePlace: true,
       reason: input.why,
+      unlessIdle: true,
     });
     if (!armed.ok) {
       if (
@@ -1224,6 +1223,7 @@ async function applyTickAction(input: {
       verb: "disarm",
       side: input.side,
       reason: input.why,
+      unlessIdle: true,
     });
     return { acted: disarmed.ok };
   }
@@ -1233,6 +1233,7 @@ async function applyTickAction(input: {
       id: input.playbook.id,
       side: input.side,
       patch: { status: "stop_adding" },
+      unlessIdle: true,
     });
     return { acted: patched.ok };
   }
@@ -1255,7 +1256,11 @@ async function applyTickAction(input: {
       side: input.side,
       lastPrice: input.lastPrice,
       reason: input.why,
+      unlessIdle: true,
     });
+    if (placed.ok && placed.skipped) {
+      return { acted: false };
+    }
     if (!placed.ok) {
       if ("quiet" in placed && placed.quiet) {
         return { acted: false };
@@ -1340,7 +1345,7 @@ async function applyTickAction(input: {
     if (!kept.ok) {
       return { acted: false };
     }
-    const listens = dcaStartListens(input.playbook.startKind);
+    const listens = kept.armed;
     await logDcaEvent({
       playbook: input.playbook,
       side: input.side,
@@ -1378,7 +1383,7 @@ async function applyTickAction(input: {
       if (!kept.ok) {
         return { acted: false };
       }
-      const listens = dcaStartListens(input.playbook.startKind);
+      const listens = kept.armed;
       const known = String(input.why ?? "").trim();
       await logDcaEvent({
         playbook: input.playbook,
@@ -1419,7 +1424,7 @@ async function applyTickAction(input: {
   if (!kept.ok) {
     return { acted: false };
   }
-  const listens = dcaStartListens(input.playbook.startKind);
+  const listens = kept.armed;
   const why = String(input.why ?? "").trim();
   await logDcaEvent({
     playbook: input.playbook,

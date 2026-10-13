@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   CANCEL_ALL_CONFIRM,
   CLOSE_ALL_CONFIRM,
+  closeAllAlreadyGone,
   closeAllBlockNewSizeCopy,
   closeAllExtraBody,
   closeAllFlash,
@@ -91,5 +92,18 @@ assert.equal(
   false,
 );
 assert.equal(closeAllBlockNewSizeCopy({}).label, "Set reduce only");
+assert.equal(
+  closeAllAlreadyGone("That position is no longer open."),
+  true,
+);
+assert.equal(closeAllAlreadyGone("That order is no longer open."), true);
+assert.equal(
+  closeAllAlreadyGone(
+    "Could not close 1000TOSHIUSDT: That position is no longer open.",
+  ),
+  true,
+);
+assert.equal(closeAllAlreadyGone("Bind an exchange in Desk Settings before cancelling."), false);
+assert.equal(closeAllAlreadyGone("insufficient balance"), false);
 
 console.log("futures command checks passed");

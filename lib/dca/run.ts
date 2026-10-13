@@ -79,6 +79,7 @@ import {
   dcaExitLimitRestKey,
   dcaExitTpslNeedsVenueSync,
   dcaFlattenKey,
+  dcaFlattenRearms,
   dcaAtrTimeframe,
   dcaArmTriggerForSide,
   dcaIndicatorStartForSide,
@@ -121,6 +122,7 @@ import {
   listDcaPlaybooksForAccount,
   patchDcaLeg,
   patchDcaPlaybook,
+  readDcaLegStatus,
   resetDcaLeg,
   resetDcaPlaybook,
   stampDcaCycleStart,
@@ -1066,7 +1068,28 @@ async function placeClip(input: {
   lastPrice: number;
   reason?: string;
   generationMs?: number;
-}): Promise<{ ok: true } | { ok: false; error: string; quiet?: boolean }> {
+  /** Skip the order when Disable desk has already set this leg idle. */
+  unlessIdle?: boolean;
+}): Promise<
+  { ok: true; skipped?: boolean } | { ok: false; error: string; quiet?: boolean }
+> {
+  if (input.unlessIdle) {
+    const supabase = createServiceClient();
+    if (!supabase) {
+      return { ok: false, error: "Auth is not configured." };
+    }
+    const current = await readDcaLegStatus({
+      supabase,
+      id: input.playbook.id,
+      side: input.side,
+    });
+    if (!current.ok) {
+      return current;
+    }
+    if (current.status == null || !dcaFlattenRearms(current.status)) {
+      return { ok: true, skipped: true };
+    }
+  }
   const leg = dcaLegFor(input.playbook, input.side);
   const firstClip = leg.clipsFilled === 0;
   let clipSize = input.playbook.clipSize;
@@ -1206,6 +1229,7 @@ async function placeClip(input: {
     supabase,
     id: input.playbook.id,
     side: input.side,
+    unlessIdle: input.unlessIdle,
     patch: {
       status: "armed",
       clipsFilled: leg.clipsFilled + 1,
@@ -1216,6 +1240,9 @@ async function placeClip(input: {
   });
   if (!patched.ok) {
     return patched;
+  }
+  if (input.unlessIdle && !patched.updated) {
+    return { ok: true, skipped: true };
   }
   await syncDcaPlaybookExits({
     playbook: input.playbook,
@@ -1673,16 +1700,28 @@ async function flattenSide(input: {
 export async function keepListeningAfterFlatten(input: {
   playbook: DcaPlaybook;
   side: FuturesSide;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<{ ok: true; armed: boolean } | { ok: false; error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
     return { ok: false, error: "Auth is not configured." };
   }
   if (dcaStartListens(input.playbook.startKind)) {
-    return patchDcaLeg({
+    const current = await readDcaLegStatus({
       supabase,
       id: input.playbook.id,
       side: input.side,
+    });
+    if (!current.ok) {
+      return current;
+    }
+    if (current.status == null || !dcaFlattenRearms(current.status)) {
+      return { ok: true, armed: false };
+    }
+    const patched = await patchDcaLeg({
+      supabase,
+      id: input.playbook.id,
+      side: input.side,
+      unlessIdle: true,
       patch: {
         status: "armed",
         clipsFilled: 0,
@@ -1693,12 +1732,17 @@ export async function keepListeningAfterFlatten(input: {
         cycleMaxValue: null,
       },
     });
+    if (!patched.ok) {
+      return patched;
+    }
+    return { ok: true, armed: patched.updated };
   }
-  return resetDcaLeg({
+  const reset = await resetDcaLeg({
     supabase,
     id: input.playbook.id,
     side: input.side,
   });
+  return reset.ok ? { ok: true, armed: false } : reset;
 }
 
 async function moveStopToBreakeven(input: {
@@ -1781,6 +1825,8 @@ async function applyDcaVerbUnlocked(input: {
   source?: "manual" | "webhook";
   forcePlace?: boolean;
   reason?: string;
+  /** Engine tick: do not turn an idle leg back on. */
+  unlessIdle?: boolean;
 }): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -1815,6 +1861,7 @@ async function applyDcaVerbUnlocked(input: {
             id: input.playbook.id,
             side,
             patch: { status: "stop_adding" },
+            unlessIdle: input.unlessIdle,
           })
         : await resetDcaLeg({
             supabase,
@@ -1823,6 +1870,9 @@ async function applyDcaVerbUnlocked(input: {
           });
       if (!patched.ok) {
         return patched;
+      }
+      if (openQty > 0 && input.unlessIdle && !patched.updated) {
+        continue;
       }
       if (openQty > 0) {
         leftOpen = true;
@@ -1912,6 +1962,7 @@ async function applyDcaVerbUnlocked(input: {
     const flattenWhy =
       input.reason ??
       (input.source === "webhook" ? "Signal webhook" : undefined);
+    let stillArmed = false;
     for (const side of sides) {
       const closed = await flattenSide({
         playbook: input.playbook,
@@ -1929,16 +1980,17 @@ async function applyDcaVerbUnlocked(input: {
       if (!kept.ok) {
         return kept;
       }
+      stillArmed = stillArmed || kept.armed;
       touchPlaybook(input.playbook);
     }
     await logDcaEvent({
       playbook: input.playbook,
       event: "dca.closed",
       message: flattenWhy
-        ? dcaStartListens(input.playbook.startKind)
+        ? stillArmed
           ? `${input.playbook.name} position closed. Waiting for the next start. ${flattenWhy}.`
           : `Closed ${input.playbook.name}. ${flattenWhy}.`
-        : dcaStartListens(input.playbook.startKind)
+        : stillArmed
           ? `${input.playbook.name} position closed. Waiting for the next start.`
           : `Closed ${input.playbook.name}.`,
       data: {
@@ -1949,7 +2001,7 @@ async function applyDcaVerbUnlocked(input: {
     });
     return {
       ok: true,
-      message: dcaStartListens(input.playbook.startKind)
+      message: stillArmed
         ? "Position closed. Bot is still armed."
         : "Position closed.",
     };
@@ -2017,6 +2069,10 @@ async function applyDcaVerbUnlocked(input: {
         if (!kept.ok) {
           return kept;
         }
+        if (!kept.armed) {
+          skippedIdle += 1;
+          continue;
+        }
         leg = {
           ...leg,
           status: "armed",
@@ -2055,9 +2111,14 @@ async function applyDcaVerbUnlocked(input: {
         id: playbook.id,
         side,
         patch: { status: "armed" },
+        unlessIdle: input.unlessIdle,
       });
       if (!patched.ok) {
         return patched;
+      }
+      if (!patched.updated) {
+        skippedIdle += 1;
+        continue;
       }
       resumed += 1;
       continue;
@@ -2071,9 +2132,14 @@ async function applyDcaVerbUnlocked(input: {
         id: playbook.id,
         side,
         patch: { status: "armed" },
+        unlessIdle: input.unlessIdle,
       });
       if (!patched.ok) {
         return patched;
+      }
+      if (!patched.updated) {
+        skippedIdle += 1;
+        continue;
       }
       waiting += 1;
       continue;
@@ -2084,9 +2150,14 @@ async function applyDcaVerbUnlocked(input: {
         id: playbook.id,
         side,
         patch: { status: "armed" },
+        unlessIdle: input.unlessIdle,
       });
       if (!patched.ok) {
         return patched;
+      }
+      if (!patched.updated) {
+        skippedIdle += 1;
+        continue;
       }
       waiting += 1;
       continue;
@@ -2099,6 +2170,7 @@ async function applyDcaVerbUnlocked(input: {
       mode: input.mode,
       side,
       lastPrice,
+      unlessIdle: input.unlessIdle,
       reason:
         input.reason ??
         formatDcaStartReasons({
@@ -2115,6 +2187,10 @@ async function applyDcaVerbUnlocked(input: {
         return clip;
       }
       break;
+    }
+    if (clip.skipped) {
+      skippedIdle += 1;
+      continue;
     }
     placed += 1;
     const nextLeg = {
@@ -2133,6 +2209,9 @@ async function applyDcaVerbUnlocked(input: {
   }
 
   if (skippedIdle === sides.length) {
+    if (input.unlessIdle) {
+      return { ok: true, message: "Bot is off." };
+    }
     return { ok: false, error: "Arm the bot first." };
   }
   if (placed === 0 && waiting === 0 && resumed === 0 && already > 0) {
@@ -2169,6 +2248,8 @@ export async function applyDcaVerb(input: {
   source?: "manual" | "webhook";
   forcePlace?: boolean;
   reason?: string;
+  /** Engine tick: do not turn an idle leg back on. */
+  unlessIdle?: boolean;
 }): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
   return withDeskLease({
     accountId: input.playbook.accountId,

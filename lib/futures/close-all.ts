@@ -75,6 +75,11 @@ export function closeAllBlockNewSizeCopy(input: { dcaDesk?: boolean }): {
   };
 }
 
+/** A row left the live book between the list and the close. The flatten is done. */
+export function closeAllAlreadyGone(error: string): boolean {
+  return /that (position|order) is no longer open/i.test(error);
+}
+
 export function closeAllFlash(input: {
   live: boolean;
   closedCount: number;

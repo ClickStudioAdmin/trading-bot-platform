@@ -102,6 +102,7 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  closeAllAlreadyGone,
   closeAllFlash,
   parseCloseAllConfirm,
   parseCloseAllScope,
@@ -1844,6 +1845,10 @@ async function runCloseAll(
           connection: plan.useSymbolCancelAll ? null : connection,
         });
         if (!cancelled.ok) {
+          if (closeAllAlreadyGone(cancelled.error)) {
+            cancelledCount += 1;
+            return;
+          }
           cancelError ??= `Could not cancel ${row.symbol}: ${cancelled.error}`;
           return;
         }
@@ -1882,6 +1887,10 @@ async function runCloseAll(
           orderType: "market",
         });
         if (!closed.ok) {
+          if (closeAllAlreadyGone(closed.error)) {
+            closedCount += 1;
+            return;
+          }
           closeError ??= `Could not close ${row.symbol}: ${closed.error}`;
           return;
         }
