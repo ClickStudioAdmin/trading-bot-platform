@@ -864,16 +864,14 @@ function ReviewStep({
             </thead>
             <tbody>
               {rows.map((row) => {
-                const desk = desks.find((item) => item.key === row.key);
-                const details = desk ? setupDeskDetails(desk) : null;
                 return (
                 <tr key={row.key} className="border-b border-line last:border-b-0">
                   <td className="px-3 py-2 align-top text-ink">{row.name}</td>
                   <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
-                    {desk ? formatDeskType(desk.deskType) : "—"}
+                    {row.deskType ? formatDeskType(row.deskType) : "—"}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
-                    {details?.mode ?? "—"}
+                    {row.mode ?? "—"}
                   </td>
                   <BotNameCell bots={row.bots} folders={folders} />
                   <td className="whitespace-nowrap px-3 py-2 align-top text-ink-muted">
