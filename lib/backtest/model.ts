@@ -210,16 +210,10 @@ export function parseBacktestName(
   return { ok: true, name };
 }
 
-export function comparableBacktestName(name: string, symbol: string): string {
+/** Stored title for a comparable child. Uses the backtest name; the contract stays on the run. */
+export function comparableBacktestName(name: string): string {
   const base = name.trim() || "Backtest";
-  const pair = symbol.trim();
-  if (!pair) {
-    return base.slice(0, 80);
-  }
-  if (base.toLowerCase().includes(pair.toLowerCase())) {
-    return base.slice(0, 80);
-  }
-  return `${base} · ${pair}`.slice(0, 80);
+  return base.slice(0, 80);
 }
 
 export function backtestRunTitle(run: {
@@ -232,10 +226,7 @@ export function backtestRunTitle(run: {
   if (stored) {
     return stored;
   }
-  if (!run.parentRunId) {
-    return run.recipe.name.trim() || "Backtest";
-  }
-  return comparableBacktestName(run.recipe.name, run.symbol);
+  return comparableBacktestName(run.recipe.name);
 }
 
 function backtestSymbolKey(symbol: string): string {

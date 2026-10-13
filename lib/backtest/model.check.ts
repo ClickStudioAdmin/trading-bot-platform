@@ -715,15 +715,16 @@ assert.equal(seeded.sourceTemplateId, "tmpl-1");
 assert.deepEqual(seeded.comparables, ["SOLUSDT"]);
 assert.equal(seeded.name, "October ETH");
 
-assert.equal(comparableBacktestName("DCA Test - SOL", "XRPUSDT"), "DCA Test - SOL · XRPUSDT");
-assert.equal(comparableBacktestName("DCA Test - XRPUSDT", "XRPUSDT"), "DCA Test - XRPUSDT");
+assert.equal(comparableBacktestName("DCA Test - SOL"), "DCA Test - SOL");
+assert.equal(comparableBacktestName("DCA Test - XRPUSDT"), "DCA Test - XRPUSDT");
+assert.equal(comparableBacktestName("   "), "Backtest");
 assert.equal(
   backtestRunTitle({
     recipe: { name: "DCA Test - SOL" },
     symbol: "XRPUSDT",
     parentRunId: "parent-1",
   }),
-  "DCA Test - SOL · XRPUSDT",
+  "DCA Test - SOL",
 );
 assert.equal(
   backtestRunTitle({
@@ -749,7 +750,7 @@ assert.equal(
     symbol: "ETHUSDT",
     parentRunId: "parent-1",
   }),
-  "My Winning Strategy · ETHUSDT",
+  "My Winning Strategy",
 );
 assert.equal(readBacktestName("  October   ETH  "), "October ETH");
 assert.equal(readBacktestName(""), null);
