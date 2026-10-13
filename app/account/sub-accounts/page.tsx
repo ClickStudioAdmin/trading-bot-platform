@@ -30,7 +30,7 @@ import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Manage Desks",
-  description: "Rename and delete desks, and manage exchange keys.",
+  description: "Rename, disable, and delete desks, and manage exchange keys.",
 };
 
 export default async function ManageSubAccountsPage({

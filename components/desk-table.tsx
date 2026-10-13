@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import { AccountDeleteControl } from "@/components/account-delete-control";
+import { AccountDisableControl } from "@/components/account-disable-control";
 import { AccountRenameControl } from "@/components/account-rename-control";
 import {
   SortTh,
@@ -13,6 +14,7 @@ import {
   TablePager,
   useClientTable,
 } from "@/components/table-chrome";
+import { deskDisableBotKind } from "@/lib/accounts/disable-desk";
 import {
   formatAccountMode,
   formatAccountUsageStatus,
@@ -154,7 +156,7 @@ export function DeskTable({
             <col className="w-[14rem]" />
             <col className="w-[20rem]" />
             <col />
-            <col className="w-[11rem]" />
+            <col className="w-[13rem]" />
           </colgroup>
           <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
@@ -230,6 +232,11 @@ export function DeskTable({
                         accountId={account.id}
                         accountName={account.name}
                         otherNames={otherDeskNames(allAccounts, account.id)}
+                      />
+                      <AccountDisableControl
+                        accountId={account.id}
+                        accountName={account.name}
+                        kind={deskDisableBotKind(account)}
                       />
                       <AccountDeleteControl
                         accountId={account.id}
