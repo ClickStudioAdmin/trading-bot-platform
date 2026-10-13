@@ -361,7 +361,7 @@ export async function queueTemplateBacktestAction(
       feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
       startingUsdt: balance.startingUsdt,
       leverage: leverage.leverage,
-      name: comparableBacktestName(named.name, comparable),
+      name: comparableBacktestName(named.name),
       recipe: comparableRecipe,
     });
   }

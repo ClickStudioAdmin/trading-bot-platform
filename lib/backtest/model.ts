@@ -210,16 +210,10 @@ export function parseBacktestName(
   return { ok: true, name };
 }
 
-export function comparableBacktestName(name: string, symbol: string): string {
+/** Stored title for a comparable child. Uses the backtest name; the contract stays on the run. */
+export function comparableBacktestName(name: string): string {
   const base = name.trim() || "Backtest";
-  const pair = symbol.trim();
-  if (!pair) {
-    return base.slice(0, 80);
-  }
-  if (base.toLowerCase().includes(pair.toLowerCase())) {
-    return base.slice(0, 80);
-  }
-  return `${base} · ${pair}`.slice(0, 80);
+  return base.slice(0, 80);
 }
 
 export function backtestRunTitle(run: {
@@ -232,10 +226,7 @@ export function backtestRunTitle(run: {
   if (stored) {
     return stored;
   }
-  if (!run.parentRunId) {
-    return run.recipe.name.trim() || "Backtest";
-  }
-  return comparableBacktestName(run.recipe.name, run.symbol);
+  return comparableBacktestName(run.recipe.name);
 }
 
 function backtestSymbolKey(symbol: string): string {
@@ -422,6 +413,30 @@ export function filterSavedBacktestFamilies(
     visible.push({ head: family.head, children });
   }
   return visible;
+}
+
+export type SavedBacktestListRow = {
+  run: BacktestRun;
+  role: SavedBacktestChildRole | null;
+};
+
+/** One pager row per parent and each visible child. Collapsed parents omit their children. */
+export function savedBacktestListRows(
+  families: readonly SavedBacktestFamily[],
+  collapsedParentIds?: ReadonlySet<string>,
+): SavedBacktestListRow[] {
+  const collapsed = collapsedParentIds ?? new Set<string>();
+  const rows: SavedBacktestListRow[] = [];
+  for (const family of families) {
+    rows.push({ run: family.head, role: null });
+    if (family.children.length === 0 || collapsed.has(family.head.id)) {
+      continue;
+    }
+    for (const child of family.children) {
+      rows.push({ run: child.run, role: child.role });
+    }
+  }
+  return rows;
 }
 
 export function backtestRerunHref(runId: string): string {
@@ -974,6 +989,26 @@ export function backtestRunWasLiquidated(
   orders: Array<Pick<SimulatedOrder, "reason">>,
 ): boolean {
   return orders.some((row) => row.reason === "liquidation");
+}
+
+const LIST_LIQUIDATION_MARK: SimulatedOrder = {
+  atMs: 0,
+  action: "flatten",
+  side: "long",
+  qty: 0,
+  price: 0,
+  feeUsdt: 0,
+  realizedUsdt: null,
+  reason: "liquidation",
+};
+
+/** Saved-list row. Keeps the liquidation mark and drops the fill tape. */
+export function backtestListSnapshot(run: BacktestRun): BacktestRun {
+  return {
+    ...run,
+    orders: backtestRunWasLiquidated(run.orders) ? [LIST_LIQUIDATION_MARK] : [],
+    replayEvents: null,
+  };
 }
 
 export function backtestRunOutcome(input: {
