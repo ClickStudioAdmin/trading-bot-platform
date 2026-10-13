@@ -33,6 +33,7 @@ import {
   backtestPageCanRun,
   backtestTapeInterval,
   comparableBacktestName,
+  comparableSymbolsAfterDetach,
   defaultBacktestDates,
   parseBacktestName,
   backtestRunTitle,
@@ -49,6 +50,7 @@ import {
   canDeleteBacktestRun,
   canReadBacktestRun,
   claimBacktestRunById,
+  clearBacktestParentRun,
   countBacktestRunsForTemplate,
   deleteBacktestRun,
   insertBacktestRun,
@@ -57,6 +59,7 @@ import {
   listBacktestRuns,
   loadBacktestRun,
   promoteDraftBacktestRun,
+  setBacktestComparableSymbols,
   updateBacktestRun,
 } from "./store";
 import { executeBacktestRun } from "./execute";
@@ -795,5 +798,36 @@ export async function deleteBacktestRunsAction(
     };
   }
   return { ok: true };
+}
+
+export async function detachBacktestFromParentAction(
+  formData: FormData,
+): Promise<BacktestActionResult> {
+  const auth = await requireMember();
+  if (!auth.ok) {
+    return auth;
+  }
+  const run = await loadBacktestRun(String(formData.get("runId") ?? ""));
+  if (!run || !canDeleteBacktestRun(run, auth.member.id, auth.isAdmin)) {
+    return { ok: false, error: "That run was not found." };
+  }
+  if (!run.parentRunId) {
+    return { ok: false, error: "That backtest is already standalone." };
+  }
+  const parent = await loadBacktestRun(run.parentRunId);
+  const nextSymbols =
+    parent && canDeleteBacktestRun(parent, auth.member.id, auth.isAdmin)
+      ? comparableSymbolsAfterDetach(parent, run)
+      : null;
+  const detached = await clearBacktestParentRun(run.id);
+  if (!detached) {
+    return { ok: false, error: "Could not detach that backtest." };
+  }
+  if (parent && nextSymbols && nextSymbols.length !== parent.comparableSymbols.length) {
+    await setBacktestComparableSymbols(parent.id, nextSymbols);
+  }
+  revalidateBacktests(`/account/backtests/${run.id}`);
+  revalidatePath(`/account/backtests/${run.parentRunId}`);
+  return { ok: true, runId: run.id };
 }
 

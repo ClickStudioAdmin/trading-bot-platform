@@ -4,7 +4,10 @@ import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { RemoveBacktestButton } from "@/components/backtest-run-view";
+import {
+  DetachBacktestButton,
+  RemoveBacktestButton,
+} from "@/components/backtest-run-view";
 import {
   BotButtonLead,
   botBtnIcon,
@@ -800,6 +803,9 @@ function BacktestRunRow({
                 className="size-3.5 shrink-0 fill-current"
               />
             </TableIconAction>
+          ) : null}
+          {row.parentRunId ? (
+            <DetachBacktestButton runId={row.id} canDetach={canRemove} />
           ) : null}
           <RemoveBacktestButton
             runId={row.id}
