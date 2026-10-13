@@ -102,6 +102,7 @@ export default async function CashAndCarryAutomationsPage({
       {loaded.signedIn ? (
         <div className="mt-6">
           <AutomationsDesk
+            key={session.account.id}
             values={values}
             inUseRuleIds={loaded.inUseRuleIds}
             reduceOnly={Boolean(loaded.config.reduceOnly)}

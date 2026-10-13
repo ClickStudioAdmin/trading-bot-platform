@@ -69,7 +69,7 @@ import {
   dcaBotPair,
   dcaBotSummary,
   dcaListStatus,
-  missingById,
+  rowsForDesk,
   type AutomationsBotBlotter,
 } from "@/lib/bots/automations-list";
 import { dcaBotConfig } from "@/lib/bots/bot-config";
@@ -587,7 +587,25 @@ export function DcaPlaybooksDesk({
       .reverse()
       .map((playbook) => ({ key: playbook.id, playbook })),
   );
-  const savedPlaybooks = cards
+  const [deskId, setDeskId] = useState(accountId ?? "");
+  const deskChanged = (accountId ?? "") !== deskId;
+  const incomingCards = [...playbooks]
+    .reverse()
+    .map((playbook) => ({ key: playbook.id, playbook }));
+  const visibleCards = rowsForDesk({
+    deskChanged,
+    current: cards,
+    incoming: incomingCards,
+    id: (card) => card.playbook?.id,
+  });
+  if (deskChanged) {
+    setDeskId(accountId ?? "");
+    setCards([...visibleCards]);
+    setExtraLibrary([]);
+  } else if (visibleCards !== cards) {
+    setCards([...visibleCards]);
+  }
+  const savedPlaybooks = visibleCards
     .map((card) => card.playbook)
     .filter((playbook): playbook is DcaPlaybook => Boolean(playbook?.id));
   const addPlaybookClass = deskActionBtnClass;
@@ -607,32 +625,11 @@ export function DcaPlaybooksDesk({
     setDraftClone(clone);
     setDraft(nextDraft);
   }
-  const missingPlaybooks = missingById(
-    new Set(savedPlaybooks.map((playbook) => playbook.id)),
-    playbooks,
-  );
-  if (missingPlaybooks.length > 0) {
-    setCards((current) => {
-      const seen = new Set(
-        current.flatMap((card) =>
-          card.playbook?.id ? [card.playbook.id] : [],
-        ),
-      );
-      const fresh = missingById(seen, playbooks);
-      if (fresh.length === 0) {
-        return current;
-      }
-      return [
-        ...fresh.map((playbook) => ({ key: playbook.id, playbook })),
-        ...current,
-      ];
-    });
-  }
   const formCard =
     edit === AUTOMATIONS_NEW
       ? nextDraft
       : edit
-        ? cards.find((card) => card.playbook?.id === edit) ?? null
+        ? visibleCards.find((card) => card.playbook?.id === edit) ?? null
         : null;
   const showForm = Boolean(formCard);
 
