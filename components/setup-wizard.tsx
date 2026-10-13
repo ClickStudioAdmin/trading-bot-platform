@@ -60,7 +60,7 @@ import {
   botsEmptyNote,
   readyDeskRows,
   foldersForDesk,
-  keptArmTemplateIds,
+  starterArmIdsAfterSelection,
   makeSetupDesk,
   paperVenuesFor,
   setupDeskDetails,
@@ -1827,8 +1827,8 @@ function BotStep({
         Load starter bots?
       </h2>
       <p className="mt-2 text-sm text-ink-muted">
-        These starter bots are marked Include in Starter Pack. Choose Initial
-        Status to start a bot when setup finishes. Disabled leaves the bot off.
+        These starter bots are marked Include in Starter Pack. Initial Status
+        starts on Active. Choose Disabled to leave a bot off.
       </p>
       <div className="mt-4 overflow-x-auto rounded-card border border-line">
         <table className="w-full text-left text-sm">
@@ -1853,12 +1853,7 @@ function BotStep({
               function choose(templateIds: string[]) {
                 onChange(desk.key, {
                   templateIds,
-                  armTemplateIds: keptArmTemplateIds({
-                    mode: desk.mode,
-                    connectionId: desk.connectionId,
-                    templateIds,
-                    armTemplateIds: desk.armTemplateIds,
-                  }),
+                  armTemplateIds: starterArmIdsAfterSelection(desk, templateIds),
                 });
               }
               return (

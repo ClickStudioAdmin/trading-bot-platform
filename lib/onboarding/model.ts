@@ -298,6 +298,26 @@ export function keptArmTemplateIds(desk: {
   return desk.armTemplateIds.filter((id) => selected.has(id));
 }
 
+/** Newly ticked starter bots default to Active when the desk can start them. */
+export function starterArmIdsAfterSelection(
+  desk: {
+    mode: "paper" | "live";
+    connectionId: string | null;
+    templateIds: readonly string[];
+    armTemplateIds: readonly string[];
+  },
+  nextTemplateIds: readonly string[],
+): string[] {
+  const previous = new Set(desk.templateIds);
+  const added = nextTemplateIds.filter((id) => !previous.has(id));
+  return keptArmTemplateIds({
+    mode: desk.mode,
+    connectionId: desk.connectionId,
+    templateIds: nextTemplateIds,
+    armTemplateIds: [...desk.armTemplateIds, ...added],
+  });
+}
+
 export function defaultSetupName(deskType: DeskType, mode: "paper" | "live"): string {
   const suffix = mode === "paper" ? "Paper" : "Connected";
   return `${formatDeskType(deskType)} ${suffix}`.slice(0, 40).trim();
@@ -964,13 +984,16 @@ export function applyBotSetupChoice(input: {
     }));
   }
   if (input.choice === "all") {
-    return input.desks.map((desk) => ({
-      ...desk,
-      templateIds: foldersForDesk(input.folders, desk.deskType).flatMap(
+    return input.desks.map((desk) => {
+      const templateIds = foldersForDesk(input.folders, desk.deskType).flatMap(
         (folder) => folder.templates.map((template) => template.id),
-      ),
-      armTemplateIds: [],
-    }));
+      );
+      return {
+        ...desk,
+        templateIds,
+        armTemplateIds: setupDeskCanStartBots(desk) ? templateIds : [],
+      };
+    });
   }
   return input.desks.map((desk) => ({
     ...desk,
