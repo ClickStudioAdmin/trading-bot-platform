@@ -651,32 +651,34 @@ function ApplyFromLibraryButton({
           wide
           sticky={
             <>
-              <p className="mt-1 text-sm text-ink-muted">
-                Tick a folder or individual templates. Creates idle or
-                disabled bots on this desk. Nothing is armed.
-              </p>
-              <div className="mt-4 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className={secondaryBtn}
-                >
-                  {result?.results?.length ? "Close" : "Cancel"}
-                </button>
-                {!result?.results?.length ? (
+              <div className="mt-1 flex items-start justify-between gap-4">
+                <p className="min-w-0 max-w-sm text-sm text-ink-muted">
+                  Tick a folder or individual templates. Creates idle or
+                  disabled bots on this desk. Nothing is armed.
+                </p>
+                <div className="flex shrink-0 gap-2">
                   <button
                     type="button"
-                    disabled={selected.length === 0 || pending}
-                    onClick={() => void onApply()}
-                    className={primaryBtn}
+                    onClick={() => setOpen(false)}
+                    className={secondaryBtn}
                   >
-                    {pending
-                      ? "Applying…"
-                      : selected.length > 1
-                        ? `Apply ${selected.length}`
-                        : "Apply"}
+                    {result?.results?.length ? "Close" : "Cancel"}
                   </button>
-                ) : null}
+                  {!result?.results?.length ? (
+                    <button
+                      type="button"
+                      disabled={selected.length === 0 || pending}
+                      onClick={() => void onApply()}
+                      className={primaryBtn}
+                    >
+                      {pending
+                        ? "Applying…"
+                        : selected.length > 1
+                          ? `Apply ${selected.length}`
+                          : "Apply"}
+                    </button>
+                  ) : null}
+                </div>
               </div>
               {result?.results && result.results.length > 0 ? (
                 <ul className="mt-3 space-y-1 text-sm">
