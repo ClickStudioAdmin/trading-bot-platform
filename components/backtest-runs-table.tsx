@@ -11,6 +11,8 @@ import {
   deskActionBtnClass,
 } from "@/components/bot-form-chrome";
 import {
+  IconChevronDown,
+  IconChevronRight,
   IconClose,
   IconCornerDownRight,
   IconFilterClear,
@@ -49,10 +51,12 @@ import {
   filterSavedBacktestFamilies,
   formatBacktestReturnPct,
   savedBacktestFamilies,
+  savedBacktestListRows,
   type BacktestRun,
   type BacktestStatus,
   type SavedBacktestChildRole,
   type SavedBacktestFamily,
+  type SavedBacktestListRow,
 } from "@/lib/backtest/model";
 import { formatCount, signedTone } from "@/lib/opportunities/format";
 import {
@@ -210,6 +214,9 @@ export function BacktestRunsTable({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [collapsedFamilies, setCollapsedFamilies] = useState<Set<string>>(
+    () => new Set(),
+  );
   const { confirm, dialog } = useConfirmDialog();
   const matchesRun = useCallback(
     (row: BacktestRun) => {
@@ -245,12 +252,31 @@ export function BacktestRunsTable({
     }
     return map;
   }, [filteredFamilies]);
-  const filtered = useMemo(() => {
-    if (nestChildren) {
-      return filteredFamilies.map((family) => family.head);
+  const listRows = useMemo(() => {
+    if (!nestChildren) {
+      return runs
+        .filter(matchesRun)
+        .map((run) => ({ run, role: null }) satisfies SavedBacktestListRow);
     }
-    return runs.filter(matchesRun);
-  }, [filteredFamilies, matchesRun, nestChildren, runs]);
+    return savedBacktestListRows(filteredFamilies, collapsedFamilies);
+  }, [collapsedFamilies, filteredFamilies, matchesRun, nestChildren, runs]);
+  const familySort = useMemo(() => {
+    const map = new Map<
+      string,
+      { head: BacktestRun; familyIndex: number; childAt: Map<string, number> }
+    >();
+    filteredFamilies.forEach((family, familyIndex) => {
+      const childAt = new Map(
+        family.children.map((child, index) => [child.run.id, index]),
+      );
+      const info = { head: family.head, familyIndex, childAt };
+      map.set(family.head.id, info);
+      for (const child of family.children) {
+        map.set(child.run.id, info);
+      }
+    });
+    return map;
+  }, [filteredFamilies]);
   const compare = useCallback(
     (left: BacktestRun, right: BacktestRun, key: string, dir: TableSortDir) => {
       if (key === "name") {
@@ -264,36 +290,61 @@ export function BacktestRunsTable({
     },
     [titleMode],
   );
-  const table = useClientTable(filtered, compare, { defaultKey: "name" });
-  const rowsUnder = useCallback(
-    (head: BacktestRun) => {
+  const compareList = useCallback(
+    (
+      left: SavedBacktestListRow,
+      right: SavedBacktestListRow,
+      key: string,
+      dir: TableSortDir,
+    ) => {
       if (!nestChildren) {
-        return [{ row: head, childRole: null as SavedBacktestChildRole | null }];
+        return compare(left.run, right.run, key, dir);
       }
-      const family = familyByHead.get(head.id);
-      return [
-        { row: head, childRole: null as SavedBacktestChildRole | null },
-        ...(family?.children ?? []).map((child) => ({
-          row: child.run,
-          childRole: child.role,
-        })),
-      ];
+      const leftInfo = familySort.get(left.run.id);
+      const rightInfo = familySort.get(right.run.id);
+      if (!leftInfo || !rightInfo || leftInfo.head.id === rightInfo.head.id) {
+        const leftAt =
+          left.role == null ? -1 : (leftInfo?.childAt.get(left.run.id) ?? 0);
+        const rightAt =
+          right.role == null
+            ? -1
+            : (rightInfo?.childAt.get(right.run.id) ?? 0);
+        return leftAt - rightAt;
+      }
+      const byHead = compare(leftInfo.head, rightInfo.head, key, dir);
+      if (byHead !== 0) {
+        return byHead;
+      }
+      return leftInfo.familyIndex - rightInfo.familyIndex;
     },
-    [familyByHead, nestChildren],
+    [compare, familySort, nestChildren],
   );
-  const pageEntries = table.pageRows.flatMap(rowsUnder);
-  const listedEntries = filtered.flatMap(rowsUnder);
+  const table = useClientTable(listRows, compareList, { defaultKey: "name" });
+  const pageEntries = table.pageRows;
+  const listedEntries = listRows;
   const removableIds = pageEntries
-    .filter((entry) => canDeleteBacktestRun(entry.row, memberId, isAdmin))
-    .map((entry) => entry.row.id);
+    .filter((entry) => canDeleteBacktestRun(entry.run, memberId, isAdmin))
+    .map((entry) => entry.run.id);
   const listedRemovableIds = listedEntries
-    .filter((entry) => canDeleteBacktestRun(entry.row, memberId, isAdmin))
-    .map((entry) => entry.row.id);
+    .filter((entry) => canDeleteBacktestRun(entry.run, memberId, isAdmin))
+    .map((entry) => entry.run.id);
   const allSelected =
     removableIds.length > 0 && removableIds.every((id) => selected.has(id));
   const selectedCount = [...selected].filter((id) =>
     listedRemovableIds.includes(id),
   ).length;
+
+  function toggleFamily(id: string) {
+    setCollapsedFamilies((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
 
   function toggleRow(id: string) {
     setSelected((current) => {
@@ -537,7 +588,7 @@ export function BacktestRunsTable({
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {listRows.length === 0 ? (
               <tr>
                 <td
                   colSpan={BACKTEST_RUN_COLUMNS}
@@ -549,22 +600,38 @@ export function BacktestRunsTable({
                 </td>
               </tr>
             ) : (
-              pageEntries.map((entry) => (
-                <BacktestRunRow
-                  key={entry.row.id}
-                  row={entry.row}
-                  memberId={memberId}
-                  isAdmin={isAdmin}
-                  isPrimary={entry.row.id === primaryRunId}
-                  primaryBadge={primaryBadge}
-                  childBadge={childBadge}
-                  childRole={entry.childRole}
-                  titleMode={titleMode}
-                  returnTo={returnTo}
-                  selected={selected.has(entry.row.id)}
-                  onToggle={() => toggleRow(entry.row.id)}
-                />
-              ))
+              pageEntries.map((entry) => {
+                const childCount =
+                  entry.role == null
+                    ? (familyByHead.get(entry.run.id)?.children.length ?? 0)
+                    : 0;
+                return (
+                  <BacktestRunRow
+                    key={entry.run.id}
+                    row={entry.run}
+                    memberId={memberId}
+                    isAdmin={isAdmin}
+                    isPrimary={entry.run.id === primaryRunId}
+                    primaryBadge={primaryBadge}
+                    childBadge={childBadge}
+                    childRole={entry.role}
+                    familyExpanded={
+                      childCount > 0
+                        ? !collapsedFamilies.has(entry.run.id)
+                        : null
+                    }
+                    onToggleFamily={
+                      childCount > 0
+                        ? () => toggleFamily(entry.run.id)
+                        : undefined
+                    }
+                    titleMode={titleMode}
+                    returnTo={returnTo}
+                    selected={selected.has(entry.run.id)}
+                    onToggle={() => toggleRow(entry.run.id)}
+                  />
+                );
+              })
             )}
           </tbody>
         </table>
@@ -581,6 +648,8 @@ function BacktestRunRow({
   primaryBadge,
   childBadge,
   childRole,
+  familyExpanded,
+  onToggleFamily,
   titleMode,
   returnTo,
   selected,
@@ -593,6 +662,9 @@ function BacktestRunRow({
   primaryBadge: string;
   childBadge?: string;
   childRole: SavedBacktestChildRole | null;
+  /** Null when this row has no children. */
+  familyExpanded: boolean | null;
+  onToggleFamily?: () => void;
   titleMode: "family" | "recipe";
   returnTo: string;
   selected: boolean;
@@ -645,6 +717,25 @@ function BacktestRunRow({
             childRole ? "pl-4" : ""
           }`}
         >
+          {familyExpanded != null ? (
+            <button
+              type="button"
+              className="inline-flex size-5 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
+              aria-expanded={familyExpanded}
+              aria-label={
+                familyExpanded
+                  ? `Hide children of ${title}`
+                  : `Show children of ${title}`
+              }
+              onClick={onToggleFamily}
+            >
+              {familyExpanded ? (
+                <IconChevronDown className="size-3.5" />
+              ) : (
+                <IconChevronRight className="size-3.5" />
+              )}
+            </button>
+          ) : null}
           {childRole ? (
             <IconCornerDownRight className="size-3.5 shrink-0 text-ink-faint" />
           ) : null}

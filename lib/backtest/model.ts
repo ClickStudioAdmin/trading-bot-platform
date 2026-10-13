@@ -424,6 +424,30 @@ export function filterSavedBacktestFamilies(
   return visible;
 }
 
+export type SavedBacktestListRow = {
+  run: BacktestRun;
+  role: SavedBacktestChildRole | null;
+};
+
+/** One pager row per parent and each visible child. Collapsed parents omit their children. */
+export function savedBacktestListRows(
+  families: readonly SavedBacktestFamily[],
+  collapsedParentIds?: ReadonlySet<string>,
+): SavedBacktestListRow[] {
+  const collapsed = collapsedParentIds ?? new Set<string>();
+  const rows: SavedBacktestListRow[] = [];
+  for (const family of families) {
+    rows.push({ run: family.head, role: null });
+    if (family.children.length === 0 || collapsed.has(family.head.id)) {
+      continue;
+    }
+    for (const child of family.children) {
+      rows.push({ run: child.run, role: child.role });
+    }
+  }
+  return rows;
+}
+
 export function backtestRerunHref(runId: string): string {
   return backtestNewHref({ rerun: runId }, "replay");
 }
@@ -974,6 +998,26 @@ export function backtestRunWasLiquidated(
   orders: Array<Pick<SimulatedOrder, "reason">>,
 ): boolean {
   return orders.some((row) => row.reason === "liquidation");
+}
+
+const LIST_LIQUIDATION_MARK: SimulatedOrder = {
+  atMs: 0,
+  action: "flatten",
+  side: "long",
+  qty: 0,
+  price: 0,
+  feeUsdt: 0,
+  realizedUsdt: null,
+  reason: "liquidation",
+};
+
+/** Saved-list row. Keeps the liquidation mark and drops the fill tape. */
+export function backtestListSnapshot(run: BacktestRun): BacktestRun {
+  return {
+    ...run,
+    orders: backtestRunWasLiquidated(run.orders) ? [LIST_LIQUIDATION_MARK] : [],
+    replayEvents: null,
+  };
 }
 
 export function backtestRunOutcome(input: {
