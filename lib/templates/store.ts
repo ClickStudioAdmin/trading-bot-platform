@@ -260,6 +260,38 @@ export async function listAllTemplates(opts?: {
   return attachOutboundTemplateShares(supabase, parsed);
 }
 
+export async function loadTemplatesByIds(
+  ids: string[],
+): Promise<AutomationTemplate[]> {
+  const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+  if (unique.length === 0) {
+    return [];
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from("automation_templates")
+    .select("*")
+    .in("id", unique);
+  if (error || !data) {
+    return [];
+  }
+  const emails = await memberEmails(
+    supabase,
+    data.map((row) => String((row as { user_id?: string }).user_id ?? "")),
+  );
+  return data
+    .map((row) =>
+      parseTemplateRow(
+        row as Record<string, unknown>,
+        emails.get(String((row as { user_id?: string }).user_id ?? "")) ?? null,
+      ),
+    )
+    .filter((row): row is AutomationTemplate => Boolean(row));
+}
+
 export async function loadTemplateById(
   id: string,
 ): Promise<AutomationTemplate | null> {

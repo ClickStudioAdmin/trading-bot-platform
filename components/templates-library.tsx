@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useConfirmDialog } from "@/components/confirm-modal";
+import {
+  useConfirmDialog,
+  type ConfirmCheckbox,
+} from "@/components/confirm-modal";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
@@ -46,6 +49,7 @@ import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { Modal, StarterPackCheckbox } from "@/components/template-modals";
 import { sliceTablePage, type TableSortDir } from "@/lib/table-chrome";
 import type { BacktestLinkHighlight } from "@/lib/backtest/model";
+import { templateIdsDeletedWithFolder } from "@/lib/templates/folder-delete";
 import { formatTemplateDeskType } from "@/lib/templates/recipe";
 import {
   createTemplateSetAction,
@@ -141,6 +145,47 @@ function folderLabel(folders: AutomationTemplateSet[]): string {
     return "—";
   }
   return folders.map((folder) => folder.name).join(", ");
+}
+
+function folderDeleteCheckbox(
+  folders: AutomationTemplateSet[],
+  scope: "account" | "admin",
+): ConfirmCheckbox | undefined {
+  const items = folders.flatMap((folder) => folder.items);
+  const deletable = folders.flatMap((folder) => {
+    const ids = new Set(
+      templateIdsDeletedWithFolder({
+        folderVisibility: folder.visibility,
+        folderUserId: folder.userId,
+        actorId: folder.userId ?? "",
+        isAdmin: scope === "admin",
+        templates: folder.items.map((item) => ({
+          id: item.templateId,
+          visibility: item.visibility,
+          userId: item.visibility === "user" ? folder.userId : null,
+        })),
+      }),
+    );
+    return folder.items.filter((item) => ids.has(item.templateId));
+  });
+  if (deletable.length === 0) {
+    return undefined;
+  }
+  const keepsPlatform =
+    scope === "account" &&
+    items.some((item) => item.visibility === "platform");
+  return {
+    label:
+      folders.length > 1
+        ? "Also delete the templates in these folders"
+        : "Also delete the templates in this folder",
+    hint: keepsPlatform
+      ? "Your templates are removed from your library and from any other folder. Platform templates stay in the catalog."
+      : scope === "admin"
+        ? "They are removed from the catalog and from any other folder."
+        : "They are removed from your library and from any other folder.",
+    checked: false,
+  };
 }
 
 function sharedCountLabel(peers: { email: string }[]): string {
@@ -680,17 +725,22 @@ export function TemplatesLibrary({
   }
 
   async function deleteFolderRow(row: AutomationTemplateSet) {
+    const checkbox = folderDeleteCheckbox([row], variant);
     const ok = await confirm({
       title: `Delete folder “${row.name}”?`,
       message: "This cannot be undone.",
       confirmLabel: "Delete",
       danger: true,
+      checkbox,
     });
     if (!ok) {
       return;
     }
     const data = new FormData();
     data.set("setId", row.id);
+    if (checkbox?.checked) {
+      data.set("deleteTemplates", "1");
+    }
     const result = await deleteTemplateSetAction(data);
     flash(result);
     if (result.ok) {
@@ -761,12 +811,19 @@ export function TemplatesLibrary({
     }
     const noun = templateTab ? "template" : "folder";
     const plural = ids.length === 1 ? noun : `${noun}s`;
+    const folderCheckbox = templateTab
+      ? undefined
+      : folderDeleteCheckbox(
+          sets.filter((row) => ids.includes(row.id)),
+          variant,
+        );
     if (op === "delete") {
       const ok = await confirm({
         title: `Delete ${ids.length} ${plural}?`,
         message: "This cannot be undone.",
         confirmLabel: "Delete",
         danger: true,
+        checkbox: folderCheckbox,
       });
       if (!ok) {
         return;
@@ -796,6 +853,9 @@ export function TemplatesLibrary({
     data.set("kind", templateTab ? "template" : "folder");
     data.set("op", op);
     data.set("ids", ids.join(","));
+    if (op === "delete" && folderCheckbox?.checked) {
+      data.set("deleteTemplates", "1");
+    }
     const result = await bulkLibraryAction(data);
     flash(result);
     if (result.ok) {
@@ -2236,17 +2296,25 @@ function FolderEditModal({
   }
 
   async function remove() {
+    const checkbox = folderDeleteCheckbox(
+      [set],
+      set.visibility === "platform" ? "admin" : "account",
+    );
     const ok = await confirm({
       title: `Delete folder “${set.name}”?`,
       message: "This cannot be undone.",
       confirmLabel: "Delete",
       danger: true,
+      checkbox,
     });
     if (!ok) {
       return;
     }
     const data = new FormData();
     data.set("setId", set.id);
+    if (checkbox?.checked) {
+      data.set("deleteTemplates", "1");
+    }
     onResult(await deleteTemplateSetAction(data));
   }
 
