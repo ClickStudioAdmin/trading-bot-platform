@@ -48,8 +48,10 @@ import {
   dcaPlaybookConflict,
   dcaPlaybookHasOpenCycle,
   dcaCycleFieldsLocked,
+  dcaFlattenRearms,
   dcaPlaybookHoldsCycle,
   dcaPlaybookIsRunning,
+  dcaPlaybookLeavesIdle,
   dcaWithLockedCycleConfig,
   resolveDcaSaveConfig,
   dcaCloneIdleDraft,
@@ -2042,6 +2044,54 @@ assert.equal(
     long: {
       status: "idle",
       clipsFilled: 0,
+      lastClipPrice: null,
+      lastClipAtMs: null,
+      firstFillPrice: null,
+      breakevenDone: false,
+      cycleMaxValue: null,
+    },
+    short: {
+      status: "idle",
+      clipsFilled: 0,
+      lastClipPrice: null,
+      lastClipAtMs: null,
+      firstFillPrice: null,
+      breakevenDone: false,
+      cycleMaxValue: null,
+    },
+  }),
+  false,
+);
+assert.equal(dcaFlattenRearms("idle"), false);
+assert.equal(dcaFlattenRearms("armed"), true);
+assert.equal(dcaFlattenRearms("stop_adding"), true);
+assert.equal(dcaFlattenRearms("closing"), true);
+assert.equal(
+  dcaPlaybookLeavesIdle({
+    long: { status: "closing" },
+    short: { status: "idle" },
+  }),
+  true,
+);
+assert.equal(
+  dcaPlaybookLeavesIdle({
+    long: { status: "idle" },
+    short: { status: "armed" },
+  }),
+  true,
+);
+assert.equal(
+  dcaPlaybookLeavesIdle({
+    long: { status: "idle" },
+    short: { status: "idle" },
+  }),
+  false,
+);
+assert.equal(
+  dcaPlaybookIsRunning({
+    long: {
+      status: "closing",
+      clipsFilled: 1,
       lastClipPrice: null,
       lastClipAtMs: null,
       firstFillPrice: null,

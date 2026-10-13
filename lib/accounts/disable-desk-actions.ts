@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSessionContext } from "@/lib/auth/session";
 import {
+  deskAllowsDcaPlaybooks,
   deskUsesCashAndCarry,
   type TradingAccount,
 } from "@/lib/accounts/model";
@@ -17,7 +18,7 @@ import {
   loadDeskCopySettings,
   saveDeskCopySettings,
 } from "@/lib/copy/follower-settings";
-import { dcaPlaybookIsRunning } from "@/lib/dca/playbook";
+import { dcaPlaybookLeavesIdle } from "@/lib/dca/playbook";
 import {
   listDcaPlaybooksForAccount,
   resetDcaPlaybook,
@@ -145,7 +146,7 @@ async function turnOffDcaBots(
     return { ok: false, error: "Auth is not configured." };
   }
   const playbooks = await listDcaPlaybooksForAccount(accountId, supabase);
-  const running = playbooks.filter((playbook) => dcaPlaybookIsRunning(playbook));
+  const running = playbooks.filter((playbook) => dcaPlaybookLeavesIdle(playbook));
   for (const playbook of running) {
     const reset = await resetDcaPlaybook({ supabase, id: playbook.id });
     if (!reset.ok) {
@@ -306,7 +307,7 @@ async function closeFuturesPositions(
     (row) => row.status === "open" || row.status === "cancelling",
   );
   if (livePositions.length === 0 && liveWorking.length === 0) {
-    return {
+    return finishFuturesClose(userId, account, {
       ok: true,
       detail: closePositionsDetail({
         closed: 0,
@@ -315,7 +316,7 @@ async function closeFuturesPositions(
       }),
       closed: 0,
       cancelled: 0,
-    };
+    });
   }
   if (openPositions.length > 0 || openWorking.length > 0) {
     const marked = await markFuturesPendingClose({
@@ -325,7 +326,7 @@ async function closeFuturesPositions(
       workingIds: selectIds(openWorking),
     });
     if (!marked.ok) {
-      return marked;
+      return finishFuturesClose(userId, account, marked);
     }
   }
   const result = await runFuturesCommand({
@@ -346,7 +347,7 @@ async function closeFuturesPositions(
       result.error === "Nothing to close." ||
       result.error === "Nothing to cancel."
     ) {
-      return {
+      return finishFuturesClose(userId, account, {
         ok: true,
         detail: closePositionsDetail({
           closed: 0,
@@ -355,11 +356,11 @@ async function closeFuturesPositions(
         }),
         closed: 0,
         cancelled: 0,
-      };
+      });
     }
-    return result;
+    return finishFuturesClose(userId, account, result);
   }
-  return {
+  return finishFuturesClose(userId, account, {
     ok: true,
     detail: closePositionsDetail({
       closed: livePositions.length,
@@ -368,7 +369,23 @@ async function closeFuturesPositions(
     }),
     closed: livePositions.length,
     cancelled: liveWorking.length,
-  };
+  });
+}
+
+/** A listening bot can arm again while positions close. Idle it once more. */
+async function finishFuturesClose(
+  userId: string,
+  account: TradingAccount,
+  result: DisableDeskStepResult,
+): Promise<DisableDeskStepResult> {
+  if (!deskAllowsDcaPlaybooks(account)) {
+    return result;
+  }
+  const bots = await turnOffDcaBots(userId, account.id);
+  if (!bots.ok && result.ok) {
+    return bots;
+  }
+  return result;
 }
 
 export async function closeDeskPositions(
