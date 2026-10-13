@@ -303,6 +303,19 @@ export function isBacktestComparableChild(
   );
 }
 
+/** Drop a detached comparable's contract from the parent's list. A variation leaves that list unchanged. */
+export function comparableSymbolsAfterDetach(
+  parent: BacktestRun,
+  child: BacktestRun,
+): string[] {
+  const symbols = parent.comparableSymbols ?? [];
+  if (!isBacktestComparableChild(parent, child)) {
+    return [...symbols];
+  }
+  const key = backtestSymbolKey(child.symbol);
+  return symbols.filter((item) => backtestSymbolKey(item) !== key);
+}
+
 export function splitBacktestFamily(
   primary: BacktestRun,
   children: readonly BacktestRun[],

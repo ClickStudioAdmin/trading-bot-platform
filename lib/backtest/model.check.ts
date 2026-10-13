@@ -35,6 +35,7 @@ import {
   parseBacktestName,
   readBacktestName,
   backtestVariantEdited,
+  comparableSymbolsAfterDetach,
   isBacktestComparableChild,
   splitBacktestFamily,
   savedBacktestFamilies,
@@ -798,6 +799,14 @@ const familyVariation = {
 } as import("./model").BacktestRun;
 assert.equal(isBacktestComparableChild(familyPrimary, familyComparable), true);
 assert.equal(isBacktestComparableChild(familyPrimary, familyVariation), false);
+assert.deepEqual(
+  comparableSymbolsAfterDetach(familyPrimary, familyComparable),
+  [],
+);
+assert.deepEqual(
+  comparableSymbolsAfterDetach(familyPrimary, familyVariation),
+  ["SOLUSDT"],
+);
 const family = splitBacktestFamily(familyPrimary, [
   familyComparable,
   familyVariation,

@@ -396,6 +396,45 @@ export async function promoteDraftBacktestRun(
   return null;
 }
 
+export async function clearBacktestParentRun(
+  id: string,
+): Promise<BacktestRun | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("backtest_runs")
+    .update({ parent_run_id: null })
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  return parseBacktestRunRow(data as Record<string, unknown>);
+}
+
+export async function setBacktestComparableSymbols(
+  id: string,
+  comparableSymbols: string[],
+): Promise<BacktestRun | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("backtest_runs")
+    .update({ comparable_symbols: comparableSymbols })
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  return parseBacktestRunRow(data as Record<string, unknown>);
+}
+
 export async function linkBacktestRunTemplate(
   id: string,
   templateId: string,

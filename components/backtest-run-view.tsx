@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { IconFilterClear, IconPlus, IconTemplates, IconTrash } from "@/components/icons";
+import {
+  IconFilterClear,
+  IconPlus,
+  IconTemplates,
+  IconTrash,
+  IconUnlink,
+} from "@/components/icons";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import {
   SortTh,
@@ -108,6 +114,7 @@ import {
   applyBacktestToDeskAction,
   attachBacktestToTemplateAction,
   deleteBacktestAction,
+  detachBacktestFromParentAction,
   saveBacktestAsPlatformTemplateAction,
   saveBacktestAsTemplateAction,
 } from "@/lib/backtest/actions";
@@ -1304,6 +1311,48 @@ export function RemoveBacktestButton({
         detail="Delete this backtest run."
       >
         <IconTrash {...TABLE_BTN_ICON} />
+      </TableIconAction>
+      {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
+    </form>
+  );
+}
+
+export function DetachBacktestButton({
+  runId,
+  canDetach,
+}: {
+  runId: string;
+  canDetach: boolean;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!canDetach) {
+    return null;
+  }
+  return (
+    <form
+      className="inline-flex"
+      action={async (formData) => {
+        setPending(true);
+        setError(null);
+        const result = await detachBacktestFromParentAction(formData);
+        setPending(false);
+        if (!result.ok) {
+          setError(result.error ?? "Could not detach that backtest.");
+          return;
+        }
+        router.refresh();
+      }}
+    >
+      <input type="hidden" name="runId" value={runId} />
+      <TableIconAction
+        type="submit"
+        disabled={pending}
+        label="Detach from Parent"
+        detail="Make this backtest standalone."
+      >
+        <IconUnlink {...TABLE_BTN_ICON} />
       </TableIconAction>
       {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
     </form>

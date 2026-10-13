@@ -72,6 +72,7 @@ import {
   TriangleAlert,
   TrendingUp,
   Undo2,
+  Unlink,
   UnfoldVertical,
   Upload,
   User,
@@ -238,6 +239,13 @@ export const LUCIDE_ICONS = [
     lucide: "CornerDownRight",
     usedIn: "Saved backtests, comparable and variation rows",
     Icon: CornerDownRight,
+  },
+  {
+    id: "unlink",
+    name: "Detach",
+    lucide: "Unlink",
+    usedIn: "Saved backtests, detach a comparable or variation from its parent",
+    Icon: Unlink,
   },
   {
     id: "copy",
@@ -714,6 +722,10 @@ export function IconChevronRight(props: LucideProps) {
 
 export function IconCornerDownRight(props: LucideProps) {
   return <CornerDownRight aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconUnlink(props: LucideProps) {
+  return <Unlink aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconChevronsUp(props: LucideProps) {
