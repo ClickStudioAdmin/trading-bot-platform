@@ -188,7 +188,6 @@ export function DeskTable({
         </TableFilterBar>
       </TableFilterSession>
       <TableCard
-        className="mt-0"
         pager={
           <TablePager
             window={table.window}
