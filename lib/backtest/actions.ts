@@ -57,6 +57,7 @@ import {
   insertBacktestRun,
   linkBacktestRunTemplate,
   listAttachedBacktestLinks,
+  listAttachedBacktestLinksByTemplate,
   listBacktestRuns,
   loadBacktestRun,
   promoteDraftBacktestRun,
@@ -544,6 +545,23 @@ export async function attachedBacktestLinksAction(
   }
   return listAttachedBacktestLinks(
     String(templateId ?? ""),
+    auth.member.id,
+    auth.isAdmin,
+  );
+}
+
+export async function attachedBacktestsByTemplateAction(
+  templateIds: string[],
+): Promise<Record<string, TemplateBacktestLink[]>> {
+  const auth = await requireMember();
+  if (!auth.ok) {
+    return {};
+  }
+  const ids = (Array.isArray(templateIds) ? templateIds : [])
+    .map((id) => String(id))
+    .slice(0, 200);
+  return listAttachedBacktestLinksByTemplate(
+    ids,
     auth.member.id,
     auth.isAdmin,
   );

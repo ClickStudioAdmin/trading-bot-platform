@@ -10,7 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { BacktestParameterSections } from "@/components/backtest-parameter-sections";
-import { IconInfo } from "@/components/icons";
+import { IconBacktest, IconInfo } from "@/components/icons";
 import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import { attachedBacktestLinksAction } from "@/lib/backtest/actions";
 import { templateParamSections } from "@/lib/backtest/param-sections";
@@ -45,7 +45,11 @@ export function TemplateParametersButton({
     backtests ?? (loadedFor === templateId ? loadedBacktests : null);
   const popupId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const anchorRef = useRef<HTMLSpanElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  const [popupTab, setPopupTab] = useState<"parameters" | "backtests">(
+    "parameters",
+  );
   const pinned = useRef(false);
   const closeTimer = useRef<number | null>(null);
   const [open, setOpen] = useState(false);
@@ -102,7 +106,7 @@ export function TemplateParametersButton({
       return;
     }
     function place() {
-      const anchor = buttonRef.current?.getBoundingClientRect();
+      const anchor = anchorRef.current?.getBoundingClientRect();
       const panel = popupRef.current;
       if (!anchor || !panel) {
         return;
@@ -143,7 +147,7 @@ export function TemplateParametersButton({
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [open, sections.length, shownBacktests?.length]);
+  }, [open, popupTab, sections.length, shownBacktests?.length]);
 
   useEffect(() => {
     if (!open) {
@@ -155,7 +159,7 @@ export function TemplateParametersButton({
         return;
       }
       if (
-        buttonRef.current?.contains(target) ||
+        anchorRef.current?.contains(target) ||
         popupRef.current?.contains(target)
       ) {
         return;
@@ -182,54 +186,90 @@ export function TemplateParametersButton({
     return null;
   }
 
-  function onEnter() {
+  const hasBacktests = (shownBacktests?.length ?? 0) > 0;
+
+  function showPopup(tab?: "parameters" | "backtests") {
     clearClose();
+    if (tab) {
+      setPopupTab(tab);
+    }
     setOpen(true);
     loadBacktests();
   }
 
-  function onClick(event: ReactMouseEvent<HTMLButtonElement>) {
+  function onClick(
+    tab: "parameters" | "backtests",
+    event: ReactMouseEvent<HTMLButtonElement>,
+  ) {
     event.preventDefault();
     event.stopPropagation();
     clearClose();
-    if (open && pinned.current) {
+    if (open && pinned.current && popupTab === tab) {
       pinned.current = false;
       setOpen(false);
       return;
     }
     pinned.current = true;
+    setPopupTab(tab);
     setOpen(true);
     loadBacktests();
   }
 
+  const iconClass =
+    `inline-flex size-5 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink ${className}`.trim();
+
   return (
     <>
-      <button
-        ref={buttonRef}
-        type="button"
-        data-template-parameters=""
-        aria-label={`Parameters for ${name}`}
-        aria-expanded={open}
-        aria-controls={open ? popupId : undefined}
-        onMouseEnter={onEnter}
-        onMouseLeave={scheduleClose}
-        onFocus={onEnter}
-        onBlur={scheduleClose}
-        onMouseDown={(event) => event.stopPropagation()}
-        onClick={onClick}
-        className={`inline-flex size-5 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink ${className}`.trim()}
-      >
-        <IconInfo size={14} className="size-3.5" />
-      </button>
+      <span ref={anchorRef} className="inline-flex shrink-0 items-center">
+        <button
+          ref={buttonRef}
+          type="button"
+          data-template-parameters=""
+          aria-label={`Parameters for ${name}`}
+          aria-expanded={open}
+          aria-controls={open ? popupId : undefined}
+          onMouseEnter={() => showPopup("parameters")}
+          onMouseLeave={scheduleClose}
+          onFocus={() => showPopup("parameters")}
+          onBlur={scheduleClose}
+          onMouseDown={(event) => event.stopPropagation()}
+          onClick={(event) => onClick("parameters", event)}
+          className={iconClass}
+        >
+          <IconInfo size={14} className="size-3.5" />
+        </button>
+        {hasBacktests ? (
+          <button
+            type="button"
+            data-template-parameters=""
+            aria-label={`Backtests for ${name}`}
+            aria-expanded={open && popupTab === "backtests"}
+            aria-controls={open ? popupId : undefined}
+            onMouseEnter={() => showPopup("backtests")}
+            onMouseLeave={scheduleClose}
+            onFocus={() => showPopup("backtests")}
+            onBlur={scheduleClose}
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => onClick("backtests", event)}
+            className={iconClass}
+          >
+            <IconBacktest size={14} className="size-3.5" />
+          </button>
+        ) : null}
+      </span>
       {open && typeof document !== "undefined"
         ? createPortal(
             <div
               ref={popupRef}
               id={popupId}
               role="dialog"
-              aria-label={`${name} parameters`}
+              aria-label={
+                popupTab === "backtests"
+                  ? `${name} backtests`
+                  : `${name} parameters`
+              }
               data-template-parameters=""
-              onMouseEnter={onEnter}
+              onMouseEnter={() => showPopup()}
               onMouseLeave={scheduleClose}
               className={`fixed z-[90] overflow-auto rounded-card border border-line bg-canvas p-3 text-left font-normal normal-case tracking-normal text-ink shadow-none ${previewClass}`.trim()}
               style={{
@@ -239,49 +279,96 @@ export function TemplateParametersButton({
                 maxHeight: box?.maxHeight ?? POPUP_MAX_HEIGHT,
               }}
             >
-              <h2 className="mb-3 text-lg font-semibold">Parameters</h2>
-              {sections.length > 0 ? (
+              {hasBacktests ? (
+                <nav
+                  role="tablist"
+                  aria-label={`${name} details`}
+                  className="-mx-3 -mt-3 mb-3 flex border-b border-line px-2"
+                >
+                  <PopupTab
+                    selected={popupTab === "parameters"}
+                    onClick={() => setPopupTab("parameters")}
+                  >
+                    Parameters
+                  </PopupTab>
+                  <PopupTab
+                    selected={popupTab === "backtests"}
+                    onClick={() => setPopupTab("backtests")}
+                  >
+                    Backtests
+                  </PopupTab>
+                </nav>
+              ) : (
+                <h2 className="mb-3 text-lg font-semibold">Parameters</h2>
+              )}
+              {popupTab === "backtests" && hasBacktests ? (
+                <ul className="overflow-hidden rounded-card border border-line bg-surface">
+                  {shownBacktests?.map((run) => (
+                    <li
+                      key={run.runId}
+                      className="border-b border-line last:border-b-0"
+                    >
+                      <a
+                        href={`/account/backtests/${run.runId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        data-template-parameters=""
+                        onMouseDown={(event) => event.stopPropagation()}
+                        onClick={(event) => event.stopPropagation()}
+                        className="flex items-baseline justify-between gap-4 px-5 py-2.5 text-sm font-medium text-accent hover:underline"
+                      >
+                        <span className="min-w-0 text-left break-words">
+                          {run.name}
+                        </span>
+                        <span className="shrink-0 text-right text-xs font-normal tabular-nums text-ink-muted">
+                          {formatAuDateUtc(run.fromMs)} – {formatAuDateUtc(run.toMs)}
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : sections.length > 0 ? (
                 <BacktestParameterSections sections={sections} />
               ) : (
                 <p className="text-sm text-ink-muted">No parameters stored.</p>
               )}
-              {shownBacktests && shownBacktests.length > 0 ? (
-                <section className="mt-4">
-                  <h3 className="mb-2 text-sm font-semibold text-ink">
-                    Backtests
-                  </h3>
-                  <ul className="overflow-hidden rounded-card border border-line bg-surface">
-                    {shownBacktests.map((run) => (
-                      <li
-                        key={run.runId}
-                        className="border-b border-line last:border-b-0"
-                      >
-                        <a
-                          href={`/account/backtests/${run.runId}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          data-template-parameters=""
-                          onMouseDown={(event) => event.stopPropagation()}
-                          onClick={(event) => event.stopPropagation()}
-                          className="flex items-baseline justify-between gap-4 px-5 py-2.5 text-sm font-medium text-accent hover:underline"
-                        >
-                          <span className="min-w-0 text-left break-words">
-                            {run.name}
-                          </span>
-                          <span className="shrink-0 text-right text-xs font-normal tabular-nums text-ink-muted">
-                            {formatAuDateUtc(run.fromMs)} – {formatAuDateUtc(run.toMs)}
-                          </span>
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ) : null}
             </div>,
             document.body,
           )
         : null}
     </>
+  );
+}
+
+function PopupTab({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={selected}
+      data-template-parameters=""
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onClick();
+      }}
+      className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+        selected
+          ? "border-accent text-ink"
+          : "border-transparent text-ink-muted hover:text-ink"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 

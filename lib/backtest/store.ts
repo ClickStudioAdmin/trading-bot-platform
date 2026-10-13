@@ -6,6 +6,7 @@ import {
   backtestLinkHighlight,
   memberCanReadBacktestRun,
   templateBacktestLinks,
+  templateBacktestLinksByTemplate,
   type AttachedBacktestRow,
   type TemplateBacktestLink,
   estimateBacktestBars,
@@ -636,30 +637,75 @@ export async function listAttachedBacktestLinks(
   }
   const rows: AttachedBacktestRow[] = [];
   for (const item of data) {
-    const row = item as Record<string, unknown>;
-    const status = parseBacktestStatus(row.status);
-    if (!status) {
-      continue;
+    const parsed = attachedBacktestRow(item as Record<string, unknown>);
+    if (parsed) {
+      rows.push(parsed);
     }
-    const recipe = row.recipe;
-    const recipeName =
-      recipe && typeof recipe === "object" && "name" in recipe
-        ? String((recipe as { name: unknown }).name ?? "")
-        : "";
-    rows.push({
-      id: String(row.id),
-      userId: row.user_id ? String(row.user_id) : null,
-      status,
-      name: readBacktestName(row.name),
-      symbol: String(row.symbol ?? ""),
-      recipeName,
-      parentRunId: row.parent_run_id ? String(row.parent_run_id) : null,
-      fromMs: Number(row.from_ms) || 0,
-      toMs: Number(row.to_ms) || 0,
-      createdAtMs: asTime(row.created_at),
-    });
   }
   return templateBacktestLinks(rows, viewerId, isAdmin);
+}
+
+export async function listAttachedBacktestLinksByTemplate(
+  templateIds: string[],
+  viewerId: string,
+  isAdmin: boolean,
+): Promise<Record<string, TemplateBacktestLink[]>> {
+  const ids = [...new Set(templateIds.map((id) => id.trim()).filter(Boolean))];
+  if (ids.length === 0) {
+    return {};
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return {};
+  }
+  const { data, error } = await supabase
+    .from("backtest_runs")
+    .select(
+      "id, user_id, name, symbol, parent_run_id, from_ms, to_ms, created_at, recipe, status, template_id",
+    )
+    .in("template_id", ids)
+    .eq("status", "done")
+    .order("created_at", { ascending: false });
+  if (error || !data) {
+    return {};
+  }
+  const rows: Array<AttachedBacktestRow & { templateId: string }> = [];
+  for (const item of data) {
+    const row = item as Record<string, unknown>;
+    const parsed = attachedBacktestRow(row);
+    const templateId = row.template_id ? String(row.template_id) : "";
+    if (!parsed || !templateId) {
+      continue;
+    }
+    rows.push({ ...parsed, templateId });
+  }
+  return templateBacktestLinksByTemplate(rows, viewerId, isAdmin);
+}
+
+function attachedBacktestRow(
+  row: Record<string, unknown>,
+): AttachedBacktestRow | null {
+  const status = parseBacktestStatus(row.status);
+  if (!status) {
+    return null;
+  }
+  const recipe = row.recipe;
+  const recipeName =
+    recipe && typeof recipe === "object" && "name" in recipe
+      ? String((recipe as { name: unknown }).name ?? "")
+      : "";
+  return {
+    id: String(row.id),
+    userId: row.user_id ? String(row.user_id) : null,
+    status,
+    name: readBacktestName(row.name),
+    symbol: String(row.symbol ?? ""),
+    recipeName,
+    parentRunId: row.parent_run_id ? String(row.parent_run_id) : null,
+    fromMs: Number(row.from_ms) || 0,
+    toMs: Number(row.to_ms) || 0,
+    createdAtMs: asTime(row.created_at),
+  };
 }
 
 export { canDeleteBacktestRun } from "./model";

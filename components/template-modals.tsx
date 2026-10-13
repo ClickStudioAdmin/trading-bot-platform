@@ -27,6 +27,8 @@ import {
   type TemplateVisibility,
 } from "@/lib/templates/recipe";
 import { TemplateNameWithParameters } from "@/components/template-parameters-tip";
+import { attachedBacktestsByTemplateAction } from "@/lib/backtest/actions";
+import type { TemplateBacktestLink } from "@/lib/backtest/model";
 import { formatDeskType } from "@/lib/accounts/model";
 import {
   BotButtonLead,
@@ -524,7 +526,30 @@ function ApplyFromLibraryButton({
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<TemplateActionResult | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const [backtestsByTemplate, setBacktestsByTemplate] = useState<
+    Record<string, TemplateBacktestLink[]> | null
+  >(null);
   const selected = templates.filter((row) => selectedIds.has(row.id));
+  const templateKey = templates
+    .filter((row) => row.deskType === deskType)
+    .map((row) => row.id)
+    .join(",");
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const ids = templateKey ? templateKey.split(",") : [];
+    let cancelled = false;
+    void attachedBacktestsByTemplateAction(ids).then((rows) => {
+      if (!cancelled) {
+        setBacktestsByTemplate(rows);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, templateKey]);
   const tree = libraryTree(
     templates.filter((row) => row.deskType === deskType),
     sets.filter((row) => row.deskType === deskType),
@@ -699,6 +724,7 @@ function ApplyFromLibraryButton({
             <ScopePanel
               id={tab === "mine" ? "template-picker-mine" : "template-picker-platform"}
               scope={tab === "mine" ? tree.mine : tree.platform}
+              backtestsByTemplate={backtestsByTemplate}
               empty={
                 tab === "mine"
                   ? "None yet. Save a bot as a template from a card."
@@ -847,9 +873,20 @@ function PickerTabButton({
   );
 }
 
+function templateBacktests(
+  map: Record<string, TemplateBacktestLink[]> | null,
+  templateId: string,
+): TemplateBacktestLink[] | null {
+  if (!map) {
+    return null;
+  }
+  return map[templateId] ?? [];
+}
+
 function ScopePanel({
   id,
   scope,
+  backtestsByTemplate,
   empty,
   selectedIds,
   onToggleTemplate,
@@ -857,6 +894,7 @@ function ScopePanel({
 }: {
   id: string;
   scope: PickerScope;
+  backtestsByTemplate: Record<string, TemplateBacktestLink[]> | null;
   empty: string;
   selectedIds: Set<string>;
   onToggleTemplate: (id: string) => void;
@@ -881,6 +919,7 @@ function ScopePanel({
             key={folder.id}
             folder={folder}
             nested
+            backtestsByTemplate={backtestsByTemplate}
             selectedIds={selectedIds}
             onToggleTemplate={onToggleTemplate}
             onToggleFolder={onToggleFolder}
@@ -890,6 +929,10 @@ function ScopePanel({
           <TemplatePick
             key={item.templateId}
             item={item}
+            backtests={templateBacktests(
+              backtestsByTemplate,
+              item.templateId,
+            )}
             selectedIds={selectedIds}
             onToggleTemplate={onToggleTemplate}
           />
@@ -901,10 +944,12 @@ function ScopePanel({
 
 function TemplatePick({
   item,
+  backtests,
   selectedIds,
   onToggleTemplate,
 }: {
   item: PickerItem;
+  backtests: TemplateBacktestLink[] | null;
   selectedIds: Set<string>;
   onToggleTemplate: (id: string) => void;
 }) {
@@ -920,6 +965,7 @@ function TemplatePick({
             name={item.name}
             recipe={item.recipe}
             templateId={item.templateId}
+            backtests={backtests}
           />
         </span>
       </label>
@@ -930,12 +976,14 @@ function TemplatePick({
 function FolderNode({
   folder,
   nested,
+  backtestsByTemplate,
   selectedIds,
   onToggleTemplate,
   onToggleFolder,
 }: {
   folder: PickerFolder;
   nested: boolean;
+  backtestsByTemplate: Record<string, TemplateBacktestLink[]> | null;
   selectedIds: Set<string>;
   onToggleTemplate: (id: string) => void;
   onToggleFolder: (ids: string[]) => void;
@@ -976,6 +1024,7 @@ function FolderNode({
               key={child.id}
               folder={child}
               nested
+              backtestsByTemplate={backtestsByTemplate}
               selectedIds={selectedIds}
               onToggleTemplate={onToggleTemplate}
               onToggleFolder={onToggleFolder}
@@ -985,6 +1034,10 @@ function FolderNode({
             <TemplatePick
               key={`${folder.id}-${item.templateId}`}
               item={item}
+              backtests={templateBacktests(
+                backtestsByTemplate,
+                item.templateId,
+              )}
               selectedIds={selectedIds}
               onToggleTemplate={onToggleTemplate}
             />

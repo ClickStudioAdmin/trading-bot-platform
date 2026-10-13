@@ -1459,6 +1459,32 @@ export function templateBacktestLinks(
     }));
 }
 
+/** Finished runs this member can open, grouped by the template they are attached to. */
+export function templateBacktestLinksByTemplate(
+  rows: Array<AttachedBacktestRow & { templateId: string }>,
+  viewerId: string,
+  isAdmin: boolean,
+): Record<string, TemplateBacktestLink[]> {
+  const grouped = new Map<string, AttachedBacktestRow[]>();
+  for (const row of rows) {
+    const templateId = row.templateId.trim();
+    if (!templateId) {
+      continue;
+    }
+    const list = grouped.get(templateId) ?? [];
+    list.push(row);
+    grouped.set(templateId, list);
+  }
+  const links: Record<string, TemplateBacktestLink[]> = {};
+  for (const [templateId, list] of grouped) {
+    const visible = templateBacktestLinks(list, viewerId, isAdmin);
+    if (visible.length > 0) {
+      links[templateId] = visible;
+    }
+  }
+  return links;
+}
+
 export function backtestLinkHighlight(
   run: Pick<
     BacktestRun,

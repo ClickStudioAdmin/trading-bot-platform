@@ -31,6 +31,7 @@ import {
   backtestRoePct,
   backtestRunTitle,
   templateBacktestLinks,
+  templateBacktestLinksByTemplate,
   comparableBacktestName,
   parseBacktestName,
   readBacktestName,
@@ -509,6 +510,22 @@ assert.deepEqual(
 assert.deepEqual(
   templateBacktestLinks(attachedRows, "stranger", true).map((row) => row.runId),
   ["other", "newer", "older", "published"],
+);
+const grouped = templateBacktestLinksByTemplate(
+  attachedRows.map((row, index) => ({
+    ...row,
+    templateId: index === 0 ? "template-a" : "template-b",
+  })),
+  "owner",
+  false,
+);
+assert.deepEqual(
+  grouped["template-a"]?.map((row) => row.runId),
+  ["older"],
+);
+assert.deepEqual(
+  grouped["template-b"]?.map((row) => row.runId),
+  ["newer", "published"],
 );
 const closedClip = [
   {
