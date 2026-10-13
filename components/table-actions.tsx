@@ -256,6 +256,7 @@ export function TableLabelButton({
   disabled = false,
   title,
   className = "",
+  expanded,
 }: {
   icon: ReactNode;
   children: ReactNode;
@@ -266,6 +267,7 @@ export function TableLabelButton({
   disabled?: boolean;
   title?: string;
   className?: string;
+  expanded?: boolean;
 }) {
   const mark = `${TABLE_LABEL_BTN_CLASS[variant]} ${className}`.trim();
   const leading = <LabelIcon>{icon}</LabelIcon>;
@@ -284,6 +286,8 @@ export function TableLabelButton({
       title={title}
       onClick={onClick}
       className={mark}
+      aria-expanded={expanded}
+      aria-haspopup={expanded === undefined ? undefined : "menu"}
     >
       {leading}
       {children}

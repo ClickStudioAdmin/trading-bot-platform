@@ -2,22 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AccountExchangesPanel } from "@/components/account-exchanges-panel";
 import { DeskTable } from "@/components/desk-table";
-import { DeskTypeMark } from "@/components/desk-mark";
 import { PageHeading } from "@/components/page-heading";
-import {
-  AUTOMATED_DESK_TYPES,
-  MANUAL_DESK_TYPES,
-  formatDeskNavLabel,
-  pickDefaultAccount,
-  type DeskType,
-  type TradingAccount,
-} from "@/lib/accounts/model";
+import { pickDefaultAccount } from "@/lib/accounts/model";
 import {
   listTradingAccounts,
   loadAccountUsage,
-  type AccountUsage,
 } from "@/lib/accounts/store";
-import type { ExchangeConnection } from "@/lib/exchanges/connections";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
 import { requireVerifiedEmail } from "@/lib/auth/session";
@@ -124,31 +114,12 @@ async function DesksTab({
         <p className="mb-6 text-sm text-success">Desk renamed.</p>
       ) : null}
 
-      {accounts.length === 0 ? (
-        <p className="text-sm text-ink-muted">
-          No desks yet. Create one from the sidebar.
-        </p>
-      ) : (
-        <>
-          <DeskTypeSections
-            label="Automated desks"
-            types={AUTOMATED_DESK_TYPES}
-            accounts={accounts}
-            usage={usage}
-            connections={connections}
-            currentId={currentId}
-          />
-          <DeskTypeSections
-            label="Manual trading desks"
-            types={MANUAL_DESK_TYPES}
-            accounts={accounts}
-            usage={usage}
-            connections={connections}
-            currentId={currentId}
-            hideTypeHeading
-          />
-        </>
-      )}
+      <DeskTable
+        accounts={accounts}
+        usage={Object.fromEntries(usage)}
+        connections={connections}
+        currentId={currentId}
+      />
     </div>
   );
 }
@@ -176,64 +147,6 @@ function TabLink({
     >
       {children}
     </Link>
-  );
-}
-
-function DeskTypeSections({
-  label,
-  types,
-  accounts,
-  usage,
-  connections,
-  currentId,
-  hideTypeHeading = false,
-}: {
-  label: string;
-  types: readonly DeskType[];
-  accounts: TradingAccount[];
-  usage: Map<string, AccountUsage>;
-  connections: ExchangeConnection[];
-  currentId: string;
-  hideTypeHeading?: boolean;
-}) {
-  const groups = types
-    .map((deskType) => ({
-      deskType,
-      rows: accounts.filter((account) => account.deskType === deskType),
-    }))
-    .filter((group) => group.rows.length > 0);
-  if (groups.length === 0) {
-    return null;
-  }
-
-  return (
-    <section className="mt-8 first:mt-0">
-      <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
-        {label}
-      </p>
-      <div className="mt-4 space-y-6">
-        {groups.map((group) => {
-          const typeLabel = formatDeskNavLabel(group.deskType);
-          return (
-            <div key={group.deskType}>
-              {hideTypeHeading ? null : (
-                <h2 className="mb-4 flex items-center gap-2 text-2xl font-semibold tracking-tight">
-                  <DeskTypeMark deskType={group.deskType} />
-                  {typeLabel}
-                </h2>
-              )}
-              <DeskTable
-                accounts={group.rows}
-                allAccounts={accounts}
-                usage={Object.fromEntries(usage)}
-                connections={connections}
-                currentId={currentId}
-              />
-            </div>
-          );
-        })}
-      </div>
-    </section>
   );
 }
 
