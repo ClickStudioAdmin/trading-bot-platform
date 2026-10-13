@@ -908,19 +908,31 @@ assert.deepEqual(
   collapsedList.map((row) => row.run.id),
   ["primary", "orphan", "other"],
 );
+const listOrder = (
+  reason: "liquidation" | "stop",
+): import("./model").SimulatedOrder => ({
+  atMs: 1,
+  action: "sell",
+  side: "long",
+  qty: 1,
+  price: 1,
+  feeUsdt: 0,
+  realizedUsdt: null,
+  reason,
+});
 const liquidatedSnapshot = backtestListSnapshot({
   ...familyPrimary,
-  orders: [{ reason: "liquidation" }],
-  replayEvents: [{ atMs: 1 }],
-} as import("./model").BacktestRun);
+  orders: [listOrder("liquidation")],
+  replayEvents: [],
+});
 assert.equal(liquidatedSnapshot.orders[0]?.reason, "liquidation");
 assert.equal(liquidatedSnapshot.orders.length, 1);
 assert.equal(liquidatedSnapshot.replayEvents, null);
 const quietSnapshot = backtestListSnapshot({
   ...familyPrimary,
-  orders: [{ reason: "stop" }],
+  orders: [listOrder("stop")],
   replayEvents: [],
-} as import("./model").BacktestRun);
+});
 assert.deepEqual(quietSnapshot.orders, []);
 
 const variantOrigin = {
