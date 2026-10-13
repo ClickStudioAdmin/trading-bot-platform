@@ -704,7 +704,7 @@ function ApplyFromLibraryButton({
             <nav
               role="tablist"
               aria-label="Template source"
-              className="sticky top-0 z-10 -mx-5 -mt-4 mb-3 flex border-b border-line bg-surface-raised px-5"
+              className="sticky top-0 z-10 -mx-5 -mt-4 mb-6 flex border-b border-line bg-surface-raised px-5"
             >
               <PickerTabButton
                 selected={tab === "mine"}
@@ -900,44 +900,42 @@ function ScopePanel({
   onToggleTemplate: (id: string) => void;
   onToggleFolder: (ids: string[]) => void;
 }) {
-  if (scope.folders.length === 0 && scope.loose.length === 0) {
-    return (
-      <p id={id} role="tabpanel" className="text-sm text-ink-muted">
-        {empty}
-      </p>
-    );
-  }
+  const emptyList = scope.folders.length === 0 && scope.loose.length === 0;
   return (
     <div
       id={id}
       role="tabpanel"
-      className="rounded-control border border-line bg-canvas px-3 py-2"
+      className="min-h-[30rem] max-h-[30rem] overflow-y-auto rounded-control border border-line bg-canvas px-3 py-2"
     >
-      <ul className="space-y-1">
-        {scope.folders.map((folder) => (
-          <FolderNode
-            key={folder.id}
-            folder={folder}
-            nested
-            backtestsByTemplate={backtestsByTemplate}
-            selectedIds={selectedIds}
-            onToggleTemplate={onToggleTemplate}
-            onToggleFolder={onToggleFolder}
-          />
-        ))}
-        {scope.loose.map((item) => (
-          <TemplatePick
-            key={item.templateId}
-            item={item}
-            backtests={templateBacktests(
-              backtestsByTemplate,
-              item.templateId,
-            )}
-            selectedIds={selectedIds}
-            onToggleTemplate={onToggleTemplate}
-          />
-        ))}
-      </ul>
+      {emptyList ? (
+        <p className="text-sm text-ink-muted">{empty}</p>
+      ) : (
+        <ul className="space-y-1">
+          {scope.folders.map((folder) => (
+            <FolderNode
+              key={folder.id}
+              folder={folder}
+              nested
+              backtestsByTemplate={backtestsByTemplate}
+              selectedIds={selectedIds}
+              onToggleTemplate={onToggleTemplate}
+              onToggleFolder={onToggleFolder}
+            />
+          ))}
+          {scope.loose.map((item) => (
+            <TemplatePick
+              key={item.templateId}
+              item={item}
+              backtests={templateBacktests(
+                backtestsByTemplate,
+                item.templateId,
+              )}
+              selectedIds={selectedIds}
+              onToggleTemplate={onToggleTemplate}
+            />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
