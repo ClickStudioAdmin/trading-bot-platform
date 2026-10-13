@@ -42,13 +42,16 @@ export function BybitAgreementEnables({
   }
 
   return (
-    <div className="mt-2 max-w-52 space-y-2">
+    <div className="space-y-2">
       {kinds.map((kind) => {
         const title = bybitAgreementKindTitle(kind);
         const busy = pending && pendingKey === kind;
         return (
-          <div key={kind}>
-            <p className="whitespace-normal text-hint text-warning">
+          <div
+            key={kind}
+            className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
+          >
+            <p className="min-w-0 text-hint text-warning">
               {title} need a Bybit agreement. Sign on Bybit, then enable them
               here.
             </p>
@@ -56,7 +59,7 @@ export function BybitAgreementEnables({
               type="button"
               disabled={pending}
               onClick={() => enable(kind)}
-              className="mt-1 whitespace-normal rounded-control border border-line px-2 py-0.5 text-left text-xs text-ink hover:border-line-strong disabled:opacity-40"
+              className="shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-ink hover:border-line-strong disabled:opacity-40"
             >
               {busy ? "Enabling…" : `Enable ${title.toLowerCase()}`}
             </button>
