@@ -46,7 +46,7 @@ export type DeskListRow = {
   blocks: readonly AccountDeleteBlock[];
   status: DeskListStatus;
   exchange: string | null;
-  venue: string | null;
+  connection: string | null;
   environment: string | null;
   /** Venue-specific environment name, when it is longer than the column label. */
   environmentTitle: string | null;
@@ -90,8 +90,8 @@ export function deskDetailLines(input: {
   workingCount: number;
 }): readonly [string, string, string] {
   return [
-    countLine(input.openCount, "Open position", "Open positions"),
     countLine(input.botCount, "Bot", "Bots"),
+    countLine(input.openCount, "Open position", "Open positions"),
     countLine(input.workingCount, "Open order", "Open orders"),
   ];
 }
@@ -130,21 +130,21 @@ export function deskExchangeView(
   connection: Pick<ExchangeConnection, "label" | "venue" | "environment"> | null,
 ): {
   exchange: string | null;
-  venue: string | null;
+  connection: string | null;
   environment: string | null;
   environmentTitle: string | null;
 } {
   const venueId = connection?.venue || account.venue;
   const environmentId = connection?.environment || account.venueEnvironment;
-  const venueLabel = venueId ? formatVenueLabel(venueId) : "";
+  const exchange = venueId ? formatVenueLabel(venueId) : "";
   const label = connection?.label?.trim() || "";
   const place = deskEnvironmentNames(account.mode, venueId, environmentId);
   if (account.mode === "live" && !connection) {
-    return { exchange: null, venue: null, ...place };
+    return { exchange: null, connection: null, ...place };
   }
   return {
-    exchange: label || venueLabel || null,
-    venue: label && venueLabel && label !== venueLabel ? venueLabel : null,
+    exchange: exchange || label || null,
+    connection: label && exchange && label !== exchange ? label : null,
     ...place,
   };
 }
@@ -197,7 +197,7 @@ export function buildDeskListRow(
     blocks,
     status: deskListStatus(botsOn),
     exchange: place.exchange,
-    venue: place.venue,
+    connection: place.connection,
     environment: place.environment,
     environmentTitle: place.environmentTitle,
     detailLines: deskDetailLines({ openCount, botCount, workingCount }),
@@ -298,7 +298,7 @@ export function compareDeskList(
         deskListOptionValue(right.exchange),
         dir,
       ) ||
-      compareTableText(left.venue ?? "", right.venue ?? "", dir)
+      compareTableText(left.connection ?? "", right.connection ?? "", dir)
     );
   }
   if (key === "environment") {
@@ -310,8 +310,8 @@ export function compareDeskList(
   }
   if (key === "details") {
     return (
-      compareTableNum(left.openCount, right.openCount, dir) ||
       compareTableNum(left.botCount, right.botCount, dir) ||
+      compareTableNum(left.openCount, right.openCount, dir) ||
       compareTableNum(left.workingCount, right.workingCount, dir)
     );
   }

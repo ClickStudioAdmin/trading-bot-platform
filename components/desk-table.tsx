@@ -206,7 +206,7 @@ export function DeskTable({
             <col className="w-[14rem]" />
             <col />
             <col className="w-[7rem]" />
-            <col className="w-[13rem]" />
+            <col className="w-[7.5rem]" />
           </colgroup>
           <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
@@ -312,8 +312,8 @@ function DeskRow({
         {row.exchange ? (
           <>
             <p>{row.exchange}</p>
-            {row.venue ? (
-              <p className="mt-1 text-hint text-ink-muted">{row.venue}</p>
+            {row.connection ? (
+              <p className="mt-1 text-hint text-ink-muted">{row.connection}</p>
             ) : null}
           </>
         ) : (
