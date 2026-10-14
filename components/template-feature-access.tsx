@@ -1,10 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
-import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
+import { createContext, useContext, type ReactNode } from "react";
 import { FreeTrialBadges } from "@/components/plan-trial-hint";
 import {
-  TEMPLATE_FEATURE_KEYS,
   templateFeatureAccessFor,
   type TemplateFeatureAccess,
   type TemplateFeatureKey,
@@ -32,54 +30,34 @@ export function useTemplateFeatureAccess(): TemplateFeatureAccess[] {
 
 export function useTemplateFeatureGate(active: boolean) {
   const access = useTemplateFeatureAccess();
-  const [revealed, setRevealed] = useState<TemplateFeatureKey[]>([]);
 
-  function reveal(key: TemplateFeatureKey): boolean {
+  function reveal(key: TemplateFeatureKey): TemplateFeatureAccess | null {
     if (!active) {
-      return false;
+      return null;
     }
     const row = templateFeatureAccessFor(access, key);
-    if (!row || row.allowed) {
-      return false;
+    if (!row || row.allowed || !row.message) {
+      return null;
     }
-    setRevealed((current) =>
-      current.includes(key) ? current : [...current, key],
-    );
-    return true;
+    return row;
   }
 
-  const denied = TEMPLATE_FEATURE_KEYS.flatMap((key) => {
-    if (!revealed.includes(key)) {
-      return [];
-    }
-    const row = templateFeatureAccessFor(access, key);
-    return row && !row.allowed ? [row] : [];
-  });
   const trials = active
     ? access.filter((row) => row.allowed && row.message)
     : [];
 
-  return { reveal, denied, trials, revealed, access };
+  return { reveal, trials, access };
 }
 
 export function TemplateFeatureGateNotices({
-  denied,
   trials,
 }: {
-  denied: readonly TemplateFeatureAccess[];
   trials: readonly TemplateFeatureAccess[];
 }) {
-  if (denied.length === 0 && trials.length === 0) {
-    return null;
-  }
   return (
-    <div className="mb-4 space-y-3">
-      {denied.map((row) => (
-        <DeskTypeRejectBanner key={row.key} access={row} />
-      ))}
-      <FreeTrialBadges
-        messages={trials.flatMap((row) => (row.message ? [row.message] : []))}
-      />
-    </div>
+    <FreeTrialBadges
+      messages={trials.flatMap((row) => (row.message ? [row.message] : []))}
+      className="mb-4 flex flex-wrap items-center gap-2"
+    />
   );
 }

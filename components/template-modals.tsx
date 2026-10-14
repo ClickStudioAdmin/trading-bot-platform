@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
+import { ClickGateNotice, useClickGate } from "@/components/click-gate-notice";
 import { FreeTrialBadge } from "@/components/plan-trial-hint";
 import { useQuotaAccess } from "@/components/quota-access";
 import { useTemplateFeatureAccess } from "@/components/template-feature-access";
@@ -272,7 +272,7 @@ export function SaveAsTemplateButton({
   const [createFolder, setCreateFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [starterPack, setStarterPack] = useState(false);
-  const [showGate, setShowGate] = useState(false);
+  const clickGate = useClickGate();
   const saveAccess = templateFeatureAccessFor(
     useTemplateFeatureAccess(),
     "extras_templates",
@@ -280,11 +280,12 @@ export function SaveAsTemplateButton({
 
   const folderGroups = saveFolderGroups(folders, kind, platform);
 
-  function resetAndOpen() {
+  function resetAndOpen(anchor: HTMLElement) {
     if (saveAccess && !saveAccess.allowed && !isAdmin) {
-      setShowGate(true);
+      clickGate.show(saveAccess, anchor);
       return;
     }
+    clickGate.hide();
     setName(defaultName);
     setDescription("");
     setPlatform(false);
@@ -307,7 +308,7 @@ export function SaveAsTemplateButton({
     }
   }
 
-  async function onSave() {
+  async function onSave(anchor: HTMLElement) {
     setPending(true);
     const data = buildForm();
     data.set("templateName", name);
@@ -333,8 +334,7 @@ export function SaveAsTemplateButton({
           : savePaperAsTemplateAction;
     const next = await action(data);
     if (!next.ok && saveAccess && next.error === saveAccess.message) {
-      setShowGate(true);
-      setOpen(false);
+      clickGate.show(saveAccess, anchor);
       setPending(false);
       setResult(null);
       return;
@@ -358,15 +358,18 @@ export function SaveAsTemplateButton({
 
   return (
     <div className="flex w-full flex-col gap-2">
-      {showGate && saveAccess && !saveAccess.allowed ? (
-        <DeskTypeRejectBanner access={saveAccess} />
-      ) : null}
+      <ClickGateNotice
+        access={clickGate.notice}
+        anchorRef={clickGate.anchorRef}
+        generation={clickGate.generation}
+        onDismiss={clickGate.hide}
+      />
       {saveAccess?.allowed && saveAccess.message ? (
         <FreeTrialBadge message={saveAccess.message} />
       ) : null}
       <button
         type="button"
-        onClick={() => resetAndOpen()}
+        onClick={(event) => resetAndOpen(event.currentTarget)}
         className={
           buttonClassName ??
           "inline-flex shrink-0 items-center gap-1.5 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
@@ -480,7 +483,7 @@ export function SaveAsTemplateButton({
             </button>
             <button
               type="button"
-              onClick={() => void onSave()}
+              onClick={(event) => void onSave(event.currentTarget)}
               disabled={pending || (createFolder && !newFolderName.trim())}
               className={primaryBtn}
             >

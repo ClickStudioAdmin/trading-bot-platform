@@ -31,8 +31,8 @@ import {
 import { ReplayIndicatorLegend } from "@/components/replay-indicator-legend";
 import { ReplayChartBar } from "@/components/replay-chart-bar";
 import { FreeTrialBadge } from "@/components/plan-trial-hint";
+import { ClickGateNotice, useClickGate } from "@/components/click-gate-notice";
 import {
-  ResearchNoticeBanner,
   ResearchTrialLines,
   useResearchGateAccess,
 } from "@/components/research-gate-access";
@@ -40,7 +40,6 @@ import {
   indicatorAddDenial,
   replayPageTrialLines,
   researchTrialLine,
-  type ResearchNotice,
 } from "@/lib/membership/entitlements";
 import type { ChartSnapshot } from "@/components/chart-screenshot";
 import {
@@ -730,9 +729,7 @@ export function ReplayPlayer({
   }, [visibleEvents.length, sideLanes]);
   const stats = replayPlayStats(visibleOrders, run.startingUsdt);
   const researchGate = useResearchGateAccess();
-  const [indicatorNotice, setIndicatorNotice] = useState<ResearchNotice | null>(
-    null,
-  );
+  const indicatorGate = useClickGate();
   const [references, setReferences] = useState<string[]>(
     runIndicators?.referenceIndicators ?? [],
   );
@@ -2298,6 +2295,12 @@ export function ReplayPlayer({
 
   const chartColumn = (
     <>
+      <ClickGateNotice
+        access={indicatorGate.notice}
+        anchorRef={indicatorGate.anchorRef}
+        generation={indicatorGate.generation}
+        onDismiss={indicatorGate.hide}
+      />
       <section
         className={`w-full min-w-0 overflow-hidden rounded-card border border-line bg-canvas ${
           sidePanel || fillViewport ? "flex min-h-0 flex-1 flex-col" : "min-h-[420px]"
@@ -2327,28 +2330,25 @@ export function ReplayPlayer({
           references={references}
           appliedReferences={appliedReferences}
           indicatorNotice={
-            <>
-              <ResearchNoticeBanner notice={indicatorNotice} className="" />
-              <ResearchTrialLines
-                lines={
-                  researchGate && researchTrialLine(researchGate.indicators)
-                    ? [researchTrialLine(researchGate.indicators) as string]
-                    : []
-                }
-              />
-            </>
+            <ResearchTrialLines
+              lines={
+                researchGate && researchTrialLine(researchGate.indicators)
+                  ? [researchTrialLine(researchGate.indicators) as string]
+                  : []
+              }
+            />
           }
-          onToggleReference={(id, enabled) => {
+          onToggleReference={(id, enabled, anchor) => {
             if (enabled) {
               const denial = researchGate
                 ? indicatorAddDenial(researchGate)
                 : null;
               if (denial) {
-                setIndicatorNotice(denial);
+                indicatorGate.show(denial, anchor);
                 return;
               }
             }
-            setIndicatorNotice(null);
+            indicatorGate.hide();
             setReferences((current) =>
               enabled
                 ? current.includes(id)

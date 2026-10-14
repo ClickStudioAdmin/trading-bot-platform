@@ -11,17 +11,15 @@ import { createPortal } from "react-dom";
 import { BacktestHighlightBody } from "@/components/backtest-highlight-hover";
 import { PageHeading } from "@/components/page-heading";
 import {
+  ClickGateNotice,
+  useClickGate,
+} from "@/components/click-gate-notice";
+import {
   TemplateFeatureGateNotices,
   useTemplateFeatureGate,
 } from "@/components/template-feature-access";
-import {
-  ResearchNoticeBanner,
-  useResearchGateAccess,
-} from "@/components/research-gate-access";
-import {
-  backtestCreateDenial,
-  type ResearchNotice,
-} from "@/lib/membership/entitlements";
+import { useResearchGateAccess } from "@/components/research-gate-access";
+import { backtestCreateDenial } from "@/lib/membership/entitlements";
 import {
   SortTh,
   TABLE_ACTIONS_TD_CLASS,
@@ -542,26 +540,14 @@ export function TemplatesLibrary({
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [importing, setImporting] = useState(false);
   const { confirm, dialog } = useConfirmDialog();
-  const templateGateRef = useRef<HTMLDivElement>(null);
   const researchGate = useResearchGateAccess();
-  const [researchNotice, setResearchNotice] = useState<ResearchNotice | null>(
-    null,
-  );
+  const clickGate = useClickGate();
+  const actionAnchorRef = useRef<HTMLElement | null>(null);
   const {
     reveal: revealTemplateGate,
-    denied: deniedTemplateGates,
     trials: templateTrials,
-    revealed: revealedTemplateGates,
     access: templateFeatureAccess,
   } = useTemplateFeatureGate(variant === "account");
-  const revealedTemplateKey = revealedTemplateGates.join(",");
-
-  useEffect(() => {
-    if (!revealedTemplateKey) {
-      return;
-    }
-    templateGateRef.current?.scrollIntoView({ block: "start" });
-  }, [revealedTemplateKey]);
 
   useEffect(() => {
     setTab(tabForVariant(initialTab, variant));
@@ -829,8 +815,14 @@ export function TemplatesLibrary({
         (row) => !row.allowed && row.message === result.error,
       );
       if (variant === "account" && gate && revealTemplateGate(gate.key)) {
-        setMessage(null);
-        setError(null);
+        if (actionAnchorRef.current) {
+          clickGate.show(gate, actionAnchorRef.current);
+          setMessage(null);
+          setError(null);
+        } else {
+          setMessage(null);
+          setError(result.error ?? "That did not work.");
+        }
       } else {
         setMessage(null);
         setError(result.error ?? "That did not work.");
@@ -1028,8 +1020,10 @@ export function TemplatesLibrary({
     setBulkFolderOpen(true);
   }
 
-  async function exportSelected() {
-    if (revealTemplateGate("extras_import_export_templates")) {
+  async function exportSelected(anchor: HTMLElement) {
+    const denied = revealTemplateGate("extras_import_export_templates");
+    if (denied) {
+      clickGate.show(denied, anchor);
       return;
     }
     const ids = listedIds.filter((id) => selected.has(id));
@@ -1043,8 +1037,10 @@ export function TemplatesLibrary({
     flash(await exportTemplateLibraryAction(data));
   }
 
-  async function exportAll() {
-    if (revealTemplateGate("extras_import_export_templates")) {
+  async function exportAll(anchor: HTMLElement) {
+    const denied = revealTemplateGate("extras_import_export_templates");
+    if (denied) {
+      clickGate.show(denied, anchor);
       return;
     }
     const data = new FormData();
@@ -1053,7 +1049,17 @@ export function TemplatesLibrary({
   }
 
   return (
-    <div>
+    <div
+      onClickCapture={(event) => {
+        if (!(event.target instanceof Element)) {
+          return;
+        }
+        const button = event.target.closest("button");
+        if (button instanceof HTMLElement) {
+          actionAnchorRef.current = button;
+        }
+      }}
+    >
       <PageHeading
         overline={overline}
         title={title}
@@ -1062,13 +1068,13 @@ export function TemplatesLibrary({
       {description ? (
         <p className="mb-6 text-sm text-ink-muted">{description}</p>
       ) : null}
-      <div ref={templateGateRef}>
-        <TemplateFeatureGateNotices
-          denied={deniedTemplateGates}
-          trials={templateTrials}
-        />
-        <ResearchNoticeBanner notice={researchNotice} />
-      </div>
+      <TemplateFeatureGateNotices trials={templateTrials} />
+      <ClickGateNotice
+        access={clickGate.notice}
+        anchorRef={clickGate.anchorRef}
+        generation={clickGate.generation}
+        onDismiss={clickGate.hide}
+      />
       <nav className="flex flex-wrap border-b border-line">
         <TabButton selected={tab === "templates"} onClick={() => changeTab("templates")}>
           {variant === "admin" ? "Templates" : "My Templates"}
@@ -1110,7 +1116,7 @@ export function TemplatesLibrary({
               <TableLabelButton
                 variant="bulk"
                 icon={<IconDownload {...TABLE_BTN_ICON} />}
-                onClick={() => void exportSelected()}
+                onClick={(event) => void exportSelected(event.currentTarget)}
               >
                 Export
               </TableLabelButton>
@@ -1146,15 +1152,19 @@ export function TemplatesLibrary({
               <TableLabelButton
                 variant="secondary"
                 icon={<IconDownload {...TABLE_BTN_ICON} />}
-                onClick={() => void exportAll()}
+                onClick={(event) => void exportAll(event.currentTarget)}
               >
                 Export all
               </TableLabelButton>
               <TableLabelButton
                 variant="secondary"
                 icon={<IconImport {...TABLE_BTN_ICON} />}
-                onClick={() => {
-                  if (revealTemplateGate("extras_import_export_templates")) {
+                onClick={(event) => {
+                  const denied = revealTemplateGate(
+                    "extras_import_export_templates",
+                  );
+                  if (denied) {
+                    clickGate.show(denied, event.currentTarget);
                     return;
                   }
                   setImporting(true);
@@ -1166,8 +1176,10 @@ export function TemplatesLibrary({
                 <TableLabelButton
                   variant="primary"
                   icon={<IconPlus {...TABLE_BTN_ICON} />}
-                  onClick={() => {
-                    if (revealTemplateGate("extras_templates")) {
+                  onClick={(event) => {
+                    const denied = revealTemplateGate("extras_templates");
+                    if (denied) {
+                      clickGate.show(denied, event.currentTarget);
                       return;
                     }
                     setCreatingFolder(true);
@@ -1443,8 +1455,12 @@ export function TemplatesLibrary({
                         <TableIconAction
                           label="Share"
                           detail="Share this template with another member."
-                          onClick={() => {
-                            if (revealTemplateGate("extras_share_templates")) {
+                          onClick={(event) => {
+                            const denied = revealTemplateGate(
+                              "extras_share_templates",
+                            );
+                            if (denied) {
+                              clickGate.show(denied, event.currentTarget);
                               return;
                             }
                             setSharingTemplateId(row.id);
@@ -1457,15 +1473,12 @@ export function TemplatesLibrary({
                         <TableIconAction
                           label="Backtest"
                           detail="Run a backtest from this template."
-                          onClick={() => {
+                          onClick={(event) => {
                             const denial = researchGate
                               ? backtestCreateDenial(researchGate)
                               : null;
                             if (denial) {
-                              setResearchNotice(denial);
-                              templateGateRef.current?.scrollIntoView({
-                                block: "start",
-                              });
+                              clickGate.show(denial, event.currentTarget);
                               return;
                             }
                             router.push(backtestNewHref({ template: row.id }));
@@ -1675,8 +1688,12 @@ export function TemplatesLibrary({
                           <TableIconAction
                             label="Share"
                             detail="Share this folder with another member."
-                            onClick={() => {
-                            if (revealTemplateGate("extras_share_templates")) {
+                            onClick={(event) => {
+                            const denied = revealTemplateGate(
+                              "extras_share_templates",
+                            );
+                            if (denied) {
+                              clickGate.show(denied, event.currentTarget);
                               return;
                             }
                             setSharingFolderId(row.id);
