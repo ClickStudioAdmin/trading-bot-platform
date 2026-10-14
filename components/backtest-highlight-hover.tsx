@@ -1,8 +1,5 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
-import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import {
   formatBacktestReturnPct,
   type BacktestLinkHighlight,
@@ -10,45 +7,6 @@ import {
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
 import { signedTone } from "@/lib/opportunities/format";
 import { formatAuDateUtc } from "@/lib/time/display";
-
-export function BacktestHighlightHover({
-  highlight,
-  children,
-}: {
-  highlight: BacktestLinkHighlight;
-  children: ReactNode;
-}) {
-  const [box, setBox] = useState<DOMRect | null>(null);
-  const previewClass = useThemePreviewPortalClass();
-
-  return (
-    <>
-      <span
-        onMouseEnter={(event) =>
-          setBox(event.currentTarget.getBoundingClientRect())
-        }
-        onMouseLeave={() => setBox(null)}
-      >
-        {children}
-      </span>
-      {box && typeof document !== "undefined"
-        ? createPortal(
-            <span
-              role="tooltip"
-              className={`pointer-events-none fixed z-50 w-72 whitespace-normal rounded-control border border-line bg-surface-raised px-3 py-2 text-left text-hint font-normal normal-case tracking-normal text-ink ${previewClass}`.trim()}
-              style={{
-                top: box.bottom + 8,
-                left: Math.max(12, Math.min(box.left, window.innerWidth - 300)),
-              }}
-            >
-              <BacktestHighlightBody highlight={highlight} />
-            </span>,
-            document.body,
-          )
-        : null}
-    </>
-  );
-}
 
 export function BacktestHighlightBody({
   highlight,
