@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   AUTOMATIONS_NEW,
   automationsEditHref,
+  automationsEditingExisting,
   automationsEditTitle,
   automationsNewHref,
   automationsSavedHref,
@@ -49,6 +50,9 @@ assert.equal(
   ),
   "/strategies/futures/automations?desk=desk-1&edit=pb-1&saved=1&notice=Bot+saved.",
 );
+assert.equal(automationsEditingExisting(null), false);
+assert.equal(automationsEditingExisting("new"), false);
+assert.equal(automationsEditingExisting("pb-1"), true);
 assert.equal(automationsEditTitle({ edit: null }), null);
 assert.equal(automationsEditTitle({ edit: "new" }), "New bot");
 assert.equal(
