@@ -110,15 +110,15 @@ const links = templateBotLinksByTemplate(
 
 assert.deepEqual(
   links["tpl-btc"]?.map((bot) => templateBotLinkLabel(bot)),
-  ["Alpha · Same settings", "Main · Renamed bot"],
+  ["Renamed bot", "Same settings"],
 );
 assert.equal(
   links["tpl-btc"]?.[0]?.href,
-  "/strategies/futures/automations?desk=desk-a#bot-pb-3",
+  "/strategies/futures/automations?desk=desk-b#bot-pb-1",
 );
 assert.equal(
   links["tpl-btc"]?.[1]?.href,
-  "/strategies/futures/automations?desk=desk-b#bot-pb-1",
+  "/strategies/futures/automations?desk=desk-a#bot-pb-3",
 );
 assert.deepEqual(
   links["tpl-eth"]?.map((bot) => bot.id),
