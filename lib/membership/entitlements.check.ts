@@ -231,11 +231,11 @@ const plusPaper = capPlan("Plus", {
 
 assert.equal(
   capUsageMessage("max_paper_desks", 2, 2, "Plus"),
-  "You have 2 of 2 Paper Trading desks. Upgrade to Plus to add another.",
+  "You have hit your maximum of 2 Paper Trading Desks. Upgrade to Plus to add another.",
 );
 assert.equal(
   gateRejectLead(capUsageMessage("max_paper_desks", 2, 2, "Plus"), "Plus"),
-  "You have 2 of 2 Paper Trading desks.",
+  "You have hit your maximum of 2 Paper Trading Desks.",
 );
 
 const fullPaper = quotas({
@@ -246,20 +246,20 @@ const fullPaper = quotas({
 assert.equal(quotaAccessFor(fullPaper, "max_paper_desks")?.allowed, false);
 assert.equal(
   quotaAccessFor(fullPaper, "max_paper_desks")?.message,
-  "You have 2 of 2 Paper Trading desks. Upgrade to Plus to add another.",
+  "You have hit your maximum of 2 Paper Trading Desks. Upgrade to Plus to add another.",
 );
 assert.equal(quotaAccessFor(fullPaper, "max_paper_desks")?.upgradePlan, "Plus");
 assert.equal(
   quotaAccessFor(fullPaper, "max_demo_desks")?.message,
-  "You have 1 of 1 Exchange Connected - Demo desks. Upgrade to Plus to add another.",
+  "You have hit your maximum of 1 Exchange Connected - Demo Desk. Upgrade to Plus to add another.",
 );
 assert.equal(
   quotaAccessFor(fullPaper, "max_live_env_desks")?.message,
-  "You have 0 of 0 Exchange Connected - Live desks. Upgrade to Plus to add another.",
+  "You have hit your maximum of 0 Exchange Connected - Live Desks. Upgrade to Plus to add another.",
 );
 assert.equal(
   quotaAccessFor(fullPaper, "max_bots")?.message,
-  "You have 4 of 4 bots. Upgrade to Plus to add another.",
+  "You have hit your maximum of 4 Bots. Upgrade to Plus to add another.",
 );
 
 const under = quotas({
@@ -274,7 +274,7 @@ assert.equal(
 );
 assert.equal(
   quotaRoomMessage(quotaAccessFor(under, "max_paper_desks"), 2),
-  "You have 1 of 2 Paper Trading desks. Upgrade to Plus to add another.",
+  "You have hit your maximum of 2 Paper Trading Desks. Upgrade to Plus to add another.",
 );
 
 const unlimited = quotas({ cap: { max_bots: null }, used: { max_bots: 40 } });
@@ -298,7 +298,7 @@ const noneCap = quotas({
 assert.equal(quotaAccessFor(noneCap, "max_paper_desks")?.upgradePlan, null);
 assert.equal(
   quotaAccessFor(noneCap, "max_paper_desks")?.message,
-  "You have 0 of 0 Paper Trading desks.",
+  "You have hit your maximum of 0 Paper Trading Desks.",
 );
 assert.equal(
   cheapestPublicCapPlanName(

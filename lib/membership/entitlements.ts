@@ -245,11 +245,17 @@ export const DESK_QUOTA_KEYS: readonly QuotaCapKey[] = [
   "max_live_env_desks",
 ];
 
-const QUOTA_NOUN: Record<QuotaCapKey, string> = {
-  max_paper_desks: "Paper Trading desks",
-  max_demo_desks: "Exchange Connected - Demo desks",
-  max_live_env_desks: "Exchange Connected - Live desks",
-  max_bots: "bots",
+const QUOTA_NOUN: Record<QuotaCapKey, { one: string; many: string }> = {
+  max_paper_desks: { one: "Paper Trading Desk", many: "Paper Trading Desks" },
+  max_demo_desks: {
+    one: "Exchange Connected - Demo Desk",
+    many: "Exchange Connected - Demo Desks",
+  },
+  max_live_env_desks: {
+    one: "Exchange Connected - Live Desk",
+    many: "Exchange Connected - Live Desks",
+  },
+  max_bots: { one: "Bot", many: "Bots" },
 };
 
 export type CapUnlockCandidate = UnlockCandidate & {
@@ -265,17 +271,18 @@ export type QuotaAccess = {
   limit: number | null;
 };
 
-export function quotaNoun(key: QuotaCapKey): string {
-  return QUOTA_NOUN[key];
+export function quotaNoun(key: QuotaCapKey, count = 2): string {
+  const noun = QUOTA_NOUN[key];
+  return count === 1 ? noun.one : noun.many;
 }
 
 export function capUsageMessage(
   key: QuotaCapKey,
-  used: number,
+  _used: number,
   limit: number,
   planName: string | null,
 ): string {
-  const lead = `You have ${used} of ${limit} ${quotaNoun(key)}.`;
+  const lead = `You have hit your maximum of ${limit} ${quotaNoun(key, limit)}.`;
   if (!planName) {
     return lead;
   }
