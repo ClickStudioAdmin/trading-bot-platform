@@ -11,8 +11,7 @@ import {
 } from "@/lib/exchanges/actions";
 import type { VenueDefinition } from "@/lib/exchanges/venues";
 import { AppSelect } from "@/components/app-select";
-import { StepUpCodeField } from "@/components/step-up-code-field";
-import { STEP_UP_FIELD } from "@/lib/auth/step-up";
+import { StepUpForm } from "@/components/step-up-code-field";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -48,7 +47,7 @@ export function ExchangeConnectForm({
     const field = event
       ? (event.target as HTMLInputElement | HTMLSelectElement).name
       : "";
-    if (field === "label" || field === "next" || field === STEP_UP_FIELD) {
+    if (field === "label" || field === "next") {
       return;
     }
     if (check) {
@@ -68,9 +67,10 @@ export function ExchangeConnectForm({
   }
 
   return (
-    <form
-      ref={formRef}
+    <StepUpForm
+      formRef={formRef}
       action={saveExchangeConnection}
+      confirmLabel="Save connection"
       autoComplete="off"
       onInput={clearCheck}
       className={
@@ -148,7 +148,6 @@ export function ExchangeConnectForm({
       {check && !check.ok ? (
         <p className="text-sm text-danger">{check.error}</p>
       ) : null}
-      <StepUpCodeField inputClassName={fieldClass} />
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -179,6 +178,6 @@ export function ExchangeConnectForm({
           Save connection
         </PendingSubmitButton>
       </div>
-    </form>
+    </StepUpForm>
   );
 }

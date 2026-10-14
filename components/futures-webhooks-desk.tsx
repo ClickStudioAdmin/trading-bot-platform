@@ -10,7 +10,7 @@ import {
 } from "@/lib/futures/actions";
 import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
 import { AppSelect } from "@/components/app-select";
-import { StepUpCodeField } from "@/components/step-up-code-field";
+import { StepUpForm } from "@/components/step-up-code-field";
 
 const STRATEGY_PAYLOADS = [
   {
@@ -246,9 +246,8 @@ export function FuturesWebhooksDesk({
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <form action={rotateFuturesWebhook} className="space-y-2">
+            <StepUpForm action={rotateFuturesWebhook} confirmLabel="Rotate URL">
               <input type="hidden" name="webhookId" value={hook.id} />
-              <StepUpCodeField />
               <PendingSubmitButton
                 pendingLabel="Rotating…"
                 successKey={`rotate-webhook-${hook.id}`}
@@ -256,7 +255,7 @@ export function FuturesWebhooksDesk({
               >
                 Rotate URL
               </PendingSubmitButton>
-            </form>
+            </StepUpForm>
             <form action={deleteFuturesWebhookAction}>
               <input type="hidden" name="webhookId" value={hook.id} />
               <PendingSubmitButton

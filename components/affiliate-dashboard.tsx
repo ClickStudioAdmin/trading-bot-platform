@@ -9,7 +9,7 @@ import { CopyTextButton } from "@/components/copy-text-button";
 import { IconFilterClear } from "@/components/icons";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { StepUpCodeField } from "@/components/step-up-code-field";
+import { StepUpForm } from "@/components/step-up-code-field";
 import {
   LiveGetForm,
   SortTh,
@@ -878,8 +878,9 @@ export function AffiliateDashboard({
             tick this on Settings → Crypto.
           </p>
         ) : null}
-              <form
+              <StepUpForm
                 action={requestAffiliatePayoutAction}
+                confirmLabel="Request payout"
                 className="mt-4 flex flex-wrap items-end gap-3"
               >
                 <input
@@ -927,10 +928,6 @@ export function AffiliateDashboard({
                     {shortenPayoutAddress(portal.payoutSettings.address)}
                   </p>
                 </div>
-                <StepUpCodeField
-                  className="w-52 shrink-0"
-                  inputClassName={BILLING_FIELD_CLASS}
-                />
           <PendingSubmitButton
             pendingLabel="Requesting…"
             disabled={!canWithdraw}
@@ -938,7 +935,7 @@ export function AffiliateDashboard({
           >
                   Request payout
           </PendingSubmitButton>
-        </form>
+        </StepUpForm>
             </section>
             <section className="rounded-card border border-line bg-surface p-5">
               <h2 className="text-lg font-semibold tracking-tight">

@@ -1,7 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useRef, useSyncExternalStore, type ReactNode } from "react";
+import {
+  useActionState,
+  useCallback,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { DeskTypeMark } from "@/components/desk-mark";
 import { useDeskTypeAccess } from "@/components/desk-type-access";
@@ -37,7 +46,11 @@ import { IconChevronDown, IconTour } from "@/components/icons";
 import { NavBadge } from "@/components/nav-badge";
 import { NAV_ACTIVE_CLASS, NAV_IDLE_CLASS, NavItemIcon } from "@/components/site-nav";
 import { resetDevAccount, startPlatformTour } from "@/lib/onboarding/actions";
-import { StepUpCodeField } from "@/components/step-up-code-field";
+import {
+  StepUpModal,
+  useTotpStepUpEnabled,
+} from "@/components/step-up-code-field";
+import { STEP_UP_FIELD, stepUpShouldAsk } from "@/lib/auth/step-up";
 import {
   OPEN_ACCOUNT_NAV_EVENT,
   tourTargetForAccountHref,
@@ -169,12 +182,28 @@ export function AccountSidenav({
 
 function DevResetAccount() {
   const formRef = useRef<HTMLFormElement>(null);
+  const formId = `step-up-${useId().replace(/:/g, "")}`;
   const [state, action, pending] = useActionState(resetDevAccount, null);
   const { confirm, dialog } = useConfirmDialog();
+  const totpEnabled = useTotpStepUpEnabled();
+  const [askCode, setAskCode] = useState(false);
+  const closeCode = useCallback(() => setAskCode(false), []);
+
+  function holdForCode(event: FormEvent<HTMLFormElement>) {
+    if (
+      stepUpShouldAsk({
+        enabled: totpEnabled,
+        code: String(new FormData(event.currentTarget).get(STEP_UP_FIELD) ?? ""),
+      })
+    ) {
+      event.preventDefault();
+      setAskCode(true);
+    }
+  }
+
   return (
     <>
-      <form ref={formRef} action={action} className="space-y-2">
-        <StepUpCodeField />
+      <form id={formId} ref={formRef} action={action} onSubmit={holdForCode}>
         <button
           type="button"
           disabled={pending}
@@ -186,9 +215,14 @@ function DevResetAccount() {
               confirmLabel: "Reset Account",
               danger: true,
             }).then((ok) => {
-              if (ok) {
-                formRef.current?.requestSubmit();
+              if (!ok) {
+                return;
               }
+              if (totpEnabled) {
+                setAskCode(true);
+                return;
+              }
+              formRef.current?.requestSubmit();
             });
           }}
           className="flex items-center gap-2 rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40"
@@ -196,10 +230,19 @@ function DevResetAccount() {
           <span aria-hidden className="size-4 shrink-0" />
           {pending ? "Resetting…" : "Reset Account"}
         </button>
-        {state?.error ? (
+        {state?.error && !askCode ? (
           <p className="px-3 pb-1 text-xs text-danger">{state.error}</p>
         ) : null}
       </form>
+      <StepUpModal
+        open={askCode}
+        formId={formId}
+        confirmLabel="Reset Account"
+        danger
+        pending={pending}
+        error={state?.error ?? null}
+        onCancel={closeCode}
+      />
       {dialog}
     </>
   );
@@ -220,26 +263,12 @@ function DeskTypeCreateLink({
 }) {
   const access = useDeskTypeAccess();
   const row = deskTypeAccessFor(access, deskType);
-  const denied = access.length > 0 && row && !row.allowed ? row.message : null;
-  if (denied) {
-    return (
-      <button
-        type="button"
-        disabled
-        title={denied}
-        aria-label={denied}
-        className={`${className} cursor-not-allowed opacity-40`}
-      >
-        {children}
-      </button>
-    );
-  }
   return (
     <Link
       href={createDeskPath(deskType)}
       aria-current={creating ? "true" : undefined}
       aria-label={label}
-      title={row?.message ?? label}
+      title={row?.allowed && row.message ? row.message : label}
       className={className}
     >
       {children}
