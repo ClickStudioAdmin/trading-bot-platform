@@ -47,6 +47,7 @@ import {
   BACKTEST_YEAR_MS,
   attachClickDenial,
   backtestCreateDenial,
+  newBacktestPageNotices,
   backtestListTrialLines,
   backtestSpanFitsYears,
   backtestYearsDecision,
@@ -1054,6 +1055,52 @@ assert.equal(
   "Your free trial of backtesting ended on 01/10/2026.",
 );
 assert.equal(backtestCreateDenial(backtestEnded)?.upgradePlan, "Plus");
+assert.deepEqual(
+  newBacktestPageNotices(researchGate(), {
+    adding: 1,
+    fromMs: 0,
+    toMs: year,
+  }).map((row) => row.message),
+  ["Backtesting is not allowed on your plan. Upgrade to Plus to enable it."],
+);
+assert.deepEqual(
+  newBacktestPageNotices(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_stored_backtests: 3, max_backtest_years: 2 },
+      savedUsed: 3,
+    }),
+    { adding: 1, fromMs: 0, toMs: year },
+  ).map((row) => row.message),
+  [
+    "You have hit your maximum of 3 Saved Backtests. Upgrade to Plus to add another.",
+  ],
+);
+assert.deepEqual(
+  newBacktestPageNotices(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_stored_backtests: 3, max_backtest_years: 1 },
+      savedUsed: 3,
+    }),
+    { adding: 1, fromMs: 0, toMs: 2 * year },
+  ).map((row) => row.message),
+  [
+    "You have hit your maximum of 3 Saved Backtests. Upgrade to Plus to add another.",
+    "Maximum of 1 year available on your plan. Upgrade to Plus to enable it.",
+  ],
+);
+assert.deepEqual(
+  newBacktestPageNotices(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_stored_backtests: 3, max_backtest_years: 2 },
+      savedUsed: 0,
+    }),
+    { adding: 1, fromMs: 0, toMs: year },
+  ),
+  [],
+);
 
 assert.equal(
   attachClickDenial(researchGate())?.message,
