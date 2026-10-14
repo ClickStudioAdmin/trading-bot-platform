@@ -1378,6 +1378,11 @@ export function backtestListTrialLines(gate: ResearchGateAccess): string[] {
   return lines;
 }
 
+/** Open backtesting and replay trials for the replay page. The report does not show them. */
+export function replayPageTrialLines(gate: ResearchGateAccess): string[] {
+  return backtestListTrialLines(gate);
+}
+
 function featureNotice(
   row: ResearchFeatureAccess,
 ): ResearchNotice | null {

@@ -23,7 +23,8 @@ import {
   listBacktestRuns,
   loadBacktestRun,
 } from "@/lib/backtest/store";
-import { deniedReplayMessage } from "@/lib/membership/load-research-gate-access";
+import { replayClickDenial, replayPageTrialLines } from "@/lib/membership/entitlements";
+import { loadResearchGateAccess } from "@/lib/membership/load-research-gate-access";
 import { templateIsLibraryRow } from "@/lib/templates/recipe";
 import { listApplyableSets, loadTemplateById } from "@/lib/templates/store";
 
@@ -74,7 +75,8 @@ export default async function AccountBacktestReplayPage({
       </div>
     );
   }
-  const replayDenial = await deniedReplayMessage(member.id);
+  const researchGate = await loadResearchGateAccess(member.id);
+  const replayDenial = replayClickDenial(researchGate);
   if (replayDenial) {
     return (
       <div>
@@ -98,6 +100,7 @@ export default async function AccountBacktestReplayPage({
       </div>
     );
   }
+  const trialLines = replayPageTrialLines(researchGate);
   const family = await loadReplayFamily(run, member.id, isAdmin);
   const linked = run.templateId ? await loadTemplateById(run.templateId) : null;
   const linkedLibrary = Boolean(
@@ -112,6 +115,16 @@ export default async function AccountBacktestReplayPage({
           { label: "Replay" },
         ]}
       />
+      {trialLines.length > 0 ? (
+        <div className="mb-4 space-y-3">
+          {trialLines.map((line) => (
+            <DeskTypeRejectBanner
+              key={line}
+              access={{ allowed: false, message: line, upgradePlan: null }}
+            />
+          ))}
+        </div>
+      ) : null}
       <ReplayPlayer
         key={run.id}
         run={run}

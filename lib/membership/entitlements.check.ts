@@ -53,6 +53,7 @@ import {
   queueBacktestDenial,
   queueTrialLines,
   replayClickDenial,
+  replayPageTrialLines,
   researchGateAccess,
   researchTrialLine,
   savedBacktestDecision,
@@ -1236,6 +1237,31 @@ assert.equal(replayClickDenial(openReplay), null);
 assert.deepEqual(backtestListTrialLines(openReplay), [
   "Replaying backtests is in a free trial until 28/10/2026.",
 ]);
+assert.deepEqual(replayPageTrialLines(openReplay), [
+  "Replaying backtests is in a free trial until 28/10/2026.",
+]);
+assert.deepEqual(
+  replayPageTrialLines(
+    researchGate({
+      trials: {
+        features: {
+          research_backtest: { days: 14 },
+          replay_backtests: { days: 14 },
+        },
+        caps: {},
+      },
+      grants: [
+        { key: "research_backtest", endsAt: "2026-10-28T00:00:00.000Z" },
+        { key: "replay_backtests", endsAt: "2026-10-26T00:00:00.000Z" },
+      ],
+    }),
+  ),
+  [
+    "Backtesting is in a free trial until 28/10/2026.",
+    "Replaying backtests is in a free trial until 26/10/2026.",
+  ],
+);
+assert.deepEqual(replayPageTrialLines(researchGate()), []);
 assert.deepEqual(
   queueTrialLines(
     researchGate({
