@@ -149,7 +149,17 @@ assert.equal(
   "All",
 );
 
-assert.deepEqual(templateParamSections(dca), recipeParamSections(dca));
+const templateDca = templateParamSections(dca);
+assert.deepEqual(
+  templateDca[0]?.groups[0]?.rows.map((row) => row.label),
+  ["Contract", "Direction"],
+);
+assert.equal(
+  templateDca.flatMap((section) => section.groups.flatMap((group) => group.rows)).some(
+    (row) => row.label === "Name",
+  ),
+  false,
+);
 
 const paper = snapshotPaperRecipe({
   ...defaultPaperLayer(0),
@@ -165,12 +175,12 @@ const paper = snapshotPaperRecipe({
 const paperSections = templateParamSections(paper);
 assert.deepEqual(
   paperSections.map((section) => section.title),
-  ["General", "Entry Conditions", "Position Sizing", "Exit Conditions"],
+  ["Entry Conditions", "Position Sizing", "Exit Conditions"],
 );
 const paperRows = paperSections.flatMap((section) =>
   section.groups.flatMap((group) => group.rows),
 );
-assert.equal(paperRows.find((row) => row.label === "Name")?.value, "Core carry");
+assert.equal(paperRows.find((row) => row.label === "Name"), undefined);
 assert.equal(paperRows.find((row) => row.label === "Min APR %")?.value, "10%");
 assert.equal(paperRows.find((row) => row.label === "Min DTE")?.value, "7");
 assert.equal(paperRows.find((row) => row.label === "Max DTE")?.value, "Off");

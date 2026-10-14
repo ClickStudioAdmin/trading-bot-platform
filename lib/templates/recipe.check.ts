@@ -10,6 +10,8 @@ import {
   perpsRecipeToRule,
   recipeHasRuntimeKeys,
   recipePreview,
+  storedTemplateRecipe,
+  botNameFromTemplate,
   dcaFormMatchesPlaybook,
   snapshotDcaRecipe,
   snapshotPaperRecipe,
@@ -393,7 +395,33 @@ assert.equal(
   uniqueAppliedName("Core", ["Core", "Core (from template)"]),
   "Core (from template 2)",
 );
-assert.equal(recipePreview(snapshot).includes("ETHUSDT"), true);
+assert.equal(recipePreview(snapshot), "ETHUSDT");
+assert.equal(recipePreview(paper), "");
+assert.equal(storedTemplateRecipe(snapshot).name, "");
+assert.equal(snapshot.name, "ETH grid");
+assert.equal(botNameFromTemplate("  Grid idea  "), "Grid idea");
+assert.equal(botNameFromTemplate("x".repeat(80)).length, 40);
+assert.equal(botNameFromTemplate("   "), "Template");
+const unnamed = parseTemplateRecipe({ ...snapshot, name: "" }, "dca", 1);
+assert.equal(unnamed.ok, true);
+if (unnamed.ok) {
+  assert.equal(unnamed.recipe.name, "");
+}
+const namedRoundTrip = parseTemplateRecipe(snapshot, "dca", 1);
+assert.equal(namedRoundTrip.ok, true);
+if (namedRoundTrip.ok) {
+  assert.equal(namedRoundTrip.recipe.name, "ETH grid");
+}
+const unnamedPerps = parseTemplateRecipe({ ...perps, name: "" }, "perps", 1);
+assert.equal(unnamedPerps.ok, true);
+if (unnamedPerps.ok) {
+  assert.equal(unnamedPerps.recipe.name, "");
+}
+const unnamedPaper = parseTemplateRecipe({ ...paper, name: "" }, "cash_and_carry", 1);
+assert.equal(unnamedPaper.ok, true);
+if (unnamedPaper.ok) {
+  assert.equal(unnamedPaper.recipe.name, "");
+}
 
 assert.equal(parseTemplateName("").ok, false);
 assert.equal(parseTemplateName("  Grid  ").ok, true);

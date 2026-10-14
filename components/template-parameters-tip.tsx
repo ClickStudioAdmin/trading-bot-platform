@@ -71,18 +71,21 @@ function enqueueAttachedBacktests(
 
 export function TemplateParametersButton({
   name,
+  description = null,
   recipe,
   templateId = null,
   backtests = null,
   className = "",
 }: {
   name: string;
+  description?: string | null;
   recipe: TemplateRecipe | null | undefined;
   templateId?: string | null;
   /** When set, skip the lookup and show these runs. Null loads attached runs as soon as the button is shown. */
   backtests?: TemplateBacktestLink[] | null;
   className?: string;
 }) {
+  const descriptionText = description?.trim() ?? "";
   const sections = recipe ? templateParamSections(recipe) : [];
   const requestId = useRef<string | null>(null);
   const [loadedBacktests, setLoadedBacktests] = useState<
@@ -387,6 +390,11 @@ export function TemplateParametersButton({
                 ) : (
                   <h2 className="text-lg font-semibold">Parameters</h2>
                 )}
+                {descriptionText ? (
+                  <p className="mt-3 text-sm whitespace-pre-wrap break-words text-ink-muted">
+                    {descriptionText}
+                  </p>
+                ) : null}
               </div>
               <div
                 data-parameters-body=""
@@ -473,6 +481,7 @@ function PopupTab({
 
 export function TemplateNameWithParameters({
   name,
+  description = null,
   recipe,
   templateId = null,
   backtests = null,
@@ -480,6 +489,7 @@ export function TemplateNameWithParameters({
   nameClassName = "min-w-0 break-words",
 }: {
   name: string;
+  description?: string | null;
   recipe: TemplateRecipe | null | undefined;
   templateId?: string | null;
   backtests?: TemplateBacktestLink[] | null;
@@ -491,6 +501,7 @@ export function TemplateNameWithParameters({
       <span className={nameClassName}>{name}</span>
       <TemplateParametersButton
         name={name}
+        description={description}
         recipe={recipe}
         templateId={templateId}
         backtests={backtests}

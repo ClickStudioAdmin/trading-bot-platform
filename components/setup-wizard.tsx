@@ -1096,6 +1096,7 @@ function BotNameCell({
             <li key={bot.templateId}>
               <TemplateNameWithParameters
                 name={bot.name}
+                description={starterDescription(folders, bot.templateId)}
                 recipe={starterRecipe(folders, bot.templateId)}
                 templateId={bot.templateId}
                 nameClassName=""
@@ -1906,6 +1907,7 @@ function BotStep({
                             />
                             <TemplateNameWithParameters
                               name={template.name}
+                              description={template.description}
                               recipe={template.recipe}
                               templateId={template.id}
                               nameClassName=""
@@ -1944,6 +1946,19 @@ function starterRecipe(folders: readonly StarterFolder[], templateId: string) {
     const match = folder.templates.find((row) => row.id === templateId);
     if (match?.recipe) {
       return match.recipe;
+    }
+  }
+  return null;
+}
+
+function starterDescription(
+  folders: readonly StarterFolder[],
+  templateId: string,
+) {
+  for (const folder of folders) {
+    const match = folder.templates.find((row) => row.id === templateId);
+    if (match) {
+      return match.description ?? null;
     }
   }
   return null;

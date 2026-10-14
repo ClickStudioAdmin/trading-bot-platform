@@ -748,6 +748,7 @@ type PickerTab = "mine" | "platform";
 type PickerItem = {
   templateId: string;
   name: string;
+  description: string | null;
   recipe: TemplateRecipe | null;
 };
 
@@ -767,6 +768,7 @@ type PickerFolder = {
 function asPickerFolder(
   folder: AutomationTemplateSet,
   recipes: Map<string, TemplateRecipe>,
+  descriptions: Map<string, string | null>,
 ): PickerFolder {
   return {
     id: folder.id,
@@ -774,6 +776,7 @@ function asPickerFolder(
     items: folder.items.map((item) => ({
       templateId: item.templateId,
       name: item.name,
+      description: descriptions.get(item.templateId) ?? null,
       recipe: recipes.get(item.templateId) ?? null,
     })),
     folders: [],
@@ -785,6 +788,7 @@ function templatesAsItems(rows: TemplateSummary[]): PickerItem[] {
   return rows.map((row) => ({
     templateId: row.id,
     name: row.name,
+    description: row.description,
     recipe: row.recipe,
   }));
 }
@@ -802,11 +806,12 @@ function scopeContent(
   templates: TemplateSummary[],
   sets: AutomationTemplateSet[],
   recipes: Map<string, TemplateRecipe>,
+  descriptions: Map<string, string | null>,
   match: (row: { visibility: string; sharedByEmail: string | null }) => boolean,
 ): PickerScope {
   const folders = sets
     .filter((folder) => match(folder))
-    .map((folder) => asPickerFolder(folder, recipes));
+    .map((folder) => asPickerFolder(folder, recipes, descriptions));
   const filed = new Set(
     folders.flatMap((folder) => folder.items.map((item) => item.templateId)),
   );
@@ -823,13 +828,17 @@ function libraryTree(
   sets: AutomationTemplateSet[],
 ): { mine: PickerScope; platform: PickerScope } {
   const recipes = new Map(templates.map((row) => [row.id, row.recipe]));
+  const descriptions = new Map(
+    templates.map((row) => [row.id, row.description]),
+  );
   const mine = scopeContent(
     templates,
     sets,
     recipes,
+    descriptions,
     (row) => row.visibility === "user" && !row.sharedByEmail,
   );
-  const shared = scopeContent(templates, sets, recipes, (row) =>
+  const shared = scopeContent(templates, sets, recipes, descriptions, (row) =>
     Boolean(row.sharedByEmail),
   );
   return {
@@ -841,6 +850,7 @@ function libraryTree(
       templates,
       sets,
       recipes,
+      descriptions,
       (row) => row.visibility === "platform",
     ),
   };
@@ -963,6 +973,7 @@ function TemplatePick({
         <span className="min-w-0">
           <TemplateNameWithParameters
             name={item.name}
+            description={item.description}
             recipe={item.recipe}
             templateId={item.templateId}
             backtests={backtests}

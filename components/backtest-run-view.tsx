@@ -873,12 +873,14 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
 
 export function BacktestOriginBadges({
   templateName,
+  templateDescription = null,
   templateRecipe = null,
   templateId = null,
   deskLabel,
   edited = false,
 }: {
   templateName: string | null;
+  templateDescription?: string | null;
   templateRecipe?: TemplateRecipe | null;
   templateId?: string | null;
   deskLabel: string | null;
@@ -894,6 +896,7 @@ export function BacktestOriginBadges({
           Template · {templateName}
           <TemplateParametersButton
             name={templateName}
+            description={templateDescription}
             recipe={templateRecipe}
             templateId={templateId}
           />

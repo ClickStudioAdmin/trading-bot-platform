@@ -876,11 +876,21 @@ function paperSections(recipe: PaperTemplateRecipe): ParamSection[] {
   ];
 }
 
+function withoutBotName(sections: ParamSection[]): ParamSection[] {
+  return sections.flatMap((section) => {
+    const groups = section.groups.flatMap((group) => {
+      const rows = group.rows.filter((row) => row.label !== "Name");
+      return rows.length > 0 ? [{ ...group, rows }] : [];
+    });
+    return groups.length > 0 ? [{ ...section, groups }] : [];
+  });
+}
+
 export function templateParamSections(recipe: TemplateRecipe): ParamSection[] {
   if (recipe.kind === "cash_and_carry") {
-    return paperSections(recipe);
+    return withoutBotName(paperSections(recipe));
   }
-  return recipeParamSections(recipe);
+  return withoutBotName(recipeParamSections(recipe));
 }
 
 function listedBotSections(recipe: BacktestRecipe): ParamSection[] {

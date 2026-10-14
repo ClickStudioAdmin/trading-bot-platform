@@ -411,6 +411,7 @@ function StarterBots({
                       />
                       <TemplateNameWithParameters
                         name={template.name}
+                        description={template.description}
                         recipe={template.recipe}
                         templateId={template.id}
                         nameClassName=""

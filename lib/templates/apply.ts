@@ -27,6 +27,7 @@ import { loadFuturesAutomationRules } from "@/lib/futures/automation-load";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { PaperEngineLayer } from "@/lib/engine/decide";
 import {
+  botNameFromTemplate,
   dcaRecipeToConfig,
   paperRecipeToLayer,
   perpsRecipeToRule,
@@ -207,7 +208,11 @@ async function applyDcaTemplate(input: {
     supabase,
     userId: input.userId,
     accountId: input.accountId,
-    config: { ...built.config, webhookId: built.config.webhookId },
+    config: {
+      ...built.config,
+      name: botNameFromTemplate(input.template.name),
+      webhookId: built.config.webhookId,
+    },
   });
   if (!saved.ok) {
     const taken = saved.error.includes("already covers");
@@ -276,7 +281,7 @@ async function applyPerpsTemplate(input: {
   const rule: FuturesAutomationRule = {
     ...built.rule,
     name: uniqueAppliedName(
-      built.rule.name,
+      botNameFromTemplate(input.template.name),
       existing.map((row) => row.name),
     ),
     mode: "disabled",
@@ -368,7 +373,7 @@ async function applyPaperTemplate(input: {
   }
   const layer: PaperEngineLayer = {
     ...built.layer,
-    name: uniqueAppliedName(built.layer.name, names),
+    name: uniqueAppliedName(botNameFromTemplate(input.template.name), names),
     mode: "disabled",
     id: null,
     sortOrder: nextOrder,

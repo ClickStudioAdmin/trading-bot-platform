@@ -212,6 +212,7 @@ const FOLDER_TEMPLATE_PREVIEW = 5;
 type FolderTemplateEntry = {
   id: string;
   name: string;
+  description: string | null;
   recipe: TemplateRecipe | null;
 };
 
@@ -226,6 +227,7 @@ function FolderTemplateNames({ items }: { items: FolderTemplateEntry[] }) {
         <TemplateNameWithParameters
           key={item.id}
           name={item.name}
+          description={item.description}
           recipe={item.recipe}
           templateId={item.id}
         />
@@ -315,6 +317,7 @@ function FolderTemplatesSeeAll({ items }: { items: FolderTemplateEntry[] }) {
                   <li key={item.id}>
                     <TemplateNameWithParameters
                       name={item.name}
+                      description={item.description}
                       recipe={item.recipe}
                       templateId={item.id}
                     />
@@ -465,6 +468,14 @@ export function TemplatesLibrary({
     const map = new Map<string, TemplateRecipe>();
     for (const row of [...templates, ...sharedTemplates]) {
       map.set(row.id, row.recipe);
+    }
+    return map;
+  }, [sharedTemplates, templates]);
+
+  const descriptions = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const row of [...templates, ...sharedTemplates]) {
+      map.set(row.id, row.description);
     }
     return map;
   }, [sharedTemplates, templates]);
@@ -1187,6 +1198,7 @@ export function TemplatesLibrary({
                   <td className="px-4 py-3 font-medium text-ink">
                     <TemplateNameWithParameters
                       name={row.name}
+                      description={row.description}
                       recipe={row.recipe}
                       templateId={row.id}
                     />
@@ -1435,6 +1447,7 @@ export function TemplatesLibrary({
                         items={row.items.map((item) => ({
                           id: item.templateId,
                           name: item.name,
+                          description: descriptions.get(item.templateId) ?? null,
                           recipe: recipes.get(item.templateId) ?? null,
                         }))}
                       />
@@ -1606,6 +1619,7 @@ export function TemplatesLibrary({
           kind="template"
           name={sharingTemplate.name}
           id={sharingTemplate.id}
+          description={sharingTemplate.description}
           recipe={sharingTemplate.recipe}
           peers={sharingTemplate.sharedWith}
           onClose={() => setSharingTemplateId(null)}
@@ -1801,6 +1815,7 @@ function ImportModal({
                   aside: (
                     <TemplateParametersButton
                       name={row.name}
+                      description={row.description}
                       recipe={row.recipe}
                       templateId={row.id}
                     />
@@ -1868,6 +1883,7 @@ function ShareModal({
   name,
   id,
   peers,
+  description = null,
   recipe = null,
   onClose,
   onResult,
@@ -1875,6 +1891,7 @@ function ShareModal({
   kind: "template" | "set";
   name: string;
   id: string;
+  description?: string | null;
   peers: { userId: string; email: string }[];
   recipe?: TemplateRecipe | null;
   onClose: () => void;
@@ -1944,6 +1961,7 @@ function ShareModal({
           {kind === "template" ? (
             <TemplateParametersButton
               name={name}
+              description={description}
               recipe={recipe}
               templateId={id}
             />
@@ -2171,7 +2189,9 @@ function TemplateEditModal({
   return (
     <>
     <Modal title="Edit template" onClose={onClose}>
-      <p className="mt-1 text-hint text-ink-muted">{recipePreview(template.recipe)}</p>
+      {recipePreview(template.recipe) ? (
+        <p className="mt-1 text-hint text-ink-muted">{recipePreview(template.recipe)}</p>
+      ) : null}
       <nav className="mt-4 flex gap-1 border-b border-line" role="tablist">
         <button
           type="button"
@@ -2592,6 +2612,7 @@ function MembershipColumn({
               <span className="min-w-0 text-sm text-ink">
                 <TemplateNameWithParameters
                   name={row.name}
+                  description={row.description}
                   recipe={row.recipe}
                   templateId={row.id}
                   className="min-w-0"

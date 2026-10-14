@@ -21,6 +21,7 @@ export async function listOnboardingFolders(): Promise<StarterFolder[]> {
   const loose: StarterLooseTemplate[] = templates.map((template) => ({
     id: template.id,
     name: template.name,
+    description: template.description,
     visibility: starterVisibility(template.visibility),
     deskType: template.deskType,
     starterPack: template.starterPack,
@@ -33,13 +34,16 @@ export async function listOnboardingFolders(): Promise<StarterFolder[]> {
       deskType: set.deskType,
       visibility: starterVisibility(set.visibility),
       starterPack: set.starterPack,
-      templates: set.items.map((item) => ({
-        id: item.templateId,
-        name: item.name,
-        visibility: starterVisibility(item.visibility),
-        recipe:
-          templates.find((row) => row.id === item.templateId)?.recipe ?? null,
-      })),
+      templates: set.items.map((item) => {
+        const source = templates.find((row) => row.id === item.templateId);
+        return {
+          id: item.templateId,
+          name: item.name,
+          description: source?.description ?? null,
+          visibility: starterVisibility(item.visibility),
+          recipe: source?.recipe ?? null,
+        };
+      }),
     })),
     loose,
   );

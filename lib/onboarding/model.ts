@@ -52,6 +52,7 @@ export type StarterDeskType = "dca" | "perps" | "cash_and_carry";
 export type StarterTemplate = {
   id: string;
   name: string;
+  description?: string | null;
   visibility: StarterVisibility;
   recipe?: TemplateRecipe | null;
 };
