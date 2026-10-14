@@ -47,21 +47,31 @@ assert.deepEqual(
     { mode: "paper", venue: "bybit", venueEnvironment: null },
     null,
   ),
-  { exchange: "Bybit", connection: null, environment: "Paper" },
+  {
+    exchange: "Bybit",
+    connection: null,
+    environment: "Paper",
+    environmentTitle: null,
+  },
 );
 assert.deepEqual(
   deskExchangeView(
     { mode: "live", venue: "bybit", venueEnvironment: "demo" },
     { label: "Main Demo Account", venue: "bybit", environment: "demo" },
   ),
-  { exchange: "Bybit", connection: "Main Demo Account", environment: "Demo" },
+  {
+    exchange: "Bybit",
+    connection: "Main Demo Account",
+    environment: "Demo",
+    environmentTitle: null,
+  },
 );
 assert.deepEqual(
   deskExchangeView(
     { mode: "live", venue: "bybit", venueEnvironment: "demo" },
     { label: "Bybit", venue: "bybit", environment: "demo" },
   ),
-  { exchange: "Bybit", connection: null, environment: "Demo" },
+  { exchange: "Bybit", connection: null, environment: "Demo", environmentTitle: null },
 );
 assert.deepEqual(
   deskExchangeView(
@@ -75,7 +85,8 @@ assert.deepEqual(
   {
     exchange: "Hyperliquid",
     connection: "Hyper - Test Agent",
-    environment: "Hyperliquid Testnet (demo)",
+    environment: "Demo",
+    environmentTitle: "Hyperliquid Testnet",
   },
 );
 assert.deepEqual(
@@ -83,7 +94,7 @@ assert.deepEqual(
     { mode: "live", venue: "bybit", venueEnvironment: "demo" },
     null,
   ),
-  { exchange: null, connection: null, environment: "Demo" },
+  { exchange: null, connection: null, environment: "Demo", environmentTitle: null },
 );
 
 function account(
