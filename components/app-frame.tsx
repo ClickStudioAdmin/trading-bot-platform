@@ -4,6 +4,7 @@ import { QuotaAccessProvider } from "@/components/quota-access";
 import { TemplateFeatureAccessProvider } from "@/components/template-feature-access";
 import { CopyGateProvider } from "@/components/copy-gate-access";
 import { ResearchGateProvider } from "@/components/research-gate-access";
+import { TotpStepUpProvider } from "@/components/step-up-code-field";
 import { PlatformTour } from "@/components/platform-tour";
 import { SetupGate } from "@/components/setup-gate";
 import { SetupModalFallback } from "@/components/setup-modal";
@@ -115,6 +116,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
 
   return (
     <UiPreferencesProvider chrome={chromeScheme} content={contentScheme}>
+      <TotpStepUpProvider enabled={Boolean(member?.totpEnabled)}>
       <DeskTypeAccessProvider access={deskTypeAccess}>
       <QuotaAccessProvider access={quotaAccess}>
       <TemplateFeatureAccessProvider access={templateFeatureAccess}>
@@ -183,6 +185,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
       </TemplateFeatureAccessProvider>
       </QuotaAccessProvider>
       </DeskTypeAccessProvider>
+      </TotpStepUpProvider>
     </UiPreferencesProvider>
   );
 }

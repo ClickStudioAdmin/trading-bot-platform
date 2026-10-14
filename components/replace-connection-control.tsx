@@ -7,6 +7,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
 import { replaceExchangeConnection } from "@/lib/exchanges/actions";
 import type { VenueCredentialField } from "@/lib/exchanges/venues";
+import { StepUpCodeField } from "@/components/step-up-code-field";
 
 const fieldClass =
   "mt-1 w-full min-w-0 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -59,6 +60,7 @@ export function ReplaceConnectionControl({
               />
             </label>
           ))}
+          <StepUpCodeField inputClassName={fieldClass} />
           <PendingSubmitButton
             pendingLabel="Verifying…"
             successKey={`exchange-replace-${connectionId}`}

@@ -11,6 +11,7 @@ import {
 } from "@/lib/accounts/model";
 import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
+import { StepUpCodeField } from "@/components/step-up-code-field";
 import { useDeskTypeAccess } from "@/components/desk-type-access";
 import {
   quotaAccessFor,
@@ -1993,6 +1994,7 @@ function SetupKeyForm({
           ? "Paste the account address and an approved agent private key. The secret is encrypted and is not shown again."
           : "Use a trade-only key with no withdrawal permission. The secret is encrypted and is not shown again."}
       </p>
+      <StepUpCodeField inputClassName={fieldClass} />
       {message ? (
         <p className={`text-sm ${ok ? "text-success" : "text-danger"}`}>
           {message}

@@ -137,7 +137,7 @@ Result is allow, or a reason:
 - `upgrade` — feature off, or cap already used up. Name the cheapest **public**, not archived plan (lowest price, then `sort_order`) where the feature is on, or where the cap is null or greater than current use. A private plan is never named. If no public plan unlocks it, the line says it is not on a public plan and does not invent a name.
 - `need_2fa` — the plan has **Require 2FA** and `totp_enabled_at` is null. Copy is “Turn on 2FA”, linking to Account Settings → Password & Security. Not checkout.
 
-**Require 2FA** is a boolean on `membership_plans` (`requires_2fa`, default false), not a catalog tick. Admin plan editor gets one checkbox. Seed every existing plan false so current logins are not blocked. It applies to the mutations in the matrix below. It does not apply to billing, settings, sign-in, or sign-out.
+**Require 2FA** is a boolean on `membership_plans` (`requires_2fa`, default false), not a catalog tick. Admin plan editor gets one checkbox. Seed every existing plan false so current logins are not blocked. It applies to the mutations in the matrix below. It does not apply to billing, settings, sign-in, or sign-out. That checkbox is not wired. A separate step-up, only when Google Authenticator is already on, asks for a fresh code on password change, withdraw, affiliate payout address and request, exchange key save or replace, webhook rotate, desk delete, trader alias change, and the develop reset ([phase-2fa.md](phase-2fa.md)).
 
 Editing an existing bot, template, listing, or backtest does not consume another cap. Creating, cloning, importing, queueing, and arming a new one does.
 

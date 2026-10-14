@@ -1,18 +1,18 @@
-# 2FA (login only)
+# 2FA
 
 **V1 item 2** ([roadmap.md](roadmap.md)). Spec written 16 Sep 2026 when Click split this out of entitlements. Identity (verify + forgot password) is V1 item 1. Plan-required 2FA and Upgrade gates are V1 item 6 ([phase-entitlements.md](phase-entitlements.md)).
 
-**Accepted 17 Sep 2026.** Stop. Do not start UI cleanup or plan gates until Click says go.
+**Accepted 17 Sep 2026** for sign-in. Step-up on the submits below was added 14 Oct 2026. The plan checkbox `requires_2fa` is still not wired.
 
 Never trust the browser. Server actions reject. Secrets never go in `NEXT_PUBLIC_` or the frontend bundle beyond the enroll QR the signed-in member asked for.
 
 ## Status
 
-Accepted 17 Sep 2026. Google Authenticator TOTP on Account Settings → Password & Security. Sign-in asks for the 6-digit code (or a one-time recovery code). Not a plan gate.
+Accepted 17 Sep 2026 for sign-in. Google Authenticator TOTP on Account Settings → Password & Security. Sign-in asks for the 6-digit code (or a one-time recovery code). When that authenticator is already on, the submits listed under Step-up ask for a fresh code on that one submit. A login with 2FA off is unchanged. Not a plan gate.
 
 ## Purpose
 
-A member can turn on **Google Authenticator** (standard TOTP: SHA-1, 6 digits, 30s) on Account Settings → Password & Security. After that, sign-in asks for the code. That is the whole item. A plan **requiring** 2FA before Live / copy / backtest is **not** this item.
+A member can turn on **Google Authenticator** (standard TOTP: SHA-1, 6 digits, 30s) on Account Settings → Password & Security. After that, sign-in asks for the code. The same code is asked again on the step-up submits in Done when. A plan **requiring** 2FA before Live / copy / backtest is **not** this item.
 
 ## Done when
 
@@ -21,8 +21,9 @@ A member can turn on **Google Authenticator** (standard TOTP: SHA-1, 6 digits, 3
 3. Disable 2FA requires the current password (and the current code if still enrolled).
 4. Unverified logins stay on the verify wall — they cannot reach Settings to enroll.
 5. Server rejects a session that skipped the 2FA step.
+6. When 2FA is already on, these submits reject without a current authenticator or recovery code: change password, Account Balance withdraw, save affiliate payout address, request an affiliate payout, save or replace an exchange API key (including setup), rotate a webhook secret, delete a desk, change the public trader alias, and reset the develop account. Bio, logo, and an unchanged alias do not ask. Pause, close, billing, and sign-in stay on the session.
 
-Stop. Do not add plan flags, Upgrade copy, or “turn on 2FA to unlock Live” here.
+The plan checkbox that requires enrollment before other clicks is still V1 item 6. Do not add that here.
 
 ## Out of scope
 

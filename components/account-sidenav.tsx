@@ -37,6 +37,7 @@ import { IconChevronDown, IconTour } from "@/components/icons";
 import { NavBadge } from "@/components/nav-badge";
 import { NAV_ACTIVE_CLASS, NAV_IDLE_CLASS, NavItemIcon } from "@/components/site-nav";
 import { resetDevAccount, startPlatformTour } from "@/lib/onboarding/actions";
+import { StepUpCodeField } from "@/components/step-up-code-field";
 import {
   OPEN_ACCOUNT_NAV_EVENT,
   tourTargetForAccountHref,
@@ -172,7 +173,8 @@ function DevResetAccount() {
   const { confirm, dialog } = useConfirmDialog();
   return (
     <>
-      <form ref={formRef} action={action}>
+      <form ref={formRef} action={action} className="space-y-2">
+        <StepUpCodeField />
         <button
           type="button"
           disabled={pending}
