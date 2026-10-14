@@ -87,6 +87,10 @@ import {
 import type { LibraryTab } from "@/lib/templates/library-tab";
 import type { TemplateDeskType, TemplateRecipe } from "@/lib/templates/recipe";
 import { recipePreview } from "@/lib/templates/recipe";
+import {
+  templateBotLinkLabel,
+  type TemplateBotLink,
+} from "@/lib/templates/desk-bots";
 import type {
   AutomationTemplate,
   AutomationTemplateSet,
@@ -419,6 +423,7 @@ export function TemplatesLibrary({
   sharedTemplates = [],
   sharedSets = [],
   linkedBacktests = {},
+  botLinks = {},
   initialTab = "templates",
 }: {
   variant: "account" | "admin";
@@ -430,6 +435,7 @@ export function TemplatesLibrary({
   sharedTemplates?: AutomationTemplate[];
   sharedSets?: AutomationTemplateSet[];
   linkedBacktests?: Record<string, BacktestLinkHighlight>;
+  botLinks?: Record<string, TemplateBotLink[]>;
   initialTab?: LibraryTab;
 }) {
   const router = useRouter();
@@ -686,12 +692,14 @@ export function TemplatesLibrary({
   );
   const bulkFolders = foldersForAll(selectedTemplates, sets, variant);
   const showStarterPack = variant === "admin";
+  const showBots = variant === "account";
   const tableColumns =
     6 +
     (sharedTab ? 0 : 1) +
     (showOwner ? 1 : 0) +
     (showSharedWith ? 1 : 0) +
     (showStarterPack ? 1 : 0);
+  const templateTableColumns = tableColumns + (showBots ? 1 : 0);
 
   function flash(result: TemplateActionResult) {
     if (result.json && result.filename) {
@@ -1102,7 +1110,7 @@ export function TemplatesLibrary({
               : "Nothing shared with you yet. Another member can share a template, or a folder that contains templates, by entering your email."
           }
           rows={listedTemplates.length}
-          columns={tableColumns}
+          columns={templateTableColumns}
           pager={
             <TablePager
               window={pagedTemplates.window}
@@ -1150,6 +1158,9 @@ export function TemplatesLibrary({
                 onSort={() => onSort("contract")}
               />
               <th className="px-4 py-3 font-medium">Backtests</th>
+              {showBots ? (
+                <th className="px-4 py-3 font-medium">Bots</th>
+              ) : null}
               {showOwner ? (
                 <SortTh
                   label={sharedTab ? "Shared by" : "Owner"}
@@ -1183,6 +1194,7 @@ export function TemplatesLibrary({
                 !sharedTab &&
                 (variant === "admin" || row.visibility === "user");
               const linkedRun = linkedBacktests[row.id];
+              const matchedBots = botLinks[row.id] ?? [];
               return (
                 <tr key={row.id} className="border-b border-line last:border-b-0">
                   {sharedTab ? null : (
@@ -1228,6 +1240,26 @@ export function TemplatesLibrary({
                       <span className="text-ink-faint">—</span>
                     )}
                   </td>
+                  {showBots ? (
+                    <td className="px-4 py-3">
+                      {matchedBots.length === 0 ? (
+                        <span className="text-ink-faint">—</span>
+                      ) : (
+                        <ul className="flex flex-col gap-1">
+                          {matchedBots.map((bot) => (
+                            <li key={`${bot.deskId}-${bot.id}`}>
+                              <Link
+                                href={bot.href}
+                                className="text-accent hover:underline"
+                              >
+                                {templateBotLinkLabel(bot)}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </td>
+                  ) : null}
                   {showOwner ? (
                     <td className="px-4 py-3 text-ink-muted">
                       {sharedTab

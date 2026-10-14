@@ -5,6 +5,7 @@ import { parseLibraryTab } from "@/lib/templates/library-tab";
 import { getSessionMember } from "@/lib/auth/session";
 import { inheritPlatformBacktests } from "@/lib/backtest/library";
 import { listLinkedBacktestRuns } from "@/lib/backtest/store";
+import { listTemplateBotLinks } from "@/lib/templates/desk-bots";
 import { listSharedSets, listSharedTemplates, listVisibleSets, listVisibleTemplates } from "@/lib/templates/store";
 import { redirect } from "next/navigation";
 
@@ -30,13 +31,14 @@ export default async function AccountTemplatesPage({
     listSharedSets({ userId: member.id }),
   ]);
   const libraryRows = [...templates, ...sharedTemplates];
-  const linkedBacktests = inheritPlatformBacktests(
-    libraryRows,
-    await listLinkedBacktestRuns(
+  const [linkedRuns, botLinks] = await Promise.all([
+    listLinkedBacktestRuns(
       libraryRows.map((row) => row.id),
       { userId: member.id, isAdmin: memberIsAdmin(member) },
     ),
-  );
+    listTemplateBotLinks(member.id, libraryRows),
+  ]);
+  const linkedBacktests = inheritPlatformBacktests(libraryRows, linkedRuns);
 
   return (
     <TemplatesLibrary
@@ -47,6 +49,7 @@ export default async function AccountTemplatesPage({
       sharedTemplates={sharedTemplates}
       sharedSets={sharedSets}
       linkedBacktests={linkedBacktests}
+      botLinks={botLinks}
       initialTab={parseLibraryTab(params.tab)}
     />
   );
