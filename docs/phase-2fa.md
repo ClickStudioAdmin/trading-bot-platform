@@ -21,7 +21,7 @@ A member can turn on **Google Authenticator** (standard TOTP: SHA-1, 6 digits, 3
 3. Disable 2FA requires the current password (and the current code if still enrolled).
 4. Unverified logins stay on the verify wall — they cannot reach Settings to enroll.
 5. Server rejects a session that skipped the 2FA step.
-6. When 2FA is already on, these submits reject without a current authenticator or recovery code: change password, Account Balance withdraw, save affiliate payout address, request an affiliate payout, save or replace an exchange API key (including setup), rotate a webhook secret, delete a desk, change the public trader alias, and reset the develop account. The action button opens that code in a modal. A small Cancel drops the request and leaves the page as it was. Bio, logo, and an unchanged alias do not ask. Pause, close, billing, and sign-in stay on the session. Sign-in keeps its dedicated page.
+6. When 2FA is already on, these submits reject without a current authenticator or recovery code: change password, Account Balance withdraw, save affiliate payout address, request an affiliate payout, save or replace an exchange API key (including setup), rotate a webhook secret, delete a desk, change the public trader alias, and reset the develop account. The action button opens that code in a modal titled 2FA Authentication Required. A small Cancel drops the request and leaves the page as it was. Bio, logo, and an unchanged alias do not ask. Pause, close, billing, and sign-in stay on the session. Sign-in keeps its dedicated page.
 
 The plan checkbox that requires enrollment before other clicks is still V1 item 6. Do not add that here.
 
