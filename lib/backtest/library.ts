@@ -1,6 +1,7 @@
 import { deskPath } from "@/lib/accounts/model";
 import { backtestRunTitle, type BacktestRecipe } from "@/lib/backtest/model";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
+import { templatePageHref } from "@/lib/templates/library-tab";
 import {
   parseTemplateRecipe,
   recipesMatchReplayFields,
@@ -548,4 +549,22 @@ export function attachedTemplateName(
     (template.visibility === "backtested" && template.userId == null) ||
     viewer.shared;
   return visible ? name : null;
+}
+
+/** Where the saved-list Template name opens. */
+export function attachedTemplateHref(
+  template: { id: string; visibility: string; userId: string | null },
+  viewer: { userId: string; isAdmin: boolean; shared: boolean },
+): string {
+  if (template.visibility === "platform" && viewer.isAdmin) {
+    return templatePageHref(template.id, "admin");
+  }
+  if (
+    viewer.shared &&
+    template.userId !== viewer.userId &&
+    template.visibility !== "platform"
+  ) {
+    return templatePageHref(template.id, "shared");
+  }
+  return templatePageHref(template.id, "account");
 }

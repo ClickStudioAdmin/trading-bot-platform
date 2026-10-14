@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { TemplatesLibrary } from "@/components/templates-library";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { parseLibraryTab } from "@/lib/templates/library-tab";
+import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionMember } from "@/lib/auth/session";
 import { inheritPlatformBacktests } from "@/lib/backtest/library";
 import { listLinkedBacktestRuns } from "@/lib/backtest/store";
@@ -51,6 +52,7 @@ export default async function AccountTemplatesPage({
       linkedBacktests={linkedBacktests}
       botLinks={botLinks}
       initialTab={parseLibraryTab(params.tab)}
+      focusTemplateId={firstSearchValue(params.template)?.trim() || null}
     />
   );
 }

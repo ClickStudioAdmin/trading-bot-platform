@@ -238,7 +238,7 @@ export function BacktestRunDetail({
   returnTo: string;
   comparables?: BacktestRun[];
   comparablePrimary?: BacktestRun | null;
-  templates?: Record<string, string>;
+  templates?: Record<string, { name: string; href: string }>;
 }) {
   const params = backtestListedSections(run.recipe, {
     name: backtestRunTitle(run),
@@ -410,7 +410,7 @@ function BacktestFamilyTables({
   isAdmin: boolean;
   returnTo: string;
   watchRunId: string;
-  templates: Record<string, string>;
+  templates: Record<string, { name: string; href: string }>;
 }) {
   const family = splitBacktestFamily(primary, related);
   return (

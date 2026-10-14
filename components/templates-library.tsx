@@ -52,7 +52,11 @@ import {
 } from "@/components/icons";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { Modal, StarterPackCheckbox } from "@/components/template-modals";
-import { sliceTablePage, type TableSortDir } from "@/lib/table-chrome";
+import {
+  sliceTablePage,
+  TABLE_PAGE_SIZE,
+  type TableSortDir,
+} from "@/lib/table-chrome";
 import {
   attachedBacktestLinksAction,
   detachBacktestFromTemplateAction,
@@ -122,6 +126,59 @@ function tabForVariant(
     return "templates";
   }
   return tab;
+}
+
+function focusLibraryTab(
+  focusTemplateId: string | null,
+  variant: "account" | "admin",
+  templates: AutomationTemplate[],
+  sharedTemplates: AutomationTemplate[],
+): LibraryTab | null {
+  if (!focusTemplateId) {
+    return null;
+  }
+  const own = templates.find((row) => row.id === focusTemplateId);
+  if (own && (variant === "admin" || own.visibility !== "platform")) {
+    return tabForVariant("templates", variant);
+  }
+  if (
+    variant === "account" &&
+    sharedTemplates.some((row) => row.id === focusTemplateId)
+  ) {
+    return "shared-templates";
+  }
+  return null;
+}
+
+function focusLibraryPage(
+  focusTemplateId: string | null,
+  tab: LibraryTab,
+  variant: "account" | "admin",
+  templates: AutomationTemplate[],
+  sharedTemplates: AutomationTemplate[],
+): number {
+  if (!focusTemplateId) {
+    return 1;
+  }
+  const source = tab === "shared-templates" ? sharedTemplates : templates;
+  const rows = source.filter((row) => {
+    if (tab === "shared-templates") {
+      return true;
+    }
+    if (variant === "account" && row.visibility === "platform") {
+      return false;
+    }
+    if (variant === "admin" && row.visibility !== "platform") {
+      return false;
+    }
+    return true;
+  });
+  rows.sort((a, b) => compareText(a.name, b.name, "asc"));
+  const index = rows.findIndex((row) => row.id === focusTemplateId);
+  if (index < 0) {
+    return 1;
+  }
+  return Math.floor(index / TABLE_PAGE_SIZE) + 1;
 }
 
 type SortKey =
@@ -425,6 +482,7 @@ export function TemplatesLibrary({
   linkedBacktests = {},
   botLinks = {},
   initialTab = "templates",
+  focusTemplateId = null,
 }: {
   variant: "account" | "admin";
   title: string;
@@ -437,15 +495,33 @@ export function TemplatesLibrary({
   linkedBacktests?: Record<string, BacktestLinkHighlight>;
   botLinks?: Record<string, TemplateBotLink[]>;
   initialTab?: LibraryTab;
+  /** `?template=` from a backtest row. Opens that row on the tab that lists it. */
+  focusTemplateId?: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [tab, setTab] = useState<LibraryTab>(tabForVariant(initialTab, variant));
+  const focusedTab = focusLibraryTab(
+    focusTemplateId,
+    variant,
+    templates,
+    sharedTemplates,
+  );
+  const [tab, setTab] = useState<LibraryTab>(
+    focusedTab ?? tabForVariant(initialTab, variant),
+  );
   const [deskFilter, setDeskFilter] = useState<"all" | TemplateDeskType>("all");
   const [folderFilter, setFolderFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortState>({ key: "name", dir: "asc" });
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() =>
+    focusLibraryPage(
+      focusTemplateId,
+      focusedTab ?? tabForVariant(initialTab, variant),
+      variant,
+      templates,
+      sharedTemplates,
+    ),
+  );
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
@@ -461,6 +537,15 @@ export function TemplatesLibrary({
   useEffect(() => {
     setTab(tabForVariant(initialTab, variant));
   }, [initialTab, variant]);
+
+  useEffect(() => {
+    if (!focusTemplateId) {
+      return;
+    }
+    document.getElementById(`template-${focusTemplateId}`)?.scrollIntoView({
+      block: "center",
+    });
+  }, [focusTemplateId]);
 
   const knownFolders = useMemo(() => {
     const byId = new Map<string, AutomationTemplateSet>();
@@ -1197,7 +1282,13 @@ export function TemplatesLibrary({
               const linkedRun = linkedBacktests[row.id];
               const matchedBots = botLinks[row.id] ?? [];
               return (
-                <tr key={row.id} className="border-b border-line last:border-b-0">
+                <tr
+                  key={row.id}
+                  id={`template-${row.id}`}
+                  className={`scroll-mt-24 border-b border-line last:border-b-0 ${
+                    focusTemplateId === row.id ? "bg-accent/10" : ""
+                  }`}
+                >
                   {sharedTab ? null : (
                     <td className="px-4 py-3">
                       <AppCheck
