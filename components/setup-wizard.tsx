@@ -92,6 +92,7 @@ import {
   setupResumeScreenId,
   setupDeskCanStartBots,
   setupReviewRows,
+  setupDeskQuotaAdding,
   setupScreens,
   setupInitialStatusChoices,
   starterStatusWord,
@@ -900,6 +901,7 @@ export function SetupWizard({
     {deskEditor ? (
       <CreateDeskDialog
         desk={deskEditor.desk}
+        desks={desks}
         takenNames={takenNames(deskEditor.desk?.key)}
         takenKeys={desks
           .filter((row) => row.key !== deskEditor.desk?.key)
@@ -1262,6 +1264,20 @@ function DeskStep({
   onEdit: (desk: SetupDesk) => void;
   onRemove: (key: string) => void;
 }) {
+  const quotas = useQuotaAccess();
+  const pending = setupDeskQuotaAdding(desks);
+  const quotaNotices =
+    quotas.length === 0
+      ? []
+      : (["max_paper_desks", "max_demo_desks", "max_live_env_desks"] as const).flatMap(
+          (key) => {
+            const row = quotaAccessFor(quotas, key);
+            const message = quotaRoomMessage(row, pending[key]);
+            return message
+              ? [{ key, message, upgradePlan: row?.upgradePlan ?? null }]
+              : [];
+          },
+        );
   return (
     <section>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1278,6 +1294,20 @@ function DeskStep({
       <p className="mt-1 text-hint text-ink-muted">
         Add nothing to continue without desks.
       </p>
+      {quotaNotices.length > 0 ? (
+        <div className="mt-4 space-y-3">
+          {quotaNotices.map((notice) => (
+            <DeskTypeRejectBanner
+              key={notice.key}
+              access={{
+                allowed: false,
+                message: notice.message,
+                upgradePlan: notice.upgradePlan,
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
       <div className="mt-4 overflow-x-auto rounded-card border border-line">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
@@ -1359,12 +1389,14 @@ function DeskStep({
 
 function CreateDeskDialog({
   desk,
+  desks,
   takenNames,
   takenKeys,
   onClose,
   onSave,
 }: {
   desk: SetupDesk | null;
+  desks: SetupDesk[];
   takenNames: string[];
   takenKeys: string[];
   onClose: () => void;
@@ -1445,18 +1477,23 @@ function CreateDeskDialog({
   const typeRow = deskTypeAccessFor(access, deskType);
   const typeBlocked = gated && typeRow ? !typeRow.allowed : false;
   const typeNotice = gated ? typeRow?.message ?? null : null;
-  const paperQuota = quotaAccessFor(quotas, "max_paper_desks");
-  const demoQuota = quotaAccessFor(quotas, "max_demo_desks");
-  const liveQuota = quotaAccessFor(quotas, "max_live_env_desks");
-  const paperOff = quotasGated && paperQuota ? !paperQuota.allowed : false;
-  const demoOff = quotasGated && demoQuota ? !demoQuota.allowed : false;
-  const liveOff = quotasGated && liveQuota ? !liveQuota.allowed : false;
+  const pendingAdds = setupDeskQuotaAdding(desks, desk?.key ?? null);
+  function bandRoom(key: QuotaCapKey): string | null {
+    if (!quotasGated || key === "max_bots") {
+      return null;
+    }
+    return quotaRoomMessage(quotaAccessFor(quotas, key), pendingAdds[key] + 1);
+  }
+  const paperOff = bandRoom("max_paper_desks") != null;
+  const demoOff = bandRoom("max_demo_desks") != null;
+  const liveOff = bandRoom("max_live_env_desks") != null;
   const bandKey: QuotaCapKey =
     mode === "paper"
       ? "max_paper_desks"
       : quotaKeyForDesk({ mode: "live", venueEnvironment: environmentId });
   const bandQuota = quotaAccessFor(quotas, bandKey);
-  const quotaBlocked = quotasGated && bandQuota ? !bandQuota.allowed : false;
+  const quotaMessage = bandRoom(bandKey);
+  const quotaBlocked = quotaMessage != null;
 
   function selectDeskType(raw: string) {
     if (!ONBOARDING_DESK_TYPES.includes(raw as DeskType)) {
@@ -1582,8 +1619,14 @@ function CreateDeskDialog({
           {typeBlocked && typeRow ? (
             <DeskTypeRejectBanner access={typeRow} />
           ) : null}
-          {quotaBlocked && bandQuota ? (
-            <DeskTypeRejectBanner access={bandQuota} />
+          {quotaBlocked && quotaMessage ? (
+            <DeskTypeRejectBanner
+              access={{
+                allowed: false,
+                message: quotaMessage,
+                upgradePlan: bandQuota?.upgradePlan ?? null,
+              }}
+            />
           ) : null}
           <label className="block text-sm text-ink">
             Desk type
