@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AppCheck } from "@/components/app-check";
 import { CopyDeskGuardsFields } from "@/components/copy-desk-guards-fields";
@@ -30,7 +30,7 @@ import {
 } from "@/lib/membership/entitlements";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { IconCopyTrading } from "@/components/icons";
-import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
+import { ClickGateNotice, useClickGate } from "@/components/click-gate-notice";
 import { useCopyGateAccess } from "@/components/copy-gate-access";
 import { followClickDenial } from "@/lib/membership/entitlements";
 
@@ -61,7 +61,8 @@ export function CopyFollowButton({
   const gate = useCopyGateAccess();
   const copyDenial = gate ? followClickDenial(gate) : null;
   const [open, setOpen] = useState(defaultOpen && !copyDenial);
-  const [copyNotice, setCopyNotice] = useState(defaultOpen ? copyDenial : null);
+  const clickGate = useClickGate();
+  const seededNotice = useRef(false);
   const access = useDeskTypeAccess();
   const typeRow = deskTypeAccessFor(access, deskType);
   const typeDenied =
@@ -75,10 +76,19 @@ export function CopyFollowButton({
     );
   }
 
+  function bindCopyButton(node: HTMLButtonElement | null) {
+    if (!node || seededNotice.current || !defaultOpen || !copyDenial) {
+      return;
+    }
+    seededNotice.current = true;
+    clickGate.show(copyDenial, node);
+  }
+
   let control: ReactNode;
   if (typeDenied) {
     control = (
       <button
+        ref={bindCopyButton}
         type="button"
         disabled
         title={typeDenied}
@@ -92,13 +102,15 @@ export function CopyFollowButton({
   } else {
     control = (
       <button
+        ref={bindCopyButton}
         type="button"
-        onClick={() => {
+        onClick={(event) => {
           if (copyDenial) {
-            setCopyNotice(copyDenial);
+            clickGate.show(copyDenial, event.currentTarget);
             setOpen(false);
             return;
           }
+          clickGate.hide();
           setOpen(true);
         }}
         className={`inline-flex items-center justify-center gap-2 ${className}`}
@@ -112,7 +124,12 @@ export function CopyFollowButton({
 
   return (
     <div className="flex w-full flex-col gap-2">
-      {copyNotice ? <DeskTypeRejectBanner access={copyNotice} /> : null}
+      <ClickGateNotice
+        access={clickGate.notice}
+        anchorRef={clickGate.anchorRef}
+        generation={clickGate.generation}
+        onDismiss={clickGate.hide}
+      />
       {control}
       {open && !typeDenied ? (
         <CopyFollowModal
