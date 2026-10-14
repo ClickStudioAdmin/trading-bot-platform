@@ -580,7 +580,7 @@ export const LUCIDE_ICONS = [
     id: "flask-conical",
     name: "Backtesting Tool",
     lucide: "FlaskConical",
-    usedIn: "Header nav, desk Backtest",
+    usedIn: "Header nav, desk Backtest, template row Backtest",
     Icon: FlaskConical,
   },
   {
