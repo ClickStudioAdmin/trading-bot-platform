@@ -38,6 +38,7 @@ import {
 } from "@/components/research-gate-access";
 import {
   indicatorAddDenial,
+  replayPageTrialLines,
   researchTrialLine,
 } from "@/lib/membership/entitlements";
 import type { ChartSnapshot } from "@/components/chart-screenshot";
@@ -2132,9 +2133,7 @@ export function ReplayPlayer({
     </section>
   );
 
-  const replayTrial = researchGate
-    ? researchTrialLine(researchGate.replay)
-    : null;
+  const replayTrials = researchGate ? replayPageTrialLines(researchGate) : [];
   const header = (
       <div
         className={`relative z-30 flex shrink-0 flex-wrap items-center gap-3 py-3 ${
@@ -2145,7 +2144,9 @@ export function ReplayPlayer({
           <h1 className="shrink-0 text-2xl font-semibold tracking-tight">
             {run.symbol} replay
           </h1>
-          {replayTrial ? <FreeTrialBadge message={replayTrial} /> : null}
+          {replayTrials.map((line) => (
+            <FreeTrialBadge key={line} message={line} />
+          ))}
           <ReplayVariantSelect
             run={run}
             family={family}

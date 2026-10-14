@@ -1484,6 +1484,22 @@ export function backtestListTrialLines(gate: ResearchGateAccess): string[] {
   return backtest ? [backtest] : [];
 }
 
+/** Open backtesting and replay trials for the replay page. The report does not show them. */
+export function replayPageTrialLines(gate: ResearchGateAccess): string[] {
+  const lines: string[] = [];
+  const backtest = researchTrialLine(gate.backtest);
+  if (backtest) {
+    lines.push(backtest);
+  }
+  if (gate.backtest.allowed) {
+    const replay = researchTrialLine(gate.replay);
+    if (replay) {
+      lines.push(replay);
+    }
+  }
+  return lines;
+}
+
 function featureNotice(
   row: ResearchFeatureAccess,
 ): ResearchNotice | null {

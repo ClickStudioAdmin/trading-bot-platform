@@ -23,7 +23,8 @@ import {
   listBacktestRuns,
   loadBacktestRun,
 } from "@/lib/backtest/store";
-import { deniedReplayMessage } from "@/lib/membership/load-research-gate-access";
+import { replayClickDenial } from "@/lib/membership/entitlements";
+import { loadResearchGateAccess } from "@/lib/membership/load-research-gate-access";
 import { templateIsLibraryRow } from "@/lib/templates/recipe";
 import { listApplyableSets, loadTemplateById } from "@/lib/templates/store";
 
@@ -74,7 +75,8 @@ export default async function AccountBacktestReplayPage({
       </div>
     );
   }
-  const replayDenial = await deniedReplayMessage(member.id);
+  const researchGate = await loadResearchGateAccess(member.id);
+  const replayDenial = replayClickDenial(researchGate);
   if (replayDenial) {
     return (
       <div>
