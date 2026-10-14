@@ -154,6 +154,10 @@ export function automationsSavedHref(
   });
 }
 
+export function automationsEditingExisting(edit: string | null): boolean {
+  return Boolean(edit && edit !== AUTOMATIONS_NEW);
+}
+
 export function automationsEditTitle(input: {
   edit: string | null;
   name?: string | null;
