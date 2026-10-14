@@ -47,7 +47,7 @@ export function TemplateParametersButton({
   const popupId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const anchorRef = useRef<HTMLSpanElement>(null);
-  const headerRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const [popupTab, setPopupTab] = useState<"parameters" | "backtests">(
     "parameters",
@@ -287,8 +287,8 @@ export function TemplateParametersButton({
                 maxHeight: box?.maxHeight ?? POPUP_MAX_HEIGHT,
               }}
             >
-              {hasBacktests ? (
-                <div ref={headerRef} className="shrink-0 pb-3">
+              <div ref={headerRef} className="shrink-0 pb-3">
+                {hasBacktests ? (
                   <nav
                     role="tablist"
                     aria-label={`${name} details`}
@@ -307,15 +307,10 @@ export function TemplateParametersButton({
                       Backtests
                     </PopupTab>
                   </nav>
-                </div>
-              ) : (
-                <h2
-                  ref={headerRef}
-                  className="shrink-0 pb-3 text-lg font-semibold"
-                >
-                  Parameters
-                </h2>
-              )}
+                ) : (
+                  <h2 className="text-lg font-semibold">Parameters</h2>
+                )}
+              </div>
               <div
                 data-parameters-body=""
                 className="min-h-0 overflow-y-auto"
