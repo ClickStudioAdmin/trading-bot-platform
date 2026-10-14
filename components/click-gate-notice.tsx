@@ -33,9 +33,13 @@ export type ClickGatePlacement = {
   side: "below" | "above" | "right" | "left";
 };
 
-export type ClickGateAccess = {
+export type ClickGateItem = {
   message: string;
   upgradePlan: string | null;
+};
+
+export type ClickGateAccess = ClickGateItem & {
+  items?: readonly ClickGateItem[];
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -219,16 +223,23 @@ export function useClickGate() {
 
   const show = useCallback(
     (
-      access: { message: string | null; upgradePlan: string | null },
+      access: {
+        message: string | null;
+        upgradePlan: string | null;
+        items?: readonly ClickGateItem[];
+      },
       anchor: EventTarget | null,
     ) => {
-      if (!access.message || !(anchor instanceof HTMLElement)) {
+      const items = (access.items ?? []).filter((item) => item.message);
+      const message = access.message || items[0]?.message || null;
+      if (!message || !(anchor instanceof HTMLElement)) {
         return;
       }
       anchorRef.current = anchor;
       setNotice({
-        message: access.message,
+        message,
         upgradePlan: access.upgradePlan,
+        items: items.length > 1 ? items : undefined,
       });
       setGeneration((current) => current + 1);
     },
@@ -374,7 +385,8 @@ export function ClickGateNotice({
     return null;
   }
 
-  const lead = gateRejectLead(access.message, access.upgradePlan);
+  const items =
+    access.items && access.items.length > 1 ? access.items : [access];
   return createPortal(
     <div
       ref={panelRef}
@@ -390,21 +402,53 @@ export function ClickGateNotice({
       }}
       onClick={(event) => event.stopPropagation()}
     >
-      <div className="flex flex-wrap items-start gap-2 px-3 py-2.5">
-        <p className="flex min-w-0 flex-1 basis-40 items-start gap-2 text-sm text-warning">
-          <IconWarning size={18} className="mt-0.5 size-4 shrink-0" aria-hidden />
-          <span>{lead}</span>
-        </p>
-        <div className="sticky top-0 flex shrink-0 items-center gap-2">
-          {access.upgradePlan ? (
-            <Link
-              href="/account/plans"
-              className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink"
-            >
-              Upgrade to {access.upgradePlan}
-              <IconArrowRight size={14} className="size-3.5" aria-hidden />
-            </Link>
-          ) : null}
+      {items.map((item, index) => (
+        <ClickGateRow
+          key={`${index}:${item.message}`}
+          item={item}
+          divided={index > 0}
+          dismissRef={index === 0 ? dismissRef : undefined}
+          onDismiss={index === 0 ? onDismiss : undefined}
+        />
+      ))}
+    </div>,
+    portalHost,
+  );
+}
+
+function ClickGateRow({
+  item,
+  divided,
+  dismissRef,
+  onDismiss,
+}: {
+  item: ClickGateItem;
+  divided: boolean;
+  dismissRef?: RefObject<HTMLButtonElement | null>;
+  onDismiss?: () => void;
+}) {
+  const lead = gateRejectLead(item.message, item.upgradePlan);
+  return (
+    <div
+      className={`flex flex-wrap items-center gap-2 px-3 py-2.5${
+        divided ? " border-t border-warning/25" : ""
+      }`}
+    >
+      <p className="flex min-w-0 flex-1 basis-40 items-start gap-2 text-sm text-warning">
+        <IconWarning size={18} className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <span>{lead}</span>
+      </p>
+      <div className="sticky top-0 flex shrink-0 items-center gap-2">
+        {item.upgradePlan ? (
+          <Link
+            href="/account/plans"
+            className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink"
+          >
+            Upgrade to {item.upgradePlan}
+            <IconArrowRight size={14} className="size-3.5" aria-hidden />
+          </Link>
+        ) : null}
+        {onDismiss ? (
           <button
             ref={dismissRef}
             type="button"
@@ -414,9 +458,10 @@ export function ClickGateNotice({
           >
             <IconClose size={14} className="size-3.5" />
           </button>
-        </div>
+        ) : (
+          <span className="size-7 shrink-0" aria-hidden />
+        )}
       </div>
-    </div>,
-    portalHost,
+    </div>
   );
 }
