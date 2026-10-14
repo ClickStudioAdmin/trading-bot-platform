@@ -2,9 +2,13 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import Link from "next/link";
+import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
 import { FreeTrialBadges } from "@/components/plan-trial-hint";
 import { IconPlay } from "@/components/icons";
-import type { ResearchGateAccess } from "@/lib/membership/entitlements";
+import type {
+  ResearchGateAccess,
+  ResearchNotice,
+} from "@/lib/membership/entitlements";
 
 const ResearchGateContext = createContext<ResearchGateAccess | null>(null);
 
@@ -24,6 +28,23 @@ export function ResearchGateProvider({
 
 export function useResearchGateAccess(): ResearchGateAccess | null {
   return useContext(ResearchGateContext);
+}
+
+export function ResearchNoticeBanner({
+  notice,
+  className = "mb-4",
+}: {
+  notice: ResearchNotice | null;
+  className?: string;
+}) {
+  if (!notice) {
+    return null;
+  }
+  return (
+    <div className={className}>
+      <DeskTypeRejectBanner access={notice} />
+    </div>
+  );
 }
 
 export function ResearchTrialLines({ lines }: { lines: readonly string[] }) {

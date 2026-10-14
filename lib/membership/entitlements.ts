@@ -1358,33 +1358,43 @@ export function queueBacktestDenial(
   gate: ResearchGateAccess,
   input: { variant: boolean; adding: number; fromMs: number; toMs: number },
 ): ResearchNotice | null {
+  const notices = newBacktestPageNotices(gate, input);
+  return notices[0] ?? null;
+}
+
+/** Banners for the new backtest page. Backtesting off hides the cap lines. */
+export function newBacktestPageNotices(
+  gate: ResearchGateAccess,
+  input: { variant?: boolean; adding: number; fromMs: number; toMs: number },
+): ResearchNotice[] {
   const blocked = featureNotice(gate.backtest);
   if (blocked) {
-    return blocked;
+    return [blocked];
   }
   if (input.variant) {
     const optimize = featureNotice(gate.optimize);
     if (optimize) {
-      return optimize;
+      return [optimize];
     }
   }
+  const notices: ResearchNotice[] = [];
   const saved = savedBacktestDecision(gate, input.adding);
   if (!saved.allowed && saved.message) {
-    return {
+    notices.push({
       allowed: false,
       message: saved.message,
       upgradePlan: saved.upgradePlan,
-    };
+    });
   }
   const years = backtestYearsDecision(gate, input.fromMs, input.toMs);
   if (!years.allowed && years.message) {
-    return {
+    notices.push({
       allowed: false,
       message: years.message,
       upgradePlan: years.upgradePlan,
-    };
+    });
   }
-  return null;
+  return notices;
 }
 
 export function savedBacktestDecision(

@@ -56,13 +56,6 @@ export async function loadResearchGateAccess(
   });
 }
 
-export async function deniedBacktestCreateMessage(
-  userId: string,
-): Promise<string | null> {
-  const gate = await loadResearchGateAccess(userId);
-  return gate.backtest.allowed ? null : gate.backtest.message;
-}
-
 export async function deniedAttachBacktestMessage(
   userId: string,
 ): Promise<string | null> {

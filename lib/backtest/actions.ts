@@ -4,7 +4,6 @@ import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
 import {
   deniedAttachBacktestMessage,
-  deniedBacktestCreateMessage,
   deniedQueueBacktestMessage,
 } from "@/lib/membership/load-research-gate-access";
 import { parseCandleVenue } from "@/lib/market/candles";
@@ -161,10 +160,6 @@ export async function seedBacktestDraftAction(
   const allowed = canQueueUserBacktest(recipe);
   if (!allowed.ok) {
     return allowed;
-  }
-  const blocked = await deniedBacktestCreateMessage(auth.member.id);
-  if (blocked) {
-    return { ok: false, error: blocked };
   }
   const dates = defaultBacktestDates();
   const range = parseBacktestDates(dates.from, dates.to);

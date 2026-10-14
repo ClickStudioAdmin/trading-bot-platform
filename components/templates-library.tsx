@@ -18,8 +18,6 @@ import {
   TemplateFeatureGateNotices,
   useTemplateFeatureGate,
 } from "@/components/template-feature-access";
-import { useResearchGateAccess } from "@/components/research-gate-access";
-import { backtestCreateDenial } from "@/lib/membership/entitlements";
 import {
   SortTh,
   TABLE_ACTIONS_TD_CLASS,
@@ -540,7 +538,6 @@ export function TemplatesLibrary({
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [importing, setImporting] = useState(false);
   const { confirm, dialog } = useConfirmDialog();
-  const researchGate = useResearchGateAccess();
   const clickGate = useClickGate();
   const actionAnchorRef = useRef<HTMLElement | null>(null);
   const {
@@ -1473,14 +1470,7 @@ export function TemplatesLibrary({
                         <TableIconAction
                           label="Backtest"
                           detail="Run a backtest from this template."
-                          onClick={(event) => {
-                            const denial = researchGate
-                              ? backtestCreateDenial(researchGate)
-                              : null;
-                            if (denial) {
-                              clickGate.show(denial, event.currentTarget);
-                              return;
-                            }
+                          onClick={() => {
                             router.push(backtestNewHref({ template: row.id }));
                           }}
                         >

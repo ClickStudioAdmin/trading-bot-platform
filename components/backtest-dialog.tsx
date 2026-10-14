@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { ClickGateNotice, useClickGate } from "@/components/click-gate-notice";
 import {
   BotButtonLead,
   botBtnIcon,
@@ -12,10 +11,7 @@ import {
   ResearchTrialLines,
   useResearchGateAccess,
 } from "@/components/research-gate-access";
-import {
-  backtestCreateDenial,
-  researchTrialLine,
-} from "@/lib/membership/entitlements";
+import { researchTrialLine } from "@/lib/membership/entitlements";
 import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import { seedBacktestDraftAction } from "@/lib/backtest/actions";
@@ -75,31 +71,17 @@ export function BacktestTemplateLink({
   buttonClassName?: string;
 }) {
   const gate = useResearchGateAccess();
-  const clickGate = useClickGate();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const saved = findMatchingSavedBacktest(current, savedBacktests);
   const trial = gate ? researchTrialLine(gate.backtest) : null;
   return (
     <span className={className ?? "inline-flex flex-col items-end"}>
-      <ClickGateNotice
-        access={clickGate.notice}
-        anchorRef={clickGate.anchorRef}
-        generation={clickGate.generation}
-        onDismiss={clickGate.hide}
-      />
       <ResearchTrialLines lines={trial ? [trial] : []} />
       <button
         type="button"
         disabled={pending}
-        onClick={(event) => {
-          const denial = gate ? backtestCreateDenial(gate) : null;
-          if (denial) {
-            clickGate.show(denial, event.currentTarget);
-            setError(null);
-            return;
-          }
-          clickGate.hide();
+        onClick={() => {
           const loaded = getRecipe?.() ??
             (current
               ? { ok: true as const, recipe: current }
