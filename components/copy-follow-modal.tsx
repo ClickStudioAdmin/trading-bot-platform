@@ -24,9 +24,11 @@ import { AppSelect } from "@/components/app-select";
 import { useDeskTypeAccess } from "@/components/desk-type-access";
 import { useQuotaAccess } from "@/components/quota-access";
 import {
+  copyDeskPlanNotices,
   deskTypeAccessFor,
   quotaAccessFor,
   quotaKeyForDesk,
+  type CopyDeskPlanNotice,
 } from "@/lib/membership/entitlements";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { IconCopyTrading } from "@/components/icons";
@@ -46,6 +48,7 @@ export function CopyFollowButton({
   connections,
   following,
   defaultOpen = false,
+  revealGatesOnClick = false,
   className = "rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink",
 }: {
   parentAccountId: string;
@@ -56,16 +59,41 @@ export function CopyFollowButton({
   connections: ExchangeConnection[];
   following?: boolean;
   defaultOpen?: boolean;
+  revealGatesOnClick?: boolean;
   className?: string;
 }) {
   const gate = useCopyGateAccess();
   const copyDenial = gate ? followClickDenial(gate) : null;
-  const [open, setOpen] = useState(defaultOpen && !copyDenial);
-  const [copyNotice, setCopyNotice] = useState(defaultOpen ? copyDenial : null);
   const access = useDeskTypeAccess();
+  const quotaAccess = useQuotaAccess();
   const typeRow = deskTypeAccessFor(access, deskType);
   const typeDenied =
     access.length > 0 && typeRow && !typeRow.allowed ? typeRow.message : null;
+  const quotasGated = quotaAccess.length > 0;
+  const paperQuota = quotaAccessFor(quotaAccess, "max_paper_desks");
+  const liveQuota = quotaAccessFor(
+    quotaAccess,
+    quotaKeyForDesk({ mode: "live", venueEnvironment }),
+  );
+  const paperOff = quotasGated && paperQuota ? !paperQuota.allowed : false;
+  const liveOff = quotasGated && liveQuota ? !liveQuota.allowed : false;
+  const planNotices = revealGatesOnClick
+    ? copyDeskPlanNotices({
+        typeRow,
+        typeGated: access.length > 0,
+        quotas: quotaAccess,
+        quotasGated,
+        venueEnvironment,
+      })
+    : [];
+  const planBlocks = Boolean(typeDenied) || (paperOff && liveOff);
+  const [open, setOpen] = useState(
+    defaultOpen && !copyDenial && !(revealGatesOnClick && planBlocks),
+  );
+  const [copyNotice, setCopyNotice] = useState(defaultOpen ? copyDenial : null);
+  const [shownPlanNotices, setShownPlanNotices] = useState<CopyDeskPlanNotice[]>(
+    defaultOpen && revealGatesOnClick ? planNotices : [],
+  );
 
   if (following) {
     return (
@@ -76,7 +104,7 @@ export function CopyFollowButton({
   }
 
   let control: ReactNode;
-  if (typeDenied) {
+  if (typeDenied && !revealGatesOnClick) {
     control = (
       <button
         type="button"
@@ -94,8 +122,15 @@ export function CopyFollowButton({
       <button
         type="button"
         onClick={() => {
+          if (revealGatesOnClick) {
+            setShownPlanNotices(planNotices);
+          }
           if (copyDenial) {
             setCopyNotice(copyDenial);
+            setOpen(false);
+            return;
+          }
+          if (revealGatesOnClick && planBlocks) {
             setOpen(false);
             return;
           }
@@ -112,6 +147,9 @@ export function CopyFollowButton({
 
   return (
     <div className="flex w-full flex-col gap-2">
+      {shownPlanNotices.map((notice) => (
+        <DeskTypeRejectBanner key={notice.key} access={notice} />
+      ))}
       {copyNotice ? <DeskTypeRejectBanner access={copyNotice} /> : null}
       {control}
       {open && !typeDenied ? (
