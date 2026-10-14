@@ -10,6 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { BacktestParameterSections } from "@/components/backtest-parameter-sections";
+import { BacktestHighlightBody } from "@/components/backtest-highlight-hover";
 import { IconBacktest, IconInfo } from "@/components/icons";
 import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import { attachedBacktestsByTemplateAction } from "@/lib/backtest/actions";
@@ -125,7 +126,13 @@ export function TemplateParametersButton({
       return;
     }
     clearClose();
-    closeTimer.current = window.setTimeout(() => setOpen(false), 140);
+    closeTimer.current = window.setTimeout(() => {
+      closeTimer.current = null;
+      if (pinned.current) {
+        return;
+      }
+      setOpen(false);
+    }, 140);
   }
 
   useEffect(() => () => clearClose(), []);
@@ -219,10 +226,15 @@ export function TemplateParametersButton({
       if (!(target instanceof Node)) {
         return;
       }
+      const path = event.composedPath();
       if (
+        (anchorRef.current && path.includes(anchorRef.current)) ||
+        (popupRef.current && path.includes(popupRef.current)) ||
         anchorRef.current?.contains(target) ||
         popupRef.current?.contains(target)
       ) {
+        pinned.current = true;
+        clearClose();
         return;
       }
       pinned.current = false;
@@ -256,6 +268,13 @@ export function TemplateParametersButton({
     }
     setOpen(true);
     loadBacktests();
+  }
+
+  function selectPopupTab(tab: "parameters" | "backtests") {
+    pinned.current = true;
+    clearClose();
+    setPopupTab(tab);
+    setOpen(true);
   }
 
   function onClick(
@@ -300,22 +319,24 @@ export function TemplateParametersButton({
           <IconInfo size={14} className="size-3.5" />
         </button>
         {hasBacktests ? (
-          <button
-            type="button"
+          <span
+            role="img"
             data-template-parameters=""
-            aria-label={`Backtests for ${name}`}
-            aria-expanded={open && popupTab === "backtests"}
-            aria-controls={open ? popupId : undefined}
-            onMouseEnter={() => showPopup("backtests")}
+            aria-label={`Backtests attached for ${name}`}
+            onMouseEnter={clearClose}
             onMouseLeave={scheduleClose}
-            onFocus={() => showPopup("backtests")}
-            onBlur={scheduleClose}
-            onMouseDown={(event) => event.stopPropagation()}
-            onClick={(event) => onClick("backtests", event)}
-            className={iconClass}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            className="inline-flex size-5 shrink-0 cursor-default items-center justify-center text-ink-muted"
           >
             <IconBacktest size={14} className="size-3.5" />
-          </button>
+          </span>
         ) : null}
       </span>
       {open && typeof document !== "undefined"
@@ -332,6 +353,12 @@ export function TemplateParametersButton({
               data-template-parameters=""
               onMouseEnter={() => showPopup()}
               onMouseLeave={scheduleClose}
+              onMouseDown={(event) => {
+                event.stopPropagation();
+                event.nativeEvent.stopPropagation();
+                pinned.current = true;
+                clearClose();
+              }}
               className={`fixed z-[90] flex flex-col overflow-hidden rounded-card border border-line bg-canvas p-4 text-left font-normal normal-case tracking-normal text-ink shadow-none ${previewClass}`.trim()}
               style={{
                 top: box?.top ?? -9999,
@@ -349,13 +376,13 @@ export function TemplateParametersButton({
                   >
                     <PopupTab
                       selected={popupTab === "parameters"}
-                      onClick={() => setPopupTab("parameters")}
+                      onClick={() => selectPopupTab("parameters")}
                     >
                       Parameters
                     </PopupTab>
                     <PopupTab
                       selected={popupTab === "backtests"}
-                      onClick={() => setPopupTab("backtests")}
+                      onClick={() => selectPopupTab("backtests")}
                     >
                       Backtests
                     </PopupTab>
@@ -375,12 +402,9 @@ export function TemplateParametersButton({
                 style={{ maxHeight: box?.bodyMax ?? POPUP_MAX_HEIGHT }}
               >
                 {popupTab === "backtests" && hasBacktests ? (
-                  <ul className="overflow-hidden rounded-card border border-line bg-surface">
+                  <ul className="space-y-2">
                     {shownBacktests?.map((run) => (
-                      <li
-                        key={run.runId}
-                        className="border-b border-line last:border-b-0"
-                      >
+                      <li key={run.runId}>
                         <a
                           href={`/account/backtests/${run.runId}`}
                           target="_blank"
@@ -388,14 +412,19 @@ export function TemplateParametersButton({
                           data-template-parameters=""
                           onMouseDown={(event) => event.stopPropagation()}
                           onClick={(event) => event.stopPropagation()}
-                          className="flex items-baseline justify-between gap-4 px-5 py-2.5 text-sm font-medium text-accent hover:underline"
+                          className="block rounded-control border border-line bg-surface-raised px-3 py-2 text-ink"
                         >
-                          <span className="min-w-0 text-left break-words">
+                          <span className="mb-2 block text-sm font-medium text-accent">
                             {run.name}
                           </span>
-                          <span className="shrink-0 text-right text-xs font-normal tabular-nums text-ink-muted">
-                            {formatAuDateUtc(run.fromMs)} – {formatAuDateUtc(run.toMs)}
-                          </span>
+                          {run.highlight ? (
+                            <BacktestHighlightBody highlight={run.highlight} />
+                          ) : (
+                            <span className="text-xs tabular-nums text-ink-muted">
+                              {formatAuDateUtc(run.fromMs)} –{" "}
+                              {formatAuDateUtc(run.toMs)}
+                            </span>
+                          )}
                         </a>
                       </li>
                     ))}
@@ -429,7 +458,11 @@ function PopupTab({
       role="tab"
       aria-selected={selected}
       data-template-parameters=""
-      onMouseDown={(event) => event.stopPropagation()}
+      onMouseDown={(event) => {
+        event.stopPropagation();
+        event.nativeEvent.stopPropagation();
+        onClick();
+      }}
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();

@@ -8,7 +8,10 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { BacktestHighlightHover } from "@/components/backtest-highlight-hover";
+import {
+  BacktestHighlightBody,
+  BacktestHighlightHover,
+} from "@/components/backtest-highlight-hover";
 import { PageHeading } from "@/components/page-heading";
 import {
   SortTh,
@@ -45,14 +48,21 @@ import {
   IconPlus,
   IconShare,
   IconTrash,
+  IconUnlink,
 } from "@/components/icons";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { Modal, StarterPackCheckbox } from "@/components/template-modals";
 import { sliceTablePage, type TableSortDir } from "@/lib/table-chrome";
 import {
+  attachedBacktestLinksAction,
+  detachBacktestFromTemplateAction,
+} from "@/lib/backtest/actions";
+import {
   backtestNewHref,
   type BacktestLinkHighlight,
+  type TemplateBacktestLink,
 } from "@/lib/backtest/model";
+import { formatAuDateUtc } from "@/lib/time/display";
 import { libraryTemplateCanBacktest } from "@/lib/backtest/eligibility";
 import { templateIdsDeletedWithFolder } from "@/lib/templates/folder-delete";
 import { formatTemplateDeskType } from "@/lib/templates/recipe";
@@ -2130,6 +2140,7 @@ function TemplateEditModal({
   const [starterPack, setStarterPack] = useState(template.starterPack);
   const [publishName, setPublishName] = useState(template.name);
   const [pending, setPending] = useState(false);
+  const [editTab, setEditTab] = useState<"details" | "backtests">("details");
   const { confirm, dialog } = useConfirmDialog();
 
   async function save() {
@@ -2181,16 +2192,38 @@ function TemplateEditModal({
       {recipePreview(template.recipe) ? (
         <p className="mt-1 text-hint text-ink-muted">{recipePreview(template.recipe)}</p>
       ) : null}
+      <nav className="mt-4 flex gap-1 border-b border-line" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={editTab === "details"}
+          onClick={() => setEditTab("details")}
+          className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+            editTab === "details"
+              ? "border-accent text-ink"
+              : "border-transparent text-ink-muted hover:text-ink"
+          }`}
+        >
+          Details
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={editTab === "backtests"}
+          onClick={() => setEditTab("backtests")}
+          className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+            editTab === "backtests"
+              ? "border-accent text-ink"
+              : "border-transparent text-ink-muted hover:text-ink"
+          }`}
+        >
+          Backtests
+        </button>
+      </nav>
+      {editTab === "details" ? (
+        <>
       <label className="mt-4 block text-sm text-ink">
-        <span className="inline-flex items-center gap-1">
-          Name
-          <TemplateParametersButton
-            name={template.name}
-            description={template.description}
-            recipe={template.recipe}
-            templateId={template.id}
-          />
-        </span>
+        Name
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
@@ -2262,6 +2295,12 @@ function TemplateEditModal({
           />
         </label>
       ) : null}
+        </>
+      ) : (
+        <div className="mt-4">
+          <TemplateBacktestsPanel templateId={template.id} />
+        </div>
+      )}
       <div className="mt-4 flex flex-wrap justify-end gap-2">
         <button type="button" onClick={onClose} className={secondaryBtn}>
           Cancel
@@ -2285,6 +2324,100 @@ function TemplateEditModal({
       </div>
     </Modal>
     {dialog}
+    </>
+  );
+}
+
+function TemplateBacktestsPanel({ templateId }: { templateId: string }) {
+  const router = useRouter();
+  const { confirm, dialog } = useConfirmDialog();
+  const [runs, setRuns] = useState<TemplateBacktestLink[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void attachedBacktestLinksAction(templateId).then((rows) => {
+      if (!cancelled) {
+        setRuns(rows.filter((row) => row.templateId === templateId));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [templateId]);
+
+  async function detach(run: TemplateBacktestLink) {
+    const ok = await confirm({
+      title: `Detach “${run.name}”?`,
+      message:
+        "The run stays in Backtests. It will no longer show on this template.",
+      confirmLabel: "Detach",
+    });
+    if (!ok) {
+      return;
+    }
+    setPendingId(run.runId);
+    setError(null);
+    const data = new FormData();
+    data.set("runId", run.runId);
+    data.set("templateId", templateId);
+    const result = await detachBacktestFromTemplateAction(data);
+    setPendingId(null);
+    if (!result.ok) {
+      setError(result.error ?? "Could not detach that backtest.");
+      return;
+    }
+    setRuns((current) => current?.filter((row) => row.runId !== run.runId) ?? []);
+    router.refresh();
+  }
+
+  return (
+    <>
+      {runs === null ? (
+        <p className="text-sm text-ink-muted">Loading backtests…</p>
+      ) : runs.length === 0 ? (
+        <p className="text-sm text-ink-muted">
+          No backtests are attached to this template.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {runs.map((run) => (
+            <li
+              key={run.runId}
+              className="rounded-control border border-line bg-canvas px-3 py-2"
+            >
+              <div className="mb-2 flex items-start justify-between gap-2">
+                <a
+                  href={`/account/backtests/${run.runId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="min-w-0 text-sm font-medium text-accent hover:underline"
+                >
+                  {run.name}
+                </a>
+                <TableIconAction
+                  label="Detach"
+                  detail="Remove this backtest from the template."
+                  disabled={pendingId === run.runId}
+                  onClick={() => void detach(run)}
+                >
+                  <IconUnlink {...TABLE_BTN_ICON} />
+                </TableIconAction>
+              </div>
+              {run.highlight ? (
+                <BacktestHighlightBody highlight={run.highlight} />
+              ) : (
+                <span className="text-xs tabular-nums text-ink-muted">
+                  {formatAuDateUtc(run.fromMs)} – {formatAuDateUtc(run.toMs)}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {error ? <p className="mt-2 text-sm text-danger">{error}</p> : null}
+      {dialog}
     </>
   );
 }
