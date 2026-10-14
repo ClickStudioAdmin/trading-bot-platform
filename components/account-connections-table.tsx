@@ -14,6 +14,7 @@ import {
   TABLE_ACTIONS_TD_CLASS,
   TABLE_ACTIONS_TH_CLASS,
   TABLE_BTN_ICON,
+  TABLE_THEAD_CLASS,
   TABLE_TITLE_CASE_TH_CLASS,
   TableActions,
   TableCard,
@@ -148,11 +149,12 @@ export function AccountConnectionsTable({
           />
         }
       >
-        <table className="w-full min-w-[42rem] text-left text-sm">
-          <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
+        <table className="w-full min-w-[42rem] text-left text-base">
+          <thead className={`${TABLE_THEAD_CLASS} text-sm text-ink-muted`}>
             <tr>
               <SortTh
                 label="Name"
+                className="pl-5!"
                 active={table.sortKey === "name"}
                 dir={table.sortDir}
                 onSort={() => table.onSort("name")}
@@ -206,7 +208,7 @@ export function AccountConnectionsTable({
                       : "border-b border-line last:border-b-0"
                   }
                 >
-                  <td className="px-4 py-3 align-top">
+                  <td className="py-3 pr-4 pl-5 align-top">
                     <p>{caption.name}</p>
                     {caption.venue ? (
                       <p className="mt-1 text-hint text-ink-muted">{caption.venue}</p>

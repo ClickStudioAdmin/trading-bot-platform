@@ -14,6 +14,7 @@ import {
   TABLE_ACTIONS_TD_CLASS,
   TABLE_ACTIONS_TH_CLASS,
   TABLE_FILTER_FIELD_CLASS,
+  TABLE_THEAD_CLASS,
   TableActions,
   TableCard,
   TableFilterBar,
@@ -53,6 +54,8 @@ import type { ExchangeConnection } from "@/lib/exchanges/connections";
 
 const DESK_CELL = "px-2.5 py-3 align-top";
 const DESK_HEAD = "px-2.5!";
+const DESK_NAME_CELL = "py-3 pr-2.5 pl-5 align-top";
+const DESK_NAME_HEAD = "pr-2.5! pl-5!";
 
 export function DeskTable({
   accounts,
@@ -200,7 +203,7 @@ export function DeskTable({
           />
         }
       >
-        <table className="w-full table-fixed text-left text-sm">
+        <table className="w-full table-fixed text-left text-base">
           <colgroup>
             <col className="w-[16%]" />
             <col className="w-[15%]" />
@@ -211,11 +214,11 @@ export function DeskTable({
             <col className="w-[8%]" />
             <col className="w-[10%]" />
           </colgroup>
-          <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
+          <thead className={`${TABLE_THEAD_CLASS} text-sm text-ink-muted`}>
             <tr>
               <SortTh
                 label="Name"
-                className={DESK_HEAD}
+                className={DESK_NAME_HEAD}
                 active={table.sortKey === "name"}
                 dir={table.sortDir}
                 onSort={() => table.onSort("name")}
@@ -268,7 +271,7 @@ export function DeskTable({
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-sm text-ink-muted">
+                <td colSpan={8} className="py-6 pr-4 pl-5 text-ink-muted">
                   {filtering
                     ? "No desks match these filters."
                     : "No desks yet."}
@@ -308,7 +311,7 @@ function DeskRow({
   const defaultSwitch = pickDefaultAccount(remaining);
   return (
     <tr className="border-b border-line last:border-b-0">
-      <td className={DESK_CELL}>{account.name}</td>
+      <td className={DESK_NAME_CELL}>{account.name}</td>
       <td className={DESK_CELL}>
         <p>{formatDeskType(account.deskType)}</p>
         {account.copyOfAccountId ? (

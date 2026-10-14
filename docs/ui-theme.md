@@ -67,7 +67,7 @@ The scale is on **Theme → Cards** (`/admin/theme?tab=cards`). Live card titles
 | Hint | 13px faint | `text-hint text-ink-faint` | Hover or inactive only — not field helpers |
 | KPI | 24px | `text-2xl font-semibold tabular-nums` | Balance and stat tiles |
 
-Theme page section headings stay 20px (`text-xl`) so they sit above the samples. Do not use 14px regular ink as a card title.
+Theme page section headings stay 20px (`text-xl`) so they sit above the samples. Do not use 14px regular ink as a card title. Manage Desks and its Exchanges tab use 16px cells (`text-base`) and 14px headers (`text-sm`). The name column has a little extra left padding.
 
 ## Surfaces
 
