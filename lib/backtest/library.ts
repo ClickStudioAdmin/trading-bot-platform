@@ -6,6 +6,7 @@ import {
   recipesMatchReplayFields,
   templateIsLibraryRow,
   TEMPLATE_RECIPE_VERSION,
+  type TemplateRecipe,
   type TemplateVisibility,
 } from "@/lib/templates/recipe";
 
@@ -56,6 +57,83 @@ export function toBacktestLibraryItem(row: {
     recipe: row.recipe as BacktestRecipe,
     ...(row.visibility !== undefined ? { visibility: row.visibility } : {}),
   };
+}
+
+function hasAttachedBacktests<T>(value: T | undefined): boolean {
+  if (value == null) {
+    return false;
+  }
+  return !Array.isArray(value) || value.length > 0;
+}
+
+/**
+ * A user template with the same replay settings as a platform template shows
+ * that platform template's finished runs. The user row keeps its own runs.
+ */
+export function inheritPlatformBacktests<T>(
+  templates: ReadonlyArray<{
+    id: string;
+    visibility: string;
+    recipe: TemplateRecipe;
+  }>,
+  byTemplateId: Record<string, T>,
+): Record<string, T> {
+  const next: Record<string, T> = { ...byTemplateId };
+  const platform = templates.filter((row) => row.visibility === "platform");
+  for (const template of templates) {
+    if (template.visibility !== "user" || hasAttachedBacktests(next[template.id])) {
+      continue;
+    }
+    if (template.recipe.kind !== "dca" && template.recipe.kind !== "perps") {
+      continue;
+    }
+    const twin = platform.find(
+      (row) =>
+        (row.recipe.kind === "dca" || row.recipe.kind === "perps") &&
+        hasAttachedBacktests(byTemplateId[row.id]) &&
+        recipesMatchReplayFields(template.recipe, row.recipe),
+    );
+    if (!twin) {
+      continue;
+    }
+    const value = byTemplateId[twin.id];
+    if (value != null) {
+      next[template.id] = value;
+    }
+  }
+  return next;
+}
+
+/** Platform templates whose replay settings match a requested user template. */
+export function matchingPlatformTemplateIds(
+  templates: ReadonlyArray<{
+    id: string;
+    visibility: string;
+    recipe: TemplateRecipe;
+  }>,
+  requestedIds: ReadonlyArray<string>,
+): string[] {
+  const requested = new Set(requestedIds);
+  const platform = templates.filter((row) => row.visibility === "platform");
+  const ids: string[] = [];
+  for (const template of templates) {
+    if (!requested.has(template.id) || template.visibility !== "user") {
+      continue;
+    }
+    if (template.recipe.kind !== "dca" && template.recipe.kind !== "perps") {
+      continue;
+    }
+    for (const row of platform) {
+      if (row.recipe.kind !== "dca" && row.recipe.kind !== "perps") {
+        continue;
+      }
+      if (!recipesMatchReplayFields(template.recipe, row.recipe)) {
+        continue;
+      }
+      ids.push(row.id);
+    }
+  }
+  return [...new Set(ids)];
 }
 
 export function findMatchingBacktestTemplate(

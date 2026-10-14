@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { TemplatesLibrary } from "@/components/templates-library";
+import { memberIsAdmin } from "@/lib/admin/access";
 import { parseLibraryTab } from "@/lib/templates/library-tab";
 import { getSessionMember } from "@/lib/auth/session";
+import { inheritPlatformBacktests } from "@/lib/backtest/library";
 import { listLinkedBacktestRuns } from "@/lib/backtest/store";
 import { listSharedSets, listSharedTemplates, listVisibleSets, listVisibleTemplates } from "@/lib/templates/store";
 import { redirect } from "next/navigation";
@@ -27,8 +29,13 @@ export default async function AccountTemplatesPage({
     listSharedTemplates({ userId: member.id }),
     listSharedSets({ userId: member.id }),
   ]);
-  const linkedBacktests = await listLinkedBacktestRuns(
-    templates.map((row) => row.id),
+  const libraryRows = [...templates, ...sharedTemplates];
+  const linkedBacktests = inheritPlatformBacktests(
+    libraryRows,
+    await listLinkedBacktestRuns(
+      libraryRows.map((row) => row.id),
+      { userId: member.id, isAdmin: memberIsAdmin(member) },
+    ),
   );
 
   return (

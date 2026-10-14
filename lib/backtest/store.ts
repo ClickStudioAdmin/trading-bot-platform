@@ -1,11 +1,19 @@
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { parseDcaIndicatorTimeframe } from "@/lib/dca/indicators";
-import { parseTemplateRecipe } from "@/lib/templates/recipe";
+import {
+  inheritPlatformBacktests,
+  matchingPlatformTemplateIds,
+} from "@/lib/backtest/library";
+import {
+  isTemplateDeskType,
+  parseTemplateRecipe,
+  TEMPLATE_RECIPE_VERSION,
+  type TemplateRecipe,
+} from "@/lib/templates/recipe";
 import {
   backtestLinkHighlight,
   memberCanReadBacktestRun,
-  templateBacktestLinks,
   templateBacktestLinksByTemplate,
   type AttachedBacktestRow,
   type TemplateBacktestLink,
@@ -620,29 +628,12 @@ export async function listAttachedBacktestLinks(
   if (!id) {
     return [];
   }
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return [];
-  }
-  const { data, error } = await supabase
-    .from("backtest_runs")
-    .select(
-      "id, user_id, name, symbol, parent_run_id, from_ms, to_ms, created_at, recipe, status",
-    )
-    .eq("template_id", id)
-    .eq("status", "done")
-    .order("created_at", { ascending: false });
-  if (error || !data) {
-    return [];
-  }
-  const rows: AttachedBacktestRow[] = [];
-  for (const item of data) {
-    const parsed = attachedBacktestRow(item as Record<string, unknown>);
-    if (parsed) {
-      rows.push(parsed);
-    }
-  }
-  return templateBacktestLinks(rows, viewerId, isAdmin);
+  const grouped = await listAttachedBacktestLinksByTemplate(
+    [id],
+    viewerId,
+    isAdmin,
+  );
+  return grouped[id] ?? [];
 }
 
 export async function listAttachedBacktestLinksByTemplate(
@@ -658,12 +649,16 @@ export async function listAttachedBacktestLinksByTemplate(
   if (!supabase) {
     return {};
   }
+  const recipes = await loadBacktestTemplateRecipes(supabase, ids);
+  const queryIds = [
+    ...new Set([...ids, ...matchingPlatformTemplateIds(recipes, ids)]),
+  ];
   const { data, error } = await supabase
     .from("backtest_runs")
     .select(
       "id, user_id, name, symbol, parent_run_id, from_ms, to_ms, created_at, recipe, status, template_id",
     )
-    .in("template_id", ids)
+    .in("template_id", queryIds)
     .eq("status", "done")
     .order("created_at", { ascending: false });
   if (error || !data) {
@@ -679,7 +674,64 @@ export async function listAttachedBacktestLinksByTemplate(
     }
     rows.push({ ...parsed, templateId });
   }
-  return templateBacktestLinksByTemplate(rows, viewerId, isAdmin);
+  const grouped = inheritPlatformBacktests(
+    recipes,
+    templateBacktestLinksByTemplate(rows, viewerId, isAdmin),
+  );
+  const links: Record<string, TemplateBacktestLink[]> = {};
+  for (const id of ids) {
+    const value = grouped[id];
+    if (value && value.length > 0) {
+      links[id] = value;
+    }
+  }
+  return links;
+}
+
+async function loadBacktestTemplateRecipes(
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
+  ids: string[],
+): Promise<
+  Array<{ id: string; visibility: string; recipe: TemplateRecipe }>
+> {
+  const [requested, platform] = await Promise.all([
+    supabase
+      .from("automation_templates")
+      .select("id, visibility, desk_type, recipe, recipe_version")
+      .in("id", ids),
+    supabase
+      .from("automation_templates")
+      .select("id, visibility, desk_type, recipe, recipe_version")
+      .eq("visibility", "platform"),
+  ]);
+  const seen = new Set<string>();
+  const recipes: Array<{
+    id: string;
+    visibility: string;
+    recipe: TemplateRecipe;
+  }> = [];
+  for (const item of [...(requested.data ?? []), ...(platform.data ?? [])]) {
+    const row = item as Record<string, unknown>;
+    const id = String(row.id ?? "");
+    if (!id || seen.has(id) || !isTemplateDeskType(row.desk_type)) {
+      continue;
+    }
+    const parsed = parseTemplateRecipe(
+      row.recipe,
+      row.desk_type,
+      Number(row.recipe_version) || TEMPLATE_RECIPE_VERSION,
+    );
+    if (!parsed.ok) {
+      continue;
+    }
+    seen.add(id);
+    recipes.push({
+      id,
+      visibility: String(row.visibility ?? ""),
+      recipe: parsed.recipe,
+    });
+  }
+  return recipes;
 }
 
 function attachedBacktestRow(
@@ -712,6 +764,7 @@ export { canDeleteBacktestRun } from "./model";
 
 export async function listLinkedBacktestRuns(
   templateIds: string[],
+  viewer?: { userId: string; isAdmin: boolean },
 ): Promise<Record<string, BacktestLinkHighlight>> {
   const ids = [...new Set(templateIds.filter(Boolean))];
   const linked: Record<string, BacktestLinkHighlight> = {};
@@ -734,6 +787,12 @@ export async function listLinkedBacktestRuns(
   for (const item of data) {
     const run = parseBacktestRunRow(item as Record<string, unknown>);
     if (!run?.templateId || linked[run.templateId]) {
+      continue;
+    }
+    if (
+      viewer &&
+      !memberCanReadBacktestRun(run, viewer.userId, viewer.isAdmin)
+    ) {
       continue;
     }
     linked[run.templateId] = backtestLinkHighlight(run);

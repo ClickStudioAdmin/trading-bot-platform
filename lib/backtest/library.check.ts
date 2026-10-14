@@ -9,6 +9,8 @@ import {
   toSavedBacktestMatch,
   findMatchingBacktestTemplate,
   groupBacktestLibrary,
+  inheritPlatformBacktests,
+  matchingPlatformTemplateIds,
   parseBacktestRecipeJson,
   userBacktestFieldIssues,
 } from "./library";
@@ -388,6 +390,45 @@ assert.deepEqual(
     perps,
   ).map((row) => row.id),
   ["perps:1"],
+);
+
+const platformHighlight = { runId: "platform-run" };
+const ownHighlight = { runId: "own-run" };
+const sameBot = [
+  { id: "user", visibility: "user", recipe: perps },
+  { id: "platform", visibility: "platform", recipe: { ...perps, name: "Catalog" } },
+  { id: "other", visibility: "user", recipe: { ...perps, symbol: "ETHUSDT" } },
+  { id: "copy", visibility: "user", recipe: perps },
+];
+const inherited = inheritPlatformBacktests(sameBot, {
+  platform: platformHighlight,
+});
+assert.equal(inherited.user, platformHighlight);
+assert.equal(inherited.copy, platformHighlight);
+assert.equal(inherited.platform, platformHighlight);
+assert.equal(inherited.other, undefined);
+const kept = inheritPlatformBacktests(sameBot, {
+  platform: platformHighlight,
+  user: ownHighlight,
+});
+assert.equal(kept.user, ownHighlight);
+assert.equal(kept.copy, platformHighlight);
+const privateOnly = inheritPlatformBacktests(
+  [
+    { id: "a", visibility: "user", recipe: perps },
+    { id: "b", visibility: "user", recipe: perps },
+  ],
+  { a: platformHighlight },
+);
+assert.equal(privateOnly.b, undefined);
+const filled = inheritPlatformBacktests(sameBot, {
+  platform: [{ runId: "platform-run" }],
+  user: [],
+});
+assert.deepEqual(filled.user, [{ runId: "platform-run" }]);
+assert.deepEqual(
+  matchingPlatformTemplateIds(sameBot, ["user", "other"]),
+  ["platform"],
 );
 
 console.log("backtest library checks passed");
