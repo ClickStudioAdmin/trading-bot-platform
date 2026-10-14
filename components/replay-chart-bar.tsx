@@ -53,7 +53,11 @@ export function ReplayChartBar({
   indicators: ReplayIndicatorChoice[];
   references: readonly string[];
   appliedReferences: readonly string[];
-  onToggleReference: (id: string, enabled: boolean) => void;
+  onToggleReference: (
+    id: string,
+    enabled: boolean,
+    anchor: HTMLElement,
+  ) => void;
   indicatorNotice?: ReactNode;
 }) {
   const [open, setOpen] = useState<"bars" | "canvas" | null>(null);
@@ -209,7 +213,16 @@ export function ReplayChartBar({
                       checked={checked}
                       disabled={row.locked}
                       aria-label={row.label}
-                      onChange={(event) => onToggleReference(row.id, event.target.checked)}
+                      onChange={(event) => {
+                        const label = event.currentTarget.closest("label");
+                        onToggleReference(
+                          row.id,
+                          event.target.checked,
+                          label instanceof HTMLElement
+                            ? label
+                            : event.currentTarget,
+                        );
+                      }}
                     />
                     <span>{row.label}</span>
                     {loading ? (
