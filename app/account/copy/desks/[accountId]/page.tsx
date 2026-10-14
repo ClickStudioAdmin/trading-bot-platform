@@ -7,9 +7,10 @@ import {
 } from "@/components/futures-blotter";
 import { CopyDeskDetailsHeader } from "@/components/copy-desk-details-header";
 import { CopyFollowButton } from "@/components/copy-follow-modal";
-import { CopyFollowTrialLine } from "@/components/copy-gate-access";
-import { PlanGateNotices } from "@/components/desk-type-reject";
-import { DESK_QUOTA_KEYS } from "@/lib/membership/entitlements";
+import {
+  CopyDeskPageNotices,
+  CopyFollowTrialLine,
+} from "@/components/copy-gate-access";
 import { loadCopyCatalogueDesk } from "@/lib/copy/catalogue";
 import { copyDeskPagePath } from "@/lib/copy/model";
 import { loadCopyDeskPublicClosed } from "@/lib/copy/desk-performance";
@@ -92,10 +93,7 @@ export default async function CopyDeskPerformancePage({
           { label: card.deskName },
         ]}
       />
-      <PlanGateNotices
-        deskTypes={[card.deskType]}
-        quotaKeys={DESK_QUOTA_KEYS}
-      />
+      <CopyDeskPageNotices deskType={card.deskType} />
       <div>
         <CopyDeskDetailsHeader
           card={card}

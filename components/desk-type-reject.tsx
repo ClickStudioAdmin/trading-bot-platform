@@ -121,11 +121,17 @@ export function QuotaRejectNotices({
 export function PlanGateNotices({
   deskTypes,
   quotaKeys,
+  extras = [],
   serverError,
   className = "mb-4 space-y-3",
 }: {
   deskTypes?: readonly DeskType[];
   quotaKeys?: readonly QuotaCapKey[];
+  extras?: readonly {
+    allowed: boolean;
+    message: string | null;
+    upgradePlan: string | null;
+  }[];
   serverError?: string | null;
   className?: string;
 }) {
@@ -144,6 +150,7 @@ export function PlanGateNotices({
   return (
     <AccessRejectNotices
       rows={[...deskRows, ...quotaRows]}
+      extras={extras}
       serverError={serverError}
       className={className}
       rowKey={rejectNoticeKey}
@@ -157,11 +164,17 @@ function rejectNoticeKey(row: DeskTypeAccess | QuotaAccess): string {
 
 function AccessRejectNotices({
   rows,
+  extras = [],
   serverError,
   className,
   rowKey,
 }: {
   rows: readonly (DeskTypeAccess | QuotaAccess)[];
+  extras?: readonly {
+    allowed: boolean;
+    message: string | null;
+    upgradePlan: string | null;
+  }[];
   serverError?: string | null;
   className: string;
   rowKey: (row: DeskTypeAccess | QuotaAccess) => string;
@@ -176,14 +189,20 @@ function AccessRejectNotices({
     return true;
   });
   const covered = new Set(denied.map((row) => row.message));
+  const extraRows = extras.filter(
+    (row) => !row.allowed && row.message && !covered.has(row.message),
+  );
   const extra = serverError && !covered.has(serverError) ? serverError : null;
-  if (denied.length === 0 && !extra) {
+  if (denied.length === 0 && extraRows.length === 0 && !extra) {
     return null;
   }
   return (
     <div className={className}>
       {denied.map((row) => (
         <DeskTypeRejectBanner key={rowKey(row)} access={row} />
+      ))}
+      {extraRows.map((row) => (
+        <DeskTypeRejectBanner key={row.message} access={row} />
       ))}
       {extra ? (
         <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
