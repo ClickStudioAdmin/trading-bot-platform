@@ -75,6 +75,10 @@ import {
   activeSetupScreen,
   applyBotSetupChoice,
   applyDeskSetupChoice,
+  botChoiceWhenBotsClosed,
+  botManualChoiceClosed,
+  deskChoiceWhenTypesClosed,
+  deskManualChoiceClosed,
   botsEmptyNote,
   readyDeskRows,
   foldersForDesk,
@@ -120,17 +124,6 @@ function isActionRedirect(error: unknown): boolean {
     return true;
   }
   return error instanceof Error && error.message === "NEXT_REDIRECT";
-}
-
-function deniedSetupNotes(
-  access: ReturnType<typeof useDeskTypeAccess>,
-): string[] {
-  if (access.length === 0) {
-    return [];
-  }
-  return access.flatMap((row) =>
-    row.allowed || !row.message ? [] : [row.message],
-  );
 }
 
 function deniedSetupDeskMessage(
@@ -249,12 +242,19 @@ export function SetupWizard({
     1,
   );
   const paperBatch = quotaRoomMessage(paperQuota, paperNeed);
-  const [desks, setDesks] = useState<SetupDesk[]>(initialDraft.desks);
-  const [deskChoice, setDeskChoice] = useState<DeskSetupChoice | null>(
-    initialDraft.deskChoice,
+  const noDeskTypes = deskManualChoiceClosed({
+    gated: deskTypesGated,
+    allowedCount: allowedTypes?.length ?? 0,
+  });
+  const noBots = botManualChoiceClosed(
+    quotaAccessFor(quotaAccess, "max_bots"),
   );
-  const [botChoice, setBotChoice] = useState<BotSetupChoice | null>(
-    initialDraft.botChoice,
+  const [desks, setDesks] = useState<SetupDesk[]>(initialDraft.desks);
+  const [deskChoice, setDeskChoice] = useState<DeskSetupChoice | null>(() =>
+    deskChoiceWhenTypesClosed(noDeskTypes, initialDraft.deskChoice),
+  );
+  const [botChoice, setBotChoice] = useState<BotSetupChoice | null>(() =>
+    botChoiceWhenBotsClosed(noBots, initialDraft.botChoice),
   );
   const [applied, setApplied] = useState<string[]>(initialDraft.applied);
   const [summary, setSummary] = useState(initialDraft.summary);
@@ -439,36 +439,29 @@ export function SetupWizard({
 
   function continueForward() {
     if (screen.main === "desks" && screen.sub === "choice") {
-      if (!deskChoice) {
+      const choice = deskChoiceWhenTypesClosed(noDeskTypes, deskChoice);
+      if (!choice) {
         setError("Choose how to add desks.");
         return;
       }
-      if (
-        deskChoice === "all_paper" &&
-        deskTypesGated &&
-        (allowedTypes?.length ?? 0) === 0
-      ) {
-        setError(
-          deniedSetupNotes(deskTypeAccess)[0] ??
-            "No desk types are allowed on your plan.",
-        );
-        return;
-      }
-      if (deskChoice === "all_paper" && paperBatch) {
+      if (choice === "all_paper" && paperBatch) {
         setError(paperBatch);
         return;
       }
       const nextDesks = applyDeskSetupChoice({
-        choice: deskChoice,
+        choice,
         desks,
         takenNames: existingNames,
         deskTypes: allowedTypes,
       });
-      const nextBotChoice = deskChoice === "none" ? null : botChoice;
+      const nextBotChoice =
+        choice === "none"
+          ? null
+          : botChoiceWhenBotsClosed(noBots, botChoice);
       const planned = setupScreens({
         desks: nextDesks,
         folders,
-        deskChoice,
+        deskChoice: choice,
         botChoice: nextBotChoice,
       });
       const target = planned.find(
@@ -478,24 +471,26 @@ export function SetupWizard({
         return;
       }
       setDesks(nextDesks);
+      setDeskChoice(choice);
       setBotChoice(nextBotChoice);
       advance(
         target,
         draft({
           desks: nextDesks,
-          deskChoice,
+          deskChoice: choice,
           botChoice: nextBotChoice,
         }),
       );
       return;
     }
     if (screen.main === "bots" && screen.sub === "choice") {
-      if (!botChoice) {
+      const choice = botChoiceWhenBotsClosed(noBots, botChoice);
+      if (!choice) {
         setError("Choose how to add bots.");
         return;
       }
       const nextDesks = applyBotSetupChoice({
-        choice: botChoice,
+        choice,
         desks,
         folders,
       });
@@ -503,7 +498,7 @@ export function SetupWizard({
         desks: nextDesks,
         folders,
         deskChoice,
-        botChoice,
+        botChoice: choice,
       });
       const index = planned.findIndex(
         (item) => setupScreenId(item) === "bots:choice",
@@ -513,7 +508,8 @@ export function SetupWizard({
         return;
       }
       setDesks(nextDesks);
-      advance(target, draft({ desks: nextDesks, botChoice }));
+      setBotChoice(choice);
+      advance(target, draft({ desks: nextDesks, botChoice: choice }));
       return;
     }
     if (next) {
@@ -542,8 +538,8 @@ export function SetupWizard({
             return;
           }
           setDesks([]);
-          setDeskChoice(null);
-          setBotChoice(null);
+          setDeskChoice(deskChoiceWhenTypesClosed(noDeskTypes, null));
+          setBotChoice(botChoiceWhenBotsClosed(noBots, null));
           setApplied([]);
           setReadyForTour(false);
           setTourPromptSeen(false);
@@ -658,15 +654,14 @@ export function SetupWizard({
               title: "Add a Paper Trading desk for each strategy type",
               detail: "Quickest way to see all desk types in action.",
               icon: <IconDesks {...CHOICE_ICON} />,
-              disabled:
-                (deskTypesGated && (allowedTypes?.length ?? 0) === 0) ||
-                Boolean(paperBatch),
+              disabled: noDeskTypes || Boolean(paperBatch),
             },
             {
               value: "manual",
               title: "Manually select desk types and modes",
               detail: "Add each desk, then review the details before you continue.",
               icon: <IconPencil {...CHOICE_ICON} />,
+              disabled: noDeskTypes,
             },
             {
               value: "none",
@@ -726,6 +721,7 @@ export function SetupWizard({
               detail:
                 "Pick the bots for every desk together, and which of those bots to start.",
               icon: <IconPencil {...CHOICE_ICON} />,
+              disabled: noBots,
             },
             {
               value: "none",
