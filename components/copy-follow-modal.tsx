@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AppCheck } from "@/components/app-check";
 import { CopyDeskGuardsFields } from "@/components/copy-desk-guards-fields";
@@ -28,11 +28,10 @@ import {
   deskTypeAccessFor,
   quotaAccessFor,
   quotaKeyForDesk,
-  type CopyDeskPlanNotice,
 } from "@/lib/membership/entitlements";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { IconCopyTrading } from "@/components/icons";
-import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
+import { ClickGateNotice, useClickGate } from "@/components/click-gate-notice";
 import { useCopyGateAccess } from "@/components/copy-gate-access";
 import { followClickDenial } from "@/lib/membership/entitlements";
 
@@ -64,6 +63,8 @@ export function CopyFollowButton({
 }) {
   const gate = useCopyGateAccess();
   const copyDenial = gate ? followClickDenial(gate) : null;
+  const clickGate = useClickGate();
+  const seededNotice = useRef(false);
   const access = useDeskTypeAccess();
   const quotaAccess = useQuotaAccess();
   const typeRow = deskTypeAccessFor(access, deskType);
@@ -90,10 +91,36 @@ export function CopyFollowButton({
   const [open, setOpen] = useState(
     defaultOpen && !copyDenial && !(revealGatesOnClick && planBlocks),
   );
-  const [copyNotice, setCopyNotice] = useState(defaultOpen ? copyDenial : null);
-  const [shownPlanNotices, setShownPlanNotices] = useState<CopyDeskPlanNotice[]>(
-    defaultOpen && revealGatesOnClick ? planNotices : [],
-  );
+
+  function clickNotices() {
+    const notices: { message: string; upgradePlan: string | null }[] = [];
+    if (revealGatesOnClick) {
+      notices.push(...planNotices);
+    }
+    if (copyDenial) {
+      notices.push(copyDenial);
+    }
+    return notices;
+  }
+
+  function showClickNotices(anchor: HTMLElement) {
+    const notices = clickNotices();
+    if (notices.length === 0) {
+      clickGate.hide();
+      return;
+    }
+    if (notices.length === 1) {
+      clickGate.show(notices[0], anchor);
+      return;
+    }
+    clickGate.show(
+      {
+        message: notices.map((notice) => notice.message).join(" "),
+        upgradePlan: null,
+      },
+      anchor,
+    );
+  }
 
   if (following) {
     return (
@@ -103,10 +130,19 @@ export function CopyFollowButton({
     );
   }
 
+  function bindCopyButton(node: HTMLButtonElement | null) {
+    if (!node || seededNotice.current || !defaultOpen || clickNotices().length === 0) {
+      return;
+    }
+    seededNotice.current = true;
+    showClickNotices(node);
+  }
+
   let control: ReactNode;
   if (typeDenied && !revealGatesOnClick) {
     control = (
       <button
+        ref={bindCopyButton}
         type="button"
         disabled
         title={typeDenied}
@@ -120,17 +156,16 @@ export function CopyFollowButton({
   } else {
     control = (
       <button
+        ref={bindCopyButton}
         type="button"
-        onClick={() => {
-          if (revealGatesOnClick) {
-            setShownPlanNotices(planNotices);
+        onClick={(event) => {
+          const notices = clickNotices();
+          if (notices.length > 0) {
+            showClickNotices(event.currentTarget);
+          } else {
+            clickGate.hide();
           }
-          if (copyDenial) {
-            setCopyNotice(copyDenial);
-            setOpen(false);
-            return;
-          }
-          if (revealGatesOnClick && planBlocks) {
+          if (copyDenial || (revealGatesOnClick && planBlocks)) {
             setOpen(false);
             return;
           }
@@ -147,10 +182,12 @@ export function CopyFollowButton({
 
   return (
     <div className="flex w-full flex-col gap-2">
-      {shownPlanNotices.map((notice) => (
-        <DeskTypeRejectBanner key={notice.key} access={notice} />
-      ))}
-      {copyNotice ? <DeskTypeRejectBanner access={copyNotice} /> : null}
+      <ClickGateNotice
+        access={clickGate.notice}
+        anchorRef={clickGate.anchorRef}
+        generation={clickGate.generation}
+        onDismiss={clickGate.hide}
+      />
       {control}
       {open && !typeDenied ? (
         <CopyFollowModal
