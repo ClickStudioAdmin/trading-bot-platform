@@ -1,6 +1,6 @@
 # Roadmap
 
-Click locked this V1 / V2 split **16 Sep 2026**. On **12 Oct 2026** Click swapped onboarding with entitlements, and invite-friends with the front-end website, and inserted Strategy Builder before production deploy. On **13 Oct 2026** Click moved production deploy to after invite friends, and inserted Create Platform Templates after Strategy Builder. On **14 Oct 2026** Click swapped system test with Create Platform Templates, then folded tour refinement into that system test and removed the separate step, then placed Create Platform Templates immediately after Strategy Builder. Do not reorder V1 again or start a later V1 item until Click says go. V2 has **no order** — do not start any V2 item until Click picks one.
+Click locked this V1 / V2 split **16 Sep 2026**. On **12 Oct 2026** Click swapped onboarding with entitlements, and invite-friends with the front-end website, and inserted Strategy Builder before production deploy. On **13 Oct 2026** Click moved production deploy to after invite friends, and inserted Create Platform Templates after Strategy Builder. On **14 Oct 2026** Click swapped system test with Create Platform Templates, then folded tour refinement into that system test and removed the separate step, then placed Create Platform Templates immediately after Strategy Builder. On **14 Oct 2026** Click moved the current item to Strategy Builder. Do not reorder V1 again or start a later V1 item until Click says go. V2 has **no order** — do not start any V2 item until Click picks one.
 
 Phases **1–11** are shipped. See [master-spec.md](master-spec.md) and [phase-11.md](phase-11.md). Older phase files still say “roadmap 2” / “roadmap 5”; those numbers are historical. **This file is the plan.**
 
@@ -22,19 +22,15 @@ Keep building on these; do not reopen them as a phase unless Click asks.
 | Plans, payments, affiliates | Closed at step 8: [phase-membership.md](phase-membership.md) |
 | Notifications and Resend | Steps 1–8 in repo: [phase-notifications.md](phase-notifications.md) |
 
-## Current (V1 item 4)
+## Current (V1 item 7)
 
-**Account Positions, Bots, and Automations lists.** Started 21 Sep 2026. Work only what Click asks. Spec: [phase-account-blotter.md](phase-account-blotter.md). Isolation already shipped in item 3 — this item is the directory UI only. Next is onboarding (item 5). Click is building that now. Entitlements stay item 6.
-
-**In progress**
-
-- Desk Automations (C&C, Perps bots, DCA): Theme table of bots, Create / Template on the toolbar, Clone on the row Actions, View/Edit opens the existing bot form (`?edit=`). `#bot-…` still opens that form. Automations is the first desk tab; Positions is second.
+**Strategy Builder and bot structures (and full test).** Click is on this as of 14 Oct 2026. Morph Perps bots into one playbook per contract and side, with And/Or stacks for entry, additional exposure, and exit. The app places the first order, later adds, and the exit. Signals only arm. Then refine DCA and Cash and Carry to that structure, and fully test the builder and those playbooks. The whole-product system test stays item 9. Write [phase-strategy-builder.md](phase-strategy-builder.md) for this item. Do not start Create Platform Templates (item 8) until Click asks.
 
 **Still locked / do not start until Click asks**
 
-- Account-wide Positions and Bots sidenav lists.
+- Account-wide Positions and Bots sidenav lists (item 4).
 - Virtual lots / same-pair stacking / mixed desk types. Typed desks stay one type, one bind, one UI. Virtual deals stay V2.
-- Entitlements / plan gates (item 6).
+- Remaining entitlement rows. Gate row 6a is already started, one row at a time.
 
 ## V1 (locked order)
 
@@ -45,10 +41,10 @@ Stop after each item until Click says go.
 | 1 | **Identity** | **Accepted 17 Sep 2026.** Email verify on signup + forgot password + unverified wall. Wizard removed; new users land on Overview after confirm. Spec: [phase-entitlements.md](phase-entitlements.md) (identity slice). |
 | 2 | **2FA** | **Accepted 17 Sep 2026.** Settings enroll + sign-in challenge only. Google Authenticator TOTP, recovery codes shown once. **Not** a plan gate yet. Spec: [phase-2fa.md](phase-2fa.md). |
 | 3 | **UI refinement and cleanup** | **Accepted 21 Sep 2026.** Light is live (chrome vs content). Isolation shipped 19 Sep 2026. Breadcrumbs on orphans. `/account/book` removed. |
-| 4 | **Account Positions, Bots, and Automations lists** | **Current.** Started 21 Sep 2026. Spec: [phase-account-blotter.md](phase-account-blotter.md). Isolation already in repo (item 3). Desk Automations list first; account Positions / Bots wait until Click asks. Virtual lots stay V2. |
-| 5 | **Onboarding wizards and Starter Packs** | Blocking first-run modal: desk type × mode, exchange keys, idle bots from admin starter folders, then an optional guided tour. The app stays closed until Finish or Skip. Never arm. Click is building this now. Spec: [phase-onboarding.md](phase-onboarding.md). |
+| 4 | **Account Positions, Bots, and Automations lists** | Started 21 Sep 2026. Spec: [phase-account-blotter.md](phase-account-blotter.md). Isolation already in repo (item 3). Desk Automations list first; account Positions / Bots wait until Click asks. Virtual lots stay V2. |
+| 5 | **Onboarding wizards and Starter Packs** | Blocking first-run modal: desk type × mode, exchange keys, idle bots from admin starter folders, then an optional guided tour. The app stays closed until Finish or Skip. Never arm. Spec: [phase-onboarding.md](phase-onboarding.md). |
 | 6 | **Entitlements and plan / 2FA gates** | `assertEntitlement`, visible/disabled + Upgrade, a plan may require 2FA, downgrade grace. Gate map scoped 9 Oct 2026. Spec: [phase-entitlements.md](phase-entitlements.md) (gates). |
-| 7 | **Strategy Builder and bot structures (and full test)** | Implement the Strategy Builder plan on Perps bots (`perps_bots`): one playbook per contract and side. Entry, additional exposure, and exit are And/Or condition stacks. The app places the first order, later adds, and the exit. Signals only arm. Then refine the other managing playbooks (DCA and Cash and Carry) to that structure, and fully test the builder and those playbooks. This replaces the parked position builder / scale-in desk. The whole-product system test stays item 9. Write `docs/phase-strategy-builder.md` when this item starts. |
+| 7 | **Strategy Builder and bot structures (and full test)** | **Current.** Click is on this as of 14 Oct 2026. Implement the Strategy Builder plan on Perps bots (`perps_bots`): one playbook per contract and side. Entry, additional exposure, and exit are And/Or condition stacks. The app places the first order, later adds, and the exit. Signals only arm. Then refine the other managing playbooks (DCA and Cash and Carry) to that structure, and fully test the builder and those playbooks. This replaces the parked position builder / scale-in desk. The whole-product system test stays item 9. Write `docs/phase-strategy-builder.md` when this item starts. |
 | 8 | **Create Platform Templates** | The template library is already shipped ([templates.md](templates.md)). This item writes the platform templates and starter folders on `/admin/templates` for DCA, Perps bots, and Cash and Carry, using the structures from item 7. Apply stays idle or disabled. Never arm. A public member catalog stays V2. |
 | 9 | **Full system test and refinement (including tour refinement)** | Whole product, **including Hyperliquid** leftover desk-test, copy leftover desk-test, and the platform tour and onboarding copy. Fix what Click finds. Not a new feature phase. |
 | 10 | **Invite friends to test** | Closed testers before the public soft launch. |
