@@ -1159,7 +1159,7 @@ export function TemplatesLibrary({
               />
               <th className="px-4 py-3 font-medium">Backtests</th>
               {showBots ? (
-                <th className="px-4 py-3 font-medium">Bots</th>
+                <th className="w-px px-4 py-3 font-medium">Bots</th>
               ) : null}
               {showOwner ? (
                 <SortTh
@@ -1172,6 +1172,7 @@ export function TemplatesLibrary({
               {showSharedWith ? (
                 <SortTh
                   label="Shared with"
+                  className="whitespace-nowrap"
                   active={sort.key === "shared"}
                   dir={sort.dir}
                   onSort={() => onSort("shared")}
@@ -1241,16 +1242,16 @@ export function TemplatesLibrary({
                     )}
                   </td>
                   {showBots ? (
-                    <td className="px-4 py-3">
+                    <td className="w-px px-4 py-3">
                       {matchedBots.length === 0 ? (
                         <span className="text-ink-faint">—</span>
                       ) : (
-                        <ul className="flex flex-col gap-1">
+                        <ul className="flex w-40 flex-col gap-1">
                           {matchedBots.map((bot) => (
                             <li key={`${bot.deskId}-${bot.id}`}>
                               <Link
                                 href={bot.href}
-                                className="text-accent hover:underline"
+                                className="block break-words text-accent hover:underline"
                               >
                                 {templateBotLinkLabel(bot)}
                               </Link>

@@ -23,11 +23,8 @@ export type TemplateBotLink = {
   href: string;
 };
 
-export function templateBotLinkLabel(bot: {
-  deskName: string;
-  name: string;
-}): string {
-  return `${bot.deskName} · ${bot.name}`;
+export function templateBotLinkLabel(bot: { name: string }): string {
+  return bot.name;
 }
 
 export function templateBotLinks(
