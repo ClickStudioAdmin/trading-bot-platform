@@ -25,7 +25,7 @@ export function DeskTypeRejectBanner({
   }
   const lead = gateRejectLead(access.message, access.upgradePlan);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-warning/30 bg-warning/10 px-4 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-card gate-notice px-4 py-3">
       <p className="flex min-w-0 flex-1 items-start gap-3 text-sm text-warning">
         <IconWarning size={18} className="mt-0.5 size-4 shrink-0" aria-hidden />
         <span>{lead}</span>

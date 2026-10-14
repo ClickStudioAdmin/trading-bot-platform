@@ -392,7 +392,7 @@ export function ClickGateNotice({
       ref={panelRef}
       role="status"
       data-click-gate-notice=""
-      className={`fixed z-[70] overflow-y-auto rounded-card border border-warning/30 bg-warning/10 ${previewClass}`.trim()}
+      className={`fixed z-[70] overflow-y-auto rounded-card gate-notice ${previewClass}`.trim()}
       style={{
         top: box?.top ?? 0,
         left: box?.left ?? 0,
