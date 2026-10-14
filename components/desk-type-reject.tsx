@@ -6,6 +6,7 @@ import { useDeskTypeAccess } from "@/components/desk-type-access";
 import { useQuotaAccess } from "@/components/quota-access";
 import type { DeskType } from "@/lib/accounts/model";
 import {
+  bundledDeskTypeDenial,
   deskTypeAccessFor,
   gateRejectLead,
   quotaAccessFor,
@@ -45,10 +46,12 @@ export function DeskTypeRejectBanner({
 export function DeskTypeRejectNotices({
   deskTypes,
   serverError,
+  bundle = false,
   className = "mb-4 space-y-3",
 }: {
   deskTypes?: readonly DeskType[];
   serverError?: string | null;
+  bundle?: boolean;
   className?: string;
 }) {
   const access = useDeskTypeAccess();
@@ -72,11 +75,16 @@ export function DeskTypeRejectNotices({
   if (denied.length === 0 && !extra) {
     return null;
   }
+  const bundled = bundle ? bundledDeskTypeDenial(denied) : null;
   return (
     <div className={className}>
-      {denied.map((row) => (
-        <DeskTypeRejectBanner key={row.deskType} access={row} />
-      ))}
+      {bundled ? (
+        <DeskTypeRejectBanner access={bundled} />
+      ) : (
+        denied.map((row) => (
+          <DeskTypeRejectBanner key={row.deskType} access={row} />
+        ))
+      )}
       {extra ? (
         <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {extra}
