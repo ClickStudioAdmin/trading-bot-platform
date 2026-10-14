@@ -102,6 +102,14 @@ export function parseReplayViewPreferences(raw: unknown): ReplayViewPreferences 
   };
 }
 
+export function addedReferenceIndicatorIds(
+  previous: readonly string[],
+  next: readonly string[],
+): string[] {
+  const had = new Set(previous);
+  return next.filter((id) => !had.has(id));
+}
+
 export function parseReplayRunIndicators(raw: unknown): ReplayRunIndicators {
   const row = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   return {

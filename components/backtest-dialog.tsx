@@ -7,6 +7,16 @@ import {
   PreviousBacktestLink,
 } from "@/components/bot-form-chrome";
 import { IconBacktest } from "@/components/icons";
+import {
+  ResearchNoticeBanner,
+  ResearchTrialLines,
+  useResearchGateAccess,
+} from "@/components/research-gate-access";
+import {
+  backtestCreateDenial,
+  researchTrialLine,
+  type ResearchNotice,
+} from "@/lib/membership/entitlements";
 import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import { seedBacktestDraftAction } from "@/lib/backtest/actions";
@@ -65,15 +75,27 @@ export function BacktestTemplateLink({
   className?: string;
   buttonClassName?: string;
 }) {
+  const gate = useResearchGateAccess();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<ResearchNotice | null>(null);
   const saved = findMatchingSavedBacktest(current, savedBacktests);
+  const trial = gate ? researchTrialLine(gate.backtest) : null;
   return (
     <span className={className ?? "inline-flex flex-col items-end"}>
+      <ResearchNoticeBanner notice={notice} className="mb-2 w-full min-w-80" />
+      <ResearchTrialLines lines={trial ? [trial] : []} />
       <button
         type="button"
         disabled={pending}
         onClick={() => {
+          const denial = gate ? backtestCreateDenial(gate) : null;
+          if (denial) {
+            setNotice(denial);
+            setError(null);
+            return;
+          }
+          setNotice(null);
           const loaded = getRecipe?.() ??
             (current
               ? { ok: true as const, recipe: current }

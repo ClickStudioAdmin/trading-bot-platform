@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ResearchReplayButton } from "@/components/research-gate-access";
 import type { ReactNode } from "react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import {
@@ -10,7 +11,6 @@ import {
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
 import { ColumnHint } from "@/components/column-hint";
-import { IconPlay } from "@/components/icons";
 import { BacktestRunsTable } from "@/components/backtest-runs-table";
 import { BacktestStudyCharts } from "@/components/backtest-study-charts";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
@@ -285,13 +285,7 @@ export function BacktestRunDetail({
             </div>
           </div>
           {complete ? (
-            <Link
-              href={`/account/backtests/${run.id}/replay`}
-              className="inline-flex shrink-0 items-center gap-2 rounded-control bg-accent-strong px-4 py-2 text-base font-medium text-ink hover:bg-accent"
-            >
-              <IconPlay size={28} className="ml-0.5 size-7 fill-current" />
-              Replay
-            </Link>
+            <ResearchReplayButton href={`/account/backtests/${run.id}/replay`} />
           ) : null}
         </div>
         <BacktestMatchCard

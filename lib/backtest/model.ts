@@ -1199,7 +1199,7 @@ export function realizedReturnPct(
   return stats.realizedUsdt / stats.startingUsdt;
 }
 
-const MS_PER_YEAR = 365.25 * 24 * 60 * 60 * 1000;
+export const BACKTEST_MS_PER_YEAR = 365.25 * 24 * 60 * 60 * 1000;
 
 export function realizedAprPct(
   realizedUsdt: number,
@@ -1208,7 +1208,7 @@ export function realizedAprPct(
   toMs: number,
 ): number | null {
   const period = returnOnCapitalUsedPct(realizedUsdt, peakNotionalUsdt);
-  const years = (toMs - fromMs) / MS_PER_YEAR;
+  const years = (toMs - fromMs) / BACKTEST_MS_PER_YEAR;
   if (period == null || !(years > 0) || period <= -1) {
     return null;
   }

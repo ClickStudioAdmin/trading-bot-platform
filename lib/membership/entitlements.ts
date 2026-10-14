@@ -1047,3 +1047,486 @@ function decideQuota(input: {
     message: capUsageMessage(input.key, input.used, limit, upgradePlan),
   };
 }
+
+export const RESEARCH_FEATURE_KEYS = [
+  "research_backtest",
+  "research_backtest_attach_templates",
+  "replay_backtests",
+  "replay_chart_indicators",
+  "replay_strategy_optimization",
+] as const;
+
+export type ResearchFeatureKey = (typeof RESEARCH_FEATURE_KEYS)[number];
+
+const RESEARCH_ACTIVITY: Record<ResearchFeatureKey, string> = {
+  research_backtest: "Backtesting",
+  research_backtest_attach_templates: "Attaching results to a bot template",
+  replay_backtests: "Replaying backtests",
+  replay_chart_indicators: "Adding chart indicators",
+  replay_strategy_optimization: "Strategy optimization",
+};
+
+export const RESEARCH_CAP_KEYS = [
+  "max_stored_backtests",
+  "max_backtest_years",
+] as const;
+
+export type ResearchCapKey = (typeof RESEARCH_CAP_KEYS)[number];
+
+/** Same year length the backtest APR uses. A window of exactly this many milliseconds fits. */
+export const BACKTEST_YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
+
+export type ResearchFeatureAccess = {
+  key: ResearchFeatureKey;
+  allowed: boolean;
+  message: string | null;
+  upgradePlan: string | null;
+};
+
+export type ResearchCapSnapshot = {
+  key: ResearchCapKey;
+  standing: number | null;
+  trialLimit: number | null;
+  phase: "active" | "ended" | null;
+  trialEndsOn: string | null;
+  upgradePlan: string | null;
+  limit: number | null;
+};
+
+export type ResearchGateAccess = {
+  backtest: ResearchFeatureAccess;
+  attach: ResearchFeatureAccess;
+  replay: ResearchFeatureAccess;
+  indicators: ResearchFeatureAccess;
+  optimize: ResearchFeatureAccess;
+  saved: ResearchCapSnapshot & { used: number };
+  years: ResearchCapSnapshot;
+  /** False when the owned-run count could not be read. Caps then fail closed on the server. */
+  savedCountOk: boolean;
+};
+
+export type ResearchNotice = {
+  allowed: false;
+  message: string;
+  upgradePlan: string | null;
+};
+
+export function researchActivity(key: ResearchFeatureKey): string {
+  return RESEARCH_ACTIVITY[key];
+}
+
+export function researchFeatureAccessList(input: {
+  features: PlanFeatures;
+  trials: PlanTrials;
+  grants: readonly { key: string; endsAt: string }[];
+  nowMs: number;
+  plans: readonly UnlockCandidate[];
+}): ResearchFeatureAccess[] {
+  return RESEARCH_FEATURE_KEYS.map((key) =>
+    decideResearchFeature({ ...input, key }),
+  );
+}
+
+export function researchGateAccess(input: {
+  features: PlanFeatures;
+  caps: PlanCaps;
+  trials: PlanTrials;
+  grants: readonly { key: string; endsAt: string }[];
+  nowMs: number;
+  plans: readonly CapUnlockCandidate[];
+  savedUsed: number;
+  savedCountOk?: boolean;
+}): ResearchGateAccess {
+  const rows = researchFeatureAccessList(input);
+  const feature = (key: ResearchFeatureKey) =>
+    rows.find((row) => row.key === key) ?? {
+      key,
+      allowed: false,
+      message: researchNotAllowedMessage(key, null),
+      upgradePlan: null,
+    };
+  const capInput = {
+    features: input.features,
+    caps: input.caps,
+    trials: input.trials,
+    grants: input.grants,
+    nowMs: input.nowMs,
+    plans: input.plans,
+  };
+  return {
+    backtest: feature("research_backtest"),
+    attach: feature("research_backtest_attach_templates"),
+    replay: feature("replay_backtests"),
+    indicators: feature("replay_chart_indicators"),
+    optimize: feature("replay_strategy_optimization"),
+    saved: {
+      ...researchCapSnapshot({ ...capInput, key: "max_stored_backtests" }),
+      used: input.savedUsed,
+    },
+    years: researchCapSnapshot({ ...capInput, key: "max_backtest_years" }),
+    savedCountOk: input.savedCountOk ?? true,
+  };
+}
+
+export function researchCapSnapshot(input: {
+  key: ResearchCapKey;
+  features: PlanFeatures;
+  caps: PlanCaps;
+  trials: PlanTrials;
+  grants: readonly { key: string; endsAt: string }[];
+  nowMs: number;
+  plans: readonly CapUnlockCandidate[];
+}): ResearchCapSnapshot {
+  const standing = input.caps[input.key];
+  const offer = capTrialOffer(
+    { features: input.features, caps: input.caps, trials: input.trials },
+    input.key,
+  );
+  const grant = input.grants.find((row) => row.key === input.key) ?? null;
+  const phase = grant
+    ? trialPhase(grant.endsAt, input.nowMs)
+    : offer
+      ? "active"
+      : null;
+  const limit = effectiveCap({ standing, offer, phase });
+  return {
+    key: input.key,
+    standing,
+    trialLimit: offer?.limit ?? null,
+    phase: phase === "active" || phase === "ended" ? phase : null,
+    trialEndsOn: grant ? formatAuDateUtc(Date.parse(grant.endsAt)) : null,
+    upgradePlan:
+      limit == null
+        ? null
+        : cheapestPublicCapPlanName(input.plans, input.key, limit),
+    limit,
+  };
+}
+
+export function backtestSpanFitsYears(
+  fromMs: number,
+  toMs: number,
+  years: number,
+): boolean {
+  if (!(years > 0)) {
+    return false;
+  }
+  const span = toMs - fromMs;
+  if (!Number.isFinite(span) || span < 0) {
+    return false;
+  }
+  return span <= years * BACKTEST_YEAR_MS;
+}
+
+export function backtestCreateDenial(
+  gate: ResearchGateAccess,
+): ResearchNotice | null {
+  return featureNotice(gate.backtest);
+}
+
+export function attachClickDenial(
+  gate: ResearchGateAccess,
+): ResearchNotice | null {
+  return featureNotice(gate.attach);
+}
+
+export function replayClickDenial(
+  gate: ResearchGateAccess,
+): ResearchNotice | null {
+  return featureNotice(gate.backtest) ?? featureNotice(gate.replay);
+}
+
+export function indicatorAddDenial(
+  gate: ResearchGateAccess,
+): ResearchNotice | null {
+  return featureNotice(gate.indicators);
+}
+
+export function optimizeClickDenial(
+  gate: ResearchGateAccess,
+): ResearchNotice | null {
+  return featureNotice(gate.optimize);
+}
+
+export function queueBacktestDenial(
+  gate: ResearchGateAccess,
+  input: { variant: boolean; adding: number; fromMs: number; toMs: number },
+): ResearchNotice | null {
+  const blocked = featureNotice(gate.backtest);
+  if (blocked) {
+    return blocked;
+  }
+  if (input.variant) {
+    const optimize = featureNotice(gate.optimize);
+    if (optimize) {
+      return optimize;
+    }
+  }
+  const saved = savedBacktestDecision(gate, input.adding);
+  if (!saved.allowed && saved.message) {
+    return {
+      allowed: false,
+      message: saved.message,
+      upgradePlan: saved.upgradePlan,
+    };
+  }
+  const years = backtestYearsDecision(gate, input.fromMs, input.toMs);
+  if (!years.allowed && years.message) {
+    return {
+      allowed: false,
+      message: years.message,
+      upgradePlan: years.upgradePlan,
+    };
+  }
+  return null;
+}
+
+export function savedBacktestDecision(
+  gate: ResearchGateAccess,
+  adding: number,
+): { allowed: boolean; message: string | null; upgradePlan: string | null } {
+  return capCountDecision(gate.saved, adding, {
+    open: "Saved Backtests",
+    ended: "saved backtests",
+    closed: savedBacktestClosedMessage,
+  });
+}
+
+export function backtestYearsDecision(
+  gate: ResearchGateAccess,
+  fromMs: number,
+  toMs: number,
+): { allowed: boolean; message: string | null; upgradePlan: string | null } {
+  const snapshot = gate.years;
+  const open = yearsTrialOpen(snapshot);
+  const limit = snapshot.limit;
+  if (limit == null || backtestSpanFitsYears(fromMs, toMs, limit)) {
+    return { allowed: true, message: open, upgradePlan: null };
+  }
+  const withinTrial =
+    snapshot.trialLimit != null &&
+    backtestSpanFitsYears(fromMs, toMs, snapshot.trialLimit);
+  if (snapshot.phase === "ended" && withinTrial && snapshot.trialEndsOn) {
+    return {
+      allowed: false,
+      message: `Your free trial of backtest timeframe ended on ${snapshot.trialEndsOn}.`,
+      upgradePlan: snapshot.upgradePlan,
+    };
+  }
+  return {
+    allowed: false,
+    message: yearsClosedMessage(limit, snapshot.upgradePlan),
+    upgradePlan: snapshot.upgradePlan,
+  };
+}
+
+export function backtestYearsHint(gate: ResearchGateAccess): string | null {
+  const limit = gate.years.limit;
+  if (limit == null || limit <= 0) {
+    return null;
+  }
+  return yearsAvailableMessage(limit);
+}
+
+export function researchTrialLine(
+  row: ResearchFeatureAccess,
+): string | null {
+  return row.allowed && row.message ? row.message : null;
+}
+
+export function queueTrialLines(
+  gate: ResearchGateAccess,
+  input: { variant: boolean; adding: number; fromMs: number; toMs: number },
+): string[] {
+  if (queueBacktestDenial(gate, input)) {
+    return [];
+  }
+  const lines: string[] = [];
+  const backtest = researchTrialLine(gate.backtest);
+  if (backtest) {
+    lines.push(backtest);
+  }
+  if (input.variant) {
+    const optimize = researchTrialLine(gate.optimize);
+    if (optimize) {
+      lines.push(optimize);
+    }
+  }
+  const saved = savedBacktestDecision(gate, input.adding);
+  if (saved.allowed && saved.message) {
+    lines.push(saved.message);
+  }
+  const years = backtestYearsDecision(gate, input.fromMs, input.toMs);
+  if (years.allowed && years.message) {
+    lines.push(years.message);
+  }
+  return lines;
+}
+
+export function backtestListTrialLines(gate: ResearchGateAccess): string[] {
+  const lines: string[] = [];
+  const backtest = researchTrialLine(gate.backtest);
+  if (backtest) {
+    lines.push(backtest);
+  }
+  if (gate.backtest.allowed) {
+    const replay = researchTrialLine(gate.replay);
+    if (replay) {
+      lines.push(replay);
+    }
+  }
+  return lines;
+}
+
+function featureNotice(
+  row: ResearchFeatureAccess,
+): ResearchNotice | null {
+  if (row.allowed || !row.message) {
+    return null;
+  }
+  return {
+    allowed: false,
+    message: row.message,
+    upgradePlan: row.upgradePlan,
+  };
+}
+
+function researchNotAllowedMessage(
+  key: ResearchFeatureKey,
+  planName: string | null,
+): string {
+  const lead = `${researchActivity(key)} is not allowed on your plan.`;
+  if (!planName) {
+    return lead;
+  }
+  return `${lead} Upgrade to ${planName} to enable it.`;
+}
+
+function decideResearchFeature(input: {
+  key: ResearchFeatureKey;
+  features: PlanFeatures;
+  trials: PlanTrials;
+  grants: readonly { key: string; endsAt: string }[];
+  nowMs: number;
+  plans: readonly UnlockCandidate[];
+}): ResearchFeatureAccess {
+  const upgradePlan = cheapestPublicPlanName(input.plans, input.key);
+  if (input.features[input.key]) {
+    return {
+      key: input.key,
+      allowed: true,
+      message: null,
+      upgradePlan: null,
+    };
+  }
+  const offer = featureTrialOffer(
+    { features: input.features, caps: emptyCaps(), trials: input.trials },
+    input.key,
+  );
+  const grant = input.grants.find((row) => row.key === input.key) ?? null;
+  const phase = grant ? trialPhase(grant.endsAt, input.nowMs) : null;
+  const access = featureAccess({
+    included: false,
+    phase: phase ?? (offer ? "active" : null),
+  });
+  if (access === "trial") {
+    return {
+      key: input.key,
+      allowed: true,
+      message: grant
+        ? `${researchActivity(input.key)} is in a free trial until ${formatAuDateUtc(Date.parse(grant.endsAt))}.`
+        : `${researchActivity(input.key)} is in a free trial.`,
+      upgradePlan: null,
+    };
+  }
+  if (grant && phase === "ended") {
+    return {
+      key: input.key,
+      allowed: false,
+      message: `Your free trial of ${researchActivity(input.key).toLowerCase()} ended on ${formatAuDateUtc(Date.parse(grant.endsAt))}.`,
+      upgradePlan,
+    };
+  }
+  return {
+    key: input.key,
+    allowed: false,
+    message: researchNotAllowedMessage(input.key, upgradePlan),
+    upgradePlan,
+  };
+}
+
+function capCountDecision(
+  snapshot: ResearchCapSnapshot & { used: number },
+  adding: number,
+  copy: {
+    open: string;
+    ended: string;
+    closed: (limit: number, plan: string | null) => string;
+  },
+): { allowed: boolean; message: string | null; upgradePlan: string | null } {
+  const open =
+    snapshot.phase === "active" && snapshot.trialLimit != null
+      ? snapshot.trialEndsOn
+        ? `${copy.open} are in a free trial until ${snapshot.trialEndsOn}.`
+        : `${copy.open} are in a free trial.`
+      : null;
+  const limit = snapshot.limit;
+  if (limit == null || snapshot.used + adding <= limit) {
+    return { allowed: true, message: open, upgradePlan: null };
+  }
+  const withinTrial =
+    snapshot.trialLimit != null && snapshot.used + adding <= snapshot.trialLimit;
+  if (snapshot.phase === "ended" && withinTrial && snapshot.trialEndsOn) {
+    return {
+      allowed: false,
+      message: `Your free trial of ${copy.ended} ended on ${snapshot.trialEndsOn}.`,
+      upgradePlan: snapshot.upgradePlan,
+    };
+  }
+  return {
+    allowed: false,
+    message: copy.closed(limit, snapshot.upgradePlan),
+    upgradePlan: snapshot.upgradePlan,
+  };
+}
+
+function savedBacktestClosedMessage(
+  limit: number,
+  planName: string | null,
+): string {
+  if (limit <= 0) {
+    return researchNotAllowedMessage("research_backtest", planName);
+  }
+  const noun = limit === 1 ? "Saved Backtest" : "Saved Backtests";
+  const lead = `You have hit your maximum of ${limit} ${noun}.`;
+  if (!planName) {
+    return lead;
+  }
+  return `${lead} Upgrade to ${planName} to add another.`;
+}
+
+function yearsAvailableMessage(limit: number): string {
+  const noun = limit === 1 ? "year" : "years";
+  return `Maximum of ${limit} ${noun} available on your plan.`;
+}
+
+function yearsClosedMessage(limit: number, planName: string | null): string {
+  if (limit <= 0) {
+    return researchNotAllowedMessage("research_backtest", planName);
+  }
+  const lead = `${yearsAvailableMessage(limit)}`;
+  if (!planName) {
+    return lead;
+  }
+  return `${lead} Upgrade to ${planName} to enable it.`;
+}
+
+function yearsTrialOpen(snapshot: ResearchCapSnapshot): string | null {
+  if (snapshot.phase !== "active" || snapshot.trialLimit == null) {
+    return null;
+  }
+  if (!snapshot.trialEndsOn) {
+    return "Backtest timeframe is in a free trial.";
+  }
+  return `Backtest timeframe is in a free trial until ${snapshot.trialEndsOn}.`;
+}

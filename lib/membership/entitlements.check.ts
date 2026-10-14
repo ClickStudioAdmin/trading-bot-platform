@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { BACKTEST_MS_PER_YEAR } from "@/lib/backtest/model";
 import {
   emptyCaps,
   emptyFeatures,
@@ -40,6 +41,22 @@ import {
   quotaRoomMessage,
   type CapUnlockCandidate,
   type UnlockCandidate,
+  BACKTEST_YEAR_MS,
+  attachClickDenial,
+  backtestCreateDenial,
+  backtestListTrialLines,
+  backtestSpanFitsYears,
+  backtestYearsDecision,
+  backtestYearsHint,
+  indicatorAddDenial,
+  optimizeClickDenial,
+  queueBacktestDenial,
+  queueTrialLines,
+  replayClickDenial,
+  researchGateAccess,
+  researchTrialLine,
+  savedBacktestDecision,
+  type ResearchGateAccess,
 } from "@/lib/membership/entitlements";
 
 const nowMs = Date.parse("2026-10-14T00:00:00.000Z");
@@ -863,3 +880,371 @@ assert.equal(
 );
 
 console.log("copy gate entitlement checks passed");
+
+const year = BACKTEST_MS_PER_YEAR;
+assert.equal(BACKTEST_YEAR_MS, year);
+
+const researchPlus: CapUnlockCandidate = {
+  ...unlock("Plus", {
+    priceUsd: 20,
+    sortOrder: 2,
+    on: {
+      research_backtest: true,
+      research_backtest_attach_templates: true,
+      replay_backtests: true,
+      replay_chart_indicators: true,
+      replay_strategy_optimization: true,
+    },
+  }),
+  caps: {
+    ...emptyCaps(),
+    max_stored_backtests: 5,
+    max_backtest_years: 5,
+  },
+};
+
+function researchGate(input: {
+  on?: Partial<PlanFeatures>;
+  caps?: Partial<PlanCaps>;
+  trials?: PlanTrials;
+  grants?: { key: string; endsAt: string }[];
+  plans?: CapUnlockCandidate[];
+  savedUsed?: number;
+} = {}): ResearchGateAccess {
+  return researchGateAccess({
+    features: features(input.on),
+    caps: { ...emptyCaps(), ...input.caps },
+    trials: input.trials ?? emptyPlanTrials(),
+    grants: input.grants ?? [],
+    nowMs,
+    plans: input.plans ?? [researchPlus],
+    savedUsed: input.savedUsed ?? 0,
+  });
+}
+
+const day = 24 * 60 * 60 * 1000;
+const window = { fromMs: 0, toMs: day };
+
+assert.equal(
+  backtestCreateDenial(researchGate())?.message,
+  "Backtesting is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  gateRejectLead(
+    backtestCreateDenial(researchGate())?.message ?? "",
+    "Plus",
+  ),
+  "Backtesting is not allowed on your plan.",
+);
+assert.equal(backtestCreateDenial(researchGate())?.upgradePlan, "Plus");
+assert.equal(
+  backtestCreateDenial(
+    researchGate({
+      plans: [
+        {
+          ...researchPlus,
+          name: "Secret",
+          visibility: "private",
+          priceUsd: 1,
+        },
+      ],
+    }),
+  )?.upgradePlan,
+  null,
+);
+assert.equal(
+  backtestCreateDenial(
+    researchGate({
+      plans: [
+        {
+          ...researchPlus,
+          name: "Secret",
+          visibility: "private",
+          priceUsd: 1,
+        },
+      ],
+    }),
+  )?.message,
+  "Backtesting is not allowed on your plan.",
+);
+
+const backtestOpen = researchGate({
+  trials: { features: { research_backtest: { days: 14 } }, caps: {} },
+  grants: [{ key: "research_backtest", endsAt: "2026-10-28T00:00:00.000Z" }],
+});
+assert.equal(backtestCreateDenial(backtestOpen), null);
+assert.equal(
+  researchTrialLine(backtestOpen.backtest),
+  "Backtesting is in a free trial until 28/10/2026.",
+);
+const backtestEnded = researchGate({
+  trials: { features: { research_backtest: { days: 14 } }, caps: {} },
+  grants: [{ key: "research_backtest", endsAt: "2026-10-01T00:00:00.000Z" }],
+});
+assert.equal(
+  backtestCreateDenial(backtestEnded)?.message,
+  "Your free trial of backtesting ended on 01/10/2026.",
+);
+assert.equal(backtestCreateDenial(backtestEnded)?.upgradePlan, "Plus");
+
+assert.equal(
+  attachClickDenial(researchGate())?.message,
+  "Attaching results to a bot template is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  attachClickDenial(researchGate({ on: { research_backtest: false } }))?.message,
+  "Attaching results to a bot template is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  attachClickDenial(
+    researchGate({ on: { research_backtest_attach_templates: true } }),
+  ),
+  null,
+);
+
+const savedFull = researchGate({
+  on: { research_backtest: true },
+  caps: { max_stored_backtests: 3 },
+  savedUsed: 3,
+});
+assert.equal(
+  savedBacktestDecision(savedFull, 1).message,
+  "You have hit your maximum of 3 Saved Backtests. Upgrade to Plus to add another.",
+);
+assert.equal(
+  gateRejectLead(savedBacktestDecision(savedFull, 1).message ?? "", "Plus"),
+  "You have hit your maximum of 3 Saved Backtests.",
+);
+assert.equal(
+  savedBacktestDecision(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_stored_backtests: 1 },
+      savedUsed: 1,
+    }),
+    1,
+  ).message,
+  "You have hit your maximum of 1 Saved Backtest. Upgrade to Plus to add another.",
+);
+assert.equal(
+  queueBacktestDenial(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_stored_backtests: 0 },
+      savedUsed: 0,
+    }),
+    { variant: false, adding: 1, ...window },
+  )?.message,
+  "Backtesting is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  queueBacktestDenial(
+    researchGate({
+      caps: { max_stored_backtests: 0 },
+      savedUsed: 5,
+    }),
+    { variant: false, adding: 1, ...window },
+  )?.message,
+  "Backtesting is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  queueBacktestDenial(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_stored_backtests: 3 },
+      savedUsed: 2,
+    }),
+    { variant: false, adding: 2, ...window },
+  )?.message,
+  "You have hit your maximum of 3 Saved Backtests. Upgrade to Plus to add another.",
+);
+assert.equal(
+  queueBacktestDenial(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_stored_backtests: 3 },
+      savedUsed: 2,
+    }),
+    { variant: false, adding: 1, ...window },
+  ),
+  null,
+);
+
+const yearsGate = researchGate({
+  on: { research_backtest: true },
+  caps: { max_backtest_years: 2 },
+});
+assert.equal(backtestSpanFitsYears(0, 2 * year, 2), true);
+assert.equal(backtestSpanFitsYears(0, 2 * year + 1, 2), false);
+assert.equal(backtestYearsDecision(yearsGate, 0, 2 * year).allowed, true);
+assert.equal(
+  backtestYearsDecision(yearsGate, 0, 2 * year + 1).message,
+  "Maximum of 2 years available on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  gateRejectLead(
+    backtestYearsDecision(yearsGate, 0, 2 * year + 1).message ?? "",
+    "Plus",
+  ),
+  "Maximum of 2 years available on your plan.",
+);
+assert.equal(
+  backtestYearsDecision(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_backtest_years: 1 },
+    }),
+    0,
+    year + 1,
+  ).message,
+  "Maximum of 1 year available on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(backtestYearsHint(yearsGate), "Maximum of 2 years available on your plan.");
+assert.equal(
+  queueBacktestDenial(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_backtest_years: 0 },
+    }),
+    { variant: false, adding: 1, fromMs: 0, toMs: day },
+  )?.message,
+  "Backtesting is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  queueBacktestDenial(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_stored_backtests: 1, max_backtest_years: 1 },
+      savedUsed: 1,
+    }),
+    { variant: false, adding: 1, fromMs: 0, toMs: 2 * year },
+  )?.message,
+  "You have hit your maximum of 1 Saved Backtest. Upgrade to Plus to add another.",
+);
+
+const yearsTrial = researchGate({
+  on: { research_backtest: true },
+  caps: { max_backtest_years: 1 },
+  trials: { features: {}, caps: { max_backtest_years: { days: 14, limit: 3 } } },
+  grants: [{ key: "max_backtest_years", endsAt: "2026-10-28T00:00:00.000Z" }],
+});
+assert.equal(backtestYearsHint(yearsTrial), "Maximum of 3 years available on your plan.");
+assert.equal(backtestYearsDecision(yearsTrial, 0, 2 * year).allowed, true);
+assert.equal(
+  backtestYearsDecision(yearsTrial, 0, 2 * year).message,
+  "Backtest timeframe is in a free trial until 28/10/2026.",
+);
+assert.equal(backtestYearsDecision(yearsTrial, 0, 4 * year).allowed, false);
+assert.match(
+  backtestYearsDecision(yearsTrial, 0, 4 * year).message ?? "",
+  /^Maximum of 3 years available on your plan/,
+);
+const yearsEnded = researchGate({
+  on: { research_backtest: true },
+  caps: { max_backtest_years: 1 },
+  trials: { features: {}, caps: { max_backtest_years: { days: 14, limit: 3 } } },
+  grants: [{ key: "max_backtest_years", endsAt: "2026-10-01T00:00:00.000Z" }],
+});
+assert.equal(
+  backtestYearsDecision(yearsEnded, 0, 2 * year).message,
+  "Your free trial of backtest timeframe ended on 01/10/2026.",
+);
+assert.equal(backtestYearsHint(yearsEnded), "Maximum of 1 year available on your plan.");
+assert.equal(backtestYearsDecision(yearsEnded, 0, year).allowed, true);
+
+const savedTrial = researchGate({
+  on: { research_backtest: true },
+  caps: { max_stored_backtests: 1 },
+  savedUsed: 1,
+  trials: { features: {}, caps: { max_stored_backtests: { days: 14, limit: 4 } } },
+  grants: [{ key: "max_stored_backtests", endsAt: "2026-10-28T00:00:00.000Z" }],
+});
+assert.equal(
+  savedBacktestDecision(savedTrial, 1).message,
+  "Saved Backtests are in a free trial until 28/10/2026.",
+);
+assert.equal(savedBacktestDecision(savedTrial, 1).allowed, true);
+const savedEnded = researchGate({
+  on: { research_backtest: true },
+  caps: { max_stored_backtests: 1 },
+  savedUsed: 1,
+  trials: { features: {}, caps: { max_stored_backtests: { days: 14, limit: 4 } } },
+  grants: [{ key: "max_stored_backtests", endsAt: "2026-10-01T00:00:00.000Z" }],
+});
+assert.equal(
+  savedBacktestDecision(savedEnded, 1).message,
+  "Your free trial of saved backtests ended on 01/10/2026.",
+);
+
+assert.equal(
+  replayClickDenial(researchGate())?.message,
+  "Backtesting is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  replayClickDenial(researchGate({ on: { research_backtest: true } }))?.message,
+  "Replaying backtests is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  replayClickDenial(
+    researchGate({ on: { research_backtest: true, replay_backtests: true } }),
+  ),
+  null,
+);
+assert.equal(
+  indicatorAddDenial(researchGate())?.message,
+  "Adding chart indicators is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  indicatorAddDenial(
+    researchGate({ on: { replay_chart_indicators: true } }),
+  ),
+  null,
+);
+assert.equal(
+  optimizeClickDenial(researchGate())?.message,
+  "Strategy optimization is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  queueBacktestDenial(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_stored_backtests: 1 },
+      savedUsed: 1,
+    }),
+    { variant: true, adding: 1, ...window },
+  )?.message,
+  "Strategy optimization is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  queueBacktestDenial(
+    researchGate({
+      on: { research_backtest: true, replay_strategy_optimization: true },
+      caps: { max_stored_backtests: 1, max_backtest_years: 1 },
+      savedUsed: 1,
+    }),
+    { variant: true, adding: 1, fromMs: 0, toMs: 2 * year },
+  )?.message,
+  "You have hit your maximum of 1 Saved Backtest. Upgrade to Plus to add another.",
+);
+
+const openReplay = researchGate({
+  on: { research_backtest: true },
+  trials: { features: { replay_backtests: { days: 14 } }, caps: {} },
+  grants: [{ key: "replay_backtests", endsAt: "2026-10-28T00:00:00.000Z" }],
+});
+assert.equal(replayClickDenial(openReplay), null);
+assert.deepEqual(backtestListTrialLines(openReplay), [
+  "Replaying backtests is in a free trial until 28/10/2026.",
+]);
+assert.deepEqual(
+  queueTrialLines(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_stored_backtests: null, max_backtest_years: null },
+    }),
+    { variant: false, adding: 1, ...window },
+  ),
+  [],
+);
+
+console.log("research gate entitlement checks passed");

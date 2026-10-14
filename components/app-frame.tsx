@@ -3,6 +3,7 @@ import { DeskTypeAccessProvider } from "@/components/desk-type-access";
 import { QuotaAccessProvider } from "@/components/quota-access";
 import { TemplateFeatureAccessProvider } from "@/components/template-feature-access";
 import { CopyGateProvider } from "@/components/copy-gate-access";
+import { ResearchGateProvider } from "@/components/research-gate-access";
 import { PlatformTour } from "@/components/platform-tour";
 import { SetupGate } from "@/components/setup-gate";
 import { SetupModalFallback } from "@/components/setup-modal";
@@ -44,6 +45,7 @@ import { loadDeskTypeAccess } from "@/lib/membership/load-desk-type-access";
 import { loadQuotaAccess } from "@/lib/membership/load-quota-access";
 import { loadTemplateFeatureAccess } from "@/lib/membership/load-template-feature-access";
 import { loadCopyGateAccess } from "@/lib/membership/load-copy-gate-access";
+import { loadResearchGateAccess } from "@/lib/membership/load-research-gate-access";
 import { loadPlatformBrand } from "@/lib/platform/brand";
 
 export async function AppFrame({ children }: { children: React.ReactNode }) {
@@ -55,6 +57,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
     quotaAccess,
     templateFeatureAccess,
     copyGateAccess,
+    researchGateAccess,
   ] = member
     ? await Promise.all([
         listTradingAccounts(member.id),
@@ -73,8 +76,11 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
         member.emailVerifiedAt && member.platformMember
           ? loadCopyGateAccess(member.id)
           : Promise.resolve(null),
+        member.emailVerifiedAt && member.platformMember
+          ? loadResearchGateAccess(member.id)
+          : Promise.resolve(null),
       ])
-    : [[], null, [], [], [], null];
+    : [[], null, [], [], [], null, null];
   const verified = Boolean(member?.emailVerifiedAt);
   const admin = verified && member ? await getAdminUser() : null;
   const autoTick = admin ? await loadAutoTickEnabled() : false;
@@ -113,6 +119,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
       <QuotaAccessProvider access={quotaAccess}>
       <TemplateFeatureAccessProvider access={templateFeatureAccess}>
       <CopyGateProvider access={copyGateAccess}>
+      <ResearchGateProvider access={researchGateAccess}>
       <div
         inert={needsSetup ? true : undefined}
         className={needsSetup ? "h-dvh overflow-hidden" : undefined}
@@ -171,6 +178,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
           />
         </Suspense>
       ) : null}
+      </ResearchGateProvider>
       </CopyGateProvider>
       </TemplateFeatureAccessProvider>
       </QuotaAccessProvider>
