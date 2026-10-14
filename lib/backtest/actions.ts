@@ -38,6 +38,7 @@ import {
   defaultBacktestDates,
   parseBacktestName,
   backtestRunTitle,
+  detachBacktestFromTemplateDecision,
   type TemplateBacktestLink,
   estimateBacktestBars,
   parseBacktestDates,
@@ -56,6 +57,7 @@ import {
   deleteBacktestRun,
   insertBacktestRun,
   linkBacktestRunTemplate,
+  unlinkBacktestRunTemplate,
   listAttachedBacktestLinks,
   listAttachedBacktestLinksByTemplate,
   listBacktestRuns,
@@ -613,6 +615,40 @@ export async function attachBacktestToTemplateAction(
     return { ok: false, error: "Could not attach that run." };
   }
   revalidateBacktests(`/account/backtests/${run.id}`);
+  return { ok: true, runId: run.id };
+}
+
+export async function detachBacktestFromTemplateAction(
+  formData: FormData,
+): Promise<BacktestActionResult> {
+  const auth = await requireMember();
+  if (!auth.ok) {
+    return auth;
+  }
+  const templateId = String(formData.get("templateId") ?? "").trim();
+  const run = await loadBacktestRun(String(formData.get("runId") ?? ""));
+  if (!run || !canReadBacktestRun(run, auth.member.id, auth.isAdmin)) {
+    return { ok: false, error: "That run was not found." };
+  }
+  const template = templateId ? await loadTemplateById(templateId) : null;
+  if (!template) {
+    return { ok: false, error: "That template was not found." };
+  }
+  const decision = detachBacktestFromTemplateDecision({
+    runTemplateId: run.templateId,
+    template,
+    userId: auth.member.id,
+    isAdmin: auth.isAdmin,
+  });
+  if (!decision.ok) {
+    return decision;
+  }
+  const unlinked = await unlinkBacktestRunTemplate(run.id, template.id);
+  if (!unlinked) {
+    return { ok: false, error: "Could not detach that backtest." };
+  }
+  revalidateBacktests(`/account/backtests/${run.id}`);
+  revalidatePath("/admin/templates");
   return { ok: true, runId: run.id };
 }
 

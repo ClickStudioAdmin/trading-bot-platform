@@ -30,6 +30,7 @@ import {
   backtestQueueSeedFromRun,
   backtestRoePct,
   backtestRunTitle,
+  detachBacktestFromTemplateDecision,
   templateBacktestLinks,
   templateBacktestLinksByTemplate,
   comparableBacktestName,
@@ -526,6 +527,58 @@ assert.deepEqual(
 assert.deepEqual(
   grouped["template-b"]?.map((row) => row.runId),
   ["newer", "published"],
+);
+assert.equal(grouped["template-a"]?.[0]?.templateId, "template-a");
+assert.equal(grouped["template-b"]?.[0]?.templateId, "template-b");
+const userTemplate = {
+  id: "user",
+  visibility: "user",
+  userId: "owner",
+};
+assert.deepEqual(
+  detachBacktestFromTemplateDecision({
+    runTemplateId: "user",
+    template: userTemplate,
+    userId: "owner",
+    isAdmin: false,
+  }),
+  { ok: true },
+);
+assert.equal(
+  detachBacktestFromTemplateDecision({
+    runTemplateId: "platform",
+    template: userTemplate,
+    userId: "owner",
+    isAdmin: true,
+  }).ok,
+  false,
+);
+assert.equal(
+  detachBacktestFromTemplateDecision({
+    runTemplateId: "user",
+    template: userTemplate,
+    userId: "stranger",
+    isAdmin: false,
+  }).ok,
+  false,
+);
+assert.equal(
+  detachBacktestFromTemplateDecision({
+    runTemplateId: "platform",
+    template: { id: "platform", visibility: "platform", userId: null },
+    userId: "owner",
+    isAdmin: false,
+  }).ok,
+  false,
+);
+assert.equal(
+  detachBacktestFromTemplateDecision({
+    runTemplateId: "platform",
+    template: { id: "platform", visibility: "platform", userId: null },
+    userId: "owner",
+    isAdmin: true,
+  }).ok,
+  true,
 );
 assert.equal(ownerLinks[0]?.highlight, null);
 const cardLinks = templateBacktestLinks(

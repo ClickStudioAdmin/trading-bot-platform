@@ -451,6 +451,28 @@ export async function setBacktestComparableSymbols(
   return parseBacktestRunRow(data as Record<string, unknown>);
 }
 
+export async function unlinkBacktestRunTemplate(
+  id: string,
+  templateId: string,
+): Promise<BacktestRun | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("backtest_runs")
+    .update({ template_id: null })
+    .eq("id", id)
+    .eq("template_id", templateId)
+    .eq("status", "done")
+    .select("*")
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  return parseBacktestRunRow(data as Record<string, unknown>);
+}
+
 export async function linkBacktestRunTemplate(
   id: string,
   templateId: string,

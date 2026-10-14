@@ -1415,6 +1415,8 @@ export type TemplateBacktestLink = {
   fromMs: number;
   toMs: number;
   highlight: BacktestLinkHighlight | null;
+  /** Library row this run’s `template_id` points at. Inherited copies keep the platform id. */
+  templateId?: string;
 };
 
 export type AttachedBacktestRow = {
@@ -1496,10 +1498,36 @@ export function templateBacktestLinksByTemplate(
   for (const [templateId, list] of grouped) {
     const visible = templateBacktestLinks(list, viewerId, isAdmin);
     if (visible.length > 0) {
-      links[templateId] = visible;
+      links[templateId] = visible.map((link) => ({ ...link, templateId }));
     }
   }
   return links;
+}
+
+/** Who may clear `template_id` from Edit template. The run must be attached to that row. */
+export function detachBacktestFromTemplateDecision(input: {
+  runTemplateId: string | null;
+  template: { id: string; visibility: string; userId: string | null };
+  userId: string;
+  isAdmin: boolean;
+}): { ok: true } | { ok: false; error: string } {
+  const templateId = input.template.id.trim();
+  if (!templateId || input.runTemplateId !== templateId) {
+    return {
+      ok: false,
+      error: "That backtest is not attached to this template.",
+    };
+  }
+  const catalog =
+    input.template.visibility === "platform" ||
+    (input.template.visibility === "backtested" && !input.template.userId);
+  const canManage = catalog
+    ? input.isAdmin
+    : input.template.userId === input.userId || input.isAdmin;
+  if (!canManage) {
+    return { ok: false, error: "That template was not found." };
+  }
+  return { ok: true };
 }
 
 export function backtestLinkHighlight(
