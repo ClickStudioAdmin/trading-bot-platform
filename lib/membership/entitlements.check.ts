@@ -237,6 +237,14 @@ assert.equal(
   gateRejectLead(capUsageMessage("max_paper_desks", 2, 2, "Plus"), "Plus"),
   "You have hit your maximum of 2 Paper Trading Desks.",
 );
+assert.equal(
+  capUsageMessage("max_bots", 0, 0, "Plus"),
+  "Bots are not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  capUsageMessage("max_demo_desks", 0, 0, null),
+  "Exchange Connected - Demo desks are not allowed on your plan.",
+);
 
 const fullPaper = quotas({
   cap: { max_paper_desks: 2, max_demo_desks: 1, max_live_env_desks: 0, max_bots: 4 },
@@ -255,7 +263,14 @@ assert.equal(
 );
 assert.equal(
   quotaAccessFor(fullPaper, "max_live_env_desks")?.message,
-  "You have hit your maximum of 0 Exchange Connected - Live Desks. Upgrade to Plus to add another.",
+  "Exchange Connected - Live desks are not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  gateRejectLead(
+    quotaAccessFor(fullPaper, "max_live_env_desks")?.message ?? "",
+    "Plus",
+  ),
+  "Exchange Connected - Live desks are not allowed on your plan.",
 );
 assert.equal(
   quotaAccessFor(fullPaper, "max_bots")?.message,
@@ -298,7 +313,7 @@ const noneCap = quotas({
 assert.equal(quotaAccessFor(noneCap, "max_paper_desks")?.upgradePlan, null);
 assert.equal(
   quotaAccessFor(noneCap, "max_paper_desks")?.message,
-  "You have hit your maximum of 0 Paper Trading Desks.",
+  "Paper Trading desks are not allowed on your plan.",
 );
 assert.equal(
   cheapestPublicCapPlanName(
