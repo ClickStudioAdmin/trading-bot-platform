@@ -263,26 +263,12 @@ function DeskTypeCreateLink({
 }) {
   const access = useDeskTypeAccess();
   const row = deskTypeAccessFor(access, deskType);
-  const denied = access.length > 0 && row && !row.allowed ? row.message : null;
-  if (denied) {
-    return (
-      <button
-        type="button"
-        disabled
-        title={denied}
-        aria-label={denied}
-        className={`${className} cursor-not-allowed opacity-40`}
-      >
-        {children}
-      </button>
-    );
-  }
   return (
     <Link
       href={createDeskPath(deskType)}
       aria-current={creating ? "true" : undefined}
       aria-label={label}
-      title={row?.message ?? label}
+      title={row?.allowed && row.message ? row.message : label}
       className={className}
     >
       {children}
