@@ -124,6 +124,58 @@ export function deskTypeUpgradeMessage(
   return notAllowedOnPlanMessage(`${formatDeskType(deskType)} desks`, planName);
 }
 
+function joinEnglishList(items: readonly string[]): string {
+  if (items.length <= 1) {
+    return items[0] ?? "";
+  }
+  if (items.length === 2) {
+    return `${items[0]} and ${items[1]}`;
+  }
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+}
+
+/** One setup-choice line for every closed desk type. */
+export function bundledDeskTypeDenial(
+  rows: readonly DeskTypeAccess[],
+): Pick<DeskTypeAccess, "allowed" | "message" | "upgradePlan"> | null {
+  const denied = DESK_TYPE_ORDER.flatMap((deskType) => {
+    const row = rows.find((item) => item.deskType === deskType);
+    return row && !row.allowed && row.message ? [row] : [];
+  });
+  if (denied.length === 0) {
+    return null;
+  }
+  if (denied.length === 1) {
+    const only = denied[0];
+    return {
+      allowed: false,
+      message: only.message,
+      upgradePlan: only.upgradePlan,
+    };
+  }
+  const plans = new Set(denied.map((row) => row.upgradePlan));
+  const upgradePlan = plans.size === 1 ? denied[0].upgradePlan : null;
+  const names = joinEnglishList(denied.map((row) => formatDeskType(row.deskType)));
+  const standard = denied.every(
+    (row) => row.message === deskTypeUpgradeMessage(row.deskType, row.upgradePlan),
+  );
+  if (standard) {
+    return {
+      allowed: false,
+      message: notAllowedOnPlanMessage(`${names} desks`, upgradePlan),
+      upgradePlan,
+    };
+  }
+  const leads = denied.map((row) => gateRejectLead(row.message ?? "", row.upgradePlan));
+  return {
+    allowed: false,
+    message: upgradePlan
+      ? `${leads.join(" ")} Upgrade to ${upgradePlan} to enable it.`
+      : leads.join(" "),
+    upgradePlan,
+  };
+}
+
 export function deskTypeTrialEndedMessage(
   deskType: DeskType,
   endedOn: string,
