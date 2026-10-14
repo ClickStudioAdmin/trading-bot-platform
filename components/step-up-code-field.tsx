@@ -46,6 +46,8 @@ const continueClass =
 const dangerClass =
   "rounded-control bg-danger px-4 py-2 text-sm font-medium text-canvas hover:opacity-90 disabled:opacity-70";
 
+export const STEP_UP_MODAL_TITLE = "2FA Authentication Required";
+
 function StepUpFormPending({
   onPending,
 }: {
@@ -149,7 +151,7 @@ export function StepUpModal({
     return null;
   }
   return (
-    <Modal title="Authenticator code" onClose={close} elevated>
+    <Modal title={STEP_UP_MODAL_TITLE} onClose={close} elevated>
       <StepUpPrompt
         formId={formId}
         confirmLabel={confirmLabel}

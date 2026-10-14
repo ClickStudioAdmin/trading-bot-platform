@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
+  STEP_UP_MODAL_TITLE,
   StepUpForm,
   StepUpPrompt,
   TotpStepUpProvider,
@@ -68,8 +69,10 @@ const page = renderToStaticMarkup(
     </StepUpForm>
   </TotpStepUpProvider>,
 );
+assert.equal(STEP_UP_MODAL_TITLE, "2FA Authentication Required");
 assert.match(page, /Request payout/);
 assert.doesNotMatch(page, /Authenticator code/);
+assert.doesNotMatch(page, /2FA Authentication Required/);
 assert.doesNotMatch(page, new RegExp(`name="${STEP_UP_FIELD}"`));
 
 const off = renderToStaticMarkup(
