@@ -29,6 +29,10 @@ import {
   activeSetupScreen,
   applyBotSetupChoice,
   applyDeskSetupChoice,
+  botChoiceWhenBotsClosed,
+  botManualChoiceClosed,
+  deskChoiceWhenTypesClosed,
+  deskManualChoiceClosed,
   botsEmptyNote,
   devAccountResetAllowed,
   devResetDeskOrder,
@@ -682,6 +686,22 @@ assert.equal(applyDeskSetupChoice({
   desks: paperSet,
   takenNames: [],
 }).length, 0);
+assert.equal(deskManualChoiceClosed({ gated: false, allowedCount: 0 }), false);
+assert.equal(deskManualChoiceClosed({ gated: true, allowedCount: 0 }), true);
+assert.equal(deskManualChoiceClosed({ gated: true, allowedCount: 2 }), false);
+assert.equal(botManualChoiceClosed(null), false);
+assert.equal(botManualChoiceClosed({ limit: null }), false);
+assert.equal(botManualChoiceClosed({ limit: 0 }), true);
+assert.equal(botManualChoiceClosed({ limit: 4 }), false);
+assert.equal(deskChoiceWhenTypesClosed(true, "manual"), "none");
+assert.equal(deskChoiceWhenTypesClosed(true, "all_paper"), "none");
+assert.equal(deskChoiceWhenTypesClosed(true, null), "none");
+assert.equal(deskChoiceWhenTypesClosed(false, "manual"), "manual");
+assert.equal(botChoiceWhenBotsClosed(true, "manual"), "none");
+assert.equal(botChoiceWhenBotsClosed(true, null), "none");
+assert.equal(botChoiceWhenBotsClosed(true, "all"), "all");
+assert.equal(botChoiceWhenBotsClosed(true, "none"), "none");
+assert.equal(botChoiceWhenBotsClosed(false, "manual"), "manual");
 const withBots = applyBotSetupChoice({
   choice: "all",
   desks: [paper, connected],
