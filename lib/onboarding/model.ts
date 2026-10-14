@@ -20,6 +20,10 @@ import {
   ACCOUNT_DESKS_HREF,
   ACCOUNT_EXCHANGES_HREF,
 } from "@/lib/site-links";
+import {
+  quotaKeyForDesk,
+  type QuotaCapKey,
+} from "@/lib/membership/entitlements";
 import type { TemplateRecipe } from "@/lib/templates/recipe";
 
 export const SETUP_PATH = "/account/setup";
@@ -1182,6 +1186,32 @@ export function setupReviewRows(input: {
 
 export function desksStillToCreate(desks: readonly SetupDesk[]): SetupDesk[] {
   return desks.filter((desk) => !desk.accountId);
+}
+
+/** Uncreated wizard desks per plan cap. A desk being edited is left out. Created desks are already in the quota count. */
+export function setupDeskQuotaAdding(
+  desks: readonly SetupDesk[],
+  exceptKey: string | null = null,
+): Record<Extract<QuotaCapKey, "max_paper_desks" | "max_demo_desks" | "max_live_env_desks">, number> {
+  const adds = {
+    max_paper_desks: 0,
+    max_demo_desks: 0,
+    max_live_env_desks: 0,
+  };
+  for (const desk of desksStillToCreate(desks)) {
+    if (desk.key === exceptKey) {
+      continue;
+    }
+    const key = quotaKeyForDesk({
+      mode: desk.mode,
+      venueEnvironment: desk.mode === "live" ? desk.environmentId : null,
+    });
+    if (key === "max_bots") {
+      continue;
+    }
+    adds[key] += 1;
+  }
+  return adds;
 }
 
 export function createdStarterBots(input: {

@@ -397,3 +397,20 @@ table:has(> tbody > tr:only-child > td[colspan]) > thead {
 :is(.theme-light, .theme-preview-light) .border-warning\/30 {
   border-color: color-mix(in oklab, var(--color-warning) 42%, var(--color-line));
 }
+
+/* Plan gate click popup and page banner. Dark is the 10% warning wash a
+   surface card showed through bg-warning/10, mixed into surface so the panel
+   is solid. Light keeps the stronger opaque wash. The theme class can sit on
+   the portaled notice itself. */
+.gate-notice {
+  border-style: solid;
+  border-width: 1px;
+  background-color: color-mix(in oklab, var(--color-warning) 10%, var(--color-surface));
+  border-color: color-mix(in oklab, var(--color-warning) 30%, var(--color-surface));
+}
+
+:is(.theme-light, .theme-preview-light) .gate-notice,
+:is(.theme-light, .theme-preview-light).gate-notice {
+  background-color: color-mix(in oklab, var(--color-warning) 16%, var(--color-surface));
+  border-color: color-mix(in oklab, var(--color-warning) 42%, var(--color-line));
+}

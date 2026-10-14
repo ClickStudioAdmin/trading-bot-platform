@@ -18,6 +18,7 @@ import {
   createdStarterBots,
   readyDeskRows,
   desksStillToCreate,
+  setupDeskQuotaAdding,
   draftHasSecret,
   emptySetupDraft,
   foldersForDesk,
@@ -390,6 +391,25 @@ const created = desksStillToCreate([
 ]);
 assert.equal(created.length, 1);
 assert.equal(created[0]?.key, connected.key);
+const paperDrafts = Array.from({ length: 11 }, (_, index) => ({
+  ...paper,
+  key: `paper-${index}`,
+  name: `Perps bots Paper ${index}`,
+}));
+assert.equal(setupDeskQuotaAdding(paperDrafts).max_paper_desks, 11);
+assert.equal(setupDeskQuotaAdding(paperDrafts, "paper-0").max_paper_desks, 10);
+assert.equal(
+  setupDeskQuotaAdding([
+    { ...paper, accountId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" },
+    connected,
+  ]).max_paper_desks,
+  0,
+);
+assert.equal(
+  setupDeskQuotaAdding([paper, connected]).max_demo_desks +
+    setupDeskQuotaAdding([paper, connected]).max_live_env_desks,
+  1,
+);
 const starterId = "11111111-1111-4111-8111-111111111111";
 const createdDeskId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 assert.deepEqual(

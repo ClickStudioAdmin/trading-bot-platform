@@ -48,7 +48,7 @@ Light (live chrome/content + Theme page preview):
 | `warning` | `#9A6F0A` | Caution, pending |
 | `mode-*` | same as dark | Desk mode dots unchanged |
 
-Light callout and badge tints use a stronger mix than the dark `/10` `/15` washes so they separate from white `surface`. Solid `accent-strong`, `plan-header`, `success`, `danger`, and `warning` fills keep white labels. Portaled listboxes (AppSelect / AppMultiSelect), hints, and confirm overlays follow the nearest chrome or content scheme.
+Light callout and badge tints use a stronger mix than the dark `/10` `/15` washes so they separate from white `surface`. Solid `accent-strong`, `plan-header`, `success`, `danger`, and `warning` fills keep white labels. Portaled listboxes (AppSelect / AppMultiSelect), hints, and confirm overlays follow the nearest chrome or content scheme. Plan gate notices (the click popup and the page upgrade banner) use a solid fill: 10% warning mixed into `surface` in dark, and 16% warning mixed into `surface` in light.
 
 ## Type
 
