@@ -35,6 +35,7 @@ import {
 } from "@/lib/backtest/model";
 import {
   backtestYearsHint,
+  newBacktestPageNotices,
   queueBacktestDenial,
   queueTrialLines,
   type ResearchNotice,
@@ -554,14 +555,21 @@ export function BacktestQueueForm({
     (variant && !variantDirty);
   const queuedRange = parseBacktestDates(fromDate, toDate);
   const yearsHint = gate ? backtestYearsHint(gate) : null;
-  const trialLines =
-    gate && queuedRange.ok
-      ? queueTrialLines(gate, {
+  const queueGate = gate;
+  const queueInput =
+    queueGate && queuedRange.ok
+      ? {
           variant,
           adding: 1 + comparables.length,
           fromMs: queuedRange.fromMs,
           toMs: queuedRange.toMs,
-        })
+        }
+      : null;
+  const trialLines =
+    queueGate && queueInput ? queueTrialLines(queueGate, queueInput) : [];
+  const pageNotices =
+    !variant && queueGate && queueInput
+      ? newBacktestPageNotices(queueGate, queueInput)
       : [];
   const submitLabel = pending
     ? preview.inline
@@ -616,6 +624,13 @@ export function BacktestQueueForm({
       {variant || !showTitle ? null : (
         <h2 className="text-lg font-semibold">New backtest</h2>
       )}
+      {pageNotices.length > 0 ? (
+        <div className="mb-4 space-y-3">
+          {pageNotices.map((row) => (
+            <ResearchNoticeBanner key={row.message} notice={row} className="" />
+          ))}
+        </div>
+      ) : null}
       {variant ? null : (
       <p className={showTitle ? "mt-1 text-sm text-ink-muted" : "text-sm text-ink-muted"}>
         {loadedFromRun
@@ -654,7 +669,14 @@ export function BacktestQueueForm({
               toMs: range.toMs,
             });
             if (denial) {
-              setNotice(denial);
+              const alreadyShown =
+                !variant &&
+                newBacktestPageNotices(gate, {
+                  adding: 1 + comparables.length,
+                  fromMs: range.fromMs,
+                  toMs: range.toMs,
+                }).some((row) => row.message === denial.message);
+              setNotice(alreadyShown ? null : denial);
               setError(null);
               return;
             }

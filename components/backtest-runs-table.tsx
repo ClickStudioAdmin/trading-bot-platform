@@ -10,7 +10,6 @@ import {
   useResearchGateAccess,
 } from "@/components/research-gate-access";
 import {
-  backtestCreateDenial,
   backtestListTrialLines,
   replayClickDenial,
   type ResearchNotice,
@@ -521,11 +520,6 @@ export function BacktestRunsTable({
             <button
               type="button"
               onClick={() => {
-                const denial = gate ? backtestCreateDenial(gate) : null;
-                if (denial) {
-                  setNotice(denial);
-                  return;
-                }
                 router.push(createHref);
               }}
               className={`inline-flex items-center ${deskActionBtnClass}`}

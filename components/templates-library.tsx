@@ -15,15 +15,10 @@ import {
   useTemplateFeatureGate,
 } from "@/components/template-feature-access";
 import {
-  ResearchNoticeBanner,
   ResearchTrialLines,
   useResearchGateAccess,
 } from "@/components/research-gate-access";
-import {
-  backtestCreateDenial,
-  researchTrialLine,
-  type ResearchNotice,
-} from "@/lib/membership/entitlements";
+import { researchTrialLine } from "@/lib/membership/entitlements";
 import {
   SortTh,
   TABLE_ACTIONS_TD_CLASS,
@@ -546,9 +541,6 @@ export function TemplatesLibrary({
   const { confirm, dialog } = useConfirmDialog();
   const templateGateRef = useRef<HTMLDivElement>(null);
   const researchGate = useResearchGateAccess();
-  const [researchNotice, setResearchNotice] = useState<ResearchNotice | null>(
-    null,
-  );
   const {
     reveal: revealTemplateGate,
     denied: deniedTemplateGates,
@@ -1069,7 +1061,6 @@ export function TemplatesLibrary({
           denied={deniedTemplateGates}
           trials={templateTrials}
         />
-        <ResearchNoticeBanner notice={researchNotice} />
         <ResearchTrialLines
           lines={
             researchGate && researchTrialLine(researchGate.backtest)
@@ -1467,16 +1458,6 @@ export function TemplatesLibrary({
                           label="Backtest"
                           detail="Run a backtest from this template."
                           onClick={() => {
-                            const denial = researchGate
-                              ? backtestCreateDenial(researchGate)
-                              : null;
-                            if (denial) {
-                              setResearchNotice(denial);
-                              templateGateRef.current?.scrollIntoView({
-                                block: "start",
-                              });
-                              return;
-                            }
                             router.push(backtestNewHref({ template: row.id }));
                           }}
                         >
