@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
+import { FreeTrialBadges } from "@/components/plan-trial-hint";
 import {
   TEMPLATE_FEATURE_KEYS,
   templateFeatureAccessFor,
@@ -76,11 +77,9 @@ export function TemplateFeatureGateNotices({
       {denied.map((row) => (
         <DeskTypeRejectBanner key={row.key} access={row} />
       ))}
-      {trials.map((row) => (
-        <p key={row.key} className="text-sm text-warning">
-          {row.message}
-        </p>
-      ))}
+      <FreeTrialBadges
+        messages={trials.flatMap((row) => (row.message ? [row.message] : []))}
+      />
     </div>
   );
 }

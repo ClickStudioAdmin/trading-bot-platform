@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
+import { FreeTrialBadge } from "@/components/plan-trial-hint";
 import { useQuotaAccess } from "@/components/quota-access";
 import { useTemplateFeatureAccess } from "@/components/template-feature-access";
 import {
@@ -361,7 +362,7 @@ export function SaveAsTemplateButton({
         <DeskTypeRejectBanner access={saveAccess} />
       ) : null}
       {saveAccess?.allowed && saveAccess.message ? (
-        <p className="text-sm text-warning">{saveAccess.message}</p>
+        <FreeTrialBadge message={saveAccess.message} />
       ) : null}
       <button
         type="button"

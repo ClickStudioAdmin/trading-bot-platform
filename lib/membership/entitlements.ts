@@ -1416,6 +1416,12 @@ export function queueTrialLines(
 }
 
 export function backtestListTrialLines(gate: ResearchGateAccess): string[] {
+  const backtest = researchTrialLine(gate.backtest);
+  return backtest ? [backtest] : [];
+}
+
+/** Open backtesting and replay trials for the replay page. The report does not show them. */
+export function replayPageTrialLines(gate: ResearchGateAccess): string[] {
   const lines: string[] = [];
   const backtest = researchTrialLine(gate.backtest);
   if (backtest) {
@@ -1428,11 +1434,6 @@ export function backtestListTrialLines(gate: ResearchGateAccess): string[] {
     }
   }
   return lines;
-}
-
-/** Open backtesting and replay trials for the replay page. The report does not show them. */
-export function replayPageTrialLines(gate: ResearchGateAccess): string[] {
-  return backtestListTrialLines(gate);
 }
 
 function featureNotice(

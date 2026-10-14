@@ -3,6 +3,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 import Link from "next/link";
 import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
+import { FreeTrialBadges } from "@/components/plan-trial-hint";
 import { IconPlay } from "@/components/icons";
 import type {
   ResearchGateAccess,
@@ -51,13 +52,10 @@ export function ResearchTrialLines({ lines }: { lines: readonly string[] }) {
     return null;
   }
   return (
-    <div className="mb-3 space-y-1">
-      {lines.map((line) => (
-        <p key={line} className="text-sm text-warning">
-          {line}
-        </p>
-      ))}
-    </div>
+    <FreeTrialBadges
+      messages={lines}
+      className="mb-3 flex flex-wrap items-center gap-2"
+    />
   );
 }
 

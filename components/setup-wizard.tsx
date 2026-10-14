@@ -24,6 +24,7 @@ import {
   DeskTypeRejectNotices,
   QuotaRejectNotices,
 } from "@/components/desk-type-reject";
+import { FreeTrialBadge } from "@/components/plan-trial-hint";
 import { useQuotaAccess } from "@/components/quota-access";
 import {
   IconArrowLeft,
@@ -1599,8 +1600,8 @@ function CreateDeskDialog({
               })}
             </AppSelect>
             {typeNotice && !typeBlocked ? (
-              <span className="mt-1 block text-sm text-warning">
-                {typeNotice}
+              <span className="mt-1 block">
+                <FreeTrialBadge message={typeNotice} />
               </span>
             ) : null}
           </label>
@@ -1634,8 +1635,8 @@ function CreateDeskDialog({
               </option>
             </AppSelect>
             {bandQuota?.allowed && bandQuota.message ? (
-              <span className="mt-1 block text-sm text-warning">
-                {bandQuota.message}
+              <span className="mt-1 block">
+                <FreeTrialBadge message={bandQuota.message} />
               </span>
             ) : null}
           </label>
