@@ -10,6 +10,7 @@ import { DcaPlaybooksDesk } from "@/components/dca-playbook-form";
 import { FuturesAutomationsDesk } from "@/components/futures-rules-form";
 import {
   AUTOMATIONS_NEW,
+  automationsEditingExisting,
   automationsEditTitle,
   parseAutomationsClone,
   parseAutomationsEdit,
@@ -193,7 +194,11 @@ export default async function FuturesAutomationsPage({
       name: loadedPlaybooks.find((playbook) => playbook.id === knownEdit)?.name,
     });
     return (
-      <AutomationsPageFrame listHref={listHref} editTitle={editTitle}>
+      <AutomationsPageFrame
+        listHref={listHref}
+        editTitle={editTitle}
+        existingBot={automationsEditingExisting(knownEdit)}
+      >
         {hl ? (
           <p className="mt-4 rounded-card border border-line bg-surface px-4 py-3 text-sm text-ink-muted">
             This Hyperliquid desk is one-way. Long or short only. Indicators
@@ -326,7 +331,11 @@ export default async function FuturesAutomationsPage({
   );
 
   return (
-    <AutomationsPageFrame listHref={listHref} editTitle={editTitle}>
+    <AutomationsPageFrame
+      listHref={listHref}
+      editTitle={editTitle}
+      existingBot={automationsEditingExisting(knownEdit)}
+    >
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}

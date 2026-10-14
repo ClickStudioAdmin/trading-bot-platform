@@ -460,27 +460,12 @@ function CreateDeskTypeItem({
 }) {
   const access = useDeskTypeAccess();
   const row = deskTypeAccessFor(access, deskType);
-  const denied = access.length > 0 && row && !row.allowed ? row.message : null;
-  if (denied) {
-    return (
-      <button
-        type="button"
-        role="menuitem"
-        disabled
-        title={denied}
-        aria-label={denied}
-        className="flex w-full cursor-not-allowed items-center gap-2 rounded-control px-2 py-1.5 text-left text-sm text-ink opacity-40"
-      >
-        <DeskTypeMark deskType={deskType} />
-        {formatDeskType(deskType)}
-      </button>
-    );
-  }
+  const trial = row?.allowed && row.message ? row.message : undefined;
   return (
     <Link
       role="menuitem"
       href={createDeskPath(deskType)}
-      title={row?.message ?? undefined}
+      title={trial}
       className="flex items-center gap-2 rounded-control px-2 py-1.5 text-sm text-ink hover:bg-surface-raised"
       onClick={onPick}
     >
