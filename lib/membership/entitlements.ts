@@ -870,13 +870,6 @@ export const DESK_QUOTA_KEYS: readonly QuotaCapKey[] = [
   "max_live_env_desks",
 ];
 
-const QUOTA_CLOSED_SUBJECT: Record<QuotaCapKey, string> = {
-  max_paper_desks: "Paper Trading desks",
-  max_demo_desks: "Exchange Connected - Demo desks",
-  max_live_env_desks: "Exchange Connected - Live desks",
-  max_bots: "Bots",
-};
-
 const QUOTA_NOUN: Record<QuotaCapKey, { one: string; many: string }> = {
   max_paper_desks: { one: "Paper Trading Desk", many: "Paper Trading Desks" },
   max_demo_desks: {
@@ -914,9 +907,6 @@ export function capUsageMessage(
   limit: number,
   planName: string | null,
 ): string {
-  if (limit === 0) {
-    return notAllowedOnPlanMessage(QUOTA_CLOSED_SUBJECT[key], planName);
-  }
   const lead = `You have hit your maximum of ${limit} ${quotaNoun(key, limit)}.`;
   if (!planName) {
     return lead;
