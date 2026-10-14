@@ -20,6 +20,20 @@ import {
   templateFeatureAccessFor,
   templateFeatureAccessList,
   templateNotAllowedMessage,
+  cheapestPublicSharePlanName,
+  copyCapDecision,
+  copyCapSnapshot,
+  copyFeatureAccessFor,
+  copyFeatureAccessList,
+  followClickDenial,
+  followTrialMessage,
+  inviteDenial,
+  inviteTrialMessage,
+  ownerRefusesNewFollower,
+  shareSaveDenial,
+  shareTrialLines,
+  sharingDeskMessage,
+  type CopyGateAccess,
   quotaAccessList,
   quotaKeyAfterBind,
   quotaKeyForDesk,
@@ -539,3 +553,313 @@ assert.equal(
 );
 
 console.log("template feature entitlement checks passed");
+
+const copyPlus: CapUnlockCandidate = {
+  ...unlock("Plus", {
+    priceUsd: 20,
+    sortOrder: 2,
+    on: {
+      copy_follow: true,
+      copy_catalogue: true,
+      copy_share: true,
+    },
+  }),
+  caps: {
+    ...emptyCaps(),
+    max_copy_follows: 5,
+    max_followers_accepted: 10,
+  },
+};
+
+function copyGate(input: {
+  on?: Partial<PlanFeatures>;
+  caps?: Partial<PlanCaps>;
+  trials?: PlanTrials;
+  grants?: { key: string; endsAt: string }[];
+  plans?: CapUnlockCandidate[];
+  used?: number;
+}): CopyGateAccess {
+  const planFeatures = features(input.on);
+  const caps = { ...emptyCaps(), ...input.caps };
+  const plans = input.plans ?? [copyPlus];
+  const grants = input.grants ?? [];
+  const trials = input.trials ?? emptyPlanTrials();
+  const rows = copyFeatureAccessList({
+    features: planFeatures,
+    trials,
+    grants,
+    nowMs,
+    plans,
+  });
+  const capInput = {
+    features: planFeatures,
+    caps,
+    trials,
+    grants,
+    nowMs,
+    plans,
+  };
+  const follow = copyFeatureAccessFor(rows, "copy_follow");
+  const publicShare = copyFeatureAccessFor(rows, "copy_catalogue");
+  const privateShare = copyFeatureAccessFor(rows, "copy_share");
+  assert.ok(follow && publicShare && privateShare);
+  return {
+    follow,
+    publicShare,
+    privateShare,
+    sharingUpgradePlan: cheapestPublicSharePlanName(plans),
+    copyCap: {
+      ...copyCapSnapshot({ ...capInput, key: "max_copy_follows" }),
+      used: input.used ?? 0,
+    },
+    followerCap: copyCapSnapshot({
+      ...capInput,
+      key: "max_followers_accepted",
+    }),
+  };
+}
+
+const copyingLine =
+  "Copying other traders' desks is not allowed on your plan. Upgrade to Plus to enable it.";
+assert.equal(
+  followClickDenial(copyGate({ caps: { max_copy_follows: 0 } }))?.message,
+  copyingLine,
+);
+assert.equal(
+  gateRejectLead(copyingLine, "Plus"),
+  "Copying other traders' desks is not allowed on your plan.",
+);
+assert.equal(
+  followClickDenial(
+    copyGate({
+      on: { copy_follow: true },
+      caps: { max_copy_follows: 2 },
+      used: 2,
+    }),
+  )?.message,
+  "You have hit your maximum of 2 Desk Copies. Upgrade to Plus to add another.",
+);
+assert.equal(
+  followClickDenial(
+    copyGate({
+      on: { copy_follow: true },
+      caps: { max_copy_follows: 1 },
+      used: 1,
+    }),
+  )?.message,
+  "You have hit your maximum of 1 Desk Copy. Upgrade to Plus to add another.",
+);
+assert.equal(
+  followClickDenial(
+    copyGate({
+      caps: { max_copy_follows: 0, max_followers_accepted: 0 },
+      used: 0,
+    }),
+  )?.message,
+  copyingLine,
+);
+
+const secretCopy: CapUnlockCandidate = {
+  ...unlock("Secret", {
+    visibility: "private",
+    priceUsd: 1,
+    on: { copy_follow: true, copy_catalogue: true, copy_share: true },
+  }),
+  caps: {
+    ...emptyCaps(),
+    max_copy_follows: 99,
+    max_followers_accepted: 99,
+  },
+};
+assert.equal(
+  followClickDenial(copyGate({ plans: [secretCopy] }))?.upgradePlan,
+  null,
+);
+assert.equal(
+  followClickDenial(copyGate({ plans: [secretCopy] }))?.message,
+  "Copying other traders' desks is not allowed on your plan.",
+);
+
+const copyOpen = copyGate({
+  trials: { features: { copy_follow: { days: 14 } }, caps: {} },
+  grants: [{ key: "copy_follow", endsAt: "2026-10-28T00:00:00.000Z" }],
+});
+assert.equal(followClickDenial(copyOpen), null);
+assert.equal(
+  followTrialMessage(copyOpen),
+  "Copying other traders' desks is in a free trial until 28/10/2026.",
+);
+
+const copyEnded = copyGate({
+  trials: { features: { copy_follow: { days: 14 } }, caps: {} },
+  grants: [{ key: "copy_follow", endsAt: "2026-10-01T00:00:00.000Z" }],
+});
+assert.equal(
+  followClickDenial(copyEnded)?.message,
+  "Your free trial of copying other traders' desks ended on 01/10/2026.",
+);
+
+const copiesTrial = copyGate({
+  on: { copy_follow: true },
+  caps: { max_copy_follows: 1 },
+  used: 1,
+  trials: { features: {}, caps: { max_copy_follows: { days: 14, limit: 3 } } },
+  grants: [{ key: "max_copy_follows", endsAt: "2026-10-28T00:00:00.000Z" }],
+});
+assert.equal(followClickDenial(copiesTrial), null);
+assert.equal(
+  followTrialMessage(copiesTrial),
+  "Desk Copies are in a free trial until 28/10/2026.",
+);
+const copiesEnded = copyGate({
+  on: { copy_follow: true },
+  caps: { max_copy_follows: 1 },
+  used: 1,
+  trials: { features: {}, caps: { max_copy_follows: { days: 14, limit: 3 } } },
+  grants: [{ key: "max_copy_follows", endsAt: "2026-10-01T00:00:00.000Z" }],
+});
+assert.equal(
+  followClickDenial(copiesEnded)?.message,
+  "Your free trial of desk copies ended on 01/10/2026.",
+);
+
+const shareOff = copyGate({
+  caps: { max_followers_accepted: 5 },
+});
+assert.equal(
+  shareSaveDenial(shareOff, { visibility: "public", requestedMax: 9 })?.message,
+  "Sharing this desk is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  shareSaveDenial(shareOff, { visibility: "private", requestedMax: null })
+    ?.message,
+  sharingDeskMessage("Plus"),
+);
+assert.equal(shareTrialLines(shareOff).length, 0);
+
+const publicOnly = copyGate({
+  on: { copy_catalogue: true },
+  caps: { max_followers_accepted: 5 },
+});
+assert.equal(
+  shareSaveDenial(publicOnly, { visibility: "private", requestedMax: 2 })
+    ?.message,
+  "Sharing a desk privately is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  shareSaveDenial(publicOnly, { visibility: "public", requestedMax: null })
+    ?.message,
+  "You have hit your maximum of 5 followers. Upgrade to Plus to add another.",
+);
+assert.equal(
+  shareSaveDenial(publicOnly, { visibility: "public", requestedMax: 5 }),
+  null,
+);
+assert.equal(
+  inviteDenial(publicOnly, 0)?.message,
+  "Sharing a desk privately is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+
+const followersClosed = copyGate({
+  on: { copy_catalogue: true, copy_share: true },
+  caps: { max_followers_accepted: 0 },
+});
+assert.equal(
+  shareSaveDenial(followersClosed, { visibility: "private", requestedMax: 1 })
+    ?.message,
+  "Followers are not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  inviteDenial(followersClosed, 0)?.message,
+  "Followers are not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  inviteDenial(
+    copyGate({
+      on: { copy_share: true },
+      caps: { max_followers_accepted: 1 },
+    }),
+    1,
+  )?.message,
+  "You have hit your maximum of 1 follower. Upgrade to Plus to add another.",
+);
+
+const followerTrial = copyGate({
+  on: { copy_share: true, copy_catalogue: true },
+  caps: { max_followers_accepted: 1 },
+  trials: {
+    features: {},
+    caps: { max_followers_accepted: { days: 14, limit: 4 } },
+  },
+  grants: [{ key: "max_followers_accepted", endsAt: "2026-10-28T00:00:00.000Z" }],
+});
+assert.equal(
+  shareSaveDenial(followerTrial, { visibility: "public", requestedMax: 4 }),
+  null,
+);
+assert.equal(
+  inviteTrialMessage(followerTrial, 1),
+  "Followers are in a free trial until 28/10/2026.",
+);
+assert.equal(
+  copyCapSnapshot({
+    key: "max_followers_accepted",
+    features: features(),
+    caps: { ...emptyCaps(), max_followers_accepted: 1 },
+    trials: {
+      features: {},
+      caps: { max_followers_accepted: { days: 14, limit: 4 } },
+    },
+    grants: [],
+    nowMs,
+    plans: [copyPlus],
+  }).trialLimit,
+  null,
+);
+
+assert.equal(
+  ownerRefusesNewFollower(publicOnly, {
+    followerCount: 0,
+    visibility: "public",
+  }),
+  false,
+);
+assert.equal(
+  ownerRefusesNewFollower(shareOff, {
+    followerCount: 0,
+    visibility: "public",
+  }),
+  true,
+);
+assert.equal(
+  ownerRefusesNewFollower(followersClosed, {
+    followerCount: 0,
+    visibility: "private",
+  }),
+  true,
+);
+assert.equal(
+  ownerRefusesNewFollower(
+    copyGate({
+      on: { copy_catalogue: true, copy_share: true },
+      caps: { max_followers_accepted: 1 },
+    }),
+    { followerCount: 1, visibility: "public", alreadyCounted: true },
+  ),
+  false,
+);
+assert.equal(
+  copyCapDecision(
+    copyGate({
+      on: { copy_follow: true },
+      caps: { max_copy_follows: 2 },
+      used: 2,
+      trials: { features: {}, caps: { max_copy_follows: { days: 14, limit: 4 } } },
+      grants: [{ key: "max_copy_follows", endsAt: "2026-10-01T00:00:00.000Z" }],
+    }).copyCap,
+    { used: 2, adding: 0, requestedMax: null },
+  ).message,
+  "You have hit your maximum of 2 Desk Copies. Upgrade to Plus to add another.",
+);
+
+console.log("copy gate entitlement checks passed");

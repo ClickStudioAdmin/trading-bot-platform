@@ -8,6 +8,7 @@ import {
 import { deskHref, deskIsCopy } from "@/lib/accounts/model";
 import { loadDeskCopyListing } from "@/lib/copy/listings";
 import { loadDeskCopyFollowerViews } from "@/lib/copy/shares";
+import { copyShareCountsTowardCap } from "@/lib/copy/model";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionContext } from "@/lib/auth/session";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
@@ -63,7 +64,14 @@ export default async function FuturesSharedDesksPage({
       ) : null}
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
         <DeskCopyFollowersList listing={listing} followers={followers} />
-        <DeskCopyPrivateShareCard listing={listing} canInvite />
+        <DeskCopyPrivateShareCard
+          listing={listing}
+          canInvite
+          followerCount={
+            followers.filter((row) => copyShareCountsTowardCap(row.status))
+              .length
+          }
+        />
       </div>
     </main>
   );

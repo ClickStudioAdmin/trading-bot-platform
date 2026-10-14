@@ -365,6 +365,444 @@ function decideTemplateFeature(input: {
   };
 }
 
+export const COPY_FEATURE_KEYS = [
+  "copy_follow",
+  "copy_catalogue",
+  "copy_share",
+] as const;
+
+export type CopyFeatureKey = (typeof COPY_FEATURE_KEYS)[number];
+
+const COPY_ACTIVITY: Record<CopyFeatureKey, string> = {
+  copy_follow: "Copying other traders' desks",
+  copy_catalogue: "Sharing a desk publicly",
+  copy_share: "Sharing a desk privately",
+};
+
+export const COPY_CAP_KEYS = [
+  "max_copy_follows",
+  "max_followers_accepted",
+] as const;
+
+export type CopyCapKey = (typeof COPY_CAP_KEYS)[number];
+
+const COPY_CAP_NOUN: Record<CopyCapKey, { one: string; many: string }> = {
+  max_copy_follows: { one: "Desk Copy", many: "Desk Copies" },
+  max_followers_accepted: { one: "follower", many: "followers" },
+};
+
+const COPY_CAP_TRIAL: Record<CopyCapKey, string> = {
+  max_copy_follows: "Desk Copies",
+  max_followers_accepted: "Followers",
+};
+
+export type CopyFeatureAccess = {
+  key: CopyFeatureKey;
+  allowed: boolean;
+  message: string | null;
+  upgradePlan: string | null;
+};
+
+export type CopyCapSnapshot = {
+  key: CopyCapKey;
+  standing: number | null;
+  trialLimit: number | null;
+  phase: "active" | "ended" | null;
+  trialEndsOn: string | null;
+  upgradePlan: string | null;
+};
+
+export type CopyGateAccess = {
+  follow: CopyFeatureAccess;
+  publicShare: CopyFeatureAccess;
+  privateShare: CopyFeatureAccess;
+  sharingUpgradePlan: string | null;
+  copyCap: CopyCapSnapshot & { used: number };
+  followerCap: CopyCapSnapshot;
+};
+
+export type CopyNotice = {
+  allowed: false;
+  message: string;
+  upgradePlan: string | null;
+};
+
+export function copyActivity(key: CopyFeatureKey): string {
+  return COPY_ACTIVITY[key];
+}
+
+export function sharingDeskMessage(planName: string | null): string {
+  const lead = "Sharing this desk is not allowed on your plan.";
+  if (!planName) {
+    return lead;
+  }
+  return `${lead} Upgrade to ${planName} to enable it.`;
+}
+
+export function copyFeatureAccessList(input: {
+  features: PlanFeatures;
+  trials: PlanTrials;
+  grants: readonly { key: string; endsAt: string }[];
+  nowMs: number;
+  plans: readonly UnlockCandidate[];
+}): CopyFeatureAccess[] {
+  return COPY_FEATURE_KEYS.map((key) => decideCopyFeature({ ...input, key }));
+}
+
+export function copyFeatureAccessFor(
+  access: readonly CopyFeatureAccess[],
+  key: CopyFeatureKey,
+): CopyFeatureAccess | null {
+  return access.find((row) => row.key === key) ?? null;
+}
+
+export function cheapestPublicSharePlanName(
+  plans: readonly UnlockCandidate[],
+): string | null {
+  const ranked = plans
+    .filter(
+      (plan) =>
+        planIsPublic(plan) &&
+        !planIsArchived(plan) &&
+        (plan.features.copy_catalogue === true ||
+          plan.features.copy_share === true),
+    )
+    .slice()
+    .sort(
+      (left, right) =>
+        left.priceUsd - right.priceUsd ||
+        left.sortOrder - right.sortOrder ||
+        left.name.localeCompare(right.name),
+    );
+  return ranked[0]?.name ?? null;
+}
+
+export function copyCapSnapshot(input: {
+  key: CopyCapKey;
+  features: PlanFeatures;
+  caps: PlanCaps;
+  trials: PlanTrials;
+  grants: readonly { key: string; endsAt: string }[];
+  nowMs: number;
+  plans: readonly CapUnlockCandidate[];
+}): CopyCapSnapshot {
+  const standing = input.caps[input.key];
+  const offer = capTrialOffer(
+    { features: input.features, caps: input.caps, trials: input.trials },
+    input.key,
+  );
+  const grant = input.grants.find((row) => row.key === input.key) ?? null;
+  const phase = grant
+    ? trialPhase(grant.endsAt, input.nowMs)
+    : offer
+      ? "active"
+      : null;
+  const limit = effectiveCap({ standing, offer, phase });
+  return {
+    key: input.key,
+    standing,
+    trialLimit: offer?.limit ?? null,
+    phase: phase === "active" || phase === "ended" ? phase : null,
+    trialEndsOn: grant ? formatAuDateUtc(Date.parse(grant.endsAt)) : null,
+    upgradePlan:
+      limit == null
+        ? null
+        : cheapestPublicCapPlanName(input.plans, input.key, limit),
+  };
+}
+
+export function copyCapDecision(
+  snapshot: CopyCapSnapshot,
+  input: { used: number; adding?: number; requestedMax?: number | null },
+): { allowed: boolean; message: string | null } {
+  const adding = input.adding ?? 0;
+  const offer =
+    snapshot.trialLimit == null
+      ? null
+      : { key: snapshot.key, days: 1, limit: snapshot.trialLimit };
+  const limit = effectiveCap({
+    standing: snapshot.standing,
+    offer,
+    phase: snapshot.phase,
+  });
+  const openMessage =
+    snapshot.phase === "active" && snapshot.trialLimit != null
+      ? snapshot.trialEndsOn
+        ? `${COPY_CAP_TRIAL[snapshot.key]} are in a free trial until ${snapshot.trialEndsOn}.`
+        : `${COPY_CAP_TRIAL[snapshot.key]} are in a free trial.`
+      : null;
+  if (limit == null) {
+    return { allowed: true, message: openMessage };
+  }
+  const requestedTooHigh =
+    input.requestedMax !== undefined &&
+    (input.requestedMax == null || input.requestedMax > limit);
+  const countTooHigh = input.used + adding > limit;
+  if (!requestedTooHigh && !countTooHigh) {
+    return { allowed: true, message: openMessage };
+  }
+  const withinTrial =
+    snapshot.trialLimit != null &&
+    input.used + adding <= snapshot.trialLimit &&
+    (input.requestedMax === undefined ||
+      (input.requestedMax != null && input.requestedMax <= snapshot.trialLimit));
+  if (snapshot.phase === "ended" && withinTrial && snapshot.trialEndsOn) {
+    return {
+      allowed: false,
+      message: `Your free trial of ${COPY_CAP_TRIAL[snapshot.key].toLowerCase()} ended on ${snapshot.trialEndsOn}.`,
+    };
+  }
+  return {
+    allowed: false,
+    message: copyCapClosedMessage(snapshot.key, limit, snapshot.upgradePlan),
+  };
+}
+
+export function followClickDenial(gate: CopyGateAccess): CopyNotice | null {
+  if (!gate.follow.allowed && gate.follow.message) {
+    return {
+      allowed: false,
+      message: gate.follow.message,
+      upgradePlan: gate.follow.upgradePlan,
+    };
+  }
+  const decision = copyCapDecision(gate.copyCap, {
+    used: gate.copyCap.used,
+    adding: 1,
+  });
+  if (!decision.allowed && decision.message) {
+    return {
+      allowed: false,
+      message: decision.message,
+      upgradePlan: gate.copyCap.upgradePlan,
+    };
+  }
+  return null;
+}
+
+export function followTrialMessage(gate: CopyGateAccess): string | null {
+  if (followClickDenial(gate)) {
+    return null;
+  }
+  if (gate.follow.allowed && gate.follow.message) {
+    return gate.follow.message;
+  }
+  const decision = copyCapDecision(gate.copyCap, {
+    used: gate.copyCap.used,
+    adding: 1,
+  });
+  return decision.allowed ? decision.message : null;
+}
+
+export function shareSaveDenial(
+  gate: CopyGateAccess,
+  input: { visibility: "public" | "private"; requestedMax: number | null },
+): CopyNotice | null {
+  if (!gate.publicShare.allowed && !gate.privateShare.allowed) {
+    return {
+      allowed: false,
+      message: sharingDeskMessage(gate.sharingUpgradePlan),
+      upgradePlan: gate.sharingUpgradePlan,
+    };
+  }
+  const row = input.visibility === "public" ? gate.publicShare : gate.privateShare;
+  if (!row.allowed && row.message) {
+    return {
+      allowed: false,
+      message: row.message,
+      upgradePlan: row.upgradePlan,
+    };
+  }
+  const decision = copyCapDecision(gate.followerCap, {
+    used: 0,
+    adding: 0,
+    requestedMax: input.requestedMax,
+  });
+  if (!decision.allowed && decision.message) {
+    return {
+      allowed: false,
+      message: decision.message,
+      upgradePlan: gate.followerCap.upgradePlan,
+    };
+  }
+  return null;
+}
+
+export function inviteDenial(
+  gate: CopyGateAccess,
+  followerCount: number,
+): CopyNotice | null {
+  if (!gate.publicShare.allowed && !gate.privateShare.allowed) {
+    return {
+      allowed: false,
+      message: sharingDeskMessage(gate.sharingUpgradePlan),
+      upgradePlan: gate.sharingUpgradePlan,
+    };
+  }
+  if (!gate.privateShare.allowed && gate.privateShare.message) {
+    return {
+      allowed: false,
+      message: gate.privateShare.message,
+      upgradePlan: gate.privateShare.upgradePlan,
+    };
+  }
+  const decision = copyCapDecision(gate.followerCap, {
+    used: followerCount,
+    adding: 1,
+  });
+  if (!decision.allowed && decision.message) {
+    return {
+      allowed: false,
+      message: decision.message,
+      upgradePlan: gate.followerCap.upgradePlan,
+    };
+  }
+  return null;
+}
+
+export function ownerRefusesNewFollower(
+  gate: CopyGateAccess,
+  input: {
+    followerCount: number;
+    visibility: "public" | "private";
+    alreadyCounted?: boolean;
+  },
+): boolean {
+  if (!gate.publicShare.allowed && !gate.privateShare.allowed) {
+    return true;
+  }
+  const row = input.visibility === "public" ? gate.publicShare : gate.privateShare;
+  if (!row.allowed) {
+    return true;
+  }
+  return !copyCapDecision(gate.followerCap, {
+    used: input.followerCount,
+    adding: input.alreadyCounted ? 0 : 1,
+  }).allowed;
+}
+
+export function shareTrialLines(gate: CopyGateAccess): string[] {
+  const lines: string[] = [];
+  if (gate.publicShare.allowed && gate.publicShare.message) {
+    lines.push(gate.publicShare.message);
+  }
+  if (gate.privateShare.allowed && gate.privateShare.message) {
+    lines.push(gate.privateShare.message);
+  }
+  if (gate.publicShare.allowed || gate.privateShare.allowed) {
+    const decision = copyCapDecision(gate.followerCap, { used: 0, adding: 0 });
+    if (decision.allowed && decision.message) {
+      lines.push(decision.message);
+    }
+  }
+  return lines;
+}
+
+export function inviteTrialMessage(
+  gate: CopyGateAccess,
+  followerCount: number,
+): string | null {
+  if (!gate.privateShare.allowed) {
+    return null;
+  }
+  if (gate.privateShare.message) {
+    return gate.privateShare.message;
+  }
+  const decision = copyCapDecision(gate.followerCap, {
+    used: followerCount,
+    adding: 1,
+  });
+  return decision.allowed ? decision.message : null;
+}
+
+function copyCapClosedMessage(
+  key: CopyCapKey,
+  limit: number,
+  planName: string | null,
+): string {
+  if (limit === 0) {
+    if (key === "max_copy_follows") {
+      return copyNotAllowedMessage("copy_follow", planName);
+    }
+    const lead = "Followers are not allowed on your plan.";
+    if (!planName) {
+      return lead;
+    }
+    return `${lead} Upgrade to ${planName} to enable it.`;
+  }
+  const noun =
+    limit === 1 ? COPY_CAP_NOUN[key].one : COPY_CAP_NOUN[key].many;
+  const lead = `You have hit your maximum of ${limit} ${noun}.`;
+  if (!planName) {
+    return lead;
+  }
+  return `${lead} Upgrade to ${planName} to add another.`;
+}
+
+function copyNotAllowedMessage(
+  key: CopyFeatureKey,
+  planName: string | null,
+): string {
+  const lead = `${copyActivity(key)} is not allowed on your plan.`;
+  if (!planName) {
+    return lead;
+  }
+  return `${lead} Upgrade to ${planName} to enable it.`;
+}
+
+function decideCopyFeature(input: {
+  key: CopyFeatureKey;
+  features: PlanFeatures;
+  trials: PlanTrials;
+  grants: readonly { key: string; endsAt: string }[];
+  nowMs: number;
+  plans: readonly UnlockCandidate[];
+}): CopyFeatureAccess {
+  const upgradePlan = cheapestPublicPlanName(input.plans, input.key);
+  if (input.features[input.key]) {
+    return {
+      key: input.key,
+      allowed: true,
+      message: null,
+      upgradePlan: null,
+    };
+  }
+  const offer = featureTrialOffer(
+    { features: input.features, caps: emptyCaps(), trials: input.trials },
+    input.key,
+  );
+  const grant = input.grants.find((row) => row.key === input.key) ?? null;
+  const phase = grant ? trialPhase(grant.endsAt, input.nowMs) : null;
+  const access = featureAccess({
+    included: false,
+    phase: phase ?? (offer ? "active" : null),
+  });
+  if (access === "trial") {
+    return {
+      key: input.key,
+      allowed: true,
+      message: grant
+        ? `${copyActivity(input.key)} is in a free trial until ${formatAuDateUtc(Date.parse(grant.endsAt))}.`
+        : `${copyActivity(input.key)} is in a free trial.`,
+      upgradePlan: null,
+    };
+  }
+  if (grant && phase === "ended") {
+    return {
+      key: input.key,
+      allowed: false,
+      message: `Your free trial of ${copyActivity(input.key).toLowerCase()} ended on ${formatAuDateUtc(Date.parse(grant.endsAt))}.`,
+      upgradePlan,
+    };
+  }
+  return {
+    key: input.key,
+    allowed: false,
+    message: copyNotAllowedMessage(input.key, upgradePlan),
+    upgradePlan,
+  };
+}
+
 export const QUOTA_CAP_KEYS = [
   "max_paper_desks",
   "max_demo_desks",

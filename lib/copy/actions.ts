@@ -32,6 +32,12 @@ import { writeEventLog } from "@/lib/logs/write";
 import { deniedDeskTypeMessage } from "@/lib/membership/entitlements";
 import { loadDeskTypeAccess } from "@/lib/membership/load-desk-type-access";
 import { deniedDeskQuotaMessage } from "@/lib/membership/load-quota-access";
+import {
+  deniedCopyInviteMessage,
+  deniedNewCopyMessage,
+  deniedShareListingMessage,
+  ownerBlocksNewFollower,
+} from "@/lib/membership/load-copy-gate-access";
 import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { deskActionError, deskActionOk } from "@/lib/ui/desk-action";
@@ -185,6 +191,14 @@ export async function saveDeskCopyListingAction(formData: FormData) {
     const minBalanceUsdt = parsed.minBalanceUsdt;
     const sharingEnabled = parsed.sharingEnabled;
     const allowNewFollowers = parsed.allowNewFollowers;
+    const sharingDenied = await deniedShareListingMessage(session.member.id, {
+      sharingEnabled,
+      visibility,
+      requestedMax: maxFollowers,
+    });
+    if (sharingDenied) {
+      redirect(settingsHref({ error: sharingDenied }));
+    }
     const [profile, firstFillMs, settings, existing, usage] =
       await Promise.all([
         loadTraderProfile(session.member.id),
@@ -310,10 +324,18 @@ export async function inviteDeskCopyShareAction(formData: FormData) {
     loadDeskCopyShares(account.id),
     loadCopyPlatformSettings(),
   ]);
+  const followerCount = countOpenCopyShares(shares);
+  const inviteDenied = await deniedCopyInviteMessage(
+    session.member.id,
+    followerCount,
+  );
+  if (inviteDenied) {
+    redirect(sharedHref({ error: inviteDenied }));
+  }
   const block = copyInviteBlockCode({
     listing,
     ceiling: platform.maxFollowersCeiling,
-    followerCount: countOpenCopyShares(shares),
+    followerCount,
     fromUserId: session.member.id,
     toUserId: member.userId,
   });
@@ -428,6 +450,10 @@ export async function createCopyDeskAction(formData: FormData) {
   if (typeDenied) {
     return fail(typeDenied);
   }
+  const copyDenied = await deniedNewCopyMessage(member.id);
+  if (copyDenied) {
+    return fail(copyDenied);
+  }
   const desks = await listTradingAccounts(member.id);
   const alreadyCopying = desks.some((desk) => desk.copyOfAccountId === parent.id);
   const [listing, shares, platform] = await Promise.all([
@@ -447,6 +473,18 @@ export async function createCopyDeskAction(formData: FormData) {
   });
   if (block) {
     return fail(formatCopyCreateBlock(block));
+  }
+  if (
+    listing &&
+    (await ownerBlocksNewFollower({
+      ownerId: parent.userId,
+      followerCount: countOpenCopyShares(shares),
+      visibility: listing.visibility,
+      alreadyCounted:
+        grant?.status === "invited" || grant?.status === "active",
+    }))
+  ) {
+    return fail("This desk is not taking new followers.");
   }
   const named = validateNewDeskName(
     formData.get("name"),

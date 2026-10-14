@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AppCheck } from "@/components/app-check";
 import { CopyDeskGuardsFields } from "@/components/copy-desk-guards-fields";
@@ -30,6 +30,9 @@ import {
 } from "@/lib/membership/entitlements";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { IconCopyTrading } from "@/components/icons";
+import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
+import { useCopyGateAccess } from "@/components/copy-gate-access";
+import { followClickDenial } from "@/lib/membership/entitlements";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -55,7 +58,10 @@ export function CopyFollowButton({
   defaultOpen?: boolean;
   className?: string;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const gate = useCopyGateAccess();
+  const copyDenial = gate ? followClickDenial(gate) : null;
+  const [open, setOpen] = useState(defaultOpen && !copyDenial);
+  const [copyNotice, setCopyNotice] = useState(defaultOpen ? copyDenial : null);
   const access = useDeskTypeAccess();
   const typeRow = deskTypeAccessFor(access, deskType);
   const typeDenied =
@@ -69,8 +75,9 @@ export function CopyFollowButton({
     );
   }
 
+  let control: ReactNode;
   if (typeDenied) {
-    return (
+    control = (
       <button
         type="button"
         disabled
@@ -82,20 +89,32 @@ export function CopyFollowButton({
         </BotButtonLead>
       </button>
     );
-  }
-
-  return (
-    <>
+  } else {
+    control = (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          if (copyDenial) {
+            setCopyNotice(copyDenial);
+            setOpen(false);
+            return;
+          }
+          setOpen(true);
+        }}
         className={`inline-flex items-center justify-center gap-2 ${className}`}
       >
         <BotButtonLead icon={<IconCopyTrading {...botBtnIcon} />}>
           Copy
         </BotButtonLead>
       </button>
-      {open ? (
+    );
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-2">
+      {copyNotice ? <DeskTypeRejectBanner access={copyNotice} /> : null}
+      {control}
+      {open && !typeDenied ? (
         <CopyFollowModal
           parentAccountId={parentAccountId}
           deskName={deskName}
@@ -106,7 +125,7 @@ export function CopyFollowButton({
           onClose={() => setOpen(false)}
         />
       ) : null}
-    </>
+    </div>
   );
 }
 

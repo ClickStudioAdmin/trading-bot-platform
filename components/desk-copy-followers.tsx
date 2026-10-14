@@ -1,4 +1,12 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
+import {
+  CopyInviteTrialLine,
+  useCopyGateAccess,
+} from "@/components/copy-gate-access";
 import {
   inviteDeskCopyShareAction,
   revokeDeskCopyShareAction,
@@ -12,6 +20,7 @@ import {
   type DeskCopyListing,
 } from "@/lib/copy/model";
 import { formatAuDateUtc, parseDisplayTime } from "@/lib/time/display";
+import { inviteDenial, type CopyNotice } from "@/lib/membership/entitlements";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -120,14 +129,32 @@ export function DeskCopyFollowersList({
 export function DeskCopyPrivateShareCard({
   listing,
   canInvite,
+  followerCount = 0,
 }: {
   listing: DeskCopyListing | null;
   canInvite: boolean;
+  followerCount?: number;
 }) {
+  const gate = useCopyGateAccess();
+  const [inviteNotice, setInviteNotice] = useState<CopyNotice | null>(null);
   const inviteReady =
     canInvite &&
     Boolean(listing?.sharingEnabled) &&
     Boolean(listing?.allowNewFollowers);
+
+  function onInvite(event: FormEvent<HTMLFormElement>) {
+    if (!gate) {
+      return;
+    }
+    const denial = inviteDenial(gate, followerCount);
+    if (!denial) {
+      setInviteNotice(null);
+      return;
+    }
+    event.preventDefault();
+    setInviteNotice(denial);
+  }
+
   return (
     <section className="space-y-4 rounded-card border border-line bg-surface p-5">
       <div>
@@ -151,7 +178,13 @@ export function DeskCopyPrivateShareCard({
           {COPY_FOLLOWING_UNAVAILABLE} New invites are paused.
         </p>
       ) : inviteReady ? (
-        <form action={inviteDeskCopyShareAction} className="space-y-3">
+        <form
+          action={inviteDeskCopyShareAction}
+          onSubmit={onInvite}
+          className="space-y-3"
+        >
+          <CopyInviteTrialLine followerCount={followerCount} />
+          {inviteNotice ? <DeskTypeRejectBanner access={inviteNotice} /> : null}
           <label className="block text-sm text-ink">
             Invite email
             <input
