@@ -5,14 +5,8 @@ import { useConfirmDialog } from "@/components/confirm-modal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ClickGateNotice, useClickGate } from "@/components/click-gate-notice";
-import {
-  ResearchTrialLines,
-  useResearchGateAccess,
-} from "@/components/research-gate-access";
-import {
-  backtestListTrialLines,
-  replayClickDenial,
-} from "@/lib/membership/entitlements";
+import { useResearchGateAccess } from "@/components/research-gate-access";
+import { replayClickDenial } from "@/lib/membership/entitlements";
 import {
   DetachBacktestButton,
   RemoveBacktestButton,
@@ -493,7 +487,6 @@ export function BacktestRunsTable({
         generation={clickGate.generation}
         onDismiss={clickGate.hide}
       />
-      <ResearchTrialLines lines={gate ? backtestListTrialLines(gate) : []} />
       {dialog}
       <TableFilterSession
         toolbar={

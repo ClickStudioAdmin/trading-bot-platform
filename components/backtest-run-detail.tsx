@@ -110,6 +110,7 @@ function BacktestMatchCard({
   defaultName,
   deskType,
   matchingTemplateName,
+  matchingTemplateHref = null,
   matchingDeskLabel,
   matchingDeskHref,
   linkedTemplateName,
@@ -126,6 +127,7 @@ function BacktestMatchCard({
   defaultName: string;
   deskType: BacktestRun["deskType"];
   matchingTemplateName: string | null;
+  matchingTemplateHref?: string | null;
   matchingDeskLabel: string | null;
   matchingDeskHref: string | null;
   linkedTemplateName: string | null;
@@ -142,9 +144,18 @@ function BacktestMatchCard({
     <div className="flex w-full max-w-xl flex-wrap gap-3">
       <MatchPanel title="Template Bot Matching">
         {matchingTemplateName ? (
-          <p className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success">
-            Template · {matchingTemplateName}
-          </p>
+          matchingTemplateHref ? (
+            <Link
+              href={matchingTemplateHref}
+              className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success"
+            >
+              Template · {matchingTemplateName}
+            </Link>
+          ) : (
+            <p className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success">
+              Template · {matchingTemplateName}
+            </p>
+          )
         ) : (
           <p className="text-sm text-ink-faint">No matching template</p>
         )}
@@ -209,6 +220,7 @@ export function BacktestRunDetail({
   sourceTemplateName = null,
   attachTemplateId = null,
   matchingTemplateName = null,
+  matchingTemplateHref = null,
   matchingDeskLabel = null,
   matchingDeskHref = null,
   linkedTemplateName = null,
@@ -229,6 +241,7 @@ export function BacktestRunDetail({
   sourceTemplateName?: string | null;
   attachTemplateId?: string | null;
   matchingTemplateName?: string | null;
+  matchingTemplateHref?: string | null;
   matchingDeskLabel?: string | null;
   matchingDeskHref?: string | null;
   linkedTemplateName?: string | null;
@@ -293,6 +306,7 @@ export function BacktestRunDetail({
           defaultName={backtestRunTitle(run)}
           deskType={run.deskType}
           matchingTemplateName={matchingTemplateName}
+          matchingTemplateHref={matchingTemplateHref}
           matchingDeskLabel={matchingDeskLabel}
           matchingDeskHref={matchingDeskHref}
           linkedTemplateName={linkedTemplateName}

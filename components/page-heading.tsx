@@ -8,6 +8,7 @@ export function PageHeading({
   as = "h1",
   className = "mb-6",
   actions,
+  titleAside,
   tour,
 }: {
   overline?: string;
@@ -15,11 +16,18 @@ export function PageHeading({
   as?: "h1" | "h2";
   className?: string;
   actions?: ReactNode;
+  titleAside?: ReactNode;
   tour?: string;
 }) {
   const headingClass = `font-semibold tracking-tight ${
     overline ? "mt-2" : ""
   } ${as === "h2" ? "text-xl" : "text-2xl"}`;
+  const heading =
+    as === "h2" ? (
+      <h2 className={headingClass}>{title}</h2>
+    ) : (
+      <h1 className={headingClass}>{title}</h1>
+    );
 
   return (
     <div
@@ -32,11 +40,10 @@ export function PageHeading({
             {overline}
           </p>
         ) : null}
-        {as === "h2" ? (
-          <h2 className={headingClass}>{title}</h2>
-        ) : (
-          <h1 className={headingClass}>{title}</h1>
-        )}
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          {heading}
+          {titleAside}
+        </div>
       </div>
       {actions ? (
         <div className="mb-0.5 flex shrink-0 flex-wrap items-center justify-end gap-2">

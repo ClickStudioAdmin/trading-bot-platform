@@ -9,6 +9,7 @@ import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { ClickGateNotice, formSubmitAnchor, useClickGate } from "@/components/click-gate-notice";
+import { FreeTrialBadge } from "@/components/plan-trial-hint";
 import {
   ResearchNoticeBanner,
   ResearchTrialLines,
@@ -39,6 +40,7 @@ import {
   newBacktestPageNotices,
   queueBacktestDenial,
   queueTrialLines,
+  researchTrialLine,
 } from "@/lib/membership/entitlements";
 import {
   canQueueUserBacktest,
@@ -567,6 +569,11 @@ export function BacktestQueueForm({
       : null;
   const trialLines =
     queueGate && queueInput ? queueTrialLines(queueGate, queueInput) : [];
+  const optimizeTrial =
+    variant && gate ? researchTrialLine(gate.optimize) : null;
+  const formTrialLines = optimizeTrial
+    ? trialLines.filter((line) => line !== optimizeTrial)
+    : trialLines;
   const pageNotices =
     !variant && queueGate && queueInput
       ? newBacktestPageNotices(queueGate, queueInput)
@@ -583,7 +590,18 @@ export function BacktestQueueForm({
         ? "Run backtest"
         : "Queue backtest";
 
+  const pageNoticeBlock =
+    pageNotices.length > 0 ? (
+      <div className="mb-6 space-y-3">
+        {pageNotices.map((row) => (
+          <ResearchNoticeBanner key={row.message} notice={row} className="" />
+        ))}
+      </div>
+    ) : null;
+
   return (
+    <>
+    {variant ? null : pageNoticeBlock}
     <section
       id={variant ? undefined : "replay"}
       className={
@@ -594,7 +612,10 @@ export function BacktestQueueForm({
     >
       {variant ? (
         <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-canvas px-4 py-3">
-          <h2 className="text-lg font-semibold text-ink">Modify</h2>
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <h2 className="text-lg font-semibold text-ink">Optimize</h2>
+            {optimizeTrial ? <FreeTrialBadge message={optimizeTrial} /> : null}
+          </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             {variantDirty ? (
               <p className="rounded-control bg-warning/15 px-2 py-0.5 text-xs text-warning">
@@ -624,13 +645,6 @@ export function BacktestQueueForm({
       {variant || !showTitle ? null : (
         <h2 className="text-lg font-semibold">New backtest</h2>
       )}
-      {pageNotices.length > 0 ? (
-        <div className="mb-4 space-y-3">
-          {pageNotices.map((row) => (
-            <ResearchNoticeBanner key={row.message} notice={row} className="" />
-          ))}
-        </div>
-      ) : null}
       {variant ? null : (
       <p className={showTitle ? "mt-1 text-sm text-ink-muted" : "text-sm text-ink-muted"}>
         {loadedFromRun
@@ -733,7 +747,7 @@ export function BacktestQueueForm({
           generation={clickGate.generation}
           onDismiss={clickGate.hide}
         />
-        <ResearchTrialLines lines={trialLines} />
+        <ResearchTrialLines lines={formTrialLines} />
         {variant ? (
           <input type="hidden" name="parentRunId" value={variantParentId} />
         ) : null}
@@ -1199,5 +1213,6 @@ export function BacktestQueueForm({
       )}
       </div>
     </section>
+    </>
   );
 }

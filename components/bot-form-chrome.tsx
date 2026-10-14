@@ -484,14 +484,21 @@ export function BotFormSidebar({
 
 export function BotFormSidebarSection({
   title,
+  titleAside,
   children,
 }: {
   title?: string;
+  titleAside?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-2 border-t border-line pt-4">
-      {title ? <h4 className={botSectionTitleClass}>{title}</h4> : null}
+      {title ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <h4 className={botSectionTitleClass}>{title}</h4>
+          {titleAside}
+        </div>
+      ) : null}
       {children}
     </div>
   );

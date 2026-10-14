@@ -109,14 +109,11 @@ export function CopyFollowButton({
       clickGate.hide();
       return;
     }
-    if (notices.length === 1) {
-      clickGate.show(notices[0], anchor);
-      return;
-    }
     clickGate.show(
       {
-        message: notices.map((notice) => notice.message).join(" "),
-        upgradePlan: null,
+        message: notices[0].message,
+        upgradePlan: notices[0].upgradePlan,
+        items: notices,
       },
       anchor,
     );

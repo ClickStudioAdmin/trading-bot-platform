@@ -7,11 +7,6 @@ import {
   PreviousBacktestLink,
 } from "@/components/bot-form-chrome";
 import { IconBacktest } from "@/components/icons";
-import {
-  ResearchTrialLines,
-  useResearchGateAccess,
-} from "@/components/research-gate-access";
-import { researchTrialLine } from "@/lib/membership/entitlements";
 import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import { seedBacktestDraftAction } from "@/lib/backtest/actions";
@@ -70,14 +65,11 @@ export function BacktestTemplateLink({
   className?: string;
   buttonClassName?: string;
 }) {
-  const gate = useResearchGateAccess();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const saved = findMatchingSavedBacktest(current, savedBacktests);
-  const trial = gate ? researchTrialLine(gate.backtest) : null;
   return (
     <span className={className ?? "inline-flex flex-col items-end"}>
-      <ResearchTrialLines lines={trial ? [trial] : []} />
       <button
         type="button"
         disabled={pending}

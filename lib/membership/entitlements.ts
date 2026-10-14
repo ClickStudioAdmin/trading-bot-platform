@@ -1484,20 +1484,13 @@ export function backtestListTrialLines(gate: ResearchGateAccess): string[] {
   return backtest ? [backtest] : [];
 }
 
-/** Open backtesting and replay trials for the replay page. The report does not show them. */
+/** The replay trial on the replay page. The backtesting trial stays on the backtests list. The report does not show this line. */
 export function replayPageTrialLines(gate: ResearchGateAccess): string[] {
-  const lines: string[] = [];
-  const backtest = researchTrialLine(gate.backtest);
-  if (backtest) {
-    lines.push(backtest);
+  if (!gate.backtest.allowed) {
+    return [];
   }
-  if (gate.backtest.allowed) {
-    const replay = researchTrialLine(gate.replay);
-    if (replay) {
-      lines.push(replay);
-    }
-  }
-  return lines;
+  const replay = researchTrialLine(gate.replay);
+  return replay ? [replay] : [];
 }
 
 function featureNotice(

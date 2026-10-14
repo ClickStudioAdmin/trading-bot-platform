@@ -78,6 +78,7 @@ import {
   type BacktestLibraryItem,
   type SavedBacktestMatch,
 } from "@/components/backtest-dialog";
+import { BacktestingTrialMark } from "@/components/research-gate-access";
 import {
   snapshotPerpsRecipe,
   type PerpsTemplateRecipe,
@@ -1502,7 +1503,10 @@ function RuleCard({
             }
           />
         </BotFormSidebarSection>
-        <BotFormSidebarSection title="Backtesting">
+        <BotFormSidebarSection
+          title="Backtesting"
+          titleAside={<BacktestingTrialMark />}
+        >
           <BacktestTemplateLink
             current={liveRecipe()}
             templates={backtestLibrary}

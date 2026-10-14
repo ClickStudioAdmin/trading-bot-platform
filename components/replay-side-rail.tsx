@@ -15,14 +15,8 @@ import { useRouter } from "next/navigation";
 import { useModalPortalHost } from "@/components/portal-host";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
 import { ClickGateNotice, useClickGate } from "@/components/click-gate-notice";
-import {
-  ResearchTrialLines,
-  useResearchGateAccess,
-} from "@/components/research-gate-access";
-import {
-  optimizeClickDenial,
-  researchTrialLine,
-} from "@/lib/membership/entitlements";
+import { useResearchGateAccess } from "@/components/research-gate-access";
+import { optimizeClickDenial } from "@/lib/membership/entitlements";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import {
   ApplyBacktestButton,
@@ -366,13 +360,6 @@ function ParametersBody({
               generation={clickGate.generation}
               onDismiss={clickGate.hide}
             />
-            <ResearchTrialLines
-              lines={
-                researchGate && researchTrialLine(researchGate.optimize)
-                  ? [researchTrialLine(researchGate.optimize) as string]
-                  : []
-              }
-            />
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Parameters</h2>
               <button
@@ -390,7 +377,7 @@ function ParametersBody({
                 }}
                 className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent"
               >
-                Modify
+                Optimize
               </button>
             </div>
             <BacktestParameterSections sections={paramSections} />

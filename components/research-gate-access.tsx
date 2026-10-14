@@ -3,11 +3,12 @@
 import { createContext, useContext, type ReactNode } from "react";
 import Link from "next/link";
 import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
-import { FreeTrialBadges } from "@/components/plan-trial-hint";
+import { FreeTrialBadge, FreeTrialBadges } from "@/components/plan-trial-hint";
 import { IconPlay } from "@/components/icons";
-import type {
-  ResearchGateAccess,
-  ResearchNotice,
+import {
+  researchTrialLine,
+  type ResearchGateAccess,
+  type ResearchNotice,
 } from "@/lib/membership/entitlements";
 
 const ResearchGateContext = createContext<ResearchGateAccess | null>(null);
@@ -57,6 +58,15 @@ export function ResearchTrialLines({ lines }: { lines: readonly string[] }) {
       className="mb-3 flex flex-wrap items-center gap-2"
     />
   );
+}
+
+export function BacktestingTrialMark() {
+  const gate = useResearchGateAccess();
+  const line = gate ? researchTrialLine(gate.backtest) : null;
+  if (!line) {
+    return null;
+  }
+  return <FreeTrialBadge message={line} />;
 }
 
 export function ResearchReplayButton({ href }: { href: string }) {

@@ -169,6 +169,7 @@ import {
   type BacktestLibraryItem,
   type SavedBacktestMatch,
 } from "@/components/backtest-dialog";
+import { BacktestingTrialMark } from "@/components/research-gate-access";
 import { IconPlus, IconSave } from "@/components/icons";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
@@ -2842,7 +2843,10 @@ export function DcaPlaybookForm({
             }}
           />
         </BotFormSidebarSection>
-        <BotFormSidebarSection title="Backtesting">
+        <BotFormSidebarSection
+          title="Backtesting"
+          titleAside={<BacktestingTrialMark />}
+        >
           <BacktestTemplateLink
             current={liveRecipe()}
             getRecipe={recipeForBacktest}
