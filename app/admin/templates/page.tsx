@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { TemplatesLibrary } from "@/components/templates-library";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { parseLibraryTab } from "@/lib/templates/library-tab";
+import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionMember } from "@/lib/auth/session";
 import { listLinkedBacktestRuns } from "@/lib/backtest/store";
 import { listAllSets, listAllTemplates } from "@/lib/templates/store";
@@ -40,6 +41,7 @@ export default async function AdminTemplatesPage({
       sets={sets}
       linkedBacktests={linkedBacktests}
       initialTab={parseLibraryTab(params.tab)}
+      focusTemplateId={firstSearchValue(params.template)?.trim() || null}
     />
   );
 }

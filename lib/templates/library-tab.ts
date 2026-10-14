@@ -16,3 +16,17 @@ export function parseLibraryTab(
   }
   return "templates";
 }
+
+/** Bot Templates, with this template selected. Shared rows use the Shared Templates tab. Platform rows an admin can open use Admin → Templates. */
+export function templatePageHref(
+  templateId: string,
+  place: "account" | "shared" | "admin" = "account",
+): string {
+  const params = new URLSearchParams();
+  if (place === "shared") {
+    params.set("tab", "shared-templates");
+  }
+  params.set("template", templateId.trim());
+  const path = place === "admin" ? "/admin/templates" : "/account/templates";
+  return `${path}?${params.toString()}`;
+}

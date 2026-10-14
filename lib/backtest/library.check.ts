@@ -9,6 +9,7 @@ import {
   toSavedBacktestMatch,
   findMatchingBacktestTemplate,
   groupBacktestLibrary,
+  attachedTemplateHref,
   attachedTemplateName,
   inheritPlatformBacktests,
   matchingPlatformTemplateIds,
@@ -505,6 +506,34 @@ assert.equal(
     { userId: "member", isAdmin: true, shared: false },
   ),
   null,
+);
+assert.equal(
+  attachedTemplateHref(
+    { id: "tmpl-1", visibility: "user", userId: "owner" },
+    { userId: "owner", isAdmin: false, shared: false },
+  ),
+  "/account/templates?template=tmpl-1",
+);
+assert.equal(
+  attachedTemplateHref(
+    { id: "tmpl-2", visibility: "user", userId: "owner" },
+    { userId: "member", isAdmin: false, shared: true },
+  ),
+  "/account/templates?tab=shared-templates&template=tmpl-2",
+);
+assert.equal(
+  attachedTemplateHref(
+    { id: "plat-1", visibility: "platform", userId: null },
+    { userId: "admin", isAdmin: true, shared: false },
+  ),
+  "/admin/templates?template=plat-1",
+);
+assert.equal(
+  attachedTemplateHref(
+    { id: "plat-1", visibility: "platform", userId: null },
+    { userId: "member", isAdmin: false, shared: false },
+  ),
+  "/account/templates?template=plat-1",
 );
 
 console.log("backtest library checks passed");

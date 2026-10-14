@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { parseDcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import {
+  attachedTemplateHref,
   attachedTemplateName,
   inheritPlatformBacktests,
   matchingPlatformTemplateIds,
@@ -952,12 +953,17 @@ export async function claimQueuedBacktestRun(input?: {
   return parseBacktestRunRow(claimed as Record<string, unknown>);
 }
 
+export type AttachedTemplateColumn = {
+  name: string;
+  href: string;
+};
+
 /** Names for the saved-list Template column. Hidden templates and missing rows are omitted. */
 export async function listAttachedTemplateNames(
   templateIds: Array<string | null | undefined>,
   userId: string,
   isAdmin: boolean,
-): Promise<Record<string, string>> {
+): Promise<Record<string, AttachedTemplateColumn>> {
   const ids = [
     ...new Set(
       templateIds.map((id) => id?.trim() ?? "").filter((id) => id.length > 0),
@@ -979,15 +985,16 @@ export async function listAttachedTemplateNames(
       sharedIds.add(row.id);
     }
   }
-  const names: Record<string, string> = {};
+  const names: Record<string, AttachedTemplateColumn> = {};
   for (const row of templates) {
-    const name = attachedTemplateName(row, {
+    const viewer = {
       userId,
       isAdmin,
       shared: sharedIds.has(row.id),
-    });
+    };
+    const name = attachedTemplateName(row, viewer);
     if (name) {
-      names[row.id] = name;
+      names[row.id] = { name, href: attachedTemplateHref(row, viewer) };
     }
   }
   return names;

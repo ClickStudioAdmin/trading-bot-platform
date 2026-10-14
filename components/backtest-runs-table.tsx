@@ -142,14 +142,26 @@ function runApr(row: BacktestRun): number | null {
 
 function attachedTemplateLabel(
   row: BacktestRun,
-  templates: Record<string, string>,
+  templates: Record<string, { name: string; href: string }>,
 ): string | null {
   const id = row.templateId?.trim();
   if (!id) {
     return null;
   }
-  const name = templates[id]?.trim();
+  const name = templates[id]?.name?.trim();
   return name || null;
+}
+
+function attachedTemplateHref(
+  row: BacktestRun,
+  templates: Record<string, { name: string; href: string }>,
+): string | null {
+  const id = row.templateId?.trim();
+  if (!id) {
+    return null;
+  }
+  const href = templates[id]?.href?.trim();
+  return href || null;
 }
 
 function compareTemplateNames(
@@ -174,7 +186,7 @@ function compareBacktestRun(
   right: BacktestRun,
   key: string,
   dir: TableSortDir,
-  templates: Record<string, string>,
+  templates: Record<string, { name: string; href: string }>,
 ): number {
   if (key === "name") {
     return compareTableText(backtestRunTitle(left), backtestRunTitle(right), dir);
@@ -245,8 +257,8 @@ export function BacktestRunsTable({
   createHref?: string;
   /** Saved list. Comparables and variations render under the parent. */
   nestChildren?: boolean;
-  /** Library template names keyed by `template_id`. Missing ids render as an em dash. */
-  templates?: Record<string, string>;
+  /** Library templates keyed by `template_id`. Missing ids render as an em dash. */
+  templates?: Record<string, { name: string; href: string }>;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -672,6 +684,7 @@ export function BacktestRunsTable({
                     }
                     titleMode={titleMode}
                     templateName={attachedTemplateLabel(entry.run, templates)}
+                    templateHref={attachedTemplateHref(entry.run, templates)}
                     returnTo={returnTo}
                     selected={selected.has(entry.run.id)}
                     onToggle={() => toggleRow(entry.run.id)}
@@ -699,6 +712,7 @@ function BacktestRunRow({
   onToggleFamily,
   titleMode,
   templateName,
+  templateHref,
   returnTo,
   selected,
   onToggle,
@@ -716,6 +730,7 @@ function BacktestRunRow({
   onToggleFamily?: () => void;
   titleMode: "family" | "recipe";
   templateName: string | null;
+  templateHref: string | null;
   returnTo: string;
   selected: boolean;
   onToggle: () => void;
@@ -850,8 +865,10 @@ function BacktestRunRow({
       </td>
       <td className="px-4 py-3 font-medium tabular-nums">{row.symbol}</td>
       <td className="px-4 py-3">
-        {templateName ? (
-          <span className="text-ink">{templateName}</span>
+        {templateName && templateHref ? (
+          <Link href={templateHref} className="text-ink hover:underline">
+            {templateName}
+          </Link>
         ) : (
           <span className="text-ink-faint">—</span>
         )}

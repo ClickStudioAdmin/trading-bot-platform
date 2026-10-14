@@ -65,7 +65,7 @@ export default async function AccountBacktestsPage({
   } catch {
     runs = [];
   }
-  let templates: Record<string, string> = {};
+  let templates: Awaited<ReturnType<typeof listAttachedTemplateNames>> = {};
   try {
     templates = await listAttachedTemplateNames(
       runs.map((row) => row.templateId),
