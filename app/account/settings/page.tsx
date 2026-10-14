@@ -26,7 +26,7 @@ import {
   memberTotpEnabled,
 } from "@/lib/auth/totp-store";
 import { MemberNotificationSettingsForm } from "@/components/notification-settings-form";
-import { StepUpCodeField } from "@/components/step-up-code-field";
+import { StepUpForm } from "@/components/step-up-code-field";
 import { TotpSettings } from "@/components/totp-settings";
 import { redirect } from "next/navigation";
 
@@ -132,8 +132,9 @@ export default async function AccountSettingsPage({
         />
       ) : tab === "password" ? (
         <div className="mt-6 grid gap-6 lg:grid-cols-2 lg:items-start">
-          <form
+          <StepUpForm
             action={changeOwnPassword}
+            confirmLabel="Change password"
             className="space-y-4 rounded-card border border-line bg-surface p-5"
           >
             <div>
@@ -177,7 +178,6 @@ export default async function AccountSettingsPage({
                 At least 8 characters.
               </span>
             </label>
-            <StepUpCodeField inputClassName={fieldClass} />
             <PendingSubmitButton
               pendingLabel="Saving…"
               successKey="save-password"
@@ -185,7 +185,7 @@ export default async function AccountSettingsPage({
             >
               Change password
             </PendingSubmitButton>
-          </form>
+          </StepUpForm>
           <SecuritySettingsTab email={member.email} userId={member.id} />
         </div>
       ) : (
@@ -242,8 +242,11 @@ export default async function AccountSettingsPage({
           </div>
         </form>
         {showPlatformSettings ? (
-        <form
+        <StepUpForm
           action={saveTraderProfileAction}
+          aliasName="alias"
+          initialAlias={trader?.alias ?? ""}
+          confirmLabel="Save trader profile"
           className="space-y-4 rounded-card border border-line bg-surface p-5"
         >
           <div>
@@ -291,11 +294,6 @@ export default async function AccountSettingsPage({
               Optional. {TRADER_BIO_MAX} characters.
             </span>
           </label>
-          <StepUpCodeField
-            required={false}
-            inputClassName={fieldClass}
-            hint="Required when you change the alias. Google Authenticator or a recovery code."
-          />
           <PendingSubmitButton
             pendingLabel="Saving…"
             successKey="save-trader-profile"
@@ -303,7 +301,7 @@ export default async function AccountSettingsPage({
           >
             Save trader profile
           </PendingSubmitButton>
-        </form>
+        </StepUpForm>
         ) : null}
         </div>
         {showPlatformSettings && invites.length > 0 ? (
