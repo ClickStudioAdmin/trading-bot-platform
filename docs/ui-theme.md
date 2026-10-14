@@ -73,6 +73,8 @@ Theme page section headings stay 20px (`text-xl`) so they sit above the samples.
 
 Cards: `bg-surface`, `border-line`, radius 16px, padding 20–24px. No heavy drop shadows. Soft border only.
 
+Scrollbars on `overflow-auto`, `overflow-x-auto`, and `overflow-y-auto` are the thin bar: 8px, no arrow buttons, transparent track, `line-strong` thumb, `ink-faint` on hover. The parameters popup body uses `overflow-y-auto`, so it uses that same bar.
+
 ## Layout
 
 Desk chrome (header, footer, strategy nav, strategy pages, `/account`, `/admin`) uses `max-w-7xl` (~1280px). The desk type sits under the desk name. The exchange connection chip keeps a little extra space above the desk tabs. Narrow forms stay `max-w-lg` or `max-w-3xl`. Signed-in admins open **Admin** from the user menu, under Sign out. Footer **Tick** stays in the footer. Positions Snapshot and Desk Statistics use the 18px section title (`text-lg`). Bots, Activity, and Current Positions sit on the table row at that same size, with the page buttons. On Affiliates → Network, List and Chart sit on the Show Filters row and move above the filter bar when filters are open. Past Positions uses that same size. Choosing a page, Previous, or Next scrolls slowly to the top of the table, then shows that page.
