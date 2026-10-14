@@ -37,6 +37,7 @@ import {
   IconClose,
   IconDisable,
   IconDownload,
+  IconBacktest,
   IconFilterClear,
   IconFolderPlus,
   IconImport,
@@ -48,7 +49,11 @@ import {
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { Modal, StarterPackCheckbox } from "@/components/template-modals";
 import { sliceTablePage, type TableSortDir } from "@/lib/table-chrome";
-import type { BacktestLinkHighlight } from "@/lib/backtest/model";
+import {
+  backtestNewHref,
+  type BacktestLinkHighlight,
+} from "@/lib/backtest/model";
+import { libraryTemplateCanBacktest } from "@/lib/backtest/eligibility";
 import { templateIdsDeletedWithFolder } from "@/lib/templates/folder-delete";
 import { formatTemplateDeskType } from "@/lib/templates/recipe";
 import {
@@ -1238,6 +1243,15 @@ export function TemplatesLibrary({
                           onClick={() => setSharingTemplateId(row.id)}
                         >
                           <IconShare {...TABLE_BTN_ICON} />
+                        </TableIconAction>
+                      ) : null}
+                      {libraryTemplateCanBacktest(row.recipe) ? (
+                        <TableIconAction
+                          label="Backtest"
+                          detail="Run a backtest from this template."
+                          href={backtestNewHref({ template: row.id })}
+                        >
+                          <IconBacktest {...TABLE_BTN_ICON} />
                         </TableIconAction>
                       ) : null}
                       {canEdit ? (

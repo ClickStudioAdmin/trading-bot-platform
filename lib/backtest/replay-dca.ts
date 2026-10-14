@@ -25,6 +25,7 @@ import {
   dcaResolvedSafetyPrices,
   dcaTrailingDistance,
 } from "@/lib/dca/grid";
+import { canBacktestDcaRecipe } from "./eligibility";
 import { dcaRecipeToConfig, type DcaTemplateRecipe } from "@/lib/templates/recipe";
 import type { FuturesSide } from "@/lib/futures/model";
 import {
@@ -50,26 +51,7 @@ import { fillSentence, skippedEntrySentence } from "./events";
 import type { ReplayEvent } from "./model";
 import { filterBecause, indicatorBecause, priceStartBecause } from "./explain";
 
-export function canBacktestDcaRecipe(
-  recipe: DcaTemplateRecipe,
-): { ok: true } | { ok: false; error: string } {
-  if (recipe.startKind === "webhook") {
-    return {
-      ok: false,
-      error: "Webhook-start DCA cannot be backtested. Use price, indicator, or trend.",
-    };
-  }
-  const hasClip = recipe.clipSize > 0;
-  const hasBudget =
-    recipe.maxValue != null &&
-    recipe.maxValue > 0 &&
-    recipe.maxClips != null &&
-    recipe.maxClips > 0;
-  if (!hasClip && !hasBudget) {
-    return { ok: false, error: "This DCA bot needs a clip size." };
-  }
-  return { ok: true };
-}
+export { canBacktestDcaRecipe };
 
 function feeUsdt(qty: number, price: number, feeRate: number): number {
   return Math.abs(qty * price) * feeRate;

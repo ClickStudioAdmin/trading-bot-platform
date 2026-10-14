@@ -10,6 +10,7 @@ import {
   resampleBarsForTimeframe,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import { canBacktestPerpsRecipe } from "./eligibility";
 import { backtestTapeInterval } from "./model";
 import {
   paperStopLossHit,
@@ -42,31 +43,7 @@ import { fillSentence, skippedEntrySentence } from "./events";
 import type { ReplayEvent } from "./model";
 import { filterBecause, indicatorBecause, priceStartBecause } from "./explain";
 
-export function canBacktestPerpsRecipe(
-  recipe: PerpsTemplateRecipe,
-): { ok: true } | { ok: false; error: string } {
-  if (recipe.entrySource === "webhook") {
-    return {
-      ok: false,
-      error: "Webhook-entry bots cannot be backtested. Use a price When.",
-    };
-  }
-  const size = Number(String(recipe.size).replace(/,/g, "").trim());
-  if (!(size > 0)) {
-    return { ok: false, error: "This bot needs a size before it can replay." };
-  }
-  if (recipe.entrySource === "indicator" || recipe.entrySource === "trend") {
-    if (!recipe.indicator?.kind || !recipe.indicator.timeframe) {
-      return { ok: false, error: "This bot needs Indicator or Trend settings." };
-    }
-    return { ok: true };
-  }
-  const trigger = Number(String(recipe.triggerPrice).replace(/,/g, "").trim());
-  if (!(trigger > 0)) {
-    return { ok: false, error: "This bot needs a When price." };
-  }
-  return { ok: true };
-}
+export { canBacktestPerpsRecipe };
 
 export function recipeAction(recipe: PerpsTemplateRecipe): {
   action: FuturesAction;
