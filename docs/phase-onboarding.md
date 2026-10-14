@@ -254,7 +254,8 @@ Stop after each until Click says go. Do not start inside item 4 or item 6.
 - Putting `/welcome` back as a block on the product
 - Auto Demo Account
 - Starting a bot the member did not tick, marketplace, or copying starter rows into the member library
-- Admin-edited tour scripts, videos, or a help center (V1 item 13)
+- Refining the platform tour and onboarding info after the platform templates exist (V1 item 10)
+- Admin-edited tour scripts, videos, or a help center (V1 item 14)
 - Account-wide Positions / Bots (item 4, still waiting on Click)
 - Building plan gates (item 6). This wizard only calls them
 - Copy desks, scale-in, MEXC, paper auto-switch
