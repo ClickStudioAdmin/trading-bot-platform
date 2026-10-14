@@ -12,7 +12,7 @@ import { createPortal } from "react-dom";
 import { BacktestParameterSections } from "@/components/backtest-parameter-sections";
 import { IconBacktest, IconInfo } from "@/components/icons";
 import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
-import { attachedBacktestLinksAction } from "@/lib/backtest/actions";
+import { attachedBacktestsByTemplateAction } from "@/lib/backtest/actions";
 import { templateParamSections } from "@/lib/backtest/param-sections";
 import type { TemplateBacktestLink } from "@/lib/backtest/model";
 import type { TemplateRecipe } from "@/lib/templates/recipe";
@@ -21,6 +21,52 @@ import { formatAuDateUtc } from "@/lib/time/display";
 const POPUP_WIDTH = 416;
 const POPUP_MAX_HEIGHT = 560;
 const POPUP_MARGIN = 24;
+const ATTACHED_BATCH = 200;
+
+type AttachedWaiter = {
+  id: string;
+  resolve: (rows: TemplateBacktestLink[]) => void;
+  reject: (error: unknown) => void;
+};
+
+let attachedQueue: AttachedWaiter[] = [];
+let attachedFlush: number | null = null;
+
+function enqueueAttachedBacktests(
+  templateId: string,
+): Promise<TemplateBacktestLink[]> {
+  return new Promise((resolve, reject) => {
+    attachedQueue.push({ id: templateId, resolve, reject });
+    if (attachedFlush != null) {
+      return;
+    }
+    attachedFlush = window.setTimeout(() => {
+      attachedFlush = null;
+      const batch = attachedQueue;
+      attachedQueue = [];
+      const ids = [...new Set(batch.map((item) => item.id))];
+      const chunks: string[][] = [];
+      for (let index = 0; index < ids.length; index += ATTACHED_BATCH) {
+        chunks.push(ids.slice(index, index + ATTACHED_BATCH));
+      }
+      void Promise.all(chunks.map((chunk) => attachedBacktestsByTemplateAction(chunk)))
+        .then((maps) => {
+          const merged: Record<string, TemplateBacktestLink[]> = {};
+          for (const map of maps) {
+            Object.assign(merged, map);
+          }
+          for (const item of batch) {
+            item.resolve(merged[item.id] ?? []);
+          }
+        })
+        .catch((error: unknown) => {
+          for (const item of batch) {
+            item.reject(error);
+          }
+        });
+    }, 0);
+  });
+}
 
 export function TemplateParametersButton({
   name,
@@ -32,7 +78,7 @@ export function TemplateParametersButton({
   name: string;
   recipe: TemplateRecipe | null | undefined;
   templateId?: string | null;
-  /** When set, skip the lookup and show these runs. Null loads attached runs for `templateId`. */
+  /** When set, skip the lookup and show these runs. Null loads attached runs as soon as the button is shown. */
   backtests?: TemplateBacktestLink[] | null;
   className?: string;
 }) {
@@ -81,13 +127,17 @@ export function TemplateParametersButton({
 
   useEffect(() => () => clearClose(), []);
 
+  useEffect(() => {
+    loadBacktests();
+  }, [templateId, backtests]);
+
   function loadBacktests() {
     if (!templateId || backtests || requestId.current === templateId) {
       return;
     }
     const id = templateId;
     requestId.current = id;
-    void attachedBacktestLinksAction(id)
+    void enqueueAttachedBacktests(id)
       .then((rows) => {
         if (requestId.current !== id) {
           return;
