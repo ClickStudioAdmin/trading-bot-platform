@@ -14,15 +14,14 @@ import { createPortal, flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useModalPortalHost } from "@/components/portal-host";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
+import { ClickGateNotice, useClickGate } from "@/components/click-gate-notice";
 import {
-  ResearchNoticeBanner,
   ResearchTrialLines,
   useResearchGateAccess,
 } from "@/components/research-gate-access";
 import {
   optimizeClickDenial,
   researchTrialLine,
-  type ResearchNotice,
 } from "@/lib/membership/entitlements";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import {
@@ -304,9 +303,7 @@ function ParametersBody({
   const researchGate = useResearchGateAccess();
   const pendingToken = useRef<string | null>(null);
   const [modifying, setModifying] = useState(false);
-  const [optimizeNotice, setOptimizeNotice] = useState<ResearchNotice | null>(
-    null,
-  );
+  const clickGate = useClickGate();
   const variant = run.id !== rootId;
   const seed = useMemo(() => {
     const next = backtestQueueSeedFromRun(run);
@@ -363,7 +360,12 @@ function ParametersBody({
       ) : (
         <>
           <div className="min-h-0 flex-1 overflow-auto pr-3">
-            <ResearchNoticeBanner notice={optimizeNotice} />
+            <ClickGateNotice
+              access={clickGate.notice}
+              anchorRef={clickGate.anchorRef}
+              generation={clickGate.generation}
+              onDismiss={clickGate.hide}
+            />
             <ResearchTrialLines
               lines={
                 researchGate && researchTrialLine(researchGate.optimize)
@@ -375,15 +377,15 @@ function ParametersBody({
               <h2 className="text-lg font-semibold">Parameters</h2>
               <button
                 type="button"
-                onClick={() => {
+                onClick={(event) => {
                   const denial = researchGate
                     ? optimizeClickDenial(researchGate)
                     : null;
                   if (denial) {
-                    setOptimizeNotice(denial);
+                    clickGate.show(denial, event.currentTarget);
                     return;
                   }
-                  setOptimizeNotice(null);
+                  clickGate.hide();
                   setModifying(true);
                 }}
                 className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent"

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { type FormEvent } from "react";
 import Link from "next/link";
 import { AppCheck } from "@/components/app-check";
 import { LogoFileField } from "@/components/logo-file-field";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
+import { ClickGateNotice, formSubmitAnchor, useClickGate } from "@/components/click-gate-notice";
 import {
   CopyShareTrialLines,
   useCopyGateAccess,
@@ -25,7 +25,7 @@ import {
   parseCopyMaxFollowers,
   type DeskCopyListing,
 } from "@/lib/copy/model";
-import { shareSaveDenial, type CopyNotice } from "@/lib/membership/entitlements";
+import { shareSaveDenial } from "@/lib/membership/entitlements";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { AppSelect } from "@/components/app-select";
 
@@ -54,7 +54,7 @@ export function DeskCopyShareCard({
   const sharingLockedOn =
     Boolean(listing?.sharingEnabled) && openTradeCount > 0;
   const gate = useCopyGateAccess();
-  const [shareNotice, setShareNotice] = useState<CopyNotice | null>(null);
+  const clickGate = useClickGate();
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     if (!gate) {
@@ -62,7 +62,7 @@ export function DeskCopyShareCard({
     }
     const data = new FormData(event.currentTarget);
     if (data.get("sharingEnabled") !== "on") {
-      setShareNotice(null);
+      clickGate.hide();
       return;
     }
     const parsedMax = parseCopyMaxFollowers(data.get("maxFollowers"));
@@ -82,11 +82,11 @@ export function DeskCopyShareCard({
       requestedMax: capped.maxFollowers,
     });
     if (!denial) {
-      setShareNotice(null);
+      clickGate.hide();
       return;
     }
     event.preventDefault();
-    setShareNotice(denial);
+    clickGate.show(denial, formSubmitAnchor(event));
   }
   return (
     <section className="space-y-4 rounded-card border border-line bg-surface p-5">
@@ -119,7 +119,12 @@ export function DeskCopyShareCard({
           className="space-y-4"
         >
           <CopyShareTrialLines />
-          {shareNotice ? <DeskTypeRejectBanner access={shareNotice} /> : null}
+          <ClickGateNotice
+            access={clickGate.notice}
+            anchorRef={clickGate.anchorRef}
+            generation={clickGate.generation}
+            onDismiss={clickGate.hide}
+          />
           <div className="space-y-2">
             <label className="flex items-start gap-2 text-sm text-ink">
               {sharingLockedOn ? (

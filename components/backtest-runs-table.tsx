@@ -4,15 +4,14 @@ import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useConfirmDialog } from "@/components/confirm-modal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ClickGateNotice, useClickGate } from "@/components/click-gate-notice";
 import {
-  ResearchNoticeBanner,
   ResearchTrialLines,
   useResearchGateAccess,
 } from "@/components/research-gate-access";
 import {
   backtestListTrialLines,
   replayClickDenial,
-  type ResearchNotice,
 } from "@/lib/membership/entitlements";
 import {
   DetachBacktestButton,
@@ -275,7 +274,7 @@ export function BacktestRunsTable({
   const [status, setStatus] = useState<"all" | BacktestStatus>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const gate = useResearchGateAccess();
-  const [notice, setNotice] = useState<ResearchNotice | null>(null);
+  const clickGate = useClickGate();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -488,7 +487,12 @@ export function BacktestRunsTable({
 
   return (
     <div>
-      <ResearchNoticeBanner notice={notice} />
+      <ClickGateNotice
+        access={clickGate.notice}
+        anchorRef={clickGate.anchorRef}
+        generation={clickGate.generation}
+        onDismiss={clickGate.hide}
+      />
       <ResearchTrialLines lines={gate ? backtestListTrialLines(gate) : []} />
       {dialog}
       <TableFilterSession
@@ -705,12 +709,13 @@ export function BacktestRunsTable({
                     returnTo={returnTo}
                     selected={selected.has(entry.run.id)}
                     onToggle={() => toggleRow(entry.run.id)}
-                    onReplay={(runId) => {
+                    onReplay={(runId, anchor) => {
                       const denial = gate ? replayClickDenial(gate) : null;
                       if (denial) {
-                        setNotice(denial);
+                        clickGate.show(denial, anchor);
                         return;
                       }
+                      clickGate.hide();
                       router.push(`/account/backtests/${runId}/replay`);
                     }}
                   />
@@ -760,7 +765,7 @@ function BacktestRunRow({
   returnTo: string;
   selected: boolean;
   onToggle: () => void;
-  onReplay?: (runId: string) => void;
+  onReplay?: (runId: string, anchor: HTMLElement) => void;
 }) {
   const href =
     row.status === "draft"
@@ -919,7 +924,7 @@ function BacktestRunRow({
             <TableIconAction
               label="Replay"
               detail="Open this run on the replay page."
-              onClick={() => onReplay?.(row.id)}
+              onClick={(event) => onReplay?.(row.id, event.currentTarget)}
             >
               <IconPlay
                 {...TABLE_BTN_ICON}

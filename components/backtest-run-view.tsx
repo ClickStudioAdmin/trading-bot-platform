@@ -9,15 +9,14 @@ import {
   IconUnlink,
 } from "@/components/icons";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
+import { ClickGateNotice, formSubmitAnchor, useClickGate } from "@/components/click-gate-notice";
 import {
-  ResearchNoticeBanner,
   ResearchTrialLines,
   useResearchGateAccess,
 } from "@/components/research-gate-access";
 import {
   attachClickDenial,
   researchTrialLine,
-  type ResearchNotice,
 } from "@/lib/membership/entitlements";
 import {
   SortTh,
@@ -937,9 +936,9 @@ export function AttachBacktestButton({
 }) {
   const router = useRouter();
   const gate = useResearchGateAccess();
+  const clickGate = useClickGate();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<ResearchNotice | null>(null);
   const trial = gate ? researchTrialLine(gate.attach) : null;
   return (
     <form
@@ -947,9 +946,11 @@ export function AttachBacktestButton({
         const denial = gate ? attachClickDenial(gate) : null;
         if (denial) {
           event.preventDefault();
-          setNotice(denial);
+          clickGate.show(denial, formSubmitAnchor(event));
           setError(null);
+          return;
         }
+        clickGate.hide();
       }}
       action={async (formData) => {
         setPending(true);
@@ -963,7 +964,12 @@ export function AttachBacktestButton({
         router.refresh();
       }}
     >
-      <ResearchNoticeBanner notice={notice} />
+      <ClickGateNotice
+        access={clickGate.notice}
+        anchorRef={clickGate.anchorRef}
+        generation={clickGate.generation}
+        onDismiss={clickGate.hide}
+      />
       <ResearchTrialLines lines={trial ? [trial] : []} />
       <input type="hidden" name="runId" value={runId} />
       {templateId ? (
@@ -1006,11 +1012,11 @@ export function SaveBacktestAsTemplateButton({
 }) {
   const router = useRouter();
   const gate = useResearchGateAccess();
+  const clickGate = useClickGate();
   const platformOnly = !canSaveAs && canSaveAsPlatform;
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<ResearchNotice | null>(null);
   const [name, setName] = useState(defaultName);
   const [platform, setPlatform] = useState(platformOnly);
   const [folderIds, setFolderIds] = useState<string[]>([]);
@@ -1023,15 +1029,15 @@ export function SaveBacktestAsTemplateButton({
     return null;
   }
 
-  function resetAndOpen() {
+  function resetAndOpen(anchor: HTMLElement) {
     if (!canSaveAsPlatform) {
       const denial = gate ? attachClickDenial(gate) : null;
       if (denial) {
-        setNotice(denial);
+        clickGate.show(denial, anchor);
         return;
       }
     }
-    setNotice(null);
+    clickGate.hide();
     setName(defaultName);
     setPlatform(platformOnly);
     setFolderIds([]);
@@ -1054,16 +1060,16 @@ export function SaveBacktestAsTemplateButton({
 
   const canChoose = canSaveAs && canSaveAsPlatform;
 
-  async function onSave() {
+  async function onSave(anchor: HTMLElement) {
     if (!platform) {
       const denial = gate ? attachClickDenial(gate) : null;
       if (denial) {
-        setNotice(denial);
+        clickGate.show(denial, anchor);
         setError(null);
         return;
       }
     }
-    setNotice(null);
+    clickGate.hide();
     setPending(true);
     setError(null);
     const data = new FormData();
@@ -1093,11 +1099,16 @@ export function SaveBacktestAsTemplateButton({
   const trial = gate && canSaveAs ? researchTrialLine(gate.attach) : null;
   return (
     <>
-      <ResearchNoticeBanner notice={notice} />
+      <ClickGateNotice
+        access={clickGate.notice}
+        anchorRef={clickGate.anchorRef}
+        generation={clickGate.generation}
+        onDismiss={clickGate.hide}
+      />
       <ResearchTrialLines lines={trial ? [trial] : []} />
       <button
         type="button"
-        onClick={resetAndOpen}
+        onClick={(event) => resetAndOpen(event.currentTarget)}
         title={
           platformOnly
             ? "Create an applyable platform template from this run. Does not attach the run or arm a desk."
@@ -1180,7 +1191,6 @@ export function SaveBacktestAsTemplateButton({
               />
             </label>
           ) : null}
-          <ResearchNoticeBanner notice={notice} className="mt-3" />
           {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
           <div className="mt-4 flex justify-end gap-2">
             <button
@@ -1192,7 +1202,7 @@ export function SaveBacktestAsTemplateButton({
             </button>
             <button
               type="button"
-              onClick={() => void onSave()}
+              onClick={(event) => void onSave(event.currentTarget)}
               disabled={pending || (createFolder && !newFolderName.trim())}
               className={savePrimaryBtn}
             >

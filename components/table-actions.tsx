@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { forwardRef, useRef, useState, type ReactNode } from "react";
+import {
+  forwardRef,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
@@ -136,7 +142,7 @@ export const TableIconAction = forwardRef<
     href?: string;
     target?: string;
     rel?: string;
-    onClick?: () => void;
+    onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
     type?: "button" | "submit";
     form?: string;
     disabled?: boolean;
@@ -192,9 +198,9 @@ export const TableIconAction = forwardRef<
         disabled={disabled}
         aria-label={spoken}
         className={mark}
-        onClick={() => {
+        onClick={(event) => {
           dismiss();
-          onClick?.();
+          onClick?.(event);
         }}
         {...tip}
       >
@@ -262,7 +268,7 @@ export function TableLabelButton({
   children: ReactNode;
   variant?: keyof typeof TABLE_LABEL_BTN_CLASS;
   href?: string;
-  onClick?: () => void;
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
   type?: "button" | "submit";
   disabled?: boolean;
   title?: string;
