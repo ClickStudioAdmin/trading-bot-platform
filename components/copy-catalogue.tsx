@@ -18,6 +18,7 @@ import {
 import { toggleDeskCopyFavoriteAction } from "@/lib/copy/actions";
 import { copyCatalogueHref } from "@/lib/copy/catalogue-href";
 import { CopyFollowButton } from "@/components/copy-follow-modal";
+import { CopyFollowTrialLine } from "@/components/copy-gate-access";
 import type { CopyCatalogueCard } from "@/lib/copy/catalogue";
 import type { ExchangeConnection } from "@/lib/exchanges/connections";
 import {
@@ -122,6 +123,7 @@ export function CopyCatalogueBoard({
   ];
   return (
     <div className="space-y-5">
+      <CopyFollowTrialLine />
       {showFilters ? (
       <>
       <div className="flex flex-wrap items-center gap-4 border-b border-line">

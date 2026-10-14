@@ -25,7 +25,7 @@ export function CopyDeskDetailsHeader({
 
   return (
     <section className="mb-8 rounded-card border border-line bg-surface p-5">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="grid min-w-0 flex-1 gap-6 md:grid-cols-2 xl:grid-cols-3 xl:gap-8">
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
@@ -104,7 +104,9 @@ export function CopyDeskDetailsHeader({
             </Link>
           </div>
         </div>
-        {action ? <div className="shrink-0">{action}</div> : null}
+        {action ? (
+          <div className="w-full max-w-md shrink-0">{action}</div>
+        ) : null}
       </div>
       {children ? <div className="mt-6">{children}</div> : null}
     </section>

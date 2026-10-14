@@ -24,6 +24,12 @@ import {
   parseStoredVenueEnvironment,
 } from "@/lib/exchanges/venues";
 import { writeEventLog } from "@/lib/logs/write";
+import { deniedDeskTypeMessage } from "@/lib/membership/entitlements";
+import { loadDeskTypeAccess } from "@/lib/membership/load-desk-type-access";
+import {
+  deniedDeskQuotaMessage,
+  deniedQuotaMessage,
+} from "@/lib/membership/load-quota-access";
 import { listOnboardingFolders } from "@/lib/onboarding/catalog";
 import { starterTemplateAllowed } from "@/lib/onboarding/model";
 import { skipOnboardingForExternalDesk } from "@/lib/onboarding/store";
@@ -121,6 +127,13 @@ export async function createTradingAccount(formData: FormData) {
     return fail(createdChoice.error);
   }
   const choice = createdChoice.value;
+  const typeDenied = deniedDeskTypeMessage(
+    await loadDeskTypeAccess(member.id),
+    choice.deskType,
+  );
+  if (typeDenied) {
+    return fail(typeDenied);
+  }
   let connectionId: string | null = null;
   let venueEnvironment = choice.venueEnvironment;
   if (choice.mode === "live") {
@@ -148,6 +161,31 @@ export async function createTradingAccount(formData: FormData) {
       }
     }
   }
+  const quotaDenied = await deniedDeskQuotaMessage(member.id, {
+    mode: choice.mode,
+    venueEnvironment,
+  });
+  if (quotaDenied) {
+    return fail(quotaDenied);
+  }
+  const starterIds = [
+    ...new Set(
+      formData
+        .getAll("starterTemplateId")
+        .map((value) => String(value).trim())
+        .filter(Boolean),
+    ),
+  ];
+  if (starterIds.length > 0) {
+    const botDenied = await deniedQuotaMessage(
+      member.id,
+      "max_bots",
+      starterIds.length,
+    );
+    if (botDenied) {
+      return fail(botDenied);
+    }
+  }
   const created = await insertTradingAccount(
     member.id,
     named.name,
@@ -171,14 +209,6 @@ export async function createTradingAccount(formData: FormData) {
       return fail(bound.error);
     }
   }
-  const starterIds = [
-    ...new Set(
-      formData
-        .getAll("starterTemplateId")
-        .map((value) => String(value).trim())
-        .filter(Boolean),
-    ),
-  ];
   const starterErrors: string[] = [];
   if (starterIds.length > 0) {
     const folders = await listOnboardingFolders();

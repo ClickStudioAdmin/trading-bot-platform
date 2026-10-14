@@ -30,6 +30,16 @@ import {
 } from "@/components/chart-context-menu";
 import { ReplayIndicatorLegend } from "@/components/replay-indicator-legend";
 import { ReplayChartBar } from "@/components/replay-chart-bar";
+import {
+  ResearchNoticeBanner,
+  ResearchTrialLines,
+  useResearchGateAccess,
+} from "@/components/research-gate-access";
+import {
+  indicatorAddDenial,
+  researchTrialLine,
+  type ResearchNotice,
+} from "@/lib/membership/entitlements";
 import type { ChartSnapshot } from "@/components/chart-screenshot";
 import {
   REPLAY_CHART_APPEARANCE_KEY,
@@ -717,6 +727,10 @@ export function ReplayPlayer({
     }
   }, [visibleEvents.length, sideLanes]);
   const stats = replayPlayStats(visibleOrders, run.startingUsdt);
+  const researchGate = useResearchGateAccess();
+  const [indicatorNotice, setIndicatorNotice] = useState<ResearchNotice | null>(
+    null,
+  );
   const [references, setReferences] = useState<string[]>(
     runIndicators?.referenceIndicators ?? [],
   );
@@ -2306,7 +2320,29 @@ export function ReplayPlayer({
           indicators={indicatorChoices}
           references={references}
           appliedReferences={appliedReferences}
+          indicatorNotice={
+            <>
+              <ResearchNoticeBanner notice={indicatorNotice} className="" />
+              <ResearchTrialLines
+                lines={
+                  researchGate && researchTrialLine(researchGate.indicators)
+                    ? [researchTrialLine(researchGate.indicators) as string]
+                    : []
+                }
+              />
+            </>
+          }
           onToggleReference={(id, enabled) => {
+            if (enabled) {
+              const denial = researchGate
+                ? indicatorAddDenial(researchGate)
+                : null;
+              if (denial) {
+                setIndicatorNotice(denial);
+                return;
+              }
+            }
+            setIndicatorNotice(null);
             setReferences((current) =>
               enabled
                 ? current.includes(id)

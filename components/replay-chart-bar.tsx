@@ -38,6 +38,7 @@ export function ReplayChartBar({
   references,
   appliedReferences,
   onToggleReference,
+  indicatorNotice = null,
 }: {
   interval: DcaIndicatorTimeframe;
   onInterval: (value: DcaIndicatorTimeframe) => void;
@@ -53,6 +54,7 @@ export function ReplayChartBar({
   references: readonly string[];
   appliedReferences: readonly string[];
   onToggleReference: (id: string, enabled: boolean) => void;
+  indicatorNotice?: ReactNode;
 }) {
   const [open, setOpen] = useState<"bars" | "canvas" | null>(null);
   const [indicatorsOpen, setIndicatorsOpen] = useState(false);
@@ -189,6 +191,7 @@ export function ReplayChartBar({
           <p className="mt-2 text-sm text-ink-muted">
             Strategy indicators stay on. Anything else is a visual reference only.
           </p>
+          {indicatorNotice ? <div className="mt-3">{indicatorNotice}</div> : null}
           <ul className="mt-4 space-y-2">
             {indicators.map((row) => {
               const checked = row.locked || references.includes(row.id);

@@ -32,6 +32,15 @@ import {
 } from "@/lib/exchanges/venues";
 import { SharedKeyWarning } from "@/components/shared-key-warning";
 import { AppSelect } from "@/components/app-select";
+import { useDeskTypeAccess } from "@/components/desk-type-access";
+import { DeskTypeRejectBanner, QuotaRejectNotices } from "@/components/desk-type-reject";
+import { useQuotaAccess } from "@/components/quota-access";
+import {
+  QUOTA_CAP_KEYS,
+  deskTypeAccessFor,
+  quotaAccessFor,
+  quotaKeyForDesk,
+} from "@/lib/membership/entitlements";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -69,6 +78,10 @@ export function CreateAccountForm({
   onCancel?: () => void;
   starterFolders?: StarterFolder[];
 }) {
+  const deskTypeAccess = useDeskTypeAccess();
+  const deskTypesGated = deskTypeAccess.length > 0;
+  const quotaAccess = useQuotaAccess();
+  const quotasGated = quotaAccess.length > 0;
   const [deskType, setDeskType] = useState<DeskType>(
     initialDeskType ?? "cash_and_carry",
   );
@@ -115,9 +128,44 @@ export function CreateAccountForm({
   const nameCheck = validateNewDeskName(name, existingNames);
   const nameError =
     name.trim().length > 0 && !nameCheck.ok ? nameCheck.error : null;
+  const typeRow = deskTypeAccessFor(deskTypeAccess, deskType);
+  const typeDenied = deskTypesGated && typeRow ? !typeRow.allowed : false;
+  const typeNotice = deskTypesGated ? typeRow?.message ?? null : null;
+  function quotaBlock(key: "max_paper_desks" | "max_demo_desks" | "max_live_env_desks") {
+    const row = quotaAccessFor(quotaAccess, key);
+    return quotasGated && row && !row.allowed ? row : null;
+  }
+  const paperBlocked = quotaBlock("max_paper_desks");
+  const demoBlocked = quotaBlock("max_demo_desks");
+  const liveBlocked = quotaBlock("max_live_env_desks");
+  const selectedBand =
+    mode === "paper"
+      ? "max_paper_desks"
+      : bindChoice === "existing" && connectionId
+        ? quotaKeyForDesk({
+            mode: "live",
+            venueEnvironment: selected?.environment ?? null,
+          })
+        : "max_live_env_desks";
+  const quotaRow = quotaAccessFor(quotaAccess, selectedBand);
+  const quotaDenied =
+    mode === "paper"
+      ? paperBlocked
+      : bindChoice === "later" || !connectionId
+        ? liveBlocked
+        : quotaBlock(
+            quotaKeyForDesk({
+              mode: "live",
+              venueEnvironment: selected?.environment ?? null,
+            }) === "max_demo_desks"
+              ? "max_demo_desks"
+              : "max_live_env_desks",
+          );
+  const quotaNotice =
+    quotasGated && quotaRow?.allowed ? quotaRow.message : null;
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
-    if (!nameCheck.ok) {
+    if (!nameCheck.ok || typeDenied || quotaDenied) {
       event.preventDefault();
     }
   }
@@ -156,6 +204,12 @@ export function CreateAccountForm({
       {embedded || hideTitle ? null : (
         <h2 className="text-lg font-semibold tracking-tight">New desk</h2>
       )}
+      {typeDenied && typeRow && !hideTitle ? (
+        <DeskTypeRejectBanner access={typeRow} />
+      ) : null}
+      {hideTitle ? null : (
+        <QuotaRejectNotices keys={QUOTA_CAP_KEYS} className="space-y-3" />
+      )}
       {next ? <input type="hidden" name="next" value={next} /> : null}
       <input type="hidden" name="venue" value={venue} />
       {track ? <input type="hidden" name="track" value={track} /> : null}
@@ -176,6 +230,10 @@ export function CreateAccountForm({
             value={deskType}
             onChange={(event) => {
               const nextType = event.target.value as DeskType;
+              const nextRow = deskTypeAccessFor(deskTypeAccess, nextType);
+              if (deskTypesGated && nextRow && !nextRow.allowed) {
+                return;
+              }
               setDeskType(nextType);
               setConnectionId("");
               setAddStarter(false);
@@ -187,14 +245,24 @@ export function CreateAccountForm({
             }}
             className={fieldClass}
           >
-            {DESK_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {formatDeskTypeChoice(type)}
-              </option>
-            ))}
+            {DESK_TYPES.map((type) => {
+              const row = deskTypeAccessFor(deskTypeAccess, type);
+              const off = deskTypesGated && row ? !row.allowed : false;
+              return (
+                <option key={type} value={type} disabled={off}>
+                  {formatDeskTypeChoice(type)}
+                </option>
+              );
+            })}
           </AppSelect>
         </label>
       )}
+      {typeNotice && !typeDenied ? (
+        <p className="text-sm text-warning">{typeNotice}</p>
+      ) : null}
+      {quotaNotice ? (
+        <p className="text-sm text-warning">{quotaNotice}</p>
+      ) : null}
       <label className="block text-sm text-ink">
         Name
         <input
@@ -231,8 +299,12 @@ export function CreateAccountForm({
           }}
           className={fieldClass}
         >
-          <option value="paper">{formatAccountModeChoice("paper")}</option>
-          <option value="live">{formatAccountModeChoice("live")}</option>
+          <option value="paper" disabled={Boolean(paperBlocked)}>
+            {formatAccountModeChoice("paper")}
+          </option>
+          <option value="live" disabled={Boolean(demoBlocked && liveBlocked)}>
+            {formatAccountModeChoice("live")}
+          </option>
         </AppSelect>
       </label>
       {mode === "paper" && deskType !== "cash_and_carry" && paperVenues.length > 1 ? (
@@ -267,7 +339,9 @@ export function CreateAccountForm({
               }}
               className={fieldClass}
             >
-              <option value="later">Bind Later in Desk Settings</option>
+              <option value="later" disabled={Boolean(liveBlocked)}>
+                Bind Later in Desk Settings
+              </option>
               <option value="existing">
                 Select Existing Exchange Connection
               </option>
@@ -287,11 +361,19 @@ export function CreateAccountForm({
                   <option value="" disabled>
                     Choose a connection
                   </option>
-                  {liveKeys.map((row) => (
-                    <option key={row.id} value={row.id}>
-                      {formatConnectionSummary(row)}
-                    </option>
-                  ))}
+                  {liveKeys.map((row) => {
+                    const band = quotaKeyForDesk({
+                      mode: "live",
+                      venueEnvironment: row.environment,
+                    });
+                    const off =
+                      band === "max_demo_desks" ? demoBlocked : liveBlocked;
+                    return (
+                      <option key={row.id} value={row.id} disabled={Boolean(off)}>
+                        {formatConnectionSummary(row)}
+                      </option>
+                    );
+                  })}
                 </AppSelect>
               </label>
             ) : (
@@ -338,7 +420,12 @@ export function CreateAccountForm({
       <div className="flex flex-wrap items-center gap-2">
         <PendingSubmitButton
           pendingLabel="Creating…"
-          disabled={!nameCheck.ok}
+          disabled={!nameCheck.ok || typeDenied || Boolean(quotaDenied)}
+          title={
+            typeDenied
+              ? typeNotice ?? undefined
+              : quotaDenied?.message ?? undefined
+          }
           className="inline-flex items-center gap-2 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
         >
           <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>

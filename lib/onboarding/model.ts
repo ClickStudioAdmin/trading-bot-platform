@@ -932,10 +932,11 @@ export function starterBotDesks(
 export function paperDesksForEachType(input: {
   existing: readonly SetupDesk[];
   takenNames: readonly string[];
+  deskTypes?: readonly DeskType[];
 }): SetupDesk[] {
   const rows: SetupDesk[] = [];
   const taken = [...input.takenNames];
-  for (const deskType of ONBOARDING_DESK_TYPES) {
+  for (const deskType of input.deskTypes ?? ONBOARDING_DESK_TYPES) {
     const previous = input.existing.find(
       (desk) => desk.deskType === deskType && desk.mode === "paper",
     );
@@ -959,11 +960,13 @@ export function applyDeskSetupChoice(input: {
   choice: DeskSetupChoice;
   desks: readonly SetupDesk[];
   takenNames: readonly string[];
+  deskTypes?: readonly DeskType[];
 }): SetupDesk[] {
   if (input.choice === "all_paper") {
     return paperDesksForEachType({
       existing: input.desks,
       takenNames: input.takenNames,
+      deskTypes: input.deskTypes,
     });
   }
   if (input.choice === "none") {
@@ -1356,10 +1359,17 @@ export function validateSetupForFinish(input: {
   blocks: readonly SetupBlock[];
   folders: readonly StarterFolder[];
   boundConnectionIds: readonly string[];
+  denied?: readonly { deskType: DeskType; message: string }[];
 }): { ok: true; draft: SetupDraft } | { ok: false; error: string } {
   const names = validateSetupNames(input.draft.desks, input.existingNames);
   if (!names.ok) {
     return names;
+  }
+  const denial = (input.denied ?? []).find((row) =>
+    input.draft.desks.some((desk) => desk.deskType === row.deskType),
+  );
+  if (denial) {
+    return { ok: false, error: denial.message };
   }
   const blocked = blockedSetupDesks(input.draft.desks, input.blocks);
   if (blocked.length > 0) {

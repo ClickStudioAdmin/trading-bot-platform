@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
 import { ReplayPlayer } from "@/components/replay-player";
 import { deskAllowsPerpsRecipes, deskIsCopy } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
@@ -22,6 +23,7 @@ import {
   listBacktestRuns,
   loadBacktestRun,
 } from "@/lib/backtest/store";
+import { deniedReplayMessage } from "@/lib/membership/load-research-gate-access";
 import { templateIsLibraryRow } from "@/lib/templates/recipe";
 import { listApplyableSets, loadTemplateById } from "@/lib/templates/store";
 
@@ -63,6 +65,30 @@ export default async function AccountBacktestReplayPage({
         <p className="mt-2 text-sm text-ink-muted">
           Replay opens once the run has finished.
         </p>
+        <Link
+          href={`/account/backtests/${run.id}`}
+          className="mt-4 inline-block text-sm text-accent hover:underline"
+        >
+          Back to the report
+        </Link>
+      </div>
+    );
+  }
+  const replayDenial = await deniedReplayMessage(member.id);
+  if (replayDenial) {
+    return (
+      <div>
+        <Breadcrumbs
+          items={[
+            { href: listHref, label: "Backtesting Tool" },
+            { href: `/account/backtests/${run.id}`, label: backtestRunTitle(run) },
+            { label: "Replay" },
+          ]}
+        />
+        <h1 className="text-2xl font-semibold tracking-tight">Replay</h1>
+        <div className="mt-4">
+          <DeskTypeRejectBanner access={replayDenial} />
+        </div>
         <Link
           href={`/account/backtests/${run.id}`}
           className="mt-4 inline-block text-sm text-accent hover:underline"

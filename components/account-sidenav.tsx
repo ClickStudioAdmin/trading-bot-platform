@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { DeskTypeMark } from "@/components/desk-mark";
+import { useDeskTypeAccess } from "@/components/desk-type-access";
 import { SiteLogo } from "@/components/site-logo";
 import { rememberTradingAccount } from "@/lib/accounts/actions";
 import {
@@ -40,6 +41,7 @@ import {
   OPEN_ACCOUNT_NAV_EVENT,
   tourTargetForAccountHref,
 } from "@/lib/onboarding/model";
+import { deskTypeAccessFor } from "@/lib/membership/entitlements";
 import { ACCOUNT_DESK_LINKS, AFFILIATE_ONLY_LINKS } from "@/lib/site-links";
 
 export function AccountSidenav({
@@ -201,6 +203,48 @@ function DevResetAccount() {
   );
 }
 
+function DeskTypeCreateLink({
+  deskType,
+  creating,
+  label,
+  className,
+  children,
+}: {
+  deskType: DeskType;
+  creating: boolean;
+  label: string;
+  className: string;
+  children: ReactNode;
+}) {
+  const access = useDeskTypeAccess();
+  const row = deskTypeAccessFor(access, deskType);
+  const denied = access.length > 0 && row && !row.allowed ? row.message : null;
+  if (denied) {
+    return (
+      <button
+        type="button"
+        disabled
+        title={denied}
+        aria-label={denied}
+        className={`${className} cursor-not-allowed opacity-40`}
+      >
+        {children}
+      </button>
+    );
+  }
+  return (
+    <Link
+      href={createDeskPath(deskType)}
+      aria-current={creating ? "true" : undefined}
+      aria-label={label}
+      title={row?.message ?? label}
+      className={className}
+    >
+      {children}
+    </Link>
+  );
+}
+
 function DeskGroup({
   label,
   types,
@@ -247,11 +291,10 @@ function DeskGroup({
                 <span>{typeLabel}</span>
               </p>
               {empty ? null : (
-                <Link
-                  href={createDeskPath(group.deskType)}
-                  aria-current={creating ? "true" : undefined}
-                  aria-label={`Create ${typeLabel} desk`}
-                  title={`Create ${typeLabel} desk`}
+                <DeskTypeCreateLink
+                  deskType={group.deskType}
+                  creating={creating}
+                  label={`Create ${typeLabel} desk`}
                   className={`flex size-6 shrink-0 items-center justify-center rounded-control text-base leading-none ${
                     creating
                       ? "bg-surface-raised text-ink"
@@ -259,7 +302,7 @@ function DeskGroup({
                   }`}
                 >
                   +
-                </Link>
+                </DeskTypeCreateLink>
               )}
             </div>
             <div className="mt-1 flex flex-col gap-1 pl-5">
@@ -271,9 +314,10 @@ function DeskGroup({
                 />
               ))}
               {empty ? (
-                <Link
-                  href={createDeskPath(group.deskType)}
-                  aria-current={creating ? "true" : undefined}
+                <DeskTypeCreateLink
+                  deskType={group.deskType}
+                  creating={creating}
+                  label={`Create ${typeLabel} desk`}
                   className={`flex items-center gap-1.5 rounded-control px-3 py-2 text-sm ${
                     creating
                       ? "bg-surface-raised text-ink"
@@ -284,7 +328,7 @@ function DeskGroup({
                     +
                   </span>
                   Create Desk
-                </Link>
+                </DeskTypeCreateLink>
               ) : null}
             </div>
           </div>
@@ -317,11 +361,10 @@ function ManualDeskGroup({
           Manual trading desks
         </p>
         {empty ? null : (
-          <Link
-            href={createDeskPath("perps")}
-            aria-current={creating ? "true" : undefined}
-            aria-label="Create Perps desk"
-            title="Create Perps desk"
+          <DeskTypeCreateLink
+            deskType="perps"
+            creating={creating}
+            label="Create Perps desk"
             className={`flex size-6 shrink-0 items-center justify-center rounded-control text-base leading-none ${
               creating
                 ? "bg-surface-raised text-ink"
@@ -329,7 +372,7 @@ function ManualDeskGroup({
             }`}
           >
             +
-          </Link>
+          </DeskTypeCreateLink>
         )}
       </div>
       <nav aria-label="Manual trading desks" className="mt-3 flex flex-col gap-1 pl-5">
@@ -341,9 +384,10 @@ function ManualDeskGroup({
           />
         ))}
         {empty ? (
-          <Link
-            href={createDeskPath("perps")}
-            aria-current={creating ? "true" : undefined}
+          <DeskTypeCreateLink
+            deskType="perps"
+            creating={creating}
+            label="Create Perps desk"
             className={`flex items-center gap-1.5 rounded-control px-3 py-2 text-sm ${
               creating
                 ? "bg-surface-raised text-ink"
@@ -354,7 +398,7 @@ function ManualDeskGroup({
               +
             </span>
             Create Desk
-          </Link>
+          </DeskTypeCreateLink>
         ) : null}
       </nav>
     </div>

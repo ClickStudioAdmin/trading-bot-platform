@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { defaultReplayChartAppearance } from "./chart-appearance";
 import {
+  addedReferenceIndicatorIds,
   defaultReplayRunIndicators,
   defaultReplayViewPreferences,
   mergeReplayIndicatorStyles,
@@ -141,5 +142,9 @@ assert.equal(
   serializeReplayRunIndicators(runIndicators),
   serializeReplayRunIndicators(indicatorsAgain),
 );
+
+assert.deepEqual(addedReferenceIndicatorIds(["rsi"], ["rsi", "ema"]), ["ema"]);
+assert.deepEqual(addedReferenceIndicatorIds(["rsi", "ema"], ["rsi"]), []);
+assert.deepEqual(addedReferenceIndicatorIds([], []), []);
 
 console.log("replay-preferences.check: ok");

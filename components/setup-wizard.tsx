@@ -11,6 +11,19 @@ import {
 } from "@/lib/accounts/model";
 import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
+import { useDeskTypeAccess } from "@/components/desk-type-access";
+import {
+  quotaAccessFor,
+  quotaKeyForDesk,
+  quotaRoomMessage,
+  type QuotaCapKey,
+} from "@/lib/membership/entitlements";
+import {
+  DeskTypeRejectBanner,
+  DeskTypeRejectNotices,
+  QuotaRejectNotices,
+} from "@/components/desk-type-reject";
+import { useQuotaAccess } from "@/components/quota-access";
 import {
   IconArrowLeft,
   IconArrowRight,
@@ -39,6 +52,10 @@ import {
 } from "@/components/table-chrome";
 import { checkExchangeConnection } from "@/lib/exchanges/actions";
 import { getVenue } from "@/lib/exchanges/venues";
+import {
+  allowedDeskTypes,
+  deskTypeAccessFor,
+} from "@/lib/membership/entitlements";
 import {
   createSetupBeforeTour,
   finishSetup,
@@ -102,6 +119,36 @@ function isActionRedirect(error: unknown): boolean {
     return true;
   }
   return error instanceof Error && error.message === "NEXT_REDIRECT";
+}
+
+function deniedSetupNotes(
+  access: ReturnType<typeof useDeskTypeAccess>,
+): string[] {
+  if (access.length === 0) {
+    return [];
+  }
+  return access.flatMap((row) =>
+    row.allowed || !row.message ? [] : [row.message],
+  );
+}
+
+function deniedSetupDeskMessage(
+  desks: readonly { deskType: DeskType }[],
+  access: ReturnType<typeof useDeskTypeAccess>,
+): string | null {
+  if (access.length === 0) {
+    return null;
+  }
+  for (const desk of desks) {
+    const row = deskTypeAccessFor(access, desk.deskType);
+    if (row && !row.allowed) {
+      return (
+        row.message ??
+        `${formatDeskType(desk.deskType)} desks are not allowed on your plan.`
+      );
+    }
+  }
+  return null;
 }
 
 function wizardActionError(error: unknown): string {
@@ -189,6 +236,18 @@ export function SetupWizard({
   folders: StarterFolder[];
 }) {
   const router = useRouter();
+  const deskTypeAccess = useDeskTypeAccess();
+  const deskTypesGated = deskTypeAccess.length > 0;
+  const quotaAccess = useQuotaAccess();
+  const allowedTypes = deskTypesGated
+    ? allowedDeskTypes(deskTypeAccess)
+    : undefined;
+  const paperQuota = quotaAccessFor(quotaAccess, "max_paper_desks");
+  const paperNeed = Math.max(
+    deskTypesGated ? (allowedTypes?.length ?? 0) : ONBOARDING_DESK_TYPES.length,
+    1,
+  );
+  const paperBatch = quotaRoomMessage(paperQuota, paperNeed);
   const [desks, setDesks] = useState<SetupDesk[]>(initialDraft.desks);
   const [deskChoice, setDeskChoice] = useState<DeskSetupChoice | null>(
     initialDraft.deskChoice,
@@ -327,6 +386,11 @@ export function SetupWizard({
       setError(`Choose a key for ${missing.name}, or bind it later.`);
       return;
     }
+    const blockedType = deniedSetupDeskMessage(body.desks, deskTypeAccess);
+    if (blockedType) {
+      setError(blockedType);
+      return;
+    }
     setError(null);
     startTransition(async () => {
       try {
@@ -378,10 +442,26 @@ export function SetupWizard({
         setError("Choose how to add desks.");
         return;
       }
+      if (
+        deskChoice === "all_paper" &&
+        deskTypesGated &&
+        (allowedTypes?.length ?? 0) === 0
+      ) {
+        setError(
+          deniedSetupNotes(deskTypeAccess)[0] ??
+            "No desk types are allowed on your plan.",
+        );
+        return;
+      }
+      if (deskChoice === "all_paper" && paperBatch) {
+        setError(paperBatch);
+        return;
+      }
       const nextDesks = applyDeskSetupChoice({
         choice: deskChoice,
         desks,
         takenNames: existingNames,
+        deskTypes: allowedTypes,
       });
       const nextBotChoice = deskChoice === "none" ? null : botChoice;
       const planned = setupScreens({
@@ -536,6 +616,31 @@ export function SetupWizard({
         )}
       </div>
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
+      {screen.main === "intro" ? null : (
+        <DeskTypeRejectNotices
+          deskTypes={
+            screen.main === "desks" && screen.sub === "choice"
+              ? undefined
+              : desks.map((desk) => desk.deskType)
+          }
+          className="space-y-3"
+        />
+      )}
+      {screen.main === "intro" ? null : (
+        <QuotaRejectNotices keys={["max_paper_desks", "max_demo_desks", "max_live_env_desks", "max_bots"]} className="space-y-3" />
+      )}
+      {screen.main === "desks" &&
+      screen.sub === "choice" &&
+      paperQuota?.allowed &&
+      paperBatch ? (
+        <DeskTypeRejectBanner
+          access={{
+            allowed: false,
+            message: paperBatch,
+            upgradePlan: paperQuota.upgradePlan,
+          }}
+        />
+      ) : null}
       {screen.main === "intro" ? (
         <IntroStep playing={playing} onWatch={() => setPlaying(true)} />
       ) : null}
@@ -551,6 +656,9 @@ export function SetupWizard({
               title: "Add a Paper Trading desk for each strategy type",
               detail: "Quickest way to see all desk types in action.",
               icon: <IconDesks {...CHOICE_ICON} />,
+              disabled:
+                (deskTypesGated && (allowedTypes?.length ?? 0) === 0) ||
+                Boolean(paperBatch),
             },
             {
               value: "manual",
@@ -656,7 +764,11 @@ export function SetupWizard({
       {screen.main === "tour" ? <TourAsk /> : null}
       </div>
       <div className="shrink-0 border-t border-line bg-surface-raised px-6 py-4">
-        {error ? (
+        {error &&
+        !deskTypeAccess.some(
+          (row) => !row.allowed && row.message === error,
+        ) &&
+        !quotaAccess.some((row) => !row.allowed && row.message === error) ? (
           <p className="mb-3 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}
           </p>
@@ -1027,7 +1139,14 @@ function ChoiceStep({
   intro?: string;
   name: string;
   value: string | null;
-  options: { value: string; title: string; detail: string; icon: ReactNode }[];
+  options: {
+    value: string;
+    title: string;
+    detail: string;
+    icon: ReactNode;
+    disabled?: boolean;
+    notes?: string[];
+  }[];
   onChange: (value: string) => void;
 }) {
   return (
@@ -1041,7 +1160,9 @@ function ChoiceStep({
             <label
               key={option.value}
               className={
-                selected
+                option.disabled
+                  ? "flex cursor-not-allowed items-center gap-4 rounded-card border border-line bg-canvas px-5 py-4 opacity-60"
+                  : selected
                   ? "flex cursor-pointer items-center gap-4 rounded-card border border-accent bg-accent/10 px-5 py-4 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
                   : "flex cursor-pointer items-center gap-4 rounded-card border border-line bg-canvas px-5 py-4 hover:border-line-strong hover:bg-surface-raised has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
               }
@@ -1051,7 +1172,12 @@ function ChoiceStep({
                 name={name}
                 value={option.value}
                 checked={selected}
-                onChange={() => onChange(option.value)}
+                disabled={option.disabled}
+                onChange={() => {
+                  if (!option.disabled) {
+                    onChange(option.value);
+                  }
+                }}
                 className="sr-only"
               />
               <span
@@ -1070,6 +1196,11 @@ function ChoiceStep({
                 <span className="mt-1 block text-sm text-ink-muted">
                   {option.detail}
                 </span>
+                {option.notes?.map((note) => (
+                  <span key={note} className="mt-1 block text-sm text-ink-muted">
+                    {note}
+                  </span>
+                ))}
               </span>
             </label>
           );
@@ -1237,7 +1368,19 @@ function CreateDeskDialog({
   onClose: () => void;
   onSave: (desk: SetupDesk) => void;
 }) {
-  const initialType = desk?.deskType ?? ONBOARDING_DESK_TYPES[0];
+  const access = useDeskTypeAccess();
+  const gated = access.length > 0;
+  const quotas = useQuotaAccess();
+  const quotasGated = quotas.length > 0;
+  const firstAllowed = ONBOARDING_DESK_TYPES.find((type) => {
+    if (!gated) {
+      return true;
+    }
+    const row = deskTypeAccessFor(access, type);
+    return !row || row.allowed;
+  });
+  const initialType =
+    desk?.deskType ?? firstAllowed ?? ONBOARDING_DESK_TYPES[0];
   const seed =
     desk ??
     makeSetupDesk({
@@ -1297,11 +1440,31 @@ function CreateDeskDialog({
     return allocateSetupName(base, takenNames);
   }
 
+  const typeRow = deskTypeAccessFor(access, deskType);
+  const typeBlocked = gated && typeRow ? !typeRow.allowed : false;
+  const typeNotice = gated ? typeRow?.message ?? null : null;
+  const paperQuota = quotaAccessFor(quotas, "max_paper_desks");
+  const demoQuota = quotaAccessFor(quotas, "max_demo_desks");
+  const liveQuota = quotaAccessFor(quotas, "max_live_env_desks");
+  const paperOff = quotasGated && paperQuota ? !paperQuota.allowed : false;
+  const demoOff = quotasGated && demoQuota ? !demoQuota.allowed : false;
+  const liveOff = quotasGated && liveQuota ? !liveQuota.allowed : false;
+  const bandKey: QuotaCapKey =
+    mode === "paper"
+      ? "max_paper_desks"
+      : quotaKeyForDesk({ mode: "live", venueEnvironment: environmentId });
+  const bandQuota = quotaAccessFor(quotas, bandKey);
+  const quotaBlocked = quotasGated && bandQuota ? !bandQuota.allowed : false;
+
   function selectDeskType(raw: string) {
     if (!ONBOARDING_DESK_TYPES.includes(raw as DeskType)) {
       return;
     }
     const nextType = raw as DeskType;
+    const nextRow = deskTypeAccessFor(access, nextType);
+    if (gated && nextRow && !nextRow.allowed) {
+      return;
+    }
     const allowed =
       mode === "paper" ? paperVenuesFor(nextType) : connectedVenuesFor(nextType);
     const nextVenue =
@@ -1359,6 +1522,9 @@ function CreateDeskDialog({
   }
 
   function save() {
+    if (typeBlocked || quotaBlocked) {
+      return;
+    }
     const result = setupDeskFromDetails({
       deskType,
       mode,
@@ -1411,6 +1577,12 @@ function CreateDeskDialog({
           </h2>
         </div>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
+          {typeBlocked && typeRow ? (
+            <DeskTypeRejectBanner access={typeRow} />
+          ) : null}
+          {quotaBlocked && bandQuota ? (
+            <DeskTypeRejectBanner access={bandQuota} />
+          ) : null}
           <label className="block text-sm text-ink">
             Desk type
             <AppSelect
@@ -1418,12 +1590,21 @@ function CreateDeskDialog({
               onChange={(event) => selectDeskType(event.target.value)}
               className={fieldClass}
             >
-              {ONBOARDING_DESK_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {formatDeskType(type)}
-                </option>
-              ))}
+              {ONBOARDING_DESK_TYPES.map((type) => {
+                const row = deskTypeAccessFor(access, type);
+                const off = gated && row ? !row.allowed : false;
+                return (
+                  <option key={type} value={type} disabled={off}>
+                    {formatDeskType(type)}
+                  </option>
+                );
+              })}
             </AppSelect>
+            {typeNotice && !typeBlocked ? (
+              <span className="mt-1 block text-sm text-warning">
+                {typeNotice}
+              </span>
+            ) : null}
           </label>
           <label className="block text-sm text-ink">
             Name
@@ -1447,9 +1628,18 @@ function CreateDeskDialog({
               }
               className={fieldClass}
             >
-              <option value="paper">{formatAccountModeChoice("paper")}</option>
-              <option value="live">{formatAccountModeChoice("live")}</option>
+              <option value="paper" disabled={paperOff}>
+                {formatAccountModeChoice("paper")}
+              </option>
+              <option value="live" disabled={demoOff && liveOff}>
+                {formatAccountModeChoice("live")}
+              </option>
             </AppSelect>
+            {bandQuota?.allowed && bandQuota.message ? (
+              <span className="mt-1 block text-sm text-warning">
+                {bandQuota.message}
+              </span>
+            ) : null}
           </label>
           {showMarket ? (
             <label className="block text-sm text-ink">
@@ -1491,11 +1681,18 @@ function CreateDeskDialog({
                     onChange={(event) => selectEnvironment(event.target.value)}
                     className={fieldClass}
                   >
-                    {(venueDef?.environments ?? []).map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.label}
-                      </option>
-                    ))}
+                    {(venueDef?.environments ?? []).map((item) => {
+                      const key = quotaKeyForDesk({
+                        mode: "live",
+                        venueEnvironment: item.id,
+                      });
+                      const off = key === "max_demo_desks" ? demoOff : liveOff;
+                      return (
+                        <option key={item.id} value={item.id} disabled={off}>
+                          {item.label}
+                        </option>
+                      );
+                    })}
                   </AppSelect>
                 </label>
               </div>
@@ -1547,7 +1744,11 @@ function CreateDeskDialog({
           <button
             type="button"
             onClick={save}
-            disabled={mode === "live" && choice === "new" && !connectionId}
+            disabled={
+              typeBlocked ||
+              quotaBlocked ||
+              (mode === "live" && choice === "new" && !connectionId)
+            }
             className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:opacity-40"
           >
             {desk ? <IconSave {...WIZARD_ICON} /> : <IconPlus {...WIZARD_ICON} />}

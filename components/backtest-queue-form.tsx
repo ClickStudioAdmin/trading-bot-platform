@@ -8,6 +8,11 @@ import { BotRecipeEditor } from "@/components/bot-recipe-editor";
 import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
+import {
+  ResearchNoticeBanner,
+  ResearchTrialLines,
+  useResearchGateAccess,
+} from "@/components/research-gate-access";
 import { queueTemplateBacktestAction } from "@/lib/backtest/actions";
 import { loadBacktestDeskBotAction } from "@/lib/backtest/desk-bot-action";
 import type { BacktestRecipe } from "@/lib/backtest/model";
@@ -28,6 +33,12 @@ import {
   matchingBacktestWindowDays,
   parseBacktestDates,
 } from "@/lib/backtest/model";
+import {
+  backtestYearsHint,
+  queueBacktestDenial,
+  queueTrialLines,
+  type ResearchNotice,
+} from "@/lib/membership/entitlements";
 import {
   canQueueUserBacktest,
   findMatchingBacktestTemplate,
@@ -247,8 +258,10 @@ export function BacktestQueueForm({
   const [venueEnvironment, setVenueEnvironment] = useState(
     seed?.venueEnvironment ?? defaultVenueEnvironment,
   );
+  const gate = useResearchGateAccess();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<ResearchNotice | null>(null);
   const [recipeFieldIssues, setRecipeFieldIssues] = useState<string[]>([]);
   const [bybitPairs, setBybitPairs] = useState<LinearPerp[]>([]);
   const [hyperliquidPairs, setHyperliquidPairs] = useState<LinearPerp[]>([]);
@@ -539,6 +552,17 @@ export function BacktestQueueForm({
     recipeFieldIssues.length > 0 ||
     !backtestName.trim() ||
     (variant && !variantDirty);
+  const queuedRange = parseBacktestDates(fromDate, toDate);
+  const yearsHint = gate ? backtestYearsHint(gate) : null;
+  const trialLines =
+    gate && queuedRange.ok
+      ? queueTrialLines(gate, {
+          variant,
+          adding: 1 + comparables.length,
+          fromMs: queuedRange.fromMs,
+          toMs: queuedRange.toMs,
+        })
+      : [];
   const submitLabel = pending
     ? preview.inline
       ? "Running…"
@@ -611,6 +635,31 @@ export function BacktestQueueForm({
         id={variant ? "backtest-variant-queue" : undefined}
         className="@container min-w-0 space-y-3"
         action={async (formData) => {
+          const range = parseBacktestDates(fromDate, toDate);
+          if (gate && range.ok) {
+            if (
+              gate.saved.limit != null &&
+              !gate.savedCountOk &&
+              gate.backtest.allowed &&
+              !(variant && !gate.optimize.allowed)
+            ) {
+              setNotice(null);
+              setError("Could not check your saved backtests.");
+              return;
+            }
+            const denial = queueBacktestDenial(gate, {
+              variant,
+              adding: 1 + comparables.length,
+              fromMs: range.fromMs,
+              toMs: range.toMs,
+            });
+            if (denial) {
+              setNotice(denial);
+              setError(null);
+              return;
+            }
+          }
+          setNotice(null);
           setPending(true);
           setError(null);
           if (variant) {
@@ -637,6 +686,8 @@ export function BacktestQueueForm({
           router.refresh();
         }}
       >
+        <ResearchNoticeBanner notice={notice} />
+        <ResearchTrialLines lines={trialLines} />
         {variant ? (
           <input type="hidden" name="parentRunId" value={variantParentId} />
         ) : null}
@@ -793,6 +844,9 @@ export function BacktestQueueForm({
               onChange={setToDate}
             />
           </div>
+          {yearsHint ? (
+            <p className="mt-2 text-sm text-ink-muted">{yearsHint}</p>
+          ) : null}
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"

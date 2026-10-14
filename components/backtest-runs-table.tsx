@@ -5,6 +5,17 @@ import { useConfirmDialog } from "@/components/confirm-modal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  ResearchNoticeBanner,
+  ResearchTrialLines,
+  useResearchGateAccess,
+} from "@/components/research-gate-access";
+import {
+  backtestCreateDenial,
+  backtestListTrialLines,
+  replayClickDenial,
+  type ResearchNotice,
+} from "@/lib/membership/entitlements";
+import {
   DetachBacktestButton,
   RemoveBacktestButton,
 } from "@/components/backtest-run-view";
@@ -264,6 +275,8 @@ export function BacktestRunsTable({
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | BacktestStatus>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const gate = useResearchGateAccess();
+  const [notice, setNotice] = useState<ResearchNotice | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -476,6 +489,8 @@ export function BacktestRunsTable({
 
   return (
     <div>
+      <ResearchNoticeBanner notice={notice} />
+      <ResearchTrialLines lines={gate ? backtestListTrialLines(gate) : []} />
       {dialog}
       <TableFilterSession
         toolbar={
@@ -503,14 +518,22 @@ export function BacktestRunsTable({
         }
         actions={
           createHref ? (
-            <Link
-              href={createHref}
+            <button
+              type="button"
+              onClick={() => {
+                const denial = gate ? backtestCreateDenial(gate) : null;
+                if (denial) {
+                  setNotice(denial);
+                  return;
+                }
+                router.push(createHref);
+              }}
               className={`inline-flex items-center ${deskActionBtnClass}`}
             >
               <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
                 Create New Backtest
               </BotButtonLead>
-            </Link>
+            </button>
           ) : undefined
         }
       >
@@ -688,6 +711,14 @@ export function BacktestRunsTable({
                     returnTo={returnTo}
                     selected={selected.has(entry.run.id)}
                     onToggle={() => toggleRow(entry.run.id)}
+                    onReplay={(runId) => {
+                      const denial = gate ? replayClickDenial(gate) : null;
+                      if (denial) {
+                        setNotice(denial);
+                        return;
+                      }
+                      router.push(`/account/backtests/${runId}/replay`);
+                    }}
                   />
                 );
               })
@@ -716,6 +747,7 @@ function BacktestRunRow({
   returnTo,
   selected,
   onToggle,
+  onReplay,
 }: {
   row: BacktestRun;
   memberId: string;
@@ -734,6 +766,7 @@ function BacktestRunRow({
   returnTo: string;
   selected: boolean;
   onToggle: () => void;
+  onReplay?: (runId: string) => void;
 }) {
   const href =
     row.status === "draft"
@@ -890,9 +923,9 @@ function BacktestRunRow({
         <TableActions>
           {row.status === "done" ? (
             <TableIconAction
-              href={`/account/backtests/${row.id}/replay`}
               label="Replay"
               detail="Open this run on the replay page."
+              onClick={() => onReplay?.(row.id)}
             >
               <IconPlay
                 {...TABLE_BTN_ICON}

@@ -1,6 +1,7 @@
 "use server";
 
 import { memberIsAdmin } from "@/lib/admin/access";
+import { deniedTemplateFeatureMessage } from "@/lib/membership/load-template-feature-access";
 import { getSessionContext, getSessionMember } from "@/lib/auth/session";
 import { deskPath } from "@/lib/accounts/model";
 import { parseDcaPlaybookForm } from "@/lib/dca/playbook";
@@ -355,6 +356,15 @@ async function saveNamedRecipe(input: {
   newFolderName: string | null;
   starterPack?: boolean;
 }): Promise<TemplateActionResult> {
+  if (input.visibility !== "platform") {
+    const denied = await deniedTemplateFeatureMessage(
+      input.userId,
+      "extras_templates",
+    );
+    if (denied) {
+      return { ok: false, error: denied };
+    }
+  }
   if (input.newFolderName) {
     const folderName = parseFolderName(input.newFolderName);
     if (!folderName.ok) {
@@ -1203,6 +1213,15 @@ export async function createTemplateSetAction(
   ) {
     return { ok: false, error: "Choose a desk type." };
   }
+  if (meta.visibility !== "platform") {
+    const denied = await deniedTemplateFeatureMessage(
+      auth.member.id,
+      "extras_templates",
+    );
+    if (denied) {
+      return { ok: false, error: denied };
+    }
+  }
   const ids = String(formData.get("templateIds") ?? "")
     .split(",")
     .map((id) => id.trim())
@@ -1386,6 +1405,13 @@ export async function shareTemplateAction(
   if (!auth.ok) {
     return auth;
   }
+  const denied = await deniedTemplateFeatureMessage(
+    auth.member.id,
+    "extras_share_templates",
+  );
+  if (denied) {
+    return { ok: false, error: denied };
+  }
   const id = String(formData.get("templateId") ?? "").trim();
   const template = await loadTemplateById(id);
   if (
@@ -1433,6 +1459,13 @@ export async function shareSetAction(
   const auth = await requireMember();
   if (!auth.ok) {
     return auth;
+  }
+  const denied = await deniedTemplateFeatureMessage(
+    auth.member.id,
+    "extras_share_templates",
+  );
+  if (denied) {
+    return { ok: false, error: denied };
   }
   const id = String(formData.get("setId") ?? "").trim();
   const set = await loadSetById(id);
@@ -1706,6 +1739,15 @@ export async function exportTemplateLibraryAction(
       code: "forbidden",
     };
   }
+  if (scope !== "all" && scope !== "platform") {
+    const denied = await deniedTemplateFeatureMessage(
+      auth.member.id,
+      "extras_import_export_templates",
+    );
+    if (denied) {
+      return { ok: false, error: denied };
+    }
+  }
   let templates =
     scope === "all"
       ? await listAllTemplates()
@@ -1758,6 +1800,15 @@ export async function importTemplateLibraryAction(
   const auth = await requireMember();
   if (!auth.ok) {
     return auth;
+  }
+  if (!(auth.isAdmin && formData.get("catalog") === "admin")) {
+    const denied = await deniedTemplateFeatureMessage(
+      auth.member.id,
+      "extras_import_export_templates",
+    );
+    if (denied) {
+      return { ok: false, error: denied };
+    }
   }
   const parsed = parseTemplateLibraryJson(String(formData.get("libraryJson") ?? ""));
   if (!parsed.ok) {

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { CreateAccountForm } from "@/components/create-account-form";
 import { CreateDeskDetails } from "@/components/create-desk-details";
+import { PlanGateNotices } from "@/components/desk-type-reject";
+import { QUOTA_CAP_KEYS } from "@/lib/membership/entitlements";
 import { PageHeading } from "@/components/page-heading";
 import {
   createDeskPath,
@@ -53,11 +55,11 @@ export default async function NewDeskPage({
         overline="Desks"
         title={`New ${formatDeskType(typed.deskType)} desk`}
       />
-      {error ? (
-        <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-          {error}
-        </p>
-      ) : null}
+      <PlanGateNotices
+        deskTypes={[typed.deskType]}
+        quotaKeys={QUOTA_CAP_KEYS}
+        serverError={error}
+      />
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <CreateAccountForm
           connections={connections}

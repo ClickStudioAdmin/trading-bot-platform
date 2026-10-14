@@ -10,6 +10,16 @@ import {
 } from "@/components/icons";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import {
+  ResearchNoticeBanner,
+  ResearchTrialLines,
+  useResearchGateAccess,
+} from "@/components/research-gate-access";
+import {
+  attachClickDenial,
+  researchTrialLine,
+  type ResearchNotice,
+} from "@/lib/membership/entitlements";
+import {
   SortTh,
   TABLE_BTN_ICON,
   TABLE_FILTER_FIELD_CLASS,
@@ -926,10 +936,21 @@ export function AttachBacktestButton({
   templateId?: string;
 }) {
   const router = useRouter();
+  const gate = useResearchGateAccess();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<ResearchNotice | null>(null);
+  const trial = gate ? researchTrialLine(gate.attach) : null;
   return (
     <form
+      onSubmit={(event) => {
+        const denial = gate ? attachClickDenial(gate) : null;
+        if (denial) {
+          event.preventDefault();
+          setNotice(denial);
+          setError(null);
+        }
+      }}
       action={async (formData) => {
         setPending(true);
         setError(null);
@@ -942,6 +963,8 @@ export function AttachBacktestButton({
         router.refresh();
       }}
     >
+      <ResearchNoticeBanner notice={notice} />
+      <ResearchTrialLines lines={trial ? [trial] : []} />
       <input type="hidden" name="runId" value={runId} />
       {templateId ? (
         <input type="hidden" name="templateId" value={templateId} />
@@ -982,10 +1005,12 @@ export function SaveBacktestAsTemplateButton({
   canSaveAsPlatform: boolean;
 }) {
   const router = useRouter();
+  const gate = useResearchGateAccess();
   const platformOnly = !canSaveAs && canSaveAsPlatform;
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<ResearchNotice | null>(null);
   const [name, setName] = useState(defaultName);
   const [platform, setPlatform] = useState(platformOnly);
   const [folderIds, setFolderIds] = useState<string[]>([]);
@@ -999,6 +1024,14 @@ export function SaveBacktestAsTemplateButton({
   }
 
   function resetAndOpen() {
+    if (!canSaveAsPlatform) {
+      const denial = gate ? attachClickDenial(gate) : null;
+      if (denial) {
+        setNotice(denial);
+        return;
+      }
+    }
+    setNotice(null);
     setName(defaultName);
     setPlatform(platformOnly);
     setFolderIds([]);
@@ -1022,6 +1055,15 @@ export function SaveBacktestAsTemplateButton({
   const canChoose = canSaveAs && canSaveAsPlatform;
 
   async function onSave() {
+    if (!platform) {
+      const denial = gate ? attachClickDenial(gate) : null;
+      if (denial) {
+        setNotice(denial);
+        setError(null);
+        return;
+      }
+    }
+    setNotice(null);
     setPending(true);
     setError(null);
     const data = new FormData();
@@ -1048,8 +1090,11 @@ export function SaveBacktestAsTemplateButton({
     router.refresh();
   }
 
+  const trial = gate && canSaveAs ? researchTrialLine(gate.attach) : null;
   return (
     <>
+      <ResearchNoticeBanner notice={notice} />
+      <ResearchTrialLines lines={trial ? [trial] : []} />
       <button
         type="button"
         onClick={resetAndOpen}
@@ -1135,6 +1180,7 @@ export function SaveBacktestAsTemplateButton({
               />
             </label>
           ) : null}
+          <ResearchNoticeBanner notice={notice} className="mt-3" />
           {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
           <div className="mt-4 flex justify-end gap-2">
             <button

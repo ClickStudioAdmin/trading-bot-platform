@@ -7,6 +7,9 @@ import {
 } from "@/components/futures-blotter";
 import { CopyDeskDetailsHeader } from "@/components/copy-desk-details-header";
 import { CopyFollowButton } from "@/components/copy-follow-modal";
+import { CopyFollowTrialLine } from "@/components/copy-gate-access";
+import { PlanGateNotices } from "@/components/desk-type-reject";
+import { DESK_QUOTA_KEYS } from "@/lib/membership/entitlements";
 import { loadCopyCatalogueDesk } from "@/lib/copy/catalogue";
 import { copyDeskPagePath } from "@/lib/copy/model";
 import { loadCopyDeskPublicClosed } from "@/lib/copy/desk-performance";
@@ -89,20 +92,27 @@ export default async function CopyDeskPerformancePage({
           { label: card.deskName },
         ]}
       />
+      <PlanGateNotices
+        deskTypes={[card.deskType]}
+        quotaKeys={DESK_QUOTA_KEYS}
+      />
       <div>
         <CopyDeskDetailsHeader
           card={card}
           action={
-            <CopyFollowButton
-              parentAccountId={card.accountId}
-              deskName={card.deskName}
-              deskType={card.deskType}
-              venue={card.venue}
-              venueEnvironment={card.venueEnvironment}
-              connections={connections}
-              following={card.following}
-              className="whitespace-nowrap rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
-            />
+            <div className="flex w-full flex-col gap-2">
+              <CopyFollowTrialLine />
+              <CopyFollowButton
+                parentAccountId={card.accountId}
+                deskName={card.deskName}
+                deskType={card.deskType}
+                venue={card.venue}
+                venueEnvironment={card.venueEnvironment}
+                connections={connections}
+                following={card.following}
+                className="whitespace-nowrap rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
+              />
+            </div>
           }
         >
           <FuturesPerformanceStats

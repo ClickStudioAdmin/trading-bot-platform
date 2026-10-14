@@ -836,6 +836,25 @@ export async function listLinkedBacktestRuns(
   return linked;
 }
 
+/** Saved runs this login owns. Drafts and published rows do not count. */
+export async function countOwnedSavedBacktests(
+  userId: string,
+): Promise<number | null> {
+  const supabase = createServiceClient();
+  if (!supabase || !userId) {
+    return null;
+  }
+  const { count, error } = await supabase
+    .from("backtest_runs")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .neq("status", "draft");
+  if (error || count == null) {
+    return null;
+  }
+  return count;
+}
+
 export async function countBacktestRunsForTemplate(
   templateId: string,
 ): Promise<number> {

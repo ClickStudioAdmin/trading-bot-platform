@@ -1,7 +1,15 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { AppCheck } from "@/components/app-check";
 import { LogoFileField } from "@/components/logo-file-field";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
+import {
+  CopyShareTrialLines,
+  useCopyGateAccess,
+} from "@/components/copy-gate-access";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   deskHref,
@@ -13,8 +21,11 @@ import { saveDeskCopyListingAction } from "@/lib/copy/actions";
 import {
   COPY_DESCRIPTION_MAX,
   COPY_SHARE_OFF_OPEN_TRADES,
+  copyMaxFollowersWithinCeiling,
+  parseCopyMaxFollowers,
   type DeskCopyListing,
 } from "@/lib/copy/model";
+import { shareSaveDenial, type CopyNotice } from "@/lib/membership/entitlements";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { AppSelect } from "@/components/app-select";
 
@@ -42,6 +53,41 @@ export function DeskCopyShareCard({
   const stamp = `${formatDeskType(account.deskType)} · ${formatDeskVenueCaption(account)} · ${modeLabel}`;
   const sharingLockedOn =
     Boolean(listing?.sharingEnabled) && openTradeCount > 0;
+  const gate = useCopyGateAccess();
+  const [shareNotice, setShareNotice] = useState<CopyNotice | null>(null);
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    if (!gate) {
+      return;
+    }
+    const data = new FormData(event.currentTarget);
+    if (data.get("sharingEnabled") !== "on") {
+      setShareNotice(null);
+      return;
+    }
+    const parsedMax = parseCopyMaxFollowers(data.get("maxFollowers"));
+    if (!parsedMax.ok) {
+      return;
+    }
+    const capped = copyMaxFollowersWithinCeiling(
+      parsedMax.maxFollowers,
+      maxFollowersCeiling,
+    );
+    if (!capped.ok) {
+      return;
+    }
+    const visibility = data.get("visibility") === "public" ? "public" : "private";
+    const denial = shareSaveDenial(gate, {
+      visibility,
+      requestedMax: capped.maxFollowers,
+    });
+    if (!denial) {
+      setShareNotice(null);
+      return;
+    }
+    event.preventDefault();
+    setShareNotice(denial);
+  }
   return (
     <section className="space-y-4 rounded-card border border-line bg-surface p-5">
       <div>
@@ -67,7 +113,13 @@ export function DeskCopyShareCard({
           ) : null}
         </p>
       ) : (
-        <form action={saveDeskCopyListingAction} className="space-y-4">
+        <form
+          action={saveDeskCopyListingAction}
+          onSubmit={onSubmit}
+          className="space-y-4"
+        >
+          <CopyShareTrialLines />
+          {shareNotice ? <DeskTypeRejectBanner access={shareNotice} /> : null}
           <div className="space-y-2">
             <label className="flex items-start gap-2 text-sm text-ink">
               {sharingLockedOn ? (

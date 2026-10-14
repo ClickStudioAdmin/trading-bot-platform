@@ -646,6 +646,37 @@ assert.deepEqual(
   [...ONBOARDING_DESK_TYPES],
 );
 assert.equal(paperSet.every((desk) => desk.mode === "paper"), true);
+const planTypes = applyDeskSetupChoice({
+  choice: "all_paper",
+  desks: [],
+  takenNames: [],
+  deskTypes: ["perps", "dca"],
+});
+assert.deepEqual(
+  planTypes.map((desk) => desk.deskType),
+  ["perps", "dca"],
+);
+const deniedFinish = validateSetupForFinish({
+  draft: { ...emptySetupDraft(), desks: [paper] },
+  existingNames: [],
+  blocks: [],
+  folders: [],
+  boundConnectionIds: [],
+  denied: [
+    {
+      deskType: "dca",
+      message:
+        "DCA desks are not allowed on your plan. Upgrade to Plus to enable it.",
+    },
+  ],
+});
+assert.equal(deniedFinish.ok, false);
+if (!deniedFinish.ok) {
+  assert.equal(
+    deniedFinish.error,
+    "DCA desks are not allowed on your plan. Upgrade to Plus to enable it.",
+  );
+}
 assert.equal(applyDeskSetupChoice({
   choice: "none",
   desks: paperSet,

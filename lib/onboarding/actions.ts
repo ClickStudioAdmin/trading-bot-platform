@@ -26,6 +26,13 @@ import {
   listExchangeConnections,
 } from "@/lib/exchanges/store";
 import { writeEventLog } from "@/lib/logs/write";
+import { loadDeskTypeAccess } from "@/lib/membership/load-desk-type-access";
+import { loadQuotaAccess } from "@/lib/membership/load-quota-access";
+import {
+  quotaAccessFor,
+  quotaKeyForDesk,
+  quotaRoomMessage,
+} from "@/lib/membership/entitlements";
 import { startAppliedStarterBot } from "@/lib/onboarding/arm";
 import { listOnboardingFolders } from "@/lib/onboarding/catalog";
 import {
@@ -276,6 +283,7 @@ async function materializeSetup(
   const boundConnectionIds = binds
     .filter((bind) => !ownedIds.has(bind.accountId))
     .map((bind) => bind.connectionId);
+  const deskTypes = await loadDeskTypeAccess(userId);
   const ready = validateSetupForFinish({
     draft,
     existingNames: accounts
@@ -284,6 +292,11 @@ async function materializeSetup(
     blocks: [],
     folders,
     boundConnectionIds,
+    denied: deskTypes.flatMap((row) =>
+      row.allowed || !row.message
+        ? []
+        : [{ deskType: row.deskType, message: row.message }],
+    ),
   });
   if (!ready.ok) {
     await saveOnboardingDraft(userId, draft);
@@ -291,6 +304,37 @@ async function materializeSetup(
   }
   const working = ready.draft;
   const connections = await listExchangeConnections(userId);
+  const quotas = await loadQuotaAccess(userId);
+  const bandAdds = {
+    max_paper_desks: 0,
+    max_demo_desks: 0,
+    max_live_env_desks: 0,
+    max_bots: 0,
+  };
+  for (const desk of desksStillToCreate(working.desks)) {
+    const key = quotaKeyForDesk({
+      mode: desk.mode,
+      venueEnvironment: desk.mode === "live" ? desk.environmentId : null,
+    });
+    bandAdds[key] += 1;
+    const message = quotaRoomMessage(
+      quotaAccessFor(quotas, key),
+      bandAdds[key],
+    );
+    if (message) {
+      await saveOnboardingDraft(userId, working);
+      return { ok: false, error: message };
+    }
+  }
+  const botAdds = appliesStillToRun(working.desks, working.applied).length;
+  const botMessage = quotaRoomMessage(
+    quotaAccessFor(quotas, "max_bots"),
+    botAdds,
+  );
+  if (botMessage) {
+    await saveOnboardingDraft(userId, working);
+    return { ok: false, error: botMessage };
+  }
   for (const desk of desksStillToCreate(working.desks)) {
     let connectionId: string | null = null;
     if (desk.mode === "live" && desk.connectionId && !desk.bindLater) {

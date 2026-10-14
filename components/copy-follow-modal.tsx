@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AppCheck } from "@/components/app-check";
 import { CopyDeskGuardsFields } from "@/components/copy-desk-guards-fields";
@@ -21,8 +21,18 @@ import {
 import { connectionFitsDesk, getVenue } from "@/lib/exchanges/venues";
 import type { DeskType } from "@/lib/accounts/model";
 import { AppSelect } from "@/components/app-select";
+import { useDeskTypeAccess } from "@/components/desk-type-access";
+import { useQuotaAccess } from "@/components/quota-access";
+import {
+  deskTypeAccessFor,
+  quotaAccessFor,
+  quotaKeyForDesk,
+} from "@/lib/membership/entitlements";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { IconCopyTrading } from "@/components/icons";
+import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
+import { useCopyGateAccess } from "@/components/copy-gate-access";
+import { followClickDenial } from "@/lib/membership/entitlements";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -48,7 +58,14 @@ export function CopyFollowButton({
   defaultOpen?: boolean;
   className?: string;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const gate = useCopyGateAccess();
+  const copyDenial = gate ? followClickDenial(gate) : null;
+  const [open, setOpen] = useState(defaultOpen && !copyDenial);
+  const [copyNotice, setCopyNotice] = useState(defaultOpen ? copyDenial : null);
+  const access = useDeskTypeAccess();
+  const typeRow = deskTypeAccessFor(access, deskType);
+  const typeDenied =
+    access.length > 0 && typeRow && !typeRow.allowed ? typeRow.message : null;
 
   if (following) {
     return (
@@ -58,18 +75,46 @@ export function CopyFollowButton({
     );
   }
 
-  return (
-    <>
+  let control: ReactNode;
+  if (typeDenied) {
+    control = (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        disabled
+        title={typeDenied}
+        className={`inline-flex cursor-not-allowed items-center justify-center gap-2 opacity-40 ${className}`}
+      >
+        <BotButtonLead icon={<IconCopyTrading {...botBtnIcon} />}>
+          Copy
+        </BotButtonLead>
+      </button>
+    );
+  } else {
+    control = (
+      <button
+        type="button"
+        onClick={() => {
+          if (copyDenial) {
+            setCopyNotice(copyDenial);
+            setOpen(false);
+            return;
+          }
+          setOpen(true);
+        }}
         className={`inline-flex items-center justify-center gap-2 ${className}`}
       >
         <BotButtonLead icon={<IconCopyTrading {...botBtnIcon} />}>
           Copy
         </BotButtonLead>
       </button>
-      {open ? (
+    );
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-2">
+      {copyNotice ? <DeskTypeRejectBanner access={copyNotice} /> : null}
+      {control}
+      {open && !typeDenied ? (
         <CopyFollowModal
           parentAccountId={parentAccountId}
           deskName={deskName}
@@ -80,7 +125,7 @@ export function CopyFollowButton({
           onClose={() => setOpen(false)}
         />
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -102,6 +147,15 @@ function CopyFollowModal({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const quotaAccess = useQuotaAccess();
+  const quotasGated = quotaAccess.length > 0;
+  const paperQuota = quotaAccessFor(quotaAccess, "max_paper_desks");
+  const liveQuota = quotaAccessFor(
+    quotaAccess,
+    quotaKeyForDesk({ mode: "live", venueEnvironment }),
+  );
+  const paperOff = quotasGated && paperQuota ? !paperQuota.allowed : false;
+  const liveOff = quotasGated && liveQuota ? !liveQuota.allowed : false;
   const [mode, setMode] = useState<"paper" | "live">("paper");
   const [followed, setFollowed] = useState(false);
   const venueDef = getVenue(venue);
@@ -182,10 +236,10 @@ function CopyFollowModal({
                   }
                   className={fieldClass}
                 >
-                  <option value="paper">
+                  <option value="paper" disabled={paperOff}>
                     {formatAccountModeChoice("paper")}
                   </option>
-                  <option value="live">
+                  <option value="live" disabled={liveOff}>
                     {formatAccountModeChoice("live")}
                   </option>
                 </AppSelect>
@@ -221,6 +275,16 @@ function CopyFollowModal({
           <div className="space-y-3 border-t border-line pt-4">
             <PendingSubmitButton
               pendingLabel="Copying…"
+              disabled={mode === "paper" ? paperOff : liveOff}
+              title={
+                mode === "paper"
+                  ? paperOff
+                    ? paperQuota?.message ?? undefined
+                    : undefined
+                  : liveOff
+                    ? liveQuota?.message ?? undefined
+                    : undefined
+              }
               className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
             >
               <BotButtonLead icon={<IconCopyTrading {...botBtnIcon} />}>

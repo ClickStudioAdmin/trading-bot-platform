@@ -2,6 +2,11 @@
 
 import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
+import {
+  deniedAttachBacktestMessage,
+  deniedBacktestCreateMessage,
+  deniedQueueBacktestMessage,
+} from "@/lib/membership/load-research-gate-access";
 import { parseCandleVenue } from "@/lib/market/candles";
 import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 import {
@@ -157,6 +162,10 @@ export async function seedBacktestDraftAction(
   if (!allowed.ok) {
     return allowed;
   }
+  const blocked = await deniedBacktestCreateMessage(auth.member.id);
+  if (blocked) {
+    return { ok: false, error: blocked };
+  }
   const dates = defaultBacktestDates();
   const range = parseBacktestDates(dates.from, dates.to);
   if (!range.ok) {
@@ -284,6 +293,16 @@ export async function queueTemplateBacktestAction(
     symbol,
     venue,
   );
+  const requestedParentId = String(formData.get("parentRunId") ?? "").trim();
+  const blocked = await deniedQueueBacktestMessage(auth.member.id, {
+    variant: Boolean(requestedParentId),
+    adding: 1 + comparables.length,
+    fromMs: range.fromMs,
+    toMs: range.toMs,
+  });
+  if (blocked) {
+    return { ok: false, error: blocked };
+  }
   const feePreset = parseFeePreset(formData.get("feePreset"));
   const venueEnvironment =
     String(formData.get("venueEnvironment") ?? "").trim() || null;
@@ -315,7 +334,6 @@ export async function queueTemplateBacktestAction(
     auth.member.id,
     auth.isAdmin,
   );
-  const requestedParentId = String(formData.get("parentRunId") ?? "").trim();
   let linkedParentId: string | null = null;
   if (requestedParentId) {
     const parent = await loadBacktestRun(requestedParentId);
@@ -583,6 +601,10 @@ export async function attachBacktestToTemplateAction(
   if (run.status !== "done" || run.userId !== auth.member.id) {
     return { ok: false, error: "Attach a finished run you own." };
   }
+  const blocked = await deniedAttachBacktestMessage(auth.member.id);
+  if (blocked) {
+    return { ok: false, error: blocked };
+  }
   const templateId =
     String(formData.get("templateId") ?? "").trim() ||
     run.sourceTemplateId ||
@@ -665,6 +687,10 @@ export async function saveBacktestAsTemplateAction(
   }
   if (run.status !== "done" || run.userId !== auth.member.id) {
     return { ok: false, error: "Save a finished run you own." };
+  }
+  const blocked = await deniedAttachBacktestMessage(auth.member.id);
+  if (blocked) {
+    return { ok: false, error: blocked };
   }
   if (run.templateId) {
     const linked = await loadTemplateById(run.templateId);

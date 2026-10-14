@@ -2,10 +2,13 @@
 
 import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
+import { addedReferenceIndicatorIds, parseReplayRunIndicators } from "@/lib/backtest/replay-preferences";
 import {
+  loadReplayRunIndicators,
   saveReplayRunIndicators,
   saveReplayViewPreferences,
 } from "@/lib/backtest/replay-preferences-store";
+import { deniedNewReplayIndicatorsMessage } from "@/lib/membership/load-research-gate-access";
 import { canReadBacktestRun, loadBacktestRun } from "@/lib/backtest/store";
 
 export async function saveReplayViewPreferencesAction(
@@ -30,6 +33,18 @@ export async function saveReplayRunIndicatorsAction(
   const run = await loadBacktestRun(runId);
   if (!run || !canReadBacktestRun(run, member.id, memberIsAdmin(member))) {
     return { ok: false };
+  }
+  const next = parseReplayRunIndicators(input);
+  const previous = await loadReplayRunIndicators(member.id, run.id);
+  const added = addedReferenceIndicatorIds(
+    previous?.referenceIndicators ?? [],
+    next.referenceIndicators,
+  );
+  if (added.length > 0) {
+    const denied = await deniedNewReplayIndicatorsMessage(member.id);
+    if (denied) {
+      return { ok: false };
+    }
   }
   const ok = await saveReplayRunIndicators(member.id, run.id, input);
   return { ok };

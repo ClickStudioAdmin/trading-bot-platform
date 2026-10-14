@@ -10,6 +10,8 @@ import {
   useAutomationsColumns,
 } from "@/components/automations-column-picker";
 import { useConfirmDialog } from "@/components/confirm-modal";
+import { useQuotaAccess } from "@/components/quota-access";
+import { quotaAccessFor } from "@/lib/membership/entitlements";
 import {
   IconActivity,
   IconCopy,
@@ -193,6 +195,8 @@ export function AutomationsBotTable({
   ) => Promise<{ ok: boolean; error?: string }>;
 }) {
   const { confirm, dialog } = useConfirmDialog();
+  const botQuota = quotaAccessFor(useQuotaAccess(), "max_bots");
+  const botsBlocked = botQuota ? !botQuota.allowed : false;
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkError, setBulkError] = useState<string | null>(null);
   const [bulkPending, setBulkPending] = useState(false);
@@ -717,9 +721,15 @@ export function AutomationsBotTable({
                   </TableIconAction>
                   {row.cloneHref ? (
                     <TableIconAction
-                      href={row.cloneHref}
+                      href={botsBlocked ? undefined : row.cloneHref}
+                      disabled={botsBlocked}
                       label="Clone"
-                      detail="Create a new bot from this one."
+                      detail={
+                        botsBlocked
+                          ? (botQuota?.message ??
+                            "Create a new bot from this one.")
+                          : "Create a new bot from this one."
+                      }
                     >
                       <IconCopy {...TABLE_BTN_ICON} />
                     </TableIconAction>

@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
+import { useQuotaAccess } from "@/components/quota-access";
+import { useTemplateFeatureAccess } from "@/components/template-feature-access";
+import {
+  quotaAccessFor,
+  templateFeatureAccessFor,
+} from "@/lib/membership/entitlements";
 import { ModalHost, useModalPortalHost } from "@/components/portal-host";
 
 export { ModalHost, useModalPortalHost };
@@ -264,10 +271,19 @@ export function SaveAsTemplateButton({
   const [createFolder, setCreateFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [starterPack, setStarterPack] = useState(false);
+  const [showGate, setShowGate] = useState(false);
+  const saveAccess = templateFeatureAccessFor(
+    useTemplateFeatureAccess(),
+    "extras_templates",
+  );
 
   const folderGroups = saveFolderGroups(folders, kind, platform);
 
   function resetAndOpen() {
+    if (saveAccess && !saveAccess.allowed && !isAdmin) {
+      setShowGate(true);
+      return;
+    }
     setName(defaultName);
     setDescription("");
     setPlatform(false);
@@ -315,6 +331,13 @@ export function SaveAsTemplateButton({
           ? savePerpsAsTemplateAction
           : savePaperAsTemplateAction;
     const next = await action(data);
+    if (!next.ok && saveAccess && next.error === saveAccess.message) {
+      setShowGate(true);
+      setOpen(false);
+      setPending(false);
+      setResult(null);
+      return;
+    }
     setResult(next);
     setPending(false);
     if (next.ok) {
@@ -333,7 +356,13 @@ export function SaveAsTemplateButton({
   }
 
   return (
-    <>
+    <div className="flex w-full flex-col gap-2">
+      {showGate && saveAccess && !saveAccess.allowed ? (
+        <DeskTypeRejectBanner access={saveAccess} />
+      ) : null}
+      {saveAccess?.allowed && saveAccess.message ? (
+        <p className="text-sm text-warning">{saveAccess.message}</p>
+      ) : null}
       <button
         type="button"
         onClick={() => resetAndOpen()}
@@ -459,7 +488,7 @@ export function SaveAsTemplateButton({
           </div>
         </Modal>
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -494,6 +523,22 @@ export function DeskTemplateBar({
   sets: AutomationTemplateSet[];
   onApplied?: (items: AppliedDeskItem[]) => void;
 }) {
+  const botQuota = quotaAccessFor(useQuotaAccess(), "max_bots");
+  const botsBlocked = botQuota ? !botQuota.allowed : false;
+  if (botsBlocked) {
+    return (
+      <button
+        type="button"
+        disabled
+        title={botQuota?.message ?? undefined}
+        className={`cursor-not-allowed opacity-40 ${deskActionBtnClass}`}
+      >
+        <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
+          Create Bot from Template
+        </BotButtonLead>
+      </button>
+    );
+  }
   return (
     <div className="flex flex-wrap items-center gap-2">
       <ApplyFromLibraryButton
