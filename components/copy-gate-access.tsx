@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
+import { FreeTrialBadge, FreeTrialBadges } from "@/components/plan-trial-hint";
 import {
   followTrialMessage,
   inviteTrialMessage,
@@ -26,17 +27,13 @@ export function useCopyGateAccess(): CopyGateAccess | null {
   return useContext(CopyGateContext);
 }
 
-export function CopyFollowTrialLine({
-  className = "text-sm text-warning",
-}: {
-  className?: string;
-}) {
+export function CopyFollowTrialLine() {
   const gate = useCopyGateAccess();
   const message = gate ? followTrialMessage(gate) : null;
   if (!message) {
     return null;
   }
-  return <p className={className}>{message}</p>;
+  return <FreeTrialBadge message={message} />;
 }
 
 export function CopyShareTrialLines() {
@@ -45,15 +42,7 @@ export function CopyShareTrialLines() {
   if (lines.length === 0) {
     return null;
   }
-  return (
-    <div className="space-y-1">
-      {lines.map((line) => (
-        <p key={line} className="text-sm text-warning">
-          {line}
-        </p>
-      ))}
-    </div>
-  );
+  return <FreeTrialBadges messages={lines} />;
 }
 
 export function CopyInviteTrialLine({
@@ -66,5 +55,5 @@ export function CopyInviteTrialLine({
   if (!message) {
     return null;
   }
-  return <p className="text-sm text-warning">{message}</p>;
+  return <FreeTrialBadge message={message} />;
 }

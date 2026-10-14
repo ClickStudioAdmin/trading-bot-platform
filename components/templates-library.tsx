@@ -15,11 +15,6 @@ import {
   useTemplateFeatureGate,
 } from "@/components/template-feature-access";
 import {
-  ResearchTrialLines,
-  useResearchGateAccess,
-} from "@/components/research-gate-access";
-import { researchTrialLine } from "@/lib/membership/entitlements";
-import {
   SortTh,
   TABLE_ACTIONS_TD_CLASS,
   TABLE_ACTIONS_TH_CLASS,
@@ -540,7 +535,6 @@ export function TemplatesLibrary({
   const [importing, setImporting] = useState(false);
   const { confirm, dialog } = useConfirmDialog();
   const templateGateRef = useRef<HTMLDivElement>(null);
-  const researchGate = useResearchGateAccess();
   const {
     reveal: revealTemplateGate,
     denied: deniedTemplateGates,
@@ -1060,13 +1054,6 @@ export function TemplatesLibrary({
         <TemplateFeatureGateNotices
           denied={deniedTemplateGates}
           trials={templateTrials}
-        />
-        <ResearchTrialLines
-          lines={
-            researchGate && researchTrialLine(researchGate.backtest)
-              ? [researchTrialLine(researchGate.backtest) as string]
-              : []
-          }
         />
       </div>
       <nav className="flex flex-wrap border-b border-line">

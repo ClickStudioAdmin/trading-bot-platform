@@ -1347,8 +1347,9 @@ const openReplay = researchGate({
   grants: [{ key: "replay_backtests", endsAt: "2026-10-28T00:00:00.000Z" }],
 });
 assert.equal(replayClickDenial(openReplay), null);
-assert.deepEqual(backtestListTrialLines(openReplay), [
-  "Replaying backtests is in a free trial until 28/10/2026.",
+assert.deepEqual(backtestListTrialLines(openReplay), []);
+assert.deepEqual(backtestListTrialLines(backtestOpen), [
+  "Backtesting is in a free trial until 28/10/2026.",
 ]);
 assert.deepEqual(
   queueTrialLines(
