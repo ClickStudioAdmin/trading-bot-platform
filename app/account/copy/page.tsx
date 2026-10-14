@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { CopyCatalogueBoard } from "@/components/copy-catalogue";
-import { PlanGateNotices } from "@/components/desk-type-reject";
-import { DESK_QUOTA_KEYS } from "@/lib/membership/entitlements";
 import { PageHeading } from "@/components/page-heading";
 import { loadCopyCatalogue } from "@/lib/copy/catalogue";
 import { copyCatalogueHref } from "@/lib/copy/catalogue-href";
@@ -54,11 +52,11 @@ export default async function AccountCopyCataloguePage({
   return (
     <>
       <PageHeading as="h1" title="Copy Trading" />
-      <PlanGateNotices
-        deskTypes={cards.map((card) => card.deskType)}
-        quotaKeys={DESK_QUOTA_KEYS}
-        serverError={error}
-      />
+      {error ? (
+        <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+          {error}
+        </p>
+      ) : null}
       {unfollowed ? (
         <p className="mb-4 text-sm text-success">
           You unfollowed that desk. The copy desk was deleted. A
@@ -75,6 +73,7 @@ export default async function AccountCopyCataloguePage({
         connections={connections}
         openParentId={openParentId}
         inviteCount={chrome.actions.copyInvite}
+        revealCopyGatesOnClick
       />
     </>
   );

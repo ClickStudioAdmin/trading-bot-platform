@@ -969,6 +969,60 @@ export function quotaKeyForDesk(input: {
   return "max_live_env_desks";
 }
 
+export type CopyDeskPlanNotice = CopyNotice & { key: string };
+
+/** Desk-type and mode-cap lines for one Copy click. Paper plus the parent's live environment. */
+export function copyDeskPlanNotices(input: {
+  typeRow: DeskTypeAccess | null;
+  typeGated: boolean;
+  quotas: readonly QuotaAccess[];
+  quotasGated: boolean;
+  venueEnvironment: string | null;
+}): CopyDeskPlanNotice[] {
+  const notices: CopyDeskPlanNotice[] = [];
+  if (
+    input.typeGated &&
+    input.typeRow &&
+    !input.typeRow.allowed &&
+    input.typeRow.message
+  ) {
+    notices.push({
+      key: input.typeRow.deskType,
+      allowed: false,
+      message: input.typeRow.message,
+      upgradePlan: input.typeRow.upgradePlan,
+    });
+  }
+  if (!input.quotasGated) {
+    return notices;
+  }
+  const keys = [
+    "max_paper_desks" as const,
+    quotaKeyForDesk({
+      mode: "live",
+      venueEnvironment: input.venueEnvironment,
+    }),
+  ];
+  const seen = new Set<string>();
+  for (const key of keys) {
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    const row = quotaAccessFor(input.quotas, key);
+    if (!row || row.allowed || !row.message) {
+      continue;
+    }
+    notices.push({
+      key: row.key,
+      allowed: false,
+      message: row.message,
+      upgradePlan: row.upgradePlan,
+    });
+  }
+  return notices;
+}
+
 export function quotaKeyAfterBind(input: {
   currentEnvironment: string | null;
   nextEnvironment: string | null;

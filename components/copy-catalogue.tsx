@@ -104,6 +104,7 @@ export function CopyCatalogueBoard({
   openParentId = "",
   showFilters = true,
   inviteCount = 0,
+  revealCopyGatesOnClick = false,
 }: {
   cards: CopyCatalogueCard[];
   tab: CopyCatalogueTab;
@@ -115,6 +116,7 @@ export function CopyCatalogueBoard({
   openParentId?: string;
   showFilters?: boolean;
   inviteCount?: number;
+  revealCopyGatesOnClick?: boolean;
 }) {
   const tabs: { id: CopyCatalogueTab; label: string; count?: number }[] = [
     { id: "all", label: "All", count: inviteCount },
@@ -359,6 +361,7 @@ export function CopyCatalogueBoard({
                   connections={connections}
                   following={card.following}
                   defaultOpen={openParentId === card.accountId}
+                  revealGatesOnClick={revealCopyGatesOnClick}
                   className="w-full rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
                 />
                 <TableLabelButton

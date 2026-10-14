@@ -38,6 +38,7 @@ import {
   type CopyGateAccess,
   DESK_QUOTA_KEYS,
   quotaAccessList,
+  copyDeskPlanNotices,
   quotaKeyAfterBind,
   quotaKeyForDesk,
   quotaRoomMessage,
@@ -1316,3 +1317,74 @@ assert.deepEqual(
 );
 
 console.log("research gate entitlement checks passed");
+
+const dcaClosed = {
+  deskType: "dca" as const,
+  allowed: false,
+  message: "DCA desks are not allowed on your plan. Upgrade to Free to enable it.",
+  upgradePlan: "Free",
+};
+const demoFull = quotas({
+  cap: { max_paper_desks: 5, max_demo_desks: 1, max_live_env_desks: 2 },
+  used: { max_demo_desks: 1 },
+  plans: [plusPaper],
+});
+assert.deepEqual(
+  copyDeskPlanNotices({
+    typeRow: dcaClosed,
+    typeGated: true,
+    quotas: demoFull,
+    quotasGated: true,
+    venueEnvironment: "demo",
+  }).map((row) => row.key),
+  ["dca", "max_demo_desks"],
+);
+const demoNotice = copyDeskPlanNotices({
+  typeRow: dcaClosed,
+  typeGated: true,
+  quotas: demoFull,
+  quotasGated: true,
+  venueEnvironment: "demo",
+})[1];
+assert.equal(
+  demoNotice?.message,
+  "You have hit your maximum of 1 Exchange Connected - Demo Desk. Upgrade to Plus to add another.",
+);
+assert.equal(demoNotice?.upgradePlan, "Plus");
+assert.deepEqual(
+  copyDeskPlanNotices({
+    typeRow: { ...dcaClosed, allowed: true },
+    typeGated: true,
+    quotas: quotas({
+      cap: { max_paper_desks: 2, max_demo_desks: 3, max_live_env_desks: 1 },
+      used: { max_paper_desks: 2, max_live_env_desks: 1, max_demo_desks: 3 },
+      plans: [plusPaper],
+    }),
+    quotasGated: true,
+    venueEnvironment: null,
+  }).map((row) => row.key),
+  ["max_paper_desks", "max_live_env_desks"],
+);
+assert.deepEqual(
+  copyDeskPlanNotices({
+    typeRow: dcaClosed,
+    typeGated: false,
+    quotas: demoFull,
+    quotasGated: false,
+    venueEnvironment: "demo",
+  }),
+  [],
+);
+assert.deepEqual(
+  copyDeskPlanNotices({
+    typeRow: { ...dcaClosed, allowed: true, message: null },
+    typeGated: true,
+    quotas: quotas({
+      cap: { max_paper_desks: 5, max_demo_desks: 3, max_live_env_desks: 2 },
+      plans: [plusPaper],
+    }),
+    quotasGated: true,
+    venueEnvironment: "demo",
+  }),
+  [],
+);
