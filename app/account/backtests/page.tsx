@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
+import { BacktestingTrialMark } from "@/components/research-gate-access";
 import { BacktestRunRefresh } from "@/components/backtest-run-view";
 import { BacktestRunsTable } from "@/components/backtest-runs-table";
 import { getSessionMember } from "@/lib/auth/session";
@@ -85,7 +86,10 @@ export default async function AccountBacktestsPage({
       {pendingRun ? (
         <BacktestRunRefresh active runId={pendingRun.id} />
       ) : null}
-      <PageHeading title="Backtesting Tool" />
+      <PageHeading
+        title="Backtesting Tool"
+        titleAside={<BacktestingTrialMark />}
+      />
       <BacktestRunsTable
         runs={runs}
         memberId={member.id}
