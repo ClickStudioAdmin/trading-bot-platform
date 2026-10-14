@@ -34,10 +34,12 @@ export function AccountDisableControl({
   accountId,
   accountName,
   kind,
+  disabled = false,
 }: {
   accountId: string;
   accountName: string;
   kind: DeskDisableBotKind;
+  disabled?: boolean;
 }) {
   const router = useRouter();
   const started = useRef(false);
@@ -127,8 +129,16 @@ export function AccountDisableControl({
     <>
       <TableIconAction
         label="Disable desk"
-        detail="Turn every bot off, then close open positions."
+        detail={
+          disabled
+            ? "This desk is already inactive."
+            : "Turn every bot off, then close open positions."
+        }
+        disabled={disabled}
         onClick={() => {
+          if (disabled) {
+            return;
+          }
           if (open) {
             close();
             return;
