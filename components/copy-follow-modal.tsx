@@ -66,19 +66,16 @@ export function CopyFollowButton({
 
   if (typeDenied) {
     return (
-      <div>
-        <button
-          type="button"
-          disabled
-          title={typeDenied}
-          className={`inline-flex cursor-not-allowed items-center justify-center gap-2 opacity-40 ${className}`}
-        >
-          <BotButtonLead icon={<IconCopyTrading {...botBtnIcon} />}>
-            Copy
-          </BotButtonLead>
-        </button>
-        <p className="mt-2 text-sm text-ink-muted">{typeDenied}</p>
-      </div>
+      <button
+        type="button"
+        disabled
+        title={typeDenied}
+        className={`inline-flex cursor-not-allowed items-center justify-center gap-2 opacity-40 ${className}`}
+      >
+        <BotButtonLead icon={<IconCopyTrading {...botBtnIcon} />}>
+          Copy
+        </BotButtonLead>
+      </button>
     );
   }
 

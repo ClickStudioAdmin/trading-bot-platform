@@ -7,6 +7,7 @@ import {
 } from "@/components/futures-blotter";
 import { CopyDeskDetailsHeader } from "@/components/copy-desk-details-header";
 import { CopyFollowButton } from "@/components/copy-follow-modal";
+import { DeskTypeRejectNotices } from "@/components/desk-type-reject";
 import { loadCopyCatalogueDesk } from "@/lib/copy/catalogue";
 import { copyDeskPagePath } from "@/lib/copy/model";
 import { loadCopyDeskPublicClosed } from "@/lib/copy/desk-performance";
@@ -89,6 +90,7 @@ export default async function CopyDeskPerformancePage({
           { label: card.deskName },
         ]}
       />
+      <DeskTypeRejectNotices deskTypes={[card.deskType]} />
       <div>
         <CopyDeskDetailsHeader
           card={card}

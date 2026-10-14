@@ -36,6 +36,8 @@ export type DeskTypeAccess = {
   deskType: DeskType;
   allowed: boolean;
   message: string | null;
+  /** Cheapest public plan that includes this type, when the type is closed. */
+  upgradePlan: string | null;
 };
 
 export type UnlockCandidate = {
@@ -71,6 +73,20 @@ export function cheapestPublicPlanName(
         left.name.localeCompare(right.name),
     );
   return ranked[0]?.name ?? null;
+}
+
+export function deskTypeRejectLead(
+  message: string,
+  upgradePlan: string | null,
+): string {
+  if (!upgradePlan) {
+    return message;
+  }
+  const cta = ` Upgrade to ${upgradePlan} to enable it.`;
+  if (message.endsWith(cta)) {
+    return message.slice(0, -cta.length);
+  }
+  return message;
 }
 
 export function deskTypeUpgradeMessage(
@@ -146,8 +162,14 @@ function decideDeskType(input: {
   plans: readonly UnlockCandidate[];
 }): DeskTypeAccess {
   const key = DESK_TYPE_FEATURES[input.deskType];
+  const upgradePlan = cheapestPublicPlanName(input.plans, key);
   if (input.features[key]) {
-    return { deskType: input.deskType, allowed: true, message: null };
+    return {
+      deskType: input.deskType,
+      allowed: true,
+      message: null,
+      upgradePlan: null,
+    };
   }
   const offer = featureTrialOffer(
     { features: input.features, caps: emptyCaps(), trials: input.trials },
@@ -169,6 +191,7 @@ function decideDeskType(input: {
             formatAuDateUtc(Date.parse(grant.endsAt)),
           )
         : `${formatDeskType(input.deskType)} is in a free trial.`,
+      upgradePlan: null,
     };
   }
   if (grant && phase === "ended") {
@@ -179,14 +202,13 @@ function decideDeskType(input: {
         input.deskType,
         formatAuDateUtc(Date.parse(grant.endsAt)),
       ),
+      upgradePlan,
     };
   }
   return {
     deskType: input.deskType,
     allowed: false,
-    message: deskTypeUpgradeMessage(
-      input.deskType,
-      cheapestPublicPlanName(input.plans, key),
-    ),
+    message: deskTypeUpgradeMessage(input.deskType, upgradePlan),
+    upgradePlan,
   };
 }

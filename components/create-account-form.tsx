@@ -33,6 +33,7 @@ import {
 import { SharedKeyWarning } from "@/components/shared-key-warning";
 import { AppSelect } from "@/components/app-select";
 import { useDeskTypeAccess } from "@/components/desk-type-access";
+import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
 import { deskTypeAccessFor } from "@/lib/membership/entitlements";
 
 const fieldClass =
@@ -163,6 +164,9 @@ export function CreateAccountForm({
       {embedded || hideTitle ? null : (
         <h2 className="text-lg font-semibold tracking-tight">New desk</h2>
       )}
+      {typeDenied && typeRow && !hideTitle ? (
+        <DeskTypeRejectBanner access={typeRow} />
+      ) : null}
       {next ? <input type="hidden" name="next" value={next} /> : null}
       <input type="hidden" name="venue" value={venue} />
       {track ? <input type="hidden" name="track" value={track} /> : null}
@@ -210,12 +214,8 @@ export function CreateAccountForm({
           </AppSelect>
         </label>
       )}
-      {typeNotice ? (
-        <p
-          className={`text-sm ${typeDenied ? "text-ink-muted" : "text-warning"}`}
-        >
-          {typeNotice}
-        </p>
+      {typeNotice && !typeDenied ? (
+        <p className="text-sm text-warning">{typeNotice}</p>
       ) : null}
       <label className="block text-sm text-ink">
         Name

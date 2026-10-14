@@ -13,6 +13,10 @@ import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
 import { useDeskTypeAccess } from "@/components/desk-type-access";
 import {
+  DeskTypeRejectBanner,
+  DeskTypeRejectNotices,
+} from "@/components/desk-type-reject";
+import {
   IconArrowLeft,
   IconArrowRight,
   IconCheck,
@@ -593,6 +597,16 @@ export function SetupWizard({
         )}
       </div>
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
+      {screen.main === "intro" ? null : (
+        <DeskTypeRejectNotices
+          deskTypes={
+            screen.main === "desks" && screen.sub === "choice"
+              ? undefined
+              : desks.map((desk) => desk.deskType)
+          }
+          className="space-y-3"
+        />
+      )}
       {screen.main === "intro" ? (
         <IntroStep playing={playing} onWatch={() => setPlaying(true)} />
       ) : null}
@@ -609,7 +623,6 @@ export function SetupWizard({
               detail: "Quickest way to see all desk types in action.",
               icon: <IconDesks {...CHOICE_ICON} />,
               disabled: deskTypesGated && (allowedTypes?.length ?? 0) === 0,
-              notes: deniedSetupNotes(deskTypeAccess),
             },
             {
               value: "manual",
@@ -715,7 +728,10 @@ export function SetupWizard({
       {screen.main === "tour" ? <TourAsk /> : null}
       </div>
       <div className="shrink-0 border-t border-line bg-surface-raised px-6 py-4">
-        {error ? (
+        {error &&
+        !deskTypeAccess.some(
+          (row) => !row.allowed && row.message === error,
+        ) ? (
           <p className="mb-3 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}
           </p>
@@ -1456,10 +1472,6 @@ function CreateDeskDialog({
 
   function save() {
     if (typeBlocked) {
-      setError(
-        typeNotice ??
-          `${formatDeskType(deskType)} desks are not allowed on your plan.`,
-      );
       return;
     }
     const result = setupDeskFromDetails({
@@ -1514,6 +1526,9 @@ function CreateDeskDialog({
           </h2>
         </div>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
+          {typeBlocked && typeRow ? (
+            <DeskTypeRejectBanner access={typeRow} />
+          ) : null}
           <label className="block text-sm text-ink">
             Desk type
             <AppSelect
@@ -1531,12 +1546,8 @@ function CreateDeskDialog({
                 );
               })}
             </AppSelect>
-            {typeNotice ? (
-              <span
-                className={`mt-1 block text-sm ${
-                  typeBlocked ? "text-ink-muted" : "text-warning"
-                }`}
-              >
+            {typeNotice && !typeBlocked ? (
+              <span className="mt-1 block text-sm text-warning">
                 {typeNotice}
               </span>
             ) : null}

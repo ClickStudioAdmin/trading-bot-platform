@@ -6,6 +6,7 @@ import {
   cheapestPublicPlanName,
   deniedDeskTypeMessage,
   deskTypeAccessList,
+  deskTypeRejectLead,
   deskTypeUpgradeMessage,
   type UnlockCandidate,
 } from "@/lib/membership/entitlements";
@@ -63,9 +64,14 @@ assert.equal(
 
 const closed = access({ plans: [plus] });
 assert.equal(row(closed, "dca").allowed, false);
+assert.equal(row(closed, "dca").upgradePlan, "Plus");
 assert.equal(
   row(closed, "dca").message,
   "DCA desks are not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  deskTypeRejectLead(row(closed, "dca").message ?? "", "Plus"),
+  "DCA desks are not allowed on your plan.",
 );
 assert.equal(row(closed, "perps").allowed, false);
 assert.equal(
@@ -110,6 +116,7 @@ assert.equal(
 );
 
 const none = access({ plans: [secret] });
+assert.equal(row(none, "dca").upgradePlan, null);
 assert.equal(
   row(none, "dca").message,
   "DCA desks are not allowed on your plan.",
@@ -142,8 +149,13 @@ const ended = access({
   plans: [plus],
 });
 assert.equal(row(ended, "dca").allowed, false);
+assert.equal(row(ended, "dca").upgradePlan, "Plus");
 assert.equal(
   row(ended, "dca").message,
+  "Your free trial of DCA ended on 01/10/2026.",
+);
+assert.equal(
+  deskTypeRejectLead(row(ended, "dca").message ?? "", "Plus"),
   "Your free trial of DCA ended on 01/10/2026.",
 );
 
