@@ -104,7 +104,7 @@ export default async function NewBacktestPage({
   });
 
   return (
-    <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
+    <main className="pt-6 pb-8">
       <div className="mb-6 flex min-w-0 items-center gap-3">
         <DeskBackLink href={backtestSavedListHref()} />
         <h2 className="min-w-0 text-lg font-semibold tracking-tight">

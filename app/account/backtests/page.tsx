@@ -81,7 +81,7 @@ export default async function AccountBacktestsPage({
     runs.find((row) => row.status === "running");
 
   return (
-    <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
+    <main className="pt-6 pb-8">
       {pendingRun ? (
         <BacktestRunRefresh active runId={pendingRun.id} />
       ) : null}
