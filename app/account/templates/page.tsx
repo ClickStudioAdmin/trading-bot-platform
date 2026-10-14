@@ -5,7 +5,7 @@ import { parseLibraryTab } from "@/lib/templates/library-tab";
 import { getSessionMember } from "@/lib/auth/session";
 import { inheritPlatformBacktests } from "@/lib/backtest/library";
 import { listLinkedBacktestRuns } from "@/lib/backtest/store";
-import { listTemplateBotLinks } from "@/lib/templates/desk-bots";
+import { listTemplateBotLinks } from "@/lib/templates/desk-bots-load";
 import { listSharedSets, listSharedTemplates, listVisibleSets, listVisibleTemplates } from "@/lib/templates/store";
 import { redirect } from "next/navigation";
 
