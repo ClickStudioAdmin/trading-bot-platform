@@ -7,6 +7,7 @@ import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
 import { matchDeskBacktestBot } from "@/lib/backtest/desk-bots";
 import {
+  attachedTemplateHref,
   decideBacktestTemplateActions,
   deskBotAutomationsHref,
   findMatchingBacktestTemplate,
@@ -78,6 +79,18 @@ export default async function AccountBacktestDetailPage({
     library,
     run.sourceTemplateId,
   );
+  const matchingRow = matchingTemplate
+    ? templates.find((row) => row.id === matchingTemplate.id) ?? null
+    : null;
+  const matchingTemplateHref = matchingRow
+    ? attachedTemplateHref(matchingRow, {
+        userId: member.id,
+        isAdmin,
+        shared:
+          matchingRow.userId !== member.id &&
+          matchingRow.visibility !== "platform",
+      })
+    : null;
   const templateActions = decideBacktestTemplateActions({
     status: run.status,
     ownerUserId: run.userId,
@@ -136,6 +149,7 @@ export default async function AccountBacktestDetailPage({
       sourceTemplateName={templateActions.sourceName}
       attachTemplateId={templateActions.matchingTemplateId}
       matchingTemplateName={templateActions.matchingTemplateName}
+      matchingTemplateHref={matchingTemplateHref}
       matchingDeskLabel={templateActions.matchingDeskLabel}
       matchingDeskHref={
         matchingDeskBot ? deskBotAutomationsHref(matchingDeskBot) : null
