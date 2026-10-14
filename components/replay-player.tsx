@@ -2566,7 +2566,7 @@ export function ReplayPlayer({
 
   const railNavClass = fillViewport
     ? "absolute top-0 z-40 flex items-center max-lg:inset-x-0 max-lg:h-12 max-lg:flex-row max-lg:border-t max-lg:border-line max-lg:bg-surface lg:left-[calc(100%+1rem)] lg:w-12 lg:flex-col lg:py-1"
-    : "z-40 flex items-center max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:h-12 max-lg:flex-row max-lg:border-t max-lg:border-line max-lg:bg-surface lg:absolute lg:left-[calc(100%+1rem)] lg:top-0 lg:w-12 lg:flex-col lg:py-1";
+    : "z-40 flex items-center max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:h-12 max-lg:flex-row max-lg:border-t max-lg:border-line max-lg:bg-surface lg:absolute lg:top-0 lg:right-0 lg:left-auto lg:w-12 lg:flex-col lg:py-1";
   const railPanelClass = fillViewport
     ? "flex h-full max-h-[46%] min-h-0 min-w-0 flex-col overflow-hidden lg:max-h-none"
     : "fixed inset-x-0 bottom-12 top-16 z-30 flex min-h-0 flex-col overflow-auto bg-canvas lg:static lg:inset-auto lg:z-auto lg:h-full lg:min-h-0 lg:overflow-hidden lg:bg-transparent";
@@ -2580,17 +2580,19 @@ export function ReplayPlayer({
     <div
       ref={sideGridRef}
       className={
-        sidePanel
-          ? `grid items-stretch gap-4 lg:grid-cols-[minmax(24rem,1fr)_34rem] ${
-              fillViewport
-                ? "min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden"
-                : sideGridHeight != null
-                  ? "min-h-0 grid-rows-[minmax(0,1fr)] overflow-hidden"
-                  : "max-lg:pb-14"
-            }`
-          : fillViewport
-            ? "flex min-h-0 flex-1 flex-col overflow-hidden"
-            : "max-lg:pb-14"
+        `${
+          sidePanel
+            ? `grid items-stretch gap-4 lg:grid-cols-[minmax(24rem,1fr)_34rem] ${
+                fillViewport
+                  ? "min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden"
+                  : sideGridHeight != null
+                    ? "min-h-0 grid-rows-[minmax(0,1fr)] overflow-hidden"
+                    : "max-lg:pb-14"
+              }`
+            : fillViewport
+              ? "flex min-h-0 flex-1 flex-col overflow-hidden"
+              : "max-lg:pb-14"
+        }${fillViewport ? "" : " lg:pr-16"}`
       }
       style={
         sidePanel && sideBySide && !fillViewport && sideGridHeight != null
