@@ -34,6 +34,7 @@ import { SharedKeyWarning } from "@/components/shared-key-warning";
 import { AppSelect } from "@/components/app-select";
 import { useDeskTypeAccess } from "@/components/desk-type-access";
 import { DeskTypeRejectBanner, QuotaRejectNotices } from "@/components/desk-type-reject";
+import { FreeTrialBadge } from "@/components/plan-trial-hint";
 import { useQuotaAccess } from "@/components/quota-access";
 import {
   QUOTA_CAP_KEYS,
@@ -258,11 +259,9 @@ export function CreateAccountForm({
         </label>
       )}
       {typeNotice && !typeDenied ? (
-        <p className="text-sm text-warning">{typeNotice}</p>
+        <FreeTrialBadge message={typeNotice} />
       ) : null}
-      {quotaNotice ? (
-        <p className="text-sm text-warning">{quotaNotice}</p>
-      ) : null}
+      {quotaNotice ? <FreeTrialBadge message={quotaNotice} /> : null}
       <label className="block text-sm text-ink">
         Name
         <input
