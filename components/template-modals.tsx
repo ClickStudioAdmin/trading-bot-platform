@@ -641,42 +641,44 @@ function ApplyFromLibraryButton({
         className={deskActionBtnClass}
       >
         <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
-          Create New Bot from Template
+          Create Bot from Template
         </BotButtonLead>
       </button>
       {open ? (
         <Modal
-          title="Create New Bot from Template"
+          title="Create Bot from Template"
           onClose={() => setOpen(false)}
           wide
           sticky={
             <>
-              <p className="mt-1 text-sm text-ink-muted">
-                Tick a folder or individual templates. Creates idle or
-                disabled bots on this desk. Nothing is armed.
-              </p>
-              <div className="mt-4 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className={secondaryBtn}
-                >
-                  {result?.results?.length ? "Close" : "Cancel"}
-                </button>
-                {!result?.results?.length ? (
+              <div className="mt-1 flex items-start justify-between gap-4">
+                <p className="min-w-0 max-w-sm text-sm text-ink-muted">
+                  Tick a folder or individual templates. Creates idle or
+                  disabled bots on this desk. Nothing is armed.
+                </p>
+                <div className="flex shrink-0 gap-2">
                   <button
                     type="button"
-                    disabled={selected.length === 0 || pending}
-                    onClick={() => void onApply()}
-                    className={primaryBtn}
+                    onClick={() => setOpen(false)}
+                    className={secondaryBtn}
                   >
-                    {pending
-                      ? "Applying…"
-                      : selected.length > 1
-                        ? `Apply ${selected.length}`
-                        : "Apply"}
+                    {result?.results?.length ? "Close" : "Cancel"}
                   </button>
-                ) : null}
+                  {!result?.results?.length ? (
+                    <button
+                      type="button"
+                      disabled={selected.length === 0 || pending}
+                      onClick={() => void onApply()}
+                      className={primaryBtn}
+                    >
+                      {pending
+                        ? "Applying…"
+                        : selected.length > 1
+                          ? `Apply ${selected.length}`
+                          : "Apply"}
+                    </button>
+                  ) : null}
+                </div>
               </div>
               {result?.results && result.results.length > 0 ? (
                 <ul className="mt-3 space-y-1 text-sm">
@@ -704,7 +706,7 @@ function ApplyFromLibraryButton({
             <nav
               role="tablist"
               aria-label="Template source"
-              className="sticky top-0 z-10 -mx-5 -mt-4 mb-3 flex border-b border-line bg-surface-raised px-5"
+              className="sticky top-0 z-10 -mx-5 -mt-4 mb-6 flex border-b border-line bg-surface-raised px-5"
             >
               <PickerTabButton
                 selected={tab === "mine"}
@@ -900,44 +902,42 @@ function ScopePanel({
   onToggleTemplate: (id: string) => void;
   onToggleFolder: (ids: string[]) => void;
 }) {
-  if (scope.folders.length === 0 && scope.loose.length === 0) {
-    return (
-      <p id={id} role="tabpanel" className="text-sm text-ink-muted">
-        {empty}
-      </p>
-    );
-  }
+  const emptyList = scope.folders.length === 0 && scope.loose.length === 0;
   return (
     <div
       id={id}
       role="tabpanel"
-      className="rounded-control border border-line bg-canvas px-3 py-2"
+      className="min-h-[30rem] max-h-[30rem] overflow-y-auto rounded-control border border-line bg-canvas px-3 py-2"
     >
-      <ul className="space-y-1">
-        {scope.folders.map((folder) => (
-          <FolderNode
-            key={folder.id}
-            folder={folder}
-            nested
-            backtestsByTemplate={backtestsByTemplate}
-            selectedIds={selectedIds}
-            onToggleTemplate={onToggleTemplate}
-            onToggleFolder={onToggleFolder}
-          />
-        ))}
-        {scope.loose.map((item) => (
-          <TemplatePick
-            key={item.templateId}
-            item={item}
-            backtests={templateBacktests(
-              backtestsByTemplate,
-              item.templateId,
-            )}
-            selectedIds={selectedIds}
-            onToggleTemplate={onToggleTemplate}
-          />
-        ))}
-      </ul>
+      {emptyList ? (
+        <p className="text-sm text-ink-muted">{empty}</p>
+      ) : (
+        <ul className="space-y-1">
+          {scope.folders.map((folder) => (
+            <FolderNode
+              key={folder.id}
+              folder={folder}
+              nested
+              backtestsByTemplate={backtestsByTemplate}
+              selectedIds={selectedIds}
+              onToggleTemplate={onToggleTemplate}
+              onToggleFolder={onToggleFolder}
+            />
+          ))}
+          {scope.loose.map((item) => (
+            <TemplatePick
+              key={item.templateId}
+              item={item}
+              backtests={templateBacktests(
+                backtestsByTemplate,
+                item.templateId,
+              )}
+              selectedIds={selectedIds}
+              onToggleTemplate={onToggleTemplate}
+            />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

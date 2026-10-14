@@ -936,7 +936,7 @@ export function ThemeBotFormDraft() {
         </button>
         <button type="button" className={deskBtnClass}>
           <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
-            Create New Bot from Template
+            Create Bot from Template
           </BotButtonLead>
         </button>
         <button type="button" className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink">
