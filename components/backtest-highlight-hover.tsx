@@ -50,7 +50,7 @@ export function BacktestHighlightHover({
   );
 }
 
-function BacktestHighlightBody({
+export function BacktestHighlightBody({
   highlight,
 }: {
   highlight: BacktestLinkHighlight;

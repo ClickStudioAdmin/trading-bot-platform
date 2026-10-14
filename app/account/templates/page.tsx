@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { TemplatesLibrary } from "@/components/templates-library";
+import { memberIsAdmin } from "@/lib/admin/access";
 import { parseLibraryTab } from "@/lib/templates/library-tab";
 import { getSessionMember } from "@/lib/auth/session";
+import { inheritPlatformBacktests } from "@/lib/backtest/library";
 import { listLinkedBacktestRuns } from "@/lib/backtest/store";
 import { listTemplateBotLinks } from "@/lib/templates/desk-bots";
 import { listSharedSets, listSharedTemplates, listVisibleSets, listVisibleTemplates } from "@/lib/templates/store";
@@ -28,11 +30,15 @@ export default async function AccountTemplatesPage({
     listSharedTemplates({ userId: member.id }),
     listSharedSets({ userId: member.id }),
   ]);
-  const libraryTemplates = [...templates, ...sharedTemplates];
-  const [linkedBacktests, botLinks] = await Promise.all([
-    listLinkedBacktestRuns(templates.map((row) => row.id)),
-    listTemplateBotLinks(member.id, libraryTemplates),
+  const libraryRows = [...templates, ...sharedTemplates];
+  const [linkedRuns, botLinks] = await Promise.all([
+    listLinkedBacktestRuns(
+      libraryRows.map((row) => row.id),
+      { userId: member.id, isAdmin: memberIsAdmin(member) },
+    ),
+    listTemplateBotLinks(member.id, libraryRows),
   ]);
+  const linkedBacktests = inheritPlatformBacktests(libraryRows, linkedRuns);
 
   return (
     <TemplatesLibrary

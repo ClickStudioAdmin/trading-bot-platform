@@ -22,7 +22,8 @@ import {
   listBacktestRuns,
   loadBacktestRun,
 } from "@/lib/backtest/store";
-import { listApplyableSets } from "@/lib/templates/store";
+import { templateIsLibraryRow } from "@/lib/templates/recipe";
+import { listApplyableSets, loadTemplateById } from "@/lib/templates/store";
 
 export const metadata: Metadata = {
   title: "Replay",
@@ -72,6 +73,10 @@ export default async function AccountBacktestReplayPage({
     );
   }
   const family = await loadReplayFamily(run, member.id, isAdmin);
+  const linked = run.templateId ? await loadTemplateById(run.templateId) : null;
+  const linkedLibrary = Boolean(
+    linked && templateIsLibraryRow(linked.visibility),
+  );
   return (
     <div>
       <Breadcrumbs
@@ -88,8 +93,8 @@ export default async function AccountBacktestReplayPage({
         runIndicators={await loadReplayRunIndicators(member.id, run.id)}
         family={family.rows}
         rootId={family.rootId}
-        allowKeep={run.userId === member.id}
-        allowKeepPlatform={isAdmin}
+        allowKeep={run.userId === member.id && !linkedLibrary}
+        allowKeepPlatform={isAdmin && linked?.visibility !== "platform"}
         folders={await listApplyableSets({ userId: run.userId ?? member.id })}
         applyDesks={await loadReplayDesks(member.id, run)}
       />
