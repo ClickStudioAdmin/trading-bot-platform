@@ -8,10 +8,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import {
-  BacktestHighlightBody,
-  BacktestHighlightHover,
-} from "@/components/backtest-highlight-hover";
+import { BacktestHighlightBody } from "@/components/backtest-highlight-hover";
 import { PageHeading } from "@/components/page-heading";
 import {
   SortTh,
@@ -1227,16 +1224,13 @@ export function TemplatesLibrary({
                   </td>
                   <td className="px-4 py-3">
                     {linkedRun ? (
-                      <BacktestHighlightHover highlight={linkedRun}>
-                        <Link
-                          href={`/account/backtests/${linkedRun.runId}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-accent hover:underline"
-                        >
-                          Open
-                        </Link>
-                      </BacktestHighlightHover>
+                      <TemplateParametersButton
+                        name={row.name}
+                        description={row.description}
+                        recipe={row.recipe}
+                        templateId={row.id}
+                        trigger="backtests"
+                      />
                     ) : (
                       <span className="text-ink-faint">—</span>
                     )}

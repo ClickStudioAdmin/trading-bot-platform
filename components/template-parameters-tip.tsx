@@ -75,6 +75,7 @@ export function TemplateParametersButton({
   recipe,
   templateId = null,
   backtests = null,
+  trigger = "parameters",
   className = "",
 }: {
   name: string;
@@ -83,6 +84,8 @@ export function TemplateParametersButton({
   templateId?: string | null;
   /** When set, skip the lookup and show these runs. Null loads attached runs as soon as the button is shown. */
   backtests?: TemplateBacktestLink[] | null;
+  /** parameters: the info button opens Parameters. backtests: the flask opens the Backtests tab. */
+  trigger?: "parameters" | "backtests";
   className?: string;
 }) {
   const descriptionText = description?.trim() ?? "";
@@ -100,7 +103,7 @@ export function TemplateParametersButton({
   const headerRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const [popupTab, setPopupTab] = useState<"parameters" | "backtests">(
-    "parameters",
+    trigger === "backtests" ? "backtests" : "parameters",
   );
   const pinned = useRef(false);
   const closeTimer = useRef<number | null>(null);
@@ -255,11 +258,12 @@ export function TemplateParametersButton({
     };
   }, [open]);
 
-  if (!recipe) {
+  if (!recipe && trigger !== "backtests") {
     return null;
   }
 
   const hasBacktests = (shownBacktests?.length ?? 0) > 0;
+  const showTabs = trigger === "backtests" || hasBacktests;
 
   function showPopup(tab?: "parameters" | "backtests") {
     clearClose();
@@ -296,29 +300,53 @@ export function TemplateParametersButton({
   }
 
   const iconClass =
-    `inline-flex size-5 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink ${className}`.trim();
+    `inline-flex size-5 shrink-0 items-center justify-center rounded-control hover:bg-surface-raised ${
+      trigger === "backtests"
+        ? "text-accent hover:text-accent"
+        : "text-ink-muted hover:text-ink"
+    } ${className}`.trim();
 
   return (
     <>
       <span ref={anchorRef} className="inline-flex shrink-0 items-center">
-        <button
-          ref={buttonRef}
-          type="button"
-          data-template-parameters=""
-          aria-label={`Parameters for ${name}`}
-          aria-expanded={open}
-          aria-controls={open ? popupId : undefined}
-          onMouseEnter={() => showPopup("parameters")}
-          onMouseLeave={scheduleClose}
-          onFocus={() => showPopup("parameters")}
-          onBlur={scheduleClose}
-          onMouseDown={(event) => event.stopPropagation()}
-          onClick={(event) => onClick("parameters", event)}
-          className={iconClass}
-        >
-          <IconInfo size={14} className="size-3.5" />
-        </button>
-        {hasBacktests ? (
+        {trigger === "backtests" ? (
+          <button
+            ref={buttonRef}
+            type="button"
+            data-template-parameters=""
+            aria-label={`Backtests for ${name}`}
+            aria-expanded={open}
+            aria-controls={open ? popupId : undefined}
+            onMouseEnter={() => showPopup("backtests")}
+            onMouseLeave={scheduleClose}
+            onFocus={() => showPopup("backtests")}
+            onBlur={scheduleClose}
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => onClick("backtests", event)}
+            className={iconClass}
+          >
+            <IconBacktest size={14} className="size-3.5" />
+          </button>
+        ) : (
+          <button
+            ref={buttonRef}
+            type="button"
+            data-template-parameters=""
+            aria-label={`Parameters for ${name}`}
+            aria-expanded={open}
+            aria-controls={open ? popupId : undefined}
+            onMouseEnter={() => showPopup("parameters")}
+            onMouseLeave={scheduleClose}
+            onFocus={() => showPopup("parameters")}
+            onBlur={scheduleClose}
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => onClick("parameters", event)}
+            className={iconClass}
+          >
+            <IconInfo size={14} className="size-3.5" />
+          </button>
+        )}
+        {trigger === "parameters" && hasBacktests ? (
           <span
             role="img"
             data-template-parameters=""
@@ -368,7 +396,7 @@ export function TemplateParametersButton({
               }}
             >
               <div ref={headerRef} className="shrink-0 pb-3">
-                {hasBacktests ? (
+                {showTabs ? (
                   <nav
                     role="tablist"
                     aria-label={`${name} details`}
@@ -401,34 +429,40 @@ export function TemplateParametersButton({
                 className="min-h-0 overflow-y-auto"
                 style={{ maxHeight: box?.bodyMax ?? POPUP_MAX_HEIGHT }}
               >
-                {popupTab === "backtests" && hasBacktests ? (
-                  <ul className="space-y-2">
-                    {shownBacktests?.map((run) => (
-                      <li key={run.runId}>
-                        <a
-                          href={`/account/backtests/${run.runId}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          data-template-parameters=""
-                          onMouseDown={(event) => event.stopPropagation()}
-                          onClick={(event) => event.stopPropagation()}
-                          className="block rounded-control border border-line bg-surface-raised px-3 py-2 text-ink"
-                        >
-                          <span className="mb-2 block text-sm font-medium text-accent">
-                            {run.name}
-                          </span>
-                          {run.highlight ? (
-                            <BacktestHighlightBody highlight={run.highlight} />
-                          ) : (
-                            <span className="text-xs tabular-nums text-ink-muted">
-                              {formatAuDateUtc(run.fromMs)} –{" "}
-                              {formatAuDateUtc(run.toMs)}
+                {popupTab === "backtests" && showTabs ? (
+                  shownBacktests == null ? (
+                    <p className="text-sm text-ink-muted">Loading backtests…</p>
+                  ) : hasBacktests ? (
+                    <ul className="space-y-2">
+                      {shownBacktests.map((run) => (
+                        <li key={run.runId}>
+                          <a
+                            href={`/account/backtests/${run.runId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            data-template-parameters=""
+                            onMouseDown={(event) => event.stopPropagation()}
+                            onClick={(event) => event.stopPropagation()}
+                            className="block rounded-control border border-line bg-surface-raised px-3 py-2 text-ink"
+                          >
+                            <span className="mb-2 block text-sm font-medium text-accent">
+                              {run.name}
                             </span>
-                          )}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
+                            {run.highlight ? (
+                              <BacktestHighlightBody highlight={run.highlight} />
+                            ) : (
+                              <span className="text-xs tabular-nums text-ink-muted">
+                                {formatAuDateUtc(run.fromMs)} –{" "}
+                                {formatAuDateUtc(run.toMs)}
+                              </span>
+                            )}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-ink-muted">No backtests attached.</p>
+                  )
                 ) : sections.length > 0 ? (
                   <BacktestParameterSections sections={sections} />
                 ) : (
