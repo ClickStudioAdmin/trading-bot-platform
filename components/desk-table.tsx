@@ -363,6 +363,7 @@ function DeskRow({
             accountId={account.id}
             accountName={account.name}
             kind={deskDisableBotKind(account)}
+            disabled={row.status === "inactive"}
           />
           <AccountDeleteControl
             accountId={account.id}
