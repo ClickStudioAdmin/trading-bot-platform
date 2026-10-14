@@ -26,6 +26,7 @@ import {
   listExchangeConnections,
 } from "@/lib/exchanges/store";
 import { writeEventLog } from "@/lib/logs/write";
+import { loadDeskTypeAccess } from "@/lib/membership/load-desk-type-access";
 import { startAppliedStarterBot } from "@/lib/onboarding/arm";
 import { listOnboardingFolders } from "@/lib/onboarding/catalog";
 import {
@@ -276,6 +277,7 @@ async function materializeSetup(
   const boundConnectionIds = binds
     .filter((bind) => !ownedIds.has(bind.accountId))
     .map((bind) => bind.connectionId);
+  const deskTypes = await loadDeskTypeAccess(userId);
   const ready = validateSetupForFinish({
     draft,
     existingNames: accounts
@@ -284,6 +286,11 @@ async function materializeSetup(
     blocks: [],
     folders,
     boundConnectionIds,
+    denied: deskTypes.flatMap((row) =>
+      row.allowed || !row.message
+        ? []
+        : [{ deskType: row.deskType, message: row.message }],
+    ),
   });
   if (!ready.ok) {
     await saveOnboardingDraft(userId, draft);

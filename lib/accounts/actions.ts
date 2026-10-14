@@ -24,6 +24,8 @@ import {
   parseStoredVenueEnvironment,
 } from "@/lib/exchanges/venues";
 import { writeEventLog } from "@/lib/logs/write";
+import { deniedDeskTypeMessage } from "@/lib/membership/entitlements";
+import { loadDeskTypeAccess } from "@/lib/membership/load-desk-type-access";
 import { listOnboardingFolders } from "@/lib/onboarding/catalog";
 import { starterTemplateAllowed } from "@/lib/onboarding/model";
 import { skipOnboardingForExternalDesk } from "@/lib/onboarding/store";
@@ -121,6 +123,13 @@ export async function createTradingAccount(formData: FormData) {
     return fail(createdChoice.error);
   }
   const choice = createdChoice.value;
+  const typeDenied = deniedDeskTypeMessage(
+    await loadDeskTypeAccess(member.id),
+    choice.deskType,
+  );
+  if (typeDenied) {
+    return fail(typeDenied);
+  }
   let connectionId: string | null = null;
   let venueEnvironment = choice.venueEnvironment;
   if (choice.mode === "live") {

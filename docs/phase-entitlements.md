@@ -8,7 +8,7 @@ Never trust the browser for entitlements, verification, 2FA, or admin permission
 
 ## Status
 
-**V1 item 1 (identity) accepted 17 Sep 2026:** verify on signup + forgot password + unverified wall. **V1 item 2 (2FA) accepted 17 Sep 2026:** Google Authenticator enroll + sign-in. **V1 item 3 accepted 21 Sep 2026.** Item 4 (account blotter lists) is current. Onboarding is V1 item 5 and Click is building that now. The gate map below was scoped **9 Oct 2026**. Stop. Do not start gates (V1 item 6) until Click says go.
+**V1 item 1 (identity) accepted 17 Sep 2026:** verify on signup + forgot password + unverified wall. **V1 item 2 (2FA) accepted 17 Sep 2026:** Google Authenticator enroll + sign-in. **V1 item 3 accepted 21 Sep 2026.** Item 4 (account blotter lists) is current. Onboarding is V1 item 5 and Click is building that now. The gate map below was scoped **9 Oct 2026**. Click started 6a one row at a time on **14 Oct 2026**. Desk types are the first row. Do not start the next row until Click asks.
 
 ## Purpose
 
@@ -157,7 +157,7 @@ Setup finish in `lib/onboarding/actions.ts` writes desks with `insertTradingAcco
 
 | Plan row | Reject when | Also disable |
 | --- | --- | --- |
-| Desk type tick (`desk_perps`, `desk_perps_bots`, `desk_dca`, `desk_cash_and_carry`, `desk_signal_follower`) | `createTradingAccount` and `createCopyDeskAction` for that type | Type choice on `/account/desks/new` and the copy-desk type choice. Page stays. |
+| Desk type tick (`desk_perps`, `desk_perps_bots`, `desk_dca`, `desk_cash_and_carry`, `desk_signal_follower`) | `createTradingAccount`, `createCopyDeskAction`, and setup finish for that type | Type choice in the setup wizard, on `/account/desks/new`, the sidenav create control, and Manage Desks. Copy stays visible and disables. Page stays. |
 | Paper Trading `max_paper_desks` | New paper desk, including a paper copy desk, when the login already has that many paper desks | Paper choice on create. |
 | Exchange Connected - Demo `max_demo_desks` | New demo/testnet desk, or a bind that makes a desk demo, when already at the cap | Demo track on create. |
 | Exchange Connected - Live `max_live_env_desks` | New live-environment desk, or a bind that makes a desk live, when already at the cap | Live track on create. |
@@ -179,6 +179,8 @@ Setup finish in `lib/onboarding/actions.ts` writes desks with `insertTradingAcco
 | Add Additional Chart Indicators `replay_chart_indicators` | Saving extra replay chart indicators (`replay-chart-bar` add). Indicators the recipe already uses stay | Add indicator. |
 | Strategy Optimization `replay_strategy_optimization` | Any member control that queues a replay variant or Modify run | That control, if it is already on the page. Do not build the parked optimizer ([phase-backtest-optimize.md](phase-backtest-optimize.md)). |
 | Deduct Plan Payment from Earnings `affiliate_pay_subscription` | Turning the Billing opt-in on. Collection already refuses the transfer when the tick is off | The opt-in. |
+
+Desk types are the first row, started 14 Oct 2026. A type the plan does not include stays visible and disables. The line is “DCA desks are not allowed on your plan. Upgrade to Plus to enable it.” The plan name is the cheapest public plan with that tick. A private plan is never named. If no public plan includes it, the line stops after “your plan.” An open trial keeps the type enabled: “DCA is in a free trial until {date}.” After the trial, a new desk of that type rejects with “Your free trial of DCA ended on {date}.” Desks already created stay. “Add a Paper Trading desk for each strategy type” adds only allowed types. A desk-type trial clock also starts the first time this gate loads, so setup can show the end date. Other trials still start on Billing & Account or Plans.
 
 Webhook deliveries and already-running bots are left alone in 6a. New creates reject. Cutting off a feature the member is already using is **6b**, after grace. Turning 6a on will reject **new** uses for anyone whose current plan does not include that row (seed Free has Live, copy, backtest, and webhooks off).
 

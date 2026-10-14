@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { DeskTypeAccessProvider } from "@/components/desk-type-access";
 import { PlatformTour } from "@/components/platform-tour";
 import { SetupGate } from "@/components/setup-gate";
 import { SetupModalFallback } from "@/components/setup-modal";
@@ -36,18 +37,22 @@ import {
   loadAdminNotificationChrome,
   loadMemberNotificationChrome,
 } from "@/lib/notifications/badges";
+import { loadDeskTypeAccess } from "@/lib/membership/load-desk-type-access";
 import { loadPlatformBrand } from "@/lib/platform/brand";
 
 export async function AppFrame({ children }: { children: React.ReactNode }) {
   const member = await getSessionMember();
-  const [desks, onboarding] = member
+  const [desks, onboarding, deskTypeAccess] = member
     ? await Promise.all([
         listTradingAccounts(member.id),
         member.emailVerifiedAt && member.platformMember
           ? loadMemberOnboarding(member.id)
           : Promise.resolve(null),
+        member.emailVerifiedAt && member.platformMember
+          ? loadDeskTypeAccess(member.id)
+          : Promise.resolve([]),
       ])
-    : [[], null];
+    : [[], null, []];
   const verified = Boolean(member?.emailVerifiedAt);
   const admin = verified && member ? await getAdminUser() : null;
   const autoTick = admin ? await loadAutoTickEnabled() : false;
@@ -82,6 +87,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
 
   return (
     <UiPreferencesProvider chrome={chromeScheme} content={contentScheme}>
+      <DeskTypeAccessProvider access={deskTypeAccess}>
       <div
         inert={needsSetup ? true : undefined}
         className={needsSetup ? "h-dvh overflow-hidden" : undefined}
@@ -140,6 +146,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
           />
         </Suspense>
       ) : null}
+      </DeskTypeAccessProvider>
     </UiPreferencesProvider>
   );
 }

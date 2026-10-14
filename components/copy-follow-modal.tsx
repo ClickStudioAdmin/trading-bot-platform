@@ -21,6 +21,8 @@ import {
 import { connectionFitsDesk, getVenue } from "@/lib/exchanges/venues";
 import type { DeskType } from "@/lib/accounts/model";
 import { AppSelect } from "@/components/app-select";
+import { useDeskTypeAccess } from "@/components/desk-type-access";
+import { deskTypeAccessFor } from "@/lib/membership/entitlements";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { IconCopyTrading } from "@/components/icons";
 
@@ -49,12 +51,34 @@ export function CopyFollowButton({
   className?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const access = useDeskTypeAccess();
+  const typeRow = deskTypeAccessFor(access, deskType);
+  const typeDenied =
+    access.length > 0 && typeRow && !typeRow.allowed ? typeRow.message : null;
 
   if (following) {
     return (
       <p className="whitespace-nowrap rounded-control border border-line px-4 py-2 text-center text-sm text-ink-muted">
         Following
       </p>
+    );
+  }
+
+  if (typeDenied) {
+    return (
+      <div>
+        <button
+          type="button"
+          disabled
+          title={typeDenied}
+          className={`inline-flex cursor-not-allowed items-center justify-center gap-2 opacity-40 ${className}`}
+        >
+          <BotButtonLead icon={<IconCopyTrading {...botBtnIcon} />}>
+            Copy
+          </BotButtonLead>
+        </button>
+        <p className="mt-2 text-sm text-ink-muted">{typeDenied}</p>
+      </div>
     );
   }
 

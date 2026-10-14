@@ -29,6 +29,8 @@ import { parseBoundConnectionId } from "@/lib/exchanges/connections";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { writeEventLog } from "@/lib/logs/write";
+import { deniedDeskTypeMessage } from "@/lib/membership/entitlements";
+import { loadDeskTypeAccess } from "@/lib/membership/load-desk-type-access";
 import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { deskActionError, deskActionOk } from "@/lib/ui/desk-action";
@@ -417,6 +419,13 @@ export async function createCopyDeskAction(formData: FormData) {
   const parent = await loadTradingAccountById(parentId);
   if (!parent) {
     return fail("That desk was not found.");
+  }
+  const typeDenied = deniedDeskTypeMessage(
+    await loadDeskTypeAccess(member.id),
+    parent.deskType,
+  );
+  if (typeDenied) {
+    return fail(typeDenied);
   }
   const desks = await listTradingAccounts(member.id);
   const alreadyCopying = desks.some((desk) => desk.copyOfAccountId === parent.id);

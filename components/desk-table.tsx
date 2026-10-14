@@ -7,6 +7,7 @@ import { AccountDisableControl } from "@/components/account-disable-control";
 import { AccountRenameControl } from "@/components/account-rename-control";
 import { AppSelect } from "@/components/app-select";
 import { DeskTypeMark } from "@/components/desk-mark";
+import { useDeskTypeAccess } from "@/components/desk-type-access";
 import { IconFilterClear, IconPlus } from "@/components/icons";
 import {
   SortTh,
@@ -28,6 +29,7 @@ import {
   TableLabelButton,
 } from "@/components/table-actions";
 import { deskDisableBotKind } from "@/lib/accounts/disable-desk";
+import { deskTypeAccessFor } from "@/lib/membership/entitlements";
 import {
   buildDeskListRow,
   compareDeskList,
@@ -47,6 +49,7 @@ import {
   formatDeskType,
   otherDeskNames,
   pickDefaultAccount,
+  type DeskType,
   type TradingAccount,
 } from "@/lib/accounts/model";
 import type { AccountUsage } from "@/lib/accounts/store";
@@ -436,19 +439,53 @@ function CreateDeskMenu() {
           className="absolute right-0 z-20 mt-2 w-64 rounded-card border border-line bg-surface p-1"
         >
           {DESK_LIST_TYPES.map((type) => (
-            <Link
+            <CreateDeskTypeItem
               key={type}
-              role="menuitem"
-              href={createDeskPath(type)}
-              className="flex items-center gap-2 rounded-control px-2 py-1.5 text-sm text-ink hover:bg-surface-raised"
-              onClick={() => setOpen(false)}
-            >
-              <DeskTypeMark deskType={type} />
-              {formatDeskType(type)}
-            </Link>
+              deskType={type}
+              onPick={() => setOpen(false)}
+            />
           ))}
         </div>
       ) : null}
     </div>
+  );
+}
+
+function CreateDeskTypeItem({
+  deskType,
+  onPick,
+}: {
+  deskType: DeskType;
+  onPick: () => void;
+}) {
+  const access = useDeskTypeAccess();
+  const row = deskTypeAccessFor(access, deskType);
+  const denied = access.length > 0 && row && !row.allowed ? row.message : null;
+  if (denied) {
+    return (
+      <button
+        type="button"
+        role="menuitem"
+        disabled
+        title={denied}
+        aria-label={denied}
+        className="flex w-full cursor-not-allowed items-center gap-2 rounded-control px-2 py-1.5 text-left text-sm text-ink opacity-40"
+      >
+        <DeskTypeMark deskType={deskType} />
+        {formatDeskType(deskType)}
+      </button>
+    );
+  }
+  return (
+    <Link
+      role="menuitem"
+      href={createDeskPath(deskType)}
+      title={row?.message ?? undefined}
+      className="flex items-center gap-2 rounded-control px-2 py-1.5 text-sm text-ink hover:bg-surface-raised"
+      onClick={onPick}
+    >
+      <DeskTypeMark deskType={deskType} />
+      {formatDeskType(deskType)}
+    </Link>
   );
 }

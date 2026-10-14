@@ -40,6 +40,7 @@ export async function ensureMemberTrialGrants(input: {
   userId: string;
   plan: TrialPlan;
   nowMs?: number;
+  keys?: readonly string[];
 }): Promise<
   | { ok: true; grants: MemberTrialGrant[]; nowMs: number }
   | { ok: false; error: string }
@@ -49,8 +50,11 @@ export async function ensureMemberTrialGrants(input: {
     return loaded;
   }
   const nowMs = input.nowMs ?? Date.now();
+  const keys = input.keys ? new Set(input.keys) : null;
   const missing = missingTrialGrants({
-    offers: planTrialOffers(input.plan),
+    offers: planTrialOffers(input.plan).filter((offer) =>
+      keys ? keys.has(offer.key) : true,
+    ),
     existing: loaded.grants,
     nowMs,
   });

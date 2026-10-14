@@ -32,6 +32,8 @@ import {
 } from "@/lib/exchanges/venues";
 import { SharedKeyWarning } from "@/components/shared-key-warning";
 import { AppSelect } from "@/components/app-select";
+import { useDeskTypeAccess } from "@/components/desk-type-access";
+import { deskTypeAccessFor } from "@/lib/membership/entitlements";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -69,6 +71,8 @@ export function CreateAccountForm({
   onCancel?: () => void;
   starterFolders?: StarterFolder[];
 }) {
+  const deskTypeAccess = useDeskTypeAccess();
+  const deskTypesGated = deskTypeAccess.length > 0;
   const [deskType, setDeskType] = useState<DeskType>(
     initialDeskType ?? "cash_and_carry",
   );
@@ -115,9 +119,12 @@ export function CreateAccountForm({
   const nameCheck = validateNewDeskName(name, existingNames);
   const nameError =
     name.trim().length > 0 && !nameCheck.ok ? nameCheck.error : null;
+  const typeRow = deskTypeAccessFor(deskTypeAccess, deskType);
+  const typeDenied = deskTypesGated && typeRow ? !typeRow.allowed : false;
+  const typeNotice = deskTypesGated ? typeRow?.message ?? null : null;
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
-    if (!nameCheck.ok) {
+    if (!nameCheck.ok || typeDenied) {
       event.preventDefault();
     }
   }
@@ -176,6 +183,10 @@ export function CreateAccountForm({
             value={deskType}
             onChange={(event) => {
               const nextType = event.target.value as DeskType;
+              const nextRow = deskTypeAccessFor(deskTypeAccess, nextType);
+              if (deskTypesGated && nextRow && !nextRow.allowed) {
+                return;
+              }
               setDeskType(nextType);
               setConnectionId("");
               setAddStarter(false);
@@ -187,14 +198,25 @@ export function CreateAccountForm({
             }}
             className={fieldClass}
           >
-            {DESK_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {formatDeskTypeChoice(type)}
-              </option>
-            ))}
+            {DESK_TYPES.map((type) => {
+              const row = deskTypeAccessFor(deskTypeAccess, type);
+              const off = deskTypesGated && row ? !row.allowed : false;
+              return (
+                <option key={type} value={type} disabled={off}>
+                  {formatDeskTypeChoice(type)}
+                </option>
+              );
+            })}
           </AppSelect>
         </label>
       )}
+      {typeNotice ? (
+        <p
+          className={`text-sm ${typeDenied ? "text-ink-muted" : "text-warning"}`}
+        >
+          {typeNotice}
+        </p>
+      ) : null}
       <label className="block text-sm text-ink">
         Name
         <input
@@ -338,7 +360,8 @@ export function CreateAccountForm({
       <div className="flex flex-wrap items-center gap-2">
         <PendingSubmitButton
           pendingLabel="Creating…"
-          disabled={!nameCheck.ok}
+          disabled={!nameCheck.ok || typeDenied}
+          title={typeDenied ? typeNotice ?? undefined : undefined}
           className="inline-flex items-center gap-2 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
         >
           <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
