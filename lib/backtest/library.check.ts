@@ -9,6 +9,7 @@ import {
   toSavedBacktestMatch,
   findMatchingBacktestTemplate,
   groupBacktestLibrary,
+  attachedTemplateName,
   inheritPlatformBacktests,
   matchingPlatformTemplateIds,
   parseBacktestRecipeJson,
@@ -454,6 +455,56 @@ assert.deepEqual(filled.user, [{ runId: "platform-run" }]);
 assert.deepEqual(
   matchingPlatformTemplateIds(sameBot, ["user", "other"]),
   ["platform"],
+);
+
+assert.equal(
+  attachedTemplateName(
+    { name: "DCA Test", visibility: "user", userId: "owner" },
+    { userId: "owner", isAdmin: false, shared: false },
+  ),
+  "DCA Test",
+);
+assert.equal(
+  attachedTemplateName(
+    { name: "  Platform grid  ", visibility: "platform", userId: null },
+    { userId: "member", isAdmin: false, shared: false },
+  ),
+  "Platform grid",
+);
+assert.equal(
+  attachedTemplateName(
+    { name: "Private", visibility: "user", userId: "owner" },
+    { userId: "member", isAdmin: false, shared: false },
+  ),
+  null,
+);
+assert.equal(
+  attachedTemplateName(
+    { name: "Private", visibility: "user", userId: "owner" },
+    { userId: "member", isAdmin: false, shared: true },
+  ),
+  "Private",
+);
+assert.equal(
+  attachedTemplateName(
+    { name: "Private", visibility: "user", userId: "owner" },
+    { userId: "member", isAdmin: true, shared: false },
+  ),
+  "Private",
+);
+assert.equal(
+  attachedTemplateName(
+    { name: "Snapshot", visibility: "backtested", userId: null },
+    { userId: "member", isAdmin: false, shared: false },
+  ),
+  "Snapshot",
+);
+assert.equal(
+  attachedTemplateName(
+    { name: "   ", visibility: "platform", userId: null },
+    { userId: "member", isAdmin: true, shared: false },
+  ),
+  null,
 );
 
 console.log("backtest library checks passed");

@@ -218,6 +218,7 @@ export function BacktestRunDetail({
   returnTo,
   comparables = [],
   comparablePrimary = null,
+  templates = {},
 }: {
   run: BacktestRun;
   listHref: string;
@@ -237,6 +238,7 @@ export function BacktestRunDetail({
   returnTo: string;
   comparables?: BacktestRun[];
   comparablePrimary?: BacktestRun | null;
+  templates?: Record<string, string>;
 }) {
   const params = backtestListedSections(run.recipe, {
     name: backtestRunTitle(run),
@@ -385,6 +387,7 @@ export function BacktestRunDetail({
           isAdmin={isAdmin}
           returnTo={`${listHref}/${run.id}`}
           watchRunId={run.id}
+          templates={templates}
         />
       ) : null}
       </div>
@@ -399,6 +402,7 @@ function BacktestFamilyTables({
   isAdmin,
   returnTo,
   watchRunId,
+  templates,
 }: {
   primary: BacktestRun;
   related: BacktestRun[];
@@ -406,6 +410,7 @@ function BacktestFamilyTables({
   isAdmin: boolean;
   returnTo: string;
   watchRunId: string;
+  templates: Record<string, string>;
 }) {
   const family = splitBacktestFamily(primary, related);
   return (
@@ -424,6 +429,7 @@ function BacktestFamilyTables({
             primaryBadge="Primary Pair"
             returnTo={returnTo}
             watchRunId={watchRunId}
+            templates={templates}
           />
         </section>
       ) : null}
@@ -444,6 +450,7 @@ function BacktestFamilyTables({
             titleMode="recipe"
             returnTo={returnTo}
             watchRunId={watchRunId}
+            templates={templates}
           />
         </section>
       ) : null}

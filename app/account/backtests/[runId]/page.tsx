@@ -20,6 +20,7 @@ import {
 } from "@/lib/backtest/model";
 import {
   canReadBacktestRun,
+  listAttachedTemplateNames,
   listBacktestRuns,
   loadBacktestRun,
 } from "@/lib/backtest/store";
@@ -115,6 +116,14 @@ export default async function AccountBacktestDetailPage({
     )
     .map((desk) => ({ id: desk.id, name: desk.name }));
   const comparableFamily = await loadComparableFamily(run, member.id, isAdmin);
+  const templateNames = await listAttachedTemplateNames(
+    [
+      comparableFamily?.primary.templateId,
+      ...(comparableFamily?.children ?? []).map((row) => row.templateId),
+    ],
+    member.id,
+    isAdmin,
+  );
 
   return (
     <BacktestRunDetail
@@ -138,6 +147,7 @@ export default async function AccountBacktestDetailPage({
       returnTo={backtestSavedListHref()}
       comparablePrimary={comparableFamily?.primary ?? null}
       comparables={comparableFamily?.children ?? []}
+      templates={templateNames}
     />
   );
 }

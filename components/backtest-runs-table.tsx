@@ -139,11 +139,41 @@ function runApr(row: BacktestRun): number | null {
     : null;
 }
 
+function attachedTemplateLabel(
+  row: BacktestRun,
+  templates: Record<string, string>,
+): string | null {
+  const id = row.templateId?.trim();
+  if (!id) {
+    return null;
+  }
+  const name = templates[id]?.trim();
+  return name || null;
+}
+
+function compareTemplateNames(
+  left: string | null,
+  right: string | null,
+  dir: TableSortDir,
+): number {
+  if (!left && !right) {
+    return 0;
+  }
+  if (!left) {
+    return 1;
+  }
+  if (!right) {
+    return -1;
+  }
+  return compareTableText(left, right, dir);
+}
+
 function compareBacktestRun(
   left: BacktestRun,
   right: BacktestRun,
   key: string,
   dir: TableSortDir,
+  templates: Record<string, string>,
 ): number {
   if (key === "name") {
     return compareTableText(backtestRunTitle(left), backtestRunTitle(right), dir);
@@ -154,10 +184,10 @@ function compareBacktestRun(
   if (key === "contract") {
     return compareTableText(left.symbol, right.symbol, dir);
   }
-  if (key === "comps") {
-    return compareTableNum(
-      (left.comparableSymbols ?? []).length,
-      (right.comparableSymbols ?? []).length,
+  if (key === "template") {
+    return compareTemplateNames(
+      attachedTemplateLabel(left, templates),
+      attachedTemplateLabel(right, templates),
       dir,
     );
   }
@@ -198,6 +228,7 @@ export function BacktestRunsTable({
   empty = "No runs yet.",
   createHref,
   nestChildren = false,
+  templates = {},
 }: {
   runs: BacktestRun[];
   memberId: string;
@@ -213,6 +244,8 @@ export function BacktestRunsTable({
   createHref?: string;
   /** Saved list. Comparables and variations render under the parent. */
   nestChildren?: boolean;
+  /** Library template names keyed by `template_id`. Missing ids render as an em dash. */
+  templates?: Record<string, string>;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -236,6 +269,7 @@ export function BacktestRunsTable({
       }
       const hay = [
         backtestListTitle(row, titleMode),
+        attachedTemplateLabel(row, templates) ?? "",
         row.symbol,
         row.deskType === "dca" ? "dca" : "perps",
         row.status,
@@ -244,7 +278,7 @@ export function BacktestRunsTable({
         .toLowerCase();
       return hay.includes(needle);
     },
-    [query, status, titleMode],
+    [query, status, templates, titleMode],
   );
   const filteredFamilies = useMemo(() => {
     if (!nestChildren) {
@@ -293,9 +327,9 @@ export function BacktestRunsTable({
           dir,
         );
       }
-      return compareBacktestRun(left, right, key, dir);
+      return compareBacktestRun(left, right, key, dir, templates);
     },
-    [titleMode],
+    [templates, titleMode],
   );
   const compareList = useCallback(
     (
@@ -556,10 +590,10 @@ export function BacktestRunsTable({
                 onSort={() => table.onSort("contract")}
               />
               <SortTh
-                label="Comps"
-                active={table.sortKey === "comps"}
+                label="Template"
+                active={table.sortKey === "template"}
                 dir={table.sortDir}
-                onSort={() => table.onSort("comps")}
+                onSort={() => table.onSort("template")}
               />
               <SortTh
                 label="Days"
@@ -636,6 +670,7 @@ export function BacktestRunsTable({
                         : undefined
                     }
                     titleMode={titleMode}
+                    templateName={attachedTemplateLabel(entry.run, templates)}
                     returnTo={returnTo}
                     selected={selected.has(entry.run.id)}
                     onToggle={() => toggleRow(entry.run.id)}
@@ -662,6 +697,7 @@ function BacktestRunRow({
   familyExpanded,
   onToggleFamily,
   titleMode,
+  templateName,
   returnTo,
   selected,
   onToggle,
@@ -678,6 +714,7 @@ function BacktestRunRow({
   familyExpanded: boolean | null;
   onToggleFamily?: () => void;
   titleMode: "family" | "recipe";
+  templateName: string | null;
   returnTo: string;
   selected: boolean;
   onToggle: () => void;
@@ -808,10 +845,12 @@ function BacktestRunRow({
         {row.deskType === "dca" ? "DCA" : "Perps"}
       </td>
       <td className="px-4 py-3 font-medium tabular-nums">{row.symbol}</td>
-      <td className="px-4 py-3 text-ink-muted">
-        {(row.comparableSymbols ?? []).length > 0
-          ? `+${row.comparableSymbols.length}`
-          : "—"}
+      <td className="px-4 py-3">
+        {templateName ? (
+          <span className="text-ink">{templateName}</span>
+        ) : (
+          <span className="text-ink-faint">—</span>
+        )}
       </td>
       <td className="px-4 py-3 tabular-nums text-ink-muted">
         {days != null ? formatCount(days) : "—"}

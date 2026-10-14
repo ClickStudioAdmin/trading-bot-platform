@@ -531,3 +531,21 @@ export function decideBacktestTemplateActions(input: {
 }
 
 export { recipeParamRows } from "@/lib/backtest/param-sections";
+
+/** The saved-list Template column. Attachment is `template_id`, not the template they loaded from. */
+export function attachedTemplateName(
+  template: { name: string; visibility: string; userId: string | null },
+  viewer: { userId: string; isAdmin: boolean; shared: boolean },
+): string | null {
+  const name = template.name.trim();
+  if (!name) {
+    return null;
+  }
+  const visible =
+    viewer.isAdmin ||
+    template.visibility === "platform" ||
+    template.userId === viewer.userId ||
+    (template.visibility === "backtested" && template.userId == null) ||
+    viewer.shared;
+  return visible ? name : null;
+}
