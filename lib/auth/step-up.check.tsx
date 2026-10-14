@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   StepUpCodeField,
@@ -48,31 +47,25 @@ assert.equal(traderAliasNeedsStepUp("Click", "click"), true);
 assert.equal(traderAliasNeedsStepUp("Click", "Click Desk"), true);
 
 const hidden = renderToStaticMarkup(
-  createElement(
-    TotpStepUpProvider,
-    { enabled: false },
-    createElement(StepUpCodeField),
-  ),
+  <TotpStepUpProvider enabled={false}>
+    <StepUpCodeField />
+  </TotpStepUpProvider>,
 );
 assert.equal(hidden, "");
 
 const shown = renderToStaticMarkup(
-  createElement(
-    TotpStepUpProvider,
-    { enabled: true },
-    createElement(StepUpCodeField),
-  ),
+  <TotpStepUpProvider enabled>
+    <StepUpCodeField />
+  </TotpStepUpProvider>,
 );
 assert.match(shown, new RegExp(`name="${STEP_UP_FIELD}"`));
 assert.match(shown, /required/);
 assert.match(shown, /Authenticator code/);
 
 const optional = renderToStaticMarkup(
-  createElement(
-    TotpStepUpProvider,
-    { enabled: true },
-    createElement(StepUpCodeField, { required: false }),
-  ),
+  <TotpStepUpProvider enabled>
+    <StepUpCodeField required={false} />
+  </TotpStepUpProvider>,
 );
 assert.doesNotMatch(optional, /required/);
 
