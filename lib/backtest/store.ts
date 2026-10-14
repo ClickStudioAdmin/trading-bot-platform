@@ -2,9 +2,14 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { parseDcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import {
+  attachedTemplateName,
   inheritPlatformBacktests,
   matchingPlatformTemplateIds,
 } from "@/lib/backtest/library";
+import {
+  listSharedTemplates,
+  loadTemplatesByIds,
+} from "@/lib/templates/store";
 import {
   isTemplateDeskType,
   parseTemplateRecipe,
@@ -945,4 +950,45 @@ export async function claimQueuedBacktestRun(input?: {
     return null;
   }
   return parseBacktestRunRow(claimed as Record<string, unknown>);
+}
+
+/** Names for the saved-list Template column. Hidden templates and missing rows are omitted. */
+export async function listAttachedTemplateNames(
+  templateIds: Array<string | null | undefined>,
+  userId: string,
+  isAdmin: boolean,
+): Promise<Record<string, string>> {
+  const ids = [
+    ...new Set(
+      templateIds.map((id) => id?.trim() ?? "").filter((id) => id.length > 0),
+    ),
+  ];
+  if (ids.length === 0) {
+    return {};
+  }
+  const templates = await loadTemplatesByIds(ids);
+  const needsShare = templates.some(
+    (row) =>
+      attachedTemplateName(row, { userId, isAdmin, shared: false }) == null &&
+      row.name.trim().length > 0,
+  );
+  const sharedIds = new Set<string>();
+  if (needsShare) {
+    const shared = await listSharedTemplates({ userId });
+    for (const row of shared) {
+      sharedIds.add(row.id);
+    }
+  }
+  const names: Record<string, string> = {};
+  for (const row of templates) {
+    const name = attachedTemplateName(row, {
+      userId,
+      isAdmin,
+      shared: sharedIds.has(row.id),
+    });
+    if (name) {
+      names[row.id] = name;
+    }
+  }
+  return names;
 }

@@ -11,7 +11,10 @@ import {
   backtestNewHref,
   backtestSavedListHref,
 } from "@/lib/backtest/model";
-import { listBacktestRuns } from "@/lib/backtest/store";
+import {
+  listAttachedTemplateNames,
+  listBacktestRuns,
+} from "@/lib/backtest/store";
 import { firstSearchValue } from "@/lib/paper/open";
 
 export const metadata: Metadata = {
@@ -62,6 +65,16 @@ export default async function AccountBacktestsPage({
   } catch {
     runs = [];
   }
+  let templates: Record<string, string> = {};
+  try {
+    templates = await listAttachedTemplateNames(
+      runs.map((row) => row.templateId),
+      member.id,
+      isAdmin,
+    );
+  } catch {
+    templates = {};
+  }
 
   const pendingRun =
     runs.find((row) => row.status === "queued") ??
@@ -80,6 +93,7 @@ export default async function AccountBacktestsPage({
         returnTo={backtestSavedListHref()}
         createHref={backtestNewHref()}
         nestChildren
+        templates={templates}
         empty="No backtests yet. Create one to replay a desk bot or a library template."
       />
     </main>
