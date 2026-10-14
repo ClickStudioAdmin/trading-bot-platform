@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
+import { FreeTrialBadges } from "@/components/plan-trial-hint";
 import { IconPlay } from "@/components/icons";
 import {
   replayClickDenial,
@@ -53,13 +54,10 @@ export function ResearchTrialLines({ lines }: { lines: readonly string[] }) {
     return null;
   }
   return (
-    <div className="mb-3 space-y-1">
-      {lines.map((line) => (
-        <p key={line} className="text-sm text-warning">
-          {line}
-        </p>
-      ))}
-    </div>
+    <FreeTrialBadges
+      messages={lines}
+      className="mb-3 flex flex-wrap items-center gap-2"
+    />
   );
 }
 
@@ -72,10 +70,6 @@ export function ResearchReplayButton({ href }: { href: string }) {
     const backtest = researchTrialLine(gate.backtest);
     if (backtest) {
       lines.push(backtest);
-    }
-    const replay = researchTrialLine(gate.replay);
-    if (replay) {
-      lines.push(replay);
     }
   }
   return (
