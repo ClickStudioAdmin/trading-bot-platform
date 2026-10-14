@@ -122,7 +122,13 @@ export function TemplateParametersButton({
       return;
     }
     clearClose();
-    closeTimer.current = window.setTimeout(() => setOpen(false), 140);
+    closeTimer.current = window.setTimeout(() => {
+      closeTimer.current = null;
+      if (pinned.current) {
+        return;
+      }
+      setOpen(false);
+    }, 140);
   }
 
   useEffect(() => () => clearClose(), []);
@@ -216,10 +222,15 @@ export function TemplateParametersButton({
       if (!(target instanceof Node)) {
         return;
       }
+      const path = event.composedPath();
       if (
+        (anchorRef.current && path.includes(anchorRef.current)) ||
+        (popupRef.current && path.includes(popupRef.current)) ||
         anchorRef.current?.contains(target) ||
         popupRef.current?.contains(target)
       ) {
+        pinned.current = true;
+        clearClose();
         return;
       }
       pinned.current = false;
@@ -253,6 +264,13 @@ export function TemplateParametersButton({
     }
     setOpen(true);
     loadBacktests();
+  }
+
+  function selectPopupTab(tab: "parameters" | "backtests") {
+    pinned.current = true;
+    clearClose();
+    setPopupTab(tab);
+    setOpen(true);
   }
 
   function onClick(
@@ -297,22 +315,24 @@ export function TemplateParametersButton({
           <IconInfo size={14} className="size-3.5" />
         </button>
         {hasBacktests ? (
-          <button
-            type="button"
+          <span
+            role="img"
             data-template-parameters=""
-            aria-label={`Backtests for ${name}`}
-            aria-expanded={open && popupTab === "backtests"}
-            aria-controls={open ? popupId : undefined}
-            onMouseEnter={() => showPopup("backtests")}
+            aria-label={`Backtests attached for ${name}`}
+            onMouseEnter={clearClose}
             onMouseLeave={scheduleClose}
-            onFocus={() => showPopup("backtests")}
-            onBlur={scheduleClose}
-            onMouseDown={(event) => event.stopPropagation()}
-            onClick={(event) => onClick("backtests", event)}
-            className={iconClass}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            className="inline-flex size-5 shrink-0 cursor-default items-center justify-center text-ink-muted"
           >
             <IconBacktest size={14} className="size-3.5" />
-          </button>
+          </span>
         ) : null}
       </span>
       {open && typeof document !== "undefined"
@@ -329,6 +349,12 @@ export function TemplateParametersButton({
               data-template-parameters=""
               onMouseEnter={() => showPopup()}
               onMouseLeave={scheduleClose}
+              onMouseDown={(event) => {
+                event.stopPropagation();
+                event.nativeEvent.stopPropagation();
+                pinned.current = true;
+                clearClose();
+              }}
               className={`fixed z-[90] flex flex-col overflow-hidden rounded-card border border-line bg-canvas p-4 text-left font-normal normal-case tracking-normal text-ink shadow-none ${previewClass}`.trim()}
               style={{
                 top: box?.top ?? -9999,
@@ -346,13 +372,13 @@ export function TemplateParametersButton({
                   >
                     <PopupTab
                       selected={popupTab === "parameters"}
-                      onClick={() => setPopupTab("parameters")}
+                      onClick={() => selectPopupTab("parameters")}
                     >
                       Parameters
                     </PopupTab>
                     <PopupTab
                       selected={popupTab === "backtests"}
-                      onClick={() => setPopupTab("backtests")}
+                      onClick={() => selectPopupTab("backtests")}
                     >
                       Backtests
                     </PopupTab>
@@ -421,7 +447,11 @@ function PopupTab({
       role="tab"
       aria-selected={selected}
       data-template-parameters=""
-      onMouseDown={(event) => event.stopPropagation()}
+      onMouseDown={(event) => {
+        event.stopPropagation();
+        event.nativeEvent.stopPropagation();
+        onClick();
+      }}
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
