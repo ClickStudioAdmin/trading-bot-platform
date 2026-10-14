@@ -51,6 +51,9 @@ import {
 import type { AccountUsage } from "@/lib/accounts/store";
 import type { ExchangeConnection } from "@/lib/exchanges/connections";
 
+const DESK_CELL = "px-2.5 py-3 align-top";
+const DESK_HEAD = "px-2.5!";
+
 export function DeskTable({
   accounts,
   usage,
@@ -197,62 +200,69 @@ export function DeskTable({
           />
         }
       >
-        <table className="w-full min-w-[96rem] table-fixed text-left text-sm">
+        <table className="w-full table-fixed text-left text-sm">
           <colgroup>
-            <col className="w-[14rem]" />
-            <col className="w-[12rem]" />
-            <col className="w-[12rem]" />
-            <col className="w-[14rem]" />
-            <col className="w-[14rem]" />
-            <col />
-            <col className="w-[7rem]" />
-            <col className="w-[7.5rem]" />
+            <col className="w-[16%]" />
+            <col className="w-[15%]" />
+            <col className="w-[15%]" />
+            <col className="w-[13%]" />
+            <col className="w-[11%]" />
+            <col className="w-[12%]" />
+            <col className="w-[8%]" />
+            <col className="w-[10%]" />
           </colgroup>
           <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               <SortTh
                 label="Name"
+                className={DESK_HEAD}
                 active={table.sortKey === "name"}
                 dir={table.sortDir}
                 onSort={() => table.onSort("name")}
               />
               <SortTh
                 label="Type"
+                className={DESK_HEAD}
                 active={table.sortKey === "type"}
                 dir={table.sortDir}
                 onSort={() => table.onSort("type")}
               />
               <SortTh
                 label="Mode"
+                className={DESK_HEAD}
                 active={table.sortKey === "mode"}
                 dir={table.sortDir}
                 onSort={() => table.onSort("mode")}
               />
               <SortTh
                 label="Exchange"
+                className={DESK_HEAD}
                 active={table.sortKey === "exchange"}
                 dir={table.sortDir}
                 onSort={() => table.onSort("exchange")}
               />
               <SortTh
                 label="Environment"
+                className={DESK_HEAD}
                 active={table.sortKey === "environment"}
                 dir={table.sortDir}
                 onSort={() => table.onSort("environment")}
               />
               <SortTh
                 label="Details"
+                className={DESK_HEAD}
                 active={table.sortKey === "details"}
                 dir={table.sortDir}
                 onSort={() => table.onSort("details")}
               />
               <SortTh
                 label="Status"
+                className={DESK_HEAD}
                 active={table.sortKey === "status"}
                 dir={table.sortDir}
                 onSort={() => table.onSort("status")}
               />
-              <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
+              <th className={`${TABLE_ACTIONS_TH_CLASS} ${DESK_HEAD}`}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -298,17 +308,17 @@ function DeskRow({
   const defaultSwitch = pickDefaultAccount(remaining);
   return (
     <tr className="border-b border-line last:border-b-0">
-      <td className="px-4 py-3 pr-8 align-top">{account.name}</td>
-      <td className="px-4 py-3 pr-8 align-top">
+      <td className={DESK_CELL}>{account.name}</td>
+      <td className={DESK_CELL}>
         <p>{formatDeskType(account.deskType)}</p>
         {account.copyOfAccountId ? (
           <p className="mt-1 text-hint text-ink-muted">Copy</p>
         ) : null}
       </td>
-      <td className="px-4 py-3 pr-8 align-top text-ink-muted">
+      <td className={`${DESK_CELL} text-ink-muted`}>
         {formatAccountMode(account.mode)}
       </td>
-      <td className="px-4 py-3 pr-8 align-top text-ink-muted">
+      <td className={`${DESK_CELL} text-ink-muted`}>
         {row.exchange ? (
           <>
             <p>{row.exchange}</p>
@@ -320,14 +330,14 @@ function DeskRow({
           <span className="text-ink-faint">—</span>
         )}
       </td>
-      <td className="px-4 py-3 pr-8 align-top text-ink-muted">
+      <td className={`${DESK_CELL} whitespace-nowrap text-ink-muted`}>
         {row.environment ? (
           <span title={row.environmentTitle ?? undefined}>{row.environment}</span>
         ) : (
           <span className="text-ink-faint">—</span>
         )}
       </td>
-      <td className="px-4 py-3 pr-8 align-top text-ink-muted">
+      <td className={`${DESK_CELL} text-ink-muted`}>
         <div className="space-y-1">
           {row.detailLines.map((line) => (
             <p key={line} className="tabular-nums">
@@ -336,13 +346,13 @@ function DeskRow({
           ))}
         </div>
       </td>
-      <td className="px-4 py-3 pr-8 align-top">
+      <td className={`${DESK_CELL} whitespace-nowrap`}>
         <StatusBadge
           label={formatDeskListStatus(row.status)}
           tone={row.status === "active" ? "success" : "muted"}
         />
       </td>
-      <td className={`${TABLE_ACTIONS_TD_CLASS} align-top`}>
+      <td className={`${TABLE_ACTIONS_TD_CLASS} ${DESK_HEAD} align-top`}>
         <TableActions>
           <AccountRenameControl
             accountId={account.id}
