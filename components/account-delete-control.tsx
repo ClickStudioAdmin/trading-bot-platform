@@ -17,12 +17,14 @@ export function AccountDeleteControl({
   blockedMessage,
   switchOptions,
   defaultSwitchId,
+  hint = "Remove this desk and its closed history.",
 }: {
   accountId: string;
   accountName: string;
   blockedMessage: string | null;
   switchOptions?: { id: string; name: string; mode: string }[];
   defaultSwitchId?: string;
+  hint?: string;
 }) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -42,7 +44,7 @@ export function AccountDeleteControl({
         ref={buttonRef}
         danger
         label="Delete"
-        detail="Remove this desk and its closed history."
+        detail={hint}
         onClick={() => setOpen((current) => !current)}
       >
         <IconTrash {...TABLE_BTN_ICON} />
