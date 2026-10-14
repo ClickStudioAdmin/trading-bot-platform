@@ -1192,6 +1192,28 @@ const yearsGate = researchGate({
 });
 assert.equal(backtestSpanFitsYears(0, 2 * year, 2), true);
 assert.equal(backtestSpanFitsYears(0, 2 * year + 1, 2), false);
+const oneYearFrom = Date.UTC(2025, 9, 14);
+const oneYearTo = Date.UTC(2026, 9, 14) + 24 * 60 * 60 * 1000 - 1;
+assert.equal(backtestSpanFitsYears(oneYearFrom, oneYearTo, 1), true);
+assert.equal(
+  backtestYearsDecision(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_backtest_years: 1 },
+    }),
+    oneYearFrom,
+    oneYearTo,
+  ).allowed,
+  true,
+);
+assert.equal(
+  backtestSpanFitsYears(
+    oneYearFrom,
+    Date.UTC(2026, 9, 15) + 24 * 60 * 60 * 1000 - 1,
+    1,
+  ),
+  false,
+);
 assert.equal(backtestYearsDecision(yearsGate, 0, 2 * year).allowed, true);
 assert.equal(
   backtestYearsDecision(yearsGate, 0, 2 * year + 1).message,

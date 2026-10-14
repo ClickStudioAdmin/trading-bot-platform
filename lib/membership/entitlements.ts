@@ -1321,7 +1321,11 @@ export function backtestSpanFitsYears(
   if (!Number.isFinite(span) || span < 0) {
     return false;
   }
-  return span <= years * BACKTEST_YEAR_MS;
+  // The end date is stored through 23:59:59.999. Measure the selected dates,
+  // so that last day does not push a 1 year selection over a one-year cap.
+  const dayMs = 24 * 60 * 60 * 1000;
+  const selected = (toMs + 1) % dayMs === 0 ? span - (dayMs - 1) : span;
+  return selected <= years * BACKTEST_YEAR_MS;
 }
 
 export function backtestCreateDenial(
