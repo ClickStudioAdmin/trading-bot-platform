@@ -50,6 +50,7 @@ import {
 } from "@/lib/dca/indicators";
 import { AppSelect } from "@/components/app-select";
 import { IconBacktest, IconPlus, IconSave, IconTemplates } from "@/components/icons";
+import { FreeTrialBadge } from "@/components/plan-trial-hint";
 
 const fieldClass = botFieldClass;
 const fieldInvalidClass = botFieldInvalidClass;
@@ -2354,7 +2355,12 @@ export function ThemeBotFormDraft() {
           </button>
         </BotFormSidebarSection>
         {desk !== "cnc" ? (
-          <BotFormSidebarSection title="Backtesting">
+          <BotFormSidebarSection
+            title="Backtesting"
+            titleAside={
+              <FreeTrialBadge message="Backtesting is in a free trial until 28/10/2026." />
+            }
+          >
             <button type="button" className={botSidebarActionClass}>
               <BotButtonLead icon={<IconBacktest {...botBtnIcon} />}>
                 Backtest
