@@ -12,6 +12,7 @@ import {
 export type BacktestLibraryItem = {
   id: string;
   name: string;
+  description?: string | null;
   recipe: BacktestRecipe;
   visibility?: string;
 };
@@ -31,6 +32,7 @@ export type BacktestDeskBot = {
 export function toBacktestLibraryItem(row: {
   id: string;
   name?: string | null;
+  description?: string | null;
   recipe: { kind: string; name?: string };
   visibility?: string;
   symbol?: string;
@@ -50,10 +52,12 @@ export function toBacktestLibraryItem(row: {
         })
       : recipeName) ||
     "Backtest";
+  const description = row.description?.trim() || null;
   return {
     id: row.id,
     name,
     recipe: row.recipe as BacktestRecipe,
+    ...(description ? { description } : {}),
     ...(row.visibility !== undefined ? { visibility: row.visibility } : {}),
   };
 }

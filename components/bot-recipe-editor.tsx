@@ -91,7 +91,12 @@ function DcaRecipeMount({
       onRecipeChange={(result) => {
         onIssuesChange(result.error ? [result.error] : []);
         if (result.recipe) {
-          onChange(result.recipe, result.fromUser);
+          onChange(
+            recipe.name.trim()
+              ? result.recipe
+              : { ...result.recipe, name: "" },
+            result.fromUser,
+          );
         }
       }}
     />

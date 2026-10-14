@@ -194,11 +194,23 @@ export function parseTemplateDescription(raw: unknown): string | null {
   return text.slice(0, 500);
 }
 
+/** Templates do not store a bot name. The preview is the contract, when there is one. */
 export function recipePreview(recipe: TemplateRecipe): string {
   if (recipe.kind === "cash_and_carry") {
-    return recipe.name;
+    return "";
   }
-  return `${recipe.name} · ${recipe.symbol}`;
+  return recipe.symbol;
+}
+
+/** Drop the bot name before a recipe is written onto a template row. */
+export function storedTemplateRecipe<T extends TemplateRecipe>(recipe: T): T {
+  return { ...recipe, name: "" };
+}
+
+/** New bots created from a template use the template name, within the bot name limit. */
+export function botNameFromTemplate(name: string): string {
+  const trimmed = name.trim().replace(/\s+/g, " ");
+  return (trimmed || "Template").slice(0, RECIPE_NAME_MAX);
 }
 
 export function recipesMatchForBacktest(
@@ -551,19 +563,22 @@ function parseDcaTemplateRecipe(
   if (!built.ok) {
     return built;
   }
-  return { ok: true, recipe: snapshotDcaRecipe(built.config) };
+  return {
+    ok: true,
+    recipe: keepStoredRecipeName(snapshotDcaRecipe(built.config), row.name),
+  };
 }
 
 function parsePerpsTemplateRecipe(
   row: Record<string, unknown>,
   venue?: string,
 ): { ok: true; recipe: PerpsTemplateRecipe } | { ok: false; error: string } {
-  if (typeof row.symbol !== "string" || typeof row.name !== "string") {
+  if (typeof row.symbol !== "string") {
     return { ok: false, error: STALE_TEMPLATE_ERROR };
   }
   const recipe: PerpsTemplateRecipe = {
     kind: "perps",
-    name: String(row.name),
+    name: typeof row.name === "string" ? row.name : "",
     symbol: String(row.symbol),
     formAction: (row.formAction as PerpsTemplateRecipe["formAction"]) ?? "buy",
     orderType: (row.orderType as PerpsTemplateRecipe["orderType"]) ?? "market",
@@ -598,18 +613,21 @@ function parsePerpsTemplateRecipe(
   if (!built.ok) {
     return built;
   }
-  return { ok: true, recipe: snapshotPerpsRecipe(built.rule) };
+  return {
+    ok: true,
+    recipe: keepStoredRecipeName(snapshotPerpsRecipe(built.rule), row.name),
+  };
 }
 
 function parsePaperTemplateRecipe(
   row: Record<string, unknown>,
 ): { ok: true; recipe: PaperTemplateRecipe } | { ok: false; error: string } {
-  if (typeof row.name !== "string" || typeof row.notionalUsdt !== "number") {
+  if (typeof row.notionalUsdt !== "number") {
     return { ok: false, error: STALE_TEMPLATE_ERROR };
   }
   const recipe: PaperTemplateRecipe = {
     kind: "cash_and_carry",
-    name: String(row.name),
+    name: typeof row.name === "string" ? row.name : "",
     sizeType: row.sizeType === "fixed" ? "fixed" : "dynamic",
     exitSizeType: row.exitSizeType === "fixed" ? "fixed" : "dynamic",
     notionalUsdt: row.notionalUsdt,
@@ -629,7 +647,21 @@ function parsePaperTemplateRecipe(
   if (!built.ok) {
     return built;
   }
-  return { ok: true, recipe: snapshotPaperRecipe(built.layer) };
+  return {
+    ok: true,
+    recipe: keepStoredRecipeName(snapshotPaperRecipe(built.layer), row.name),
+  };
+}
+
+function keepStoredRecipeName<T extends TemplateRecipe>(
+  recipe: T,
+  stored: unknown,
+): T {
+  const name = typeof stored === "string" ? stored.trim() : "";
+  if (name) {
+    return recipe;
+  }
+  return { ...recipe, name: "" };
 }
 
 function asNullableNumber(value: unknown): number | null {

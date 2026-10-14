@@ -195,8 +195,8 @@ export function BacktestQueueForm({
   );
   const [backtestName, setBacktestName] = useState(
     seed?.name?.trim() ||
+      initialTemplate?.name?.trim() ||
       seed?.recipe.name?.trim() ||
-      initialTemplate?.recipe.name?.trim() ||
       "",
   );
   const [comparables, setComparables] = useState<string[]>(
@@ -222,8 +222,8 @@ export function BacktestQueueForm({
   const [variantOrigin, setVariantOrigin] = useState(() => ({
     name:
       seed?.name?.trim() ||
+      initialTemplate?.name?.trim() ||
       seed?.recipe.name?.trim() ||
-      initialTemplate?.recipe.name?.trim() ||
       "",
     fromDate: seed?.fromDate ?? dates.from,
     toDate: seed?.toDate ?? dates.to,
@@ -323,6 +323,7 @@ export function BacktestQueueForm({
           aside: (
             <TemplateParametersButton
               name={row.name}
+              description={row.description}
               recipe={row.recipe}
               templateId={row.id}
             />
@@ -703,7 +704,11 @@ export function BacktestQueueForm({
                   setPickedDeskBot(result.bot);
                   setRecipe(result.bot.recipe);
                   setBacktestName((current) => {
-                    const previous = (recipe?.name ?? "").trim();
+                    const previous = (
+                      templates.find((row) => row.id === templateId)?.name ??
+                      recipe?.name ??
+                      ""
+                    ).trim();
                     const typed = current.trim();
                     if (!typed || typed === previous) {
                       return result.bot.recipe.name;
@@ -729,10 +734,14 @@ export function BacktestQueueForm({
               if (next) {
                 setRecipe(next.recipe);
                 setBacktestName((current) => {
-                  const previous = (recipe?.name ?? "").trim();
+                  const previous = (
+                    templates.find((row) => row.id === templateId)?.name ??
+                    recipe?.name ??
+                    ""
+                  ).trim();
                   const typed = current.trim();
                   if (!typed || typed === previous) {
-                    return next.recipe.name;
+                    return next.name;
                   }
                   return current;
                 });
@@ -750,6 +759,7 @@ export function BacktestQueueForm({
           {pickedTemplate && matchingTemplate?.id !== pickedTemplate.id ? (
             <TemplateParametersButton
               name={pickedTemplate.name}
+              description={pickedTemplate.description}
               recipe={pickedTemplate.recipe}
               templateId={pickedTemplate.id}
               className="mt-2"
@@ -984,6 +994,7 @@ export function BacktestQueueForm({
             </div>
             <BacktestOriginBadges
               templateName={matchingTemplate?.name ?? null}
+              templateDescription={matchingTemplate?.description ?? null}
               templateRecipe={matchingTemplate?.recipe ?? null}
               templateId={matchingTemplate?.id ?? null}
               deskLabel={

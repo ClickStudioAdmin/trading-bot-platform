@@ -5,6 +5,7 @@ import {
   parseTemplateRecipe,
   parseTemplateVisibility,
   recipePreview,
+  storedTemplateRecipe,
   TEMPLATE_RECIPE_VERSION,
   type TemplateDeskType,
   type TemplateRecipe,
@@ -139,7 +140,7 @@ function parseTemplateRow(
     deskType: row.desk_type,
     name: String(row.name ?? ""),
     description: row.description ? String(row.description) : null,
-    recipe: parsed.recipe,
+    recipe: storedTemplateRecipe(parsed.recipe),
     recipeVersion: Number(row.recipe_version) || TEMPLATE_RECIPE_VERSION,
     createdAtMs: asTime(row.created_at),
     updatedAtMs: asTime(row.updated_at),
@@ -376,7 +377,7 @@ export async function insertTemplate(input: {
       desk_type: input.deskType,
       name: input.name,
       description: input.description,
-      recipe: input.recipe,
+      recipe: storedTemplateRecipe(input.recipe),
       recipe_version: TEMPLATE_RECIPE_VERSION,
       starter_pack: parseStarterPackFlag(input.starterPack, input.visibility),
       updated_at: new Date().toISOString(),
@@ -412,7 +413,7 @@ export async function replaceTemplateRecipe(input: {
   const { error } = await supabase
     .from("automation_templates")
     .update({
-      recipe: input.recipe,
+      recipe: storedTemplateRecipe(input.recipe),
       recipe_version: TEMPLATE_RECIPE_VERSION,
       description: input.description,
       updated_at: new Date().toISOString(),
