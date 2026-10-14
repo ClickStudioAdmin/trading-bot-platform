@@ -8,7 +8,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { PanelCloseButton } from "@/components/panel-close-button";
 import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
 import { deleteTradingAccount } from "@/lib/accounts/actions";
-import { StepUpCodeField } from "@/components/step-up-code-field";
+import { StepUpForm } from "@/components/step-up-code-field";
 
 const BLOCKED_MS = 4000;
 
@@ -60,13 +60,17 @@ export function AccountDeleteControl({
         {blockedMessage ? (
           <p className="text-hint text-ink-faint">{blockedMessage}.</p>
         ) : (
-          <form action={deleteTradingAccount} className="space-y-3">
+          <StepUpForm
+            action={deleteTradingAccount}
+            confirmLabel="Delete desk"
+            danger
+            className="space-y-3"
+          >
             <input type="hidden" name="accountId" value={accountId} />
             <p className="text-hint text-ink-faint">
               Remove {accountName} and its closed history? This cannot be
               undone.
             </p>
-            <StepUpCodeField />
             <PendingSubmitButton
               pendingLabel="Deleting…"
               className="w-full rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
@@ -77,7 +81,7 @@ export function AccountDeleteControl({
               options={options}
               defaultSwitchId={defaultSwitchId}
             />
-          </form>
+          </StepUpForm>
         )}
       </AnchoredPanel>
     </>

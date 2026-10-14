@@ -36,6 +36,7 @@ import {
   shareTrialLines,
   sharingDeskMessage,
   type CopyGateAccess,
+  DESK_QUOTA_KEYS,
   quotaAccessList,
   quotaKeyAfterBind,
   quotaKeyForDesk,
@@ -316,6 +317,12 @@ function quotas(input: {
     },
   });
 }
+
+assert.deepEqual([...DESK_QUOTA_KEYS], [
+  "max_paper_desks",
+  "max_demo_desks",
+  "max_live_env_desks",
+]);
 
 const plusPaper = capPlan("Plus", {
   priceUsd: 20,
