@@ -583,7 +583,18 @@ export function BacktestQueueForm({
         ? "Run backtest"
         : "Queue backtest";
 
+  const pageNoticeBlock =
+    pageNotices.length > 0 ? (
+      <div className="mb-6 space-y-3">
+        {pageNotices.map((row) => (
+          <ResearchNoticeBanner key={row.message} notice={row} className="" />
+        ))}
+      </div>
+    ) : null;
+
   return (
+    <>
+    {variant ? null : pageNoticeBlock}
     <section
       id={variant ? undefined : "replay"}
       className={
@@ -624,13 +635,6 @@ export function BacktestQueueForm({
       {variant || !showTitle ? null : (
         <h2 className="text-lg font-semibold">New backtest</h2>
       )}
-      {pageNotices.length > 0 ? (
-        <div className="mb-4 space-y-3">
-          {pageNotices.map((row) => (
-            <ResearchNoticeBanner key={row.message} notice={row} className="" />
-          ))}
-        </div>
-      ) : null}
       {variant ? null : (
       <p className={showTitle ? "mt-1 text-sm text-ink-muted" : "text-sm text-ink-muted"}>
         {loadedFromRun
@@ -1199,5 +1203,6 @@ export function BacktestQueueForm({
       )}
       </div>
     </section>
+    </>
   );
 }
