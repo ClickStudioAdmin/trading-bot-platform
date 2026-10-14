@@ -620,6 +620,7 @@ export function SetupWizard({
               ? undefined
               : desks.map((desk) => desk.deskType)
           }
+          bundle={screen.main === "desks" && screen.sub === "choice"}
           className="space-y-3"
         />
       )}
