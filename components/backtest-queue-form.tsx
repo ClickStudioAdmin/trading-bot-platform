@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AppMultiSelect, AppSelect, type AppSelectOption } from "@/components/app-select";
 import { TemplateParametersButton } from "@/components/template-parameters-tip";
@@ -8,8 +8,8 @@ import { BotRecipeEditor } from "@/components/bot-recipe-editor";
 import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
+import { ClickGateNotice, formSubmitAnchor, useClickGate } from "@/components/click-gate-notice";
 import {
-  ResearchNoticeBanner,
   ResearchTrialLines,
   useResearchGateAccess,
 } from "@/components/research-gate-access";
@@ -37,7 +37,6 @@ import {
   backtestYearsHint,
   queueBacktestDenial,
   queueTrialLines,
-  type ResearchNotice,
 } from "@/lib/membership/entitlements";
 import {
   canQueueUserBacktest,
@@ -259,9 +258,9 @@ export function BacktestQueueForm({
     seed?.venueEnvironment ?? defaultVenueEnvironment,
   );
   const gate = useResearchGateAccess();
+  const clickGate = useClickGate();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<ResearchNotice | null>(null);
   const [recipeFieldIssues, setRecipeFieldIssues] = useState<string[]>([]);
   const [bybitPairs, setBybitPairs] = useState<LinearPerp[]>([]);
   const [hyperliquidPairs, setHyperliquidPairs] = useState<LinearPerp[]>([]);
@@ -634,6 +633,37 @@ export function BacktestQueueForm({
       <form
         id={variant ? "backtest-variant-queue" : undefined}
         className="@container min-w-0 space-y-3"
+        onSubmit={(event: FormEvent<HTMLFormElement>) => {
+          const range = parseBacktestDates(fromDate, toDate);
+          if (
+            gate &&
+            range.ok &&
+            gate.saved.limit != null &&
+            !gate.savedCountOk &&
+            gate.backtest.allowed &&
+            !(variant && !gate.optimize.allowed)
+          ) {
+            clickGate.hide();
+            return;
+          }
+          if (!gate || !range.ok) {
+            clickGate.hide();
+            return;
+          }
+          const denial = queueBacktestDenial(gate, {
+            variant,
+            adding: 1 + comparables.length,
+            fromMs: range.fromMs,
+            toMs: range.toMs,
+          });
+          if (!denial) {
+            clickGate.hide();
+            return;
+          }
+          event.preventDefault();
+          clickGate.show(denial, formSubmitAnchor(event));
+          setError(null);
+        }}
         action={async (formData) => {
           const range = parseBacktestDates(fromDate, toDate);
           if (gate && range.ok) {
@@ -643,23 +673,11 @@ export function BacktestQueueForm({
               gate.backtest.allowed &&
               !(variant && !gate.optimize.allowed)
             ) {
-              setNotice(null);
+              clickGate.hide();
               setError("Could not check your saved backtests.");
               return;
             }
-            const denial = queueBacktestDenial(gate, {
-              variant,
-              adding: 1 + comparables.length,
-              fromMs: range.fromMs,
-              toMs: range.toMs,
-            });
-            if (denial) {
-              setNotice(denial);
-              setError(null);
-              return;
-            }
           }
-          setNotice(null);
           setPending(true);
           setError(null);
           if (variant) {
@@ -686,7 +704,12 @@ export function BacktestQueueForm({
           router.refresh();
         }}
       >
-        <ResearchNoticeBanner notice={notice} />
+        <ClickGateNotice
+          access={clickGate.notice}
+          anchorRef={clickGate.anchorRef}
+          generation={clickGate.generation}
+          onDismiss={clickGate.hide}
+        />
         <ResearchTrialLines lines={trialLines} />
         {variant ? (
           <input type="hidden" name="parentRunId" value={variantParentId} />
