@@ -975,6 +975,43 @@ export function applyDeskSetupChoice(input: {
   return [...input.desks];
 }
 
+/** Plan publishes desk types and every one of them is closed. */
+export function deskManualChoiceClosed(input: {
+  gated: boolean;
+  allowedCount: number;
+}): boolean {
+  return input.gated && input.allowedCount === 0;
+}
+
+/**
+ * Max Bots is a hard zero. A positive cap that is already full stays open;
+ * Create still refuses another bot.
+ */
+export function botManualChoiceClosed(
+  row: { limit: number | null } | null,
+): boolean {
+  return row != null && row.limit === 0;
+}
+
+/** No allowed desk type leaves only “Don't add any”. */
+export function deskChoiceWhenTypesClosed(
+  closed: boolean,
+  choice: DeskSetupChoice | null,
+): DeskSetupChoice | null {
+  return closed ? "none" : choice;
+}
+
+/** No allowed bots leaves “Don't add any”, unless starter bots were already chosen. */
+export function botChoiceWhenBotsClosed(
+  closed: boolean,
+  choice: BotSetupChoice | null,
+): BotSetupChoice | null {
+  if (!closed || choice === "all" || choice === "none") {
+    return choice;
+  }
+  return "none";
+}
+
 export function applyBotSetupChoice(input: {
   choice: BotSetupChoice;
   desks: readonly SetupDesk[];
