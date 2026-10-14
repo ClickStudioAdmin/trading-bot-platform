@@ -22,7 +22,12 @@ import { connectionFitsDesk, getVenue } from "@/lib/exchanges/venues";
 import type { DeskType } from "@/lib/accounts/model";
 import { AppSelect } from "@/components/app-select";
 import { useDeskTypeAccess } from "@/components/desk-type-access";
-import { deskTypeAccessFor } from "@/lib/membership/entitlements";
+import { useQuotaAccess } from "@/components/quota-access";
+import {
+  deskTypeAccessFor,
+  quotaAccessFor,
+  quotaKeyForDesk,
+} from "@/lib/membership/entitlements";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { IconCopyTrading } from "@/components/icons";
 
@@ -123,6 +128,15 @@ function CopyFollowModal({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const quotaAccess = useQuotaAccess();
+  const quotasGated = quotaAccess.length > 0;
+  const paperQuota = quotaAccessFor(quotaAccess, "max_paper_desks");
+  const liveQuota = quotaAccessFor(
+    quotaAccess,
+    quotaKeyForDesk({ mode: "live", venueEnvironment }),
+  );
+  const paperOff = quotasGated && paperQuota ? !paperQuota.allowed : false;
+  const liveOff = quotasGated && liveQuota ? !liveQuota.allowed : false;
   const [mode, setMode] = useState<"paper" | "live">("paper");
   const [followed, setFollowed] = useState(false);
   const venueDef = getVenue(venue);
@@ -203,10 +217,10 @@ function CopyFollowModal({
                   }
                   className={fieldClass}
                 >
-                  <option value="paper">
+                  <option value="paper" disabled={paperOff}>
                     {formatAccountModeChoice("paper")}
                   </option>
-                  <option value="live">
+                  <option value="live" disabled={liveOff}>
                     {formatAccountModeChoice("live")}
                   </option>
                 </AppSelect>
@@ -242,6 +256,16 @@ function CopyFollowModal({
           <div className="space-y-3 border-t border-line pt-4">
             <PendingSubmitButton
               pendingLabel="Copying…"
+              disabled={mode === "paper" ? paperOff : liveOff}
+              title={
+                mode === "paper"
+                  ? paperOff
+                    ? paperQuota?.message ?? undefined
+                    : undefined
+                  : liveOff
+                    ? liveQuota?.message ?? undefined
+                    : undefined
+              }
               className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
             >
               <BotButtonLead icon={<IconCopyTrading {...botBtnIcon} />}>

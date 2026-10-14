@@ -66,6 +66,7 @@ import {
   readDeskNameFromSettingsForm,
 } from "@/lib/accounts/actions";
 import { applyDeskBindRules, loadAccountUsage } from "@/lib/accounts/store";
+import { deniedBindQuotaMessage } from "@/lib/membership/load-quota-access";
 import { saveDeskCopySettings } from "@/lib/copy/follower-settings";
 import { pauseCopyNewEntriesOnUnbind } from "@/lib/copy/listings";
 import {
@@ -380,6 +381,14 @@ export async function saveFuturesSettings(formData: FormData) {
       } else if (match.status !== "active" && match.id !== current.connectionId) {
         settingsFail(account.id, "That connection is not active.");
       } else {
+        const quotaDenied = await deniedBindQuotaMessage({
+          userId: user.id,
+          currentEnvironment: account.venueEnvironment,
+          nextEnvironment: match.environment,
+        });
+        if (quotaDenied) {
+          settingsFail(account.id, quotaDenied);
+        }
         const bound = await applyDeskBindRules({
           userId: user.id,
           account,

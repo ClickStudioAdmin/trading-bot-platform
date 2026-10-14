@@ -13,9 +13,17 @@ import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
 import { useDeskTypeAccess } from "@/components/desk-type-access";
 import {
+  quotaAccessFor,
+  quotaKeyForDesk,
+  quotaRoomMessage,
+  type QuotaCapKey,
+} from "@/lib/membership/entitlements";
+import {
   DeskTypeRejectBanner,
   DeskTypeRejectNotices,
+  QuotaRejectNotices,
 } from "@/components/desk-type-reject";
+import { useQuotaAccess } from "@/components/quota-access";
 import {
   IconArrowLeft,
   IconArrowRight,
@@ -230,9 +238,16 @@ export function SetupWizard({
   const router = useRouter();
   const deskTypeAccess = useDeskTypeAccess();
   const deskTypesGated = deskTypeAccess.length > 0;
+  const quotaAccess = useQuotaAccess();
   const allowedTypes = deskTypesGated
     ? allowedDeskTypes(deskTypeAccess)
     : undefined;
+  const paperQuota = quotaAccessFor(quotaAccess, "max_paper_desks");
+  const paperNeed = Math.max(
+    deskTypesGated ? (allowedTypes?.length ?? 0) : ONBOARDING_DESK_TYPES.length,
+    1,
+  );
+  const paperBatch = quotaRoomMessage(paperQuota, paperNeed);
   const [desks, setDesks] = useState<SetupDesk[]>(initialDraft.desks);
   const [deskChoice, setDeskChoice] = useState<DeskSetupChoice | null>(
     initialDraft.deskChoice,
@@ -438,6 +453,10 @@ export function SetupWizard({
         );
         return;
       }
+      if (deskChoice === "all_paper" && paperBatch) {
+        setError(paperBatch);
+        return;
+      }
       const nextDesks = applyDeskSetupChoice({
         choice: deskChoice,
         desks,
@@ -607,6 +626,21 @@ export function SetupWizard({
           className="space-y-3"
         />
       )}
+      {screen.main === "intro" ? null : (
+        <QuotaRejectNotices keys={["max_paper_desks", "max_demo_desks", "max_live_env_desks", "max_bots"]} className="space-y-3" />
+      )}
+      {screen.main === "desks" &&
+      screen.sub === "choice" &&
+      paperQuota?.allowed &&
+      paperBatch ? (
+        <DeskTypeRejectBanner
+          access={{
+            allowed: false,
+            message: paperBatch,
+            upgradePlan: paperQuota.upgradePlan,
+          }}
+        />
+      ) : null}
       {screen.main === "intro" ? (
         <IntroStep playing={playing} onWatch={() => setPlaying(true)} />
       ) : null}
@@ -622,7 +656,9 @@ export function SetupWizard({
               title: "Add a Paper Trading desk for each strategy type",
               detail: "Quickest way to see all desk types in action.",
               icon: <IconDesks {...CHOICE_ICON} />,
-              disabled: deskTypesGated && (allowedTypes?.length ?? 0) === 0,
+              disabled:
+                (deskTypesGated && (allowedTypes?.length ?? 0) === 0) ||
+                Boolean(paperBatch),
             },
             {
               value: "manual",
@@ -731,7 +767,8 @@ export function SetupWizard({
         {error &&
         !deskTypeAccess.some(
           (row) => !row.allowed && row.message === error,
-        ) ? (
+        ) &&
+        !quotaAccess.some((row) => !row.allowed && row.message === error) ? (
           <p className="mb-3 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}
           </p>
@@ -1333,6 +1370,8 @@ function CreateDeskDialog({
 }) {
   const access = useDeskTypeAccess();
   const gated = access.length > 0;
+  const quotas = useQuotaAccess();
+  const quotasGated = quotas.length > 0;
   const firstAllowed = ONBOARDING_DESK_TYPES.find((type) => {
     if (!gated) {
       return true;
@@ -1404,6 +1443,18 @@ function CreateDeskDialog({
   const typeRow = deskTypeAccessFor(access, deskType);
   const typeBlocked = gated && typeRow ? !typeRow.allowed : false;
   const typeNotice = gated ? typeRow?.message ?? null : null;
+  const paperQuota = quotaAccessFor(quotas, "max_paper_desks");
+  const demoQuota = quotaAccessFor(quotas, "max_demo_desks");
+  const liveQuota = quotaAccessFor(quotas, "max_live_env_desks");
+  const paperOff = quotasGated && paperQuota ? !paperQuota.allowed : false;
+  const demoOff = quotasGated && demoQuota ? !demoQuota.allowed : false;
+  const liveOff = quotasGated && liveQuota ? !liveQuota.allowed : false;
+  const bandKey: QuotaCapKey =
+    mode === "paper"
+      ? "max_paper_desks"
+      : quotaKeyForDesk({ mode: "live", venueEnvironment: environmentId });
+  const bandQuota = quotaAccessFor(quotas, bandKey);
+  const quotaBlocked = quotasGated && bandQuota ? !bandQuota.allowed : false;
 
   function selectDeskType(raw: string) {
     if (!ONBOARDING_DESK_TYPES.includes(raw as DeskType)) {
@@ -1471,7 +1522,7 @@ function CreateDeskDialog({
   }
 
   function save() {
-    if (typeBlocked) {
+    if (typeBlocked || quotaBlocked) {
       return;
     }
     const result = setupDeskFromDetails({
@@ -1529,6 +1580,9 @@ function CreateDeskDialog({
           {typeBlocked && typeRow ? (
             <DeskTypeRejectBanner access={typeRow} />
           ) : null}
+          {quotaBlocked && bandQuota ? (
+            <DeskTypeRejectBanner access={bandQuota} />
+          ) : null}
           <label className="block text-sm text-ink">
             Desk type
             <AppSelect
@@ -1574,9 +1628,18 @@ function CreateDeskDialog({
               }
               className={fieldClass}
             >
-              <option value="paper">{formatAccountModeChoice("paper")}</option>
-              <option value="live">{formatAccountModeChoice("live")}</option>
+              <option value="paper" disabled={paperOff}>
+                {formatAccountModeChoice("paper")}
+              </option>
+              <option value="live" disabled={demoOff && liveOff}>
+                {formatAccountModeChoice("live")}
+              </option>
             </AppSelect>
+            {bandQuota?.allowed && bandQuota.message ? (
+              <span className="mt-1 block text-sm text-warning">
+                {bandQuota.message}
+              </span>
+            ) : null}
           </label>
           {showMarket ? (
             <label className="block text-sm text-ink">
@@ -1618,11 +1681,18 @@ function CreateDeskDialog({
                     onChange={(event) => selectEnvironment(event.target.value)}
                     className={fieldClass}
                   >
-                    {(venueDef?.environments ?? []).map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.label}
-                      </option>
-                    ))}
+                    {(venueDef?.environments ?? []).map((item) => {
+                      const key = quotaKeyForDesk({
+                        mode: "live",
+                        venueEnvironment: item.id,
+                      });
+                      const off = key === "max_demo_desks" ? demoOff : liveOff;
+                      return (
+                        <option key={item.id} value={item.id} disabled={off}>
+                          {item.label}
+                        </option>
+                      );
+                    })}
                   </AppSelect>
                 </label>
               </div>
@@ -1676,6 +1746,7 @@ function CreateDeskDialog({
             onClick={save}
             disabled={
               typeBlocked ||
+              quotaBlocked ||
               (mode === "live" && choice === "new" && !connectionId)
             }
             className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:opacity-40"

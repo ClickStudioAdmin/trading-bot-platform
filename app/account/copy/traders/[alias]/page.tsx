@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CopyCatalogueBoard } from "@/components/copy-catalogue";
-import { DeskTypeRejectNotices } from "@/components/desk-type-reject";
+import { PlanGateNotices } from "@/components/desk-type-reject";
+import { DESK_QUOTA_KEYS } from "@/lib/membership/entitlements";
 import { PageHeading } from "@/components/page-heading";
 import { loadTraderCatalogueDesks } from "@/lib/copy/catalogue";
 import { loadTraderProfileByAlias } from "@/lib/copy/profile";
@@ -67,7 +68,10 @@ export default async function CopyTraderPage({
           )}
         </div>
       </div>
-      <DeskTypeRejectNotices deskTypes={desks.map((desk) => desk.deskType)} />
+      <PlanGateNotices
+        deskTypes={desks.map((desk) => desk.deskType)}
+        quotaKeys={DESK_QUOTA_KEYS}
+      />
       <dl className="mb-8 grid gap-4 sm:grid-cols-3">
         <div className="rounded-card border border-line bg-surface p-5">
           <dt className="text-xs uppercase tracking-[0.12em] text-ink-muted">

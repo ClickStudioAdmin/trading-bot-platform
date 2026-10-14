@@ -1,13 +1,27 @@
 import assert from "node:assert/strict";
-import { emptyFeatures, type PlanFeatures } from "@/lib/membership/catalog";
+import {
+  emptyCaps,
+  emptyFeatures,
+  type PlanCaps,
+  type PlanFeatures,
+} from "@/lib/membership/catalog";
 import { emptyPlanTrials, type PlanTrials } from "@/lib/membership/trials";
 import {
   allowedDeskTypes,
+  capUsageMessage,
+  cheapestPublicCapPlanName,
   cheapestPublicPlanName,
   deniedDeskTypeMessage,
   deskTypeAccessList,
   deskTypeRejectLead,
   deskTypeUpgradeMessage,
+  gateRejectLead,
+  quotaAccessFor,
+  quotaAccessList,
+  quotaKeyAfterBind,
+  quotaKeyForDesk,
+  quotaRoomMessage,
+  type CapUnlockCandidate,
   type UnlockCandidate,
 } from "@/lib/membership/entitlements";
 
@@ -171,3 +185,201 @@ assert.deepEqual(allowedDeskTypes(closed), []);
 assert.deepEqual(allowedDeskTypes(included), ["dca"]);
 
 console.log("desk type entitlement checks passed");
+
+function caps(extra: Partial<PlanCaps> = {}): PlanCaps {
+  return { ...emptyCaps(), ...extra };
+}
+
+function capPlan(
+  name: string,
+  extra: Partial<CapUnlockCandidate> & { cap?: Partial<PlanCaps> } = {},
+): CapUnlockCandidate {
+  return {
+    ...unlock(name, extra),
+    caps: caps(extra.cap),
+  };
+}
+
+function quotas(input: {
+  cap?: Partial<PlanCaps>;
+  trials?: PlanTrials;
+  grants?: { key: string; endsAt: string }[];
+  plans?: CapUnlockCandidate[];
+  used?: Partial<Record<"max_paper_desks" | "max_demo_desks" | "max_live_env_desks" | "max_bots", number>>;
+}) {
+  return quotaAccessList({
+    caps: caps(input.cap),
+    trials: input.trials ?? emptyPlanTrials(),
+    grants: input.grants ?? [],
+    nowMs,
+    plans: input.plans ?? [],
+    used: {
+      max_paper_desks: 0,
+      max_demo_desks: 0,
+      max_live_env_desks: 0,
+      max_bots: 0,
+      ...input.used,
+    },
+  });
+}
+
+const plusPaper = capPlan("Plus", {
+  priceUsd: 20,
+  sortOrder: 2,
+  cap: { max_paper_desks: 5, max_demo_desks: 2, max_live_env_desks: 2, max_bots: 10 },
+});
+
+assert.equal(
+  capUsageMessage("max_paper_desks", 2, 2, "Plus"),
+  "You have 2 of 2 Paper Trading desks. Upgrade to Plus to add another.",
+);
+assert.equal(
+  gateRejectLead(capUsageMessage("max_paper_desks", 2, 2, "Plus"), "Plus"),
+  "You have 2 of 2 Paper Trading desks.",
+);
+
+const fullPaper = quotas({
+  cap: { max_paper_desks: 2, max_demo_desks: 1, max_live_env_desks: 0, max_bots: 4 },
+  used: { max_paper_desks: 2, max_demo_desks: 1, max_live_env_desks: 0, max_bots: 4 },
+  plans: [plusPaper],
+});
+assert.equal(quotaAccessFor(fullPaper, "max_paper_desks")?.allowed, false);
+assert.equal(
+  quotaAccessFor(fullPaper, "max_paper_desks")?.message,
+  "You have 2 of 2 Paper Trading desks. Upgrade to Plus to add another.",
+);
+assert.equal(quotaAccessFor(fullPaper, "max_paper_desks")?.upgradePlan, "Plus");
+assert.equal(
+  quotaAccessFor(fullPaper, "max_demo_desks")?.message,
+  "You have 1 of 1 Exchange Connected - Demo desks. Upgrade to Plus to add another.",
+);
+assert.equal(
+  quotaAccessFor(fullPaper, "max_live_env_desks")?.message,
+  "You have 0 of 0 Exchange Connected - Live desks. Upgrade to Plus to add another.",
+);
+assert.equal(
+  quotaAccessFor(fullPaper, "max_bots")?.message,
+  "You have 4 of 4 bots. Upgrade to Plus to add another.",
+);
+
+const under = quotas({
+  cap: { max_paper_desks: 2 },
+  used: { max_paper_desks: 1 },
+  plans: [plusPaper],
+});
+assert.equal(quotaAccessFor(under, "max_paper_desks")?.allowed, true);
+assert.equal(
+  quotaRoomMessage(quotaAccessFor(under, "max_paper_desks"), 1),
+  null,
+);
+assert.equal(
+  quotaRoomMessage(quotaAccessFor(under, "max_paper_desks"), 2),
+  "You have 1 of 2 Paper Trading desks. Upgrade to Plus to add another.",
+);
+
+const unlimited = quotas({ cap: { max_bots: null }, used: { max_bots: 40 } });
+assert.equal(quotaAccessFor(unlimited, "max_bots")?.allowed, true);
+assert.equal(quotaAccessFor(unlimited, "max_bots")?.limit, null);
+
+const secretCap = capPlan("Secret", {
+  visibility: "private",
+  priceUsd: 1,
+  cap: { max_paper_desks: null },
+});
+const namedCap = quotas({
+  cap: { max_paper_desks: 0 },
+  plans: [secretCap, plusPaper],
+});
+assert.equal(quotaAccessFor(namedCap, "max_paper_desks")?.upgradePlan, "Plus");
+const noneCap = quotas({
+  cap: { max_paper_desks: 0 },
+  plans: [secretCap],
+});
+assert.equal(quotaAccessFor(noneCap, "max_paper_desks")?.upgradePlan, null);
+assert.equal(
+  quotaAccessFor(noneCap, "max_paper_desks")?.message,
+  "You have 0 of 0 Paper Trading desks.",
+);
+assert.equal(
+  cheapestPublicCapPlanName(
+    [
+      capPlan("Archive", {
+        priceUsd: 0,
+        archivedAt: "2026-01-01T00:00:00.000Z",
+        cap: { max_paper_desks: null },
+      }),
+      capPlan("Draft", {
+        visibility: "draft",
+        priceUsd: 0,
+        cap: { max_paper_desks: null },
+      }),
+      capPlan("Pro", { priceUsd: 20, sortOrder: 1, cap: { max_paper_desks: 3 } }),
+      plusPaper,
+    ],
+    "max_paper_desks",
+    2,
+  ),
+  "Pro",
+);
+assert.equal(
+  cheapestPublicCapPlanName([plusPaper], "max_paper_desks", 5),
+  null,
+);
+
+const openCap = quotas({
+  cap: { max_paper_desks: 1 },
+  trials: { features: {}, caps: { max_paper_desks: { days: 14, limit: 3 } } },
+  grants: [{ key: "max_paper_desks", endsAt: "2026-10-28T00:00:00.000Z" }],
+  used: { max_paper_desks: 1 },
+});
+assert.equal(quotaAccessFor(openCap, "max_paper_desks")?.allowed, true);
+assert.equal(quotaAccessFor(openCap, "max_paper_desks")?.limit, 3);
+assert.equal(
+  quotaAccessFor(openCap, "max_paper_desks")?.message,
+  "Paper Trading is in a free trial until 28/10/2026.",
+);
+
+const endedCap = quotas({
+  cap: { max_paper_desks: 1 },
+  trials: { features: {}, caps: { max_paper_desks: { days: 14, limit: 3 } } },
+  grants: [{ key: "max_paper_desks", endsAt: "2026-10-01T00:00:00.000Z" }],
+  used: { max_paper_desks: 1 },
+  plans: [plusPaper],
+});
+assert.equal(quotaAccessFor(endedCap, "max_paper_desks")?.allowed, false);
+assert.equal(
+  quotaAccessFor(endedCap, "max_paper_desks")?.message,
+  "Your free trial of Paper Trading ended on 01/10/2026.",
+);
+assert.equal(quotaAccessFor(endedCap, "max_paper_desks")?.upgradePlan, "Plus");
+
+assert.equal(
+  quotaKeyForDesk({ mode: "paper", venueEnvironment: null }),
+  "max_paper_desks",
+);
+assert.equal(
+  quotaKeyForDesk({ mode: "live", venueEnvironment: "demo" }),
+  "max_demo_desks",
+);
+assert.equal(
+  quotaKeyForDesk({ mode: "live", venueEnvironment: "testnet" }),
+  "max_demo_desks",
+);
+assert.equal(
+  quotaKeyForDesk({ mode: "live", venueEnvironment: null }),
+  "max_live_env_desks",
+);
+assert.equal(
+  quotaKeyAfterBind({ currentEnvironment: null, nextEnvironment: "demo" }),
+  "max_demo_desks",
+);
+assert.equal(
+  quotaKeyAfterBind({ currentEnvironment: null, nextEnvironment: "live" }),
+  null,
+);
+assert.equal(
+  quotaKeyAfterBind({ currentEnvironment: "demo", nextEnvironment: "live" }),
+  "max_live_env_desks",
+);
+
+console.log("quota entitlement checks passed");

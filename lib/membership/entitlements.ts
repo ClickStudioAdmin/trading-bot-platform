@@ -1,18 +1,26 @@
 import {
   AUTOMATED_DESK_TYPES,
   MANUAL_DESK_TYPES,
+  deskDisplayMode,
   formatDeskType,
   type DeskType,
+  type TradingAccountMode,
 } from "@/lib/accounts/model";
 import {
+  PLAN_CAP_LABELS,
   emptyCaps,
+  emptyFeatures,
   planIsArchived,
   planIsPublic,
+  type PlanCapKey,
+  type PlanCaps,
   type PlanFeatureKey,
   type PlanFeatures,
   type PlanVisibility,
 } from "@/lib/membership/catalog";
 import {
+  capTrialOffer,
+  effectiveCap,
   featureAccess,
   featureTrialOffer,
   trialPhase,
@@ -75,18 +83,27 @@ export function cheapestPublicPlanName(
   return ranked[0]?.name ?? null;
 }
 
-export function deskTypeRejectLead(
+export function gateRejectLead(
   message: string,
   upgradePlan: string | null,
 ): string {
   if (!upgradePlan) {
     return message;
   }
-  const cta = ` Upgrade to ${upgradePlan} to enable it.`;
-  if (message.endsWith(cta)) {
-    return message.slice(0, -cta.length);
+  for (const tail of [" to enable it.", " to add another."]) {
+    const cta = ` Upgrade to ${upgradePlan}${tail}`;
+    if (message.endsWith(cta)) {
+      return message.slice(0, -cta.length);
+    }
   }
   return message;
+}
+
+export function deskTypeRejectLead(
+  message: string,
+  upgradePlan: string | null,
+): string {
+  return gateRejectLead(message, upgradePlan);
 }
 
 export function deskTypeUpgradeMessage(
@@ -210,5 +227,233 @@ function decideDeskType(input: {
     allowed: false,
     message: deskTypeUpgradeMessage(input.deskType, upgradePlan),
     upgradePlan,
+  };
+}
+
+export const QUOTA_CAP_KEYS = [
+  "max_paper_desks",
+  "max_demo_desks",
+  "max_live_env_desks",
+  "max_bots",
+] as const;
+
+export type QuotaCapKey = (typeof QUOTA_CAP_KEYS)[number];
+
+export const DESK_QUOTA_KEYS: readonly QuotaCapKey[] = [
+  "max_paper_desks",
+  "max_demo_desks",
+  "max_live_env_desks",
+];
+
+const QUOTA_NOUN: Record<QuotaCapKey, string> = {
+  max_paper_desks: "Paper Trading desks",
+  max_demo_desks: "Exchange Connected - Demo desks",
+  max_live_env_desks: "Exchange Connected - Live desks",
+  max_bots: "bots",
+};
+
+export type CapUnlockCandidate = UnlockCandidate & {
+  caps: PlanCaps;
+};
+
+export type QuotaAccess = {
+  key: QuotaCapKey;
+  allowed: boolean;
+  message: string | null;
+  upgradePlan: string | null;
+  used: number;
+  limit: number | null;
+};
+
+export function quotaNoun(key: QuotaCapKey): string {
+  return QUOTA_NOUN[key];
+}
+
+export function capUsageMessage(
+  key: QuotaCapKey,
+  used: number,
+  limit: number,
+  planName: string | null,
+): string {
+  const lead = `You have ${used} of ${limit} ${quotaNoun(key)}.`;
+  if (!planName) {
+    return lead;
+  }
+  return `${lead} Upgrade to ${planName} to add another.`;
+}
+
+export function quotaTrialEndedMessage(key: QuotaCapKey, endedOn: string): string {
+  return `Your free trial of ${PLAN_CAP_LABELS[key]} ended on ${endedOn}.`;
+}
+
+export function quotaTrialOpenMessage(key: QuotaCapKey, until: string): string {
+  return `${PLAN_CAP_LABELS[key]} is in a free trial until ${until}.`;
+}
+
+export function cheapestPublicCapPlanName(
+  plans: readonly CapUnlockCandidate[],
+  key: PlanCapKey,
+  used: number,
+): string | null {
+  const ranked = plans
+    .filter((plan) => {
+      if (!planIsPublic(plan) || planIsArchived(plan)) {
+        return false;
+      }
+      const cap = plan.caps[key];
+      return cap == null || cap > used;
+    })
+    .slice()
+    .sort(
+      (left, right) =>
+        left.priceUsd - right.priceUsd ||
+        left.sortOrder - right.sortOrder ||
+        left.name.localeCompare(right.name),
+    );
+  return ranked[0]?.name ?? null;
+}
+
+export function quotaKeyForDesk(input: {
+  mode: TradingAccountMode;
+  venueEnvironment: string | null;
+}): QuotaCapKey {
+  const display = deskDisplayMode(input);
+  if (display === "paper") {
+    return "max_paper_desks";
+  }
+  if (display === "demo") {
+    return "max_demo_desks";
+  }
+  return "max_live_env_desks";
+}
+
+export function quotaKeyAfterBind(input: {
+  currentEnvironment: string | null;
+  nextEnvironment: string | null;
+}): QuotaCapKey | null {
+  const before = deskDisplayMode({
+    mode: "live",
+    venueEnvironment: input.currentEnvironment,
+  });
+  const after = deskDisplayMode({
+    mode: "live",
+    venueEnvironment: input.nextEnvironment,
+  });
+  if (before === after) {
+    return null;
+  }
+  return quotaKeyForDesk({
+    mode: "live",
+    venueEnvironment: input.nextEnvironment,
+  });
+}
+
+export function quotaAccessList(input: {
+  caps: PlanCaps;
+  trials: PlanTrials;
+  grants: readonly { key: string; endsAt: string }[];
+  nowMs: number;
+  plans: readonly CapUnlockCandidate[];
+  used: Readonly<Record<QuotaCapKey, number>>;
+}): QuotaAccess[] {
+  return QUOTA_CAP_KEYS.map((key) =>
+    decideQuota({ ...input, key, used: input.used[key] }),
+  );
+}
+
+export function quotaAccessFor(
+  access: readonly QuotaAccess[],
+  key: QuotaCapKey,
+): QuotaAccess | null {
+  return access.find((row) => row.key === key) ?? null;
+}
+
+export function quotaRoomMessage(
+  row: QuotaAccess | null,
+  adding = 1,
+): string | null {
+  if (!row || adding <= 0) {
+    return null;
+  }
+  if (row.limit == null || row.used + adding <= row.limit) {
+    return null;
+  }
+  if (!row.allowed && row.message) {
+    return row.message;
+  }
+  return capUsageMessage(row.key, row.used, row.limit, row.upgradePlan);
+}
+
+function decideQuota(input: {
+  key: QuotaCapKey;
+  caps: PlanCaps;
+  trials: PlanTrials;
+  grants: readonly { key: string; endsAt: string }[];
+  nowMs: number;
+  plans: readonly CapUnlockCandidate[];
+  used: number;
+}): QuotaAccess {
+  const standing = input.caps[input.key];
+  const offer = capTrialOffer(
+    { features: emptyFeatures(), caps: input.caps, trials: input.trials },
+    input.key,
+  );
+  const grant = input.grants.find((row) => row.key === input.key) ?? null;
+  const phase = grant
+    ? trialPhase(grant.endsAt, input.nowMs)
+    : offer
+      ? "active"
+      : null;
+  const limit = effectiveCap({
+    standing,
+    offer,
+    phase,
+  });
+  const upgradePlan = cheapestPublicCapPlanName(
+    input.plans,
+    input.key,
+    input.used,
+  );
+  const base = {
+    key: input.key,
+    used: input.used,
+    limit,
+    upgradePlan,
+  };
+  if (limit == null || input.used + 1 <= limit) {
+    const open =
+      offer && phase === "active"
+        ? grant
+          ? quotaTrialOpenMessage(
+              input.key,
+              formatAuDateUtc(Date.parse(grant.endsAt)),
+            )
+          : `${PLAN_CAP_LABELS[input.key]} is in a free trial.`
+        : null;
+    return {
+      ...base,
+      allowed: true,
+      message: open,
+    };
+  }
+  if (
+    grant &&
+    phase === "ended" &&
+    offer?.limit != null &&
+    input.used < offer.limit
+  ) {
+    return {
+      ...base,
+      allowed: false,
+      message: quotaTrialEndedMessage(
+        input.key,
+        formatAuDateUtc(Date.parse(grant.endsAt)),
+      ),
+    };
+  }
+  return {
+    ...base,
+    allowed: false,
+    message: capUsageMessage(input.key, input.used, limit, upgradePlan),
   };
 }

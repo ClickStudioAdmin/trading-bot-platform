@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useQuotaAccess } from "@/components/quota-access";
+import { quotaAccessFor } from "@/lib/membership/entitlements";
 import { ModalHost, useModalPortalHost } from "@/components/portal-host";
 
 export { ModalHost, useModalPortalHost };
@@ -494,6 +496,22 @@ export function DeskTemplateBar({
   sets: AutomationTemplateSet[];
   onApplied?: (items: AppliedDeskItem[]) => void;
 }) {
+  const botQuota = quotaAccessFor(useQuotaAccess(), "max_bots");
+  const botsBlocked = botQuota ? !botQuota.allowed : false;
+  if (botsBlocked) {
+    return (
+      <button
+        type="button"
+        disabled
+        title={botQuota?.message ?? undefined}
+        className={`cursor-not-allowed opacity-40 ${deskActionBtnClass}`}
+      >
+        <BotButtonLead icon={<IconTemplates {...botBtnIcon} />}>
+          Create Bot from Template
+        </BotButtonLead>
+      </button>
+    );
+  }
   return (
     <div className="flex flex-wrap items-center gap-2">
       <ApplyFromLibraryButton

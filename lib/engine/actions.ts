@@ -18,6 +18,7 @@ import { loadPaperRules } from "@/lib/engine/load";
 import { closePaperCarryMarket } from "@/lib/paper/actions";
 import { loadOpenPaperCarriesByRuleId } from "@/lib/paper/list";
 import { applyDeskBindRules, loadAccountUsage } from "@/lib/accounts/store";
+import { deniedBindQuotaMessage, deniedQuotaMessage } from "@/lib/membership/load-quota-access";
 import {
   deskPath,
   formatStrategyDetachBlockers,
@@ -435,6 +436,13 @@ async function upsertPaperRules(input: {
   accountId: string;
   layers: PaperEngineLayer[];
 }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const adding = input.layers.filter((layer) => layer.id === null).length;
+  if (adding > 0) {
+    const botDenied = await deniedQuotaMessage(input.userId, "max_bots", adding);
+    if (botDenied) {
+      return { ok: false, error: botDenied };
+    }
+  }
   for (const layer of input.layers) {
     const payload = paperLayerToRow(input.userId, layer, input.accountId);
     if (layer.id !== null) {
@@ -477,6 +485,13 @@ async function replacePaperRules(input: {
   accountId: string;
   layers: PaperEngineLayer[];
 }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const adding = input.layers.filter((layer) => layer.id === null).length;
+  if (adding > 0) {
+    const botDenied = await deniedQuotaMessage(input.userId, "max_bots", adding);
+    if (botDenied) {
+      return { ok: false, error: botDenied };
+    }
+  }
   const { data: existing, error: loadError } = await input.supabase
     .from("paper_rules")
     .select("id")
@@ -637,6 +652,14 @@ export async function savePaperSettings(formData: FormData) {
       } else if (match.status !== "active" && match.id !== currentId) {
         settingsFail(account.id, "That connection is not active.");
       } else {
+        const quotaDenied = await deniedBindQuotaMessage({
+          userId: user.id,
+          currentEnvironment: account.venueEnvironment,
+          nextEnvironment: match.environment,
+        });
+        if (quotaDenied) {
+          settingsFail(account.id, quotaDenied);
+        }
         const bound = await applyDeskBindRules({
           userId: user.id,
           account,

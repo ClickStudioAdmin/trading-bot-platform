@@ -1,4 +1,5 @@
 import { listTradingAccounts } from "@/lib/accounts/store";
+import { deniedQuotaMessage } from "@/lib/membership/load-quota-access";
 import type { TradingAccount } from "@/lib/accounts/model";
 import { deskAllowsPerpsRecipes, deskAllowsTemplateApply } from "@/lib/accounts/model";
 import { loadDcaBookUsdt, loadDcaSizingLeverage } from "@/lib/dca/book";
@@ -435,6 +436,16 @@ export async function applyTemplateToDesk(input: {
       notes: [],
     };
   }
+  const botDenied = await deniedQuotaMessage(input.userId, "max_bots", 1);
+  if (botDenied) {
+    return {
+      templateId: input.templateId,
+      name: "Template",
+      ok: false,
+      error: botDenied,
+      notes: [],
+    };
+  }
   const desk = await ownedDesk(input.userId, input.accountId);
   if (!desk) {
     return {
@@ -613,6 +624,20 @@ export async function applyTemplateSetToDesk(input: {
     };
   }
   const byId = new Map(input.items.map((item) => [item.templateId, item]));
+  const adding = set.items.filter(
+    (item) => byId.get(item.templateId)?.skip !== true,
+  ).length;
+  if (adding > 0) {
+    const botDenied = await deniedQuotaMessage(input.userId, "max_bots", adding);
+    if (botDenied) {
+      return {
+        ok: false,
+        deskType: set.deskType,
+        results: [],
+        error: botDenied,
+      };
+    }
+  }
   const results: ApplyItemResult[] = [];
   for (const item of set.items) {
     const override = byId.get(item.templateId);

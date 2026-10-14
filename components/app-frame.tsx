@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { DeskTypeAccessProvider } from "@/components/desk-type-access";
+import { QuotaAccessProvider } from "@/components/quota-access";
 import { PlatformTour } from "@/components/platform-tour";
 import { SetupGate } from "@/components/setup-gate";
 import { SetupModalFallback } from "@/components/setup-modal";
@@ -38,11 +39,12 @@ import {
   loadMemberNotificationChrome,
 } from "@/lib/notifications/badges";
 import { loadDeskTypeAccess } from "@/lib/membership/load-desk-type-access";
+import { loadQuotaAccess } from "@/lib/membership/load-quota-access";
 import { loadPlatformBrand } from "@/lib/platform/brand";
 
 export async function AppFrame({ children }: { children: React.ReactNode }) {
   const member = await getSessionMember();
-  const [desks, onboarding, deskTypeAccess] = member
+  const [desks, onboarding, deskTypeAccess, quotaAccess] = member
     ? await Promise.all([
         listTradingAccounts(member.id),
         member.emailVerifiedAt && member.platformMember
@@ -51,8 +53,11 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
         member.emailVerifiedAt && member.platformMember
           ? loadDeskTypeAccess(member.id)
           : Promise.resolve([]),
+        member.emailVerifiedAt && member.platformMember
+          ? loadQuotaAccess(member.id)
+          : Promise.resolve([]),
       ])
-    : [[], null, []];
+    : [[], null, [], []];
   const verified = Boolean(member?.emailVerifiedAt);
   const admin = verified && member ? await getAdminUser() : null;
   const autoTick = admin ? await loadAutoTickEnabled() : false;
@@ -88,6 +93,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
   return (
     <UiPreferencesProvider chrome={chromeScheme} content={contentScheme}>
       <DeskTypeAccessProvider access={deskTypeAccess}>
+      <QuotaAccessProvider access={quotaAccess}>
       <div
         inert={needsSetup ? true : undefined}
         className={needsSetup ? "h-dvh overflow-hidden" : undefined}
@@ -146,6 +152,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
           />
         </Suspense>
       ) : null}
+      </QuotaAccessProvider>
       </DeskTypeAccessProvider>
     </UiPreferencesProvider>
   );

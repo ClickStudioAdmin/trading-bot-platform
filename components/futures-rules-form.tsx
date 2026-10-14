@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { NewBotLink } from "@/components/quota-access";
 import { useRouter } from "next/navigation";
 import { AutomationsBotTable } from "@/components/automations-bot-table";
 import {
@@ -313,14 +313,14 @@ export function FuturesAutomationsDesk({
             revealId={revealId}
             toolbar={
               <>
-                <Link
+                <NewBotLink
                   href={automationsNewHref(listHref)}
                   className={`inline-flex items-center ${deskActionBtnClass}`}
                 >
                   <BotButtonLead icon={<IconPlus {...botBtnIcon} />}>
                     Create New Bot
                   </BotButtonLead>
-                </Link>
+                </NewBotLink>
                 {accountId ? (
                   <DeskTemplateBar
                     deskType="perps"

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CopyCatalogueBoard } from "@/components/copy-catalogue";
-import { DeskTypeRejectNotices } from "@/components/desk-type-reject";
+import { PlanGateNotices } from "@/components/desk-type-reject";
+import { DESK_QUOTA_KEYS } from "@/lib/membership/entitlements";
 import { PageHeading } from "@/components/page-heading";
 import { loadCopyCatalogue } from "@/lib/copy/catalogue";
 import { copyCatalogueHref } from "@/lib/copy/catalogue-href";
@@ -53,8 +54,9 @@ export default async function AccountCopyCataloguePage({
   return (
     <>
       <PageHeading as="h1" title="Copy Trading" />
-      <DeskTypeRejectNotices
+      <PlanGateNotices
         deskTypes={cards.map((card) => card.deskType)}
+        quotaKeys={DESK_QUOTA_KEYS}
         serverError={error}
       />
       {unfollowed ? (

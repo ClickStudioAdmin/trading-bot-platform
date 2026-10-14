@@ -6,6 +6,7 @@ import {
   parseFuturesAutomationRow,
   type FuturesAutomationRule,
 } from "./automation";
+import { deniedQuotaMessage } from "@/lib/membership/load-quota-access";
 import { getSessionContext } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -147,6 +148,13 @@ export async function upsertFuturesAutomationRules(input: {
   accountId: string;
   rules: FuturesAutomationRule[];
 }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const adding = input.rules.filter((rule) => !rule.id).length;
+  if (adding > 0) {
+    const botDenied = await deniedQuotaMessage(input.userId, "max_bots", adding);
+    if (botDenied) {
+      return { ok: false, error: botDenied };
+    }
+  }
   for (const rule of input.rules) {
     const row = futuresAutomationToRow(input.userId, input.accountId, rule);
     if (rule.id) {
@@ -182,6 +190,13 @@ export async function saveFuturesAutomationRules(input: {
     .eq("account_id", input.accountId);
   if (loadError) {
     return { ok: false, error: loadError.message };
+  }
+  const adding = input.rules.filter((rule) => !rule.id).length;
+  if (adding > 0) {
+    const botDenied = await deniedQuotaMessage(input.userId, "max_bots", adding);
+    if (botDenied) {
+      return { ok: false, error: botDenied };
+    }
   }
   const keep = new Set(
     input.rules.map((rule) => rule.id).filter((id): id is string => Boolean(id)),

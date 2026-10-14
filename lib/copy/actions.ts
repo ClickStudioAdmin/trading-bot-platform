@@ -31,6 +31,7 @@ import { loadFuturesSettings } from "@/lib/futures/settings";
 import { writeEventLog } from "@/lib/logs/write";
 import { deniedDeskTypeMessage } from "@/lib/membership/entitlements";
 import { loadDeskTypeAccess } from "@/lib/membership/load-desk-type-access";
+import { deniedDeskQuotaMessage } from "@/lib/membership/load-quota-access";
 import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { deskActionError, deskActionOk } from "@/lib/ui/desk-action";
@@ -494,6 +495,13 @@ export async function createCopyDeskAction(formData: FormData) {
         return fail(fit.error);
       }
     }
+  }
+  const quotaDenied = await deniedDeskQuotaMessage(member.id, {
+    mode,
+    venueEnvironment,
+  });
+  if (quotaDenied) {
+    return fail(quotaDenied);
   }
   const created = await insertTradingAccount(
     member.id,

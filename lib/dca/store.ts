@@ -9,6 +9,7 @@ import {
   type DcaPlaybookConfig,
   type DcaStatus,
 } from "./playbook";
+import { deniedQuotaMessage } from "@/lib/membership/load-quota-access";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FuturesSide } from "@/lib/futures/model";
@@ -314,6 +315,10 @@ export async function saveDcaPlaybook(input: {
       return { ok: false, error: "Could not save the bot." };
     }
     return { ok: true, playbook };
+  }
+  const botDenied = await deniedQuotaMessage(input.userId, "max_bots", 1);
+  if (botDenied) {
+    return { ok: false, error: botDenied };
   }
   const { data, error } = await input.supabase
     .from("dca_playbooks")
