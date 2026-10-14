@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { type FormEvent } from "react";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { DeskTypeRejectBanner } from "@/components/desk-type-reject";
+import { ClickGateNotice, formSubmitAnchor, useClickGate } from "@/components/click-gate-notice";
 import {
   CopyInviteTrialLine,
   useCopyGateAccess,
@@ -20,7 +20,7 @@ import {
   type DeskCopyListing,
 } from "@/lib/copy/model";
 import { formatAuDateUtc, parseDisplayTime } from "@/lib/time/display";
-import { inviteDenial, type CopyNotice } from "@/lib/membership/entitlements";
+import { inviteDenial } from "@/lib/membership/entitlements";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -136,7 +136,7 @@ export function DeskCopyPrivateShareCard({
   followerCount?: number;
 }) {
   const gate = useCopyGateAccess();
-  const [inviteNotice, setInviteNotice] = useState<CopyNotice | null>(null);
+  const clickGate = useClickGate();
   const inviteReady =
     canInvite &&
     Boolean(listing?.sharingEnabled) &&
@@ -148,11 +148,11 @@ export function DeskCopyPrivateShareCard({
     }
     const denial = inviteDenial(gate, followerCount);
     if (!denial) {
-      setInviteNotice(null);
+      clickGate.hide();
       return;
     }
     event.preventDefault();
-    setInviteNotice(denial);
+    clickGate.show(denial, formSubmitAnchor(event));
   }
 
   return (
@@ -184,7 +184,12 @@ export function DeskCopyPrivateShareCard({
           className="space-y-3"
         >
           <CopyInviteTrialLine followerCount={followerCount} />
-          {inviteNotice ? <DeskTypeRejectBanner access={inviteNotice} /> : null}
+          <ClickGateNotice
+            access={clickGate.notice}
+            anchorRef={clickGate.anchorRef}
+            generation={clickGate.generation}
+            onDismiss={clickGate.hide}
+          />
           <label className="block text-sm text-ink">
             Invite email
             <input
