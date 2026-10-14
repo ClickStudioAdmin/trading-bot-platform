@@ -20,6 +20,7 @@ import { formatAuDateUtc } from "@/lib/time/display";
 
 const POPUP_WIDTH = 416;
 const POPUP_MAX_HEIGHT = 560;
+const POPUP_MARGIN = 24;
 
 export function TemplateParametersButton({
   name,
@@ -46,6 +47,7 @@ export function TemplateParametersButton({
   const popupId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const anchorRef = useRef<HTMLSpanElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const [popupTab, setPopupTab] = useState<"parameters" | "backtests">(
     "parameters",
@@ -58,6 +60,7 @@ export function TemplateParametersButton({
     left: number;
     width: number;
     maxHeight: number;
+    bodyMax: number;
   } | null>(null);
   const previewClass = useThemePreviewPortalClass();
 
@@ -111,7 +114,7 @@ export function TemplateParametersButton({
       if (!anchor || !panel) {
         return;
       }
-      const margin = 12;
+      const margin = POPUP_MARGIN;
       const gap = 8;
       const width = Math.min(POPUP_WIDTH, window.innerWidth - margin * 2);
       const maxHeight = Math.min(
@@ -125,7 +128,11 @@ export function TemplateParametersButton({
       if (left < margin) {
         left = margin;
       }
-      const height = Math.min(panel.offsetHeight || maxHeight, maxHeight);
+      const headerHeight = headerRef.current?.offsetHeight ?? 0;
+      const bodyMax = Math.max(160, maxHeight - 34 - headerHeight);
+      const bodyEl = panel.querySelector<HTMLElement>("[data-parameters-body]");
+      const visibleBody = Math.min(bodyEl?.scrollHeight ?? 0, bodyMax);
+      const height = Math.min(34 + headerHeight + visibleBody, maxHeight);
       let top = anchor.top;
       if (top + height > window.innerHeight - margin) {
         top = Math.max(margin, window.innerHeight - margin - height);
@@ -135,9 +142,10 @@ export function TemplateParametersButton({
         current.top === top &&
         current.left === left &&
         current.width === width &&
-        current.maxHeight === maxHeight
+        current.maxHeight === maxHeight &&
+        current.bodyMax === bodyMax
           ? current
-          : { top, left, width, maxHeight },
+          : { top, left, width, maxHeight, bodyMax },
       );
     }
     place();
@@ -271,67 +279,80 @@ export function TemplateParametersButton({
               data-template-parameters=""
               onMouseEnter={() => showPopup()}
               onMouseLeave={scheduleClose}
-              className={`fixed z-[90] overflow-auto rounded-card border border-line bg-canvas p-3 text-left font-normal normal-case tracking-normal text-ink shadow-none ${previewClass}`.trim()}
+              className={`fixed z-[90] flex flex-col overflow-hidden rounded-card border border-line bg-canvas p-4 text-left font-normal normal-case tracking-normal text-ink shadow-none ${previewClass}`.trim()}
               style={{
                 top: box?.top ?? -9999,
-                left: box?.left ?? 12,
+                left: box?.left ?? POPUP_MARGIN,
                 width: box?.width ?? POPUP_WIDTH,
                 maxHeight: box?.maxHeight ?? POPUP_MAX_HEIGHT,
               }}
             >
               {hasBacktests ? (
-                <nav
-                  role="tablist"
-                  aria-label={`${name} details`}
-                  className="-mx-3 -mt-3 mb-3 flex border-b border-line px-2"
-                >
-                  <PopupTab
-                    selected={popupTab === "parameters"}
-                    onClick={() => setPopupTab("parameters")}
+                <div ref={headerRef} className="shrink-0 pb-3">
+                  <nav
+                    role="tablist"
+                    aria-label={`${name} details`}
+                    className="flex border-b border-line"
                   >
-                    Parameters
-                  </PopupTab>
-                  <PopupTab
-                    selected={popupTab === "backtests"}
-                    onClick={() => setPopupTab("backtests")}
-                  >
-                    Backtests
-                  </PopupTab>
-                </nav>
-              ) : (
-                <h2 className="mb-3 text-lg font-semibold">Parameters</h2>
-              )}
-              {popupTab === "backtests" && hasBacktests ? (
-                <ul className="overflow-hidden rounded-card border border-line bg-surface">
-                  {shownBacktests?.map((run) => (
-                    <li
-                      key={run.runId}
-                      className="border-b border-line last:border-b-0"
+                    <PopupTab
+                      selected={popupTab === "parameters"}
+                      onClick={() => setPopupTab("parameters")}
                     >
-                      <a
-                        href={`/account/backtests/${run.runId}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        data-template-parameters=""
-                        onMouseDown={(event) => event.stopPropagation()}
-                        onClick={(event) => event.stopPropagation()}
-                        className="flex items-baseline justify-between gap-4 px-5 py-2.5 text-sm font-medium text-accent hover:underline"
-                      >
-                        <span className="min-w-0 text-left break-words">
-                          {run.name}
-                        </span>
-                        <span className="shrink-0 text-right text-xs font-normal tabular-nums text-ink-muted">
-                          {formatAuDateUtc(run.fromMs)} – {formatAuDateUtc(run.toMs)}
-                        </span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              ) : sections.length > 0 ? (
-                <BacktestParameterSections sections={sections} />
+                      Parameters
+                    </PopupTab>
+                    <PopupTab
+                      selected={popupTab === "backtests"}
+                      onClick={() => setPopupTab("backtests")}
+                    >
+                      Backtests
+                    </PopupTab>
+                  </nav>
+                </div>
               ) : (
-                <p className="text-sm text-ink-muted">No parameters stored.</p>
+                <h2
+                  ref={headerRef}
+                  className="shrink-0 pb-3 text-lg font-semibold"
+                >
+                  Parameters
+                </h2>
               )}
+              <div
+                data-parameters-body=""
+                className="min-h-0 overflow-y-auto"
+                style={{ maxHeight: box?.bodyMax ?? POPUP_MAX_HEIGHT }}
+              >
+                {popupTab === "backtests" && hasBacktests ? (
+                  <ul className="overflow-hidden rounded-card border border-line bg-surface">
+                    {shownBacktests?.map((run) => (
+                      <li
+                        key={run.runId}
+                        className="border-b border-line last:border-b-0"
+                      >
+                        <a
+                          href={`/account/backtests/${run.runId}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          data-template-parameters=""
+                          onMouseDown={(event) => event.stopPropagation()}
+                          onClick={(event) => event.stopPropagation()}
+                          className="flex items-baseline justify-between gap-4 px-5 py-2.5 text-sm font-medium text-accent hover:underline"
+                        >
+                          <span className="min-w-0 text-left break-words">
+                            {run.name}
+                          </span>
+                          <span className="shrink-0 text-right text-xs font-normal tabular-nums text-ink-muted">
+                            {formatAuDateUtc(run.fromMs)} – {formatAuDateUtc(run.toMs)}
+                          </span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : sections.length > 0 ? (
+                  <BacktestParameterSections sections={sections} />
+                ) : (
+                  <p className="text-sm text-ink-muted">No parameters stored.</p>
+                )}
+              </div>
             </div>,
             document.body,
           )
