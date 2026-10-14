@@ -8,11 +8,11 @@ Never trust the browser. Server actions reject. Secrets never go in `NEXT_PUBLIC
 
 ## Status
 
-Accepted 17 Sep 2026 for sign-in. Google Authenticator TOTP on Account Settings → Password & Security. Sign-in asks for the 6-digit code (or a one-time recovery code). When that authenticator is already on, the submits listed under Step-up ask for a fresh code on that one submit. A login with 2FA off is unchanged. Not a plan gate.
+Accepted 17 Sep 2026 for sign-in. Google Authenticator TOTP on Account Settings → Password & Security. Sign-in asks for the 6-digit code (or a one-time recovery code) on its own page. When that authenticator is already on, the submits listed under Step-up open a modal for a fresh code. Cancel closes the modal and does not submit. Those pages do not show the code field. A login with 2FA off is unchanged. Not a plan gate.
 
 ## Purpose
 
-A member can turn on **Google Authenticator** (standard TOTP: SHA-1, 6 digits, 30s) on Account Settings → Password & Security. After that, sign-in asks for the code. The same code is asked again on the step-up submits in Done when. A plan **requiring** 2FA before Live / copy / backtest is **not** this item.
+A member can turn on **Google Authenticator** (standard TOTP: SHA-1, 6 digits, 30s) on Account Settings → Password & Security. After that, sign-in asks for the code on its own page. The same code is asked again in a modal when a step-up submit in Done when is clicked. A plan **requiring** 2FA before Live / copy / backtest is **not** this item.
 
 ## Done when
 
@@ -21,7 +21,7 @@ A member can turn on **Google Authenticator** (standard TOTP: SHA-1, 6 digits, 3
 3. Disable 2FA requires the current password (and the current code if still enrolled).
 4. Unverified logins stay on the verify wall — they cannot reach Settings to enroll.
 5. Server rejects a session that skipped the 2FA step.
-6. When 2FA is already on, these submits reject without a current authenticator or recovery code: change password, Account Balance withdraw, save affiliate payout address, request an affiliate payout, save or replace an exchange API key (including setup), rotate a webhook secret, delete a desk, change the public trader alias, and reset the develop account. Bio, logo, and an unchanged alias do not ask. Pause, close, billing, and sign-in stay on the session.
+6. When 2FA is already on, these submits reject without a current authenticator or recovery code: change password, Account Balance withdraw, save affiliate payout address, request an affiliate payout, save or replace an exchange API key (including setup), rotate a webhook secret, delete a desk, change the public trader alias, and reset the develop account. The action button opens that code in a modal. A small Cancel drops the request and leaves the page as it was. Bio, logo, and an unchanged alias do not ask. Pause, close, billing, and sign-in stay on the session. Sign-in keeps its dedicated page.
 
 The plan checkbox that requires enrollment before other clicks is still V1 item 6. Do not add that here.
 
