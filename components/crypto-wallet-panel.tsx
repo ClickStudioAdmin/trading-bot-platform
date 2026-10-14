@@ -24,7 +24,7 @@ import {
   requestMainWalletWithdrawAction,
 } from "@/lib/membership/wallet-actions";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
-import { StepUpCodeField } from "@/components/step-up-code-field";
+import { StepUpForm } from "@/components/step-up-code-field";
 import {
   accountBalanceCoversNextCycle,
   accountBalancePendingWithdrawNote,
@@ -625,7 +625,11 @@ function MainWalletWithdrawForm({
           on Settings → Crypto.
         </p>
       ) : null}
-      <form action={requestMainWalletWithdrawAction} className="space-y-3">
+      <StepUpForm
+        action={requestMainWalletWithdrawAction}
+        confirmLabel="Request withdraw"
+        className="space-y-3"
+      >
         <label className="block text-sm text-ink">
           Chain
           <AppSelect
@@ -668,7 +672,6 @@ function MainWalletWithdrawForm({
             className={`${BILLING_FIELD_CLASS} font-mono text-xs`}
           />
         </label>
-        <StepUpCodeField inputClassName={BILLING_FIELD_CLASS} />
         <PendingSubmitButton
           pendingLabel="Requesting…"
           disabled={!canWithdraw}
@@ -676,7 +679,7 @@ function MainWalletWithdrawForm({
         >
           Request withdraw
         </PendingSubmitButton>
-      </form>
+      </StepUpForm>
       {withdraw.pending.length > 0 ? (
         <div>
           <h3 className="text-sm font-semibold text-ink">

@@ -11,7 +11,7 @@ import {
 } from "@/lib/accounts/model";
 import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
-import { StepUpCodeField } from "@/components/step-up-code-field";
+import { StepUpForm } from "@/components/step-up-code-field";
 import { useDeskTypeAccess } from "@/components/desk-type-access";
 import {
   quotaAccessFor,
@@ -1935,6 +1935,7 @@ function SetupKeyForm({
 }) {
   const venue = getVenue(venueId);
   const [message, setMessage] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
   const [pending, startTransition] = useTransition();
   if (!venue) {
@@ -1949,20 +1950,26 @@ function SetupKeyForm({
   }
 
   return (
-    <form
+    <StepUpForm
       className="mt-4 space-y-3"
       autoComplete="off"
+      confirmLabel="Save key"
+      pending={pending}
+      error={saveError}
+      onCancel={() => setSaveError(null)}
       onSubmit={(event) => {
         event.preventDefault();
         const data = readForm(event.currentTarget);
+        setSaveError(null);
         startTransition(async () => {
           const saved = await saveSetupConnection(data);
           if (!saved.ok) {
             setOk(false);
-            setMessage(saved.error);
+            setSaveError(saved.error);
             return;
           }
           setOk(true);
+          setSaveError(null);
           setMessage("Key saved. It is bound to this desk when you finish.");
           onSaved(saved.connection);
         });
@@ -1990,7 +1997,6 @@ function SetupKeyForm({
           ? "Paste the account address and an approved agent private key. The secret is encrypted and is not shown again."
           : "Use a trade-only key with no withdrawal permission. The secret is encrypted and is not shown again."}
       </p>
-      <StepUpCodeField inputClassName={fieldClass} />
       {message ? (
         <p className={`text-sm ${ok ? "text-success" : "text-danger"}`}>
           {message}
@@ -2025,7 +2031,7 @@ function SetupKeyForm({
           Save key
         </button>
       </div>
-    </form>
+    </StepUpForm>
   );
 }
 

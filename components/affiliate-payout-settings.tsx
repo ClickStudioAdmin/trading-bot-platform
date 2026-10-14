@@ -8,7 +8,7 @@ import type { AffiliatePayoutSettings } from "@/lib/membership/affiliate";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import { AppSelect } from "@/components/app-select";
 import { AppCheck } from "@/components/app-check";
-import { StepUpCodeField } from "@/components/step-up-code-field";
+import { StepUpForm } from "@/components/step-up-code-field";
 
 export function AffiliatePayoutSettingsForm({
   settings,
@@ -22,7 +22,11 @@ export function AffiliatePayoutSettingsForm({
   const [autoPayout, setAutoPayout] = useState(settings.autoPayout);
 
   return (
-    <form action={saveAffiliatePayoutSettingsAction} className="mt-4 space-y-3">
+    <StepUpForm
+      action={saveAffiliatePayoutSettingsAction}
+      confirmLabel="Save payout settings"
+      className="mt-4 space-y-3"
+    >
       <label className="block text-sm text-ink">
         Chain
         <AppSelect
@@ -81,13 +85,12 @@ export function AffiliatePayoutSettingsForm({
           Must be more than the program minimum {formatUsd(minPayoutUsd)}.
         </span>
       </label>
-      <StepUpCodeField inputClassName={BILLING_FIELD_CLASS} />
       <PendingSubmitButton
         pendingLabel="Saving…"
         className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
       >
         Save payout settings
       </PendingSubmitButton>
-    </form>
+    </StepUpForm>
   );
 }
