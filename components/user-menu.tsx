@@ -52,6 +52,7 @@ export function UserMenu({
           <form action={signOut}>
             <PendingSubmitButton
               pendingLabel="Signing out…"
+              align="start"
               className="w-full rounded-control px-2 py-2 text-left text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
             >
               Sign out
