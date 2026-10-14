@@ -106,6 +106,7 @@ export function PendingSubmitButton({
   title,
   skipSizeGuard = false,
   deskAction,
+  align = "center",
   "aria-label": ariaLabel,
 }: {
   children: ReactNode;
@@ -120,6 +121,8 @@ export function PendingSubmitButton({
   title?: string;
   skipSizeGuard?: boolean;
   deskAction?: string;
+  /** Full-width buttons stay centered. Menu rows pass start. */
+  align?: "center" | "start";
   "aria-label"?: string;
 }) {
   const { pending, data } = useFormStatus();
@@ -132,6 +135,7 @@ export function PendingSubmitButton({
         value === undefined ||
         data?.get(name) === value);
   const stretch = /(^|\s)w-full(\s|$)/.test(className);
+  const itemAlign = align === "start" ? "justify-start" : "justify-center";
   const restored = useStoredButtonSuccess(successKey);
   const wasPending = useRef(false);
   const [localOk, setLocalOk] = useState(false);
@@ -188,8 +192,8 @@ export function PendingSubmitButton({
         <span
           className={`invisible col-start-1 row-start-1 whitespace-nowrap ${
             stretch
-              ? "flex w-full items-center justify-center gap-1.5"
-              : "inline-flex items-center justify-center gap-1.5"
+              ? `flex w-full items-center ${itemAlign} gap-1.5`
+              : `inline-flex items-center ${itemAlign} gap-1.5`
           }`}
           aria-hidden
         >
@@ -198,8 +202,8 @@ export function PendingSubmitButton({
         <span
           className={
             stretch
-              ? "col-start-1 row-start-1 flex w-full items-center justify-center gap-1.5"
-              : "col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5"
+              ? `col-start-1 row-start-1 flex w-full items-center ${itemAlign} gap-1.5`
+              : `col-start-1 row-start-1 inline-flex items-center ${itemAlign} gap-1.5`
           }
         >
           {thisPending ? (
