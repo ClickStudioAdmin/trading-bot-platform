@@ -527,6 +527,48 @@ assert.deepEqual(
   grouped["template-b"]?.map((row) => row.runId),
   ["newer", "published"],
 );
+assert.equal(ownerLinks[0]?.highlight, null);
+const cardLinks = templateBacktestLinks(
+  [
+    {
+      id: "card",
+      userId: "owner",
+      status: "done" as const,
+      name: "Card",
+      symbol: "BTCUSDT",
+      recipeName: "Dip",
+      parentRunId: null,
+      fromMs: Date.UTC(2021, 9, 15),
+      toMs: Date.UTC(2026, 9, 14),
+      createdAtMs: 9,
+      interval: "15",
+      leverage: 10,
+      stats: {
+        trades: 427,
+        wins: 427,
+        winRate: 1,
+        realizedUsdt: 5334.79,
+        maxDrawdownUsdt: 0,
+        profitFactor: null,
+        timeInMarket: 0,
+        openQty: 0,
+        openSide: null,
+        markUsdt: 0,
+        startingUsdt: 10000,
+        endingUsdt: 15334.79,
+        returnPct: null,
+      },
+      orders: [],
+    },
+  ],
+  "owner",
+  false,
+);
+assert.equal(cardLinks[0]?.highlight?.trades, 427);
+assert.equal(cardLinks[0]?.highlight?.symbol, "BTCUSDT");
+assert.equal(cardLinks[0]?.highlight?.interval, "15");
+assert.equal(cardLinks[0]?.highlight?.realizedUsdt, 5334.79);
+assert.equal(cardLinks[0]?.highlight?.winRate, 1);
 const closedClip = [
   {
     atMs: 1,

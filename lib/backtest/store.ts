@@ -656,7 +656,7 @@ export async function listAttachedBacktestLinksByTemplate(
   const { data, error } = await supabase
     .from("backtest_runs")
     .select(
-      "id, user_id, name, symbol, parent_run_id, from_ms, to_ms, created_at, recipe, status, template_id",
+      "id, user_id, name, symbol, parent_run_id, from_ms, to_ms, created_at, recipe, status, template_id, interval, leverage, stats, orders",
     )
     .in("template_id", queryIds)
     .eq("status", "done")
@@ -746,17 +746,25 @@ function attachedBacktestRow(
     recipe && typeof recipe === "object" && "name" in recipe
       ? String((recipe as { name: unknown }).name ?? "")
       : "";
+  const recipeSymbol =
+    recipe && typeof recipe === "object" && "symbol" in recipe
+      ? String((recipe as { symbol: unknown }).symbol ?? "")
+      : "";
   return {
     id: String(row.id),
     userId: row.user_id ? String(row.user_id) : null,
     status,
     name: readBacktestName(row.name),
-    symbol: String(row.symbol ?? ""),
+    symbol: recipeSymbol || String(row.symbol ?? ""),
     recipeName,
     parentRunId: row.parent_run_id ? String(row.parent_run_id) : null,
     fromMs: Number(row.from_ms) || 0,
     toMs: Number(row.to_ms) || 0,
     createdAtMs: asTime(row.created_at),
+    interval: parseDcaIndicatorTimeframe(row.interval),
+    leverage: normalizeBacktestLeverage(row.leverage),
+    stats: parseStats(row.stats),
+    orders: parseSimulatedOrders(row.orders),
   };
 }
 

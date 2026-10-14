@@ -1414,6 +1414,7 @@ export type TemplateBacktestLink = {
   name: string;
   fromMs: number;
   toMs: number;
+  highlight: BacktestLinkHighlight | null;
 };
 
 export type AttachedBacktestRow = {
@@ -1427,6 +1428,10 @@ export type AttachedBacktestRow = {
   fromMs: number;
   toMs: number;
   createdAtMs: number;
+  interval?: DcaIndicatorTimeframe | null;
+  leverage?: number;
+  stats?: BacktestStats | null;
+  orders?: SimulatedOrder[];
 };
 
 /** Finished runs attached to one template, newest first, that this member can open. */
@@ -1456,6 +1461,18 @@ export function templateBacktestLinks(
       }),
       fromMs: row.fromMs,
       toMs: row.toMs,
+      highlight: row.interval
+        ? backtestLinkHighlight({
+            id: row.id,
+            symbol: row.symbol,
+            interval: row.interval,
+            fromMs: row.fromMs,
+            toMs: row.toMs,
+            stats: row.stats ?? null,
+            orders: row.orders ?? [],
+            leverage: normalizeBacktestLeverage(row.leverage),
+          })
+        : null,
     }));
 }
 

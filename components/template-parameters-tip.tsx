@@ -10,6 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { BacktestParameterSections } from "@/components/backtest-parameter-sections";
+import { BacktestHighlightBody } from "@/components/backtest-highlight-hover";
 import { IconBacktest, IconInfo } from "@/components/icons";
 import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import { attachedBacktestsByTemplateAction } from "@/lib/backtest/actions";
@@ -393,12 +394,9 @@ export function TemplateParametersButton({
                 style={{ maxHeight: box?.bodyMax ?? POPUP_MAX_HEIGHT }}
               >
                 {popupTab === "backtests" && hasBacktests ? (
-                  <ul className="overflow-hidden rounded-card border border-line bg-surface">
+                  <ul className="space-y-2">
                     {shownBacktests?.map((run) => (
-                      <li
-                        key={run.runId}
-                        className="border-b border-line last:border-b-0"
-                      >
+                      <li key={run.runId}>
                         <a
                           href={`/account/backtests/${run.runId}`}
                           target="_blank"
@@ -406,14 +404,19 @@ export function TemplateParametersButton({
                           data-template-parameters=""
                           onMouseDown={(event) => event.stopPropagation()}
                           onClick={(event) => event.stopPropagation()}
-                          className="flex items-baseline justify-between gap-4 px-5 py-2.5 text-sm font-medium text-accent hover:underline"
+                          className="block rounded-control border border-line bg-surface-raised px-3 py-2 text-ink"
                         >
-                          <span className="min-w-0 text-left break-words">
+                          <span className="mb-2 block text-sm font-medium text-accent">
                             {run.name}
                           </span>
-                          <span className="shrink-0 text-right text-xs font-normal tabular-nums text-ink-muted">
-                            {formatAuDateUtc(run.fromMs)} – {formatAuDateUtc(run.toMs)}
-                          </span>
+                          {run.highlight ? (
+                            <BacktestHighlightBody highlight={run.highlight} />
+                          ) : (
+                            <span className="text-xs tabular-nums text-ink-muted">
+                              {formatAuDateUtc(run.fromMs)} –{" "}
+                              {formatAuDateUtc(run.toMs)}
+                            </span>
+                          )}
                         </a>
                       </li>
                     ))}
