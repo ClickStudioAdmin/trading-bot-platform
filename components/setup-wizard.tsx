@@ -286,6 +286,9 @@ export function SetupWizard({
     screenIndex >= 0 && screenIndex < screens.length - 1
       ? screens[screenIndex + 1]
       : null;
+  const reviewCreates =
+    screen.main === "review" &&
+    setupReviewRows({ desks, folders }).length > 0;
   function draft(overrides?: Partial<SetupDraft>): SetupDraft {
     return {
       desks,
@@ -836,22 +839,22 @@ export function SetupWizard({
             onClick={continueForward}
             className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
-            {pending && next?.main === "tour" ? (
+            {pending && next?.main === "tour" && reviewCreates ? (
               <IconLoader
                 {...WIZARD_ICON}
                 className="size-3.5 shrink-0 animate-spin"
               />
-            ) : screen.main === "review" ? (
+            ) : reviewCreates ? (
               <IconPlus {...WIZARD_ICON} />
             ) : null}
             {pending
-              ? next?.main === "tour"
+              ? next?.main === "tour" && reviewCreates
                 ? "Creating…"
                 : "Saving…"
-              : screen.main === "review"
+              : reviewCreates
                 ? "Create"
                 : "Continue"}
-            {screen.main === "review" ? null : (
+            {reviewCreates ? null : (
               <IconArrowRight {...WIZARD_ICON} />
             )}
           </button>
