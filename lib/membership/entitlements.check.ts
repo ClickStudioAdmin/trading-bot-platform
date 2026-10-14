@@ -15,6 +15,7 @@ import {
   deniedDeskTypeMessage,
   deskTypeAccessList,
   deskTypeRejectLead,
+  bundledDeskTypeDenial,
   deskTypeUpgradeMessage,
   gateRejectLead,
   quotaAccessFor,
@@ -35,6 +36,7 @@ import {
   shareTrialLines,
   sharingDeskMessage,
   type CopyGateAccess,
+  DESK_QUOTA_KEYS,
   quotaAccessList,
   quotaKeyAfterBind,
   quotaKeyForDesk,
@@ -175,6 +177,65 @@ assert.equal(
 );
 assert.equal(deniedDeskTypeMessage(included, "dca"), null);
 
+const closedTypes = access({ plans: [unlock("Free", { priceUsd: 0, sortOrder: 1, on: {} })] });
+const bundled = bundledDeskTypeDenial(closedTypes);
+assert.equal(
+  bundled?.message,
+  "Perps bots, DCA, Cash and Carry, TradingView Strategy, and Perps desks are not allowed on your plan.",
+);
+assert.equal(bundled?.upgradePlan, null);
+const sharedPlan = bundledDeskTypeDenial([
+  {
+    deskType: "dca",
+    allowed: false,
+    message: deskTypeUpgradeMessage("dca", "Free"),
+    upgradePlan: "Free",
+  },
+  {
+    deskType: "perps",
+    allowed: false,
+    message: deskTypeUpgradeMessage("perps", "Free"),
+    upgradePlan: "Free",
+  },
+]);
+assert.equal(
+  sharedPlan?.message,
+  "DCA and Perps desks are not allowed on your plan. Upgrade to Free to enable it.",
+);
+assert.equal(sharedPlan?.upgradePlan, "Free");
+assert.equal(
+  bundledDeskTypeDenial([
+    {
+      deskType: "perps",
+      allowed: false,
+      message: deskTypeUpgradeMessage("perps", "Plus"),
+      upgradePlan: "Plus",
+    },
+    {
+      deskType: "dca",
+      allowed: false,
+      message: deskTypeUpgradeMessage("dca", "Free"),
+      upgradePlan: "Free",
+    },
+  ])?.upgradePlan,
+  null,
+);
+assert.equal(
+  bundledDeskTypeDenial([row(closed, "dca")])?.message,
+  row(closed, "dca").message,
+);
+assert.equal(
+  bundledDeskTypeDenial([
+    {
+      deskType: "dca",
+      allowed: true,
+      message: null,
+      upgradePlan: null,
+    },
+  ]),
+  null,
+);
+
 const openGrant = access({
   trials: { features: { desk_dca: { days: 14 } }, caps: {} },
   grants: [{ key: "desk_dca", endsAt: "2026-10-28T00:00:00.000Z" }],
@@ -256,6 +317,12 @@ function quotas(input: {
     },
   });
 }
+
+assert.deepEqual([...DESK_QUOTA_KEYS], [
+  "max_paper_desks",
+  "max_demo_desks",
+  "max_live_env_desks",
+]);
 
 const plusPaper = capPlan("Plus", {
   priceUsd: 20,
