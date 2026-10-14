@@ -1,8 +1,12 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
+import { PlanGateNotices } from "@/components/desk-type-reject";
 import { FreeTrialBadge, FreeTrialBadges } from "@/components/plan-trial-hint";
+import type { DeskType } from "@/lib/accounts/model";
 import {
+  DESK_QUOTA_KEYS,
+  followClickDenial,
   followTrialMessage,
   inviteTrialMessage,
   shareTrialLines,
@@ -25,6 +29,18 @@ export function CopyGateProvider({
 
 export function useCopyGateAccess(): CopyGateAccess | null {
   return useContext(CopyGateContext);
+}
+
+export function CopyDeskPageNotices({ deskType }: { deskType: DeskType }) {
+  const gate = useCopyGateAccess();
+  const denial = gate ? followClickDenial(gate) : null;
+  return (
+    <PlanGateNotices
+      deskTypes={[deskType]}
+      quotaKeys={DESK_QUOTA_KEYS}
+      extras={denial ? [denial] : []}
+    />
+  );
 }
 
 export function CopyFollowTrialLine() {
