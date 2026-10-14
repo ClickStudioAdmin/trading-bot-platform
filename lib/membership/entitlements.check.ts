@@ -17,6 +17,9 @@ import {
   deskTypeUpgradeMessage,
   gateRejectLead,
   quotaAccessFor,
+  templateFeatureAccessFor,
+  templateFeatureAccessList,
+  templateNotAllowedMessage,
   quotaAccessList,
   quotaKeyAfterBind,
   quotaKeyForDesk,
@@ -398,3 +401,141 @@ assert.equal(
 );
 
 console.log("quota entitlement checks passed");
+
+const templatePlus = unlock("Plus", {
+  priceUsd: 20,
+  sortOrder: 2,
+  on: {
+    extras_templates: true,
+    extras_share_templates: true,
+    extras_import_export_templates: true,
+  },
+});
+
+function templateRows(input: {
+  on?: Partial<PlanFeatures>;
+  trials?: PlanTrials;
+  grants?: { key: string; endsAt: string }[];
+  plans?: UnlockCandidate[];
+}) {
+  return templateFeatureAccessList({
+    features: features(input.on),
+    trials: input.trials ?? emptyPlanTrials(),
+    grants: input.grants ?? [],
+    nowMs,
+    plans: input.plans ?? [],
+  });
+}
+
+assert.equal(
+  templateNotAllowedMessage("extras_templates", "Plus"),
+  "Saving templates is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  gateRejectLead(
+    templateNotAllowedMessage("extras_templates", "Plus"),
+    "Plus",
+  ),
+  "Saving templates is not allowed on your plan.",
+);
+assert.equal(
+  templateNotAllowedMessage("extras_share_templates", "Plus"),
+  "Sharing templates is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  templateNotAllowedMessage("extras_import_export_templates", null),
+  "Importing and exporting templates is not allowed on your plan.",
+);
+
+const templateClosed = templateRows({ plans: [templatePlus] });
+assert.equal(
+  templateFeatureAccessFor(templateClosed, "extras_templates")?.allowed,
+  false,
+);
+assert.equal(
+  templateFeatureAccessFor(templateClosed, "extras_templates")?.message,
+  "Saving templates is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  templateFeatureAccessFor(templateClosed, "extras_templates")?.upgradePlan,
+  "Plus",
+);
+assert.equal(
+  templateFeatureAccessFor(templateClosed, "extras_share_templates")?.message,
+  "Sharing templates is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+assert.equal(
+  templateFeatureAccessFor(templateClosed, "extras_import_export_templates")
+    ?.message,
+  "Importing and exporting templates is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+
+const templateSecret = unlock("Secret", {
+  visibility: "private",
+  priceUsd: 1,
+  on: { extras_templates: true },
+});
+assert.equal(
+  templateFeatureAccessFor(
+    templateRows({ plans: [templateSecret] }),
+    "extras_templates",
+  )?.upgradePlan,
+  null,
+);
+assert.equal(
+  templateFeatureAccessFor(
+    templateRows({ plans: [templateSecret] }),
+    "extras_templates",
+  )?.message,
+  "Saving templates is not allowed on your plan.",
+);
+assert.equal(
+  templateFeatureAccessFor(
+    templateRows({ plans: [templateSecret, templatePlus] }),
+    "extras_templates",
+  )?.upgradePlan,
+  "Plus",
+);
+
+const templateOpen = templateRows({
+  trials: { features: { extras_templates: { days: 14 } }, caps: {} },
+  grants: [{ key: "extras_templates", endsAt: "2026-10-28T00:00:00.000Z" }],
+  plans: [templatePlus],
+});
+assert.equal(
+  templateFeatureAccessFor(templateOpen, "extras_templates")?.allowed,
+  true,
+);
+assert.equal(
+  templateFeatureAccessFor(templateOpen, "extras_templates")?.message,
+  "Saving templates is in a free trial until 28/10/2026.",
+);
+
+const templateEnded = templateRows({
+  trials: { features: { extras_share_templates: { days: 14 } }, caps: {} },
+  grants: [
+    { key: "extras_share_templates", endsAt: "2026-10-01T00:00:00.000Z" },
+  ],
+  plans: [templatePlus],
+});
+assert.equal(
+  templateFeatureAccessFor(templateEnded, "extras_share_templates")?.allowed,
+  false,
+);
+assert.equal(
+  templateFeatureAccessFor(templateEnded, "extras_share_templates")?.message,
+  "Your free trial of sharing templates ended on 01/10/2026.",
+);
+assert.equal(
+  templateFeatureAccessFor(templateEnded, "extras_share_templates")?.upgradePlan,
+  "Plus",
+);
+assert.equal(
+  templateFeatureAccessFor(
+    templateRows({ on: { extras_import_export_templates: true } }),
+    "extras_import_export_templates",
+  )?.allowed,
+  true,
+);
+
+console.log("template feature entitlement checks passed");

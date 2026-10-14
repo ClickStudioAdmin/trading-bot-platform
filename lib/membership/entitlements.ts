@@ -237,6 +237,134 @@ function decideDeskType(input: {
   };
 }
 
+export const TEMPLATE_FEATURE_KEYS = [
+  "extras_templates",
+  "extras_share_templates",
+  "extras_import_export_templates",
+] as const;
+
+export type TemplateFeatureKey = (typeof TEMPLATE_FEATURE_KEYS)[number];
+
+const TEMPLATE_ACTIVITY: Record<TemplateFeatureKey, string> = {
+  extras_templates: "Saving templates",
+  extras_share_templates: "Sharing templates",
+  extras_import_export_templates: "Importing and exporting templates",
+};
+
+export type TemplateFeatureAccess = {
+  key: TemplateFeatureKey;
+  allowed: boolean;
+  message: string | null;
+  upgradePlan: string | null;
+};
+
+export function templateActivity(key: TemplateFeatureKey): string {
+  return TEMPLATE_ACTIVITY[key];
+}
+
+export function templateNotAllowedMessage(
+  key: TemplateFeatureKey,
+  planName: string | null,
+): string {
+  const lead = `${templateActivity(key)} is not allowed on your plan.`;
+  if (!planName) {
+    return lead;
+  }
+  return `${lead} Upgrade to ${planName} to enable it.`;
+}
+
+export function templateTrialEndedMessage(
+  key: TemplateFeatureKey,
+  endedOn: string,
+): string {
+  return `Your free trial of ${templateActivity(key).toLowerCase()} ended on ${endedOn}.`;
+}
+
+export function templateTrialOpenMessage(
+  key: TemplateFeatureKey,
+  until: string,
+): string {
+  return `${templateActivity(key)} is in a free trial until ${until}.`;
+}
+
+export function templateFeatureAccessList(input: {
+  features: PlanFeatures;
+  trials: PlanTrials;
+  grants: readonly { key: string; endsAt: string }[];
+  nowMs: number;
+  plans: readonly UnlockCandidate[];
+}): TemplateFeatureAccess[] {
+  return TEMPLATE_FEATURE_KEYS.map((key) =>
+    decideTemplateFeature({ ...input, key }),
+  );
+}
+
+export function templateFeatureAccessFor(
+  access: readonly TemplateFeatureAccess[],
+  key: TemplateFeatureKey,
+): TemplateFeatureAccess | null {
+  return access.find((row) => row.key === key) ?? null;
+}
+
+function decideTemplateFeature(input: {
+  key: TemplateFeatureKey;
+  features: PlanFeatures;
+  trials: PlanTrials;
+  grants: readonly { key: string; endsAt: string }[];
+  nowMs: number;
+  plans: readonly UnlockCandidate[];
+}): TemplateFeatureAccess {
+  const upgradePlan = cheapestPublicPlanName(input.plans, input.key);
+  if (input.features[input.key]) {
+    return {
+      key: input.key,
+      allowed: true,
+      message: null,
+      upgradePlan: null,
+    };
+  }
+  const offer = featureTrialOffer(
+    { features: input.features, caps: emptyCaps(), trials: input.trials },
+    input.key,
+  );
+  const grant = input.grants.find((row) => row.key === input.key) ?? null;
+  const phase = grant ? trialPhase(grant.endsAt, input.nowMs) : null;
+  const access = featureAccess({
+    included: false,
+    phase: phase ?? (offer ? "active" : null),
+  });
+  if (access === "trial") {
+    return {
+      key: input.key,
+      allowed: true,
+      message: grant
+        ? templateTrialOpenMessage(
+            input.key,
+            formatAuDateUtc(Date.parse(grant.endsAt)),
+          )
+        : `${templateActivity(input.key)} is in a free trial.`,
+      upgradePlan: null,
+    };
+  }
+  if (grant && phase === "ended") {
+    return {
+      key: input.key,
+      allowed: false,
+      message: templateTrialEndedMessage(
+        input.key,
+        formatAuDateUtc(Date.parse(grant.endsAt)),
+      ),
+      upgradePlan,
+    };
+  }
+  return {
+    key: input.key,
+    allowed: false,
+    message: templateNotAllowedMessage(input.key, upgradePlan),
+    upgradePlan,
+  };
+}
+
 export const QUOTA_CAP_KEYS = [
   "max_paper_desks",
   "max_demo_desks",

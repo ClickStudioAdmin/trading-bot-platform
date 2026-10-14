@@ -14,6 +14,10 @@ import {
 } from "@/components/backtest-highlight-hover";
 import { PageHeading } from "@/components/page-heading";
 import {
+  TemplateFeatureGateNotices,
+  useTemplateFeatureGate,
+} from "@/components/template-feature-access";
+import {
   SortTh,
   TABLE_ACTIONS_TD_CLASS,
   TABLE_ACTIONS_TH_CLASS,
@@ -457,6 +461,22 @@ export function TemplatesLibrary({
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [importing, setImporting] = useState(false);
   const { confirm, dialog } = useConfirmDialog();
+  const templateGateRef = useRef<HTMLDivElement>(null);
+  const {
+    reveal: revealTemplateGate,
+    denied: deniedTemplateGates,
+    trials: templateTrials,
+    revealed: revealedTemplateGates,
+    access: templateFeatureAccess,
+  } = useTemplateFeatureGate(variant === "account");
+  const revealedTemplateKey = revealedTemplateGates.join(",");
+
+  useEffect(() => {
+    if (!revealedTemplateKey) {
+      return;
+    }
+    templateGateRef.current?.scrollIntoView({ block: "start" });
+  }, [revealedTemplateKey]);
 
   useEffect(() => {
     setTab(tabForVariant(initialTab, variant));
@@ -711,8 +731,16 @@ export function TemplatesLibrary({
         result.notes?.join(" ") || (result.json ? "Downloaded." : "Saved."),
       );
     } else {
-      setMessage(null);
-      setError(result.error ?? "That did not work.");
+      const gate = templateFeatureAccess.find(
+        (row) => !row.allowed && row.message === result.error,
+      );
+      if (variant === "account" && gate && revealTemplateGate(gate.key)) {
+        setMessage(null);
+        setError(null);
+      } else {
+        setMessage(null);
+        setError(result.error ?? "That did not work.");
+      }
     }
   }
 
@@ -907,6 +935,9 @@ export function TemplatesLibrary({
   }
 
   async function exportSelected() {
+    if (revealTemplateGate("extras_import_export_templates")) {
+      return;
+    }
     const ids = listedIds.filter((id) => selected.has(id));
     if (ids.length === 0) {
       return;
@@ -919,6 +950,9 @@ export function TemplatesLibrary({
   }
 
   async function exportAll() {
+    if (revealTemplateGate("extras_import_export_templates")) {
+      return;
+    }
     const data = new FormData();
     data.set("scope", variant === "admin" ? "platform" : "own");
     flash(await exportTemplateLibraryAction(data));
@@ -934,6 +968,12 @@ export function TemplatesLibrary({
       {description ? (
         <p className="mb-6 text-sm text-ink-muted">{description}</p>
       ) : null}
+      <div ref={templateGateRef}>
+        <TemplateFeatureGateNotices
+          denied={deniedTemplateGates}
+          trials={templateTrials}
+        />
+      </div>
       <nav className="flex flex-wrap border-b border-line">
         <TabButton selected={tab === "templates"} onClick={() => changeTab("templates")}>
           {variant === "admin" ? "Templates" : "My Templates"}
@@ -1018,7 +1058,12 @@ export function TemplatesLibrary({
               <TableLabelButton
                 variant="secondary"
                 icon={<IconImport {...TABLE_BTN_ICON} />}
-                onClick={() => setImporting(true)}
+                onClick={() => {
+                  if (revealTemplateGate("extras_import_export_templates")) {
+                    return;
+                  }
+                  setImporting(true);
+                }}
               >
                 Import
               </TableLabelButton>
@@ -1026,7 +1071,12 @@ export function TemplatesLibrary({
                 <TableLabelButton
                   variant="primary"
                   icon={<IconPlus {...TABLE_BTN_ICON} />}
-                  onClick={() => setCreatingFolder(true)}
+                  onClick={() => {
+                    if (revealTemplateGate("extras_templates")) {
+                      return;
+                    }
+                    setCreatingFolder(true);
+                  }}
                 >
                   Add New Folder
                 </TableLabelButton>
@@ -1295,7 +1345,12 @@ export function TemplatesLibrary({
                         <TableIconAction
                           label="Share"
                           detail="Share this template with another member."
-                          onClick={() => setSharingTemplateId(row.id)}
+                          onClick={() => {
+                            if (revealTemplateGate("extras_share_templates")) {
+                              return;
+                            }
+                            setSharingTemplateId(row.id);
+                          }}
                         >
                           <IconShare {...TABLE_BTN_ICON} />
                         </TableIconAction>
@@ -1510,7 +1565,12 @@ export function TemplatesLibrary({
                           <TableIconAction
                             label="Share"
                             detail="Share this folder with another member."
-                            onClick={() => setSharingFolderId(row.id)}
+                            onClick={() => {
+                            if (revealTemplateGate("extras_share_templates")) {
+                              return;
+                            }
+                            setSharingFolderId(row.id);
+                          }}
                           >
                             <IconShare {...TABLE_BTN_ICON} />
                           </TableIconAction>
@@ -1576,6 +1636,7 @@ export function TemplatesLibrary({
 
       {importing ? (
         <ImportModal
+          adminCatalog={variant === "admin"}
           onClose={() => setImporting(false)}
           onResult={(result) => {
             flash(result);
@@ -1748,9 +1809,11 @@ function downloadJson(json: string, filename: string) {
 }
 
 function ImportModal({
+  adminCatalog = false,
   onClose,
   onResult,
 }: {
+  adminCatalog?: boolean;
   onClose: () => void;
   onResult: (result: TemplateActionResult) => void;
 }) {
@@ -1795,6 +1858,9 @@ function ImportModal({
     data.set("libraryJson", raw);
     data.set("templateIds", [...templateIds].join(","));
     data.set("setIds", [...setIds].join(","));
+    if (adminCatalog) {
+      data.set("catalog", "admin");
+    }
     const result = await importTemplateLibraryAction(data);
     setPending(false);
     onResult(result);
