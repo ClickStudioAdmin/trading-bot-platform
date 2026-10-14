@@ -21,6 +21,8 @@ import {
   requireVerifiedEmail,
   setActiveAccountId,
 } from "@/lib/auth/session";
+import { stepUpFromForm } from "@/lib/auth/step-up-guard";
+import { traderAliasNeedsStepUp } from "@/lib/auth/step-up";
 import {
   accountCanHoldConnections,
   connectionFitsDesk,
@@ -119,6 +121,12 @@ export async function saveTraderProfileAction(formData: FormData) {
   );
   if (!upload.ok) {
     redirect(traderSettingsPath({ error: upload.error }));
+  }
+  if (traderAliasNeedsStepUp(existing?.alias ?? null, parsed.alias)) {
+    const stepUp = await stepUpFromForm(member.id, formData);
+    if (stepUp) {
+      redirect(traderSettingsPath({ error: stepUp }));
+    }
   }
   let logoPath = existing?.logoPath ?? null;
   if (upload.ext && file instanceof File) {

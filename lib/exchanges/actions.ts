@@ -33,6 +33,7 @@ import {
 import { writeEventLog } from "@/lib/logs/write";
 import { withQuery } from "@/lib/accounts/model";
 import { getSessionContext, getSessionMember } from "@/lib/auth/session";
+import { stepUpFromForm } from "@/lib/auth/step-up-guard";
 import { ACCOUNT_EXCHANGES_HREF } from "@/lib/site-links";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -102,6 +103,11 @@ export async function saveExchangeConnection(formData: FormData) {
     return failTo(parsed.error);
   }
   const { venue, environment, label, credentials, fingerprint } = parsed;
+
+  const stepUp = await stepUpFromForm(session.member.id, formData);
+  if (stepUp) {
+    return failTo(stepUp);
+  }
 
   const verified = await verifyExchangeCredentials({
     venueId: venue.id,
@@ -289,6 +295,11 @@ export async function replaceExchangeConnection(formData: FormData) {
   const fingerprint = keyFingerprint(parsed.credentials, venue.venue);
   if (!fingerprint) {
     fail("API key is too short to save.");
+  }
+
+  const stepUp = await stepUpFromForm(session.member.id, formData);
+  if (stepUp) {
+    fail(stepUp);
   }
 
   const verified = await verifyExchangeCredentials({

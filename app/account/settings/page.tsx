@@ -26,6 +26,7 @@ import {
   memberTotpEnabled,
 } from "@/lib/auth/totp-store";
 import { MemberNotificationSettingsForm } from "@/components/notification-settings-form";
+import { StepUpCodeField } from "@/components/step-up-code-field";
 import { TotpSettings } from "@/components/totp-settings";
 import { redirect } from "next/navigation";
 
@@ -176,6 +177,7 @@ export default async function AccountSettingsPage({
                 At least 8 characters.
               </span>
             </label>
+            <StepUpCodeField inputClassName={fieldClass} />
             <PendingSubmitButton
               pendingLabel="Saving…"
               successKey="save-password"
@@ -289,6 +291,11 @@ export default async function AccountSettingsPage({
               Optional. {TRADER_BIO_MAX} characters.
             </span>
           </label>
+          <StepUpCodeField
+            required={false}
+            inputClassName={fieldClass}
+            hint="Required when you change the alias. Google Authenticator or a recovery code."
+          />
           <PendingSubmitButton
             pendingLabel="Saving…"
             successKey="save-trader-profile"

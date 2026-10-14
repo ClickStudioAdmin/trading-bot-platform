@@ -34,6 +34,7 @@ import { listOnboardingFolders } from "@/lib/onboarding/catalog";
 import { starterTemplateAllowed } from "@/lib/onboarding/model";
 import { skipOnboardingForExternalDesk } from "@/lib/onboarding/store";
 import { applyTemplateToDesk } from "@/lib/templates/apply";
+import { stepUpFromForm } from "@/lib/auth/step-up-guard";
 import {
   getSessionContext,
   requireVerifiedEmail,
@@ -265,6 +266,10 @@ export async function deleteTradingAccount(formData: FormData) {
     redirect("/sign-in");
   }
   const accountId = String(formData.get("accountId") ?? "");
+  const stepUp = await stepUpFromForm(session.member.id, formData);
+  if (stepUp) {
+    redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(stepUp)}`);
+  }
   const written = await deleteTradingAccountRow(session.member.id, accountId);
   if (written.error) {
     redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(written.error)}`);

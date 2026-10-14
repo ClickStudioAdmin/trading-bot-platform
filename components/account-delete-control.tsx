@@ -8,6 +8,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { PanelCloseButton } from "@/components/panel-close-button";
 import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
 import { deleteTradingAccount } from "@/lib/accounts/actions";
+import { StepUpCodeField } from "@/components/step-up-code-field";
 
 const BLOCKED_MS = 4000;
 
@@ -65,6 +66,7 @@ export function AccountDeleteControl({
               Remove {accountName} and its closed history? This cannot be
               undone.
             </p>
+            <StepUpCodeField />
             <PendingSubmitButton
               pendingLabel="Deleting…"
               className="w-full rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"

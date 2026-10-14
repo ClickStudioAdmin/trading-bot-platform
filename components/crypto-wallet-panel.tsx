@@ -24,6 +24,7 @@ import {
   requestMainWalletWithdrawAction,
 } from "@/lib/membership/wallet-actions";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
+import { StepUpCodeField } from "@/components/step-up-code-field";
 import {
   accountBalanceCoversNextCycle,
   accountBalancePendingWithdrawNote,
@@ -667,6 +668,7 @@ function MainWalletWithdrawForm({
             className={`${BILLING_FIELD_CLASS} font-mono text-xs`}
           />
         </label>
+        <StepUpCodeField inputClassName={BILLING_FIELD_CLASS} />
         <PendingSubmitButton
           pendingLabel="Requesting…"
           disabled={!canWithdraw}

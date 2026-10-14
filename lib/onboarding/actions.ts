@@ -17,6 +17,8 @@ import {
   requireVerifiedEmail,
   setActiveAccountId,
 } from "@/lib/auth/session";
+import { stepUpError } from "@/lib/auth/step-up-guard";
+import { STEP_UP_FIELD } from "@/lib/auth/step-up";
 import { createMemberExchangeConnection } from "@/lib/exchanges/member-connection";
 import { connectionFitsDesk } from "@/lib/exchanges/venues";
 import {
@@ -129,6 +131,10 @@ export async function saveSetupConnection(formData: FormData): Promise<
   const accounts = await listTradingAccounts(member.id);
   if (accounts.length > 0) {
     return { ok: false, error: "Add keys from Exchanges after setup." };
+  }
+  const stepUp = await stepUpError(member.id, formData.get(STEP_UP_FIELD));
+  if (stepUp) {
+    return { ok: false, error: stepUp };
   }
   const written = await createMemberExchangeConnection({
     userId: member.id,
@@ -554,12 +560,17 @@ export async function dismissSetupSummary(): Promise<void> {
 
 export async function resetDevAccount(
   previous: { error: string } | null,
+  formData?: FormData,
 ): Promise<{ error: string } | null> {
   void previous;
   if (!devAccountResetAllowed()) {
     return { error: "Reset is only available outside production." };
   }
   const member = await requirePlatformMember();
+  const stepUp = await stepUpError(member.id, formData?.get(STEP_UP_FIELD));
+  if (stepUp) {
+    return { error: stepUp };
+  }
   const desks = await teardownAllTradingAccounts(member.id);
   if (desks.error) {
     return { error: desks.error };

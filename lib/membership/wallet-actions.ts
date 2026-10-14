@@ -2,6 +2,7 @@
 
 import { requireAdmin } from "@/lib/admin/access";
 import { getSessionMember, requireVerifiedEmail } from "@/lib/auth/session";
+import { stepUpFromForm } from "@/lib/auth/step-up-guard";
 import { writeEventLog } from "@/lib/logs/write";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -530,6 +531,10 @@ export async function requestMainWalletWithdrawAction(formData: FormData) {
   });
   if (!amountOk.ok) {
     failBilling(amountOk.reason, { tab: "wallet" });
+  }
+  const stepUp = await stepUpFromForm(member.id, formData);
+  if (stepUp) {
+    failBilling(stepUp, { tab: "wallet" });
   }
   const requested = await requestUsdtPayout({
     userId: member.id,
