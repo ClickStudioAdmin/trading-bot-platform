@@ -71,10 +71,6 @@ export function ResearchReplayButton({ href }: { href: string }) {
     if (backtest) {
       lines.push(backtest);
     }
-    const replay = researchTrialLine(gate.replay);
-    if (replay) {
-      lines.push(replay);
-    }
   }
   return (
     <div className="flex max-w-xl flex-col items-stretch gap-2">
