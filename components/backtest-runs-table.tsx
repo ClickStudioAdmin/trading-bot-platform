@@ -44,6 +44,7 @@ import {
   useClientTable,
 } from "@/components/table-chrome";
 import { AppCheck } from "@/components/app-check";
+import { TemplateParametersButton } from "@/components/template-parameters-tip";
 import { deleteBacktestRunsAction } from "@/lib/backtest/actions";
 import {
   backtestAprPct,
@@ -815,9 +816,12 @@ function BacktestRunRow({
           {childRole ? (
             <IconCornerDownRight className="size-3.5 shrink-0 text-ink-faint" />
           ) : null}
-          <Link href={href} className="text-ink hover:underline">
-            {title}
-          </Link>
+          <span className="inline-flex min-w-0 items-center gap-1">
+            <Link href={href} className="text-ink hover:underline">
+              {title}
+            </Link>
+            <TemplateParametersButton name={title} recipe={row.recipe} />
+          </span>
           {childLabel ? (
             <span className="rounded-control bg-surface-raised px-1.5 py-0.5 text-[11px] font-medium text-ink-muted">
               {childLabel}
