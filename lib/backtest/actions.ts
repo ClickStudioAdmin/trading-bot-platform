@@ -732,6 +732,15 @@ export async function saveBacktestAsPlatformTemplateAction(
   if (run.status !== "done") {
     return { ok: false, error: "Save a finished run." };
   }
+  if (run.templateId) {
+    const linked = await loadTemplateById(run.templateId);
+    if (linked?.visibility === "platform") {
+      return {
+        ok: false,
+        error: "This run is already attached to a platform template.",
+      };
+    }
+  }
   const requested = String(formData.get("name") ?? "").trim() || run.recipe.name;
   const names = [requested, uniqueBacktestName(requested, run.symbol)];
   const starterPack = formData.get("starterPack") === "1";

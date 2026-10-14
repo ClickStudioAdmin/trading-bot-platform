@@ -149,8 +149,33 @@ const attached = decideBacktestTemplateActions({
 });
 assert.equal(attached.canAttach, false);
 assert.equal(attached.canSaveAs, false);
+assert.equal(attached.canSaveAsPlatform, false);
 assert.equal(attached.applyTemplateId, "tmpl-1");
 assert.equal(attached.linkedName, "Dip buyer");
+
+const adminAttachedUser = decideBacktestTemplateActions({
+  status: "done",
+  ownerUserId: "admin-1",
+  memberId: "admin-1",
+  isAdmin: true,
+  recipe: perps,
+  source,
+  linked: { id: "tmpl-1", name: "Dip buyer", visibility: "user" },
+});
+assert.equal(adminAttachedUser.canSaveAs, false);
+assert.equal(adminAttachedUser.canSaveAsPlatform, true);
+
+const adminAttachedPlatform = decideBacktestTemplateActions({
+  status: "done",
+  ownerUserId: "admin-1",
+  memberId: "admin-1",
+  isAdmin: true,
+  recipe: perps,
+  source: null,
+  linked: { id: "plat-1", name: "Starter dip", visibility: "platform" },
+});
+assert.equal(adminAttachedPlatform.canSaveAs, false);
+assert.equal(adminAttachedPlatform.canSaveAsPlatform, false);
 
 const snapshot = decideBacktestTemplateActions({
   status: "done",
