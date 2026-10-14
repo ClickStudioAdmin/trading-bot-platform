@@ -778,7 +778,7 @@ function BacktestRunRow({
           {childRole ? (
             <IconCornerDownRight className="size-3.5 shrink-0 text-ink-faint" />
           ) : null}
-          <Link href={href} className="text-accent hover:underline">
+          <Link href={href} className="text-ink hover:underline">
             {title}
           </Link>
           {childLabel ? (
