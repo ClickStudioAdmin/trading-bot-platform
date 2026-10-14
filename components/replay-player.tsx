@@ -30,6 +30,7 @@ import {
 } from "@/components/chart-context-menu";
 import { ReplayIndicatorLegend } from "@/components/replay-indicator-legend";
 import { ReplayChartBar } from "@/components/replay-chart-bar";
+import { FreeTrialBadge } from "@/components/plan-trial-hint";
 import {
   ResearchNoticeBanner,
   ResearchTrialLines,
@@ -2134,6 +2135,9 @@ export function ReplayPlayer({
     </section>
   );
 
+  const replayTrial = researchGate
+    ? researchTrialLine(researchGate.replay)
+    : null;
   const header = (
       <div
         className={`relative z-30 flex shrink-0 flex-wrap items-center gap-3 py-3 ${
@@ -2144,6 +2148,7 @@ export function ReplayPlayer({
           <h1 className="shrink-0 text-2xl font-semibold tracking-tight">
             {run.symbol} replay
           </h1>
+          {replayTrial ? <FreeTrialBadge message={replayTrial} /> : null}
           <ReplayVariantSelect
             run={run}
             family={family}

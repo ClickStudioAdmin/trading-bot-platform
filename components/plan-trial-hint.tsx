@@ -38,6 +38,38 @@ export function trialBadgeClass(phase: TrialPhase | "offer"): string {
   return `${shape} bg-warning/15 text-warning`;
 }
 
+export function FreeTrialBadge({ message }: { message: string }) {
+  return (
+    <ColumnHint
+      label={
+        <span className={trialBadgeClass("active")} aria-label={message}>
+          Free Trial
+        </span>
+      }
+      hint={message}
+    />
+  );
+}
+
+export function FreeTrialBadges({
+  messages,
+  className = "flex flex-wrap items-center gap-2",
+}: {
+  messages: readonly string[];
+  className?: string;
+}) {
+  if (messages.length === 0) {
+    return null;
+  }
+  return (
+    <div className={className}>
+      {messages.map((message) => (
+        <FreeTrialBadge key={message} message={message} />
+      ))}
+    </div>
+  );
+}
+
 function TrialEndCopy({
   phase,
   endsAt,

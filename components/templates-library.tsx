@@ -16,12 +16,10 @@ import {
 } from "@/components/template-feature-access";
 import {
   ResearchNoticeBanner,
-  ResearchTrialLines,
   useResearchGateAccess,
 } from "@/components/research-gate-access";
 import {
   backtestCreateDenial,
-  researchTrialLine,
   type ResearchNotice,
 } from "@/lib/membership/entitlements";
 import {
@@ -1070,13 +1068,6 @@ export function TemplatesLibrary({
           trials={templateTrials}
         />
         <ResearchNoticeBanner notice={researchNotice} />
-        <ResearchTrialLines
-          lines={
-            researchGate && researchTrialLine(researchGate.backtest)
-              ? [researchTrialLine(researchGate.backtest) as string]
-              : []
-          }
-        />
       </div>
       <nav className="flex flex-wrap border-b border-line">
         <TabButton selected={tab === "templates"} onClick={() => changeTab("templates")}>
