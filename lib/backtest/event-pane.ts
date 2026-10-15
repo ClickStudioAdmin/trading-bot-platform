@@ -10,6 +10,7 @@ import {
   formatStrategyLeafReason,
 } from "@/lib/bots/condition-copy";
 import type { TemplateHardExitSignal } from "@/lib/dca/hard-exit";
+import type { EntryStack } from "@/lib/strategy/expr";
 import type { BacktestRecipe, ReplayEvent } from "./model";
 
 export type EventParameter = { label: string; value: string };
@@ -118,6 +119,26 @@ function hardExitSection(
     return null;
   }
   return filterSection(role, spec, side, detail);
+}
+
+function exitLeafSections(
+  stack: EntryStack | null | undefined,
+  side: "long" | "short",
+  role: string,
+): EventParameterSection[] {
+  if (!stack || stack.leaves.length === 0) {
+    return [];
+  }
+  return stack.leaves.map((leaf, index) => ({
+    role,
+    detail: "",
+    params: [
+      {
+        label: stack.joins[index] === "or" ? "Or" : "And",
+        value: formatStrategyLeafReason(leaf, side),
+      },
+    ],
+  }));
 }
 
 function factDetail(event: ReplayEvent, role: string): string {
@@ -252,6 +273,9 @@ export function eventParameterSections(
       );
       if (longExit) {
         sections.push(longExit);
+        sections.push(
+          ...exitLeafSections(recipe.exitStack, side, "Hard exit"),
+        );
       }
       if (side === "short") {
         const shortExit = hardExitSection(
@@ -263,6 +287,9 @@ export function eventParameterSections(
         );
         if (shortExit) {
           sections.push(shortExit);
+          sections.push(
+            ...exitLeafSections(recipe.shortExitStack, side, "Short hard exit"),
+          );
         }
       }
     }
@@ -355,6 +382,7 @@ export function eventParameterSections(
       );
       if (exit) {
         sections.push(exit);
+        sections.push(...exitLeafSections(recipe.exitStack, side, "Hard exit"));
       }
     }
   }

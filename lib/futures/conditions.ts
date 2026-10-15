@@ -17,6 +17,12 @@ import {
   type HardExitDraft,
   type HardExitSignal,
 } from "@/lib/dca/hard-exit";
+import {
+  hardExitAnchor,
+  hardExitTriggerTimeframe,
+  parseExitStackForm,
+  writeExitStackFormFields,
+} from "@/lib/dca/exit-stack";
 import { closedLiveIndicatorBars } from "@/lib/market/desk-klines";
 import type { CandleBar } from "@/lib/market/candles";
 import {
@@ -368,6 +374,7 @@ export function parseFuturesConditionForm(
       entryStack: EntryStack;
       exitIf: DcaFilterSpec | null;
       exitHard: HardExitSignal | null;
+      exitStack: EntryStack;
       breakevenActivationPct: number | null;
       breakevenOffsetPct: number | null;
     }
@@ -380,6 +387,7 @@ export function parseFuturesConditionForm(
       entryStack: emptyEntryStack(),
       exitIf: null,
       exitHard: null,
+      exitStack: emptyEntryStack(),
       breakevenActivationPct: null,
       breakevenOffsetPct: null,
     };
@@ -413,6 +421,16 @@ export function parseFuturesConditionForm(
   if (!exitIf.ok) {
     return exitIf;
   }
+  const exitDraft = hardExitDraftFromStored(exitIf.filter, exitIf.signal);
+  const exitStacked = parseExitStackForm(
+    form,
+    `${prefix}exitIf`,
+    hardExitAnchor(exitDraft),
+    hardExitTriggerTimeframe(exitDraft),
+  );
+  if (!exitStacked.ok) {
+    return exitStacked;
+  }
   const breakevenOn =
     String(form.get(`${prefix}breakevenActivationPct`) ?? "").trim() !== "";
   const breakeven = parseFuturesBreakevenFields(form, prefix, breakevenOn);
@@ -431,6 +449,7 @@ export function parseFuturesConditionForm(
     entryStack,
     exitIf: exitIf.filter,
     exitHard: exitIf.signal,
+    exitStack: exitStacked.stack,
     breakevenActivationPct: breakeven.activationPct,
     breakevenOffsetPct: breakeven.offsetPct,
   };
@@ -442,6 +461,7 @@ export function conditionsFromRow(row: Record<string, unknown>): {
   entryStack: EntryStack;
   exitIf: DcaFilterSpec | null;
   exitHard: HardExitSignal | null;
+  exitStack: EntryStack;
   breakevenActivationPct: number | null;
   breakevenOffsetPct: number | null;
 } {
@@ -457,6 +477,7 @@ export function conditionsFromRow(row: Record<string, unknown>): {
     entryStack,
     exitIf: exitHard ? null : filterFromRow(row, "exit_if"),
     exitHard,
+    exitStack: entryStackFromJson(row.exit_expr) ?? emptyEntryStack(),
     breakevenActivationPct: activation > 0 ? activation : null,
     breakevenOffsetPct: Number.isFinite(offset) && offset >= 0 ? offset : null,
   };
@@ -468,6 +489,7 @@ export function conditionColumns(rule: {
   entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
   exitHard?: HardExitSignal | null;
+  exitStack?: EntryStack | null;
   breakevenActivationPct?: number | null;
   breakevenOffsetPct?: number | null;
 }): Record<string, unknown> {
@@ -484,6 +506,10 @@ export function conditionColumns(rule: {
     ...filterColumns("confirm", confirm),
     ...filterColumns("exit_if", rule.exitHard ? null : rule.exitIf),
     exit_hard: hardExitSignalToJson(rule.exitHard),
+    exit_expr:
+      rule.exitStack && rule.exitStack.leaves.length > 0
+        ? entryStackToJson(rule.exitStack)
+        : null,
     entry_expr: stack.leaves.length > 0 ? entryStackToJson(stack) : null,
     breakeven_activation_pct: rule.breakevenActivationPct ?? null,
     breakeven_offset_pct:
@@ -503,6 +529,7 @@ export function writeFuturesConditionFormFields(
     exitIf?: DcaFilterSpec | null;
     exitHard?: HardExitSignal | null;
     exitDraft?: HardExitDraft | null;
+    exitStack?: EntryStack | null;
     breakevenActivationPct?: number | null;
     breakevenOffsetPct?: number | null;
   },
@@ -553,6 +580,9 @@ export function writeFuturesConditionFormFields(
       hardExitDraftFromStored(rule.exitIf, null),
     );
   }
+  if (rule.exitDraft !== undefined || rule.exitStack) {
+    writeExitStackFormFields(form, `${prefix}exitIf`, rule.exitStack);
+  }
   if (rule.breakevenActivationPct != null) {
     form.set(
       `${prefix}breakevenActivationPct`,
@@ -571,6 +601,7 @@ export function futuresAutomationTimeframes(rule: {
   confirm?: DcaFilterSpec | null;
   entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
+  exitStack?: EntryStack | null;
   shortEntry?: {
     entrySource: FuturesAutomationEntry;
     indicator?: DcaIndicatorStart | null;
@@ -608,6 +639,9 @@ export function futuresAutomationTimeframes(rule: {
     }
   }
   add(rule.exitIf?.timeframe);
+  for (const timeframe of entryStackTimeframes(rule.exitStack ?? emptyEntryStack())) {
+    add(timeframe);
+  }
   return rows;
 }
 

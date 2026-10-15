@@ -86,6 +86,7 @@ export type FuturesAutomationRule = {
   entryStack: EntryStack;
   exitIf: DcaFilterSpec | null;
   exitHard?: HardExitSignal | null;
+  exitStack?: EntryStack | null;
   breakevenActivationPct: number | null;
   breakevenOffsetPct: number | null;
   direction: PerpsDirection;
@@ -119,6 +120,7 @@ export type FuturesAutomationFormValues = {
   entryStack: EntryStack;
   exitIf: DcaFilterSpec | null;
   exitHard?: HardExitSignal | null;
+  exitStack?: EntryStack | null;
   exitDraft?: HardExitDraft | null;
   breakevenActivationPct: string;
   breakevenOffsetPct: string;
@@ -382,6 +384,7 @@ export function parseFuturesAutomationForm(
     parsed.rule.entryStack = conditions.entryStack;
     parsed.rule.exitIf = conditions.exitIf;
     parsed.rule.exitHard = conditions.exitHard;
+    parsed.rule.exitStack = conditions.exitStack;
     parsed.rule.breakevenActivationPct = conditions.breakevenActivationPct;
     parsed.rule.breakevenOffsetPct = conditions.breakevenOffsetPct;
     const directed = applyPerpsDirection(form, prefix, deskVenue, parsed.rule);
@@ -935,6 +938,7 @@ export function futuresRuleToForm(
     entryStack: rule.entryStack ?? emptyEntryStack(),
     exitIf: rule.exitIf,
     exitHard: rule.exitHard ?? null,
+    exitStack: rule.exitStack ?? emptyEntryStack(),
     exitDraft: hardExitDraftFromStored(rule.exitIf, rule.exitHard),
     breakevenActivationPct:
       rule.breakevenActivationPct == null
@@ -1024,6 +1028,7 @@ function attachRuleConditions(
   rule.entryStack = conditions.entryStack;
   rule.exitIf = conditions.exitIf;
   rule.exitHard = conditions.exitHard;
+  rule.exitStack = conditions.exitStack;
   rule.breakevenActivationPct = conditions.breakevenActivationPct;
   rule.breakevenOffsetPct = conditions.breakevenOffsetPct;
 }
@@ -1088,6 +1093,13 @@ export function perpsRuleMatchesWebhook(
   if (
     rule.exitHard?.trigger === "webhook" &&
     rule.exitHard.webhookId === firedId
+  ) {
+    return true;
+  }
+  if (
+    (rule.exitStack?.leaves ?? []).some(
+      (leaf) => leaf.kind === "webhook" && leaf.webhookId === firedId,
+    )
   ) {
     return true;
   }

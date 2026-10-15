@@ -111,7 +111,13 @@ import {
   dcaEntryStackNeedsWideBars,
 } from "./entry-stack";
 import { dcaFilterForSide, dcaPlaybookFilterNeedsWideBars } from "./filters";
-import { hardExitForSide } from "./hard-exit";
+import { hardExitForSide, hardExitMet } from "./hard-exit";
+import {
+  exitExpressionMet,
+  exitStackForSide,
+  exitStackNeedsWideBars,
+  formatExitExpressionText,
+} from "./exit-stack";
 import { dcaDisarmedMessage, dcaSyncFailedMessage } from "./log-copy";
 import {
   dcaSyncFailureStamp,
@@ -386,7 +392,9 @@ async function loadPlaybookStartBars(
   const wide =
     supertrend ||
     dcaPlaybookFilterNeedsWideBars(playbook) ||
-    dcaEntryStackNeedsWideBars(playbook);
+    dcaEntryStackNeedsWideBars(playbook) ||
+    exitStackNeedsWideBars(playbook.exitStack) ||
+    exitStackNeedsWideBars(playbook.shortExitStack);
   for (const timeframe of timeframes) {
     const fetched = await loadDeskIndicatorBars({
       venue: desk.venue,
@@ -2040,20 +2048,50 @@ async function applyDcaVerbUnlocked(input: {
     let leg = dcaLegFor(playbook, side);
     const sideKind = dcaStartKindForSide(playbook, side);
     const sideWebhook = dcaWebhookIdForSide(playbook, side);
-    const exitSignal = hardExitForSide(playbook, side).signal;
-    if (
-      fromSignal &&
-      firedWebhookId &&
-      exitSignal?.trigger === "webhook" &&
-      exitSignal.webhookId === firedWebhookId
-    ) {
+    const exit = hardExitForSide(playbook, side);
+    const exitStack = exitStackForSide(playbook, side);
+    const exitWebhook =
+      (exit.signal?.trigger === "webhook" &&
+        exit.signal.webhookId === firedWebhookId) ||
+      exitStack.leaves.some(
+        (leaf) => leaf.kind === "webhook" && leaf.webhookId === firedWebhookId,
+      );
+    if (fromSignal && firedWebhookId && exitWebhook) {
       const open = opens.find((row) => row.side === side);
-      if (open && open.qty > 0) {
+      const exitBars = exit.filter
+        ? (startBars.get(exit.filter.timeframe) ?? [])
+        : [];
+      const expressionMet =
+        open != null &&
+        open.qty > 0 &&
+        exitExpressionMet({
+          first: hardExitMet({
+            filter: exit.filter,
+            signal: exit.signal,
+            side,
+            closes: exitBars.map((row) => row.close),
+            bars: exitBars,
+            prices: { last: lastPrice, mark: lastPrice, index: lastPrice },
+            firedWebhookId,
+          }),
+          stack: exitStack,
+          side,
+          price: lastPrice,
+          prices: { last: lastPrice, mark: lastPrice, index: lastPrice },
+          barsByTimeframe: startBars,
+          firedWebhookId,
+        });
+      if (open && open.qty > 0 && expressionMet) {
         const closed = await flattenSide({
           playbook,
           mode: input.mode,
           side,
-          reason: "Signal webhook",
+          reason: formatExitExpressionText({
+            filter: exit.filter,
+            signal: exit.signal,
+            stack: exitStack,
+            side,
+          }),
           closeKind: "exit_if",
         });
         if (!closed.ok) {

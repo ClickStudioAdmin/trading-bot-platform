@@ -86,9 +86,15 @@ import {
 } from "./filters";
 import { hardExitForSide } from "./hard-exit";
 import {
+  exitLeafResults,
+  exitStackForSide,
+  exitStackNeedsWideBars,
+  exitStackTimeframes,
+  formatExitExpressionText,
+} from "./exit-stack";
+import {
   formatBreakevenReason,
   formatDcaStartReasons,
-  formatHardExitText,
   formatPriceCrossReason,
 } from "@/lib/bots/condition-copy";
 import { dcaDecisionMessage, dcaExitClosedMessage } from "./log-copy";
@@ -260,7 +266,9 @@ export async function runDcaPlaybookTick(input?: {
       playbook.shortIndicatorKind === "supertrend" ||
       dcaNeedsAtrBars(playbook) ||
       dcaPlaybookFilterNeedsWideBars(playbook) ||
-      dcaEntryStackNeedsWideBars(playbook);
+      dcaEntryStackNeedsWideBars(playbook) ||
+      exitStackNeedsWideBars(playbook.exitStack) ||
+      exitStackNeedsWideBars(playbook.shortExitStack);
     for (const interval of dcaTickBarTimeframes(playbook)) {
       const key = `${account.venue}:${playbook.symbol}:${interval}`;
       if (seenBars.has(key)) {
@@ -615,7 +623,9 @@ export async function runDcaPlaybookTick(input?: {
               supertrend ||
               dcaNeedsAtrBars(playbook) ||
               dcaPlaybookFilterNeedsWideBars(playbook) ||
-              dcaEntryStackNeedsWideBars(playbook)
+              dcaEntryStackNeedsWideBars(playbook) ||
+              exitStackNeedsWideBars(playbook.exitStack) ||
+              exitStackNeedsWideBars(playbook.shortExitStack)
                 ? 500
                 : 80,
           }).catch((error: unknown) => {
@@ -762,6 +772,7 @@ export async function runDcaPlaybookTick(input?: {
       const indicatorStart = dcaIndicatorStartForSide(playbook, side);
       const confirm = dcaFilterForSide(playbook, side, "confirm");
       const exit = hardExitForSide(playbook, side);
+      const exitStack = exitStackForSide(playbook, side);
       const exitIf = exit.filter;
       const confirmSeries = seriesForFilter(
         confirm,
@@ -862,6 +873,27 @@ export async function runDcaPlaybookTick(input?: {
         exitHard: exit.signal,
         exitIfCloses: exitIfSeries.closes,
         exitIfBars: exitIfSeries.bars,
+        ...(exitStack.leaves.length > 0
+          ? {
+              exitJoins: exitStack.joins,
+              exitLeaves: exitLeafResults({
+                stack: exitStack,
+                side,
+                price: prices.last,
+                prices,
+                barsByTimeframe: new Map(
+                  exitStackTimeframes(exitStack).map((timeframe) => [
+                    timeframe,
+                    closedLiveIndicatorBars(
+                      barsByTimeframe.get(timeframe) ?? [],
+                      timeframe,
+                    ),
+                  ]),
+                ),
+                firedWebhookId: undefined,
+              }),
+            }
+          : {}),
         triggerPrices: prices,
       });
       const flagPatch: (typeof flagWrites)[number]["patch"] = {};
@@ -1106,9 +1138,10 @@ function dcaActionWhy(input: {
   }
   if (action.kind === "close" && action.reason === "exit_if") {
     const exit = hardExitForSide(playbook, side);
-    return formatHardExitText({
+    return formatExitExpressionText({
       filter: exit.filter,
       signal: exit.signal,
+      stack: exitStackForSide(playbook, side),
       side,
     });
   }

@@ -17,6 +17,10 @@ import {
 import { entryStackListensOnPriceTick, entryStackMatchesWebhook } from "@/lib/strategy/expr";
 import { hardExitMet } from "@/lib/dca/hard-exit";
 import {
+  exitExpressionMet,
+  formatExitExpressionText,
+} from "@/lib/dca/exit-stack";
+import {
   perpsAutomationLegs,
   perpsRuleMatchesWebhook,
 } from "./automation";
@@ -52,7 +56,6 @@ import type { CandleBar } from "@/lib/market/candles";
 import {
   formatBreakevenReason,
   formatFuturesEntryReasons,
-  formatHardExitText,
   futuresBreakevenMessage,
   futuresFiredMessage,
   futuresHardExitMessage,
@@ -412,7 +415,9 @@ export async function fireWebhookAutomationEntries(input: {
     return perpsAutomationLegs(rule).some(
       (leg) =>
         leg.rule.entrySource === "price" ||
-        leg.rule.entryStack.leaves.some((leaf) => leaf.kind === "price"),
+        leg.rule.entryStack.leaves.some((leaf) => leaf.kind === "price") ||
+        leg.rule.exitHard?.trigger === "price" ||
+        (leg.rule.exitStack?.leaves ?? []).some((leaf) => leaf.kind === "price"),
     );
   });
   let tickers = new Map<string, BybitTicker>();
@@ -428,17 +433,55 @@ export async function fireWebhookAutomationEntries(input: {
     if (!rule.id) {
       continue;
     }
-    if (
-      rule.exitHard?.trigger === "webhook" &&
-      rule.exitHard.webhookId === input.webhookId
-    ) {
+    const exitWebhookHit =
+      (rule.exitHard?.trigger === "webhook" &&
+        rule.exitHard.webhookId === input.webhookId) ||
+      (rule.exitStack?.leaves ?? []).some(
+        (leaf) =>
+          leaf.kind === "webhook" && leaf.webhookId === input.webhookId,
+      );
+    if (exitWebhookHit) {
       const owned = opens.filter(
         (row) => row.ruleId === rule.id && row.symbol === rule.symbol,
       );
+      const barsByTimeframe = await loadRuleBars({
+        rule,
+        account,
+        cache: klineCache,
+      });
+      const ticker = tickers.get(rule.symbol);
+      const prices = ticker ? tickerTriggerPrices(ticker) : null;
       let flattened = false;
       for (const open of owned) {
-        const reasons = formatHardExitText({
+        const exitBars = rule.exitIf
+          ? (barsByTimeframe.get(rule.exitIf.timeframe) ?? [])
+          : [];
+        const first = hardExitMet({
+          filter: rule.exitIf,
           signal: rule.exitHard,
+          side: open.side,
+          closes: exitBars.map((row) => row.close),
+          bars: exitBars,
+          prices,
+          firedWebhookId: input.webhookId,
+        });
+        if (
+          !exitExpressionMet({
+            first,
+            stack: rule.exitStack,
+            side: open.side,
+            price: prices?.last ?? null,
+            prices,
+            barsByTimeframe,
+            firedWebhookId: input.webhookId,
+          })
+        ) {
+          continue;
+        }
+        const reasons = formatExitExpressionText({
+          filter: rule.exitIf,
+          signal: rule.exitHard,
+          stack: rule.exitStack,
           side: open.side,
         });
         const closed = await runFuturesCommand({
@@ -640,7 +683,12 @@ async function monitorOwnedFuturesPositions(input: {
       continue;
     }
     const { rule, account } = owned;
-    if (!rule.exitIf && !rule.exitHard && rule.breakevenActivationPct == null) {
+    if (
+      !rule.exitIf &&
+      !rule.exitHard &&
+      !(rule.exitStack && rule.exitStack.leaves.length > 0) &&
+      rule.breakevenActivationPct == null
+    ) {
       continue;
     }
     let deskTickers = input.tickers;
@@ -665,22 +713,29 @@ async function monitorOwnedFuturesPositions(input: {
       cache: input.klineCache,
     });
     const prices = ticker ? tickerTriggerPrices(ticker) : null;
-    const exitMet = rule.exitHard
-      ? hardExitMet({
-          signal: rule.exitHard,
-          side: open.side,
-          prices,
-        })
-      : Boolean(rule.exitIf) &&
-        futuresFilterMet({
-          spec: rule.exitIf,
-          side: open.side,
-          barsByTimeframe,
-        });
-    if (exitMet) {
-      const reasons = formatHardExitText({
+    const exitBars = rule.exitIf
+      ? (barsByTimeframe.get(rule.exitIf.timeframe) ?? [])
+      : [];
+    const exitMet = exitExpressionMet({
+      first: hardExitMet({
         filter: rule.exitIf,
         signal: rule.exitHard,
+        side: open.side,
+        closes: exitBars.map((row) => row.close),
+        bars: exitBars,
+        prices,
+      }),
+      stack: rule.exitStack,
+      side: open.side,
+      price: prices?.last ?? null,
+      prices,
+      barsByTimeframe,
+    });
+    if (exitMet) {
+      const reasons = formatExitExpressionText({
+        filter: rule.exitIf,
+        signal: rule.exitHard,
+        stack: rule.exitStack,
         side: open.side,
       });
       const closed = await runFuturesCommand({

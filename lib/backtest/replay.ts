@@ -11,10 +11,10 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import {
-  formatHardExitText,
   formatStrategyLeafReason,
 } from "@/lib/bots/condition-copy";
 import { hardExitMet, hardExitSignalFromJson } from "@/lib/dca/hard-exit";
+import { exitExpressionMet, formatExitExpressionText } from "@/lib/dca/exit-stack";
 import { canBacktestPerpsRecipe } from "./eligibility";
 import { backtestTapeInterval } from "./model";
 import {
@@ -62,21 +62,26 @@ function perpsHardExitMet(
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>,
 ): boolean {
   const signal = hardExitSignalFromJson(recipe.exitHard);
-  if (signal) {
-    return hardExitMet({
-      signal,
-      side,
-      prices: { last: price, mark: price, index: price },
-    });
-  }
-  return (
-    Boolean(recipe.exitIf) &&
-    futuresFilterMet({
-      spec: recipe.exitIf,
-      side,
-      barsByTimeframe,
-    })
-  );
+  return exitExpressionMet({
+    first: signal
+      ? hardExitMet({
+          signal,
+          side,
+          prices: { last: price, mark: price, index: price },
+        })
+      : Boolean(recipe.exitIf) &&
+        futuresFilterMet({
+          spec: recipe.exitIf,
+          side,
+          barsByTimeframe,
+        }),
+    stack: recipe.exitStack,
+    side,
+    price,
+    prices: { last: price, mark: price, index: price },
+    barsByTimeframe,
+    firedWebhookId: null,
+  });
 }
 
 export function recipeAction(recipe: PerpsTemplateRecipe): {
@@ -208,6 +213,9 @@ export async function replayPerpsPriceCross(input: {
     ) ?? []),
     input.recipe.confirm?.timeframe,
     input.recipe.exitIf?.timeframe,
+    ...(input.recipe.exitStack?.leaves.map((leaf) =>
+      strategyLeafTimeframe(leaf),
+    ) ?? []),
   ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
   let wasTrue = false;
   let open: OpenSim | null = null;
@@ -378,12 +386,12 @@ export async function replayPerpsPriceCross(input: {
           bar.timeMs,
           price,
           "exit_if",
-          hardExitSignalFromJson(input.recipe.exitHard)
-            ? formatHardExitText({
-                signal: hardExitSignalFromJson(input.recipe.exitHard),
-                side: open.side,
-              })
-            : filterBecause(input.recipe.exitIf, open.side, "Exit if"),
+          formatExitExpressionText({
+            filter: input.recipe.exitIf,
+            signal: hardExitSignalFromJson(input.recipe.exitHard),
+            stack: input.recipe.exitStack,
+            side: open.side,
+          }),
         );
       }
       if (
@@ -631,6 +639,9 @@ async function replayPerpsBoth(input: {
     ...(short.entryStack?.leaves.map((leaf) => strategyLeafTimeframe(leaf)) ?? []),
     short.confirm?.timeframe,
     input.recipe.exitIf?.timeframe,
+    ...(input.recipe.exitStack?.leaves.map((leaf) =>
+      strategyLeafTimeframe(leaf),
+    ) ?? []),
   ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
   const legs: Array<{
     side: FuturesSide;

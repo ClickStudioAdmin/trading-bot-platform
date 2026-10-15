@@ -26,6 +26,7 @@ import {
   confirmFromEntryStack,
   entryStackIsLegacy,
   resolveEntryStack,
+  type EntryStack,
 } from "@/lib/strategy/expr";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
 import type {
@@ -176,7 +177,12 @@ function hardExitGroup(
   spec: DcaFilterSpec | null | undefined,
   signal: TemplateHardExitSignal | null | undefined,
   side: "long" | "short",
+  stack?: EntryStack | null,
 ): ParamGroup {
+  const extra = (stack?.leaves ?? []).map((leaf, index) => ({
+    label: stack?.joins[index] === "or" ? "Or" : "And",
+    value: formatStrategyLeafReason(leaf, side),
+  }));
   if (signal?.trigger === "price") {
     return {
       title,
@@ -196,17 +202,20 @@ function hardExitGroup(
           value: signal.compare === "lte" ? "At or below" : "At or above",
         },
         { label: "Price", value: num(signal.price) },
+        ...extra,
       ],
     };
   }
   if (signal?.trigger === "webhook") {
     return {
       title,
-      rows: [{ label: "Trigger", value: "Signal webhook" }],
+      rows: [{ label: "Trigger", value: "Signal webhook" }, ...extra],
     };
   }
   if (!spec) {
-    return { rows: [{ label: title, value: "Off" }] };
+    return extra.length > 0
+      ? { title, rows: extra }
+      : { rows: [{ label: title, value: "Off" }] };
   }
   return {
     title,
@@ -216,6 +225,7 @@ function hardExitGroup(
         value: spec.kind === "supertrend" ? "Trend" : "Indicator",
       },
       ...filterRows(spec, side),
+      ...extra,
     ],
   };
 }
@@ -582,12 +592,24 @@ function dcaExitGroups(recipe: DcaTemplateRecipe): ParamGroup[] {
   if (recipe.direction === "both") {
     groups.push({ title: "Hard Exit Condition", rows: [] });
     groups.push(
-      hardExitGroup("Long", recipe.exitIf, recipe.exitHard, "long"),
-      hardExitGroup("Short", recipe.shortExitIf, recipe.shortExitHard, "short"),
+      hardExitGroup("Long", recipe.exitIf, recipe.exitHard, "long", recipe.exitStack),
+      hardExitGroup(
+        "Short",
+        recipe.shortExitIf,
+        recipe.shortExitHard,
+        "short",
+        recipe.shortExitStack,
+      ),
     );
   } else {
     groups.push(
-      hardExitGroup("Hard Exit Condition", recipe.exitIf, recipe.exitHard, side),
+      hardExitGroup(
+        "Hard Exit Condition",
+        recipe.exitIf,
+        recipe.exitHard,
+        side,
+        recipe.exitStack,
+      ),
     );
   }
   return groups;
@@ -843,6 +865,7 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
           recipe.exitIf,
           recipe.exitHard,
           side,
+          recipe.exitStack,
         ),
       ],
     });

@@ -39,6 +39,13 @@ import {
 } from "@/components/bot-indicator-fields";
 import { HardExitFields } from "@/components/hard-exit-fields";
 import {
+  ExitConditionStack,
+  anchorDisabledKinds,
+  anchorDisabledWebhookIds,
+  exitRowsFromStack,
+  type ExitStackRow,
+} from "@/components/exit-condition-stack";
+import {
   EntryConditionStack,
   entryConflictSlots,
   entryDraftComplete,
@@ -1125,8 +1132,14 @@ export function DcaPlaybookForm({
   const [exitIf, setExitIf] = useState<HardExitDraft | null>(() =>
     hardExitDraftFromStored(source?.exitIf, source?.exitHard),
   );
+  const [exitRows, setExitRows] = useState<ExitStackRow[]>(() =>
+    exitRowsFromStack(source?.exitStack),
+  );
   const [shortExitIf, setShortExitIf] = useState<HardExitDraft | null>(() =>
     hardExitDraftFromStored(source?.shortExitIf, source?.shortExitHard),
+  );
+  const [shortExitRows, setShortExitRows] = useState<ExitStackRow[]>(() =>
+    exitRowsFromStack(source?.shortExitStack),
   );
   const defaultSymbol =
     source?.symbol ??
@@ -1491,9 +1504,17 @@ export function DcaPlaybookForm({
     entryRows.some((row) => !entryDraftComplete(row.draft)) ||
     (direction === "both" &&
       shortEntryRows.some((row) => !entryDraftComplete(row.draft))) ||
-    Boolean(exitIf && !hardExitComplete(exitIf)) ||
+    Boolean(
+      exitIf &&
+        (!hardExitComplete(exitIf) ||
+          exitRows.some((row) => !hardExitComplete(row.draft))),
+    ) ||
     (direction === "both" &&
-      Boolean(shortExitIf && !hardExitComplete(shortExitIf))) ||
+      Boolean(
+        shortExitIf &&
+          (!hardExitComplete(shortExitIf) ||
+            shortExitRows.some((row) => !hardExitComplete(row.draft))),
+      )) ||
     tpMissing ||
     trailMissing ||
     slMissing ||
@@ -1524,9 +1545,17 @@ export function DcaPlaybookForm({
       entryRows.some((row) => !entryDraftComplete(row.draft)) ||
       (direction === "both" &&
         shortEntryRows.some((row) => !entryDraftComplete(row.draft))) ||
-      Boolean(exitIf && !hardExitComplete(exitIf)) ||
+      Boolean(
+        exitIf &&
+          (!hardExitComplete(exitIf) ||
+            exitRows.some((row) => !hardExitComplete(row.draft))),
+      ) ||
       (direction === "both" &&
-        Boolean(shortExitIf && !hardExitComplete(shortExitIf)));
+        Boolean(
+          shortExitIf &&
+            (!hardExitComplete(shortExitIf) ||
+              shortExitRows.some((row) => !hardExitComplete(row.draft))),
+        ));
     onRecipeChangeRef.current({
       recipe: snapshotDcaRecipe(parsed.config),
       error: missing ? "Fill required fields before saving." : null,
@@ -2663,44 +2692,104 @@ export function DcaPlaybookForm({
             title="Long"
             nested
             enabled={Boolean(exitIf)}
-            onEnabled={(next) =>
-              setExitIf(next ? (exitIf ?? defaultHardExit("long")) : null)
-            }
+            onEnabled={(next) => {
+              setExitIf(next ? (exitIf ?? defaultHardExit("long")) : null);
+              if (!next) {
+                setExitRows([]);
+              }
+            }}
           >
             {exitIf ? (
-              <HardExitFields
-                prefix="exitIf"
-                side="long"
-                value={exitIf}
-                onChange={setExitIf}
-                webhooks={signalWebhooks}
-                gridClass={fieldRowClass5}
-                fieldClass={fieldClass}
-                labelClass={labelClass}
-              />
+              <>
+                <HardExitFields
+                  prefix="exitIf"
+                  side="long"
+                  value={exitIf}
+                  onChange={setExitIf}
+                  webhooks={signalWebhooks}
+                  gridClass={fieldRowClass5}
+                  fieldClass={fieldClass}
+                  labelClass={labelClass}
+                  disabledKinds={anchorDisabledKinds(
+                    exitIf,
+                    exitRows,
+                    signalWebhooks.map((hook) => hook.id),
+                  )}
+                  disabledWebhookIds={anchorDisabledWebhookIds(
+                    exitIf,
+                    exitRows,
+                    signalWebhooks.map((hook) => hook.id),
+                  )}
+                />
+                <ExitConditionStack
+                  prefix="exitIf"
+                  side="long"
+                  anchor={exitIf}
+                  rows={exitRows}
+                  onChange={(next) => {
+                    setExitRows(next);
+                    setTouched(true);
+                    setFormTick((tick) => tick + 1);
+                  }}
+                  webhooks={signalWebhooks}
+                  gridClass={fieldRowClass5}
+                  fieldClass={fieldClass}
+                  labelClass={labelClass}
+                />
+              </>
             ) : null}
           </OptionalSection>
           <OptionalSection
             title="Short"
             nested
             enabled={Boolean(shortExitIf)}
-            onEnabled={(next) =>
+            onEnabled={(next) => {
               setShortExitIf(
                 next ? (shortExitIf ?? defaultHardExit("short")) : null,
-              )
-            }
+              );
+              if (!next) {
+                setShortExitRows([]);
+              }
+            }}
           >
             {shortExitIf ? (
-              <HardExitFields
-                prefix="shortExitIf"
-                side="short"
-                value={shortExitIf}
-                onChange={setShortExitIf}
-                webhooks={signalWebhooks}
-                gridClass={fieldRowClass5}
-                fieldClass={fieldClass}
-                labelClass={labelClass}
-              />
+              <>
+                <HardExitFields
+                  prefix="shortExitIf"
+                  side="short"
+                  value={shortExitIf}
+                  onChange={setShortExitIf}
+                  webhooks={signalWebhooks}
+                  gridClass={fieldRowClass5}
+                  fieldClass={fieldClass}
+                  labelClass={labelClass}
+                  disabledKinds={anchorDisabledKinds(
+                    shortExitIf,
+                    shortExitRows,
+                    signalWebhooks.map((hook) => hook.id),
+                  )}
+                  disabledWebhookIds={anchorDisabledWebhookIds(
+                    shortExitIf,
+                    shortExitRows,
+                    signalWebhooks.map((hook) => hook.id),
+                  )}
+                />
+                <ExitConditionStack
+                  prefix="shortExitIf"
+                  side="short"
+                  anchor={shortExitIf}
+                  rows={shortExitRows}
+                  onChange={(next) => {
+                    setShortExitRows(next);
+                    setTouched(true);
+                    setFormTick((tick) => tick + 1);
+                  }}
+                  webhooks={signalWebhooks}
+                  gridClass={fieldRowClass5}
+                  fieldClass={fieldClass}
+                  labelClass={labelClass}
+                />
+              </>
             ) : null}
           </OptionalSection>
         </BotFormGroup>
@@ -2708,26 +2797,56 @@ export function DcaPlaybookForm({
         <OptionalSection
           title="Hard Exit Condition"
           enabled={Boolean(exitIf)}
-          onEnabled={(next) =>
+          onEnabled={(next) => {
             setExitIf(
               next
                 ? (exitIf ??
                   defaultHardExit(direction === "short" ? "short" : "long"))
                 : null,
-            )
-          }
+            );
+            if (!next) {
+              setExitRows([]);
+            }
+          }}
         >
           {exitIf ? (
-            <HardExitFields
-              prefix="exitIf"
-              side={direction === "short" ? "short" : "long"}
-              value={exitIf}
-              onChange={setExitIf}
-              webhooks={signalWebhooks}
-              gridClass={fieldRowClass5}
-              fieldClass={fieldClass}
-              labelClass={labelClass}
-            />
+            <>
+              <HardExitFields
+                prefix="exitIf"
+                side={direction === "short" ? "short" : "long"}
+                value={exitIf}
+                onChange={setExitIf}
+                webhooks={signalWebhooks}
+                gridClass={fieldRowClass5}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+                disabledKinds={anchorDisabledKinds(
+                  exitIf,
+                  exitRows,
+                  signalWebhooks.map((hook) => hook.id),
+                )}
+                disabledWebhookIds={anchorDisabledWebhookIds(
+                  exitIf,
+                  exitRows,
+                  signalWebhooks.map((hook) => hook.id),
+                )}
+              />
+              <ExitConditionStack
+                prefix="exitIf"
+                side={direction === "short" ? "short" : "long"}
+                anchor={exitIf}
+                rows={exitRows}
+                onChange={(next) => {
+                  setExitRows(next);
+                  setTouched(true);
+                  setFormTick((tick) => tick + 1);
+                }}
+                webhooks={signalWebhooks}
+                gridClass={fieldRowClass5}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            </>
           ) : null}
         </OptionalSection>
       )}

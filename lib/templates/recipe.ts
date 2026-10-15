@@ -5,6 +5,15 @@ import {
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
 import {
+  applyExitStackWebhook,
+  exitStackDropEmptyWebhooks,
+  exitStackForEditor,
+  exitStackNeedsWebhook,
+  exitStackWebhookIds,
+  templateExitStack,
+  writeExitStackFormFields,
+} from "@/lib/dca/exit-stack";
+import {
   hardExitDraftFromTemplate,
   hardExitSignalFromJson,
   hardExitWebhookId,
@@ -147,6 +156,8 @@ export type DcaTemplateRecipe = {
   shortExitIf?: DcaFilterSpec | null;
   exitHard?: TemplateHardExitSignal | null;
   shortExitHard?: TemplateHardExitSignal | null;
+  exitStack?: EntryStack | null;
+  shortExitStack?: EntryStack | null;
 };
 
 export type PerpsTemplateRecipe = {
@@ -170,6 +181,7 @@ export type PerpsTemplateRecipe = {
   entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
   exitHard?: TemplateHardExitSignal | null;
+  exitStack?: EntryStack | null;
   breakevenActivationPct?: number | null;
   breakevenOffsetPct?: number | null;
   direction: "long" | "short" | "both";
@@ -303,6 +315,10 @@ export function dcaFormMatchesPlaybook(
     hardExitWebhookId(saved.exitHard) === hardExitWebhookId(next.exitHard) &&
     hardExitWebhookId(saved.shortExitHard) ===
       hardExitWebhookId(next.shortExitHard) &&
+    JSON.stringify(exitStackWebhookIds(saved.exitStack)) ===
+      JSON.stringify(exitStackWebhookIds(next.exitStack)) &&
+    JSON.stringify(exitStackWebhookIds(saved.shortExitStack)) ===
+      JSON.stringify(exitStackWebhookIds(next.shortExitStack)) &&
     JSON.stringify(snapshotDcaRecipe(saved)) ===
       JSON.stringify(snapshotDcaRecipe(next))
   );
@@ -378,6 +394,12 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     ...(templateHardExit(config.shortExitHard)
       ? { shortExitHard: templateHardExit(config.shortExitHard) }
       : {}),
+    ...(templateExitStack(config.exitStack)
+      ? { exitStack: templateExitStack(config.exitStack) }
+      : {}),
+    ...(config.direction === "both" && templateExitStack(config.shortExitStack)
+      ? { shortExitStack: templateExitStack(config.shortExitStack) }
+      : {}),
   };
 }
 
@@ -408,6 +430,7 @@ export function snapshotPerpsRecipe(
         | "entryStack"
         | "exitIf"
         | "exitHard"
+        | "exitStack"
         | "breakevenActivationPct"
         | "breakevenOffsetPct"
         | "direction"
@@ -451,6 +474,9 @@ export function snapshotPerpsRecipe(
     exitIf: rule.exitHard ? null : (rule.exitIf ?? null),
     ...(templateHardExit(rule.exitHard)
       ? { exitHard: templateHardExit(rule.exitHard) }
+      : {}),
+    ...(templateExitStack(rule.exitStack)
+      ? { exitStack: templateExitStack(rule.exitStack) }
       : {}),
     breakevenActivationPct: rule.breakevenActivationPct ?? null,
     breakevenOffsetPct: rule.breakevenOffsetPct ?? null,
@@ -527,6 +553,8 @@ export function dcaRecipePlaybookSeed(recipe: DcaTemplateRecipe): DcaPlaybook {
     shortExitIf: recipe.shortExitHard ? null : (recipe.shortExitIf ?? null),
     exitHard: hardExitSignalFromJson(recipe.exitHard),
     shortExitHard: hardExitSignalFromJson(recipe.shortExitHard),
+    exitStack: exitStackForEditor(recipe.exitStack),
+    shortExitStack: exitStackForEditor(recipe.shortExitStack),
     long: IDLE_DCA_LEG,
     short: IDLE_DCA_LEG,
     armConditionTrue: false,
@@ -559,6 +587,7 @@ export function perpsRecipeFormSeed(
     confirm: recipe.confirm ?? null,
     exitIf: recipe.exitHard ? null : (recipe.exitIf ?? null),
     exitHard: hardExitSignalFromJson(recipe.exitHard),
+    exitStack: exitStackForEditor(recipe.exitStack),
     exitDraft: hardExitDraftFromTemplate(recipe.exitIf, recipe.exitHard),
     breakevenActivationPct:
       recipe.breakevenActivationPct == null
@@ -641,7 +670,9 @@ function parseDcaTemplateRecipe(
     String(row.startKind) === "webhook" ||
     String(row.shortStartKind) === "webhook" ||
     templateHardExitNeedsWebhook(row.exitHard) ||
-    templateHardExitNeedsWebhook(row.shortExitHard)
+    templateHardExitNeedsWebhook(row.shortExitHard) ||
+    exitStackNeedsWebhook(entryStackFromJson(row.exitStack)) ||
+    exitStackNeedsWebhook(entryStackFromJson(row.shortExitStack))
       ? "11111111-1111-4111-8111-111111111111"
       : undefined;
   const built = dcaRecipeToConfig(row as unknown as DcaTemplateRecipe, {
@@ -693,6 +724,7 @@ function parsePerpsTemplateRecipe(
     entryStack: entryStackFromJson(row.entryStack) ?? undefined,
     exitIf: filterSpecFromRecipe(row.exitIf),
     exitHard: (row.exitHard as PerpsTemplateRecipe["exitHard"]) ?? null,
+    exitStack: entryStackFromJson(row.exitStack) ?? undefined,
     breakevenActivationPct: asNullableNumber(row.breakevenActivationPct),
     breakevenOffsetPct: asNullableNumber(row.breakevenOffsetPct),
     direction:
@@ -706,9 +738,11 @@ function parsePerpsTemplateRecipe(
   };
   const built = perpsRecipeToRule(recipe, {
     sortOrder: 0,
-    webhookId: templateHardExitNeedsWebhook(recipe.exitHard)
-      ? "11111111-1111-4111-8111-111111111111"
-      : undefined,
+    webhookId:
+      templateHardExitNeedsWebhook(recipe.exitHard) ||
+      exitStackNeedsWebhook(recipe.exitStack)
+        ? "11111111-1111-4111-8111-111111111111"
+        : undefined,
     venue: venueForRecipeSymbol(recipe.symbol, venue),
   });
   if (!built.ok) {
@@ -1091,6 +1125,24 @@ export function dcaRecipeToConfig(
     notes,
     "Short Hard Exit",
   );
+  writeAppliedExitStack(
+    form,
+    "exitIf",
+    entryStackFromJson("exitStack" in recipe ? recipe.exitStack : null),
+    exitWebhookId,
+    notes,
+  );
+  if (direction === "both") {
+    writeAppliedExitStack(
+      form,
+      "shortExitIf",
+      entryStackFromJson(
+        "shortExitStack" in recipe ? recipe.shortExitStack : null,
+      ),
+      exitWebhookId,
+      notes,
+    );
+  }
   const parsed = parseDcaPlaybookForm(form, venue);
   if (!parsed.ok) {
     return parsed;
@@ -1166,15 +1218,17 @@ export function perpsRecipeToRule(
       exitDraft.webhookId = webhookId;
     }
   }
+  const exitKept = !(exitDraft?.trigger === "webhook" && !exitDraft.webhookId);
+  const exitStack = exitKept
+    ? appliedExitStack(recipe.exitStack, webhookId, notes)
+    : null;
   writeFuturesConditionFormFields(form, "r0_", {
     indicator: recipe.indicator,
     confirm: recipe.confirm,
     entryStack: recipe.entryStack,
-    exitIf: exitDraft?.trigger === "webhook" && !exitDraft.webhookId
-      ? null
-      : recipe.exitIf,
-    exitDraft:
-      exitDraft?.trigger === "webhook" && !exitDraft.webhookId ? null : exitDraft,
+    exitIf: exitKept ? recipe.exitIf : null,
+    exitStack,
+    exitDraft: exitKept ? exitDraft : null,
     breakevenActivationPct: recipe.breakevenActivationPct,
     breakevenOffsetPct: recipe.breakevenOffsetPct,
   });
@@ -1453,6 +1507,7 @@ export function perpsFormToSnapshotSource(
     entryStack: layer.entryStack,
     exitIf: layer.exitIf,
     exitHard: layer.exitHard,
+    exitStack: layer.exitStack,
     exitDraft: layer.exitDraft,
     breakevenActivationPct:
       layer.breakevenActivationPct.trim() === ""
@@ -1488,6 +1543,36 @@ export function paperFormToSnapshotSource(
   form.set("r0_takeProfit", layer.takeProfit);
   form.set("r0_stopLoss", layer.stopLoss);
   return form;
+}
+
+function appliedExitStack(
+  stack: EntryStack | null | undefined,
+  webhookId: string,
+  notes: string[],
+): EntryStack | null {
+  const filled = applyExitStackWebhook(stack, webhookId);
+  if (!exitStackNeedsWebhook(filled)) {
+    return filled.leaves.length > 0 ? filled : null;
+  }
+  notes.push("Hard Exit signal needs a webhook on this desk.");
+  const dropped = exitStackDropEmptyWebhooks(filled);
+  return dropped.leaves.length > 0 ? dropped : null;
+}
+
+function writeAppliedExitStack(
+  form: FormData,
+  prefix: string,
+  stack: EntryStack | null | undefined,
+  webhookId: string,
+  notes: string[],
+): void {
+  if (form.get(`${prefix}Trigger`) == null) {
+    return;
+  }
+  const next = appliedExitStack(stack, webhookId, notes);
+  if (next) {
+    writeExitStackFormFields(form, prefix, next);
+  }
 }
 
 export function recipeHasRuntimeKeys(value: unknown): boolean {

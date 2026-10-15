@@ -30,6 +30,14 @@ import {
 } from "@/components/bot-form-chrome";
 import { HardExitFields } from "@/components/hard-exit-fields";
 import {
+  ExitConditionStack,
+  anchorDisabledKinds,
+  anchorDisabledWebhookIds,
+  exitRowsFromStack,
+  exitStackFromRows,
+  type ExitStackRow,
+} from "@/components/exit-condition-stack";
+import {
   initialPerpsEntryDrafts,
   oppositePerpsEntryDraft,
   PerpsEntryPanel,
@@ -496,6 +504,9 @@ function RuleCard({
   const [exitIf, setExitIf] = useState<HardExitDraft | null>(
     () => layer.exitDraft ?? hardExitDraftFromStored(layer.exitIf, layer.exitHard),
   );
+  const [exitRows, setExitRows] = useState<ExitStackRow[]>(() =>
+    exitRowsFromStack(layer.exitStack),
+  );
   const [breakevenOn, setBreakevenOn] = useState(
     layer.breakevenActivationPct.trim() !== "",
   );
@@ -585,8 +596,12 @@ function RuleCard({
       perpsEntryDraftMissing(entryDrafts.long, direction === "close_long")) ||
     (showShort &&
       perpsEntryDraftMissing(entryDrafts.short, direction === "close_short"));
-  const exitIfMissing = Boolean(exitIf) && !hardExitComplete(exitIf);
+  const exitIfMissing =
+    Boolean(exitIf) &&
+    (!hardExitComplete(exitIf) ||
+      exitRows.some((row) => !hardExitComplete(row.draft)));
   const exitParts = hardExitParts(closing ? null : exitIf);
+  const exitStack = closing ? null : exitStackFromRows(exitRows);
   const tpsl =
     tpOn || slOn
       ? {
@@ -645,6 +660,7 @@ function RuleCard({
     shortEntry: shortLeg,
     exitIf: exitParts.filter,
     exitHard: exitParts.signal,
+    exitStack,
     exitDraft: closing ? null : exitIf,
     breakevenActivationPct:
       closing || !slOn || !breakevenOn ? "" : breakevenActivationPct,
@@ -715,6 +731,7 @@ function RuleCard({
       shortEntry: shortLeg,
       exitIf: exitParts.filter,
       exitHard: exitParts.signal,
+      exitStack,
       breakevenActivationPct:
         closing || !slOn || !breakevenOn
           ? null
@@ -1253,21 +1270,53 @@ function RuleCard({
             title="Hard Exit Condition"
             hint="Flattens this bot’s open size at market when the condition is true."
             enabled={Boolean(exitIf)}
-            onEnabled={(next) =>
-              setExitIf(next ? (exitIf ?? defaultHardExit(exitSide)) : null)
-            }
+            onEnabled={(next) => {
+              setExitIf(next ? (exitIf ?? defaultHardExit(exitSide)) : null);
+              if (!next) {
+                setExitRows([]);
+              }
+              setDirty(true);
+              setFormTick((tick) => tick + 1);
+            }}
           >
             {exitIf ? (
-              <HardExitFields
-                prefix={`${prefix}exitIf`}
-                side={exitSide}
-                value={exitIf}
-                onChange={setExitIf}
-                webhooks={triggerWebhooks}
-                gridClass={fieldRow5}
-                fieldClass={botFieldClass}
-                labelClass={botLabelClass}
-              />
+              <>
+                <HardExitFields
+                  prefix={`${prefix}exitIf`}
+                  side={exitSide}
+                  value={exitIf}
+                  onChange={setExitIf}
+                  webhooks={triggerWebhooks}
+                  gridClass={fieldRow5}
+                  fieldClass={botFieldClass}
+                  labelClass={botLabelClass}
+                  disabledKinds={anchorDisabledKinds(
+                    exitIf,
+                    exitRows,
+                    triggerWebhooks.map((hook) => hook.id),
+                  )}
+                  disabledWebhookIds={anchorDisabledWebhookIds(
+                    exitIf,
+                    exitRows,
+                    triggerWebhooks.map((hook) => hook.id),
+                  )}
+                />
+                <ExitConditionStack
+                  prefix={`${prefix}exitIf`}
+                  side={exitSide}
+                  anchor={exitIf}
+                  rows={exitRows}
+                  onChange={(next) => {
+                    setExitRows(next);
+                    setDirty(true);
+                    setFormTick((tick) => tick + 1);
+                  }}
+                  webhooks={triggerWebhooks}
+                  gridClass={fieldRow5}
+                  fieldClass={botFieldClass}
+                  labelClass={botLabelClass}
+                />
+              </>
             ) : null}
           </OptionalSection>
         </BotFormStep>

@@ -15,6 +15,12 @@ import {
   dcaEntryTickExtras,
 } from "@/lib/dca/entry-stack";
 import {
+  exitLeafResults,
+  exitStackForSide,
+  exitStackTimeframes,
+  formatExitExpressionText,
+} from "@/lib/dca/exit-stack";
+import {
   dcaFilterForSide,
   seriesForFilter,
 } from "@/lib/dca/filters";
@@ -33,10 +39,7 @@ import {
   dcaResolvedSafetyPrices,
   dcaTrailingDistance,
 } from "@/lib/dca/grid";
-import {
-  formatDcaStartReasons,
-  formatHardExitText,
-} from "@/lib/bots/condition-copy";
+import { formatDcaStartReasons } from "@/lib/bots/condition-copy";
 import { canBacktestDcaRecipe } from "./eligibility";
 import { dcaRecipeToConfig, type DcaTemplateRecipe } from "@/lib/templates/recipe";
 import type { FuturesSide } from "@/lib/futures/model";
@@ -564,6 +567,7 @@ export async function replayDcaPlaybook(input: {
       const indicatorStart = dcaIndicatorStartForSide(config, side);
       const confirm = dcaFilterForSide(config, side, "confirm");
       const exit = hardExitForSide(config, side);
+      const exitStack = exitStackForSide(config, side);
       const exitIf = exit.filter;
       const tapeInterval = backtestTapeInterval(input.recipe, 1, 2);
       const confirmSeries = seriesForFilter(
@@ -679,6 +683,36 @@ export async function replayDcaPlaybook(input: {
         exitHard: exit.signal,
         exitIfCloses: exitIfSeries.closes,
         exitIfBars: exitIfSeries.bars,
+        ...(exitStack.leaves.length > 0
+          ? {
+              exitJoins: exitStack.joins,
+              exitLeaves: exitLeafResults({
+                stack: exitStack,
+                side,
+                price,
+                prices: triggerPrices,
+                barsByTimeframe: new Map(
+                  exitStackTimeframes(exitStack).map((timeframe) => {
+                    const sampled = resampleBarsForTimeframe(
+                      barWindow,
+                      tapeInterval,
+                      timeframe,
+                    );
+                    return [
+                      timeframe,
+                      sampled.map((row) => ({
+                        timeMs: 0,
+                        open: row.close,
+                        high: row.high,
+                        low: row.low,
+                        close: row.close,
+                      })),
+                    ] as const;
+                  }),
+                ),
+              }),
+            }
+          : {}),
         takeProfitOrderType: config.takeProfitOrderType,
         tpLimitResting:
           config.takeProfitOrderType === "limit" && live.qty > 0,
@@ -717,13 +751,12 @@ export async function replayDcaPlaybook(input: {
           true,
           closeReason,
           closeReason === "exit_if"
-            ? exit.signal
-              ? formatHardExitText({
-                  filter: null,
-                  signal: exit.signal,
-                  side,
-                })
-              : filterBecause(exitIf, side, "Exit if")
+            ? formatExitExpressionText({
+                filter: exit.filter,
+                signal: exit.signal,
+                stack: exitStack,
+                side,
+              })
             : undefined,
         );
         closedThisBar = true;

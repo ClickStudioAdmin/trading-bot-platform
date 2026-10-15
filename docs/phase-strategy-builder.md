@@ -15,7 +15,7 @@ In progress. First step is the entry stack on Perps bots.
 | # | Step | Who | Done when |
 | --- | --- | --- | --- |
 | 1 | Entry stack | Agent | Perps bots can add conditions after the initial trigger, joined with And or Or. Each added row uses the same trigger dropdown (Price cross, Indicator, Trend, or Signal webhook). Conflicting choices are disabled. Direction is Long, Short, or Both when the exchange hedges. Both uses two sections, Long entry and Short entry, each with its own trigger and stack. The same form is the desk bot, New Backtest, and replay Modify. The engine, replay, and parameter lists (bot, backtest, template) read that stack. A saved Secondary Entry opens as one And filter. |
-| 2 | Exit stack | — | Hard Exit becomes the first row of an exit condition stack. Not started. |
+| 2 | Exit stack | Agent | Hard Exit is the first row of an Add Condition stack on DCA and Perps. Further rows use the same Hard Exit triggers and And or Or. The stack is still one closer that races with take profit, trailing stop, and stop loss. One Hard Exit stays on `exit_if_*` / `exit_hard`. Extra rows are `exit_expr` (`short_exit_expr` on DCA Both). |
 | 3 | Additional exposure | — | Caps, size per add, and its own condition stack. Not started. |
 | 4 | Position and pattern leaves | — | Breakeven-limit, price versus fill, impulse then pullback. Not started. |
 | 5 | Other playbooks | Agent | DCA entry uses the same Add Condition stack as Perps. Cash and Carry is not started. |
@@ -32,9 +32,19 @@ In progress. First step is the entry stack on Perps bots.
 7. Direction matches DCA: Long, Short, or Both. Both is hidden on a one-way exchange. Both keeps the long leg on the existing columns and the short leg in `short_entry`. Each side has its own section, trigger, and stack. The same webhook may arm both sides. Conflict rules stay inside one section.
 8. DCA uses that same stack on Long entry and Short entry. Each side has its own Initial Order Trigger. One And filter still writes `confirm_*` / `short_confirm_*`. Any other stack is `entry_expr` / `short_entry_expr`. Cash and Carry is unchanged.
 
+## How the exit stack works
+
+1. Take profit, trailing stop, and stop loss stay as they are, including limit orders. Move Breakeven stays inside Stop loss. There is no join between those exits and Hard Exit. The first one that is met closes. On one check, stop still wins, then this Hard Exit stack, then take profit.
+2. Hard Exit is condition 1 and has no joiner. **Add condition** appends Price cross, Indicator, Trend, or Signal webhook, with And or Or. The same conflict rules as entries apply: the same webhook twice, two price crosses joined with And, or two webhooks joined with And. Cap is 12 conditions and 4 timeframes, including the first row.
+3. Indicator rows stay the Hard Exit list (Price vs EMA/SMA, RSI, Price vs BB, ATR band). Trend is Supertrend. MACD, SMA Cross, and EMA Cross stay on entries.
+4. When the stack is true, the app market-flattens that side. A webhook that is only an And peer does not flatten by itself.
+5. DCA Both has a Long section and a Short section. Short uses the long exit, including its stack, only when the short Hard Exit is off. Perps Both keeps one shared Hard Exit section.
+6. A single Hard Exit still writes `exit_if_*` or `exit_hard`. Extra rows write `exit_expr` on the playbook or rule, and `short_exit_expr` for the DCA short section. Empty extra rows store null.
+
 ## Out of this step
 
-- Exit condition stack, additional exposure, position leaves, pattern leaves
+- Confirm conditions on take profit, trailing stop, or stop loss, and further profit or loss trigger types
+- Additional exposure, position leaves, pattern leaves
 - Cash and Carry
 - A scripting language, nesting deeper than And-inside-Or, chart drawing, a general pattern scanner
 - Multi-pair or virtual lots

@@ -37,6 +37,8 @@ export function HardExitFields({
   fieldClass,
   labelClass,
   named = true,
+  disabledKinds = [],
+  disabledWebhookIds = [],
 }: {
   prefix: string;
   side: FuturesSide;
@@ -47,6 +49,8 @@ export function HardExitFields({
   fieldClass: string;
   labelClass: string;
   named?: boolean;
+  disabledKinds?: HardExitTrigger[];
+  disabledWebhookIds?: string[];
 }) {
   const webhookChoices =
     value.trigger === "webhook" &&
@@ -76,7 +80,14 @@ export function HardExitFields({
           className={fieldClass}
         >
           {TRIGGER_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
+            <option
+              key={option.value}
+              value={option.value}
+              disabled={
+                option.value !== value.trigger &&
+                disabledKinds.includes(option.value)
+              }
+            >
               {option.label}
             </option>
           ))}
@@ -147,7 +158,14 @@ export function HardExitFields({
                 : "Pick a webhook"}
             </option>
             {webhookChoices.map((hook) => (
-              <option key={hook.id} value={hook.id}>
+              <option
+                key={hook.id}
+                value={hook.id}
+                disabled={
+                  hook.id !== value.webhookId &&
+                  disabledWebhookIds.includes(hook.id)
+                }
+              >
                 {hook.name}
               </option>
             ))}

@@ -99,6 +99,16 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
     ),
     exit_hard: hardExitSignalToJson(config.exitHard),
     short_exit_hard: hardExitSignalToJson(config.shortExitHard),
+    exit_expr:
+      config.exitStack && config.exitStack.leaves.length > 0
+        ? entryStackToJson(config.exitStack)
+        : null,
+    short_exit_expr:
+      config.direction === "both" &&
+      config.shortExitStack &&
+      config.shortExitStack.leaves.length > 0
+        ? entryStackToJson(config.shortExitStack)
+        : null,
   };
 }
 
