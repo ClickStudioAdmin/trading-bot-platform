@@ -600,7 +600,7 @@ function dcaExitGroups(recipe: DcaTemplateRecipe): ParamGroup[] {
   ];
   const side: "long" | "short" = recipe.direction === "short" ? "short" : "long";
   if (recipe.direction === "both") {
-    groups.push({ title: "Hard Exit Condition", rows: [] });
+    groups.push({ title: "Condition Builder", rows: [] });
     groups.push(
       hardExitGroup("Long", recipe.exitIf, recipe.exitHard, "long", recipe.exitStack),
       hardExitGroup(
@@ -614,7 +614,7 @@ function dcaExitGroups(recipe: DcaTemplateRecipe): ParamGroup[] {
   } else {
     groups.push(
       hardExitGroup(
-        "Hard Exit Condition",
+        "Condition Builder",
         recipe.exitIf,
         recipe.exitHard,
         side,
@@ -871,7 +871,7 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
           recipe.breakevenOffsetPct,
         ),
         hardExitGroup(
-          "Hard Exit Condition",
+          "Condition Builder",
           recipe.exitIf,
           recipe.exitHard,
           side,

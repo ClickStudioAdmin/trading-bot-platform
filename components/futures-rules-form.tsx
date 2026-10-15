@@ -1272,7 +1272,7 @@ function RuleCard({
             </div>
           </OptionalSection>
           <OptionalSection
-            title="Hard Exit Condition"
+            title="Condition Builder"
             hint="Flattens this bot’s open size at market when the condition is true."
             enabled={Boolean(exitIf)}
             onEnabled={(next) => {

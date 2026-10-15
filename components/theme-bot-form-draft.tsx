@@ -2494,7 +2494,7 @@ export function ThemeBotFormDraft() {
             </OptionalSection>
 
             {bothSides ? (
-              <Group title="Hard Exit Condition">
+              <Group title="Condition Builder">
                 <OptionalSection
                   title="Long"
                   nested
@@ -2606,7 +2606,7 @@ export function ThemeBotFormDraft() {
               </Group>
             ) : (
               <OptionalSection
-                title="Hard Exit Condition"
+                title="Condition Builder"
                 hint={
                   desk === "perps"
                     ? "Flattens this bot's open size at market when the condition is true."

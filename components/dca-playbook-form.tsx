@@ -2768,7 +2768,7 @@ export function DcaPlaybookForm({
       </OptionalSection>
 
       {direction === "both" ? (
-        <BotFormGroup title="Hard Exit Condition">
+        <BotFormGroup title="Condition Builder">
           <OptionalSection
             title="Long"
             nested
@@ -2882,7 +2882,7 @@ export function DcaPlaybookForm({
         </BotFormGroup>
       ) : (
         <OptionalSection
-          title="Hard Exit Condition"
+          title="Condition Builder"
           enabled={Boolean(exitIf)}
           onEnabled={(next) => {
             setExitIf(

@@ -114,7 +114,7 @@ assert.deepEqual(
   ["Move stop to breakeven at %", "Breakeven offset %"],
 );
 assert.equal(
-  recipeParamRows(dca).find((row) => row.label === "Hard Exit Condition")?.value,
+  recipeParamRows(dca).find((row) => row.label === "Condition Builder")?.value,
   "Off",
 );
 
