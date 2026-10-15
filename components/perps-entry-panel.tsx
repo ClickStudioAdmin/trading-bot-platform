@@ -403,6 +403,7 @@ export function PerpsEntryPanel({
           </BotField>
         </div>
       </BotFormGroup>
+      {draft.entrySource === "" && !closing ? null : (
       <BotFormGroup>
         <div className={fieldRow5}>
           {draft.entrySource === "indicator" && !closing ? (
@@ -481,7 +482,7 @@ export function PerpsEntryPanel({
                 ))}
               </AppSelect>
             </BotField>
-          ) : (
+          ) : draft.entrySource === "price" || closing ? (
             <>
               <BotField label="Price source" required>
                 <AppSelect
@@ -564,9 +565,10 @@ export function PerpsEntryPanel({
                 />
               </BotField>
             </>
-          )}
+          ) : null}
         </div>
       </BotFormGroup>
+      )}
     </>
   );
   if (closing) {
