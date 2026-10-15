@@ -257,9 +257,9 @@ export function decideFuturesAutomationTick(input: {
   if (entriesBlocked) {
     return { fire: false, nextTrue: false };
   }
+  // One open row per contract and side, so a new entry on that side does not fire.
   if (
     (input.action === "buy" || input.action === "sell") &&
-    input.skipIfOpen &&
     input.hasOpenOnSide
   ) {
     return { fire: false, nextTrue: true };
@@ -625,7 +625,7 @@ export function parseFuturesAutomationFields(input: {
       triggerBy: triggerBy.trigger,
       triggerCompare: compare.compare,
       triggerPrice: triggerPrice.price,
-      skipIfOpen: parseSkipIfOpen(input.skipIfOpen),
+      skipIfOpen: true,
       tpsl: null,
       trailing: null,
       indicator: null,
@@ -664,17 +664,6 @@ function parseStoredAction(
     return { ok: true, action: "flatten", closeSide: side };
   }
   return { ok: true, action: parsed.action, closeSide: null };
-}
-
-function parseSkipIfOpen(raw: unknown): boolean {
-  if (raw == null) {
-    return false;
-  }
-  const value = String(raw).trim().toLowerCase();
-  if (value === "" || value === "off" || value === "false" || value === "0") {
-    return false;
-  }
-  return value === "on" || value === "true" || value === "1";
 }
 
 function applyPerpsDirection(
@@ -735,7 +724,7 @@ function applyPerpsDirection(
       triggerBy: triggerBy.trigger,
       triggerCompare: compare.compare,
       triggerPrice: triggerPrice.price,
-      skipIfOpen: parseSkipIfOpen(form.get(`${shortPrefix}skipIfOpen`)),
+      skipIfOpen: true,
       indicator: conditions.indicator,
       confirm: conditions.confirm,
       entryStack: conditions.entryStack,

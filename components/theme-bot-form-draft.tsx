@@ -389,21 +389,6 @@ function PercentField({
   );
 }
 
-function SideBlock({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="space-y-3">
-      <h4 className={sectionTitleClass}>{title}</h4>
-      {children}
-    </div>
-  );
-}
-
 function ThemeSecondaryEntry({
   side,
   prefix,
@@ -542,7 +527,6 @@ export function ThemeBotFormDraft() {
   >("long");
   const [shortStartKind, setShortStartKind] = useState<StartKind>("indicator");
   const [shortWebhookId, setShortWebhookId] = useState("sample");
-  const [shortSkipIfOpen, setShortSkipIfOpen] = useState(true);
   const [shortEntryRows, setShortEntryRows] = useState<EntryStackRow[]>([]);
   const [startKind, setStartKind] = useState<StartKind>("indicator");
   const [priceSource, setPriceSource] = useState("last");
@@ -638,7 +622,6 @@ export function ThemeBotFormDraft() {
   const [breakevenOffset, setBreakevenOffset] = useState("0");
   const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(null);
   const [shortExitIf, setShortExitIf] = useState<DcaFilterSpec | null>(null);
-  const [skipIfOpen, setSkipIfOpen] = useState(true);
   const [averaging, setAveraging] = useState<"dip" | "interval">("dip");
   const [spacingKind, setSpacingKind] = useState<"percent" | "atr">("percent");
   const [dipPct, setDipPct] = useState("1");
@@ -717,7 +700,6 @@ export function ThemeBotFormDraft() {
     breakevenOffset,
     exitIf,
     shortExitIf,
-    skipIfOpen,
     averaging,
     spacingKind,
     dipPct,
@@ -881,7 +863,6 @@ export function ThemeBotFormDraft() {
     if (next === "both" && perpsDirection === "short") {
       setShortStartKind(startKind);
       setShortWebhookId(webhookId);
-      setShortSkipIfOpen(skipIfOpen);
       setShortEntryRows(entryRows);
       setShortPriceSource(priceSource);
       setShortPriceWhen(priceWhen);
@@ -902,7 +883,6 @@ export function ThemeBotFormDraft() {
     } else if (next === "both" && perpsDirection !== "both") {
       setShortStartKind(startKind);
       setShortWebhookId(webhookId);
-      setShortSkipIfOpen(skipIfOpen);
       setShortPriceSource(priceSource);
       setShortPriceWhen(priceWhen === "gte" ? "lte" : "gte");
       setShortPriceLevel(priceLevel);
@@ -917,7 +897,6 @@ export function ThemeBotFormDraft() {
     } else if (perpsDirection === "both" && next === "short") {
       setStartKind(shortStartKind);
       setWebhookId(shortWebhookId);
-      setSkipIfOpen(shortSkipIfOpen);
       setPriceSource(shortPriceSource);
       setPriceWhen(shortPriceWhen);
       setPriceLevel(shortPriceLevel);
@@ -1128,11 +1107,9 @@ export function ThemeBotFormDraft() {
         <>
         <BotFormStep
           title={
-            desk === "perps"
-              ? perpsDirection === "short"
-                ? "Short entry"
-                : "Long entry"
-              : "Entry Conditions"
+            (desk === "perps" ? perpsDirection : direction) === "short"
+              ? "Short entry"
+              : "Long entry"
           }
         >
         <Group>
@@ -1175,18 +1152,6 @@ export function ThemeBotFormDraft() {
                   </option>
                 </AppSelect>
               </Field>
-              {closing ? null : (
-                <label className="flex items-center gap-2 self-end pb-0.5 text-sm text-ink lg:col-span-2">
-                  <AppCheck
-                    checked={skipIfOpen}
-                    onChange={(event) => setSkipIfOpen(event.target.checked)}
-                  />
-                  <HintLabel
-                    text="Skip if this side is already open"
-                    hint="Off means each new cross or trigger can add size to the same row."
-                  />
-                </label>
-              )}
               </>
             ) : (
               <Field label="Initial Order Trigger" className="lg:col-span-2" required>
@@ -1246,96 +1211,8 @@ export function ThemeBotFormDraft() {
                 </AppSelect>
               </Field>
             </div>
-            {bothSides && !closing ? (
-              <div className="mt-5 space-y-5">
-                <SideBlock title="Long">
-                  <ThemeSecondaryEntry
-                    side="long"
-                    prefix="themeConfirm"
-                    spec={confirm}
-                    onChange={setConfirm}
-                    enabled={confirmOn}
-                    onEnabled={setConfirmOn}
-                  />
-                </SideBlock>
-                <div className="space-y-5 border-t border-line pt-5">
-                  <SideBlock title="Short">
-                    <ThemeSecondaryEntry
-                      side="short"
-                      prefix="themeShortConfirm"
-                      spec={shortConfirm}
-                      onChange={setShortConfirm}
-                      enabled={shortConfirmOn}
-                      onEnabled={setShortConfirmOn}
-                    />
-                  </SideBlock>
-                </div>
-              </div>
-            ) : null}
             </>
           ) : startKind === "indicator" && !closing ? (
-            bothSides ? (
-              <div className="space-y-5">
-                <SideBlock title="Long">
-                  <div className={rowClass}>
-                    <IndicatorStartFields
-                      side="long"
-                      prefix="theme"
-                      kind={indicatorKind}
-                      timeframe={timeframe}
-                      compare={when}
-                      level={level}
-                      period={period}
-                      slowPeriod={slowPeriod}
-                      onKindChange={setIndicatorKind}
-                      onTimeframeChange={setTimeframe}
-                      onCompareChange={setWhen}
-                      onLevelChange={setLevel}
-                      onPeriodChange={setPeriod}
-                      onSlowPeriodChange={setSlowPeriod}
-                    />
-                  </div>
-                  <ThemeSecondaryEntry
-                    side="long"
-                    prefix="themeConfirm"
-                    spec={confirm}
-                    onChange={setConfirm}
-                    enabled={confirmOn}
-                    onEnabled={setConfirmOn}
-                  />
-                </SideBlock>
-                <div className="space-y-5 border-t border-line pt-5">
-                  <SideBlock title="Short">
-                    <div className={rowClass}>
-                      <IndicatorStartFields
-                        side="short"
-                        prefix="themeShort"
-                        kind={shortIndicatorKind}
-                        timeframe={shortTimeframe}
-                        compare={shortWhen}
-                        level={shortLevel}
-                        period={shortPeriod}
-                        slowPeriod={shortSlowPeriod}
-                        onKindChange={setShortIndicatorKind}
-                        onTimeframeChange={setShortTimeframe}
-                        onCompareChange={setShortWhen}
-                        onLevelChange={setShortLevel}
-                        onPeriodChange={setShortPeriod}
-                        onSlowPeriodChange={setShortSlowPeriod}
-                      />
-                    </div>
-                    <ThemeSecondaryEntry
-                      side="short"
-                      prefix="themeShortConfirm"
-                      spec={shortConfirm}
-                      onChange={setShortConfirm}
-                      enabled={shortConfirmOn}
-                      onEnabled={setShortConfirmOn}
-                    />
-                  </SideBlock>
-                </div>
-              </div>
-            ) : (
               <div className={rowClass5}>
                 <IndicatorStartFields
                   side={entrySide}
@@ -1354,66 +1231,7 @@ export function ThemeBotFormDraft() {
                   onSlowPeriodChange={setSlowPeriod}
                 />
               </div>
-            )
           ) : startKind === "trend" && !closing ? (
-            bothSides ? (
-              <div className="space-y-5">
-                <SideBlock title="Long">
-                  <div className={rowClass}>
-                    <TrendStartFields
-                      side="long"
-                      prefix="theme"
-                      kind={indicatorKind}
-                      timeframe={timeframe}
-                      compare={when}
-                      period={period}
-                      multiplier={multiplier}
-                      onKindChange={setIndicatorKind}
-                      onTimeframeChange={setTimeframe}
-                      onCompareChange={setWhen}
-                      onPeriodChange={setPeriod}
-                      onMultiplierChange={setMultiplier}
-                    />
-                  </div>
-                  <ThemeSecondaryEntry
-                    side="long"
-                    prefix="themeConfirm"
-                    spec={confirm}
-                    onChange={setConfirm}
-                    enabled={confirmOn}
-                    onEnabled={setConfirmOn}
-                  />
-                </SideBlock>
-                <div className="space-y-5 border-t border-line pt-5">
-                  <SideBlock title="Short">
-                    <div className={rowClass}>
-                      <TrendStartFields
-                        side="short"
-                        prefix="themeShort"
-                        kind={shortIndicatorKind}
-                        timeframe={shortTimeframe}
-                        compare={shortWhen}
-                        period={shortPeriod}
-                        multiplier={shortMultiplier}
-                        onKindChange={setShortIndicatorKind}
-                        onTimeframeChange={setShortTimeframe}
-                        onCompareChange={setShortWhen}
-                        onPeriodChange={setShortPeriod}
-                        onMultiplierChange={setShortMultiplier}
-                      />
-                    </div>
-                    <ThemeSecondaryEntry
-                      side="short"
-                      prefix="themeShortConfirm"
-                      spec={shortConfirm}
-                      onChange={setShortConfirm}
-                      enabled={shortConfirmOn}
-                      onEnabled={setShortConfirmOn}
-                    />
-                  </SideBlock>
-                </div>
-              </div>
-            ) : (
               <div className={rowClass5}>
                 <TrendStartFields
                   side={entrySide}
@@ -1430,59 +1248,8 @@ export function ThemeBotFormDraft() {
                   onMultiplierChange={setMultiplier}
                 />
               </div>
-            )
           ) : (
             <div className={desk === "perps" ? rowClass5 : rowClass}>
-              {bothSides ? (
-                <div className="space-y-5 sm:col-span-2 lg:col-span-4">
-                  <SideBlock title="Long">
-                    <div className={rowClass}>
-                      <PriceTriggerFields
-                        desk={desk}
-                        priceSource={priceSource}
-                        onPriceSource={setPriceSource}
-                        priceWhen={priceWhen}
-                        onPriceWhen={setPriceWhen}
-                        priceLevel={priceLevel}
-                        onPriceLevel={setPriceLevel}
-                        invalid={showFieldErrors && missing.priceLevel}
-                      />
-                    </div>
-                    <ThemeSecondaryEntry
-                      side="long"
-                      prefix="themeConfirm"
-                      spec={confirm}
-                      onChange={setConfirm}
-                      enabled={confirmOn}
-                      onEnabled={setConfirmOn}
-                    />
-                  </SideBlock>
-                  <div className="space-y-5 border-t border-line pt-5">
-                    <SideBlock title="Short">
-                      <div className={rowClass}>
-                        <PriceTriggerFields
-                          desk={desk}
-                          priceSource={shortPriceSource}
-                          onPriceSource={setShortPriceSource}
-                          priceWhen={shortPriceWhen}
-                          onPriceWhen={setShortPriceWhen}
-                          priceLevel={shortPriceLevel}
-                          onPriceLevel={setShortPriceLevel}
-                          invalid={showFieldErrors && missing.shortPriceLevel}
-                        />
-                      </div>
-                      <ThemeSecondaryEntry
-                        side="short"
-                        prefix="themeShortConfirm"
-                        spec={shortConfirm}
-                        onChange={setShortConfirm}
-                        enabled={shortConfirmOn}
-                        onEnabled={setShortConfirmOn}
-                      />
-                    </SideBlock>
-                  </div>
-                </div>
-              ) : (
                 <PriceTriggerFields
                   desk={desk}
                   priceSource={priceSource}
@@ -1493,12 +1260,11 @@ export function ThemeBotFormDraft() {
                   onPriceLevel={setPriceLevel}
                   invalid={showFieldErrors && missing.priceLevel}
                 />
-              )}
             </div>
           )}
         </Group>
 
-        {!closing && !bothSides ? (
+        {!closing ? (
           desk === "perps" ? (
             <EntryConditionStack
               prefix="themeEntry"
@@ -1542,16 +1308,6 @@ export function ThemeBotFormDraft() {
                     <option value="webhook">Signal webhook</option>
                   </AppSelect>
                 </Field>
-                <label className="flex items-center gap-2 self-end pb-0.5 text-sm text-ink lg:col-span-2">
-                  <AppCheck
-                    checked={shortSkipIfOpen}
-                    onChange={(event) => setShortSkipIfOpen(event.target.checked)}
-                  />
-                  <HintLabel
-                    text="Skip if this side is already open"
-                    hint="Off means each new cross or trigger can add size to the same row."
-                  />
-                </label>
               </div>
             </Group>
             <Group>
@@ -1629,6 +1385,89 @@ export function ThemeBotFormDraft() {
               gridClass={rowClass5}
               fieldClass={fieldClass}
               labelClass={labelClass}
+            />
+          </BotFormStep>
+        ) : null}
+
+        {desk === "dca" && direction === "both" ? (
+          <BotFormStep title="Short entry">
+            <Group>
+              <div className={rowClass}>
+                <Field label="Initial Order Trigger" className="lg:col-span-2" required>
+                  <AppSelect
+                    value={startKind}
+                    onChange={(event) =>
+                      applyStartKind(event.target.value as StartKind)
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="indicator">Indicator</option>
+                    <option value="trend">Trend</option>
+                    <option value="price">Price Cross</option>
+                    <option value="webhook">Signal Webhook</option>
+                  </AppSelect>
+                </Field>
+              </div>
+            </Group>
+            <Group>
+              {startKind === "indicator" ? (
+                <div className={rowClass5}>
+                  <IndicatorStartFields
+                    side="short"
+                    prefix="themeShort"
+                    kind={shortIndicatorKind}
+                    timeframe={shortTimeframe}
+                    compare={shortWhen}
+                    level={shortLevel}
+                    period={shortPeriod}
+                    slowPeriod={shortSlowPeriod}
+                    onKindChange={setShortIndicatorKind}
+                    onTimeframeChange={setShortTimeframe}
+                    onCompareChange={setShortWhen}
+                    onLevelChange={setShortLevel}
+                    onPeriodChange={setShortPeriod}
+                    onSlowPeriodChange={setShortSlowPeriod}
+                  />
+                </div>
+              ) : startKind === "trend" ? (
+                <div className={rowClass5}>
+                  <TrendStartFields
+                    side="short"
+                    prefix="themeShort"
+                    kind={shortIndicatorKind}
+                    timeframe={shortTimeframe}
+                    compare={shortWhen}
+                    period={shortPeriod}
+                    multiplier={shortMultiplier}
+                    onKindChange={setShortIndicatorKind}
+                    onTimeframeChange={setShortTimeframe}
+                    onCompareChange={setShortWhen}
+                    onPeriodChange={setShortPeriod}
+                    onMultiplierChange={setShortMultiplier}
+                  />
+                </div>
+              ) : startKind === "price" ? (
+                <div className={rowClass}>
+                  <PriceTriggerFields
+                    desk="dca"
+                    priceSource={shortPriceSource}
+                    onPriceSource={setShortPriceSource}
+                    priceWhen={shortPriceWhen}
+                    onPriceWhen={setShortPriceWhen}
+                    priceLevel={shortPriceLevel}
+                    onPriceLevel={setShortPriceLevel}
+                    invalid={showFieldErrors && missing.shortPriceLevel}
+                  />
+                </div>
+              ) : null}
+            </Group>
+            <ThemeSecondaryEntry
+              side="short"
+              prefix="themeShortConfirm"
+              spec={shortConfirm}
+              onChange={setShortConfirm}
+              enabled={shortConfirmOn}
+              onEnabled={setShortConfirmOn}
             />
           </BotFormStep>
         ) : null}

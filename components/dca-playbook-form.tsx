@@ -1579,9 +1579,218 @@ export function DcaPlaybookForm({
   const fieldRowClass5 = embedded ? botCompactRowClass : botRowClass5;
   const nameSpan = embedded ? "col-span-full" : "col-span-2";
   const pairSpan = embedded ? "col-span-full" : "lg:col-span-2";
-  const blockSpan = embedded
-    ? "col-span-full space-y-4"
-    : "space-y-4 sm:col-span-2 lg:col-span-4";
+  const lockClass = cycleLocked ? " pointer-events-none opacity-40" : "";
+
+  function applyDcaStartKind(next: DcaStartKind) {
+    if (next === "trend") {
+      setIndicatorKind("supertrend");
+      setIndicatorPeriod(String(defaultDcaIndicatorPeriod("supertrend")));
+      setIndicatorMultiplier(String(DEFAULT_DCA_SUPERTREND_MULTIPLIER));
+      setIndicatorCompare(indicatorCompareForDirection("long", "supertrend", ""));
+      setIndicatorLevel("");
+      setShortIndicatorKind("supertrend");
+      setShortIndicatorPeriod(String(defaultDcaIndicatorPeriod("supertrend")));
+      setShortIndicatorMultiplier(String(DEFAULT_DCA_SUPERTREND_MULTIPLIER));
+      setShortIndicatorCompare(
+        indicatorCompareForDirection("short", "supertrend", ""),
+      );
+      setShortIndicatorLevel("");
+    } else if (startKind === "trend" && next === "indicator") {
+      setIndicatorKind("rsi");
+      setIndicatorPeriod(String(defaultDcaIndicatorPeriod("rsi")));
+      setIndicatorCompare(indicatorCompareForDirection("long", "rsi", ""));
+      setIndicatorLevel("30");
+      setShortIndicatorKind("rsi");
+      setShortIndicatorPeriod(String(defaultDcaIndicatorPeriod("rsi")));
+      setShortIndicatorCompare(indicatorCompareForDirection("short", "rsi", ""));
+      setShortIndicatorLevel("70");
+    }
+    setStartKind(next);
+  }
+
+  function dcaTriggerSelect(named: boolean) {
+    return (
+      <BotFormGroup locked={cycleLocked}>
+        <div className={fieldRowClass}>
+          <label
+            className={`${labelClass} ${pairSpan}${lockClass}`}
+            inert={cycleLocked || undefined}
+            aria-disabled={cycleLocked || undefined}
+          >
+            <HintLabel text="Initial Order Trigger" required />
+            <AppSelect
+              name={named ? "startKind" : undefined}
+              value={startKind}
+              onChange={(event) =>
+                applyDcaStartKind(event.target.value as DcaStartKind)
+              }
+              className={fieldClass}
+            >
+              {startKind === "immediate" ? (
+                <option value="immediate">Immediate</option>
+              ) : null}
+              <option value="indicator">Indicator</option>
+              <option value="trend">Trend</option>
+              <option value="price">Price Cross</option>
+              <option value="webhook">Signal Webhook</option>
+            </AppSelect>
+          </label>
+        </div>
+      </BotFormGroup>
+    );
+  }
+
+  function dcaEntryFields(side: "long" | "short") {
+    const shortLeg = direction === "both" && side === "short";
+    const fieldSide: "long" | "short" =
+      shortLeg || direction === "short" ? "short" : "long";
+    const confirmSpec = shortLeg ? shortConfirm : confirm;
+    const setConfirmSpec = shortLeg ? setShortConfirm : setConfirm;
+    return (
+      <>
+        {startKind === "price" ? (
+          <BotFormGroup locked={cycleLocked}>
+            <div className={fieldRowClass}>
+              <TriggerFields
+                prefix={shortLeg ? "shortArm" : "arm"}
+                triggerBy={
+                  shortLeg
+                    ? (source?.shortArmTrigger?.triggerBy ??
+                      source?.armTrigger?.triggerBy ??
+                      "last")
+                    : (source?.armTrigger?.triggerBy ?? "last")
+                }
+                compare={
+                  shortLeg
+                    ? (source?.shortArmTrigger?.compare ??
+                      ((source?.armTrigger?.compare ?? "gte") === "gte"
+                        ? "lte"
+                        : "gte"))
+                    : (source?.armTrigger?.compare ?? "gte")
+                }
+                price={optional(
+                  shortLeg
+                    ? (source?.shortArmTrigger?.price ?? source?.armTrigger?.price)
+                    : source?.armTrigger?.price,
+                )}
+                quoteLabel={policy.quoteLabel}
+              />
+            </div>
+          </BotFormGroup>
+        ) : null}
+        {startKind === "webhook" && !shortLeg ? (
+          <BotFormGroup locked={cycleLocked}>
+            <div className={fieldRowClass}>
+              {signalWebhooks.length > 0 ? (
+                <label className={`${labelClass} ${pairSpan}${lockClass}`}>
+                  <HintLabel text="Signal Webhook" required />
+                  <AppSelect
+                    name="webhookId"
+                    defaultValue={source?.webhookId ?? signalWebhooks[0]?.id}
+                    className={fieldClass}
+                  >
+                    {signalWebhooks.map((row) => (
+                      <option key={row.id} value={row.id}>
+                        {row.name}
+                      </option>
+                    ))}
+                  </AppSelect>
+                </label>
+              ) : (
+                <p
+                  className={`self-end text-hint text-ink-muted ${
+                    embedded ? "col-span-full" : "lg:col-span-3"
+                  }`}
+                >
+                  Create a Signal on{" "}
+                  <Link href={webhooksHref} className="text-accent">
+                    Webhooks
+                  </Link>{" "}
+                  first. Set Status to Active and Save, then buy / sell starts
+                  that side only.
+                </p>
+              )}
+            </div>
+          </BotFormGroup>
+        ) : null}
+        {startKind === "indicator" ? (
+          <BotFormGroup locked={cycleLocked}>
+            <div className={fieldRowClass}>
+              <IndicatorStartFields
+                side={fieldSide}
+                prefix={shortLeg ? "shortIndicator" : "indicator"}
+                kind={shortLeg ? shortIndicatorKind : indicatorKind}
+                timeframe={shortLeg ? shortIndicatorTimeframe : indicatorTimeframe}
+                compare={shortLeg ? shortIndicatorCompare : indicatorCompare}
+                level={shortLeg ? shortIndicatorLevel : indicatorLevel}
+                period={shortLeg ? shortIndicatorPeriod : indicatorPeriod}
+                slowPeriod={
+                  shortLeg ? shortIndicatorSlowPeriod : indicatorSlowPeriod
+                }
+                onKindChange={shortLeg ? setShortIndicatorKind : setIndicatorKind}
+                onTimeframeChange={
+                  shortLeg ? setShortIndicatorTimeframe : setIndicatorTimeframe
+                }
+                onCompareChange={
+                  shortLeg ? setShortIndicatorCompare : setIndicatorCompare
+                }
+                onLevelChange={shortLeg ? setShortIndicatorLevel : setIndicatorLevel}
+                onPeriodChange={
+                  shortLeg ? setShortIndicatorPeriod : setIndicatorPeriod
+                }
+                onSlowPeriodChange={
+                  shortLeg
+                    ? setShortIndicatorSlowPeriod
+                    : setIndicatorSlowPeriod
+                }
+              />
+            </div>
+          </BotFormGroup>
+        ) : null}
+        {startKind === "trend" ? (
+          <BotFormGroup locked={cycleLocked}>
+            <div className={fieldRowClass}>
+              <TrendStartFields
+                side={fieldSide}
+                prefix={shortLeg ? "shortIndicator" : "indicator"}
+                kind={shortLeg ? shortIndicatorKind : indicatorKind}
+                timeframe={shortLeg ? shortIndicatorTimeframe : indicatorTimeframe}
+                compare={shortLeg ? shortIndicatorCompare : indicatorCompare}
+                period={shortLeg ? shortIndicatorPeriod : indicatorPeriod}
+                multiplier={
+                  shortLeg ? shortIndicatorMultiplier : indicatorMultiplier
+                }
+                onKindChange={shortLeg ? setShortIndicatorKind : setIndicatorKind}
+                onTimeframeChange={
+                  shortLeg ? setShortIndicatorTimeframe : setIndicatorTimeframe
+                }
+                onCompareChange={
+                  shortLeg ? setShortIndicatorCompare : setIndicatorCompare
+                }
+                onPeriodChange={
+                  shortLeg ? setShortIndicatorPeriod : setIndicatorPeriod
+                }
+                onMultiplierChange={
+                  shortLeg
+                    ? setShortIndicatorMultiplier
+                    : setIndicatorMultiplier
+                }
+              />
+            </div>
+          </BotFormGroup>
+        ) : null}
+        {startKind === "immediate" && direction === "both" ? null : (
+          <DcaSecondaryEntrySection
+            side={fieldSide}
+            prefix={shortLeg ? "shortConfirm" : "confirm"}
+            spec={confirmSpec}
+            onChange={setConfirmSpec}
+            locked={cycleLocked}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -1763,364 +1972,26 @@ export function DcaPlaybookForm({
         </p>
       ) : null}
 
+      {direction !== "short" ? (
       <BotFormStep
-        title="Entry Conditions"
+        title="Long entry"
         locked={cycleLocked}
         defaultCollapsed={hasOpenPosition}
       >
-      <BotFormGroup locked={cycleLocked}>
-        <div className={fieldRowClass}>
-          <label className={`${labelClass} ${pairSpan}`}>
-            <HintLabel text="Initial Order Trigger" required />
-            <AppSelect
-              name="startKind"
-              value={startKind}
-              onChange={(event) => {
-                const next = event.target.value as DcaStartKind;
-                if (next === "trend") {
-                  setIndicatorKind("supertrend");
-                  setIndicatorPeriod(
-                    String(defaultDcaIndicatorPeriod("supertrend")),
-                  );
-                  setIndicatorMultiplier(
-                    String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
-                  );
-                  setIndicatorCompare(
-                    indicatorCompareForDirection("long", "supertrend", ""),
-                  );
-                  setIndicatorLevel("");
-                  setShortIndicatorKind("supertrend");
-                  setShortIndicatorPeriod(
-                    String(defaultDcaIndicatorPeriod("supertrend")),
-                  );
-                  setShortIndicatorMultiplier(
-                    String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
-                  );
-                  setShortIndicatorCompare(
-                    indicatorCompareForDirection("short", "supertrend", ""),
-                  );
-                  setShortIndicatorLevel("");
-                } else if (startKind === "trend" && next === "indicator") {
-                  setIndicatorKind("rsi");
-                  setIndicatorPeriod(String(defaultDcaIndicatorPeriod("rsi")));
-                  setIndicatorCompare(
-                    indicatorCompareForDirection("long", "rsi", ""),
-                  );
-                  setIndicatorLevel("30");
-                  setShortIndicatorKind("rsi");
-                  setShortIndicatorPeriod(
-                    String(defaultDcaIndicatorPeriod("rsi")),
-                  );
-                  setShortIndicatorCompare(
-                    indicatorCompareForDirection("short", "rsi", ""),
-                  );
-                  setShortIndicatorLevel("70");
-                }
-                setStartKind(next);
-              }}
-              className={fieldClass}
-            >
-              {startKind === "immediate" ? (
-                <option value="immediate">Immediate</option>
-              ) : null}
-              <option value="indicator">Indicator</option>
-              <option value="trend">Trend</option>
-              <option value="price">Price Cross</option>
-              <option value="webhook">Signal Webhook</option>
-            </AppSelect>
-          </label>
-        </div>
-      </BotFormGroup>
-
-      <BotFormGroup locked={cycleLocked}>
-        <div className={fieldRowClass}>
-          {startKind === "price" && direction === "both" ? (
-            <div className={blockSpan}>
-              <div className="space-y-4">
-                <p className={sectionTitleClass}>Long</p>
-                <div className={fieldRowClass}>
-                  <TriggerFields
-                    prefix="arm"
-                    triggerBy={source?.armTrigger?.triggerBy ?? "last"}
-                    compare={source?.armTrigger?.compare ?? "gte"}
-                    price={optional(source?.armTrigger?.price)}
-                    quoteLabel={policy.quoteLabel}
-                  />
-                </div>
-                <DcaSecondaryEntrySection
-                  side="long"
-                  prefix="confirm"
-                  spec={confirm}
-                  onChange={setConfirm}
-                  locked={cycleLocked}
-                />
-              </div>
-              <div className="space-y-4 border-t border-line pt-4">
-                <p className={sectionTitleClass}>Short</p>
-                <div className={fieldRowClass}>
-                  <TriggerFields
-                    prefix="shortArm"
-                    triggerBy={
-                      source?.shortArmTrigger?.triggerBy ??
-                      source?.armTrigger?.triggerBy ??
-                      "last"
-                    }
-                    compare={
-                      source?.shortArmTrigger?.compare ??
-                      ((source?.armTrigger?.compare ?? "gte") === "gte"
-                        ? "lte"
-                        : "gte")
-                    }
-                    price={optional(
-                      source?.shortArmTrigger?.price ??
-                        source?.armTrigger?.price,
-                    )}
-                    quoteLabel={policy.quoteLabel}
-                  />
-                </div>
-                <DcaSecondaryEntrySection
-                  side="short"
-                  prefix="shortConfirm"
-                  spec={shortConfirm}
-                  onChange={setShortConfirm}
-                  locked={cycleLocked}
-                />
-              </div>
-            </div>
-          ) : null}
-          {startKind === "price" && direction !== "both" ? (
-            <>
-              <TriggerFields
-                prefix="arm"
-                triggerBy={source?.armTrigger?.triggerBy ?? "last"}
-                compare={source?.armTrigger?.compare ?? "gte"}
-                price={optional(source?.armTrigger?.price)}
-                quoteLabel={policy.quoteLabel}
-              />
-            </>
-          ) : null}
-          {startKind === "webhook" ? (
-            signalWebhooks.length > 0 ? (
-              <>
-                <label className={`${labelClass} ${pairSpan}`}>
-                  <HintLabel text="Signal Webhook" required />
-                  <AppSelect
-                    name="webhookId"
-                    defaultValue={source?.webhookId ?? signalWebhooks[0]?.id}
-                    className={fieldClass}
-                  >
-                    {signalWebhooks.map((row) => (
-                      <option key={row.id} value={row.id}>
-                        {row.name}
-                      </option>
-                    ))}
-                  </AppSelect>
-                </label>
-              </>
-            ) : (
-              <p
-                className={`self-end text-hint text-ink-muted ${
-                  embedded ? "col-span-full" : "lg:col-span-3"
-                }`}
-              >
-                Create a Signal on{" "}
-                <Link href={webhooksHref} className="text-accent">
-                  Webhooks
-                </Link>{" "}
-                first. Set Status to Active and Save, then buy / sell starts
-                that side only.
-              </p>
-            )
-          ) : null}
-          {startKind === "indicator" && direction === "both" ? (
-            <div className={blockSpan}>
-              <div className="space-y-4">
-                <p className={sectionTitleClass}>Long</p>
-                <div className={fieldRowClass}>
-                  <IndicatorStartFields
-                    side="long"
-                    prefix="indicator"
-                    kind={indicatorKind}
-                    timeframe={indicatorTimeframe}
-                    compare={indicatorCompare}
-                    level={indicatorLevel}
-                    period={indicatorPeriod}
-                    slowPeriod={indicatorSlowPeriod}
-                    onKindChange={setIndicatorKind}
-                    onTimeframeChange={setIndicatorTimeframe}
-                    onCompareChange={setIndicatorCompare}
-                    onLevelChange={setIndicatorLevel}
-                    onPeriodChange={setIndicatorPeriod}
-                    onSlowPeriodChange={setIndicatorSlowPeriod}
-                  />
-                </div>
-                <DcaSecondaryEntrySection
-                  side="long"
-                  prefix="confirm"
-                  spec={confirm}
-                  onChange={setConfirm}
-                  locked={cycleLocked}
-                />
-              </div>
-              <div className="space-y-4 border-t border-line pt-4">
-                <p className={sectionTitleClass}>Short</p>
-                <div className={fieldRowClass}>
-                  <IndicatorStartFields
-                    side="short"
-                    prefix="shortIndicator"
-                    kind={shortIndicatorKind}
-                    timeframe={shortIndicatorTimeframe}
-                    compare={shortIndicatorCompare}
-                    level={shortIndicatorLevel}
-                    period={shortIndicatorPeriod}
-                    slowPeriod={shortIndicatorSlowPeriod}
-                    onKindChange={setShortIndicatorKind}
-                    onTimeframeChange={setShortIndicatorTimeframe}
-                    onCompareChange={setShortIndicatorCompare}
-                    onLevelChange={setShortIndicatorLevel}
-                    onPeriodChange={setShortIndicatorPeriod}
-                    onSlowPeriodChange={setShortIndicatorSlowPeriod}
-                  />
-                </div>
-                <DcaSecondaryEntrySection
-                  side="short"
-                  prefix="shortConfirm"
-                  spec={shortConfirm}
-                  onChange={setShortConfirm}
-                  locked={cycleLocked}
-                />
-              </div>
-            </div>
-          ) : null}
-          {startKind === "indicator" && direction !== "both" ? (
-            <>
-              <IndicatorStartFields
-                side={direction === "short" ? "short" : "long"}
-                prefix="indicator"
-                kind={indicatorKind}
-                timeframe={indicatorTimeframe}
-                compare={indicatorCompare}
-                level={indicatorLevel}
-                period={indicatorPeriod}
-                slowPeriod={indicatorSlowPeriod}
-                onKindChange={setIndicatorKind}
-                onTimeframeChange={setIndicatorTimeframe}
-                onCompareChange={setIndicatorCompare}
-                onLevelChange={setIndicatorLevel}
-                onPeriodChange={setIndicatorPeriod}
-                onSlowPeriodChange={setIndicatorSlowPeriod}
-              />
-            </>
-          ) : null}
-          {startKind === "trend" && direction === "both" ? (
-            <div className={blockSpan}>
-              <div className="space-y-4">
-                <p className={sectionTitleClass}>Long</p>
-                <div className={fieldRowClass}>
-                  <TrendStartFields
-                    side="long"
-                    prefix="indicator"
-                    kind={indicatorKind}
-                    timeframe={indicatorTimeframe}
-                    compare={indicatorCompare}
-                    period={indicatorPeriod}
-                    multiplier={indicatorMultiplier}
-                    onKindChange={setIndicatorKind}
-                    onTimeframeChange={setIndicatorTimeframe}
-                    onCompareChange={setIndicatorCompare}
-                    onPeriodChange={setIndicatorPeriod}
-                    onMultiplierChange={setIndicatorMultiplier}
-                  />
-                </div>
-                <DcaSecondaryEntrySection
-                  side="long"
-                  prefix="confirm"
-                  spec={confirm}
-                  onChange={setConfirm}
-                  locked={cycleLocked}
-                />
-              </div>
-              <div className="space-y-4 border-t border-line pt-4">
-                <p className={sectionTitleClass}>Short</p>
-                <div className={fieldRowClass}>
-                  <TrendStartFields
-                    side="short"
-                    prefix="shortIndicator"
-                    kind={shortIndicatorKind}
-                    timeframe={shortIndicatorTimeframe}
-                    compare={shortIndicatorCompare}
-                    period={shortIndicatorPeriod}
-                    multiplier={shortIndicatorMultiplier}
-                    onKindChange={setShortIndicatorKind}
-                    onTimeframeChange={setShortIndicatorTimeframe}
-                    onCompareChange={setShortIndicatorCompare}
-                    onPeriodChange={setShortIndicatorPeriod}
-                    onMultiplierChange={setShortIndicatorMultiplier}
-                  />
-                </div>
-                <DcaSecondaryEntrySection
-                  side="short"
-                  prefix="shortConfirm"
-                  spec={shortConfirm}
-                  onChange={setShortConfirm}
-                  locked={cycleLocked}
-                />
-              </div>
-            </div>
-          ) : null}
-          {startKind === "trend" && direction !== "both" ? (
-            <>
-              <TrendStartFields
-                side={direction === "short" ? "short" : "long"}
-                prefix="indicator"
-                kind={indicatorKind}
-                timeframe={indicatorTimeframe}
-                compare={indicatorCompare}
-                period={indicatorPeriod}
-                multiplier={indicatorMultiplier}
-                onKindChange={setIndicatorKind}
-                onTimeframeChange={setIndicatorTimeframe}
-                onCompareChange={setIndicatorCompare}
-                onPeriodChange={setIndicatorPeriod}
-                onMultiplierChange={setIndicatorMultiplier}
-              />
-            </>
-          ) : null}
-        </div>
-      </BotFormGroup>
-
-      {direction === "both" && startKind === "webhook" ? (
-        <>
-          <BotFormGroup title="Long" locked={cycleLocked}>
-            <DcaSecondaryEntrySection
-              side="long"
-              prefix="confirm"
-              spec={confirm}
-              onChange={setConfirm}
-              locked={cycleLocked}
-            />
-          </BotFormGroup>
-          <BotFormGroup title="Short" locked={cycleLocked}>
-            <DcaSecondaryEntrySection
-              side="short"
-              prefix="shortConfirm"
-              spec={shortConfirm}
-              onChange={setShortConfirm}
-              locked={cycleLocked}
-            />
-          </BotFormGroup>
-        </>
-      ) : direction !== "both" ? (
-        <DcaSecondaryEntrySection
-          side={direction === "short" ? "short" : "long"}
-          prefix="confirm"
-          spec={confirm}
-          onChange={setConfirm}
-          locked={cycleLocked}
-        />
-      ) : null}
-
+        {dcaTriggerSelect(true)}
+        {dcaEntryFields("long")}
       </BotFormStep>
+      ) : null}
+      {direction !== "long" ? (
+      <BotFormStep
+        title="Short entry"
+        locked={cycleLocked}
+        defaultCollapsed={hasOpenPosition}
+      >
+        {dcaTriggerSelect(direction === "short")}
+        {dcaEntryFields("short")}
+      </BotFormStep>
+      ) : null}
       <BotFormStep
         title="Position Sizing"
         locked={cycleLocked}

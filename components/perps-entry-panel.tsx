@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
 import {
   IndicatorStartFields,
@@ -10,7 +9,6 @@ import {
 import {
   BotField,
   BotFormGroup,
-  HintLabel,
 } from "@/components/bot-form-chrome";
 import {
   EntryConditionStack,
@@ -379,22 +377,6 @@ export function PerpsEntryPanel({
               </option>
             </AppSelect>
           </BotField>
-          {closing ? null : (
-            <label
-              className={`flex items-center gap-2 self-end pb-0.5 text-sm text-ink ${pairSpan}`}
-            >
-              <AppCheck
-                name={`${prefix}skipIfOpen`}
-                value="on"
-                checked={draft.skipIfOpen}
-                onChange={(event) => patch({ skipIfOpen: event.target.checked })}
-              />
-              <HintLabel
-                text="Skip if this side is already open"
-                hint="Off means each new cross or trigger can add size to the same row."
-              />
-            </label>
-          )}
         </div>
       </BotFormGroup>
       <BotFormGroup>

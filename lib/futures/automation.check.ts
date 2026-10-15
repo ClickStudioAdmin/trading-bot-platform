@@ -80,6 +80,18 @@ assert.deepEqual(
     conditionMet: true,
     wasTrue: false,
     action: "buy",
+    mode: "active",
+    bookReduceOnly: false,
+    skipIfOpen: false,
+    hasOpenOnSide: true,
+  }),
+  { fire: false, nextTrue: true },
+);
+assert.deepEqual(
+  decideFuturesAutomationTick({
+    conditionMet: true,
+    wasTrue: false,
+    action: "buy",
     mode: "reduce_only",
     bookReduceOnly: false,
     skipIfOpen: false,

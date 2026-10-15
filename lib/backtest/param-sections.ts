@@ -293,7 +293,13 @@ function priceRows(
   ];
 }
 
-function dcaEntryGroups(recipe: DcaTemplateRecipe, quote: string): ParamGroup[] {
+function dcaSideEntryGroups(
+  recipe: DcaTemplateRecipe,
+  side: "long" | "short",
+  quote: string,
+): ParamGroup[] {
+  const both = recipe.direction === "both";
+  const shortLeg = both && side === "short";
   const groups: ParamGroup[] = [
     {
       rows: [
@@ -301,87 +307,48 @@ function dcaEntryGroups(recipe: DcaTemplateRecipe, quote: string): ParamGroup[] 
       ],
     },
   ];
-  const both = recipe.direction === "both";
-  const side: "long" | "short" = recipe.direction === "short" ? "short" : "long";
   if (recipe.startKind === "price") {
-    if (both) {
-      groups.push(
-        { title: "Long", rows: priceRows(recipe.armTrigger, quote) },
-        secondaryGroup(recipe.confirm, "long"),
-        {
-          title: "Short",
-          rows: priceRows(recipe.shortArmTrigger ?? recipe.armTrigger, quote),
-        },
-        secondaryGroup(recipe.shortConfirm, "short"),
-      );
-    } else {
-      groups.push({ rows: priceRows(recipe.armTrigger, quote) });
-      groups.push(secondaryGroup(recipe.confirm, side));
-    }
-    return groups;
-  }
-  if (recipe.startKind === "indicator" || recipe.startKind === "trend") {
-    const trend = recipe.startKind === "trend";
-    const longRows = indicatorRows({
-      trend,
-      side: "long",
-      kind: recipe.indicatorKind,
-      timeframe: recipe.indicatorTimeframe,
-      compare: recipe.indicatorCompare,
-      level: recipe.indicatorLevel,
-      period: recipe.indicatorPeriod,
-      slowPeriod: recipe.indicatorSlowPeriod,
-      multiplier: recipe.indicatorMultiplier,
+    groups.push({
+      rows: priceRows(
+        shortLeg ? (recipe.shortArmTrigger ?? recipe.armTrigger) : recipe.armTrigger,
+        quote,
+      ),
     });
-    if (both) {
-      groups.push(
-        { title: "Long", rows: longRows },
-        secondaryGroup(recipe.confirm, "long"),
-        {
-          title: "Short",
-          rows: indicatorRows({
-            trend,
-            side: "short",
-            kind: recipe.shortIndicatorKind ?? recipe.indicatorKind,
-            timeframe:
-              recipe.shortIndicatorTimeframe ?? recipe.indicatorTimeframe,
-            compare: recipe.shortIndicatorCompare ?? recipe.indicatorCompare,
-            level: recipe.shortIndicatorLevel ?? recipe.indicatorLevel,
-            period: recipe.shortIndicatorPeriod ?? recipe.indicatorPeriod,
-            slowPeriod:
-              recipe.shortIndicatorSlowPeriod ?? recipe.indicatorSlowPeriod,
-            multiplier:
-              recipe.shortIndicatorMultiplier ?? recipe.indicatorMultiplier,
-          }),
-        },
-        secondaryGroup(recipe.shortConfirm, "short"),
-      );
-    } else {
-      groups.push({
-        rows: indicatorRows({
-          trend,
-          side,
-          kind: recipe.indicatorKind,
-          timeframe: recipe.indicatorTimeframe,
-          compare: recipe.indicatorCompare,
-          level: recipe.indicatorLevel,
-          period: recipe.indicatorPeriod,
-          slowPeriod: recipe.indicatorSlowPeriod,
-          multiplier: recipe.indicatorMultiplier,
-        }),
-      });
-      groups.push(secondaryGroup(recipe.confirm, side));
-    }
-    return groups;
+  } else if (recipe.startKind === "indicator" || recipe.startKind === "trend") {
+    groups.push({
+      rows: indicatorRows({
+        trend: recipe.startKind === "trend",
+        side,
+        kind: shortLeg ? (recipe.shortIndicatorKind ?? recipe.indicatorKind) : recipe.indicatorKind,
+        timeframe: shortLeg
+          ? (recipe.shortIndicatorTimeframe ?? recipe.indicatorTimeframe)
+          : recipe.indicatorTimeframe,
+        compare: shortLeg
+          ? (recipe.shortIndicatorCompare ?? recipe.indicatorCompare)
+          : recipe.indicatorCompare,
+        level: shortLeg
+          ? (recipe.shortIndicatorLevel ?? recipe.indicatorLevel)
+          : recipe.indicatorLevel,
+        period: shortLeg
+          ? (recipe.shortIndicatorPeriod ?? recipe.indicatorPeriod)
+          : recipe.indicatorPeriod,
+        slowPeriod: shortLeg
+          ? (recipe.shortIndicatorSlowPeriod ?? recipe.indicatorSlowPeriod)
+          : recipe.indicatorSlowPeriod,
+        multiplier: shortLeg
+          ? (recipe.shortIndicatorMultiplier ?? recipe.indicatorMultiplier)
+          : recipe.indicatorMultiplier,
+      }),
+    });
   }
-  if (recipe.startKind === "webhook" && both) {
+  if (recipe.startKind !== "immediate" || !both) {
     groups.push(
-      { title: "Long", rows: secondaryGroup(recipe.confirm, "long").rows },
-      { title: "Short", rows: secondaryGroup(recipe.shortConfirm, "short").rows },
+      secondaryGroup(
+        shortLeg ? recipe.shortConfirm : recipe.confirm,
+        side,
+      ),
     );
-    return groups;
   }
-  groups.push(secondaryGroup(recipe.confirm, side));
   return groups;
 }
 
@@ -567,6 +534,12 @@ function dcaExitGroups(recipe: DcaTemplateRecipe): ParamGroup[] {
 
 function dcaSections(recipe: DcaTemplateRecipe): ParamSection[] {
   const quote = quoteLabel(recipe.symbol);
+  const entrySides: Array<"long" | "short"> =
+    recipe.direction === "both"
+      ? ["long", "short"]
+      : recipe.direction === "short"
+        ? ["short"]
+        : ["long"];
   return [
     {
       title: "General",
@@ -580,7 +553,10 @@ function dcaSections(recipe: DcaTemplateRecipe): ParamSection[] {
         },
       ],
     },
-    { title: "Entry Conditions", groups: dcaEntryGroups(recipe, quote) },
+    ...entrySides.map((side) => ({
+      title: side === "short" ? "Short entry" : "Long entry",
+      groups: dcaSideEntryGroups(recipe, side, quote),
+    })),
     { title: "Position Sizing", groups: sizingGroups(recipe, quote) },
     { title: "Exit Conditions", groups: dcaExitGroups(recipe) },
   ];
@@ -650,14 +626,6 @@ function perpsEntryGroups(
           label: "Initial Order Trigger",
           value: perpsTriggerLabel(recipe.entrySource),
         },
-        ...(closing
-          ? []
-          : [
-              {
-                label: "Skip if this side is already open",
-                value: recipe.skipIfOpen ? "On" : "Off",
-              },
-            ]),
       ],
     },
   ];

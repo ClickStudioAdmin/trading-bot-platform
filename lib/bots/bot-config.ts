@@ -124,60 +124,62 @@ function dcaMaxValueLabel(playbook: DcaPlaybook): string {
   return `${value} USDT`;
 }
 
-function dcaEntryLines(playbook: DcaPlaybook): BotConfigLine[] {
+function dcaEntryLines(playbook: DcaPlaybook, side: FuturesSide): BotConfigLine[] {
   const lines: BotConfigLine[] = [
     setting("Start", dcaStartLabel(playbook.startKind)),
   ];
-  for (const side of dcaSides(playbook)) {
-    const prefix = sidePrefix(playbook, side);
-    if (playbook.startKind === "price") {
-      const trigger = dcaArmTriggerForSide(playbook, side);
-      lines.push(
-        setting(
-          `${prefix}Price`,
-          trigger
-            ? formatPriceCrossReason({
-                source: trigger.triggerBy,
-                compare: trigger.compare,
-                level: trigger.price,
-              })
-            : null,
-        ),
-      );
-    }
-    if (playbook.startKind === "indicator" || playbook.startKind === "trend") {
-      const start = dcaIndicatorStartForSide(playbook, side);
-      lines.push(
-        setting(
-          `${prefix}${playbook.startKind === "trend" ? "Trend" : "Indicator"}`,
-          start ? formatIndicatorStartReason(start, side) : null,
-        ),
-      );
-    }
-    if (playbook.startKind === "webhook" && side === dcaSides(playbook)[0]) {
-      lines.push(setting("Webhook", "Signal webhook"));
-    }
-    const confirm =
-      playbook.direction === "both" && side === "short"
-        ? playbook.shortConfirm
-        : playbook.confirm;
-    lines.push(
-      setting(`${prefix}Secondary entry`, filterText(confirm, side)),
-    );
-  }
-  if (playbook.disarmTrigger) {
+  if (playbook.startKind === "price") {
+    const trigger = dcaArmTriggerForSide(playbook, side);
     lines.push(
       setting(
-        "Disarm",
-        formatPriceCrossReason({
-          source: playbook.disarmTrigger.triggerBy,
-          compare: playbook.disarmTrigger.compare,
-          level: playbook.disarmTrigger.price,
-        }),
+        "Price",
+        trigger
+          ? formatPriceCrossReason({
+              source: trigger.triggerBy,
+              compare: trigger.compare,
+              level: trigger.price,
+            })
+          : null,
       ),
     );
   }
+  if (playbook.startKind === "indicator" || playbook.startKind === "trend") {
+    const start = dcaIndicatorStartForSide(playbook, side);
+    lines.push(
+      setting(
+        playbook.startKind === "trend" ? "Trend" : "Indicator",
+        start ? formatIndicatorStartReason(start, side) : null,
+      ),
+    );
+  }
+  if (playbook.startKind === "webhook") {
+    lines.push(setting("Webhook", "Signal webhook"));
+  }
+  const confirm =
+    playbook.direction === "both" && side === "short"
+      ? playbook.shortConfirm
+      : playbook.confirm;
+  lines.push(setting("Secondary entry", filterText(confirm, side)));
   return lines;
+}
+
+function dcaEntrySections(playbook: DcaPlaybook): Array<BotConfigSection | null> {
+  return dcaSides(playbook).map((side, index) => {
+    const lines = dcaEntryLines(playbook, side);
+    if (index === 0 && playbook.disarmTrigger) {
+      lines.push(
+        setting(
+          "Disarm",
+          formatPriceCrossReason({
+            source: playbook.disarmTrigger.triggerBy,
+            compare: playbook.disarmTrigger.compare,
+            level: playbook.disarmTrigger.price,
+          }),
+        ),
+      );
+    }
+    return section(side === "short" ? "Short entry" : "Long entry", lines);
+  });
 }
 
 function dcaSizingLines(playbook: DcaPlaybook): BotConfigLine[] {
@@ -304,7 +306,7 @@ export function dcaBotConfig(playbook: DcaPlaybook): BotConfigSection[] {
       setting("Contract", playbook.symbol),
       setting("Direction", dcaDirectionLabel(playbook.direction)),
     ]),
-    section("Entry Conditions", dcaEntryLines(playbook)),
+    ...dcaEntrySections(playbook),
     section("Position Sizing", dcaSizingLines(playbook)),
     section("Exit Conditions", dcaExitLines(playbook)),
   ]);
@@ -342,7 +344,6 @@ function perpsEntryLines(input: {
   closing: boolean;
   side: FuturesSide;
   entrySource: FuturesAutomationFormValues["entrySource"];
-  skipIfOpen: boolean;
   triggerBy: FuturesAutomationFormValues["triggerBy"];
   triggerCompare: FuturesAutomationFormValues["triggerCompare"];
   triggerPrice: string;
@@ -353,9 +354,6 @@ function perpsEntryLines(input: {
   const entry: BotConfigLine[] = [
     setting("Initial order trigger", perpsEntryLabel(input.entrySource)),
   ];
-  if (!input.closing) {
-    entry.push(setting("Skip if open", input.skipIfOpen ? "Yes" : "No"));
-  }
   if (input.entrySource === "price") {
     const price = Number(input.triggerPrice);
     entry.push(
@@ -430,7 +428,6 @@ export function perpsBotConfig(
     closing,
     side,
     entrySource: rule.entrySource,
-    skipIfOpen: rule.skipIfOpen,
     triggerBy: rule.triggerBy,
     triggerCompare: rule.triggerCompare,
     triggerPrice: rule.triggerPrice,
@@ -444,7 +441,6 @@ export function perpsBotConfig(
           closing: false,
           side: "short",
           entrySource: rule.shortEntry.entrySource,
-          skipIfOpen: rule.shortEntry.skipIfOpen,
           triggerBy: rule.shortEntry.triggerBy,
           triggerCompare: rule.shortEntry.triggerCompare,
           triggerPrice: String(rule.shortEntry.triggerPrice),

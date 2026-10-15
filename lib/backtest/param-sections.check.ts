@@ -34,7 +34,7 @@ const dca = dcaSeed();
 const sections = recipeParamSections(dca);
 assert.deepEqual(
   sections.map((section) => section.title),
-  ["General", "Entry Conditions", "Position Sizing", "Exit Conditions"],
+  ["General", "Long entry", "Position Sizing", "Exit Conditions"],
 );
 const general = sections[0]?.groups[0]?.rows.map((row) => row.label);
 assert.deepEqual(general, ["Name", "Contract", "Direction"]);

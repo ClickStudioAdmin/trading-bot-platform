@@ -62,17 +62,11 @@ const playbook = {
 const dca = dcaBotConfig(playbook);
 assert.equal(value(dca, "General", "Contract"), "BTCUSDT");
 assert.equal(value(dca, "General", "Direction"), "Both");
-assert.equal(value(dca, "Entry Conditions", "Start"), "Price");
-assert.equal(
-  value(dca, "Entry Conditions", "Long Price"),
-  "Last is at or below 100",
-);
-assert.equal(
-  value(dca, "Entry Conditions", "Short Price"),
-  "Mark is at or above 120",
-);
-assert.match(value(dca, "Entry Conditions", "Long Secondary entry"), /RSI 14/);
-assert.equal(value(dca, "Entry Conditions", "Short Secondary entry"), "Off");
+assert.equal(value(dca, "Long entry", "Start"), "Price");
+assert.equal(value(dca, "Long entry", "Price"), "Last is at or below 100");
+assert.equal(value(dca, "Short entry", "Price"), "Mark is at or above 120");
+assert.match(value(dca, "Long entry", "Secondary entry"), /RSI 14/);
+assert.equal(value(dca, "Short entry", "Secondary entry"), "Off");
 assert.equal(value(dca, "Position Sizing", "Max orders"), "5");
 assert.equal(value(dca, "Position Sizing", "Max value"), "No max value");
 assert.equal(value(dca, "Position Sizing", "Order size"), "25 USDT");
@@ -120,7 +114,6 @@ const perps = perpsBotConfig({
 });
 assert.equal(value(perps, "General", "Direction"), "Long");
 assert.equal(value(perps, "Long entry", "Initial order trigger"), "Price cross");
-assert.equal(value(perps, "Long entry", "Skip if open"), "Yes");
 assert.equal(value(perps, "Long entry", "Price"), "Last is at or above 2500");
 assert.equal(value(perps, "Long entry", "Secondary entry"), "Off");
 
