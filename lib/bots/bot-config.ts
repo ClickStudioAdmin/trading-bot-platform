@@ -203,7 +203,10 @@ function dcaEntrySections(playbook: DcaPlaybook): Array<BotConfigSection | null>
         ),
       );
     }
-    return section(side === "short" ? "Short entry" : "Long entry", lines);
+    return section(
+      side === "short" ? "Short Entry Condition Builder" : "Long Entry Condition Builder",
+      lines,
+    );
   });
 }
 
@@ -576,8 +579,15 @@ export function perpsBotConfig(
       setting("Contract", rule.symbol),
       setting("Direction", perpsDirectionLabel(rule)),
     ]),
-    section(rule.direction === "both" ? "Long entry" : side === "short" ? "Short entry" : "Long entry", entry),
-    ...(shortEntry ? [section("Short entry", shortEntry)] : []),
+    section(
+      rule.direction === "both"
+        ? "Long Entry Condition Builder"
+        : side === "short"
+          ? "Short Entry Condition Builder"
+          : "Long Entry Condition Builder",
+      entry,
+    ),
+    ...(shortEntry ? [section("Short Entry Condition Builder", shortEntry)] : []),
     section("Position Sizing", sizing),
     section("Exit Conditions", exits),
   ]);

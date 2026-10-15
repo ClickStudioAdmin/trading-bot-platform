@@ -1317,8 +1317,8 @@ export function ThemeBotFormDraft() {
         <BotFormStep
           title={
             (desk === "perps" ? perpsDirection : direction) === "short"
-              ? "Short entry"
-              : "Long entry"
+              ? "Short Entry Condition Builder"
+              : "Long Entry Condition Builder"
           }
         >
         {(() => {
@@ -1555,7 +1555,7 @@ export function ThemeBotFormDraft() {
         </BotFormStep>
 
         {desk === "perps" && perpsDirection === "both" ? (
-          <BotFormStep title="Short entry">
+          <BotFormStep title="Short Entry Condition Builder">
             {(() => {
               const lead = (
                 <>
@@ -1693,7 +1693,7 @@ export function ThemeBotFormDraft() {
         ) : null}
 
         {desk === "dca" && direction === "both" ? (
-          <BotFormStep title="Short entry">
+          <BotFormStep title="Short Entry Condition Builder">
             {(() => {
               const lead = (
                 <>

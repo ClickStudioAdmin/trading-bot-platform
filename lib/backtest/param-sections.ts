@@ -648,7 +648,7 @@ function dcaSections(recipe: DcaTemplateRecipe): ParamSection[] {
       ],
     },
     ...entrySides.map((side) => ({
-      title: side === "short" ? "Short entry" : "Long entry",
+      title: side === "short" ? "Short Entry Condition Builder" : "Long Entry Condition Builder",
       groups: dcaSideEntryGroups(recipe, side, quote),
     })),
     {
@@ -818,14 +818,14 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
     {
       title:
         recipe.direction === "both" || side === "long"
-          ? "Long entry"
-          : "Short entry",
+          ? "Long Entry Condition Builder"
+          : "Short Entry Condition Builder",
       groups: entry,
     },
     ...(recipe.direction === "both" && recipe.shortEntry
       ? [
           {
-            title: "Short entry",
+            title: "Short Entry Condition Builder",
             groups: perpsEntryGroups(
               {
                 ...recipe,

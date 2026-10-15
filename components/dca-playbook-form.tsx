@@ -2178,7 +2178,7 @@ export function DcaPlaybookForm({
 
       {direction !== "short" ? (
       <BotFormStep
-        title="Long entry"
+        title="Long Entry Condition Builder"
         locked={cycleLocked}
         defaultCollapsed={hasOpenPosition}
       >
@@ -2187,7 +2187,7 @@ export function DcaPlaybookForm({
       ) : null}
       {direction !== "long" ? (
       <BotFormStep
-        title="Short entry"
+        title="Short Entry Condition Builder"
         locked={cycleLocked}
         defaultCollapsed={hasOpenPosition}
       >

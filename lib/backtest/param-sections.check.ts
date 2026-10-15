@@ -34,7 +34,7 @@ const dca = dcaSeed();
 const sections = recipeParamSections(dca);
 assert.deepEqual(
   sections.map((section) => section.title),
-  ["General", "Long entry", "Position Sizing", "Additional Orders", "Exit Conditions"],
+  ["General", "Long Entry Condition Builder", "Position Sizing", "Additional Orders", "Exit Conditions"],
 );
 const general = sections[0]?.groups[0]?.rows.map((row) => row.label);
 assert.deepEqual(general, ["Name", "Contract", "Direction"]);
@@ -154,7 +154,7 @@ const perps = snapshotPerpsRecipe({
 const perpsSections = recipeParamSections(perps);
 assert.deepEqual(
   perpsSections.map((section) => section.title),
-  ["General", "Long entry", "Position Sizing", "Exit Conditions"],
+  ["General", "Long Entry Condition Builder", "Position Sizing", "Exit Conditions"],
 );
 assert.deepEqual(
   perpsSections[0]?.groups[0]?.rows.map((row) => row.label),

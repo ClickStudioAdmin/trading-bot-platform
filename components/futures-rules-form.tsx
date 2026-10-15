@@ -902,7 +902,7 @@ function RuleCard({
 
       {showLong ? (
       <BotFormStep
-        title="Long entry"
+        title="Long Entry Condition Builder"
         defaultCollapsed={inUse}
       >
         <PerpsEntryPanel
@@ -922,7 +922,7 @@ function RuleCard({
       ) : null}
       {showShort ? (
       <BotFormStep
-        title="Short entry"
+        title="Short Entry Condition Builder"
         defaultCollapsed={inUse}
       >
         <PerpsEntryPanel

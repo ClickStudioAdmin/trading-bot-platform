@@ -14,7 +14,7 @@ In progress. First step is the entry stack on Perps bots.
 
 | # | Step | Who | Done when |
 | --- | --- | --- | --- |
-| 1 | Entry stack | Agent | Perps bots can add conditions after the initial trigger, joined with And or Or. Each added row uses the same trigger dropdown (Price cross, Indicator, Trend, or Signal webhook). Conflicting choices are disabled. Direction is Long, Short, or Both when the exchange hedges. Both uses two sections, Long entry and Short entry, each with its own trigger and stack. The same form is the desk bot, New Backtest, and replay Modify. The engine, replay, and parameter lists (bot, backtest, template) read that stack. A saved Secondary Entry opens as one And filter. |
+| 1 | Entry stack | Agent | Perps bots can add conditions after the initial trigger, joined with And or Or. Each added row uses the same trigger dropdown (Price cross, Indicator, Trend, or Signal webhook). Conflicting choices are disabled. Direction is Long, Short, or Both when the exchange hedges. Both uses two sections, Long Entry Condition Builder and Short Entry Condition Builder, each with its own trigger and stack. The same form is the desk bot, New Backtest, and replay Modify. The engine, replay, and parameter lists (bot, backtest, template) read that stack. A saved Secondary Entry opens as one And filter. |
 | 2 | Exit stack | Agent | Hard Exit is the first row of an Add Condition stack on DCA and Perps. Further rows use the same Hard Exit triggers and And or Or. The stack is still one closer that races with take profit, trailing stop, and stop loss. One Hard Exit stays on `exit_if_*` / `exit_hard`. Extra rows are `exit_expr` (`short_exit_expr` on DCA Both). |
 | 3 | Additional exposure | — | Caps, size per add, and its own condition stack. Not started. |
 | 4 | Position and pattern leaves | — | Breakeven-limit, price versus fill, impulse then pullback. Not started. |
@@ -30,7 +30,7 @@ In progress. First step is the entry stack on Perps bots.
 5. One And filter is still stored on the old confirm columns so an older reader sees the same Secondary Entry. Any other stack is `entry_expr` on `futures_automation_rules`. Templates and backtests store that stack on the recipe when the confirm column cannot hold it.
 6. Close long / Close short do not take the stack. Those choices stay only on a bot that already closes.
 7. Direction matches DCA: Long, Short, or Both. Both is hidden on a one-way exchange. Both keeps the long leg on the existing columns and the short leg in `short_entry`. Each side has its own section, trigger, and stack. The same webhook may arm both sides. Conflict rules stay inside one section.
-8. DCA uses that same stack on Long entry and Short entry. Each side has its own Condition Type. One And filter still writes `confirm_*` / `short_confirm_*`. Any other stack is `entry_expr` / `short_entry_expr`. Cash and Carry is unchanged.
+8. DCA uses that same stack on Long Entry Condition Builder and Short Entry Condition Builder. Each side has its own Condition Type. One And filter still writes `confirm_*` / `short_confirm_*`. Any other stack is `entry_expr` / `short_entry_expr`. Cash and Carry is unchanged.
 
 ## How the exit stack works
 
