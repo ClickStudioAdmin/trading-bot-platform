@@ -299,7 +299,7 @@ export function ExitConditionStack({
       onClick={addRow}
     >
       <IconPlus size={14} className="size-3.5" />
-      Add condition
+      Add Condition
     </button>
   ) : null;
   if (grouped) {

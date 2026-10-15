@@ -48,7 +48,7 @@ function Hairline({ children }: { children: ReactNode }) {
 
 export function AddConditionButton({
   onClick,
-  label = "Add condition",
+  label = "Add Condition",
 }: {
   onClick: () => void;
   label?: string;

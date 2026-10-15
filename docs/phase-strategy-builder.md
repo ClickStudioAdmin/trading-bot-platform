@@ -24,7 +24,7 @@ In progress. First step is the entry stack on Perps bots.
 ## How the entry stack works
 
 1. The Condition Type stays Price cross, Indicator, Trend, or Signal webhook. It is condition 1 and has no joiner.
-2. **Add condition** appends another trigger: Price cross, Indicator, Trend, or Signal webhook, with the same fields as the Condition Type. Each added row picks **And** or **Or**.
+2. **Add Condition** appends another trigger: Price cross, Indicator, Trend, or Signal webhook, with the same fields as the Condition Type. Each added row picks **And** or **Or**.
 3. And stays in the current group. Or starts a new group. Groups are OR'd. Conditions inside a group are AND'd. A dropdown choice that cannot be true in that group is disabled: the same webhook twice, two webhooks joined with And, or two tests of one series that cannot be true together. A second price row stays available. At or above A and at or below B on the same price source are disabled only when A is higher than B. Opposite crosses, opposite sits, and a cross against the other side of the same MACD, RSI, moving average, Bollinger band, or Supertrend are disabled. And itself is disabled when that join would create one of those. Cap is 12 conditions and 4 timeframes, including the trigger. A saved Secondary Entry still opens as its filter row.
 4. A level that stays true still fires once, on the edge, the same way the bot fires today.
 5. One And filter is still stored on the old confirm columns so an older reader sees the same Secondary Entry. Any other stack is `entry_expr` on `futures_automation_rules`. Templates and backtests store that stack on the recipe when the confirm column cannot hold it.
@@ -35,7 +35,7 @@ In progress. First step is the entry stack on Perps bots.
 ## How the exit stack works
 
 1. Take profit, trailing stop, and stop loss stay as they are, including limit orders. Move Breakeven stays inside Stop loss. There is no join between those exits and Hard Exit. The first one that is met closes. On one check, stop still wins, then this Hard Exit stack, then take profit.
-2. Hard Exit is condition 1 and has no joiner. **Add condition** appends Price cross, Indicator, Trend, or Signal webhook, with And or Or. The same conflict rules as entries apply. Hard Exit also disables RSI Between against a level outside that range, Bollinger outside against inside, and ATR above the upper band together with below the lower band. Cap is 12 conditions and 4 timeframes, including the first row.
+2. Hard Exit is condition 1 and has no joiner. **Add Condition** appends Price cross, Indicator, Trend, or Signal webhook, with And or Or. The same conflict rules as entries apply. Hard Exit also disables RSI Between against a level outside that range, Bollinger outside against inside, and ATR above the upper band together with below the lower band. Cap is 12 conditions and 4 timeframes, including the first row.
 3. Entry and Hard Exit share one Indicator list: RSI, MACD, Price vs SMA, Price vs EMA, SMA Cross, EMA Cross, Price vs BB, and ATR band. Trend is Supertrend. Confirm keeps that list, then Supertrend.
 4. When the stack is true, the app market-flattens that side. A webhook that is only an And peer does not flatten by itself.
 5. DCA Both has a Long section and a Short section. Short uses the long exit, including its stack, only when the short Hard Exit is off. Perps Both keeps one shared Hard Exit section.
