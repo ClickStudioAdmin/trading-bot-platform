@@ -29,6 +29,7 @@ import {
 import { venueAllowsPerpsBoth } from "@/lib/futures/perps-direction";
 import {
   shortEntryFromJson,
+  writeEntryStackFormFields,
   writeFuturesConditionFormFields,
   type PerpsEntryLeg,
 } from "@/lib/futures/conditions";
@@ -129,6 +130,8 @@ export type DcaTemplateRecipe = {
   shortIndicatorMultiplier?: number | null;
   confirm?: DcaFilterSpec | null;
   shortConfirm?: DcaFilterSpec | null;
+  entryStack?: EntryStack | null;
+  shortEntryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
   shortExitIf?: DcaFilterSpec | null;
 };
@@ -336,6 +339,14 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     shortIndicatorMultiplier: config.shortIndicatorMultiplier ?? null,
     confirm: config.confirm ?? null,
     shortConfirm: config.shortConfirm ?? null,
+    ...(config.entryStack && !entryStackIsLegacy(config.entryStack)
+      ? { entryStack: config.entryStack }
+      : {}),
+    ...(config.direction === "both" &&
+    config.shortEntryStack &&
+    !entryStackIsLegacy(config.shortEntryStack)
+      ? { shortEntryStack: config.shortEntryStack }
+      : {}),
     exitIf: config.exitIf ?? null,
     shortExitIf: config.shortExitIf ?? null,
   };
@@ -957,6 +968,18 @@ export function dcaRecipeToConfig(
     (shortKind ? recipe.indicatorMultiplier : null);
   if (shortMultiplier != null) {
     form.set("shortIndicatorMultiplier", String(shortMultiplier));
+  }
+  const entryStack = entryStackFromJson(
+    "entryStack" in recipe ? recipe.entryStack : null,
+  );
+  if (entryStack && entryStack.leaves.length > 0) {
+    writeEntryStackFormFields(form, "", entryStack);
+  }
+  const shortEntryStack = entryStackFromJson(
+    "shortEntryStack" in recipe ? recipe.shortEntryStack : null,
+  );
+  if (direction === "both" && shortEntryStack && shortEntryStack.leaves.length > 0) {
+    writeEntryStackFormFields(form, "short_", shortEntryStack);
   }
   writeDcaFilterFormFields(form, "confirm", filterSpecFromRecipe(recipe.confirm));
   writeDcaFilterFormFields(

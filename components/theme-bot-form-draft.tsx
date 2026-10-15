@@ -1277,6 +1277,23 @@ export function ThemeBotFormDraft() {
               fieldClass={fieldClass}
               labelClass={labelClass}
             />
+          ) : desk === "dca" ? (
+            <EntryConditionStack
+              prefix="themeDcaEntry"
+              side={entrySide}
+              rows={entryRows}
+              onChange={setEntryRows}
+              anchor={{ kind: startKind, webhookId }}
+              webhooks={[{ id: "sample", name: "Sample signal" }]}
+              triggerTimeframe={
+                startKind === "indicator" || startKind === "trend"
+                  ? timeframe
+                  : null
+              }
+              gridClass={rowClass5}
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+            />
           ) : (
             <ThemeSecondaryEntry
               side={entrySide}
@@ -1461,13 +1478,21 @@ export function ThemeBotFormDraft() {
                 </div>
               ) : null}
             </Group>
-            <ThemeSecondaryEntry
+            <EntryConditionStack
+              prefix="themeDcaShortEntry"
               side="short"
-              prefix="themeShortConfirm"
-              spec={shortConfirm}
-              onChange={setShortConfirm}
-              enabled={shortConfirmOn}
-              onEnabled={setShortConfirmOn}
+              rows={shortEntryRows}
+              onChange={setShortEntryRows}
+              anchor={{ kind: startKind, webhookId }}
+              webhooks={[{ id: "sample", name: "Sample signal" }]}
+              triggerTimeframe={
+                startKind === "indicator" || startKind === "trend"
+                  ? shortTimeframe
+                  : null
+              }
+              gridClass={rowClass5}
+              fieldClass={fieldClass}
+              labelClass={labelClass}
             />
           </BotFormStep>
         ) : null}

@@ -811,20 +811,24 @@ export function backtestTapeInterval(
       );
     }
   }
-  if (
-    recipe?.kind === "dca" &&
-    (recipe.startKind === "indicator" || recipe.startKind === "trend")
-  ) {
-    const primary = recipe.indicatorTimeframe;
-    const short = recipe.shortIndicatorTimeframe;
-    if (primary && short) {
-      return finerDcaIndicatorTimeframe(primary, short);
-    }
-    if (primary) {
-      return primary;
-    }
-    if (short) {
-      return short;
+  if (recipe?.kind === "dca") {
+    const indicatorStart =
+      recipe.startKind === "indicator" || recipe.startKind === "trend";
+    const primary = indicatorStart ? recipe.indicatorTimeframe : null;
+    const short = indicatorStart ? recipe.shortIndicatorTimeframe : null;
+    const stacked = [
+      primary,
+      short,
+      ...(recipe.entryStack?.leaves.map((leaf) => strategyLeafTimeframe(leaf)) ??
+        []),
+      ...(recipe.shortEntryStack?.leaves.map((leaf) =>
+        strategyLeafTimeframe(leaf),
+      ) ?? []),
+    ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
+    if (stacked.length > 0) {
+      return stacked.reduce((finest, next) =>
+        finerDcaIndicatorTimeframe(finest, next),
+      );
     }
   }
   for (const interval of DCA_INDICATOR_TIMEFRAMES) {

@@ -70,8 +70,23 @@ import {
   writeDcaFilterFormFields,
   type DcaFilterSpec,
 } from "./filters";
+import {
+  confirmFromEntryStack,
+  emptyEntryStack,
+  entryStackConflictMessage,
+  entryStackError,
+  entryStackFromJson,
+  entryStackIsLegacy,
+  entryStackMet,
+  entryStackTimeframes,
+  type EntryConflictSlot,
+  type EntryStack,
+  type StrategyJoin,
+  type StrategyLeaf,
+} from "@/lib/strategy/expr";
 
 export type { DcaFilterSpec } from "./filters";
+export type { EntryStack } from "@/lib/strategy/expr";
 
 export type DcaStatus = "idle" | "armed" | "stop_adding" | "closing";
 export type DcaDirection = "long" | "short" | "both";
@@ -147,6 +162,9 @@ export type DcaPlaybookConfig = {
   shortIndicatorMultiplier?: number | null;
   confirm?: DcaFilterSpec | null;
   shortConfirm?: DcaFilterSpec | null;
+  /** Null falls back to confirm. A stored stack, including empty, wins. */
+  entryStack?: EntryStack | null;
+  shortEntryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
   shortExitIf?: DcaFilterSpec | null;
 };
@@ -759,6 +777,8 @@ export function dcaIndicatorTimeframes(playbook: {
   shortIndicatorTimeframe?: DcaIndicatorTimeframe | null;
   confirm?: DcaFilterSpec | null;
   shortConfirm?: DcaFilterSpec | null;
+  entryStack?: EntryStack | null;
+  shortEntryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
   shortExitIf?: DcaFilterSpec | null;
 }): DcaIndicatorTimeframe[] {
@@ -776,6 +796,16 @@ export function dcaIndicatorTimeframes(playbook: {
   for (const row of dcaFilterTimeframes(playbook)) {
     if (!rows.includes(row)) {
       rows.push(row);
+    }
+  }
+  for (const stack of [playbook.entryStack, playbook.shortEntryStack]) {
+    if (!stack || entryStackIsLegacy(stack)) {
+      continue;
+    }
+    for (const timeframe of entryStackTimeframes(stack)) {
+      if (!rows.includes(timeframe)) {
+        rows.push(timeframe);
+      }
     }
   }
   return rows;
@@ -1055,6 +1085,16 @@ export function writeDcaCycleFormFields(
   }
   writeDcaFilterFormFields(form, "confirm", current.confirm);
   writeDcaFilterFormFields(form, "shortConfirm", current.shortConfirm);
+  if (current.entryStack && current.entryStack.leaves.length > 0) {
+    writeDcaEntryStackFields(form, "entry", current.entryStack);
+  }
+  if (
+    current.direction === "both" &&
+    current.shortEntryStack &&
+    current.shortEntryStack.leaves.length > 0
+  ) {
+    writeDcaEntryStackFields(form, "short_entry", current.shortEntryStack);
+  }
 }
 
 export function resolveDcaSaveConfig(
@@ -1326,6 +1366,169 @@ function parseOptionalTrigger(
       price: parsedPrice.value,
     },
   };
+}
+
+function dcaIndicatorFieldNames(prefix: string): {
+  kind: string;
+  timeframe: string;
+  compare: string;
+  level: string;
+  period: string;
+  slowPeriod: string;
+  multiplier: string;
+} {
+  return {
+    kind: `${prefix}indicatorKind`,
+    timeframe: `${prefix}indicatorTimeframe`,
+    compare: `${prefix}indicatorCompare`,
+    level: `${prefix}indicatorLevel`,
+    period: `${prefix}indicatorPeriod`,
+    slowPeriod: `${prefix}indicatorSlowPeriod`,
+    multiplier: `${prefix}indicatorMultiplier`,
+  };
+}
+
+function parseDcaEntryLeaf(
+  form: FormData,
+  prefix: string,
+  source: string,
+): { ok: true; leaf: StrategyLeaf } | { ok: false; error: string } {
+  if (source === "price") {
+    const triggerBy = String(form.get(`${prefix}TriggerBy`) ?? "last");
+    if (triggerBy !== "last" && triggerBy !== "mark" && triggerBy !== "index") {
+      return { ok: false, error: "Choose a price source." };
+    }
+    const compare = String(form.get(`${prefix}TriggerCompare`) ?? "gte");
+    if (compare !== "gte" && compare !== "lte") {
+      return { ok: false, error: "Choose a price comparison." };
+    }
+    const price = Number(
+      String(form.get(`${prefix}TriggerPrice`) ?? "").replace(/,/g, "").trim(),
+    );
+    if (!(price > 0)) {
+      return { ok: false, error: "Enter a price." };
+    }
+    return { ok: true, leaf: { kind: "price", triggerBy, compare, price } };
+  }
+  if (source === "webhook") {
+    const webhookId = String(form.get(`${prefix}WebhookId`) ?? "").trim();
+    if (!webhookId) {
+      return { ok: false, error: "Pick a webhook." };
+    }
+    return { ok: true, leaf: { kind: "webhook", webhookId } };
+  }
+  if (source === "indicator" || source === "trend") {
+    const parsed = parseDcaIndicatorStartFields(
+      form,
+      dcaIndicatorFieldNames(prefix),
+      true,
+      "entry condition",
+      source,
+    );
+    if (!parsed.ok) {
+      return parsed;
+    }
+    if (!parsed.start) {
+      return { ok: false, error: "Enter an entry condition." };
+    }
+    return { ok: true, leaf: { kind: source, start: parsed.start } };
+  }
+  const parsed = parseDcaFilterForm(form, prefix, true, "entry condition");
+  if (!parsed.ok) {
+    return parsed;
+  }
+  if (!parsed.spec) {
+    return { ok: false, error: "Enter an entry condition." };
+  }
+  return { ok: true, leaf: { kind: "filter", spec: parsed.spec } };
+}
+
+/** Field names match EntryConditionStack: `${prefix}Count` and `${prefix}${index}`. */
+function parseDcaEntryStackForm(
+  form: FormData,
+  prefix: string,
+  triggerTimeframe: DcaIndicatorTimeframe | null,
+  trigger?: EntryConflictSlot,
+):
+  | { ok: true; present: boolean; stack: EntryStack }
+  | { ok: false; error: string } {
+  if (form.get(`${prefix}Count`) == null) {
+    return { ok: true, present: false, stack: emptyEntryStack() };
+  }
+  const count = Number(String(form.get(`${prefix}Count`)));
+  if (!Number.isInteger(count) || count < 0) {
+    return { ok: false, error: "Entry conditions are incomplete." };
+  }
+  const leaves: EntryStack["leaves"] = [];
+  const joins: EntryStack["joins"] = [];
+  for (let index = 0; index < count; index += 1) {
+    const row = `${prefix}${index}`;
+    const joinRaw = String(form.get(`${row}Join`) ?? "and");
+    const source = String(form.get(`${row}Source`) ?? "").trim();
+    const parsed = parseDcaEntryLeaf(form, row, source);
+    if (!parsed.ok) {
+      return parsed;
+    }
+    leaves.push(parsed.leaf);
+    joins.push(joinRaw === "or" ? "or" : "and");
+  }
+  const stack: EntryStack = { leaves, joins };
+  const error = entryStackError({ stack, triggerTimeframe });
+  if (error) {
+    return { ok: false, error };
+  }
+  if (trigger) {
+    const conflict = entryStackConflictMessage({ trigger, stack });
+    if (conflict) {
+      return { ok: false, error: conflict };
+    }
+  }
+  return { ok: true, present: true, stack };
+}
+
+function writeDcaEntryStackFields(
+  form: FormData,
+  prefix: string,
+  stack: EntryStack,
+): void {
+  form.set(`${prefix}Count`, String(stack.leaves.length));
+  stack.leaves.forEach((leaf, index) => {
+    const row = `${prefix}${index}`;
+    form.set(`${row}Join`, stack.joins[index] ?? "and");
+    form.set(`${row}Source`, leaf.kind);
+    if (leaf.kind === "filter") {
+      writeDcaFilterFormFields(form, row, leaf.spec);
+      return;
+    }
+    if (leaf.kind === "price") {
+      form.set(`${row}TriggerBy`, leaf.triggerBy);
+      form.set(`${row}TriggerCompare`, leaf.compare);
+      form.set(`${row}TriggerPrice`, String(leaf.price));
+      return;
+    }
+    if (leaf.kind === "webhook") {
+      form.set(`${row}WebhookId`, leaf.webhookId);
+      return;
+    }
+    const names = dcaIndicatorFieldNames(row);
+    form.set(names.kind, leaf.start.kind);
+    form.set(names.timeframe, leaf.start.timeframe);
+    if (leaf.start.compare) {
+      form.set(names.compare, leaf.start.compare);
+    }
+    if (leaf.start.level != null) {
+      form.set(names.level, String(leaf.start.level));
+    }
+    if (leaf.start.period != null) {
+      form.set(names.period, String(leaf.start.period));
+    }
+    if (leaf.start.slowPeriod != null) {
+      form.set(names.slowPeriod, String(leaf.start.slowPeriod));
+    }
+    if (leaf.start.multiplier != null) {
+      form.set(names.multiplier, String(leaf.start.multiplier));
+    }
+  });
 }
 
 export function parseDcaPlaybookForm(
@@ -1647,6 +1850,57 @@ export function parseDcaPlaybookForm(
   if (!shortExitIf.ok) {
     return shortExitIf;
   }
+  const longTriggerTimeframe =
+    longIndicator.start &&
+    (startKind === "indicator" || startKind === "trend")
+      ? longIndicator.start.timeframe
+      : null;
+  const shortTriggerTimeframe =
+    shortIndicator.start &&
+    (startKind === "indicator" || startKind === "trend")
+      ? shortIndicator.start.timeframe
+      : null;
+  const triggerSlot: EntryConflictSlot | undefined =
+    startKind === "price" ||
+    startKind === "indicator" ||
+    startKind === "trend" ||
+    startKind === "webhook"
+      ? {
+          kind: startKind,
+          join: "and",
+          webhookId: startKind === "webhook" ? webhookId : null,
+        }
+      : undefined;
+  const longStack = parseDcaEntryStackForm(
+    form,
+    "entry",
+    longTriggerTimeframe,
+    triggerSlot,
+  );
+  if (!longStack.ok) {
+    return longStack;
+  }
+  const shortStack =
+    direction === "both"
+      ? parseDcaEntryStackForm(
+          form,
+          "short_entry",
+          shortTriggerTimeframe,
+          triggerSlot,
+        )
+      : { ok: true as const, present: false, stack: emptyEntryStack() };
+  if (!shortStack.ok) {
+    return shortStack;
+  }
+  const confirmSpec = longStack.present
+    ? confirmFromEntryStack(longStack.stack)
+    : confirm.spec;
+  const shortConfirmSpec =
+    direction === "both"
+      ? shortStack.present
+        ? confirmFromEntryStack(shortStack.stack)
+        : shortConfirm.spec
+      : null;
   return {
     ok: true,
     config: {
@@ -1697,8 +1951,11 @@ export function parseDcaPlaybookForm(
       shortIndicatorPeriod: shortIndicator.start?.period ?? null,
       shortIndicatorSlowPeriod: shortIndicator.start?.slowPeriod ?? null,
       shortIndicatorMultiplier: shortIndicator.start?.multiplier ?? null,
-      confirm: confirm.spec,
-      shortConfirm: direction === "both" ? shortConfirm.spec : null,
+      confirm: confirmSpec,
+      shortConfirm: shortConfirmSpec,
+      entryStack: longStack.present ? longStack.stack : null,
+      shortEntryStack:
+        direction === "both" && shortStack.present ? shortStack.stack : null,
       exitIf: exitIf.spec,
       shortExitIf: direction === "both" ? shortExitIf.spec : null,
     },
@@ -2078,8 +2335,20 @@ export function parseDcaPlaybookRow(
     shortIndicatorMultiplier: parseDcaIndicatorMultiplier(
       row.short_indicator_multiplier,
     ),
-    confirm: filterFromRow(row, "confirm"),
-    shortConfirm: filterFromRow(row, "short_confirm"),
+    confirm: (() => {
+      const stored = entryStackFromJson(row.entry_expr);
+      return stored
+        ? confirmFromEntryStack(stored)
+        : filterFromRow(row, "confirm");
+    })(),
+    shortConfirm: (() => {
+      const stored = entryStackFromJson(row.short_entry_expr);
+      return stored
+        ? confirmFromEntryStack(stored)
+        : filterFromRow(row, "short_confirm");
+    })(),
+    entryStack: entryStackFromJson(row.entry_expr),
+    shortEntryStack: entryStackFromJson(row.short_entry_expr),
     exitIf: filterFromRow(row, "exit_if"),
     shortExitIf: filterFromRow(row, "short_exit_if"),
     updatedAtMs: (() => {
@@ -2482,6 +2751,9 @@ export function decideDcaTick(input: {
   confirm?: DcaFilterSpec | null;
   confirmCloses?: number[] | null;
   confirmBars?: SupertrendBar[] | null;
+  /** Set for a stack that does not fit one And filter. */
+  entryLeaves?: boolean[] | null;
+  entryJoins?: StrategyJoin[] | null;
   exitIf?: DcaFilterSpec | null;
   exitIfCloses?: number[] | null;
   exitIfBars?: SupertrendBar[] | null;
@@ -2558,6 +2830,7 @@ export function decideDcaTick(input: {
     closes: input.confirmCloses,
     bars: input.confirmBars,
   });
+  const stackedEntry = input.entryJoins != null;
   const exitIfMet =
     Boolean(input.exitIf) &&
     dcaFilterMet({
@@ -2695,10 +2968,15 @@ export function decideDcaTick(input: {
   ) {
     const levelRestart =
       !input.reduceOnly &&
-      confirmMet &&
+      (stackedEntry
+        ? entryStackMet({
+            trigger: indicatorNow,
+            leaves: input.entryLeaves ?? [],
+            joins: input.entryJoins ?? [],
+          })
+        : confirmMet && indicatorNow) &&
       (startKind === "indicator" || startKind === "trend") &&
-      !latchCross &&
-      indicatorNow;
+      !latchCross;
     if (levelRestart) {
       return {
         action: { kind: "arm" },
@@ -2754,7 +3032,14 @@ export function decideDcaTick(input: {
       startKind === "immediate" ||
       (startKind === "price" && armMet) ||
       ((startKind === "indicator" || startKind === "trend") && indicatorDue);
-    if (!input.reduceOnly && startReady && confirmMet) {
+    const entryMet = stackedEntry
+      ? entryStackMet({
+          trigger: startReady,
+          leaves: input.entryLeaves ?? [],
+          joins: input.entryJoins ?? [],
+        })
+      : startReady && confirmMet;
+    if (!input.reduceOnly && entryMet) {
       return {
         action: { kind: "arm" },
         nextArmTrue,

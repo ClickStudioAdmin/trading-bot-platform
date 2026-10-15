@@ -1,3 +1,4 @@
+import { entryStackToJson } from "@/lib/strategy/expr";
 import { filterColumns } from "./filters";
 import {
   dcaPlaybookConflict,
@@ -71,6 +72,16 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
     short_indicator_multiplier: config.shortIndicatorMultiplier ?? null,
     ...filterColumns("confirm", config.confirm),
     ...filterColumns("short_confirm", config.shortConfirm),
+    entry_expr:
+      config.entryStack && config.entryStack.leaves.length > 0
+        ? entryStackToJson(config.entryStack)
+        : null,
+    short_entry_expr:
+      config.direction === "both" &&
+      config.shortEntryStack &&
+      config.shortEntryStack.leaves.length > 0
+        ? entryStackToJson(config.shortEntryStack)
+        : null,
     ...filterColumns("exit_if", config.exitIf),
     ...filterColumns("short_exit_if", config.shortExitIf),
   };

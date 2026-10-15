@@ -75,6 +75,10 @@ import {
   type DcaPlaybook,
 } from "./playbook";
 import {
+  dcaEntryStackNeedsWideBars,
+  dcaEntryTickExtras,
+} from "./entry-stack";
+import {
   dcaFilterForSide,
   dcaPlaybookFilterNeedsWideBars,
   seriesForFilter,
@@ -253,7 +257,8 @@ export async function runDcaPlaybookTick(input?: {
       playbook.indicatorKind === "supertrend" ||
       playbook.shortIndicatorKind === "supertrend" ||
       dcaNeedsAtrBars(playbook) ||
-      dcaPlaybookFilterNeedsWideBars(playbook);
+      dcaPlaybookFilterNeedsWideBars(playbook) ||
+      dcaEntryStackNeedsWideBars(playbook);
     for (const interval of dcaTickBarTimeframes(playbook)) {
       const key = `${account.venue}:${playbook.symbol}:${interval}`;
       if (seenBars.has(key)) {
@@ -607,7 +612,8 @@ export async function runDcaPlaybookTick(input?: {
             limit:
               supertrend ||
               dcaNeedsAtrBars(playbook) ||
-              dcaPlaybookFilterNeedsWideBars(playbook)
+              dcaPlaybookFilterNeedsWideBars(playbook) ||
+              dcaEntryStackNeedsWideBars(playbook)
                 ? 500
                 : 80,
           }).catch((error: unknown) => {
@@ -842,6 +848,13 @@ export async function runDcaPlaybookTick(input?: {
         confirm,
         confirmCloses: confirmSeries.closes,
         confirmBars: confirmSeries.bars,
+        ...dcaEntryTickExtras({
+          playbook,
+          side,
+          price: prices.last,
+          prices,
+          barsByTimeframe,
+        }),
         exitIf,
         exitIfCloses: exitIfSeries.closes,
         exitIfBars: exitIfSeries.bars,

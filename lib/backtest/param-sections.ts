@@ -181,16 +181,13 @@ function optionalFilter(
   return { title, rows: filterRows(spec, side) };
 }
 
-function perpsEntryStackGroup(
-  recipe: PerpsTemplateRecipe,
+function entryStackGroup(
+  stack: ReturnType<typeof resolveEntryStack>,
+  confirm: DcaFilterSpec | null | undefined,
   side: "long" | "short",
 ): ParamGroup {
-  const stack = resolveEntryStack(recipe.entryStack, recipe.confirm);
   if (entryStackIsLegacy(stack)) {
-    return secondaryGroup(
-      confirmFromEntryStack(stack) ?? recipe.confirm,
-      side,
-    );
+    return secondaryGroup(confirmFromEntryStack(stack) ?? confirm, side);
   }
   return {
     title: "Entry conditions",
@@ -199,6 +196,14 @@ function perpsEntryStackGroup(
       value: formatStrategyLeafReason(leaf, side),
     })),
   };
+}
+
+function perpsEntryStackGroup(
+  recipe: PerpsTemplateRecipe,
+  side: "long" | "short",
+): ParamGroup {
+  const stack = resolveEntryStack(recipe.entryStack, recipe.confirm);
+  return entryStackGroup(stack, recipe.confirm, side);
 }
 
 function secondaryGroup(
@@ -341,12 +346,11 @@ function dcaSideEntryGroups(
       }),
     });
   }
-  if (recipe.startKind !== "immediate" || !both) {
+  const confirm = shortLeg ? recipe.shortConfirm : recipe.confirm;
+  const stored = shortLeg ? recipe.shortEntryStack : recipe.entryStack;
+  if (recipe.startKind !== "immediate" || !both || (stored && stored.leaves.length > 0)) {
     groups.push(
-      secondaryGroup(
-        shortLeg ? recipe.shortConfirm : recipe.confirm,
-        side,
-      ),
+      entryStackGroup(resolveEntryStack(stored, confirm), confirm, side),
     );
   }
   return groups;

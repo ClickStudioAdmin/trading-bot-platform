@@ -26,7 +26,6 @@ import {
   botLabelClass,
   botRowClass,
   botRowClass5,
-  useBotColumnLayout,
   botSectionTitleClass,
   botSidebarActionClass,
   botSidebarRemoveClass,
@@ -39,6 +38,19 @@ import {
   TrendStartFields,
 } from "@/components/bot-indicator-fields";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
+import {
+  EntryConditionStack,
+  entryConflictSlots,
+  entryDraftComplete,
+  entryRowsFromSources,
+  flipEntryRows,
+  type EntryStackRow,
+} from "@/components/entry-condition-stack";
+import {
+  entryKindDisabled,
+  entryWebhookIdDisabled,
+  type StrategyTriggerKind,
+} from "@/lib/strategy/expr";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import {
   BYBIT_AGREEMENT_NOTE,
@@ -194,47 +206,6 @@ const headerRemoveClass = botSidebarRemoveClass;
 
 function optional(value: number | null | undefined): string {
   return value == null ? "" : String(value);
-}
-
-function DcaSecondaryEntrySection({
-  side,
-  prefix,
-  spec,
-  onChange,
-  locked = false,
-}: {
-  side: "long" | "short";
-  prefix: string;
-  spec: DcaFilterSpec | null;
-  onChange: (next: DcaFilterSpec | null) => void;
-  locked?: boolean;
-}) {
-  const column = useBotColumnLayout();
-  return (
-    <OptionalSection
-      title="Secondary Entry Condition"
-      hint="Must be true for the entry trigger to execute."
-      locked={locked}
-      enabled={Boolean(spec)}
-      onEnabled={(next) =>
-        onChange(next ? (spec ?? dcaFilterSpecForKind("rsi", side)) : null)
-      }
-    >
-      <DcaFilterBlock
-        label="Kind"
-        prefix={prefix}
-        side={side}
-        spec={spec}
-        onChange={onChange}
-        named
-        dense
-        allowOff={false}
-        gridClass={column ? botCompactRowClass : botRowClass5}
-        fieldClass={fieldClass}
-        labelClass={labelClass}
-      />
-    </OptionalSection>
-  );
 }
 
 function initialIndicatorCompare(
@@ -1132,11 +1103,14 @@ export function DcaPlaybookForm({
       "short",
     ),
   );
-  const [confirm, setConfirm] = useState<DcaFilterSpec | null>(
-    source?.confirm ?? null,
+  const [webhookId, setWebhookId] = useState(
+    source?.webhookId ?? signalWebhooks[0]?.id ?? "",
   );
-  const [shortConfirm, setShortConfirm] = useState<DcaFilterSpec | null>(
-    source?.shortConfirm ?? null,
+  const [entryRows, setEntryRows] = useState<EntryStackRow[]>(() =>
+    entryRowsFromSources(source?.entryStack, source?.confirm),
+  );
+  const [shortEntryRows, setShortEntryRows] = useState<EntryStackRow[]>(() =>
+    entryRowsFromSources(source?.shortEntryStack, source?.shortConfirm),
   );
   const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(
     source?.exitIf ?? null,
@@ -1497,9 +1471,9 @@ export function DcaPlaybookForm({
       ? parsedLive.error
       : null;
   const requiredMissing =
-    Boolean(confirm && !dcaFilterComplete(confirm)) ||
+    entryRows.some((row) => !entryDraftComplete(row.draft)) ||
     (direction === "both" &&
-      Boolean(shortConfirm && !dcaFilterComplete(shortConfirm))) ||
+      shortEntryRows.some((row) => !entryDraftComplete(row.draft))) ||
     Boolean(exitIf && !dcaFilterComplete(exitIf)) ||
     (direction === "both" &&
       Boolean(shortExitIf && !dcaFilterComplete(shortExitIf))) ||
@@ -1530,9 +1504,9 @@ export function DcaPlaybookForm({
       trailMissing ||
       slMissing ||
       breakevenMissing ||
-      Boolean(confirm && !dcaFilterComplete(confirm)) ||
+      entryRows.some((row) => !entryDraftComplete(row.draft)) ||
       (direction === "both" &&
-        Boolean(shortConfirm && !dcaFilterComplete(shortConfirm))) ||
+        shortEntryRows.some((row) => !entryDraftComplete(row.draft))) ||
       Boolean(exitIf && !dcaFilterComplete(exitIf)) ||
       (direction === "both" &&
         Boolean(shortExitIf && !dcaFilterComplete(shortExitIf)));
@@ -1608,6 +1582,38 @@ export function DcaPlaybookForm({
     setStartKind(next);
   }
 
+  function dcaStackAnchor(): {
+    kind: StrategyTriggerKind;
+    webhookId: string | null;
+  } {
+    if (
+      startKind === "price" ||
+      startKind === "indicator" ||
+      startKind === "trend" ||
+      startKind === "webhook"
+    ) {
+      return {
+        kind: startKind,
+        webhookId: startKind === "webhook" ? webhookId : null,
+      };
+    }
+    return { kind: "indicator", webhookId: null };
+  }
+  function dcaStartDisabled(kind: StrategyTriggerKind): boolean {
+    const webhookIds = signalWebhooks.map((row) => row.id);
+    const lists =
+      direction === "both"
+        ? [entryRows, shortEntryRows]
+        : [entryRows];
+    return lists.some((rows) =>
+      entryKindDisabled({
+        slots: entryConflictSlots(dcaStackAnchor(), rows),
+        index: 0,
+        kind,
+        webhookIds,
+      }),
+    );
+  }
   function dcaTriggerSelect(named: boolean) {
     return (
       <BotFormGroup locked={cycleLocked}>
@@ -1631,8 +1637,18 @@ export function DcaPlaybookForm({
               ) : null}
               <option value="indicator">Indicator</option>
               <option value="trend">Trend</option>
-              <option value="price">Price Cross</option>
-              <option value="webhook">Signal Webhook</option>
+              <option
+                value="price"
+                disabled={dcaStartDisabled("price")}
+              >
+                Price Cross
+              </option>
+              <option
+                value="webhook"
+                disabled={dcaStartDisabled("webhook")}
+              >
+                Signal Webhook
+              </option>
             </AppSelect>
           </label>
         </div>
@@ -1644,8 +1660,8 @@ export function DcaPlaybookForm({
     const shortLeg = direction === "both" && side === "short";
     const fieldSide: "long" | "short" =
       shortLeg || direction === "short" ? "short" : "long";
-    const confirmSpec = shortLeg ? shortConfirm : confirm;
-    const setConfirmSpec = shortLeg ? setShortConfirm : setConfirm;
+    const rows = shortLeg ? shortEntryRows : entryRows;
+    const setRows = shortLeg ? setShortEntryRows : setEntryRows;
     return (
       <>
         {startKind === "price" ? (
@@ -1686,11 +1702,34 @@ export function DcaPlaybookForm({
                   <HintLabel text="Signal Webhook" required />
                   <AppSelect
                     name="webhookId"
-                    defaultValue={source?.webhookId ?? signalWebhooks[0]?.id}
+                    value={webhookId}
+                    onChange={(event) => setWebhookId(event.target.value)}
                     className={fieldClass}
                   >
                     {signalWebhooks.map((row) => (
-                      <option key={row.id} value={row.id}>
+                      <option
+                        key={row.id}
+                        value={row.id}
+                        disabled={
+                          entryWebhookIdDisabled({
+                            slots: entryConflictSlots(
+                              dcaStackAnchor(),
+                              entryRows,
+                            ),
+                            index: 0,
+                            webhookId: row.id,
+                          }) ||
+                          (direction === "both" &&
+                            entryWebhookIdDisabled({
+                              slots: entryConflictSlots(
+                                dcaStackAnchor(),
+                                shortEntryRows,
+                              ),
+                              index: 0,
+                              webhookId: row.id,
+                            }))
+                        }
+                      >
                         {row.name}
                       </option>
                     ))}
@@ -1779,15 +1818,28 @@ export function DcaPlaybookForm({
             </div>
           </BotFormGroup>
         ) : null}
-        {startKind === "immediate" && direction === "both" ? null : (
-          <DcaSecondaryEntrySection
-            side={fieldSide}
-            prefix={shortLeg ? "shortConfirm" : "confirm"}
-            spec={confirmSpec}
-            onChange={setConfirmSpec}
-            locked={cycleLocked}
-          />
-        )}
+        <EntryConditionStack
+          prefix={shortLeg ? "short_entry" : "entry"}
+          side={fieldSide}
+          rows={rows}
+          onChange={(next) => {
+            setRows(next);
+            setTouched(true);
+            setFormTick((tick) => tick + 1);
+          }}
+          anchor={dcaStackAnchor()}
+          webhooks={signalWebhooks}
+          triggerTimeframe={
+            startKind === "indicator" || startKind === "trend"
+              ? parseDcaIndicatorTimeframe(
+                  shortLeg ? shortIndicatorTimeframe : indicatorTimeframe,
+                )
+              : null
+          }
+          gridClass={fieldRowClass5}
+          fieldClass={fieldClass}
+          labelClass={labelClass}
+        />
       </>
     );
   }
@@ -1908,6 +1960,8 @@ export function DcaPlaybookForm({
                   const next = event.target.value as typeof direction;
                   if (next === "both" && direction !== "both") {
                     if (direction === "short") {
+                      setShortEntryRows(entryRows);
+                      setEntryRows(flipEntryRows(entryRows, "long"));
                       setShortIndicatorKind(indicatorKind);
                       setShortIndicatorTimeframe(indicatorTimeframe);
                       setShortIndicatorCompare(indicatorCompare);
@@ -1920,6 +1974,7 @@ export function DcaPlaybookForm({
                         setIndicatorLevel(seedOppositeRsiLevel(indicatorLevel));
                       }
                     } else {
+                      setShortEntryRows(flipEntryRows(entryRows, "short"));
                       setShortIndicatorKind(indicatorKind);
                       setShortIndicatorTimeframe(indicatorTimeframe);
                       setShortIndicatorCompare(
@@ -1938,6 +1993,7 @@ export function DcaPlaybookForm({
                       setShortIndicatorMultiplier(indicatorMultiplier);
                     }
                   } else if (direction === "both" && next === "short") {
+                    setEntryRows(shortEntryRows);
                     setIndicatorKind(shortIndicatorKind);
                     setIndicatorTimeframe(shortIndicatorTimeframe);
                     setIndicatorCompare(shortIndicatorCompare);

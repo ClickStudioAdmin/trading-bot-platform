@@ -1,4 +1,5 @@
 import { formatDcaFilterReason, type DcaFilterSpec } from "@/lib/dca/filters";
+import { dcaEntryStackForSide } from "@/lib/dca/entry-stack";
 import {
   dcaArmTriggerForSide,
   dcaIndicatorStartForSide,
@@ -159,7 +160,27 @@ function dcaEntryLines(playbook: DcaPlaybook, side: FuturesSide): BotConfigLine[
     playbook.direction === "both" && side === "short"
       ? playbook.shortConfirm
       : playbook.confirm;
-  lines.push(setting("Secondary entry", filterText(confirm, side)));
+  const stack = dcaEntryStackForSide(playbook, side);
+  if (entryStackIsLegacy(stack)) {
+    lines.push(
+      setting(
+        "Secondary entry",
+        filterText(confirmFromEntryStack(stack) ?? confirm, side),
+      ),
+    );
+  } else {
+    lines.push(
+      setting(
+        "Entry conditions",
+        stack.leaves
+          .map((leaf, index) => {
+            const join = stack.joins[index] === "or" ? "or" : "and";
+            return `${join} ${formatStrategyLeafReason(leaf, side)}`;
+          })
+          .join(", "),
+      ),
+    );
+  }
   return lines;
 }
 

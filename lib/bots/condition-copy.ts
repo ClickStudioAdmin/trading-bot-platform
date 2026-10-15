@@ -164,6 +164,7 @@ export function formatDcaStartReasons(input: {
   armTrigger?: DcaPriceTrigger | null;
   indicator?: DcaIndicatorStart | null;
   confirm?: DcaFilterSpec | null;
+  entryStack?: EntryStack | null;
   price?: number | null;
 }): string {
   const start =
@@ -183,12 +184,17 @@ export function formatDcaStartReasons(input: {
               ? "Trend"
               : "Indicator"
           : null;
-  return joinConditionReasons([
-    start,
-    input.confirm
-      ? formatSecondaryEntryReason(input.confirm, input.side)
-      : null,
-  ]);
+  const stack = resolveEntryStack(input.entryStack, input.confirm);
+  if (entryStackIsLegacy(stack)) {
+    const confirm = confirmFromEntryStack(stack) ?? input.confirm;
+    return joinConditionReasons([
+      start,
+      confirm ? formatSecondaryEntryReason(confirm, input.side) : null,
+    ]);
+  }
+  return formatEntryWithStack(start ?? "", stack, (leaf) =>
+    formatStrategyLeafReason(leaf, input.side),
+  );
 }
 
 export function futuresActionLabel(

@@ -10,13 +10,19 @@ import {
   type DcaLegState,
 } from "@/lib/dca/playbook";
 import {
+  dcaEntryStackForSide,
+  dcaEntryTickExtras,
+} from "@/lib/dca/entry-stack";
+import {
   dcaFilterForSide,
   seriesForFilter,
 } from "@/lib/dca/filters";
+import { entryStackIsLegacy, entryStackTimeframes } from "@/lib/strategy/expr";
 import {
   atrAtEachTapeBar,
   resampleBarsForTimeframe,
   resampleClosesForTimeframe,
+  type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import {
   DEFAULT_DCA_ATR_PERIOD,
@@ -25,6 +31,7 @@ import {
   dcaResolvedSafetyPrices,
   dcaTrailingDistance,
 } from "@/lib/dca/grid";
+import { formatDcaStartReasons } from "@/lib/bots/condition-copy";
 import { canBacktestDcaRecipe } from "./eligibility";
 import { dcaRecipeToConfig, type DcaTemplateRecipe } from "@/lib/templates/recipe";
 import type { FuturesSide } from "@/lib/futures/model";
@@ -561,6 +568,27 @@ export async function replayDcaPlaybook(input: {
           ? resampleBarsForTimeframe(barWindow, tapeInterval, exitIf.timeframe)
           : null,
       );
+      const entryStack = dcaEntryStackForSide(config, side);
+      const entryBars = new Map<DcaIndicatorTimeframe, CandleBar[]>();
+      if (!entryStackIsLegacy(entryStack)) {
+        for (const timeframe of entryStackTimeframes(entryStack)) {
+          const sampled = resampleBarsForTimeframe(
+            barWindow,
+            tapeInterval,
+            timeframe,
+          );
+          entryBars.set(
+            timeframe,
+            sampled.map((row) => ({
+              timeMs: 0,
+              open: row.close,
+              high: row.high,
+              low: row.low,
+              close: row.close,
+            })),
+          );
+        }
+      }
       const decision = decideDcaTick({
         status: live.status,
         side,
@@ -630,6 +658,13 @@ export async function replayDcaPlaybook(input: {
         confirm,
         confirmCloses: confirmSeries.closes,
         confirmBars: confirmSeries.bars,
+        ...dcaEntryTickExtras({
+          playbook: config,
+          side,
+          price,
+          prices: triggerPrices,
+          barsByTimeframe: entryBars,
+        }),
         exitIf,
         exitIfCloses: exitIfSeries.closes,
         exitIfBars: exitIfSeries.bars,
@@ -730,6 +765,17 @@ export async function replayDcaPlaybook(input: {
   }
 
   function dcaEntryBecause(side: FuturesSide): string {
+    const entryStack = dcaEntryStackForSide(config, side);
+    if (!entryStackIsLegacy(entryStack)) {
+      return formatDcaStartReasons({
+        startKind: config.startKind,
+        side,
+        armTrigger: dcaArmTriggerForSide(config, side),
+        indicator: dcaIndicatorStartForSide(config, side),
+        entryStack,
+        price: closes[closes.length - 1] ?? null,
+      });
+    }
     if (config.startKind === "immediate") {
       return "Immediate start.";
     }

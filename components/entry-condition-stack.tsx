@@ -206,6 +206,43 @@ function leafFromDraft(draft: EntryConditionDraft): StrategyLeaf | null {
   return { kind: draft.kind, start };
 }
 
+export function flipEntryRows(
+  rows: EntryStackRow[],
+  side: FuturesSide,
+): EntryStackRow[] {
+  return rows.map((row) => {
+    if (row.draft.kind === "price") {
+      return {
+        ...row,
+        draft: {
+          ...row.draft,
+          compare: row.draft.compare === "gte" ? "lte" : "gte",
+        },
+      };
+    }
+    if (row.draft.kind === "indicator" || row.draft.kind === "trend") {
+      return {
+        ...row,
+        draft: {
+          ...row.draft,
+          compare: indicatorCompareForDirection(
+            side,
+            row.draft.indicatorKind,
+            "",
+          ),
+          level:
+            row.draft.indicatorKind === "rsi"
+              ? side === "short"
+                ? "70"
+                : "30"
+              : row.draft.level,
+        },
+      };
+    }
+    return row;
+  });
+}
+
 export function entryConflictSlots(
   anchor: { kind: StrategyTriggerKind; webhookId?: string | null },
   rows: EntryStackRow[],

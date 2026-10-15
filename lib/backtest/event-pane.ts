@@ -165,6 +165,41 @@ export function eventParameterSections(
         ),
       );
     }
+    const dcaStack =
+      side === "short" && recipe.direction === "both"
+        ? recipe.shortEntryStack
+        : recipe.entryStack;
+    if (entry && dcaStack) {
+      for (const leaf of dcaStack.leaves) {
+        if (leaf.kind === "filter") {
+          sections.push(
+            filterSection(
+              "Entry condition",
+              leaf.spec,
+              side,
+              factDetail(event, "Entry condition"),
+            ),
+          );
+          continue;
+        }
+        if (leaf.kind === "indicator" || leaf.kind === "trend") {
+          sections.push(
+            indicatorSection({
+              role: "Entry condition",
+              kind: leaf.start.kind,
+              compare: leaf.start.compare,
+              level: leaf.start.level,
+              period: leaf.start.period,
+              slowPeriod: leaf.start.slowPeriod,
+              multiplier: leaf.start.multiplier ?? null,
+              timeframe: leaf.start.timeframe,
+              side,
+              detail: factDetail(event, "Entry condition"),
+            }),
+          );
+        }
+      }
+    }
     if (hardExit && recipe.exitIf) {
       sections.push(
         filterSection(

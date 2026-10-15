@@ -264,6 +264,24 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
     }
     addSpec(specs, fromFilter(recipe.confirm, "Secondary entry"));
     addSpec(specs, fromFilter(recipe.shortConfirm, "Short secondary entry"));
+    if (recipe.entryStack) {
+      for (const leaf of recipe.entryStack.leaves) {
+        if (leaf.kind === "filter") {
+          addSpec(specs, fromFilter(leaf.spec, "Entry condition"));
+        } else if (leaf.kind === "indicator" || leaf.kind === "trend") {
+          addSpec(specs, specFromIndicator(leaf.start, "Entry condition"));
+        }
+      }
+    }
+    if (recipe.shortEntryStack) {
+      for (const leaf of recipe.shortEntryStack.leaves) {
+        if (leaf.kind === "filter") {
+          addSpec(specs, fromFilter(leaf.spec, "Short entry condition"));
+        } else if (leaf.kind === "indicator" || leaf.kind === "trend") {
+          addSpec(specs, specFromIndicator(leaf.start, "Short entry condition"));
+        }
+      }
+    }
     addSpec(specs, fromFilter(recipe.exitIf, "Hard exit"));
     addSpec(specs, fromFilter(recipe.shortExitIf, "Short hard exit"));
     return specs;

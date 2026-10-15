@@ -1306,6 +1306,49 @@ form.set("symbol", "BTCUSDT");
 form.set("side", "long");
 form.set("clipSize", "0.01");
 form.set("sizeUnit", "qty");
+const stackForm = new FormData();
+stackForm.set("symbol", "BTCUSDT");
+stackForm.set("direction", "long");
+stackForm.set("clipSize", "0.01");
+stackForm.set("sizeUnit", "qty");
+stackForm.set("startKind", "indicator");
+stackForm.set("indicatorKind", "rsi");
+stackForm.set("indicatorTimeframe", "15");
+stackForm.set("indicatorCompare", "cross_lte");
+stackForm.set("indicatorLevel", "30");
+stackForm.set("indicatorPeriod", "14");
+stackForm.set("entryCount", "1");
+stackForm.set("entry0Join", "or");
+stackForm.set("entry0Source", "price");
+stackForm.set("entry0TriggerBy", "last");
+stackForm.set("entry0TriggerCompare", "gte");
+stackForm.set("entry0TriggerPrice", "50");
+const stackParsed = parseDcaPlaybookForm(stackForm);
+assert.equal(stackParsed.ok, true);
+if (stackParsed.ok) {
+  assert.equal(stackParsed.config.confirm, null);
+  assert.equal(stackParsed.config.entryStack?.leaves.length, 1);
+  assert.equal(stackParsed.config.entryStack?.joins[0], "or");
+  assert.equal(stackParsed.config.entryStack?.leaves[0]?.kind, "price");
+}
+const conflictForm = new FormData();
+conflictForm.set("symbol", "BTCUSDT");
+conflictForm.set("direction", "long");
+conflictForm.set("clipSize", "0.01");
+conflictForm.set("sizeUnit", "qty");
+conflictForm.set("startKind", "price");
+conflictForm.set("armTriggerBy", "last");
+conflictForm.set("armCompare", "gte");
+conflictForm.set("armPrice", "100");
+conflictForm.set("entryCount", "1");
+conflictForm.set("entry0Join", "and");
+conflictForm.set("entry0Source", "price");
+conflictForm.set("entry0TriggerBy", "mark");
+conflictForm.set("entry0TriggerCompare", "lte");
+conflictForm.set("entry0TriggerPrice", "90");
+const conflictParsed = parseDcaPlaybookForm(conflictForm);
+assert.equal(conflictParsed.ok, false);
+
 const parsed = parseDcaPlaybookForm(form);
 assert.equal(parsed.ok, true);
 if (parsed.ok) {
@@ -3173,6 +3216,30 @@ assert.equal(
     confirm: rsiConfirmLow,
     confirmCloses: [],
     confirmBars: [],
+  }).action.kind,
+  "none",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "price",
+    armTrigger: { triggerBy: "last", compare: "gte", price: 1000 },
+    entryJoins: ["or"],
+    entryLeaves: [true],
+  }).action.kind,
+  "arm",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "price",
+    armTrigger: { triggerBy: "last", compare: "gte", price: 100 },
+    entryJoins: ["and"],
+    entryLeaves: [false],
   }).action.kind,
   "none",
 );

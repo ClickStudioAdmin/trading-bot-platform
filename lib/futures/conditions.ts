@@ -713,7 +713,7 @@ function quotedPrice(
   return price;
 }
 
-function strategyLeafMet(input: {
+export function entryLeafMet(input: {
   leaf: StrategyLeaf;
   side: FuturesSide;
   price: number | null;
@@ -789,7 +789,7 @@ export function futuresEntryConditionMet(input: {
     trigger: start,
     joins: stack.joins,
     leaves: stack.leaves.map((leaf) =>
-      strategyLeafMet({
+      entryLeafMet({
         leaf,
         side: input.side,
         price: input.price,

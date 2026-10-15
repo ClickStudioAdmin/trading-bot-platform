@@ -16,6 +16,7 @@ import {
   entryDraftComplete,
   entryRowsFromSources,
   entryStackFromRows,
+  flipEntryRows,
   type EntryStackRow,
   type EntryWebhookOption,
 } from "@/components/entry-condition-stack";
@@ -146,40 +147,6 @@ export function perpsEntryDraftFromLeg(
   );
 }
 
-function flipRows(rows: EntryStackRow[], side: FuturesSide): EntryStackRow[] {
-  return rows.map((row) => {
-    if (row.draft.kind === "price") {
-      return {
-        ...row,
-        draft: {
-          ...row.draft,
-          compare: row.draft.compare === "gte" ? "lte" : "gte",
-        },
-      };
-    }
-    if (row.draft.kind === "indicator" || row.draft.kind === "trend") {
-      return {
-        ...row,
-        draft: {
-          ...row.draft,
-          compare: indicatorCompareForDirection(
-            side,
-            row.draft.indicatorKind,
-            "",
-          ),
-          level:
-            row.draft.indicatorKind === "rsi"
-              ? side === "short"
-                ? "70"
-                : "30"
-              : row.draft.level,
-        },
-      };
-    }
-    return row;
-  });
-}
-
 /** Copy a side and flip price and indicator direction so the other side starts opposite. */
 export function oppositePerpsEntryDraft(
   draft: PerpsEntryDraft,
@@ -199,7 +166,7 @@ export function oppositePerpsEntryDraft(
           ? "70"
           : "30"
         : draft.indicatorLevel,
-    entryRows: flipRows(draft.entryRows, side),
+    entryRows: flipEntryRows(draft.entryRows, side),
   };
 }
 

@@ -102,7 +102,12 @@ import {
   type DcaStatus,
 } from "./playbook";
 import { formatDcaStartReasons } from "@/lib/bots/condition-copy";
-import { dcaFilterForSide, dcaFilterMet, dcaPlaybookFilterNeedsWideBars } from "./filters";
+import {
+  dcaEntryExpressionMet,
+  dcaEntryStackForSide,
+  dcaEntryStackNeedsWideBars,
+} from "./entry-stack";
+import { dcaFilterForSide, dcaPlaybookFilterNeedsWideBars } from "./filters";
 import { dcaDisarmedMessage, dcaSyncFailedMessage } from "./log-copy";
 import {
   dcaSyncFailureStamp,
@@ -374,7 +379,10 @@ async function loadPlaybookStartBars(
   const supertrend =
     playbook.indicatorKind === "supertrend" ||
     playbook.shortIndicatorKind === "supertrend";
-  const wide = supertrend || dcaPlaybookFilterNeedsWideBars(playbook);
+  const wide =
+    supertrend ||
+    dcaPlaybookFilterNeedsWideBars(playbook) ||
+    dcaEntryStackNeedsWideBars(playbook);
   for (const timeframe of timeframes) {
     const fetched = await loadDeskIndicatorBars({
       venue: desk.venue,
@@ -430,24 +438,6 @@ function seriesStartDueForSide(
     closes: bars.map((row) => row.close),
     bars,
   }).due;
-}
-
-function confirmMetForSide(
-  playbook: DcaPlaybook,
-  side: FuturesSide,
-  barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>,
-): boolean {
-  const confirm = dcaFilterForSide(playbook, side, "confirm");
-  if (!confirm) {
-    return true;
-  }
-  const bars = barsByTimeframe.get(confirm.timeframe) ?? [];
-  return dcaFilterMet({
-    spec: confirm,
-    side,
-    closes: bars.map((row) => row.close),
-    bars,
-  });
 }
 
 function clipTrailing(
@@ -1823,6 +1813,7 @@ async function applyDcaVerbUnlocked(input: {
   verb: DcaVerb;
   side?: FuturesSide | null;
   source?: "manual" | "webhook";
+  firedWebhookId?: string | null;
   forcePlace?: boolean;
   reason?: string;
   /** Engine tick: do not turn an idle leg back on. */
@@ -2009,6 +2000,11 @@ async function applyDcaVerbUnlocked(input: {
 
   const lastPrice = await lastPriceForPlaybook(input.playbook);
   const fromSignal = input.source === "webhook";
+  const firedWebhookId = input.firedWebhookId ?? null;
+  const startSignal =
+    fromSignal &&
+    input.playbook.startKind === "webhook" &&
+    (firedWebhookId == null || firedWebhookId === input.playbook.webhookId);
   const startBars = await loadPlaybookStartBars(input.playbook);
   const seriesBarsLoaded = [...startBars.values()].some(
     (rows) => rows.length > 0,
@@ -2031,7 +2027,7 @@ async function applyDcaVerbUnlocked(input: {
   const placeNow =
     Boolean(input.forcePlace) ||
     input.playbook.startKind === "immediate" ||
-    (input.playbook.startKind === "webhook" && fromSignal) ||
+    (input.playbook.startKind === "webhook" && startSignal) ||
     priceStartMet(input.playbook, lastPrice);
   let placed = 0;
   let resumed = 0;
@@ -2049,7 +2045,7 @@ async function applyDcaVerbUnlocked(input: {
     if (
       !dcaWebhookSignalApplies({
         startKind: playbook.startKind,
-        fromSignal,
+        fromSignal: startSignal,
         status: leg.status,
       })
     ) {
@@ -2123,28 +2119,24 @@ async function applyDcaVerbUnlocked(input: {
       resumed += 1;
       continue;
     }
+    const entryTrigger =
+      placeNow || seriesStartDueForSide(playbook, side, startBars);
     if (
-      !placeNow &&
-      !seriesStartDueForSide(playbook, side, startBars)
-    ) {
-      const patched = await patchDcaLeg({
-        supabase,
-        id: playbook.id,
+      !input.forcePlace &&
+      !dcaEntryExpressionMet({
+        playbook,
         side,
-        patch: { status: "armed" },
-        unlessIdle: input.unlessIdle,
-      });
-      if (!patched.ok) {
-        return patched;
-      }
-      if (!patched.updated) {
-        skippedIdle += 1;
-        continue;
-      }
-      waiting += 1;
-      continue;
-    }
-    if (!input.forcePlace && !confirmMetForSide(playbook, side, startBars)) {
+        trigger: entryTrigger,
+        price: lastPrice,
+        prices: {
+          last: lastPrice,
+          mark: lastPrice,
+          index: lastPrice,
+        },
+        barsByTimeframe: startBars,
+        firedWebhookId,
+      })
+    ) {
       const patched = await patchDcaLeg({
         supabase,
         id: playbook.id,
@@ -2179,6 +2171,7 @@ async function applyDcaVerbUnlocked(input: {
           armTrigger: dcaArmTriggerForSide(playbook, side),
           indicator: dcaIndicatorStartForSide(playbook, side),
           confirm: dcaFilterForSide(playbook, side, "confirm"),
+          entryStack: dcaEntryStackForSide(playbook, side),
           price: lastPrice,
         }),
     });
@@ -2246,6 +2239,7 @@ export async function applyDcaVerb(input: {
   verb: DcaVerb;
   side?: FuturesSide | null;
   source?: "manual" | "webhook";
+  firedWebhookId?: string | null;
   forcePlace?: boolean;
   reason?: string;
   /** Engine tick: do not turn an idle leg back on. */
