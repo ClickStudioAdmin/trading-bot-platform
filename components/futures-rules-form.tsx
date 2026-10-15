@@ -1285,7 +1285,9 @@ function RuleCard({
             }}
           >
             {exitIf ? (
-              <>
+              <ExitConditionStack
+                grouped
+                lead={
                 <HardExitFields
                   prefix={`${prefix}exitIf`}
                   side={exitSide}
@@ -1308,8 +1310,8 @@ function RuleCard({
                     triggerWebhooks.map((hook) => hook.id),
                   )}
                 />
-                <ExitConditionStack
-                  prefix={`${prefix}exitIf`}
+                }
+                prefix={`${prefix}exitIf`}
                   side={exitSide}
                   anchor={exitIf}
                   rows={exitRows}
@@ -1322,8 +1324,7 @@ function RuleCard({
                   gridClass={fieldRow5}
                   fieldClass={botFieldClass}
                   labelClass={botLabelClass}
-                />
-              </>
+              />
             ) : null}
           </OptionalSection>
         </BotFormStep>

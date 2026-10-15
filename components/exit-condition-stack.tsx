@@ -155,7 +155,7 @@ export function ExitConditionStack({
   fieldClass: string;
   labelClass: string;
   named?: boolean;
-  /** Theme sample. Draws And rows as one card and starts a new card at Or. */
+  /** And rows share a card. Or starts the next card. */
   grouped?: boolean;
   lead?: ReactNode;
 }) {
@@ -235,7 +235,7 @@ export function ExitConditionStack({
     return (
       <button
         type="button"
-        className="inline-flex items-center gap-2 pb-2 text-sm text-danger"
+        className="inline-flex shrink-0 items-center gap-1.5 text-sm text-danger"
         onClick={() => onChange(rows.filter((item) => item.key !== row.key))}
       >
         <IconTrash size={14} className="size-3.5" />
@@ -330,7 +330,7 @@ export function ExitConditionStack({
               : undefined
           }
           addGroup={
-            canAdd ? <AddConditionButton centered onClick={() => addAt("or")} /> : null
+            canAdd ? <AddConditionButton onClick={() => addAt("or")} /> : null
           }
         />
       </div>

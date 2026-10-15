@@ -1801,8 +1801,12 @@ export function DcaPlaybookForm({
     const kind = sideStartKind(side);
     const hookId = sideWebhook(side);
     return (
-      <>
-        {kind === "price" ? (
+      <EntryConditionStack
+        grouped
+        lead={
+          <>
+            {dcaTriggerSelect(side)}
+            {kind === "price" ? (
           <BotFormGroup locked={cycleLocked}>
             <div className={fieldRowClass}>
               <TriggerFields
@@ -1956,8 +1960,9 @@ export function DcaPlaybookForm({
             </div>
           </BotFormGroup>
         ) : null}
-        <EntryConditionStack
-          prefix={shortLeg ? "short_entry" : "entry"}
+          </>
+        }
+        prefix={shortLeg ? "short_entry" : "entry"}
           side={fieldSide}
           rows={rows}
           onChange={(next) => {
@@ -1977,8 +1982,7 @@ export function DcaPlaybookForm({
           gridClass={fieldRowClass5}
           fieldClass={fieldClass}
           labelClass={labelClass}
-        />
-      </>
+      />
     );
   }
 
@@ -2178,7 +2182,6 @@ export function DcaPlaybookForm({
         locked={cycleLocked}
         defaultCollapsed={hasOpenPosition}
       >
-        {dcaTriggerSelect("long")}
         {dcaEntryFields("long")}
       </BotFormStep>
       ) : null}
@@ -2188,7 +2191,6 @@ export function DcaPlaybookForm({
         locked={cycleLocked}
         defaultCollapsed={hasOpenPosition}
       >
-        {dcaTriggerSelect("short")}
         {dcaEntryFields("short")}
       </BotFormStep>
       ) : null}
@@ -2779,7 +2781,9 @@ export function DcaPlaybookForm({
             }}
           >
             {exitIf ? (
-              <>
+              <ExitConditionStack
+                grouped
+                lead={
                 <HardExitFields
                   prefix="exitIf"
                   side="long"
@@ -2802,8 +2806,8 @@ export function DcaPlaybookForm({
                     signalWebhooks.map((hook) => hook.id),
                   )}
                 />
-                <ExitConditionStack
-                  prefix="exitIf"
+                }
+                prefix="exitIf"
                   side="long"
                   anchor={exitIf}
                   rows={exitRows}
@@ -2816,8 +2820,7 @@ export function DcaPlaybookForm({
                   gridClass={fieldRowClass5}
                   fieldClass={fieldClass}
                   labelClass={labelClass}
-                />
-              </>
+              />
             ) : null}
           </OptionalSection>
           <OptionalSection
@@ -2834,7 +2837,9 @@ export function DcaPlaybookForm({
             }}
           >
             {shortExitIf ? (
-              <>
+              <ExitConditionStack
+                grouped
+                lead={
                 <HardExitFields
                   prefix="shortExitIf"
                   side="short"
@@ -2857,8 +2862,8 @@ export function DcaPlaybookForm({
                     signalWebhooks.map((hook) => hook.id),
                   )}
                 />
-                <ExitConditionStack
-                  prefix="shortExitIf"
+                }
+                prefix="shortExitIf"
                   side="short"
                   anchor={shortExitIf}
                   rows={shortExitRows}
@@ -2871,8 +2876,7 @@ export function DcaPlaybookForm({
                   gridClass={fieldRowClass5}
                   fieldClass={fieldClass}
                   labelClass={labelClass}
-                />
-              </>
+              />
             ) : null}
           </OptionalSection>
         </BotFormGroup>
@@ -2893,7 +2897,9 @@ export function DcaPlaybookForm({
           }}
         >
           {exitIf ? (
-            <>
+            <ExitConditionStack
+              grouped
+              lead={
               <HardExitFields
                 prefix="exitIf"
                 side={direction === "short" ? "short" : "long"}
@@ -2916,8 +2922,8 @@ export function DcaPlaybookForm({
                   signalWebhooks.map((hook) => hook.id),
                 )}
               />
-              <ExitConditionStack
-                prefix="exitIf"
+              }
+              prefix="exitIf"
                 side={direction === "short" ? "short" : "long"}
                 anchor={exitIf}
                 rows={exitRows}
@@ -2930,8 +2936,7 @@ export function DcaPlaybookForm({
                 gridClass={fieldRowClass5}
                 fieldClass={fieldClass}
                 labelClass={labelClass}
-              />
-            </>
+            />
           ) : null}
         </OptionalSection>
       )}

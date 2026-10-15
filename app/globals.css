@@ -11,6 +11,7 @@
   --color-ink-faint: #6b7382;
   --color-accent: #a78bfa;
   --color-accent-strong: #8b6cf6;
+  --color-join: #2f6fed;
   --color-plan-header: #764ded;
   --color-success: #34d399;
   --color-danger: #f07167;
@@ -342,7 +343,7 @@ table:has(> tbody > tr:only-child > td[colspan]) > thead {
   --color-warning: #f5b942;
 }
 
-:is(.theme-light, .theme-preview-light) :is(.bg-accent-strong, .bg-plan-header, .bg-danger, .bg-success, .bg-warning) {
+:is(.theme-light, .theme-preview-light) :is(.bg-accent-strong, .bg-plan-header, .bg-danger, .bg-success, .bg-warning, .bg-join) {
   color: #f4f6f8;
 }
 

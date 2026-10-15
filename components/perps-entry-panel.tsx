@@ -324,7 +324,7 @@ export function PerpsEntryPanel({
     draft.webhookId && !webhooks.some((hook) => hook.id === draft.webhookId)
       ? [...webhooks, { id: draft.webhookId, name: "Webhook (removed)" }]
       : webhooks;
-  return (
+  const triggerFields = (
     <>
       <BotFormGroup>
         <div className={fieldRow}>
@@ -567,24 +567,29 @@ export function PerpsEntryPanel({
           )}
         </div>
       </BotFormGroup>
-      {closing ? null : (
-        <EntryConditionStack
-          prefix={`${prefix}entry`}
-          side={side}
-          rows={draft.entryRows}
-          onChange={(entryRows) => patch({ entryRows })}
-          anchor={anchor}
-          webhooks={whenWebhooks}
-          triggerTimeframe={
-            draft.entrySource === "indicator" || draft.entrySource === "trend"
-              ? draft.indicatorTimeframe
-              : null
-          }
-          gridClass={fieldRow5}
-          fieldClass={fieldClass}
-          labelClass={labelClass}
-        />
-      )}
     </>
+  );
+  if (closing) {
+    return triggerFields;
+  }
+  return (
+    <EntryConditionStack
+      grouped
+      lead={triggerFields}
+      prefix={`${prefix}entry`}
+      side={side}
+      rows={draft.entryRows}
+      onChange={(entryRows) => patch({ entryRows })}
+      anchor={anchor}
+      webhooks={whenWebhooks}
+      triggerTimeframe={
+        draft.entrySource === "indicator" || draft.entrySource === "trend"
+          ? draft.indicatorTimeframe
+          : null
+      }
+      gridClass={fieldRow5}
+      fieldClass={fieldClass}
+      labelClass={labelClass}
+    />
   );
 }

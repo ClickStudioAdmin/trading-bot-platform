@@ -33,40 +33,38 @@ export function insertAt<T>(rows: readonly T[], index: number, row: T): T[] {
   return [...rows.slice(0, index), row, ...rows.slice(index)];
 }
 
-export function AddConditionButton({
-  onClick,
-  centered = false,
-}: {
-  onClick: () => void;
-  centered?: boolean;
-}) {
-  const button = (
-    <button
-      type="button"
-      className="inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink"
-      onClick={onClick}
-    >
-      <IconPlus size={14} className="size-3.5" />
-      Add condition
-    </button>
-  );
-  if (!centered) {
-    return button;
-  }
+function Hairline({ children }: { children: ReactNode }) {
   return (
     <div className="flex items-center gap-3">
       <span className="h-px min-w-0 flex-1 bg-line" aria-hidden />
-      {button}
+      {children}
       <span className="h-px min-w-0 flex-1 bg-line" aria-hidden />
     </div>
   );
 }
 
-function JoinPill({ label }: { label: "And" | "Or" }) {
+export function AddConditionButton({ onClick }: { onClick: () => void }) {
   return (
-    <span className="inline-flex rounded-md bg-accent-strong px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
-      {label}
-    </span>
+    <Hairline>
+      <button
+        type="button"
+        className="inline-flex shrink-0 items-center gap-2 text-sm text-ink-muted hover:text-ink"
+        onClick={onClick}
+      >
+        <IconPlus size={14} className="size-3.5" />
+        Add condition
+      </button>
+    </Hairline>
+  );
+}
+
+function JoinWord({ label }: { label: "And" | "Or" }) {
+  return (
+    <Hairline>
+      <span className="inline-flex shrink-0 rounded-md bg-join px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
+        {label}
+      </span>
+    </Hairline>
   );
 }
 
@@ -92,33 +90,39 @@ export function GroupedConditions<T extends { key: string; join: StrategyJoin }>
         const opener = group[0];
         return (
           <div key={opener?.key ?? "group-1"} className="space-y-3">
-            {groupIndex > 0 ? (
-              <div className="px-4">
-                <JoinPill label="Or" />
-              </div>
-            ) : null}
+            {groupIndex > 0 ? <JoinWord label="Or" /> : null}
             <section className="space-y-4 rounded-card border border-line bg-canvas px-4 py-4">
-              <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-ink">
-                  Group {groupIndex + 1}
-                </h3>
-                <p className="text-hint text-ink-muted">
-                  Every condition in this group must be true.
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-ink">
+                    Group {groupIndex + 1}
+                  </h3>
+                  <p className="text-hint text-ink-muted">
+                    Every condition in this group must be true.
+                  </p>
+                </div>
+                {groupIndex > 0 && opener ? (
+                  <div className="shrink-0">{renderRemove(opener)}</div>
+                ) : null}
               </div>
               {groupIndex === 0 ? lead : null}
               {group.map((row, rowIndex) => {
                 const opensGroup = groupIndex > 0 && rowIndex === 0;
                 const firstWithoutLead =
                   groupIndex === 0 && rowIndex === 0 && !lead;
+                const showAnd = !opensGroup && !firstWithoutLead;
                 return (
-                <div key={row.key} className="space-y-3">
-                  {opensGroup || firstWithoutLead ? null : (
-                    <JoinPill label="And" />
-                  )}
-                  <div className="flex justify-end">{renderRemove(row)}</div>
-                  {renderBody(row)}
-                </div>
+                  <div key={row.key} className="space-y-3">
+                    {showAnd ? <JoinWord label="And" /> : null}
+                    {opensGroup ? (
+                      renderBody(row)
+                    ) : (
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3">
+                        <div className="min-w-0">{renderBody(row)}</div>
+                        <div className="shrink-0">{renderRemove(row)}</div>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
               {renderAddInGroup?.(groupIndex)}
