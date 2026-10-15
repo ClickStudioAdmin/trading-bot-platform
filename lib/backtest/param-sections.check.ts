@@ -107,11 +107,11 @@ const perps = snapshotPerpsRecipe({
 const perpsSections = recipeParamSections(perps);
 assert.deepEqual(
   perpsSections.map((section) => section.title),
-  ["General", "Entry Conditions", "Position Sizing", "Exit Conditions"],
+  ["General", "Long entry", "Position Sizing", "Exit Conditions"],
 );
 assert.deepEqual(
   perpsSections[0]?.groups[0]?.rows.map((row) => row.label),
-  ["Name", "Contract", "Action"],
+  ["Name", "Contract", "Direction"],
 );
 assert.equal(
   perpsSections[1]?.groups[0]?.rows[0]?.value,

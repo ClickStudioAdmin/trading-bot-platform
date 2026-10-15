@@ -9,7 +9,9 @@ import {
   FUTURES_RULE_IN_USE,
   futuresAutomationIdempotencyKey,
   futuresDeskAutomationStatus,
+  futuresAutomationToRow,
   parseFuturesAutomationForm,
+  parseFuturesAutomationRow,
   parseFuturesTriggerCompare,
   triggerConditionMet,
 } from "./automation";
@@ -381,5 +383,77 @@ assert.equal(clonedRule.symbol, "ETHUSDT");
 assert.equal(clonedRule.size, "0.5");
 assert.equal(clonedRule.formAction, "sell");
 assert.equal(clonedRule.mode, "disabled");
+
+function perpsForm(fields: Record<string, string>): FormData {
+  const form = new FormData();
+  form.set("deskVenue", "bybit");
+  form.set("ruleCount", "1");
+  form.set("r0_name", "Direction");
+  form.set("r0_mode", "disabled");
+  form.set("r0_symbol", "BTCUSDT");
+  form.set("r0_orderType", "market");
+  form.set("r0_sizeUnit", "qty");
+  form.set("r0_size", "1");
+  form.set("r0_entrySource", "price");
+  form.set("r0_triggerBy", "last");
+  form.set("r0_triggerCompare", "gte");
+  form.set("r0_triggerPrice", "100");
+  form.set("r0_skipIfOpen", "on");
+  for (const [key, value] of Object.entries(fields)) {
+    form.set(key, value);
+  }
+  return form;
+}
+
+const derivedShort = parseFuturesAutomationForm(
+  perpsForm({ r0_action: "sell" }),
+);
+assert.equal(derivedShort.ok, true);
+if (derivedShort.ok) {
+  assert.equal(derivedShort.rules[0]?.direction, "short");
+  assert.equal(derivedShort.rules[0]?.action, "sell");
+  assert.equal(derivedShort.rules[0]?.shortEntry, null);
+}
+
+const both = parseFuturesAutomationForm(
+  perpsForm({
+    r0_action: "buy",
+    r0_direction: "both",
+    r0_short_entrySource: "price",
+    r0_short_triggerBy: "mark",
+    r0_short_triggerCompare: "lte",
+    r0_short_triggerPrice: "90",
+    r0_short_skipIfOpen: "on",
+  }),
+);
+assert.equal(both.ok, true);
+if (both.ok) {
+  const rule = both.rules[0];
+  assert.equal(rule?.direction, "both");
+  assert.equal(rule?.action, "buy");
+  assert.equal(rule?.shortEntry?.triggerCompare, "lte");
+  assert.equal(rule?.shortEntry?.triggerPrice, 90);
+  assert.equal(rule?.shortEntry?.triggerBy, "mark");
+  const row = futuresAutomationToRow("user", "account", rule!);
+  assert.equal(row.direction, "both");
+  const loaded = parseFuturesAutomationRow(row);
+  assert.equal(loaded.direction, "both");
+  assert.equal(loaded.shortEntry?.triggerPrice, 90);
+  assert.equal(loaded.action, "buy");
+}
+
+const oneWay = parseFuturesAutomationForm(
+  perpsForm({
+    deskVenue: "hyperliquid",
+    r0_symbol: "BTC",
+    r0_action: "buy",
+    r0_direction: "both",
+  }),
+  "hyperliquid",
+);
+assert.equal(oneWay.ok, false);
+if (!oneWay.ok) {
+  assert.match(oneWay.error, /one-way/);
+}
 
 console.log("futures automation checks passed");

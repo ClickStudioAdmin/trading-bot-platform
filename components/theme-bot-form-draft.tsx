@@ -281,8 +281,6 @@ function Group({
 
 type ExitMethod = "" | "price" | "percent" | "atr";
 type StartKind = "price" | "indicator" | "trend" | "webhook";
-type Action = "buy" | "sell" | "close_long" | "close_short";
-
 function Field({
   label,
   hint,
@@ -539,7 +537,13 @@ function PriceTriggerFields({
 export function ThemeBotFormDraft() {
   const [name, setName] = useState("Sample bot");
   const [symbol, setSymbol] = useState("BTCUSDT");
-  const [action, setAction] = useState<Action>("buy");
+  const [perpsDirection, setPerpsDirection] = useState<
+    "long" | "short" | "both"
+  >("long");
+  const [shortStartKind, setShortStartKind] = useState<StartKind>("indicator");
+  const [shortWebhookId, setShortWebhookId] = useState("sample");
+  const [shortSkipIfOpen, setShortSkipIfOpen] = useState(true);
+  const [shortEntryRows, setShortEntryRows] = useState<EntryStackRow[]>([]);
   const [startKind, setStartKind] = useState<StartKind>("indicator");
   const [priceSource, setPriceSource] = useState("last");
   const [priceWhen, setPriceWhen] = useState("gte");
@@ -653,7 +657,7 @@ export function ThemeBotFormDraft() {
   const draftValue = {
     name,
     symbol,
-    action,
+    perpsDirection,
     startKind,
     orderType,
     limitPrice,
@@ -746,15 +750,13 @@ export function ThemeBotFormDraft() {
     setSavedKey(draftKey);
   }
   const dirty = savedKey !== null && draftKey !== savedKey;
-  const closing =
-    desk === "perps" &&
-    (action === "close_long" || action === "close_short");
+  const closing = false;
   const entrySide: "long" | "short" =
     desk === "dca"
       ? direction === "short"
         ? "short"
         : "long"
-      : action === "sell" || action === "close_short"
+      : perpsDirection === "short"
         ? "short"
         : "long";
   const bothSides = desk === "dca" && direction === "both";
@@ -872,6 +874,63 @@ export function ThemeBotFormDraft() {
     ) {
       setStartKind("price");
     }
+  }
+
+  function applyPerpsDirection(next: "long" | "short" | "both") {
+    const kindForSeed = startKind === "trend" ? "supertrend" : indicatorKind;
+    if (next === "both" && perpsDirection === "short") {
+      setShortStartKind(startKind);
+      setShortWebhookId(webhookId);
+      setShortSkipIfOpen(skipIfOpen);
+      setShortEntryRows(entryRows);
+      setShortPriceSource(priceSource);
+      setShortPriceWhen(priceWhen);
+      setShortPriceLevel(priceLevel);
+      setShortIndicatorKind(indicatorKind);
+      setShortTimeframe(timeframe);
+      setShortWhen(when);
+      setShortPeriod(period);
+      setShortSlowPeriod(slowPeriod);
+      setShortLevel(level);
+      setShortMultiplier(multiplier);
+      setPriceWhen(priceWhen === "gte" ? "lte" : "gte");
+      setWhen(oppositeIndicatorCompare(kindForSeed, when));
+      if (indicatorKind === "rsi") {
+        setLevel(level === "70" ? "30" : "70");
+      }
+      setEntryRows([]);
+    } else if (next === "both" && perpsDirection !== "both") {
+      setShortStartKind(startKind);
+      setShortWebhookId(webhookId);
+      setShortSkipIfOpen(skipIfOpen);
+      setShortPriceSource(priceSource);
+      setShortPriceWhen(priceWhen === "gte" ? "lte" : "gte");
+      setShortPriceLevel(priceLevel);
+      setShortIndicatorKind(indicatorKind);
+      setShortTimeframe(timeframe);
+      setShortWhen(oppositeIndicatorCompare(kindForSeed, when));
+      setShortPeriod(period);
+      setShortSlowPeriod(slowPeriod);
+      setShortMultiplier(multiplier);
+      setShortLevel(indicatorKind === "rsi" ? "70" : level);
+      setShortEntryRows(entryRows);
+    } else if (perpsDirection === "both" && next === "short") {
+      setStartKind(shortStartKind);
+      setWebhookId(shortWebhookId);
+      setSkipIfOpen(shortSkipIfOpen);
+      setPriceSource(shortPriceSource);
+      setPriceWhen(shortPriceWhen);
+      setPriceLevel(shortPriceLevel);
+      setIndicatorKind(shortIndicatorKind);
+      setTimeframe(shortTimeframe);
+      setWhen(shortWhen);
+      setPeriod(shortPeriod);
+      setSlowPeriod(shortSlowPeriod);
+      setLevel(shortLevel);
+      setMultiplier(shortMultiplier);
+      setEntryRows(shortEntryRows);
+    }
+    setPerpsDirection(next);
   }
 
   function applyDirection(next: "long" | "short" | "both") {
@@ -1020,36 +1079,23 @@ export function ThemeBotFormDraft() {
                 />
               </Field>
               {desk === "perps" ? (
-                <Field label="Action" required>
+                <Field
+                  label="Direction"
+                  hint="Long and Short are independent positions and never flatten each other."
+                  required
+                >
                   <AppSelect
-                    value={action}
-                    onChange={(event) => {
-                      const next = event.target.value as Action;
-                      setAction(next);
-                      if (next === "close_long" || next === "close_short") {
-                        if (
-                          startKind === "indicator" ||
-                          startKind === "trend"
-                        ) {
-                          setStartKind("price");
-                        }
-                        return;
-                      }
-                      const side: "long" | "short" =
-                        next === "sell" ? "short" : "long";
-                      setWhen(
-                        indicatorCompareForDirection(side, indicatorKind, ""),
-                      );
-                      if (indicatorKind === "rsi") {
-                        setLevel(side === "short" ? "70" : "30");
-                      }
-                    }}
+                    value={perpsDirection}
+                    onChange={(event) =>
+                      applyPerpsDirection(
+                        event.target.value as "long" | "short" | "both",
+                      )
+                    }
                     className={fieldClass}
                   >
-                    <option value="buy">Buy</option>
-                    <option value="sell">Sell</option>
-                    <option value="close_long">Close long</option>
-                    <option value="close_short">Close short</option>
+                    <option value="long">Long</option>
+                    <option value="short">Short</option>
+                    <option value="both">Both</option>
                   </AppSelect>
                 </Field>
               ) : (
@@ -1080,7 +1126,15 @@ export function ThemeBotFormDraft() {
 
         {desk !== "cnc" ? (
         <>
-        <BotFormStep title="Entry Conditions">
+        <BotFormStep
+          title={
+            desk === "perps"
+              ? perpsDirection === "short"
+                ? "Short entry"
+                : "Long entry"
+              : "Entry Conditions"
+          }
+        >
         <Group>
           <div className={rowClass}>
             {desk === "perps" ? (
@@ -1469,6 +1523,115 @@ export function ThemeBotFormDraft() {
           )
         ) : null}
         </BotFormStep>
+
+        {desk === "perps" && perpsDirection === "both" ? (
+          <BotFormStep title="Short entry">
+            <Group>
+              <div className={rowClass}>
+                <Field label="Initial Order Trigger" required>
+                  <AppSelect
+                    value={shortStartKind}
+                    onChange={(event) =>
+                      setShortStartKind(event.target.value as StartKind)
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="price">Price cross</option>
+                    <option value="indicator">Indicator</option>
+                    <option value="trend">Trend</option>
+                    <option value="webhook">Signal webhook</option>
+                  </AppSelect>
+                </Field>
+                <label className="flex items-center gap-2 self-end pb-0.5 text-sm text-ink lg:col-span-2">
+                  <AppCheck
+                    checked={shortSkipIfOpen}
+                    onChange={(event) => setShortSkipIfOpen(event.target.checked)}
+                  />
+                  <HintLabel
+                    text="Skip if this side is already open"
+                    hint="Off means each new cross or trigger can add size to the same row."
+                  />
+                </label>
+              </div>
+            </Group>
+            <Group>
+              {shortStartKind === "webhook" ? (
+                <div className={rowClass5}>
+                  <Field label="Webhook" className="lg:col-span-2" required>
+                    <AppSelect
+                      value={shortWebhookId}
+                      onChange={(event) => setShortWebhookId(event.target.value)}
+                      className={fieldClass}
+                    >
+                      <option value="">Pick a webhook</option>
+                      <option value="sample">Sample signal</option>
+                    </AppSelect>
+                  </Field>
+                </div>
+              ) : shortStartKind === "indicator" ? (
+                <div className={rowClass5}>
+                  <IndicatorStartFields
+                    side="short"
+                    prefix="themeShort"
+                    kind={shortIndicatorKind}
+                    timeframe={shortTimeframe}
+                    compare={shortWhen}
+                    level={shortLevel}
+                    period={shortPeriod}
+                    slowPeriod={shortSlowPeriod}
+                    onKindChange={setShortIndicatorKind}
+                    onTimeframeChange={setShortTimeframe}
+                    onCompareChange={setShortWhen}
+                    onLevelChange={setShortLevel}
+                    onPeriodChange={setShortPeriod}
+                    onSlowPeriodChange={setShortSlowPeriod}
+                  />
+                </div>
+              ) : shortStartKind === "trend" ? (
+                <div className={rowClass5}>
+                  <TrendStartFields
+                    side="short"
+                    prefix="themeShort"
+                    kind={shortIndicatorKind}
+                    timeframe={shortTimeframe}
+                    compare={shortWhen}
+                    period={shortPeriod}
+                    multiplier={shortMultiplier}
+                    onKindChange={setShortIndicatorKind}
+                    onTimeframeChange={setShortTimeframe}
+                    onCompareChange={setShortWhen}
+                    onPeriodChange={setShortPeriod}
+                    onMultiplierChange={setShortMultiplier}
+                  />
+                </div>
+              ) : (
+                <div className={rowClass5}>
+                  <PriceTriggerFields
+                    desk="perps"
+                    priceSource={shortPriceSource}
+                    onPriceSource={setShortPriceSource}
+                    priceWhen={shortPriceWhen}
+                    onPriceWhen={setShortPriceWhen}
+                    priceLevel={shortPriceLevel}
+                    onPriceLevel={setShortPriceLevel}
+                    invalid={false}
+                  />
+                </div>
+              )}
+            </Group>
+            <EntryConditionStack
+              prefix="themeShortEntry"
+              side="short"
+              rows={shortEntryRows}
+              onChange={setShortEntryRows}
+              anchor={{ kind: shortStartKind, webhookId: shortWebhookId }}
+              webhooks={[{ id: "sample", name: "Sample signal" }]}
+              gridClass={rowClass5}
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+            />
+          </BotFormStep>
+        ) : null}
 
         <BotFormStep title="Position Sizing">
         {desk === "dca" && !closing ? (

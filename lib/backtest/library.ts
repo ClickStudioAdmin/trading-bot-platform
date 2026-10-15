@@ -435,7 +435,7 @@ export function userBacktestFieldIssues(
   if (recipe.formAction === "close_long" || recipe.formAction === "close_short") {
     issues.push({
       field: "formAction",
-      message: "Flatten rules cannot be replayed. Pick Buy or Sell.",
+      message: "Flatten rules cannot be replayed. Pick Long or Short.",
     });
   }
   const size = Number(String(recipe.size).replace(/,/g, "").trim());

@@ -16,7 +16,6 @@ import {
   BotButtonLead,
   botBtnIcon,
   BotStatusField,
-  HintLabel,
   OptionalSection,
   OrderTypePill,
   botCompactRowClass,
@@ -29,20 +28,15 @@ import {
   botSidebarSaveClass,
   deskActionBtnClass,
 } from "@/components/bot-form-chrome";
-import { AppCheck } from "@/components/app-check";
-import {
-  IndicatorStartFields,
-  TrendStartFields,
-} from "@/components/bot-indicator-fields";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import {
-  EntryConditionStack,
-  entryConflictSlots,
-  entryDraftComplete,
-  entryRowsFromSources,
-  entryStackFromRows,
-  type EntryStackRow,
-} from "@/components/entry-condition-stack";
+  initialPerpsEntryDrafts,
+  oppositePerpsEntryDraft,
+  PerpsEntryPanel,
+  perpsEntryDraftMissing,
+  perpsEntryLegFromDraft,
+  type PerpsEntryDraft,
+} from "@/components/perps-entry-panel";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import {
   BYBIT_AGREEMENT_NOTE,
@@ -75,10 +69,10 @@ import {
 import {
   cloneFuturesAutomationForm,
   defaultFuturesAutomationForm,
-  parseAutomationEntry,
   parseFuturesAutomationForm,
   type FuturesAutomationFormValues,
 } from "@/lib/futures/automation";
+import { venueAllowsPerpsBoth } from "@/lib/futures/perps-direction";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
 import {
@@ -96,21 +90,6 @@ import {
   dcaFilterSpecForKind,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
-import {
-  confirmFromEntryStack,
-  entryKindDisabled,
-  entryWebhookIdDisabled,
-} from "@/lib/strategy/expr";
-import {
-  DEFAULT_DCA_RSI_PERIOD,
-  DEFAULT_DCA_SUPERTREND_MULTIPLIER,
-  DEFAULT_DCA_SUPERTREND_PERIOD,
-  indicatorCompareForDirection,
-  parseDcaIndicatorCompare,
-  type DcaIndicatorKind,
-  type DcaIndicatorTimeframe,
-} from "@/lib/dca/indicators";
-import type { DcaIndicatorStart } from "@/lib/dca/playbook";
 import type { FuturesOrderType, FuturesSide, FuturesTrigger } from "@/lib/futures/model";
 import type { FuturesTpslLevelKind } from "@/lib/futures/tpsl";
 import { IconPlus, IconSave } from "@/components/icons";
@@ -488,12 +467,17 @@ function RuleCard({
       ? "disabled"
       : layer.mode,
   );
-  const [formAction, setFormAction] = useState(layer.formAction);
+  const allowBoth = venueAllowsPerpsBoth(venueId);
+  const [direction, setDirection] = useState<PerpsFormDirection>(() =>
+    initialPerpsFormDirection(layer, allowBoth),
+  );
+  const [entryDrafts, setEntryDrafts] = useState(() =>
+    initialPerpsEntryDrafts(layer),
+  );
   const [orderType, setOrderType] = useState(layer.orderType);
   const [sizeUnit, setSizeUnit] = useState(layer.sizeUnit);
   const [size, setSize] = useState(layer.size);
   const [limitPrice, setLimitPrice] = useState(layer.limitPrice);
-  const [triggerPrice, setTriggerPrice] = useState(layer.triggerPrice);
   const [symbolState, setSymbolState] = useState(() =>
     embedded || layer.id
       ? layer.symbol
@@ -507,50 +491,6 @@ function RuleCard({
       onSymbolChange?.(next);
     }
   }
-  const [entrySource, setEntrySource] = useState(layer.entrySource);
-  const [webhookId, setWebhookId] = useState(layer.webhookId);
-  const entrySide: FuturesSide = formAction === "sell" ? "short" : "long";
-  const [indicatorKind, setIndicatorKind] = useState<DcaIndicatorKind>(
-    layer.indicator?.kind ??
-      (layer.entrySource === "trend" ? "supertrend" : "rsi"),
-  );
-  const [indicatorTimeframe, setIndicatorTimeframe] =
-    useState<DcaIndicatorTimeframe>(layer.indicator?.timeframe ?? "15");
-  const [indicatorCompare, setIndicatorCompare] = useState(
-    layer.indicator?.compare ??
-      indicatorCompareForDirection(
-        layer.formAction === "sell" ? "short" : "long",
-        layer.indicator?.kind ??
-          (layer.entrySource === "trend" ? "supertrend" : "rsi"),
-        "",
-      ),
-  );
-  const [indicatorLevel, setIndicatorLevel] = useState(
-    layer.indicator?.level != null
-      ? String(layer.indicator.level)
-      : layer.formAction === "sell"
-        ? "70"
-        : "30",
-  );
-  const [indicatorPeriod, setIndicatorPeriod] = useState(
-    String(
-      layer.indicator?.period ??
-        (layer.entrySource === "trend"
-          ? DEFAULT_DCA_SUPERTREND_PERIOD
-          : DEFAULT_DCA_RSI_PERIOD),
-    ),
-  );
-  const [indicatorSlowPeriod, setIndicatorSlowPeriod] = useState(
-    layer.indicator?.slowPeriod != null
-      ? String(layer.indicator.slowPeriod)
-      : "",
-  );
-  const [indicatorMultiplier, setIndicatorMultiplier] = useState(
-    String(layer.indicator?.multiplier ?? DEFAULT_DCA_SUPERTREND_MULTIPLIER),
-  );
-  const [entryRows, setEntryRows] = useState<EntryStackRow[]>(() =>
-    entryRowsFromSources(layer.entryStack, layer.confirm),
-  );
   const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(
     layer.exitIf ?? null,
   );
@@ -604,7 +544,24 @@ function RuleCard({
   const [trailingActive, setTrailingActive] = useState(
     layer.trailing?.activePrice != null ? String(layer.trailing.activePrice) : "",
   );
-  const closing = formAction === "close_long" || formAction === "close_short";
+  const closing = direction === "close_long" || direction === "close_short";
+  const showLong =
+    direction === "long" || direction === "both" || direction === "close_long";
+  const showShort =
+    direction === "short" || direction === "both" || direction === "close_short";
+  const formAction = perpsFormAction(direction);
+  const storedDirection = perpsStoredDirection(direction);
+  const exitSide: FuturesSide =
+    direction === "short" || direction === "close_short" ? "short" : "long";
+  const primaryDraft =
+    direction === "short" || direction === "close_short"
+      ? entryDrafts.short
+      : entryDrafts.long;
+  const primaryLeg = perpsEntryLegFromDraft(primaryDraft, closing);
+  const shortLeg =
+    storedDirection === "both"
+      ? perpsEntryLegFromDraft(entryDrafts.short, false)
+      : null;
   const tpMissing = tpOn && takeProfit.trim() === "";
   const slMissing = slOn && stopLoss.trim() === "";
   const trailMissing = trailOn && trailingStop.trim() === "";
@@ -614,19 +571,11 @@ function RuleCard({
     tpOn && tpOrderType === "limit" && tpLimitPrice.trim() === "";
   const slLimitMissing =
     slOn && slOrderType === "limit" && slLimitPrice.trim() === "";
-  const entryStack = closing
-    ? { leaves: [], joins: [] }
-    : entryStackFromRows(entryRows);
-  const entrySlots = entryConflictSlots(
-    {
-      kind: closing ? "price" : entrySource,
-      webhookId,
-    },
-    closing ? [] : entryRows,
-  );
-  const confirm = closing ? null : confirmFromEntryStack(entryStack);
   const entryMissing =
-    !closing && entryRows.some((row) => !entryDraftComplete(row.draft));
+    (showLong &&
+      perpsEntryDraftMissing(entryDrafts.long, direction === "close_long")) ||
+    (showShort &&
+      perpsEntryDraftMissing(entryDrafts.short, direction === "close_short"));
   const exitIfMissing = Boolean(exitIf) && !dcaFilterComplete(exitIf);
   const tpsl =
     tpOn || slOn
@@ -660,44 +609,30 @@ function RuleCard({
           peak: layer.trailing?.peak ?? null,
         }
       : null;
-  const webhookEntry = entrySource === "webhook";
-  const whenWebhooks =
-    webhookId && !triggerWebhooks.some((hook) => hook.id === webhookId)
-      ? [...triggerWebhooks, { id: webhookId, name: "Webhook (removed)" }]
-      : triggerWebhooks;
   const selected = options.find((row) => row.symbol === symbol);
   const baseCoin = selected?.baseCoin ?? "Token";
-  function liveIndicator(): DcaIndicatorStart | null {
-    if (entrySource !== "indicator" && entrySource !== "trend") {
-      return null;
-    }
-    return {
-      kind: indicatorKind,
-      timeframe: indicatorTimeframe,
-      compare: parseDcaIndicatorCompare(indicatorCompare),
-      level: Number(indicatorLevel) || null,
-      period: Number(indicatorPeriod) || null,
-      slowPeriod: Number(indicatorSlowPeriod) || null,
-      multiplier: Number(indicatorMultiplier) || null,
-    };
-  }
   const snapshotLayer: FuturesAutomationFormValues = {
     ...layer,
     mode,
     formAction,
+    direction: storedDirection,
     orderType,
     sizeUnit,
     size,
     limitPrice,
-    triggerPrice,
+    triggerPrice: String(primaryLeg.triggerPrice || ""),
     symbol,
-    entrySource,
-    webhookId,
+    entrySource: primaryLeg.entrySource,
+    webhookId: primaryLeg.webhookId ?? "",
+    triggerBy: primaryLeg.triggerBy,
+    triggerCompare: primaryLeg.triggerCompare,
+    skipIfOpen: primaryLeg.skipIfOpen,
     tpsl,
     trailing,
-    indicator: liveIndicator(),
-    confirm,
-    entryStack,
+    indicator: primaryLeg.indicator,
+    confirm: primaryLeg.confirm,
+    entryStack: primaryLeg.entryStack,
+    shortEntry: shortLeg,
     exitIf: closing ? null : exitIf,
     breakevenActivationPct:
       closing || !breakevenOn ? "" : breakevenActivationPct,
@@ -733,16 +668,9 @@ function RuleCard({
     }
     return fallback;
   }
-  function controlChecked(name: string, fallback: boolean): boolean {
-    const named = formRef.current?.elements.namedItem(name);
-    if (named instanceof HTMLInputElement && named.type === "checkbox") {
-      return named.checked;
-    }
-    return fallback;
-  }
-  function liveRecipe() {
+  function recipeNow(name: string) {
     return snapshotPerpsRecipe({
-      name: layer.name,
+      name,
       symbol,
       action:
         formAction === "sell"
@@ -756,20 +684,22 @@ function RuleCard({
           : formAction === "close_long"
             ? "long"
             : null,
+      direction: storedDirection,
       orderType,
       sizeUnit,
       size: Number(size.replace(/,/g, "")) || null,
       limitPrice: Number(limitPrice.replace(/,/g, "")) || null,
-      entrySource,
-      triggerBy: layer.triggerBy,
-      triggerCompare: layer.triggerCompare,
-      triggerPrice: Number(triggerPrice.replace(/,/g, "")) || 0,
-      skipIfOpen: layer.skipIfOpen,
+      entrySource: primaryLeg.entrySource,
+      triggerBy: primaryLeg.triggerBy,
+      triggerCompare: primaryLeg.triggerCompare,
+      triggerPrice: primaryLeg.triggerPrice,
+      skipIfOpen: primaryLeg.skipIfOpen,
       tpsl,
       trailing,
-      indicator: liveIndicator(),
-      confirm,
-      entryStack,
+      indicator: primaryLeg.indicator,
+      confirm: primaryLeg.confirm,
+      entryStack: primaryLeg.entryStack,
+      shortEntry: shortLeg,
       exitIf: closing ? null : exitIf,
       breakevenActivationPct: closing || !breakevenOn
         ? null
@@ -778,6 +708,9 @@ function RuleCard({
         ? null
         : Number(breakevenOffsetPct.replace(/,/g, "")) || 0,
     });
+  }
+  function liveRecipe() {
+    return recipeNow(layer.name);
   }
   const publishError = !parsedLive.ok
     ? parsedLive.error
@@ -788,52 +721,39 @@ function RuleCard({
     if (!embedded) {
       return;
     }
-    const triggerBy = controlValue(`${prefix}triggerBy`, layer.triggerBy);
-    const triggerCompare = controlValue(
-      `${prefix}triggerCompare`,
-      layer.triggerCompare,
+    const recipe = recipeNow(
+      controlValue(`${prefix}name`, layer.name).trim() || layer.name,
     );
-    const recipe = snapshotPerpsRecipe({
-      name: controlValue(`${prefix}name`, layer.name).trim() || layer.name,
-      symbol,
-      action:
-        formAction === "sell"
-          ? "sell"
-          : formAction === "close_long" || formAction === "close_short"
-            ? "flatten"
-            : "buy",
-      closeSide:
-        formAction === "close_short"
-          ? "short"
-          : formAction === "close_long"
-            ? "long"
-            : null,
-      orderType,
-      sizeUnit,
-      size: Number(size.replace(/,/g, "")) || null,
-      limitPrice: Number(limitPrice.replace(/,/g, "")) || null,
-      entrySource,
-      triggerBy: triggerBy === "mark" || triggerBy === "index" ? triggerBy : "last",
-      triggerCompare: triggerCompare === "lte" ? "lte" : "gte",
-      triggerPrice: Number(triggerPrice.replace(/,/g, "")) || 0,
-      skipIfOpen: controlChecked(`${prefix}skipIfOpen`, layer.skipIfOpen),
-      tpsl,
-      trailing,
-      indicator: liveIndicator(),
-      confirm,
-      entryStack,
-      exitIf: closing ? null : exitIf,
-      breakevenActivationPct: closing || !breakevenOn
-        ? null
-        : Number(breakevenActivationPct.replace(/,/g, "")) || null,
-      breakevenOffsetPct: closing || !breakevenOn
-        ? null
-        : Number(breakevenOffsetPct.replace(/,/g, "")) || 0,
-    });
     onRecipeChange?.(recipe, publishError, dirty);
     // formTick advances on each edit, so this effect reads the latest fields.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [embedded, formTick, publishError, onRecipeChange, symbol]);
+
+  function updateEntryDraft(side: "long" | "short", next: PerpsEntryDraft) {
+    setEntryDrafts((current) => ({ ...current, [side]: next }));
+    setDirty(true);
+    setFormTick((tick) => tick + 1);
+  }
+  function applyPerpsDirection(next: PerpsFormDirection) {
+    setEntryDrafts((current) => {
+      if (next !== "both" || direction === "both") {
+        return current;
+      }
+      if (direction === "short" || direction === "close_short") {
+        return {
+          ...current,
+          long: oppositePerpsEntryDraft(current.short, "long"),
+        };
+      }
+      return {
+        ...current,
+        short: oppositePerpsEntryDraft(current.long, "short"),
+      };
+    });
+    setDirection(next);
+    setDirty(true);
+    setFormTick((tick) => tick + 1);
+  }
 
   const { confirm: askConfirm, dialog } = useConfirmDialog();
 
@@ -912,271 +832,76 @@ function RuleCard({
               agreementGate={agreementGate}
             />
           </BotField>
-          <BotField label="Action" required>
+          <BotField
+            label="Direction"
+            hint="Long and Short are independent positions and never flatten each other."
+            required
+          >
+            <input type="hidden" name={`${prefix}direction`} value={storedDirection} />
+            <input type="hidden" name={`${prefix}action`} value={formAction} />
             <AppSelect
-              name={`${prefix}action`}
-              value={formAction}
-              onChange={(event) => {
-                const next = event.target
-                  .value as FuturesAutomationFormValues["formAction"];
-                setFormAction(next);
-                if (next === "close_long" || next === "close_short") {
-                  if (
-                    entrySource === "indicator" ||
-                    entrySource === "trend"
-                  ) {
-                    setEntrySource("price");
-                  }
-                  return;
-                }
-                const side: FuturesSide = next === "sell" ? "short" : "long";
-                setIndicatorCompare(
-                  indicatorCompareForDirection(side, indicatorKind, ""),
-                );
-                if (indicatorKind === "rsi") {
-                  setIndicatorLevel(side === "short" ? "70" : "30");
-                }
-                setEntryRows((rows) =>
-                  rows.map((row) => {
-                    if (
-                      row.draft.kind !== "indicator" &&
-                      row.draft.kind !== "trend"
-                    ) {
-                      return row;
-                    }
-                    return {
-                      ...row,
-                      draft: {
-                        ...row.draft,
-                        compare: indicatorCompareForDirection(
-                          side,
-                          row.draft.indicatorKind,
-                          "",
-                        ),
-                        level:
-                          row.draft.indicatorKind === "rsi"
-                            ? side === "short"
-                              ? "70"
-                              : "30"
-                            : row.draft.level,
-                      },
-                    };
-                  }),
-                );
-              }}
+              value={direction}
+              onChange={(event) =>
+                applyPerpsDirection(
+                  event.target.value as PerpsFormDirection,
+                )
+              }
               className={botFieldClass}
             >
-              <option value="buy">Buy</option>
-              <option value="sell">Sell</option>
-              <option value="close_long">Close long</option>
-              <option value="close_short">Close short</option>
+              <option value="long">Long</option>
+              <option value="short">Short</option>
+              {allowBoth ? <option value="both">Both</option> : null}
+              {layer.formAction === "close_long" ? (
+                <option value="close_long">Close long</option>
+              ) : null}
+              {layer.formAction === "close_short" ? (
+                <option value="close_short">Close short</option>
+              ) : null}
             </AppSelect>
           </BotField>
         </div>
       </BotFormStep>
 
-      <BotFormStep title="Entry Conditions" defaultCollapsed={inUse}>
-      <BotFormGroup>
-        <div className={fieldRow}>
-          <BotField label="Initial Order Trigger" required>
-            <input type="hidden" name={`${prefix}entrySource`} value={entrySource} />
-            <AppSelect
-              value={entrySource}
-              onChange={(event) => {
-                const next = parseAutomationEntry(event.target.value);
-                setEntrySource(next);
-                if (next === "trend") {
-                  setIndicatorKind("supertrend");
-                  setIndicatorCompare(
-                    indicatorCompareForDirection(entrySide, "supertrend", ""),
-                  );
-                  setIndicatorPeriod(String(DEFAULT_DCA_SUPERTREND_PERIOD));
-                  setIndicatorMultiplier(
-                    String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
-                  );
-                }
-                if (next === "indicator" && indicatorKind === "supertrend") {
-                  setIndicatorKind("rsi");
-                  setIndicatorCompare(
-                    indicatorCompareForDirection(entrySide, "rsi", ""),
-                  );
-                  setIndicatorPeriod(String(DEFAULT_DCA_RSI_PERIOD));
-                  setIndicatorLevel(entrySide === "short" ? "70" : "30");
-                }
-              }}
-              className={botFieldClass}
-            >
-              <option
-                value="price"
-                disabled={entryKindDisabled({
-                  slots: entrySlots,
-                  index: 0,
-                  kind: "price",
-                  webhookIds: triggerWebhooks.map((hook) => hook.id),
-                })}
-              >
-                Price cross
-              </option>
-              {closing ? null : (
-                <option value="indicator">Indicator</option>
-              )}
-              {closing ? null : <option value="trend">Trend</option>}
-              <option
-                value="webhook"
-                disabled={entryKindDisabled({
-                  slots: entrySlots,
-                  index: 0,
-                  kind: "webhook",
-                  webhookIds: triggerWebhooks.map((hook) => hook.id),
-                })}
-              >
-                Signal webhook
-              </option>
-            </AppSelect>
-          </BotField>
-          {closing ? null : (
-            <label
-              className={`flex items-center gap-2 self-end pb-0.5 text-sm text-ink ${pairSpan}`}
-            >
-              <AppCheck
-                name={`${prefix}skipIfOpen`}
-                value="on"
-                defaultChecked={layer.skipIfOpen}
-              />
-              <HintLabel
-                text="Skip if this side is already open"
-                hint="Off means each new cross or trigger can add size to the same row."
-              />
-            </label>
-          )}
-        </div>
-      </BotFormGroup>
-
-      <BotFormGroup>
-        <div className={fieldRow5}>
-          {entrySource === "indicator" && !closing ? (
-            <IndicatorStartFields
-              side={entrySide}
-              prefix={`${prefix}indicator`}
-              kind={indicatorKind}
-              timeframe={indicatorTimeframe}
-              compare={indicatorCompare}
-              level={indicatorLevel}
-              period={indicatorPeriod}
-              slowPeriod={indicatorSlowPeriod}
-              onKindChange={setIndicatorKind}
-              onTimeframeChange={setIndicatorTimeframe}
-              onCompareChange={setIndicatorCompare}
-              onLevelChange={setIndicatorLevel}
-              onPeriodChange={setIndicatorPeriod}
-              onSlowPeriodChange={setIndicatorSlowPeriod}
-            />
-          ) : entrySource === "trend" && !closing ? (
-            <TrendStartFields
-              side={entrySide}
-              prefix={`${prefix}indicator`}
-              kind={indicatorKind}
-              timeframe={indicatorTimeframe}
-              compare={indicatorCompare}
-              period={indicatorPeriod}
-              multiplier={indicatorMultiplier}
-              onKindChange={setIndicatorKind}
-              onTimeframeChange={setIndicatorTimeframe}
-              onCompareChange={setIndicatorCompare}
-              onPeriodChange={setIndicatorPeriod}
-              onMultiplierChange={setIndicatorMultiplier}
-            />
-          ) : webhookEntry ? (
-            <BotField label="Webhook" className={pairSpan} required>
-              <AppSelect
-                name={`${prefix}webhookId`}
-                value={webhookId}
-                onChange={(event) => setWebhookId(event.target.value)}
-                className={botFieldClass}
-              >
-                <option value="">
-                  {triggerWebhooks.length === 0
-                    ? "Create a Signal webhook first"
-                    : "Pick a webhook"}
-                </option>
-                {whenWebhooks.map((hook) => (
-                  <option
-                    key={hook.id}
-                    value={hook.id}
-                    disabled={entryWebhookIdDisabled({
-                      slots: entrySlots,
-                      index: 0,
-                      webhookId: hook.id,
-                    })}
-                  >
-                    {hook.name}
-                  </option>
-                ))}
-              </AppSelect>
-            </BotField>
-          ) : (
-            <>
-              <BotField label="Price source" required>
-                <AppSelect
-                  name={`${prefix}triggerBy`}
-                  defaultValue={layer.triggerBy}
-                  className={botFieldClass}
-                >
-                  <option value="last">Last is</option>
-                  <option value="mark">Mark is</option>
-                  <option value="index">Index is</option>
-                </AppSelect>
-              </BotField>
-              <BotField label="Compare" required>
-                <AppSelect
-                  name={`${prefix}triggerCompare`}
-                  defaultValue={layer.triggerCompare}
-                  className={botFieldClass}
-                >
-                  <option value="gte">At or above</option>
-                  <option value="lte">At or below</option>
-                </AppSelect>
-              </BotField>
-              <BotField label="Price" required>
-                <GroupedNumberInput
-                  name={`${prefix}triggerPrice`}
-                  value={triggerPrice}
-                  onChange={setTriggerPrice}
-                  allowDecimal
-                  className={botFieldClass}
-                />
-              </BotField>
-            </>
-          )}
-        </div>
-      </BotFormGroup>
-
-      {!closing ? (
-        <EntryConditionStack
-          prefix={`${prefix}entry`}
-          side={entrySide}
-          rows={entryRows}
-          onChange={(rows) => {
-            setEntryRows(rows);
-            setDirty(true);
-            setFormTick((tick) => tick + 1);
-          }}
-          anchor={{
-            kind: entrySource,
-            webhookId,
-          }}
-          webhooks={whenWebhooks}
-          triggerTimeframe={
-            entrySource === "indicator" || entrySource === "trend"
-              ? indicatorTimeframe
-              : null
-          }
-          gridClass={fieldRow5}
+      {showLong ? (
+      <BotFormStep
+        title="Long entry"
+        defaultCollapsed={inUse}
+      >
+        <PerpsEntryPanel
+          prefix={prefix}
+          side="long"
+          closing={direction === "close_long"}
+          draft={entryDrafts.long}
+          onChange={(next) => updateEntryDraft("long", next)}
+          webhooks={triggerWebhooks}
+          fieldRow={fieldRow}
+          fieldRow5={fieldRow5}
+          pairSpan={pairSpan}
           fieldClass={botFieldClass}
           labelClass={botLabelClass}
         />
-      ) : null}
       </BotFormStep>
+      ) : null}
+      {showShort ? (
+      <BotFormStep
+        title="Short entry"
+        defaultCollapsed={inUse}
+      >
+        <PerpsEntryPanel
+          prefix={direction === "both" ? `${prefix}short_` : prefix}
+          side="short"
+          closing={direction === "close_short"}
+          draft={entryDrafts.short}
+          onChange={(next) => updateEntryDraft("short", next)}
+          webhooks={triggerWebhooks}
+          fieldRow={fieldRow}
+          fieldRow5={fieldRow5}
+          pairSpan={pairSpan}
+          fieldClass={botFieldClass}
+          labelClass={botLabelClass}
+        />
+      </BotFormStep>
+      ) : null}
 
       <BotFormStep title="Position Sizing" defaultCollapsed={inUse}>
       <BotFormGroup title={closing ? undefined : "Order Size"}>
@@ -1504,14 +1229,14 @@ function RuleCard({
             enabled={Boolean(exitIf)}
             onEnabled={(next) =>
               setExitIf(
-                next ? (exitIf ?? dcaFilterSpecForKind("rsi", entrySide)) : null,
+                next ? (exitIf ?? dcaFilterSpecForKind("rsi", exitSide)) : null,
               )
             }
           >
             <DcaFilterBlock
               label="Kind"
               prefix={`${prefix}exitIf`}
-              side={entrySide}
+              side={exitSide}
               spec={exitIf}
               onChange={setExitIf}
               named
@@ -1661,4 +1386,43 @@ export function PerpsRecipeForm({
       onSymbolChange={onSymbolChange}
     />
   );
+}
+
+type PerpsFormDirection = "long" | "short" | "both" | "close_long" | "close_short";
+
+function initialPerpsFormDirection(
+  layer: FuturesAutomationFormValues,
+  allowBoth: boolean,
+): PerpsFormDirection {
+  if (layer.formAction === "close_long" || layer.formAction === "close_short") {
+    return layer.formAction;
+  }
+  if (layer.direction === "both" && allowBoth) {
+    return "both";
+  }
+  if (layer.formAction === "sell" || layer.direction === "short") {
+    return "short";
+  }
+  return "long";
+}
+
+function perpsFormAction(
+  direction: PerpsFormDirection,
+): FuturesAutomationFormValues["formAction"] {
+  if (direction === "close_long" || direction === "close_short") {
+    return direction;
+  }
+  return direction === "short" ? "sell" : "buy";
+}
+
+function perpsStoredDirection(
+  direction: PerpsFormDirection,
+): "long" | "short" | "both" {
+  if (direction === "both") {
+    return "both";
+  }
+  if (direction === "short" || direction === "close_short") {
+    return "short";
+  }
+  return "long";
 }

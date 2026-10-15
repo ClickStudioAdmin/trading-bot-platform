@@ -290,6 +290,30 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
       timeframe: start.timeframe,
     });
   }
+  const short = recipe.direction === "both" ? recipe.shortEntry : null;
+  if (
+    short &&
+    (short.entrySource === "indicator" || short.entrySource === "trend") &&
+    short.indicator
+  ) {
+    const startShort = short.indicator;
+    addSpec(specs, {
+      key: specKey({
+        kind: startShort.kind,
+        period: startShort.period,
+        slowPeriod: startShort.slowPeriod,
+        multiplier: startShort.multiplier ?? null,
+        timeframe: startShort.timeframe,
+      }),
+      kind: startShort.kind,
+      roles: ["Short entry"],
+      period: startShort.period,
+      slowPeriod: startShort.slowPeriod,
+      multiplier: startShort.multiplier ?? null,
+      levels: startShort.level != null ? [startShort.level] : [],
+      timeframe: startShort.timeframe,
+    });
+  }
   addSpec(specs, fromFilter(recipe.confirm, "Secondary entry"));
   if (recipe.entryStack) {
     for (const leaf of recipe.entryStack.leaves) {
@@ -297,6 +321,15 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
         addSpec(specs, fromFilter(leaf.spec, "Entry condition"));
       } else if (leaf.kind === "indicator" || leaf.kind === "trend") {
         addSpec(specs, specFromIndicator(leaf.start, "Entry condition"));
+      }
+    }
+  }
+  if (short?.entryStack) {
+    for (const leaf of short.entryStack.leaves) {
+      if (leaf.kind === "filter") {
+        addSpec(specs, fromFilter(leaf.spec, "Short entry condition"));
+      } else if (leaf.kind === "indicator" || leaf.kind === "trend") {
+        addSpec(specs, specFromIndicator(leaf.start, "Short entry condition"));
       }
     }
   }

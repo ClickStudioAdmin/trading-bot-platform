@@ -22,10 +22,16 @@ import {
   defaultFuturesAutomationForm,
   parseFuturesAutomationForm,
   writeAutomationExitsToForm,
+  writePerpsShortEntryFields,
   type FuturesAutomationFormValues,
   type FuturesAutomationRule,
 } from "@/lib/futures/automation";
-import { writeFuturesConditionFormFields } from "@/lib/futures/conditions";
+import { venueAllowsPerpsBoth } from "@/lib/futures/perps-direction";
+import {
+  shortEntryFromJson,
+  writeFuturesConditionFormFields,
+  type PerpsEntryLeg,
+} from "@/lib/futures/conditions";
 import {
   confirmFromEntryStack,
   entryStackFromJson,
@@ -149,6 +155,8 @@ export type PerpsTemplateRecipe = {
   exitIf?: DcaFilterSpec | null;
   breakevenActivationPct?: number | null;
   breakevenOffsetPct?: number | null;
+  direction: "long" | "short" | "both";
+  shortEntry?: PerpsEntryLeg | null;
 };
 
 export type PaperTemplateRecipe = {
@@ -361,6 +369,8 @@ export function snapshotPerpsRecipe(
         | "exitIf"
         | "breakevenActivationPct"
         | "breakevenOffsetPct"
+        | "direction"
+        | "shortEntry"
       >
     >,
 ): PerpsTemplateRecipe {
@@ -400,6 +410,12 @@ export function snapshotPerpsRecipe(
     exitIf: rule.exitIf ?? null,
     breakevenActivationPct: rule.breakevenActivationPct ?? null,
     breakevenOffsetPct: rule.breakevenOffsetPct ?? null,
+    direction:
+      rule.direction ??
+      (formAction === "sell" || formAction === "close_short" ? "short" : "long"),
+    ...(rule.direction === "both" && rule.shortEntry
+      ? { shortEntry: rule.shortEntry }
+      : {}),
   };
 }
 
@@ -622,6 +638,14 @@ function parsePerpsTemplateRecipe(
     exitIf: filterSpecFromRecipe(row.exitIf),
     breakevenActivationPct: asNullableNumber(row.breakevenActivationPct),
     breakevenOffsetPct: asNullableNumber(row.breakevenOffsetPct),
+    direction:
+      row.direction === "short" || row.direction === "both"
+        ? row.direction
+        : row.direction === "long" ||
+            (row.formAction !== "sell" && row.formAction !== "close_short")
+          ? "long"
+          : "short",
+    shortEntry: shortEntryFromJson(row.shortEntry),
   };
   const built = perpsRecipeToRule(recipe, {
     sortOrder: 0,
@@ -980,7 +1004,22 @@ export function perpsRecipeToRule(
   form.set("r0_name", recipe.name);
   form.set("r0_mode", "disabled");
   form.set("r0_symbol", options.symbol ?? recipe.symbol);
-  form.set("r0_action", recipe.formAction);
+  const direction =
+    recipe.direction ??
+    (recipe.formAction === "sell" || recipe.formAction === "close_short"
+      ? "short"
+      : "long");
+  if (direction === "both" && !venueAllowsPerpsBoth(venue)) {
+    form.set("r0_direction", "long");
+    form.set("r0_action", "buy");
+    notes.push("Hyperliquid is one-way. Applied as Long.");
+  } else {
+    form.set("r0_direction", direction);
+    form.set(
+      "r0_action",
+      direction === "both" ? "buy" : recipe.formAction,
+    );
+  }
   form.set("r0_orderType", recipe.orderType);
   form.set("r0_sizeUnit", recipe.sizeUnit);
   form.set("r0_size", recipe.size);
@@ -1004,6 +1043,13 @@ export function perpsRecipeToRule(
     breakevenActivationPct: recipe.breakevenActivationPct,
     breakevenOffsetPct: recipe.breakevenOffsetPct,
   });
+  if (
+    direction === "both" &&
+    venueAllowsPerpsBoth(venue) &&
+    recipe.shortEntry
+  ) {
+    writePerpsShortEntryFields(form, "r0_short_", recipe.shortEntry);
+  }
   const parsed = parseFuturesAutomationForm(form, venue);
   if (!parsed.ok) {
     return parsed;
@@ -1240,6 +1286,13 @@ export function perpsFormToSnapshotSource(
   form.set("r0_name", layer.name);
   form.set("r0_mode", layer.mode);
   form.set("r0_symbol", layer.symbol);
+  form.set(
+    "r0_direction",
+    layer.direction ??
+      (layer.formAction === "sell" || layer.formAction === "close_short"
+        ? "short"
+        : "long"),
+  );
   form.set("r0_action", layer.formAction);
   form.set("r0_orderType", layer.orderType);
   form.set("r0_sizeUnit", layer.sizeUnit);
@@ -1254,6 +1307,9 @@ export function perpsFormToSnapshotSource(
     form.set("r0_skipIfOpen", "on");
   }
   writeAutomationExitsToForm(form, "r0_", layer.tpsl, layer.trailing);
+  if (layer.direction === "both" && layer.shortEntry) {
+    writePerpsShortEntryFields(form, "r0_short_", layer.shortEntry);
+  }
   writeFuturesConditionFormFields(form, "r0_", {
     indicator: layer.indicator,
     confirm: layer.confirm,

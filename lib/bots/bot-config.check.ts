@@ -118,11 +118,11 @@ const perps = perpsBotConfig({
     slLimitPrice: null,
   },
 });
-assert.equal(value(perps, "General", "Action"), "Buy");
-assert.equal(value(perps, "Entry Conditions", "Initial order trigger"), "Price cross");
-assert.equal(value(perps, "Entry Conditions", "Skip if open"), "Yes");
-assert.equal(value(perps, "Entry Conditions", "Price"), "Last is at or above 2500");
-assert.equal(value(perps, "Entry Conditions", "Secondary entry"), "Off");
+assert.equal(value(perps, "General", "Direction"), "Long");
+assert.equal(value(perps, "Long entry", "Initial order trigger"), "Price cross");
+assert.equal(value(perps, "Long entry", "Skip if open"), "Yes");
+assert.equal(value(perps, "Long entry", "Price"), "Last is at or above 2500");
+assert.equal(value(perps, "Long entry", "Secondary entry"), "Off");
 
 const stacked = perpsBotConfig({
   ...defaultFuturesAutomationForm(0, "ETHUSDT"),
@@ -159,10 +159,10 @@ const stacked = perpsBotConfig({
   },
 });
 assert.match(
-  value(stacked, "Entry Conditions", "Entry conditions"),
+  value(stacked, "Long entry", "Entry conditions"),
   /^and RSI 14 at or below 30/,
 );
-assert.match(value(stacked, "Entry Conditions", "Entry conditions"), /or Price is above EMA 21/);
+assert.match(value(stacked, "Long entry", "Entry conditions"), /or Price is above EMA 21/);
 assert.equal(value(perps, "Position Sizing", "Size"), "10 USDT");
 assert.equal(value(perps, "Exit Conditions", "Take profit"), "3% · Last · Market");
 assert.equal(value(perps, "Exit Conditions", "Stop loss"), "Off");

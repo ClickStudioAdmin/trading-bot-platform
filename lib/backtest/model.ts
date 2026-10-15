@@ -785,11 +785,21 @@ export function backtestTapeInterval(
   if (recipe?.kind === "perps") {
     const indicatorStart =
       recipe.entrySource === "indicator" || recipe.entrySource === "trend";
+    const shortStart =
+      recipe.direction === "both" &&
+      (recipe.shortEntry?.entrySource === "indicator" ||
+        recipe.shortEntry?.entrySource === "trend");
     const rows = [
       indicatorStart ? recipe.indicator?.timeframe : null,
       ...(recipe.entryStack?.leaves.map((leaf) => strategyLeafTimeframe(leaf)) ??
         []),
       indicatorStart ? recipe.confirm?.timeframe : null,
+      shortStart ? recipe.shortEntry?.indicator?.timeframe : null,
+      ...(recipe.direction === "both"
+        ? (recipe.shortEntry?.entryStack?.leaves.map((leaf) =>
+            strategyLeafTimeframe(leaf),
+          ) ?? [])
+        : []),
       indicatorStart ? recipe.exitIf?.timeframe : null,
     ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
     if (rows.length === 1) {

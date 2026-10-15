@@ -23,6 +23,7 @@ const base: PerpsTemplateRecipe = {
   skipIfOpen: true,
   tpsl: null,
   trailing: null,
+  direction: "long",
 };
 
 assert.equal(canBacktestPerpsRecipe(base).ok, true);
@@ -110,6 +111,36 @@ const both = await replayPerpsPriceCross({
 });
 assert.equal(both.orders.length, 1);
 assert.equal(both.stats.openQty, 1);
+
+const hedged = await replayPerpsPriceCross({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 110, high: 110, low: 90, close: 110 },
+  ],
+  recipe: {
+    ...base,
+    direction: "both",
+    triggerCompare: "gte",
+    triggerPrice: "105",
+    skipIfOpen: true,
+    shortEntry: {
+      entrySource: "price",
+      webhookId: null,
+      triggerBy: "last",
+      triggerCompare: "lte",
+      triggerPrice: 95,
+      skipIfOpen: true,
+      indicator: null,
+      confirm: null,
+      entryStack: { leaves: [], joins: [] },
+    },
+  },
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(hedged.orders.length, 1);
+assert.equal(hedged.orders[0]?.action, "buy");
+assert.equal(hedged.stats.openSide, "long");
 
 const withTp = await replayPerpsPriceCross({
   bars: [

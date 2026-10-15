@@ -1,5 +1,4 @@
 import {
-  automationSide,
   decideFuturesAutomationTick,
   futuresAutomationIdempotencyKey,
   parseFuturesAutomationRow,
@@ -16,6 +15,10 @@ import {
   futuresFilterMet,
 } from "./conditions";
 import { entryStackListensOnPriceTick, entryStackMatchesWebhook } from "@/lib/strategy/expr";
+import {
+  perpsAutomationLegs,
+  perpsRuleMatchesWebhook,
+} from "./automation";
 import {
   isBybitAgreementQuiet,
   isBybitAgreementReject,
@@ -171,7 +174,10 @@ export async function runFuturesAutomationTick(input?: {
       continue;
     }
     parsedRules.push({ rawAccountId: accountId, rule, account });
-    if (!entryStackListensOnPriceTick(rule.entrySource, rule.entryStack)) {
+    const priceLegs = perpsAutomationLegs(rule).filter((leg) =>
+      entryStackListensOnPriceTick(leg.rule.entrySource, leg.rule.entryStack),
+    );
+    if (priceLegs.length === 0) {
       continue;
     }
     let deskTickers = tickers;
@@ -190,72 +196,105 @@ export async function runFuturesAutomationTick(input?: {
     }
     const ticker = deskTickers.get(rule.symbol);
     const prices = ticker ? tickerTriggerPrices(ticker) : null;
-    const price = prices ? triggerPrice(rule.triggerBy, prices) : null;
     const barsByTimeframe = await loadRuleBars({
       rule,
       account,
       cache: klineCache,
     });
-    const side = automationSide(rule);
     const bookOpens = opensByAccount.get(accountId) ?? [];
-    const openOnSide = bookOpens.find(
-      (row) => row.symbol === rule.symbol && row.side === side,
-    );
-    const decision = decideFuturesAutomationTick({
-      conditionMet: futuresEntryConditionMet({
-        rule,
-        side,
-        price,
-        prices,
-        barsByTimeframe,
-        firedWebhookId: rule.entrySource === "webhook" ? null : undefined,
-      }),
-      wasTrue: rule.conditionTrue,
-      action: rule.action,
-      mode: rule.mode,
-      bookReduceOnly: reduceOnly.has(accountId),
-      skipIfOpen: rule.skipIfOpen,
-      hasOpenOnSide: Boolean(openOnSide),
-    });
-    if (decision.fire) {
-      const reasons = formatFuturesEntryReasons({
-        entrySource: rule.entrySource,
-        side,
-        triggerBy: rule.triggerBy,
-        triggerCompare: rule.triggerCompare,
-        triggerPrice: rule.triggerPrice,
-        price,
-        indicator: rule.indicator,
-        confirm: rule.confirm,
-        entryStack: rule.entryStack,
+    let stopLegs = false;
+    for (const leg of priceLegs) {
+      if (stopLegs) {
+        break;
+      }
+      const legRule = leg.rule;
+      const price = prices ? triggerPrice(legRule.triggerBy, prices) : null;
+      const side = leg.side;
+      const openOnSide = bookOpens.find(
+        (row) => row.symbol === rule.symbol && row.side === side,
+      );
+      const decision = decideFuturesAutomationTick({
+        conditionMet: futuresEntryConditionMet({
+          rule: legRule,
+          side,
+          price,
+          prices,
+          barsByTimeframe,
+          firedWebhookId: legRule.entrySource === "webhook" ? null : undefined,
+        }),
+        wasTrue: legRule.conditionTrue,
+        action: legRule.action,
+        mode: rule.mode,
+        bookReduceOnly: reduceOnly.has(accountId),
+        skipIfOpen: legRule.skipIfOpen,
+        hasOpenOnSide: Boolean(openOnSide),
       });
-      const result = await fireAutomationRule({
-        rule,
-        accountId,
-        userId: account.userId,
-        mode: account.mode,
-        positionId: openOnSide?.id ?? null,
-        reason: reasons,
-      });
-      if (!result.ok) {
-        if (
-          isBybitAgreementQuiet(result.error) ||
-          isBybitAgreementReject(result.error)
-        ) {
-          if (!openOnSide) {
-            await patchRule(supabase, rule.id, { mode: "disabled" });
+      if (decision.fire) {
+        const reasons = formatFuturesEntryReasons({
+          entrySource: legRule.entrySource,
+          side,
+          triggerBy: legRule.triggerBy,
+          triggerCompare: legRule.triggerCompare,
+          triggerPrice: legRule.triggerPrice,
+          price,
+          indicator: legRule.indicator,
+          confirm: legRule.confirm,
+          entryStack: legRule.entryStack,
+        });
+        const result = await fireAutomationRule({
+          rule: legRule,
+          accountId,
+          userId: account.userId,
+          mode: account.mode,
+          positionId: openOnSide?.id ?? null,
+          reason: reasons,
+        });
+        if (!result.ok) {
+          if (
+            isBybitAgreementQuiet(result.error) ||
+            isBybitAgreementReject(result.error)
+          ) {
+            if (!openOnSide) {
+              await patchRule(supabase, rule.id, { mode: "disabled" });
+              stopLegs = true;
+            }
+            if (isBybitAgreementQuiet(result.error)) {
+              continue;
+            }
           }
-          if (isBybitAgreementQuiet(result.error)) {
-            continue;
-          }
+          await writeEventLog({
+            level: "warning",
+            scope: "trade",
+            event: "engine.open_failed",
+            message: reasons
+              ? `${result.error} Trying: ${reasons}.`
+              : result.error,
+            userId: account.userId,
+            accountId,
+            strategy: FUTURES_STRATEGY_ID,
+            data: {
+              ruleId: rule.id,
+              ruleName: rule.name,
+              symbol: rule.symbol,
+              side,
+              action: legRule.action,
+              positionId: openOnSide?.id ?? null,
+              reason: reasons,
+            },
+          });
+          continue;
         }
+        fired += 1;
         await writeEventLog({
-          level: "warning",
           scope: "trade",
-          event: "engine.open_failed",
-          message: reasons
-            ? `${result.error} Trying: ${reasons}.`
-            : result.error,
+          event: "engine.fired",
+          message: futuresFiredMessage({
+            name: rule.name,
+            symbol: rule.symbol,
+            action: legRule.action,
+            closeSide: legRule.closeSide,
+            reasons,
+          }),
           userId: account.userId,
           accountId,
           strategy: FUTURES_STRATEGY_ID,
@@ -264,48 +303,23 @@ export async function runFuturesAutomationTick(input?: {
             ruleName: rule.name,
             symbol: rule.symbol,
             side,
-            action: rule.action,
-            positionId: openOnSide?.id ?? null,
+            action: legRule.action,
+            positionId: result.positionId,
+            entrySource: legRule.entrySource,
             reason: reasons,
           },
         });
+        await patchRule(supabase, rule.id, {
+          [leg.latch]: true,
+          last_fired_at: new Date().toISOString(),
+        });
         continue;
       }
-      fired += 1;
-      await writeEventLog({
-        scope: "trade",
-        event: "engine.fired",
-        message: futuresFiredMessage({
-          name: rule.name,
-          symbol: rule.symbol,
-          action: rule.action,
-          closeSide: rule.closeSide,
-          reasons,
-        }),
-        userId: account.userId,
-        accountId,
-        strategy: FUTURES_STRATEGY_ID,
-        data: {
-          ruleId: rule.id,
-          ruleName: rule.name,
-          symbol: rule.symbol,
-          side,
-          action: rule.action,
-          positionId: result.positionId,
-          entrySource: rule.entrySource,
-          reason: reasons,
-        },
-      });
-      await patchRule(supabase, rule.id, {
-        condition_true: true,
-        last_fired_at: new Date().toISOString(),
-      });
-      continue;
-    }
-    if (decision.nextTrue !== rule.conditionTrue) {
-      await patchRule(supabase, rule.id, {
-        condition_true: decision.nextTrue,
-      });
+      if (decision.nextTrue !== legRule.conditionTrue) {
+        await patchRule(supabase, rule.id, {
+          [leg.latch]: decision.nextTrue,
+        });
+      }
     }
   }
 
@@ -347,12 +361,7 @@ export async function fireWebhookAutomationEntries(input: {
     .order("sort_order", { ascending: true });
   const matchedRows = (ruleRows ?? []).filter((raw) => {
     const rule = parseFuturesAutomationRow(raw as Record<string, unknown>);
-    return entryStackMatchesWebhook(
-      rule.entrySource,
-      rule.webhookId,
-      rule.entryStack,
-      input.webhookId,
-    );
+    return perpsRuleMatchesWebhook(rule, input.webhookId);
   });
   if (matchedRows.length === 0) {
     return { fired: 0 };
@@ -399,9 +408,10 @@ export async function fireWebhookAutomationEntries(input: {
   const klineCache = new Map<string, CandleBar[]>();
   const needsPrice = matchedRows.some((raw) => {
     const rule = parseFuturesAutomationRow(raw as Record<string, unknown>);
-    return (
-      rule.entrySource === "price" ||
-      rule.entryStack.leaves.some((leaf) => leaf.kind === "price")
+    return perpsAutomationLegs(rule).some(
+      (leg) =>
+        leg.rule.entrySource === "price" ||
+        leg.rule.entryStack.leaves.some((leaf) => leaf.kind === "price"),
     );
   });
   let tickers = new Map<string, BybitTicker>();
@@ -417,10 +427,6 @@ export async function fireWebhookAutomationEntries(input: {
     if (!rule.id) {
       continue;
     }
-    const side = automationSide(rule);
-    const openOnSide = opens.find(
-      (row) => row.symbol === rule.symbol && row.side === side,
-    );
     const barsByTimeframe = await loadRuleBars({
       rule,
       account,
@@ -428,101 +434,119 @@ export async function fireWebhookAutomationEntries(input: {
     });
     const ticker = tickers.get(rule.symbol);
     const prices = ticker ? tickerTriggerPrices(ticker) : null;
-    const price = prices ? triggerPrice(rule.triggerBy, prices) : null;
-    const decision = decideFuturesAutomationTick({
-      conditionMet: futuresEntryConditionMet({
-        rule,
-        side,
-        price,
-        prices,
-        barsByTimeframe,
-        firedWebhookId: input.webhookId,
-      }),
-      wasTrue: false,
-      action: rule.action,
-      mode: rule.mode,
-      bookReduceOnly,
-      skipIfOpen: rule.skipIfOpen,
-      hasOpenOnSide: Boolean(openOnSide),
-    });
-    if (!decision.fire) {
-      continue;
-    }
-    const reasons = formatFuturesEntryReasons({
-      entrySource: rule.entrySource,
-      side,
-      triggerBy: rule.triggerBy,
-      triggerCompare: rule.triggerCompare,
-      triggerPrice: rule.triggerPrice,
-      indicator: rule.indicator,
-      confirm: rule.confirm,
-      entryStack: rule.entryStack,
-    });
-    const result = await fireAutomationRule({
-      rule,
-      accountId: input.accountId,
-      userId: input.userId,
-      mode: input.mode,
-      positionId: openOnSide?.id ?? null,
-      reason: reasons,
-    });
-    if (result.ok) {
-      fired += 1;
-      await writeEventLog({
-        scope: "trade",
-        event: "engine.fired",
-        message: futuresFiredMessage({
-          name: rule.name,
-          symbol: rule.symbol,
-          action: rule.action,
-          closeSide: rule.closeSide,
-          reasons,
-          webhook: true,
+    const webhookLegs = perpsAutomationLegs(rule).filter((leg) =>
+      entryStackMatchesWebhook(
+        leg.rule.entrySource,
+        leg.rule.webhookId,
+        leg.rule.entryStack,
+        input.webhookId,
+      ),
+    );
+    for (const leg of webhookLegs) {
+      const legRule = leg.rule;
+      const side = leg.side;
+      const openOnSide = opens.find(
+        (row) => row.symbol === rule.symbol && row.side === side,
+      );
+      const price = prices ? triggerPrice(legRule.triggerBy, prices) : null;
+      const decision = decideFuturesAutomationTick({
+        conditionMet: futuresEntryConditionMet({
+          rule: legRule,
+          side,
+          price,
+          prices,
+          barsByTimeframe,
+          firedWebhookId: input.webhookId,
         }),
-        userId: input.userId,
-        accountId: input.accountId,
-        strategy: FUTURES_STRATEGY_ID,
-        data: {
-          ruleId: rule.id,
-          ruleName: rule.name,
-          symbol: rule.symbol,
-          side,
-          action: rule.action,
-          positionId: result.positionId,
-          webhookId: input.webhookId,
-          entrySource: rule.entrySource,
-          reason: reasons,
-        },
+        wasTrue: false,
+        action: legRule.action,
+        mode: rule.mode,
+        bookReduceOnly,
+        skipIfOpen: legRule.skipIfOpen,
+        hasOpenOnSide: Boolean(openOnSide),
       });
-      await patchRule(supabase, rule.id, {
-        last_fired_at: new Date().toISOString(),
-      });
-    } else if (
-      isBybitAgreementQuiet(result.error) ||
-      isBybitAgreementReject(result.error)
-    ) {
-      if (!openOnSide) {
-        await patchRule(supabase, rule.id, { mode: "disabled" });
+      if (!decision.fire) {
+        continue;
       }
-    } else {
-      await writeEventLog({
-        level: "warning",
-        scope: "trade",
-        event: "engine.open_failed",
-        message: reasons ? `${result.error} Trying: ${reasons}.` : result.error,
-        userId: input.userId,
-        accountId: input.accountId,
-        strategy: FUTURES_STRATEGY_ID,
-        data: {
-          ruleId: rule.id,
-          ruleName: rule.name,
-          symbol: rule.symbol,
-          side,
-          webhookId: input.webhookId,
-          positionId: openOnSide?.id ?? null,
-          reason: reasons,
-        },
+      const reasons = formatFuturesEntryReasons({
+        entrySource: legRule.entrySource,
+        side,
+        triggerBy: legRule.triggerBy,
+        triggerCompare: legRule.triggerCompare,
+        triggerPrice: legRule.triggerPrice,
+        indicator: legRule.indicator,
+        confirm: legRule.confirm,
+        entryStack: legRule.entryStack,
       });
+      const result = await fireAutomationRule({
+        rule: legRule,
+        accountId: input.accountId,
+        userId: input.userId,
+        mode: input.mode,
+        positionId: openOnSide?.id ?? null,
+        reason: reasons,
+      });
+      if (result.ok) {
+        fired += 1;
+        await writeEventLog({
+          scope: "trade",
+          event: "engine.fired",
+          message: futuresFiredMessage({
+            name: rule.name,
+            symbol: rule.symbol,
+            action: legRule.action,
+            closeSide: legRule.closeSide,
+            reasons,
+            webhook: true,
+          }),
+          userId: input.userId,
+          accountId: input.accountId,
+          strategy: FUTURES_STRATEGY_ID,
+          data: {
+            ruleId: rule.id,
+            ruleName: rule.name,
+            symbol: rule.symbol,
+            side,
+            action: legRule.action,
+            positionId: result.positionId,
+            webhookId: input.webhookId,
+            entrySource: legRule.entrySource,
+            reason: reasons,
+          },
+        });
+        await patchRule(supabase, rule.id, {
+          last_fired_at: new Date().toISOString(),
+        });
+      } else if (
+        isBybitAgreementQuiet(result.error) ||
+        isBybitAgreementReject(result.error)
+      ) {
+        if (!openOnSide) {
+          await patchRule(supabase, rule.id, { mode: "disabled" });
+          break;
+        }
+      } else {
+        await writeEventLog({
+          level: "warning",
+          scope: "trade",
+          event: "engine.open_failed",
+          message: reasons
+            ? `${result.error} Trying: ${reasons}.`
+            : result.error,
+          userId: input.userId,
+          accountId: input.accountId,
+          strategy: FUTURES_STRATEGY_ID,
+          data: {
+            ruleId: rule.id,
+            ruleName: rule.name,
+            symbol: rule.symbol,
+            side,
+            webhookId: input.webhookId,
+            positionId: openOnSide?.id ?? null,
+            reason: reasons,
+          },
+        });
+      }
     }
   }
   return { fired };

@@ -375,15 +375,13 @@ export function automationsBotBlotterCells(
   };
 }
 
-const PERPS_ACTION_LABEL: Record<
-  FuturesAutomationFormValues["formAction"],
-  string
-> = {
-  buy: "Buy",
-  sell: "Sell",
-  close_long: "Close long",
-  close_short: "Close short",
-};
+function perpsListDirection(rule: FuturesAutomationFormValues): string {
+  if (rule.formAction === "close_long") return "Close long";
+  if (rule.formAction === "close_short") return "Close short";
+  if (rule.direction === "both") return "Both";
+  if (rule.direction === "short" || rule.formAction === "sell") return "Short";
+  return "Long";
+}
 
 const PERPS_ENTRY_LABEL: Record<string, string> = {
   price: "Price",
@@ -438,7 +436,7 @@ export function paperBotSummary(layer: PaperLayerFormValues): string {
 }
 
 export function perpsBotPair(rule: FuturesAutomationFormValues): string {
-  return `${rule.symbol} · ${PERPS_ACTION_LABEL[rule.formAction]}`;
+  return `${rule.symbol} · ${perpsListDirection(rule)}`;
 }
 
 export function perpsBotSummary(rule: FuturesAutomationFormValues): string {
@@ -446,7 +444,7 @@ export function perpsBotSummary(rule: FuturesAutomationFormValues): string {
   const size = rule.size.trim()
     ? `${rule.size}${rule.sizeUnit === "usdt" ? " USDT" : ""}`
     : "";
-  return [PERPS_ACTION_LABEL[rule.formAction], entry, rule.orderType, size]
+  return [perpsListDirection(rule), entry, rule.orderType, size]
     .filter(Boolean)
     .join(" · ");
 }

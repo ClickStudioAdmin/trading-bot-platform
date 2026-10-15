@@ -310,11 +310,12 @@ export function dcaBotConfig(playbook: DcaPlaybook): BotConfigSection[] {
   ]);
 }
 
-function perpsActionLabel(action: FuturesAutomationFormValues["formAction"]): string {
-  if (action === "sell") return "Sell";
-  if (action === "close_long") return "Close long";
-  if (action === "close_short") return "Close short";
-  return "Buy";
+function perpsDirectionLabel(rule: FuturesAutomationFormValues): string {
+  if (rule.formAction === "close_long") return "Close long";
+  if (rule.formAction === "close_short") return "Close short";
+  if (rule.direction === "both") return "Both";
+  if (rule.direction === "short" || rule.formAction === "sell") return "Short";
+  return "Long";
 }
 
 function perpsEntryLabel(source: FuturesAutomationFormValues["entrySource"]): string {
@@ -329,9 +330,82 @@ function perpsClosing(rule: FuturesAutomationFormValues): boolean {
 }
 
 function perpsSide(rule: FuturesAutomationFormValues): FuturesSide {
-  return rule.formAction === "sell" || rule.formAction === "close_short"
+  if (rule.direction === "both") return "long";
+  return rule.formAction === "sell" ||
+    rule.formAction === "close_short" ||
+    rule.direction === "short"
     ? "short"
     : "long";
+}
+
+function perpsEntryLines(input: {
+  closing: boolean;
+  side: FuturesSide;
+  entrySource: FuturesAutomationFormValues["entrySource"];
+  skipIfOpen: boolean;
+  triggerBy: FuturesAutomationFormValues["triggerBy"];
+  triggerCompare: FuturesAutomationFormValues["triggerCompare"];
+  triggerPrice: string;
+  indicator: FuturesAutomationFormValues["indicator"];
+  confirm: FuturesAutomationFormValues["confirm"];
+  entryStack: FuturesAutomationFormValues["entryStack"];
+}): BotConfigLine[] {
+  const entry: BotConfigLine[] = [
+    setting("Initial order trigger", perpsEntryLabel(input.entrySource)),
+  ];
+  if (!input.closing) {
+    entry.push(setting("Skip if open", input.skipIfOpen ? "Yes" : "No"));
+  }
+  if (input.entrySource === "price") {
+    const price = Number(input.triggerPrice);
+    entry.push(
+      setting(
+        "Price",
+        Number.isFinite(price) && input.triggerPrice.trim()
+          ? formatPriceCrossReason({
+              source: input.triggerBy,
+              compare: input.triggerCompare,
+              level: price,
+            })
+          : null,
+      ),
+    );
+  } else if (input.entrySource === "indicator" || input.entrySource === "trend") {
+    entry.push(
+      setting(
+        input.entrySource === "trend" ? "Trend" : "Indicator",
+        input.indicator
+          ? formatIndicatorStartReason(input.indicator, input.side)
+          : null,
+      ),
+    );
+  } else {
+    entry.push(setting("Webhook", "Signal webhook"));
+  }
+  if (!input.closing) {
+    const stack = resolveEntryStack(input.entryStack, input.confirm);
+    if (entryStackIsLegacy(stack)) {
+      entry.push(
+        setting(
+          "Secondary entry",
+          filterText(confirmFromEntryStack(stack) ?? input.confirm, input.side),
+        ),
+      );
+    } else {
+      entry.push(
+        setting(
+          "Entry conditions",
+          stack.leaves
+            .map((leaf, index) => {
+              const join = stack.joins[index] === "or" ? "or" : "and";
+              return `${join} ${formatStrategyLeafReason(leaf, input.side)}`;
+            })
+            .join(", "),
+        ),
+      );
+    }
+  }
+  return entry;
 }
 
 function perpsLevel(
@@ -352,61 +426,33 @@ export function perpsBotConfig(
   const side = perpsSide(rule);
   const size = rule.size.trim();
   const unit = rule.sizeUnit === "usdt" ? "USDT" : "Token qty";
-  const entry: BotConfigLine[] = [
-    setting("Initial order trigger", perpsEntryLabel(rule.entrySource)),
-  ];
-  if (!closing) {
-    entry.push(setting("Skip if open", rule.skipIfOpen ? "Yes" : "No"));
-  }
-  if (rule.entrySource === "price") {
-    const price = Number(rule.triggerPrice);
-    entry.push(
-      setting(
-        "Price",
-        Number.isFinite(price) && rule.triggerPrice.trim()
-          ? formatPriceCrossReason({
-              source: rule.triggerBy,
-              compare: rule.triggerCompare,
-              level: price,
-            })
-          : null,
-      ),
-    );
-  } else if (rule.entrySource === "indicator" || rule.entrySource === "trend") {
-    entry.push(
-      setting(
-        rule.entrySource === "trend" ? "Trend" : "Indicator",
-        rule.indicator
-          ? formatIndicatorStartReason(rule.indicator, side)
-          : null,
-      ),
-    );
-  } else {
-    entry.push(setting("Webhook", "Signal webhook"));
-  }
-  if (!closing) {
-    const stack = resolveEntryStack(rule.entryStack, rule.confirm);
-    if (entryStackIsLegacy(stack)) {
-      entry.push(
-        setting(
-          "Secondary entry",
-          filterText(confirmFromEntryStack(stack) ?? rule.confirm, side),
-        ),
-      );
-    } else {
-      entry.push(
-        setting(
-          "Entry conditions",
-          stack.leaves
-            .map((leaf, index) => {
-              const join = stack.joins[index] === "or" ? "or" : "and";
-              return `${join} ${formatStrategyLeafReason(leaf, side)}`;
-            })
-            .join(", "),
-        ),
-      );
-    }
-  }
+  const entry = perpsEntryLines({
+    closing,
+    side,
+    entrySource: rule.entrySource,
+    skipIfOpen: rule.skipIfOpen,
+    triggerBy: rule.triggerBy,
+    triggerCompare: rule.triggerCompare,
+    triggerPrice: rule.triggerPrice,
+    indicator: rule.indicator,
+    confirm: rule.confirm,
+    entryStack: rule.entryStack,
+  });
+  const shortEntry =
+    rule.direction === "both" && rule.shortEntry
+      ? perpsEntryLines({
+          closing: false,
+          side: "short",
+          entrySource: rule.shortEntry.entrySource,
+          skipIfOpen: rule.shortEntry.skipIfOpen,
+          triggerBy: rule.shortEntry.triggerBy,
+          triggerCompare: rule.shortEntry.triggerCompare,
+          triggerPrice: String(rule.shortEntry.triggerPrice),
+          indicator: rule.shortEntry.indicator,
+          confirm: rule.shortEntry.confirm,
+          entryStack: rule.shortEntry.entryStack,
+        })
+      : null;
 
   const sizing: Array<BotConfigLine | null> = [
     setting(
@@ -495,9 +541,10 @@ export function perpsBotConfig(
   return sectionsOf([
     section("General", [
       setting("Contract", rule.symbol),
-      setting("Action", perpsActionLabel(rule.formAction)),
+      setting("Direction", perpsDirectionLabel(rule)),
     ]),
-    section("Entry Conditions", entry),
+    section(rule.direction === "both" ? "Long entry" : side === "short" ? "Short entry" : "Long entry", entry),
+    ...(shortEntry ? [section("Short entry", shortEntry)] : []),
     section("Position Sizing", sizing),
     section("Exit Conditions", exits),
   ]);

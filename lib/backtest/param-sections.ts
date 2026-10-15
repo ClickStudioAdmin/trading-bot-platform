@@ -599,17 +599,12 @@ function perpsTriggerLabel(source: PerpsTemplateRecipe["entrySource"]): string {
   return "Price cross";
 }
 
-function perpsActionLabel(action: PerpsTemplateRecipe["formAction"]): string {
-  if (action === "sell") {
-    return "Sell";
-  }
-  if (action === "close_long") {
-    return "Close long";
-  }
-  if (action === "close_short") {
-    return "Close short";
-  }
-  return "Buy";
+function perpsDirectionText(recipe: PerpsTemplateRecipe): string {
+  if (recipe.formAction === "close_long") return "Close long";
+  if (recipe.formAction === "close_short") return "Close short";
+  if (recipe.direction === "both") return "Both";
+  if (recipe.direction === "short" || recipe.formAction === "sell") return "Short";
+  return "Long";
 }
 
 function perpsPriceSource(value: string | null | undefined): string {
@@ -643,11 +638,11 @@ function perpsExitLevel(
   return optionalGroup(title, level != null, rows);
 }
 
-function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
-  const closing =
-    recipe.formAction === "close_long" || recipe.formAction === "close_short";
-  const quote = quoteLabel(recipe.symbol);
-  const side: "long" | "short" = recipe.formAction === "sell" ? "short" : "long";
+function perpsEntryGroups(
+  recipe: PerpsTemplateRecipe,
+  side: "long" | "short",
+  closing: boolean,
+): ParamGroup[] {
   const entry: ParamGroup[] = [
     {
       rows: [
@@ -697,6 +692,20 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
   if (!closing) {
     entry.push(perpsEntryStackGroup(recipe, side));
   }
+  return entry;
+}
+
+function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
+  const closing =
+    recipe.formAction === "close_long" || recipe.formAction === "close_short";
+  const quote = quoteLabel(recipe.symbol);
+  const side: "long" | "short" =
+    recipe.direction === "both"
+      ? "long"
+      : recipe.formAction === "sell" || recipe.direction === "short"
+        ? "short"
+        : "long";
+  const entry = perpsEntryGroups(recipe, side, closing);
   const sizeRows: ParamRow[] = [
     {
       label: closing ? "Qty to close" : "Size",
@@ -724,12 +733,41 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
           rows: [
             { label: "Name", value: recipe.name },
             { label: "Contract", value: recipe.symbol },
-            { label: "Action", value: perpsActionLabel(recipe.formAction) },
+            { label: "Direction", value: perpsDirectionText(recipe) },
           ],
         },
       ],
     },
-    { title: "Entry Conditions", groups: entry },
+    {
+      title:
+        recipe.direction === "both" || side === "long"
+          ? "Long entry"
+          : "Short entry",
+      groups: entry,
+    },
+    ...(recipe.direction === "both" && recipe.shortEntry
+      ? [
+          {
+            title: "Short entry",
+            groups: perpsEntryGroups(
+              {
+                ...recipe,
+                formAction: "sell" as const,
+                entrySource: recipe.shortEntry.entrySource,
+                triggerBy: recipe.shortEntry.triggerBy,
+                triggerCompare: recipe.shortEntry.triggerCompare,
+                triggerPrice: String(recipe.shortEntry.triggerPrice),
+                skipIfOpen: recipe.shortEntry.skipIfOpen,
+                indicator: recipe.shortEntry.indicator,
+                confirm: recipe.shortEntry.confirm,
+                entryStack: recipe.shortEntry.entryStack,
+              },
+              "short",
+              false,
+            ),
+          },
+        ]
+      : []),
     {
       title: "Position Sizing",
       groups: [{ title: closing ? undefined : "Order Size", rows: sizeRows }],

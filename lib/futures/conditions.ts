@@ -13,12 +13,20 @@ import type { CandleBar } from "@/lib/market/candles";
 import {
   dcaPnlPct,
   dcaSeriesStartEval,
+  parseDcaIndicatorKind,
   parseDcaIndicatorStartFields,
   parseOptionalNonNegative,
   parseOptionalPositive,
   type DcaIndicatorStart,
 } from "@/lib/dca/playbook";
-import type { DcaIndicatorTimeframe, SupertrendBar } from "@/lib/dca/indicators";
+import {
+  parseDcaIndicatorCompare,
+  parseDcaIndicatorMultiplier,
+  parseDcaIndicatorPeriod,
+  parseDcaIndicatorTimeframe,
+  type DcaIndicatorTimeframe,
+  type SupertrendBar,
+} from "@/lib/dca/indicators";
 import { dcaBreakevenPrice, dcaTighterStopPrice } from "@/lib/dca/grid";
 import {
   confirmFromEntryStack,
@@ -38,6 +46,19 @@ import {
 import { triggerPrice } from "./tpsl";
 import type { FuturesTrigger } from "./model";
 import type { FuturesAction, FuturesSide } from "./model";
+
+/** The short leg of a Both rule. Single-side rules leave this null. */
+export type PerpsEntryLeg = {
+  entrySource: FuturesAutomationEntry;
+  webhookId: string | null;
+  triggerBy: FuturesTrigger;
+  triggerCompare: "gte" | "lte";
+  triggerPrice: number;
+  skipIfOpen: boolean;
+  indicator: DcaIndicatorStart | null;
+  confirm: DcaFilterSpec | null;
+  entryStack: EntryStack;
+};
 
 export type { EntryStack };
 
@@ -517,24 +538,43 @@ export function futuresAutomationTimeframes(rule: {
   confirm?: DcaFilterSpec | null;
   entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
+  shortEntry?: {
+    entrySource: FuturesAutomationEntry;
+    indicator?: DcaIndicatorStart | null;
+    confirm?: DcaFilterSpec | null;
+    entryStack?: EntryStack | null;
+  } | null;
 }): DcaIndicatorTimeframe[] {
   const rows: DcaIndicatorTimeframe[] = [];
-  if (
-    (rule.entrySource === "indicator" || rule.entrySource === "trend") &&
-    rule.indicator &&
-    !rows.includes(rule.indicator.timeframe)
-  ) {
-    rows.push(rule.indicator.timeframe);
-  }
-  const stack = resolveEntryStack(rule.entryStack, rule.confirm);
-  for (const timeframe of entryStackTimeframes(stack)) {
-    if (!rows.includes(timeframe)) {
+  function add(timeframe: DcaIndicatorTimeframe | null | undefined) {
+    if (timeframe && !rows.includes(timeframe)) {
       rows.push(timeframe);
     }
   }
-  if (rule.exitIf && !rows.includes(rule.exitIf.timeframe)) {
-    rows.push(rule.exitIf.timeframe);
+  if (
+    (rule.entrySource === "indicator" || rule.entrySource === "trend") &&
+    rule.indicator
+  ) {
+    add(rule.indicator.timeframe);
   }
+  const stack = resolveEntryStack(rule.entryStack, rule.confirm);
+  for (const timeframe of entryStackTimeframes(stack)) {
+    add(timeframe);
+  }
+  const short = rule.shortEntry;
+  if (short) {
+    if (
+      (short.entrySource === "indicator" || short.entrySource === "trend") &&
+      short.indicator
+    ) {
+      add(short.indicator.timeframe);
+    }
+    const shortStack = resolveEntryStack(short.entryStack, short.confirm);
+    for (const timeframe of entryStackTimeframes(shortStack)) {
+      add(timeframe);
+    }
+  }
+  add(rule.exitIf?.timeframe);
   return rows;
 }
 
@@ -548,25 +588,40 @@ export function futuresAutomationNeedsBars(rule: {
   return futuresAutomationTimeframes(rule).length > 0;
 }
 
+function stackNeedsWideBars(stack: EntryStack): boolean {
+  return stack.leaves.some((leaf) => {
+    if (leaf.kind === "trend") {
+      return true;
+    }
+    if (leaf.kind === "filter") {
+      return dcaFilterNeedsBars(leaf.spec);
+    }
+    return false;
+  });
+}
+
 export function futuresAutomationNeedsWideBars(rule: {
   entrySource: FuturesAutomationEntry;
   indicator?: DcaIndicatorStart | null;
   confirm?: DcaFilterSpec | null;
   entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
+  shortEntry?: {
+    indicator?: DcaIndicatorStart | null;
+    confirm?: DcaFilterSpec | null;
+    entryStack?: EntryStack | null;
+  } | null;
 }): boolean {
   const stack = resolveEntryStack(rule.entryStack, rule.confirm);
+  const short = rule.shortEntry;
+  const shortStack = short
+    ? resolveEntryStack(short.entryStack, short.confirm)
+    : emptyEntryStack();
   return (
     rule.indicator?.kind === "supertrend" ||
-    stack.leaves.some((leaf) => {
-      if (leaf.kind === "trend") {
-        return true;
-      }
-      if (leaf.kind === "filter") {
-        return dcaFilterNeedsBars(leaf.spec);
-      }
-      return false;
-    }) ||
+    short?.indicator?.kind === "supertrend" ||
+    stackNeedsWideBars(stack) ||
+    stackNeedsWideBars(shortStack) ||
     dcaFilterNeedsBars(rule.exitIf)
   );
 }
@@ -788,4 +843,134 @@ export function emptyBarsByTimeframe(): Map<
   CandleBar[]
 > {
   return new Map();
+}
+
+function indicatorStartFromRaw(raw: unknown): DcaIndicatorStart | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return null;
+  }
+  const row = raw as Record<string, unknown>;
+  const kind = parseDcaIndicatorKind(row.kind);
+  const timeframe = parseDcaIndicatorTimeframe(row.timeframe);
+  if (!kind || !timeframe) {
+    return null;
+  }
+  const compareRaw = row.compare;
+  const compare =
+    compareRaw == null || String(compareRaw).trim() === ""
+      ? null
+      : parseDcaIndicatorCompare(compareRaw);
+  if (compareRaw != null && String(compareRaw).trim() !== "" && !compare) {
+    return null;
+  }
+  const level =
+    row.level == null || row.level === "" ? null : Number(row.level);
+  if (level != null && !Number.isFinite(level)) {
+    return null;
+  }
+  const period = row.period == null ? null : parseDcaIndicatorPeriod(row.period);
+  const slowPeriod =
+    row.slowPeriod == null ? null : parseDcaIndicatorPeriod(row.slowPeriod);
+  const multiplier =
+    row.multiplier == null ? null : parseDcaIndicatorMultiplier(row.multiplier);
+  if (row.period != null && period == null) {
+    return null;
+  }
+  if (row.slowPeriod != null && slowPeriod == null) {
+    return null;
+  }
+  if (row.multiplier != null && multiplier == null) {
+    return null;
+  }
+  return {
+    kind,
+    timeframe,
+    compare,
+    level,
+    period,
+    slowPeriod,
+    multiplier,
+  };
+}
+
+/** Stored short leg. Single-side rules write null instead of calling this. */
+export function shortEntryToJson(leg: PerpsEntryLeg): Record<string, unknown> {
+  return {
+    entrySource: leg.entrySource,
+    webhookId: leg.webhookId,
+    triggerBy: leg.triggerBy,
+    triggerCompare: leg.triggerCompare,
+    triggerPrice: leg.triggerPrice,
+    skipIfOpen: leg.skipIfOpen,
+    indicator: leg.indicator
+      ? {
+          kind: leg.indicator.kind,
+          timeframe: leg.indicator.timeframe,
+          compare: leg.indicator.compare,
+          level: leg.indicator.level,
+          period: leg.indicator.period,
+          slowPeriod: leg.indicator.slowPeriod,
+          multiplier: leg.indicator.multiplier ?? null,
+        }
+      : null,
+    entryStack: entryStackToJson(leg.entryStack),
+  };
+}
+
+export function shortEntryFromJson(raw: unknown): PerpsEntryLeg | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return null;
+  }
+  const row = raw as Record<string, unknown>;
+  const source = String(row.entrySource ?? "").trim().toLowerCase();
+  if (
+    source !== "price" &&
+    source !== "indicator" &&
+    source !== "trend" &&
+    source !== "webhook"
+  ) {
+    return null;
+  }
+  const webhookId = String(row.webhookId ?? "").trim() || null;
+  if (source === "webhook" && !webhookId) {
+    return null;
+  }
+  const triggerBy = row.triggerBy;
+  if (triggerBy !== "last" && triggerBy !== "mark" && triggerBy !== "index") {
+    return null;
+  }
+  const triggerCompare = row.triggerCompare;
+  if (triggerCompare !== "gte" && triggerCompare !== "lte") {
+    return null;
+  }
+  const triggerPrice = Number(row.triggerPrice);
+  if (source === "price" && !(triggerPrice > 0)) {
+    return null;
+  }
+  const indicator =
+    row.indicator == null ? null : indicatorStartFromRaw(row.indicator);
+  if (row.indicator != null && !indicator) {
+    return null;
+  }
+  if ((source === "indicator" || source === "trend") && !indicator) {
+    return null;
+  }
+  const stack =
+    row.entryStack == null
+      ? emptyEntryStack()
+      : entryStackFromJson(row.entryStack);
+  if (!stack) {
+    return null;
+  }
+  return {
+    entrySource: source,
+    webhookId: source === "webhook" ? webhookId : null,
+    triggerBy,
+    triggerCompare,
+    triggerPrice: triggerPrice > 0 ? triggerPrice : 1,
+    skipIfOpen: row.skipIfOpen === true,
+    indicator,
+    confirm: confirmFromEntryStack(stack),
+    entryStack: stack,
+  };
 }

@@ -186,11 +186,16 @@ export function eventParameterSections(
       );
     }
   } else {
-    const start = recipe.indicator;
+    const shortLeg =
+      side === "short" && recipe.direction === "both" ? recipe.shortEntry : null;
+    const start = shortLeg ? shortLeg.indicator : recipe.indicator;
+    const entrySource = shortLeg ? shortLeg.entrySource : recipe.entrySource;
+    const confirm = shortLeg ? shortLeg.confirm : recipe.confirm;
+    const entryStack = shortLeg ? shortLeg.entryStack : recipe.entryStack;
     if (
       entry &&
       start &&
-      (recipe.entrySource === "indicator" || recipe.entrySource === "trend")
+      (entrySource === "indicator" || entrySource === "trend")
     ) {
       sections.push(
         indicatorSection({
@@ -207,18 +212,18 @@ export function eventParameterSections(
         }),
       );
     }
-    if (entry && recipe.confirm) {
+    if (entry && confirm) {
       sections.push(
         filterSection(
           "Secondary entry",
-          recipe.confirm,
+          confirm,
           side,
           factDetail(event, "Secondary entry"),
         ),
       );
     }
-    if (entry && recipe.entryStack && !recipe.confirm) {
-      for (const leaf of recipe.entryStack.leaves) {
+    if (entry && entryStack && !confirm) {
+      for (const leaf of entryStack.leaves) {
         if (leaf.kind === "filter") {
           sections.push(
             filterSection(

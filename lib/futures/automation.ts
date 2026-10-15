@@ -35,10 +35,23 @@ import {
   conditionColumns,
   conditionsFromRow,
   parseFuturesConditionForm,
+  shortEntryFromJson,
+  shortEntryToJson,
+  writeFuturesConditionFormFields,
   type EntryStack,
   type FuturesAutomationEntry,
+  type PerpsEntryLeg,
 } from "./conditions";
-import { emptyEntryStack } from "@/lib/strategy/expr";
+import {
+  emptyEntryStack,
+  entryStackMatchesWebhook,
+} from "@/lib/strategy/expr";
+import {
+  parsePerpsDirection,
+  perpsDirectionFromAction,
+  venueAllowsPerpsBoth,
+  type PerpsDirection,
+} from "./perps-direction";
 
 export type { FuturesAutomationEntry };
 export type FuturesTriggerCompare = "gte" | "lte";
@@ -69,7 +82,10 @@ export type FuturesAutomationRule = {
   exitIf: DcaFilterSpec | null;
   breakevenActivationPct: number | null;
   breakevenOffsetPct: number | null;
+  direction: PerpsDirection;
+  shortEntry: PerpsEntryLeg | null;
   conditionTrue: boolean;
+  shortConditionTrue: boolean;
   lastFiredAtMs: number | null;
 };
 
@@ -98,6 +114,8 @@ export type FuturesAutomationFormValues = {
   exitIf: DcaFilterSpec | null;
   breakevenActivationPct: string;
   breakevenOffsetPct: string;
+  direction?: PerpsDirection;
+  shortEntry?: PerpsEntryLeg | null;
 };
 
 export function defaultFuturesAutomationForm(
@@ -357,6 +375,10 @@ export function parseFuturesAutomationForm(
     parsed.rule.exitIf = conditions.exitIf;
     parsed.rule.breakevenActivationPct = conditions.breakevenActivationPct;
     parsed.rule.breakevenOffsetPct = conditions.breakevenOffsetPct;
+    const directed = applyPerpsDirection(form, prefix, deskVenue, parsed.rule);
+    if (!directed.ok) {
+      return directed;
+    }
     rules.push(parsed.rule);
   }
   return { ok: true, rules };
@@ -460,6 +482,31 @@ export function writeAutomationExitsToForm(
       form.set(`${prefix}trailingActive`, String(trailing.activePrice));
     }
   }
+}
+
+export function writePerpsShortEntryFields(
+  form: FormData,
+  prefix: string,
+  leg: PerpsEntryLeg,
+): void {
+  form.set(`${prefix}entrySource`, leg.entrySource);
+  if (leg.webhookId) {
+    form.set(`${prefix}webhookId`, leg.webhookId);
+  }
+  form.set(`${prefix}triggerBy`, leg.triggerBy);
+  form.set(`${prefix}triggerCompare`, leg.triggerCompare);
+  form.set(`${prefix}triggerPrice`, String(leg.triggerPrice));
+  if (leg.skipIfOpen) {
+    form.set(`${prefix}skipIfOpen`, "on");
+  }
+  writeFuturesConditionFormFields(form, prefix, {
+    indicator: leg.indicator,
+    confirm: leg.confirm,
+    entryStack: leg.entryStack,
+    exitIf: null,
+    breakevenActivationPct: null,
+    breakevenOffsetPct: null,
+  });
 }
 
 export function parseFuturesAutomationFields(input: {
@@ -587,7 +634,13 @@ export function parseFuturesAutomationFields(input: {
       exitIf: null,
       breakevenActivationPct: null,
       breakevenOffsetPct: null,
+      direction: perpsDirectionFromAction(
+        actionParsed.action,
+        actionParsed.closeSide,
+      ),
+      shortEntry: null,
       conditionTrue: Boolean(input.conditionTrue),
+      shortConditionTrue: false,
       lastFiredAtMs: Number.isFinite(lastFired) ? lastFired : null,
     },
   };
@@ -622,6 +675,83 @@ function parseSkipIfOpen(raw: unknown): boolean {
     return false;
   }
   return value === "on" || value === "true" || value === "1";
+}
+
+function applyPerpsDirection(
+  form: FormData,
+  prefix: string,
+  venue: string,
+  rule: FuturesAutomationRule,
+): { ok: true } | { ok: false; error: string } {
+  const chosen = parsePerpsDirection(form.get(`${prefix}direction`));
+  if (rule.action === "flatten") {
+    rule.direction = perpsDirectionFromAction(rule.action, rule.closeSide);
+    rule.shortEntry = null;
+    return { ok: true };
+  }
+  if (chosen === "both") {
+    if (!venueAllowsPerpsBoth(venue)) {
+      return {
+        ok: false,
+        error: "This exchange is one-way. Choose Long or Short.",
+      };
+    }
+    const shortPrefix = `${prefix}short_`;
+    const entrySource = parseAutomationEntry(form.get(`${shortPrefix}entrySource`));
+    const webhookId = String(form.get(`${shortPrefix}webhookId`) ?? "").trim() || null;
+    if (entrySource === "webhook" && !webhookId) {
+      return { ok: false, error: "Pick a Signal webhook for the short entry." };
+    }
+    const triggerBy = parseFuturesTrigger(form.get(`${shortPrefix}triggerBy`));
+    if (!triggerBy.ok) {
+      return triggerBy;
+    }
+    const priceEntry = entrySource === "price";
+    const compare = priceEntry
+      ? parseFuturesTriggerCompare(form.get(`${shortPrefix}triggerCompare`))
+      : { ok: true as const, compare: "lte" as const };
+    if (!compare.ok) {
+      return compare;
+    }
+    const triggerPrice = priceEntry
+      ? parseFuturesLimitPrice(form.get(`${shortPrefix}triggerPrice`))
+      : { ok: true as const, price: 1 };
+    if (!triggerPrice.ok) {
+      return { ok: false, error: "Enter a short trigger price." };
+    }
+    const conditions = parseFuturesConditionForm(form, shortPrefix, {
+      entrySource,
+      closing: false,
+    });
+    if (!conditions.ok) {
+      return conditions;
+    }
+    rule.action = "buy";
+    rule.closeSide = null;
+    rule.direction = "both";
+    rule.shortEntry = {
+      entrySource,
+      webhookId: entrySource === "webhook" ? webhookId : null,
+      triggerBy: triggerBy.trigger,
+      triggerCompare: compare.compare,
+      triggerPrice: triggerPrice.price,
+      skipIfOpen: parseSkipIfOpen(form.get(`${shortPrefix}skipIfOpen`)),
+      indicator: conditions.indicator,
+      confirm: conditions.confirm,
+      entryStack: conditions.entryStack,
+    };
+    return { ok: true };
+  }
+  if (chosen === "long") {
+    rule.action = "buy";
+    rule.closeSide = null;
+  } else if (chosen === "short") {
+    rule.action = "sell";
+    rule.closeSide = null;
+  }
+  rule.direction = perpsDirectionFromAction(rule.action, rule.closeSide);
+  rule.shortEntry = null;
+  return { ok: true };
 }
 
 export function parseAutomationEntry(raw: unknown): FuturesAutomationEntry {
@@ -659,7 +789,10 @@ function emptyParsedRule(): FuturesAutomationRule {
     exitIf: null,
     breakevenActivationPct: null,
     breakevenOffsetPct: null,
+    direction: "long",
+    shortEntry: null,
     conditionTrue: false,
+    shortConditionTrue: false,
     lastFiredAtMs: null,
   };
 }
@@ -721,6 +854,7 @@ export function parseFuturesAutomationRow(
       trailingPeak: null,
     });
     attachRuleConditions(preferred.rule, row);
+    attachPerpsDirection(preferred.rule, row);
     return preferred.rule;
   }
   if (venue) {
@@ -734,7 +868,36 @@ export function parseFuturesAutomationRow(
     return emptyParsedRule();
   }
   attachRuleConditions(hyperliquid.rule, row);
+  attachPerpsDirection(hyperliquid.rule, row);
   return hyperliquid.rule;
+}
+
+function attachPerpsDirection(
+  rule: FuturesAutomationRule,
+  row: Record<string, unknown>,
+): void {
+  rule.shortConditionTrue = Boolean(row.short_condition_true);
+  if (rule.action === "flatten") {
+    rule.direction = perpsDirectionFromAction(rule.action, rule.closeSide);
+    rule.shortEntry = null;
+    return;
+  }
+  const stored = parsePerpsDirection(row.direction);
+  if (stored === "both") {
+    rule.action = "buy";
+    rule.closeSide = null;
+    rule.direction = "both";
+    rule.shortEntry = shortEntryFromJson(row.short_entry);
+    return;
+  }
+  if (stored === "long" || stored === "short") {
+    rule.direction = stored;
+    rule.action = stored === "short" ? "sell" : "buy";
+    rule.closeSide = null;
+  } else {
+    rule.direction = perpsDirectionFromAction(rule.action, rule.closeSide);
+  }
+  rule.shortEntry = null;
 }
 
 function formActionOf(
@@ -779,6 +942,8 @@ export function futuresRuleToForm(
         : String(rule.breakevenActivationPct),
     breakevenOffsetPct:
       rule.breakevenOffsetPct == null ? "" : String(rule.breakevenOffsetPct),
+    direction: rule.direction,
+    shortEntry: rule.direction === "both" ? rule.shortEntry : null,
   };
 }
 
@@ -833,7 +998,13 @@ export function futuresAutomationToRow(
     trailing_stop: rule.trailing?.distance ?? null,
     trailing_active: rule.trailing?.activePrice ?? null,
     ...conditionColumns(rule),
+    direction: rule.direction,
+    short_entry:
+      rule.direction === "both" && rule.shortEntry
+        ? shortEntryToJson(rule.shortEntry)
+        : null,
     condition_true: false,
+    short_condition_true: false,
     updated_at: new Date().toISOString(),
   };
 }
@@ -854,4 +1025,71 @@ function attachRuleConditions(
   rule.exitIf = conditions.exitIf;
   rule.breakevenActivationPct = conditions.breakevenActivationPct;
   rule.breakevenOffsetPct = conditions.breakevenOffsetPct;
+}
+
+export type PerpsAutomationLeg = {
+  side: FuturesSide;
+  rule: FuturesAutomationRule;
+  latch: "condition_true" | "short_condition_true";
+};
+
+/** One leg for Long or Short. Both returns the long leg, then the short leg. */
+export function perpsAutomationLegs(
+  rule: FuturesAutomationRule,
+): PerpsAutomationLeg[] {
+  if (rule.action === "flatten" || rule.direction !== "both") {
+    const side: FuturesSide =
+      rule.action === "flatten"
+        ? (rule.closeSide ?? "long")
+        : rule.action === "sell"
+          ? "short"
+          : "long";
+    return [{ side, rule, latch: "condition_true" }];
+  }
+  const longRule: FuturesAutomationRule = {
+    ...rule,
+    action: "buy",
+    closeSide: null,
+    direction: "long",
+    shortEntry: null,
+  };
+  const short = rule.shortEntry;
+  if (!short) {
+    return [{ side: "long", rule: longRule, latch: "condition_true" }];
+  }
+  const shortRule: FuturesAutomationRule = {
+    ...rule,
+    action: "sell",
+    closeSide: null,
+    direction: "short",
+    shortEntry: null,
+    entrySource: short.entrySource,
+    webhookId: short.webhookId,
+    triggerBy: short.triggerBy,
+    triggerCompare: short.triggerCompare,
+    triggerPrice: short.triggerPrice,
+    skipIfOpen: short.skipIfOpen,
+    indicator: short.indicator,
+    confirm: short.confirm,
+    entryStack: short.entryStack,
+    conditionTrue: rule.shortConditionTrue,
+  };
+  return [
+    { side: "long", rule: longRule, latch: "condition_true" },
+    { side: "short", rule: shortRule, latch: "short_condition_true" },
+  ];
+}
+
+export function perpsRuleMatchesWebhook(
+  rule: FuturesAutomationRule,
+  firedId: string,
+): boolean {
+  return perpsAutomationLegs(rule).some((leg) =>
+    entryStackMatchesWebhook(
+      leg.rule.entrySource,
+      leg.rule.webhookId,
+      leg.rule.entryStack,
+      firedId,
+    ),
+  );
 }
