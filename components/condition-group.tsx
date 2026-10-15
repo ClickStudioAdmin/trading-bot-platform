@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { IconPlus } from "@/components/icons";
 import type { StrategyJoin } from "@/lib/strategy/expr";
 
 export function partitionByOr<T extends { join: StrategyJoin }>(rows: T[]): T[][] {
@@ -13,18 +14,78 @@ export function partitionByOr<T extends { join: StrategyJoin }>(rows: T[]): T[][
   return groups;
 }
 
+/** Where an And row belongs: after the last row of that group. */
+export function andInsertIndex<T extends { join: StrategyJoin }>(
+  rows: readonly T[],
+  groupIndex: number,
+): number {
+  const groups = partitionByOr(rows as T[]);
+  const group = groups[groupIndex] ?? [];
+  if (group.length === 0) {
+    return 0;
+  }
+  const last = group[group.length - 1];
+  const index = last ? rows.indexOf(last) : -1;
+  return index < 0 ? rows.length : index + 1;
+}
+
+export function insertAt<T>(rows: readonly T[], index: number, row: T): T[] {
+  return [...rows.slice(0, index), row, ...rows.slice(index)];
+}
+
+export function AddConditionButton({
+  onClick,
+  centered = false,
+}: {
+  onClick: () => void;
+  centered?: boolean;
+}) {
+  const button = (
+    <button
+      type="button"
+      className="inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink"
+      onClick={onClick}
+    >
+      <IconPlus size={14} className="size-3.5" />
+      Add condition
+    </button>
+  );
+  if (!centered) {
+    return button;
+  }
+  return (
+    <div className="flex items-center gap-3">
+      <span className="h-px min-w-0 flex-1 bg-line" aria-hidden />
+      {button}
+      <span className="h-px min-w-0 flex-1 bg-line" aria-hidden />
+    </div>
+  );
+}
+
+function OrSeam() {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="h-px min-w-0 flex-1 bg-line" aria-hidden />
+      <span className="text-sm text-ink">Or</span>
+      <span className="h-px min-w-0 flex-1 bg-line" aria-hidden />
+    </div>
+  );
+}
+
 export function GroupedConditions<T extends { key: string; join: StrategyJoin }>({
   rows,
   lead,
-  renderJoin,
   renderRemove,
   renderBody,
+  renderAddInGroup,
+  addGroup,
 }: {
   rows: T[];
   lead?: ReactNode;
-  renderJoin: (row: T) => ReactNode;
   renderRemove: (row: T) => ReactNode;
   renderBody: (row: T) => ReactNode;
+  renderAddInGroup?: (groupIndex: number) => ReactNode;
+  addGroup?: ReactNode;
 }) {
   const groups = partitionByOr(rows);
   return (
@@ -33,13 +94,7 @@ export function GroupedConditions<T extends { key: string; join: StrategyJoin }>
         const opener = group[0];
         return (
           <div key={opener?.key ?? "group-1"} className="space-y-3">
-            {groupIndex > 0 && opener ? (
-              <div className="flex items-center gap-3">
-                <span className="h-px min-w-0 flex-1 bg-line" aria-hidden />
-                {renderJoin(opener)}
-                <span className="h-px min-w-0 flex-1 bg-line" aria-hidden />
-              </div>
-            ) : null}
+            {groupIndex > 0 ? <OrSeam /> : null}
             <section className="space-y-4 rounded-card border border-line bg-canvas px-4 py-4">
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold text-ink">
@@ -52,21 +107,16 @@ export function GroupedConditions<T extends { key: string; join: StrategyJoin }>
               {groupIndex === 0 ? lead : null}
               {group.map((row) => (
                 <div key={row.key} className="space-y-3">
-                  {row.join === "and" ? (
-                    <div className="flex items-end justify-between gap-3">
-                      {renderJoin(row)}
-                      {renderRemove(row)}
-                    </div>
-                  ) : (
-                    <div className="flex justify-end">{renderRemove(row)}</div>
-                  )}
+                  <div className="flex justify-end">{renderRemove(row)}</div>
                   {renderBody(row)}
                 </div>
               ))}
+              {renderAddInGroup?.(groupIndex)}
             </section>
           </div>
         );
       })}
+      {addGroup}
     </div>
   );
 }

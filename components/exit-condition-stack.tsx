@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { GroupedConditions } from "@/components/condition-group";
+import {
+  AddConditionButton,
+  andInsertIndex,
+  GroupedConditions,
+  insertAt,
+} from "@/components/condition-group";
 import { AppSelect } from "@/components/app-select";
 import { HintLabel } from "@/components/bot-form-chrome";
 import { HardExitFields } from "@/components/hard-exit-fields";
@@ -230,6 +235,48 @@ export function ExitConditionStack({
         : base;
     commit([...current, { key: rowKey(), join, draft }]);
   }
+  function addAt(join: StrategyJoin, groupIndex?: number) {
+    const current = rowsRef.current;
+    if (current.length + 1 >= STRATEGY_CONDITION_CAP) {
+      return;
+    }
+    const index =
+      join === "or" ? current.length : andInsertIndex(current, groupIndex ?? 0);
+    const timeframeSet = usedTimeframes(anchor, current);
+    const timeframe =
+      timeframeSet.size >= 4
+        ? (timeframeSet.values().next().value ?? "240")
+        : "240";
+    const kinds: HardExitTrigger[] = ["indicator", "price", "trend", "webhook"];
+    const slotIndex = (rowIndex: number) =>
+      anchorSlot ? rowIndex + 1 : rowIndex;
+    let trigger: HardExitTrigger = "indicator";
+    for (const candidate of kinds) {
+      const draft = hardExitForTrigger(candidate, side, null);
+      const probe = insertAt(current, index, {
+        key: "next",
+        join,
+        draft,
+      });
+      if (
+        entrySlotAllowed({
+          slots: exitConflictSlots(anchor, probe),
+          index: slotIndex(index),
+          kind: candidate,
+          webhookIds,
+        })
+      ) {
+        trigger = candidate;
+        break;
+      }
+    }
+    const base = hardExitForTrigger(trigger, side, null);
+    const draft: HardExitDraft =
+      base.trigger === "indicator" || base.trigger === "trend"
+        ? { ...base, spec: { ...base.spec, timeframe } }
+        : base;
+    commit(insertAt(current, index, { key: rowKey(), join, draft }));
+  }
   function joinControl(row: ExitStackRow, index: number, slotIndex: number, labelled: boolean) {
     return (
       <label className={`${labelled ? labelClass : ""} w-36 shrink-0`}>
@@ -327,17 +374,17 @@ export function ExitConditionStack({
   const countInput = named ? (
     <input type="hidden" name={`${prefix}StackCount`} value={String(rows.length)} />
   ) : null;
-  const addButton =
-    rows.length + 1 < STRATEGY_CONDITION_CAP ? (
-      <button
-        type="button"
-        className="inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink"
-        onClick={addRow}
-      >
-        <IconPlus size={14} className="size-3.5" />
-        Add condition
-      </button>
-    ) : null;
+  const canAdd = rows.length + 1 < STRATEGY_CONDITION_CAP;
+  const addButton = canAdd ? (
+    <button
+      type="button"
+      className="inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink"
+      onClick={addRow}
+    >
+      <IconPlus size={14} className="size-3.5" />
+      Add condition
+    </button>
+  ) : null;
   if (grouped) {
     return (
       <div className="space-y-3">
@@ -345,11 +392,30 @@ export function ExitConditionStack({
         <GroupedConditions
           rows={rendered}
           lead={lead}
-          renderJoin={(item) => joinControl(item.row, item.index, item.slotIndex, false)}
           renderRemove={(item) => removeControl(item.row)}
-          renderBody={(item) => item.body}
+          renderBody={(item) => (
+            <>
+              {named ? (
+                <input
+                  type="hidden"
+                  name={`${prefix}Stack${item.index}Join`}
+                  value={item.join}
+                />
+              ) : null}
+              {item.body}
+            </>
+          )}
+          renderAddInGroup={
+            canAdd
+              ? (groupIndex) => (
+                  <AddConditionButton onClick={() => addAt("and", groupIndex)} />
+                )
+              : undefined
+          }
+          addGroup={
+            canAdd ? <AddConditionButton centered onClick={() => addAt("or")} /> : null
+          }
         />
-        {addButton}
       </div>
     );
   }

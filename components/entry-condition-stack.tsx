@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { GroupedConditions } from "@/components/condition-group";
+import {
+  AddConditionButton,
+  andInsertIndex,
+  GroupedConditions,
+  insertAt,
+} from "@/components/condition-group";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { AppSelect } from "@/components/app-select";
 import {
@@ -369,6 +374,44 @@ function draftForKind(
     period: String(DEFAULT_DCA_RSI_PERIOD),
     slowPeriod: "",
     multiplier: String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
+  };
+}
+
+function rowAtJoin(
+  side: FuturesSide,
+  rows: EntryStackRow[],
+  index: number,
+  join: StrategyJoin,
+  anchor: EntryAnchor,
+  webhookIds: string[],
+  triggerTimeframe: DcaIndicatorTimeframe | null,
+): EntryStackRow {
+  const timeframe = pickedTimeframe(rows, triggerTimeframe, "15");
+  const kinds: StrategyTriggerKind[] = [
+    "price",
+    "indicator",
+    "trend",
+    "webhook",
+  ];
+  for (const candidate of kinds) {
+    const draft = draftForKind(candidate, side, timeframe);
+    const probe = insertAt(rows, index, { key: "next", join, draft });
+    const slots = entryConflictSlots(anchor, probe);
+    if (
+      entrySlotAllowed({
+        slots,
+        index: index + 1,
+        kind: candidate,
+        webhookIds,
+      })
+    ) {
+      return { key: rowKey(), join, draft };
+    }
+  }
+  return {
+    key: rowKey(),
+    join,
+    draft: draftForKind("indicator", side, timeframe),
   };
 }
 
@@ -824,22 +867,40 @@ export function EntryConditionStack({
           ),
         };
       });
-  const addButton =
-    rows.length < cap ? (
-      <button
-        type="button"
-        className="inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink"
-        onClick={() =>
-          onChange([
-            ...rows,
-            nextRow(side, rows, anchor, webhookIds, triggerTimeframe),
-          ])
-        }
-      >
-        <IconPlus size={14} className="size-3.5" />
-        Add condition
-      </button>
-    ) : null;
+  function addAt(join: StrategyJoin, groupIndex?: number) {
+    const current = rowsRef.current;
+    if (current.length >= cap) {
+      return;
+    }
+    const index =
+      join === "or" ? current.length : andInsertIndex(current, groupIndex ?? 0);
+    const created = rowAtJoin(
+      side,
+      current,
+      index,
+      join,
+      anchor,
+      webhookIds,
+      triggerTimeframe,
+    );
+    commit(insertAt(current, index, created));
+  }
+  const canAdd = rows.length < cap;
+  const addButton = canAdd ? (
+    <button
+      type="button"
+      className="inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink"
+      onClick={() =>
+        onChange([
+          ...rows,
+          nextRow(side, rows, anchor, webhookIds, triggerTimeframe),
+        ])
+      }
+    >
+      <IconPlus size={14} className="size-3.5" />
+      Add condition
+    </button>
+  ) : null;
   if (grouped) {
     return (
       <div className="space-y-3">
@@ -847,11 +908,26 @@ export function EntryConditionStack({
         <GroupedConditions
           rows={rendered}
           lead={lead}
-          renderJoin={(item) => joinControl(item.row, item.index, item.slotIndex, false)}
           renderRemove={(item) => removeControl(item.row)}
-          renderBody={(item) => item.body}
+          renderBody={(item) => (
+            <>
+              <input type="hidden" name={`${prefix}${item.index}Join`} value={item.join} />
+              {item.body}
+            </>
+          )}
+          renderAddInGroup={
+            canAdd
+              ? (groupIndex) => (
+                  <AddConditionButton onClick={() => addAt("and", groupIndex)} />
+                )
+              : undefined
+          }
+          addGroup={
+            canAdd ? (
+              <AddConditionButton centered onClick={() => addAt("or")} />
+            ) : null
+          }
         />
-        {addButton}
       </div>
     );
   }
