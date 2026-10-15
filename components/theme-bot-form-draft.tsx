@@ -1415,12 +1415,14 @@ export function ThemeBotFormDraft() {
                   level={level}
                   period={period}
                   slowPeriod={slowPeriod}
+                  multiplier={multiplier}
                   onKindChange={setIndicatorKind}
                   onTimeframeChange={setTimeframe}
                   onCompareChange={setWhen}
                   onLevelChange={setLevel}
                   onPeriodChange={setPeriod}
                   onSlowPeriodChange={setSlowPeriod}
+                  onMultiplierChange={setMultiplier}
                   seriesSlots={themeEntrySlots}
                   seriesIndex={0}
                 />
@@ -1570,12 +1572,14 @@ export function ThemeBotFormDraft() {
                     level={shortLevel}
                     period={shortPeriod}
                     slowPeriod={shortSlowPeriod}
+                    multiplier={shortMultiplier}
                     onKindChange={setShortIndicatorKind}
                     onTimeframeChange={setShortTimeframe}
                     onCompareChange={setShortWhen}
                     onLevelChange={setShortLevel}
                     onPeriodChange={setShortPeriod}
                     onSlowPeriodChange={setShortSlowPeriod}
+                    onMultiplierChange={setShortMultiplier}
                     seriesSlots={themeShortSlots}
                     seriesIndex={0}
                   />
@@ -1685,12 +1689,14 @@ export function ThemeBotFormDraft() {
                     level={shortLevel}
                     period={shortPeriod}
                     slowPeriod={shortSlowPeriod}
+                    multiplier={shortMultiplier}
                     onKindChange={setShortIndicatorKind}
                     onTimeframeChange={setShortTimeframe}
                     onCompareChange={setShortWhen}
                     onLevelChange={setShortLevel}
                     onPeriodChange={setShortPeriod}
                     onSlowPeriodChange={setShortSlowPeriod}
+                    onMultiplierChange={setShortMultiplier}
                     seriesSlots={themeShortSlots}
                     seriesIndex={0}
                   />

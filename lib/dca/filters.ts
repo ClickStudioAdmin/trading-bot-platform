@@ -1,17 +1,19 @@
 import type { FuturesSide } from "@/lib/futures/model";
 import {
+  DEFAULT_DCA_ATR_BAND_MULT,
   DEFAULT_DCA_BB_PERIOD,
+  DEFAULT_DCA_CROSS_FAST_PERIOD,
+  DEFAULT_DCA_CROSS_SLOW_PERIOD,
   DEFAULT_DCA_MA_PERIOD,
   DEFAULT_DCA_RSI_PERIOD,
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
   DEFAULT_DCA_SUPERTREND_PERIOD,
   DCA_INDICATOR_TIMEFRAME_LABELS,
+  atrBandMet,
   bollingerBands,
-  emaValues,
+  formatDcaIndicatorStartLabel,
   indicatorStartMet,
-  lastAtrValue,
   rsiValue,
-  parseDcaIndicatorCompare,
   parseDcaIndicatorMultiplier,
   parseDcaIndicatorPeriod,
   parseDcaIndicatorTimeframe,
@@ -20,10 +22,15 @@ import {
   type SupertrendBar,
 } from "./indicators";
 
+export { atrBandMet, DEFAULT_DCA_ATR_BAND_MULT };
+
 export const DCA_FILTER_KINDS = [
-  "ema",
-  "sma",
   "rsi",
+  "macd",
+  "sma",
+  "ema",
+  "sma_cross",
+  "ema_cross",
   "bb",
   "atr_band",
   "supertrend",
@@ -34,6 +41,8 @@ export const DCA_FILTER_COMPARES = [
   "lte",
   "inside",
   "between",
+  "cross_gte",
+  "cross_lte",
 ] as const;
 export type DcaFilterCompare = (typeof DCA_FILTER_COMPARES)[number];
 
@@ -44,6 +53,7 @@ export type DcaFilterSpec = {
   level: number | null;
   levelTo?: number | null;
   period: number | null;
+  slowPeriod?: number | null;
   multiplier: number | null;
 };
 
@@ -51,15 +61,16 @@ export const DCA_FILTER_KIND_OPTIONS: {
   value: DcaFilterKind;
   label: string;
 }[] = [
-  { value: "ema", label: "Price vs EMA" },
-  { value: "sma", label: "Price vs SMA" },
   { value: "rsi", label: "RSI" },
+  { value: "macd", label: "MACD" },
+  { value: "sma", label: "Price vs SMA" },
+  { value: "ema", label: "Price vs EMA" },
+  { value: "sma_cross", label: "SMA Cross" },
+  { value: "ema_cross", label: "EMA Cross" },
   { value: "bb", label: "Price vs BB" },
   { value: "atr_band", label: "ATR band" },
   { value: "supertrend", label: "Supertrend" },
 ];
-
-export const DEFAULT_DCA_ATR_BAND_MULT = 2;
 
 export const DCA_CONFIRM_FIELD_LABEL =
   "Secondary Condition (must be true for the entry trigger to execute)";
@@ -69,6 +80,18 @@ export function dcaFilterComplete(
 ): boolean {
   if (!spec) {
     return false;
+  }
+  if (spec.kind === "macd") {
+    return spec.level != null && Number.isFinite(spec.level);
+  }
+  if (spec.kind === "ema_cross" || spec.kind === "sma_cross") {
+    return (
+      spec.period != null &&
+      spec.slowPeriod != null &&
+      spec.period > 0 &&
+      spec.slowPeriod > 0 &&
+      spec.period !== spec.slowPeriod
+    );
   }
   if (spec.kind === "rsi") {
     if (spec.level == null) {
@@ -98,6 +121,12 @@ export function defaultDcaFilterPeriod(kind: DcaFilterKind): number {
   if (kind === "supertrend" || kind === "atr_band") {
     return DEFAULT_DCA_SUPERTREND_PERIOD;
   }
+  if (kind === "ema_cross" || kind === "sma_cross") {
+    return DEFAULT_DCA_CROSS_FAST_PERIOD;
+  }
+  if (kind === "macd") {
+    return DEFAULT_DCA_MA_PERIOD;
+  }
   return DEFAULT_DCA_MA_PERIOD;
 }
 
@@ -109,24 +138,70 @@ export function sitDcaFilterCompare(
 
 export function parseDcaFilterCompare(value: unknown): DcaFilterCompare | null {
   const raw = String(value ?? "").trim().toLowerCase();
-  if (raw === "inside" || raw === "between") {
+  if (
+    raw === "inside" ||
+    raw === "between" ||
+    raw === "cross_gte" ||
+    raw === "cross_lte" ||
+    raw === "gte" ||
+    raw === "lte"
+  ) {
     return raw;
   }
-  const sit = parseDcaIndicatorCompare(raw);
-  if (!sit) {
-    return null;
+  return null;
+}
+
+function filterCompareForKind(
+  kind: DcaFilterKind,
+  compare: DcaFilterCompare,
+  side: FuturesSide,
+): DcaFilterCompare {
+  if (kind === "macd") {
+    if (
+      compare === "gte" ||
+      compare === "lte" ||
+      compare === "cross_gte" ||
+      compare === "cross_lte"
+    ) {
+      return compare;
+    }
+    return defaultDcaFilterCompare(kind, side);
   }
-  return sitDcaFilterCompare(sit);
+  if (kind === "ema_cross" || kind === "sma_cross") {
+    return compare === "cross_lte" ? "cross_lte" : "cross_gte";
+  }
+  if (kind === "atr_band") {
+    if (compare === "gte" || compare === "lte" || compare === "inside") {
+      return compare;
+    }
+    return defaultDcaFilterCompare(kind, side);
+  }
+  if (compare === "inside" && kind !== "bb") {
+    return defaultDcaFilterCompare(kind, side);
+  }
+  if (compare === "between" && kind !== "rsi") {
+    return defaultDcaFilterCompare(kind, side);
+  }
+  if (compare === "cross_gte") {
+    return "gte";
+  }
+  if (compare === "cross_lte") {
+    return "lte";
+  }
+  return compare;
 }
 
 export function defaultDcaFilterCompare(
   kind: DcaFilterKind,
   side: FuturesSide,
-): "gte" | "lte" {
+): DcaFilterCompare {
+  if (kind === "macd" || kind === "ema_cross" || kind === "sma_cross") {
+    return side === "short" ? "cross_lte" : "cross_gte";
+  }
   if (kind === "rsi") {
     return side === "short" ? "gte" : "lte";
   }
-  if (kind === "supertrend") {
+  if (kind === "supertrend" || kind === "atr_band") {
     return side === "short" ? "lte" : "gte";
   }
   return side === "short" ? "lte" : "gte";
@@ -139,6 +214,9 @@ export function defaultDcaFilterLevel(
   if (kind === "rsi") {
     return side === "short" ? 70 : 30;
   }
+  if (kind === "macd") {
+    return 0;
+  }
   return null;
 }
 
@@ -150,13 +228,20 @@ export function dcaFilterSpecForKind(
   kind: DcaFilterKind,
   side: FuturesSide,
 ): DcaFilterSpec {
+  const pair = kind === "ema_cross" || kind === "sma_cross";
   return {
     kind,
     timeframe: "240",
     compare: defaultDcaFilterCompare(kind, side),
     level: defaultDcaFilterLevel(kind, side),
     levelTo: null,
-    period: defaultDcaFilterPeriod(kind),
+    period:
+      kind === "macd"
+        ? null
+        : pair
+          ? DEFAULT_DCA_CROSS_FAST_PERIOD
+          : defaultDcaFilterPeriod(kind),
+    slowPeriod: pair ? DEFAULT_DCA_CROSS_SLOW_PERIOD : null,
     multiplier:
       kind === "supertrend"
         ? DEFAULT_DCA_SUPERTREND_MULTIPLIER
@@ -173,6 +258,7 @@ export function parseDcaFilterSpec(input: {
   level: unknown;
   levelTo?: unknown;
   period: unknown;
+  slowPeriod?: unknown;
   multiplier: unknown;
 }): DcaFilterSpec | null {
   const kind = parseDcaFilterKind(input.kind);
@@ -180,15 +266,12 @@ export function parseDcaFilterSpec(input: {
   if (!kind || !timeframe) {
     return null;
   }
-  let compare =
+  const posted =
     parseDcaFilterCompare(input.compare) ?? defaultDcaFilterCompare(kind, "long");
-  if (compare === "inside" && kind !== "bb" && kind !== "atr_band") {
-    compare = defaultDcaFilterCompare(kind, "long");
-  }
-  if (compare === "between" && kind !== "rsi") {
-    compare = defaultDcaFilterCompare(kind, "long");
-  }
+  const compare = filterCompareForKind(kind, posted, "long");
+  const pair = kind === "ema_cross" || kind === "sma_cross";
   const period = parseDcaIndicatorPeriod(input.period);
+  const slowPeriod = parseDcaIndicatorPeriod(input.slowPeriod);
   const multiplier = parseDcaIndicatorMultiplier(input.multiplier);
   const levelRaw =
     input.level == null || String(input.level).trim() === ""
@@ -210,9 +293,20 @@ export function parseDcaFilterSpec(input: {
     kind,
     timeframe,
     compare,
-    level: kind === "rsi" ? level : null,
+    level:
+      kind === "rsi"
+        ? level
+        : kind === "macd"
+          ? (level ?? 0)
+          : null,
     levelTo: kind === "rsi" && compare === "between" ? levelTo : null,
-    period: period ?? defaultDcaFilterPeriod(kind),
+    period:
+      kind === "macd"
+        ? null
+        : pair
+          ? (period ?? DEFAULT_DCA_CROSS_FAST_PERIOD)
+          : (period ?? defaultDcaFilterPeriod(kind)),
+    slowPeriod: pair ? (slowPeriod ?? DEFAULT_DCA_CROSS_SLOW_PERIOD) : null,
     multiplier:
       kind === "supertrend"
         ? (multiplier ?? DEFAULT_DCA_SUPERTREND_MULTIPLIER)
@@ -242,6 +336,7 @@ export function parseDcaFilterForm(
     level: form.get(`${prefix}Level`),
     levelTo: form.get(`${prefix}LevelTo`),
     period: form.get(`${prefix}Period`),
+    slowPeriod: form.get(`${prefix}SlowPeriod`),
     multiplier: form.get(`${prefix}Multiplier`),
   });
   if (!spec) {
@@ -272,6 +367,7 @@ export function writeDcaFilterFormFields(
     form.delete(`${prefix}Level`);
     form.delete(`${prefix}LevelTo`);
     form.delete(`${prefix}Period`);
+    form.delete(`${prefix}SlowPeriod`);
     form.delete(`${prefix}Multiplier`);
     return;
   }
@@ -290,9 +386,18 @@ export function writeDcaFilterFormFields(
   }
   if (spec.period != null) {
     form.set(`${prefix}Period`, String(spec.period));
+  } else {
+    form.delete(`${prefix}Period`);
+  }
+  if (spec.slowPeriod != null) {
+    form.set(`${prefix}SlowPeriod`, String(spec.slowPeriod));
+  } else {
+    form.delete(`${prefix}SlowPeriod`);
   }
   if (spec.multiplier != null) {
     form.set(`${prefix}Multiplier`, String(spec.multiplier));
+  } else {
+    form.delete(`${prefix}Multiplier`);
   }
 }
 
@@ -370,6 +475,20 @@ export function seriesForFilter(
 }
 
 export function dcaFilterWhenOptions(kind: DcaFilterKind, _side?: FuturesSide) {
+  if (kind === "macd") {
+    return [
+      { value: "cross_gte", label: "Crosses above" },
+      { value: "cross_lte", label: "Crosses below" },
+      { value: "gte", label: "Is above" },
+      { value: "lte", label: "Is below" },
+    ];
+  }
+  if (kind === "ema_cross" || kind === "sma_cross") {
+    return [
+      { value: "cross_gte", label: "Crosses above" },
+      { value: "cross_lte", label: "Crosses below" },
+    ];
+  }
   if (kind === "rsi") {
     return [
       { value: "lte", label: "At or below" },
@@ -406,7 +525,14 @@ export function dcaFilterWhenOptions(kind: DcaFilterKind, _side?: FuturesSide) {
 export function dcaFilterWhenValue(
   compare: DcaFilterCompare | DcaIndicatorCompare | null | undefined,
 ): DcaFilterCompare {
-  if (compare === "inside" || compare === "between") {
+  if (
+    compare === "inside" ||
+    compare === "between" ||
+    compare === "cross_gte" ||
+    compare === "cross_lte" ||
+    compare === "gte" ||
+    compare === "lte"
+  ) {
     return compare;
   }
   return sitDcaFilterCompare(compare);
@@ -468,6 +594,21 @@ export function formatDcaFilterReason(
           : "Price is above upper ATR band";
     return `${when} ${period} × ${multiplier}${suffix}`;
   }
+  if (
+    spec.kind === "macd" ||
+    spec.kind === "ema_cross" ||
+    spec.kind === "sma_cross"
+  ) {
+    return formatDcaIndicatorStartLabel({
+      kind: spec.kind,
+      compare: spec.compare,
+      level: spec.level,
+      period: spec.period,
+      slowPeriod: spec.slowPeriod,
+      timeframe: spec.timeframe,
+      side: _side,
+    });
+  }
   const name = spec.kind === "sma" ? "SMA" : "EMA";
   const when =
     spec.compare === "lte" ? "Price is below" : "Price is above";
@@ -495,35 +636,6 @@ export function dcaFilterSummaryLine(
   return `${label}: ${dcaFilterLabel(longSpec)}`;
 }
 
-export function atrBandMet(input: {
-  bars: SupertrendBar[];
-  period: number;
-  multiplier: number;
-  compare: DcaFilterCompare | DcaIndicatorCompare;
-}): boolean | null {
-  if (input.bars.length < input.period + 1 || !(input.multiplier > 0)) {
-    return null;
-  }
-  const atr = lastAtrValue(input.bars, input.period);
-  const mid = emaValues(
-    input.bars.map((row) => row.close),
-    input.period,
-  ).at(-1);
-  const price = input.bars.at(-1)?.close;
-  if (atr == null || mid == null || price == null) {
-    return null;
-  }
-  const upper = mid + atr * input.multiplier;
-  const lower = mid - atr * input.multiplier;
-  if (input.compare === "inside") {
-    return price >= lower && price <= upper;
-  }
-  if (input.compare === "lte" || input.compare === "cross_lte") {
-    return price <= lower;
-  }
-  return price >= upper;
-}
-
 export function dcaFilterMet(input: {
   spec: DcaFilterSpec | null | undefined;
   side: FuturesSide;
@@ -543,6 +655,32 @@ export function dcaFilterMet(input: {
         period: spec.period ?? defaultDcaFilterPeriod("atr_band"),
         multiplier: spec.multiplier ?? DEFAULT_DCA_ATR_BAND_MULT,
         compare: spec.compare,
+      }) === true
+    );
+  }
+  if (
+    spec.kind === "macd" ||
+    spec.kind === "ema_cross" ||
+    spec.kind === "sma_cross"
+  ) {
+    const compare =
+      spec.compare === "gte" ||
+      spec.compare === "lte" ||
+      spec.compare === "cross_gte" ||
+      spec.compare === "cross_lte"
+        ? spec.compare
+        : "cross_gte";
+    return (
+      indicatorStartMet({
+        kind: spec.kind,
+        side: input.side,
+        closes,
+        bars,
+        compare,
+        level: spec.kind === "macd" ? spec.level : null,
+        period: spec.period,
+        slowPeriod: spec.slowPeriod,
+        splitBySide: false,
       }) === true
     );
   }
@@ -602,6 +740,7 @@ export function filterColumns(
     [`${prefix}_compare`]: spec?.compare ?? null,
     [`${prefix}_level`]: spec?.level ?? null,
     [`${prefix}_period`]: spec?.period ?? null,
+    [`${prefix}_slow_period`]: spec?.slowPeriod ?? null,
     [`${prefix}_multiplier`]:
       spec?.kind === "rsi" && spec.compare === "between"
         ? (spec.levelTo ?? null)
@@ -619,6 +758,7 @@ export function filterFromRow(
     compare: row[`${prefix}_compare`],
     level: row[`${prefix}_level`],
     period: row[`${prefix}_period`],
+    slowPeriod: row[`${prefix}_slow_period`],
     multiplier: row[`${prefix}_multiplier`],
   });
 }

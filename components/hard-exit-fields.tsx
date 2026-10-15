@@ -39,10 +39,18 @@ function hardExitParamGrid(spec: DcaFilterSpec): string {
   const base =
     "col-span-full grid min-w-0 grid-cols-2 gap-x-3 gap-y-2 [&>*]:min-w-0";
   const multiplier = spec.kind === "supertrend" || spec.kind === "atr_band";
+  const pair = spec.kind === "ema_cross" || spec.kind === "sma_cross";
+  const macd = spec.kind === "macd";
   const level = spec.kind === "rsi" && spec.compare !== "between";
   const range = spec.kind === "rsi" && spec.compare === "between";
   if (multiplier) {
     return `${base} lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_6.5rem_minmax(0,2.4fr)]`;
+  }
+  if (pair) {
+    return `${base} lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(0,2fr)_6.5rem]`;
+  }
+  if (macd) {
+    return `${base} lg:grid-cols-[minmax(0,1.1fr)_6.5rem_minmax(0,2fr)_6.5rem]`;
   }
   if (range) {
     return `${base} lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(0,2fr)_6.5rem_6.5rem]`;
@@ -284,6 +292,7 @@ export function HardExitFields({
                         level: seeded.level,
                         levelTo: seeded.levelTo,
                         period: seeded.period,
+                        slowPeriod: seeded.slowPeriod,
                         multiplier: seeded.multiplier,
                       }),
                       option.value === value.spec.kind,

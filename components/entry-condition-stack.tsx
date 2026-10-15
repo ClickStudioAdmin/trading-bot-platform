@@ -712,6 +712,7 @@ export function EntryConditionStack({
                     level={draft.level}
                     period={draft.period}
                     slowPeriod={draft.slowPeriod}
+                    multiplier={draft.multiplier}
                     seriesSlots={slots}
                     seriesIndex={slotIndex}
                     onKindChange={(indicatorKind) =>
@@ -727,6 +728,9 @@ export function EntryConditionStack({
                     onPeriodChange={(period) => patchDraft(row.key, { period })}
                     onSlowPeriodChange={(slowPeriod) =>
                       patchDraft(row.key, { slowPeriod })
+                    }
+                    onMultiplierChange={(multiplier) =>
+                      patchDraft(row.key, { multiplier })
                     }
                   />
                 ) : draft.kind === "trend" ? (

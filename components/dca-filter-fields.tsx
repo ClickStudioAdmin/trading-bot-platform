@@ -58,6 +58,7 @@ function filterSeriesClaim(
     level,
     levelTo,
     period: spec.period,
+    slowPeriod: spec.slowPeriod,
     multiplier: spec.multiplier,
   });
 }
@@ -198,28 +199,53 @@ export function DcaFilterParamFields({
   whenClass?: string;
 } & SeriesProps) {
   const column = useBotColumnLayout();
+  const pair = spec.kind === "ema_cross" || spec.kind === "sma_cross";
+  const macd = spec.kind === "macd";
   const whenOptions = dcaFilterWhenOptions(spec.kind, side);
   const whenValue = dcaFilterWhenValue(spec.compare);
-  const showLevel = spec.kind === "rsi" && spec.compare !== "between";
+  const showLevel = macd || (spec.kind === "rsi" && spec.compare !== "between");
   const showLevelRange = spec.kind === "rsi" && spec.compare === "between";
   const showMultiplier = spec.kind === "supertrend" || spec.kind === "atr_band";
+  const periodLabel = (
+    <label className={`${labelClass} min-w-0`}>
+      <HintLabel text={pair ? "Fast" : "Period"} required />
+      <GroupedNumberInput
+        name={named ? `${prefix}Period` : undefined}
+        value={spec.period == null ? "" : String(spec.period)}
+        onChange={(next) => {
+          const period = Number(next.replace(/,/g, "").trim());
+          onChange({
+            ...spec,
+            period: Number.isFinite(period) && period > 0 ? period : spec.period,
+          });
+        }}
+        className={fieldClass}
+      />
+    </label>
+  );
+  const slowLabel = pair ? (
+    <label className={`${labelClass} min-w-0`}>
+      <HintLabel text="Slow" required />
+      <GroupedNumberInput
+        name={named ? `${prefix}SlowPeriod` : undefined}
+        value={spec.slowPeriod == null ? "" : String(spec.slowPeriod)}
+        onChange={(next) => {
+          const slowPeriod = Number(next.replace(/,/g, "").trim());
+          onChange({
+            ...spec,
+            slowPeriod:
+              Number.isFinite(slowPeriod) && slowPeriod > 0
+                ? slowPeriod
+                : spec.slowPeriod,
+          });
+        }}
+        className={fieldClass}
+      />
+    </label>
+  ) : null;
   const fields = (
     <>
-      <label className={`${labelClass} min-w-0`}>
-        <HintLabel text="Period" required />
-        <GroupedNumberInput
-          name={named ? `${prefix}Period` : undefined}
-          value={spec.period == null ? "" : String(spec.period)}
-          onChange={(next) => {
-            const period = Number(next.replace(/,/g, "").trim());
-            onChange({
-              ...spec,
-              period: Number.isFinite(period) && period > 0 ? period : spec.period,
-            });
-          }}
-          className={fieldClass}
-        />
-      </label>
+      {macd || pair ? null : periodLabel}
       {showMultiplier ? (
         <label className={`${labelClass} min-w-0`}>
           <HintLabel text="Multiplier" required />
@@ -270,6 +296,7 @@ export function DcaFilterParamFields({
           ))}
         </AppSelect>
       </label>
+      {pair ? periodLabel : null}
       <label
         className={
           column
@@ -315,6 +342,7 @@ export function DcaFilterParamFields({
           ))}
         </AppSelect>
       </label>
+      {slowLabel}
       {showLevel ? (
         <label className={`${labelClass} min-w-0`}>
           <HintLabel text="Level" required />
@@ -329,6 +357,7 @@ export function DcaFilterParamFields({
               });
             }}
             allowDecimal
+            allowNegative={macd}
             className={fieldClass}
           />
         </label>

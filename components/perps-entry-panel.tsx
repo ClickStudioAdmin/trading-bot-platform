@@ -381,6 +381,7 @@ export function PerpsEntryPanel({
               level={draft.indicatorLevel}
               period={draft.indicatorPeriod}
               slowPeriod={draft.indicatorSlowPeriod}
+              multiplier={draft.indicatorMultiplier}
               onKindChange={(indicatorKind) => patch({ indicatorKind })}
               onTimeframeChange={(indicatorTimeframe) =>
                 patch({ indicatorTimeframe })
@@ -390,6 +391,9 @@ export function PerpsEntryPanel({
               onPeriodChange={(indicatorPeriod) => patch({ indicatorPeriod })}
               onSlowPeriodChange={(indicatorSlowPeriod) =>
                 patch({ indicatorSlowPeriod })
+              }
+              onMultiplierChange={(indicatorMultiplier) =>
+                patch({ indicatorMultiplier })
               }
               seriesSlots={entrySlots}
               seriesIndex={0}

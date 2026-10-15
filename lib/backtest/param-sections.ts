@@ -149,8 +149,15 @@ function filterRows(spec: DcaFilterSpec, side: "long" | "short"): ParamRow[] {
       label: "Kind",
       value: optionLabel(DCA_FILTER_KIND_OPTIONS, spec.kind),
     },
-    { label: "Period", value: num(spec.period) },
   ];
+  if (spec.kind === "ema_cross" || spec.kind === "sma_cross") {
+    rows.push(
+      { label: "Fast", value: num(spec.period) },
+      { label: "Slow", value: num(spec.slowPeriod) },
+    );
+  } else if (spec.kind !== "macd") {
+    rows.push({ label: "Period", value: num(spec.period) });
+  }
   if (spec.kind === "supertrend" || spec.kind === "atr_band") {
     rows.push({ label: "Multiplier", value: num(spec.multiplier) });
   }
@@ -166,7 +173,7 @@ function filterRows(spec: DcaFilterSpec, side: "long" | "short"): ParamRow[] {
       { label: "From", value: num(spec.level) },
       { label: "To", value: num(spec.levelTo) },
     );
-  } else if (spec.kind === "rsi") {
+  } else if (spec.kind === "rsi" || spec.kind === "macd") {
     rows.push({ label: "Level", value: num(spec.level) });
   }
   return rows;

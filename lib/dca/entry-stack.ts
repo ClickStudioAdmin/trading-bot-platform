@@ -83,7 +83,7 @@ export function dcaEntryStackNeedsWideBars(
       }
       if (
         (leaf.kind === "indicator" || leaf.kind === "trend") &&
-        leaf.start.kind === "supertrend"
+        (leaf.start.kind === "supertrend" || leaf.start.kind === "atr_band")
       ) {
         return true;
       }

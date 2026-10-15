@@ -36,7 +36,7 @@ In progress. First step is the entry stack on Perps bots.
 
 1. Take profit, trailing stop, and stop loss stay as they are, including limit orders. Move Breakeven stays inside Stop loss. There is no join between those exits and Hard Exit. The first one that is met closes. On one check, stop still wins, then this Hard Exit stack, then take profit.
 2. Hard Exit is condition 1 and has no joiner. **Add condition** appends Price cross, Indicator, Trend, or Signal webhook, with And or Or. The same conflict rules as entries apply. Hard Exit also disables RSI Between against a level outside that range, Bollinger outside against inside, and ATR above the upper band together with below the lower band. Cap is 12 conditions and 4 timeframes, including the first row.
-3. Indicator rows stay the Hard Exit list (Price vs EMA/SMA, RSI, Price vs BB, ATR band). Trend is Supertrend. MACD, SMA Cross, and EMA Cross stay on entries.
+3. Entry and Hard Exit share one Indicator list: RSI, MACD, Price vs SMA, Price vs EMA, SMA Cross, EMA Cross, Price vs BB, and ATR band. Trend is Supertrend. Confirm keeps that list, then Supertrend.
 4. When the stack is true, the app market-flattens that side. A webhook that is only an And peer does not flatten by itself.
 5. DCA Both has a Long section and a Short section. Short uses the long exit, including its stack, only when the short Hard Exit is off. Perps Both keeps one shared Hard Exit section.
 6. A single Hard Exit still writes `exit_if_*` or `exit_hard`. Extra rows write `exit_expr` on the playbook or rule, and `short_exit_expr` for the DCA short section. Empty extra rows store null.

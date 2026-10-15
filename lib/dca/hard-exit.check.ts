@@ -56,6 +56,37 @@ if (trendLegacyParsed.ok) {
   );
 }
 
+const macdExit = baseForm();
+macdExit.set("exitIfTrigger", "indicator");
+macdExit.set("exitIfKind", "macd");
+macdExit.set("exitIfTimeframe", "60");
+macdExit.set("exitIfCompare", "cross_gte");
+macdExit.set("exitIfLevel", "0");
+const macdExitParsed = parseDcaPlaybookForm(macdExit);
+assert.equal(macdExitParsed.ok, true);
+if (macdExitParsed.ok) {
+  assert.equal(macdExitParsed.config.exitIf?.kind, "macd");
+  assert.equal(macdExitParsed.config.exitIf?.compare, "cross_gte");
+  assert.equal(macdExitParsed.config.exitIf?.level, 0);
+  assert.equal(macdExitParsed.config.exitIf?.period, null);
+}
+
+const crossExit = baseForm();
+crossExit.set("exitIfTrigger", "indicator");
+crossExit.set("exitIfKind", "ema_cross");
+crossExit.set("exitIfTimeframe", "240");
+crossExit.set("exitIfCompare", "cross_lte");
+crossExit.set("exitIfPeriod", "9");
+crossExit.set("exitIfSlowPeriod", "21");
+const crossExitParsed = parseDcaPlaybookForm(crossExit);
+assert.equal(crossExitParsed.ok, true);
+if (crossExitParsed.ok) {
+  assert.equal(crossExitParsed.config.exitIf?.kind, "ema_cross");
+  assert.equal(crossExitParsed.config.exitIf?.compare, "cross_lte");
+  assert.equal(crossExitParsed.config.exitIf?.period, 9);
+  assert.equal(crossExitParsed.config.exitIf?.slowPeriod, 21);
+}
+
 const indicator = baseForm();
 indicator.set("exitIfTrigger", "indicator");
 indicator.set("exitIfKind", "ema");

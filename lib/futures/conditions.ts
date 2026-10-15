@@ -681,6 +681,9 @@ function stackNeedsWideBars(stack: EntryStack): boolean {
     if (leaf.kind === "trend") {
       return true;
     }
+    if (leaf.kind === "indicator" && leaf.start.kind === "atr_band") {
+      return true;
+    }
     if (leaf.kind === "filter") {
       return dcaFilterNeedsBars(leaf.spec);
     }
@@ -707,7 +710,9 @@ export function futuresAutomationNeedsWideBars(rule: {
     : emptyEntryStack();
   return (
     rule.indicator?.kind === "supertrend" ||
+    rule.indicator?.kind === "atr_band" ||
     short?.indicator?.kind === "supertrend" ||
+    short?.indicator?.kind === "atr_band" ||
     stackNeedsWideBars(stack) ||
     stackNeedsWideBars(shortStack) ||
     dcaFilterNeedsBars(rule.exitIf)

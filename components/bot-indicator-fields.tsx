@@ -11,6 +11,7 @@ import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   DCA_INDICATOR_KIND_OPTIONS,
   DCA_TREND_KIND_OPTIONS,
+  DEFAULT_DCA_ATR_BAND_MULT,
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
@@ -54,6 +55,7 @@ function seededEntryClaim(
     level: kind === "rsi" ? "30" : kind === "macd" ? "0" : "",
     period: defaultDcaIndicatorPeriod(kind),
     slowPeriod: defaultDcaIndicatorSlowPeriod(kind),
+    multiplier: kind === "atr_band" ? DEFAULT_DCA_ATR_BAND_MULT : "",
   });
 }
 
@@ -92,12 +94,14 @@ export function IndicatorStartFields({
   level,
   period,
   slowPeriod,
+  multiplier,
   onKindChange,
   onTimeframeChange,
   onCompareChange,
   onLevelChange,
   onPeriodChange,
   onSlowPeriodChange,
+  onMultiplierChange,
   seriesSlots,
   seriesIndex,
 }: {
@@ -109,12 +113,14 @@ export function IndicatorStartFields({
   level: string;
   period: string;
   slowPeriod: string;
+  multiplier: string;
   onKindChange: (next: DcaIndicatorKind) => void;
   onTimeframeChange: (next: DcaIndicatorTimeframe) => void;
   onCompareChange: (next: string) => void;
   onLevelChange: (next: string) => void;
   onPeriodChange: (next: string) => void;
   onSlowPeriodChange: (next: string) => void;
+  onMultiplierChange: (next: string) => void;
 } & SeriesProps) {
   const includeLegacyEmaPrice = dcaIndicatorIsLegacyEmaPrice(
     kind,
@@ -162,6 +168,7 @@ export function IndicatorStartFields({
                 level,
                 period,
                 slowPeriod,
+                multiplier,
               }),
               option.value === currentWhen,
             )}
@@ -193,7 +200,11 @@ export function IndicatorStartFields({
           ) {
             onLevelChange("");
           }
-          if (dcaIndicatorUsesPairPeriods(next)) {
+          if (next === "atr_band") {
+            onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
+            onMultiplierChange(String(DEFAULT_DCA_ATR_BAND_MULT));
+            onSlowPeriodChange("");
+          } else if (dcaIndicatorUsesPairPeriods(next)) {
             onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
             onSlowPeriodChange(String(defaultDcaIndicatorSlowPeriod(next)));
           } else {
@@ -243,6 +254,7 @@ export function IndicatorStartFields({
                 level,
                 period,
                 slowPeriod,
+                multiplier,
               }),
               interval === timeframe,
             )}
@@ -305,6 +317,18 @@ export function IndicatorStartFields({
       />
     </label>
   ) : null;
+  const multiplierField = kind === "atr_band" ? (
+    <label className={labelClass}>
+      <HintLabel text="Multiplier" required />
+      <GroupedNumberInput
+        name={`${prefix}Multiplier`}
+        value={multiplier}
+        onChange={onMultiplierChange}
+        allowDecimal
+        className={fieldClass}
+      />
+    </label>
+  ) : null;
   return (
     <>
       {showPairPeriods ? (
@@ -318,6 +342,20 @@ export function IndicatorStartFields({
           {indicatorField}
           {timeframeField}
           {pairFields}
+        </div>
+      ) : kind === "atr_band" ? (
+        <div
+          className={
+            column
+              ? compactGrid
+              : "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_6.5rem_minmax(0,2.4fr)]"
+          }
+        >
+          {indicatorField}
+          {periodField}
+          {multiplierField}
+          {timeframeField}
+          {whenField}
         </div>
       ) : kind === "rsi" ? (
         <div

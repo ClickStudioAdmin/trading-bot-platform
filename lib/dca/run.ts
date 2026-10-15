@@ -388,7 +388,9 @@ async function loadPlaybookStartBars(
   const desk = await loadDeskVenueContext(playbook.accountId);
   const supertrend =
     playbook.indicatorKind === "supertrend" ||
-    playbook.shortIndicatorKind === "supertrend";
+    playbook.shortIndicatorKind === "supertrend" ||
+    playbook.indicatorKind === "atr_band" ||
+    playbook.shortIndicatorKind === "atr_band";
   const wide =
     supertrend ||
     dcaPlaybookFilterNeedsWideBars(playbook) ||

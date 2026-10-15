@@ -1870,6 +1870,9 @@ export function DcaPlaybookForm({
                 slowPeriod={
                   shortLeg ? shortIndicatorSlowPeriod : indicatorSlowPeriod
                 }
+                multiplier={
+                  shortLeg ? shortIndicatorMultiplier : indicatorMultiplier
+                }
                 onKindChange={shortLeg ? setShortIndicatorKind : setIndicatorKind}
                 onTimeframeChange={
                   shortLeg ? setShortIndicatorTimeframe : setIndicatorTimeframe
@@ -1885,6 +1888,11 @@ export function DcaPlaybookForm({
                   shortLeg
                     ? setShortIndicatorSlowPeriod
                     : setIndicatorSlowPeriod
+                }
+                onMultiplierChange={
+                  shortLeg
+                    ? setShortIndicatorMultiplier
+                    : setIndicatorMultiplier
                 }
                 seriesSlots={entryConflictSlots(dcaStackAnchor(side), rows)}
                 seriesIndex={0}

@@ -42,6 +42,7 @@ import {
   type DcaTakeProfitKind,
 } from "./grid";
 import {
+  DEFAULT_DCA_ATR_BAND_MULT,
   DEFAULT_DCA_BB_PERIOD,
   DEFAULT_DCA_RSI_PERIOD,
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
@@ -813,6 +814,7 @@ export function parseDcaIndicatorKind(
     raw === "sma" ||
     raw === "sma_cross" ||
     raw === "bb" ||
+    raw === "atr_band" ||
     raw === "supertrend"
     ? raw
     : null;
@@ -2170,7 +2172,7 @@ export function parseDcaIndicatorStartFields(
       error:
         family === "trend"
           ? `Choose a ${prefix}trend.`
-          : `Choose ${prefix}RSI, MACD, EMA, SMA, or BB.`,
+          : `Choose ${prefix}RSI, MACD, EMA, SMA, BB, or ATR band.`,
     };
   }
   if (family === "trend" && kind !== "supertrend") {
@@ -2178,6 +2180,9 @@ export function parseDcaIndicatorStartFields(
   }
   if (family === "indicator" && kind === "supertrend") {
     return { ok: false, error: `Supertrend is a Trend start, not an Indicator.` };
+  }
+  if (family === "trend" && kind === "atr_band") {
+    return { ok: false, error: `ATR band is an Indicator, not a Trend.` };
   }
   const timeframe = parseDcaIndicatorTimeframe(
     form.get(names.timeframe) ?? "15",
@@ -2227,6 +2232,28 @@ export function parseDcaIndicatorStartFields(
         level: level.value ?? 0,
         period: null,
         slowPeriod: null,
+      },
+    };
+  }
+  if (kind === "atr_band") {
+    const cmp = parseDcaIndicatorCompare(compareRaw || "gte");
+    if (cmp !== "gte" && cmp !== "lte" && cmp !== "inside") {
+      return { ok: false, error: `Choose when ${prefix}ATR band should fire.` };
+    }
+    return {
+      ok: true,
+      start: {
+        kind,
+        timeframe,
+        compare: cmp,
+        level: null,
+        period:
+          parseDcaIndicatorPeriod(form.get(names.period)) ??
+          DEFAULT_DCA_SUPERTREND_PERIOD,
+        slowPeriod: null,
+        multiplier:
+          parseDcaIndicatorMultiplier(form.get(names.multiplier)) ??
+          DEFAULT_DCA_ATR_BAND_MULT,
       },
     };
   }
@@ -2382,7 +2409,7 @@ export function parseDcaIndicatorStartFields(
       },
     };
   }
-  return { ok: false, error: `Choose ${prefix}RSI, MACD, EMA, SMA, or BB.` };
+  return { ok: false, error: `Choose ${prefix}RSI, MACD, EMA, SMA, BB, or ATR band.` };
 }
 
 function parseLeg(

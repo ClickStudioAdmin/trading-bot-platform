@@ -2706,6 +2706,26 @@ if (macdLevelParsed.ok) {
   assert.equal(macdLevelParsed.config.indicatorLevel, -0.2);
 }
 
+const atrBandForm = new FormData();
+atrBandForm.set("symbol", "BTCUSDT");
+atrBandForm.set("side", "long");
+atrBandForm.set("clipSize", "0.01");
+atrBandForm.set("sizeUnit", "qty");
+atrBandForm.set("startKind", "indicator");
+atrBandForm.set("indicatorKind", "atr_band");
+atrBandForm.set("indicatorTimeframe", "60");
+atrBandForm.set("indicatorCompare", "inside");
+atrBandForm.set("indicatorPeriod", "10");
+atrBandForm.set("indicatorMultiplier", "2");
+const atrBandParsed = parseDcaPlaybookForm(atrBandForm);
+assert.equal(atrBandParsed.ok, true);
+if (atrBandParsed.ok) {
+  assert.equal(atrBandParsed.config.indicatorKind, "atr_band");
+  assert.equal(atrBandParsed.config.indicatorCompare, "inside");
+  assert.equal(atrBandParsed.config.indicatorPeriod, 10);
+  assert.equal(atrBandParsed.config.indicatorMultiplier, 2);
+}
+
 const emaLevelForm = new FormData();
 emaLevelForm.set("symbol", "BTCUSDT");
 emaLevelForm.set("side", "long");

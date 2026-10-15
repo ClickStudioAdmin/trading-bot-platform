@@ -508,6 +508,7 @@ const LEAF_INDICATOR_KINDS = [
   "sma",
   "sma_cross",
   "bb",
+  "atr_band",
   "supertrend",
 ] as const;
 
@@ -638,6 +639,7 @@ export function entryStackFromJson(raw: unknown): EntryStack | null {
         level: specRow.level,
         levelTo: specRow.levelTo,
         period: specRow.period,
+        slowPeriod: specRow.slowPeriod,
         multiplier: specRow.multiplier,
       });
       parsed = spec ? { kind: "filter", spec } : null;
