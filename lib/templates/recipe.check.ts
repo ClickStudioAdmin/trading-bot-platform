@@ -47,6 +47,13 @@ assert.equal(
   dcaFormMatchesPlaybook(parsed.config, { ...parsed.config, clipSize: 99 }),
   false,
 );
+assert.equal(
+  dcaFormMatchesPlaybook(parsed.config, {
+    ...parsed.config,
+    shortWebhookId: "22222222-2222-4222-8222-222222222222",
+  }),
+  false,
+);
 assert.equal(snapshot.kind, "dca");
 assert.equal(snapshot.symbol, "ETHUSDT");
 assert.equal(snapshot.startKind, "webhook");
@@ -63,6 +70,8 @@ if (oldRecipe.ok && oldRecipe.recipe.kind === "dca") {
   assert.equal(oldRecipe.recipe.maxValueKind, "usdt");
 }
 assert.equal("webhookId" in snapshot, false);
+assert.equal("shortWebhookId" in snapshot, false);
+assert.equal(snapshot.shortStartKind, "webhook");
 assert.equal(recipeHasRuntimeKeys(snapshot), false);
 
 const roundTrip = parseTemplateRecipe(snapshot, "dca", 1);
@@ -75,10 +84,57 @@ const applied = dcaRecipeToConfig(snapshot, {});
 assert.equal(applied.ok, true);
 if (applied.ok) {
   assert.equal(applied.config.startKind, "indicator");
+  assert.equal(applied.config.shortStartKind, "indicator");
   assert.equal(applied.config.indicatorKind, "rsi");
+  assert.equal(applied.config.shortIndicatorKind, "rsi");
   assert.equal(applied.config.webhookId, null);
+  assert.equal(applied.config.shortWebhookId, null);
   assert.equal(applied.config.symbol, "ETHUSDT");
   assert.ok(applied.notes[0]?.includes("Signal"));
+  assert.ok(applied.notes.some((note) => note.includes("Short signal")));
+}
+
+const appliedHook = dcaRecipeToConfig(snapshot, {
+  webhookId: "22222222-2222-4222-8222-222222222222",
+});
+assert.equal(appliedHook.ok, true);
+if (appliedHook.ok) {
+  assert.equal(appliedHook.config.startKind, "webhook");
+  assert.equal(appliedHook.config.shortStartKind, "webhook");
+  assert.equal(
+    appliedHook.config.webhookId,
+    "22222222-2222-4222-8222-222222222222",
+  );
+  assert.equal(
+    appliedHook.config.shortWebhookId,
+    "22222222-2222-4222-8222-222222222222",
+  );
+}
+
+const splitSnap = snapshotDcaRecipe({
+  ...parsed.config,
+  startKind: "price",
+  shortStartKind: "indicator",
+  webhookId: null,
+  shortWebhookId: null,
+  armTrigger: { triggerBy: "last", compare: "lte", price: 100 },
+  indicatorKind: null,
+  shortIndicatorKind: "rsi",
+  shortIndicatorTimeframe: "15",
+  shortIndicatorCompare: "gte",
+  shortIndicatorLevel: 70,
+  shortIndicatorPeriod: 14,
+});
+assert.equal(splitSnap.startKind, "price");
+assert.equal(splitSnap.shortStartKind, "indicator");
+assert.equal("shortWebhookId" in splitSnap, false);
+const splitApplied = dcaRecipeToConfig(splitSnap, {});
+assert.equal(splitApplied.ok, true);
+if (splitApplied.ok) {
+  assert.equal(splitApplied.config.startKind, "price");
+  assert.equal(splitApplied.config.shortStartKind, "indicator");
+  assert.equal(splitApplied.config.shortIndicatorKind, "rsi");
+  assert.equal(splitApplied.config.armTrigger?.price, 100);
 }
 
 const appliedManual = dcaRecipeToConfig({ ...snapshot, startKind: "immediate" }, {});

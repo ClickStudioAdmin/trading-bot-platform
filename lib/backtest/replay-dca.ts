@@ -1,6 +1,7 @@
 import {
   decideDcaTick,
   dcaArmTriggerForSide,
+  dcaStartKindForSide,
   dcaAtrTimeframe,
   dcaCycleClipSize,
   dcaEnabledSides,
@@ -10,13 +11,27 @@ import {
   type DcaLegState,
 } from "@/lib/dca/playbook";
 import {
+  dcaEntryStackForSide,
+  dcaEntryTickExtras,
+} from "@/lib/dca/entry-stack";
+import {
+  exitExpressionMet,
+  exitLeafResults,
+  exitStackForSide,
+  exitStackTimeframes,
+  formatExitExpressionText,
+} from "@/lib/dca/exit-stack";
+import {
   dcaFilterForSide,
   seriesForFilter,
 } from "@/lib/dca/filters";
+import { hardExitForSide, hardExitMet } from "@/lib/dca/hard-exit";
+import { entryStackIsLegacy, entryStackTimeframes } from "@/lib/strategy/expr";
 import {
   atrAtEachTapeBar,
   resampleBarsForTimeframe,
   resampleClosesForTimeframe,
+  type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import {
   DEFAULT_DCA_ATR_PERIOD,
@@ -25,6 +40,7 @@ import {
   dcaResolvedSafetyPrices,
   dcaTrailingDistance,
 } from "@/lib/dca/grid";
+import { formatDcaStartReasons } from "@/lib/bots/condition-copy";
 import { canBacktestDcaRecipe } from "./eligibility";
 import { dcaRecipeToConfig, type DcaTemplateRecipe } from "@/lib/templates/recipe";
 import type { FuturesSide } from "@/lib/futures/model";
@@ -113,6 +129,10 @@ export async function replayDcaPlaybook(input: {
   const config = {
     ...built.config,
     startKind: input.recipe.startKind,
+    shortStartKind:
+      input.recipe.direction === "both"
+        ? (input.recipe.shortStartKind ?? input.recipe.startKind)
+        : null,
   };
   const sides = dcaEnabledSides(config.direction);
   const splitSides = config.direction === "both";
@@ -414,13 +434,13 @@ export async function replayDcaPlaybook(input: {
     }
   }
 
-  function fillLimitTakeProfit(side: FuturesSide, bar: CandleBar): boolean {
+  function limitTakeProfitPrice(side: FuturesSide, bar: CandleBar): number | null {
     if (config.takeProfitOrderType !== "limit") {
-      return false;
+      return null;
     }
     const live = legs[side];
     if (!(live.qty > 0)) {
-      return false;
+      return null;
     }
     const planned = dcaPlannedExits({
       side,
@@ -437,18 +457,14 @@ export async function replayDcaPlaybook(input: {
       takeProfitAtrMult: config.takeProfitAtrMult,
     });
     if (planned.takeProfit == null) {
-      return false;
+      return null;
     }
     const favorable = side === "long" ? bar.high : bar.low;
     const hit =
       side === "long"
         ? favorable >= planned.takeProfit
         : favorable <= planned.takeProfit;
-    if (!hit) {
-      return false;
-    }
-    flatten(side, bar.timeMs, planned.takeProfit, true, "take_profit");
-    return true;
+    return hit ? planned.takeProfit : null;
   }
 
   let barIndex = 0;
@@ -539,7 +555,77 @@ export async function replayDcaPlaybook(input: {
             continue;
           }
         }
-        if (fillLimitTakeProfit(side, bar)) {
+        const limitTp = limitTakeProfitPrice(side, bar);
+        if (limitTp != null) {
+          const exitNow = hardExitForSide(config, side);
+          const exitStackNow = exitStackForSide(config, side);
+          const tapeIntervalNow = backtestTapeInterval(input.recipe, 1, 2);
+          const exitBarsNow = new Map<DcaIndicatorTimeframe, CandleBar[]>();
+          const exitFrames = new Set<DcaIndicatorTimeframe>(
+            exitStackTimeframes(exitStackNow),
+          );
+          if (exitNow.filter) {
+            exitFrames.add(exitNow.filter.timeframe);
+          }
+          for (const timeframe of exitFrames) {
+            const sampled = resampleBarsForTimeframe(
+              barWindow,
+              tapeIntervalNow,
+              timeframe,
+            );
+            exitBarsNow.set(
+              timeframe,
+              sampled.map((row) => ({
+                timeMs: 0,
+                open: row.close,
+                high: row.high,
+                low: row.low,
+                close: row.close,
+              })),
+            );
+          }
+          const exitSeries = seriesForFilter(
+            exitNow.filter,
+            exitNow.filter
+              ? resampleBarsForTimeframe(
+                  barWindow,
+                  tapeIntervalNow,
+                  exitNow.filter.timeframe,
+                )
+              : null,
+          );
+          const stackMet = exitExpressionMet({
+            first: hardExitMet({
+              filter: exitNow.filter,
+              signal: exitNow.signal,
+              side,
+              closes: exitSeries.closes,
+              bars: exitSeries.bars,
+              prices: triggerPrices,
+            }),
+            stack: exitStackNow,
+            side,
+            price,
+            prices: triggerPrices,
+            barsByTimeframe: exitBarsNow,
+          });
+          if (stackMet) {
+            flatten(
+              side,
+              bar.timeMs,
+              price,
+              true,
+              "exit_if",
+              formatExitExpressionText({
+                filter: exitNow.filter,
+                signal: exitNow.signal,
+                stack: exitStackNow,
+                side,
+              }),
+            );
+          } else {
+            flatten(side, bar.timeMs, limitTp, true, "take_profit");
+          }
           closedThisBar = true;
           continue;
         }
@@ -547,7 +633,9 @@ export async function replayDcaPlaybook(input: {
       const live = legs[side];
       const indicatorStart = dcaIndicatorStartForSide(config, side);
       const confirm = dcaFilterForSide(config, side, "confirm");
-      const exitIf = dcaFilterForSide(config, side, "exitIf");
+      const exit = hardExitForSide(config, side);
+      const exitStack = exitStackForSide(config, side);
+      const exitIf = exit.filter;
       const tapeInterval = backtestTapeInterval(input.recipe, 1, 2);
       const confirmSeries = seriesForFilter(
         confirm,
@@ -561,6 +649,27 @@ export async function replayDcaPlaybook(input: {
           ? resampleBarsForTimeframe(barWindow, tapeInterval, exitIf.timeframe)
           : null,
       );
+      const entryStack = dcaEntryStackForSide(config, side);
+      const entryBars = new Map<DcaIndicatorTimeframe, CandleBar[]>();
+      if (!entryStackIsLegacy(entryStack)) {
+        for (const timeframe of entryStackTimeframes(entryStack)) {
+          const sampled = resampleBarsForTimeframe(
+            barWindow,
+            tapeInterval,
+            timeframe,
+          );
+          entryBars.set(
+            timeframe,
+            sampled.map((row) => ({
+              timeMs: 0,
+              open: row.close,
+              high: row.high,
+              low: row.low,
+              close: row.close,
+            })),
+          );
+        }
+      }
       const decision = decideDcaTick({
         status: live.status,
         side,
@@ -571,7 +680,7 @@ export async function replayDcaPlaybook(input: {
         lastClipAtMs: live.lastClipAtMs,
         firstFillPrice: live.firstFillPrice,
         nowMs: bar.timeMs,
-        startKind: config.startKind,
+        startKind: dcaStartKindForSide(config, side),
         dcaMode: config.dcaMode,
         dipPct: config.dipPct,
         intervalMinutes: config.intervalMinutes,
@@ -630,9 +739,47 @@ export async function replayDcaPlaybook(input: {
         confirm,
         confirmCloses: confirmSeries.closes,
         confirmBars: confirmSeries.bars,
+        ...dcaEntryTickExtras({
+          playbook: config,
+          side,
+          price,
+          prices: triggerPrices,
+          barsByTimeframe: entryBars,
+        }),
         exitIf,
+        exitHard: exit.signal,
         exitIfCloses: exitIfSeries.closes,
         exitIfBars: exitIfSeries.bars,
+        ...(exitStack.leaves.length > 0
+          ? {
+              exitJoins: exitStack.joins,
+              exitLeaves: exitLeafResults({
+                stack: exitStack,
+                side,
+                price,
+                prices: triggerPrices,
+                barsByTimeframe: new Map(
+                  exitStackTimeframes(exitStack).map((timeframe) => {
+                    const sampled = resampleBarsForTimeframe(
+                      barWindow,
+                      tapeInterval,
+                      timeframe,
+                    );
+                    return [
+                      timeframe,
+                      sampled.map((row) => ({
+                        timeMs: 0,
+                        open: row.close,
+                        high: row.high,
+                        low: row.low,
+                        close: row.close,
+                      })),
+                    ] as const;
+                  }),
+                ),
+              }),
+            }
+          : {}),
         takeProfitOrderType: config.takeProfitOrderType,
         tpLimitResting:
           config.takeProfitOrderType === "limit" && live.qty > 0,
@@ -671,7 +818,12 @@ export async function replayDcaPlaybook(input: {
           true,
           closeReason,
           closeReason === "exit_if"
-            ? filterBecause(exitIf, side, "Exit if")
+            ? formatExitExpressionText({
+                filter: exit.filter,
+                signal: exit.signal,
+                stack: exitStack,
+                side,
+              })
             : undefined,
         );
         closedThisBar = true;
@@ -730,10 +882,22 @@ export async function replayDcaPlaybook(input: {
   }
 
   function dcaEntryBecause(side: FuturesSide): string {
-    if (config.startKind === "immediate") {
+    const entryStack = dcaEntryStackForSide(config, side);
+    if (!entryStackIsLegacy(entryStack)) {
+      return formatDcaStartReasons({
+        startKind: dcaStartKindForSide(config, side),
+        side,
+        armTrigger: dcaArmTriggerForSide(config, side),
+        indicator: dcaIndicatorStartForSide(config, side),
+        entryStack,
+        price: closes[closes.length - 1] ?? null,
+      });
+    }
+    const sideKind = dcaStartKindForSide(config, side);
+    if (sideKind === "immediate") {
       return "Immediate start.";
     }
-    if (config.startKind === "price") {
+    if (sideKind === "price") {
       const last = closes[closes.length - 1] ?? 0;
       return priceStartBecause(dcaArmTriggerForSide(config, side), last);
     }

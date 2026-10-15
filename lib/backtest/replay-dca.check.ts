@@ -137,6 +137,28 @@ assert.ok(
   bothImmediate.orders.some((row) => row.side === "short" && row.qty > 0),
 );
 
+const splitStart = new FormData();
+splitStart.set("startKind", "price");
+splitStart.set("armTriggerBy", "last");
+splitStart.set("armCompare", "lte");
+splitStart.set("armPrice", "50");
+splitStart.set("shortStartKind", "immediate");
+const splitReplay = await replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 100, high: 100, low: 100, close: 100 },
+  ],
+  recipe: parseRecipe("both", splitStart),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+const splitEntries = splitReplay.orders.filter(
+  (row) => row.action === "buy" || row.action === "sell",
+);
+assert.equal(splitEntries.length, 1);
+assert.equal(splitEntries[0]?.side, "short");
+assert.ok(!splitReplay.orders.some((row) => row.side === "long" && row.qty > 0));
+
 const priceBoth = new FormData();
 priceBoth.set("startKind", "price");
 priceBoth.set("armTriggerBy", "last");
@@ -473,6 +495,36 @@ const limitTpHit = await replayDcaPlaybook({
 assert.equal(limitTpHit.orders[1]?.action, "flatten");
 assert.equal(limitTpHit.orders[1]?.reason, "take_profit");
 assert.ok(Math.abs((limitTpHit.orders[1]?.price ?? 0) - 110) < 1e-8);
+
+const limitTpExitForm = new FormData();
+limitTpExitForm.set("name", "Limit TP vs stack");
+limitTpExitForm.set("symbol", "BTCUSDT");
+limitTpExitForm.set("direction", "long");
+limitTpExitForm.set("startKind", "immediate");
+limitTpExitForm.set("clipSize", "1");
+limitTpExitForm.set("sizeUnit", "qty");
+limitTpExitForm.set("takeProfitPct", "10");
+limitTpExitForm.set("takeProfitOrderType", "limit");
+limitTpExitForm.set("exitIfTrigger", "price");
+limitTpExitForm.set("exitIfTriggerBy", "last");
+limitTpExitForm.set("exitIfTriggerCompare", "gte");
+limitTpExitForm.set("exitIfTriggerPrice", "101");
+const limitTpExitParsed = parseDcaPlaybookForm(limitTpExitForm);
+assert.equal(limitTpExitParsed.ok, true);
+if (!limitTpExitParsed.ok) {
+  throw new Error("expected limit TP and hard exit parse");
+}
+const limitTpVsStack = await replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 100, high: 111, low: 100, close: 105 },
+  ],
+  recipe: snapshotDcaRecipe(limitTpExitParsed.config),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(limitTpVsStack.orders[1]?.reason, "exit_if");
+assert.equal(limitTpVsStack.orders[1]?.price, 105);
 
 const gridTpForm = new FormData();
 gridTpForm.set("name", "Grid limit TP");

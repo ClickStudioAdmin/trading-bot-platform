@@ -29,7 +29,10 @@ export function canBacktestDcaRecipe(
 export function canBacktestPerpsRecipe(
   recipe: PerpsTemplateRecipe,
 ): { ok: true } | { ok: false; error: string } {
-  if (recipe.entrySource === "webhook") {
+  if (
+    recipe.entrySource === "webhook" ||
+    (recipe.direction === "both" && recipe.shortEntry?.entrySource === "webhook")
+  ) {
     return {
       ok: false,
       error: "Webhook-entry bots cannot be backtested. Use a price When.",
@@ -43,11 +46,21 @@ export function canBacktestPerpsRecipe(
     if (!recipe.indicator?.kind || !recipe.indicator.timeframe) {
       return { ok: false, error: "This bot needs Indicator or Trend settings." };
     }
-    return { ok: true };
+  } else {
+    const trigger = Number(String(recipe.triggerPrice).replace(/,/g, "").trim());
+    if (!(trigger > 0)) {
+      return { ok: false, error: "This bot needs a When price." };
+    }
   }
-  const trigger = Number(String(recipe.triggerPrice).replace(/,/g, "").trim());
-  if (!(trigger > 0)) {
-    return { ok: false, error: "This bot needs a When price." };
+  const short = recipe.direction === "both" ? recipe.shortEntry : null;
+  if (short?.entrySource === "indicator" || short?.entrySource === "trend") {
+    if (!short.indicator?.kind || !short.indicator.timeframe) {
+      return { ok: false, error: "The short entry needs Indicator or Trend settings." };
+    }
+  } else if (short && short.entrySource === "price") {
+    if (!(short.triggerPrice > 0)) {
+      return { ok: false, error: "The short entry needs a When price." };
+    }
   }
   return { ok: true };
 }

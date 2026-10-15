@@ -1,7 +1,11 @@
 import { formatDcaFilterReason, type DcaFilterSpec } from "@/lib/dca/filters";
+import { formatExitExpressionText } from "@/lib/dca/exit-stack";
+import { perpsLegHasOwnExit } from "@/lib/futures/conditions";
+import { dcaEntryStackForSide } from "@/lib/dca/entry-stack";
 import {
   dcaArmTriggerForSide,
   dcaIndicatorStartForSide,
+  dcaStartKindForSide,
   dcaIntervalParts,
   type DcaPlaybook,
 } from "@/lib/dca/playbook";
@@ -9,8 +13,14 @@ import type { PaperLayerFormValues } from "@/lib/engine/rules";
 import {
   formatIndicatorStartReason,
   formatPriceCrossReason,
+  formatStrategyLeafReason,
 } from "@/lib/bots/condition-copy";
 import type { FuturesAutomationFormValues } from "@/lib/futures/automation";
+import {
+  confirmFromEntryStack,
+  entryStackIsLegacy,
+  resolveEntryStack,
+} from "@/lib/strategy/expr";
 import type { FuturesSide } from "@/lib/futures/model";
 
 export type BotConfigLine = {
@@ -83,13 +93,6 @@ function dcaSides(playbook: DcaPlaybook): FuturesSide[] {
   return [playbook.direction === "short" ? "short" : "long"];
 }
 
-function sidePrefix(playbook: DcaPlaybook, side: FuturesSide): string {
-  if (playbook.direction !== "both") {
-    return "";
-  }
-  return side === "short" ? "Short " : "Long ";
-}
-
 function dcaStartLabel(kind: string): string {
   if (kind === "price") return "Price";
   if (kind === "webhook") return "Signal";
@@ -118,60 +121,86 @@ function dcaMaxValueLabel(playbook: DcaPlaybook): string {
   return `${value} USDT`;
 }
 
-function dcaEntryLines(playbook: DcaPlaybook): BotConfigLine[] {
+function dcaEntryLines(playbook: DcaPlaybook, side: FuturesSide): BotConfigLine[] {
+  const startKind = dcaStartKindForSide(playbook, side);
   const lines: BotConfigLine[] = [
-    setting("Start", dcaStartLabel(playbook.startKind)),
+    setting("Start", dcaStartLabel(startKind)),
   ];
-  for (const side of dcaSides(playbook)) {
-    const prefix = sidePrefix(playbook, side);
-    if (playbook.startKind === "price") {
-      const trigger = dcaArmTriggerForSide(playbook, side);
-      lines.push(
-        setting(
-          `${prefix}Price`,
-          trigger
-            ? formatPriceCrossReason({
-                source: trigger.triggerBy,
-                compare: trigger.compare,
-                level: trigger.price,
-              })
-            : null,
-        ),
-      );
-    }
-    if (playbook.startKind === "indicator" || playbook.startKind === "trend") {
-      const start = dcaIndicatorStartForSide(playbook, side);
-      lines.push(
-        setting(
-          `${prefix}${playbook.startKind === "trend" ? "Trend" : "Indicator"}`,
-          start ? formatIndicatorStartReason(start, side) : null,
-        ),
-      );
-    }
-    if (playbook.startKind === "webhook" && side === dcaSides(playbook)[0]) {
-      lines.push(setting("Webhook", "Signal webhook"));
-    }
-    const confirm =
-      playbook.direction === "both" && side === "short"
-        ? playbook.shortConfirm
-        : playbook.confirm;
-    lines.push(
-      setting(`${prefix}Secondary entry`, filterText(confirm, side)),
-    );
-  }
-  if (playbook.disarmTrigger) {
+  if (startKind === "price") {
+    const trigger = dcaArmTriggerForSide(playbook, side);
     lines.push(
       setting(
-        "Disarm",
-        formatPriceCrossReason({
-          source: playbook.disarmTrigger.triggerBy,
-          compare: playbook.disarmTrigger.compare,
-          level: playbook.disarmTrigger.price,
-        }),
+        "Price",
+        trigger
+          ? formatPriceCrossReason({
+              source: trigger.triggerBy,
+              compare: trigger.compare,
+              level: trigger.price,
+            })
+          : null,
+      ),
+    );
+  }
+  if (startKind === "indicator" || startKind === "trend") {
+    const start = dcaIndicatorStartForSide(playbook, side);
+    lines.push(
+      setting(
+        startKind === "trend" ? "Trend" : "Indicator",
+        start ? formatIndicatorStartReason(start, side) : null,
+      ),
+    );
+  }
+  if (startKind === "webhook") {
+    lines.push(setting("Webhook", "Signal webhook"));
+  }
+  const confirm =
+    playbook.direction === "both" && side === "short"
+      ? playbook.shortConfirm
+      : playbook.confirm;
+  const stack = dcaEntryStackForSide(playbook, side);
+  if (entryStackIsLegacy(stack)) {
+    lines.push(
+      setting(
+        "Secondary entry",
+        filterText(confirmFromEntryStack(stack) ?? confirm, side),
+      ),
+    );
+  } else {
+    lines.push(
+      setting(
+        "Entry conditions",
+        stack.leaves
+          .map((leaf, index) => {
+            const join = stack.joins[index] === "or" ? "or" : "and";
+            return `${join} ${formatStrategyLeafReason(leaf, side)}`;
+          })
+          .join(", "),
       ),
     );
   }
   return lines;
+}
+
+function dcaEntrySections(playbook: DcaPlaybook): Array<BotConfigSection | null> {
+  return dcaSides(playbook).map((side, index) => {
+    const lines = dcaEntryLines(playbook, side);
+    if (index === 0 && playbook.disarmTrigger) {
+      lines.push(
+        setting(
+          "Disarm",
+          formatPriceCrossReason({
+            source: playbook.disarmTrigger.triggerBy,
+            compare: playbook.disarmTrigger.compare,
+            level: playbook.disarmTrigger.price,
+          }),
+        ),
+      );
+    }
+    return section(
+      side === "short" ? "Short Entry Condition Builder" : "Long Entry Condition Builder",
+      lines,
+    );
+  });
 }
 
 function dcaSizingLines(playbook: DcaPlaybook): BotConfigLine[] {
@@ -264,32 +293,58 @@ function dcaExitLines(playbook: DcaPlaybook): BotConfigLine[] {
     ),
     setting(
       "Stop loss",
-      playbook.stopLossPct == null
+      playbook.stopLossPct == null && playbook.breakevenActivationPct == null
         ? null
         : joinParts([
-            pct(playbook.stopLossPct),
-            basisLabel(playbook.stopLossBasis),
-          ]),
-    ),
-    setting(
-      "Move breakeven",
-      playbook.breakevenActivationPct == null
-        ? null
-        : joinParts([
-            `At ${pct(playbook.breakevenActivationPct)}`,
-            `Offset ${pct(playbook.breakevenOffsetPct) ?? "0%"}`,
+            playbook.stopLossPct == null
+              ? null
+              : joinParts([
+                  pct(playbook.stopLossPct),
+                  basisLabel(playbook.stopLossBasis),
+                ]),
+            playbook.breakevenActivationPct == null
+              ? null
+              : `Move breakeven at ${pct(playbook.breakevenActivationPct)} · offset ${pct(playbook.breakevenOffsetPct) ?? "0%"}`,
           ]),
     ),
   ];
-  for (const side of dcaSides(playbook)) {
-    const prefix = sidePrefix(playbook, side);
-    const spec =
-      playbook.direction === "both" && side === "short"
-        ? playbook.shortExitIf
-        : playbook.exitIf;
-    lines.push(setting(`${prefix}Hard exit`, filterText(spec, side)));
-  }
   return lines;
+}
+
+function dcaCustomExitLine(
+  playbook: DcaPlaybook,
+  side: FuturesSide,
+): BotConfigLine {
+  const ownShort = side === "short" && playbook.direction === "both";
+  return setting(
+    "Custom conditions",
+    formatExitExpressionText({
+      filter: ownShort
+        ? playbook.shortExitHard
+          ? null
+          : playbook.shortExitIf
+        : playbook.exitHard
+          ? null
+          : playbook.exitIf,
+      signal: ownShort ? playbook.shortExitHard : playbook.exitHard,
+      stack: ownShort ? playbook.shortExitStack : playbook.exitStack,
+      side,
+    }) || null,
+  );
+}
+
+function dcaExitSections(
+  playbook: DcaPlaybook,
+): Array<BotConfigSection | null> {
+  const classic = dcaExitLines(playbook);
+  return dcaSides(playbook).map((side) =>
+    section(
+      side === "short"
+        ? "Short Exit Condition Builder"
+        : "Long Exit Condition Builder",
+      [...classic, dcaCustomExitLine(playbook, side)],
+    ),
+  );
 }
 
 export function dcaBotConfig(playbook: DcaPlaybook): BotConfigSection[] {
@@ -298,17 +353,18 @@ export function dcaBotConfig(playbook: DcaPlaybook): BotConfigSection[] {
       setting("Contract", playbook.symbol),
       setting("Direction", dcaDirectionLabel(playbook.direction)),
     ]),
-    section("Entry Conditions", dcaEntryLines(playbook)),
+    ...dcaEntrySections(playbook),
     section("Position Sizing", dcaSizingLines(playbook)),
-    section("Exit Conditions", dcaExitLines(playbook)),
+    ...dcaExitSections(playbook),
   ]);
 }
 
-function perpsActionLabel(action: FuturesAutomationFormValues["formAction"]): string {
-  if (action === "sell") return "Sell";
-  if (action === "close_long") return "Close long";
-  if (action === "close_short") return "Close short";
-  return "Buy";
+function perpsDirectionLabel(rule: FuturesAutomationFormValues): string {
+  if (rule.formAction === "close_long") return "Close long";
+  if (rule.formAction === "close_short") return "Close short";
+  if (rule.direction === "both") return "Both";
+  if (rule.direction === "short" || rule.formAction === "sell") return "Short";
+  return "Long";
 }
 
 function perpsEntryLabel(source: FuturesAutomationFormValues["entrySource"]): string {
@@ -323,9 +379,78 @@ function perpsClosing(rule: FuturesAutomationFormValues): boolean {
 }
 
 function perpsSide(rule: FuturesAutomationFormValues): FuturesSide {
-  return rule.formAction === "sell" || rule.formAction === "close_short"
+  if (rule.direction === "both") return "long";
+  return rule.formAction === "sell" ||
+    rule.formAction === "close_short" ||
+    rule.direction === "short"
     ? "short"
     : "long";
+}
+
+function perpsEntryLines(input: {
+  closing: boolean;
+  side: FuturesSide;
+  entrySource: FuturesAutomationFormValues["entrySource"];
+  triggerBy: FuturesAutomationFormValues["triggerBy"];
+  triggerCompare: FuturesAutomationFormValues["triggerCompare"];
+  triggerPrice: string;
+  indicator: FuturesAutomationFormValues["indicator"];
+  confirm: FuturesAutomationFormValues["confirm"];
+  entryStack: FuturesAutomationFormValues["entryStack"];
+}): BotConfigLine[] {
+  const entry: BotConfigLine[] = [
+    setting("Initial order trigger", perpsEntryLabel(input.entrySource)),
+  ];
+  if (input.entrySource === "price") {
+    const price = Number(input.triggerPrice);
+    entry.push(
+      setting(
+        "Price",
+        Number.isFinite(price) && input.triggerPrice.trim()
+          ? formatPriceCrossReason({
+              source: input.triggerBy,
+              compare: input.triggerCompare,
+              level: price,
+            })
+          : null,
+      ),
+    );
+  } else if (input.entrySource === "indicator" || input.entrySource === "trend") {
+    entry.push(
+      setting(
+        input.entrySource === "trend" ? "Trend" : "Indicator",
+        input.indicator
+          ? formatIndicatorStartReason(input.indicator, input.side)
+          : null,
+      ),
+    );
+  } else {
+    entry.push(setting("Webhook", "Signal webhook"));
+  }
+  if (!input.closing) {
+    const stack = resolveEntryStack(input.entryStack, input.confirm);
+    if (entryStackIsLegacy(stack)) {
+      entry.push(
+        setting(
+          "Secondary entry",
+          filterText(confirmFromEntryStack(stack) ?? input.confirm, input.side),
+        ),
+      );
+    } else {
+      entry.push(
+        setting(
+          "Entry conditions",
+          stack.leaves
+            .map((leaf, index) => {
+              const join = stack.joins[index] === "or" ? "or" : "and";
+              return `${join} ${formatStrategyLeafReason(leaf, input.side)}`;
+            })
+            .join(", "),
+        ),
+      );
+    }
+  }
+  return entry;
 }
 
 function perpsLevel(
@@ -346,43 +471,31 @@ export function perpsBotConfig(
   const side = perpsSide(rule);
   const size = rule.size.trim();
   const unit = rule.sizeUnit === "usdt" ? "USDT" : "Token qty";
-  const entry: BotConfigLine[] = [
-    setting("Initial order trigger", perpsEntryLabel(rule.entrySource)),
-  ];
-  if (!closing) {
-    entry.push(setting("Skip if open", rule.skipIfOpen ? "Yes" : "No"));
-  }
-  if (rule.entrySource === "price") {
-    const price = Number(rule.triggerPrice);
-    entry.push(
-      setting(
-        "Price",
-        Number.isFinite(price) && rule.triggerPrice.trim()
-          ? formatPriceCrossReason({
-              source: rule.triggerBy,
-              compare: rule.triggerCompare,
-              level: price,
-            })
-          : null,
-      ),
-    );
-  } else if (rule.entrySource === "indicator" || rule.entrySource === "trend") {
-    entry.push(
-      setting(
-        rule.entrySource === "trend" ? "Trend" : "Indicator",
-        rule.indicator
-          ? formatIndicatorStartReason(rule.indicator, side)
-          : null,
-      ),
-    );
-  } else {
-    entry.push(setting("Webhook", "Signal webhook"));
-  }
-  if (!closing) {
-    entry.push(
-      setting("Secondary entry", filterText(rule.confirm, side)),
-    );
-  }
+  const entry = perpsEntryLines({
+    closing,
+    side,
+    entrySource: rule.entrySource,
+    triggerBy: rule.triggerBy,
+    triggerCompare: rule.triggerCompare,
+    triggerPrice: rule.triggerPrice,
+    indicator: rule.indicator,
+    confirm: rule.confirm,
+    entryStack: rule.entryStack,
+  });
+  const shortEntry =
+    rule.direction === "both" && rule.shortEntry
+      ? perpsEntryLines({
+          closing: false,
+          side: "short",
+          entrySource: rule.shortEntry.entrySource,
+          triggerBy: rule.shortEntry.triggerBy,
+          triggerCompare: rule.shortEntry.triggerCompare,
+          triggerPrice: String(rule.shortEntry.triggerPrice),
+          indicator: rule.shortEntry.indicator,
+          confirm: rule.shortEntry.confirm,
+          entryStack: rule.shortEntry.entryStack,
+        })
+      : null;
 
   const sizing: Array<BotConfigLine | null> = [
     setting(
@@ -402,80 +515,115 @@ export function perpsBotConfig(
     sizing.push(setting("Limit price", rule.limitPrice.trim() || null));
   }
 
-  const exits: BotConfigLine[] = closing
+  const exitSides: FuturesSide[] = closing
     ? []
-    : [
-        setting(
-          "Take profit",
-          perpsLevel(rule.tpsl?.takeProfit, rule.tpsl?.tpKind)
-            ? joinParts([
-                perpsLevel(rule.tpsl?.takeProfit, rule.tpsl?.tpKind),
-                rule.tpsl?.tpTrigger === "mark"
-                  ? "Mark"
-                  : rule.tpsl?.tpTrigger === "index"
-                    ? "Index"
-                    : "Last",
-                orderLabel(rule.tpsl?.tpOrderType),
-                rule.tpsl?.tpOrderType === "limit"
-                  ? amount(rule.tpsl.tpLimitPrice)
-                  : null,
-                rule.tpsl?.mode === "partial" && rule.tpsl.tpQty
-                  ? `Partial ${amount(rule.tpsl.tpQty)}`
-                  : null,
-              ])
-            : null,
-        ),
-        setting(
-          "Stop loss",
-          perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind)
-            ? joinParts([
-                perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind),
-                rule.tpsl?.slTrigger === "mark"
-                  ? "Mark"
-                  : rule.tpsl?.slTrigger === "index"
-                    ? "Index"
-                    : "Last",
-                orderLabel(rule.tpsl?.slOrderType),
-                rule.tpsl?.slOrderType === "limit"
-                  ? amount(rule.tpsl.slLimitPrice)
-                  : null,
-                rule.tpsl?.mode === "partial" && rule.tpsl.slQty
-                  ? `Partial ${amount(rule.tpsl.slQty)}`
-                  : null,
-              ])
-            : null,
-        ),
-        setting(
-          "Trailing stop",
-          rule.trailing
-            ? joinParts([
-                `Retracement ${amount(rule.trailing.distance)}`,
-                rule.trailing.activePrice != null
-                  ? `Activation ${amount(rule.trailing.activePrice)}`
-                  : null,
-              ])
-            : null,
-        ),
-        setting(
-          "Move breakeven",
-          rule.breakevenActivationPct.trim()
-            ? joinParts([
-                `At ${rule.breakevenActivationPct.trim()}%`,
-                `Offset ${rule.breakevenOffsetPct.trim() || "0"}%`,
-              ])
-            : null,
-        ),
-        setting("Hard exit", filterText(rule.exitIf, side)),
-      ];
+    : rule.direction === "both"
+      ? ["long", "short"]
+      : [side];
+  const classicExits: BotConfigLine[] = [
+    setting(
+      "Take profit",
+      perpsLevel(rule.tpsl?.takeProfit, rule.tpsl?.tpKind)
+        ? joinParts([
+            perpsLevel(rule.tpsl?.takeProfit, rule.tpsl?.tpKind),
+            rule.tpsl?.tpTrigger === "mark"
+              ? "Mark"
+              : rule.tpsl?.tpTrigger === "index"
+                ? "Index"
+                : "Last",
+            orderLabel(rule.tpsl?.tpOrderType),
+            rule.tpsl?.tpOrderType === "limit"
+              ? amount(rule.tpsl.tpLimitPrice)
+              : null,
+            rule.tpsl?.mode === "partial" && rule.tpsl.tpQty
+              ? `Partial ${amount(rule.tpsl.tpQty)}`
+              : null,
+          ])
+        : null,
+    ),
+    setting(
+      "Trailing stop",
+      rule.trailing
+        ? joinParts([
+            `Retracement ${amount(rule.trailing.distance)}`,
+            rule.trailing.activePrice != null
+              ? `Activation ${amount(rule.trailing.activePrice)}`
+              : null,
+          ])
+        : null,
+    ),
+    setting(
+      "Stop loss",
+      perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind) ||
+      rule.breakevenActivationPct.trim()
+        ? joinParts([
+            perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind)
+              ? joinParts([
+                  perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind),
+                  rule.tpsl?.slTrigger === "mark"
+                    ? "Mark"
+                    : rule.tpsl?.slTrigger === "index"
+                      ? "Index"
+                      : "Last",
+                  orderLabel(rule.tpsl?.slOrderType),
+                  rule.tpsl?.slOrderType === "limit"
+                    ? amount(rule.tpsl.slLimitPrice)
+                    : null,
+                  rule.tpsl?.mode === "partial" && rule.tpsl.slQty
+                    ? `Partial ${amount(rule.tpsl.slQty)}`
+                    : null,
+                ])
+              : null,
+            rule.breakevenActivationPct.trim()
+              ? `Move breakeven at ${rule.breakevenActivationPct.trim()}% · offset ${rule.breakevenOffsetPct.trim() || "0"}%`
+              : null,
+          ])
+        : null,
+    ),
+  ];
 
   return sectionsOf([
     section("General", [
       setting("Contract", rule.symbol),
-      setting("Action", perpsActionLabel(rule.formAction)),
+      setting("Direction", perpsDirectionLabel(rule)),
     ]),
-    section("Entry Conditions", entry),
+    section(
+      rule.direction === "both"
+        ? "Long Entry Condition Builder"
+        : side === "short"
+          ? "Short Entry Condition Builder"
+          : "Long Entry Condition Builder",
+      entry,
+    ),
+    ...(shortEntry ? [section("Short Entry Condition Builder", shortEntry)] : []),
     section("Position Sizing", sizing),
-    section("Exit Conditions", exits),
+    ...exitSides.map((exitSide) => {
+      const ownShort = exitSide === "short" && rule.direction === "both";
+      const short = ownShort && perpsLegHasOwnExit(rule.shortEntry) ? rule.shortEntry : null;
+      return section(
+        exitSide === "short"
+          ? "Short Exit Condition Builder"
+          : "Long Exit Condition Builder",
+        [
+          ...classicExits,
+          setting(
+            "Custom conditions",
+            formatExitExpressionText({
+              filter: ownShort
+                ? short?.exitHard
+                  ? null
+                  : short?.exitIf
+                : rule.exitHard
+                  ? null
+                  : rule.exitIf,
+              signal: ownShort ? short?.exitHard : rule.exitHard,
+              stack: ownShort ? short?.exitStack : rule.exitStack,
+              side: exitSide,
+            }) || null,
+          ),
+        ],
+      );
+    }),
   ]);
 }
 

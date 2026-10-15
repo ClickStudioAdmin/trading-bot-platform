@@ -35,6 +35,7 @@ import {
   dcaNeedsAtrBars,
   dcaEnabledSides,
   dcaShouldFlattenIdleOpen,
+  dcaStartKindForSide,
   dcaStartListens,
   dcaNeedsIndicatorCloses,
   dcaLegIsRunning,
@@ -1306,6 +1307,112 @@ form.set("symbol", "BTCUSDT");
 form.set("side", "long");
 form.set("clipSize", "0.01");
 form.set("sizeUnit", "qty");
+const stackForm = new FormData();
+stackForm.set("symbol", "BTCUSDT");
+stackForm.set("direction", "long");
+stackForm.set("clipSize", "0.01");
+stackForm.set("sizeUnit", "qty");
+stackForm.set("startKind", "indicator");
+stackForm.set("indicatorKind", "rsi");
+stackForm.set("indicatorTimeframe", "15");
+stackForm.set("indicatorCompare", "cross_lte");
+stackForm.set("indicatorLevel", "30");
+stackForm.set("indicatorPeriod", "14");
+stackForm.set("entryCount", "1");
+stackForm.set("entry0Join", "or");
+stackForm.set("entry0Source", "price");
+stackForm.set("entry0TriggerBy", "last");
+stackForm.set("entry0TriggerCompare", "gte");
+stackForm.set("entry0TriggerPrice", "50");
+const stackParsed = parseDcaPlaybookForm(stackForm);
+assert.equal(stackParsed.ok, true);
+if (stackParsed.ok) {
+  assert.equal(stackParsed.config.confirm, null);
+  assert.equal(stackParsed.config.entryStack?.leaves.length, 1);
+  assert.equal(stackParsed.config.entryStack?.joins[0], "or");
+  assert.equal(stackParsed.config.entryStack?.leaves[0]?.kind, "price");
+}
+const conflictForm = new FormData();
+conflictForm.set("symbol", "BTCUSDT");
+conflictForm.set("direction", "long");
+conflictForm.set("clipSize", "0.01");
+conflictForm.set("sizeUnit", "qty");
+conflictForm.set("startKind", "price");
+conflictForm.set("armTriggerBy", "last");
+conflictForm.set("armCompare", "gte");
+conflictForm.set("armPrice", "100");
+conflictForm.set("entryCount", "1");
+conflictForm.set("entry0Join", "and");
+conflictForm.set("entry0Source", "price");
+conflictForm.set("entry0TriggerBy", "last");
+conflictForm.set("entry0TriggerCompare", "lte");
+conflictForm.set("entry0TriggerPrice", "90");
+const conflictParsed = parseDcaPlaybookForm(conflictForm);
+assert.equal(conflictParsed.ok, false);
+if (!conflictParsed.ok) {
+  assert.equal(
+    conflictParsed.error,
+    "These conditions cannot be true at the same time.",
+  );
+}
+const priceBandForm = new FormData();
+priceBandForm.set("symbol", "BTCUSDT");
+priceBandForm.set("direction", "long");
+priceBandForm.set("clipSize", "0.01");
+priceBandForm.set("sizeUnit", "qty");
+priceBandForm.set("startKind", "price");
+priceBandForm.set("armTriggerBy", "last");
+priceBandForm.set("armCompare", "gte");
+priceBandForm.set("armPrice", "90");
+priceBandForm.set("entryCount", "1");
+priceBandForm.set("entry0Join", "and");
+priceBandForm.set("entry0Source", "price");
+priceBandForm.set("entry0TriggerBy", "last");
+priceBandForm.set("entry0TriggerCompare", "lte");
+priceBandForm.set("entry0TriggerPrice", "100");
+assert.equal(parseDcaPlaybookForm(priceBandForm).ok, true);
+const otherSourceForm = new FormData();
+otherSourceForm.set("symbol", "BTCUSDT");
+otherSourceForm.set("direction", "long");
+otherSourceForm.set("clipSize", "0.01");
+otherSourceForm.set("sizeUnit", "qty");
+otherSourceForm.set("startKind", "price");
+otherSourceForm.set("armTriggerBy", "last");
+otherSourceForm.set("armCompare", "gte");
+otherSourceForm.set("armPrice", "100");
+otherSourceForm.set("entryCount", "1");
+otherSourceForm.set("entry0Join", "and");
+otherSourceForm.set("entry0Source", "price");
+otherSourceForm.set("entry0TriggerBy", "mark");
+otherSourceForm.set("entry0TriggerCompare", "lte");
+otherSourceForm.set("entry0TriggerPrice", "90");
+assert.equal(parseDcaPlaybookForm(otherSourceForm).ok, true);
+const macdForm = new FormData();
+macdForm.set("symbol", "BTCUSDT");
+macdForm.set("direction", "long");
+macdForm.set("clipSize", "0.01");
+macdForm.set("sizeUnit", "qty");
+macdForm.set("startKind", "indicator");
+macdForm.set("indicatorKind", "macd");
+macdForm.set("indicatorTimeframe", "15");
+macdForm.set("indicatorCompare", "cross_gte");
+macdForm.set("indicatorLevel", "0");
+macdForm.set("entryCount", "1");
+macdForm.set("entry0Join", "and");
+macdForm.set("entry0Source", "indicator");
+macdForm.set("entry0indicatorKind", "macd");
+macdForm.set("entry0indicatorTimeframe", "15");
+macdForm.set("entry0indicatorCompare", "cross_lte");
+macdForm.set("entry0indicatorLevel", "5");
+const macdParsed = parseDcaPlaybookForm(macdForm);
+assert.equal(macdParsed.ok, false);
+if (!macdParsed.ok) {
+  assert.equal(
+    macdParsed.error,
+    "These conditions cannot be true at the same time.",
+  );
+}
+
 const parsed = parseDcaPlaybookForm(form);
 assert.equal(parsed.ok, true);
 if (parsed.ok) {
@@ -1350,6 +1457,11 @@ assert.equal(bothParsed.ok, true);
 if (bothParsed.ok) {
   assert.equal(bothParsed.config.direction, "both");
   assert.equal(bothParsed.config.startKind, "webhook");
+  assert.equal(bothParsed.config.shortStartKind, "webhook");
+  assert.equal(
+    bothParsed.config.shortWebhookId,
+    "11111111-1111-1111-1111-111111111111",
+  );
   assert.equal(bothParsed.config.dcaMode, "order");
   assert.equal(bothParsed.config.sizeMultiplier, 2);
 }
@@ -1365,6 +1477,41 @@ assert.equal(bothManualParsed.ok, true);
 if (bothManualParsed.ok) {
   assert.equal(bothManualParsed.config.direction, "both");
   assert.equal(bothManualParsed.config.startKind, "immediate");
+  assert.equal(bothManualParsed.config.shortStartKind, "immediate");
+}
+
+const splitStart = new FormData();
+splitStart.set("symbol", "BTCUSDT");
+splitStart.set("direction", "both");
+splitStart.set("clipSize", "1");
+splitStart.set("sizeUnit", "qty");
+splitStart.set("startKind", "price");
+splitStart.set("armTriggerBy", "last");
+splitStart.set("armCompare", "lte");
+splitStart.set("armPrice", "100");
+splitStart.set("shortStartKind", "indicator");
+splitStart.set("shortIndicatorKind", "rsi");
+splitStart.set("shortIndicatorTimeframe", "15");
+splitStart.set("shortIndicatorCompare", "gte");
+splitStart.set("shortIndicatorLevel", "70");
+splitStart.set("shortIndicatorPeriod", "14");
+const splitParsed = parseDcaPlaybookForm(splitStart);
+assert.equal(splitParsed.ok, true);
+if (splitParsed.ok) {
+  assert.equal(splitParsed.config.startKind, "price");
+  assert.equal(splitParsed.config.shortStartKind, "indicator");
+  assert.equal(splitParsed.config.armTrigger?.price, 100);
+  assert.equal(splitParsed.config.shortArmTrigger ?? null, null);
+  assert.equal(splitParsed.config.indicatorKind, null);
+  assert.equal(splitParsed.config.shortIndicatorKind, "rsi");
+  assert.equal(
+    dcaStartKindForSide(splitParsed.config, "long"),
+    "price",
+  );
+  assert.equal(
+    dcaStartKindForSide(splitParsed.config, "short"),
+    "indicator",
+  );
 }
 
 assert.equal(
@@ -2559,6 +2706,26 @@ if (macdLevelParsed.ok) {
   assert.equal(macdLevelParsed.config.indicatorLevel, -0.2);
 }
 
+const atrBandForm = new FormData();
+atrBandForm.set("symbol", "BTCUSDT");
+atrBandForm.set("side", "long");
+atrBandForm.set("clipSize", "0.01");
+atrBandForm.set("sizeUnit", "qty");
+atrBandForm.set("startKind", "indicator");
+atrBandForm.set("indicatorKind", "atr_band");
+atrBandForm.set("indicatorTimeframe", "60");
+atrBandForm.set("indicatorCompare", "inside");
+atrBandForm.set("indicatorPeriod", "10");
+atrBandForm.set("indicatorMultiplier", "2");
+const atrBandParsed = parseDcaPlaybookForm(atrBandForm);
+assert.equal(atrBandParsed.ok, true);
+if (atrBandParsed.ok) {
+  assert.equal(atrBandParsed.config.indicatorKind, "atr_band");
+  assert.equal(atrBandParsed.config.indicatorCompare, "inside");
+  assert.equal(atrBandParsed.config.indicatorPeriod, 10);
+  assert.equal(atrBandParsed.config.indicatorMultiplier, 2);
+}
+
 const emaLevelForm = new FormData();
 emaLevelForm.set("symbol", "BTCUSDT");
 emaLevelForm.set("side", "long");
@@ -3173,6 +3340,30 @@ assert.equal(
     confirm: rsiConfirmLow,
     confirmCloses: [],
     confirmBars: [],
+  }).action.kind,
+  "none",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "price",
+    armTrigger: { triggerBy: "last", compare: "gte", price: 1000 },
+    entryJoins: ["or"],
+    entryLeaves: [true],
+  }).action.kind,
+  "arm",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "price",
+    armTrigger: { triggerBy: "last", compare: "gte", price: 100 },
+    entryJoins: ["and"],
+    entryLeaves: [false],
   }).action.kind,
   "none",
 );

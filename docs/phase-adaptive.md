@@ -56,7 +56,7 @@ Reuse Trend definitions already on the start door. Do not invent a second Supert
 
 | Tool | Role | Notes |
 | --- | --- | --- |
-| **Supertrend** | Filter and/or exit | Start already exists as Initial Order Trigger **Trend**. Same definition on Confirm / Exit-if. |
+| **Supertrend** | Filter and/or exit | Start already exists as Condition Type **Trend**. Same definition on Confirm / Exit-if. |
 | **ADX** | Filter only later | Strength, not direction. Not a start. Parked. |
 | **Market Structure** | Filter and later start | Not on the Trend start door until Click locks a swing rule. Parked. |
 

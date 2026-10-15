@@ -2,9 +2,17 @@ import {
   formatDcaFilterReason,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
+import type { HardExitSignal } from "@/lib/dca/hard-exit";
 import { formatDcaIndicatorStartLabel } from "@/lib/dca/indicators";
 import type { DcaIndicatorStart, DcaPriceTrigger, DcaStartKind } from "@/lib/dca/playbook";
 import type { FuturesAutomationEntry, FuturesTriggerCompare } from "@/lib/futures/automation";
+import type { EntryStack, StrategyLeaf } from "@/lib/strategy/expr";
+import {
+  confirmFromEntryStack,
+  entryStackIsLegacy,
+  formatEntryWithStack,
+  resolveEntryStack,
+} from "@/lib/strategy/expr";
 import type { FuturesAction, FuturesSide, FuturesTrigger } from "@/lib/futures/model";
 
 export function joinConditionReasons(
@@ -53,6 +61,26 @@ export function formatIndicatorStartReason(
   });
 }
 
+export function formatStrategyLeafReason(
+  leaf: StrategyLeaf,
+  side: FuturesSide,
+): string {
+  if (leaf.kind === "filter") {
+    return formatDcaFilterReason(leaf.spec, side);
+  }
+  if (leaf.kind === "price") {
+    return formatPriceCrossReason({
+      source: leaf.triggerBy,
+      compare: leaf.compare,
+      level: leaf.price,
+    });
+  }
+  if (leaf.kind === "webhook") {
+    return "Signal webhook";
+  }
+  return formatIndicatorStartReason(leaf.start, side);
+}
+
 export function formatSecondaryEntryReason(
   spec: DcaFilterSpec,
   side: FuturesSide,
@@ -65,6 +93,27 @@ export function formatHardExitReason(
   side: FuturesSide,
 ): string {
   return formatDcaFilterReason(spec, side);
+}
+
+export function formatHardExitText(input: {
+  filter?: DcaFilterSpec | null;
+  signal?: HardExitSignal | null;
+  side?: FuturesSide;
+}): string {
+  if (input.signal?.trigger === "price") {
+    return formatPriceCrossReason({
+      source: input.signal.triggerBy,
+      compare: input.signal.compare,
+      level: input.signal.price,
+    });
+  }
+  if (input.signal?.trigger === "webhook") {
+    return "Signal webhook";
+  }
+  if (input.filter) {
+    return formatHardExitReason(input.filter, input.side ?? "long");
+  }
+  return "";
 }
 
 export function formatBreakevenReason(input: {
@@ -101,6 +150,7 @@ export function formatFuturesEntryReasons(input: {
   price?: number | null;
   indicator?: DcaIndicatorStart | null;
   confirm?: DcaFilterSpec | null;
+  entryStack?: EntryStack | null;
 }): string {
   const start =
     input.entrySource === "webhook"
@@ -117,12 +167,17 @@ export function formatFuturesEntryReasons(input: {
           : input.entrySource === "trend"
             ? "Trend"
             : "Indicator";
-  return joinConditionReasons([
-    start,
-    input.confirm
-      ? formatSecondaryEntryReason(input.confirm, input.side)
-      : null,
-  ]);
+  const stack = resolveEntryStack(input.entryStack, input.confirm);
+  if (entryStackIsLegacy(stack)) {
+    const confirm = confirmFromEntryStack(stack) ?? input.confirm;
+    return joinConditionReasons([
+      start,
+      confirm ? formatSecondaryEntryReason(confirm, input.side) : null,
+    ]);
+  }
+  return formatEntryWithStack(start, stack, (leaf) =>
+    formatStrategyLeafReason(leaf, input.side),
+  );
 }
 
 export function formatDcaStartReasons(input: {
@@ -131,6 +186,7 @@ export function formatDcaStartReasons(input: {
   armTrigger?: DcaPriceTrigger | null;
   indicator?: DcaIndicatorStart | null;
   confirm?: DcaFilterSpec | null;
+  entryStack?: EntryStack | null;
   price?: number | null;
 }): string {
   const start =
@@ -150,12 +206,17 @@ export function formatDcaStartReasons(input: {
               ? "Trend"
               : "Indicator"
           : null;
-  return joinConditionReasons([
-    start,
-    input.confirm
-      ? formatSecondaryEntryReason(input.confirm, input.side)
-      : null,
-  ]);
+  const stack = resolveEntryStack(input.entryStack, input.confirm);
+  if (entryStackIsLegacy(stack)) {
+    const confirm = confirmFromEntryStack(stack) ?? input.confirm;
+    return joinConditionReasons([
+      start,
+      confirm ? formatSecondaryEntryReason(confirm, input.side) : null,
+    ]);
+  }
+  return formatEntryWithStack(start ?? "", stack, (leaf) =>
+    formatStrategyLeafReason(leaf, input.side),
+  );
 }
 
 export function futuresActionLabel(

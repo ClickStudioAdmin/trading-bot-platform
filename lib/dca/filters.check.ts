@@ -68,8 +68,48 @@ assert.equal(
   false,
 );
 assert.equal(parseDcaFilterKind(""), null);
-assert.equal(parseDcaFilterKind("macd"), null);
+assert.equal(parseDcaFilterKind("macd"), "macd");
+assert.equal(parseDcaFilterKind("ema_cross"), "ema_cross");
+assert.equal(parseDcaFilterKind("sma_cross"), "sma_cross");
 assert.equal(parseDcaFilterKind("ema"), "ema");
+assert.deepEqual(
+  dcaFilterWhenOptions("macd").map((row) => row.value),
+  ["cross_gte", "cross_lte", "gte", "lte"],
+);
+assert.deepEqual(
+  dcaFilterWhenOptions("ema_cross").map((row) => row.value),
+  ["cross_gte", "cross_lte"],
+);
+const macdExit = dcaFilterSpecForKind("macd", "long");
+assert.equal(macdExit.compare, "cross_gte");
+assert.equal(macdExit.level, 0);
+assert.equal(macdExit.period, null);
+assert.equal(dcaFilterComplete(macdExit), true);
+const crossExit = parseDcaFilterSpec({
+  kind: "sma_cross",
+  timeframe: "60",
+  compare: "cross_lte",
+  level: null,
+  period: 9,
+  slowPeriod: 21,
+  multiplier: null,
+});
+assert.equal(crossExit?.compare, "cross_lte");
+assert.equal(crossExit?.period, 9);
+assert.equal(crossExit?.slowPeriod, 21);
+assert.equal(dcaFilterComplete(crossExit), true);
+const crossCols = filterColumns("exit_if", crossExit);
+assert.equal(crossCols.exit_if_slow_period, 21);
+assert.equal(filterFromRow(crossCols, "exit_if")?.slowPeriod, 21);
+assert.equal(
+  dcaFilterMet({
+    spec: macdExit,
+    side: "long",
+    closes: [],
+    bars: [],
+  }),
+  false,
+);
 
 assert.equal(dcaFilterMet({ spec: null, side: "long", closes: [], bars: [] }), true);
 

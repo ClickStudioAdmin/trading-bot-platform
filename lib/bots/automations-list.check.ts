@@ -109,8 +109,8 @@ const perps = {
   size: "0.5",
   sizeUnit: "qty" as const,
 };
-assert.equal(perpsBotPair(perps), "ETHUSDT · Sell");
-assert.equal(perpsBotSummary(perps), "Sell · Indicator · market · 0.5");
+assert.equal(perpsBotPair(perps), "ETHUSDT · Short");
+assert.equal(perpsBotSummary(perps), "Short · Indicator · market · 0.5");
 
 const playbook = {
   symbol: "BTCUSDT",
