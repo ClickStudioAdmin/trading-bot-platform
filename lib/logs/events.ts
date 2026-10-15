@@ -26,6 +26,7 @@ export const EVENT_LOG_OPTIONS = [
   { event: "engine.close_failed", scope: "trade" },
   { event: "engine.open_failed", scope: "trade" },
   { event: "engine.tick", scope: "system" },
+  { event: "engine.logs_purged", scope: "system" },
   { event: "engine.tick_admin", scope: "system" },
   { event: "exchange.remove_failed", scope: "system" },
   { event: "exchange.removed", scope: "system" },
