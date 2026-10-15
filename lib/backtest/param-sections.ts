@@ -471,6 +471,25 @@ function optionalGroup(
   return { title, rows };
 }
 
+function nestBreakeven(
+  group: ParamGroup,
+  title: string,
+  activation: number | null | undefined,
+  offset: number | null | undefined,
+): ParamGroup {
+  if (activation == null) {
+    return group;
+  }
+  const extra: ParamRow[] = [
+    { label: "Move stop to breakeven at %", value: pct(activation) },
+    { label: "Breakeven offset %", value: pct(offset ?? 0) },
+  ];
+  if (!group.title) {
+    return { title, rows: extra };
+  }
+  return { title: group.title, rows: [...group.rows, ...extra] };
+}
+
 function dcaExitGroups(recipe: DcaTemplateRecipe): ParamGroup[] {
   const tpOn =
     recipe.takeProfitKind === "atr"
@@ -501,27 +520,21 @@ function dcaExitGroups(recipe: DcaTemplateRecipe): ParamGroup[] {
   });
   const trailOn = recipe.trailingPct != null || recipe.trailingTriggerPct != null;
   const slOn = recipe.stopLossPct != null;
-  const breakevenOn = recipe.breakevenActivationPct != null;
   const groups: ParamGroup[] = [
     optionalGroup("Take profit", tpOn, tpRows),
     optionalGroup("Trailing stop", trailOn, [
       { label: "Trigger %", value: pct(recipe.trailingTriggerPct) },
       { label: "Trailing %", value: pct(recipe.trailingPct) },
     ]),
-    optionalGroup("Stop loss", slOn, [
-      { label: "Basis", value: basisLabel(recipe.stopLossBasis) },
-      { label: "Stop loss %", value: pct(recipe.stopLossPct) },
-    ]),
-    optionalGroup("Move Breakeven", breakevenOn, [
-      {
-        label: "Move stop to breakeven at %",
-        value: pct(recipe.breakevenActivationPct),
-      },
-      {
-        label: "Breakeven offset %",
-        value: pct(recipe.breakevenOffsetPct ?? 0),
-      },
-    ]),
+    nestBreakeven(
+      optionalGroup("Stop loss", slOn, [
+        { label: "Basis", value: basisLabel(recipe.stopLossBasis) },
+        { label: "Stop loss %", value: pct(recipe.stopLossPct) },
+      ]),
+      "Stop loss",
+      recipe.breakevenActivationPct,
+      recipe.breakevenOffsetPct,
+    ),
   ];
   const side: "long" | "short" = recipe.direction === "short" ? "short" : "long";
   if (recipe.direction === "both") {
@@ -768,27 +781,18 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
                 : num(recipe.trailing.activePrice),
           },
         ]),
-        perpsExitLevel(
+        nestBreakeven(
+          perpsExitLevel(
+            "Stop loss",
+            tpsl?.stopLoss,
+            tpsl?.slKind,
+            tpsl?.slTrigger,
+            tpsl?.slOrderType,
+            tpsl?.slLimitPrice,
+          ),
           "Stop loss",
-          tpsl?.stopLoss,
-          tpsl?.slKind,
-          tpsl?.slTrigger,
-          tpsl?.slOrderType,
-          tpsl?.slLimitPrice,
-        ),
-        optionalGroup(
-          "Move Breakeven",
-          recipe.breakevenActivationPct != null,
-          [
-            {
-              label: "Move stop to breakeven at %",
-              value: pct(recipe.breakevenActivationPct),
-            },
-            {
-              label: "Breakeven offset %",
-              value: pct(recipe.breakevenOffsetPct ?? 0),
-            },
-          ],
+          recipe.breakevenActivationPct,
+          recipe.breakevenOffsetPct,
         ),
         optionalFilter("Hard Exit Condition", recipe.exitIf, side),
       ],

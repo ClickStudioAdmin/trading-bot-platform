@@ -746,7 +746,8 @@ export function ThemeBotFormDraft() {
   const requireSl = desk !== "cnc" && !closing && slOn;
   const requireTrail = desk !== "cnc" && !closing && trailOn;
   const requireTrailTrigger = requireTrail && desk === "dca";
-  const requireBreakeven = desk !== "cnc" && !closing && breakevenOn;
+  const requireBreakeven =
+    desk !== "cnc" && !closing && slOn && breakevenOn;
   const requireCarryTp = desk === "cnc" && carryTpOn;
   const requireCarrySl = desk === "cnc" && carrySlOn;
   const requireConfirm = desk !== "cnc" && !closing && confirmOn;
@@ -2034,6 +2035,9 @@ export function ThemeBotFormDraft() {
               enabled={slOn}
               onEnabled={(next) => {
                 setSlOn(next);
+                if (!next) {
+                  setBreakevenOn(false);
+                }
                 if (next && !slMethod) {
                   setSlMethod(desk === "dca" ? "percent" : "price");
                 }
@@ -2126,29 +2130,31 @@ export function ThemeBotFormDraft() {
                   ) : null}
                 </div>
               )}
-            </OptionalSection>
-
-            <OptionalSection
-              title="Move Breakeven"
-              enabled={breakevenOn}
-              onEnabled={setBreakevenOn}
-            >
-              <div className={rowClass}>
-                <Field label="Move stop to breakeven at %" required>
-                  <PercentField
-                    value={breakevenAt}
-                    onChange={setBreakevenAt}
-                    required
-                    invalid={showFieldErrors && missing.breakevenAt}
-                  />
-                </Field>
-                <Field label="Breakeven offset %">
-                  <PercentField
-                    value={breakevenOffset}
-                    onChange={setBreakevenOffset}
-                    placeholder="0"
-                  />
-                </Field>
+              <div className="border-t border-line pt-4">
+                <OptionalSection
+                  title="Move Breakeven"
+                  nested
+                  enabled={breakevenOn}
+                  onEnabled={setBreakevenOn}
+                >
+                  <div className={rowClass}>
+                    <Field label="Move stop to breakeven at %" required>
+                      <PercentField
+                        value={breakevenAt}
+                        onChange={setBreakevenAt}
+                        required
+                        invalid={showFieldErrors && missing.breakevenAt}
+                      />
+                    </Field>
+                    <Field label="Breakeven offset %">
+                      <PercentField
+                        value={breakevenOffset}
+                        onChange={setBreakevenOffset}
+                        placeholder="0"
+                      />
+                    </Field>
+                  </div>
+                </OptionalSection>
               </div>
             </OptionalSection>
 

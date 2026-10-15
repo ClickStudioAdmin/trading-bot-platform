@@ -77,10 +77,15 @@ assert.equal(
   value(dca, "Exit Conditions", "Take profit"),
   "1.2% · Average entry · Market",
 );
-assert.equal(value(dca, "Exit Conditions", "Stop loss"), "Off");
 assert.equal(
-  value(dca, "Exit Conditions", "Move breakeven"),
-  "At 0.8% · Offset 0.1%",
+  value(dca, "Exit Conditions", "Stop loss"),
+  "Move breakeven at 0.8% · offset 0.1%",
+);
+assert.equal(
+  dca
+    .find((row) => row.title === "Exit Conditions")
+    ?.lines.some((line) => line.label === "Move breakeven"),
+  false,
 );
 assert.equal(value(dca, "Exit Conditions", "Long Hard exit"), "Off");
 assert.match(value(dca, "Exit Conditions", "Short Hard exit"), /RSI 14/);
@@ -160,6 +165,31 @@ assert.equal(value(perps, "Position Sizing", "Size"), "10 USDT");
 assert.equal(value(perps, "Exit Conditions", "Take profit"), "3% · Last · Market");
 assert.equal(value(perps, "Exit Conditions", "Stop loss"), "Off");
 assert.equal(value(perps, "Exit Conditions", "Hard exit"), "Off");
+const perpsStop = perpsBotConfig({
+  ...defaultFuturesAutomationForm(0, "ETHUSDT"),
+  formAction: "buy",
+  tpsl: {
+    takeProfit: null,
+    stopLoss: 2,
+    tpKind: "percent",
+    slKind: "percent",
+    tpTrigger: "last",
+    slTrigger: "mark",
+    mode: "full",
+    tpQty: null,
+    slQty: null,
+    tpOrderType: "market",
+    slOrderType: "market",
+    tpLimitPrice: null,
+    slLimitPrice: null,
+  },
+  breakevenActivationPct: "1.5",
+  breakevenOffsetPct: "0.2",
+});
+assert.equal(
+  value(perpsStop, "Exit Conditions", "Stop loss"),
+  "2% · Mark · Market · Move breakeven at 1.5% · offset 0.2%",
+);
 
 const closeRule = perpsBotConfig({
   ...defaultFuturesAutomationForm(0, "ETHUSDT"),

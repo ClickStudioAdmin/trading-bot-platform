@@ -293,20 +293,18 @@ function dcaExitLines(playbook: DcaPlaybook): BotConfigLine[] {
     ),
     setting(
       "Stop loss",
-      playbook.stopLossPct == null
+      playbook.stopLossPct == null && playbook.breakevenActivationPct == null
         ? null
         : joinParts([
-            pct(playbook.stopLossPct),
-            basisLabel(playbook.stopLossBasis),
-          ]),
-    ),
-    setting(
-      "Move breakeven",
-      playbook.breakevenActivationPct == null
-        ? null
-        : joinParts([
-            `At ${pct(playbook.breakevenActivationPct)}`,
-            `Offset ${pct(playbook.breakevenOffsetPct) ?? "0%"}`,
+            playbook.stopLossPct == null
+              ? null
+              : joinParts([
+                  pct(playbook.stopLossPct),
+                  basisLabel(playbook.stopLossBasis),
+                ]),
+            playbook.breakevenActivationPct == null
+              ? null
+              : `Move breakeven at ${pct(playbook.breakevenActivationPct)} · offset ${pct(playbook.breakevenOffsetPct) ?? "0%"}`,
           ]),
     ),
   ];
@@ -514,20 +512,28 @@ export function perpsBotConfig(
         ),
         setting(
           "Stop loss",
-          perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind)
+          perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind) ||
+          rule.breakevenActivationPct.trim()
             ? joinParts([
-                perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind),
-                rule.tpsl?.slTrigger === "mark"
-                  ? "Mark"
-                  : rule.tpsl?.slTrigger === "index"
-                    ? "Index"
-                    : "Last",
-                orderLabel(rule.tpsl?.slOrderType),
-                rule.tpsl?.slOrderType === "limit"
-                  ? amount(rule.tpsl.slLimitPrice)
+                perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind)
+                  ? joinParts([
+                      perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind),
+                      rule.tpsl?.slTrigger === "mark"
+                        ? "Mark"
+                        : rule.tpsl?.slTrigger === "index"
+                          ? "Index"
+                          : "Last",
+                      orderLabel(rule.tpsl?.slOrderType),
+                      rule.tpsl?.slOrderType === "limit"
+                        ? amount(rule.tpsl.slLimitPrice)
+                        : null,
+                      rule.tpsl?.mode === "partial" && rule.tpsl.slQty
+                        ? `Partial ${amount(rule.tpsl.slQty)}`
+                        : null,
+                    ])
                   : null,
-                rule.tpsl?.mode === "partial" && rule.tpsl.slQty
-                  ? `Partial ${amount(rule.tpsl.slQty)}`
+                rule.breakevenActivationPct.trim()
+                  ? `Move breakeven at ${rule.breakevenActivationPct.trim()}% · offset ${rule.breakevenOffsetPct.trim() || "0"}%`
                   : null,
               ])
             : null,
@@ -540,15 +546,6 @@ export function perpsBotConfig(
                 rule.trailing.activePrice != null
                   ? `Activation ${amount(rule.trailing.activePrice)}`
                   : null,
-              ])
-            : null,
-        ),
-        setting(
-          "Move breakeven",
-          rule.breakevenActivationPct.trim()
-            ? joinParts([
-                `At ${rule.breakevenActivationPct.trim()}%`,
-                `Offset ${rule.breakevenOffsetPct.trim() || "0"}%`,
               ])
             : null,
         ),

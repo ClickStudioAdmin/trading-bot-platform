@@ -504,7 +504,11 @@ function RuleCard({
     layer.breakevenOffsetPct,
   );
   const [tpOn, setTpOn] = useState(() => layer.tpsl?.takeProfit != null);
-  const [slOn, setSlOn] = useState(() => layer.tpsl?.stopLoss != null);
+  const [slOn, setSlOn] = useState(
+    () =>
+      layer.tpsl?.stopLoss != null ||
+      layer.breakevenActivationPct.trim() !== "",
+  );
   const [trailOn, setTrailOn] = useState(
     () => Boolean(layer.trailing && layer.trailing.distance > 0),
   );
@@ -566,7 +570,10 @@ function RuleCard({
   const slMissing = slOn && stopLoss.trim() === "";
   const trailMissing = trailOn && trailingStop.trim() === "";
   const breakevenMissing =
-    !closing && breakevenOn && breakevenActivationPct.trim() === "";
+    !closing &&
+    slOn &&
+    breakevenOn &&
+    breakevenActivationPct.trim() === "";
   const tpLimitMissing =
     tpOn && tpOrderType === "limit" && tpLimitPrice.trim() === "";
   const slLimitMissing =
@@ -635,8 +642,9 @@ function RuleCard({
     shortEntry: shortLeg,
     exitIf: closing ? null : exitIf,
     breakevenActivationPct:
-      closing || !breakevenOn ? "" : breakevenActivationPct,
-    breakevenOffsetPct: closing || !breakevenOn ? "" : breakevenOffsetPct,
+      closing || !slOn || !breakevenOn ? "" : breakevenActivationPct,
+    breakevenOffsetPct:
+      closing || !slOn || !breakevenOn ? "" : breakevenOffsetPct,
   };
   let parsedLive: ReturnType<typeof parseFuturesAutomationForm>;
   try {
@@ -701,12 +709,14 @@ function RuleCard({
       entryStack: primaryLeg.entryStack,
       shortEntry: shortLeg,
       exitIf: closing ? null : exitIf,
-      breakevenActivationPct: closing || !breakevenOn
-        ? null
-        : Number(breakevenActivationPct.replace(/,/g, "")) || null,
-      breakevenOffsetPct: closing || !breakevenOn
-        ? null
-        : Number(breakevenOffsetPct.replace(/,/g, "")) || 0,
+      breakevenActivationPct:
+        closing || !slOn || !breakevenOn
+          ? null
+          : Number(breakevenActivationPct.replace(/,/g, "")) || null,
+      breakevenOffsetPct:
+        closing || !slOn || !breakevenOn
+          ? null
+          : Number(breakevenOffsetPct.replace(/,/g, "")) || 0,
     });
   }
   function liveRecipe() {
@@ -1091,10 +1101,29 @@ function RuleCard({
               </BotField>
             </div>
           </OptionalSection>
+          {!slOn || !breakevenOn ? (
+            <div hidden>
+              <input
+                type="hidden"
+                name={`${prefix}breakevenActivationPct`}
+                value=""
+              />
+              <input
+                type="hidden"
+                name={`${prefix}breakevenOffsetPct`}
+                value=""
+              />
+            </div>
+          ) : null}
           <OptionalSection
             title="Stop loss"
             enabled={slOn}
-            onEnabled={setSlOn}
+            onEnabled={(next) => {
+              setSlOn(next);
+              if (!next) {
+                setBreakevenOn(false);
+              }
+            }}
           >
             <div className={fieldRow5}>
               <BotField label="Type" required>
@@ -1171,56 +1200,45 @@ function RuleCard({
                 <input type="hidden" name={`${prefix}slLimitPrice`} value="" />
               )}
             </div>
-          </OptionalSection>
-          {!breakevenOn ? (
-            <div hidden>
-              <input
-                type="hidden"
-                name={`${prefix}breakevenActivationPct`}
-                value=""
-              />
-              <input
-                type="hidden"
-                name={`${prefix}breakevenOffsetPct`}
-                value=""
-              />
-            </div>
-          ) : null}
-          <OptionalSection
-            title="Move Breakeven"
-            enabled={breakevenOn}
-            onEnabled={setBreakevenOn}
-          >
-            <div className={fieldRow}>
-              <BotField label="Move stop to breakeven at %" required>
-                <span className="relative mt-0.5 block">
-                  <GroupedNumberInput
-                    name={`${prefix}breakevenActivationPct`}
-                    value={breakevenActivationPct}
-                    onChange={setBreakevenActivationPct}
-                    allowDecimal
-                    className={`${botFieldClass} pr-7`}
-                  />
-                  <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
-                    %
-                  </span>
-                </span>
-              </BotField>
-              <BotField label="Breakeven offset %">
-                <span className="relative mt-0.5 block">
-                  <GroupedNumberInput
-                    name={`${prefix}breakevenOffsetPct`}
-                    value={breakevenOffsetPct}
-                    onChange={setBreakevenOffsetPct}
-                    allowDecimal
-                    placeholder="0"
-                    className={`${botFieldClass} pr-7`}
-                  />
-                  <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
-                    %
-                  </span>
-                </span>
-              </BotField>
+            <div className="border-t border-line pt-4">
+              <OptionalSection
+                title="Move Breakeven"
+                nested
+                enabled={breakevenOn}
+                onEnabled={setBreakevenOn}
+              >
+                <div className={fieldRow}>
+                  <BotField label="Move stop to breakeven at %" required>
+                    <span className="relative mt-0.5 block">
+                      <GroupedNumberInput
+                        name={`${prefix}breakevenActivationPct`}
+                        value={breakevenActivationPct}
+                        onChange={setBreakevenActivationPct}
+                        allowDecimal
+                        className={`${botFieldClass} pr-7`}
+                      />
+                      <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                        %
+                      </span>
+                    </span>
+                  </BotField>
+                  <BotField label="Breakeven offset %">
+                    <span className="relative mt-0.5 block">
+                      <GroupedNumberInput
+                        name={`${prefix}breakevenOffsetPct`}
+                        value={breakevenOffsetPct}
+                        onChange={setBreakevenOffsetPct}
+                        allowDecimal
+                        placeholder="0"
+                        className={`${botFieldClass} pr-7`}
+                      />
+                      <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                        %
+                      </span>
+                    </span>
+                  </BotField>
+                </div>
+              </OptionalSection>
             </div>
           </OptionalSection>
           <OptionalSection

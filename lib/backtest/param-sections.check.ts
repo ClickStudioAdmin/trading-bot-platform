@@ -64,6 +64,56 @@ assert.equal(
   "Off",
 );
 assert.equal(
+  recipeParamRows(dca).some((row) => row.label === "Move Breakeven"),
+  false,
+);
+
+function dcaWithExits(fields: Record<string, string>) {
+  const form = new FormData();
+  form.set("name", "Exit nest");
+  form.set("symbol", "BTCUSDT");
+  form.set("direction", "long");
+  form.set("startKind", "immediate");
+  form.set("clipSize", "1");
+  form.set("sizeUnit", "qty");
+  form.set("takeProfitPct", "10");
+  for (const [key, value] of Object.entries(fields)) {
+    form.set(key, value);
+  }
+  const parsed = parseDcaPlaybookForm(form);
+  assert.equal(parsed.ok, true);
+  if (!parsed.ok) {
+    throw new Error("expected DCA parse");
+  }
+  return snapshotDcaRecipe(parsed.config);
+}
+
+const nestedStop = recipeParamSections(
+  dcaWithExits({
+    stopLossPct: "3",
+    breakevenActivationPct: "1.5",
+    breakevenOffsetPct: "0.2",
+  }),
+).find((section) => section.title === "Exit Conditions");
+const stopGroup = nestedStop?.groups.find((group) => group.title === "Stop loss");
+assert.deepEqual(
+  stopGroup?.rows.map((row) => row.label),
+  ["Basis", "Stop loss %", "Move stop to breakeven at %", "Breakeven offset %"],
+);
+assert.equal(
+  nestedStop?.groups.some((group) => group.title === "Move Breakeven"),
+  false,
+);
+const breakevenOnly = recipeParamSections(
+  dcaWithExits({ breakevenActivationPct: "1.5" }),
+).find((section) => section.title === "Exit Conditions");
+assert.deepEqual(
+  breakevenOnly?.groups
+    .find((group) => group.title === "Stop loss")
+    ?.rows.map((row) => row.label),
+  ["Move stop to breakeven at %", "Breakeven offset %"],
+);
+assert.equal(
   recipeParamRows(dca).find((row) => row.label === "Hard Exit Condition")?.value,
   "Off",
 );

@@ -1009,7 +1009,10 @@ export function DcaPlaybookForm({
   const [breakevenOn, setBreakevenOn] = useState(
     () => source?.breakevenActivationPct != null,
   );
-  const [slOn, setSlOn] = useState(() => source?.stopLossPct != null);
+  const [slOn, setSlOn] = useState(
+    () =>
+      source?.stopLossPct != null || source?.breakevenActivationPct != null,
+  );
   const [indicatorKind, setIndicatorKind] = useState<DcaIndicatorKind>(
     source?.indicatorKind ??
       (source?.startKind === "trend" ? "supertrend" : "rsi"),
@@ -1418,8 +1421,9 @@ export function DcaPlaybookForm({
       stopLossBasis,
       trailingTriggerPct: trailOn ? trailingTriggerPct : "",
       trailingPct: trailOn ? trailingPct : "",
-      breakevenActivationPct: breakevenOn ? breakevenActivationPct : "",
-      breakevenOffsetPct: breakevenOn ? breakevenOffsetPct : "",
+      breakevenActivationPct:
+        slOn && breakevenOn ? breakevenActivationPct : "",
+      breakevenOffsetPct: slOn && breakevenOn ? breakevenOffsetPct : "",
       indicatorKind,
       indicatorTimeframe,
       indicatorCompare,
@@ -1465,7 +1469,7 @@ export function DcaPlaybookForm({
     (asNumber(trailingTriggerPct) == null || asNumber(trailingPct) == null);
   const slMissing = slOn && asNumber(stopLossPct) == null;
   const breakevenMissing =
-    breakevenOn && asNumber(breakevenActivationPct) == null;
+    slOn && breakevenOn && asNumber(breakevenActivationPct) == null;
   const parseConstraint =
     !parsedLive.ok && parsedLive.error === "Percent must be 100 or less."
       ? parsedLive.error
@@ -2550,10 +2554,21 @@ export function DcaPlaybookForm({
           <input type="hidden" name="stopLossBasis" value={stopLossBasis} />
         </div>
       ) : null}
+      {!slOn || !breakevenOn ? (
+        <div hidden>
+          <input type="hidden" name="breakevenActivationPct" value="" />
+          <input type="hidden" name="breakevenOffsetPct" value="" />
+        </div>
+      ) : null}
       <OptionalSection
         title="Stop loss"
         enabled={slOn}
-        onEnabled={setSlOn}
+        onEnabled={(next) => {
+          setSlOn(next);
+          if (!next) {
+            setBreakevenOn(false);
+          }
+        }}
       >
         <div className={fieldRowClass}>
           <label className={labelClass}>
@@ -2579,38 +2594,34 @@ export function DcaPlaybookForm({
             />
           </BotField>
         </div>
-      </OptionalSection>
-
-      {!breakevenOn ? (
-        <div hidden>
-          <input type="hidden" name="breakevenActivationPct" value="" />
-          <input type="hidden" name="breakevenOffsetPct" value="" />
-        </div>
-      ) : null}
-      <OptionalSection
-        title="Move Breakeven"
-        enabled={breakevenOn}
-        onEnabled={setBreakevenOn}
-      >
-        <div className={fieldRowClass}>
-          <BotField label="Move stop to breakeven at %" required>
-            <PercentInput
-              name="breakevenActivationPct"
-              value={breakevenActivationPct}
-              onChange={setBreakevenActivationPct}
-              ariaLabel="Move stop to breakeven at percent"
-            />
-          </BotField>
-          <label className={labelClass}>
-            Breakeven offset %
-            <PercentInput
-              name="breakevenOffsetPct"
-              value={breakevenOffsetPct}
-              onChange={setBreakevenOffsetPct}
-              placeholder="0"
-              ariaLabel="Breakeven offset percent"
-            />
-          </label>
+        <div className="border-t border-line pt-4">
+          <OptionalSection
+            title="Move Breakeven"
+            nested
+            enabled={breakevenOn}
+            onEnabled={setBreakevenOn}
+          >
+            <div className={fieldRowClass}>
+              <BotField label="Move stop to breakeven at %" required>
+                <PercentInput
+                  name="breakevenActivationPct"
+                  value={breakevenActivationPct}
+                  onChange={setBreakevenActivationPct}
+                  ariaLabel="Move stop to breakeven at percent"
+                />
+              </BotField>
+              <label className={labelClass}>
+                Breakeven offset %
+                <PercentInput
+                  name="breakevenOffsetPct"
+                  value={breakevenOffsetPct}
+                  onChange={setBreakevenOffsetPct}
+                  placeholder="0"
+                  ariaLabel="Breakeven offset percent"
+                />
+              </label>
+            </div>
+          </OptionalSection>
         </div>
       </OptionalSection>
 
