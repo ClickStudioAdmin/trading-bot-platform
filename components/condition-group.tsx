@@ -131,14 +131,12 @@ export function GroupedConditions<T extends { key: string; join: StrategyJoin }>
             {groupIndex > 0 ? <JoinWord label="Or" /> : null}
             <section className="space-y-4 rounded-card border border-line bg-canvas px-4 py-4">
               <div className="flex items-start justify-between gap-3 border-b border-line">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-ink">
-                    Group {groupIndex + 1}
-                  </h3>
-                  <p className="text-hint text-ink-muted">
-                    Every condition in this group must be true.
-                  </p>
-                </div>
+                <h3 className="min-w-0 text-sm font-semibold text-ink">
+                  Group {groupIndex + 1}
+                  <span className="ml-2 text-hint font-normal text-ink-muted">
+                    - Every condition in this group must be true.
+                  </span>
+                </h3>
                 {groupIndex > 0 && opener ? (
                   <div className="shrink-0">{renderRemove(opener, "group")}</div>
                 ) : null}
