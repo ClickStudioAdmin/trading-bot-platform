@@ -210,7 +210,12 @@ assert.equal(stackedParsed.ok, true);
 if (stackedParsed.ok) {
   assert.equal(stackedParsed.confirm, null);
   assert.equal(stackedParsed.entryStack.joins[0], "or");
-  assert.equal(stackedParsed.entryStack.leaves[0]?.spec.kind, "ema");
+  const stackedLeaf = stackedParsed.entryStack.leaves[0];
+  assert.equal(stackedLeaf?.kind, "filter");
+  assert.equal(
+    stackedLeaf?.kind === "filter" ? stackedLeaf.spec.kind : "",
+    "ema",
+  );
 }
 
 assert.equal(
@@ -227,6 +232,105 @@ assert.equal(
   }),
   true,
   "Or passes when the trigger misses and the second condition is true",
+);
+
+const priceOr = new FormData();
+priceOr.set("r0_entryCount", "1");
+priceOr.set("r0_entry0Join", "or");
+priceOr.set("r0_entry0Source", "price");
+priceOr.set("r0_entry0TriggerBy", "mark");
+priceOr.set("r0_entry0TriggerCompare", "lte");
+priceOr.set("r0_entry0TriggerPrice", "150");
+const priceOrParsed = parseFuturesConditionForm(priceOr, "r0_", {
+  entrySource: "price",
+  closing: false,
+});
+assert.equal(priceOrParsed.ok, true);
+assert.equal(
+  futuresEntryConditionMet({
+    rule: {
+      entrySource: "price",
+      triggerCompare: "gte",
+      triggerPrice: 200,
+      entryStack: priceOrParsed.ok ? priceOrParsed.entryStack : undefined,
+    },
+    side: "long",
+    price: 100,
+    prices: { last: 100, mark: 140, index: 100 },
+    barsByTimeframe: bars,
+  }),
+  true,
+  "Or price leaf uses its own price source",
+);
+
+const priceAnd = new FormData();
+priceAnd.set("r0_webhookId", "hook-a");
+priceAnd.set("r0_entryCount", "1");
+priceAnd.set("r0_entry0Join", "and");
+priceAnd.set("r0_entry0Source", "price");
+priceAnd.set("r0_entry0TriggerBy", "last");
+priceAnd.set("r0_entry0TriggerCompare", "gte");
+priceAnd.set("r0_entry0TriggerPrice", "90");
+const priceAndParsed = parseFuturesConditionForm(priceAnd, "r0_", {
+  entrySource: "price",
+  closing: false,
+});
+assert.equal(priceAndParsed.ok, false);
+if (!priceAndParsed.ok) {
+  assert.match(priceAndParsed.error, /price crosses/);
+}
+
+const webhookAnd = new FormData();
+webhookAnd.set("r0_webhookId", "hook-a");
+webhookAnd.set("r0_entryCount", "1");
+webhookAnd.set("r0_entry0Join", "and");
+webhookAnd.set("r0_entry0Source", "webhook");
+webhookAnd.set("r0_entry0WebhookId", "hook-b");
+const webhookAndParsed = parseFuturesConditionForm(webhookAnd, "r0_", {
+  entrySource: "webhook",
+  closing: false,
+});
+assert.equal(webhookAndParsed.ok, false);
+
+const webhookOr = new FormData();
+webhookOr.set("r0_entryCount", "1");
+webhookOr.set("r0_entry0Join", "or");
+webhookOr.set("r0_entry0Source", "webhook");
+webhookOr.set("r0_entry0WebhookId", "hook-b");
+const webhookOrParsed = parseFuturesConditionForm(webhookOr, "r0_", {
+  entrySource: "price",
+  closing: false,
+});
+assert.equal(webhookOrParsed.ok, true);
+assert.equal(
+  futuresEntryConditionMet({
+    rule: {
+      entrySource: "price",
+      triggerCompare: "gte",
+      triggerPrice: 200,
+      entryStack: webhookOrParsed.ok ? webhookOrParsed.entryStack : undefined,
+    },
+    side: "long",
+    price: 100,
+    barsByTimeframe: bars,
+    firedWebhookId: "hook-b",
+  }),
+  true,
+);
+assert.equal(
+  futuresEntryConditionMet({
+    rule: {
+      entrySource: "price",
+      triggerCompare: "gte",
+      triggerPrice: 200,
+      entryStack: webhookOrParsed.ok ? webhookOrParsed.entryStack : undefined,
+    },
+    side: "long",
+    price: 100,
+    barsByTimeframe: bars,
+    firedWebhookId: null,
+  }),
+  false,
 );
 
 console.log("futures conditions checks passed");

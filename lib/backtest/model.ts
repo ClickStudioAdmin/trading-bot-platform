@@ -18,6 +18,7 @@ import {
   type PerpsTemplateRecipe,
 } from "@/lib/templates/recipe";
 import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
+import { strategyLeafTimeframe } from "@/lib/strategy/expr";
 
 export type BacktestRecipe = PerpsTemplateRecipe | DcaTemplateRecipe;
 export type BacktestDeskType = "perps" | "dca";
@@ -781,15 +782,15 @@ export function backtestTapeInterval(
   fromMs: number,
   toMs: number,
 ): DcaIndicatorTimeframe {
-  if (
-    recipe?.kind === "perps" &&
-    (recipe.entrySource === "indicator" || recipe.entrySource === "trend")
-  ) {
+  if (recipe?.kind === "perps") {
+    const indicatorStart =
+      recipe.entrySource === "indicator" || recipe.entrySource === "trend";
     const rows = [
-      recipe.indicator?.timeframe,
-      ...(recipe.entryStack?.leaves.map((leaf) => leaf.spec.timeframe) ?? []),
-      recipe.confirm?.timeframe,
-      recipe.exitIf?.timeframe,
+      indicatorStart ? recipe.indicator?.timeframe : null,
+      ...(recipe.entryStack?.leaves.map((leaf) => strategyLeafTimeframe(leaf)) ??
+        []),
+      indicatorStart ? recipe.confirm?.timeframe : null,
+      indicatorStart ? recipe.exitIf?.timeframe : null,
     ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
     if (rows.length === 1) {
       return rows[0];

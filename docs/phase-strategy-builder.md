@@ -14,7 +14,7 @@ In progress. First step is the entry stack on Perps bots.
 
 | # | Step | Who | Done when |
 | --- | --- | --- | --- |
-| 1 | Entry stack | Agent | Perps bots can add market conditions after the initial trigger, joined with And or Or. The same form is the desk bot, New Backtest, and replay Modify. The engine, replay, and parameter lists (bot, backtest, template) read that stack. A saved Secondary Entry opens as one And. |
+| 1 | Entry stack | Agent | Perps bots can add conditions after the initial trigger, joined with And or Or. Each added row uses the same trigger dropdown (Price cross, Indicator, Trend, or Signal webhook). Conflicting choices are disabled. The same form is the desk bot, New Backtest, and replay Modify. The engine, replay, and parameter lists (bot, backtest, template) read that stack. A saved Secondary Entry opens as one And filter. |
 | 2 | Exit stack | — | Hard Exit becomes the first row of an exit condition stack. Not started. |
 | 3 | Additional exposure | — | Caps, size per add, and its own condition stack. Not started. |
 | 4 | Position and pattern leaves | — | Breakeven-limit, price versus fill, impulse then pullback. Not started. |
@@ -24,8 +24,8 @@ In progress. First step is the entry stack on Perps bots.
 ## How the entry stack works
 
 1. The initial order trigger stays Price cross, Indicator, Trend, or Signal webhook. It is condition 1 and has no joiner.
-2. **Add condition** appends a market filter (Price vs EMA / SMA, RSI, Price vs BB, ATR band, or Supertrend). Each added row picks **And** or **Or**.
-3. And stays in the current group. Or starts a new group. Groups are OR'd. Conditions inside a group are AND'd. Cap is 12 conditions and 4 timeframes, including the trigger.
+2. **Add condition** appends another trigger: Price cross, Indicator, Trend, or Signal webhook, with the same fields as the initial order trigger. Each added row picks **And** or **Or**.
+3. And stays in the current group. Or starts a new group. Groups are OR'd. Conditions inside a group are AND'd. A dropdown choice that cannot be true in that group is disabled: the same webhook twice, two price crosses joined with And, or two webhooks joined with And. And itself is disabled when that join would create one of those. Cap is 12 conditions and 4 timeframes, including the trigger. A saved Secondary Entry still opens as its filter row.
 4. A level that stays true still fires once, on the edge, the same way the bot fires today.
 5. One And filter is still stored on the old confirm columns so an older reader sees the same Secondary Entry. Any other stack is `entry_expr` on `futures_automation_rules`. Templates and backtests store that stack on the recipe when the confirm column cannot hold it.
 6. Close long / Close short do not take the stack.

@@ -168,6 +168,35 @@ function conditionColor(role: string, color: string): string {
   return color;
 }
 
+function specFromIndicator(
+  start: {
+    kind: DcaIndicatorKind;
+    timeframe: DcaIndicatorTimeframe;
+    period: number | null;
+    slowPeriod: number | null;
+    multiplier?: number | null;
+    level: number | null;
+  },
+  role: string,
+): Spec {
+  return {
+    key: specKey({
+      kind: start.kind,
+      period: start.period,
+      slowPeriod: start.slowPeriod,
+      multiplier: start.multiplier ?? null,
+      timeframe: start.timeframe,
+    }),
+    kind: start.kind,
+    roles: [role],
+    period: start.period,
+    slowPeriod: start.slowPeriod,
+    multiplier: start.multiplier ?? null,
+    levels: start.level != null ? [start.level] : [],
+    timeframe: start.timeframe,
+  };
+}
+
 function fromFilter(spec: DcaFilterSpec | null | undefined, role: string): Spec | null {
   if (!spec) {
     return null;
@@ -264,7 +293,11 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
   addSpec(specs, fromFilter(recipe.confirm, "Secondary entry"));
   if (recipe.entryStack) {
     for (const leaf of recipe.entryStack.leaves) {
-      addSpec(specs, fromFilter(leaf.spec, "Entry condition"));
+      if (leaf.kind === "filter") {
+        addSpec(specs, fromFilter(leaf.spec, "Entry condition"));
+      } else if (leaf.kind === "indicator" || leaf.kind === "trend") {
+        addSpec(specs, specFromIndicator(leaf.start, "Entry condition"));
+      }
     }
   }
   addSpec(specs, fromFilter(recipe.exitIf, "Hard exit"));

@@ -4,7 +4,6 @@ import {
   DCA_FILTER_KIND_OPTIONS,
   dcaFilterWhenOptions,
   dcaFilterWhenValue,
-  formatDcaFilterReason,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
 import {
@@ -21,6 +20,7 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import { dcaAveragingKind, dcaIntervalParts } from "@/lib/dca/playbook";
+import { formatStrategyLeafReason } from "@/lib/bots/condition-copy";
 import {
   confirmFromEntryStack,
   entryStackIsLegacy,
@@ -196,7 +196,7 @@ function perpsEntryStackGroup(
     title: "Entry conditions",
     rows: stack.leaves.map((leaf, index) => ({
       label: stack.joins[index] === "or" ? "Or" : "And",
-      value: formatDcaFilterReason(leaf.spec, side),
+      value: formatStrategyLeafReason(leaf, side),
     })),
   };
 }

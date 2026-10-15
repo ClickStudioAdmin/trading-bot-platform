@@ -31,8 +31,13 @@ import { ColumnHint } from "@/components/column-hint";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import {
   EntryConditionStack,
+  entryConflictSlots,
   type EntryStackRow,
 } from "@/components/entry-condition-stack";
+import {
+  entryKindDisabled,
+  entryWebhookIdDisabled,
+} from "@/lib/strategy/expr";
 import {
   dcaFilterComplete,
   dcaFilterSpecForKind,
@@ -596,6 +601,10 @@ export function ThemeBotFormDraft() {
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPrice, setLimitPrice] = useState("");
   const [webhookId, setWebhookId] = useState("sample");
+  const themeEntrySlots = entryConflictSlots(
+    { kind: startKind, webhookId },
+    entryRows,
+  );
   const [size, setSize] = useState("100");
   const [sizeUnit, setSizeUnit] = useState<"qty" | "usdt">("usdt");
   const [sizeMultiplier, setSizeMultiplier] = useState("1");
@@ -1084,12 +1093,32 @@ export function ThemeBotFormDraft() {
                   }
                   className={fieldClass}
                 >
-                  <option value="price">Price cross</option>
+                  <option
+                    value="price"
+                    disabled={entryKindDisabled({
+                      slots: themeEntrySlots,
+                      index: 0,
+                      kind: "price",
+                      webhookIds: ["sample"],
+                    })}
+                  >
+                    Price cross
+                  </option>
                   {closing ? null : (
                     <option value="indicator">Indicator</option>
                   )}
                   {closing ? null : <option value="trend">Trend</option>}
-                  <option value="webhook">Signal webhook</option>
+                  <option
+                    value="webhook"
+                    disabled={entryKindDisabled({
+                      slots: themeEntrySlots,
+                      index: 0,
+                      kind: "webhook",
+                      webhookIds: ["sample"],
+                    })}
+                  >
+                    Signal webhook
+                  </option>
                 </AppSelect>
               </Field>
               {closing ? null : (
@@ -1147,7 +1176,19 @@ export function ThemeBotFormDraft() {
                       ? "Pick a webhook"
                       : "Pick a Signal webhook"}
                   </option>
-                  <option value="sample">Sample signal</option>
+                  <option
+                    value="sample"
+                    disabled={
+                      desk === "perps" &&
+                      entryWebhookIdDisabled({
+                        slots: themeEntrySlots,
+                        index: 0,
+                        webhookId: "sample",
+                      })
+                    }
+                  >
+                    Sample signal
+                  </option>
                 </AppSelect>
               </Field>
             </div>
@@ -1410,6 +1451,8 @@ export function ThemeBotFormDraft() {
               side={entrySide}
               rows={entryRows}
               onChange={setEntryRows}
+              anchor={{ kind: startKind, webhookId }}
+              webhooks={[{ id: "sample", name: "Sample signal" }]}
               gridClass={rowClass5}
               fieldClass={fieldClass}
               labelClass={labelClass}

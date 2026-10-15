@@ -15,6 +15,7 @@ import {
   futuresEntryConditionMet,
   futuresFilterMet,
 } from "./conditions";
+import { entryStackListensOnPriceTick, entryStackMatchesWebhook } from "@/lib/strategy/expr";
 import {
   isBybitAgreementQuiet,
   isBybitAgreementReject,
@@ -170,7 +171,7 @@ export async function runFuturesAutomationTick(input?: {
       continue;
     }
     parsedRules.push({ rawAccountId: accountId, rule, account });
-    if (rule.entrySource === "webhook") {
+    if (!entryStackListensOnPriceTick(rule.entrySource, rule.entryStack)) {
       continue;
     }
     let deskTickers = tickers;
@@ -205,7 +206,9 @@ export async function runFuturesAutomationTick(input?: {
         rule,
         side,
         price,
+        prices,
         barsByTimeframe,
+        firedWebhookId: rule.entrySource === "webhook" ? null : undefined,
       }),
       wasTrue: rule.conditionTrue,
       action: rule.action,
@@ -340,11 +343,18 @@ export async function fireWebhookAutomationEntries(input: {
     .from("futures_automation_rules")
     .select("*")
     .eq("account_id", input.accountId)
-    .eq("webhook_id", input.webhookId)
-    .eq("entry_source", "webhook")
     .neq("mode", "disabled")
     .order("sort_order", { ascending: true });
-  if (!ruleRows || ruleRows.length === 0) {
+  const matchedRows = (ruleRows ?? []).filter((raw) => {
+    const rule = parseFuturesAutomationRow(raw as Record<string, unknown>);
+    return entryStackMatchesWebhook(
+      rule.entrySource,
+      rule.webhookId,
+      rule.entryStack,
+      input.webhookId,
+    );
+  });
+  if (matchedRows.length === 0) {
     return { fired: 0 };
   }
   const [{ data: settingsRow }, { data: openRows }, { data: accountRow }] =
@@ -387,8 +397,22 @@ export async function fireWebhookAutomationEntries(input: {
     parseFuturesPositionRow(row as Record<string, unknown>),
   );
   const klineCache = new Map<string, CandleBar[]>();
+  const needsPrice = matchedRows.some((raw) => {
+    const rule = parseFuturesAutomationRow(raw as Record<string, unknown>);
+    return (
+      rule.entrySource === "price" ||
+      rule.entryStack.leaves.some((leaf) => leaf.kind === "price")
+    );
+  });
+  let tickers = new Map<string, BybitTicker>();
+  if (needsPrice) {
+    tickers = (await loadDeskTickerMap(
+      account.venue,
+      account.venueEnvironment,
+    ).catch(() => new Map())) as Map<string, BybitTicker>;
+  }
   let fired = 0;
-  for (const raw of ruleRows) {
+  for (const raw of matchedRows) {
     const rule = parseFuturesAutomationRow(raw as Record<string, unknown>);
     if (!rule.id) {
       continue;
@@ -402,12 +426,17 @@ export async function fireWebhookAutomationEntries(input: {
       account,
       cache: klineCache,
     });
+    const ticker = tickers.get(rule.symbol);
+    const prices = ticker ? tickerTriggerPrices(ticker) : null;
+    const price = prices ? triggerPrice(rule.triggerBy, prices) : null;
     const decision = decideFuturesAutomationTick({
       conditionMet: futuresEntryConditionMet({
         rule,
         side,
-        price: null,
+        price,
+        prices,
         barsByTimeframe,
+        firedWebhookId: input.webhookId,
       }),
       wasTrue: false,
       action: rule.action,

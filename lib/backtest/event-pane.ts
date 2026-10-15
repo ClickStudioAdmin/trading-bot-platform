@@ -5,6 +5,7 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import { formatDcaFilterReason, type DcaFilterSpec } from "@/lib/dca/filters";
+import { formatStrategyLeafReason } from "@/lib/bots/condition-copy";
 import type { BacktestRecipe, ReplayEvent } from "./model";
 
 export type EventParameter = { label: string; value: string };
@@ -218,14 +219,44 @@ export function eventParameterSections(
     }
     if (entry && recipe.entryStack && !recipe.confirm) {
       for (const leaf of recipe.entryStack.leaves) {
-        sections.push(
-          filterSection(
-            "Entry condition",
-            leaf.spec,
-            side,
-            factDetail(event, "Entry condition"),
-          ),
-        );
+        if (leaf.kind === "filter") {
+          sections.push(
+            filterSection(
+              "Entry condition",
+              leaf.spec,
+              side,
+              factDetail(event, "Entry condition"),
+            ),
+          );
+          continue;
+        }
+        if (leaf.kind === "indicator" || leaf.kind === "trend") {
+          sections.push(
+            indicatorSection({
+              role: "Entry condition",
+              kind: leaf.start.kind,
+              compare: leaf.start.compare,
+              level: leaf.start.level,
+              period: leaf.start.period,
+              slowPeriod: leaf.start.slowPeriod,
+              multiplier: leaf.start.multiplier ?? null,
+              timeframe: leaf.start.timeframe,
+              side,
+              detail: factDetail(event, "Entry condition"),
+            }),
+          );
+          continue;
+        }
+        sections.push({
+          role: "Entry condition",
+          detail: factDetail(event, "Entry condition"),
+          params: [
+            {
+              label: "Condition",
+              value: formatStrategyLeafReason(leaf, side),
+            },
+          ],
+        });
       }
     }
     if (hardExit && recipe.exitIf) {

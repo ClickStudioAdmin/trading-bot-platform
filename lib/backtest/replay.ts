@@ -10,6 +10,7 @@ import {
   resampleBarsForTimeframe,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import { formatStrategyLeafReason } from "@/lib/bots/condition-copy";
 import { canBacktestPerpsRecipe } from "./eligibility";
 import { backtestTapeInterval } from "./model";
 import {
@@ -41,7 +42,11 @@ import {
 } from "./model";
 import { fillSentence, skippedEntrySentence } from "./events";
 import type { ReplayEvent } from "./model";
-import { entryStackIsLegacy, resolveEntryStack } from "@/lib/strategy/expr";
+import {
+  entryStackIsLegacy,
+  resolveEntryStack,
+  strategyLeafTimeframe,
+} from "@/lib/strategy/expr";
 import { filterBecause, indicatorBecause, priceStartBecause } from "./explain";
 
 export { canBacktestPerpsRecipe };
@@ -167,8 +172,9 @@ export async function replayPerpsPriceCross(input: {
   const tape = backtestTapeInterval(input.recipe, 1, 2);
   const conditionTimeframes = [
     input.recipe.indicator?.timeframe,
-    ...(input.recipe.entryStack?.leaves.map((leaf) => leaf.spec.timeframe) ??
-      []),
+    ...(input.recipe.entryStack?.leaves.map((leaf) =>
+      strategyLeafTimeframe(leaf),
+    ) ?? []),
     input.recipe.confirm?.timeframe,
     input.recipe.exitIf?.timeframe,
   ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
@@ -502,7 +508,7 @@ export async function replayPerpsPriceCross(input: {
       ? ""
       : stack.leaves
           .map((leaf, index) => {
-            const text = filterBecause(leaf.spec, side, "Confirm");
+            const text = formatStrategyLeafReason(leaf, side);
             const join = stack.joins[index] === "or" ? "Or" : "And";
             return text ? `${join} ${text}` : "";
           })

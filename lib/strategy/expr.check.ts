@@ -3,15 +3,21 @@ import type { DcaFilterSpec } from "@/lib/dca/filters";
 import {
   confirmFromEntryStack,
   emptyEntryStack,
+  entryJoinDisabled,
+  entryKindDisabled,
+  entryStackConflictMessage,
   entryStackError,
   entryStackFromJson,
   entryStackIsLegacy,
   entryStackMet,
   entryStackToJson,
+  entryWebhookIdDisabled,
   formatEntryWithStack,
   legacyEntryStack,
   resolveEntryStack,
   STRATEGY_CONDITION_CAP,
+  type EntryConflictSlot,
+  type StrategyLeaf,
 } from "./expr";
 
 const rsi: DcaFilterSpec = {
@@ -131,7 +137,8 @@ const roundTrip = entryStackFromJson(
   }),
 );
 assert.equal(roundTrip?.joins[1], "or");
-assert.equal(roundTrip?.leaves[1]?.spec.kind, "ema");
+const roundLeaf = roundTrip?.leaves[1];
+assert.equal(roundLeaf?.kind === "filter" ? roundLeaf.spec.kind : "", "ema");
 assert.equal(entryStackFromJson({ leaves: [], joins: ["and"] }), null);
 assert.equal(entryStackFromJson({ leaves: [{ kind: "price" }], joins: ["and"] }), null);
 
@@ -173,9 +180,154 @@ assert.equal(
       ],
       joins: ["and", "or"],
     },
-    (spec) => spec.kind,
+    (leaf) => (leaf.kind === "filter" ? leaf.spec.kind : leaf.kind),
   ),
   "Price, and rsi, or ema",
+);
+
+const priceLeaf: StrategyLeaf = {
+  kind: "price",
+  triggerBy: "mark",
+  compare: "lte",
+  price: 100,
+};
+const webhookLeaf: StrategyLeaf = { kind: "webhook", webhookId: "hook-a" };
+const otherWebhook: StrategyLeaf = { kind: "webhook", webhookId: "hook-b" };
+const indicatorLeaf: StrategyLeaf = {
+  kind: "indicator",
+  start: {
+    kind: "rsi",
+    timeframe: "15",
+    compare: "lte",
+    level: 30,
+    period: 14,
+    slowPeriod: null,
+  },
+};
+const triggerRound = entryStackFromJson(
+  entryStackToJson({
+    leaves: [priceLeaf, indicatorLeaf, webhookLeaf],
+    joins: ["and", "or", "or"],
+  }),
+);
+assert.equal(triggerRound?.leaves[0]?.kind, "price");
+assert.equal(
+  triggerRound?.leaves[0]?.kind === "price"
+    ? triggerRound.leaves[0].triggerBy
+    : "",
+  "mark",
+);
+assert.equal(triggerRound?.leaves[1]?.kind, "indicator");
+assert.equal(
+  triggerRound?.leaves[2]?.kind === "webhook"
+    ? triggerRound.leaves[2].webhookId
+    : "",
+  "hook-a",
+);
+
+function slots(
+  trigger: EntryConflictSlot["kind"],
+  rows: EntryConflictSlot[],
+  webhookId: string | null = null,
+): EntryConflictSlot[] {
+  return [{ kind: trigger, join: "and", webhookId }, ...rows];
+}
+
+const priceAndPrice = slots("price", [
+  { kind: "price", join: "and", webhookId: null },
+]);
+assert.equal(
+  entryKindDisabled({ slots: priceAndPrice, index: 1, kind: "price" }),
+  true,
+);
+assert.equal(
+  entryKindDisabled({ slots: priceAndPrice, index: 1, kind: "indicator" }),
+  false,
+);
+assert.equal(
+  entryJoinDisabled({ slots: priceAndPrice, index: 1, join: "and" }),
+  true,
+);
+const priceOrPrice = slots("price", [
+  { kind: "price", join: "or", webhookId: null },
+]);
+assert.equal(
+  entryKindDisabled({ slots: priceOrPrice, index: 1, kind: "price" }),
+  false,
+);
+assert.equal(
+  entryKindDisabled({ slots: priceOrPrice, index: 0, kind: "price" }),
+  false,
+);
+assert.equal(
+  entryJoinDisabled({ slots: priceOrPrice, index: 1, join: "and" }),
+  true,
+);
+
+const sameHook = slots(
+  "webhook",
+  [{ kind: "webhook", join: "or", webhookId: "hook-a" }],
+  "hook-a",
+);
+assert.equal(
+  entryWebhookIdDisabled({ slots: sameHook, index: 1, webhookId: "hook-a" }),
+  true,
+);
+assert.equal(
+  entryWebhookIdDisabled({ slots: sameHook, index: 1, webhookId: "hook-b" }),
+  false,
+);
+assert.equal(
+  entryKindDisabled({
+    slots: sameHook,
+    index: 1,
+    kind: "webhook",
+    webhookIds: ["hook-a"],
+  }),
+  true,
+  "the only webhook id is already used",
+);
+const twoHooksAnd = slots(
+  "price",
+  [
+    { kind: "webhook", join: "and", webhookId: "hook-a" },
+    { kind: "webhook", join: "and", webhookId: "hook-b" },
+  ],
+);
+assert.equal(
+  entryKindDisabled({ slots: twoHooksAnd, index: 2, kind: "webhook" }),
+  true,
+);
+assert.equal(
+  entryStackConflictMessage({
+    trigger: { kind: "price", join: "and" },
+    stack: {
+      leaves: [webhookLeaf, otherWebhook],
+      joins: ["and", "and"],
+    },
+  }),
+  "Two webhooks cannot be joined with And.",
+);
+assert.equal(
+  entryStackConflictMessage({
+    trigger: { kind: "price", join: "and" },
+    stack: { leaves: [priceLeaf], joins: ["and"] },
+  }),
+  "Two price crosses cannot be joined with And.",
+);
+assert.equal(
+  entryStackConflictMessage({
+    trigger: { kind: "webhook", join: "and", webhookId: "hook-a" },
+    stack: { leaves: [webhookLeaf], joins: ["or"] },
+  }),
+  "The same webhook cannot be used twice.",
+);
+assert.equal(
+  entryStackConflictMessage({
+    trigger: { kind: "indicator", join: "and" },
+    stack: { leaves: [priceLeaf, indicatorLeaf], joins: ["and", "and"] },
+  }),
+  null,
 );
 
 console.log("strategy expr checks passed");

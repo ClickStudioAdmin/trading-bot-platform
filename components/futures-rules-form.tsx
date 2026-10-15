@@ -37,6 +37,8 @@ import {
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import {
   EntryConditionStack,
+  entryConflictSlots,
+  entryDraftComplete,
   entryRowsFromSources,
   entryStackFromRows,
   type EntryStackRow,
@@ -94,7 +96,11 @@ import {
   dcaFilterSpecForKind,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
-import { confirmFromEntryStack } from "@/lib/strategy/expr";
+import {
+  confirmFromEntryStack,
+  entryKindDisabled,
+  entryWebhookIdDisabled,
+} from "@/lib/strategy/expr";
 import {
   DEFAULT_DCA_RSI_PERIOD,
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
@@ -611,9 +617,16 @@ function RuleCard({
   const entryStack = closing
     ? { leaves: [], joins: [] }
     : entryStackFromRows(entryRows);
+  const entrySlots = entryConflictSlots(
+    {
+      kind: closing ? "price" : entrySource,
+      webhookId,
+    },
+    closing ? [] : entryRows,
+  );
   const confirm = closing ? null : confirmFromEntryStack(entryStack);
   const entryMissing =
-    !closing && entryRows.some((row) => !dcaFilterComplete(row.spec));
+    !closing && entryRows.some((row) => !entryDraftComplete(row.draft));
   const exitIfMissing = Boolean(exitIf) && !dcaFilterComplete(exitIf);
   const tpsl =
     tpOn || slOn
@@ -923,6 +936,33 @@ function RuleCard({
                 if (indicatorKind === "rsi") {
                   setIndicatorLevel(side === "short" ? "70" : "30");
                 }
+                setEntryRows((rows) =>
+                  rows.map((row) => {
+                    if (
+                      row.draft.kind !== "indicator" &&
+                      row.draft.kind !== "trend"
+                    ) {
+                      return row;
+                    }
+                    return {
+                      ...row,
+                      draft: {
+                        ...row.draft,
+                        compare: indicatorCompareForDirection(
+                          side,
+                          row.draft.indicatorKind,
+                          "",
+                        ),
+                        level:
+                          row.draft.indicatorKind === "rsi"
+                            ? side === "short"
+                              ? "70"
+                              : "30"
+                            : row.draft.level,
+                      },
+                    };
+                  }),
+                );
               }}
               className={botFieldClass}
             >
@@ -966,10 +1006,32 @@ function RuleCard({
               }}
               className={botFieldClass}
             >
-              <option value="price">Price cross</option>
-              {closing ? null : <option value="indicator">Indicator</option>}
+              <option
+                value="price"
+                disabled={entryKindDisabled({
+                  slots: entrySlots,
+                  index: 0,
+                  kind: "price",
+                  webhookIds: triggerWebhooks.map((hook) => hook.id),
+                })}
+              >
+                Price cross
+              </option>
+              {closing ? null : (
+                <option value="indicator">Indicator</option>
+              )}
               {closing ? null : <option value="trend">Trend</option>}
-              <option value="webhook">Signal webhook</option>
+              <option
+                value="webhook"
+                disabled={entryKindDisabled({
+                  slots: entrySlots,
+                  index: 0,
+                  kind: "webhook",
+                  webhookIds: triggerWebhooks.map((hook) => hook.id),
+                })}
+              >
+                Signal webhook
+              </option>
             </AppSelect>
           </BotField>
           {closing ? null : (
@@ -1038,7 +1100,15 @@ function RuleCard({
                     : "Pick a webhook"}
                 </option>
                 {whenWebhooks.map((hook) => (
-                  <option key={hook.id} value={hook.id}>
+                  <option
+                    key={hook.id}
+                    value={hook.id}
+                    disabled={entryWebhookIdDisabled({
+                      slots: entrySlots,
+                      index: 0,
+                      webhookId: hook.id,
+                    })}
+                  >
                     {hook.name}
                   </option>
                 ))}
@@ -1091,6 +1161,11 @@ function RuleCard({
             setDirty(true);
             setFormTick((tick) => tick + 1);
           }}
+          anchor={{
+            kind: entrySource,
+            webhookId,
+          }}
+          webhooks={whenWebhooks}
           triggerTimeframe={
             entrySource === "indicator" || entrySource === "trend"
               ? indicatorTimeframe

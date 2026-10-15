@@ -9,6 +9,7 @@ import type { PaperLayerFormValues } from "@/lib/engine/rules";
 import {
   formatIndicatorStartReason,
   formatPriceCrossReason,
+  formatStrategyLeafReason,
 } from "@/lib/bots/condition-copy";
 import type { FuturesAutomationFormValues } from "@/lib/futures/automation";
 import {
@@ -399,7 +400,7 @@ export function perpsBotConfig(
           stack.leaves
             .map((leaf, index) => {
               const join = stack.joins[index] === "or" ? "or" : "and";
-              return `${join} ${formatDcaFilterReason(leaf.spec, side)}`;
+              return `${join} ${formatStrategyLeafReason(leaf, side)}`;
             })
             .join(", "),
         ),

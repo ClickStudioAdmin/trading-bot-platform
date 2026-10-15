@@ -5,7 +5,7 @@ import {
 import { formatDcaIndicatorStartLabel } from "@/lib/dca/indicators";
 import type { DcaIndicatorStart, DcaPriceTrigger, DcaStartKind } from "@/lib/dca/playbook";
 import type { FuturesAutomationEntry, FuturesTriggerCompare } from "@/lib/futures/automation";
-import type { EntryStack } from "@/lib/strategy/expr";
+import type { EntryStack, StrategyLeaf } from "@/lib/strategy/expr";
 import {
   confirmFromEntryStack,
   entryStackIsLegacy,
@@ -58,6 +58,26 @@ export function formatIndicatorStartReason(
     timeframe: start.timeframe,
     side,
   });
+}
+
+export function formatStrategyLeafReason(
+  leaf: StrategyLeaf,
+  side: FuturesSide,
+): string {
+  if (leaf.kind === "filter") {
+    return formatDcaFilterReason(leaf.spec, side);
+  }
+  if (leaf.kind === "price") {
+    return formatPriceCrossReason({
+      source: leaf.triggerBy,
+      compare: leaf.compare,
+      level: leaf.price,
+    });
+  }
+  if (leaf.kind === "webhook") {
+    return "Signal webhook";
+  }
+  return formatIndicatorStartReason(leaf.start, side);
 }
 
 export function formatSecondaryEntryReason(
@@ -133,8 +153,8 @@ export function formatFuturesEntryReasons(input: {
       confirm ? formatSecondaryEntryReason(confirm, input.side) : null,
     ]);
   }
-  return formatEntryWithStack(start, stack, (spec) =>
-    formatDcaFilterReason(spec, input.side),
+  return formatEntryWithStack(start, stack, (leaf) =>
+    formatStrategyLeafReason(leaf, input.side),
   );
 }
 

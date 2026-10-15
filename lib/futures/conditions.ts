@@ -23,6 +23,7 @@ import { dcaBreakevenPrice, dcaTighterStopPrice } from "@/lib/dca/grid";
 import {
   confirmFromEntryStack,
   emptyEntryStack,
+  entryStackConflictMessage,
   entryStackError,
   entryStackFromJson,
   entryStackMet,
@@ -30,8 +31,12 @@ import {
   entryStackToJson,
   legacyEntryStack,
   resolveEntryStack,
+  type EntryConflictSlot,
   type EntryStack,
+  type StrategyLeaf,
 } from "@/lib/strategy/expr";
+import { triggerPrice } from "./tpsl";
+import type { FuturesTrigger } from "./model";
 import type { FuturesAction, FuturesSide } from "./model";
 
 export type { EntryStack };
@@ -163,10 +168,76 @@ export function parseFuturesBreakevenFields(
   };
 }
 
+function parsePriceEntryLeaf(
+  form: FormData,
+  prefix: string,
+): { ok: true; leaf: StrategyLeaf } | { ok: false; error: string } {
+  const triggerBy = String(form.get(`${prefix}TriggerBy`) ?? "last");
+  if (triggerBy !== "last" && triggerBy !== "mark" && triggerBy !== "index") {
+    return { ok: false, error: "Choose a price source." };
+  }
+  const compare = String(form.get(`${prefix}TriggerCompare`) ?? "gte");
+  if (compare !== "gte" && compare !== "lte") {
+    return { ok: false, error: "Choose a price comparison." };
+  }
+  const price = Number(
+    String(form.get(`${prefix}TriggerPrice`) ?? "").replace(/,/g, "").trim(),
+  );
+  if (!(price > 0)) {
+    return { ok: false, error: "Enter a price." };
+  }
+  return {
+    ok: true,
+    leaf: { kind: "price", triggerBy, compare, price },
+  };
+}
+
+function parseTriggerEntryLeaf(
+  form: FormData,
+  prefix: string,
+  source: string,
+): { ok: true; leaf: StrategyLeaf } | { ok: false; error: string } {
+  if (source === "price") {
+    return parsePriceEntryLeaf(form, prefix);
+  }
+  if (source === "webhook") {
+    const webhookId = String(form.get(`${prefix}WebhookId`) ?? "").trim();
+    if (!webhookId) {
+      return { ok: false, error: "Pick a webhook." };
+    }
+    return { ok: true, leaf: { kind: "webhook", webhookId } };
+  }
+  if (source === "indicator" || source === "trend") {
+    const parsed = parseDcaIndicatorStartFields(
+      form,
+      futuresIndicatorFieldNames(prefix),
+      true,
+      "entry condition",
+      source,
+    );
+    if (!parsed.ok) {
+      return parsed;
+    }
+    if (!parsed.start) {
+      return { ok: false, error: "Enter an entry condition." };
+    }
+    return { ok: true, leaf: { kind: source, start: parsed.start } };
+  }
+  const parsed = parseDcaFilterForm(form, prefix, true, "entry condition");
+  if (!parsed.ok) {
+    return parsed;
+  }
+  if (!parsed.spec) {
+    return { ok: false, error: "Enter an entry condition." };
+  }
+  return { ok: true, leaf: { kind: "filter", spec: parsed.spec } };
+}
+
 export function parseEntryStackForm(
   form: FormData,
   prefix: string,
   triggerTimeframe: DcaIndicatorTimeframe | null,
+  trigger?: EntryConflictSlot,
 ):
   | { ok: true; present: boolean; stack: EntryStack }
   | { ok: false; error: string } {
@@ -181,25 +252,28 @@ export function parseEntryStackForm(
   const joins: EntryStack["joins"] = [];
   for (let index = 0; index < count; index += 1) {
     const joinRaw = String(form.get(`${prefix}entry${index}Join`) ?? "and");
-    const parsed = parseDcaFilterForm(
+    const source = String(form.get(`${prefix}entry${index}Source`) ?? "").trim();
+    const parsed = parseTriggerEntryLeaf(
       form,
       `${prefix}entry${index}`,
-      true,
-      "entry condition",
+      source,
     );
     if (!parsed.ok) {
       return parsed;
     }
-    if (!parsed.spec) {
-      return { ok: false, error: "Enter an entry condition." };
-    }
-    leaves.push({ kind: "filter", spec: parsed.spec });
+    leaves.push(parsed.leaf);
     joins.push(joinRaw === "or" ? "or" : "and");
   }
   const stack: EntryStack = { leaves, joins };
   const error = entryStackError({ stack, triggerTimeframe });
   if (error) {
     return { ok: false, error };
+  }
+  if (trigger) {
+    const conflict = entryStackConflictMessage({ trigger, stack });
+    if (conflict) {
+      return { ok: false, error: conflict };
+    }
   }
   return { ok: true, present: true, stack };
 }
@@ -211,8 +285,41 @@ export function writeEntryStackFormFields(
 ): void {
   form.set(`${prefix}entryCount`, String(stack.leaves.length));
   stack.leaves.forEach((leaf, index) => {
-    form.set(`${prefix}entry${index}Join`, stack.joins[index] ?? "and");
-    writeDcaFilterFormFields(form, `${prefix}entry${index}`, leaf.spec);
+    const row = `${prefix}entry${index}`;
+    form.set(`${row}Join`, stack.joins[index] ?? "and");
+    form.set(`${row}Source`, leaf.kind);
+    if (leaf.kind === "filter") {
+      writeDcaFilterFormFields(form, row, leaf.spec);
+      return;
+    }
+    if (leaf.kind === "price") {
+      form.set(`${row}TriggerBy`, leaf.triggerBy);
+      form.set(`${row}TriggerCompare`, leaf.compare);
+      form.set(`${row}TriggerPrice`, String(leaf.price));
+      return;
+    }
+    if (leaf.kind === "webhook") {
+      form.set(`${row}WebhookId`, leaf.webhookId);
+      return;
+    }
+    const names = futuresIndicatorFieldNames(row);
+    form.set(names.kind, leaf.start.kind);
+    form.set(names.timeframe, leaf.start.timeframe);
+    if (leaf.start.compare) {
+      form.set(names.compare, leaf.start.compare);
+    }
+    if (leaf.start.level != null) {
+      form.set(names.level, String(leaf.start.level));
+    }
+    if (leaf.start.period != null) {
+      form.set(names.period, String(leaf.start.period));
+    }
+    if (leaf.start.slowPeriod != null) {
+      form.set(names.slowPeriod, String(leaf.start.slowPeriod));
+    }
+    if (leaf.start.multiplier != null) {
+      form.set(names.multiplier, String(leaf.start.multiplier));
+    }
   });
 }
 
@@ -258,7 +365,11 @@ export function parseFuturesConditionForm(
     (input.entrySource === "indicator" || input.entrySource === "trend")
       ? indicator.start.timeframe
       : null;
-  const stacked = parseEntryStackForm(form, prefix, triggerTimeframe);
+  const stacked = parseEntryStackForm(form, prefix, triggerTimeframe, {
+    kind: input.entrySource,
+    join: "and",
+    webhookId: String(form.get(`${prefix}webhookId`) ?? "").trim() || null,
+  });
   if (!stacked.ok) {
     return stacked;
   }
@@ -447,7 +558,15 @@ export function futuresAutomationNeedsWideBars(rule: {
   const stack = resolveEntryStack(rule.entryStack, rule.confirm);
   return (
     rule.indicator?.kind === "supertrend" ||
-    stack.leaves.some((leaf) => dcaFilterNeedsBars(leaf.spec)) ||
+    stack.leaves.some((leaf) => {
+      if (leaf.kind === "trend") {
+        return true;
+      }
+      if (leaf.kind === "filter") {
+        return dcaFilterNeedsBars(leaf.spec);
+      }
+      return false;
+    }) ||
     dcaFilterNeedsBars(rule.exitIf)
   );
 }
@@ -470,9 +589,17 @@ export function futuresStartMet(input: {
   triggerCompare: "gte" | "lte";
   triggerPrice: number;
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
+  webhookId?: string | null;
+  /** Undefined keeps a webhook trigger true. Null means this tick is not that webhook. */
+  firedWebhookId?: string | null;
 }): boolean {
   if (input.entrySource === "webhook") {
-    return true;
+    if (input.firedWebhookId === undefined) {
+      return true;
+    }
+    return (
+      input.firedWebhookId != null && input.firedWebhookId === input.webhookId
+    );
   }
   if (input.entrySource === "price") {
     if (!(input.price != null && input.price > 0)) {
@@ -520,6 +647,59 @@ export function futuresFilterMet(input: {
   });
 }
 
+function quotedPrice(
+  triggerBy: FuturesTrigger,
+  price: number | null,
+  prices?: { last: number | null; mark: number | null; index: number | null } | null,
+): number | null {
+  if (prices) {
+    return triggerPrice(triggerBy, prices);
+  }
+  return price;
+}
+
+function strategyLeafMet(input: {
+  leaf: StrategyLeaf;
+  side: FuturesSide;
+  price: number | null;
+  prices?: { last: number | null; mark: number | null; index: number | null } | null;
+  barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
+  firedWebhookId?: string | null;
+}): boolean {
+  const leaf = input.leaf;
+  if (leaf.kind === "filter") {
+    return futuresFilterMet({
+      spec: leaf.spec,
+      side: input.side,
+      barsByTimeframe: input.barsByTimeframe,
+    });
+  }
+  if (leaf.kind === "price") {
+    const level = quotedPrice(leaf.triggerBy, input.price, input.prices);
+    if (!(level != null && level > 0)) {
+      return false;
+    }
+    return leaf.compare === "gte" ? level >= leaf.price : level <= leaf.price;
+  }
+  if (leaf.kind === "webhook") {
+    return input.firedWebhookId != null && input.firedWebhookId === leaf.webhookId;
+  }
+  const bars = barsForTimeframe(input.barsByTimeframe, leaf.start.timeframe);
+  return dcaSeriesStartEval({
+    startKind: leaf.kind,
+    side: input.side,
+    indicatorKind: leaf.start.kind,
+    indicatorCompare: leaf.start.compare,
+    indicatorLevel: leaf.start.level,
+    indicatorPeriod: leaf.start.period,
+    indicatorSlowPeriod: leaf.start.slowPeriod,
+    indicatorMultiplier: leaf.start.multiplier,
+    clipsFilled: 0,
+    closes: bars.map((row) => row.close),
+    bars,
+  }).now;
+}
+
 export function futuresEntryConditionMet(input: {
   rule: {
     entrySource: FuturesAutomationEntry;
@@ -528,12 +708,15 @@ export function futuresEntryConditionMet(input: {
     entryStack?: EntryStack | null;
     triggerCompare: "gte" | "lte";
     triggerPrice: number;
+    webhookId?: string | null;
     action?: FuturesAction;
     closeSide?: FuturesSide | null;
   };
   side: FuturesSide;
   price: number | null;
+  prices?: { last: number | null; mark: number | null; index: number | null } | null;
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
+  firedWebhookId?: string | null;
 }): boolean {
   const start = futuresStartMet({
     entrySource: input.rule.entrySource,
@@ -543,16 +726,21 @@ export function futuresEntryConditionMet(input: {
     triggerCompare: input.rule.triggerCompare,
     triggerPrice: input.rule.triggerPrice,
     barsByTimeframe: input.barsByTimeframe,
+    webhookId: input.rule.webhookId,
+    firedWebhookId: input.firedWebhookId,
   });
   const stack = resolveEntryStack(input.rule.entryStack, input.rule.confirm);
   return entryStackMet({
     trigger: start,
     joins: stack.joins,
     leaves: stack.leaves.map((leaf) =>
-      futuresFilterMet({
-        spec: leaf.spec,
+      strategyLeafMet({
+        leaf,
         side: input.side,
+        price: input.price,
+        prices: input.prices,
         barsByTimeframe: input.barsByTimeframe,
+        firedWebhookId: input.firedWebhookId,
       }),
     ),
   });
