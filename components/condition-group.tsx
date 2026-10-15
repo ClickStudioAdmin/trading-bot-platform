@@ -1,5 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
-import { IconPlus } from "@/components/icons";
+import { IconPlus, IconTrash } from "@/components/icons";
+import { TableHint, useActionHint } from "@/components/table-actions";
 import type { StrategyJoin } from "@/lib/strategy/expr";
 
 export function partitionByOr<T extends { join: StrategyJoin }>(rows: T[]): T[][] {
@@ -43,7 +46,13 @@ function Hairline({ children }: { children: ReactNode }) {
   );
 }
 
-export function AddConditionButton({ onClick }: { onClick: () => void }) {
+export function AddConditionButton({
+  onClick,
+  label = "Add condition",
+}: {
+  onClick: () => void;
+  label?: string;
+}) {
   return (
     <Hairline>
       <button
@@ -52,9 +61,38 @@ export function AddConditionButton({ onClick }: { onClick: () => void }) {
         onClick={onClick}
       >
         <IconPlus size={14} className="size-3.5" />
-        Add condition
+        {label}
       </button>
     </Hairline>
+  );
+}
+
+export function RemoveConditionButton({
+  scope,
+  onClick,
+}: {
+  scope: "group" | "condition";
+  onClick: () => void;
+}) {
+  const label =
+    scope === "group" ? "Remove this condition Group" : "Remove this condition";
+  const { box, dismiss, tip } = useActionHint();
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={label}
+        className="inline-flex size-7 items-center justify-center text-danger"
+        onClick={() => {
+          dismiss();
+          onClick();
+        }}
+        {...tip}
+      >
+        <IconTrash size={14} className="size-3.5" />
+      </button>
+      <TableHint box={box} label={label} detail="" />
+    </>
   );
 }
 
@@ -78,7 +116,7 @@ export function GroupedConditions<T extends { key: string; join: StrategyJoin }>
 }: {
   rows: T[];
   lead?: ReactNode;
-  renderRemove: (row: T) => ReactNode;
+  renderRemove: (row: T, scope: "group" | "condition") => ReactNode;
   renderBody: (row: T) => ReactNode;
   renderAddInGroup?: (groupIndex: number) => ReactNode;
   addGroup?: ReactNode;
@@ -102,7 +140,7 @@ export function GroupedConditions<T extends { key: string; join: StrategyJoin }>
                   </p>
                 </div>
                 {groupIndex > 0 && opener ? (
-                  <div className="shrink-0">{renderRemove(opener)}</div>
+                  <div className="shrink-0">{renderRemove(opener, "group")}</div>
                 ) : null}
               </div>
               {groupIndex === 0 ? lead : null}
@@ -119,7 +157,7 @@ export function GroupedConditions<T extends { key: string; join: StrategyJoin }>
                     ) : (
                       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3">
                         <div className="min-w-0">{renderBody(row)}</div>
-                        <div className="shrink-0">{renderRemove(row)}</div>
+                        <div className="shrink-0">{renderRemove(row, "condition")}</div>
                       </div>
                     )}
                   </div>

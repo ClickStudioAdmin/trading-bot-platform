@@ -6,6 +6,7 @@ import {
   andInsertIndex,
   GroupedConditions,
   insertAt,
+  RemoveConditionButton,
 } from "@/components/condition-group";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { AppSelect } from "@/components/app-select";
@@ -14,7 +15,7 @@ import {
   TrendStartFields,
 } from "@/components/bot-indicator-fields";
 import { HintLabel } from "@/components/bot-form-chrome";
-import { IconPlus, IconTrash } from "@/components/icons";
+import { IconPlus } from "@/components/icons";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { dcaFilterComplete, type DcaFilterSpec } from "@/lib/dca/filters";
 import {
@@ -495,16 +496,15 @@ export function EntryConditionStack({
       </label>
     );
   }
-  function removeControl(row: EntryStackRow) {
+  function removeControl(
+    row: EntryStackRow,
+    scope: "group" | "condition" = "condition",
+  ) {
     return (
-      <button
-        type="button"
-        className="inline-flex shrink-0 items-center gap-1.5 text-sm text-danger"
+      <RemoveConditionButton
+        scope={scope}
         onClick={() => onChange(rows.filter((item) => item.key !== row.key))}
-      >
-        <IconTrash size={14} className="size-3.5" />
-        Remove
-      </button>
+      />
     );
   }
   const rendered = rows.map((row, index) => {
@@ -817,7 +817,7 @@ export function EntryConditionStack({
         <GroupedConditions
           rows={rendered}
           lead={lead}
-          renderRemove={(item) => removeControl(item.row)}
+          renderRemove={(item, scope) => removeControl(item.row, scope)}
           renderBody={(item) => (
             <>
               <input type="hidden" name={`${prefix}${item.index}Join`} value={item.join} />
@@ -832,7 +832,12 @@ export function EntryConditionStack({
               : undefined
           }
           addGroup={
-            canAdd ? <AddConditionButton onClick={() => addAt("or")} /> : null
+            canAdd ? (
+              <AddConditionButton
+                label="Add Condition Group"
+                onClick={() => addAt("or")}
+              />
+            ) : null
           }
         />
       </div>
