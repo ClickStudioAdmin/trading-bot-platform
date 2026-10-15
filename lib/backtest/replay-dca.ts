@@ -1,6 +1,7 @@
 import {
   decideDcaTick,
   dcaArmTriggerForSide,
+  dcaStartKindForSide,
   dcaAtrTimeframe,
   dcaCycleClipSize,
   dcaEnabledSides,
@@ -120,6 +121,10 @@ export async function replayDcaPlaybook(input: {
   const config = {
     ...built.config,
     startKind: input.recipe.startKind,
+    shortStartKind:
+      input.recipe.direction === "both"
+        ? (input.recipe.shortStartKind ?? input.recipe.startKind)
+        : null,
   };
   const sides = dcaEnabledSides(config.direction);
   const splitSides = config.direction === "both";
@@ -599,7 +604,7 @@ export async function replayDcaPlaybook(input: {
         lastClipAtMs: live.lastClipAtMs,
         firstFillPrice: live.firstFillPrice,
         nowMs: bar.timeMs,
-        startKind: config.startKind,
+        startKind: dcaStartKindForSide(config, side),
         dcaMode: config.dcaMode,
         dipPct: config.dipPct,
         intervalMinutes: config.intervalMinutes,
@@ -768,7 +773,7 @@ export async function replayDcaPlaybook(input: {
     const entryStack = dcaEntryStackForSide(config, side);
     if (!entryStackIsLegacy(entryStack)) {
       return formatDcaStartReasons({
-        startKind: config.startKind,
+        startKind: dcaStartKindForSide(config, side),
         side,
         armTrigger: dcaArmTriggerForSide(config, side),
         indicator: dcaIndicatorStartForSide(config, side),
@@ -776,10 +781,11 @@ export async function replayDcaPlaybook(input: {
         price: closes[closes.length - 1] ?? null,
       });
     }
-    if (config.startKind === "immediate") {
+    const sideKind = dcaStartKindForSide(config, side);
+    if (sideKind === "immediate") {
       return "Immediate start.";
     }
-    if (config.startKind === "price") {
+    if (sideKind === "price") {
       const last = closes[closes.length - 1] ?? 0;
       return priceStartBecause(dcaArmTriggerForSide(config, side), last);
     }

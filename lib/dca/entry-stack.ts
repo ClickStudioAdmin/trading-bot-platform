@@ -11,7 +11,12 @@ import {
 } from "@/lib/strategy/expr";
 import { dcaFilterForSide, dcaFilterMet } from "./filters";
 import type { DcaIndicatorTimeframe } from "./indicators";
-import { dcaEnabledSides, type DcaPlaybookConfig } from "./playbook";
+import {
+  dcaEnabledSides,
+  dcaStartKindForSide,
+  dcaWebhookIdForSide,
+  type DcaPlaybookConfig,
+} from "./playbook";
 
 type StackPlaybook = Pick<
   DcaPlaybookConfig,
@@ -21,7 +26,9 @@ type StackPlaybook = Pick<
   | "entryStack"
   | "shortEntryStack"
   | "startKind"
+  | "shortStartKind"
   | "webhookId"
+  | "shortWebhookId"
 >;
 
 export function dcaEntryStackForSide(
@@ -84,7 +91,13 @@ export function dcaPlaybookMatchesWebhook(
   if (!firedId) {
     return false;
   }
-  if (playbook.startKind === "webhook" && playbook.webhookId === firedId) {
+  if (
+    dcaEnabledSides(playbook.direction).some(
+      (side) =>
+        dcaStartKindForSide(playbook, side) === "webhook" &&
+        dcaWebhookIdForSide(playbook, side) === firedId,
+    )
+  ) {
     return true;
   }
   return dcaEnabledSides(playbook.direction).some((side) =>

@@ -21,7 +21,16 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
     symbol: config.symbol,
     direction: config.direction,
     start_kind: config.startKind,
+    short_start_kind:
+      config.direction === "both"
+        ? (config.shortStartKind ?? config.startKind)
+        : null,
     webhook_id: config.webhookId,
+    short_webhook_id:
+      config.direction === "both" &&
+      (config.shortStartKind ?? config.startKind) === "webhook"
+        ? (config.shortWebhookId ?? config.webhookId)
+        : null,
     dca_mode: config.dcaMode,
     clip_size: config.clipSize,
     size_unit: config.sizeUnit,

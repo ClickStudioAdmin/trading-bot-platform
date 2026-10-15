@@ -88,6 +88,8 @@ export type DcaTemplateRecipe = {
   symbol: string;
   direction: DcaPlaybookConfig["direction"];
   startKind: DcaPlaybookConfig["startKind"];
+  /** Direction Both. Absent means the short leg still shares startKind. */
+  shortStartKind?: DcaPlaybookConfig["shortStartKind"];
   dcaMode: DcaPlaybookConfig["dcaMode"];
   clipSize: number;
   sizeUnit: DcaPlaybookConfig["sizeUnit"];
@@ -285,6 +287,7 @@ export function dcaFormMatchesPlaybook(
   }
   return (
     saved.webhookId === next.webhookId &&
+    (saved.shortWebhookId ?? null) === (next.shortWebhookId ?? null) &&
     JSON.stringify(snapshotDcaRecipe(saved)) ===
       JSON.stringify(snapshotDcaRecipe(next))
   );
@@ -297,6 +300,11 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     symbol: config.symbol,
     direction: config.direction,
     startKind: config.startKind,
+    ...(config.direction === "both"
+      ? {
+          shortStartKind: config.shortStartKind ?? config.startKind,
+        }
+      : {}),
     dcaMode: config.dcaMode,
     clipSize: config.clipSize,
     sizeUnit: config.sizeUnit,
@@ -440,7 +448,12 @@ export function dcaRecipePlaybookSeed(recipe: DcaTemplateRecipe): DcaPlaybook {
     symbol: recipe.symbol,
     direction: recipe.direction,
     startKind: recipe.startKind,
+    shortStartKind:
+      recipe.direction === "both"
+        ? (recipe.shortStartKind ?? recipe.startKind)
+        : null,
     webhookId: null,
+    shortWebhookId: null,
     dcaMode: recipe.dcaMode,
     clipSize: recipe.clipSize,
     sizeUnit: recipe.sizeUnit,
@@ -596,7 +609,8 @@ function parseDcaTemplateRecipe(
     return { ok: false, error: STALE_TEMPLATE_ERROR };
   }
   const placeholderWebhook =
-    String(row.startKind) === "webhook"
+    String(row.startKind) === "webhook" ||
+    String(row.shortStartKind) === "webhook"
       ? "11111111-1111-4111-8111-111111111111"
       : undefined;
   const built = dcaRecipeToConfig(row as unknown as DcaTemplateRecipe, {
@@ -774,6 +788,24 @@ export function dcaRecipeToConfig(
   form.set("startKind", appliedStart);
   if (appliedStart === "webhook") {
     form.set("webhookId", webhookId);
+  }
+  if (String(form.get("direction")) === "both") {
+    const shortKind = String(recipe.shortStartKind ?? appliedStart);
+    let appliedShort = shortKind;
+    const shortHook = webhookId;
+    if (shortKind === "webhook" && !shortHook) {
+      appliedShort = "indicator";
+      notes.push(
+        "Short signal start needs a webhook on this desk. Applied as Indicator.",
+      );
+    } else if (shortKind === "immediate") {
+      appliedShort = "indicator";
+      notes.push("Short manual start is retired. Applied as Indicator.");
+    }
+    form.set("shortStartKind", appliedShort);
+    if (appliedShort === "webhook") {
+      form.set("shortWebhookId", shortHook);
+    }
   }
   const averaging = dcaAveragingKind({
     dcaMode: recipe.dcaMode === "order" ? "order" : "position",
@@ -968,6 +1000,24 @@ export function dcaRecipeToConfig(
     (shortKind ? recipe.indicatorMultiplier : null);
   if (shortMultiplier != null) {
     form.set("shortIndicatorMultiplier", String(shortMultiplier));
+  }
+  if (
+    form.get("shortStartKind") === "indicator" &&
+    !form.get("shortIndicatorKind")
+  ) {
+    form.set("shortIndicatorKind", "rsi");
+    form.set(
+      "shortIndicatorTimeframe",
+      String(form.get("shortIndicatorTimeframe") || "15"),
+    );
+    form.set(
+      "shortIndicatorCompare",
+      String(form.get("shortIndicatorCompare") || "cross_gte"),
+    );
+    form.set(
+      "shortIndicatorLevel",
+      String(form.get("shortIndicatorLevel") || "70"),
+    );
   }
   const entryStack = entryStackFromJson(
     "entryStack" in recipe ? recipe.entryStack : null,
@@ -1178,6 +1228,8 @@ export type DcaSnapshotOverlay = {
   symbol?: string;
   direction?: string;
   startKind?: string;
+  shortStartKind?: string;
+  shortWebhookId?: string;
   averaging?: string;
   restGrid?: boolean;
   sizeUnit?: string;

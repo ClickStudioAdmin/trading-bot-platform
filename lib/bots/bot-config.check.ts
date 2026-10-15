@@ -63,6 +63,17 @@ const dca = dcaBotConfig(playbook);
 assert.equal(value(dca, "General", "Contract"), "BTCUSDT");
 assert.equal(value(dca, "General", "Direction"), "Both");
 assert.equal(value(dca, "Long entry", "Start"), "Price");
+const splitDca = dcaBotConfig({
+  ...playbook,
+  shortStartKind: "indicator",
+  shortIndicatorKind: "rsi",
+  shortIndicatorTimeframe: "15",
+  shortIndicatorCompare: "gte",
+  shortIndicatorLevel: 70,
+  shortIndicatorPeriod: 14,
+});
+assert.equal(value(splitDca, "Long entry", "Start"), "Price");
+assert.equal(value(splitDca, "Short entry", "Start"), "Indicator");
 assert.equal(value(dca, "Long entry", "Price"), "Last is at or below 100");
 assert.equal(value(dca, "Short entry", "Price"), "Mark is at or above 120");
 assert.match(value(dca, "Long entry", "Secondary entry"), /RSI 14/);

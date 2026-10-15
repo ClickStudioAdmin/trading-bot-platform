@@ -243,7 +243,11 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
         timeframe: recipe.indicatorTimeframe,
       });
     }
-    if (recipe.shortIndicatorKind) {
+    const shortStartKind = recipe.shortStartKind ?? recipe.startKind;
+    if (
+      recipe.shortIndicatorKind &&
+      (shortStartKind === "indicator" || shortStartKind === "trend")
+    ) {
       addSpec(specs, {
         key: specKey({
           kind: recipe.shortIndicatorKind,

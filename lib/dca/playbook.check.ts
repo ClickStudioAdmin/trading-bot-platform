@@ -35,6 +35,7 @@ import {
   dcaNeedsAtrBars,
   dcaEnabledSides,
   dcaShouldFlattenIdleOpen,
+  dcaStartKindForSide,
   dcaStartListens,
   dcaNeedsIndicatorCloses,
   dcaLegIsRunning,
@@ -1393,6 +1394,11 @@ assert.equal(bothParsed.ok, true);
 if (bothParsed.ok) {
   assert.equal(bothParsed.config.direction, "both");
   assert.equal(bothParsed.config.startKind, "webhook");
+  assert.equal(bothParsed.config.shortStartKind, "webhook");
+  assert.equal(
+    bothParsed.config.shortWebhookId,
+    "11111111-1111-1111-1111-111111111111",
+  );
   assert.equal(bothParsed.config.dcaMode, "order");
   assert.equal(bothParsed.config.sizeMultiplier, 2);
 }
@@ -1408,6 +1414,41 @@ assert.equal(bothManualParsed.ok, true);
 if (bothManualParsed.ok) {
   assert.equal(bothManualParsed.config.direction, "both");
   assert.equal(bothManualParsed.config.startKind, "immediate");
+  assert.equal(bothManualParsed.config.shortStartKind, "immediate");
+}
+
+const splitStart = new FormData();
+splitStart.set("symbol", "BTCUSDT");
+splitStart.set("direction", "both");
+splitStart.set("clipSize", "1");
+splitStart.set("sizeUnit", "qty");
+splitStart.set("startKind", "price");
+splitStart.set("armTriggerBy", "last");
+splitStart.set("armCompare", "lte");
+splitStart.set("armPrice", "100");
+splitStart.set("shortStartKind", "indicator");
+splitStart.set("shortIndicatorKind", "rsi");
+splitStart.set("shortIndicatorTimeframe", "15");
+splitStart.set("shortIndicatorCompare", "gte");
+splitStart.set("shortIndicatorLevel", "70");
+splitStart.set("shortIndicatorPeriod", "14");
+const splitParsed = parseDcaPlaybookForm(splitStart);
+assert.equal(splitParsed.ok, true);
+if (splitParsed.ok) {
+  assert.equal(splitParsed.config.startKind, "price");
+  assert.equal(splitParsed.config.shortStartKind, "indicator");
+  assert.equal(splitParsed.config.armTrigger?.price, 100);
+  assert.equal(splitParsed.config.shortArmTrigger ?? null, null);
+  assert.equal(splitParsed.config.indicatorKind, null);
+  assert.equal(splitParsed.config.shortIndicatorKind, "rsi");
+  assert.equal(
+    dcaStartKindForSide(splitParsed.config, "long"),
+    "price",
+  );
+  assert.equal(
+    dcaStartKindForSide(splitParsed.config, "short"),
+    "indicator",
+  );
 }
 
 assert.equal(

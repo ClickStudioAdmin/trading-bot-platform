@@ -102,7 +102,8 @@ export function eventParameterSections(
       entry &&
       (recipe.startKind === "indicator" || recipe.startKind === "trend") &&
       recipe.indicatorKind &&
-      (side === "long" || !recipe.shortIndicatorKind)
+      (side !== "short" ||
+        (recipe.shortStartKind == null && !recipe.shortIndicatorKind))
     ) {
       sections.push(
         indicatorSection({
@@ -119,7 +120,13 @@ export function eventParameterSections(
         }),
       );
     }
-    if (entry && side === "short" && recipe.shortIndicatorKind) {
+    const shortStartKind = recipe.shortStartKind ?? recipe.startKind;
+    if (
+      entry &&
+      side === "short" &&
+      recipe.shortIndicatorKind &&
+      (shortStartKind === "indicator" || shortStartKind === "trend")
+    ) {
       sections.push(
         indicatorSection({
           role: "Short entry",

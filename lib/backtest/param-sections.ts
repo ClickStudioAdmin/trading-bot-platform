@@ -305,24 +305,27 @@ function dcaSideEntryGroups(
 ): ParamGroup[] {
   const both = recipe.direction === "both";
   const shortLeg = both && side === "short";
+  const startKind = shortLeg
+    ? (recipe.shortStartKind ?? recipe.startKind)
+    : recipe.startKind;
   const groups: ParamGroup[] = [
     {
       rows: [
-        { label: "Initial Order Trigger", value: dcaTriggerLabel(recipe.startKind) },
+        { label: "Initial Order Trigger", value: dcaTriggerLabel(startKind) },
       ],
     },
   ];
-  if (recipe.startKind === "price") {
+  if (startKind === "price") {
     groups.push({
       rows: priceRows(
         shortLeg ? (recipe.shortArmTrigger ?? recipe.armTrigger) : recipe.armTrigger,
         quote,
       ),
     });
-  } else if (recipe.startKind === "indicator" || recipe.startKind === "trend") {
+  } else if (startKind === "indicator" || startKind === "trend") {
     groups.push({
       rows: indicatorRows({
-        trend: recipe.startKind === "trend",
+        trend: startKind === "trend",
         side,
         kind: shortLeg ? (recipe.shortIndicatorKind ?? recipe.indicatorKind) : recipe.indicatorKind,
         timeframe: shortLeg
@@ -348,7 +351,7 @@ function dcaSideEntryGroups(
   }
   const confirm = shortLeg ? recipe.shortConfirm : recipe.confirm;
   const stored = shortLeg ? recipe.shortEntryStack : recipe.entryStack;
-  if (recipe.startKind !== "immediate" || !both || (stored && stored.leaves.length > 0)) {
+  if (startKind !== "immediate" || !both || (stored && stored.leaves.length > 0)) {
     groups.push(
       entryStackGroup(resolveEntryStack(stored, confirm), confirm, side),
     );

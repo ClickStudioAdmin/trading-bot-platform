@@ -3,6 +3,7 @@ import { dcaEntryStackForSide } from "@/lib/dca/entry-stack";
 import {
   dcaArmTriggerForSide,
   dcaIndicatorStartForSide,
+  dcaStartKindForSide,
   dcaIntervalParts,
   type DcaPlaybook,
 } from "@/lib/dca/playbook";
@@ -126,10 +127,11 @@ function dcaMaxValueLabel(playbook: DcaPlaybook): string {
 }
 
 function dcaEntryLines(playbook: DcaPlaybook, side: FuturesSide): BotConfigLine[] {
+  const startKind = dcaStartKindForSide(playbook, side);
   const lines: BotConfigLine[] = [
-    setting("Start", dcaStartLabel(playbook.startKind)),
+    setting("Start", dcaStartLabel(startKind)),
   ];
-  if (playbook.startKind === "price") {
+  if (startKind === "price") {
     const trigger = dcaArmTriggerForSide(playbook, side);
     lines.push(
       setting(
@@ -144,16 +146,16 @@ function dcaEntryLines(playbook: DcaPlaybook, side: FuturesSide): BotConfigLine[
       ),
     );
   }
-  if (playbook.startKind === "indicator" || playbook.startKind === "trend") {
+  if (startKind === "indicator" || startKind === "trend") {
     const start = dcaIndicatorStartForSide(playbook, side);
     lines.push(
       setting(
-        playbook.startKind === "trend" ? "Trend" : "Indicator",
+        startKind === "trend" ? "Trend" : "Indicator",
         start ? formatIndicatorStartReason(start, side) : null,
       ),
     );
   }
-  if (playbook.startKind === "webhook") {
+  if (startKind === "webhook") {
     lines.push(setting("Webhook", "Signal webhook"));
   }
   const confirm =

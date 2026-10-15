@@ -814,8 +814,10 @@ export function backtestTapeInterval(
   if (recipe?.kind === "dca") {
     const indicatorStart =
       recipe.startKind === "indicator" || recipe.startKind === "trend";
+    const shortKind = recipe.shortStartKind ?? recipe.startKind;
+    const shortSeries = shortKind === "indicator" || shortKind === "trend";
     const primary = indicatorStart ? recipe.indicatorTimeframe : null;
-    const short = indicatorStart ? recipe.shortIndicatorTimeframe : null;
+    const short = shortSeries ? recipe.shortIndicatorTimeframe : null;
     const stacked = [
       primary,
       short,

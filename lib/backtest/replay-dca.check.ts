@@ -137,6 +137,28 @@ assert.ok(
   bothImmediate.orders.some((row) => row.side === "short" && row.qty > 0),
 );
 
+const splitStart = new FormData();
+splitStart.set("startKind", "price");
+splitStart.set("armTriggerBy", "last");
+splitStart.set("armCompare", "lte");
+splitStart.set("armPrice", "50");
+splitStart.set("shortStartKind", "immediate");
+const splitReplay = await replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 100, high: 100, low: 100, close: 100 },
+  ],
+  recipe: parseRecipe("both", splitStart),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+const splitEntries = splitReplay.orders.filter(
+  (row) => row.action === "buy" || row.action === "sell",
+);
+assert.equal(splitEntries.length, 1);
+assert.equal(splitEntries[0]?.side, "short");
+assert.ok(!splitReplay.orders.some((row) => row.side === "long" && row.qty > 0));
+
 const priceBoth = new FormData();
 priceBoth.set("startKind", "price");
 priceBoth.set("armTriggerBy", "last");

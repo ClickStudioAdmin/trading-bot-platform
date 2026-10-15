@@ -88,7 +88,10 @@ import {
   dcaLegFor,
   dcaLegIsRunning,
   dcaOpenExitLimits,
+  dcaSeriesStart,
   dcaSeriesStartEval,
+  dcaStartKindForSide,
+  dcaWebhookIdForSide,
   dcaStartListens,
   dcaWebhookSignalApplies,
   IDLE_DCA_LEG,
@@ -418,7 +421,7 @@ function seriesStartDueForSide(
   }
   const bars = barsByTimeframe.get(start.timeframe) ?? [];
   return dcaSeriesStartEval({
-    startKind: playbook.startKind,
+    startKind: dcaStartKindForSide(playbook, side),
     side,
     indicatorKind: start.kind,
     indicatorCompare: start.compare,
@@ -1695,7 +1698,7 @@ export async function keepListeningAfterFlatten(input: {
   if (!supabase) {
     return { ok: false, error: "Auth is not configured." };
   }
-  if (dcaStartListens(input.playbook.startKind)) {
+  if (dcaStartListens(dcaStartKindForSide(input.playbook, input.side))) {
     const current = await readDcaLegStatus({
       supabase,
       id: input.playbook.id,
@@ -1792,19 +1795,17 @@ async function moveStopToBreakeven(input: {
 
 function priceStartMet(
   playbook: DcaPlaybook,
+  side: FuturesSide,
   lastPrice: number | null,
 ): boolean {
-  if (playbook.startKind !== "price" || !playbook.armTrigger) {
+  if (dcaStartKindForSide(playbook, side) !== "price") {
     return false;
   }
-  if (lastPrice === null) {
+  const trigger = dcaArmTriggerForSide(playbook, side);
+  if (!trigger || lastPrice === null) {
     return false;
   }
-  return triggerConditionMet(
-    lastPrice,
-    playbook.armTrigger.compare,
-    playbook.armTrigger.price,
-  );
+  return triggerConditionMet(lastPrice, trigger.compare, trigger.price);
 }
 
 async function applyDcaVerbUnlocked(input: {
@@ -2001,34 +2002,27 @@ async function applyDcaVerbUnlocked(input: {
   const lastPrice = await lastPriceForPlaybook(input.playbook);
   const fromSignal = input.source === "webhook";
   const firedWebhookId = input.firedWebhookId ?? null;
-  const startSignal =
-    fromSignal &&
-    input.playbook.startKind === "webhook" &&
-    (firedWebhookId == null || firedWebhookId === input.playbook.webhookId);
   const startBars = await loadPlaybookStartBars(input.playbook);
   const seriesBarsLoaded = [...startBars.values()].some(
     (rows) => rows.length > 0,
   );
+  const seriesSide = sides.find((side) =>
+    dcaSeriesStart(dcaStartKindForSide(input.playbook, side)),
+  );
   if (
     !input.forcePlace &&
-    (input.playbook.startKind === "indicator" ||
-      input.playbook.startKind === "trend") &&
+    seriesSide &&
     dcaIndicatorTimeframes(input.playbook).length > 0 &&
     !seriesBarsLoaded
   ) {
     return {
       ok: false,
       error:
-        input.playbook.startKind === "trend"
+        dcaStartKindForSide(input.playbook, seriesSide) === "trend"
           ? "Could not read Supertrend candles. The first order was not placed."
           : "Could not read indicator candles. The first order was not placed.",
     };
   }
-  const placeNow =
-    Boolean(input.forcePlace) ||
-    input.playbook.startKind === "immediate" ||
-    (input.playbook.startKind === "webhook" && startSignal) ||
-    priceStartMet(input.playbook, lastPrice);
   let placed = 0;
   let resumed = 0;
   let waiting = 0;
@@ -2042,10 +2036,16 @@ async function applyDcaVerbUnlocked(input: {
 
   for (const side of sides) {
     let leg = dcaLegFor(playbook, side);
+    const sideKind = dcaStartKindForSide(playbook, side);
+    const sideWebhook = dcaWebhookIdForSide(playbook, side);
+    const sideSignal =
+      fromSignal &&
+      sideKind === "webhook" &&
+      (firedWebhookId == null || firedWebhookId === sideWebhook);
     if (
       !dcaWebhookSignalApplies({
-        startKind: playbook.startKind,
-        fromSignal: startSignal,
+        startKind: sideKind,
+        fromSignal: sideSignal,
         status: leg.status,
       })
     ) {
@@ -2060,7 +2060,7 @@ async function applyDcaVerbUnlocked(input: {
         positionQty: open?.qty ?? null,
       })
     ) {
-      if (input.forcePlace && dcaStartListens(playbook.startKind)) {
+      if (input.forcePlace && dcaStartListens(sideKind)) {
         const kept = await keepListeningAfterFlatten({ playbook, side });
         if (!kept.ok) {
           return kept;
@@ -2120,7 +2120,11 @@ async function applyDcaVerbUnlocked(input: {
       continue;
     }
     const entryTrigger =
-      placeNow || seriesStartDueForSide(playbook, side, startBars);
+      Boolean(input.forcePlace) ||
+      sideKind === "immediate" ||
+      sideSignal ||
+      priceStartMet(playbook, side, lastPrice) ||
+      seriesStartDueForSide(playbook, side, startBars);
     if (
       !input.forcePlace &&
       !dcaEntryExpressionMet({
@@ -2166,7 +2170,7 @@ async function applyDcaVerbUnlocked(input: {
       reason:
         input.reason ??
         formatDcaStartReasons({
-          startKind: playbook.startKind,
+          startKind: sideKind,
           side,
           armTrigger: dcaArmTriggerForSide(playbook, side),
           indicator: dcaIndicatorStartForSide(playbook, side),

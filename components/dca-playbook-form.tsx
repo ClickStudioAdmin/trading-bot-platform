@@ -1109,6 +1109,12 @@ export function DcaPlaybookForm({
   const [webhookId, setWebhookId] = useState(
     source?.webhookId ?? signalWebhooks[0]?.id ?? "",
   );
+  const [shortStartKind, setShortStartKind] = useState<DcaStartKind>(
+    () => source?.shortStartKind ?? source?.startKind ?? "indicator",
+  );
+  const [shortWebhookId, setShortWebhookId] = useState(
+    () => source?.shortWebhookId ?? source?.webhookId ?? signalWebhooks[0]?.id ?? "",
+  );
   const [entryRows, setEntryRows] = useState<EntryStackRow[]>(() =>
     entryRowsFromSources(source?.entryStack, source?.confirm),
   );
@@ -1398,6 +1404,12 @@ export function DcaPlaybookForm({
       symbol,
       direction,
       startKind,
+      ...(direction === "both"
+        ? {
+            shortStartKind,
+            shortWebhookId: shortStartKind === "webhook" ? shortWebhookId : "",
+          }
+        : {}),
       averaging,
       restGrid: averaging === "dip" && restGrid,
       sizeUnit: sizeUnitForClip,
@@ -1559,66 +1571,89 @@ export function DcaPlaybookForm({
   const pairSpan = embedded ? "col-span-full" : "lg:col-span-2";
   const lockClass = cycleLocked ? " pointer-events-none opacity-40" : "";
 
-  function applyDcaStartKind(next: DcaStartKind) {
+  function applyDcaStartKind(side: "long" | "short", next: DcaStartKind) {
+    const shortState = direction === "both" && side === "short";
+    const current = shortState ? shortStartKind : startKind;
+    const fieldSide: "long" | "short" =
+      shortState || direction === "short" ? "short" : "long";
     if (next === "trend") {
-      setIndicatorKind("supertrend");
-      setIndicatorPeriod(String(defaultDcaIndicatorPeriod("supertrend")));
-      setIndicatorMultiplier(String(DEFAULT_DCA_SUPERTREND_MULTIPLIER));
-      setIndicatorCompare(indicatorCompareForDirection("long", "supertrend", ""));
-      setIndicatorLevel("");
-      setShortIndicatorKind("supertrend");
-      setShortIndicatorPeriod(String(defaultDcaIndicatorPeriod("supertrend")));
-      setShortIndicatorMultiplier(String(DEFAULT_DCA_SUPERTREND_MULTIPLIER));
-      setShortIndicatorCompare(
-        indicatorCompareForDirection("short", "supertrend", ""),
-      );
-      setShortIndicatorLevel("");
-    } else if (startKind === "trend" && next === "indicator") {
-      setIndicatorKind("rsi");
-      setIndicatorPeriod(String(defaultDcaIndicatorPeriod("rsi")));
-      setIndicatorCompare(indicatorCompareForDirection("long", "rsi", ""));
-      setIndicatorLevel("30");
-      setShortIndicatorKind("rsi");
-      setShortIndicatorPeriod(String(defaultDcaIndicatorPeriod("rsi")));
-      setShortIndicatorCompare(indicatorCompareForDirection("short", "rsi", ""));
-      setShortIndicatorLevel("70");
+      if (shortState) {
+        setShortIndicatorKind("supertrend");
+        setShortIndicatorPeriod(String(defaultDcaIndicatorPeriod("supertrend")));
+        setShortIndicatorMultiplier(String(DEFAULT_DCA_SUPERTREND_MULTIPLIER));
+        setShortIndicatorCompare(
+          indicatorCompareForDirection("short", "supertrend", ""),
+        );
+        setShortIndicatorLevel("");
+      } else {
+        setIndicatorKind("supertrend");
+        setIndicatorPeriod(String(defaultDcaIndicatorPeriod("supertrend")));
+        setIndicatorMultiplier(String(DEFAULT_DCA_SUPERTREND_MULTIPLIER));
+        setIndicatorCompare(
+          indicatorCompareForDirection(fieldSide, "supertrend", ""),
+        );
+        setIndicatorLevel("");
+      }
+    } else if (current === "trend" && next === "indicator") {
+      if (shortState) {
+        setShortIndicatorKind("rsi");
+        setShortIndicatorPeriod(String(defaultDcaIndicatorPeriod("rsi")));
+        setShortIndicatorCompare(indicatorCompareForDirection("short", "rsi", ""));
+        setShortIndicatorLevel("70");
+      } else {
+        setIndicatorKind("rsi");
+        setIndicatorPeriod(String(defaultDcaIndicatorPeriod("rsi")));
+        setIndicatorCompare(indicatorCompareForDirection(fieldSide, "rsi", ""));
+        setIndicatorLevel(fieldSide === "short" ? "70" : "30");
+      }
     }
-    setStartKind(next);
+    if (shortState) {
+      setShortStartKind(next);
+    } else {
+      setStartKind(next);
+    }
   }
 
-  function dcaStackAnchor(): {
+  function sideStartKind(side: "long" | "short"): DcaStartKind {
+    return direction === "both" && side === "short" ? shortStartKind : startKind;
+  }
+  function sideWebhook(side: "long" | "short"): string {
+    return direction === "both" && side === "short" ? shortWebhookId : webhookId;
+  }
+  function dcaStackAnchor(side: "long" | "short"): {
     kind: StrategyTriggerKind;
     webhookId: string | null;
   } {
+    const kind = sideStartKind(side);
     if (
-      startKind === "price" ||
-      startKind === "indicator" ||
-      startKind === "trend" ||
-      startKind === "webhook"
+      kind === "price" ||
+      kind === "indicator" ||
+      kind === "trend" ||
+      kind === "webhook"
     ) {
       return {
-        kind: startKind,
-        webhookId: startKind === "webhook" ? webhookId : null,
+        kind,
+        webhookId: kind === "webhook" ? sideWebhook(side) : null,
       };
     }
     return { kind: "indicator", webhookId: null };
   }
-  function dcaStartDisabled(kind: StrategyTriggerKind): boolean {
-    const webhookIds = signalWebhooks.map((row) => row.id);
-    const lists =
-      direction === "both"
-        ? [entryRows, shortEntryRows]
-        : [entryRows];
-    return lists.some((rows) =>
-      entryKindDisabled({
-        slots: entryConflictSlots(dcaStackAnchor(), rows),
-        index: 0,
-        kind,
-        webhookIds,
-      }),
-    );
+  function dcaStartDisabled(
+    side: "long" | "short",
+    kind: StrategyTriggerKind,
+  ): boolean {
+    const rows =
+      direction === "both" && side === "short" ? shortEntryRows : entryRows;
+    return entryKindDisabled({
+      slots: entryConflictSlots(dcaStackAnchor(side), rows),
+      index: 0,
+      kind,
+      webhookIds: signalWebhooks.map((row) => row.id),
+    });
   }
-  function dcaTriggerSelect(named: boolean) {
+  function dcaTriggerSelect(side: "long" | "short") {
+    const shortState = direction === "both" && side === "short";
+    const value = sideStartKind(side);
     return (
       <BotFormGroup locked={cycleLocked}>
         <div className={fieldRowClass}>
@@ -1629,27 +1664,27 @@ export function DcaPlaybookForm({
           >
             <HintLabel text="Initial Order Trigger" required />
             <AppSelect
-              name={named ? "startKind" : undefined}
-              value={startKind}
+              name={shortState ? "shortStartKind" : "startKind"}
+              value={value}
               onChange={(event) =>
-                applyDcaStartKind(event.target.value as DcaStartKind)
+                applyDcaStartKind(side, event.target.value as DcaStartKind)
               }
               className={fieldClass}
             >
-              {startKind === "immediate" ? (
+              {value === "immediate" ? (
                 <option value="immediate">Immediate</option>
               ) : null}
               <option value="indicator">Indicator</option>
               <option value="trend">Trend</option>
               <option
                 value="price"
-                disabled={dcaStartDisabled("price")}
+                disabled={dcaStartDisabled(side, "price")}
               >
                 Price Cross
               </option>
               <option
                 value="webhook"
-                disabled={dcaStartDisabled("webhook")}
+                disabled={dcaStartDisabled(side, "webhook")}
               >
                 Signal Webhook
               </option>
@@ -1666,9 +1701,11 @@ export function DcaPlaybookForm({
       shortLeg || direction === "short" ? "short" : "long";
     const rows = shortLeg ? shortEntryRows : entryRows;
     const setRows = shortLeg ? setShortEntryRows : setEntryRows;
+    const kind = sideStartKind(side);
+    const hookId = sideWebhook(side);
     return (
       <>
-        {startKind === "price" ? (
+        {kind === "price" ? (
           <BotFormGroup locked={cycleLocked}>
             <div className={fieldRowClass}>
               <TriggerFields
@@ -1698,41 +1735,31 @@ export function DcaPlaybookForm({
             </div>
           </BotFormGroup>
         ) : null}
-        {startKind === "webhook" && !shortLeg ? (
+        {kind === "webhook" ? (
           <BotFormGroup locked={cycleLocked}>
             <div className={fieldRowClass}>
               {signalWebhooks.length > 0 ? (
                 <label className={`${labelClass} ${pairSpan}${lockClass}`}>
                   <HintLabel text="Signal Webhook" required />
                   <AppSelect
-                    name="webhookId"
-                    value={webhookId}
-                    onChange={(event) => setWebhookId(event.target.value)}
+                    name={shortLeg ? "shortWebhookId" : "webhookId"}
+                    value={hookId}
+                    onChange={(event) =>
+                      shortLeg
+                        ? setShortWebhookId(event.target.value)
+                        : setWebhookId(event.target.value)
+                    }
                     className={fieldClass}
                   >
                     {signalWebhooks.map((row) => (
                       <option
                         key={row.id}
                         value={row.id}
-                        disabled={
-                          entryWebhookIdDisabled({
-                            slots: entryConflictSlots(
-                              dcaStackAnchor(),
-                              entryRows,
-                            ),
-                            index: 0,
-                            webhookId: row.id,
-                          }) ||
-                          (direction === "both" &&
-                            entryWebhookIdDisabled({
-                              slots: entryConflictSlots(
-                                dcaStackAnchor(),
-                                shortEntryRows,
-                              ),
-                              index: 0,
-                              webhookId: row.id,
-                            }))
-                        }
+                        disabled={entryWebhookIdDisabled({
+                          slots: entryConflictSlots(dcaStackAnchor(side), rows),
+                          index: 0,
+                          webhookId: row.id,
+                        })}
                       >
                         {row.name}
                       </option>
@@ -1756,7 +1783,7 @@ export function DcaPlaybookForm({
             </div>
           </BotFormGroup>
         ) : null}
-        {startKind === "indicator" ? (
+        {kind === "indicator" ? (
           <BotFormGroup locked={cycleLocked}>
             <div className={fieldRowClass}>
               <IndicatorStartFields
@@ -1790,7 +1817,7 @@ export function DcaPlaybookForm({
             </div>
           </BotFormGroup>
         ) : null}
-        {startKind === "trend" ? (
+        {kind === "trend" ? (
           <BotFormGroup locked={cycleLocked}>
             <div className={fieldRowClass}>
               <TrendStartFields
@@ -1831,10 +1858,10 @@ export function DcaPlaybookForm({
             setTouched(true);
             setFormTick((tick) => tick + 1);
           }}
-          anchor={dcaStackAnchor()}
+          anchor={dcaStackAnchor(side)}
           webhooks={signalWebhooks}
           triggerTimeframe={
-            startKind === "indicator" || startKind === "trend"
+            kind === "indicator" || kind === "trend"
               ? parseDcaIndicatorTimeframe(
                   shortLeg ? shortIndicatorTimeframe : indicatorTimeframe,
                 )
@@ -1963,6 +1990,8 @@ export function DcaPlaybookForm({
                 onChange={(event) => {
                   const next = event.target.value as typeof direction;
                   if (next === "both" && direction !== "both") {
+                    setShortStartKind(startKind);
+                    setShortWebhookId(webhookId);
                     if (direction === "short") {
                       setShortEntryRows(entryRows);
                       setEntryRows(flipEntryRows(entryRows, "long"));
@@ -1997,6 +2026,8 @@ export function DcaPlaybookForm({
                       setShortIndicatorMultiplier(indicatorMultiplier);
                     }
                   } else if (direction === "both" && next === "short") {
+                    setStartKind(shortStartKind);
+                    setWebhookId(shortWebhookId);
                     setEntryRows(shortEntryRows);
                     setIndicatorKind(shortIndicatorKind);
                     setIndicatorTimeframe(shortIndicatorTimeframe);
@@ -2038,7 +2069,7 @@ export function DcaPlaybookForm({
         locked={cycleLocked}
         defaultCollapsed={hasOpenPosition}
       >
-        {dcaTriggerSelect(true)}
+        {dcaTriggerSelect("long")}
         {dcaEntryFields("long")}
       </BotFormStep>
       ) : null}
@@ -2048,7 +2079,7 @@ export function DcaPlaybookForm({
         locked={cycleLocked}
         defaultCollapsed={hasOpenPosition}
       >
-        {dcaTriggerSelect(direction === "short")}
+        {dcaTriggerSelect("short")}
         {dcaEntryFields("short")}
       </BotFormStep>
       ) : null}

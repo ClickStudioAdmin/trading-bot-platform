@@ -54,6 +54,7 @@ import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   dcaArmTriggerForSide,
+  dcaStartKindForSide,
   dcaClipsFilledFromGrid,
   dcaCycleEnded,
   dcaEnabledSides,
@@ -788,7 +789,7 @@ export async function runDcaPlaybookTick(input?: {
         lastClipAtMs: leg.lastClipAtMs,
         firstFillPrice: leg.firstFillPrice,
         nowMs: Date.now(),
-        startKind: playbook.startKind,
+        startKind: dcaStartKindForSide(playbook, side),
         dcaMode: playbook.dcaMode,
         dipPct: playbook.dipPct,
         intervalMinutes: playbook.intervalMinutes,
@@ -1084,7 +1085,7 @@ function dcaActionWhy(input: {
     (action.kind === "clip" && input.clipsFilled === 0)
   ) {
     return formatDcaStartReasons({
-      startKind: playbook.startKind,
+      startKind: dcaStartKindForSide(playbook, side),
       side,
       armTrigger: dcaArmTriggerForSide(playbook, side),
       indicator: dcaIndicatorStartForSide(playbook, side),

@@ -30,7 +30,7 @@ In progress. First step is the entry stack on Perps bots.
 5. One And filter is still stored on the old confirm columns so an older reader sees the same Secondary Entry. Any other stack is `entry_expr` on `futures_automation_rules`. Templates and backtests store that stack on the recipe when the confirm column cannot hold it.
 6. Close long / Close short do not take the stack. Those choices stay only on a bot that already closes.
 7. Direction matches DCA: Long, Short, or Both. Both is hidden on a one-way exchange. Both keeps the long leg on the existing columns and the short leg in `short_entry`. Each side has its own section, trigger, and stack. The same webhook may arm both sides. Conflict rules stay inside one section.
-8. DCA uses that same stack on Long entry and Short entry. The start kind stays shared. One And filter still writes `confirm_*` / `short_confirm_*`. Any other stack is `entry_expr` / `short_entry_expr`. Cash and Carry is unchanged.
+8. DCA uses that same stack on Long entry and Short entry. Each side has its own Initial Order Trigger. One And filter still writes `confirm_*` / `short_confirm_*`. Any other stack is `entry_expr` / `short_entry_expr`. Cash and Carry is unchanged.
 
 ## Out of this step
 
