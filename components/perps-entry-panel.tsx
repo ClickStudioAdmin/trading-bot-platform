@@ -318,6 +318,8 @@ export function PerpsEntryPanel({
               }}
               className={fieldClass}
             >
+              {closing ? null : <option value="indicator">Indicator</option>}
+              {closing ? null : <option value="trend">Trend</option>}
               <option
                 value="price"
                 disabled={entryKindDisabled({
@@ -327,10 +329,8 @@ export function PerpsEntryPanel({
                   webhookIds,
                 })}
               >
-                Price cross
+                Price Cross
               </option>
-              {closing ? null : <option value="indicator">Indicator</option>}
-              {closing ? null : <option value="trend">Trend</option>}
               <option
                 value="webhook"
                 disabled={entryKindDisabled({
@@ -340,7 +340,7 @@ export function PerpsEntryPanel({
                   webhookIds,
                 })}
               >
-                Signal webhook
+                Signal Webhook
               </option>
             </AppSelect>
           </BotField>

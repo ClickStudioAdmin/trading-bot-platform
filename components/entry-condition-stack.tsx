@@ -362,10 +362,10 @@ function nextRow(
 }
 
 const TRIGGER_OPTIONS: { value: StrategyTriggerKind; label: string }[] = [
-  { value: "price", label: "Price cross" },
   { value: "indicator", label: "Indicator" },
   { value: "trend", label: "Trend" },
-  { value: "webhook", label: "Signal webhook" },
+  { value: "price", label: "Price Cross" },
+  { value: "webhook", label: "Signal Webhook" },
 ];
 
 export function EntryConditionStack({

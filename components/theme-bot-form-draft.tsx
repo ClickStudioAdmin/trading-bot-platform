@@ -1180,6 +1180,10 @@ export function ThemeBotFormDraft() {
                   }
                   className={fieldClass}
                 >
+                  {closing ? null : (
+                    <option value="indicator">Indicator</option>
+                  )}
+                  {closing ? null : <option value="trend">Trend</option>}
                   <option
                     value="price"
                     disabled={entryKindDisabled({
@@ -1189,12 +1193,8 @@ export function ThemeBotFormDraft() {
                       webhookIds: ["sample"],
                     })}
                   >
-                    Price cross
+                    Price Cross
                   </option>
-                  {closing ? null : (
-                    <option value="indicator">Indicator</option>
-                  )}
-                  {closing ? null : <option value="trend">Trend</option>}
                   <option
                     value="webhook"
                     disabled={entryKindDisabled({
@@ -1204,7 +1204,7 @@ export function ThemeBotFormDraft() {
                       webhookIds: ["sample"],
                     })}
                   >
-                    Signal webhook
+                    Signal Webhook
                   </option>
                 </AppSelect>
               </Field>
@@ -1375,10 +1375,10 @@ export function ThemeBotFormDraft() {
                     }
                     className={fieldClass}
                   >
-                    <option value="price">Price cross</option>
                     <option value="indicator">Indicator</option>
                     <option value="trend">Trend</option>
-                    <option value="webhook">Signal webhook</option>
+                    <option value="price">Price Cross</option>
+                    <option value="webhook">Signal Webhook</option>
                   </AppSelect>
                 </Field>
               </div>

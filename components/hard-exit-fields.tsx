@@ -17,10 +17,10 @@ import {
 import type { FuturesSide, FuturesTrigger } from "@/lib/futures/model";
 
 const TRIGGER_OPTIONS: { value: HardExitTrigger; label: string }[] = [
-  { value: "price", label: "Price cross" },
   { value: "indicator", label: "Indicator" },
   { value: "trend", label: "Trend" },
-  { value: "webhook", label: "Signal webhook" },
+  { value: "price", label: "Price Cross" },
+  { value: "webhook", label: "Signal Webhook" },
 ];
 
 const INDICATOR_OPTIONS = DCA_FILTER_KIND_OPTIONS.filter(
