@@ -30,6 +30,11 @@ import {
 } from "./trailing";
 import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 import type { DcaFilterSpec } from "@/lib/dca/filters";
+import {
+  hardExitDraftFromStored,
+  type HardExitDraft,
+  type HardExitSignal,
+} from "@/lib/dca/hard-exit";
 import type { DcaIndicatorStart } from "@/lib/dca/playbook";
 import {
   conditionColumns,
@@ -80,6 +85,7 @@ export type FuturesAutomationRule = {
   confirm: DcaFilterSpec | null;
   entryStack: EntryStack;
   exitIf: DcaFilterSpec | null;
+  exitHard?: HardExitSignal | null;
   breakevenActivationPct: number | null;
   breakevenOffsetPct: number | null;
   direction: PerpsDirection;
@@ -112,6 +118,8 @@ export type FuturesAutomationFormValues = {
   confirm: DcaFilterSpec | null;
   entryStack: EntryStack;
   exitIf: DcaFilterSpec | null;
+  exitHard?: HardExitSignal | null;
+  exitDraft?: HardExitDraft | null;
   breakevenActivationPct: string;
   breakevenOffsetPct: string;
   direction?: PerpsDirection;
@@ -373,6 +381,7 @@ export function parseFuturesAutomationForm(
     parsed.rule.confirm = conditions.confirm;
     parsed.rule.entryStack = conditions.entryStack;
     parsed.rule.exitIf = conditions.exitIf;
+    parsed.rule.exitHard = conditions.exitHard;
     parsed.rule.breakevenActivationPct = conditions.breakevenActivationPct;
     parsed.rule.breakevenOffsetPct = conditions.breakevenOffsetPct;
     const directed = applyPerpsDirection(form, prefix, deskVenue, parsed.rule);
@@ -925,6 +934,8 @@ export function futuresRuleToForm(
     confirm: rule.confirm,
     entryStack: rule.entryStack ?? emptyEntryStack(),
     exitIf: rule.exitIf,
+    exitHard: rule.exitHard ?? null,
+    exitDraft: hardExitDraftFromStored(rule.exitIf, rule.exitHard),
     breakevenActivationPct:
       rule.breakevenActivationPct == null
         ? ""
@@ -1012,6 +1023,7 @@ function attachRuleConditions(
   rule.confirm = conditions.confirm;
   rule.entryStack = conditions.entryStack;
   rule.exitIf = conditions.exitIf;
+  rule.exitHard = conditions.exitHard;
   rule.breakevenActivationPct = conditions.breakevenActivationPct;
   rule.breakevenOffsetPct = conditions.breakevenOffsetPct;
 }
@@ -1073,6 +1085,12 @@ export function perpsRuleMatchesWebhook(
   rule: FuturesAutomationRule,
   firedId: string,
 ): boolean {
+  if (
+    rule.exitHard?.trigger === "webhook" &&
+    rule.exitHard.webhookId === firedId
+  ) {
+    return true;
+  }
   return perpsAutomationLegs(rule).some((leg) =>
     entryStackMatchesWebhook(
       leg.rule.entrySource,

@@ -37,7 +37,7 @@ import {
   IndicatorStartFields,
   TrendStartFields,
 } from "@/components/bot-indicator-fields";
-import { DcaFilterBlock } from "@/components/dca-filter-fields";
+import { HardExitFields } from "@/components/hard-exit-fields";
 import {
   EntryConditionStack,
   entryConflictSlots,
@@ -166,10 +166,11 @@ import {
   type DcaIndicatorKind,
 } from "@/lib/dca/indicators";
 import {
-  dcaFilterComplete,
-  dcaFilterSpecForKind,
-  type DcaFilterSpec,
-} from "@/lib/dca/filters";
+  defaultHardExit,
+  hardExitComplete,
+  hardExitDraftFromStored,
+  type HardExitDraft,
+} from "@/lib/dca/hard-exit";
 import { closedLiveIndicatorBars } from "@/lib/market/desk-klines";
 import type { CandleBar } from "@/lib/market/candles";
 import type { FuturesOrderType, FuturesSide } from "@/lib/futures/model";
@@ -1121,11 +1122,11 @@ export function DcaPlaybookForm({
   const [shortEntryRows, setShortEntryRows] = useState<EntryStackRow[]>(() =>
     entryRowsFromSources(source?.shortEntryStack, source?.shortConfirm),
   );
-  const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(
-    source?.exitIf ?? null,
+  const [exitIf, setExitIf] = useState<HardExitDraft | null>(() =>
+    hardExitDraftFromStored(source?.exitIf, source?.exitHard),
   );
-  const [shortExitIf, setShortExitIf] = useState<DcaFilterSpec | null>(
-    source?.shortExitIf ?? null,
+  const [shortExitIf, setShortExitIf] = useState<HardExitDraft | null>(() =>
+    hardExitDraftFromStored(source?.shortExitIf, source?.shortExitHard),
   );
   const defaultSymbol =
     source?.symbol ??
@@ -1490,9 +1491,9 @@ export function DcaPlaybookForm({
     entryRows.some((row) => !entryDraftComplete(row.draft)) ||
     (direction === "both" &&
       shortEntryRows.some((row) => !entryDraftComplete(row.draft))) ||
-    Boolean(exitIf && !dcaFilterComplete(exitIf)) ||
+    Boolean(exitIf && !hardExitComplete(exitIf)) ||
     (direction === "both" &&
-      Boolean(shortExitIf && !dcaFilterComplete(shortExitIf))) ||
+      Boolean(shortExitIf && !hardExitComplete(shortExitIf))) ||
     tpMissing ||
     trailMissing ||
     slMissing ||
@@ -1523,9 +1524,9 @@ export function DcaPlaybookForm({
       entryRows.some((row) => !entryDraftComplete(row.draft)) ||
       (direction === "both" &&
         shortEntryRows.some((row) => !entryDraftComplete(row.draft))) ||
-      Boolean(exitIf && !dcaFilterComplete(exitIf)) ||
+      Boolean(exitIf && !hardExitComplete(exitIf)) ||
       (direction === "both" &&
-        Boolean(shortExitIf && !dcaFilterComplete(shortExitIf)));
+        Boolean(shortExitIf && !hardExitComplete(shortExitIf)));
     onRecipeChangeRef.current({
       recipe: snapshotDcaRecipe(parsed.config),
       error: missing ? "Fill required fields before saving." : null,
@@ -2663,22 +2664,21 @@ export function DcaPlaybookForm({
             nested
             enabled={Boolean(exitIf)}
             onEnabled={(next) =>
-              setExitIf(next ? (exitIf ?? dcaFilterSpecForKind("rsi", "long")) : null)
+              setExitIf(next ? (exitIf ?? defaultHardExit("long")) : null)
             }
           >
-            <DcaFilterBlock
-              label="Kind"
-              prefix="exitIf"
-              side="long"
-              spec={exitIf}
-              onChange={setExitIf}
-              named
-              dense
-              allowOff={false}
-              gridClass={fieldRowClass5}
-              fieldClass={fieldClass}
-              labelClass={labelClass}
-            />
+            {exitIf ? (
+              <HardExitFields
+                prefix="exitIf"
+                side="long"
+                value={exitIf}
+                onChange={setExitIf}
+                webhooks={signalWebhooks}
+                gridClass={fieldRowClass5}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            ) : null}
           </OptionalSection>
           <OptionalSection
             title="Short"
@@ -2686,25 +2686,22 @@ export function DcaPlaybookForm({
             enabled={Boolean(shortExitIf)}
             onEnabled={(next) =>
               setShortExitIf(
-                next
-                  ? (shortExitIf ?? dcaFilterSpecForKind("rsi", "short"))
-                  : null,
+                next ? (shortExitIf ?? defaultHardExit("short")) : null,
               )
             }
           >
-            <DcaFilterBlock
-              label="Kind"
-              prefix="shortExitIf"
-              side="short"
-              spec={shortExitIf}
-              onChange={setShortExitIf}
-              named
-              dense
-              allowOff={false}
-              gridClass={fieldRowClass5}
-              fieldClass={fieldClass}
-              labelClass={labelClass}
-            />
+            {shortExitIf ? (
+              <HardExitFields
+                prefix="shortExitIf"
+                side="short"
+                value={shortExitIf}
+                onChange={setShortExitIf}
+                webhooks={signalWebhooks}
+                gridClass={fieldRowClass5}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            ) : null}
           </OptionalSection>
         </BotFormGroup>
       ) : (
@@ -2715,27 +2712,23 @@ export function DcaPlaybookForm({
             setExitIf(
               next
                 ? (exitIf ??
-                  dcaFilterSpecForKind(
-                    "rsi",
-                    direction === "short" ? "short" : "long",
-                  ))
+                  defaultHardExit(direction === "short" ? "short" : "long"))
                 : null,
             )
           }
         >
-          <DcaFilterBlock
-            label="Kind"
-            prefix="exitIf"
-            side={direction === "short" ? "short" : "long"}
-            spec={exitIf}
-            onChange={setExitIf}
-            named
-            dense
-            allowOff={false}
-            gridClass={fieldRowClass5}
-            fieldClass={fieldClass}
-            labelClass={labelClass}
-          />
+          {exitIf ? (
+            <HardExitFields
+              prefix="exitIf"
+              side={direction === "short" ? "short" : "long"}
+              value={exitIf}
+              onChange={setExitIf}
+              webhooks={signalWebhooks}
+              gridClass={fieldRowClass5}
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+            />
+          ) : null}
         </OptionalSection>
       )}
       </BotFormStep>

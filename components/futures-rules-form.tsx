@@ -28,7 +28,7 @@ import {
   botSidebarSaveClass,
   deskActionBtnClass,
 } from "@/components/bot-form-chrome";
-import { DcaFilterBlock } from "@/components/dca-filter-fields";
+import { HardExitFields } from "@/components/hard-exit-fields";
 import {
   initialPerpsEntryDrafts,
   oppositePerpsEntryDraft,
@@ -86,10 +86,12 @@ import {
   type PerpsTemplateRecipe,
 } from "@/lib/templates/recipe";
 import {
-  dcaFilterComplete,
-  dcaFilterSpecForKind,
-  type DcaFilterSpec,
-} from "@/lib/dca/filters";
+  defaultHardExit,
+  hardExitComplete,
+  hardExitDraftFromStored,
+  hardExitParts,
+  type HardExitDraft,
+} from "@/lib/dca/hard-exit";
 import type { FuturesOrderType, FuturesSide, FuturesTrigger } from "@/lib/futures/model";
 import type { FuturesTpslLevelKind } from "@/lib/futures/tpsl";
 import { IconPlus, IconSave } from "@/components/icons";
@@ -491,8 +493,8 @@ function RuleCard({
       onSymbolChange?.(next);
     }
   }
-  const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(
-    layer.exitIf ?? null,
+  const [exitIf, setExitIf] = useState<HardExitDraft | null>(
+    () => layer.exitDraft ?? hardExitDraftFromStored(layer.exitIf, layer.exitHard),
   );
   const [breakevenOn, setBreakevenOn] = useState(
     layer.breakevenActivationPct.trim() !== "",
@@ -583,7 +585,8 @@ function RuleCard({
       perpsEntryDraftMissing(entryDrafts.long, direction === "close_long")) ||
     (showShort &&
       perpsEntryDraftMissing(entryDrafts.short, direction === "close_short"));
-  const exitIfMissing = Boolean(exitIf) && !dcaFilterComplete(exitIf);
+  const exitIfMissing = Boolean(exitIf) && !hardExitComplete(exitIf);
+  const exitParts = hardExitParts(closing ? null : exitIf);
   const tpsl =
     tpOn || slOn
       ? {
@@ -640,7 +643,9 @@ function RuleCard({
     confirm: primaryLeg.confirm,
     entryStack: primaryLeg.entryStack,
     shortEntry: shortLeg,
-    exitIf: closing ? null : exitIf,
+    exitIf: exitParts.filter,
+    exitHard: exitParts.signal,
+    exitDraft: closing ? null : exitIf,
     breakevenActivationPct:
       closing || !slOn || !breakevenOn ? "" : breakevenActivationPct,
     breakevenOffsetPct:
@@ -708,7 +713,8 @@ function RuleCard({
       confirm: primaryLeg.confirm,
       entryStack: primaryLeg.entryStack,
       shortEntry: shortLeg,
-      exitIf: closing ? null : exitIf,
+      exitIf: exitParts.filter,
+      exitHard: exitParts.signal,
       breakevenActivationPct:
         closing || !slOn || !breakevenOn
           ? null
@@ -1248,24 +1254,21 @@ function RuleCard({
             hint="Flattens this bot’s open size at market when the condition is true."
             enabled={Boolean(exitIf)}
             onEnabled={(next) =>
-              setExitIf(
-                next ? (exitIf ?? dcaFilterSpecForKind("rsi", exitSide)) : null,
-              )
+              setExitIf(next ? (exitIf ?? defaultHardExit(exitSide)) : null)
             }
           >
-            <DcaFilterBlock
-              label="Kind"
-              prefix={`${prefix}exitIf`}
-              side={exitSide}
-              spec={exitIf}
-              onChange={setExitIf}
-              named
-              dense
-              allowOff={false}
-              gridClass={fieldRow5}
-              fieldClass={botFieldClass}
-              labelClass={botLabelClass}
-            />
+            {exitIf ? (
+              <HardExitFields
+                prefix={`${prefix}exitIf`}
+                side={exitSide}
+                value={exitIf}
+                onChange={setExitIf}
+                webhooks={triggerWebhooks}
+                gridClass={fieldRow5}
+                fieldClass={botFieldClass}
+                labelClass={botLabelClass}
+              />
+            ) : null}
           </OptionalSection>
         </BotFormStep>
       ) : null}

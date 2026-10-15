@@ -1,4 +1,5 @@
 import { formatDcaFilterReason, type DcaFilterSpec } from "@/lib/dca/filters";
+import { hardExitForSide } from "@/lib/dca/hard-exit";
 import { dcaEntryStackForSide } from "@/lib/dca/entry-stack";
 import {
   dcaArmTriggerForSide,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/dca/playbook";
 import type { PaperLayerFormValues } from "@/lib/engine/rules";
 import {
+  formatHardExitText,
   formatIndicatorStartReason,
   formatPriceCrossReason,
   formatStrategyLeafReason,
@@ -312,11 +314,17 @@ function dcaExitLines(playbook: DcaPlaybook): BotConfigLine[] {
   ];
   for (const side of dcaSides(playbook)) {
     const prefix = sidePrefix(playbook, side);
-    const spec =
-      playbook.direction === "both" && side === "short"
-        ? playbook.shortExitIf
-        : playbook.exitIf;
-    lines.push(setting(`${prefix}Hard exit`, filterText(spec, side)));
+    const exit = hardExitForSide(playbook, side);
+    lines.push(
+      setting(
+        `${prefix}Hard exit`,
+        formatHardExitText({
+          filter: exit.filter,
+          signal: exit.signal,
+          side,
+        }) || null,
+      ),
+    );
   }
   return lines;
 }
@@ -551,7 +559,14 @@ export function perpsBotConfig(
               ])
             : null,
         ),
-        setting("Hard exit", filterText(rule.exitIf, side)),
+        setting(
+          "Hard exit",
+          formatHardExitText({
+            filter: rule.exitIf,
+            signal: rule.exitHard,
+            side,
+          }) || null,
+        ),
       ];
 
   return sectionsOf([

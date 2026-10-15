@@ -5,7 +5,11 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import { formatDcaFilterReason, type DcaFilterSpec } from "@/lib/dca/filters";
-import { formatStrategyLeafReason } from "@/lib/bots/condition-copy";
+import {
+  formatHardExitText,
+  formatStrategyLeafReason,
+} from "@/lib/bots/condition-copy";
+import type { TemplateHardExitSignal } from "@/lib/dca/hard-exit";
 import type { BacktestRecipe, ReplayEvent } from "./model";
 
 export type EventParameter = { label: string; value: string };
@@ -83,6 +87,37 @@ function filterSection(
     params.push({ label: "Level", value: String(spec.level) });
   }
   return { role, detail, params };
+}
+
+function hardExitSection(
+  role: string,
+  spec: DcaFilterSpec | null | undefined,
+  signal: TemplateHardExitSignal | null | undefined,
+  side: "long" | "short",
+  detail: string,
+): EventParameterSection | null {
+  if (signal?.trigger === "price" || signal?.trigger === "webhook") {
+    return {
+      role,
+      detail,
+      params: [
+        {
+          label: "Condition",
+          value: formatHardExitText({
+            signal:
+              signal.trigger === "webhook"
+                ? { trigger: "webhook", webhookId: "" }
+                : signal,
+            side,
+          }),
+        },
+      ],
+    };
+  }
+  if (!spec) {
+    return null;
+  }
+  return filterSection(role, spec, side, detail);
 }
 
 function factDetail(event: ReplayEvent, role: string): string {
@@ -207,25 +242,29 @@ export function eventParameterSections(
         }
       }
     }
-    if (hardExit && recipe.exitIf) {
-      sections.push(
-        filterSection(
-          "Hard exit",
-          recipe.exitIf,
-          side,
-          factDetail(event, "Hard exit"),
-        ),
+    if (hardExit) {
+      const longExit = hardExitSection(
+        "Hard exit",
+        recipe.exitIf,
+        recipe.exitHard,
+        side,
+        factDetail(event, "Hard exit"),
       );
-    }
-    if (hardExit && side === "short" && recipe.shortExitIf) {
-      sections.push(
-        filterSection(
+      if (longExit) {
+        sections.push(longExit);
+      }
+      if (side === "short") {
+        const shortExit = hardExitSection(
           "Short hard exit",
           recipe.shortExitIf,
+          recipe.shortExitHard,
           side,
           factDetail(event, "Short hard exit"),
-        ),
-      );
+        );
+        if (shortExit) {
+          sections.push(shortExit);
+        }
+      }
     }
   } else {
     const shortLeg =
@@ -306,15 +345,17 @@ export function eventParameterSections(
         });
       }
     }
-    if (hardExit && recipe.exitIf) {
-      sections.push(
-        filterSection(
-          "Hard exit",
-          recipe.exitIf,
-          side,
-          factDetail(event, "Hard exit"),
-        ),
+    if (hardExit) {
+      const exit = hardExitSection(
+        "Hard exit",
+        recipe.exitIf,
+        recipe.exitHard,
+        side,
+        factDetail(event, "Hard exit"),
       );
+      if (exit) {
+        sections.push(exit);
+      }
     }
   }
   if (sections.length === 0) {

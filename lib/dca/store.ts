@@ -1,5 +1,6 @@
 import { entryStackToJson } from "@/lib/strategy/expr";
 import { filterColumns } from "./filters";
+import { hardExitSignalToJson } from "./hard-exit";
 import {
   dcaPlaybookConflict,
   dcaPlaybookIsRunning,
@@ -91,8 +92,13 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
       config.shortEntryStack.leaves.length > 0
         ? entryStackToJson(config.shortEntryStack)
         : null,
-    ...filterColumns("exit_if", config.exitIf),
-    ...filterColumns("short_exit_if", config.shortExitIf),
+    ...filterColumns("exit_if", config.exitHard ? null : config.exitIf),
+    ...filterColumns(
+      "short_exit_if",
+      config.shortExitHard ? null : config.shortExitIf,
+    ),
+    exit_hard: hardExitSignalToJson(config.exitHard),
+    short_exit_hard: hardExitSignalToJson(config.shortExitHard),
   };
 }
 

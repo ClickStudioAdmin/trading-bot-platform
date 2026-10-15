@@ -62,7 +62,6 @@ import {
   type DcaIndicatorTimeframe,
 } from "./indicators";
 import {
-  dcaFilterForSide,
   dcaFilterMet,
   dcaFilterTimeframes,
   filterFromRow,
@@ -70,6 +69,12 @@ import {
   writeDcaFilterFormFields,
   type DcaFilterSpec,
 } from "./filters";
+import {
+  hardExitMet,
+  hardExitSignalFromJson,
+  parseHardExitForm,
+  type HardExitSignal,
+} from "./hard-exit";
 import {
   confirmFromEntryStack,
   emptyEntryStack,
@@ -170,6 +175,9 @@ export type DcaPlaybookConfig = {
   shortEntryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
   shortExitIf?: DcaFilterSpec | null;
+  /** Price cross or signal webhook. Null keeps exitIf. */
+  exitHard?: HardExitSignal | null;
+  shortExitHard?: HardExitSignal | null;
 };
 
 export type DcaPlaybook = DcaPlaybookConfig & {
@@ -1920,15 +1928,14 @@ export function parseDcaPlaybookForm(
   if (!shortConfirm.ok) {
     return shortConfirm;
   }
-  const exitIf = parseDcaFilterForm(form, "exitIf", false, "Exit-if");
+  const exitIf = parseHardExitForm(form, "exitIf", "Hard Exit");
   if (!exitIf.ok) {
     return exitIf;
   }
-  const shortExitIf = parseDcaFilterForm(
+  const shortExitIf = parseHardExitForm(
     form,
     "shortExitIf",
-    false,
-    "Short Exit-if",
+    "Short Hard Exit",
   );
   if (!shortExitIf.ok) {
     return shortExitIf;
@@ -2033,8 +2040,10 @@ export function parseDcaPlaybookForm(
       entryStack: longStack.present ? longStack.stack : null,
       shortEntryStack:
         direction === "both" && shortStack.present ? shortStack.stack : null,
-      exitIf: exitIf.spec,
-      shortExitIf: direction === "both" ? shortExitIf.spec : null,
+      exitIf: exitIf.filter,
+      shortExitIf: direction === "both" ? shortExitIf.filter : null,
+      exitHard: exitIf.signal,
+      shortExitHard: direction === "both" ? shortExitIf.signal : null,
     },
   };
 }
@@ -2431,8 +2440,14 @@ export function parseDcaPlaybookRow(
     })(),
     entryStack: entryStackFromJson(row.entry_expr),
     shortEntryStack: entryStackFromJson(row.short_entry_expr),
-    exitIf: filterFromRow(row, "exit_if"),
-    shortExitIf: filterFromRow(row, "short_exit_if"),
+    exitIf: hardExitSignalFromJson(row.exit_hard)
+      ? null
+      : filterFromRow(row, "exit_if"),
+    shortExitIf: hardExitSignalFromJson(row.short_exit_hard)
+      ? null
+      : filterFromRow(row, "short_exit_if"),
+    exitHard: hardExitSignalFromJson(row.exit_hard),
+    shortExitHard: hardExitSignalFromJson(row.short_exit_hard),
     updatedAtMs: (() => {
       const ms = new Date(String(row.updated_at ?? "")).getTime();
       return Number.isFinite(ms) ? ms : 0;
@@ -2837,6 +2852,8 @@ export function decideDcaTick(input: {
   entryLeaves?: boolean[] | null;
   entryJoins?: StrategyJoin[] | null;
   exitIf?: DcaFilterSpec | null;
+  exitHard?: HardExitSignal | null;
+  firedWebhookId?: string | null;
   exitIfCloses?: number[] | null;
   exitIfBars?: SupertrendBar[] | null;
   takeProfitOrderType?: FuturesOrderType;
@@ -2913,14 +2930,15 @@ export function decideDcaTick(input: {
     bars: input.confirmBars,
   });
   const stackedEntry = input.entryJoins != null;
-  const exitIfMet =
-    Boolean(input.exitIf) &&
-    dcaFilterMet({
-      spec: input.exitIf,
-      side: input.side,
-      closes: input.exitIfCloses,
-      bars: input.exitIfBars,
-    });
+  const exitIfMet = hardExitMet({
+    filter: input.exitIf,
+    signal: input.exitHard,
+    side: input.side,
+    closes: input.exitIfCloses,
+    bars: input.exitIfBars,
+    prices: input.triggerPrices,
+    firedWebhookId: input.firedWebhookId,
+  });
   const indicatorNow = seriesStart.now;
   const indicatorDue = seriesStart.due;
   const nextArmTrue = armMet;

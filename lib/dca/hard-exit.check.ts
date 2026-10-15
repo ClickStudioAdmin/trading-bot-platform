@@ -1,0 +1,202 @@
+import assert from "node:assert/strict";
+import { parseDcaPlaybookForm } from "./playbook";
+import {
+  dcaRecipeToConfig,
+  recipeHasRuntimeKeys,
+  snapshotDcaRecipe,
+} from "@/lib/templates/recipe";
+import {
+  hardExitDraftFromStored,
+  hardExitMet,
+  parseHardExitForm,
+} from "./hard-exit";
+
+function baseForm(): FormData {
+  const form = new FormData();
+  form.set("name", "Hard exit");
+  form.set("symbol", "BTCUSDT");
+  form.set("direction", "long");
+  form.set("startKind", "immediate");
+  form.set("clipSize", "1");
+  form.set("sizeUnit", "qty");
+  return form;
+}
+
+const legacy = baseForm();
+legacy.set("exitIfKind", "rsi");
+legacy.set("exitIfTimeframe", "5");
+legacy.set("exitIfCompare", "gte");
+legacy.set("exitIfLevel", "70");
+legacy.set("exitIfPeriod", "14");
+const legacyParsed = parseDcaPlaybookForm(legacy);
+assert.equal(legacyParsed.ok, true);
+if (!legacyParsed.ok) {
+  throw new Error("legacy hard exit should parse");
+}
+assert.equal(legacyParsed.config.exitIf?.kind, "rsi");
+assert.equal(legacyParsed.config.exitHard ?? null, null);
+assert.equal(
+  hardExitDraftFromStored(legacyParsed.config.exitIf, null)?.trigger,
+  "indicator",
+);
+
+const trendLegacy = baseForm();
+trendLegacy.set("exitIfKind", "supertrend");
+trendLegacy.set("exitIfTimeframe", "240");
+trendLegacy.set("exitIfCompare", "lte");
+trendLegacy.set("exitIfPeriod", "10");
+trendLegacy.set("exitIfMultiplier", "3");
+const trendLegacyParsed = parseDcaPlaybookForm(trendLegacy);
+assert.equal(trendLegacyParsed.ok, true);
+if (trendLegacyParsed.ok) {
+  assert.equal(trendLegacyParsed.config.exitIf?.kind, "supertrend");
+  assert.equal(
+    hardExitDraftFromStored(trendLegacyParsed.config.exitIf, null)?.trigger,
+    "trend",
+  );
+}
+
+const indicator = baseForm();
+indicator.set("exitIfTrigger", "indicator");
+indicator.set("exitIfKind", "ema");
+indicator.set("exitIfTimeframe", "60");
+indicator.set("exitIfCompare", "gte");
+indicator.set("exitIfPeriod", "21");
+const indicatorParsed = parseDcaPlaybookForm(indicator);
+assert.equal(indicatorParsed.ok, true);
+if (indicatorParsed.ok) {
+  assert.equal(indicatorParsed.config.exitIf?.kind, "ema");
+  assert.equal(indicatorParsed.config.exitIf?.timeframe, "60");
+  assert.equal(indicatorParsed.config.exitHard ?? null, null);
+}
+
+const forcedTrend = baseForm();
+forcedTrend.set("exitIfTrigger", "trend");
+forcedTrend.set("exitIfKind", "ema");
+forcedTrend.set("exitIfTimeframe", "60");
+forcedTrend.set("exitIfPeriod", "21");
+const forcedParsed = parseDcaPlaybookForm(forcedTrend);
+assert.equal(forcedParsed.ok, true);
+if (forcedParsed.ok) {
+  assert.equal(forcedParsed.config.exitIf?.kind, "supertrend");
+  assert.equal(forcedParsed.config.exitIf?.timeframe, "60");
+}
+
+const price = baseForm();
+price.set("exitIfTrigger", "price");
+price.set("exitIfTriggerBy", "mark");
+price.set("exitIfTriggerCompare", "lte");
+price.set("exitIfTriggerPrice", "100");
+const priceParsed = parseDcaPlaybookForm(price);
+assert.equal(priceParsed.ok, true);
+if (!priceParsed.ok) {
+  throw new Error("price hard exit should parse");
+}
+assert.equal(priceParsed.config.exitIf ?? null, null);
+assert.deepEqual(priceParsed.config.exitHard, {
+  trigger: "price",
+  triggerBy: "mark",
+  compare: "lte",
+  price: 100,
+});
+const priceSnap = snapshotDcaRecipe(priceParsed.config);
+assert.equal(priceSnap.exitIf, null);
+assert.equal(priceSnap.exitHard?.trigger, "price");
+assert.equal(recipeHasRuntimeKeys(priceSnap), false);
+const priceApplied = dcaRecipeToConfig(priceSnap, { venue: "bybit" });
+assert.equal(priceApplied.ok, true);
+if (priceApplied.ok) {
+  assert.equal(priceApplied.config.exitHard?.trigger, "price");
+  if (priceApplied.config.exitHard?.trigger === "price") {
+    assert.equal(priceApplied.config.exitHard.price, 100);
+    assert.equal(priceApplied.config.exitHard.triggerBy, "mark");
+  }
+}
+
+const missingPrice = parseHardExitForm(baseForm(), "exitIf", "Hard Exit");
+const blankPrice = baseForm();
+blankPrice.set("exitIfTrigger", "price");
+const blankPriceParsed = parseDcaPlaybookForm(blankPrice);
+assert.equal(blankPriceParsed.ok, false);
+if (!blankPriceParsed.ok) {
+  assert.equal(blankPriceParsed.error, "Enter a Hard Exit price.");
+}
+assert.equal(missingPrice.ok, true);
+
+const webhookId = "11111111-1111-4111-8111-111111111111";
+const webhook = baseForm();
+webhook.set("exitIfTrigger", "webhook");
+webhook.set("exitIfWebhookId", webhookId);
+const webhookParsed = parseDcaPlaybookForm(webhook);
+assert.equal(webhookParsed.ok, true);
+if (!webhookParsed.ok) {
+  throw new Error("webhook hard exit should parse");
+}
+assert.equal(webhookParsed.config.exitHard?.trigger, "webhook");
+const webhookSnap = snapshotDcaRecipe(webhookParsed.config);
+assert.equal(webhookSnap.exitHard?.trigger, "webhook");
+assert.equal("webhookId" in webhookSnap, false);
+assert.equal(JSON.stringify(webhookSnap).includes(webhookId), false);
+assert.equal(recipeHasRuntimeKeys(webhookSnap), false);
+const webhookOff = dcaRecipeToConfig(webhookSnap, { venue: "bybit" });
+assert.equal(webhookOff.ok, true);
+if (webhookOff.ok) {
+  assert.equal(webhookOff.config.exitHard ?? null, null);
+  assert.match(webhookOff.notes.join(" "), /Hard Exit signal needs a webhook/);
+}
+const webhookOn = dcaRecipeToConfig(webhookSnap, {
+  venue: "bybit",
+  webhookId,
+});
+assert.equal(webhookOn.ok, true);
+if (webhookOn.ok && webhookOn.config.exitHard?.trigger === "webhook") {
+  assert.equal(webhookOn.config.exitHard.webhookId, webhookId);
+}
+
+const missingHook = baseForm();
+missingHook.set("exitIfTrigger", "webhook");
+const missingHookParsed = parseDcaPlaybookForm(missingHook);
+assert.equal(missingHookParsed.ok, false);
+if (!missingHookParsed.ok) {
+  assert.equal(missingHookParsed.error, "Choose a Hard Exit signal webhook.");
+}
+
+assert.equal(
+  hardExitMet({
+    signal: { trigger: "price", triggerBy: "last", compare: "gte", price: 100 },
+    side: "long",
+    prices: { last: 100, mark: 90, index: 90 },
+  }),
+  true,
+);
+assert.equal(
+  hardExitMet({
+    signal: { trigger: "price", triggerBy: "last", compare: "lte", price: 100 },
+    side: "long",
+    prices: { last: 101, mark: 90, index: 90 },
+  }),
+  false,
+);
+assert.equal(
+  hardExitMet({
+    signal: { trigger: "webhook", webhookId },
+    side: "long",
+  }),
+  false,
+);
+assert.equal(
+  hardExitMet({
+    signal: { trigger: "webhook", webhookId },
+    side: "long",
+    firedWebhookId: webhookId,
+  }),
+  true,
+);
+assert.equal(
+  hardExitMet({
+    filter: legacyParsed.config.exitIf,
+    side: "long",
+    closes: [],
+  }),
+  false,
+);

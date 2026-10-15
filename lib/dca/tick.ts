@@ -84,10 +84,11 @@ import {
   dcaPlaybookFilterNeedsWideBars,
   seriesForFilter,
 } from "./filters";
+import { hardExitForSide } from "./hard-exit";
 import {
   formatBreakevenReason,
   formatDcaStartReasons,
-  formatHardExitReason,
+  formatHardExitText,
   formatPriceCrossReason,
 } from "@/lib/bots/condition-copy";
 import { dcaDecisionMessage, dcaExitClosedMessage } from "./log-copy";
@@ -760,7 +761,8 @@ export async function runDcaPlaybookTick(input?: {
         dcaOpenExitLimits(openWorking, playbook.id, side, "tp").length > 0;
       const indicatorStart = dcaIndicatorStartForSide(playbook, side);
       const confirm = dcaFilterForSide(playbook, side, "confirm");
-      const exitIf = dcaFilterForSide(playbook, side, "exitIf");
+      const exit = hardExitForSide(playbook, side);
+      const exitIf = exit.filter;
       const confirmSeries = seriesForFilter(
         confirm,
         confirm
@@ -857,6 +859,7 @@ export async function runDcaPlaybookTick(input?: {
           barsByTimeframe,
         }),
         exitIf,
+        exitHard: exit.signal,
         exitIfCloses: exitIfSeries.closes,
         exitIfBars: exitIfSeries.bars,
         triggerPrices: prices,
@@ -1102,8 +1105,12 @@ function dcaActionWhy(input: {
     });
   }
   if (action.kind === "close" && action.reason === "exit_if") {
-    const exitIf = dcaFilterForSide(playbook, side, "exitIf");
-    return exitIf ? formatHardExitReason(exitIf, side) : "";
+    const exit = hardExitForSide(playbook, side);
+    return formatHardExitText({
+      filter: exit.filter,
+      signal: exit.signal,
+      side,
+    });
   }
   if (action.kind === "breakeven") {
     return formatBreakevenReason({

@@ -18,6 +18,7 @@ import {
   dcaFilterForSide,
   seriesForFilter,
 } from "@/lib/dca/filters";
+import { hardExitForSide } from "@/lib/dca/hard-exit";
 import { entryStackIsLegacy, entryStackTimeframes } from "@/lib/strategy/expr";
 import {
   atrAtEachTapeBar,
@@ -32,7 +33,10 @@ import {
   dcaResolvedSafetyPrices,
   dcaTrailingDistance,
 } from "@/lib/dca/grid";
-import { formatDcaStartReasons } from "@/lib/bots/condition-copy";
+import {
+  formatDcaStartReasons,
+  formatHardExitText,
+} from "@/lib/bots/condition-copy";
 import { canBacktestDcaRecipe } from "./eligibility";
 import { dcaRecipeToConfig, type DcaTemplateRecipe } from "@/lib/templates/recipe";
 import type { FuturesSide } from "@/lib/futures/model";
@@ -559,7 +563,8 @@ export async function replayDcaPlaybook(input: {
       const live = legs[side];
       const indicatorStart = dcaIndicatorStartForSide(config, side);
       const confirm = dcaFilterForSide(config, side, "confirm");
-      const exitIf = dcaFilterForSide(config, side, "exitIf");
+      const exit = hardExitForSide(config, side);
+      const exitIf = exit.filter;
       const tapeInterval = backtestTapeInterval(input.recipe, 1, 2);
       const confirmSeries = seriesForFilter(
         confirm,
@@ -671,6 +676,7 @@ export async function replayDcaPlaybook(input: {
           barsByTimeframe: entryBars,
         }),
         exitIf,
+        exitHard: exit.signal,
         exitIfCloses: exitIfSeries.closes,
         exitIfBars: exitIfSeries.bars,
         takeProfitOrderType: config.takeProfitOrderType,
@@ -711,7 +717,13 @@ export async function replayDcaPlaybook(input: {
           true,
           closeReason,
           closeReason === "exit_if"
-            ? filterBecause(exitIf, side, "Exit if")
+            ? exit.signal
+              ? formatHardExitText({
+                  filter: null,
+                  signal: exit.signal,
+                  side,
+                })
+              : filterBecause(exitIf, side, "Exit if")
             : undefined,
         );
         closedThisBar = true;

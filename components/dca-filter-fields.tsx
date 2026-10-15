@@ -112,7 +112,7 @@ export function DcaFilterBlock({
   );
 }
 
-function DcaFilterParamFields({
+export function DcaFilterParamFields({
   prefix,
   side,
   spec,

@@ -29,6 +29,7 @@ import {
 } from "@/components/bot-indicator-fields";
 import { ColumnHint } from "@/components/column-hint";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
+import { HardExitFields } from "@/components/hard-exit-fields";
 import {
   EntryConditionStack,
   entryConflictSlots,
@@ -43,6 +44,11 @@ import {
   dcaFilterSpecForKind,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
+import {
+  defaultHardExit,
+  hardExitComplete,
+  type HardExitDraft,
+} from "@/lib/dca/hard-exit";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { ChevronIcon, TabButton } from "@/components/trade-expand";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
@@ -622,8 +628,8 @@ export function ThemeBotFormDraft() {
   const [slLimitPrice, setSlLimitPrice] = useState("");
   const [breakevenAt, setBreakevenAt] = useState("");
   const [breakevenOffset, setBreakevenOffset] = useState("0");
-  const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(null);
-  const [shortExitIf, setShortExitIf] = useState<DcaFilterSpec | null>(null);
+  const [exitIf, setExitIf] = useState<HardExitDraft | null>(null);
+  const [shortExitIf, setShortExitIf] = useState<HardExitDraft | null>(null);
   const [averaging, setAveraging] = useState<"dip" | "interval">("dip");
   const [spacingKind, setSpacingKind] = useState<"percent" | "atr">("percent");
   const [dipPct, setDipPct] = useState("1");
@@ -815,8 +821,8 @@ export function ThemeBotFormDraft() {
     orderSizeUsdt: requireCarrySize,
     confirm: requireConfirm && !dcaFilterComplete(confirm),
     shortConfirm: requireShortConfirm && !dcaFilterComplete(shortConfirm),
-    exitIf: requireExitIf && !dcaFilterComplete(exitIf),
-    shortExitIf: requireShortExitIf && !dcaFilterComplete(shortExitIf),
+    exitIf: requireExitIf && !hardExitComplete(exitIf),
+    shortExitIf: requireShortExitIf && !hardExitComplete(shortExitIf),
   };
   const hasMissing = Object.values(missing).some(Boolean);
   const showFieldErrors = dirty && hasMissing;
@@ -971,7 +977,7 @@ export function ThemeBotFormDraft() {
       }
       setShortExitIfOn(exitIfOn);
       if (exitIfOn) {
-        setShortExitIf((current) => current ?? dcaFilterSpecForKind("rsi", "short"));
+        setShortExitIf((current) => current ?? defaultHardExit("short"));
       }
     } else if (direction === "both" && next === "short") {
       setStartKind(shortStartKind);
@@ -2219,23 +2225,22 @@ export function ThemeBotFormDraft() {
                   enabled={exitIfOn}
                   onEnabled={(next) => {
                     setExitIfOn(next);
-                    setExitIf(
-                      next ? (exitIf ?? dcaFilterSpecForKind("rsi", "long")) : null,
-                    );
+                    setExitIf(next ? (exitIf ?? defaultHardExit("long")) : null);
                   }}
                 >
-                  <DcaFilterBlock
-                    label="Kind"
-                    prefix="themeExitIf"
-                    side="long"
-                    spec={exitIf}
-                    onChange={setExitIf}
-                    dense
-                    allowOff={false}
-                    gridClass={rowClass5}
-                    fieldClass={fieldClass}
-                    labelClass={labelClass}
-                  />
+                  {exitIf ? (
+                    <HardExitFields
+                      prefix="themeExitIf"
+                      side="long"
+                      value={exitIf}
+                      onChange={setExitIf}
+                      webhooks={[{ id: "sample", name: "Sample signal" }]}
+                      named={false}
+                      gridClass={rowClass5}
+                      fieldClass={fieldClass}
+                      labelClass={labelClass}
+                    />
+                  ) : null}
                 </OptionalSection>
                 <OptionalSection
                   title="Short"
@@ -2244,24 +2249,23 @@ export function ThemeBotFormDraft() {
                   onEnabled={(next) => {
                     setShortExitIfOn(next);
                     setShortExitIf(
-                      next
-                        ? (shortExitIf ?? dcaFilterSpecForKind("rsi", "short"))
-                        : null,
+                      next ? (shortExitIf ?? defaultHardExit("short")) : null,
                     );
                   }}
                 >
-                  <DcaFilterBlock
-                    label="Kind"
-                    prefix="themeShortExitIf"
-                    side="short"
-                    spec={shortExitIf}
-                    onChange={setShortExitIf}
-                    dense
-                    allowOff={false}
-                    gridClass={rowClass5}
-                    fieldClass={fieldClass}
-                    labelClass={labelClass}
-                  />
+                  {shortExitIf ? (
+                    <HardExitFields
+                      prefix="themeShortExitIf"
+                      side="short"
+                      value={shortExitIf}
+                      onChange={setShortExitIf}
+                      webhooks={[{ id: "sample", name: "Sample signal" }]}
+                      named={false}
+                      gridClass={rowClass5}
+                      fieldClass={fieldClass}
+                      labelClass={labelClass}
+                    />
+                  ) : null}
                 </OptionalSection>
               </Group>
             ) : (
@@ -2276,24 +2280,23 @@ export function ThemeBotFormDraft() {
                 onEnabled={(next) => {
                   setExitIfOn(next);
                   setExitIf(
-                    next
-                      ? (exitIf ?? dcaFilterSpecForKind("rsi", entrySide))
-                      : null,
+                    next ? (exitIf ?? defaultHardExit(entrySide)) : null,
                   );
                 }}
               >
-                <DcaFilterBlock
-                  label="Kind"
-                  prefix="themeExitIf"
-                  side={entrySide}
-                  spec={exitIf}
-                  onChange={setExitIf}
-                  dense
-                  allowOff={false}
-                  gridClass={rowClass5}
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-                />
+                {exitIf ? (
+                  <HardExitFields
+                    prefix="themeExitIf"
+                    side={entrySide}
+                    value={exitIf}
+                    onChange={setExitIf}
+                    webhooks={[{ id: "sample", name: "Sample signal" }]}
+                    named={false}
+                    gridClass={rowClass5}
+                    fieldClass={fieldClass}
+                    labelClass={labelClass}
+                  />
+                ) : null}
               </OptionalSection>
             )}
 

@@ -111,6 +111,7 @@ import {
   dcaEntryStackNeedsWideBars,
 } from "./entry-stack";
 import { dcaFilterForSide, dcaPlaybookFilterNeedsWideBars } from "./filters";
+import { hardExitForSide } from "./hard-exit";
 import { dcaDisarmedMessage, dcaSyncFailedMessage } from "./log-copy";
 import {
   dcaSyncFailureStamp,
@@ -2028,6 +2029,7 @@ async function applyDcaVerbUnlocked(input: {
   let waiting = 0;
   let already = 0;
   let skippedIdle = 0;
+  let flattened = 0;
   const playbook = input.playbook;
   const opens = await loadOpenFuturesOnSymbol(playbook.symbol, {
     accountId: playbook.accountId,
@@ -2038,6 +2040,38 @@ async function applyDcaVerbUnlocked(input: {
     let leg = dcaLegFor(playbook, side);
     const sideKind = dcaStartKindForSide(playbook, side);
     const sideWebhook = dcaWebhookIdForSide(playbook, side);
+    const exitSignal = hardExitForSide(playbook, side).signal;
+    if (
+      fromSignal &&
+      firedWebhookId &&
+      exitSignal?.trigger === "webhook" &&
+      exitSignal.webhookId === firedWebhookId
+    ) {
+      const open = opens.find((row) => row.side === side);
+      if (open && open.qty > 0) {
+        const closed = await flattenSide({
+          playbook,
+          mode: input.mode,
+          side,
+          reason: "Signal webhook",
+          closeKind: "exit_if",
+        });
+        if (!closed.ok) {
+          return closed;
+        }
+        const kept = await keepListeningAfterFlatten({ playbook, side });
+        if (!kept.ok) {
+          return kept;
+        }
+        touchPlaybook(playbook);
+        flattened += 1;
+        continue;
+      }
+      if (sideWebhook !== firedWebhookId) {
+        skippedIdle += 1;
+        continue;
+      }
+    }
     const sideSignal =
       fromSignal &&
       sideKind === "webhook" &&
@@ -2205,6 +2239,15 @@ async function applyDcaVerbUnlocked(input: {
     }
   }
 
+  if (flattened > 0 && placed === 0 && resumed === 0 && waiting === 0) {
+    await logDcaEvent({
+      playbook,
+      event: "dca.closed",
+      message: `Closed ${playbook.name}. Signal webhook.`,
+      data: { sides, reason: "exit_if", why: "Signal webhook" },
+    });
+    return { ok: true, message: "Hard Exit closed the position." };
+  }
   if (skippedIdle === sides.length) {
     if (input.unlessIdle) {
       return { ok: true, message: "Bot is off." };

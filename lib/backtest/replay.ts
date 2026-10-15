@@ -10,7 +10,11 @@ import {
   resampleBarsForTimeframe,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
-import { formatStrategyLeafReason } from "@/lib/bots/condition-copy";
+import {
+  formatHardExitText,
+  formatStrategyLeafReason,
+} from "@/lib/bots/condition-copy";
+import { hardExitMet, hardExitSignalFromJson } from "@/lib/dca/hard-exit";
 import { canBacktestPerpsRecipe } from "./eligibility";
 import { backtestTapeInterval } from "./model";
 import {
@@ -50,6 +54,30 @@ import {
 import { filterBecause, indicatorBecause, priceStartBecause } from "./explain";
 
 export { canBacktestPerpsRecipe };
+
+function perpsHardExitMet(
+  recipe: PerpsTemplateRecipe,
+  side: FuturesSide,
+  price: number,
+  barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>,
+): boolean {
+  const signal = hardExitSignalFromJson(recipe.exitHard);
+  if (signal) {
+    return hardExitMet({
+      signal,
+      side,
+      prices: { last: price, mark: price, index: price },
+    });
+  }
+  return (
+    Boolean(recipe.exitIf) &&
+    futuresFilterMet({
+      spec: recipe.exitIf,
+      side,
+      barsByTimeframe,
+    })
+  );
+}
 
 export function recipeAction(recipe: PerpsTemplateRecipe): {
   action: FuturesAction;
@@ -344,18 +372,18 @@ export async function replayPerpsPriceCross(input: {
       );
       if (
         open &&
-        input.recipe.exitIf &&
-        futuresFilterMet({
-          spec: input.recipe.exitIf,
-          side: open.side,
-          barsByTimeframe,
-        })
+        perpsHardExitMet(input.recipe, open.side, price, barsByTimeframe)
       ) {
         flattenOpen(
           bar.timeMs,
           price,
           "exit_if",
-          filterBecause(input.recipe.exitIf, open.side, "Exit if"),
+          hardExitSignalFromJson(input.recipe.exitHard)
+            ? formatHardExitText({
+                signal: hardExitSignalFromJson(input.recipe.exitHard),
+                side: open.side,
+              })
+            : filterBecause(input.recipe.exitIf, open.side, "Exit if"),
         );
       }
       if (
@@ -804,15 +832,7 @@ async function replayPerpsBoth(input: {
     );
     for (const side of ["long", "short"] as const) {
       const open = book[side];
-      if (
-        open &&
-        input.recipe.exitIf &&
-        futuresFilterMet({
-          spec: input.recipe.exitIf,
-          side,
-          barsByTimeframe,
-        })
-      ) {
+      if (open && perpsHardExitMet(input.recipe, side, price, barsByTimeframe)) {
         flattenSide(side, bar.timeMs, price, "exit_if");
       }
     }

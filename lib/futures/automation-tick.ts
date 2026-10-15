@@ -15,6 +15,7 @@ import {
   futuresFilterMet,
 } from "./conditions";
 import { entryStackListensOnPriceTick, entryStackMatchesWebhook } from "@/lib/strategy/expr";
+import { hardExitMet } from "@/lib/dca/hard-exit";
 import {
   perpsAutomationLegs,
   perpsRuleMatchesWebhook,
@@ -51,7 +52,7 @@ import type { CandleBar } from "@/lib/market/candles";
 import {
   formatBreakevenReason,
   formatFuturesEntryReasons,
-  formatHardExitReason,
+  formatHardExitText,
   futuresBreakevenMessage,
   futuresFiredMessage,
   futuresHardExitMessage,
@@ -427,6 +428,67 @@ export async function fireWebhookAutomationEntries(input: {
     if (!rule.id) {
       continue;
     }
+    if (
+      rule.exitHard?.trigger === "webhook" &&
+      rule.exitHard.webhookId === input.webhookId
+    ) {
+      const owned = opens.filter(
+        (row) => row.ruleId === rule.id && row.symbol === rule.symbol,
+      );
+      let flattened = false;
+      for (const open of owned) {
+        const reasons = formatHardExitText({
+          signal: rule.exitHard,
+          side: open.side,
+        });
+        const closed = await runFuturesCommand({
+          actor: {
+            userId: input.userId,
+            accountId: input.accountId,
+            mode: input.mode,
+          },
+          command: {
+            kind: "place",
+            action: "flatten",
+            symbol: open.symbol,
+            positionId: open.id,
+            orderType: "market",
+            source: "webhook",
+            ruleId: rule.id,
+            ruleName: rule.name,
+            reason: reasons,
+          },
+        });
+        if (closed.ok) {
+          fired += 1;
+          flattened = true;
+          await writeEventLog({
+            scope: "trade",
+            event: "engine.exit_if",
+            message: futuresHardExitMessage({
+              name: rule.name,
+              symbol: open.symbol,
+              reasons,
+            }),
+            userId: input.userId,
+            accountId: input.accountId,
+            strategy: FUTURES_STRATEGY_ID,
+            data: {
+              ruleId: rule.id,
+              ruleName: rule.name,
+              symbol: open.symbol,
+              side: open.side,
+              positionId: open.id,
+              webhookId: input.webhookId,
+              reason: reasons,
+            },
+          });
+        }
+      }
+      if (flattened) {
+        continue;
+      }
+    }
     const barsByTimeframe = await loadRuleBars({
       rule,
       account,
@@ -578,7 +640,7 @@ async function monitorOwnedFuturesPositions(input: {
       continue;
     }
     const { rule, account } = owned;
-    if (!rule.exitIf && rule.breakevenActivationPct == null) {
+    if (!rule.exitIf && !rule.exitHard && rule.breakevenActivationPct == null) {
       continue;
     }
     let deskTickers = input.tickers;
@@ -602,15 +664,25 @@ async function monitorOwnedFuturesPositions(input: {
       account,
       cache: input.klineCache,
     });
-    if (
-      rule.exitIf &&
-      futuresFilterMet({
-        spec: rule.exitIf,
+    const prices = ticker ? tickerTriggerPrices(ticker) : null;
+    const exitMet = rule.exitHard
+      ? hardExitMet({
+          signal: rule.exitHard,
+          side: open.side,
+          prices,
+        })
+      : Boolean(rule.exitIf) &&
+        futuresFilterMet({
+          spec: rule.exitIf,
+          side: open.side,
+          barsByTimeframe,
+        });
+    if (exitMet) {
+      const reasons = formatHardExitText({
+        filter: rule.exitIf,
+        signal: rule.exitHard,
         side: open.side,
-        barsByTimeframe,
-      })
-    ) {
-      const reasons = formatHardExitReason(rule.exitIf, open.side);
+      });
       const closed = await runFuturesCommand({
         actor: {
           userId: account.userId,

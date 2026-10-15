@@ -8,6 +8,15 @@ import {
   writeDcaFilterFormFields,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
+import {
+  hardExitDraftFromStored,
+  hardExitSignalFromJson,
+  hardExitSignalToJson,
+  parseHardExitForm,
+  writeHardExitFormFields,
+  type HardExitDraft,
+  type HardExitSignal,
+} from "@/lib/dca/hard-exit";
 import { closedLiveIndicatorBars } from "@/lib/market/desk-klines";
 import type { CandleBar } from "@/lib/market/candles";
 import {
@@ -358,6 +367,7 @@ export function parseFuturesConditionForm(
       confirm: DcaFilterSpec | null;
       entryStack: EntryStack;
       exitIf: DcaFilterSpec | null;
+      exitHard: HardExitSignal | null;
       breakevenActivationPct: number | null;
       breakevenOffsetPct: number | null;
     }
@@ -369,6 +379,7 @@ export function parseFuturesConditionForm(
       confirm: null,
       entryStack: emptyEntryStack(),
       exitIf: null,
+      exitHard: null,
       breakevenActivationPct: null,
       breakevenOffsetPct: null,
     };
@@ -398,7 +409,7 @@ export function parseFuturesConditionForm(
   if (!confirm.ok) {
     return confirm;
   }
-  const exitIf = parseDcaFilterForm(form, `${prefix}exitIf`, false, "Hard Exit");
+  const exitIf = parseHardExitForm(form, `${prefix}exitIf`, "Hard Exit");
   if (!exitIf.ok) {
     return exitIf;
   }
@@ -418,7 +429,8 @@ export function parseFuturesConditionForm(
       ? confirmFromEntryStack(entryStack)
       : confirm.spec,
     entryStack,
-    exitIf: exitIf.spec,
+    exitIf: exitIf.filter,
+    exitHard: exitIf.signal,
     breakevenActivationPct: breakeven.activationPct,
     breakevenOffsetPct: breakeven.offsetPct,
   };
@@ -429,6 +441,7 @@ export function conditionsFromRow(row: Record<string, unknown>): {
   confirm: DcaFilterSpec | null;
   entryStack: EntryStack;
   exitIf: DcaFilterSpec | null;
+  exitHard: HardExitSignal | null;
   breakevenActivationPct: number | null;
   breakevenOffsetPct: number | null;
 } {
@@ -437,11 +450,13 @@ export function conditionsFromRow(row: Record<string, unknown>): {
   const stored = entryStackFromJson(row.entry_expr);
   const confirm = filterFromRow(row, "confirm");
   const entryStack = stored ?? legacyEntryStack(confirm);
+  const exitHard = hardExitSignalFromJson(row.exit_hard);
   return {
     indicator: indicatorStartFromRow(row),
     confirm: stored ? confirmFromEntryStack(stored) : confirm,
     entryStack,
-    exitIf: filterFromRow(row, "exit_if"),
+    exitIf: exitHard ? null : filterFromRow(row, "exit_if"),
+    exitHard,
     breakevenActivationPct: activation > 0 ? activation : null,
     breakevenOffsetPct: Number.isFinite(offset) && offset >= 0 ? offset : null,
   };
@@ -452,6 +467,7 @@ export function conditionColumns(rule: {
   confirm?: DcaFilterSpec | null;
   entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
+  exitHard?: HardExitSignal | null;
   breakevenActivationPct?: number | null;
   breakevenOffsetPct?: number | null;
 }): Record<string, unknown> {
@@ -466,7 +482,8 @@ export function conditionColumns(rule: {
   return {
     ...indicatorColumns(rule.indicator),
     ...filterColumns("confirm", confirm),
-    ...filterColumns("exit_if", rule.exitIf),
+    ...filterColumns("exit_if", rule.exitHard ? null : rule.exitIf),
+    exit_hard: hardExitSignalToJson(rule.exitHard),
     entry_expr: stack.leaves.length > 0 ? entryStackToJson(stack) : null,
     breakeven_activation_pct: rule.breakevenActivationPct ?? null,
     breakeven_offset_pct:
@@ -484,6 +501,8 @@ export function writeFuturesConditionFormFields(
     confirm?: DcaFilterSpec | null;
     entryStack?: EntryStack | null;
     exitIf?: DcaFilterSpec | null;
+    exitHard?: HardExitSignal | null;
+    exitDraft?: HardExitDraft | null;
     breakevenActivationPct?: number | null;
     breakevenOffsetPct?: number | null;
   },
@@ -519,7 +538,21 @@ export function writeFuturesConditionFormFields(
       ? confirmFromEntryStack(rule.entryStack)
       : rule.confirm,
   );
-  writeDcaFilterFormFields(form, `${prefix}exitIf`, rule.exitIf);
+  if (rule.exitDraft !== undefined) {
+    writeHardExitFormFields(form, `${prefix}exitIf`, rule.exitDraft);
+  } else if (rule.exitHard) {
+    writeHardExitFormFields(
+      form,
+      `${prefix}exitIf`,
+      hardExitDraftFromStored(null, rule.exitHard),
+    );
+  } else {
+    writeHardExitFormFields(
+      form,
+      `${prefix}exitIf`,
+      hardExitDraftFromStored(rule.exitIf, null),
+    );
+  }
   if (rule.breakevenActivationPct != null) {
     form.set(
       `${prefix}breakevenActivationPct`,

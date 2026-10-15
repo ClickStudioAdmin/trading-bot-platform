@@ -2,6 +2,7 @@ import {
   formatDcaFilterReason,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
+import type { HardExitSignal } from "@/lib/dca/hard-exit";
 import { formatDcaIndicatorStartLabel } from "@/lib/dca/indicators";
 import type { DcaIndicatorStart, DcaPriceTrigger, DcaStartKind } from "@/lib/dca/playbook";
 import type { FuturesAutomationEntry, FuturesTriggerCompare } from "@/lib/futures/automation";
@@ -92,6 +93,27 @@ export function formatHardExitReason(
   side: FuturesSide,
 ): string {
   return formatDcaFilterReason(spec, side);
+}
+
+export function formatHardExitText(input: {
+  filter?: DcaFilterSpec | null;
+  signal?: HardExitSignal | null;
+  side?: FuturesSide;
+}): string {
+  if (input.signal?.trigger === "price") {
+    return formatPriceCrossReason({
+      source: input.signal.triggerBy,
+      compare: input.signal.compare,
+      level: input.signal.price,
+    });
+  }
+  if (input.signal?.trigger === "webhook") {
+    return "Signal webhook";
+  }
+  if (input.filter) {
+    return formatHardExitReason(input.filter, input.side ?? "long");
+  }
+  return "";
 }
 
 export function formatBreakevenReason(input: {

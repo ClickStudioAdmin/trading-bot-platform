@@ -21,6 +21,7 @@ import {
 } from "@/lib/dca/indicators";
 import { dcaAveragingKind, dcaIntervalParts } from "@/lib/dca/playbook";
 import { formatStrategyLeafReason } from "@/lib/bots/condition-copy";
+import type { TemplateHardExitSignal } from "@/lib/dca/hard-exit";
 import {
   confirmFromEntryStack,
   entryStackIsLegacy,
@@ -170,15 +171,53 @@ function filterRows(spec: DcaFilterSpec, side: "long" | "short"): ParamRow[] {
   return rows;
 }
 
-function optionalFilter(
+function hardExitGroup(
   title: string,
   spec: DcaFilterSpec | null | undefined,
+  signal: TemplateHardExitSignal | null | undefined,
   side: "long" | "short",
 ): ParamGroup {
+  if (signal?.trigger === "price") {
+    return {
+      title,
+      rows: [
+        { label: "Trigger", value: "Price cross" },
+        {
+          label: "Price source",
+          value:
+            signal.triggerBy === "mark"
+              ? "Mark is"
+              : signal.triggerBy === "index"
+                ? "Index is"
+                : "Last is",
+        },
+        {
+          label: "Compare",
+          value: signal.compare === "lte" ? "At or below" : "At or above",
+        },
+        { label: "Price", value: num(signal.price) },
+      ],
+    };
+  }
+  if (signal?.trigger === "webhook") {
+    return {
+      title,
+      rows: [{ label: "Trigger", value: "Signal webhook" }],
+    };
+  }
   if (!spec) {
     return { rows: [{ label: title, value: "Off" }] };
   }
-  return { title, rows: filterRows(spec, side) };
+  return {
+    title,
+    rows: [
+      {
+        label: "Trigger",
+        value: spec.kind === "supertrend" ? "Trend" : "Indicator",
+      },
+      ...filterRows(spec, side),
+    ],
+  };
 }
 
 function entryStackGroup(
@@ -543,11 +582,13 @@ function dcaExitGroups(recipe: DcaTemplateRecipe): ParamGroup[] {
   if (recipe.direction === "both") {
     groups.push({ title: "Hard Exit Condition", rows: [] });
     groups.push(
-      optionalFilter("Long", recipe.exitIf, "long"),
-      optionalFilter("Short", recipe.shortExitIf, "short"),
+      hardExitGroup("Long", recipe.exitIf, recipe.exitHard, "long"),
+      hardExitGroup("Short", recipe.shortExitIf, recipe.shortExitHard, "short"),
     );
   } else {
-    groups.push(optionalFilter("Hard Exit Condition", recipe.exitIf, side));
+    groups.push(
+      hardExitGroup("Hard Exit Condition", recipe.exitIf, recipe.exitHard, side),
+    );
   }
   return groups;
 }
@@ -797,7 +838,12 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
           recipe.breakevenActivationPct,
           recipe.breakevenOffsetPct,
         ),
-        optionalFilter("Hard Exit Condition", recipe.exitIf, side),
+        hardExitGroup(
+          "Hard Exit Condition",
+          recipe.exitIf,
+          recipe.exitHard,
+          side,
+        ),
       ],
     });
   }

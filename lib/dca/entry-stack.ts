@@ -10,6 +10,7 @@ import {
   type StrategyJoin,
 } from "@/lib/strategy/expr";
 import { dcaFilterForSide, dcaFilterMet } from "./filters";
+import { hardExitForSide } from "./hard-exit";
 import type { DcaIndicatorTimeframe } from "./indicators";
 import {
   dcaEnabledSides,
@@ -29,6 +30,10 @@ type StackPlaybook = Pick<
   | "shortStartKind"
   | "webhookId"
   | "shortWebhookId"
+  | "exitIf"
+  | "shortExitIf"
+  | "exitHard"
+  | "shortExitHard"
 >;
 
 export function dcaEntryStackForSide(
@@ -97,6 +102,14 @@ export function dcaPlaybookMatchesWebhook(
         dcaStartKindForSide(playbook, side) === "webhook" &&
         dcaWebhookIdForSide(playbook, side) === firedId,
     )
+  ) {
+    return true;
+  }
+  if (
+    dcaEnabledSides(playbook.direction).some((side) => {
+      const signal = hardExitForSide(playbook, side).signal;
+      return signal?.trigger === "webhook" && signal.webhookId === firedId;
+    })
   ) {
     return true;
   }
