@@ -959,7 +959,7 @@ export function DcaPlaybookForm({
     const timer = window.setTimeout(() => setMaxValueSettled(maxValue), 600);
     return () => window.clearTimeout(timer);
   }, [maxValue]);
-  const [dipPct, setDipPct] = useState(optional(source?.dipPct));
+  const [dipPct, setDipPct] = useState(optional(source?.dipPct) || "1");
   const [spacingKind, setSpacingKind] = useState<DcaSpacingKind>(
     source?.spacingKind ?? "percent",
   );
