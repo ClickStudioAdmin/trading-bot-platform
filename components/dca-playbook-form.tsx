@@ -1765,12 +1765,12 @@ export function DcaPlaybookForm({
               onChange={(event) =>
                 applyDcaStartKind(side, event.target.value as DcaStartKind)
               }
-              className={fieldClass}
+              className={`${fieldClass} !min-w-72`}
             >
               {value === "immediate" ? (
                 <option value="immediate">Immediate</option>
               ) : null}
-              <option value="">Select Trigger</option>
+              <option value="">Select Condition Type</option>
               <option value="indicator">Indicator</option>
               <option value="trend">Trend</option>
               <option

@@ -372,9 +372,9 @@ export function PerpsEntryPanel({
                 }
                 patch(partial);
               }}
-              className={fieldClass}
+              className={`${fieldClass} !min-w-72`}
             >
-              {closing ? null : <option value="">Select Trigger</option>}
+              {closing ? null : <option value="">Select Condition Type</option>}
               {closing ? null : <option value="indicator">Indicator</option>}
               {closing ? null : <option value="trend">Trend</option>}
               <option

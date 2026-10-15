@@ -1334,9 +1334,9 @@ export function ThemeBotFormDraft() {
                   onChange={(event) =>
                     applyStartKind(event.target.value as StartKind)
                   }
-                  className={fieldClass}
+                  className={`${fieldClass} !min-w-72`}
                 >
-                  {closing ? null : <option value="">Select Trigger</option>}
+                  {closing ? null : <option value="">Select Condition Type</option>}
                   {closing ? null : (
                     <option value="indicator">Indicator</option>
                   )}
@@ -1373,9 +1373,9 @@ export function ThemeBotFormDraft() {
                   onChange={(event) =>
                     applyStartKind(event.target.value as StartKind)
                   }
-                  className={fieldClass}
+                  className={`${fieldClass} !min-w-72`}
                 >
-                  <option value="">Select Trigger</option>
+                  <option value="">Select Condition Type</option>
                   <option value="indicator">Indicator</option>
                   <option value="trend">Trend</option>
                   <option value="price">Price Cross</option>
@@ -1567,9 +1567,9 @@ export function ThemeBotFormDraft() {
                     onChange={(event) =>
                       applyShortStartKind(event.target.value as StartKind)
                     }
-                    className={fieldClass}
+                    className={`${fieldClass} !min-w-72`}
                   >
-                    <option value="">Select Trigger</option>
+                    <option value="">Select Condition Type</option>
                     <option value="indicator">Indicator</option>
                     <option value="trend">Trend</option>
                     <option
@@ -1705,9 +1705,9 @@ export function ThemeBotFormDraft() {
                     onChange={(event) =>
                       applyShortStartKind(event.target.value as StartKind)
                     }
-                    className={fieldClass}
+                    className={`${fieldClass} !min-w-72`}
                   >
-                    <option value="">Select Trigger</option>
+                    <option value="">Select Condition Type</option>
                     <option value="indicator">Indicator</option>
                     <option value="trend">Trend</option>
                     <option value="price">Price Cross</option>
