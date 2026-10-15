@@ -1758,7 +1758,7 @@ export function DcaPlaybookForm({
             inert={cycleLocked || undefined}
             aria-disabled={cycleLocked || undefined}
           >
-            <HintLabel text="Initial Order Trigger" required />
+            <HintLabel text="Condition Type" required />
             <AppSelect
               name={shortState ? "shortStartKind" : "startKind"}
               value={value}

@@ -25,7 +25,7 @@ if (!parsed.ok) {
 const seed = snapshotDcaRecipe(parsed.config);
 const preview = recipeParamRows(seed);
 assert.equal(
-  preview.find((row) => row.label === "Initial Order Trigger")?.value,
+  preview.find((row) => row.label === "Condition Type")?.value,
   "Immediate",
 );
 assert.equal(

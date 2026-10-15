@@ -328,7 +328,7 @@ export function PerpsEntryPanel({
     <>
       <BotFormGroup>
         <div className={fieldRow}>
-          <BotField label="Initial Order Trigger" required>
+          <BotField label="Condition Type" required>
             <input
               type="hidden"
               name={`${prefix}entrySource`}

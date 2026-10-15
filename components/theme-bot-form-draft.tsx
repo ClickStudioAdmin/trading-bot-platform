@@ -1328,7 +1328,7 @@ export function ThemeBotFormDraft() {
           <div className={rowClass}>
             {desk === "perps" ? (
               <>
-              <Field label="Initial Order Trigger" required>
+              <Field label="Condition Type" required>
                 <AppSelect
                   value={startKind}
                   onChange={(event) =>
@@ -1367,7 +1367,7 @@ export function ThemeBotFormDraft() {
               </Field>
               </>
             ) : (
-              <Field label="Initial Order Trigger" className="lg:col-span-2" required>
+              <Field label="Condition Type" className="lg:col-span-2" required>
                 <AppSelect
                   value={startKind}
                   onChange={(event) =>
@@ -1561,7 +1561,7 @@ export function ThemeBotFormDraft() {
                 <>
             <Group>
               <div className={rowClass}>
-                <Field label="Initial Order Trigger" required>
+                <Field label="Condition Type" required>
                   <AppSelect
                     value={shortStartKind}
                     onChange={(event) =>
@@ -1699,7 +1699,7 @@ export function ThemeBotFormDraft() {
                 <>
             <Group>
               <div className={rowClass}>
-                <Field label="Initial Order Trigger" className="lg:col-span-2" required>
+                <Field label="Condition Type" className="lg:col-span-2" required>
                   <AppSelect
                     value={shortStartKind}
                     onChange={(event) =>

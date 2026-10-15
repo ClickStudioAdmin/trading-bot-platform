@@ -370,7 +370,7 @@ function dcaSideEntryGroups(
   const groups: ParamGroup[] = [
     {
       rows: [
-        { label: "Initial Order Trigger", value: dcaTriggerLabel(startKind) },
+        { label: "Condition Type", value: dcaTriggerLabel(startKind) },
       ],
     },
   ];
@@ -716,7 +716,7 @@ function perpsEntryGroups(
     {
       rows: [
         {
-          label: "Initial Order Trigger",
+          label: "Condition Type",
           value: perpsTriggerLabel(recipe.entrySource),
         },
       ],

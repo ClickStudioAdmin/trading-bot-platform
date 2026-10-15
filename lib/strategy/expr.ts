@@ -69,7 +69,7 @@ export type EntryConflictSlot = {
 };
 
 /**
- * Conditions after the initial order trigger.
+ * Conditions after the Condition Type.
  * `joins[i]` is how `leaves[i]` attaches: And stays in the current group,
  * Or starts a new group. Groups are OR'd. Leaves inside a group are AND'd.
  */

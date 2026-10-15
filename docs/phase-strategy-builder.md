@@ -23,14 +23,14 @@ In progress. First step is the entry stack on Perps bots.
 
 ## How the entry stack works
 
-1. The initial order trigger stays Price cross, Indicator, Trend, or Signal webhook. It is condition 1 and has no joiner.
-2. **Add condition** appends another trigger: Price cross, Indicator, Trend, or Signal webhook, with the same fields as the initial order trigger. Each added row picks **And** or **Or**.
+1. The Condition Type stays Price cross, Indicator, Trend, or Signal webhook. It is condition 1 and has no joiner.
+2. **Add condition** appends another trigger: Price cross, Indicator, Trend, or Signal webhook, with the same fields as the Condition Type. Each added row picks **And** or **Or**.
 3. And stays in the current group. Or starts a new group. Groups are OR'd. Conditions inside a group are AND'd. A dropdown choice that cannot be true in that group is disabled: the same webhook twice, two webhooks joined with And, or two tests of one series that cannot be true together. A second price row stays available. At or above A and at or below B on the same price source are disabled only when A is higher than B. Opposite crosses, opposite sits, and a cross against the other side of the same MACD, RSI, moving average, Bollinger band, or Supertrend are disabled. And itself is disabled when that join would create one of those. Cap is 12 conditions and 4 timeframes, including the trigger. A saved Secondary Entry still opens as its filter row.
 4. A level that stays true still fires once, on the edge, the same way the bot fires today.
 5. One And filter is still stored on the old confirm columns so an older reader sees the same Secondary Entry. Any other stack is `entry_expr` on `futures_automation_rules`. Templates and backtests store that stack on the recipe when the confirm column cannot hold it.
 6. Close long / Close short do not take the stack. Those choices stay only on a bot that already closes.
 7. Direction matches DCA: Long, Short, or Both. Both is hidden on a one-way exchange. Both keeps the long leg on the existing columns and the short leg in `short_entry`. Each side has its own section, trigger, and stack. The same webhook may arm both sides. Conflict rules stay inside one section.
-8. DCA uses that same stack on Long entry and Short entry. Each side has its own Initial Order Trigger. One And filter still writes `confirm_*` / `short_confirm_*`. Any other stack is `entry_expr` / `short_entry_expr`. Cash and Carry is unchanged.
+8. DCA uses that same stack on Long entry and Short entry. Each side has its own Condition Type. One And filter still writes `confirm_*` / `short_confirm_*`. Any other stack is `entry_expr` / `short_entry_expr`. Cash and Carry is unchanged.
 
 ## How the exit stack works
 
