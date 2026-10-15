@@ -37,7 +37,7 @@ export type AppSelectChangeEvent = ChangeEvent<HTMLInputElement>;
 export const LiveFilterSubmit = createContext<(() => void) | null>(null);
 
 const FIELD_TRIGGER =
-  "inline-flex w-full min-w-0 items-center justify-between gap-3 rounded-control border border-line bg-canvas px-3 py-2 text-left text-sm text-ink hover:border-line-strong focus:border-line-strong focus:outline-none disabled:opacity-40";
+  "inline-flex w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded-control border border-line bg-canvas px-3 py-2 text-left text-sm text-ink hover:border-line-strong focus:border-line-strong focus:outline-none disabled:opacity-40";
 const ACTION_TRIGGER =
   "inline-flex w-max max-w-full shrink-0 items-center justify-between gap-3 rounded-control bg-accent-strong px-4 py-2 text-left text-sm font-medium text-ink hover:bg-accent focus:outline-none disabled:opacity-40";
 
@@ -666,10 +666,10 @@ function OptionLabel({
   size?: number;
 }) {
   if (!option) {
-    return <span className="min-w-0 truncate" />;
+    return <span className="min-w-0 flex-1 truncate" />;
   }
   return (
-    <span className="inline-flex min-w-0 items-center gap-2">
+    <span className="inline-flex min-w-0 max-w-full flex-1 items-center gap-2 overflow-hidden">
       {option.icon ? <TokenIcon symbol={option.icon} size={size} /> : null}
       <span className="min-w-0 truncate">{option.label}</span>
     </span>

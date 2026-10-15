@@ -8,6 +8,7 @@ import {
   DCA_FILTER_KIND_OPTIONS,
   dcaFilterSpecForKind,
   parseDcaFilterKind,
+  type DcaFilterSpec,
 } from "@/lib/dca/filters";
 import {
   hardExitForTrigger,
@@ -32,6 +33,25 @@ const TRIGGER_OPTIONS: { value: HardExitTrigger; label: string }[] = [
 const INDICATOR_OPTIONS = DCA_FILTER_KIND_OPTIONS.filter(
   (option) => option.value !== "supertrend",
 );
+
+/** When takes the spare width. Period, multiplier, timeframe, and level stay short. */
+function hardExitParamGrid(spec: DcaFilterSpec): string {
+  const base =
+    "col-span-full grid min-w-0 grid-cols-2 gap-x-3 gap-y-2 [&>*]:min-w-0";
+  const multiplier = spec.kind === "supertrend" || spec.kind === "atr_band";
+  const level = spec.kind === "rsi" && spec.compare !== "between";
+  const range = spec.kind === "rsi" && spec.compare === "between";
+  if (multiplier) {
+    return `${base} lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_6.5rem_minmax(0,2.4fr)]`;
+  }
+  if (range) {
+    return `${base} lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(0,2fr)_6.5rem_6.5rem]`;
+  }
+  if (level) {
+    return `${base} lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(0,2fr)_6.5rem]`;
+  }
+  return `${base} lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(0,2.4fr)]`;
+}
 
 export function HardExitFields({
   prefix,
@@ -217,8 +237,8 @@ export function HardExitFields({
           </AppSelect>
         </label>
       ) : (
-        <div className="col-span-full grid grid-cols-2 gap-4 lg:grid-cols-5">
-          <label className={labelClass}>
+        <div className={hardExitParamGrid(value.spec)}>
+          <label className={`${labelClass} min-w-0`}>
             <HintLabel
               text={value.trigger === "trend" ? "Trend" : "Indicator"}
               required

@@ -205,7 +205,7 @@ export function DcaFilterParamFields({
   const showMultiplier = spec.kind === "supertrend" || spec.kind === "atr_band";
   const fields = (
     <>
-      <label className={labelClass}>
+      <label className={`${labelClass} min-w-0`}>
         <HintLabel text="Period" required />
         <GroupedNumberInput
           name={named ? `${prefix}Period` : undefined}
@@ -221,7 +221,7 @@ export function DcaFilterParamFields({
         />
       </label>
       {showMultiplier ? (
-        <label className={labelClass}>
+        <label className={`${labelClass} min-w-0`}>
           <HintLabel text="Multiplier" required />
           <GroupedNumberInput
             name={named ? `${prefix}Multiplier` : undefined}
@@ -241,7 +241,7 @@ export function DcaFilterParamFields({
           />
         </label>
       ) : null}
-      <label className={labelClass}>
+      <label className={`${labelClass} min-w-0`}>
         <HintLabel text="Timeframe" required />
         <AppSelect
           name={named ? `${prefix}Timeframe` : undefined}
@@ -274,7 +274,7 @@ export function DcaFilterParamFields({
         className={
           column
             ? `${labelClass} col-span-full min-w-0`
-            : `${labelClass} ${whenClass} min-w-[16rem]`
+            : `${labelClass} ${whenClass} min-w-0`
         }
       >
         <HintLabel text="When" required />
@@ -316,7 +316,7 @@ export function DcaFilterParamFields({
         </AppSelect>
       </label>
       {showLevel ? (
-        <label className={labelClass}>
+        <label className={`${labelClass} min-w-0`}>
           <HintLabel text="Level" required />
           <GroupedNumberInput
             name={named ? `${prefix}Level` : undefined}
@@ -335,7 +335,7 @@ export function DcaFilterParamFields({
       ) : null}
       {showLevelRange ? (
         <>
-          <label className={labelClass}>
+          <label className={`${labelClass} min-w-0`}>
             <HintLabel text="From" required />
             <GroupedNumberInput
               name={named ? `${prefix}Level` : undefined}
@@ -351,7 +351,7 @@ export function DcaFilterParamFields({
               className={fieldClass}
             />
           </label>
-          <label className={labelClass}>
+          <label className={`${labelClass} min-w-0`}>
             <HintLabel text="To" required />
             <GroupedNumberInput
               name={named ? `${prefix}LevelTo` : undefined}
