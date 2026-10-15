@@ -4,6 +4,7 @@ import {
   DCA_FILTER_KIND_OPTIONS,
   dcaFilterWhenOptions,
   dcaFilterWhenValue,
+  formatDcaFilterReason,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
 import {
@@ -20,6 +21,11 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import { dcaAveragingKind, dcaIntervalParts } from "@/lib/dca/playbook";
+import {
+  confirmFromEntryStack,
+  entryStackIsLegacy,
+  resolveEntryStack,
+} from "@/lib/strategy/expr";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
 import type {
   DcaTemplateRecipe,
@@ -173,6 +179,26 @@ function optionalFilter(
     return { rows: [{ label: title, value: "Off" }] };
   }
   return { title, rows: filterRows(spec, side) };
+}
+
+function perpsEntryStackGroup(
+  recipe: PerpsTemplateRecipe,
+  side: "long" | "short",
+): ParamGroup {
+  const stack = resolveEntryStack(recipe.entryStack, recipe.confirm);
+  if (entryStackIsLegacy(stack)) {
+    return secondaryGroup(
+      confirmFromEntryStack(stack) ?? recipe.confirm,
+      side,
+    );
+  }
+  return {
+    title: "Entry conditions",
+    rows: stack.leaves.map((leaf, index) => ({
+      label: stack.joins[index] === "or" ? "Or" : "And",
+      value: formatDcaFilterReason(leaf.spec, side),
+    })),
+  };
 }
 
 function secondaryGroup(
@@ -669,7 +695,7 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
     });
   }
   if (!closing) {
-    entry.push(secondaryGroup(recipe.confirm, side));
+    entry.push(perpsEntryStackGroup(recipe, side));
   }
   const sizeRows: ParamRow[] = [
     {

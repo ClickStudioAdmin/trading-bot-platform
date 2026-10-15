@@ -41,6 +41,7 @@ import {
 } from "./model";
 import { fillSentence, skippedEntrySentence } from "./events";
 import type { ReplayEvent } from "./model";
+import { entryStackIsLegacy, resolveEntryStack } from "@/lib/strategy/expr";
 import { filterBecause, indicatorBecause, priceStartBecause } from "./explain";
 
 export { canBacktestPerpsRecipe };
@@ -166,6 +167,8 @@ export async function replayPerpsPriceCross(input: {
   const tape = backtestTapeInterval(input.recipe, 1, 2);
   const conditionTimeframes = [
     input.recipe.indicator?.timeframe,
+    ...(input.recipe.entryStack?.leaves.map((leaf) => leaf.spec.timeframe) ??
+      []),
     input.recipe.confirm?.timeframe,
     input.recipe.exitIf?.timeframe,
   ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
@@ -401,6 +404,7 @@ export async function replayPerpsPriceCross(input: {
         entrySource: input.recipe.entrySource,
         indicator: input.recipe.indicator,
         confirm: input.recipe.confirm,
+        entryStack: input.recipe.entryStack,
         triggerCompare: input.recipe.triggerCompare,
         triggerPrice: Number(
           String(input.recipe.triggerPrice).replace(/,/g, "").trim(),
@@ -490,20 +494,39 @@ export async function replayPerpsPriceCross(input: {
     price: number,
     barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>,
   ): string {
+    const stack = resolveEntryStack(
+      input.recipe.entryStack,
+      input.recipe.confirm,
+    );
+    const stackBecause = entryStackIsLegacy(stack)
+      ? ""
+      : stack.leaves
+          .map((leaf, index) => {
+            const text = filterBecause(leaf.spec, side, "Confirm");
+            const join = stack.joins[index] === "or" ? "Or" : "And";
+            return text ? `${join} ${text}` : "";
+          })
+          .filter(Boolean)
+          .join(" ");
     if (input.recipe.entrySource === "price") {
       const level = Number(String(input.recipe.triggerPrice).replace(/,/g, ""));
-      return priceStartBecause(
-        {
-          triggerBy: input.recipe.triggerBy,
-          compare: input.recipe.triggerCompare,
-          price: level,
-        },
-        price,
-      );
+      return [
+        priceStartBecause(
+          {
+            triggerBy: input.recipe.triggerBy,
+            compare: input.recipe.triggerCompare,
+            price: level,
+          },
+          price,
+        ),
+        stackBecause,
+      ]
+        .filter(Boolean)
+        .join(" ");
     }
     const start = input.recipe.indicator;
     if (!start) {
-      return "";
+      return stackBecause;
     }
     const bars = barsByTimeframe.get(start.timeframe) ?? [];
     return [
@@ -520,6 +543,7 @@ export async function replayPerpsPriceCross(input: {
         bars,
       }),
       filterBecause(input.recipe.confirm, side, "Confirm"),
+      stackBecause,
     ]
       .filter(Boolean)
       .join(" ");

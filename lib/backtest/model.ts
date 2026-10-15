@@ -787,6 +787,7 @@ export function backtestTapeInterval(
   ) {
     const rows = [
       recipe.indicator?.timeframe,
+      ...(recipe.entryStack?.leaves.map((leaf) => leaf.spec.timeframe) ?? []),
       recipe.confirm?.timeframe,
       recipe.exitIf?.timeframe,
     ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));

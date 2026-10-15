@@ -11,6 +11,11 @@ import {
   formatPriceCrossReason,
 } from "@/lib/bots/condition-copy";
 import type { FuturesAutomationFormValues } from "@/lib/futures/automation";
+import {
+  confirmFromEntryStack,
+  entryStackIsLegacy,
+  resolveEntryStack,
+} from "@/lib/strategy/expr";
 import type { FuturesSide } from "@/lib/futures/model";
 
 export type BotConfigLine = {
@@ -379,9 +384,27 @@ export function perpsBotConfig(
     entry.push(setting("Webhook", "Signal webhook"));
   }
   if (!closing) {
-    entry.push(
-      setting("Secondary entry", filterText(rule.confirm, side)),
-    );
+    const stack = resolveEntryStack(rule.entryStack, rule.confirm);
+    if (entryStackIsLegacy(stack)) {
+      entry.push(
+        setting(
+          "Secondary entry",
+          filterText(confirmFromEntryStack(stack) ?? rule.confirm, side),
+        ),
+      );
+    } else {
+      entry.push(
+        setting(
+          "Entry conditions",
+          stack.leaves
+            .map((leaf, index) => {
+              const join = stack.joins[index] === "or" ? "or" : "and";
+              return `${join} ${formatDcaFilterReason(leaf.spec, side)}`;
+            })
+            .join(", "),
+        ),
+      );
+    }
   }
 
   const sizing: Array<BotConfigLine | null> = [

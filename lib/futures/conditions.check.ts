@@ -189,8 +189,44 @@ assert.equal(parsed.ok, true);
 if (parsed.ok) {
   assert.equal(parsed.indicator?.kind, "rsi");
   assert.equal(parsed.confirm?.kind, "ema");
+  assert.equal(parsed.entryStack.leaves.length, 1);
+  assert.equal(parsed.entryStack.joins[0], "and");
   assert.equal(parsed.breakevenActivationPct, 1.5);
   assert.equal(parsed.breakevenOffsetPct, 0.2);
 }
+
+const stacked = new FormData();
+stacked.set("r0_entryCount", "1");
+stacked.set("r0_entry0Join", "or");
+stacked.set("r0_entry0Kind", "ema");
+stacked.set("r0_entry0Timeframe", "15");
+stacked.set("r0_entry0Compare", "gte");
+stacked.set("r0_entry0Period", "5");
+const stackedParsed = parseFuturesConditionForm(stacked, "r0_", {
+  entrySource: "price",
+  closing: false,
+});
+assert.equal(stackedParsed.ok, true);
+if (stackedParsed.ok) {
+  assert.equal(stackedParsed.confirm, null);
+  assert.equal(stackedParsed.entryStack.joins[0], "or");
+  assert.equal(stackedParsed.entryStack.leaves[0]?.spec.kind, "ema");
+}
+
+assert.equal(
+  futuresEntryConditionMet({
+    rule: {
+      entrySource: "price",
+      triggerCompare: "gte",
+      triggerPrice: 200,
+      entryStack: stackedParsed.ok ? stackedParsed.entryStack : undefined,
+    },
+    side: "long",
+    price: 100,
+    barsByTimeframe: bars,
+  }),
+  true,
+  "Or passes when the trigger misses and the second condition is true",
+);
 
 console.log("futures conditions checks passed");

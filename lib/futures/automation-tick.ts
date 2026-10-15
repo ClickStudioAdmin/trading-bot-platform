@@ -224,6 +224,7 @@ export async function runFuturesAutomationTick(input?: {
         price,
         indicator: rule.indicator,
         confirm: rule.confirm,
+        entryStack: rule.entryStack,
       });
       const result = await fireAutomationRule({
         rule,
@@ -426,6 +427,7 @@ export async function fireWebhookAutomationEntries(input: {
       triggerPrice: rule.triggerPrice,
       indicator: rule.indicator,
       confirm: rule.confirm,
+      entryStack: rule.entryStack,
     });
     const result = await fireAutomationRule({
       rule,

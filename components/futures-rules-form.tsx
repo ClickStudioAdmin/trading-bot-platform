@@ -35,6 +35,12 @@ import {
   TrendStartFields,
 } from "@/components/bot-indicator-fields";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
+import {
+  EntryConditionStack,
+  entryRowsFromSources,
+  entryStackFromRows,
+  type EntryStackRow,
+} from "@/components/entry-condition-stack";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import {
   BYBIT_AGREEMENT_NOTE,
@@ -88,6 +94,7 @@ import {
   dcaFilterSpecForKind,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
+import { confirmFromEntryStack } from "@/lib/strategy/expr";
 import {
   DEFAULT_DCA_RSI_PERIOD,
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
@@ -535,8 +542,8 @@ function RuleCard({
   const [indicatorMultiplier, setIndicatorMultiplier] = useState(
     String(layer.indicator?.multiplier ?? DEFAULT_DCA_SUPERTREND_MULTIPLIER),
   );
-  const [confirm, setConfirm] = useState<DcaFilterSpec | null>(
-    layer.confirm ?? null,
+  const [entryRows, setEntryRows] = useState<EntryStackRow[]>(() =>
+    entryRowsFromSources(layer.entryStack, layer.confirm),
   );
   const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(
     layer.exitIf ?? null,
@@ -601,7 +608,12 @@ function RuleCard({
     tpOn && tpOrderType === "limit" && tpLimitPrice.trim() === "";
   const slLimitMissing =
     slOn && slOrderType === "limit" && slLimitPrice.trim() === "";
-  const confirmMissing = Boolean(confirm) && !dcaFilterComplete(confirm);
+  const entryStack = closing
+    ? { leaves: [], joins: [] }
+    : entryStackFromRows(entryRows);
+  const confirm = closing ? null : confirmFromEntryStack(entryStack);
+  const entryMissing =
+    !closing && entryRows.some((row) => !dcaFilterComplete(row.spec));
   const exitIfMissing = Boolean(exitIf) && !dcaFilterComplete(exitIf);
   const tpsl =
     tpOn || slOn
@@ -671,7 +683,8 @@ function RuleCard({
     tpsl,
     trailing,
     indicator: liveIndicator(),
-    confirm: closing ? null : confirm,
+    confirm,
+    entryStack,
     exitIf: closing ? null : exitIf,
     breakevenActivationPct:
       closing || !breakevenOn ? "" : breakevenActivationPct,
@@ -693,7 +706,7 @@ function RuleCard({
     breakevenMissing ||
     tpLimitMissing ||
     slLimitMissing ||
-    confirmMissing ||
+    entryMissing ||
     exitIfMissing ||
     !parsedLive.ok;
   function controlValue(name: string, fallback: string): string {
@@ -742,7 +755,8 @@ function RuleCard({
       tpsl,
       trailing,
       indicator: liveIndicator(),
-      confirm: closing ? null : confirm,
+      confirm,
+      entryStack,
       exitIf: closing ? null : exitIf,
       breakevenActivationPct: closing || !breakevenOn
         ? null
@@ -793,7 +807,8 @@ function RuleCard({
       tpsl,
       trailing,
       indicator: liveIndicator(),
-      confirm: closing ? null : confirm,
+      confirm,
+      entryStack,
       exitIf: closing ? null : exitIf,
       breakevenActivationPct: closing || !breakevenOn
         ? null
@@ -1067,30 +1082,24 @@ function RuleCard({
       </BotFormGroup>
 
       {!closing ? (
-        <OptionalSection
-          title="Secondary Entry Condition"
-          hint="Must be true for the entry trigger to execute."
-          enabled={Boolean(confirm)}
-          onEnabled={(next) =>
-            setConfirm(
-              next ? (confirm ?? dcaFilterSpecForKind("rsi", entrySide)) : null,
-            )
+        <EntryConditionStack
+          prefix={`${prefix}entry`}
+          side={entrySide}
+          rows={entryRows}
+          onChange={(rows) => {
+            setEntryRows(rows);
+            setDirty(true);
+            setFormTick((tick) => tick + 1);
+          }}
+          triggerTimeframe={
+            entrySource === "indicator" || entrySource === "trend"
+              ? indicatorTimeframe
+              : null
           }
-        >
-          <DcaFilterBlock
-            label="Kind"
-            prefix={`${prefix}confirm`}
-            side={entrySide}
-            spec={confirm}
-            onChange={setConfirm}
-            named
-            dense
-            allowOff={false}
-            gridClass={fieldRow5}
-            fieldClass={botFieldClass}
-            labelClass={botLabelClass}
-          />
-        </OptionalSection>
+          gridClass={fieldRow5}
+          fieldClass={botFieldClass}
+          labelClass={botLabelClass}
+        />
       ) : null}
       </BotFormStep>
 

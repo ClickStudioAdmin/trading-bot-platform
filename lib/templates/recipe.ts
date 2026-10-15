@@ -26,6 +26,13 @@ import {
   type FuturesAutomationRule,
 } from "@/lib/futures/automation";
 import { writeFuturesConditionFormFields } from "@/lib/futures/conditions";
+import {
+  confirmFromEntryStack,
+  entryStackFromJson,
+  entryStackIsLegacy,
+  resolveEntryStack,
+  type EntryStack,
+} from "@/lib/strategy/expr";
 import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 
 export const TEMPLATE_RECIPE_VERSION = 1;
@@ -138,6 +145,7 @@ export type PerpsTemplateRecipe = {
   trailing: FuturesAutomationFormValues["trailing"];
   indicator?: FuturesAutomationFormValues["indicator"];
   confirm?: DcaFilterSpec | null;
+  entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
   breakevenActivationPct?: number | null;
   breakevenOffsetPct?: number | null;
@@ -349,6 +357,7 @@ export function snapshotPerpsRecipe(
         FuturesAutomationRule,
         | "indicator"
         | "confirm"
+        | "entryStack"
         | "exitIf"
         | "breakevenActivationPct"
         | "breakevenOffsetPct"
@@ -363,6 +372,9 @@ export function snapshotPerpsRecipe(
       : rule.action === "sell"
         ? "sell"
         : "buy";
+  const hasStack = rule.entryStack != null;
+  const stack = resolveEntryStack(rule.entryStack, rule.confirm);
+  const legacyStack = entryStackIsLegacy(stack);
   return {
     kind: "perps",
     name: rule.name,
@@ -380,7 +392,11 @@ export function snapshotPerpsRecipe(
     tpsl: rule.tpsl,
     trailing: rule.trailing,
     indicator: rule.indicator ?? null,
-    confirm: rule.confirm ?? null,
+    confirm:
+      hasStack || !legacyStack
+        ? confirmFromEntryStack(stack)
+        : (rule.confirm ?? null),
+    ...(legacyStack ? {} : { entryStack: stack }),
     exitIf: rule.exitIf ?? null,
     breakevenActivationPct: rule.breakevenActivationPct ?? null,
     breakevenOffsetPct: rule.breakevenOffsetPct ?? null,
@@ -602,6 +618,7 @@ function parsePerpsTemplateRecipe(
     trailing: (row.trailing as PerpsTemplateRecipe["trailing"]) ?? null,
     indicator: (row.indicator as PerpsTemplateRecipe["indicator"]) ?? null,
     confirm: filterSpecFromRecipe(row.confirm),
+    entryStack: entryStackFromJson(row.entryStack) ?? undefined,
     exitIf: filterSpecFromRecipe(row.exitIf),
     breakevenActivationPct: asNullableNumber(row.breakevenActivationPct),
     breakevenOffsetPct: asNullableNumber(row.breakevenOffsetPct),
@@ -982,6 +999,7 @@ export function perpsRecipeToRule(
   writeFuturesConditionFormFields(form, "r0_", {
     indicator: recipe.indicator,
     confirm: recipe.confirm,
+    entryStack: recipe.entryStack,
     exitIf: recipe.exitIf,
     breakevenActivationPct: recipe.breakevenActivationPct,
     breakevenOffsetPct: recipe.breakevenOffsetPct,
@@ -1239,6 +1257,7 @@ export function perpsFormToSnapshotSource(
   writeFuturesConditionFormFields(form, "r0_", {
     indicator: layer.indicator,
     confirm: layer.confirm,
+    entryStack: layer.entryStack,
     exitIf: layer.exitIf,
     breakevenActivationPct:
       layer.breakevenActivationPct.trim() === ""

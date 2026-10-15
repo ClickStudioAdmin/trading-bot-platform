@@ -5,6 +5,13 @@ import {
 import { formatDcaIndicatorStartLabel } from "@/lib/dca/indicators";
 import type { DcaIndicatorStart, DcaPriceTrigger, DcaStartKind } from "@/lib/dca/playbook";
 import type { FuturesAutomationEntry, FuturesTriggerCompare } from "@/lib/futures/automation";
+import type { EntryStack } from "@/lib/strategy/expr";
+import {
+  confirmFromEntryStack,
+  entryStackIsLegacy,
+  formatEntryWithStack,
+  resolveEntryStack,
+} from "@/lib/strategy/expr";
 import type { FuturesAction, FuturesSide, FuturesTrigger } from "@/lib/futures/model";
 
 export function joinConditionReasons(
@@ -101,6 +108,7 @@ export function formatFuturesEntryReasons(input: {
   price?: number | null;
   indicator?: DcaIndicatorStart | null;
   confirm?: DcaFilterSpec | null;
+  entryStack?: EntryStack | null;
 }): string {
   const start =
     input.entrySource === "webhook"
@@ -117,12 +125,17 @@ export function formatFuturesEntryReasons(input: {
           : input.entrySource === "trend"
             ? "Trend"
             : "Indicator";
-  return joinConditionReasons([
-    start,
-    input.confirm
-      ? formatSecondaryEntryReason(input.confirm, input.side)
-      : null,
-  ]);
+  const stack = resolveEntryStack(input.entryStack, input.confirm);
+  if (entryStackIsLegacy(stack)) {
+    const confirm = confirmFromEntryStack(stack) ?? input.confirm;
+    return joinConditionReasons([
+      start,
+      confirm ? formatSecondaryEntryReason(confirm, input.side) : null,
+    ]);
+  }
+  return formatEntryWithStack(start, stack, (spec) =>
+    formatDcaFilterReason(spec, input.side),
+  );
 }
 
 export function formatDcaStartReasons(input: {

@@ -35,8 +35,10 @@ import {
   conditionColumns,
   conditionsFromRow,
   parseFuturesConditionForm,
+  type EntryStack,
   type FuturesAutomationEntry,
 } from "./conditions";
+import { emptyEntryStack } from "@/lib/strategy/expr";
 
 export type { FuturesAutomationEntry };
 export type FuturesTriggerCompare = "gte" | "lte";
@@ -63,6 +65,7 @@ export type FuturesAutomationRule = {
   trailing: FuturesTrailing | null;
   indicator: DcaIndicatorStart | null;
   confirm: DcaFilterSpec | null;
+  entryStack: EntryStack;
   exitIf: DcaFilterSpec | null;
   breakevenActivationPct: number | null;
   breakevenOffsetPct: number | null;
@@ -91,6 +94,7 @@ export type FuturesAutomationFormValues = {
   trailing: FuturesTrailing | null;
   indicator: DcaIndicatorStart | null;
   confirm: DcaFilterSpec | null;
+  entryStack: EntryStack;
   exitIf: DcaFilterSpec | null;
   breakevenActivationPct: string;
   breakevenOffsetPct: string;
@@ -121,6 +125,7 @@ export function defaultFuturesAutomationForm(
     trailing: null,
     indicator: null,
     confirm: null,
+    entryStack: emptyEntryStack(),
     exitIf: null,
     breakevenActivationPct: "",
     breakevenOffsetPct: "",
@@ -348,6 +353,7 @@ export function parseFuturesAutomationForm(
     }
     parsed.rule.indicator = conditions.indicator;
     parsed.rule.confirm = conditions.confirm;
+    parsed.rule.entryStack = conditions.entryStack;
     parsed.rule.exitIf = conditions.exitIf;
     parsed.rule.breakevenActivationPct = conditions.breakevenActivationPct;
     parsed.rule.breakevenOffsetPct = conditions.breakevenOffsetPct;
@@ -577,6 +583,7 @@ export function parseFuturesAutomationFields(input: {
       trailing: null,
       indicator: null,
       confirm: null,
+      entryStack: emptyEntryStack(),
       exitIf: null,
       breakevenActivationPct: null,
       breakevenOffsetPct: null,
@@ -648,6 +655,7 @@ function emptyParsedRule(): FuturesAutomationRule {
     trailing: null,
     indicator: null,
     confirm: null,
+    entryStack: emptyEntryStack(),
     exitIf: null,
     breakevenActivationPct: null,
     breakevenOffsetPct: null,
@@ -763,6 +771,7 @@ export function futuresRuleToForm(
     trailing: rule.trailing,
     indicator: rule.indicator,
     confirm: rule.confirm,
+    entryStack: rule.entryStack ?? emptyEntryStack(),
     exitIf: rule.exitIf,
     breakevenActivationPct:
       rule.breakevenActivationPct == null
@@ -841,6 +850,7 @@ function attachRuleConditions(
     rule.indicator = conditions.indicator;
   }
   rule.confirm = conditions.confirm;
+  rule.entryStack = conditions.entryStack;
   rule.exitIf = conditions.exitIf;
   rule.breakevenActivationPct = conditions.breakevenActivationPct;
   rule.breakevenOffsetPct = conditions.breakevenOffsetPct;

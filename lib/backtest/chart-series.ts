@@ -262,6 +262,11 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
     });
   }
   addSpec(specs, fromFilter(recipe.confirm, "Secondary entry"));
+  if (recipe.entryStack) {
+    for (const leaf of recipe.entryStack.leaves) {
+      addSpec(specs, fromFilter(leaf.spec, "Entry condition"));
+    }
+  }
   addSpec(specs, fromFilter(recipe.exitIf, "Hard exit"));
   return specs;
 }

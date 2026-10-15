@@ -30,6 +30,10 @@ import {
 import { ColumnHint } from "@/components/column-hint";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import {
+  EntryConditionStack,
+  type EntryStackRow,
+} from "@/components/entry-condition-stack";
+import {
   dcaFilterComplete,
   dcaFilterSpecForKind,
   type DcaFilterSpec,
@@ -560,6 +564,7 @@ export function ThemeBotFormDraft() {
   );
   const [confirmOn, setConfirmOn] = useState(false);
   const [confirm, setConfirm] = useState<DcaFilterSpec | null>(null);
+  const [entryRows, setEntryRows] = useState<EntryStackRow[]>([]);
   const [shortConfirmOn, setShortConfirmOn] = useState(false);
   const [shortConfirm, setShortConfirm] = useState<DcaFilterSpec | null>(null);
   const [tpOn, setTpOn] = useState(false);
@@ -1399,6 +1404,17 @@ export function ThemeBotFormDraft() {
         </Group>
 
         {!closing && !bothSides ? (
+          desk === "perps" ? (
+            <EntryConditionStack
+              prefix="themeEntry"
+              side={entrySide}
+              rows={entryRows}
+              onChange={setEntryRows}
+              gridClass={rowClass5}
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+            />
+          ) : (
             <ThemeSecondaryEntry
               side={entrySide}
               prefix="themeConfirm"
@@ -1407,6 +1423,7 @@ export function ThemeBotFormDraft() {
               enabled={confirmOn}
               onEnabled={setConfirmOn}
             />
+          )
         ) : null}
         </BotFormStep>
 

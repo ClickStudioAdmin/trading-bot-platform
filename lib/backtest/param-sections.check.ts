@@ -118,6 +118,53 @@ assert.equal(
   "Price cross",
 );
 assert.equal(
+  recipeParamRows(perps).find((row) => row.label === "Secondary Entry Condition")
+    ?.value,
+  "Off",
+);
+const orRecipe = snapshotPerpsRecipe({
+  name: "Or entry",
+  symbol: "ETHUSDT",
+  action: "buy",
+  closeSide: null,
+  orderType: "market",
+  sizeUnit: "qty",
+  size: 1,
+  limitPrice: null,
+  entrySource: "price",
+  triggerBy: "last",
+  triggerCompare: "gte",
+  triggerPrice: 100,
+  skipIfOpen: true,
+  tpsl: null,
+  trailing: null,
+  confirm: null,
+  entryStack: {
+    leaves: [
+      {
+        kind: "filter",
+        spec: {
+          kind: "ema",
+          timeframe: "60",
+          compare: "gte",
+          level: null,
+          period: 21,
+          multiplier: null,
+        },
+      },
+    ],
+    joins: ["or"],
+  },
+});
+assert.match(
+  recipeParamRows(orRecipe).find((row) => row.label === "Or")?.value ?? "",
+  /EMA 21/,
+);
+assert.equal(
+  recipeParamRows(orRecipe).some((row) => row.label === "Secondary Entry Condition"),
+  false,
+);
+assert.equal(
   recipeParamRows(perps).find((row) => row.label === "Take profit")?.value,
   "Off",
 );

@@ -216,6 +216,18 @@ export function eventParameterSections(
         ),
       );
     }
+    if (entry && recipe.entryStack && !recipe.confirm) {
+      for (const leaf of recipe.entryStack.leaves) {
+        sections.push(
+          filterSection(
+            "Entry condition",
+            leaf.spec,
+            side,
+            factDetail(event, "Entry condition"),
+          ),
+        );
+      }
+    }
     if (hardExit && recipe.exitIf) {
       sections.push(
         filterSection(

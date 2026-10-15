@@ -20,7 +20,21 @@ import {
 } from "@/lib/dca/playbook";
 import type { DcaIndicatorTimeframe, SupertrendBar } from "@/lib/dca/indicators";
 import { dcaBreakevenPrice, dcaTighterStopPrice } from "@/lib/dca/grid";
+import {
+  confirmFromEntryStack,
+  emptyEntryStack,
+  entryStackError,
+  entryStackFromJson,
+  entryStackMet,
+  entryStackTimeframes,
+  entryStackToJson,
+  legacyEntryStack,
+  resolveEntryStack,
+  type EntryStack,
+} from "@/lib/strategy/expr";
 import type { FuturesAction, FuturesSide } from "./model";
+
+export type { EntryStack };
 
 export type FuturesAutomationEntry =
   | "price"
@@ -149,6 +163,59 @@ export function parseFuturesBreakevenFields(
   };
 }
 
+export function parseEntryStackForm(
+  form: FormData,
+  prefix: string,
+  triggerTimeframe: DcaIndicatorTimeframe | null,
+):
+  | { ok: true; present: boolean; stack: EntryStack }
+  | { ok: false; error: string } {
+  if (form.get(`${prefix}entryCount`) == null) {
+    return { ok: true, present: false, stack: emptyEntryStack() };
+  }
+  const count = Number(String(form.get(`${prefix}entryCount`)));
+  if (!Number.isInteger(count) || count < 0) {
+    return { ok: false, error: "Entry conditions are incomplete." };
+  }
+  const leaves: EntryStack["leaves"] = [];
+  const joins: EntryStack["joins"] = [];
+  for (let index = 0; index < count; index += 1) {
+    const joinRaw = String(form.get(`${prefix}entry${index}Join`) ?? "and");
+    const parsed = parseDcaFilterForm(
+      form,
+      `${prefix}entry${index}`,
+      true,
+      "entry condition",
+    );
+    if (!parsed.ok) {
+      return parsed;
+    }
+    if (!parsed.spec) {
+      return { ok: false, error: "Enter an entry condition." };
+    }
+    leaves.push({ kind: "filter", spec: parsed.spec });
+    joins.push(joinRaw === "or" ? "or" : "and");
+  }
+  const stack: EntryStack = { leaves, joins };
+  const error = entryStackError({ stack, triggerTimeframe });
+  if (error) {
+    return { ok: false, error };
+  }
+  return { ok: true, present: true, stack };
+}
+
+export function writeEntryStackFormFields(
+  form: FormData,
+  prefix: string,
+  stack: EntryStack,
+): void {
+  form.set(`${prefix}entryCount`, String(stack.leaves.length));
+  stack.leaves.forEach((leaf, index) => {
+    form.set(`${prefix}entry${index}Join`, stack.joins[index] ?? "and");
+    writeDcaFilterFormFields(form, `${prefix}entry${index}`, leaf.spec);
+  });
+}
+
 export function parseFuturesConditionForm(
   form: FormData,
   prefix: string,
@@ -161,6 +228,7 @@ export function parseFuturesConditionForm(
       ok: true;
       indicator: DcaIndicatorStart | null;
       confirm: DcaFilterSpec | null;
+      entryStack: EntryStack;
       exitIf: DcaFilterSpec | null;
       breakevenActivationPct: number | null;
       breakevenOffsetPct: number | null;
@@ -171,6 +239,7 @@ export function parseFuturesConditionForm(
       ok: true,
       indicator: null,
       confirm: null,
+      entryStack: emptyEntryStack(),
       exitIf: null,
       breakevenActivationPct: null,
       breakevenOffsetPct: null,
@@ -183,6 +252,15 @@ export function parseFuturesConditionForm(
   );
   if (!indicator.ok) {
     return indicator;
+  }
+  const triggerTimeframe =
+    indicator.start &&
+    (input.entrySource === "indicator" || input.entrySource === "trend")
+      ? indicator.start.timeframe
+      : null;
+  const stacked = parseEntryStackForm(form, prefix, triggerTimeframe);
+  if (!stacked.ok) {
+    return stacked;
   }
   const confirm = parseDcaFilterForm(form, `${prefix}confirm`, false, "confirm");
   if (!confirm.ok) {
@@ -198,10 +276,16 @@ export function parseFuturesConditionForm(
   if (!breakeven.ok) {
     return breakeven;
   }
+  const entryStack = stacked.present
+    ? stacked.stack
+    : legacyEntryStack(confirm.spec);
   return {
     ok: true,
     indicator: indicator.start,
-    confirm: confirm.spec,
+    confirm: stacked.present
+      ? confirmFromEntryStack(entryStack)
+      : confirm.spec,
+    entryStack,
     exitIf: exitIf.spec,
     breakevenActivationPct: breakeven.activationPct,
     breakevenOffsetPct: breakeven.offsetPct,
@@ -211,15 +295,20 @@ export function parseFuturesConditionForm(
 export function conditionsFromRow(row: Record<string, unknown>): {
   indicator: DcaIndicatorStart | null;
   confirm: DcaFilterSpec | null;
+  entryStack: EntryStack;
   exitIf: DcaFilterSpec | null;
   breakevenActivationPct: number | null;
   breakevenOffsetPct: number | null;
 } {
   const activation = Number(row.breakeven_activation_pct);
   const offset = Number(row.breakeven_offset_pct);
+  const stored = entryStackFromJson(row.entry_expr);
+  const confirm = filterFromRow(row, "confirm");
+  const entryStack = stored ?? legacyEntryStack(confirm);
   return {
     indicator: indicatorStartFromRow(row),
-    confirm: filterFromRow(row, "confirm"),
+    confirm: stored ? confirmFromEntryStack(stored) : confirm,
+    entryStack,
     exitIf: filterFromRow(row, "exit_if"),
     breakevenActivationPct: activation > 0 ? activation : null,
     breakevenOffsetPct: Number.isFinite(offset) && offset >= 0 ? offset : null,
@@ -229,14 +318,24 @@ export function conditionsFromRow(row: Record<string, unknown>): {
 export function conditionColumns(rule: {
   indicator?: DcaIndicatorStart | null;
   confirm?: DcaFilterSpec | null;
+  entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
   breakevenActivationPct?: number | null;
   breakevenOffsetPct?: number | null;
 }): Record<string, unknown> {
+  const stack =
+    rule.entryStack != null
+      ? rule.entryStack
+      : legacyEntryStack(rule.confirm);
+  const confirm =
+    rule.entryStack != null
+      ? confirmFromEntryStack(rule.entryStack)
+      : (rule.confirm ?? null);
   return {
     ...indicatorColumns(rule.indicator),
-    ...filterColumns("confirm", rule.confirm),
+    ...filterColumns("confirm", confirm),
     ...filterColumns("exit_if", rule.exitIf),
+    entry_expr: stack.leaves.length > 0 ? entryStackToJson(stack) : null,
     breakeven_activation_pct: rule.breakevenActivationPct ?? null,
     breakeven_offset_pct:
       rule.breakevenActivationPct != null
@@ -251,6 +350,7 @@ export function writeFuturesConditionFormFields(
   rule: {
     indicator?: DcaIndicatorStart | null;
     confirm?: DcaFilterSpec | null;
+    entryStack?: EntryStack | null;
     exitIf?: DcaFilterSpec | null;
     breakevenActivationPct?: number | null;
     breakevenOffsetPct?: number | null;
@@ -277,7 +377,16 @@ export function writeFuturesConditionFormFields(
       form.set(names.multiplier, String(start.multiplier));
     }
   }
-  writeDcaFilterFormFields(form, `${prefix}confirm`, rule.confirm);
+  if (rule.entryStack) {
+    writeEntryStackFormFields(form, prefix, rule.entryStack);
+  }
+  writeDcaFilterFormFields(
+    form,
+    `${prefix}confirm`,
+    rule.entryStack != null
+      ? confirmFromEntryStack(rule.entryStack)
+      : rule.confirm,
+  );
   writeDcaFilterFormFields(form, `${prefix}exitIf`, rule.exitIf);
   if (rule.breakevenActivationPct != null) {
     form.set(
@@ -295,6 +404,7 @@ export function futuresAutomationTimeframes(rule: {
   entrySource: FuturesAutomationEntry;
   indicator?: DcaIndicatorStart | null;
   confirm?: DcaFilterSpec | null;
+  entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
 }): DcaIndicatorTimeframe[] {
   const rows: DcaIndicatorTimeframe[] = [];
@@ -305,10 +415,14 @@ export function futuresAutomationTimeframes(rule: {
   ) {
     rows.push(rule.indicator.timeframe);
   }
-  for (const spec of [rule.confirm, rule.exitIf]) {
-    if (spec && !rows.includes(spec.timeframe)) {
-      rows.push(spec.timeframe);
+  const stack = resolveEntryStack(rule.entryStack, rule.confirm);
+  for (const timeframe of entryStackTimeframes(stack)) {
+    if (!rows.includes(timeframe)) {
+      rows.push(timeframe);
     }
+  }
+  if (rule.exitIf && !rows.includes(rule.exitIf.timeframe)) {
+    rows.push(rule.exitIf.timeframe);
   }
   return rows;
 }
@@ -317,6 +431,7 @@ export function futuresAutomationNeedsBars(rule: {
   entrySource: FuturesAutomationEntry;
   indicator?: DcaIndicatorStart | null;
   confirm?: DcaFilterSpec | null;
+  entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
 }): boolean {
   return futuresAutomationTimeframes(rule).length > 0;
@@ -326,11 +441,13 @@ export function futuresAutomationNeedsWideBars(rule: {
   entrySource: FuturesAutomationEntry;
   indicator?: DcaIndicatorStart | null;
   confirm?: DcaFilterSpec | null;
+  entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
 }): boolean {
+  const stack = resolveEntryStack(rule.entryStack, rule.confirm);
   return (
     rule.indicator?.kind === "supertrend" ||
-    dcaFilterNeedsBars(rule.confirm) ||
+    stack.leaves.some((leaf) => dcaFilterNeedsBars(leaf.spec)) ||
     dcaFilterNeedsBars(rule.exitIf)
   );
 }
@@ -408,6 +525,7 @@ export function futuresEntryConditionMet(input: {
     entrySource: FuturesAutomationEntry;
     indicator?: DcaIndicatorStart | null;
     confirm?: DcaFilterSpec | null;
+    entryStack?: EntryStack | null;
     triggerCompare: "gte" | "lte";
     triggerPrice: number;
     action?: FuturesAction;
@@ -426,13 +544,17 @@ export function futuresEntryConditionMet(input: {
     triggerPrice: input.rule.triggerPrice,
     barsByTimeframe: input.barsByTimeframe,
   });
-  if (!start) {
-    return false;
-  }
-  return futuresFilterMet({
-    spec: input.rule.confirm,
-    side: input.side,
-    barsByTimeframe: input.barsByTimeframe,
+  const stack = resolveEntryStack(input.rule.entryStack, input.rule.confirm);
+  return entryStackMet({
+    trigger: start,
+    joins: stack.joins,
+    leaves: stack.leaves.map((leaf) =>
+      futuresFilterMet({
+        spec: leaf.spec,
+        side: input.side,
+        barsByTimeframe: input.barsByTimeframe,
+      }),
+    ),
   });
 }
 
