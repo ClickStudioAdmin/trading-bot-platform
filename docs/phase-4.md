@@ -54,7 +54,7 @@ Expand a current or past position for **Orders** and **Position logs**. Each ord
 
 ## Event logs and admin
 
-`event_logs` records system, strategy, and trade events. Writes are service-role only via `writeEventLog`. Manual paper open/close, unwinds, automation saves, engine clips, and admin header ticks are logged. Page scans are not.
+`event_logs` records system, strategy, and trade events. Writes are service-role only via `writeEventLog`. The Fly engine removes rows older than 60 days. Manual paper open/close, unwinds, automation saves, engine clips, and admin header ticks are logged. Page scans are not.
 
 `/strategies/cash-and-carry/activity` is the signed-in user’s own trade and strategy events. `/admin/logs` is the full system log for admins. Logs and members are live. Admin settings is a placeholder.
 

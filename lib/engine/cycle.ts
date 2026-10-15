@@ -3,6 +3,8 @@ import { runCashAndCarryDeskTick } from "@/lib/engine/cash-and-carry-tick";
 import {
   ENGINE_BILLING_DEPOSIT_SCAN_KEY,
   ENGINE_BILLING_DEPOSIT_TTL_SECONDS,
+  ENGINE_EVENT_LOG_RETENTION_SCAN_KEY,
+  ENGINE_EVENT_LOG_RETENTION_TTL_SECONDS,
   ENGINE_CLAIM_BATCH,
   ENGINE_DESK_CONCURRENCY,
   ENGINE_HOT_CLAIM_BATCH,
@@ -48,6 +50,7 @@ import {
   reconcileOpenFuturesVenuePositions,
   reconcileOpenFuturesWorkingOrders,
 } from "@/lib/futures/reconcile";
+import { purgeExpiredEventLogs } from "@/lib/logs/retention";
 import { writeEventLog } from "@/lib/logs/write";
 import { processOneQueuedBacktest } from "@/lib/backtest/execute";
 import { backtestDrainMaxBars } from "@/lib/backtest/model";
@@ -198,6 +201,9 @@ export async function runEngineCycle(
   if (maxMs === undefined || Date.now() - started < maxMs) {
     await releaseMembershipCommissions(workerId);
   }
+  if (maxMs === undefined || Date.now() - started < maxMs) {
+    await purgeExpiredActivityLogs(workerId);
+  }
 
   if (!options?.silent) {
     await writeEventLog({
@@ -277,6 +283,41 @@ async function runMembershipInvoices(workerId: string): Promise<void> {
       event: "membership.invoice_issued",
       message:
         cause instanceof Error ? cause.message : "Billing cycle failed",
+      data: { workerId },
+    });
+  }
+}
+
+async function purgeExpiredActivityLogs(workerId: string): Promise<void> {
+  const won = await tryClaimEngineScan({
+    workerId,
+    scanKey: ENGINE_EVENT_LOG_RETENTION_SCAN_KEY,
+    ttlSeconds: ENGINE_EVENT_LOG_RETENTION_TTL_SECONDS,
+  });
+  if (!won) {
+    return;
+  }
+  try {
+    const purged = await purgeExpiredEventLogs();
+    if (purged.deleted > 0) {
+      await writeEventLog({
+        scope: "system",
+        event: "engine.logs_purged",
+        message: `Removed ${purged.deleted} activity log${purged.deleted === 1 ? "" : "s"} older than 60 days`,
+        data: {
+          workerId,
+          deleted: purged.deleted,
+          cutoff: purged.cutoff,
+        },
+      });
+    }
+  } catch (cause) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "engine.logs_purged",
+      message:
+        cause instanceof Error ? cause.message : "Activity log purge failed",
       data: { workerId },
     });
   }
