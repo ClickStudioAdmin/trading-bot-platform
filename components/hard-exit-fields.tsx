@@ -14,6 +14,12 @@ import {
   type HardExitDraft,
   type HardExitTrigger,
 } from "@/lib/dca/hard-exit";
+import { indicatorClaim } from "@/lib/strategy/conflicts";
+import {
+  choiceConflicts,
+  priceChoiceConflicts,
+  type EntryConflictSlot,
+} from "@/lib/strategy/expr";
 import type { FuturesSide, FuturesTrigger } from "@/lib/futures/model";
 
 const TRIGGER_OPTIONS: { value: HardExitTrigger; label: string }[] = [
@@ -37,6 +43,8 @@ export function HardExitFields({
   fieldClass,
   labelClass,
   named = true,
+  seriesSlots,
+  seriesIndex,
   disabledKinds = [],
   disabledWebhookIds = [],
 }: {
@@ -49,6 +57,8 @@ export function HardExitFields({
   fieldClass: string;
   labelClass: string;
   named?: boolean;
+  seriesSlots?: readonly EntryConflictSlot[];
+  seriesIndex?: number;
   disabledKinds?: HardExitTrigger[];
   disabledWebhookIds?: string[];
 }) {
@@ -108,9 +118,28 @@ export function HardExitFields({
               }
               className={fieldClass}
             >
-              <option value="last">Last is</option>
-              <option value="mark">Mark is</option>
-              <option value="index">Index is</option>
+              {(["last", "mark", "index"] as const).map((source) => (
+                <option
+                  key={source}
+                  value={source}
+                  disabled={priceChoiceConflicts(
+                    seriesSlots,
+                    seriesIndex,
+                    {
+                      source: value.triggerBy,
+                      compare: value.compare,
+                      price: value.price,
+                    },
+                    { source },
+                  )}
+                >
+                  {source === "last"
+                    ? "Last is"
+                    : source === "mark"
+                      ? "Mark is"
+                      : "Index is"}
+                </option>
+              ))}
             </AppSelect>
           </label>
           <label className={labelClass}>
@@ -126,8 +155,24 @@ export function HardExitFields({
               }
               className={fieldClass}
             >
-              <option value="gte">At or above</option>
-              <option value="lte">At or below</option>
+              {(["gte", "lte"] as const).map((compare) => (
+                <option
+                  key={compare}
+                  value={compare}
+                  disabled={priceChoiceConflicts(
+                    seriesSlots,
+                    seriesIndex,
+                    {
+                      source: value.triggerBy,
+                      compare: value.compare,
+                      price: value.price,
+                    },
+                    { compare },
+                  )}
+                >
+                  {compare === "gte" ? "At or above" : "At or below"}
+                </option>
+              ))}
             </AppSelect>
           </label>
           <label className={labelClass}>
@@ -202,11 +247,32 @@ export function HardExitFields({
                     (option) => option.value === "supertrend",
                   )
                 : INDICATOR_OPTIONS
-              ).map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
+              ).map((option) => {
+                const seeded = dcaFilterSpecForKind(option.value, side);
+                return (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                    disabled={choiceConflicts(
+                      seriesSlots,
+                      seriesIndex,
+                      indicatorClaim({
+                        surface: "filter",
+                        kind: option.value,
+                        timeframe: value.spec.timeframe,
+                        compare: seeded.compare,
+                        level: seeded.level,
+                        levelTo: seeded.levelTo,
+                        period: seeded.period,
+                        multiplier: seeded.multiplier,
+                      }),
+                      option.value === value.spec.kind,
+                    )}
+                  >
+                    {option.label}
+                  </option>
+                );
+              })}
             </AppSelect>
           </label>
           <DcaFilterParamFields
@@ -219,6 +285,8 @@ export function HardExitFields({
             labelClass={labelClass}
             bare
             whenClass="min-w-0"
+            seriesSlots={seriesSlots}
+            seriesIndex={seriesIndex}
           />
         </div>
       )}

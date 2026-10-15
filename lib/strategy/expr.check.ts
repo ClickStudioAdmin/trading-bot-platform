@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import type { DcaFilterSpec } from "@/lib/dca/filters";
+import { priceClaim } from "@/lib/strategy/conflicts";
 import {
+  claimConflictsAt,
   confirmFromEntryStack,
   emptyEntryStack,
   entryJoinDisabled,
@@ -233,32 +235,55 @@ function slots(
   return [{ kind: trigger, join: "and", webhookId }, ...rows];
 }
 
-const priceAndPrice = slots("price", [
-  { kind: "price", join: "and", webhookId: null },
+const priceBand = slots("price", [
+  {
+    kind: "price",
+    join: "and",
+    webhookId: null,
+    claim: priceClaim({ source: "last", compare: "lte", price: 100 }),
+  },
 ]);
+priceBand[0] = {
+  ...priceBand[0],
+  claim: priceClaim({ source: "last", compare: "gte", price: 90 }),
+};
 assert.equal(
-  entryKindDisabled({ slots: priceAndPrice, index: 1, kind: "price" }),
-  true,
-);
-assert.equal(
-  entryKindDisabled({ slots: priceAndPrice, index: 1, kind: "indicator" }),
+  entryKindDisabled({ slots: priceBand, index: 1, kind: "price" }),
   false,
 );
-assert.equal(
-  entryJoinDisabled({ slots: priceAndPrice, index: 1, join: "and" }),
-  true,
-);
-const priceOrPrice = slots("price", [
-  { kind: "price", join: "or", webhookId: null },
+assert.equal(claimConflictsAt(priceBand, 1, priceBand[1]?.claim), false);
+assert.equal(entryJoinDisabled({ slots: priceBand, index: 1, join: "and" }), false);
+const priceGap = slots("price", [
+  {
+    kind: "price",
+    join: "and",
+    webhookId: null,
+    claim: priceClaim({ source: "last", compare: "lte", price: 90 }),
+  },
 ]);
+priceGap[0] = {
+  ...priceGap[0],
+  claim: priceClaim({ source: "last", compare: "gte", price: 100 }),
+};
+assert.equal(claimConflictsAt(priceGap, 1, priceGap[1]?.claim), true);
+assert.equal(entryJoinDisabled({ slots: priceGap, index: 1, join: "and" }), true);
+const priceOrPrice = slots("price", [
+  {
+    kind: "price",
+    join: "or",
+    webhookId: null,
+    claim: priceClaim({ source: "last", compare: "lte", price: 90 }),
+  },
+]);
+priceOrPrice[0] = {
+  ...priceOrPrice[0],
+  claim: priceClaim({ source: "last", compare: "gte", price: 100 }),
+};
 assert.equal(
   entryKindDisabled({ slots: priceOrPrice, index: 1, kind: "price" }),
   false,
 );
-assert.equal(
-  entryKindDisabled({ slots: priceOrPrice, index: 0, kind: "price" }),
-  false,
-);
+assert.equal(claimConflictsAt(priceOrPrice, 1, priceOrPrice[1]?.claim), false);
 assert.equal(
   entryJoinDisabled({ slots: priceOrPrice, index: 1, join: "and" }),
   true,
@@ -310,10 +335,25 @@ assert.equal(
 );
 assert.equal(
   entryStackConflictMessage({
-    trigger: { kind: "price", join: "and" },
+    trigger: {
+      kind: "price",
+      join: "and",
+      claim: priceClaim({ source: "mark", compare: "gte", price: 120 }),
+    },
     stack: { leaves: [priceLeaf], joins: ["and"] },
   }),
-  "Two price crosses cannot be joined with And.",
+  "These conditions cannot be true at the same time.",
+);
+assert.equal(
+  entryStackConflictMessage({
+    trigger: {
+      kind: "price",
+      join: "and",
+      claim: priceClaim({ source: "mark", compare: "gte", price: 80 }),
+    },
+    stack: { leaves: [priceLeaf], joins: ["and"] },
+  }),
+  null,
 );
 assert.equal(
   entryStackConflictMessage({

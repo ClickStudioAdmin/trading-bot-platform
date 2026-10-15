@@ -16,8 +16,51 @@ import {
   DCA_INDICATOR_TIMEFRAME_LABELS,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import { indicatorClaim } from "@/lib/strategy/conflicts";
+import {
+  choiceConflicts,
+  type EntryConflictSlot,
+} from "@/lib/strategy/expr";
 import type { FuturesSide } from "@/lib/futures/model";
 import { AppSelect } from "@/components/app-select";
+
+type SeriesProps = {
+  seriesSlots?: readonly EntryConflictSlot[];
+  seriesIndex?: number;
+};
+
+function filterSeriesClaim(
+  spec: DcaFilterSpec,
+  patch: {
+    kind?: DcaFilterSpec["kind"];
+    timeframe?: DcaIndicatorTimeframe;
+    compare?: string;
+    level?: number | null;
+    levelTo?: number | null;
+  },
+) {
+  const compare = patch.compare ?? spec.compare;
+  let level = patch.level === undefined ? spec.level : patch.level;
+  let levelTo = patch.levelTo === undefined ? spec.levelTo : patch.levelTo;
+  if (compare === "between") {
+    const valid =
+      level != null && levelTo != null && level < levelTo;
+    if (!valid) {
+      level = 30;
+      levelTo = 70;
+    }
+  }
+  return indicatorClaim({
+    surface: "filter",
+    kind: patch.kind ?? spec.kind,
+    timeframe: patch.timeframe ?? spec.timeframe,
+    compare,
+    level,
+    levelTo,
+    period: spec.period,
+    multiplier: spec.multiplier,
+  });
+}
 
 function nextFilterSpec(
   current: DcaFilterSpec | null,
@@ -44,6 +87,8 @@ export function DcaFilterBlock({
   whenClass: whenClassProp,
   fieldClass,
   labelClass,
+  seriesSlots,
+  seriesIndex,
 }: {
   label: string;
   prefix: string;
@@ -57,7 +102,7 @@ export function DcaFilterBlock({
   whenClass?: string;
   fieldClass: string;
   labelClass: string;
-}) {
+} & SeriesProps) {
   const kindField = (
     <label className={labelClass}>
       <HintLabel text={label} required />
@@ -72,7 +117,22 @@ export function DcaFilterBlock({
       >
         {allowOff ? <option value="">Off</option> : null}
         {DCA_FILTER_KIND_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option
+            key={option.value}
+            value={option.value}
+            disabled={
+              spec != null &&
+              choiceConflicts(
+                seriesSlots,
+                seriesIndex,
+                filterSeriesClaim(
+                  { ...nextFilterSpec(spec, option.value, side), timeframe: spec.timeframe },
+                  {},
+                ),
+                option.value === spec.kind,
+              )
+            }
+          >
             {option.label}
           </option>
         ))}
@@ -90,6 +150,8 @@ export function DcaFilterBlock({
       labelClass={labelClass}
       bare={dense}
       whenClass={whenClassProp ?? "col-span-2"}
+      seriesSlots={seriesSlots}
+      seriesIndex={seriesIndex}
     />
   ) : null;
   if (dense) {
@@ -122,6 +184,8 @@ export function DcaFilterParamFields({
   labelClass,
   bare = false,
   whenClass = "col-span-2",
+  seriesSlots,
+  seriesIndex,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -132,7 +196,7 @@ export function DcaFilterParamFields({
   labelClass: string;
   bare?: boolean;
   whenClass?: string;
-}) {
+} & SeriesProps) {
   const column = useBotColumnLayout();
   const whenOptions = dcaFilterWhenOptions(spec.kind, side);
   const whenValue = dcaFilterWhenValue(spec.compare);
@@ -191,7 +255,16 @@ export function DcaFilterParamFields({
           className={fieldClass}
         >
           {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
-            <option key={interval} value={interval}>
+            <option
+              key={interval}
+              value={interval}
+              disabled={choiceConflicts(
+                seriesSlots,
+                seriesIndex,
+                filterSeriesClaim(spec, { timeframe: interval }),
+                interval === spec.timeframe,
+              )}
+            >
               {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
             </option>
           ))}
@@ -227,7 +300,16 @@ export function DcaFilterParamFields({
           className={fieldClass}
         >
           {whenOptions.map((option) => (
-            <option key={option.value} value={option.value}>
+            <option
+              key={option.value}
+              value={option.value}
+              disabled={choiceConflicts(
+                seriesSlots,
+                seriesIndex,
+                filterSeriesClaim(spec, { compare: option.value }),
+                option.value === whenValue,
+              )}
+            >
               {option.label}
             </option>
           ))}

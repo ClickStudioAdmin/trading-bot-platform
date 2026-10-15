@@ -34,16 +34,21 @@ import {
   ExitConditionStack,
   anchorDisabledKinds,
   anchorDisabledWebhookIds,
+  exitConflictSlots,
   type ExitStackRow,
 } from "@/components/exit-condition-stack";
 import {
   EntryConditionStack,
   entryConflictSlots,
+  type EntryAnchor,
   type EntryStackRow,
 } from "@/components/entry-condition-stack";
+import { indicatorClaim, priceClaim, type ConflictClaim } from "@/lib/strategy/conflicts";
 import {
   entryKindDisabled,
   entryWebhookIdDisabled,
+  priceChoiceConflicts,
+  type EntryConflictSlot,
 } from "@/lib/strategy/expr";
 import {
   dcaFilterComplete,
@@ -453,6 +458,8 @@ function PriceTriggerFields({
   priceLevel,
   onPriceLevel,
   invalid = false,
+  seriesSlots,
+  seriesIndex,
 }: {
   desk: DeskKind;
   priceSource: string;
@@ -462,6 +469,8 @@ function PriceTriggerFields({
   priceLevel: string;
   onPriceLevel: (next: string) => void;
   invalid?: boolean;
+  seriesSlots?: readonly EntryConflictSlot[];
+  seriesIndex?: number;
 }) {
   if (desk === "perps") {
     return (
@@ -472,9 +481,24 @@ function PriceTriggerFields({
             onChange={(event) => onPriceSource(event.target.value)}
             className={fieldClass}
           >
-            <option value="last">Last is</option>
-            <option value="mark">Mark is</option>
-            <option value="index">Index is</option>
+            {(["last", "mark", "index"] as const).map((source) => (
+              <option
+                key={source}
+                value={source}
+                disabled={priceChoiceConflicts(
+                  seriesSlots,
+                  seriesIndex,
+                  { source: priceSource, compare: priceWhen, price: priceLevel },
+                  { source },
+                )}
+              >
+                {source === "last"
+                  ? "Last is"
+                  : source === "mark"
+                    ? "Mark is"
+                    : "Index is"}
+              </option>
+            ))}
           </AppSelect>
         </Field>
         <Field label="Compare" required>
@@ -483,8 +507,20 @@ function PriceTriggerFields({
             onChange={(event) => onPriceWhen(event.target.value)}
             className={fieldClass}
           >
-            <option value="gte">At or above</option>
-            <option value="lte">At or below</option>
+            {(["gte", "lte"] as const).map((compare) => (
+              <option
+                key={compare}
+                value={compare}
+                disabled={priceChoiceConflicts(
+                  seriesSlots,
+                  seriesIndex,
+                  { source: priceSource, compare: priceWhen, price: priceLevel },
+                  { compare },
+                )}
+              >
+                {compare === "gte" ? "At or above" : "At or below"}
+              </option>
+            ))}
           </AppSelect>
         </Field>
         <Field label="Price" required>
@@ -506,9 +542,20 @@ function PriceTriggerFields({
           onChange={(event) => onPriceSource(event.target.value)}
           className={fieldClass}
         >
-          <option value="last">Last</option>
-          <option value="mark">Mark</option>
-          <option value="index">Index</option>
+          {(["last", "mark", "index"] as const).map((source) => (
+            <option
+              key={source}
+              value={source}
+              disabled={priceChoiceConflicts(
+                seriesSlots,
+                seriesIndex,
+                { source: priceSource, compare: priceWhen, price: priceLevel },
+                { source },
+              )}
+            >
+              {source === "last" ? "Last" : source === "mark" ? "Mark" : "Index"}
+            </option>
+          ))}
         </AppSelect>
       </Field>
       <Field label="When" required>
@@ -517,8 +564,20 @@ function PriceTriggerFields({
           onChange={(event) => onPriceWhen(event.target.value)}
           className={fieldClass}
         >
-          <option value="gte">At or above</option>
-          <option value="lte">At or below</option>
+          {(["gte", "lte"] as const).map((compare) => (
+            <option
+              key={compare}
+              value={compare}
+              disabled={priceChoiceConflicts(
+                seriesSlots,
+                seriesIndex,
+                { source: priceSource, compare: priceWhen, price: priceLevel },
+                { compare },
+              )}
+            >
+              {compare === "gte" ? "At or above" : "At or below"}
+            </option>
+          ))}
         </AppSelect>
       </Field>
       <Field label="Level (USDT)" required>
@@ -531,6 +590,41 @@ function PriceTriggerFields({
       </Field>
     </>
   );
+}
+
+function themeStartClaim(input: {
+  kind: StartKind;
+  priceSource: string;
+  priceWhen: string;
+  priceLevel: string;
+  indicatorKind: DcaIndicatorKind;
+  timeframe: DcaIndicatorTimeframe;
+  when: string;
+  period: string;
+  slowPeriod: string;
+  level: string;
+  multiplier: string;
+}): ConflictClaim | null {
+  if (input.kind === "price") {
+    return priceClaim({
+      source: input.priceSource,
+      compare: input.priceWhen,
+      price: input.priceLevel,
+    });
+  }
+  if (input.kind === "indicator" || input.kind === "trend") {
+    return indicatorClaim({
+      surface: "entry",
+      kind: input.indicatorKind,
+      timeframe: input.timeframe,
+      compare: input.when,
+      level: input.level,
+      period: input.period,
+      slowPeriod: input.slowPeriod,
+      multiplier: input.multiplier,
+    });
+  }
+  return null;
 }
 
 export function ThemeBotFormDraft() {
@@ -603,10 +697,42 @@ export function ThemeBotFormDraft() {
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPrice, setLimitPrice] = useState("");
   const [webhookId, setWebhookId] = useState("sample");
-  const themeEntrySlots = entryConflictSlots(
-    { kind: startKind, webhookId },
-    entryRows,
-  );
+  const themeLongAnchor: EntryAnchor = {
+    kind: startKind,
+    webhookId,
+    claim: themeStartClaim({
+      kind: startKind,
+      priceSource,
+      priceWhen,
+      priceLevel,
+      indicatorKind,
+      timeframe,
+      when,
+      period,
+      slowPeriod,
+      level,
+      multiplier,
+    }),
+  };
+  const themeShortAnchor: EntryAnchor = {
+    kind: shortStartKind,
+    webhookId: shortWebhookId,
+    claim: themeStartClaim({
+      kind: shortStartKind,
+      priceSource: shortPriceSource,
+      priceWhen: shortPriceWhen,
+      priceLevel: shortPriceLevel,
+      indicatorKind: shortIndicatorKind,
+      timeframe: shortTimeframe,
+      when: shortWhen,
+      period: shortPeriod,
+      slowPeriod: shortSlowPeriod,
+      level: shortLevel,
+      multiplier: shortMultiplier,
+    }),
+  };
+  const themeEntrySlots = entryConflictSlots(themeLongAnchor, entryRows);
+  const themeShortSlots = entryConflictSlots(themeShortAnchor, shortEntryRows);
   const [size, setSize] = useState("100");
   const [sizeUnit, setSizeUnit] = useState<"qty" | "usdt">("usdt");
   const [sizeMultiplier, setSizeMultiplier] = useState("1");
@@ -1221,7 +1347,17 @@ export function ThemeBotFormDraft() {
                   <option value="indicator">Indicator</option>
                   <option value="trend">Trend</option>
                   <option value="price">Price Cross</option>
-                  <option value="webhook">Signal Webhook</option>
+                  <option
+                    value="webhook"
+                    disabled={entryKindDisabled({
+                      slots: themeEntrySlots,
+                      index: 0,
+                      kind: "webhook",
+                      webhookIds: ["sample"],
+                    })}
+                  >
+                    Signal Webhook
+                  </option>
                 </AppSelect>
               </Field>
             )}
@@ -1285,6 +1421,8 @@ export function ThemeBotFormDraft() {
                   onLevelChange={setLevel}
                   onPeriodChange={setPeriod}
                   onSlowPeriodChange={setSlowPeriod}
+                  seriesSlots={themeEntrySlots}
+                  seriesIndex={0}
                 />
               </div>
           ) : startKind === "trend" && !closing ? (
@@ -1302,6 +1440,8 @@ export function ThemeBotFormDraft() {
                   onCompareChange={setWhen}
                   onPeriodChange={setPeriod}
                   onMultiplierChange={setMultiplier}
+                  seriesSlots={themeEntrySlots}
+                  seriesIndex={0}
                 />
               </div>
           ) : (
@@ -1315,6 +1455,8 @@ export function ThemeBotFormDraft() {
                   priceLevel={priceLevel}
                   onPriceLevel={setPriceLevel}
                   invalid={showFieldErrors && missing.priceLevel}
+                  seriesSlots={themeEntrySlots}
+                  seriesIndex={0}
                 />
             </div>
           )}
@@ -1327,7 +1469,7 @@ export function ThemeBotFormDraft() {
               side={entrySide}
               rows={entryRows}
               onChange={setEntryRows}
-              anchor={{ kind: startKind, webhookId }}
+              anchor={themeLongAnchor}
               webhooks={[{ id: "sample", name: "Sample signal" }]}
               gridClass={rowClass5}
               fieldClass={fieldClass}
@@ -1339,7 +1481,7 @@ export function ThemeBotFormDraft() {
               side={entrySide}
               rows={entryRows}
               onChange={setEntryRows}
-              anchor={{ kind: startKind, webhookId }}
+              anchor={themeLongAnchor}
               webhooks={[{ id: "sample", name: "Sample signal" }]}
               triggerTimeframe={
                 startKind === "indicator" || startKind === "trend"
@@ -1377,8 +1519,28 @@ export function ThemeBotFormDraft() {
                   >
                     <option value="indicator">Indicator</option>
                     <option value="trend">Trend</option>
-                    <option value="price">Price Cross</option>
-                    <option value="webhook">Signal Webhook</option>
+                    <option
+                      value="price"
+                      disabled={entryKindDisabled({
+                        slots: themeShortSlots,
+                        index: 0,
+                        kind: "price",
+                        webhookIds: ["sample"],
+                      })}
+                    >
+                      Price Cross
+                    </option>
+                    <option
+                      value="webhook"
+                      disabled={entryKindDisabled({
+                        slots: themeShortSlots,
+                        index: 0,
+                        kind: "webhook",
+                        webhookIds: ["sample"],
+                      })}
+                    >
+                      Signal Webhook
+                    </option>
                   </AppSelect>
                 </Field>
               </div>
@@ -1414,6 +1576,8 @@ export function ThemeBotFormDraft() {
                     onLevelChange={setShortLevel}
                     onPeriodChange={setShortPeriod}
                     onSlowPeriodChange={setShortSlowPeriod}
+                    seriesSlots={themeShortSlots}
+                    seriesIndex={0}
                   />
                 </div>
               ) : shortStartKind === "trend" ? (
@@ -1431,6 +1595,8 @@ export function ThemeBotFormDraft() {
                     onCompareChange={setShortWhen}
                     onPeriodChange={setShortPeriod}
                     onMultiplierChange={setShortMultiplier}
+                    seriesSlots={themeShortSlots}
+                    seriesIndex={0}
                   />
                 </div>
               ) : (
@@ -1444,6 +1610,8 @@ export function ThemeBotFormDraft() {
                     priceLevel={shortPriceLevel}
                     onPriceLevel={setShortPriceLevel}
                     invalid={false}
+                    seriesSlots={themeShortSlots}
+                    seriesIndex={0}
                   />
                 </div>
               )}
@@ -1453,7 +1621,7 @@ export function ThemeBotFormDraft() {
               side="short"
               rows={shortEntryRows}
               onChange={setShortEntryRows}
-              anchor={{ kind: shortStartKind, webhookId: shortWebhookId }}
+              anchor={themeShortAnchor}
               webhooks={[{ id: "sample", name: "Sample signal" }]}
               gridClass={rowClass5}
               fieldClass={fieldClass}
@@ -1477,7 +1645,17 @@ export function ThemeBotFormDraft() {
                     <option value="indicator">Indicator</option>
                     <option value="trend">Trend</option>
                     <option value="price">Price Cross</option>
-                    <option value="webhook">Signal Webhook</option>
+                    <option
+                      value="webhook"
+                      disabled={entryKindDisabled({
+                        slots: themeShortSlots,
+                        index: 0,
+                        kind: "webhook",
+                        webhookIds: ["sample"],
+                      })}
+                    >
+                      Signal Webhook
+                    </option>
                   </AppSelect>
                 </Field>
               </div>
@@ -1513,6 +1691,8 @@ export function ThemeBotFormDraft() {
                     onLevelChange={setShortLevel}
                     onPeriodChange={setShortPeriod}
                     onSlowPeriodChange={setShortSlowPeriod}
+                    seriesSlots={themeShortSlots}
+                    seriesIndex={0}
                   />
                 </div>
               ) : shortStartKind === "trend" ? (
@@ -1530,6 +1710,8 @@ export function ThemeBotFormDraft() {
                     onCompareChange={setShortWhen}
                     onPeriodChange={setShortPeriod}
                     onMultiplierChange={setShortMultiplier}
+                    seriesSlots={themeShortSlots}
+                    seriesIndex={0}
                   />
                 </div>
               ) : (
@@ -1543,6 +1725,8 @@ export function ThemeBotFormDraft() {
                     priceLevel={shortPriceLevel}
                     onPriceLevel={setShortPriceLevel}
                     invalid={showFieldErrors && missing.shortPriceLevel}
+                    seriesSlots={themeShortSlots}
+                    seriesIndex={0}
                   />
                 </div>
               )}
@@ -1552,7 +1736,7 @@ export function ThemeBotFormDraft() {
               side="short"
               rows={shortEntryRows}
               onChange={setShortEntryRows}
-              anchor={{ kind: shortStartKind, webhookId: shortWebhookId }}
+              anchor={themeShortAnchor}
               webhooks={[{ id: "sample", name: "Sample signal" }]}
               triggerTimeframe={
                 shortStartKind === "indicator" || shortStartKind === "trend"
@@ -2260,6 +2444,8 @@ export function ThemeBotFormDraft() {
                         gridClass={rowClass5}
                         fieldClass={fieldClass}
                         labelClass={labelClass}
+                        seriesSlots={exitConflictSlots(exitIf, exitRows)}
+                        seriesIndex={0}
                         disabledKinds={anchorDisabledKinds(
                           exitIf,
                           exitRows,
@@ -2312,6 +2498,8 @@ export function ThemeBotFormDraft() {
                         gridClass={rowClass5}
                         fieldClass={fieldClass}
                         labelClass={labelClass}
+                        seriesSlots={exitConflictSlots(shortExitIf, shortExitRows)}
+                        seriesIndex={0}
                         disabledKinds={anchorDisabledKinds(
                           shortExitIf,
                           shortExitRows,
@@ -2370,6 +2558,8 @@ export function ThemeBotFormDraft() {
                       gridClass={rowClass5}
                       fieldClass={fieldClass}
                       labelClass={labelClass}
+                      seriesSlots={exitConflictSlots(exitIf, exitRows)}
+                      seriesIndex={0}
                       disabledKinds={anchorDisabledKinds(
                         exitIf,
                         exitRows,

@@ -7,6 +7,7 @@ import { HardExitFields } from "@/components/hard-exit-fields";
 import { IconPlus, IconTrash } from "@/components/icons";
 import {
   hardExitAnchor,
+  hardExitClaim,
   hardExitTriggerTimeframe,
   leafFromHardExit,
 } from "@/lib/dca/exit-stack";
@@ -23,6 +24,7 @@ import {
   STRATEGY_CONDITION_CAP,
   entryJoinDisabled,
   entryKindDisabled,
+  entrySlotAllowed,
   entryWebhookIdDisabled,
   type EntryConflictSlot,
   type EntryStack,
@@ -100,7 +102,7 @@ export function exitStackFromRows(rows: ExitStackRow[]): EntryStack {
   return { leaves, joins };
 }
 
-function slotsFor(
+export function exitConflictSlots(
   anchor: HardExitDraft,
   rows: ExitStackRow[],
 ): EntryConflictSlot[] {
@@ -111,6 +113,7 @@ function slotsFor(
       kind: row.draft.trigger,
       join: row.join,
       webhookId: row.draft.trigger === "webhook" ? row.draft.webhookId : null,
+      claim: hardExitClaim(row.draft),
     })),
   ];
 }
@@ -160,7 +163,7 @@ export function ExitConditionStack({
   useEffect(() => {
     rowsRef.current = rows;
   }, [rows]);
-  const slots = slotsFor(anchor, rows);
+  const slots = exitConflictSlots(anchor, rows);
   const webhookIds = webhooks.map((hook) => hook.id);
   const anchorSlot = hardExitAnchor(anchor);
   function commit(next: ExitStackRow[]) {
@@ -182,12 +185,12 @@ export function ExitConditionStack({
     let join: StrategyJoin = "and";
     for (const candidate of kinds) {
       const draft = hardExitForTrigger(candidate, side, null);
-      const andSlots = slotsFor(anchor, [
+      const andSlots = exitConflictSlots(anchor, [
         ...current,
         { key: "next", join: "and", draft },
       ]);
       if (
-        !entryKindDisabled({
+        entrySlotAllowed({
           slots: andSlots,
           index: andSlots.length - 1,
           kind: candidate,
@@ -197,12 +200,12 @@ export function ExitConditionStack({
         trigger = candidate;
         break;
       }
-      const orSlots = slotsFor(anchor, [
+      const orSlots = exitConflictSlots(anchor, [
         ...current,
         { key: "next", join: "or", draft },
       ]);
       if (
-        !entryKindDisabled({
+        entrySlotAllowed({
           slots: orSlots,
           index: orSlots.length - 1,
           kind: candidate,
@@ -286,6 +289,8 @@ export function ExitConditionStack({
               fieldClass={fieldClass}
               labelClass={labelClass}
               named={named}
+              seriesSlots={slots}
+              seriesIndex={slotIndex}
               disabledKinds={[...disabledKinds]}
               disabledWebhookIds={webhooks
                 .map((hook) => hook.id)
@@ -319,7 +324,7 @@ export function anchorDisabledKinds(
   rows: ExitStackRow[],
   webhookIds: string[],
 ): HardExitTrigger[] {
-  const slots = slotsFor(anchor, rows);
+  const slots = exitConflictSlots(anchor, rows);
   return (["price", "indicator", "trend", "webhook"] as const).filter((kind) =>
     entryKindDisabled({ slots, index: 0, kind, webhookIds }),
   );
@@ -330,7 +335,7 @@ export function anchorDisabledWebhookIds(
   rows: ExitStackRow[],
   webhookIds: string[],
 ): string[] {
-  const slots = slotsFor(anchor, rows);
+  const slots = exitConflictSlots(anchor, rows);
   return webhookIds.filter((id) =>
     entryWebhookIdDisabled({ slots, index: 0, webhookId: id }),
   );

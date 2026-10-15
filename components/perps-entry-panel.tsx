@@ -36,10 +36,12 @@ import type { FuturesAutomationFormValues } from "@/lib/futures/automation";
 import { parseAutomationEntry } from "@/lib/futures/automation";
 import type { PerpsEntryLeg } from "@/lib/futures/conditions";
 import type { FuturesSide, FuturesTrigger } from "@/lib/futures/model";
+import { indicatorClaim, priceClaim } from "@/lib/strategy/conflicts";
 import {
   confirmFromEntryStack,
   entryKindDisabled,
   entryWebhookIdDisabled,
+  priceChoiceConflicts,
   type EntryStack,
 } from "@/lib/strategy/expr";
 
@@ -256,10 +258,31 @@ export function PerpsEntryPanel({
     draftRef.current = next;
     onChange(next);
   }
-  const entrySlots = entryConflictSlots(
-    { kind: closing ? "price" : draft.entrySource, webhookId: draft.webhookId },
-    closing ? [] : draft.entryRows,
-  );
+  const anchor = {
+    kind: (closing ? "price" : draft.entrySource) as PerpsEntryDraft["entrySource"],
+    webhookId: draft.webhookId,
+    claim: closing
+      ? null
+      : draft.entrySource === "price"
+        ? priceClaim({
+            source: draft.triggerBy,
+            compare: draft.triggerCompare,
+            price: draft.triggerPrice,
+          })
+        : draft.entrySource === "indicator" || draft.entrySource === "trend"
+          ? indicatorClaim({
+              surface: "entry",
+              kind: draft.indicatorKind,
+              timeframe: draft.indicatorTimeframe,
+              compare: draft.indicatorCompare,
+              level: draft.indicatorLevel,
+              period: draft.indicatorPeriod,
+              slowPeriod: draft.indicatorSlowPeriod,
+              multiplier: draft.indicatorMultiplier,
+            })
+          : null,
+  };
+  const entrySlots = entryConflictSlots(anchor, closing ? [] : draft.entryRows);
   const webhookIds = webhooks.map((hook) => hook.id);
   const whenWebhooks =
     draft.webhookId && !webhooks.some((hook) => hook.id === draft.webhookId)
@@ -368,6 +391,8 @@ export function PerpsEntryPanel({
               onSlowPeriodChange={(indicatorSlowPeriod) =>
                 patch({ indicatorSlowPeriod })
               }
+              seriesSlots={entrySlots}
+              seriesIndex={0}
             />
           ) : draft.entrySource === "trend" && !closing ? (
             <TrendStartFields
@@ -387,6 +412,8 @@ export function PerpsEntryPanel({
               onMultiplierChange={(indicatorMultiplier) =>
                 patch({ indicatorMultiplier })
               }
+              seriesSlots={entrySlots}
+              seriesIndex={0}
             />
           ) : draft.entrySource === "webhook" ? (
             <BotField label="Webhook" className={pairSpan} required>
@@ -433,9 +460,28 @@ export function PerpsEntryPanel({
                   }
                   className={fieldClass}
                 >
-                  <option value="last">Last is</option>
-                  <option value="mark">Mark is</option>
-                  <option value="index">Index is</option>
+                  {(["last", "mark", "index"] as const).map((source) => (
+                    <option
+                      key={source}
+                      value={source}
+                      disabled={priceChoiceConflicts(
+                        entrySlots,
+                        0,
+                        {
+                          source: draft.triggerBy,
+                          compare: draft.triggerCompare,
+                          price: draft.triggerPrice,
+                        },
+                        { source },
+                      )}
+                    >
+                      {source === "last"
+                        ? "Last is"
+                        : source === "mark"
+                          ? "Mark is"
+                          : "Index is"}
+                    </option>
+                  ))}
                 </AppSelect>
               </BotField>
               <BotField label="Compare" required>
@@ -450,8 +496,24 @@ export function PerpsEntryPanel({
                   }
                   className={fieldClass}
                 >
-                  <option value="gte">At or above</option>
-                  <option value="lte">At or below</option>
+                  {(["gte", "lte"] as const).map((compare) => (
+                    <option
+                      key={compare}
+                      value={compare}
+                      disabled={priceChoiceConflicts(
+                        entrySlots,
+                        0,
+                        {
+                          source: draft.triggerBy,
+                          compare: draft.triggerCompare,
+                          price: draft.triggerPrice,
+                        },
+                        { compare },
+                      )}
+                    >
+                      {compare === "gte" ? "At or above" : "At or below"}
+                    </option>
+                  ))}
                 </AppSelect>
               </BotField>
               <BotField label="Price" required>
@@ -473,7 +535,7 @@ export function PerpsEntryPanel({
           side={side}
           rows={draft.entryRows}
           onChange={(entryRows) => patch({ entryRows })}
-          anchor={{ kind: draft.entrySource, webhookId: draft.webhookId }}
+          anchor={anchor}
           webhooks={whenWebhooks}
           triggerTimeframe={
             draft.entrySource === "indicator" || draft.entrySource === "trend"

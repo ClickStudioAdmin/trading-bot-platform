@@ -83,6 +83,11 @@ import {
   parseExitStackForm,
 } from "./exit-stack";
 import {
+  indicatorClaim,
+  priceClaim,
+  type ConflictClaim,
+} from "@/lib/strategy/conflicts";
+import {
   confirmFromEntryStack,
   emptyEntryStack,
   entryStackConflictMessage,
@@ -287,6 +292,7 @@ export function dcaStartKindForSide(
 function dcaStartConflictSlot(
   kind: DcaStartKind | null,
   webhookId: string | null,
+  claim: ConflictClaim | null = null,
 ): EntryConflictSlot | undefined {
   if (
     kind === "price" ||
@@ -298,9 +304,37 @@ function dcaStartConflictSlot(
       kind,
       join: "and",
       webhookId: kind === "webhook" ? webhookId : null,
+      claim,
     };
   }
   return undefined;
+}
+
+function dcaStartClaim(
+  kind: DcaStartKind | null,
+  trigger: DcaPriceTrigger | null,
+  start: DcaIndicatorStart | null,
+): ConflictClaim | null {
+  if (kind === "price" && trigger) {
+    return priceClaim({
+      source: trigger.triggerBy,
+      compare: trigger.compare,
+      price: trigger.price,
+    });
+  }
+  if ((kind === "indicator" || kind === "trend") && start) {
+    return indicatorClaim({
+      surface: "entry",
+      kind: start.kind,
+      timeframe: start.timeframe,
+      compare: start.compare,
+      level: start.level,
+      period: start.period,
+      slowPeriod: start.slowPeriod,
+      multiplier: start.multiplier,
+    });
+  }
+  return null;
 }
 
 export function dcaWebhookIdForSide(
@@ -1994,10 +2028,19 @@ export function parseDcaPlaybookForm(
     shortIndicator.start && dcaSeriesStart(shortStartKind)
       ? shortIndicator.start.timeframe
       : null;
-  const longTriggerSlot = dcaStartConflictSlot(startKind, webhookId);
+  const longTriggerSlot = dcaStartConflictSlot(
+    startKind,
+    webhookId,
+    dcaStartClaim(startKind, armTrigger.trigger, longIndicator.start),
+  );
   const shortTriggerSlot = dcaStartConflictSlot(
     shortStartKind ?? startKind,
     shortWebhookId,
+    dcaStartClaim(
+      shortStartKind ?? startKind,
+      shortArmTrigger.trigger,
+      shortIndicator.start,
+    ),
   );
   const longStack = parseDcaEntryStackForm(
     form,

@@ -264,12 +264,14 @@ assert.equal(
 );
 
 const priceAnd = new FormData();
-priceAnd.set("r0_webhookId", "hook-a");
+priceAnd.set("r0_triggerBy", "last");
+priceAnd.set("r0_triggerCompare", "gte");
+priceAnd.set("r0_triggerPrice", "100");
 priceAnd.set("r0_entryCount", "1");
 priceAnd.set("r0_entry0Join", "and");
 priceAnd.set("r0_entry0Source", "price");
 priceAnd.set("r0_entry0TriggerBy", "last");
-priceAnd.set("r0_entry0TriggerCompare", "gte");
+priceAnd.set("r0_entry0TriggerCompare", "lte");
 priceAnd.set("r0_entry0TriggerPrice", "90");
 const priceAndParsed = parseFuturesConditionForm(priceAnd, "r0_", {
   entrySource: "price",
@@ -277,8 +279,27 @@ const priceAndParsed = parseFuturesConditionForm(priceAnd, "r0_", {
 });
 assert.equal(priceAndParsed.ok, false);
 if (!priceAndParsed.ok) {
-  assert.match(priceAndParsed.error, /price crosses/);
+  assert.equal(
+    priceAndParsed.error,
+    "These conditions cannot be true at the same time.",
+  );
 }
+
+const priceBand = new FormData();
+priceBand.set("r0_triggerBy", "last");
+priceBand.set("r0_triggerCompare", "gte");
+priceBand.set("r0_triggerPrice", "90");
+priceBand.set("r0_entryCount", "1");
+priceBand.set("r0_entry0Join", "and");
+priceBand.set("r0_entry0Source", "price");
+priceBand.set("r0_entry0TriggerBy", "last");
+priceBand.set("r0_entry0TriggerCompare", "lte");
+priceBand.set("r0_entry0TriggerPrice", "100");
+const priceBandParsed = parseFuturesConditionForm(priceBand, "r0_", {
+  entrySource: "price",
+  closing: false,
+});
+assert.equal(priceBandParsed.ok, true);
 
 const webhookAnd = new FormData();
 webhookAnd.set("r0_webhookId", "hook-a");

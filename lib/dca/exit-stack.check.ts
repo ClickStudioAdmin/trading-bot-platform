@@ -92,9 +92,23 @@ assert.equal(conflictParsed.ok, false);
 if (!conflictParsed.ok) {
   assert.equal(
     conflictParsed.error,
-    "Two price crosses cannot be joined with And.",
+    "These conditions cannot be true at the same time.",
   );
 }
+
+const priceBand = baseForm();
+priceBand.set("exitIfTrigger", "price");
+priceBand.set("exitIfTriggerBy", "last");
+priceBand.set("exitIfTriggerCompare", "gte");
+priceBand.set("exitIfTriggerPrice", "90");
+priceBand.set("exitIfStackCount", "1");
+priceBand.set("exitIfStack0Join", "and");
+priceBand.set("exitIfStack0Trigger", "price");
+priceBand.set("exitIfStack0TriggerBy", "last");
+priceBand.set("exitIfStack0TriggerCompare", "lte");
+priceBand.set("exitIfStack0TriggerPrice", "100");
+const priceBandParsed = parseDcaPlaybookForm(priceBand);
+assert.equal(priceBandParsed.ok, true);
 
 const priceLeaf = {
   kind: "price" as const,

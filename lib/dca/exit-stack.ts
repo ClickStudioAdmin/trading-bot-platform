@@ -1,6 +1,7 @@
 import { formatHardExitText } from "@/lib/bots/condition-copy";
 import type { FuturesSide } from "@/lib/futures/model";
 import type { CandleBar } from "@/lib/market/candles";
+import { indicatorClaim, priceClaim } from "@/lib/strategy/conflicts";
 import {
   STRATEGY_CONDITION_CAP,
   STRATEGY_TIMEFRAME_CAP,
@@ -39,16 +40,43 @@ export function exitStackMet(input: {
   });
 }
 
+export function hardExitClaim(
+  draft: HardExitDraft | null | undefined,
+): EntryConflictSlot["claim"] {
+  if (!draft || draft.trigger === "webhook") {
+    return null;
+  }
+  if (draft.trigger === "price") {
+    return priceClaim({
+      source: draft.triggerBy,
+      compare: draft.compare,
+      price: draft.price,
+    });
+  }
+  return indicatorClaim({
+    surface: "filter",
+    kind: draft.spec.kind,
+    timeframe: draft.spec.timeframe,
+    compare: draft.spec.compare,
+    level: draft.spec.level,
+    levelTo: draft.spec.levelTo,
+    period: draft.spec.period,
+    multiplier: draft.spec.multiplier,
+  });
+}
+
 export function hardExitAnchor(
   draft: HardExitDraft | null | undefined,
 ): EntryConflictSlot | null {
   if (!draft) {
     return null;
   }
-  if (draft.trigger === "webhook") {
-    return { kind: "webhook", join: "and", webhookId: draft.webhookId };
-  }
-  return { kind: draft.trigger, join: "and" };
+  return {
+    kind: draft.trigger,
+    join: "and",
+    webhookId: draft.trigger === "webhook" ? draft.webhookId : null,
+    claim: hardExitClaim(draft),
+  };
 }
 
 export function hardExitTriggerTimeframe(

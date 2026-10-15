@@ -26,10 +26,62 @@ import {
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import { indicatorClaim } from "@/lib/strategy/conflicts";
+import {
+  choiceConflicts,
+  type EntryConflictSlot,
+} from "@/lib/strategy/expr";
 import { AppSelect } from "@/components/app-select";
 
 const fieldClass = botFieldClass;
 const labelClass = botLabelClass;
+
+type SeriesProps = {
+  seriesSlots?: readonly EntryConflictSlot[];
+  seriesIndex?: number;
+};
+
+function seededEntryClaim(
+  side: "long" | "short",
+  kind: DcaIndicatorKind,
+  timeframe: DcaIndicatorTimeframe,
+) {
+  return indicatorClaim({
+    surface: "entry",
+    kind,
+    timeframe,
+    compare: indicatorCompareForDirection(side, kind, ""),
+    level: kind === "rsi" ? "30" : kind === "macd" ? "0" : "",
+    period: defaultDcaIndicatorPeriod(kind),
+    slowPeriod: defaultDcaIndicatorSlowPeriod(kind),
+  });
+}
+
+function entrySeriesClaim(input: {
+  kind: string;
+  timeframe: unknown;
+  compare: unknown;
+  level?: unknown;
+  period?: unknown;
+  slowPeriod?: unknown;
+  multiplier?: unknown;
+}) {
+  const compare = input.compare === "legacy" ? "cross_gte" : input.compare;
+  const level =
+    input.compare === "legacy" && String(input.level ?? "").trim() === ""
+      ? "1"
+      : input.level;
+  return indicatorClaim({
+    surface: "entry",
+    kind: input.kind,
+    timeframe: input.timeframe,
+    compare,
+    level,
+    period: input.period,
+    slowPeriod: input.slowPeriod,
+    multiplier: input.multiplier,
+  });
+}
 
 export function IndicatorStartFields({
   side,
@@ -46,6 +98,8 @@ export function IndicatorStartFields({
   onLevelChange,
   onPeriodChange,
   onSlowPeriodChange,
+  seriesSlots,
+  seriesIndex,
 }: {
   side: "long" | "short";
   prefix: string;
@@ -61,7 +115,7 @@ export function IndicatorStartFields({
   onLevelChange: (next: string) => void;
   onPeriodChange: (next: string) => void;
   onSlowPeriodChange: (next: string) => void;
-}) {
+} & SeriesProps) {
   const includeLegacyEmaPrice = dcaIndicatorIsLegacyEmaPrice(
     kind,
     compare,
@@ -72,6 +126,13 @@ export function IndicatorStartFields({
     side,
     includeLegacyEmaPrice,
   );
+  const currentWhen = dcaIndicatorWhenValue(kind, side, compare, level);
+  function entryDisabled(
+    claim: ReturnType<typeof indicatorClaim>,
+    selected: boolean,
+  ) {
+    return choiceConflicts(seriesSlots, seriesIndex, claim, selected);
+  }
   const showPairPeriods =
     dcaIndicatorUsesPairPeriods(kind) && !includeLegacyEmaPrice;
   const whenField = (
@@ -90,7 +151,21 @@ export function IndicatorStartFields({
         className={fieldClass}
       >
         {whenOptions.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option
+            key={option.value}
+            value={option.value}
+            disabled={entryDisabled(
+              entrySeriesClaim({
+                kind,
+                timeframe,
+                compare: option.value,
+                level,
+                period,
+                slowPeriod,
+              }),
+              option.value === currentWhen,
+            )}
+          >
             {option.label}
           </option>
         ))}
@@ -131,7 +206,14 @@ export function IndicatorStartFields({
         className={fieldClass}
       >
         {DCA_INDICATOR_KIND_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option
+            key={option.value}
+            value={option.value}
+            disabled={entryDisabled(
+              seededEntryClaim(side, option.value, timeframe),
+              option.value === kind,
+            )}
+          >
             {option.label}
           </option>
         ))}
@@ -150,7 +232,21 @@ export function IndicatorStartFields({
         className={fieldClass}
       >
         {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
-          <option key={interval} value={interval}>
+          <option
+            key={interval}
+            value={interval}
+            disabled={entryDisabled(
+              entrySeriesClaim({
+                kind,
+                timeframe: interval,
+                compare,
+                level,
+                period,
+                slowPeriod,
+              }),
+              interval === timeframe,
+            )}
+          >
             {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
           </option>
         ))}
@@ -273,6 +369,8 @@ export function TrendStartFields({
   onCompareChange,
   onPeriodChange,
   onMultiplierChange,
+  seriesSlots,
+  seriesIndex,
 }: {
   side: "long" | "short";
   prefix: string;
@@ -286,10 +384,17 @@ export function TrendStartFields({
   onCompareChange: (next: string) => void;
   onPeriodChange: (next: string) => void;
   onMultiplierChange: (next: string) => void;
-}) {
+} & SeriesProps) {
   const trendKind = kind === "supertrend" ? kind : "supertrend";
   const column = useBotColumnLayout();
   const whenOptions = dcaIndicatorWhenOptions(trendKind, side, false);
+  const currentWhen = dcaIndicatorWhenValue(trendKind, side, compare);
+  function trendDisabled(
+    claim: ReturnType<typeof indicatorClaim>,
+    selected: boolean,
+  ) {
+    return choiceConflicts(seriesSlots, seriesIndex, claim, selected);
+  }
   return (
     <div
       className={
@@ -349,7 +454,20 @@ export function TrendStartFields({
           className={fieldClass}
         >
           {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
-            <option key={interval} value={interval}>
+            <option
+              key={interval}
+              value={interval}
+              disabled={trendDisabled(
+                entrySeriesClaim({
+                  kind: trendKind,
+                  timeframe: interval,
+                  compare,
+                  period,
+                  multiplier,
+                }),
+                interval === timeframe,
+              )}
+            >
               {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
             </option>
           ))}
@@ -359,12 +477,25 @@ export function TrendStartFields({
         <HintLabel text="When" required />
         <AppSelect
           name={`${prefix}Compare`}
-          value={dcaIndicatorWhenValue(trendKind, side, compare)}
+          value={currentWhen}
           onChange={(event) => onCompareChange(event.target.value)}
           className={fieldClass}
         >
           {whenOptions.map((option) => (
-            <option key={option.value} value={option.value}>
+            <option
+              key={option.value}
+              value={option.value}
+              disabled={trendDisabled(
+                entrySeriesClaim({
+                  kind: trendKind,
+                  timeframe,
+                  compare: option.value,
+                  period,
+                  multiplier,
+                }),
+                option.value === currentWhen,
+              )}
+            >
               {option.label}
             </option>
           ))}

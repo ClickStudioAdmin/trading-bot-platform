@@ -12,6 +12,15 @@ import {
 } from "@/lib/dca/indicators";
 import type { DcaIndicatorStart } from "@/lib/dca/playbook";
 import type { FuturesTrigger } from "@/lib/futures/model";
+import {
+  claimsConflict,
+  indicatorClaim,
+  priceClaim,
+  SERIES_CONFLICT_MESSAGE,
+  type ConflictClaim,
+} from "@/lib/strategy/conflicts";
+
+export { SERIES_CONFLICT_MESSAGE, type ConflictClaim };
 
 /** Entry, add, and exit stacks share this cap. The initial trigger counts as one. */
 export const STRATEGY_CONDITION_CAP = 12;
@@ -55,6 +64,8 @@ export type EntryConflictSlot = {
   kind: StrategyTriggerKind | "filter";
   join: StrategyJoin;
   webhookId?: string | null;
+  /** Series test used to disable an And that cannot be true. */
+  claim?: ConflictClaim | null;
 };
 
 /**
@@ -170,11 +181,11 @@ function slotsWithJoin(
 }
 
 /**
- * Price crosses in one And group cannot all be true as separate crosses.
  * Two webhooks in one And group cannot both fire on one tick.
  * The same webhook id cannot be selected twice.
  * When every listed webhook id is already used, Signal webhook is disabled.
- * Indicator and Trend stay available.
+ * Indicator, Trend, and Price Cross stay available. Their When choices are
+ * disabled when that choice cannot be true beside an And peer.
  */
 export function entryKindDisabled(input: {
   slots: readonly EntryConflictSlot[];
@@ -182,7 +193,7 @@ export function entryKindDisabled(input: {
   kind: StrategyTriggerKind;
   webhookIds?: readonly string[];
 }): boolean {
-  if (input.kind === "indicator" || input.kind === "trend") {
+  if (input.kind === "indicator" || input.kind === "trend" || input.kind === "price") {
     return false;
   }
   const slots = slotsWithJoin(input.slots, input.index, null);
@@ -190,9 +201,6 @@ export function entryKindDisabled(input: {
   const peers = slots.filter(
     (slot, cursor) => cursor !== input.index && entryGroupOf(slots, cursor) === group,
   );
-  if (input.kind === "price") {
-    return peers.some((slot) => slot.kind === "price");
-  }
   if (peers.some((slot) => slot.kind === "webhook")) {
     return true;
   }
@@ -229,6 +237,71 @@ export function entryWebhookIdDisabled(input: {
   );
 }
 
+/** True when this claim cannot sit in the slot's current And group. */
+export function claimConflictsAt(
+  slots: readonly EntryConflictSlot[],
+  index: number,
+  claim: ConflictClaim | null | undefined,
+): boolean {
+  if (!claim) {
+    return false;
+  }
+  const group = entryGroupOf(slots, index);
+  return slots.some((slot, cursor) => {
+    if (cursor === index || entryGroupOf(slots, cursor) !== group) {
+      return false;
+    }
+    return claimsConflict(slot.claim, claim);
+  });
+}
+
+/** A dropdown choice stays available when it is already selected. */
+export function choiceConflicts(
+  slots: readonly EntryConflictSlot[] | undefined,
+  index: number | undefined,
+  claim: ConflictClaim | null | undefined,
+  selected: boolean,
+): boolean {
+  if (selected || slots == null || index == null) {
+    return false;
+  }
+  return claimConflictsAt(slots, index, claim);
+}
+
+/** Price source or compare that cannot be true beside an And peer. */
+export function priceChoiceConflicts(
+  slots: readonly EntryConflictSlot[] | undefined,
+  index: number | undefined,
+  current: { source: string; compare: string; price: string },
+  next: { source?: string; compare?: string },
+): boolean {
+  const source = next.source ?? current.source;
+  const compare = next.compare ?? current.compare;
+  return choiceConflicts(
+    slots,
+    index,
+    priceClaim({ source, compare, price: current.price }),
+    source === current.source && compare === current.compare,
+  );
+}
+
+/** Kind is allowed, and its series test can sit in this And group. */
+export function entrySlotAllowed(input: {
+  slots: readonly EntryConflictSlot[];
+  index: number;
+  kind: StrategyTriggerKind;
+  webhookIds?: readonly string[];
+}): boolean {
+  if (entryKindDisabled(input)) {
+    return false;
+  }
+  return !claimConflictsAt(
+    input.slots,
+    input.index,
+    input.slots[input.index]?.claim,
+  );
+}
+
 /** And is disabled when that join would put this row in a conflicting group. */
 export function entryJoinDisabled(input: {
   slots: readonly EntryConflictSlot[];
@@ -239,14 +312,55 @@ export function entryJoinDisabled(input: {
     return false;
   }
   const slot = input.slots[input.index];
-  if (!slot || slot.kind === "filter" || slot.kind === "indicator" || slot.kind === "trend") {
+  if (!slot) {
     return false;
   }
   const slots = slotsWithJoin(input.slots, input.index, "and");
-  return entryKindDisabled({
-    slots,
-    index: input.index,
-    kind: slot.kind,
+  if (
+    slot.kind === "webhook" &&
+    entryKindDisabled({
+      slots,
+      index: input.index,
+      kind: slot.kind,
+    })
+  ) {
+    return true;
+  }
+  return claimConflictsAt(slots, input.index, slots[input.index]?.claim);
+}
+
+export function claimFromLeaf(leaf: StrategyLeaf): ConflictClaim | null {
+  if (leaf.kind === "price") {
+    return priceClaim({
+      source: leaf.triggerBy,
+      compare: leaf.compare,
+      price: leaf.price,
+    });
+  }
+  if (leaf.kind === "webhook") {
+    return null;
+  }
+  if (leaf.kind === "filter") {
+    return indicatorClaim({
+      surface: "filter",
+      kind: leaf.spec.kind,
+      timeframe: leaf.spec.timeframe,
+      compare: leaf.spec.compare,
+      level: leaf.spec.level,
+      levelTo: leaf.spec.levelTo,
+      period: leaf.spec.period,
+      multiplier: leaf.spec.multiplier,
+    });
+  }
+  return indicatorClaim({
+    surface: "entry",
+    kind: leaf.start.kind,
+    timeframe: leaf.start.timeframe,
+    compare: leaf.start.compare,
+    level: leaf.start.level,
+    period: leaf.start.period,
+    slowPeriod: leaf.start.slowPeriod,
+    multiplier: leaf.start.multiplier,
   });
 }
 
@@ -260,6 +374,7 @@ export function entryStackConflictMessage(input: {
       kind: leaf.kind,
       join: input.stack.joins[index] ?? "and",
       webhookId: leaf.kind === "webhook" ? leaf.webhookId : null,
+      claim: claimFromLeaf(leaf),
     })),
   ];
   const seen = new Set<string>();
@@ -274,19 +389,21 @@ export function entryStackConflictMessage(input: {
   }
   for (let index = 0; index < slots.length; index += 1) {
     const slot = slots[index];
-    if (!slot || (slot.kind !== "price" && slot.kind !== "webhook")) {
+    if (!slot) {
       continue;
     }
     if (
+      slot.kind === "webhook" &&
       entryKindDisabled({
         slots,
         index,
         kind: slot.kind,
       })
     ) {
-      return slot.kind === "price"
-        ? "Two price crosses cannot be joined with And."
-        : "Two webhooks cannot be joined with And.";
+      return "Two webhooks cannot be joined with And.";
+    }
+    if (claimConflictsAt(slots, index, slot.claim)) {
+      return SERIES_CONFLICT_MESSAGE;
     }
   }
   return null;

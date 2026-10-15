@@ -42,6 +42,7 @@ import {
   ExitConditionStack,
   anchorDisabledKinds,
   anchorDisabledWebhookIds,
+  exitConflictSlots,
   exitRowsFromStack,
   type ExitStackRow,
 } from "@/components/exit-condition-stack";
@@ -53,9 +54,12 @@ import {
   flipEntryRows,
   type EntryStackRow,
 } from "@/components/entry-condition-stack";
+import { indicatorClaim, priceClaim, type ConflictClaim } from "@/lib/strategy/conflicts";
 import {
   entryKindDisabled,
   entryWebhookIdDisabled,
+  priceChoiceConflicts,
+  type EntryConflictSlot,
   type StrategyTriggerKind,
 } from "@/lib/strategy/expr";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
@@ -1123,6 +1127,23 @@ export function DcaPlaybookForm({
   const [shortWebhookId, setShortWebhookId] = useState(
     () => source?.shortWebhookId ?? source?.webhookId ?? signalWebhooks[0]?.id ?? "",
   );
+  const [armTriggerBy, setArmTriggerBy] = useState(
+    source?.armTrigger?.triggerBy ?? "last",
+  );
+  const [armCompare, setArmCompare] = useState(
+    source?.armTrigger?.compare ?? "gte",
+  );
+  const [armPrice, setArmPrice] = useState(optional(source?.armTrigger?.price));
+  const [shortArmTriggerBy, setShortArmTriggerBy] = useState(
+    source?.shortArmTrigger?.triggerBy ?? source?.armTrigger?.triggerBy ?? "last",
+  );
+  const [shortArmCompare, setShortArmCompare] = useState(
+    source?.shortArmTrigger?.compare ??
+      ((source?.armTrigger?.compare ?? "gte") === "gte" ? "lte" : "gte"),
+  );
+  const [shortArmPrice, setShortArmPrice] = useState(
+    optional(source?.shortArmTrigger?.price ?? source?.armTrigger?.price),
+  );
   const [entryRows, setEntryRows] = useState<EntryStackRow[]>(() =>
     entryRowsFromSources(source?.entryStack, source?.confirm),
   );
@@ -1653,8 +1674,33 @@ export function DcaPlaybookForm({
   function dcaStackAnchor(side: "long" | "short"): {
     kind: StrategyTriggerKind;
     webhookId: string | null;
+    claim: ConflictClaim | null;
   } {
     const kind = sideStartKind(side);
+    const shortLeg = direction === "both" && side === "short";
+    const claim =
+      kind === "price"
+        ? priceClaim({
+            source: shortLeg ? shortArmTriggerBy : armTriggerBy,
+            compare: shortLeg ? shortArmCompare : armCompare,
+            price: shortLeg ? shortArmPrice : armPrice,
+          })
+        : kind === "indicator" || kind === "trend"
+          ? indicatorClaim({
+              surface: "entry",
+              kind: shortLeg ? shortIndicatorKind : indicatorKind,
+              timeframe: shortLeg ? shortIndicatorTimeframe : indicatorTimeframe,
+              compare: shortLeg ? shortIndicatorCompare : indicatorCompare,
+              level: shortLeg ? shortIndicatorLevel : indicatorLevel,
+              period: shortLeg ? shortIndicatorPeriod : indicatorPeriod,
+              slowPeriod: shortLeg
+                ? shortIndicatorSlowPeriod
+                : indicatorSlowPeriod,
+              multiplier: shortLeg
+                ? shortIndicatorMultiplier
+                : indicatorMultiplier,
+            })
+          : null;
     if (
       kind === "price" ||
       kind === "indicator" ||
@@ -1664,9 +1710,10 @@ export function DcaPlaybookForm({
       return {
         kind,
         webhookId: kind === "webhook" ? sideWebhook(side) : null,
+        claim,
       };
     }
-    return { kind: "indicator", webhookId: null };
+    return { kind: "indicator", webhookId: null, claim: null };
   }
   function dcaStartDisabled(
     side: "long" | "short",
@@ -1740,27 +1787,23 @@ export function DcaPlaybookForm({
             <div className={fieldRowClass}>
               <TriggerFields
                 prefix={shortLeg ? "shortArm" : "arm"}
-                triggerBy={
-                  shortLeg
-                    ? (source?.shortArmTrigger?.triggerBy ??
-                      source?.armTrigger?.triggerBy ??
-                      "last")
-                    : (source?.armTrigger?.triggerBy ?? "last")
+                triggerBy={shortLeg ? shortArmTriggerBy : armTriggerBy}
+                compare={shortLeg ? shortArmCompare : armCompare}
+                price={shortLeg ? shortArmPrice : armPrice}
+                onTriggerBy={(next) =>
+                  (shortLeg ? setShortArmTriggerBy : setArmTriggerBy)(
+                    next === "mark" || next === "index" ? next : "last",
+                  )
                 }
-                compare={
-                  shortLeg
-                    ? (source?.shortArmTrigger?.compare ??
-                      ((source?.armTrigger?.compare ?? "gte") === "gte"
-                        ? "lte"
-                        : "gte"))
-                    : (source?.armTrigger?.compare ?? "gte")
+                onCompare={(next) =>
+                  (shortLeg ? setShortArmCompare : setArmCompare)(
+                    next === "lte" ? "lte" : "gte",
+                  )
                 }
-                price={optional(
-                  shortLeg
-                    ? (source?.shortArmTrigger?.price ?? source?.armTrigger?.price)
-                    : source?.armTrigger?.price,
-                )}
+                onPrice={shortLeg ? setShortArmPrice : setArmPrice}
                 quoteLabel={policy.quoteLabel}
+                seriesSlots={entryConflictSlots(dcaStackAnchor(side), rows)}
+                seriesIndex={0}
               />
             </div>
           </BotFormGroup>
@@ -1843,6 +1886,8 @@ export function DcaPlaybookForm({
                     ? setShortIndicatorSlowPeriod
                     : setIndicatorSlowPeriod
                 }
+                seriesSlots={entryConflictSlots(dcaStackAnchor(side), rows)}
+                seriesIndex={0}
               />
             </div>
           </BotFormGroup>
@@ -1875,6 +1920,8 @@ export function DcaPlaybookForm({
                     ? setShortIndicatorMultiplier
                     : setIndicatorMultiplier
                 }
+                seriesSlots={entryConflictSlots(dcaStackAnchor(side), rows)}
+                seriesIndex={0}
               />
             </div>
           </BotFormGroup>
@@ -2710,6 +2757,8 @@ export function DcaPlaybookForm({
                   gridClass={fieldRowClass5}
                   fieldClass={fieldClass}
                   labelClass={labelClass}
+                  seriesSlots={exitConflictSlots(exitIf, exitRows)}
+                  seriesIndex={0}
                   disabledKinds={anchorDisabledKinds(
                     exitIf,
                     exitRows,
@@ -2763,6 +2812,8 @@ export function DcaPlaybookForm({
                   gridClass={fieldRowClass5}
                   fieldClass={fieldClass}
                   labelClass={labelClass}
+                  seriesSlots={exitConflictSlots(shortExitIf, shortExitRows)}
+                  seriesIndex={0}
                   disabledKinds={anchorDisabledKinds(
                     shortExitIf,
                     shortExitRows,
@@ -2820,6 +2871,8 @@ export function DcaPlaybookForm({
                 gridClass={fieldRowClass5}
                 fieldClass={fieldClass}
                 labelClass={labelClass}
+                seriesSlots={exitConflictSlots(exitIf, exitRows)}
+                seriesIndex={0}
                 disabledKinds={anchorDisabledKinds(
                   exitIf,
                   exitRows,
@@ -3315,13 +3368,23 @@ function TriggerFields({
   triggerBy,
   compare,
   price,
+  onTriggerBy,
+  onCompare,
+  onPrice,
   quoteLabel,
+  seriesSlots,
+  seriesIndex,
 }: {
   prefix: "arm" | "disarm" | "shortArm";
   triggerBy: string;
   compare: string;
   price: string;
+  onTriggerBy: (next: string) => void;
+  onCompare: (next: string) => void;
+  onPrice: (next: string) => void;
   quoteLabel: string;
+  seriesSlots?: readonly EntryConflictSlot[];
+  seriesIndex?: number;
 }) {
   return (
     <>
@@ -3329,30 +3392,56 @@ function TriggerFields({
         <HintLabel text="Price" required />
         <AppSelect
           name={`${prefix}TriggerBy`}
-          defaultValue={triggerBy}
+          value={triggerBy}
+          onChange={(event) => onTriggerBy(event.target.value)}
           className={fieldClass}
         >
-          <option value="last">Last</option>
-          <option value="mark">Mark</option>
-          <option value="index">Index</option>
+          {(["last", "mark", "index"] as const).map((source) => (
+            <option
+              key={source}
+              value={source}
+              disabled={priceChoiceConflicts(
+                seriesSlots,
+                seriesIndex,
+                { source: triggerBy, compare, price },
+                { source },
+              )}
+            >
+              {source === "last" ? "Last" : source === "mark" ? "Mark" : "Index"}
+            </option>
+          ))}
         </AppSelect>
       </label>
       <label className={labelClass}>
         <HintLabel text="When" required />
         <AppSelect
           name={`${prefix}Compare`}
-          defaultValue={compare}
+          value={compare}
+          onChange={(event) => onCompare(event.target.value)}
           className={fieldClass}
         >
-          <option value="gte">At or above</option>
-          <option value="lte">At or below</option>
+          {(["gte", "lte"] as const).map((next) => (
+            <option
+              key={next}
+              value={next}
+              disabled={priceChoiceConflicts(
+                seriesSlots,
+                seriesIndex,
+                { source: triggerBy, compare, price },
+                { compare: next },
+              )}
+            >
+              {next === "gte" ? "At or above" : "At or below"}
+            </option>
+          ))}
         </AppSelect>
       </label>
       <label className={labelClass}>
         <HintLabel text={`Level (${quoteLabel})`} required />
         <GroupedNumberInput
           name={`${prefix}Price`}
-          defaultValue={price}
+          value={price}
+          onChange={onPrice}
           allowDecimal
           className={fieldClass}
         />

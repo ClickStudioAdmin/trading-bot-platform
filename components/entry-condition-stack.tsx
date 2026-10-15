@@ -25,10 +25,17 @@ import {
 } from "@/lib/dca/playbook";
 import type { FuturesSide, FuturesTrigger } from "@/lib/futures/model";
 import {
+  indicatorClaim,
+  priceClaim,
+  type ConflictClaim,
+} from "@/lib/strategy/conflicts";
+import {
   STRATEGY_CONDITION_CAP,
   entryJoinDisabled,
   entryKindDisabled,
+  entrySlotAllowed,
   entryWebhookIdDisabled,
+  priceChoiceConflicts,
   resolveEntryStack,
   type EntryConflictSlot,
   type EntryStack,
@@ -66,6 +73,49 @@ export type EntryStackRow = {
 };
 
 export type EntryWebhookOption = { id: string; name: string };
+
+export type EntryAnchor = {
+  kind: StrategyTriggerKind;
+  webhookId?: string | null;
+  claim?: ConflictClaim | null;
+};
+
+export function claimFromEntryDraft(
+  draft: EntryConditionDraft,
+): ConflictClaim | null {
+  if (draft.kind === "price") {
+    return priceClaim({
+      source: draft.triggerBy,
+      compare: draft.compare,
+      price: draft.price,
+    });
+  }
+  if (draft.kind === "webhook") {
+    return null;
+  }
+  if (draft.kind === "filter") {
+    return indicatorClaim({
+      surface: "filter",
+      kind: draft.spec.kind,
+      timeframe: draft.spec.timeframe,
+      compare: draft.spec.compare,
+      level: draft.spec.level,
+      levelTo: draft.spec.levelTo,
+      period: draft.spec.period,
+      multiplier: draft.spec.multiplier,
+    });
+  }
+  return indicatorClaim({
+    surface: "entry",
+    kind: draft.indicatorKind,
+    timeframe: draft.timeframe,
+    compare: draft.compare,
+    level: draft.level,
+    period: draft.period,
+    slowPeriod: draft.slowPeriod,
+    multiplier: draft.multiplier,
+  });
+}
 
 function rowKey(): string {
   return `entry-${Math.random().toString(36).slice(2, 10)}`;
@@ -244,7 +294,7 @@ export function flipEntryRows(
 }
 
 export function entryConflictSlots(
-  anchor: { kind: StrategyTriggerKind; webhookId?: string | null },
+  anchor: EntryAnchor,
   rows: EntryStackRow[],
 ): EntryConflictSlot[] {
   return [
@@ -252,11 +302,13 @@ export function entryConflictSlots(
       kind: anchor.kind,
       join: "and",
       webhookId: anchor.kind === "webhook" ? (anchor.webhookId ?? null) : null,
+      claim: anchor.claim ?? null,
     },
     ...rows.map((row) => ({
       kind: row.draft.kind,
       join: row.join,
       webhookId: row.draft.kind === "webhook" ? row.draft.webhookId : null,
+      claim: claimFromEntryDraft(row.draft),
     })),
   ];
 }
@@ -321,7 +373,7 @@ function draftForKind(
 function nextRow(
   side: FuturesSide,
   rows: EntryStackRow[],
-  anchor: { kind: StrategyTriggerKind; webhookId?: string | null },
+  anchor: EntryAnchor,
   webhookIds: string[],
   triggerTimeframe: DcaIndicatorTimeframe | null,
 ): EntryStackRow {
@@ -333,19 +385,17 @@ function nextRow(
     "webhook",
   ];
   let kind: StrategyTriggerKind = "indicator";
+  let join: StrategyJoin = "and";
   for (const candidate of kinds) {
-    const slots = entryConflictSlots(anchor, [
+    const draft = draftForKind(candidate, side, timeframe);
+    const andSlots = entryConflictSlots(anchor, [
       ...rows,
-      {
-        key: "next",
-        join: "and",
-        draft: draftForKind(candidate, side, timeframe),
-      },
+      { key: "next", join: "and", draft },
     ]);
     if (
-      !entryKindDisabled({
-        slots,
-        index: slots.length - 1,
+      entrySlotAllowed({
+        slots: andSlots,
+        index: andSlots.length - 1,
         kind: candidate,
         webhookIds,
       })
@@ -353,10 +403,26 @@ function nextRow(
       kind = candidate;
       break;
     }
+    const orSlots = entryConflictSlots(anchor, [
+      ...rows,
+      { key: "next", join: "or", draft },
+    ]);
+    if (
+      entrySlotAllowed({
+        slots: orSlots,
+        index: orSlots.length - 1,
+        kind: candidate,
+        webhookIds,
+      })
+    ) {
+      kind = candidate;
+      join = "or";
+      break;
+    }
   }
   return {
     key: rowKey(),
-    join: "and",
+    join,
     draft: draftForKind(kind, side, timeframe),
   };
 }
@@ -384,7 +450,7 @@ export function EntryConditionStack({
   side: FuturesSide;
   rows: EntryStackRow[];
   onChange: (rows: EntryStackRow[]) => void;
-  anchor: { kind: StrategyTriggerKind; webhookId?: string | null };
+  anchor: EntryAnchor;
   webhooks?: EntryWebhookOption[];
   triggerTimeframe?: DcaIndicatorTimeframe | null;
   gridClass: string;
@@ -493,6 +559,8 @@ export function EntryConditionStack({
                   gridClass={gridClass}
                   fieldClass={fieldClass}
                   labelClass={labelClass}
+                  seriesSlots={slots}
+                  seriesIndex={slotIndex}
                 />
               </>
             ) : (
@@ -558,9 +626,28 @@ export function EntryConditionStack({
                         }
                         className={fieldClass}
                       >
-                        <option value="last">Last is</option>
-                        <option value="mark">Mark is</option>
-                        <option value="index">Index is</option>
+                        {(["last", "mark", "index"] as const).map((source) => (
+                          <option
+                            key={source}
+                            value={source}
+                            disabled={priceChoiceConflicts(
+                              slots,
+                              slotIndex,
+                              {
+                                source: draft.triggerBy,
+                                compare: draft.compare,
+                                price: draft.price,
+                              },
+                              { source },
+                            )}
+                          >
+                            {source === "last"
+                              ? "Last is"
+                              : source === "mark"
+                                ? "Mark is"
+                                : "Index is"}
+                          </option>
+                        ))}
                       </AppSelect>
                     </label>
                     <label className={labelClass}>
@@ -579,8 +666,24 @@ export function EntryConditionStack({
                         }
                         className={fieldClass}
                       >
-                        <option value="gte">At or above</option>
-                        <option value="lte">At or below</option>
+                        {(["gte", "lte"] as const).map((compare) => (
+                          <option
+                            key={compare}
+                            value={compare}
+                            disabled={priceChoiceConflicts(
+                              slots,
+                              slotIndex,
+                              {
+                                source: draft.triggerBy,
+                                compare: draft.compare,
+                                price: draft.price,
+                              },
+                              { compare },
+                            )}
+                          >
+                            {compare === "gte" ? "At or above" : "At or below"}
+                          </option>
+                        ))}
                       </AppSelect>
                     </label>
                     <label className={labelClass}>
@@ -609,6 +712,8 @@ export function EntryConditionStack({
                     level={draft.level}
                     period={draft.period}
                     slowPeriod={draft.slowPeriod}
+                    seriesSlots={slots}
+                    seriesIndex={slotIndex}
                     onKindChange={(indicatorKind) =>
                       patchDraft(row.key, { indicatorKind })
                     }
@@ -633,6 +738,8 @@ export function EntryConditionStack({
                     compare={draft.compare}
                     period={draft.period}
                     multiplier={draft.multiplier}
+                    seriesSlots={slots}
+                    seriesIndex={slotIndex}
                     onKindChange={(indicatorKind) =>
                       patchDraft(row.key, { indicatorKind })
                     }

@@ -33,6 +33,7 @@ import {
   ExitConditionStack,
   anchorDisabledKinds,
   anchorDisabledWebhookIds,
+  exitConflictSlots,
   exitRowsFromStack,
   exitStackFromRows,
   type ExitStackRow,
@@ -1290,6 +1291,8 @@ function RuleCard({
                   gridClass={fieldRow5}
                   fieldClass={botFieldClass}
                   labelClass={botLabelClass}
+                  seriesSlots={exitConflictSlots(exitIf, exitRows)}
+                  seriesIndex={0}
                   disabledKinds={anchorDisabledKinds(
                     exitIf,
                     exitRows,

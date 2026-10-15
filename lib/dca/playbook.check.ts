@@ -1344,11 +1344,74 @@ conflictForm.set("armPrice", "100");
 conflictForm.set("entryCount", "1");
 conflictForm.set("entry0Join", "and");
 conflictForm.set("entry0Source", "price");
-conflictForm.set("entry0TriggerBy", "mark");
+conflictForm.set("entry0TriggerBy", "last");
 conflictForm.set("entry0TriggerCompare", "lte");
 conflictForm.set("entry0TriggerPrice", "90");
 const conflictParsed = parseDcaPlaybookForm(conflictForm);
 assert.equal(conflictParsed.ok, false);
+if (!conflictParsed.ok) {
+  assert.equal(
+    conflictParsed.error,
+    "These conditions cannot be true at the same time.",
+  );
+}
+const priceBandForm = new FormData();
+priceBandForm.set("symbol", "BTCUSDT");
+priceBandForm.set("direction", "long");
+priceBandForm.set("clipSize", "0.01");
+priceBandForm.set("sizeUnit", "qty");
+priceBandForm.set("startKind", "price");
+priceBandForm.set("armTriggerBy", "last");
+priceBandForm.set("armCompare", "gte");
+priceBandForm.set("armPrice", "90");
+priceBandForm.set("entryCount", "1");
+priceBandForm.set("entry0Join", "and");
+priceBandForm.set("entry0Source", "price");
+priceBandForm.set("entry0TriggerBy", "last");
+priceBandForm.set("entry0TriggerCompare", "lte");
+priceBandForm.set("entry0TriggerPrice", "100");
+assert.equal(parseDcaPlaybookForm(priceBandForm).ok, true);
+const otherSourceForm = new FormData();
+otherSourceForm.set("symbol", "BTCUSDT");
+otherSourceForm.set("direction", "long");
+otherSourceForm.set("clipSize", "0.01");
+otherSourceForm.set("sizeUnit", "qty");
+otherSourceForm.set("startKind", "price");
+otherSourceForm.set("armTriggerBy", "last");
+otherSourceForm.set("armCompare", "gte");
+otherSourceForm.set("armPrice", "100");
+otherSourceForm.set("entryCount", "1");
+otherSourceForm.set("entry0Join", "and");
+otherSourceForm.set("entry0Source", "price");
+otherSourceForm.set("entry0TriggerBy", "mark");
+otherSourceForm.set("entry0TriggerCompare", "lte");
+otherSourceForm.set("entry0TriggerPrice", "90");
+assert.equal(parseDcaPlaybookForm(otherSourceForm).ok, true);
+const macdForm = new FormData();
+macdForm.set("symbol", "BTCUSDT");
+macdForm.set("direction", "long");
+macdForm.set("clipSize", "0.01");
+macdForm.set("sizeUnit", "qty");
+macdForm.set("startKind", "indicator");
+macdForm.set("indicatorKind", "macd");
+macdForm.set("indicatorTimeframe", "15");
+macdForm.set("indicatorCompare", "cross_gte");
+macdForm.set("indicatorLevel", "0");
+macdForm.set("entryCount", "1");
+macdForm.set("entry0Join", "and");
+macdForm.set("entry0Source", "indicator");
+macdForm.set("entry0indicatorKind", "macd");
+macdForm.set("entry0indicatorTimeframe", "15");
+macdForm.set("entry0indicatorCompare", "cross_lte");
+macdForm.set("entry0indicatorLevel", "5");
+const macdParsed = parseDcaPlaybookForm(macdForm);
+assert.equal(macdParsed.ok, false);
+if (!macdParsed.ok) {
+  assert.equal(
+    macdParsed.error,
+    "These conditions cannot be true at the same time.",
+  );
+}
 
 const parsed = parseDcaPlaybookForm(form);
 assert.equal(parsed.ok, true);

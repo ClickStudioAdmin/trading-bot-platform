@@ -43,6 +43,7 @@ import {
   type SupertrendBar,
 } from "@/lib/dca/indicators";
 import { dcaBreakevenPrice, dcaTighterStopPrice } from "@/lib/dca/grid";
+import { indicatorClaim, priceClaim } from "@/lib/strategy/conflicts";
 import {
   confirmFromEntryStack,
   emptyEntryStack,
@@ -405,10 +406,30 @@ export function parseFuturesConditionForm(
     (input.entrySource === "indicator" || input.entrySource === "trend")
       ? indicator.start.timeframe
       : null;
+  const triggerClaim =
+    input.entrySource === "price"
+      ? priceClaim({
+          source: form.get(`${prefix}triggerBy`),
+          compare: form.get(`${prefix}triggerCompare`),
+          price: form.get(`${prefix}triggerPrice`),
+        })
+      : indicator.start
+        ? indicatorClaim({
+            surface: "entry",
+            kind: indicator.start.kind,
+            timeframe: indicator.start.timeframe,
+            compare: indicator.start.compare,
+            level: indicator.start.level,
+            period: indicator.start.period,
+            slowPeriod: indicator.start.slowPeriod,
+            multiplier: indicator.start.multiplier,
+          })
+        : null;
   const stacked = parseEntryStackForm(form, prefix, triggerTimeframe, {
     kind: input.entrySource,
     join: "and",
     webhookId: String(form.get(`${prefix}webhookId`) ?? "").trim() || null,
+    claim: triggerClaim,
   });
   if (!stacked.ok) {
     return stacked;
