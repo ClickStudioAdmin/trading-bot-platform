@@ -1125,7 +1125,9 @@ function RuleCard({
               }
             }}
           >
-            <div className={fieldRow5}>
+            <div className="@container">
+            <div className="grid items-start gap-4 @min-[40rem]:grid-cols-2">
+              <div className="grid grid-cols-2 gap-4">
               <BotField label="Type" required>
                 <AppSelect
                   name={`${prefix}slKind`}
@@ -1199,15 +1201,14 @@ function RuleCard({
               ) : (
                 <input type="hidden" name={`${prefix}slLimitPrice`} value="" />
               )}
-            </div>
-            <div className="border-t border-line pt-4">
+              </div>
               <OptionalSection
                 title="Move Breakeven"
-                nested
+                className="min-w-0"
                 enabled={breakevenOn}
                 onEnabled={setBreakevenOn}
               >
-                <div className={fieldRow}>
+                <div className="grid grid-cols-2 gap-4">
                   <BotField label="Move stop to breakeven at %" required>
                     <span className="relative mt-0.5 block">
                       <GroupedNumberInput
@@ -1239,6 +1240,7 @@ function RuleCard({
                   </BotField>
                 </div>
               </OptionalSection>
+            </div>
             </div>
           </OptionalSection>
           <OptionalSection

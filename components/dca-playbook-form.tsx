@@ -2601,58 +2601,58 @@ export function DcaPlaybookForm({
           }
         }}
       >
-        <div className={fieldRowClass}>
-          <label className={labelClass}>
-            <HintLabel text="Basis" required />
-            <AppSelect
-              name="stopLossBasis"
-              value={stopLossBasis}
-              onChange={(event) =>
-                setStopLossBasis(parseDcaExitBasis(event.target.value))
-              }
-              className={fieldClass}
+        <div className="@container">
+          <div className="grid grid-cols-2 items-start gap-4 @min-[40rem]:grid-cols-4">
+            <label className={labelClass}>
+              <HintLabel text="Basis" required />
+              <AppSelect
+                name="stopLossBasis"
+                value={stopLossBasis}
+                onChange={(event) =>
+                  setStopLossBasis(parseDcaExitBasis(event.target.value))
+                }
+                className={fieldClass}
+              >
+                <option value="average">Average entry</option>
+                <option value="first_entry">First fill</option>
+              </AppSelect>
+            </label>
+            <BotField label="Stop loss %" required>
+              <PercentInput
+                name="stopLossPct"
+                value={stopLossPct}
+                onChange={setStopLossPct}
+                ariaLabel="Stop loss percent"
+              />
+            </BotField>
+            <OptionalSection
+              title="Move Breakeven"
+              className="col-span-2"
+              enabled={breakevenOn}
+              onEnabled={setBreakevenOn}
             >
-              <option value="average">Average entry</option>
-              <option value="first_entry">First fill</option>
-            </AppSelect>
-          </label>
-          <BotField label="Stop loss %" required>
-            <PercentInput
-              name="stopLossPct"
-              value={stopLossPct}
-              onChange={setStopLossPct}
-              ariaLabel="Stop loss percent"
-            />
-          </BotField>
-        </div>
-        <div className="border-t border-line pt-4">
-          <OptionalSection
-            title="Move Breakeven"
-            nested
-            enabled={breakevenOn}
-            onEnabled={setBreakevenOn}
-          >
-            <div className={fieldRowClass}>
-              <BotField label="Move stop to breakeven at %" required>
-                <PercentInput
-                  name="breakevenActivationPct"
-                  value={breakevenActivationPct}
-                  onChange={setBreakevenActivationPct}
-                  ariaLabel="Move stop to breakeven at percent"
-                />
-              </BotField>
-              <label className={labelClass}>
-                Breakeven offset %
-                <PercentInput
-                  name="breakevenOffsetPct"
-                  value={breakevenOffsetPct}
-                  onChange={setBreakevenOffsetPct}
-                  placeholder="0"
-                  ariaLabel="Breakeven offset percent"
-                />
-              </label>
-            </div>
-          </OptionalSection>
+              <div className="grid grid-cols-2 gap-4">
+                <BotField label="Move stop to breakeven at %" required>
+                  <PercentInput
+                    name="breakevenActivationPct"
+                    value={breakevenActivationPct}
+                    onChange={setBreakevenActivationPct}
+                    ariaLabel="Move stop to breakeven at percent"
+                  />
+                </BotField>
+                <label className={labelClass}>
+                  Breakeven offset %
+                  <PercentInput
+                    name="breakevenOffsetPct"
+                    value={breakevenOffsetPct}
+                    onChange={setBreakevenOffsetPct}
+                    placeholder="0"
+                    ariaLabel="Breakeven offset percent"
+                  />
+                </label>
+              </div>
+            </OptionalSection>
+          </div>
         </div>
       </OptionalSection>
 

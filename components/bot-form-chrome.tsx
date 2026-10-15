@@ -124,6 +124,7 @@ export function OptionalSection({
   onEnabled,
   nested = false,
   locked = false,
+  className,
   children,
 }: {
   title: string;
@@ -132,12 +133,13 @@ export function OptionalSection({
   onEnabled: (next: boolean) => void;
   nested?: boolean;
   locked?: boolean;
+  className?: string;
   children: ReactNode;
 }) {
   const { markDirty } = useDeskFormStatus();
   return (
     <section
-      className={`col-span-full block w-full min-w-0 space-y-3${
+      className={`block min-w-0 space-y-3 ${className ?? "col-span-full w-full"}${
         locked ? " pointer-events-none opacity-40" : ""
       }`}
       inert={locked || undefined}

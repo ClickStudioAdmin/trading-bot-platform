@@ -229,6 +229,7 @@ function OptionalSection({
   enabled,
   onEnabled,
   nested = false,
+  className,
   children,
 }: {
   title: string;
@@ -236,11 +237,12 @@ function OptionalSection({
   enabled: boolean;
   onEnabled: (next: boolean) => void;
   nested?: boolean;
+  className?: string;
   children: ReactNode;
 }) {
   return (
     <section
-      className="col-span-full block w-full min-w-0 space-y-3"
+      className={`block min-w-0 space-y-3 ${className ?? "col-span-full w-full"}`}
     >
       <div className="flex items-center gap-3">
         <label className="inline-flex shrink-0 cursor-pointer">
@@ -2086,8 +2088,16 @@ export function ThemeBotFormDraft() {
                 }
               }}
             >
+              <div className="@container">
+                <div
+                  className={
+                    desk === "dca"
+                      ? "grid grid-cols-2 items-start gap-4 @min-[40rem]:grid-cols-4"
+                      : "grid items-start gap-4 @min-[40rem]:grid-cols-2"
+                  }
+                >
               {desk === "dca" ? (
-                <div className={rowClass}>
+                <>
                   <Field label="Basis" required>
                     <AppSelect
                       className={fieldClass}
@@ -2106,9 +2116,9 @@ export function ThemeBotFormDraft() {
                       invalid={showFieldErrors && missing.slValue}
                     />
                   </Field>
-                </div>
+                </>
               ) : (
-                <div className={rowClass}>
+                <div className="grid grid-cols-2 gap-4">
                   <Field label="Type" required>
                     <AppSelect
                       className={fieldClass}
@@ -2173,14 +2183,13 @@ export function ThemeBotFormDraft() {
                   ) : null}
                 </div>
               )}
-              <div className="border-t border-line pt-4">
                 <OptionalSection
                   title="Move Breakeven"
-                  nested
+                  className={desk === "dca" ? "col-span-2" : "min-w-0"}
                   enabled={breakevenOn}
                   onEnabled={setBreakevenOn}
                 >
-                  <div className={rowClass}>
+                  <div className="grid grid-cols-2 gap-4">
                     <Field label="Move stop to breakeven at %" required>
                       <PercentField
                         value={breakevenAt}
@@ -2198,6 +2207,7 @@ export function ThemeBotFormDraft() {
                     </Field>
                   </div>
                 </OptionalSection>
+                </div>
               </div>
             </OptionalSection>
 
