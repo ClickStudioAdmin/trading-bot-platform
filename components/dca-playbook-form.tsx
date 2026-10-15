@@ -1754,7 +1754,7 @@ export function DcaPlaybookForm({
       <BotFormGroup locked={cycleLocked}>
         <div className={fieldRowClass}>
           <label
-            className={`${labelClass} ${pairSpan}${lockClass}`}
+            className={`${labelClass}${lockClass}`}
             inert={cycleLocked || undefined}
             aria-disabled={cycleLocked || undefined}
           >

@@ -1367,7 +1367,7 @@ export function ThemeBotFormDraft() {
               </Field>
               </>
             ) : (
-              <Field label="Condition Type" className="lg:col-span-2" required>
+              <Field label="Condition Type" required>
                 <AppSelect
                   value={startKind}
                   onChange={(event) =>
@@ -1699,7 +1699,7 @@ export function ThemeBotFormDraft() {
                 <>
             <Group>
               <div className={rowClass}>
-                <Field label="Condition Type" className="lg:col-span-2" required>
+                <Field label="Condition Type" required>
                   <AppSelect
                     value={shortStartKind}
                     onChange={(event) =>
