@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+import { GroupedConditions } from "@/components/condition-group";
 import { AppSelect } from "@/components/app-select";
 import { HintLabel } from "@/components/bot-form-chrome";
 import { HardExitFields } from "@/components/hard-exit-fields";
@@ -147,6 +148,8 @@ export function ExitConditionStack({
   fieldClass,
   labelClass,
   named = true,
+  grouped = false,
+  lead,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -158,6 +161,9 @@ export function ExitConditionStack({
   fieldClass: string;
   labelClass: string;
   named?: boolean;
+  /** Theme sample. Draws And rows as one card and starts a new card at Or. */
+  grouped?: boolean;
+  lead?: ReactNode;
 }) {
   const rowsRef = useRef(rows);
   useEffect(() => {
@@ -224,97 +230,142 @@ export function ExitConditionStack({
         : base;
     commit([...current, { key: rowKey(), join, draft }]);
   }
-  return (
-    <div className="space-y-4">
-      {named ? (
-        <input type="hidden" name={`${prefix}StackCount`} value={String(rows.length)} />
-      ) : null}
-      {rows.map((row, index) => {
-        const slotIndex = anchorSlot ? index + 1 : index;
-        const disabledKinds = (["price", "indicator", "trend", "webhook"] as const).filter(
-          (kind) =>
-            kind !== row.draft.trigger &&
-            entryKindDisabled({
+  function joinControl(row: ExitStackRow, index: number, slotIndex: number, labelled: boolean) {
+    return (
+      <label className={`${labelled ? labelClass : ""} w-36 shrink-0`}>
+        {labelled ? (
+          <HintLabel text="Join" required />
+        ) : (
+          <span className="sr-only">
+            How this condition combines with the ones above
+          </span>
+        )}
+        <AppSelect
+          name={named ? `${prefix}Stack${index}Join` : undefined}
+          value={row.join}
+          aria-label={
+            labelled ? undefined : "How this condition combines with the ones above"
+          }
+          onChange={(event) => {
+            const join = event.target.value === "or" ? "or" : "and";
+            replace(row.key, { ...row, join });
+          }}
+          className={fieldClass}
+        >
+          <option
+            value="and"
+            disabled={entryJoinDisabled({
               slots,
               index: slotIndex,
-              kind,
-              webhookIds,
-            }),
-        );
-        return (
-          <div key={row.key} className="space-y-3 border-t border-line pt-4">
-            <div className="flex items-end justify-between gap-3">
-              <label className={`${labelClass} w-36`}>
-                <HintLabel text="Join" required />
-                <AppSelect
-                  name={named ? `${prefix}Stack${index}Join` : undefined}
-                  value={row.join}
-                  onChange={(event) => {
-                    const join = event.target.value === "or" ? "or" : "and";
-                    replace(row.key, { ...row, join });
-                  }}
-                  className={fieldClass}
-                >
-                  <option
-                    value="and"
-                    disabled={entryJoinDisabled({
-                      slots,
-                      index: slotIndex,
-                      join: "and",
-                    })}
-                  >
-                    And
-                  </option>
-                  <option value="or">Or</option>
-                </AppSelect>
-              </label>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 pb-2 text-sm text-danger"
-                onClick={() =>
-                  onChange(rows.filter((item) => item.key !== row.key))
-                }
-              >
-                <IconTrash size={14} className="size-3.5" />
-                Remove
-              </button>
-            </div>
-            <HardExitFields
-              prefix={`${prefix}Stack${index}`}
-              side={side}
-              value={row.draft}
-              onChange={(draft) => replace(row.key, { ...row, draft })}
-              webhooks={webhooks}
-              gridClass={gridClass}
-              fieldClass={fieldClass}
-              labelClass={labelClass}
-              named={named}
-              seriesSlots={slots}
-              seriesIndex={slotIndex}
-              disabledKinds={[...disabledKinds]}
-              disabledWebhookIds={webhooks
-                .map((hook) => hook.id)
-                .filter((id) =>
-                  entryWebhookIdDisabled({
-                    slots,
-                    index: slotIndex,
-                    webhookId: id,
-                  }),
-                )}
-            />
+              join: "and",
+            })}
+          >
+            And
+          </option>
+          <option value="or">Or</option>
+        </AppSelect>
+      </label>
+    );
+  }
+  function removeControl(row: ExitStackRow) {
+    return (
+      <button
+        type="button"
+        className="inline-flex items-center gap-2 pb-2 text-sm text-danger"
+        onClick={() => onChange(rows.filter((item) => item.key !== row.key))}
+      >
+        <IconTrash size={14} className="size-3.5" />
+        Remove
+      </button>
+    );
+  }
+  const rendered = rows.map((row, index) => {
+    const slotIndex = anchorSlot ? index + 1 : index;
+    const disabledKinds = (["price", "indicator", "trend", "webhook"] as const).filter(
+      (kind) =>
+        kind !== row.draft.trigger &&
+        entryKindDisabled({
+          slots,
+          index: slotIndex,
+          kind,
+          webhookIds,
+        }),
+    );
+    return {
+      key: row.key,
+      join: row.join,
+      row,
+      index,
+      slotIndex,
+      body: (
+        <HardExitFields
+          prefix={`${prefix}Stack${index}`}
+          side={side}
+          value={row.draft}
+          onChange={(draft) => replace(row.key, { ...row, draft })}
+          webhooks={webhooks}
+          gridClass={gridClass}
+          fieldClass={fieldClass}
+          labelClass={labelClass}
+          named={named}
+          seriesSlots={slots}
+          seriesIndex={slotIndex}
+          disabledKinds={[...disabledKinds]}
+          disabledWebhookIds={webhooks
+            .map((hook) => hook.id)
+            .filter((id) =>
+              entryWebhookIdDisabled({
+                slots,
+                index: slotIndex,
+                webhookId: id,
+              }),
+            )}
+        />
+      ),
+    };
+  });
+  const countInput = named ? (
+    <input type="hidden" name={`${prefix}StackCount`} value={String(rows.length)} />
+  ) : null;
+  const addButton =
+    rows.length + 1 < STRATEGY_CONDITION_CAP ? (
+      <button
+        type="button"
+        className="inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink"
+        onClick={addRow}
+      >
+        <IconPlus size={14} className="size-3.5" />
+        Add condition
+      </button>
+    ) : null;
+  if (grouped) {
+    return (
+      <div className="space-y-3">
+        {countInput}
+        <GroupedConditions
+          rows={rendered}
+          lead={lead}
+          renderJoin={(item) => joinControl(item.row, item.index, item.slotIndex, false)}
+          renderRemove={(item) => removeControl(item.row)}
+          renderBody={(item) => item.body}
+        />
+        {addButton}
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-4">
+      {countInput}
+      {rendered.map((item) => (
+        <div key={item.key} className="space-y-3 border-t border-line pt-4">
+          <div className="flex items-end justify-between gap-3">
+            {joinControl(item.row, item.index, item.slotIndex, true)}
+            {removeControl(item.row)}
           </div>
-        );
-      })}
-      {rows.length + 1 < STRATEGY_CONDITION_CAP ? (
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink"
-          onClick={addRow}
-        >
-          <IconPlus size={14} className="size-3.5" />
-          Add condition
-        </button>
-      ) : null}
+          {item.body}
+        </div>
+      ))}
+      {addButton}
     </div>
   );
 }

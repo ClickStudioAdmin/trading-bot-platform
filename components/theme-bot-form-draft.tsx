@@ -635,7 +635,18 @@ export function ThemeBotFormDraft() {
   >("long");
   const [shortStartKind, setShortStartKind] = useState<StartKind>("indicator");
   const [shortWebhookId, setShortWebhookId] = useState("sample");
-  const [shortEntryRows, setShortEntryRows] = useState<EntryStackRow[]>([]);
+  const [shortEntryRows, setShortEntryRows] = useState<EntryStackRow[]>([
+    {
+      key: "sample-short-and",
+      join: "and",
+      draft: { kind: "price", triggerBy: "last", compare: "lte", price: "90" },
+    },
+    {
+      key: "sample-short-or",
+      join: "or",
+      draft: { kind: "webhook", webhookId: "sample" },
+    },
+  ]);
   const [startKind, setStartKind] = useState<StartKind>("indicator");
   const [priceSource, setPriceSource] = useState("last");
   const [priceWhen, setPriceWhen] = useState("gte");
@@ -665,14 +676,25 @@ export function ThemeBotFormDraft() {
   );
   const [confirmOn, setConfirmOn] = useState(false);
   const [confirm, setConfirm] = useState<DcaFilterSpec | null>(null);
-  const [entryRows, setEntryRows] = useState<EntryStackRow[]>([]);
+  const [entryRows, setEntryRows] = useState<EntryStackRow[]>([
+    {
+      key: "sample-and",
+      join: "and",
+      draft: { kind: "price", triggerBy: "last", compare: "gte", price: "100" },
+    },
+    {
+      key: "sample-or",
+      join: "or",
+      draft: { kind: "webhook", webhookId: "sample" },
+    },
+  ]);
   const [shortConfirmOn, setShortConfirmOn] = useState(false);
   const [shortConfirm, setShortConfirm] = useState<DcaFilterSpec | null>(null);
   const [tpOn, setTpOn] = useState(false);
   const [trailOn, setTrailOn] = useState(false);
   const [slOn, setSlOn] = useState(false);
   const [breakevenOn, setBreakevenOn] = useState(false);
-  const [exitIfOn, setExitIfOn] = useState(false);
+  const [exitIfOn, setExitIfOn] = useState(true);
   const [shortExitIfOn, setShortExitIfOn] = useState(false);
   const [minApr, setMinApr] = useState("");
   const [minDte, setMinDte] = useState("");
@@ -760,8 +782,19 @@ export function ThemeBotFormDraft() {
   const [slLimitPrice, setSlLimitPrice] = useState("");
   const [breakevenAt, setBreakevenAt] = useState("");
   const [breakevenOffset, setBreakevenOffset] = useState("0");
-  const [exitIf, setExitIf] = useState<HardExitDraft | null>(null);
-  const [exitRows, setExitRows] = useState<ExitStackRow[]>([]);
+  const [exitIf, setExitIf] = useState<HardExitDraft | null>(defaultHardExit("long"));
+  const [exitRows, setExitRows] = useState<ExitStackRow[]>([
+    {
+      key: "sample-exit-and",
+      join: "and",
+      draft: { trigger: "price", triggerBy: "last", compare: "lte", price: "90" },
+    },
+    {
+      key: "sample-exit-or",
+      join: "or",
+      draft: { trigger: "webhook", webhookId: "sample" },
+    },
+  ]);
   const [shortExitIf, setShortExitIf] = useState<HardExitDraft | null>(null);
   const [shortExitRows, setShortExitRows] = useState<ExitStackRow[]>([]);
   const themeWebhooks = [{ id: "sample", name: "Sample signal" }];
@@ -1294,6 +1327,9 @@ export function ThemeBotFormDraft() {
               : "Long entry"
           }
         >
+        {(() => {
+          const lead = (
+            <>
         <Group>
           <div className={rowClass}>
             {desk === "perps" ? (
@@ -1463,52 +1499,70 @@ export function ThemeBotFormDraft() {
             </div>
           )}
         </Group>
-
-        {!closing ? (
-          desk === "perps" ? (
-            <EntryConditionStack
-              prefix="themeEntry"
-              side={entrySide}
-              rows={entryRows}
-              onChange={setEntryRows}
-              anchor={themeLongAnchor}
-              webhooks={[{ id: "sample", name: "Sample signal" }]}
-              gridClass={rowClass5}
-              fieldClass={fieldClass}
-              labelClass={labelClass}
-            />
-          ) : desk === "dca" ? (
-            <EntryConditionStack
-              prefix="themeDcaEntry"
-              side={entrySide}
-              rows={entryRows}
-              onChange={setEntryRows}
-              anchor={themeLongAnchor}
-              webhooks={[{ id: "sample", name: "Sample signal" }]}
-              triggerTimeframe={
-                startKind === "indicator" || startKind === "trend"
-                  ? timeframe
-                  : null
-              }
-              gridClass={rowClass5}
-              fieldClass={fieldClass}
-              labelClass={labelClass}
-            />
-          ) : (
-            <ThemeSecondaryEntry
-              side={entrySide}
-              prefix="themeConfirm"
-              spec={confirm}
-              onChange={setConfirm}
-              enabled={confirmOn}
-              onEnabled={setConfirmOn}
-            />
-          )
-        ) : null}
+            </>
+          );
+          if (!closing && desk === "perps") {
+            return (
+              <EntryConditionStack
+                grouped
+                lead={lead}
+                prefix="themeEntry"
+                side={entrySide}
+                rows={entryRows}
+                onChange={setEntryRows}
+                anchor={themeLongAnchor}
+                webhooks={[{ id: "sample", name: "Sample signal" }]}
+                gridClass={rowClass5}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            );
+          }
+          if (!closing && desk === "dca") {
+            return (
+              <EntryConditionStack
+                grouped
+                lead={lead}
+                prefix="themeDcaEntry"
+                side={entrySide}
+                rows={entryRows}
+                onChange={setEntryRows}
+                anchor={themeLongAnchor}
+                webhooks={[{ id: "sample", name: "Sample signal" }]}
+                triggerTimeframe={
+                  startKind === "indicator" || startKind === "trend"
+                    ? timeframe
+                    : null
+                }
+                gridClass={rowClass5}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            );
+          }
+          return (
+            <>
+              {lead}
+              {!closing ? (
+                <ThemeSecondaryEntry
+                  side={entrySide}
+                  prefix="themeConfirm"
+                  spec={confirm}
+                  onChange={setConfirm}
+                  enabled={confirmOn}
+                  onEnabled={setConfirmOn}
+                />
+              ) : null}
+            </>
+          );
+        })()}
         </BotFormStep>
 
         {desk === "perps" && perpsDirection === "both" ? (
           <BotFormStep title="Short entry">
+            {(() => {
+              const lead = (
+                <>
             <Group>
               <div className={rowClass}>
                 <Field label="Initial Order Trigger" required>
@@ -1620,7 +1674,12 @@ export function ThemeBotFormDraft() {
                 </div>
               )}
             </Group>
+                </>
+              );
+              return (
             <EntryConditionStack
+              grouped
+              lead={lead}
               prefix="themeShortEntry"
               side="short"
               rows={shortEntryRows}
@@ -1631,11 +1690,16 @@ export function ThemeBotFormDraft() {
               fieldClass={fieldClass}
               labelClass={labelClass}
             />
+              );
+            })()}
           </BotFormStep>
         ) : null}
 
         {desk === "dca" && direction === "both" ? (
           <BotFormStep title="Short entry">
+            {(() => {
+              const lead = (
+                <>
             <Group>
               <div className={rowClass}>
                 <Field label="Initial Order Trigger" className="lg:col-span-2" required>
@@ -1737,7 +1801,12 @@ export function ThemeBotFormDraft() {
                 </div>
               )}
             </Group>
+                </>
+              );
+              return (
             <EntryConditionStack
+              grouped
+              lead={lead}
               prefix="themeDcaShortEntry"
               side="short"
               rows={shortEntryRows}
@@ -1753,6 +1822,8 @@ export function ThemeBotFormDraft() {
               fieldClass={fieldClass}
               labelClass={labelClass}
             />
+              );
+            })()}
           </BotFormStep>
         ) : null}
 
@@ -2439,43 +2510,44 @@ export function ThemeBotFormDraft() {
                   }}
                 >
                   {exitIf ? (
-                    <>
-                      <HardExitFields
-                        prefix="themeExitIf"
-                        side="long"
-                        value={exitIf}
-                        onChange={setExitIf}
-                        webhooks={themeWebhooks}
-                        named={false}
-                        gridClass={rowClass5}
-                        fieldClass={fieldClass}
-                        labelClass={labelClass}
-                        seriesSlots={exitConflictSlots(exitIf, exitRows)}
-                        seriesIndex={0}
-                        disabledKinds={anchorDisabledKinds(
-                          exitIf,
-                          exitRows,
-                          themeWebhooks.map((hook) => hook.id),
-                        )}
-                        disabledWebhookIds={anchorDisabledWebhookIds(
-                          exitIf,
-                          exitRows,
-                          themeWebhooks.map((hook) => hook.id),
-                        )}
-                      />
-                      <ExitConditionStack
-                        prefix="themeExitIf"
-                        side="long"
-                        anchor={exitIf}
-                        rows={exitRows}
-                        onChange={setExitRows}
-                        webhooks={themeWebhooks}
-                        named={false}
-                        gridClass={rowClass5}
-                        fieldClass={fieldClass}
-                        labelClass={labelClass}
-                      />
-                    </>
+                    <ExitConditionStack
+                      grouped
+                      lead={
+                        <HardExitFields
+                          prefix="themeExitIf"
+                          side="long"
+                          value={exitIf}
+                          onChange={setExitIf}
+                          webhooks={themeWebhooks}
+                          named={false}
+                          gridClass={rowClass5}
+                          fieldClass={fieldClass}
+                          labelClass={labelClass}
+                          seriesSlots={exitConflictSlots(exitIf, exitRows)}
+                          seriesIndex={0}
+                          disabledKinds={anchorDisabledKinds(
+                            exitIf,
+                            exitRows,
+                            themeWebhooks.map((hook) => hook.id),
+                          )}
+                          disabledWebhookIds={anchorDisabledWebhookIds(
+                            exitIf,
+                            exitRows,
+                            themeWebhooks.map((hook) => hook.id),
+                          )}
+                        />
+                      }
+                      prefix="themeExitIf"
+                      side="long"
+                      anchor={exitIf}
+                      rows={exitRows}
+                      onChange={setExitRows}
+                      webhooks={themeWebhooks}
+                      named={false}
+                      gridClass={rowClass5}
+                      fieldClass={fieldClass}
+                      labelClass={labelClass}
+                    />
                   ) : null}
                 </OptionalSection>
                 <OptionalSection
@@ -2493,43 +2565,44 @@ export function ThemeBotFormDraft() {
                   }}
                 >
                   {shortExitIf ? (
-                    <>
-                      <HardExitFields
-                        prefix="themeShortExitIf"
-                        side="short"
-                        value={shortExitIf}
-                        onChange={setShortExitIf}
-                        webhooks={themeWebhooks}
-                        named={false}
-                        gridClass={rowClass5}
-                        fieldClass={fieldClass}
-                        labelClass={labelClass}
-                        seriesSlots={exitConflictSlots(shortExitIf, shortExitRows)}
-                        seriesIndex={0}
-                        disabledKinds={anchorDisabledKinds(
-                          shortExitIf,
-                          shortExitRows,
-                          themeWebhooks.map((hook) => hook.id),
-                        )}
-                        disabledWebhookIds={anchorDisabledWebhookIds(
-                          shortExitIf,
-                          shortExitRows,
-                          themeWebhooks.map((hook) => hook.id),
-                        )}
-                      />
-                      <ExitConditionStack
-                        prefix="themeShortExitIf"
-                        side="short"
-                        anchor={shortExitIf}
-                        rows={shortExitRows}
-                        onChange={setShortExitRows}
-                        webhooks={themeWebhooks}
-                        named={false}
-                        gridClass={rowClass5}
-                        fieldClass={fieldClass}
-                        labelClass={labelClass}
-                      />
-                    </>
+                    <ExitConditionStack
+                      grouped
+                      lead={
+                        <HardExitFields
+                          prefix="themeShortExitIf"
+                          side="short"
+                          value={shortExitIf}
+                          onChange={setShortExitIf}
+                          webhooks={themeWebhooks}
+                          named={false}
+                          gridClass={rowClass5}
+                          fieldClass={fieldClass}
+                          labelClass={labelClass}
+                          seriesSlots={exitConflictSlots(shortExitIf, shortExitRows)}
+                          seriesIndex={0}
+                          disabledKinds={anchorDisabledKinds(
+                            shortExitIf,
+                            shortExitRows,
+                            themeWebhooks.map((hook) => hook.id),
+                          )}
+                          disabledWebhookIds={anchorDisabledWebhookIds(
+                            shortExitIf,
+                            shortExitRows,
+                            themeWebhooks.map((hook) => hook.id),
+                          )}
+                        />
+                      }
+                      prefix="themeShortExitIf"
+                      side="short"
+                      anchor={shortExitIf}
+                      rows={shortExitRows}
+                      onChange={setShortExitRows}
+                      webhooks={themeWebhooks}
+                      named={false}
+                      gridClass={rowClass5}
+                      fieldClass={fieldClass}
+                      labelClass={labelClass}
+                    />
                   ) : null}
                 </OptionalSection>
               </Group>
@@ -2553,43 +2626,44 @@ export function ThemeBotFormDraft() {
                 }}
               >
                 {exitIf ? (
-                  <>
-                    <HardExitFields
-                      prefix="themeExitIf"
-                      side={entrySide}
-                      value={exitIf}
-                      onChange={setExitIf}
-                      webhooks={themeWebhooks}
-                      named={false}
-                      gridClass={rowClass5}
-                      fieldClass={fieldClass}
-                      labelClass={labelClass}
-                      seriesSlots={exitConflictSlots(exitIf, exitRows)}
-                      seriesIndex={0}
-                      disabledKinds={anchorDisabledKinds(
-                        exitIf,
-                        exitRows,
-                        themeWebhooks.map((hook) => hook.id),
-                      )}
-                      disabledWebhookIds={anchorDisabledWebhookIds(
-                        exitIf,
-                        exitRows,
-                        themeWebhooks.map((hook) => hook.id),
-                      )}
-                    />
-                    <ExitConditionStack
-                      prefix="themeExitIf"
-                      side={entrySide}
-                      anchor={exitIf}
-                      rows={exitRows}
-                      onChange={setExitRows}
-                      webhooks={themeWebhooks}
-                      named={false}
-                      gridClass={rowClass5}
-                      fieldClass={fieldClass}
-                      labelClass={labelClass}
-                    />
-                  </>
+                  <ExitConditionStack
+                    grouped
+                    lead={
+                      <HardExitFields
+                        prefix="themeExitIf"
+                        side={entrySide}
+                        value={exitIf}
+                        onChange={setExitIf}
+                        webhooks={themeWebhooks}
+                        named={false}
+                        gridClass={rowClass5}
+                        fieldClass={fieldClass}
+                        labelClass={labelClass}
+                        seriesSlots={exitConflictSlots(exitIf, exitRows)}
+                        seriesIndex={0}
+                        disabledKinds={anchorDisabledKinds(
+                          exitIf,
+                          exitRows,
+                          themeWebhooks.map((hook) => hook.id),
+                        )}
+                        disabledWebhookIds={anchorDisabledWebhookIds(
+                          exitIf,
+                          exitRows,
+                          themeWebhooks.map((hook) => hook.id),
+                        )}
+                      />
+                    }
+                    prefix="themeExitIf"
+                    side={entrySide}
+                    anchor={exitIf}
+                    rows={exitRows}
+                    onChange={setExitRows}
+                    webhooks={themeWebhooks}
+                    named={false}
+                    gridClass={rowClass5}
+                    fieldClass={fieldClass}
+                    labelClass={labelClass}
+                  />
                 ) : null}
               </OptionalSection>
             )}
