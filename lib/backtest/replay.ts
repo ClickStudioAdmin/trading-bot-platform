@@ -361,18 +361,6 @@ export async function replayPerpsPriceCross(input: {
           flattenOpen(bar.timeMs, trail.fillPrice, "trailing");
         }
       }
-      if (open?.tpsl && tpslHasLevels(open.tpsl)) {
-        const tp = paperTakeProfitHit({
-          side: open.side,
-          tpsl: open.tpsl,
-          last: favorable,
-          mark: favorable,
-          index: favorable,
-        });
-        if (tp) {
-          flattenOpen(bar.timeMs, tp.price, "take_profit");
-        }
-      }
       const barsByTimeframe = replayBarsByTimeframe(
         input.bars.slice(0, input.bars.indexOf(bar) + 1),
         tape,
@@ -393,6 +381,18 @@ export async function replayPerpsPriceCross(input: {
             side: open.side,
           }),
         );
+      }
+      if (open?.tpsl && tpslHasLevels(open.tpsl)) {
+        const tp = paperTakeProfitHit({
+          side: open.side,
+          tpsl: open.tpsl,
+          last: favorable,
+          mark: favorable,
+          index: favorable,
+        });
+        if (tp) {
+          flattenOpen(bar.timeMs, tp.price, "take_profit");
+        }
       }
       if (
         open &&
@@ -776,6 +776,11 @@ async function replayPerpsBoth(input: {
     if (book.long || book.short) {
       barsIn += 1;
     }
+    const barsByTimeframe = replayBarsByTimeframe(
+      input.bars.slice(0, input.bars.indexOf(bar) + 1),
+      tape,
+      conditionTimeframes,
+    );
     for (const side of ["long", "short"] as const) {
       const open = book[side];
       if (!open) {
@@ -818,6 +823,14 @@ async function replayPerpsBoth(input: {
           continue;
         }
       }
+      if (
+        !liquidated &&
+        book[side] &&
+        perpsHardExitMet(input.recipe, side, price, barsByTimeframe)
+      ) {
+        flattenSide(side, bar.timeMs, price, "exit_if");
+        continue;
+      }
       if (open.tpsl && tpslHasLevels(open.tpsl)) {
         const tp = paperTakeProfitHit({
           side: open.side,
@@ -835,17 +848,6 @@ async function replayPerpsBoth(input: {
     if (liquidated) {
       markEquity(0);
       continue;
-    }
-    const barsByTimeframe = replayBarsByTimeframe(
-      input.bars.slice(0, input.bars.indexOf(bar) + 1),
-      tape,
-      conditionTimeframes,
-    );
-    for (const side of ["long", "short"] as const) {
-      const open = book[side];
-      if (open && perpsHardExitMet(input.recipe, side, price, barsByTimeframe)) {
-        flattenSide(side, bar.timeMs, price, "exit_if");
-      }
     }
     for (const leg of legs) {
       const open = book[leg.side];

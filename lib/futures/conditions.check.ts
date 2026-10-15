@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  futuresAutomationNeedsWideBars,
   futuresBreakevenDue,
   futuresBreakevenStop,
   futuresEntryConditionMet,
@@ -352,6 +353,52 @@ assert.equal(
     firedWebhookId: null,
   }),
   false,
+);
+
+assert.equal(
+  futuresAutomationNeedsWideBars({
+    entrySource: "price",
+    exitIf: {
+      kind: "rsi",
+      timeframe: "15",
+      compare: "gte",
+      level: 70,
+      period: 14,
+      multiplier: null,
+    },
+    exitStack: { leaves: [], joins: [] },
+  }),
+  false,
+);
+assert.equal(
+  futuresAutomationNeedsWideBars({
+    entrySource: "price",
+    exitIf: {
+      kind: "rsi",
+      timeframe: "15",
+      compare: "gte",
+      level: 70,
+      period: 14,
+      multiplier: null,
+    },
+    exitStack: {
+      leaves: [
+        {
+          kind: "filter",
+          spec: {
+            kind: "atr_band",
+            timeframe: "15",
+            compare: "gte",
+            level: null,
+            period: 10,
+            multiplier: 2,
+          },
+        },
+      ],
+      joins: ["and"],
+    },
+  }),
+  true,
 );
 
 console.log("futures conditions checks passed");

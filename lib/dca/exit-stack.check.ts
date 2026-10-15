@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { claimsConflict } from "@/lib/strategy/conflicts";
 import { entryStackFromJson } from "@/lib/strategy/expr";
 import {
   dcaRecipeToConfig,
@@ -12,6 +13,7 @@ import {
   exitStackError,
   exitStackMet,
   exitStackNeedsWebhook,
+  hardExitClaim,
   parseExitStackForm,
   templateExitStack,
 } from "./exit-stack";
@@ -162,5 +164,28 @@ if (templated?.leaves[0]?.kind === "webhook") {
 assert.equal(JSON.stringify(templated).includes(webhookId), false);
 assert.equal(exitStackNeedsWebhook(templated), true);
 assert.equal(entryStackFromJson(templated)?.leaves.length, 1);
+
+function crossExit(slowPeriod: number, compare: "cross_gte" | "cross_lte") {
+  return hardExitClaim({
+    trigger: "indicator",
+    spec: {
+      kind: "ema_cross",
+      timeframe: "15",
+      compare,
+      level: null,
+      period: 9,
+      slowPeriod,
+      multiplier: null,
+    },
+  });
+}
+assert.equal(
+  claimsConflict(crossExit(21, "cross_gte"), crossExit(50, "cross_lte")),
+  false,
+);
+assert.equal(
+  claimsConflict(crossExit(50, "cross_gte"), crossExit(50, "cross_lte")),
+  true,
+);
 
 console.log("exit-stack.check ok");

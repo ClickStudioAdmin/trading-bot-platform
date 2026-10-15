@@ -349,6 +349,7 @@ export function claimFromLeaf(leaf: StrategyLeaf): ConflictClaim | null {
       level: leaf.spec.level,
       levelTo: leaf.spec.levelTo,
       period: leaf.spec.period,
+      slowPeriod: leaf.spec.slowPeriod,
       multiplier: leaf.spec.multiplier,
     });
   }

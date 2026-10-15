@@ -18,6 +18,7 @@ import {
   type HardExitSignal,
 } from "@/lib/dca/hard-exit";
 import {
+  exitStackNeedsWideBars,
   hardExitAnchor,
   hardExitTriggerTimeframe,
   parseExitStackForm,
@@ -697,6 +698,7 @@ export function futuresAutomationNeedsWideBars(rule: {
   confirm?: DcaFilterSpec | null;
   entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
+  exitStack?: EntryStack | null;
   shortEntry?: {
     indicator?: DcaIndicatorStart | null;
     confirm?: DcaFilterSpec | null;
@@ -715,7 +717,8 @@ export function futuresAutomationNeedsWideBars(rule: {
     short?.indicator?.kind === "atr_band" ||
     stackNeedsWideBars(stack) ||
     stackNeedsWideBars(shortStack) ||
-    dcaFilterNeedsBars(rule.exitIf)
+    dcaFilterNeedsBars(rule.exitIf) ||
+    exitStackNeedsWideBars(rule.exitStack)
   );
 }
 

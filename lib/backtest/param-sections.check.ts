@@ -294,4 +294,27 @@ assert.equal(
   "2%",
 );
 
+const atrEntry = {
+  ...perps,
+  entrySource: "indicator" as const,
+  indicator: {
+    kind: "atr_band" as const,
+    timeframe: "15" as const,
+    compare: "inside" as const,
+    level: null,
+    period: 10,
+    slowPeriod: null,
+    multiplier: 2,
+  },
+};
+const atrRows = recipeParamRows(atrEntry);
+assert.equal(
+  atrRows.find((row) => row.label === "Indicator")?.value,
+  "ATR band",
+);
+assert.equal(
+  atrRows.find((row) => row.label === "Multiplier")?.value,
+  "2",
+);
+
 console.log("backtest param section checks passed");

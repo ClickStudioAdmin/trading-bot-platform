@@ -496,6 +496,36 @@ assert.equal(limitTpHit.orders[1]?.action, "flatten");
 assert.equal(limitTpHit.orders[1]?.reason, "take_profit");
 assert.ok(Math.abs((limitTpHit.orders[1]?.price ?? 0) - 110) < 1e-8);
 
+const limitTpExitForm = new FormData();
+limitTpExitForm.set("name", "Limit TP vs stack");
+limitTpExitForm.set("symbol", "BTCUSDT");
+limitTpExitForm.set("direction", "long");
+limitTpExitForm.set("startKind", "immediate");
+limitTpExitForm.set("clipSize", "1");
+limitTpExitForm.set("sizeUnit", "qty");
+limitTpExitForm.set("takeProfitPct", "10");
+limitTpExitForm.set("takeProfitOrderType", "limit");
+limitTpExitForm.set("exitIfTrigger", "price");
+limitTpExitForm.set("exitIfTriggerBy", "last");
+limitTpExitForm.set("exitIfTriggerCompare", "gte");
+limitTpExitForm.set("exitIfTriggerPrice", "101");
+const limitTpExitParsed = parseDcaPlaybookForm(limitTpExitForm);
+assert.equal(limitTpExitParsed.ok, true);
+if (!limitTpExitParsed.ok) {
+  throw new Error("expected limit TP and hard exit parse");
+}
+const limitTpVsStack = await replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 100, high: 111, low: 100, close: 105 },
+  ],
+  recipe: snapshotDcaRecipe(limitTpExitParsed.config),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(limitTpVsStack.orders[1]?.reason, "exit_if");
+assert.equal(limitTpVsStack.orders[1]?.price, 105);
+
 const gridTpForm = new FormData();
 gridTpForm.set("name", "Grid limit TP");
 gridTpForm.set("symbol", "XRPUSDT");

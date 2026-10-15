@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import type { DcaFilterSpec } from "@/lib/dca/filters";
-import { priceClaim } from "@/lib/strategy/conflicts";
+import { indicatorClaim, priceClaim } from "@/lib/strategy/conflicts";
 import {
   claimConflictsAt,
   confirmFromEntryStack,
@@ -368,6 +368,63 @@ assert.equal(
     stack: { leaves: [priceLeaf, indicatorLeaf], joins: ["and", "and"] },
   }),
   null,
+);
+
+function crossFilter(
+  slowPeriod: number,
+  compare: "cross_gte" | "cross_lte",
+): DcaFilterSpec {
+  return {
+    kind: "ema_cross",
+    timeframe: "15",
+    compare,
+    level: null,
+    period: 9,
+    slowPeriod,
+    multiplier: null,
+  };
+}
+assert.equal(
+  entryStackConflictMessage({
+    trigger: {
+      kind: "filter",
+      join: "and",
+      claim: indicatorClaim({
+        surface: "filter",
+        kind: "ema_cross",
+        timeframe: "15",
+        compare: "cross_lte",
+        period: 9,
+        slowPeriod: 21,
+      }),
+    },
+    stack: {
+      leaves: [{ kind: "filter", spec: crossFilter(50, "cross_gte") }],
+      joins: ["and"],
+    },
+  }),
+  null,
+);
+assert.equal(
+  entryStackConflictMessage({
+    trigger: {
+      kind: "filter",
+      join: "and",
+      claim: indicatorClaim({
+        surface: "filter",
+        kind: "ema_cross",
+        timeframe: "15",
+        compare: "cross_lte",
+        period: 9,
+        slowPeriod: 50,
+      }),
+    },
+    stack: {
+      leaves: [{ kind: "filter", spec: crossFilter(50, "cross_gte") }],
+      joins: ["and"],
+    },
+  }),
+  "These conditions cannot be true at the same time.",
 );
 
 console.log("strategy expr checks passed");

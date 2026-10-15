@@ -15,6 +15,7 @@ import {
   dcaEntryTickExtras,
 } from "@/lib/dca/entry-stack";
 import {
+  exitExpressionMet,
   exitLeafResults,
   exitStackForSide,
   exitStackTimeframes,
@@ -24,7 +25,7 @@ import {
   dcaFilterForSide,
   seriesForFilter,
 } from "@/lib/dca/filters";
-import { hardExitForSide } from "@/lib/dca/hard-exit";
+import { hardExitForSide, hardExitMet } from "@/lib/dca/hard-exit";
 import { entryStackIsLegacy, entryStackTimeframes } from "@/lib/strategy/expr";
 import {
   atrAtEachTapeBar,
@@ -433,13 +434,13 @@ export async function replayDcaPlaybook(input: {
     }
   }
 
-  function fillLimitTakeProfit(side: FuturesSide, bar: CandleBar): boolean {
+  function limitTakeProfitPrice(side: FuturesSide, bar: CandleBar): number | null {
     if (config.takeProfitOrderType !== "limit") {
-      return false;
+      return null;
     }
     const live = legs[side];
     if (!(live.qty > 0)) {
-      return false;
+      return null;
     }
     const planned = dcaPlannedExits({
       side,
@@ -456,18 +457,14 @@ export async function replayDcaPlaybook(input: {
       takeProfitAtrMult: config.takeProfitAtrMult,
     });
     if (planned.takeProfit == null) {
-      return false;
+      return null;
     }
     const favorable = side === "long" ? bar.high : bar.low;
     const hit =
       side === "long"
         ? favorable >= planned.takeProfit
         : favorable <= planned.takeProfit;
-    if (!hit) {
-      return false;
-    }
-    flatten(side, bar.timeMs, planned.takeProfit, true, "take_profit");
-    return true;
+    return hit ? planned.takeProfit : null;
   }
 
   let barIndex = 0;
@@ -558,7 +555,77 @@ export async function replayDcaPlaybook(input: {
             continue;
           }
         }
-        if (fillLimitTakeProfit(side, bar)) {
+        const limitTp = limitTakeProfitPrice(side, bar);
+        if (limitTp != null) {
+          const exitNow = hardExitForSide(config, side);
+          const exitStackNow = exitStackForSide(config, side);
+          const tapeIntervalNow = backtestTapeInterval(input.recipe, 1, 2);
+          const exitBarsNow = new Map<DcaIndicatorTimeframe, CandleBar[]>();
+          const exitFrames = new Set<DcaIndicatorTimeframe>(
+            exitStackTimeframes(exitStackNow),
+          );
+          if (exitNow.filter) {
+            exitFrames.add(exitNow.filter.timeframe);
+          }
+          for (const timeframe of exitFrames) {
+            const sampled = resampleBarsForTimeframe(
+              barWindow,
+              tapeIntervalNow,
+              timeframe,
+            );
+            exitBarsNow.set(
+              timeframe,
+              sampled.map((row) => ({
+                timeMs: 0,
+                open: row.close,
+                high: row.high,
+                low: row.low,
+                close: row.close,
+              })),
+            );
+          }
+          const exitSeries = seriesForFilter(
+            exitNow.filter,
+            exitNow.filter
+              ? resampleBarsForTimeframe(
+                  barWindow,
+                  tapeIntervalNow,
+                  exitNow.filter.timeframe,
+                )
+              : null,
+          );
+          const stackMet = exitExpressionMet({
+            first: hardExitMet({
+              filter: exitNow.filter,
+              signal: exitNow.signal,
+              side,
+              closes: exitSeries.closes,
+              bars: exitSeries.bars,
+              prices: triggerPrices,
+            }),
+            stack: exitStackNow,
+            side,
+            price,
+            prices: triggerPrices,
+            barsByTimeframe: exitBarsNow,
+          });
+          if (stackMet) {
+            flatten(
+              side,
+              bar.timeMs,
+              price,
+              true,
+              "exit_if",
+              formatExitExpressionText({
+                filter: exitNow.filter,
+                signal: exitNow.signal,
+                stack: exitStackNow,
+                side,
+              }),
+            );
+          } else {
+            flatten(side, bar.timeMs, limitTp, true, "take_profit");
+          }
           closedThisBar = true;
           continue;
         }

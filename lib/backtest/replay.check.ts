@@ -296,6 +296,99 @@ const confirmBlocked = await replayPerpsPriceCross({
 });
 assert.equal(confirmBlocked.orders.length, 0);
 
+const raceBars = [
+  { timeMs: 1_000, open: 99, high: 99, low: 99, close: 99 },
+  { timeMs: 2_000, open: 101, high: 101, low: 101, close: 101 },
+  { timeMs: 3_000, open: 101, high: 120, low: 100, close: 108 },
+];
+const raceExits: PerpsTemplateRecipe = {
+  ...base,
+  tpsl: {
+    takeProfit: 110,
+    stopLoss: null,
+    tpTrigger: "last",
+    slTrigger: "last",
+    mode: "full",
+    tpQty: null,
+    slQty: null,
+    tpOrderType: "market",
+    slOrderType: "market",
+    tpLimitPrice: null,
+    slLimitPrice: null,
+  },
+  exitHard: {
+    trigger: "price",
+    triggerBy: "last",
+    compare: "gte",
+    price: 105,
+  },
+};
+const stackBeforeTp = await replayPerpsPriceCross({
+  bars: raceBars,
+  recipe: raceExits,
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(stackBeforeTp.orders[1]?.reason, "exit_if");
+assert.equal(stackBeforeTp.orders[1]?.price, 108);
+
+const hedgedStackBeforeTp = await replayPerpsPriceCross({
+  bars: raceBars,
+  recipe: {
+    ...raceExits,
+    direction: "both",
+    shortEntry: {
+      entrySource: "price",
+      webhookId: null,
+      triggerBy: "last",
+      triggerCompare: "lte",
+      triggerPrice: 1,
+      skipIfOpen: true,
+      indicator: null,
+      confirm: null,
+      entryStack: { leaves: [], joins: [] },
+    },
+  },
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(hedgedStackBeforeTp.orders[1]?.reason, "exit_if");
+assert.equal(hedgedStackBeforeTp.orders[1]?.price, 108);
+
+const stopBeforeStack = await replayPerpsPriceCross({
+  bars: [
+    { timeMs: 1_000, open: 99, high: 99, low: 99, close: 99 },
+    { timeMs: 2_000, open: 101, high: 101, low: 101, close: 101 },
+    { timeMs: 3_000, open: 101, high: 102, low: 90, close: 95 },
+  ],
+  recipe: {
+    ...base,
+    tpsl: {
+      takeProfit: null,
+      stopLoss: 95,
+      tpTrigger: "last",
+      slTrigger: "last",
+      mode: "full",
+      tpQty: null,
+      slQty: null,
+      tpOrderType: "market",
+      slOrderType: "market",
+      tpLimitPrice: null,
+      slLimitPrice: null,
+    },
+    exitHard: {
+      trigger: "price",
+      triggerBy: "last",
+      compare: "lte",
+      price: 96,
+    },
+  },
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(stopBeforeStack.orders[1]?.reason, "stop");
+assert.equal(stopBeforeStack.orders[1]?.price, 95);
+
 console.log("backtest replay checks passed");
 }
 

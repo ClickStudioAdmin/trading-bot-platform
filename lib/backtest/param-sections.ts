@@ -330,6 +330,9 @@ function indicatorRows(input: {
   if (dcaIndicatorUsesPeriod(kind)) {
     rows.push({ label: "Period", value: num(input.period) });
   }
+  if (kind === "atr_band") {
+    rows.push({ label: "Multiplier", value: num(input.multiplier) });
+  }
   rows.push(
     { label: "Timeframe", value: frame },
     { label: "When", value: when },

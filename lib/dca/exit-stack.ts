@@ -61,6 +61,7 @@ export function hardExitClaim(
     level: draft.spec.level,
     levelTo: draft.spec.levelTo,
     period: draft.spec.period,
+    slowPeriod: draft.spec.slowPeriod,
     multiplier: draft.spec.multiplier,
   });
 }
