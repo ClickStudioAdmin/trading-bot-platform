@@ -16,6 +16,7 @@ import {
   listConnectionDeskBinds,
   listExchangeConnections,
 } from "@/lib/exchanges/store";
+import { memberIsAdmin } from "@/lib/admin/access";
 import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
 import { requireVerifiedEmail } from "@/lib/auth/session";
 import { listOnboardingFolders } from "@/lib/onboarding/catalog";
@@ -64,6 +65,7 @@ export default async function NewDeskPage({
         <CreateAccountForm
           connections={connections}
           sharedConnectionIds={sharedConnectionIds}
+          allowSharedKeys={memberIsAdmin(member)}
           existingNames={accounts.map((account) => account.name)}
           next={createDeskPath(typed.deskType)}
           initialDeskType={typed.deskType}

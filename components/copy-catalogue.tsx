@@ -101,6 +101,8 @@ export function CopyCatalogueBoard({
   sort,
   next,
   connections,
+  sharedConnectionIds = [],
+  allowSharedKeys = false,
   openParentId = "",
   showFilters = true,
   inviteCount = 0,
@@ -113,6 +115,8 @@ export function CopyCatalogueBoard({
   sort: CopyCatalogueSort;
   next: string;
   connections: ExchangeConnection[];
+  sharedConnectionIds?: string[];
+  allowSharedKeys?: boolean;
   openParentId?: string;
   showFilters?: boolean;
   inviteCount?: number;
@@ -359,6 +363,8 @@ export function CopyCatalogueBoard({
                   venue={card.venue}
                   venueEnvironment={card.venueEnvironment}
                   connections={connections}
+                  sharedConnectionIds={sharedConnectionIds}
+                  allowSharedKeys={allowSharedKeys}
                   following={card.following}
                   defaultOpen={openParentId === card.accountId}
                   revealGatesOnClick={revealCopyGatesOnClick}

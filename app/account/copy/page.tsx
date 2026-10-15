@@ -7,9 +7,14 @@ import {
   parseCopyCatalogueSort,
   parseCopyCatalogueTab,
 } from "@/lib/copy/model";
+import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
 import { loadMemberNotificationChrome } from "@/lib/notifications/badges";
-import { listExchangeConnections } from "@/lib/exchanges/store";
+import { connectionIdsBoundToOtherDesks } from "@/lib/exchanges/connections";
+import {
+  listConnectionDeskBinds,
+  listExchangeConnections,
+} from "@/lib/exchanges/store";
 import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
 
@@ -41,7 +46,13 @@ export default async function AccountCopyCataloguePage({
     query,
     sort,
   });
-  const connections = await listExchangeConnections(member.id);
+  const [connections, sharedConnectionIds] = await Promise.all([
+    listExchangeConnections(member.id),
+    listConnectionDeskBinds(member.id).then((binds) =>
+      connectionIdsBoundToOtherDesks(binds),
+    ),
+  ]);
+  const allowSharedKeys = memberIsAdmin(member);
   const openParentId = firstSearchValue(params.copy) ?? "";
   const next = copyCatalogueHref({ tab, privateOnly, query, sort });
   const chrome = await loadMemberNotificationChrome(
@@ -71,6 +82,8 @@ export default async function AccountCopyCataloguePage({
         sort={sort}
         next={next}
         connections={connections}
+        sharedConnectionIds={sharedConnectionIds}
+        allowSharedKeys={allowSharedKeys}
         openParentId={openParentId}
         inviteCount={chrome.actions.copyInvite}
         revealCopyGatesOnClick

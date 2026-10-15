@@ -7,8 +7,13 @@ import { PageHeading } from "@/components/page-heading";
 import { loadTraderCatalogueDesks } from "@/lib/copy/catalogue";
 import { loadTraderProfileByAlias } from "@/lib/copy/profile";
 import { formatAuDateUtc, parseDisplayTime } from "@/lib/time/display";
+import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
-import { listExchangeConnections } from "@/lib/exchanges/store";
+import { connectionIdsBoundToOtherDesks } from "@/lib/exchanges/connections";
+import {
+  listConnectionDeskBinds,
+  listExchangeConnections,
+} from "@/lib/exchanges/store";
 import { notFound, redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -39,7 +44,12 @@ export default async function CopyTraderPage({
     .filter((ms): ms is number => ms != null)
     .sort((a, b) => a - b)[0];
   const followers = desks.reduce((sum, row) => sum + row.followerCount, 0);
-  const connections = await listExchangeConnections(member.id);
+  const [connections, sharedConnectionIds] = await Promise.all([
+    listExchangeConnections(member.id),
+    listConnectionDeskBinds(member.id).then((binds) =>
+      connectionIdsBoundToOtherDesks(binds),
+    ),
+  ]);
   const next = `/account/copy/traders/${encodeURIComponent(trader.alias)}`;
 
   return (
@@ -106,6 +116,8 @@ export default async function CopyTraderPage({
         sort="newest"
         next={next}
         connections={connections}
+        sharedConnectionIds={sharedConnectionIds}
+        allowSharedKeys={memberIsAdmin(member)}
         showFilters={false}
       />
     </>

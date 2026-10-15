@@ -10,7 +10,7 @@ New members start with zero desks. After they confirm email they land on Overvie
 
 Platform templates and folders can be flagged **Include in Starter Pack** on `/admin/templates`. That flag does **not** copy or apply anything yet. Stored JSON is still a `recipe`. See [templates.md](templates.md).
 
-Create desk (`/account/desks/new`, Manage desks) already picks one type, a name, and Paper Trading or Connected Exchange. Connected can bind an existing trade-only key or bind later. Type and mode never change. Paper uses public marks and the in-app ledger. One live desk binds one key. Two desks cannot share a key or the same venue account.
+Create desk (`/account/desks/new`, Manage desks) already picks one type, a name, and Paper Trading or Connected Exchange. Connected can bind an existing trade-only key or bind later. Type and mode never change. Paper uses public marks and the in-app ledger. One live desk binds one key. Members cannot share that key across desks. Admins can, for testing, with the shared-balance warning on Desk Settings and New desk. Two keys still cannot be the same venue account.
 
 ## Purpose
 
@@ -32,7 +32,7 @@ There is no Skip setup. The member goes through Add Desks, Add Bots, Review, and
 | 3 | Desk list | One table for every desk. **Add Desk** sits at the top and opens a sub-modal. The member picks the desk type there, then the name, mode, market or exchange, environment, and key. Several desks of one type are allowed, including more than one Paper desk and more than one Connected desk. No quantity field. Columns are type, name, mode, environment, market, and key. The plan desk cap is the limit once item 6 gates exist. |
 | 4 | Demo vs Live | Not a third column. Connected is `mode = live`. Demo vs Live is the key’s venue environment, chosen on the exchange step. Display mode stays Paper / Demo / Live as today. |
 | 5 | When rows are written | Desk names and details stay a draft until **Create** on Review. API secrets are never stored in that draft. A key the member saves in the create modal, or on the exchange step, is written immediately through the existing connection action (verify, trade-only, encrypt). The draft keeps the connection id only. |
-| 6 | Keys | Same rules as Exchanges and create desk. Trade-only, no withdrawal permission. Server verifies. Browser never sees the secret again. One connection binds one desk. **Bind later** is allowed per connected desk. |
+| 6 | Keys | Same rules as Exchanges and create desk. Trade-only, no withdrawal permission. Server verifies. Browser never sees the secret again. One connection binds one desk for members. Admins may reuse a key. **Bind later** is allowed per connected desk. |
 | 7 | Starter bots | Admin marks **Include in Starter Pack** on a platform folder or on a platform template. The wizard lists every template in a flagged folder, and every flagged template that is not already in one of those folders. Apply uses today’s apply path. A bot stays **Disabled** unless **Initial Status** is **Active**. Every bot uses those two words. For a DCA bot, Active runs the desk arm action, so an immediate start can place the first order. Perps bots and Cash and Carry use the desk enable action. Setup does not offer Stop adding or Reduce only. A Connected desk without a key cannot choose Active. |
 | 8 | Library copy | Apply onto the new desks only. Do not also copy those rows into the member’s template library. |
 | 9 | Tour | Asked on Take a Tour, after Continue on Review, including when they created nothing. Yes starts the tour. Not now lands on Overview. The tour only explains. It never presses Enable or an order button. |
@@ -153,7 +153,7 @@ Steps that do not apply are omitted (no desk yet, no bot desk, no TradingView de
 | --- | --- | --- | --- |
 | 1 | Overview in the account menu | Always | This is your home. |
 | 2 | Manage Desks | Always | Desks are created here. Type and mode stay as they were set. |
-| 3 | Exchanges (Manage desks, Exchanges tab) | Always | Keys are trade-only. One key binds one desk. Demo and Live are the key’s environment. |
+| 3 | Exchanges (Manage desks, Exchanges tab) | Always | Keys are trade-only. Members: one key binds one desk. Admins may reuse a key. Demo and Live are the key’s environment. |
 | 4 | Desk list in the sidenav | They have a desk | Open a desk from this list. Paper, Demo, and Live are marked here. |
 | 5 | Bots on that desk | A new or existing DCA, Perps bots, or Cash and Carry desk | Bots stay Disabled unless Initial Status is Active. The app places orders only after that. |
 | 6 | Webhooks | A TradingView Strategy desk, and step 5 did not run | Alerts arrive here. Setup does not turn them on. |
