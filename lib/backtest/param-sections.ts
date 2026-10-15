@@ -633,6 +633,7 @@ function dcaSections(recipe: DcaTemplateRecipe): ParamSection[] {
       : recipe.direction === "short"
         ? ["short"]
         : ["long"];
+  const orderGroups = sizingGroups(recipe, quote);
   return [
     {
       title: "General",
@@ -650,7 +651,22 @@ function dcaSections(recipe: DcaTemplateRecipe): ParamSection[] {
       title: side === "short" ? "Short entry" : "Long entry",
       groups: dcaSideEntryGroups(recipe, side, quote),
     })),
-    { title: "Position Sizing", groups: sizingGroups(recipe, quote) },
+    {
+      title: "Position Sizing",
+      groups: orderGroups.filter(
+        (group) =>
+          group.title === "Maximum Exposure" ||
+          group.title === "Initial Order Size",
+      ),
+    },
+    {
+      title: "Additional Orders",
+      groups: orderGroups.filter(
+        (group) =>
+          group.title === "Additional Order Types" ||
+          group.title === "Additional Order Scaling",
+      ),
+    },
     { title: "Exit Conditions", groups: dcaExitGroups(recipe) },
   ];
 }

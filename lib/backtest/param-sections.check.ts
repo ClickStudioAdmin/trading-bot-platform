@@ -34,17 +34,14 @@ const dca = dcaSeed();
 const sections = recipeParamSections(dca);
 assert.deepEqual(
   sections.map((section) => section.title),
-  ["General", "Long entry", "Position Sizing", "Exit Conditions"],
+  ["General", "Long entry", "Position Sizing", "Additional Orders", "Exit Conditions"],
 );
 const general = sections[0]?.groups[0]?.rows.map((row) => row.label);
 assert.deepEqual(general, ["Name", "Contract", "Direction"]);
 const sizing = sections[2]?.groups.map((group) => group.title);
-assert.deepEqual(sizing, [
-  "Maximum Exposure",
-  "Initial Order Size",
-  "Additional Order Types",
-  "Additional Order Scaling",
-]);
+assert.deepEqual(sizing, ["Maximum Exposure", "Initial Order Size"]);
+const adds = sections[3]?.groups.map((group) => group.title);
+assert.deepEqual(adds, ["Additional Order Types", "Additional Order Scaling"]);
 const labels = recipeParamRows(dca).map((row) => row.label);
 assert.equal(labels.includes("Type"), false);
 assert.equal(labels.includes("Take profit"), false);

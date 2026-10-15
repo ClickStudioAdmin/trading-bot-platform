@@ -1008,6 +1008,10 @@ function RuleCard({
       </BotFormStep>
 
       {!closing ? (
+        <BotFormStep title="Additional Orders" defaultCollapsed={inUse} />
+      ) : null}
+
+      {!closing ? (
         <BotFormStep title="Exit Conditions">
           {tpOn || slOn ? (
             <>

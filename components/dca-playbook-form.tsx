@@ -2338,7 +2338,12 @@ export function DcaPlaybookForm({
             </label>
           </div>
         </BotFormGroup>
-
+      </BotFormStep>
+      <BotFormStep
+        title="Additional Orders"
+        locked={cycleLocked}
+        defaultCollapsed={hasOpenPosition}
+      >
         <BotFormGroup
           title="Additional Order Types"
           hint="This method applies to every add after the first fill. The step next to Spacing is the first add; later adds use the same method."

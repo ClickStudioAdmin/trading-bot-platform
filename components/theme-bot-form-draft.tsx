@@ -2015,8 +2015,10 @@ export function ThemeBotFormDraft() {
             </div>
           </Group>
         )}
+        </BotFormStep>
 
         {desk === "dca" ? (
+        <BotFormStep title="Additional Orders">
         <Group
           title="Additional Order Types"
           hint="This method applies to every add after the first fill. The step next to Spacing is the first add; later adds use the same method."
@@ -2151,9 +2153,6 @@ export function ThemeBotFormDraft() {
             ) : null}
           </div>
         </Group>
-        ) : null}
-
-        {desk === "dca" ? (
         <Group
           title="Additional Order Scaling"
           hint="How size and distance grow after the first add. 1 keeps later adds the same as the first add."
@@ -2209,8 +2208,10 @@ export function ThemeBotFormDraft() {
             </Field>
           </div>
         </Group>
-        ) : null}
         </BotFormStep>
+        ) : desk === "perps" && !closing ? (
+          <BotFormStep title="Additional Orders" />
+        ) : null}
 
         {!closing ? (
           <BotFormStep title="Exit Conditions">
