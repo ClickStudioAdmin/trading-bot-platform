@@ -242,9 +242,11 @@ export function IndicatorStartFields({
           className={
             column
               ? compactGrid
-              : levelField
-                ? "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2fr)_6.5rem]"
-                : "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2.4fr)]"
+              : levelField && !periodField
+                ? "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_minmax(12rem,1.6fr)_6.5rem]"
+                : levelField
+                  ? "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2fr)_6.5rem]"
+                  : "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2.4fr)]"
           }
         >
           {indicatorField}
