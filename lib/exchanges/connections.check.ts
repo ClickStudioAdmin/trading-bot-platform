@@ -11,6 +11,7 @@ import {
   parseBoundConnectionId,
   connectionIdsBoundToOtherDesks,
   exclusiveConnectionBindError,
+  connectionListedForBind,
   sharedKeyWarningKind,
   parseConnectionLabel,
   parseExchangeConnectionRow,
@@ -131,6 +132,48 @@ assert.equal(
     binds: [{ connectionId: "k1", accountId: "a", accountName: "Desk A" }],
   }),
   null,
+);
+assert.equal(
+  exclusiveConnectionBindError({
+    connectionId: "k1",
+    currentAccountId: "b",
+    allowShared: true,
+    binds: [{ connectionId: "k1", accountId: "a", accountName: "Desk A" }],
+  }),
+  null,
+);
+assert.equal(
+  connectionListedForBind({
+    connectionId: "k1",
+    sharedConnectionIds: ["k1"],
+    allowShared: false,
+  }),
+  false,
+);
+assert.equal(
+  connectionListedForBind({
+    connectionId: "k1",
+    selectedId: "k1",
+    sharedConnectionIds: ["k1"],
+    allowShared: false,
+  }),
+  true,
+);
+assert.equal(
+  connectionListedForBind({
+    connectionId: "k1",
+    sharedConnectionIds: ["k1"],
+    allowShared: true,
+  }),
+  true,
+);
+assert.equal(
+  connectionListedForBind({
+    connectionId: "k2",
+    sharedConnectionIds: ["k1"],
+    allowShared: false,
+  }),
+  true,
 );
 assert.equal(
   sharedKeyWarningKind({

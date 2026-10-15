@@ -27,6 +27,7 @@ import {
 import { usableBookShareToInput } from "@/lib/opportunities/capacity";
 import { firstSearchValue } from "@/lib/paper/open";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
+import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionContext } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 
@@ -51,6 +52,7 @@ export default async function CashAndCarrySettingsPage({
   const connections = live
     ? await listExchangeConnections(session.member.id)
     : [];
+  const allowSharedKeys = memberIsAdmin(session.member);
   const sharedConnectionIds = live
     ? connectionIdsBoundToOtherDesks(
         await listConnectionDeskBinds(session.member.id),
@@ -107,6 +109,7 @@ export default async function CashAndCarrySettingsPage({
             selected={selected}
             detachBlocked={detachBlocked}
             sharedConnectionIds={sharedConnectionIds}
+            allowSharedKeys={allowSharedKeys}
             canSave={canSave}
             venues={connectionVenuesForDeskType(session.account.deskType)}
             next={settingsHref}
@@ -151,6 +154,7 @@ function ExchangeBindField({
   selected,
   detachBlocked,
   sharedConnectionIds,
+  allowSharedKeys,
   canSave,
   venues,
   next,
@@ -160,6 +164,7 @@ function ExchangeBindField({
   selected: ExchangeConnection | null;
   detachBlocked: boolean;
   sharedConnectionIds: string[];
+  allowSharedKeys: boolean;
   canSave: boolean;
   venues: ReturnType<typeof connectionVenuesForDeskType>;
   next: string;
@@ -204,6 +209,7 @@ function ExchangeBindField({
         selectedId={selectedId}
         allowNone={!selected}
         sharedConnectionIds={sharedConnectionIds}
+        allowSharedKeys={allowSharedKeys}
       />
       {selected ? (
         <div className="mt-2">

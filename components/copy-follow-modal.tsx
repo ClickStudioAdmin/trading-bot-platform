@@ -13,9 +13,12 @@ import {
   formatDeskVenueCaption,
 } from "@/lib/accounts/model";
 import { createCopyDeskAction } from "@/lib/copy/actions";
+import { SharedKeyWarning } from "@/components/shared-key-warning";
 import { formatCopyPaperStartingUsdt } from "@/lib/copy/decide";
 import {
+  connectionListedForBind,
   formatConnectionSummary,
+  sharedKeyWarningKind,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
 import { connectionFitsDesk, getVenue } from "@/lib/exchanges/venues";
@@ -45,6 +48,8 @@ export function CopyFollowButton({
   venue,
   venueEnvironment,
   connections,
+  sharedConnectionIds = [],
+  allowSharedKeys = false,
   following,
   defaultOpen = false,
   revealGatesOnClick = false,
@@ -56,6 +61,8 @@ export function CopyFollowButton({
   venue: string;
   venueEnvironment: string | null;
   connections: ExchangeConnection[];
+  sharedConnectionIds?: string[];
+  allowSharedKeys?: boolean;
   following?: boolean;
   defaultOpen?: boolean;
   revealGatesOnClick?: boolean;
@@ -194,6 +201,8 @@ export function CopyFollowButton({
           venue={venue}
           venueEnvironment={venueEnvironment}
           connections={connections}
+          sharedConnectionIds={sharedConnectionIds}
+          allowSharedKeys={allowSharedKeys}
           onClose={() => setOpen(false)}
         />
       ) : null}
@@ -208,6 +217,8 @@ function CopyFollowModal({
   venue,
   venueEnvironment,
   connections,
+  sharedConnectionIds,
+  allowSharedKeys,
   onClose,
 }: {
   parentAccountId: string;
@@ -216,6 +227,8 @@ function CopyFollowModal({
   venue: string;
   venueEnvironment: string | null;
   connections: ExchangeConnection[];
+  sharedConnectionIds: string[];
+  allowSharedKeys: boolean;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -229,13 +242,14 @@ function CopyFollowModal({
   const paperOff = quotasGated && paperQuota ? !paperQuota.allowed : false;
   const liveOff = quotasGated && liveQuota ? !liveQuota.allowed : false;
   const [mode, setMode] = useState<"paper" | "live">("paper");
+  const [connectionId, setConnectionId] = useState("");
   const [followed, setFollowed] = useState(false);
   const venueDef = getVenue(venue);
   const stamp = `${formatDeskType(deskType)} · ${formatDeskVenueCaption({
     venue,
     venueEnvironment,
   })}${venueDef ? ` · ${venueDef.label}` : ""}`;
-  const matching = connections.filter(
+  const venueMatches = connections.filter(
     (row) =>
       row.status === "active" &&
       connectionFitsDesk({
@@ -245,6 +259,20 @@ function CopyFollowModal({
         connectionEnvironment: row.environment,
       }).ok,
   );
+  const matching = venueMatches.filter((row) =>
+    connectionListedForBind({
+      connectionId: row.id,
+      sharedConnectionIds,
+      allowShared: allowSharedKeys,
+    }),
+  );
+  const warningKind =
+    allowSharedKeys && connectionId
+      ? sharedKeyWarningKind({
+          connectionId,
+          sharedConnectionIds,
+        })
+      : null;
 
   return (
     <Modal title="Copy desk" onClose={onClose} size="xl">
@@ -318,20 +346,30 @@ function CopyFollowModal({
               </label>
               {mode === "live" ? (
                 matching.length > 0 ? (
-                  <label className="block text-sm text-ink">
-                    Exchange connection
-                    <AppSelect name="exchangeConnectionId" className={fieldClass}>
-                      <option value="">Bind later in Desk Settings</option>
-                      {matching.map((row) => (
-                        <option key={row.id} value={row.id}>
-                          {formatConnectionSummary(row)}
-                        </option>
-                      ))}
-                    </AppSelect>
-                  </label>
+                  <div className="space-y-2">
+                    <label className="block text-sm text-ink">
+                      Exchange connection
+                      <AppSelect
+                        name="exchangeConnectionId"
+                        value={connectionId}
+                        onChange={(event) => setConnectionId(event.target.value)}
+                        className={fieldClass}
+                      >
+                        <option value="">Bind later in Desk Settings</option>
+                        {matching.map((row) => (
+                          <option key={row.id} value={row.id}>
+                            {formatConnectionSummary(row)}
+                          </option>
+                        ))}
+                      </AppSelect>
+                    </label>
+                    {warningKind ? <SharedKeyWarning kind={warningKind} /> : null}
+                  </div>
                 ) : (
                   <p className="text-sm text-ink-muted">
-                    No matching key on this login. Bind later in Desk Settings.
+                    {!allowSharedKeys && venueMatches.length > 0
+                      ? "Every matching key is already bound to another desk. Bind later, or unbind one first."
+                      : "No matching key on this login. Bind later in Desk Settings."}
                   </p>
                 )
               ) : (

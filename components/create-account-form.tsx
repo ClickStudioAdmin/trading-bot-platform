@@ -17,6 +17,7 @@ import {
   validateNewDeskName,
 } from "@/lib/accounts/model";
 import {
+  connectionListedForBind,
   formatConnectionSummary,
   sharedKeyWarningKind,
   type ExchangeConnection,
@@ -57,6 +58,7 @@ const DESK_TYPES: DeskType[] = [
 export function CreateAccountForm({
   connections,
   sharedConnectionIds = [],
+  allowSharedKeys = false,
   existingNames = [],
   next,
   embedded = false,
@@ -69,6 +71,7 @@ export function CreateAccountForm({
 }: {
   connections: ExchangeConnection[];
   sharedConnectionIds?: string[];
+  allowSharedKeys?: boolean;
   existingNames?: string[];
   next?: string;
   embedded?: boolean;
@@ -99,13 +102,19 @@ export function CreateAccountForm({
         if (row.status !== "active") {
           return false;
         }
-        if (sharedConnectionIds.includes(row.id)) {
+        if (
+          !connectionListedForBind({
+            connectionId: row.id,
+            sharedConnectionIds,
+            allowShared: allowSharedKeys,
+          })
+        ) {
           return false;
         }
         const venue = getVenue(row.venue);
         return venue ? venueAllowsDeskType(venue, deskType) : false;
       }),
-    [connections, deskType, sharedConnectionIds],
+    [allowSharedKeys, connections, deskType, sharedConnectionIds],
   );
   const paperVenues = useMemo(
     () => venuesForDeskType(deskType),

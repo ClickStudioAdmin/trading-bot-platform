@@ -37,7 +37,7 @@ Phase accepted. DCA is complete ([phase-11.md](phase-11.md)).
 
 Perp types share `futures_positions` / `futures_orders` scoped to that desk id. Do not add `/strategies/dca` as a second ledger. Keep internal slugs (`futures`, `cash-and-carry`) if cheaper than `/desks/:id`.
 
-Same venue key on two desks still shares IM. Isolation = another desk **and** another trade-only key.
+Same venue key on two desks still shares IM. Isolation for members = another desk **and** another trade-only key. Admins may bind one saved key to more than one desk for testing; the shared-balance warning stays.
 
 ## Later
 

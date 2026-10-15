@@ -47,6 +47,8 @@ export function connectionIdsBoundToOtherDesks(
 export function exclusiveConnectionBindError(input: {
   connectionId: string;
   currentAccountId?: string | null;
+  /** Admins may reuse one key across desks for testing. */
+  allowShared?: boolean;
   binds: readonly {
     connectionId: string;
     accountId: string;
@@ -54,7 +56,7 @@ export function exclusiveConnectionBindError(input: {
   }[];
 }): string | null {
   const id = input.connectionId.trim();
-  if (!id) {
+  if (!id || input.allowShared) {
     return null;
   }
   const other = input.binds.find(
@@ -66,6 +68,22 @@ export function exclusiveConnectionBindError(input: {
   }
   const name = other.accountName?.trim() || "another desk";
   return `That exchange key is already bound to ${name}. Use a different trade-only key.`;
+}
+
+/** Members do not see a key another desk already holds, except the desk's own bind. */
+export function connectionListedForBind(input: {
+  connectionId: string;
+  selectedId?: string | null;
+  sharedConnectionIds: readonly string[];
+  allowShared: boolean;
+}): boolean {
+  if (input.allowShared) {
+    return true;
+  }
+  if (input.selectedId && input.connectionId === input.selectedId) {
+    return true;
+  }
+  return !input.sharedConnectionIds.includes(input.connectionId);
 }
 
 export type SharedKeyWarningKind = "pending" | "shared";
