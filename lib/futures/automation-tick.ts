@@ -13,6 +13,7 @@ import {
   futuresBreakevenStop,
   futuresEntryConditionMet,
   futuresFilterMet,
+  perpsExitForSide,
 } from "./conditions";
 import { entryStackListensOnPriceTick, entryStackMatchesWebhook } from "@/lib/strategy/expr";
 import { hardExitMet } from "@/lib/dca/hard-exit";
@@ -433,13 +434,17 @@ export async function fireWebhookAutomationEntries(input: {
     if (!rule.id) {
       continue;
     }
-    const exitWebhookHit =
-      (rule.exitHard?.trigger === "webhook" &&
-        rule.exitHard.webhookId === input.webhookId) ||
-      (rule.exitStack?.leaves ?? []).some(
-        (leaf) =>
-          leaf.kind === "webhook" && leaf.webhookId === input.webhookId,
+    const exitWebhookHit = (["long", "short"] as const).some((side) => {
+      const exit = perpsExitForSide(rule, side);
+      return (
+        (exit.exitHard?.trigger === "webhook" &&
+          exit.exitHard.webhookId === input.webhookId) ||
+        exit.exitStack.leaves.some(
+          (leaf) =>
+            leaf.kind === "webhook" && leaf.webhookId === input.webhookId,
+        )
       );
+    });
     if (exitWebhookHit) {
       const owned = opens.filter(
         (row) => row.ruleId === rule.id && row.symbol === rule.symbol,
@@ -453,12 +458,13 @@ export async function fireWebhookAutomationEntries(input: {
       const prices = ticker ? tickerTriggerPrices(ticker) : null;
       let flattened = false;
       for (const open of owned) {
-        const exitBars = rule.exitIf
-          ? (barsByTimeframe.get(rule.exitIf.timeframe) ?? [])
+        const exit = perpsExitForSide(rule, open.side);
+        const exitBars = exit.exitIf
+          ? (barsByTimeframe.get(exit.exitIf.timeframe) ?? [])
           : [];
         const first = hardExitMet({
-          filter: rule.exitIf,
-          signal: rule.exitHard,
+          filter: exit.exitIf,
+          signal: exit.exitHard,
           side: open.side,
           closes: exitBars.map((row) => row.close),
           bars: exitBars,
@@ -468,7 +474,7 @@ export async function fireWebhookAutomationEntries(input: {
         if (
           !exitExpressionMet({
             first,
-            stack: rule.exitStack,
+            stack: exit.exitStack,
             side: open.side,
             price: prices?.last ?? null,
             prices,
@@ -479,9 +485,9 @@ export async function fireWebhookAutomationEntries(input: {
           continue;
         }
         const reasons = formatExitExpressionText({
-          filter: rule.exitIf,
-          signal: rule.exitHard,
-          stack: rule.exitStack,
+          filter: exit.exitIf,
+          signal: exit.exitHard,
+          stack: exit.exitStack,
           side: open.side,
         });
         const closed = await runFuturesCommand({
@@ -683,10 +689,11 @@ async function monitorOwnedFuturesPositions(input: {
       continue;
     }
     const { rule, account } = owned;
+    const watchedExit = perpsExitForSide(rule, open.side);
     if (
-      !rule.exitIf &&
-      !rule.exitHard &&
-      !(rule.exitStack && rule.exitStack.leaves.length > 0) &&
+      !watchedExit.exitIf &&
+      !watchedExit.exitHard &&
+      watchedExit.exitStack.leaves.length === 0 &&
       rule.breakevenActivationPct == null
     ) {
       continue;
@@ -713,19 +720,19 @@ async function monitorOwnedFuturesPositions(input: {
       cache: input.klineCache,
     });
     const prices = ticker ? tickerTriggerPrices(ticker) : null;
-    const exitBars = rule.exitIf
-      ? (barsByTimeframe.get(rule.exitIf.timeframe) ?? [])
+    const exitBars = watchedExit.exitIf
+      ? (barsByTimeframe.get(watchedExit.exitIf.timeframe) ?? [])
       : [];
     const exitMet = exitExpressionMet({
       first: hardExitMet({
-        filter: rule.exitIf,
-        signal: rule.exitHard,
+        filter: watchedExit.exitIf,
+        signal: watchedExit.exitHard,
         side: open.side,
         closes: exitBars.map((row) => row.close),
         bars: exitBars,
         prices,
       }),
-      stack: rule.exitStack,
+      stack: watchedExit.exitStack,
       side: open.side,
       price: prices?.last ?? null,
       prices,
@@ -733,9 +740,9 @@ async function monitorOwnedFuturesPositions(input: {
     });
     if (exitMet) {
       const reasons = formatExitExpressionText({
-        filter: rule.exitIf,
-        signal: rule.exitHard,
-        stack: rule.exitStack,
+        filter: watchedExit.exitIf,
+        signal: watchedExit.exitHard,
+        stack: watchedExit.exitStack,
         side: open.side,
       });
       const closed = await runFuturesCommand({

@@ -85,21 +85,25 @@ assert.equal(value(dca, "Position Sizing", "Price deviation"), "2%");
 assert.equal(value(dca, "Position Sizing", "Order"), "Market");
 assert.equal(value(dca, "Position Sizing", "Order size multiplier"), "1.5");
 assert.equal(
-  value(dca, "Exit Conditions", "Take profit"),
+  value(dca, "Long Exit Condition Builder", "Take profit"),
   "1.2% · Average entry · Market",
 );
 assert.equal(
-  value(dca, "Exit Conditions", "Stop loss"),
+  value(dca, "Short Exit Condition Builder", "Take profit"),
+  "1.2% · Average entry · Market",
+);
+assert.equal(
+  value(dca, "Long Exit Condition Builder", "Stop loss"),
   "Move breakeven at 0.8% · offset 0.1%",
 );
 assert.equal(
   dca
-    .find((row) => row.title === "Exit Conditions")
+    .find((row) => row.title === "Long Exit Condition Builder")
     ?.lines.some((line) => line.label === "Move breakeven"),
   false,
 );
-assert.equal(value(dca, "Exit Conditions", "Long Hard exit"), "Off");
-assert.match(value(dca, "Exit Conditions", "Short Hard exit"), /RSI 14/);
+assert.equal(value(dca, "Long Exit Condition Builder", "Custom conditions"), "Off");
+assert.match(value(dca, "Short Exit Condition Builder", "Custom conditions"), /RSI 14/);
 
 const perps = perpsBotConfig({
   ...defaultFuturesAutomationForm(0, "ETHUSDT"),
@@ -173,9 +177,9 @@ assert.match(
 );
 assert.match(value(stacked, "Long Entry Condition Builder", "Entry conditions"), /or Price is above EMA 21/);
 assert.equal(value(perps, "Position Sizing", "Size"), "10 USDT");
-assert.equal(value(perps, "Exit Conditions", "Take profit"), "3% · Last · Market");
-assert.equal(value(perps, "Exit Conditions", "Stop loss"), "Off");
-assert.equal(value(perps, "Exit Conditions", "Hard exit"), "Off");
+assert.equal(value(perps, "Long Exit Condition Builder", "Take profit"), "3% · Last · Market");
+assert.equal(value(perps, "Long Exit Condition Builder", "Stop loss"), "Off");
+assert.equal(value(perps, "Long Exit Condition Builder", "Custom conditions"), "Off");
 const perpsStop = perpsBotConfig({
   ...defaultFuturesAutomationForm(0, "ETHUSDT"),
   formAction: "buy",
@@ -198,7 +202,7 @@ const perpsStop = perpsBotConfig({
   breakevenOffsetPct: "0.2",
 });
 assert.equal(
-  value(perpsStop, "Exit Conditions", "Stop loss"),
+  value(perpsStop, "Long Exit Condition Builder", "Stop loss"),
   "2% · Mark · Market · Move breakeven at 1.5% · offset 0.2%",
 );
 
@@ -209,7 +213,11 @@ const closeRule = perpsBotConfig({
 });
 assert.equal(value(closeRule, "Position Sizing", "Qty to close"), "All");
 assert.equal(
-  closeRule.find((row) => row.title === "Exit Conditions"),
+  closeRule.find(
+    (row) =>
+      row.title === "Exit Conditions" ||
+      row.title.endsWith("Exit Condition Builder"),
+  ),
   undefined,
 );
 

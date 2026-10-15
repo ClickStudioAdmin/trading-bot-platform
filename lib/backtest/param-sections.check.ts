@@ -34,7 +34,7 @@ const dca = dcaSeed();
 const sections = recipeParamSections(dca);
 assert.deepEqual(
   sections.map((section) => section.title),
-  ["General", "Long Entry Condition Builder", "Position Sizing", "Additional Orders", "Exit Conditions"],
+  ["General", "Long Entry Condition Builder", "Position Sizing", "Additional Orders", "Long Exit Condition Builder"],
 );
 const general = sections[0]?.groups[0]?.rows.map((row) => row.label);
 assert.deepEqual(general, ["Name", "Contract", "Direction"]);
@@ -91,7 +91,7 @@ const nestedStop = recipeParamSections(
     breakevenActivationPct: "1.5",
     breakevenOffsetPct: "0.2",
   }),
-).find((section) => section.title === "Exit Conditions");
+).find((section) => section.title === "Long Exit Condition Builder");
 const stopGroup = nestedStop?.groups.find((group) => group.title === "Stop loss");
 assert.deepEqual(
   stopGroup?.rows.map((row) => row.label),
@@ -103,7 +103,7 @@ assert.equal(
 );
 const breakevenOnly = recipeParamSections(
   dcaWithExits({ breakevenActivationPct: "1.5" }),
-).find((section) => section.title === "Exit Conditions");
+).find((section) => section.title === "Long Exit Condition Builder");
 assert.deepEqual(
   breakevenOnly?.groups
     .find((group) => group.title === "Stop loss")
@@ -111,7 +111,7 @@ assert.deepEqual(
   ["Move stop to breakeven at %", "Breakeven offset %"],
 );
 assert.equal(
-  recipeParamRows(dca).find((row) => row.label === "Condition Builder")?.value,
+  recipeParamRows(dca).find((row) => row.label === "Custom conditions")?.value,
   "Off",
 );
 
@@ -154,7 +154,7 @@ const perps = snapshotPerpsRecipe({
 const perpsSections = recipeParamSections(perps);
 assert.deepEqual(
   perpsSections.map((section) => section.title),
-  ["General", "Long Entry Condition Builder", "Position Sizing", "Exit Conditions"],
+  ["General", "Long Entry Condition Builder", "Position Sizing", "Long Exit Condition Builder"],
 );
 assert.deepEqual(
   perpsSections[0]?.groups[0]?.rows.map((row) => row.label),
@@ -234,7 +234,9 @@ const closeRecipe = snapshotPerpsRecipe({
 });
 assert.equal(
   recipeParamSections(closeRecipe).some(
-    (section) => section.title === "Exit Conditions",
+    (section) =>
+      section.title === "Exit Conditions" ||
+      section.title.endsWith("Exit Condition Builder"),
   ),
   false,
 );

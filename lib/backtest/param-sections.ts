@@ -552,6 +552,33 @@ function nestBreakeven(
   return { title: group.title, rows: [...group.rows, ...extra] };
 }
 
+function dcaExitSections(recipe: DcaTemplateRecipe): ParamSection[] {
+  const groups = dcaExitGroups(recipe);
+  const classic = groups.filter((group) => group.title !== "Condition Builder" && group.title !== "Long" && group.title !== "Short" && group.title !== "Custom conditions");
+  const sides: Array<"long" | "short"> =
+    recipe.direction === "both"
+      ? ["long", "short"]
+      : recipe.direction === "short"
+        ? ["short"]
+        : ["long"];
+  return sides.map((side) => ({
+    title:
+      side === "short"
+        ? "Short Exit Condition Builder"
+        : "Long Exit Condition Builder",
+    groups: [
+      ...classic,
+      hardExitGroup(
+        "Custom conditions",
+        side === "short" ? recipe.shortExitIf : recipe.exitIf,
+        side === "short" ? recipe.shortExitHard : recipe.exitHard,
+        side,
+        side === "short" ? recipe.shortExitStack : recipe.exitStack,
+      ),
+    ],
+  }));
+}
+
 function dcaExitGroups(recipe: DcaTemplateRecipe): ParamGroup[] {
   const tpOn =
     recipe.takeProfitKind === "atr"
@@ -667,7 +694,7 @@ function dcaSections(recipe: DcaTemplateRecipe): ParamSection[] {
           group.title === "Additional Order Scaling",
       ),
     },
-    { title: "Exit Conditions", groups: dcaExitGroups(recipe) },
+    ...dcaExitSections(recipe),
   ];
 }
 
@@ -850,53 +877,91 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
       groups: [{ title: closing ? undefined : "Order Size", rows: sizeRows }],
     },
   ];
-  if (!closing) {
-    const tpsl = recipe.tpsl;
-    sections.push({
-      title: "Exit Conditions",
+  sections.push(...perpsExitSections(recipe, side));
+  return sections;
+}
+
+function perpsShortHasOwnExit(recipe: PerpsTemplateRecipe): boolean {
+  const leg = recipe.shortEntry;
+  if (!leg) {
+    return false;
+  }
+  return Boolean(
+    leg.exitIf ||
+      leg.exitHard ||
+      (leg.exitStack && leg.exitStack.leaves.length > 0),
+  );
+}
+
+function perpsExitSections(
+  recipe: PerpsTemplateRecipe,
+  entrySide: "long" | "short",
+): ParamSection[] {
+  const closing =
+    recipe.formAction === "close_long" || recipe.formAction === "close_short";
+  if (closing) {
+    return [];
+  }
+  const tpsl = recipe.tpsl;
+  const classic: ParamGroup[] = [
+    perpsExitLevel(
+      "Take profit",
+      tpsl?.takeProfit,
+      tpsl?.tpKind,
+      tpsl?.tpTrigger,
+      tpsl?.tpOrderType,
+      tpsl?.tpLimitPrice,
+    ),
+    optionalGroup("Trailing stop", recipe.trailing?.distance != null, [
+      { label: "Retracement", value: num(recipe.trailing?.distance) },
+      {
+        label: "Activation price",
+        value:
+          recipe.trailing?.activePrice == null
+            ? "Off"
+            : num(recipe.trailing.activePrice),
+      },
+    ]),
+    nestBreakeven(
+      perpsExitLevel(
+        "Stop loss",
+        tpsl?.stopLoss,
+        tpsl?.slKind,
+        tpsl?.slTrigger,
+        tpsl?.slOrderType,
+        tpsl?.slLimitPrice,
+      ),
+      "Stop loss",
+      recipe.breakevenActivationPct,
+      recipe.breakevenOffsetPct,
+    ),
+  ];
+  const sides: Array<"long" | "short"> =
+    recipe.direction === "both"
+      ? ["long", "short"]
+      : entrySide === "short"
+        ? ["short"]
+        : ["long"];
+  return sides.map((exitSide) => {
+    const ownShort = exitSide === "short" && recipe.direction === "both";
+    const short = ownShort && perpsShortHasOwnExit(recipe) ? recipe.shortEntry : null;
+    return {
+      title:
+        exitSide === "short"
+          ? "Short Exit Condition Builder"
+          : "Long Exit Condition Builder",
       groups: [
-        perpsExitLevel(
-          "Take profit",
-          tpsl?.takeProfit,
-          tpsl?.tpKind,
-          tpsl?.tpTrigger,
-          tpsl?.tpOrderType,
-          tpsl?.tpLimitPrice,
-        ),
-        optionalGroup("Trailing stop", recipe.trailing?.distance != null, [
-          { label: "Retracement", value: num(recipe.trailing?.distance) },
-          {
-            label: "Activation price",
-            value:
-              recipe.trailing?.activePrice == null
-                ? "Off"
-                : num(recipe.trailing.activePrice),
-          },
-        ]),
-        nestBreakeven(
-          perpsExitLevel(
-            "Stop loss",
-            tpsl?.stopLoss,
-            tpsl?.slKind,
-            tpsl?.slTrigger,
-            tpsl?.slOrderType,
-            tpsl?.slLimitPrice,
-          ),
-          "Stop loss",
-          recipe.breakevenActivationPct,
-          recipe.breakevenOffsetPct,
-        ),
+        ...classic,
         hardExitGroup(
-          "Condition Builder",
-          recipe.exitIf,
-          recipe.exitHard,
-          side,
-          recipe.exitStack,
+          "Custom conditions",
+          ownShort ? (short?.exitIf ?? null) : recipe.exitIf,
+          ownShort ? (short?.exitHard ?? null) : recipe.exitHard,
+          exitSide,
+          ownShort ? (short?.exitStack ?? null) : recipe.exitStack,
         ),
       ],
-    });
-  }
-  return sections;
+    };
+  });
 }
 
 export function recipeParamSections(recipe: BacktestRecipe): ParamSection[] {

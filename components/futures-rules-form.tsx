@@ -28,16 +28,19 @@ import {
   botSidebarSaveClass,
   deskActionBtnClass,
 } from "@/components/bot-form-chrome";
-import { HardExitFields } from "@/components/hard-exit-fields";
+import { ExitSideBuilder } from "@/components/exit-side-builder";
 import {
-  ExitConditionStack,
-  anchorDisabledKinds,
-  anchorDisabledWebhookIds,
-  exitConflictSlots,
   exitRowsFromStack,
   exitStackFromRows,
   type ExitStackRow,
 } from "@/components/exit-condition-stack";
+import {
+  classicSignature,
+  customStackFromClauses,
+  exitClausesFromSaved,
+  syncClassicClauses,
+  type ExitBuilderClause,
+} from "@/lib/strategy/exit-clauses";
 import {
   initialPerpsEntryDrafts,
   oppositePerpsEntryDraft,
@@ -95,7 +98,6 @@ import {
   type PerpsTemplateRecipe,
 } from "@/lib/templates/recipe";
 import {
-  defaultHardExit,
   hardExitComplete,
   hardExitDraftFromStored,
   hardExitParts,
@@ -562,6 +564,69 @@ function RuleCard({
   const [trailingActive, setTrailingActive] = useState(
     layer.trailing?.activePrice != null ? String(layer.trailing.activePrice) : "",
   );
+  const [shortExitIf, setShortExitIf] = useState<HardExitDraft | null>(() =>
+    hardExitDraftFromStored(
+      layer.shortEntry?.exitIf,
+      layer.shortEntry?.exitHard,
+    ),
+  );
+  const [shortExitRows, setShortExitRows] = useState<ExitStackRow[]>(() =>
+    exitRowsFromStack(layer.shortEntry?.exitStack),
+  );
+  const [exitClauses, setExitClauses] = useState(() =>
+    exitClausesFromSaved({
+      takeProfit: tpOn,
+      trailing: trailOn,
+      stopLoss: slOn,
+      anchor: exitIf,
+      rows: exitRows,
+    }),
+  );
+  const [shortClauses, setShortClauses] = useState(() =>
+    exitClausesFromSaved({
+      takeProfit: tpOn,
+      trailing: trailOn,
+      stopLoss: slOn,
+      anchor: shortExitIf,
+      rows: shortExitRows,
+    }),
+  );
+  function commitExitClauses(
+    next: ExitBuilderClause[],
+    which: "primary" | "short",
+  ) {
+    const custom = customStackFromClauses(next);
+    if (which === "short") {
+      setShortClauses(next);
+      setShortExitIf(custom.anchor);
+      setShortExitRows(custom.rows);
+      setExitClauses((current) =>
+        classicSignature(current) === classicSignature(next)
+          ? current
+          : syncClassicClauses(current, next),
+      );
+    } else {
+      setExitClauses(next);
+      setExitIf(custom.anchor);
+      setExitRows(custom.rows);
+      if (direction === "both") {
+        setShortClauses((current) =>
+          classicSignature(current) === classicSignature(next)
+            ? current
+            : syncClassicClauses(current, next),
+        );
+      }
+    }
+    setTpOn(next.some((clause) => clause.kind === "take_profit"));
+    setTrailOn(next.some((clause) => clause.kind === "trailing_stop"));
+    const nextSl = next.some((clause) => clause.kind === "stop_loss");
+    setSlOn(nextSl);
+    if (!nextSl) {
+      setBreakevenOn(false);
+    }
+    setDirty(true);
+    setFormTick((tick) => tick + 1);
+  }
   const closing = direction === "close_long" || direction === "close_short";
   const showLong =
     direction === "long" || direction === "both" || direction === "close_long";
@@ -576,9 +641,21 @@ function RuleCard({
       ? entryDrafts.short
       : entryDrafts.long;
   const primaryLeg = perpsEntryLegFromDraft(primaryDraft, closing);
+  const shortExitParts = hardExitParts(
+    storedDirection === "both" ? shortExitIf : null,
+  );
   const shortLeg =
     storedDirection === "both"
-      ? perpsEntryLegFromDraft(entryDrafts.short, false)
+      ? {
+          ...perpsEntryLegFromDraft(entryDrafts.short, false),
+          ...(shortExitIf || shortExitRows.some((row) => row.draft.trigger !== "unset")
+            ? {
+                exitIf: shortExitParts.filter,
+                exitHard: shortExitParts.signal,
+                exitStack: exitStackFromRows(shortExitRows),
+              }
+            : {}),
+        }
       : null;
   const tpMissing = tpOn && takeProfit.trim() === "";
   const slMissing = slOn && stopLoss.trim() === "";
@@ -601,6 +678,11 @@ function RuleCard({
     Boolean(exitIf) &&
     (!hardExitComplete(exitIf) ||
       exitRows.some((row) => !hardExitComplete(row.draft)));
+  const shortExitMissing =
+    storedDirection === "both" &&
+    Boolean(shortExitIf) &&
+    (!hardExitComplete(shortExitIf) ||
+      shortExitRows.some((row) => !hardExitComplete(row.draft)));
   const exitParts = hardExitParts(closing ? null : exitIf);
   const exitStack = closing ? null : exitStackFromRows(exitRows);
   const tpsl =
@@ -690,6 +772,7 @@ function RuleCard({
     slLimitMissing ||
     entryMissing ||
     exitIfMissing ||
+    shortExitMissing ||
     !parsedLive.ok;
   function controlValue(name: string, fallback: string): string {
     const named = formRef.current?.elements.namedItem(name);
@@ -788,12 +871,262 @@ function RuleCard({
         short: oppositePerpsEntryDraft(current.long, "short"),
       };
     });
+    if (next === "both" && direction !== "both") {
+      setShortClauses((current) => syncClassicClauses(current, exitClauses));
+    } else if (direction === "both" && next === "short") {
+      setExitClauses(shortClauses);
+      const moved = customStackFromClauses(shortClauses);
+      setExitIf(moved.anchor);
+      setExitRows(moved.rows);
+    }
     setDirection(next);
     setDirty(true);
     setFormTick((tick) => tick + 1);
   }
 
   const { confirm: askConfirm, dialog } = useConfirmDialog();
+
+
+  function perpsNamed(submit: boolean, field: string) {
+    return submit ? `${prefix}${field}` : undefined;
+  }
+  function perpsTakeProfitFields(submit: boolean) {
+    return (
+      <>
+        {submit && (tpOn || slOn) ? (
+          <>
+            <input type="hidden" name={`${prefix}tpsl`} value="on" />
+            <input type="hidden" name={`${prefix}tpslMode`} value={layer.tpsl?.mode ?? "full"} />
+          </>
+        ) : null}
+        <div className={fieldRow5}>
+          <BotField label="Type" required>
+            <AppSelect
+              name={perpsNamed(submit, "tpKind")}
+              value={tpKind}
+              onChange={(event) => {
+                const next = event.target.value === "percent" ? "percent" : "price";
+                setTpKind(next);
+                setTakeProfit("");
+              }}
+              className={botFieldClass}
+            >
+              <option value="price">Price</option>
+              <option value="percent">Percentage</option>
+            </AppSelect>
+          </BotField>
+          <BotField label={tpKind === "percent" ? "%" : "Price"} required>
+            {tpKind === "percent" ? (
+              <span className="relative mt-0.5 block">
+                <GroupedNumberInput
+                  name={perpsNamed(submit, "takeProfit")}
+                  value={takeProfit}
+                  onChange={setTakeProfit}
+                  allowDecimal
+                  className={`${botFieldClass} pr-7`}
+                />
+                <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                  %
+                </span>
+              </span>
+            ) : (
+              <GroupedNumberInput
+                name={perpsNamed(submit, "takeProfit")}
+                value={takeProfit}
+                onChange={setTakeProfit}
+                allowDecimal
+                className={botFieldClass}
+              />
+            )}
+          </BotField>
+          <BotField label="Trigger" required>
+            <AppSelect
+              name={perpsNamed(submit, "tpTrigger")}
+              value={tpTrigger}
+              onChange={(event) => setTpTrigger(event.target.value as FuturesTrigger)}
+              className={botFieldClass}
+            >
+              <option value="last">Last</option>
+              <option value="mark">Mark</option>
+              <option value="index">Index</option>
+            </AppSelect>
+          </BotField>
+          <BotField label="Order type" required>
+            <OrderTypePill
+              name={perpsNamed(submit, "tpOrderType")}
+              value={tpOrderType === "limit" ? "limit" : "market"}
+              onChange={setTpOrderType}
+            />
+          </BotField>
+          {tpOrderType === "limit" ? (
+            <BotField label="Limit price" required>
+              <GroupedNumberInput
+                name={perpsNamed(submit, "tpLimitPrice")}
+                value={tpLimitPrice}
+                onChange={setTpLimitPrice}
+                allowDecimal
+                className={botFieldClass}
+              />
+            </BotField>
+          ) : submit ? (
+            <input type="hidden" name={`${prefix}tpLimitPrice`} value="" />
+          ) : null}
+        </div>
+      </>
+    );
+  }
+  function perpsTrailingFields(submit: boolean) {
+    return (
+      <div className={fieldRow}>
+        {submit ? <input type="hidden" name={`${prefix}trailing`} value="on" /> : null}
+        <BotField label="Retracement" required>
+          <GroupedNumberInput
+            name={perpsNamed(submit, "trailingStop")}
+            value={trailingStop}
+            onChange={setTrailingStop}
+            allowDecimal
+            className={botFieldClass}
+          />
+        </BotField>
+        <BotField label="Activation price" hint="Empty is Off.">
+          <GroupedNumberInput
+            name={perpsNamed(submit, "trailingActive")}
+            value={trailingActive}
+            onChange={setTrailingActive}
+            allowDecimal
+            className={botFieldClass}
+          />
+        </BotField>
+      </div>
+    );
+  }
+  function perpsStopFields(submit: boolean) {
+    return (
+      <>
+        {submit && (!slOn || !breakevenOn) ? (
+          <div hidden>
+            <input type="hidden" name={`${prefix}breakevenActivationPct`} value="" />
+            <input type="hidden" name={`${prefix}breakevenOffsetPct`} value="" />
+          </div>
+        ) : null}
+        <div className="@container">
+          <div className="grid items-start gap-4 @min-[40rem]:grid-cols-2">
+            <div className="grid grid-cols-2 gap-4">
+              <BotField label="Type" required>
+                <AppSelect
+                  name={perpsNamed(submit, "slKind")}
+                  value={slKind}
+                  onChange={(event) => {
+                    const next = event.target.value === "percent" ? "percent" : "price";
+                    setSlKind(next);
+                    setStopLoss("");
+                  }}
+                  className={botFieldClass}
+                >
+                  <option value="price">Price</option>
+                  <option value="percent">Percentage</option>
+                </AppSelect>
+              </BotField>
+              <BotField label={slKind === "percent" ? "%" : "Price"} required>
+                {slKind === "percent" ? (
+                  <span className="relative mt-0.5 block">
+                    <GroupedNumberInput
+                      name={perpsNamed(submit, "stopLoss")}
+                      value={stopLoss}
+                      onChange={setStopLoss}
+                      allowDecimal
+                      className={`${botFieldClass} pr-7`}
+                    />
+                    <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                      %
+                    </span>
+                  </span>
+                ) : (
+                  <GroupedNumberInput
+                    name={perpsNamed(submit, "stopLoss")}
+                    value={stopLoss}
+                    onChange={setStopLoss}
+                    allowDecimal
+                    className={botFieldClass}
+                  />
+                )}
+              </BotField>
+              <BotField label="Trigger" required>
+                <AppSelect
+                  name={perpsNamed(submit, "slTrigger")}
+                  value={slTrigger}
+                  onChange={(event) => setSlTrigger(event.target.value as FuturesTrigger)}
+                  className={botFieldClass}
+                >
+                  <option value="last">Last</option>
+                  <option value="mark">Mark</option>
+                  <option value="index">Index</option>
+                </AppSelect>
+              </BotField>
+              <BotField label="Order type" required>
+                <OrderTypePill
+                  name={perpsNamed(submit, "slOrderType")}
+                  value={slOrderType === "limit" ? "limit" : "market"}
+                  onChange={setSlOrderType}
+                />
+              </BotField>
+              {slOrderType === "limit" ? (
+                <BotField label="Limit price" required>
+                  <GroupedNumberInput
+                    name={perpsNamed(submit, "slLimitPrice")}
+                    value={slLimitPrice}
+                    onChange={setSlLimitPrice}
+                    allowDecimal
+                    className={botFieldClass}
+                  />
+                </BotField>
+              ) : submit ? (
+                <input type="hidden" name={`${prefix}slLimitPrice`} value="" />
+              ) : null}
+            </div>
+            <OptionalSection
+              title="Move Breakeven"
+              className="min-w-0"
+              enabled={breakevenOn}
+              onEnabled={setBreakevenOn}
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <BotField label="Move stop to breakeven at %" required>
+                  <span className="relative mt-0.5 block">
+                    <GroupedNumberInput
+                      name={perpsNamed(submit, "breakevenActivationPct")}
+                      value={breakevenActivationPct}
+                      onChange={setBreakevenActivationPct}
+                      allowDecimal
+                      className={`${botFieldClass} pr-7`}
+                    />
+                    <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                      %
+                    </span>
+                  </span>
+                </BotField>
+                <BotField label="Breakeven offset %">
+                  <span className="relative mt-0.5 block">
+                    <GroupedNumberInput
+                      name={perpsNamed(submit, "breakevenOffsetPct")}
+                      value={breakevenOffsetPct}
+                      onChange={setBreakevenOffsetPct}
+                      allowDecimal
+                      placeholder="0"
+                      className={`${botFieldClass} pr-7`}
+                    />
+                    <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                      %
+                    </span>
+                  </span>
+                </BotField>
+              </div>
+            </OptionalSection>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -1008,329 +1341,45 @@ function RuleCard({
       </BotFormStep>
 
       {!closing ? (
-        <BotFormStep title="Additional Orders" defaultCollapsed={inUse} />
+        <BotFormStep title="Additional Orders" defaultCollapsed={inUse}>
+          {null}
+        </BotFormStep>
       ) : null}
 
-      {!closing ? (
-        <BotFormStep title="Exit Conditions">
-          {tpOn || slOn ? (
-            <>
-              <input type="hidden" name={`${prefix}tpsl`} value="on" />
-              <input
-                type="hidden"
-                name={`${prefix}tpslMode`}
-                value={layer.tpsl?.mode ?? "full"}
-              />
-            </>
-          ) : null}
-          <OptionalSection
-            title="Take profit"
-            enabled={tpOn}
-            onEnabled={setTpOn}
-          >
-            <div className={fieldRow5}>
-              <BotField label="Type" required>
-                <AppSelect
-                  name={`${prefix}tpKind`}
-                  value={tpKind}
-                  onChange={(event) => {
-                    const next = event.target.value === "percent" ? "percent" : "price";
-                    setTpKind(next);
-                    setTakeProfit("");
-                  }}
-                  className={botFieldClass}
-                >
-                  <option value="price">Price</option>
-                  <option value="percent">Percentage</option>
-                </AppSelect>
-              </BotField>
-              <BotField label={tpKind === "percent" ? "%" : "Price"} required>
-                {tpKind === "percent" ? (
-                  <span className="relative mt-0.5 block">
-                    <GroupedNumberInput
-                      name={`${prefix}takeProfit`}
-                      value={takeProfit}
-                      onChange={setTakeProfit}
-                      allowDecimal
-                      className={`${botFieldClass} pr-7`}
-                    />
-                    <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
-                      %
-                    </span>
-                  </span>
-                ) : (
-                  <GroupedNumberInput
-                    name={`${prefix}takeProfit`}
-                    value={takeProfit}
-                    onChange={setTakeProfit}
-                    allowDecimal
-                    className={botFieldClass}
-                  />
-                )}
-              </BotField>
-              <BotField label="Trigger" required>
-                <AppSelect
-                  name={`${prefix}tpTrigger`}
-                  value={tpTrigger}
-                  onChange={(event) =>
-                    setTpTrigger(event.target.value as FuturesTrigger)
-                  }
-                  className={botFieldClass}
-                >
-                  <option value="last">Last</option>
-                  <option value="mark">Mark</option>
-                  <option value="index">Index</option>
-                </AppSelect>
-              </BotField>
-              <BotField label="Order type" required>
-                <OrderTypePill
-                  name={`${prefix}tpOrderType`}
-                  value={tpOrderType === "limit" ? "limit" : "market"}
-                  onChange={setTpOrderType}
-                />
-              </BotField>
-              {tpOrderType === "limit" ? (
-                <BotField label="Limit price" required>
-                  <GroupedNumberInput
-                    name={`${prefix}tpLimitPrice`}
-                    value={tpLimitPrice}
-                    onChange={setTpLimitPrice}
-                    allowDecimal
-                    className={botFieldClass}
-                  />
-                </BotField>
-              ) : (
-                <input type="hidden" name={`${prefix}tpLimitPrice`} value="" />
-              )}
-            </div>
-          </OptionalSection>
-          <OptionalSection
-            title="Trailing stop"
-            enabled={trailOn}
-            onEnabled={setTrailOn}
-          >
-            {trailOn ? (
-              <input type="hidden" name={`${prefix}trailing`} value="on" />
-            ) : null}
-            <div className={fieldRow}>
-              <BotField label="Retracement" required>
-                <GroupedNumberInput
-                  name={`${prefix}trailingStop`}
-                  value={trailingStop}
-                  onChange={setTrailingStop}
-                  allowDecimal
-                  className={botFieldClass}
-                />
-              </BotField>
-              <BotField label="Activation price" hint="Empty is Off.">
-                <GroupedNumberInput
-                  name={`${prefix}trailingActive`}
-                  value={trailingActive}
-                  onChange={setTrailingActive}
-                  allowDecimal
-                  className={botFieldClass}
-                />
-              </BotField>
-            </div>
-          </OptionalSection>
-          {!slOn || !breakevenOn ? (
-            <div hidden>
-              <input
-                type="hidden"
-                name={`${prefix}breakevenActivationPct`}
-                value=""
-              />
-              <input
-                type="hidden"
-                name={`${prefix}breakevenOffsetPct`}
-                value=""
-              />
-            </div>
-          ) : null}
-          <OptionalSection
-            title="Stop loss"
-            enabled={slOn}
-            onEnabled={(next) => {
-              setSlOn(next);
-              if (!next) {
-                setBreakevenOn(false);
-              }
-            }}
-          >
-            <div className="@container">
-            <div className="grid items-start gap-4 @min-[40rem]:grid-cols-2">
-              <div className="grid grid-cols-2 gap-4">
-              <BotField label="Type" required>
-                <AppSelect
-                  name={`${prefix}slKind`}
-                  value={slKind}
-                  onChange={(event) => {
-                    const next = event.target.value === "percent" ? "percent" : "price";
-                    setSlKind(next);
-                    setStopLoss("");
-                  }}
-                  className={botFieldClass}
-                >
-                  <option value="price">Price</option>
-                  <option value="percent">Percentage</option>
-                </AppSelect>
-              </BotField>
-              <BotField label={slKind === "percent" ? "%" : "Price"} required>
-                {slKind === "percent" ? (
-                  <span className="relative mt-0.5 block">
-                    <GroupedNumberInput
-                      name={`${prefix}stopLoss`}
-                      value={stopLoss}
-                      onChange={setStopLoss}
-                      allowDecimal
-                      className={`${botFieldClass} pr-7`}
-                    />
-                    <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
-                      %
-                    </span>
-                  </span>
-                ) : (
-                  <GroupedNumberInput
-                    name={`${prefix}stopLoss`}
-                    value={stopLoss}
-                    onChange={setStopLoss}
-                    allowDecimal
-                    className={botFieldClass}
-                  />
-                )}
-              </BotField>
-              <BotField label="Trigger" required>
-                <AppSelect
-                  name={`${prefix}slTrigger`}
-                  value={slTrigger}
-                  onChange={(event) =>
-                    setSlTrigger(event.target.value as FuturesTrigger)
-                  }
-                  className={botFieldClass}
-                >
-                  <option value="last">Last</option>
-                  <option value="mark">Mark</option>
-                  <option value="index">Index</option>
-                </AppSelect>
-              </BotField>
-              <BotField label="Order type" required>
-                <OrderTypePill
-                  name={`${prefix}slOrderType`}
-                  value={slOrderType === "limit" ? "limit" : "market"}
-                  onChange={setSlOrderType}
-                />
-              </BotField>
-              {slOrderType === "limit" ? (
-                <BotField label="Limit price" required>
-                  <GroupedNumberInput
-                    name={`${prefix}slLimitPrice`}
-                    value={slLimitPrice}
-                    onChange={setSlLimitPrice}
-                    allowDecimal
-                    className={botFieldClass}
-                  />
-                </BotField>
-              ) : (
-                <input type="hidden" name={`${prefix}slLimitPrice`} value="" />
-              )}
-              </div>
-              <OptionalSection
-                title="Move Breakeven"
-                className="min-w-0"
-                enabled={breakevenOn}
-                onEnabled={setBreakevenOn}
-              >
-                <div className="grid grid-cols-2 gap-4">
-                  <BotField label="Move stop to breakeven at %" required>
-                    <span className="relative mt-0.5 block">
-                      <GroupedNumberInput
-                        name={`${prefix}breakevenActivationPct`}
-                        value={breakevenActivationPct}
-                        onChange={setBreakevenActivationPct}
-                        allowDecimal
-                        className={`${botFieldClass} pr-7`}
-                      />
-                      <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
-                        %
-                      </span>
-                    </span>
-                  </BotField>
-                  <BotField label="Breakeven offset %">
-                    <span className="relative mt-0.5 block">
-                      <GroupedNumberInput
-                        name={`${prefix}breakevenOffsetPct`}
-                        value={breakevenOffsetPct}
-                        onChange={setBreakevenOffsetPct}
-                        allowDecimal
-                        placeholder="0"
-                        className={`${botFieldClass} pr-7`}
-                      />
-                      <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
-                        %
-                      </span>
-                    </span>
-                  </BotField>
-                </div>
-              </OptionalSection>
-            </div>
-            </div>
-          </OptionalSection>
-          <OptionalSection
-            title="Condition Builder"
-            hint="Flattens this bot’s open size at market when the condition is true."
-            enabled={Boolean(exitIf)}
-            onEnabled={(next) => {
-              setExitIf(next ? (exitIf ?? defaultHardExit(exitSide)) : null);
-              if (!next) {
-                setExitRows([]);
-              }
-              setDirty(true);
-              setFormTick((tick) => tick + 1);
-            }}
-          >
-            {exitIf ? (
-              <ExitConditionStack
-                grouped
-                lead={
-                <HardExitFields
-                  prefix={`${prefix}exitIf`}
-                  side={exitSide}
-                  value={exitIf}
-                  onChange={setExitIf}
-                  webhooks={triggerWebhooks}
-                  gridClass={fieldRow5}
-                  fieldClass={botFieldClass}
-                  labelClass={botLabelClass}
-                  seriesSlots={exitConflictSlots(exitIf, exitRows)}
-                  seriesIndex={0}
-                  disabledKinds={anchorDisabledKinds(
-                    exitIf,
-                    exitRows,
-                    triggerWebhooks.map((hook) => hook.id),
-                  )}
-                  disabledWebhookIds={anchorDisabledWebhookIds(
-                    exitIf,
-                    exitRows,
-                    triggerWebhooks.map((hook) => hook.id),
-                  )}
-                />
-                }
-                prefix={`${prefix}exitIf`}
-                  side={exitSide}
-                  anchor={exitIf}
-                  rows={exitRows}
-                  onChange={(next) => {
-                    setExitRows(next);
-                    setDirty(true);
-                    setFormTick((tick) => tick + 1);
-                  }}
-                  webhooks={triggerWebhooks}
-                  gridClass={fieldRow5}
-                  fieldClass={botFieldClass}
-                  labelClass={botLabelClass}
-              />
-            ) : null}
-          </OptionalSection>
+      {!closing && (direction === "long" || direction === "both") ? (
+        <BotFormStep title="Long Exit Condition Builder">
+          <ExitSideBuilder
+            clauses={exitClauses}
+            onChange={(next) => commitExitClauses(next, "primary")}
+            side="long"
+            prefix={`${prefix}exitIf`}
+            webhooks={triggerWebhooks}
+            fieldClass={botFieldClass}
+            labelClass={botLabelClass}
+            gridClass={fieldRow5}
+            renderTakeProfit={() => perpsTakeProfitFields(true)}
+            renderTrailingStop={() => perpsTrailingFields(true)}
+            renderStopLoss={() => perpsStopFields(true)}
+          />
+        </BotFormStep>
+      ) : null}
+      {!closing && (direction === "short" || direction === "both") ? (
+        <BotFormStep title="Short Exit Condition Builder">
+          <ExitSideBuilder
+            clauses={direction === "both" ? shortClauses : exitClauses}
+            onChange={(next) =>
+              commitExitClauses(next, direction === "both" ? "short" : "primary")
+            }
+            side="short"
+            prefix={direction === "both" ? `${prefix}short_exitIf` : `${prefix}exitIf`}
+            webhooks={triggerWebhooks}
+            fieldClass={botFieldClass}
+            labelClass={botLabelClass}
+            gridClass={fieldRow5}
+            renderTakeProfit={() => perpsTakeProfitFields(direction !== "both")}
+            renderTrailingStop={() => perpsTrailingFields(direction !== "both")}
+            renderStopLoss={() => perpsStopFields(direction !== "both")}
+          />
         </BotFormStep>
       ) : null}
 

@@ -37,15 +37,18 @@ import {
   IndicatorStartFields,
   TrendStartFields,
 } from "@/components/bot-indicator-fields";
-import { HardExitFields } from "@/components/hard-exit-fields";
+import { ExitSideBuilder } from "@/components/exit-side-builder";
 import {
-  ExitConditionStack,
-  anchorDisabledKinds,
-  anchorDisabledWebhookIds,
-  exitConflictSlots,
   exitRowsFromStack,
   type ExitStackRow,
 } from "@/components/exit-condition-stack";
+import {
+  classicSignature,
+  customStackFromClauses,
+  exitClausesFromSaved,
+  syncClassicClauses,
+  type ExitBuilderClause,
+} from "@/lib/strategy/exit-clauses";
 import {
   EntryConditionStack,
   entryConflictSlots,
@@ -177,7 +180,6 @@ import {
   type DcaIndicatorKind,
 } from "@/lib/dca/indicators";
 import {
-  defaultHardExit,
   hardExitComplete,
   hardExitDraftFromStored,
   type HardExitDraft,
@@ -300,7 +302,7 @@ function PercentInput({
   placeholder,
   ariaLabel,
 }: {
-  name: string;
+  name?: string;
   value?: string;
   defaultValue?: string;
   onChange?: (next: string) => void;
@@ -1171,6 +1173,60 @@ export function DcaPlaybookForm({
   const [shortExitRows, setShortExitRows] = useState<ExitStackRow[]>(() =>
     exitRowsFromStack(source?.shortExitStack),
   );
+  const [exitClauses, setExitClauses] = useState(() =>
+    exitClausesFromSaved({
+      takeProfit: tpOn,
+      trailing: trailOn,
+      stopLoss: slOn,
+      anchor: exitIf,
+      rows: exitRows,
+    }),
+  );
+  const [shortClauses, setShortClauses] = useState(() =>
+    exitClausesFromSaved({
+      takeProfit: tpOn,
+      trailing: trailOn,
+      stopLoss: slOn,
+      anchor: shortExitIf,
+      rows: shortExitRows,
+    }),
+  );
+  function commitExitClauses(
+    next: ExitBuilderClause[],
+    which: "primary" | "short",
+  ) {
+    const custom = customStackFromClauses(next);
+    if (which === "short") {
+      setShortClauses(next);
+      setShortExitIf(custom.anchor);
+      setShortExitRows(custom.rows);
+      setExitClauses((current) =>
+        classicSignature(current) === classicSignature(next)
+          ? current
+          : syncClassicClauses(current, next),
+      );
+    } else {
+      setExitClauses(next);
+      setExitIf(custom.anchor);
+      setExitRows(custom.rows);
+      if (direction === "both") {
+        setShortClauses((current) =>
+          classicSignature(current) === classicSignature(next)
+            ? current
+            : syncClassicClauses(current, next),
+        );
+      }
+    }
+    setTpOn(next.some((clause) => clause.kind === "take_profit"));
+    setTrailOn(next.some((clause) => clause.kind === "trailing_stop"));
+    const nextSl = next.some((clause) => clause.kind === "stop_loss");
+    setSlOn(nextSl);
+    if (!nextSl) {
+      setBreakevenOn(false);
+    }
+    setTouched(true);
+    setFormTick((tick) => tick + 1);
+  }
   const defaultSymbol =
     source?.symbol ??
     options.find((row) => row.symbol === policy.defaultSymbol)?.symbol ??
@@ -1986,6 +2042,174 @@ export function DcaPlaybookForm({
     );
   }
 
+
+  function dcaTakeProfitFields(submit: boolean) {
+    return (
+      <div className={fieldRowClass}>
+        <label className={labelClass}>
+          <HintLabel text="Basis" required />
+          <AppSelect
+            name={submit ? "takeProfitBasis" : undefined}
+            value={takeProfitBasis}
+            onChange={(event) =>
+              setTakeProfitBasis(parseDcaExitBasis(event.target.value))
+            }
+            className={fieldClass}
+          >
+            <option value="average">Average entry</option>
+            <option value="first_entry">First fill</option>
+          </AppSelect>
+        </label>
+        <label className={labelClass}>
+          <HintLabel text="Method" required />
+          <AppSelect
+            name={submit ? "takeProfitKind" : undefined}
+            value={takeProfitKind}
+            onChange={(event) =>
+              setTakeProfitKind(parseDcaTakeProfitKind(event.target.value))
+            }
+            className={fieldClass}
+          >
+            <option value="percent">Percentage</option>
+            <option value="atr">ATR × multiplier</option>
+          </AppSelect>
+        </label>
+        {takeProfitKind === "percent" ? (
+          <BotField label="Target %" required>
+            <PercentInput
+              name={submit ? "takeProfitPct" : undefined}
+              value={takeProfitPct}
+              onChange={setTakeProfitPct}
+              ariaLabel="Take profit target percent"
+            />
+          </BotField>
+        ) : (
+          <>
+            <CycleLock
+              locked={cycleLocked && averaging === "dip" && spacingKind === "atr"}
+            >
+              <label className={labelClass}>
+                <HintLabel text="ATR period" required />
+                <GroupedNumberInput
+                  name={
+                    submit && !(averaging === "dip" && spacingKind === "atr")
+                      ? "atrPeriod"
+                      : undefined
+                  }
+                  value={atrPeriod}
+                  onChange={setAtrPeriod}
+                  className={fieldClass}
+                  ariaLabel="ATR period"
+                />
+              </label>
+            </CycleLock>
+            <label className={labelClass}>
+              <HintLabel text="ATR multiple" required />
+              <GroupedNumberInput
+                name={submit ? "takeProfitAtrMult" : undefined}
+                value={takeProfitAtrMult}
+                onChange={setTakeProfitAtrMult}
+                allowDecimal
+                className={fieldClass}
+                ariaLabel="Take profit ATR multiple"
+              />
+            </label>
+          </>
+        )}
+        <BotField label="Order type" required>
+          <OrderTypePill
+            name={submit ? "takeProfitOrderType" : undefined}
+            value={takeProfitOrderType === "limit" ? "limit" : "market"}
+            onChange={setTakeProfitOrderType}
+          />
+        </BotField>
+      </div>
+    );
+  }
+  function dcaTrailingFields(submit: boolean) {
+    return (
+      <div className={fieldRowClass}>
+        <BotField
+          label="Trigger %"
+          hint="Trail starts after price moves this %."
+          required
+        >
+          <PercentInput
+            name={submit ? "trailingTriggerPct" : undefined}
+            value={trailingTriggerPct}
+            onChange={setTrailingTriggerPct}
+            ariaLabel="Trailing trigger percent"
+          />
+        </BotField>
+        <BotField label="Trailing %" required>
+          <PercentInput
+            name={submit ? "trailingPct" : undefined}
+            value={trailingPct}
+            onChange={setTrailingPct}
+            ariaLabel="Trailing percent"
+          />
+        </BotField>
+      </div>
+    );
+  }
+  function dcaStopFields(submit: boolean) {
+    return (
+      <div className="@container">
+        <div className="grid grid-cols-2 items-start gap-4 @min-[40rem]:grid-cols-4">
+          <label className={labelClass}>
+            <HintLabel text="Basis" required />
+            <AppSelect
+              name={submit ? "stopLossBasis" : undefined}
+              value={stopLossBasis}
+              onChange={(event) =>
+                setStopLossBasis(parseDcaExitBasis(event.target.value))
+              }
+              className={fieldClass}
+            >
+              <option value="average">Average entry</option>
+              <option value="first_entry">First fill</option>
+            </AppSelect>
+          </label>
+          <BotField label="Stop loss %" required>
+            <PercentInput
+              name={submit ? "stopLossPct" : undefined}
+              value={stopLossPct}
+              onChange={setStopLossPct}
+              ariaLabel="Stop loss percent"
+            />
+          </BotField>
+          <OptionalSection
+            title="Move Breakeven"
+            className="col-span-2"
+            enabled={breakevenOn}
+            onEnabled={setBreakevenOn}
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <BotField label="Move stop to breakeven at %" required>
+                <PercentInput
+                  name={submit ? "breakevenActivationPct" : undefined}
+                  value={breakevenActivationPct}
+                  onChange={setBreakevenActivationPct}
+                  ariaLabel="Move stop to breakeven at percent"
+                />
+              </BotField>
+              <label className={labelClass}>
+                Breakeven offset %
+                <PercentInput
+                  name={submit ? "breakevenOffsetPct" : undefined}
+                  value={breakevenOffsetPct}
+                  onChange={setBreakevenOffsetPct}
+                  placeholder="0"
+                  ariaLabel="Breakeven offset percent"
+                />
+              </label>
+            </div>
+          </OptionalSection>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
     <StayOnPageForm
@@ -2139,6 +2363,10 @@ export function DcaPlaybookForm({
                       setShortIndicatorMultiplier(indicatorMultiplier);
                     }
                   } else if (direction === "both" && next === "short") {
+                    setExitClauses(shortClauses);
+                    const moved = customStackFromClauses(shortClauses);
+                    setExitIf(moved.anchor);
+                    setExitRows(moved.rows);
                     setStartKind(shortStartKind);
                     setWebhookId(shortWebhookId);
                     setEntryRows(shortEntryRows);
@@ -2149,6 +2377,11 @@ export function DcaPlaybookForm({
                     setIndicatorPeriod(shortIndicatorPeriod);
                     setIndicatorSlowPeriod(shortIndicatorSlowPeriod);
                     setIndicatorMultiplier(shortIndicatorMultiplier);
+                  }
+                  if (next === "both" && direction !== "both") {
+                    setShortClauses((current) =>
+                      syncClassicClauses(current, exitClauses),
+                    );
                   }
                   setDirection(next);
                 }}
@@ -2556,8 +2789,7 @@ export function DcaPlaybookForm({
           {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         </BotFormGroup>
       </BotFormStep>
-      <BotFormStep title="Exit Conditions">
-
+      
       {!tpOn ? (
         <div hidden>
           <input type="hidden" name="takeProfitKind" value="percent" />
@@ -2567,134 +2799,12 @@ export function DcaPlaybookForm({
           <input type="hidden" name="takeProfitOrderType" value="market" />
         </div>
       ) : null}
-      <OptionalSection
-        title="Take profit"
-        enabled={tpOn}
-        onEnabled={(next) => {
-          setTpOn(next);
-          if (next && takeProfitKind === "percent" && !takeProfitPct) {
-            setTakeProfitKind("percent");
-          }
-        }}
-      >
-          <div className={fieldRowClass}>
-          <label className={labelClass}>
-            <HintLabel text="Basis" required />
-            <AppSelect
-              name="takeProfitBasis"
-              value={takeProfitBasis}
-              onChange={(event) =>
-                setTakeProfitBasis(parseDcaExitBasis(event.target.value))
-              }
-              className={fieldClass}
-            >
-              <option value="average">Average entry</option>
-              <option value="first_entry">First fill</option>
-            </AppSelect>
-          </label>
-          <label className={labelClass}>
-            <HintLabel text="Method" required />
-            <AppSelect
-              name="takeProfitKind"
-              value={takeProfitKind}
-              onChange={(event) =>
-                setTakeProfitKind(parseDcaTakeProfitKind(event.target.value))
-              }
-              className={fieldClass}
-            >
-              <option value="percent">Percentage</option>
-              <option value="atr">ATR × multiplier</option>
-            </AppSelect>
-          </label>
-          {takeProfitKind === "percent" ? (
-          <BotField label="Target %" required>
-            <PercentInput
-              name="takeProfitPct"
-              value={takeProfitPct}
-              onChange={setTakeProfitPct}
-              ariaLabel="Take profit target percent"
-            />
-          </BotField>
-          ) : (
-          <>
-            <CycleLock
-              locked={
-                cycleLocked && averaging === "dip" && spacingKind === "atr"
-              }
-            >
-              <label className={labelClass}>
-                <HintLabel text="ATR period" required />
-                <GroupedNumberInput
-                  name={
-                    averaging === "dip" && spacingKind === "atr"
-                      ? undefined
-                      : "atrPeriod"
-                  }
-                  value={atrPeriod}
-                  onChange={setAtrPeriod}
-                  className={fieldClass}
-                  ariaLabel="ATR period"
-                />
-              </label>
-            </CycleLock>
-            <label className={labelClass}>
-              <HintLabel text="ATR multiple" required />
-              <GroupedNumberInput
-                name="takeProfitAtrMult"
-                value={takeProfitAtrMult}
-                onChange={setTakeProfitAtrMult}
-                allowDecimal
-                className={fieldClass}
-                ariaLabel="Take profit ATR multiple"
-              />
-            </label>
-          </>
-          )}
-          <BotField label="Order type" required>
-            <OrderTypePill
-              name="takeProfitOrderType"
-              value={takeProfitOrderType === "limit" ? "limit" : "market"}
-              onChange={setTakeProfitOrderType}
-            />
-          </BotField>
-        </div>
-      </OptionalSection>
-
       {!trailOn ? (
         <div hidden>
           <input type="hidden" name="trailingTriggerPct" value="" />
           <input type="hidden" name="trailingPct" value="" />
         </div>
       ) : null}
-      <OptionalSection
-        title="Trailing stop"
-        enabled={trailOn}
-        onEnabled={setTrailOn}
-      >
-        <div className={fieldRowClass}>
-          <BotField
-            label="Trigger %"
-            hint="Trail starts after price moves this %."
-            required
-          >
-            <PercentInput
-              name="trailingTriggerPct"
-              value={trailingTriggerPct}
-              onChange={setTrailingTriggerPct}
-              ariaLabel="Trailing trigger percent"
-            />
-          </BotField>
-          <BotField label="Trailing %" required>
-            <PercentInput
-              name="trailingPct"
-              value={trailingPct}
-              onChange={setTrailingPct}
-              ariaLabel="Trailing percent"
-            />
-          </BotField>
-        </div>
-      </OptionalSection>
-
       {!slOn ? (
         <div hidden>
           <input type="hidden" name="stopLossPct" value="" />
@@ -2707,245 +2817,43 @@ export function DcaPlaybookForm({
           <input type="hidden" name="breakevenOffsetPct" value="" />
         </div>
       ) : null}
-      <OptionalSection
-        title="Stop loss"
-        enabled={slOn}
-        onEnabled={(next) => {
-          setSlOn(next);
-          if (!next) {
-            setBreakevenOn(false);
-          }
-        }}
-      >
-        <div className="@container">
-          <div className="grid grid-cols-2 items-start gap-4 @min-[40rem]:grid-cols-4">
-            <label className={labelClass}>
-              <HintLabel text="Basis" required />
-              <AppSelect
-                name="stopLossBasis"
-                value={stopLossBasis}
-                onChange={(event) =>
-                  setStopLossBasis(parseDcaExitBasis(event.target.value))
-                }
-                className={fieldClass}
-              >
-                <option value="average">Average entry</option>
-                <option value="first_entry">First fill</option>
-              </AppSelect>
-            </label>
-            <BotField label="Stop loss %" required>
-              <PercentInput
-                name="stopLossPct"
-                value={stopLossPct}
-                onChange={setStopLossPct}
-                ariaLabel="Stop loss percent"
-              />
-            </BotField>
-            <OptionalSection
-              title="Move Breakeven"
-              className="col-span-2"
-              enabled={breakevenOn}
-              onEnabled={setBreakevenOn}
-            >
-              <div className="grid grid-cols-2 gap-4">
-                <BotField label="Move stop to breakeven at %" required>
-                  <PercentInput
-                    name="breakevenActivationPct"
-                    value={breakevenActivationPct}
-                    onChange={setBreakevenActivationPct}
-                    ariaLabel="Move stop to breakeven at percent"
-                  />
-                </BotField>
-                <label className={labelClass}>
-                  Breakeven offset %
-                  <PercentInput
-                    name="breakevenOffsetPct"
-                    value={breakevenOffsetPct}
-                    onChange={setBreakevenOffsetPct}
-                    placeholder="0"
-                    ariaLabel="Breakeven offset percent"
-                  />
-                </label>
-              </div>
-            </OptionalSection>
-          </div>
-        </div>
-      </OptionalSection>
-
-      {direction === "both" ? (
-        <BotFormGroup title="Condition Builder">
-          <OptionalSection
-            title="Long"
-            nested
-            enabled={Boolean(exitIf)}
-            onEnabled={(next) => {
-              setExitIf(next ? (exitIf ?? defaultHardExit("long")) : null);
-              if (!next) {
-                setExitRows([]);
-              }
-            }}
-          >
-            {exitIf ? (
-              <ExitConditionStack
-                grouped
-                lead={
-                <HardExitFields
-                  prefix="exitIf"
-                  side="long"
-                  value={exitIf}
-                  onChange={setExitIf}
-                  webhooks={signalWebhooks}
-                  gridClass={fieldRowClass5}
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-                  seriesSlots={exitConflictSlots(exitIf, exitRows)}
-                  seriesIndex={0}
-                  disabledKinds={anchorDisabledKinds(
-                    exitIf,
-                    exitRows,
-                    signalWebhooks.map((hook) => hook.id),
-                  )}
-                  disabledWebhookIds={anchorDisabledWebhookIds(
-                    exitIf,
-                    exitRows,
-                    signalWebhooks.map((hook) => hook.id),
-                  )}
-                />
-                }
-                prefix="exitIf"
-                  side="long"
-                  anchor={exitIf}
-                  rows={exitRows}
-                  onChange={(next) => {
-                    setExitRows(next);
-                    setTouched(true);
-                    setFormTick((tick) => tick + 1);
-                  }}
-                  webhooks={signalWebhooks}
-                  gridClass={fieldRowClass5}
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-              />
-            ) : null}
-          </OptionalSection>
-          <OptionalSection
-            title="Short"
-            nested
-            enabled={Boolean(shortExitIf)}
-            onEnabled={(next) => {
-              setShortExitIf(
-                next ? (shortExitIf ?? defaultHardExit("short")) : null,
-              );
-              if (!next) {
-                setShortExitRows([]);
-              }
-            }}
-          >
-            {shortExitIf ? (
-              <ExitConditionStack
-                grouped
-                lead={
-                <HardExitFields
-                  prefix="shortExitIf"
-                  side="short"
-                  value={shortExitIf}
-                  onChange={setShortExitIf}
-                  webhooks={signalWebhooks}
-                  gridClass={fieldRowClass5}
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-                  seriesSlots={exitConflictSlots(shortExitIf, shortExitRows)}
-                  seriesIndex={0}
-                  disabledKinds={anchorDisabledKinds(
-                    shortExitIf,
-                    shortExitRows,
-                    signalWebhooks.map((hook) => hook.id),
-                  )}
-                  disabledWebhookIds={anchorDisabledWebhookIds(
-                    shortExitIf,
-                    shortExitRows,
-                    signalWebhooks.map((hook) => hook.id),
-                  )}
-                />
-                }
-                prefix="shortExitIf"
-                  side="short"
-                  anchor={shortExitIf}
-                  rows={shortExitRows}
-                  onChange={(next) => {
-                    setShortExitRows(next);
-                    setTouched(true);
-                    setFormTick((tick) => tick + 1);
-                  }}
-                  webhooks={signalWebhooks}
-                  gridClass={fieldRowClass5}
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-              />
-            ) : null}
-          </OptionalSection>
-        </BotFormGroup>
-      ) : (
-        <OptionalSection
-          title="Condition Builder"
-          enabled={Boolean(exitIf)}
-          onEnabled={(next) => {
-            setExitIf(
-              next
-                ? (exitIf ??
-                  defaultHardExit(direction === "short" ? "short" : "long"))
-                : null,
-            );
-            if (!next) {
-              setExitRows([]);
-            }
-          }}
-        >
-          {exitIf ? (
-            <ExitConditionStack
-              grouped
-              lead={
-              <HardExitFields
-                prefix="exitIf"
-                side={direction === "short" ? "short" : "long"}
-                value={exitIf}
-                onChange={setExitIf}
-                webhooks={signalWebhooks}
-                gridClass={fieldRowClass5}
-                fieldClass={fieldClass}
-                labelClass={labelClass}
-                seriesSlots={exitConflictSlots(exitIf, exitRows)}
-                seriesIndex={0}
-                disabledKinds={anchorDisabledKinds(
-                  exitIf,
-                  exitRows,
-                  signalWebhooks.map((hook) => hook.id),
-                )}
-                disabledWebhookIds={anchorDisabledWebhookIds(
-                  exitIf,
-                  exitRows,
-                  signalWebhooks.map((hook) => hook.id),
-                )}
-              />
-              }
-              prefix="exitIf"
-                side={direction === "short" ? "short" : "long"}
-                anchor={exitIf}
-                rows={exitRows}
-                onChange={(next) => {
-                  setExitRows(next);
-                  setTouched(true);
-                  setFormTick((tick) => tick + 1);
-                }}
-                webhooks={signalWebhooks}
-                gridClass={fieldRowClass5}
-                fieldClass={fieldClass}
-                labelClass={labelClass}
-            />
-          ) : null}
-        </OptionalSection>
-      )}
+      {direction !== "short" ? (
+      <BotFormStep title="Long Exit Condition Builder">
+        <ExitSideBuilder
+          clauses={exitClauses}
+          onChange={(next) => commitExitClauses(next, "primary")}
+          side="long"
+          prefix="exitIf"
+          webhooks={signalWebhooks}
+          fieldClass={fieldClass}
+          labelClass={labelClass}
+          gridClass={fieldRowClass5}
+          renderTakeProfit={() => dcaTakeProfitFields(true)}
+          renderTrailingStop={() => dcaTrailingFields(true)}
+          renderStopLoss={() => dcaStopFields(true)}
+        />
       </BotFormStep>
+      ) : null}
+      {direction !== "long" ? (
+      <BotFormStep title="Short Exit Condition Builder">
+        <ExitSideBuilder
+          clauses={direction === "both" ? shortClauses : exitClauses}
+          onChange={(next) =>
+            commitExitClauses(next, direction === "both" ? "short" : "primary")
+          }
+          side="short"
+          prefix={direction === "both" ? "shortExitIf" : "exitIf"}
+          webhooks={signalWebhooks}
+          fieldClass={fieldClass}
+          labelClass={labelClass}
+          gridClass={fieldRowClass5}
+          renderTakeProfit={() => dcaTakeProfitFields(direction !== "both")}
+          renderTrailingStop={() => dcaTrailingFields(direction !== "both")}
+          renderStopLoss={() => dcaStopFields(direction !== "both")}
+        />
+      </BotFormStep>
+      ) : null}
+
 
       </BotFormCard>
       {embedded ? null : (

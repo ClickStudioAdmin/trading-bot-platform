@@ -4,6 +4,7 @@ import {
   filterColumns,
   filterFromRow,
   parseDcaFilterForm,
+  parseDcaFilterSpec,
   seriesForFilter,
   writeDcaFilterFormFields,
   type DcaFilterSpec,
@@ -75,7 +76,57 @@ export type PerpsEntryLeg = {
   indicator: DcaIndicatorStart | null;
   confirm: DcaFilterSpec | null;
   entryStack: EntryStack;
+  /** Custom exit for the short leg. Absent means the short leg uses the long exit. */
+  exitIf?: DcaFilterSpec | null;
+  exitHard?: HardExitSignal | null;
+  exitStack?: EntryStack | null;
 };
+
+export function perpsLegHasOwnExit(
+  leg: PerpsEntryLeg | null | undefined,
+): boolean {
+  if (!leg) {
+    return false;
+  }
+  return Boolean(
+    leg.exitIf ||
+      leg.exitHard ||
+      (leg.exitStack && leg.exitStack.leaves.length > 0),
+  );
+}
+
+export function perpsExitForSide(
+  rule: {
+    direction?: string | null;
+    exitIf?: DcaFilterSpec | null;
+    exitHard?: HardExitSignal | null;
+    exitStack?: EntryStack | null;
+    shortEntry?: PerpsEntryLeg | null;
+  },
+  side: FuturesSide,
+): {
+  exitIf: DcaFilterSpec | null;
+  exitHard: HardExitSignal | null;
+  exitStack: EntryStack;
+} {
+  if (
+    side === "short" &&
+    rule.direction === "both" &&
+    perpsLegHasOwnExit(rule.shortEntry)
+  ) {
+    const leg = rule.shortEntry;
+    return {
+      exitIf: leg?.exitIf ?? null,
+      exitHard: leg?.exitHard ?? null,
+      exitStack: leg?.exitStack ?? emptyEntryStack(),
+    };
+  }
+  return {
+    exitIf: rule.exitIf ?? null,
+    exitHard: rule.exitHard ?? null,
+    exitStack: rule.exitStack ?? emptyEntryStack(),
+  };
+}
 
 export type { EntryStack };
 
@@ -624,12 +675,7 @@ export function futuresAutomationTimeframes(rule: {
   entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
   exitStack?: EntryStack | null;
-  shortEntry?: {
-    entrySource: FuturesAutomationEntry;
-    indicator?: DcaIndicatorStart | null;
-    confirm?: DcaFilterSpec | null;
-    entryStack?: EntryStack | null;
-  } | null;
+  shortEntry?: PerpsEntryLeg | null;
 }): DcaIndicatorTimeframe[] {
   const rows: DcaIndicatorTimeframe[] = [];
   function add(timeframe: DcaIndicatorTimeframe | null | undefined) {
@@ -663,6 +709,14 @@ export function futuresAutomationTimeframes(rule: {
   add(rule.exitIf?.timeframe);
   for (const timeframe of entryStackTimeframes(rule.exitStack ?? emptyEntryStack())) {
     add(timeframe);
+  }
+  if (rule.shortEntry && perpsLegHasOwnExit(rule.shortEntry)) {
+    add(rule.shortEntry.exitIf?.timeframe);
+    for (const timeframe of entryStackTimeframes(
+      rule.shortEntry.exitStack ?? emptyEntryStack(),
+    )) {
+      add(timeframe);
+    }
   }
   return rows;
 }
@@ -699,11 +753,7 @@ export function futuresAutomationNeedsWideBars(rule: {
   entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
   exitStack?: EntryStack | null;
-  shortEntry?: {
-    indicator?: DcaIndicatorStart | null;
-    confirm?: DcaFilterSpec | null;
-    entryStack?: EntryStack | null;
-  } | null;
+  shortEntry?: PerpsEntryLeg | null;
 }): boolean {
   const stack = resolveEntryStack(rule.entryStack, rule.confirm);
   const short = rule.shortEntry;
@@ -718,7 +768,9 @@ export function futuresAutomationNeedsWideBars(rule: {
     stackNeedsWideBars(stack) ||
     stackNeedsWideBars(shortStack) ||
     dcaFilterNeedsBars(rule.exitIf) ||
-    exitStackNeedsWideBars(rule.exitStack)
+    exitStackNeedsWideBars(rule.exitStack) ||
+    dcaFilterNeedsBars(short?.exitIf) ||
+    exitStackNeedsWideBars(short?.exitStack)
   );
 }
 
@@ -1010,6 +1062,17 @@ export function shortEntryToJson(leg: PerpsEntryLeg): Record<string, unknown> {
         }
       : null,
     entryStack: entryStackToJson(leg.entryStack),
+    ...(perpsLegHasOwnExit(leg)
+      ? {
+          exit: {
+            exitIf: leg.exitIf ?? null,
+            exitHard: hardExitSignalToJson(leg.exitHard),
+            exitStack: leg.exitStack
+              ? entryStackToJson(leg.exitStack)
+              : null,
+          },
+        }
+      : {}),
   };
 }
 
@@ -1058,6 +1121,7 @@ export function shortEntryFromJson(raw: unknown): PerpsEntryLeg | null {
   if (!stack) {
     return null;
   }
+  const exit = shortExitFromJson(row.exit);
   return {
     entrySource: source,
     webhookId: source === "webhook" ? webhookId : null,
@@ -1068,5 +1132,45 @@ export function shortEntryFromJson(raw: unknown): PerpsEntryLeg | null {
     indicator,
     confirm: confirmFromEntryStack(stack),
     entryStack: stack,
+    ...exit,
   };
+}
+
+function shortExitFromJson(raw: unknown): {
+  exitIf?: DcaFilterSpec | null;
+  exitHard?: HardExitSignal | null;
+  exitStack?: EntryStack | null;
+} {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return {};
+  }
+  const row = raw as Record<string, unknown>;
+  const exitHard = hardExitSignalFromJson(row.exitHard);
+  const exitStack = entryStackFromJson(row.exitStack);
+  const exitIf = exitFilterFromJson(row.exitIf);
+  if (!exitIf && !exitHard && !(exitStack && exitStack.leaves.length > 0)) {
+    return {};
+  }
+  return {
+    exitIf,
+    exitHard,
+    exitStack,
+  };
+}
+
+function exitFilterFromJson(raw: unknown): DcaFilterSpec | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return null;
+  }
+  const row = raw as Record<string, unknown>;
+  return parseDcaFilterSpec({
+    kind: row.kind,
+    timeframe: row.timeframe,
+    compare: row.compare,
+    level: row.level,
+    levelTo: row.levelTo,
+    period: row.period,
+    slowPeriod: row.slowPeriod,
+    multiplier: row.multiplier,
+  });
 }

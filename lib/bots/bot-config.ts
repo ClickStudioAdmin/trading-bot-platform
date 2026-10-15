@@ -1,6 +1,6 @@
 import { formatDcaFilterReason, type DcaFilterSpec } from "@/lib/dca/filters";
-import { hardExitForSide } from "@/lib/dca/hard-exit";
-import { exitStackForSide, formatExitExpressionText } from "@/lib/dca/exit-stack";
+import { formatExitExpressionText } from "@/lib/dca/exit-stack";
+import { perpsLegHasOwnExit } from "@/lib/futures/conditions";
 import { dcaEntryStackForSide } from "@/lib/dca/entry-stack";
 import {
   dcaArmTriggerForSide,
@@ -91,13 +91,6 @@ function dcaSides(playbook: DcaPlaybook): FuturesSide[] {
     return ["long", "short"];
   }
   return [playbook.direction === "short" ? "short" : "long"];
-}
-
-function sidePrefix(playbook: DcaPlaybook, side: FuturesSide): string {
-  if (playbook.direction !== "both") {
-    return "";
-  }
-  return side === "short" ? "Short " : "Long ";
 }
 
 function dcaStartLabel(kind: string): string {
@@ -315,22 +308,43 @@ function dcaExitLines(playbook: DcaPlaybook): BotConfigLine[] {
           ]),
     ),
   ];
-  for (const side of dcaSides(playbook)) {
-    const prefix = sidePrefix(playbook, side);
-    const exit = hardExitForSide(playbook, side);
-    lines.push(
-      setting(
-        `${prefix}Hard exit`,
-        formatExitExpressionText({
-          filter: exit.filter,
-          signal: exit.signal,
-          stack: exitStackForSide(playbook, side),
-          side,
-        }) || null,
-      ),
-    );
-  }
   return lines;
+}
+
+function dcaCustomExitLine(
+  playbook: DcaPlaybook,
+  side: FuturesSide,
+): BotConfigLine {
+  const ownShort = side === "short" && playbook.direction === "both";
+  return setting(
+    "Custom conditions",
+    formatExitExpressionText({
+      filter: ownShort
+        ? playbook.shortExitHard
+          ? null
+          : playbook.shortExitIf
+        : playbook.exitHard
+          ? null
+          : playbook.exitIf,
+      signal: ownShort ? playbook.shortExitHard : playbook.exitHard,
+      stack: ownShort ? playbook.shortExitStack : playbook.exitStack,
+      side,
+    }) || null,
+  );
+}
+
+function dcaExitSections(
+  playbook: DcaPlaybook,
+): Array<BotConfigSection | null> {
+  const classic = dcaExitLines(playbook);
+  return dcaSides(playbook).map((side) =>
+    section(
+      side === "short"
+        ? "Short Exit Condition Builder"
+        : "Long Exit Condition Builder",
+      [...classic, dcaCustomExitLine(playbook, side)],
+    ),
+  );
 }
 
 export function dcaBotConfig(playbook: DcaPlaybook): BotConfigSection[] {
@@ -341,7 +355,7 @@ export function dcaBotConfig(playbook: DcaPlaybook): BotConfigSection[] {
     ]),
     ...dcaEntrySections(playbook),
     section("Position Sizing", dcaSizingLines(playbook)),
-    section("Exit Conditions", dcaExitLines(playbook)),
+    ...dcaExitSections(playbook),
   ]);
 }
 
@@ -501,78 +515,72 @@ export function perpsBotConfig(
     sizing.push(setting("Limit price", rule.limitPrice.trim() || null));
   }
 
-  const exits: BotConfigLine[] = closing
+  const exitSides: FuturesSide[] = closing
     ? []
-    : [
-        setting(
-          "Take profit",
-          perpsLevel(rule.tpsl?.takeProfit, rule.tpsl?.tpKind)
-            ? joinParts([
-                perpsLevel(rule.tpsl?.takeProfit, rule.tpsl?.tpKind),
-                rule.tpsl?.tpTrigger === "mark"
-                  ? "Mark"
-                  : rule.tpsl?.tpTrigger === "index"
-                    ? "Index"
-                    : "Last",
-                orderLabel(rule.tpsl?.tpOrderType),
-                rule.tpsl?.tpOrderType === "limit"
-                  ? amount(rule.tpsl.tpLimitPrice)
-                  : null,
-                rule.tpsl?.mode === "partial" && rule.tpsl.tpQty
-                  ? `Partial ${amount(rule.tpsl.tpQty)}`
-                  : null,
-              ])
-            : null,
-        ),
-        setting(
-          "Stop loss",
-          perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind) ||
-          rule.breakevenActivationPct.trim()
-            ? joinParts([
-                perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind)
-                  ? joinParts([
-                      perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind),
-                      rule.tpsl?.slTrigger === "mark"
-                        ? "Mark"
-                        : rule.tpsl?.slTrigger === "index"
-                          ? "Index"
-                          : "Last",
-                      orderLabel(rule.tpsl?.slOrderType),
-                      rule.tpsl?.slOrderType === "limit"
-                        ? amount(rule.tpsl.slLimitPrice)
-                        : null,
-                      rule.tpsl?.mode === "partial" && rule.tpsl.slQty
-                        ? `Partial ${amount(rule.tpsl.slQty)}`
-                        : null,
-                    ])
-                  : null,
-                rule.breakevenActivationPct.trim()
-                  ? `Move breakeven at ${rule.breakevenActivationPct.trim()}% · offset ${rule.breakevenOffsetPct.trim() || "0"}%`
-                  : null,
-              ])
-            : null,
-        ),
-        setting(
-          "Trailing stop",
-          rule.trailing
-            ? joinParts([
-                `Retracement ${amount(rule.trailing.distance)}`,
-                rule.trailing.activePrice != null
-                  ? `Activation ${amount(rule.trailing.activePrice)}`
-                  : null,
-              ])
-            : null,
-        ),
-        setting(
-          "Hard exit",
-          formatExitExpressionText({
-            filter: rule.exitIf,
-            signal: rule.exitHard,
-            stack: rule.exitStack,
-            side,
-          }) || null,
-        ),
-      ];
+    : rule.direction === "both"
+      ? ["long", "short"]
+      : [side];
+  const classicExits: BotConfigLine[] = [
+    setting(
+      "Take profit",
+      perpsLevel(rule.tpsl?.takeProfit, rule.tpsl?.tpKind)
+        ? joinParts([
+            perpsLevel(rule.tpsl?.takeProfit, rule.tpsl?.tpKind),
+            rule.tpsl?.tpTrigger === "mark"
+              ? "Mark"
+              : rule.tpsl?.tpTrigger === "index"
+                ? "Index"
+                : "Last",
+            orderLabel(rule.tpsl?.tpOrderType),
+            rule.tpsl?.tpOrderType === "limit"
+              ? amount(rule.tpsl.tpLimitPrice)
+              : null,
+            rule.tpsl?.mode === "partial" && rule.tpsl.tpQty
+              ? `Partial ${amount(rule.tpsl.tpQty)}`
+              : null,
+          ])
+        : null,
+    ),
+    setting(
+      "Trailing stop",
+      rule.trailing
+        ? joinParts([
+            `Retracement ${amount(rule.trailing.distance)}`,
+            rule.trailing.activePrice != null
+              ? `Activation ${amount(rule.trailing.activePrice)}`
+              : null,
+          ])
+        : null,
+    ),
+    setting(
+      "Stop loss",
+      perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind) ||
+      rule.breakevenActivationPct.trim()
+        ? joinParts([
+            perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind)
+              ? joinParts([
+                  perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind),
+                  rule.tpsl?.slTrigger === "mark"
+                    ? "Mark"
+                    : rule.tpsl?.slTrigger === "index"
+                      ? "Index"
+                      : "Last",
+                  orderLabel(rule.tpsl?.slOrderType),
+                  rule.tpsl?.slOrderType === "limit"
+                    ? amount(rule.tpsl.slLimitPrice)
+                    : null,
+                  rule.tpsl?.mode === "partial" && rule.tpsl.slQty
+                    ? `Partial ${amount(rule.tpsl.slQty)}`
+                    : null,
+                ])
+              : null,
+            rule.breakevenActivationPct.trim()
+              ? `Move breakeven at ${rule.breakevenActivationPct.trim()}% · offset ${rule.breakevenOffsetPct.trim() || "0"}%`
+              : null,
+          ])
+        : null,
+    ),
+  ];
 
   return sectionsOf([
     section("General", [
@@ -589,7 +597,33 @@ export function perpsBotConfig(
     ),
     ...(shortEntry ? [section("Short Entry Condition Builder", shortEntry)] : []),
     section("Position Sizing", sizing),
-    section("Exit Conditions", exits),
+    ...exitSides.map((exitSide) => {
+      const ownShort = exitSide === "short" && rule.direction === "both";
+      const short = ownShort && perpsLegHasOwnExit(rule.shortEntry) ? rule.shortEntry : null;
+      return section(
+        exitSide === "short"
+          ? "Short Exit Condition Builder"
+          : "Long Exit Condition Builder",
+        [
+          ...classicExits,
+          setting(
+            "Custom conditions",
+            formatExitExpressionText({
+              filter: ownShort
+                ? short?.exitHard
+                  ? null
+                  : short?.exitIf
+                : rule.exitHard
+                  ? null
+                  : rule.exitIf,
+              signal: ownShort ? short?.exitHard : rule.exitHard,
+              stack: ownShort ? short?.exitStack : rule.exitStack,
+              side: exitSide,
+            }) || null,
+          ),
+        ],
+      );
+    }),
   ]);
 }
 

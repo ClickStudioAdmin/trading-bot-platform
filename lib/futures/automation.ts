@@ -515,7 +515,9 @@ export function writePerpsShortEntryFields(
     indicator: leg.indicator,
     confirm: leg.confirm,
     entryStack: leg.entryStack,
-    exitIf: null,
+    exitIf: leg.exitIf ?? null,
+    exitHard: leg.exitHard ?? null,
+    exitStack: leg.exitStack ?? null,
     breakevenActivationPct: null,
     breakevenOffsetPct: null,
   });
@@ -737,6 +739,10 @@ function applyPerpsDirection(
     rule.action = "buy";
     rule.closeSide = null;
     rule.direction = "both";
+    const shortExit =
+      conditions.exitIf ||
+      conditions.exitHard ||
+      conditions.exitStack.leaves.length > 0;
     rule.shortEntry = {
       entrySource,
       webhookId: entrySource === "webhook" ? webhookId : null,
@@ -747,6 +753,13 @@ function applyPerpsDirection(
       indicator: conditions.indicator,
       confirm: conditions.confirm,
       entryStack: conditions.entryStack,
+      ...(shortExit
+        ? {
+            exitIf: conditions.exitIf,
+            exitHard: conditions.exitHard,
+            exitStack: conditions.exitStack,
+          }
+        : {}),
     };
     return { ok: true };
   }
@@ -1086,6 +1099,15 @@ export function perpsAutomationLegs(
     confirm: short.confirm,
     entryStack: short.entryStack,
     conditionTrue: rule.shortConditionTrue,
+    ...(short.exitIf ||
+    short.exitHard ||
+    (short.exitStack && short.exitStack.leaves.length > 0)
+      ? {
+          exitIf: short.exitIf ?? null,
+          exitHard: short.exitHard ?? null,
+          exitStack: short.exitStack ?? emptyEntryStack(),
+        }
+      : {}),
   };
   return [
     { side: "long", rule: longRule, latch: "condition_true" },
@@ -1105,6 +1127,20 @@ export function perpsRuleMatchesWebhook(
   }
   if (
     (rule.exitStack?.leaves ?? []).some(
+      (leaf) => leaf.kind === "webhook" && leaf.webhookId === firedId,
+    )
+  ) {
+    return true;
+  }
+  const short = rule.shortEntry;
+  if (
+    short?.exitHard?.trigger === "webhook" &&
+    short.exitHard.webhookId === firedId
+  ) {
+    return true;
+  }
+  if (
+    (short?.exitStack?.leaves ?? []).some(
       (leaf) => leaf.kind === "webhook" && leaf.webhookId === firedId,
     )
   ) {

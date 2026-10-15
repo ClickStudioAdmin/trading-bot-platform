@@ -96,7 +96,7 @@ export function RemoveConditionButton({
   );
 }
 
-function JoinWord({ label }: { label: "And" | "Or" }) {
+export function JoinWord({ label }: { label: "And" | "Or" }) {
   return (
     <Hairline>
       <span className="inline-flex shrink-0 rounded-md bg-join px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">

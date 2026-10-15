@@ -4,6 +4,7 @@ import {
   futuresBreakevenStop,
   futuresEntryConditionMet,
   futuresFilterMet,
+  perpsExitForSide,
 } from "@/lib/futures/conditions";
 import type { FuturesAction, FuturesSide } from "@/lib/futures/model";
 import {
@@ -61,7 +62,15 @@ function perpsHardExitMet(
   price: number,
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>,
 ): boolean {
-  const signal = hardExitSignalFromJson(recipe.exitHard);
+  const exit = perpsExitForSide(
+    {
+      ...recipe,
+      exitIf: recipe.exitIf ?? null,
+      exitHard: hardExitSignalFromJson(recipe.exitHard),
+    },
+    side,
+  );
+  const signal = exit.exitHard;
   return exitExpressionMet({
     first: signal
       ? hardExitMet({
@@ -69,13 +78,13 @@ function perpsHardExitMet(
           side,
           prices: { last: price, mark: price, index: price },
         })
-      : Boolean(recipe.exitIf) &&
+      : Boolean(exit.exitIf) &&
         futuresFilterMet({
-          spec: recipe.exitIf,
+          spec: exit.exitIf,
           side,
           barsByTimeframe,
         }),
-    stack: recipe.exitStack,
+    stack: exit.exitStack,
     side,
     price,
     prices: { last: price, mark: price, index: price },
@@ -642,6 +651,9 @@ async function replayPerpsBoth(input: {
     ...(input.recipe.exitStack?.leaves.map((leaf) =>
       strategyLeafTimeframe(leaf),
     ) ?? []),
+    short.exitIf?.timeframe,
+    ...(short.exitStack?.leaves.map((leaf) => strategyLeafTimeframe(leaf)) ??
+      []),
   ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
   const legs: Array<{
     side: FuturesSide;
