@@ -52,7 +52,6 @@ import {
 } from "@/lib/strategy/expr";
 import {
   dcaFilterComplete,
-  dcaFilterSpecForKind,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
 import {
@@ -299,7 +298,7 @@ function Group({
 }
 
 type ExitMethod = "" | "price" | "percent" | "atr";
-type StartKind = "price" | "indicator" | "trend" | "webhook";
+type StartKind = "" | "price" | "indicator" | "trend" | "webhook";
 function Field({
   label,
   hint,
@@ -430,7 +429,7 @@ function ThemeSecondaryEntry({
       enabled={enabled}
       onEnabled={(next) => {
         onEnabled(next);
-        onChange(next ? (spec ?? dcaFilterSpecForKind("rsi", side)) : null);
+        onChange(next ? spec : null);
       }}
     >
       <DcaFilterBlock
@@ -597,7 +596,7 @@ function themeStartClaim(input: {
   priceSource: string;
   priceWhen: string;
   priceLevel: string;
-  indicatorKind: DcaIndicatorKind;
+  indicatorKind: DcaIndicatorKind | "";
   timeframe: DcaIndicatorTimeframe;
   when: string;
   period: string;
@@ -613,6 +612,9 @@ function themeStartClaim(input: {
     });
   }
   if (input.kind === "indicator" || input.kind === "trend") {
+    if (!input.indicatorKind) {
+      return null;
+    }
     return indicatorClaim({
       surface: "entry",
       kind: input.indicatorKind,
@@ -633,7 +635,7 @@ export function ThemeBotFormDraft() {
   const [perpsDirection, setPerpsDirection] = useState<
     "long" | "short" | "both"
   >("long");
-  const [shortStartKind, setShortStartKind] = useState<StartKind>("indicator");
+  const [shortStartKind, setShortStartKind] = useState<StartKind>("");
   const [shortWebhookId, setShortWebhookId] = useState("sample");
   const [shortEntryRows, setShortEntryRows] = useState<EntryStackRow[]>([
     {
@@ -647,11 +649,11 @@ export function ThemeBotFormDraft() {
       draft: { kind: "webhook", webhookId: "sample" },
     },
   ]);
-  const [startKind, setStartKind] = useState<StartKind>("indicator");
+  const [startKind, setStartKind] = useState<StartKind>("");
   const [priceSource, setPriceSource] = useState("last");
   const [priceWhen, setPriceWhen] = useState("gte");
   const [priceLevel, setPriceLevel] = useState("");
-  const [indicatorKind, setIndicatorKind] = useState<DcaIndicatorKind>("rsi");
+  const [indicatorKind, setIndicatorKind] = useState<DcaIndicatorKind | "">("");
   const [timeframe, setTimeframe] = useState<DcaIndicatorTimeframe>("15");
   const [when, setWhen] = useState("cross_lte");
   const [period, setPeriod] = useState(String(DEFAULT_DCA_RSI_PERIOD));
@@ -663,8 +665,9 @@ export function ThemeBotFormDraft() {
   const [shortPriceSource, setShortPriceSource] = useState("last");
   const [shortPriceWhen, setShortPriceWhen] = useState("lte");
   const [shortPriceLevel, setShortPriceLevel] = useState("");
-  const [shortIndicatorKind, setShortIndicatorKind] =
-    useState<DcaIndicatorKind>("rsi");
+  const [shortIndicatorKind, setShortIndicatorKind] = useState<
+    DcaIndicatorKind | ""
+  >("");
   const [shortTimeframe, setShortTimeframe] =
     useState<DcaIndicatorTimeframe>("15");
   const [shortWhen, setShortWhen] = useState("cross_gte");
@@ -720,7 +723,7 @@ export function ThemeBotFormDraft() {
   const [limitPrice, setLimitPrice] = useState("");
   const [webhookId, setWebhookId] = useState("sample");
   const themeLongAnchor: EntryAnchor = {
-    kind: startKind,
+    kind: startKind === "" ? "indicator" : startKind,
     webhookId,
     claim: themeStartClaim({
       kind: startKind,
@@ -737,7 +740,7 @@ export function ThemeBotFormDraft() {
     }),
   };
   const themeShortAnchor: EntryAnchor = {
-    kind: shortStartKind,
+    kind: shortStartKind === "" ? "indicator" : shortStartKind,
     webhookId: shortWebhookId,
     claim: themeStartClaim({
       kind: shortStartKind,
@@ -1018,19 +1021,10 @@ export function ThemeBotFormDraft() {
         setShortMultiplier(String(DEFAULT_DCA_SUPERTREND_MULTIPLIER));
         setShortLevel("");
       }
-    } else if (
-      next === "indicator" &&
-      (startKind === "trend" || indicatorKind === "supertrend")
-    ) {
-      setIndicatorKind("rsi");
-      setWhen(indicatorCompareForDirection(entrySide, "rsi", ""));
-      setPeriod(String(DEFAULT_DCA_RSI_PERIOD));
-      setLevel(entrySide === "short" ? "70" : "30");
+    } else if (next === "indicator" && startKind !== "indicator") {
+      setIndicatorKind("");
       if (touchShort) {
-        setShortIndicatorKind("rsi");
-        setShortWhen(indicatorCompareForDirection("short", "rsi", ""));
-        setShortPeriod(String(DEFAULT_DCA_RSI_PERIOD));
-        setShortLevel("70");
+        setShortIndicatorKind("");
       }
     }
     setStartKind(next);
@@ -1043,14 +1037,8 @@ export function ThemeBotFormDraft() {
       setShortPeriod(String(DEFAULT_DCA_SUPERTREND_PERIOD));
       setShortMultiplier(String(DEFAULT_DCA_SUPERTREND_MULTIPLIER));
       setShortLevel("");
-    } else if (
-      next === "indicator" &&
-      (shortStartKind === "trend" || shortIndicatorKind === "supertrend")
-    ) {
-      setShortIndicatorKind("rsi");
-      setShortWhen(indicatorCompareForDirection("short", "rsi", ""));
-      setShortPeriod(String(DEFAULT_DCA_RSI_PERIOD));
-      setShortLevel("70");
+    } else if (next === "indicator" && shortStartKind !== "indicator") {
+      setShortIndicatorKind("");
     }
     setShortStartKind(next);
   }
@@ -1086,7 +1074,9 @@ export function ThemeBotFormDraft() {
       setShortLevel(level);
       setShortMultiplier(multiplier);
       setPriceWhen(priceWhen === "gte" ? "lte" : "gte");
-      setWhen(oppositeIndicatorCompare(kindForSeed, when));
+      setWhen(
+        kindForSeed ? oppositeIndicatorCompare(kindForSeed, when) : when,
+      );
       if (indicatorKind === "rsi") {
         setLevel(level === "70" ? "30" : "70");
       }
@@ -1099,7 +1089,9 @@ export function ThemeBotFormDraft() {
       setShortPriceLevel(priceLevel);
       setShortIndicatorKind(indicatorKind);
       setShortTimeframe(timeframe);
-      setShortWhen(oppositeIndicatorCompare(kindForSeed, when));
+      setShortWhen(
+        kindForSeed ? oppositeIndicatorCompare(kindForSeed, when) : when,
+      );
       setShortPeriod(period);
       setShortSlowPeriod(slowPeriod);
       setShortMultiplier(multiplier);
@@ -1133,7 +1125,9 @@ export function ThemeBotFormDraft() {
       setShortPriceLevel(priceLevel);
       setShortIndicatorKind(indicatorKind);
       setShortTimeframe(timeframe);
-      setShortWhen(oppositeIndicatorCompare(kindForSeed, when));
+      setShortWhen(
+        kindForSeed ? oppositeIndicatorCompare(kindForSeed, when) : when,
+      );
       setShortPeriod(period);
       setShortSlowPeriod(slowPeriod);
       const numericLevel = Number(level.replace(/,/g, ""));
@@ -1149,7 +1143,7 @@ export function ThemeBotFormDraft() {
       setShortMultiplier(multiplier);
       setShortConfirmOn(confirmOn);
       if (confirmOn) {
-        setShortConfirm((current) => current ?? dcaFilterSpecForKind("rsi", "short"));
+        setShortConfirm((current) => current ?? confirm);
       }
       setShortExitIfOn(exitIfOn);
       if (exitIfOn) {
@@ -1342,6 +1336,7 @@ export function ThemeBotFormDraft() {
                   }
                   className={fieldClass}
                 >
+                  {closing ? null : <option value="">Select Trigger</option>}
                   {closing ? null : (
                     <option value="indicator">Indicator</option>
                   )}
@@ -1380,6 +1375,7 @@ export function ThemeBotFormDraft() {
                   }
                   className={fieldClass}
                 >
+                  <option value="">Select Trigger</option>
                   <option value="indicator">Indicator</option>
                   <option value="trend">Trend</option>
                   <option value="price">Price Cross</option>
@@ -1468,7 +1464,7 @@ export function ThemeBotFormDraft() {
                 <TrendStartFields
                   side={entrySide}
                   prefix="theme"
-                  kind={indicatorKind}
+                  kind={indicatorKind || "supertrend"}
                   timeframe={timeframe}
                   compare={when}
                   period={period}
@@ -1482,7 +1478,7 @@ export function ThemeBotFormDraft() {
                   seriesIndex={0}
                 />
               </div>
-          ) : (
+          ) : startKind === "price" ? (
             <div className={desk === "perps" ? rowClass5 : rowClass}>
                 <PriceTriggerFields
                   desk={desk}
@@ -1497,7 +1493,7 @@ export function ThemeBotFormDraft() {
                   seriesIndex={0}
                 />
             </div>
-          )}
+          ) : null}
         </Group>
             </>
           );
@@ -1569,10 +1565,11 @@ export function ThemeBotFormDraft() {
                   <AppSelect
                     value={shortStartKind}
                     onChange={(event) =>
-                      setShortStartKind(event.target.value as StartKind)
+                      applyShortStartKind(event.target.value as StartKind)
                     }
                     className={fieldClass}
                   >
+                    <option value="">Select Trigger</option>
                     <option value="indicator">Indicator</option>
                     <option value="trend">Trend</option>
                     <option
@@ -1643,7 +1640,7 @@ export function ThemeBotFormDraft() {
                   <TrendStartFields
                     side="short"
                     prefix="themeShort"
-                    kind={shortIndicatorKind}
+                    kind={shortIndicatorKind || "supertrend"}
                     timeframe={shortTimeframe}
                     compare={shortWhen}
                     period={shortPeriod}
@@ -1657,7 +1654,7 @@ export function ThemeBotFormDraft() {
                     seriesIndex={0}
                   />
                 </div>
-              ) : (
+              ) : shortStartKind === "price" ? (
                 <div className={rowClass5}>
                   <PriceTriggerFields
                     desk="perps"
@@ -1672,7 +1669,7 @@ export function ThemeBotFormDraft() {
                     seriesIndex={0}
                   />
                 </div>
-              )}
+              ) : null}
             </Group>
                 </>
               );
@@ -1710,6 +1707,7 @@ export function ThemeBotFormDraft() {
                     }
                     className={fieldClass}
                   >
+                    <option value="">Select Trigger</option>
                     <option value="indicator">Indicator</option>
                     <option value="trend">Trend</option>
                     <option value="price">Price Cross</option>
@@ -1770,7 +1768,7 @@ export function ThemeBotFormDraft() {
                   <TrendStartFields
                     side="short"
                     prefix="themeShort"
-                    kind={shortIndicatorKind}
+                    kind={shortIndicatorKind || "supertrend"}
                     timeframe={shortTimeframe}
                     compare={shortWhen}
                     period={shortPeriod}
@@ -1784,7 +1782,7 @@ export function ThemeBotFormDraft() {
                     seriesIndex={0}
                   />
                 </div>
-              ) : (
+              ) : shortStartKind === "price" ? (
                 <div className={rowClass}>
                   <PriceTriggerFields
                     desk="dca"
@@ -1799,7 +1797,7 @@ export function ThemeBotFormDraft() {
                     seriesIndex={0}
                   />
                 </div>
-              )}
+              ) : null}
             </Group>
                 </>
               );

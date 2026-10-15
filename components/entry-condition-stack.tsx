@@ -39,7 +39,6 @@ import {
   STRATEGY_CONDITION_CAP,
   entryJoinDisabled,
   entryKindDisabled,
-  entrySlotAllowed,
   entryWebhookIdDisabled,
   priceChoiceConflicts,
   resolveEntryStack,
@@ -51,7 +50,7 @@ import {
 } from "@/lib/strategy/expr";
 
 type IndicatorConditionDraft = {
-  indicatorKind: DcaIndicatorKind;
+  indicatorKind: DcaIndicatorKind | "";
   timeframe: DcaIndicatorTimeframe;
   compare: string;
   level: string;
@@ -61,6 +60,7 @@ type IndicatorConditionDraft = {
 };
 
 export type EntryConditionDraft =
+  | { kind: "unset" }
   | { kind: "filter"; spec: DcaFilterSpec }
   | {
       kind: "price";
@@ -96,7 +96,7 @@ export function claimFromEntryDraft(
       price: draft.price,
     });
   }
-  if (draft.kind === "webhook") {
+  if (draft.kind === "webhook" || draft.kind === "unset") {
     return null;
   }
   if (draft.kind === "filter") {
@@ -111,6 +111,9 @@ export function claimFromEntryDraft(
       slowPeriod: draft.spec.slowPeriod,
       multiplier: draft.spec.multiplier,
     });
+  }
+  if (!draft.indicatorKind) {
+    return null;
   }
   return indicatorClaim({
     surface: "entry",
@@ -208,6 +211,9 @@ function indicatorStartFromDraft(
 }
 
 export function entryDraftComplete(draft: EntryConditionDraft): boolean {
+  if (draft.kind === "unset") {
+    return false;
+  }
   if (draft.kind === "filter") {
     return dcaFilterComplete(draft.spec);
   }
@@ -235,6 +241,9 @@ export function entryStackFromRows(rows: EntryStackRow[]): EntryStack {
 }
 
 function leafFromDraft(draft: EntryConditionDraft): StrategyLeaf | null {
+  if (draft.kind === "unset") {
+    return null;
+  }
   if (draft.kind === "filter") {
     return { kind: "filter", spec: draft.spec };
   }
@@ -278,6 +287,9 @@ export function flipEntryRows(
       };
     }
     if (row.draft.kind === "indicator" || row.draft.kind === "trend") {
+      if (!row.draft.indicatorKind) {
+        return row;
+      }
       return {
         ...row,
         draft: {
@@ -312,7 +324,7 @@ export function entryConflictSlots(
       claim: anchor.claim ?? null,
     },
     ...rows.map((row) => ({
-      kind: row.draft.kind,
+      kind: row.draft.kind === "unset" ? "indicator" : row.draft.kind,
       join: row.join,
       webhookId: row.draft.kind === "webhook" ? row.draft.webhookId : null,
       claim: claimFromEntryDraft(row.draft),
@@ -367,109 +379,18 @@ function draftForKind(
   }
   return {
     kind: "indicator",
-    indicatorKind: "rsi",
+    indicatorKind: "",
     timeframe,
-    compare: indicatorCompareForDirection(side, "rsi", ""),
-    level: side === "short" ? "70" : "30",
-    period: String(DEFAULT_DCA_RSI_PERIOD),
+    compare: "",
+    level: "",
+    period: "",
     slowPeriod: "",
-    multiplier: String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
+    multiplier: "",
   };
 }
 
-function rowAtJoin(
-  side: FuturesSide,
-  rows: EntryStackRow[],
-  index: number,
-  join: StrategyJoin,
-  anchor: EntryAnchor,
-  webhookIds: string[],
-  triggerTimeframe: DcaIndicatorTimeframe | null,
-): EntryStackRow {
-  const timeframe = pickedTimeframe(rows, triggerTimeframe, "15");
-  const kinds: StrategyTriggerKind[] = [
-    "price",
-    "indicator",
-    "trend",
-    "webhook",
-  ];
-  for (const candidate of kinds) {
-    const draft = draftForKind(candidate, side, timeframe);
-    const probe = insertAt(rows, index, { key: "next", join, draft });
-    const slots = entryConflictSlots(anchor, probe);
-    if (
-      entrySlotAllowed({
-        slots,
-        index: index + 1,
-        kind: candidate,
-        webhookIds,
-      })
-    ) {
-      return { key: rowKey(), join, draft };
-    }
-  }
-  return {
-    key: rowKey(),
-    join,
-    draft: draftForKind("indicator", side, timeframe),
-  };
-}
-
-function nextRow(
-  side: FuturesSide,
-  rows: EntryStackRow[],
-  anchor: EntryAnchor,
-  webhookIds: string[],
-  triggerTimeframe: DcaIndicatorTimeframe | null,
-): EntryStackRow {
-  const timeframe = pickedTimeframe(rows, triggerTimeframe, "15");
-  const kinds: StrategyTriggerKind[] = [
-    "price",
-    "indicator",
-    "trend",
-    "webhook",
-  ];
-  let kind: StrategyTriggerKind = "indicator";
-  let join: StrategyJoin = "and";
-  for (const candidate of kinds) {
-    const draft = draftForKind(candidate, side, timeframe);
-    const andSlots = entryConflictSlots(anchor, [
-      ...rows,
-      { key: "next", join: "and", draft },
-    ]);
-    if (
-      entrySlotAllowed({
-        slots: andSlots,
-        index: andSlots.length - 1,
-        kind: candidate,
-        webhookIds,
-      })
-    ) {
-      kind = candidate;
-      break;
-    }
-    const orSlots = entryConflictSlots(anchor, [
-      ...rows,
-      { key: "next", join: "or", draft },
-    ]);
-    if (
-      entrySlotAllowed({
-        slots: orSlots,
-        index: orSlots.length - 1,
-        kind: candidate,
-        webhookIds,
-      })
-    ) {
-      kind = candidate;
-      join = "or";
-      break;
-    }
-  }
-  return {
-    key: rowKey(),
-    join,
-    draft: draftForKind(kind, side, timeframe),
-  };
+function blankEntryRow(join: StrategyJoin): EntryStackRow {
+  return { key: rowKey(), join, draft: { kind: "unset" } };
 }
 
 const TRIGGER_OPTIONS: { value: StrategyTriggerKind; label: string }[] = [
@@ -637,7 +558,7 @@ export function EntryConditionStack({
                   <HintLabel text="Trigger" required />
                   <AppSelect
                     name={`${prefix}${index}Source`}
-                    value={draft.kind}
+                    value={draft.kind === "unset" ? "" : draft.kind}
                     onChange={(event) => {
                       const kind = event.target.value as StrategyTriggerKind;
                       if (
@@ -660,6 +581,7 @@ export function EntryConditionStack({
                     }}
                     className={fieldClass}
                   >
+                    <option value="">Select Trigger</option>
                     {TRIGGER_OPTIONS.map((option) => (
                       <option
                         key={option.value}
@@ -805,7 +727,7 @@ export function EntryConditionStack({
                   <TrendStartFields
                     side={side}
                     prefix={`${prefix}${index}indicator`}
-                    kind={draft.indicatorKind}
+                    kind={draft.indicatorKind || "supertrend"}
                     timeframe={draft.timeframe}
                     compare={draft.compare}
                     period={draft.period}
@@ -826,7 +748,7 @@ export function EntryConditionStack({
                       patchDraft(row.key, { multiplier })
                     }
                   />
-                ) : (
+                ) : draft.kind === "webhook" ? (
                   <label className={labelClass}>
                     <HintLabel text="Webhook" required />
                     <AppSelect
@@ -860,7 +782,7 @@ export function EntryConditionStack({
                       ))}
                     </AppSelect>
                   </label>
-                )}
+                ) : null}
               </div>
             )}
           </>
@@ -874,15 +796,7 @@ export function EntryConditionStack({
     }
     const index =
       join === "or" ? current.length : andInsertIndex(current, groupIndex ?? 0);
-    const created = rowAtJoin(
-      side,
-      current,
-      index,
-      join,
-      anchor,
-      webhookIds,
-      triggerTimeframe,
-    );
+    const created = blankEntryRow(join);
     commit(insertAt(current, index, created));
   }
   const canAdd = rows.length < cap;
@@ -890,12 +804,7 @@ export function EntryConditionStack({
     <button
       type="button"
       className="inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink"
-      onClick={() =>
-        onChange([
-          ...rows,
-          nextRow(side, rows, anchor, webhookIds, triggerTimeframe),
-        ])
-      }
+        onClick={() => onChange([...rows, blankEntryRow("and")])}
     >
       <IconPlus size={14} className="size-3.5" />
       Add condition

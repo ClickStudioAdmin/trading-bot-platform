@@ -670,10 +670,14 @@ function RuleCard({
   };
   let parsedLive: ReturnType<typeof parseFuturesAutomationForm>;
   try {
-    parsedLive = parseFuturesAutomationForm(
-      perpsFormToSnapshotSource(snapshotLayer, venueId),
-      venueId,
-    );
+    const snapshot = perpsFormToSnapshotSource(snapshotLayer, venueId);
+    if (primaryDraft.entrySource === "") {
+      snapshot.set("r0_entrySource", "");
+    }
+    if (storedDirection === "both" && entryDrafts.short.entrySource === "") {
+      snapshot.set("r0_short_entrySource", "");
+    }
+    parsedLive = parseFuturesAutomationForm(snapshot, venueId);
   } catch {
     parsedLive = { ok: false, error: "Could not read the form." };
   }

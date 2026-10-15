@@ -1679,13 +1679,25 @@ export function parseDcaPlaybookForm(
   const direction =
     parseDcaDirection(form.get("direction")) ??
     parseFuturesSide(form.get("side"));
-  const startKind = parseDcaStartKind(form.get("startKind"));
+  const startRaw = form.get("startKind");
+  if (typeof startRaw === "string" && startRaw.trim() === "") {
+    return { ok: false, error: "Choose a trigger." };
+  }
+  const startKind = parseDcaStartKind(startRaw);
   const directionForStart =
     parseDcaDirection(form.get("direction")) ??
     parseFuturesSide(form.get("side"));
+  const shortStartRaw = form.get("shortStartKind");
+  if (
+    directionForStart === "both" &&
+    typeof shortStartRaw === "string" &&
+    shortStartRaw.trim() === ""
+  ) {
+    return { ok: false, error: "Choose a trigger." };
+  }
   const shortStartKind =
     directionForStart === "both"
-      ? (parseOptionalDcaStartKind(form.get("shortStartKind")) ?? startKind)
+      ? (parseOptionalDcaStartKind(shortStartRaw) ?? startKind)
       : null;
   const averagingRaw = form.get("averaging") ?? form.get("dcaMode");
   const averaging = parseDcaAveragingKind(averagingRaw);

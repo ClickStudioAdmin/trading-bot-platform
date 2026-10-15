@@ -43,15 +43,18 @@ export function exitStackMet(input: {
 export function hardExitClaim(
   draft: HardExitDraft | null | undefined,
 ): EntryConflictSlot["claim"] {
-  if (!draft || draft.trigger === "webhook") {
+  if (!draft || draft.trigger === "webhook" || draft.trigger === "unset") {
     return null;
   }
   if (draft.trigger === "price") {
     return priceClaim({
       source: draft.triggerBy,
       compare: draft.compare,
-      price: draft.price,
-    });
+    price: draft.price,
+  });
+  }
+  if (!draft.spec) {
+    return null;
   }
   return indicatorClaim({
     surface: "filter",
@@ -69,7 +72,13 @@ export function hardExitClaim(
 export function hardExitAnchor(
   draft: HardExitDraft | null | undefined,
 ): EntryConflictSlot | null {
-  if (!draft) {
+  if (!draft || draft.trigger === "unset") {
+    return null;
+  }
+  if (
+    (draft.trigger === "indicator" || draft.trigger === "trend") &&
+    !draft.spec
+  ) {
     return null;
   }
   return {
@@ -83,7 +92,13 @@ export function hardExitAnchor(
 export function hardExitTriggerTimeframe(
   draft: HardExitDraft | null | undefined,
 ): DcaIndicatorTimeframe | null {
-  if (!draft || draft.trigger === "price" || draft.trigger === "webhook") {
+  if (
+    !draft ||
+    draft.trigger === "price" ||
+    draft.trigger === "webhook" ||
+    draft.trigger === "unset" ||
+    !draft.spec
+  ) {
     return null;
   }
   return draft.spec.timeframe;

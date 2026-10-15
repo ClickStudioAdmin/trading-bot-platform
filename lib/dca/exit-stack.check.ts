@@ -6,6 +6,7 @@ import {
   recipeHasRuntimeKeys,
   snapshotDcaRecipe,
 } from "@/lib/templates/recipe";
+import { defaultHardExit, parseHardExitForm } from "./hard-exit";
 import { parseDcaPlaybookForm } from "./playbook";
 import {
   TEMPLATE_EXIT_WEBHOOK_ID,
@@ -187,5 +188,14 @@ assert.equal(
   claimsConflict(crossExit(50, "cross_gte"), crossExit(50, "cross_lte")),
   true,
 );
+assert.equal(defaultHardExit("long").trigger, "unset");
+const blankTrigger = baseForm();
+blankTrigger.set("startKind", "");
+const missingTrigger = parseDcaPlaybookForm(blankTrigger);
+assert.equal(missingTrigger.ok, false);
+const blankExit = new FormData();
+blankExit.set("exitTrigger", "unset");
+const missingExit = parseHardExitForm(blankExit, "exit");
+assert.equal(missingExit.ok, false);
 
 console.log("exit-stack.check ok");

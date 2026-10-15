@@ -39,7 +39,9 @@ export type TemplateHardExitSignal =
   | { trigger: "webhook" };
 
 export type HardExitDraft =
-  | { trigger: "indicator" | "trend"; spec: DcaFilterSpec }
+  | { trigger: "unset" }
+  | { trigger: "indicator"; spec: DcaFilterSpec | null }
+  | { trigger: "trend"; spec: DcaFilterSpec }
   | {
       trigger: "price";
       triggerBy: FuturesTrigger;
@@ -60,11 +62,8 @@ export function hardExitFromFilter(
   };
 }
 
-export function defaultHardExit(side: FuturesSide): HardExitDraft {
-  return {
-    trigger: "indicator",
-    spec: dcaFilterSpecForKind("rsi", side),
-  };
+export function defaultHardExit(_side: FuturesSide): HardExitDraft {
+  return { trigger: "unset" };
 }
 
 export function hardExitForTrigger(
@@ -73,7 +72,9 @@ export function hardExitForTrigger(
   current: HardExitDraft | null,
 ): HardExitDraft {
   const timeframe =
-    current && (current.trigger === "indicator" || current.trigger === "trend")
+    current &&
+    (current.trigger === "indicator" || current.trigger === "trend") &&
+    current.spec
       ? current.spec.timeframe
       : "240";
   if (trigger === "price") {
@@ -88,20 +89,23 @@ export function hardExitForTrigger(
       spec: { ...dcaFilterSpecForKind("supertrend", side), timeframe },
     };
   }
-  const kind =
-    current?.trigger === "indicator" && current.spec.kind !== "supertrend"
-      ? current.spec.kind
-      : "rsi";
-  return {
-    trigger: "indicator",
-    spec: { ...dcaFilterSpecForKind(kind, side), timeframe },
-  };
+  if (
+    current?.trigger === "indicator" &&
+    current.spec &&
+    current.spec.kind !== "supertrend"
+  ) {
+    return {
+      trigger: "indicator",
+      spec: { ...current.spec, timeframe },
+    };
+  }
+  return { trigger: "indicator", spec: null };
 }
 
 export function hardExitComplete(
   draft: HardExitDraft | null | undefined,
 ): boolean {
-  if (!draft) {
+  if (!draft || draft.trigger === "unset") {
     return false;
   }
   if (draft.trigger === "price") {
@@ -110,7 +114,7 @@ export function hardExitComplete(
   if (draft.trigger === "webhook") {
     return draft.webhookId.trim() !== "";
   }
-  return dcaFilterComplete(draft.spec);
+  return draft.spec != null && dcaFilterComplete(draft.spec);
 }
 
 export function hardExitDraftFromStored(
@@ -154,7 +158,7 @@ export function hardExitParts(draft: HardExitDraft | null | undefined): {
   filter: DcaFilterSpec | null;
   signal: HardExitSignal | null;
 } {
-  if (!draft) {
+  if (!draft || draft.trigger === "unset") {
     return { filter: null, signal: null };
   }
   if (draft.trigger === "price") {
@@ -303,6 +307,10 @@ export function writeHardExitFormFields(
     return;
   }
   form.set(`${prefix}Trigger`, draft.trigger);
+  if (draft.trigger === "unset") {
+    writeDcaFilterFormFields(form, prefix, null);
+    return;
+  }
   if (draft.trigger === "price") {
     writeDcaFilterFormFields(form, prefix, null);
     form.set(`${prefix}TriggerBy`, draft.triggerBy);

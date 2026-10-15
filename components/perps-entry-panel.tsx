@@ -46,13 +46,13 @@ import {
 } from "@/lib/strategy/expr";
 
 export type PerpsEntryDraft = {
-  entrySource: FuturesAutomationFormValues["entrySource"];
+  entrySource: FuturesAutomationFormValues["entrySource"] | "";
   webhookId: string;
   triggerBy: FuturesTrigger;
   triggerCompare: "gte" | "lte";
   triggerPrice: string;
   skipIfOpen: boolean;
-  indicatorKind: DcaIndicatorKind;
+  indicatorKind: DcaIndicatorKind | "";
   indicatorTimeframe: DcaIndicatorTimeframe;
   indicatorCompare: string;
   indicatorLevel: string;
@@ -62,20 +62,42 @@ export type PerpsEntryDraft = {
   entryRows: EntryStackRow[];
 };
 
-function indicatorKindFor(source: string, kind?: DcaIndicatorKind | null): DcaIndicatorKind {
+function indicatorKindFor(
+  source: string,
+  kind?: DcaIndicatorKind | null,
+): DcaIndicatorKind | "" {
+  if (source === "" ) {
+    return "";
+  }
   if (source === "trend") {
     return "supertrend";
   }
+  if (source === "indicator") {
+    return kind && kind !== "supertrend" ? kind : "";
+  }
   return kind && kind !== "supertrend" ? kind : "rsi";
+}
+
+function blankPerpsEntry(layer: FuturesAutomationFormValues): boolean {
+  return (
+    !layer.id &&
+    layer.entrySource === "price" &&
+    !layer.webhookId &&
+    layer.indicator == null &&
+    !String(layer.triggerPrice ?? "").trim() &&
+    (layer.entryStack == null || layer.entryStack.leaves.length === 0)
+  );
 }
 
 export function perpsEntryDraftFromLayer(
   layer: FuturesAutomationFormValues,
   side: FuturesSide,
+  blank = false,
 ): PerpsEntryDraft {
-  const kind = indicatorKindFor(layer.entrySource, layer.indicator?.kind);
+  const entrySource = blank ? "" : layer.entrySource;
+  const kind = indicatorKindFor(entrySource, layer.indicator?.kind);
   return {
-    entrySource: layer.entrySource,
+    entrySource,
     webhookId: layer.webhookId,
     triggerBy: layer.triggerBy,
     triggerCompare: layer.triggerCompare,
@@ -85,7 +107,7 @@ export function perpsEntryDraftFromLayer(
     indicatorTimeframe: layer.indicator?.timeframe ?? "15",
     indicatorCompare:
       layer.indicator?.compare ??
-      indicatorCompareForDirection(side, kind, ""),
+      (kind ? indicatorCompareForDirection(side, kind, "") : ""),
     indicatorLevel:
       layer.indicator?.level != null
         ? String(layer.indicator.level)
@@ -113,19 +135,20 @@ export function initialPerpsEntryDrafts(layer: FuturesAutomationFormValues): {
   long: PerpsEntryDraft;
   short: PerpsEntryDraft;
 } {
+  const blank = blankPerpsEntry(layer);
   if (layer.direction === "both" && layer.shortEntry) {
     return {
-      long: perpsEntryDraftFromLayer(layer, "long"),
+      long: perpsEntryDraftFromLayer(layer, "long", blank),
       short: perpsEntryDraftFromLeg(layer.shortEntry, "short"),
     };
   }
   const shortSide =
     layer.formAction === "sell" || layer.formAction === "close_short";
   if (shortSide) {
-    const short = perpsEntryDraftFromLayer(layer, "short");
+    const short = perpsEntryDraftFromLayer(layer, "short", blank);
     return { short, long: oppositePerpsEntryDraft(short, "long") };
   }
-  const long = perpsEntryDraftFromLayer(layer, "long");
+  const long = perpsEntryDraftFromLayer(layer, "long", blank);
   return { long, short: oppositePerpsEntryDraft(long, "short") };
 }
 
@@ -159,9 +182,11 @@ export function oppositePerpsEntryDraft(
     ...draft,
     triggerCompare: draft.triggerCompare === "gte" ? "lte" : "gte",
     indicatorCompare:
-      kind === "rsi"
-        ? oppositeIndicatorCompare(kind, draft.indicatorCompare)
-        : indicatorCompareForDirection(side, kind, ""),
+      !kind
+        ? draft.indicatorCompare
+        : kind === "rsi"
+          ? oppositeIndicatorCompare(kind, draft.indicatorCompare)
+          : indicatorCompareForDirection(side, kind, ""),
     indicatorLevel:
       kind === "rsi"
         ? side === "short"
@@ -175,7 +200,10 @@ export function oppositePerpsEntryDraft(
 export function indicatorFromPerpsDraft(
   draft: PerpsEntryDraft,
 ): DcaIndicatorStart | null {
-  if (draft.entrySource !== "indicator" && draft.entrySource !== "trend") {
+  if (
+    (draft.entrySource !== "indicator" && draft.entrySource !== "trend") ||
+    !draft.indicatorKind
+  ) {
     return null;
   }
   return {
@@ -194,8 +222,9 @@ export function perpsEntryLegFromDraft(
   closing: boolean,
 ): PerpsEntryLeg {
   const entrySource =
-    closing &&
-    (draft.entrySource === "indicator" || draft.entrySource === "trend")
+    draft.entrySource === "" ||
+    (closing &&
+      (draft.entrySource === "indicator" || draft.entrySource === "trend"))
       ? "price"
       : draft.entrySource;
   const entryStack: EntryStack = closing
@@ -220,6 +249,12 @@ export function perpsEntryDraftMissing(
 ): boolean {
   if (closing) {
     return false;
+  }
+  if (draft.entrySource === "") {
+    return true;
+  }
+  if (draft.entrySource === "indicator" && draft.indicatorKind === "") {
+    return true;
   }
   return draft.entryRows.some((row) => !entryDraftComplete(row.draft));
 }
@@ -259,7 +294,8 @@ export function PerpsEntryPanel({
     onChange(next);
   }
   const anchor = {
-    kind: (closing ? "price" : draft.entrySource) as PerpsEntryDraft["entrySource"],
+    kind:
+      closing || draft.entrySource === "" ? "price" : draft.entrySource,
     webhookId: draft.webhookId,
     claim: closing
       ? null
@@ -313,8 +349,15 @@ export function PerpsEntryPanel({
                   : draft.entrySource
               }
               onChange={(event) => {
+                if (event.target.value === "") {
+                  patch({ entrySource: "" });
+                  return;
+                }
                 const next = parseAutomationEntry(event.target.value);
                 const partial: Partial<PerpsEntryDraft> = { entrySource: next };
+                if (next === "indicator" && draft.entrySource !== "indicator") {
+                  partial.indicatorKind = "";
+                }
                 if (next === "trend") {
                   partial.indicatorKind = "supertrend";
                   partial.indicatorCompare = indicatorCompareForDirection(
@@ -327,20 +370,11 @@ export function PerpsEntryPanel({
                     DEFAULT_DCA_SUPERTREND_MULTIPLIER,
                   );
                 }
-                if (next === "indicator" && draft.indicatorKind === "supertrend") {
-                  partial.indicatorKind = "rsi";
-                  partial.indicatorCompare = indicatorCompareForDirection(
-                    side,
-                    "rsi",
-                    "",
-                  );
-                  partial.indicatorPeriod = String(DEFAULT_DCA_RSI_PERIOD);
-                  partial.indicatorLevel = side === "short" ? "70" : "30";
-                }
                 patch(partial);
               }}
               className={fieldClass}
             >
+              {closing ? null : <option value="">Select Trigger</option>}
               {closing ? null : <option value="indicator">Indicator</option>}
               {closing ? null : <option value="trend">Trend</option>}
               <option
@@ -402,7 +436,7 @@ export function PerpsEntryPanel({
             <TrendStartFields
               side={side}
               prefix={`${prefix}indicator`}
-              kind={draft.indicatorKind}
+              kind={draft.indicatorKind || "supertrend"}
               timeframe={draft.indicatorTimeframe}
               compare={draft.indicatorCompare}
               period={draft.indicatorPeriod}

@@ -14,23 +14,19 @@ import { IconPlus, IconTrash } from "@/components/icons";
 import {
   hardExitAnchor,
   hardExitClaim,
-  hardExitTriggerTimeframe,
   leafFromHardExit,
 } from "@/lib/dca/exit-stack";
 import {
   hardExitComplete,
-  hardExitForTrigger,
   hardExitParts,
   type HardExitDraft,
   type HardExitTrigger,
 } from "@/lib/dca/hard-exit";
-import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import type { FuturesSide } from "@/lib/futures/model";
 import {
   STRATEGY_CONDITION_CAP,
   entryJoinDisabled,
   entryKindDisabled,
-  entrySlotAllowed,
   entryWebhookIdDisabled,
   type EntryConflictSlot,
   type EntryStack,
@@ -115,31 +111,24 @@ export function exitConflictSlots(
   const first = hardExitAnchor(anchor);
   return [
     ...(first ? [first] : []),
-    ...rows.map((row) => ({
-      kind: row.draft.trigger,
-      join: row.join,
-      webhookId: row.draft.trigger === "webhook" ? row.draft.webhookId : null,
-      claim: hardExitClaim(row.draft),
-    })),
+    ...rows.map((row) =>
+      row.draft.trigger === "unset" ||
+      (row.draft.trigger === "indicator" && row.draft.spec == null)
+        ? {
+            kind: "indicator" as const,
+            join: row.join,
+            webhookId: null,
+            claim: null,
+          }
+        : {
+            kind: row.draft.trigger,
+            join: row.join,
+            webhookId:
+              row.draft.trigger === "webhook" ? row.draft.webhookId : null,
+            claim: hardExitClaim(row.draft),
+          },
+    ),
   ];
-}
-
-function usedTimeframes(
-  anchor: HardExitDraft,
-  rows: ExitStackRow[],
-): Set<DcaIndicatorTimeframe> {
-  const used = new Set<DcaIndicatorTimeframe>();
-  const first = hardExitTriggerTimeframe(anchor);
-  if (first) {
-    used.add(first);
-  }
-  for (const row of rows) {
-    const timeframe = hardExitTriggerTimeframe(row.draft);
-    if (timeframe) {
-      used.add(timeframe);
-    }
-  }
-  return used;
 }
 
 export function ExitConditionStack({
@@ -185,55 +174,10 @@ export function ExitConditionStack({
     commit(rowsRef.current.map((item) => (item.key === key ? next : item)));
   }
   function addRow() {
-    const current = rowsRef.current;
-    const timeframeSet = usedTimeframes(anchor, current);
-    const timeframe =
-      timeframeSet.size >= 4
-        ? (timeframeSet.values().next().value ?? "240")
-        : "240";
-    const kinds: HardExitTrigger[] = ["indicator", "price", "trend", "webhook"];
-    let trigger: HardExitTrigger = "indicator";
-    let join: StrategyJoin = "and";
-    for (const candidate of kinds) {
-      const draft = hardExitForTrigger(candidate, side, null);
-      const andSlots = exitConflictSlots(anchor, [
-        ...current,
-        { key: "next", join: "and", draft },
-      ]);
-      if (
-        entrySlotAllowed({
-          slots: andSlots,
-          index: andSlots.length - 1,
-          kind: candidate,
-          webhookIds,
-        })
-      ) {
-        trigger = candidate;
-        break;
-      }
-      const orSlots = exitConflictSlots(anchor, [
-        ...current,
-        { key: "next", join: "or", draft },
-      ]);
-      if (
-        entrySlotAllowed({
-          slots: orSlots,
-          index: orSlots.length - 1,
-          kind: candidate,
-          webhookIds,
-        })
-      ) {
-        trigger = candidate;
-        join = "or";
-        break;
-      }
-    }
-    const base = hardExitForTrigger(trigger, side, null);
-    const draft: HardExitDraft =
-      base.trigger === "indicator" || base.trigger === "trend"
-        ? { ...base, spec: { ...base.spec, timeframe } }
-        : base;
-    commit([...current, { key: rowKey(), join, draft }]);
+    commit([
+      ...rowsRef.current,
+      { key: rowKey(), join: "and", draft: { trigger: "unset" } },
+    ]);
   }
   function addAt(join: StrategyJoin, groupIndex?: number) {
     const current = rowsRef.current;
@@ -242,40 +186,13 @@ export function ExitConditionStack({
     }
     const index =
       join === "or" ? current.length : andInsertIndex(current, groupIndex ?? 0);
-    const timeframeSet = usedTimeframes(anchor, current);
-    const timeframe =
-      timeframeSet.size >= 4
-        ? (timeframeSet.values().next().value ?? "240")
-        : "240";
-    const kinds: HardExitTrigger[] = ["indicator", "price", "trend", "webhook"];
-    const slotIndex = (rowIndex: number) =>
-      anchorSlot ? rowIndex + 1 : rowIndex;
-    let trigger: HardExitTrigger = "indicator";
-    for (const candidate of kinds) {
-      const draft = hardExitForTrigger(candidate, side, null);
-      const probe = insertAt(current, index, {
-        key: "next",
+    commit(
+      insertAt(current, index, {
+        key: rowKey(),
         join,
-        draft,
-      });
-      if (
-        entrySlotAllowed({
-          slots: exitConflictSlots(anchor, probe),
-          index: slotIndex(index),
-          kind: candidate,
-          webhookIds,
-        })
-      ) {
-        trigger = candidate;
-        break;
-      }
-    }
-    const base = hardExitForTrigger(trigger, side, null);
-    const draft: HardExitDraft =
-      base.trigger === "indicator" || base.trigger === "trend"
-        ? { ...base, spec: { ...base.spec, timeframe } }
-        : base;
-    commit(insertAt(current, index, { key: rowKey(), join, draft }));
+        draft: { trigger: "unset" },
+      }),
+    );
   }
   function joinControl(row: ExitStackRow, index: number, slotIndex: number, labelled: boolean) {
     return (

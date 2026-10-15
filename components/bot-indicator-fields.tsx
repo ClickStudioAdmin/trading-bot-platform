@@ -107,7 +107,7 @@ export function IndicatorStartFields({
 }: {
   side: "long" | "short";
   prefix: string;
-  kind: DcaIndicatorKind;
+  kind: DcaIndicatorKind | "";
   timeframe: DcaIndicatorTimeframe;
   compare: string;
   level: string;
@@ -122,6 +122,92 @@ export function IndicatorStartFields({
   onSlowPeriodChange: (next: string) => void;
   onMultiplierChange: (next: string) => void;
 } & SeriesProps) {
+  const column = useBotColumnLayout();
+  const compactGrid = `col-span-full ${botCompactRowClass}`;
+  function entryDisabled(
+    claim: ReturnType<typeof indicatorClaim>,
+    selected: boolean,
+  ) {
+    return choiceConflicts(seriesSlots, seriesIndex, claim, selected);
+  }
+  function chooseKind(next: string) {
+    if (
+      next !== "rsi" &&
+      next !== "macd" &&
+      next !== "sma" &&
+      next !== "ema" &&
+      next !== "sma_cross" &&
+      next !== "ema_cross" &&
+      next !== "bb" &&
+      next !== "atr_band"
+    ) {
+      return;
+    }
+    onKindChange(next);
+    onCompareChange(indicatorCompareForDirection(side, next, ""));
+    if (next === "rsi") {
+      onLevelChange(side === "short" ? "70" : "30");
+    } else if (next === "macd") {
+      onLevelChange("0");
+    } else if (
+      kind === "rsi" ||
+      kind === "macd" ||
+      (kind !== "" && dcaIndicatorIsLegacyEmaPrice(kind, compare, level))
+    ) {
+      onLevelChange("");
+    }
+    if (next === "atr_band") {
+      onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
+      onMultiplierChange(String(DEFAULT_DCA_ATR_BAND_MULT));
+      onSlowPeriodChange("");
+    } else if (dcaIndicatorUsesPairPeriods(next)) {
+      onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
+      onSlowPeriodChange(String(defaultDcaIndicatorSlowPeriod(next) ?? ""));
+    } else {
+      onSlowPeriodChange("");
+      if (dcaIndicatorUsesPeriod(next)) {
+        onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
+      }
+    }
+  }
+  const indicatorField = (
+    <label className={labelClass}>
+      <HintLabel text="Indicator" required />
+      <AppSelect
+        name={`${prefix}Kind`}
+        value={kind}
+        onChange={(event) => chooseKind(event.target.value)}
+        className={fieldClass}
+      >
+        <option value="">Select Indicator</option>
+        {DCA_INDICATOR_KIND_OPTIONS.map((option) => (
+          <option
+            key={option.value}
+            value={option.value}
+            disabled={entryDisabled(
+              seededEntryClaim(side, option.value, timeframe),
+              option.value === kind,
+            )}
+          >
+            {option.label}
+          </option>
+        ))}
+      </AppSelect>
+    </label>
+  );
+  if (!kind) {
+    return (
+      <div
+        className={
+          column
+            ? compactGrid
+            : "col-span-full grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1.1fr)_6.5rem_6.5rem_minmax(16rem,2fr)_6.5rem]"
+        }
+      >
+        {indicatorField}
+      </div>
+    );
+  }
   const includeLegacyEmaPrice = dcaIndicatorIsLegacyEmaPrice(
     kind,
     compare,
@@ -133,12 +219,6 @@ export function IndicatorStartFields({
     includeLegacyEmaPrice,
   );
   const currentWhen = dcaIndicatorWhenValue(kind, side, compare, level);
-  function entryDisabled(
-    claim: ReturnType<typeof indicatorClaim>,
-    selected: boolean,
-  ) {
-    return choiceConflicts(seriesSlots, seriesIndex, claim, selected);
-  }
   const showPairPeriods =
     dcaIndicatorUsesPairPeriods(kind) && !includeLegacyEmaPrice;
   const whenField = (
@@ -171,58 +251,6 @@ export function IndicatorStartFields({
                 multiplier,
               }),
               option.value === currentWhen,
-            )}
-          >
-            {option.label}
-          </option>
-        ))}
-      </AppSelect>
-    </label>
-  );
-  const indicatorField = (
-    <label className={labelClass}>
-      <HintLabel text="Indicator" required />
-      <AppSelect
-        name={`${prefix}Kind`}
-        value={kind}
-        onChange={(event) => {
-          const next = event.target.value as DcaIndicatorKind;
-          onKindChange(next);
-          onCompareChange(indicatorCompareForDirection(side, next, ""));
-          if (next === "rsi") {
-            onLevelChange("30");
-          } else if (next === "macd") {
-            onLevelChange("0");
-          } else if (
-            kind === "rsi" ||
-            kind === "macd" ||
-            dcaIndicatorIsLegacyEmaPrice(kind, compare, level)
-          ) {
-            onLevelChange("");
-          }
-          if (next === "atr_band") {
-            onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
-            onMultiplierChange(String(DEFAULT_DCA_ATR_BAND_MULT));
-            onSlowPeriodChange("");
-          } else if (dcaIndicatorUsesPairPeriods(next)) {
-            onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
-            onSlowPeriodChange(String(defaultDcaIndicatorSlowPeriod(next)));
-          } else {
-            onSlowPeriodChange("");
-            if (dcaIndicatorUsesPeriod(next)) {
-              onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
-            }
-          }
-        }}
-        className={fieldClass}
-      >
-        {DCA_INDICATOR_KIND_OPTIONS.map((option) => (
-          <option
-            key={option.value}
-            value={option.value}
-            disabled={entryDisabled(
-              seededEntryClaim(side, option.value, timeframe),
-              option.value === kind,
             )}
           >
             {option.label}
@@ -299,8 +327,6 @@ export function IndicatorStartFields({
       />
     </label>
   ) : null;
-  const column = useBotColumnLayout();
-  const compactGrid = `col-span-full ${botCompactRowClass}`;
   const levelField = dcaIndicatorShowsLevel(kind, compare, level) ? (
     <label className={labelClass}>
       <HintLabel

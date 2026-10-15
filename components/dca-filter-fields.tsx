@@ -116,7 +116,7 @@ export function DcaFilterBlock({
         }}
         className={fieldClass}
       >
-        {allowOff ? <option value="">Off</option> : null}
+        <option value="">{allowOff ? "Off" : "Select Indicator"}</option>
         {DCA_FILTER_KIND_OPTIONS.map((option) => (
           <option
             key={option.value}

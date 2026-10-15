@@ -62,13 +62,11 @@ export function AddConditionButton({
   );
 }
 
-function OrSeam() {
+function JoinPill({ label }: { label: "And" | "Or" }) {
   return (
-    <div className="flex items-center gap-3">
-      <span className="h-px min-w-0 flex-1 bg-line" aria-hidden />
-      <span className="text-sm text-ink">Or</span>
-      <span className="h-px min-w-0 flex-1 bg-line" aria-hidden />
-    </div>
+    <span className="inline-flex rounded-md bg-accent-strong px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
+      {label}
+    </span>
   );
 }
 
@@ -94,7 +92,11 @@ export function GroupedConditions<T extends { key: string; join: StrategyJoin }>
         const opener = group[0];
         return (
           <div key={opener?.key ?? "group-1"} className="space-y-3">
-            {groupIndex > 0 ? <OrSeam /> : null}
+            {groupIndex > 0 ? (
+              <div className="px-4">
+                <JoinPill label="Or" />
+              </div>
+            ) : null}
             <section className="space-y-4 rounded-card border border-line bg-canvas px-4 py-4">
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold text-ink">
@@ -105,12 +107,20 @@ export function GroupedConditions<T extends { key: string; join: StrategyJoin }>
                 </p>
               </div>
               {groupIndex === 0 ? lead : null}
-              {group.map((row) => (
+              {group.map((row, rowIndex) => {
+                const opensGroup = groupIndex > 0 && rowIndex === 0;
+                const firstWithoutLead =
+                  groupIndex === 0 && rowIndex === 0 && !lead;
+                return (
                 <div key={row.key} className="space-y-3">
+                  {opensGroup || firstWithoutLead ? null : (
+                    <JoinPill label="And" />
+                  )}
                   <div className="flex justify-end">{renderRemove(row)}</div>
                   {renderBody(row)}
                 </div>
-              ))}
+                );
+              })}
               {renderAddInGroup?.(groupIndex)}
             </section>
           </div>

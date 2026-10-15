@@ -581,6 +581,9 @@ export function parseFuturesAutomationFields(input: {
     }
     limitPrice = parsed.price;
   }
+  if (typeof input.entrySource === "string" && input.entrySource.trim() === "") {
+    return { ok: false, error: "Choose a trigger." };
+  }
   let entrySource = parseAutomationEntry(input.entrySource);
   if (
     actionParsed.action === "flatten" &&
@@ -698,7 +701,11 @@ function applyPerpsDirection(
       };
     }
     const shortPrefix = `${prefix}short_`;
-    const entrySource = parseAutomationEntry(form.get(`${shortPrefix}entrySource`));
+    const shortEntryRaw = form.get(`${shortPrefix}entrySource`);
+    if (typeof shortEntryRaw === "string" && shortEntryRaw.trim() === "") {
+      return { ok: false, error: "Choose a trigger." };
+    }
+    const entrySource = parseAutomationEntry(shortEntryRaw);
     const webhookId = String(form.get(`${shortPrefix}webhookId`) ?? "").trim() || null;
     if (entrySource === "webhook" && !webhookId) {
       return { ok: false, error: "Pick a Signal webhook for the short entry." };

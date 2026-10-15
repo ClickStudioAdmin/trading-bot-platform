@@ -468,4 +468,12 @@ if (!oneWay.ok) {
   assert.match(oneWay.error, /one-way/);
 }
 
+const blankTrigger = parseFuturesAutomationForm(
+  perpsForm({ r0_action: "buy", r0_entrySource: "" }),
+);
+assert.equal(blankTrigger.ok, false);
+if (!blankTrigger.ok) {
+  assert.match(blankTrigger.error, /Choose a trigger/);
+}
+
 console.log("futures automation checks passed");

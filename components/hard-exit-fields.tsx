@@ -102,7 +102,7 @@ export function HardExitFields({
         <HintLabel text="Trigger" required />
         <AppSelect
           name={named ? `${prefix}Trigger` : undefined}
-          value={value.trigger}
+          value={value.trigger === "unset" ? "" : value.trigger}
           onChange={(event) => {
             const trigger = event.target.value as HardExitTrigger;
             if (
@@ -111,12 +111,14 @@ export function HardExitFields({
               trigger !== "trend" &&
               trigger !== "webhook"
             ) {
+              onChange({ trigger: "unset" });
               return;
             }
             onChange(hardExitForTrigger(trigger, side, value));
           }}
           className={fieldClass}
         >
+          <option value="">Select Trigger</option>
           {TRIGGER_OPTIONS.map((option) => (
             <option
               key={option.value}
@@ -244,6 +246,32 @@ export function HardExitFields({
             ))}
           </AppSelect>
         </label>
+      ) : value.trigger === "unset" ? null : value.spec == null ? (
+        <label className={labelClass}>
+          <HintLabel text="Indicator" required />
+          <AppSelect
+            name={named ? `${prefix}Kind` : undefined}
+            value=""
+            onChange={(event) => {
+              const kind = parseDcaFilterKind(event.target.value);
+              if (!kind || kind === "supertrend") {
+                return;
+              }
+              onChange({
+                trigger: "indicator",
+                spec: dcaFilterSpecForKind(kind, side),
+              });
+            }}
+            className={fieldClass}
+          >
+            <option value="">Select Indicator</option>
+            {INDICATOR_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </AppSelect>
+        </label>
       ) : (
         <div className={hardExitParamGrid(value.spec)}>
           <label className={`${labelClass} min-w-0`}>
@@ -263,9 +291,13 @@ export function HardExitFields({
                   return;
                 }
                 const seeded = dcaFilterSpecForKind(kind, side);
+                const current = value.spec;
+                if (!current) {
+                  return;
+                }
                 onChange({
                   ...value,
-                  spec: { ...seeded, timeframe: value.spec.timeframe },
+                  spec: { ...seeded, timeframe: current.timeframe },
                 });
               }}
               className={fieldClass}
@@ -287,7 +319,7 @@ export function HardExitFields({
                       indicatorClaim({
                         surface: "filter",
                         kind: option.value,
-                        timeframe: value.spec.timeframe,
+                        timeframe: value.spec?.timeframe ?? "240",
                         compare: seeded.compare,
                         level: seeded.level,
                         levelTo: seeded.levelTo,
@@ -295,7 +327,7 @@ export function HardExitFields({
                         slowPeriod: seeded.slowPeriod,
                         multiplier: seeded.multiplier,
                       }),
-                      option.value === value.spec.kind,
+                      option.value === value.spec?.kind,
                     )}
                   >
                     {option.label}

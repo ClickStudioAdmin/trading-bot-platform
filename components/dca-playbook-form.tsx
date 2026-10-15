@@ -927,8 +927,8 @@ export function DcaPlaybookForm({
       ? "long"
       : (source?.direction ?? "long"),
   );
-  const [startKind, setStartKind] = useState<DcaStartKind>(
-    source?.startKind ?? "indicator",
+  const [startKind, setStartKind] = useState<DcaStartKind | "">(
+    source?.startKind ?? "",
   );
   const [averaging, setAveraging] = useState<DcaAveragingKind>(() =>
     source ? dcaAveragingKind(source) : "dip",
@@ -1025,9 +1025,11 @@ export function DcaPlaybookForm({
     () =>
       source?.stopLossPct != null || source?.breakevenActivationPct != null,
   );
-  const [indicatorKind, setIndicatorKind] = useState<DcaIndicatorKind>(
-    source?.indicatorKind ??
-      (source?.startKind === "trend" ? "supertrend" : "rsi"),
+  const [indicatorKind, setIndicatorKind] = useState<DcaIndicatorKind | "">(
+    source
+      ? (source.indicatorKind ??
+        (source.startKind === "trend" ? "supertrend" : "rsi"))
+      : "",
   );
   const [indicatorTimeframe, setIndicatorTimeframe] = useState(
     source?.indicatorTimeframe ?? "15",
@@ -1062,8 +1064,12 @@ export function DcaPlaybookForm({
       "long",
     ),
   );
-  const [shortIndicatorKind, setShortIndicatorKind] = useState<DcaIndicatorKind>(
-    source?.shortIndicatorKind ?? source?.indicatorKind ?? "rsi",
+  const [shortIndicatorKind, setShortIndicatorKind] = useState<
+    DcaIndicatorKind | ""
+  >(
+    source
+      ? (source.shortIndicatorKind ?? source.indicatorKind ?? "rsi")
+      : "",
   );
   const [shortIndicatorTimeframe, setShortIndicatorTimeframe] = useState(
     source?.shortIndicatorTimeframe ?? source?.indicatorTimeframe ?? "15",
@@ -1121,8 +1127,11 @@ export function DcaPlaybookForm({
   const [webhookId, setWebhookId] = useState(
     source?.webhookId ?? signalWebhooks[0]?.id ?? "",
   );
-  const [shortStartKind, setShortStartKind] = useState<DcaStartKind>(
-    () => source?.shortStartKind ?? source?.startKind ?? "indicator",
+  const [shortStartKind, setShortStartKind] = useState<DcaStartKind | "">(
+    () =>
+      source
+        ? (source.shortStartKind ?? source.startKind ?? "indicator")
+        : "",
   );
   const [shortWebhookId, setShortWebhookId] = useState(
     () => source?.shortWebhookId ?? source?.webhookId ?? signalWebhooks[0]?.id ?? "",
@@ -1521,7 +1530,14 @@ export function DcaPlaybookForm({
     !parsedLive.ok && parsedLive.error === "Percent must be 100 or less."
       ? parsedLive.error
       : null;
+  const triggerMissing =
+    startKind === "" ||
+    (startKind === "indicator" && indicatorKind === "") ||
+    (direction === "both" &&
+      (shortStartKind === "" ||
+        (shortStartKind === "indicator" && shortIndicatorKind === "")));
   const requiredMissing =
+    triggerMissing ||
     entryRows.some((row) => !entryDraftComplete(row.draft)) ||
     (direction === "both" &&
       shortEntryRows.some((row) => !entryDraftComplete(row.draft))) ||
@@ -1559,6 +1575,7 @@ export function DcaPlaybookForm({
       return;
     }
     const missing =
+      triggerMissing ||
       tpMissing ||
       trailMissing ||
       slMissing ||
@@ -1622,11 +1639,19 @@ export function DcaPlaybookForm({
   const pairSpan = embedded ? "col-span-full" : "lg:col-span-2";
   const lockClass = cycleLocked ? " pointer-events-none opacity-40" : "";
 
-  function applyDcaStartKind(side: "long" | "short", next: DcaStartKind) {
+  function applyDcaStartKind(side: "long" | "short", next: DcaStartKind | "") {
     const shortState = direction === "both" && side === "short";
     const current = shortState ? shortStartKind : startKind;
     const fieldSide: "long" | "short" =
       shortState || direction === "short" ? "short" : "long";
+    if (next === "") {
+      if (shortState) {
+        setShortStartKind("");
+      } else {
+        setStartKind("");
+      }
+      return;
+    }
     if (next === "trend") {
       if (shortState) {
         setShortIndicatorKind("supertrend");
@@ -1645,17 +1670,11 @@ export function DcaPlaybookForm({
         );
         setIndicatorLevel("");
       }
-    } else if (current === "trend" && next === "indicator") {
+    } else if (next === "indicator" && current !== "indicator") {
       if (shortState) {
-        setShortIndicatorKind("rsi");
-        setShortIndicatorPeriod(String(defaultDcaIndicatorPeriod("rsi")));
-        setShortIndicatorCompare(indicatorCompareForDirection("short", "rsi", ""));
-        setShortIndicatorLevel("70");
+        setShortIndicatorKind("");
       } else {
-        setIndicatorKind("rsi");
-        setIndicatorPeriod(String(defaultDcaIndicatorPeriod("rsi")));
-        setIndicatorCompare(indicatorCompareForDirection(fieldSide, "rsi", ""));
-        setIndicatorLevel(fieldSide === "short" ? "70" : "30");
+        setIndicatorKind("");
       }
     }
     if (shortState) {
@@ -1665,7 +1684,7 @@ export function DcaPlaybookForm({
     }
   }
 
-  function sideStartKind(side: "long" | "short"): DcaStartKind {
+  function sideStartKind(side: "long" | "short"): DcaStartKind | "" {
     return direction === "both" && side === "short" ? shortStartKind : startKind;
   }
   function sideWebhook(side: "long" | "short"): string {
@@ -1751,6 +1770,7 @@ export function DcaPlaybookForm({
               {value === "immediate" ? (
                 <option value="immediate">Immediate</option>
               ) : null}
+              <option value="">Select Trigger</option>
               <option value="indicator">Indicator</option>
               <option value="trend">Trend</option>
               <option
@@ -1906,7 +1926,9 @@ export function DcaPlaybookForm({
               <TrendStartFields
                 side={fieldSide}
                 prefix={shortLeg ? "shortIndicator" : "indicator"}
-                kind={shortLeg ? shortIndicatorKind : indicatorKind}
+                kind={
+                  (shortLeg ? shortIndicatorKind : indicatorKind) || "supertrend"
+                }
                 timeframe={shortLeg ? shortIndicatorTimeframe : indicatorTimeframe}
                 compare={shortLeg ? shortIndicatorCompare : indicatorCompare}
                 period={shortLeg ? shortIndicatorPeriod : indicatorPeriod}
@@ -2096,10 +2118,12 @@ export function DcaPlaybookForm({
                       setShortIndicatorKind(indicatorKind);
                       setShortIndicatorTimeframe(indicatorTimeframe);
                       setShortIndicatorCompare(
-                        oppositeIndicatorCompare(
-                          indicatorKind,
-                          indicatorCompare,
-                        ),
+                        indicatorKind
+                          ? oppositeIndicatorCompare(
+                              indicatorKind,
+                              indicatorCompare,
+                            )
+                          : indicatorCompare,
                       );
                       setShortIndicatorLevel(
                         indicatorKind === "rsi"
