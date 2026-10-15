@@ -17,6 +17,7 @@ import {
   connectionFitsDesk,
   parseStoredVenueEnvironment,
 } from "@/lib/exchanges/venues";
+import { loginIsAdmin } from "@/lib/admin/emails";
 import { exclusiveConnectionBindError } from "@/lib/exchanges/connections";
 import {
   listConnectionDeskBinds,
@@ -169,6 +170,26 @@ export async function insertTradingAccount(
   return account;
 }
 
+async function memberMayShareExchangeKey(userId: string): Promise<boolean> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return false;
+  }
+  const { data, error } = await supabase
+    .from("members")
+    .select("role, email")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !data) {
+    return false;
+  }
+  const row = data as { role?: unknown; email?: unknown };
+  return loginIsAdmin({
+    role: row.role == null ? null : String(row.role),
+    email: row.email == null ? null : String(row.email),
+  });
+}
+
 export async function applyDeskBindRules(input: {
   userId: string;
   account: {
@@ -192,10 +213,15 @@ export async function applyDeskBindRules(input: {
   if (!fit.ok) {
     return { error: fit.error };
   }
+  const [allowShared, binds] = await Promise.all([
+    memberMayShareExchangeKey(input.userId),
+    listConnectionDeskBinds(input.userId),
+  ]);
   const taken = exclusiveConnectionBindError({
     connectionId: input.connectionId,
     currentAccountId: input.account.id,
-    binds: await listConnectionDeskBinds(input.userId),
+    allowShared,
+    binds,
   });
   if (taken) {
     return { error: taken };

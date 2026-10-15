@@ -1,4 +1,4 @@
-import { emailIsListedAdmin } from "@/lib/admin/emails";
+import { loginIsAdmin } from "@/lib/admin/emails";
 import {
   getSessionMember,
   requireVerifiedEmail,
@@ -14,7 +14,7 @@ export type AdminUser = {
 export { emailIsListedAdmin, listedAdminEmails } from "@/lib/admin/emails";
 
 export function memberIsAdmin(member: SessionMember): boolean {
-  return member.role === "admin" || emailIsListedAdmin(member.email);
+  return loginIsAdmin(member);
 }
 
 export async function getAdminUser(): Promise<AdminUser | null> {

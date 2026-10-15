@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SharedKeyWarning } from "@/components/shared-key-warning";
 import {
+  connectionListedForBind,
   formatConnectionSummary,
   sharedKeyWarningKind,
   type ExchangeConnection,
@@ -14,11 +15,13 @@ export function ExchangeBindSelect({
   selectedId,
   allowNone,
   sharedConnectionIds,
+  allowSharedKeys = false,
 }: {
   options: ExchangeConnection[];
   selectedId: string | null;
   allowNone: boolean;
   sharedConnectionIds: string[];
+  allowSharedKeys?: boolean;
 }) {
   const [value, setValue] = useState(selectedId ?? "none");
   const warningKind = sharedKeyWarningKind({
@@ -37,9 +40,13 @@ export function ExchangeBindSelect({
       >
         {allowNone ? <option value="none">None</option> : null}
         {options
-          .filter(
-            (row) =>
-              row.id === selectedId || !sharedConnectionIds.includes(row.id),
+          .filter((row) =>
+            connectionListedForBind({
+              connectionId: row.id,
+              selectedId,
+              sharedConnectionIds,
+              allowShared: allowSharedKeys,
+            }),
           )
           .map((row) => (
           <option key={row.id} value={row.id}>
@@ -48,7 +55,7 @@ export function ExchangeBindSelect({
           </option>
         ))}
       </AppSelect>
-      {sharedConnectionIds.length > 0 ? (
+      {!allowSharedKeys && sharedConnectionIds.length > 0 ? (
         <p className="mt-2 text-sm text-ink-muted">
           Keys already bound to another desk are not listed.
         </p>

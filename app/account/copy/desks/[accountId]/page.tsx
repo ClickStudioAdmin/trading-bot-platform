@@ -14,8 +14,13 @@ import {
 import { loadCopyCatalogueDesk } from "@/lib/copy/catalogue";
 import { copyDeskPagePath } from "@/lib/copy/model";
 import { loadCopyDeskPublicClosed } from "@/lib/copy/desk-performance";
+import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
-import { listExchangeConnections } from "@/lib/exchanges/store";
+import { connectionIdsBoundToOtherDesks } from "@/lib/exchanges/connections";
+import {
+  listConnectionDeskBinds,
+  listExchangeConnections,
+} from "@/lib/exchanges/store";
 import {
   deskBlotterFiltersActive,
   filterFuturesBlotterRows,
@@ -64,9 +69,12 @@ export default async function CopyDeskPerformancePage({
   if (!card) {
     notFound();
   }
-  const [closed, connections] = await Promise.all([
+  const [closed, connections, sharedConnectionIds] = await Promise.all([
     loadCopyDeskPublicClosed(card.accountId),
     listExchangeConnections(member.id),
+    listConnectionDeskBinds(member.id).then((binds) =>
+      connectionIdsBoundToOtherDesks(binds),
+    ),
   ]);
   const query = await searchParams;
   const filters = parseDeskBlotterFilters(query);
@@ -107,6 +115,8 @@ export default async function CopyDeskPerformancePage({
                 venue={card.venue}
                 venueEnvironment={card.venueEnvironment}
                 connections={connections}
+                sharedConnectionIds={sharedConnectionIds}
+                allowSharedKeys={memberIsAdmin(member)}
                 following={card.following}
                 className="whitespace-nowrap rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
               />

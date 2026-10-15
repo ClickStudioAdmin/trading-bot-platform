@@ -46,6 +46,7 @@ import {
 } from "@/lib/futures/actions";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { firstSearchValue } from "@/lib/paper/open";
+import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionContext } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
@@ -71,6 +72,7 @@ export default async function FuturesSettingsPage({
   const connections = live
     ? await listExchangeConnections(session.member.id)
     : [];
+  const allowSharedKeys = memberIsAdmin(session.member);
   const sharedConnectionIds = live
     ? connectionIdsBoundToOtherDesks(
         await listConnectionDeskBinds(session.member.id),
@@ -204,6 +206,7 @@ export default async function FuturesSettingsPage({
                   selected={selected}
                   detachBlocked={detachBlocked}
                   sharedConnectionIds={sharedConnectionIds}
+                  allowSharedKeys={allowSharedKeys}
                   canSave={canSave}
                   venues={bindVenues}
                   next={settingsHref}
@@ -265,6 +268,7 @@ export default async function FuturesSettingsPage({
                   selected={selected}
                   detachBlocked={detachBlocked}
                   sharedConnectionIds={sharedConnectionIds}
+                  allowSharedKeys={allowSharedKeys}
                   canSave={canSave}
                   venues={bindVenues}
                   next={settingsHref}
@@ -386,6 +390,7 @@ function ExchangeBindField({
   selected,
   detachBlocked,
   sharedConnectionIds,
+  allowSharedKeys,
   canSave,
   venues,
   next,
@@ -395,6 +400,7 @@ function ExchangeBindField({
   selected: ExchangeConnection | null;
   detachBlocked: boolean;
   sharedConnectionIds: string[];
+  allowSharedKeys: boolean;
   canSave: boolean;
   venues: ReturnType<typeof connectionVenuesForDeskType>;
   next: string;
@@ -439,6 +445,7 @@ function ExchangeBindField({
         selectedId={selectedId}
         allowNone={!selected}
         sharedConnectionIds={sharedConnectionIds}
+        allowSharedKeys={allowSharedKeys}
       />
       {selected ? (
         <div className="mt-2">
