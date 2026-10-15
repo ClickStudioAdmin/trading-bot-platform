@@ -263,6 +263,7 @@ export function ExitConditionStack({
       slotIndex,
       body: (
         <HardExitFields
+          lead={false}
           prefix={`${prefix}Stack${index}`}
           side={side}
           value={row.draft}

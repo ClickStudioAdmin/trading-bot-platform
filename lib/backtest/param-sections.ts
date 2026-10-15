@@ -194,7 +194,7 @@ function hardExitGroup(
     return {
       title,
       rows: [
-        { label: "Trigger", value: "Price cross" },
+        { label: "Condition Type", value: "Price cross" },
         {
           label: "Price source",
           value:
@@ -216,7 +216,7 @@ function hardExitGroup(
   if (signal?.trigger === "webhook") {
     return {
       title,
-      rows: [{ label: "Trigger", value: "Signal webhook" }, ...extra],
+      rows: [{ label: "Condition Type", value: "Signal webhook" }, ...extra],
     };
   }
   if (!spec) {
@@ -228,7 +228,7 @@ function hardExitGroup(
     title,
     rows: [
       {
-        label: "Trigger",
+        label: "Condition Type",
         value: spec.kind === "supertrend" ? "Trend" : "Indicator",
       },
       ...filterRows(spec, side),

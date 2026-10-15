@@ -75,6 +75,7 @@ export function HardExitFields({
   seriesIndex,
   disabledKinds = [],
   disabledWebhookIds = [],
+  lead = true,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -89,6 +90,8 @@ export function HardExitFields({
   seriesIndex?: number;
   disabledKinds?: HardExitTrigger[];
   disabledWebhookIds?: string[];
+  /** First row of the Condition Builder. Added rows stay Trigger. */
+  lead?: boolean;
 }) {
   const webhookChoices =
     value.trigger === "webhook" &&
@@ -98,8 +101,8 @@ export function HardExitFields({
       : webhooks;
   return (
     <div className={gridClass}>
-      <label className={labelClass}>
-        <HintLabel text="Trigger" required />
+      <label className={lead ? `${labelClass} whitespace-nowrap` : labelClass}>
+        <HintLabel text={lead ? "Condition Type" : "Trigger"} required />
         <AppSelect
           name={named ? `${prefix}Trigger` : undefined}
           value={value.trigger === "unset" ? "" : value.trigger}
@@ -116,9 +119,9 @@ export function HardExitFields({
             }
             onChange(hardExitForTrigger(trigger, side, value));
           }}
-          className={fieldClass}
+          className={lead ? `${fieldClass} !min-w-72` : fieldClass}
         >
-          <option value="">Select Trigger</option>
+          <option value="">{lead ? "Select Condition Type" : "Select Trigger"}</option>
           {TRIGGER_OPTIONS.map((option) => (
             <option
               key={option.value}
