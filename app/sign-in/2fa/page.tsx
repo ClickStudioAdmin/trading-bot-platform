@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { TotpCodeBoxes } from "@/components/totp-code-boxes";
+import { SecondFactorEntry } from "@/components/totp-code-boxes";
 import {
   cancelSignIn2faAction,
   completeSignIn2faAction,
@@ -43,15 +43,7 @@ export default async function SignIn2faPage({
         <form id="cancel-sign-in-2fa" action={cancelSignIn2faAction} hidden />
         <form action={completeSignIn2faAction}>
           <div className="mt-4">
-            <label className="block text-sm text-ink" htmlFor="code">
-              Authenticator code
-            </label>
-            <TotpCodeBoxes id="code" name="code" allowRecovery>
-              <span className="mt-1 block text-hint text-ink-muted">
-                Open Google Authenticator and enter the 6-digit code. A recovery
-                code also works once.
-              </span>
-            </TotpCodeBoxes>
+            <SecondFactorEntry id="code" name="code" allowRecovery />
           </div>
           {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
           <div className="mt-5 flex items-center justify-end gap-3">
