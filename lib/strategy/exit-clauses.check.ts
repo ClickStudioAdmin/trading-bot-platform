@@ -1,10 +1,18 @@
 import assert from "node:assert/strict";
 import type { ExitStackRow } from "@/components/exit-condition-stack";
 import {
+  entryKindDisabled,
+  entryWebhookIdDisabled,
+  priceChoiceConflicts,
+} from "@/lib/strategy/expr";
+import {
   classicSignature,
+  customConditionCount,
   customStackFromClauses,
   exitClauseListMissing,
   exitClausesFromSaved,
+  exitConflictModel,
+  exitLeadKindDisabled,
   mergedClassicExitFlags,
   syncClassicClauses,
 } from "./exit-clauses";
@@ -96,6 +104,149 @@ assert.equal(
     ...clauses,
     { key: "blank", kind: "", anchor: { trigger: "unset" }, rows: [] },
   ]),
+  true,
+);
+
+const classicAnd = exitConflictModel([
+  {
+    key: "tp",
+    kind: "take_profit",
+    anchor: { trigger: "unset" },
+    rows: [
+      { key: "hook", join: "and", draft: { trigger: "webhook", webhookId: "one" } },
+      { key: "next", join: "and", draft: { trigger: "unset" } },
+    ],
+  },
+]);
+assert.equal(classicAnd.rowIndex.hook, 0);
+assert.equal(classicAnd.rowIndex.next, 1);
+assert.equal(
+  entryKindDisabled({
+    slots: classicAnd.slots,
+    index: 1,
+    kind: "webhook",
+    webhookIds: ["one", "two"],
+  }),
+  true,
+);
+assert.equal(
+  entryKindDisabled({
+    slots: classicAnd.slots,
+    index: 1,
+    kind: "indicator",
+    webhookIds: ["one", "two"],
+  }),
+  false,
+);
+assert.equal(
+  exitLeadKindDisabled({
+    model: classicAnd,
+    clauseKey: "tp",
+    kind: "webhook",
+    webhookIds: ["one", "two"],
+  }),
+  true,
+);
+assert.equal(
+  exitLeadKindDisabled({
+    model: classicAnd,
+    clauseKey: "tp",
+    kind: "price",
+    webhookIds: ["one", "two"],
+  }),
+  false,
+);
+assert.equal(
+  customConditionCount([
+    {
+      key: "tp",
+      kind: "take_profit",
+      anchor: { trigger: "unset" },
+      rows: [
+        {
+          key: "hook",
+          join: "and",
+          draft: { trigger: "webhook", webhookId: "one" },
+        },
+      ],
+    },
+  ]),
+  1,
+);
+
+const priced = exitConflictModel([
+  {
+    key: "custom",
+    kind: "custom",
+    anchor: { trigger: "price", triggerBy: "last", compare: "gte", price: "100" },
+    rows: [
+      {
+        key: "below",
+        join: "and",
+        draft: { trigger: "price", triggerBy: "last", compare: "gte", price: "90" },
+      },
+    ],
+  },
+]);
+assert.equal(
+  priceChoiceConflicts(
+    priced.slots,
+    priced.rowIndex.below,
+    { source: "last", compare: "gte", price: "90" },
+    { compare: "lte" },
+  ),
+  true,
+);
+assert.equal(
+  priceChoiceConflicts(
+    priced.slots,
+    priced.rowIndex.below,
+    { source: "last", compare: "gte", price: "90" },
+    { compare: "gte" },
+  ),
+  false,
+);
+
+const split = exitConflictModel([
+  {
+    key: "first",
+    kind: "custom",
+    anchor: { trigger: "webhook", webhookId: "one" },
+    rows: [],
+  },
+  {
+    key: "second",
+    kind: "custom",
+    anchor: { trigger: "unset" },
+    rows: [],
+  },
+]);
+assert.equal(split.anchorIndex.second, 1);
+assert.equal(split.slots[1]?.join, "or");
+assert.equal(
+  exitLeadKindDisabled({
+    model: split,
+    clauseKey: "second",
+    kind: "webhook",
+    webhookIds: ["one", "two"],
+  }),
+  false,
+);
+assert.equal(
+  entryWebhookIdDisabled({
+    slots: split.slots,
+    index: split.anchorIndex.second ?? 0,
+    webhookId: "one",
+  }),
+  true,
+);
+assert.equal(
+  exitLeadKindDisabled({
+    model: split,
+    clauseKey: "second",
+    kind: "webhook",
+    webhookIds: ["one"],
+  }),
   true,
 );
 

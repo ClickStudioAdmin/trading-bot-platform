@@ -12,17 +12,9 @@ import {
   JoinWord,
   RemoveConditionButton,
 } from "@/components/condition-group";
-import {
-  anchorDisabledKinds,
-  anchorDisabledWebhookIds,
-  exitConflictSlots,
-  type ExitStackRow,
-} from "@/components/exit-condition-stack";
-import { hardExitAnchor } from "@/lib/dca/exit-stack";
 import { HardExitFields } from "@/components/hard-exit-fields";
 import {
   hardExitForTrigger,
-  type HardExitDraft,
   type HardExitTrigger,
 } from "@/lib/dca/hard-exit";
 import type { FuturesSide } from "@/lib/futures/model";
@@ -30,6 +22,8 @@ import {
   customConditionCount,
   customExitClause,
   emptyExitClause,
+  exitConflictModel,
+  exitLeadKindDisabled,
   isClassicExitKind,
   type ClassicExitKind,
   type ExitBuilderClause,
@@ -136,23 +130,9 @@ export function ExitSideBuilder({
 }) {
   const column = useBotColumnLayout();
   const custom = clauses.filter((clause) => clause.kind === "custom");
-  const first = custom[0];
-  const flatRows: ExitStackRow[] = [];
-  if (first) {
-    for (const row of first.rows) {
-      flatRows.push({ ...row, join: "and" });
-    }
-    for (const group of custom.slice(1)) {
-      flatRows.push({ key: group.key, join: "or", draft: group.anchor });
-      for (const row of group.rows) {
-        flatRows.push({ ...row, join: "and" });
-      }
-    }
-  }
-  const anchor = first?.anchor ?? null;
-  const slots = exitConflictSlots(anchor ?? { trigger: "unset" }, flatRows);
   const placed = placeCustom(clauses);
   const webhookIds = webhooks.map((hook) => hook.id);
+  const conflicts = exitConflictModel(clauses);
   const customCount = customConditionCount(clauses);
   const classicUsed = new Set(
     clauses.filter((clause) => isClassicExitKind(clause.kind)).map((clause) => clause.kind),
@@ -160,7 +140,6 @@ export function ExitSideBuilder({
   const canAddGroup =
     clauses.length < STRATEGY_CONDITION_CAP &&
     (classicUsed.size < 3 || customCount < STRATEGY_CONDITION_CAP);
-  const leadAnchor = anchor ?? { trigger: "unset" as const };
 
   function commit(next: ExitBuilderClause[]) {
     onChange(next.length > 0 ? next : [emptyExitClause()]);
@@ -182,7 +161,7 @@ export function ExitSideBuilder({
         ...current,
         kind: value,
         anchor: { trigger: "unset" },
-        rows: [],
+        rows: current.rows,
       }));
       return;
     }
@@ -194,7 +173,7 @@ export function ExitSideBuilder({
             side,
             current.kind === "custom" ? current.anchor : null,
           ),
-          current.kind === "custom" ? current.rows : [],
+          current.rows,
           current.key,
         ),
       );
@@ -214,12 +193,12 @@ export function ExitSideBuilder({
     commit([...clauses, emptyExitClause()]);
   }
   function addCustomRow(clause: ExitBuilderClause) {
-    const added = clause.kind === "custom" ? 1 : 2;
-    if (isClassicExitKind(clause.kind) || customCount + added > STRATEGY_CONDITION_CAP) {
+    const added = clause.kind === "" ? 2 : 1;
+    if (customCount + added > STRATEGY_CONDITION_CAP) {
       return;
     }
     const row = { key: rowKey(), join: "and" as const, draft: { trigger: "unset" as const } };
-    if (clause.kind !== "custom") {
+    if (clause.kind === "") {
       patch(clause.key, (current) => customExitClause({ trigger: "unset" }, [row], current.key));
       return;
     }
@@ -234,31 +213,28 @@ export function ExitSideBuilder({
       rows: current.rows.filter((row) => row.key !== rowKeyValue),
     }));
   }
-  function seriesIndexFor(
-    row: PlacedCustom | null,
-    lead: HardExitDraft | null,
-  ): number {
-    if (!row || row.stackIndex == null) {
-      return 0;
-    }
-    return hardExitAnchor(lead) ? row.stackIndex + 1 : row.stackIndex;
-  }
-  function disabledTriggers(
-    row: PlacedCustom,
-    draft: HardExitDraft,
+  function disabledKinds(
     seriesIndex: number,
+    selected: HardExitTrigger | "unset",
   ): HardExitTrigger[] {
     return (["price", "indicator", "trend", "webhook"] as const).filter(
       (kind) =>
-        kind !== draft.trigger &&
-        (row.role === "anchor" && row.stackIndex == null
-          ? anchorDisabledKinds(leadAnchor, flatRows, webhookIds).includes(kind)
-          : entryKindDisabled({
-              slots,
-              index: seriesIndex,
-              kind,
-              webhookIds,
-            })),
+        kind !== selected &&
+        entryKindDisabled({
+          slots: conflicts.slots,
+          index: seriesIndex,
+          kind,
+          webhookIds,
+        }),
+    );
+  }
+  function disabledWebhookIds(seriesIndex: number): string[] {
+    return webhookIds.filter((id) =>
+      entryWebhookIdDisabled({
+        slots: conflicts.slots,
+        index: seriesIndex,
+        webhookId: id,
+      }),
     );
   }
 
@@ -274,16 +250,21 @@ export function ExitSideBuilder({
         const anchorRow = placed.find(
           (row) => row.clauseKey === clause.key && row.role === "anchor",
         );
-        const anchorSeries = seriesIndexFor(anchorRow ?? null, anchor);
+        const anchorSeries = conflicts.anchorIndex[clause.key] ?? 0;
         const advancedDisabled = advancedFull
           ? (["price", "indicator", "trend", "webhook"] as const)
-          : anchorRow
-            ? disabledTriggers(anchorRow, clause.anchor, anchorSeries)
-            : [];
-        const rowAdded = clause.kind === "custom" ? 1 : 2;
-        const canAddRow =
-          !isClassicExitKind(clause.kind) &&
-          customCount + rowAdded <= STRATEGY_CONDITION_CAP;
+          : (["price", "indicator", "trend", "webhook"] as const).filter(
+              (kind) =>
+                kind !== clause.anchor.trigger &&
+                exitLeadKindDisabled({
+                  model: conflicts,
+                  clauseKey: clause.key,
+                  kind,
+                  webhookIds,
+                }),
+            );
+        const rowAdded = clause.kind === "" ? 2 : 1;
+        const canAddRow = customCount + rowAdded <= STRATEGY_CONDITION_CAP;
         const anchorPrefix =
           anchorRow?.stackIndex == null ? prefix : `${prefix}Stack${anchorRow.stackIndex}`;
         return (
@@ -369,39 +350,29 @@ export function ExitSideBuilder({
                     fieldClass={fieldClass}
                     labelClass={labelClass}
                     named={named}
-                    seriesSlots={slots}
+                    seriesSlots={conflicts.slots}
                     seriesIndex={anchorSeries}
-                    disabledWebhookIds={
-                      anchorRow?.stackIndex == null
-                        ? anchorDisabledWebhookIds(leadAnchor, flatRows, webhookIds)
-                        : webhookIds.filter((id) =>
-                            entryWebhookIdDisabled({
-                              slots,
-                              index: anchorSeries,
-                              webhookId: id,
-                            }),
-                          )
-                    }
+                    disabledWebhookIds={disabledWebhookIds(anchorSeries)}
                   />
                 </div>
               ) : null}
-              {placed
-                .filter((row) => row.clauseKey === clause.key && row.role === "row")
-                .map((row) => {
-                  const draft =
-                    clause.rows.find((item) => item.key === row.rowKey)?.draft ?? {
-                      trigger: "unset" as const,
-                    };
-                  const seriesIndex = seriesIndexFor(row, anchor);
+              {clause.rows.map((row) => {
+                  const placedRow = placed.find(
+                    (item) => item.clauseKey === clause.key && item.rowKey === row.key,
+                  );
+                  const seriesIndex = conflicts.rowIndex[row.key] ?? 0;
+                  const postRow = named && clause.kind === "custom";
                   const fieldPrefix =
-                    row.stackIndex == null ? prefix : `${prefix}Stack${row.stackIndex}`;
+                    postRow && placedRow?.stackIndex != null
+                      ? `${prefix}Stack${placedRow.stackIndex}`
+                      : prefix;
                   return (
-                    <div key={row.rowKey ?? row.clauseKey} className="space-y-3">
+                    <div key={row.key} className="space-y-3">
                       <JoinWord label="And" />
-                      {named && row.stackIndex != null ? (
+                      {postRow && placedRow?.stackIndex != null ? (
                         <input
                           type="hidden"
-                          name={`${prefix}Stack${row.stackIndex}Join`}
+                          name={`${prefix}Stack${placedRow.stackIndex}Join`}
                           value="and"
                         />
                       ) : null}
@@ -411,15 +382,12 @@ export function ExitSideBuilder({
                             lead={false}
                             prefix={fieldPrefix}
                             side={side}
-                            value={draft}
+                            value={row.draft}
                             onChange={(next) => {
-                              if (!row.rowKey) {
-                                return;
-                              }
                               patch(clause.key, (current) => ({
                                 ...current,
                                 rows: current.rows.map((item) =>
-                                  item.key === row.rowKey ? { ...item, draft: next } : item,
+                                  item.key === row.key ? { ...item, draft: next } : item,
                                 ),
                               }));
                             }}
@@ -427,26 +395,16 @@ export function ExitSideBuilder({
                             gridClass={gridClass}
                             fieldClass={fieldClass}
                             labelClass={labelClass}
-                            named={named}
-                            seriesSlots={slots}
+                            named={postRow}
+                            seriesSlots={conflicts.slots}
                             seriesIndex={seriesIndex}
-                            disabledKinds={disabledTriggers(row, draft, seriesIndex)}
-                            disabledWebhookIds={webhookIds.filter((id) =>
-                              entryWebhookIdDisabled({
-                                slots,
-                                index: seriesIndex,
-                                webhookId: id,
-                              }),
-                            )}
+                            disabledKinds={disabledKinds(seriesIndex, row.draft.trigger)}
+                            disabledWebhookIds={disabledWebhookIds(seriesIndex)}
                           />
                         </div>
                         <RemoveConditionButton
                           scope="condition"
-                          onClick={() => {
-                            if (row.rowKey) {
-                              removeCustomRow(clause, row.rowKey);
-                            }
-                          }}
+                          onClick={() => removeCustomRow(clause, row.key)}
                         />
                       </div>
                     </div>

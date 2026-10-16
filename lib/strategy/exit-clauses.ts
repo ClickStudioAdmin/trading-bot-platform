@@ -1,6 +1,12 @@
 import type { ExitStackRow } from "@/components/exit-condition-stack";
+import { hardExitAnchor, hardExitClaim } from "@/lib/dca/exit-stack";
 import type { HardExitDraft } from "@/lib/dca/hard-exit";
-import type { StrategyJoin } from "@/lib/strategy/expr";
+import {
+  entryKindDisabled,
+  type EntryConflictSlot,
+  type StrategyJoin,
+  type StrategyTriggerKind,
+} from "@/lib/strategy/expr";
 
 export const EXIT_CLAUSE_KINDS = [
   "take_profit",
@@ -134,11 +140,92 @@ export function syncClassicClauses(
 
 export function customConditionCount(clauses: readonly ExitBuilderClause[]): number {
   return clauses.reduce((count, clause) => {
-    if (clause.kind !== "custom") {
-      return count;
-    }
-    return count + 1 + clause.rows.length;
+    const lead = clause.kind === "custom" ? 1 : 0;
+    return count + lead + clause.rows.length;
   }, 0);
+}
+
+export type ExitConflictModel = {
+  slots: EntryConflictSlot[];
+  anchorIndex: Record<string, number>;
+  rowIndex: Record<string, number>;
+  /** First slot of a group that already has one. */
+  groupStart: Record<string, number>;
+};
+
+function draftSlot(draft: HardExitDraft, join: StrategyJoin): EntryConflictSlot {
+  if (!hardExitAnchor(draft) || draft.trigger === "unset") {
+    return { kind: "indicator", join, webhookId: null, claim: null };
+  }
+  return {
+    kind: draft.trigger,
+    join,
+    webhookId: draft.trigger === "webhook" ? draft.webhookId : null,
+    claim: hardExitClaim(draft),
+  };
+}
+
+/** And peers inside one exit group, Or between groups. Includes Common And rows. */
+export function exitConflictModel(
+  clauses: readonly Pick<ExitBuilderClause, "key" | "kind" | "anchor" | "rows">[],
+): ExitConflictModel {
+  const slots: EntryConflictSlot[] = [];
+  const anchorIndex: Record<string, number> = {};
+  const rowIndex: Record<string, number> = {};
+  const groupStart: Record<string, number> = {};
+  for (const clause of clauses) {
+    const start = slots.length;
+    if (clause.kind === "custom") {
+      slots.push(draftSlot(clause.anchor, start === 0 ? "and" : "or"));
+      anchorIndex[clause.key] = slots.length - 1;
+    }
+    for (const row of clause.rows) {
+      const first = slots.length === start;
+      const join: StrategyJoin = first ? (start === 0 ? "and" : "or") : "and";
+      slots.push(draftSlot(row.draft, join));
+      rowIndex[row.key] = slots.length - 1;
+    }
+    if (slots.length > start) {
+      groupStart[clause.key] = start;
+    }
+  }
+  return { slots, anchorIndex, rowIndex, groupStart };
+}
+
+/**
+ * A Condition Type on the lead row. The current anchor is its own slot.
+ * A Common lead is tested as if it became that advanced kind beside its And rows.
+ */
+export function exitLeadKindDisabled(input: {
+  model: ExitConflictModel;
+  clauseKey: string;
+  kind: StrategyTriggerKind;
+  webhookIds?: readonly string[];
+}): boolean {
+  const index = input.model.anchorIndex[input.clauseKey];
+  if (index != null) {
+    return entryKindDisabled({
+      slots: input.model.slots,
+      index,
+      kind: input.kind,
+      webhookIds: input.webhookIds,
+    });
+  }
+  const insertAt = input.model.groupStart[input.clauseKey] ?? input.model.slots.length;
+  const join: StrategyJoin = insertAt === 0 ? "and" : "or";
+  const slots: EntryConflictSlot[] = [
+    ...input.model.slots.slice(0, insertAt),
+    { kind: "indicator", join, webhookId: null, claim: null },
+    ...input.model.slots.slice(insertAt).map((slot, offset) =>
+      offset === 0 ? { ...slot, join: "and" as const } : slot,
+    ),
+  ];
+  return entryKindDisabled({
+    slots,
+    index: insertAt,
+    kind: input.kind,
+    webhookIds: input.webhookIds,
+  });
 }
 
 export function exitClausesFromSaved(input: {

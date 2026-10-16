@@ -281,11 +281,33 @@ export function HardExitFields({
             className={fieldClass}
           >
             <option value="">Select Indicator</option>
-            {INDICATOR_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
+            {INDICATOR_OPTIONS.map((option) => {
+              const seeded = dcaFilterSpecForKind(option.value, side);
+              return (
+                <option
+                  key={option.value}
+                  value={option.value}
+                  disabled={choiceConflicts(
+                    seriesSlots,
+                    seriesIndex,
+                    indicatorClaim({
+                      surface: "filter",
+                      kind: option.value,
+                      timeframe: seeded.timeframe,
+                      compare: seeded.compare,
+                      level: seeded.level,
+                      levelTo: seeded.levelTo,
+                      period: seeded.period,
+                      slowPeriod: seeded.slowPeriod,
+                      multiplier: seeded.multiplier,
+                    }),
+                    false,
+                  )}
+                >
+                  {option.label}
+                </option>
+              );
+            })}
           </AppSelect>
         </label>
       ) : (

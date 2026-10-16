@@ -978,6 +978,7 @@ export function ThemeBotFormDraft() {
     breakevenAt,
     breakevenOffset,
     shortClassic,
+    exitClauses,
     shortClauses,
     exitIf,
     exitRows,
