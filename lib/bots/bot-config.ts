@@ -197,7 +197,7 @@ function dcaEntrySections(playbook: DcaPlaybook): Array<BotConfigSection | null>
       );
     }
     return section(
-      side === "short" ? "Short Entry Condition Builder" : "Long Entry Condition Builder",
+      side === "short" ? "Short Entry Conditions" : "Long Entry Conditions",
       lines,
     );
   });
@@ -340,8 +340,8 @@ function dcaExitSections(
   return dcaSides(playbook).map((side) =>
     section(
       side === "short"
-        ? "Short Exit Condition Builder"
-        : "Long Exit Condition Builder",
+        ? "Short Exit Conditions"
+        : "Long Exit Conditions",
       [...classic, dcaCustomExitLine(playbook, side)],
     ),
   );
@@ -589,13 +589,13 @@ export function perpsBotConfig(
     ]),
     section(
       rule.direction === "both"
-        ? "Long Entry Condition Builder"
+        ? "Long Entry Conditions"
         : side === "short"
-          ? "Short Entry Condition Builder"
-          : "Long Entry Condition Builder",
+          ? "Short Entry Conditions"
+          : "Long Entry Conditions",
       entry,
     ),
-    ...(shortEntry ? [section("Short Entry Condition Builder", shortEntry)] : []),
+    ...(shortEntry ? [section("Short Entry Conditions", shortEntry)] : []),
     section("Position Sizing", sizing),
     ...(closing
       ? []
@@ -612,8 +612,8 @@ export function perpsBotConfig(
       const short = ownShort && perpsLegHasOwnExit(rule.shortEntry) ? rule.shortEntry : null;
       return section(
         exitSide === "short"
-          ? "Short Exit Condition Builder"
-          : "Long Exit Condition Builder",
+          ? "Short Exit Conditions"
+          : "Long Exit Conditions",
         [
           ...classicExits,
           setting(
