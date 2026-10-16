@@ -1,6 +1,7 @@
 # Long backtests (development). Same image as the desk worker, different process.
 # GitHub Actions creates tbp-backtest-dev when FLY_API_TOKEN is set.
-# Secrets match tbp-engine-dev: development Supabase only.
+# Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EXCHANGE_CREDENTIALS_KEY.
+# Development Supabase only. The billing key stays on tbp-engine-dev.
 
 app = "tbp-backtest-dev"
 primary_region = "syd"

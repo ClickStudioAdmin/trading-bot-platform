@@ -1,5 +1,6 @@
 # Long backtests (production). Same image as the desk worker, different process.
-# Secrets match tbp-engine: production Supabase only.
+# Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EXCHANGE_CREDENTIALS_KEY.
+# Production Supabase only. The billing key stays on tbp-engine.
 
 app = "tbp-backtest"
 primary_region = "syd"
