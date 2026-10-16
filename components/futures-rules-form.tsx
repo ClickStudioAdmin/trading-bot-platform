@@ -110,7 +110,10 @@ import {
   type HardExitDraft,
 } from "@/lib/dca/hard-exit";
 import type { FuturesOrderType, FuturesSide, FuturesTrigger } from "@/lib/futures/model";
-import type { FuturesTpslLevelKind } from "@/lib/futures/tpsl";
+import {
+  defaultTpslLevelKind,
+  type FuturesTpslLevelKind,
+} from "@/lib/futures/tpsl";
 import { IconPlus, IconSave } from "@/components/icons";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import { perpsFormToSnapshotSource } from "@/lib/templates/recipe";
@@ -563,11 +566,11 @@ function RuleCard({
   const [stopLoss, setStopLoss] = useState(
     layer.tpsl?.stopLoss != null ? String(layer.tpsl.stopLoss) : "",
   );
-  const [tpKind, setTpKind] = useState<FuturesTpslLevelKind>(
-    layer.tpsl?.tpKind === "percent" ? "percent" : "price",
+  const [tpKind, setTpKind] = useState<FuturesTpslLevelKind>(() =>
+    defaultTpslLevelKind(layer.tpsl?.takeProfit, layer.tpsl?.tpKind),
   );
-  const [slKind, setSlKind] = useState<FuturesTpslLevelKind>(
-    layer.tpsl?.slKind === "percent" ? "percent" : "price",
+  const [slKind, setSlKind] = useState<FuturesTpslLevelKind>(() =>
+    defaultTpslLevelKind(layer.tpsl?.stopLoss, layer.tpsl?.slKind),
   );
   const [tpTrigger, setTpTrigger] = useState<FuturesTrigger>(
     layer.tpsl?.tpTrigger ?? "last",
@@ -734,8 +737,8 @@ function RuleCard({
       ? {
           takeProfit: tpLive ? Number(takeProfit.replace(/,/g, "")) || null : null,
           stopLoss: slLive ? Number(stopLoss.replace(/,/g, "")) || null : null,
-          tpKind: tpLive ? tpKind : "price",
-          slKind: slLive ? slKind : "price",
+          tpKind: tpLive ? tpKind : "percent",
+          slKind: slLive ? slKind : "percent",
           tpTrigger,
           slTrigger,
           mode: layer.tpsl?.mode ?? "full",

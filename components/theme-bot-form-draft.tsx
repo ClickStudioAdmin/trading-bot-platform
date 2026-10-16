@@ -778,7 +778,7 @@ export function ThemeBotFormDraft() {
   const [tpLimitPrice, setTpLimitPrice] = useState("");
   const [trailValue, setTrailValue] = useState("");
   const [trailTrigger, setTrailTrigger] = useState("");
-  const [slMethod, setSlMethod] = useState<ExitMethod>("");
+  const [slMethod, setSlMethod] = useState<ExitMethod>("percent");
   const [slValue, setSlValue] = useState("");
   const [slBasis, setSlBasis] = useState("average");
   const [slTrigger, setSlTrigger] = useState("last");
