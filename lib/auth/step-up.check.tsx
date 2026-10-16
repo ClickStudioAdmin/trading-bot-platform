@@ -139,6 +139,18 @@ const dangerBusy = renderToStaticMarkup(
 );
 assert.match(dangerBusy, /Checking…/);
 assert.match(dangerBusy, /text-ink/);
+const deleting = renderToStaticMarkup(
+  <StepUpPrompt
+    formId="delete-desk-long"
+    confirmLabel="Delete desk"
+    danger
+    pending
+    pendingLabel="Deleting…"
+    onCancel={() => {}}
+  />,
+);
+assert.match(deleting, /Deleting…/);
+assert.doesNotMatch(deleting, /Checking…/);
 assert.doesNotMatch(dangerBusy, /text-canvas/);
 
 let redirected = false;

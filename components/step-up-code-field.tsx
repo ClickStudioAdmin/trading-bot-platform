@@ -73,6 +73,7 @@ export function StepUpPrompt({
   error = null,
   onCancel,
   hint = "Google Authenticator or a recovery code.",
+  pendingLabel = "Checking…",
 }: {
   formId: string;
   confirmLabel: string;
@@ -81,6 +82,7 @@ export function StepUpPrompt({
   error?: string | null;
   onCancel: () => void;
   hint?: string;
+  pendingLabel?: string;
 }) {
   const fieldId = `${formId}-code`;
   const [missing, setMissing] = useState(false);
@@ -137,7 +139,7 @@ export function StepUpPrompt({
           {pending ? (
             <span className="inline-flex items-center gap-2">
               <ButtonBusyIcon />
-              Checking…
+              {pendingLabel}
             </span>
           ) : (
             confirmLabel
@@ -156,6 +158,7 @@ export function StepUpModal({
   pending = false,
   error = null,
   onCancel,
+  pendingLabel = "Checking…",
 }: {
   open: boolean;
   formId: string;
@@ -164,6 +167,7 @@ export function StepUpModal({
   pending?: boolean;
   error?: string | null;
   onCancel: () => void;
+  pendingLabel?: string;
 }) {
   const close = useCallback(() => {
     if (pending) {
@@ -183,6 +187,7 @@ export function StepUpModal({
         pending={pending}
         error={error}
         onCancel={close}
+        pendingLabel={pendingLabel}
       />
     </Modal>
   );
@@ -209,6 +214,7 @@ export function StepUpForm({
   danger = false,
   error = null,
   pending = false,
+  pendingLabel = "Checking…",
   onSubmit,
   onInput,
   onCancel,
@@ -225,6 +231,7 @@ export function StepUpForm({
   danger?: boolean;
   error?: string | null;
   pending?: boolean;
+  pendingLabel?: string;
   onSubmit?: (event: FormEvent<HTMLFormElement>) => void;
   onInput?: (event: FormEvent<HTMLFormElement>) => void;
   onCancel?: () => void;
@@ -304,6 +311,7 @@ export function StepUpForm({
         pending={busy}
         error={stepUpError ?? error}
         onCancel={cancel}
+        pendingLabel={pendingLabel}
       />
     </>
   );
