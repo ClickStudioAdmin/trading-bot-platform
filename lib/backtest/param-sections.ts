@@ -20,13 +20,11 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import { dcaAveragingKind, dcaIntervalParts } from "@/lib/dca/playbook";
-import { formatStrategyLeafReason } from "@/lib/bots/condition-copy";
 import type { TemplateHardExitSignal } from "@/lib/dca/hard-exit";
 import {
-  confirmFromEntryStack,
-  entryStackIsLegacy,
   resolveEntryStack,
   type EntryStack,
+  type StrategyLeaf,
 } from "@/lib/strategy/expr";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
 import type {
@@ -40,7 +38,24 @@ export type ParamRow = { label: string; value: string };
 
 export type ParamGroup = { title?: string; rows: ParamRow[] };
 
-export type ParamSection = { title: string; groups: ParamGroup[] };
+/** One condition inside a form-style group. */
+export type ParamCondition = { rows: ParamRow[] };
+
+/**
+ * Conditions grouped the same way as the bot form.
+ * `groups[0]` is Group 1. Later groups are opened by Or.
+ * Conditions inside a group are joined with And.
+ */
+export type ParamStack = {
+  title?: string;
+  groups: ParamCondition[][];
+};
+
+export type ParamSection = {
+  title: string;
+  groups: ParamGroup[];
+  stack?: ParamStack;
+};
 
 export type BacktestWindowFields = {
   name?: string | null;
@@ -179,6 +194,165 @@ function filterRows(spec: DcaFilterSpec, side: "long" | "short"): ParamRow[] {
   return rows;
 }
 
+type PriceListStyle = "dca" | "perps";
+
+function leafConditionRows(
+  leaf: StrategyLeaf,
+  side: "long" | "short",
+  priceStyle: PriceListStyle,
+  quote: string,
+): ParamRow[] {
+  if (leaf.kind === "price") {
+    if (priceStyle === "dca") {
+      return [
+        { label: "Condition Type", value: "Price cross" },
+        ...priceRows(
+          {
+            triggerBy: leaf.triggerBy,
+            compare: leaf.compare,
+            price: leaf.price,
+          },
+          quote,
+        ),
+      ];
+    }
+    return [
+      { label: "Condition Type", value: "Price cross" },
+      { label: "Price source", value: perpsPriceSource(leaf.triggerBy) },
+      { label: "Compare", value: whenLabel(leaf.compare) },
+      { label: "Price", value: num(leaf.price) },
+    ];
+  }
+  if (leaf.kind === "webhook") {
+    return [{ label: "Condition Type", value: "Signal webhook" }];
+  }
+  if (leaf.kind === "filter") {
+    return [
+      {
+        label: "Condition Type",
+        value: leaf.spec.kind === "supertrend" ? "Trend" : "Indicator",
+      },
+      ...filterRows(leaf.spec, side),
+    ];
+  }
+  return [
+    {
+      label: "Condition Type",
+      value: leaf.kind === "trend" ? "Trend" : "Indicator",
+    },
+    ...indicatorRows({
+      trend: leaf.kind === "trend",
+      side,
+      kind: leaf.start.kind,
+      timeframe: leaf.start.timeframe,
+      compare: leaf.start.compare,
+      level: leaf.start.level,
+      period: leaf.start.period,
+      slowPeriod: leaf.start.slowPeriod,
+      multiplier: leaf.start.multiplier,
+    }),
+  ];
+}
+
+/** Lead is Group 1. And stays in the current group. Or starts the next group. */
+function conditionStack(
+  lead: ParamRow[] | null,
+  leaves: readonly StrategyLeaf[],
+  joins: readonly ("and" | "or")[],
+  side: "long" | "short",
+  priceStyle: PriceListStyle,
+  quote: string,
+): ParamCondition[][] {
+  const groups: ParamCondition[][] = [];
+  if (lead && lead.length > 0) {
+    groups.push([{ rows: lead }]);
+  }
+  for (let index = 0; index < leaves.length; index += 1) {
+    const leaf = leaves[index];
+    if (!leaf) {
+      continue;
+    }
+    const condition = {
+      rows: leafConditionRows(leaf, side, priceStyle, quote),
+    };
+    if (groups.length === 0 || joins[index] === "or") {
+      groups.push([condition]);
+    } else {
+      groups[groups.length - 1]?.push(condition);
+    }
+  }
+  return groups;
+}
+
+function hardExitAnchorRows(
+  spec: DcaFilterSpec | null | undefined,
+  signal: TemplateHardExitSignal | null | undefined,
+  side: "long" | "short",
+): ParamRow[] | null {
+  if (signal?.trigger === "price") {
+    return [
+      { label: "Condition Type", value: "Price cross" },
+      {
+        label: "Price source",
+        value:
+          signal.triggerBy === "mark"
+            ? "Mark is"
+            : signal.triggerBy === "index"
+              ? "Index is"
+              : "Last is",
+      },
+      {
+        label: "Compare",
+        value: signal.compare === "lte" ? "At or below" : "At or above",
+      },
+      { label: "Price", value: num(signal.price) },
+    ];
+  }
+  if (signal?.trigger === "webhook") {
+    return [{ label: "Condition Type", value: "Signal webhook" }];
+  }
+  if (!spec) {
+    return null;
+  }
+  return [
+    {
+      label: "Condition Type",
+      value: spec.kind === "supertrend" ? "Trend" : "Indicator",
+    },
+    ...filterRows(spec, side),
+  ];
+}
+
+function hardExitParts(
+  title: string,
+  spec: DcaFilterSpec | null | undefined,
+  signal: TemplateHardExitSignal | null | undefined,
+  side: "long" | "short",
+  stack?: EntryStack | null,
+): { group?: ParamGroup; stack?: ParamStack } {
+  const leaves = stack?.leaves ?? [];
+  const anchor = hardExitAnchorRows(spec, signal, side);
+  if (leaves.length === 0) {
+    if (!anchor) {
+      return { group: { rows: [{ label: title, value: "Off" }] } };
+    }
+    return { group: { title, rows: anchor } };
+  }
+  return {
+    stack: {
+      title,
+      groups: conditionStack(
+        anchor,
+        leaves,
+        stack?.joins ?? [],
+        side,
+        "perps",
+        "USDT",
+      ),
+    },
+  };
+}
+
 function hardExitGroup(
   title: string,
   spec: DcaFilterSpec | null | undefined,
@@ -186,80 +360,7 @@ function hardExitGroup(
   side: "long" | "short",
   stack?: EntryStack | null,
 ): ParamGroup {
-  const extra = (stack?.leaves ?? []).map((leaf, index) => ({
-    label: stack?.joins[index] === "or" ? "Or" : "And",
-    value: formatStrategyLeafReason(leaf, side),
-  }));
-  if (signal?.trigger === "price") {
-    return {
-      title,
-      rows: [
-        { label: "Condition Type", value: "Price cross" },
-        {
-          label: "Price source",
-          value:
-            signal.triggerBy === "mark"
-              ? "Mark is"
-              : signal.triggerBy === "index"
-                ? "Index is"
-                : "Last is",
-        },
-        {
-          label: "Compare",
-          value: signal.compare === "lte" ? "At or below" : "At or above",
-        },
-        { label: "Price", value: num(signal.price) },
-        ...extra,
-      ],
-    };
-  }
-  if (signal?.trigger === "webhook") {
-    return {
-      title,
-      rows: [{ label: "Condition Type", value: "Signal webhook" }, ...extra],
-    };
-  }
-  if (!spec) {
-    return extra.length > 0
-      ? { title, rows: extra }
-      : { rows: [{ label: title, value: "Off" }] };
-  }
-  return {
-    title,
-    rows: [
-      {
-        label: "Condition Type",
-        value: spec.kind === "supertrend" ? "Trend" : "Indicator",
-      },
-      ...filterRows(spec, side),
-      ...extra,
-    ],
-  };
-}
-
-function entryStackGroup(
-  stack: ReturnType<typeof resolveEntryStack>,
-  confirm: DcaFilterSpec | null | undefined,
-  side: "long" | "short",
-): ParamGroup {
-  if (entryStackIsLegacy(stack)) {
-    return secondaryGroup(confirmFromEntryStack(stack) ?? confirm, side);
-  }
-  return {
-    title: "Entry conditions",
-    rows: stack.leaves.map((leaf, index) => ({
-      label: stack.joins[index] === "or" ? "Or" : "And",
-      value: formatStrategyLeafReason(leaf, side),
-    })),
-  };
-}
-
-function perpsEntryStackGroup(
-  recipe: PerpsTemplateRecipe,
-  side: "long" | "short",
-): ParamGroup {
-  const stack = resolveEntryStack(recipe.entryStack, recipe.confirm);
-  return entryStackGroup(stack, recipe.confirm, side);
+  return hardExitParts(title, spec, signal, side, stack).group ?? { title, rows: [] };
 }
 
 function secondaryGroup(
@@ -357,33 +458,29 @@ function priceRows(
   ];
 }
 
-function dcaSideEntryGroups(
+function dcaSideEntry(
   recipe: DcaTemplateRecipe,
   side: "long" | "short",
   quote: string,
-): ParamGroup[] {
+): { groups: ParamGroup[]; stack?: ParamStack } {
   const both = recipe.direction === "both";
   const shortLeg = both && side === "short";
   const startKind = shortLeg
     ? (recipe.shortStartKind ?? recipe.startKind)
     : recipe.startKind;
-  const groups: ParamGroup[] = [
-    {
-      rows: [
-        { label: "Condition Type", value: dcaTriggerLabel(startKind) },
-      ],
-    },
+  const lead: ParamRow[] = [
+    { label: "Condition Type", value: dcaTriggerLabel(startKind) },
   ];
   if (startKind === "price") {
-    groups.push({
-      rows: priceRows(
+    lead.push(
+      ...priceRows(
         shortLeg ? (recipe.shortArmTrigger ?? recipe.armTrigger) : recipe.armTrigger,
         quote,
       ),
-    });
+    );
   } else if (startKind === "indicator" || startKind === "trend") {
-    groups.push({
-      rows: indicatorRows({
+    lead.push(
+      ...indicatorRows({
         trend: startKind === "trend",
         side,
         kind: shortLeg ? (recipe.shortIndicatorKind ?? recipe.indicatorKind) : recipe.indicatorKind,
@@ -406,16 +503,36 @@ function dcaSideEntryGroups(
           ? (recipe.shortIndicatorMultiplier ?? recipe.indicatorMultiplier)
           : recipe.indicatorMultiplier,
       }),
-    });
+    );
   }
   const confirm = shortLeg ? recipe.shortConfirm : recipe.confirm;
   const stored = shortLeg ? recipe.shortEntryStack : recipe.entryStack;
-  if (startKind !== "immediate" || !both || (stored && stored.leaves.length > 0)) {
-    groups.push(
-      entryStackGroup(resolveEntryStack(stored, confirm), confirm, side),
-    );
+  const resolved = resolveEntryStack(stored, confirm);
+  const showStack =
+    startKind !== "immediate" || !both || (stored != null && stored.leaves.length > 0);
+  if (showStack && resolved.leaves.length > 0) {
+    return {
+      groups: [],
+      stack: {
+        groups: conditionStack(
+          lead,
+          resolved.leaves,
+          resolved.joins,
+          side,
+          "dca",
+          quote,
+        ),
+      },
+    };
   }
-  return groups;
+  const groups: ParamGroup[] = [{ rows: lead.slice(0, 1) }];
+  if (lead.length > 1) {
+    groups.push({ rows: lead.slice(1) });
+  }
+  if (showStack) {
+    groups.push(secondaryGroup(confirm, side));
+  }
+  return { groups };
 }
 
 function exposureRows(recipe: DcaTemplateRecipe, quote: string): ParamRow[] {
@@ -561,22 +678,24 @@ function dcaExitSections(recipe: DcaTemplateRecipe): ParamSection[] {
       : recipe.direction === "short"
         ? ["short"]
         : ["long"];
-  return sides.map((side) => ({
-    title:
-      side === "short"
-        ? "Short Exit Conditions"
-        : "Long Exit Conditions",
-    groups: [
-      ...classic,
-      hardExitGroup(
-        "Custom conditions",
-        side === "short" ? recipe.shortExitIf : recipe.exitIf,
-        side === "short" ? recipe.shortExitHard : recipe.exitHard,
-        side,
-        side === "short" ? recipe.shortExitStack : recipe.exitStack,
-      ),
-    ],
-  }));
+  return sides.map((side) => {
+    const ownShort = side === "short" && recipe.direction === "both";
+    const custom = hardExitParts(
+      "Custom conditions",
+      ownShort ? recipe.shortExitIf : recipe.exitIf,
+      ownShort ? recipe.shortExitHard : recipe.exitHard,
+      side,
+      ownShort ? recipe.shortExitStack : recipe.exitStack,
+    );
+    return {
+      title:
+        side === "short"
+          ? "Short Exit Conditions"
+          : "Long Exit Conditions",
+      groups: [...classic, ...(custom.group ? [custom.group] : [])],
+      stack: custom.stack,
+    };
+  });
 }
 
 function dcaExitGroups(recipe: DcaTemplateRecipe): ParamGroup[] {
@@ -674,10 +793,14 @@ function dcaSections(recipe: DcaTemplateRecipe): ParamSection[] {
         },
       ],
     },
-    ...entrySides.map((side) => ({
-      title: side === "short" ? "Short Entry Conditions" : "Long Entry Conditions",
-      groups: dcaSideEntryGroups(recipe, side, quote),
-    })),
+    ...entrySides.map((side) => {
+      const entry = dcaSideEntry(recipe, side, quote);
+      return {
+        title: side === "short" ? "Short Entry Conditions" : "Long Entry Conditions",
+        groups: entry.groups,
+        stack: entry.stack,
+      };
+    }),
     {
       title: "Position Sizing",
       groups: orderGroups.filter(
@@ -750,25 +873,21 @@ function perpsExitLevel(
   return optionalGroup(title, level != null, rows);
 }
 
-function perpsEntryGroups(
+function perpsEntry(
   recipe: PerpsTemplateRecipe,
   side: "long" | "short",
   closing: boolean,
-): ParamGroup[] {
-  const entry: ParamGroup[] = [
+): { groups: ParamGroup[]; stack?: ParamStack } {
+  const lead: ParamRow[] = [
     {
-      rows: [
-        {
-          label: "Condition Type",
-          value: perpsTriggerLabel(recipe.entrySource),
-        },
-      ],
+      label: "Condition Type",
+      value: perpsTriggerLabel(recipe.entrySource),
     },
   ];
   if (recipe.entrySource === "indicator" || recipe.entrySource === "trend") {
     const start = recipe.indicator;
-    entry.push({
-      rows: indicatorRows({
+    lead.push(
+      ...indicatorRows({
         trend: recipe.entrySource === "trend",
         side,
         kind: start?.kind,
@@ -779,24 +898,40 @@ function perpsEntryGroups(
         slowPeriod: start?.slowPeriod,
         multiplier: start?.multiplier,
       }),
-    });
+    );
   } else if (recipe.entrySource === "webhook") {
-    entry.push({
-      rows: [{ label: "Webhook", value: "Not set" }],
-    });
+    lead.push({ label: "Webhook", value: "Not set" });
   } else {
-    entry.push({
-      rows: [
-        { label: "Price source", value: perpsPriceSource(recipe.triggerBy) },
-        { label: "Compare", value: whenLabel(recipe.triggerCompare) },
-        { label: "Price", value: num(recipe.triggerPrice) },
-      ],
-    });
+    lead.push(
+      { label: "Price source", value: perpsPriceSource(recipe.triggerBy) },
+      { label: "Compare", value: whenLabel(recipe.triggerCompare) },
+      { label: "Price", value: num(recipe.triggerPrice) },
+    );
+  }
+  const resolved = resolveEntryStack(recipe.entryStack, recipe.confirm);
+  if (!closing && resolved.leaves.length > 0) {
+    return {
+      groups: [],
+      stack: {
+        groups: conditionStack(
+          lead,
+          resolved.leaves,
+          resolved.joins,
+          side,
+          "perps",
+          quoteLabel(recipe.symbol),
+        ),
+      },
+    };
+  }
+  const groups: ParamGroup[] = [{ rows: lead.slice(0, 1) }];
+  if (lead.length > 1) {
+    groups.push({ rows: lead.slice(1) });
   }
   if (!closing) {
-    entry.push(perpsEntryStackGroup(recipe, side));
+    groups.push(secondaryGroup(recipe.confirm, side));
   }
-  return entry;
+  return { groups };
 }
 
 function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
@@ -809,7 +944,7 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
       : recipe.formAction === "sell" || recipe.direction === "short"
         ? "short"
         : "long";
-  const entry = perpsEntryGroups(recipe, side, closing);
+  const entry = perpsEntry(recipe, side, closing);
   const sizeRows: ParamRow[] = [
     {
       label: closing ? "Qty to close" : "Size",
@@ -847,13 +982,14 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
         recipe.direction === "both" || side === "long"
           ? "Long Entry Conditions"
           : "Short Entry Conditions",
-      groups: entry,
+      groups: entry.groups,
+      stack: entry.stack,
     },
     ...(recipe.direction === "both" && recipe.shortEntry
       ? [
           {
             title: "Short Entry Conditions",
-            groups: perpsEntryGroups(
+            ...perpsEntry(
               {
                 ...recipe,
                 formAction: "sell" as const,
@@ -960,21 +1096,20 @@ function perpsExitSections(
   return sides.map((exitSide) => {
     const ownShort = exitSide === "short" && recipe.direction === "both";
     const short = ownShort && perpsShortHasOwnExit(recipe) ? recipe.shortEntry : null;
+    const custom = hardExitParts(
+      "Custom conditions",
+      ownShort ? (short?.exitIf ?? null) : recipe.exitIf,
+      ownShort ? (short?.exitHard ?? null) : recipe.exitHard,
+      exitSide,
+      ownShort ? (short?.exitStack ?? null) : recipe.exitStack,
+    );
     return {
       title:
         exitSide === "short"
           ? "Short Exit Conditions"
           : "Long Exit Conditions",
-      groups: [
-        ...classic,
-        hardExitGroup(
-          "Custom conditions",
-          ownShort ? (short?.exitIf ?? null) : recipe.exitIf,
-          ownShort ? (short?.exitHard ?? null) : recipe.exitHard,
-          exitSide,
-          ownShort ? (short?.exitStack ?? null) : recipe.exitStack,
-        ),
-      ],
+      groups: [...classic, ...(custom.group ? [custom.group] : [])],
+      stack: custom.stack,
     };
   });
 }
@@ -1100,7 +1235,10 @@ function withoutBotName(sections: ParamSection[]): ParamSection[] {
       const rows = group.rows.filter((row) => row.label !== "Name");
       return rows.length > 0 ? [{ ...group, rows }] : [];
     });
-    return groups.length > 0 ? [{ ...section, groups }] : [];
+    if (groups.length === 0 && !section.stack) {
+      return [];
+    }
+    return [{ ...section, groups }];
   });
 }
 
@@ -1153,17 +1291,33 @@ export function backtestListedSections(
   ];
 }
 
+function sectionRowScopes(
+  section: ParamSection,
+): Array<{ label: string; value: string; scope: string }> {
+  const fromGroups = section.groups.flatMap((group) =>
+    group.rows.map((row) => ({
+      label: row.label,
+      value: row.value,
+      scope: group.title ?? section.title,
+    })),
+  );
+  const fromStack = (section.stack?.groups ?? []).flatMap((conditions, index) =>
+    conditions.flatMap((condition) =>
+      condition.rows.map((row) => ({
+        label: row.label,
+        value: row.value,
+        scope: `Group ${index + 1}`,
+      })),
+    ),
+  );
+  return [...fromGroups, ...fromStack];
+}
+
 export function recipeParamRows(
   recipe: BacktestRecipe,
 ): Array<{ label: string; value: string }> {
   const flat = recipeParamSections(recipe).flatMap((section) =>
-    section.groups.flatMap((group) =>
-      group.rows.map((row) => ({
-        label: row.label,
-        value: row.value,
-        scope: group.title ?? section.title,
-      })),
-    ),
+    sectionRowScopes(section),
   );
   const counts = new Map<string, number>();
   for (const row of flat) {

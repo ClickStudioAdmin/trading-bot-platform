@@ -6,6 +6,7 @@ import {
   snapshotPaperRecipe,
   snapshotPerpsRecipe,
 } from "@/lib/templates/recipe";
+import { adminConditionReview } from "./condition-list-samples";
 import {
   backtestListedSections,
   recipeParamRows,
@@ -209,9 +210,20 @@ const orRecipe = snapshotPerpsRecipe({
     joins: ["or"],
   },
 });
+const orEntry = recipeParamSections(orRecipe).find(
+  (section) => section.title === "Long Entry Conditions",
+);
+assert.equal(orEntry?.stack?.groups.length, 2);
+assert.equal(orEntry?.stack?.groups[0]?.length, 1);
+assert.equal(orEntry?.stack?.groups[1]?.length, 1);
 assert.match(
-  recipeParamRows(orRecipe).find((row) => row.label === "Or")?.value ?? "",
-  /EMA 21/,
+  orEntry?.stack?.groups[1]?.[0]?.rows.map((row) => `${row.label} ${row.value}`).join(" ") ??
+    "",
+  /Price vs EMA/,
+);
+assert.match(
+  orEntry?.stack?.groups[1]?.[0]?.rows.map((row) => row.value).join(" ") ?? "",
+  /21/,
 );
 assert.equal(
   recipeParamRows(orRecipe).some((row) => row.label === "Secondary Entry Condition"),
@@ -366,31 +378,70 @@ assert.equal(
   )?.value,
   "Both",
 );
-assert.match(
-  recipeParamRows({
-    ...perps,
-    direction: "both",
+const bothRows = recipeParamSections({
+  ...perps,
+  direction: "both",
+  entryStack: {
+    leaves: [{ kind: "price", triggerBy: "last", compare: "gte", price: 130 }],
+    joins: ["and"],
+  },
+  shortEntry: {
+    entrySource: "price",
+    webhookId: null,
+    triggerBy: "last",
+    triggerCompare: "lte",
+    triggerPrice: 90,
+    skipIfOpen: true,
+    indicator: null,
+    confirm: null,
     entryStack: {
-      leaves: [{ kind: "price", triggerBy: "last", compare: "gte", price: 130 }],
-      joins: ["and"],
+      leaves: [{ kind: "price", triggerBy: "last", compare: "lte", price: 70 }],
+      joins: ["or"],
     },
-    shortEntry: {
-      entrySource: "price",
-      webhookId: null,
-      triggerBy: "last",
-      triggerCompare: "lte",
-      triggerPrice: 90,
-      skipIfOpen: true,
-      indicator: null,
-      confirm: null,
-      entryStack: {
-        leaves: [{ kind: "price", triggerBy: "last", compare: "lte", price: 70 }],
-        joins: ["or"],
-      },
-    },
-  })
-    .find((row) => row.label === "Or")?.value ?? "",
+  },
+});
+const bothShort = bothRows.find((section) => section.title === "Short Entry Conditions");
+assert.equal(bothShort?.stack?.groups.length, 2);
+assert.match(
+  bothShort?.stack?.groups[1]?.[0]?.rows.map((row) => row.value).join(" ") ?? "",
   /70/,
 );
+const bothLong = bothRows.find((section) => section.title === "Long Entry Conditions");
+assert.equal(bothLong?.stack?.groups.length, 1);
+assert.equal(bothLong?.stack?.groups[0]?.length, 2);
+
+const review = adminConditionReview();
+assert.deepEqual(
+  review.map((sample) => sample.title),
+  ["Two groups", "One group", "Custom exit", "Perps Or group"],
+);
+const two = review[0]?.sections[0];
+assert.equal(two?.title, "Short Entry Conditions");
+assert.equal(two?.stack?.groups.length, 2);
+assert.equal(two?.stack?.groups[0]?.length, 2);
+assert.equal(two?.stack?.groups[1]?.length, 1);
+assert.equal(
+  two?.stack?.groups[0]?.[0]?.rows.find((row) => row.label === "When")?.value,
+  "Turns bearish",
+);
+assert.equal(
+  two?.stack?.groups[0]?.[1]?.rows.find((row) => row.label === "Level")?.value,
+  "70",
+);
+const one = review[1]?.sections[0];
+assert.equal(one?.stack?.groups.length, 1);
+assert.equal(one?.stack?.groups[0]?.length, 2);
+const exitSample = review[2]?.sections[0];
+assert.equal(exitSample?.title, "Short Exit Conditions");
+assert.equal(
+  exitSample?.groups.some((group) => group.title === "Take profit"),
+  true,
+);
+assert.equal(exitSample?.stack?.title, "Custom conditions");
+assert.equal(exitSample?.stack?.groups.length, 2);
+assert.equal(exitSample?.stack?.groups[0]?.length, 2);
+const perpsOr = review[3]?.sections[0];
+assert.equal(perpsOr?.stack?.groups.length, 2);
+assert.equal(perpsOr?.stack?.groups[0]?.length, 1);
 
 console.log("backtest param section checks passed");
