@@ -130,6 +130,23 @@ export type DcaLegState = {
   cycleMaxValue: number | null;
 };
 
+/** Take profit, trailing stop, and stop loss for one exit leg. */
+export type DcaClassicExit = {
+  takeProfitKind: DcaTakeProfitKind;
+  takeProfitAtrMult: number | null;
+  takeProfitPct: number | null;
+  takeProfitBasis: DcaExitBasis;
+  takeProfitOrderType: FuturesOrderType;
+  stopLossPct: number | null;
+  stopLossBasis: DcaExitBasis;
+  breakevenActivationPct: number | null;
+  breakevenOffsetPct: number | null;
+  trailingTriggerPct: number | null;
+  trailingPct: number | null;
+  /** ATR period for this leg's take profit. Null keeps the playbook spacing period. */
+  atrPeriod: number | null;
+};
+
 export type DcaPlaybookConfig = {
   name: string;
   symbol: string;
@@ -164,6 +181,11 @@ export type DcaPlaybookConfig = {
   breakevenOffsetPct: number | null;
   trailingTriggerPct: number | null;
   trailingPct: number | null;
+  /**
+   * Direction both. Null means this row still shares the long classic columns.
+   * A stored object is this side's own take profit, trailing stop, and stop.
+   */
+  shortClassic?: DcaClassicExit | null;
   armTrigger: DcaPriceTrigger | null;
   shortArmTrigger?: DcaPriceTrigger | null;
   disarmTrigger: DcaPriceTrigger | null;
@@ -977,8 +999,103 @@ export function dcaAtrTimeframe(playbook: {
 export function dcaNeedsAtrBars(playbook: {
   spacingKind?: DcaSpacingKind | null;
   takeProfitKind?: DcaTakeProfitKind | null;
+  direction?: DcaDirection | null;
+  shortClassic?: DcaClassicExit | null;
 }): boolean {
-  return playbook.spacingKind === "atr" || playbook.takeProfitKind === "atr";
+  return (
+    playbook.spacingKind === "atr" ||
+    playbook.takeProfitKind === "atr" ||
+    (playbook.direction === "both" &&
+      playbook.shortClassic?.takeProfitKind === "atr")
+  );
+}
+
+export function dcaClassicFromConfig(
+  config: Pick<
+    DcaPlaybookConfig,
+    | "takeProfitKind"
+    | "takeProfitAtrMult"
+    | "takeProfitPct"
+    | "takeProfitBasis"
+    | "takeProfitOrderType"
+    | "stopLossPct"
+    | "stopLossBasis"
+    | "breakevenActivationPct"
+    | "breakevenOffsetPct"
+    | "trailingTriggerPct"
+    | "trailingPct"
+    | "atrPeriod"
+  >,
+): DcaClassicExit {
+  return {
+    takeProfitKind: config.takeProfitKind ?? "percent",
+    takeProfitAtrMult: config.takeProfitAtrMult ?? null,
+    takeProfitPct: config.takeProfitPct,
+    takeProfitBasis: config.takeProfitBasis,
+    takeProfitOrderType: config.takeProfitOrderType,
+    stopLossPct: config.stopLossPct,
+    stopLossBasis: config.stopLossBasis,
+    breakevenActivationPct: config.breakevenActivationPct,
+    breakevenOffsetPct: config.breakevenOffsetPct,
+    trailingTriggerPct: config.trailingTriggerPct,
+    trailingPct: config.trailingPct,
+    atrPeriod: config.atrPeriod ?? null,
+  };
+}
+
+/** Short leg of a Both bot uses shortClassic when that object was saved. */
+export function dcaClassicForSide(
+  config: DcaPlaybookConfig,
+  side: FuturesSide,
+): DcaClassicExit {
+  if (side === "short" && config.direction === "both" && config.shortClassic) {
+    return config.shortClassic;
+  }
+  return dcaClassicFromConfig(config);
+}
+
+export function dcaClassicToJson(classic: DcaClassicExit): Record<string, unknown> {
+  return {
+    takeProfitKind: classic.takeProfitKind,
+    takeProfitAtrMult: classic.takeProfitAtrMult,
+    takeProfitPct: classic.takeProfitPct,
+    takeProfitBasis: classic.takeProfitBasis,
+    takeProfitOrderType: classic.takeProfitOrderType,
+    stopLossPct: classic.stopLossPct,
+    stopLossBasis: classic.stopLossBasis,
+    breakevenActivationPct: classic.breakevenActivationPct,
+    breakevenOffsetPct: classic.breakevenOffsetPct,
+    trailingTriggerPct: classic.trailingTriggerPct,
+    trailingPct: classic.trailingPct,
+    atrPeriod: classic.atrPeriod,
+  };
+}
+
+export function dcaShortClassicFromJson(raw: unknown): DcaClassicExit | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return null;
+  }
+  const row = raw as Record<string, unknown>;
+  const offset = Number(row.breakevenOffsetPct);
+  return {
+    takeProfitKind: parseDcaTakeProfitKind(row.takeProfitKind),
+    takeProfitAtrMult: parseDcaAtrMult(row.takeProfitAtrMult),
+    takeProfitPct: asPositiveOrNull(row.takeProfitPct),
+    takeProfitBasis: parseDcaExitBasis(row.takeProfitBasis),
+    takeProfitOrderType: parseDcaExitOrderType(row.takeProfitOrderType),
+    stopLossPct: asPositiveOrNull(row.stopLossPct),
+    stopLossBasis: parseDcaExitBasis(row.stopLossBasis),
+    breakevenActivationPct: asPositiveOrNull(row.breakevenActivationPct),
+    breakevenOffsetPct:
+      row.breakevenOffsetPct == null || row.breakevenOffsetPct === ""
+        ? null
+        : Number.isFinite(offset) && offset >= 0
+          ? offset
+          : null,
+    trailingTriggerPct: asPositiveOrNull(row.trailingTriggerPct),
+    trailingPct: asPositiveOrNull(row.trailingPct),
+    atrPeriod: parseDcaAtrPeriod(row.atrPeriod),
+  };
 }
 
 export function dcaTickBarTimeframes(playbook: {
@@ -1669,6 +1786,95 @@ function writeDcaEntryStackFields(
   });
 }
 
+function parseDcaShortClassicForm(
+  form: FormData,
+  direction: DcaDirection | null,
+): { ok: true; classic: DcaClassicExit | null } | { ok: false; error: string } {
+  if (direction !== "both" || form.get("shortClassic") !== "on") {
+    return { ok: true, classic: null };
+  }
+  const takeProfitKind = parseDcaTakeProfitKind(form.get("shortTakeProfitKind"));
+  const atrPeriod = parseDcaAtrPeriod(form.get("shortAtrPeriod"));
+  const takeProfitAtrMult =
+    takeProfitKind === "atr"
+      ? parseDcaAtrMult(form.get("shortTakeProfitAtrMult"))
+      : null;
+  const takeProfitPct =
+    takeProfitKind === "atr"
+      ? { ok: true as const, value: null as number | null }
+      : parseOptionalPositive(form.get("shortTakeProfitPct"));
+  const stopLossPct = parseOptionalPositive(form.get("shortStopLossPct"));
+  const breakevenActivationPct = parseOptionalPositive(
+    form.get("shortBreakevenActivationPct"),
+  );
+  const breakevenOffsetPct = parseOptionalNonNegative(
+    form.get("shortBreakevenOffsetPct"),
+  );
+  const trailingTriggerPct = parseOptionalPositive(
+    form.get("shortTrailingTriggerPct"),
+  );
+  const trailingPct = parseOptionalPositive(form.get("shortTrailingPct"));
+  if (!takeProfitPct.ok) {
+    return takeProfitPct;
+  }
+  if (!stopLossPct.ok) {
+    return stopLossPct;
+  }
+  if (!breakevenActivationPct.ok) {
+    return breakevenActivationPct;
+  }
+  if (!breakevenOffsetPct.ok) {
+    return breakevenOffsetPct;
+  }
+  if (!trailingTriggerPct.ok) {
+    return trailingTriggerPct;
+  }
+  if (!trailingPct.ok) {
+    return trailingPct;
+  }
+  const tpOn = form.get("shortTpOn") === "on";
+  const slOn = form.get("shortSlOn") === "on";
+  const trailOn = form.get("shortTrailOn") === "on";
+  const breakevenOn = slOn && form.get("shortBreakeven") === "on";
+  if (tpOn && takeProfitKind === "atr") {
+    if (atrPeriod == null) {
+      return { ok: false, error: "Enter a short ATR period." };
+    }
+    if (takeProfitAtrMult == null) {
+      return { ok: false, error: "Enter a short take profit ATR multiple." };
+    }
+  }
+  if (tpOn && takeProfitKind !== "atr" && takeProfitPct.value == null) {
+    return { ok: false, error: "Enter a short take profit." };
+  }
+  if (slOn && stopLossPct.value == null) {
+    return { ok: false, error: "Enter a short stop loss." };
+  }
+  if (trailOn && (trailingTriggerPct.value == null || trailingPct.value == null)) {
+    return { ok: false, error: "Enter a short trailing stop." };
+  }
+  if (breakevenOn && breakevenActivationPct.value == null) {
+    return { ok: false, error: "Enter a short breakeven activation percent." };
+  }
+  return {
+    ok: true,
+    classic: {
+      takeProfitKind: tpOn ? takeProfitKind : "percent",
+      takeProfitAtrMult: tpOn && takeProfitKind === "atr" ? takeProfitAtrMult : null,
+      takeProfitPct: tpOn && takeProfitKind !== "atr" ? takeProfitPct.value : null,
+      takeProfitBasis: parseDcaExitBasis(form.get("shortTakeProfitBasis")),
+      takeProfitOrderType: parseDcaExitOrderType(form.get("shortTakeProfitOrderType")),
+      stopLossPct: slOn ? stopLossPct.value : null,
+      stopLossBasis: parseDcaExitBasis(form.get("shortStopLossBasis")),
+      breakevenActivationPct: breakevenOn ? breakevenActivationPct.value : null,
+      breakevenOffsetPct: breakevenOn ? breakevenOffsetPct.value : null,
+      trailingTriggerPct: trailOn ? trailingTriggerPct.value : null,
+      trailingPct: trailOn ? trailingPct.value : null,
+      atrPeriod: tpOn && takeProfitKind === "atr" ? atrPeriod : null,
+    },
+  };
+}
+
 export function parseDcaPlaybookForm(
   form: FormData,
   venue = "bybit",
@@ -1925,6 +2131,10 @@ export function parseDcaPlaybookForm(
   if (form.get("breakeven") === "on" && breakevenActivationPct.value == null) {
     return { ok: false, error: "Enter a breakeven activation percent." };
   }
+  const shortClassicParsed = parseDcaShortClassicForm(form, direction);
+  if (!shortClassicParsed.ok) {
+    return shortClassicParsed;
+  }
   const armTrigger = parseOptionalTrigger(
     startKind === "price",
     form.get("armTriggerBy"),
@@ -2136,6 +2346,7 @@ export function parseDcaPlaybookForm(
       breakevenOffsetPct: breakevenOffsetPct.value,
       trailingTriggerPct: trailingTriggerPct.value,
       trailingPct: trailingPct.value,
+      shortClassic: shortClassicParsed.classic,
       armTrigger: armTrigger.trigger,
       shortArmTrigger: shortArmTrigger.trigger,
       disarmTrigger: null,
@@ -2620,6 +2831,8 @@ export function parseDcaPlaybookRow(
           : null,
     trailingTriggerPct: asPositiveOrNull(row.trailing_trigger_pct),
     trailingPct: asPositiveOrNull(row.trailing_pct),
+    shortClassic:
+      direction === "both" ? dcaShortClassicFromJson(row.short_classic) : null,
     armTrigger: parseStoredTrigger(
       row.arm_trigger_by,
       row.arm_compare,
@@ -3053,6 +3266,8 @@ export function decideDcaTick(input: {
   deviationMultiplier?: number;
   spacingKind?: DcaSpacingKind | null;
   atr?: number | null;
+  /** ATR used for an ATR take profit. Defaults to atr. */
+  takeProfitAtr?: number | null;
   atrSpacingMult?: number | null;
   clipsFilled: number;
   maxClips: number | null;
@@ -3249,7 +3464,7 @@ export function decideDcaTick(input: {
             stopLossBasis,
             trailingPct: null,
             takeProfitKind: "atr",
-            atr: input.atr,
+            atr: input.takeProfitAtr ?? input.atr,
             takeProfitAtrMult: input.takeProfitAtrMult,
           }).takeProfit;
           if (tpPrice == null) {
@@ -4069,18 +4284,19 @@ export function dcaOpenHint(input: {
     return null;
   }
   const filled = dcaFilledClipCount(input.orders) ?? leg.clipsFilled;
+  const classic = dcaClassicForSide(input.playbook, input.side);
   const planned = dcaPlannedExits({
     side: input.side,
     entryPrice: input.entryPrice ?? null,
     firstFillPrice: leg.firstFillPrice,
     mark: input.mark ?? null,
-    takeProfitPct: input.playbook.takeProfitPct,
-    stopLossPct: input.playbook.stopLossPct,
-    takeProfitBasis: input.playbook.takeProfitBasis,
-    stopLossBasis: input.playbook.stopLossBasis,
-    trailingPct: input.playbook.trailingPct,
-    takeProfitKind: input.playbook.takeProfitKind,
-    takeProfitAtrMult: input.playbook.takeProfitAtrMult,
+    takeProfitPct: classic.takeProfitPct,
+    stopLossPct: classic.stopLossPct,
+    takeProfitBasis: classic.takeProfitBasis,
+    stopLossBasis: classic.stopLossBasis,
+    trailingPct: classic.trailingPct,
+    takeProfitKind: classic.takeProfitKind,
+    takeProfitAtrMult: classic.takeProfitAtrMult,
   });
   const tpLimitResting = (input.working ?? []).some(
     (row) =>
@@ -4102,7 +4318,7 @@ export function dcaOpenHint(input: {
     plannedTakeProfit: planned.takeProfit,
     plannedStopLoss: planned.stopLoss,
     plannedTrailing: planned.trailingStop,
-    takeProfitOrderType: input.playbook.takeProfitOrderType,
+    takeProfitOrderType: classic.takeProfitOrderType,
     stopLossOrderType: "market",
     tpLimitResting,
   };
@@ -4131,18 +4347,19 @@ export function dcaHintsForCopyOpen(
     const filled =
       dcaFilledClipCount(row.orders) ??
       dcaLegFor(playbook, row.side).clipsFilled;
+    const classic = dcaClassicForSide(playbook, row.side);
     const planned = dcaPlannedExits({
       side: row.side,
       entryPrice: row.entryPrice ?? null,
       firstFillPrice: dcaLegFor(playbook, row.side).firstFillPrice,
       mark: row.mark ?? null,
-      takeProfitPct: playbook.takeProfitPct,
-      stopLossPct: playbook.stopLossPct,
-      takeProfitBasis: playbook.takeProfitBasis,
-      stopLossBasis: playbook.stopLossBasis,
-      trailingPct: playbook.trailingPct,
-      takeProfitKind: playbook.takeProfitKind,
-      takeProfitAtrMult: playbook.takeProfitAtrMult,
+      takeProfitPct: classic.takeProfitPct,
+      stopLossPct: classic.stopLossPct,
+      takeProfitBasis: classic.takeProfitBasis,
+      stopLossBasis: classic.stopLossBasis,
+      trailingPct: classic.trailingPct,
+      takeProfitKind: classic.takeProfitKind,
+      takeProfitAtrMult: classic.takeProfitAtrMult,
     });
     const tpLimitResting = (working ?? []).some(
       (item) =>
@@ -4162,7 +4379,7 @@ export function dcaHintsForCopyOpen(
       plannedTakeProfit: planned.takeProfit,
       plannedStopLoss: planned.stopLoss,
       plannedTrailing: planned.trailingStop,
-      takeProfitOrderType: playbook.takeProfitOrderType,
+      takeProfitOrderType: classic.takeProfitOrderType,
       stopLossOrderType: "market",
       tpLimitResting,
     };

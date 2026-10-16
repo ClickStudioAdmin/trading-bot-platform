@@ -45,6 +45,26 @@ assert.deepEqual(hyperliquid?.comparableSymbols, ["SOL"]);
 const bybit = parseBacktestRunRow(dcaRunRow("ETHUSDT", "bybit"));
 assert.equal(bybit?.symbol, "ETHUSDT");
 assert.deepEqual(bybit?.comparableSymbols, ["SOLUSDT"]);
+assert.equal(bybit?.progressDone, null);
+assert.equal(bybit?.progressPhase, null);
+const withProgress = parseBacktestRunRow({
+  ...dcaRunRow("ETHUSDT", "bybit"),
+  progress_done: 12000,
+  progress_total: 35136,
+  progress_phase: "candles",
+});
+assert.equal(withProgress?.progressDone, 12000);
+assert.equal(withProgress?.progressTotal, 35136);
+assert.equal(withProgress?.progressPhase, "candles");
+assert.equal(withProgress?.claimCount, 0);
+assert.equal(withProgress?.retryAfterMs, null);
+const withClaim = parseBacktestRunRow({
+  ...dcaRunRow("ETHUSDT", "bybit"),
+  claim_count: 2,
+  retry_after: "2026-10-16T05:31:00.000Z",
+});
+assert.equal(withClaim?.claimCount, 2);
+assert.equal(withClaim?.retryAfterMs, Date.parse("2026-10-16T05:31:00.000Z"));
 
 const bybitRecipe = bybit?.recipe;
 assert.ok(bybitRecipe);
@@ -127,6 +147,42 @@ assert.equal(
     maxBars: 3000,
   }),
   false,
+);
+assert.equal(
+  backtestRowIsClaimable({
+    status: "queued",
+    claimedAtMs: null,
+    nowMs,
+    staleMs,
+    bars: 100,
+    maxBars: 0,
+    retryAfterMs: nowMs + 60_000,
+  }),
+  false,
+);
+assert.equal(
+  backtestRowIsClaimable({
+    status: "queued",
+    claimedAtMs: null,
+    nowMs,
+    staleMs,
+    bars: 100,
+    maxBars: 0,
+    retryAfterMs: nowMs - 1,
+  }),
+  true,
+);
+assert.equal(
+  backtestRowIsClaimable({
+    status: "running",
+    claimedAtMs: nowMs - staleMs - 1,
+    nowMs,
+    staleMs,
+    bars: 100,
+    maxBars: 0,
+    retryAfterMs: nowMs + 60_000,
+  }),
+  true,
 );
 
 console.log("backtest store checks passed");

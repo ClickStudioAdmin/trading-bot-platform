@@ -19,6 +19,7 @@ import {
 } from "@/lib/templates/recipe";
 import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 import { strategyLeafTimeframe } from "@/lib/strategy/expr";
+import type { BacktestProgressPhase } from "./progress";
 
 export type BacktestRecipe = PerpsTemplateRecipe | DcaTemplateRecipe;
 export type BacktestDeskType = "perps" | "dca";
@@ -153,6 +154,14 @@ export type BacktestRun = {
   comparableSymbols: string[];
   /** Run title. Null on rows saved before the backtest name existed. */
   name: string | null;
+  /** Candles loaded for a running replay. Null once the row is idle. */
+  progressDone: number | null;
+  progressTotal: number | null;
+  progressPhase: BacktestProgressPhase | null;
+  /** Times work has started on this row, including interrupted passes. */
+  claimCount: number;
+  /** Queued rows stay unclaimed until this instant. Null when ready. */
+  retryAfterMs: number | null;
 };
 
 export type EquityPoint = {
@@ -946,7 +955,7 @@ export function backtestPageCanRun(input: {
   );
 }
 
-/** Desk-cycle drain stays inside the short-job cap. The Fly loop passes 0 (any length). */
+/** Desk cycle claims a short run when time remains. The backtest machine passes 0 and takes any length. */
 export function backtestDrainMaxBars(where: "cycle" | "worker"): number {
   return where === "cycle" ? BACKTEST_VERCEL_BAR_LIMIT : 0;
 }

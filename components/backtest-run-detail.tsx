@@ -27,6 +27,12 @@ import {
   realizedReturnPct,
   type BacktestRun,
 } from "@/lib/backtest/model";
+import {
+  BacktestProgressBanner,
+  backtestRunningStatusText,
+} from "@/components/backtest-progress-banner";
+import { backtestQueuedNotice } from "@/lib/backtest/guard";
+import { backtestRunProgress } from "@/lib/backtest/progress";
 import { backtestListedSections } from "@/lib/backtest/param-sections";
 import {
   formatCount,
@@ -263,6 +269,7 @@ export function BacktestRunDetail({
   const complete = run.status === "done";
   const pendingMessage = incompleteRunMessage(run);
   const status = backtestStatusTone(run.status);
+  const progress = backtestRunProgress(run);
   return (
     <>
       <BacktestRunRefresh
@@ -294,7 +301,9 @@ export function BacktestRunDetail({
               }`}
             >
               <StatusDot tone={status.tone} pulse={status.pulse} />
-              {status.label}
+              {run.status === "running"
+                ? backtestRunningStatusText(progress)
+                : status.label}
             </div>
           </div>
           {complete ? (
@@ -323,24 +332,20 @@ export function BacktestRunDetail({
 
       <BacktestHeaderStats run={run} />
 
-      {run.error ? <p className="text-sm text-danger">{run.error}</p> : null}
-      {run.status === "queued" || run.status === "running" ? (
+      {run.error && run.status !== "queued" ? (
+        <p className="text-sm text-danger">{run.error}</p>
+      ) : null}
+      {run.status === "queued" ? (
         <p
           role="status"
-          className={`flex items-center gap-2 rounded-control border px-3 py-2 text-sm ${
-            run.status === "queued"
-              ? "border-warning/30 bg-warning/10 text-warning"
-              : "border-success/30 bg-success/10 text-success"
-          }`}
+          className="flex items-center gap-2 rounded-control border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning"
         >
-          <StatusDot
-            tone={run.status === "queued" ? "warning" : "success"}
-            pulse
-          />
-          {run.status === "queued"
-            ? "Queued. Starting this run now."
-            : "Running. This page refreshes until it finishes."}
+          <StatusDot tone="warning" pulse />
+          {backtestQueuedNotice(run.error)}
         </p>
+      ) : null}
+      {run.status === "running" ? (
+        <BacktestProgressBanner progress={progress} />
       ) : null}
 
       <div className="grid items-start gap-6 lg:grid-cols-2">

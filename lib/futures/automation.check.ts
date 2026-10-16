@@ -290,6 +290,7 @@ if (hlParsed.ok) {
 
 assert.equal(defaultFuturesAutomationForm(0).formAction, "buy");
 assert.equal(defaultFuturesAutomationForm(0).mode, "disabled");
+assert.equal(defaultFuturesAutomationForm(0).sizeUnit, "usdt");
 
 const webhookRule = new FormData();
 webhookRule.set("ruleCount", "1");

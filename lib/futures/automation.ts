@@ -140,7 +140,7 @@ export function defaultFuturesAutomationForm(
     symbol,
     formAction: "buy",
     orderType: "market",
-    sizeUnit: "qty",
+    sizeUnit: "usdt",
     size: "",
     limitPrice: "",
     entrySource: "price",
@@ -524,9 +524,22 @@ export function writePerpsShortEntryFields(
     exitIf: leg.exitIf ?? null,
     exitHard: leg.exitHard ?? null,
     exitStack: leg.exitStack ?? null,
-    breakevenActivationPct: null,
-    breakevenOffsetPct: null,
+    breakevenActivationPct: leg.classic?.breakevenActivationPct ?? null,
+    breakevenOffsetPct: leg.classic?.breakevenOffsetPct ?? null,
   });
+  if (leg.classic) {
+    form.set(`${prefix}classic`, "on");
+    writeAutomationExitsToForm(form, prefix, leg.classic.tpsl, leg.classic.trailing);
+    if (leg.classic.tpsl?.takeProfit != null) {
+      form.set(`${prefix}tpOn`, "on");
+    }
+    if (leg.classic.tpsl?.stopLoss != null) {
+      form.set(`${prefix}slOn`, "on");
+    }
+    if (leg.classic.breakevenActivationPct != null) {
+      form.set(`${prefix}breakeven`, "on");
+    }
+  }
 }
 
 export function parseFuturesAutomationFields(input: {
@@ -749,6 +762,13 @@ function applyPerpsDirection(
       conditions.exitIf ||
       conditions.exitHard ||
       conditions.exitStack.leaves.length > 0;
+    const shortClassicOn = form.get(`${shortPrefix}classic`) === "on";
+    const shortExits = shortClassicOn
+      ? parseAutomationExits(form, shortPrefix)
+      : { ok: true as const, tpsl: null, trailing: null };
+    if (!shortExits.ok) {
+      return shortExits;
+    }
     rule.shortEntry = {
       entrySource,
       webhookId: entrySource === "webhook" ? webhookId : null,
@@ -764,6 +784,16 @@ function applyPerpsDirection(
             exitIf: conditions.exitIf,
             exitHard: conditions.exitHard,
             exitStack: conditions.exitStack,
+          }
+        : {}),
+      ...(shortClassicOn
+        ? {
+            classic: {
+              tpsl: shortExits.tpsl,
+              trailing: shortExits.trailing,
+              breakevenActivationPct: conditions.breakevenActivationPct,
+              breakevenOffsetPct: conditions.breakevenOffsetPct,
+            },
           }
         : {}),
     };
@@ -1105,6 +1135,14 @@ export function perpsAutomationLegs(
     confirm: short.confirm,
     entryStack: short.entryStack,
     conditionTrue: rule.shortConditionTrue,
+    ...(short.classic
+      ? {
+          tpsl: short.classic.tpsl,
+          trailing: short.classic.trailing,
+          breakevenActivationPct: short.classic.breakevenActivationPct,
+          breakevenOffsetPct: short.classic.breakevenOffsetPct,
+        }
+      : {}),
     ...(short.exitIf ||
     short.exitHard ||
     (short.exitStack && short.exitStack.leaves.length > 0)

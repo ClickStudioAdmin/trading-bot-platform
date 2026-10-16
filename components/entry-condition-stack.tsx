@@ -568,8 +568,11 @@ export function EntryConditionStack({
               </>
             ) : (
               <div className={gridClass}>
-                <label className={labelClass}>
-                  <HintLabel text="Trigger" required />
+                <label className={row.join === "or" ? `${labelClass} whitespace-nowrap` : labelClass}>
+                  <HintLabel
+                    text={row.join === "or" ? "Condition Type" : "Trigger"}
+                    required
+                  />
                   <AppSelect
                     name={`${prefix}${index}Source`}
                     value={draft.kind === "unset" ? "" : draft.kind}
@@ -581,6 +584,7 @@ export function EntryConditionStack({
                         kind !== "trend" &&
                         kind !== "webhook"
                       ) {
+                        replace(row.key, { ...row, draft: { kind: "unset" } });
                         return;
                       }
                       const timeframe = pickedTimeframe(
@@ -593,9 +597,11 @@ export function EntryConditionStack({
                         draft: draftForKind(kind, side, timeframe),
                       });
                     }}
-                    className={fieldClass}
+                    className={row.join === "or" ? `${fieldClass} !min-w-72` : fieldClass}
                   >
-                    <option value="">Select Trigger</option>
+                    <option value="">
+                      {row.join === "or" ? "Select Condition Type" : "Select Trigger"}
+                    </option>
                     {TRIGGER_OPTIONS.map((option) => (
                       <option
                         key={option.value}
