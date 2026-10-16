@@ -8,7 +8,6 @@ import {
   useId,
   useState,
   type FormEvent,
-  type FormHTMLAttributes,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -187,6 +186,16 @@ export function StepUpModal({
   );
 }
 
+/** Step-up actions may return `{ stepUpError }` instead of redirecting. */
+type StepUpFormAction =
+  | string
+  | ((
+      formData: FormData,
+    ) =>
+      | void
+      | { stepUpError?: string }
+      | Promise<void | { stepUpError?: string }>);
+
 export function StepUpForm({
   action,
   className,
@@ -203,7 +212,7 @@ export function StepUpForm({
   onCancel,
   formRef,
 }: {
-  action?: FormHTMLAttributes<HTMLFormElement>["action"];
+  action?: StepUpFormAction;
   className?: string;
   autoComplete?: string;
   children: ReactNode;
