@@ -562,6 +562,10 @@ const BACKTEST_RUN_COLUMNS = [
   "retry_after",
 ] as const;
 
+function backtestRunRecord(row: unknown): Record<string, unknown> {
+  return row as Record<string, unknown>;
+}
+
 function backtestRunColumns(input?: {
   orders?: boolean;
   replayEvents?: boolean;
@@ -598,7 +602,7 @@ export async function loadBacktestRun(
   if (error || !data) {
     return null;
   }
-  return parseBacktestRunRow(data as Record<string, unknown>);
+  return parseBacktestRunRow(backtestRunRecord(data));
 }
 
 export async function listBacktestRuns(input: {
@@ -649,7 +653,7 @@ export async function listBacktestRuns(input: {
   const { data, error } = await query;
   const rows = !error && data
     ? data
-        .map((row) => parseBacktestRunRow(row as Record<string, unknown>))
+        .map((row) => parseBacktestRunRow(backtestRunRecord(row)))
         .filter((row): row is BacktestRun => Boolean(row))
     : [];
   if (error || rows.length === 0) {
