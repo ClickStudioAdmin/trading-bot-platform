@@ -994,19 +994,24 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
     },
   ];
   if (!closing) {
-    sections.push({
-      title: "Additional Orders",
-      groups: [
-        {
-          rows: [
-            { label: "Condition Type", value: "Off" },
-            { label: "Size", value: "Off" },
-            { label: "Unit", value: "Off" },
-            { label: "Order", value: "Off" },
-          ],
-        },
-      ],
-    });
+    const addSides: Array<"long" | "short"> =
+      recipe.direction === "both" ? ["long", "short"] : [side];
+    for (const addSide of addSides) {
+      sections.push({
+        title:
+          addSide === "short" ? "Short Additional Orders" : "Long Additional Orders",
+        groups: [
+          {
+            rows: [
+              { label: "Condition Type", value: "Off" },
+              { label: "Size", value: "Off" },
+              { label: "Unit", value: "Off" },
+              { label: "Order", value: "Off" },
+            ],
+          },
+        ],
+      });
+    }
   }
   sections.push(...perpsExitSections(recipe, side));
   return sections;
