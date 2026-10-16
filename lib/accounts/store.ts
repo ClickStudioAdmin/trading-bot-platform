@@ -11,6 +11,12 @@ import {
 } from "@/lib/accounts/model";
 import { memberDisplayName } from "@/lib/members/sync";
 import { dcaLegStatusesOn } from "@/lib/accounts/desk-list";
+import {
+  DESK_DELETE_BATCH,
+  DESK_DELETE_MAX_BATCHES,
+  deleteRowsInBatches,
+  deskDeleteErrorMessage,
+} from "@/lib/accounts/desk-delete";
 import { countArmedRules } from "@/lib/accounts/overview";
 import { selectPaperEngineSettings } from "@/lib/engine/settings";
 import {
@@ -524,26 +530,61 @@ export async function teardownTradingAccountsById(
   return { error: null };
 }
 
+const DESK_DELETE_TABLES = [
+  "futures_command_receipts",
+  "futures_working_orders",
+  "futures_orders",
+  "futures_positions",
+  "futures_automation_rules",
+  "dca_playbooks",
+  "paper_orders",
+  "paper_carries",
+  "paper_rules",
+] as const;
+
+async function deleteAccountRows(
+  supabase: SupabaseClient,
+  table: (typeof DESK_DELETE_TABLES)[number],
+  userId: string,
+  accountId: string,
+): Promise<string | null> {
+  return deleteRowsInBatches({
+    batchSize: DESK_DELETE_BATCH,
+    maxBatches: DESK_DELETE_MAX_BATCHES,
+    selectIds: async (limit) => {
+      const selected = await supabase
+        .from(table)
+        .select("id")
+        .eq("account_id", accountId)
+        .eq("user_id", userId)
+        .limit(limit);
+      if (selected.error) {
+        return { ids: [], error: selected.error.message };
+      }
+      const ids = (selected.data ?? []).map(
+        (row) => (row as { id: string | number }).id,
+      );
+      return { ids, error: null };
+    },
+    deleteIds: async (ids) => {
+      const removed = await supabase.from(table).delete().in("id", ids);
+      return { error: removed.error?.message ?? null };
+    },
+  });
+}
+
 async function teardownTradingAccount(
   supabase: SupabaseClient,
   userId: string,
   accountId: string,
 ): Promise<{ error: string | null }> {
-  const { error: receiptError } = await supabase
-    .from("futures_command_receipts")
-    .delete()
-    .eq("account_id", accountId)
-    .eq("user_id", userId);
-  if (receiptError) {
-    return { error: receiptError.message };
-  }
   const { error: unbindError } = await supabase
     .from("paper_engine_settings")
     .update({ exchange_connection_id: null, updated_at: new Date().toISOString() })
     .eq("account_id", accountId)
     .eq("user_id", userId);
   if (unbindError) {
-    return { error: unbindError.message };
+    return { error: deskDeleteErrorMessage(unbindError.message) };
   }
   const { error: futuresUnbindError } = await supabase
     .from("strategy_settings")
@@ -551,39 +592,13 @@ async function teardownTradingAccount(
     .eq("account_id", accountId)
     .eq("user_id", userId);
   if (futuresUnbindError) {
-    return { error: futuresUnbindError.message };
+    return { error: deskDeleteErrorMessage(futuresUnbindError.message) };
   }
-  const { error: futuresWorkingError } = await supabase
-    .from("futures_working_orders")
-    .delete()
-    .eq("account_id", accountId)
-    .eq("user_id", userId);
-  if (futuresWorkingError) {
-    return { error: futuresWorkingError.message };
-  }
-  const { error: futuresOrderError } = await supabase
-    .from("futures_orders")
-    .delete()
-    .eq("account_id", accountId)
-    .eq("user_id", userId);
-  if (futuresOrderError) {
-    return { error: futuresOrderError.message };
-  }
-  const { error: futuresPositionError } = await supabase
-    .from("futures_positions")
-    .delete()
-    .eq("account_id", accountId)
-    .eq("user_id", userId);
-  if (futuresPositionError) {
-    return { error: futuresPositionError.message };
-  }
-  const { error: futuresRuleError } = await supabase
-    .from("futures_automation_rules")
-    .delete()
-    .eq("account_id", accountId)
-    .eq("user_id", userId);
-  if (futuresRuleError) {
-    return { error: futuresRuleError.message };
+  for (const table of DESK_DELETE_TABLES) {
+    const removed = await deleteAccountRows(supabase, table, userId, accountId);
+    if (removed) {
+      return { error: removed };
+    }
   }
   const { error: strategySettingsError } = await supabase
     .from("strategy_settings")
@@ -591,31 +606,7 @@ async function teardownTradingAccount(
     .eq("account_id", accountId)
     .eq("user_id", userId);
   if (strategySettingsError) {
-    return { error: strategySettingsError.message };
-  }
-  const { error: orderError } = await supabase
-    .from("paper_orders")
-    .delete()
-    .eq("account_id", accountId)
-    .eq("user_id", userId);
-  if (orderError) {
-    return { error: orderError.message };
-  }
-  const { error: carryError } = await supabase
-    .from("paper_carries")
-    .delete()
-    .eq("account_id", accountId)
-    .eq("user_id", userId);
-  if (carryError) {
-    return { error: carryError.message };
-  }
-  const { error: ruleError } = await supabase
-    .from("paper_rules")
-    .delete()
-    .eq("account_id", accountId)
-    .eq("user_id", userId);
-  if (ruleError) {
-    return { error: ruleError.message };
+    return { error: deskDeleteErrorMessage(strategySettingsError.message) };
   }
   const { error: settingsError } = await supabase
     .from("paper_engine_settings")
@@ -623,14 +614,14 @@ async function teardownTradingAccount(
     .eq("account_id", accountId)
     .eq("user_id", userId);
   if (settingsError) {
-    return { error: settingsError.message };
+    return { error: deskDeleteErrorMessage(settingsError.message) };
   }
   const { error } = await supabase
     .from("trading_accounts")
     .delete()
     .eq("id", accountId)
     .eq("user_id", userId);
-  return { error: error?.message ?? null };
+  return { error: error ? deskDeleteErrorMessage(error.message) : null };
 }
 
 export async function renameTradingAccountRow(
