@@ -1,5 +1,6 @@
 "use server";
 
+import { closeTradingAccountRow } from "@/lib/accounts/close-store";
 import {
   bindConnectionToDesk,
   deleteTradingAccountRow,
@@ -370,6 +371,77 @@ export async function deleteTradingAccount(formData: FormData) {
   }
   refreshAccountChrome();
   redirect(`${SUB_ACCOUNTS_PATH}?deleted=1`);
+}
+
+export async function closeTradingAccount(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const accountId = String(formData.get("accountId") ?? "");
+  const granted =
+    deskDeleteGrantAllows(
+      String(formData.get("deskDeleteGrant") ?? ""),
+      session.member.id,
+      accountId,
+    ) ||
+    deskDeleteGrantAllows(
+      await deskDeleteGrantToken(),
+      session.member.id,
+      accountId,
+    );
+  if (!granted) {
+    const stepUp = await stepUpFromForm(session.member.id, formData);
+    if (stepUp) {
+      return stepUpRejection(stepUp);
+    }
+  }
+  try {
+    await rememberDeskDeleteGrant(session.member.id, accountId);
+  } catch {
+    // One pass still runs. A follow-up pass asks for a new code.
+  }
+  const written = await closeTradingAccountRow(session.member.id, accountId);
+  if (written.error) {
+    if (written.error !== DESK_DELETE_TIMED_OUT) {
+      await clearDeskDeleteGrant();
+      return stepUpRejection(written.error);
+    }
+    const expiresAtMs = Date.now() + DESK_DELETE_GRANT_MS;
+    return {
+      ...stepUpRejection(written.error),
+      deskDeleteGrant: signDeskDeleteGrant(
+        session.member.id,
+        accountId,
+        expiresAtMs,
+      ),
+    };
+  }
+  await clearDeskDeleteGrant();
+  await writeEventLog({
+    scope: "system",
+    event: "copy.desk_closed",
+    message:
+      written.kind === "archive"
+        ? "Closed a desk. Followers keep their copy for six months."
+        : "Closed a desk and withdrew the invites.",
+    userId: session.member.id,
+    data: { accountId, kind: written.kind },
+  });
+  if (session.account.id === accountId) {
+    const remaining = await listTradingAccounts(session.member.id);
+    const next = pickSwitchAfterDelete(
+      remaining,
+      formData.get("switchToAccountId"),
+    );
+    if (next) {
+      await setActiveAccountId(next.id);
+    }
+  }
+  refreshAccountChrome();
+  redirect(
+    `${SUB_ACCOUNTS_PATH}?closed=${written.kind === "archive" ? "archive" : "revoke"}`,
+  );
 }
 
 export async function readDeskNameFromSettingsForm(args: {

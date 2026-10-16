@@ -36,7 +36,7 @@ export const DESK_DELETE_FAILED = "Could not delete this desk. Try again.";
 export const DESK_DELETE_MISSING = "That account was not found.";
 
 export const DESK_DELETE_HAS_COPIES =
-  "Remove the copy desks that follow this desk first.";
+  "Close this desk instead. Followers keep their copy for six months.";
 
 export function deskDeleteErrorMessage(raw: string): string {
   if (/statement timeout|lock timeout/i.test(raw)) {
