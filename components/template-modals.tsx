@@ -15,7 +15,10 @@ export { ModalHost, useModalPortalHost };
 import { createPortal } from "react-dom";
 import { AppMultiSelect } from "@/components/app-select";
 import { AppCheck, AppRadio } from "@/components/app-check";
-import { PanelCloseButton } from "@/components/panel-close-button";
+import {
+  PanelCloseButton,
+  PanelCloseReserve,
+} from "@/components/panel-close-button";
 import {
   applyTemplateAction,
   saveDcaAsTemplateAction,
@@ -174,7 +177,10 @@ export function Modal({
           <>
             <div className="shrink-0 border-b border-line px-5 pt-5 pb-4">
               <PanelCloseButton onClick={onClose} />
-              <h2 className="pr-8 text-lg font-semibold text-ink">{title}</h2>
+              <h2 className="min-w-0 text-lg font-semibold text-ink">
+                <PanelCloseReserve size="modal" />
+                {title}
+              </h2>
               {sticky}
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 [overflow-anchor:none]">
@@ -184,7 +190,10 @@ export function Modal({
         ) : (
           <>
             <PanelCloseButton onClick={onClose} />
-            <h2 className="pr-8 text-lg font-semibold text-ink">{title}</h2>
+            <h2 className="min-w-0 text-lg font-semibold text-ink">
+              <PanelCloseReserve size="modal" />
+              {title}
+            </h2>
             {children}
           </>
         )}

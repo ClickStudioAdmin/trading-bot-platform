@@ -4,7 +4,10 @@ import { useId, useRef, useState, type FormEvent } from "react";
 import { AnchoredPanel } from "@/components/anchored-panel";
 import { IconPencil } from "@/components/icons";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { PanelCloseButton } from "@/components/panel-close-button";
+import {
+  PanelCloseButton,
+  PanelCloseReserve,
+} from "@/components/panel-close-button";
 import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
 import { renameTradingAccount } from "@/lib/accounts/actions";
 import { validateNewDeskName } from "@/lib/accounts/model";
@@ -44,12 +47,12 @@ export function AccountRenameControl({
         open={open}
         onClose={() => setOpen(false)}
         buttonRef={buttonRef}
-        className="p-3 pt-8"
+        className="p-3"
       >
         <PanelCloseButton onClick={() => setOpen(false)} />
         <form
           action={renameTradingAccount}
-          className="space-y-3"
+          className="flex flex-col gap-3"
           onSubmit={(event: FormEvent<HTMLFormElement>) => {
             if (!nameCheck.ok) {
               event.preventDefault();
@@ -58,6 +61,7 @@ export function AccountRenameControl({
         >
           <input type="hidden" name="accountId" value={accountId} />
           <label className="block text-sm text-ink">
+            <PanelCloseReserve />
             Name
             <input
               name="name"
@@ -69,8 +73,8 @@ export function AccountRenameControl({
               aria-describedby={nameError ? errorId : undefined}
               className={
                 nameError
-                  ? "mt-1 w-full min-w-0 rounded-control border border-danger bg-canvas px-3 py-2 text-sm text-ink focus:border-danger focus:outline-none"
-                  : "mt-1 w-full min-w-0 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+                  ? "mt-1 block w-full min-w-0 rounded-control border border-danger bg-canvas px-3 py-2 text-sm text-ink focus:border-danger focus:outline-none"
+                  : "mt-1 block w-full min-w-0 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
               }
             />
             {nameError ? (
