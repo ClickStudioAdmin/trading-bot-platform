@@ -1,11 +1,22 @@
-/** Rows removed per statement so a desk with many bots stays under the database time limit. */
+/**
+ * Rows removed per statement. A full page means more may remain, and a
+ * shorter page means that table is done. Kept small so one statement stays
+ * under the database time limit.
+ */
 export const DESK_DELETE_BATCH = 300;
 
 /** Stop one request before the server action itself times out. A later try continues. */
-export const DESK_DELETE_MAX_BATCHES = 80;
+export const DESK_DELETE_MAX_BATCHES = 200;
 
-/** Return to the dialog before the host kills the page. */
-export const DESK_DELETE_BUDGET_MS = 20_000;
+/**
+ * Stay under the Manage Desks `maxDuration` of 60s so the dialog gets an
+ * answer instead of the host error page. Closed orders and logs can outlast
+ * one pass after the bots are already gone.
+ */
+export const DESK_DELETE_BUDGET_MS = 45_000;
+
+/** How many passes one authenticator code may run. Each pass refreshes its grant. */
+export const DESK_DELETE_CONTINUE_ATTEMPTS = 8;
 
 export const DESK_DELETE_TIMED_OUT = "Deleting this desk timed out. Try again.";
 
@@ -65,4 +76,21 @@ export async function deleteRowsInBatches(args: {
     }
   }
   return DESK_DELETE_TIMED_OUT;
+}
+
+/** One code keeps deleting after a pass stops for time. A redirect still throws. */
+export async function continueTimedDeskDelete<T>(
+  run: () => Promise<T>,
+  isTimeout: (result: T) => boolean,
+  attempts = DESK_DELETE_CONTINUE_ATTEMPTS,
+): Promise<T> {
+  const times = Math.max(1, Math.floor(attempts));
+  let last: T | undefined;
+  for (let attempt = 0; attempt < times; attempt += 1) {
+    last = await run();
+    if (!isTimeout(last)) {
+      return last;
+    }
+  }
+  return last as T;
 }

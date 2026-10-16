@@ -9,9 +9,15 @@ import {
   PanelCloseButton,
   PanelCloseReserve,
 } from "@/components/panel-close-button";
+import { StepUpForm } from "@/components/step-up-code-field";
 import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
 import { deleteTradingAccount } from "@/lib/accounts/actions";
-import { StepUpForm } from "@/components/step-up-code-field";
+import {
+  DESK_DELETE_CONTINUE_ATTEMPTS,
+  DESK_DELETE_TIMED_OUT,
+  continueTimedDeskDelete,
+} from "@/lib/accounts/desk-delete";
+import { stepUpRejectionMessage } from "@/lib/auth/step-up";
 
 const BLOCKED_MS = 4000;
 
@@ -67,9 +73,32 @@ export function AccountDeleteControl({
           </p>
         ) : (
           <StepUpForm
-            action={deleteTradingAccount}
+            action={async (formData) => {
+              let grant = "";
+              return continueTimedDeskDelete(
+                async () => {
+                  if (grant) {
+                    formData.set("deskDeleteGrant", grant);
+                  }
+                  const result = await deleteTradingAccount(formData);
+                  if (
+                    result &&
+                    typeof result === "object" &&
+                    "deskDeleteGrant" in result &&
+                    typeof result.deskDeleteGrant === "string"
+                  ) {
+                    grant = result.deskDeleteGrant;
+                  }
+                  return result;
+                },
+                (result) =>
+                  stepUpRejectionMessage(result) === DESK_DELETE_TIMED_OUT,
+                DESK_DELETE_CONTINUE_ATTEMPTS,
+              );
+            }}
             confirmLabel="Delete desk"
             danger
+            pendingLabel="Deleting…"
             className="flex flex-col gap-3"
           >
             <input type="hidden" name="accountId" value={accountId} />
