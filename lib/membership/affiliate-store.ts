@@ -1,4 +1,11 @@
 import { randomBytes } from "node:crypto";
+import {
+  applyRowsInBatches,
+  chunkList,
+  ROW_BATCH,
+  ROW_BATCH_CAP,
+  statementTimeoutMessage,
+} from "@/lib/db/row-batches";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   AFFILIATE_ALIAS_TAKEN,
@@ -1173,6 +1180,89 @@ export async function approvePayout(
   return { ok: true };
 }
 
+const PAYOUT_TIMED_OUT = "That payout timed out. Try again.";
+const PAYOUT_FAILED = "Could not update that payout. Try again.";
+
+function payoutWriteError(raw: string): string {
+  return statementTimeoutMessage(raw, PAYOUT_TIMED_OUT, PAYOUT_FAILED);
+}
+
+type ServiceClient = NonNullable<ReturnType<typeof createServiceClient>>;
+
+async function listPayoutCommissionIds(
+  supabase: ServiceClient,
+  payoutId: string,
+): Promise<{ ids: string[] } | { error: string }> {
+  const ids: string[] = [];
+  let cursor = "";
+  for (let page = 0; page < ROW_BATCH_CAP; page += 1) {
+    let query = supabase
+      .from("membership_payout_items")
+      .select("commission_id")
+      .eq("payout_id", payoutId)
+      .order("commission_id", { ascending: true })
+      .limit(ROW_BATCH);
+    if (cursor) {
+      query = query.gt("commission_id", cursor);
+    }
+    const selected = await query;
+    if (selected.error) {
+      return { error: payoutWriteError(selected.error.message) };
+    }
+    const chunk = (selected.data ?? [])
+      .map((row) => String((row as { commission_id?: unknown }).commission_id ?? ""))
+      .filter(Boolean);
+    ids.push(...chunk);
+    if (chunk.length < ROW_BATCH) {
+      return { ids };
+    }
+    const nextCursor = chunk[chunk.length - 1] ?? "";
+    if (!nextCursor || nextCursor === cursor) {
+      return { error: PAYOUT_FAILED };
+    }
+    cursor = nextCursor;
+  }
+  return { error: PAYOUT_TIMED_OUT };
+}
+
+async function deletePayoutItems(
+  supabase: ServiceClient,
+  payoutId: string,
+): Promise<string | null> {
+  const raw = await applyRowsInBatches({
+    selectIds: async (limit) => {
+      const selected = await supabase
+        .from("membership_payout_items")
+        .select("commission_id")
+        .eq("payout_id", payoutId)
+        .limit(limit);
+      if (selected.error) {
+        return { ids: [], error: selected.error.message };
+      }
+      return {
+        ids: (selected.data ?? [])
+          .map((row) =>
+            String((row as { commission_id?: unknown }).commission_id ?? ""),
+          )
+          .filter(Boolean),
+        error: null,
+      };
+    },
+    applyIds: async (ids) => {
+      const removed = await supabase
+        .from("membership_payout_items")
+        .delete()
+        .eq("payout_id", payoutId)
+        .in("commission_id", ids);
+      return { error: removed.error?.message ?? null };
+    },
+  });
+  if (!raw) {
+    return null;
+  }
+  return payoutWriteError(raw);
+}
+
 export async function rejectPayout(
   payoutId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -1204,12 +1294,9 @@ export async function rejectPayout(
       return { ok: false, error: walletError.message };
     }
   }
-  const { error: itemError } = await supabase
-    .from("membership_payout_items")
-    .delete()
-    .eq("payout_id", payoutId);
-  if (itemError) {
-    return { ok: false, error: itemError.message };
+  const removed = await deletePayoutItems(supabase, payoutId);
+  if (removed) {
+    return { ok: false, error: removed };
   }
   const { error } = await supabase
     .from("membership_payouts")
@@ -1242,14 +1329,18 @@ export async function markPayoutPaid(
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
   }
-  if (payout.commissionIds.length > 0) {
+  const listed = await listPayoutCommissionIds(supabase, payoutId);
+  if ("error" in listed) {
+    return { ok: false, error: listed.error };
+  }
+  for (const chunk of chunkList(listed.ids)) {
     const { error: commissionError } = await supabase
       .from("membership_commissions")
       .update({ status: "paid" })
-      .in("id", payout.commissionIds)
+      .in("id", chunk)
       .eq("status", "payable");
     if (commissionError) {
-      return { ok: false, error: commissionError.message };
+      return { ok: false, error: payoutWriteError(commissionError.message) };
     }
   }
   const { error } = await supabase
