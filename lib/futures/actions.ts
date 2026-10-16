@@ -619,7 +619,7 @@ export async function saveFuturesAutomations(
       revalidatePath(FUTURES_PATHS.positions);
     });
   }
-  revalidatePath(FUTURES_PATHS.positions);
+  // A revalidate here refreshes the open bot page. The form already has the saved row.
   const rules = await loadFuturesAutomationRules(account.id);
   return {
     ok: true,

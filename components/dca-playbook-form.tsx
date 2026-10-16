@@ -107,8 +107,12 @@ import {
   AUTOMATIONS_NEW,
   automationsEditHref,
   automationsNewHref,
-  automationsStayEditHref,
 } from "@/lib/bots/automations-path";
+import { mergeSavedPlaybookCard } from "@/lib/bots/automations-saved-edit";
+import {
+  rememberSavedBotEdit,
+  useShownAutomationsEdit,
+} from "@/components/automations-saved-edit";
 import {
   deleteDcaPlaybookAction,
   setDcaBotModesAction,
@@ -651,6 +655,7 @@ export function DcaPlaybooksDesk({
   );
   const [draftEdit, setDraftEdit] = useState(edit);
   const [draftClone, setDraftClone] = useState(clone);
+  const [shownEdit, setShownEdit] = useShownAutomationsEdit(edit);
   const nextDraft =
     edit !== draftEdit || clone !== draftClone
       ? edit === AUTOMATIONS_NEW
@@ -663,10 +668,10 @@ export function DcaPlaybooksDesk({
     setDraft(nextDraft);
   }
   const formCard =
-    edit === AUTOMATIONS_NEW
+    shownEdit === AUTOMATIONS_NEW
       ? nextDraft
-      : edit
-        ? visibleCards.find((card) => card.playbook?.id === edit) ?? null
+      : shownEdit
+        ? visibleCards.find((card) => card.playbook?.id === shownEdit) ?? null
         : null;
   const showForm = Boolean(formCard);
 
@@ -703,13 +708,16 @@ export function DcaPlaybooksDesk({
     router.refresh();
   }
 
-  function stayOnEdit(botId: string | null | undefined, notice?: string | null) {
+  function stayOnSaved(
+    botId: string | null | undefined,
+    name?: string | null,
+  ) {
     const id = String(botId ?? "").trim();
     if (!id) {
       return;
     }
-    router.replace(automationsStayEditHref(listHref, id, notice));
-    router.refresh();
+    setShownEdit(id);
+    rememberSavedBotEdit(listHref, id, name);
   }
 
   return (
@@ -760,10 +768,16 @@ export function DcaPlaybooksDesk({
             }
             if (next.playbook) {
               const playbook = next.playbook;
-              setCards((current) => upsertDcaCard(current, playbook));
+              setCards((current) =>
+                mergeSavedPlaybookCard(
+                  current,
+                  playbook,
+                  formCard.playbook ? null : formCard.key,
+                ),
+              );
             }
             if (next.ok) {
-              stayOnEdit(next.playbook?.id, next.notice);
+              stayOnSaved(next.playbook?.id, next.playbook?.name);
             }
           }}
           onRemoveDraft={

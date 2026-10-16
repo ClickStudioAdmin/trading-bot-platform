@@ -132,8 +132,12 @@ import {
   AUTOMATIONS_NEW,
   automationsEditHref,
   automationsNewHref,
-  automationsStayEditHref,
 } from "@/lib/bots/automations-path";
+import { withCreatedFormKey } from "@/lib/bots/automations-saved-edit";
+import {
+  rememberSavedBotEdit,
+  useShownAutomationsEdit,
+} from "@/components/automations-saved-edit";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
 export function FuturesAutomationsDesk({
@@ -225,6 +229,7 @@ export function FuturesAutomationsDesk({
   );
   const [draftEdit, setDraftEdit] = useState(edit);
   const [draftClone, setDraftClone] = useState(clone);
+  const [shownEdit, setShownEdit] = useShownAutomationsEdit(edit);
   const nextDraft =
     edit !== draftEdit || clone !== draftClone
       ? edit === AUTOMATIONS_NEW
@@ -237,10 +242,10 @@ export function FuturesAutomationsDesk({
     setDraft(nextDraft);
   }
   const formLayer =
-    edit === AUTOMATIONS_NEW
+    shownEdit === AUTOMATIONS_NEW
       ? nextDraft
-      : edit
-        ? visibleLayers.find((layer) => layer.id === edit) ?? null
+      : shownEdit
+        ? visibleLayers.find((layer) => layer.id === shownEdit) ?? null
         : null;
   const showForm = Boolean(formLayer);
 
@@ -267,21 +272,31 @@ export function FuturesAutomationsDesk({
     router.refresh();
   }
 
-  function stayOnEdit(botId: string | null | undefined, notice?: string | null) {
+  function stayOnSaved(
+    botId: string | null | undefined,
+    name?: string | null,
+  ) {
     const id = String(botId ?? "").trim();
     if (!id) {
       return;
     }
-    router.replace(automationsStayEditHref(listHref, id, notice));
-    router.refresh();
+    setShownEdit(id);
+    rememberSavedBotEdit(listHref, id, name);
   }
 
-  function applySaveResult(result: SaveFuturesAutomationsResult) {
+  function applySaveResult(
+    result: SaveFuturesAutomationsResult,
+    created?: { id: string; key: string } | null,
+  ) {
     if (!result.ok || !result.forms) {
       return;
     }
     setLayers((current) =>
-      keepFormKeys(current, [...(result.forms ?? [])].reverse()),
+      withCreatedFormKey(
+        keepFormKeys(current, [...(result.forms ?? [])].reverse()),
+        created?.id,
+        created?.key,
+      ),
     );
   }
 
@@ -310,9 +325,16 @@ export function FuturesAutomationsDesk({
             const created = result.forms?.find(
               (layer) => layer.id && !previous.has(layer.id),
             );
-            applySaveResult(result);
+            const savedId = created?.id ?? formLayer.id;
+            applySaveResult(
+              result,
+              created?.id
+                ? { id: created.id, key: formLayer.key }
+                : null,
+            );
             if (result.ok) {
-              stayOnEdit(created?.id ?? formLayer.id, result.notice);
+              const saved = result.forms?.find((layer) => layer.id === savedId);
+              stayOnSaved(savedId, saved?.name ?? formLayer.name);
             }
           }}
           onTemplateSaved={(item) =>
