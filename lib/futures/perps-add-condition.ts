@@ -46,6 +46,93 @@ export function blankPerpsAddConditionDraft(
   };
 }
 
+export type PerpsAddOrderValues = {
+  size: string;
+  sizeUnit: "qty" | "usdt";
+  orderType: "market" | "limit";
+  limitPrice: string;
+};
+
+export type PerpsAddCondition = {
+  key: string;
+  type: PerpsAddConditionType;
+  draft: PerpsAddConditionDraft;
+};
+
+/** One Or group. Conditions inside it are And. Order values belong to the group. */
+export type PerpsAddOrderGroup = {
+  key: string;
+  lead: PerpsAddCondition;
+  conditions: PerpsAddCondition[];
+  order: PerpsAddOrderValues;
+};
+
+function perpsAddKey(prefix: string): string {
+  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function blankPerpsAddOrderValues(): PerpsAddOrderValues {
+  return {
+    size: "",
+    sizeUnit: "usdt",
+    orderType: "market",
+    limitPrice: "",
+  };
+}
+
+export function blankPerpsAddCondition(
+  side: "long" | "short",
+): PerpsAddCondition {
+  return {
+    key: perpsAddKey("add"),
+    type: "",
+    draft: blankPerpsAddConditionDraft(side),
+  };
+}
+
+export function blankPerpsAddOrderGroup(
+  side: "long" | "short",
+): PerpsAddOrderGroup {
+  return {
+    key: perpsAddKey("group"),
+    lead: blankPerpsAddCondition(side),
+    conditions: [],
+    order: blankPerpsAddOrderValues(),
+  };
+}
+
+export function blankPerpsAddOrderGroups(
+  side: "long" | "short",
+): PerpsAddOrderGroup[] {
+  return [blankPerpsAddOrderGroup(side)];
+}
+
+export function countPerpsAddConditions(
+  groups: readonly PerpsAddOrderGroup[],
+): number {
+  return groups.reduce(
+    (sum, group) => sum + 1 + group.conditions.length,
+    0,
+  );
+}
+
+export function appendPerpsAddCondition(
+  group: PerpsAddOrderGroup,
+  side: "long" | "short",
+): PerpsAddOrderGroup {
+  return {
+    ...group,
+    conditions: [...group.conditions, blankPerpsAddCondition(side)],
+  };
+}
+
+export function appendPerpsAddOrderGroup(
+  groups: readonly PerpsAddOrderGroup[],
+  side: "long" | "short",
+): PerpsAddOrderGroup[] {
+  return [...groups, blankPerpsAddOrderGroup(side)];
+}
+
 /** Fields that belong to the selected additional-order condition. */
 export function perpsAddConditionDraftForType(
   type: PerpsAddConditionType,

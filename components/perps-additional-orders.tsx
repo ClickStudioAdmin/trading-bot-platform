@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { AppSelect } from "@/components/app-select";
 import {
   IndicatorStartFields,
@@ -8,34 +8,83 @@ import {
 } from "@/components/bot-indicator-fields";
 import {
   BotField,
-  BotFormGroup,
   OrderTypePill,
   conditionFieldClass,
   useBotColumnLayout,
 } from "@/components/bot-form-chrome";
+import {
+  AddConditionButton,
+  RemoveConditionButton,
+} from "@/components/condition-group";
+import { JoinWord } from "@/components/condition-join";
+import {
+  claimFromEntryDraft,
+  entryConflictSlots,
+  type EntryConditionDraft,
+  type EntryStackRow,
+} from "@/components/entry-condition-stack";
 import { useDeskFormStatus } from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { DcaIndicatorKind, DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import {
-  blankPerpsAddConditionDraft,
+  appendPerpsAddCondition,
+  appendPerpsAddOrderGroup,
+  countPerpsAddConditions,
   perpsAddConditionDraftForType,
+  type PerpsAddCondition,
   type PerpsAddConditionDraft,
   type PerpsAddConditionType,
+  type PerpsAddOrderGroup,
+  type PerpsAddOrderValues,
 } from "@/lib/futures/perps-add-condition";
+import {
+  STRATEGY_CONDITION_CAP,
+  entryKindDisabled,
+  entryWebhookIdDisabled,
+  priceChoiceConflicts,
+} from "@/lib/strategy/expr";
 
-export type { PerpsAddConditionType };
+export type { PerpsAddConditionType, PerpsAddOrderGroup };
+
+function entryDraftFromAdd(condition: PerpsAddCondition): EntryConditionDraft {
+  if (condition.type === "price") {
+    return {
+      kind: "price",
+      triggerBy: condition.draft.triggerBy,
+      compare: condition.draft.triggerCompare,
+      price: condition.draft.triggerPrice,
+    };
+  }
+  if (condition.type === "webhook") {
+    return { kind: "webhook", webhookId: condition.draft.webhookId };
+  }
+  if (condition.type === "indicator" || condition.type === "trend") {
+    return {
+      kind: condition.type,
+      indicatorKind: condition.draft.kind,
+      timeframe: condition.draft.timeframe,
+      compare: condition.draft.compare,
+      level: condition.draft.level,
+      period: condition.draft.period,
+      slowPeriod: condition.draft.slowPeriod,
+      multiplier: condition.draft.multiplier,
+    };
+  }
+  return { kind: "unset" };
+}
+
+function parseType(value: string): PerpsAddConditionType {
+  return value === "indicator" ||
+    value === "trend" ||
+    value === "price" ||
+    value === "webhook"
+    ? value
+    : "";
+}
 
 export function PerpsAdditionalOrders({
-  conditionType,
-  onConditionType,
-  size,
-  onSize,
-  sizeUnit,
-  onSizeUnit,
-  orderType,
-  onOrderType,
-  limitPrice,
-  onLimitPrice,
+  groups,
+  onGroupsChange,
   quoteLabel,
   baseCoin,
   fieldClass,
@@ -43,18 +92,9 @@ export function PerpsAdditionalOrders({
   fieldsClass,
   side = "long",
   webhooks = [],
-  onConditionDraftChange,
 }: {
-  conditionType: PerpsAddConditionType;
-  onConditionType: (next: PerpsAddConditionType) => void;
-  size: string;
-  onSize: (next: string) => void;
-  sizeUnit: "qty" | "usdt";
-  onSizeUnit: (next: "qty" | "usdt") => void;
-  orderType: "market" | "limit";
-  onOrderType: (next: "market" | "limit") => void;
-  limitPrice: string;
-  onLimitPrice: (next: string) => void;
+  groups: PerpsAddOrderGroup[];
+  onGroupsChange: (next: PerpsAddOrderGroup[]) => void;
   quoteLabel: string;
   baseCoin: string;
   fieldClass: string;
@@ -62,229 +102,509 @@ export function PerpsAdditionalOrders({
   fieldsClass?: string;
   side?: "long" | "short";
   webhooks?: readonly { id: string; name: string }[];
-  onConditionDraftChange?: (next: PerpsAddConditionDraft) => void;
 }) {
   const { markDirty } = useDeskFormStatus();
   const column = useBotColumnLayout();
-  const [draft, setDraft] = useState(() => blankPerpsAddConditionDraft(side));
-  const draftRef = useRef(draft);
+  const groupsRef = useRef(groups);
   const conditionGrid = fieldsClass ?? gridClass;
+  useEffect(() => {
+    groupsRef.current = groups;
+  }, [groups]);
 
-  function publishDraft(next: PerpsAddConditionDraft) {
-    draftRef.current = next;
-    setDraft(next);
-    onConditionDraftChange?.(next);
+  function commit(next: PerpsAddOrderGroup[]) {
+    groupsRef.current = next;
+    onGroupsChange(next);
+    markDirty();
   }
 
-  function chooseType(next: PerpsAddConditionType) {
-    onConditionType(next);
-    publishDraft(perpsAddConditionDraftForType(next, side, draftRef.current));
+  function updateGroup(
+    groupKey: string,
+    update: (group: PerpsAddOrderGroup) => PerpsAddOrderGroup,
+  ) {
+    commit(
+      groupsRef.current.map((group) =>
+        group.key === groupKey ? update(group) : group,
+      ),
+    );
   }
 
-  function patchDraft(partial: Partial<PerpsAddConditionDraft>) {
-    publishDraft({ ...draftRef.current, ...partial });
+  function patchCondition(
+    group: PerpsAddOrderGroup,
+    conditionKey: string,
+    update: (condition: PerpsAddCondition) => PerpsAddCondition,
+  ): PerpsAddOrderGroup {
+    if (group.lead.key === conditionKey) {
+      return { ...group, lead: update(group.lead) };
+    }
+    return {
+      ...group,
+      conditions: group.conditions.map((condition) =>
+        condition.key === conditionKey ? update(condition) : condition,
+      ),
+    };
   }
+
+  function chooseType(
+    group: PerpsAddOrderGroup,
+    condition: PerpsAddCondition,
+    next: PerpsAddConditionType,
+  ) {
+    updateGroup(group.key, (current) =>
+      patchCondition(current, condition.key, (item) => ({
+        ...item,
+        type: next,
+        draft: perpsAddConditionDraftForType(next, side, item.draft),
+      })),
+    );
+  }
+
+  function patchDraft(
+    group: PerpsAddOrderGroup,
+    condition: PerpsAddCondition,
+    partial: Partial<PerpsAddConditionDraft>,
+  ) {
+    updateGroup(group.key, (current) =>
+      patchCondition(current, condition.key, (item) => ({
+        ...item,
+        draft: { ...item.draft, ...partial },
+      })),
+    );
+  }
+
+  function patchOrder(
+    groupKey: string,
+    partial: Partial<PerpsAddOrderValues>,
+  ) {
+    updateGroup(groupKey, (group) => ({
+      ...group,
+      order: { ...group.order, ...partial },
+    }));
+  }
+
+  const canAdd = countPerpsAddConditions(groups) < STRATEGY_CONDITION_CAP;
 
   return (
     <div className="space-y-3">
-      <BotFormGroup>
-        <div className={gridClass}>
-          <BotField label="Condition Type" className="whitespace-nowrap" required>
-            <AppSelect
-              value={conditionType}
-              onChange={(event) => {
-                const next = event.target.value;
-                chooseType(
-                  next === "indicator" ||
-                    next === "trend" ||
-                    next === "price" ||
-                    next === "webhook"
-                    ? next
-                    : "",
-                );
-              }}
-              className={conditionFieldClass(fieldClass, column)}
+      {groups.map((group, groupIndex) => {
+        const rows: EntryStackRow[] = group.conditions.map((condition) => ({
+          key: condition.key,
+          join: "and",
+          draft: entryDraftFromAdd(condition),
+        }));
+        const leadDraft = entryDraftFromAdd(group.lead);
+        const slots = entryConflictSlots(
+          {
+            kind:
+              leadDraft.kind === "unset" || leadDraft.kind === "filter"
+                ? "price"
+                : leadDraft.kind,
+            webhookId: leadDraft.kind === "webhook" ? leadDraft.webhookId : "",
+            claim: claimFromEntryDraft(leadDraft),
+          },
+          rows,
+        );
+        const webhookIds = webhooks.map((hook) => hook.id);
+        return (
+          <div key={group.key} className="space-y-3">
+            {groupIndex > 0 ? <JoinWord label="Or" /> : null}
+            <section className="space-y-4 rounded-card border border-line bg-canvas px-4 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="min-w-0 text-sm font-semibold text-ink">
+                  Group {groupIndex + 1}
+                  <span className="ml-2 text-hint font-normal text-ink-muted">
+                    - Every condition in this group must be true.
+                  </span>
+                </h3>
+                {groupIndex > 0 ? (
+                  <RemoveConditionButton
+                    scope="group"
+                    onClick={() =>
+                      commit(groupsRef.current.filter((item) => item.key !== group.key))
+                    }
+                  />
+                ) : null}
+              </div>
+              <ConditionFields
+                condition={group.lead}
+                label="Condition Type"
+                slotIndex={0}
+                slots={slots}
+                webhookIds={webhookIds}
+                webhooks={webhooks}
+                side={side}
+                fieldClass={fieldClass}
+                gridClass={gridClass}
+                conditionGrid={conditionGrid}
+                column={column}
+                onType={(next) => chooseType(group, group.lead, next)}
+                onDraft={(partial) => patchDraft(group, group.lead, partial)}
+              />
+              {group.conditions.map((condition, index) => (
+                <div key={condition.key} className="space-y-3">
+                  <JoinWord label="And" />
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3">
+                    <div className="min-w-0">
+                      <ConditionFields
+                        condition={condition}
+                        label="Trigger"
+                        slotIndex={index + 1}
+                        slots={slots}
+                        webhookIds={webhookIds}
+                        webhooks={webhooks}
+                        side={side}
+                        fieldClass={fieldClass}
+                        gridClass={gridClass}
+                        conditionGrid={conditionGrid}
+                        column={column}
+                        onType={(next) => chooseType(group, condition, next)}
+                        onDraft={(partial) => patchDraft(group, condition, partial)}
+                      />
+                    </div>
+                    <RemoveConditionButton
+                      scope="condition"
+                      onClick={() =>
+                        updateGroup(group.key, (current) => ({
+                          ...current,
+                          conditions: current.conditions.filter(
+                            (item) => item.key !== condition.key,
+                          ),
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+              ))}
+              {canAdd ? (
+                <AddConditionButton
+                  onClick={() =>
+                    updateGroup(group.key, (current) =>
+                      appendPerpsAddCondition(current, side),
+                    )
+                  }
+                />
+              ) : null}
+              <OrderFields
+                order={group.order}
+                quoteLabel={quoteLabel}
+                baseCoin={baseCoin}
+                fieldClass={fieldClass}
+                gridClass={gridClass}
+                onChange={(partial) => patchOrder(group.key, partial)}
+              />
+            </section>
+          </div>
+        );
+      })}
+      {canAdd ? (
+        <AddConditionButton
+          label="Add Condition Group"
+          onClick={() => commit(appendPerpsAddOrderGroup(groupsRef.current, side))}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ConditionFields({
+  condition,
+  label,
+  slotIndex,
+  slots,
+  webhookIds,
+  webhooks,
+  side,
+  fieldClass,
+  gridClass,
+  conditionGrid,
+  column,
+  onType,
+  onDraft,
+}: {
+  condition: PerpsAddCondition;
+  label: "Condition Type" | "Trigger";
+  slotIndex: number;
+  slots: ReturnType<typeof entryConflictSlots>;
+  webhookIds: string[];
+  webhooks: readonly { id: string; name: string }[];
+  side: "long" | "short";
+  fieldClass: string;
+  gridClass: string;
+  conditionGrid: string;
+  column: boolean;
+  onType: (next: PerpsAddConditionType) => void;
+  onDraft: (partial: Partial<PerpsAddConditionDraft>) => void;
+}) {
+  const { type, draft } = condition;
+  const listed =
+    type === "webhook" &&
+    draft.webhookId &&
+    !webhooks.some((hook) => hook.id === draft.webhookId)
+      ? [...webhooks, { id: draft.webhookId, name: "Webhook (removed)" }]
+      : webhooks;
+  return (
+    <div className="space-y-3">
+      <div className={gridClass}>
+        <BotField
+          label={label}
+          className={label === "Condition Type" ? "whitespace-nowrap" : undefined}
+          required
+        >
+          <AppSelect
+            value={type}
+            onChange={(event) => onType(parseType(event.target.value))}
+            className={conditionFieldClass(fieldClass, column)}
+          >
+            <option value="">
+              {label === "Condition Type" ? "Select Condition Type" : "Select Trigger"}
+            </option>
+            <option
+              value="indicator"
+              disabled={entryKindDisabled({
+                slots,
+                index: slotIndex,
+                kind: "indicator",
+                webhookIds,
+              })}
             >
-              <option value="">Select Condition Type</option>
-              <option value="indicator">Indicator</option>
-              <option value="trend">Trend</option>
-              <option value="price">Price Cross</option>
-              <option value="webhook">Signal Webhook</option>
+              Indicator
+            </option>
+            <option
+              value="trend"
+              disabled={entryKindDisabled({
+                slots,
+                index: slotIndex,
+                kind: "trend",
+                webhookIds,
+              })}
+            >
+              Trend
+            </option>
+            <option
+              value="price"
+              disabled={entryKindDisabled({
+                slots,
+                index: slotIndex,
+                kind: "price",
+                webhookIds,
+              })}
+            >
+              Price Cross
+            </option>
+            <option
+              value="webhook"
+              disabled={entryKindDisabled({
+                slots,
+                index: slotIndex,
+                kind: "webhook",
+                webhookIds,
+              })}
+            >
+              Signal Webhook
+            </option>
+          </AppSelect>
+        </BotField>
+      </div>
+      {type === "indicator" ? (
+        <div className={conditionGrid}>
+          <IndicatorStartFields
+            side={side}
+            prefix={`add-${condition.key}`}
+            kind={draft.kind}
+            timeframe={draft.timeframe}
+            compare={draft.compare}
+            level={draft.level}
+            period={draft.period}
+            slowPeriod={draft.slowPeriod}
+            multiplier={draft.multiplier}
+            onKindChange={(kind) => onDraft({ kind })}
+            onTimeframeChange={(timeframe) => onDraft({ timeframe })}
+            onCompareChange={(compare) => onDraft({ compare })}
+            onLevelChange={(level) => onDraft({ level })}
+            onPeriodChange={(period) => onDraft({ period })}
+            onSlowPeriodChange={(slowPeriod) => onDraft({ slowPeriod })}
+            onMultiplierChange={(multiplier) => onDraft({ multiplier })}
+            seriesSlots={slots}
+            seriesIndex={slotIndex}
+          />
+        </div>
+      ) : null}
+      {type === "trend" ? (
+        <div className={conditionGrid}>
+          <TrendStartFields
+            side={side}
+            prefix={`add-${condition.key}`}
+            kind={draft.kind === "supertrend" ? draft.kind : "supertrend"}
+            timeframe={draft.timeframe}
+            compare={draft.compare}
+            period={draft.period}
+            multiplier={draft.multiplier}
+            onKindChange={(kind: DcaIndicatorKind) => onDraft({ kind })}
+            onTimeframeChange={(timeframe: DcaIndicatorTimeframe) =>
+              onDraft({ timeframe })
+            }
+            onCompareChange={(compare) => onDraft({ compare })}
+            onPeriodChange={(period) => onDraft({ period })}
+            onMultiplierChange={(multiplier) => onDraft({ multiplier })}
+            seriesSlots={slots}
+            seriesIndex={slotIndex}
+          />
+        </div>
+      ) : null}
+      {type === "price" ? (
+        <div className={conditionGrid}>
+          <BotField label="Price source" required>
+            <AppSelect
+              value={draft.triggerBy}
+              onChange={(event) =>
+                onDraft({
+                  triggerBy:
+                    event.target.value === "mark" || event.target.value === "index"
+                      ? event.target.value
+                      : "last",
+                })
+              }
+              className={fieldClass}
+            >
+              {(["last", "mark", "index"] as const).map((source) => (
+                <option
+                  key={source}
+                  value={source}
+                  disabled={priceChoiceConflicts(
+                    slots,
+                    slotIndex,
+                    {
+                      source: draft.triggerBy,
+                      compare: draft.triggerCompare,
+                      price: draft.triggerPrice,
+                    },
+                    { source },
+                  )}
+                >
+                  {source === "last" ? "Last is" : source === "mark" ? "Mark is" : "Index is"}
+                </option>
+              ))}
+            </AppSelect>
+          </BotField>
+          <BotField label="Compare" required>
+            <AppSelect
+              value={draft.triggerCompare}
+              onChange={(event) =>
+                onDraft({
+                  triggerCompare: event.target.value === "lte" ? "lte" : "gte",
+                })
+              }
+              className={fieldClass}
+            >
+              <option value="gte">At or above</option>
+              <option value="lte">At or below</option>
+            </AppSelect>
+          </BotField>
+          <BotField label="Price" required>
+            <GroupedNumberInput
+              value={draft.triggerPrice}
+              onChange={(triggerPrice) => onDraft({ triggerPrice })}
+              allowDecimal
+              className={fieldClass}
+            />
+          </BotField>
+        </div>
+      ) : null}
+      {type === "webhook" ? (
+        <div className={conditionGrid}>
+          <BotField label="Webhook" className="lg:col-span-2" required>
+            <AppSelect
+              value={draft.webhookId}
+              onChange={(event) => onDraft({ webhookId: event.target.value })}
+              className={fieldClass}
+            >
+              <option value="">
+                {webhooks.length === 0
+                  ? "Create a Signal webhook first"
+                  : "Pick a webhook"}
+              </option>
+              {listed.map((hook) => (
+                <option
+                  key={hook.id}
+                  value={hook.id}
+                  disabled={entryWebhookIdDisabled({
+                    slots,
+                    index: slotIndex,
+                    webhookId: hook.id,
+                  })}
+                >
+                  {hook.name}
+                </option>
+              ))}
             </AppSelect>
           </BotField>
         </div>
-      </BotFormGroup>
-      {conditionType === "indicator" ? (
-        <BotFormGroup>
-          <div className={conditionGrid}>
-            <IndicatorStartFields
-              side={side}
-              prefix="addIndicator"
-              kind={draft.kind}
-              timeframe={draft.timeframe}
-              compare={draft.compare}
-              level={draft.level}
-              period={draft.period}
-              slowPeriod={draft.slowPeriod}
-              multiplier={draft.multiplier}
-              onKindChange={(kind) => patchDraft({ kind })}
-              onTimeframeChange={(timeframe) => patchDraft({ timeframe })}
-              onCompareChange={(compare) => patchDraft({ compare })}
-              onLevelChange={(level) => patchDraft({ level })}
-              onPeriodChange={(period) => patchDraft({ period })}
-              onSlowPeriodChange={(slowPeriod) => patchDraft({ slowPeriod })}
-              onMultiplierChange={(multiplier) => patchDraft({ multiplier })}
-            />
-          </div>
-        </BotFormGroup>
       ) : null}
-      {conditionType === "trend" ? (
-        <BotFormGroup>
-          <div className={conditionGrid}>
-            <TrendStartFields
-              side={side}
-              prefix="addTrend"
-              kind={draft.kind === "supertrend" ? draft.kind : "supertrend"}
-              timeframe={draft.timeframe}
-              compare={draft.compare}
-              period={draft.period}
-              multiplier={draft.multiplier}
-              onKindChange={(kind: DcaIndicatorKind) => patchDraft({ kind })}
-              onTimeframeChange={(timeframe: DcaIndicatorTimeframe) =>
-                patchDraft({ timeframe })
-              }
-              onCompareChange={(compare) => patchDraft({ compare })}
-              onPeriodChange={(period) => patchDraft({ period })}
-              onMultiplierChange={(multiplier) => patchDraft({ multiplier })}
-            />
-          </div>
-        </BotFormGroup>
-      ) : null}
-      {conditionType === "price" ? (
-        <BotFormGroup>
-          <div className={conditionGrid}>
-            <BotField label="Price source" required>
-              <AppSelect
-                value={draft.triggerBy}
-                onChange={(event) =>
-                  patchDraft({
-                    triggerBy:
-                      event.target.value === "mark" ||
-                      event.target.value === "index"
-                        ? event.target.value
-                        : "last",
-                  })
-                }
-                className={fieldClass}
-              >
-                <option value="last">Last is</option>
-                <option value="mark">Mark is</option>
-                <option value="index">Index is</option>
-              </AppSelect>
-            </BotField>
-            <BotField label="Compare" required>
-              <AppSelect
-                value={draft.triggerCompare}
-                onChange={(event) =>
-                  patchDraft({
-                    triggerCompare: event.target.value === "lte" ? "lte" : "gte",
-                  })
-                }
-                className={fieldClass}
-              >
-                <option value="gte">At or above</option>
-                <option value="lte">At or below</option>
-              </AppSelect>
-            </BotField>
-            <BotField label="Price" required>
-              <GroupedNumberInput
-                value={draft.triggerPrice}
-                onChange={(triggerPrice) => patchDraft({ triggerPrice })}
-                allowDecimal
-                className={fieldClass}
-              />
-            </BotField>
-          </div>
-        </BotFormGroup>
-      ) : null}
-      {conditionType === "webhook" ? (
-        <BotFormGroup>
-          <div className={conditionGrid}>
-            <BotField label="Webhook" className="lg:col-span-2" required>
-              <AppSelect
-                value={draft.webhookId}
-                onChange={(event) =>
-                  patchDraft({ webhookId: event.target.value })
-                }
-                className={fieldClass}
-              >
-                <option value="">
-                  {webhooks.length === 0
-                    ? "Create a Signal webhook first"
-                    : "Pick a webhook"}
-                </option>
-                {webhooks.map((hook) => (
-                  <option key={hook.id} value={hook.id}>
-                    {hook.name}
-                  </option>
-                ))}
-              </AppSelect>
-            </BotField>
-          </div>
-        </BotFormGroup>
-      ) : null}
-      {conditionType ? (
-        <BotFormGroup>
-          <div className={gridClass}>
-            <BotField label="Size">
-              <span className="relative mt-1 block">
-                {sizeUnit === "usdt" ? (
-                  <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-                    $
-                  </span>
-                ) : null}
-                <GroupedNumberInput
-                  value={size}
-                  onChange={onSize}
-                  allowDecimal
-                  className={`${fieldClass} !mt-0 ${sizeUnit === "usdt" ? "pl-7" : ""}`}
-                />
-              </span>
-            </BotField>
-            <BotField label="Unit">
-              <AppSelect
-                value={sizeUnit}
-                onChange={(event) => {
-                  onSizeUnit(event.target.value === "qty" ? "qty" : "usdt");
-                  onSize("");
-                }}
-                className={fieldClass}
-              >
-                <option value="usdt">{quoteLabel}</option>
-                <option value="qty">{baseCoin}</option>
-              </AppSelect>
-            </BotField>
-            <BotField label="Order">
-              <OrderTypePill
-                value={orderType}
-                onChange={(next) => {
-                  onOrderType(next);
-                  markDirty();
-                }}
-              />
-            </BotField>
-            {orderType === "limit" ? (
-              <BotField label="Limit price">
-                <GroupedNumberInput
-                  value={limitPrice}
-                  onChange={onLimitPrice}
-                  allowDecimal
-                  className={fieldClass}
-                />
-              </BotField>
-            ) : null}
-          </div>
-        </BotFormGroup>
+    </div>
+  );
+}
+
+function OrderFields({
+  order,
+  quoteLabel,
+  baseCoin,
+  fieldClass,
+  gridClass,
+  onChange,
+}: {
+  order: PerpsAddOrderValues;
+  quoteLabel: string;
+  baseCoin: string;
+  fieldClass: string;
+  gridClass: string;
+  onChange: (partial: Partial<PerpsAddOrderValues>) => void;
+}) {
+  return (
+    <div className={gridClass}>
+      <BotField label="Size">
+        <span className="relative mt-1 block">
+          {order.sizeUnit === "usdt" ? (
+            <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
+              $
+            </span>
+          ) : null}
+          <GroupedNumberInput
+            value={order.size}
+            onChange={(size) => onChange({ size })}
+            allowDecimal
+            className={`${fieldClass} !mt-0 ${order.sizeUnit === "usdt" ? "pl-7" : ""}`}
+          />
+        </span>
+      </BotField>
+      <BotField label="Unit">
+        <AppSelect
+          value={order.sizeUnit}
+          onChange={(event) =>
+            onChange({
+              sizeUnit: event.target.value === "qty" ? "qty" : "usdt",
+              size: "",
+            })
+          }
+          className={fieldClass}
+        >
+          <option value="usdt">{quoteLabel}</option>
+          <option value="qty">{baseCoin}</option>
+        </AppSelect>
+      </BotField>
+      <BotField label="Order">
+        <OrderTypePill
+          value={order.orderType}
+          onChange={(orderType) => onChange({ orderType })}
+        />
+      </BotField>
+      {order.orderType === "limit" ? (
+        <BotField label="Limit price">
+          <GroupedNumberInput
+            value={order.limitPrice}
+            onChange={(limitPrice) => onChange({ limitPrice })}
+            allowDecimal
+            className={fieldClass}
+          />
+        </BotField>
       ) : null}
     </div>
   );
