@@ -170,6 +170,36 @@ assert.match(
   /ends today/,
 );
 
+const quarter = 15 * 60 * 1000;
+const maxFrom = Date.UTC(2026, 9, 16);
+const maxNow = Date.UTC(2026, 9, 16, 8, 47);
+const formingOpen = Math.floor(maxNow / quarter) * quarter;
+const lastClosed = formingOpen - quarter;
+const maxBars = [];
+for (let timeMs = maxFrom; timeMs <= lastClosed; timeMs += quarter) {
+  maxBars.push({ timeMs });
+}
+assert.equal(
+  backtestTapeCoverageError({
+    bars: maxBars,
+    fromMs: maxFrom,
+    toMs: Date.UTC(2026, 9, 17) - 1,
+    intervalMs: quarter,
+    nowMs: maxNow,
+  }),
+  null,
+);
+assert.match(
+  backtestTapeCoverageError({
+    bars: maxBars.filter((row) => row.timeMs <= lastClosed - quarter),
+    fromMs: maxFrom,
+    toMs: Date.UTC(2026, 9, 17) - 1,
+    intervalMs: quarter,
+    nowMs: maxNow,
+  }) ?? "",
+  /newest candle is 16 Oct 2026/,
+);
+
 const hole = backtestTapeCoverageError({
   bars: hourly(fromMs, 100, new Set([10, 11, 12])),
   fromMs,
