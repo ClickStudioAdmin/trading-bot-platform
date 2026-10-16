@@ -89,9 +89,13 @@ const prompt = renderToStaticMarkup(
   <StepUpPrompt formId="reset-account" confirmLabel="Reset Account" danger onCancel={() => {}} />,
 );
 assert.match(prompt, /Authenticator code/);
+assert.match(prompt, /type="hidden"/);
 assert.match(prompt, new RegExp(`name="${STEP_UP_FIELD}"`));
 assert.match(prompt, /form="reset-account"/);
-assert.match(prompt, /required/);
+assert.doesNotMatch(prompt, /required/);
+assert.match(prompt, /inputMode="numeric"/);
+assert.equal((prompt.match(/data-totp-box/g) ?? []).length, 6);
+assert.match(prompt, /Use a recovery code/);
 assert.match(prompt, /Google Authenticator or a recovery code/);
 assert.match(prompt, /type="button"/);
 assert.match(prompt, />Cancel</);

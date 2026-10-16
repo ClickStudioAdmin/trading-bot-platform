@@ -149,6 +149,7 @@ export function Modal({
   }
   return createPortal(
     <div
+      data-modal-overlay=""
       className={`fixed inset-0 flex items-center justify-center bg-canvas/70 p-4 ${
         elevated ? "z-[60]" : "z-50"
       } ${previewClass}`.trim()}

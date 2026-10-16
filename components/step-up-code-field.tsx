@@ -15,7 +15,12 @@ import {
 import { useFormStatus } from "react-dom";
 import { ButtonBusyIcon } from "@/components/pending-submit-button";
 import { Modal } from "@/components/template-modals";
-import { STEP_UP_FIELD, stepUpShouldAsk } from "@/lib/auth/step-up";
+import { TotpCodeBoxes } from "@/components/totp-code-boxes";
+import {
+  STEP_UP_FIELD,
+  STEP_UP_MISSING,
+  stepUpShouldAsk,
+} from "@/lib/auth/step-up";
 
 const TotpStepUpContext = createContext(false);
 
@@ -37,8 +42,6 @@ export function useTotpStepUpEnabled(): boolean {
   return useContext(TotpStepUpContext);
 }
 
-const fieldClass =
-  "mt-1 w-full min-w-0 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 const cancelClass =
   "shrink-0 rounded-control px-1.5 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40";
 const continueClass =
@@ -78,23 +81,30 @@ export function StepUpPrompt({
   hint?: string;
 }) {
   const fieldId = `${formId}-code`;
+  const [missing, setMissing] = useState(false);
+  const shownError = error ?? (missing ? STEP_UP_MISSING : null);
   return (
     <>
-      <label htmlFor={fieldId} className="mt-4 block text-sm text-ink">
-        Authenticator code
-        <input
+      <div className="mt-4">
+        <label htmlFor={fieldId} className="block text-sm text-ink">
+          Authenticator code
+        </label>
+        <TotpCodeBoxes
           id={fieldId}
-          form={formId}
           name={STEP_UP_FIELD}
-          required
-          autoFocus
-          autoComplete="one-time-code"
-          spellCheck={false}
-          className={fieldClass}
-        />
-        <span className="mt-1 block text-hint text-ink-muted">{hint}</span>
-      </label>
-      {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
+          form={formId}
+          disabled={pending}
+          allowRecovery
+          onValueChange={(value) => {
+            if (value.trim()) {
+              setMissing(false);
+            }
+          }}
+        >
+          <span className="mt-1 block text-hint text-ink-muted">{hint}</span>
+        </TotpCodeBoxes>
+      </div>
+      {shownError ? <p className="mt-3 text-sm text-danger">{shownError}</p> : null}
       <div className="mt-5 flex items-center justify-end gap-3">
         <button
           type="button"
@@ -109,6 +119,18 @@ export function StepUpPrompt({
           form={formId}
           disabled={pending}
           className={danger ? dangerClass : continueClass}
+          onClick={(event) => {
+            const formEl = document.getElementById(formId);
+            if (!(formEl instanceof HTMLFormElement)) {
+              return;
+            }
+            const code = String(new FormData(formEl).get(STEP_UP_FIELD) ?? "");
+            if (code.trim()) {
+              return;
+            }
+            event.preventDefault();
+            setMissing(true);
+          }}
         >
           {pending ? (
             <span className="inline-flex items-center gap-2">
