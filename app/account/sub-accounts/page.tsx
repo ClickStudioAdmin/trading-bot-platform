@@ -18,6 +18,8 @@ import {
 } from "@/lib/site-links";
 import { redirect } from "next/navigation";
 
+export const maxDuration = 60;
+
 export const metadata: Metadata = {
   title: "Manage Desks",
   description: "Rename, disable, and delete desks, and manage exchange keys.",
