@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import {
+  DESK_DELETE_BUDGET_MS,
   DESK_DELETE_FAILED,
   DESK_DELETE_TIMED_OUT,
+  continueTimedDeskDelete,
   deleteRowsInBatches,
   deskDeleteErrorMessage,
   deskDeletePastBudget,
@@ -93,6 +95,47 @@ const budgetHit = await deleteRowsInBatches({
 });
 assert.equal(budgetHit, DESK_DELETE_TIMED_OUT);
 assert.equal(budgetDeletes, 0);
+assert.equal(DESK_DELETE_BUDGET_MS < 60_000, true);
+assert.equal(deskDeletePastBudget(1_000, 1_000 + DESK_DELETE_BUDGET_MS), true);
+assert.equal(
+  deskDeletePastBudget(1_000, 1_000 + DESK_DELETE_BUDGET_MS - 1),
+  false,
+);
+
+const calls: string[] = [];
+const finished = await continueTimedDeskDelete(
+  async () => {
+    calls.push("run");
+    return calls.length === 2 ? "done" : DESK_DELETE_TIMED_OUT;
+  },
+  (result) => result === DESK_DELETE_TIMED_OUT,
+  4,
+);
+assert.equal(finished, "done");
+assert.deepEqual(calls, ["run", "run"]);
+
+calls.length = 0;
+const exhausted = await continueTimedDeskDelete(
+  async () => {
+    calls.push("run");
+    return DESK_DELETE_TIMED_OUT;
+  },
+  (result) => result === DESK_DELETE_TIMED_OUT,
+  3,
+);
+assert.equal(exhausted, DESK_DELETE_TIMED_OUT);
+assert.equal(calls.length, 3);
+
+await assert.rejects(
+  continueTimedDeskDelete(
+    async () => {
+      throw new Error("NEXT_REDIRECT");
+    },
+    () => true,
+    3,
+  ),
+  /NEXT_REDIRECT/,
+);
 
 console.log("desk delete checks passed");
 }
