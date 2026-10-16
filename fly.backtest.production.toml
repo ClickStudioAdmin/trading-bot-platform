@@ -1,0 +1,26 @@
+# Long backtests (production). Same image as the desk worker, different process.
+# Secrets match tbp-engine: production Supabase only.
+
+app = "tbp-backtest"
+primary_region = "syd"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  TBP_ENGINE_WORKER = "1"
+  TBP_BACKTEST_WORKER = "1"
+
+[processes]
+  app = "./node_modules/.bin/tsx lib/engine/backtest-worker.ts"
+
+[http_service]
+  internal_port = 8080
+  auto_stop_machines = "off"
+  min_machines_running = 1
+  processes = ["app"]
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+  cpus = 1
