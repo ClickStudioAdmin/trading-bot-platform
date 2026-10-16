@@ -12,12 +12,7 @@ import {
 import { memberDisplayName } from "@/lib/members/sync";
 import { dcaLegStatusesOn } from "@/lib/accounts/desk-list";
 import {
-  DESK_DELETE_BATCH,
-  DESK_DELETE_BUDGET_MS,
-  DESK_DELETE_MAX_BATCHES,
-  DESK_DELETE_TIMED_OUT,
-  deleteRowsInBatches,
-  deskDeletePastBudget,
+  drainDeskDeleteChunks,
   deskDeleteErrorMessage,
 } from "@/lib/accounts/desk-delete";
 import { countArmedRules } from "@/lib/accounts/overview";
@@ -533,230 +528,22 @@ export async function teardownTradingAccountsById(
   return { error: null };
 }
 
-const DESK_DELETE_TABLES = [
-  "futures_command_receipts",
-  "futures_working_orders",
-  "futures_orders",
-  "futures_positions",
-  "futures_automation_rules",
-  "dca_playbooks",
-  "futures_webhooks",
-  "paper_orders",
-  "paper_carries",
-  "paper_rules",
-] as const;
-
-async function deleteAccountRows(
-  supabase: SupabaseClient,
-  table: (typeof DESK_DELETE_TABLES)[number],
-  userId: string,
-  accountId: string,
-  startedAt: number,
-): Promise<string | null> {
-  return deleteRowsInBatches({
-    batchSize: DESK_DELETE_BATCH,
-    maxBatches: DESK_DELETE_MAX_BATCHES,
-    startedAt,
-    budgetMs: DESK_DELETE_BUDGET_MS,
-    selectIds: async (limit) => {
-      const selected = await supabase
-        .from(table)
-        .select("id")
-        .eq("account_id", accountId)
-        .eq("user_id", userId)
-        .limit(limit);
-      if (selected.error) {
-        return { ids: [], error: selected.error.message };
-      }
-      const ids = (selected.data ?? []).map(
-        (row) => (row as { id: string | number }).id,
-      );
-      return { ids, error: null };
-    },
-    deleteIds: async (ids) => {
-      const removed = await supabase.from(table).delete().in("id", ids);
-      return { error: removed.error?.message ?? null };
-    },
-  });
-}
-
-async function deleteCopyReceipts(
-  supabase: SupabaseClient,
-  accountId: string,
-  startedAt: number,
-): Promise<string | null> {
-  return deleteRowsInBatches({
-    batchSize: DESK_DELETE_BATCH,
-    maxBatches: DESK_DELETE_MAX_BATCHES,
-    startedAt,
-    budgetMs: DESK_DELETE_BUDGET_MS,
-    selectIds: async (limit) => {
-      const selected = await supabase
-        .from("desk_copy_receipts")
-        .select("id")
-        .eq("follower_account_id", accountId)
-        .limit(limit);
-      if (selected.error) {
-        return { ids: [], error: selected.error.message };
-      }
-      const ids = (selected.data ?? []).map(
-        (row) => (row as { id: string }).id,
-      );
-      return { ids, error: null };
-    },
-    deleteIds: async (ids) => {
-      const removed = await supabase
-        .from("desk_copy_receipts")
-        .delete()
-        .in("id", ids);
-      return { error: removed.error?.message ?? null };
-    },
-  });
-}
-
-async function deleteCopyFavorites(
-  supabase: SupabaseClient,
-  accountId: string,
-  startedAt: number,
-): Promise<string | null> {
-  return deleteRowsInBatches({
-    batchSize: DESK_DELETE_BATCH,
-    maxBatches: DESK_DELETE_MAX_BATCHES,
-    startedAt,
-    budgetMs: DESK_DELETE_BUDGET_MS,
-    selectIds: async (limit) => {
-      const selected = await supabase
-        .from("desk_copy_favorites")
-        .select("user_id")
-        .eq("account_id", accountId)
-        .limit(limit);
-      if (selected.error) {
-        return { ids: [], error: selected.error.message };
-      }
-      const ids = (selected.data ?? []).map(
-        (row) => (row as { user_id: string }).user_id,
-      );
-      return { ids, error: null };
-    },
-    deleteIds: async (ids) => {
-      const removed = await supabase
-        .from("desk_copy_favorites")
-        .delete()
-        .eq("account_id", accountId)
-        .in("user_id", ids);
-      return { error: removed.error?.message ?? null };
-    },
-  });
-}
-
-/** The desk row sets these to null in the same statement. Clear them first. */
-async function detachEventLogs(
-  supabase: SupabaseClient,
-  userId: string,
-  accountId: string,
-  startedAt: number,
-): Promise<string | null> {
-  return deleteRowsInBatches({
-    batchSize: DESK_DELETE_BATCH,
-    maxBatches: DESK_DELETE_MAX_BATCHES,
-    startedAt,
-    budgetMs: DESK_DELETE_BUDGET_MS,
-    selectIds: async (limit) => {
-      const selected = await supabase
-        .from("event_logs")
-        .select("id")
-        .eq("account_id", accountId)
-        .eq("user_id", userId)
-        .limit(limit);
-      if (selected.error) {
-        return { ids: [], error: selected.error.message };
-      }
-      const ids = (selected.data ?? []).map(
-        (row) => (row as { id: number }).id,
-      );
-      return { ids, error: null };
-    },
-    deleteIds: async (ids) => {
-      const updated = await supabase
-        .from("event_logs")
-        .update({ account_id: null })
-        .in("id", ids);
-      return { error: updated.error?.message ?? null };
-    },
-  });
-}
-
 async function teardownTradingAccount(
   supabase: SupabaseClient,
   userId: string,
   accountId: string,
 ): Promise<{ error: string | null }> {
-  const startedAt = Date.now();
-  const { error: unbindError } = await supabase
-    .from("paper_engine_settings")
-    .update({ exchange_connection_id: null, updated_at: new Date().toISOString() })
-    .eq("account_id", accountId)
-    .eq("user_id", userId);
-  if (unbindError) {
-    return { error: deskDeleteErrorMessage(unbindError.message) };
-  }
-  const { error: futuresUnbindError } = await supabase
-    .from("strategy_settings")
-    .update({ exchange_connection_id: null, updated_at: new Date().toISOString() })
-    .eq("account_id", accountId)
-    .eq("user_id", userId);
-  if (futuresUnbindError) {
-    return { error: deskDeleteErrorMessage(futuresUnbindError.message) };
-  }
-  for (const table of DESK_DELETE_TABLES) {
-    const removed = await deleteAccountRows(
-      supabase,
-      table,
-      userId,
-      accountId,
-      startedAt,
-    );
-    if (removed) {
-      return { error: removed };
+  const error = await drainDeskDeleteChunks(async () => {
+    const { data, error: rpcError } = await supabase.rpc("delete_desk_chunk", {
+      p_user_id: userId,
+      p_account_id: accountId,
+    });
+    if (rpcError) {
+      return deskDeleteErrorMessage(rpcError.message);
     }
-  }
-  const receipts = await deleteCopyReceipts(supabase, accountId, startedAt);
-  if (receipts) {
-    return { error: receipts };
-  }
-  const favorites = await deleteCopyFavorites(supabase, accountId, startedAt);
-  if (favorites) {
-    return { error: favorites };
-  }
-  const logs = await detachEventLogs(supabase, userId, accountId, startedAt);
-  if (logs) {
-    return { error: logs };
-  }
-  if (deskDeletePastBudget(startedAt)) {
-    return { error: DESK_DELETE_TIMED_OUT };
-  }
-  const { error: strategySettingsError } = await supabase
-    .from("strategy_settings")
-    .delete()
-    .eq("account_id", accountId)
-    .eq("user_id", userId);
-  if (strategySettingsError) {
-    return { error: deskDeleteErrorMessage(strategySettingsError.message) };
-  }
-  const { error: settingsError } = await supabase
-    .from("paper_engine_settings")
-    .delete()
-    .eq("account_id", accountId)
-    .eq("user_id", userId);
-  if (settingsError) {
-    return { error: deskDeleteErrorMessage(settingsError.message) };
-  }
-  const { error } = await supabase
-    .from("trading_accounts")
-    .delete()
-    .eq("id", accountId)
-    .eq("user_id", userId);
-  return { error: error ? deskDeleteErrorMessage(error.message) : null };
+    return String(data ?? "");
+  });
+  return { error };
 }
 
 export async function renameTradingAccountRow(
