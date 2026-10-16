@@ -39,7 +39,7 @@ export function backtestClaimCanRequeue(claimCount: number): boolean {
 export function backtestQueuedNotice(error: string | null): string {
   const reason = error?.trim() ?? "";
   if (!reason) {
-    return "Queued. Starting this run now.";
+    return "Queued. Starting soon....";
   }
   return `Waiting to retry. ${reason}`;
 }
