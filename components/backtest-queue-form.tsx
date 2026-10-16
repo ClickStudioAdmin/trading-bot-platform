@@ -983,7 +983,9 @@ export function BacktestQueueForm({
             </p>
           ) : null}
           {historyNotice ? (
-            <p className="mt-2 text-sm text-ink-muted">{historyNotice}</p>
+            <p className="mt-2 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+              {historyNotice}
+            </p>
           ) : null}
           {historyRangeError ? (
             <p className="mt-2 text-sm text-danger">{historyRangeError}</p>
