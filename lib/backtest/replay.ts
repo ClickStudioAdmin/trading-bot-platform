@@ -227,6 +227,7 @@ export async function replayPerpsPriceCross(input: {
   feeRate: number;
   startingUsdt: number;
   leverage?: number;
+  onBar?: (barIndex: number) => void;
 }): Promise<{ orders: SimulatedOrder[]; stats: BacktestStats; events: ReplayEvent[] }> {
   const allowed = canBacktestPerpsRecipe(input.recipe);
   if (!allowed.ok) {
@@ -354,6 +355,7 @@ export async function replayPerpsPriceCross(input: {
   for (const bar of input.bars) {
     barIndex += 1;
     await yieldBacktestReplay(barIndex);
+    input.onBar?.(barIndex);
     const price = bar.close;
     if (!(price > 0)) {
       continue;
@@ -600,6 +602,7 @@ async function replayPerpsBoth(input: {
   feeRate: number;
   startingUsdt: number;
   leverage?: number;
+  onBar?: (barIndex: number) => void;
 }): Promise<{ orders: SimulatedOrder[]; stats: BacktestStats; events: ReplayEvent[] }> {
   const short = input.recipe.shortEntry;
   if (!short) {
@@ -775,6 +778,7 @@ async function replayPerpsBoth(input: {
   for (const bar of input.bars) {
     barIndex += 1;
     await yieldBacktestReplay(barIndex);
+    input.onBar?.(barIndex);
     const price = bar.close;
     if (!(price > 0) || liquidated) {
       if (liquidated) {

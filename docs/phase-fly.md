@@ -161,7 +161,7 @@ Once **tbp-engine-dev** appears in the Fly dashboard, open it (do not Launch ano
 
 If those four do not match Vercel Development, the worker will talk to the wrong database or fail to decrypt keys. Do not paste production values here.
 
-**Backtest machine.** The same workflow creates **tbp-backtest-dev**. Copy `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `EXCHANGE_CREDENTIALS_KEY` from Vercel Development onto it. Leave `BILLING_CREDENTIALS_KEY` on `tbp-engine-dev`. Long backtests run on the backtest app, one at a time. The desk app does not drain them. A short run (≤3000 bars) can still finish on the desk cycle when that cycle has time left. Until those three secrets exist, the backtest deploy job fails and long runs stay queued.
+**Backtest machine.** The same workflow creates **tbp-backtest-dev** as one `performance-1x` machine with 8 GB of memory. That size is for a 10-year 15-minute window and a bot with many conditions. Copy `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `EXCHANGE_CREDENTIALS_KEY` from Vercel Development onto it. Leave `BILLING_CREDENTIALS_KEY` on `tbp-engine-dev`. Long backtests run on the backtest app, one at a time. The desk app does not drain them and stays on its smaller machine. A short run (≤3000 bars) can still finish on the desk cycle when that cycle has time left. Until those three secrets exist, the backtest deploy job fails and long runs stay queued.
 
 Re-run **Deploy Engine**. You want the engine and the backtest jobs green:
 

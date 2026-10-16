@@ -2,14 +2,10 @@ import assert from "node:assert/strict";
 import {
   BACKTEST_INTERRUPTED_ERROR,
   BACKTEST_MAX_CLAIM_ATTEMPTS,
-  BACKTEST_RESULT_BYTE_LIMIT,
-  BACKTEST_TOO_LARGE_ERROR,
   backtestClaimBudgetExceeded,
   backtestClaimCanRequeue,
   backtestErrorIsTransient,
   backtestQueuedNotice,
-  backtestResultExceedsStoreLimit,
-  backtestStoredPayloadBytes,
   backtestTapeCoverageError,
   formatBacktestUtcDate,
 } from "./guard";
@@ -25,7 +21,6 @@ assert.equal(
   BACKTEST_INTERRUPTED_ERROR,
   "Stopped after 3 interrupted attempts.",
 );
-assert.equal(BACKTEST_TOO_LARGE_ERROR, "This run is too large to store.");
 
 assert.equal(backtestQueuedNotice(null), "Queued. Starting this run now.");
 assert.equal(backtestQueuedNotice("  "), "Queued. Starting this run now.");
@@ -78,12 +73,6 @@ assert.equal(
   backtestErrorIsTransient(new Error(BACKTEST_INTERRUPTED_ERROR)),
   false,
 );
-
-const small = backtestStoredPayloadBytes([{ id: 1 }], []);
-assert.ok(small > 0);
-assert.ok(small < BACKTEST_RESULT_BYTE_LIMIT);
-assert.equal(backtestResultExceedsStoreLimit([{ id: 1 }], []), false);
-assert.equal(BACKTEST_RESULT_BYTE_LIMIT, 8 * 1024 * 1024);
 
 const hour = 60 * 60 * 1000;
 const fromMs = Date.UTC(2025, 9, 16);
