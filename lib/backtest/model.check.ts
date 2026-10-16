@@ -826,6 +826,9 @@ const seeded = backtestQueueSeedFromRun({
   parentRunId: null,
   comparableSymbols: ["SOLUSDT"],
   name: "October ETH",
+  progressDone: null,
+  progressTotal: null,
+  progressPhase: null,
 });
 assert.equal(seeded.fromDate, "2021-01-01");
 assert.equal(seeded.toDate, "2026-01-01");

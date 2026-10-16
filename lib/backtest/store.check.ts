@@ -45,6 +45,17 @@ assert.deepEqual(hyperliquid?.comparableSymbols, ["SOL"]);
 const bybit = parseBacktestRunRow(dcaRunRow("ETHUSDT", "bybit"));
 assert.equal(bybit?.symbol, "ETHUSDT");
 assert.deepEqual(bybit?.comparableSymbols, ["SOLUSDT"]);
+assert.equal(bybit?.progressDone, null);
+assert.equal(bybit?.progressPhase, null);
+const withProgress = parseBacktestRunRow({
+  ...dcaRunRow("ETHUSDT", "bybit"),
+  progress_done: 12000,
+  progress_total: 35136,
+  progress_phase: "candles",
+});
+assert.equal(withProgress?.progressDone, 12000);
+assert.equal(withProgress?.progressTotal, 35136);
+assert.equal(withProgress?.progressPhase, "candles");
 
 const bybitRecipe = bybit?.recipe;
 assert.ok(bybitRecipe);
