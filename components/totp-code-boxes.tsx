@@ -20,6 +20,7 @@ export function TotpCodeBoxes({
   autoFocus = true,
   disabled = false,
   allowRecovery = false,
+  onValueChange,
   children,
 }: {
   id: string;
@@ -28,6 +29,7 @@ export function TotpCodeBoxes({
   autoFocus?: boolean;
   disabled?: boolean;
   allowRecovery?: boolean;
+  onValueChange?: (value: string) => void;
   children?: ReactNode;
 }) {
   const { pending } = useFormStatus();
@@ -40,6 +42,12 @@ export function TotpCodeBoxes({
   const submittedCode = useRef<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const activeIndex = Math.min(code.length, TOTP_DIGIT_COUNT - 1);
+  const external = Boolean(form);
+  const submittedValue = recoveryMode ? recoveryValue : code;
+
+  function publish(next: string) {
+    onValueChange?.(next);
+  }
 
   useEffect(() => {
     if (recoveryMode || locked || !totpDigitsComplete(code)) {
@@ -70,18 +78,29 @@ export function TotpCodeBoxes({
     if (recoveryMode) {
       setRecoveryValue("");
       setRecoveryMode(false);
+      publish("");
       return;
     }
     setCode("");
     setRecoveryMode(true);
+    publish("");
   }
 
   return (
     <div ref={rootRef}>
+      {external ? (
+        <input
+          type="hidden"
+          name={name}
+          form={form}
+          value={submittedValue}
+          readOnly
+        />
+      ) : null}
       {recoveryMode ? (
         <input
           id={id}
-          name={name}
+          name={external ? undefined : name}
           form={form}
           value={recoveryValue}
           required
@@ -93,7 +112,11 @@ export function TotpCodeBoxes({
           disabled={locked}
           placeholder="xxxx-xxxx"
           className={recoveryClass}
-          onChange={(event) => setRecoveryValue(event.target.value)}
+          onChange={(event) => {
+            const next = event.target.value;
+            setRecoveryValue(next);
+            publish(next);
+          }}
         />
       ) : (
         <div className="relative mt-1 grid w-full max-w-[19.5rem] grid-cols-6 gap-2">
@@ -114,10 +137,9 @@ export function TotpCodeBoxes({
           <input
             ref={inputRef}
             id={id}
-            name={name}
-            form={form}
+            name={external ? undefined : name}
             value={code}
-            required
+            required={!external}
             autoFocus={autoFocus}
             inputMode="numeric"
             autoComplete="one-time-code"
@@ -129,7 +151,11 @@ export function TotpCodeBoxes({
             className="absolute inset-0 size-full cursor-text opacity-0"
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
-            onChange={(event) => setCode(clampTotpCode(event.target.value))}
+            onChange={(event) => {
+              const next = clampTotpCode(event.target.value);
+              setCode(next);
+              publish(next);
+            }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();
