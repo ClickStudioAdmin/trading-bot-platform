@@ -143,7 +143,7 @@ export function ExchangeConnectForm({
           : "Use a trade-only key with no withdrawal permission. Check the connection, then save. The secret is encrypted and is not shown again. Live desks bind a key in Desk Settings. The same key on two desks shares venue margin."}
       </p>
       {check?.ok ? (
-        <p className="text-sm text-success">Connection checks out.</p>
+        <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Connection checks out.</p>
       ) : null}
       {check && !check.ok ? (
         <p className="text-sm text-danger">{check.error}</p>

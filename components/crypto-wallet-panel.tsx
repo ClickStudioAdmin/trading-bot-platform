@@ -233,7 +233,11 @@ function CheckDepositButton({ checkout }: { checkout?: boolean }) {
       ) : null}
       {live.notice ? (
         <p
-          className={`text-sm ${live.noticeOk ? "text-success" : "text-ink-muted"}`}
+          className={
+            live.noticeOk
+              ? "rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success"
+              : "text-sm text-ink-muted"
+          }
           role="status"
         >
           {live.notice}
@@ -298,7 +302,7 @@ export function LiveAccountBalanceSummary({
         />
       </p>
       {live.notice && live.noticeOk ? (
-        <p className="mt-3 text-sm text-success" role="status">
+        <p className="mt-3 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success" role="status">
           {live.notice}
         </p>
       ) : null}

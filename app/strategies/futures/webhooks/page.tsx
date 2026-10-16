@@ -165,18 +165,18 @@ export default async function FuturesWebhooksPage({
         </p>
       ) : null}
       {created ? (
-        <p className="mt-4 text-sm text-success">Webhook created.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Webhook created.</p>
       ) : null}
       {renamed ? (
-        <p className="mt-4 text-sm text-success">Webhook renamed.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Webhook renamed.</p>
       ) : null}
       {rotated ? (
-        <p className="mt-4 text-sm text-success">
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           URL rotated. The previous URL no longer works.
         </p>
       ) : null}
       {deleted ? (
-        <p className="mt-4 text-sm text-success">Webhook deleted.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Webhook deleted.</p>
       ) : null}
       {session ? (
         <div className="space-y-4">

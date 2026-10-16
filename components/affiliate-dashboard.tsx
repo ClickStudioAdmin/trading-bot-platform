@@ -340,37 +340,37 @@ export function AffiliateDashboard({
         </TabLink>
       </nav>
       {saved === "withdraw" ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           Withdraw requested. It will go out on the next payout list.
         </p>
       ) : null}
       {saved === "payout-settings" ? (
-        <p className="mt-6 text-sm text-success">Payout settings saved.</p>
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Payout settings saved.</p>
       ) : null}
       {saved === "alias" ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           Affiliate alias saved. Your network shows this name.
         </p>
       ) : null}
       {saved === "joined" ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           You are in. Share your code to start attributing referrals.
         </p>
       ) : null}
       {saved === "campaign" ? (
-        <p className="mt-6 text-sm text-success">Campaign created.</p>
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Campaign created.</p>
       ) : null}
       {saved === "link" ? (
-        <p className="mt-6 text-sm text-success">URL created.</p>
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">URL created.</p>
       ) : null}
       {saved === "campaign-archived" ? (
-        <p className="mt-6 text-sm text-success">Campaign archived.</p>
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Campaign archived.</p>
       ) : null}
       {saved === "link-archived" ? (
-        <p className="mt-6 text-sm text-success">URL archived.</p>
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">URL archived.</p>
       ) : null}
       {saved === "link-renamed" ? (
-        <p className="mt-6 text-sm text-success">URL renamed.</p>
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">URL renamed.</p>
       ) : null}
       {error ? (
         <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

@@ -85,28 +85,28 @@ export function FuturesFlash({
   }
   if (webhookArm) {
     return (
-      <p className="text-sm text-success">
+      <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         Signal accepted. If an automation uses that webhook, it just fired.
       </p>
     );
   }
   if (liveOpened) {
     return (
-      <p className="text-sm text-success">
+      <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         Futures opened on the connected exchange.
       </p>
     );
   }
   if (liveAdded) {
     return (
-      <p className="text-sm text-success">
+      <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         Size added on the connected exchange.
       </p>
     );
   }
   if (livePlaybookClosed) {
     return (
-      <p className="text-sm text-success">
+      <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         Bot closed on the connected exchange. Positions flattened and the
         bot is idle.
       </p>
@@ -114,7 +114,7 @@ export function FuturesFlash({
   }
   if (livePositionClosed) {
     return (
-      <p className="text-sm text-success">
+      <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         Position closed on the connected exchange. Bot orders cancelled.
         The bot is still armed.
       </p>
@@ -122,7 +122,7 @@ export function FuturesFlash({
   }
   if (liveClosedAndCancelled) {
     return (
-      <p className="text-sm text-success">
+      <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         Working orders cancelled and open positions closed on the connected
         exchange.
       </p>
@@ -130,96 +130,96 @@ export function FuturesFlash({
   }
   if (liveClosedAll) {
     return (
-      <p className="text-sm text-success">
+      <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         Open positions closed on the connected exchange.
       </p>
     );
   }
   if (liveClosed) {
     return (
-      <p className="text-sm text-success">
+      <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         Close filled on the connected exchange.
       </p>
     );
   }
   if (liveWorking) {
     return (
-      <p className="text-sm text-success">
+      <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         Limit working on the connected exchange.
       </p>
     );
   }
   if (liveAmended) {
     return (
-      <p className="text-sm text-success">
+      <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         Limit updated on the connected exchange.
       </p>
     );
   }
   if (liveTpsl) {
     return (
-      <p className="text-sm text-success">
+      <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         TP/SL updated on the connected exchange.
       </p>
     );
   }
   if (liveTrailing) {
     return (
-      <p className="text-sm text-success">
+      <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         Trailing stop updated on the connected exchange.
       </p>
     );
   }
   if (opened) {
-    return <p className="text-sm text-success">Paper futures opened.</p>;
+    return <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Paper futures opened.</p>;
   }
   if (added) {
-    return <p className="text-sm text-success">Paper size added.</p>;
+    return <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Paper size added.</p>;
   }
   if (playbookClosed) {
     return (
-      <p className="text-sm text-success">
+      <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         Bot closed. Positions flattened and the bot is idle.
       </p>
     );
   }
   if (positionClosed) {
     return (
-      <p className="text-sm text-success">
+      <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         Position closed. Bot orders cancelled. The bot is still armed.
       </p>
     );
   }
   if (closedAndCancelled) {
     return (
-      <p className="text-sm text-success">
+      <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         Working orders cancelled and paper positions closed.
       </p>
     );
   }
   if (closedAll) {
-    return <p className="text-sm text-success">Open positions closed.</p>;
+    return <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Open positions closed.</p>;
   }
   if (cancelledAll) {
-    return <p className="text-sm text-success">Working orders cancelled.</p>;
+    return <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Working orders cancelled.</p>;
   }
   if (closed) {
-    return <p className="text-sm text-success">Paper close filled.</p>;
+    return <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Paper close filled.</p>;
   }
   if (working) {
-    return <p className="text-sm text-success">Paper limit is working.</p>;
+    return <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Paper limit is working.</p>;
   }
   if (cancelled) {
-    return <p className="text-sm text-success">Order cancelled.</p>;
+    return <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Order cancelled.</p>;
   }
   if (amended) {
-    return <p className="text-sm text-success">Paper limit updated.</p>;
+    return <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Paper limit updated.</p>;
   }
   if (tpsl) {
-    return <p className="text-sm text-success">TP/SL updated.</p>;
+    return <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">TP/SL updated.</p>;
   }
   if (trailing) {
-    return <p className="text-sm text-success">Trailing stop updated.</p>;
+    return <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Trailing stop updated.</p>;
   }
   return null;
 }

@@ -46,7 +46,7 @@ export default async function AdminAffiliatesPage({
     <div>
       <PageHeading overline="Admin" title="Affiliates" />
       {saved ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           {saved === "files"
             ? `Generated ${fileCount || "the"} payout list${fileCount === "1" ? "" : "s"}.`
             : saved === "rejected"

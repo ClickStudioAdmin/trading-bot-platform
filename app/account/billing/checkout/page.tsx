@@ -81,7 +81,7 @@ export default async function AccountCheckoutPage({
         </p>
       ) : null}
       {deposited ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           {creditedDepositsNotice(Number(deposited))}
         </p>
       ) : null}
