@@ -147,7 +147,9 @@ jobs:
       - name: Deploy
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: flyctl deploy --config fly.backtest.development.toml --remote-only
+        run: |
+          flyctl deploy --config fly.backtest.development.toml --remote-only --ha=false
+          flyctl scale count 1 --app tbp-backtest-dev --yes
 
   deploy-production:
     name: Deploy production engine
@@ -266,4 +268,6 @@ jobs:
       - name: Deploy
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: flyctl deploy --config fly.backtest.production.toml --remote-only
+        run: |
+          flyctl deploy --config fly.backtest.production.toml --remote-only --ha=false
+          flyctl scale count 1 --app tbp-backtest --yes

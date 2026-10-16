@@ -116,6 +116,7 @@ export async function replayDcaPlaybook(input: {
   startingUsdt: number;
   leverage?: number;
   venue?: string;
+  onBar?: (barIndex: number) => void;
 }): Promise<{ orders: SimulatedOrder[]; stats: BacktestStats; events: ReplayEvent[] }> {
   const allowed = canBacktestDcaRecipe(input.recipe);
   if (!allowed.ok) {
@@ -503,6 +504,7 @@ export async function replayDcaPlaybook(input: {
   for (const bar of input.bars) {
     barIndex += 1;
     await yieldBacktestReplay(barIndex);
+    input.onBar?.(barIndex);
     const price = bar.close;
     if (!(price > 0)) {
       continue;

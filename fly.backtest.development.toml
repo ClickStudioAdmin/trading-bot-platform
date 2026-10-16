@@ -12,6 +12,8 @@ primary_region = "syd"
 [env]
   TBP_ENGINE_WORKER = "1"
   TBP_BACKTEST_WORKER = "1"
+  # Leave headroom for native buffers on the 8 GB machine.
+  NODE_OPTIONS = "--max-old-space-size=6144"
 
 [processes]
   app = "./node_modules/.bin/tsx lib/engine/backtest-worker.ts"
@@ -23,6 +25,6 @@ primary_region = "syd"
   processes = ["app"]
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
+  size = "performance-1x"
+  memory = "8192mb"
   cpus = 1

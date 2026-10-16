@@ -7,13 +7,8 @@ export const BACKTEST_MAX_CLAIM_ATTEMPTS = 3;
 /** Pause before a queued row can be claimed again after a venue blip. */
 export const BACKTEST_RETRY_DELAY_MS = 60_000;
 
-/** Orders plus replay events. Larger results are failed instead of written. */
-export const BACKTEST_RESULT_BYTE_LIMIT = 8 * 1024 * 1024;
-
 export const BACKTEST_INTERRUPTED_ERROR =
   "Stopped after 3 interrupted attempts.";
-
-export const BACKTEST_TOO_LARGE_ERROR = "This run is too large to store.";
 
 const TAPE_COVERAGE_MIN_PERCENT = 98;
 
@@ -47,25 +42,6 @@ export function backtestQueuedNotice(error: string | null): string {
     return "Queued. Starting this run now.";
   }
   return `Waiting to retry. ${reason}`;
-}
-
-export function backtestStoredPayloadBytes(
-  orders: unknown,
-  events: unknown,
-): number {
-  return Buffer.byteLength(
-    JSON.stringify({ orders: orders ?? [], events: events ?? [] }),
-    "utf8",
-  );
-}
-
-export function backtestResultExceedsStoreLimit(
-  orders: unknown,
-  events: unknown,
-): boolean {
-  return (
-    backtestStoredPayloadBytes(orders, events) > BACKTEST_RESULT_BYTE_LIMIT
-  );
 }
 
 /**
