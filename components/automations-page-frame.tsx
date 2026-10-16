@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AutomationsEditHeading } from "@/components/automations-saved-edit";
 import { AutomationsHashEdit } from "@/components/automations-hash-edit";
 import { DeskBackLink } from "@/components/desk-back-link";
 import { QuotaRejectNotices } from "@/components/desk-type-reject";
@@ -21,9 +22,7 @@ export function AutomationsPageFrame({
       {editTitle ? (
         <div className="mb-6 flex min-w-0 items-center gap-3">
           <DeskBackLink href={listHref} />
-          <h2 className="min-w-0 text-lg font-semibold tracking-tight">
-            {editTitle}
-          </h2>
+          <AutomationsEditHeading title={editTitle} />
         </div>
       ) : null}
       {children}
