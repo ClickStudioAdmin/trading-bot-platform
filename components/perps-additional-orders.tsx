@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AppSelect } from "@/components/app-select";
 import {
   IndicatorStartFields,
@@ -11,11 +11,13 @@ import {
   BotFormGroup,
   OrderTypePill,
 } from "@/components/bot-form-chrome";
+import { useDeskFormStatus } from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { DcaIndicatorKind, DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import {
   blankPerpsAddConditionDraft,
   perpsAddConditionDraftForType,
+  type PerpsAddConditionDraft,
   type PerpsAddConditionType,
 } from "@/lib/futures/perps-add-condition";
 
@@ -39,6 +41,7 @@ export function PerpsAdditionalOrders({
   fieldsClass,
   side = "long",
   webhooks = [],
+  onConditionDraftChange,
 }: {
   conditionType: PerpsAddConditionType;
   onConditionType: (next: PerpsAddConditionType) => void;
@@ -57,31 +60,34 @@ export function PerpsAdditionalOrders({
   fieldsClass?: string;
   side?: "long" | "short";
   webhooks?: readonly { id: string; name: string }[];
+  onConditionDraftChange?: (next: PerpsAddConditionDraft) => void;
 }) {
+  const { markDirty } = useDeskFormStatus();
   const [draft, setDraft] = useState(() => blankPerpsAddConditionDraft(side));
+  const draftRef = useRef(draft);
   const conditionGrid = fieldsClass ?? gridClass;
+
+  function publishDraft(next: PerpsAddConditionDraft) {
+    draftRef.current = next;
+    setDraft(next);
+    onConditionDraftChange?.(next);
+  }
 
   function chooseType(next: PerpsAddConditionType) {
     onConditionType(next);
-    setDraft((current) => perpsAddConditionDraftForType(next, side, current));
+    publishDraft(perpsAddConditionDraftForType(next, side, draftRef.current));
   }
 
-  function patchDraft(partial: Partial<typeof draft>) {
-    setDraft((current) => ({ ...current, ...partial }));
+  function patchDraft(partial: Partial<PerpsAddConditionDraft>) {
+    publishDraft({ ...draftRef.current, ...partial });
   }
 
   return (
-    <div
-      className="space-y-3"
-      onChange={(event) => {
-        event.stopPropagation();
-      }}
-    >
+    <div className="space-y-3">
       <BotFormGroup>
         <div className={gridClass}>
           <BotField label="Condition Type" className="whitespace-nowrap">
             <AppSelect
-              trackDirty={false}
               value={conditionType}
               onChange={(event) => {
                 const next = event.target.value;
@@ -156,7 +162,6 @@ export function PerpsAdditionalOrders({
           <div className={conditionGrid}>
             <BotField label="Price source" required>
               <AppSelect
-                trackDirty={false}
                 value={draft.triggerBy}
                 onChange={(event) =>
                   patchDraft({
@@ -176,7 +181,6 @@ export function PerpsAdditionalOrders({
             </BotField>
             <BotField label="Compare" required>
               <AppSelect
-                trackDirty={false}
                 value={draft.triggerCompare}
                 onChange={(event) =>
                   patchDraft({
@@ -205,7 +209,6 @@ export function PerpsAdditionalOrders({
           <div className={conditionGrid}>
             <BotField label="Webhook" className="lg:col-span-2" required>
               <AppSelect
-                trackDirty={false}
                 value={draft.webhookId}
                 onChange={(event) =>
                   patchDraft({ webhookId: event.target.value })
@@ -246,7 +249,6 @@ export function PerpsAdditionalOrders({
           </BotField>
           <BotField label="Unit">
             <AppSelect
-              trackDirty={false}
               value={sizeUnit}
               onChange={(event) => {
                 onSizeUnit(event.target.value === "qty" ? "qty" : "usdt");
@@ -259,7 +261,13 @@ export function PerpsAdditionalOrders({
             </AppSelect>
           </BotField>
           <BotField label="Order">
-            <OrderTypePill value={orderType} onChange={onOrderType} />
+            <OrderTypePill
+              value={orderType}
+              onChange={(next) => {
+                onOrderType(next);
+                markDirty();
+              }}
+            />
           </BotField>
           {orderType === "limit" ? (
             <BotField label="Limit price">

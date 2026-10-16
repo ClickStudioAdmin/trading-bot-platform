@@ -36,6 +36,10 @@ import {
   type PerpsAddConditionType,
 } from "@/components/perps-additional-orders";
 import {
+  blankPerpsAddConditionDraft,
+  type PerpsAddConditionDraft,
+} from "@/lib/futures/perps-add-condition";
+import {
   type ExitStackRow,
 } from "@/components/exit-condition-stack";
 import {
@@ -762,6 +766,9 @@ export function ThemeBotFormDraft() {
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPrice, setLimitPrice] = useState("");
   const [addConditionType, setAddConditionType] = useState<PerpsAddConditionType>("");
+  const [addConditionDraft, setAddConditionDraft] = useState<PerpsAddConditionDraft>(
+    () => blankPerpsAddConditionDraft("long"),
+  );
   const [addSize, setAddSize] = useState("");
   const [addSizeUnit, setAddSizeUnit] = useState<"qty" | "usdt">("usdt");
   const [addOrderType, setAddOrderType] = useState<"market" | "limit">("market");
@@ -930,6 +937,12 @@ export function ThemeBotFormDraft() {
     startKind,
     orderType,
     limitPrice,
+    addConditionType,
+    addConditionDraft,
+    addSize,
+    addSizeUnit,
+    addOrderType,
+    addLimitPrice,
     webhookId,
     priceSource,
     priceWhen,
@@ -2848,6 +2861,7 @@ export function ThemeBotFormDraft() {
               fieldsClass={rowClass5}
               side={perpsDirection === "short" ? "short" : "long"}
               webhooks={themeWebhooks}
+              onConditionDraftChange={setAddConditionDraft}
             />
           </BotFormStep>
         ) : null}
