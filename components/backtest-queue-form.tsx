@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { flushSync, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AppMultiSelect, AppSelect, type AppSelectOption } from "@/components/app-select";
 import { TemplateParametersButton } from "@/components/template-parameters-tip";
@@ -9,6 +10,7 @@ import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { ClickGateNotice, formSubmitAnchor, useClickGate } from "@/components/click-gate-notice";
+import { IconLoader } from "@/components/icons";
 import { FreeTrialBadge } from "@/components/plan-trial-hint";
 import {
   ResearchNoticeBanner,
@@ -124,6 +126,34 @@ export type BacktestQueueSeed = {
   venueEnvironment: string | null;
   comparables: string[];
 };
+
+function QueueSubmitButton({
+  disabled,
+  idle,
+  pendingLabel,
+  busy,
+}: {
+  disabled: boolean;
+  idle: string;
+  pendingLabel: string;
+  busy: boolean;
+}) {
+  const { pending } = useFormStatus();
+  const show = pending || busy;
+  return (
+    <button
+      type="submit"
+      disabled={disabled || show}
+      aria-busy={show}
+      className="inline-flex items-center gap-2 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-70"
+    >
+      {show ? (
+        <IconLoader className="size-3.5 shrink-0 animate-spin" aria-hidden />
+      ) : null}
+      {show ? pendingLabel : idle}
+    </button>
+  );
+}
 
 function VariantShell({
   variant,
@@ -575,17 +605,14 @@ export function BacktestQueueForm({
     !variant && queueGate && queueInput
       ? newBacktestPageNotices(queueGate, queueInput)
       : [];
-  const submitLabel = pending
+  const idleLabel = variant
     ? preview.inline
-      ? "Running…"
-      : "Queuing…"
-    : variant
-      ? preview.inline
-        ? "Run variant"
-        : "Queue variant"
-      : preview.inline
-        ? "Run backtest"
-        : "Queue backtest";
+      ? "Run variant"
+      : "Queue variant"
+    : preview.inline
+      ? "Run backtest"
+      : "Queue backtest";
+  const submitLabel = pending ? "Queuing…" : idleLabel;
 
   const pageNoticeBlock =
     pageNotices.length > 0 ? (
@@ -619,8 +646,12 @@ export function BacktestQueueForm({
               type="submit"
               form="backtest-variant-queue"
               disabled={submitDisabled}
-              className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
+              aria-busy={pending}
+              className="inline-flex items-center gap-2 rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
             >
+              {pending ? (
+                <IconLoader className="size-3.5 shrink-0 animate-spin" aria-hidden />
+              ) : null}
               {submitLabel}
             </button>
             {onVariantCancel ? (
@@ -667,10 +698,12 @@ export function BacktestQueueForm({
             !(variant && !gate.optimize.allowed)
           ) {
             clickGate.hide();
+            flushSync(() => setPending(true));
             return;
           }
           if (!gate || !range.ok) {
             clickGate.hide();
+            flushSync(() => setPending(true));
             return;
           }
           const denial = queueBacktestDenial(gate, {
@@ -681,6 +714,7 @@ export function BacktestQueueForm({
           });
           if (!denial) {
             clickGate.hide();
+            flushSync(() => setPending(true));
             return;
           }
           const alreadyShown = pageNotices.some(
@@ -1064,13 +1098,12 @@ export function BacktestQueueForm({
         ))}
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         {variant ? null : (
-        <button
-          type="submit"
+        <QueueSubmitButton
           disabled={submitDisabled}
-          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
-        >
-          {submitLabel}
-        </button>
+          idle={idleLabel}
+          pendingLabel="Queuing…"
+          busy={pending}
+        />
         )}
       </form>
       {variant && recipe && pairChanged ? (

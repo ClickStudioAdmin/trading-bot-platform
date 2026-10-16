@@ -8,12 +8,6 @@ import {
 } from "@/lib/membership/load-research-gate-access";
 import { parseCandleVenue } from "@/lib/market/candles";
 import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
-import {
-  candleHistoryBlockedMessage,
-  candleVenueLabel,
-  intervalHistoryLabel,
-} from "@/lib/market/candle-availability";
-import { backtestCandleHistoryError } from "@/lib/market/candle-range";
 import type { BacktestRecipe, BacktestRun } from "./model";
 import {
   canQueueUserBacktest,
@@ -30,6 +24,7 @@ import {
 import { applyRecipeToDesk, automationsPathForDeskType } from "@/lib/templates/apply";
 import { parseTemplateName, recipesMatchReplayFields } from "@/lib/templates/recipe";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   BACKTEST_CANDLE_LIMIT,
   BACKTEST_FEE_PRESETS,
@@ -301,28 +296,6 @@ export async function queueTemplateBacktestAction(
   const feePreset = parseFeePreset(formData.get("feePreset"));
   const venueEnvironment =
     String(formData.get("venueEnvironment") ?? "").trim() || null;
-  try {
-    const historyError = await backtestCandleHistoryError({
-      venue,
-      venueEnvironment,
-      interval,
-      fromMs: range.fromMs,
-      toMs: range.toMs,
-      symbols: [symbol, ...comparables],
-    });
-    if (historyError) {
-      return { ok: false, error: historyError };
-    }
-  } catch {
-    return {
-      ok: false,
-      error: candleHistoryBlockedMessage({
-        venueLabel: candleVenueLabel(venue),
-        symbol,
-        intervalLabel: intervalHistoryLabel(interval),
-      }),
-    };
-  }
   const sourceTemplateId = await resolveSourceTemplateId(
     String(formData.get("sourceTemplateId") ?? pickedTemplateId),
     queuedRecipe,
@@ -395,32 +368,13 @@ export async function queueTemplateBacktestAction(
       recipe: comparableRecipe,
     });
   }
-  const inline =
-    !linkedParentId &&
-    backtestPageCanRun({
-      fromMs: range.fromMs,
-      toMs: range.toMs,
-      interval,
-      comparableSymbols: comparables,
-    });
-  if (inline) {
-    const result = await executeBacktestRun(run.id);
-    const children = await listBacktestRuns({ parentRunId: run.id, limit: 20 });
-    for (const child of children) {
-      if (child.status === "queued") {
-        await executeBacktestRun(child.id);
-      }
-    }
-    if (linkedParentId) {
-      revalidateBacktests(`/account/backtests/${linkedParentId}`);
-    }
-    revalidateBacktests(`/account/backtests/${run.id}`);
-    return { ...result, runId: result.runId ?? run.id };
-  }
   if (linkedParentId) {
     revalidateBacktests(`/account/backtests/${linkedParentId}`);
   }
   revalidateBacktests(`/account/backtests/${run.id}`);
+  if (!requestedParentId) {
+    redirect(`/account/backtests/${run.id}`);
+  }
   return { ok: true, runId: run.id };
 }
 

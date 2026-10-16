@@ -11,6 +11,7 @@ import {
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
 import { ColumnHint } from "@/components/column-hint";
+import { IconLoader } from "@/components/icons";
 import { BacktestRunsTable } from "@/components/backtest-runs-table";
 import { BacktestStudyCharts } from "@/components/backtest-study-charts";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
@@ -333,10 +334,7 @@ export function BacktestRunDetail({
               : "border-success/30 bg-success/10 text-success"
           }`}
         >
-          <StatusDot
-            tone={run.status === "queued" ? "warning" : "success"}
-            pulse
-          />
+          <IconLoader className="size-4 shrink-0 animate-spin" aria-hidden />
           {run.status === "queued"
             ? "Queued. Starting this run now."
             : "Running. This page refreshes until it finishes."}
@@ -362,7 +360,10 @@ export function BacktestRunDetail({
             {complete ? (
               <BacktestStatsGrid run={run} />
             ) : (
-              <SectionPlaceholder message={pendingMessage} />
+              <SectionPlaceholder
+                message={pendingMessage}
+                loading={run.status === "queued" || run.status === "running"}
+              />
             )}
           </section>
         </div>
@@ -374,15 +375,24 @@ export function BacktestRunDetail({
         <>
           <section>
             <h2 className="mb-2 text-lg font-semibold">P&L (realized profit)</h2>
-            <SectionPlaceholder message={pendingMessage} />
+            <SectionPlaceholder
+              message={pendingMessage}
+              loading={run.status === "queued" || run.status === "running"}
+            />
           </section>
           <section>
             <h2 className="mb-2 text-lg font-semibold">Chart</h2>
-            <SectionPlaceholder message={pendingMessage} />
+            <SectionPlaceholder
+              message={pendingMessage}
+              loading={run.status === "queued" || run.status === "running"}
+            />
           </section>
           <section>
             <h2 className="mb-2 text-lg font-semibold">Open Positions</h2>
-            <SectionPlaceholder message={pendingMessage} />
+            <SectionPlaceholder
+              message={pendingMessage}
+              loading={run.status === "queued" || run.status === "running"}
+            />
           </section>
         </>
       )}
@@ -482,10 +492,23 @@ function incompleteRunMessage(run: BacktestRun): string {
   return "Results will appear when this run finishes.";
 }
 
-function SectionPlaceholder({ message }: { message: string }) {
+function SectionPlaceholder({
+  message,
+  loading = false,
+}: {
+  message: string;
+  loading?: boolean;
+}) {
   return (
     <div className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
-      {message}
+      {loading ? (
+        <p role="status" className="flex items-center gap-2">
+          <IconLoader className="size-4 shrink-0 animate-spin" aria-hidden />
+          {message}
+        </p>
+      ) : (
+        message
+      )}
     </div>
   );
 }
