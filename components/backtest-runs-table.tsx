@@ -595,7 +595,7 @@ export function BacktestRunsTable({
           {error}
         </p>
       ) : null}
-      {message ? <p className="mt-4 text-sm text-success">{message}</p> : null}
+      {message ? <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">{message}</p> : null}
       <TableCard
         pager={
           <TablePager

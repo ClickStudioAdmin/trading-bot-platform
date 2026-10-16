@@ -103,26 +103,26 @@ export default async function AccountSettingsPage({
         </p>
       ) : null}
       {saved === "profile" ? (
-        <p className="mt-6 text-sm text-success">Profile saved.</p>
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Profile saved.</p>
       ) : null}
       {saved === "trader" ? (
-        <p className="mt-6 text-sm text-success">Trader profile saved.</p>
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Trader profile saved.</p>
       ) : null}
       {saved === "password" ? (
-        <p className="mt-6 text-sm text-success">Password changed.</p>
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Password changed.</p>
       ) : null}
       {saved === "2fa" ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           2FA is on.
         </p>
       ) : null}
       {saved === "2fa-off" ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           2FA is off.
         </p>
       ) : null}
       {saved === "notifications" ? (
-        <p className="mt-6 text-sm text-success">Notification settings saved.</p>
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Notification settings saved.</p>
       ) : null}
 
       {tab === "notifications" ? (

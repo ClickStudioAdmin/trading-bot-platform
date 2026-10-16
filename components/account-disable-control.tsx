@@ -173,7 +173,7 @@ export function AccountDisableControl({
               </ol>
               {phase === "done" ? (
                 <div className="mt-4">
-                  <p className="text-sm font-medium text-success">
+                  <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
                     {DISABLE_DESK_SUCCESS}
                   </p>
                   <p className="mt-1 text-sm text-ink-muted">{success}</p>

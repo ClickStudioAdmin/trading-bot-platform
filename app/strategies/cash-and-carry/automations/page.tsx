@@ -102,7 +102,7 @@ export default async function CashAndCarryAutomationsPage({
         </p>
       ) : null}
       {saved ? (
-        <p className="mt-4 text-sm text-success">{notice || "Bot saved."}</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">{notice || "Bot saved."}</p>
       ) : null}
       {loaded.signedIn ? (
         <div className="mt-6">

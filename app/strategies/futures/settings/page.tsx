@@ -170,13 +170,13 @@ export default async function FuturesSettingsPage({
         </p>
       ) : null}
       {saved ? (
-        <p className="mt-4 text-sm text-success">Settings saved.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Settings saved.</p>
       ) : null}
       {copySaved ? (
-        <p className="mt-4 text-sm text-success">Copy guards saved.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Copy guards saved.</p>
       ) : null}
       {shareSaved ? (
-        <p className="mt-4 text-sm text-success">Share settings saved.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Share settings saved.</p>
       ) : null}
       <div
         className={

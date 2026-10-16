@@ -297,29 +297,29 @@ export default async function AccountBillingPage({
         </p>
       ) : null}
       {saved === "method" ? (
-        <p className="mt-6 text-sm text-success">Payment method saved.</p>
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Payment method saved.</p>
       ) : null}
       {saved === "card" ? (
-        <p className="mt-6 text-sm text-success">Card details saved.</p>
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Card details saved.</p>
       ) : null}
       {saved === "withdraw" ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           Withdraw requested. It will go out on the next payout list.
         </p>
       ) : null}
       {upgraded === "1" ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           Subscription update sent to Stripe. This page refreshes when the
           webhook confirms.
         </p>
       ) : null}
       {upgraded === "wallet" ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           Plan paid from your account.
         </p>
       ) : null}
       {deposited ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           {creditedDepositsNotice(Number(deposited))}
         </p>
       ) : null}
@@ -329,7 +329,7 @@ export default async function AccountBillingPage({
         </p>
       ) : null}
       {checkout === "success" ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           Checkout received. Plan and invoices update when Stripe confirms.
         </p>
       ) : null}

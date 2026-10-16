@@ -58,10 +58,10 @@ export default async function AdminMembersPage({
         </p>
       ) : null}
       {created ? (
-        <p className="mt-4 text-sm text-success">Member created.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Member created.</p>
       ) : null}
       {updated ? (
-        <p className="mt-4 text-sm text-success">Member saved.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Member saved.</p>
       ) : null}
 
       <TableFilterSession

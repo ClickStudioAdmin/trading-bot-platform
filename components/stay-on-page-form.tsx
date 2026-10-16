@@ -59,7 +59,7 @@ export function DeskFormFlash({ className }: { className?: string }) {
   }
   if (notice) {
     return (
-      <p className={className ?? "text-sm text-success"} role="status">
+      <p className={className ?? "rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success"} role="status">
         {notice}
       </p>
     );
