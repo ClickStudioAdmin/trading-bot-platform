@@ -104,6 +104,35 @@ assert.equal(
 );
 assert.equal(value(dca, "Long Exit Conditions", "Custom conditions"), "Off");
 assert.match(value(dca, "Short Exit Conditions", "Custom conditions"), /RSI 14/);
+const splitExits = dcaBotConfig({
+  ...playbook,
+  stopLossPct: 9,
+  shortClassic: {
+    takeProfitKind: "percent",
+    takeProfitAtrMult: null,
+    takeProfitPct: 4,
+    takeProfitBasis: "first_entry",
+    takeProfitOrderType: "limit",
+    stopLossPct: 3,
+    stopLossBasis: "first_entry",
+    breakevenActivationPct: 6,
+    breakevenOffsetPct: 0.4,
+    trailingTriggerPct: 8,
+    trailingPct: 1,
+    atrPeriod: null,
+  },
+});
+assert.equal(
+  value(splitExits, "Long Exit Conditions", "Take profit"),
+  "1.2% · Average entry · Market",
+);
+assert.equal(
+  value(splitExits, "Short Exit Conditions", "Take profit"),
+  "4% · First fill · Limit",
+);
+assert.match(value(splitExits, "Long Exit Conditions", "Stop loss"), /9%/);
+assert.match(value(splitExits, "Short Exit Conditions", "Stop loss"), /3%/);
+assert.match(value(splitExits, "Short Exit Conditions", "Stop loss"), /6%/);
 
 const perps = perpsBotConfig({
   ...defaultFuturesAutomationForm(0, "ETHUSDT"),
@@ -209,6 +238,63 @@ assert.equal(
   value(perpsStop, "Long Exit Conditions", "Stop loss"),
   "2% · Mark · Market · Move breakeven at 1.5% · offset 0.2%",
 );
+const perpsBoth = perpsBotConfig({
+  ...defaultFuturesAutomationForm(0, "ETHUSDT"),
+  formAction: "buy",
+  direction: "both",
+  tpsl: {
+    takeProfit: 3,
+    stopLoss: 9,
+    tpKind: "percent",
+    slKind: "percent",
+    tpTrigger: "last",
+    slTrigger: "mark",
+    mode: "full",
+    tpQty: null,
+    slQty: null,
+    tpOrderType: "market",
+    slOrderType: "market",
+    tpLimitPrice: null,
+    slLimitPrice: null,
+  },
+  shortEntry: {
+    entrySource: "price",
+    webhookId: null,
+    triggerBy: "last",
+    triggerCompare: "lte",
+    triggerPrice: 90,
+    skipIfOpen: true,
+    indicator: null,
+    confirm: null,
+    entryStack: { leaves: [], joins: [] },
+    classic: {
+      tpsl: {
+        takeProfit: 7,
+        stopLoss: 4,
+        tpKind: "percent",
+        slKind: "percent",
+        tpTrigger: "index",
+        slTrigger: "last",
+        mode: "full",
+        tpQty: null,
+        slQty: null,
+        tpOrderType: "market",
+        slOrderType: "market",
+        tpLimitPrice: null,
+        slLimitPrice: null,
+      },
+      trailing: { distance: 1.5, activePrice: null, peak: null },
+      breakevenActivationPct: 6,
+      breakevenOffsetPct: 0.2,
+    },
+  },
+});
+assert.equal(value(perpsBoth, "Long Exit Conditions", "Take profit"), "3% · Last · Market");
+assert.equal(value(perpsBoth, "Short Exit Conditions", "Take profit"), "7% · Index · Market");
+assert.match(value(perpsBoth, "Long Exit Conditions", "Stop loss"), /9%/);
+assert.match(value(perpsBoth, "Short Exit Conditions", "Stop loss"), /4%/);
+assert.match(value(perpsBoth, "Short Exit Conditions", "Stop loss"), /6%/);
+assert.match(value(perpsBoth, "Short Exit Conditions", "Trailing stop"), /1.5/);
 
 const closeRule = perpsBotConfig({
   ...defaultFuturesAutomationForm(0, "ETHUSDT"),

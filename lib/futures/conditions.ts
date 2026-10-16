@@ -61,7 +61,8 @@ import {
   type EntryStack,
   type StrategyLeaf,
 } from "@/lib/strategy/expr";
-import { triggerPrice } from "./tpsl";
+import { triggerPrice, type FuturesTpsl } from "./tpsl";
+import type { FuturesTrailing } from "./trailing";
 import type { FuturesTrigger } from "./model";
 import type { FuturesAction, FuturesSide } from "./model";
 
@@ -80,6 +81,18 @@ export type PerpsEntryLeg = {
   exitIf?: DcaFilterSpec | null;
   exitHard?: HardExitSignal | null;
   exitStack?: EntryStack | null;
+  /**
+   * Take profit, trailing stop, and stop loss for the short leg.
+   * Absent means this side still shares the long classic exits.
+   */
+  classic?: PerpsShortClassic | null;
+};
+
+export type PerpsShortClassic = {
+  tpsl: FuturesTpsl | null;
+  trailing: FuturesTrailing | null;
+  breakevenActivationPct: number | null;
+  breakevenOffsetPct: number | null;
 };
 
 export function perpsLegHasOwnExit(
@@ -1074,6 +1087,7 @@ export function shortEntryToJson(leg: PerpsEntryLeg): Record<string, unknown> {
           },
         }
       : {}),
+    ...(leg.classic ? { classic: leg.classic } : {}),
   };
 }
 
@@ -1143,6 +1157,73 @@ export function shortEntryFromJson(raw: unknown): PerpsEntryLeg | null {
     confirm: confirmFromEntryStack(stack),
     entryStack: stack,
     ...exit,
+    classic: perpsShortClassicFromJson(row.classic),
+  };
+}
+
+function positiveOrNull(raw: unknown): number | null {
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+export function perpsShortClassicFromJson(raw: unknown): PerpsShortClassic | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return null;
+  }
+  const row = raw as Record<string, unknown>;
+  const tpslRaw =
+    row.tpsl && typeof row.tpsl === "object" && !Array.isArray(row.tpsl)
+      ? (row.tpsl as Record<string, unknown>)
+      : null;
+  const takeProfit = positiveOrNull(tpslRaw?.takeProfit);
+  const stopLoss = positiveOrNull(tpslRaw?.stopLoss);
+  const trigger = (value: unknown): FuturesTrigger =>
+    value === "mark" || value === "index" ? value : "last";
+  const tpsl =
+    tpslRaw && (takeProfit != null || stopLoss != null)
+      ? {
+          takeProfit,
+          stopLoss,
+          tpKind: tpslRaw.tpKind === "percent" ? ("percent" as const) : ("price" as const),
+          slKind: tpslRaw.slKind === "percent" ? ("percent" as const) : ("price" as const),
+          tpTrigger: trigger(tpslRaw.tpTrigger),
+          slTrigger: trigger(tpslRaw.slTrigger),
+          mode: tpslRaw.mode === "partial" ? ("partial" as const) : ("full" as const),
+          tpQty: positiveOrNull(tpslRaw.tpQty),
+          slQty: positiveOrNull(tpslRaw.slQty),
+          tpOrderType:
+            tpslRaw.tpOrderType === "limit" ? ("limit" as const) : ("market" as const),
+          slOrderType:
+            tpslRaw.slOrderType === "limit" ? ("limit" as const) : ("market" as const),
+          tpLimitPrice: positiveOrNull(tpslRaw.tpLimitPrice),
+          slLimitPrice: positiveOrNull(tpslRaw.slLimitPrice),
+        }
+      : null;
+  const trailRaw =
+    row.trailing && typeof row.trailing === "object" && !Array.isArray(row.trailing)
+      ? (row.trailing as Record<string, unknown>)
+      : null;
+  const distance = positiveOrNull(trailRaw?.distance);
+  const trailing =
+    distance == null
+      ? null
+      : {
+          distance,
+          activePrice: positiveOrNull(trailRaw?.activePrice),
+          peak: positiveOrNull(trailRaw?.peak),
+        };
+  const activation = positiveOrNull(row.breakevenActivationPct);
+  const offset = Number(row.breakevenOffsetPct);
+  return {
+    tpsl,
+    trailing,
+    breakevenActivationPct: activation,
+    breakevenOffsetPct:
+      activation == null
+        ? null
+        : Number.isFinite(offset) && offset >= 0
+          ? offset
+          : 0,
   };
 }
 

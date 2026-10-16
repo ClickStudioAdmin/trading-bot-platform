@@ -3,6 +3,7 @@ import {
   dcaArmTriggerForSide,
   dcaStartKindForSide,
   dcaAtrTimeframe,
+  dcaClassicForSide,
   dcaCycleClipSize,
   dcaEnabledSides,
   dcaIndicatorStartForSide,
@@ -153,9 +154,14 @@ export async function replayDcaPlaybook(input: {
   let liquidated = false;
   const closes: number[] = [];
   const ohlc: Array<{ high: number; low: number; close: number }> = [];
+  const shortAtrPeriod =
+    config.direction === "both" && config.shortClassic?.takeProfitKind === "atr"
+      ? config.shortClassic.atrPeriod
+      : null;
   const needsAtr =
     (config.spacingKind ?? "percent") === "atr" ||
-    (config.takeProfitKind ?? "percent") === "atr";
+    (config.takeProfitKind ?? "percent") === "atr" ||
+    config.shortClassic?.takeProfitKind === "atr";
   const firstBar = input.bars[0];
   const lastBar = input.bars[input.bars.length - 1];
   const tape =
@@ -170,6 +176,17 @@ export async function replayDcaPlaybook(input: {
         config.atrPeriod ?? DEFAULT_DCA_ATR_PERIOD,
       )
     : null;
+  const shortAtrByBar =
+    needsAtr &&
+    shortAtrPeriod != null &&
+    shortAtrPeriod !== (config.atrPeriod ?? DEFAULT_DCA_ATR_PERIOD)
+      ? atrAtEachTapeBar(
+          input.bars,
+          tape,
+          dcaAtrTimeframe(config),
+          shortAtrPeriod,
+        )
+      : null;
 
   function remember(
     order: SimulatedOrder,
@@ -349,17 +366,18 @@ export async function replayDcaPlaybook(input: {
     const entry =
       nextQty > 0 ? (leg.entry * leg.qty + price * qty) / nextQty : price;
     let trailing = leg.trailing;
-    if (config.trailingPct != null && config.trailingPct > 0) {
-      const distance = dcaTrailingDistance(price, config.trailingPct);
+    const classic = dcaClassicForSide(config, side);
+    if (classic.trailingPct != null && classic.trailingPct > 0) {
+      const distance = dcaTrailingDistance(price, classic.trailingPct);
       trailing = armTrailingAt(
         {
           distance,
           activePrice:
-            config.trailingTriggerPct == null
+            classic.trailingTriggerPct == null
               ? null
               : side === "long"
-                ? price * (1 + config.trailingTriggerPct / 100)
-                : price * (1 - config.trailingTriggerPct / 100),
+                ? price * (1 + classic.trailingTriggerPct / 100)
+                : price * (1 - classic.trailingTriggerPct / 100),
           peak: null,
         },
         price,
@@ -385,6 +403,19 @@ export async function replayDcaPlaybook(input: {
       return null;
     }
     return atrByBar[ohlc.length - 1] ?? null;
+  }
+
+  function atrForSide(side: FuturesSide): number | null {
+    const classic = dcaClassicForSide(config, side);
+    if (
+      side === "short" &&
+      classic.takeProfitKind === "atr" &&
+      shortAtrByBar &&
+      ohlc.length > 0
+    ) {
+      return shortAtrByBar[ohlc.length - 1] ?? null;
+    }
+    return currentAtr();
   }
 
   function nextRestingGridPrice(side: FuturesSide): number | null {
@@ -435,7 +466,8 @@ export async function replayDcaPlaybook(input: {
   }
 
   function limitTakeProfitPrice(side: FuturesSide, bar: CandleBar): number | null {
-    if (config.takeProfitOrderType !== "limit") {
+    const classic = dcaClassicForSide(config, side);
+    if (classic.takeProfitOrderType !== "limit") {
       return null;
     }
     const live = legs[side];
@@ -447,14 +479,14 @@ export async function replayDcaPlaybook(input: {
       entryPrice: live.entry,
       firstFillPrice: live.firstFillPrice,
       mark: live.entry,
-      takeProfitPct: config.takeProfitPct,
-      stopLossPct: config.stopLossPct,
-      takeProfitBasis: config.takeProfitBasis,
-      stopLossBasis: config.stopLossBasis,
-      trailingPct: config.trailingPct,
-      takeProfitKind: config.takeProfitKind,
-      atr: currentAtr(),
-      takeProfitAtrMult: config.takeProfitAtrMult,
+      takeProfitPct: classic.takeProfitPct,
+      stopLossPct: classic.stopLossPct,
+      takeProfitBasis: classic.takeProfitBasis,
+      stopLossBasis: classic.stopLossBasis,
+      trailingPct: classic.trailingPct,
+      takeProfitKind: classic.takeProfitKind,
+      atr: atrForSide(side),
+      takeProfitAtrMult: classic.takeProfitAtrMult,
     });
     if (planned.takeProfit == null) {
       return null;
@@ -500,21 +532,22 @@ export async function replayDcaPlaybook(input: {
       if (leg.qty > 0) {
         held = true;
         const adverse = side === "long" ? bar.low : bar.high;
+        const exitClassic = dcaClassicForSide(config, side);
         const plannedStop =
-          config.stopLossPct != null && config.stopLossPct > 0
+          exitClassic.stopLossPct != null && exitClassic.stopLossPct > 0
             ? dcaPlannedExits({
                 side,
                 entryPrice: leg.entry,
                 firstFillPrice: leg.firstFillPrice,
                 mark: price,
-                takeProfitPct: config.takeProfitPct,
-                stopLossPct: config.stopLossPct,
-                takeProfitBasis: config.takeProfitBasis,
-                stopLossBasis: config.stopLossBasis,
-                trailingPct: config.trailingPct,
-                takeProfitKind: config.takeProfitKind,
-                atr: currentAtr(),
-                takeProfitAtrMult: config.takeProfitAtrMult,
+                takeProfitPct: exitClassic.takeProfitPct,
+                stopLossPct: exitClassic.stopLossPct,
+                takeProfitBasis: exitClassic.takeProfitBasis,
+                stopLossBasis: exitClassic.stopLossBasis,
+                trailingPct: exitClassic.trailingPct,
+                takeProfitKind: exitClassic.takeProfitKind,
+                atr: atrForSide(side),
+                takeProfitAtrMult: exitClassic.takeProfitAtrMult,
               }).stopLoss
             : null;
         const firstHit = adverseExit(side, adverse, [
@@ -687,6 +720,7 @@ export async function replayDcaPlaybook(input: {
         deviationMultiplier: config.deviationMultiplier,
         spacingKind: config.spacingKind,
         atr: currentAtr(),
+        takeProfitAtr: atrForSide(side),
         atrSpacingMult: config.atrSpacingMult,
         clipsFilled: live.clipsFilled,
         maxClips: config.maxClips,
@@ -699,13 +733,13 @@ export async function replayDcaPlaybook(input: {
         }),
         positionQty: live.qty > 0 ? live.qty : null,
         entryPrice: live.qty > 0 ? live.entry : null,
-        takeProfitKind: config.takeProfitKind,
-        takeProfitAtrMult: config.takeProfitAtrMult,
-        takeProfitPct: config.takeProfitPct,
-        stopLossPct: config.stopLossPct,
-        takeProfitBasis: config.takeProfitBasis,
-        stopLossBasis: config.stopLossBasis,
-        breakevenActivationPct: config.breakevenActivationPct,
+        takeProfitKind: dcaClassicForSide(config, side).takeProfitKind,
+        takeProfitAtrMult: dcaClassicForSide(config, side).takeProfitAtrMult,
+        takeProfitPct: dcaClassicForSide(config, side).takeProfitPct,
+        stopLossPct: dcaClassicForSide(config, side).stopLossPct,
+        takeProfitBasis: dcaClassicForSide(config, side).takeProfitBasis,
+        stopLossBasis: dcaClassicForSide(config, side).stopLossBasis,
+        breakevenActivationPct: dcaClassicForSide(config, side).breakevenActivationPct,
         breakevenDone: live.breakevenDone,
         armTrigger: dcaArmTriggerForSide(config, side),
         armConditionTrue: live.armTrue,
@@ -780,9 +814,10 @@ export async function replayDcaPlaybook(input: {
               }),
             }
           : {}),
-        takeProfitOrderType: config.takeProfitOrderType,
+        takeProfitOrderType: dcaClassicForSide(config, side).takeProfitOrderType,
         tpLimitResting:
-          config.takeProfitOrderType === "limit" && live.qty > 0,
+          dcaClassicForSide(config, side).takeProfitOrderType === "limit" &&
+          live.qty > 0,
         triggerPrices,
       });
       legs[side] = {
@@ -839,7 +874,7 @@ export async function replayDcaPlaybook(input: {
       } else if (decision.action.kind === "stop_adding") {
         legs[side] = { ...legs[side], status: "stop_adding" };
       } else if (decision.action.kind === "breakeven") {
-        const offset = config.breakevenOffsetPct ?? 0;
+        const offset = dcaClassicForSide(config, side).breakevenOffsetPct ?? 0;
         const sl =
           side === "long"
             ? live.entry * (1 + offset / 100)

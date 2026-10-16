@@ -4,9 +4,11 @@ import { perpsLegHasOwnExit } from "@/lib/futures/conditions";
 import { dcaEntryStackForSide } from "@/lib/dca/entry-stack";
 import {
   dcaArmTriggerForSide,
+  dcaClassicForSide,
   dcaIndicatorStartForSide,
   dcaStartKindForSide,
   dcaIntervalParts,
+  type DcaClassicExit,
   type DcaPlaybook,
 } from "@/lib/dca/playbook";
 import type { PaperLayerFormValues } from "@/lib/engine/rules";
@@ -255,26 +257,26 @@ function dcaSizingLines(playbook: DcaPlaybook): BotConfigLine[] {
   return lines.filter((row): row is BotConfigLine => row != null);
 }
 
-function dcaExitLines(playbook: DcaPlaybook): BotConfigLine[] {
-  const tpAtr = playbook.takeProfitKind === "atr";
+function dcaExitLines(classic: DcaClassicExit): BotConfigLine[] {
+  const tpAtr = classic.takeProfitKind === "atr";
   const tpOn = tpAtr
-    ? playbook.takeProfitAtrMult != null
-    : playbook.takeProfitPct != null;
+    ? classic.takeProfitAtrMult != null
+    : classic.takeProfitPct != null;
   const trailOn =
-    playbook.trailingTriggerPct != null || playbook.trailingPct != null;
+    classic.trailingTriggerPct != null || classic.trailingPct != null;
   const lines: BotConfigLine[] = [
     setting(
       "Take profit",
       tpOn
         ? joinParts([
             tpAtr
-              ? `${amount(playbook.takeProfitAtrMult) ?? ""}× ATR`
-              : pct(playbook.takeProfitPct),
-            tpAtr && amount(playbook.atrPeriod)
-              ? `Period ${amount(playbook.atrPeriod)}`
+              ? `${amount(classic.takeProfitAtrMult) ?? ""}× ATR`
+              : pct(classic.takeProfitPct),
+            tpAtr && amount(classic.atrPeriod)
+              ? `Period ${amount(classic.atrPeriod)}`
               : null,
-            basisLabel(playbook.takeProfitBasis),
-            orderLabel(playbook.takeProfitOrderType),
+            basisLabel(classic.takeProfitBasis),
+            orderLabel(classic.takeProfitOrderType),
           ])
         : null,
     ),
@@ -282,29 +284,27 @@ function dcaExitLines(playbook: DcaPlaybook): BotConfigLine[] {
       "Trailing stop",
       trailOn
         ? joinParts([
-            pct(playbook.trailingTriggerPct)
-              ? `Trigger ${pct(playbook.trailingTriggerPct)}`
+            pct(classic.trailingTriggerPct)
+              ? `Trigger ${pct(classic.trailingTriggerPct)}`
               : null,
-            pct(playbook.trailingPct)
-              ? `Trail ${pct(playbook.trailingPct)}`
-              : null,
+            pct(classic.trailingPct) ? `Trail ${pct(classic.trailingPct)}` : null,
           ])
         : null,
     ),
     setting(
       "Stop loss",
-      playbook.stopLossPct == null && playbook.breakevenActivationPct == null
+      classic.stopLossPct == null && classic.breakevenActivationPct == null
         ? null
         : joinParts([
-            playbook.stopLossPct == null
+            classic.stopLossPct == null
               ? null
               : joinParts([
-                  pct(playbook.stopLossPct),
-                  basisLabel(playbook.stopLossBasis),
+                  pct(classic.stopLossPct),
+                  basisLabel(classic.stopLossBasis),
                 ]),
-            playbook.breakevenActivationPct == null
+            classic.breakevenActivationPct == null
               ? null
-              : `Move breakeven at ${pct(playbook.breakevenActivationPct)} · offset ${pct(playbook.breakevenOffsetPct) ?? "0%"}`,
+              : `Move breakeven at ${pct(classic.breakevenActivationPct)} · offset ${pct(classic.breakevenOffsetPct) ?? "0%"}`,
           ]),
     ),
   ];
@@ -336,13 +336,15 @@ function dcaCustomExitLine(
 function dcaExitSections(
   playbook: DcaPlaybook,
 ): Array<BotConfigSection | null> {
-  const classic = dcaExitLines(playbook);
   return dcaSides(playbook).map((side) =>
     section(
       side === "short"
         ? "Short Exit Conditions"
         : "Long Exit Conditions",
-      [...classic, dcaCustomExitLine(playbook, side)],
+      [
+        ...dcaExitLines(dcaClassicForSide(playbook, side)),
+        dcaCustomExitLine(playbook, side),
+      ],
     ),
   );
 }
@@ -464,6 +466,75 @@ function perpsLevel(
   return kind === "percent" ? `${text}%` : text;
 }
 
+function perpsClassicLines(input: {
+  tpsl: FuturesAutomationFormValues["tpsl"];
+  trailing: FuturesAutomationFormValues["trailing"];
+  breakevenActivationPct: string;
+  breakevenOffsetPct: string;
+}): BotConfigLine[] {
+  const activation = input.breakevenActivationPct.trim();
+  return [
+    setting(
+      "Take profit",
+      perpsLevel(input.tpsl?.takeProfit, input.tpsl?.tpKind)
+        ? joinParts([
+            perpsLevel(input.tpsl?.takeProfit, input.tpsl?.tpKind),
+            input.tpsl?.tpTrigger === "mark"
+              ? "Mark"
+              : input.tpsl?.tpTrigger === "index"
+                ? "Index"
+                : "Last",
+            orderLabel(input.tpsl?.tpOrderType),
+            input.tpsl?.tpOrderType === "limit"
+              ? amount(input.tpsl.tpLimitPrice)
+              : null,
+            input.tpsl?.mode === "partial" && input.tpsl.tpQty
+              ? `Partial ${amount(input.tpsl.tpQty)}`
+              : null,
+          ])
+        : null,
+    ),
+    setting(
+      "Trailing stop",
+      input.trailing
+        ? joinParts([
+            `Retracement ${amount(input.trailing.distance)}`,
+            input.trailing.activePrice != null
+              ? `Activation ${amount(input.trailing.activePrice)}`
+              : null,
+          ])
+        : null,
+    ),
+    setting(
+      "Stop loss",
+      perpsLevel(input.tpsl?.stopLoss, input.tpsl?.slKind) || activation
+        ? joinParts([
+            perpsLevel(input.tpsl?.stopLoss, input.tpsl?.slKind)
+              ? joinParts([
+                  perpsLevel(input.tpsl?.stopLoss, input.tpsl?.slKind),
+                  input.tpsl?.slTrigger === "mark"
+                    ? "Mark"
+                    : input.tpsl?.slTrigger === "index"
+                      ? "Index"
+                      : "Last",
+                  orderLabel(input.tpsl?.slOrderType),
+                  input.tpsl?.slOrderType === "limit"
+                    ? amount(input.tpsl.slLimitPrice)
+                    : null,
+                  input.tpsl?.mode === "partial" && input.tpsl.slQty
+                    ? `Partial ${amount(input.tpsl.slQty)}`
+                    : null,
+                ])
+              : null,
+            activation
+              ? `Move breakeven at ${activation}% · offset ${input.breakevenOffsetPct.trim() || "0"}%`
+              : null,
+          ])
+        : null,
+    ),
+  ];
+}
+
 export function perpsBotConfig(
   rule: FuturesAutomationFormValues,
 ): BotConfigSection[] {
@@ -520,67 +591,12 @@ export function perpsBotConfig(
     : rule.direction === "both"
       ? ["long", "short"]
       : [side];
-  const classicExits: BotConfigLine[] = [
-    setting(
-      "Take profit",
-      perpsLevel(rule.tpsl?.takeProfit, rule.tpsl?.tpKind)
-        ? joinParts([
-            perpsLevel(rule.tpsl?.takeProfit, rule.tpsl?.tpKind),
-            rule.tpsl?.tpTrigger === "mark"
-              ? "Mark"
-              : rule.tpsl?.tpTrigger === "index"
-                ? "Index"
-                : "Last",
-            orderLabel(rule.tpsl?.tpOrderType),
-            rule.tpsl?.tpOrderType === "limit"
-              ? amount(rule.tpsl.tpLimitPrice)
-              : null,
-            rule.tpsl?.mode === "partial" && rule.tpsl.tpQty
-              ? `Partial ${amount(rule.tpsl.tpQty)}`
-              : null,
-          ])
-        : null,
-    ),
-    setting(
-      "Trailing stop",
-      rule.trailing
-        ? joinParts([
-            `Retracement ${amount(rule.trailing.distance)}`,
-            rule.trailing.activePrice != null
-              ? `Activation ${amount(rule.trailing.activePrice)}`
-              : null,
-          ])
-        : null,
-    ),
-    setting(
-      "Stop loss",
-      perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind) ||
-      rule.breakevenActivationPct.trim()
-        ? joinParts([
-            perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind)
-              ? joinParts([
-                  perpsLevel(rule.tpsl?.stopLoss, rule.tpsl?.slKind),
-                  rule.tpsl?.slTrigger === "mark"
-                    ? "Mark"
-                    : rule.tpsl?.slTrigger === "index"
-                      ? "Index"
-                      : "Last",
-                  orderLabel(rule.tpsl?.slOrderType),
-                  rule.tpsl?.slOrderType === "limit"
-                    ? amount(rule.tpsl.slLimitPrice)
-                    : null,
-                  rule.tpsl?.mode === "partial" && rule.tpsl.slQty
-                    ? `Partial ${amount(rule.tpsl.slQty)}`
-                    : null,
-                ])
-              : null,
-            rule.breakevenActivationPct.trim()
-              ? `Move breakeven at ${rule.breakevenActivationPct.trim()}% · offset ${rule.breakevenOffsetPct.trim() || "0"}%`
-              : null,
-          ])
-        : null,
-    ),
-  ];
+  const classicExits = perpsClassicLines({
+    tpsl: rule.tpsl,
+    trailing: rule.trailing,
+    breakevenActivationPct: rule.breakevenActivationPct,
+    breakevenOffsetPct: rule.breakevenOffsetPct,
+  });
 
   return sectionsOf([
     section("General", [
@@ -610,12 +626,27 @@ export function perpsBotConfig(
     ...exitSides.map((exitSide) => {
       const ownShort = exitSide === "short" && rule.direction === "both";
       const short = ownShort && perpsLegHasOwnExit(rule.shortEntry) ? rule.shortEntry : null;
+      const shortClassic = ownShort ? rule.shortEntry?.classic : null;
+      const exitLines = shortClassic
+        ? perpsClassicLines({
+            tpsl: shortClassic.tpsl,
+            trailing: shortClassic.trailing,
+            breakevenActivationPct:
+              shortClassic.breakevenActivationPct == null
+                ? ""
+                : String(shortClassic.breakevenActivationPct),
+            breakevenOffsetPct:
+              shortClassic.breakevenOffsetPct == null
+                ? ""
+                : String(shortClassic.breakevenOffsetPct),
+          })
+        : classicExits;
       return section(
         exitSide === "short"
           ? "Short Exit Conditions"
           : "Long Exit Conditions",
         [
-          ...classicExits,
+          ...exitLines,
           setting(
             "Custom conditions",
             formatExitExpressionText({

@@ -61,6 +61,7 @@ import {
   dcaGridClipCounts,
   dcaIndicatorStartForSide,
   dcaAtrTimeframe,
+  dcaClassicForSide,
   isDcaClipKey,
   dcaLegFor,
   dcaLegIsRunning,
@@ -513,18 +514,19 @@ export async function runDcaPlaybookTick(input?: {
       }
       const tpLimitResting =
         dcaOpenExitLimits(book.live, playbook.id, side, "tp").length > 0;
+      const classic = dcaClassicForSide(playbook, side);
       const reason = dcaPriceExitReason({
         side,
         qty: open.qty,
         entryPrice: open.entryPrice,
         firstFillPrice: leg.firstFillPrice,
         mark: prices.mark,
-        stopLossPct: playbook.stopLossPct,
-        stopLossBasis: playbook.stopLossBasis,
-        takeProfitPct: playbook.takeProfitPct,
-        takeProfitBasis: playbook.takeProfitBasis,
-        takeProfitKind: playbook.takeProfitKind,
-        takeProfitOrderType: playbook.takeProfitOrderType,
+        stopLossPct: classic.stopLossPct,
+        stopLossBasis: classic.stopLossBasis,
+        takeProfitPct: classic.takeProfitPct,
+        takeProfitBasis: classic.takeProfitBasis,
+        takeProfitKind: classic.takeProfitKind,
+        takeProfitOrderType: classic.takeProfitOrderType,
         tpLimitResting,
       });
       if (!reason) {
@@ -643,16 +645,17 @@ export async function runDcaPlaybookTick(input?: {
       }
     }
     const atrTimeframe = dcaAtrTimeframe(playbook);
-    const atr =
-      dcaNeedsAtrBars(playbook) && playbook.atrPeriod != null
-        ? lastAtrValue(
-            closedLiveIndicatorBars(
-              barsByTimeframe.get(atrTimeframe) ?? [],
-              atrTimeframe,
-            ),
-            playbook.atrPeriod,
-          )
-        : null;
+    const atrBars = closedLiveIndicatorBars(
+      barsByTimeframe.get(atrTimeframe) ?? [],
+      atrTimeframe,
+    );
+    function atrForPeriod(period: number | null | undefined): number | null {
+      if (period == null) {
+        return null;
+      }
+      return lastAtrValue(atrBars, period);
+    }
+    const spacingAtr = atrForPeriod(playbook.atrPeriod);
     const book = workingBooks.get(playbook.accountId) ?? {
       live: [],
       history: [],
@@ -714,7 +717,7 @@ export async function runDcaPlaybookTick(input?: {
           mode: account.mode,
           side,
           lastPrice: prices.last,
-          atr,
+          atr: spacingAtr,
           clipsFilled: leg.clipsFilled,
           positionId: open?.id ?? null,
           entryPrice: open?.entryPrice ?? null,
@@ -742,7 +745,7 @@ export async function runDcaPlaybookTick(input?: {
           mode: account.mode,
           side,
           lastPrice: prices.last,
-          atr,
+          atr: spacingAtr,
           clipsFilled: leg.clipsFilled,
           positionId: open?.id ?? null,
           entryPrice: open?.entryPrice ?? null,
@@ -792,6 +795,11 @@ export async function runDcaPlaybookTick(input?: {
             )
           : null,
       );
+      const classic = dcaClassicForSide(playbook, side);
+      const takeProfitAtr =
+        classic.takeProfitKind === "atr"
+          ? atrForPeriod(classic.atrPeriod ?? playbook.atrPeriod)
+          : spacingAtr;
       const decision = decideDcaTick({
         status: leg.status,
         side,
@@ -808,7 +816,8 @@ export async function runDcaPlaybookTick(input?: {
         intervalMinutes: playbook.intervalMinutes,
         deviationMultiplier: playbook.deviationMultiplier,
         spacingKind: playbook.spacingKind,
-        atr,
+        atr: spacingAtr,
+        takeProfitAtr,
         atrSpacingMult: playbook.atrSpacingMult,
         clipsFilled: leg.clipsFilled,
         maxClips: playbook.maxClips,
@@ -819,15 +828,15 @@ export async function runDcaPlaybookTick(input?: {
         }),
         positionQty: open?.qty ?? null,
         entryPrice: open?.entryPrice ?? null,
-        takeProfitKind: playbook.takeProfitKind,
-        takeProfitAtrMult: playbook.takeProfitAtrMult,
-        takeProfitPct: playbook.takeProfitPct,
-        stopLossPct: playbook.stopLossPct,
-        takeProfitBasis: playbook.takeProfitBasis,
-        stopLossBasis: playbook.stopLossBasis,
-        takeProfitOrderType: playbook.takeProfitOrderType,
+        takeProfitKind: classic.takeProfitKind,
+        takeProfitAtrMult: classic.takeProfitAtrMult,
+        takeProfitPct: classic.takeProfitPct,
+        stopLossPct: classic.stopLossPct,
+        takeProfitBasis: classic.takeProfitBasis,
+        stopLossBasis: classic.stopLossBasis,
+        takeProfitOrderType: classic.takeProfitOrderType,
         tpLimitResting,
-        breakevenActivationPct: playbook.breakevenActivationPct,
+        breakevenActivationPct: classic.breakevenActivationPct,
         breakevenDone: leg.breakevenDone,
         armTrigger: dcaArmTriggerForSide(playbook, side),
         armConditionTrue: playbook.armConditionTrue,
@@ -955,7 +964,7 @@ export async function runDcaPlaybookTick(input?: {
           mode: account.mode,
           side,
           lastPrice: prices.last,
-          atr,
+          atr: spacingAtr,
           clipsFilled: leg.clipsFilled,
           positionId: open?.id ?? null,
           entryPrice: open?.entryPrice ?? null,
@@ -990,7 +999,7 @@ export async function runDcaPlaybookTick(input?: {
           mode: account.mode,
           side,
           lastPrice: prices.last,
-          atr,
+          atr: spacingAtr,
           clipsFilled: leg.clipsFilled,
           positionId: open?.id ?? null,
           entryPrice: open?.entryPrice ?? null,
@@ -1150,8 +1159,8 @@ function dcaActionWhy(input: {
       side,
       entryPrice: input.entryPrice ?? 0,
       mark: input.mark ?? input.lastPrice ?? 0,
-      activationPct: playbook.breakevenActivationPct ?? 0,
-      offsetPct: playbook.breakevenOffsetPct,
+      activationPct: dcaClassicForSide(playbook, side).breakevenActivationPct ?? 0,
+      offsetPct: dcaClassicForSide(playbook, side).breakevenOffsetPct,
     });
   }
   return "";
