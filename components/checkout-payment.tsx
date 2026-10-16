@@ -440,7 +440,7 @@ function CheckoutDepositWatcher({
   if (paidPlan) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-success" role="status">
+        <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success" role="status">
           Payment received. You're on {paidPlan}.
         </p>
         <Link
@@ -469,7 +469,7 @@ function CheckoutDepositWatcher({
         </p>
       ) : null}
       {live.notice && !paying ? (
-        <p className="text-sm text-success" role="status">
+        <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success" role="status">
           {live.notice}
         </p>
       ) : null}

@@ -1300,7 +1300,7 @@ export function ApplyBacktestButton({
               />
             </label>
             {error ? <p className="text-sm text-danger">{error}</p> : null}
-            {message ? <p className="text-sm text-success">{message}</p> : null}
+            {message ? <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">{message}</p> : null}
             <div className="flex justify-end gap-2">
               <button
                 type="button"

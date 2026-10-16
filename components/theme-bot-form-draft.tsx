@@ -3043,7 +3043,7 @@ function ThemeBotFormReference() {
 
       <div className="space-y-2">
         <p className={labelClass}>Flashes and locks</p>
-        <p className="text-sm text-success" role="status">
+        <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success" role="status">
           Saved.
         </p>
         <DraftCallout tone="danger">

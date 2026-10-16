@@ -45,18 +45,18 @@ export async function AccountExchangesPanel({
             </p>
           ) : null}
           {saved ? (
-            <p className="text-sm text-success">Connection saved.</p>
+            <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Connection saved.</p>
           ) : null}
           {renamed ? (
-            <p className="text-sm text-success">Connection renamed.</p>
+            <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Connection renamed.</p>
           ) : null}
           {replaced ? (
-            <p className="text-sm text-success">
+            <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
               Key replaced. Bound desks still use this connection.
             </p>
           ) : null}
           {removed ? (
-            <p className="text-sm text-success">Connection removed.</p>
+            <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Connection removed.</p>
           ) : null}
         </div>
       ) : null}

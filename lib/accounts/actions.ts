@@ -273,7 +273,7 @@ export async function deleteTradingAccount(formData: FormData) {
   }
   const written = await deleteTradingAccountRow(session.member.id, accountId);
   if (written.error) {
-    redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(written.error)}`);
+    return stepUpRejection(written.error);
   }
   await writeEventLog({
     scope: "system",

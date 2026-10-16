@@ -8,7 +8,6 @@ import {
   useId,
   useState,
   type FormEvent,
-  type FormHTMLAttributes,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -19,6 +18,8 @@ import { TotpCodeBoxes } from "@/components/totp-code-boxes";
 import {
   STEP_UP_FIELD,
   STEP_UP_MISSING,
+  STEP_UP_REQUEST_FAILED,
+  rethrowNextControlFlow,
   stepUpRejectionMessage,
   stepUpShouldAsk,
 } from "@/lib/auth/step-up";
@@ -48,7 +49,7 @@ const cancelClass =
 const continueClass =
   "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-70";
 const dangerClass =
-  "rounded-control bg-danger px-4 py-2 text-sm font-medium text-ink hover:opacity-90 disabled:opacity-70";
+  "rounded-control bg-danger px-4 py-2 text-sm font-medium text-ink hover:opacity-90";
 
 export const STEP_UP_MODAL_TITLE = "2FA Authentication Required";
 
@@ -187,6 +188,16 @@ export function StepUpModal({
   );
 }
 
+/** Step-up actions may return `{ stepUpError }` instead of redirecting. */
+type StepUpFormAction =
+  | string
+  | ((
+      formData: FormData,
+    ) =>
+      | void
+      | { stepUpError?: string }
+      | Promise<void | { stepUpError?: string }>);
+
 export function StepUpForm({
   action,
   className,
@@ -203,7 +214,7 @@ export function StepUpForm({
   onCancel,
   formRef,
 }: {
-  action?: FormHTMLAttributes<HTMLFormElement>["action"];
+  action?: StepUpFormAction;
   className?: string;
   autoComplete?: string;
   children: ReactNode;
@@ -236,13 +247,19 @@ export function StepUpForm({
       return;
     }
     setStepUpError(null);
-    const result = await action(formData);
-    const message = stepUpRejectionMessage(result);
-    if (!message) {
-      return;
+    try {
+      const result = await action(formData);
+      const message = stepUpRejectionMessage(result);
+      if (!message) {
+        return;
+      }
+      setStepUpError(message);
+      setOpen(true);
+    } catch (error) {
+      rethrowNextControlFlow(error);
+      setStepUpError(STEP_UP_REQUEST_FAILED);
+      setOpen(true);
     }
-    setStepUpError(message);
-    setOpen(true);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {

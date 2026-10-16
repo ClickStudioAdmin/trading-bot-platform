@@ -69,7 +69,7 @@ export default async function AccountCopyCataloguePage({
         </p>
       ) : null}
       {unfollowed ? (
-        <p className="mb-4 text-sm text-success">
+        <p className="mb-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           You unfollowed that desk. The copy desk was deleted. A
           private invite still lets you follow again.
         </p>

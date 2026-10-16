@@ -220,7 +220,7 @@ function ResultNote({ result }: { result: TemplateActionResult | null }) {
   ];
   if (notes.length === 0) {
     return (
-      <p className="mt-3 text-sm text-success">Saved.</p>
+      <p className="mt-3 rounded-card border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Saved.</p>
     );
   }
   return (

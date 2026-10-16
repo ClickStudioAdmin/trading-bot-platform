@@ -6,6 +6,29 @@ export const STEP_UP_MISSING =
 export const STEP_UP_INVALID =
   "That Google Authenticator or recovery code is incorrect.";
 
+/** Shown on the dialog when the submit dies before it can answer. */
+export const STEP_UP_REQUEST_FAILED = "That request timed out. Try again.";
+
+const NEXT_CONTROL_PREFIXES = [
+  "NEXT_REDIRECT",
+  "NEXT_HTTP_ERROR_FALLBACK",
+  "NEXT_NOT_FOUND",
+];
+
+/** Redirects and not-found must leave the dialog. Other failures stay on it. */
+export function rethrowNextControlFlow(error: unknown): void {
+  if (typeof error !== "object" || error === null || !("digest" in error)) {
+    return;
+  }
+  const digest = (error as { digest?: unknown }).digest;
+  if (typeof digest !== "string") {
+    return;
+  }
+  if (NEXT_CONTROL_PREFIXES.some((prefix) => digest.startsWith(prefix))) {
+    throw error;
+  }
+}
+
 /** When 2FA is off, the submit stands. When it is on, this code must verify. */
 export function stepUpFailure(input: {
   enabled: boolean;

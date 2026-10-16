@@ -89,7 +89,7 @@ export default async function CashAndCarrySettingsPage({
         </p>
       ) : null}
       {saved ? (
-        <p className="mt-4 text-sm text-success">Settings saved.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Settings saved.</p>
       ) : null}
       <DeskSettingsForm
         action={savePaperSettings}

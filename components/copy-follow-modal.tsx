@@ -282,7 +282,7 @@ function CopyFollowModal({
       </p>
       {followed ? (
         <div className="mt-4 space-y-4">
-          <p className="text-sm text-success">
+          <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
             You are following this desk. Close this window, or open the copy
             desk from the sidebar.
           </p>
