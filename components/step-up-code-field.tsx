@@ -15,6 +15,7 @@ import {
 import { useFormStatus } from "react-dom";
 import { ButtonBusyIcon } from "@/components/pending-submit-button";
 import { Modal } from "@/components/template-modals";
+import { TotpCodeBoxes } from "@/components/totp-code-boxes";
 import { STEP_UP_FIELD, stepUpShouldAsk } from "@/lib/auth/step-up";
 
 const TotpStepUpContext = createContext(false);
@@ -37,8 +38,6 @@ export function useTotpStepUpEnabled(): boolean {
   return useContext(TotpStepUpContext);
 }
 
-const fieldClass =
-  "mt-1 w-full min-w-0 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 const cancelClass =
   "shrink-0 rounded-control px-1.5 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40";
 const continueClass =
@@ -80,20 +79,14 @@ export function StepUpPrompt({
   const fieldId = `${formId}-code`;
   return (
     <>
-      <label htmlFor={fieldId} className="mt-4 block text-sm text-ink">
-        Authenticator code
-        <input
-          id={fieldId}
-          form={formId}
-          name={STEP_UP_FIELD}
-          required
-          autoFocus
-          autoComplete="one-time-code"
-          spellCheck={false}
-          className={fieldClass}
-        />
-        <span className="mt-1 block text-hint text-ink-muted">{hint}</span>
-      </label>
+      <div className="mt-4">
+        <label htmlFor={fieldId} className="block text-sm text-ink">
+          Authenticator code
+        </label>
+        <TotpCodeBoxes id={fieldId} name={STEP_UP_FIELD} form={formId} disabled={pending} allowRecovery>
+          <span className="mt-1 block text-hint text-ink-muted">{hint}</span>
+        </TotpCodeBoxes>
+      </div>
       {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
       <div className="mt-5 flex items-center justify-end gap-3">
         <button

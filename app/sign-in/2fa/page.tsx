@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { TotpCodeBoxes } from "@/components/totp-code-boxes";
 import {
   cancelSignIn2faAction,
   completeSignIn2faAction,
 } from "@/lib/auth/totp-actions";
 import { redirectSignedInHome } from "@/lib/auth/onboarding";
 import { getSignInChallengeUserId } from "@/lib/auth/session";
-import {
-  AUTH_FORM_COLUMN_CLASS,
-  BILLING_FIELD_CLASS,
-} from "@/lib/membership/wallet-form";
+import { AUTH_FORM_COLUMN_CLASS } from "@/lib/membership/wallet-form";
 import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
 
@@ -44,22 +42,17 @@ export default async function SignIn2faPage({
         </h1>
         <form id="cancel-sign-in-2fa" action={cancelSignIn2faAction} hidden />
         <form action={completeSignIn2faAction}>
-          <label className="mt-4 block text-sm text-ink" htmlFor="code">
-            Authenticator code
-            <input
-              id="code"
-              name="code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              autoFocus
-              required
-              className={BILLING_FIELD_CLASS}
-            />
-            <span className="mt-1 block text-hint text-ink-muted">
-              Open Google Authenticator and enter the 6-digit code. A recovery
-              code also works once.
-            </span>
-          </label>
+          <div className="mt-4">
+            <label className="block text-sm text-ink" htmlFor="code">
+              Authenticator code
+            </label>
+            <TotpCodeBoxes id="code" name="code" allowRecovery>
+              <span className="mt-1 block text-hint text-ink-muted">
+                Open Google Authenticator and enter the 6-digit code. A recovery
+                code also works once.
+              </span>
+            </TotpCodeBoxes>
+          </div>
           {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
           <div className="mt-5 flex items-center justify-end gap-3">
             <button type="submit" form="cancel-sign-in-2fa" className={cancelClass}>
