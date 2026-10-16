@@ -177,6 +177,10 @@ assert.match(
 );
 assert.match(value(stacked, "Long Entry Condition Builder", "Entry conditions"), /or Price is above EMA 21/);
 assert.equal(value(perps, "Position Sizing", "Size"), "10 USDT");
+assert.equal(value(perps, "Additional Orders", "Condition Type"), "Off");
+assert.equal(value(perps, "Additional Orders", "Size"), "Off");
+assert.equal(value(perps, "Additional Orders", "Unit"), "Off");
+assert.equal(value(perps, "Additional Orders", "Order"), "Off");
 assert.equal(value(perps, "Long Exit Condition Builder", "Take profit"), "3% · Last · Market");
 assert.equal(value(perps, "Long Exit Condition Builder", "Stop loss"), "Off");
 assert.equal(value(perps, "Long Exit Condition Builder", "Custom conditions"), "Off");
@@ -212,6 +216,10 @@ const closeRule = perpsBotConfig({
   size: "",
 });
 assert.equal(value(closeRule, "Position Sizing", "Qty to close"), "All");
+assert.equal(
+  closeRule.find((row) => row.title === "Additional Orders"),
+  undefined,
+);
 assert.equal(
   closeRule.find(
     (row) =>

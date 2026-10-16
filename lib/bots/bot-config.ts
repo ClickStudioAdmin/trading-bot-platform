@@ -597,6 +597,16 @@ export function perpsBotConfig(
     ),
     ...(shortEntry ? [section("Short Entry Condition Builder", shortEntry)] : []),
     section("Position Sizing", sizing),
+    ...(closing
+      ? []
+      : [
+          section("Additional Orders", [
+            setting("Condition Type", null),
+            setting("Size", null),
+            setting("Unit", null),
+            setting("Order", null),
+          ]),
+        ]),
     ...exitSides.map((exitSide) => {
       const ownShort = exitSide === "short" && rule.direction === "both";
       const short = ownShort && perpsLegHasOwnExit(rule.shortEntry) ? rule.shortEntry : null;

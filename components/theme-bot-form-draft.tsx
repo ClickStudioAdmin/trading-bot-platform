@@ -31,6 +31,10 @@ import { ColumnHint } from "@/components/column-hint";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { ExitSideBuilder } from "@/components/exit-side-builder";
 import {
+  PerpsAdditionalOrders,
+  type PerpsAddConditionType,
+} from "@/components/perps-additional-orders";
+import {
   type ExitStackRow,
 } from "@/components/exit-condition-stack";
 import {
@@ -722,6 +726,11 @@ export function ThemeBotFormDraft() {
   const [carrySl, setCarrySl] = useState("");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPrice, setLimitPrice] = useState("");
+  const [addConditionType, setAddConditionType] = useState<PerpsAddConditionType>("");
+  const [addSize, setAddSize] = useState("");
+  const [addSizeUnit, setAddSizeUnit] = useState<"qty" | "usdt">("usdt");
+  const [addOrderType, setAddOrderType] = useState<"market" | "limit">("market");
+  const [addLimitPrice, setAddLimitPrice] = useState("");
   const [webhookId, setWebhookId] = useState("sample");
   const themeLongAnchor: EntryAnchor = {
     kind: startKind === "" ? "indicator" : startKind,
@@ -2537,7 +2546,27 @@ export function ThemeBotFormDraft() {
         </Group>
         </BotFormStep>
         ) : desk === "perps" && !closing ? (
-          <BotFormStep title="Additional Orders">{null}</BotFormStep>
+          <BotFormStep title="Additional Orders">
+            <PerpsAdditionalOrders
+              conditionType={addConditionType}
+              onConditionType={setAddConditionType}
+              size={addSize}
+              onSize={setAddSize}
+              sizeUnit={addSizeUnit}
+              onSizeUnit={setAddSizeUnit}
+              orderType={addOrderType}
+              onOrderType={setAddOrderType}
+              limitPrice={addLimitPrice}
+              onLimitPrice={setAddLimitPrice}
+              quoteLabel="USDT"
+              baseCoin={
+                SAMPLE_PAIRS.find((pair) => pair.symbol === symbol)?.baseCoin ??
+                "BTC"
+              }
+              fieldClass={fieldClass}
+              gridClass={rowClass}
+            />
+          </BotFormStep>
         ) : null}
 
         {(desk === "perps" ? perpsDirection !== "short" : direction !== "short") ? (
