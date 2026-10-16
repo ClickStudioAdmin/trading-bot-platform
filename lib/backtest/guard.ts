@@ -96,6 +96,11 @@ export function formatBacktestUtcDate(ms: number): string {
   return `${date.getUTCDate()} ${month} ${date.getUTCFullYear()}`;
 }
 
+function utcDayMs(ms: number): number {
+  const date = new Date(ms);
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
 /** Null when the tape reaches both ends of the window and has no large hole. */
 export function backtestTapeCoverageError(input: {
   bars: ReadonlyArray<{ timeMs: number }>;
@@ -129,7 +134,9 @@ export function backtestTapeCoverageError(input: {
   if (oldest == null || newest == null) {
     return "Incomplete candle history. No candles were loaded for this window.";
   }
-  if (oldest > input.fromMs + step) {
+  // The start date is a UTC day. A listing often has no bar at midnight,
+  // so any candle on that day reaches the window.
+  if (utcDayMs(oldest) > utcDayMs(input.fromMs)) {
     return `Incomplete candle history. The oldest candle is ${formatBacktestUtcDate(oldest)}, and this window starts ${formatBacktestUtcDate(input.fromMs)}.`;
   }
   const endTarget = Math.min(input.toMs, input.nowMs);
