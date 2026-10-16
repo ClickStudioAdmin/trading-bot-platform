@@ -123,6 +123,25 @@ assert.match(
   /oldest candle is 2 Nov 2025/,
 );
 
+const listedLater = backtestTapeCoverageError({
+  bars: hourly(Date.UTC(2020, 2, 25, 8), 6),
+  fromMs: Date.UTC(2020, 2, 25),
+  toMs: Date.UTC(2020, 2, 25, 13),
+  intervalMs: hour,
+  nowMs: Date.UTC(2026, 9, 16),
+});
+assert.equal(listedLater, null);
+assert.match(
+  backtestTapeCoverageError({
+    bars: hourly(Date.UTC(2020, 2, 26, 8), 6),
+    fromMs: Date.UTC(2020, 2, 25),
+    toMs: Date.UTC(2020, 2, 26, 13),
+    intervalMs: hour,
+    nowMs: Date.UTC(2026, 9, 16),
+  }) ?? "",
+  /oldest candle is 26 Mar 2020/,
+);
+
 const late = backtestTapeCoverageError({
   bars: hourly(Date.UTC(2025, 10, 2), 6),
   fromMs,
