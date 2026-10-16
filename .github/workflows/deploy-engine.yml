@@ -133,11 +133,12 @@ jobs:
           ')"
           echo "Fly secret names:"
           echo "$names"
-          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY EXCHANGE_CREDENTIALS_KEY BILLING_CREDENTIALS_KEY; do
+          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY EXCHANGE_CREDENTIALS_KEY; do
             if ! echo "$names" | grep -qx "$name"; then
               echo "tbp-backtest-dev exists, but $name is not set on the Fly app."
-              echo "In Fly, open tbp-backtest-dev → Secrets and add the same development values as tbp-engine-dev:"
-              echo "SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EXCHANGE_CREDENTIALS_KEY, BILLING_CREDENTIALS_KEY."
+              echo "In Fly, open tbp-backtest-dev → Secrets and add the development values:"
+              echo "SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EXCHANGE_CREDENTIALS_KEY."
+              echo "The billing key stays on tbp-engine-dev. Backtests do not decrypt wallets."
               echo "Then re-run this workflow."
               exit 1
             fi
@@ -251,10 +252,12 @@ jobs:
           ')"
           echo "Fly secret names:"
           echo "$names"
-          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY EXCHANGE_CREDENTIALS_KEY BILLING_CREDENTIALS_KEY; do
+          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY EXCHANGE_CREDENTIALS_KEY; do
             if ! echo "$names" | grep -qx "$name"; then
               echo "tbp-backtest exists, but $name is not set on the Fly app."
-              echo "In Fly, open tbp-backtest → Secrets and add the same production values as tbp-engine."
+              echo "In Fly, open tbp-backtest → Secrets and add the production values:"
+              echo "SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EXCHANGE_CREDENTIALS_KEY."
+              echo "The billing key stays on tbp-engine. Backtests do not decrypt wallets."
               echo "Then re-run this workflow."
               exit 1
             fi
