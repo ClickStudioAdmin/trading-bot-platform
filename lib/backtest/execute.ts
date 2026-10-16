@@ -1,3 +1,9 @@
+import {
+  candleHistoryBlockedMessage,
+  candleVenueLabel,
+  intervalHistoryLabel,
+} from "@/lib/market/candle-availability";
+import { backtestCandleHistoryError } from "@/lib/market/candle-range";
 import type { CandleBar } from "@/lib/market/candles";
 import { loadBacktestCandles } from "@/lib/market/desk-klines";
 import {
@@ -91,6 +97,31 @@ export async function executeBacktestRun(
   await touchBacktestProgress(runId, { done: 0, total: bars, phase: "candles" });
   const stopHeartbeat = startClaimHeartbeat(runId);
   try {
+    let historyError: string | null = null;
+    try {
+      historyError = await backtestCandleHistoryError({
+        venue: run.venue,
+        venueEnvironment: run.venueEnvironment,
+        interval: run.interval,
+        fromMs: run.fromMs,
+        toMs: run.toMs,
+        symbols: [run.symbol],
+      });
+    } catch {
+      historyError = candleHistoryBlockedMessage({
+        venueLabel: candleVenueLabel(run.venue),
+        symbol: run.symbol,
+        intervalLabel: intervalHistoryLabel(run.interval),
+      });
+    }
+    if (historyError) {
+      await updateBacktestRun(runId, {
+        status: "failed",
+        error: historyError,
+        finished: true,
+      });
+      return { ok: false, error: historyError, runId };
+    }
     const allowed =
       run.recipe.kind === "dca"
         ? canBacktestDcaRecipe(run.recipe)

@@ -41,14 +41,22 @@ const FIELD_TRIGGER =
 const ACTION_TRIGGER =
   "inline-flex w-max max-w-full shrink-0 items-center justify-between gap-3 rounded-control bg-accent-strong px-4 py-2 text-left text-sm font-medium text-ink hover:bg-accent focus:outline-none disabled:opacity-40";
 
+function triggerVisualClass(className: string) {
+  return className
+    .split(/\s+/)
+    .filter((token) => token && !/^!?m[trblxy]?-/.test(token))
+    .join(" ");
+}
+
 function mergeTriggerClass(base: string, className: string) {
-  if (!/\bbg-/.test(className)) {
-    return `${base} ${className}`.trim();
+  const visual = triggerVisualClass(className);
+  if (!/\bbg-/.test(visual)) {
+    return `${base} ${visual}`.trim();
   }
   return `${base
     .split(/\s+/)
     .filter((token) => !token.startsWith("bg-"))
-    .join(" ")} ${className}`.trim();
+    .join(" ")} ${visual}`.trim();
 }
 
 function selectRootClass(variant: "field" | "action", className: string) {

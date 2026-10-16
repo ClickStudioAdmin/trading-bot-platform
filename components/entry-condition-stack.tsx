@@ -14,7 +14,11 @@ import {
   IndicatorStartFields,
   TrendStartFields,
 } from "@/components/bot-indicator-fields";
-import { HintLabel } from "@/components/bot-form-chrome";
+import {
+  HintLabel,
+  conditionFieldClass,
+  useBotColumnLayout,
+} from "@/components/bot-form-chrome";
 import { IconPlus } from "@/components/icons";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { dcaFilterComplete, type DcaFilterSpec } from "@/lib/dca/filters";
@@ -443,6 +447,7 @@ export function EntryConditionStack({
   grouped?: boolean;
   lead?: ReactNode;
 }) {
+  const column = useBotColumnLayout();
   const cap = STRATEGY_CONDITION_CAP - 1;
   const webhookIds = webhooks.map((hook) => hook.id);
   const slots = entryConflictSlots(anchor, rows);
@@ -597,7 +602,11 @@ export function EntryConditionStack({
                         draft: draftForKind(kind, side, timeframe),
                       });
                     }}
-                    className={row.join === "or" ? `${fieldClass} !min-w-72` : fieldClass}
+                    className={
+                      row.join === "or"
+                        ? conditionFieldClass(fieldClass, column)
+                        : fieldClass
+                    }
                   >
                     <option value="">
                       {row.join === "or" ? "Select Condition Type" : "Select Trigger"}

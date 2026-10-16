@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { flushSync, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AppMultiSelect, AppSelect, type AppSelectOption } from "@/components/app-select";
 import { TemplateParametersButton } from "@/components/template-parameters-tip";
@@ -9,6 +10,7 @@ import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { ClickGateNotice, formSubmitAnchor, useClickGate } from "@/components/click-gate-notice";
+import { IconLoader } from "@/components/icons";
 import { FreeTrialBadge } from "@/components/plan-trial-hint";
 import {
   ResearchNoticeBanner,
@@ -125,6 +127,34 @@ export type BacktestQueueSeed = {
   comparables: string[];
 };
 
+function QueueSubmitButton({
+  disabled,
+  idle,
+  pendingLabel,
+  busy,
+}: {
+  disabled: boolean;
+  idle: string;
+  pendingLabel: string;
+  busy: boolean;
+}) {
+  const { pending } = useFormStatus();
+  const show = pending || busy;
+  return (
+    <button
+      type="submit"
+      disabled={disabled || show}
+      aria-busy={show}
+      className="inline-flex items-center gap-2 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-70"
+    >
+      {show ? (
+        <IconLoader className="size-3.5 shrink-0 animate-spin" aria-hidden />
+      ) : null}
+      {show ? pendingLabel : idle}
+    </button>
+  );
+}
+
 function VariantShell({
   variant,
   leading,
@@ -134,13 +164,10 @@ function VariantShell({
   leading?: ReactNode;
   children: ReactNode;
 }) {
-  if (!variant) {
-    return children;
-  }
   return (
     <div className="min-w-0 rounded-card border border-line bg-surface p-5">
-      {leading}
-      <div className={leading ? "mt-4" : undefined}>{children}</div>
+      {variant ? leading : null}
+      <div className={variant && leading ? "mt-4" : undefined}>{children}</div>
     </div>
   );
 }
@@ -578,17 +605,14 @@ export function BacktestQueueForm({
     !variant && queueGate && queueInput
       ? newBacktestPageNotices(queueGate, queueInput)
       : [];
-  const submitLabel = pending
+  const idleLabel = variant
     ? preview.inline
-      ? "Running…"
-      : "Queuing…"
-    : variant
-      ? preview.inline
-        ? "Run variant"
-        : "Queue variant"
-      : preview.inline
-        ? "Run backtest"
-        : "Queue backtest";
+      ? "Run variant"
+      : "Queue variant"
+    : preview.inline
+      ? "Run backtest"
+      : "Queue backtest";
+  const submitLabel = pending ? "Queuing…" : idleLabel;
 
   const pageNoticeBlock =
     pageNotices.length > 0 ? (
@@ -604,11 +628,7 @@ export function BacktestQueueForm({
     {variant ? null : pageNoticeBlock}
     <section
       id={variant ? undefined : "replay"}
-      className={
-        variant
-          ? ""
-          : "mb-8 rounded-card border border-line bg-surface p-5"
-      }
+      className={variant ? "" : "mb-8"}
     >
       {variant ? (
         <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-canvas px-4 py-3">
@@ -626,8 +646,12 @@ export function BacktestQueueForm({
               type="submit"
               form="backtest-variant-queue"
               disabled={submitDisabled}
-              className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
+              aria-busy={pending}
+              className="inline-flex items-center gap-2 rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
             >
+              {pending ? (
+                <IconLoader className="size-3.5 shrink-0 animate-spin" aria-hidden />
+              ) : null}
               {submitLabel}
             </button>
             {onVariantCancel ? (
@@ -642,24 +666,24 @@ export function BacktestQueueForm({
           </div>
         </div>
       ) : null}
+      <div
+        className={
+          variant
+            ? "space-y-4 p-4"
+            : "grid min-w-0 items-start gap-6 lg:grid-cols-2 [&>*]:min-w-0"
+        }
+      >
+      <VariantShell variant={variant} leading={variantLeading}>
       {variant || !showTitle ? null : (
         <h2 className="text-lg font-semibold">New backtest</h2>
       )}
       {variant ? null : (
-      <p className={showTitle ? "mt-1 text-sm text-ink-muted" : "text-sm text-ink-muted"}>
+      <p className={showTitle ? "mt-1 mb-4 text-sm text-ink-muted" : "mb-4 text-sm text-ink-muted"}>
         {loadedFromRun
           ? "Parameters loaded from the previous run. Tweak them and queue a new one."
           : "Pick a desk bot or a library template. Edit the replay fields, then queue. Long windows go to the engine worker."}
       </p>
       )}
-      <div
-        className={
-          variant
-            ? "space-y-4 p-4"
-            : "mt-4 grid min-w-0 items-start gap-6 lg:grid-cols-2 [&>*]:min-w-0"
-        }
-      >
-      <VariantShell variant={variant} leading={variantLeading}>
       <form
         id={variant ? "backtest-variant-queue" : undefined}
         className="@container min-w-0 space-y-3"
@@ -674,10 +698,12 @@ export function BacktestQueueForm({
             !(variant && !gate.optimize.allowed)
           ) {
             clickGate.hide();
+            flushSync(() => setPending(true));
             return;
           }
           if (!gate || !range.ok) {
             clickGate.hide();
+            flushSync(() => setPending(true));
             return;
           }
           const denial = queueBacktestDenial(gate, {
@@ -688,6 +714,7 @@ export function BacktestQueueForm({
           });
           if (!denial) {
             clickGate.hide();
+            flushSync(() => setPending(true));
             return;
           }
           const alreadyShown = pageNotices.some(
@@ -1071,13 +1098,12 @@ export function BacktestQueueForm({
         ))}
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         {variant ? null : (
-        <button
-          type="submit"
+        <QueueSubmitButton
           disabled={submitDisabled}
-          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
-        >
-          {submitLabel}
-        </button>
+          idle={idleLabel}
+          pendingLabel="Queuing…"
+          busy={pending}
+        />
         )}
       </form>
       {variant && recipe && pairChanged ? (
@@ -1091,7 +1117,7 @@ export function BacktestQueueForm({
           className={
             variant
               ? "min-w-0"
-              : "min-w-0 rounded-card border border-line bg-canvas p-4"
+              : "min-w-0 rounded-card border border-line bg-surface p-5"
           }
         >
           {variant ? null : (
@@ -1201,7 +1227,7 @@ export function BacktestQueueForm({
           </div>
         </aside>
       ) : variant ? null : (
-        <aside className="min-w-0 rounded-card border border-line bg-canvas p-4">
+        <aside className="min-w-0 rounded-card border border-line bg-surface p-5">
           <h3 className="text-lg font-semibold tracking-tight text-ink">
             Bot to replay
           </h3>

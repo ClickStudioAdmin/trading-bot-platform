@@ -10,6 +10,8 @@ import {
   BotField,
   BotFormGroup,
   botFieldInvalidClass,
+  conditionFieldClass,
+  useBotColumnLayout,
 } from "@/components/bot-form-chrome";
 import {
   EntryConditionStack,
@@ -306,6 +308,7 @@ export function PerpsEntryPanel({
   labelClass: string;
   showErrors?: boolean;
 }) {
+  const column = useBotColumnLayout();
   const draftRef = useRef(draft);
   useEffect(() => {
     draftRef.current = draft;
@@ -394,7 +397,7 @@ export function PerpsEntryPanel({
                 }
                 patch(partial);
               }}
-              className={`${fieldClass} !min-w-72`}
+              className={conditionFieldClass(fieldClass, column)}
             >
               {closing ? null : <option value="">Select Condition Type</option>}
               {closing ? null : <option value="indicator">Indicator</option>}

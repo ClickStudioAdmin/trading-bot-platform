@@ -1250,7 +1250,7 @@ function RuleCard({
         </BotField>
         <BotField label={kind === "percent" ? "%" : "Price"} required>
           {kind === "percent" ? (
-            <span className="relative mt-0.5 block">
+            <span className="relative mt-1 block">
               <GroupedNumberInput
                 name={exitFieldName(leg, "takeProfit")}
                 value={price}
@@ -1258,7 +1258,7 @@ function RuleCard({
                   shortLeg ? patchShort({ takeProfit: next }) : setTakeProfit(next)
                 }
                 allowDecimal
-                className={`${dirty && missing ? botFieldInvalidClass : botFieldClass} pr-7`}
+                className={`${dirty && missing ? botFieldInvalidClass : botFieldClass} !mt-0 pr-7`}
               />
               <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
                 %
@@ -1405,7 +1405,7 @@ function RuleCard({
               </BotField>
               <BotField label={kind === "percent" ? "%" : "Price"} required>
                 {kind === "percent" ? (
-                  <span className="relative mt-0.5 block">
+                  <span className="relative mt-1 block">
                     <GroupedNumberInput
                       name={exitFieldName(leg, "stopLoss")}
                       value={price}
@@ -1413,7 +1413,7 @@ function RuleCard({
                         shortLeg ? patchShort({ stopLoss: next }) : setStopLoss(next)
                       }
                       allowDecimal
-                      className={`${dirty && missing ? botFieldInvalidClass : botFieldClass} pr-7`}
+                      className={`${dirty && missing ? botFieldInvalidClass : botFieldClass} !mt-0 pr-7`}
                     />
                     <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
                       %
@@ -1487,7 +1487,7 @@ function RuleCard({
             >
               <div className="grid grid-cols-2 gap-4">
                 <BotField label="Move stop to breakeven at %" required>
-                  <span className="relative mt-0.5 block">
+                  <span className="relative mt-1 block">
                     <GroupedNumberInput
                       name={exitFieldName(leg, "breakevenActivationPct")}
                       value={activation}
@@ -1497,7 +1497,7 @@ function RuleCard({
                           : setBreakevenActivationPct(next)
                       }
                       allowDecimal
-                      className={`${dirty && moveMissing ? botFieldInvalidClass : botFieldClass} pr-7`}
+                      className={`${dirty && moveMissing ? botFieldInvalidClass : botFieldClass} !mt-0 pr-7`}
                     />
                     <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
                       %
@@ -1505,7 +1505,7 @@ function RuleCard({
                   </span>
                 </BotField>
                 <BotField label="Breakeven offset %">
-                  <span className="relative mt-0.5 block">
+                  <span className="relative mt-1 block">
                     <GroupedNumberInput
                       name={exitFieldName(leg, "breakevenOffsetPct")}
                       value={offset}
@@ -1516,7 +1516,7 @@ function RuleCard({
                       }
                       allowDecimal
                       placeholder="0"
-                      className={`${botFieldClass} pr-7`}
+                      className={`${botFieldClass} !mt-0 pr-7`}
                     />
                     <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
                       %
@@ -1736,7 +1736,7 @@ function RuleCard({
                 onChange={setSize}
                 allowDecimal
                 placeholder={closing ? "All" : undefined}
-                className={`${dirty && sizeMissing ? botFieldInvalidClass : botFieldClass} ${
+                className={`${dirty && sizeMissing ? botFieldInvalidClass : botFieldClass} !mt-0 ${
                   !closing && sizeUnit === "usdt" ? "pl-7" : ""
                 }`}
               />

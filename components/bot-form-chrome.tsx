@@ -22,9 +22,14 @@ export const botSectionTitleClass = "text-sm font-semibold text-ink";
 export const botStepTitleClass = "text-lg font-semibold tracking-tight text-ink";
 export const botRowClass = "grid grid-cols-2 gap-4 lg:grid-cols-4";
 export const botRowClass5 = "grid grid-cols-2 gap-4 lg:grid-cols-5";
-/** Backtest columns only. The desk form keeps botRowClass. */
+/** Backtest columns only. The desk form keeps botRowClass. A lone field spans the row. */
 export const botCompactRowClass =
-  "grid min-w-0 grid-cols-1 gap-3 @min-[22rem]:grid-cols-2 [&>*]:min-w-0";
+  "grid min-w-0 grid-cols-1 gap-3 @min-[22rem]:grid-cols-2 [&>*]:min-w-0 [&>:only-child]:col-span-full";
+
+/** Desk Condition Type stays wide. The backtest column uses the cell width. */
+export function conditionFieldClass(fieldClass: string, column: boolean) {
+  return column ? fieldClass : `${fieldClass} !min-w-72`;
+}
 
 const BotColumnLayoutContext = createContext(false);
 
