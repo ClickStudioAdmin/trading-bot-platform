@@ -43,7 +43,7 @@ export default async function AccountBacktestReplayPage({
     redirect("/sign-in");
   }
   const { runId } = await params;
-  const run = await loadBacktestRun(runId);
+  const run = await loadBacktestRun(runId, { replayEvents: false });
   const isAdmin = memberIsAdmin(member);
   if (!run || !canReadBacktestRun(run, member.id, isAdmin)) {
     notFound();
@@ -130,26 +130,37 @@ export default async function AccountBacktestReplayPage({
   );
 }
 
+function replayRailRun(run: BacktestRun): BacktestRun {
+  return { ...run, orders: [], replayEvents: null };
+}
+
 async function loadReplayFamily(
   run: BacktestRun,
   userId: string,
   isAdmin: boolean,
 ): Promise<{ rootId: string; rows: BacktestRun[] }> {
-  const parent = run.parentRunId ? await loadBacktestRun(run.parentRunId) : null;
+  const parent = run.parentRunId
+    ? await loadBacktestRun(run.parentRunId, {
+        orders: false,
+        replayEvents: false,
+      })
+    : null;
   const root =
     parent && canReadBacktestRun(parent, userId, isAdmin) ? parent : run;
   const children = await listBacktestRuns({
     parentRunId: root.id,
     limit: 40,
+    orders: false,
+    replayEvents: false,
   });
-  const rows = [root];
+  const rows = [replayRailRun(root)];
   for (const child of children) {
     if (child.id !== root.id && canReadBacktestRun(child, userId, isAdmin)) {
       rows.push(child);
     }
   }
   if (!rows.some((row) => row.id === run.id)) {
-    rows.push(run);
+    rows.push(replayRailRun(run));
   }
   return { rootId: root.id, rows };
 }

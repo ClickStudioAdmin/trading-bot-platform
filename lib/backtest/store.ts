@@ -526,14 +526,73 @@ export async function linkBacktestRunTemplate(
   return parseBacktestRunRow(data as Record<string, unknown>);
 }
 
-export async function loadBacktestRun(id: string): Promise<BacktestRun | null> {
+const BACKTEST_RUN_COLUMNS = [
+  "id",
+  "user_id",
+  "template_id",
+  "source_template_id",
+  "study_id",
+  "desk_type",
+  "venue",
+  "venue_environment",
+  "symbol",
+  "interval",
+  "from_ms",
+  "to_ms",
+  "fee_preset",
+  "fee_rate",
+  "status",
+  "recipe",
+  "stats",
+  "orders",
+  "replay_events",
+  "error",
+  "created_at",
+  "finished_at",
+  "starting_balance_usdt",
+  "parent_run_id",
+  "comparable_symbols",
+  "claimed_at",
+  "leverage",
+  "name",
+  "progress_done",
+  "progress_total",
+  "progress_phase",
+  "claim_count",
+  "retry_after",
+] as const;
+
+function backtestRunColumns(input?: {
+  orders?: boolean;
+  replayEvents?: boolean;
+}): string {
+  const orders = input?.orders !== false;
+  const replayEvents = input?.replayEvents !== false;
+  if (orders && replayEvents) {
+    return "*";
+  }
+  return BACKTEST_RUN_COLUMNS.filter((column) => {
+    if (!orders && column === "orders") {
+      return false;
+    }
+    if (!replayEvents && column === "replay_events") {
+      return false;
+    }
+    return true;
+  }).join(",");
+}
+
+export async function loadBacktestRun(
+  id: string,
+  options?: { orders?: boolean; replayEvents?: boolean },
+): Promise<BacktestRun | null> {
   const supabase = createServiceClient();
   if (!supabase) {
     return null;
   }
   const { data, error } = await supabase
     .from("backtest_runs")
-    .select("*")
+    .select(backtestRunColumns(options))
     .eq("id", id)
     .maybeSingle();
   if (error || !data) {
@@ -552,6 +611,8 @@ export async function listBacktestRuns(input: {
   studyId?: string;
   includeDrafts?: boolean;
   limit?: number;
+  orders?: boolean;
+  replayEvents?: boolean;
 }): Promise<BacktestRun[]> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -559,7 +620,7 @@ export async function listBacktestRuns(input: {
   }
   let query = supabase
     .from("backtest_runs")
-    .select("*")
+    .select(backtestRunColumns(input))
     .order("created_at", { ascending: false })
     .limit(input.limit ?? 80);
   if (!input.includeDrafts) {

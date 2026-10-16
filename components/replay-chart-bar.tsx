@@ -26,6 +26,7 @@ const TOOL_BUTTON =
 export function ReplayChartBar({
   interval,
   onInterval,
+  disabledIntervals,
   favoriteIntervals,
   onFavoriteIntervals,
   appearance,
@@ -42,6 +43,7 @@ export function ReplayChartBar({
 }: {
   interval: DcaIndicatorTimeframe;
   onInterval: (value: DcaIndicatorTimeframe) => void;
+  disabledIntervals?: ReadonlySet<DcaIndicatorTimeframe>;
   favoriteIntervals: readonly DcaIndicatorTimeframe[];
   onFavoriteIntervals: (value: DcaIndicatorTimeframe[]) => void;
   appearance: ReplayChartAppearance;
@@ -67,6 +69,7 @@ export function ReplayChartBar({
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <ReplayChartIntervalControl
           interval={interval}
+          disabledIntervals={disabledIntervals}
           onInterval={onInterval}
           favorites={favoriteIntervals}
           onFavorites={onFavoriteIntervals}

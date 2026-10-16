@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import {
+  candleBarTimeMs,
+  candleIndexAt,
   clipCandlesToWindow,
   isValidCandleBar,
   parseCandleInterval,
@@ -72,5 +74,16 @@ assert.deepEqual(
   clipped.map((row) => row.timeMs),
   [2_000, 3_000, 4_000],
 );
+const bars = [
+  { timeMs: 1_000 },
+  { timeMs: 2_000 },
+  { timeMs: 3_000 },
+];
+assert.equal(candleIndexAt(bars, 500), 0);
+assert.equal(candleIndexAt(bars, 2_000), 1);
+assert.equal(candleIndexAt(bars, 2_500), 1);
+assert.equal(candleIndexAt(bars, 9_000), 2);
+assert.equal(candleBarTimeMs(bars, 500), 500);
+assert.equal(candleBarTimeMs(bars, 2_500), 2_000);
 
 console.log("candle parse checks passed");

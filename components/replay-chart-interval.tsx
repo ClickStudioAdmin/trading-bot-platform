@@ -32,11 +32,13 @@ const INTERVAL_GROUPS: { label: string; intervals: DcaIndicatorTimeframe[] }[] =
 export function ReplayChartIntervalControl({
   interval,
   onInterval,
+  disabledIntervals,
   favorites,
   onFavorites,
 }: {
   interval: DcaIndicatorTimeframe;
   onInterval: (value: DcaIndicatorTimeframe) => void;
+  disabledIntervals?: ReadonlySet<DcaIndicatorTimeframe>;
   favorites: readonly DcaIndicatorTimeframe[];
   onFavorites: (value: DcaIndicatorTimeframe[]) => void;
 }) {
@@ -85,12 +87,15 @@ export function ReplayChartIntervalControl({
       <div className="flex flex-wrap gap-1" role="group" aria-label="Chart timeframe">
         {row.map((value) => {
           const selected = interval === value;
+          const disabled = disabledIntervals?.has(value) ?? false;
           return (
             <button
               key={value}
               type="button"
+              disabled={disabled}
+              title={disabled ? "Too many bars for this window" : undefined}
               onClick={() => onInterval(value)}
-              className={`rounded-control px-2 py-1 text-xs ${
+              className={`rounded-control px-2 py-1 text-xs disabled:opacity-40 ${
                 selected
                   ? "bg-accent-strong text-ink"
                   : "border border-line text-ink-muted hover:text-ink"
@@ -130,6 +135,7 @@ export function ReplayChartIntervalControl({
                 const selected = interval === value;
                 const locked = ROW_DEFAULTS.has(value);
                 const pinned = locked || favoriteSet.has(value);
+                const disabled = disabledIntervals?.has(value) ?? false;
                 return (
                   <div
                     key={value}
@@ -141,8 +147,13 @@ export function ReplayChartIntervalControl({
                       type="button"
                       role="option"
                       aria-selected={selected}
-                      className="min-w-0 flex-1 px-3 py-1.5 text-left text-sm text-ink"
+                      disabled={disabled}
+                      title={disabled ? "Too many bars for this window" : undefined}
+                      className="min-w-0 flex-1 px-3 py-1.5 text-left text-sm text-ink disabled:opacity-40"
                       onClick={() => {
+                        if (disabled) {
+                          return;
+                        }
                         onInterval(value);
                         setOpen(false);
                       }}

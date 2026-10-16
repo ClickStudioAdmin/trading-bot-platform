@@ -97,18 +97,27 @@ import {
 } from "@/lib/backtest/play";
 import {
   backtestChartFetchBounds,
+  chartIntervalForWindow,
+  replayChartFetchBars,
+  replayChartIntervalAllowed,
   type BacktestRun,
   type ReplayEvent,
   type SimulatedOrder,
 } from "@/lib/backtest/model";
 import { listBacktestCycles, replayPositionsPageSize } from "@/lib/backtest/positions";
 import {
+  DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import { attachRightAxisWheel } from "@/lib/charts/interact";
 import { loadBacktestDisplayCandles } from "@/lib/charts/load-backtest-candles";
-import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
+import {
+  candleBarTimeMs,
+  candleIndexAt,
+  clipCandlesToWindow,
+  type CandleBar,
+} from "@/lib/market/candles";
 import { formatPrice, formatQty, signedTone } from "@/lib/opportunities/format";
 import {
   IconChevronRight,
@@ -323,18 +332,6 @@ function styledLineColor(
   return style.opacity >= 100 ? base : colorWithOpacity(base, style.opacity);
 }
 
-function candleIndexAt(candles: CandleBar[], atMs: number): number {
-  let index = 0;
-  for (let i = 0; i < candles.length; i += 1) {
-    if ((candles[i]?.timeMs ?? 0) <= atMs) {
-      index = i;
-    } else {
-      break;
-    }
-  }
-  return index;
-}
-
 /** Pixels under the side-by-side grid: layout padding plus the site footer. */
 function replayFrameReserve(grid: HTMLElement): number {
   const footer = document.querySelector("footer");
@@ -412,7 +409,20 @@ export function ReplayPlayer({
     () => run.replayEvents ?? eventsFromOrders(run.orders),
     [run.replayEvents, run.orders],
   );
-  const [interval, setInterval] = useState<DcaIndicatorTimeframe>(run.interval);
+  const [interval, setInterval] = useState<DcaIndicatorTimeframe>(() =>
+    chartIntervalForWindow(run.fromMs, run.toMs, run.interval),
+  );
+  const closedIntervals = useMemo(() => {
+    const closed = new Set<DcaIndicatorTimeframe>();
+    for (const value of DCA_INDICATOR_TIMEFRAMES) {
+      if (
+        !replayChartIntervalAllowed(run.fromMs, run.toMs, value, run.interval)
+      ) {
+        closed.add(value);
+      }
+    }
+    return closed;
+  }, [run.fromMs, run.interval, run.toMs]);
   const [favoriteIntervals, setFavoriteIntervals] = useState<DcaIndicatorTimeframe[]>(
     preferences?.favoriteIntervals ?? [],
   );
@@ -605,6 +615,12 @@ export function ReplayPlayer({
       interval,
       fromMs: bounds.fromMs,
       toMs: bounds.toMs,
+      maxBars: replayChartFetchBars(
+        run.fromMs,
+        run.toMs,
+        interval,
+        run.interval,
+      ),
     })
       .then((rows) => {
         if (!cancelled) {
@@ -1413,14 +1429,7 @@ export function ReplayPlayer({
               replayMarkerInPositionFocus(row.orderIndex, focusOrders),
           )
           .map((row) => {
-            let barMs = row.atMs;
-            for (const candle of candles) {
-              if (candle.timeMs <= row.atMs) {
-                barMs = candle.timeMs;
-              } else {
-                break;
-              }
-            }
+            const barMs = candleBarTimeMs(candles, row.atMs);
             const selectedSame =
               selected != null &&
               selected.atMs === row.atMs &&
@@ -1449,14 +1458,7 @@ export function ReplayPlayer({
           selected.atMs <= at &&
           replayMarkerInPositionFocus(selected.orderIndex, focusOrders)
         ) {
-          let barMs = selected.atMs;
-          for (const candle of candles) {
-            if (candle.timeMs <= selected.atMs) {
-              barMs = candle.timeMs;
-            } else {
-              break;
-            }
-          }
+          const barMs = candleBarTimeMs(candles, selected.atMs);
           plotted.push({
             time: Math.floor(barMs / 1000) as never,
             position: selected.side === "short" ? "belowBar" : "aboveBar",
@@ -2308,7 +2310,13 @@ export function ReplayPlayer({
       >
         <ReplayChartBar
           interval={interval}
-          onInterval={setInterval}
+          onInterval={(next) => {
+            if (closedIntervals.has(next)) {
+              return;
+            }
+            setInterval(next);
+          }}
+          disabledIntervals={closedIntervals}
           favoriteIntervals={favoriteIntervals}
           onFavoriteIntervals={setFavoriteIntervals}
           appearance={chartAppearance}

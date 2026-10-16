@@ -893,6 +893,8 @@ export const BACKTEST_CHART_INTERVALS: readonly DcaIndicatorTimeframe[] = [
   "D",
 ];
 export const BACKTEST_CHART_BAR_LIMIT = 1500;
+/** Replay refuses a finer timeframe than this. The auto pick can still be a little larger. */
+export const BACKTEST_REPLAY_BAR_CAP = 4_000;
 
 export function chartIntervalForWindow(
   fromMs: number,
@@ -925,6 +927,32 @@ export function backtestChartIntervalFits(
   interval: DcaIndicatorTimeframe,
 ): boolean {
   return estimateBacktestBars(fromMs, toMs, interval) <= BACKTEST_CHART_BAR_LIMIT;
+}
+
+export function replayChartIntervalAllowed(
+  fromMs: number,
+  toMs: number,
+  interval: DcaIndicatorTimeframe,
+  tape: DcaIndicatorTimeframe,
+): boolean {
+  if (interval === chartIntervalForWindow(fromMs, toMs, tape)) {
+    return true;
+  }
+  return estimateBacktestBars(fromMs, toMs, interval) <= BACKTEST_REPLAY_BAR_CAP;
+}
+
+/** How many bars the replay chart may download for this timeframe. */
+export function replayChartFetchBars(
+  fromMs: number,
+  toMs: number,
+  interval: DcaIndicatorTimeframe,
+  tape: DcaIndicatorTimeframe,
+): number {
+  const needed = Math.max(1, estimateBacktestBars(fromMs, toMs, interval));
+  if (interval === chartIntervalForWindow(fromMs, toMs, tape)) {
+    return needed;
+  }
+  return Math.min(needed, BACKTEST_REPLAY_BAR_CAP);
 }
 
 export function backtestChartFetchBounds(
