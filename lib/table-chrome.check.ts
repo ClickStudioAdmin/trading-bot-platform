@@ -12,8 +12,10 @@ import {
   tablePageHrefs,
   tablePagerItems,
   tablePageWindow,
+  pruneRemovedIds,
   tableFiltersOpenStorageKey,
   tableFiltersSuggestOpen,
+  withRemovedIds,
   tableSortHref,
   toggleTableSortDir,
 } from "./table-chrome";
@@ -118,5 +120,11 @@ assert.notEqual(
   tableFiltersOpenStorageKey({ pathname: "/account/billing", tab: "ledger" }),
   tableFiltersOpenStorageKey({ pathname: "/account/inbox" }),
 );
+const removed = new Set(["a"]);
+assert.equal(withRemovedIds(removed, ["a", " "]), removed);
+assert.deepEqual([...withRemovedIds(removed, ["b"])], ["a", "b"]);
+assert.equal(pruneRemovedIds(removed, ["a"]), removed);
+assert.deepEqual([...pruneRemovedIds(removed, [])], []);
+assert.equal(pruneRemovedIds(new Set(), ["a"]).size, 0);
 
 console.log("table-chrome checks passed");

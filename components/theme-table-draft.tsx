@@ -137,6 +137,7 @@ function compareSampleRows(
 }
 
 export function ThemeTableDraft() {
+  const [rows, setRows] = useState(SAMPLE_ROWS);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -148,7 +149,7 @@ export function ThemeTableDraft() {
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return SAMPLE_ROWS.filter((item) => {
+    return rows.filter((item) => {
       if (typeFilter !== "all" && item.type !== typeFilter) {
         return false;
       }
@@ -163,7 +164,7 @@ export function ThemeTableDraft() {
         item.venue.toLowerCase().includes(needle)
       );
     });
-  }, [query, typeFilter, statusFilter]);
+  }, [query, rows, typeFilter, statusFilter]);
 
   const table = useClientTable(filtered, compareSampleRows, {
     defaultKey: "name",
@@ -243,14 +244,28 @@ export function ThemeTableDraft() {
               <TableLabelButton
                 variant="bulk"
                 icon={<IconDisable {...TABLE_BTN_ICON} />}
-                onClick={() => flash(`Sample only — disable ${selectedCount}.`)}
+                onClick={() => {
+                  setRows((current) =>
+                    current.map((row) =>
+                      selected.has(row.id) ? { ...row, status: "disabled" } : row,
+                    ),
+                  );
+                  setSelected(new Set());
+                  flash(`Disabled ${selectedCount}.`);
+                }}
               >
                 Disable
               </TableLabelButton>
               <TableLabelButton
                 variant="danger"
                 icon={<IconTrash {...TABLE_BTN_ICON} />}
-                onClick={() => flash(`Sample only — delete ${selectedCount}.`)}
+                onClick={() => {
+                  setRows((current) =>
+                    current.filter((row) => !selected.has(row.id)),
+                  );
+                  setSelected(new Set());
+                  flash(`Deleted ${selectedCount}.`);
+                }}
               >
                 Delete
               </TableLabelButton>
@@ -474,6 +489,16 @@ export function ThemeTableDraft() {
                         label="Delete"
                         detail="Remove this item."
                         danger
+                        onClick={() => {
+                          setRows((current) =>
+                            current.filter((row) => row.id !== item.id),
+                          );
+                          setSelected((current) => {
+                            const next = new Set(current);
+                            next.delete(item.id);
+                            return next;
+                          });
+                        }}
                       >
                         <IconTrash {...TABLE_BTN_ICON} />
                       </TableIconAction>

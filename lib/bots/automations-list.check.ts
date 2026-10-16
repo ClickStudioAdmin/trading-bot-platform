@@ -12,6 +12,7 @@ import {
   dcaBotSummary,
   dcaListStatus,
   filterAutomationsBots,
+  deskBotRows,
   missingById,
   rowsForDesk,
   futuresAutomationsBotBlotter,
@@ -27,6 +28,7 @@ import {
   automationsReturnHref,
   focusedBotTitle,
 } from "./automations-path";
+import { pruneRemovedIds, withRemovedIds } from "@/lib/table-chrome";
 import { defaultFuturesAutomationForm } from "@/lib/futures/automation";
 import { paperConfigToFormValues, defaultPaperLayer } from "@/lib/engine/rules";
 import type { DcaPlaybook } from "@/lib/dca/playbook";
@@ -75,6 +77,104 @@ assert.equal(
   }),
   sameDesk,
 );
+const kept = [{ id: "a" }, { id: "b" }];
+assert.equal(
+  rowsForDesk({
+    deskChanged: false,
+    current: kept,
+    incoming: [{ id: "a" }, { id: "b" }],
+    id: (row) => row.id,
+    omitIds: new Set(),
+  }),
+  kept,
+);
+assert.deepEqual(
+  rowsForDesk({
+    deskChanged: false,
+    current: [{ id: "a" }, { id: "b" }, { id: "c" }],
+    incoming: [{ id: "a" }, { id: "b" }, { id: "c" }],
+    id: (row) => row.id,
+    omitIds: new Set(["b"]),
+  }).map((row) => row.id),
+  ["a", "c"],
+);
+assert.deepEqual(
+  rowsForDesk({
+    deskChanged: false,
+    current: [{ id: "a" }, { id: null }],
+    incoming: [{ id: "b" }, { id: "a" }],
+    id: (row) => row.id,
+    omitIds: new Set(["b"]),
+  }).map((row) => row.id),
+  ["a", null],
+);
+
+const sameRemoved = new Set(["a"]);
+assert.equal(withRemovedIds(sameRemoved, ["a", " "]), sameRemoved);
+assert.deepEqual([...withRemovedIds(sameRemoved, ["b"])], ["a", "b"]);
+assert.equal(pruneRemovedIds(sameRemoved, ["a", "b"]), sameRemoved);
+assert.equal(pruneRemovedIds(new Set(), ["a"]).size, 0);
+assert.deepEqual([...pruneRemovedIds(sameRemoved, ["b"])], []);
+
+const hidden = deskBotRows({
+  deskChanged: false,
+  current: [{ id: "a" }, { id: "b" }],
+  incoming: [{ id: "a" }, { id: "b" }, { id: "c" }],
+  removedIds: new Set(["b"]),
+  id: (row) => row.id,
+});
+assert.deepEqual(
+  hidden.rows.map((row) => row.id),
+  ["c", "a"],
+);
+assert.equal(hidden.removedIds.has("b"), true);
+
+const staleServer = deskBotRows({
+  deskChanged: false,
+  current: [{ id: "a" }],
+  incoming: [{ id: "b" }, { id: "a" }],
+  removedIds: new Set(["b"]),
+  id: (row) => row.id,
+});
+assert.deepEqual(
+  staleServer.rows.map((row) => row.id),
+  ["a"],
+);
+assert.equal(staleServer.removedIds.has("b"), true);
+
+const serverCaughtUp = deskBotRows({
+  deskChanged: false,
+  current: [{ id: "a" }, { id: "b" }],
+  incoming: [{ id: "a" }],
+  removedIds: new Set(["b"]),
+  id: (row) => row.id,
+});
+assert.deepEqual(
+  serverCaughtUp.rows.map((row) => row.id),
+  ["a"],
+);
+const cleared = deskBotRows({
+  deskChanged: false,
+  current: serverCaughtUp.rows,
+  incoming: [{ id: "a" }],
+  removedIds: serverCaughtUp.removedIds,
+  id: (row) => row.id,
+});
+assert.equal(cleared.removedIds.size, 0);
+assert.equal(cleared.rows, serverCaughtUp.rows);
+
+const switchedDesk = deskBotRows({
+  deskChanged: true,
+  current: [{ id: "a" }],
+  incoming: [{ id: "z" }],
+  removedIds: new Set(["a"]),
+  id: (row) => row.id,
+});
+assert.deepEqual(
+  switchedDesk.rows.map((row) => row.id),
+  ["z"],
+);
+assert.equal(switchedDesk.removedIds.size, 0);
 
 assert.equal(botModeLabel("cnc", "reduce_only"), "Reduce only");
 assert.equal(botModeLabel("dca", "stop_adding"), "Stop adding");

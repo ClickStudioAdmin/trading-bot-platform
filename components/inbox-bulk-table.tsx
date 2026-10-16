@@ -82,8 +82,31 @@ export function InboxBulkTable({
 }) {
   const ids = useMemo(() => rows.map((row) => row.id), [rows]);
   const [selected, setSelected] = useState<number[]>([]);
+  const [readAtOverride, setReadAtOverride] = useState<
+    Map<number, string | null>
+  >(() => new Map());
   const allSelected = ids.length > 0 && ids.every((id) => selected.includes(id));
   const hasSelection = selected.length > 0;
+
+  function shownReadAt(row: InboxTableRow): string | null {
+    return readAtOverride.has(row.id)
+      ? (readAtOverride.get(row.id) ?? null)
+      : row.readAt;
+  }
+
+  function paintRead(targetIds: readonly number[], read: boolean) {
+    if (targetIds.length === 0) {
+      return;
+    }
+    setReadAtOverride((current) => {
+      const next = new Map(current);
+      const stamp = read ? new Date().toISOString() : null;
+      for (const id of targetIds) {
+        next.set(id, stamp);
+      }
+      return next;
+    });
+  }
 
   function toggleAll() {
     setSelected(allSelected ? [] : ids);
@@ -107,6 +130,8 @@ export function InboxBulkTable({
               <TablePendingLabelButton
                 form="inbox-bulk"
                 formAction={markNotificationsReadAction}
+                name="intent"
+                value="read"
                 pendingLabel="Marking…"
                 icon={<IconMailOpen {...TABLE_BTN_ICON} />}
               >
@@ -115,6 +140,8 @@ export function InboxBulkTable({
               <TablePendingLabelButton
                 form="inbox-bulk"
                 formAction={markNotificationsUnreadAction}
+                name="intent"
+                value="unread"
                 pendingLabel="Marking…"
                 icon={<IconMail {...TABLE_BTN_ICON} />}
               >
@@ -137,11 +164,26 @@ export function InboxBulkTable({
       >
         {filterBar}
       </TableFilterSession>
-      <form id="inbox-mark-all" action={markNotificationsReadAction} className="hidden">
+      <form
+        id="inbox-mark-all"
+        action={markNotificationsReadAction}
+        className="hidden"
+        onSubmit={() => paintRead(ids, true)}
+      >
         <input type="hidden" name="all" value="1" />
         <InboxReturnFields page={page} filters={filters} sort={sort} />
       </form>
-      <form id="inbox-bulk">
+      <form
+        id="inbox-bulk"
+        onSubmit={(event) => {
+          const submitter = (event.nativeEvent as SubmitEvent).submitter;
+          const intent =
+            submitter instanceof HTMLButtonElement ? submitter.value : "";
+          if (intent === "read" || intent === "unread") {
+            paintRead(selected, intent === "read");
+          }
+        }}
+      >
         <InboxReturnFields page={page} filters={filters} sort={sort} />
         <TableCard pager={pager}>
           <table className="w-full min-w-[42rem] text-left text-sm">
@@ -189,7 +231,7 @@ export function InboxBulkTable({
                   <tr
                     key={row.id}
                     className={`border-b border-line last:border-b-0 ${
-                      row.readAt ? "" : "bg-warning/5"
+                      shownReadAt(row) ? "" : "bg-warning/5"
                     }`}
                   >
                     <td className="px-4 py-3 align-top">
@@ -207,7 +249,7 @@ export function InboxBulkTable({
                         type="submit"
                         form={`inbox-open-${row.id}`}
                         className={`text-left hover:text-accent ${
-                          row.readAt
+                          shownReadAt(row)
                             ? "text-ink-muted"
                             : "font-medium text-ink"
                         }`}
@@ -223,8 +265,8 @@ export function InboxBulkTable({
                     </td>
                     <td className="px-4 py-3 align-top">
                       <StatusBadge
-                        label={row.readAt ? "Read" : "Unread"}
-                        status={row.readAt ? "read" : "unread"}
+                        label={shownReadAt(row) ? "Read" : "Unread"}
+                        status={shownReadAt(row) ? "read" : "unread"}
                       />
                     </td>
                     <td className={`${TABLE_ACTIONS_TD_CLASS} align-top`}>
@@ -232,14 +274,14 @@ export function InboxBulkTable({
                         <TableIconAction
                           type="submit"
                           form={`inbox-row-${row.id}`}
-                          label={row.readAt ? "Mark unread" : "Mark read"}
+                          label={shownReadAt(row) ? "Mark unread" : "Mark read"}
                           detail={
-                            row.readAt
+                            shownReadAt(row)
                               ? "Show this notice as unread."
                               : "Mark this notice as read."
                           }
                         >
-                          {row.readAt ? (
+                          {shownReadAt(row) ? (
                             <IconMail {...TABLE_BTN_ICON} />
                           ) : (
                             <IconMailOpen {...TABLE_BTN_ICON} />
@@ -263,10 +305,11 @@ export function InboxBulkTable({
           <form
             id={`inbox-row-${row.id}`}
             action={
-              row.readAt
+              shownReadAt(row)
                 ? markNotificationsUnreadAction
                 : markNotificationsReadAction
             }
+            onSubmit={() => paintRead([row.id], !shownReadAt(row))}
           >
             <input type="hidden" name="id" value={row.id} />
             <InboxReturnFields page={page} filters={filters} sort={sort} />
