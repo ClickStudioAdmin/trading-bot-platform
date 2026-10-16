@@ -65,6 +65,8 @@ export type PerpsAddOrderGroup = {
   lead: PerpsAddCondition;
   conditions: PerpsAddCondition[];
   order: PerpsAddOrderValues;
+  /** Group 2 and later. Omitted means the group uses Group 1's size. */
+  sameAsGroup1?: boolean;
 };
 
 function perpsAddKey(prefix: string): string {
@@ -78,6 +80,32 @@ export function blankPerpsAddOrderValues(): PerpsAddOrderValues {
     orderType: "market",
     limitPrice: "",
   };
+}
+
+/** Group 2+ uses Group 1 until the box is cleared. Group 1 always shows its fields. */
+export function sharesGroupLeadSizing(
+  groupIndex: number,
+  sameAsGroup1: boolean | undefined,
+): boolean {
+  return groupIndex > 0 && sameAsGroup1 !== false;
+}
+
+export function isBlankPerpsAddOrder(order: PerpsAddOrderValues): boolean {
+  const blank = blankPerpsAddOrderValues();
+  return (
+    order.size === blank.size &&
+    order.sizeUnit === blank.sizeUnit &&
+    order.orderType === blank.orderType &&
+    order.limitPrice === blank.limitPrice
+  );
+}
+
+/** The first time a later group leaves Same as Group 1, start from Group 1's values. */
+export function revealGroupOrder(
+  order: PerpsAddOrderValues,
+  lead: PerpsAddOrderValues,
+): PerpsAddOrderValues {
+  return isBlankPerpsAddOrder(order) ? { ...lead } : order;
 }
 
 export function blankPerpsAddCondition(

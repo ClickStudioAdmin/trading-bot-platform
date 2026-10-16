@@ -15,6 +15,7 @@ import {
 } from "@/components/bot-form-chrome";
 import {
   entryGroupOrderKey,
+  GroupPositionSizing,
   PerpsGroupOrderFields,
   useExtraGroupOrders,
 } from "@/components/entry-group-order";
@@ -654,26 +655,36 @@ export function PerpsEntryPanel({
               const lead = key === "lead";
               const values = lead ? order : extraOrders.orderFor(key);
               return (
-                <PerpsGroupOrderFields
-                  order={values}
-                  quoteLabel={quoteLabel ?? "USDT"}
-                  baseCoin={baseCoin ?? "Token"}
-                  fieldClass={fieldClass}
-                  invalidFieldClass={botFieldInvalidClass}
-                  gridClass={fieldRow}
-                  named={lead && orderNamed}
-                  namePrefix={prefix}
-                  required={lead}
-                  sizeInvalid={lead && orderSizeInvalid}
-                  limitInvalid={lead && orderLimitInvalid}
-                  onChange={(partial) => {
-                    if (lead) {
-                      onOrderChange(partial);
-                      return;
-                    }
-                    extraOrders.patch(key, partial);
-                  }}
-                />
+                <GroupPositionSizing
+                  groupIndex={groupIndex}
+                  sameAsGroup1={lead || extraOrders.sharesLead(key)}
+                  onSameAsGroup1={
+                    lead
+                      ? undefined
+                      : (same) => extraOrders.setShares(key, same, order)
+                  }
+                >
+                  <PerpsGroupOrderFields
+                    order={values}
+                    quoteLabel={quoteLabel ?? "USDT"}
+                    baseCoin={baseCoin ?? "Token"}
+                    fieldClass={fieldClass}
+                    invalidFieldClass={botFieldInvalidClass}
+                    gridClass={fieldRow}
+                    named={lead && orderNamed}
+                    namePrefix={prefix}
+                    required={lead}
+                    sizeInvalid={lead && orderSizeInvalid}
+                    limitInvalid={lead && orderLimitInvalid}
+                    onChange={(partial) => {
+                      if (lead) {
+                        onOrderChange(partial);
+                        return;
+                      }
+                      extraOrders.patch(key, partial);
+                    }}
+                  />
+                </GroupPositionSizing>
               );
             }
           : undefined
