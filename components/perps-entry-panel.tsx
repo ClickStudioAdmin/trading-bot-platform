@@ -16,7 +16,6 @@ import {
   entryDraftComplete,
   entryRowsFromSources,
   entryStackFromRows,
-  flipEntryRows,
   type EntryStackRow,
   type EntryWebhookOption,
 } from "@/components/entry-condition-stack";
@@ -26,7 +25,6 @@ import {
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
   DEFAULT_DCA_SUPERTREND_PERIOD,
   indicatorCompareForDirection,
-  oppositeIndicatorCompare,
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
@@ -131,6 +129,26 @@ export function perpsEntryDraftFromLayer(
   };
 }
 
+/** A side the user has not configured. Side defaults only — nothing copied across. */
+export function emptyPerpsEntryDraft(side: FuturesSide): PerpsEntryDraft {
+  return {
+    entrySource: "",
+    webhookId: "",
+    triggerBy: "last",
+    triggerCompare: side === "short" ? "lte" : "gte",
+    triggerPrice: "",
+    skipIfOpen: true,
+    indicatorKind: "",
+    indicatorTimeframe: "15",
+    indicatorCompare: "",
+    indicatorLevel: side === "short" ? "70" : "30",
+    indicatorPeriod: String(DEFAULT_DCA_RSI_PERIOD),
+    indicatorSlowPeriod: "",
+    indicatorMultiplier: String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
+    entryRows: [],
+  };
+}
+
 export function initialPerpsEntryDrafts(layer: FuturesAutomationFormValues): {
   long: PerpsEntryDraft;
   short: PerpsEntryDraft;
@@ -145,11 +163,15 @@ export function initialPerpsEntryDrafts(layer: FuturesAutomationFormValues): {
   const shortSide =
     layer.formAction === "sell" || layer.formAction === "close_short";
   if (shortSide) {
-    const short = perpsEntryDraftFromLayer(layer, "short", blank);
-    return { short, long: oppositePerpsEntryDraft(short, "long") };
+    return {
+      short: perpsEntryDraftFromLayer(layer, "short", blank),
+      long: emptyPerpsEntryDraft("long"),
+    };
   }
-  const long = perpsEntryDraftFromLayer(layer, "long", blank);
-  return { long, short: oppositePerpsEntryDraft(long, "short") };
+  return {
+    long: perpsEntryDraftFromLayer(layer, "long", blank),
+    short: emptyPerpsEntryDraft("short"),
+  };
 }
 
 export function perpsEntryDraftFromLeg(
@@ -170,31 +192,6 @@ export function perpsEntryDraftFromLeg(
     } as FuturesAutomationFormValues,
     side,
   );
-}
-
-/** Copy a side and flip price and indicator direction so the other side starts opposite. */
-export function oppositePerpsEntryDraft(
-  draft: PerpsEntryDraft,
-  side: FuturesSide,
-): PerpsEntryDraft {
-  const kind = draft.indicatorKind;
-  return {
-    ...draft,
-    triggerCompare: draft.triggerCompare === "gte" ? "lte" : "gte",
-    indicatorCompare:
-      !kind
-        ? draft.indicatorCompare
-        : kind === "rsi"
-          ? oppositeIndicatorCompare(kind, draft.indicatorCompare)
-          : indicatorCompareForDirection(side, kind, ""),
-    indicatorLevel:
-      kind === "rsi"
-        ? side === "short"
-          ? "70"
-          : "30"
-        : draft.indicatorLevel,
-    entryRows: flipEntryRows(draft.entryRows, side),
-  };
 }
 
 export function indicatorFromPerpsDraft(

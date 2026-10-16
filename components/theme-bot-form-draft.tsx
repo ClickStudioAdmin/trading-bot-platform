@@ -38,10 +38,10 @@ import {
   type ExitStackRow,
 } from "@/components/exit-condition-stack";
 import {
-  classicSignature,
+  blankExitClauses,
   customStackFromClauses,
   exitClausesFromSaved,
-  syncClassicClauses,
+  mergedClassicExitFlags,
   type ExitBuilderClause,
 } from "@/lib/strategy/exit-clauses";
 import {
@@ -75,8 +75,6 @@ import {
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
   DEFAULT_DCA_SUPERTREND_PERIOD,
   indicatorCompareForDirection,
-  oppositeIndicatorCompare,
-  oppositeRsiLevel,
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
@@ -644,18 +642,7 @@ export function ThemeBotFormDraft() {
   >("long");
   const [shortStartKind, setShortStartKind] = useState<StartKind>("");
   const [shortWebhookId, setShortWebhookId] = useState("sample");
-  const [shortEntryRows, setShortEntryRows] = useState<EntryStackRow[]>([
-    {
-      key: "sample-short-and",
-      join: "and",
-      draft: { kind: "price", triggerBy: "last", compare: "lte", price: "90" },
-    },
-    {
-      key: "sample-short-or",
-      join: "or",
-      draft: { kind: "webhook", webhookId: "sample" },
-    },
-  ]);
+  const [shortEntryRows, setShortEntryRows] = useState<EntryStackRow[]>([]);
   const [startKind, setStartKind] = useState<StartKind>("");
   const [priceSource, setPriceSource] = useState("last");
   const [priceWhen, setPriceWhen] = useState("gte");
@@ -828,6 +815,24 @@ export function ThemeBotFormDraft() {
       rows: shortExitRows,
     }),
   );
+  function themeIsBoth() {
+    return (
+      (desk === "perps" && perpsDirection === "both") ||
+      (desk === "dca" && direction === "both")
+    );
+  }
+  function applyThemeFlags(
+    primary: readonly ExitBuilderClause[],
+    short: readonly ExitBuilderClause[] | null,
+  ) {
+    const flags = mergedClassicExitFlags(primary, short);
+    setTpOn(flags.takeProfit);
+    setTrailOn(flags.trailing);
+    setSlOn(flags.stopLoss);
+    if (!flags.stopLoss) {
+      setBreakevenOn(false);
+    }
+  }
   function commitThemeExit(
     next: ExitBuilderClause[],
     which: "primary" | "short",
@@ -837,32 +842,12 @@ export function ThemeBotFormDraft() {
       setShortClauses(next);
       setShortExitIf(custom.anchor);
       setShortExitRows(custom.rows);
-      setExitClauses((current) =>
-        classicSignature(current) === classicSignature(next)
-          ? current
-          : syncClassicClauses(current, next),
-      );
+      applyThemeFlags(exitClauses, next);
     } else {
       setExitClauses(next);
       setExitIf(custom.anchor);
       setExitRows(custom.rows);
-      const both =
-        (desk === "perps" && perpsDirection === "both") ||
-        (desk === "dca" && direction === "both");
-      if (both) {
-        setShortClauses((current) =>
-          classicSignature(current) === classicSignature(next)
-            ? current
-            : syncClassicClauses(current, next),
-        );
-      }
-    }
-    setTpOn(next.some((clause) => clause.kind === "take_profit"));
-    setTrailOn(next.some((clause) => clause.kind === "trailing_stop"));
-    const nextSl = next.some((clause) => clause.kind === "stop_loss");
-    setSlOn(nextSl);
-    if (!nextSl) {
-      setBreakevenOn(false);
+      applyThemeFlags(next, themeIsBoth() ? shortClauses : null);
     }
   }
   const themeWebhooks = [{ id: "sample", name: "Sample signal" }];
@@ -1126,121 +1111,101 @@ export function ThemeBotFormDraft() {
     }
   }
 
+  function copyThemeEntryToShort() {
+    setShortStartKind(startKind);
+    setShortWebhookId(webhookId);
+    setShortEntryRows(entryRows.map((row) => ({ ...row, draft: { ...row.draft } })));
+    setShortPriceSource(priceSource);
+    setShortPriceWhen(priceWhen);
+    setShortPriceLevel(priceLevel);
+    setShortIndicatorKind(indicatorKind);
+    setShortTimeframe(timeframe);
+    setShortWhen(when);
+    setShortPeriod(period);
+    setShortSlowPeriod(slowPeriod);
+    setShortLevel(level);
+    setShortMultiplier(multiplier);
+    setShortConfirmOn(confirmOn);
+    setShortConfirm(confirm);
+  }
+  function blankThemeLongEntry() {
+    setStartKind("");
+    setEntryRows([]);
+    setWebhookId("sample");
+    setPriceSource("last");
+    setPriceWhen("gte");
+    setPriceLevel("");
+    setIndicatorKind("");
+    setTimeframe("15");
+    setWhen("cross_lte");
+    setPeriod(String(DEFAULT_DCA_RSI_PERIOD));
+    setSlowPeriod("21");
+    setLevel("30");
+    setMultiplier(String(DEFAULT_DCA_SUPERTREND_MULTIPLIER));
+    setConfirmOn(false);
+    setConfirm(null);
+  }
+  function moveThemeExitToShort() {
+    const kept = exitClauses;
+    setShortClauses(kept);
+    const moved = customStackFromClauses(kept);
+    setShortExitIf(moved.anchor);
+    setShortExitRows(moved.rows);
+    const blank = blankExitClauses();
+    setExitClauses(blank);
+    setExitIf(null);
+    setExitRows([]);
+    applyThemeFlags(blank, kept);
+  }
+  function promoteThemeShort() {
+    setStartKind(shortStartKind);
+    setWebhookId(shortWebhookId);
+    setEntryRows(shortEntryRows);
+    setPriceSource(shortPriceSource);
+    setPriceWhen(shortPriceWhen);
+    setPriceLevel(shortPriceLevel);
+    setIndicatorKind(shortIndicatorKind);
+    setTimeframe(shortTimeframe);
+    setWhen(shortWhen);
+    setPeriod(shortPeriod);
+    setSlowPeriod(shortSlowPeriod);
+    setLevel(shortLevel);
+    setMultiplier(shortMultiplier);
+    setConfirmOn(shortConfirmOn);
+    setConfirm(shortConfirm);
+    setExitClauses(shortClauses);
+    const moved = customStackFromClauses(shortClauses);
+    setExitIf(moved.anchor);
+    setExitRows(moved.rows);
+    applyThemeFlags(shortClauses, null);
+  }
+
   function applyPerpsDirection(next: "long" | "short" | "both") {
-    const kindForSeed = startKind === "trend" ? "supertrend" : indicatorKind;
     if (next === "both" && perpsDirection === "short") {
-      setShortStartKind(startKind);
-      setShortWebhookId(webhookId);
-      setShortEntryRows(entryRows);
-      setShortPriceSource(priceSource);
-      setShortPriceWhen(priceWhen);
-      setShortPriceLevel(priceLevel);
-      setShortIndicatorKind(indicatorKind);
-      setShortTimeframe(timeframe);
-      setShortWhen(when);
-      setShortPeriod(period);
-      setShortSlowPeriod(slowPeriod);
-      setShortLevel(level);
-      setShortMultiplier(multiplier);
-      setPriceWhen(priceWhen === "gte" ? "lte" : "gte");
-      setWhen(
-        kindForSeed ? oppositeIndicatorCompare(kindForSeed, when) : when,
-      );
-      if (indicatorKind === "rsi") {
-        setLevel(level === "70" ? "30" : "70");
-      }
-      setEntryRows([]);
+      copyThemeEntryToShort();
+      blankThemeLongEntry();
+      moveThemeExitToShort();
     } else if (next === "both" && perpsDirection !== "both") {
-      setShortStartKind(startKind);
-      setShortWebhookId(webhookId);
-      setShortPriceSource(priceSource);
-      setShortPriceWhen(priceWhen === "gte" ? "lte" : "gte");
-      setShortPriceLevel(priceLevel);
-      setShortIndicatorKind(indicatorKind);
-      setShortTimeframe(timeframe);
-      setShortWhen(
-        kindForSeed ? oppositeIndicatorCompare(kindForSeed, when) : when,
-      );
-      setShortPeriod(period);
-      setShortSlowPeriod(slowPeriod);
-      setShortMultiplier(multiplier);
-      setShortLevel(indicatorKind === "rsi" ? "70" : level);
-      setShortEntryRows(entryRows);
-      setShortClauses((current) => syncClassicClauses(current, exitClauses));
+      applyThemeFlags(exitClauses, shortClauses);
     } else if (perpsDirection === "both" && next === "short") {
-      setStartKind(shortStartKind);
-      setWebhookId(shortWebhookId);
-      setPriceSource(shortPriceSource);
-      setPriceWhen(shortPriceWhen);
-      setPriceLevel(shortPriceLevel);
-      setIndicatorKind(shortIndicatorKind);
-      setTimeframe(shortTimeframe);
-      setWhen(shortWhen);
-      setPeriod(shortPeriod);
-      setSlowPeriod(shortSlowPeriod);
-      setLevel(shortLevel);
-      setMultiplier(shortMultiplier);
-      setEntryRows(shortEntryRows);
-      setExitClauses(shortClauses);
-      const movedExit = customStackFromClauses(shortClauses);
-      setExitIf(movedExit.anchor);
-      setExitRows(movedExit.rows);
+      promoteThemeShort();
+    } else if (perpsDirection === "both" && next === "long") {
+      applyThemeFlags(exitClauses, null);
     }
     setPerpsDirection(next);
   }
 
   function applyDirection(next: "long" | "short" | "both") {
-    const kindForSeed = startKind === "trend" ? "supertrend" : indicatorKind;
-    if (next === "both" && direction !== "both") {
-      setShortStartKind(startKind);
-      setShortWebhookId(webhookId);
-      setShortPriceSource(priceSource);
-      setShortPriceWhen(priceWhen === "gte" ? "lte" : "gte");
-      setShortPriceLevel(priceLevel);
-      setShortIndicatorKind(indicatorKind);
-      setShortTimeframe(timeframe);
-      setShortWhen(
-        kindForSeed ? oppositeIndicatorCompare(kindForSeed, when) : when,
-      );
-      setShortPeriod(period);
-      setShortSlowPeriod(slowPeriod);
-      const numericLevel = Number(level.replace(/,/g, ""));
-      setShortLevel(
-        indicatorKind === "rsi"
-          ? String(
-              oppositeRsiLevel(
-                Number.isFinite(numericLevel) ? numericLevel : 30,
-              ),
-            )
-          : level,
-      );
-      setShortMultiplier(multiplier);
-      setShortConfirmOn(confirmOn);
-      if (confirmOn) {
-        setShortConfirm((current) => current ?? confirm);
-      }
-      setShortClauses((current) => syncClassicClauses(current, exitClauses));
+    if (next === "both" && direction === "short") {
+      copyThemeEntryToShort();
+      blankThemeLongEntry();
+      moveThemeExitToShort();
+    } else if (next === "both" && direction !== "both") {
+      applyThemeFlags(exitClauses, shortClauses);
     } else if (direction === "both" && next === "short") {
-      setStartKind(shortStartKind);
-      setWebhookId(shortWebhookId);
-      setPriceSource(shortPriceSource);
-      setPriceWhen(shortPriceWhen);
-      setPriceLevel(shortPriceLevel);
-      setIndicatorKind(shortIndicatorKind);
-      setTimeframe(shortTimeframe);
-      setWhen(shortWhen);
-      setPeriod(shortPeriod);
-      setSlowPeriod(shortSlowPeriod);
-      setLevel(shortLevel);
-      setMultiplier(shortMultiplier);
-      setConfirmOn(shortConfirmOn);
-      setExitClauses(shortClauses);
-      const moved = customStackFromClauses(shortClauses);
-      setExitIf(moved.anchor);
-      setExitRows(moved.rows);
-      if (shortConfirm) {
-        setConfirm(shortConfirm);
-      }
+      promoteThemeShort();
+    } else if (direction === "both" && next === "long") {
+      applyThemeFlags(exitClauses, null);
     }
     setDirection(next);
   }
