@@ -12,11 +12,9 @@ import { canBacktestPerpsRecipe, replayPerpsPriceCross } from "./replay";
 import { createBacktestProgressPump } from "./progress";
 import {
   BACKTEST_INTERRUPTED_ERROR,
-  BACKTEST_TOO_LARGE_ERROR,
   backtestClaimBudgetExceeded,
   backtestClaimCanRequeue,
   backtestErrorIsTransient,
-  backtestResultExceedsStoreLimit,
   backtestRunTapeCoverageError,
 } from "./guard";
 import {
@@ -140,7 +138,18 @@ export async function executeBacktestRun(
       });
       return { ok: false, error: coverageError, runId };
     }
-    progress.report(candles.length, "replay");
+    progress.report(0, "replay");
+    let reportedBar = 0;
+    const onBar = (barIndex: number) => {
+      if (
+        barIndex === 1 ||
+        barIndex - reportedBar >= 2_000 ||
+        barIndex === candles.length
+      ) {
+        reportedBar = barIndex;
+        progress.report(barIndex, "replay");
+      }
+    };
     const replayed =
       run.recipe.kind === "dca"
         ? await replayDcaPlaybook({
@@ -150,6 +159,7 @@ export async function executeBacktestRun(
             startingUsdt: run.startingUsdt,
             leverage: run.leverage,
             venue: run.venue,
+            onBar,
           })
         : await replayPerpsPriceCross({
             bars: candles,
@@ -157,15 +167,8 @@ export async function executeBacktestRun(
             feeRate: run.feeRate,
             startingUsdt: run.startingUsdt,
             leverage: run.leverage,
+            onBar,
           });
-    if (backtestResultExceedsStoreLimit(replayed.orders, replayed.events)) {
-      await updateBacktestRun(runId, {
-        status: "failed",
-        error: BACKTEST_TOO_LARGE_ERROR,
-        finished: true,
-      });
-      return { ok: false, error: BACKTEST_TOO_LARGE_ERROR, runId };
-    }
     await updateBacktestRun(runId, {
       status: "done",
       stats: replayed.stats,

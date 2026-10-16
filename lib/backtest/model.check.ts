@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  BACKTEST_CANDLE_LIMIT,
   backtestLinkHighlight,
   backtestDrainMaxBars,
   backtestPageCanRun,
@@ -233,6 +234,10 @@ assert.equal(
   estimateBacktestBars(Date.UTC(2026, 0, 1), Date.UTC(2026, 0, 2), "60"),
   24,
 );
+const tenYearMs = 10 * 366 * 24 * 60 * 60 * 1000;
+const tenYearFifteen = estimateBacktestBars(0, tenYearMs, "15");
+assert.ok(tenYearFifteen > 350_000);
+assert.ok(tenYearFifteen <= BACKTEST_CANDLE_LIMIT);
 assert.equal(
   chartIntervalForWindow(Date.UTC(2026, 6, 1), Date.UTC(2026, 6, 31), "15"),
   "30",
