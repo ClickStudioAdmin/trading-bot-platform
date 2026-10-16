@@ -31,6 +31,13 @@ import {
   memberTotpEnabled,
   savePendingTotpSecret,
 } from "@/lib/auth/totp-store";
+import {
+  secondFactorInvalidMessage,
+  secondFactorMissingMessage,
+  secondFactorPasswordMessage,
+  secondFactorRecoverySelected,
+  STEP_UP_KIND_FIELD,
+} from "@/lib/auth/step-up";
 import { verifyMemberSecondFactor } from "@/lib/auth/totp-verify";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
@@ -149,10 +156,14 @@ export async function disableTotpAction(formData: FormData) {
   const member = await requireVerifiedEmail();
   const password = String(formData.get("currentPassword") ?? "");
   const code = String(formData.get("code") ?? "");
+  const recovery = secondFactorRecoverySelected(
+    formData.get(STEP_UP_KIND_FIELD),
+    code,
+  );
   if (password.length < 8 || !code.trim()) {
     redirect(
       settingsSecurityPath({
-        error: "Enter your password and a Google Authenticator or recovery code.",
+        error: secondFactorPasswordMessage(recovery),
       }),
     );
   }
@@ -178,7 +189,7 @@ export async function disableTotpAction(formData: FormData) {
   if (!(await verifyMemberSecondFactor(member.id, code, current))) {
     redirect(
       settingsSecurityPath({
-        error: "That Google Authenticator or recovery code is incorrect.",
+        error: secondFactorInvalidMessage(recovery),
       }),
     );
   }
@@ -213,11 +224,15 @@ export async function completeSignIn2faAction(formData: FormData) {
     redirect(`${SIGN_IN_PATH}?error=${encodeURIComponent("Sign in again.")}`);
   }
   const code = String(formData.get("code") ?? "");
+  const recovery = secondFactorRecoverySelected(
+    formData.get(STEP_UP_KIND_FIELD),
+    code,
+  );
   if (!code.trim()) {
-    redirect(challengePath("Enter the Google Authenticator or recovery code."));
+    redirect(challengePath(secondFactorMissingMessage(recovery)));
   }
   if (!(await verifyMemberSecondFactor(userId, code))) {
-    redirect(challengePath("That code is incorrect."));
+    redirect(challengePath(secondFactorInvalidMessage(recovery)));
   }
   await clearSignInChallenge();
   await createSession(userId);

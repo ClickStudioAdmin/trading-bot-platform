@@ -1,4 +1,9 @@
-import { STEP_UP_FIELD, stepUpFailure } from "@/lib/auth/step-up";
+import {
+  secondFactorRecoverySelected,
+  STEP_UP_FIELD,
+  STEP_UP_KIND_FIELD,
+  stepUpFailure,
+} from "@/lib/auth/step-up";
 import {
   loadMemberTotp,
   memberTotpEnabled,
@@ -8,6 +13,7 @@ import { verifyMemberSecondFactor } from "@/lib/auth/totp-verify";
 export async function stepUpError(
   userId: string,
   rawCode: unknown,
+  recovery?: boolean,
 ): Promise<string | null> {
   const totp = await loadMemberTotp(userId);
   const enabled = memberTotpEnabled(totp);
@@ -18,12 +24,17 @@ export async function stepUpError(
   const verified = code.trim()
     ? await verifyMemberSecondFactor(userId, code, totp)
     : false;
-  return stepUpFailure({ enabled, code, verified });
+  return stepUpFailure({ enabled, code, verified, recovery });
 }
 
 export function stepUpFromForm(
   userId: string,
   formData: FormData,
 ): Promise<string | null> {
-  return stepUpError(userId, formData.get(STEP_UP_FIELD));
+  const code = formData.get(STEP_UP_FIELD);
+  return stepUpError(
+    userId,
+    code,
+    secondFactorRecoverySelected(formData.get(STEP_UP_KIND_FIELD), String(code ?? "")),
+  );
 }
