@@ -13,6 +13,7 @@ import {
   BotFormStep,
   BotFormSidebar,
   BotFormSidebarSection,
+  completeRequiredNotice,
   BotButtonLead,
   botBtnIcon,
   BotStatusField,
@@ -694,10 +695,8 @@ function RuleRow({
             accountReduceOnly={accountReduceOnly}
           />
         }
-        dirty={dirty}
-        error={
-          dirty && missing ? "Fill required fields before saving." : undefined
-        }
+        dirty={Boolean(layer.id) && dirty}
+        error={missing ? completeRequiredNotice : undefined}
         save={
           <div className="space-y-2">
             <PendingSubmitButton

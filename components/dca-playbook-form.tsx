@@ -14,6 +14,7 @@ import {
   BotFormStep,
   BotFormSidebar,
   BotFormSidebarSection,
+  completeRequiredNotice,
   BotFormSummaryCard,
   BotButtonLead,
   botBtnIcon,
@@ -182,6 +183,7 @@ import {
 import {
   hardExitComplete,
   hardExitDraftFromStored,
+  writeHardExitFormFields,
   type HardExitDraft,
 } from "@/lib/dca/hard-exit";
 import { closedLiveIndicatorBars } from "@/lib/market/desk-klines";
@@ -971,6 +973,38 @@ function upsertDcaCard(
     return [next, ...cards];
   }
   return cards.map((item, itemIndex) => (itemIndex === index ? next : item));
+}
+
+/** Posted exit fields follow the draft. Unset matches an empty Trigger input. */
+function writeLiveHardExit(
+  form: FormData,
+  prefix: string,
+  draft: HardExitDraft | null,
+) {
+  if (!draft || draft.trigger === "unset") {
+    writeHardExitFormFields(form, prefix, null);
+    return;
+  }
+  writeHardExitFormFields(form, prefix, draft);
+}
+
+function writeLiveExitSide(
+  form: FormData,
+  prefix: string,
+  anchor: HardExitDraft | null,
+  rows: readonly ExitStackRow[],
+) {
+  if (anchor == null && rows.length === 0) {
+    writeLiveHardExit(form, prefix, null);
+    form.delete(`${prefix}StackCount`);
+    return;
+  }
+  writeLiveHardExit(form, prefix, anchor);
+  form.set(`${prefix}StackCount`, String(rows.length));
+  rows.forEach((row, index) => {
+    form.set(`${prefix}Stack${index}Join`, row.join === "or" ? "or" : "and");
+    writeLiveHardExit(form, `${prefix}Stack${index}`, row.draft);
+  });
 }
 
 function resolveDcaDraft(
@@ -1844,12 +1878,23 @@ export function DcaPlaybookForm({
     };
   }
   function snapshotForm() {
-    return dcaFormToSnapshotSource(formRef.current, {
+    const data = dcaFormToSnapshotSource(formRef.current, {
       ...snapshotOverlay(),
       name:
         readFormControl(formRef.current, "name") ||
         snapshotOverlay().name,
     });
+    // Exit rows are written from state. A render still sees the previous
+    // inputs, so the new timeframe and kind would be missing and a finished
+    // short exit would be rejected.
+    writeLiveExitSide(data, "exitIf", exitIf, exitRows);
+    writeLiveExitSide(
+      data,
+      "shortExitIf",
+      direction === "both" ? shortExitIf : null,
+      direction === "both" ? shortExitRows : [],
+    );
+    return data;
   }
   function liveRecipe() {
     const parsed = parseDcaPlaybookForm(snapshotForm(), policy.venueId);
@@ -2003,6 +2048,7 @@ export function DcaPlaybookForm({
     (playbook
       ? loadedRecipe != null && liveRecipeKey !== loadedRecipe
       : touched);
+  const showSaveNotes = Boolean(playbook) && dirty;
   const constraintBlocked = cycleLocked
     ? null
     : (parseConstraint ?? saveBlocked);
@@ -3310,15 +3356,11 @@ export function DcaPlaybookForm({
             accountReduceOnly={reduceOnly}
           />
         }
-        dirty={dirty}
+        dirty={showSaveNotes}
         error={
-          dirty
-            ? requiredMissing
-              ? !parsedLive.ok && !parseConstraint
-                ? parsedLive.error
-                : "Fill required fields before saving."
-              : constraintBlocked ?? undefined
-            : undefined
+          requiredMissing
+            ? completeRequiredNotice
+            : constraintBlocked ?? undefined
         }
         save={
           <div className="space-y-2">
@@ -3328,12 +3370,9 @@ export function DcaPlaybookForm({
               className={botSidebarSaveClass}
               disabled={Boolean(!dirty || constraintBlocked || requiredMissing)}
               title={
-                constraintBlocked ??
-                (requiredMissing
-                  ? !parsedLive.ok && !parseConstraint
-                    ? parsedLive.error
-                    : "Fill required fields before saving."
-                  : undefined)
+                requiredMissing
+                  ? completeRequiredNotice
+                  : constraintBlocked ?? undefined
               }
             >
               <span className="inline-flex items-center gap-1.5">

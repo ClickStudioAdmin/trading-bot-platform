@@ -2,8 +2,6 @@ import { decideFuturesAutomationTick } from "@/lib/futures/automation";
 import {
   futuresBreakevenDue,
   futuresBreakevenStop,
-  futuresEntryConditionMet,
-  futuresFilterMet,
   perpsExitForSide,
 } from "@/lib/futures/conditions";
 import type { FuturesAction, FuturesSide } from "@/lib/futures/model";
@@ -14,10 +12,11 @@ import {
 import {
   formatStrategyLeafReason,
 } from "@/lib/bots/condition-copy";
-import { hardExitMet, hardExitSignalFromJson } from "@/lib/dca/hard-exit";
-import { exitExpressionMet, formatExitExpressionText } from "@/lib/dca/exit-stack";
+import { hardExitSignalFromJson } from "@/lib/dca/hard-exit";
+import { formatExitExpressionText } from "@/lib/dca/exit-stack";
 import { canBacktestPerpsRecipe } from "./eligibility";
 import { backtestTapeInterval } from "./model";
+import { ReplayBook } from "./replay-mask";
 import {
   paperStopLossHit,
   paperTakeProfitHit,
@@ -55,43 +54,6 @@ import {
 import { filterBecause, indicatorBecause, priceStartBecause } from "./explain";
 
 export { canBacktestPerpsRecipe };
-
-function perpsHardExitMet(
-  recipe: PerpsTemplateRecipe,
-  side: FuturesSide,
-  price: number,
-  barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>,
-): boolean {
-  const exit = perpsExitForSide(
-    {
-      ...recipe,
-      exitIf: recipe.exitIf ?? null,
-      exitHard: hardExitSignalFromJson(recipe.exitHard),
-    },
-    side,
-  );
-  const signal = exit.exitHard;
-  return exitExpressionMet({
-    first: signal
-      ? hardExitMet({
-          signal,
-          side,
-          prices: { last: price, mark: price, index: price },
-        })
-      : Boolean(exit.exitIf) &&
-        futuresFilterMet({
-          spec: exit.exitIf,
-          side,
-          barsByTimeframe,
-        }),
-    stack: exit.exitStack,
-    side,
-    price,
-    prices: { last: price, mark: price, index: price },
-    barsByTimeframe,
-    firedWebhookId: null,
-  });
-}
 
 export function recipeAction(recipe: PerpsTemplateRecipe): {
   action: FuturesAction;
@@ -237,7 +199,7 @@ function unrealized(
   return side === "long" ? (mark - entry) * qty : (entry - mark) * qty;
 }
 
-function replayBarsByTimeframe(
+export function replayBarsByTimeframe(
   window: CandleBar[],
   tape: DcaIndicatorTimeframe,
   timeframes: DcaIndicatorTimeframe[],
@@ -286,6 +248,22 @@ export async function replayPerpsPriceCross(input: {
       strategyLeafTimeframe(leaf),
     ) ?? []),
   ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
+  const series = new ReplayBook(input.bars, tape, Date.now());
+  const entrySide: FuturesSide =
+    action === "sell" ? "short" : closeSide ?? "long";
+  const entryMask = series.entryMask({
+    side: entrySide,
+    entrySource: input.recipe.entrySource,
+    triggerCompare: input.recipe.triggerCompare,
+    triggerPrice: Number(
+      String(input.recipe.triggerPrice).replace(/,/g, "").trim(),
+    ),
+    indicator: input.recipe.indicator ?? null,
+    confirm: input.recipe.confirm ?? null,
+    entryStack: input.recipe.entryStack ?? null,
+  });
+  const longExitMask = series.exitMask(input.recipe, "long");
+  const shortExitMask = series.exitMask(input.recipe, "short");
   let wasTrue = false;
   let open: OpenSim | null = null;
   const orders: SimulatedOrder[] = [];
@@ -430,14 +408,9 @@ export async function replayPerpsPriceCross(input: {
           flattenOpen(bar.timeMs, trail.fillPrice, "trailing");
         }
       }
-      const barsByTimeframe = replayBarsByTimeframe(
-        input.bars.slice(0, input.bars.indexOf(bar) + 1),
-        tape,
-        conditionTimeframes,
-      );
       if (
         open &&
-        perpsHardExitMet(input.recipe, open.side, price, barsByTimeframe)
+        (open.side === "short" ? shortExitMask : longExitMask)[barIndex - 1]
       ) {
         flattenOpen(
           bar.timeMs,
@@ -502,32 +475,7 @@ export async function replayPerpsPriceCross(input: {
       markEquity(0);
       continue;
     }
-    const barsByTimeframe = replayBarsByTimeframe(
-      input.bars.slice(0, input.bars.indexOf(bar) + 1),
-      tape,
-      conditionTimeframes,
-    );
-    const side: FuturesSide =
-      action === "flatten"
-        ? (closeSide ?? "long")
-        : action === "sell"
-          ? "short"
-          : "long";
-    const conditionMet = futuresEntryConditionMet({
-      rule: {
-        entrySource: input.recipe.entrySource,
-        indicator: input.recipe.indicator,
-        confirm: input.recipe.confirm,
-        entryStack: input.recipe.entryStack,
-        triggerCompare: input.recipe.triggerCompare,
-        triggerPrice: Number(
-          String(input.recipe.triggerPrice).replace(/,/g, "").trim(),
-        ),
-      },
-      side,
-      price,
-      barsByTimeframe,
-    });
+    const conditionMet = entryMask[barIndex - 1] === true;
     const hasOpenOnSide =
       action === "flatten"
         ? Boolean(open && open.side === (closeSide ?? "long"))
@@ -558,7 +506,11 @@ export async function replayPerpsPriceCross(input: {
             ? backtestMarginUsdt(open.qty * open.entry, leverage)
             : 0;
           const available = input.startingUsdt + realized - locked;
-          const because = perpsEntryBecause(side, price, barsByTimeframe);
+          const because = perpsEntryBecause(
+            side,
+            price,
+            series.barsAt(barIndex - 1, conditionTimeframes),
+          );
           if (backtestMarginUsdt(qty * price, leverage) + fee <= available) {
             realized -= fee;
             remember(
@@ -674,6 +626,27 @@ async function replayPerpsBoth(input: {
     ...(short.exitStack?.leaves.map((leaf) => strategyLeafTimeframe(leaf)) ??
       []),
   ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
+  const series = new ReplayBook(input.bars, tape, Date.now());
+  const longEntryMask = series.entryMask({
+    side: "long",
+    entrySource: input.recipe.entrySource,
+    triggerCompare: input.recipe.triggerCompare,
+    triggerPrice: Number(String(input.recipe.triggerPrice).replace(/,/g, "")),
+    indicator: input.recipe.indicator ?? null,
+    confirm: input.recipe.confirm ?? null,
+    entryStack: input.recipe.entryStack ?? null,
+  });
+  const shortEntryMask = series.entryMask({
+    side: "short",
+    entrySource: short.entrySource,
+    triggerCompare: short.triggerCompare,
+    triggerPrice: short.triggerPrice,
+    indicator: short.indicator ?? null,
+    confirm: short.confirm ?? null,
+    entryStack: short.entryStack ?? null,
+  });
+  const longExitMask = series.exitMask(input.recipe, "long");
+  const shortExitMask = series.exitMask(input.recipe, "short");
   const legs: Array<{
     side: FuturesSide;
     wasTrue: boolean;
@@ -812,11 +785,6 @@ async function replayPerpsBoth(input: {
     if (book.long || book.short) {
       barsIn += 1;
     }
-    const barsByTimeframe = replayBarsByTimeframe(
-      input.bars.slice(0, input.bars.indexOf(bar) + 1),
-      tape,
-      conditionTimeframes,
-    );
     for (const side of ["long", "short"] as const) {
       const open = book[side];
       if (!open) {
@@ -862,7 +830,7 @@ async function replayPerpsBoth(input: {
       if (
         !liquidated &&
         book[side] &&
-        perpsHardExitMet(input.recipe, side, price, barsByTimeframe)
+        (side === "short" ? shortExitMask : longExitMask)[barIndex - 1]
       ) {
         const exit = perpsExitForSide(
           {
@@ -950,19 +918,9 @@ async function replayPerpsBoth(input: {
           open.breakevenDone = true;
         }
       }
-      const conditionMet = futuresEntryConditionMet({
-        rule: {
-          entrySource: leg.entrySource,
-          indicator: leg.indicator,
-          confirm: leg.confirm,
-          entryStack: leg.entryStack,
-          triggerCompare: leg.triggerCompare,
-          triggerPrice: leg.triggerPrice,
-        },
-        side: leg.side,
-        price,
-        barsByTimeframe,
-      });
+      const conditionMet =
+        (leg.side === "short" ? shortEntryMask : longEntryMask)[barIndex - 1] ===
+        true;
       const decision = decideFuturesAutomationTick({
         conditionMet,
         wasTrue: leg.wasTrue,
@@ -998,7 +956,7 @@ async function replayPerpsBoth(input: {
         entryStack: leg.entryStack,
         side: leg.side,
         price,
-        barsByTimeframe,
+        barsByTimeframe: series.barsAt(barIndex - 1, conditionTimeframes),
       });
       if (backtestMarginUsdt(qty * price, leverage) + fee > available) {
         events.push({

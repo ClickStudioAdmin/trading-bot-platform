@@ -7,6 +7,7 @@ import {
   BotFormStep,
   BotFormSidebar,
   BotFormSidebarSection,
+  completeRequiredNotice,
   BotFormSummaryCard,
   BotButtonLead,
   botBtnIcon,
@@ -921,6 +922,7 @@ export function ThemeBotFormDraft() {
   const [status, setStatus] = useState("disabled");
   const [appliedStatus, setAppliedStatus] = useState("disabled");
   const [savedKey, setSavedKey] = useState<string | null>(null);
+  const [persisted, setPersisted] = useState(false);
   const draftValue = {
     name,
     symbol,
@@ -1222,6 +1224,7 @@ export function ThemeBotFormDraft() {
   }
 
   function switchDesk(next: DeskKind) {
+    setPersisted(false);
     setSavedKey(null);
     setDesk(next);
     setStatus("active");
@@ -1420,6 +1423,7 @@ export function ThemeBotFormDraft() {
     if (hasMissing) {
       return;
     }
+    setPersisted(true);
     setSavedKey(draftKey);
     setAppliedStatus(status);
   }
@@ -3071,20 +3075,14 @@ export function ThemeBotFormDraft() {
             onChange={setStatus}
           />
         }
-        dirty={dirty}
-        error={
-          dirty && hasMissing
-            ? "Fill required fields before saving."
-            : undefined
-        }
+        dirty={persisted && dirty}
+        error={hasMissing ? completeRequiredNotice : undefined}
         save={
           <button
             type="button"
             className={botSidebarSaveClass}
             disabled={!dirty || hasMissing}
-            title={
-              hasMissing ? "Fill required fields before saving." : undefined
-            }
+            title={hasMissing ? completeRequiredNotice : undefined}
             onClick={saveDraft}
           >
             <span className="inline-flex items-center gap-1.5">

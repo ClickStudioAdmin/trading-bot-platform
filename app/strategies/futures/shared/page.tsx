@@ -1,14 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
-import {
-  DeskCopyFollowersList,
-  DeskCopyPrivateShareCard,
-} from "@/components/desk-copy-followers";
+import { DeskCopyFollowersTable } from "@/components/desk-copy-followers";
 import { deskHref, deskIsCopy } from "@/lib/accounts/model";
 import { loadDeskCopyListing } from "@/lib/copy/listings";
 import { loadDeskCopyFollowerViews } from "@/lib/copy/shares";
-import { copyShareCountsTowardCap } from "@/lib/copy/model";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionContext } from "@/lib/auth/session";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
@@ -44,8 +40,7 @@ export default async function FuturesSharedDesksPage({
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Manage Copy Traders" />
       <p className="-mt-4 text-sm text-ink-muted">
-        Followers of this desk. Invite privately here. Visibility, logos, and
-        caps stay on{" "}
+        Followers of this desk. Visibility, logos, and caps stay on{" "}
         <Link href={settingsHref} className="text-accent">
           Desk Settings
         </Link>
@@ -60,17 +55,17 @@ export default async function FuturesSharedDesksPage({
         <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Invite sent.</p>
       ) : null}
       {savedFlag === "revoke" ? (
-        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Invite revoked.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
+          {Number(firstSearchValue(params.count)) > 1
+            ? `${Number(firstSearchValue(params.count))} invites revoked.`
+            : "Invite revoked."}
+        </p>
       ) : null}
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
-        <DeskCopyFollowersList listing={listing} followers={followers} />
-        <DeskCopyPrivateShareCard
+      <div className="mt-6">
+        <DeskCopyFollowersTable
+          accountId={session.account.id}
           listing={listing}
-          canInvite
-          followerCount={
-            followers.filter((row) => copyShareCountsTowardCap(row.status))
-              .length
-          }
+          followers={followers}
         />
       </div>
     </main>

@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { parseDcaPlaybookForm } from "@/lib/dca/playbook";
 import { snapshotDcaRecipe } from "@/lib/templates/recipe";
-import { canDeleteBacktestRun, parseBacktestRunRow } from "./store";
+import {
+  backtestRowIsClaimable,
+  canDeleteBacktestRun,
+  parseBacktestRunRow,
+} from "./store";
 
 function dcaRunRow(symbol: string, venue: string): Record<string, unknown> {
   const form = new FormData();
@@ -66,5 +70,63 @@ assert.equal(canDeleteBacktestRun({ userId: "owner-1" }, "other-2", false), fals
 assert.equal(canDeleteBacktestRun({ userId: null }, "owner-1", false), false);
 assert.equal(canDeleteBacktestRun({ userId: null }, "owner-1", true), true);
 assert.equal(canDeleteBacktestRun({ userId: "owner-1" }, "other-2", true), true);
+
+const nowMs = Date.UTC(2026, 9, 16, 5, 30);
+const staleMs = 15 * 60_000;
+assert.equal(
+  backtestRowIsClaimable({
+    status: "queued",
+    claimedAtMs: null,
+    nowMs,
+    staleMs,
+    bars: 40_000,
+    maxBars: 0,
+  }),
+  true,
+);
+assert.equal(
+  backtestRowIsClaimable({
+    status: "running",
+    claimedAtMs: nowMs - staleMs - 1,
+    nowMs,
+    staleMs,
+    bars: 35_000,
+    maxBars: 0,
+  }),
+  true,
+);
+assert.equal(
+  backtestRowIsClaimable({
+    status: "running",
+    claimedAtMs: nowMs - 60_000,
+    nowMs,
+    staleMs,
+    bars: 35_000,
+    maxBars: 0,
+  }),
+  false,
+);
+assert.equal(
+  backtestRowIsClaimable({
+    status: "running",
+    claimedAtMs: null,
+    nowMs,
+    staleMs,
+    bars: 100,
+    maxBars: 0,
+  }),
+  false,
+);
+assert.equal(
+  backtestRowIsClaimable({
+    status: "queued",
+    claimedAtMs: null,
+    nowMs,
+    staleMs,
+    bars: 4000,
+    maxBars: 3000,
+  }),
+  false,
+);
 
 console.log("backtest store checks passed");

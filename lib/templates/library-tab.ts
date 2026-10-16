@@ -3,6 +3,7 @@ export const LIBRARY_TABS = [
   "sets",
   "shared-templates",
   "shared-sets",
+  "conditions",
 ] as const;
 
 export type LibraryTab = (typeof LIBRARY_TABS)[number];
@@ -11,7 +12,12 @@ export function parseLibraryTab(
   raw: string | string[] | undefined,
 ): LibraryTab {
   const value = Array.isArray(raw) ? raw[0] : raw;
-  if (value === "sets" || value === "shared-templates" || value === "shared-sets") {
+  if (
+    value === "sets" ||
+    value === "shared-templates" ||
+    value === "shared-sets" ||
+    value === "conditions"
+  ) {
     return value;
   }
   return "templates";

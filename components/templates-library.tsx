@@ -35,6 +35,7 @@ import {
   TablePager,
 } from "@/components/table-chrome";
 import { AppCheck } from "@/components/app-check";
+import { AdminConditionList } from "@/components/admin-condition-list";
 import {
   TemplateNameWithParameters,
   TemplateParametersButton,
@@ -129,6 +130,9 @@ function tabForVariant(
     variant === "admin" &&
     (tab === "shared-templates" || tab === "shared-sets")
   ) {
+    return "templates";
+  }
+  if (variant !== "admin" && tab === "conditions") {
     return "templates";
   }
   return tab;
@@ -1224,6 +1228,14 @@ export function TemplatesLibrary({
         <TabButton selected={tab === "sets"} onClick={() => changeTab("sets")}>
           {variant === "admin" ? "Folders" : "My Folders"}
         </TabButton>
+        {variant === "admin" ? (
+          <TabButton
+            selected={tab === "conditions"}
+            onClick={() => changeTab("conditions")}
+          >
+            Condition list
+          </TabButton>
+        ) : null}
         {variant === "account" ? (
           <>
             <TabButton
@@ -1241,6 +1253,11 @@ export function TemplatesLibrary({
           </>
         ) : null}
       </nav>
+      {tab === "conditions" ? (
+        <div className="mt-6">
+          <AdminConditionList />
+        </div>
+      ) : (
       <TableFilterSession
         toolbar={
           sharedTab || selectedCount === 0 ? undefined : (
@@ -1391,6 +1408,7 @@ export function TemplatesLibrary({
             </TableLabelButton>
           </TableFilterBar>
       </TableFilterSession>
+      )}
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
