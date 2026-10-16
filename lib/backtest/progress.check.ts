@@ -24,8 +24,8 @@ assert.equal(parseBacktestProgressCount(null), null);
 
 assert.equal(backtestProgressPercent(0, 35_136), 0);
 assert.equal(backtestProgressPercent(12_000, 35_136), 34);
-assert.equal(backtestProgressPercent(35_136, 35_136), 99);
-assert.equal(backtestProgressPercent(40_000, 35_136), 99);
+assert.equal(backtestProgressPercent(35_136, 35_136), 100);
+assert.equal(backtestProgressPercent(40_000, 35_136), 100);
 assert.equal(backtestProgressPercent(1, 0), 0);
 
 const year = {
@@ -37,20 +37,26 @@ const year = {
 const loading = backtestRunProgress(year);
 assert.ok(loading);
 assert.equal(loading.percent, 34);
-assert.equal(loading.done, 12_000);
+assert.equal(loading.stages[0]?.state, "active");
+assert.equal(loading.stages[0]?.percent, 34);
+assert.equal(loading.stages[1]?.state, "waiting");
+assert.equal(loading.stages[1]?.percent, 0);
 assert.equal(
   backtestProgressLabel(loading),
   "Loading candles. 12,000 of 35,136 (34%).",
 );
-assert.equal(backtestRunningStatusText(loading), "Running · 34%");
+assert.equal(backtestRunningStatusText(loading), "Loading candles · 34%");
 assert.equal(backtestRunningStatusText(null), "Running");
 const markup = renderToStaticMarkup(
   createElement(BacktestProgressBanner, { progress: loading }),
 );
-assert.match(markup, /role="progressbar"/);
+assert.equal(markup.match(/role="progressbar"/g)?.length, 2);
 assert.match(markup, /aria-valuenow="34"/);
+assert.match(markup, /aria-valuenow="0"/);
 assert.match(markup, /width:34%/);
-assert.match(markup, /Loading candles\. 12,000 of 35,136 \(34%\)\./);
+assert.match(markup, /Loading candles/);
+assert.match(markup, /Replaying/);
+assert.match(markup, /Waiting/);
 const quiet = renderToStaticMarkup(
   createElement(BacktestProgressBanner, { progress: null }),
 );
@@ -68,40 +74,68 @@ assert.equal(
   backtestRunProgress({ ...year, progressTotal: null }),
   null,
 );
+const loaded = backtestRunProgress({
+  ...year,
+  progressDone: 35_136,
+  progressPhase: "candles",
+});
+assert.equal(loaded?.stages[0]?.state, "done");
+assert.equal(loaded?.stages[0]?.percent, 100);
+assert.equal(loaded?.headline, "Candles loaded");
 const replaying = backtestRunProgress({
   ...year,
-  progressDone: 35_000,
+  progressDone: 12_000,
   progressPhase: "replay",
 });
 assert.equal(replaying?.phase, "replay");
-assert.equal(replaying?.percent, 99);
+assert.equal(replaying?.stages[0]?.state, "done");
+assert.equal(replaying?.stages[0]?.percent, 100);
+assert.equal(replaying?.stages[1]?.percent, 34);
+assert.equal(replaying?.percent, 34);
 assert.equal(
   replaying ? backtestProgressLabel(replaying) : "",
-  "Replaying. 35,000 of 35,136 (99%).",
+  "Replaying. 12,000 of 35,136 (34%).",
 );
+assert.equal(
+  replaying ? backtestRunningStatusText(replaying) : "",
+  "Replaying · 34%",
+);
+const replayMarkup = renderToStaticMarkup(
+  createElement(BacktestProgressBanner, { progress: replaying }),
+);
+assert.match(replayMarkup, /Candles loaded/);
+assert.match(replayMarkup, /Complete/);
+assert.match(replayMarkup, /width:100%/);
+assert.match(replayMarkup, /width:34%/);
 
 async function main(): Promise<void> {
-  const seen: number[] = [];
+  const seen: Array<{ done: number; total: number; phase: string }> = [];
   let releaseFirst = () => {};
   const pump = createBacktestProgressPump(async (input) => {
-    seen.push(input.done);
+    seen.push(input);
     if (seen.length === 1) {
       await new Promise<void>((resolve) => {
         releaseFirst = resolve;
       });
     }
-  }, 35_136);
-  pump.report(0, "candles");
+  });
+  pump.report({ done: 0, total: 35_136, phase: "candles" });
   await Promise.resolve();
-  pump.report(1_000, "candles");
-  pump.report(3_000, "candles");
+  pump.report({ done: 1_000, total: 35_136, phase: "candles" });
+  pump.report({ done: 3_000, total: 35_136, phase: "candles" });
   releaseFirst();
   await pump.flushed();
-  assert.deepEqual(seen, [0, 3_000]);
+  assert.deepEqual(
+    seen.map((row) => row.done),
+    [0, 3_000],
+  );
 
-  pump.report(40_000, "replay");
+  pump.report({ done: 35_136, total: 35_136, phase: "candles" });
+  pump.report({ done: 12_000, total: 35_040, phase: "replay" });
   await pump.flushed();
-  assert.equal(seen.at(-1), 35_136);
+  assert.equal(seen.at(-1)?.phase, "replay");
+  assert.equal(seen.at(-1)?.done, 12_000);
+  assert.equal(seen.at(-1)?.total, 35_040);
   console.log("backtest progress checks passed");
 }
 
