@@ -564,8 +564,8 @@ function dcaExitSections(recipe: DcaTemplateRecipe): ParamSection[] {
   return sides.map((side) => ({
     title:
       side === "short"
-        ? "Short Exit Condition Builder"
-        : "Long Exit Condition Builder",
+        ? "Short Exit Conditions"
+        : "Long Exit Conditions",
     groups: [
       ...classic,
       hardExitGroup(
@@ -675,7 +675,7 @@ function dcaSections(recipe: DcaTemplateRecipe): ParamSection[] {
       ],
     },
     ...entrySides.map((side) => ({
-      title: side === "short" ? "Short Entry Condition Builder" : "Long Entry Condition Builder",
+      title: side === "short" ? "Short Entry Conditions" : "Long Entry Conditions",
       groups: dcaSideEntryGroups(recipe, side, quote),
     })),
     {
@@ -845,14 +845,14 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
     {
       title:
         recipe.direction === "both" || side === "long"
-          ? "Long Entry Condition Builder"
-          : "Short Entry Condition Builder",
+          ? "Long Entry Conditions"
+          : "Short Entry Conditions",
       groups: entry,
     },
     ...(recipe.direction === "both" && recipe.shortEntry
       ? [
           {
-            title: "Short Entry Condition Builder",
+            title: "Short Entry Conditions",
             groups: perpsEntryGroups(
               {
                 ...recipe,
@@ -963,8 +963,8 @@ function perpsExitSections(
     return {
       title:
         exitSide === "short"
-          ? "Short Exit Condition Builder"
-          : "Long Exit Condition Builder",
+          ? "Short Exit Conditions"
+          : "Long Exit Conditions",
       groups: [
         ...classic,
         hardExitGroup(

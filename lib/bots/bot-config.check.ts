@@ -62,7 +62,7 @@ const playbook = {
 const dca = dcaBotConfig(playbook);
 assert.equal(value(dca, "General", "Contract"), "BTCUSDT");
 assert.equal(value(dca, "General", "Direction"), "Both");
-assert.equal(value(dca, "Long Entry Condition Builder", "Start"), "Price");
+assert.equal(value(dca, "Long Entry Conditions", "Start"), "Price");
 const splitDca = dcaBotConfig({
   ...playbook,
   shortStartKind: "indicator",
@@ -72,12 +72,12 @@ const splitDca = dcaBotConfig({
   shortIndicatorLevel: 70,
   shortIndicatorPeriod: 14,
 });
-assert.equal(value(splitDca, "Long Entry Condition Builder", "Start"), "Price");
-assert.equal(value(splitDca, "Short Entry Condition Builder", "Start"), "Indicator");
-assert.equal(value(dca, "Long Entry Condition Builder", "Price"), "Last is at or below 100");
-assert.equal(value(dca, "Short Entry Condition Builder", "Price"), "Mark is at or above 120");
-assert.match(value(dca, "Long Entry Condition Builder", "Secondary entry"), /RSI 14/);
-assert.equal(value(dca, "Short Entry Condition Builder", "Secondary entry"), "Off");
+assert.equal(value(splitDca, "Long Entry Conditions", "Start"), "Price");
+assert.equal(value(splitDca, "Short Entry Conditions", "Start"), "Indicator");
+assert.equal(value(dca, "Long Entry Conditions", "Price"), "Last is at or below 100");
+assert.equal(value(dca, "Short Entry Conditions", "Price"), "Mark is at or above 120");
+assert.match(value(dca, "Long Entry Conditions", "Secondary entry"), /RSI 14/);
+assert.equal(value(dca, "Short Entry Conditions", "Secondary entry"), "Off");
 assert.equal(value(dca, "Position Sizing", "Max orders"), "5");
 assert.equal(value(dca, "Position Sizing", "Max value"), "No max value");
 assert.equal(value(dca, "Position Sizing", "Order size"), "25 USDT");
@@ -85,25 +85,25 @@ assert.equal(value(dca, "Position Sizing", "Price deviation"), "2%");
 assert.equal(value(dca, "Position Sizing", "Order"), "Market");
 assert.equal(value(dca, "Position Sizing", "Order size multiplier"), "1.5");
 assert.equal(
-  value(dca, "Long Exit Condition Builder", "Take profit"),
+  value(dca, "Long Exit Conditions", "Take profit"),
   "1.2% · Average entry · Market",
 );
 assert.equal(
-  value(dca, "Short Exit Condition Builder", "Take profit"),
+  value(dca, "Short Exit Conditions", "Take profit"),
   "1.2% · Average entry · Market",
 );
 assert.equal(
-  value(dca, "Long Exit Condition Builder", "Stop loss"),
+  value(dca, "Long Exit Conditions", "Stop loss"),
   "Move breakeven at 0.8% · offset 0.1%",
 );
 assert.equal(
   dca
-    .find((row) => row.title === "Long Exit Condition Builder")
+    .find((row) => row.title === "Long Exit Conditions")
     ?.lines.some((line) => line.label === "Move breakeven"),
   false,
 );
-assert.equal(value(dca, "Long Exit Condition Builder", "Custom conditions"), "Off");
-assert.match(value(dca, "Short Exit Condition Builder", "Custom conditions"), /RSI 14/);
+assert.equal(value(dca, "Long Exit Conditions", "Custom conditions"), "Off");
+assert.match(value(dca, "Short Exit Conditions", "Custom conditions"), /RSI 14/);
 
 const perps = perpsBotConfig({
   ...defaultFuturesAutomationForm(0, "ETHUSDT"),
@@ -133,9 +133,9 @@ const perps = perpsBotConfig({
   },
 });
 assert.equal(value(perps, "General", "Direction"), "Long");
-assert.equal(value(perps, "Long Entry Condition Builder", "Initial order trigger"), "Price cross");
-assert.equal(value(perps, "Long Entry Condition Builder", "Price"), "Last is at or above 2500");
-assert.equal(value(perps, "Long Entry Condition Builder", "Secondary entry"), "Off");
+assert.equal(value(perps, "Long Entry Conditions", "Initial order trigger"), "Price cross");
+assert.equal(value(perps, "Long Entry Conditions", "Price"), "Last is at or above 2500");
+assert.equal(value(perps, "Long Entry Conditions", "Secondary entry"), "Off");
 
 const stacked = perpsBotConfig({
   ...defaultFuturesAutomationForm(0, "ETHUSDT"),
@@ -172,18 +172,18 @@ const stacked = perpsBotConfig({
   },
 });
 assert.match(
-  value(stacked, "Long Entry Condition Builder", "Entry conditions"),
+  value(stacked, "Long Entry Conditions", "Entry conditions"),
   /^and RSI 14 at or below 30/,
 );
-assert.match(value(stacked, "Long Entry Condition Builder", "Entry conditions"), /or Price is above EMA 21/);
+assert.match(value(stacked, "Long Entry Conditions", "Entry conditions"), /or Price is above EMA 21/);
 assert.equal(value(perps, "Position Sizing", "Size"), "10 USDT");
 assert.equal(value(perps, "Additional Orders", "Condition Type"), "Off");
 assert.equal(value(perps, "Additional Orders", "Size"), "Off");
 assert.equal(value(perps, "Additional Orders", "Unit"), "Off");
 assert.equal(value(perps, "Additional Orders", "Order"), "Off");
-assert.equal(value(perps, "Long Exit Condition Builder", "Take profit"), "3% · Last · Market");
-assert.equal(value(perps, "Long Exit Condition Builder", "Stop loss"), "Off");
-assert.equal(value(perps, "Long Exit Condition Builder", "Custom conditions"), "Off");
+assert.equal(value(perps, "Long Exit Conditions", "Take profit"), "3% · Last · Market");
+assert.equal(value(perps, "Long Exit Conditions", "Stop loss"), "Off");
+assert.equal(value(perps, "Long Exit Conditions", "Custom conditions"), "Off");
 const perpsStop = perpsBotConfig({
   ...defaultFuturesAutomationForm(0, "ETHUSDT"),
   formAction: "buy",
@@ -206,7 +206,7 @@ const perpsStop = perpsBotConfig({
   breakevenOffsetPct: "0.2",
 });
 assert.equal(
-  value(perpsStop, "Long Exit Condition Builder", "Stop loss"),
+  value(perpsStop, "Long Exit Conditions", "Stop loss"),
   "2% · Mark · Market · Move breakeven at 1.5% · offset 0.2%",
 );
 
@@ -224,7 +224,7 @@ assert.equal(
   closeRule.find(
     (row) =>
       row.title === "Exit Conditions" ||
-      row.title.endsWith("Exit Condition Builder"),
+      row.title.endsWith("Exit Conditions"),
   ),
   undefined,
 );
