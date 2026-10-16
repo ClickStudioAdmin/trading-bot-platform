@@ -115,6 +115,32 @@ assert.equal(
   recipeParamRows(dca).find((row) => row.label === "Custom conditions")?.value,
   "Off",
 );
+const splitDca = recipeParamSections(
+  dcaWithExits({
+    direction: "both",
+    takeProfitPct: "5",
+    shortClassic: "on",
+    shortTpOn: "on",
+    shortTakeProfitKind: "percent",
+    shortTakeProfitPct: "8",
+    shortTakeProfitBasis: "average",
+    shortTakeProfitOrderType: "market",
+  }),
+);
+assert.equal(
+  splitDca
+    .find((section) => section.title === "Long Exit Conditions")
+    ?.groups.find((group) => group.title === "Take profit")
+    ?.rows.find((row) => row.label === "Target %")?.value,
+  "5%",
+);
+assert.equal(
+  splitDca
+    .find((section) => section.title === "Short Exit Conditions")
+    ?.groups.find((group) => group.title === "Take profit")
+    ?.rows.find((row) => row.label === "Target %")?.value,
+  "8%",
+);
 
 const listed = backtestListedSections(dca, {
   name: "October ETH",
@@ -409,6 +435,72 @@ assert.match(
 const bothLong = bothRows.find((section) => section.title === "Long Entry Conditions");
 assert.equal(bothLong?.stack?.groups.length, 1);
 assert.equal(bothLong?.stack?.groups[0]?.length, 2);
+const longTpsl = {
+  takeProfit: 10,
+  stopLoss: null,
+  tpKind: "price" as const,
+  slKind: "price" as const,
+  tpTrigger: "last" as const,
+  slTrigger: "last" as const,
+  mode: "full" as const,
+  tpQty: null,
+  slQty: null,
+  tpOrderType: "market" as const,
+  slOrderType: "market" as const,
+  tpLimitPrice: null,
+  slLimitPrice: null,
+};
+const splitPerps = recipeParamSections(
+  snapshotPerpsRecipe({
+    name: "Perps rule",
+    symbol: "ETHUSDT",
+    action: "buy",
+    closeSide: null,
+    orderType: "market",
+    sizeUnit: "qty",
+    size: 2,
+    limitPrice: null,
+    entrySource: "price",
+    triggerBy: "last",
+    triggerCompare: "gte",
+    triggerPrice: 100,
+    skipIfOpen: true,
+    trailing: null,
+    direction: "both",
+    tpsl: longTpsl,
+    shortEntry: {
+      entrySource: "price",
+      webhookId: null,
+      triggerBy: "last",
+      triggerCompare: "lte",
+      triggerPrice: 90,
+      skipIfOpen: true,
+      indicator: null,
+      confirm: null,
+      entryStack: { leaves: [], joins: [] },
+      classic: {
+        tpsl: { ...longTpsl, takeProfit: 7, tpTrigger: "index" },
+        trailing: null,
+        breakevenActivationPct: null,
+        breakevenOffsetPct: null,
+      },
+    },
+  }),
+);
+assert.equal(
+  splitPerps
+    .find((section) => section.title === "Long Exit Conditions")
+    ?.groups.find((group) => group.title === "Take profit")
+    ?.rows.find((row) => row.label === "Price")?.value,
+  "10",
+);
+assert.equal(
+  splitPerps
+    .find((section) => section.title === "Short Exit Conditions")
+    ?.groups.find((group) => group.title === "Take profit")
+    ?.rows.find((row) => row.label === "Price")?.value,
+  "7",
+);
 
 const review = adminConditionReview();
 assert.deepEqual(
