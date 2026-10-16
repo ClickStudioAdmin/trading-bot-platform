@@ -1709,6 +1709,18 @@ function RuleCard({
           fieldClass={botFieldClass}
           labelClass={botLabelClass}
           showErrors={dirty}
+          order={{ size, sizeUnit, orderType, limitPrice }}
+          onOrderChange={(partial) => {
+            if (partial.size != null) setSize(partial.size);
+            if (partial.sizeUnit != null) setSizeUnit(partial.sizeUnit);
+            if (partial.orderType != null) setOrderType(partial.orderType);
+            if (partial.limitPrice != null) setLimitPrice(partial.limitPrice);
+          }}
+          orderNamed
+          quoteLabel={quoteLabel}
+          baseCoin={baseCoin}
+          orderSizeInvalid={dirty && sizeMissing}
+          orderLimitInvalid={dirty && orderLimitMissing}
         />
       </BotFormStep>
       ) : null}
@@ -1730,54 +1742,37 @@ function RuleCard({
           fieldClass={botFieldClass}
           labelClass={botLabelClass}
           showErrors={dirty}
+          order={{ size, sizeUnit, orderType, limitPrice }}
+          onOrderChange={(partial) => {
+            if (partial.size != null) setSize(partial.size);
+            if (partial.sizeUnit != null) setSizeUnit(partial.sizeUnit);
+            if (partial.orderType != null) setOrderType(partial.orderType);
+            if (partial.limitPrice != null) setLimitPrice(partial.limitPrice);
+          }}
+          orderNamed={!showLong}
+          quoteLabel={quoteLabel}
+          baseCoin={baseCoin}
+          orderSizeInvalid={dirty && sizeMissing}
+          orderLimitInvalid={dirty && orderLimitMissing}
         />
       </BotFormStep>
       ) : null}
 
+      {closing ? (
       <BotFormStep title="Position Sizing" defaultCollapsed={inUse}>
-      <BotFormGroup title={closing ? undefined : "Order Size"}>
+      <BotFormGroup>
         <div className={fieldRow}>
-          <BotField
-            label={closing ? "Qty to close" : "Size"}
-            hint={closing ? "Empty closes the whole row." : undefined}
-            required={!closing}
-          >
-            <span className="relative mt-1 block">
-              {!closing && sizeUnit === "usdt" ? (
-                <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-                  $
-                </span>
-              ) : null}
-              <GroupedNumberInput
-                name={`${prefix}size`}
-                value={size}
-                onChange={setSize}
-                allowDecimal
-                placeholder={closing ? "All" : undefined}
-                className={`${dirty && sizeMissing ? botFieldInvalidClass : botFieldClass} !mt-0 ${
-                  !closing && sizeUnit === "usdt" ? "pl-7" : ""
-                }`}
-              />
-            </span>
+          <BotField label="Qty to close" hint="Empty closes the whole row.">
+            <GroupedNumberInput
+              name={`${prefix}size`}
+              value={size}
+              onChange={setSize}
+              allowDecimal
+              placeholder="All"
+              className={botFieldClass}
+            />
           </BotField>
-          {closing ? (
-            <input type="hidden" name={`${prefix}sizeUnit`} value="qty" />
-          ) : (
-            <BotField label="Unit" required>
-              <input type="hidden" name={`${prefix}sizeUnit`} value={sizeUnit} />
-              <AppSelect
-                value={sizeUnit}
-                onChange={(event) => {
-                  setSizeUnit(event.target.value as "qty" | "usdt");
-                  setSize("");
-                }}
-                className={botFieldClass}
-              >
-                <option value="usdt">{quoteLabel}</option>
-                <option value="qty">{baseCoin}</option>
-              </AppSelect>
-            </BotField>
-          )}
+          <input type="hidden" name={`${prefix}sizeUnit`} value="qty" />
           <BotField label="Order" required>
             <OrderTypePill
               name={`${prefix}orderType`}
@@ -1799,6 +1794,7 @@ function RuleCard({
         </div>
       </BotFormGroup>
       </BotFormStep>
+      ) : null}
 
       {!closing ? (
         <BotFormStep title="Additional Orders Condition Builder" defaultCollapsed={inUse}>

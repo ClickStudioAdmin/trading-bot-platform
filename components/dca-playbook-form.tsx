@@ -61,6 +61,11 @@ import {
   entryRowsFromSources,
   type EntryStackRow,
 } from "@/components/entry-condition-stack";
+import {
+  DcaGroupSizeFields,
+  entryGroupOrderKey,
+  useExtraGroupOrders,
+} from "@/components/entry-group-order";
 import { indicatorClaim, priceClaim, type ConflictClaim } from "@/lib/strategy/conflicts";
 import {
   entryKindDisabled,
@@ -1506,6 +1511,8 @@ export function DcaPlaybookForm({
   }
   const [formTick, setFormTick] = useState(0);
   const [touched, setTouched] = useState(false);
+  const longExtraOrders = useExtraGroupOrders();
+  const shortExtraOrders = useExtraGroupOrders();
   useEffect(() => {
     setFormTick(1);
   }, []);
@@ -2434,6 +2441,41 @@ export function DcaPlaybookForm({
           gridClass={fieldRowClass5}
           fieldClass={fieldClass}
           labelClass={labelClass}
+          groupFooter={(groupIndex) => {
+            const key = entryGroupOrderKey(rows, groupIndex);
+            const extra = shortLeg ? shortExtraOrders : longExtraOrders;
+            if (key === "lead") {
+              return (
+                <DcaGroupSizeFields
+                  size={clipSize}
+                  sizeUnit={sizeUnit}
+                  onSize={setClipSize}
+                  onUnit={setSizeUnit}
+                  quoteLabel={policy.quoteLabel}
+                  baseCoin={selectedPair?.baseCoin ?? "Token"}
+                  fieldClass={sizeError ? botFieldInvalidClass : fieldClass}
+                  gridClass={fieldRowClass}
+                  named={!shortLeg}
+                  required
+                  calculated={derivedClip != null ? clipForSave : null}
+                  sizeError={sizeError}
+                />
+              );
+            }
+            const values = extra.orderFor(key);
+            return (
+              <DcaGroupSizeFields
+                size={values.size}
+                sizeUnit={values.sizeUnit}
+                onSize={(size) => extra.patch(key, { size })}
+                onUnit={(unit) => extra.patch(key, { sizeUnit: unit, size: "" })}
+                quoteLabel={policy.quoteLabel}
+                baseCoin={selectedPair?.baseCoin ?? "Token"}
+                fieldClass={fieldClass}
+                gridClass={fieldRowClass}
+              />
+            );
+          }}
       />
     );
   }
@@ -2970,70 +3012,6 @@ export function DcaPlaybookForm({
         {dcaEntryFields("short")}
       </BotFormStep>
       ) : null}
-      <BotFormStep
-        title="Position Sizing"
-        locked={cycleLocked}
-        defaultCollapsed={hasOpenPosition}
-      >
-        <BotFormGroup title="Initial Order Size" locked={cycleLocked}>
-          <div className={fieldRowClass}>
-            {budgetSizesClip ? (
-              <input type="hidden" name="sizeUnit" value="usdt" />
-            ) : (
-              <label className={labelClass}>
-                <HintLabel text="Size unit" required />
-                <AppSelect
-                  name="sizeUnit"
-                  value={sizeUnit}
-                  onChange={(event) =>
-                    setSizeUnit(event.target.value as "qty" | "usdt")
-                  }
-                  className={fieldClass}
-                >
-                  <option value="usdt">{policy.quoteLabel}</option>
-                  <option value="qty">Token qty</option>
-                </AppSelect>
-              </label>
-            )}
-            <label className={labelClass}>
-              <HintLabel
-                text={
-                  budgetSizesClip
-                    ? `Order size (${policy.quoteLabel})`
-                    : "Order size"
-                }
-                required
-              />
-              {derivedClip != null ? (
-                <>
-                  <input type="hidden" name="clipSize" value={clipForSave} />
-                  <p
-                    className={`${fieldClass} cursor-default text-ink-muted`}
-                    aria-label="Calculated order size"
-                  >
-                    {clipForSave}
-                  </p>
-                </>
-              ) : (
-                <GroupedNumberInput
-                  name="clipSize"
-                  value={clipSize}
-                  onChange={setClipSize}
-                  allowDecimal
-                  className={`mt-0.5 w-full rounded-control border bg-canvas px-2 py-1.5 text-sm text-ink focus:outline-none ${
-                    sizeError
-                      ? "border-danger focus:border-danger"
-                      : "border-line focus:border-line-strong"
-                  }`}
-                />
-              )}
-              {sizeError ? (
-                <p className="mt-1 text-xs text-danger">{sizeError}</p>
-              ) : null}
-            </label>
-          </div>
-        </BotFormGroup>
-      </BotFormStep>
       <BotFormStep
         title="Additional Orders"
         locked={cycleLocked}

@@ -432,6 +432,7 @@ export function EntryConditionStack({
   labelClass,
   grouped = false,
   lead,
+  groupFooter,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -446,6 +447,8 @@ export function EntryConditionStack({
   /** And rows share a card. Or starts the next card. */
   grouped?: boolean;
   lead?: ReactNode;
+  /** Size fields at the bottom of each group, after Add Condition. */
+  groupFooter?: (groupIndex: number) => ReactNode;
 }) {
   const column = useBotColumnLayout();
   const cap = STRATEGY_CONDITION_CAP - 1;
@@ -860,6 +863,7 @@ export function EntryConditionStack({
                 )
               : undefined
           }
+          renderGroupFooter={groupFooter}
           addGroup={
             canAdd ? (
               <AddConditionButton

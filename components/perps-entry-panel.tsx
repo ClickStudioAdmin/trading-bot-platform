@@ -14,6 +14,11 @@ import {
   useBotColumnLayout,
 } from "@/components/bot-form-chrome";
 import {
+  entryGroupOrderKey,
+  PerpsGroupOrderFields,
+  useExtraGroupOrders,
+} from "@/components/entry-group-order";
+import {
   EntryConditionStack,
   entryConflictSlots,
   entryDraftComplete,
@@ -37,6 +42,7 @@ import { parseDcaIndicatorCompare } from "@/lib/dca/indicators";
 import type { FuturesAutomationFormValues } from "@/lib/futures/automation";
 import { parseAutomationEntry } from "@/lib/futures/automation";
 import type { PerpsEntryLeg } from "@/lib/futures/conditions";
+import type { PerpsAddOrderValues } from "@/lib/futures/perps-add-condition";
 import type { FuturesSide, FuturesTrigger } from "@/lib/futures/model";
 import { indicatorClaim, priceClaim } from "@/lib/strategy/conflicts";
 import {
@@ -294,6 +300,13 @@ export function PerpsEntryPanel({
   fieldClass,
   labelClass,
   showErrors = false,
+  order,
+  onOrderChange,
+  orderNamed = false,
+  quoteLabel,
+  baseCoin,
+  orderSizeInvalid = false,
+  orderLimitInvalid = false,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -307,8 +320,16 @@ export function PerpsEntryPanel({
   fieldClass: string;
   labelClass: string;
   showErrors?: boolean;
+  order?: PerpsAddOrderValues;
+  onOrderChange?: (partial: Partial<PerpsAddOrderValues>) => void;
+  orderNamed?: boolean;
+  quoteLabel?: string;
+  baseCoin?: string;
+  orderSizeInvalid?: boolean;
+  orderLimitInvalid?: boolean;
 }) {
   const column = useBotColumnLayout();
+  const extraOrders = useExtraGroupOrders();
   const draftRef = useRef(draft);
   useEffect(() => {
     draftRef.current = draft;
@@ -626,6 +647,37 @@ export function PerpsEntryPanel({
       gridClass={fieldRow5}
       fieldClass={fieldClass}
       labelClass={labelClass}
+      groupFooter={
+        order && onOrderChange
+          ? (groupIndex) => {
+              const key = entryGroupOrderKey(draft.entryRows, groupIndex);
+              const lead = key === "lead";
+              const values = lead ? order : extraOrders.orderFor(key);
+              return (
+                <PerpsGroupOrderFields
+                  order={values}
+                  quoteLabel={quoteLabel ?? "USDT"}
+                  baseCoin={baseCoin ?? "Token"}
+                  fieldClass={fieldClass}
+                  invalidFieldClass={botFieldInvalidClass}
+                  gridClass={fieldRow}
+                  named={lead && orderNamed}
+                  namePrefix={prefix}
+                  required={lead}
+                  sizeInvalid={lead && orderSizeInvalid}
+                  limitInvalid={lead && orderLimitInvalid}
+                  onChange={(partial) => {
+                    if (lead) {
+                      onOrderChange(partial);
+                      return;
+                    }
+                    extraOrders.patch(key, partial);
+                  }}
+                />
+              );
+            }
+          : undefined
+      }
     />
   );
 }
