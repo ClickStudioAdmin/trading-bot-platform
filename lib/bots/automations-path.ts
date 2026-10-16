@@ -143,6 +143,14 @@ export function automationsStayEditHref(
   return automationsEditHref(listHref, botId, extra);
 }
 
+/** Address after a save. A reload opens this bot. No saved or notice query. */
+export function automationsSavedBotHref(
+  listHref: string,
+  botId: string,
+): string {
+  return automationsEditHref(listHref, botId.trim());
+}
+
 export function automationsSavedHref(
   listHref: string,
   createdId?: string | null,

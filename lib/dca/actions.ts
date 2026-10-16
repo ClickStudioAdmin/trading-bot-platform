@@ -270,8 +270,6 @@ async function acceptDcaVerb(input: {
   const playbook =
     (await loadDcaPlaybookById(input.playbook.id, input.accountId)) ??
     input.playbook;
-  revalidatePath(FUTURES_PATHS.automations);
-  revalidatePath(FUTURES_PATHS.positions);
   return {
     ok: true,
     notice: noticeForDcaVerb(input.verb, Boolean(input.ownsOpen)),
@@ -481,10 +479,7 @@ async function saveDcaPlaybookWith(
       revalidatePath(FUTURES_PATHS.positions);
     });
   }
-  revalidatePath(FUTURES_PATHS.automations);
-  if (dcaPlaybookIsRunning(saved.playbook)) {
-    revalidatePath(FUTURES_PATHS.positions);
-  }
+  // A revalidate here refreshes the open bot page. The form already has the playbook.
   const intent = parseDcaSaveIntent(intentRaw);
   if (intent === "arm" && dcaStartListens(config.startKind)) {
     return acceptDcaVerb({
