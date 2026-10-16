@@ -197,6 +197,71 @@ assert.equal(
   claimsConflict(crossExit(50, "cross_gte"), crossExit(50, "cross_lte")),
   true,
 );
+const shortCustom = baseForm();
+shortCustom.set("direction", "both");
+shortCustom.set("startKind", "trend");
+shortCustom.set("shortStartKind", "trend");
+shortCustom.set("indicatorKind", "supertrend");
+shortCustom.set("indicatorTimeframe", "240");
+shortCustom.set("indicatorCompare", "gte");
+shortCustom.set("indicatorPeriod", "10");
+shortCustom.set("indicatorMultiplier", "3");
+shortCustom.set("shortIndicatorKind", "supertrend");
+shortCustom.set("shortIndicatorTimeframe", "240");
+shortCustom.set("shortIndicatorCompare", "lte");
+shortCustom.set("shortIndicatorPeriod", "10");
+shortCustom.set("shortIndicatorMultiplier", "3");
+shortCustom.set("sizeUnit", "usdt");
+shortCustom.set("clipSize", "1000");
+shortCustom.set("shortExitIfTrigger", "trend");
+shortCustom.set("shortExitIfKind", "supertrend");
+shortCustom.set("shortExitIfTimeframe", "240");
+shortCustom.set("shortExitIfCompare", "gte");
+shortCustom.set("shortExitIfPeriod", "10");
+shortCustom.set("shortExitIfMultiplier", "3");
+shortCustom.set("shortExitIfStackCount", "1");
+shortCustom.set("shortExitIfStack0Join", "and");
+shortCustom.set("shortExitIfStack0Trigger", "indicator");
+shortCustom.set("shortExitIfStack0Kind", "rsi");
+shortCustom.set("shortExitIfStack0Timeframe", "240");
+shortCustom.set("shortExitIfStack0Compare", "gte");
+shortCustom.set("shortExitIfStack0Period", "14");
+shortCustom.set("shortExitIfStack0Level", "70");
+const shortCustomParsed = parseDcaPlaybookForm(shortCustom);
+assert.equal(shortCustomParsed.ok, true);
+if (!shortCustomParsed.ok) {
+  throw new Error("short custom exit should parse");
+}
+assert.equal(shortCustomParsed.config.shortExitIf?.kind, "supertrend");
+assert.equal(shortCustomParsed.config.shortExitIf?.compare, "gte");
+assert.equal(shortCustomParsed.config.shortExitStack?.leaves.length, 1);
+assert.equal(shortCustomParsed.config.shortExitStack?.leaves[0]?.kind, "filter");
+if (shortCustomParsed.config.shortExitStack?.leaves[0]?.kind === "filter") {
+  assert.equal(shortCustomParsed.config.shortExitStack.leaves[0].spec.kind, "rsi");
+  assert.equal(shortCustomParsed.config.shortExitStack.leaves[0].spec.level, 70);
+}
+
+const shortIndicatorBlank = baseForm();
+shortIndicatorBlank.set("direction", "both");
+shortIndicatorBlank.set("shortExitIfTrigger", "trend");
+shortIndicatorBlank.set("shortExitIfKind", "supertrend");
+shortIndicatorBlank.set("shortExitIfTimeframe", "240");
+shortIndicatorBlank.set("shortExitIfCompare", "gte");
+shortIndicatorBlank.set("shortExitIfPeriod", "10");
+shortIndicatorBlank.set("shortExitIfMultiplier", "3");
+shortIndicatorBlank.set("shortExitIfStackCount", "1");
+shortIndicatorBlank.set("shortExitIfStack0Join", "and");
+shortIndicatorBlank.set("shortExitIfStack0Trigger", "indicator");
+shortIndicatorBlank.set("shortExitIfStack0Kind", "");
+const shortIndicatorBlankParsed = parseDcaPlaybookForm(shortIndicatorBlank);
+assert.equal(shortIndicatorBlankParsed.ok, false);
+if (!shortIndicatorBlankParsed.ok) {
+  assert.equal(
+    shortIndicatorBlankParsed.error,
+    "Enter a valid Short Hard Exit filter.",
+  );
+}
+
 assert.equal(defaultHardExit("long").trigger, "unset");
 const blankTrigger = baseForm();
 blankTrigger.set("startKind", "");

@@ -1,6 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Hairline, JoinWord } from "@/components/condition-join";
+
+export { JoinWord };
 import { IconPlus, IconTrash } from "@/components/icons";
 import { TableHint, useActionHint } from "@/components/table-actions";
 import type { StrategyJoin } from "@/lib/strategy/expr";
@@ -34,16 +37,6 @@ export function andInsertIndex<T extends { join: StrategyJoin }>(
 
 export function insertAt<T>(rows: readonly T[], index: number, row: T): T[] {
   return [...rows.slice(0, index), row, ...rows.slice(index)];
-}
-
-function Hairline({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className="h-px min-w-0 flex-1 bg-line" aria-hidden />
-      {children}
-      <span className="h-px min-w-0 flex-1 bg-line" aria-hidden />
-    </div>
-  );
 }
 
 export function AddConditionButton({
@@ -93,16 +86,6 @@ export function RemoveConditionButton({
       </button>
       <TableHint box={box} label={label} detail="" />
     </>
-  );
-}
-
-export function JoinWord({ label }: { label: "And" | "Or" }) {
-  return (
-    <Hairline>
-      <span className="inline-flex shrink-0 rounded-md bg-join px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
-        {label}
-      </span>
-    </Hairline>
   );
 }
 

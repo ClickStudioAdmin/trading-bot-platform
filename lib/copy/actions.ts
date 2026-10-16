@@ -371,6 +371,17 @@ export async function inviteDeskCopyShareAction(formData: FormData) {
   redirect(sharedHref({ saved: "invite" }));
 }
 
+function shareIdsFromForm(formData: FormData): string[] {
+  return [
+    ...new Set(
+      formData
+        .getAll("shareId")
+        .map((value) => String(value).trim())
+        .filter(Boolean),
+    ),
+  ];
+}
+
 export async function revokeDeskCopyShareAction(formData: FormData) {
   const session = await getSessionContext();
   if (!session) {
@@ -379,28 +390,38 @@ export async function revokeDeskCopyShareAction(formData: FormData) {
   const account = session.account;
   const sharedHref = (extra: Record<string, string>) =>
     deskPath(FUTURES_PATHS.shared, account.id, extra);
-  const shareId = String(formData.get("shareId") ?? "").trim();
-  if (!shareId) {
+  const shareIds = shareIdsFromForm(formData);
+  if (shareIds.length === 0) {
     redirect(sharedHref({ error: "That invite was not found." }));
   }
-  const revoked = await revokeDeskCopyShare({
-    shareId,
-    parentAccountId: account.id,
-    fromUserId: session.member.id,
-  });
-  if (!revoked.ok) {
-    redirect(sharedHref({ error: revoked.error }));
+  for (const shareId of shareIds) {
+    const revoked = await revokeDeskCopyShare({
+      shareId,
+      parentAccountId: account.id,
+      fromUserId: session.member.id,
+    });
+    if (!revoked.ok) {
+      redirect(sharedHref({ error: revoked.error }));
+    }
   }
   await writeEventLog({
     scope: "system",
     event: "copy.invite_revoked",
-    message: "Revoked a copy invite",
+    message:
+      shareIds.length === 1
+        ? "Revoked a copy invite"
+        : `Revoked ${shareIds.length} copy invites`,
     userId: session.member.id,
     accountId: account.id,
-    data: { shareId },
+    data: { shareIds },
   });
   revalidatePath("/", "layout");
-  redirect(sharedHref({ saved: "revoke" }));
+  redirect(
+    sharedHref({
+      saved: "revoke",
+      ...(shareIds.length > 1 ? { count: String(shareIds.length) } : {}),
+    }),
+  );
 }
 
 function safeCopyCataloguePath(value: unknown): string {

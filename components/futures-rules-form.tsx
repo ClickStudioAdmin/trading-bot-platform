@@ -13,6 +13,7 @@ import {
   BotFormStep,
   BotFormSidebar,
   BotFormSidebarSection,
+  completeRequiredNotice,
   BotButtonLead,
   botBtnIcon,
   BotStatusField,
@@ -1504,8 +1505,8 @@ function RuleCard({
             accountReduceOnly={accountReduceOnly}
           />
         }
-        dirty={dirty}
-        error={dirty && requiredMissing ? saveError ?? undefined : undefined}
+        dirty={Boolean(layer.id) && dirty}
+        error={requiredMissing ? completeRequiredNotice : undefined}
         save={
           <div className="space-y-2">
             <PendingSubmitButton
@@ -1513,11 +1514,7 @@ function RuleCard({
               deskAction="default"
               className={botSidebarSaveClass}
               disabled={!dirty || requiredMissing}
-              title={
-                dirty && requiredMissing
-                  ? saveError ?? "Fill required fields before saving."
-                  : undefined
-              }
+              title={requiredMissing ? completeRequiredNotice : undefined}
             >
               <span className="inline-flex items-center gap-1.5">
                 <IconSave {...botBtnIcon} />

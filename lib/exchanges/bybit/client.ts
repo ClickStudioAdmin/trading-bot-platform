@@ -7,6 +7,7 @@ type BybitBody<T> = {
 };
 
 const BYBIT_PUBLIC_ATTEMPTS = 4;
+const BYBIT_PUBLIC_TIMEOUT_MS = 20_000;
 
 class BybitPublicError extends Error {
   readonly retryable: boolean;
@@ -67,6 +68,7 @@ async function bybitGetOnce<T>(
       headers: {
         Accept: "application/json",
       },
+      signal: AbortSignal.timeout(BYBIT_PUBLIC_TIMEOUT_MS),
     });
   } catch (cause) {
     const message =
