@@ -645,7 +645,10 @@ export function backtestWindowEndingToday(days: number): {
   to: string;
 } {
   const toMs = Date.now();
-  const fromMs = toMs - days * 24 * 60 * 60 * 1000;
+  const spanDays = Math.max(1, Math.floor(days));
+  // The end date is included. Subtracting the full count would count that
+  // day twice and turn a 365-day year into 366.
+  const fromMs = toMs - (spanDays - 1) * 24 * 60 * 60 * 1000;
   return { from: isoDateUtc(fromMs), to: isoDateUtc(toMs) };
 }
 
