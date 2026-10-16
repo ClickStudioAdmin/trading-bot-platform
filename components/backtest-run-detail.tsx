@@ -31,6 +31,7 @@ import {
   BacktestProgressBanner,
   backtestRunningStatusText,
 } from "@/components/backtest-progress-banner";
+import { backtestQueuedNotice } from "@/lib/backtest/guard";
 import { backtestRunProgress } from "@/lib/backtest/progress";
 import { backtestListedSections } from "@/lib/backtest/param-sections";
 import {
@@ -331,14 +332,16 @@ export function BacktestRunDetail({
 
       <BacktestHeaderStats run={run} />
 
-      {run.error ? <p className="text-sm text-danger">{run.error}</p> : null}
+      {run.error && run.status !== "queued" ? (
+        <p className="text-sm text-danger">{run.error}</p>
+      ) : null}
       {run.status === "queued" ? (
         <p
           role="status"
           className="flex items-center gap-2 rounded-control border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning"
         >
           <StatusDot tone="warning" pulse />
-          Queued. Starting this run now.
+          {backtestQueuedNotice(run.error)}
         </p>
       ) : null}
       {run.status === "running" ? (
