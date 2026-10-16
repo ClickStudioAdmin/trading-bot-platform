@@ -7,6 +7,15 @@ import {
   clampTotpCode,
   totpDigitsComplete,
 } from "@/lib/auth/totp-digits";
+import {
+  AUTHENTICATOR_CODE_HINT,
+  AUTHENTICATOR_CODE_LABEL,
+  RECOVERY_CODE_HINT,
+  RECOVERY_CODE_LABEL,
+  STEP_UP_KIND_FIELD,
+  USE_AUTHENTICATOR_CODE,
+  USE_RECOVERY_CODE,
+} from "@/lib/auth/step-up";
 
 const boxClass =
   "flex aspect-square w-full min-w-0 items-center justify-center rounded-control border bg-canvas p-0 text-2xl font-medium tabular-nums leading-none text-ink";
@@ -20,7 +29,9 @@ export function TotpCodeBoxes({
   autoFocus = true,
   disabled = false,
   allowRecovery = false,
+  initialRecovery = false,
   onValueChange,
+  onRecoveryModeChange,
   children,
 }: {
   id: string;
@@ -29,14 +40,16 @@ export function TotpCodeBoxes({
   autoFocus?: boolean;
   disabled?: boolean;
   allowRecovery?: boolean;
+  initialRecovery?: boolean;
   onValueChange?: (value: string) => void;
+  onRecoveryModeChange?: (recovery: boolean) => void;
   children?: ReactNode;
 }) {
   const { pending } = useFormStatus();
   const locked = disabled || pending;
   const [code, setCode] = useState("");
   const [focused, setFocused] = useState(false);
-  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState(initialRecovery);
   const [recoveryValue, setRecoveryValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const submittedCode = useRef<string | null>(null);
@@ -75,14 +88,14 @@ export function TotpCodeBoxes({
 
   function toggleRecovery() {
     submittedCode.current = null;
+    const next = !recoveryMode;
     if (recoveryMode) {
       setRecoveryValue("");
-      setRecoveryMode(false);
-      publish("");
-      return;
+    } else {
+      setCode("");
     }
-    setCode("");
-    setRecoveryMode(true);
+    setRecoveryMode(next);
+    onRecoveryModeChange?.(next);
     publish("");
   }
 
@@ -94,6 +107,15 @@ export function TotpCodeBoxes({
           name={name}
           form={form}
           value={submittedValue}
+          readOnly
+        />
+      ) : null}
+      {allowRecovery ? (
+        <input
+          type="hidden"
+          name={STEP_UP_KIND_FIELD}
+          form={form}
+          value={recoveryMode ? "recovery" : "authenticator"}
           readOnly
         />
       ) : null}
@@ -111,6 +133,7 @@ export function TotpCodeBoxes({
           spellCheck={false}
           disabled={locked}
           placeholder="xxxx-xxxx"
+          aria-label={RECOVERY_CODE_LABEL}
           className={recoveryClass}
           onChange={(event) => {
             const next = event.target.value;
@@ -147,7 +170,7 @@ export function TotpCodeBoxes({
             autoCorrect="off"
             spellCheck={false}
             disabled={locked}
-            aria-label="Authenticator code"
+            aria-label={AUTHENTICATOR_CODE_LABEL}
             className="absolute inset-0 size-full cursor-text opacity-0"
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
@@ -172,9 +195,60 @@ export function TotpCodeBoxes({
           onClick={toggleRecovery}
           disabled={locked}
         >
-          {recoveryMode ? "Use a 6-digit code" : "Use a recovery code"}
+          {recoveryMode ? USE_AUTHENTICATOR_CODE : USE_RECOVERY_CODE}
         </button>
       ) : null}
     </div>
+  );
+}
+
+export function SecondFactorEntry({
+  id,
+  name,
+  form,
+  autoFocus = true,
+  disabled = false,
+  allowRecovery = false,
+  initialRecovery = false,
+  onValueChange,
+  onRecoveryModeChange,
+}: {
+  id: string;
+  name: string;
+  form?: string;
+  autoFocus?: boolean;
+  disabled?: boolean;
+  allowRecovery?: boolean;
+  initialRecovery?: boolean;
+  onValueChange?: (value: string) => void;
+  onRecoveryModeChange?: (recovery: boolean) => void;
+}) {
+  const [recoveryMode, setRecoveryMode] = useState(initialRecovery);
+  return (
+    <>
+      <label htmlFor={id} className="block text-sm text-ink">
+        {recoveryMode ? RECOVERY_CODE_LABEL : AUTHENTICATOR_CODE_LABEL}
+      </label>
+      <TotpCodeBoxes
+        id={id}
+        name={name}
+        form={form}
+        autoFocus={autoFocus}
+        disabled={disabled}
+        allowRecovery={allowRecovery}
+        initialRecovery={initialRecovery}
+        onValueChange={onValueChange}
+        onRecoveryModeChange={(recovery) => {
+          setRecoveryMode(recovery);
+          onRecoveryModeChange?.(recovery);
+        }}
+      >
+        {allowRecovery ? (
+          <span className="mt-1 block text-hint text-ink-muted">
+            {recoveryMode ? RECOVERY_CODE_HINT : AUTHENTICATOR_CODE_HINT}
+          </span>
+        ) : null}
+      </TotpCodeBoxes>
+    </>
   );
 }

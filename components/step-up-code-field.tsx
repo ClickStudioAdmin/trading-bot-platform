@@ -14,10 +14,10 @@ import {
 import { useFormStatus } from "react-dom";
 import { ButtonBusyIcon } from "@/components/pending-submit-button";
 import { Modal } from "@/components/template-modals";
-import { TotpCodeBoxes } from "@/components/totp-code-boxes";
+import { SecondFactorEntry } from "@/components/totp-code-boxes";
 import {
+  secondFactorMissingMessage,
   STEP_UP_FIELD,
-  STEP_UP_MISSING,
   STEP_UP_REQUEST_FAILED,
   rethrowNextControlFlow,
   stepUpRejectionMessage,
@@ -72,7 +72,7 @@ export function StepUpPrompt({
   pending = false,
   error = null,
   onCancel,
-  hint = "Google Authenticator or a recovery code.",
+  initialRecovery = false,
 }: {
   formId: string;
   confirmLabel: string;
@@ -80,31 +80,39 @@ export function StepUpPrompt({
   pending?: boolean;
   error?: string | null;
   onCancel: () => void;
-  hint?: string;
+  initialRecovery?: boolean;
 }) {
   const fieldId = `${formId}-code`;
   const [missing, setMissing] = useState(false);
-  const shownError = error ?? (missing ? STEP_UP_MISSING : null);
+  const [recoveryMode, setRecoveryMode] = useState(initialRecovery);
+  const [dismissedError, setDismissedError] = useState<string | null>(null);
+  if (!error && dismissedError) {
+    setDismissedError(null);
+  }
+  const serverError = error && error === dismissedError ? null : error;
+  const shownError =
+    serverError ?? (missing ? secondFactorMissingMessage(recoveryMode) : null);
   return (
     <>
       <div className="mt-4">
-        <label htmlFor={fieldId} className="block text-sm text-ink">
-          Authenticator code
-        </label>
-        <TotpCodeBoxes
+        <SecondFactorEntry
           id={fieldId}
           name={STEP_UP_FIELD}
           form={formId}
           disabled={pending}
           allowRecovery
+          initialRecovery={initialRecovery}
           onValueChange={(value) => {
             if (value.trim()) {
               setMissing(false);
             }
           }}
-        >
-          <span className="mt-1 block text-hint text-ink-muted">{hint}</span>
-        </TotpCodeBoxes>
+          onRecoveryModeChange={(recovery) => {
+            setRecoveryMode(recovery);
+            setMissing(false);
+            setDismissedError(error);
+          }}
+        />
       </div>
       {shownError ? <p className="mt-3 text-sm text-danger">{shownError}</p> : null}
       <div className="mt-5 flex items-center justify-end gap-3">
