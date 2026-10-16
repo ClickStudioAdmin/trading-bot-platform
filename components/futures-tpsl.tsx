@@ -8,6 +8,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { saveFuturesTpsl } from "@/lib/futures/actions";
 import {
+  defaultTpslLevelKind,
   estimatedTpslPnl,
   futuresTpslPercentPrice,
   type FuturesTpslLevelKind,
@@ -375,8 +376,12 @@ function FuturesTpslDialog({
   const [mode, setMode] = useState<FuturesTpslMode>(
     tpslMode === "partial" ? "partial" : "full",
   );
-  const [tpKind, setTpKind] = useState<FuturesTpslLevelKind>("price");
-  const [slKind, setSlKind] = useState<FuturesTpslLevelKind>("price");
+  const [tpKind, setTpKind] = useState<FuturesTpslLevelKind>(() =>
+    defaultTpslLevelKind(takeProfit),
+  );
+  const [slKind, setSlKind] = useState<FuturesTpslLevelKind>(() =>
+    defaultTpslLevelKind(stopLoss),
+  );
   const [tp, setTp] = useState(
     takeProfit === null
       ? ""
@@ -729,9 +734,8 @@ function TpslPriceField({
   const [orderType, setOrderType] = useState<FuturesOrderType>(
     defaultOrderType === "limit" ? "limit" : "market",
   );
-  const [kind, setKind] = useState<FuturesTpslLevelKind>(
-    defaultKind === "percent" ? "percent" : "price",
-  );
+  const initialKind = defaultTpslLevelKind(defaultPrice, defaultKind);
+  const [kind, setKind] = useState<FuturesTpslLevelKind>(initialKind);
   const orderName =
     orderNameProp ?? (name.endsWith("stopLoss") ? "slOrderType" : "tpOrderType");
   const limitName =
@@ -762,8 +766,7 @@ function TpslPriceField({
               allowDecimal
               placeholder={kind === "percent" ? "1.5" : "0.0"}
               defaultValue={
-                kind === (defaultKind === "percent" ? "percent" : "price") &&
-                defaultPrice != null
+                kind === initialKind && defaultPrice != null
                   ? String(defaultPrice)
                   : ""
               }

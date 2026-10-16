@@ -36,7 +36,7 @@ export function FuturesOrderTicket({
   const [symbol, setSymbol] = useState(() =>
     firstOpenPerp(options, agreementGate, defaultSymbol),
   );
-  const [unit, setUnit] = useState<"qty" | "usdt">("qty");
+  const [unit, setUnit] = useState<"qty" | "usdt">("usdt");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [size, setSize] = useState("");
   const [limitPrice, setLimitPrice] = useState("");

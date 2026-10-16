@@ -140,7 +140,7 @@ export function defaultFuturesAutomationForm(
     symbol,
     formAction: "buy",
     orderType: "market",
-    sizeUnit: "qty",
+    sizeUnit: "usdt",
     size: "",
     limitPrice: "",
     entrySource: "price",
