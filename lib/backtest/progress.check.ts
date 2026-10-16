@@ -43,9 +43,9 @@ assert.equal(loading.stages[1]?.state, "waiting");
 assert.equal(loading.stages[1]?.percent, 0);
 assert.equal(
   backtestProgressLabel(loading),
-  "Loading candles. 12,000 of 35,136 (34%).",
+  "Loading Candles. 12,000 of 35,136 (34%).",
 );
-assert.equal(backtestRunningStatusText(loading), "Loading candles · 34%");
+assert.equal(backtestRunningStatusText(loading), "Loading Candles · 34%");
 assert.equal(backtestRunningStatusText(null), "Running");
 const markup = renderToStaticMarkup(
   createElement(BacktestProgressBanner, { progress: loading }),
@@ -54,7 +54,7 @@ assert.equal(markup.match(/role="progressbar"/g)?.length, 2);
 assert.match(markup, /aria-valuenow="34"/);
 assert.match(markup, /aria-valuenow="0"/);
 assert.match(markup, /width:34%/);
-assert.match(markup, /Loading candles/);
+assert.match(markup, /Loading Candles/);
 assert.match(markup, /Replaying/);
 assert.match(markup, /Waiting/);
 const quiet = renderToStaticMarkup(
