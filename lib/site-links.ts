@@ -77,6 +77,7 @@ export const ADMIN_NAV_LINKS = [
   { href: "/admin/affiliates", label: "Affiliates" },
   { href: "/admin/members", label: "Members" },
   { href: "/admin/templates", label: "Templates" },
+  { href: "/admin/system", label: "System" },
   { href: "/admin/logs", label: "Logs" },
   { href: "/admin/theme", label: "Theme" },
 ] as const;
