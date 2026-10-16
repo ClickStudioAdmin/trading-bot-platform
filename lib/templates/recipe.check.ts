@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { entryRowsFromSources } from "@/components/entry-condition-stack";
+import { exitRowsFromStack } from "@/components/exit-condition-stack";
+import { initialPerpsEntryDrafts } from "@/components/perps-entry-panel";
 import { parseDcaPlaybookForm } from "@/lib/dca/playbook";
 import { defaultPaperLayer } from "@/lib/engine/rules";
 import {
@@ -19,6 +22,9 @@ import {
   recipesMatchForBacktest,
   recipesMatchReplayFields,
   snapshotPerpsRecipe,
+  dcaRecipePlaybookSeed,
+  perpsRecipeFormSeed,
+  TEMPLATE_RECIPE_VERSION,
   uniqueAppliedName,
   templateFitsDesk,
   formatTemplateDeskType,
@@ -534,5 +540,184 @@ assert.equal(parseTemplateVisibility("backtested"), "backtested");
 assert.equal(parseTemplateVisibility("platform"), "platform");
 assert.equal(templateIsLibraryRow("backtested"), false);
 assert.equal(templateIsLibraryRow("user"), true);
+
+const bothPerps = snapshotPerpsRecipe({
+  name: "Both stack",
+  symbol: "BTCUSDT",
+  action: "buy",
+  closeSide: null,
+  orderType: "market",
+  sizeUnit: "qty",
+  size: 1,
+  limitPrice: null,
+  entrySource: "price",
+  triggerBy: "last",
+  triggerCompare: "gte",
+  triggerPrice: 100,
+  skipIfOpen: true,
+  tpsl: {
+    takeProfit: null,
+    stopLoss: 80,
+    tpTrigger: "last",
+    slTrigger: "last",
+    mode: "full",
+    tpQty: null,
+    slQty: null,
+    tpOrderType: "market",
+    slOrderType: "market",
+    tpLimitPrice: null,
+    slLimitPrice: null,
+  },
+  trailing: null,
+  confirm: null,
+  direction: "both",
+  entryStack: {
+    leaves: [{ kind: "price", triggerBy: "last", compare: "gte", price: 130 }],
+    joins: ["and"],
+  },
+  exitHard: { trigger: "price", triggerBy: "last", compare: "lte", price: 90 },
+  exitStack: {
+    leaves: [{ kind: "price", triggerBy: "last", compare: "lte", price: 70 }],
+    joins: ["and"],
+  },
+  shortEntry: {
+    entrySource: "price",
+    webhookId: null,
+    triggerBy: "last",
+    triggerCompare: "lte",
+    triggerPrice: 90,
+    skipIfOpen: true,
+    indicator: null,
+    confirm: null,
+    entryStack: {
+      leaves: [{ kind: "price", triggerBy: "last", compare: "lte", price: 70 }],
+      joins: ["or"],
+    },
+    exitHard: { trigger: "price", triggerBy: "last", compare: "gte", price: 120 },
+    exitStack: {
+      leaves: [{ kind: "price", triggerBy: "last", compare: "gte", price: 140 }],
+      joins: ["and"],
+    },
+  },
+});
+const loadedPerps = parseTemplateRecipe(bothPerps, "perps", TEMPLATE_RECIPE_VERSION);
+assert.equal(loadedPerps.ok, true);
+if (!loadedPerps.ok || loadedPerps.recipe.kind !== "perps") {
+  throw new Error("expected a perps recipe");
+}
+assert.equal(loadedPerps.recipe.direction, "both");
+assert.equal(loadedPerps.recipe.entryStack?.leaves.length, 1);
+assert.equal(loadedPerps.recipe.shortEntry?.triggerPrice, 90);
+assert.equal(loadedPerps.recipe.shortEntry?.entryStack.leaves.length, 1);
+assert.equal(loadedPerps.recipe.shortEntry?.exitHard?.trigger, "price");
+assert.equal(loadedPerps.recipe.exitStack?.leaves.length, 1);
+const perpsSeed = perpsRecipeFormSeed(loadedPerps.recipe);
+assert.equal(perpsSeed.direction, "both");
+assert.equal(perpsSeed.shortEntry?.triggerPrice, 90);
+assert.equal(perpsSeed.entryStack.leaves.length, 1);
+assert.equal(perpsSeed.shortEntry?.exitStack?.leaves.length, 1);
+const perpsDrafts = initialPerpsEntryDrafts(perpsSeed);
+assert.equal(perpsDrafts.long.entrySource, "price");
+assert.equal(perpsDrafts.long.triggerPrice, "100");
+assert.equal(perpsDrafts.long.entryRows.length, 1);
+assert.equal(perpsDrafts.short.entrySource, "price");
+assert.equal(perpsDrafts.short.triggerPrice, "90");
+assert.equal(perpsDrafts.short.entryRows.length, 1);
+assert.equal(perpsDrafts.short.entryRows[0]?.join, "or");
+assert.equal(exitRowsFromStack(perpsSeed.exitStack).length, 1);
+assert.equal(exitRowsFromStack(perpsSeed.shortEntry?.exitStack).length, 1);
+
+const legacyConfirm = snapshotPerpsRecipe({
+  name: "Confirm only",
+  symbol: "BTCUSDT",
+  action: "buy",
+  closeSide: null,
+  orderType: "market",
+  sizeUnit: "qty",
+  size: 1,
+  limitPrice: null,
+  entrySource: "price",
+  triggerBy: "last",
+  triggerCompare: "gte",
+  triggerPrice: 100,
+  skipIfOpen: true,
+  tpsl: null,
+  trailing: null,
+  confirm: {
+    kind: "ema",
+    timeframe: "60",
+    compare: "gte",
+    level: null,
+    period: 21,
+    multiplier: null,
+  },
+  direction: "long",
+});
+const legacyLoaded = parseTemplateRecipe(
+  legacyConfirm,
+  "perps",
+  TEMPLATE_RECIPE_VERSION,
+);
+assert.equal(legacyLoaded.ok, true);
+if (!legacyLoaded.ok || legacyLoaded.recipe.kind !== "perps") {
+  throw new Error("expected a perps recipe");
+}
+const legacySeed = perpsRecipeFormSeed(legacyLoaded.recipe);
+assert.equal(legacySeed.direction, "long");
+assert.equal(legacySeed.entryStack.leaves.length, 1);
+assert.equal(initialPerpsEntryDrafts(legacySeed).long.entryRows.length, 1);
+
+const bothDca = new FormData();
+bothDca.set("name", "Both stack");
+bothDca.set("symbol", "BTCUSDT");
+bothDca.set("direction", "both");
+bothDca.set("startKind", "price");
+bothDca.set("armTriggerBy", "last");
+bothDca.set("armCompare", "gte");
+bothDca.set("armPrice", "100");
+bothDca.set("shortStartKind", "price");
+bothDca.set("shortArmTriggerBy", "last");
+bothDca.set("shortArmCompare", "lte");
+bothDca.set("shortArmPrice", "90");
+bothDca.set("clipSize", "1");
+bothDca.set("sizeUnit", "qty");
+bothDca.set("entryCount", "1");
+bothDca.set("entry0Join", "and");
+bothDca.set("entry0Source", "price");
+bothDca.set("entry0TriggerBy", "last");
+bothDca.set("entry0TriggerCompare", "gte");
+bothDca.set("entry0TriggerPrice", "130");
+bothDca.set("short_entryCount", "1");
+bothDca.set("short_entry0Join", "or");
+bothDca.set("short_entry0Source", "price");
+bothDca.set("short_entry0TriggerBy", "last");
+bothDca.set("short_entry0TriggerCompare", "lte");
+bothDca.set("short_entry0TriggerPrice", "70");
+const bothDcaParsed = parseDcaPlaybookForm(bothDca);
+assert.equal(bothDcaParsed.ok, true);
+if (!bothDcaParsed.ok) {
+  throw new Error("expected a DCA playbook");
+}
+const bothDcaRecipe = snapshotDcaRecipe(bothDcaParsed.config);
+const loadedDca = parseTemplateRecipe(bothDcaRecipe, "dca", TEMPLATE_RECIPE_VERSION);
+assert.equal(loadedDca.ok, true);
+if (!loadedDca.ok || loadedDca.recipe.kind !== "dca") {
+  throw new Error("expected a dca recipe");
+}
+assert.equal(loadedDca.recipe.direction, "both");
+assert.equal(loadedDca.recipe.entryStack?.leaves.length, 1);
+assert.equal(loadedDca.recipe.shortEntryStack?.leaves.length, 1);
+const dcaSeed = dcaRecipePlaybookSeed(loadedDca.recipe);
+assert.equal(dcaSeed.direction, "both");
+assert.equal(dcaSeed.shortStartKind, "price");
+assert.equal(entryRowsFromSources(dcaSeed.entryStack, dcaSeed.confirm).length, 1);
+assert.equal(
+  entryRowsFromSources(dcaSeed.shortEntryStack, dcaSeed.shortConfirm).length,
+  1,
+);
+assert.equal(
+  entryRowsFromSources(dcaSeed.shortEntryStack, dcaSeed.shortConfirm)[0]?.join,
+  "or",
+);
 
 console.log("templates recipe ok");

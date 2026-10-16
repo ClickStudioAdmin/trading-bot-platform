@@ -55,6 +55,7 @@ import {
   confirmFromEntryStack,
   entryStackFromJson,
   entryStackIsLegacy,
+  legacyEntryStack,
   resolveEntryStack,
   type EntryStack,
 } from "@/lib/strategy/expr";
@@ -549,6 +550,9 @@ export function dcaRecipePlaybookSeed(recipe: DcaTemplateRecipe): DcaPlaybook {
     shortIndicatorMultiplier: recipe.shortIndicatorMultiplier ?? null,
     confirm: recipe.confirm ?? null,
     shortConfirm: recipe.shortConfirm ?? null,
+    entryStack: recipe.entryStack ?? null,
+    shortEntryStack:
+      recipe.direction === "both" ? (recipe.shortEntryStack ?? null) : null,
     exitIf: recipe.exitHard ? null : (recipe.exitIf ?? null),
     shortExitIf: recipe.shortExitHard ? null : (recipe.shortExitIf ?? null),
     exitHard: hardExitSignalFromJson(recipe.exitHard),
@@ -585,10 +589,13 @@ export function perpsRecipeFormSeed(
     trailing: recipe.trailing,
     indicator: recipe.indicator ?? null,
     confirm: recipe.confirm ?? null,
+    entryStack: recipe.entryStack ?? legacyEntryStack(recipe.confirm ?? null),
     exitIf: recipe.exitHard ? null : (recipe.exitIf ?? null),
     exitHard: hardExitSignalFromJson(recipe.exitHard),
     exitStack: exitStackForEditor(recipe.exitStack),
     exitDraft: hardExitDraftFromTemplate(recipe.exitIf, recipe.exitHard),
+    direction: recipe.direction,
+    shortEntry: recipe.direction === "both" ? (recipe.shortEntry ?? null) : null,
     breakevenActivationPct:
       recipe.breakevenActivationPct == null
         ? ""

@@ -326,4 +326,71 @@ assert.equal(
   "2",
 );
 
+const bothSections = recipeParamSections({
+  ...perps,
+  direction: "both",
+  entryStack: {
+    leaves: [{ kind: "price", triggerBy: "last", compare: "gte", price: 130 }],
+    joins: ["and"],
+  },
+  shortEntry: {
+    entrySource: "price",
+    webhookId: null,
+    triggerBy: "last",
+    triggerCompare: "lte",
+    triggerPrice: 90,
+    skipIfOpen: true,
+    indicator: null,
+    confirm: null,
+    entryStack: {
+      leaves: [{ kind: "price", triggerBy: "last", compare: "lte", price: 70 }],
+      joins: ["or"],
+    },
+  },
+});
+assert.deepEqual(
+  bothSections.map((section) => section.title),
+  [
+    "General",
+    "Long Entry Conditions",
+    "Short Entry Conditions",
+    "Position Sizing",
+    "Additional Orders",
+    "Long Exit Conditions",
+    "Short Exit Conditions",
+  ],
+);
+assert.equal(
+  bothSections.find((section) => section.title === "General")?.groups[0]?.rows.find(
+    (row) => row.label === "Direction",
+  )?.value,
+  "Both",
+);
+assert.match(
+  recipeParamRows({
+    ...perps,
+    direction: "both",
+    entryStack: {
+      leaves: [{ kind: "price", triggerBy: "last", compare: "gte", price: 130 }],
+      joins: ["and"],
+    },
+    shortEntry: {
+      entrySource: "price",
+      webhookId: null,
+      triggerBy: "last",
+      triggerCompare: "lte",
+      triggerPrice: 90,
+      skipIfOpen: true,
+      indicator: null,
+      confirm: null,
+      entryStack: {
+        leaves: [{ kind: "price", triggerBy: "last", compare: "lte", price: 70 }],
+        joins: ["or"],
+      },
+    },
+  })
+    .find((row) => row.label === "Or")?.value ?? "",
+  /70/,
+);
+
 console.log("backtest param section checks passed");
