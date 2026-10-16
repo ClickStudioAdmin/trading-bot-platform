@@ -96,9 +96,10 @@ import {
   dcaBotPair,
   dcaBotSummary,
   dcaListStatus,
-  rowsForDesk,
+  deskBotRows,
   type AutomationsBotBlotter,
 } from "@/lib/bots/automations-list";
+import { withRemovedIds } from "@/lib/table-chrome";
 import { dcaBotConfig } from "@/lib/bots/bot-config";
 import {
   AUTOMATIONS_NEW,
@@ -574,23 +575,36 @@ export function DcaPlaybooksDesk({
       .reverse()
       .map((playbook) => ({ key: playbook.id, playbook })),
   );
+  const [removedIds, setRemovedIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const [deskId, setDeskId] = useState(accountId ?? "");
   const deskChanged = (accountId ?? "") !== deskId;
   const incomingCards = [...playbooks]
     .reverse()
     .map((playbook) => ({ key: playbook.id, playbook }));
-  const visibleCards = rowsForDesk({
+  const botList = deskBotRows({
     deskChanged,
     current: cards,
     incoming: incomingCards,
+    removedIds,
     id: (card) => card.playbook?.id,
   });
+  const visibleCards = botList.rows;
   if (deskChanged) {
     setDeskId(accountId ?? "");
     setCards([...visibleCards]);
     setExtraLibrary([]);
-  } else if (visibleCards !== cards) {
-    setCards([...visibleCards]);
+    if (botList.removedIds !== removedIds) {
+      setRemovedIds(botList.removedIds);
+    }
+  } else {
+    if (botList.removedIds !== removedIds) {
+      setRemovedIds(botList.removedIds);
+    }
+    if (visibleCards !== cards) {
+      setCards([...visibleCards]);
+    }
   }
   const savedPlaybooks = visibleCards
     .map((card) => card.playbook)
@@ -757,8 +771,18 @@ export function DcaPlaybooksDesk({
               }
               const result = await setDcaBotModesAction(data);
               if (result.ok) {
-                for (const playbook of result.playbooks ?? []) {
-                  setCards((current) => upsertDcaCard(current, playbook));
+                if (action === "delete") {
+                  const drop = new Set(ids);
+                  setRemovedIds((current) => withRemovedIds(current, ids));
+                  setCards((current) =>
+                    current.filter(
+                      (card) => !drop.has(card.playbook?.id ?? ""),
+                    ),
+                  );
+                } else {
+                  for (const playbook of result.playbooks ?? []) {
+                    setCards((current) => upsertDcaCard(current, playbook));
+                  }
                 }
               }
               return result.ok
@@ -808,6 +832,9 @@ export function DcaPlaybooksDesk({
                   data,
                 )) as DcaDeskActionResult;
                 if (result.deletedId) {
+                  setRemovedIds((current) =>
+                    withRemovedIds(current, [playbook.id]),
+                  );
                   setCards((current) =>
                     current.filter((item) => item.key !== playbook.id),
                   );

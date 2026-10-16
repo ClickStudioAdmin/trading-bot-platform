@@ -66,11 +66,12 @@ import { AppSelect } from "@/components/app-select";
 import {
   automationsBotBlotterCells,
   botModeLabel,
-  rowsForDesk,
+  deskBotRows,
   paperBotPair,
   paperBotSummary,
   type AutomationsBotBlotter,
 } from "@/lib/bots/automations-list";
+import { withRemovedIds } from "@/lib/table-chrome";
 import { paperBotConfig } from "@/lib/bots/bot-config";
 import { deskHref } from "@/lib/accounts/model";
 import {
@@ -170,6 +171,9 @@ export function PaperRulesForm({
 }) {
   const router = useRouter();
   const [layers, setLayers] = useState(() => [...values.layers].reverse());
+  const [removedIds, setRemovedIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const [deskId, setDeskId] = useState(accountId ?? "");
   const [draft, setDraft] = useState(() =>
     edit === AUTOMATIONS_NEW
@@ -180,18 +184,28 @@ export function PaperRulesForm({
   const [draftClone, setDraftClone] = useState(clone);
   const [inUseIds, setInUseIds] = useState(inUseRuleIds);
   const deskChanged = (accountId ?? "") !== deskId;
-  const visibleLayers = rowsForDesk({
+  const botList = deskBotRows({
     deskChanged,
     current: layers,
     incoming: [...values.layers].reverse(),
+    removedIds,
     id: (layer) => layer.id,
   });
+  const visibleLayers = botList.rows;
   if (deskChanged) {
     setDeskId(accountId ?? "");
     setLayers([...visibleLayers]);
     setInUseIds(inUseRuleIds);
-  } else if (visibleLayers !== layers) {
-    setLayers([...visibleLayers]);
+    if (botList.removedIds !== removedIds) {
+      setRemovedIds(botList.removedIds);
+    }
+  } else {
+    if (botList.removedIds !== removedIds) {
+      setRemovedIds(botList.removedIds);
+    }
+    if (visibleLayers !== layers) {
+      setLayers([...visibleLayers]);
+    }
   }
   const nextDraft =
     edit !== draftEdit || clone !== draftClone
@@ -351,6 +365,9 @@ export function PaperRulesForm({
               }
               const result = await setPaperBotModesAction(data);
               if (result.ok) {
+                if (action === "delete") {
+                  setRemovedIds((current) => withRemovedIds(current, ids));
+                }
                 applySaveResult(result);
               }
               return result.ok
@@ -384,6 +401,7 @@ export function PaperRulesForm({
                 if (!result.ok) {
                   return;
                 }
+                setRemovedIds((current) => withRemovedIds(current, [layer.id]));
                 applySaveResult(result);
                 setLayers((current) =>
                   current.filter((item) => item.id !== layer.id),
