@@ -1,5 +1,5 @@
 import { CopyTextButton } from "@/components/copy-text-button";
-import { TotpCodeBoxes } from "@/components/totp-code-boxes";
+import { SecondFactorEntry, TotpCodeBoxes } from "@/components/totp-code-boxes";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   cancelTotpEnrollAction,
@@ -124,8 +124,7 @@ export function TotpSettings({
           </p>
           <p className="mt-1 text-sm text-ink-muted">
             Sign-in asks for a 6-digit code after your password. Disable it
-            with your current password and a code from the app (or a leftover
-            recovery code).
+            with your current password and the method you choose below.
           </p>
         </div>
         <form action={disableTotpAction} className="space-y-3">
@@ -139,12 +138,12 @@ export function TotpSettings({
               className={fieldClass}
             />
           </label>
-          <div>
-            <label className="block text-sm text-ink" htmlFor="disable-code">
-              Code
-            </label>
-            <TotpCodeBoxes id="disable-code" name="code" autoFocus={false} allowRecovery />
-          </div>
+          <SecondFactorEntry
+            id="disable-code"
+            name="code"
+            autoFocus={false}
+            allowRecovery
+          />
           <PendingSubmitButton
             pendingLabel="Disabling…"
             className="rounded-control border border-danger/40 px-4 py-2 text-sm text-danger hover:bg-danger/10"
