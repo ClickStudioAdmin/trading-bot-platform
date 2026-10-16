@@ -39,6 +39,23 @@ export function stepUpShouldAsk(input: {
   return input.code.trim() === "";
 }
 
+/** A wrong code stays on the step-up modal. Redirecting would close it. */
+export function stepUpRejection(message: string): { stepUpError: string } {
+  return { stepUpError: message };
+}
+
+export function stepUpRejectionMessage(result: unknown): string | null {
+  if (typeof result !== "object" || result === null || !("stepUpError" in result)) {
+    return null;
+  }
+  const message = (result as { stepUpError?: unknown }).stepUpError;
+  if (typeof message !== "string") {
+    return null;
+  }
+  const trimmed = message.trim();
+  return trimmed || null;
+}
+
 /** Bio, logo, and an unchanged alias stay on the session. */
 export function traderAliasNeedsStepUp(
   previousAlias: string | null,

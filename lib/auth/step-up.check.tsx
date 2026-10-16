@@ -11,6 +11,8 @@ import {
   STEP_UP_INVALID,
   STEP_UP_MISSING,
   stepUpFailure,
+  stepUpRejection,
+  stepUpRejectionMessage,
   stepUpShouldAsk,
   traderAliasNeedsStepUp,
 } from "./step-up";
@@ -60,6 +62,15 @@ assert.equal(
 assert.equal(
   stepUpShouldAsk({ enabled: true, code: "", aliasUnchanged: false }),
   true,
+);
+
+assert.equal(stepUpRejectionMessage(null), null);
+assert.equal(stepUpRejectionMessage({}), null);
+assert.equal(stepUpRejectionMessage({ stepUpError: "  " }), null);
+assert.equal(stepUpRejectionMessage({ error: STEP_UP_INVALID }), null);
+assert.equal(
+  stepUpRejectionMessage(stepUpRejection(STEP_UP_INVALID)),
+  STEP_UP_INVALID,
 );
 
 const page = renderToStaticMarkup(

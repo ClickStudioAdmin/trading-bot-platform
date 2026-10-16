@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin/access";
 import { emailIsListedAdmin } from "@/lib/admin/emails";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { requireVerifiedEmail } from "@/lib/auth/session";
+import { stepUpRejection } from "@/lib/auth/step-up";
 import { stepUpFromForm } from "@/lib/auth/step-up-guard";
 import { writeEventLog } from "@/lib/logs/write";
 import {
@@ -287,7 +288,7 @@ export async function changeOwnPassword(formData: FormData) {
   }
   const stepUp = await stepUpFromForm(member.id, formData);
   if (stepUp) {
-    redirect(settingsPath({ tab: "password", error: stepUp }));
+    return stepUpRejection(stepUp);
   }
   const { error } = await supabase
     .from("members")

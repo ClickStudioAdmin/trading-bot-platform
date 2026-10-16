@@ -76,6 +76,7 @@ import {
 } from "@/lib/copy/model";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
+import { stepUpRejection } from "@/lib/auth/step-up";
 import { stepUpFromForm } from "@/lib/auth/step-up-guard";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
@@ -1050,7 +1051,7 @@ export async function rotateFuturesWebhook(formData: FormData) {
   }
   const stepUp = await stepUpFromForm(session.member.id, formData);
   if (stepUp) {
-    webhookFail(session.account.id, stepUp);
+    return stepUpRejection(stepUp);
   }
   const rotated = await rotateFuturesWebhookToken({
     supabase,

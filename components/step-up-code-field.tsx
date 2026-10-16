@@ -19,6 +19,7 @@ import { TotpCodeBoxes } from "@/components/totp-code-boxes";
 import {
   STEP_UP_FIELD,
   STEP_UP_MISSING,
+  stepUpRejectionMessage,
   stepUpShouldAsk,
 } from "@/lib/auth/step-up";
 
@@ -222,11 +223,27 @@ export function StepUpForm({
   const formId = `step-up-${useId().replace(/:/g, "")}`;
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [stepUpError, setStepUpError] = useState<string | null>(null);
   const busy = pending || submitting;
   const cancel = useCallback(() => {
     setOpen(false);
+    setStepUpError(null);
     onCancel?.();
   }, [onCancel]);
+
+  async function runAction(formData: FormData) {
+    if (typeof action !== "function") {
+      return;
+    }
+    setStepUpError(null);
+    const result = await action(formData);
+    const message = stepUpRejectionMessage(result);
+    if (!message) {
+      return;
+    }
+    setStepUpError(message);
+    setOpen(true);
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     const data = new FormData(event.currentTarget);
@@ -241,6 +258,7 @@ export function StepUpForm({
       })
     ) {
       event.preventDefault();
+      setStepUpError(null);
       setOpen(true);
       return;
     }
@@ -252,7 +270,7 @@ export function StepUpForm({
       <form
         id={formId}
         ref={formRef}
-        action={action}
+        action={typeof action === "function" ? runAction : action}
         className={className}
         autoComplete={autoComplete}
         onSubmit={handleSubmit}
@@ -267,7 +285,7 @@ export function StepUpForm({
         confirmLabel={confirmLabel}
         danger={danger}
         pending={busy}
-        error={error}
+        error={stepUpError ?? error}
         onCancel={cancel}
       />
     </>
