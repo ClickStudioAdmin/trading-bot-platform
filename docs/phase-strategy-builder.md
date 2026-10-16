@@ -44,7 +44,7 @@ In progress. First step is the entry stack on Perps bots.
 ## How Perps additional orders work
 
 1. DCA Additional Orders stays Additional Order Types and Additional Order Scaling. That model does not change.
-2. Perps Additional Orders is its own step, after Position Sizing, when the bot is not closing. It opens like the entry section, with nothing but Condition Type on Select Condition Type. The options match the entry selector: Indicator, Trend, Price Cross, and Signal Webhook. Selecting one shows that entry condition's fields, then Size, Unit, and Order. It is not the Add Condition stack.
+2. Perps Additional Orders Condition Builder is its own step, after Position Sizing, when the bot is not closing. It opens like the entry section, with nothing but Condition Type on Select Condition Type. The options match the entry selector: Indicator, Trend, Price Cross, and Signal Webhook. Selecting one shows that entry condition's fields, then Size, Unit, and Order. It is not the Add Condition stack.
 3. Size, Unit, and Order appear after a type is chosen. Order is Market or Limit. Limit shows Limit price. Editing Condition Type, the fields for that type, Size, Unit, or Order marks the bot unsaved and enables Save, the same as the rest of the form. These fields are not saved yet, so parameter lists and the saved bot configuration show Condition Type, Size, Unit, and Order as Off. A successful Save clears the unsaved notice. Close long and Close short omit the step.
 
 ## Out of this step

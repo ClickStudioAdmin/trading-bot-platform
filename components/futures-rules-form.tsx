@@ -1805,7 +1805,7 @@ function RuleCard({
       </BotFormStep>
 
       {!closing ? (
-        <BotFormStep title="Additional Orders" defaultCollapsed={inUse}>
+        <BotFormStep title="Additional Orders Condition Builder" defaultCollapsed={inUse}>
           <PerpsAdditionalOrders
             conditionType={addConditionType}
             onConditionType={setAddConditionType}

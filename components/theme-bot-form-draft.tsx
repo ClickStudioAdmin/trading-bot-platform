@@ -2839,7 +2839,7 @@ export function ThemeBotFormDraft() {
         </Group>
         </BotFormStep>
         ) : desk === "perps" && !closing ? (
-          <BotFormStep title="Additional Orders">
+          <BotFormStep title="Additional Orders Condition Builder">
             <PerpsAdditionalOrders
               conditionType={addConditionType}
               onConditionType={setAddConditionType}
