@@ -38,6 +38,7 @@ export default async function ManageSubAccountsPage({
   const tab = firstSearchValue(params.tab) === "exchanges" ? "exchanges" : "desks";
   const error = firstSearchValue(params.error);
   const deleted = firstSearchValue(params.deleted) === "1";
+  const closed = firstSearchValue(params.closed);
   const renamed = firstSearchValue(params.renamed) === "1";
   const saved = firstSearchValue(params.saved) === "1";
   const replaced = firstSearchValue(params.replaced) === "1";
@@ -77,6 +78,7 @@ export default async function ManageSubAccountsPage({
           memberId={member.id}
           error={error}
           deleted={deleted}
+          closed={closed === "archive" || closed === "revoke" ? closed : null}
           renamed={renamed}
         />
       )}
@@ -88,11 +90,13 @@ async function DesksTab({
   memberId,
   error,
   deleted,
+  closed,
   renamed,
 }: {
   memberId: string;
   error?: string;
   deleted: boolean;
+  closed: "archive" | "revoke" | null;
   renamed: boolean;
 }) {
   const accounts = await listTradingAccounts(memberId);
@@ -111,6 +115,16 @@ async function DesksTab({
       ) : null}
       {deleted ? (
         <p className="mb-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Desk deleted.</p>
+      ) : null}
+      {closed === "archive" ? (
+        <p className="mb-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
+          Desk closed. Followers keep their copy for six months.
+        </p>
+      ) : null}
+      {closed === "revoke" ? (
+        <p className="mb-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
+          Desk closed. Invites were withdrawn.
+        </p>
       ) : null}
       {renamed ? (
         <p className="mb-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Desk renamed.</p>

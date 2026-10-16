@@ -155,6 +155,23 @@ export const notificationCopy = {
       [`The invite to copy ${input.deskName} was withdrawn.`],
       { label: "Open Copy Trading", url: "/account/copy" },
     ),
+  copy_source_closed: (input: { deskName: string; keepsCopy: boolean }) =>
+    input.keepsCopy
+      ? notice(
+          `Source closed — ${input.deskName}`,
+          [
+            `${input.deskName} is closed. Your copy stays on this login for six months, with its history, and it no longer copies.`,
+            "You can remove that copy sooner if the book is flat and it is not your only desk. After six months it is removed. If it is your only desk, you may have no desks.",
+          ],
+          { label: "Open desks", url: "/account/sub-accounts" },
+        )
+      : notice(
+          `Source closed — ${input.deskName}`,
+          [
+            `The invite to copy ${input.deskName} was withdrawn. The desk is closed. There is no copy desk to keep.`,
+          ],
+          { label: "Open Copy Trading", url: "/account/copy" },
+        ),
   desk_sync_failed: (input: {
     deskName: string;
     venue: string;
@@ -333,6 +350,11 @@ export function sampleNotice(
     case "copy_invite_revoked":
       return notificationCopy.copy_invite_revoked({
         deskName: "Hyper Live",
+      });
+    case "copy_source_closed":
+      return notificationCopy.copy_source_closed({
+        deskName: "Bybit Live 1",
+        keepsCopy: true,
       });
     case "desk_sync_failed":
       return notificationCopy.desk_sync_failed({

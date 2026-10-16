@@ -29,6 +29,7 @@ export const NOTIFICATION_LABELS: Record<NotificationId, string> = {
   payout_rejected: "Withdraw rejected",
   copy_invite_received: "Copy invite received",
   copy_invite_revoked: "Copy invite withdrawn",
+  copy_source_closed: "Copy source closed",
   desk_sync_failed: "Desk sync failed",
   desk_order_failed: "Live order failed",
   exchange_verify_failed: "Exchange key failed",
@@ -54,6 +55,8 @@ export const NOTIFICATION_HINTS: Record<NotificationId, string> = {
     "An Affiliate or Account Balance USDT withdraw was rejected and returned.",
   copy_invite_received: "Someone invited this login to copy a desk.",
   copy_invite_revoked: "A copy invite was withdrawn.",
+  copy_source_closed:
+    "A desk you copy, or were invited to copy, was closed.",
   desk_sync_failed: "A live desk could not sync with the venue.",
   desk_order_failed: "A live desk hit a repeating reject.",
   exchange_verify_failed: "An exchange key failed verification.",
@@ -94,7 +97,7 @@ export const MEMBER_NOTIFICATION_GROUPS: NotificationSettingGroup[] = [
   {
     id: "copy",
     label: "Copy trading",
-    ids: ["copy_invite_received", "copy_invite_revoked"],
+    ids: ["copy_invite_received", "copy_invite_revoked", "copy_source_closed"],
     platformOnly: true,
   },
   {
@@ -206,6 +209,7 @@ export const MEMBER_CHANNEL_LIST: ChannelList = {
       rows: [
         row("copy_invite_received", "copy_invite"),
         row("copy_invite_revoked"),
+        row("copy_source_closed"),
       ],
     },
     {
