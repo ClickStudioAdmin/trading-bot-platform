@@ -14,6 +14,7 @@ import {
   BotFormStep,
   BotFormSidebar,
   BotFormSidebarSection,
+  completeRequiredNotice,
   BotFormSummaryCard,
   BotButtonLead,
   botBtnIcon,
@@ -1776,6 +1777,7 @@ export function DcaPlaybookForm({
     (playbook
       ? loadedRecipe != null && liveRecipeKey !== loadedRecipe
       : touched);
+  const showSaveNotes = Boolean(playbook) && dirty;
   const constraintBlocked = cycleLocked
     ? null
     : (parseConstraint ?? saveBlocked);
@@ -2959,15 +2961,11 @@ export function DcaPlaybookForm({
             accountReduceOnly={reduceOnly}
           />
         }
-        dirty={dirty}
+        dirty={showSaveNotes}
         error={
-          dirty
-            ? requiredMissing
-              ? !parsedLive.ok && !parseConstraint
-                ? parsedLive.error
-                : "Fill required fields before saving."
-              : constraintBlocked ?? undefined
-            : undefined
+          requiredMissing
+            ? completeRequiredNotice
+            : constraintBlocked ?? undefined
         }
         save={
           <div className="space-y-2">
@@ -2977,12 +2975,9 @@ export function DcaPlaybookForm({
               className={botSidebarSaveClass}
               disabled={Boolean(!dirty || constraintBlocked || requiredMissing)}
               title={
-                constraintBlocked ??
-                (requiredMissing
-                  ? !parsedLive.ok && !parseConstraint
-                    ? parsedLive.error
-                    : "Fill required fields before saving."
-                  : undefined)
+                requiredMissing
+                  ? completeRequiredNotice
+                  : constraintBlocked ?? undefined
               }
             >
               <span className="inline-flex items-center gap-1.5">
