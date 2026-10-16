@@ -952,11 +952,21 @@ export function backtestDrainMaxBars(where: "cycle" | "worker"): number {
 }
 
 const BACKTEST_REPLAY_YIELD_EVERY = 2_000;
+const BACKTEST_REPLAY_YIELD_MS = 50;
+let lastReplayYieldMs = 0;
 
+/** Hand the event loop back often enough for the claim heartbeat and desk ticks. */
 export async function yieldBacktestReplay(barIndex: number): Promise<void> {
-  if (barIndex <= 0 || barIndex % BACKTEST_REPLAY_YIELD_EVERY !== 0) {
+  const now = Date.now();
+  if (lastReplayYieldMs === 0) {
+    lastReplayYieldMs = now;
+  }
+  const boundary = barIndex > 0 && barIndex % BACKTEST_REPLAY_YIELD_EVERY === 0;
+  const elapsed = now - lastReplayYieldMs >= BACKTEST_REPLAY_YIELD_MS;
+  if (!boundary && !elapsed) {
     return;
   }
+  lastReplayYieldMs = now;
   await new Promise<void>((resolve) => {
     setTimeout(resolve, 0);
   });
