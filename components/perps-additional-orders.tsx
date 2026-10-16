@@ -89,7 +89,7 @@ export function PerpsAdditionalOrders({
     <div className="space-y-3">
       <BotFormGroup>
         <div className={gridClass}>
-          <BotField label="Condition Type" className="whitespace-nowrap">
+          <BotField label="Condition Type" className="whitespace-nowrap" required>
             <AppSelect
               value={conditionType}
               onChange={(event) => {
@@ -233,57 +233,59 @@ export function PerpsAdditionalOrders({
           </div>
         </BotFormGroup>
       ) : null}
-      <BotFormGroup>
-        <div className={gridClass}>
-          <BotField label="Size">
-            <span className="relative mt-1 block">
-              {sizeUnit === "usdt" ? (
-                <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-                  $
-                </span>
-              ) : null}
-              <GroupedNumberInput
-                value={size}
-                onChange={onSize}
-                allowDecimal
-                className={`${fieldClass} !mt-0 ${sizeUnit === "usdt" ? "pl-7" : ""}`}
-              />
-            </span>
-          </BotField>
-          <BotField label="Unit">
-            <AppSelect
-              value={sizeUnit}
-              onChange={(event) => {
-                onSizeUnit(event.target.value === "qty" ? "qty" : "usdt");
-                onSize("");
-              }}
-              className={fieldClass}
-            >
-              <option value="usdt">{quoteLabel}</option>
-              <option value="qty">{baseCoin}</option>
-            </AppSelect>
-          </BotField>
-          <BotField label="Order">
-            <OrderTypePill
-              value={orderType}
-              onChange={(next) => {
-                onOrderType(next);
-                markDirty();
-              }}
-            />
-          </BotField>
-          {orderType === "limit" ? (
-            <BotField label="Limit price">
-              <GroupedNumberInput
-                value={limitPrice}
-                onChange={onLimitPrice}
-                allowDecimal
+      {conditionType ? (
+        <BotFormGroup>
+          <div className={gridClass}>
+            <BotField label="Size">
+              <span className="relative mt-1 block">
+                {sizeUnit === "usdt" ? (
+                  <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
+                    $
+                  </span>
+                ) : null}
+                <GroupedNumberInput
+                  value={size}
+                  onChange={onSize}
+                  allowDecimal
+                  className={`${fieldClass} !mt-0 ${sizeUnit === "usdt" ? "pl-7" : ""}`}
+                />
+              </span>
+            </BotField>
+            <BotField label="Unit">
+              <AppSelect
+                value={sizeUnit}
+                onChange={(event) => {
+                  onSizeUnit(event.target.value === "qty" ? "qty" : "usdt");
+                  onSize("");
+                }}
                 className={fieldClass}
+              >
+                <option value="usdt">{quoteLabel}</option>
+                <option value="qty">{baseCoin}</option>
+              </AppSelect>
+            </BotField>
+            <BotField label="Order">
+              <OrderTypePill
+                value={orderType}
+                onChange={(next) => {
+                  onOrderType(next);
+                  markDirty();
+                }}
               />
             </BotField>
-          ) : null}
-        </div>
-      </BotFormGroup>
+            {orderType === "limit" ? (
+              <BotField label="Limit price">
+                <GroupedNumberInput
+                  value={limitPrice}
+                  onChange={onLimitPrice}
+                  allowDecimal
+                  className={fieldClass}
+                />
+              </BotField>
+            ) : null}
+          </div>
+        </BotFormGroup>
+      ) : null}
     </div>
   );
 }
