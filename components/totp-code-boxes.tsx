@@ -9,7 +9,7 @@ import {
 } from "@/lib/auth/totp-digits";
 
 const boxClass =
-  "aspect-square w-full min-w-0 rounded-control border bg-canvas p-0 text-center text-lg tabular-nums text-ink";
+  "flex aspect-square w-full min-w-0 items-center justify-center rounded-control border bg-canvas p-0 text-2xl font-medium tabular-nums leading-none text-ink";
 const recoveryClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none disabled:opacity-60";
 
@@ -119,7 +119,7 @@ export function TotpCodeBoxes({
           }}
         />
       ) : (
-        <div className="relative mt-1 grid w-full max-w-[19.5rem] grid-cols-6 gap-2">
+        <div className="relative mt-1 grid w-full max-w-lg grid-cols-6 gap-2">
           {Array.from({ length: TOTP_DIGIT_COUNT }, (_, index) => (
             <div
               key={index}
