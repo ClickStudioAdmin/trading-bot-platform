@@ -1,4 +1,5 @@
 import { STEP_UP_REQUEST_FAILED } from "@/lib/auth/step-up";
+import { DELETE_BLOCKED_COPIES } from "@/lib/accounts/model";
 
 /**
  * Rows removed per statement. A full page means more may remain, and a
@@ -35,8 +36,7 @@ export const DESK_DELETE_FAILED = "Could not delete this desk. Try again.";
 
 export const DESK_DELETE_MISSING = "That account was not found.";
 
-export const DESK_DELETE_HAS_COPIES =
-  "Remove the copy desks that follow this desk first.";
+export const DESK_DELETE_HAS_COPIES = `${DELETE_BLOCKED_COPIES}.`;
 
 export function deskDeleteErrorMessage(raw: string): string {
   if (/statement timeout|lock timeout/i.test(raw)) {

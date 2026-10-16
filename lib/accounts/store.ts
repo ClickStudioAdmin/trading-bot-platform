@@ -12,6 +12,8 @@ import {
 import { memberDisplayName } from "@/lib/members/sync";
 import { dcaLegStatusesOn } from "@/lib/accounts/desk-list";
 import {
+  DESK_DELETE_FAILED,
+  DESK_DELETE_HAS_COPIES,
   DESK_DELETE_RPC_DEADLINE_MS,
   DESK_DELETE_TIMED_OUT,
   drainDeskDeleteChunks,
@@ -355,7 +357,7 @@ export async function loadAccountUsage(
     return usage;
   }
   const accountIds = accounts.map((account) => account.id);
-  const [{ data: openRows }, { data: futuresOpenRows }, { data: futuresWorkingRows }, settings, ruleRows, futuresRuleRows, futuresBinds, dcaRows] =
+  const [{ data: openRows }, { data: futuresOpenRows }, { data: futuresWorkingRows }, settings, ruleRows, futuresRuleRows, futuresBinds, dcaRows, copyParents] =
     await Promise.all([
     supabase
       .from("paper_carries")
@@ -380,6 +382,7 @@ export async function loadAccountUsage(
       .from("dca_playbooks")
       .select("account_id, long_status, short_status")
       .in("account_id", accountIds),
+    copyFollowerParentIds(supabase, accountIds),
   ]);
   const carryOpenCount = new Map<string, number>();
   const futuresOpenCount = new Map<string, number>();
@@ -468,10 +471,38 @@ export async function loadAccountUsage(
         openCount: opens + working,
         automationsRunning,
         mode: account.mode,
+        hasCopyFollowers: copyParents.ids.has(account.id),
       }),
     });
   }
   return usage;
+}
+
+/** Parent desks that still have a copy desk pointing at them. */
+async function copyFollowerParentIds(
+  supabase: SupabaseClient,
+  accountIds: string[],
+): Promise<{ ids: Set<string>; error: string | null }> {
+  if (accountIds.length === 0) {
+    return { ids: new Set(), error: null };
+  }
+  const { data, error } = await supabase
+    .from("trading_accounts")
+    .select("copy_of_account_id")
+    .in("copy_of_account_id", accountIds);
+  if (error) {
+    return { ids: new Set(), error: error.message };
+  }
+  const ids = new Set<string>();
+  for (const row of data ?? []) {
+    const id = String(
+      (row as { copy_of_account_id?: string }).copy_of_account_id ?? "",
+    ).trim();
+    if (id) {
+      ids.add(id);
+    }
+  }
+  return { ids, error: null };
 }
 
 export async function deleteTradingAccountRow(
@@ -491,6 +522,15 @@ export async function deleteTradingAccountRow(
   const blocks = usage.get(accountId)?.blocks ?? ["last"];
   if (blocks.length > 0) {
     return { error: `${formatDeleteBlockers(blocks)}.` };
+  }
+  // Repeat the copy check immediately before any write. A follower added
+  // after the list loaded must still stop the delete with nothing changed.
+  const copies = await copyFollowerParentIds(supabase, [accountId]);
+  if (copies.error) {
+    return { error: DESK_DELETE_FAILED };
+  }
+  if (copies.ids.has(accountId)) {
+    return { error: DESK_DELETE_HAS_COPIES };
   }
   return teardownTradingAccount(supabase, userId, accountId);
 }
