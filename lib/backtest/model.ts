@@ -649,16 +649,26 @@ export function backtestQueueSeedFromRun(run: BacktestRun): {
   };
 }
 
-export function backtestWindowEndingToday(days: number): {
-  from: string;
-  to: string;
-} {
-  const toMs = Date.now();
+export function backtestWindowEndingOn(
+  today: string,
+  days: number,
+): { from: string; to: string } {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(today);
+  const toMs = match
+    ? Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+    : Date.now();
   const spanDays = Math.max(1, Math.floor(days));
   // The end date is included. Subtracting the full count would count that
   // day twice and turn a 365-day year into 366.
   const fromMs = toMs - (spanDays - 1) * 24 * 60 * 60 * 1000;
   return { from: isoDateUtc(fromMs), to: isoDateUtc(toMs) };
+}
+
+export function backtestWindowEndingToday(days: number): {
+  from: string;
+  to: string;
+} {
+  return backtestWindowEndingOn(isoDateUtc(Date.now()), days);
 }
 
 export function defaultBacktestDates(): { from: string; to: string } {
@@ -676,6 +686,54 @@ export function matchingBacktestWindowDays(
     }
   }
   return null;
+}
+
+const BACKTEST_QUEUE_CLICK_BLOCKS = [
+  "Enter a name and pick a desk bot or template.",
+  "Enter a backtest name.",
+  "Pick a desk bot or template.",
+] as const;
+
+/** Why Queue cannot submit yet. Empty name and no bot stay clickable so the form can say so. */
+export function backtestQueueClickBlock(input: {
+  name: string;
+  hasRecipe: boolean;
+}): string | null {
+  const nameMissing = input.name.trim().length === 0;
+  const botMissing = !input.hasRecipe;
+  if (nameMissing && botMissing) {
+    return BACKTEST_QUEUE_CLICK_BLOCKS[0];
+  }
+  if (nameMissing) {
+    return BACKTEST_QUEUE_CLICK_BLOCKS[1];
+  }
+  if (botMissing) {
+    return BACKTEST_QUEUE_CLICK_BLOCKS[2];
+  }
+  return null;
+}
+
+export function isBacktestQueueClickBlock(message: string): boolean {
+  return (BACKTEST_QUEUE_CLICK_BLOCKS as readonly string[]).includes(message);
+}
+
+/** Hard blocks only. A missing name, a missing bot, and a candle check still in flight do not disable Queue. */
+export function backtestQueueSubmitDisabled(input: {
+  pending: boolean;
+  previewError: boolean;
+  historyRangeError: boolean;
+  recipeRejected: boolean;
+  fieldIssueCount: number;
+  variantUndirtied: boolean;
+}): boolean {
+  return (
+    input.pending ||
+    input.previewError ||
+    input.historyRangeError ||
+    input.recipeRejected ||
+    input.fieldIssueCount > 0 ||
+    input.variantUndirtied
+  );
 }
 
 export function parseStartingBalance(

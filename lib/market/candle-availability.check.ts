@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { isoDateUtc } from "@/lib/backtest/model";
+import { backtestWindowEndingOn, isoDateUtc } from "@/lib/backtest/model";
 import {
   CANDLE_HISTORY_FLOOR_MS,
   candleAvailabilityNotice,
@@ -8,6 +8,7 @@ import {
   findEarliestCandleMs,
   formatYearMonthSpan,
   limitingCandleSpan,
+  maxBacktestRangeDates,
   maxCandleRangeDates,
   utcDayFloor,
 } from "./candle-availability";
@@ -116,6 +117,38 @@ const capped = maxCandleRangeDates(
   "2026-09-01",
 );
 assert.equal(capped.to, "2026-09-01");
+const planMax = maxBacktestRangeDates({
+  today: "2026-10-16",
+  planYears: 10,
+  span: null,
+});
+assert.deepEqual(planMax, backtestWindowEndingOn("2026-10-16", 3650));
+const cappedByPlan = maxBacktestRangeDates({
+  today: "2026-10-16",
+  planYears: 10,
+  span: {
+    symbol: "BTCUSDT",
+    earliestMs: Date.UTC(2016, 0, 1),
+    latestMs: Date.UTC(2026, 9, 16),
+  },
+});
+assert.equal(cappedByPlan?.from, planMax?.from);
+assert.equal(cappedByPlan?.to, "2026-10-16");
+const tightened = maxBacktestRangeDates({
+  today: "2026-10-16",
+  planYears: 10,
+  span: {
+    symbol: "BTCUSDT",
+    earliestMs: Date.UTC(2020, 0, 1),
+    latestMs: Date.UTC(2026, 9, 16, 8, 30),
+  },
+});
+assert.equal(tightened?.from, "2020-01-01");
+assert.equal(tightened?.to, "2026-10-16");
+assert.equal(
+  maxBacktestRangeDates({ today: "2026-10-16", planYears: null, span: null }),
+  null,
+);
 assert.match(formatYearMonthSpan(FIRST, NOW), /5 years/);
 assert.equal(CANDLE_HISTORY_FLOOR_MS, Date.UTC(2016, 0, 1));
 

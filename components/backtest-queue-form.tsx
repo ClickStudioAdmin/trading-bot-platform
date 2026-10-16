@@ -28,6 +28,8 @@ import {
   BACKTEST_WINDOW_PRESETS,
   DEFAULT_LEVERAGE,
   DEFAULT_STARTING_USDT,
+  backtestQueueClickBlock,
+  backtestQueueSubmitDisabled,
   backtestShouldRunInline,
   backtestTapeInterval,
   backtestVariantEdited,
@@ -68,7 +70,7 @@ import {
   candleRangesDoNotOverlap,
   candleVenueLabel,
   limitingCandleSpan,
-  maxCandleRangeDates,
+  maxBacktestRangeDates,
   missingCandleHistoryMessage,
   type CandleSpan,
 } from "@/lib/market/candle-availability";
@@ -132,11 +134,13 @@ function QueueSubmitButton({
   idle,
   pendingLabel,
   busy,
+  describedBy,
 }: {
   disabled: boolean;
   idle: string;
   pendingLabel: string;
   busy: boolean;
+  describedBy?: string;
 }) {
   const { pending } = useFormStatus();
   const show = pending || busy;
@@ -145,6 +149,7 @@ function QueueSubmitButton({
       type="submit"
       disabled={disabled || show}
       aria-busy={show}
+      aria-describedby={describedBy}
       className="inline-flex items-center gap-2 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-70"
     >
       {show ? (
@@ -214,6 +219,7 @@ export function BacktestQueueForm({
   const router = useRouter();
   const botRequest = useRef(0);
   const formIssueRef = useRef<string | null>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
   const [pickedDeskBot, setPickedDeskBot] = useState<BacktestDeskBot | null>(
     matchedDeskBot,
   );
@@ -543,8 +549,11 @@ export function BacktestQueueForm({
       venueLabel,
     });
   })();
-  const maxRange =
-    historyLimit != null ? maxCandleRangeDates(historyLimit, dates.to) : null;
+  const maxRange = maxBacktestRangeDates({
+    today: dates.to,
+    planYears: gate?.years.limit ?? null,
+    span: historyLimit,
+  });
   const maxRangeSelected = Boolean(
     maxRange && fromDate === maxRange.from && toDate === maxRange.to,
   );
@@ -572,16 +581,18 @@ export function BacktestQueueForm({
       baselineRecipe: variantRecipeBaseline,
       recipe,
     });
-  const submitDisabled =
-    pending ||
-    Boolean(preview.error) ||
-    Boolean(historyRangeError) ||
-    historyView.status === "loading" ||
-    historyView.status === "idle" ||
-    !queueAllowed.ok ||
-    recipeFieldIssues.length > 0 ||
-    !backtestName.trim() ||
-    (variant && !variantDirty);
+  const queueClickBlock = backtestQueueClickBlock({
+    name: backtestName,
+    hasRecipe: recipe != null,
+  });
+  const submitDisabled = backtestQueueSubmitDisabled({
+    pending,
+    previewError: Boolean(preview.error),
+    historyRangeError: Boolean(historyRangeError),
+    recipeRejected: recipe != null && !queueAllowed.ok,
+    fieldIssueCount: recipeFieldIssues.length,
+    variantUndirtied: variant && !variantDirty,
+  });
   const queuedRange = parseBacktestDates(fromDate, toDate);
   const yearsHint = gate ? backtestYearsHint(gate) : null;
   const queueGate = gate;
@@ -647,6 +658,9 @@ export function BacktestQueueForm({
               form="backtest-variant-queue"
               disabled={submitDisabled}
               aria-busy={pending}
+              aria-describedby={
+                queueClickBlock ? "backtest-queue-block" : undefined
+              }
               className="inline-flex items-center gap-2 rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
             >
               {pending ? (
@@ -688,6 +702,15 @@ export function BacktestQueueForm({
         id={variant ? "backtest-variant-queue" : undefined}
         className="@container min-w-0 space-y-3"
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
+          if (queueClickBlock) {
+            event.preventDefault();
+            if (!backtestName.trim()) {
+              nameRef.current?.focus();
+            } else {
+              document.getElementById("backtest-bot")?.focus();
+            }
+            return;
+          }
           const range = parseBacktestDates(fromDate, toDate);
           if (
             gate &&
@@ -789,6 +812,8 @@ export function BacktestQueueForm({
         <label className="block text-sm text-ink">
           Name
           <input
+            ref={nameRef}
+            id="backtest-name"
             name="backtestName"
             value={backtestName}
             maxLength={BACKTEST_NAME_MAX}
@@ -809,6 +834,7 @@ export function BacktestQueueForm({
           <span className="mt-1 flex items-start gap-2">
           <span className="min-w-0 flex-1">
           <AppSelect
+            id="backtest-bot"
             value={selectValue}
             options={botOptions}
             onChange={(event) => {
@@ -1096,6 +1122,11 @@ export function BacktestQueueForm({
             {issue}
           </p>
         ))}
+        {queueClickBlock ? (
+          <p id="backtest-queue-block" className="text-sm text-ink">
+            {queueClickBlock}
+          </p>
+        ) : null}
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         {variant ? null : (
         <QueueSubmitButton
@@ -1103,6 +1134,7 @@ export function BacktestQueueForm({
           idle={idleLabel}
           pendingLabel="Queuing…"
           busy={pending}
+          describedBy={queueClickBlock ? "backtest-queue-block" : undefined}
         />
         )}
       </form>

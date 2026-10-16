@@ -1,5 +1,5 @@
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
-import { isoDateUtc } from "@/lib/backtest/model";
+import { backtestWindowEndingOn, isoDateUtc } from "@/lib/backtest/model";
 
 export const CANDLE_HISTORY_FLOOR_MS = Date.UTC(2016, 0, 1);
 
@@ -157,6 +157,25 @@ export function maxCandleRangeDates(
     from: isoDateUtc(span.earliestMs),
     to: latest < today ? latest : today,
   };
+}
+
+/** Plan maximum until candle history loads, then the shorter of the plan and the tape. */
+export function maxBacktestRangeDates(input: {
+  today: string;
+  planYears: number | null;
+  span: CandleSpan | null;
+}): { from: string; to: string } | null {
+  const plan =
+    input.planYears != null && input.planYears > 0
+      ? backtestWindowEndingOn(input.today, Math.round(input.planYears * 365))
+      : null;
+  const tape = input.span ? maxCandleRangeDates(input.span, input.today) : null;
+  if (plan && tape) {
+    const from = plan.from > tape.from ? plan.from : tape.from;
+    const to = plan.to < tape.to ? plan.to : tape.to;
+    return from <= to ? { from, to } : null;
+  }
+  return plan ?? tape;
 }
 
 export function candleHistoryBlockedMessage(input: {

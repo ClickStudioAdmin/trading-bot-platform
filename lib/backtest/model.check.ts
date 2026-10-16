@@ -22,9 +22,13 @@ import {
   backtestOutcomeLabel,
   backtestRunOutcome,
   firstAdverseFill,
+  backtestQueueClickBlock,
+  backtestQueueSubmitDisabled,
   defaultBacktestDates,
   backtestWindowDays,
+  backtestWindowEndingOn,
   backtestWindowEndingToday,
+  isBacktestQueueClickBlock,
   matchingBacktestWindowDays,
   parseBacktestDates,
   backtestAprPct,
@@ -76,6 +80,54 @@ assert.equal(
   30,
 );
 assert.equal(matchingBacktestWindowDays("2020-01-01", defaultDates.to), null);
+assert.deepEqual(backtestWindowEndingOn("2026-10-16", 1825), {
+  from: "2021-10-18",
+  to: "2026-10-16",
+});
+const tenYear = backtestWindowEndingOn("2026-10-16", 3650);
+assert.equal(tenYear.to, "2026-10-16");
+const tenYearRange = parseBacktestDates(tenYear.from, tenYear.to);
+assert.equal(tenYearRange.ok, true);
+if (tenYearRange.ok) {
+  assert.equal(backtestWindowDays(tenYearRange.fromMs, tenYearRange.toMs), 3650);
+}
+assert.equal(
+  backtestQueueClickBlock({ name: "", hasRecipe: false }),
+  "Enter a name and pick a desk bot or template.",
+);
+assert.equal(
+  backtestQueueClickBlock({ name: "Rule 1", hasRecipe: false }),
+  "Pick a desk bot or template.",
+);
+assert.equal(
+  backtestQueueClickBlock({ name: "  ", hasRecipe: true }),
+  "Enter a backtest name.",
+);
+assert.equal(backtestQueueClickBlock({ name: "Rule 1", hasRecipe: true }), null);
+assert.equal(isBacktestQueueClickBlock("Enter a backtest name."), true);
+assert.equal(isBacktestQueueClickBlock("Could not queue that backtest."), false);
+assert.equal(
+  backtestQueueSubmitDisabled({
+    pending: false,
+    previewError: false,
+    historyRangeError: false,
+    recipeRejected: false,
+    fieldIssueCount: 0,
+    variantUndirtied: false,
+  }),
+  false,
+);
+assert.equal(
+  backtestQueueSubmitDisabled({
+    pending: false,
+    previewError: false,
+    historyRangeError: true,
+    recipeRejected: false,
+    fieldIssueCount: 0,
+    variantUndirtied: false,
+  }),
+  true,
+);
 for (const days of [30, 365, 1825, 3650]) {
   const window = backtestWindowEndingToday(days);
   const range = parseBacktestDates(window.from, window.to);
