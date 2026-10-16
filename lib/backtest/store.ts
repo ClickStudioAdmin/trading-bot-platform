@@ -921,6 +921,28 @@ export async function claimBacktestRunById(
   return parseBacktestRunRow(data as Record<string, unknown>);
 }
 
+/** Queued rows, and running rows whose claim has gone quiet, can be taken. */
+export function backtestRowIsClaimable(input: {
+  status: string;
+  claimedAtMs: number | null;
+  nowMs: number;
+  staleMs: number;
+  bars: number;
+  maxBars: number;
+}): boolean {
+  const stale =
+    input.status === "running" &&
+    input.claimedAtMs != null &&
+    input.claimedAtMs < input.nowMs - input.staleMs;
+  if (input.status !== "queued" && !stale) {
+    return false;
+  }
+  if (!(input.maxBars > 0)) {
+    return true;
+  }
+  return input.bars <= input.maxBars;
+}
+
 export async function claimQueuedBacktestRun(input?: {
   maxBars?: number;
   staleMinutes?: number;
@@ -938,34 +960,54 @@ export async function claimQueuedBacktestRun(input?: {
   if (!error && Array.isArray(data) && data[0]) {
     return parseBacktestRunRow(data[0] as Record<string, unknown>);
   }
+  const staleMs = (input?.staleMinutes ?? 15) * 60_000;
+  const staleBefore = new Date(Date.now() - staleMs).toISOString();
   const { data: queued } = await supabase
     .from("backtest_runs")
     .select("*")
-    .eq("status", "queued")
+    .or(
+      `status.eq.queued,and(status.eq.running,claimed_at.lt."${staleBefore}")`,
+    )
     .order("created_at", { ascending: true })
     .limit(20);
+  const nowMs = Date.now();
   const rows = (queued ?? [])
-    .map((row) => parseBacktestRunRow(row as Record<string, unknown>))
-    .filter((row): row is BacktestRun => Boolean(row));
+    .map((row) => {
+      const raw = row as Record<string, unknown>;
+      const parsed = parseBacktestRunRow(raw);
+      return parsed ? { raw, parsed } : null;
+    })
+    .filter((row): row is { raw: Record<string, unknown>; parsed: BacktestRun } =>
+      Boolean(row),
+    );
   const chosen = rows.find((row) => {
-    if (!input?.maxBars || input.maxBars <= 0) {
-      return true;
-    }
-    return estimateBacktestBars(row.fromMs, row.toMs, row.interval) <= input.maxBars;
+    const claimedAt = row.raw.claimed_at;
+    const claimedAtMs =
+      claimedAt == null ? null : new Date(String(claimedAt)).getTime();
+    return backtestRowIsClaimable({
+      status: String(row.raw.status ?? ""),
+      claimedAtMs: Number.isFinite(claimedAtMs) ? claimedAtMs : null,
+      nowMs,
+      staleMs,
+      bars: estimateBacktestBars(row.parsed.fromMs, row.parsed.toMs, row.parsed.interval),
+      maxBars: input?.maxBars ?? 0,
+    });
   });
   if (!chosen) {
     return null;
   }
-  const { data: claimed } = await supabase
+  let claim = supabase
     .from("backtest_runs")
     .update({
       status: "running",
       claimed_at: new Date().toISOString(),
     })
-    .eq("id", chosen.id)
-    .eq("status", "queued")
-    .select("*")
-    .maybeSingle();
+    .eq("id", chosen.parsed.id);
+  claim =
+    chosen.parsed.status === "running"
+      ? claim.eq("status", "running").lt("claimed_at", staleBefore)
+      : claim.eq("status", "queued");
+  const { data: claimed } = await claim.select("*").maybeSingle();
   if (!claimed) {
     return null;
   }
