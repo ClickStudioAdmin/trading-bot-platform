@@ -4,23 +4,42 @@ import {
   DESK_DELETE_FAILED,
   DESK_DELETE_HAS_COPIES,
   DESK_DELETE_MISSING,
+  DESK_DELETE_PASS_DEADLINE_MS,
+  DESK_DELETE_RPC_DEADLINE_MS,
   DESK_DELETE_TIMED_OUT,
   continueTimedDeskDelete,
   deleteRowsInBatches,
+  deskDeleteAttemptTimeout,
   deskDeleteErrorMessage,
   deskDeletePastBudget,
   drainDeskDeleteChunks,
   interpretDeskDeleteChunk,
+  withDeskDeleteDeadline,
 } from "./desk-delete";
+import { STEP_UP_REQUEST_FAILED } from "../auth/step-up";
 
 assert.equal(
   deskDeleteErrorMessage("canceling statement due to statement timeout"),
   DESK_DELETE_TIMED_OUT,
 );
 assert.equal(
+  deskDeleteErrorMessage("canceling statement due to lock timeout"),
+  DESK_DELETE_TIMED_OUT,
+);
+assert.equal(
   deskDeleteErrorMessage("duplicate key value violates unique constraint"),
   DESK_DELETE_FAILED,
 );
+assert.equal(DESK_DELETE_RPC_DEADLINE_MS < DESK_DELETE_BUDGET_MS, true);
+assert.equal(DESK_DELETE_BUDGET_MS < DESK_DELETE_PASS_DEADLINE_MS, true);
+assert.equal(DESK_DELETE_PASS_DEADLINE_MS < 60_000, true);
+assert.deepEqual(deskDeleteAttemptTimeout(""), {
+  stepUpError: STEP_UP_REQUEST_FAILED,
+});
+assert.deepEqual(deskDeleteAttemptTimeout("grant-1"), {
+  stepUpError: DESK_DELETE_TIMED_OUT,
+  deskDeleteGrant: "grant-1",
+});
 assert.equal(deskDeleteErrorMessage(DESK_DELETE_TIMED_OUT), DESK_DELETE_TIMED_OUT);
 assert.equal(interpretDeskDeleteChunk("more"), "more");
 assert.equal(interpretDeskDeleteChunk("done"), "done");
@@ -163,6 +182,28 @@ const chunkBudget = await drainDeskDeleteChunks(
   1,
 );
 assert.equal(chunkBudget, DESK_DELETE_TIMED_OUT);
+
+const answered = await withDeskDeleteDeadline(async () => "done", "late", 200);
+assert.equal(answered, "done");
+const late = await withDeskDeleteDeadline(
+  () =>
+    new Promise<string>((resolve) => {
+      setTimeout(() => resolve("done"), 40);
+    }),
+  "late",
+  10,
+);
+assert.equal(late, "late");
+const lateError = await withDeskDeleteDeadline(
+  () =>
+    new Promise<string>((_resolve, reject) => {
+      setTimeout(() => reject(new Error("late boom")), 40);
+    }),
+  "late",
+  10,
+);
+assert.equal(lateError, "late");
+await new Promise((resolve) => setTimeout(resolve, 50));
 
 await assert.rejects(
   continueTimedDeskDelete(

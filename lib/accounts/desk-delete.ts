@@ -1,3 +1,5 @@
+import { STEP_UP_REQUEST_FAILED } from "@/lib/auth/step-up";
+
 /**
  * Rows removed per statement. A full page means more may remain, and a
  * shorter page means that table is done. Kept small so one statement stays
@@ -9,11 +11,20 @@ export const DESK_DELETE_BATCH = 300;
 export const DESK_DELETE_MAX_BATCHES = 200;
 
 /**
- * Stay under the Manage Desks `maxDuration` of 60s so the dialog gets an
- * answer instead of the host error page. Closed orders and logs can outlast
- * one pass after the bots are already gone.
+ * Stay well under the Manage Desks `maxDuration` of 60s. One pass has to
+ * answer before the host drops the request, or the 2FA dialog stays on
+ * Deleting… with Cancel disabled. Closed history continues on the next pass.
  */
-export const DESK_DELETE_BUDGET_MS = 45_000;
+export const DESK_DELETE_BUDGET_MS = 15_000;
+
+/** One database call. A lock or a dropped connection must not hold the pass. */
+export const DESK_DELETE_RPC_DEADLINE_MS = 10_000;
+
+/**
+ * The browser gives up if that pass never answers. Later than the server
+ * budget, earlier than the host limit.
+ */
+export const DESK_DELETE_PASS_DEADLINE_MS = 35_000;
 
 /** How many passes one authenticator code may run. Each pass refreshes its grant. */
 export const DESK_DELETE_CONTINUE_ATTEMPTS = 8;
@@ -28,7 +39,7 @@ export const DESK_DELETE_HAS_COPIES =
   "Remove the copy desks that follow this desk first.";
 
 export function deskDeleteErrorMessage(raw: string): string {
-  if (/statement timeout/i.test(raw)) {
+  if (/statement timeout|lock timeout/i.test(raw)) {
     return DESK_DELETE_TIMED_OUT;
   }
   if (raw === DESK_DELETE_TIMED_OUT || raw === DESK_DELETE_FAILED) {
@@ -128,6 +139,58 @@ export async function deleteRowsInBatches(args: {
     }
   }
   return DESK_DELETE_TIMED_OUT;
+}
+
+/**
+ * Resolves with `onTimeout` when `run` does not answer in time. A late
+ * failure from `run` is ignored so the dialog can unlock.
+ */
+export async function withDeskDeleteDeadline<T>(
+  run: () => Promise<T>,
+  onTimeout: T,
+  ms: number,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const work = run().then(
+    (value) => ({ ok: true as const, value }),
+    (error: unknown) => ({ ok: false as const, error }),
+  );
+  try {
+    const winner = await Promise.race([
+      work,
+      new Promise<{ ok: "timeout" }>((resolve) => {
+        timer = setTimeout(() => resolve({ ok: "timeout" }), ms);
+      }),
+    ]);
+    if (winner.ok === "timeout") {
+      return onTimeout;
+    }
+    if (!winner.ok) {
+      throw winner.error;
+    }
+    return winner.value;
+  } finally {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+  }
+}
+
+/**
+ * A pass that never answers. With a grant, the same code keeps going.
+ * Without one, the dialog shows the timeout and accepts another code.
+ */
+export function deskDeleteAttemptTimeout(grant: string): {
+  stepUpError: string;
+  deskDeleteGrant?: string;
+} {
+  if (grant) {
+    return {
+      stepUpError: DESK_DELETE_TIMED_OUT,
+      deskDeleteGrant: grant,
+    };
+  }
+  return { stepUpError: STEP_UP_REQUEST_FAILED };
 }
 
 /** One code keeps deleting after a pass stops for time. A redirect still throws. */

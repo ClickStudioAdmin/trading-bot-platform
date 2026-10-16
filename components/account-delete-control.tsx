@@ -14,8 +14,11 @@ import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
 import { deleteTradingAccount } from "@/lib/accounts/actions";
 import {
   DESK_DELETE_CONTINUE_ATTEMPTS,
+  DESK_DELETE_PASS_DEADLINE_MS,
   DESK_DELETE_TIMED_OUT,
   continueTimedDeskDelete,
+  deskDeleteAttemptTimeout,
+  withDeskDeleteDeadline,
 } from "@/lib/accounts/desk-delete";
 import { stepUpRejectionMessage } from "@/lib/auth/step-up";
 
@@ -80,7 +83,11 @@ export function AccountDeleteControl({
                   if (grant) {
                     formData.set("deskDeleteGrant", grant);
                   }
-                  const result = await deleteTradingAccount(formData);
+                  const result = await withDeskDeleteDeadline(
+                    () => deleteTradingAccount(formData),
+                    deskDeleteAttemptTimeout(grant),
+                    DESK_DELETE_PASS_DEADLINE_MS,
+                  );
                   if (
                     result &&
                     typeof result === "object" &&

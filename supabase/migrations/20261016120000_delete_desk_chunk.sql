@@ -28,6 +28,10 @@ declare
         'paper_rules'
     ];
 begin
+    -- A locked row or a slow batch must fail this call. The next call continues.
+    perform set_config('lock_timeout', '2s', true);
+    perform set_config('statement_timeout', '8s', true);
+
     if p_user_id is null or p_account_id is null then
         return 'missing';
     end if;

@@ -12,8 +12,11 @@ import {
 import { memberDisplayName } from "@/lib/members/sync";
 import { dcaLegStatusesOn } from "@/lib/accounts/desk-list";
 import {
+  DESK_DELETE_RPC_DEADLINE_MS,
+  DESK_DELETE_TIMED_OUT,
   drainDeskDeleteChunks,
   deskDeleteErrorMessage,
+  withDeskDeleteDeadline,
 } from "@/lib/accounts/desk-delete";
 import { countArmedRules } from "@/lib/accounts/overview";
 import { selectPaperEngineSettings } from "@/lib/engine/settings";
@@ -534,14 +537,20 @@ async function teardownTradingAccount(
   accountId: string,
 ): Promise<{ error: string | null }> {
   const error = await drainDeskDeleteChunks(async () => {
-    const { data, error: rpcError } = await supabase.rpc("delete_desk_chunk", {
-      p_user_id: userId,
-      p_account_id: accountId,
-    });
-    if (rpcError) {
-      return deskDeleteErrorMessage(rpcError.message);
-    }
-    return String(data ?? "");
+    const status = await withDeskDeleteDeadline(async () => {
+      const { data, error: rpcError } = await supabase.rpc(
+        "delete_desk_chunk",
+        {
+          p_user_id: userId,
+          p_account_id: accountId,
+        },
+      );
+      if (rpcError) {
+        return deskDeleteErrorMessage(rpcError.message);
+      }
+      return String(data ?? "");
+    }, DESK_DELETE_TIMED_OUT, DESK_DELETE_RPC_DEADLINE_MS);
+    return status;
   });
   return { error };
 }
