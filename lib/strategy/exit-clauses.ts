@@ -17,7 +17,7 @@ export type ClassicExitKind = "take_profit" | "trailing_stop" | "stop_loss";
 export type ExitBuilderClause = {
   key: string;
   kind: ExitClauseKind;
-  /** First condition inside Build Custom Conditions. */
+  /** First advanced condition in this group. */
   anchor: HardExitDraft;
   /** Further custom conditions. They join the anchor with And. */
   rows: ExitStackRow[];

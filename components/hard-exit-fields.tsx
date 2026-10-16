@@ -80,6 +80,7 @@ export function HardExitFields({
   disabledKinds = [],
   disabledWebhookIds = [],
   lead = true,
+  showTrigger = true,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -96,6 +97,8 @@ export function HardExitFields({
   disabledWebhookIds?: string[];
   /** First row of the Condition Builder. Added rows stay Trigger. */
   lead?: boolean;
+  /** Exit groups pick the trigger on Condition Type. Keep the posted name. */
+  showTrigger?: boolean;
 }) {
   const column = useBotColumnLayout();
   const webhookChoices =
@@ -106,6 +109,10 @@ export function HardExitFields({
       : webhooks;
   return (
     <div className={gridClass}>
+      {showTrigger ? null : named && value.trigger !== "unset" ? (
+        <input type="hidden" name={`${prefix}Trigger`} value={value.trigger} />
+      ) : null}
+      {showTrigger ? (
       <label className={lead ? `${labelClass} whitespace-nowrap` : labelClass}>
         <HintLabel text={lead ? "Condition Type" : "Trigger"} required />
         <AppSelect
@@ -141,6 +148,7 @@ export function HardExitFields({
           ))}
         </AppSelect>
       </label>
+      ) : null}
       {value.trigger === "price" ? (
         <>
           <label className={labelClass}>
