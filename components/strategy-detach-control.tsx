@@ -53,7 +53,7 @@ export function StrategyDetachControl({
         onClose={() => setOpen(false)}
         buttonRef={buttonRef}
       >
-        <p className="text-hint text-ink-faint">{DETACH_BLOCKED}</p>
+        <p className="text-sm text-ink">{DETACH_BLOCKED}</p>
       </AnchoredPanel>
     </>
   );
