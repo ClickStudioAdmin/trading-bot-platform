@@ -5,7 +5,10 @@ import { AnchoredPanel } from "@/components/anchored-panel";
 import { AppSelect } from "@/components/app-select";
 import { IconTrash } from "@/components/icons";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { PanelCloseButton } from "@/components/panel-close-button";
+import {
+  PanelCloseButton,
+  PanelCloseReserve,
+} from "@/components/panel-close-button";
 import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
 import { deleteTradingAccount } from "@/lib/accounts/actions";
 import { StepUpForm } from "@/components/step-up-code-field";
@@ -54,20 +57,24 @@ export function AccountDeleteControl({
         open={open}
         onClose={() => setOpen(false)}
         buttonRef={buttonRef}
-        className="p-3 pt-8"
+        className="p-3"
       >
         <PanelCloseButton onClick={() => setOpen(false)} />
         {blockedMessage ? (
-          <p className="text-hint text-ink-faint">{blockedMessage}.</p>
+          <p className="break-words text-hint text-ink-faint">
+            <PanelCloseReserve />
+            {blockedMessage}.
+          </p>
         ) : (
           <StepUpForm
             action={deleteTradingAccount}
             confirmLabel="Delete desk"
             danger
-            className="space-y-3"
+            className="flex flex-col gap-3"
           >
             <input type="hidden" name="accountId" value={accountId} />
-            <p className="text-hint text-ink-faint">
+            <p className="min-w-0 break-words text-hint text-ink-faint">
+              <PanelCloseReserve />
               Remove {accountName} and its closed history? This cannot be
               undone.
             </p>
