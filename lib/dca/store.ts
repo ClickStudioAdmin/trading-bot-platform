@@ -4,6 +4,7 @@ import { hardExitSignalToJson } from "./hard-exit";
 import {
   dcaPlaybookConflict,
   dcaPlaybookIsRunning,
+  dcaClassicToJson,
   parseDcaPlaybookRow,
   parseDcaStatus,
   type DcaLegState,
@@ -57,6 +58,10 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
     breakeven_offset_pct: config.breakevenOffsetPct,
     trailing_trigger_pct: config.trailingTriggerPct,
     trailing_pct: config.trailingPct,
+    short_classic:
+      config.direction === "both" && config.shortClassic
+        ? dcaClassicToJson(config.shortClassic)
+        : null,
     arm_trigger_by: config.armTrigger?.triggerBy ?? null,
     arm_compare: config.armTrigger?.compare ?? null,
     arm_price: config.armTrigger?.price ?? null,

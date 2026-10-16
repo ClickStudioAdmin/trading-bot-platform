@@ -107,6 +107,7 @@ function account(
     venueEnvironment: partial.mode === "paper" ? null : "demo",
     copyOfAccountId: null,
     createdAtMs: 0,
+    closedAtMs: null,
     ...partial,
   };
 }

@@ -221,7 +221,7 @@ export async function loadCopyCatalogue(input: {
     ]);
   const accounts = (desks ?? [])
     .map((row) => parseTradingAccountRow(row as Record<string, unknown>))
-    .filter((row) => candidateIds.includes(row.id));
+    .filter((row) => candidateIds.includes(row.id) && row.closedAtMs == null);
   const ownerIds = [...new Set(accounts.map((row) => row.userId))];
   const { data: profiles } =
     ownerIds.length === 0

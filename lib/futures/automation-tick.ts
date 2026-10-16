@@ -690,11 +690,21 @@ async function monitorOwnedFuturesPositions(input: {
     }
     const { rule, account } = owned;
     const watchedExit = perpsExitForSide(rule, open.side);
+    const sideClassic =
+      open.side === "short" && rule.direction === "both"
+        ? (rule.shortEntry?.classic ?? null)
+        : null;
+    const breakevenActivationPct = sideClassic
+      ? sideClassic.breakevenActivationPct
+      : rule.breakevenActivationPct;
+    const breakevenOffsetPct = sideClassic
+      ? sideClassic.breakevenOffsetPct
+      : rule.breakevenOffsetPct;
     if (
       !watchedExit.exitIf &&
       !watchedExit.exitHard &&
       watchedExit.exitStack.leaves.length === 0 &&
-      rule.breakevenActivationPct == null
+      breakevenActivationPct == null
     ) {
       continue;
     }
@@ -810,7 +820,7 @@ async function monitorOwnedFuturesPositions(input: {
         qty: open.qty,
         entryPrice: open.entryPrice,
         mark: last,
-        activationPct: rule.breakevenActivationPct,
+        activationPct: breakevenActivationPct,
         done: open.breakevenDone,
       })
     ) {
@@ -819,7 +829,7 @@ async function monitorOwnedFuturesPositions(input: {
         side: open.side,
         entryPrice: open.entryPrice,
         currentStop: current?.stopLoss ?? open.stopLoss,
-        offsetPct: rule.breakevenOffsetPct,
+        offsetPct: breakevenOffsetPct,
       });
       if (stop == null || !(stop > 0)) {
         continue;
@@ -828,8 +838,8 @@ async function monitorOwnedFuturesPositions(input: {
         side: open.side,
         entryPrice: open.entryPrice,
         mark: last,
-        activationPct: rule.breakevenActivationPct ?? 0,
-        offsetPct: rule.breakevenOffsetPct,
+        activationPct: breakevenActivationPct ?? 0,
+        offsetPct: breakevenOffsetPct,
         stop,
       });
       const moved = await runFuturesCommand({

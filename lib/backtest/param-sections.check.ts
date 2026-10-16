@@ -6,6 +6,7 @@ import {
   snapshotPaperRecipe,
   snapshotPerpsRecipe,
 } from "@/lib/templates/recipe";
+import { adminConditionReview } from "./condition-list-samples";
 import {
   backtestListedSections,
   recipeParamRows,
@@ -114,6 +115,32 @@ assert.equal(
   recipeParamRows(dca).find((row) => row.label === "Custom conditions")?.value,
   "Off",
 );
+const splitDca = recipeParamSections(
+  dcaWithExits({
+    direction: "both",
+    takeProfitPct: "5",
+    shortClassic: "on",
+    shortTpOn: "on",
+    shortTakeProfitKind: "percent",
+    shortTakeProfitPct: "8",
+    shortTakeProfitBasis: "average",
+    shortTakeProfitOrderType: "market",
+  }),
+);
+assert.equal(
+  splitDca
+    .find((section) => section.title === "Long Exit Conditions")
+    ?.groups.find((group) => group.title === "Take profit")
+    ?.rows.find((row) => row.label === "Target %")?.value,
+  "5%",
+);
+assert.equal(
+  splitDca
+    .find((section) => section.title === "Short Exit Conditions")
+    ?.groups.find((group) => group.title === "Take profit")
+    ?.rows.find((row) => row.label === "Target %")?.value,
+  "8%",
+);
 
 const listed = backtestListedSections(dca, {
   name: "October ETH",
@@ -209,9 +236,20 @@ const orRecipe = snapshotPerpsRecipe({
     joins: ["or"],
   },
 });
+const orEntry = recipeParamSections(orRecipe).find(
+  (section) => section.title === "Long Entry Conditions",
+);
+assert.equal(orEntry?.stack?.groups.length, 2);
+assert.equal(orEntry?.stack?.groups[0]?.length, 1);
+assert.equal(orEntry?.stack?.groups[1]?.length, 1);
 assert.match(
-  recipeParamRows(orRecipe).find((row) => row.label === "Or")?.value ?? "",
-  /EMA 21/,
+  orEntry?.stack?.groups[1]?.[0]?.rows.map((row) => `${row.label} ${row.value}`).join(" ") ??
+    "",
+  /Price vs EMA/,
+);
+assert.match(
+  orEntry?.stack?.groups[1]?.[0]?.rows.map((row) => row.value).join(" ") ?? "",
+  /21/,
 );
 assert.equal(
   recipeParamRows(orRecipe).some((row) => row.label === "Secondary Entry Condition"),
@@ -366,14 +404,70 @@ assert.equal(
   )?.value,
   "Both",
 );
-assert.match(
-  recipeParamRows({
-    ...perps,
-    direction: "both",
+const bothRows = recipeParamSections({
+  ...perps,
+  direction: "both",
+  entryStack: {
+    leaves: [{ kind: "price", triggerBy: "last", compare: "gte", price: 130 }],
+    joins: ["and"],
+  },
+  shortEntry: {
+    entrySource: "price",
+    webhookId: null,
+    triggerBy: "last",
+    triggerCompare: "lte",
+    triggerPrice: 90,
+    skipIfOpen: true,
+    indicator: null,
+    confirm: null,
     entryStack: {
-      leaves: [{ kind: "price", triggerBy: "last", compare: "gte", price: 130 }],
-      joins: ["and"],
+      leaves: [{ kind: "price", triggerBy: "last", compare: "lte", price: 70 }],
+      joins: ["or"],
     },
+  },
+});
+const bothShort = bothRows.find((section) => section.title === "Short Entry Conditions");
+assert.equal(bothShort?.stack?.groups.length, 2);
+assert.match(
+  bothShort?.stack?.groups[1]?.[0]?.rows.map((row) => row.value).join(" ") ?? "",
+  /70/,
+);
+const bothLong = bothRows.find((section) => section.title === "Long Entry Conditions");
+assert.equal(bothLong?.stack?.groups.length, 1);
+assert.equal(bothLong?.stack?.groups[0]?.length, 2);
+const longTpsl = {
+  takeProfit: 10,
+  stopLoss: null,
+  tpKind: "price" as const,
+  slKind: "price" as const,
+  tpTrigger: "last" as const,
+  slTrigger: "last" as const,
+  mode: "full" as const,
+  tpQty: null,
+  slQty: null,
+  tpOrderType: "market" as const,
+  slOrderType: "market" as const,
+  tpLimitPrice: null,
+  slLimitPrice: null,
+};
+const splitPerps = recipeParamSections(
+  snapshotPerpsRecipe({
+    name: "Perps rule",
+    symbol: "ETHUSDT",
+    action: "buy",
+    closeSide: null,
+    orderType: "market",
+    sizeUnit: "qty",
+    size: 2,
+    limitPrice: null,
+    entrySource: "price",
+    triggerBy: "last",
+    triggerCompare: "gte",
+    triggerPrice: 100,
+    skipIfOpen: true,
+    trailing: null,
+    direction: "both",
+    tpsl: longTpsl,
     shortEntry: {
       entrySource: "price",
       webhookId: null,
@@ -383,14 +477,63 @@ assert.match(
       skipIfOpen: true,
       indicator: null,
       confirm: null,
-      entryStack: {
-        leaves: [{ kind: "price", triggerBy: "last", compare: "lte", price: 70 }],
-        joins: ["or"],
+      entryStack: { leaves: [], joins: [] },
+      classic: {
+        tpsl: { ...longTpsl, takeProfit: 7, tpTrigger: "index" },
+        trailing: null,
+        breakevenActivationPct: null,
+        breakevenOffsetPct: null,
       },
     },
-  })
-    .find((row) => row.label === "Or")?.value ?? "",
-  /70/,
+  }),
 );
+assert.equal(
+  splitPerps
+    .find((section) => section.title === "Long Exit Conditions")
+    ?.groups.find((group) => group.title === "Take profit")
+    ?.rows.find((row) => row.label === "Price")?.value,
+  "10",
+);
+assert.equal(
+  splitPerps
+    .find((section) => section.title === "Short Exit Conditions")
+    ?.groups.find((group) => group.title === "Take profit")
+    ?.rows.find((row) => row.label === "Price")?.value,
+  "7",
+);
+
+const review = adminConditionReview();
+assert.deepEqual(
+  review.map((sample) => sample.title),
+  ["Two groups", "One group", "Custom exit", "Perps Or group"],
+);
+const two = review[0]?.sections[0];
+assert.equal(two?.title, "Short Entry Conditions");
+assert.equal(two?.stack?.groups.length, 2);
+assert.equal(two?.stack?.groups[0]?.length, 2);
+assert.equal(two?.stack?.groups[1]?.length, 1);
+assert.equal(
+  two?.stack?.groups[0]?.[0]?.rows.find((row) => row.label === "When")?.value,
+  "Turns bearish",
+);
+assert.equal(
+  two?.stack?.groups[0]?.[1]?.rows.find((row) => row.label === "Level")?.value,
+  "70",
+);
+const one = review[1]?.sections[0];
+assert.equal(one?.stack?.groups.length, 1);
+assert.equal(one?.stack?.groups[0]?.length, 2);
+const exitSample = review[2]?.sections[0];
+assert.equal(exitSample?.title, "Short Exit Conditions");
+assert.equal(
+  exitSample?.groups.some((group) => group.title === "Take profit"),
+  true,
+);
+assert.equal(exitSample?.stack?.title, "Custom conditions");
+assert.equal(exitSample?.stack?.groups.length, 2);
+assert.equal(exitSample?.stack?.groups[0]?.length, 2);
+const perpsOr = review[3]?.sections[0];
+assert.equal(perpsOr?.stack?.groups.length, 2);
+assert.equal(perpsOr?.stack?.groups[0]?.length, 1);
 
 console.log("backtest param section checks passed");

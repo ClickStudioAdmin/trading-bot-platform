@@ -106,6 +106,13 @@ export function sampleInboxNotices(): SeedRow[] {
       read: true,
     },
     {
+      template: "copy_source_closed",
+      notice: notificationCopy.copy_source_closed({
+        deskName: "Bybit Live 1",
+        keepsCopy: true,
+      }),
+    },
+    {
       template: "desk_sync_failed",
       notice: notificationCopy.desk_sync_failed({
         deskName: "Bybit Live 2",

@@ -1,3 +1,4 @@
+import type { DeskCloseKind } from "@/lib/accounts/close";
 import {
   AUTOMATED_DESK_TYPES,
   MANUAL_DESK_TYPES,
@@ -35,6 +36,8 @@ export type DeskListUsage = {
   futuresConnectionId: string | null;
   strategyConnectionId: string | null;
   blocks: readonly AccountDeleteBlock[];
+  sourceClosed?: boolean;
+  closeKind?: DeskCloseKind | null;
 };
 
 export type DeskListRow = {
@@ -44,6 +47,8 @@ export type DeskListRow = {
   workingCount: number;
   botsOn: number;
   blocks: readonly AccountDeleteBlock[];
+  sourceClosed: boolean;
+  closeKind: DeskCloseKind | null;
   status: DeskListStatus;
   exchange: string | null;
   connection: string | null;
@@ -195,6 +200,8 @@ export function buildDeskListRow(
     workingCount,
     botsOn,
     blocks,
+    sourceClosed: usage?.sourceClosed ?? false,
+    closeKind: usage?.closeKind ?? null,
     status: deskListStatus(botsOn),
     exchange: place.exchange,
     connection: place.connection,
