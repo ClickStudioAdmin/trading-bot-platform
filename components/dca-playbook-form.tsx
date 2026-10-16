@@ -43,10 +43,10 @@ import {
   type ExitStackRow,
 } from "@/components/exit-condition-stack";
 import {
-  classicSignature,
+  blankExitClauses,
   customStackFromClauses,
   exitClausesFromSaved,
-  syncClassicClauses,
+  mergedClassicExitFlags,
   type ExitBuilderClause,
 } from "@/lib/strategy/exit-clauses";
 import {
@@ -54,7 +54,6 @@ import {
   entryConflictSlots,
   entryDraftComplete,
   entryRowsFromSources,
-  flipEntryRows,
   type EntryStackRow,
 } from "@/components/entry-condition-stack";
 import { indicatorClaim, priceClaim, type ConflictClaim } from "@/lib/strategy/conflicts";
@@ -175,9 +174,6 @@ import {
   indicatorCompareForDirection,
   lastAtrValue,
   parseDcaIndicatorTimeframe,
-  oppositeIndicatorCompare,
-  oppositeRsiCompare,
-  oppositeRsiLevel,
   type DcaIndicatorKind,
 } from "@/lib/dca/indicators";
 import {
@@ -249,9 +245,8 @@ function initialIndicatorCompare(
   return indicatorCompareForDirection(side, kind, stored ?? "");
 }
 
-function seedOppositeRsiLevel(level: string): string {
-  const n = Number(level);
-  return String(oppositeRsiLevel(Number.isFinite(n) && n > 0 ? n : null));
+function copyEntryRows(rows: EntryStackRow[]): EntryStackRow[] {
+  return rows.map((row) => ({ ...row, draft: { ...row.draft } }));
 }
 
 function asNumber(text: string): number | null {
@@ -1095,61 +1090,36 @@ export function DcaPlaybookForm({
   );
   const [shortIndicatorKind, setShortIndicatorKind] = useState<
     DcaIndicatorKind | ""
-  >(
-    source
-      ? (source.shortIndicatorKind ?? source.indicatorKind ?? "rsi")
-      : "",
-  );
+  >(source?.shortIndicatorKind ?? "");
   const [shortIndicatorTimeframe, setShortIndicatorTimeframe] = useState(
-    source?.shortIndicatorTimeframe ?? source?.indicatorTimeframe ?? "15",
+    source?.shortIndicatorTimeframe ?? "15",
   );
   const [shortIndicatorLevel, setShortIndicatorLevel] = useState(() => {
     if (source?.shortIndicatorLevel != null) {
       return optional(source.shortIndicatorLevel);
     }
-    const kind = source?.shortIndicatorKind ?? source?.indicatorKind ?? "rsi";
-    if (kind !== "rsi") {
-      return (
-        optional(source?.indicatorLevel) ||
-        String(defaultDcaIndicatorLevel(kind) ?? "")
-      );
+    const kind = source?.shortIndicatorKind;
+    if (!kind || kind === "rsi") {
+      return "70";
     }
-    return source?.indicatorLevel != null
-      ? String(oppositeRsiLevel(source.indicatorLevel))
-      : "70";
+    return String(defaultDcaIndicatorLevel(kind) ?? "");
   });
   const [shortIndicatorPeriod, setShortIndicatorPeriod] = useState(
     optional(source?.shortIndicatorPeriod) ||
-      optional(source?.indicatorPeriod) ||
-      String(
-        defaultDcaIndicatorPeriod(
-          source?.shortIndicatorKind ?? source?.indicatorKind ?? "rsi",
-        ),
-      ),
+      String(defaultDcaIndicatorPeriod(source?.shortIndicatorKind ?? "rsi")),
   );
   const [shortIndicatorSlowPeriod, setShortIndicatorSlowPeriod] = useState(
     optional(source?.shortIndicatorSlowPeriod) ||
-      optional(source?.indicatorSlowPeriod) ||
-      String(
-        defaultDcaIndicatorSlowPeriod(
-          source?.shortIndicatorKind ?? source?.indicatorKind ?? "rsi",
-        ) ?? "",
-      ),
+      String(defaultDcaIndicatorSlowPeriod(source?.shortIndicatorKind ?? "rsi") ?? ""),
   );
   const [shortIndicatorMultiplier, setShortIndicatorMultiplier] = useState(
     optional(source?.shortIndicatorMultiplier) ||
-      optional(source?.indicatorMultiplier) ||
       String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
   );
   const [shortIndicatorCompare, setShortIndicatorCompare] = useState(() =>
     initialIndicatorCompare(
-      source?.shortIndicatorKind ?? source?.indicatorKind ?? "rsi",
-      source?.shortIndicatorCompare ??
-        (source?.shortIndicatorKind
-          ? source.shortIndicatorCompare
-          : source?.indicatorKind === "rsi" || !source?.indicatorKind
-            ? oppositeRsiCompare(source?.indicatorCompare ?? "cross_lte")
-            : source?.indicatorCompare),
+      source?.shortIndicatorKind ?? "rsi",
+      source?.shortIndicatorCompare,
       "short",
     ),
   );
@@ -1157,13 +1127,10 @@ export function DcaPlaybookForm({
     source?.webhookId ?? signalWebhooks[0]?.id ?? "",
   );
   const [shortStartKind, setShortStartKind] = useState<DcaStartKind | "">(
-    () =>
-      source
-        ? (source.shortStartKind ?? source.startKind ?? "indicator")
-        : "",
+    source?.shortStartKind ?? "",
   );
   const [shortWebhookId, setShortWebhookId] = useState(
-    () => source?.shortWebhookId ?? source?.webhookId ?? signalWebhooks[0]?.id ?? "",
+    () => source?.shortWebhookId ?? signalWebhooks[0]?.id ?? "",
   );
   const [armTriggerBy, setArmTriggerBy] = useState(
     source?.armTrigger?.triggerBy ?? "last",
@@ -1173,14 +1140,13 @@ export function DcaPlaybookForm({
   );
   const [armPrice, setArmPrice] = useState(optional(source?.armTrigger?.price));
   const [shortArmTriggerBy, setShortArmTriggerBy] = useState(
-    source?.shortArmTrigger?.triggerBy ?? source?.armTrigger?.triggerBy ?? "last",
+    source?.shortArmTrigger?.triggerBy ?? "last",
   );
   const [shortArmCompare, setShortArmCompare] = useState(
-    source?.shortArmTrigger?.compare ??
-      ((source?.armTrigger?.compare ?? "gte") === "gte" ? "lte" : "gte"),
+    source?.shortArmTrigger?.compare ?? "lte",
   );
   const [shortArmPrice, setShortArmPrice] = useState(
-    optional(source?.shortArmTrigger?.price ?? source?.armTrigger?.price),
+    optional(source?.shortArmTrigger?.price),
   );
   const [entryRows, setEntryRows] = useState<EntryStackRow[]>(() =>
     entryRowsFromSources(source?.entryStack, source?.confirm),
@@ -1211,13 +1177,25 @@ export function DcaPlaybookForm({
   );
   const [shortClauses, setShortClauses] = useState(() =>
     exitClausesFromSaved({
-      takeProfit: tpOn,
-      trailing: trailOn,
-      stopLoss: slOn,
+      takeProfit: direction === "both" && tpOn,
+      trailing: direction === "both" && trailOn,
+      stopLoss: direction === "both" && slOn,
       anchor: shortExitIf,
       rows: shortExitRows,
     }),
   );
+  function applyClassicFlags(
+    primary: readonly ExitBuilderClause[],
+    short: readonly ExitBuilderClause[] | null,
+  ) {
+    const flags = mergedClassicExitFlags(primary, short);
+    setTpOn(flags.takeProfit);
+    setTrailOn(flags.trailing);
+    setSlOn(flags.stopLoss);
+    if (!flags.stopLoss) {
+      setBreakevenOn(false);
+    }
+  }
   function commitExitClauses(
     next: ExitBuilderClause[],
     which: "primary" | "short",
@@ -1227,32 +1205,60 @@ export function DcaPlaybookForm({
       setShortClauses(next);
       setShortExitIf(custom.anchor);
       setShortExitRows(custom.rows);
-      setExitClauses((current) =>
-        classicSignature(current) === classicSignature(next)
-          ? current
-          : syncClassicClauses(current, next),
-      );
+      applyClassicFlags(exitClauses, next);
     } else {
       setExitClauses(next);
       setExitIf(custom.anchor);
       setExitRows(custom.rows);
-      if (direction === "both") {
-        setShortClauses((current) =>
-          classicSignature(current) === classicSignature(next)
-            ? current
-            : syncClassicClauses(current, next),
-        );
-      }
-    }
-    setTpOn(next.some((clause) => clause.kind === "take_profit"));
-    setTrailOn(next.some((clause) => clause.kind === "trailing_stop"));
-    const nextSl = next.some((clause) => clause.kind === "stop_loss");
-    setSlOn(nextSl);
-    if (!nextSl) {
-      setBreakevenOn(false);
+      applyClassicFlags(next, direction === "both" ? shortClauses : null);
     }
     setTouched(true);
     setFormTick((tick) => tick + 1);
+  }
+  function blankDcaLongEntry() {
+    setStartKind("");
+    setEntryRows([]);
+    setWebhookId(signalWebhooks[0]?.id ?? "");
+    setIndicatorKind("");
+    setIndicatorTimeframe("15");
+    setIndicatorCompare(initialIndicatorCompare("rsi", null, "long"));
+    setIndicatorLevel(String(defaultDcaIndicatorLevel("rsi") ?? ""));
+    setIndicatorPeriod(String(defaultDcaIndicatorPeriod("rsi")));
+    setIndicatorSlowPeriod(String(defaultDcaIndicatorSlowPeriod("rsi") ?? ""));
+    setIndicatorMultiplier(String(DEFAULT_DCA_SUPERTREND_MULTIPLIER));
+    setArmTriggerBy("last");
+    setArmCompare("gte");
+    setArmPrice("");
+  }
+  function copyDcaPrimaryEntryToShort() {
+    setShortStartKind(startKind);
+    setShortWebhookId(webhookId);
+    setShortEntryRows(copyEntryRows(entryRows));
+    setShortIndicatorKind(indicatorKind);
+    setShortIndicatorTimeframe(indicatorTimeframe);
+    setShortIndicatorCompare(indicatorCompare);
+    setShortIndicatorLevel(indicatorLevel);
+    setShortIndicatorPeriod(indicatorPeriod);
+    setShortIndicatorSlowPeriod(indicatorSlowPeriod);
+    setShortIndicatorMultiplier(indicatorMultiplier);
+    setShortArmTriggerBy(armTriggerBy);
+    setShortArmCompare(armCompare);
+    setShortArmPrice(armPrice);
+  }
+  function copyDcaShortEntryToPrimary() {
+    setStartKind(shortStartKind);
+    setWebhookId(shortWebhookId);
+    setEntryRows(shortEntryRows);
+    setIndicatorKind(shortIndicatorKind);
+    setIndicatorTimeframe(shortIndicatorTimeframe);
+    setIndicatorCompare(shortIndicatorCompare);
+    setIndicatorLevel(shortIndicatorLevel);
+    setIndicatorPeriod(shortIndicatorPeriod);
+    setIndicatorSlowPeriod(shortIndicatorSlowPeriod);
+    setIndicatorMultiplier(shortIndicatorMultiplier);
+    setArmTriggerBy(shortArmTriggerBy);
+    setArmCompare(shortArmCompare);
+    setArmPrice(shortArmPrice);
   }
   const defaultSymbol =
     source?.symbol ??
@@ -2351,64 +2357,30 @@ export function DcaPlaybookForm({
                 value={direction}
                 onChange={(event) => {
                   const next = event.target.value as typeof direction;
-                  if (next === "both" && direction !== "both") {
-                    setShortStartKind(startKind);
-                    setShortWebhookId(webhookId);
-                    if (direction === "short") {
-                      setShortEntryRows(entryRows);
-                      setEntryRows(flipEntryRows(entryRows, "long"));
-                      setShortIndicatorKind(indicatorKind);
-                      setShortIndicatorTimeframe(indicatorTimeframe);
-                      setShortIndicatorCompare(indicatorCompare);
-                      setShortIndicatorLevel(indicatorLevel);
-                      setShortIndicatorPeriod(indicatorPeriod);
-                      setShortIndicatorSlowPeriod(indicatorSlowPeriod);
-                      setShortIndicatorMultiplier(indicatorMultiplier);
-                      if (indicatorKind === "rsi") {
-                        setIndicatorCompare(oppositeRsiCompare(indicatorCompare));
-                        setIndicatorLevel(seedOppositeRsiLevel(indicatorLevel));
-                      }
-                    } else {
-                      setShortEntryRows(flipEntryRows(entryRows, "short"));
-                      setShortIndicatorKind(indicatorKind);
-                      setShortIndicatorTimeframe(indicatorTimeframe);
-                      setShortIndicatorCompare(
-                        indicatorKind
-                          ? oppositeIndicatorCompare(
-                              indicatorKind,
-                              indicatorCompare,
-                            )
-                          : indicatorCompare,
-                      );
-                      setShortIndicatorLevel(
-                        indicatorKind === "rsi"
-                          ? seedOppositeRsiLevel(indicatorLevel)
-                          : indicatorLevel,
-                      );
-                      setShortIndicatorPeriod(indicatorPeriod);
-                      setShortIndicatorSlowPeriod(indicatorSlowPeriod);
-                      setShortIndicatorMultiplier(indicatorMultiplier);
-                    }
+                  if (next === "both" && direction === "short") {
+                    copyDcaPrimaryEntryToShort();
+                    blankDcaLongEntry();
+                    const kept = exitClauses;
+                    setShortClauses(kept);
+                    const moved = customStackFromClauses(kept);
+                    setShortExitIf(moved.anchor);
+                    setShortExitRows(moved.rows);
+                    const blank = blankExitClauses();
+                    setExitClauses(blank);
+                    setExitIf(null);
+                    setExitRows([]);
+                    applyClassicFlags(blank, kept);
+                  } else if (next === "both" && direction !== "both") {
+                    applyClassicFlags(exitClauses, shortClauses);
                   } else if (direction === "both" && next === "short") {
+                    copyDcaShortEntryToPrimary();
                     setExitClauses(shortClauses);
                     const moved = customStackFromClauses(shortClauses);
                     setExitIf(moved.anchor);
                     setExitRows(moved.rows);
-                    setStartKind(shortStartKind);
-                    setWebhookId(shortWebhookId);
-                    setEntryRows(shortEntryRows);
-                    setIndicatorKind(shortIndicatorKind);
-                    setIndicatorTimeframe(shortIndicatorTimeframe);
-                    setIndicatorCompare(shortIndicatorCompare);
-                    setIndicatorLevel(shortIndicatorLevel);
-                    setIndicatorPeriod(shortIndicatorPeriod);
-                    setIndicatorSlowPeriod(shortIndicatorSlowPeriod);
-                    setIndicatorMultiplier(shortIndicatorMultiplier);
-                  }
-                  if (next === "both" && direction !== "both") {
-                    setShortClauses((current) =>
-                      syncClassicClauses(current, exitClauses),
-                    );
+                    applyClassicFlags(shortClauses, null);
+                  } else if (direction === "both" && next === "long") {
+                    applyClassicFlags(exitClauses, null);
                   }
                   setDirection(next);
                 }}

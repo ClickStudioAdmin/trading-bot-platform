@@ -39,15 +39,14 @@ import {
   type ExitStackRow,
 } from "@/components/exit-condition-stack";
 import {
-  classicSignature,
+  blankExitClauses,
   customStackFromClauses,
   exitClausesFromSaved,
-  syncClassicClauses,
+  mergedClassicExitFlags,
   type ExitBuilderClause,
 } from "@/lib/strategy/exit-clauses";
 import {
   initialPerpsEntryDrafts,
-  oppositePerpsEntryDraft,
   PerpsEntryPanel,
   perpsEntryDraftMissing,
   perpsEntryLegFromDraft,
@@ -611,13 +610,25 @@ function RuleCard({
   );
   const [shortClauses, setShortClauses] = useState(() =>
     exitClausesFromSaved({
-      takeProfit: tpOn,
-      trailing: trailOn,
-      stopLoss: slOn,
+      takeProfit: direction === "both" && tpOn,
+      trailing: direction === "both" && trailOn,
+      stopLoss: direction === "both" && slOn,
       anchor: shortExitIf,
       rows: shortExitRows,
     }),
   );
+  function applyClassicFlags(
+    primary: readonly ExitBuilderClause[],
+    short: readonly ExitBuilderClause[] | null,
+  ) {
+    const flags = mergedClassicExitFlags(primary, short);
+    setTpOn(flags.takeProfit);
+    setTrailOn(flags.trailing);
+    setSlOn(flags.stopLoss);
+    if (!flags.stopLoss) {
+      setBreakevenOn(false);
+    }
+  }
   function commitExitClauses(
     next: ExitBuilderClause[],
     which: "primary" | "short",
@@ -627,29 +638,12 @@ function RuleCard({
       setShortClauses(next);
       setShortExitIf(custom.anchor);
       setShortExitRows(custom.rows);
-      setExitClauses((current) =>
-        classicSignature(current) === classicSignature(next)
-          ? current
-          : syncClassicClauses(current, next),
-      );
+      applyClassicFlags(exitClauses, next);
     } else {
       setExitClauses(next);
       setExitIf(custom.anchor);
       setExitRows(custom.rows);
-      if (direction === "both") {
-        setShortClauses((current) =>
-          classicSignature(current) === classicSignature(next)
-            ? current
-            : syncClassicClauses(current, next),
-        );
-      }
-    }
-    setTpOn(next.some((clause) => clause.kind === "take_profit"));
-    setTrailOn(next.some((clause) => clause.kind === "trailing_stop"));
-    const nextSl = next.some((clause) => clause.kind === "stop_loss");
-    setSlOn(nextSl);
-    if (!nextSl) {
-      setBreakevenOn(false);
+      applyClassicFlags(next, direction === "both" ? shortClauses : null);
     }
     setDirty(true);
     setFormTick((tick) => tick + 1);
@@ -883,28 +877,27 @@ function RuleCard({
     setFormTick((tick) => tick + 1);
   }
   function applyPerpsDirection(next: PerpsFormDirection) {
-    setEntryDrafts((current) => {
-      if (next !== "both" || direction === "both") {
-        return current;
-      }
-      if (direction === "short" || direction === "close_short") {
-        return {
-          ...current,
-          long: oppositePerpsEntryDraft(current.short, "long"),
-        };
-      }
-      return {
-        ...current,
-        short: oppositePerpsEntryDraft(current.long, "short"),
-      };
-    });
-    if (next === "both" && direction !== "both") {
-      setShortClauses((current) => syncClassicClauses(current, exitClauses));
+    if (next === "both" && direction === "short") {
+      const kept = exitClauses;
+      setShortClauses(kept);
+      const moved = customStackFromClauses(kept);
+      setShortExitIf(moved.anchor);
+      setShortExitRows(moved.rows);
+      const blank = blankExitClauses();
+      setExitClauses(blank);
+      setExitIf(null);
+      setExitRows([]);
+      applyClassicFlags(blank, kept);
+    } else if (next === "both" && direction !== "both") {
+      applyClassicFlags(exitClauses, shortClauses);
     } else if (direction === "both" && next === "short") {
       setExitClauses(shortClauses);
       const moved = customStackFromClauses(shortClauses);
       setExitIf(moved.anchor);
       setExitRows(moved.rows);
+      applyClassicFlags(shortClauses, null);
+    } else if (direction === "both" && next === "long") {
+      applyClassicFlags(exitClauses, null);
     }
     setDirection(next);
     setDirty(true);

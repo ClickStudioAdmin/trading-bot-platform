@@ -4,6 +4,7 @@ import {
   classicSignature,
   customStackFromClauses,
   exitClausesFromSaved,
+  mergedClassicExitFlags,
   syncClassicClauses,
 } from "./exit-clauses";
 
@@ -77,5 +78,16 @@ assert.deepEqual(
 );
 assert.equal(synced[2]?.key, "keep");
 assert.equal(classicSignature(synced), "take_profit|stop_loss");
+
+const merged = mergedClassicExitFlags(clauses, empty);
+assert.equal(merged.takeProfit, true);
+assert.equal(merged.trailing, false);
+assert.equal(merged.stopLoss, true);
+const onlyShort = mergedClassicExitFlags(empty, clauses);
+assert.equal(onlyShort.takeProfit, true);
+assert.equal(onlyShort.stopLoss, true);
+const primaryOnly = mergedClassicExitFlags(empty, null);
+assert.equal(primaryOnly.takeProfit, false);
+assert.equal(primaryOnly.stopLoss, false);
 
 console.log("exit clause checks passed");
