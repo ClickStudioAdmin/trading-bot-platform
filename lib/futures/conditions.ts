@@ -505,6 +505,7 @@ export function parseFuturesConditionForm(
     return exitStacked;
   }
   const breakevenOn =
+    form.get(`${prefix}breakeven`) === "on" ||
     String(form.get(`${prefix}breakevenActivationPct`) ?? "").trim() !== "";
   const breakeven = parseFuturesBreakevenFields(form, prefix, breakevenOn);
   if (!breakeven.ok) {

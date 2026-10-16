@@ -73,6 +73,14 @@ export function blankExitClauses(): ExitBuilderClause[] {
   return [emptyExitClause()];
 }
 
+/** A list that already has a condition still shows Select Condition Type. */
+export function exitClauseListMissing(
+  clauses: readonly ExitBuilderClause[],
+): boolean {
+  const started = clauses.some((clause) => clause.kind !== "");
+  return started && clauses.some((clause) => clause.kind === "");
+}
+
 export function classicExitFlags(clauses: readonly ExitBuilderClause[]): {
   takeProfit: boolean;
   trailing: boolean;

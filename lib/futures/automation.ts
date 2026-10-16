@@ -428,6 +428,12 @@ export function slicePrefixedForm(form: FormData, prefix: string): FormData {
   if (form.get(`${prefix}tpsl`) === "on") {
     next.set("tpsl", "on");
   }
+  if (form.get(`${prefix}tpOn`) === "on") {
+    next.set("tpOn", "on");
+  }
+  if (form.get(`${prefix}slOn`) === "on") {
+    next.set("slOn", "on");
+  }
   if (form.get(`${prefix}trailing`) === "on") {
     next.set("trailing", "on");
   }

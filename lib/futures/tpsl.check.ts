@@ -66,6 +66,41 @@ const emptyOn = new FormData();
 emptyOn.set("tpsl", "on");
 assert.equal(parseFuturesTpslForm(emptyOn, undefined).ok, false);
 
+const stopOnlyEmpty = new FormData();
+stopOnlyEmpty.set("tpsl", "on");
+stopOnlyEmpty.set("slOn", "on");
+stopOnlyEmpty.set("stopLoss", "");
+stopOnlyEmpty.set("slTrigger", "last");
+stopOnlyEmpty.set("tpTrigger", "last");
+const stopOnlyEmptyParsed = parseFuturesTpslForm(stopOnlyEmpty, undefined);
+assert.equal(stopOnlyEmptyParsed.ok, false);
+if (!stopOnlyEmptyParsed.ok) {
+  assert.equal(stopOnlyEmptyParsed.error, "Enter a stop loss.");
+}
+
+const stopOnlyFilled = new FormData();
+stopOnlyFilled.set("tpsl", "on");
+stopOnlyFilled.set("slOn", "on");
+stopOnlyFilled.set("stopLoss", "70000");
+stopOnlyFilled.set("slTrigger", "last");
+stopOnlyFilled.set("tpTrigger", "last");
+const stopOnlyFilledParsed = parseFuturesTpslForm(stopOnlyFilled, undefined);
+assert.equal(stopOnlyFilledParsed.ok, true);
+if (stopOnlyFilledParsed.ok && stopOnlyFilledParsed.tpsl) {
+  assert.equal(stopOnlyFilledParsed.tpsl.stopLoss, 70000);
+  assert.equal(stopOnlyFilledParsed.tpsl.takeProfit, null);
+}
+
+const stopLimitEmpty = new FormData();
+stopLimitEmpty.set("tpsl", "on");
+stopLimitEmpty.set("slOn", "on");
+stopLimitEmpty.set("stopLoss", "70000");
+stopLimitEmpty.set("slOrderType", "limit");
+stopLimitEmpty.set("slLimitPrice", "");
+stopLimitEmpty.set("slTrigger", "last");
+stopLimitEmpty.set("tpTrigger", "last");
+assert.equal(parseFuturesTpslForm(stopLimitEmpty, undefined).ok, false);
+
 const leftover = new FormData();
 leftover.set("takeProfit", "90000");
 leftover.set("tpslMode", "partial");

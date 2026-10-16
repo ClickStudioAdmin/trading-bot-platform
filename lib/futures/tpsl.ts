@@ -267,6 +267,14 @@ function readTpslFromForm(
   if (!stopRaw.ok) {
     return stopRaw;
   }
+  const tpRequired = form.get("tpOn") === "on";
+  const slRequired = form.get("slOn") === "on";
+  if (tpRequired && takeRaw.price === null) {
+    return { ok: false, error: "Enter a take profit." };
+  }
+  if (slRequired && stopRaw.price === null) {
+    return { ok: false, error: "Enter a stop loss." };
+  }
   if (requireLevel && takeRaw.price === null && stopRaw.price === null) {
     return { ok: false, error: "Enter a take profit, a stop loss, or both." };
   }
@@ -322,6 +330,7 @@ function readTpslFromForm(
     raw: form.get("tpLimitPrice"),
     label: "take profit",
     instrument,
+    requireExplicit: tpRequired,
   });
   if (!tpLimit.ok) {
     return tpLimit;
@@ -332,6 +341,7 @@ function readTpslFromForm(
     raw: form.get("slLimitPrice"),
     label: "stop loss",
     instrument,
+    requireExplicit: slRequired,
   });
   if (!slLimit.ok) {
     return slLimit;
@@ -395,9 +405,16 @@ function parseStopLimitPrice(input: {
   raw: unknown;
   label: string;
   instrument: BybitInstrument | undefined;
+  requireExplicit?: boolean;
 }): { ok: true; price: number | null } | { ok: false; error: string } {
   if (input.orderType !== "limit" || input.trigger === null) {
     return { ok: true, price: null };
+  }
+  if (
+    input.requireExplicit &&
+    String(input.raw ?? "").replace(/,/g, "").trim() === ""
+  ) {
+    return { ok: false, error: `Enter a ${input.label} limit price.` };
   }
   const parsed = parseFuturesOptionalPrice(input.raw, `${input.label} limit`);
   if (!parsed.ok) {

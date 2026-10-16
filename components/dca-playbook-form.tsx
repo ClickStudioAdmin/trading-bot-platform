@@ -23,6 +23,7 @@ import {
   OrderTypePill,
   botCompactRowClass,
   botFieldClass,
+  botFieldInvalidClass,
   botLabelClass,
   botRowClass,
   botRowClass5,
@@ -45,6 +46,7 @@ import {
 import {
   blankExitClauses,
   customStackFromClauses,
+  exitClauseListMissing,
   exitClausesFromSaved,
   mergedClassicExitFlags,
   type ExitBuilderClause,
@@ -171,6 +173,7 @@ import {
   defaultDcaIndicatorPeriod,
   defaultDcaIndicatorSlowPeriod,
   indicatorCompareForDirection,
+  indicatorDraftMissing,
   lastAtrValue,
   parseDcaIndicatorTimeframe,
   type DcaIndicatorKind,
@@ -253,6 +256,40 @@ function asNumber(text: string): number | null {
   return value > 0 && Number.isFinite(value) ? value : null;
 }
 
+function dcaStartDraftMissing(input: {
+  kind: string;
+  indicatorKind: string;
+  compare: string;
+  level: string;
+  period: string;
+  slowPeriod: string;
+  multiplier: string;
+  armPrice: string;
+  webhookId: string;
+}): boolean {
+  if (input.kind === "") {
+    return true;
+  }
+  if (input.kind === "price") {
+    return asNumber(input.armPrice) == null;
+  }
+  if (input.kind === "webhook") {
+    return input.webhookId.trim() === "";
+  }
+  if (input.kind === "indicator" || input.kind === "trend") {
+    return indicatorDraftMissing({
+      family: input.kind,
+      kind: input.indicatorKind,
+      compare: input.compare,
+      level: input.level,
+      period: input.period,
+      slowPeriod: input.slowPeriod,
+      multiplier: input.multiplier,
+    });
+  }
+  return false;
+}
+
 function formatDerivedClip(value: number, unit: "qty" | "usdt"): string {
   const places = unit === "usdt" ? 4 : 8;
   return value.toFixed(places).replace(/\.?0+$/, "");
@@ -296,6 +333,7 @@ function PercentInput({
   onChange,
   placeholder,
   ariaLabel,
+  invalid = false,
 }: {
   name?: string;
   value?: string;
@@ -303,6 +341,7 @@ function PercentInput({
   onChange?: (next: string) => void;
   placeholder?: string;
   ariaLabel?: string;
+  invalid?: boolean;
 }) {
   return (
     <span className="relative mt-0.5 block">
@@ -314,7 +353,7 @@ function PercentInput({
         allowDecimal
         placeholder={placeholder}
         ariaLabel={ariaLabel}
-        className={`${fieldClass} mt-0 pr-7`}
+        className={`${invalid ? botFieldInvalidClass : fieldClass} mt-0 pr-7`}
       />
       <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
         %
@@ -1504,6 +1543,13 @@ export function DcaPlaybookForm({
       ? "short"
       : "long";
   const summary = summaryBySide[activeLadderSide];
+  const exitFlags = mergedClassicExitFlags(
+    exitClauses,
+    direction === "both" ? shortClauses : null,
+  );
+  const tpLive = exitFlags.takeProfit;
+  const slLive = exitFlags.stopLoss;
+  const trailLive = exitFlags.trailing;
   function snapshotOverlay() {
     return {
       name: source?.name || defaultName || DEFAULT_DCA_NAME,
@@ -1530,18 +1576,22 @@ export function DcaPlaybookForm({
       spacingKind,
       atrPeriod,
       atrSpacingMult,
-      takeProfitKind: tpOn ? takeProfitKind : "percent",
-      takeProfitAtrMult: tpOn ? takeProfitAtrMult : "",
-      takeProfitPct: tpOn ? takeProfitPct : "",
+      takeProfitKind: tpLive ? takeProfitKind : "percent",
+      takeProfitAtrMult: tpLive ? takeProfitAtrMult : "",
+      takeProfitPct: tpLive ? takeProfitPct : "",
       takeProfitBasis,
       takeProfitOrderType,
-      stopLossPct: slOn ? stopLossPct : "",
+      stopLossPct: slLive ? stopLossPct : "",
       stopLossBasis,
-      trailingTriggerPct: trailOn ? trailingTriggerPct : "",
-      trailingPct: trailOn ? trailingPct : "",
+      trailingTriggerPct: trailLive ? trailingTriggerPct : "",
+      trailingPct: trailLive ? trailingPct : "",
       breakevenActivationPct:
-        slOn && breakevenOn ? breakevenActivationPct : "",
-      breakevenOffsetPct: slOn && breakevenOn ? breakevenOffsetPct : "",
+        slLive && breakevenOn ? breakevenActivationPct : "",
+      breakevenOffsetPct: slLive && breakevenOn ? breakevenOffsetPct : "",
+      tpOn: tpLive ? "on" : "",
+      slOn: slLive ? "on" : "",
+      trailOn: trailLive ? "on" : "",
+      breakeven: slLive && breakevenOn ? "on" : "",
       indicatorKind,
       indicatorTimeframe,
       indicatorCompare,
@@ -1578,26 +1628,47 @@ export function DcaPlaybookForm({
   }
   const liveConfig = parsedLive.ok ? parsedLive.config : null;
   const tpMissing =
-    tpOn &&
+    tpLive &&
     (takeProfitKind === "atr"
       ? asNumber(takeProfitAtrMult) == null
       : asNumber(takeProfitPct) == null);
   const trailMissing =
-    trailOn &&
+    trailLive &&
     (asNumber(trailingTriggerPct) == null || asNumber(trailingPct) == null);
-  const slMissing = slOn && asNumber(stopLossPct) == null;
+  const slMissing = slLive && asNumber(stopLossPct) == null;
   const breakevenMissing =
-    slOn && breakevenOn && asNumber(breakevenActivationPct) == null;
+    slLive && breakevenOn && asNumber(breakevenActivationPct) == null;
   const parseConstraint =
     !parsedLive.ok && parsedLive.error === "Percent must be 100 or less."
       ? parsedLive.error
       : null;
   const triggerMissing =
-    startKind === "" ||
-    (startKind === "indicator" && indicatorKind === "") ||
+    dcaStartDraftMissing({
+      kind: startKind,
+      indicatorKind,
+      compare: indicatorCompare,
+      level: indicatorLevel,
+      period: indicatorPeriod,
+      slowPeriod: indicatorSlowPeriod,
+      multiplier: indicatorMultiplier,
+      armPrice,
+      webhookId,
+    }) ||
     (direction === "both" &&
-      (shortStartKind === "" ||
-        (shortStartKind === "indicator" && shortIndicatorKind === "")));
+      dcaStartDraftMissing({
+        kind: shortStartKind,
+        indicatorKind: shortIndicatorKind,
+        compare: shortIndicatorCompare,
+        level: shortIndicatorLevel,
+        period: shortIndicatorPeriod,
+        slowPeriod: shortIndicatorSlowPeriod,
+        multiplier: shortIndicatorMultiplier,
+        armPrice: shortArmPrice,
+        webhookId: shortWebhookId,
+      }));
+  const exitKindMissing =
+    exitClauseListMissing(exitClauses) ||
+    (direction === "both" && exitClauseListMissing(shortClauses));
   const requiredMissing =
     triggerMissing ||
     entryRows.some((row) => !entryDraftComplete(row.draft)) ||
@@ -1618,6 +1689,7 @@ export function DcaPlaybookForm({
     trailMissing ||
     slMissing ||
     breakevenMissing ||
+    exitKindMissing ||
     (!cycleLocked && !parsedLive.ok && !parseConstraint);
   const liveRecipeKey =
     liveConfig == null ? null : JSON.stringify(snapshotDcaRecipe(liveConfig));
@@ -1642,6 +1714,7 @@ export function DcaPlaybookForm({
       trailMissing ||
       slMissing ||
       breakevenMissing ||
+      exitKindMissing ||
       entryRows.some((row) => !entryDraftComplete(row.draft)) ||
       (direction === "both" &&
         shortEntryRows.some((row) => !entryDraftComplete(row.draft))) ||
@@ -2049,6 +2122,12 @@ export function DcaPlaybookForm({
   }
 
 
+  function dcaExitSubmits(kind: "take_profit" | "trailing_stop" | "stop_loss") {
+    if (direction !== "both") {
+      return true;
+    }
+    return !exitClauses.some((clause) => clause.kind === kind);
+  }
   function dcaTakeProfitFields(submit: boolean) {
     return (
       <div className={fieldRowClass}>
@@ -2087,6 +2166,7 @@ export function DcaPlaybookForm({
               value={takeProfitPct}
               onChange={setTakeProfitPct}
               ariaLabel="Take profit target percent"
+              invalid={dirty && tpMissing}
             />
           </BotField>
         ) : (
@@ -2116,7 +2196,7 @@ export function DcaPlaybookForm({
                 value={takeProfitAtrMult}
                 onChange={setTakeProfitAtrMult}
                 allowDecimal
-                className={fieldClass}
+                className={dirty && tpMissing ? botFieldInvalidClass : fieldClass}
                 ariaLabel="Take profit ATR multiple"
               />
             </label>
@@ -2145,6 +2225,7 @@ export function DcaPlaybookForm({
             value={trailingTriggerPct}
             onChange={setTrailingTriggerPct}
             ariaLabel="Trailing trigger percent"
+            invalid={dirty && trailMissing}
           />
         </BotField>
         <BotField label="Trailing %" required>
@@ -2153,6 +2234,7 @@ export function DcaPlaybookForm({
             value={trailingPct}
             onChange={setTrailingPct}
             ariaLabel="Trailing percent"
+            invalid={dirty && trailMissing}
           />
         </BotField>
       </div>
@@ -2182,6 +2264,7 @@ export function DcaPlaybookForm({
               value={stopLossPct}
               onChange={setStopLossPct}
               ariaLabel="Stop loss percent"
+              invalid={dirty && slMissing}
             />
           </BotField>
           <OptionalSection
@@ -2197,6 +2280,7 @@ export function DcaPlaybookForm({
                   value={breakevenActivationPct}
                   onChange={setBreakevenActivationPct}
                   ariaLabel="Move stop to breakeven at percent"
+                  invalid={dirty && breakevenMissing}
                 />
               </BotField>
               <label className={labelClass}>
@@ -2762,7 +2846,7 @@ export function DcaPlaybookForm({
         </BotFormGroup>
       </BotFormStep>
       
-      {!tpOn ? (
+      {tpLive ? <input type="hidden" name="tpOn" value="on" /> : (
         <div hidden>
           <input type="hidden" name="takeProfitKind" value="percent" />
           <input type="hidden" name="takeProfitPct" value="" />
@@ -2770,20 +2854,23 @@ export function DcaPlaybookForm({
           <input type="hidden" name="takeProfitBasis" value={takeProfitBasis} />
           <input type="hidden" name="takeProfitOrderType" value="market" />
         </div>
-      ) : null}
-      {!trailOn ? (
+      )}
+      {trailLive ? <input type="hidden" name="trailOn" value="on" /> : (
         <div hidden>
           <input type="hidden" name="trailingTriggerPct" value="" />
           <input type="hidden" name="trailingPct" value="" />
         </div>
-      ) : null}
-      {!slOn ? (
+      )}
+      {slLive ? <input type="hidden" name="slOn" value="on" /> : (
         <div hidden>
           <input type="hidden" name="stopLossPct" value="" />
           <input type="hidden" name="stopLossBasis" value={stopLossBasis} />
         </div>
+      )}
+      {slLive && breakevenOn ? (
+        <input type="hidden" name="breakeven" value="on" />
       ) : null}
-      {!slOn || !breakevenOn ? (
+      {!slLive || !breakevenOn ? (
         <div hidden>
           <input type="hidden" name="breakevenActivationPct" value="" />
           <input type="hidden" name="breakevenOffsetPct" value="" />
@@ -2819,9 +2906,9 @@ export function DcaPlaybookForm({
           fieldClass={fieldClass}
           labelClass={labelClass}
           gridClass={fieldRowClass5}
-          renderTakeProfit={() => dcaTakeProfitFields(direction !== "both")}
-          renderTrailingStop={() => dcaTrailingFields(direction !== "both")}
-          renderStopLoss={() => dcaStopFields(direction !== "both")}
+          renderTakeProfit={() => dcaTakeProfitFields(dcaExitSubmits("take_profit"))}
+          renderTrailingStop={() => dcaTrailingFields(dcaExitSubmits("trailing_stop"))}
+          renderStopLoss={() => dcaStopFields(dcaExitSubmits("stop_loss"))}
         />
       </BotFormStep>
       ) : null}
@@ -2849,7 +2936,9 @@ export function DcaPlaybookForm({
         error={
           dirty
             ? requiredMissing
-              ? "Fill required fields before saving."
+              ? !parsedLive.ok && !parseConstraint
+                ? parsedLive.error
+                : "Fill required fields before saving."
               : constraintBlocked ?? undefined
             : undefined
         }
@@ -2863,7 +2952,9 @@ export function DcaPlaybookForm({
               title={
                 constraintBlocked ??
                 (requiredMissing
-                  ? "Fill required fields before saving."
+                  ? !parsedLive.ok && !parseConstraint
+                    ? parsedLive.error
+                    : "Fill required fields before saving."
                   : undefined)
               }
             >
