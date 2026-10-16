@@ -109,6 +109,66 @@ export function recipeAction(recipe: PerpsTemplateRecipe): {
   };
 }
 
+function perpsLegBecause(input: {
+  entrySource: PerpsTemplateRecipe["entrySource"];
+  triggerBy: PerpsTemplateRecipe["triggerBy"];
+  triggerCompare: PerpsTemplateRecipe["triggerCompare"];
+  triggerPrice: number;
+  indicator: PerpsTemplateRecipe["indicator"];
+  confirm: PerpsTemplateRecipe["confirm"];
+  entryStack: PerpsTemplateRecipe["entryStack"];
+  side: FuturesSide;
+  price: number;
+  barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
+}): string {
+  const stack = resolveEntryStack(input.entryStack, input.confirm);
+  const stackBecause = entryStackIsLegacy(stack)
+    ? ""
+    : stack.leaves
+        .map((leaf, index) => {
+          const text = formatStrategyLeafReason(leaf, input.side);
+          const join = stack.joins[index] === "or" ? "Or" : "And";
+          return text ? `${join} ${text}` : "";
+        })
+        .filter(Boolean)
+        .join(" ");
+  if (input.entrySource === "price") {
+    return [priceStartBecause(
+      {
+        triggerBy: input.triggerBy,
+        compare: input.triggerCompare,
+        price: input.triggerPrice,
+      },
+      input.price,
+    ), stackBecause]
+      .filter(Boolean)
+      .join(" ");
+  }
+  const start = input.indicator;
+  if (!start) {
+    return stackBecause;
+  }
+  const bars = input.barsByTimeframe.get(start.timeframe) ?? [];
+  return [
+    indicatorBecause({
+      kind: start.kind,
+      compare: start.compare,
+      level: start.level,
+      period: start.period,
+      slowPeriod: start.slowPeriod,
+      multiplier: start.multiplier ?? null,
+      timeframe: start.timeframe,
+      side: input.side,
+      closes: bars.map((row) => row.close),
+      bars,
+    }),
+    filterBecause(input.confirm, input.side, "Confirm"),
+    stackBecause,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function sizeAtPrice(recipe: PerpsTemplateRecipe, price: number): number {
   const size = Number(String(recipe.size).replace(/,/g, "").trim());
   if (!(size > 0) || !(price > 0)) {
@@ -548,59 +608,18 @@ export async function replayPerpsPriceCross(input: {
     price: number,
     barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>,
   ): string {
-    const stack = resolveEntryStack(
-      input.recipe.entryStack,
-      input.recipe.confirm,
-    );
-    const stackBecause = entryStackIsLegacy(stack)
-      ? ""
-      : stack.leaves
-          .map((leaf, index) => {
-            const text = formatStrategyLeafReason(leaf, side);
-            const join = stack.joins[index] === "or" ? "Or" : "And";
-            return text ? `${join} ${text}` : "";
-          })
-          .filter(Boolean)
-          .join(" ");
-    if (input.recipe.entrySource === "price") {
-      const level = Number(String(input.recipe.triggerPrice).replace(/,/g, ""));
-      return [
-        priceStartBecause(
-          {
-            triggerBy: input.recipe.triggerBy,
-            compare: input.recipe.triggerCompare,
-            price: level,
-          },
-          price,
-        ),
-        stackBecause,
-      ]
-        .filter(Boolean)
-        .join(" ");
-    }
-    const start = input.recipe.indicator;
-    if (!start) {
-      return stackBecause;
-    }
-    const bars = barsByTimeframe.get(start.timeframe) ?? [];
-    return [
-      indicatorBecause({
-        kind: start.kind,
-        compare: start.compare,
-        level: start.level,
-        period: start.period,
-        slowPeriod: start.slowPeriod,
-        multiplier: start.multiplier ?? null,
-        timeframe: start.timeframe,
-        side,
-        closes: bars.map((row) => row.close),
-        bars,
-      }),
-      filterBecause(input.recipe.confirm, side, "Confirm"),
-      stackBecause,
-    ]
-      .filter(Boolean)
-      .join(" ");
+    return perpsLegBecause({
+      entrySource: input.recipe.entrySource,
+      triggerBy: input.recipe.triggerBy,
+      triggerCompare: input.recipe.triggerCompare,
+      triggerPrice: Number(String(input.recipe.triggerPrice).replace(/,/g, "")),
+      indicator: input.recipe.indicator,
+      confirm: input.recipe.confirm,
+      entryStack: input.recipe.entryStack,
+      side,
+      price,
+      barsByTimeframe,
+    });
   }
 
   return {
@@ -705,7 +724,7 @@ async function replayPerpsBoth(input: {
   let barsIn = 0;
   let liquidated = false;
 
-  function remember(order: SimulatedOrder) {
+  function remember(order: SimulatedOrder, because?: string) {
     const orderIndex = orders.length;
     orders.push(order);
     events.push({
@@ -718,6 +737,7 @@ async function replayPerpsBoth(input: {
         reason: order.reason ?? "close",
         side: order.side,
         price: order.price,
+        because,
       }),
     });
   }
@@ -727,6 +747,7 @@ async function replayPerpsBoth(input: {
     atMs: number,
     fill: number,
     reason: BacktestFillReason,
+    because?: string,
   ) {
     const open = book[side];
     if (!open) {
@@ -742,16 +763,19 @@ async function replayPerpsBoth(input: {
     } else {
       grossLoss += Math.abs(pnl);
     }
-    remember({
-      atMs,
-      action: "flatten",
-      side: open.side,
-      qty: open.qty,
-      price: fill,
-      feeUsdt: fee,
-      realizedUsdt: pnl,
-      reason,
-    });
+    remember(
+      {
+        atMs,
+        action: "flatten",
+        side: open.side,
+        qty: open.qty,
+        price: fill,
+        feeUsdt: fee,
+        realizedUsdt: pnl,
+        reason,
+      },
+      because,
+    );
     book[side] = null;
   }
 
@@ -840,7 +864,26 @@ async function replayPerpsBoth(input: {
         book[side] &&
         perpsHardExitMet(input.recipe, side, price, barsByTimeframe)
       ) {
-        flattenSide(side, bar.timeMs, price, "exit_if");
+        const exit = perpsExitForSide(
+          {
+            ...input.recipe,
+            exitIf: input.recipe.exitIf ?? null,
+            exitHard: hardExitSignalFromJson(input.recipe.exitHard),
+          },
+          side,
+        );
+        flattenSide(
+          side,
+          bar.timeMs,
+          price,
+          "exit_if",
+          formatExitExpressionText({
+            filter: exit.exitIf,
+            signal: exit.exitHard,
+            stack: exit.exitStack,
+            side,
+          }),
+        );
         continue;
       }
       if (open.tpsl && tpslHasLevels(open.tpsl)) {
@@ -935,6 +978,18 @@ async function replayPerpsBoth(input: {
           ? backtestMarginUsdt(book.short.qty * book.short.entry, leverage)
           : 0);
       const available = input.startingUsdt + realized - locked;
+      const because = perpsLegBecause({
+        entrySource: leg.entrySource,
+        triggerBy: leg.triggerBy,
+        triggerCompare: leg.triggerCompare,
+        triggerPrice: leg.triggerPrice,
+        indicator: leg.indicator,
+        confirm: leg.confirm,
+        entryStack: leg.entryStack,
+        side: leg.side,
+        price,
+        barsByTimeframe,
+      });
       if (backtestMarginUsdt(qty * price, leverage) + fee > available) {
         events.push({
           atMs: bar.timeMs,
@@ -942,21 +997,24 @@ async function replayPerpsBoth(input: {
           reason: "entry",
           orderIndex: null,
           side: leg.side,
-          text: skippedEntrySentence(leg.side),
+          text: skippedEntrySentence(leg.side, because),
         });
         continue;
       }
       realized -= fee;
-      remember({
-        atMs: bar.timeMs,
-        action: leg.side === "short" ? "sell" : "buy",
-        side: leg.side,
-        qty,
-        price,
-        feeUsdt: fee,
-        realizedUsdt: -fee,
-        reason: "entry",
-      });
+      remember(
+        {
+          atMs: bar.timeMs,
+          action: leg.side === "short" ? "sell" : "buy",
+          side: leg.side,
+          qty,
+          price,
+          feeUsdt: fee,
+          realizedUsdt: -fee,
+          reason: "entry",
+        },
+        because,
+      );
       book[leg.side] = mergeSimPosition(
         book[leg.side],
         leg.side,
