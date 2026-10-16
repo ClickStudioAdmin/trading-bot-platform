@@ -109,6 +109,8 @@ const run: BacktestRun = {
   progressDone: null,
   progressTotal: null,
   progressPhase: null,
+  claimCount: 0,
+  retryAfterMs: null,
 };
 const timeline = buildEquityTimeline(run);
 assert.equal(timeline[0]?.equityUsdt, 10_000);

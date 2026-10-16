@@ -829,6 +829,8 @@ const seeded = backtestQueueSeedFromRun({
   progressDone: null,
   progressTotal: null,
   progressPhase: null,
+  claimCount: 0,
+  retryAfterMs: null,
 });
 assert.equal(seeded.fromDate, "2021-01-01");
 assert.equal(seeded.toDate, "2026-01-01");
