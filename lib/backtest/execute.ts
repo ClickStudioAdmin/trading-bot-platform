@@ -9,10 +9,12 @@ import {
 import { backtestFailureMessage } from "./failure";
 import { canBacktestDcaRecipe, replayDcaPlaybook } from "./replay-dca";
 import { canBacktestPerpsRecipe, replayPerpsPriceCross } from "./replay";
+import { createBacktestProgressPump } from "./progress";
 import {
   claimQueuedBacktestRun,
   loadBacktestRun,
   touchBacktestClaim,
+  touchBacktestProgress,
   updateBacktestRun,
 } from "./store";
 
@@ -49,6 +51,11 @@ export async function executeBacktestRun(
       `backtest long run ${runId} bars=${bars} ${run.symbol} ${run.interval}`,
     );
   }
+  const progress = createBacktestProgressPump(
+    (input) => touchBacktestProgress(runId, { ...input, total: bars }),
+    bars,
+  );
+  await touchBacktestProgress(runId, { done: 0, total: bars, phase: "candles" });
   const stopHeartbeat = startClaimHeartbeat(runId);
   try {
     const allowed =
@@ -73,6 +80,9 @@ export async function executeBacktestRun(
         fromMs: run.fromMs,
         toMs: run.toMs,
         limit: BACKTEST_CANDLE_LIMIT,
+        onProgress: (loaded) => {
+          progress.report(loaded, "candles");
+        },
       }));
     if (candles.length < 8) {
       await updateBacktestRun(runId, {
@@ -82,6 +92,7 @@ export async function executeBacktestRun(
       });
       return { ok: false, error: "Not enough candles in that window.", runId };
     }
+    progress.report(candles.length, "replay");
     const replayed =
       run.recipe.kind === "dca"
         ? await replayDcaPlaybook({

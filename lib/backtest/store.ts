@@ -41,6 +41,10 @@ import {
   type SimulatedOrder,
 } from "./model";
 import { parseReplayEvents } from "./events";
+import {
+  parseBacktestProgressCount,
+  parseBacktestProgressPhase,
+} from "./progress";
 
 function asTime(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -181,6 +185,9 @@ export function parseBacktestRunRow(
       venue,
     ),
     name: readBacktestName(row.name),
+    progressDone: parseBacktestProgressCount(row.progress_done),
+    progressTotal: parseBacktestProgressCount(row.progress_total),
+    progressPhase: parseBacktestProgressPhase(row.progress_phase),
   };
 }
 
@@ -884,6 +891,35 @@ export async function deleteBacktestRun(id: string): Promise<
     return { ok: false, error: error.message };
   }
   return { ok: true };
+}
+
+export async function touchBacktestProgress(
+  id: string,
+  input: {
+    done: number;
+    total: number;
+    phase: "candles" | "replay";
+  },
+): Promise<void> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return;
+  }
+  const total = Math.max(0, Math.floor(input.total));
+  const raw = Math.max(0, Math.floor(input.done));
+  const done = total > 0 ? Math.min(total, raw) : raw;
+  const { error } = await supabase
+    .from("backtest_runs")
+    .update({
+      progress_done: done,
+      progress_total: total,
+      progress_phase: input.phase,
+    })
+    .eq("id", id)
+    .eq("status", "running");
+  if (error && !/progress_/i.test(error.message)) {
+    console.error(`backtest progress ${id}`, error.message);
+  }
 }
 
 export async function touchBacktestClaim(id: string): Promise<void> {

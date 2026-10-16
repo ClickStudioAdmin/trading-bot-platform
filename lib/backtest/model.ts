@@ -19,6 +19,7 @@ import {
 } from "@/lib/templates/recipe";
 import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 import { strategyLeafTimeframe } from "@/lib/strategy/expr";
+import type { BacktestProgressPhase } from "./progress";
 
 export type BacktestRecipe = PerpsTemplateRecipe | DcaTemplateRecipe;
 export type BacktestDeskType = "perps" | "dca";
@@ -153,6 +154,10 @@ export type BacktestRun = {
   comparableSymbols: string[];
   /** Run title. Null on rows saved before the backtest name existed. */
   name: string | null;
+  /** Candles loaded for a running replay. Null once the row is idle. */
+  progressDone: number | null;
+  progressTotal: number | null;
+  progressPhase: BacktestProgressPhase | null;
 };
 
 export type EquityPoint = {
