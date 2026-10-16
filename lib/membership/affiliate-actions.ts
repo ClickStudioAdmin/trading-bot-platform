@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin/access";
 import { emailIsListedAdmin } from "@/lib/admin/emails";
 import { hashPassword } from "@/lib/auth/password";
 import { createSession, getSessionMember, requireVerifiedEmail } from "@/lib/auth/session";
+import { stepUpRejection } from "@/lib/auth/step-up";
 import { stepUpFromForm } from "@/lib/auth/step-up-guard";
 import {
   clearReferralCookie,
@@ -348,7 +349,7 @@ export async function requestAffiliatePayoutAction(formData: FormData) {
   }
   const stepUp = await stepUpFromForm(member.id, formData);
   if (stepUp) {
-    portalFail(stepUp, "payouts");
+    return stepUpRejection(stepUp);
   }
   const requested = await requestUsdtPayout({
     userId: member.id,
@@ -406,7 +407,7 @@ export async function saveAffiliatePayoutSettingsAction(formData: FormData) {
   }
   const stepUp = await stepUpFromForm(member.id, formData);
   if (stepUp) {
-    portalFail(stepUp, "settings");
+    return stepUpRejection(stepUp);
   }
   const saved = await saveAffiliatePayoutSettings({
     userId: member.id,
