@@ -318,7 +318,9 @@ function DeskRow({
       <td className={DESK_CELL}>
         <p>{formatDeskType(account.deskType)}</p>
         {account.copyOfAccountId ? (
-          <p className="mt-1 text-hint text-ink-muted">Copy</p>
+          <p className="mt-1 text-hint text-ink-muted">
+            {row.sourceClosed ? "Closed copy" : "Copy"}
+          </p>
         ) : null}
       </td>
       <td className={`${DESK_CELL} text-ink-muted`}>
@@ -374,12 +376,17 @@ function DeskRow({
           <AccountDeleteControl
             accountId={account.id}
             accountName={account.name}
-            blockedMessage={canDelete ? null : formatDeleteBlockers(blocks)}
+            closeKind={row.closeKind}
+            blockedMessage={
+              canDelete || row.closeKind ? null : formatDeleteBlockers(blocks)
+            }
             hint={
-              canDelete ? undefined : formatDeleteBlockers(blocks)
+              canDelete || row.closeKind
+                ? undefined
+                : formatDeleteBlockers(blocks)
             }
             switchOptions={
-              current && canDelete
+              current && (canDelete || row.closeKind)
                 ? remaining.map((item) => ({
                     id: item.id,
                     name: item.name,
@@ -387,7 +394,11 @@ function DeskRow({
                   }))
                 : undefined
             }
-            defaultSwitchId={current && canDelete ? defaultSwitch?.id : undefined}
+            defaultSwitchId={
+              current && (canDelete || row.closeKind)
+                ? defaultSwitch?.id
+                : undefined
+            }
           />
         </TableActions>
       </td>

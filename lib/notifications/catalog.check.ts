@@ -31,7 +31,7 @@ import {
   sampleOperatorNotice,
 } from "./copy";
 
-assert.equal(NOTIFICATION_IDS.length, 21);
+assert.equal(NOTIFICATION_IDS.length, 22);
 assert.equal(isNotificationId("invoice_issued"), true);
 assert.equal(isNotificationId("trade_opened"), false);
 assert.equal(isOperatorNotificationId("operator_gas_low"), true);

@@ -58,7 +58,7 @@ Affiliate-only logins: Inbox + Settings. Settings show Affiliates (commission + 
 
 Same ID in email, inbox, and settings.
 
-**Member — email + in-app default on:** `payment_failed`, `subscription_past_due`, `account_shortfall`, `payout_rejected`, `copy_invite_received`, `desk_sync_failed`, `desk_order_failed`, `exchange_verify_failed`, `password_changed` (email not mute-able).
+**Member — email + in-app default on:** `payment_failed`, `subscription_past_due`, `account_shortfall`, `payout_rejected`, `copy_invite_received`, `copy_source_closed`, `desk_sync_failed`, `desk_order_failed`, `exchange_verify_failed`, `password_changed` (email not mute-able).
 
 **Member — in-app on, email off:** `invoice_issued`, `invoice_paid`, `deposit_credited`, `commission_released`, `payout_requested`, `payout_paid`, `copy_invite_revoked`.
 
@@ -86,6 +86,7 @@ Member footer (step 8): “You can modify your email preferences on Account Sett
 | `payout_rejected` | Withdraw rejected — {amount} | Your {amount} USDT withdraw was rejected.{optionalNote} / The amount is back on your {bookLabel}. | Payouts (by book) |
 | `copy_invite_received` | Copy invite — {deskName} | {traderAlias} invited you to copy {deskName}. Open Copy Trading to accept or ignore. | Open Copy Trading → `/account/copy` |
 | `copy_invite_revoked` | Copy invite withdrawn — {deskName} | The invite to copy {deskName} was withdrawn. | Open Copy Trading → `/account/copy` |
+| `copy_source_closed` | Source closed — {deskName} | Copy stays six months, then may be removed even if it is the only desk. Invite-only: the invite was withdrawn and nothing is kept. | Desks, or Copy Trading when there is no copy |
 | `desk_sync_failed` | Desk sync failed — {deskName} | {deskName} could not sync with {venue}. {detail} / The bot stays as it is until this is fixed. Check the desk Activity log. | Desk Activity |
 | `desk_order_failed` | Live order failed — {deskName} | {deskName} hit a repeating {venue} reject ({detail}). / Open the desk, fix the bind or size, or disarm the bot. | Desk |
 | `exchange_verify_failed` | Exchange key failed — {connectionName} | We could not verify {connectionName} ({venue}). Live desks on this key will not place until you replace it. | Open Exchanges → `/account/sub-accounts?tab=exchanges` |

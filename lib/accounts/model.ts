@@ -29,6 +29,8 @@ export type TradingAccount = {
   venueEnvironment: string | null;
   copyOfAccountId: string | null;
   createdAtMs: number;
+  /** Set on a source desk the owner closed. Hidden from that login. */
+  closedAtMs: number | null;
 };
 
 export type DeskCapabilityInput =
@@ -418,7 +420,16 @@ export function parseTradingAccountRow(
     ),
     copyOfAccountId: parseDeskQuery(row.copy_of_account_id),
     createdAtMs: Number.isFinite(created) ? created : 0,
+    closedAtMs: closedAtMs(row.closed_at),
   };
+}
+
+function closedAtMs(value: unknown): number | null {
+  if (value == null || value === "") {
+    return null;
+  }
+  const ms = new Date(String(value)).getTime();
+  return Number.isFinite(ms) ? ms : null;
 }
 
 export function parseDeskCreateChoice(input: {
@@ -626,11 +637,12 @@ export function formatAccountModeChoice(mode: TradingAccountMode): string {
     : "Paper Trading (uses live market data - no real trades)";
 }
 
-export type AccountDeleteBlock = "last" | "open" | "automations" | "copies";
+export type AccountDeleteBlock =
+  | "last"
+  | "open"
+  | "automations"
+  | "follower_open";
 
-/** Shown before any delete starts. The database repeats this check. */
-export const DELETE_BLOCKED_COPIES =
-  "Remove the copy desks that follow this desk first";
 export type ConnectionRemoveBlock = "in_use";
 export type StrategyDetachBlock = "open" | "automations";
 
@@ -639,7 +651,7 @@ export function accountDeleteBlockers(input: {
   openCount: number;
   automationsRunning: boolean;
   mode: TradingAccountMode;
-  hasCopyFollowers?: boolean;
+  followerBooksOpen?: boolean;
 }): AccountDeleteBlock[] {
   const blocks: AccountDeleteBlock[] = [];
   if (input.accountCount <= 1) {
@@ -651,8 +663,8 @@ export function accountDeleteBlockers(input: {
   if (input.automationsRunning) {
     blocks.push("automations");
   }
-  if (input.hasCopyFollowers) {
-    blocks.push("copies");
+  if (input.followerBooksOpen) {
+    blocks.push("follower_open");
   }
   return blocks;
 }
@@ -673,8 +685,10 @@ export function formatDeleteBlockers(
   } else if (automations) {
     parts.push("Disable bots first");
   }
-  if (blocks.includes("copies")) {
-    parts.push(DELETE_BLOCKED_COPIES);
+  if (blocks.includes("follower_open")) {
+    parts.push(
+      "A follower still has an open position or a working order. Disable this desk and let the next tick flatten those copies",
+    );
   }
   return parts.join(" · ");
 }

@@ -1,5 +1,6 @@
+import { deskWindDown, type DeskCloseKind } from "@/lib/accounts/close";
+import { loadDeskCloseFacts } from "@/lib/accounts/close-facts";
 import {
-  accountDeleteBlockers,
   DEFAULT_ACCOUNT_NAME,
   DESK_NAME_TAKEN,
   formatDeleteBlockers,
@@ -44,6 +45,7 @@ export type TradingAccountOption = TradingAccount & {
 
 export async function listTradingAccounts(
   userId: string,
+  options?: { includeClosed?: boolean },
 ): Promise<TradingAccount[]> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -57,9 +59,13 @@ export async function listTradingAccounts(
   if (error || !data) {
     return [];
   }
-  return data.map((row) =>
+  const accounts = data.map((row) =>
     parseTradingAccountRow(row as Record<string, unknown>),
   );
+  if (options?.includeClosed) {
+    return accounts;
+  }
+  return accounts.filter((account) => account.closedAtMs == null);
 }
 
 export async function listAllTradingAccounts(): Promise<TradingAccountOption[]> {
@@ -322,6 +328,10 @@ export type AccountUsage = {
   strategyConnectionId: string | null;
   futuresConnectionId: string | null;
   blocks: AccountDeleteBlock[];
+  /** Set when Close archives or withdraws invites. Null when Delete is the action. */
+  closeKind: DeskCloseKind | null;
+  /** This copy desk’s source has been closed. */
+  sourceClosed: boolean;
 };
 
 export async function loadAccountUsage(
@@ -330,6 +340,14 @@ export async function loadAccountUsage(
   const accountCount = accounts.length;
   const usage = new Map<string, AccountUsage>();
   for (const account of accounts) {
+    const wind = deskWindDown({
+      accountCount,
+      openCount: 0,
+      automationsRunning: false,
+      hasCopyDesks: false,
+      hasOpenShares: false,
+      followerBooksOpen: false,
+    });
     usage.set(account.id, {
       openCount: 0,
       carryOpenCount: 0,
@@ -341,12 +359,9 @@ export async function loadAccountUsage(
       reduceOnly: false,
       strategyConnectionId: null,
       futuresConnectionId: null,
-      blocks: accountDeleteBlockers({
-        accountCount,
-        openCount: 0,
-        automationsRunning: false,
-        mode: account.mode,
-      }),
+      blocks: wind.action === "blocked" ? [...wind.blocks] : [],
+      closeKind: null,
+      sourceClosed: false,
     });
   }
   if (accounts.length === 0) {
@@ -357,7 +372,7 @@ export async function loadAccountUsage(
     return usage;
   }
   const accountIds = accounts.map((account) => account.id);
-  const [{ data: openRows }, { data: futuresOpenRows }, { data: futuresWorkingRows }, settings, ruleRows, futuresRuleRows, futuresBinds, dcaRows, copyParents] =
+  const [{ data: openRows }, { data: futuresOpenRows }, { data: futuresWorkingRows }, settings, ruleRows, futuresRuleRows, futuresBinds, dcaRows] =
     await Promise.all([
     supabase
       .from("paper_carries")
@@ -382,8 +397,15 @@ export async function loadAccountUsage(
       .from("dca_playbooks")
       .select("account_id, long_status, short_status")
       .in("account_id", accountIds),
-    copyFollowerParentIds(supabase, accountIds),
   ]);
+  const closeFacts = await loadDeskCloseFacts(
+    accountIds,
+    new Map(
+      accounts
+        .filter((account) => account.copyOfAccountId)
+        .map((account) => [account.id, account.copyOfAccountId as string]),
+    ),
+  );
   const carryOpenCount = new Map<string, number>();
   const futuresOpenCount = new Map<string, number>();
   const workingCount = new Map<string, number>();
@@ -455,6 +477,15 @@ export async function loadAccountUsage(
     const botCount = rules.length + (dcaBotCount.get(account.id) ?? 0);
     const automationsRunning = botsOn > 0;
     const reduceOnly = reduceOnlyIds.has(account.id);
+    const facts = closeFacts.get(account.id);
+    const wind = deskWindDown({
+      accountCount,
+      openCount: opens + working,
+      automationsRunning,
+      hasCopyDesks: facts?.hasCopyDesks ?? false,
+      hasOpenShares: facts?.hasOpenShares ?? false,
+      followerBooksOpen: facts?.followerBooksOpen ?? false,
+    });
     usage.set(account.id, {
       openCount: opens,
       carryOpenCount: carries,
@@ -466,13 +497,9 @@ export async function loadAccountUsage(
       reduceOnly,
       strategyConnectionId: connectionByAccount.get(account.id) ?? null,
       futuresConnectionId: futuresBinds.get(account.id) ?? null,
-      blocks: accountDeleteBlockers({
-        accountCount,
-        openCount: opens + working,
-        automationsRunning,
-        mode: account.mode,
-        hasCopyFollowers: copyParents.ids.has(account.id),
-      }),
+      blocks: wind.action === "blocked" ? [...wind.blocks] : [],
+      closeKind: wind.action === "close" ? wind.kind : null,
+      sourceClosed: facts?.sourceClosed ?? false,
     });
   }
   return usage;
@@ -519,7 +546,14 @@ export async function deleteTradingAccountRow(
     return { error: "That account was not found." };
   }
   const usage = await loadAccountUsage(accounts);
-  const blocks = usage.get(accountId)?.blocks ?? ["last"];
+  const row = usage.get(accountId);
+  const blocks = row?.blocks ?? ["last"];
+  if (row?.closeKind === "archive") {
+    return { error: DESK_DELETE_HAS_COPIES };
+  }
+  if (row?.closeKind === "revoke") {
+    return { error: "Close this desk so invited members are told." };
+  }
   if (blocks.length > 0) {
     return { error: `${formatDeleteBlockers(blocks)}.` };
   }
@@ -532,6 +566,10 @@ export async function deleteTradingAccountRow(
   if (copies.ids.has(accountId)) {
     return { error: DESK_DELETE_HAS_COPIES };
   }
+  const shares = await loadDeskCloseFacts([accountId]);
+  if (shares.get(accountId)?.hasOpenShares) {
+    return { error: "Close this desk so invited members are told." };
+  }
   return teardownTradingAccount(supabase, userId, accountId);
 }
 
@@ -539,7 +577,7 @@ export async function deleteTradingAccountRow(
 export async function teardownAllTradingAccounts(
   userId: string,
 ): Promise<{ error: string | null }> {
-  const accounts = await listTradingAccounts(userId);
+  const accounts = await listTradingAccounts(userId, { includeClosed: true });
   return teardownTradingAccountsById(
     userId,
     accounts.map((account) => account.id),
@@ -559,7 +597,7 @@ export async function teardownTradingAccountsById(
     return { error: "Auth is not configured." };
   }
   const wanted = new Set(accountIds);
-  const accounts = await listTradingAccounts(userId);
+  const accounts = await listTradingAccounts(userId, { includeClosed: true });
   for (const account of devResetDeskOrder(
     accounts.filter((row) => wanted.has(row.id)),
   )) {
@@ -569,6 +607,18 @@ export async function teardownTradingAccountsById(
     }
   }
   return { error: null };
+}
+
+/** Removes one desk with no blocker check. Close retention and login wipe use this. */
+export async function teardownTradingAccountById(
+  userId: string,
+  accountId: string,
+): Promise<{ error: string | null }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { error: "Auth is not configured." };
+  }
+  return teardownTradingAccount(supabase, userId, accountId);
 }
 
 async function teardownTradingAccount(

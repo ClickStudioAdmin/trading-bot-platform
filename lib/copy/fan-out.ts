@@ -87,10 +87,13 @@ export async function fanOutCopyFills(input: {
   if (followers.length === 0) {
     return;
   }
+  const parentAccount = await loadTradingAccountById(input.parentAccountId);
+  if (parentAccount?.closedAtMs != null) {
+    return;
+  }
   const sinceMs = Math.min(
     ...followers.map((row) => row.createdAtMs).filter((ms) => ms > 0),
   );
-  const parentAccount = await loadTradingAccountById(input.parentAccountId);
   const parentIsDca = parentAccount?.deskType === "dca";
   const [fills, parentWorking, parentOpens, shares, listing, parentSettings] =
     await Promise.all([

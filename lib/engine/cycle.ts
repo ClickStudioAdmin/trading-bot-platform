@@ -3,6 +3,8 @@ import { runCashAndCarryDeskTick } from "@/lib/engine/cash-and-carry-tick";
 import {
   ENGINE_BILLING_DEPOSIT_SCAN_KEY,
   ENGINE_BILLING_DEPOSIT_TTL_SECONDS,
+  ENGINE_DESK_CLOSE_RETENTION_SCAN_KEY,
+  ENGINE_DESK_CLOSE_RETENTION_TTL_SECONDS,
   ENGINE_EVENT_LOG_RETENTION_SCAN_KEY,
   ENGINE_EVENT_LOG_RETENTION_TTL_SECONDS,
   ENGINE_CLAIM_BATCH,
@@ -50,6 +52,7 @@ import {
   reconcileOpenFuturesVenuePositions,
   reconcileOpenFuturesWorkingOrders,
 } from "@/lib/futures/reconcile";
+import { purgeExpiredClosedDesks } from "@/lib/accounts/close-store";
 import { purgeExpiredEventLogs } from "@/lib/logs/retention";
 import { writeEventLog } from "@/lib/logs/write";
 import { processOneQueuedBacktest } from "@/lib/backtest/execute";
@@ -204,6 +207,9 @@ export async function runEngineCycle(
   if (maxMs === undefined || Date.now() - started < maxMs) {
     await purgeExpiredActivityLogs(workerId);
   }
+  if (maxMs === undefined || Date.now() - started < maxMs) {
+    await purgeExpiredClosedDesksJob(workerId);
+  }
 
   if (!options?.silent) {
     await writeEventLog({
@@ -318,6 +324,41 @@ async function purgeExpiredActivityLogs(workerId: string): Promise<void> {
       event: "engine.logs_purged",
       message:
         cause instanceof Error ? cause.message : "Activity log purge failed",
+      data: { workerId },
+    });
+  }
+}
+
+async function purgeExpiredClosedDesksJob(workerId: string): Promise<void> {
+  const won = await tryClaimEngineScan({
+    workerId,
+    scanKey: ENGINE_DESK_CLOSE_RETENTION_SCAN_KEY,
+    ttlSeconds: ENGINE_DESK_CLOSE_RETENTION_TTL_SECONDS,
+  });
+  if (!won) {
+    return;
+  }
+  try {
+    const purged = await purgeExpiredClosedDesks();
+    if (purged.parents > 0) {
+      await writeEventLog({
+        scope: "system",
+        event: "engine.desks_purged",
+        message: `Removed ${purged.copies} closed copy desk${purged.copies === 1 ? "" : "s"} and 1 source desk after six months`,
+        data: {
+          workerId,
+          parents: purged.parents,
+          copies: purged.copies,
+        },
+      });
+    }
+  } catch (cause) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "engine.desks_purged",
+      message:
+        cause instanceof Error ? cause.message : "Closed desk purge failed",
       data: { workerId },
     });
   }
