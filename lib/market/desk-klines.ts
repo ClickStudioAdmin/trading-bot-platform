@@ -145,6 +145,22 @@ function sortUniqueBars(bars: CandleBar[]): CandleBar[] {
   return [...byTime.values()].sort((a, b) => a.timeMs - b.timeMs);
 }
 
+/** Unique candle times inside the window. Overlapping venue pages count once. */
+export function tallyBacktestCandles(input: {
+  seen: Set<number>;
+  bars: readonly CandleBar[];
+  fromMs: number;
+  toMs: number;
+}): number {
+  for (const row of input.bars) {
+    if (row.timeMs < input.fromMs || row.timeMs > input.toMs) {
+      continue;
+    }
+    input.seen.add(row.timeMs);
+  }
+  return input.seen.size;
+}
+
 export async function loadBacktestCandles(input: {
   venue: string;
   venueEnvironment: string | null;
@@ -153,6 +169,7 @@ export async function loadBacktestCandles(input: {
   fromMs: number;
   toMs: number;
   limit: number;
+  onProgress?: (loaded: number) => void;
 }): Promise<CandleBar[]> {
   const limit = Math.min(
     BACKTEST_CANDLE_LIMIT,
@@ -160,6 +177,21 @@ export async function loadBacktestCandles(input: {
   );
   const endTimeMs = input.toMs;
   const startTimeMs = input.fromMs;
+
+  const seen = new Set<number>();
+  const note = (chunk: CandleBar[]) => {
+    if (!input.onProgress) {
+      return;
+    }
+    input.onProgress(
+      tallyBacktestCandles({
+        seen,
+        bars: chunk,
+        fromMs: startTimeMs,
+        toMs: endTimeMs,
+      }),
+    );
+  };
 
   if (input.venue === "hyperliquid") {
     const collected: CandleBar[] = [];
@@ -176,6 +208,7 @@ export async function loadBacktestCandles(input: {
         break;
       }
       collected.push(...chunk);
+      note(chunk);
       const oldest = chunk[0]?.timeMs;
       if (oldest == null || oldest >= cursorEnd) {
         break;
@@ -204,6 +237,7 @@ export async function loadBacktestCandles(input: {
       break;
     }
     collected.push(...chunk);
+    note(chunk);
     const oldest = chunk[0]?.timeMs;
     if (oldest == null || oldest >= cursorEnd) {
       break;

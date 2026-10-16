@@ -1,7 +1,7 @@
 name: Deploy Engine
 
-# develop → tbp-engine-dev (development Supabase only)
-# main    → tbp-engine (production Supabase only)
+# develop → tbp-engine-dev and tbp-backtest-dev (development Supabase only)
+# main    → tbp-engine and tbp-backtest (production Supabase only)
 # Create the Fly apps and set FLY_API_TOKEN plus Fly secrets before this job succeeds.
 
 on:
@@ -83,6 +83,72 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: flyctl deploy --config fly.development.toml --remote-only
 
+  deploy-development-backtest:
+    name: Deploy development backtests
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    environment: development
+    permissions:
+      contents: read
+    steps:
+      - name: Check Fly token
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "FLY_API_TOKEN is not set on the development environment."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Ensure development backtest app exists
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_ORG: ${{ vars.FLY_ORG || 'tbp-154' }}
+        run: |
+          if flyctl status --app tbp-backtest-dev >/dev/null 2>&1; then
+            echo "tbp-backtest-dev already exists"
+            exit 0
+          fi
+          echo "creating tbp-backtest-dev in org $FLY_ORG"
+          flyctl apps create tbp-backtest-dev --org "$FLY_ORG" --yes
+
+      - name: Check Fly app secrets
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          payload="$(flyctl secrets list --app tbp-backtest-dev --json)"
+          names="$(echo "$payload" | jq -r '
+            if type == "array" then
+              .[] | (.Name // .name // empty)
+            elif type == "object" then
+              (.Secrets // .secrets // [])[] | (.Name // .name // empty)
+            else empty
+            end
+          ')"
+          echo "Fly secret names:"
+          echo "$names"
+          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY EXCHANGE_CREDENTIALS_KEY; do
+            if ! echo "$names" | grep -qx "$name"; then
+              echo "tbp-backtest-dev exists, but $name is not set on the Fly app."
+              echo "In Fly, open tbp-backtest-dev → Secrets and add the development values:"
+              echo "SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EXCHANGE_CREDENTIALS_KEY."
+              echo "The billing key stays on tbp-engine-dev. Backtests do not decrypt wallets."
+              echo "Then re-run this workflow."
+              exit 1
+            fi
+          done
+
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --config fly.backtest.development.toml --remote-only
+
   deploy-production:
     name: Deploy production engine
     if: github.ref == 'refs/heads/main'
@@ -135,3 +201,69 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: flyctl deploy --config fly.production.toml --remote-only
+
+  deploy-production-backtest:
+    name: Deploy production backtests
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - name: Check Fly token
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "FLY_API_TOKEN is not set on the production environment."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Ensure production backtest app exists
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_ORG: ${{ vars.FLY_ORG || 'tbp-154' }}
+        run: |
+          if flyctl status --app tbp-backtest >/dev/null 2>&1; then
+            echo "tbp-backtest already exists"
+            exit 0
+          fi
+          echo "creating tbp-backtest in org $FLY_ORG"
+          flyctl apps create tbp-backtest --org "$FLY_ORG" --yes
+
+      - name: Check Fly app secrets
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          payload="$(flyctl secrets list --app tbp-backtest --json)"
+          names="$(echo "$payload" | jq -r '
+            if type == "array" then
+              .[] | (.Name // .name // empty)
+            elif type == "object" then
+              (.Secrets // .secrets // [])[] | (.Name // .name // empty)
+            else empty
+            end
+          ')"
+          echo "Fly secret names:"
+          echo "$names"
+          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY EXCHANGE_CREDENTIALS_KEY; do
+            if ! echo "$names" | grep -qx "$name"; then
+              echo "tbp-backtest exists, but $name is not set on the Fly app."
+              echo "In Fly, open tbp-backtest → Secrets and add the production values:"
+              echo "SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EXCHANGE_CREDENTIALS_KEY."
+              echo "The billing key stays on tbp-engine. Backtests do not decrypt wallets."
+              echo "Then re-run this workflow."
+              exit 1
+            fi
+          done
+
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --config fly.backtest.production.toml --remote-only

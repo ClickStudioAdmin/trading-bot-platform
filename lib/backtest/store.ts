@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/admin";
+import { BACKTEST_RETRY_DELAY_MS } from "./guard";
 import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { parseDcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import {
@@ -41,6 +42,10 @@ import {
   type SimulatedOrder,
 } from "./model";
 import { parseReplayEvents } from "./events";
+import {
+  parseBacktestProgressCount,
+  parseBacktestProgressPhase,
+} from "./progress";
 
 function asTime(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -181,7 +186,28 @@ export function parseBacktestRunRow(
       venue,
     ),
     name: readBacktestName(row.name),
+    progressDone: parseBacktestProgressCount(row.progress_done),
+    progressTotal: parseBacktestProgressCount(row.progress_total),
+    progressPhase: parseBacktestProgressPhase(row.progress_phase),
+    claimCount: parseBacktestClaimCount(row.claim_count),
+    retryAfterMs: parseBacktestRetryAfterMs(row.retry_after),
   };
+}
+
+function parseBacktestClaimCount(raw: unknown): number {
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) {
+    return 0;
+  }
+  return Math.floor(value);
+}
+
+function parseBacktestRetryAfterMs(raw: unknown): number | null {
+  if (raw == null || raw === "") {
+    return null;
+  }
+  const ms = new Date(String(raw)).getTime();
+  return Number.isFinite(ms) ? ms : null;
 }
 
 function unknownBacktestColumn(message: string, column: string): boolean {
@@ -886,6 +912,117 @@ export async function deleteBacktestRun(id: string): Promise<
   return { ok: true };
 }
 
+export async function touchBacktestProgress(
+  id: string,
+  input: {
+    done: number;
+    total: number;
+    phase: "candles" | "replay";
+  },
+): Promise<void> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return;
+  }
+  const total = Math.max(0, Math.floor(input.total));
+  const raw = Math.max(0, Math.floor(input.done));
+  const done = total > 0 ? Math.min(total, raw) : raw;
+  const { error } = await supabase
+    .from("backtest_runs")
+    .update({
+      progress_done: done,
+      progress_total: total,
+      progress_phase: input.phase,
+    })
+    .eq("id", id)
+    .eq("status", "running");
+  if (error && !/progress_/i.test(error.message)) {
+    console.error(`backtest progress ${id}`, error.message);
+  }
+}
+
+/** One work start. Returns the new count. A missing column counts as the first start. */
+export async function noteBacktestAttempt(id: string): Promise<number> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return 1;
+  }
+  for (let tryNo = 0; tryNo < 4; tryNo += 1) {
+    const currentRow = await supabase
+      .from("backtest_runs")
+      .select("claim_count")
+      .eq("id", id)
+      .maybeSingle();
+    if (currentRow.error) {
+      if (/claim_count/i.test(currentRow.error.message)) {
+        return 1;
+      }
+      throw new Error(currentRow.error.message);
+    }
+    const current = parseBacktestClaimCount(
+      (currentRow.data as { claim_count?: unknown } | null)?.claim_count,
+    );
+    const next = current + 1;
+    const updated = await supabase
+      .from("backtest_runs")
+      .update({ claim_count: next })
+      .eq("id", id)
+      .eq("claim_count", current)
+      .select("claim_count")
+      .maybeSingle();
+    if (updated.error) {
+      if (/claim_count/i.test(updated.error.message)) {
+        return 1;
+      }
+      throw new Error(updated.error.message);
+    }
+    if (updated.data) {
+      return next;
+    }
+  }
+  throw new Error("Could not record this backtest attempt.");
+}
+
+/** Put a venue blip back on the queue. The claim skips the row until the delay ends. */
+export async function requeueBacktestRun(
+  id: string,
+  error: string,
+  delayMs = BACKTEST_RETRY_DELAY_MS,
+): Promise<boolean> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return false;
+  }
+  let payload: Record<string, unknown> = {
+    status: "queued",
+    claimed_at: null,
+    retry_after: new Date(Date.now() + Math.max(0, delayMs)).toISOString(),
+    error,
+    progress_done: null,
+    progress_total: null,
+    progress_phase: null,
+  };
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const result = await supabase
+      .from("backtest_runs")
+      .update(payload)
+      .eq("id", id)
+      .eq("status", "running")
+      .select("id");
+    if (!result.error) {
+      return (result.data?.length ?? 0) > 0;
+    }
+    const column = ["retry_after", "progress_done", "progress_total", "progress_phase"].find(
+      (name) => unknownBacktestColumn(result.error.message, name),
+    );
+    if (!column || !(column in payload) || column === "retry_after") {
+      return false;
+    }
+    payload = withoutColumn(payload, column);
+  }
+  return false;
+}
+
 export async function touchBacktestClaim(id: string): Promise<void> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -929,12 +1066,17 @@ export function backtestRowIsClaimable(input: {
   staleMs: number;
   bars: number;
   maxBars: number;
+  retryAfterMs?: number | null;
 }): boolean {
   const stale =
     input.status === "running" &&
     input.claimedAtMs != null &&
     input.claimedAtMs < input.nowMs - input.staleMs;
-  if (input.status !== "queued" && !stale) {
+  if (input.status === "queued") {
+    if (input.retryAfterMs != null && input.retryAfterMs > input.nowMs) {
+      return false;
+    }
+  } else if (!stale) {
     return false;
   }
   if (!(input.maxBars > 0)) {
@@ -991,6 +1133,7 @@ export async function claimQueuedBacktestRun(input?: {
       staleMs,
       bars: estimateBacktestBars(row.parsed.fromMs, row.parsed.toMs, row.parsed.interval),
       maxBars: input?.maxBars ?? 0,
+      retryAfterMs: parseBacktestRetryAfterMs(row.raw.retry_after),
     });
   });
   if (!chosen) {

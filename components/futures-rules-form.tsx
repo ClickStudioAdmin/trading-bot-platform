@@ -111,7 +111,10 @@ import {
 } from "@/lib/dca/hard-exit";
 import type { PerpsShortClassic } from "@/lib/futures/conditions";
 import type { FuturesOrderType, FuturesSide, FuturesTrigger } from "@/lib/futures/model";
-import type { FuturesTpslLevelKind } from "@/lib/futures/tpsl";
+import {
+  defaultTpslLevelKind,
+  type FuturesTpslLevelKind,
+} from "@/lib/futures/tpsl";
 import { IconPlus, IconSave } from "@/components/icons";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import { perpsFormToSnapshotSource } from "@/lib/templates/recipe";
@@ -466,8 +469,8 @@ type PerpsClassicDraft = {
 
 function blankPerpsClassic(): PerpsClassicDraft {
   return {
-    tpKind: "price",
-    slKind: "price",
+    tpKind: "percent",
+    slKind: "percent",
     takeProfit: "",
     stopLoss: "",
     tpTrigger: "last",
@@ -488,8 +491,8 @@ function perpsDraftFromClassic(
   classic: NonNullable<NonNullable<FuturesAutomationFormValues["shortEntry"]>["classic"]>,
 ): PerpsClassicDraft {
   return {
-    tpKind: classic.tpsl?.tpKind === "percent" ? "percent" : "price",
-    slKind: classic.tpsl?.slKind === "percent" ? "percent" : "price",
+    tpKind: defaultTpslLevelKind(classic.tpsl?.takeProfit, classic.tpsl?.tpKind),
+    slKind: defaultTpslLevelKind(classic.tpsl?.stopLoss, classic.tpsl?.slKind),
     takeProfit:
       classic.tpsl?.takeProfit != null ? String(classic.tpsl.takeProfit) : "",
     stopLoss: classic.tpsl?.stopLoss != null ? String(classic.tpsl.stopLoss) : "",
@@ -518,8 +521,8 @@ function perpsDraftFromClassic(
 
 function perpsDraftFromLong(layer: FuturesAutomationFormValues): PerpsClassicDraft {
   return {
-    tpKind: layer.tpsl?.tpKind === "percent" ? "percent" : "price",
-    slKind: layer.tpsl?.slKind === "percent" ? "percent" : "price",
+    tpKind: defaultTpslLevelKind(layer.tpsl?.takeProfit, layer.tpsl?.tpKind),
+    slKind: defaultTpslLevelKind(layer.tpsl?.stopLoss, layer.tpsl?.slKind),
     takeProfit:
       layer.tpsl?.takeProfit != null ? String(layer.tpsl.takeProfit) : "",
     stopLoss: layer.tpsl?.stopLoss != null ? String(layer.tpsl.stopLoss) : "",
@@ -658,11 +661,11 @@ function RuleCard({
   const [stopLoss, setStopLoss] = useState(
     layer.tpsl?.stopLoss != null ? String(layer.tpsl.stopLoss) : "",
   );
-  const [tpKind, setTpKind] = useState<FuturesTpslLevelKind>(
-    layer.tpsl?.tpKind === "percent" ? "percent" : "price",
+  const [tpKind, setTpKind] = useState<FuturesTpslLevelKind>(() =>
+    defaultTpslLevelKind(layer.tpsl?.takeProfit, layer.tpsl?.tpKind),
   );
-  const [slKind, setSlKind] = useState<FuturesTpslLevelKind>(
-    layer.tpsl?.slKind === "percent" ? "percent" : "price",
+  const [slKind, setSlKind] = useState<FuturesTpslLevelKind>(() =>
+    defaultTpslLevelKind(layer.tpsl?.stopLoss, layer.tpsl?.slKind),
   );
   const [tpTrigger, setTpTrigger] = useState<FuturesTrigger>(
     layer.tpsl?.tpTrigger ?? "last",
@@ -799,8 +802,8 @@ function RuleCard({
             stopLoss: shortSlLive
               ? Number(shortClassic.stopLoss.replace(/,/g, "")) || null
               : null,
-            tpKind: shortTpLive ? shortClassic.tpKind : "price",
-            slKind: shortSlLive ? shortClassic.slKind : "price",
+            tpKind: shortTpLive ? shortClassic.tpKind : "percent",
+            slKind: shortSlLive ? shortClassic.slKind : "percent",
             tpTrigger: shortClassic.tpTrigger,
             slTrigger: shortClassic.slTrigger,
             mode: storedShort?.tpsl?.mode ?? layer.tpsl?.mode ?? "full",
@@ -911,8 +914,8 @@ function RuleCard({
       ? {
           takeProfit: tpLive ? Number(takeProfit.replace(/,/g, "")) || null : null,
           stopLoss: slLive ? Number(stopLoss.replace(/,/g, "")) || null : null,
-          tpKind: tpLive ? tpKind : "price",
-          slKind: slLive ? slKind : "price",
+          tpKind: tpLive ? tpKind : "percent",
+          slKind: slLive ? slKind : "percent",
           tpTrigger,
           slTrigger,
           mode: layer.tpsl?.mode ?? "full",
@@ -1129,8 +1132,8 @@ function RuleCard({
     setShortClassic(currentPrimaryClassic());
   }
   function blankPrimaryClassic() {
-    setTpKind("price");
-    setSlKind("price");
+    setTpKind("percent");
+    setSlKind("percent");
     setTakeProfit("");
     setStopLoss("");
     setTpTrigger("last");

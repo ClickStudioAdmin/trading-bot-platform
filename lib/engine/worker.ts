@@ -1,6 +1,4 @@
 import { createServer } from "node:http";
-import { processOneQueuedBacktest } from "@/lib/backtest/execute";
-import { backtestDrainMaxBars } from "@/lib/backtest/model";
 import { watchDcaPriceExits } from "@/lib/dca/tick";
 import { ensureBybitLinearTickerStream } from "@/lib/exchanges/bybit/ticker-stream";
 import { runEngineCycle } from "./cycle";
@@ -25,37 +23,6 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
-}
-
-const BACKTEST_DRAIN_IDLE_MS = 5_000;
-
-async function drainBacktestQueue(workerId: string): Promise<void> {
-  for (;;) {
-    try {
-      const result = await processOneQueuedBacktest({
-        maxBars: backtestDrainMaxBars("worker"),
-      });
-      if (!result) {
-        await sleep(BACKTEST_DRAIN_IDLE_MS);
-        continue;
-      }
-      console.log(
-        `backtest drain ${result.ok ? "finished" : "failed"} run=${result.runId ?? ""} ${result.error ?? ""}`.trim(),
-      );
-    } catch (cause) {
-      const message =
-        cause instanceof Error ? cause.message : "Backtest drain failed";
-      console.error("backtest drain failed", cause);
-      await writeEventLog({
-        level: "error",
-        scope: "system",
-        event: "engine.tick",
-        message,
-        data: { workerId },
-      }).catch(() => {});
-      await sleep(BACKTEST_DRAIN_IDLE_MS);
-    }
-  }
 }
 
 async function main(): Promise<void> {
@@ -84,7 +51,6 @@ async function main(): Promise<void> {
   });
   ensureBybitLinearTickerStream();
   console.log(`engine worker started ${workerId}`);
-  void drainBacktestQueue(workerId);
   for (;;) {
     const hot = (await listHotEngineAccountIds()).length > 0;
     const loopMs = engineLoopMs({
