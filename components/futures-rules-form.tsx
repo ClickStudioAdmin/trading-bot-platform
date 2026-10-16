@@ -20,6 +20,7 @@ import {
   OrderTypePill,
   botCompactRowClass,
   botFieldClass,
+  botFieldInvalidClass,
   botLabelClass,
   botRowClass,
   botRowClass5,
@@ -30,20 +31,24 @@ import {
 } from "@/components/bot-form-chrome";
 import { ExitSideBuilder } from "@/components/exit-side-builder";
 import {
+  PerpsAdditionalOrders,
+  type PerpsAddConditionType,
+} from "@/components/perps-additional-orders";
+import {
   exitRowsFromStack,
   exitStackFromRows,
   type ExitStackRow,
 } from "@/components/exit-condition-stack";
 import {
-  classicSignature,
+  blankExitClauses,
   customStackFromClauses,
+  exitClauseListMissing,
   exitClausesFromSaved,
-  syncClassicClauses,
+  mergedClassicExitFlags,
   type ExitBuilderClause,
 } from "@/lib/strategy/exit-clauses";
 import {
   initialPerpsEntryDrafts,
-  oppositePerpsEntryDraft,
   PerpsEntryPanel,
   perpsEntryDraftMissing,
   perpsEntryLegFromDraft,
@@ -509,6 +514,11 @@ function RuleCard({
   const [sizeUnit, setSizeUnit] = useState(layer.sizeUnit);
   const [size, setSize] = useState(layer.size);
   const [limitPrice, setLimitPrice] = useState(layer.limitPrice);
+  const [addConditionType, setAddConditionType] = useState<PerpsAddConditionType>("");
+  const [addSize, setAddSize] = useState("");
+  const [addSizeUnit, setAddSizeUnit] = useState<"qty" | "usdt">("usdt");
+  const [addOrderType, setAddOrderType] = useState<"market" | "limit">("market");
+  const [addLimitPrice, setAddLimitPrice] = useState("");
   const [symbolState, setSymbolState] = useState(() =>
     embedded || layer.id
       ? layer.symbol
@@ -602,13 +612,25 @@ function RuleCard({
   );
   const [shortClauses, setShortClauses] = useState(() =>
     exitClausesFromSaved({
-      takeProfit: tpOn,
-      trailing: trailOn,
-      stopLoss: slOn,
+      takeProfit: direction === "both" && tpOn,
+      trailing: direction === "both" && trailOn,
+      stopLoss: direction === "both" && slOn,
       anchor: shortExitIf,
       rows: shortExitRows,
     }),
   );
+  function applyClassicFlags(
+    primary: readonly ExitBuilderClause[],
+    short: readonly ExitBuilderClause[] | null,
+  ) {
+    const flags = mergedClassicExitFlags(primary, short);
+    setTpOn(flags.takeProfit);
+    setTrailOn(flags.trailing);
+    setSlOn(flags.stopLoss);
+    if (!flags.stopLoss) {
+      setBreakevenOn(false);
+    }
+  }
   function commitExitClauses(
     next: ExitBuilderClause[],
     which: "primary" | "short",
@@ -618,29 +640,12 @@ function RuleCard({
       setShortClauses(next);
       setShortExitIf(custom.anchor);
       setShortExitRows(custom.rows);
-      setExitClauses((current) =>
-        classicSignature(current) === classicSignature(next)
-          ? current
-          : syncClassicClauses(current, next),
-      );
+      applyClassicFlags(exitClauses, next);
     } else {
       setExitClauses(next);
       setExitIf(custom.anchor);
       setExitRows(custom.rows);
-      if (direction === "both") {
-        setShortClauses((current) =>
-          classicSignature(current) === classicSignature(next)
-            ? current
-            : syncClassicClauses(current, next),
-        );
-      }
-    }
-    setTpOn(next.some((clause) => clause.kind === "take_profit"));
-    setTrailOn(next.some((clause) => clause.kind === "trailing_stop"));
-    const nextSl = next.some((clause) => clause.kind === "stop_loss");
-    setSlOn(nextSl);
-    if (!nextSl) {
-      setBreakevenOn(false);
+      applyClassicFlags(next, direction === "both" ? shortClauses : null);
     }
     setDirty(true);
     setFormTick((tick) => tick + 1);
@@ -675,18 +680,38 @@ function RuleCard({
             : {}),
         }
       : null;
-  const tpMissing = tpOn && takeProfit.trim() === "";
-  const slMissing = slOn && stopLoss.trim() === "";
-  const trailMissing = trailOn && trailingStop.trim() === "";
+  const exitFlags = mergedClassicExitFlags(
+    exitClauses,
+    storedDirection === "both" ? shortClauses : null,
+  );
+  const tpLive = exitFlags.takeProfit;
+  const slLive = exitFlags.stopLoss;
+  const trailLive = exitFlags.trailing;
+  function positiveText(text: string): boolean {
+    const value = Number(text.replace(/,/g, "").trim());
+    return Number.isFinite(value) && value > 0;
+  }
+  const tpMissing = tpLive && !positiveText(takeProfit);
+  const slMissing = slLive && !positiveText(stopLoss);
+  const trailMissing = trailLive && !positiveText(trailingStop);
   const breakevenMissing =
     !closing &&
-    slOn &&
+    slLive &&
     breakevenOn &&
-    breakevenActivationPct.trim() === "";
+    !positiveText(breakevenActivationPct);
   const tpLimitMissing =
-    tpOn && tpOrderType === "limit" && tpLimitPrice.trim() === "";
+    tpLive && tpOrderType === "limit" && !positiveText(tpLimitPrice);
   const slLimitMissing =
-    slOn && slOrderType === "limit" && slLimitPrice.trim() === "";
+    slLive && slOrderType === "limit" && !positiveText(slLimitPrice);
+  const sizeMissing = !closing && !positiveText(size);
+  const orderLimitMissing =
+    !closing && orderType === "limit" && !positiveText(limitPrice);
+  const exitKindMissing =
+    !closing &&
+    (exitClauseListMissing(exitClauses) ||
+      (storedDirection === "both" && exitClauseListMissing(shortClauses)));
+  const nameMissing =
+    !embedded && controlValue(`${prefix}name`, layer.name).trim() === "";
   const entryMissing =
     (showLong &&
       perpsEntryDraftMissing(entryDrafts.long, direction === "close_long")) ||
@@ -704,12 +729,12 @@ function RuleCard({
   const exitParts = hardExitParts(closing ? null : exitIf);
   const exitStack = closing ? null : exitStackFromRows(exitRows);
   const tpsl =
-    tpOn || slOn
+    tpLive || slLive
       ? {
-          takeProfit: tpOn ? Number(takeProfit.replace(/,/g, "")) || null : null,
-          stopLoss: slOn ? Number(stopLoss.replace(/,/g, "")) || null : null,
-          tpKind: tpOn ? tpKind : "price",
-          slKind: slOn ? slKind : "price",
+          takeProfit: tpLive ? Number(takeProfit.replace(/,/g, "")) || null : null,
+          stopLoss: slLive ? Number(stopLoss.replace(/,/g, "")) || null : null,
+          tpKind: tpLive ? tpKind : "price",
+          slKind: slLive ? slKind : "price",
           tpTrigger,
           slTrigger,
           mode: layer.tpsl?.mode ?? "full",
@@ -718,17 +743,17 @@ function RuleCard({
           tpOrderType,
           slOrderType,
           tpLimitPrice:
-            tpOn && tpOrderType === "limit"
+            tpLive && tpOrderType === "limit"
               ? Number(tpLimitPrice.replace(/,/g, "")) || null
               : null,
           slLimitPrice:
-            slOn && slOrderType === "limit"
+            slLive && slOrderType === "limit"
               ? Number(slLimitPrice.replace(/,/g, "")) || null
               : null,
         }
       : null;
   const trailing =
-        trailOn && Number(trailingStop.replace(/,/g, "")) > 0
+        trailLive && Number(trailingStop.replace(/,/g, "")) > 0
       ? {
           distance: Number(trailingStop.replace(/,/g, "")),
           activePrice: Number(trailingActive.replace(/,/g, "")) || null,
@@ -764,9 +789,9 @@ function RuleCard({
     exitStack,
     exitDraft: closing ? null : exitIf,
     breakevenActivationPct:
-      closing || !slOn || !breakevenOn ? "" : breakevenActivationPct,
+      closing || !slLive || !breakevenOn ? "" : breakevenActivationPct,
     breakevenOffsetPct:
-      closing || !slOn || !breakevenOn ? "" : breakevenOffsetPct,
+      closing || !slLive || !breakevenOn ? "" : breakevenOffsetPct,
   };
   let parsedLive: ReturnType<typeof parseFuturesAutomationForm>;
   try {
@@ -776,6 +801,22 @@ function RuleCard({
     }
     if (storedDirection === "both" && entryDrafts.short.entrySource === "") {
       snapshot.set("r0_short_entrySource", "");
+    }
+    if (!closing && (tpLive || slLive)) {
+      snapshot.set(`${prefix}tpsl`, "on");
+      snapshot.set(`${prefix}tpslMode`, layer.tpsl?.mode ?? "full");
+    }
+    if (!closing && tpLive) {
+      snapshot.set(`${prefix}tpOn`, "on");
+    }
+    if (!closing && slLive) {
+      snapshot.set(`${prefix}slOn`, "on");
+    }
+    if (!closing && trailLive) {
+      snapshot.set(`${prefix}trailing`, "on");
+    }
+    if (!closing && slLive && breakevenOn) {
+      snapshot.set(`${prefix}breakeven`, "on");
     }
     parsedLive = parseFuturesAutomationForm(snapshot, venueId);
   } catch {
@@ -788,11 +829,18 @@ function RuleCard({
     breakevenMissing ||
     tpLimitMissing ||
     slLimitMissing ||
+    sizeMissing ||
+    orderLimitMissing ||
+    exitKindMissing ||
+    nameMissing ||
     entryMissing ||
     exitIfMissing ||
     shortExitMissing ||
     !parsedLive.ok;
   function controlValue(name: string, fallback: string): string {
+    if (typeof HTMLInputElement === "undefined") {
+      return fallback;
+    }
     const named = formRef.current?.elements.namedItem(name);
     if (
       named instanceof HTMLInputElement ||
@@ -839,11 +887,11 @@ function RuleCard({
       exitHard: exitParts.signal,
       exitStack,
       breakevenActivationPct:
-        closing || !slOn || !breakevenOn
+        closing || !slLive || !breakevenOn
           ? null
           : Number(breakevenActivationPct.replace(/,/g, "")) || null,
       breakevenOffsetPct:
-        closing || !slOn || !breakevenOn
+        closing || !slLive || !breakevenOn
           ? null
           : Number(breakevenOffsetPct.replace(/,/g, "")) || 0,
     });
@@ -851,11 +899,12 @@ function RuleCard({
   function liveRecipe() {
     return recipeNow(layer.name);
   }
-  const publishError = !parsedLive.ok
+  const saveError = !parsedLive.ok
     ? parsedLive.error
     : requiredMissing
       ? "Fill required fields before saving."
       : null;
+  const publishError = saveError;
   useEffect(() => {
     if (!embedded) {
       return;
@@ -874,28 +923,27 @@ function RuleCard({
     setFormTick((tick) => tick + 1);
   }
   function applyPerpsDirection(next: PerpsFormDirection) {
-    setEntryDrafts((current) => {
-      if (next !== "both" || direction === "both") {
-        return current;
-      }
-      if (direction === "short" || direction === "close_short") {
-        return {
-          ...current,
-          long: oppositePerpsEntryDraft(current.short, "long"),
-        };
-      }
-      return {
-        ...current,
-        short: oppositePerpsEntryDraft(current.long, "short"),
-      };
-    });
-    if (next === "both" && direction !== "both") {
-      setShortClauses((current) => syncClassicClauses(current, exitClauses));
+    if (next === "both" && direction === "short") {
+      const kept = exitClauses;
+      setShortClauses(kept);
+      const moved = customStackFromClauses(kept);
+      setShortExitIf(moved.anchor);
+      setShortExitRows(moved.rows);
+      const blank = blankExitClauses();
+      setExitClauses(blank);
+      setExitIf(null);
+      setExitRows([]);
+      applyClassicFlags(blank, kept);
+    } else if (next === "both" && direction !== "both") {
+      applyClassicFlags(exitClauses, shortClauses);
     } else if (direction === "both" && next === "short") {
       setExitClauses(shortClauses);
       const moved = customStackFromClauses(shortClauses);
       setExitIf(moved.anchor);
       setExitRows(moved.rows);
+      applyClassicFlags(shortClauses, null);
+    } else if (direction === "both" && next === "long") {
+      applyClassicFlags(exitClauses, null);
     }
     setDirection(next);
     setDirty(true);
@@ -908,15 +956,21 @@ function RuleCard({
   function perpsNamed(submit: boolean, field: string) {
     return submit ? `${prefix}${field}` : undefined;
   }
+  function classicSubmits(
+    kind: "take_profit" | "trailing_stop" | "stop_loss",
+    side: "long" | "short",
+  ) {
+    if (direction !== "both") {
+      return true;
+    }
+    if (side === "long") {
+      return true;
+    }
+    return !exitClauses.some((clause) => clause.kind === kind);
+  }
   function perpsTakeProfitFields(submit: boolean) {
     return (
       <>
-        {submit && (tpOn || slOn) ? (
-          <>
-            <input type="hidden" name={`${prefix}tpsl`} value="on" />
-            <input type="hidden" name={`${prefix}tpslMode`} value={layer.tpsl?.mode ?? "full"} />
-          </>
-        ) : null}
         <div className={fieldRow5}>
           <BotField label="Type" required>
             <AppSelect
@@ -941,7 +995,7 @@ function RuleCard({
                   value={takeProfit}
                   onChange={setTakeProfit}
                   allowDecimal
-                  className={`${botFieldClass} pr-7`}
+                  className={`${dirty && tpMissing ? botFieldInvalidClass : botFieldClass} pr-7`}
                 />
                 <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
                   %
@@ -953,7 +1007,7 @@ function RuleCard({
                 value={takeProfit}
                 onChange={setTakeProfit}
                 allowDecimal
-                className={botFieldClass}
+                className={dirty && tpMissing ? botFieldInvalidClass : botFieldClass}
               />
             )}
           </BotField>
@@ -983,7 +1037,7 @@ function RuleCard({
                 value={tpLimitPrice}
                 onChange={setTpLimitPrice}
                 allowDecimal
-                className={botFieldClass}
+                className={dirty && tpLimitMissing ? botFieldInvalidClass : botFieldClass}
               />
             </BotField>
           ) : submit ? (
@@ -996,14 +1050,13 @@ function RuleCard({
   function perpsTrailingFields(submit: boolean) {
     return (
       <div className={fieldRow}>
-        {submit ? <input type="hidden" name={`${prefix}trailing`} value="on" /> : null}
         <BotField label="Retracement" required>
           <GroupedNumberInput
             name={perpsNamed(submit, "trailingStop")}
             value={trailingStop}
             onChange={setTrailingStop}
             allowDecimal
-            className={botFieldClass}
+            className={dirty && trailMissing ? botFieldInvalidClass : botFieldClass}
           />
         </BotField>
         <BotField label="Activation price" hint="Empty is Off.">
@@ -1021,7 +1074,7 @@ function RuleCard({
   function perpsStopFields(submit: boolean) {
     return (
       <>
-        {submit && (!slOn || !breakevenOn) ? (
+        {submit && (!slLive || !breakevenOn) ? (
           <div hidden>
             <input type="hidden" name={`${prefix}breakevenActivationPct`} value="" />
             <input type="hidden" name={`${prefix}breakevenOffsetPct`} value="" />
@@ -1053,7 +1106,7 @@ function RuleCard({
                       value={stopLoss}
                       onChange={setStopLoss}
                       allowDecimal
-                      className={`${botFieldClass} pr-7`}
+                      className={`${dirty && slMissing ? botFieldInvalidClass : botFieldClass} pr-7`}
                     />
                     <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
                       %
@@ -1065,7 +1118,7 @@ function RuleCard({
                     value={stopLoss}
                     onChange={setStopLoss}
                     allowDecimal
-                    className={botFieldClass}
+                    className={dirty && slMissing ? botFieldInvalidClass : botFieldClass}
                   />
                 )}
               </BotField>
@@ -1095,7 +1148,7 @@ function RuleCard({
                     value={slLimitPrice}
                     onChange={setSlLimitPrice}
                     allowDecimal
-                    className={botFieldClass}
+                    className={dirty && slLimitMissing ? botFieldInvalidClass : botFieldClass}
                   />
                 </BotField>
               ) : submit ? (
@@ -1116,7 +1169,7 @@ function RuleCard({
                       value={breakevenActivationPct}
                       onChange={setBreakevenActivationPct}
                       allowDecimal
-                      className={`${botFieldClass} pr-7`}
+                      className={`${dirty && breakevenMissing ? botFieldInvalidClass : botFieldClass} pr-7`}
                     />
                     <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
                       %
@@ -1190,6 +1243,18 @@ function RuleCard({
       <input type="hidden" name="ruleCount" value="1" />
       <input type="hidden" name="deskVenue" value={venueId} />
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
+      {!closing && (tpLive || slLive) ? (
+        <>
+          <input type="hidden" name={`${prefix}tpsl`} value="on" />
+          <input type="hidden" name={`${prefix}tpslMode`} value={layer.tpsl?.mode ?? "full"} />
+        </>
+      ) : null}
+      {!closing && tpLive ? <input type="hidden" name={`${prefix}tpOn`} value="on" /> : null}
+      {!closing && slLive ? <input type="hidden" name={`${prefix}slOn`} value="on" /> : null}
+      {!closing && trailLive ? <input type="hidden" name={`${prefix}trailing`} value="on" /> : null}
+      {!closing && slLive && breakevenOn ? (
+        <input type="hidden" name={`${prefix}breakeven`} value="on" />
+      ) : null}
       <BotFormColumns single={embedded}>
       <BotFormCard>
       <BotFormStep title="General">
@@ -1268,6 +1333,7 @@ function RuleCard({
           pairSpan={pairSpan}
           fieldClass={botFieldClass}
           labelClass={botLabelClass}
+          showErrors={dirty}
         />
       </BotFormStep>
       ) : null}
@@ -1288,6 +1354,7 @@ function RuleCard({
           pairSpan={pairSpan}
           fieldClass={botFieldClass}
           labelClass={botLabelClass}
+          showErrors={dirty}
         />
       </BotFormStep>
       ) : null}
@@ -1312,7 +1379,7 @@ function RuleCard({
                 onChange={setSize}
                 allowDecimal
                 placeholder={closing ? "All" : undefined}
-                className={`${botFieldClass} ${
+                className={`${dirty && sizeMissing ? botFieldInvalidClass : botFieldClass} ${
                   !closing && sizeUnit === "usdt" ? "pl-7" : ""
                 }`}
               />
@@ -1350,7 +1417,7 @@ function RuleCard({
                 value={limitPrice}
                 onChange={setLimitPrice}
                 allowDecimal
-                className={botFieldClass}
+                className={dirty && orderLimitMissing ? botFieldInvalidClass : botFieldClass}
               />
             </BotField>
           ) : null}
@@ -1360,7 +1427,22 @@ function RuleCard({
 
       {!closing ? (
         <BotFormStep title="Additional Orders" defaultCollapsed={inUse}>
-          {null}
+          <PerpsAdditionalOrders
+            conditionType={addConditionType}
+            onConditionType={setAddConditionType}
+            size={addSize}
+            onSize={setAddSize}
+            sizeUnit={addSizeUnit}
+            onSizeUnit={setAddSizeUnit}
+            orderType={addOrderType}
+            onOrderType={setAddOrderType}
+            limitPrice={addLimitPrice}
+            onLimitPrice={setAddLimitPrice}
+            quoteLabel={quoteLabel}
+            baseCoin={baseCoin}
+            fieldClass={botFieldClass}
+            gridClass={fieldRow}
+          />
         </BotFormStep>
       ) : null}
 
@@ -1375,9 +1457,9 @@ function RuleCard({
             fieldClass={botFieldClass}
             labelClass={botLabelClass}
             gridClass={fieldRow5}
-            renderTakeProfit={() => perpsTakeProfitFields(true)}
-            renderTrailingStop={() => perpsTrailingFields(true)}
-            renderStopLoss={() => perpsStopFields(true)}
+            renderTakeProfit={() => perpsTakeProfitFields(classicSubmits("take_profit", "long"))}
+            renderTrailingStop={() => perpsTrailingFields(classicSubmits("trailing_stop", "long"))}
+            renderStopLoss={() => perpsStopFields(classicSubmits("stop_loss", "long"))}
           />
         </BotFormStep>
       ) : null}
@@ -1394,9 +1476,13 @@ function RuleCard({
             fieldClass={botFieldClass}
             labelClass={botLabelClass}
             gridClass={fieldRow5}
-            renderTakeProfit={() => perpsTakeProfitFields(direction !== "both")}
-            renderTrailingStop={() => perpsTrailingFields(direction !== "both")}
-            renderStopLoss={() => perpsStopFields(direction !== "both")}
+            renderTakeProfit={() =>
+              perpsTakeProfitFields(classicSubmits("take_profit", "short"))
+            }
+            renderTrailingStop={() =>
+              perpsTrailingFields(classicSubmits("trailing_stop", "short"))
+            }
+            renderStopLoss={() => perpsStopFields(classicSubmits("stop_loss", "short"))}
           />
         </BotFormStep>
       ) : null}
@@ -1419,11 +1505,7 @@ function RuleCard({
           />
         }
         dirty={dirty}
-        error={
-          dirty && requiredMissing
-            ? "Fill required fields before saving."
-            : undefined
-        }
+        error={dirty && requiredMissing ? saveError ?? undefined : undefined}
         save={
           <div className="space-y-2">
             <PendingSubmitButton
@@ -1431,6 +1513,11 @@ function RuleCard({
               deskAction="default"
               className={botSidebarSaveClass}
               disabled={!dirty || requiredMissing}
+              title={
+                dirty && requiredMissing
+                  ? saveError ?? "Fill required fields before saving."
+                  : undefined
+              }
             >
               <span className="inline-flex items-center gap-1.5">
                 <IconSave {...botBtnIcon} />

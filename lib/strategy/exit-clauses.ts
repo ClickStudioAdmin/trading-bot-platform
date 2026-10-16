@@ -69,6 +69,51 @@ export function classicSignature(clauses: readonly ExitBuilderClause[]): string 
     .join("|");
 }
 
+export function blankExitClauses(): ExitBuilderClause[] {
+  return [emptyExitClause()];
+}
+
+/** A list that already has a condition still shows Select Condition Type. */
+export function exitClauseListMissing(
+  clauses: readonly ExitBuilderClause[],
+): boolean {
+  const started = clauses.some((clause) => clause.kind !== "");
+  return started && clauses.some((clause) => clause.kind === "");
+}
+
+export function classicExitFlags(clauses: readonly ExitBuilderClause[]): {
+  takeProfit: boolean;
+  trailing: boolean;
+  stopLoss: boolean;
+} {
+  return {
+    takeProfit: clauses.some((clause) => clause.kind === "take_profit"),
+    trailing: clauses.some((clause) => clause.kind === "trailing_stop"),
+    stopLoss: clauses.some((clause) => clause.kind === "stop_loss"),
+  };
+}
+
+/** One stored classic set. Pass the short list only while Both is open. */
+export function mergedClassicExitFlags(
+  primary: readonly ExitBuilderClause[],
+  short: readonly ExitBuilderClause[] | null,
+): {
+  takeProfit: boolean;
+  trailing: boolean;
+  stopLoss: boolean;
+} {
+  const left = classicExitFlags(primary);
+  if (!short) {
+    return left;
+  }
+  const right = classicExitFlags(short);
+  return {
+    takeProfit: left.takeProfit || right.takeProfit,
+    trailing: left.trailing || right.trailing,
+    stopLoss: left.stopLoss || right.stopLoss,
+  };
+}
+
 /** Copy classic clauses from source onto target. Custom clauses on target stay. */
 export function syncClassicClauses(
   target: readonly ExitBuilderClause[],

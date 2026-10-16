@@ -217,6 +217,80 @@ export function dcaIndicatorShowsLevel(
   return dcaIndicatorIsLegacyEmaPrice(kind, compare, level);
 }
 
+function draftNumber(raw: string): number {
+  return Number(raw.replace(/,/g, "").trim());
+}
+
+/** True when a visible indicator or trend start still has an empty required field. */
+export function indicatorDraftMissing(input: {
+  family: "indicator" | "trend";
+  kind: string;
+  compare: string;
+  level: string;
+  period: string;
+  slowPeriod: string;
+  multiplier: string;
+}): boolean {
+  const kind = (input.kind ||
+    (input.family === "trend" ? "supertrend" : "")) as DcaIndicatorKind | "";
+  if (kind === "") {
+    return true;
+  }
+  if (input.family === "trend" && kind !== "supertrend") {
+    return true;
+  }
+  if (input.family === "indicator" && kind === "supertrend") {
+    return true;
+  }
+  if (dcaIndicatorShowsLevel(kind, input.compare, input.level)) {
+    const text = input.level.replace(/,/g, "").trim();
+    if (kind === "macd") {
+      if (text === "" || text === "-" || !Number.isFinite(Number(text))) {
+        return true;
+      }
+    } else if (!dcaIndicatorHasLevel(input.level)) {
+      return true;
+    }
+  }
+  const legacyPrice = dcaIndicatorIsLegacyEmaPrice(
+    kind,
+    input.compare,
+    input.level,
+  );
+  if (dcaIndicatorUsesPairPeriods(kind) && !legacyPrice) {
+    const fast = draftNumber(input.period);
+    const slow = draftNumber(input.slowPeriod);
+    if (
+      !(fast >= DCA_INDICATOR_PERIOD_MIN) ||
+      !(slow >= DCA_INDICATOR_PERIOD_MIN) ||
+      fast === slow
+    ) {
+      return true;
+    }
+  } else if (
+    kind === "supertrend" ||
+    dcaIndicatorUsesPeriod(kind)
+  ) {
+    const period = draftNumber(input.period);
+    if (
+      !(period >= DCA_INDICATOR_PERIOD_MIN) ||
+      period > DCA_INDICATOR_PERIOD_MAX
+    ) {
+      return true;
+    }
+  }
+  if (kind === "supertrend" || kind === "atr_band") {
+    const multiplier = draftNumber(input.multiplier);
+    if (
+      !(multiplier >= DCA_SUPERTREND_MULTIPLIER_MIN) ||
+      multiplier > DCA_SUPERTREND_MULTIPLIER_MAX
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function defaultDcaIndicatorLevel(
   kind: DcaIndicatorKind,
 ): number | null {

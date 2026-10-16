@@ -81,6 +81,7 @@ export function AppSelect({
   id,
   "aria-label": ariaLabel,
   searchable = false,
+  trackDirty = true,
 }: {
   name?: string;
   value?: string | number;
@@ -95,6 +96,8 @@ export function AppSelect({
   id?: string;
   "aria-label"?: string;
   searchable?: boolean;
+  /** False when a change must not mark the surrounding desk form unsaved. */
+  trackDirty?: boolean;
 }) {
   const liveSubmit = useContext(LiveFilterSubmit);
   const portalHost = useModalPortalHost();
@@ -166,7 +169,7 @@ export function AppSelect({
     if (hiddenRef.current) {
       hiddenRef.current.value = next;
     }
-    if (changed) {
+    if (changed && trackDirty) {
       markDirty();
     }
     const input = hiddenRef.current;

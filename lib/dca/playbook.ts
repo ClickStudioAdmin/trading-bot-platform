@@ -1910,6 +1910,21 @@ export function parseDcaPlaybookForm(
   if (!trailingPct.ok) {
     return trailingPct;
   }
+  if (form.get("tpOn") === "on" && takeProfitKind !== "atr" && takeProfitPct.value == null) {
+    return { ok: false, error: "Enter a take profit." };
+  }
+  if (form.get("slOn") === "on" && stopLossPct.value == null) {
+    return { ok: false, error: "Enter a stop loss." };
+  }
+  if (
+    form.get("trailOn") === "on" &&
+    (trailingTriggerPct.value == null || trailingPct.value == null)
+  ) {
+    return { ok: false, error: "Enter a trailing stop." };
+  }
+  if (form.get("breakeven") === "on" && breakevenActivationPct.value == null) {
+    return { ok: false, error: "Enter a breakeven activation percent." };
+  }
   const armTrigger = parseOptionalTrigger(
     startKind === "price",
     form.get("armTriggerBy"),
@@ -2156,6 +2171,23 @@ export function parseDcaPlaybookForm(
   };
 }
 
+function requiredWhenPosted(
+  form: FormData,
+  name: string,
+  parse: (value: unknown) => number | null,
+  fallback: number,
+  label: string,
+): { ok: true; value: number } | { ok: false; error: string } {
+  if (!form.has(name)) {
+    return { ok: true, value: fallback };
+  }
+  const parsed = parse(form.get(name));
+  if (parsed == null) {
+    return { ok: false, error: `Enter a ${label}.` };
+  }
+  return { ok: true, value: parsed };
+}
+
 export function parseDcaIndicatorStartFields(
   form: FormData,
   names: {
@@ -2212,6 +2244,16 @@ export function parseDcaIndicatorStartFields(
     if (!level.ok || level.value === null) {
       return { ok: false, error: `Enter an ${prefix}RSI level.` };
     }
+    const period = requiredWhenPosted(
+      form,
+      names.period,
+      parseDcaIndicatorPeriod,
+      DEFAULT_DCA_RSI_PERIOD,
+      `${prefix}RSI period`,
+    );
+    if (!period.ok) {
+      return period;
+    }
     return {
       ok: true,
       start: {
@@ -2219,9 +2261,7 @@ export function parseDcaIndicatorStartFields(
         timeframe,
         compare: cmp,
         level: level.value,
-        period:
-          parseDcaIndicatorPeriod(form.get(names.period)) ??
-          DEFAULT_DCA_RSI_PERIOD,
+        period: period.value,
         slowPeriod: null,
       },
     };
@@ -2233,6 +2273,9 @@ export function parseDcaIndicatorStartFields(
     }
     const level = parseOptionalFinite(form.get(names.level));
     if (!level.ok) {
+      return { ok: false, error: `Enter a ${prefix}MACD level.` };
+    }
+    if (form.has(names.level) && level.value === null) {
       return { ok: false, error: `Enter a ${prefix}MACD level.` };
     }
     return {
@@ -2252,6 +2295,26 @@ export function parseDcaIndicatorStartFields(
     if (cmp !== "gte" && cmp !== "lte" && cmp !== "inside") {
       return { ok: false, error: `Choose when ${prefix}ATR band should fire.` };
     }
+    const period = requiredWhenPosted(
+      form,
+      names.period,
+      parseDcaIndicatorPeriod,
+      DEFAULT_DCA_SUPERTREND_PERIOD,
+      `${prefix}ATR period`,
+    );
+    if (!period.ok) {
+      return period;
+    }
+    const multiplier = requiredWhenPosted(
+      form,
+      names.multiplier,
+      parseDcaIndicatorMultiplier,
+      DEFAULT_DCA_ATR_BAND_MULT,
+      `${prefix}ATR multiplier`,
+    );
+    if (!multiplier.ok) {
+      return multiplier;
+    }
     return {
       ok: true,
       start: {
@@ -2259,13 +2322,9 @@ export function parseDcaIndicatorStartFields(
         timeframe,
         compare: cmp,
         level: null,
-        period:
-          parseDcaIndicatorPeriod(form.get(names.period)) ??
-          DEFAULT_DCA_SUPERTREND_PERIOD,
+        period: period.value,
         slowPeriod: null,
-        multiplier:
-          parseDcaIndicatorMultiplier(form.get(names.multiplier)) ??
-          DEFAULT_DCA_ATR_BAND_MULT,
+        multiplier: multiplier.value,
       },
     };
   }
@@ -2279,6 +2338,26 @@ export function parseDcaIndicatorStartFields(
     ) {
       return { ok: false, error: `Choose when ${prefix}Supertrend should fire.` };
     }
+    const period = requiredWhenPosted(
+      form,
+      names.period,
+      parseDcaIndicatorPeriod,
+      DEFAULT_DCA_SUPERTREND_PERIOD,
+      `${prefix}Supertrend period`,
+    );
+    if (!period.ok) {
+      return period;
+    }
+    const multiplier = requiredWhenPosted(
+      form,
+      names.multiplier,
+      parseDcaIndicatorMultiplier,
+      DEFAULT_DCA_SUPERTREND_MULTIPLIER,
+      `${prefix}Supertrend multiplier`,
+    );
+    if (!multiplier.ok) {
+      return multiplier;
+    }
     return {
       ok: true,
       start: {
@@ -2286,13 +2365,9 @@ export function parseDcaIndicatorStartFields(
         timeframe,
         compare: cmp,
         level: null,
-        period:
-          parseDcaIndicatorPeriod(form.get(names.period)) ??
-          DEFAULT_DCA_SUPERTREND_PERIOD,
+        period: period.value,
         slowPeriod: null,
-        multiplier:
-          parseDcaIndicatorMultiplier(form.get(names.multiplier)) ??
-          DEFAULT_DCA_SUPERTREND_MULTIPLIER,
+        multiplier: multiplier.value,
       },
     };
   }
@@ -2306,6 +2381,16 @@ export function parseDcaIndicatorStartFields(
     ) {
       return { ok: false, error: `Choose when ${prefix}Bollinger Bands should fire.` };
     }
+    const period = requiredWhenPosted(
+      form,
+      names.period,
+      parseDcaIndicatorPeriod,
+      DEFAULT_DCA_BB_PERIOD,
+      `${prefix}Bollinger period`,
+    );
+    if (!period.ok) {
+      return period;
+    }
     return {
       ok: true,
       start: {
@@ -2313,7 +2398,7 @@ export function parseDcaIndicatorStartFields(
         timeframe,
         compare: cmp,
         level: null,
-        period: parseDcaIndicatorPeriod(form.get(names.period)) ?? DEFAULT_DCA_BB_PERIOD,
+        period: period.value,
         slowPeriod: null,
       },
     };
@@ -2397,12 +2482,28 @@ export function parseDcaIndicatorStartFields(
     if (cmp !== "cross_gte" && cmp !== "cross_lte") {
       return { ok: false, error: `Choose when ${prefix}the averages should cross.` };
     }
-    const fast =
-      parseDcaIndicatorPeriod(form.get(names.period)) ??
-      DEFAULT_DCA_CROSS_FAST_PERIOD;
-    const slow =
-      parseDcaIndicatorPeriod(form.get(names.slowPeriod)) ??
-      DEFAULT_DCA_CROSS_SLOW_PERIOD;
+    const fastParsed = requiredWhenPosted(
+      form,
+      names.period,
+      parseDcaIndicatorPeriod,
+      DEFAULT_DCA_CROSS_FAST_PERIOD,
+      `${prefix}fast period`,
+    );
+    if (!fastParsed.ok) {
+      return fastParsed;
+    }
+    const slowParsed = requiredWhenPosted(
+      form,
+      names.slowPeriod,
+      parseDcaIndicatorPeriod,
+      DEFAULT_DCA_CROSS_SLOW_PERIOD,
+      `${prefix}slow period`,
+    );
+    if (!slowParsed.ok) {
+      return slowParsed;
+    }
+    const fast = fastParsed.value;
+    const slow = slowParsed.value;
     if (fast === slow) {
       return {
         ok: false,

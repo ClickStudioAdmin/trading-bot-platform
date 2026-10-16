@@ -9,6 +9,7 @@ import {
 import {
   BotField,
   BotFormGroup,
+  botFieldInvalidClass,
 } from "@/components/bot-form-chrome";
 import {
   EntryConditionStack,
@@ -16,7 +17,6 @@ import {
   entryDraftComplete,
   entryRowsFromSources,
   entryStackFromRows,
-  flipEntryRows,
   type EntryStackRow,
   type EntryWebhookOption,
 } from "@/components/entry-condition-stack";
@@ -26,7 +26,7 @@ import {
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
   DEFAULT_DCA_SUPERTREND_PERIOD,
   indicatorCompareForDirection,
-  oppositeIndicatorCompare,
+  indicatorDraftMissing,
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
@@ -131,6 +131,26 @@ export function perpsEntryDraftFromLayer(
   };
 }
 
+/** A side the user has not configured. Side defaults only — nothing copied across. */
+export function emptyPerpsEntryDraft(side: FuturesSide): PerpsEntryDraft {
+  return {
+    entrySource: "",
+    webhookId: "",
+    triggerBy: "last",
+    triggerCompare: side === "short" ? "lte" : "gte",
+    triggerPrice: "",
+    skipIfOpen: true,
+    indicatorKind: "",
+    indicatorTimeframe: "15",
+    indicatorCompare: "",
+    indicatorLevel: side === "short" ? "70" : "30",
+    indicatorPeriod: String(DEFAULT_DCA_RSI_PERIOD),
+    indicatorSlowPeriod: "",
+    indicatorMultiplier: String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
+    entryRows: [],
+  };
+}
+
 export function initialPerpsEntryDrafts(layer: FuturesAutomationFormValues): {
   long: PerpsEntryDraft;
   short: PerpsEntryDraft;
@@ -145,11 +165,15 @@ export function initialPerpsEntryDrafts(layer: FuturesAutomationFormValues): {
   const shortSide =
     layer.formAction === "sell" || layer.formAction === "close_short";
   if (shortSide) {
-    const short = perpsEntryDraftFromLayer(layer, "short", blank);
-    return { short, long: oppositePerpsEntryDraft(short, "long") };
+    return {
+      short: perpsEntryDraftFromLayer(layer, "short", blank),
+      long: emptyPerpsEntryDraft("long"),
+    };
   }
-  const long = perpsEntryDraftFromLayer(layer, "long", blank);
-  return { long, short: oppositePerpsEntryDraft(long, "short") };
+  return {
+    long: perpsEntryDraftFromLayer(layer, "long", blank),
+    short: emptyPerpsEntryDraft("short"),
+  };
 }
 
 export function perpsEntryDraftFromLeg(
@@ -170,31 +194,6 @@ export function perpsEntryDraftFromLeg(
     } as FuturesAutomationFormValues,
     side,
   );
-}
-
-/** Copy a side and flip price and indicator direction so the other side starts opposite. */
-export function oppositePerpsEntryDraft(
-  draft: PerpsEntryDraft,
-  side: FuturesSide,
-): PerpsEntryDraft {
-  const kind = draft.indicatorKind;
-  return {
-    ...draft,
-    triggerCompare: draft.triggerCompare === "gte" ? "lte" : "gte",
-    indicatorCompare:
-      !kind
-        ? draft.indicatorCompare
-        : kind === "rsi"
-          ? oppositeIndicatorCompare(kind, draft.indicatorCompare)
-          : indicatorCompareForDirection(side, kind, ""),
-    indicatorLevel:
-      kind === "rsi"
-        ? side === "short"
-          ? "70"
-          : "30"
-        : draft.indicatorLevel,
-    entryRows: flipEntryRows(draft.entryRows, side),
-  };
 }
 
 export function indicatorFromPerpsDraft(
@@ -253,8 +252,29 @@ export function perpsEntryDraftMissing(
   if (draft.entrySource === "") {
     return true;
   }
-  if (draft.entrySource === "indicator" && draft.indicatorKind === "") {
+  if (draft.entrySource === "price") {
+    const price = Number(draft.triggerPrice.replace(/,/g, "").trim());
+    if (!(price > 0)) {
+      return true;
+    }
+  }
+  if (draft.entrySource === "webhook" && draft.webhookId.trim() === "") {
     return true;
+  }
+  if (draft.entrySource === "indicator" || draft.entrySource === "trend") {
+    if (
+      indicatorDraftMissing({
+        family: draft.entrySource,
+        kind: draft.indicatorKind,
+        compare: draft.indicatorCompare,
+        level: draft.indicatorLevel,
+        period: draft.indicatorPeriod,
+        slowPeriod: draft.indicatorSlowPeriod,
+        multiplier: draft.indicatorMultiplier,
+      })
+    ) {
+      return true;
+    }
   }
   return draft.entryRows.some((row) => !entryDraftComplete(row.draft));
 }
@@ -271,6 +291,7 @@ export function PerpsEntryPanel({
   pairSpan,
   fieldClass,
   labelClass,
+  showErrors = false,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -283,6 +304,7 @@ export function PerpsEntryPanel({
   pairSpan: string;
   fieldClass: string;
   labelClass: string;
+  showErrors?: boolean;
 }) {
   const draftRef = useRef(draft);
   useEffect(() => {
@@ -460,7 +482,11 @@ export function PerpsEntryPanel({
                 name={`${prefix}webhookId`}
                 value={draft.webhookId}
                 onChange={(event) => patch({ webhookId: event.target.value })}
-                className={fieldClass}
+                className={
+                  showErrors && draft.webhookId.trim() === ""
+                    ? botFieldInvalidClass
+                    : fieldClass
+                }
               >
                 <option value="">
                   {webhooks.length === 0
@@ -561,7 +587,12 @@ export function PerpsEntryPanel({
                   value={draft.triggerPrice}
                   onChange={(triggerPrice) => patch({ triggerPrice })}
                   allowDecimal
-                  className={fieldClass}
+                  className={
+                    showErrors &&
+                    !(Number(draft.triggerPrice.replace(/,/g, "").trim()) > 0)
+                      ? botFieldInvalidClass
+                      : fieldClass
+                  }
                 />
               </BotField>
             </>
