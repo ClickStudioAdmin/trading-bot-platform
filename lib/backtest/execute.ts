@@ -82,9 +82,8 @@ export async function executeBacktestRun(
       `backtest long run ${runId} bars=${bars} ${run.symbol} ${run.interval}`,
     );
   }
-  const progress = createBacktestProgressPump(
-    (input) => touchBacktestProgress(runId, { ...input, total: bars }),
-    bars,
+  const progress = createBacktestProgressPump((input) =>
+    touchBacktestProgress(runId, input),
   );
   await touchBacktestProgress(runId, { done: 0, total: bars, phase: "candles" });
   const stopHeartbeat = startClaimHeartbeat(runId);
@@ -112,7 +111,7 @@ export async function executeBacktestRun(
         toMs: run.toMs,
         limit: BACKTEST_CANDLE_LIMIT,
         onProgress: (loaded) => {
-          progress.report(loaded, "candles");
+          progress.report({ done: loaded, total: bars, phase: "candles" });
         },
       }));
     if (candles.length < 8) {
@@ -138,16 +137,26 @@ export async function executeBacktestRun(
       });
       return { ok: false, error: coverageError, runId };
     }
-    progress.report(0, "replay");
+    const replayTotal = candles.length;
+    progress.report({
+      done: replayTotal,
+      total: replayTotal,
+      phase: "candles",
+    });
+    progress.report({ done: 0, total: replayTotal, phase: "replay" });
     let reportedBar = 0;
     const onBar = (barIndex: number) => {
       if (
         barIndex === 1 ||
         barIndex - reportedBar >= 2_000 ||
-        barIndex === candles.length
+        barIndex === replayTotal
       ) {
         reportedBar = barIndex;
-        progress.report(barIndex, "replay");
+        progress.report({
+          done: barIndex,
+          total: replayTotal,
+          phase: "replay",
+        });
       }
     };
     const replayed =

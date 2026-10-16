@@ -3,11 +3,22 @@ import type { BacktestStatus } from "./model";
 
 export type BacktestProgressPhase = "candles" | "replay";
 
+export type BacktestProgressStageState = "waiting" | "active" | "done";
+
+export type BacktestProgressStage = {
+  id: BacktestProgressPhase;
+  label: string;
+  detail: string;
+  percent: number;
+  state: BacktestProgressStageState;
+};
+
 export type BacktestProgress = {
   phase: BacktestProgressPhase;
-  done: number;
-  total: number;
+  stages: [BacktestProgressStage, BacktestProgressStage];
+  /** Percent of the stage that is still moving. */
   percent: number;
+  headline: string;
 };
 
 export function parseBacktestProgressPhase(
@@ -27,13 +38,17 @@ export function parseBacktestProgressCount(raw: unknown): number | null {
   return Math.floor(value);
 }
 
-/** Share of the window already loaded. Stays under 100 while the run is still going. */
+/** Share of one stage. A finished stage is 100 while the run is still going. */
 export function backtestProgressPercent(done: number, total: number): number {
   if (!(total > 0) || !(done > 0)) {
     return 0;
   }
   const bounded = Math.min(total, done);
-  return Math.min(99, Math.round((bounded / total) * 100));
+  return Math.min(100, Math.round((bounded / total) * 100));
+}
+
+function countDetail(done: number, total: number): string {
+  return `${formatCount(done)} of ${formatCount(total)}`;
 }
 
 export function backtestRunProgress(input: {
@@ -52,22 +67,67 @@ export function backtestRunProgress(input: {
   const done = Math.min(total, Math.max(0, input.progressDone ?? 0));
   const phase: BacktestProgressPhase =
     input.progressPhase === "replay" ? "replay" : "candles";
+  const percent = done >= total ? 100 : backtestProgressPercent(done, total);
+  if (phase === "replay") {
+    const candles: BacktestProgressStage = {
+      id: "candles",
+      label: "Candles loaded",
+      detail: "Complete",
+      percent: 100,
+      state: "done",
+    };
+    const replay: BacktestProgressStage = {
+      id: "replay",
+      label: "Replaying",
+      detail: countDetail(done, total),
+      percent,
+      state: percent >= 100 ? "done" : "active",
+    };
+    return {
+      phase,
+      stages: [candles, replay],
+      percent,
+      headline: `Replaying · ${percent}%`,
+    };
+  }
+  const candlesComplete = done >= total;
+  const candles: BacktestProgressStage = {
+    id: "candles",
+    label: candlesComplete ? "Candles loaded" : "Loading candles",
+    detail: countDetail(done, total),
+    percent,
+    state: candlesComplete ? "done" : "active",
+  };
+  const replay: BacktestProgressStage = {
+    id: "replay",
+    label: "Replaying",
+    detail: "Waiting",
+    percent: 0,
+    state: "waiting",
+  };
   return {
     phase,
-    done,
-    total,
-    percent: backtestProgressPercent(done, total),
+    stages: [candles, replay],
+    percent,
+    headline: candlesComplete
+      ? "Candles loaded"
+      : `Loading candles · ${percent}%`,
   };
 }
 
 export function backtestProgressLabel(progress: BacktestProgress): string {
-  const counts = `${formatCount(progress.done)} of ${formatCount(progress.total)}`;
-  const action = progress.phase === "replay" ? "Replaying" : "Loading candles";
-  return `${action}. ${counts} (${progress.percent}%).`;
+  const current =
+    progress.stages.find((stage) => stage.state === "active") ??
+    progress.stages[progress.stages.length - 1];
+  if (!current || current.state === "waiting") {
+    return progress.headline;
+  }
+  return `${current.label}. ${current.detail} (${current.percent}%).`;
 }
 
 export type BacktestProgressWrite = {
   done: number;
+  total: number;
   phase: BacktestProgressPhase;
 };
 
@@ -77,21 +137,21 @@ export type BacktestProgressWrite = {
  */
 export function createBacktestProgressPump(
   write: (input: BacktestProgressWrite) => Promise<void>,
-  total: number,
 ): {
-  report: (done: number, phase: BacktestProgressPhase) => void;
+  report: (input: BacktestProgressWrite) => void;
   flushed: () => Promise<void>;
 } {
-  const cap = total > 0 ? total : Number.POSITIVE_INFINITY;
   let queued: BacktestProgressWrite | null = null;
   let pumping = false;
   let pending = Promise.resolve();
 
-  function report(done: number, phase: BacktestProgressPhase) {
-    const bounded = Math.max(0, Math.floor(done));
+  function report(input: BacktestProgressWrite) {
+    const total = Math.max(0, Math.floor(input.total));
+    const done = Math.max(0, Math.floor(input.done));
     queued = {
-      done: Math.min(cap, bounded),
-      phase,
+      done: total > 0 ? Math.min(total, done) : done,
+      total,
+      phase: input.phase,
     };
     if (pumping) {
       return;
@@ -111,7 +171,7 @@ export function createBacktestProgressPump(
       } finally {
         pumping = false;
         if (queued) {
-          report(queued.done, queued.phase);
+          report(queued);
         }
       }
     });
