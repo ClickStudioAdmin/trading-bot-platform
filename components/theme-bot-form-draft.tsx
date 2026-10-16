@@ -1921,6 +1921,78 @@ export function ThemeBotFormDraft() {
             </>
           ) : null}
         </div>
+        {desk === "dca" && !closing ? (
+          <Group title="Maximum Exposure">
+            <div className={rowClass}>
+              <Field label="Max orders" required={averaging === "dip" && restGrid}>
+                <GroupedNumberInput
+                  value={maxClips}
+                  onChange={setMaxClips}
+                  className={
+                    showFieldErrors && missing.maxClips
+                      ? fieldInvalidClass
+                      : fieldClass
+                  }
+                  placeholder="No cap"
+                />
+              </Field>
+              <Field label="Max value">
+                <AppSelect
+                  value={maxValueMode}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    if (next === "none") {
+                      setMaxValueMode("none");
+                      setMaxValue("");
+                      return;
+                    }
+                    setMaxValueMode(next as "usdt" | "percent" | "margin");
+                    const amount = Number(maxValue.replace(/,/g, "").trim());
+                    if (
+                      (next === "percent" || next === "margin") &&
+                      Number.isFinite(amount) &&
+                      amount > 100
+                    ) {
+                      setMaxValue("");
+                    }
+                  }}
+                  className={fieldClass}
+                >
+                  <option value="usdt">Fixed USDT</option>
+                  <option value="percent">% of account</option>
+                  <option value="margin">% of available margin</option>
+                  <option value="none">No max value</option>
+                </AppSelect>
+              </Field>
+              {maxValueMode !== "none" ? (
+                <Field
+                  label={
+                    maxValueMode === "percent" || maxValueMode === "margin"
+                      ? "Percent"
+                      : "USDT"
+                  }
+                  required
+                >
+                  <GroupedNumberInput
+                    value={maxValue}
+                    onChange={setMaxValue}
+                    allowDecimal
+                    className={
+                      showFieldErrors && missing.maxValue
+                        ? fieldInvalidClass
+                        : fieldClass
+                    }
+                    placeholder={
+                      maxValueMode === "percent" || maxValueMode === "margin"
+                        ? "e.g. 20"
+                        : "e.g. 700"
+                    }
+                  />
+                </Field>
+              ) : null}
+            </div>
+          </Group>
+        ) : null}
         </BotFormStep>
 
         {desk !== "cnc" ? (
@@ -2437,79 +2509,6 @@ export function ThemeBotFormDraft() {
         ) : null}
 
         <BotFormStep title="Position Sizing">
-        {desk === "dca" && !closing ? (
-          <Group title="Maximum Exposure">
-            <div className={rowClass}>
-              <Field label="Max orders" required={averaging === "dip" && restGrid}>
-                <GroupedNumberInput
-                  value={maxClips}
-                  onChange={setMaxClips}
-                  className={
-                    showFieldErrors && missing.maxClips
-                      ? fieldInvalidClass
-                      : fieldClass
-                  }
-                  placeholder="No cap"
-                />
-              </Field>
-              <Field label="Max value">
-                <AppSelect
-                  value={maxValueMode}
-                  onChange={(event) => {
-                    const next = event.target.value;
-                    if (next === "none") {
-                      setMaxValueMode("none");
-                      setMaxValue("");
-                      return;
-                    }
-                    setMaxValueMode(next as "usdt" | "percent" | "margin");
-                    const amount = Number(maxValue.replace(/,/g, "").trim());
-                    if (
-                      (next === "percent" || next === "margin") &&
-                      Number.isFinite(amount) &&
-                      amount > 100
-                    ) {
-                      setMaxValue("");
-                    }
-                  }}
-                  className={fieldClass}
-                >
-                  <option value="usdt">Fixed USDT</option>
-                  <option value="percent">% of account</option>
-                  <option value="margin">% of available margin</option>
-                  <option value="none">No max value</option>
-                </AppSelect>
-              </Field>
-              {maxValueMode !== "none" ? (
-                <Field
-                  label={
-                    maxValueMode === "percent" || maxValueMode === "margin"
-                      ? "Percent"
-                      : "USDT"
-                  }
-                  required
-                >
-                  <GroupedNumberInput
-                    value={maxValue}
-                    onChange={setMaxValue}
-                    allowDecimal
-                    className={
-                      showFieldErrors && missing.maxValue
-                        ? fieldInvalidClass
-                        : fieldClass
-                    }
-                    placeholder={
-                      maxValueMode === "percent" || maxValueMode === "margin"
-                        ? "e.g. 20"
-                        : "e.g. 700"
-                    }
-                  />
-                </Field>
-              ) : null}
-            </div>
-          </Group>
-        ) : null}
-
         {!closing ? (
           <Group title={desk === "dca" ? "Initial Order Size" : "Order Size"}>
             <div className={rowClass}>

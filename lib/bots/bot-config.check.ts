@@ -78,8 +78,8 @@ assert.equal(value(dca, "Long Entry Conditions", "Price"), "Last is at or below 
 assert.equal(value(dca, "Short Entry Conditions", "Price"), "Mark is at or above 120");
 assert.match(value(dca, "Long Entry Conditions", "Secondary entry"), /RSI 14/);
 assert.equal(value(dca, "Short Entry Conditions", "Secondary entry"), "Off");
-assert.equal(value(dca, "Position Sizing", "Max orders"), "5");
-assert.equal(value(dca, "Position Sizing", "Max value"), "No max value");
+assert.equal(value(dca, "General", "Max orders"), "5");
+assert.equal(value(dca, "General", "Max value"), "No max value");
 assert.equal(value(dca, "Position Sizing", "Order size"), "25 USDT");
 assert.equal(value(dca, "Position Sizing", "Price deviation"), "2%");
 assert.equal(value(dca, "Position Sizing", "Order"), "Market");
