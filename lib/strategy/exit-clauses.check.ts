@@ -3,6 +3,7 @@ import type { ExitStackRow } from "@/components/exit-condition-stack";
 import {
   classicSignature,
   customStackFromClauses,
+  exitClauseListMissing,
   exitClausesFromSaved,
   mergedClassicExitFlags,
   syncClassicClauses,
@@ -89,5 +90,13 @@ assert.equal(onlyShort.stopLoss, true);
 const primaryOnly = mergedClassicExitFlags(empty, null);
 assert.equal(primaryOnly.takeProfit, false);
 assert.equal(primaryOnly.stopLoss, false);
+assert.equal(exitClauseListMissing(empty), false);
+assert.equal(
+  exitClauseListMissing([
+    ...clauses,
+    { key: "blank", kind: "", anchor: { trigger: "unset" }, rows: [] },
+  ]),
+  true,
+);
 
 console.log("exit clause checks passed");

@@ -23,6 +23,7 @@ import {
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
   DEFAULT_DCA_SUPERTREND_PERIOD,
   indicatorCompareForDirection,
+  indicatorDraftMissing,
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
@@ -223,6 +224,19 @@ export function entryDraftComplete(draft: EntryConditionDraft): boolean {
   }
   if (draft.kind === "webhook") {
     return draft.webhookId.trim() !== "";
+  }
+  if (
+    indicatorDraftMissing({
+      family: draft.kind,
+      kind: draft.indicatorKind,
+      compare: draft.compare,
+      level: draft.level,
+      period: draft.period,
+      slowPeriod: draft.slowPeriod,
+      multiplier: draft.multiplier,
+    })
+  ) {
+    return false;
   }
   return indicatorStartFromDraft(draft) != null;
 }

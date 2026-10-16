@@ -46,6 +46,15 @@ if (missing.ok) {
   assert.equal(missing.stack.leaves.length, 0);
 }
 
+const emptyStop = baseForm();
+emptyStop.set("slOn", "on");
+emptyStop.set("stopLossPct", "");
+const emptyStopParsed = parseDcaPlaybookForm(emptyStop);
+assert.equal(emptyStopParsed.ok, false);
+if (!emptyStopParsed.ok) {
+  assert.equal(emptyStopParsed.error, "Enter a stop loss.");
+}
+
 const round = baseForm();
 round.set("exitIfTrigger", "price");
 round.set("exitIfTriggerBy", "last");

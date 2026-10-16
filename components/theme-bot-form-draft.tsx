@@ -40,6 +40,7 @@ import {
 import {
   blankExitClauses,
   customStackFromClauses,
+  exitClauseListMissing,
   exitClausesFromSaved,
   mergedClassicExitFlags,
   type ExitBuilderClause,
@@ -47,6 +48,7 @@ import {
 import {
   EntryConditionStack,
   entryConflictSlots,
+  entryDraftComplete,
   type EntryAnchor,
   type EntryStackRow,
 } from "@/components/entry-condition-stack";
@@ -75,6 +77,7 @@ import {
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
   DEFAULT_DCA_SUPERTREND_PERIOD,
   indicatorCompareForDirection,
+  indicatorDraftMissing,
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
@@ -971,9 +974,16 @@ export function ThemeBotFormDraft() {
         ? "short"
         : "long";
   const bothSides = desk === "dca" && direction === "both";
-  const requireTp = desk !== "cnc" && !closing && tpOn;
-  const requireSl = desk !== "cnc" && !closing && slOn;
-  const requireTrail = desk !== "cnc" && !closing && trailOn;
+  const themeBothExits =
+    (desk === "perps" && perpsDirection === "both") ||
+    (desk === "dca" && direction === "both");
+  const themeExitFlags = mergedClassicExitFlags(
+    exitClauses,
+    themeBothExits ? shortClauses : null,
+  );
+  const requireTp = desk !== "cnc" && !closing && themeExitFlags.takeProfit;
+  const requireSl = desk !== "cnc" && !closing && themeExitFlags.stopLoss;
+  const requireTrail = desk !== "cnc" && !closing && themeExitFlags.trailing;
   const requireTrailTrigger = requireTrail && desk === "dca";
   const requireBreakeven =
     desk !== "cnc" && !closing && slOn && breakevenOn;
@@ -1024,6 +1034,39 @@ export function ThemeBotFormDraft() {
   const requireCarrySize =
     desk === "cnc" && carrySizeType === "fixed" && !filled(orderSizeUsdt);
   const missing = {
+    conditionType: desk !== "cnc" && startKind === "",
+    shortConditionType: themeBothExits && shortStartKind === "",
+    indicatorStart:
+      desk !== "cnc" &&
+      (startKind === "indicator" || startKind === "trend") &&
+      indicatorDraftMissing({
+        family: startKind,
+        kind: indicatorKind,
+        compare: when,
+        level,
+        period,
+        slowPeriod,
+        multiplier,
+      }),
+    shortIndicatorStart:
+      themeBothExits &&
+      (shortStartKind === "indicator" || shortStartKind === "trend") &&
+      indicatorDraftMissing({
+        family: shortStartKind,
+        kind: shortIndicatorKind,
+        compare: shortWhen,
+        level: shortLevel,
+        period: shortPeriod,
+        slowPeriod: shortSlowPeriod,
+        multiplier: shortMultiplier,
+      }),
+    entryRows:
+      desk !== "cnc" && entryRows.some((row) => !entryDraftComplete(row.draft)),
+    shortEntryRows:
+      themeBothExits &&
+      shortEntryRows.some((row) => !entryDraftComplete(row.draft)),
+    exitKind: desk !== "cnc" && exitClauseListMissing(exitClauses),
+    shortExitKind: themeBothExits && exitClauseListMissing(shortClauses),
     priceLevel: requirePrice && !filled(priceLevel),
     shortPriceLevel: requireShortPrice && !filled(shortPriceLevel),
     limitPrice: requireLimitPrice,

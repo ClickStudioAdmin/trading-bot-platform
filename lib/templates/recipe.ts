@@ -1394,6 +1394,10 @@ export type DcaSnapshotOverlay = {
   trailingPct?: string;
   breakevenActivationPct?: string;
   breakevenOffsetPct?: string;
+  tpOn?: string;
+  slOn?: string;
+  trailOn?: string;
+  breakeven?: string;
 };
 
 export function readFormControl(

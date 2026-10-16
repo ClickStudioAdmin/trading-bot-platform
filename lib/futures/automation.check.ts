@@ -189,6 +189,29 @@ if (exitsParsed.ok) {
   assert.equal(exitsParsed.rules[0]?.tpsl?.slTrigger, "mark");
 }
 
+const emptyStop = new FormData();
+emptyStop.set("ruleCount", "1");
+emptyStop.set("r0_name", "Stop only");
+emptyStop.set("r0_mode", "active");
+emptyStop.set("r0_symbol", "BTCUSDT");
+emptyStop.set("r0_action", "buy");
+emptyStop.set("r0_orderType", "market");
+emptyStop.set("r0_sizeUnit", "qty");
+emptyStop.set("r0_size", "0.01");
+emptyStop.set("r0_triggerBy", "last");
+emptyStop.set("r0_triggerCompare", "gte");
+emptyStop.set("r0_triggerPrice", "90000");
+emptyStop.set("r0_tpsl", "on");
+emptyStop.set("r0_slOn", "on");
+emptyStop.set("r0_stopLoss", "");
+emptyStop.set("r0_slTrigger", "last");
+emptyStop.set("r0_tpTrigger", "last");
+const emptyStopParsed = parseFuturesAutomationForm(emptyStop);
+assert.equal(emptyStopParsed.ok, false);
+if (!emptyStopParsed.ok) {
+  assert.equal(emptyStopParsed.error, "Enter a stop loss.");
+}
+
 const percentExits = new FormData();
 percentExits.set("ruleCount", "1");
 percentExits.set("r0_name", "Pct");

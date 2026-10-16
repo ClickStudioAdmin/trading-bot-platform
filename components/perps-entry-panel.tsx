@@ -9,6 +9,7 @@ import {
 import {
   BotField,
   BotFormGroup,
+  botFieldInvalidClass,
 } from "@/components/bot-form-chrome";
 import {
   EntryConditionStack,
@@ -25,6 +26,7 @@ import {
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
   DEFAULT_DCA_SUPERTREND_PERIOD,
   indicatorCompareForDirection,
+  indicatorDraftMissing,
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
@@ -250,8 +252,29 @@ export function perpsEntryDraftMissing(
   if (draft.entrySource === "") {
     return true;
   }
-  if (draft.entrySource === "indicator" && draft.indicatorKind === "") {
+  if (draft.entrySource === "price") {
+    const price = Number(draft.triggerPrice.replace(/,/g, "").trim());
+    if (!(price > 0)) {
+      return true;
+    }
+  }
+  if (draft.entrySource === "webhook" && draft.webhookId.trim() === "") {
     return true;
+  }
+  if (draft.entrySource === "indicator" || draft.entrySource === "trend") {
+    if (
+      indicatorDraftMissing({
+        family: draft.entrySource,
+        kind: draft.indicatorKind,
+        compare: draft.indicatorCompare,
+        level: draft.indicatorLevel,
+        period: draft.indicatorPeriod,
+        slowPeriod: draft.indicatorSlowPeriod,
+        multiplier: draft.indicatorMultiplier,
+      })
+    ) {
+      return true;
+    }
   }
   return draft.entryRows.some((row) => !entryDraftComplete(row.draft));
 }
@@ -268,6 +291,7 @@ export function PerpsEntryPanel({
   pairSpan,
   fieldClass,
   labelClass,
+  showErrors = false,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -280,6 +304,7 @@ export function PerpsEntryPanel({
   pairSpan: string;
   fieldClass: string;
   labelClass: string;
+  showErrors?: boolean;
 }) {
   const draftRef = useRef(draft);
   useEffect(() => {
@@ -457,7 +482,11 @@ export function PerpsEntryPanel({
                 name={`${prefix}webhookId`}
                 value={draft.webhookId}
                 onChange={(event) => patch({ webhookId: event.target.value })}
-                className={fieldClass}
+                className={
+                  showErrors && draft.webhookId.trim() === ""
+                    ? botFieldInvalidClass
+                    : fieldClass
+                }
               >
                 <option value="">
                   {webhooks.length === 0
@@ -558,7 +587,12 @@ export function PerpsEntryPanel({
                   value={draft.triggerPrice}
                   onChange={(triggerPrice) => patch({ triggerPrice })}
                   allowDecimal
-                  className={fieldClass}
+                  className={
+                    showErrors &&
+                    !(Number(draft.triggerPrice.replace(/,/g, "").trim()) > 0)
+                      ? botFieldInvalidClass
+                      : fieldClass
+                  }
                 />
               </BotField>
             </>
