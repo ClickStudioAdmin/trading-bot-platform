@@ -16,8 +16,52 @@ import {
   DCA_INDICATOR_TIMEFRAME_LABELS,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import { indicatorClaim } from "@/lib/strategy/conflicts";
+import {
+  choiceConflicts,
+  type EntryConflictSlot,
+} from "@/lib/strategy/expr";
 import type { FuturesSide } from "@/lib/futures/model";
 import { AppSelect } from "@/components/app-select";
+
+type SeriesProps = {
+  seriesSlots?: readonly EntryConflictSlot[];
+  seriesIndex?: number;
+};
+
+function filterSeriesClaim(
+  spec: DcaFilterSpec,
+  patch: {
+    kind?: DcaFilterSpec["kind"];
+    timeframe?: DcaIndicatorTimeframe;
+    compare?: string;
+    level?: number | null;
+    levelTo?: number | null;
+  },
+) {
+  const compare = patch.compare ?? spec.compare;
+  let level = patch.level === undefined ? spec.level : patch.level;
+  let levelTo = patch.levelTo === undefined ? spec.levelTo : patch.levelTo;
+  if (compare === "between") {
+    const valid =
+      level != null && levelTo != null && level < levelTo;
+    if (!valid) {
+      level = 30;
+      levelTo = 70;
+    }
+  }
+  return indicatorClaim({
+    surface: "filter",
+    kind: patch.kind ?? spec.kind,
+    timeframe: patch.timeframe ?? spec.timeframe,
+    compare,
+    level,
+    levelTo,
+    period: spec.period,
+    slowPeriod: spec.slowPeriod,
+    multiplier: spec.multiplier,
+  });
+}
 
 function nextFilterSpec(
   current: DcaFilterSpec | null,
@@ -44,6 +88,8 @@ export function DcaFilterBlock({
   whenClass: whenClassProp,
   fieldClass,
   labelClass,
+  seriesSlots,
+  seriesIndex,
 }: {
   label: string;
   prefix: string;
@@ -57,7 +103,7 @@ export function DcaFilterBlock({
   whenClass?: string;
   fieldClass: string;
   labelClass: string;
-}) {
+} & SeriesProps) {
   const kindField = (
     <label className={labelClass}>
       <HintLabel text={label} required />
@@ -70,9 +116,24 @@ export function DcaFilterBlock({
         }}
         className={fieldClass}
       >
-        {allowOff ? <option value="">Off</option> : null}
+        <option value="">{allowOff ? "Off" : "Select Indicator"}</option>
         {DCA_FILTER_KIND_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option
+            key={option.value}
+            value={option.value}
+            disabled={
+              spec != null &&
+              choiceConflicts(
+                seriesSlots,
+                seriesIndex,
+                filterSeriesClaim(
+                  { ...nextFilterSpec(spec, option.value, side), timeframe: spec.timeframe },
+                  {},
+                ),
+                option.value === spec.kind,
+              )
+            }
+          >
             {option.label}
           </option>
         ))}
@@ -90,6 +151,8 @@ export function DcaFilterBlock({
       labelClass={labelClass}
       bare={dense}
       whenClass={whenClassProp ?? "col-span-2"}
+      seriesSlots={seriesSlots}
+      seriesIndex={seriesIndex}
     />
   ) : null;
   if (dense) {
@@ -112,7 +175,7 @@ export function DcaFilterBlock({
   );
 }
 
-function DcaFilterParamFields({
+export function DcaFilterParamFields({
   prefix,
   side,
   spec,
@@ -122,6 +185,8 @@ function DcaFilterParamFields({
   labelClass,
   bare = false,
   whenClass = "col-span-2",
+  seriesSlots,
+  seriesIndex,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -132,32 +197,57 @@ function DcaFilterParamFields({
   labelClass: string;
   bare?: boolean;
   whenClass?: string;
-}) {
+} & SeriesProps) {
   const column = useBotColumnLayout();
+  const pair = spec.kind === "ema_cross" || spec.kind === "sma_cross";
+  const macd = spec.kind === "macd";
   const whenOptions = dcaFilterWhenOptions(spec.kind, side);
   const whenValue = dcaFilterWhenValue(spec.compare);
-  const showLevel = spec.kind === "rsi" && spec.compare !== "between";
+  const showLevel = macd || (spec.kind === "rsi" && spec.compare !== "between");
   const showLevelRange = spec.kind === "rsi" && spec.compare === "between";
   const showMultiplier = spec.kind === "supertrend" || spec.kind === "atr_band";
+  const periodLabel = (
+    <label className={`${labelClass} min-w-0`}>
+      <HintLabel text={pair ? "Fast" : "Period"} required />
+      <GroupedNumberInput
+        name={named ? `${prefix}Period` : undefined}
+        value={spec.period == null ? "" : String(spec.period)}
+        onChange={(next) => {
+          const period = Number(next.replace(/,/g, "").trim());
+          onChange({
+            ...spec,
+            period: Number.isFinite(period) && period > 0 ? period : spec.period,
+          });
+        }}
+        className={fieldClass}
+      />
+    </label>
+  );
+  const slowLabel = pair ? (
+    <label className={`${labelClass} min-w-0`}>
+      <HintLabel text="Slow" required />
+      <GroupedNumberInput
+        name={named ? `${prefix}SlowPeriod` : undefined}
+        value={spec.slowPeriod == null ? "" : String(spec.slowPeriod)}
+        onChange={(next) => {
+          const slowPeriod = Number(next.replace(/,/g, "").trim());
+          onChange({
+            ...spec,
+            slowPeriod:
+              Number.isFinite(slowPeriod) && slowPeriod > 0
+                ? slowPeriod
+                : spec.slowPeriod,
+          });
+        }}
+        className={fieldClass}
+      />
+    </label>
+  ) : null;
   const fields = (
     <>
-      <label className={labelClass}>
-        <HintLabel text="Period" required />
-        <GroupedNumberInput
-          name={named ? `${prefix}Period` : undefined}
-          value={spec.period == null ? "" : String(spec.period)}
-          onChange={(next) => {
-            const period = Number(next.replace(/,/g, "").trim());
-            onChange({
-              ...spec,
-              period: Number.isFinite(period) && period > 0 ? period : spec.period,
-            });
-          }}
-          className={fieldClass}
-        />
-      </label>
+      {macd || pair ? null : periodLabel}
       {showMultiplier ? (
-        <label className={labelClass}>
+        <label className={`${labelClass} min-w-0`}>
           <HintLabel text="Multiplier" required />
           <GroupedNumberInput
             name={named ? `${prefix}Multiplier` : undefined}
@@ -177,7 +267,7 @@ function DcaFilterParamFields({
           />
         </label>
       ) : null}
-      <label className={labelClass}>
+      <label className={`${labelClass} min-w-0`}>
         <HintLabel text="Timeframe" required />
         <AppSelect
           name={named ? `${prefix}Timeframe` : undefined}
@@ -191,17 +281,27 @@ function DcaFilterParamFields({
           className={fieldClass}
         >
           {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
-            <option key={interval} value={interval}>
+            <option
+              key={interval}
+              value={interval}
+              disabled={choiceConflicts(
+                seriesSlots,
+                seriesIndex,
+                filterSeriesClaim(spec, { timeframe: interval }),
+                interval === spec.timeframe,
+              )}
+            >
               {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
             </option>
           ))}
         </AppSelect>
       </label>
+      {pair ? periodLabel : null}
       <label
         className={
           column
             ? `${labelClass} col-span-full min-w-0`
-            : `${labelClass} ${whenClass} min-w-[16rem]`
+            : `${labelClass} ${whenClass} min-w-0`
         }
       >
         <HintLabel text="When" required />
@@ -227,14 +327,24 @@ function DcaFilterParamFields({
           className={fieldClass}
         >
           {whenOptions.map((option) => (
-            <option key={option.value} value={option.value}>
+            <option
+              key={option.value}
+              value={option.value}
+              disabled={choiceConflicts(
+                seriesSlots,
+                seriesIndex,
+                filterSeriesClaim(spec, { compare: option.value }),
+                option.value === whenValue,
+              )}
+            >
               {option.label}
             </option>
           ))}
         </AppSelect>
       </label>
+      {slowLabel}
       {showLevel ? (
-        <label className={labelClass}>
+        <label className={`${labelClass} min-w-0`}>
           <HintLabel text="Level" required />
           <GroupedNumberInput
             name={named ? `${prefix}Level` : undefined}
@@ -247,13 +357,14 @@ function DcaFilterParamFields({
               });
             }}
             allowDecimal
+            allowNegative={macd}
             className={fieldClass}
           />
         </label>
       ) : null}
       {showLevelRange ? (
         <>
-          <label className={labelClass}>
+          <label className={`${labelClass} min-w-0`}>
             <HintLabel text="From" required />
             <GroupedNumberInput
               name={named ? `${prefix}Level` : undefined}
@@ -269,7 +380,7 @@ function DcaFilterParamFields({
               className={fieldClass}
             />
           </label>
-          <label className={labelClass}>
+          <label className={`${labelClass} min-w-0`}>
             <HintLabel text="To" required />
             <GroupedNumberInput
               name={named ? `${prefix}LevelTo` : undefined}

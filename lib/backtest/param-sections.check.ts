@@ -34,17 +34,14 @@ const dca = dcaSeed();
 const sections = recipeParamSections(dca);
 assert.deepEqual(
   sections.map((section) => section.title),
-  ["General", "Entry Conditions", "Position Sizing", "Exit Conditions"],
+  ["General", "Long Entry Condition Builder", "Position Sizing", "Additional Orders", "Long Exit Condition Builder"],
 );
 const general = sections[0]?.groups[0]?.rows.map((row) => row.label);
 assert.deepEqual(general, ["Name", "Contract", "Direction"]);
 const sizing = sections[2]?.groups.map((group) => group.title);
-assert.deepEqual(sizing, [
-  "Maximum Exposure",
-  "Initial Order Size",
-  "Additional Order Types",
-  "Additional Order Scaling",
-]);
+assert.deepEqual(sizing, ["Maximum Exposure", "Initial Order Size"]);
+const adds = sections[3]?.groups.map((group) => group.title);
+assert.deepEqual(adds, ["Additional Order Types", "Additional Order Scaling"]);
 const labels = recipeParamRows(dca).map((row) => row.label);
 assert.equal(labels.includes("Type"), false);
 assert.equal(labels.includes("Take profit"), false);
@@ -64,7 +61,57 @@ assert.equal(
   "Off",
 );
 assert.equal(
-  recipeParamRows(dca).find((row) => row.label === "Hard Exit Condition")?.value,
+  recipeParamRows(dca).some((row) => row.label === "Move Breakeven"),
+  false,
+);
+
+function dcaWithExits(fields: Record<string, string>) {
+  const form = new FormData();
+  form.set("name", "Exit nest");
+  form.set("symbol", "BTCUSDT");
+  form.set("direction", "long");
+  form.set("startKind", "immediate");
+  form.set("clipSize", "1");
+  form.set("sizeUnit", "qty");
+  form.set("takeProfitPct", "10");
+  for (const [key, value] of Object.entries(fields)) {
+    form.set(key, value);
+  }
+  const parsed = parseDcaPlaybookForm(form);
+  assert.equal(parsed.ok, true);
+  if (!parsed.ok) {
+    throw new Error("expected DCA parse");
+  }
+  return snapshotDcaRecipe(parsed.config);
+}
+
+const nestedStop = recipeParamSections(
+  dcaWithExits({
+    stopLossPct: "3",
+    breakevenActivationPct: "1.5",
+    breakevenOffsetPct: "0.2",
+  }),
+).find((section) => section.title === "Long Exit Condition Builder");
+const stopGroup = nestedStop?.groups.find((group) => group.title === "Stop loss");
+assert.deepEqual(
+  stopGroup?.rows.map((row) => row.label),
+  ["Basis", "Stop loss %", "Move stop to breakeven at %", "Breakeven offset %"],
+);
+assert.equal(
+  nestedStop?.groups.some((group) => group.title === "Move Breakeven"),
+  false,
+);
+const breakevenOnly = recipeParamSections(
+  dcaWithExits({ breakevenActivationPct: "1.5" }),
+).find((section) => section.title === "Long Exit Condition Builder");
+assert.deepEqual(
+  breakevenOnly?.groups
+    .find((group) => group.title === "Stop loss")
+    ?.rows.map((row) => row.label),
+  ["Move stop to breakeven at %", "Breakeven offset %"],
+);
+assert.equal(
+  recipeParamRows(dca).find((row) => row.label === "Custom conditions")?.value,
   "Off",
 );
 
@@ -107,15 +154,62 @@ const perps = snapshotPerpsRecipe({
 const perpsSections = recipeParamSections(perps);
 assert.deepEqual(
   perpsSections.map((section) => section.title),
-  ["General", "Entry Conditions", "Position Sizing", "Exit Conditions"],
+  ["General", "Long Entry Condition Builder", "Position Sizing", "Long Exit Condition Builder"],
 );
 assert.deepEqual(
   perpsSections[0]?.groups[0]?.rows.map((row) => row.label),
-  ["Name", "Contract", "Action"],
+  ["Name", "Contract", "Direction"],
 );
 assert.equal(
   perpsSections[1]?.groups[0]?.rows[0]?.value,
   "Price cross",
+);
+assert.equal(
+  recipeParamRows(perps).find((row) => row.label === "Secondary Entry Condition")
+    ?.value,
+  "Off",
+);
+const orRecipe = snapshotPerpsRecipe({
+  name: "Or entry",
+  symbol: "ETHUSDT",
+  action: "buy",
+  closeSide: null,
+  orderType: "market",
+  sizeUnit: "qty",
+  size: 1,
+  limitPrice: null,
+  entrySource: "price",
+  triggerBy: "last",
+  triggerCompare: "gte",
+  triggerPrice: 100,
+  skipIfOpen: true,
+  tpsl: null,
+  trailing: null,
+  confirm: null,
+  entryStack: {
+    leaves: [
+      {
+        kind: "filter",
+        spec: {
+          kind: "ema",
+          timeframe: "60",
+          compare: "gte",
+          level: null,
+          period: 21,
+          multiplier: null,
+        },
+      },
+    ],
+    joins: ["or"],
+  },
+});
+assert.match(
+  recipeParamRows(orRecipe).find((row) => row.label === "Or")?.value ?? "",
+  /EMA 21/,
+);
+assert.equal(
+  recipeParamRows(orRecipe).some((row) => row.label === "Secondary Entry Condition"),
+  false,
 );
 assert.equal(
   recipeParamRows(perps).find((row) => row.label === "Take profit")?.value,
@@ -140,7 +234,9 @@ const closeRecipe = snapshotPerpsRecipe({
 });
 assert.equal(
   recipeParamSections(closeRecipe).some(
-    (section) => section.title === "Exit Conditions",
+    (section) =>
+      section.title === "Exit Conditions" ||
+      section.title.endsWith("Exit Condition Builder"),
   ),
   false,
 );
@@ -195,6 +291,29 @@ assert.equal(
 assert.equal(
   paperRows.find((row) => row.label === "Stop loss %")?.value,
   "2%",
+);
+
+const atrEntry = {
+  ...perps,
+  entrySource: "indicator" as const,
+  indicator: {
+    kind: "atr_band" as const,
+    timeframe: "15" as const,
+    compare: "inside" as const,
+    level: null,
+    period: 10,
+    slowPeriod: null,
+    multiplier: 2,
+  },
+};
+const atrRows = recipeParamRows(atrEntry);
+assert.equal(
+  atrRows.find((row) => row.label === "Indicator")?.value,
+  "ATR band",
+);
+assert.equal(
+  atrRows.find((row) => row.label === "Multiplier")?.value,
+  "2",
 );
 
 console.log("backtest param section checks passed");

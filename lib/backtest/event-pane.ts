@@ -5,6 +5,12 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import { formatDcaFilterReason, type DcaFilterSpec } from "@/lib/dca/filters";
+import {
+  formatHardExitText,
+  formatStrategyLeafReason,
+} from "@/lib/bots/condition-copy";
+import type { TemplateHardExitSignal } from "@/lib/dca/hard-exit";
+import type { EntryStack } from "@/lib/strategy/expr";
 import type { BacktestRecipe, ReplayEvent } from "./model";
 
 export type EventParameter = { label: string; value: string };
@@ -84,6 +90,57 @@ function filterSection(
   return { role, detail, params };
 }
 
+function hardExitSection(
+  role: string,
+  spec: DcaFilterSpec | null | undefined,
+  signal: TemplateHardExitSignal | null | undefined,
+  side: "long" | "short",
+  detail: string,
+): EventParameterSection | null {
+  if (signal?.trigger === "price" || signal?.trigger === "webhook") {
+    return {
+      role,
+      detail,
+      params: [
+        {
+          label: "Condition",
+          value: formatHardExitText({
+            signal:
+              signal.trigger === "webhook"
+                ? { trigger: "webhook", webhookId: "" }
+                : signal,
+            side,
+          }),
+        },
+      ],
+    };
+  }
+  if (!spec) {
+    return null;
+  }
+  return filterSection(role, spec, side, detail);
+}
+
+function exitLeafSections(
+  stack: EntryStack | null | undefined,
+  side: "long" | "short",
+  role: string,
+): EventParameterSection[] {
+  if (!stack || stack.leaves.length === 0) {
+    return [];
+  }
+  return stack.leaves.map((leaf, index) => ({
+    role,
+    detail: "",
+    params: [
+      {
+        label: stack.joins[index] === "or" ? "Or" : "And",
+        value: formatStrategyLeafReason(leaf, side),
+      },
+    ],
+  }));
+}
+
 function factDetail(event: ReplayEvent, role: string): string {
   return event.facts?.find((row) => row.role === role)?.detail ?? "";
 }
@@ -101,7 +158,8 @@ export function eventParameterSections(
       entry &&
       (recipe.startKind === "indicator" || recipe.startKind === "trend") &&
       recipe.indicatorKind &&
-      (side === "long" || !recipe.shortIndicatorKind)
+      (side !== "short" ||
+        (recipe.shortStartKind == null && !recipe.shortIndicatorKind))
     ) {
       sections.push(
         indicatorSection({
@@ -118,7 +176,13 @@ export function eventParameterSections(
         }),
       );
     }
-    if (entry && side === "short" && recipe.shortIndicatorKind) {
+    const shortStartKind = recipe.shortStartKind ?? recipe.startKind;
+    if (
+      entry &&
+      side === "short" &&
+      recipe.shortIndicatorKind &&
+      (shortStartKind === "indicator" || shortStartKind === "trend")
+    ) {
       sections.push(
         indicatorSection({
           role: "Short entry",
@@ -164,32 +228,82 @@ export function eventParameterSections(
         ),
       );
     }
-    if (hardExit && recipe.exitIf) {
-      sections.push(
-        filterSection(
-          "Hard exit",
-          recipe.exitIf,
-          side,
-          factDetail(event, "Hard exit"),
-        ),
-      );
+    const dcaStack =
+      side === "short" && recipe.direction === "both"
+        ? recipe.shortEntryStack
+        : recipe.entryStack;
+    if (entry && dcaStack) {
+      for (const leaf of dcaStack.leaves) {
+        if (leaf.kind === "filter") {
+          sections.push(
+            filterSection(
+              "Entry condition",
+              leaf.spec,
+              side,
+              factDetail(event, "Entry condition"),
+            ),
+          );
+          continue;
+        }
+        if (leaf.kind === "indicator" || leaf.kind === "trend") {
+          sections.push(
+            indicatorSection({
+              role: "Entry condition",
+              kind: leaf.start.kind,
+              compare: leaf.start.compare,
+              level: leaf.start.level,
+              period: leaf.start.period,
+              slowPeriod: leaf.start.slowPeriod,
+              multiplier: leaf.start.multiplier ?? null,
+              timeframe: leaf.start.timeframe,
+              side,
+              detail: factDetail(event, "Entry condition"),
+            }),
+          );
+        }
+      }
     }
-    if (hardExit && side === "short" && recipe.shortExitIf) {
-      sections.push(
-        filterSection(
+    if (hardExit) {
+      const longExit = hardExitSection(
+        "Hard exit",
+        recipe.exitIf,
+        recipe.exitHard,
+        side,
+        factDetail(event, "Hard exit"),
+      );
+      if (longExit) {
+        sections.push(longExit);
+        sections.push(
+          ...exitLeafSections(recipe.exitStack, side, "Hard exit"),
+        );
+      }
+      if (side === "short") {
+        const shortExit = hardExitSection(
           "Short hard exit",
           recipe.shortExitIf,
+          recipe.shortExitHard,
           side,
           factDetail(event, "Short hard exit"),
-        ),
-      );
+        );
+        if (shortExit) {
+          sections.push(shortExit);
+          sections.push(
+            ...exitLeafSections(recipe.shortExitStack, side, "Short hard exit"),
+          );
+        }
+      }
     }
   } else {
-    const start = recipe.indicator;
+    const shortLeg =
+      side === "short" && recipe.direction === "both" ? recipe.shortEntry : null;
+    const start = shortLeg ? shortLeg.indicator : recipe.indicator;
+    const entrySource = shortLeg ? shortLeg.entrySource : recipe.entrySource;
+    const confirm = shortLeg ? shortLeg.confirm : recipe.confirm;
+    const entryStack = shortLeg ? shortLeg.entryStack : recipe.entryStack;
     if (
       entry &&
       start &&
-      (recipe.entrySource === "indicator" || recipe.entrySource === "trend")
+      (entrySource === "indicator" || entrySource === "trend")
     ) {
       sections.push(
         indicatorSection({
@@ -206,25 +320,70 @@ export function eventParameterSections(
         }),
       );
     }
-    if (entry && recipe.confirm) {
+    if (entry && confirm) {
       sections.push(
         filterSection(
           "Secondary entry",
-          recipe.confirm,
+          confirm,
           side,
           factDetail(event, "Secondary entry"),
         ),
       );
     }
-    if (hardExit && recipe.exitIf) {
-      sections.push(
-        filterSection(
-          "Hard exit",
-          recipe.exitIf,
-          side,
-          factDetail(event, "Hard exit"),
-        ),
+    if (entry && entryStack && !confirm) {
+      for (const leaf of entryStack.leaves) {
+        if (leaf.kind === "filter") {
+          sections.push(
+            filterSection(
+              "Entry condition",
+              leaf.spec,
+              side,
+              factDetail(event, "Entry condition"),
+            ),
+          );
+          continue;
+        }
+        if (leaf.kind === "indicator" || leaf.kind === "trend") {
+          sections.push(
+            indicatorSection({
+              role: "Entry condition",
+              kind: leaf.start.kind,
+              compare: leaf.start.compare,
+              level: leaf.start.level,
+              period: leaf.start.period,
+              slowPeriod: leaf.start.slowPeriod,
+              multiplier: leaf.start.multiplier ?? null,
+              timeframe: leaf.start.timeframe,
+              side,
+              detail: factDetail(event, "Entry condition"),
+            }),
+          );
+          continue;
+        }
+        sections.push({
+          role: "Entry condition",
+          detail: factDetail(event, "Entry condition"),
+          params: [
+            {
+              label: "Condition",
+              value: formatStrategyLeafReason(leaf, side),
+            },
+          ],
+        });
+      }
+    }
+    if (hardExit) {
+      const exit = hardExitSection(
+        "Hard exit",
+        recipe.exitIf,
+        recipe.exitHard,
+        side,
+        factDetail(event, "Hard exit"),
       );
+      if (exit) {
+        sections.push(exit);
+        sections.push(...exitLeafSections(recipe.exitStack, side, "Hard exit"));
+      }
     }
   }
   if (sections.length === 0) {

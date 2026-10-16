@@ -2,6 +2,7 @@ import { automationsBotBlotterHref } from "@/lib/bots/automations-path";
 import {
   compareTableNum,
   compareTableText,
+  pruneRemovedIds,
   type TableSortDir,
 } from "@/lib/table-chrome";
 import type { DcaPlaybook } from "@/lib/dca/playbook";
@@ -140,30 +141,93 @@ export function missingById<T extends { id: string | null | undefined }>(
 /**
  * The bots list keeps local rows and prepends ones the server just added.
  * A desk change replaces the list. The previous desk's bots must not stay on screen.
+ * `omitIds` are rows the user already removed. A stale server payload must not
+ * put those rows back, and a later payload that drops them must not leave the
+ * local copy on screen.
  */
 export function rowsForDesk<T>(input: {
   deskChanged: boolean;
   current: readonly T[];
   incoming: readonly T[];
   id: (row: T) => string | null | undefined;
+  omitIds?: ReadonlySet<string>;
 }): readonly T[] {
   if (input.deskChanged) {
     return input.incoming;
   }
+  const omit = input.omitIds;
+  const current =
+    omit && omit.size > 0
+      ? input.current.filter((row) => {
+          const id = input.id(row);
+          return !id || !omit.has(id);
+        })
+      : input.current;
   const seen = new Set(
-    input.current.flatMap((row) => {
+    current.flatMap((row) => {
       const id = input.id(row);
       return id ? [id] : [];
     }),
   );
   const fresh = missingById(
     seen,
-    input.incoming.map((row) => ({ id: input.id(row), row })),
+    input.incoming.flatMap((row) => {
+      const id = input.id(row);
+      if (id && omit?.has(id)) {
+        return [];
+      }
+      return [{ id, row }];
+    }),
   ).map((item) => item.row);
   if (fresh.length === 0) {
-    return input.current;
+    return current.length === input.current.length ? input.current : current;
   }
-  return [...fresh, ...input.current];
+  return [...fresh, ...current];
+}
+
+/**
+ * Visible bots for one desk. Removed ids stay hidden until both the local
+ * list and the server payload have dropped them. A desk change shows that
+ * desk's payload and clears the removed set.
+ */
+export function deskBotRows<T>(input: {
+  deskChanged: boolean;
+  current: readonly T[];
+  incoming: readonly T[];
+  removedIds: ReadonlySet<string>;
+  id: (row: T) => string | null | undefined;
+}): { rows: readonly T[]; removedIds: ReadonlySet<string> } {
+  if (input.deskChanged) {
+    return {
+      rows: input.incoming,
+      removedIds:
+        input.removedIds.size === 0 ? input.removedIds : new Set<string>(),
+    };
+  }
+  const present: string[] = [];
+  for (const row of input.incoming) {
+    const id = input.id(row);
+    if (id) {
+      present.push(id);
+    }
+  }
+  for (const row of input.current) {
+    const id = input.id(row);
+    if (id) {
+      present.push(id);
+    }
+  }
+  const removedIds = pruneRemovedIds(input.removedIds, present);
+  return {
+    rows: rowsForDesk({
+      deskChanged: false,
+      current: input.current,
+      incoming: input.incoming,
+      id: input.id,
+      omitIds: removedIds,
+    }),
+    removedIds,
+  };
 }
 
 export function filterAutomationsBots<
@@ -375,15 +439,13 @@ export function automationsBotBlotterCells(
   };
 }
 
-const PERPS_ACTION_LABEL: Record<
-  FuturesAutomationFormValues["formAction"],
-  string
-> = {
-  buy: "Buy",
-  sell: "Sell",
-  close_long: "Close long",
-  close_short: "Close short",
-};
+function perpsListDirection(rule: FuturesAutomationFormValues): string {
+  if (rule.formAction === "close_long") return "Close long";
+  if (rule.formAction === "close_short") return "Close short";
+  if (rule.direction === "both") return "Both";
+  if (rule.direction === "short" || rule.formAction === "sell") return "Short";
+  return "Long";
+}
 
 const PERPS_ENTRY_LABEL: Record<string, string> = {
   price: "Price",
@@ -438,7 +500,7 @@ export function paperBotSummary(layer: PaperLayerFormValues): string {
 }
 
 export function perpsBotPair(rule: FuturesAutomationFormValues): string {
-  return `${rule.symbol} · ${PERPS_ACTION_LABEL[rule.formAction]}`;
+  return `${rule.symbol} · ${perpsListDirection(rule)}`;
 }
 
 export function perpsBotSummary(rule: FuturesAutomationFormValues): string {
@@ -446,7 +508,7 @@ export function perpsBotSummary(rule: FuturesAutomationFormValues): string {
   const size = rule.size.trim()
     ? `${rule.size}${rule.sizeUnit === "usdt" ? " USDT" : ""}`
     : "";
-  return [PERPS_ACTION_LABEL[rule.formAction], entry, rule.orderType, size]
+  return [perpsListDirection(rule), entry, rule.orderType, size]
     .filter(Boolean)
     .join(" · ");
 }

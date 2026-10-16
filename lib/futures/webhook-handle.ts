@@ -6,6 +6,7 @@ import {
   parseDeskQuery,
   parseDeskType,
 } from "@/lib/accounts/model";
+import { dcaPlaybookMatchesWebhook } from "@/lib/dca/entry-stack";
 import { applyDcaVerb } from "@/lib/dca/run";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { writeEventLog } from "@/lib/logs/write";
@@ -158,9 +159,14 @@ export async function handleFuturesWebhook(input: {
   }
 
   if (parsed.parsed.kind === "arm") {
+    const command = parsed.parsed;
     if (deskType === "dca") {
+      const firedId = found.id ?? "";
       const playbooks = (await listDcaPlaybooksForAccount(accountId)).filter(
-        (row) => row.webhookId === found.id,
+        (row) =>
+          command.verb === "arm"
+            ? dcaPlaybookMatchesWebhook(row, firedId)
+            : row.webhookId === found.id,
       );
       if (playbooks.length === 0) {
         await writeEventLog({
@@ -191,6 +197,7 @@ export async function handleFuturesWebhook(input: {
             verb: parsed.parsed.verb,
             side: parsed.parsed.side,
             source: "webhook",
+            firedWebhookId: found.id,
           }),
         );
       }

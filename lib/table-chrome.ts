@@ -1,5 +1,48 @@
 export const TABLE_PAGE_SIZE = 20;
 
+/** Add ids to a removed set. Returns the same set when nothing new is present. */
+export function withRemovedIds(
+  removed: ReadonlySet<string>,
+  ids: readonly string[],
+): ReadonlySet<string> {
+  let next: Set<string> | null = null;
+  for (const id of ids) {
+    const trimmed = id.trim();
+    if (!trimmed || removed.has(trimmed) || next?.has(trimmed)) {
+      continue;
+    }
+    next ??= new Set(removed);
+    next.add(trimmed);
+  }
+  return next ?? removed;
+}
+
+/**
+ * Drop removed ids that are no longer in `stillPresentIds`.
+ * Keep the same set when every removed id is still present.
+ */
+export function pruneRemovedIds(
+  removed: ReadonlySet<string>,
+  stillPresentIds: Iterable<string>,
+): ReadonlySet<string> {
+  if (removed.size === 0) {
+    return removed;
+  }
+  const present =
+    stillPresentIds instanceof Set
+      ? stillPresentIds
+      : new Set(stillPresentIds);
+  let next: Set<string> | null = null;
+  for (const id of removed) {
+    if (present.has(id)) {
+      continue;
+    }
+    next ??= new Set(removed);
+    next.delete(id);
+  }
+  return next ?? removed;
+}
+
 export type TableSortDir = "asc" | "desc";
 export type StatusTone = "success" | "warning" | "danger" | "accent" | "muted";
 

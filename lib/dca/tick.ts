@@ -54,6 +54,7 @@ import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   dcaArmTriggerForSide,
+  dcaStartKindForSide,
   dcaClipsFilledFromGrid,
   dcaCycleEnded,
   dcaEnabledSides,
@@ -75,14 +76,25 @@ import {
   type DcaPlaybook,
 } from "./playbook";
 import {
+  dcaEntryStackNeedsWideBars,
+  dcaEntryTickExtras,
+} from "./entry-stack";
+import {
   dcaFilterForSide,
   dcaPlaybookFilterNeedsWideBars,
   seriesForFilter,
 } from "./filters";
+import { hardExitForSide } from "./hard-exit";
+import {
+  exitLeafResults,
+  exitStackForSide,
+  exitStackNeedsWideBars,
+  exitStackTimeframes,
+  formatExitExpressionText,
+} from "./exit-stack";
 import {
   formatBreakevenReason,
   formatDcaStartReasons,
-  formatHardExitReason,
   formatPriceCrossReason,
 } from "@/lib/bots/condition-copy";
 import { dcaDecisionMessage, dcaExitClosedMessage } from "./log-copy";
@@ -253,7 +265,10 @@ export async function runDcaPlaybookTick(input?: {
       playbook.indicatorKind === "supertrend" ||
       playbook.shortIndicatorKind === "supertrend" ||
       dcaNeedsAtrBars(playbook) ||
-      dcaPlaybookFilterNeedsWideBars(playbook);
+      dcaPlaybookFilterNeedsWideBars(playbook) ||
+      dcaEntryStackNeedsWideBars(playbook) ||
+      exitStackNeedsWideBars(playbook.exitStack) ||
+      exitStackNeedsWideBars(playbook.shortExitStack);
     for (const interval of dcaTickBarTimeframes(playbook)) {
       const key = `${account.venue}:${playbook.symbol}:${interval}`;
       if (seenBars.has(key)) {
@@ -607,7 +622,10 @@ export async function runDcaPlaybookTick(input?: {
             limit:
               supertrend ||
               dcaNeedsAtrBars(playbook) ||
-              dcaPlaybookFilterNeedsWideBars(playbook)
+              dcaPlaybookFilterNeedsWideBars(playbook) ||
+              dcaEntryStackNeedsWideBars(playbook) ||
+              exitStackNeedsWideBars(playbook.exitStack) ||
+              exitStackNeedsWideBars(playbook.shortExitStack)
                 ? 500
                 : 80,
           }).catch((error: unknown) => {
@@ -753,7 +771,9 @@ export async function runDcaPlaybookTick(input?: {
         dcaOpenExitLimits(openWorking, playbook.id, side, "tp").length > 0;
       const indicatorStart = dcaIndicatorStartForSide(playbook, side);
       const confirm = dcaFilterForSide(playbook, side, "confirm");
-      const exitIf = dcaFilterForSide(playbook, side, "exitIf");
+      const exit = hardExitForSide(playbook, side);
+      const exitStack = exitStackForSide(playbook, side);
+      const exitIf = exit.filter;
       const confirmSeries = seriesForFilter(
         confirm,
         confirm
@@ -782,7 +802,7 @@ export async function runDcaPlaybookTick(input?: {
         lastClipAtMs: leg.lastClipAtMs,
         firstFillPrice: leg.firstFillPrice,
         nowMs: Date.now(),
-        startKind: playbook.startKind,
+        startKind: dcaStartKindForSide(playbook, side),
         dcaMode: playbook.dcaMode,
         dipPct: playbook.dipPct,
         intervalMinutes: playbook.intervalMinutes,
@@ -842,9 +862,38 @@ export async function runDcaPlaybookTick(input?: {
         confirm,
         confirmCloses: confirmSeries.closes,
         confirmBars: confirmSeries.bars,
+        ...dcaEntryTickExtras({
+          playbook,
+          side,
+          price: prices.last,
+          prices,
+          barsByTimeframe,
+        }),
         exitIf,
+        exitHard: exit.signal,
         exitIfCloses: exitIfSeries.closes,
         exitIfBars: exitIfSeries.bars,
+        ...(exitStack.leaves.length > 0
+          ? {
+              exitJoins: exitStack.joins,
+              exitLeaves: exitLeafResults({
+                stack: exitStack,
+                side,
+                price: prices.last,
+                prices,
+                barsByTimeframe: new Map(
+                  exitStackTimeframes(exitStack).map((timeframe) => [
+                    timeframe,
+                    closedLiveIndicatorBars(
+                      barsByTimeframe.get(timeframe) ?? [],
+                      timeframe,
+                    ),
+                  ]),
+                ),
+                firedWebhookId: undefined,
+              }),
+            }
+          : {}),
         triggerPrices: prices,
       });
       const flagPatch: (typeof flagWrites)[number]["patch"] = {};
@@ -1071,7 +1120,7 @@ function dcaActionWhy(input: {
     (action.kind === "clip" && input.clipsFilled === 0)
   ) {
     return formatDcaStartReasons({
-      startKind: playbook.startKind,
+      startKind: dcaStartKindForSide(playbook, side),
       side,
       armTrigger: dcaArmTriggerForSide(playbook, side),
       indicator: dcaIndicatorStartForSide(playbook, side),
@@ -1088,8 +1137,13 @@ function dcaActionWhy(input: {
     });
   }
   if (action.kind === "close" && action.reason === "exit_if") {
-    const exitIf = dcaFilterForSide(playbook, side, "exitIf");
-    return exitIf ? formatHardExitReason(exitIf, side) : "";
+    const exit = hardExitForSide(playbook, side);
+    return formatExitExpressionText({
+      filter: exit.filter,
+      signal: exit.signal,
+      stack: exitStackForSide(playbook, side),
+      side,
+    });
   }
   if (action.kind === "breakeven") {
     return formatBreakevenReason({

@@ -8,8 +8,14 @@ export type DcaIndicatorKind =
   | "sma"
   | "sma_cross"
   | "bb"
+  | "atr_band"
   | "supertrend";
-export type DcaIndicatorCompare = "gte" | "lte" | "cross_gte" | "cross_lte";
+export type DcaIndicatorCompare =
+  | "gte"
+  | "lte"
+  | "cross_gte"
+  | "cross_lte"
+  | "inside";
 export type SupertrendBar = { high: number; low: number; close: number };
 export const DEFAULT_DCA_MA_PERIOD = 21;
 export const DEFAULT_DCA_CROSS_FAST_PERIOD = 9;
@@ -18,6 +24,7 @@ export const DEFAULT_DCA_BB_PERIOD = 20;
 export const DEFAULT_DCA_RSI_PERIOD = 14;
 export const DEFAULT_DCA_SUPERTREND_PERIOD = 10;
 export const DEFAULT_DCA_SUPERTREND_MULTIPLIER = 3;
+export const DEFAULT_DCA_ATR_BAND_MULT = 2;
 export const DCA_SUPERTREND_MULTIPLIER_MIN = 0.5;
 export const DCA_SUPERTREND_MULTIPLIER_MAX = 20;
 export const DCA_BB_STDDEV = 2;
@@ -63,7 +70,13 @@ export function parseDcaIndicatorCompare(
   value: unknown,
 ): DcaIndicatorCompare | null {
   const raw = String(value ?? "").trim().toLowerCase();
-  if (raw === "gte" || raw === "lte" || raw === "cross_gte" || raw === "cross_lte") {
+  if (
+    raw === "gte" ||
+    raw === "lte" ||
+    raw === "cross_gte" ||
+    raw === "cross_lte" ||
+    raw === "inside"
+  ) {
     return raw;
   }
   return null;
@@ -110,6 +123,7 @@ export const DCA_INDICATOR_KIND_OPTIONS: {
   { value: "sma_cross", label: "SMA Cross" },
   { value: "ema_cross", label: "EMA Cross" },
   { value: "bb", label: "Price vs BB" },
+  { value: "atr_band", label: "ATR band" },
 ];
 
 export const DCA_TREND_KIND_OPTIONS: {
@@ -118,7 +132,13 @@ export const DCA_TREND_KIND_OPTIONS: {
 }[] = [{ value: "supertrend", label: "Supertrend" }];
 
 export function dcaIndicatorUsesPeriod(kind: DcaIndicatorKind): boolean {
-  return kind === "ema" || kind === "sma" || kind === "rsi" || kind === "bb";
+  return (
+    kind === "ema" ||
+    kind === "sma" ||
+    kind === "rsi" ||
+    kind === "bb" ||
+    kind === "atr_band"
+  );
 }
 
 export function dcaIndicatorUsesPairPeriods(kind: DcaIndicatorKind): boolean {
@@ -132,7 +152,7 @@ export function defaultDcaIndicatorPeriod(kind: DcaIndicatorKind): number {
   if (kind === "rsi") {
     return DEFAULT_DCA_RSI_PERIOD;
   }
-  if (kind === "supertrend") {
+  if (kind === "supertrend" || kind === "atr_band") {
     return DEFAULT_DCA_SUPERTREND_PERIOD;
   }
   if (dcaIndicatorUsesPairPeriods(kind)) {
@@ -250,6 +270,13 @@ export function dcaIndicatorWhenOptions(
       { value: "lte", label: "Price is below bottom" },
     ];
   }
+  if (kind === "atr_band") {
+    return [
+      { value: "gte", label: "Price is above upper band" },
+      { value: "lte", label: "Price is below lower band" },
+      { value: "inside", label: "Price is inside" },
+    ];
+  }
   if (kind === "supertrend") {
     return [
       { value: "cross_gte", label: "Turns bullish" },
@@ -320,6 +347,17 @@ export function formatDcaIndicatorStartLabel(input: {
             ? "is bullish"
             : "turns bullish";
     return `Supertrend ${period} × ${multiplier} ${when}${timeframe}`;
+  }
+  if (input.kind === "atr_band") {
+    const period = input.period ?? DEFAULT_DCA_SUPERTREND_PERIOD;
+    const multiplier = input.multiplier ?? DEFAULT_DCA_ATR_BAND_MULT;
+    const when =
+      input.compare === "inside"
+        ? "Price is inside ATR band"
+        : input.compare === "lte" || input.compare === "cross_lte"
+          ? "Price is below lower ATR band"
+          : "Price is above upper ATR band";
+    return `${when} ${period} × ${multiplier}${timeframe}`;
   }
   if (input.kind === "bb") {
     const period = input.period ?? DEFAULT_DCA_BB_PERIOD;
@@ -534,13 +572,17 @@ export function oppositeIndicatorCompare(
     kind === "bb" ||
     kind === "ema" ||
     kind === "sma" ||
-    kind === "supertrend"
+    kind === "supertrend" ||
+    kind === "atr_band"
   ) {
     if (compare === "gte") {
       return "lte";
     }
     if (compare === "lte") {
       return "gte";
+    }
+    if (compare === "inside") {
+      return "inside";
     }
     if (compare === "cross_lte") {
       return "cross_gte";
@@ -593,6 +635,12 @@ export function indicatorCompareForDirection(
       return compare;
     }
     return direction === "short" ? "cross_gte" : "cross_lte";
+  }
+  if (kind === "atr_band") {
+    if (compare === "gte" || compare === "lte" || compare === "inside") {
+      return compare;
+    }
+    return direction === "short" ? "lte" : "gte";
   }
   if (kind === "ema_cross") {
     if (compare === "legacy") {
@@ -909,6 +957,35 @@ export function indicatorBarsForCross<T>(bars: T[]): T[] {
   return bars;
 }
 
+export function atrBandMet(input: {
+  bars: SupertrendBar[];
+  period: number;
+  multiplier: number;
+  compare: DcaIndicatorCompare | "between";
+}): boolean | null {
+  if (input.bars.length < input.period + 1 || !(input.multiplier > 0)) {
+    return null;
+  }
+  const atr = lastAtrValue(input.bars, input.period);
+  const mid = emaValues(
+    input.bars.map((row) => row.close),
+    input.period,
+  ).at(-1);
+  const price = input.bars.at(-1)?.close;
+  if (atr == null || mid == null || price == null) {
+    return null;
+  }
+  const upper = mid + atr * input.multiplier;
+  const lower = mid - atr * input.multiplier;
+  if (input.compare === "inside") {
+    return price >= lower && price <= upper;
+  }
+  if (input.compare === "lte" || input.compare === "cross_lte") {
+    return price <= lower;
+  }
+  return price >= upper;
+}
+
 export function indicatorStartMet(input: {
   kind: DcaIndicatorKind;
   side: FuturesSide;
@@ -942,6 +1019,16 @@ export function indicatorStartMet(input: {
       return bullish ? prev === -1 && now === 1 : prev === 1 && now === -1;
     }
     return bullish ? now === 1 : now === -1;
+  }
+  if (input.kind === "atr_band") {
+    return (
+      atrBandMet({
+        bars: input.bars ?? [],
+        period: input.period ?? DEFAULT_DCA_SUPERTREND_PERIOD,
+        multiplier: input.multiplier ?? DEFAULT_DCA_ATR_BAND_MULT,
+        compare: input.compare ?? "gte",
+      }) === true
+    );
   }
   if (input.kind === "bb") {
     const period = input.period ?? DEFAULT_DCA_BB_PERIOD;

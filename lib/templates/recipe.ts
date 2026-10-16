@@ -5,6 +5,24 @@ import {
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
 import {
+  applyExitStackWebhook,
+  exitStackDropEmptyWebhooks,
+  exitStackForEditor,
+  exitStackNeedsWebhook,
+  exitStackWebhookIds,
+  templateExitStack,
+  writeExitStackFormFields,
+} from "@/lib/dca/exit-stack";
+import {
+  hardExitDraftFromTemplate,
+  hardExitSignalFromJson,
+  hardExitWebhookId,
+  templateHardExit,
+  templateHardExitNeedsWebhook,
+  writeTemplateHardExitFields,
+  type TemplateHardExitSignal,
+} from "@/lib/dca/hard-exit";
+import {
   oppositeRsiCompare,
   oppositeRsiLevel,
 } from "@/lib/dca/indicators";
@@ -22,10 +40,24 @@ import {
   defaultFuturesAutomationForm,
   parseFuturesAutomationForm,
   writeAutomationExitsToForm,
+  writePerpsShortEntryFields,
   type FuturesAutomationFormValues,
   type FuturesAutomationRule,
 } from "@/lib/futures/automation";
-import { writeFuturesConditionFormFields } from "@/lib/futures/conditions";
+import { venueAllowsPerpsBoth } from "@/lib/futures/perps-direction";
+import {
+  shortEntryFromJson,
+  writeEntryStackFormFields,
+  writeFuturesConditionFormFields,
+  type PerpsEntryLeg,
+} from "@/lib/futures/conditions";
+import {
+  confirmFromEntryStack,
+  entryStackFromJson,
+  entryStackIsLegacy,
+  resolveEntryStack,
+  type EntryStack,
+} from "@/lib/strategy/expr";
 import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 
 export const TEMPLATE_RECIPE_VERSION = 1;
@@ -74,6 +106,8 @@ export type DcaTemplateRecipe = {
   symbol: string;
   direction: DcaPlaybookConfig["direction"];
   startKind: DcaPlaybookConfig["startKind"];
+  /** Direction Both. Absent means the short leg still shares startKind. */
+  shortStartKind?: DcaPlaybookConfig["shortStartKind"];
   dcaMode: DcaPlaybookConfig["dcaMode"];
   clipSize: number;
   sizeUnit: DcaPlaybookConfig["sizeUnit"];
@@ -116,8 +150,14 @@ export type DcaTemplateRecipe = {
   shortIndicatorMultiplier?: number | null;
   confirm?: DcaFilterSpec | null;
   shortConfirm?: DcaFilterSpec | null;
+  entryStack?: EntryStack | null;
+  shortEntryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
   shortExitIf?: DcaFilterSpec | null;
+  exitHard?: TemplateHardExitSignal | null;
+  shortExitHard?: TemplateHardExitSignal | null;
+  exitStack?: EntryStack | null;
+  shortExitStack?: EntryStack | null;
 };
 
 export type PerpsTemplateRecipe = {
@@ -138,9 +178,14 @@ export type PerpsTemplateRecipe = {
   trailing: FuturesAutomationFormValues["trailing"];
   indicator?: FuturesAutomationFormValues["indicator"];
   confirm?: DcaFilterSpec | null;
+  entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
+  exitHard?: TemplateHardExitSignal | null;
+  exitStack?: EntryStack | null;
   breakevenActivationPct?: number | null;
   breakevenOffsetPct?: number | null;
+  direction: "long" | "short" | "both";
+  shortEntry?: PerpsEntryLeg | null;
 };
 
 export type PaperTemplateRecipe = {
@@ -266,6 +311,14 @@ export function dcaFormMatchesPlaybook(
   }
   return (
     saved.webhookId === next.webhookId &&
+    (saved.shortWebhookId ?? null) === (next.shortWebhookId ?? null) &&
+    hardExitWebhookId(saved.exitHard) === hardExitWebhookId(next.exitHard) &&
+    hardExitWebhookId(saved.shortExitHard) ===
+      hardExitWebhookId(next.shortExitHard) &&
+    JSON.stringify(exitStackWebhookIds(saved.exitStack)) ===
+      JSON.stringify(exitStackWebhookIds(next.exitStack)) &&
+    JSON.stringify(exitStackWebhookIds(saved.shortExitStack)) ===
+      JSON.stringify(exitStackWebhookIds(next.shortExitStack)) &&
     JSON.stringify(snapshotDcaRecipe(saved)) ===
       JSON.stringify(snapshotDcaRecipe(next))
   );
@@ -278,6 +331,11 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     symbol: config.symbol,
     direction: config.direction,
     startKind: config.startKind,
+    ...(config.direction === "both"
+      ? {
+          shortStartKind: config.shortStartKind ?? config.startKind,
+        }
+      : {}),
     dcaMode: config.dcaMode,
     clipSize: config.clipSize,
     sizeUnit: config.sizeUnit,
@@ -320,8 +378,28 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     shortIndicatorMultiplier: config.shortIndicatorMultiplier ?? null,
     confirm: config.confirm ?? null,
     shortConfirm: config.shortConfirm ?? null,
-    exitIf: config.exitIf ?? null,
-    shortExitIf: config.shortExitIf ?? null,
+    ...(config.entryStack && !entryStackIsLegacy(config.entryStack)
+      ? { entryStack: config.entryStack }
+      : {}),
+    ...(config.direction === "both" &&
+    config.shortEntryStack &&
+    !entryStackIsLegacy(config.shortEntryStack)
+      ? { shortEntryStack: config.shortEntryStack }
+      : {}),
+    exitIf: config.exitHard ? null : (config.exitIf ?? null),
+    shortExitIf: config.shortExitHard ? null : (config.shortExitIf ?? null),
+    ...(templateHardExit(config.exitHard)
+      ? { exitHard: templateHardExit(config.exitHard) }
+      : {}),
+    ...(templateHardExit(config.shortExitHard)
+      ? { shortExitHard: templateHardExit(config.shortExitHard) }
+      : {}),
+    ...(templateExitStack(config.exitStack)
+      ? { exitStack: templateExitStack(config.exitStack) }
+      : {}),
+    ...(config.direction === "both" && templateExitStack(config.shortExitStack)
+      ? { shortExitStack: templateExitStack(config.shortExitStack) }
+      : {}),
   };
 }
 
@@ -349,9 +427,14 @@ export function snapshotPerpsRecipe(
         FuturesAutomationRule,
         | "indicator"
         | "confirm"
+        | "entryStack"
         | "exitIf"
+        | "exitHard"
+        | "exitStack"
         | "breakevenActivationPct"
         | "breakevenOffsetPct"
+        | "direction"
+        | "shortEntry"
       >
     >,
 ): PerpsTemplateRecipe {
@@ -363,6 +446,9 @@ export function snapshotPerpsRecipe(
       : rule.action === "sell"
         ? "sell"
         : "buy";
+  const hasStack = rule.entryStack != null;
+  const stack = resolveEntryStack(rule.entryStack, rule.confirm);
+  const legacyStack = entryStackIsLegacy(stack);
   return {
     kind: "perps",
     name: rule.name,
@@ -380,10 +466,26 @@ export function snapshotPerpsRecipe(
     tpsl: rule.tpsl,
     trailing: rule.trailing,
     indicator: rule.indicator ?? null,
-    confirm: rule.confirm ?? null,
-    exitIf: rule.exitIf ?? null,
+    confirm:
+      hasStack || !legacyStack
+        ? confirmFromEntryStack(stack)
+        : (rule.confirm ?? null),
+    ...(legacyStack ? {} : { entryStack: stack }),
+    exitIf: rule.exitHard ? null : (rule.exitIf ?? null),
+    ...(templateHardExit(rule.exitHard)
+      ? { exitHard: templateHardExit(rule.exitHard) }
+      : {}),
+    ...(templateExitStack(rule.exitStack)
+      ? { exitStack: templateExitStack(rule.exitStack) }
+      : {}),
     breakevenActivationPct: rule.breakevenActivationPct ?? null,
     breakevenOffsetPct: rule.breakevenOffsetPct ?? null,
+    direction:
+      rule.direction ??
+      (formAction === "sell" || formAction === "close_short" ? "short" : "long"),
+    ...(rule.direction === "both" && rule.shortEntry
+      ? { shortEntry: rule.shortEntry }
+      : {}),
   };
 }
 
@@ -397,7 +499,12 @@ export function dcaRecipePlaybookSeed(recipe: DcaTemplateRecipe): DcaPlaybook {
     symbol: recipe.symbol,
     direction: recipe.direction,
     startKind: recipe.startKind,
+    shortStartKind:
+      recipe.direction === "both"
+        ? (recipe.shortStartKind ?? recipe.startKind)
+        : null,
     webhookId: null,
+    shortWebhookId: null,
     dcaMode: recipe.dcaMode,
     clipSize: recipe.clipSize,
     sizeUnit: recipe.sizeUnit,
@@ -442,8 +549,12 @@ export function dcaRecipePlaybookSeed(recipe: DcaTemplateRecipe): DcaPlaybook {
     shortIndicatorMultiplier: recipe.shortIndicatorMultiplier ?? null,
     confirm: recipe.confirm ?? null,
     shortConfirm: recipe.shortConfirm ?? null,
-    exitIf: recipe.exitIf ?? null,
-    shortExitIf: recipe.shortExitIf ?? null,
+    exitIf: recipe.exitHard ? null : (recipe.exitIf ?? null),
+    shortExitIf: recipe.shortExitHard ? null : (recipe.shortExitIf ?? null),
+    exitHard: hardExitSignalFromJson(recipe.exitHard),
+    shortExitHard: hardExitSignalFromJson(recipe.shortExitHard),
+    exitStack: exitStackForEditor(recipe.exitStack),
+    shortExitStack: exitStackForEditor(recipe.shortExitStack),
     long: IDLE_DCA_LEG,
     short: IDLE_DCA_LEG,
     armConditionTrue: false,
@@ -474,7 +585,10 @@ export function perpsRecipeFormSeed(
     trailing: recipe.trailing,
     indicator: recipe.indicator ?? null,
     confirm: recipe.confirm ?? null,
-    exitIf: recipe.exitIf ?? null,
+    exitIf: recipe.exitHard ? null : (recipe.exitIf ?? null),
+    exitHard: hardExitSignalFromJson(recipe.exitHard),
+    exitStack: exitStackForEditor(recipe.exitStack),
+    exitDraft: hardExitDraftFromTemplate(recipe.exitIf, recipe.exitHard),
     breakevenActivationPct:
       recipe.breakevenActivationPct == null
         ? ""
@@ -553,7 +667,12 @@ function parseDcaTemplateRecipe(
     return { ok: false, error: STALE_TEMPLATE_ERROR };
   }
   const placeholderWebhook =
-    String(row.startKind) === "webhook"
+    String(row.startKind) === "webhook" ||
+    String(row.shortStartKind) === "webhook" ||
+    templateHardExitNeedsWebhook(row.exitHard) ||
+    templateHardExitNeedsWebhook(row.shortExitHard) ||
+    exitStackNeedsWebhook(entryStackFromJson(row.exitStack)) ||
+    exitStackNeedsWebhook(entryStackFromJson(row.shortExitStack))
       ? "11111111-1111-4111-8111-111111111111"
       : undefined;
   const built = dcaRecipeToConfig(row as unknown as DcaTemplateRecipe, {
@@ -602,12 +721,28 @@ function parsePerpsTemplateRecipe(
     trailing: (row.trailing as PerpsTemplateRecipe["trailing"]) ?? null,
     indicator: (row.indicator as PerpsTemplateRecipe["indicator"]) ?? null,
     confirm: filterSpecFromRecipe(row.confirm),
+    entryStack: entryStackFromJson(row.entryStack) ?? undefined,
     exitIf: filterSpecFromRecipe(row.exitIf),
+    exitHard: (row.exitHard as PerpsTemplateRecipe["exitHard"]) ?? null,
+    exitStack: entryStackFromJson(row.exitStack) ?? undefined,
     breakevenActivationPct: asNullableNumber(row.breakevenActivationPct),
     breakevenOffsetPct: asNullableNumber(row.breakevenOffsetPct),
+    direction:
+      row.direction === "short" || row.direction === "both"
+        ? row.direction
+        : row.direction === "long" ||
+            (row.formAction !== "sell" && row.formAction !== "close_short")
+          ? "long"
+          : "short",
+    shortEntry: shortEntryFromJson(row.shortEntry),
   };
   const built = perpsRecipeToRule(recipe, {
     sortOrder: 0,
+    webhookId:
+      templateHardExitNeedsWebhook(recipe.exitHard) ||
+      exitStackNeedsWebhook(recipe.exitStack)
+        ? "11111111-1111-4111-8111-111111111111"
+        : undefined,
     venue: venueForRecipeSymbol(recipe.symbol, venue),
   });
   if (!built.ok) {
@@ -722,6 +857,24 @@ export function dcaRecipeToConfig(
   form.set("startKind", appliedStart);
   if (appliedStart === "webhook") {
     form.set("webhookId", webhookId);
+  }
+  if (String(form.get("direction")) === "both") {
+    const shortKind = String(recipe.shortStartKind ?? appliedStart);
+    let appliedShort = shortKind;
+    const shortHook = webhookId;
+    if (shortKind === "webhook" && !shortHook) {
+      appliedShort = "indicator";
+      notes.push(
+        "Short signal start needs a webhook on this desk. Applied as Indicator.",
+      );
+    } else if (shortKind === "immediate") {
+      appliedShort = "indicator";
+      notes.push("Short manual start is retired. Applied as Indicator.");
+    }
+    form.set("shortStartKind", appliedShort);
+    if (appliedShort === "webhook") {
+      form.set("shortWebhookId", shortHook);
+    }
   }
   const averaging = dcaAveragingKind({
     dcaMode: recipe.dcaMode === "order" ? "order" : "position",
@@ -917,18 +1070,79 @@ export function dcaRecipeToConfig(
   if (shortMultiplier != null) {
     form.set("shortIndicatorMultiplier", String(shortMultiplier));
   }
+  if (
+    form.get("shortStartKind") === "indicator" &&
+    !form.get("shortIndicatorKind")
+  ) {
+    form.set("shortIndicatorKind", "rsi");
+    form.set(
+      "shortIndicatorTimeframe",
+      String(form.get("shortIndicatorTimeframe") || "15"),
+    );
+    form.set(
+      "shortIndicatorCompare",
+      String(form.get("shortIndicatorCompare") || "cross_gte"),
+    );
+    form.set(
+      "shortIndicatorLevel",
+      String(form.get("shortIndicatorLevel") || "70"),
+    );
+  }
+  const entryStack = entryStackFromJson(
+    "entryStack" in recipe ? recipe.entryStack : null,
+  );
+  if (entryStack && entryStack.leaves.length > 0) {
+    writeEntryStackFormFields(form, "", entryStack);
+  }
+  const shortEntryStack = entryStackFromJson(
+    "shortEntryStack" in recipe ? recipe.shortEntryStack : null,
+  );
+  if (direction === "both" && shortEntryStack && shortEntryStack.leaves.length > 0) {
+    writeEntryStackFormFields(form, "short_", shortEntryStack);
+  }
   writeDcaFilterFormFields(form, "confirm", filterSpecFromRecipe(recipe.confirm));
   writeDcaFilterFormFields(
     form,
     "shortConfirm",
     filterSpecFromRecipe(recipe.shortConfirm),
   );
-  writeDcaFilterFormFields(form, "exitIf", filterSpecFromRecipe(recipe.exitIf));
-  writeDcaFilterFormFields(
+  const exitWebhookId = options.webhookId?.trim() || "";
+  writeTemplateHardExitFields(
+    form,
+    "exitIf",
+    filterSpecFromRecipe(recipe.exitIf),
+    recipe.exitHard,
+    exitWebhookId,
+    notes,
+    "Hard Exit",
+  );
+  writeTemplateHardExitFields(
     form,
     "shortExitIf",
     filterSpecFromRecipe(recipe.shortExitIf),
+    recipe.shortExitHard,
+    exitWebhookId,
+    notes,
+    "Short Hard Exit",
   );
+  writeAppliedExitStack(
+    form,
+    "exitIf",
+    entryStackFromJson("exitStack" in recipe ? recipe.exitStack : null),
+    exitWebhookId,
+    notes,
+  );
+  if (direction === "both") {
+    writeAppliedExitStack(
+      form,
+      "shortExitIf",
+      entryStackFromJson(
+        "shortExitStack" in recipe ? recipe.shortExitStack : null,
+      ),
+      exitWebhookId,
+      notes,
+    );
+  }
   const parsed = parseDcaPlaybookForm(form, venue);
   if (!parsed.ok) {
     return parsed;
@@ -963,7 +1177,22 @@ export function perpsRecipeToRule(
   form.set("r0_name", recipe.name);
   form.set("r0_mode", "disabled");
   form.set("r0_symbol", options.symbol ?? recipe.symbol);
-  form.set("r0_action", recipe.formAction);
+  const direction =
+    recipe.direction ??
+    (recipe.formAction === "sell" || recipe.formAction === "close_short"
+      ? "short"
+      : "long");
+  if (direction === "both" && !venueAllowsPerpsBoth(venue)) {
+    form.set("r0_direction", "long");
+    form.set("r0_action", "buy");
+    notes.push("Hyperliquid is one-way. Applied as Long.");
+  } else {
+    form.set("r0_direction", direction);
+    form.set(
+      "r0_action",
+      direction === "both" ? "buy" : recipe.formAction,
+    );
+  }
   form.set("r0_orderType", recipe.orderType);
   form.set("r0_sizeUnit", recipe.sizeUnit);
   form.set("r0_size", recipe.size);
@@ -979,13 +1208,37 @@ export function perpsRecipeToRule(
     form.set("r0_skipIfOpen", "on");
   }
   writeAutomationExitsToForm(form, "r0_", recipe.tpsl, recipe.trailing);
+  const exitDraft = hardExitDraftFromTemplate(recipe.exitIf, recipe.exitHard);
+  if (exitDraft?.trigger === "webhook") {
+    if (!webhookId) {
+      notes.push(
+        "Hard Exit signal needs a webhook on this desk. Hard Exit was left off.",
+      );
+    } else {
+      exitDraft.webhookId = webhookId;
+    }
+  }
+  const exitKept = !(exitDraft?.trigger === "webhook" && !exitDraft.webhookId);
+  const exitStack = exitKept
+    ? appliedExitStack(recipe.exitStack, webhookId, notes)
+    : null;
   writeFuturesConditionFormFields(form, "r0_", {
     indicator: recipe.indicator,
     confirm: recipe.confirm,
-    exitIf: recipe.exitIf,
+    entryStack: recipe.entryStack,
+    exitIf: exitKept ? recipe.exitIf : null,
+    exitStack,
+    exitDraft: exitKept ? exitDraft : null,
     breakevenActivationPct: recipe.breakevenActivationPct,
     breakevenOffsetPct: recipe.breakevenOffsetPct,
   });
+  if (
+    direction === "both" &&
+    venueAllowsPerpsBoth(venue) &&
+    recipe.shortEntry
+  ) {
+    writePerpsShortEntryFields(form, "r0_short_", recipe.shortEntry);
+  }
   const parsed = parseFuturesAutomationForm(form, venue);
   if (!parsed.ok) {
     return parsed;
@@ -1091,6 +1344,8 @@ export type DcaSnapshotOverlay = {
   symbol?: string;
   direction?: string;
   startKind?: string;
+  shortStartKind?: string;
+  shortWebhookId?: string;
   averaging?: string;
   restGrid?: boolean;
   sizeUnit?: string;
@@ -1222,6 +1477,13 @@ export function perpsFormToSnapshotSource(
   form.set("r0_name", layer.name);
   form.set("r0_mode", layer.mode);
   form.set("r0_symbol", layer.symbol);
+  form.set(
+    "r0_direction",
+    layer.direction ??
+      (layer.formAction === "sell" || layer.formAction === "close_short"
+        ? "short"
+        : "long"),
+  );
   form.set("r0_action", layer.formAction);
   form.set("r0_orderType", layer.orderType);
   form.set("r0_sizeUnit", layer.sizeUnit);
@@ -1236,10 +1498,17 @@ export function perpsFormToSnapshotSource(
     form.set("r0_skipIfOpen", "on");
   }
   writeAutomationExitsToForm(form, "r0_", layer.tpsl, layer.trailing);
+  if (layer.direction === "both" && layer.shortEntry) {
+    writePerpsShortEntryFields(form, "r0_short_", layer.shortEntry);
+  }
   writeFuturesConditionFormFields(form, "r0_", {
     indicator: layer.indicator,
     confirm: layer.confirm,
+    entryStack: layer.entryStack,
     exitIf: layer.exitIf,
+    exitHard: layer.exitHard,
+    exitStack: layer.exitStack,
+    exitDraft: layer.exitDraft,
     breakevenActivationPct:
       layer.breakevenActivationPct.trim() === ""
         ? null
@@ -1274,6 +1543,36 @@ export function paperFormToSnapshotSource(
   form.set("r0_takeProfit", layer.takeProfit);
   form.set("r0_stopLoss", layer.stopLoss);
   return form;
+}
+
+function appliedExitStack(
+  stack: EntryStack | null | undefined,
+  webhookId: string,
+  notes: string[],
+): EntryStack | null {
+  const filled = applyExitStackWebhook(stack, webhookId);
+  if (!exitStackNeedsWebhook(filled)) {
+    return filled.leaves.length > 0 ? filled : null;
+  }
+  notes.push("Hard Exit signal needs a webhook on this desk.");
+  const dropped = exitStackDropEmptyWebhooks(filled);
+  return dropped.leaves.length > 0 ? dropped : null;
+}
+
+function writeAppliedExitStack(
+  form: FormData,
+  prefix: string,
+  stack: EntryStack | null | undefined,
+  webhookId: string,
+  notes: string[],
+): void {
+  if (form.get(`${prefix}Trigger`) == null) {
+    return;
+  }
+  const next = appliedExitStack(stack, webhookId, notes);
+  if (next) {
+    writeExitStackFormFields(form, prefix, next);
+  }
 }
 
 export function recipeHasRuntimeKeys(value: unknown): boolean {

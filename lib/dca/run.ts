@@ -88,7 +88,10 @@ import {
   dcaLegFor,
   dcaLegIsRunning,
   dcaOpenExitLimits,
+  dcaSeriesStart,
   dcaSeriesStartEval,
+  dcaStartKindForSide,
+  dcaWebhookIdForSide,
   dcaStartListens,
   dcaWebhookSignalApplies,
   IDLE_DCA_LEG,
@@ -102,7 +105,19 @@ import {
   type DcaStatus,
 } from "./playbook";
 import { formatDcaStartReasons } from "@/lib/bots/condition-copy";
-import { dcaFilterForSide, dcaFilterMet, dcaPlaybookFilterNeedsWideBars } from "./filters";
+import {
+  dcaEntryExpressionMet,
+  dcaEntryStackForSide,
+  dcaEntryStackNeedsWideBars,
+} from "./entry-stack";
+import { dcaFilterForSide, dcaPlaybookFilterNeedsWideBars } from "./filters";
+import { hardExitForSide, hardExitMet } from "./hard-exit";
+import {
+  exitExpressionMet,
+  exitStackForSide,
+  exitStackNeedsWideBars,
+  formatExitExpressionText,
+} from "./exit-stack";
 import { dcaDisarmedMessage, dcaSyncFailedMessage } from "./log-copy";
 import {
   dcaSyncFailureStamp,
@@ -373,8 +388,15 @@ async function loadPlaybookStartBars(
   const desk = await loadDeskVenueContext(playbook.accountId);
   const supertrend =
     playbook.indicatorKind === "supertrend" ||
-    playbook.shortIndicatorKind === "supertrend";
-  const wide = supertrend || dcaPlaybookFilterNeedsWideBars(playbook);
+    playbook.shortIndicatorKind === "supertrend" ||
+    playbook.indicatorKind === "atr_band" ||
+    playbook.shortIndicatorKind === "atr_band";
+  const wide =
+    supertrend ||
+    dcaPlaybookFilterNeedsWideBars(playbook) ||
+    dcaEntryStackNeedsWideBars(playbook) ||
+    exitStackNeedsWideBars(playbook.exitStack) ||
+    exitStackNeedsWideBars(playbook.shortExitStack);
   for (const timeframe of timeframes) {
     const fetched = await loadDeskIndicatorBars({
       venue: desk.venue,
@@ -410,7 +432,7 @@ function seriesStartDueForSide(
   }
   const bars = barsByTimeframe.get(start.timeframe) ?? [];
   return dcaSeriesStartEval({
-    startKind: playbook.startKind,
+    startKind: dcaStartKindForSide(playbook, side),
     side,
     indicatorKind: start.kind,
     indicatorCompare: start.compare,
@@ -430,24 +452,6 @@ function seriesStartDueForSide(
     closes: bars.map((row) => row.close),
     bars,
   }).due;
-}
-
-function confirmMetForSide(
-  playbook: DcaPlaybook,
-  side: FuturesSide,
-  barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>,
-): boolean {
-  const confirm = dcaFilterForSide(playbook, side, "confirm");
-  if (!confirm) {
-    return true;
-  }
-  const bars = barsByTimeframe.get(confirm.timeframe) ?? [];
-  return dcaFilterMet({
-    spec: confirm,
-    side,
-    closes: bars.map((row) => row.close),
-    bars,
-  });
 }
 
 function clipTrailing(
@@ -1705,7 +1709,7 @@ export async function keepListeningAfterFlatten(input: {
   if (!supabase) {
     return { ok: false, error: "Auth is not configured." };
   }
-  if (dcaStartListens(input.playbook.startKind)) {
+  if (dcaStartListens(dcaStartKindForSide(input.playbook, input.side))) {
     const current = await readDcaLegStatus({
       supabase,
       id: input.playbook.id,
@@ -1802,19 +1806,17 @@ async function moveStopToBreakeven(input: {
 
 function priceStartMet(
   playbook: DcaPlaybook,
+  side: FuturesSide,
   lastPrice: number | null,
 ): boolean {
-  if (playbook.startKind !== "price" || !playbook.armTrigger) {
+  if (dcaStartKindForSide(playbook, side) !== "price") {
     return false;
   }
-  if (lastPrice === null) {
+  const trigger = dcaArmTriggerForSide(playbook, side);
+  if (!trigger || lastPrice === null) {
     return false;
   }
-  return triggerConditionMet(
-    lastPrice,
-    playbook.armTrigger.compare,
-    playbook.armTrigger.price,
-  );
+  return triggerConditionMet(lastPrice, trigger.compare, trigger.price);
 }
 
 async function applyDcaVerbUnlocked(input: {
@@ -1823,6 +1825,7 @@ async function applyDcaVerbUnlocked(input: {
   verb: DcaVerb;
   side?: FuturesSide | null;
   source?: "manual" | "webhook";
+  firedWebhookId?: string | null;
   forcePlace?: boolean;
   reason?: string;
   /** Engine tick: do not turn an idle leg back on. */
@@ -2009,35 +2012,34 @@ async function applyDcaVerbUnlocked(input: {
 
   const lastPrice = await lastPriceForPlaybook(input.playbook);
   const fromSignal = input.source === "webhook";
+  const firedWebhookId = input.firedWebhookId ?? null;
   const startBars = await loadPlaybookStartBars(input.playbook);
   const seriesBarsLoaded = [...startBars.values()].some(
     (rows) => rows.length > 0,
   );
+  const seriesSide = sides.find((side) =>
+    dcaSeriesStart(dcaStartKindForSide(input.playbook, side)),
+  );
   if (
     !input.forcePlace &&
-    (input.playbook.startKind === "indicator" ||
-      input.playbook.startKind === "trend") &&
+    seriesSide &&
     dcaIndicatorTimeframes(input.playbook).length > 0 &&
     !seriesBarsLoaded
   ) {
     return {
       ok: false,
       error:
-        input.playbook.startKind === "trend"
+        dcaStartKindForSide(input.playbook, seriesSide) === "trend"
           ? "Could not read Supertrend candles. The first order was not placed."
           : "Could not read indicator candles. The first order was not placed.",
     };
   }
-  const placeNow =
-    Boolean(input.forcePlace) ||
-    input.playbook.startKind === "immediate" ||
-    (input.playbook.startKind === "webhook" && fromSignal) ||
-    priceStartMet(input.playbook, lastPrice);
   let placed = 0;
   let resumed = 0;
   let waiting = 0;
   let already = 0;
   let skippedIdle = 0;
+  let flattened = 0;
   const playbook = input.playbook;
   const opens = await loadOpenFuturesOnSymbol(playbook.symbol, {
     accountId: playbook.accountId,
@@ -2046,10 +2048,78 @@ async function applyDcaVerbUnlocked(input: {
 
   for (const side of sides) {
     let leg = dcaLegFor(playbook, side);
+    const sideKind = dcaStartKindForSide(playbook, side);
+    const sideWebhook = dcaWebhookIdForSide(playbook, side);
+    const exit = hardExitForSide(playbook, side);
+    const exitStack = exitStackForSide(playbook, side);
+    const exitWebhook =
+      (exit.signal?.trigger === "webhook" &&
+        exit.signal.webhookId === firedWebhookId) ||
+      exitStack.leaves.some(
+        (leaf) => leaf.kind === "webhook" && leaf.webhookId === firedWebhookId,
+      );
+    if (fromSignal && firedWebhookId && exitWebhook) {
+      const open = opens.find((row) => row.side === side);
+      const exitBars = exit.filter
+        ? (startBars.get(exit.filter.timeframe) ?? [])
+        : [];
+      const expressionMet =
+        open != null &&
+        open.qty > 0 &&
+        exitExpressionMet({
+          first: hardExitMet({
+            filter: exit.filter,
+            signal: exit.signal,
+            side,
+            closes: exitBars.map((row) => row.close),
+            bars: exitBars,
+            prices: { last: lastPrice, mark: lastPrice, index: lastPrice },
+            firedWebhookId,
+          }),
+          stack: exitStack,
+          side,
+          price: lastPrice,
+          prices: { last: lastPrice, mark: lastPrice, index: lastPrice },
+          barsByTimeframe: startBars,
+          firedWebhookId,
+        });
+      if (open && open.qty > 0 && expressionMet) {
+        const closed = await flattenSide({
+          playbook,
+          mode: input.mode,
+          side,
+          reason: formatExitExpressionText({
+            filter: exit.filter,
+            signal: exit.signal,
+            stack: exitStack,
+            side,
+          }),
+          closeKind: "exit_if",
+        });
+        if (!closed.ok) {
+          return closed;
+        }
+        const kept = await keepListeningAfterFlatten({ playbook, side });
+        if (!kept.ok) {
+          return kept;
+        }
+        touchPlaybook(playbook);
+        flattened += 1;
+        continue;
+      }
+      if (sideWebhook !== firedWebhookId) {
+        skippedIdle += 1;
+        continue;
+      }
+    }
+    const sideSignal =
+      fromSignal &&
+      sideKind === "webhook" &&
+      (firedWebhookId == null || firedWebhookId === sideWebhook);
     if (
       !dcaWebhookSignalApplies({
-        startKind: playbook.startKind,
-        fromSignal,
+        startKind: sideKind,
+        fromSignal: sideSignal,
         status: leg.status,
       })
     ) {
@@ -2064,7 +2134,7 @@ async function applyDcaVerbUnlocked(input: {
         positionQty: open?.qty ?? null,
       })
     ) {
-      if (input.forcePlace && dcaStartListens(playbook.startKind)) {
+      if (input.forcePlace && dcaStartListens(sideKind)) {
         const kept = await keepListeningAfterFlatten({ playbook, side });
         if (!kept.ok) {
           return kept;
@@ -2123,28 +2193,28 @@ async function applyDcaVerbUnlocked(input: {
       resumed += 1;
       continue;
     }
+    const entryTrigger =
+      Boolean(input.forcePlace) ||
+      sideKind === "immediate" ||
+      sideSignal ||
+      priceStartMet(playbook, side, lastPrice) ||
+      seriesStartDueForSide(playbook, side, startBars);
     if (
-      !placeNow &&
-      !seriesStartDueForSide(playbook, side, startBars)
-    ) {
-      const patched = await patchDcaLeg({
-        supabase,
-        id: playbook.id,
+      !input.forcePlace &&
+      !dcaEntryExpressionMet({
+        playbook,
         side,
-        patch: { status: "armed" },
-        unlessIdle: input.unlessIdle,
-      });
-      if (!patched.ok) {
-        return patched;
-      }
-      if (!patched.updated) {
-        skippedIdle += 1;
-        continue;
-      }
-      waiting += 1;
-      continue;
-    }
-    if (!input.forcePlace && !confirmMetForSide(playbook, side, startBars)) {
+        trigger: entryTrigger,
+        price: lastPrice,
+        prices: {
+          last: lastPrice,
+          mark: lastPrice,
+          index: lastPrice,
+        },
+        barsByTimeframe: startBars,
+        firedWebhookId,
+      })
+    ) {
       const patched = await patchDcaLeg({
         supabase,
         id: playbook.id,
@@ -2174,11 +2244,12 @@ async function applyDcaVerbUnlocked(input: {
       reason:
         input.reason ??
         formatDcaStartReasons({
-          startKind: playbook.startKind,
+          startKind: sideKind,
           side,
           armTrigger: dcaArmTriggerForSide(playbook, side),
           indicator: dcaIndicatorStartForSide(playbook, side),
           confirm: dcaFilterForSide(playbook, side, "confirm"),
+          entryStack: dcaEntryStackForSide(playbook, side),
           price: lastPrice,
         }),
     });
@@ -2208,6 +2279,15 @@ async function applyDcaVerbUnlocked(input: {
     }
   }
 
+  if (flattened > 0 && placed === 0 && resumed === 0 && waiting === 0) {
+    await logDcaEvent({
+      playbook,
+      event: "dca.closed",
+      message: `Closed ${playbook.name}. Signal webhook.`,
+      data: { sides, reason: "exit_if", why: "Signal webhook" },
+    });
+    return { ok: true, message: "Hard Exit closed the position." };
+  }
   if (skippedIdle === sides.length) {
     if (input.unlessIdle) {
       return { ok: true, message: "Bot is off." };
@@ -2246,6 +2326,7 @@ export async function applyDcaVerb(input: {
   verb: DcaVerb;
   side?: FuturesSide | null;
   source?: "manual" | "webhook";
+  firedWebhookId?: string | null;
   forcePlace?: boolean;
   reason?: string;
   /** Engine tick: do not turn an idle leg back on. */

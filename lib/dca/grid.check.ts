@@ -875,6 +875,7 @@ assert.deepEqual(
     "SMA Cross",
     "EMA Cross",
     "Price vs BB",
+    "ATR band",
   ],
 );
 assert.equal(

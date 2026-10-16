@@ -18,6 +18,7 @@ import {
   type PerpsTemplateRecipe,
 } from "@/lib/templates/recipe";
 import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
+import { strategyLeafTimeframe } from "@/lib/strategy/expr";
 
 export type BacktestRecipe = PerpsTemplateRecipe | DcaTemplateRecipe;
 export type BacktestDeskType = "perps" | "dca";
@@ -781,14 +782,25 @@ export function backtestTapeInterval(
   fromMs: number,
   toMs: number,
 ): DcaIndicatorTimeframe {
-  if (
-    recipe?.kind === "perps" &&
-    (recipe.entrySource === "indicator" || recipe.entrySource === "trend")
-  ) {
+  if (recipe?.kind === "perps") {
+    const indicatorStart =
+      recipe.entrySource === "indicator" || recipe.entrySource === "trend";
+    const shortStart =
+      recipe.direction === "both" &&
+      (recipe.shortEntry?.entrySource === "indicator" ||
+        recipe.shortEntry?.entrySource === "trend");
     const rows = [
-      recipe.indicator?.timeframe,
-      recipe.confirm?.timeframe,
-      recipe.exitIf?.timeframe,
+      indicatorStart ? recipe.indicator?.timeframe : null,
+      ...(recipe.entryStack?.leaves.map((leaf) => strategyLeafTimeframe(leaf)) ??
+        []),
+      indicatorStart ? recipe.confirm?.timeframe : null,
+      shortStart ? recipe.shortEntry?.indicator?.timeframe : null,
+      ...(recipe.direction === "both"
+        ? (recipe.shortEntry?.entryStack?.leaves.map((leaf) =>
+            strategyLeafTimeframe(leaf),
+          ) ?? [])
+        : []),
+      indicatorStart ? recipe.exitIf?.timeframe : null,
     ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
     if (rows.length === 1) {
       return rows[0];
@@ -799,20 +811,26 @@ export function backtestTapeInterval(
       );
     }
   }
-  if (
-    recipe?.kind === "dca" &&
-    (recipe.startKind === "indicator" || recipe.startKind === "trend")
-  ) {
-    const primary = recipe.indicatorTimeframe;
-    const short = recipe.shortIndicatorTimeframe;
-    if (primary && short) {
-      return finerDcaIndicatorTimeframe(primary, short);
-    }
-    if (primary) {
-      return primary;
-    }
-    if (short) {
-      return short;
+  if (recipe?.kind === "dca") {
+    const indicatorStart =
+      recipe.startKind === "indicator" || recipe.startKind === "trend";
+    const shortKind = recipe.shortStartKind ?? recipe.startKind;
+    const shortSeries = shortKind === "indicator" || shortKind === "trend";
+    const primary = indicatorStart ? recipe.indicatorTimeframe : null;
+    const short = shortSeries ? recipe.shortIndicatorTimeframe : null;
+    const stacked = [
+      primary,
+      short,
+      ...(recipe.entryStack?.leaves.map((leaf) => strategyLeafTimeframe(leaf)) ??
+        []),
+      ...(recipe.shortEntryStack?.leaves.map((leaf) =>
+        strategyLeafTimeframe(leaf),
+      ) ?? []),
+    ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
+    if (stacked.length > 0) {
+      return stacked.reduce((finest, next) =>
+        finerDcaIndicatorTimeframe(finest, next),
+      );
     }
   }
   for (const interval of DCA_INDICATOR_TIMEFRAMES) {

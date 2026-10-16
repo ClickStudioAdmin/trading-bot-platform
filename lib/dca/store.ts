@@ -1,4 +1,6 @@
+import { entryStackToJson } from "@/lib/strategy/expr";
 import { filterColumns } from "./filters";
+import { hardExitSignalToJson } from "./hard-exit";
 import {
   dcaPlaybookConflict,
   dcaPlaybookIsRunning,
@@ -20,7 +22,16 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
     symbol: config.symbol,
     direction: config.direction,
     start_kind: config.startKind,
+    short_start_kind:
+      config.direction === "both"
+        ? (config.shortStartKind ?? config.startKind)
+        : null,
     webhook_id: config.webhookId,
+    short_webhook_id:
+      config.direction === "both" &&
+      (config.shortStartKind ?? config.startKind) === "webhook"
+        ? (config.shortWebhookId ?? config.webhookId)
+        : null,
     dca_mode: config.dcaMode,
     clip_size: config.clipSize,
     size_unit: config.sizeUnit,
@@ -71,8 +82,33 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
     short_indicator_multiplier: config.shortIndicatorMultiplier ?? null,
     ...filterColumns("confirm", config.confirm),
     ...filterColumns("short_confirm", config.shortConfirm),
-    ...filterColumns("exit_if", config.exitIf),
-    ...filterColumns("short_exit_if", config.shortExitIf),
+    entry_expr:
+      config.entryStack && config.entryStack.leaves.length > 0
+        ? entryStackToJson(config.entryStack)
+        : null,
+    short_entry_expr:
+      config.direction === "both" &&
+      config.shortEntryStack &&
+      config.shortEntryStack.leaves.length > 0
+        ? entryStackToJson(config.shortEntryStack)
+        : null,
+    ...filterColumns("exit_if", config.exitHard ? null : config.exitIf),
+    ...filterColumns(
+      "short_exit_if",
+      config.shortExitHard ? null : config.shortExitIf,
+    ),
+    exit_hard: hardExitSignalToJson(config.exitHard),
+    short_exit_hard: hardExitSignalToJson(config.shortExitHard),
+    exit_expr:
+      config.exitStack && config.exitStack.leaves.length > 0
+        ? entryStackToJson(config.exitStack)
+        : null,
+    short_exit_expr:
+      config.direction === "both" &&
+      config.shortExitStack &&
+      config.shortExitStack.leaves.length > 0
+        ? entryStackToJson(config.shortExitStack)
+        : null,
   };
 }
 

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  futuresAutomationNeedsWideBars,
   futuresBreakevenDue,
   futuresBreakevenStop,
   futuresEntryConditionMet,
@@ -189,8 +190,215 @@ assert.equal(parsed.ok, true);
 if (parsed.ok) {
   assert.equal(parsed.indicator?.kind, "rsi");
   assert.equal(parsed.confirm?.kind, "ema");
+  assert.equal(parsed.entryStack.leaves.length, 1);
+  assert.equal(parsed.entryStack.joins[0], "and");
   assert.equal(parsed.breakevenActivationPct, 1.5);
   assert.equal(parsed.breakevenOffsetPct, 0.2);
 }
+
+const stacked = new FormData();
+stacked.set("r0_entryCount", "1");
+stacked.set("r0_entry0Join", "or");
+stacked.set("r0_entry0Kind", "ema");
+stacked.set("r0_entry0Timeframe", "15");
+stacked.set("r0_entry0Compare", "gte");
+stacked.set("r0_entry0Period", "5");
+const stackedParsed = parseFuturesConditionForm(stacked, "r0_", {
+  entrySource: "price",
+  closing: false,
+});
+assert.equal(stackedParsed.ok, true);
+if (stackedParsed.ok) {
+  assert.equal(stackedParsed.confirm, null);
+  assert.equal(stackedParsed.entryStack.joins[0], "or");
+  const stackedLeaf = stackedParsed.entryStack.leaves[0];
+  assert.equal(stackedLeaf?.kind, "filter");
+  assert.equal(
+    stackedLeaf?.kind === "filter" ? stackedLeaf.spec.kind : "",
+    "ema",
+  );
+}
+
+assert.equal(
+  futuresEntryConditionMet({
+    rule: {
+      entrySource: "price",
+      triggerCompare: "gte",
+      triggerPrice: 200,
+      entryStack: stackedParsed.ok ? stackedParsed.entryStack : undefined,
+    },
+    side: "long",
+    price: 100,
+    barsByTimeframe: bars,
+  }),
+  true,
+  "Or passes when the trigger misses and the second condition is true",
+);
+
+const priceOr = new FormData();
+priceOr.set("r0_entryCount", "1");
+priceOr.set("r0_entry0Join", "or");
+priceOr.set("r0_entry0Source", "price");
+priceOr.set("r0_entry0TriggerBy", "mark");
+priceOr.set("r0_entry0TriggerCompare", "lte");
+priceOr.set("r0_entry0TriggerPrice", "150");
+const priceOrParsed = parseFuturesConditionForm(priceOr, "r0_", {
+  entrySource: "price",
+  closing: false,
+});
+assert.equal(priceOrParsed.ok, true);
+assert.equal(
+  futuresEntryConditionMet({
+    rule: {
+      entrySource: "price",
+      triggerCompare: "gte",
+      triggerPrice: 200,
+      entryStack: priceOrParsed.ok ? priceOrParsed.entryStack : undefined,
+    },
+    side: "long",
+    price: 100,
+    prices: { last: 100, mark: 140, index: 100 },
+    barsByTimeframe: bars,
+  }),
+  true,
+  "Or price leaf uses its own price source",
+);
+
+const priceAnd = new FormData();
+priceAnd.set("r0_triggerBy", "last");
+priceAnd.set("r0_triggerCompare", "gte");
+priceAnd.set("r0_triggerPrice", "100");
+priceAnd.set("r0_entryCount", "1");
+priceAnd.set("r0_entry0Join", "and");
+priceAnd.set("r0_entry0Source", "price");
+priceAnd.set("r0_entry0TriggerBy", "last");
+priceAnd.set("r0_entry0TriggerCompare", "lte");
+priceAnd.set("r0_entry0TriggerPrice", "90");
+const priceAndParsed = parseFuturesConditionForm(priceAnd, "r0_", {
+  entrySource: "price",
+  closing: false,
+});
+assert.equal(priceAndParsed.ok, false);
+if (!priceAndParsed.ok) {
+  assert.equal(
+    priceAndParsed.error,
+    "These conditions cannot be true at the same time.",
+  );
+}
+
+const priceBand = new FormData();
+priceBand.set("r0_triggerBy", "last");
+priceBand.set("r0_triggerCompare", "gte");
+priceBand.set("r0_triggerPrice", "90");
+priceBand.set("r0_entryCount", "1");
+priceBand.set("r0_entry0Join", "and");
+priceBand.set("r0_entry0Source", "price");
+priceBand.set("r0_entry0TriggerBy", "last");
+priceBand.set("r0_entry0TriggerCompare", "lte");
+priceBand.set("r0_entry0TriggerPrice", "100");
+const priceBandParsed = parseFuturesConditionForm(priceBand, "r0_", {
+  entrySource: "price",
+  closing: false,
+});
+assert.equal(priceBandParsed.ok, true);
+
+const webhookAnd = new FormData();
+webhookAnd.set("r0_webhookId", "hook-a");
+webhookAnd.set("r0_entryCount", "1");
+webhookAnd.set("r0_entry0Join", "and");
+webhookAnd.set("r0_entry0Source", "webhook");
+webhookAnd.set("r0_entry0WebhookId", "hook-b");
+const webhookAndParsed = parseFuturesConditionForm(webhookAnd, "r0_", {
+  entrySource: "webhook",
+  closing: false,
+});
+assert.equal(webhookAndParsed.ok, false);
+
+const webhookOr = new FormData();
+webhookOr.set("r0_entryCount", "1");
+webhookOr.set("r0_entry0Join", "or");
+webhookOr.set("r0_entry0Source", "webhook");
+webhookOr.set("r0_entry0WebhookId", "hook-b");
+const webhookOrParsed = parseFuturesConditionForm(webhookOr, "r0_", {
+  entrySource: "price",
+  closing: false,
+});
+assert.equal(webhookOrParsed.ok, true);
+assert.equal(
+  futuresEntryConditionMet({
+    rule: {
+      entrySource: "price",
+      triggerCompare: "gte",
+      triggerPrice: 200,
+      entryStack: webhookOrParsed.ok ? webhookOrParsed.entryStack : undefined,
+    },
+    side: "long",
+    price: 100,
+    barsByTimeframe: bars,
+    firedWebhookId: "hook-b",
+  }),
+  true,
+);
+assert.equal(
+  futuresEntryConditionMet({
+    rule: {
+      entrySource: "price",
+      triggerCompare: "gte",
+      triggerPrice: 200,
+      entryStack: webhookOrParsed.ok ? webhookOrParsed.entryStack : undefined,
+    },
+    side: "long",
+    price: 100,
+    barsByTimeframe: bars,
+    firedWebhookId: null,
+  }),
+  false,
+);
+
+assert.equal(
+  futuresAutomationNeedsWideBars({
+    entrySource: "price",
+    exitIf: {
+      kind: "rsi",
+      timeframe: "15",
+      compare: "gte",
+      level: 70,
+      period: 14,
+      multiplier: null,
+    },
+    exitStack: { leaves: [], joins: [] },
+  }),
+  false,
+);
+assert.equal(
+  futuresAutomationNeedsWideBars({
+    entrySource: "price",
+    exitIf: {
+      kind: "rsi",
+      timeframe: "15",
+      compare: "gte",
+      level: 70,
+      period: 14,
+      multiplier: null,
+    },
+    exitStack: {
+      leaves: [
+        {
+          kind: "filter",
+          spec: {
+            kind: "atr_band",
+            timeframe: "15",
+            compare: "gte",
+            level: null,
+            period: 10,
+            multiplier: 2,
+          },
+        },
+      ],
+      joins: ["and"],
+    },
+  }),
+  true,
+);
 
 console.log("futures conditions checks passed");

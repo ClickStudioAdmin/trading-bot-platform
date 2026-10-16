@@ -162,4 +162,23 @@ assert.equal(
   "Secondary Entry Price is above EMA 21 · 1h",
 );
 
+assert.equal(
+  formatDcaStartReasons({
+    startKind: "webhook",
+    side: "long",
+    entryStack: {
+      leaves: [
+        {
+          kind: "price",
+          triggerBy: "last",
+          compare: "gte",
+          price: 50,
+        },
+      ],
+      joins: ["or"],
+    },
+  }),
+  "Signal webhook, or Last is at or above 50",
+);
+
 console.log("condition-copy checks passed");

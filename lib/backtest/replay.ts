@@ -4,12 +4,18 @@ import {
   futuresBreakevenStop,
   futuresEntryConditionMet,
   futuresFilterMet,
+  perpsExitForSide,
 } from "@/lib/futures/conditions";
 import type { FuturesAction, FuturesSide } from "@/lib/futures/model";
 import {
   resampleBarsForTimeframe,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import {
+  formatStrategyLeafReason,
+} from "@/lib/bots/condition-copy";
+import { hardExitMet, hardExitSignalFromJson } from "@/lib/dca/hard-exit";
+import { exitExpressionMet, formatExitExpressionText } from "@/lib/dca/exit-stack";
 import { canBacktestPerpsRecipe } from "./eligibility";
 import { backtestTapeInterval } from "./model";
 import {
@@ -41,9 +47,51 @@ import {
 } from "./model";
 import { fillSentence, skippedEntrySentence } from "./events";
 import type { ReplayEvent } from "./model";
+import {
+  entryStackIsLegacy,
+  resolveEntryStack,
+  strategyLeafTimeframe,
+} from "@/lib/strategy/expr";
 import { filterBecause, indicatorBecause, priceStartBecause } from "./explain";
 
 export { canBacktestPerpsRecipe };
+
+function perpsHardExitMet(
+  recipe: PerpsTemplateRecipe,
+  side: FuturesSide,
+  price: number,
+  barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>,
+): boolean {
+  const exit = perpsExitForSide(
+    {
+      ...recipe,
+      exitIf: recipe.exitIf ?? null,
+      exitHard: hardExitSignalFromJson(recipe.exitHard),
+    },
+    side,
+  );
+  const signal = exit.exitHard;
+  return exitExpressionMet({
+    first: signal
+      ? hardExitMet({
+          signal,
+          side,
+          prices: { last: price, mark: price, index: price },
+        })
+      : Boolean(exit.exitIf) &&
+        futuresFilterMet({
+          spec: exit.exitIf,
+          side,
+          barsByTimeframe,
+        }),
+    stack: exit.exitStack,
+    side,
+    price,
+    prices: { last: price, mark: price, index: price },
+    barsByTimeframe,
+    firedWebhookId: null,
+  });
+}
 
 export function recipeAction(recipe: PerpsTemplateRecipe): {
   action: FuturesAction;
@@ -162,12 +210,21 @@ export async function replayPerpsPriceCross(input: {
   if (!allowed.ok) {
     return { orders: [], stats: emptyBacktestStats(input.startingUsdt), events: [] };
   }
+  if (input.recipe.direction === "both" && input.recipe.shortEntry) {
+    return replayPerpsBoth(input);
+  }
   const { action, closeSide } = recipeAction(input.recipe);
   const tape = backtestTapeInterval(input.recipe, 1, 2);
   const conditionTimeframes = [
     input.recipe.indicator?.timeframe,
+    ...(input.recipe.entryStack?.leaves.map((leaf) =>
+      strategyLeafTimeframe(leaf),
+    ) ?? []),
     input.recipe.confirm?.timeframe,
     input.recipe.exitIf?.timeframe,
+    ...(input.recipe.exitStack?.leaves.map((leaf) =>
+      strategyLeafTimeframe(leaf),
+    ) ?? []),
   ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
   let wasTrue = false;
   let open: OpenSim | null = null;
@@ -313,6 +370,27 @@ export async function replayPerpsPriceCross(input: {
           flattenOpen(bar.timeMs, trail.fillPrice, "trailing");
         }
       }
+      const barsByTimeframe = replayBarsByTimeframe(
+        input.bars.slice(0, input.bars.indexOf(bar) + 1),
+        tape,
+        conditionTimeframes,
+      );
+      if (
+        open &&
+        perpsHardExitMet(input.recipe, open.side, price, barsByTimeframe)
+      ) {
+        flattenOpen(
+          bar.timeMs,
+          price,
+          "exit_if",
+          formatExitExpressionText({
+            filter: input.recipe.exitIf,
+            signal: hardExitSignalFromJson(input.recipe.exitHard),
+            stack: input.recipe.exitStack,
+            side: open.side,
+          }),
+        );
+      }
       if (open?.tpsl && tpslHasLevels(open.tpsl)) {
         const tp = paperTakeProfitHit({
           side: open.side,
@@ -324,27 +402,6 @@ export async function replayPerpsPriceCross(input: {
         if (tp) {
           flattenOpen(bar.timeMs, tp.price, "take_profit");
         }
-      }
-      const barsByTimeframe = replayBarsByTimeframe(
-        input.bars.slice(0, input.bars.indexOf(bar) + 1),
-        tape,
-        conditionTimeframes,
-      );
-      if (
-        open &&
-        input.recipe.exitIf &&
-        futuresFilterMet({
-          spec: input.recipe.exitIf,
-          side: open.side,
-          barsByTimeframe,
-        })
-      ) {
-        flattenOpen(
-          bar.timeMs,
-          price,
-          "exit_if",
-          filterBecause(input.recipe.exitIf, open.side, "Exit if"),
-        );
       }
       if (
         open &&
@@ -401,6 +458,7 @@ export async function replayPerpsPriceCross(input: {
         entrySource: input.recipe.entrySource,
         indicator: input.recipe.indicator,
         confirm: input.recipe.confirm,
+        entryStack: input.recipe.entryStack,
         triggerCompare: input.recipe.triggerCompare,
         triggerPrice: Number(
           String(input.recipe.triggerPrice).replace(/,/g, "").trim(),
@@ -490,20 +548,39 @@ export async function replayPerpsPriceCross(input: {
     price: number,
     barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>,
   ): string {
+    const stack = resolveEntryStack(
+      input.recipe.entryStack,
+      input.recipe.confirm,
+    );
+    const stackBecause = entryStackIsLegacy(stack)
+      ? ""
+      : stack.leaves
+          .map((leaf, index) => {
+            const text = formatStrategyLeafReason(leaf, side);
+            const join = stack.joins[index] === "or" ? "Or" : "And";
+            return text ? `${join} ${text}` : "";
+          })
+          .filter(Boolean)
+          .join(" ");
     if (input.recipe.entrySource === "price") {
       const level = Number(String(input.recipe.triggerPrice).replace(/,/g, ""));
-      return priceStartBecause(
-        {
-          triggerBy: input.recipe.triggerBy,
-          compare: input.recipe.triggerCompare,
-          price: level,
-        },
-        price,
-      );
+      return [
+        priceStartBecause(
+          {
+            triggerBy: input.recipe.triggerBy,
+            compare: input.recipe.triggerCompare,
+            price: level,
+          },
+          price,
+        ),
+        stackBecause,
+      ]
+        .filter(Boolean)
+        .join(" ");
     }
     const start = input.recipe.indicator;
     if (!start) {
-      return "";
+      return stackBecause;
     }
     const bars = barsByTimeframe.get(start.timeframe) ?? [];
     return [
@@ -520,6 +597,7 @@ export async function replayPerpsPriceCross(input: {
         bars,
       }),
       filterBecause(input.recipe.confirm, side, "Confirm"),
+      stackBecause,
     ]
       .filter(Boolean)
       .join(" ");
@@ -538,6 +616,387 @@ export async function replayPerpsPriceCross(input: {
         input.bars.length > 0 ? barsIn / input.bars.length : 0,
       openQty: open?.qty ?? 0,
       openSide: open?.side ?? null,
+      markUsdt,
+      lastPrice: last?.close ?? null,
+      startingUsdt: input.startingUsdt,
+    }),
+  };
+}
+
+async function replayPerpsBoth(input: {
+  bars: CandleBar[];
+  recipe: PerpsTemplateRecipe;
+  feeRate: number;
+  startingUsdt: number;
+  leverage?: number;
+}): Promise<{ orders: SimulatedOrder[]; stats: BacktestStats; events: ReplayEvent[] }> {
+  const short = input.recipe.shortEntry;
+  if (!short) {
+    return {
+      orders: [],
+      stats: emptyBacktestStats(input.startingUsdt),
+      events: [],
+    };
+  }
+  const tape = backtestTapeInterval(input.recipe, 1, 2);
+  const conditionTimeframes = [
+    input.recipe.indicator?.timeframe,
+    ...(input.recipe.entryStack?.leaves.map((leaf) => strategyLeafTimeframe(leaf)) ??
+      []),
+    input.recipe.confirm?.timeframe,
+    short.indicator?.timeframe,
+    ...(short.entryStack?.leaves.map((leaf) => strategyLeafTimeframe(leaf)) ?? []),
+    short.confirm?.timeframe,
+    input.recipe.exitIf?.timeframe,
+    ...(input.recipe.exitStack?.leaves.map((leaf) =>
+      strategyLeafTimeframe(leaf),
+    ) ?? []),
+    short.exitIf?.timeframe,
+    ...(short.exitStack?.leaves.map((leaf) => strategyLeafTimeframe(leaf)) ??
+      []),
+  ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
+  const legs: Array<{
+    side: FuturesSide;
+    wasTrue: boolean;
+    entrySource: PerpsTemplateRecipe["entrySource"];
+    triggerBy: PerpsTemplateRecipe["triggerBy"];
+    triggerCompare: PerpsTemplateRecipe["triggerCompare"];
+    triggerPrice: number;
+    skipIfOpen: boolean;
+    indicator: PerpsTemplateRecipe["indicator"];
+    confirm: PerpsTemplateRecipe["confirm"];
+    entryStack: PerpsTemplateRecipe["entryStack"];
+  }> = [
+    {
+      side: "long",
+      wasTrue: false,
+      entrySource: input.recipe.entrySource,
+      triggerBy: input.recipe.triggerBy,
+      triggerCompare: input.recipe.triggerCompare,
+      triggerPrice: Number(String(input.recipe.triggerPrice).replace(/,/g, "")),
+      skipIfOpen: input.recipe.skipIfOpen,
+      indicator: input.recipe.indicator,
+      confirm: input.recipe.confirm,
+      entryStack: input.recipe.entryStack,
+    },
+    {
+      side: "short",
+      wasTrue: false,
+      entrySource: short.entrySource,
+      triggerBy: short.triggerBy,
+      triggerCompare: short.triggerCompare,
+      triggerPrice: short.triggerPrice,
+      skipIfOpen: short.skipIfOpen,
+      indicator: short.indicator,
+      confirm: short.confirm,
+      entryStack: short.entryStack,
+    },
+  ];
+  const book: Record<FuturesSide, OpenSim | null> = { long: null, short: null };
+  const orders: SimulatedOrder[] = [];
+  const events: ReplayEvent[] = [];
+  let realized = 0;
+  let wins = 0;
+  let trades = 0;
+  let grossWin = 0;
+  let grossLoss = 0;
+  let peak = input.startingUsdt;
+  let maxDrawdown = 0;
+  let barsIn = 0;
+  let liquidated = false;
+
+  function remember(order: SimulatedOrder) {
+    const orderIndex = orders.length;
+    orders.push(order);
+    events.push({
+      atMs: order.atMs,
+      kind: "fill",
+      reason: order.reason ?? "close",
+      orderIndex,
+      side: order.side,
+      text: fillSentence({
+        reason: order.reason ?? "close",
+        side: order.side,
+        price: order.price,
+      }),
+    });
+  }
+
+  function flattenSide(
+    side: FuturesSide,
+    atMs: number,
+    fill: number,
+    reason: BacktestFillReason,
+  ) {
+    const open = book[side];
+    if (!open) {
+      return;
+    }
+    const fee = feeUsdt(open.qty, fill, input.feeRate);
+    const pnl = unrealized(open.side, open.qty, open.entry, fill) - fee;
+    realized += pnl;
+    trades += 1;
+    if (pnl > 0) {
+      wins += 1;
+      grossWin += pnl;
+    } else {
+      grossLoss += Math.abs(pnl);
+    }
+    remember({
+      atMs,
+      action: "flatten",
+      side: open.side,
+      qty: open.qty,
+      price: fill,
+      feeUsdt: fee,
+      realizedUsdt: pnl,
+      reason,
+    });
+    book[side] = null;
+  }
+
+  function markEquity(price: number) {
+    const marked =
+      input.startingUsdt +
+      realized +
+      (book.long
+        ? unrealized(book.long.side, book.long.qty, book.long.entry, price)
+        : 0) +
+      (book.short
+        ? unrealized(book.short.side, book.short.qty, book.short.entry, price)
+        : 0);
+    if (marked > peak) {
+      peak = marked;
+    }
+    const drawdown = peak - marked;
+    if (drawdown > maxDrawdown) {
+      maxDrawdown = drawdown;
+    }
+  }
+
+  let barIndex = 0;
+  for (const bar of input.bars) {
+    barIndex += 1;
+    await yieldBacktestReplay(barIndex);
+    const price = bar.close;
+    if (!(price > 0) || liquidated) {
+      if (liquidated) {
+        markEquity(0);
+      }
+      continue;
+    }
+    if (book.long || book.short) {
+      barsIn += 1;
+    }
+    const barsByTimeframe = replayBarsByTimeframe(
+      input.bars.slice(0, input.bars.indexOf(bar) + 1),
+      tape,
+      conditionTimeframes,
+    );
+    for (const side of ["long", "short"] as const) {
+      const open = book[side];
+      if (!open) {
+        continue;
+      }
+      const adverse = open.side === "long" ? bar.low : bar.high;
+      const favorable = open.side === "long" ? bar.high : bar.low;
+      const quotes = { last: adverse, mark: adverse, index: adverse };
+      const sl =
+        open.tpsl && tpslHasLevels(open.tpsl)
+          ? paperStopLossHit({ side: open.side, tpsl: open.tpsl, ...quotes })
+          : null;
+      const liq = backtestLiquidationPrice({
+        side: open.side,
+        entry: open.entry,
+        qty: open.qty,
+        cashUsdt: input.startingUsdt + realized,
+        feeRate: input.feeRate,
+      });
+      const firstHit = firstAdverseFill(open.side, adverse, [
+        sl ? { price: sl.price, reason: "stop" } : null,
+        liq != null ? { price: liq, reason: "liquidation" } : null,
+      ]);
+      if (firstHit) {
+        flattenSide(side, bar.timeMs, firstHit.price, firstHit.reason);
+        if (firstHit.reason === "liquidation") {
+          liquidated = true;
+        }
+        continue;
+      }
+      if (open.trailing && trailingHasStop(open.trailing)) {
+        const trail = paperTrailingAdvance({
+          side: open.side,
+          trailing: open.trailing,
+          last: adverse,
+        });
+        open.trailing = { ...open.trailing, peak: trail.peak };
+        if (trail.hit && trail.fillPrice != null) {
+          flattenSide(side, bar.timeMs, trail.fillPrice, "trailing");
+          continue;
+        }
+      }
+      if (
+        !liquidated &&
+        book[side] &&
+        perpsHardExitMet(input.recipe, side, price, barsByTimeframe)
+      ) {
+        flattenSide(side, bar.timeMs, price, "exit_if");
+        continue;
+      }
+      if (open.tpsl && tpslHasLevels(open.tpsl)) {
+        const tp = paperTakeProfitHit({
+          side: open.side,
+          tpsl: open.tpsl,
+          last: favorable,
+          mark: favorable,
+          index: favorable,
+        });
+        if (tp) {
+          flattenSide(side, bar.timeMs, tp.price, "take_profit");
+          continue;
+        }
+      }
+    }
+    if (liquidated) {
+      markEquity(0);
+      continue;
+    }
+    for (const leg of legs) {
+      const open = book[leg.side];
+      if (
+        open &&
+        futuresBreakevenDue({
+          side: leg.side,
+          qty: open.qty,
+          entryPrice: open.entry,
+          mark: price,
+          activationPct: input.recipe.breakevenActivationPct,
+          done: open.breakevenDone,
+        })
+      ) {
+        const stop = futuresBreakevenStop({
+          side: leg.side,
+          entryPrice: open.entry,
+          currentStop: open.tpsl?.stopLoss ?? null,
+          offsetPct: input.recipe.breakevenOffsetPct,
+        });
+        if (stop != null && stop > 0) {
+          open.tpsl = {
+            takeProfit: open.tpsl?.takeProfit ?? null,
+            stopLoss: stop,
+            tpTrigger: open.tpsl?.tpTrigger ?? "last",
+            slTrigger: open.tpsl?.slTrigger ?? "last",
+            mode: open.tpsl?.mode ?? "full",
+            tpQty: open.tpsl?.tpQty ?? null,
+            slQty: open.tpsl?.slQty ?? null,
+            tpOrderType: open.tpsl?.tpOrderType ?? "market",
+            slOrderType: "market",
+            tpLimitPrice: open.tpsl?.tpLimitPrice ?? null,
+            slLimitPrice: null,
+          };
+          open.breakevenDone = true;
+        }
+      }
+      const conditionMet = futuresEntryConditionMet({
+        rule: {
+          entrySource: leg.entrySource,
+          indicator: leg.indicator,
+          confirm: leg.confirm,
+          entryStack: leg.entryStack,
+          triggerCompare: leg.triggerCompare,
+          triggerPrice: leg.triggerPrice,
+        },
+        side: leg.side,
+        price,
+        barsByTimeframe,
+      });
+      const decision = decideFuturesAutomationTick({
+        conditionMet,
+        wasTrue: leg.wasTrue,
+        action: leg.side === "short" ? "sell" : "buy",
+        mode: "active",
+        bookReduceOnly: false,
+        skipIfOpen: leg.skipIfOpen,
+        hasOpenOnSide: Boolean(book[leg.side]),
+      });
+      leg.wasTrue = decision.nextTrue;
+      if (!decision.fire) {
+        continue;
+      }
+      const qty = sizeAtPrice(input.recipe, price);
+      if (!(qty > 0)) {
+        continue;
+      }
+      const fee = feeUsdt(qty, price, input.feeRate);
+      const leverage = normalizeBacktestLeverage(input.leverage);
+      const locked =
+        (book.long ? backtestMarginUsdt(book.long.qty * book.long.entry, leverage) : 0) +
+        (book.short
+          ? backtestMarginUsdt(book.short.qty * book.short.entry, leverage)
+          : 0);
+      const available = input.startingUsdt + realized - locked;
+      if (backtestMarginUsdt(qty * price, leverage) + fee > available) {
+        events.push({
+          atMs: bar.timeMs,
+          kind: "skipped",
+          reason: "entry",
+          orderIndex: null,
+          side: leg.side,
+          text: skippedEntrySentence(leg.side),
+        });
+        continue;
+      }
+      realized -= fee;
+      remember({
+        atMs: bar.timeMs,
+        action: leg.side === "short" ? "sell" : "buy",
+        side: leg.side,
+        qty,
+        price,
+        feeUsdt: fee,
+        realizedUsdt: -fee,
+        reason: "entry",
+      });
+      book[leg.side] = mergeSimPosition(
+        book[leg.side],
+        leg.side,
+        qty,
+        price,
+        input.recipe.tpsl,
+        input.recipe.trailing,
+      );
+    }
+    markEquity(price);
+  }
+
+  const last = input.bars[input.bars.length - 1];
+  const markUsdt =
+    last == null
+      ? 0
+      : (book.long
+          ? unrealized(book.long.side, book.long.qty, book.long.entry, last.close)
+          : 0) +
+        (book.short
+          ? unrealized(
+              book.short.side,
+              book.short.qty,
+              book.short.entry,
+              last.close,
+            )
+          : 0);
+  const open = book.long ?? book.short;
+  return {
+    orders,
+    events,
+    stats: finishBacktestStats({
+      trades,
+      wins,
+      realizedUsdt: realized,
+      maxDrawdownUsdt: maxDrawdown,
+      profitFactor: grossLoss > 0 ? grossWin / grossLoss : null,
+      timeInMarket: input.bars.length > 0 ? barsIn / input.bars.length : 0,
+      openQty: (book.long?.qty ?? 0) + (book.short?.qty ?? 0),
+      openSide: book.long && book.short ? "long" : (open?.side ?? null),
       markUsdt,
       lastPrice: last?.close ?? null,
       startingUsdt: input.startingUsdt,
