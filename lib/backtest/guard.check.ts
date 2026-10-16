@@ -22,8 +22,8 @@ assert.equal(
   "Stopped after 3 interrupted attempts.",
 );
 
-assert.equal(backtestQueuedNotice(null), "Queued. Starting this run now.");
-assert.equal(backtestQueuedNotice("  "), "Queued. Starting this run now.");
+assert.equal(backtestQueuedNotice(null), "Queued. Starting soon....");
+assert.equal(backtestQueuedNotice("  "), "Queued. Starting soon....");
 assert.equal(
   backtestQueuedNotice("Bybit /v5/market/kline: Too many visits"),
   "Waiting to retry. Bybit /v5/market/kline: Too many visits",
