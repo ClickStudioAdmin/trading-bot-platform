@@ -9,7 +9,12 @@ import {
   formatHardExitText,
   formatStrategyLeafReason,
 } from "@/lib/bots/condition-copy";
-import type { TemplateHardExitSignal } from "@/lib/dca/hard-exit";
+import {
+  hardExitSignalFromJson,
+  type HardExitSignal,
+  type TemplateHardExitSignal,
+} from "@/lib/dca/hard-exit";
+import { perpsExitForSide } from "@/lib/futures/conditions";
 import type { EntryStack } from "@/lib/strategy/expr";
 import type { BacktestRecipe, ReplayEvent } from "./model";
 
@@ -93,7 +98,7 @@ function filterSection(
 function hardExitSection(
   role: string,
   spec: DcaFilterSpec | null | undefined,
-  signal: TemplateHardExitSignal | null | undefined,
+  signal: TemplateHardExitSignal | HardExitSignal | null | undefined,
   side: "long" | "short",
   detail: string,
 ): EventParameterSection | null {
@@ -373,16 +378,26 @@ export function eventParameterSections(
       }
     }
     if (hardExit) {
+      const own = perpsExitForSide(
+        {
+          direction: recipe.direction,
+          exitIf: recipe.exitIf ?? null,
+          exitHard: hardExitSignalFromJson(recipe.exitHard),
+          exitStack: recipe.exitStack,
+          shortEntry: recipe.shortEntry,
+        },
+        side,
+      );
       const exit = hardExitSection(
         "Hard exit",
-        recipe.exitIf,
-        recipe.exitHard,
+        own.exitIf,
+        own.exitHard,
         side,
         factDetail(event, "Hard exit"),
       );
       if (exit) {
         sections.push(exit);
-        sections.push(...exitLeafSections(recipe.exitStack, side, "Hard exit"));
+        sections.push(...exitLeafSections(own.exitStack, side, "Hard exit"));
       }
     }
   }

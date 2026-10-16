@@ -1122,7 +1122,16 @@ export function shortEntryFromJson(raw: unknown): PerpsEntryLeg | null {
   if (!stack) {
     return null;
   }
-  const exit = shortExitFromJson(row.exit);
+  const exit = shortExitFromJson(
+    row.exit ??
+      (row.exitIf != null || row.exitHard != null || row.exitStack != null
+        ? {
+            exitIf: row.exitIf,
+            exitHard: row.exitHard,
+            exitStack: row.exitStack,
+          }
+        : null),
+  );
   return {
     entrySource: source,
     webhookId: source === "webhook" ? webhookId : null,

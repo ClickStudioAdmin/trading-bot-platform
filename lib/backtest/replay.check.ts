@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { eventParameterSections } from "@/lib/backtest/event-pane";
 import type { PerpsTemplateRecipe } from "@/lib/templates/recipe";
 import {
   canBacktestPerpsRecipe,
@@ -388,6 +389,90 @@ const stopBeforeStack = await replayPerpsPriceCross({
 });
 assert.equal(stopBeforeStack.orders[1]?.reason, "stop");
 assert.equal(stopBeforeStack.orders[1]?.price, 95);
+
+const hedgedAnd = await replayPerpsPriceCross({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 140, high: 140, low: 140, close: 140 },
+    { timeMs: 3_000, open: 70, high: 70, low: 70, close: 70 },
+  ],
+  recipe: {
+    ...base,
+    direction: "both",
+    triggerCompare: "gte",
+    triggerPrice: "100",
+    skipIfOpen: true,
+    entryStack: {
+      leaves: [{ kind: "price", triggerBy: "last", compare: "gte", price: 130 }],
+      joins: ["and"],
+    },
+    exitHard: { trigger: "price", triggerBy: "last", compare: "lte", price: 90 },
+    shortEntry: {
+      entrySource: "price",
+      webhookId: null,
+      triggerBy: "last",
+      triggerCompare: "lte",
+      triggerPrice: 80,
+      skipIfOpen: true,
+      indicator: null,
+      confirm: null,
+      entryStack: { leaves: [], joins: [] },
+      exitHard: { trigger: "price", triggerBy: "last", compare: "gte", price: 120 },
+      exitStack: {
+        leaves: [{ kind: "price", triggerBy: "last", compare: "gte", price: 150 }],
+        joins: ["and"],
+      },
+    },
+  },
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+const hedgedFills = hedgedAnd.orders.filter(
+  (row) => row.action === "buy" || row.action === "sell",
+);
+assert.equal(hedgedFills.length, 2);
+assert.equal(hedgedFills[0]?.action, "buy");
+assert.equal(hedgedFills[0]?.price, 140);
+assert.equal(hedgedFills[1]?.action, "sell");
+assert.equal(hedgedFills[1]?.price, 70);
+assert.match(hedgedAnd.events[0]?.text ?? "", /And/);
+const shortExitSections = eventParameterSections(
+  {
+    ...base,
+    direction: "both",
+    exitHard: { trigger: "price", triggerBy: "last", compare: "lte", price: 90 },
+    shortEntry: {
+      entrySource: "price",
+      webhookId: null,
+      triggerBy: "last",
+      triggerCompare: "lte",
+      triggerPrice: 80,
+      skipIfOpen: true,
+      indicator: null,
+      confirm: null,
+      entryStack: { leaves: [], joins: [] },
+      exitHard: { trigger: "price", triggerBy: "last", compare: "gte", price: 120 },
+      exitStack: {
+        leaves: [{ kind: "price", triggerBy: "last", compare: "gte", price: 150 }],
+        joins: ["and"],
+      },
+    },
+  },
+  {
+    atMs: 1,
+    kind: "fill",
+    reason: "exit_if",
+    orderIndex: 0,
+    side: "short",
+    text: "",
+  },
+);
+const shortExitText = shortExitSections
+  .flatMap((section) => section.params.map((row) => row.value))
+  .join(" ");
+assert.match(shortExitText, /120/);
+assert.match(shortExitText, /150/);
+assert.doesNotMatch(shortExitText, /90/);
 
 console.log("backtest replay checks passed");
 }
