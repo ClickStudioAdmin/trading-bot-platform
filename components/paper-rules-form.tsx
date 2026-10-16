@@ -694,9 +694,11 @@ function RuleRow({
             accountReduceOnly={accountReduceOnly}
           />
         }
-        dirty={dirty}
+        dirty={Boolean(layer.id) && dirty}
         error={
-          dirty && missing ? "Fill required fields before saving." : undefined
+          Boolean(layer.id) && dirty && missing
+            ? "Fill required fields before saving."
+            : undefined
         }
         save={
           <div className="space-y-2">

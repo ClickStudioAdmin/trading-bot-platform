@@ -869,6 +869,7 @@ export function ThemeBotFormDraft() {
   const [status, setStatus] = useState("disabled");
   const [appliedStatus, setAppliedStatus] = useState("disabled");
   const [savedKey, setSavedKey] = useState<string | null>(null);
+  const [persisted, setPersisted] = useState(false);
   const draftValue = {
     name,
     symbol,
@@ -1141,6 +1142,7 @@ export function ThemeBotFormDraft() {
   }
 
   function switchDesk(next: DeskKind) {
+    setPersisted(false);
     setSavedKey(null);
     setDesk(next);
     setStatus("active");
@@ -1257,6 +1259,7 @@ export function ThemeBotFormDraft() {
     if (hasMissing) {
       return;
     }
+    setPersisted(true);
     setSavedKey(draftKey);
     setAppliedStatus(status);
   }
@@ -2797,9 +2800,9 @@ export function ThemeBotFormDraft() {
             onChange={setStatus}
           />
         }
-        dirty={dirty}
+        dirty={persisted && dirty}
         error={
-          dirty && hasMissing
+          persisted && dirty && hasMissing
             ? "Fill required fields before saving."
             : undefined
         }

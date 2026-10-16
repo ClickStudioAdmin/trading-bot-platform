@@ -1504,8 +1504,12 @@ function RuleCard({
             accountReduceOnly={accountReduceOnly}
           />
         }
-        dirty={dirty}
-        error={dirty && requiredMissing ? saveError ?? undefined : undefined}
+        dirty={Boolean(layer.id) && dirty}
+        error={
+          Boolean(layer.id) && dirty && requiredMissing
+            ? saveError ?? undefined
+            : undefined
+        }
         save={
           <div className="space-y-2">
             <PendingSubmitButton

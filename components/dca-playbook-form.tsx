@@ -1776,6 +1776,7 @@ export function DcaPlaybookForm({
     (playbook
       ? loadedRecipe != null && liveRecipeKey !== loadedRecipe
       : touched);
+  const showSaveNotes = Boolean(playbook) && dirty;
   const constraintBlocked = cycleLocked
     ? null
     : (parseConstraint ?? saveBlocked);
@@ -2959,9 +2960,9 @@ export function DcaPlaybookForm({
             accountReduceOnly={reduceOnly}
           />
         }
-        dirty={dirty}
+        dirty={showSaveNotes}
         error={
-          dirty
+          showSaveNotes
             ? requiredMissing
               ? !parsedLive.ok && !parseConstraint
                 ? parsedLive.error
