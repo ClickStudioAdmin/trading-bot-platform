@@ -137,7 +137,7 @@ export default async function AdminBillingPage({
         </p>
       ) : null}
       {saved ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           {saved === "files"
             ? `Generated ${fileCount || "the"} withdrawal list${fileCount === "1" ? "" : "s"}.`
             : saved === "rejected"
@@ -184,7 +184,7 @@ export default async function AdminBillingPage({
         </>
       ) : null}
       {tab === "overview" && scanned ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           Deposit scan finished
           {credited ? ` · ${credited} credited` : ""}.
         </p>

@@ -25,6 +25,7 @@ import {
 } from "@/lib/auth/token";
 import { VERIFY_PATH } from "@/lib/auth/onboarding-path";
 import type { MemberRole, MemberStatus } from "@/lib/members/form";
+import { DESK_DELETE_GRANT_COOKIE } from "@/lib/accounts/desk-delete-grant";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 
@@ -229,6 +230,7 @@ export async function clearSession(): Promise<void> {
   store.delete(ACCOUNT_COOKIE);
   store.delete(CHALLENGE_COOKIE);
   store.delete(RECOVERY_FLASH_COOKIE);
+  store.delete(DESK_DELETE_GRANT_COOKIE);
 }
 
 function cookieOptions(expiresAtMs: number) {

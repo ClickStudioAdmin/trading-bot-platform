@@ -18,6 +18,8 @@ import {
 } from "@/lib/site-links";
 import { redirect } from "next/navigation";
 
+export const maxDuration = 60;
+
 export const metadata: Metadata = {
   title: "Manage Desks",
   description: "Rename, disable, and delete desks, and manage exchange keys.",
@@ -108,10 +110,10 @@ async function DesksTab({
         </p>
       ) : null}
       {deleted ? (
-        <p className="mb-6 text-sm text-success">Desk deleted.</p>
+        <p className="mb-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Desk deleted.</p>
       ) : null}
       {renamed ? (
-        <p className="mb-6 text-sm text-success">Desk renamed.</p>
+        <p className="mb-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Desk renamed.</p>
       ) : null}
 
       <DeskTable

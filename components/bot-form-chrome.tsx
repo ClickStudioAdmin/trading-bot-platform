@@ -470,11 +470,15 @@ export function BotFormSidebar({
         <div className="space-y-2">
           {save}
           {dirty ? (
-            <p className="text-sm text-warning">
+            <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
               You have unsaved changes on this bot
             </p>
           ) : null}
-          {error ? <p className="text-sm text-danger">{error}</p> : null}
+          {error ? (
+            <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+              {error}
+            </p>
+          ) : null}
         </div>
         {children ? (
           <div className="flex flex-col">{children}</div>

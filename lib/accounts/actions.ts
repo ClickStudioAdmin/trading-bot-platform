@@ -34,13 +34,22 @@ import { listOnboardingFolders } from "@/lib/onboarding/catalog";
 import { starterTemplateAllowed } from "@/lib/onboarding/model";
 import { skipOnboardingForExternalDesk } from "@/lib/onboarding/store";
 import { applyTemplateToDesk } from "@/lib/templates/apply";
+import { DESK_DELETE_TIMED_OUT } from "@/lib/accounts/desk-delete";
+import {
+  DESK_DELETE_GRANT_COOKIE,
+  DESK_DELETE_GRANT_MS,
+  deskDeleteGrantAllows,
+  signDeskDeleteGrant,
+} from "@/lib/accounts/desk-delete-grant";
 import { stepUpFromForm } from "@/lib/auth/step-up-guard";
+import { stepUpRejection } from "@/lib/auth/step-up";
 import {
   getSessionContext,
   requireVerifiedEmail,
   setActiveAccountId,
 } from "@/lib/auth/session";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 const SUB_ACCOUNTS_PATH = "/account/sub-accounts";
@@ -260,20 +269,88 @@ export async function createTradingAccount(formData: FormData) {
   );
 }
 
+async function deskDeleteGrantToken(): Promise<string | null> {
+  try {
+    const store = await cookies();
+    return store.get(DESK_DELETE_GRANT_COOKIE)?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function rememberDeskDeleteGrant(
+  userId: string,
+  accountId: string,
+): Promise<void> {
+  const expiresAtMs = Date.now() + DESK_DELETE_GRANT_MS;
+  const store = await cookies();
+  store.set(
+    DESK_DELETE_GRANT_COOKIE,
+    signDeskDeleteGrant(userId, accountId, expiresAtMs),
+    {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      expires: new Date(expiresAtMs),
+    },
+  );
+}
+
+async function clearDeskDeleteGrant(): Promise<void> {
+  try {
+    const store = await cookies();
+    store.delete(DESK_DELETE_GRANT_COOKIE);
+  } catch {
+    // The delete result still stands when the cookie store is unavailable.
+  }
+}
+
 export async function deleteTradingAccount(formData: FormData) {
   const session = await getSessionContext();
   if (!session) {
     redirect("/sign-in");
   }
   const accountId = String(formData.get("accountId") ?? "");
-  const stepUp = await stepUpFromForm(session.member.id, formData);
-  if (stepUp) {
-    redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(stepUp)}`);
+  const granted =
+    deskDeleteGrantAllows(
+      String(formData.get("deskDeleteGrant") ?? ""),
+      session.member.id,
+      accountId,
+    ) ||
+    deskDeleteGrantAllows(
+      await deskDeleteGrantToken(),
+      session.member.id,
+      accountId,
+    );
+  if (!granted) {
+    const stepUp = await stepUpFromForm(session.member.id, formData);
+    if (stepUp) {
+      return stepUpRejection(stepUp);
+    }
+  }
+  try {
+    await rememberDeskDeleteGrant(session.member.id, accountId);
+  } catch {
+    // One pass still runs. A follow-up pass asks for a new code.
   }
   const written = await deleteTradingAccountRow(session.member.id, accountId);
   if (written.error) {
-    redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(written.error)}`);
+    if (written.error !== DESK_DELETE_TIMED_OUT) {
+      await clearDeskDeleteGrant();
+      return stepUpRejection(written.error);
+    }
+    const expiresAtMs = Date.now() + DESK_DELETE_GRANT_MS;
+    return {
+      ...stepUpRejection(written.error),
+      deskDeleteGrant: signDeskDeleteGrant(
+        session.member.id,
+        accountId,
+        expiresAtMs,
+      ),
+    };
   }
+  await clearDeskDeleteGrant();
   await writeEventLog({
     scope: "system",
     event: "account.deleted",

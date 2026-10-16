@@ -37,8 +37,6 @@ export default async function CashAndCarryAutomationsPage({
   const params = await searchParams;
   const session = await getSessionContext();
   const listHref = deskHref(CASH_AND_CARRY_AUTOMATIONS_PATH, session?.account.id);
-  const saved = firstSearchValue(params.saved) === "1";
-  const notice = firstSearchValue(params.notice);
   const createdId = firstSearchValue(params.created);
   const error = firstSearchValue(params.error);
   if (!session) {
@@ -100,9 +98,6 @@ export default async function CashAndCarryAutomationsPage({
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
-      ) : null}
-      {saved ? (
-        <p className="mt-4 text-sm text-success">{notice || "Bot saved."}</p>
       ) : null}
       {loaded.signedIn ? (
         <div className="mt-6">

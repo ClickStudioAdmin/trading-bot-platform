@@ -5,10 +5,19 @@ import { AnchoredPanel } from "@/components/anchored-panel";
 import { AppSelect } from "@/components/app-select";
 import { IconTrash } from "@/components/icons";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { PanelCloseButton } from "@/components/panel-close-button";
+import {
+  PanelCloseButton,
+  PanelCloseReserve,
+} from "@/components/panel-close-button";
+import { StepUpForm } from "@/components/step-up-code-field";
 import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
 import { deleteTradingAccount } from "@/lib/accounts/actions";
-import { StepUpForm } from "@/components/step-up-code-field";
+import {
+  DESK_DELETE_CONTINUE_ATTEMPTS,
+  DESK_DELETE_TIMED_OUT,
+  continueTimedDeskDelete,
+} from "@/lib/accounts/desk-delete";
+import { stepUpRejectionMessage } from "@/lib/auth/step-up";
 
 const BLOCKED_MS = 4000;
 
@@ -54,23 +63,50 @@ export function AccountDeleteControl({
         open={open}
         onClose={() => setOpen(false)}
         buttonRef={buttonRef}
-        className="p-3 pt-8"
+        className="p-3"
       >
         <PanelCloseButton onClick={() => setOpen(false)} />
         {blockedMessage ? (
-          <p className="text-hint text-ink-faint">{blockedMessage}.</p>
+          <p className="min-w-0 break-words text-sm text-ink">
+            <PanelCloseReserve />
+            {blockedMessage}.
+          </p>
         ) : (
           <StepUpForm
-            action={deleteTradingAccount}
+            action={async (formData) => {
+              let grant = "";
+              return continueTimedDeskDelete(
+                async () => {
+                  if (grant) {
+                    formData.set("deskDeleteGrant", grant);
+                  }
+                  const result = await deleteTradingAccount(formData);
+                  if (
+                    result &&
+                    typeof result === "object" &&
+                    "deskDeleteGrant" in result &&
+                    typeof result.deskDeleteGrant === "string"
+                  ) {
+                    grant = result.deskDeleteGrant;
+                  }
+                  return result;
+                },
+                (result) =>
+                  stepUpRejectionMessage(result) === DESK_DELETE_TIMED_OUT,
+                DESK_DELETE_CONTINUE_ATTEMPTS,
+              );
+            }}
             confirmLabel="Delete desk"
             danger
-            className="space-y-3"
+            pendingLabel="Deleting…"
+            className="flex flex-col gap-3"
           >
             <input type="hidden" name="accountId" value={accountId} />
-            <p className="text-hint text-ink-faint">
-              Remove {accountName} and its closed history? This cannot be
-              undone.
+            <p className="min-w-0 break-words text-sm font-medium text-ink">
+              <PanelCloseReserve />
+              Remove {accountName} and its closed history?
             </p>
+            <p className="text-hint text-ink-muted">This cannot be undone.</p>
             <PendingSubmitButton
               pendingLabel="Deleting…"
               className="w-full rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
@@ -103,7 +139,7 @@ function SwitchFields({
     return (
       <>
         <input type="hidden" name="switchToAccountId" value={only.id} />
-        <p className="text-hint text-ink-faint">Switch to {only.name}.</p>
+        <p className="text-hint text-ink-muted">Switch to {only.name}.</p>
       </>
     );
   }

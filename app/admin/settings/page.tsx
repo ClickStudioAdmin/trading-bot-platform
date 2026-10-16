@@ -147,7 +147,7 @@ export default async function AdminSettingsPage({
       {tab === "general" ? (
         <>
           {saved === "1" ? (
-            <p className="mt-6 text-sm text-success">Settings saved.</p>
+            <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Settings saved.</p>
           ) : null}
           {platformNameError ? (
             <p className="mt-6 text-sm text-danger">
@@ -246,7 +246,7 @@ export default async function AdminSettingsPage({
       {tab === "copy" ? (
         <>
           {saved === "1" ? (
-            <p className="mt-6 text-sm text-success">Settings saved.</p>
+            <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Settings saved.</p>
           ) : null}
           {copyDaysError ? (
             <p className="mt-6 text-sm text-danger">
@@ -336,7 +336,7 @@ export default async function AdminSettingsPage({
       {tab === "affiliates" ? (
         <>
           {saved === "1" ? (
-            <p className="mt-6 text-sm text-success">Settings saved.</p>
+            <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Settings saved.</p>
           ) : null}
           {error ? (
             <p className="mt-6 text-sm text-danger">{error}</p>
@@ -472,18 +472,18 @@ export default async function AdminSettingsPage({
       {tab === "crypto" ? (
         <>
           {saved === "gaslow" ? (
-            <p className="mt-6 text-sm text-success">Low ETH level saved.</p>
+            <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Low ETH level saved.</p>
           ) : null}
           {saved === "walletmin" ? (
-            <p className="mt-6 text-sm text-success">
+            <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
               Main Wallet minimum withdraw saved.
             </p>
           ) : null}
           {saved === "chain" ? (
-            <p className="mt-6 text-sm text-success">Chain saved.</p>
+            <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Chain saved.</p>
           ) : null}
           {saved === "token" ? (
-            <p className="mt-6 text-sm text-success">Token saved.</p>
+            <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Token saved.</p>
           ) : null}
           {error &&
           error !== "copy-days" &&
@@ -743,18 +743,18 @@ async function NotificationsTab({
   return (
     <>
       {saved === "1" || saved === "badges" ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           Notification and alert settings saved.
         </p>
       ) : null}
       {saved === "seeded" ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           Sample notices were added to your inbox
           {allowDemo ? ", and sample alert counts are on." : "."}
         </p>
       ) : null}
       {saved === "demo-cleared" ? (
-        <p className="mt-6 text-sm text-success">
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           Sample alert counts were cleared.
         </p>
       ) : null}

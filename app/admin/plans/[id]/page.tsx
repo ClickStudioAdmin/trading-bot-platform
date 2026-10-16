@@ -50,15 +50,15 @@ export default async function AdminEditPlanPage({
         </p>
       ) : null}
       {created ? (
-        <p className="mt-4 text-sm text-success">Plan created.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Plan created.</p>
       ) : null}
       {cloned ? (
-        <p className="mt-4 text-sm text-success">
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           Draft copy created. Rename it before you publish.
         </p>
       ) : null}
       {saved ? (
-        <p className="mt-4 text-sm text-success">Plan saved.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Plan saved.</p>
       ) : null}
       <div className="mt-4 flex justify-end">
         <AdminPlanRowActions plan={loaded.plan} />

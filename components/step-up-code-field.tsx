@@ -8,14 +8,21 @@ import {
   useId,
   useState,
   type FormEvent,
-  type FormHTMLAttributes,
   type ReactNode,
   type RefObject,
 } from "react";
 import { useFormStatus } from "react-dom";
 import { ButtonBusyIcon } from "@/components/pending-submit-button";
 import { Modal } from "@/components/template-modals";
-import { STEP_UP_FIELD, stepUpShouldAsk } from "@/lib/auth/step-up";
+import { SecondFactorEntry } from "@/components/totp-code-boxes";
+import {
+  secondFactorMissingMessage,
+  STEP_UP_FIELD,
+  STEP_UP_REQUEST_FAILED,
+  rethrowNextControlFlow,
+  stepUpRejectionMessage,
+  stepUpShouldAsk,
+} from "@/lib/auth/step-up";
 
 const TotpStepUpContext = createContext(false);
 
@@ -37,14 +44,12 @@ export function useTotpStepUpEnabled(): boolean {
   return useContext(TotpStepUpContext);
 }
 
-const fieldClass =
-  "mt-1 w-full min-w-0 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 const cancelClass =
-  "shrink-0 rounded-control px-1.5 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40";
+  "shrink-0 rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong disabled:opacity-40";
 const continueClass =
   "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-70";
 const dangerClass =
-  "rounded-control bg-danger px-4 py-2 text-sm font-medium text-canvas hover:opacity-90 disabled:opacity-70";
+  "rounded-control bg-danger px-4 py-2 text-sm font-medium text-ink hover:opacity-90";
 
 export const STEP_UP_MODAL_TITLE = "2FA Authentication Required";
 
@@ -67,7 +72,8 @@ export function StepUpPrompt({
   pending = false,
   error = null,
   onCancel,
-  hint = "Google Authenticator or a recovery code.",
+  initialRecovery = false,
+  pendingLabel = "Checking…",
 }: {
   formId: string;
   confirmLabel: string;
@@ -75,26 +81,42 @@ export function StepUpPrompt({
   pending?: boolean;
   error?: string | null;
   onCancel: () => void;
-  hint?: string;
+  initialRecovery?: boolean;
+  pendingLabel?: string;
 }) {
   const fieldId = `${formId}-code`;
+  const [missing, setMissing] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState(initialRecovery);
+  const [dismissedError, setDismissedError] = useState<string | null>(null);
+  if (!error && dismissedError) {
+    setDismissedError(null);
+  }
+  const serverError = error && error === dismissedError ? null : error;
+  const shownError =
+    serverError ?? (missing ? secondFactorMissingMessage(recoveryMode) : null);
   return (
     <>
-      <label htmlFor={fieldId} className="mt-4 block text-sm text-ink">
-        Authenticator code
-        <input
+      <div className="mt-4">
+        <SecondFactorEntry
           id={fieldId}
-          form={formId}
           name={STEP_UP_FIELD}
-          required
-          autoFocus
-          autoComplete="one-time-code"
-          spellCheck={false}
-          className={fieldClass}
+          form={formId}
+          disabled={pending}
+          allowRecovery
+          initialRecovery={initialRecovery}
+          onValueChange={(value) => {
+            if (value.trim()) {
+              setMissing(false);
+            }
+          }}
+          onRecoveryModeChange={(recovery) => {
+            setRecoveryMode(recovery);
+            setMissing(false);
+            setDismissedError(error);
+          }}
         />
-        <span className="mt-1 block text-hint text-ink-muted">{hint}</span>
-      </label>
-      {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
+      </div>
+      {shownError ? <p className="mt-3 text-sm text-danger">{shownError}</p> : null}
       <div className="mt-5 flex items-center justify-end gap-3">
         <button
           type="button"
@@ -109,11 +131,23 @@ export function StepUpPrompt({
           form={formId}
           disabled={pending}
           className={danger ? dangerClass : continueClass}
+          onClick={(event) => {
+            const formEl = document.getElementById(formId);
+            if (!(formEl instanceof HTMLFormElement)) {
+              return;
+            }
+            const code = String(new FormData(formEl).get(STEP_UP_FIELD) ?? "");
+            if (code.trim()) {
+              return;
+            }
+            event.preventDefault();
+            setMissing(true);
+          }}
         >
           {pending ? (
             <span className="inline-flex items-center gap-2">
               <ButtonBusyIcon />
-              Checking…
+              {pendingLabel}
             </span>
           ) : (
             confirmLabel
@@ -132,6 +166,7 @@ export function StepUpModal({
   pending = false,
   error = null,
   onCancel,
+  pendingLabel = "Checking…",
 }: {
   open: boolean;
   formId: string;
@@ -140,6 +175,7 @@ export function StepUpModal({
   pending?: boolean;
   error?: string | null;
   onCancel: () => void;
+  pendingLabel?: string;
 }) {
   const close = useCallback(() => {
     if (pending) {
@@ -159,10 +195,21 @@ export function StepUpModal({
         pending={pending}
         error={error}
         onCancel={close}
+        pendingLabel={pendingLabel}
       />
     </Modal>
   );
 }
+
+/** Step-up actions may return `{ stepUpError }` instead of redirecting. */
+type StepUpFormAction =
+  | string
+  | ((
+      formData: FormData,
+    ) =>
+      | void
+      | { stepUpError?: string }
+      | Promise<void | { stepUpError?: string }>);
 
 export function StepUpForm({
   action,
@@ -175,12 +222,13 @@ export function StepUpForm({
   danger = false,
   error = null,
   pending = false,
+  pendingLabel = "Checking…",
   onSubmit,
   onInput,
   onCancel,
   formRef,
 }: {
-  action?: FormHTMLAttributes<HTMLFormElement>["action"];
+  action?: StepUpFormAction;
   className?: string;
   autoComplete?: string;
   children: ReactNode;
@@ -191,6 +239,7 @@ export function StepUpForm({
   danger?: boolean;
   error?: string | null;
   pending?: boolean;
+  pendingLabel?: string;
   onSubmit?: (event: FormEvent<HTMLFormElement>) => void;
   onInput?: (event: FormEvent<HTMLFormElement>) => void;
   onCancel?: () => void;
@@ -200,11 +249,33 @@ export function StepUpForm({
   const formId = `step-up-${useId().replace(/:/g, "")}`;
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [stepUpError, setStepUpError] = useState<string | null>(null);
   const busy = pending || submitting;
   const cancel = useCallback(() => {
     setOpen(false);
+    setStepUpError(null);
     onCancel?.();
   }, [onCancel]);
+
+  async function runAction(formData: FormData) {
+    if (typeof action !== "function") {
+      return;
+    }
+    setStepUpError(null);
+    try {
+      const result = await action(formData);
+      const message = stepUpRejectionMessage(result);
+      if (!message) {
+        return;
+      }
+      setStepUpError(message);
+      setOpen(true);
+    } catch (error) {
+      rethrowNextControlFlow(error);
+      setStepUpError(STEP_UP_REQUEST_FAILED);
+      setOpen(true);
+    }
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     const data = new FormData(event.currentTarget);
@@ -219,6 +290,7 @@ export function StepUpForm({
       })
     ) {
       event.preventDefault();
+      setStepUpError(null);
       setOpen(true);
       return;
     }
@@ -230,7 +302,7 @@ export function StepUpForm({
       <form
         id={formId}
         ref={formRef}
-        action={action}
+        action={typeof action === "function" ? runAction : action}
         className={className}
         autoComplete={autoComplete}
         onSubmit={handleSubmit}
@@ -245,8 +317,9 @@ export function StepUpForm({
         confirmLabel={confirmLabel}
         danger={danger}
         pending={busy}
-        error={error}
+        error={stepUpError ?? error}
         onCancel={cancel}
+        pendingLabel={pendingLabel}
       />
     </>
   );

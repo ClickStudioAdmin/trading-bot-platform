@@ -7,12 +7,28 @@ import {
   TotpStepUpProvider,
 } from "../../components/step-up-code-field";
 import {
+  AUTHENTICATOR_CODE_HINT,
+  RECOVERY_CODE_HINT,
+  RECOVERY_CODE_LABEL,
   STEP_UP_FIELD,
   STEP_UP_INVALID,
+  STEP_UP_KIND_FIELD,
   STEP_UP_MISSING,
+  STEP_UP_REQUEST_FAILED,
+  STEP_UP_RECOVERY_INVALID,
+  STEP_UP_RECOVERY_MISSING,
+  rethrowNextControlFlow,
+  secondFactorInvalidMessage,
+  secondFactorMissingMessage,
+  secondFactorPasswordMessage,
+  secondFactorRecoverySelected,
   stepUpFailure,
+  stepUpRejection,
+  stepUpRejectionMessage,
   stepUpShouldAsk,
   traderAliasNeedsStepUp,
+  USE_AUTHENTICATOR_CODE,
+  USE_RECOVERY_CODE,
 } from "./step-up";
 
 assert.equal(
@@ -36,6 +52,23 @@ assert.equal(
   STEP_UP_INVALID,
 );
 assert.equal(
+  stepUpFailure({ enabled: true, code: "abcd-ef12", verified: false }),
+  STEP_UP_RECOVERY_INVALID,
+);
+assert.equal(
+  stepUpFailure({ enabled: true, code: "", verified: false, recovery: true }),
+  STEP_UP_RECOVERY_MISSING,
+);
+assert.equal(
+  stepUpFailure({
+    enabled: true,
+    code: "123456",
+    verified: false,
+    recovery: true,
+  }),
+  STEP_UP_RECOVERY_INVALID,
+);
+assert.equal(
   stepUpFailure({ enabled: true, code: "123456", verified: true }),
   null,
 );
@@ -43,6 +76,26 @@ assert.equal(
   stepUpFailure({ enabled: true, code: "abcd-ef12", verified: true }),
   null,
 );
+assert.equal(secondFactorRecoverySelected("recovery", ""), true);
+assert.equal(secondFactorRecoverySelected("authenticator", "abcd-ef12"), false);
+assert.equal(secondFactorRecoverySelected(null, "abcd-ef12"), true);
+assert.equal(secondFactorRecoverySelected(null, "123456"), false);
+assert.equal(secondFactorMissingMessage(false), STEP_UP_MISSING);
+assert.equal(secondFactorMissingMessage(true), STEP_UP_RECOVERY_MISSING);
+assert.equal(secondFactorInvalidMessage(false), STEP_UP_INVALID);
+assert.equal(secondFactorInvalidMessage(true), STEP_UP_RECOVERY_INVALID);
+assert.equal(
+  secondFactorPasswordMessage(false),
+  "Enter your password and the Google Authenticator code.",
+);
+assert.equal(
+  secondFactorPasswordMessage(true),
+  "Enter your password and a recovery code.",
+);
+assert.doesNotMatch(AUTHENTICATOR_CODE_HINT, / or /);
+assert.doesNotMatch(RECOVERY_CODE_HINT, / or /);
+assert.doesNotMatch(USE_AUTHENTICATOR_CODE, / or /);
+assert.doesNotMatch(USE_RECOVERY_CODE, / or /);
 
 assert.equal(traderAliasNeedsStepUp(null, "Click"), true);
 assert.equal(traderAliasNeedsStepUp("Click", "Click"), false);
@@ -60,6 +113,15 @@ assert.equal(
 assert.equal(
   stepUpShouldAsk({ enabled: true, code: "", aliasUnchanged: false }),
   true,
+);
+
+assert.equal(stepUpRejectionMessage(null), null);
+assert.equal(stepUpRejectionMessage({}), null);
+assert.equal(stepUpRejectionMessage({ stepUpError: "  " }), null);
+assert.equal(stepUpRejectionMessage({ error: STEP_UP_INVALID }), null);
+assert.equal(
+  stepUpRejectionMessage(stepUpRejection(STEP_UP_INVALID)),
+  STEP_UP_INVALID,
 );
 
 const page = renderToStaticMarkup(
@@ -89,10 +151,16 @@ const prompt = renderToStaticMarkup(
   <StepUpPrompt formId="reset-account" confirmLabel="Reset Account" danger onCancel={() => {}} />,
 );
 assert.match(prompt, /Authenticator code/);
+assert.match(prompt, /type="hidden"/);
 assert.match(prompt, new RegExp(`name="${STEP_UP_FIELD}"`));
 assert.match(prompt, /form="reset-account"/);
-assert.match(prompt, /required/);
-assert.match(prompt, /Google Authenticator or a recovery code/);
+assert.doesNotMatch(prompt, /required/);
+assert.match(prompt, /inputMode="numeric"/);
+assert.equal((prompt.match(/data-totp-box/g) ?? []).length, 6);
+assert.match(prompt, new RegExp(USE_RECOVERY_CODE));
+assert.match(prompt, new RegExp(AUTHENTICATOR_CODE_HINT));
+assert.match(prompt, new RegExp(`name="${STEP_UP_KIND_FIELD}"`));
+assert.doesNotMatch(prompt, / or /);
 assert.match(prompt, /type="button"/);
 assert.match(prompt, />Cancel</);
 assert.match(prompt, /type="submit"/);
@@ -103,12 +171,66 @@ const busy = renderToStaticMarkup(
     formId="rotate"
     confirmLabel="Rotate URL"
     pending
-    error="That Google Authenticator or recovery code is incorrect."
+    error={STEP_UP_INVALID}
     onCancel={() => {}}
   />,
 );
 assert.match(busy, /disabled/);
 assert.match(busy, /Checking…/);
-assert.match(busy, /incorrect/);
+assert.match(busy, /That Google Authenticator code is incorrect/);
+assert.doesNotMatch(busy, / or /);
+
+const recoveryPrompt = renderToStaticMarkup(
+  <StepUpPrompt
+    formId="delete-desk"
+    confirmLabel="Delete desk"
+    danger
+    initialRecovery
+    error={STEP_UP_RECOVERY_INVALID}
+    onCancel={() => {}}
+  />,
+);
+assert.match(recoveryPrompt, new RegExp(RECOVERY_CODE_LABEL));
+assert.match(recoveryPrompt, new RegExp(RECOVERY_CODE_HINT));
+assert.match(recoveryPrompt, new RegExp(USE_AUTHENTICATOR_CODE));
+assert.match(recoveryPrompt, /That recovery code is incorrect/);
+assert.match(recoveryPrompt, /value="recovery"/);
+assert.doesNotMatch(recoveryPrompt, /data-totp-box/);
+assert.doesNotMatch(recoveryPrompt, / or /);
+
+const dangerBusy = renderToStaticMarkup(
+  <StepUpPrompt
+    formId="delete-desk"
+    confirmLabel="Delete desk"
+    danger
+    pending
+    onCancel={() => {}}
+  />,
+);
+assert.match(dangerBusy, /Checking…/);
+assert.match(dangerBusy, /text-ink/);
+const deleting = renderToStaticMarkup(
+  <StepUpPrompt
+    formId="delete-desk-long"
+    confirmLabel="Delete desk"
+    danger
+    pending
+    pendingLabel="Deleting…"
+    onCancel={() => {}}
+  />,
+);
+assert.match(deleting, /Deleting…/);
+assert.doesNotMatch(deleting, /Checking…/);
+assert.doesNotMatch(dangerBusy, /text-canvas/);
+
+let redirected = false;
+try {
+  rethrowNextControlFlow({ digest: "NEXT_REDIRECT;replace;/account;307;" });
+} catch {
+  redirected = true;
+}
+assert.equal(redirected, true);
+rethrowNextControlFlow(new Error("socket hang up"));
+assert.equal(STEP_UP_REQUEST_FAILED, "That request timed out. Try again.");
 
 console.log("step-up checks passed");

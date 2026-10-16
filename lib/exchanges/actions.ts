@@ -33,6 +33,7 @@ import {
 import { writeEventLog } from "@/lib/logs/write";
 import { withQuery } from "@/lib/accounts/model";
 import { getSessionContext, getSessionMember } from "@/lib/auth/session";
+import { stepUpRejection } from "@/lib/auth/step-up";
 import { stepUpFromForm } from "@/lib/auth/step-up-guard";
 import { ACCOUNT_EXCHANGES_HREF } from "@/lib/site-links";
 import { revalidatePath } from "next/cache";
@@ -106,7 +107,7 @@ export async function saveExchangeConnection(formData: FormData) {
 
   const stepUp = await stepUpFromForm(session.member.id, formData);
   if (stepUp) {
-    return failTo(stepUp);
+    return stepUpRejection(stepUp);
   }
 
   const verified = await verifyExchangeCredentials({
@@ -299,7 +300,7 @@ export async function replaceExchangeConnection(formData: FormData) {
 
   const stepUp = await stepUpFromForm(session.member.id, formData);
   if (stepUp) {
-    fail(stepUp);
+    return stepUpRejection(stepUp);
   }
 
   const verified = await verifyExchangeCredentials({

@@ -44,7 +44,7 @@ export default async function AdminEmailTemplatesPage({
     <div>
       <PageHeading overline="Admin" title="Email templates" />
       {sent ? (
-        <p className="mt-6 text-sm text-success">Test email sent.</p>
+        <p className="mt-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Test email sent.</p>
       ) : null}
       {error === "to" ? (
         <p className="mt-6 text-sm text-danger">Enter a valid email address.</p>

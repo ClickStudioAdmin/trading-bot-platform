@@ -12,3 +12,24 @@ export function PanelCloseButton({ onClick }: { onClick: () => void }) {
     </button>
   );
 }
+
+/**
+ * First-line spacer for copy that sits beside `PanelCloseButton`.
+ * `panel` matches an anchored confirm (`p-3`). `modal` matches a dialog title (`p-5`).
+ */
+export function PanelCloseReserve({
+  size = "panel",
+}: {
+  size?: "panel" | "modal";
+}) {
+  return (
+    <span
+      aria-hidden
+      className={
+        size === "modal"
+          ? "float-right ml-2 h-4 w-4"
+          : "float-right ml-2 h-5 w-6"
+      }
+    />
+  );
+}

@@ -57,10 +57,10 @@ export default async function FuturesSharedDesksPage({
         </p>
       ) : null}
       {savedFlag === "invite" ? (
-        <p className="mt-4 text-sm text-success">Invite sent.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Invite sent.</p>
       ) : null}
       {savedFlag === "revoke" ? (
-        <p className="mt-4 text-sm text-success">Invite revoked.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Invite revoked.</p>
       ) : null}
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
         <DeskCopyFollowersList listing={listing} followers={followers} />

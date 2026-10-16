@@ -66,19 +66,31 @@ export function AnchoredPanel({
       return;
     }
     function onPointer(event: MouseEvent) {
-      const target = event.target as Node;
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
       if (
         buttonRef.current?.contains(target) ||
         panelRef.current?.contains(target)
       ) {
         return;
       }
+      const element =
+        target instanceof Element ? target : target.parentElement;
+      if (element?.closest("[data-modal-overlay]")) {
+        return;
+      }
       onClose();
     }
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
+      if (event.key !== "Escape") {
+        return;
       }
+      if (document.querySelector("[data-modal-overlay]")) {
+        return;
+      }
+      onClose();
     }
     document.addEventListener("mousedown", onPointer);
     document.addEventListener("keydown", onKey);

@@ -1,3 +1,4 @@
+import { chunkList, ROW_BATCH, ROW_BATCH_CAP } from "@/lib/db/row-batches";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   parseEmailDispatchClaim,
@@ -298,6 +299,31 @@ export async function countUnreadUserNotifications(
   return count ?? 0;
 }
 
+function uniqueNotificationIds(ids: readonly number[]): number[] {
+  const seen = new Set<number>();
+  const out: number[] = [];
+  for (const id of ids) {
+    if (!Number.isInteger(id) || id <= 0 || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
+async function markNotificationIdsRead(
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
+  userId: string,
+  ids: number[],
+): Promise<boolean> {
+  const { error } = await supabase.rpc("mark_user_notifications_read", {
+    p_user_id: userId,
+    p_ids: ids,
+  });
+  return !error;
+}
+
 export async function markUserNotificationsRead(
   userId: string,
   ids?: number[],
@@ -306,14 +332,45 @@ export async function markUserNotificationsRead(
   if (!supabase || !userId) {
     return false;
   }
-  if (ids && ids.length === 0) {
-    return false;
+  if (ids) {
+    const unique = uniqueNotificationIds(ids);
+    if (unique.length === 0) {
+      return false;
+    }
+    for (const chunk of chunkList(unique)) {
+      const marked = await markNotificationIdsRead(supabase, userId, chunk);
+      if (!marked) {
+        return false;
+      }
+    }
+    return true;
   }
-  const { error } = await supabase.rpc("mark_user_notifications_read", {
-    p_user_id: userId,
-    p_ids: ids && ids.length > 0 ? ids : null,
-  });
-  return !error;
+  for (let batch = 0; batch < ROW_BATCH_CAP; batch += 1) {
+    const selected = await supabase
+      .from("user_notifications")
+      .select("id")
+      .eq("user_id", userId)
+      .is("read_at", null)
+      .order("id", { ascending: true })
+      .limit(ROW_BATCH);
+    if (selected.error) {
+      return false;
+    }
+    const next = uniqueNotificationIds(
+      (selected.data ?? []).map((row) => Number((row as { id: unknown }).id)),
+    );
+    if (next.length === 0) {
+      return true;
+    }
+    const marked = await markNotificationIdsRead(supabase, userId, next);
+    if (!marked) {
+      return false;
+    }
+    if (next.length < ROW_BATCH) {
+      return true;
+    }
+  }
+  return true;
 }
 
 export async function markUserNotificationsUnread(
@@ -321,14 +378,23 @@ export async function markUserNotificationsUnread(
   ids: number[],
 ): Promise<boolean> {
   const supabase = createServiceClient();
-  if (!supabase || !userId || ids.length === 0) {
+  if (!supabase || !userId) {
     return false;
   }
-  const { error } = await supabase.rpc("mark_user_notifications_unread", {
-    p_user_id: userId,
-    p_ids: ids,
-  });
-  return !error;
+  const unique = uniqueNotificationIds(ids);
+  if (unique.length === 0) {
+    return false;
+  }
+  for (const chunk of chunkList(unique)) {
+    const { error } = await supabase.rpc("mark_user_notifications_unread", {
+      p_user_id: userId,
+      p_ids: chunk,
+    });
+    if (error) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export async function saveNotificationPreferences(

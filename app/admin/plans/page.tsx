@@ -50,13 +50,13 @@ export default async function AdminPlansPage({
         </p>
       ) : null}
       {archived ? (
-        <p className="mt-4 text-sm text-success">Plan archived.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Plan archived.</p>
       ) : null}
       {unarchived ? (
-        <p className="mt-4 text-sm text-success">Plan restored to the catalog.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Plan restored to the catalog.</p>
       ) : null}
       {deleted ? (
-        <p className="mt-4 text-sm text-success">Unused plan deleted.</p>
+        <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">Unused plan deleted.</p>
       ) : null}
 
       <AdminPlansTable

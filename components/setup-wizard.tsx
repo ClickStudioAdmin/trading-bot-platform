@@ -1757,7 +1757,7 @@ function CreateDeskDialog({
                 </AppSelect>
               </label>
               {choice === "new" && connectionId ? (
-                <p className="text-sm text-success">
+                <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
                   Key saved. It is bound to this desk when you finish.
                 </p>
               ) : null}
@@ -1950,7 +1950,7 @@ function ExchangeDesk({
         </AppSelect>
       </label>
       {choice === "new" && desk.connectionId ? (
-        <p className="mt-3 text-sm text-success">
+        <p className="mt-3 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           Key saved. It is bound to this desk when you finish.
         </p>
       ) : null}
@@ -2046,7 +2046,13 @@ function SetupKeyForm({
           : "Use a trade-only key with no withdrawal permission. The secret is encrypted and is not shown again."}
       </p>
       {message ? (
-        <p className={`text-sm ${ok ? "text-success" : "text-danger"}`}>
+        <p
+          className={
+            ok
+              ? "rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success"
+              : "text-sm text-danger"
+          }
+        >
           {message}
         </p>
       ) : null}

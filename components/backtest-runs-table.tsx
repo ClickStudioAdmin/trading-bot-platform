@@ -49,6 +49,7 @@ import {
 import { AppCheck } from "@/components/app-check";
 import { TemplateParametersButton } from "@/components/template-parameters-tip";
 import { deleteBacktestRunsAction } from "@/lib/backtest/actions";
+import { pruneRemovedIds, withRemovedIds } from "@/lib/table-chrome";
 import {
   backtestAprPct,
   backtestNewHref,
@@ -232,7 +233,7 @@ function compareBacktestRun(
 const BACKTEST_RUN_COLUMNS = 11;
 
 export function BacktestRunsTable({
-  runs,
+  runs: sourceRuns,
   memberId,
   isAdmin,
   primaryRunId,
@@ -267,6 +268,20 @@ export function BacktestRunsTable({
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | BacktestStatus>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [removedIds, setRemovedIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const keptRemoved = pruneRemovedIds(
+    removedIds,
+    sourceRuns.map((run) => run.id),
+  );
+  if (keptRemoved !== removedIds) {
+    setRemovedIds(keptRemoved);
+  }
+  const runs =
+    keptRemoved.size === 0
+      ? sourceRuns
+      : sourceRuns.filter((run) => !keptRemoved.has(run.id));
   const gate = useResearchGateAccess();
   const clickGate = useClickGate();
   const [pending, setPending] = useState(false);
@@ -469,6 +484,14 @@ export function BacktestRunsTable({
       return;
     }
     const deletedCurrent = Boolean(watchRunId && selected.has(watchRunId));
+    if (!result.notes) {
+      setRemovedIds((current) =>
+        withRemovedIds(
+          current,
+          [...selected].filter((id) => listedRemovableIds.includes(id)),
+        ),
+      );
+    }
     setSelected(new Set());
     if (result.notes?.[0]) {
       setMessage(result.notes[0]);
@@ -572,7 +595,7 @@ export function BacktestRunsTable({
           {error}
         </p>
       ) : null}
-      {message ? <p className="mt-4 text-sm text-success">{message}</p> : null}
+      {message ? <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">{message}</p> : null}
       <TableCard
         pager={
           <TablePager

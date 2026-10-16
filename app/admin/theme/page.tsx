@@ -4,6 +4,7 @@ import { PageHeading } from "@/components/page-heading";
 import { ButtonBusyIcon } from "@/components/pending-submit-button";
 import { ThemeBotFormDraft } from "@/components/theme-bot-form-draft";
 import { ThemeCardsDraft } from "@/components/theme-cards-draft";
+import { ThemeConfirmDraft } from "@/components/theme-confirm-draft";
 import { ThemeColourDraft } from "@/components/theme-colour-draft";
 import { ThemeFormDraft } from "@/components/theme-form-draft";
 import { ThemeIconsDraft } from "@/components/theme-icons-draft";
@@ -454,6 +455,20 @@ export default async function ThemePage({
             />
           </div>
           <ThemeSelectDraft />
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold tracking-tight">Confirm</h2>
+          <p className="mt-1 max-w-3xl text-sm text-ink-muted">
+            Live confirm standard. The main statement is the title: ink, so
+            it is white in dark and dark in light. The line under it is a
+            muted helper. Cancel stays secondary. The confirm label is white
+            (#F4F6F8) on the fill — danger for delete, disable, and unfollow;
+            accent for publish and other primary confirms.
+          </p>
+          <div className="mt-5">
+            <ThemeConfirmDraft />
+          </div>
         </section>
 
         <section className="grid gap-4 lg:grid-cols-3">

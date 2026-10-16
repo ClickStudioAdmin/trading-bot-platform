@@ -120,11 +120,12 @@ import {
   automationsBotBlotterCells,
   botModeLabel,
   botPairBaseCoin,
-  rowsForDesk,
+  deskBotRows,
   perpsBotPair,
   perpsBotSummary,
   type AutomationsBotBlotter,
 } from "@/lib/bots/automations-list";
+import { withRemovedIds } from "@/lib/table-chrome";
 import { perpsBotConfig } from "@/lib/bots/bot-config";
 import {
   AUTOMATIONS_NEW,
@@ -179,22 +180,35 @@ export function FuturesAutomationsDesk({
 }) {
   const router = useRouter();
   const [layers, setLayers] = useState(() => [...rules].reverse());
+  const [removedIds, setRemovedIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const [extraLibrary, setExtraLibrary] = useState<BacktestLibraryItem[]>([]);
   const library = [...backtestLibrary, ...extraLibrary];
   const [deskId, setDeskId] = useState(accountId ?? "");
   const deskChanged = (accountId ?? "") !== deskId;
-  const visibleLayers = rowsForDesk({
+  const botList = deskBotRows({
     deskChanged,
     current: layers,
     incoming: [...rules].reverse(),
+    removedIds,
     id: (layer) => layer.id,
   });
+  const visibleLayers = botList.rows;
   if (deskChanged) {
     setDeskId(accountId ?? "");
     setLayers([...visibleLayers]);
     setExtraLibrary([]);
-  } else if (visibleLayers !== layers) {
-    setLayers([...visibleLayers]);
+    if (botList.removedIds !== removedIds) {
+      setRemovedIds(botList.removedIds);
+    }
+  } else {
+    if (botList.removedIds !== removedIds) {
+      setRemovedIds(botList.removedIds);
+    }
+    if (visibleLayers !== layers) {
+      setLayers([...visibleLayers]);
+    }
   }
   const savedLayers = visibleLayers.filter((layer) => layer.id);
   const inUse = new Set(inUseRuleIds);
@@ -352,6 +366,9 @@ export function FuturesAutomationsDesk({
               }
               const result = await setFuturesBotModesAction(data);
               if (result.ok) {
+                if (action === "delete") {
+                  setRemovedIds((current) => withRemovedIds(current, ids));
+                }
                 applySaveResult(result);
               }
               return result.ok
@@ -388,6 +405,7 @@ export function FuturesAutomationsDesk({
                 if (!result.ok) {
                   return;
                 }
+                setRemovedIds((current) => withRemovedIds(current, [layer.id]));
                 applySaveResult(result);
                 setLayers((current) =>
                   current.filter((item) => item.id !== layer.id),

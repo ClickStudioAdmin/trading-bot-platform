@@ -74,6 +74,7 @@ import {
 import { formatAuDateUtc } from "@/lib/time/display";
 import { libraryTemplateCanBacktest } from "@/lib/backtest/eligibility";
 import { templateIdsDeletedWithFolder } from "@/lib/templates/folder-delete";
+import { pruneRemovedIds, withRemovedIds } from "@/lib/table-chrome";
 import { formatTemplateDeskType } from "@/lib/templates/recipe";
 import {
   createTemplateSetAction,
@@ -226,6 +227,100 @@ function folderLabel(folders: AutomationTemplateSet[]): string {
     return "—";
   }
   return folders.map((folder) => folder.name).join(", ");
+}
+
+type FolderMemberAdd = {
+  folderId: string;
+  templateId: string;
+  name: string;
+  preview: string;
+  visibility: AutomationTemplate["visibility"];
+};
+
+function pruneFolderAdds(
+  adds: readonly FolderMemberAdd[],
+  folders: readonly AutomationTemplateSet[],
+): readonly FolderMemberAdd[] {
+  if (adds.length === 0) {
+    return adds;
+  }
+  const next = adds.filter((add) => {
+    const folder = folders.find((row) => row.id === add.folderId);
+    if (!folder) {
+      return false;
+    }
+    return !folder.items.some((item) => item.templateId === add.templateId);
+  });
+  return next.length === adds.length ? adds : next;
+}
+
+function withFolderMembers(
+  folders: AutomationTemplateSet[],
+  adds: readonly FolderMemberAdd[],
+): AutomationTemplateSet[] {
+  if (adds.length === 0) {
+    return folders;
+  }
+  const byFolder = new Map<string, FolderMemberAdd[]>();
+  for (const add of adds) {
+    const list = byFolder.get(add.folderId);
+    if (list) {
+      list.push(add);
+    } else {
+      byFolder.set(add.folderId, [add]);
+    }
+  }
+  let changed = false;
+  const next = folders.map((folder) => {
+    const extra = byFolder.get(folder.id);
+    if (!extra?.length) {
+      return folder;
+    }
+    const have = new Set(folder.items.map((item) => item.templateId));
+    const items = [...folder.items];
+    for (const add of extra) {
+      if (have.has(add.templateId)) {
+        continue;
+      }
+      have.add(add.templateId);
+      items.push({
+        templateId: add.templateId,
+        sortOrder: items.length,
+        name: add.name,
+        preview: add.preview,
+        visibility: add.visibility,
+      });
+    }
+    if (items.length === folder.items.length) {
+      return folder;
+    }
+    changed = true;
+    return { ...folder, items };
+  });
+  return changed ? next : folders;
+}
+
+function bulkNotesSkipped(notes: string[] | undefined): boolean {
+  return Boolean(notes?.some((note) => note.startsWith("Skipped")));
+}
+
+function templatesRemovedWithFolders(
+  folders: readonly AutomationTemplateSet[],
+  admin: boolean,
+): string[] {
+  return folders.flatMap((folder) =>
+    templateIdsDeletedWithFolder({
+      folderVisibility: folder.visibility,
+      folderUserId: folder.userId,
+      actorId: folder.userId ?? "",
+      isAdmin: admin,
+      templates: folder.items.map((item) => ({
+        id: item.templateId,
+        visibility: item.visibility,
+        userId: item.visibility === "user" ? folder.userId : null,
+      })),
+    }),
+  );
 }
 
 function folderDeleteCheckbox(
@@ -534,6 +629,10 @@ export function TemplatesLibrary({
   const [sharingTemplateId, setSharingTemplateId] = useState<string | null>(null);
   const [sharingFolderId, setSharingFolderId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [droppedIds, setDroppedIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const [folderAdds, setFolderAdds] = useState<readonly FolderMemberAdd[]>([]);
   const [bulkFolderOpen, setBulkFolderOpen] = useState(false);
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -559,13 +658,40 @@ export function TemplatesLibrary({
     });
   }, [focusTemplateId]);
 
+  const serverRowIds = [
+    ...templates.map((row) => row.id),
+    ...sets.map((row) => row.id),
+    ...sharedTemplates.map((row) => row.id),
+    ...sharedSets.map((row) => row.id),
+  ];
+  const keptDropped = pruneRemovedIds(droppedIds, serverRowIds);
+  if (keptDropped !== droppedIds) {
+    setDroppedIds(keptDropped);
+  }
+  const keptAdds = pruneFolderAdds(folderAdds, sets);
+  if (keptAdds !== folderAdds) {
+    setFolderAdds(keptAdds);
+  }
+  const viewTemplates =
+    keptDropped.size === 0
+      ? templates
+      : templates.filter((row) => !keptDropped.has(row.id));
+  const viewSets =
+    keptDropped.size === 0 && keptAdds.length === 0
+      ? sets
+      : withFolderMembers(
+          keptDropped.size === 0
+            ? sets
+            : sets.filter((row) => !keptDropped.has(row.id)),
+          keptAdds,
+        );
   const knownFolders = useMemo(() => {
     const byId = new Map<string, AutomationTemplateSet>();
-    for (const folder of [...sets, ...sharedSets]) {
+    for (const folder of [...viewSets, ...sharedSets]) {
       byId.set(folder.id, folder);
     }
     return [...byId.values()];
-  }, [sets, sharedSets]);
+  }, [sharedSets, viewSets]);
 
   const recipes = useMemo(() => {
     const map = new Map<string, TemplateRecipe>();
@@ -585,7 +711,7 @@ export function TemplatesLibrary({
 
   const needle = query.trim().toLowerCase();
 
-  const filteredTemplates = templates.filter((row) => {
+  const filteredTemplates = viewTemplates.filter((row) => {
     if (variant === "account" && row.visibility === "platform") {
       return false;
     }
@@ -597,7 +723,7 @@ export function TemplatesLibrary({
     }
     return true;
   });
-  const filteredSets = sets.filter((row) => {
+  const filteredSets = viewSets.filter((row) => {
     if (variant === "account" && row.visibility === "platform") {
       return false;
     }
@@ -860,6 +986,7 @@ export function TemplatesLibrary({
     const result = await deleteTemplateAction(data);
     flash(result);
     if (result.ok) {
+      setDroppedIds((current) => withRemovedIds(current, [row.id]));
       setSelected((current) => {
         const next = new Set(current);
         next.delete(row.id);
@@ -889,6 +1016,10 @@ export function TemplatesLibrary({
     const result = await deleteTemplateSetAction(data);
     flash(result);
     if (result.ok) {
+      const extra = checkbox?.checked
+        ? templatesRemovedWithFolders([row], variant === "admin")
+        : [];
+      setDroppedIds((current) => withRemovedIds(current, [row.id, ...extra]));
       setSelected((current) => {
         const next = new Set(current);
         next.delete(row.id);
@@ -1004,7 +1135,21 @@ export function TemplatesLibrary({
     const result = await bulkLibraryAction(data);
     flash(result);
     if (result.ok) {
+      if (
+        (op === "delete" || op === "unpublish") &&
+        !bulkNotesSkipped(result.notes)
+      ) {
+        const extra =
+          op === "delete" && !templateTab && folderCheckbox?.checked
+            ? templatesRemovedWithFolders(
+                sets.filter((row) => ids.includes(row.id)),
+                variant === "admin",
+              )
+            : [];
+        setDroppedIds((current) => withRemovedIds(current, [...ids, ...extra]));
+      }
       setSelected(new Set());
+      router.refresh();
     }
   }
 
@@ -1251,7 +1396,7 @@ export function TemplatesLibrary({
           {error}
         </p>
       ) : null}
-      {message ? <p className="mt-4 text-sm text-success">{message}</p> : null}
+      {message ? <p className="mt-4 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">{message}</p> : null}
 
       {tab === "templates" || tab === "shared-templates" ? (
         <>
@@ -1801,8 +1946,22 @@ export function TemplatesLibrary({
             const result = await bulkLibraryAction(data);
             flash(result);
             if (result.ok) {
+              if (folderId && !bulkNotesSkipped(result.notes)) {
+                const rows = templates.filter((row) => ids.includes(row.id));
+                setFolderAdds((current) => [
+                  ...current,
+                  ...rows.map((row) => ({
+                    folderId,
+                    templateId: row.id,
+                    name: row.name,
+                    preview: recipePreview(row.recipe),
+                    visibility: row.visibility,
+                  })),
+                ]);
+              }
               setSelected(new Set());
               setBulkFolderOpen(false);
+              router.refresh();
             }
           }}
         />
@@ -2211,7 +2370,7 @@ function ShareModal({
           {error}
         </p>
       ) : null}
-      {message ? <p className="mt-3 text-sm text-success">{message}</p> : null}
+      {message ? <p className="mt-3 rounded-card border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">{message}</p> : null}
       {peers.length > 0 ? (
         <ul className="mt-3 space-y-1">
           {peers.map((peer) => (

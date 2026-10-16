@@ -36,6 +36,7 @@ import {
   commitDeskRename,
   readDeskNameFromSettingsForm,
 } from "@/lib/accounts/actions";
+import { applyRowsInBatches, statementTimeoutMessage } from "@/lib/db/row-batches";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { afterDeskWork } from "@/lib/ui/after-desk-work";
 import { deskActionError, type DeskActionResult } from "@/lib/ui/desk-action";
@@ -378,14 +379,6 @@ export async function deletePaperRuleAction(
   if (loaded.inUseRuleIds.includes(id)) {
     return deskActionError("Cannot remove a bot that has an open position.");
   }
-  const { error: unlinkError } = await supabase
-    .from("paper_carries")
-    .update({ rule_id: null })
-    .eq("account_id", account.id)
-    .eq("rule_id", id);
-  if (unlinkError) {
-    return deskActionError(unlinkError.message);
-  }
   const remaining = loaded.config.layers.filter((layer) => layer.id !== id);
   const saved = await replacePaperRules({
     supabase,
@@ -479,6 +472,55 @@ async function upsertPaperRules(input: {
   return { ok: true };
 }
 
+const PAPER_BOT_REMOVE_TIMED_OUT = "Removing this bot timed out. Try again.";
+const PAPER_BOT_REMOVE_FAILED = "Could not remove this bot. Try again.";
+
+/** Clearing rule_id on every closed carry in one update can exceed the database time limit. */
+async function unlinkPaperCarryHistory(
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
+  accountId: string,
+  ruleIds: number[],
+): Promise<string | null> {
+  const ids = ruleIds.filter((id) => Number.isInteger(id) && id > 0);
+  if (ids.length === 0) {
+    return null;
+  }
+  const raw = await applyRowsInBatches({
+    selectIds: async (limit) => {
+      const selected = await supabase
+        .from("paper_carries")
+        .select("id")
+        .eq("account_id", accountId)
+        .in("rule_id", ids)
+        .limit(limit);
+      if (selected.error) {
+        return { ids: [], error: selected.error.message };
+      }
+      return {
+        ids: (selected.data ?? []).map((row) =>
+          Number((row as { id: unknown }).id),
+        ),
+        error: null,
+      };
+    },
+    applyIds: async (carryIds) => {
+      const updated = await supabase
+        .from("paper_carries")
+        .update({ rule_id: null })
+        .in("id", carryIds);
+      return { error: updated.error?.message ?? null };
+    },
+  });
+  if (!raw) {
+    return null;
+  }
+  return statementTimeoutMessage(
+    raw,
+    PAPER_BOT_REMOVE_TIMED_OUT,
+    PAPER_BOT_REMOVE_FAILED,
+  );
+}
+
 async function replacePaperRules(input: {
   supabase: NonNullable<ReturnType<typeof createServiceClient>>;
   userId: string;
@@ -528,13 +570,13 @@ async function replacePaperRules(input: {
     if (blocked.length > 0) {
       return { ok: false, error: "Cannot remove a bot that has an open position." };
     }
-    const { error: unlinkError } = await input.supabase
-      .from("paper_carries")
-      .update({ rule_id: null })
-      .eq("account_id", input.accountId)
-      .in("rule_id", staleIds);
-    if (unlinkError) {
-      return { ok: false, error: unlinkError.message };
+    const unlinked = await unlinkPaperCarryHistory(
+      input.supabase,
+      input.accountId,
+      staleIds,
+    );
+    if (unlinked) {
+      return { ok: false, error: unlinked };
     }
     const { error } = await input.supabase
       .from("paper_rules")

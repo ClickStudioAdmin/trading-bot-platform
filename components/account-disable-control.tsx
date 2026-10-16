@@ -28,7 +28,7 @@ const idleStep: Step = { state: "waiting", detail: "" };
 const cancelBtn =
   "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
 const dangerBtn =
-  "rounded-control bg-danger px-4 py-2 text-sm font-medium text-canvas hover:opacity-90";
+  "rounded-control bg-danger px-4 py-2 text-sm font-medium text-ink hover:opacity-90";
 
 export function AccountDisableControl({
   accountId,
@@ -173,7 +173,7 @@ export function AccountDisableControl({
               </ol>
               {phase === "done" ? (
                 <div className="mt-4">
-                  <p className="text-sm font-medium text-success">
+                  <p className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
                     {DISABLE_DESK_SUCCESS}
                   </p>
                   <p className="mt-1 text-sm text-ink-muted">{success}</p>

@@ -81,10 +81,8 @@ export default async function FuturesAutomationsPage({
   ) {
     redirect(deskHomePath(session.account, session.account.id));
   }
-  const saved = firstSearchValue(params.saved) === "1";
   const createdId = firstSearchValue(params.created);
   const error = firstSearchValue(params.error);
-  const notice = firstSearchValue(params.notice);
   const requestedEdit = parseAutomationsEdit(firstSearchValue(params.edit));
   const clone = parseAutomationsClone(firstSearchValue(params.clone));
   const openingForm = Boolean(requestedEdit || clone);
@@ -209,9 +207,6 @@ export default async function FuturesAutomationsPage({
           <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}
           </p>
-        ) : null}
-        {saved ? (
-          <p className="mt-4 text-sm text-success">{notice ?? "Bot saved."}</p>
         ) : null}
         <div className="mt-6">
           <DcaPlaybooksDesk
@@ -340,9 +335,6 @@ export default async function FuturesAutomationsPage({
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
-      ) : null}
-      {saved ? (
-        <p className="mt-4 text-sm text-success">{notice || "Bot saved."}</p>
       ) : null}
       {settings.reduceOnly ? (
         <p className="mt-4 mb-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
