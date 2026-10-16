@@ -13,23 +13,15 @@ export async function loadBacktestDisplayCandles(input: {
   interval: DcaIndicatorTimeframe;
   fromMs: number;
   toMs: number;
-  maxBars?: number;
 }): Promise<CandleBar[]> {
   const pages: CandleBar[][] = [];
   let cursorTo = input.toMs;
   let total = 0;
-  const maxBars = Math.max(
-    1,
-    Math.min(
-      BACKTEST_CHART_FETCH_LIMIT,
-      Math.floor(input.maxBars ?? BACKTEST_CHART_FETCH_LIMIT),
-    ),
-  );
 
-  while (total < maxBars && cursorTo > input.fromMs) {
+  while (total < BACKTEST_CHART_FETCH_LIMIT && cursorTo > input.fromMs) {
     const limit = Math.min(
       RANGED_CANDLE_LIMIT,
-      maxBars - total,
+      BACKTEST_CHART_FETCH_LIMIT - total,
     );
     const params = new URLSearchParams({
       venue: input.venue,

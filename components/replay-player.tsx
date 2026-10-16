@@ -98,15 +98,12 @@ import {
 import {
   backtestChartFetchBounds,
   chartIntervalForWindow,
-  replayChartFetchBars,
-  replayChartIntervalAllowed,
   type BacktestRun,
   type ReplayEvent,
   type SimulatedOrder,
 } from "@/lib/backtest/model";
 import { listBacktestCycles, replayPositionsPageSize } from "@/lib/backtest/positions";
 import {
-  DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
@@ -412,17 +409,6 @@ export function ReplayPlayer({
   const [interval, setInterval] = useState<DcaIndicatorTimeframe>(() =>
     chartIntervalForWindow(run.fromMs, run.toMs, run.interval),
   );
-  const closedIntervals = useMemo(() => {
-    const closed = new Set<DcaIndicatorTimeframe>();
-    for (const value of DCA_INDICATOR_TIMEFRAMES) {
-      if (
-        !replayChartIntervalAllowed(run.fromMs, run.toMs, value, run.interval)
-      ) {
-        closed.add(value);
-      }
-    }
-    return closed;
-  }, [run.fromMs, run.interval, run.toMs]);
   const [favoriteIntervals, setFavoriteIntervals] = useState<DcaIndicatorTimeframe[]>(
     preferences?.favoriteIntervals ?? [],
   );
@@ -615,12 +601,6 @@ export function ReplayPlayer({
       interval,
       fromMs: bounds.fromMs,
       toMs: bounds.toMs,
-      maxBars: replayChartFetchBars(
-        run.fromMs,
-        run.toMs,
-        interval,
-        run.interval,
-      ),
     })
       .then((rows) => {
         if (!cancelled) {
@@ -2310,13 +2290,7 @@ export function ReplayPlayer({
       >
         <ReplayChartBar
           interval={interval}
-          onInterval={(next) => {
-            if (closedIntervals.has(next)) {
-              return;
-            }
-            setInterval(next);
-          }}
-          disabledIntervals={closedIntervals}
+          onInterval={setInterval}
           favoriteIntervals={favoriteIntervals}
           onFavoriteIntervals={setFavoriteIntervals}
           appearance={chartAppearance}

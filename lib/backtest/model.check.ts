@@ -11,10 +11,7 @@ import {
   backtestActivityBounds,
   backtestChartIntervalChoices,
   backtestChartIntervalFits,
-  BACKTEST_REPLAY_BAR_CAP,
   chartIntervalForWindow,
-  replayChartFetchBars,
-  replayChartIntervalAllowed,
   parseBacktestDateRange,
   backtestTapeInterval,
   parseComparableSymbols,
@@ -259,25 +256,9 @@ assert.equal(
   chartIntervalForWindow(Date.UTC(2026, 6, 1), Date.UTC(2026, 6, 31), "60"),
   "60",
 );
-const fiveYearFrom = Date.UTC(2021, 9, 18);
-const fiveYearTo = Date.UTC(2026, 9, 16);
-assert.equal(chartIntervalForWindow(fiveYearFrom, fiveYearTo, "15"), "D");
 assert.equal(
-  replayChartIntervalAllowed(fiveYearFrom, fiveYearTo, "15", "15"),
-  false,
-);
-assert.equal(
-  replayChartIntervalAllowed(fiveYearFrom, fiveYearTo, "D", "15"),
-  true,
-);
-assert.equal(
-  replayChartFetchBars(fiveYearFrom, fiveYearTo, "15", "15"),
-  BACKTEST_REPLAY_BAR_CAP,
-);
-assert.ok(replayChartFetchBars(fiveYearFrom, fiveYearTo, "D", "15") > 1500);
-assert.ok(
-  replayChartFetchBars(fiveYearFrom, fiveYearTo, "D", "15") <=
-    BACKTEST_REPLAY_BAR_CAP,
+  chartIntervalForWindow(Date.UTC(2021, 9, 18), Date.UTC(2026, 9, 16), "15"),
+  "D",
 );
 assert.deepEqual(backtestChartIntervalChoices("5"), [
   "5",
