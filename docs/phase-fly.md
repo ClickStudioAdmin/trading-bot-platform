@@ -26,7 +26,7 @@ Three layers. Implement these in code **before** (or as) the first Fly deploy. O
 ```
 Vercel (Sydney)     UI, TradingView webhook HTTP door, user Save/Arm/Trigger
 Postgres            Ledgers + desk leases (the coordinator)
-Fly (Sydney)        One or more worker processes claiming desks
+Fly (Sydney)        Desk workers, and a separate backtest machine
 ```
 
 ```
@@ -34,10 +34,10 @@ Fly (Sydney)        One or more worker processes claiming desks
 2. Claim            take N idle desks (SKIP LOCKED lease)
 3. Desk tick        that desk only; a few desks in parallel on one process
 4. Release          next loop
-5. Backtest         Fly drains one queued `backtest_runs` row on its own loop (any length). The desk cycle claims a short run only if time remains.
+5. Backtest         `tbp-backtest-dev` / `tbp-backtest` drain one queued run on their own machine (any length). The desk cycle claims a short run only if time remains.
 ```
 
-The backtest page claims a run only when it is a short job (≤3000 bars and ≤4 pairs). Longer runs stay `queued` for the Fly loop, so a 60-second page request cannot pin them as `running`.
+The backtest page claims a run only when it is a short job (≤3000 bars and ≤4 pairs). Longer runs stay `queued` for the backtest machine, so a 60-second page request cannot pin them as `running`. A crash on that machine restarts the backtest app. The desks keep ticking.
 
 ### 1. Work unit = one desk
 
@@ -58,14 +58,16 @@ No extra queue product. A lease row per desk (or `pg_advisory_lock` on the desk 
 
 Vercel mutations (Save, Arm, Trigger, webhook place) take a **short** lock on the same desk id, or rely on existing idempotency keys (`runFuturesCommand`). Prefer the short lock so Save and a worker tick cannot rest the same ladder together. Keys stay the safety net.
 
-### 3. Host = Fly in Sydney, two apps
+### 3. Host = Fly in Sydney, desk and backtest apps
 
 Bybit blocks many US IPs (same as Vercel `syd1`). Fly region **`syd`**. Two apps, same split as today:
 
-| Git | Fly app | Supabase / secrets |
-| --- | --- | --- |
-| `develop` | engine-dev | Development project only |
-| `main` | engine | Production project only |
+| Git | Fly app | Role | Supabase / secrets |
+| --- | --- | --- | --- |
+| `develop` | `tbp-engine-dev` | Desks | Development project only |
+| `develop` | `tbp-backtest-dev` | Long backtests | Development project only |
+| `main` | `tbp-engine` | Desks | Production project only |
+| `main` | `tbp-backtest` | Long backtests | Production project only |
 
 Never mix. GitHub Actions deploys the worker; it does not POST the 60s Vercel tick once Fly is the scheduler.
 
@@ -114,7 +116,7 @@ If those pass, adding machines and desks is capacity, not a redesign.
 
 Accepted 29 Aug 2026. Implementation started 29 Aug 2026. Parked 29 Aug 2026 — Click left the engine as-is. 23 Sep 2026: Click asked for a fast tick on a desk of about 500 bots. One pass checks every listening bot in memory. Closes, breakeven, and exit sync run before new entries. New entries are capped at 8 per pass so a bar-close burst cannot block the next check. The next pass continues at the next bot, so a rejected order does not keep the same 8 at the front. 15-minute bars stay cached until that bar closes. Bybit instruments load once per minute. Reconcile reads the Bybit position book once per key. The desk lease renews while that pass is acting. A mutation on the same worker does not shorten that lease. Percent stops and take profits fire from the ticker before 15-minute bars are fetched. Closes on different symbols run together, up to 4 at a time; the two sides of one symbol stay in one chain because a Bybit cancel covers the whole symbol. New entries still wait until those closes finish, then the open-order reconcile runs. One position list is read before the pass. The worker also keeps a Bybit public linear ticker socket. Percent stops and take profits are checked again on each print while the pass runs, and during the remainder of the hot loop. A Bybit flatten from that lane sends a symbol cancel and a market close, paced at 10 trade requests a second, up to 10 symbols at once.
 
-Shipped in repo: `engine_desk_leases` + claim RPCs (`20260829080000_engine_desk_leases.sql`), `runEngineCycle` / per-desk tick, in-memory lease tests, Fly configs (`fly.development.toml`, `fly.production.toml`), worker (`lib/engine/worker.ts`), GitHub **Deploy Engine**. Vercel tick and admin Tick call the same leased cycle (`maxMs` 50s). The 5-minute GitHub POST is off (workflow_dispatch only). Footer **Tick** is the Vercel fallback.
+Shipped in repo: `engine_desk_leases` + claim RPCs (`20260829080000_engine_desk_leases.sql`), `runEngineCycle` / per-desk tick, in-memory lease tests, Fly configs (`fly.development.toml`, `fly.production.toml`, `fly.backtest.development.toml`, `fly.backtest.production.toml`), desk worker (`lib/engine/worker.ts`), backtest worker (`lib/engine/backtest-worker.ts`), GitHub **Deploy Engine**. Vercel tick and admin Tick call the same leased cycle (`maxMs` 50s). The 5-minute GitHub POST is off (workflow_dispatch only). Footer **Tick** is the Vercel fallback. The desk worker does not drain long backtests.
 
 Each Fly loop claims **hot desks first** (open futures rows, armed or stop-adding DCA playbooks, active Perps recipes), then idle books, and ticks up to three claimed desks at once. A claimed hot desk still runs when the loop budget is spent. Idle desks are the ones left for the next loop. Disabled DCA bots with no open position are not walked. One linear ticker snapshot is reused for reconcile. Paper desks skip the venue gate. Live market stop / take profit attach on the fill (`placeClip` and GTC reconcile). Indicator **cross** starts latch until the first order so a 5m bar is not missed. The worker loads desk binds without a browser session. Auto tick is off unless an admin turns it on. When the cycle still has time, it also removes `event_logs` older than 60 days: one worker claims scan key `event_log_retention` for 15 minutes and deletes at most 1,000 rows. The same tail claims `desk_close_retention` for 15 minutes and, six months after an owner closes a source desk, deletes the remaining copy desks (including a follower’s last desk) and then the hidden parent. Vercel Cron does not run this. The list of these jobs is `/admin/system`.
 
@@ -159,13 +161,16 @@ Once **tbp-engine-dev** appears in the Fly dashboard, open it (do not Launch ano
 
 If those four do not match Vercel Development, the worker will talk to the wrong database or fail to decrypt keys. Do not paste production values here.
 
-Re-run **Deploy Engine**. You want both green:
+**Backtest machine.** The same workflow creates **tbp-backtest-dev**. Copy `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `EXCHANGE_CREDENTIALS_KEY` from Vercel Development onto it. Leave `BILLING_CREDENTIALS_KEY` on `tbp-engine-dev`. Long backtests run on the backtest app, one at a time. The desk app does not drain them. A short run (≤3000 bars) can still finish on the desk cycle when that cycle has time left. Until those three secrets exist, the backtest deploy job fails and long runs stay queued.
+
+Re-run **Deploy Engine**. You want the engine and the backtest jobs green:
 
 - Database job: lease tables exist on **trading-bot-platform-dev**
-- Engine job: Fly built the worker and it is running in Sydney
+- Engine job: Fly built the desk worker and it is running in Sydney
+- Backtest job: Fly built `tbp-backtest-dev` and it is running in Sydney
 
 **7. Check that it is actually looping**  
-In Fly, open **tbp-engine-dev** logs. You should see the worker start, then a cycle about every 20 seconds. In the app, `/admin/logs` should show engine tick lines. A live DCA desk on Demo should keep placing or amending without you sitting on Auto tick.
+In Fly, open **tbp-engine-dev** logs. You should see the worker start, then a cycle about every 20 seconds. Open **tbp-backtest-dev** logs. You should see the backtest worker start, then idle until a long run is queued. In the app, `/admin/logs` should show engine tick lines. A live DCA desk on Demo should keep placing or amending without you sitting on Auto tick.
 
 **8. Leave Auto tick off**  
 Fly is the clock. Use footer **Tick** if you want a Vercel nudge. **Run workflow** on Paper Engine Tick is the manual fallback. Do not turn Auto tick on unless you are debugging.

@@ -14,6 +14,17 @@ export type { FuturesTpslMode } from "./model";
 export const FUTURES_TPSL_LEVEL_KINDS = ["price", "percent"] as const;
 export type FuturesTpslLevelKind = (typeof FUTURES_TPSL_LEVEL_KINDS)[number];
 
+/** A level that is not set opens on percentage. A saved price stays price. */
+export function defaultTpslLevelKind(
+  level: number | null | undefined,
+  kind?: FuturesTpslLevelKind | null,
+): FuturesTpslLevelKind {
+  if (level == null) {
+    return "percent";
+  }
+  return kind === "percent" ? "percent" : "price";
+}
+
 export type FuturesTpsl = {
   takeProfit: number | null;
   stopLoss: number | null;

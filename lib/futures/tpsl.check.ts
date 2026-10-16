@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import type { FuturesTpsl } from "./tpsl";
 import { isUnchangedTradingStop } from "../exchanges/bybit/orders";
 import {
+  defaultTpslLevelKind,
   estimatedTpslPnl,
   futuresTpslPercentPrice,
   paperStopCloseQty,
@@ -33,6 +34,12 @@ function levels(
     ...partial,
   };
 }
+
+assert.equal(defaultTpslLevelKind(null), "percent");
+assert.equal(defaultTpslLevelKind(undefined, "price"), "percent");
+assert.equal(defaultTpslLevelKind(1.5, "percent"), "percent");
+assert.equal(defaultTpslLevelKind(65000, "price"), "price");
+assert.equal(defaultTpslLevelKind(65000), "price");
 
 assert.equal(parseFuturesTrigger("Last").ok, true);
 assert.equal(parseFuturesTrigger("index").ok, true);
