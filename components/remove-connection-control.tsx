@@ -34,11 +34,14 @@ export function RemoveConnectionControl({
         buttonRef={buttonRef}
       >
         {blockedMessage ? (
-          <p className="text-hint text-ink-faint">{blockedMessage}.</p>
+          <p className="text-sm text-ink">{blockedMessage}.</p>
         ) : (
           <>
-            <p className="text-hint text-ink-faint">
-              Remove this connection? You can add the key again later.
+            <p className="text-sm font-medium text-ink">
+              Remove this connection?
+            </p>
+            <p className="mt-1 text-hint text-ink-muted">
+              You can add the key again later.
             </p>
             <form action={removeExchangeConnection} className="mt-3">
               <input type="hidden" name="connectionId" value={connectionId} />

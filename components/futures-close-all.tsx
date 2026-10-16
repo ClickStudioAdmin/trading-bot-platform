@@ -213,7 +213,10 @@ function FuturesBulkDialog({
         className="relative w-full max-w-md rounded-card border border-line bg-surface p-5"
       >
         <div className="flex items-start justify-between gap-3">
-          <h2 id={titleId} className="text-lg font-semibold tracking-tight">
+          <h2
+            id={titleId}
+            className="text-lg font-semibold tracking-tight text-ink"
+          >
             {copy.title}
           </h2>
           <button
@@ -296,7 +299,7 @@ function FuturesBulkDialog({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-control border border-line px-3 py-2 text-sm text-ink hover:border-line-strong"
+              className="rounded-control border border-line bg-surface-raised px-3 py-2 text-sm font-medium text-ink hover:border-line-strong"
             >
               Cancel
             </button>

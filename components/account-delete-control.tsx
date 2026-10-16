@@ -61,7 +61,7 @@ export function AccountDeleteControl({
       >
         <PanelCloseButton onClick={() => setOpen(false)} />
         {blockedMessage ? (
-          <p className="break-words text-hint text-ink-faint">
+          <p className="min-w-0 break-words text-sm text-ink">
             <PanelCloseReserve />
             {blockedMessage}.
           </p>
@@ -73,11 +73,11 @@ export function AccountDeleteControl({
             className="flex flex-col gap-3"
           >
             <input type="hidden" name="accountId" value={accountId} />
-            <p className="min-w-0 break-words text-hint text-ink-faint">
+            <p className="min-w-0 break-words text-sm font-medium text-ink">
               <PanelCloseReserve />
-              Remove {accountName} and its closed history? This cannot be
-              undone.
+              Remove {accountName} and its closed history?
             </p>
+            <p className="text-hint text-ink-muted">This cannot be undone.</p>
             <PendingSubmitButton
               pendingLabel="Deleting…"
               className="w-full rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
@@ -110,7 +110,7 @@ function SwitchFields({
     return (
       <>
         <input type="hidden" name="switchToAccountId" value={only.id} />
-        <p className="text-hint text-ink-faint">Switch to {only.name}.</p>
+        <p className="text-hint text-ink-muted">Switch to {only.name}.</p>
       </>
     );
   }
