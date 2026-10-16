@@ -118,6 +118,11 @@ jobs:
           echo "creating tbp-backtest-dev in org $FLY_ORG"
           flyctl apps create tbp-backtest-dev --org "$FLY_ORG" --yes
 
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --config fly.backtest.development.toml --remote-only
+
       - name: Check Fly app secrets
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -135,19 +140,15 @@ jobs:
           echo "$names"
           for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY EXCHANGE_CREDENTIALS_KEY; do
             if ! echo "$names" | grep -qx "$name"; then
-              echo "tbp-backtest-dev exists, but $name is not set on the Fly app."
-              echo "In Fly, open tbp-backtest-dev → Secrets and add the development values:"
+              echo "tbp-backtest-dev is deployed, but $name is not set on the Fly app."
+              echo "Saving secrets before the first machine exists fails with: No machines configured for this app."
+              echo "A machine exists now. In Fly, open tbp-backtest-dev → Secrets and add the development values:"
               echo "SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EXCHANGE_CREDENTIALS_KEY."
               echo "The billing key stays on tbp-engine-dev. Backtests do not decrypt wallets."
               echo "Then re-run this workflow."
               exit 1
             fi
           done
-
-      - name: Deploy
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: flyctl deploy --config fly.backtest.development.toml --remote-only
 
   deploy-production:
     name: Deploy production engine
@@ -237,6 +238,11 @@ jobs:
           echo "creating tbp-backtest in org $FLY_ORG"
           flyctl apps create tbp-backtest --org "$FLY_ORG" --yes
 
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --config fly.backtest.production.toml --remote-only
+
       - name: Check Fly app secrets
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -254,16 +260,12 @@ jobs:
           echo "$names"
           for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY EXCHANGE_CREDENTIALS_KEY; do
             if ! echo "$names" | grep -qx "$name"; then
-              echo "tbp-backtest exists, but $name is not set on the Fly app."
-              echo "In Fly, open tbp-backtest → Secrets and add the production values:"
+              echo "tbp-backtest is deployed, but $name is not set on the Fly app."
+              echo "Saving secrets before the first machine exists fails with: No machines configured for this app."
+              echo "A machine exists now. In Fly, open tbp-backtest → Secrets and add the production values:"
               echo "SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EXCHANGE_CREDENTIALS_KEY."
               echo "The billing key stays on tbp-engine. Backtests do not decrypt wallets."
               echo "Then re-run this workflow."
               exit 1
             fi
           done
-
-      - name: Deploy
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: flyctl deploy --config fly.backtest.production.toml --remote-only
