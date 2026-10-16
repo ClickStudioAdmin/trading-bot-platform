@@ -29,7 +29,7 @@ const cancelBtn =
 const confirmBtn =
   "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
 const dangerBtn =
-  "rounded-control bg-danger px-4 py-2 text-sm font-medium text-canvas hover:opacity-90";
+  "rounded-control bg-danger px-4 py-2 text-sm font-medium text-ink hover:opacity-90";
 
 export function ConfirmModal({
   open,

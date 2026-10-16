@@ -47,7 +47,7 @@ const cancelClass =
 const continueClass =
   "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-70";
 const dangerClass =
-  "rounded-control bg-danger px-4 py-2 text-sm font-medium text-canvas hover:opacity-90 disabled:opacity-70";
+  "rounded-control bg-danger px-4 py-2 text-sm font-medium text-ink hover:opacity-90 disabled:opacity-70";
 
 export const STEP_UP_MODAL_TITLE = "2FA Authentication Required";
 
