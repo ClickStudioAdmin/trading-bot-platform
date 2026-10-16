@@ -7,6 +7,7 @@ import {
   BotFormStep,
   BotFormSidebar,
   BotFormSidebarSection,
+  completeRequiredNotice,
   BotFormSummaryCard,
   BotButtonLead,
   botBtnIcon,
@@ -2801,19 +2802,13 @@ export function ThemeBotFormDraft() {
           />
         }
         dirty={persisted && dirty}
-        error={
-          persisted && dirty && hasMissing
-            ? "Fill required fields before saving."
-            : undefined
-        }
+        error={hasMissing ? completeRequiredNotice : undefined}
         save={
           <button
             type="button"
             className={botSidebarSaveClass}
             disabled={!dirty || hasMissing}
-            title={
-              hasMissing ? "Fill required fields before saving." : undefined
-            }
+            title={hasMissing ? completeRequiredNotice : undefined}
             onClick={saveDraft}
           >
             <span className="inline-flex items-center gap-1.5">

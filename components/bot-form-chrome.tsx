@@ -445,6 +445,8 @@ export function BotFormCard({
   );
 }
 
+export const completeRequiredNotice = "Complete required fields";
+
 export function BotFormSidebar({
   status,
   dirty,
