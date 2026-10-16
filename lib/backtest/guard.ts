@@ -133,7 +133,10 @@ export function backtestTapeCoverageError(input: {
     return `Incomplete candle history. The oldest candle is ${formatBacktestUtcDate(oldest)}, and this window starts ${formatBacktestUtcDate(input.fromMs)}.`;
   }
   const endTarget = Math.min(input.toMs, input.nowMs);
-  if (newest < endTarget - step) {
+  // Candle time is the bar open. The bar that contains the end may still be
+  // forming, so the previous open still reaches the window.
+  const currentOpen = Math.floor(endTarget / step) * step;
+  if (newest < currentOpen - step) {
     const endLabel =
       input.toMs > input.nowMs
         ? "today"
