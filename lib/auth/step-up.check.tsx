@@ -10,6 +10,8 @@ import {
   STEP_UP_FIELD,
   STEP_UP_INVALID,
   STEP_UP_MISSING,
+  STEP_UP_REQUEST_FAILED,
+  rethrowNextControlFlow,
   stepUpFailure,
   stepUpRejection,
   stepUpRejectionMessage,
@@ -125,5 +127,28 @@ const busy = renderToStaticMarkup(
 assert.match(busy, /disabled/);
 assert.match(busy, /Checking…/);
 assert.match(busy, /incorrect/);
+
+const dangerBusy = renderToStaticMarkup(
+  <StepUpPrompt
+    formId="delete-desk"
+    confirmLabel="Delete desk"
+    danger
+    pending
+    onCancel={() => {}}
+  />,
+);
+assert.match(dangerBusy, /Checking…/);
+assert.match(dangerBusy, /text-ink/);
+assert.doesNotMatch(dangerBusy, /text-canvas/);
+
+let redirected = false;
+try {
+  rethrowNextControlFlow({ digest: "NEXT_REDIRECT;replace;/account;307;" });
+} catch {
+  redirected = true;
+}
+assert.equal(redirected, true);
+rethrowNextControlFlow(new Error("socket hang up"));
+assert.equal(STEP_UP_REQUEST_FAILED, "That request timed out. Try again.");
 
 console.log("step-up checks passed");

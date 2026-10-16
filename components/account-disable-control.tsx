@@ -28,7 +28,7 @@ const idleStep: Step = { state: "waiting", detail: "" };
 const cancelBtn =
   "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
 const dangerBtn =
-  "rounded-control bg-danger px-4 py-2 text-sm font-medium text-canvas hover:opacity-90";
+  "rounded-control bg-danger px-4 py-2 text-sm font-medium text-ink hover:opacity-90";
 
 export function AccountDisableControl({
   accountId,

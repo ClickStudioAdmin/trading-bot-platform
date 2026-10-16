@@ -4,6 +4,7 @@ import {
   DESK_DELETE_TIMED_OUT,
   deleteRowsInBatches,
   deskDeleteErrorMessage,
+  deskDeletePastBudget,
 } from "./desk-delete";
 
 assert.equal(
@@ -74,6 +75,24 @@ const failed = await deleteRowsInBatches({
   deleteIds: async () => ({ error: null }),
 });
 assert.equal(failed, DESK_DELETE_TIMED_OUT);
+
+assert.equal(deskDeletePastBudget(1_000, 21_000, 20_000), true);
+assert.equal(deskDeletePastBudget(1_000, 20_999, 20_000), false);
+
+let budgetDeletes = 0;
+const budgetHit = await deleteRowsInBatches({
+  batchSize: 1,
+  maxBatches: 5,
+  startedAt: 0,
+  budgetMs: 1,
+  selectIds: async () => ({ ids: ["x"], error: null }),
+  deleteIds: async () => {
+    budgetDeletes += 1;
+    return { error: null };
+  },
+});
+assert.equal(budgetHit, DESK_DELETE_TIMED_OUT);
+assert.equal(budgetDeletes, 0);
 
 console.log("desk delete checks passed");
 }
