@@ -10,6 +10,8 @@ import {
   BotField,
   BotFormGroup,
   OrderTypePill,
+  conditionFieldClass,
+  useBotColumnLayout,
 } from "@/components/bot-form-chrome";
 import { useDeskFormStatus } from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
@@ -63,6 +65,7 @@ export function PerpsAdditionalOrders({
   onConditionDraftChange?: (next: PerpsAddConditionDraft) => void;
 }) {
   const { markDirty } = useDeskFormStatus();
+  const column = useBotColumnLayout();
   const [draft, setDraft] = useState(() => blankPerpsAddConditionDraft(side));
   const draftRef = useRef(draft);
   const conditionGrid = fieldsClass ?? gridClass;
@@ -100,7 +103,7 @@ export function PerpsAdditionalOrders({
                     : "",
                 );
               }}
-              className={`${fieldClass} !min-w-72`}
+              className={conditionFieldClass(fieldClass, column)}
             >
               <option value="">Select Condition Type</option>
               <option value="indicator">Indicator</option>
@@ -243,7 +246,7 @@ export function PerpsAdditionalOrders({
                 value={size}
                 onChange={onSize}
                 allowDecimal
-                className={`${fieldClass} ${sizeUnit === "usdt" ? "pl-7" : ""}`}
+                className={`${fieldClass} !mt-0 ${sizeUnit === "usdt" ? "pl-7" : ""}`}
               />
             </span>
           </BotField>
