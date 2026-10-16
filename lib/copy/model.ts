@@ -118,6 +118,51 @@ export function copyOwnerFollowerSituation(input: {
   };
 }
 
+export type CopyFollowerSourceKey = "catalogue" | "private";
+export type CopyFollowerStatusFilter = "" | CopyShareStatus;
+export type CopyFollowerSourceFilter = "" | CopyFollowerSourceKey;
+
+export function copyFollowerSourceKey(
+  visibility: CopyListingVisibility | null | undefined,
+): CopyFollowerSourceKey {
+  return visibility === "public" ? "catalogue" : "private";
+}
+
+/** Revoked rows stay on the list. They cannot be revoked again. */
+export function copyFollowerCanRevoke(status: CopyShareStatus): boolean {
+  return status !== "revoked";
+}
+
+export function copyFollowerFiltersActive(input: {
+  query: string;
+  status: CopyFollowerStatusFilter;
+  source: CopyFollowerSourceFilter;
+}): boolean {
+  return Boolean(input.query.trim() || input.status || input.source);
+}
+
+/** Search matches the label the owner sees. A public row does not match on email. */
+export function copyFollowerMatchesFilters(input: {
+  label: string;
+  status: CopyShareStatus;
+  source: CopyFollowerSourceKey;
+  query: string;
+  statusFilter: CopyFollowerStatusFilter;
+  sourceFilter: CopyFollowerSourceFilter;
+}): boolean {
+  const query = input.query.trim().toLowerCase();
+  if (query && !input.label.toLowerCase().includes(query)) {
+    return false;
+  }
+  if (input.statusFilter && input.status !== input.statusFilter) {
+    return false;
+  }
+  if (input.sourceFilter && input.source !== input.sourceFilter) {
+    return false;
+  }
+  return true;
+}
+
 export type CopyCatalogueTab = "all" | "favorites" | "subscribed";
 export type CopyCatalogueSort =
   | "roi"

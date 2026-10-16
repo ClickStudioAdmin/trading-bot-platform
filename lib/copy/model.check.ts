@@ -31,6 +31,10 @@ import {
   parseCopyMinActivityDays,
   parseCopyVisibility,
   copyInviteBlockCode,
+  copyFollowerCanRevoke,
+  copyFollowerFiltersActive,
+  copyFollowerMatchesFilters,
+  copyFollowerSourceKey,
   copyOwnerFollowerLabel,
   copyOwnerFollowerSituation,
   copyCatalogueIncludes,
@@ -656,6 +660,65 @@ assert.deepEqual(
     sourceLabel: "Private invite",
     detail: "Revoked 31/08/2026",
   },
+);
+
+assert.equal(copyFollowerSourceKey("public"), "catalogue");
+assert.equal(copyFollowerSourceKey("private"), "private");
+assert.equal(copyFollowerSourceKey(null), "private");
+assert.equal(copyFollowerCanRevoke("active"), true);
+assert.equal(copyFollowerCanRevoke("invited"), true);
+assert.equal(copyFollowerCanRevoke("revoked"), false);
+assert.equal(
+  copyFollowerFiltersActive({ query: " ", status: "", source: "" }),
+  false,
+);
+assert.equal(
+  copyFollowerFiltersActive({ query: "ada", status: "", source: "" }),
+  true,
+);
+assert.equal(
+  copyFollowerMatchesFilters({
+    label: "ada@example.com",
+    status: "active",
+    source: "private",
+    query: "ADA",
+    statusFilter: "active",
+    sourceFilter: "private",
+  }),
+  true,
+);
+assert.equal(
+  copyFollowerMatchesFilters({
+    label: "c84c95cc-90fb-4be7-bb82-bc2",
+    status: "active",
+    source: "catalogue",
+    query: "ada@example.com",
+    statusFilter: "",
+    sourceFilter: "",
+  }),
+  false,
+);
+assert.equal(
+  copyFollowerMatchesFilters({
+    label: "ada@example.com",
+    status: "invited",
+    source: "private",
+    query: "",
+    statusFilter: "active",
+    sourceFilter: "",
+  }),
+  false,
+);
+assert.equal(
+  copyFollowerMatchesFilters({
+    label: "ada@example.com",
+    status: "active",
+    source: "private",
+    query: "",
+    statusFilter: "",
+    sourceFilter: "catalogue",
+  }),
+  false,
 );
 
 assert.equal(
