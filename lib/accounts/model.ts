@@ -626,7 +626,11 @@ export function formatAccountModeChoice(mode: TradingAccountMode): string {
     : "Paper Trading (uses live market data - no real trades)";
 }
 
-export type AccountDeleteBlock = "last" | "open" | "automations";
+export type AccountDeleteBlock = "last" | "open" | "automations" | "copies";
+
+/** Shown before any delete starts. The database repeats this check. */
+export const DELETE_BLOCKED_COPIES =
+  "Remove the copy desks that follow this desk first";
 export type ConnectionRemoveBlock = "in_use";
 export type StrategyDetachBlock = "open" | "automations";
 
@@ -635,6 +639,7 @@ export function accountDeleteBlockers(input: {
   openCount: number;
   automationsRunning: boolean;
   mode: TradingAccountMode;
+  hasCopyFollowers?: boolean;
 }): AccountDeleteBlock[] {
   const blocks: AccountDeleteBlock[] = [];
   if (input.accountCount <= 1) {
@@ -645,6 +650,9 @@ export function accountDeleteBlockers(input: {
   }
   if (input.automationsRunning) {
     blocks.push("automations");
+  }
+  if (input.hasCopyFollowers) {
+    blocks.push("copies");
   }
   return blocks;
 }
@@ -664,6 +672,9 @@ export function formatDeleteBlockers(
     parts.push("Exit all positions first");
   } else if (automations) {
     parts.push("Disable bots first");
+  }
+  if (blocks.includes("copies")) {
+    parts.push(DELETE_BLOCKED_COPIES);
   }
   return parts.join(" · ");
 }

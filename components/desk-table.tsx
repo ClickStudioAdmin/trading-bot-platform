@@ -376,9 +376,7 @@ function DeskRow({
             accountName={account.name}
             blockedMessage={canDelete ? null : formatDeleteBlockers(blocks)}
             hint={
-              row.status === "active"
-                ? "Can't delete Active Desk"
-                : undefined
+              canDelete ? undefined : formatDeleteBlockers(blocks)
             }
             switchOptions={
               current && canDelete
