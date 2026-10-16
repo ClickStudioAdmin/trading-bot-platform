@@ -28,9 +28,12 @@ import {
 } from "@/lib/dca/indicators";
 import {
   dcaAveragingKind,
+  dcaClassicToJson,
   dcaIntervalParts,
+  dcaShortClassicFromJson,
   IDLE_DCA_LEG,
   parseDcaPlaybookForm,
+  type DcaClassicExit,
   type DcaPlaybook,
   type DcaPlaybookConfig,
 } from "@/lib/dca/playbook";
@@ -133,6 +136,8 @@ export type DcaTemplateRecipe = {
   breakevenOffsetPct: number | null;
   trailingTriggerPct: number | null;
   trailingPct: number | null;
+  /** Direction Both. Absent means the short leg still shares the long classics. */
+  shortClassic?: DcaClassicExit | null;
   armTrigger: DcaPlaybookConfig["armTrigger"];
   shortArmTrigger?: DcaPlaybookConfig["shortArmTrigger"];
   indicatorKind: DcaPlaybookConfig["indicatorKind"];
@@ -361,6 +366,9 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     breakevenOffsetPct: config.breakevenOffsetPct,
     trailingTriggerPct: config.trailingTriggerPct,
     trailingPct: config.trailingPct,
+    ...(config.direction === "both" && config.shortClassic
+      ? { shortClassic: dcaShortClassicFromJson(dcaClassicToJson(config.shortClassic)) }
+      : {}),
     armTrigger: config.armTrigger,
     shortArmTrigger: config.shortArmTrigger ?? null,
     indicatorKind: config.indicatorKind,
@@ -531,6 +539,10 @@ export function dcaRecipePlaybookSeed(recipe: DcaTemplateRecipe): DcaPlaybook {
     breakevenOffsetPct: recipe.breakevenOffsetPct,
     trailingTriggerPct: recipe.trailingTriggerPct,
     trailingPct: recipe.trailingPct,
+    shortClassic:
+      recipe.direction === "both"
+        ? dcaShortClassicFromJson(recipe.shortClassic)
+        : null,
     armTrigger: recipe.armTrigger,
     shortArmTrigger: recipe.shortArmTrigger ?? null,
     disarmTrigger: null,
@@ -963,6 +975,41 @@ export function dcaRecipeToConfig(
   }
   if (recipe.trailingPct != null) {
     form.set("trailingPct", String(recipe.trailingPct));
+  }
+  const shortClassic = dcaShortClassicFromJson(recipe.shortClassic);
+  if (String(form.get("direction")) === "both" && shortClassic) {
+    form.set("shortClassic", "on");
+    form.set("shortTakeProfitKind", shortClassic.takeProfitKind);
+    form.set("shortTakeProfitBasis", shortClassic.takeProfitBasis);
+    form.set("shortTakeProfitOrderType", shortClassic.takeProfitOrderType);
+    form.set("shortStopLossBasis", shortClassic.stopLossBasis);
+    if (shortClassic.takeProfitKind === "atr" && shortClassic.takeProfitAtrMult != null) {
+      form.set("shortTpOn", "on");
+      form.set("shortTakeProfitAtrMult", String(shortClassic.takeProfitAtrMult));
+      if (shortClassic.atrPeriod != null) {
+        form.set("shortAtrPeriod", String(shortClassic.atrPeriod));
+      }
+    } else if (shortClassic.takeProfitPct != null) {
+      form.set("shortTpOn", "on");
+      form.set("shortTakeProfitPct", String(shortClassic.takeProfitPct));
+    }
+    if (shortClassic.stopLossPct != null) {
+      form.set("shortSlOn", "on");
+      form.set("shortStopLossPct", String(shortClassic.stopLossPct));
+    }
+    if (shortClassic.breakevenActivationPct != null) {
+      form.set("shortSlOn", "on");
+      form.set("shortBreakeven", "on");
+      form.set("shortBreakevenActivationPct", String(shortClassic.breakevenActivationPct));
+      if (shortClassic.breakevenOffsetPct != null) {
+        form.set("shortBreakevenOffsetPct", String(shortClassic.breakevenOffsetPct));
+      }
+    }
+    if (shortClassic.trailingPct != null && shortClassic.trailingTriggerPct != null) {
+      form.set("shortTrailOn", "on");
+      form.set("shortTrailingPct", String(shortClassic.trailingPct));
+      form.set("shortTrailingTriggerPct", String(shortClassic.trailingTriggerPct));
+    }
   }
   const arm = recipe.armTrigger as DcaPlaybookConfig["armTrigger"] | undefined;
   if (arm) {
@@ -1405,6 +1452,23 @@ export type DcaSnapshotOverlay = {
   slOn?: string;
   trailOn?: string;
   breakeven?: string;
+  shortClassic?: string;
+  shortTakeProfitKind?: string;
+  shortTakeProfitAtrMult?: string;
+  shortTakeProfitPct?: string;
+  shortTakeProfitBasis?: string;
+  shortTakeProfitOrderType?: string;
+  shortAtrPeriod?: string;
+  shortStopLossPct?: string;
+  shortStopLossBasis?: string;
+  shortTrailingTriggerPct?: string;
+  shortTrailingPct?: string;
+  shortBreakevenActivationPct?: string;
+  shortBreakevenOffsetPct?: string;
+  shortTpOn?: string;
+  shortSlOn?: string;
+  shortTrailOn?: string;
+  shortBreakeven?: string;
 };
 
 export function readFormControl(

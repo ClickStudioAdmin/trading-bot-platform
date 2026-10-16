@@ -81,6 +81,7 @@ import {
   dcaFlattenKey,
   dcaFlattenRearms,
   dcaAtrTimeframe,
+  dcaClassicForSide,
   dcaArmTriggerForSide,
   dcaIndicatorStartForSide,
   dcaIndicatorTimeframes,
@@ -347,11 +348,16 @@ async function instrumentForPlaybook(playbook: {
 async function atrForPlaybook(
   playbook: DcaPlaybook,
   known?: number | null,
+  period?: number | null,
 ): Promise<number | null> {
-  if (known != null && known > 0) {
+  const wanted = period === undefined ? playbook.atrPeriod : period;
+  if (wanted == null) {
+    return null;
+  }
+  if (known != null && known > 0 && wanted === playbook.atrPeriod) {
     return known;
   }
-  if (!dcaNeedsAtrBars(playbook) || playbook.atrPeriod == null) {
+  if (!dcaNeedsAtrBars(playbook)) {
     return null;
   }
   const timeframe = dcaAtrTimeframe(playbook);
@@ -373,7 +379,7 @@ async function atrForPlaybook(
   });
   return lastAtrValue(
     closedLiveIndicatorBars(fetched, timeframe),
-    playbook.atrPeriod,
+    wanted,
   );
 }
 
@@ -459,18 +465,19 @@ function clipTrailing(
   side: FuturesSide,
   lastPrice: number,
 ): FuturesTrailing | null {
-  if (playbook.trailingPct === null || !(lastPrice > 0)) {
+  const classic = dcaClassicForSide(playbook, side);
+  if (classic.trailingPct === null || !(lastPrice > 0)) {
     return null;
   }
   return {
-    distance: dcaTrailingDistance(lastPrice, playbook.trailingPct),
+    distance: dcaTrailingDistance(lastPrice, classic.trailingPct),
     activePrice:
-      playbook.trailingTriggerPct === null
+      classic.trailingTriggerPct === null
         ? null
         : dcaTrailingActivationPrice({
             side,
             basisPrice: lastPrice,
-            triggerPct: playbook.trailingTriggerPct,
+            triggerPct: classic.trailingTriggerPct,
           }),
     peak: null,
   };
@@ -1353,27 +1360,35 @@ async function syncDcaPlaybookExitsUnlocked(input: {
     return;
   }
   const leg = dcaLegFor(input.playbook, input.side);
-  const atr = await atrForPlaybook(input.playbook, input.atr);
+  const classic = dcaClassicForSide(input.playbook, input.side);
+  const atr = await atrForPlaybook(
+    input.playbook,
+    input.atr,
+    classic.takeProfitKind === "atr"
+      ? (classic.atrPeriod ?? input.playbook.atrPeriod)
+      : input.playbook.atrPeriod,
+  );
   const planned = dcaPlannedExits({
     side: input.side,
     entryPrice: open.entryPrice,
     firstFillPrice: leg.firstFillPrice,
     mark: input.lastPrice,
-    takeProfitPct: input.playbook.takeProfitPct,
-    stopLossPct: input.playbook.stopLossPct,
-    takeProfitBasis: input.playbook.takeProfitBasis,
-    stopLossBasis: input.playbook.stopLossBasis,
-    trailingPct: input.playbook.trailingPct,
-    takeProfitKind: input.playbook.takeProfitKind,
+    takeProfitPct: classic.takeProfitPct,
+    stopLossPct: classic.stopLossPct,
+    takeProfitBasis: classic.takeProfitBasis,
+    stopLossBasis: classic.stopLossBasis,
+    trailingPct: classic.trailingPct,
+    takeProfitKind: classic.takeProfitKind,
     atr,
-    takeProfitAtrMult: input.playbook.takeProfitAtrMult,
+    takeProfitAtrMult: classic.takeProfitAtrMult,
   });
   const current = tpslFromRow(open) ?? emptyFuturesTpsl();
   const rawStop = leg.breakevenDone
     ? dcaBreakevenPrice({
         side: input.side,
         basisPrice: open.entryPrice,
-        offsetPct: input.playbook.breakevenOffsetPct ?? 0,
+        offsetPct:
+          dcaClassicForSide(input.playbook, input.side).breakevenOffsetPct ?? 0,
       })
     : planned.stopLoss;
   const stopLoss = dcaTighterStopPrice({
@@ -1504,7 +1519,11 @@ async function syncDcaTrailing(input: {
   currentPeak: number | null;
 }): Promise<void> {
   const lastPrice = input.lastPrice;
-  if (input.playbook.trailingPct === null || lastPrice === null || !(lastPrice > 0)) {
+  if (
+    dcaClassicForSide(input.playbook, input.side).trailingPct === null ||
+    lastPrice === null ||
+    !(lastPrice > 0)
+  ) {
     if (
       input.currentDistance !== null &&
       !hasQuietFlatSync(input.playbook, "clear_trailing")
@@ -1770,7 +1789,8 @@ async function moveStopToBreakeven(input: {
     candidate: dcaBreakevenPrice({
       side: input.side,
       basisPrice: open.entryPrice,
-      offsetPct: input.playbook.breakevenOffsetPct ?? 0,
+      offsetPct:
+        dcaClassicForSide(input.playbook, input.side).breakevenOffsetPct ?? 0,
     }),
   });
   const result = await runFuturesCommand({

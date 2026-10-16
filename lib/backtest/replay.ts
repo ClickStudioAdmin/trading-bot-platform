@@ -874,6 +874,16 @@ async function replayPerpsBoth(input: {
     }
     for (const leg of legs) {
       const open = book[leg.side];
+      const sideClassic =
+        leg.side === "short" && input.recipe.shortEntry?.classic
+          ? input.recipe.shortEntry.classic
+          : null;
+      const breakevenActivationPct = sideClassic
+        ? sideClassic.breakevenActivationPct
+        : input.recipe.breakevenActivationPct;
+      const breakevenOffsetPct = sideClassic
+        ? sideClassic.breakevenOffsetPct
+        : input.recipe.breakevenOffsetPct;
       if (
         open &&
         futuresBreakevenDue({
@@ -881,7 +891,7 @@ async function replayPerpsBoth(input: {
           qty: open.qty,
           entryPrice: open.entry,
           mark: price,
-          activationPct: input.recipe.breakevenActivationPct,
+          activationPct: breakevenActivationPct,
           done: open.breakevenDone,
         })
       ) {
@@ -889,7 +899,7 @@ async function replayPerpsBoth(input: {
           side: leg.side,
           entryPrice: open.entry,
           currentStop: open.tpsl?.stopLoss ?? null,
-          offsetPct: input.recipe.breakevenOffsetPct,
+          offsetPct: breakevenOffsetPct,
         });
         if (stop != null && stop > 0) {
           open.tpsl = {
@@ -978,8 +988,8 @@ async function replayPerpsBoth(input: {
         leg.side,
         qty,
         price,
-        input.recipe.tpsl,
-        input.recipe.trailing,
+        sideClassic ? sideClassic.tpsl : input.recipe.tpsl,
+        sideClassic ? sideClassic.trailing : input.recipe.trailing,
       );
     }
     markEquity(price);

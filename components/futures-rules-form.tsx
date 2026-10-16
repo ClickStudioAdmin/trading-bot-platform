@@ -44,8 +44,8 @@ import {
   blankExitClauses,
   customStackFromClauses,
   exitClauseListMissing,
+  classicExitFlags,
   exitClausesFromSaved,
-  mergedClassicExitFlags,
   type ExitBuilderClause,
 } from "@/lib/strategy/exit-clauses";
 import {
@@ -109,6 +109,7 @@ import {
   hardExitParts,
   type HardExitDraft,
 } from "@/lib/dca/hard-exit";
+import type { PerpsShortClassic } from "@/lib/futures/conditions";
 import type { FuturesOrderType, FuturesSide, FuturesTrigger } from "@/lib/futures/model";
 import type { FuturesTpslLevelKind } from "@/lib/futures/tpsl";
 import { IconPlus, IconSave } from "@/components/icons";
@@ -445,6 +446,100 @@ function resolvePerpsDraft(
   return defaultFuturesAutomationForm(rules.length, defaultSymbol);
 }
 
+type PerpsClassicDraft = {
+  tpKind: FuturesTpslLevelKind;
+  slKind: FuturesTpslLevelKind;
+  takeProfit: string;
+  stopLoss: string;
+  tpTrigger: FuturesTrigger;
+  slTrigger: FuturesTrigger;
+  tpOrderType: FuturesOrderType;
+  slOrderType: FuturesOrderType;
+  tpLimitPrice: string;
+  slLimitPrice: string;
+  trailingStop: string;
+  trailingActive: string;
+  breakevenOn: boolean;
+  breakevenActivationPct: string;
+  breakevenOffsetPct: string;
+};
+
+function blankPerpsClassic(): PerpsClassicDraft {
+  return {
+    tpKind: "price",
+    slKind: "price",
+    takeProfit: "",
+    stopLoss: "",
+    tpTrigger: "last",
+    slTrigger: "last",
+    tpOrderType: "market",
+    slOrderType: "market",
+    tpLimitPrice: "",
+    slLimitPrice: "",
+    trailingStop: "",
+    trailingActive: "",
+    breakevenOn: false,
+    breakevenActivationPct: "",
+    breakevenOffsetPct: "",
+  };
+}
+
+function perpsDraftFromClassic(
+  classic: NonNullable<NonNullable<FuturesAutomationFormValues["shortEntry"]>["classic"]>,
+): PerpsClassicDraft {
+  return {
+    tpKind: classic.tpsl?.tpKind === "percent" ? "percent" : "price",
+    slKind: classic.tpsl?.slKind === "percent" ? "percent" : "price",
+    takeProfit:
+      classic.tpsl?.takeProfit != null ? String(classic.tpsl.takeProfit) : "",
+    stopLoss: classic.tpsl?.stopLoss != null ? String(classic.tpsl.stopLoss) : "",
+    tpTrigger: classic.tpsl?.tpTrigger ?? "last",
+    slTrigger: classic.tpsl?.slTrigger ?? "last",
+    tpOrderType: classic.tpsl?.tpOrderType === "limit" ? "limit" : "market",
+    slOrderType: classic.tpsl?.slOrderType === "limit" ? "limit" : "market",
+    tpLimitPrice:
+      classic.tpsl?.tpLimitPrice != null ? String(classic.tpsl.tpLimitPrice) : "",
+    slLimitPrice:
+      classic.tpsl?.slLimitPrice != null ? String(classic.tpsl.slLimitPrice) : "",
+    trailingStop: classic.trailing != null ? String(classic.trailing.distance) : "",
+    trailingActive:
+      classic.trailing?.activePrice != null
+        ? String(classic.trailing.activePrice)
+        : "",
+    breakevenOn: classic.breakevenActivationPct != null,
+    breakevenActivationPct:
+      classic.breakevenActivationPct != null
+        ? String(classic.breakevenActivationPct)
+        : "",
+    breakevenOffsetPct:
+      classic.breakevenOffsetPct != null ? String(classic.breakevenOffsetPct) : "",
+  };
+}
+
+function perpsDraftFromLong(layer: FuturesAutomationFormValues): PerpsClassicDraft {
+  return {
+    tpKind: layer.tpsl?.tpKind === "percent" ? "percent" : "price",
+    slKind: layer.tpsl?.slKind === "percent" ? "percent" : "price",
+    takeProfit:
+      layer.tpsl?.takeProfit != null ? String(layer.tpsl.takeProfit) : "",
+    stopLoss: layer.tpsl?.stopLoss != null ? String(layer.tpsl.stopLoss) : "",
+    tpTrigger: layer.tpsl?.tpTrigger ?? "last",
+    slTrigger: layer.tpsl?.slTrigger ?? "last",
+    tpOrderType: layer.tpsl?.tpOrderType === "limit" ? "limit" : "market",
+    slOrderType: layer.tpsl?.slOrderType === "limit" ? "limit" : "market",
+    tpLimitPrice:
+      layer.tpsl?.tpLimitPrice != null ? String(layer.tpsl.tpLimitPrice) : "",
+    slLimitPrice:
+      layer.tpsl?.slLimitPrice != null ? String(layer.tpsl.slLimitPrice) : "",
+    trailingStop: layer.trailing != null ? String(layer.trailing.distance) : "",
+    trailingActive:
+      layer.trailing?.activePrice != null ? String(layer.trailing.activePrice) : "",
+    breakevenOn: layer.breakevenActivationPct.trim() !== "",
+    breakevenActivationPct: layer.breakevenActivationPct,
+    breakevenOffsetPct: layer.breakevenOffsetPct,
+  };
+}
+
 function RuleCard({
   layer,
   options,
@@ -548,13 +643,13 @@ function RuleCard({
   const [breakevenOffsetPct, setBreakevenOffsetPct] = useState(
     layer.breakevenOffsetPct,
   );
-  const [tpOn, setTpOn] = useState(() => layer.tpsl?.takeProfit != null);
-  const [slOn, setSlOn] = useState(
+  const [tpOn] = useState(() => layer.tpsl?.takeProfit != null);
+  const [slOn] = useState(
     () =>
       layer.tpsl?.stopLoss != null ||
       layer.breakevenActivationPct.trim() !== "",
   );
-  const [trailOn, setTrailOn] = useState(
+  const [trailOn] = useState(
     () => Boolean(layer.trailing && layer.trailing.distance > 0),
   );
   const [takeProfit, setTakeProfit] = useState(
@@ -593,6 +688,15 @@ function RuleCard({
   const [trailingActive, setTrailingActive] = useState(
     layer.trailing?.activePrice != null ? String(layer.trailing.activePrice) : "",
   );
+  const [shortClassic, setShortClassic] = useState<PerpsClassicDraft>(() => {
+    if (initialPerpsFormDirection(layer, allowBoth) !== "both") {
+      return blankPerpsClassic();
+    }
+    if (layer.shortEntry?.classic) {
+      return perpsDraftFromClassic(layer.shortEntry.classic);
+    }
+    return perpsDraftFromLong(layer);
+  });
   const [shortExitIf, setShortExitIf] = useState<HardExitDraft | null>(() =>
     hardExitDraftFromStored(
       layer.shortEntry?.exitIf,
@@ -611,25 +715,33 @@ function RuleCard({
       rows: exitRows,
     }),
   );
-  const [shortClauses, setShortClauses] = useState(() =>
-    exitClausesFromSaved({
-      takeProfit: direction === "both" && tpOn,
-      trailing: direction === "both" && trailOn,
-      stopLoss: direction === "both" && slOn,
+  const [shortClauses, setShortClauses] = useState(() => {
+    const both = initialPerpsFormDirection(layer, allowBoth) === "both";
+    const saved = both ? (layer.shortEntry?.classic ?? null) : null;
+    const legacy = both && saved == null;
+    return exitClausesFromSaved({
+      takeProfit: saved ? saved.tpsl?.takeProfit != null : legacy && tpOn,
+      trailing: saved
+        ? Boolean(saved.trailing && saved.trailing.distance > 0)
+        : legacy && trailOn,
+      stopLoss: saved
+        ? saved.tpsl?.stopLoss != null || saved.breakevenActivationPct != null
+        : legacy && slOn,
       anchor: shortExitIf,
       rows: shortExitRows,
-    }),
-  );
+    });
+  });
   function applyClassicFlags(
     primary: readonly ExitBuilderClause[],
     short: readonly ExitBuilderClause[] | null,
   ) {
-    const flags = mergedClassicExitFlags(primary, short);
-    setTpOn(flags.takeProfit);
-    setTrailOn(flags.trailing);
-    setSlOn(flags.stopLoss);
-    if (!flags.stopLoss) {
+    if (!primary.some((clause) => clause.kind === "stop_loss")) {
       setBreakevenOn(false);
+    }
+    if (short && !short.some((clause) => clause.kind === "stop_loss")) {
+      setShortClassic((draft) =>
+        draft.breakevenOn ? { ...draft, breakevenOn: false } : draft,
+      );
     }
   }
   function commitExitClauses(
@@ -668,6 +780,61 @@ function RuleCard({
   const shortExitParts = hardExitParts(
     storedDirection === "both" ? shortExitIf : null,
   );
+  const primaryFlags = classicExitFlags(exitClauses);
+  const shortFlags = classicExitFlags(shortClauses);
+  const tpLive = primaryFlags.takeProfit;
+  const slLive = primaryFlags.stopLoss;
+  const trailLive = primaryFlags.trailing;
+  const shortTpLive = storedDirection === "both" && shortFlags.takeProfit;
+  const shortSlLive = storedDirection === "both" && shortFlags.stopLoss;
+  const shortTrailLive = storedDirection === "both" && shortFlags.trailing;
+  const storedShort = layer.shortEntry?.classic ?? null;
+  const shortClassicValue: PerpsShortClassic = {
+    tpsl:
+      shortTpLive || shortSlLive
+        ? {
+            takeProfit: shortTpLive
+              ? Number(shortClassic.takeProfit.replace(/,/g, "")) || null
+              : null,
+            stopLoss: shortSlLive
+              ? Number(shortClassic.stopLoss.replace(/,/g, "")) || null
+              : null,
+            tpKind: shortTpLive ? shortClassic.tpKind : "price",
+            slKind: shortSlLive ? shortClassic.slKind : "price",
+            tpTrigger: shortClassic.tpTrigger,
+            slTrigger: shortClassic.slTrigger,
+            mode: storedShort?.tpsl?.mode ?? layer.tpsl?.mode ?? "full",
+            tpQty: storedShort?.tpsl?.tpQty ?? null,
+            slQty: storedShort?.tpsl?.slQty ?? null,
+            tpOrderType: shortClassic.tpOrderType,
+            slOrderType: shortClassic.slOrderType,
+            tpLimitPrice:
+              shortTpLive && shortClassic.tpOrderType === "limit"
+                ? Number(shortClassic.tpLimitPrice.replace(/,/g, "")) || null
+                : null,
+            slLimitPrice:
+              shortSlLive && shortClassic.slOrderType === "limit"
+                ? Number(shortClassic.slLimitPrice.replace(/,/g, "")) || null
+                : null,
+          }
+        : null,
+    trailing:
+      shortTrailLive && Number(shortClassic.trailingStop.replace(/,/g, "")) > 0
+        ? {
+            distance: Number(shortClassic.trailingStop.replace(/,/g, "")),
+            activePrice: Number(shortClassic.trailingActive.replace(/,/g, "")) || null,
+            peak: storedShort?.trailing?.peak ?? null,
+          }
+        : null,
+    breakevenActivationPct:
+      shortSlLive && shortClassic.breakevenOn
+        ? Number(shortClassic.breakevenActivationPct.replace(/,/g, "")) || null
+        : null,
+    breakevenOffsetPct:
+      shortSlLive && shortClassic.breakevenOn
+        ? Number(shortClassic.breakevenOffsetPct.replace(/,/g, "")) || 0
+        : null,
+  };
   const shortLeg =
     storedDirection === "both"
       ? {
@@ -679,15 +846,9 @@ function RuleCard({
                 exitStack: exitStackFromRows(shortExitRows),
               }
             : {}),
+          classic: shortClassicValue,
         }
       : null;
-  const exitFlags = mergedClassicExitFlags(
-    exitClauses,
-    storedDirection === "both" ? shortClauses : null,
-  );
-  const tpLive = exitFlags.takeProfit;
-  const slLive = exitFlags.stopLoss;
-  const trailLive = exitFlags.trailing;
   function positiveText(text: string): boolean {
     const value = Number(text.replace(/,/g, "").trim());
     return Number.isFinite(value) && value > 0;
@@ -704,6 +865,22 @@ function RuleCard({
     tpLive && tpOrderType === "limit" && !positiveText(tpLimitPrice);
   const slLimitMissing =
     slLive && slOrderType === "limit" && !positiveText(slLimitPrice);
+  const shortTpMissing = shortTpLive && !positiveText(shortClassic.takeProfit);
+  const shortSlMissing = shortSlLive && !positiveText(shortClassic.stopLoss);
+  const shortTrailMissing =
+    shortTrailLive && !positiveText(shortClassic.trailingStop);
+  const shortBreakevenMissing =
+    shortSlLive &&
+    shortClassic.breakevenOn &&
+    !positiveText(shortClassic.breakevenActivationPct);
+  const shortTpLimitMissing =
+    shortTpLive &&
+    shortClassic.tpOrderType === "limit" &&
+    !positiveText(shortClassic.tpLimitPrice);
+  const shortSlLimitMissing =
+    shortSlLive &&
+    shortClassic.slOrderType === "limit" &&
+    !positiveText(shortClassic.slLimitPrice);
   const sizeMissing = !closing && !positiveText(size);
   const orderLimitMissing =
     !closing && orderType === "limit" && !positiveText(limitPrice);
@@ -830,6 +1007,12 @@ function RuleCard({
     breakevenMissing ||
     tpLimitMissing ||
     slLimitMissing ||
+    shortTpMissing ||
+    shortSlMissing ||
+    shortTrailMissing ||
+    shortBreakevenMissing ||
+    shortTpLimitMissing ||
+    shortSlLimitMissing ||
     sizeMissing ||
     orderLimitMissing ||
     exitKindMissing ||
@@ -923,8 +1106,66 @@ function RuleCard({
     setDirty(true);
     setFormTick((tick) => tick + 1);
   }
+  function currentPrimaryClassic(): PerpsClassicDraft {
+    return {
+      tpKind,
+      slKind,
+      takeProfit,
+      stopLoss,
+      tpTrigger,
+      slTrigger,
+      tpOrderType,
+      slOrderType,
+      tpLimitPrice,
+      slLimitPrice,
+      trailingStop,
+      trailingActive,
+      breakevenOn,
+      breakevenActivationPct,
+      breakevenOffsetPct,
+    };
+  }
+  function copyPrimaryClassicToShort() {
+    setShortClassic(currentPrimaryClassic());
+  }
+  function blankPrimaryClassic() {
+    setTpKind("price");
+    setSlKind("price");
+    setTakeProfit("");
+    setStopLoss("");
+    setTpTrigger("last");
+    setSlTrigger("last");
+    setTpOrderType("market");
+    setSlOrderType("market");
+    setTpLimitPrice("");
+    setSlLimitPrice("");
+    setTrailingStop("");
+    setTrailingActive("");
+    setBreakevenOn(false);
+    setBreakevenActivationPct("");
+    setBreakevenOffsetPct("");
+  }
+  function copyShortClassicToPrimary() {
+    setTpKind(shortClassic.tpKind);
+    setSlKind(shortClassic.slKind);
+    setTakeProfit(shortClassic.takeProfit);
+    setStopLoss(shortClassic.stopLoss);
+    setTpTrigger(shortClassic.tpTrigger);
+    setSlTrigger(shortClassic.slTrigger);
+    setTpOrderType(shortClassic.tpOrderType);
+    setSlOrderType(shortClassic.slOrderType);
+    setTpLimitPrice(shortClassic.tpLimitPrice);
+    setSlLimitPrice(shortClassic.slLimitPrice);
+    setTrailingStop(shortClassic.trailingStop);
+    setTrailingActive(shortClassic.trailingActive);
+    setBreakevenOn(shortClassic.breakevenOn);
+    setBreakevenActivationPct(shortClassic.breakevenActivationPct);
+    setBreakevenOffsetPct(shortClassic.breakevenOffsetPct);
+  }
   function applyPerpsDirection(next: PerpsFormDirection) {
     if (next === "both" && direction === "short") {
+      copyPrimaryClassicToShort();
+      blankPrimaryClassic();
       const kept = exitClauses;
       setShortClauses(kept);
       const moved = customStackFromClauses(kept);
@@ -936,8 +1177,18 @@ function RuleCard({
       setExitRows([]);
       applyClassicFlags(blank, kept);
     } else if (next === "both" && direction !== "both") {
+      const shortHasClassic = shortClauses.some(
+        (clause) =>
+          clause.kind === "take_profit" ||
+          clause.kind === "trailing_stop" ||
+          clause.kind === "stop_loss",
+      );
+      if (!shortHasClassic) {
+        setShortClassic(blankPerpsClassic());
+      }
       applyClassicFlags(exitClauses, shortClauses);
     } else if (direction === "both" && next === "short") {
+      copyShortClassicToPrimary();
       setExitClauses(shortClauses);
       const moved = customStackFromClauses(shortClauses);
       setExitIf(moved.anchor);
@@ -954,131 +1205,177 @@ function RuleCard({
   const { confirm: askConfirm, dialog } = useConfirmDialog();
 
 
-  function perpsNamed(submit: boolean, field: string) {
-    return submit ? `${prefix}${field}` : undefined;
+  function usesShortExit(leg: "primary" | "short") {
+    return leg === "short" && direction === "both";
   }
-  function classicSubmits(
-    kind: "take_profit" | "trailing_stop" | "stop_loss",
-    side: "long" | "short",
-  ) {
-    if (direction !== "both") {
-      return true;
-    }
-    if (side === "long") {
-      return true;
-    }
-    return !exitClauses.some((clause) => clause.kind === kind);
+  function exitFieldName(leg: "primary" | "short", field: string) {
+    const root = usesShortExit(leg) ? `${prefix}short_` : prefix;
+    return `${root}${field}`;
   }
-  function perpsTakeProfitFields(submit: boolean) {
+  function patchShort(patch: Partial<PerpsClassicDraft>) {
+    setShortClassic((draft) => ({ ...draft, ...patch }));
+  }
+  function perpsTakeProfitFields(leg: "primary" | "short") {
+    const shortLeg = usesShortExit(leg);
+    const kind = shortLeg ? shortClassic.tpKind : tpKind;
+    const price = shortLeg ? shortClassic.takeProfit : takeProfit;
+    const trigger = shortLeg ? shortClassic.tpTrigger : tpTrigger;
+    const orderTypeValue = shortLeg ? shortClassic.tpOrderType : tpOrderType;
+    const limit = shortLeg ? shortClassic.tpLimitPrice : tpLimitPrice;
+    const missing = shortLeg ? shortTpMissing : tpMissing;
+    const limitMissing = shortLeg ? shortTpLimitMissing : tpLimitMissing;
     return (
-      <>
-        <div className={fieldRow5}>
-          <BotField label="Type" required>
-            <AppSelect
-              name={perpsNamed(submit, "tpKind")}
-              value={tpKind}
-              onChange={(event) => {
-                const next = event.target.value === "percent" ? "percent" : "price";
+      <div className={fieldRow5}>
+        <BotField label="Type" required>
+          <AppSelect
+            name={exitFieldName(leg, "tpKind")}
+            value={kind}
+            onChange={(event) => {
+              const next = event.target.value === "percent" ? "percent" : "price";
+              if (shortLeg) {
+                patchShort({ tpKind: next, takeProfit: "" });
+              } else {
                 setTpKind(next);
                 setTakeProfit("");
-              }}
-              className={botFieldClass}
-            >
-              <option value="price">Price</option>
-              <option value="percent">Percentage</option>
-            </AppSelect>
-          </BotField>
-          <BotField label={tpKind === "percent" ? "%" : "Price"} required>
-            {tpKind === "percent" ? (
-              <span className="relative mt-0.5 block">
-                <GroupedNumberInput
-                  name={perpsNamed(submit, "takeProfit")}
-                  value={takeProfit}
-                  onChange={setTakeProfit}
-                  allowDecimal
-                  className={`${dirty && tpMissing ? botFieldInvalidClass : botFieldClass} pr-7`}
-                />
-                <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
-                  %
-                </span>
-              </span>
-            ) : (
+              }
+            }}
+            className={botFieldClass}
+          >
+            <option value="price">Price</option>
+            <option value="percent">Percentage</option>
+          </AppSelect>
+        </BotField>
+        <BotField label={kind === "percent" ? "%" : "Price"} required>
+          {kind === "percent" ? (
+            <span className="relative mt-0.5 block">
               <GroupedNumberInput
-                name={perpsNamed(submit, "takeProfit")}
-                value={takeProfit}
-                onChange={setTakeProfit}
+                name={exitFieldName(leg, "takeProfit")}
+                value={price}
+                onChange={(next) =>
+                  shortLeg ? patchShort({ takeProfit: next }) : setTakeProfit(next)
+                }
                 allowDecimal
-                className={dirty && tpMissing ? botFieldInvalidClass : botFieldClass}
+                className={`${dirty && missing ? botFieldInvalidClass : botFieldClass} pr-7`}
               />
-            )}
-          </BotField>
-          <BotField label="Trigger" required>
-            <AppSelect
-              name={perpsNamed(submit, "tpTrigger")}
-              value={tpTrigger}
-              onChange={(event) => setTpTrigger(event.target.value as FuturesTrigger)}
-              className={botFieldClass}
-            >
-              <option value="last">Last</option>
-              <option value="mark">Mark</option>
-              <option value="index">Index</option>
-            </AppSelect>
-          </BotField>
-          <BotField label="Order type" required>
-            <OrderTypePill
-              name={perpsNamed(submit, "tpOrderType")}
-              value={tpOrderType === "limit" ? "limit" : "market"}
-              onChange={setTpOrderType}
+              <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                %
+              </span>
+            </span>
+          ) : (
+            <GroupedNumberInput
+              name={exitFieldName(leg, "takeProfit")}
+              value={price}
+              onChange={(next) =>
+                shortLeg ? patchShort({ takeProfit: next }) : setTakeProfit(next)
+              }
+              allowDecimal
+              className={dirty && missing ? botFieldInvalidClass : botFieldClass}
+            />
+          )}
+        </BotField>
+        <BotField label="Trigger" required>
+          <AppSelect
+            name={exitFieldName(leg, "tpTrigger")}
+            value={trigger}
+            onChange={(event) => {
+              const next = event.target.value as FuturesTrigger;
+              if (shortLeg) {
+                patchShort({ tpTrigger: next });
+              } else {
+                setTpTrigger(next);
+              }
+            }}
+            className={botFieldClass}
+          >
+            <option value="last">Last</option>
+            <option value="mark">Mark</option>
+            <option value="index">Index</option>
+          </AppSelect>
+        </BotField>
+        <BotField label="Order type" required>
+          <OrderTypePill
+            name={exitFieldName(leg, "tpOrderType")}
+            value={orderTypeValue === "limit" ? "limit" : "market"}
+            onChange={(next) =>
+              shortLeg ? patchShort({ tpOrderType: next }) : setTpOrderType(next)
+            }
+          />
+        </BotField>
+        {orderTypeValue === "limit" ? (
+          <BotField label="Limit price" required>
+            <GroupedNumberInput
+              name={exitFieldName(leg, "tpLimitPrice")}
+              value={limit}
+              onChange={(next) =>
+                shortLeg ? patchShort({ tpLimitPrice: next }) : setTpLimitPrice(next)
+              }
+              allowDecimal
+              className={dirty && limitMissing ? botFieldInvalidClass : botFieldClass}
             />
           </BotField>
-          {tpOrderType === "limit" ? (
-            <BotField label="Limit price" required>
-              <GroupedNumberInput
-                name={perpsNamed(submit, "tpLimitPrice")}
-                value={tpLimitPrice}
-                onChange={setTpLimitPrice}
-                allowDecimal
-                className={dirty && tpLimitMissing ? botFieldInvalidClass : botFieldClass}
-              />
-            </BotField>
-          ) : submit ? (
-            <input type="hidden" name={`${prefix}tpLimitPrice`} value="" />
-          ) : null}
-        </div>
-      </>
+        ) : (
+          <input type="hidden" name={exitFieldName(leg, "tpLimitPrice")} value="" />
+        )}
+      </div>
     );
   }
-  function perpsTrailingFields(submit: boolean) {
+  function perpsTrailingFields(leg: "primary" | "short") {
+    const shortLeg = usesShortExit(leg);
+    const distance = shortLeg ? shortClassic.trailingStop : trailingStop;
+    const active = shortLeg ? shortClassic.trailingActive : trailingActive;
+    const missing = shortLeg ? shortTrailMissing : trailMissing;
     return (
       <div className={fieldRow}>
         <BotField label="Retracement" required>
           <GroupedNumberInput
-            name={perpsNamed(submit, "trailingStop")}
-            value={trailingStop}
-            onChange={setTrailingStop}
+            name={exitFieldName(leg, "trailingStop")}
+            value={distance}
+            onChange={(next) =>
+              shortLeg ? patchShort({ trailingStop: next }) : setTrailingStop(next)
+            }
             allowDecimal
-            className={dirty && trailMissing ? botFieldInvalidClass : botFieldClass}
+            className={dirty && missing ? botFieldInvalidClass : botFieldClass}
           />
         </BotField>
         <BotField label="Activation price" hint="Empty is Off.">
           <GroupedNumberInput
-            name={perpsNamed(submit, "trailingActive")}
-            value={trailingActive}
-            onChange={setTrailingActive}
+            name={exitFieldName(leg, "trailingActive")}
+            value={active}
+            onChange={(next) =>
+              shortLeg ? patchShort({ trailingActive: next }) : setTrailingActive(next)
+            }
             allowDecimal
             className={botFieldClass}
           />
         </BotField>
+        {active.trim() !== "" ? (
+          <input type="hidden" name={exitFieldName(leg, "trailingActivation")} value="on" />
+        ) : null}
       </div>
     );
   }
-  function perpsStopFields(submit: boolean) {
+  function perpsStopFields(leg: "primary" | "short") {
+    const shortLeg = usesShortExit(leg);
+    const kind = shortLeg ? shortClassic.slKind : slKind;
+    const price = shortLeg ? shortClassic.stopLoss : stopLoss;
+    const trigger = shortLeg ? shortClassic.slTrigger : slTrigger;
+    const orderTypeValue = shortLeg ? shortClassic.slOrderType : slOrderType;
+    const limit = shortLeg ? shortClassic.slLimitPrice : slLimitPrice;
+    const breakeven = shortLeg ? shortClassic.breakevenOn : breakevenOn;
+    const activation = shortLeg
+      ? shortClassic.breakevenActivationPct
+      : breakevenActivationPct;
+    const offset = shortLeg ? shortClassic.breakevenOffsetPct : breakevenOffsetPct;
+    const stopOn = shortLeg ? shortSlLive : slLive;
+    const missing = shortLeg ? shortSlMissing : slMissing;
+    const limitMissing = shortLeg ? shortSlLimitMissing : slLimitMissing;
+    const moveMissing = shortLeg ? shortBreakevenMissing : breakevenMissing;
     return (
       <>
-        {submit && (!slLive || !breakevenOn) ? (
+        {!stopOn || !breakeven ? (
           <div hidden>
-            <input type="hidden" name={`${prefix}breakevenActivationPct`} value="" />
-            <input type="hidden" name={`${prefix}breakevenOffsetPct`} value="" />
+            <input type="hidden" name={exitFieldName(leg, "breakevenActivationPct")} value="" />
+            <input type="hidden" name={exitFieldName(leg, "breakevenOffsetPct")} value="" />
           </div>
         ) : null}
         <div className="@container">
@@ -1086,12 +1383,16 @@ function RuleCard({
             <div className="grid grid-cols-2 gap-4">
               <BotField label="Type" required>
                 <AppSelect
-                  name={perpsNamed(submit, "slKind")}
-                  value={slKind}
+                  name={exitFieldName(leg, "slKind")}
+                  value={kind}
                   onChange={(event) => {
                     const next = event.target.value === "percent" ? "percent" : "price";
-                    setSlKind(next);
-                    setStopLoss("");
+                    if (shortLeg) {
+                      patchShort({ slKind: next, stopLoss: "" });
+                    } else {
+                      setSlKind(next);
+                      setStopLoss("");
+                    }
                   }}
                   className={botFieldClass}
                 >
@@ -1099,15 +1400,17 @@ function RuleCard({
                   <option value="percent">Percentage</option>
                 </AppSelect>
               </BotField>
-              <BotField label={slKind === "percent" ? "%" : "Price"} required>
-                {slKind === "percent" ? (
+              <BotField label={kind === "percent" ? "%" : "Price"} required>
+                {kind === "percent" ? (
                   <span className="relative mt-0.5 block">
                     <GroupedNumberInput
-                      name={perpsNamed(submit, "stopLoss")}
-                      value={stopLoss}
-                      onChange={setStopLoss}
+                      name={exitFieldName(leg, "stopLoss")}
+                      value={price}
+                      onChange={(next) =>
+                        shortLeg ? patchShort({ stopLoss: next }) : setStopLoss(next)
+                      }
                       allowDecimal
-                      className={`${dirty && slMissing ? botFieldInvalidClass : botFieldClass} pr-7`}
+                      className={`${dirty && missing ? botFieldInvalidClass : botFieldClass} pr-7`}
                     />
                     <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
                       %
@@ -1115,19 +1418,28 @@ function RuleCard({
                   </span>
                 ) : (
                   <GroupedNumberInput
-                    name={perpsNamed(submit, "stopLoss")}
-                    value={stopLoss}
-                    onChange={setStopLoss}
+                    name={exitFieldName(leg, "stopLoss")}
+                    value={price}
+                    onChange={(next) =>
+                      shortLeg ? patchShort({ stopLoss: next }) : setStopLoss(next)
+                    }
                     allowDecimal
-                    className={dirty && slMissing ? botFieldInvalidClass : botFieldClass}
+                    className={dirty && missing ? botFieldInvalidClass : botFieldClass}
                   />
                 )}
               </BotField>
               <BotField label="Trigger" required>
                 <AppSelect
-                  name={perpsNamed(submit, "slTrigger")}
-                  value={slTrigger}
-                  onChange={(event) => setSlTrigger(event.target.value as FuturesTrigger)}
+                  name={exitFieldName(leg, "slTrigger")}
+                  value={trigger}
+                  onChange={(event) => {
+                    const next = event.target.value as FuturesTrigger;
+                    if (shortLeg) {
+                      patchShort({ slTrigger: next });
+                    } else {
+                      setSlTrigger(next);
+                    }
+                  }}
                   className={botFieldClass}
                 >
                   <option value="last">Last</option>
@@ -1137,40 +1449,52 @@ function RuleCard({
               </BotField>
               <BotField label="Order type" required>
                 <OrderTypePill
-                  name={perpsNamed(submit, "slOrderType")}
-                  value={slOrderType === "limit" ? "limit" : "market"}
-                  onChange={setSlOrderType}
+                  name={exitFieldName(leg, "slOrderType")}
+                  value={orderTypeValue === "limit" ? "limit" : "market"}
+                  onChange={(next) =>
+                    shortLeg ? patchShort({ slOrderType: next }) : setSlOrderType(next)
+                  }
                 />
               </BotField>
-              {slOrderType === "limit" ? (
+              {orderTypeValue === "limit" ? (
                 <BotField label="Limit price" required>
                   <GroupedNumberInput
-                    name={perpsNamed(submit, "slLimitPrice")}
-                    value={slLimitPrice}
-                    onChange={setSlLimitPrice}
+                    name={exitFieldName(leg, "slLimitPrice")}
+                    value={limit}
+                    onChange={(next) =>
+                      shortLeg
+                        ? patchShort({ slLimitPrice: next })
+                        : setSlLimitPrice(next)
+                    }
                     allowDecimal
-                    className={dirty && slLimitMissing ? botFieldInvalidClass : botFieldClass}
+                    className={dirty && limitMissing ? botFieldInvalidClass : botFieldClass}
                   />
                 </BotField>
-              ) : submit ? (
-                <input type="hidden" name={`${prefix}slLimitPrice`} value="" />
-              ) : null}
+              ) : (
+                <input type="hidden" name={exitFieldName(leg, "slLimitPrice")} value="" />
+              )}
             </div>
             <OptionalSection
               title="Move Breakeven"
               className="min-w-0"
-              enabled={breakevenOn}
-              onEnabled={setBreakevenOn}
+              enabled={breakeven}
+              onEnabled={(next) =>
+                shortLeg ? patchShort({ breakevenOn: next }) : setBreakevenOn(next)
+              }
             >
               <div className="grid grid-cols-2 gap-4">
                 <BotField label="Move stop to breakeven at %" required>
                   <span className="relative mt-0.5 block">
                     <GroupedNumberInput
-                      name={perpsNamed(submit, "breakevenActivationPct")}
-                      value={breakevenActivationPct}
-                      onChange={setBreakevenActivationPct}
+                      name={exitFieldName(leg, "breakevenActivationPct")}
+                      value={activation}
+                      onChange={(next) =>
+                        shortLeg
+                          ? patchShort({ breakevenActivationPct: next })
+                          : setBreakevenActivationPct(next)
+                      }
                       allowDecimal
-                      className={`${dirty && breakevenMissing ? botFieldInvalidClass : botFieldClass} pr-7`}
+                      className={`${dirty && moveMissing ? botFieldInvalidClass : botFieldClass} pr-7`}
                     />
                     <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
                       %
@@ -1180,9 +1504,13 @@ function RuleCard({
                 <BotField label="Breakeven offset %">
                   <span className="relative mt-0.5 block">
                     <GroupedNumberInput
-                      name={perpsNamed(submit, "breakevenOffsetPct")}
-                      value={breakevenOffsetPct}
-                      onChange={setBreakevenOffsetPct}
+                      name={exitFieldName(leg, "breakevenOffsetPct")}
+                      value={offset}
+                      onChange={(next) =>
+                        shortLeg
+                          ? patchShort({ breakevenOffsetPct: next })
+                          : setBreakevenOffsetPct(next)
+                      }
                       allowDecimal
                       placeholder="0"
                       className={`${botFieldClass} pr-7`}
@@ -1255,6 +1583,31 @@ function RuleCard({
       {!closing && trailLive ? <input type="hidden" name={`${prefix}trailing`} value="on" /> : null}
       {!closing && slLive && breakevenOn ? (
         <input type="hidden" name={`${prefix}breakeven`} value="on" />
+      ) : null}
+      {!closing && storedDirection === "both" ? (
+        <input type="hidden" name={`${prefix}short_classic`} value="on" />
+      ) : null}
+      {!closing && (shortTpLive || shortSlLive) ? (
+        <>
+          <input type="hidden" name={`${prefix}short_tpsl`} value="on" />
+          <input
+            type="hidden"
+            name={`${prefix}short_tpslMode`}
+            value={storedShort?.tpsl?.mode ?? layer.tpsl?.mode ?? "full"}
+          />
+        </>
+      ) : null}
+      {!closing && shortTpLive ? (
+        <input type="hidden" name={`${prefix}short_tpOn`} value="on" />
+      ) : null}
+      {!closing && shortSlLive ? (
+        <input type="hidden" name={`${prefix}short_slOn`} value="on" />
+      ) : null}
+      {!closing && shortTrailLive ? (
+        <input type="hidden" name={`${prefix}short_trailing`} value="on" />
+      ) : null}
+      {!closing && shortSlLive && shortClassic.breakevenOn ? (
+        <input type="hidden" name={`${prefix}short_breakeven`} value="on" />
       ) : null}
       <BotFormColumns single={embedded}>
       <BotFormCard>
@@ -1458,9 +1811,9 @@ function RuleCard({
             fieldClass={botFieldClass}
             labelClass={botLabelClass}
             gridClass={fieldRow5}
-            renderTakeProfit={() => perpsTakeProfitFields(classicSubmits("take_profit", "long"))}
-            renderTrailingStop={() => perpsTrailingFields(classicSubmits("trailing_stop", "long"))}
-            renderStopLoss={() => perpsStopFields(classicSubmits("stop_loss", "long"))}
+            renderTakeProfit={() => perpsTakeProfitFields("primary")}
+            renderTrailingStop={() => perpsTrailingFields("primary")}
+            renderStopLoss={() => perpsStopFields("primary")}
           />
         </BotFormStep>
       ) : null}
@@ -1478,12 +1831,14 @@ function RuleCard({
             labelClass={botLabelClass}
             gridClass={fieldRow5}
             renderTakeProfit={() =>
-              perpsTakeProfitFields(classicSubmits("take_profit", "short"))
+              perpsTakeProfitFields(direction === "both" ? "short" : "primary")
             }
             renderTrailingStop={() =>
-              perpsTrailingFields(classicSubmits("trailing_stop", "short"))
+              perpsTrailingFields(direction === "both" ? "short" : "primary")
             }
-            renderStopLoss={() => perpsStopFields(classicSubmits("stop_loss", "short"))}
+            renderStopLoss={() =>
+              perpsStopFields(direction === "both" ? "short" : "primary")
+            }
           />
         </BotFormStep>
       ) : null}
