@@ -93,7 +93,7 @@ export function backtestRunProgress(input: {
   const candlesComplete = done >= total;
   const candles: BacktestProgressStage = {
     id: "candles",
-    label: candlesComplete ? "Candles loaded" : "Loading candles",
+    label: candlesComplete ? "Candles loaded" : "Loading Candles",
     detail: countDetail(done, total),
     percent,
     state: candlesComplete ? "done" : "active",
@@ -111,7 +111,7 @@ export function backtestRunProgress(input: {
     percent,
     headline: candlesComplete
       ? "Candles loaded"
-      : `Loading candles · ${percent}%`,
+      : `Loading Candles · ${percent}%`,
   };
 }
 
