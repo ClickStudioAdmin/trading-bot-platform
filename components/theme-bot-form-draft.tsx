@@ -31,14 +31,8 @@ import {
 import { ColumnHint } from "@/components/column-hint";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { ExitSideBuilder } from "@/components/exit-side-builder";
-import {
-  PerpsAdditionalOrders,
-  type PerpsAddConditionType,
-} from "@/components/perps-additional-orders";
-import {
-  blankPerpsAddConditionDraft,
-  type PerpsAddConditionDraft,
-} from "@/lib/futures/perps-add-condition";
+import { PerpsAdditionalOrders } from "@/components/perps-additional-orders";
+import { blankPerpsAddOrderGroups } from "@/lib/futures/perps-add-condition";
 import {
   type ExitStackRow,
 } from "@/components/exit-condition-stack";
@@ -765,14 +759,7 @@ export function ThemeBotFormDraft() {
   const [carrySl, setCarrySl] = useState("");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPrice, setLimitPrice] = useState("");
-  const [addConditionType, setAddConditionType] = useState<PerpsAddConditionType>("");
-  const [addConditionDraft, setAddConditionDraft] = useState<PerpsAddConditionDraft>(
-    () => blankPerpsAddConditionDraft("long"),
-  );
-  const [addSize, setAddSize] = useState("");
-  const [addSizeUnit, setAddSizeUnit] = useState<"qty" | "usdt">("usdt");
-  const [addOrderType, setAddOrderType] = useState<"market" | "limit">("market");
-  const [addLimitPrice, setAddLimitPrice] = useState("");
+  const [addGroups, setAddGroups] = useState(() => blankPerpsAddOrderGroups("long"));
   const [webhookId, setWebhookId] = useState("sample");
   const themeLongAnchor: EntryAnchor = {
     kind: startKind === "" ? "indicator" : startKind,
@@ -937,12 +924,7 @@ export function ThemeBotFormDraft() {
     startKind,
     orderType,
     limitPrice,
-    addConditionType,
-    addConditionDraft,
-    addSize,
-    addSizeUnit,
-    addOrderType,
-    addLimitPrice,
+    addGroups,
     webhookId,
     priceSource,
     priceWhen,
@@ -2841,16 +2823,8 @@ export function ThemeBotFormDraft() {
         ) : desk === "perps" && !closing ? (
           <BotFormStep title="Additional Orders Condition Builder">
             <PerpsAdditionalOrders
-              conditionType={addConditionType}
-              onConditionType={setAddConditionType}
-              size={addSize}
-              onSize={setAddSize}
-              sizeUnit={addSizeUnit}
-              onSizeUnit={setAddSizeUnit}
-              orderType={addOrderType}
-              onOrderType={setAddOrderType}
-              limitPrice={addLimitPrice}
-              onLimitPrice={setAddLimitPrice}
+              groups={addGroups}
+              onGroupsChange={setAddGroups}
               quoteLabel="USDT"
               baseCoin={
                 SAMPLE_PAIRS.find((pair) => pair.symbol === symbol)?.baseCoin ??
@@ -2861,7 +2835,6 @@ export function ThemeBotFormDraft() {
               fieldsClass={rowClass5}
               side={perpsDirection === "short" ? "short" : "long"}
               webhooks={themeWebhooks}
-              onConditionDraftChange={setAddConditionDraft}
             />
           </BotFormStep>
         ) : null}

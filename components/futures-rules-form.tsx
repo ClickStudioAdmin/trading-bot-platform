@@ -31,10 +31,7 @@ import {
   deskActionBtnClass,
 } from "@/components/bot-form-chrome";
 import { ExitSideBuilder } from "@/components/exit-side-builder";
-import {
-  PerpsAdditionalOrders,
-  type PerpsAddConditionType,
-} from "@/components/perps-additional-orders";
+import { PerpsAdditionalOrders } from "@/components/perps-additional-orders";
 import {
   exitRowsFromStack,
   exitStackFromRows,
@@ -91,6 +88,7 @@ import {
   type FuturesAutomationFormValues,
 } from "@/lib/futures/automation";
 import { venueAllowsPerpsBoth } from "@/lib/futures/perps-direction";
+import { blankPerpsAddOrderGroups } from "@/lib/futures/perps-add-condition";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
 import {
@@ -635,11 +633,9 @@ function RuleCard({
   const [sizeUnit, setSizeUnit] = useState(layer.sizeUnit);
   const [size, setSize] = useState(layer.size);
   const [limitPrice, setLimitPrice] = useState(layer.limitPrice);
-  const [addConditionType, setAddConditionType] = useState<PerpsAddConditionType>("");
-  const [addSize, setAddSize] = useState("");
-  const [addSizeUnit, setAddSizeUnit] = useState<"qty" | "usdt">("usdt");
-  const [addOrderType, setAddOrderType] = useState<"market" | "limit">("market");
-  const [addLimitPrice, setAddLimitPrice] = useState("");
+  const [addGroups, setAddGroups] = useState(() =>
+    blankPerpsAddOrderGroups(direction === "short" ? "short" : "long"),
+  );
   const [symbolState, setSymbolState] = useState(() =>
     embedded || layer.id
       ? layer.symbol
@@ -1807,16 +1803,8 @@ function RuleCard({
       {!closing ? (
         <BotFormStep title="Additional Orders Condition Builder" defaultCollapsed={inUse}>
           <PerpsAdditionalOrders
-            conditionType={addConditionType}
-            onConditionType={setAddConditionType}
-            size={addSize}
-            onSize={setAddSize}
-            sizeUnit={addSizeUnit}
-            onSizeUnit={setAddSizeUnit}
-            orderType={addOrderType}
-            onOrderType={setAddOrderType}
-            limitPrice={addLimitPrice}
-            onLimitPrice={setAddLimitPrice}
+            groups={addGroups}
+            onGroupsChange={setAddGroups}
             quoteLabel={quoteLabel}
             baseCoin={baseCoin}
             fieldClass={botFieldClass}
