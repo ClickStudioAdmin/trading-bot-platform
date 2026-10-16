@@ -2,7 +2,11 @@
 
 import type { ReactNode } from "react";
 import { AppSelect } from "@/components/app-select";
-import { HintLabel } from "@/components/bot-form-chrome";
+import {
+  HintLabel,
+  conditionFieldClass,
+  useBotColumnLayout,
+} from "@/components/bot-form-chrome";
 import {
   AddConditionButton,
   JoinWord,
@@ -101,6 +105,7 @@ export function ExitSideBuilder({
   renderTrailingStop: () => ReactNode;
   renderStopLoss: () => ReactNode;
 }) {
+  const column = useBotColumnLayout();
   const custom = clauses.filter((clause) => clause.kind === "custom");
   const first = custom[0];
   const flatRows: ExitStackRow[] = [];
@@ -208,7 +213,11 @@ export function ExitSideBuilder({
           <div key={clause.key} className="space-y-3">
             {index > 0 ? <JoinWord label="Or" /> : null}
             <div className="flex items-end justify-between gap-3">
-              <label className={`${labelClass} whitespace-nowrap`}>
+              <label
+                className={`${labelClass} ${
+                  column ? "min-w-0 flex-1" : "whitespace-nowrap"
+                }`}
+              >
                 <HintLabel text="Condition Type" required />
                 <AppSelect
                   value={clause.kind}
@@ -225,7 +234,7 @@ export function ExitSideBuilder({
                     }
                     setKind(clause, next);
                   }}
-                  className={`${fieldClass} !min-w-72`}
+                  className={conditionFieldClass(fieldClass, column)}
                 >
                   <option value="">Select Condition Type</option>
                   {kindOptions.map((option) => (

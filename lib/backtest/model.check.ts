@@ -23,8 +23,10 @@ import {
   backtestRunOutcome,
   firstAdverseFill,
   defaultBacktestDates,
+  backtestWindowDays,
   backtestWindowEndingToday,
   matchingBacktestWindowDays,
+  parseBacktestDates,
   backtestAprPct,
   backtestDrawdownCard,
   backtestOnNotionalPct,
@@ -74,6 +76,14 @@ assert.equal(
   30,
 );
 assert.equal(matchingBacktestWindowDays("2020-01-01", defaultDates.to), null);
+for (const days of [30, 365, 1825, 3650]) {
+  const window = backtestWindowEndingToday(days);
+  const range = parseBacktestDates(window.from, window.to);
+  assert.equal(range.ok, true);
+  if (range.ok) {
+    assert.equal(backtestWindowDays(range.fromMs, range.toMs), days);
+  }
+}
 
 assert.equal(parseBacktestFillReason("liquidation"), "liquidation");
 assert.equal(parseBacktestFillReason("exit_if"), "exit_if");

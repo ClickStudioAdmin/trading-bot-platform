@@ -24,6 +24,8 @@ import {
   OrderTypePill,
   botCompactRowClass,
   botFieldClass,
+  conditionFieldClass,
+  useBotColumnLayout,
   botFieldInvalidClass,
   botLabelClass,
   botRowClass,
@@ -419,7 +421,7 @@ function PercentInput({
   invalid?: boolean;
 }) {
   return (
-    <span className="relative mt-0.5 block">
+    <span className="relative mt-1 block">
       <GroupedNumberInput
         name={name}
         value={value}
@@ -428,7 +430,7 @@ function PercentInput({
         allowDecimal
         placeholder={placeholder}
         ariaLabel={ariaLabel}
-        className={`${invalid ? botFieldInvalidClass : fieldClass} mt-0 pr-7`}
+        className={`${invalid ? botFieldInvalidClass : fieldClass} !mt-0 pr-7`}
       />
       <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
         %
@@ -1099,6 +1101,7 @@ export function DcaPlaybookForm({
   onSymbolChange?: (symbol: string) => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const column = useBotColumnLayout();
   const { confirm: askConfirm, dialog } = useConfirmDialog();
   const source = playbook ?? seed;
   const [direction, setDirection] = useState(
@@ -2214,7 +2217,7 @@ export function DcaPlaybookForm({
               onChange={(event) =>
                 applyDcaStartKind(side, event.target.value as DcaStartKind)
               }
-              className={`${fieldClass} !min-w-72`}
+              className={conditionFieldClass(fieldClass, column)}
             >
               {value === "immediate" ? (
                 <option value="immediate">Immediate</option>

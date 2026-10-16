@@ -1,6 +1,10 @@
 "use client";
 
-import { HintLabel } from "@/components/bot-form-chrome";
+import {
+  HintLabel,
+  conditionFieldClass,
+  useBotColumnLayout,
+} from "@/components/bot-form-chrome";
 import { DcaFilterParamFields } from "@/components/dca-filter-fields";
 import { AppSelect } from "@/components/app-select";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
@@ -93,6 +97,7 @@ export function HardExitFields({
   /** First row of the Condition Builder. Added rows stay Trigger. */
   lead?: boolean;
 }) {
+  const column = useBotColumnLayout();
   const webhookChoices =
     value.trigger === "webhook" &&
     value.webhookId &&
@@ -119,7 +124,7 @@ export function HardExitFields({
             }
             onChange(hardExitForTrigger(trigger, side, value));
           }}
-          className={lead ? `${fieldClass} !min-w-72` : fieldClass}
+          className={lead ? conditionFieldClass(fieldClass, column) : fieldClass}
         >
           <option value="">{lead ? "Select Condition Type" : "Select Trigger"}</option>
           {TRIGGER_OPTIONS.map((option) => (
