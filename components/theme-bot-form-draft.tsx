@@ -2845,6 +2845,9 @@ export function ThemeBotFormDraft() {
               }
               fieldClass={fieldClass}
               gridClass={rowClass}
+              fieldsClass={rowClass5}
+              side={perpsDirection === "short" ? "short" : "long"}
+              webhooks={themeWebhooks}
             />
           </BotFormStep>
         ) : null}

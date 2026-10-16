@@ -1796,6 +1796,9 @@ function RuleCard({
             baseCoin={baseCoin}
             fieldClass={botFieldClass}
             gridClass={fieldRow}
+            fieldsClass={fieldRow5}
+            side={direction === "short" ? "short" : "long"}
+            webhooks={triggerWebhooks}
           />
         </BotFormStep>
       ) : null}
