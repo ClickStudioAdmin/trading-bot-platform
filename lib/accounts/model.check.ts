@@ -518,6 +518,26 @@ assert.deepEqual(
   }),
   [],
 );
+assert.deepEqual(
+  accountDeleteBlockers({
+    accountCount: 2,
+    openCount: 0,
+    automationsRunning: false,
+    mode: "live",
+    followerBooksOpen: true,
+  }),
+  ["follower_open"],
+);
+assert.deepEqual(
+  accountDeleteBlockers({
+    accountCount: 1,
+    openCount: 1,
+    automationsRunning: true,
+    mode: "live",
+    followerBooksOpen: true,
+  }),
+  ["last", "open", "automations", "follower_open"],
+);
 assert.equal(
   formatDeleteBlockers(["last", "open"]),
   "Keep at least one desk · Exit all positions first",
@@ -529,6 +549,14 @@ assert.equal(
 assert.equal(
   formatDeleteBlockers(["automations"]),
   "Disable bots first",
+);
+assert.equal(
+  formatDeleteBlockers(["follower_open"]),
+  "A follower still has an open position or a working order. Disable this desk and let the next tick flatten those copies",
+);
+assert.equal(
+  formatDeleteBlockers(["open", "automations", "follower_open"]),
+  "Disable bots and exit all positions first · A follower still has an open position or a working order. Disable this desk and let the next tick flatten those copies",
 );
 assert.deepEqual(
   connectionRemoveBlockers({ inUse: false }),

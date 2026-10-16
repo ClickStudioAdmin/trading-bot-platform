@@ -11,6 +11,7 @@ export const NOTIFICATION_IDS = [
   "payout_rejected",
   "copy_invite_received",
   "copy_invite_revoked",
+  "copy_source_closed",
   "desk_sync_failed",
   "desk_order_failed",
   "exchange_verify_failed",
@@ -30,6 +31,7 @@ const EMAIL_DEFAULT_ON = new Set<NotificationId>([
   "account_shortfall",
   "payout_rejected",
   "copy_invite_received",
+  "copy_source_closed",
   "desk_sync_failed",
   "desk_order_failed",
   "exchange_verify_failed",
@@ -219,6 +221,13 @@ export function copyInviteKey(shareId: string): string {
 
 export function copyInviteRevokedKey(shareId: string): string {
   return `copy-invite-revoked:${shareId}`;
+}
+
+export function copySourceClosedKey(
+  parentAccountId: string,
+  userId: string,
+): string {
+  return `copy-source-closed:${parentAccountId}:${userId}`;
 }
 
 export function deskSyncFailedKey(

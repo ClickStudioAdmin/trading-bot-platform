@@ -300,6 +300,39 @@ export async function revokeDeskCopyShare(input: {
   return { ok: true };
 }
 
+/** Revokes every open share on a desk that is closing. Does not send the invite-withdrawn notice. */
+export async function revokeOpenDeskCopyShares(
+  parentAccountId: string,
+): Promise<
+  | { ok: true; shares: { id: string; toUserId: string }[] }
+  | { ok: false; error: string }
+> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("desk_copy_shares")
+    .update({
+      status: "revoked" satisfies CopyShareStatus,
+      updated_at: now,
+    })
+    .eq("parent_account_id", parentAccountId)
+    .in("status", ["invited", "active"])
+    .select("id, to_user_id");
+  if (error) {
+    return { ok: false, error: "Could not revoke the copy invites." };
+  }
+  return {
+    ok: true,
+    shares: (data ?? []).map((row) => ({
+      id: String((row as { id?: string }).id ?? ""),
+      toUserId: String((row as { to_user_id?: string }).to_user_id ?? ""),
+    })),
+  };
+}
+
 export async function releaseDeskCopyShareByFollower(input: {
   parentAccountId: string;
   toUserId: string;

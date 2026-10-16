@@ -11,7 +11,11 @@ import {
 } from "@/components/panel-close-button";
 import { StepUpForm } from "@/components/step-up-code-field";
 import { TABLE_BTN_ICON, TableIconAction } from "@/components/table-chrome";
-import { deleteTradingAccount } from "@/lib/accounts/actions";
+import {
+  closeTradingAccount,
+  deleteTradingAccount,
+} from "@/lib/accounts/actions";
+import type { DeskCloseKind } from "@/lib/accounts/close";
 import {
   DESK_DELETE_CONTINUE_ATTEMPTS,
   DESK_DELETE_PASS_DEADLINE_MS,
@@ -31,6 +35,7 @@ export function AccountDeleteControl({
   switchOptions,
   defaultSwitchId,
   hint = "Remove this desk and its closed history.",
+  closeKind = null,
 }: {
   accountId: string;
   accountName: string;
@@ -38,6 +43,7 @@ export function AccountDeleteControl({
   switchOptions?: { id: string; name: string; mode: string }[];
   defaultSwitchId?: string;
   hint?: string;
+  closeKind?: DeskCloseKind | null;
 }) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -56,8 +62,14 @@ export function AccountDeleteControl({
       <TableIconAction
         ref={buttonRef}
         danger
-        label="Delete"
-        detail={hint}
+        label={closeKind ? "Close" : "Delete"}
+        detail={
+          closeKind
+            ? closeKind === "archive"
+              ? "Close this desk. Followers keep a closed copy for six months."
+              : "Close this desk. Invites are withdrawn and the desk is removed."
+            : hint
+        }
         onClick={() => setOpen((current) => !current)}
       >
         <IconTrash {...TABLE_BTN_ICON} />
@@ -69,7 +81,7 @@ export function AccountDeleteControl({
         className="p-3"
       >
         <PanelCloseButton onClick={() => setOpen(false)} />
-        {blockedMessage ? (
+        {blockedMessage && !closeKind ? (
           <p className="min-w-0 break-words text-sm text-ink">
             <PanelCloseReserve />
             {blockedMessage}.
@@ -78,13 +90,14 @@ export function AccountDeleteControl({
           <StepUpForm
             action={async (formData) => {
               let grant = "";
+              const run = closeKind ? closeTradingAccount : deleteTradingAccount;
               return continueTimedDeskDelete(
                 async () => {
                   if (grant) {
                     formData.set("deskDeleteGrant", grant);
                   }
                   const result = await withDeskDeleteDeadline(
-                    () => deleteTradingAccount(formData),
+                    () => run(formData),
                     deskDeleteAttemptTimeout(grant),
                     DESK_DELETE_PASS_DEADLINE_MS,
                   );
@@ -103,22 +116,30 @@ export function AccountDeleteControl({
                 DESK_DELETE_CONTINUE_ATTEMPTS,
               );
             }}
-            confirmLabel="Delete desk"
+            confirmLabel={closeKind ? "Close desk" : "Delete desk"}
             danger
-            pendingLabel="Deleting…"
+            pendingLabel={closeKind ? "Closing…" : "Deleting…"}
             className="flex flex-col gap-3"
           >
             <input type="hidden" name="accountId" value={accountId} />
             <p className="min-w-0 break-words text-sm font-medium text-ink">
               <PanelCloseReserve />
-              Remove {accountName} and its closed history?
+              {closeKind === "archive"
+                ? `Close ${accountName}? It leaves your list. Followers keep their copy, with history, for six months, and it no longer copies. After six months those copies are removed. If a copy is someone’s only desk, they may have no desks.`
+                : closeKind === "revoke"
+                  ? `Close ${accountName}? Invites are withdrawn and this desk is removed. Nobody has a copy desk to keep.`
+                  : `Remove ${accountName} and its closed history?`}
             </p>
-            <p className="text-hint text-ink-muted">This cannot be undone.</p>
+            <p className="text-hint text-ink-muted">
+              {closeKind === "archive"
+                ? "The hidden desk is removed after six months."
+                : "This cannot be undone."}
+            </p>
             <PendingSubmitButton
-              pendingLabel="Deleting…"
+              pendingLabel={closeKind ? "Closing…" : "Deleting…"}
               className="w-full rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
             >
-              Delete desk
+              {closeKind ? "Close desk" : "Delete desk"}
             </PendingSubmitButton>
             <SwitchFields
               options={options}

@@ -11,6 +11,7 @@ import {
   commissionReleasedKey,
   copyInviteKey,
   copyInviteRevokedKey,
+  copySourceClosedKey,
   depositCreditedKey,
   invoiceIssuedKey,
   invoicePaidKey,
@@ -431,6 +432,30 @@ export async function notifyCopyInviteRevoked(input: {
       entityKey: copyInviteRevokedKey(input.shareId),
       notice: notificationCopy.copy_invite_revoked({
         deskName: listing?.name || desk?.name || "a desk",
+      }),
+    });
+  });
+}
+
+export async function notifyCopySourceClosed(input: {
+  parentAccountId: string;
+  toUserId: string;
+  deskName: string;
+  keepsCopy: boolean;
+}): Promise<void> {
+  await safeNotify(async () => {
+    const member = await memberMail(input.toUserId);
+    if (!member) {
+      return;
+    }
+    await notify({
+      template: "copy_source_closed",
+      userId: input.toUserId,
+      toEmail: member.email,
+      entityKey: copySourceClosedKey(input.parentAccountId, input.toUserId),
+      notice: notificationCopy.copy_source_closed({
+        deskName: input.deskName,
+        keepsCopy: input.keepsCopy,
       }),
     });
   });

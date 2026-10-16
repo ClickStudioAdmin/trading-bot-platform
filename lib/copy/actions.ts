@@ -469,7 +469,7 @@ export async function createCopyDeskAction(formData: FormData) {
     return fail("Pick a desk to copy.");
   }
   const parent = await loadTradingAccountById(parentId);
-  if (!parent) {
+  if (!parent || parent.closedAtMs != null) {
     return fail("That desk was not found.");
   }
   const typeDenied = deniedDeskTypeMessage(
@@ -768,6 +768,12 @@ export async function pauseDeskCopyAction(formData: FormData) {
     return fail("This is not a copy desk.");
   }
   const paused = String(formData.get("paused") ?? "") === "1";
+  if (!paused && account.copyOfAccountId) {
+    const parent = await loadTradingAccountById(account.copyOfAccountId);
+    if (parent?.closedAtMs != null) {
+      return fail("That source desk is closed. This copy no longer follows it.");
+    }
+  }
   const saved = await saveDeskCopySettings({
     accountId: account.id,
     paused,
