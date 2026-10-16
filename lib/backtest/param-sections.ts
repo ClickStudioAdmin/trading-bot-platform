@@ -877,6 +877,21 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
       groups: [{ title: closing ? undefined : "Order Size", rows: sizeRows }],
     },
   ];
+  if (!closing) {
+    sections.push({
+      title: "Additional Orders",
+      groups: [
+        {
+          rows: [
+            { label: "Condition Type", value: "Off" },
+            { label: "Size", value: "Off" },
+            { label: "Unit", value: "Off" },
+            { label: "Order", value: "Off" },
+          ],
+        },
+      ],
+    });
+  }
   sections.push(...perpsExitSections(recipe, side));
   return sections;
 }

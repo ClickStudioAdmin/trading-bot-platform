@@ -30,6 +30,10 @@ import {
 } from "@/components/bot-form-chrome";
 import { ExitSideBuilder } from "@/components/exit-side-builder";
 import {
+  PerpsAdditionalOrders,
+  type PerpsAddConditionType,
+} from "@/components/perps-additional-orders";
+import {
   exitRowsFromStack,
   exitStackFromRows,
   type ExitStackRow,
@@ -491,6 +495,11 @@ function RuleCard({
   const [sizeUnit, setSizeUnit] = useState(layer.sizeUnit);
   const [size, setSize] = useState(layer.size);
   const [limitPrice, setLimitPrice] = useState(layer.limitPrice);
+  const [addConditionType, setAddConditionType] = useState<PerpsAddConditionType>("");
+  const [addSize, setAddSize] = useState("");
+  const [addSizeUnit, setAddSizeUnit] = useState<"qty" | "usdt">("usdt");
+  const [addOrderType, setAddOrderType] = useState<"market" | "limit">("market");
+  const [addLimitPrice, setAddLimitPrice] = useState("");
   const [symbolState, setSymbolState] = useState(() =>
     embedded || layer.id
       ? layer.symbol
@@ -1342,7 +1351,22 @@ function RuleCard({
 
       {!closing ? (
         <BotFormStep title="Additional Orders" defaultCollapsed={inUse}>
-          {null}
+          <PerpsAdditionalOrders
+            conditionType={addConditionType}
+            onConditionType={setAddConditionType}
+            size={addSize}
+            onSize={setAddSize}
+            sizeUnit={addSizeUnit}
+            onSizeUnit={setAddSizeUnit}
+            orderType={addOrderType}
+            onOrderType={setAddOrderType}
+            limitPrice={addLimitPrice}
+            onLimitPrice={setAddLimitPrice}
+            quoteLabel={quoteLabel}
+            baseCoin={baseCoin}
+            fieldClass={botFieldClass}
+            gridClass={fieldRow}
+          />
         </BotFormStep>
       ) : null}
 

@@ -16,7 +16,7 @@ In progress. First step is the entry stack on Perps bots.
 | --- | --- | --- | --- |
 | 1 | Entry stack | Agent | Perps bots can add conditions after the initial trigger, joined with And or Or. Each added row uses the same trigger dropdown (Price cross, Indicator, Trend, or Signal webhook). Conflicting choices are disabled. Direction is Long, Short, or Both when the exchange hedges. Both uses two sections, Long Entry Condition Builder and Short Entry Condition Builder, each with its own trigger and stack. The same form is the desk bot, New Backtest, and replay Modify. The engine, replay, and parameter lists (bot, backtest, template) read that stack. A saved Secondary Entry opens as one And filter. |
 | 2 | Exit stack | Agent | Long Exit Condition Builder and Short Exit Condition Builder replace the shared exit card on DCA and Perps. Top-level clauses join with Or. Condition Type is Take profit, Trailing stop, Stop loss, or Build Custom Conditions. One of each classic exit. Custom conditions inside a clause join with And. Another custom clause joins with Or. Classics stay on the existing columns and are shared when Direction is Both. Custom conditions stay on `exit_if_*` / `exit_hard` / `exit_expr`. DCA short custom uses `short_exit_*`. Perps short custom is `short_entry.exit`. |
-| 3 | Additional exposure | — | Caps, size per add, and its own condition stack. Not started. |
+| 3 | Additional exposure | Agent | Perps Additional Orders is a condition builder. Condition Type opens on Select Condition Type: Indicator, Trend, Price Cross, or Signal Webhook. Size, Unit, and Order sit in that section. DCA Additional Orders stays the fixed averaging model. Caps, the condition stack, and saving these fields come later. |
 | 4 | Position and pattern leaves | — | Breakeven-limit, price versus fill, impulse then pullback. Not started. |
 | 5 | Other playbooks | Agent | DCA entry uses the same Add Condition stack as Perps. Cash and Carry is not started. |
 | 6 | Full test | Click | Desk, backtest, and replay on the finished builder. Not started. |
@@ -41,10 +41,17 @@ In progress. First step is the entry stack on Perps bots.
 5. When a custom group is true, the app market-flattens that side. A webhook that is only an And peer does not flatten by itself. The short side uses the long custom exit only when that side's custom exit is off.
 6. Take profit, trailing stop, and stop loss still write the existing columns. A custom anchor writes `exit_if_*` or `exit_hard`. Further rows in that group, and later custom groups, write `exit_expr`. DCA Both writes the short custom exit to `short_exit_*` and `short_exit_expr`. Perps Both writes the short custom exit on `short_entry.exit`. Empty custom stores null.
 
+## How Perps additional orders work
+
+1. DCA Additional Orders stays Additional Order Types and Additional Order Scaling. That model does not change.
+2. Perps Additional Orders is its own step, after Position Sizing, when the bot is not closing. Condition Type opens on Select Condition Type. The options match the entry selector: Indicator, Trend, Price Cross, and Signal Webhook. Dependent fields, Add Condition, and And / Or groups come later.
+3. Size, Unit, and Order sit in that step. Order is Market or Limit. Limit shows Limit price. These fields are not saved yet, so parameter lists and the saved bot configuration show Condition Type, Size, Unit, and Order as Off. Close long and Close short omit the step.
+
 ## Out of this step
 
 - Confirm conditions on take profit, trailing stop, or stop loss, and further profit or loss trigger types
-- Additional exposure, position leaves, pattern leaves
+- Additional-order caps, the add condition stack, and saving those fields
+- Position leaves, pattern leaves
 - Cash and Carry
 - A scripting language, nesting deeper than And-inside-Or, chart drawing, a general pattern scanner
 - Multi-pair or virtual lots
