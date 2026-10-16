@@ -82,6 +82,41 @@ export function mergeCandleBars(pages: CandleBar[][]): CandleBar[] {
   return [...byTime.values()].sort((a, b) => a.timeMs - b.timeMs);
 }
 
+/** Last bar whose open is at or before `atMs`. Zero when the series is empty or still in the future. */
+export function candleIndexAt(
+  candles: readonly { timeMs: number }[],
+  atMs: number,
+): number {
+  if (candles.length === 0 || (candles[0]?.timeMs ?? 0) > atMs) {
+    return 0;
+  }
+  let low = 0;
+  let high = candles.length - 1;
+  let index = 0;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    if ((candles[mid]?.timeMs ?? 0) <= atMs) {
+      index = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  return index;
+}
+
+export function candleBarTimeMs(
+  candles: readonly { timeMs: number }[],
+  atMs: number,
+): number {
+  const index = candleIndexAt(candles, atMs);
+  const timeMs = candles[index]?.timeMs;
+  if (timeMs == null || timeMs > atMs) {
+    return atMs;
+  }
+  return timeMs;
+}
+
 export function clipCandlesToWindow(
   candles: CandleBar[],
   fromMs: number,

@@ -256,6 +256,10 @@ assert.equal(
   chartIntervalForWindow(Date.UTC(2026, 6, 1), Date.UTC(2026, 6, 31), "60"),
   "60",
 );
+assert.equal(
+  chartIntervalForWindow(Date.UTC(2021, 9, 18), Date.UTC(2026, 9, 16), "15"),
+  "D",
+);
 assert.deepEqual(backtestChartIntervalChoices("5"), [
   "5",
   "15",

@@ -97,6 +97,7 @@ import {
 } from "@/lib/backtest/play";
 import {
   backtestChartFetchBounds,
+  chartIntervalForWindow,
   type BacktestRun,
   type ReplayEvent,
   type SimulatedOrder,
@@ -108,7 +109,12 @@ import {
 } from "@/lib/dca/indicators";
 import { attachRightAxisWheel } from "@/lib/charts/interact";
 import { loadBacktestDisplayCandles } from "@/lib/charts/load-backtest-candles";
-import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
+import {
+  candleBarTimeMs,
+  candleIndexAt,
+  clipCandlesToWindow,
+  type CandleBar,
+} from "@/lib/market/candles";
 import { formatPrice, formatQty, signedTone } from "@/lib/opportunities/format";
 import {
   IconChevronRight,
@@ -323,18 +329,6 @@ function styledLineColor(
   return style.opacity >= 100 ? base : colorWithOpacity(base, style.opacity);
 }
 
-function candleIndexAt(candles: CandleBar[], atMs: number): number {
-  let index = 0;
-  for (let i = 0; i < candles.length; i += 1) {
-    if ((candles[i]?.timeMs ?? 0) <= atMs) {
-      index = i;
-    } else {
-      break;
-    }
-  }
-  return index;
-}
-
 /** Pixels under the side-by-side grid: layout padding plus the site footer. */
 function replayFrameReserve(grid: HTMLElement): number {
   const footer = document.querySelector("footer");
@@ -412,7 +406,9 @@ export function ReplayPlayer({
     () => run.replayEvents ?? eventsFromOrders(run.orders),
     [run.replayEvents, run.orders],
   );
-  const [interval, setInterval] = useState<DcaIndicatorTimeframe>(run.interval);
+  const [interval, setInterval] = useState<DcaIndicatorTimeframe>(() =>
+    chartIntervalForWindow(run.fromMs, run.toMs, run.interval),
+  );
   const [favoriteIntervals, setFavoriteIntervals] = useState<DcaIndicatorTimeframe[]>(
     preferences?.favoriteIntervals ?? [],
   );
@@ -1413,14 +1409,7 @@ export function ReplayPlayer({
               replayMarkerInPositionFocus(row.orderIndex, focusOrders),
           )
           .map((row) => {
-            let barMs = row.atMs;
-            for (const candle of candles) {
-              if (candle.timeMs <= row.atMs) {
-                barMs = candle.timeMs;
-              } else {
-                break;
-              }
-            }
+            const barMs = candleBarTimeMs(candles, row.atMs);
             const selectedSame =
               selected != null &&
               selected.atMs === row.atMs &&
@@ -1449,14 +1438,7 @@ export function ReplayPlayer({
           selected.atMs <= at &&
           replayMarkerInPositionFocus(selected.orderIndex, focusOrders)
         ) {
-          let barMs = selected.atMs;
-          for (const candle of candles) {
-            if (candle.timeMs <= selected.atMs) {
-              barMs = candle.timeMs;
-            } else {
-              break;
-            }
-          }
+          const barMs = candleBarTimeMs(candles, selected.atMs);
           plotted.push({
             time: Math.floor(barMs / 1000) as never,
             position: selected.side === "short" ? "belowBar" : "aboveBar",
