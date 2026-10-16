@@ -235,6 +235,11 @@ export default async function AdminOverviewPage() {
             hint="Invite-only logins"
           />
           <Shortcut
+            href="/admin/system"
+            label="System"
+            hint="Maintenance jobs"
+          />
+          <Shortcut
             href="/admin/logs"
             label="Logs"
             hint="System and trade events"
