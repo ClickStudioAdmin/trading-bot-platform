@@ -2293,7 +2293,7 @@ export function ThemeBotFormDraft() {
             <div className={rowClass5}>
               <Field
                 label={desk === "perps" ? "Webhook" : "Signal Webhook"}
-                className="lg:col-span-2"
+                className="col-span-full"
                 required
               >
                 <AppSelect
@@ -2514,7 +2514,7 @@ export function ThemeBotFormDraft() {
             <Group>
               {shortStartKind === "webhook" ? (
                 <div className={rowClass5}>
-                  <Field label="Webhook" className="lg:col-span-2" required>
+                  <Field label="Webhook" className="col-span-full" required>
                     <AppSelect
                       value={shortWebhookId}
                       onChange={(event) => setShortWebhookId(event.target.value)}
@@ -2660,7 +2660,7 @@ export function ThemeBotFormDraft() {
             <Group>
               {shortStartKind === "webhook" ? (
                 <div className={rowClass5}>
-                  <Field label="Signal Webhook" className="lg:col-span-2" required>
+                  <Field label="Signal Webhook" className="col-span-full" required>
                     <AppSelect
                       value={shortWebhookId}
                       onChange={(event) => setShortWebhookId(event.target.value)}

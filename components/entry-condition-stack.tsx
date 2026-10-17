@@ -454,7 +454,7 @@ export function EntryConditionStack({
   groupFooter?: (groupIndex: number) => ReactNode;
   /** Paint empty required controls after the form has been edited. */
   showErrors?: boolean;
-  /** Perps added rows can stay on Select Condition Type or Select Trigger. */
+  /** Perps added rows can stay on Select Condition Type. */
   optionalAddedKind?: boolean;
 }) {
   const column = useBotColumnLayout();
@@ -590,9 +590,9 @@ export function EntryConditionStack({
               </>
             ) : (
               <div className={gridClass}>
-                <label className={row.join === "or" ? `${labelClass} whitespace-nowrap` : labelClass}>
+                <label className={`${labelClass} whitespace-nowrap`}>
                   <HintLabel
-                    text={row.join === "or" ? "Condition Type" : "Trigger"}
+                    text="Condition Type"
                     required={!optionalAddedKind}
                   />
                   <AppSelect
@@ -627,9 +627,7 @@ export function EntryConditionStack({
                           : fieldClass
                     }
                   >
-                    <option value="">
-                      {row.join === "or" ? "Select Condition Type" : "Select Trigger"}
-                    </option>
+                    <option value="">Select Condition Type</option>
                     {TRIGGER_OPTIONS.map((option) => (
                       <option
                         key={option.value}
@@ -804,7 +802,7 @@ export function EntryConditionStack({
                     }
                   />
                 ) : draft.kind === "webhook" ? (
-                  <label className={labelClass}>
+                  <label className={`${labelClass} col-span-full`}>
                     <HintLabel text="Webhook" required />
                     <AppSelect
                       name={`${prefix}${nameIndex}WebhookId`}
@@ -817,8 +815,8 @@ export function EntryConditionStack({
                       }
                       className={
                         showErrors && draft.webhookId.trim() === ""
-                          ? botFieldInvalidClass
-                          : fieldClass
+                          ? conditionFieldClass(botFieldInvalidClass, column)
+                          : conditionFieldClass(fieldClass, column)
                       }
                     >
                       <option value="">
