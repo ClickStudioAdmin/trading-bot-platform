@@ -311,7 +311,7 @@ export function ExitSideBuilder({
               </div>
               <div className={gridClass}>
                 <label className={`${labelClass} whitespace-nowrap`}>
-                  <HintLabel text="Condition Type" required />
+                  <HintLabel text="Condition Type" />
                   <AppSelect
                     value={clauseSelectValue(clause)}
                     onChange={(event) => setChoice(clause, event.target.value)}
