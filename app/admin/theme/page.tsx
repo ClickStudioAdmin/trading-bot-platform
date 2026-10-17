@@ -108,7 +108,7 @@ export default async function ThemePage({
               Bot form (draft)
             </h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Proposed standard chrome for Perps, DCA, and later scale-in.
+              Proposed standard chrome for Flex, DCA, and later scale-in.
               Review here before any live desk form changes.
             </p>
             <div className="mt-5">

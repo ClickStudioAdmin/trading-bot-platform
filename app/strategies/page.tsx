@@ -16,7 +16,7 @@ export default async function StrategiesPage() {
       <PageHeading overline="Desk" title="Desks" />
       <p className="-mt-2 text-sm text-ink-muted">
         Create a free account to open a typed desk. Type locks the manager:
-        Cash and Carry, Perps, TradingView Strategy, or DCA.
+        Cash and Carry, Manual, Flex, TradingView Strategy, or DCA.
       </p>
       <p className="mt-8 flex flex-wrap gap-4 text-sm">
         <Link href="/sign-up" className="text-accent hover:text-accent-strong">

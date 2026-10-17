@@ -99,7 +99,7 @@ export default async function AccountBacktestDetailPage({
     recipe: run.recipe,
     source:
       source &&
-      (source.recipe.kind === "dca" || source.recipe.kind === "perps")
+      (source.recipe.kind === "dca" || source.recipe.kind === "flex")
         ? {
             id: source.id,
             name: source.name,

@@ -514,7 +514,7 @@ assert.equal(
 const review = adminConditionReview();
 assert.deepEqual(
   review.map((sample) => sample.title),
-  ["Two groups", "One group", "Custom exit", "Perps Or group"],
+  ["Two groups", "One group", "Custom exit", "Flex Or group"],
 );
 const two = review[0]?.sections[0];
 assert.equal(two?.title, "Short Entry Conditions");

@@ -173,7 +173,7 @@ const manual = row(
   account({
     id: "manual",
     name: "ByBit",
-    deskType: "perps",
+    deskType: "manual",
     mode: "live",
     venueEnvironment: null,
   }),
@@ -202,7 +202,7 @@ assert.deepEqual(
   ["cloud"],
 );
 assert.deepEqual(
-  filterDeskList(rows, { ...EMPTY_DESK_LIST_FILTERS, type: "perps" }).map(
+  filterDeskList(rows, { ...EMPTY_DESK_LIST_FILTERS, type: "manual" }).map(
     (item) => item.account.id,
   ),
   ["manual"],
@@ -251,7 +251,7 @@ assert.equal(
   true,
 );
 
-assert.deepEqual(deskListFilterChoices(rows).types, ["dca", "perps"]);
+assert.deepEqual(deskListFilterChoices(rows).types, ["dca", "manual"]);
 assert.deepEqual(deskListFilterChoices(rows).exchanges, ["—", "Bybit"]);
 assert.deepEqual(deskListFilterChoices(rows).environments, ["—", "Demo", "Paper"]);
 

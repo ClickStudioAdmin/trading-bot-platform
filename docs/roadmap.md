@@ -14,7 +14,7 @@ Keep building on these; do not reopen them as a phase unless Click asks.
 
 | Item | Notes |
 | --- | --- |
-| Phases 1–11 | Desk product: C&C, Perps / Perps bots, TradingView Strategy, DCA |
+| Phases 1–11 | Desk product: C&C, Manual / Flex, TradingView Strategy, DCA |
 | Fly.io engine worker | Accepted: [phase-fly.md](phase-fly.md) |
 | Hyperliquid venue | Adapter and UI in repo: [phase-hyperliquid.md](phase-hyperliquid.md). Leftover desk-test is V1 system test |
 | Copy trading | Steps 1–9 in repo: [phase-copy-trading.md](phase-copy-trading.md). Leftover desk-test is V1 system test |
@@ -24,7 +24,7 @@ Keep building on these; do not reopen them as a phase unless Click asks.
 
 ## Current (V1 item 7)
 
-**Strategy Builder and bot structures (and full test).** Click is on this as of 14 Oct 2026. Morph Perps bots into one playbook per contract and side, with And/Or stacks for entry, additional exposure, and exit. The app places the first order, later adds, and the exit. Signals only arm. Then refine DCA and Cash and Carry to that structure, and fully test the builder and those playbooks. The whole-product system test stays item 9. Spec: [phase-strategy-builder.md](phase-strategy-builder.md). First step is the Perps entry stack. Do not start Create Platform Templates (item 8) until Click asks.
+**Strategy Builder and bot structures (and full test).** Click is on this as of 14 Oct 2026. Morph Flex into one playbook per contract and side, with And/Or stacks for entry, additional exposure, and exit. The app places the first order, later adds, and the exit. Signals only arm. Then refine DCA and Cash and Carry to that structure, and fully test the builder and those playbooks. The whole-product system test stays item 9. Spec: [phase-strategy-builder.md](phase-strategy-builder.md). First step is the Flex entry stack. Do not start Create Platform Templates (item 8) until Click asks.
 
 **Still locked / do not start until Click asks**
 
@@ -44,8 +44,8 @@ Stop after each item until Click says go.
 | 4 | **Account Positions, Bots, and Automations lists** | Started 21 Sep 2026. Spec: [phase-account-blotter.md](phase-account-blotter.md). Isolation already in repo (item 3). Desk Automations list first; account Positions / Bots wait until Click asks. Virtual lots stay V2. |
 | 5 | **Onboarding wizards and Starter Packs** | Blocking first-run modal: desk type × mode, exchange keys, idle bots from admin starter folders, then an optional guided tour. The app stays closed until Finish or Skip. Never arm. Spec: [phase-onboarding.md](phase-onboarding.md). |
 | 6 | **Entitlements and plan / 2FA gates** | `assertEntitlement`, visible/disabled + Upgrade, a plan may require 2FA, downgrade grace. Gate map scoped 9 Oct 2026. Spec: [phase-entitlements.md](phase-entitlements.md) (gates). |
-| 7 | **Strategy Builder and bot structures (and full test)** | **Current.** Click is on this as of 14 Oct 2026. Implement the Strategy Builder plan on Perps bots (`perps_bots`): one playbook per contract and side. Entry, additional exposure, and exit are And/Or condition stacks. The app places the first order, later adds, and the exit. Signals only arm. Then refine the other managing playbooks (DCA and Cash and Carry) to that structure, and fully test the builder and those playbooks. This replaces the parked position builder / scale-in desk. The whole-product system test stays item 9. Spec: [phase-strategy-builder.md](phase-strategy-builder.md). First step is the Perps entry stack. |
-| 8 | **Create Platform Templates** | The template library is already shipped ([templates.md](templates.md)). This item writes the platform templates and starter folders on `/admin/templates` for DCA, Perps bots, and Cash and Carry, using the structures from item 7. Apply stays idle or disabled. Never arm. A public member catalog stays V2. |
+| 7 | **Strategy Builder and bot structures (and full test)** | **Current.** Click is on this as of 14 Oct 2026. Implement the Strategy Builder plan on Flex (`flex`): one playbook per contract and side. Entry, additional exposure, and exit are And/Or condition stacks. The app places the first order, later adds, and the exit. Signals only arm. Then refine the other managing playbooks (DCA and Cash and Carry) to that structure, and fully test the builder and those playbooks. This replaces the parked position builder / scale-in desk. The whole-product system test stays item 9. Spec: [phase-strategy-builder.md](phase-strategy-builder.md). First step is the Flex entry stack. |
+| 8 | **Create Platform Templates** | The template library is already shipped ([templates.md](templates.md)). This item writes the platform templates and starter folders on `/admin/templates` for DCA, Flex, and Cash and Carry, using the structures from item 7. Apply stays idle or disabled. Never arm. A public member catalog stays V2. |
 | 9 | **Full system test and refinement (including tour refinement)** | Whole product, **including Hyperliquid** leftover desk-test, copy leftover desk-test, and the platform tour and onboarding copy. Fix what Click finds. Not a new feature phase. |
 | 10 | **Invite friends to test** | Closed testers before the public soft launch. |
 | 11 | **Production deploy and live configuration** | Deploy the production build: merge `develop` to `main` so Vercel Production, production Supabase migrations, and Fly `tbp-engine` ship. Configure every live account and integration on production only — Stripe live, Resend, mainnet billing HD and gas, exchange and billing keys, session and cron secrets, `APP_BASE_URL`. Develop secrets stay off production. See [environments.md](environments.md). |
@@ -57,7 +57,7 @@ Stop after each item until Click says go.
 
 Parked or not in V1. Keep the docs. Click picks the next one when V1 is done (or earlier if they say so).
 
-- **Internal (and maybe external) webhooks; event-driven bot signals** — cross-desk hedge path (example: DCA 5 opens → Perps bot hedge)
+- **Internal (and maybe external) webhooks; event-driven bot signals** — cross-desk hedge path (example: DCA 5 opens → Flex bot hedge)
 - **Backup market data** — failover when Bybit public klines fail ([master-spec.md](master-spec.md))
 - **Other exchanges** — MEXC, XT, further CEXes. Write `phase-mexc.md` (or equivalent) when that item starts
 - **Admin roles** — [phase-admin-roles.md](phase-admin-roles.md). Operator mail stays every admin until then

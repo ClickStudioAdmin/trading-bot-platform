@@ -1,4 +1,4 @@
-export type BotDeskKind = "perps" | "dca" | "cnc";
+export type BotDeskKind = "flex" | "dca" | "cnc";
 
 export type PerpsCncStatus = "active" | "reduce_only" | "disabled";
 export type DcaBotStatus = "active" | "stop_adding" | "disabled";

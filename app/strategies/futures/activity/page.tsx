@@ -30,7 +30,7 @@ export default async function FuturesActivityPage({
 }) {
   const params = await searchParams;
   const session = await getSessionContext();
-  const deskType = session?.account.deskType ?? "perps";
+  const deskType = session?.account.deskType ?? "manual";
   const copyDesk = session ? deskIsCopy(session.account) : false;
   const filters = parseEventLogFilters(params);
   const dcaBlotter = session
@@ -46,7 +46,7 @@ export default async function FuturesActivityPage({
     dcaBlotter && recipeAccountId && !copyDesk
       ? listDcaBotOptions(recipeAccountId)
       : Promise.resolve([]),
-    deskType === "perps_bots" && recipeAccountId && !copyDesk
+    deskType === "flex" && recipeAccountId && !copyDesk
       ? listFuturesAutomationRuleOptions(recipeAccountId)
       : Promise.resolve([]),
   ]);

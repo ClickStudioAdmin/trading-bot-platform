@@ -8,7 +8,7 @@ Private calls stay on the server (Fly worker after roadmap 1; Sydney Vercel unti
 
 ## Purpose
 
-Create Perps, DCA, or TradingView Strategy desks whose **exchange is Hyperliquid** (immutable at create). Connected Demo uses **Hyperliquid Testnet**. Connected Live uses **mainnet**. Paper uses the in-app ledger and Hyperliquid **public** marks (no agent). Cash and Carry cannot pick Hyperliquid.
+Create Manual, Flex, DCA, or TradingView Strategy desks whose **exchange is Hyperliquid** (immutable at create). Connected Demo uses **Hyperliquid Testnet**. Connected Live uses **mainnet**. Paper uses the in-app ledger and Hyperliquid **public** marks (no agent). Cash and Carry cannot pick Hyperliquid.
 
 ## Status
 
@@ -43,7 +43,7 @@ Code registry (extend today’s `lib/exchanges/venues.ts`). Postgres stores `ven
 | Parameter | Bybit | Hyperliquid | Why it exists |
 | --- | --- | --- | --- |
 | `id` | `bybit` | `hyperliquid` | Connection + desk |
-| `deskTypes` | all five | `perps`, `perps_bots`, `dca`, `signal_follower` | Hide C&C |
+| `deskTypes` | all five | `manual`, `flex`, `dca`, `signal_follower` | Hide C&C |
 | `positionMode` | `hedge` | `one_way` | Two sides vs one net row |
 | `quote` | USDT | USDC | Size labels |
 | `symbolKind` | `linear_usdt` (`BTCUSDT`) | `coin` (`BTC`) | Pickers, blotter, templates |

@@ -304,7 +304,7 @@ export function BacktestRunsTable({
         backtestListTitle(row, titleMode),
         attachedTemplateLabel(row, templates) ?? "",
         row.symbol,
-        row.deskType === "dca" ? "dca" : "perps",
+        row.deskType === "dca" ? "dca" : "flex",
         row.status,
       ]
         .join(" ")
@@ -909,7 +909,7 @@ function BacktestRunRow({
         </span>
       </td>
       <td className="px-4 py-3 text-ink-muted">
-        {row.deskType === "dca" ? "DCA" : "Perps"}
+        {row.deskType === "dca" ? "DCA" : "Flex"}
       </td>
       <td className="px-4 py-3 font-medium tabular-nums">{row.symbol}</td>
       <td className="px-4 py-3">

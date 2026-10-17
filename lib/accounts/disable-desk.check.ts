@@ -12,9 +12,9 @@ assert.equal(
   deskDisableBotKind({ deskType: "cash_and_carry" }),
   "cnc",
 );
-assert.equal(deskDisableBotKind({ deskType: "perps_bots" }), "perps");
+assert.equal(deskDisableBotKind({ deskType: "flex" }), "flex");
 assert.equal(deskDisableBotKind({ deskType: "dca" }), "dca");
-assert.equal(deskDisableBotKind({ deskType: "perps" }), "none");
+assert.equal(deskDisableBotKind({ deskType: "manual" }), "none");
 assert.equal(deskDisableBotKind({ deskType: "signal_follower" }), "none");
 assert.equal(
   deskDisableBotKind({ deskType: "dca", copyOfAccountId: "parent" }),
@@ -22,10 +22,10 @@ assert.equal(
 );
 
 assert.match(
-  disableDeskConfirmBody("Alpha", "perps"),
+  disableDeskConfirmBody("Alpha", "flex"),
   /Turn every bot off on Alpha/,
 );
-assert.match(disableDeskConfirmBody("Alpha", "perps"), /then close/);
+assert.match(disableDeskConfirmBody("Alpha", "flex"), /then close/);
 assert.match(disableDeskConfirmBody("Beta", "copy"), /Pause copying on Beta/);
 assert.match(disableDeskConfirmBody("Gamma", "none"), /Gamma has no bots/);
 
@@ -34,7 +34,7 @@ assert.equal(
   "No bots on this desk.",
 );
 assert.equal(
-  disableBotsDetail({ kind: "perps", turnedOff: 0 }),
+  disableBotsDetail({ kind: "flex", turnedOff: 0 }),
   "Bots are already off.",
 );
 assert.equal(

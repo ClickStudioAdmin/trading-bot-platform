@@ -39,7 +39,7 @@ export default async function FuturesPerformancePage({
 }) {
   const params = await searchParams;
   const session = await getSessionContext();
-  const deskType = session?.account.deskType ?? "perps";
+  const deskType = session?.account.deskType ?? "manual";
   const copyDesk = session ? deskIsCopy(session.account) : false;
   const filters = blotterFiltersForCopyDesk(
     parseDeskBlotterFilters(params),
@@ -55,7 +55,7 @@ export default async function FuturesPerformancePage({
     session &&
       filters.bot &&
       recipeAccountId &&
-      (dcaBlotter || deskType === "perps_bots"),
+      (dcaBlotter || deskType === "flex"),
   );
   const playbook =
     botScope && dcaBlotter && recipeAccountId
@@ -77,7 +77,7 @@ export default async function FuturesPerformancePage({
     dcaBlotter && recipeAccountId && !copyDesk
       ? listDcaBotOptions(recipeAccountId)
       : Promise.resolve([]),
-    deskType === "perps_bots" && recipeAccountId && !copyDesk
+    deskType === "flex" && recipeAccountId && !copyDesk
       ? listFuturesAutomationRuleOptions(recipeAccountId)
       : Promise.resolve([]),
     session ? loadFuturesSettings(session.account.id) : Promise.resolve(null),

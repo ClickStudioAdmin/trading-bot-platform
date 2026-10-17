@@ -53,7 +53,7 @@ import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
 export const metadata: Metadata = {
   title: "Desk Settings",
-  description: "Perps desk settings.",
+  description: "Futures desk settings.",
 };
 
 export default async function FuturesSettingsPage({

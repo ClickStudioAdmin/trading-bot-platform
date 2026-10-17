@@ -132,7 +132,7 @@ async function resolveSourceTemplateId(
   const template = await loadTemplateById(rawId);
   if (
     !template ||
-    (template.recipe.kind !== "dca" && template.recipe.kind !== "perps") ||
+    (template.recipe.kind !== "dca" && template.recipe.kind !== "flex") ||
     !(await canUseTemplate(template, userId, isAdmin))
   ) {
     return null;
@@ -215,7 +215,7 @@ export async function queueTemplateBacktestAction(
     const template = await loadTemplateById(pickedTemplateId);
     if (
       template &&
-      (template.recipe.kind === "dca" || template.recipe.kind === "perps") &&
+      (template.recipe.kind === "dca" || template.recipe.kind === "flex") &&
       (await canUseTemplate(template, auth.member.id, auth.isAdmin))
     ) {
       recipe = template.recipe;
@@ -564,7 +564,7 @@ export async function attachBacktestToTemplateAction(
   const source = await loadTemplateById(templateId);
   if (
     !source ||
-    (source.recipe.kind !== "dca" && source.recipe.kind !== "perps") ||
+    (source.recipe.kind !== "dca" && source.recipe.kind !== "flex") ||
     !(await canUseTemplate(source, auth.member.id, auth.isAdmin))
   ) {
     return { ok: false, error: "That template is no longer available." };

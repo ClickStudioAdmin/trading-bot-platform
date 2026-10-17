@@ -28,7 +28,7 @@ import type { TemplateRecipe } from "@/lib/templates/recipe";
 
 export const SETUP_PATH = "/account/setup";
 
-/** Same order as the account sidebar: automated desks, then manual Perps. */
+/** Same order as the account sidebar: automated desks, then Manual. */
 export const ONBOARDING_DESK_TYPES: DeskType[] = [
   ...AUTOMATED_DESK_TYPES,
   ...MANUAL_DESK_TYPES,
@@ -51,7 +51,7 @@ export type SetupScreen =
   | { main: "review"; sub: "review" }
   | { main: "tour"; sub: "tour" };
 export type StarterVisibility = "platform" | "user" | "backtested";
-export type StarterDeskType = "dca" | "perps" | "cash_and_carry";
+export type StarterDeskType = "dca" | "flex" | "cash_and_carry";
 
 export type StarterTemplate = {
   id: string;
@@ -219,7 +219,7 @@ function setupDeskKeyMatches(
 export function deskSupportsStarterBots(deskType: DeskType): boolean {
   return (
     deskType === "dca" ||
-    deskType === "perps_bots" ||
+    deskType === "flex" ||
     deskType === "cash_and_carry"
   );
 }
@@ -228,8 +228,8 @@ export function starterDeskTypeFor(deskType: DeskType): StarterDeskType | null {
   if (deskType === "dca" || deskType === "cash_and_carry") {
     return deskType;
   }
-  if (deskType === "perps_bots") {
-    return "perps";
+  if (deskType === "flex") {
+    return "flex";
   }
   return null;
 }
@@ -238,7 +238,7 @@ export function starterDeskTypeFor(deskType: DeskType): StarterDeskType | null {
 export function starterStartVerb(deskType: DeskType): "Enable" | null {
   if (
     deskType === "dca" ||
-    deskType === "perps_bots" ||
+    deskType === "flex" ||
     deskType === "cash_and_carry"
   ) {
     return "Enable";
@@ -254,7 +254,7 @@ export function setupInitialStatusChoices(
 ): readonly { value: SetupInitialStatus; label: string }[] | null {
   if (
     deskType === "dca" ||
-    deskType === "perps_bots" ||
+    deskType === "flex" ||
     deskType === "cash_and_carry"
   ) {
     return [
@@ -833,7 +833,7 @@ export function onboardingFolders(folders: readonly StarterFolder[]): StarterFol
 
 const LOOSE_STARTER_DESK_TYPES: readonly StarterDeskType[] = [
   "dca",
-  "perps",
+  "flex",
   "cash_and_carry",
 ];
 
@@ -1126,7 +1126,7 @@ export function botsEmptyNote(desks: readonly SetupDesk[]): string {
     return "No desks are selected, so there are no starter bots to load.";
   }
   if (!desks.some((desk) => deskSupportsStarterBots(desk.deskType))) {
-    return "Perps is the ticket. TradingView Strategy takes alerts. Those desks do not load starter bots.";
+    return "Manual is the ticket. TradingView Strategy takes alerts. Those desks do not load starter bots.";
   }
   return "No starter folders are marked for these desks.";
 }

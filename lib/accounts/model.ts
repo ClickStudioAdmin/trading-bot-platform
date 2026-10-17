@@ -11,8 +11,8 @@ import { ACCOUNT_EXCHANGES_HREF } from "@/lib/site-links";
 export type TradingAccountMode = "paper" | "live";
 export type DeskType =
   | "cash_and_carry"
-  | "perps"
-  | "perps_bots"
+  | "manual"
+  | "flex"
   | "signal_follower"
   | "dca";
 
@@ -53,8 +53,8 @@ export function parseAccountMode(value: unknown): TradingAccountMode {
 
 export function parseDeskType(value: unknown): DeskType {
   if (
-    value === "perps" ||
-    value === "perps_bots" ||
+    value === "manual" ||
+    value === "flex" ||
     value === "signal_follower" ||
     value === "dca"
   ) {
@@ -69,8 +69,8 @@ export function parseDeskTypeChoice(
   const raw = String(value ?? "").trim();
   if (
     raw === "cash_and_carry" ||
-    raw === "perps" ||
-    raw === "perps_bots" ||
+    raw === "manual" ||
+    raw === "flex" ||
     raw === "signal_follower" ||
     raw === "dca"
   ) {
@@ -80,24 +80,24 @@ export function parseDeskTypeChoice(
 }
 
 export const AUTOMATED_DESK_TYPES: DeskType[] = [
-  "perps_bots",
+  "flex",
   "dca",
   "cash_and_carry",
   "signal_follower",
 ];
 
-export const MANUAL_DESK_TYPES: DeskType[] = ["perps"];
+export const MANUAL_DESK_TYPES: DeskType[] = ["manual"];
 
 export function formatDeskNavLabel(deskType: DeskType): string {
-  return deskType === "perps_bots" ? "Perps" : formatDeskType(deskType);
+  return formatDeskType(deskType);
 }
 
 export function formatDeskType(deskType: DeskType): string {
-  if (deskType === "perps") {
-    return "Perps";
+  if (deskType === "manual") {
+    return "Manual";
   }
-  if (deskType === "perps_bots") {
-    return "Perps bots";
+  if (deskType === "flex") {
+    return "Flex";
   }
   if (deskType === "signal_follower") {
     return "TradingView Strategy";
@@ -109,11 +109,11 @@ export function formatDeskType(deskType: DeskType): string {
 }
 
 export function formatDeskTypeChoice(deskType: DeskType): string {
-  if (deskType === "perps") {
-    return "Perps (buy / sell / close from the ticket)";
+  if (deskType === "manual") {
+    return "Manual (buy / sell / close from the ticket)";
   }
-  if (deskType === "perps_bots") {
-    return "Perps bots (price-cross automations own the orders)";
+  if (deskType === "flex") {
+    return "Flex (price-cross automations own the orders)";
   }
   if (deskType === "signal_follower") {
     return "TradingView Strategy (alerts send buy / sell / close)";
@@ -231,7 +231,7 @@ export function deskHomePath(
     ? "/strategies/futures/positions"
     : deskType === "cash_and_carry"
       ? "/strategies/cash-and-carry/automations"
-      : deskType === "perps_bots" || deskType === "dca"
+      : deskType === "flex" || deskType === "dca"
         ? "/strategies/futures/automations"
         : "/strategies/futures/positions";
   return accountId ? pathWithDesk(base, accountId) : base;
@@ -262,14 +262,14 @@ export function deskAllowsManualPerpTicket(desk: DeskCapabilityInput): boolean {
   if (deskIsCopy(desk)) {
     return false;
   }
-  return capabilityDeskType(desk) === "perps";
+  return capabilityDeskType(desk) === "manual";
 }
 
 export function deskAllowsPerpsRecipes(desk: DeskCapabilityInput): boolean {
   if (deskIsCopy(desk)) {
     return false;
   }
-  return capabilityDeskType(desk) === "perps_bots";
+  return capabilityDeskType(desk) === "flex";
 }
 
 export function deskAllowsDcaPlaybooks(desk: DeskCapabilityInput): boolean {
@@ -289,7 +289,7 @@ export function deskAllowsSignalWebhooks(desk: DeskCapabilityInput): boolean {
     return false;
   }
   const deskType = capabilityDeskType(desk);
-  return deskType === "dca" || deskType === "perps_bots";
+  return deskType === "dca" || deskType === "flex";
 }
 
 export function deskAllowsOrderWebhooks(desk: DeskCapabilityInput): boolean {
@@ -306,7 +306,7 @@ export function deskAllowsTemplateApply(desk: DeskCapabilityInput): boolean {
   const deskType = capabilityDeskType(desk);
   return (
     deskType === "dca" ||
-    deskType === "perps_bots" ||
+    deskType === "flex" ||
     deskType === "cash_and_carry"
   );
 }
@@ -331,8 +331,8 @@ export function deskManualBuySellBlockReason(
     return COPY_DESK_BLOCK;
   }
   const deskType = capabilityDeskType(desk);
-  if (deskType === "perps_bots") {
-    return "This is a Perps bots desk. Automations own orders. Buy and Sell are not on this ticket.";
+  if (deskType === "flex") {
+    return "This is a Flex desk. Automations own orders. Buy and Sell are not on this ticket.";
   }
   if (deskType === "dca") {
     return "This is a DCA desk. The bot owns orders. Buy and Sell are not on this ticket.";

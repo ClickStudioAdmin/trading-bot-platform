@@ -339,7 +339,7 @@ export function SaveAsTemplateButton({
     const action =
       kind === "dca"
         ? saveDcaAsTemplateAction
-        : kind === "perps"
+        : kind === "flex"
           ? savePerpsAsTemplateAction
           : savePaperAsTemplateAction;
     const next = await action(data);

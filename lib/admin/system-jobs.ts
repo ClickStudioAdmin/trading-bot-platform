@@ -36,7 +36,7 @@ export const SYSTEM_JOBS: readonly SystemJob[] = [
     id: "desk-tick",
     name: "Desk tick",
     runs: "Fly engine worker. The same cycle runs from POST /api/engine/tick and the admin footer Tick.",
-    cadence: `About every ${loopSeconds} seconds. A hot book (open futures row, armed or stop-adding DCA, or an active Perps recipe) uses the faster indicator loop. Up to 3 desks at once.`,
+    cadence: `About every ${loopSeconds} seconds. A hot book (open futures row, armed or stop-adding DCA, or an active Flex recipe) uses the faster indicator loop. Up to 3 desks at once.`,
     detail:
       "Claims desks with a Postgres lease, hot desks first, then idle books. One worker owns a desk until the lease ends. Paper desks use the in-app ledger. Live desks talk to the venue from the worker, not the browser. While a hot loop still has time left, percent stops and take profits are checked again from the ticker.",
     leaves:
@@ -48,7 +48,7 @@ export const SYSTEM_JOBS: readonly SystemJob[] = [
     runs: "Fly engine cycle, before desks are claimed.",
     cadence: `Scan lease ${ENGINE_SCAN_KEY}, ${ENGINE_SCAN_TTL_SECONDS} seconds. One worker wins the lease.`,
     detail:
-      "Loads the shared cash-and-carry opportunity scan when any cash-and-carry desk exists, and one linear ticker snapshot when any Perps, Perps bots, or DCA desk exists. Later desks in that cycle reuse the snapshot.",
+      "Loads the shared cash-and-carry opportunity scan when any cash-and-carry desk exists, and one linear ticker snapshot when any Manual, Flex, or DCA desk exists. Later desks in that cycle reuse the snapshot.",
     leaves: "Does not place orders. Does not read private exchange keys.",
   },
   {

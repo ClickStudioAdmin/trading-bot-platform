@@ -551,9 +551,9 @@ export const LUCIDE_ICONS = [
   },
   {
     id: "trending-up",
-    name: "Perps",
+    name: "Manual and Flex",
     lucide: "TrendingUp",
-    usedIn: "Desk Type",
+    usedIn: "Desk type",
     Icon: TrendingUp,
   },
   {

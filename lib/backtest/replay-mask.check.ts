@@ -89,7 +89,7 @@ function entry(partial: Partial<ReplayEntryInput> = {}): ReplayEntryInput {
 
 function shell(partial: Partial<PerpsTemplateRecipe> = {}): PerpsTemplateRecipe {
   return {
-    kind: "perps",
+    kind: "flex",
     name: "Mask",
     symbol: "ETHUSDT",
     formAction: "buy",

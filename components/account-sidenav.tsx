@@ -155,9 +155,9 @@ export function AccountSidenav({
           />
           <ManualDeskGroup
             className="mt-5"
-            desks={desks.filter((desk) => desk.deskType === "perps")}
+            desks={desks.filter((desk) => desk.deskType === "manual")}
             currentDeskId={currentDeskId}
-            creating={createDeskType === "perps"}
+            creating={createDeskType === "manual"}
             modeFilter={modeFilter.value}
           />
         </div>
@@ -393,9 +393,9 @@ function ManualDeskGroup({
         </p>
         {empty ? null : (
           <DeskTypeCreateLink
-            deskType="perps"
+            deskType="manual"
             creating={creating}
-            label="Create Perps desk"
+            label="Create Manual desk"
             className={`flex size-6 shrink-0 items-center justify-center rounded-control text-base leading-none ${
               creating
                 ? "bg-surface-raised text-ink"
@@ -416,9 +416,9 @@ function ManualDeskGroup({
         ))}
         {empty ? (
           <DeskTypeCreateLink
-            deskType="perps"
+            deskType="manual"
             creating={creating}
-            label="Create Perps desk"
+            label="Create Manual desk"
             className={`flex items-center gap-1.5 rounded-control px-3 py-2 text-sm ${
               creating
                 ? "bg-surface-raised text-ink"

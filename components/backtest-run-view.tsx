@@ -588,7 +588,7 @@ function backtestOverlayForRun(
 ) {
   return buildBacktestChartOverlay({
     triggerPrice:
-      run.recipe.kind === "perps" ? Number(run.recipe.triggerPrice) : null,
+      run.recipe.kind === "flex" ? Number(run.recipe.triggerPrice) : null,
     orders: run.orders,
     focusCycleId: extra?.focusCycleId,
     includeAdds: extra?.includeAdds,

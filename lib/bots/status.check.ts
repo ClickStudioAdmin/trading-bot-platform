@@ -127,7 +127,7 @@ assert.equal(
 );
 assert.equal(disableConfirmTitleFor(2), "Disable these bots?");
 assert.equal(
-  disableConfirmMessageFor("perps", 2),
+  disableConfirmMessageFor("flex", 2),
   "Disabled closes every position these bots own and turns them off.",
 );
 assert.equal(parseBotBulkAction("enable"), "enable");
@@ -149,7 +149,7 @@ assert.equal(
   null,
 );
 assert.equal(bulkModeFor("dca", "stop_adding"), "stop_adding");
-assert.equal(bulkModeFor("perps", "stop_adding"), "reduce_only");
+assert.equal(bulkModeFor("flex", "stop_adding"), "reduce_only");
 assert.equal(bulkModeFor("cnc", "disable"), "disabled");
 assert.equal(botCanTakeBulkAction("active", "stop_adding"), true);
 assert.equal(botCanTakeBulkAction("disabled", "stop_adding"), false);

@@ -97,7 +97,7 @@ export type AutomationsBotRow = {
   id: string;
   name: string;
   pair: string;
-  /** Set for a locked contract (DCA, Perps). Cash and Carry leaves this empty. */
+  /** Set for a locked contract (DCA, Flex). Cash and Carry leaves this empty. */
   baseCoin?: string;
   pairNote?: string;
   status: string;

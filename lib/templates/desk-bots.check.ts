@@ -84,7 +84,7 @@ const bots: TemplateDeskBot[] = [
     name: "Buy dip",
     deskId: "desk-p",
     deskName: "Perps",
-    deskType: "perps_bots",
+    deskType: "flex",
     recipe: perps,
   },
   {
@@ -101,7 +101,7 @@ const links = templateBotLinksByTemplate(
   [
     { id: "tpl-btc", deskType: "dca", recipe: btc },
     { id: "tpl-eth", deskType: "dca", recipe: eth },
-    { id: "tpl-perps", deskType: "perps", recipe: perps },
+    { id: "tpl-perps", deskType: "flex", recipe: perps },
     { id: "tpl-carry", deskType: "cash_and_carry", recipe: carry },
     { id: "tpl-none", deskType: "dca", recipe: { ...btc, symbol: "SOLUSDT" } },
   ],

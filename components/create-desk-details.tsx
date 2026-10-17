@@ -15,7 +15,7 @@ const DETAILS: Record<
       "Paper uses public marks and fills on the in-app ledger.",
     ],
   },
-  perps: {
+  manual: {
     summary: "Manual ticket only. Buy, sell, and close one perpetual.",
     points: [
       "No automations or webhooks on this desk.",
@@ -23,7 +23,7 @@ const DETAILS: Record<
       "Close All still flattens the book.",
     ],
   },
-  perps_bots: {
+  flex: {
     summary: "Price-cross automations own the orders. No buy / sell ticket.",
     points: [
       "Bots Buy, Sell, or Close when last, mark, or index crosses a price.",

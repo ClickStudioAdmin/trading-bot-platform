@@ -9,7 +9,7 @@ import {
 } from "./plan-overview";
 
 const features = emptyFeatures();
-features.desk_perps = true;
+features.desk_manual = true;
 features.desk_dca = true;
 features.extras_templates = true;
 features.copy_share = true;
@@ -61,8 +61,8 @@ function line(source: PlanOverviewGroup[], title: string, key: string) {
   return found;
 }
 
-assert.equal(line(groups, "Manual Desk Types", "feature:desk_perps").included, true);
-assert.equal(line(groups, "Manual Desk Types", "feature:desk_perps").text, "Included");
+assert.equal(line(groups, "Manual Desk Types", "feature:desk_manual").included, true);
+assert.equal(line(groups, "Manual Desk Types", "feature:desk_manual").text, "Included");
 assert.equal(
   line(groups, "Automated Desk Types", "feature:desk_cash_and_carry").text,
   "—",

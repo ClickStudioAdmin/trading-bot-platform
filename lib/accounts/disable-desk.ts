@@ -3,7 +3,7 @@ import {
   type DeskType,
 } from "@/lib/accounts/model";
 
-export type DeskDisableBotKind = "cnc" | "perps" | "dca" | "copy" | "none";
+export type DeskDisableBotKind = "cnc" | "flex" | "dca" | "copy" | "none";
 
 export function deskDisableBotKind(desk: {
   deskType: DeskType;
@@ -15,8 +15,8 @@ export function deskDisableBotKind(desk: {
   if (desk.deskType === "cash_and_carry") {
     return "cnc";
   }
-  if (desk.deskType === "perps_bots") {
-    return "perps";
+  if (desk.deskType === "flex") {
+    return "flex";
   }
   if (desk.deskType === "dca") {
     return "dca";

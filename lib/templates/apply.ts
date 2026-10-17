@@ -48,7 +48,7 @@ export type ApplyItemInput = {
 
 export type AppliedDeskItem =
   | { deskType: "dca"; playbook: DcaPlaybook }
-  | { deskType: "perps"; rule: FuturesAutomationFormValues }
+  | { deskType: "flex"; rule: FuturesAutomationFormValues }
   | { deskType: "cash_and_carry"; layer: PaperLayerFormValues };
 
 export type ApplyItemResult = {
@@ -250,16 +250,16 @@ async function applyPerpsTemplate(input: {
       templateId: input.template.id,
       name: input.template.name,
       ok: false,
-      error: "Perps bot templates apply to a Perps bots desk.",
+      error: "Flex templates apply to a Flex desk.",
       notes: [],
     };
   }
-  if (recipe.kind !== "perps") {
+  if (recipe.kind !== "flex") {
     return {
       templateId: input.template.id,
       name: input.template.name,
       ok: false,
-      error: "This template is not a Perps bot.",
+      error: "This template is not a Flex bot.",
       notes: [],
     };
   }
@@ -320,7 +320,7 @@ async function applyPerpsTemplate(input: {
     ok: true,
     notes: built.notes,
     applied: {
-      deskType: "perps",
+      deskType: "flex",
       rule: futuresRuleToForm(parseFuturesAutomationRow(data as Record<string, unknown>)),
     },
   };
@@ -498,8 +498,8 @@ export async function applyRecipeToDesk(input: {
   const deskType =
     input.recipe.kind === "dca"
       ? "dca"
-      : input.recipe.kind === "perps"
-        ? "perps"
+      : input.recipe.kind === "flex"
+        ? "flex"
         : "cash_and_carry";
   const template: AutomationTemplate = {
     id: "recipe",
@@ -566,7 +566,7 @@ async function applyLoadedTemplate(input: {
           webhookId: input.webhookId,
           desk,
         })
-      : template.deskType === "perps"
+      : template.deskType === "flex"
         ? await applyPerpsTemplate({
             userId: input.userId,
             accountId: input.accountId,

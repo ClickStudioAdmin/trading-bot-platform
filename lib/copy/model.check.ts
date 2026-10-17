@@ -525,7 +525,7 @@ if (gated.ok) {
 
 const shareBase = {
   mode: "live" as const,
-  deskType: "perps" as const,
+  deskType: "manual" as const,
   copyOfAccountId: null,
   bound: true,
   alias: "alpha",

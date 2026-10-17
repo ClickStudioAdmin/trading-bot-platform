@@ -48,7 +48,7 @@ export async function listDeskBacktestBots(
   ]);
   return [
     ...optionsForDesks(dcaDesks, playbooks, "dca"),
-    ...optionsForDesks(perpsDesks, rules, "perps"),
+    ...optionsForDesks(perpsDesks, rules, "flex"),
   ];
 }
 
@@ -96,11 +96,11 @@ export async function matchDeskBacktestBot(
 
 function parseDeskBotId(
   botId: string,
-): { kind: "dca" | "perps"; id: string } | null {
+): { kind: "dca" | "flex"; id: string } | null {
   const sep = botId.indexOf(":");
   const kind = botId.slice(0, sep);
   const id = botId.slice(sep + 1).trim();
-  if ((kind !== "dca" && kind !== "perps") || !id) {
+  if ((kind !== "dca" && kind !== "flex") || !id) {
     return null;
   }
   return { kind, id };
@@ -142,7 +142,7 @@ async function listBotSummaries(
 function optionsForDesks(
   desks: TradingAccount[],
   rows: BotSummary[],
-  kind: "dca" | "perps",
+  kind: "dca" | "flex",
 ): BacktestDeskBotOption[] {
   const byAccount = new Map<string, BotSummary[]>();
   for (const row of rows) {
@@ -169,7 +169,7 @@ function optionsForDesks(
 }
 
 async function recipeForBot(
-  parsed: { kind: "dca" | "perps"; id: string },
+  parsed: { kind: "dca" | "flex"; id: string },
   desks: TradingAccount[],
 ): Promise<BacktestDeskBot | null> {
   const supabase = createServiceClient();
@@ -208,7 +208,7 @@ async function loadCandidateRecipes(
     return [];
   }
   const dca = candidates.filter((row) => row.kind === "dca");
-  const perps = candidates.filter((row) => row.kind === "perps");
+  const perps = candidates.filter((row) => row.kind === "flex");
   const [playbooks, rules] = await Promise.all([
     loadRows(
       "dca_playbooks",
@@ -311,7 +311,7 @@ function botFromRule(
     id: `perps:${rule.id}`,
     name: recipe.name,
     symbol: recipe.symbol,
-    kind: "perps",
+    kind: "flex",
     deskId: desk.id,
     deskName: desk.name,
     recipe,

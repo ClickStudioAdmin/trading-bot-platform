@@ -12,7 +12,7 @@ Steps 1–8 in repo 13 Sep 2026. Stripe cards + `/account/billing` + Checkout em
 
 ## Purpose
 
-Enough Free to test (Paper, a small desk cap, core Perps/DCA, Chart). Named upgrade when they want Live, copy, backtest, or more desks. Admin defines the catalog. Gates stay **visible and disabled** with an **Upgrade** banner. Every platform login is an affiliate. People can also join from public `/affiliates` without a platform membership. Dashboard tabs: Overview, Network, Campaigns, URLs, Commissions, Payouts, Settings. Paid out as USDT (or export / later Connect).
+Enough Free to test (Paper, a small desk cap, core Flex/DCA, Chart). Named upgrade when they want Live, copy, backtest, or more desks. Admin defines the catalog. Gates stay **visible and disabled** with an **Upgrade** banner. Every platform login is an affiliate. People can also join from public `/affiliates` without a platform membership. Dashboard tabs: Overview, Network, Campaigns, URLs, Commissions, Payouts, Settings. Paid out as USDT (or export / later Connect).
 
 ## Current micro-step
 
@@ -44,7 +44,7 @@ Suggested seed (editable):
 
 | Plan | Price | Point of the gate |
 | --- | --- | --- |
-| Free | $0 | 1–2 Paper desks, Bybit only, Perps + DCA, Chart, no Live, no copy, no backtest |
+| Free | $0 | 1–2 Paper desks, Bybit only, Manual, Flex, and DCA, Chart, no Live, no copy, no backtest |
 | Plus | paid | Live desks (small cap), copy follow + share + catalogue, webhooks, templates, maybe one venue |
 | Pro | higher | Backtest, more desks |
 
@@ -52,7 +52,7 @@ Recommend **Chart free, backtest paid**. Scale-in feature flag stays off until V
 
 ### Features (on / off)
 
-Desk types are ticks, not per-type counts. **Manual Desk Types:** Perps. **Automated Desk Types:** Perps, DCA, Cash & Carry, TradingView Strategy. Scale-in stays off the catalog until that desk type exists. Positions Chart and Starter Pack apply are not plan features. Each editor row outside Affiliates can also offer a free trial (a tick and days, and a higher cap while that clock runs). The member clock and the after-trial read-versus-create rule are in [phase-entitlements.md](phase-entitlements.md).
+Desk types are ticks, not per-type counts. **Manual Desk Types:** Manual. **Automated Desk Types:** Flex, DCA, Cash & Carry, TradingView Strategy. Scale-in stays off the catalog until that desk type exists. Positions Chart and Starter Pack apply are not plan features. Each editor row outside Affiliates can also offer a free trial (a tick and days, and a higher cap while that clock runs). The member clock and the after-trial read-versus-create rule are in [phase-entitlements.md](phase-entitlements.md).
 
 Copy: Copy other Trader's Desks, Max Desk Copies, Desk Sharing - Public, Desk Sharing - Private.
 

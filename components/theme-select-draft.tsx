@@ -7,7 +7,7 @@ const ACTION_MENU = [
   { value: "", label: "Choose a desk" },
   { value: "dca-btc", label: "DCA · BTCUSDT" },
   { value: "dca-eth", label: "DCA · ETHUSDT" },
-  { value: "perps-sol", label: "Perps · SOLUSDT" },
+  { value: "flex-sol", label: "Flex · SOLUSDT" },
 ];
 
 const VENUES = [

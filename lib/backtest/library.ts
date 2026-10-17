@@ -23,7 +23,7 @@ export type BacktestDeskBot = {
   id: string;
   name: string;
   symbol: string;
-  kind: "dca" | "perps";
+  kind: "dca" | "flex";
   deskId: string;
   deskName: string;
   recipe: BacktestRecipe;
@@ -40,7 +40,7 @@ export function toBacktestLibraryItem(row: {
   symbol?: string;
   parentRunId?: string | null;
 }): BacktestLibraryItem | null {
-  if (row.recipe.kind !== "perps" && row.recipe.kind !== "dca") {
+  if (row.recipe.kind !== "flex" && row.recipe.kind !== "dca") {
     return null;
   }
   const recipeName = String(row.recipe.name ?? "").trim();
@@ -89,12 +89,12 @@ export function inheritPlatformBacktests<T>(
     if (template.visibility !== "user" || hasAttachedBacktests(next[template.id])) {
       continue;
     }
-    if (template.recipe.kind !== "dca" && template.recipe.kind !== "perps") {
+    if (template.recipe.kind !== "dca" && template.recipe.kind !== "flex") {
       continue;
     }
     const twin = platform.find(
       (row) =>
-        (row.recipe.kind === "dca" || row.recipe.kind === "perps") &&
+        (row.recipe.kind === "dca" || row.recipe.kind === "flex") &&
         hasAttachedBacktests(byTemplateId[row.id]) &&
         recipesMatchReplayFields(template.recipe, row.recipe),
     );
@@ -125,11 +125,11 @@ export function matchingPlatformTemplateIds(
     if (!requested.has(template.id) || template.visibility !== "user") {
       continue;
     }
-    if (template.recipe.kind !== "dca" && template.recipe.kind !== "perps") {
+    if (template.recipe.kind !== "dca" && template.recipe.kind !== "flex") {
       continue;
     }
     for (const row of platform) {
-      if (row.recipe.kind !== "dca" && row.recipe.kind !== "perps") {
+      if (row.recipe.kind !== "dca" && row.recipe.kind !== "flex") {
         continue;
       }
       if (!recipesMatchReplayFields(template.recipe, row.recipe)) {
@@ -208,7 +208,7 @@ export type BacktestDeskBotOption = {
   id: string;
   name: string;
   symbol: string;
-  kind: "dca" | "perps";
+  kind: "dca" | "flex";
   deskId: string;
   deskName: string;
   venue: string;
@@ -217,10 +217,10 @@ export type BacktestDeskBotOption = {
 
 /** Same symbol and kind. The full recipe is loaded only for these rows. */
 export function deskBacktestBotCandidates<
-  T extends { kind: "dca" | "perps"; symbol: string },
+  T extends { kind: "dca" | "flex"; symbol: string },
 >(options: readonly T[], recipe: { kind: string; symbol: string }): T[] {
   const symbol = recipe.symbol.trim().toUpperCase();
-  if (recipe.kind !== "dca" && recipe.kind !== "perps") {
+  if (recipe.kind !== "dca" && recipe.kind !== "flex") {
     return [];
   }
   return options.filter(
@@ -343,14 +343,14 @@ export function readBacktestRecipeJson(
     return { ok: false, error: "Load a bot or pick a template to backtest." };
   }
   const kind = (value as { kind?: string }).kind;
-  if (kind !== "dca" && kind !== "perps") {
+  if (kind !== "dca" && kind !== "flex") {
     return { ok: false, error: "Load a bot or pick a template to backtest." };
   }
   const parsed = parseTemplateRecipe(value, kind, TEMPLATE_RECIPE_VERSION);
   if (!parsed.ok) {
     return parsed;
   }
-  if (parsed.recipe.kind !== "dca" && parsed.recipe.kind !== "perps") {
+  if (parsed.recipe.kind !== "dca" && parsed.recipe.kind !== "flex") {
     return { ok: false, error: "Load a bot or pick a template to backtest." };
   }
   return { ok: true, recipe: parsed.recipe };

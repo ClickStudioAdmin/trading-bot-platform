@@ -14,13 +14,13 @@ const DESKS: {
       "Harvest the basis between USDT spot and a dated future on the same venue.",
   },
   {
-    id: "perps",
-    deskType: "perps",
+    id: "manual",
+    deskType: "manual",
     summary: "Buy, sell, and close one perpetual from the desk ticket. No bots.",
   },
   {
-    id: "perps-bots",
-    deskType: "perps_bots",
+    id: "flex",
+    deskType: "flex",
     summary: "Price-cross automations own the orders. No buy / sell ticket.",
   },
   {
@@ -40,7 +40,7 @@ const DESKS: {
 const STEPS = [
   {
     title: "Create a typed desk",
-    body: "Cash and Carry, Perps, Perps bots, TradingView Strategy, or DCA. Type is set at create and never changes.",
+    body: "Cash and Carry, Manual, Flex, TradingView Strategy, or DCA. Type is set at create and never changes.",
   },
   {
     title: "Paper or Connected Exchange",

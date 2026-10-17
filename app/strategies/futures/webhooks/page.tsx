@@ -36,7 +36,7 @@ export default async function FuturesWebhooksPage({
   const params = await searchParams;
   const session = await getSessionContext();
   const href = (path: string) => deskHref(path, session?.account.id);
-  const deskType = session?.account.deskType ?? "perps";
+  const deskType = session?.account.deskType ?? "manual";
   const allowSignal = session
     ? deskAllowsSignalWebhooks(session.account)
     : deskAllowsSignalWebhooks(deskType);

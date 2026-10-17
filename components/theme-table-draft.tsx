@@ -55,7 +55,7 @@ const THEME_COLUMN_DEFAULTS: Record<ThemeOptionalColumn, boolean> = {
   updated: true,
 };
 
-const TYPES = ["DCA", "Perps bots", "Cash and Carry"] as const;
+const TYPES = ["DCA", "Flex", "Cash and Carry"] as const;
 const STATUSES = ["active", "disabled", "pending", "error"] as const;
 const VENUES = ["Bybit", "Hyperliquid"] as const;
 
@@ -76,28 +76,28 @@ type SampleRow = {
 const SAMPLE_ROWS: SampleRow[] = [
   row("1", "BTC ladder", "DCA", "active", "Bybit", "17 Sep 2026", 17),
   row("2", "ETH grid", "DCA", "pending", "Bybit", "16 Sep 2026", 16),
-  row("3", "SOL perps", "Perps bots", "active", "Hyperliquid", "16 Sep 2026", 16),
+  row("3", "SOL perps", "Flex", "active", "Hyperliquid", "16 Sep 2026", 16),
   row("4", "Carry main", "Cash and Carry", "disabled", "Bybit", "15 Sep 2026", 15),
-  row("5", "DOGE scalp", "Perps bots", "error", "Bybit", "15 Sep 2026", 15),
+  row("5", "DOGE scalp", "Flex", "error", "Bybit", "15 Sep 2026", 15),
   row("6", "BTC paper", "DCA", "active", "Bybit", "14 Sep 2026", 14),
   row("7", "ETH live", "DCA", "active", "Hyperliquid", "14 Sep 2026", 14),
   row("8", "Carry hedge", "Cash and Carry", "pending", "Bybit", "13 Sep 2026", 13),
-  row("9", "ARB trend", "Perps bots", "disabled", "Hyperliquid", "13 Sep 2026", 13),
-  row("10", "OP fade", "Perps bots", "active", "Bybit", "12 Sep 2026", 12),
+  row("9", "ARB trend", "Flex", "disabled", "Hyperliquid", "13 Sep 2026", 13),
+  row("10", "OP fade", "Flex", "active", "Bybit", "12 Sep 2026", 12),
   row("11", "BTC big", "DCA", "error", "Bybit", "12 Sep 2026", 12),
   row("12", "ETH big", "DCA", "active", "Hyperliquid", "11 Sep 2026", 11),
   row("13", "Carry alt", "Cash and Carry", "active", "Bybit", "11 Sep 2026", 11),
-  row("14", "SOL paper", "Perps bots", "disabled", "Bybit", "10 Sep 2026", 10),
+  row("14", "SOL paper", "Flex", "disabled", "Bybit", "10 Sep 2026", 10),
   row("15", "LINK grid", "DCA", "pending", "Bybit", "10 Sep 2026", 10),
-  row("16", "AVAX scalp", "Perps bots", "active", "Hyperliquid", "9 Sep 2026", 9),
+  row("16", "AVAX scalp", "Flex", "active", "Hyperliquid", "9 Sep 2026", 9),
   row("17", "XRP carry", "Cash and Carry", "error", "Bybit", "9 Sep 2026", 9),
   row("18", "NEAR dca", "DCA", "active", "Bybit", "8 Sep 2026", 8),
-  row("19", "SUI perps", "Perps bots", "pending", "Hyperliquid", "8 Sep 2026", 8),
-  row("20", "TIA fade", "Perps bots", "disabled", "Bybit", "7 Sep 2026", 7),
+  row("19", "SUI perps", "Flex", "pending", "Hyperliquid", "8 Sep 2026", 8),
+  row("20", "TIA fade", "Flex", "disabled", "Bybit", "7 Sep 2026", 7),
   row("21", "WIF ladder", "DCA", "active", "Bybit", "7 Sep 2026", 7),
   row("22", "PEPE grid", "DCA", "error", "Hyperliquid", "6 Sep 2026", 6),
   row("23", "Carry BTC", "Cash and Carry", "active", "Bybit", "6 Sep 2026", 6),
-  row("24", "HYPE trend", "Perps bots", "active", "Hyperliquid", "5 Sep 2026", 5),
+  row("24", "HYPE trend", "Flex", "active", "Hyperliquid", "5 Sep 2026", 5),
 ];
 
 function row(

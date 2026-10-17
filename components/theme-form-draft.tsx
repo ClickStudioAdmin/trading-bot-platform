@@ -35,7 +35,7 @@ const CONTRACTS = [
 const ACTION_MENU = [
   { value: "", label: "Choose a desk" },
   { value: "dca-btc", label: "DCA · BTCUSDT" },
-  { value: "perps-sol", label: "Perps · SOLUSDT" },
+  { value: "flex-sol", label: "Flex · SOLUSDT" },
 ];
 
 export function ThemeFormDraft() {

@@ -4,7 +4,7 @@ Not a phase. Not ordered. Not a V1 gate. Work these during V1 system test or whe
 
 1. Test TradingView webhooks (live alerts, not only the Positions dummy). See [phase-9.md](phase-9.md) Later.
 2. Test all DCA indicator and Trend start triggers (RSI / MACD / EMA / Supertrend, sit vs cross, timeframes). Compare on **Bybit** (same pair and timeframe, last closed candle), not Binance.
-3. More testing on **Perps** (ticket), **Perps bots**, and **TradingView Strategy** desks.
+3. More testing on **Manual** (ticket), **Flex**, and **TradingView Strategy** desks.
 4. Discuss multiple pairs on one DCA bot (including virtual amounts / virtual lots). Today one live playbook owns one contract. Members cannot share a key or the same venue account. Admins may reuse one saved key across desks for testing. Folders already stamp several pairs as separate bots. Do not build multi-pair, virtual size, or 3Commas-style deals until Click locks that design (V2).
 5. Review **near-only live DCA grid**. Today live rests six rungs per pass, nearest first, but far GTC stays on Bybit. Click asked about only placing limits inside a band (e.g. 3%). Prefer a working set (next 4–6 unfilled rungs nearest mark, cancel the rest) over a fixed %. Playbook knob, not a global. Trade-off: less venue load vs missing a fast dump through empty rungs. Shelved 29 Aug 2026.
 6. Refine **backtesting flow** (queue, worker drain, replay fields, run detail, save/attach). See [phase-backtesting.md](phase-backtesting.md). Added 30 Aug 2026; restated 1 Sep 2026. **Consolidate back testing and optimization** is parked ([phase-backtest-optimize.md](phase-backtest-optimize.md)).

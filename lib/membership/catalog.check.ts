@@ -305,11 +305,11 @@ const manualDesks = PLAN_COMPARE_SECTIONS.find(
 );
 assert.ok(manualDesks);
 assert.equal(manualDesks.rows[0].kind, "feature");
-assert.equal(manualDesks.rows[0].key, "desk_perps");
+assert.equal(manualDesks.rows[0].key, "desk_manual");
 assert.equal(
-  manualDesks.rows.find((row) => row.kind === "feature" && row.key === "desk_perps")
+  manualDesks.rows.find((row) => row.kind === "feature" && row.key === "desk_manual")
     ?.label,
-  "Perps",
+  "Manual",
 );
 const automatedDesks = PLAN_COMPARE_SECTIONS.find(
   (section) => section.title === "Automated Desk Types",

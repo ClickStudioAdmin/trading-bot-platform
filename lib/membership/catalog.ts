@@ -8,8 +8,8 @@ export const AFFILIATE_PCT_MAX = 100;
 
 export const PLAN_FEATURE_KEYS = [
   "desk_cash_and_carry",
-  "desk_perps",
-  "desk_perps_bots",
+  "desk_manual",
+  "desk_flex",
   "desk_signal_follower",
   "desk_dca",
   "desk_scale_in",
@@ -53,8 +53,8 @@ export type PlanCaps = Record<PlanCapKey, number | null>;
 
 export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   desk_cash_and_carry: "Cash & Carry",
-  desk_perps: "Perps",
-  desk_perps_bots: "Perps bots",
+  desk_manual: "Manual",
+  desk_flex: "Flex",
   desk_signal_follower: "TradingView Strategy",
   desk_dca: "DCA",
   desk_scale_in: "Scale-in (off until that desk type exists)",
@@ -356,14 +356,14 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
   {
     title: "Manual Desk Types",
     rows: [
-      { kind: "feature", key: "desk_perps", label: "Perps" },
+      { kind: "feature", key: "desk_manual", label: "Manual" },
     ],
   },
   {
     title: "Automated Desk Types",
     fixedOrder: true,
     rows: [
-      { kind: "feature", key: "desk_perps_bots", label: "Perps" },
+      { kind: "feature", key: "desk_flex", label: "Flex" },
       { kind: "feature", key: "desk_dca", label: "DCA" },
       { kind: "feature", key: "desk_cash_and_carry", label: "Cash & Carry" },
       { kind: "feature", key: "desk_signal_follower", label: "TradingView Strategy" },
@@ -552,8 +552,8 @@ export function publicCatalogPlans(
 export function coreDeskFeaturesOn(): Pick<
   PlanFeatures,
   | "desk_cash_and_carry"
-  | "desk_perps"
-  | "desk_perps_bots"
+  | "desk_manual"
+  | "desk_flex"
   | "desk_signal_follower"
   | "desk_dca"
   | "mode_paper"
@@ -561,8 +561,8 @@ export function coreDeskFeaturesOn(): Pick<
 > {
   return {
     desk_cash_and_carry: true,
-    desk_perps: true,
-    desk_perps_bots: true,
+    desk_manual: true,
+    desk_flex: true,
     desk_signal_follower: true,
     desk_dca: true,
     mode_paper: true,
