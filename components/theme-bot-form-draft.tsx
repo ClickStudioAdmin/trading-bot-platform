@@ -57,6 +57,7 @@ import {
   exitClausesFromSaved,
   type ExitBuilderClause,
 } from "@/lib/strategy/exit-clauses";
+import { exitCardsBlockReason } from "@/lib/strategy/exit-actions";
 import {
   EntryConditionStack,
   entryConflictSlots,
@@ -1198,8 +1199,12 @@ export function ThemeBotFormDraft() {
           !(desk === "flex" && row.draft.kind === "unset") &&
           !entryDraftComplete(row.draft),
       ),
-    exitKind: desk !== "cnc" && exitClauseListMissing(exitClauses),
-    shortExitKind: themeBothExits && exitClauseListMissing(shortClauses),
+    exitKind:
+      desk !== "cnc" &&
+      (exitClauseListMissing(exitClauses) || Boolean(exitCardsBlockReason(exitClauses))),
+    shortExitKind:
+      themeBothExits &&
+      (exitClauseListMissing(shortClauses) || Boolean(exitCardsBlockReason(shortClauses))),
     priceLevel: requirePrice && !filled(priceLevel),
     shortPriceLevel: requireShortPrice && !filled(shortPriceLevel),
     limitPrice: requireLimitPrice,
@@ -1668,7 +1673,7 @@ export function ThemeBotFormDraft() {
             invalid={valueInvalid}
           />
         ) : (
-          <div className={rowClass}>
+          <div className={`${rowClass} [&>*]:min-w-0`}>
             <Field label="Type" required>
               <AppSelect
                 className={fieldClass}
@@ -1759,7 +1764,7 @@ export function ThemeBotFormDraft() {
     const valueInvalid =
       showFieldErrors && (shortLeg ? missing.shortTrailValue : missing.trailValue);
     return (
-      <div className={rowClass}>
+      <div className={`${rowClass} [&>*]:min-w-0`}>
         {desk === "dca" ? (
           <>
             <Field
@@ -1839,8 +1844,8 @@ export function ThemeBotFormDraft() {
         <div
           className={
             desk === "dca"
-              ? "grid grid-cols-2 items-start gap-4 @min-[40rem]:grid-cols-4"
-              : "grid items-start gap-4 @min-[40rem]:grid-cols-2"
+              ? "grid grid-cols-2 items-start gap-4 [&>*]:min-w-0 @min-[40rem]:grid-cols-4"
+              : "grid items-start gap-4 [&>*]:min-w-0 @min-[40rem]:grid-cols-2"
           }
         >
           {desk === "dca" ? (
@@ -1871,7 +1876,7 @@ export function ThemeBotFormDraft() {
               </Field>
             </>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 [&>*]:min-w-0">
               <Field label="Type" required>
                 <AppSelect
                   className={fieldClass}
@@ -3023,7 +3028,6 @@ export function ThemeBotFormDraft() {
               webhooks={themeWebhooks}
               fieldClass={fieldClass}
               labelClass={labelClass}
-              gridClass={rowClass5}
               showErrors={showFieldErrors}
               renderTakeProfit={() => themeTakeProfitFields("primary")}
               renderTrailingStop={() => themeTrailingFields("primary")}
@@ -3055,7 +3059,6 @@ export function ThemeBotFormDraft() {
               webhooks={themeWebhooks}
               fieldClass={fieldClass}
               labelClass={labelClass}
-              gridClass={rowClass5}
               showErrors={showFieldErrors}
               renderTakeProfit={() =>
                 themeTakeProfitFields(themeBothExits ? "short" : "primary")
@@ -3625,7 +3628,7 @@ function ExitMethodFields({
   invalid?: boolean;
 }) {
   return (
-    <div className={rowClass}>
+    <div className={`${rowClass} [&>*]:min-w-0`}>
       <Field label="Basis" required>
         <AppSelect
           className={fieldClass}

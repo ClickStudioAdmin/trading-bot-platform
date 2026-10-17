@@ -82,6 +82,7 @@ export function HardExitFields({
   disabledWebhookIds = [],
   showTrigger = true,
   showErrors = false,
+  embed = false,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -100,6 +101,8 @@ export function HardExitFields({
   showTrigger?: boolean;
   /** Paint empty required controls after the form has been edited. */
   showErrors?: boolean;
+  /** Join these fields to the parent grid instead of starting a new row. */
+  embed?: boolean;
 }) {
   const column = useBotColumnLayout();
   const webhookChoices =
@@ -108,13 +111,17 @@ export function HardExitFields({
     !webhooks.some((hook) => hook.id === value.webhookId)
       ? [...webhooks, { id: value.webhookId, name: "Webhook (removed)" }]
       : webhooks;
+  const triggerInput =
+    showTrigger || !named || value.trigger === "unset" ? null : (
+      <input type="hidden" name={`${prefix}Trigger`} value={value.trigger} />
+    );
   return (
-    <div className={gridClass}>
-      {showTrigger ? null : named && value.trigger !== "unset" ? (
-        <input type="hidden" name={`${prefix}Trigger`} value={value.trigger} />
-      ) : null}
+    <>
+    {embed ? triggerInput : null}
+    <div className={embed ? "contents" : gridClass}>
+      {embed ? null : triggerInput}
       {showTrigger ? (
-      <label className={`${labelClass} whitespace-nowrap`}>
+      <label className={`${labelClass} min-w-0 whitespace-nowrap`}>
         <HintLabel text="Condition Type" required />
         <AppSelect
           name={named ? `${prefix}Trigger` : undefined}
@@ -156,7 +163,7 @@ export function HardExitFields({
       ) : null}
       {value.trigger === "price" ? (
         <>
-          <label className={labelClass}>
+          <label className={`${labelClass} min-w-0`}>
             <HintLabel text="Price source" required />
             <AppSelect
               name={named ? `${prefix}TriggerBy` : undefined}
@@ -193,7 +200,7 @@ export function HardExitFields({
               ))}
             </AppSelect>
           </label>
-          <label className={labelClass}>
+          <label className={`${labelClass} min-w-0`}>
             <HintLabel text="Compare" required />
             <AppSelect
               name={named ? `${prefix}TriggerCompare` : undefined}
@@ -226,7 +233,7 @@ export function HardExitFields({
               ))}
             </AppSelect>
           </label>
-          <label className={labelClass}>
+          <label className={`${labelClass} min-w-0`}>
             <HintLabel text="Price" required />
             <GroupedNumberInput
               name={named ? `${prefix}TriggerPrice` : undefined}
@@ -242,7 +249,7 @@ export function HardExitFields({
           </label>
         </>
       ) : value.trigger === "webhook" ? (
-        <label className={`${labelClass} col-span-full`}>
+        <label className={`${labelClass} col-span-full min-w-0`}>
           <HintLabel text="Webhook" required />
           <AppSelect
             name={named ? `${prefix}WebhookId` : undefined}
@@ -276,7 +283,7 @@ export function HardExitFields({
           </AppSelect>
         </label>
       ) : value.trigger === "unset" ? null : value.spec == null ? (
-        <label className={labelClass}>
+        <label className={`${labelClass} min-w-0`}>
           <HintLabel text="Indicator" required />
           <AppSelect
             name={named ? `${prefix}Kind` : undefined}
@@ -382,5 +389,6 @@ export function HardExitFields({
         </div>
       )}
     </div>
+    </>
   );
 }

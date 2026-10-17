@@ -13,14 +13,41 @@ export type ExitClauseKind = "" | (typeof EXIT_CLAUSE_KINDS)[number];
 
 export type ClassicExitKind = "take_profit" | "trailing_stop" | "stop_loss";
 
-/** One top-level exit. Clauses are joined with Or. */
+/** How much of the open position one action may reduce. */
+export type ExitScope =
+  | { kind: "all" }
+  | { kind: "remainder" }
+  | { kind: "percent"; pct: number | null }
+  | { kind: "qty"; qty: number | null }
+  | { kind: "fills"; minProfitPct: number | null };
+
+export const EXIT_SCOPE_ALL: ExitScope = { kind: "all" };
+
+/** An Or group after the first And group on one action. */
+export type ExitOrGroup = {
+  key: string;
+  anchor: HardExitDraft;
+  rows: ExitStackRow[];
+};
+
+/**
+ * One exit action. Price actions arm from `anchor` / `rows` / `orGroups`.
+ * A custom action is Close, and that stack is what makes it fire.
+ */
 export type ExitBuilderClause = {
   key: string;
   kind: ExitClauseKind;
-  /** First advanced condition in this group. */
+  /** First condition in this action. Unset means the price action has no arm stack. */
   anchor: HardExitDraft;
-  /** Further custom conditions. They join the anchor with And. */
+  /** Further conditions. They join the anchor with And. */
   rows: ExitStackRow[];
+  /** Later condition groups. Each joins the first group with Or. */
+  orGroups: ExitOrGroup[];
+  scope: ExitScope;
+  /** Target for a repeated take profit or stop. The first card uses the side fields. */
+  ownPct: number | null;
+  /** Distance for a repeated trailing stop. */
+  ownDistance: number | null;
 };
 
 function clauseKey(prefix: string): string {
@@ -37,6 +64,10 @@ export function emptyExitClause(): ExitBuilderClause {
     kind: "",
     anchor: { trigger: "unset" },
     rows: [],
+    orGroups: [],
+    scope: EXIT_SCOPE_ALL,
+    ownPct: null,
+    ownDistance: null,
   };
 }
 
@@ -46,6 +77,10 @@ export function classicExitClause(kind: ClassicExitKind): ExitBuilderClause {
     kind,
     anchor: { trigger: "unset" },
     rows: [],
+    orGroups: [],
+    scope: EXIT_SCOPE_ALL,
+    ownPct: null,
+    ownDistance: null,
   };
 }
 
@@ -59,7 +94,19 @@ export function customExitClause(
     kind: "custom",
     anchor,
     rows: rows.map((row) => ({ ...row, join: "and" as const })),
+    orGroups: [],
+    scope: EXIT_SCOPE_ALL,
+    ownPct: null,
+    ownDistance: null,
   };
+}
+
+export function clauseScope(clause: ExitBuilderClause): ExitScope {
+  return clause.scope ?? EXIT_SCOPE_ALL;
+}
+
+export function clauseOrGroups(clause: ExitBuilderClause): ExitOrGroup[] {
+  return clause.orGroups ?? [];
 }
 
 export function classicSignature(clauses: readonly ExitBuilderClause[]): string {
@@ -123,7 +170,16 @@ export function syncClassicClauses(
     .filter((clause): clause is ExitBuilderClause & { kind: ClassicExitKind } =>
       isClassicExitKind(clause.kind),
     )
-    .map((clause) => classicExitClause(clause.kind));
+    .map((clause) => ({
+      ...classicExitClause(clause.kind),
+      key: clause.key,
+      anchor: clause.anchor,
+      rows: clause.rows,
+      orGroups: clauseOrGroups(clause),
+      scope: clauseScope(clause),
+      ownPct: clause.ownPct ?? null,
+      ownDistance: clause.ownDistance ?? null,
+    }));
   const custom = target.filter((clause) => clause.kind === "custom");
   if (classics.length === 0 && custom.length === 0) {
     const empty = target.find((clause) => clause.kind === "");
@@ -137,7 +193,11 @@ export function customConditionCount(clauses: readonly ExitBuilderClause[]): num
     if (clause.kind !== "custom") {
       return count;
     }
-    return count + 1 + clause.rows.length;
+    const extra = clauseOrGroups(clause).reduce(
+      (sum, group) => sum + 1 + group.rows.length,
+      0,
+    );
+    return count + 1 + clause.rows.length + extra;
   }, 0);
 }
 
@@ -182,17 +242,22 @@ function customClausesFromStack(
       groups[groups.length - 1]?.push(row);
     }
   }
-  const clauses: ExitBuilderClause[] = [
-    customExitClause(lead, groups[0] ?? []),
-  ];
-  for (const group of groups.slice(1)) {
+  const [leadGroup, ...orGroups] = groups;
+  const clause = customExitClause(lead, leadGroup ?? []);
+  clause.orGroups = orGroups.flatMap((group) => {
     const [head, ...tail] = group;
     if (!head) {
-      continue;
+      return [];
     }
-    clauses.push(customExitClause(head.draft, tail, head.key));
-  }
-  return clauses;
+    return [
+      {
+        key: head.key,
+        anchor: head.draft,
+        rows: tail.map((row) => ({ ...row, join: "and" as const })),
+      },
+    ];
+  });
+  return [clause];
 }
 
 /** Custom clauses become the stored anchor plus And/Or rows. */
@@ -200,8 +265,7 @@ export function customStackFromClauses(clauses: readonly ExitBuilderClause[]): {
   anchor: HardExitDraft | null;
   rows: ExitStackRow[];
 } {
-  const custom = clauses.filter((clause) => clause.kind === "custom");
-  const [first, ...rest] = custom;
+  const first = clauses.find((clause) => clause.kind === "custom");
   if (!first) {
     return { anchor: null, rows: [] };
   }
@@ -209,7 +273,7 @@ export function customStackFromClauses(clauses: readonly ExitBuilderClause[]): {
     ...row,
     join: "and" as StrategyJoin,
   }));
-  for (const group of rest) {
+  for (const group of clauseOrGroups(first)) {
     rows.push({
       key: group.key,
       join: "or",
