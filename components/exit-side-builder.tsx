@@ -562,7 +562,11 @@ export function ExitSideBuilder({
                     onAnchor={(value) => setAnchor(clause, value)}
                     onPatch={(update) => patch(clause.key, update)}
                   />
-                  {canAddRow ? <AddConditionButton onClick={() => addRow(clause)} /> : null}
+                  {canAddRow ? (
+                    <div className="col-span-full w-full">
+                      <AddConditionButton onClick={() => addRow(clause)} />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </section>
