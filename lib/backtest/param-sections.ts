@@ -672,7 +672,91 @@ function nestBreakeven(
   return { title: group.title, rows: [...group.rows, ...extra] };
 }
 
+function repeatLevelRows(action: StoredExitAction): ParamRow[] {
+  const levels = action.levels;
+  if (!levels) {
+    return [];
+  }
+  const flex = levels.style === "flex";
+  if (action.kind === "take_profit") {
+    if (flex) {
+      const percent = levels.method === "percent";
+      const rows: ParamRow[] = [
+        { label: "Type", value: percent ? "Percentage" : "Price" },
+        { label: percent ? "%" : "Price", value: levels.target || "—" },
+        { label: "Trigger", value: priceSourceLabel(levels.trigger) },
+        { label: "Order type", value: orderLabel(levels.orderType === "limit") },
+      ];
+      if (levels.orderType === "limit") {
+        rows.push({ label: "Limit price", value: levels.limitPrice || "—" });
+      }
+      return rows;
+    }
+    const rows: ParamRow[] = [
+      { label: "Basis", value: basisLabel(levels.basis) },
+      {
+        label: "Method",
+        value: levels.method === "atr" ? "ATR × multiplier" : "Percentage",
+      },
+    ];
+    if (levels.method === "atr") {
+      rows.push({ label: "ATR period", value: levels.atrPeriod || "—" });
+      rows.push({ label: "ATR multiple", value: levels.atrMult || "—" });
+    } else {
+      rows.push({ label: "Target %", value: levels.target ? pct(levels.target) : "—" });
+    }
+    rows.push({ label: "Order type", value: orderLabel(levels.orderType === "limit") });
+    return rows;
+  }
+  if (action.kind === "stop_loss") {
+    if (flex) {
+      const percent = levels.method === "percent";
+      const rows: ParamRow[] = [
+        { label: "Type", value: percent ? "Percentage" : "Price" },
+        { label: percent ? "%" : "Price", value: levels.target || "—" },
+        { label: "Trigger", value: priceSourceLabel(levels.trigger) },
+        { label: "Order type", value: orderLabel(levels.orderType === "limit") },
+      ];
+      if (levels.orderType === "limit") {
+        rows.push({ label: "Limit price", value: levels.limitPrice || "—" });
+      }
+      return rows;
+    }
+    const rows: ParamRow[] = [
+      { label: "Basis", value: basisLabel(levels.basis) },
+      { label: "Stop loss %", value: levels.target ? pct(levels.target) : "—" },
+    ];
+    if (levels.breakeven) {
+      rows.push({
+        label: "Move stop to breakeven at %",
+        value: pct(levels.breakevenActivation),
+      });
+      rows.push({
+        label: "Breakeven offset %",
+        value: pct(levels.breakevenOffset || "0"),
+      });
+    }
+    return rows;
+  }
+  if (action.kind === "trailing_stop") {
+    if (flex) {
+      return [
+        { label: "Retracement", value: levels.trail || "—" },
+        { label: "Activation price", value: levels.trigger || "—" },
+      ];
+    }
+    return [
+      { label: "Trigger %", value: levels.trigger ? pct(levels.trigger) : "—" },
+      { label: "Trailing %", value: levels.trail ? pct(levels.trail) : "—" },
+    ];
+  }
+  return [];
+}
+
 function actionPriceRows(action: StoredExitAction): ParamRow[] {
+  if (action.levels) {
+    return repeatLevelRows(action);
+  }
   if (action.kind === "take_profit") {
     if (action.takeProfitPrice != null) {
       return [{ label: "Target price", value: num(action.takeProfitPrice) }];

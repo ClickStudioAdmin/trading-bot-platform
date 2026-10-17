@@ -3,6 +3,7 @@ import {
   classicExitClause,
   customExitClause,
   emptyExitClause,
+  emptyRepeatLevels,
 } from "./exit-clauses";
 import {
   clausesFromExitActions,
@@ -413,5 +414,91 @@ const round = clausesFromExitActions(exitActionsFromJson(saved));
 assert.equal(round?.[0]?.kind, "trailing_stop");
 assert.equal(round?.[0]?.anchor.trigger, "trail");
 assert.equal(round?.[0]?.rows[0]?.draft.trigger, "trend");
+
+const firstTp = classicExitClause("take_profit");
+const secondTp = classicExitClause("take_profit");
+secondTp.key = "tp-2";
+secondTp.scope = { kind: "percent", pct: 25 };
+secondTp.levels = {
+  ...emptyRepeatLevels(),
+  style: "dca",
+  method: "percent",
+  basis: "first_entry",
+  target: "4",
+  orderType: "limit",
+};
+const secondSaved = exitActionsForSave([firstTp, secondTp], prices);
+assert.equal(secondSaved?.[1]?.takeProfitPct, 4);
+assert.equal(secondSaved?.[1]?.levels?.basis, "first_entry");
+assert.equal(secondSaved?.[1]?.levels?.orderType, "limit");
+assert.equal(secondSaved?.[1]?.levels?.method, "percent");
+const secondRound = clausesFromExitActions(exitActionsFromJson(secondSaved));
+assert.equal(secondRound?.[1]?.levels?.basis, "first_entry");
+assert.equal(secondRound?.[1]?.levels?.target, "4");
+assert.equal(secondRound?.[1]?.levels?.orderType, "limit");
+
+const blankTp = classicExitClause("take_profit");
+blankTp.key = "tp-blank";
+blankTp.levels = { ...emptyRepeatLevels(), style: "dca", method: "percent", target: "" };
+assert.match(exitCardsBlockReason([firstTp, blankTp]) ?? "", /target/i);
+
+const firstTrail = classicExitClause("trailing_stop");
+const secondTrail = classicExitClause("trailing_stop");
+secondTrail.key = "trail-2";
+secondTrail.levels = {
+  ...emptyRepeatLevels(),
+  style: "dca",
+  trigger: "3",
+  trail: "1",
+};
+const trailSaved = exitActionsForSave([firstTrail, secondTrail], prices);
+assert.equal(trailSaved?.[1]?.trailingPct, 1);
+assert.equal(trailSaved?.[1]?.trailingTriggerPct, 3);
+assert.equal(trailSaved?.[1]?.levels?.trigger, "3");
+
+const quietTrail = planExitClaims({
+  actions: [trailSaved![1]!],
+  runtime: emptyExitRuntime(),
+  lots: [{ id: "a", qty: 1, price: 100 }],
+  side: "long",
+  mark: 101,
+  last: 101,
+  entryPrice: 100,
+  nowMs: 1,
+  conditionTrue: {},
+});
+assert.equal(quietTrail.claims.length, 0);
+
+const firstStop = classicExitClause("stop_loss");
+const secondStop = classicExitClause("stop_loss");
+secondStop.key = "sl-2";
+secondStop.levels = {
+  ...emptyRepeatLevels(),
+  style: "dca",
+  basis: "first_entry",
+  method: "percent",
+  target: "2",
+  breakeven: true,
+  breakevenActivation: "1.5",
+};
+const stopSaved = exitActionsForSave([firstStop, secondStop], prices);
+assert.equal(stopSaved?.[1]?.stopLossPct, 2);
+assert.equal(stopSaved?.[1]?.levels?.basis, "first_entry");
+assert.equal(stopSaved?.[1]?.levels?.breakeven, true);
+assert.match(exitCardsBlockReason([firstStop, { ...secondStop, levels: { ...secondStop.levels!, breakevenActivation: "" } }]) ?? "", /breakeven/i);
+
+const flexTp = classicExitClause("take_profit");
+flexTp.key = "flex-tp";
+flexTp.levels = {
+  ...emptyRepeatLevels(),
+  style: "flex",
+  method: "price",
+  target: "25000",
+  trigger: "mark",
+  orderType: "market",
+};
+const flexSaved = exitActionsForSave([classicExitClause("take_profit"), flexTp], prices);
+assert.equal(flexSaved?.[1]?.takeProfitPrice, 25000);
+assert.equal(flexSaved?.[1]?.takeProfitPct, null);
 
 console.log("exit-actions.check ok");

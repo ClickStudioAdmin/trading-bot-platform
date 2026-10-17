@@ -57,6 +57,7 @@ import {
   exitClauseListMissing,
   exitClausesFromSaved,
   type ExitBuilderClause,
+  type ExitFieldSlot,
 } from "@/lib/strategy/exit-clauses";
 import { exitCardsBlockReason } from "@/lib/strategy/exit-actions";
 import {
@@ -1632,43 +1633,104 @@ export function ThemeBotFormDraft() {
   function patchThemeShort(patch: Partial<ThemeClassicDraft>) {
     setShortClassic((draft) => ({ ...draft, ...patch }));
   }
-  function themeTakeProfitFields(leg: "primary" | "short") {
+  function themeTakeProfitFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = themeUsesShort(leg);
-    const method = shortLeg ? shortClassic.tpMethod : tpMethod;
-    const value = shortLeg ? shortClassic.tpValue : tpValue;
-    const basis = shortLeg ? shortClassic.tpBasis : tpBasis;
-    const trigger = shortLeg ? shortClassic.tpTrigger : tpTrigger;
-    const order = shortLeg ? shortClassic.tpOrderType : tpOrderType;
-    const limit = shortLeg ? shortClassic.tpLimitPrice : tpLimitPrice;
-    const period = shortLeg ? shortClassic.atrPeriod : atrPeriod;
-    const valueInvalid = showFieldErrors && (shortLeg ? missing.shortTpValue : missing.tpValue);
-    const periodInvalid =
-      showFieldErrors && (shortLeg ? missing.shortAtrPeriod : missing.atrPeriod);
-    const limitInvalid =
-      showFieldErrors && (shortLeg ? missing.shortTpLimitPrice : missing.tpLimitPrice);
+    const repeat = slot != null;
+    const method = repeat
+      ? desk === "dca"
+        ? slot.levels.method === "atr"
+          ? "atr"
+          : "percent"
+        : slot.levels.method === "percent"
+          ? "percent"
+          : "price"
+      : shortLeg
+        ? shortClassic.tpMethod
+        : tpMethod;
+    const value = repeat
+      ? method === "atr"
+        ? slot.levels.atrMult
+        : slot.levels.target
+      : shortLeg
+        ? shortClassic.tpValue
+        : tpValue;
+    const basis = repeat
+      ? slot.levels.basis
+      : shortLeg
+        ? shortClassic.tpBasis
+        : tpBasis;
+    const trigger = repeat
+      ? slot.levels.trigger || "last"
+      : shortLeg
+        ? shortClassic.tpTrigger
+        : tpTrigger;
+    const order = repeat
+      ? slot.levels.orderType
+      : shortLeg
+        ? shortClassic.tpOrderType
+        : tpOrderType;
+    const limit = repeat
+      ? slot.levels.limitPrice
+      : shortLeg
+        ? shortClassic.tpLimitPrice
+        : tpLimitPrice;
+    const period = repeat
+      ? slot.levels.atrPeriod
+      : shortLeg
+        ? shortClassic.atrPeriod
+        : atrPeriod;
+    const valueInvalid = repeat
+      ? slot.showErrors && !filled(value)
+      : showFieldErrors && (shortLeg ? missing.shortTpValue : missing.tpValue);
+    const periodInvalid = repeat
+      ? slot.showErrors && method === "atr" && !filled(period)
+      : showFieldErrors && (shortLeg ? missing.shortAtrPeriod : missing.atrPeriod);
+    const limitInvalid = repeat
+      ? slot.showErrors && order === "limit" && !filled(limit)
+      : showFieldErrors && (shortLeg ? missing.shortTpLimitPrice : missing.tpLimitPrice);
     return (
       <>
         {desk === "dca" ? (
           <ExitMethodFields
             method={method === "atr" ? "atr" : "percent"}
             onMethod={(next) =>
-              shortLeg ? patchThemeShort({ tpMethod: next }) : setTpMethod(next)
+              repeat
+                ? slot.onChange({ method: next })
+                : shortLeg
+                  ? patchThemeShort({ tpMethod: next })
+                  : setTpMethod(next)
             }
             value={value}
             onValue={(next) =>
-              shortLeg ? patchThemeShort({ tpValue: next }) : setTpValue(next)
+              repeat
+                ? slot.onChange(method === "atr" ? { atrMult: next } : { target: next })
+                : shortLeg
+                  ? patchThemeShort({ tpValue: next })
+                  : setTpValue(next)
             }
             basis={basis}
             onBasis={(next) =>
-              shortLeg ? patchThemeShort({ tpBasis: next }) : setTpBasis(next)
+              repeat
+                ? slot.onChange({ basis: next })
+                : shortLeg
+                  ? patchThemeShort({ tpBasis: next })
+                  : setTpBasis(next)
             }
             orderType={order}
             onOrderType={(next) =>
-              shortLeg ? patchThemeShort({ tpOrderType: next }) : setTpOrderType(next)
+              repeat
+                ? slot.onChange({ orderType: next })
+                : shortLeg
+                  ? patchThemeShort({ tpOrderType: next })
+                  : setTpOrderType(next)
             }
             atrPeriod={period}
             onAtrPeriod={(next) =>
-              shortLeg ? patchThemeShort({ atrPeriod: next }) : setAtrPeriod(next)
+              repeat
+                ? slot.onChange({ atrPeriod: next })
+                : shortLeg
+                  ? patchThemeShort({ atrPeriod: next })
+                  : setAtrPeriod(next)
             }
             atrPeriodInvalid={periodInvalid}
             invalid={valueInvalid}
@@ -1681,7 +1743,9 @@ export function ThemeBotFormDraft() {
                 value={method === "percent" ? "percent" : "price"}
                 onChange={(event) => {
                   const next = event.target.value === "percent" ? "percent" : "price";
-                  if (shortLeg) {
+                  if (repeat) {
+                    slot.onChange({ method: next, target: "" });
+                  } else if (shortLeg) {
                     patchThemeShort({ tpMethod: next, tpValue: "" });
                   } else {
                     setTpMethod(next);
@@ -1698,7 +1762,11 @@ export function ThemeBotFormDraft() {
                 <PercentField
                   value={value}
                   onChange={(next) =>
-                    shortLeg ? patchThemeShort({ tpValue: next }) : setTpValue(next)
+                    repeat
+                      ? slot.onChange({ target: next })
+                      : shortLeg
+                        ? patchThemeShort({ tpValue: next })
+                        : setTpValue(next)
                   }
                   required
                   invalid={valueInvalid}
@@ -1707,7 +1775,11 @@ export function ThemeBotFormDraft() {
                 <OffNumber
                   value={value}
                   onChange={(next) =>
-                    shortLeg ? patchThemeShort({ tpValue: next }) : setTpValue(next)
+                    repeat
+                      ? slot.onChange({ target: next })
+                      : shortLeg
+                        ? patchThemeShort({ tpValue: next })
+                        : setTpValue(next)
                   }
                   required
                   invalid={valueInvalid}
@@ -1719,9 +1791,11 @@ export function ThemeBotFormDraft() {
                 className={fieldClass}
                 value={trigger}
                 onChange={(event) =>
-                  shortLeg
-                    ? patchThemeShort({ tpTrigger: event.target.value })
-                    : setTpTrigger(event.target.value)
+                  repeat
+                    ? slot.onChange({ trigger: event.target.value })
+                    : shortLeg
+                      ? patchThemeShort({ tpTrigger: event.target.value })
+                      : setTpTrigger(event.target.value)
                 }
               >
                 <option value="last">Last</option>
@@ -1733,7 +1807,11 @@ export function ThemeBotFormDraft() {
               <OrderTypePill
                 value={order === "limit" ? "limit" : "market"}
                 onChange={(next) =>
-                  shortLeg ? patchThemeShort({ tpOrderType: next }) : setTpOrderType(next)
+                  repeat
+                    ? slot.onChange({ orderType: next })
+                    : shortLeg
+                      ? patchThemeShort({ tpOrderType: next })
+                      : setTpOrderType(next)
                 }
               />
             </Field>
@@ -1742,9 +1820,11 @@ export function ThemeBotFormDraft() {
                 <OffNumber
                   value={limit}
                   onChange={(next) =>
-                    shortLeg
-                      ? patchThemeShort({ tpLimitPrice: next })
-                      : setTpLimitPrice(next)
+                    repeat
+                      ? slot.onChange({ limitPrice: next })
+                      : shortLeg
+                        ? patchThemeShort({ tpLimitPrice: next })
+                        : setTpLimitPrice(next)
                   }
                   required
                   invalid={limitInvalid}
@@ -1756,14 +1836,25 @@ export function ThemeBotFormDraft() {
       </>
     );
   }
-  function themeTrailingFields(leg: "primary" | "short") {
+  function themeTrailingFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = themeUsesShort(leg);
-    const trigger = shortLeg ? shortClassic.trailTrigger : trailTrigger;
-    const value = shortLeg ? shortClassic.trailValue : trailValue;
-    const triggerInvalid =
-      showFieldErrors && (shortLeg ? missing.shortTrailTrigger : missing.trailTrigger);
-    const valueInvalid =
-      showFieldErrors && (shortLeg ? missing.shortTrailValue : missing.trailValue);
+    const repeat = slot != null;
+    const trigger = repeat
+      ? slot.levels.trigger
+      : shortLeg
+        ? shortClassic.trailTrigger
+        : trailTrigger;
+    const value = repeat
+      ? slot.levels.trail
+      : shortLeg
+        ? shortClassic.trailValue
+        : trailValue;
+    const triggerInvalid = repeat
+      ? slot.showErrors && !filled(trigger)
+      : showFieldErrors && (shortLeg ? missing.shortTrailTrigger : missing.trailTrigger);
+    const valueInvalid = repeat
+      ? slot.showErrors && !filled(value)
+      : showFieldErrors && (shortLeg ? missing.shortTrailValue : missing.trailValue);
     return (
       <div className="contents">
         {desk === "dca" ? (
@@ -1776,9 +1867,11 @@ export function ThemeBotFormDraft() {
               <PercentField
                 value={trigger}
                 onChange={(next) =>
-                  shortLeg
-                    ? patchThemeShort({ trailTrigger: next })
-                    : setTrailTrigger(next)
+                  repeat
+                    ? slot.onChange({ trigger: next })
+                    : shortLeg
+                      ? patchThemeShort({ trailTrigger: next })
+                      : setTrailTrigger(next)
                 }
                 required
                 invalid={triggerInvalid}
@@ -1788,7 +1881,11 @@ export function ThemeBotFormDraft() {
               <PercentField
                 value={value}
                 onChange={(next) =>
-                  shortLeg ? patchThemeShort({ trailValue: next }) : setTrailValue(next)
+                  repeat
+                    ? slot.onChange({ trail: next })
+                    : shortLeg
+                      ? patchThemeShort({ trailValue: next })
+                      : setTrailValue(next)
                 }
                 required
                 invalid={valueInvalid}
@@ -1801,7 +1898,11 @@ export function ThemeBotFormDraft() {
               <OffNumber
                 value={value}
                 onChange={(next) =>
-                  shortLeg ? patchThemeShort({ trailValue: next }) : setTrailValue(next)
+                  repeat
+                    ? slot.onChange({ trail: next })
+                    : shortLeg
+                      ? patchThemeShort({ trailValue: next })
+                      : setTrailValue(next)
                 }
                 required
                 invalid={valueInvalid}
@@ -1811,9 +1912,11 @@ export function ThemeBotFormDraft() {
               <OffNumber
                 value={trigger}
                 onChange={(next) =>
-                  shortLeg
-                    ? patchThemeShort({ trailTrigger: next })
-                    : setTrailTrigger(next)
+                  repeat
+                    ? slot.onChange({ trigger: next })
+                    : shortLeg
+                      ? patchThemeShort({ trailTrigger: next })
+                      : setTrailTrigger(next)
                 }
                 required
                 invalid={triggerInvalid}
@@ -1824,22 +1927,51 @@ export function ThemeBotFormDraft() {
       </div>
     );
   }
-  function themeStopFields(leg: "primary" | "short") {
+  function themeStopFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = themeUsesShort(leg);
-    const basis = shortLeg ? shortClassic.slBasis : slBasis;
-    const value = shortLeg ? shortClassic.slValue : slValue;
-    const method = shortLeg ? shortClassic.slMethod : slMethod;
-    const trigger = shortLeg ? shortClassic.slTrigger : slTrigger;
-    const order = shortLeg ? shortClassic.slOrderType : slOrderType;
-    const limit = shortLeg ? shortClassic.slLimitPrice : slLimitPrice;
-    const breakeven = shortLeg ? shortClassic.breakevenOn : breakevenOn;
-    const activation = shortLeg ? shortClassic.breakevenAt : breakevenAt;
-    const offset = shortLeg ? shortClassic.breakevenOffset : breakevenOffset;
-    const valueInvalid = showFieldErrors && (shortLeg ? missing.shortSlValue : missing.slValue);
-    const limitInvalid =
-      showFieldErrors && (shortLeg ? missing.shortSlLimitPrice : missing.slLimitPrice);
-    const moveInvalid =
-      showFieldErrors && (shortLeg ? missing.shortBreakevenAt : missing.breakevenAt);
+    const repeat = slot != null;
+    const basis = repeat ? slot.levels.basis : shortLeg ? shortClassic.slBasis : slBasis;
+    const value = repeat ? slot.levels.target : shortLeg ? shortClassic.slValue : slValue;
+    const method = repeat
+      ? desk === "dca"
+        ? "percent"
+        : slot.levels.method === "percent"
+          ? "percent"
+          : "price"
+      : shortLeg
+        ? shortClassic.slMethod
+        : slMethod;
+    const trigger = repeat
+      ? slot.levels.trigger || "last"
+      : shortLeg
+        ? shortClassic.slTrigger
+        : slTrigger;
+    const order = repeat ? slot.levels.orderType : shortLeg ? shortClassic.slOrderType : slOrderType;
+    const limit = repeat ? slot.levels.limitPrice : shortLeg ? shortClassic.slLimitPrice : slLimitPrice;
+    const breakeven = repeat
+      ? slot.levels.breakeven
+      : shortLeg
+        ? shortClassic.breakevenOn
+        : breakevenOn;
+    const activation = repeat
+      ? slot.levels.breakevenActivation
+      : shortLeg
+        ? shortClassic.breakevenAt
+        : breakevenAt;
+    const offset = repeat
+      ? slot.levels.breakevenOffset
+      : shortLeg
+        ? shortClassic.breakevenOffset
+        : breakevenOffset;
+    const valueInvalid = repeat
+      ? slot.showErrors && !filled(value)
+      : showFieldErrors && (shortLeg ? missing.shortSlValue : missing.slValue);
+    const limitInvalid = repeat
+      ? slot.showErrors && order === "limit" && !filled(limit)
+      : showFieldErrors && (shortLeg ? missing.shortSlLimitPrice : missing.slLimitPrice);
+    const moveInvalid = repeat
+      ? slot.showErrors && breakeven && !filled(activation)
+      : showFieldErrors && (shortLeg ? missing.shortBreakevenAt : missing.breakevenAt);
     return (
       <div className="@container col-span-full">
         <div
@@ -1856,9 +1988,11 @@ export function ThemeBotFormDraft() {
                   className={fieldClass}
                   value={basis}
                   onChange={(event) =>
-                    shortLeg
-                      ? patchThemeShort({ slBasis: event.target.value })
-                      : setSlBasis(event.target.value)
+                    repeat
+                      ? slot.onChange({ basis: event.target.value })
+                      : shortLeg
+                        ? patchThemeShort({ slBasis: event.target.value })
+                        : setSlBasis(event.target.value)
                   }
                 >
                   <option value="average">Average entry</option>
@@ -1869,7 +2003,11 @@ export function ThemeBotFormDraft() {
                 <PercentField
                   value={value}
                   onChange={(next) =>
-                    shortLeg ? patchThemeShort({ slValue: next }) : setSlValue(next)
+                    repeat
+                      ? slot.onChange({ target: next })
+                      : shortLeg
+                        ? patchThemeShort({ slValue: next })
+                        : setSlValue(next)
                   }
                   required
                   invalid={valueInvalid}
@@ -1884,7 +2022,9 @@ export function ThemeBotFormDraft() {
                   value={method === "percent" ? "percent" : "price"}
                   onChange={(event) => {
                     const next = event.target.value === "percent" ? "percent" : "price";
-                    if (shortLeg) {
+                    if (repeat) {
+                      slot.onChange({ method: next, target: "" });
+                    } else if (shortLeg) {
                       patchThemeShort({ slMethod: next, slValue: "" });
                     } else {
                       setSlMethod(next);
@@ -1901,7 +2041,11 @@ export function ThemeBotFormDraft() {
                   <PercentField
                     value={value}
                     onChange={(next) =>
-                      shortLeg ? patchThemeShort({ slValue: next }) : setSlValue(next)
+                      repeat
+                        ? slot.onChange({ target: next })
+                        : shortLeg
+                          ? patchThemeShort({ slValue: next })
+                          : setSlValue(next)
                     }
                     required
                     invalid={valueInvalid}
@@ -1910,7 +2054,11 @@ export function ThemeBotFormDraft() {
                   <OffNumber
                     value={value}
                     onChange={(next) =>
-                      shortLeg ? patchThemeShort({ slValue: next }) : setSlValue(next)
+                      repeat
+                        ? slot.onChange({ target: next })
+                        : shortLeg
+                          ? patchThemeShort({ slValue: next })
+                          : setSlValue(next)
                     }
                     required
                     invalid={valueInvalid}
@@ -1922,9 +2070,11 @@ export function ThemeBotFormDraft() {
                   className={fieldClass}
                   value={trigger}
                   onChange={(event) =>
-                    shortLeg
-                      ? patchThemeShort({ slTrigger: event.target.value })
-                      : setSlTrigger(event.target.value)
+                    repeat
+                      ? slot.onChange({ trigger: event.target.value })
+                      : shortLeg
+                        ? patchThemeShort({ slTrigger: event.target.value })
+                        : setSlTrigger(event.target.value)
                   }
                 >
                   <option value="last">Last</option>
@@ -1936,9 +2086,11 @@ export function ThemeBotFormDraft() {
                 <OrderTypePill
                   value={order === "limit" ? "limit" : "market"}
                   onChange={(next) =>
-                    shortLeg
-                      ? patchThemeShort({ slOrderType: next })
-                      : setSlOrderType(next)
+                    repeat
+                      ? slot.onChange({ orderType: next })
+                      : shortLeg
+                        ? patchThemeShort({ slOrderType: next })
+                        : setSlOrderType(next)
                   }
                 />
               </Field>
@@ -1947,9 +2099,11 @@ export function ThemeBotFormDraft() {
                   <OffNumber
                     value={limit}
                     onChange={(next) =>
-                      shortLeg
-                        ? patchThemeShort({ slLimitPrice: next })
-                        : setSlLimitPrice(next)
+                      repeat
+                        ? slot.onChange({ limitPrice: next })
+                        : shortLeg
+                          ? patchThemeShort({ slLimitPrice: next })
+                          : setSlLimitPrice(next)
                     }
                     required
                     invalid={limitInvalid}
@@ -1963,7 +2117,11 @@ export function ThemeBotFormDraft() {
             className={desk === "dca" ? "col-span-2" : "min-w-0"}
             enabled={breakeven}
             onEnabled={(next) =>
-              shortLeg ? patchThemeShort({ breakevenOn: next }) : setBreakevenOn(next)
+              repeat
+                ? slot.onChange({ breakeven: next })
+                : shortLeg
+                  ? patchThemeShort({ breakevenOn: next })
+                  : setBreakevenOn(next)
             }
           >
             <div className="grid grid-cols-2 gap-4">
@@ -1971,9 +2129,11 @@ export function ThemeBotFormDraft() {
                 <PercentField
                   value={activation}
                   onChange={(next) =>
-                    shortLeg
-                      ? patchThemeShort({ breakevenAt: next })
-                      : setBreakevenAt(next)
+                    repeat
+                      ? slot.onChange({ breakevenActivation: next })
+                      : shortLeg
+                        ? patchThemeShort({ breakevenAt: next })
+                        : setBreakevenAt(next)
                   }
                   required
                   invalid={moveInvalid}
@@ -1983,9 +2143,11 @@ export function ThemeBotFormDraft() {
                 <PercentField
                   value={offset}
                   onChange={(next) =>
-                    shortLeg
-                      ? patchThemeShort({ breakevenOffset: next })
-                      : setBreakevenOffset(next)
+                    repeat
+                      ? slot.onChange({ breakevenOffset: next })
+                      : shortLeg
+                        ? patchThemeShort({ breakevenOffset: next })
+                        : setBreakevenOffset(next)
                   }
                   placeholder="0"
                 />
@@ -3030,9 +3192,10 @@ export function ThemeBotFormDraft() {
               fieldClass={fieldClass}
               labelClass={labelClass}
               showErrors={showFieldErrors}
-              renderTakeProfit={() => themeTakeProfitFields("primary")}
-              renderTrailingStop={() => themeTrailingFields("primary")}
-              renderStopLoss={() => themeStopFields("primary")}
+              priceStyle={desk === "dca" ? "dca" : "flex"}
+              renderTakeProfit={(slot) => themeTakeProfitFields("primary", slot)}
+              renderTrailingStop={(slot) => themeTrailingFields("primary", slot)}
+              renderStopLoss={(slot) => themeStopFields("primary", slot)}
             />
           </BotFormStep>
         ) : null}
@@ -3061,14 +3224,15 @@ export function ThemeBotFormDraft() {
               fieldClass={fieldClass}
               labelClass={labelClass}
               showErrors={showFieldErrors}
-              renderTakeProfit={() =>
-                themeTakeProfitFields(themeBothExits ? "short" : "primary")
+              priceStyle={desk === "dca" ? "dca" : "flex"}
+              renderTakeProfit={(slot) =>
+                themeTakeProfitFields(themeBothExits ? "short" : "primary", slot)
               }
-              renderTrailingStop={() =>
-                themeTrailingFields(themeBothExits ? "short" : "primary")
+              renderTrailingStop={(slot) =>
+                themeTrailingFields(themeBothExits ? "short" : "primary", slot)
               }
-              renderStopLoss={() =>
-                themeStopFields(themeBothExits ? "short" : "primary")
+              renderStopLoss={(slot) =>
+                themeStopFields(themeBothExits ? "short" : "primary", slot)
               }
             />
           </BotFormStep>

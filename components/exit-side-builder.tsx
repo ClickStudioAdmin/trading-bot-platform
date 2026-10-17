@@ -35,10 +35,13 @@ import {
   customExitClause,
   emptyExitClause,
   isClassicExitKind,
+  seedRepeatLevels,
   priceRuleForKind,
   type ClassicExitKind,
   type ExitBuilderClause,
+  type ExitFieldSlot,
   type ExitOrGroup,
+  type ExitPriceStyle,
   type ExitScope,
 } from "@/lib/strategy/exit-clauses";
 import {
@@ -224,6 +227,7 @@ export function ExitSideBuilder({
   showErrors = false,
   actionName,
   prices = EMPTY_EXIT_PRICES,
+  priceStyle = "dca",
 }: {
   clauses: ExitBuilderClause[];
   onChange: (next: ExitBuilderClause[]) => void;
@@ -234,13 +238,15 @@ export function ExitSideBuilder({
   webhooks?: { id: string; name: string }[];
   fieldClass: string;
   labelClass: string;
-  renderTakeProfit: () => ReactNode;
-  renderTrailingStop: () => ReactNode;
-  renderStopLoss: () => ReactNode;
+  renderTakeProfit: (slot: ExitFieldSlot | null) => ReactNode;
+  renderTrailingStop: (slot: ExitFieldSlot | null) => ReactNode;
+  renderStopLoss: (slot: ExitFieldSlot | null) => ReactNode;
   showErrors?: boolean;
   /** Posts the action list. Empty when the side still uses the classic columns. */
   actionName?: string;
   prices?: ExitSidePrices;
+  /** Later cards use this desk's price fields. */
+  priceStyle?: ExitPriceStyle;
 }) {
   useEffect(() => {
     const hasEmptyGroup = clauses.some((clause) =>
@@ -358,49 +364,39 @@ export function ExitSideBuilder({
     patch(clause.key, (current) => ({ ...current, scope: next }));
   }
 
-  function ruleFields(
-    clause: ExitBuilderClause,
-    firstOfKind: boolean,
-    ownInvalid: boolean,
-  ): ReactNode {
-    if (clause.kind === "take_profit" && firstOfKind) {
-      return renderTakeProfit();
-    }
-    if (clause.kind === "trailing_stop" && firstOfKind) {
-      return renderTrailingStop();
-    }
-    if (clause.kind === "stop_loss" && firstOfKind) {
-      return renderStopLoss();
-    }
-    if (
-      clause.kind !== "take_profit" &&
-      clause.kind !== "stop_loss" &&
-      clause.kind !== "trailing_stop"
-    ) {
+  function ruleFields(clause: ExitBuilderClause, firstOfKind: boolean): ReactNode {
+    if (firstOfKind) {
+      if (clause.kind === "take_profit") {
+        return renderTakeProfit(null);
+      }
+      if (clause.kind === "trailing_stop") {
+        return renderTrailingStop(null);
+      }
+      if (clause.kind === "stop_loss") {
+        return renderStopLoss(null);
+      }
       return null;
     }
-    return (
-      <label className={labelClass}>
-        <HintLabel text={clause.kind === "trailing_stop" ? "Distance" : "Target %"} />
-        <input
-          value={
-            clause.kind === "trailing_stop" ? clause.ownDistance ?? "" : clause.ownPct ?? ""
-          }
-          onChange={(event) => {
-            const raw = event.target.value.replace(/,/g, "").trim();
-            const number = raw === "" ? null : Number(raw);
-            const next = number != null && Number.isFinite(number) ? number : null;
-            patch(clause.key, (current) =>
-              current.kind === "trailing_stop"
-                ? { ...current, ownDistance: next }
-                : { ...current, ownPct: next },
-            );
-          }}
-          inputMode="decimal"
-          className={ownInvalid ? botFieldInvalidClass : fieldClass}
-        />
-      </label>
-    );
+    if (!isClassicExitKind(clause.kind)) {
+      return null;
+    }
+    const slot: ExitFieldSlot = {
+      levels: seedRepeatLevels(clause, priceStyle),
+      showErrors,
+      onChange: (next) => {
+        patch(clause.key, (current) => ({
+          ...current,
+          levels: { ...seedRepeatLevels(current, priceStyle), ...next },
+        }));
+      },
+    };
+    if (clause.kind === "take_profit") {
+      return renderTakeProfit(slot);
+    }
+    if (clause.kind === "trailing_stop") {
+      return renderTrailingStop(slot);
+    }
+    return renderStopLoss(slot);
   }
 
   const kindCounts = new Map<string, number>();
@@ -439,12 +435,6 @@ export function ExitSideBuilder({
             (scope.kind === "qty" && !(scope.qty != null && scope.qty > 0)) ||
             (scope.kind === "fills" &&
               !(scope.minProfitPct != null && scope.minProfitPct > 0)));
-        const ownInvalid =
-          showErrors &&
-          !firstOfKind &&
-          ((clause.kind === "trailing_stop" && !(clause.ownDistance != null && clause.ownDistance > 0)) ||
-            ((clause.kind === "take_profit" || clause.kind === "stop_loss") &&
-              !(clause.ownPct != null && clause.ownPct > 0)));
         return (
           <div key={clause.key} className="space-y-3">
             <section className="condition-group space-y-4 rounded-card border border-line bg-canvas px-4 py-4">
@@ -558,7 +548,7 @@ export function ExitSideBuilder({
                     labelClass={labelClass}
                     showErrors={showErrors}
                     ruleLeaf={firstRuleLeaf(clause)}
-                    ruleFields={ruleFields(clause, firstOfKind, ownInvalid)}
+                    ruleFields={ruleFields(clause, firstOfKind)}
                     onAnchor={(value) => setAnchor(clause, value)}
                     onPatch={(update) => patch(clause.key, update)}
                   />

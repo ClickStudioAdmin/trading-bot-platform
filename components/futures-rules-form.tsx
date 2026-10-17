@@ -49,7 +49,7 @@ import {
   exitCardsBlockReason,
   exitPricesFromLevels,
 } from "@/lib/strategy/exit-actions";
-import type { ExitBuilderClause } from "@/lib/strategy/exit-clauses";
+import type { ExitBuilderClause, ExitFieldSlot } from "@/lib/strategy/exit-clauses";
 import {
   initialPerpsEntryDrafts,
   PerpsEntryPanel,
@@ -1290,24 +1290,58 @@ function RuleCard({
   function patchShort(patch: Partial<PerpsClassicDraft>) {
     setShortClassic((draft) => ({ ...draft, ...patch }));
   }
-  function perpsTakeProfitFields(leg: "primary" | "short") {
+  function perpsTakeProfitFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = usesShortExit(leg);
-    const kind = shortLeg ? shortClassic.tpKind : tpKind;
-    const price = shortLeg ? shortClassic.takeProfit : takeProfit;
-    const trigger = shortLeg ? shortClassic.tpTrigger : tpTrigger;
-    const orderTypeValue = shortLeg ? shortClassic.tpOrderType : tpOrderType;
-    const limit = shortLeg ? shortClassic.tpLimitPrice : tpLimitPrice;
-    const missing = shortLeg ? shortTpMissing : tpMissing;
-    const limitMissing = shortLeg ? shortTpLimitMissing : tpLimitMissing;
+    const repeat = slot != null;
+    const kind = repeat
+      ? slot.levels.method === "percent"
+        ? "percent"
+        : "price"
+      : shortLeg
+        ? shortClassic.tpKind
+        : tpKind;
+    const price = repeat ? slot.levels.target : shortLeg ? shortClassic.takeProfit : takeProfit;
+    const trigger = repeat
+      ? slot.levels.trigger === "mark" || slot.levels.trigger === "index"
+        ? slot.levels.trigger
+        : "last"
+      : shortLeg
+        ? shortClassic.tpTrigger
+        : tpTrigger;
+    const orderTypeValue = repeat
+      ? slot.levels.orderType === "limit"
+        ? "limit"
+        : "market"
+      : shortLeg
+        ? shortClassic.tpOrderType
+        : tpOrderType;
+    const limit = repeat ? slot.levels.limitPrice : shortLeg ? shortClassic.tpLimitPrice : tpLimitPrice;
+    const blank = (value: string) => {
+      const number = Number(String(value).replace(/,/g, "").trim());
+      return !(Number.isFinite(number) && number > 0);
+    };
+    const missing = repeat
+      ? slot.showErrors && blank(price)
+      : shortLeg
+        ? shortTpMissing
+        : tpMissing;
+    const limitMissing = repeat
+      ? slot.showErrors && orderTypeValue === "limit" && blank(limit)
+      : shortLeg
+        ? shortTpLimitMissing
+        : tpLimitMissing;
+    const fieldName = (name: string) => (repeat ? undefined : exitFieldName(leg, name));
     return (
       <div className="contents">
         <BotField label="Type" required>
           <AppSelect
-            name={exitFieldName(leg, "tpKind")}
+            name={fieldName("tpKind")}
             value={kind}
             onChange={(event) => {
               const next = event.target.value === "percent" ? "percent" : "price";
-              if (shortLeg) {
+              if (repeat) {
+                slot.onChange({ method: next, target: "" });
+              } else if (shortLeg) {
                 patchShort({ tpKind: next, takeProfit: "" });
               } else {
                 setTpKind(next);
@@ -1324,13 +1358,17 @@ function RuleCard({
           {kind === "percent" ? (
             <span className="relative mt-1 block">
               <GroupedNumberInput
-                name={exitFieldName(leg, "takeProfit")}
+                name={fieldName("takeProfit")}
                 value={price}
                 onChange={(next) =>
-                  shortLeg ? patchShort({ takeProfit: next }) : setTakeProfit(next)
+                  repeat
+                    ? slot.onChange({ target: next })
+                    : shortLeg
+                      ? patchShort({ takeProfit: next })
+                      : setTakeProfit(next)
                 }
                 allowDecimal
-                className={`${dirty && missing ? botFieldInvalidClass : botFieldClass} !mt-0 pr-7`}
+                className={`${(repeat ? missing : dirty && missing) ? botFieldInvalidClass : botFieldClass} !mt-0 pr-7`}
               />
               <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
                 %
@@ -1338,23 +1376,29 @@ function RuleCard({
             </span>
           ) : (
             <GroupedNumberInput
-              name={exitFieldName(leg, "takeProfit")}
+              name={fieldName("takeProfit")}
               value={price}
               onChange={(next) =>
-                shortLeg ? patchShort({ takeProfit: next }) : setTakeProfit(next)
+                repeat
+                  ? slot.onChange({ target: next })
+                  : shortLeg
+                    ? patchShort({ takeProfit: next })
+                    : setTakeProfit(next)
               }
               allowDecimal
-              className={dirty && missing ? botFieldInvalidClass : botFieldClass}
+              className={(repeat ? missing : dirty && missing) ? botFieldInvalidClass : botFieldClass}
             />
           )}
         </BotField>
         <BotField label="Trigger" required>
           <AppSelect
-            name={exitFieldName(leg, "tpTrigger")}
+            name={fieldName("tpTrigger")}
             value={trigger}
             onChange={(event) => {
               const next = event.target.value as FuturesTrigger;
-              if (shortLeg) {
+              if (repeat) {
+                slot.onChange({ trigger: next });
+              } else if (shortLeg) {
                 patchShort({ tpTrigger: next });
               } else {
                 setTpTrigger(next);
@@ -1369,87 +1413,169 @@ function RuleCard({
         </BotField>
         <BotField label="Order type" required>
           <OrderTypePill
-            name={exitFieldName(leg, "tpOrderType")}
+            name={fieldName("tpOrderType")}
             value={orderTypeValue === "limit" ? "limit" : "market"}
             onChange={(next) =>
-              shortLeg ? patchShort({ tpOrderType: next }) : setTpOrderType(next)
+              repeat
+                ? slot.onChange({ orderType: next })
+                : shortLeg
+                  ? patchShort({ tpOrderType: next })
+                  : setTpOrderType(next)
             }
           />
         </BotField>
         {orderTypeValue === "limit" ? (
           <BotField label="Limit price" required>
             <GroupedNumberInput
-              name={exitFieldName(leg, "tpLimitPrice")}
+              name={fieldName("tpLimitPrice")}
               value={limit}
               onChange={(next) =>
-                shortLeg ? patchShort({ tpLimitPrice: next }) : setTpLimitPrice(next)
+                repeat
+                  ? slot.onChange({ limitPrice: next })
+                  : shortLeg
+                    ? patchShort({ tpLimitPrice: next })
+                    : setTpLimitPrice(next)
               }
               allowDecimal
-              className={dirty && limitMissing ? botFieldInvalidClass : botFieldClass}
+              className={(repeat ? limitMissing : dirty && limitMissing) ? botFieldInvalidClass : botFieldClass}
             />
           </BotField>
-        ) : (
+        ) : repeat ? null : (
           <input type="hidden" name={exitFieldName(leg, "tpLimitPrice")} value="" />
         )}
       </div>
     );
   }
-  function perpsTrailingFields(leg: "primary" | "short") {
+  function perpsTrailingFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = usesShortExit(leg);
-    const distance = shortLeg ? shortClassic.trailingStop : trailingStop;
-    const active = shortLeg ? shortClassic.trailingActive : trailingActive;
-    const missing = shortLeg ? shortTrailMissing : trailMissing;
+    const repeat = slot != null;
+    const distance = repeat
+      ? slot.levels.trail
+      : shortLeg
+        ? shortClassic.trailingStop
+        : trailingStop;
+    const active = repeat
+      ? slot.levels.trigger
+      : shortLeg
+        ? shortClassic.trailingActive
+        : trailingActive;
+    const blank = (value: string) => {
+      const number = Number(String(value).replace(/,/g, "").trim());
+      return !(Number.isFinite(number) && number > 0);
+    };
+    const missing = repeat
+      ? slot.showErrors && blank(distance)
+      : shortLeg
+        ? shortTrailMissing
+        : trailMissing;
+    const activeMissing = repeat
+      ? slot.showErrors && blank(active)
+      : dirty && (shortLeg ? shortTrailActiveMissing : trailActiveMissing);
+    const fieldName = (name: string) => (repeat ? undefined : exitFieldName(leg, name));
     return (
       <div className="contents">
         <BotField label="Retracement" required>
           <GroupedNumberInput
-            name={exitFieldName(leg, "trailingStop")}
+            name={fieldName("trailingStop")}
             value={distance}
             onChange={(next) =>
-              shortLeg ? patchShort({ trailingStop: next }) : setTrailingStop(next)
+              repeat
+                ? slot.onChange({ trail: next })
+                : shortLeg
+                  ? patchShort({ trailingStop: next })
+                  : setTrailingStop(next)
             }
             allowDecimal
-            className={dirty && missing ? botFieldInvalidClass : botFieldClass}
+            className={(repeat ? missing : dirty && missing) ? botFieldInvalidClass : botFieldClass}
           />
         </BotField>
         <BotField label="Activation price" required>
           <GroupedNumberInput
-            name={exitFieldName(leg, "trailingActive")}
+            name={fieldName("trailingActive")}
             value={active}
             onChange={(next) =>
-              shortLeg ? patchShort({ trailingActive: next }) : setTrailingActive(next)
+              repeat
+                ? slot.onChange({ trigger: next })
+                : shortLeg
+                  ? patchShort({ trailingActive: next })
+                  : setTrailingActive(next)
             }
             allowDecimal
-            className={
-              dirty && (shortLeg ? shortTrailActiveMissing : trailActiveMissing)
-                ? botFieldInvalidClass
-                : botFieldClass
-            }
+            className={activeMissing ? botFieldInvalidClass : botFieldClass}
           />
         </BotField>
-        <input type="hidden" name={exitFieldName(leg, "trailingActivation")} value="on" />
+        {repeat ? null : (
+          <input type="hidden" name={exitFieldName(leg, "trailingActivation")} value="on" />
+        )}
       </div>
     );
   }
-  function perpsStopFields(leg: "primary" | "short") {
+  function perpsStopFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = usesShortExit(leg);
-    const kind = shortLeg ? shortClassic.slKind : slKind;
-    const price = shortLeg ? shortClassic.stopLoss : stopLoss;
-    const trigger = shortLeg ? shortClassic.slTrigger : slTrigger;
-    const orderTypeValue = shortLeg ? shortClassic.slOrderType : slOrderType;
-    const limit = shortLeg ? shortClassic.slLimitPrice : slLimitPrice;
-    const breakeven = shortLeg ? shortClassic.breakevenOn : breakevenOn;
-    const activation = shortLeg
-      ? shortClassic.breakevenActivationPct
-      : breakevenActivationPct;
-    const offset = shortLeg ? shortClassic.breakevenOffsetPct : breakevenOffsetPct;
+    const repeat = slot != null;
+    const kind = repeat
+      ? slot.levels.method === "percent"
+        ? "percent"
+        : "price"
+      : shortLeg
+        ? shortClassic.slKind
+        : slKind;
+    const price = repeat ? slot.levels.target : shortLeg ? shortClassic.stopLoss : stopLoss;
+    const trigger = repeat
+      ? slot.levels.trigger === "mark" || slot.levels.trigger === "index"
+        ? slot.levels.trigger
+        : "last"
+      : shortLeg
+        ? shortClassic.slTrigger
+        : slTrigger;
+    const orderTypeValue = repeat
+      ? slot.levels.orderType === "limit"
+        ? "limit"
+        : "market"
+      : shortLeg
+        ? shortClassic.slOrderType
+        : slOrderType;
+    const limit = repeat ? slot.levels.limitPrice : shortLeg ? shortClassic.slLimitPrice : slLimitPrice;
+    const breakeven = repeat
+      ? slot.levels.breakeven
+      : shortLeg
+        ? shortClassic.breakevenOn
+        : breakevenOn;
+    const activation = repeat
+      ? slot.levels.breakevenActivation
+      : shortLeg
+        ? shortClassic.breakevenActivationPct
+        : breakevenActivationPct;
+    const offset = repeat
+      ? slot.levels.breakevenOffset
+      : shortLeg
+        ? shortClassic.breakevenOffsetPct
+        : breakevenOffsetPct;
     const stopOn = shortLeg ? shortSlLive : slLive;
-    const missing = shortLeg ? shortSlMissing : slMissing;
-    const limitMissing = shortLeg ? shortSlLimitMissing : slLimitMissing;
-    const moveMissing = shortLeg ? shortBreakevenMissing : breakevenMissing;
+    const blank = (value: string) => {
+      const number = Number(String(value).replace(/,/g, "").trim());
+      return !(Number.isFinite(number) && number > 0);
+    };
+    const missing = repeat
+      ? slot.showErrors && blank(price)
+      : shortLeg
+        ? shortSlMissing
+        : slMissing;
+    const limitMissing = repeat
+      ? slot.showErrors && orderTypeValue === "limit" && blank(limit)
+      : shortLeg
+        ? shortSlLimitMissing
+        : slLimitMissing;
+    const moveMissing = repeat
+      ? slot.showErrors && breakeven && blank(activation)
+      : shortLeg
+        ? shortBreakevenMissing
+        : breakevenMissing;
+    const fieldName = (name: string) => (repeat ? undefined : exitFieldName(leg, name));
+    const showInvalid = (flag: boolean) => (repeat ? flag : dirty && flag);
     return (
       <>
-        {!stopOn || !breakeven ? (
+        {!repeat && (!stopOn || !breakeven) ? (
           <div hidden>
             <input type="hidden" name={exitFieldName(leg, "breakevenActivationPct")} value="" />
             <input type="hidden" name={exitFieldName(leg, "breakevenOffsetPct")} value="" />
@@ -1460,11 +1586,13 @@ function RuleCard({
             <div className="grid grid-cols-2 gap-4 [&>*]:min-w-0">
               <BotField label="Type" required>
                 <AppSelect
-                  name={exitFieldName(leg, "slKind")}
+                  name={fieldName("slKind")}
                   value={kind}
                   onChange={(event) => {
                     const next = event.target.value === "percent" ? "percent" : "price";
-                    if (shortLeg) {
+                    if (repeat) {
+                      slot.onChange({ method: next, target: "" });
+                    } else if (shortLeg) {
                       patchShort({ slKind: next, stopLoss: "" });
                     } else {
                       setSlKind(next);
@@ -1481,13 +1609,17 @@ function RuleCard({
                 {kind === "percent" ? (
                   <span className="relative mt-1 block">
                     <GroupedNumberInput
-                      name={exitFieldName(leg, "stopLoss")}
+                      name={fieldName("stopLoss")}
                       value={price}
                       onChange={(next) =>
-                        shortLeg ? patchShort({ stopLoss: next }) : setStopLoss(next)
+                        repeat
+                          ? slot.onChange({ target: next })
+                          : shortLeg
+                            ? patchShort({ stopLoss: next })
+                            : setStopLoss(next)
                       }
                       allowDecimal
-                      className={`${dirty && missing ? botFieldInvalidClass : botFieldClass} !mt-0 pr-7`}
+                      className={`${showInvalid(missing) ? botFieldInvalidClass : botFieldClass} !mt-0 pr-7`}
                     />
                     <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
                       %
@@ -1495,23 +1627,29 @@ function RuleCard({
                   </span>
                 ) : (
                   <GroupedNumberInput
-                    name={exitFieldName(leg, "stopLoss")}
+                    name={fieldName("stopLoss")}
                     value={price}
                     onChange={(next) =>
-                      shortLeg ? patchShort({ stopLoss: next }) : setStopLoss(next)
+                      repeat
+                        ? slot.onChange({ target: next })
+                        : shortLeg
+                          ? patchShort({ stopLoss: next })
+                          : setStopLoss(next)
                     }
                     allowDecimal
-                    className={dirty && missing ? botFieldInvalidClass : botFieldClass}
+                    className={showInvalid(missing) ? botFieldInvalidClass : botFieldClass}
                   />
                 )}
               </BotField>
               <BotField label="Trigger" required>
                 <AppSelect
-                  name={exitFieldName(leg, "slTrigger")}
+                  name={fieldName("slTrigger")}
                   value={trigger}
                   onChange={(event) => {
                     const next = event.target.value as FuturesTrigger;
-                    if (shortLeg) {
+                    if (repeat) {
+                      slot.onChange({ trigger: next });
+                    } else if (shortLeg) {
                       patchShort({ slTrigger: next });
                     } else {
                       setSlTrigger(next);
@@ -1526,28 +1664,34 @@ function RuleCard({
               </BotField>
               <BotField label="Order type" required>
                 <OrderTypePill
-                  name={exitFieldName(leg, "slOrderType")}
+                  name={fieldName("slOrderType")}
                   value={orderTypeValue === "limit" ? "limit" : "market"}
                   onChange={(next) =>
-                    shortLeg ? patchShort({ slOrderType: next }) : setSlOrderType(next)
+                    repeat
+                      ? slot.onChange({ orderType: next })
+                      : shortLeg
+                        ? patchShort({ slOrderType: next })
+                        : setSlOrderType(next)
                   }
                 />
               </BotField>
               {orderTypeValue === "limit" ? (
                 <BotField label="Limit price" required>
                   <GroupedNumberInput
-                    name={exitFieldName(leg, "slLimitPrice")}
+                    name={fieldName("slLimitPrice")}
                     value={limit}
                     onChange={(next) =>
-                      shortLeg
-                        ? patchShort({ slLimitPrice: next })
-                        : setSlLimitPrice(next)
+                      repeat
+                        ? slot.onChange({ limitPrice: next })
+                        : shortLeg
+                          ? patchShort({ slLimitPrice: next })
+                          : setSlLimitPrice(next)
                     }
                     allowDecimal
-                    className={dirty && limitMissing ? botFieldInvalidClass : botFieldClass}
+                    className={showInvalid(limitMissing) ? botFieldInvalidClass : botFieldClass}
                   />
                 </BotField>
-              ) : (
+              ) : repeat ? null : (
                 <input type="hidden" name={exitFieldName(leg, "slLimitPrice")} value="" />
               )}
             </div>
@@ -1556,22 +1700,28 @@ function RuleCard({
               className="min-w-0"
               enabled={breakeven}
               onEnabled={(next) =>
-                shortLeg ? patchShort({ breakevenOn: next }) : setBreakevenOn(next)
+                repeat
+                  ? slot.onChange({ breakeven: next })
+                  : shortLeg
+                    ? patchShort({ breakevenOn: next })
+                    : setBreakevenOn(next)
               }
             >
               <div className="grid grid-cols-2 gap-4">
                 <BotField label="Move stop to breakeven at %" required>
                   <span className="relative mt-1 block">
                     <GroupedNumberInput
-                      name={exitFieldName(leg, "breakevenActivationPct")}
+                      name={fieldName("breakevenActivationPct")}
                       value={activation}
                       onChange={(next) =>
-                        shortLeg
-                          ? patchShort({ breakevenActivationPct: next })
-                          : setBreakevenActivationPct(next)
+                        repeat
+                          ? slot.onChange({ breakevenActivation: next })
+                          : shortLeg
+                            ? patchShort({ breakevenActivationPct: next })
+                            : setBreakevenActivationPct(next)
                       }
                       allowDecimal
-                      className={`${dirty && moveMissing ? botFieldInvalidClass : botFieldClass} !mt-0 pr-7`}
+                      className={`${showInvalid(moveMissing) ? botFieldInvalidClass : botFieldClass} !mt-0 pr-7`}
                     />
                     <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
                       %
@@ -1581,12 +1731,14 @@ function RuleCard({
                 <BotField label="Breakeven offset %">
                   <span className="relative mt-1 block">
                     <GroupedNumberInput
-                      name={exitFieldName(leg, "breakevenOffsetPct")}
+                      name={fieldName("breakevenOffsetPct")}
                       value={offset}
                       onChange={(next) =>
-                        shortLeg
-                          ? patchShort({ breakevenOffsetPct: next })
-                          : setBreakevenOffsetPct(next)
+                        repeat
+                          ? slot.onChange({ breakevenOffset: next })
+                          : shortLeg
+                            ? patchShort({ breakevenOffsetPct: next })
+                            : setBreakevenOffsetPct(next)
                       }
                       allowDecimal
                       placeholder="0"
@@ -1911,9 +2063,10 @@ function RuleCard({
               trailingDistance: trailingStop,
               trailingActivation: trailingActive,
             })}
-            renderTakeProfit={() => perpsTakeProfitFields("primary")}
-            renderTrailingStop={() => perpsTrailingFields("primary")}
-            renderStopLoss={() => perpsStopFields("primary")}
+            priceStyle="flex"
+            renderTakeProfit={(slot) => perpsTakeProfitFields("primary", slot)}
+            renderTrailingStop={(slot) => perpsTrailingFields("primary", slot)}
+            renderStopLoss={(slot) => perpsStopFields("primary", slot)}
           />
         </BotFormStep>
       ) : null}
@@ -1952,14 +2105,15 @@ function RuleCard({
                     trailingActivation: trailingActive,
                   },
             )}
-            renderTakeProfit={() =>
-              perpsTakeProfitFields(direction === "both" ? "short" : "primary")
+            priceStyle="flex"
+            renderTakeProfit={(slot) =>
+              perpsTakeProfitFields(direction === "both" ? "short" : "primary", slot)
             }
-            renderTrailingStop={() =>
-              perpsTrailingFields(direction === "both" ? "short" : "primary")
+            renderTrailingStop={(slot) =>
+              perpsTrailingFields(direction === "both" ? "short" : "primary", slot)
             }
-            renderStopLoss={() =>
-              perpsStopFields(direction === "both" ? "short" : "primary")
+            renderStopLoss={(slot) =>
+              perpsStopFields(direction === "both" ? "short" : "primary", slot)
             }
           />
         </BotFormStep>

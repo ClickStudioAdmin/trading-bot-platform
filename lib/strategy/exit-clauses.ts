@@ -52,7 +52,79 @@ export type ExitBuilderClause = {
   ownPct: number | null;
   /** Distance for a repeated trailing stop. */
   ownDistance: number | null;
+  /** Price fields for a later card of the same action. The first card uses the side fields. */
+  levels?: ExitRepeatLevels;
 };
+
+/** DCA or Flex. A later card uses this to show that desk's price fields. */
+export type ExitPriceStyle = "dca" | "flex";
+
+/** The same price fields as the first card, kept on a later action. */
+export type ExitRepeatLevels = {
+  style: ExitPriceStyle | "";
+  basis: string;
+  method: string;
+  target: string;
+  atrPeriod: string;
+  atrMult: string;
+  orderType: string;
+  trigger: string;
+  trail: string;
+  limitPrice: string;
+  breakeven: boolean;
+  breakevenActivation: string;
+  breakevenOffset: string;
+};
+
+export type ExitFieldSlot = {
+  levels: ExitRepeatLevels;
+  onChange: (patch: Partial<ExitRepeatLevels>) => void;
+  showErrors: boolean;
+};
+
+export function emptyRepeatLevels(): ExitRepeatLevels {
+  return {
+    style: "",
+    basis: "average",
+    method: "",
+    target: "",
+    atrPeriod: "",
+    atrMult: "",
+    orderType: "market",
+    trigger: "",
+    trail: "",
+    limitPrice: "",
+    breakeven: false,
+    breakevenActivation: "",
+    breakevenOffset: "",
+  };
+}
+
+export function clauseLevels(clause: { levels?: ExitRepeatLevels | null }): ExitRepeatLevels {
+  return { ...emptyRepeatLevels(), ...clause.levels };
+}
+
+/** Fill desk defaults on a later card without wiping a value the user already set. */
+export function seedRepeatLevels(
+  clause: ExitBuilderClause,
+  style: ExitPriceStyle,
+): ExitRepeatLevels {
+  const levels = clauseLevels(clause);
+  return {
+    ...levels,
+    style: levels.style || style,
+    basis: levels.basis || "average",
+    orderType: levels.orderType || "market",
+    method:
+      levels.method ||
+      (clause.kind === "trailing_stop" ? "" : style === "flex" ? "price" : "percent"),
+    trigger:
+      levels.trigger ||
+      (style === "flex" && clause.kind !== "trailing_stop" ? "last" : ""),
+    target: levels.target || (clause.ownPct != null ? String(clause.ownPct) : ""),
+    trail: levels.trail || (clause.ownDistance != null ? String(clause.ownDistance) : ""),
+  };
+}
 
 function clauseKey(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
@@ -237,6 +309,7 @@ export function syncClassicClauses(
       scope: clauseScope(clause),
       ownPct: clause.ownPct ?? null,
       ownDistance: clause.ownDistance ?? null,
+      levels: clause.levels,
     }));
   const custom = target.filter((clause) => clause.kind === "custom");
   if (classics.length === 0 && custom.length === 0) {

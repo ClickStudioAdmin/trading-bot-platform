@@ -53,6 +53,7 @@ import {
   exitClauseListMissing,
   exitClausesFromSaved,
   type ExitBuilderClause,
+  type ExitFieldSlot,
 } from "@/lib/strategy/exit-clauses";
 import {
   clausesFromExitActions,
@@ -2581,29 +2582,60 @@ export function DcaPlaybookForm({
   ) {
     setShortClassic((draft) => ({ ...draft, [key]: value }));
   }
-  function dcaTakeProfitFields(leg: "primary" | "short") {
+  function dcaTakeProfitFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = usesShortExit(leg);
-    const kind = shortLeg ? shortClassic.takeProfitKind : takeProfitKind;
-    const basis = shortLeg ? shortClassic.takeProfitBasis : takeProfitBasis;
-    const pct = shortLeg ? shortClassic.takeProfitPct : takeProfitPct;
-    const atrMult = shortLeg ? shortClassic.takeProfitAtrMult : takeProfitAtrMult;
-    const period = shortLeg ? shortClassic.atrPeriod : atrPeriod;
-    const orderType = shortLeg
-      ? shortClassic.takeProfitOrderType
-      : takeProfitOrderType;
-    const missing = shortLeg ? shortTpMissing : tpMissing;
+    const repeat = slot != null;
+    const kind = repeat
+      ? slot.levels.method === "atr"
+        ? "atr"
+        : "percent"
+      : shortLeg
+        ? shortClassic.takeProfitKind
+        : takeProfitKind;
+    const basis = repeat
+      ? slot.levels.basis === "first_entry"
+        ? "first_entry"
+        : "average"
+      : shortLeg
+        ? shortClassic.takeProfitBasis
+        : takeProfitBasis;
+    const pct = repeat ? slot.levels.target : shortLeg ? shortClassic.takeProfitPct : takeProfitPct;
+    const atrMult = repeat
+      ? slot.levels.atrMult
+      : shortLeg
+        ? shortClassic.takeProfitAtrMult
+        : takeProfitAtrMult;
+    const period = repeat ? slot.levels.atrPeriod : shortLeg ? shortClassic.atrPeriod : atrPeriod;
+    const orderType = repeat
+      ? slot.levels.orderType === "limit"
+        ? "limit"
+        : "market"
+      : shortLeg
+        ? shortClassic.takeProfitOrderType
+        : takeProfitOrderType;
+    const missing = repeat
+      ? slot.showErrors &&
+        (kind === "atr"
+          ? asNumber(atrMult) == null || asNumber(period) == null
+          : asNumber(pct) == null)
+      : shortLeg
+        ? shortTpMissing
+        : tpMissing;
     const lockSpacing =
-      !shortLeg && cycleLocked && averaging === "dip" && spacingKind === "atr";
+      !repeat && !shortLeg && cycleLocked && averaging === "dip" && spacingKind === "atr";
+    const fieldName = (name: string) => (repeat ? undefined : classicField(leg, name));
     return (
       <div className="contents">
         <label className={labelClass}>
           <HintLabel text="Basis" required />
           <AppSelect
-            name={classicField(leg, "takeProfitBasis")}
+            name={fieldName("takeProfitBasis")}
             value={basis}
             onChange={(event) => {
               const next = parseDcaExitBasis(event.target.value);
-              if (shortLeg) {
+              if (repeat) {
+                slot.onChange({ basis: next });
+              } else if (shortLeg) {
                 patchShort("takeProfitBasis", next);
               } else {
                 setTakeProfitBasis(next);
@@ -2618,11 +2650,13 @@ export function DcaPlaybookForm({
         <label className={labelClass}>
           <HintLabel text="Method" required />
           <AppSelect
-            name={classicField(leg, "takeProfitKind")}
+            name={fieldName("takeProfitKind")}
             value={kind}
             onChange={(event) => {
               const next = parseDcaTakeProfitKind(event.target.value);
-              if (shortLeg) {
+              if (repeat) {
+                slot.onChange({ method: next });
+              } else if (shortLeg) {
                 patchShort("takeProfitKind", next);
               } else {
                 setTakeProfitKind(next);
@@ -2637,10 +2671,14 @@ export function DcaPlaybookForm({
         {kind === "percent" ? (
           <BotField label="Target %" required>
             <PercentInput
-              name={classicField(leg, "takeProfitPct")}
+              name={fieldName("takeProfitPct")}
               value={pct}
               onChange={(next) =>
-                shortLeg ? patchShort("takeProfitPct", next) : setTakeProfitPct(next)
+                repeat
+                  ? slot.onChange({ target: next })
+                  : shortLeg
+                    ? patchShort("takeProfitPct", next)
+                    : setTakeProfitPct(next)
               }
               ariaLabel="Take profit target percent"
               invalid={dirty && missing}
@@ -2653,13 +2691,19 @@ export function DcaPlaybookForm({
                 <HintLabel text="ATR period" required />
                 <GroupedNumberInput
                   name={
-                    shortLeg || !(averaging === "dip" && spacingKind === "atr")
-                      ? classicField(leg, shortLeg ? "atrPeriod" : "atrPeriod")
-                      : undefined
+                    repeat
+                      ? undefined
+                      : shortLeg || !(averaging === "dip" && spacingKind === "atr")
+                        ? classicField(leg, "atrPeriod")
+                        : undefined
                   }
                   value={period}
                   onChange={(next) =>
-                    shortLeg ? patchShort("atrPeriod", next) : setAtrPeriod(next)
+                    repeat
+                      ? slot.onChange({ atrPeriod: next })
+                      : shortLeg
+                        ? patchShort("atrPeriod", next)
+                        : setAtrPeriod(next)
                   }
                   className={
                     dirty && asNumber(period) == null ? botFieldInvalidClass : fieldClass
@@ -2671,12 +2715,14 @@ export function DcaPlaybookForm({
             <label className={labelClass}>
               <HintLabel text="ATR multiple" required />
               <GroupedNumberInput
-                name={classicField(leg, "takeProfitAtrMult")}
+                name={fieldName("takeProfitAtrMult")}
                 value={atrMult}
                 onChange={(next) =>
-                  shortLeg
-                    ? patchShort("takeProfitAtrMult", next)
-                    : setTakeProfitAtrMult(next)
+                  repeat
+                    ? slot.onChange({ atrMult: next })
+                    : shortLeg
+                      ? patchShort("takeProfitAtrMult", next)
+                      : setTakeProfitAtrMult(next)
                 }
                 allowDecimal
                 className={dirty && missing ? botFieldInvalidClass : fieldClass}
@@ -2687,23 +2733,35 @@ export function DcaPlaybookForm({
         )}
         <BotField label="Order type" required>
           <OrderTypePill
-            name={classicField(leg, "takeProfitOrderType")}
+            name={fieldName("takeProfitOrderType")}
             value={orderType === "limit" ? "limit" : "market"}
             onChange={(next) =>
-              shortLeg
-                ? patchShort("takeProfitOrderType", next)
-                : setTakeProfitOrderType(next)
+              repeat
+                ? slot.onChange({ orderType: next })
+                : shortLeg
+                  ? patchShort("takeProfitOrderType", next)
+                  : setTakeProfitOrderType(next)
             }
           />
         </BotField>
       </div>
     );
   }
-  function dcaTrailingFields(leg: "primary" | "short") {
+  function dcaTrailingFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = usesShortExit(leg);
-    const trigger = shortLeg ? shortClassic.trailingTriggerPct : trailingTriggerPct;
-    const trail = shortLeg ? shortClassic.trailingPct : trailingPct;
-    const missing = shortLeg ? shortTrailMissing : trailMissing;
+    const repeat = slot != null;
+    const trigger = repeat
+      ? slot.levels.trigger
+      : shortLeg
+        ? shortClassic.trailingTriggerPct
+        : trailingTriggerPct;
+    const trail = repeat ? slot.levels.trail : shortLeg ? shortClassic.trailingPct : trailingPct;
+    const missing = repeat
+      ? slot.showErrors && (asNumber(trigger) == null || asNumber(trail) == null)
+      : shortLeg
+        ? shortTrailMissing
+        : trailMissing;
+    const fieldName = (name: string) => (repeat ? undefined : classicField(leg, name));
     return (
       <div className="contents">
         <BotField
@@ -2712,53 +2770,87 @@ export function DcaPlaybookForm({
           required
         >
           <PercentInput
-            name={classicField(leg, "trailingTriggerPct")}
+            name={fieldName("trailingTriggerPct")}
             value={trigger}
             onChange={(next) =>
-              shortLeg
-                ? patchShort("trailingTriggerPct", next)
-                : setTrailingTriggerPct(next)
+              repeat
+                ? slot.onChange({ trigger: next })
+                : shortLeg
+                  ? patchShort("trailingTriggerPct", next)
+                  : setTrailingTriggerPct(next)
             }
             ariaLabel="Trailing trigger percent"
-            invalid={dirty && missing}
+            invalid={repeat ? missing : dirty && missing}
           />
         </BotField>
         <BotField label="Trailing %" required>
           <PercentInput
-            name={classicField(leg, "trailingPct")}
+            name={fieldName("trailingPct")}
             value={trail}
             onChange={(next) =>
-              shortLeg ? patchShort("trailingPct", next) : setTrailingPct(next)
+              repeat
+                ? slot.onChange({ trail: next })
+                : shortLeg
+                  ? patchShort("trailingPct", next)
+                  : setTrailingPct(next)
             }
             ariaLabel="Trailing percent"
-            invalid={dirty && missing}
+            invalid={repeat ? missing : dirty && missing}
           />
         </BotField>
       </div>
     );
   }
-  function dcaStopFields(leg: "primary" | "short") {
+  function dcaStopFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = usesShortExit(leg);
-    const basis = shortLeg ? shortClassic.stopLossBasis : stopLossBasis;
-    const pct = shortLeg ? shortClassic.stopLossPct : stopLossPct;
-    const breakeven = shortLeg ? shortClassic.breakevenOn : breakevenOn;
-    const activation = shortLeg
-      ? shortClassic.breakevenActivationPct
-      : breakevenActivationPct;
-    const offset = shortLeg ? shortClassic.breakevenOffsetPct : breakevenOffsetPct;
-    const missing = shortLeg ? shortSlMissing : slMissing;
-    const breakevenInvalid = shortLeg ? shortBreakevenMissing : breakevenMissing;
+    const repeat = slot != null;
+    const basis = repeat
+      ? slot.levels.basis === "first_entry"
+        ? "first_entry"
+        : "average"
+      : shortLeg
+        ? shortClassic.stopLossBasis
+        : stopLossBasis;
+    const pct = repeat ? slot.levels.target : shortLeg ? shortClassic.stopLossPct : stopLossPct;
+    const breakeven = repeat
+      ? slot.levels.breakeven
+      : shortLeg
+        ? shortClassic.breakevenOn
+        : breakevenOn;
+    const activation = repeat
+      ? slot.levels.breakevenActivation
+      : shortLeg
+        ? shortClassic.breakevenActivationPct
+        : breakevenActivationPct;
+    const offset = repeat
+      ? slot.levels.breakevenOffset
+      : shortLeg
+        ? shortClassic.breakevenOffsetPct
+        : breakevenOffsetPct;
+    const missing = repeat
+      ? slot.showErrors && asNumber(pct) == null
+      : shortLeg
+        ? shortSlMissing
+        : slMissing;
+    const breakevenInvalid = repeat
+      ? slot.showErrors && breakeven && asNumber(activation) == null
+      : shortLeg
+        ? shortBreakevenMissing
+        : breakevenMissing;
+    const fieldName = (name: string) => (repeat ? undefined : classicField(leg, name));
     return (
       <div className="contents">
         <div className="contents">
           <label className={labelClass}>
             <HintLabel text="Basis" required />
             <AppSelect
-              name={classicField(leg, "stopLossBasis")}
+              name={fieldName("stopLossBasis")}
               value={basis}
               onChange={(event) => {
                 const next = parseDcaExitBasis(event.target.value);
-                if (shortLeg) {
+                if (repeat) {
+                  slot.onChange({ basis: next });
+                } else if (shortLeg) {
                   patchShort("stopLossBasis", next);
                 } else {
                   setStopLossBasis(next);
@@ -2772,10 +2864,14 @@ export function DcaPlaybookForm({
           </label>
           <BotField label="Stop loss %" required>
             <PercentInput
-              name={classicField(leg, "stopLossPct")}
+              name={fieldName("stopLossPct")}
               value={pct}
               onChange={(next) =>
-                shortLeg ? patchShort("stopLossPct", next) : setStopLossPct(next)
+                repeat
+                  ? slot.onChange({ target: next })
+                  : shortLeg
+                    ? patchShort("stopLossPct", next)
+                    : setStopLossPct(next)
               }
               ariaLabel="Stop loss percent"
               invalid={dirty && missing}
@@ -2786,18 +2882,24 @@ export function DcaPlaybookForm({
             className="col-span-2"
             enabled={breakeven}
             onEnabled={(next) =>
-              shortLeg ? patchShort("breakevenOn", next) : setBreakevenOn(next)
+              repeat
+                ? slot.onChange({ breakeven: next })
+                : shortLeg
+                  ? patchShort("breakevenOn", next)
+                  : setBreakevenOn(next)
             }
           >
             <div className="grid grid-cols-2 gap-4">
               <BotField label="Move stop to breakeven at %" required>
                 <PercentInput
-                  name={classicField(leg, "breakevenActivationPct")}
+                  name={fieldName("breakevenActivationPct")}
                   value={activation}
                   onChange={(next) =>
-                    shortLeg
-                      ? patchShort("breakevenActivationPct", next)
-                      : setBreakevenActivationPct(next)
+                    repeat
+                      ? slot.onChange({ breakevenActivation: next })
+                      : shortLeg
+                        ? patchShort("breakevenActivationPct", next)
+                        : setBreakevenActivationPct(next)
                   }
                   ariaLabel="Move stop to breakeven at percent"
                   invalid={dirty && breakevenInvalid}
@@ -2806,12 +2908,14 @@ export function DcaPlaybookForm({
               <label className={labelClass}>
                 Breakeven offset %
                 <PercentInput
-                  name={classicField(leg, "breakevenOffsetPct")}
+                  name={fieldName("breakevenOffsetPct")}
                   value={offset}
                   onChange={(next) =>
-                    shortLeg
-                      ? patchShort("breakevenOffsetPct", next)
-                      : setBreakevenOffsetPct(next)
+                    repeat
+                      ? slot.onChange({ breakevenOffset: next })
+                      : shortLeg
+                        ? patchShort("breakevenOffsetPct", next)
+                        : setBreakevenOffsetPct(next)
                   }
                   placeholder="0"
                   ariaLabel="Breakeven offset percent"
@@ -3431,9 +3535,10 @@ export function DcaPlaybookForm({
             stopLoss: stopLossPct,
             trailingPct,
           })}
-          renderTakeProfit={() => dcaTakeProfitFields("primary")}
-          renderTrailingStop={() => dcaTrailingFields("primary")}
-          renderStopLoss={() => dcaStopFields("primary")}
+          priceStyle="dca"
+          renderTakeProfit={(slot) => dcaTakeProfitFields("primary", slot)}
+          renderTrailingStop={(slot) => dcaTrailingFields("primary", slot)}
+          renderStopLoss={(slot) => dcaStopFields("primary", slot)}
         />
       </BotFormStep>
       ) : null}
@@ -3464,14 +3569,15 @@ export function DcaPlaybookForm({
                   trailingPct,
                 },
           )}
-          renderTakeProfit={() =>
-            dcaTakeProfitFields(direction === "both" ? "short" : "primary")
+          priceStyle="dca"
+          renderTakeProfit={(slot) =>
+            dcaTakeProfitFields(direction === "both" ? "short" : "primary", slot)
           }
-          renderTrailingStop={() =>
-            dcaTrailingFields(direction === "both" ? "short" : "primary")
+          renderTrailingStop={(slot) =>
+            dcaTrailingFields(direction === "both" ? "short" : "primary", slot)
           }
-          renderStopLoss={() =>
-            dcaStopFields(direction === "both" ? "short" : "primary")
+          renderStopLoss={(slot) =>
+            dcaStopFields(direction === "both" ? "short" : "primary", slot)
           }
         />
       </BotFormStep>

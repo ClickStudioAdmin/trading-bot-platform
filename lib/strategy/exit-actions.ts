@@ -8,17 +8,20 @@ import type { FuturesSide } from "@/lib/futures/model";
 import type { CandleBar } from "@/lib/market/candles";
 import {
   clauseHasPriceRule,
+  clauseLevels,
   clauseOrGroups,
   clauseScope,
   classicExitClause,
   customExitClause,
   emptyExitClause,
+  emptyRepeatLevels,
   isClassicExitKind,
   priceRuleForKind,
   priceRuleName,
   type ClassicExitKind,
   type ExitBuilderClause,
   type ExitOrGroup,
+  type ExitRepeatLevels,
   type ExitScope,
 } from "@/lib/strategy/exit-clauses";
 
@@ -49,6 +52,10 @@ export type StoredExitAction = {
   trailingDistance: number | null;
   trailingActivation: number | null;
   trailingPct?: number | null;
+  /** Profit percent that must be reached before a DCA trailing stop starts. */
+  trailingTriggerPct?: number | null;
+  /** Price fields for a later card. Absent on the first card of that kind. */
+  levels?: ExitRepeatLevels;
 };
 
 export type ExitSidePrices = {
@@ -186,6 +193,33 @@ function scopeFromJson(value: unknown): StoredExitAction["scope"] | null {
   return null;
 }
 
+function textLevel(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function levelsFromJson(value: unknown): ExitRepeatLevels | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+  const row = value as Record<string, unknown>;
+  const style = row.style === "flex" || row.style === "dca" ? row.style : "";
+  return {
+    style,
+    basis: textLevel(row.basis) || "average",
+    method: textLevel(row.method),
+    target: textLevel(row.target),
+    atrPeriod: textLevel(row.atrPeriod),
+    atrMult: textLevel(row.atrMult),
+    orderType: row.orderType === "limit" ? "limit" : "market",
+    trigger: textLevel(row.trigger),
+    trail: textLevel(row.trail),
+    limitPrice: textLevel(row.limitPrice),
+    breakeven: row.breakeven === true,
+    breakevenActivation: textLevel(row.breakevenActivation),
+    breakevenOffset: textLevel(row.breakevenOffset),
+  };
+}
+
 export function exitActionsFromJson(value: unknown): StoredExitAction[] | null {
   if (value == null) {
     return null;
@@ -248,6 +282,9 @@ export function exitActionsFromJson(value: unknown): StoredExitAction[] | null {
       stopLossPrice: positiveOrNull(row.stopLossPrice),
       trailingDistance: positiveOrNull(row.trailingDistance),
       trailingActivation: positiveOrNull(row.trailingActivation),
+      trailingPct: positiveOrNull(row.trailingPct),
+      trailingTriggerPct: positiveOrNull(row.trailingTriggerPct),
+      levels: levelsFromJson(row.levels),
     });
   }
   return actions;
@@ -393,15 +430,11 @@ function forEachBlock(
     ) {
       return `${label} needs a ${ruleName}.`;
     }
-    if (seen > 1 && clause.kind === "trailing_stop" && !(clause.ownDistance != null && clause.ownDistance > 0)) {
-      return "Enter a distance for the extra trailing stop.";
-    }
-    if (
-      seen > 1 &&
-      (clause.kind === "take_profit" || clause.kind === "stop_loss") &&
-      !(clause.ownPct != null && clause.ownPct > 0)
-    ) {
-      return `Enter a target for the extra ${clause.kind === "take_profit" ? "take profit" : "stop loss"}.`;
+    if (seen > 1 && isClassicExitKind(clause.kind)) {
+      const missing = repeatFieldBlock(clause);
+      if (missing) {
+        return missing;
+      }
     }
     const loose =
       (clause.anchor.trigger === "unset" &&
@@ -435,6 +468,50 @@ export function exitCardsBlockReason(
   return forEachBlock(clauses);
 }
 
+function repeatFieldBlock(clause: ExitBuilderClause): string | null {
+  const levels = clauseLevels(clause);
+  const flex =
+    levels.style === "flex" ||
+    levels.trigger === "last" ||
+    levels.trigger === "mark" ||
+    levels.trigger === "index";
+  if (clause.kind === "take_profit") {
+    if (levels.method === "atr") {
+      if (levelNumber(levels.atrPeriod) == null) {
+        return "Enter an ATR period for the extra take profit.";
+      }
+      if (levelNumber(levels.atrMult) == null) {
+        return "Enter a take profit ATR multiple.";
+      }
+    } else if (levelNumber(levels.target) == null && !(clause.ownPct != null && clause.ownPct > 0)) {
+      return "Enter a target for the extra take profit.";
+    }
+    if (flex && levels.orderType === "limit" && levelNumber(levels.limitPrice) == null) {
+      return "Enter a limit price for the extra take profit.";
+    }
+    return null;
+  }
+  if (clause.kind === "stop_loss") {
+    if (levelNumber(levels.target) == null && !(clause.ownPct != null && clause.ownPct > 0)) {
+      return "Enter a stop loss for the extra stop.";
+    }
+    if (levels.breakeven && levelNumber(levels.breakevenActivation) == null) {
+      return "Enter a breakeven activation percent.";
+    }
+    if (flex && levels.orderType === "limit" && levelNumber(levels.limitPrice) == null) {
+      return "Enter a limit price for the extra stop loss.";
+    }
+    return null;
+  }
+  if (clause.kind === "trailing_stop") {
+    const trail = levelNumber(levels.trail) ?? (clause.ownDistance != null && clause.ownDistance > 0 ? clause.ownDistance : null);
+    if (levelNumber(levels.trigger) == null || trail == null) {
+      return "Enter a trailing stop.";
+    }
+  }
+  return null;
+}
+
 function pricesFor(
   clause: ExitBuilderClause,
   kindCount: number,
@@ -448,6 +525,7 @@ function pricesFor(
   | "trailingDistance"
   | "trailingActivation"
   | "trailingPct"
+  | "trailingTriggerPct"
 > {
   const blank = {
     takeProfitPct: null,
@@ -457,14 +535,15 @@ function pricesFor(
     trailingDistance: null,
     trailingActivation: null,
     trailingPct: null,
+    trailingTriggerPct: null,
   };
   if (!clauseHasPriceRule(clause)) {
     return blank;
   }
+  if (kindCount > 1) {
+    return repeatPrices(clause);
+  }
   if (clause.kind === "take_profit") {
-    if (kindCount > 1) {
-      return { ...blank, takeProfitPct: clause.ownPct };
-    }
     return {
       ...blank,
       takeProfitPct: prices.takeProfitPct,
@@ -472,9 +551,6 @@ function pricesFor(
     };
   }
   if (clause.kind === "stop_loss") {
-    if (kindCount > 1) {
-      return { ...blank, stopLossPct: clause.ownPct };
-    }
     return {
       ...blank,
       stopLossPct: prices.stopLossPct,
@@ -482,15 +558,71 @@ function pricesFor(
     };
   }
   if (clause.kind === "trailing_stop") {
-    if (kindCount > 1) {
-      return { ...blank, trailingDistance: clause.ownDistance };
-    }
     return {
       ...blank,
       trailingDistance: prices.trailingDistance,
       trailingActivation: prices.trailingActivation,
       trailingPct: prices.trailingPct ?? null,
     };
+  }
+  return blank;
+}
+
+function repeatPrices(
+  clause: ExitBuilderClause,
+): Pick<
+  StoredExitAction,
+  | "takeProfitPct"
+  | "takeProfitPrice"
+  | "stopLossPct"
+  | "stopLossPrice"
+  | "trailingDistance"
+  | "trailingActivation"
+  | "trailingPct"
+  | "trailingTriggerPct"
+> {
+  const blank = {
+    takeProfitPct: null,
+    takeProfitPrice: null,
+    stopLossPct: null,
+    stopLossPrice: null,
+    trailingDistance: null,
+    trailingActivation: null,
+    trailingPct: null,
+    trailingTriggerPct: null,
+  };
+  const levels = clauseLevels(clause);
+  const flex = levels.style === "flex";
+  const target = levelNumber(levels.target) ?? (clause.ownPct != null && clause.ownPct > 0 ? clause.ownPct : null);
+  const priceMode = levels.method === "price" || (levels.method === "" && flex);
+  if (clause.kind === "take_profit") {
+    if (levels.method === "atr" || !clauseHasPriceRule(clause)) {
+      return blank;
+    }
+    return priceMode
+      ? { ...blank, takeProfitPrice: target }
+      : { ...blank, takeProfitPct: target };
+  }
+  if (clause.kind === "stop_loss") {
+    if (!clauseHasPriceRule(clause)) {
+      return blank;
+    }
+    return priceMode
+      ? { ...blank, stopLossPrice: target }
+      : { ...blank, stopLossPct: target };
+  }
+  if (clause.kind === "trailing_stop") {
+    if (!clauseHasPriceRule(clause)) {
+      return blank;
+    }
+    const trail =
+      levelNumber(levels.trail) ??
+      (clause.ownDistance != null && clause.ownDistance > 0 ? clause.ownDistance : null);
+    const trigger = levelNumber(levels.trigger);
+    if (flex) {
+      return { ...blank, trailingDistance: trail, trailingActivation: trigger };
+    }
+    return { ...blank, trailingPct: trail, trailingTriggerPct: trigger };
   }
   return blank;
 }
@@ -516,15 +648,62 @@ export function exitActionsForSave(
       continue;
     }
     const kind: ExitActionKind = clause.kind === "custom" ? "close" : clause.kind;
+    const levels = seenCount > 1 && isClassicExitKind(clause.kind) ? clauseLevels(clause) : undefined;
     actions.push({
       id: clause.key,
       kind,
       scope,
       groups: groupsOf(clause),
       ...pricesFor(clause, seenCount, prices),
+      ...(levels ? { levels } : {}),
     });
   }
   return actions.length > 0 ? actions : null;
+}
+
+function levelsForAction(action: StoredExitAction): ExitRepeatLevels {
+  const stored = action.levels
+    ? { ...emptyRepeatLevels(), ...action.levels }
+    : emptyRepeatLevels();
+  if (action.kind === "take_profit" && !stored.target) {
+    if (action.takeProfitPrice != null) {
+      stored.target = String(action.takeProfitPrice);
+      if (!stored.method) {
+        stored.method = "price";
+      }
+    } else if (action.takeProfitPct != null) {
+      stored.target = String(action.takeProfitPct);
+    }
+  }
+  if (action.kind === "stop_loss" && !stored.target) {
+    if (action.stopLossPrice != null) {
+      stored.target = String(action.stopLossPrice);
+      if (!stored.method) {
+        stored.method = "price";
+      }
+    } else if (action.stopLossPct != null) {
+      stored.target = String(action.stopLossPct);
+    }
+  }
+  if (action.kind === "trailing_stop") {
+    if (!stored.trail) {
+      stored.trail =
+        action.trailingPct != null
+          ? String(action.trailingPct)
+          : action.trailingDistance != null
+            ? String(action.trailingDistance)
+            : "";
+    }
+    if (!stored.trigger) {
+      stored.trigger =
+        action.trailingTriggerPct != null
+          ? String(action.trailingTriggerPct)
+          : action.trailingActivation != null
+            ? String(action.trailingActivation)
+            : "";
+    }
+  }
+  return stored;
 }
 
 export function clausesFromExitActions(
@@ -571,18 +750,9 @@ export function clausesFromExitActions(
       rows: placed.rows,
       orGroups,
       scope: action.scope,
-      ownPct:
-        seenCount > 1
-          ? action.kind === "take_profit"
-            ? action.takeProfitPct
-            : action.kind === "stop_loss"
-              ? action.stopLossPct
-              : null
-          : null,
-      ownDistance:
-        seenCount > 1 && action.kind === "trailing_stop"
-          ? action.trailingDistance
-          : null,
+      ownPct: null,
+      ownDistance: null,
+      levels: seenCount > 1 ? levelsForAction(action) : undefined,
     };
   });
 }
@@ -917,6 +1087,13 @@ function priceFires(input: {
     const pct = action.stopLossPct;
     const pnl = entry != null && pct != null ? pnlPct(side, entry, input.mark) : null;
     return { fire: pnl != null && pnl <= -pct!, peak: arm.peak };
+  }
+  if (action.trailingTriggerPct != null && action.trailingTriggerPct > 0) {
+    const entry = input.entryPrice;
+    const moved = entry != null ? pnlPct(side, entry, input.last) : null;
+    if (moved == null || moved < action.trailingTriggerPct) {
+      return { fire: false, peak: arm.peak };
+    }
   }
   const distance =
     action.trailingDistance ??
