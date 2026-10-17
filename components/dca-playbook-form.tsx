@@ -2595,7 +2595,7 @@ export function DcaPlaybookForm({
     const lockSpacing =
       !shortLeg && cycleLocked && averaging === "dip" && spacingKind === "atr";
     return (
-      <div className={fieldRowClass}>
+      <div className={`${fieldRowClass} [&>*]:min-w-0`}>
         <label className={labelClass}>
           <HintLabel text="Basis" required />
           <AppSelect
@@ -2705,7 +2705,7 @@ export function DcaPlaybookForm({
     const trail = shortLeg ? shortClassic.trailingPct : trailingPct;
     const missing = shortLeg ? shortTrailMissing : trailMissing;
     return (
-      <div className={fieldRowClass}>
+      <div className={`${fieldRowClass} [&>*]:min-w-0`}>
         <BotField
           label="Trigger %"
           hint="Trail starts after price moves this %."
@@ -2750,7 +2750,7 @@ export function DcaPlaybookForm({
     const breakevenInvalid = shortLeg ? shortBreakevenMissing : breakevenMissing;
     return (
       <div className="@container">
-        <div className="grid grid-cols-2 items-start gap-4 @min-[40rem]:grid-cols-4">
+        <div className="grid grid-cols-2 items-start gap-4 [&>*]:min-w-0 @min-[40rem]:grid-cols-4">
           <label className={labelClass}>
             <HintLabel text="Basis" required />
             <AppSelect
@@ -3424,7 +3424,6 @@ export function DcaPlaybookForm({
           webhooks={signalWebhooks}
           fieldClass={fieldClass}
           labelClass={labelClass}
-          gridClass={fieldRowClass5}
           showErrors={dirty}
           actionName="exitActions"
           prices={exitPricesFromLevels({
@@ -3450,7 +3449,6 @@ export function DcaPlaybookForm({
           webhooks={signalWebhooks}
           fieldClass={fieldClass}
           labelClass={labelClass}
-          gridClass={fieldRowClass5}
           showErrors={dirty}
           actionName={direction === "both" ? "shortExitActions" : "exitActions"}
           prices={exitPricesFromLevels(

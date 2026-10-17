@@ -3,10 +3,9 @@
 import type { ReactNode } from "react";
 import { AppSelect } from "@/components/app-select";
 import {
+  BotColumnLayout,
   HintLabel,
   botFieldInvalidClass,
-  conditionFieldClass,
-  useBotColumnLayout,
 } from "@/components/bot-form-chrome";
 import {
   AddConditionButton,
@@ -63,6 +62,10 @@ const CONDITION_OPTIONS: { value: HardExitTrigger; label: string }[] = [
   { value: "price", label: "Price Cross" },
   { value: "webhook", label: "Signal Webhook" },
 ];
+
+/** Each control keeps its own column. A fixed five-column row let the wide selects paint over the next field. */
+const exitCardGrid =
+  "grid items-start gap-4 [&>*]:min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,14rem),1fr))]";
 
 function isConditionTrigger(value: string): value is HardExitTrigger {
   return (
@@ -158,7 +161,6 @@ export function ExitSideBuilder({
   webhooks = [],
   fieldClass,
   labelClass,
-  gridClass,
   renderTakeProfit,
   renderTrailingStop,
   renderStopLoss,
@@ -175,7 +177,6 @@ export function ExitSideBuilder({
   webhooks?: { id: string; name: string }[];
   fieldClass: string;
   labelClass: string;
-  gridClass: string;
   renderTakeProfit: () => ReactNode;
   renderTrailingStop: () => ReactNode;
   renderStopLoss: () => ReactNode;
@@ -184,7 +185,6 @@ export function ExitSideBuilder({
   actionName?: string;
   prices?: ExitSidePrices;
 }) {
-  const column = useBotColumnLayout();
   const webhookIds = webhooks.map((hook) => hook.id);
   const firstClose = clauses.find((clause) => clause.kind === "custom");
   const closePlaced = firstClose ? placeFirstClose(firstClose) : [];
@@ -293,6 +293,7 @@ export function ExitSideBuilder({
   const kindCounts = new Map<string, number>();
 
   return (
+    <BotColumnLayout enabled>
     <div className="space-y-3">
       {actionName ? (
         <input
@@ -350,7 +351,7 @@ export function ExitSideBuilder({
                   />
                 ) : null}
               </div>
-              <div className={gridClass}>
+              <div className={exitCardGrid}>
                 <label className={`${labelClass} whitespace-nowrap`}>
                   <HintLabel text="Action" />
                   <AppSelect
@@ -358,8 +359,8 @@ export function ExitSideBuilder({
                     onChange={(event) => setChoice(clause, event.target.value)}
                     className={
                       showErrors && clause.kind === "" && clauses.some((item) => item.kind !== "")
-                        ? conditionFieldClass(botFieldInvalidClass, column)
-                        : conditionFieldClass(fieldClass, column)
+                        ? botFieldInvalidClass
+                        : fieldClass
                     }
                   >
                     <option value="">Select Action</option>
@@ -378,7 +379,7 @@ export function ExitSideBuilder({
                       onChange={(event) =>
                         setScope(clause, event.target.value as ExitScope["kind"])
                       }
-                      className={conditionFieldClass(fieldClass, column)}
+                      className={fieldClass}
                     >
                       <option value="all">All</option>
                       <option value="percent">Percent of open size</option>
@@ -474,11 +475,9 @@ export function ExitSideBuilder({
                     rows={rows}
                     webhookIds={webhookIds}
                     webhooks={webhooks}
-                    gridClass={gridClass}
                     fieldClass={fieldClass}
                     labelClass={labelClass}
                     showErrors={showErrors}
-                    column={column}
                     onAnchor={(value) => setAnchor(clause, value)}
                     onPatch={(update) => patch(clause.key, update)}
                   />
@@ -501,6 +500,7 @@ export function ExitSideBuilder({
         />
       ) : null}
     </div>
+    </BotColumnLayout>
   );
 }
 
@@ -515,11 +515,9 @@ function ConditionStack({
   rows,
   webhookIds,
   webhooks,
-  gridClass,
   fieldClass,
   labelClass,
   showErrors,
-  column,
   onAnchor,
   onPatch,
 }: {
@@ -533,11 +531,9 @@ function ConditionStack({
   rows: ExitStackRow[];
   webhookIds: string[];
   webhooks: { id: string; name: string }[];
-  gridClass: string;
   fieldClass: string;
   labelClass: string;
   showErrors: boolean;
-  column: boolean;
   onAnchor: (value: string) => void;
   onPatch: (update: (clause: ExitBuilderClause) => ExitBuilderClause) => void;
 }) {
@@ -551,7 +547,7 @@ function ConditionStack({
   const label = clause.kind === "custom" ? "Condition Type" : "Enable when";
   return (
     <div className="space-y-3">
-      <div className={gridClass}>
+      <div className={exitCardGrid}>
         <label className={`${labelClass} whitespace-nowrap`}>
           <HintLabel text={label} />
           <AppSelect
@@ -559,8 +555,8 @@ function ConditionStack({
             onChange={(event) => onAnchor(event.target.value)}
             className={
               showErrors && clause.kind === "custom" && clause.anchor.trigger === "unset"
-                ? conditionFieldClass(botFieldInvalidClass, column)
-                : conditionFieldClass(fieldClass, column)
+                ? botFieldInvalidClass
+                : fieldClass
             }
           >
             <option value="">{clause.kind === "custom" ? "Select Condition Type" : "Always on"}</option>
@@ -584,7 +580,7 @@ function ConditionStack({
             value={clause.anchor}
             onChange={(draft) => onPatch((current) => ({ ...current, anchor: draft }))}
             webhooks={webhooks}
-            gridClass={gridClass}
+            gridClass={exitCardGrid}
             fieldClass={fieldClass}
             labelClass={labelClass}
             named={named}
@@ -609,7 +605,6 @@ function ConditionStack({
           lead={lead}
           webhookIds={webhookIds}
           webhooks={webhooks}
-          gridClass={gridClass}
           fieldClass={fieldClass}
           labelClass={labelClass}
           showErrors={showErrors}
@@ -642,11 +637,9 @@ function ConditionStack({
           lead={lead}
           webhookIds={webhookIds}
           webhooks={webhooks}
-          gridClass={gridClass}
           fieldClass={fieldClass}
           labelClass={labelClass}
           showErrors={showErrors}
-          column={column}
           onPatch={onPatch}
         />
       ))}
@@ -666,11 +659,9 @@ function OrGroup(props: {
   lead: HardExitDraft;
   webhookIds: string[];
   webhooks: { id: string; name: string }[];
-  gridClass: string;
   fieldClass: string;
   labelClass: string;
   showErrors: boolean;
-  column: boolean;
   onPatch: (update: (clause: ExitBuilderClause) => ExitBuilderClause) => void;
 }) {
   const { group, onPatch } = props;
@@ -680,7 +671,7 @@ function OrGroup(props: {
   return (
     <div className="space-y-3">
       <JoinWord label="Or" />
-      <div className={props.gridClass}>
+      <div className={exitCardGrid}>
         <label className={`${props.labelClass} whitespace-nowrap`}>
           <HintLabel text="Condition Type" />
           <AppSelect
@@ -703,8 +694,8 @@ function OrGroup(props: {
             }}
             className={
               props.showErrors && group.anchor.trigger === "unset"
-                ? conditionFieldClass(botFieldInvalidClass, props.column)
-                : conditionFieldClass(props.fieldClass, props.column)
+                ? botFieldInvalidClass
+                : props.fieldClass
             }
           >
             <option value="">Select Condition Type</option>
@@ -728,7 +719,6 @@ function OrGroup(props: {
           lead={props.lead}
           webhookIds={props.webhookIds}
           webhooks={props.webhooks}
-          gridClass={props.gridClass}
           fieldClass={props.fieldClass}
           labelClass={props.labelClass}
           showErrors={props.showErrors}
@@ -757,7 +747,6 @@ function OrGroup(props: {
           lead={props.lead}
           webhookIds={props.webhookIds}
           webhooks={props.webhooks}
-          gridClass={props.gridClass}
           fieldClass={props.fieldClass}
           labelClass={props.labelClass}
           showErrors={props.showErrors}
@@ -804,7 +793,6 @@ function DraftRow(props: {
   lead: HardExitDraft;
   webhookIds: string[];
   webhooks: { id: string; name: string }[];
-  gridClass: string;
   fieldClass: string;
   labelClass: string;
   showErrors: boolean;
@@ -827,7 +815,6 @@ function DraftRow(props: {
             lead={props.lead}
             webhookIds={props.webhookIds}
             webhooks={props.webhooks}
-            gridClass={props.gridClass}
             fieldClass={props.fieldClass}
             labelClass={props.labelClass}
             showErrors={props.showErrors}
@@ -852,7 +839,6 @@ function DraftFields({
   lead,
   webhookIds,
   webhooks,
-  gridClass,
   fieldClass,
   labelClass,
   showErrors,
@@ -869,7 +855,6 @@ function DraftFields({
   lead: HardExitDraft;
   webhookIds: string[];
   webhooks: { id: string; name: string }[];
-  gridClass: string;
   fieldClass: string;
   labelClass: string;
   showErrors: boolean;
@@ -893,7 +878,7 @@ function DraftFields({
         value={draft}
         onChange={onChange}
         webhooks={webhooks}
-        gridClass={gridClass}
+        gridClass={exitCardGrid}
         fieldClass={fieldClass}
         labelClass={labelClass}
         named={named}

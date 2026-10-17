@@ -1300,7 +1300,7 @@ function RuleCard({
     const missing = shortLeg ? shortTpMissing : tpMissing;
     const limitMissing = shortLeg ? shortTpLimitMissing : tpLimitMissing;
     return (
-      <div className={fieldRow5}>
+      <div className={`${fieldRow5} [&>*]:min-w-0`}>
         <BotField label="Type" required>
           <AppSelect
             name={exitFieldName(leg, "tpKind")}
@@ -1400,7 +1400,7 @@ function RuleCard({
     const active = shortLeg ? shortClassic.trailingActive : trailingActive;
     const missing = shortLeg ? shortTrailMissing : trailMissing;
     return (
-      <div className={fieldRow}>
+      <div className={`${fieldRow} [&>*]:min-w-0`}>
         <BotField label="Retracement" required>
           <GroupedNumberInput
             name={exitFieldName(leg, "trailingStop")}
@@ -1457,7 +1457,7 @@ function RuleCard({
         ) : null}
         <div className="@container">
           <div className="grid items-start gap-4 @min-[40rem]:grid-cols-2">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 [&>*]:min-w-0">
               <BotField label="Type" required>
                 <AppSelect
                   name={exitFieldName(leg, "slKind")}
@@ -1901,7 +1901,6 @@ function RuleCard({
             webhooks={triggerWebhooks}
             fieldClass={botFieldClass}
             labelClass={botLabelClass}
-            gridClass={fieldRow5}
             showErrors={dirty}
             actionName={`${prefix}exitActions`}
             prices={exitPricesFromLevels({
@@ -1930,7 +1929,6 @@ function RuleCard({
             webhooks={triggerWebhooks}
             fieldClass={botFieldClass}
             labelClass={botLabelClass}
-            gridClass={fieldRow5}
             showErrors={dirty}
             actionName={
               direction === "both" ? `${prefix}short_exitActions` : `${prefix}exitActions`
