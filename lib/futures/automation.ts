@@ -87,6 +87,8 @@ export type FuturesAutomationRule = {
   exitIf: DcaFilterSpec | null;
   exitHard?: HardExitSignal | null;
   exitStack?: EntryStack | null;
+  /** Set when this side does not fit the classic columns. The worker runs this list and skips those columns. */
+  exitActions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
   breakevenActivationPct: number | null;
   breakevenOffsetPct: number | null;
   direction: PerpsDirection;
@@ -121,6 +123,7 @@ export type FuturesAutomationFormValues = {
   exitIf: DcaFilterSpec | null;
   exitHard?: HardExitSignal | null;
   exitStack?: EntryStack | null;
+  exitActions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
   exitDraft?: HardExitDraft | null;
   breakevenActivationPct: string;
   breakevenOffsetPct: string;
@@ -385,6 +388,7 @@ export function parseFuturesAutomationForm(
     parsed.rule.exitIf = conditions.exitIf;
     parsed.rule.exitHard = conditions.exitHard;
     parsed.rule.exitStack = conditions.exitStack;
+    parsed.rule.exitActions = conditions.exitActions;
     parsed.rule.breakevenActivationPct = conditions.breakevenActivationPct;
     parsed.rule.breakevenOffsetPct = conditions.breakevenOffsetPct;
     const directed = applyPerpsDirection(form, prefix, deskVenue, parsed.rule);
@@ -788,6 +792,7 @@ function applyPerpsDirection(
             exitStack: conditions.exitStack,
           }
         : {}),
+      ...(conditions.exitActions ? { actions: conditions.exitActions } : {}),
       ...(shortClassicOn
         ? {
             classic: {
@@ -997,6 +1002,7 @@ export function futuresRuleToForm(
     exitIf: rule.exitIf,
     exitHard: rule.exitHard ?? null,
     exitStack: rule.exitStack ?? emptyEntryStack(),
+    exitActions: rule.exitActions ?? null,
     exitDraft: hardExitDraftFromStored(rule.exitIf, rule.exitHard),
     breakevenActivationPct:
       rule.breakevenActivationPct == null
@@ -1087,6 +1093,7 @@ function attachRuleConditions(
   rule.exitIf = conditions.exitIf;
   rule.exitHard = conditions.exitHard;
   rule.exitStack = conditions.exitStack;
+  rule.exitActions = conditions.exitActions;
   rule.breakevenActivationPct = conditions.breakevenActivationPct;
   rule.breakevenOffsetPct = conditions.breakevenOffsetPct;
 }

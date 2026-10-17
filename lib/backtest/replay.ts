@@ -13,6 +13,15 @@ import {
   formatStrategyLeafReason,
 } from "@/lib/bots/condition-copy";
 import { hardExitSignalFromJson } from "@/lib/dca/hard-exit";
+import {
+  emptyExitRuntime,
+  evaluateExitActions,
+  exitActionTimeframes,
+  sideExitActions,
+  type ExitActionKind,
+  type ExitLot,
+  type ExitRuntime,
+} from "@/lib/strategy/exit-actions";
 import { formatExitExpressionText } from "@/lib/dca/exit-stack";
 import { canBacktestPerpsRecipe } from "./eligibility";
 import { backtestTapeInterval } from "./model";
@@ -186,6 +195,28 @@ function mergeSimPosition(
   };
 }
 
+function perpsSideActions(recipe: PerpsTemplateRecipe, side: FuturesSide) {
+  return sideExitActions(
+    recipe.exitActions,
+    recipe.shortEntry?.actions,
+    recipe.direction,
+    side,
+  );
+}
+
+function claimFillReason(kind: ExitActionKind): BacktestFillReason {
+  if (kind === "stop_loss") {
+    return "stop";
+  }
+  if (kind === "trailing_stop") {
+    return "trailing";
+  }
+  if (kind === "close") {
+    return "exit_if";
+  }
+  return "take_profit";
+}
+
 function feeUsdt(qty: number, price: number, feeRate: number): number {
   return Math.abs(qty * price) * feeRate;
 }
@@ -267,6 +298,8 @@ export async function replayPerpsPriceCross(input: {
   const shortExitMask = series.exitMask(input.recipe, "short");
   let wasTrue = false;
   let open: OpenSim | null = null;
+  let flexLots: ExitLot[] = [];
+  let flexRuntime: ExitRuntime = emptyExitRuntime();
   const orders: SimulatedOrder[] = [];
   const events: ReplayEvent[] = [];
   let realized = 0;
@@ -330,6 +363,8 @@ export async function replayPerpsPriceCross(input: {
       because,
     );
     open = null;
+    flexLots = [];
+    flexRuntime = emptyExitRuntime();
   }
 
   function wipeOpen(atMs: number, fill: number) {
@@ -373,14 +408,15 @@ export async function replayPerpsPriceCross(input: {
         mark: adverse,
         index: adverse,
       };
+      const actions = perpsSideActions(input.recipe, open.side);
       const sl =
-        open.tpsl && tpslHasLevels(open.tpsl)
-          ? paperStopLossHit({
+        actions || !(open.tpsl && tpslHasLevels(open.tpsl))
+          ? null
+          : paperStopLossHit({
               side: open.side,
               tpsl: open.tpsl,
               ...quotes,
-            })
-          : null;
+            });
       const liq = backtestLiquidationPrice({
         side: open.side,
         entry: open.entry,
@@ -399,7 +435,68 @@ export async function replayPerpsPriceCross(input: {
           flattenOpen(bar.timeMs, firstHit.price, firstHit.reason);
         }
       }
-      if (open?.trailing && trailingHasStop(open.trailing)) {
+      if (actions && open) {
+        const frames = exitActionTimeframes(actions) as DcaIndicatorTimeframe[];
+        const sampled = series.barsAt(barIndex - 1, frames);
+        const bars = new Map<string, CandleBar[]>();
+        for (const [key, value] of sampled) {
+          bars.set(key, value);
+        }
+        const seeded =
+          flexLots.length > 0
+            ? flexLots
+            : [{ id: "position", qty: open.qty, price: open.entry }];
+        const settled = evaluateExitActions({
+          actions,
+          runtime: flexRuntime,
+          lots: seeded,
+          side: open.side,
+          mark: price,
+          last: price,
+          entryPrice: open.entry,
+          nowMs: bar.timeMs,
+          barsByTimeframe: bars,
+        });
+        flexRuntime = settled.runtime;
+        flexLots = settled.lots;
+        for (const claim of settled.claims) {
+          if (!open) {
+            break;
+          }
+          const take = Math.min(open.qty, claim.qty);
+          if (!open || !(take > 0)) {
+            continue;
+          }
+          const current: OpenSim = open;
+          if (take + 1e-8 >= current.qty) {
+            flattenOpen(bar.timeMs, price, claimFillReason(claim.kind));
+            break;
+          }
+          const fee = feeUsdt(take, price, input.feeRate);
+          const pnl = unrealized(current.side, take, current.entry, price) - fee;
+          realized += pnl;
+          trades += 1;
+          if (pnl > 0) {
+            wins += 1;
+            grossWin += pnl;
+          } else {
+            grossLoss += Math.abs(pnl);
+          }
+          remember(
+            {
+              atMs: bar.timeMs,
+              action: "flatten",
+              side: current.side,
+              qty: take,
+              price,
+              feeUsdt: fee,
+              realizedUsdt: pnl,
+              reason: claimFillReason(claim.kind),
+            },
+          );
+          open = { ...current, qty: current.qty - take };
+        }
+      } else if (open?.trailing && trailingHasStop(open.trailing)) {
         const trail = paperTrailingAdvance({
           side: open.side,
           trailing: open.trailing,
@@ -412,6 +509,7 @@ export async function replayPerpsPriceCross(input: {
       }
       if (
         open &&
+        !actions &&
         (open.side === "short" ? shortExitMask : longExitMask)[barIndex - 1]
       ) {
         flattenOpen(
@@ -426,7 +524,7 @@ export async function replayPerpsPriceCross(input: {
           }),
         );
       }
-      if (open?.tpsl && tpslHasLevels(open.tpsl)) {
+      if (!actions && open?.tpsl && tpslHasLevels(open.tpsl)) {
         const tp = paperTakeProfitHit({
           side: open.side,
           tpsl: open.tpsl,
@@ -440,6 +538,7 @@ export async function replayPerpsPriceCross(input: {
       }
       if (
         open &&
+        !actions &&
         futuresBreakevenDue({
           side: open.side,
           qty: open.qty,
@@ -528,14 +627,18 @@ export async function replayPerpsPriceCross(input: {
               },
               because,
             );
+            const openingActions = perpsSideActions(input.recipe, side);
             open = mergeSimPosition(
               open,
               side,
               qty,
               price,
-              input.recipe.tpsl,
-              input.recipe.trailing,
+              openingActions ? null : input.recipe.tpsl,
+              openingActions ? null : input.recipe.trailing,
             );
+            if (openingActions) {
+              flexLots.push({ id: `entry-${orders.length}`, qty, price });
+            }
           } else {
             events.push({
               atMs: bar.timeMs,
@@ -688,6 +791,11 @@ async function replayPerpsBoth(input: {
     },
   ];
   const book: Record<FuturesSide, OpenSim | null> = { long: null, short: null };
+  const bookLots: Record<FuturesSide, ExitLot[]> = { long: [], short: [] };
+  const bookArms: Record<FuturesSide, ExitRuntime> = {
+    long: emptyExitRuntime(),
+    short: emptyExitRuntime(),
+  };
   const orders: SimulatedOrder[] = [];
   const events: ReplayEvent[] = [];
   let realized = 0;
@@ -753,6 +861,12 @@ async function replayPerpsBoth(input: {
       because,
     );
     book[side] = null;
+    clearBookExit(side);
+  }
+
+  function clearBookExit(side: FuturesSide) {
+    bookLots[side] = [];
+    bookArms[side] = emptyExitRuntime();
   }
 
   function markEquity(price: number) {
@@ -797,10 +911,11 @@ async function replayPerpsBoth(input: {
       const adverse = open.side === "long" ? bar.low : bar.high;
       const favorable = open.side === "long" ? bar.high : bar.low;
       const quotes = { last: adverse, mark: adverse, index: adverse };
+      const actions = perpsSideActions(input.recipe, side);
       const sl =
-        open.tpsl && tpslHasLevels(open.tpsl)
-          ? paperStopLossHit({ side: open.side, tpsl: open.tpsl, ...quotes })
-          : null;
+        actions || !(open.tpsl && tpslHasLevels(open.tpsl))
+          ? null
+          : paperStopLossHit({ side: open.side, tpsl: open.tpsl, ...quotes });
       const liq = backtestLiquidationPrice({
         side: open.side,
         entry: open.entry,
@@ -816,6 +931,72 @@ async function replayPerpsBoth(input: {
         flattenSide(side, bar.timeMs, firstHit.price, firstHit.reason);
         if (firstHit.reason === "liquidation") {
           liquidated = true;
+        }
+        continue;
+      }
+      if (actions) {
+        const row = book[side];
+        if (row) {
+          const frames = exitActionTimeframes(actions) as DcaIndicatorTimeframe[];
+          const sampled = series.barsAt(barIndex - 1, frames);
+          const bars = new Map<string, CandleBar[]>();
+          for (const [key, value] of sampled) {
+            bars.set(key, value);
+          }
+          const seeded =
+            bookLots[side].length > 0
+              ? bookLots[side]
+              : [{ id: "position", qty: row.qty, price: row.entry }];
+          const settled = evaluateExitActions({
+            actions,
+            runtime: bookArms[side],
+            lots: seeded,
+            side,
+            mark: price,
+            last: price,
+            entryPrice: row.entry,
+            nowMs: bar.timeMs,
+            barsByTimeframe: bars,
+          });
+          bookArms[side] = settled.runtime;
+          bookLots[side] = settled.lots;
+          for (const claim of settled.claims) {
+            const current = book[side];
+            if (!current) {
+              break;
+            }
+            const take = Math.min(current.qty, claim.qty);
+            if (!(take > 0)) {
+              continue;
+            }
+            if (take + 1e-8 >= current.qty) {
+              flattenSide(side, bar.timeMs, price, claimFillReason(claim.kind));
+              break;
+            }
+            const fee = feeUsdt(take, price, input.feeRate);
+            const pnl = unrealized(side, take, current.entry, price) - fee;
+            realized += pnl;
+            trades += 1;
+            if (pnl > 0) {
+              wins += 1;
+              grossWin += pnl;
+            } else {
+              grossLoss += Math.abs(pnl);
+            }
+            remember(
+              {
+                atMs: bar.timeMs,
+                action: "flatten",
+                side,
+                qty: take,
+                price,
+                feeUsdt: fee,
+                realizedUsdt: pnl,
+                reason: claimFillReason(claim.kind),
+              },
+            );
+            book[side] = { ...current, qty: current.qty - take };
+          }
         }
         continue;
       }
@@ -987,14 +1168,22 @@ async function replayPerpsBoth(input: {
         },
         because,
       );
+      const openingActions = perpsSideActions(input.recipe, leg.side);
       book[leg.side] = mergeSimPosition(
         book[leg.side],
         leg.side,
         qty,
         price,
-        sideClassic ? sideClassic.tpsl : input.recipe.tpsl,
-        sideClassic ? sideClassic.trailing : input.recipe.trailing,
+        openingActions ? null : sideClassic ? sideClassic.tpsl : input.recipe.tpsl,
+        openingActions
+          ? null
+          : sideClassic
+            ? sideClassic.trailing
+            : input.recipe.trailing,
       );
+      if (openingActions) {
+        bookLots[leg.side].push({ id: `entry-${orders.length}`, qty, price });
+      }
     }
     markEquity(price);
   }

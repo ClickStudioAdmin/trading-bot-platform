@@ -161,6 +161,8 @@ export type DcaTemplateRecipe = {
   shortExitHard?: TemplateHardExitSignal | null;
   exitStack?: EntryStack | null;
   shortExitStack?: EntryStack | null;
+  exitActions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
+  shortExitActions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
 };
 
 export type PerpsTemplateRecipe = {
@@ -185,6 +187,7 @@ export type PerpsTemplateRecipe = {
   exitIf?: DcaFilterSpec | null;
   exitHard?: TemplateHardExitSignal | null;
   exitStack?: EntryStack | null;
+  exitActions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
   breakevenActivationPct?: number | null;
   breakevenOffsetPct?: number | null;
   direction: "long" | "short" | "both";
@@ -406,6 +409,14 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     ...(config.direction === "both" && templateExitStack(config.shortExitStack)
       ? { shortExitStack: templateExitStack(config.shortExitStack) }
       : {}),
+    ...(config.exitActions && config.exitActions.length > 0
+      ? { exitActions: config.exitActions }
+      : {}),
+    ...(config.direction === "both" &&
+    config.shortExitActions &&
+    config.shortExitActions.length > 0
+      ? { shortExitActions: config.shortExitActions }
+      : {}),
   };
 }
 
@@ -437,6 +448,7 @@ export function snapshotPerpsRecipe(
         | "exitIf"
         | "exitHard"
         | "exitStack"
+        | "exitActions"
         | "breakevenActivationPct"
         | "breakevenOffsetPct"
         | "direction"
@@ -483,6 +495,9 @@ export function snapshotPerpsRecipe(
       : {}),
     ...(templateExitStack(rule.exitStack)
       ? { exitStack: templateExitStack(rule.exitStack) }
+      : {}),
+    ...(rule.exitActions && rule.exitActions.length > 0
+      ? { exitActions: rule.exitActions }
       : {}),
     breakevenActivationPct: rule.breakevenActivationPct ?? null,
     breakevenOffsetPct: rule.breakevenOffsetPct ?? null,
@@ -1194,6 +1209,16 @@ export function dcaRecipeToConfig(
       notes,
     );
   }
+  if ("exitActions" in recipe && recipe.exitActions) {
+    form.set("exitActions", JSON.stringify(recipe.exitActions));
+  }
+  if (
+    direction === "both" &&
+    "shortExitActions" in recipe &&
+    recipe.shortExitActions
+  ) {
+    form.set("shortExitActions", JSON.stringify(recipe.shortExitActions));
+  }
   const parsed = parseDcaPlaybookForm(form, venue);
   if (!parsed.ok) {
     return parsed;
@@ -1273,6 +1298,12 @@ export function perpsRecipeToRule(
   const exitStack = exitKept
     ? appliedExitStack(recipe.exitStack, webhookId, notes)
     : null;
+  if (recipe.exitActions && recipe.exitActions.length > 0) {
+    form.set("r0_exitActions", JSON.stringify(recipe.exitActions));
+  }
+  if (recipe.shortEntry?.actions && recipe.shortEntry.actions.length > 0) {
+    form.set("r0_short_exitActions", JSON.stringify(recipe.shortEntry.actions));
+  }
   writeFuturesConditionFormFields(form, "r0_", {
     indicator: recipe.indicator,
     confirm: recipe.confirm,

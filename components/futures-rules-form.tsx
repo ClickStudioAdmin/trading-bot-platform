@@ -43,8 +43,13 @@ import {
   exitClauseListMissing,
   classicExitFlags,
   exitClausesFromSaved,
-  type ExitBuilderClause,
 } from "@/lib/strategy/exit-clauses";
+import {
+  clausesFromExitActions,
+  exitCardsBlockReason,
+  exitPricesFromLevels,
+} from "@/lib/strategy/exit-actions";
+import type { ExitBuilderClause } from "@/lib/strategy/exit-clauses";
 import {
   initialPerpsEntryDrafts,
   PerpsEntryPanel,
@@ -739,6 +744,7 @@ function RuleCard({
     exitRowsFromStack(layer.shortEntry?.exitStack),
   );
   const [exitClauses, setExitClauses] = useState(() =>
+    clausesFromExitActions(layer.exitActions) ??
     exitClausesFromSaved({
       takeProfit: tpOn,
       trailing: trailOn,
@@ -751,7 +757,9 @@ function RuleCard({
     const both = initialPerpsFormDirection(layer, allowBoth) === "both";
     const saved = both ? (layer.shortEntry?.classic ?? null) : null;
     const legacy = both && saved == null;
-    return exitClausesFromSaved({
+    return (
+      (both ? clausesFromExitActions(layer.shortEntry?.actions) : null) ??
+      exitClausesFromSaved({
       takeProfit: saved ? saved.tpsl?.takeProfit != null : legacy && tpOn,
       trailing: saved
         ? Boolean(saved.trailing && saved.trailing.distance > 0)
@@ -761,7 +769,8 @@ function RuleCard({
         : legacy && slOn,
       anchor: shortExitIf,
       rows: shortExitRows,
-    });
+    })
+    );
   });
   function applyClassicFlags(
     primary: readonly ExitBuilderClause[],
@@ -942,9 +951,14 @@ function RuleCard({
     (!closing &&
       (direction === "short" || direction === "both") &&
       perpsAddGroupsSizingMissing(shortAddGroups));
+  const exitBlock = !closing
+    ? exitCardsBlockReason(exitClauses) ||
+      (storedDirection === "both" ? exitCardsBlockReason(shortClauses) : null)
+    : null;
   const exitKindMissing =
     !closing &&
-    (exitClauseListMissing(exitClauses) ||
+    (Boolean(exitBlock) ||
+      exitClauseListMissing(exitClauses) ||
       (storedDirection === "both" && exitClauseListMissing(shortClauses)));
   const nameMissing =
     !embedded && controlValue(`${prefix}name`, layer.name).trim() === "";
@@ -1889,6 +1903,15 @@ function RuleCard({
             labelClass={botLabelClass}
             gridClass={fieldRow5}
             showErrors={dirty}
+            actionName={`${prefix}exitActions`}
+            prices={exitPricesFromLevels({
+              takeProfit,
+              takeProfitKind: tpKind,
+              stopLoss,
+              stopLossKind: slKind,
+              trailingDistance: trailingStop,
+              trailingActivation: trailingActive,
+            })}
             renderTakeProfit={() => perpsTakeProfitFields("primary")}
             renderTrailingStop={() => perpsTrailingFields("primary")}
             renderStopLoss={() => perpsStopFields("primary")}
@@ -1909,6 +1932,28 @@ function RuleCard({
             labelClass={botLabelClass}
             gridClass={fieldRow5}
             showErrors={dirty}
+            actionName={
+              direction === "both" ? `${prefix}short_exitActions` : `${prefix}exitActions`
+            }
+            prices={exitPricesFromLevels(
+              direction === "both"
+                ? {
+                    takeProfit: shortClassic.takeProfit,
+                    takeProfitKind: shortClassic.tpKind,
+                    stopLoss: shortClassic.stopLoss,
+                    stopLossKind: shortClassic.slKind,
+                    trailingDistance: shortClassic.trailingStop,
+                    trailingActivation: shortClassic.trailingActive,
+                  }
+                : {
+                    takeProfit,
+                    takeProfitKind: tpKind,
+                    stopLoss,
+                    stopLossKind: slKind,
+                    trailingDistance: trailingStop,
+                    trailingActivation: trailingActive,
+                  },
+            )}
             renderTakeProfit={() =>
               perpsTakeProfitFields(direction === "both" ? "short" : "primary")
             }
@@ -1940,7 +1985,9 @@ function RuleCard({
           />
         }
         dirty={Boolean(layer.id) && dirty}
-        error={requiredMissing ? completeRequiredNotice : undefined}
+        error={
+          exitBlock ?? (requiredMissing ? completeRequiredNotice : undefined)
+        }
         save={
           <div className="space-y-2">
             <PendingSubmitButton
@@ -1948,7 +1995,9 @@ function RuleCard({
               deskAction="default"
               className={botSidebarSaveClass}
               disabled={!dirty || requiredMissing}
-              title={requiredMissing ? completeRequiredNotice : undefined}
+              title={
+                exitBlock ?? (requiredMissing ? completeRequiredNotice : undefined)
+              }
             >
               <span className="inline-flex items-center gap-1.5">
                 <IconSave {...botBtnIcon} />

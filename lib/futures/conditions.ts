@@ -10,6 +10,12 @@ import {
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
 import {
+  exitActionTimeframes,
+  exitActionsFromJson,
+  exitActionsToJson,
+  parseExitActionsField,
+} from "@/lib/strategy/exit-actions";
+import {
   hardExitDraftFromStored,
   hardExitSignalFromJson,
   hardExitSignalToJson,
@@ -86,6 +92,8 @@ export type PerpsEntryLeg = {
    * Absent means this side still shares the long classic exits.
    */
   classic?: PerpsShortClassic | null;
+  /** Short-side exit actions. Null keeps the column exit. */
+  actions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
 };
 
 export type PerpsShortClassic = {
@@ -441,6 +449,7 @@ export function parseFuturesConditionForm(
       exitIf: DcaFilterSpec | null;
       exitHard: HardExitSignal | null;
       exitStack: EntryStack;
+      exitActions: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
       breakevenActivationPct: number | null;
       breakevenOffsetPct: number | null;
     }
@@ -454,6 +463,7 @@ export function parseFuturesConditionForm(
       exitIf: null,
       exitHard: null,
       exitStack: emptyEntryStack(),
+      exitActions: null,
       breakevenActivationPct: null,
       breakevenOffsetPct: null,
     };
@@ -527,6 +537,10 @@ export function parseFuturesConditionForm(
   const entryStack = stacked.present
     ? stacked.stack
     : legacyEntryStack(confirm.spec);
+  const exitActions = parseExitActionsField(form, `${prefix}exitActions`);
+  if (!exitActions.ok) {
+    return exitActions;
+  }
   return {
     ok: true,
     indicator: indicator.start,
@@ -537,6 +551,7 @@ export function parseFuturesConditionForm(
     exitIf: exitIf.filter,
     exitHard: exitIf.signal,
     exitStack: exitStacked.stack,
+    exitActions: exitActions.actions,
     breakevenActivationPct: breakeven.activationPct,
     breakevenOffsetPct: breakeven.offsetPct,
   };
@@ -549,6 +564,7 @@ export function conditionsFromRow(row: Record<string, unknown>): {
   exitIf: DcaFilterSpec | null;
   exitHard: HardExitSignal | null;
   exitStack: EntryStack;
+  exitActions: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
   breakevenActivationPct: number | null;
   breakevenOffsetPct: number | null;
 } {
@@ -565,6 +581,7 @@ export function conditionsFromRow(row: Record<string, unknown>): {
     exitIf: exitHard ? null : filterFromRow(row, "exit_if"),
     exitHard,
     exitStack: entryStackFromJson(row.exit_expr) ?? emptyEntryStack(),
+    exitActions: exitActionsFromJson(row.exit_actions),
     breakevenActivationPct: activation > 0 ? activation : null,
     breakevenOffsetPct: Number.isFinite(offset) && offset >= 0 ? offset : null,
   };
@@ -579,6 +596,7 @@ export function conditionColumns(rule: {
   exitStack?: EntryStack | null;
   breakevenActivationPct?: number | null;
   breakevenOffsetPct?: number | null;
+  exitActions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
 }): Record<string, unknown> {
   const stack =
     rule.entryStack != null
@@ -597,6 +615,7 @@ export function conditionColumns(rule: {
       rule.exitStack && rule.exitStack.leaves.length > 0
         ? entryStackToJson(rule.exitStack)
         : null,
+    exit_actions: exitActionsToJson(rule.exitActions),
     entry_expr: stack.leaves.length > 0 ? entryStackToJson(stack) : null,
     breakeven_activation_pct: rule.breakevenActivationPct ?? null,
     breakeven_offset_pct:
@@ -689,6 +708,7 @@ export function futuresAutomationTimeframes(rule: {
   entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
   exitStack?: EntryStack | null;
+  exitActions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
   shortEntry?: PerpsEntryLeg | null;
 }): DcaIndicatorTimeframe[] {
   const rows: DcaIndicatorTimeframe[] = [];
@@ -731,6 +751,12 @@ export function futuresAutomationTimeframes(rule: {
     )) {
       add(timeframe);
     }
+  }
+  for (const timeframe of exitActionTimeframes(rule.exitActions)) {
+    add(timeframe as DcaIndicatorTimeframe);
+  }
+  for (const timeframe of exitActionTimeframes(rule.shortEntry?.actions)) {
+    add(timeframe as DcaIndicatorTimeframe);
   }
   return rows;
 }
@@ -1088,6 +1114,7 @@ export function shortEntryToJson(leg: PerpsEntryLeg): Record<string, unknown> {
         }
       : {}),
     ...(leg.classic ? { classic: leg.classic } : {}),
+    ...(leg.actions && leg.actions.length > 0 ? { actions: leg.actions } : {}),
   };
 }
 
@@ -1158,6 +1185,9 @@ export function shortEntryFromJson(raw: unknown): PerpsEntryLeg | null {
     entryStack: stack,
     ...exit,
     classic: perpsShortClassicFromJson(row.classic),
+    ...(exitActionsFromJson(row.actions)
+      ? { actions: exitActionsFromJson(row.actions) }
+      : {}),
   };
 }
 
