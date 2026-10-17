@@ -64,6 +64,7 @@ import {
 import {
   DcaGroupSizeFields,
   entryGroupOrderKey,
+  GroupPositionSizing,
   useExtraGroupOrders,
 } from "@/components/entry-group-order";
 import { indicatorClaim, priceClaim, type ConflictClaim } from "@/lib/strategy/conflicts";
@@ -2444,36 +2445,53 @@ export function DcaPlaybookForm({
           groupFooter={(groupIndex) => {
             const key = entryGroupOrderKey(rows, groupIndex);
             const extra = shortLeg ? shortExtraOrders : longExtraOrders;
+            const quote = policy.quoteLabel;
+            const base = selectedPair?.baseCoin ?? "Token";
             if (key === "lead") {
               return (
-                <DcaGroupSizeFields
-                  size={clipSize}
-                  sizeUnit={sizeUnit}
-                  onSize={setClipSize}
-                  onUnit={setSizeUnit}
-                  quoteLabel={policy.quoteLabel}
-                  baseCoin={selectedPair?.baseCoin ?? "Token"}
-                  fieldClass={sizeError ? botFieldInvalidClass : fieldClass}
-                  gridClass={fieldRowClass}
-                  named={!shortLeg}
-                  required
-                  calculated={derivedClip != null ? clipForSave : null}
-                  sizeError={sizeError}
-                />
+                <GroupPositionSizing groupIndex={groupIndex}>
+                  <DcaGroupSizeFields
+                    size={clipSize}
+                    sizeUnit={sizeUnit}
+                    onSize={setClipSize}
+                    onUnit={setSizeUnit}
+                    quoteLabel={quote}
+                    baseCoin={base}
+                    fieldClass={sizeError ? botFieldInvalidClass : fieldClass}
+                    gridClass={fieldRowClass}
+                    named={!shortLeg}
+                    required
+                    calculated={derivedClip != null ? clipForSave : null}
+                    sizeError={sizeError}
+                  />
+                </GroupPositionSizing>
               );
             }
             const values = extra.orderFor(key);
             return (
-              <DcaGroupSizeFields
-                size={values.size}
-                sizeUnit={values.sizeUnit}
-                onSize={(size) => extra.patch(key, { size })}
-                onUnit={(unit) => extra.patch(key, { sizeUnit: unit, size: "" })}
-                quoteLabel={policy.quoteLabel}
-                baseCoin={selectedPair?.baseCoin ?? "Token"}
-                fieldClass={fieldClass}
-                gridClass={fieldRowClass}
-              />
+              <GroupPositionSizing
+                groupIndex={groupIndex}
+                sameAsGroup1={extra.sharesLead(key)}
+                onSameAsGroup1={(same) =>
+                  extra.setShares(key, same, {
+                    size: derivedClip != null ? clipForSave : clipSize,
+                    sizeUnit: derivedClip != null ? "usdt" : sizeUnit,
+                    orderType: "market",
+                    limitPrice: "",
+                  })
+                }
+              >
+                <DcaGroupSizeFields
+                  size={values.size}
+                  sizeUnit={values.sizeUnit}
+                  onSize={(size) => extra.patch(key, { size })}
+                  onUnit={(unit) => extra.patch(key, { sizeUnit: unit, size: "" })}
+                  quoteLabel={quote}
+                  baseCoin={base}
+                  fieldClass={fieldClass}
+                  gridClass={fieldRowClass}
+                />
+              </GroupPositionSizing>
             );
           }}
       />

@@ -25,12 +25,16 @@ import {
 import { useDeskFormStatus } from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { DcaIndicatorKind, DcaIndicatorTimeframe } from "@/lib/dca/indicators";
-import { PerpsGroupOrderFields } from "@/components/entry-group-order";
+import {
+  GroupPositionSizing,
+  PerpsGroupOrderFields,
+} from "@/components/entry-group-order";
 import {
   appendPerpsAddCondition,
   appendPerpsAddOrderGroup,
   countPerpsAddConditions,
   perpsAddConditionDraftForType,
+  revealGroupOrder,
   type PerpsAddCondition,
   type PerpsAddConditionDraft,
   type PerpsAddConditionType,
@@ -284,6 +288,18 @@ export function PerpsAdditionalOrders({
                 />
               ) : null}
               <OrderFields
+                groupIndex={groupIndex}
+                sameAsGroup1={group.sameAsGroup1 !== false}
+                onSameAsGroup1={(same) => {
+                  const leadOrder = groupsRef.current[0]?.order ?? group.order;
+                  updateGroup(group.key, (current) => ({
+                    ...current,
+                    sameAsGroup1: same,
+                    order: same
+                      ? current.order
+                      : revealGroupOrder(current.order, leadOrder),
+                  }));
+                }}
                 order={group.order}
                 quoteLabel={quoteLabel}
                 baseCoin={baseCoin}
@@ -544,6 +560,9 @@ function ConditionFields({
 }
 
 function OrderFields({
+  groupIndex,
+  sameAsGroup1,
+  onSameAsGroup1,
   order,
   quoteLabel,
   baseCoin,
@@ -551,6 +570,9 @@ function OrderFields({
   gridClass,
   onChange,
 }: {
+  groupIndex: number;
+  sameAsGroup1: boolean;
+  onSameAsGroup1: (same: boolean) => void;
   order: PerpsAddOrderValues;
   quoteLabel: string;
   baseCoin: string;
@@ -559,13 +581,19 @@ function OrderFields({
   onChange: (partial: Partial<PerpsAddOrderValues>) => void;
 }) {
   return (
-    <PerpsGroupOrderFields
-      order={order}
-      quoteLabel={quoteLabel}
-      baseCoin={baseCoin}
-      fieldClass={fieldClass}
-      gridClass={gridClass}
-      onChange={onChange}
-    />
+    <GroupPositionSizing
+      groupIndex={groupIndex}
+      sameAsGroup1={sameAsGroup1}
+      onSameAsGroup1={onSameAsGroup1}
+    >
+      <PerpsGroupOrderFields
+        order={order}
+        quoteLabel={quoteLabel}
+        baseCoin={baseCoin}
+        fieldClass={fieldClass}
+        gridClass={gridClass}
+        onChange={onChange}
+      />
+    </GroupPositionSizing>
   );
 }

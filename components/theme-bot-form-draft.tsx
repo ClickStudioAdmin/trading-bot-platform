@@ -34,6 +34,7 @@ import { ExitSideBuilder } from "@/components/exit-side-builder";
 import {
   DcaGroupSizeFields,
   entryGroupOrderKey,
+  GroupPositionSizing,
   PerpsGroupOrderFields,
   useExtraGroupOrders,
 } from "@/components/entry-group-order";
@@ -972,6 +973,8 @@ export function ThemeBotFormDraft() {
     sizeUnit,
     longExtraOrders: longExtraOrders.orders,
     shortExtraOrders: shortExtraOrders.orders,
+    longExtraSame: longExtraOrders.sameAsLead,
+    shortExtraSame: shortExtraOrders.sameAsLead,
     sizeMultiplier,
     deviationMultiplier,
     maxClips,
@@ -1211,28 +1214,44 @@ export function ThemeBotFormDraft() {
         ? { size, sizeUnit, orderType, limitPrice }
         : extra.orderFor(key);
       return (
-        <PerpsGroupOrderFields
-          order={values}
-          quoteLabel="USDT"
-          baseCoin={sampleBase}
-          fieldClass={fieldClass}
-          invalidFieldClass={fieldInvalidClass}
-          gridClass={rowClass}
-          named={lead && named}
-          required={lead}
-          sizeInvalid={lead && showFieldErrors && missing.size}
-          limitInvalid={lead && showFieldErrors && missing.limitPrice}
-          onChange={(partial) => {
-            if (!lead) {
-              extra.patch(key, partial);
-              return;
-            }
-            if (partial.size != null) setSize(partial.size);
-            if (partial.sizeUnit != null) setSizeUnit(partial.sizeUnit);
-            if (partial.orderType != null) setOrderType(partial.orderType);
-            if (partial.limitPrice != null) setLimitPrice(partial.limitPrice);
-          }}
-        />
+        <GroupPositionSizing
+          groupIndex={groupIndex}
+          sameAsGroup1={lead || extra.sharesLead(key)}
+          onSameAsGroup1={
+            lead
+              ? undefined
+              : (same) =>
+                  extra.setShares(key, same, {
+                    size,
+                    sizeUnit,
+                    orderType,
+                    limitPrice,
+                  })
+          }
+        >
+          <PerpsGroupOrderFields
+            order={values}
+            quoteLabel="USDT"
+            baseCoin={sampleBase}
+            fieldClass={fieldClass}
+            invalidFieldClass={fieldInvalidClass}
+            gridClass={rowClass}
+            named={lead && named}
+            required={lead}
+            sizeInvalid={lead && showFieldErrors && missing.size}
+            limitInvalid={lead && showFieldErrors && missing.limitPrice}
+            onChange={(partial) => {
+              if (!lead) {
+                extra.patch(key, partial);
+                return;
+              }
+              if (partial.size != null) setSize(partial.size);
+              if (partial.sizeUnit != null) setSizeUnit(partial.sizeUnit);
+              if (partial.orderType != null) setOrderType(partial.orderType);
+              if (partial.limitPrice != null) setLimitPrice(partial.limitPrice);
+            }}
+          />
+        </GroupPositionSizing>
       );
     }
     return renderPerpsOrderFooter;
@@ -1248,32 +1267,48 @@ export function ThemeBotFormDraft() {
       const lead = key === "lead";
       const values = lead ? { size, sizeUnit } : extra.orderFor(key);
       return (
-        <DcaGroupSizeFields
-          size={values.size}
-          sizeUnit={values.sizeUnit}
-          onSize={(next) => {
-            if (lead) {
-              setSize(next);
-              return;
-            }
-            extra.patch(key, { size: next });
-          }}
-          onUnit={(unit) => {
-            if (lead) {
-              setSizeUnit(unit);
-              return;
-            }
-            extra.patch(key, { sizeUnit: unit, size: "" });
-          }}
-          quoteLabel="USDT"
-          baseCoin={sampleBase}
-          fieldClass={
-            lead && showFieldErrors && missing.size ? fieldInvalidClass : fieldClass
+        <GroupPositionSizing
+          groupIndex={groupIndex}
+          sameAsGroup1={lead || extra.sharesLead(key)}
+          onSameAsGroup1={
+            lead
+              ? undefined
+              : (same) =>
+                  extra.setShares(key, same, {
+                    size,
+                    sizeUnit,
+                    orderType: "market",
+                    limitPrice: "",
+                  })
           }
-          gridClass={rowClass}
-          named={lead && named}
-          required={lead}
-        />
+        >
+          <DcaGroupSizeFields
+            size={values.size}
+            sizeUnit={values.sizeUnit}
+            onSize={(next) => {
+              if (lead) {
+                setSize(next);
+                return;
+              }
+              extra.patch(key, { size: next });
+            }}
+            onUnit={(unit) => {
+              if (lead) {
+                setSizeUnit(unit);
+                return;
+              }
+              extra.patch(key, { sizeUnit: unit, size: "" });
+            }}
+            quoteLabel="USDT"
+            baseCoin={sampleBase}
+            fieldClass={
+              lead && showFieldErrors && missing.size ? fieldInvalidClass : fieldClass
+            }
+            gridClass={rowClass}
+            named={lead && named}
+            required={lead}
+          />
+        </GroupPositionSizing>
       );
     }
     return renderDcaSizeFooter;

@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
-import { BotField, OrderTypePill } from "@/components/bot-form-chrome";
+import {
+  BotField,
+  OrderTypePill,
+  botSectionTitleClass,
+} from "@/components/bot-form-chrome";
 import { partitionByOr } from "@/components/condition-group";
 import { useDeskFormStatus } from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   blankPerpsAddOrderValues,
+  revealGroupOrder,
+  sharesGroupLeadSizing,
   type PerpsAddOrderValues,
 } from "@/lib/futures/perps-add-condition";
 import type { StrategyJoin } from "@/lib/strategy/expr";
@@ -26,8 +33,12 @@ export function entryGroupOrderKey(
 export function useExtraGroupOrders() {
   const { markDirty } = useDeskFormStatus();
   const [orders, setOrders] = useState<Record<string, PerpsAddOrderValues>>({});
+  const [sameAsLead, setSameAsLead] = useState<Record<string, boolean>>({});
   function orderFor(key: string): PerpsAddOrderValues {
     return orders[key] ?? blankPerpsAddOrderValues();
+  }
+  function sharesLead(key: string): boolean {
+    return sameAsLead[key] !== false;
   }
   function patch(key: string, partial: Partial<PerpsAddOrderValues>) {
     setOrders((current) => {
@@ -36,7 +47,51 @@ export function useExtraGroupOrders() {
     });
     markDirty();
   }
-  return { orders, orderFor, patch };
+  function setShares(key: string, same: boolean, seed?: PerpsAddOrderValues) {
+    setSameAsLead((current) => ({ ...current, [key]: same }));
+    if (!same && seed) {
+      setOrders((current) => {
+        const prev = current[key] ?? blankPerpsAddOrderValues();
+        const revealed = revealGroupOrder(prev, seed);
+        if (current[key] && revealed === prev) {
+          return current;
+        }
+        return { ...current, [key]: revealed };
+      });
+    }
+    markDirty();
+  }
+  return { orders, sameAsLead, orderFor, sharesLead, patch, setShares };
+}
+
+export function GroupPositionSizing({
+  groupIndex,
+  sameAsGroup1 = true,
+  onSameAsGroup1,
+  children,
+}: {
+  groupIndex: number;
+  sameAsGroup1?: boolean;
+  onSameAsGroup1?: (same: boolean) => void;
+  children: ReactNode;
+}) {
+  const shared = sharesGroupLeadSizing(groupIndex, sameAsGroup1);
+  return (
+    <div className="space-y-3">
+      <h3 className={botSectionTitleClass}>Position Sizing</h3>
+      {groupIndex > 0 ? (
+        <label className="flex items-center gap-2 text-sm text-ink">
+          <AppCheck
+            checked={sameAsGroup1}
+            onChange={(event) => onSameAsGroup1?.(event.target.checked)}
+            className=""
+          />
+          Same as Group 1
+        </label>
+      ) : null}
+      {shared ? null : children}
+    </div>
+  );
 }
 
 export function PerpsGroupOrderFields({
