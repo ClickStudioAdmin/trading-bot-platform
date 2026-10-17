@@ -451,64 +451,6 @@ export function ExitSideBuilder({
                     ))}
                   </AppSelect>
                 </label>
-                {clause.kind !== "" ? (
-                  <label className={labelClass}>
-                    <HintLabel text="Applies To" />
-                    <AppSelect
-                      value={scope.kind}
-                      onChange={(event) =>
-                        setScope(clause, event.target.value as ExitScope["kind"])
-                      }
-                      className={fieldClass}
-                    >
-                      <option value="all">Entire Position</option>
-                      <option value="percent">Percentage of Position</option>
-                      <option value="qty">Quantity</option>
-                      <option value="fills">Fills in profit</option>
-                      <option value="remainder" disabled={remainderUsed && scope.kind !== "remainder"}>
-                        Remainder
-                      </option>
-                    </AppSelect>
-                  </label>
-                ) : null}
-                {scope.kind === "percent" || scope.kind === "qty" || scope.kind === "fills" ? (
-                  <label className={labelClass}>
-                    <HintLabel
-                      text={
-                        scope.kind === "percent"
-                          ? "Percent"
-                          : scope.kind === "qty"
-                            ? "Quantity"
-                            : "Profit %"
-                      }
-                    />
-                    <input
-                      value={
-                        scope.kind === "percent"
-                          ? scope.pct ?? ""
-                          : scope.kind === "qty"
-                            ? scope.qty ?? ""
-                            : scope.minProfitPct ?? ""
-                      }
-                      onChange={(event) => {
-                        const raw = event.target.value.replace(/,/g, "").trim();
-                        const number = raw === "" ? null : Number(raw);
-                        const next = number != null && Number.isFinite(number) ? number : null;
-                        patch(clause.key, (current) => ({
-                          ...current,
-                          scope:
-                            scope.kind === "percent"
-                              ? { kind: "percent", pct: next }
-                              : scope.kind === "qty"
-                                ? { kind: "qty", qty: next }
-                                : { kind: "fills", minProfitPct: next },
-                        }));
-                      }}
-                      inputMode="decimal"
-                      className={scopeInvalid ? botFieldInvalidClass : fieldClass}
-                    />
-                  </label>
-                ) : null}
               </div>
               {clause.kind !== "" ? (
                 <div className="space-y-3 border-t border-line pt-4">
@@ -534,6 +476,66 @@ export function ExitSideBuilder({
                     <div className="col-span-full w-full">
                       <AddConditionButton onClick={() => addRow(clause)} />
                     </div>
+                  ) : null}
+                </div>
+              ) : null}
+              {clause.kind !== "" ? (
+                <div className={`${exitCardGrid} border-t border-line pt-4`}>
+                  <label className={labelClass}>
+                    <HintLabel text="Applies To" />
+                    <AppSelect
+                      value={scope.kind}
+                      onChange={(event) =>
+                        setScope(clause, event.target.value as ExitScope["kind"])
+                      }
+                      className={fieldClass}
+                    >
+                      <option value="all">Entire Position</option>
+                      <option value="percent">Percentage of Position</option>
+                      <option value="qty">Quantity</option>
+                      <option value="fills">Fills in profit</option>
+                      <option value="remainder" disabled={remainderUsed && scope.kind !== "remainder"}>
+                        Remainder
+                      </option>
+                    </AppSelect>
+                  </label>
+                  {scope.kind === "percent" || scope.kind === "qty" || scope.kind === "fills" ? (
+                    <label className={labelClass}>
+                      <HintLabel
+                        text={
+                          scope.kind === "percent"
+                            ? "Percent"
+                            : scope.kind === "qty"
+                              ? "Quantity"
+                              : "Profit %"
+                        }
+                      />
+                      <input
+                        value={
+                          scope.kind === "percent"
+                            ? scope.pct ?? ""
+                            : scope.kind === "qty"
+                              ? scope.qty ?? ""
+                              : scope.minProfitPct ?? ""
+                        }
+                        onChange={(event) => {
+                          const raw = event.target.value.replace(/,/g, "").trim();
+                          const number = raw === "" ? null : Number(raw);
+                          const next = number != null && Number.isFinite(number) ? number : null;
+                          patch(clause.key, (current) => ({
+                            ...current,
+                            scope:
+                              scope.kind === "percent"
+                                ? { kind: "percent", pct: next }
+                                : scope.kind === "qty"
+                                  ? { kind: "qty", qty: next }
+                                  : { kind: "fills", minProfitPct: next },
+                          }));
+                        }}
+                        inputMode="decimal"
+                        className={scopeInvalid ? botFieldInvalidClass : fieldClass}
+                      />
+                    </label>
                   ) : null}
                 </div>
               ) : null}
