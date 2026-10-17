@@ -33,13 +33,19 @@ import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { ExitSideBuilder } from "@/components/exit-side-builder";
 import {
   DcaGroupSizeFields,
+  entryExtraOrdersMissing,
   entryGroupOrderKey,
+  entryGroupShowsSizing,
   GroupPositionSizing,
   PerpsGroupOrderFields,
   useExtraGroupOrders,
 } from "@/components/entry-group-order";
 import { PerpsAdditionalOrders } from "@/components/perps-additional-orders";
-import { blankPerpsAddOrderGroups } from "@/lib/futures/perps-add-condition";
+import {
+  blankPerpsAddOrderGroups,
+  perpsAddGroupsSizingMissing,
+  positiveSizingText,
+} from "@/lib/futures/perps-add-condition";
 import {
   type ExitStackRow,
 } from "@/components/exit-condition-stack";
@@ -1086,6 +1092,28 @@ export function ThemeBotFormDraft() {
   const requireWebhook =
     startKind === "webhook" && (desk === "perps" || !closing) && !filled(webhookId);
   const requireSize = desk !== "cnc" && !closing && !filled(size);
+  const groupSizingMissing =
+    !closing &&
+    desk !== "cnc" &&
+    (entryExtraOrdersMissing(
+      startKind !== "",
+      entryRows,
+      longExtraOrders.orders,
+      longExtraOrders.sameAsLead,
+    ) ||
+      (themeBothExits &&
+        entryExtraOrdersMissing(
+          shortStartKind !== "",
+          shortEntryRows,
+          shortExtraOrders.orders,
+          shortExtraOrders.sameAsLead,
+        )) ||
+      (desk === "perps" &&
+        perpsDirection !== "short" &&
+        perpsAddGroupsSizingMissing(longAddGroups)) ||
+      (desk === "perps" &&
+        (perpsDirection === "short" || perpsDirection === "both") &&
+        perpsAddGroupsSizingMissing(shortAddGroups)));
   const requireDip =
     desk === "dca" &&
     averaging === "dip" &&
@@ -1155,10 +1183,19 @@ export function ThemeBotFormDraft() {
         multiplier: shortMultiplier,
       }),
     entryRows:
-      desk !== "cnc" && entryRows.some((row) => !entryDraftComplete(row.draft)),
+      desk !== "cnc" &&
+      entryRows.some(
+        (row) =>
+          !(desk === "perps" && row.draft.kind === "unset") &&
+          !entryDraftComplete(row.draft),
+      ),
     shortEntryRows:
       themeBothExits &&
-      shortEntryRows.some((row) => !entryDraftComplete(row.draft)),
+      shortEntryRows.some(
+        (row) =>
+          !(desk === "perps" && row.draft.kind === "unset") &&
+          !entryDraftComplete(row.draft),
+      ),
     exitKind: desk !== "cnc" && exitClauseListMissing(exitClauses),
     shortExitKind: themeBothExits && exitClauseListMissing(shortClauses),
     priceLevel: requirePrice && !filled(priceLevel),
@@ -1167,6 +1204,7 @@ export function ThemeBotFormDraft() {
     webhookId: requireWebhook,
     shortWebhookId: requireShortWebhook,
     size: requireSize,
+    groupSizing: groupSizingMissing,
     dipPct: requireDip,
     atrPeriod: requireAtrPeriod,
     atrSpacing: requireAtrSpacing,
@@ -1212,6 +1250,7 @@ export function ThemeBotFormDraft() {
     rows: typeof entryRows,
     extra: typeof longExtraOrders,
     named: boolean,
+    leadChosen: boolean,
   ) {
     function renderPerpsOrderFooter(groupIndex: number) {
       const key = entryGroupOrderKey(rows, groupIndex);
@@ -1222,6 +1261,7 @@ export function ThemeBotFormDraft() {
       return (
         <GroupPositionSizing
           groupIndex={groupIndex}
+          show={entryGroupShowsSizing(groupIndex, leadChosen, rows)}
           sameAsGroup1={lead || extra.sharesLead(key)}
           onSameAsGroup1={
             lead
@@ -1243,9 +1283,18 @@ export function ThemeBotFormDraft() {
             invalidFieldClass={fieldInvalidClass}
             gridClass={rowClass}
             named={lead && named}
-            required={lead}
-            sizeInvalid={lead && showFieldErrors && missing.size}
-            limitInvalid={lead && showFieldErrors && missing.limitPrice}
+            required
+            sizeInvalid={
+              showFieldErrors &&
+              (lead ? missing.size : !positiveSizingText(values.size))
+            }
+            limitInvalid={
+              showFieldErrors &&
+              (lead
+                ? missing.limitPrice
+                : values.orderType === "limit" &&
+                  !positiveSizingText(values.limitPrice))
+            }
             onChange={(partial) => {
               if (!lead) {
                 extra.patch(key, partial);
@@ -1267,6 +1316,7 @@ export function ThemeBotFormDraft() {
     rows: typeof entryRows,
     extra: typeof longExtraOrders,
     named: boolean,
+    leadChosen: boolean,
   ) {
     function renderDcaSizeFooter(groupIndex: number) {
       const key = entryGroupOrderKey(rows, groupIndex);
@@ -1275,6 +1325,7 @@ export function ThemeBotFormDraft() {
       return (
         <GroupPositionSizing
           groupIndex={groupIndex}
+          show={entryGroupShowsSizing(groupIndex, leadChosen, rows)}
           sameAsGroup1={lead || extra.sharesLead(key)}
           onSameAsGroup1={
             lead
@@ -1309,11 +1360,14 @@ export function ThemeBotFormDraft() {
             baseCoin={sampleBase}
             fieldClass={fieldClass}
             sizeInputClass={
-              lead && showFieldErrors && missing.size ? fieldInvalidClass : fieldClass
+              showFieldErrors &&
+              (lead ? missing.size : !positiveSizingText(values.size))
+                ? fieldInvalidClass
+                : fieldClass
             }
             gridClass={rowClass}
             named={lead && named}
-            required={lead}
+            required
           />
         </GroupPositionSizing>
       );
@@ -2160,7 +2214,7 @@ export function ThemeBotFormDraft() {
                     applyStartKind(event.target.value as StartKind)
                   }
                   className={
-                    showFieldErrors && startKind === ""
+                    !closing && startKind === ""
                       ? `${fieldInvalidClass} !min-w-72`
                       : `${fieldClass} !min-w-72`
                   }
@@ -2203,7 +2257,7 @@ export function ThemeBotFormDraft() {
                     applyStartKind(event.target.value as StartKind)
                   }
                   className={
-                    showFieldErrors && startKind === ""
+                    startKind === ""
                       ? `${fieldInvalidClass} !min-w-72`
                       : `${fieldClass} !min-w-72`
                   }
@@ -2347,7 +2401,13 @@ export function ThemeBotFormDraft() {
                 fieldClass={fieldClass}
                 labelClass={labelClass}
                 showErrors={showFieldErrors}
-                groupFooter={perpsOrderFooter(entryRows, longExtraOrders, true)}
+                optionalAddedKind
+                groupFooter={perpsOrderFooter(
+                  entryRows,
+                  longExtraOrders,
+                  true,
+                  startKind !== "",
+                )}
               />
             );
           }
@@ -2371,7 +2431,12 @@ export function ThemeBotFormDraft() {
                 fieldClass={fieldClass}
                 labelClass={labelClass}
                 showErrors={showFieldErrors}
-                groupFooter={dcaSizeFooter(entryRows, longExtraOrders, true)}
+                groupFooter={dcaSizeFooter(
+                  entryRows,
+                  longExtraOrders,
+                  true,
+                  startKind !== "",
+                )}
               />
             );
           }
@@ -2408,7 +2473,7 @@ export function ThemeBotFormDraft() {
                       applyShortStartKind(event.target.value as StartKind)
                     }
                     className={
-                      showFieldErrors && shortStartKind === ""
+                      shortStartKind === ""
                         ? `${fieldInvalidClass} !min-w-72`
                         : `${fieldClass} !min-w-72`
                     }
@@ -2537,10 +2602,12 @@ export function ThemeBotFormDraft() {
               fieldClass={fieldClass}
               labelClass={labelClass}
               showErrors={showFieldErrors}
+              optionalAddedKind
               groupFooter={perpsOrderFooter(
                 shortEntryRows,
                 shortExtraOrders,
                 false,
+                shortStartKind !== "",
               )}
             />
               );
@@ -2562,7 +2629,7 @@ export function ThemeBotFormDraft() {
                       applyShortStartKind(event.target.value as StartKind)
                     }
                     className={
-                      showFieldErrors && shortStartKind === ""
+                      shortStartKind === ""
                         ? `${fieldInvalidClass} !min-w-72`
                         : `${fieldClass} !min-w-72`
                     }
@@ -2686,7 +2753,12 @@ export function ThemeBotFormDraft() {
               fieldClass={fieldClass}
               labelClass={labelClass}
               showErrors={showFieldErrors}
-              groupFooter={dcaSizeFooter(shortEntryRows, shortExtraOrders, false)}
+              groupFooter={dcaSizeFooter(
+                shortEntryRows,
+                shortExtraOrders,
+                false,
+                shortStartKind !== "",
+              )}
             />
               );
             })()}
@@ -2906,6 +2978,8 @@ export function ThemeBotFormDraft() {
                   fieldsClass={rowClass5}
                   side="long"
                   webhooks={themeWebhooks}
+                  showErrors={showFieldErrors}
+                  invalidFieldClass={fieldInvalidClass}
                 />
               </BotFormStep>
             ) : null}
@@ -2924,6 +2998,8 @@ export function ThemeBotFormDraft() {
                   fieldsClass={rowClass5}
                   side="short"
                   webhooks={themeWebhooks}
+                  showErrors={showFieldErrors}
+                  invalidFieldClass={fieldInvalidClass}
                 />
               </BotFormStep>
             ) : null}

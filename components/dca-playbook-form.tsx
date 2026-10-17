@@ -63,10 +63,13 @@ import {
 } from "@/components/entry-condition-stack";
 import {
   DcaGroupSizeFields,
+  entryExtraOrdersMissing,
   entryGroupOrderKey,
+  entryGroupShowsSizing,
   GroupPositionSizing,
   useExtraGroupOrders,
 } from "@/components/entry-group-order";
+import { positiveSizingText } from "@/lib/futures/perps-add-condition";
 import { indicatorClaim, priceClaim, type ConflictClaim } from "@/lib/strategy/conflicts";
 import {
   entryKindDisabled,
@@ -1991,8 +1994,23 @@ export function DcaPlaybookForm({
   const exitKindMissing =
     exitClauseListMissing(exitClauses) ||
     (direction === "both" && exitClauseListMissing(shortClauses));
+  const groupSizingMissing =
+    entryExtraOrdersMissing(
+      startKind !== "",
+      entryRows,
+      longExtraOrders.orders,
+      longExtraOrders.sameAsLead,
+    ) ||
+    (direction === "both" &&
+      entryExtraOrdersMissing(
+        shortStartKind !== "",
+        shortEntryRows,
+        shortExtraOrders.orders,
+        shortExtraOrders.sameAsLead,
+      ));
   const requiredMissing =
     triggerMissing ||
+    groupSizingMissing ||
     entryRows.some((row) => !entryDraftComplete(row.draft)) ||
     (direction === "both" &&
       shortEntryRows.some((row) => !entryDraftComplete(row.draft))) ||
@@ -2036,6 +2054,7 @@ export function DcaPlaybookForm({
     }
     const missing =
       triggerMissing ||
+      groupSizingMissing ||
       tpMissing ||
       trailMissing ||
       slMissing ||
@@ -2228,7 +2247,7 @@ export function DcaPlaybookForm({
                 applyDcaStartKind(side, event.target.value as DcaStartKind)
               }
               className={
-                dirty && value === ""
+                value === ""
                   ? conditionFieldClass(botFieldInvalidClass, column)
                   : conditionFieldClass(fieldClass, column)
               }
@@ -2461,9 +2480,14 @@ export function DcaPlaybookForm({
             const extra = shortLeg ? shortExtraOrders : longExtraOrders;
             const quote = policy.quoteLabel;
             const base = selectedPair?.baseCoin ?? "Token";
+            const showSizing = entryGroupShowsSizing(
+              groupIndex,
+              kind !== "",
+              rows,
+            );
             if (key === "lead") {
               return (
-                <GroupPositionSizing groupIndex={groupIndex}>
+                <GroupPositionSizing groupIndex={groupIndex} show={showSizing}>
                   <DcaGroupSizeFields
                     size={clipSize}
                     sizeUnit={sizeUnit}
@@ -2493,6 +2517,7 @@ export function DcaPlaybookForm({
             return (
               <GroupPositionSizing
                 groupIndex={groupIndex}
+                show={showSizing}
                 sameAsGroup1={extra.sharesLead(key)}
                 onSameAsGroup1={(same) =>
                   extra.setShares(key, same, {
@@ -2511,7 +2536,13 @@ export function DcaPlaybookForm({
                   quoteLabel={quote}
                   baseCoin={base}
                   fieldClass={fieldClass}
+                  sizeInputClass={
+                    dirty && !positiveSizingText(values.size)
+                      ? botFieldInvalidClass
+                      : fieldClass
+                  }
                   gridClass={fieldRowClass}
+                  required
                 />
               </GroupPositionSizing>
             );

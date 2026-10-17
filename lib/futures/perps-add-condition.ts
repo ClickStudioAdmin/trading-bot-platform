@@ -90,6 +90,58 @@ export function sharesGroupLeadSizing(
   return groupIndex > 0 && sameAsGroup1 !== false;
 }
 
+export function positiveSizingText(text: string): boolean {
+  const value = Number(text.replace(/,/g, "").trim());
+  return Number.isFinite(value) && value > 0;
+}
+
+/** Size, and Limit price when the order is Limit. Unit and Order keep defaults. */
+export function perpsOrderValuesMissing(order: PerpsAddOrderValues): boolean {
+  if (!positiveSizingText(order.size)) {
+    return true;
+  }
+  return order.orderType === "limit" && !positiveSizingText(order.limitPrice);
+}
+
+/** A group's own size is required only while that group's fields are on screen. */
+export function perpsAddGroupsSizingMissing(
+  groups: readonly PerpsAddOrderGroup[],
+): boolean {
+  return groups.some((group, index) => {
+    if (group.lead.type === "") {
+      return false;
+    }
+    if (sharesGroupLeadSizing(index, group.sameAsGroup1)) {
+      return false;
+    }
+    return perpsOrderValuesMissing(group.order);
+  });
+}
+
+/**
+ * Position Sizing stays hidden until that group's first Condition Type is chosen.
+ * Group 1 uses the lead. Later groups use their opening row, not an And trigger.
+ */
+export function groupShowsPositionSizing(
+  groupIndex: number,
+  leadChosen: boolean,
+  rows: readonly { join: "and" | "or"; kind: string }[],
+): boolean {
+  if (groupIndex <= 0) {
+    return leadChosen;
+  }
+  let group = 0;
+  for (const row of rows) {
+    if (row.join === "or") {
+      group += 1;
+    }
+    if (group === groupIndex) {
+      return row.kind !== "" && row.kind !== "unset";
+    }
+  }
+  return false;
+}
+
 export function isBlankPerpsAddOrder(order: PerpsAddOrderValues): boolean {
   const blank = blankPerpsAddOrderValues();
   return (

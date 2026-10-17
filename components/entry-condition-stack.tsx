@@ -435,6 +435,7 @@ export function EntryConditionStack({
   lead,
   groupFooter,
   showErrors = false,
+  optionalAddedKind = false,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -453,6 +454,8 @@ export function EntryConditionStack({
   groupFooter?: (groupIndex: number) => ReactNode;
   /** Paint empty required controls after the form has been edited. */
   showErrors?: boolean;
+  /** Perps added rows can stay on Select Condition Type or Select Trigger. */
+  optionalAddedKind?: boolean;
 }) {
   const column = useBotColumnLayout();
   const cap = STRATEGY_CONDITION_CAP - 1;
@@ -496,7 +499,7 @@ export function EntryConditionStack({
           </span>
         )}
         <AppSelect
-          name={`${prefix}${index}Join`}
+          name={index < 0 ? undefined : `${prefix}${index}Join`}
           value={row.join}
           aria-label={
             labelled ? undefined : "How this condition combines with the ones above"
@@ -533,9 +536,15 @@ export function EntryConditionStack({
       />
     );
   }
+  let postedCount = 0;
   const rendered = rows.map((row, index) => {
         const slotIndex = index + 1;
         const draft = row.draft;
+        const postRow = !optionalAddedKind || draft.kind !== "unset";
+        const nameIndex = postRow ? postedCount : -1;
+        if (postRow) {
+          postedCount += 1;
+        }
         const webhookChoices =
           draft.kind === "webhook" &&
           draft.webhookId &&
@@ -546,7 +555,7 @@ export function EntryConditionStack({
           key: row.key,
           join: row.join,
           row,
-          index,
+          index: nameIndex,
           slotIndex,
           body: (
           <>
@@ -554,12 +563,12 @@ export function EntryConditionStack({
               <>
                 <input
                   type="hidden"
-                  name={`${prefix}${index}Source`}
+                  name={nameIndex < 0 ? undefined : `${prefix}${nameIndex}Source`}
                   value="filter"
                 />
                 <DcaFilterBlock
                   label="Kind"
-                  prefix={`${prefix}${index}`}
+                  prefix={`${prefix}${nameIndex}`}
                   side={side}
                   spec={draft.spec}
                   onChange={(spec) => {
@@ -584,10 +593,10 @@ export function EntryConditionStack({
                 <label className={row.join === "or" ? `${labelClass} whitespace-nowrap` : labelClass}>
                   <HintLabel
                     text={row.join === "or" ? "Condition Type" : "Trigger"}
-                    required
+                    required={!optionalAddedKind}
                   />
                   <AppSelect
-                    name={`${prefix}${index}Source`}
+                    name={nameIndex < 0 ? undefined : `${prefix}${nameIndex}Source`}
                     value={draft.kind === "unset" ? "" : draft.kind}
                     onChange={(event) => {
                       const kind = event.target.value as StrategyTriggerKind;
@@ -611,7 +620,7 @@ export function EntryConditionStack({
                       });
                     }}
                     className={
-                      showErrors && draft.kind === "unset"
+                      showErrors && draft.kind === "unset" && !optionalAddedKind
                         ? conditionFieldClass(botFieldInvalidClass, column)
                         : row.join === "or"
                           ? conditionFieldClass(fieldClass, column)
@@ -642,7 +651,7 @@ export function EntryConditionStack({
                     <label className={labelClass}>
                       <HintLabel text="Price source" required />
                       <AppSelect
-                        name={`${prefix}${index}TriggerBy`}
+                        name={`${prefix}${nameIndex}TriggerBy`}
                         value={draft.triggerBy}
                         onChange={(event) =>
                           replace(row.key, {
@@ -682,7 +691,7 @@ export function EntryConditionStack({
                     <label className={labelClass}>
                       <HintLabel text="Compare" required />
                       <AppSelect
-                        name={`${prefix}${index}TriggerCompare`}
+                        name={`${prefix}${nameIndex}TriggerCompare`}
                         value={draft.compare}
                         onChange={(event) =>
                           replace(row.key, {
@@ -718,7 +727,7 @@ export function EntryConditionStack({
                     <label className={labelClass}>
                       <HintLabel text="Price" required />
                       <GroupedNumberInput
-                        name={`${prefix}${index}TriggerPrice`}
+                        name={`${prefix}${nameIndex}TriggerPrice`}
                         value={draft.price}
                         onChange={(price) =>
                           replace(row.key, {
@@ -739,7 +748,7 @@ export function EntryConditionStack({
                 ) : draft.kind === "indicator" ? (
                   <IndicatorStartFields
                     side={side}
-                    prefix={`${prefix}${index}indicator`}
+                    prefix={`${prefix}${nameIndex}indicator`}
                     kind={draft.indicatorKind}
                     timeframe={draft.timeframe}
                     compare={draft.compare}
@@ -771,7 +780,7 @@ export function EntryConditionStack({
                 ) : draft.kind === "trend" ? (
                   <TrendStartFields
                     side={side}
-                    prefix={`${prefix}${index}indicator`}
+                    prefix={`${prefix}${nameIndex}indicator`}
                     kind={draft.indicatorKind || "supertrend"}
                     timeframe={draft.timeframe}
                     compare={draft.compare}
@@ -798,7 +807,7 @@ export function EntryConditionStack({
                   <label className={labelClass}>
                     <HintLabel text="Webhook" required />
                     <AppSelect
-                      name={`${prefix}${index}WebhookId`}
+                      name={`${prefix}${nameIndex}WebhookId`}
                       value={draft.webhookId}
                       onChange={(event) =>
                         replace(row.key, {
@@ -863,14 +872,16 @@ export function EntryConditionStack({
   if (grouped) {
     return (
       <div className="space-y-3">
-        <input type="hidden" name={`${prefix}Count`} value={String(rows.length)} />
+        <input type="hidden" name={`${prefix}Count`} value={String(postedCount)} />
         <GroupedConditions
           rows={rendered}
           lead={lead}
           renderRemove={(item, scope) => removeControl(item.row, scope)}
           renderBody={(item) => (
             <>
-              <input type="hidden" name={`${prefix}${item.index}Join`} value={item.join} />
+              {item.index < 0 ? null : (
+                <input type="hidden" name={`${prefix}${item.index}Join`} value={item.join} />
+              )}
               {item.body}
             </>
           )}
@@ -896,7 +907,7 @@ export function EntryConditionStack({
   }
   return (
     <div className="space-y-4">
-      <input type="hidden" name={`${prefix}Count`} value={String(rows.length)} />
+      <input type="hidden" name={`${prefix}Count`} value={String(postedCount)} />
       {rendered.map((item) => (
         <div key={item.key} className="space-y-3 border-t border-line pt-4">
           <div className="flex items-end justify-between gap-3">

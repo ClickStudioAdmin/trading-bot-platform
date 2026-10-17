@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { positiveSizingText } from "@/lib/futures/perps-add-condition";
 import { AppSelect } from "@/components/app-select";
 import {
   IndicatorStartFields,
@@ -15,6 +16,7 @@ import {
 } from "@/components/bot-form-chrome";
 import {
   entryGroupOrderKey,
+  entryGroupShowsSizing,
   GroupPositionSizing,
   PerpsGroupOrderFields,
   useExtraGroupOrders,
@@ -285,7 +287,9 @@ export function perpsEntryDraftMissing(
       return true;
     }
   }
-  return draft.entryRows.some((row) => !entryDraftComplete(row.draft));
+  return draft.entryRows.some(
+    (row) => row.draft.kind !== "unset" && !entryDraftComplete(row.draft),
+  );
 }
 
 export function PerpsEntryPanel({
@@ -308,6 +312,7 @@ export function PerpsEntryPanel({
   baseCoin,
   orderSizeInvalid = false,
   orderLimitInvalid = false,
+  extraOrders,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -328,9 +333,9 @@ export function PerpsEntryPanel({
   baseCoin?: string;
   orderSizeInvalid?: boolean;
   orderLimitInvalid?: boolean;
+  extraOrders: ReturnType<typeof useExtraGroupOrders>;
 }) {
   const column = useBotColumnLayout();
-  const extraOrders = useExtraGroupOrders();
   const draftRef = useRef(draft);
   useEffect(() => {
     draftRef.current = draft;
@@ -420,7 +425,7 @@ export function PerpsEntryPanel({
                 patch(partial);
               }}
               className={
-                showErrors && draft.entrySource === "" && !closing
+                draft.entrySource === "" && !closing
                   ? conditionFieldClass(botFieldInvalidClass, column)
                   : conditionFieldClass(fieldClass, column)
               }
@@ -655,6 +660,7 @@ export function PerpsEntryPanel({
       fieldClass={fieldClass}
       labelClass={labelClass}
       showErrors={showErrors}
+      optionalAddedKind
       groupFooter={
         order && onOrderChange
           ? (groupIndex) => {
@@ -664,6 +670,11 @@ export function PerpsEntryPanel({
               return (
                 <GroupPositionSizing
                   groupIndex={groupIndex}
+                  show={entryGroupShowsSizing(
+                    groupIndex,
+                    draft.entrySource !== "",
+                    draft.entryRows,
+                  )}
                   sameAsGroup1={lead || extraOrders.sharesLead(key)}
                   onSameAsGroup1={
                     lead
@@ -680,9 +691,19 @@ export function PerpsEntryPanel({
                     gridClass={fieldRow}
                     named={lead && orderNamed}
                     namePrefix={prefix}
-                    required={lead}
-                    sizeInvalid={lead && orderSizeInvalid}
-                    limitInvalid={lead && orderLimitInvalid}
+                    required
+                    sizeInvalid={
+                      lead
+                        ? orderSizeInvalid
+                        : showErrors && !positiveSizingText(values.size)
+                    }
+                    limitInvalid={
+                      lead
+                        ? orderLimitInvalid
+                        : showErrors &&
+                          values.orderType === "limit" &&
+                          !positiveSizingText(values.limitPrice)
+                    }
                     onChange={(partial) => {
                       if (lead) {
                         onOrderChange(partial);

@@ -13,6 +13,8 @@ import { useDeskFormStatus } from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   blankPerpsAddOrderValues,
+  groupShowsPositionSizing,
+  perpsOrderValuesMissing,
   revealGroupOrder,
   sharesGroupLeadSizing,
   type PerpsAddOrderValues,
@@ -28,6 +30,41 @@ export function entryGroupOrderKey(
   }
   const groups = partitionByOr(rows);
   return groups[groupIndex]?.[0]?.key ?? `group-${groupIndex}`;
+}
+
+export function entryGroupShowsSizing(
+  groupIndex: number,
+  leadChosen: boolean,
+  rows: readonly { join: StrategyJoin; draft: { kind: string } }[],
+): boolean {
+  return groupShowsPositionSizing(
+    groupIndex,
+    leadChosen,
+    rows.map((row) => ({ join: row.join, kind: row.draft.kind })),
+  );
+}
+
+/** Later entry groups require their own size only when those fields are visible. */
+export function entryExtraOrdersMissing(
+  leadChosen: boolean,
+  rows: readonly { key: string; join: StrategyJoin; draft: { kind: string } }[],
+  orders: Readonly<Record<string, PerpsAddOrderValues>>,
+  sameAsLead: Readonly<Record<string, boolean>>,
+): boolean {
+  const groups = partitionByOr(rows);
+  return groups.some((group, groupIndex) => {
+    if (groupIndex === 0) {
+      return false;
+    }
+    const key = group[0]?.key;
+    if (!key || !entryGroupShowsSizing(groupIndex, leadChosen, rows)) {
+      return false;
+    }
+    if (sameAsLead[key] !== false) {
+      return false;
+    }
+    return perpsOrderValuesMissing(orders[key] ?? blankPerpsAddOrderValues());
+  });
 }
 
 export function useExtraGroupOrders() {
@@ -68,14 +105,19 @@ export function GroupPositionSizing({
   groupIndex,
   sameAsGroup1 = true,
   onSameAsGroup1,
+  show = true,
   children,
 }: {
   groupIndex: number;
   sameAsGroup1?: boolean;
   onSameAsGroup1?: (same: boolean) => void;
+  show?: boolean;
   children: ReactNode;
 }) {
   const shared = sharesGroupLeadSizing(groupIndex, sameAsGroup1);
+  if (!show) {
+    return null;
+  }
   return (
     <div className="space-y-3">
       <h3 className={botSectionTitleClass}>Position Sizing</h3>

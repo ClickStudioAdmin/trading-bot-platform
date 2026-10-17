@@ -34,6 +34,7 @@ import {
   appendPerpsAddOrderGroup,
   countPerpsAddConditions,
   perpsAddConditionDraftForType,
+  positiveSizingText,
   revealGroupOrder,
   type PerpsAddCondition,
   type PerpsAddConditionDraft,
@@ -96,6 +97,8 @@ export function PerpsAdditionalOrders({
   fieldsClass,
   side = "long",
   webhooks = [],
+  showErrors = false,
+  invalidFieldClass,
 }: {
   groups: PerpsAddOrderGroup[];
   onGroupsChange: (next: PerpsAddOrderGroup[]) => void;
@@ -106,6 +109,8 @@ export function PerpsAdditionalOrders({
   fieldsClass?: string;
   side?: "long" | "short";
   webhooks?: readonly { id: string; name: string }[];
+  showErrors?: boolean;
+  invalidFieldClass?: string;
 }) {
   const { markDirty } = useDeskFormStatus();
   const column = useBotColumnLayout();
@@ -287,6 +292,7 @@ export function PerpsAdditionalOrders({
                   }
                 />
               ) : null}
+              {group.lead.type === "" ? null : (
               <OrderFields
                 groupIndex={groupIndex}
                 sameAsGroup1={group.sameAsGroup1 !== false}
@@ -305,8 +311,11 @@ export function PerpsAdditionalOrders({
                 baseCoin={baseCoin}
                 fieldClass={fieldClass}
                 gridClass={gridClass}
+                showErrors={showErrors}
+                invalidFieldClass={invalidFieldClass}
                 onChange={(partial) => patchOrder(group.key, partial)}
               />
+              )}
             </section>
           </div>
         );
@@ -568,6 +577,8 @@ function OrderFields({
   baseCoin,
   fieldClass,
   gridClass,
+  showErrors = false,
+  invalidFieldClass,
   onChange,
 }: {
   groupIndex: number;
@@ -578,6 +589,8 @@ function OrderFields({
   baseCoin: string;
   fieldClass: string;
   gridClass: string;
+  showErrors?: boolean;
+  invalidFieldClass?: string;
   onChange: (partial: Partial<PerpsAddOrderValues>) => void;
 }) {
   return (
@@ -591,7 +604,15 @@ function OrderFields({
         quoteLabel={quoteLabel}
         baseCoin={baseCoin}
         fieldClass={fieldClass}
+        invalidFieldClass={invalidFieldClass}
         gridClass={gridClass}
+        required
+        sizeInvalid={showErrors && !positiveSizingText(order.size)}
+        limitInvalid={
+          showErrors &&
+          order.orderType === "limit" &&
+          !positiveSizingText(order.limitPrice)
+        }
         onChange={onChange}
       />
     </GroupPositionSizing>
