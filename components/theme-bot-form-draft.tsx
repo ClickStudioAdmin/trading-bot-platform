@@ -34,6 +34,7 @@ import { ExitSideBuilder } from "@/components/exit-side-builder";
 import {
   DcaGroupSizeFields,
   entryGroupOrderKey,
+  entryGroupShowsSizing,
   GroupPositionSizing,
   PerpsGroupOrderFields,
   useExtraGroupOrders,
@@ -1212,6 +1213,7 @@ export function ThemeBotFormDraft() {
     rows: typeof entryRows,
     extra: typeof longExtraOrders,
     named: boolean,
+    leadChosen: boolean,
   ) {
     function renderPerpsOrderFooter(groupIndex: number) {
       const key = entryGroupOrderKey(rows, groupIndex);
@@ -1222,6 +1224,7 @@ export function ThemeBotFormDraft() {
       return (
         <GroupPositionSizing
           groupIndex={groupIndex}
+          show={entryGroupShowsSizing(groupIndex, leadChosen, rows)}
           sameAsGroup1={lead || extra.sharesLead(key)}
           onSameAsGroup1={
             lead
@@ -1267,6 +1270,7 @@ export function ThemeBotFormDraft() {
     rows: typeof entryRows,
     extra: typeof longExtraOrders,
     named: boolean,
+    leadChosen: boolean,
   ) {
     function renderDcaSizeFooter(groupIndex: number) {
       const key = entryGroupOrderKey(rows, groupIndex);
@@ -1275,6 +1279,7 @@ export function ThemeBotFormDraft() {
       return (
         <GroupPositionSizing
           groupIndex={groupIndex}
+          show={entryGroupShowsSizing(groupIndex, leadChosen, rows)}
           sameAsGroup1={lead || extra.sharesLead(key)}
           onSameAsGroup1={
             lead
@@ -2347,7 +2352,12 @@ export function ThemeBotFormDraft() {
                 fieldClass={fieldClass}
                 labelClass={labelClass}
                 showErrors={showFieldErrors}
-                groupFooter={perpsOrderFooter(entryRows, longExtraOrders, true)}
+                groupFooter={perpsOrderFooter(
+                  entryRows,
+                  longExtraOrders,
+                  true,
+                  startKind !== "",
+                )}
               />
             );
           }
@@ -2371,7 +2381,12 @@ export function ThemeBotFormDraft() {
                 fieldClass={fieldClass}
                 labelClass={labelClass}
                 showErrors={showFieldErrors}
-                groupFooter={dcaSizeFooter(entryRows, longExtraOrders, true)}
+                groupFooter={dcaSizeFooter(
+                  entryRows,
+                  longExtraOrders,
+                  true,
+                  startKind !== "",
+                )}
               />
             );
           }
@@ -2541,6 +2556,7 @@ export function ThemeBotFormDraft() {
                 shortEntryRows,
                 shortExtraOrders,
                 false,
+                shortStartKind !== "",
               )}
             />
               );
@@ -2686,7 +2702,12 @@ export function ThemeBotFormDraft() {
               fieldClass={fieldClass}
               labelClass={labelClass}
               showErrors={showFieldErrors}
-              groupFooter={dcaSizeFooter(shortEntryRows, shortExtraOrders, false)}
+              groupFooter={dcaSizeFooter(
+                shortEntryRows,
+                shortExtraOrders,
+                false,
+                shortStartKind !== "",
+              )}
             />
               );
             })()}

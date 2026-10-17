@@ -90,6 +90,30 @@ export function sharesGroupLeadSizing(
   return groupIndex > 0 && sameAsGroup1 !== false;
 }
 
+/**
+ * Position Sizing stays hidden until that group's first Condition Type is chosen.
+ * Group 1 uses the lead. Later groups use their opening row, not an And trigger.
+ */
+export function groupShowsPositionSizing(
+  groupIndex: number,
+  leadChosen: boolean,
+  rows: readonly { join: "and" | "or"; kind: string }[],
+): boolean {
+  if (groupIndex <= 0) {
+    return leadChosen;
+  }
+  let group = 0;
+  for (const row of rows) {
+    if (row.join === "or") {
+      group += 1;
+    }
+    if (group === groupIndex) {
+      return row.kind !== "" && row.kind !== "unset";
+    }
+  }
+  return false;
+}
+
 export function isBlankPerpsAddOrder(order: PerpsAddOrderValues): boolean {
   const blank = blankPerpsAddOrderValues();
   return (

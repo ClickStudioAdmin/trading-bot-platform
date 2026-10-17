@@ -64,6 +64,7 @@ import {
 import {
   DcaGroupSizeFields,
   entryGroupOrderKey,
+  entryGroupShowsSizing,
   GroupPositionSizing,
   useExtraGroupOrders,
 } from "@/components/entry-group-order";
@@ -2461,9 +2462,14 @@ export function DcaPlaybookForm({
             const extra = shortLeg ? shortExtraOrders : longExtraOrders;
             const quote = policy.quoteLabel;
             const base = selectedPair?.baseCoin ?? "Token";
+            const showSizing = entryGroupShowsSizing(
+              groupIndex,
+              kind !== "",
+              rows,
+            );
             if (key === "lead") {
               return (
-                <GroupPositionSizing groupIndex={groupIndex}>
+                <GroupPositionSizing groupIndex={groupIndex} show={showSizing}>
                   <DcaGroupSizeFields
                     size={clipSize}
                     sizeUnit={sizeUnit}
@@ -2493,6 +2499,7 @@ export function DcaPlaybookForm({
             return (
               <GroupPositionSizing
                 groupIndex={groupIndex}
+                show={showSizing}
                 sameAsGroup1={extra.sharesLead(key)}
                 onSameAsGroup1={(same) =>
                   extra.setShares(key, same, {

@@ -7,6 +7,7 @@ import {
   blankPerpsAddOrderValues,
   countPerpsAddConditions,
   perpsAddConditionDraftForType,
+  groupShowsPositionSizing,
   revealGroupOrder,
   sharesGroupLeadSizing,
 } from "./perps-add-condition";
@@ -64,6 +65,27 @@ assert.equal(sharesGroupLeadSizing(0, undefined), false);
 assert.equal(sharesGroupLeadSizing(1, undefined), true);
 assert.equal(sharesGroupLeadSizing(2, true), true);
 assert.equal(sharesGroupLeadSizing(2, false), false);
+assert.equal(groupShowsPositionSizing(0, false, []), false);
+assert.equal(groupShowsPositionSizing(0, true, []), true);
+assert.equal(
+  groupShowsPositionSizing(0, true, [{ join: "and", kind: "unset" }]),
+  true,
+);
+assert.equal(
+  groupShowsPositionSizing(1, true, [{ join: "or", kind: "unset" }]),
+  false,
+);
+assert.equal(
+  groupShowsPositionSizing(1, false, [{ join: "or", kind: "price" }]),
+  true,
+);
+assert.equal(
+  groupShowsPositionSizing(1, true, [
+    { join: "and", kind: "indicator" },
+    { join: "or", kind: "" },
+  ]),
+  false,
+);
 
 const leadOrder = { ...blankPerpsAddOrderValues(), size: "10" };
 const revealed = revealGroupOrder(blankPerpsAddOrderValues(), leadOrder);

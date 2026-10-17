@@ -287,6 +287,7 @@ export function PerpsAdditionalOrders({
                   }
                 />
               ) : null}
+              {group.lead.type === "" ? null : (
               <OrderFields
                 groupIndex={groupIndex}
                 sameAsGroup1={group.sameAsGroup1 !== false}
@@ -307,6 +308,7 @@ export function PerpsAdditionalOrders({
                 gridClass={gridClass}
                 onChange={(partial) => patchOrder(group.key, partial)}
               />
+              )}
             </section>
           </div>
         );

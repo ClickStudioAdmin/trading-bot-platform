@@ -15,6 +15,7 @@ import {
 } from "@/components/bot-form-chrome";
 import {
   entryGroupOrderKey,
+  entryGroupShowsSizing,
   GroupPositionSizing,
   PerpsGroupOrderFields,
   useExtraGroupOrders,
@@ -664,6 +665,11 @@ export function PerpsEntryPanel({
               return (
                 <GroupPositionSizing
                   groupIndex={groupIndex}
+                  show={entryGroupShowsSizing(
+                    groupIndex,
+                    draft.entrySource !== "",
+                    draft.entryRows,
+                  )}
                   sameAsGroup1={lead || extraOrders.sharesLead(key)}
                   onSameAsGroup1={
                     lead
