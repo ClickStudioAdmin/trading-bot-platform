@@ -301,7 +301,6 @@ export function PerpsEntryPanel({
   webhooks,
   fieldRow,
   fieldRow5,
-  pairSpan,
   fieldClass,
   labelClass,
   showErrors = false,
@@ -322,7 +321,6 @@ export function PerpsEntryPanel({
   webhooks: EntryWebhookOption[];
   fieldRow: string;
   fieldRow5: string;
-  pairSpan: string;
   fieldClass: string;
   labelClass: string;
   showErrors?: boolean;
@@ -513,15 +511,15 @@ export function PerpsEntryPanel({
               showErrors={showErrors}
             />
           ) : draft.entrySource === "webhook" ? (
-            <BotField label="Webhook" className={pairSpan} required>
+            <BotField label="Webhook" className="col-span-full" required>
               <AppSelect
                 name={`${prefix}webhookId`}
                 value={draft.webhookId}
                 onChange={(event) => patch({ webhookId: event.target.value })}
                 className={
                   showErrors && draft.webhookId.trim() === ""
-                    ? botFieldInvalidClass
-                    : fieldClass
+                    ? conditionFieldClass(botFieldInvalidClass, column)
+                    : conditionFieldClass(fieldClass, column)
                 }
               >
                 <option value="">

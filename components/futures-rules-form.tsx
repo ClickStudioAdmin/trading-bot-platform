@@ -622,7 +622,6 @@ function RuleCard({
   const fieldRow = embedded ? botCompactRowClass : botRowClass;
   const fieldRow5 = embedded ? botCompactRowClass : botRowClass5;
   const nameSpan = embedded ? "col-span-full" : "col-span-2";
-  const pairSpan = embedded ? "col-span-full" : "lg:col-span-2";
   const [dirty, setDirty] = useState(false);
   const [mode, setMode] = useState(
     !inUse && symbolNeedsBybitAgreement(agreementGate.symbols, layer.symbol)
@@ -1741,7 +1740,6 @@ function RuleCard({
           webhooks={triggerWebhooks}
           fieldRow={fieldRow}
           fieldRow5={fieldRow5}
-          pairSpan={pairSpan}
           fieldClass={botFieldClass}
           labelClass={botLabelClass}
           showErrors={dirty}
@@ -1775,7 +1773,6 @@ function RuleCard({
           webhooks={triggerWebhooks}
           fieldRow={fieldRow}
           fieldRow5={fieldRow5}
-          pairSpan={pairSpan}
           fieldClass={botFieldClass}
           labelClass={botLabelClass}
           showErrors={dirty}
