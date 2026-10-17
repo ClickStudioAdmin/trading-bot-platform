@@ -765,7 +765,12 @@ export function ThemeBotFormDraft() {
   const [carrySl, setCarrySl] = useState("");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPrice, setLimitPrice] = useState("");
-  const [addGroups, setAddGroups] = useState(() => blankPerpsAddOrderGroups("long"));
+  const [longAddGroups, setLongAddGroups] = useState(() =>
+    blankPerpsAddOrderGroups("long"),
+  );
+  const [shortAddGroups, setShortAddGroups] = useState(() =>
+    blankPerpsAddOrderGroups("short"),
+  );
   const [webhookId, setWebhookId] = useState("sample");
   const themeLongAnchor: EntryAnchor = {
     kind: startKind === "" ? "indicator" : startKind,
@@ -932,7 +937,8 @@ export function ThemeBotFormDraft() {
     startKind,
     orderType,
     limitPrice,
-    addGroups,
+    longAddGroups,
+    shortAddGroups,
     webhookId,
     priceSource,
     priceWhen,
@@ -2801,22 +2807,44 @@ export function ThemeBotFormDraft() {
         </Group>
         </BotFormStep>
         ) : desk === "perps" && !closing ? (
-          <BotFormStep title="Additional Orders Condition Builder">
-            <PerpsAdditionalOrders
-              groups={addGroups}
-              onGroupsChange={setAddGroups}
-              quoteLabel="USDT"
-              baseCoin={
-                SAMPLE_PAIRS.find((pair) => pair.symbol === symbol)?.baseCoin ??
-                "BTC"
-              }
-              fieldClass={fieldClass}
-              gridClass={rowClass}
-              fieldsClass={rowClass5}
-              side={perpsDirection === "short" ? "short" : "long"}
-              webhooks={themeWebhooks}
-            />
-          </BotFormStep>
+          <>
+            {perpsDirection !== "short" ? (
+              <BotFormStep title="Long Additional Orders Condition Builder">
+                <PerpsAdditionalOrders
+                  groups={longAddGroups}
+                  onGroupsChange={setLongAddGroups}
+                  quoteLabel="USDT"
+                  baseCoin={
+                    SAMPLE_PAIRS.find((pair) => pair.symbol === symbol)?.baseCoin ??
+                    "BTC"
+                  }
+                  fieldClass={fieldClass}
+                  gridClass={rowClass}
+                  fieldsClass={rowClass5}
+                  side="long"
+                  webhooks={themeWebhooks}
+                />
+              </BotFormStep>
+            ) : null}
+            {perpsDirection === "short" || perpsDirection === "both" ? (
+              <BotFormStep title="Short Additional Orders Condition Builder">
+                <PerpsAdditionalOrders
+                  groups={shortAddGroups}
+                  onGroupsChange={setShortAddGroups}
+                  quoteLabel="USDT"
+                  baseCoin={
+                    SAMPLE_PAIRS.find((pair) => pair.symbol === symbol)?.baseCoin ??
+                    "BTC"
+                  }
+                  fieldClass={fieldClass}
+                  gridClass={rowClass}
+                  fieldsClass={rowClass5}
+                  side="short"
+                  webhooks={themeWebhooks}
+                />
+              </BotFormStep>
+            ) : null}
+          </>
         ) : null}
 
         {(desk === "perps" ? perpsDirection !== "short" : direction !== "short") ? (
