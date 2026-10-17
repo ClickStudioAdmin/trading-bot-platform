@@ -112,18 +112,6 @@ import {
 } from "./run";
 import { loadAccountDcaSyncFailures } from "./sync-failure-store";
 import {
-  actionKindLabel,
-  exitActionTimeframes,
-  exitClaimsCover,
-  sideExitActions,
-} from "@/lib/strategy/exit-actions";
-import {
-  applyPaperExitClaims,
-  decideOpenExit,
-  saveExitRuntime,
-} from "@/lib/strategy/exit-desk";
-import type { ExitClaim, ExitRuntime } from "@/lib/strategy/exit-actions";
-import {
   DCA_TICK_ENTRY_RANK,
   DCA_TICK_LANE_CONCURRENCY,
   DCA_TICK_PRICE_CONCURRENCY,
@@ -271,11 +259,7 @@ export async function runDcaPlaybookTick(input?: {
   const seenBars = new Set<string>();
   for (const playbook of playbooks) {
     const account = accounts.get(playbook.accountId);
-    const actionFrames = [
-      ...exitActionTimeframes(playbook.exitActions),
-      ...exitActionTimeframes(playbook.shortExitActions),
-    ] as DcaIndicatorTimeframe[];
-    if (!account || (!dcaNeedsTickBars(playbook) && actionFrames.length === 0)) {
+    if (!account || !dcaNeedsTickBars(playbook)) {
       continue;
     }
     const wide =
@@ -286,9 +270,7 @@ export async function runDcaPlaybookTick(input?: {
       dcaEntryStackNeedsWideBars(playbook) ||
       exitStackNeedsWideBars(playbook.exitStack) ||
       exitStackNeedsWideBars(playbook.shortExitStack);
-    for (const interval of [
-      ...new Set([...dcaTickBarTimeframes(playbook), ...actionFrames]),
-    ]) {
+    for (const interval of dcaTickBarTimeframes(playbook)) {
       const key = `${account.venue}:${playbook.symbol}:${interval}`;
       if (seenBars.has(key)) {
         continue;
@@ -341,8 +323,6 @@ export async function runDcaPlaybookTick(input?: {
     action: ReturnType<typeof decideDcaTick>["action"] | null;
     why: string;
     cache: DcaSyncCache;
-    exitClaims?: ExitClaim[] | null;
-    exitRuntime?: ExitRuntime | null;
   };
   const work: TickWork[] = [];
   const flagWrites: {
@@ -367,127 +347,6 @@ export async function runDcaPlaybookTick(input?: {
     }
     lastHeartbeat = now;
     await input?.onYield?.();
-  }
-  function exitClaimCloseKind(
-    claims: readonly ExitClaim[],
-  ): "take_profit" | "stop_loss" | "exit_if" {
-    if (claims.some((claim) => claim.kind === "stop_loss")) {
-      return "stop_loss";
-    }
-    if (claims.some((claim) => claim.kind === "take_profit")) {
-      return "take_profit";
-    }
-    return "exit_if";
-  }
-  async function applyExitActionClose(item: TickWork): Promise<void> {
-    const claims = item.exitClaims ?? [];
-    const runtime = item.exitRuntime;
-    if (!item.positionId || !runtime || claims.length === 0) {
-      return;
-    }
-    const price = item.mark ?? item.lastPrice;
-    if (!(price != null && price > 0)) {
-      return;
-    }
-    const opensNow = await loadOpenFuturesOnSymbol(item.playbook.symbol, {
-      accountId: item.playbook.accountId,
-      userId: item.playbook.userId,
-    });
-    const position =
-      opensNow.find((row) => row.id === item.positionId) ??
-      opensNow.find((row) => row.side === item.side);
-    if (!position || !(position.qty > 0)) {
-      return;
-    }
-    const sentence = claims
-      .map((claim) => `${actionKindLabel(claim.kind)} ${claim.qty}`)
-      .join(", ");
-    const full = exitClaimsCover(claims, position.qty);
-    if (item.mode !== "paper") {
-      if (!full) {
-        return;
-      }
-      const closed = await flattenPlaybook({
-        playbook: item.playbook,
-        mode: item.mode,
-        side: item.side,
-        reason: sentence,
-        closeKind: exitClaimCloseKind(claims),
-        positionId: position.id,
-      });
-      if (!closed.ok) {
-        return;
-      }
-      await saveExitRuntime(position.id, runtime);
-      const kept = await keepListeningAfterFlatten({
-        playbook: item.playbook,
-        side: item.side,
-      });
-      if (!kept.ok) {
-        return;
-      }
-      acted += 1;
-      await logDcaEvent({
-        playbook: item.playbook,
-        side: item.side,
-        positionId: position.id,
-        event: "dca.closed",
-        message: dcaExitClosedMessage({
-          name: item.playbook.name,
-          reason: "flatten",
-          listens: kept.armed,
-          why: sentence,
-        }),
-        data: { reason: "exit_actions", listening: kept.armed },
-      });
-      return;
-    }
-    const applied = await applyPaperExitClaims({
-      mode: item.mode,
-      position,
-      price,
-      claims,
-      runtime,
-    });
-    if (!applied.applied) {
-      return;
-    }
-    acted += 1;
-    if (applied.remaining > 1e-8) {
-      await logDcaEvent({
-        playbook: item.playbook,
-        side: item.side,
-        positionId: position.id,
-        event: "dca.decision",
-        message: `${item.playbook.name} reduced the position. ${sentence}.`,
-        data: {
-          kind: "close",
-          reason: "exit_actions",
-          remaining: applied.remaining,
-        },
-      });
-      return;
-    }
-    const kept = await keepListeningAfterFlatten({
-      playbook: item.playbook,
-      side: item.side,
-    });
-    if (!kept.ok) {
-      return;
-    }
-    await logDcaEvent({
-      playbook: item.playbook,
-      side: item.side,
-      positionId: position.id,
-      event: "dca.closed",
-      message: dcaExitClosedMessage({
-        name: item.playbook.name,
-        reason: "flatten",
-        listens: kept.armed,
-        why: sentence,
-      }),
-      data: { reason: "exit_actions", listening: kept.armed },
-    });
   }
   async function runTickItem(item: TickWork): Promise<void> {
     if (
@@ -569,10 +428,6 @@ export async function runDcaPlaybookTick(input?: {
           listening: listens,
         },
       });
-      return;
-    }
-    if (item.kind === "close" && item.exitClaims && item.exitClaims.length > 0) {
-      await applyExitActionClose(item);
       return;
     }
     if (item.kind === "sync") {
@@ -660,16 +515,6 @@ export async function runDcaPlaybookTick(input?: {
       const tpLimitResting =
         dcaOpenExitLimits(book.live, playbook.id, side, "tp").length > 0;
       const classic = dcaClassicForSide(playbook, side);
-      if (
-        sideExitActions(
-          playbook.exitActions,
-          playbook.shortExitActions,
-          playbook.direction,
-          side,
-        )
-      ) {
-        continue;
-      }
       const reason = dcaPriceExitReason({
         side,
         qty: open.qty,
@@ -764,15 +609,8 @@ export async function runDcaPlaybookTick(input?: {
     const ticker = deskTickers.get(playbook.symbol) ?? {};
     const prices = tickerTriggerPrices(ticker);
     const barsByTimeframe = new Map<DcaIndicatorTimeframe, CandleBar[]>();
-    const playbookActionFrames = [
-      ...new Set([
-        ...dcaTickBarTimeframes(playbook),
-        ...exitActionTimeframes(playbook.exitActions),
-        ...exitActionTimeframes(playbook.shortExitActions),
-      ]),
-    ] as DcaIndicatorTimeframe[];
-    if (dcaNeedsTickBars(playbook) || playbookActionFrames.length > 0) {
-      for (const indicatorTimeframe of playbookActionFrames) {
+    if (dcaNeedsTickBars(playbook)) {
+      for (const indicatorTimeframe of dcaTickBarTimeframes(playbook)) {
         const key = `${account.venue}:${playbook.symbol}:${indicatorTimeframe}`;
         if (!klineCache.has(key)) {
           const supertrend =
@@ -958,11 +796,6 @@ export async function runDcaPlaybookTick(input?: {
           : null,
       );
       const classic = dcaClassicForSide(playbook, side);
-      const sideActions =
-        side === "short" && playbook.direction === "both"
-          ? playbook.shortExitActions
-          : playbook.exitActions;
-      const actionsOn = Boolean(sideActions && sideActions.length > 0);
       const takeProfitAtr =
         classic.takeProfitKind === "atr"
           ? atrForPeriod(classic.atrPeriod ?? playbook.atrPeriod)
@@ -997,13 +830,13 @@ export async function runDcaPlaybookTick(input?: {
         entryPrice: open?.entryPrice ?? null,
         takeProfitKind: classic.takeProfitKind,
         takeProfitAtrMult: classic.takeProfitAtrMult,
-        takeProfitPct: actionsOn ? null : classic.takeProfitPct,
-        stopLossPct: actionsOn ? null : classic.stopLossPct,
+        takeProfitPct: classic.takeProfitPct,
+        stopLossPct: classic.stopLossPct,
         takeProfitBasis: classic.takeProfitBasis,
         stopLossBasis: classic.stopLossBasis,
         takeProfitOrderType: classic.takeProfitOrderType,
         tpLimitResting,
-        breakevenActivationPct: actionsOn ? null : classic.breakevenActivationPct,
+        breakevenActivationPct: classic.breakevenActivationPct,
         breakevenDone: leg.breakevenDone,
         armTrigger: dcaArmTriggerForSide(playbook, side),
         armConditionTrue: playbook.armConditionTrue,
@@ -1045,13 +878,11 @@ export async function runDcaPlaybookTick(input?: {
           prices,
           barsByTimeframe,
         }),
-        exitIf: actionsOn ? null : exitIf,
-        exitHard: actionsOn ? null : exit.signal,
+        exitIf,
+        exitHard: exit.signal,
         exitIfCloses: exitIfSeries.closes,
         exitIfBars: exitIfSeries.bars,
-        ...(actionsOn || exitStack.leaves.length === 0
-          ? {}
-          : exitStack.leaves.length > 0
+        ...(exitStack.leaves.length > 0
           ? {
               exitJoins: exitStack.joins,
               exitLeaves: exitLeafResults({
@@ -1105,67 +936,6 @@ export async function runDcaPlaybookTick(input?: {
           flagWrites.push({ id: playbook.id, patch: flagPatch });
         }
       }
-      let actionExit = false;
-      if (
-        actionsOn &&
-        sideActions &&
-        open &&
-        open.qty > 0 &&
-        prices.mark != null &&
-        prices.mark > 0
-      ) {
-        const settled = await decideOpenExit({
-          actions: sideActions,
-          positionId: open.id,
-          side,
-          qty: open.qty,
-          entryPrice: open.entryPrice,
-          mark: prices.mark,
-          last: prices.last,
-          barsByTimeframe,
-          nowMs: Date.now(),
-        });
-        if (settled && settled.claims.length === 0) {
-          await saveExitRuntime(open.id, settled.runtime);
-        } else if (settled && settled.claims.length > 0) {
-          const full = exitClaimsCover(settled.claims, open.qty);
-          if (account.mode === "paper" || full) {
-            actionExit = true;
-            const reason = settled.claims.some((claim) => claim.kind === "stop_loss")
-              ? "stop_loss"
-              : settled.claims.some((claim) => claim.kind === "take_profit")
-                ? "take_profit"
-                : "exit_if";
-            const sentence = settled.claims
-              .map((claim) => `${actionKindLabel(claim.kind)} ${claim.qty}`)
-              .join(", ");
-            work.push({
-              rank: dcaTickWorkRank("close"),
-              kind: "close",
-              playbook,
-              mode: account.mode,
-              side,
-              lastPrice: prices.last,
-              atr: spacingAtr,
-              clipsFilled: leg.clipsFilled,
-              positionId: open.id,
-              entryPrice: open.entryPrice,
-              mark: prices.mark,
-              tpLimitResting,
-              keepListening: false,
-              flattenReason: "",
-              action: { kind: "close", reason },
-              why: sentence,
-              cache: syncCache,
-              exitClaims: settled.claims,
-              exitRuntime: settled.runtime,
-            });
-            if (full) {
-              open.qty = 0;
-            }
-          }
-        }
-      }
       const why = dcaActionWhy({
         playbook,
         side,
@@ -1175,7 +945,7 @@ export async function runDcaPlaybookTick(input?: {
         entryPrice: open?.entryPrice ?? null,
         clipsFilled: leg.clipsFilled,
       });
-      const closingNow = actionExit || decision.action.kind === "close";
+      const closingNow = decision.action.kind === "close";
       const needsSync =
         !closingNow &&
         (Boolean(open) ||
@@ -1207,7 +977,7 @@ export async function runDcaPlaybookTick(input?: {
           cache: syncCache,
         });
       }
-      if (!actionExit && decision.action.kind !== "none") {
+      if (decision.action.kind !== "none") {
         const kind: DcaTickWorkKind =
           decision.action.kind === "close"
             ? "close"

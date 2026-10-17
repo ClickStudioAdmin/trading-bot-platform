@@ -55,11 +55,6 @@ import {
   type ExitBuilderClause,
 } from "@/lib/strategy/exit-clauses";
 import {
-  clausesFromExitActions,
-  exitCardsBlockReason,
-  exitPricesFromLevels,
-} from "@/lib/strategy/exit-actions";
-import {
   EntryConditionStack,
   entryConflictSlots,
   entryDraftComplete,
@@ -1349,7 +1344,6 @@ export function DcaPlaybookForm({
     exitRowsFromStack(source?.shortExitStack),
   );
   const [exitClauses, setExitClauses] = useState(() =>
-    clausesFromExitActions(source?.exitActions) ??
     exitClausesFromSaved({
       takeProfit: tpOn,
       trailing: trailOn,
@@ -1362,11 +1356,7 @@ export function DcaPlaybookForm({
     const saved =
       source?.direction === "both" ? (source.shortClassic ?? null) : null;
     const legacy = source?.direction === "both" && saved == null;
-    return (
-      (source?.direction === "both"
-        ? clausesFromExitActions(source.shortExitActions)
-        : null) ??
-      exitClausesFromSaved({
+    return exitClausesFromSaved({
       takeProfit: saved
         ? saved.takeProfitKind === "atr"
           ? saved.takeProfitAtrMult != null
@@ -1380,8 +1370,7 @@ export function DcaPlaybookForm({
         : legacy && slOn,
       anchor: shortExitIf,
       rows: shortExitRows,
-    })
-    );
+    });
   });
   function applyClassicFlags(
     primary: readonly ExitBuilderClause[],
@@ -2002,11 +1991,7 @@ export function DcaPlaybookForm({
         armPrice: shortArmPrice,
         webhookId: shortWebhookId,
       }));
-  const exitBlock =
-    exitCardsBlockReason(exitClauses) ||
-    (direction === "both" ? exitCardsBlockReason(shortClauses) : null);
   const exitKindMissing =
-    Boolean(exitBlock) ||
     exitClauseListMissing(exitClauses) ||
     (direction === "both" && exitClauseListMissing(shortClauses));
   const groupSizingMissing =
@@ -3426,12 +3411,6 @@ export function DcaPlaybookForm({
           labelClass={labelClass}
           gridClass={fieldRowClass5}
           showErrors={dirty}
-          actionName="exitActions"
-          prices={exitPricesFromLevels({
-            takeProfit: takeProfitPct,
-            stopLoss: stopLossPct,
-            trailingPct,
-          })}
           renderTakeProfit={() => dcaTakeProfitFields("primary")}
           renderTrailingStop={() => dcaTrailingFields("primary")}
           renderStopLoss={() => dcaStopFields("primary")}
@@ -3452,20 +3431,6 @@ export function DcaPlaybookForm({
           labelClass={labelClass}
           gridClass={fieldRowClass5}
           showErrors={dirty}
-          actionName={direction === "both" ? "shortExitActions" : "exitActions"}
-          prices={exitPricesFromLevels(
-            direction === "both"
-              ? {
-                  takeProfit: shortClassic.takeProfitPct,
-                  stopLoss: shortClassic.stopLossPct,
-                  trailingPct: shortClassic.trailingPct,
-                }
-              : {
-                  takeProfit: takeProfitPct,
-                  stopLoss: stopLossPct,
-                  trailingPct,
-                },
-          )}
           renderTakeProfit={() =>
             dcaTakeProfitFields(direction === "both" ? "short" : "primary")
           }
@@ -3500,10 +3465,9 @@ export function DcaPlaybookForm({
         }
         dirty={showSaveNotes}
         error={
-          exitBlock ??
-          (requiredMissing
+          requiredMissing
             ? completeRequiredNotice
-            : constraintBlocked ?? undefined)
+            : constraintBlocked ?? undefined
         }
         save={
           <div className="space-y-2">
@@ -3513,10 +3477,9 @@ export function DcaPlaybookForm({
               className={botSidebarSaveClass}
               disabled={Boolean(!dirty || constraintBlocked || requiredMissing)}
               title={
-                exitBlock ??
-                (requiredMissing
+                requiredMissing
                   ? completeRequiredNotice
-                  : constraintBlocked ?? undefined)
+                  : constraintBlocked ?? undefined
               }
             >
               <span className="inline-flex items-center gap-1.5">

@@ -30,12 +30,12 @@ const clauses = exitClausesFromSaved({
 
 assert.deepEqual(
   clauses.map((clause) => clause.kind),
-  ["take_profit", "stop_loss", "custom"],
+  ["take_profit", "stop_loss", "custom", "custom"],
 );
 assert.equal(clauses[2]?.rows.length, 1);
 assert.equal(clauses[2]?.rows[0]?.join, "and");
-assert.equal(clauses[2]?.orGroups[0]?.anchor.trigger, "webhook");
-assert.equal(clauses[2]?.orGroups[0]?.rows.length, 0);
+assert.equal(clauses[3]?.anchor.trigger, "webhook");
+assert.equal(clauses[3]?.rows.length, 0);
 
 const flat = customStackFromClauses(clauses);
 assert.equal(flat.anchor?.trigger, "indicator");
@@ -54,7 +54,7 @@ const again = exitClausesFromSaved({
 });
 assert.deepEqual(
   again.map((clause) => clause.kind),
-  ["take_profit", "stop_loss", "custom"],
+  ["take_profit", "stop_loss", "custom", "custom"],
 );
 
 const empty = exitClausesFromSaved({
@@ -70,18 +70,7 @@ assert.deepEqual(
 );
 
 const synced = syncClassicClauses(
-  [
-    {
-      key: "keep",
-      kind: "custom",
-      anchor: { trigger: "unset" },
-      rows: [],
-      orGroups: [],
-      scope: { kind: "all" },
-      ownPct: null,
-      ownDistance: null,
-    },
-  ],
+  [{ key: "keep", kind: "custom", anchor: { trigger: "unset" }, rows: [] }],
   clauses,
 );
 assert.deepEqual(
@@ -105,16 +94,7 @@ assert.equal(exitClauseListMissing(empty), false);
 assert.equal(
   exitClauseListMissing([
     ...clauses,
-    {
-      key: "blank",
-      kind: "",
-      anchor: { trigger: "unset" },
-      rows: [],
-      orGroups: [],
-      scope: { kind: "all" },
-      ownPct: null,
-      ownDistance: null,
-    },
+    { key: "blank", kind: "", anchor: { trigger: "unset" }, rows: [] },
   ]),
   true,
 );
