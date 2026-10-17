@@ -622,9 +622,7 @@ export function EntryConditionStack({
                     className={
                       showErrors && draft.kind === "unset" && !optionalAddedKind
                         ? conditionFieldClass(botFieldInvalidClass, column)
-                        : row.join === "or"
-                          ? conditionFieldClass(fieldClass, column)
-                          : fieldClass
+                        : conditionFieldClass(fieldClass, column)
                     }
                   >
                     <option value="">Select Condition Type</option>

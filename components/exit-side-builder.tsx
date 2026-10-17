@@ -366,7 +366,6 @@ export function ExitSideBuilder({
                   ) : null}
                   <HardExitFields
                     showTrigger={false}
-                    lead={false}
                     prefix={anchorPrefix}
                     side={side}
                     value={clause.anchor}
@@ -418,7 +417,6 @@ export function ExitSideBuilder({
                       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3">
                         <div className="min-w-0">
                           <HardExitFields
-                            lead={false}
                             prefix={fieldPrefix}
                             side={side}
                             value={draft}
