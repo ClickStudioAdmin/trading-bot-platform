@@ -11,7 +11,7 @@ import {
 } from "@/lib/bots/status";
 import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
-import { IconCheck, IconChevronDown, IconOpen } from "@/components/icons";
+import { IconCheck, IconChevronDown, IconFilters, IconOpen } from "@/components/icons";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 
 export const botFieldClass = BILLING_FIELD_CLASS;
@@ -175,6 +175,7 @@ export function BotFormStep({
   locked = false,
   defaultCollapsed = false,
   shell = "surface",
+  badge,
   className,
   children,
 }: {
@@ -185,6 +186,8 @@ export function BotFormStep({
   defaultCollapsed?: boolean;
   /** Canvas shell is the theme-page trial: black outer card, surface groups. */
   shell?: "surface" | "canvas";
+  /** Theme trial. Sits on the right of the header, before the chevron. */
+  badge?: string;
   className?: string;
   children: ReactNode;
 }) {
@@ -204,12 +207,20 @@ export function BotFormStep({
       >
         <button
           type="button"
-          className="group flex w-full items-center justify-between gap-3 border-0 bg-transparent px-5 py-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+          className={`group flex w-full items-center gap-3 border-0 bg-transparent px-5 py-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent${
+            badge ? "" : " justify-between"
+          }`}
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((current) => !current)}
         >
           <HintLabel text={title} hint={hint} />
+          {badge ? (
+            <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full border border-accent/30 bg-accent/15 px-2.5 py-1 text-xs font-medium text-accent">
+              <IconFilters size={14} className="size-3.5" />
+              {badge}
+            </span>
+          ) : null}
           <IconChevronDown
             size={16}
             className={`size-4 shrink-0 text-ink-muted group-hover:text-ink${
