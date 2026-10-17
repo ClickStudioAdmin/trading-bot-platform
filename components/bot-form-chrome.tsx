@@ -198,9 +198,9 @@ export function BotFormStep({
       }${className ? ` ${className}` : ""}`}
     >
       <h3
-        className={`${botStepTitleClass} ${
-          canvasShell ? "bg-canvas" : "bg-surface-raised"
-        }${open ? " border-b border-line" : ""}${locked ? " opacity-40" : ""}`}
+        className={`${botStepTitleClass} bg-surface-raised${
+          open ? " border-b border-line" : ""
+        }${locked ? " opacity-40" : ""}`}
       >
         <button
           type="button"
