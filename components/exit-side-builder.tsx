@@ -462,30 +462,32 @@ export function ExitSideBuilder({
                 </label>
               ) : null}
               {clause.kind !== "" ? (
-                <ConditionStack
-                  clause={clause}
-                  side={side}
-                  prefix={prefix}
-                  named={postsClose}
-                  placed={placed}
-                  slots={slots}
-                  lead={lead}
-                  rows={rows}
-                  webhookIds={webhookIds}
-                  webhooks={webhooks}
-                  gridClass={gridClass}
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-                  showErrors={showErrors}
-                  column={column}
-                  onAnchor={(value) => setAnchor(clause, value)}
-                  onPatch={(update) => patch(clause.key, update)}
-                />
-              ) : null}
-              {canAddRow ? (
-                <div className="flex flex-wrap gap-2">
-                  <AddConditionButton onClick={() => addRow(clause)} />
-                  <AddConditionButton label="Add Condition Group" onClick={() => addOrGroup(clause)} />
+                <div className="space-y-3 border-t border-line pt-4">
+                  <ConditionStack
+                    clause={clause}
+                    side={side}
+                    prefix={prefix}
+                    named={postsClose}
+                    placed={placed}
+                    slots={slots}
+                    lead={lead}
+                    rows={rows}
+                    webhookIds={webhookIds}
+                    webhooks={webhooks}
+                    gridClass={gridClass}
+                    fieldClass={fieldClass}
+                    labelClass={labelClass}
+                    showErrors={showErrors}
+                    column={column}
+                    onAnchor={(value) => setAnchor(clause, value)}
+                    onPatch={(update) => patch(clause.key, update)}
+                  />
+                  {canAddRow ? (
+                    <div className="flex flex-wrap gap-2">
+                      <AddConditionButton onClick={() => addRow(clause)} />
+                      <AddConditionButton label="Add Condition Group" onClick={() => addOrGroup(clause)} />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </section>
@@ -573,25 +575,26 @@ function ConditionStack({
             ))}
           </AppSelect>
         </label>
+        {clause.anchor.trigger !== "unset" ? (
+          <HardExitFields
+            embed
+            showTrigger={false}
+            prefix={named ? prefix : `${prefix}Draft`}
+            side={side}
+            value={clause.anchor}
+            onChange={(draft) => onPatch((current) => ({ ...current, anchor: draft }))}
+            webhooks={webhooks}
+            gridClass={gridClass}
+            fieldClass={fieldClass}
+            labelClass={labelClass}
+            named={named}
+            showErrors={showErrors}
+            seriesSlots={slots}
+            seriesIndex={seriesIndex}
+            disabledWebhookIds={anchorDisabledWebhookIds(lead, rows, webhookIds)}
+          />
+        ) : null}
       </div>
-      {clause.anchor.trigger !== "unset" ? (
-        <HardExitFields
-          showTrigger={false}
-          prefix={named ? prefix : `${prefix}Draft`}
-          side={side}
-          value={clause.anchor}
-          onChange={(draft) => onPatch((current) => ({ ...current, anchor: draft }))}
-          webhooks={webhooks}
-          gridClass={gridClass}
-          fieldClass={fieldClass}
-          labelClass={labelClass}
-          named={named}
-          showErrors={showErrors}
-          seriesSlots={slots}
-          seriesIndex={seriesIndex}
-          disabledWebhookIds={anchorDisabledWebhookIds(lead, rows, webhookIds)}
-        />
-      ) : null}
       {clause.rows.map((row) => (
         <DraftRow
           key={row.key}
