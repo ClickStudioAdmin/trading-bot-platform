@@ -255,7 +255,7 @@ export function PerpsAdditionalOrders({
                     <div className="min-w-0">
                       <ConditionFields
                         condition={condition}
-                        label="Trigger"
+                        label="Condition Type"
                         slotIndex={index + 1}
                         slots={slots}
                         webhookIds={webhookIds}
@@ -346,7 +346,7 @@ function ConditionFields({
   onDraft,
 }: {
   condition: PerpsAddCondition;
-  label: "Condition Type" | "Trigger";
+  label: "Condition Type";
   slotIndex: number;
   slots: ReturnType<typeof entryConflictSlots>;
   webhookIds: string[];
@@ -371,16 +371,14 @@ function ConditionFields({
       <div className={gridClass}>
         <BotField
           label={label}
-          className={label === "Condition Type" ? "whitespace-nowrap" : undefined}
+          className="whitespace-nowrap"
         >
           <AppSelect
             value={type}
             onChange={(event) => onType(parseType(event.target.value))}
             className={conditionFieldClass(fieldClass, column)}
           >
-            <option value="">
-              {label === "Condition Type" ? "Select Condition Type" : "Select Trigger"}
-            </option>
+            <option value="">Select Condition Type</option>
             <option
               value="indicator"
               disabled={entryKindDisabled({
