@@ -216,7 +216,7 @@ export function BotFormStep({
         >
           <HintLabel text={title} hint={hint} />
           {badge ? (
-            <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full border border-accent/30 bg-accent/15 px-2.5 py-1 text-xs font-medium text-accent">
+            <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-md bg-join px-2.5 py-1 text-xs font-semibold text-white">
               <IconFilters size={14} className="size-3.5" />
               {badge}
             </span>
