@@ -80,7 +80,6 @@ export function HardExitFields({
   seriesIndex,
   disabledKinds = [],
   disabledWebhookIds = [],
-  lead = true,
   showTrigger = true,
   showErrors = false,
 }: {
@@ -97,8 +96,6 @@ export function HardExitFields({
   seriesIndex?: number;
   disabledKinds?: HardExitTrigger[];
   disabledWebhookIds?: string[];
-  /** First row of the Condition Builder. Added rows use Condition Type too. */
-  lead?: boolean;
   /** Exit groups pick the trigger on Condition Type. Keep the posted name. */
   showTrigger?: boolean;
   /** Paint empty required controls after the form has been edited. */
@@ -138,9 +135,7 @@ export function HardExitFields({
           className={
             showErrors && value.trigger === "unset"
               ? conditionFieldClass(botFieldInvalidClass, column)
-              : lead
-                ? conditionFieldClass(fieldClass, column)
-                : fieldClass
+              : conditionFieldClass(fieldClass, column)
           }
         >
           <option value="">Select Condition Type</option>
