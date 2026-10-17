@@ -93,10 +93,10 @@ export function BacktestParameterSections({
           ) : null}
           {section.stack ? <ConditionStackView stack={section.stack} /> : null}
           {section.stacks?.map((stack, index) => (
-            <ConditionStackView
-              key={`${stack.title ?? "action"}-${index}`}
-              stack={stack}
-            />
+            <div key={`${stack.title ?? "action"}-${index}`} className="space-y-3">
+              {index > 0 ? <JoinWord label="Or" /> : null}
+              <ConditionStackView stack={stack} />
+            </div>
           ))}
         </section>
       ))}
