@@ -88,7 +88,14 @@ import {
   type FuturesAutomationFormValues,
 } from "@/lib/futures/automation";
 import { venueAllowsPerpsBoth } from "@/lib/futures/perps-direction";
-import { blankPerpsAddOrderGroups } from "@/lib/futures/perps-add-condition";
+import {
+  blankPerpsAddOrderGroups,
+  perpsAddGroupsSizingMissing,
+} from "@/lib/futures/perps-add-condition";
+import {
+  entryExtraOrdersMissing,
+  useExtraGroupOrders,
+} from "@/components/entry-group-order";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
 import {
@@ -639,6 +646,8 @@ function RuleCard({
   const [shortAddGroups, setShortAddGroups] = useState(() =>
     blankPerpsAddOrderGroups("short"),
   );
+  const longExtraOrders = useExtraGroupOrders();
+  const shortExtraOrders = useExtraGroupOrders();
   const [symbolState, setSymbolState] = useState(() =>
     embedded || layer.id
       ? layer.symbol
@@ -908,6 +917,29 @@ function RuleCard({
   const sizeMissing = !closing && !positiveText(size);
   const orderLimitMissing =
     !closing && orderType === "limit" && !positiveText(limitPrice);
+  const groupSizingMissing =
+    (!closing &&
+      showLong &&
+      entryExtraOrdersMissing(
+        entryDrafts.long.entrySource !== "",
+        entryDrafts.long.entryRows,
+        longExtraOrders.orders,
+        longExtraOrders.sameAsLead,
+      )) ||
+    (!closing &&
+      showShort &&
+      entryExtraOrdersMissing(
+        entryDrafts.short.entrySource !== "",
+        entryDrafts.short.entryRows,
+        shortExtraOrders.orders,
+        shortExtraOrders.sameAsLead,
+      )) ||
+    (!closing &&
+      (direction === "long" || direction === "both") &&
+      perpsAddGroupsSizingMissing(longAddGroups)) ||
+    (!closing &&
+      (direction === "short" || direction === "both") &&
+      perpsAddGroupsSizingMissing(shortAddGroups));
   const exitKindMissing =
     !closing &&
     (exitClauseListMissing(exitClauses) ||
@@ -1039,6 +1071,7 @@ function RuleCard({
     shortSlLimitMissing ||
     sizeMissing ||
     orderLimitMissing ||
+    groupSizingMissing ||
     exitKindMissing ||
     nameMissing ||
     entryMissing ||
@@ -1724,6 +1757,7 @@ function RuleCard({
           baseCoin={baseCoin}
           orderSizeInvalid={dirty && sizeMissing}
           orderLimitInvalid={dirty && orderLimitMissing}
+          extraOrders={longExtraOrders}
         />
       </BotFormStep>
       ) : null}
@@ -1757,6 +1791,7 @@ function RuleCard({
           baseCoin={baseCoin}
           orderSizeInvalid={dirty && sizeMissing}
           orderLimitInvalid={dirty && orderLimitMissing}
+          extraOrders={shortExtraOrders}
         />
       </BotFormStep>
       ) : null}
@@ -1811,6 +1846,8 @@ function RuleCard({
             fieldsClass={fieldRow5}
             side="long"
             webhooks={triggerWebhooks}
+            showErrors={dirty}
+            invalidFieldClass={botFieldInvalidClass}
           />
         </BotFormStep>
       ) : null}
@@ -1826,6 +1863,8 @@ function RuleCard({
             fieldsClass={fieldRow5}
             side="short"
             webhooks={triggerWebhooks}
+            showErrors={dirty}
+            invalidFieldClass={botFieldInvalidClass}
           />
         </BotFormStep>
       ) : null}

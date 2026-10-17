@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { positiveSizingText } from "@/lib/futures/perps-add-condition";
 import { AppSelect } from "@/components/app-select";
 import {
   IndicatorStartFields,
@@ -311,6 +312,7 @@ export function PerpsEntryPanel({
   baseCoin,
   orderSizeInvalid = false,
   orderLimitInvalid = false,
+  extraOrders,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -331,9 +333,9 @@ export function PerpsEntryPanel({
   baseCoin?: string;
   orderSizeInvalid?: boolean;
   orderLimitInvalid?: boolean;
+  extraOrders: ReturnType<typeof useExtraGroupOrders>;
 }) {
   const column = useBotColumnLayout();
-  const extraOrders = useExtraGroupOrders();
   const draftRef = useRef(draft);
   useEffect(() => {
     draftRef.current = draft;
@@ -689,9 +691,19 @@ export function PerpsEntryPanel({
                     gridClass={fieldRow}
                     named={lead && orderNamed}
                     namePrefix={prefix}
-                    required={lead}
-                    sizeInvalid={lead && orderSizeInvalid}
-                    limitInvalid={lead && orderLimitInvalid}
+                    required
+                    sizeInvalid={
+                      lead
+                        ? orderSizeInvalid
+                        : showErrors && !positiveSizingText(values.size)
+                    }
+                    limitInvalid={
+                      lead
+                        ? orderLimitInvalid
+                        : showErrors &&
+                          values.orderType === "limit" &&
+                          !positiveSizingText(values.limitPrice)
+                    }
                     onChange={(partial) => {
                       if (lead) {
                         onOrderChange(partial);

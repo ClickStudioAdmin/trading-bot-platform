@@ -63,11 +63,13 @@ import {
 } from "@/components/entry-condition-stack";
 import {
   DcaGroupSizeFields,
+  entryExtraOrdersMissing,
   entryGroupOrderKey,
   entryGroupShowsSizing,
   GroupPositionSizing,
   useExtraGroupOrders,
 } from "@/components/entry-group-order";
+import { positiveSizingText } from "@/lib/futures/perps-add-condition";
 import { indicatorClaim, priceClaim, type ConflictClaim } from "@/lib/strategy/conflicts";
 import {
   entryKindDisabled,
@@ -1992,8 +1994,23 @@ export function DcaPlaybookForm({
   const exitKindMissing =
     exitClauseListMissing(exitClauses) ||
     (direction === "both" && exitClauseListMissing(shortClauses));
+  const groupSizingMissing =
+    entryExtraOrdersMissing(
+      startKind !== "",
+      entryRows,
+      longExtraOrders.orders,
+      longExtraOrders.sameAsLead,
+    ) ||
+    (direction === "both" &&
+      entryExtraOrdersMissing(
+        shortStartKind !== "",
+        shortEntryRows,
+        shortExtraOrders.orders,
+        shortExtraOrders.sameAsLead,
+      ));
   const requiredMissing =
     triggerMissing ||
+    groupSizingMissing ||
     entryRows.some((row) => !entryDraftComplete(row.draft)) ||
     (direction === "both" &&
       shortEntryRows.some((row) => !entryDraftComplete(row.draft))) ||
@@ -2037,6 +2054,7 @@ export function DcaPlaybookForm({
     }
     const missing =
       triggerMissing ||
+      groupSizingMissing ||
       tpMissing ||
       trailMissing ||
       slMissing ||
@@ -2518,7 +2536,13 @@ export function DcaPlaybookForm({
                   quoteLabel={quote}
                   baseCoin={base}
                   fieldClass={fieldClass}
+                  sizeInputClass={
+                    dirty && !positiveSizingText(values.size)
+                      ? botFieldInvalidClass
+                      : fieldClass
+                  }
                   gridClass={fieldRowClass}
+                  required
                 />
               </GroupPositionSizing>
             );

@@ -33,6 +33,7 @@ import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { ExitSideBuilder } from "@/components/exit-side-builder";
 import {
   DcaGroupSizeFields,
+  entryExtraOrdersMissing,
   entryGroupOrderKey,
   entryGroupShowsSizing,
   GroupPositionSizing,
@@ -40,7 +41,11 @@ import {
   useExtraGroupOrders,
 } from "@/components/entry-group-order";
 import { PerpsAdditionalOrders } from "@/components/perps-additional-orders";
-import { blankPerpsAddOrderGroups } from "@/lib/futures/perps-add-condition";
+import {
+  blankPerpsAddOrderGroups,
+  perpsAddGroupsSizingMissing,
+  positiveSizingText,
+} from "@/lib/futures/perps-add-condition";
 import {
   type ExitStackRow,
 } from "@/components/exit-condition-stack";
@@ -1087,6 +1092,28 @@ export function ThemeBotFormDraft() {
   const requireWebhook =
     startKind === "webhook" && (desk === "perps" || !closing) && !filled(webhookId);
   const requireSize = desk !== "cnc" && !closing && !filled(size);
+  const groupSizingMissing =
+    !closing &&
+    desk !== "cnc" &&
+    (entryExtraOrdersMissing(
+      startKind !== "",
+      entryRows,
+      longExtraOrders.orders,
+      longExtraOrders.sameAsLead,
+    ) ||
+      (themeBothExits &&
+        entryExtraOrdersMissing(
+          shortStartKind !== "",
+          shortEntryRows,
+          shortExtraOrders.orders,
+          shortExtraOrders.sameAsLead,
+        )) ||
+      (desk === "perps" &&
+        perpsDirection !== "short" &&
+        perpsAddGroupsSizingMissing(longAddGroups)) ||
+      (desk === "perps" &&
+        (perpsDirection === "short" || perpsDirection === "both") &&
+        perpsAddGroupsSizingMissing(shortAddGroups)));
   const requireDip =
     desk === "dca" &&
     averaging === "dip" &&
@@ -1177,6 +1204,7 @@ export function ThemeBotFormDraft() {
     webhookId: requireWebhook,
     shortWebhookId: requireShortWebhook,
     size: requireSize,
+    groupSizing: groupSizingMissing,
     dipPct: requireDip,
     atrPeriod: requireAtrPeriod,
     atrSpacing: requireAtrSpacing,
@@ -1255,9 +1283,18 @@ export function ThemeBotFormDraft() {
             invalidFieldClass={fieldInvalidClass}
             gridClass={rowClass}
             named={lead && named}
-            required={lead}
-            sizeInvalid={lead && showFieldErrors && missing.size}
-            limitInvalid={lead && showFieldErrors && missing.limitPrice}
+            required
+            sizeInvalid={
+              showFieldErrors &&
+              (lead ? missing.size : !positiveSizingText(values.size))
+            }
+            limitInvalid={
+              showFieldErrors &&
+              (lead
+                ? missing.limitPrice
+                : values.orderType === "limit" &&
+                  !positiveSizingText(values.limitPrice))
+            }
             onChange={(partial) => {
               if (!lead) {
                 extra.patch(key, partial);
@@ -1323,11 +1360,14 @@ export function ThemeBotFormDraft() {
             baseCoin={sampleBase}
             fieldClass={fieldClass}
             sizeInputClass={
-              lead && showFieldErrors && missing.size ? fieldInvalidClass : fieldClass
+              showFieldErrors &&
+              (lead ? missing.size : !positiveSizingText(values.size))
+                ? fieldInvalidClass
+                : fieldClass
             }
             gridClass={rowClass}
             named={lead && named}
-            required={lead}
+            required
           />
         </GroupPositionSizing>
       );
@@ -2938,6 +2978,8 @@ export function ThemeBotFormDraft() {
                   fieldsClass={rowClass5}
                   side="long"
                   webhooks={themeWebhooks}
+                  showErrors={showFieldErrors}
+                  invalidFieldClass={fieldInvalidClass}
                 />
               </BotFormStep>
             ) : null}
@@ -2956,6 +2998,8 @@ export function ThemeBotFormDraft() {
                   fieldsClass={rowClass5}
                   side="short"
                   webhooks={themeWebhooks}
+                  showErrors={showFieldErrors}
+                  invalidFieldClass={fieldInvalidClass}
                 />
               </BotFormStep>
             ) : null}

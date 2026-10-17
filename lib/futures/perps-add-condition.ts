@@ -90,6 +90,34 @@ export function sharesGroupLeadSizing(
   return groupIndex > 0 && sameAsGroup1 !== false;
 }
 
+export function positiveSizingText(text: string): boolean {
+  const value = Number(text.replace(/,/g, "").trim());
+  return Number.isFinite(value) && value > 0;
+}
+
+/** Size, and Limit price when the order is Limit. Unit and Order keep defaults. */
+export function perpsOrderValuesMissing(order: PerpsAddOrderValues): boolean {
+  if (!positiveSizingText(order.size)) {
+    return true;
+  }
+  return order.orderType === "limit" && !positiveSizingText(order.limitPrice);
+}
+
+/** A group's own size is required only while that group's fields are on screen. */
+export function perpsAddGroupsSizingMissing(
+  groups: readonly PerpsAddOrderGroup[],
+): boolean {
+  return groups.some((group, index) => {
+    if (group.lead.type === "") {
+      return false;
+    }
+    if (sharesGroupLeadSizing(index, group.sameAsGroup1)) {
+      return false;
+    }
+    return perpsOrderValuesMissing(group.order);
+  });
+}
+
 /**
  * Position Sizing stays hidden until that group's first Condition Type is chosen.
  * Group 1 uses the lead. Later groups use their opening row, not an And trigger.
