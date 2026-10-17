@@ -399,7 +399,7 @@ export async function fireWebhookAutomationEntries(input: {
   const account: DeskAccount = {
     userId: input.userId,
     mode: input.mode,
-    deskType: "perps_bots",
+    deskType: "flex",
     copyOfAccountId: null,
     venue,
     venueEnvironment: parseStoredVenueEnvironment(

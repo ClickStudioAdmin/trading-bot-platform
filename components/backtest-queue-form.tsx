@@ -354,7 +354,7 @@ export function BacktestQueueForm({
       ...deskBots.map((row) => ({
         value: row.id,
         group: "Desk automations",
-        label: `${row.kind === "dca" ? "DCA" : "Perps"} · ${row.name}${
+        label: `${row.kind === "dca" ? "DCA" : "Flex"} · ${row.name}${
           row.symbol ? ` · ${row.symbol}` : ""
         } · ${row.deskName}`,
       })),
@@ -362,7 +362,7 @@ export function BacktestQueueForm({
         group.items.map((row) => ({
           value: templateOptionValue(group.id, row.id),
           group: group.label,
-          label: `${row.recipe.kind === "dca" ? "DCA" : "Perps"} · ${row.name} · ${row.recipe.symbol}`,
+          label: `${row.recipe.kind === "dca" ? "DCA" : "Flex"} · ${row.name} · ${row.recipe.symbol}`,
           aside: (
             <TemplateParametersButton
               name={row.name}
@@ -1234,7 +1234,7 @@ export function BacktestQueueForm({
             Bot to replay
           </h3>
           <p className="mt-2 text-sm text-ink-muted">
-            Pick a template, or open Backtest from a Perps or DCA bot on
+            Pick a template, or open Backtest from a Flex or DCA bot on
             Automations.
           </p>
         </aside>

@@ -263,11 +263,11 @@ export default async function FuturesAutomationsPage({
       loadFuturesPositions({ status: "closed" }).catch(() => []),
       listApplyableTemplates({
         userId: session.member.id,
-        deskType: "perps",
+        deskType: "flex",
       }).catch(() => []),
       listApplyableSets({
         userId: session.member.id,
-        deskType: "perps",
+        deskType: "flex",
       }).catch(() => []),
       openingForm
         ? hl

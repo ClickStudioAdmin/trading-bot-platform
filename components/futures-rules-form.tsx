@@ -261,8 +261,8 @@ export function FuturesAutomationsDesk({
   function appendApplied(items: AppliedDeskItem[]) {
     const nextRules = items
       .filter(
-        (item): item is Extract<AppliedDeskItem, { deskType: "perps" }> =>
-          item.deskType === "perps",
+        (item): item is Extract<AppliedDeskItem, { deskType: "flex" }> =>
+          item.deskType === "flex",
       )
       .map((item) => item.rule);
     if (nextRules.length === 0) {
@@ -366,7 +366,7 @@ export function FuturesAutomationsDesk({
       ) : (
         <>
           <AutomationsBotTable
-            desk="perps"
+            desk="flex"
             revealId={revealId}
             toolbar={
               <>
@@ -380,7 +380,7 @@ export function FuturesAutomationsDesk({
                 </NewBotLink>
                 {accountId ? (
                   <DeskTemplateBar
-                    deskType="perps"
+                    deskType="flex"
                     accountId={accountId}
                     templates={templates}
                     sets={sets}
@@ -420,7 +420,7 @@ export function FuturesAutomationsDesk({
               pairNote: symbolNeedsBybitAgreement(agreementGate.symbols, layer.symbol)
                 ? BYBIT_AGREEMENT_NOTE
                 : undefined,
-              status: botModeLabel("perps", statusKey),
+              status: botModeLabel("flex", statusKey),
               statusKey,
               summary: perpsBotSummary(layer),
               config: perpsBotConfig(layer),
@@ -1616,7 +1616,7 @@ function RuleCard({
         if (mode === "disabled" && disableNeedsConfirm(inUse)) {
           return askConfirm({
             title: disableConfirmTitle(),
-            message: disableConfirmMessage("perps"),
+            message: disableConfirmMessage("flex"),
             confirmLabel: "Disable",
             danger: true,
           });
@@ -1927,7 +1927,7 @@ function RuleCard({
       <BotFormSidebar
         status={
           <BotStatusField
-            desk="perps"
+            desk="flex"
             name={`${prefix}mode`}
             value={mode}
             applied={layer.mode}
@@ -1963,7 +1963,7 @@ function RuleCard({
           <SaveAsTemplateButton
             isAdmin={isAdmin}
             defaultName={layer.name}
-            kind="perps"
+            kind="flex"
             folders={folders}
             library={backtestLibrary}
             currentRecipe={liveRecipe()}

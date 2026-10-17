@@ -111,7 +111,7 @@ const headerRemoveClass =
   "shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
 const deskBtnClass = deskActionBtnClass;
 
-type DeskKind = "perps" | "dca" | "cnc";
+type DeskKind = "flex" | "dca" | "cnc";
 
 const SAMPLE_PAIRS: LinearPerp[] = [
   {
@@ -538,7 +538,7 @@ function PriceTriggerFields({
   seriesSlots?: readonly EntryConflictSlot[];
   seriesIndex?: number;
 }) {
-  if (desk === "perps") {
+  if (desk === "flex") {
     return (
       <>
         <Field label="Price source" required>
@@ -885,7 +885,7 @@ export function ThemeBotFormDraft() {
   );
   function themeIsBoth() {
     return (
-      (desk === "perps" && perpsDirection === "both") ||
+      (desk === "flex" && perpsDirection === "both") ||
       (desk === "dca" && direction === "both")
     );
   }
@@ -935,7 +935,7 @@ export function ThemeBotFormDraft() {
   const [intervalValue, setIntervalValue] = useState("1");
   const [restGrid, setRestGrid] = useState(true);
   const [direction, setDirection] = useState<"long" | "short" | "both">("long");
-  const [desk, setDesk] = useState<DeskKind>("perps");
+  const [desk, setDesk] = useState<DeskKind>("flex");
   const [status, setStatus] = useState("disabled");
   const [appliedStatus, setAppliedStatus] = useState("disabled");
   const [savedKey, setSavedKey] = useState<string | null>(null);
@@ -1054,7 +1054,7 @@ export function ThemeBotFormDraft() {
         : "long";
   const bothSides = desk === "dca" && direction === "both";
   const themeBothExits =
-    (desk === "perps" && perpsDirection === "both") ||
+    (desk === "flex" && perpsDirection === "both") ||
     (desk === "dca" && direction === "both");
   const primaryExitFlags = classicExitFlags(exitClauses);
   const shortExitFlags = classicExitFlags(shortClauses);
@@ -1065,9 +1065,9 @@ export function ThemeBotFormDraft() {
   const requireShortSl = themeBothExits && shortExitFlags.stopLoss;
   const requireShortTrail = themeBothExits && shortExitFlags.trailing;
   const requireTrailTrigger =
-    requireTrail && (desk === "dca" || desk === "perps");
+    requireTrail && (desk === "dca" || desk === "flex");
   const requireShortTrailTrigger =
-    requireShortTrail && (desk === "dca" || desk === "perps");
+    requireShortTrail && (desk === "dca" || desk === "flex");
   const requireBreakeven =
     desk !== "cnc" && !closing && primaryExitFlags.stopLoss && breakevenOn;
   const requireShortBreakeven =
@@ -1081,18 +1081,18 @@ export function ThemeBotFormDraft() {
   const requireShortExitIf =
     desk !== "cnc" &&
     !closing &&
-    ((desk === "perps" && perpsDirection === "both") ||
+    ((desk === "flex" && perpsDirection === "both") ||
       (desk === "dca" && direction === "both")) &&
     shortClauses.some((clause) => clause.kind === "custom");
   const requirePrice =
-    startKind === "price" && (desk === "perps" || !closing);
+    startKind === "price" && (desk === "flex" || !closing);
   const requireShortPrice = themeBothExits && shortStartKind === "price";
   const requireShortWebhook =
     themeBothExits && shortStartKind === "webhook" && !filled(shortWebhookId);
   const requireLimitPrice =
-    desk === "perps" && orderType === "limit" && !filled(limitPrice);
+    desk === "flex" && orderType === "limit" && !filled(limitPrice);
   const requireWebhook =
-    startKind === "webhook" && (desk === "perps" || !closing) && !filled(webhookId);
+    startKind === "webhook" && (desk === "flex" || !closing) && !filled(webhookId);
   const requireSize = desk !== "cnc" && !closing && !filled(size);
   const groupSizingMissing =
     !closing &&
@@ -1110,10 +1110,10 @@ export function ThemeBotFormDraft() {
           shortExtraOrders.orders,
           shortExtraOrders.sameAsLead,
         )) ||
-      (desk === "perps" &&
+      (desk === "flex" &&
         perpsDirection !== "short" &&
         perpsAddGroupsSizingMissing(longAddGroups)) ||
-      (desk === "perps" &&
+      (desk === "flex" &&
         (perpsDirection === "short" || perpsDirection === "both") &&
         perpsAddGroupsSizingMissing(shortAddGroups)));
   const requireDip =
@@ -1140,16 +1140,16 @@ export function ThemeBotFormDraft() {
   const requireMaxValue =
     desk === "dca" && maxValueMode !== "none" && !filled(maxValue);
   const requireTpLimit =
-    desk === "perps" && !closing && requireTp && tpOrderType === "limit" && !filled(tpLimitPrice);
+    desk === "flex" && !closing && requireTp && tpOrderType === "limit" && !filled(tpLimitPrice);
   const requireSlLimit =
-    desk === "perps" && !closing && requireSl && slOrderType === "limit" && !filled(slLimitPrice);
+    desk === "flex" && !closing && requireSl && slOrderType === "limit" && !filled(slLimitPrice);
   const requireShortTpLimit =
-    desk === "perps" &&
+    desk === "flex" &&
     requireShortTp &&
     shortClassic.tpOrderType === "limit" &&
     !filled(shortClassic.tpLimitPrice);
   const requireShortSlLimit =
-    desk === "perps" &&
+    desk === "flex" &&
     requireShortSl &&
     shortClassic.slOrderType === "limit" &&
     !filled(shortClassic.slLimitPrice);
@@ -1188,14 +1188,14 @@ export function ThemeBotFormDraft() {
       desk !== "cnc" &&
       entryRows.some(
         (row) =>
-          !(desk === "perps" && row.draft.kind === "unset") &&
+          !(desk === "flex" && row.draft.kind === "unset") &&
           !entryDraftComplete(row.draft),
       ),
     shortEntryRows:
       themeBothExits &&
       shortEntryRows.some(
         (row) =>
-          !(desk === "perps" && row.draft.kind === "unset") &&
+          !(desk === "flex" && row.draft.kind === "unset") &&
           !entryDraftComplete(row.draft),
       ),
     exitKind: desk !== "cnc" && exitClauseListMissing(exitClauses),
@@ -1421,7 +1421,7 @@ export function ThemeBotFormDraft() {
     setStatus("active");
     setAppliedStatus("active");
     if (
-      next === "perps" &&
+      next === "flex" &&
       closing &&
       (startKind === "indicator" || startKind === "trend")
     ) {
@@ -2021,13 +2021,13 @@ export function ThemeBotFormDraft() {
           <button
             type="button"
             className={`rounded-control px-3 py-1.5 text-xs ${
-              desk === "perps"
+              desk === "flex"
                 ? "bg-surface-raised font-medium text-ink"
                 : "text-ink-muted hover:text-ink"
             }`}
-            onClick={() => switchDesk("perps")}
+            onClick={() => switchDesk("flex")}
           >
-            Perps
+            Flex
           </button>
           <button
             type="button"
@@ -2077,7 +2077,7 @@ export function ThemeBotFormDraft() {
                   onChange={setSymbol}
                 />
               </Field>
-              {desk === "perps" ? (
+              {desk === "flex" ? (
                 <Field
                   label="Direction"
                   hint="Long and Short are independent positions and never flatten each other."
@@ -2201,7 +2201,7 @@ export function ThemeBotFormDraft() {
           shell="canvas"
           badge="Condition Builder"
           title={
-            (desk === "perps" ? perpsDirection : direction) === "short"
+            (desk === "flex" ? perpsDirection : direction) === "short"
               ? "Short Entry"
               : "Long Entry"
           }
@@ -2211,7 +2211,7 @@ export function ThemeBotFormDraft() {
             <>
         <Group>
           <div className={rowClass}>
-            {desk === "perps" ? (
+            {desk === "flex" ? (
               <>
               <Field label="Condition Type" required>
                 <AppSelect
@@ -2294,7 +2294,7 @@ export function ThemeBotFormDraft() {
             <>
             <div className={rowClass5}>
               <Field
-                label={desk === "perps" ? "Webhook" : "Signal Webhook"}
+                label={desk === "flex" ? "Webhook" : "Signal Webhook"}
                 className="col-span-full"
                 required
               >
@@ -2308,14 +2308,14 @@ export function ThemeBotFormDraft() {
                   onChange={(event) => setWebhookId(event.target.value)}
                 >
                   <option value="">
-                    {desk === "perps"
+                    {desk === "flex"
                       ? "Pick a webhook"
                       : "Pick a Signal webhook"}
                   </option>
                   <option
                     value="sample"
                     disabled={
-                      desk === "perps" &&
+                      desk === "flex" &&
                       entryWebhookIdDisabled({
                         slots: themeEntrySlots,
                         index: 0,
@@ -2374,7 +2374,7 @@ export function ThemeBotFormDraft() {
                 />
               </div>
           ) : startKind === "price" ? (
-            <div className={desk === "perps" ? rowClass5 : rowClass}>
+            <div className={desk === "flex" ? rowClass5 : rowClass}>
                 <PriceTriggerFields
                   desk={desk}
                   priceSource={priceSource}
@@ -2392,7 +2392,7 @@ export function ThemeBotFormDraft() {
         </Group>
             </>
           );
-          if (!closing && desk === "perps") {
+          if (!closing && desk === "flex") {
             return (
               <EntryConditionStack
                 grouped
@@ -2465,7 +2465,7 @@ export function ThemeBotFormDraft() {
         })()}
         </BotFormStep>
 
-        {desk === "perps" && perpsDirection === "both" ? (
+        {desk === "flex" && perpsDirection === "both" ? (
           <BotFormStep shell="canvas" badge="Condition Builder" title="Short Entry">
             {(() => {
               const lead = (
@@ -2578,7 +2578,7 @@ export function ThemeBotFormDraft() {
               ) : shortStartKind === "price" ? (
                 <div className={rowClass5}>
                   <PriceTriggerFields
-                    desk="perps"
+                    desk="flex"
                     priceSource={shortPriceSource}
                     onPriceSource={setShortPriceSource}
                     priceWhen={shortPriceWhen}
@@ -2967,7 +2967,7 @@ export function ThemeBotFormDraft() {
           </div>
         </Group>
         </BotFormStep>
-        ) : desk === "perps" && !closing ? (
+        ) : desk === "flex" && !closing ? (
           <>
             {perpsDirection !== "short" ? (
               <BotFormStep shell="canvas" badge="Condition Builder" title="Long Additional Orders">
@@ -3012,7 +3012,7 @@ export function ThemeBotFormDraft() {
           </>
         ) : null}
 
-        {(desk === "perps" ? perpsDirection !== "short" : direction !== "short") ? (
+        {(desk === "flex" ? perpsDirection !== "short" : direction !== "short") ? (
           <BotFormStep shell="canvas" badge="Condition Builder" title="Long Exit">
             <ExitSideBuilder
               clauses={exitClauses}
@@ -3031,20 +3031,20 @@ export function ThemeBotFormDraft() {
             />
           </BotFormStep>
         ) : null}
-        {(desk === "perps"
+        {(desk === "flex"
           ? perpsDirection === "short" || perpsDirection === "both"
           : direction === "short" || direction === "both") ? (
           <BotFormStep shell="canvas" badge="Condition Builder" title="Short Exit">
             <ExitSideBuilder
               clauses={
-                (desk === "perps" ? perpsDirection === "both" : direction === "both")
+                (desk === "flex" ? perpsDirection === "both" : direction === "both")
                   ? shortClauses
                   : exitClauses
               }
               onChange={(next) =>
                 commitThemeExit(
                   next,
-                  (desk === "perps" ? perpsDirection === "both" : direction === "both")
+                  (desk === "flex" ? perpsDirection === "both" : direction === "both")
                     ? "short"
                     : "primary",
                 )
@@ -3427,7 +3427,7 @@ function ThemeBotFormReference() {
       </div>
 
       <div className="space-y-2">
-        <p className={labelClass}>Perps statuses</p>
+        <p className={labelClass}>Flex statuses</p>
         <p className="text-hint text-ink-muted">
           Own list. Do not mix with DCA.
         </p>
@@ -3442,7 +3442,7 @@ function ThemeBotFormReference() {
       <div className="space-y-2">
         <p className={labelClass}>C&C statuses</p>
         <p className="text-hint text-ink-muted">
-          Same three as Perps. Reduce only is not DCA Stop adding.
+          Same three as Flex. Reduce only is not DCA Stop adding.
         </p>
         <div className="flex flex-wrap gap-x-4 gap-y-2">
           <StatusLight fill="bg-success" label="Active" />

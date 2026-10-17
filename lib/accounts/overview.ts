@@ -231,7 +231,7 @@ export function overviewBotsPath(desk: {
 }): string {
   if (
     desk.copy ||
-    desk.deskType === "perps" ||
+    desk.deskType === "manual" ||
     desk.deskType === "signal_follower"
   ) {
     return overviewPositionsPath(desk);

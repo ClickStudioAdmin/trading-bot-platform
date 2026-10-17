@@ -195,7 +195,7 @@ assert.deepEqual(
 
 const paper = dcaPaper();
 const connected = makeSetupDesk({
-  deskType: "perps_bots",
+  deskType: "flex",
   mode: "live",
   takenNames: [paper.name],
 });
@@ -247,9 +247,9 @@ const detailed = setupDeskFromDetails({
 });
 assert.equal(detailed.ok, true);
 const switchedType = setupDeskFromDetails({
-  deskType: "perps_bots",
+  deskType: "flex",
   mode: "paper",
-  name: "Perps bots Paper",
+  name: "Flex Paper",
   venue: "bybit",
   environmentId: null,
   bindLater: false,
@@ -263,7 +263,7 @@ const switchedType = setupDeskFromDetails({
 });
 assert.equal(switchedType.ok, true);
 if (switchedType.ok) {
-  assert.equal(switchedType.desk.deskType, "perps_bots");
+  assert.equal(switchedType.desk.deskType, "flex");
   assert.deepEqual(switchedType.desk.templateIds, []);
   assert.deepEqual(switchedType.desk.armTemplateIds, []);
 }
@@ -394,7 +394,7 @@ assert.equal(created[0]?.key, connected.key);
 const paperDrafts = Array.from({ length: 11 }, (_, index) => ({
   ...paper,
   key: `paper-${index}`,
-  name: `Perps bots Paper ${index}`,
+  name: `Flex Paper ${index}`,
 }));
 assert.equal(setupDeskQuotaAdding(paperDrafts).max_paper_desks, 11);
 assert.equal(setupDeskQuotaAdding(paperDrafts, "paper-0").max_paper_desks, 10);
@@ -532,7 +532,7 @@ const userFolder: StarterFolder = folder({
 const dcaFolder = folder({ id: "dca-pack", deskType: "dca", name: "DCA pack" });
 const perpsFolder = folder({
   id: "perps-pack",
-  deskType: "perps",
+  deskType: "flex",
   name: "Perps pack",
   templates: [
     { id: "33333333-3333-4333-8333-333333333333", name: "ETH", visibility: "platform" },
@@ -588,11 +588,11 @@ assert.equal(
 assert.equal(foldersForDesk(withLoose, "dca").length, 2);
 assert.equal(offered[1]?.templates.length, 1);
 assert.equal(foldersForDesk([loose, dcaFolder], "signal_follower").length, 0);
-assert.equal(foldersForDesk([perpsFolder], "perps").length, 0);
-assert.equal(foldersForDesk([perpsFolder], "perps_bots").length, 1);
+assert.equal(foldersForDesk([perpsFolder], "manual").length, 0);
+assert.equal(foldersForDesk([perpsFolder], "flex").length, 1);
 assert.equal(showsBotStep([paper], [loose]), false);
 assert.equal(showsBotStep([
-  makeSetupDesk({ deskType: "perps", mode: "paper", takenNames: [] }),
+  makeSetupDesk({ deskType: "manual", mode: "paper", takenNames: [] }),
   makeSetupDesk({ deskType: "signal_follower", mode: "paper", takenNames: ["Perps Paper"] }),
 ], [dcaFolder]), false);
 const both = setupScreens({
@@ -674,11 +674,11 @@ const planTypes = applyDeskSetupChoice({
   choice: "all_paper",
   desks: [],
   takenNames: [],
-  deskTypes: ["perps", "dca"],
+  deskTypes: ["manual", "dca"],
 });
 assert.deepEqual(
   planTypes.map((desk) => desk.deskType),
-  ["perps", "dca"],
+  ["manual", "dca"],
 );
 const deniedFinish = validateSetupForFinish({
   draft: { ...emptySetupDraft(), desks: [paper] },
@@ -802,22 +802,22 @@ assert.deepEqual(
   [],
 );
 assert.equal(starterStartVerb("dca"), "Enable");
-assert.equal(starterStartVerb("perps_bots"), "Enable");
+assert.equal(starterStartVerb("flex"), "Enable");
 assert.equal(starterStartVerb("cash_and_carry"), "Enable");
-assert.equal(starterStartVerb("perps"), null);
+assert.equal(starterStartVerb("manual"), null);
 const botStatusChoices = [
   { value: "rest", label: "Disabled" },
   { value: "start", label: "Active" },
 ];
 assert.deepEqual(setupInitialStatusChoices("dca"), botStatusChoices);
-assert.deepEqual(setupInitialStatusChoices("perps_bots"), botStatusChoices);
+assert.deepEqual(setupInitialStatusChoices("flex"), botStatusChoices);
 assert.deepEqual(setupInitialStatusChoices("cash_and_carry"), botStatusChoices);
-assert.equal(setupInitialStatusChoices("perps"), null);
+assert.equal(setupInitialStatusChoices("manual"), null);
 assert.equal(starterStatusWord("dca", false), "Disabled");
 assert.equal(starterStatusWord("dca", true), "Active");
 assert.equal(starterStatusWord("cash_and_carry", false), "Disabled");
-assert.equal(starterStatusWord("perps_bots", true), "Active");
-assert.equal(starterStatusWord("perps", false), null);
+assert.equal(starterStatusWord("flex", true), "Active");
+assert.equal(starterStatusWord("manual", false), null);
 assert.equal(
   setupScreens({
     desks: [paper],
@@ -855,7 +855,7 @@ assert.deepEqual(
       mode: "Paper",
       bots: [],
     },
-    { key: "type:perps_bots", name: "—", deskType: "perps_bots", mode: null, bots: [] },
+    { key: "type:flex", name: "—", deskType: "flex", mode: null, bots: [] },
     {
       key: "type:signal_follower",
       name: "—",
@@ -863,12 +863,12 @@ assert.deepEqual(
       mode: null,
       bots: [],
     },
-    { key: "type:perps", name: "—", deskType: "perps", mode: null, bots: [] },
+    { key: "type:manual", name: "—", deskType: "manual", mode: null, bots: [] },
   ],
 );
 assert.deepEqual(setupReviewRows({ desks: [], folders: [] }), []);
 const reviewPerps = makeSetupDesk({
-  deskType: "perps",
+  deskType: "manual",
   mode: "paper",
   takenNames: ["DCA Paper", reviewCarry.name],
 });
@@ -885,7 +885,7 @@ assert.deepEqual(
     paper.key,
     reviewPerps.key,
     reviewCarry.key,
-    "type:perps_bots",
+    "type:flex",
     "type:signal_follower",
   ],
 );
@@ -927,7 +927,7 @@ assert.equal(
 assert.match(botsEmptyNote([]), /no starter bots/i);
 assert.match(
   botsEmptyNote([
-    makeSetupDesk({ deskType: "perps", mode: "paper", takenNames: [] }),
+    makeSetupDesk({ deskType: "manual", mode: "paper", takenNames: [] }),
   ]),
   /ticket/i,
 );

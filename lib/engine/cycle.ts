@@ -564,7 +564,7 @@ async function runDeskTick(input: {
     });
     return { userId, ...stats };
   }
-  if (deskType === "perps_bots" && !copyDesk) {
+  if (deskType === "flex" && !copyDesk) {
     await runFuturesAutomationTick({
       accountId: input.accountId,
       tickers,

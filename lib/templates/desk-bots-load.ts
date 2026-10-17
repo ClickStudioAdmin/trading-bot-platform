@@ -51,7 +51,7 @@ async function listTemplateDeskBots(
     desks.filter((desk) => desk.deskType === deskType).map((desk) => desk.id);
   const [playbooks, rules, layers] = await Promise.all([
     rowsFor("dca_playbooks", idsFor("dca")),
-    rowsFor("futures_automation_rules", idsFor("perps_bots")),
+    rowsFor("futures_automation_rules", idsFor("flex")),
     rowsFor("paper_rules", idsFor("cash_and_carry")),
   ]);
   const bots: TemplateDeskBot[] = [];

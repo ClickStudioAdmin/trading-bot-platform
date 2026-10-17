@@ -20,7 +20,7 @@ import {
   type TableSortDir,
 } from "@/lib/table-chrome";
 
-/** Same order as the sidebar: automated types, then manual Perps. */
+/** Same order as the sidebar: automated types, then Manual. */
 export const DESK_LIST_TYPES: readonly DeskType[] = [
   ...AUTOMATED_DESK_TYPES,
   ...MANUAL_DESK_TYPES,

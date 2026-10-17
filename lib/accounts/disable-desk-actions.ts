@@ -222,7 +222,7 @@ export async function disableDeskBots(
       accountId: owned.account.id,
       kind,
     });
-  } else if (kind === "perps") {
+  } else if (kind === "flex") {
     result = await turnOffModeRows({
       table: "futures_automation_rules",
       userId: owned.userId,

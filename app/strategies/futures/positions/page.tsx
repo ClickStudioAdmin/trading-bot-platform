@@ -78,7 +78,7 @@ export default async function FuturesPositionsPage({
   const live = Boolean(
     session && accountCanHoldConnections(session.account.mode),
   );
-  const deskType = session?.account.deskType ?? "perps";
+  const deskType = session?.account.deskType ?? "manual";
   const copyDesk = session ? deskIsCopy(session.account) : false;
   const filters = blotterFiltersForCopyDesk(
     parseDeskBlotterFilters(params),
@@ -95,7 +95,7 @@ export default async function FuturesPositionsPage({
     session &&
       filters.bot &&
       recipeAccountId &&
-      (dcaBlotter || deskType === "perps_bots"),
+      (dcaBlotter || deskType === "flex"),
   );
   const showTicket = session
     ? deskAllowsManualPerpTicket(session.account)
@@ -145,7 +145,7 @@ export default async function FuturesPositionsPage({
       dcaBlotter && playbookAccountId && !copyDesk
         ? listDcaBotOptions(playbookAccountId)
         : Promise.resolve([]),
-      deskType === "perps_bots" && recipeAccountId && !copyDesk
+      deskType === "flex" && recipeAccountId && !copyDesk
         ? loadFuturesAutomationRules(recipeAccountId)
         : Promise.resolve([]),
     ]);

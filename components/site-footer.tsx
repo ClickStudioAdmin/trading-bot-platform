@@ -13,8 +13,8 @@ export type FooterAdminChrome = {
 
 const FOOTER_DESKS: { id: string; deskType: DeskType }[] = [
   { id: "cash-and-carry", deskType: "cash_and_carry" },
-  { id: "perps", deskType: "perps" },
-  { id: "perps-bots", deskType: "perps_bots" },
+  { id: "manual", deskType: "manual" },
+  { id: "flex", deskType: "flex" },
   { id: "tradingview-strategy", deskType: "signal_follower" },
   { id: "dca", deskType: "dca" },
 ];

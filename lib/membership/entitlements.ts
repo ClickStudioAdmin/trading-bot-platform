@@ -30,8 +30,8 @@ import { formatAuDateUtc } from "@/lib/time/display";
 
 export const DESK_TYPE_FEATURES: Record<DeskType, PlanFeatureKey> = {
   cash_and_carry: "desk_cash_and_carry",
-  perps: "desk_perps",
-  perps_bots: "desk_perps_bots",
+  manual: "desk_manual",
+  flex: "desk_flex",
   signal_follower: "desk_signal_follower",
   dca: "desk_dca",
 };

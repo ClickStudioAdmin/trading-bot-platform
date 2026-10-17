@@ -194,7 +194,7 @@ function filterRows(spec: DcaFilterSpec, side: "long" | "short"): ParamRow[] {
   return rows;
 }
 
-type PriceListStyle = "dca" | "perps";
+type PriceListStyle = "dca" | "flex";
 
 function leafConditionRows(
   leaf: StrategyLeaf,
@@ -346,7 +346,7 @@ function hardExitParts(
         leaves,
         stack?.joins ?? [],
         side,
-        "perps",
+        "flex",
         "USDT",
       ),
     },
@@ -898,7 +898,7 @@ function perpsEntry(
           resolved.leaves,
           resolved.joins,
           side,
-          "perps",
+          "flex",
           quoteLabel(recipe.symbol),
         ),
       },
@@ -1123,7 +1123,7 @@ export function recipeParamSections(recipe: BacktestRecipe): ParamSection[] {
   if (recipe.kind === "dca") {
     return dcaSections(recipe);
   }
-  if (recipe.kind === "perps") {
+  if (recipe.kind === "flex") {
     return perpsSections(recipe);
   }
   return [];

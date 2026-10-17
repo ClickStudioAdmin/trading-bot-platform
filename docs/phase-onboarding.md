@@ -33,7 +33,7 @@ There is no Skip setup. The member goes through Add Desks, Add Bots, Review, and
 | 4 | Demo vs Live | Not a third column. Connected is `mode = live`. Demo vs Live is the key’s venue environment, chosen on the exchange step. Display mode stays Paper / Demo / Live as today. |
 | 5 | When rows are written | Desk names and details stay a draft until **Create** on Review. API secrets are never stored in that draft. A key the member saves in the create modal, or on the exchange step, is written immediately through the existing connection action (verify, trade-only, encrypt). The draft keeps the connection id only. |
 | 6 | Keys | Same rules as Exchanges and create desk. Trade-only, no withdrawal permission. Server verifies. Browser never sees the secret again. One connection binds one desk for members. Admins may reuse a key. **Bind later** is allowed per connected desk. |
-| 7 | Starter bots | Admin marks **Include in Starter Pack** on a platform folder or on a platform template. The wizard lists every template in a flagged folder, and every flagged template that is not already in one of those folders. Apply uses today’s apply path. A bot stays **Disabled** unless **Initial Status** is **Active**. Every bot uses those two words. For a DCA bot, Active runs the desk arm action, so an immediate start can place the first order. Perps bots and Cash and Carry use the desk enable action. Setup does not offer Stop adding or Reduce only. A Connected desk without a key cannot choose Active. |
+| 7 | Starter bots | Admin marks **Include in Starter Pack** on a platform folder or on a platform template. The wizard lists every template in a flagged folder, and every flagged template that is not already in one of those folders. Apply uses today’s apply path. A bot stays **Disabled** unless **Initial Status** is **Active**. Every bot uses those two words. For a DCA bot, Active runs the desk arm action, so an immediate start can place the first order. Flex and Cash and Carry use the desk enable action. Setup does not offer Stop adding or Reduce only. A Connected desk without a key cannot choose Active. |
 | 8 | Library copy | Apply onto the new desks only. Do not also copy those rows into the member’s template library. |
 | 9 | Tour | Asked on Take a Tour, after Continue on Review, including when they created nothing. Yes starts the tour. Not now lands on Overview. The tour only explains. It never presses Enable or an order button. |
 | 10 | New desk later | Manage desks create stays the current form. When starter folders exist for that type, the form offers **Add starter bots** (same idle / disabled apply). Not a second full wizard. |
@@ -54,7 +54,7 @@ Choosing again with Back replaces the draft selection. Nothing is inserted until
 
 Question on the list, when they choose to select manually: “Add desks now?” The line “Add nothing to continue without desks.” sits under that title, above the table.
 
-One table. **Add Desk** sits at the top. Columns are type, name, mode, environment, market, and key. An empty table says no desks yet. Types are Perps bots, DCA, Cash and Carry, TradingView Strategy, and Perps, chosen in the sub-modal.
+One table. **Add Desk** sits at the top. Columns are type, name, mode, environment, market, and key. An empty table says no desks yet. Types are Flex, DCA, Cash and Carry, TradingView Strategy, and Manual, chosen in the sub-modal.
 
 The sub-modal asks for the details, then closes back to the table:
 
@@ -65,7 +65,7 @@ The sub-modal asks for the details, then closes back to the table:
 - **Add desk** closes the modal. That desk is a row in the one table. Paper leaves environment and key blank. The pencil **Edit** reopens the modal, including the type. The trash **Remove** drops that desk. Changing the type drops starter bots already chosen for the previous type.
 
 - An empty list is valid. Continue goes to Bots, which says bots need a desk, then the tour. Exchanges stays hidden.
-- Perps is the ticket desk. TradingView Strategy has no bot recipes.
+- Manual is the ticket desk. TradingView Strategy has no bot recipes.
 - Copy desks are not offered here.
 
 When V1 item 6 gates exist, a type the plan cannot create is visible and disabled, with the same Upgrade (or verify / 2FA) line as Manage desks. Cap copy matches create desk (“You have hit your maximum of 2 Paper Trading Desks”). Desks already in the list count toward that cap. The next one past it is not added, and the list shows that same line. The server still rejects. Do not hide a type.
@@ -99,7 +99,7 @@ Always step 2. It starts with the same kind of choice as desks:
 
 If they chose no desks, this step does not offer those three. It says bots need a desk, with Back or continue to Review.
 
-The Load starter bots choice has no line under the title. If they chose only Perps and/or TradingView Strategy, or an automated type with no flagged folder or template, the same three choices still appear. Choosing manual then says there is nothing to load. Do not show an empty required picker. The done summary still says ticket and alert desks have no starter bots. Bot rows are applied when they click **Create**, after the desks exist.
+The Load starter bots choice has no line under the title. If they chose only Manual and/or TradingView Strategy, or an automated type with no flagged folder or template, the same three choices still appear. Choosing manual then says there is nothing to load. Do not show an empty required picker. The done summary still says ticket and alert desks have no starter bots. Bot rows are applied when they click **Create**, after the desks exist.
 
 Source:
 
@@ -115,7 +115,7 @@ Picker:
 - One table. One row per desk, the same shape as Review. Columns are Desk, Type, Mode, Bots, and Initial Status. The bots for that desk are listed together in the Bots column, each with its own tick. There is no folder column and no folder tick. A folder for the wrong desk type is not shown.
 - **Initial Status** is the last column. Each bot has its own dropdown, lined up with that bot. Every bot offers Disabled and Active. Active is the default, including when they load every starter bot at once. Disabled leaves the bot off. Active starts that bot when setup creates it. For a DCA bot, Active runs the desk arm action, so an immediate start can place the first order. A Connected desk without a saved key cannot choose Active, so those bots stay Disabled.
 - DCA uses each template’s saved contract. If two selected templates share a contract on the same desk, the second is skipped at apply and named in the summary. Do not ask them to remap contracts in this wizard.
-- Perps bots and Cash and Carry stack as they do today. Name collisions get the existing ` (from template)` suffix.
+- Flex and Cash and Carry stack as they do today. Name collisions get the existing ` (from template)` suffix.
 - Empty selection on this step is valid (“don’t load bots”).
 
 Apply runs when they click **Create** on Review, after the desks exist, through the same server apply used by Automations. Results are applied / skipped / failed per template. Successes stay. No rollback of siblings.
@@ -155,7 +155,7 @@ Steps that do not apply are omitted (no desk yet, no bot desk, no TradingView de
 | 2 | Manage Desks | Always | Desks are created here. Type and mode stay as they were set. |
 | 3 | Exchanges (Manage desks, Exchanges tab) | Always | Keys are trade-only. Members: one key binds one desk. Admins may reuse a key. Demo and Live are the key’s environment. |
 | 4 | Desk list in the sidenav | They have a desk | Open a desk from this list. Paper, Demo, and Live are marked here. |
-| 5 | Bots on that desk | A new or existing DCA, Perps bots, or Cash and Carry desk | Bots stay Disabled unless Initial Status is Active. The app places orders only after that. |
+| 5 | Bots on that desk | A new or existing DCA, Flex, or Cash and Carry desk | Bots stay Disabled unless Initial Status is Active. The app places orders only after that. |
 | 6 | Webhooks | A TradingView Strategy desk, and step 5 did not run | Alerts arrive here. Setup does not turn them on. |
 | 7 | Positions | They have a desk | Open positions for this desk. |
 | 8 | Desk Settings | They have a desk | Bind a key and set desk limits. Do this if the desk is still unbound. |
@@ -169,7 +169,7 @@ Copy, Backtesting, Billing, and Admin are not tour stops. Those stay header or a
 
 Manage desks → create one desk stays the current form (type, name, mode, market data or key).
 
-If the member’s plan allows templates and a flagged starter folder exists for that type, add one optional control: **Add starter bots**. Default off. On lists those starter bots for this desk only, and applies Disabled after the desk is created. Perps and TradingView Strategy do not show it.
+If the member’s plan allows templates and a flagged starter folder exists for that type, add one optional control: **Add starter bots**. Default off. On lists those starter bots for this desk only, and applies Disabled after the desk is created. Manual and TradingView Strategy do not show it.
 
 ## Data
 
@@ -198,7 +198,7 @@ Add a row to [database.md](database.md) in the same change as the migration.
 - Never trust the browser for plan, 2FA, bind, or whether a bot may start.
 - Never call private exchange APIs from the browser. Verify stays on the server.
 - Do not create a Demo Account automatically.
-- Do not edit ledgers. Setup inserts desks, connections, and bots. A bot stays Disabled unless Initial Status is Active. Perps bots and Cash and Carry use the desk enable action. DCA still runs the desk arm action, and it can place an order.
+- Do not edit ledgers. Setup inserts desks, connections, and bots. A bot stays Disabled unless Initial Status is Active. Flex and Cash and Carry use the desk enable action. DCA still runs the desk arm action, and it can place an order.
 - Idempotent Finish: a second submit returns the desks already stored on the onboarding row.
 
 ## Entitlements
@@ -231,20 +231,20 @@ Stop after each until Click says go. Do not start inside item 4 or item 6.
 | 2 | Desk draft | Add Desk sub-modal, names, paper market data, disabled rows when gates say so. Nothing written until Finish except the draft json. |
 | 3 | Exchanges | Connected desks only. New trade-only key, or bind later. No existing-connection picker. Secrets not in the draft. |
 | 4 | Finish desks | Finish creates and binds. Retry does not duplicate. Summary lists bound vs bind later. |
-| 5 | Starter bots | Flagged folders only. Apply idle / disabled. TV and Perps ticket skip the step. Failures listed, siblings kept. |
+| 5 | Starter bots | Flagged folders only. Apply idle / disabled. TV and Manual ticket skip the step. Failures listed, siblings kept. |
 | 6 | Tour | Offer, overlay, persistence, Platform Tour, conditional steps. |
 | 7 | New desk | Optional **Add starter bots** on the existing create form. |
 
 ## Tests
 
 - Skip leaves zero desks and does not show the modal again.
-- Adding DCA Paper and Perps bots Connected creates those two modes and no others. Names that collide are rejected before Finish.
+- Adding DCA Paper and Flex Connected creates those two modes and no others. Names that collide are rejected before Finish.
 - Connected with bind later inserts `mode = live` and no connection.
 - Two connected rows cannot select the same connection id.
 - A key with withdrawal permission never saves.
 - The manual bot page lists every created desk that has starter content. It contains templates from flagged platform folders, plus flagged platform templates that are not already in those folders.
 - Apply leaves a bot Disabled when Initial Status is Disabled. Active starts the bot. For DCA, Active is the arm action. Disabled creates no order.
-- TradingView Strategy and Perps still show step 2, with nothing to load.
+- TradingView Strategy and Manual still show step 2, with nothing to load.
 - Finish retry does not insert a second desk or a second bot.
 - Tour decline does not start the overlay. Skip tour persists. A missing desk omits the desk steps.
 - A gated cell does not create that desk when the server rejects.

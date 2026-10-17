@@ -22,7 +22,7 @@ import {
 function desk(partial: Partial<OverviewDeskFacts> & Pick<OverviewDeskFacts, "id" | "name">): OverviewDeskFacts {
   return {
     mode: "paper",
-    deskType: "perps_bots",
+    deskType: "flex",
     venueEnvironment: null,
     copy: false,
     openCount: 0,
@@ -60,14 +60,14 @@ const reduce = desk({ id: "reduce", name: "Reduce", reduceOnly: true });
 const opened = desk({
   id: "open",
   name: "Open",
-  deskType: "perps",
+  deskType: "manual",
   openCount: 2,
   futuresOpenCount: 2,
 });
 const working = desk({
   id: "work",
   name: "Work",
-  deskType: "perps",
+  deskType: "manual",
   workingCount: 1,
 });
 const bots = desk({
@@ -186,13 +186,13 @@ assert.equal(
 assert.equal(overviewRealized30d("cash_and_carry", 12), null);
 assert.equal(overviewRealized30d("dca", null), null);
 assert.equal(overviewRealized30d("dca", 4.5), 4.5);
-assert.equal(overviewRealized30d("perps", Number.NaN), null);
+assert.equal(overviewRealized30d("manual", Number.NaN), null);
 
 const criticalItems = overviewCriticalItems(
   [
     { id: "b", name: "Beta", deskType: "dca" },
     { id: "a", name: "Alpha", deskType: "cash_and_carry" },
-    { id: "c", name: "Quiet", deskType: "perps" },
+    { id: "c", name: "Quiet", deskType: "manual" },
   ],
   ["b", "a"],
 );

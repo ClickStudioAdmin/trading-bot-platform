@@ -46,7 +46,7 @@ export function DeskTypeMark({ deskType }: { deskType: DeskType }) {
     >
       {deskType === "cash_and_carry" ? (
         <IconCarry {...TYPE_ICON} />
-      ) : deskType === "perps" || deskType === "perps_bots" ? (
+      ) : deskType === "manual" || deskType === "flex" ? (
         <IconPerps {...TYPE_ICON} />
       ) : deskType === "signal_follower" ? (
         <IconSignal {...TYPE_ICON} />

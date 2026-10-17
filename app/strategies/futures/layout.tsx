@@ -141,7 +141,7 @@ async function FuturesDeskChrome({
   const copyDesk = deskIsCopy(session.account);
   const signalFollower = deskType === "signal_follower" && !copyDesk;
   const dca = deskType === "dca" && !copyDesk;
-  const perpsBots = deskType === "perps_bots" && !copyDesk;
+  const perpsBots = deskType === "flex" && !copyDesk;
   const live = accountCanHoldConnections(session.account.mode);
   const [settings, connections, dcaRunning, modes, ledger] = await Promise.all([
     loadFuturesSettings(),
@@ -250,12 +250,12 @@ function futuresNavProps(input: {
   showIdentity?: boolean;
 }): ComponentProps<typeof StrategySubnav> {
   const account = input.account;
-  const deskType = account?.deskType ?? "perps";
+  const deskType = account?.deskType ?? "manual";
   const copyDesk = account ? deskIsCopy(account) : false;
   const venueLabel = (account ? getVenue(account.venue)?.label : null) ?? "Bybit";
   const signalFollower = deskType === "signal_follower" && !copyDesk;
-  const perpsBots = deskType === "perps_bots" && !copyDesk;
-  const manualPerps = deskType === "perps" && !copyDesk;
+  const perpsBots = deskType === "flex" && !copyDesk;
+  const manualPerps = deskType === "manual" && !copyDesk;
   const deskId = account?.id ?? null;
   const primaryBase = copyDesk
     ? COPY_PRIMARY_LINKS

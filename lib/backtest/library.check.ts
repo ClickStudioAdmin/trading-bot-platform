@@ -37,7 +37,7 @@ const perps = snapshotPerpsRecipe({
   trailing: null,
 });
 
-assert.equal(parseBacktestRecipeJson(JSON.stringify(perps))?.kind, "perps");
+assert.equal(parseBacktestRecipeJson(JSON.stringify(perps))?.kind, "flex");
 assert.equal(parseBacktestRecipeJson("not-json"), null);
 assert.equal(parseBacktestRecipeJson({ kind: "cash_and_carry" }), null);
 
@@ -258,7 +258,7 @@ assert.equal(
       id: "dca:1",
       name: "Desk dip",
       symbol: "BTCUSDT",
-      kind: "perps" as const,
+      kind: "flex" as const,
       deskId: "desk-1",
       deskName: "Paper",
       recipe: perps,
@@ -276,7 +276,7 @@ assert.equal(
         id: "dca:1",
         name: "Desk dip",
         symbol: "BTCUSDT",
-        kind: "perps" as const,
+        kind: "flex" as const,
         deskId: "desk-1",
         deskName: "Paper",
         recipe: perps,
@@ -400,12 +400,12 @@ assert.deepEqual(
     [
       {
         id: "perps:1",
-        kind: "perps" as const,
+        kind: "flex" as const,
         symbol: "BTCUSDT",
       },
       {
         id: "perps:2",
-        kind: "perps" as const,
+        kind: "flex" as const,
         symbol: "ETHUSDT",
       },
       {

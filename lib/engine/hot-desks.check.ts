@@ -6,11 +6,11 @@ import {
 import { deskKindsFromTypes, mergeHotAccountIds } from "./hot-desks";
 
 assert.deepEqual(mergeHotAccountIds(["b", "a", ""], ["a", null]), ["a", "b"]);
-assert.deepEqual(deskKindsFromTypes(["dca", "perps"]), {
+assert.deepEqual(deskKindsFromTypes(["dca", "manual"]), {
   cashAndCarry: false,
   linear: true,
 });
-assert.deepEqual(deskKindsFromTypes(["perps_bots"]), {
+assert.deepEqual(deskKindsFromTypes(["flex"]), {
   cashAndCarry: false,
   linear: true,
 });

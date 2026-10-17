@@ -23,8 +23,8 @@ export type AdminOverview = {
     paper: number;
     live: number;
     cashAndCarry: number;
-    perps: number;
-    perpsBots: number;
+    manual: number;
+    flex: number;
     signalFollower: number;
     dca: number;
   };
@@ -37,7 +37,7 @@ export type AdminOverview = {
   automations: {
     running: number;
     cashAndCarry: number;
-    perps: number;
+    flex: number;
   };
   scan: { count: number; lastAtMs: number | null };
   lastTick: { at: string; event: string; message: string } | null;
@@ -52,8 +52,8 @@ const emptyOverview: AdminOverview = {
     paper: 0,
     live: 0,
     cashAndCarry: 0,
-    perps: 0,
-    perpsBots: 0,
+    manual: 0,
+    flex: 0,
     signalFollower: 0,
     dca: 0,
   },
@@ -63,7 +63,7 @@ const emptyOverview: AdminOverview = {
     cashAndCarryClosing: 0,
     perpsOpen: 0,
   },
-  automations: { running: 0, cashAndCarry: 0, perps: 0 },
+  automations: { running: 0, cashAndCarry: 0, flex: 0 },
   scan: { count: 0, lastAtMs: null },
   lastTick: null,
   issues: [],
@@ -132,12 +132,12 @@ export async function loadAdminOverview(): Promise<AdminOverview> {
   const memberRows = members.data ?? [];
   const deskRows = desks.data ?? [];
   const cashAndCarryIds = new Set<string>();
-  const perpsIds = new Set<string>();
+  const linearIds = new Set<string>();
   let paper = 0;
   let live = 0;
   let cashAndCarry = 0;
-  let perps = 0;
-  let perpsBots = 0;
+  let manual = 0;
+  let flex = 0;
   let signalFollower = 0;
   let dca = 0;
   for (const row of deskRows) {
@@ -148,12 +148,12 @@ export async function loadAdminOverview(): Promise<AdminOverview> {
     } else {
       paper += 1;
     }
-    if (type === "perps") {
-      perps += 1;
-      perpsIds.add(id);
-    } else if (type === "perps_bots") {
-      perpsBots += 1;
-      perpsIds.add(id);
+    if (type === "manual") {
+      manual += 1;
+      linearIds.add(id);
+    } else if (type === "flex") {
+      flex += 1;
+      linearIds.add(id);
     } else if (type === "signal_follower") {
       signalFollower += 1;
     } else if (type === "dca") {
@@ -193,8 +193,8 @@ export async function loadAdminOverview(): Promise<AdminOverview> {
   const cashAndCarryRunning = [...enabled].filter(
     (id) => cashAndCarryIds.has(id) && paperRuleDesks.has(id),
   ).length;
-  const perpsRunning = [...futuresRuleDesks].filter((id) =>
-    perpsIds.has(id),
+  const flexRunning = [...futuresRuleDesks].filter((id) =>
+    linearIds.has(id),
   ).length;
   const scanMs = latestScan.data?.scanned_at
     ? new Date(String(latestScan.data.scanned_at)).getTime()
@@ -214,8 +214,8 @@ export async function loadAdminOverview(): Promise<AdminOverview> {
       paper,
       live,
       cashAndCarry,
-      perps,
-      perpsBots,
+      manual,
+      flex,
       signalFollower,
       dca,
     },
@@ -227,9 +227,9 @@ export async function loadAdminOverview(): Promise<AdminOverview> {
       perpsOpen: (futuresOpens.data ?? []).length,
     },
     automations: {
-      running: cashAndCarryRunning + perpsRunning,
+      running: cashAndCarryRunning + flexRunning,
       cashAndCarry: cashAndCarryRunning,
-      perps: perpsRunning,
+      flex: flexRunning,
     },
     scan: {
       count: opportunityCount.count ?? 0,

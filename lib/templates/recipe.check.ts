@@ -249,7 +249,7 @@ if (hlBoth.ok) {
 
 assert.equal(parseTemplateRecipe({ name: "x" }, "dca", 1).ok, false);
 assert.equal(parseTemplateRecipe(snapshot, "dca", 2).ok, false);
-assert.equal(parseTemplateRecipe(snapshot, "perps", 1).ok, false);
+assert.equal(parseTemplateRecipe(snapshot, "flex", 1).ok, false);
 
 const hlCoin = { ...snapshot, symbol: "ETH" };
 const hlParsed = parseTemplateRecipe(hlCoin, "dca", 1, "hyperliquid");
@@ -291,7 +291,7 @@ const perps = snapshotPerpsRecipe({
   tpsl: null,
   trailing: null,
 });
-assert.equal(perps.kind, "perps");
+assert.equal(perps.kind, "flex");
 assert.equal(perps.tpsl, null);
 assert.equal(perps.trailing, null);
 assert.equal(recipesMatchForBacktest(perps, { ...perps, name: "Other" }), true);
@@ -345,19 +345,19 @@ assert.equal("webhookId" in perps, false);
 assert.equal(recipeHasRuntimeKeys(perps), false);
 const hlPerps = parseTemplateRecipe(
   { ...perps, symbol: "ETH" },
-  "perps",
+  "flex",
   1,
   "hyperliquid",
 );
 assert.equal(hlPerps.ok, true);
-if (hlPerps.ok && hlPerps.recipe.kind === "perps") {
+if (hlPerps.ok && hlPerps.recipe.kind === "flex") {
   assert.equal(hlPerps.recipe.symbol, "ETH");
 }
 assert.equal(
-  parseTemplateRecipe({ ...perps, symbol: "ETH" }, "perps", 1, "bybit").ok,
+  parseTemplateRecipe({ ...perps, symbol: "ETH" }, "flex", 1, "bybit").ok,
   false,
 );
-assert.equal(parseTemplateRecipe(perps, "perps", 1, "bybit").ok, true);
+assert.equal(parseTemplateRecipe(perps, "flex", 1, "bybit").ok, true);
 const perpsRule = perpsRecipeToRule(perps, { sortOrder: 3 });
 assert.equal(perpsRule.ok, true);
 if (perpsRule.ok) {
@@ -474,7 +474,7 @@ assert.equal(namedRoundTrip.ok, true);
 if (namedRoundTrip.ok) {
   assert.equal(namedRoundTrip.recipe.name, "ETH grid");
 }
-const unnamedPerps = parseTemplateRecipe({ ...perps, name: "" }, "perps", 1);
+const unnamedPerps = parseTemplateRecipe({ ...perps, name: "" }, "flex", 1);
 assert.equal(unnamedPerps.ok, true);
 if (unnamedPerps.ok) {
   assert.equal(unnamedPerps.recipe.name, "");
@@ -532,10 +532,10 @@ if (!missingSizeParsed.ok) {
   assert.equal(missingSizeParsed.error, "Enter an order size.");
 }
 
-assert.equal(templateFitsDesk("perps", "perps_bots"), true);
-assert.equal(templateFitsDesk("perps", "perps"), false);
+assert.equal(templateFitsDesk("flex", "flex"), true);
+assert.equal(templateFitsDesk("flex", "manual"), false);
 assert.equal(templateFitsDesk("dca", "dca"), true);
-assert.equal(formatTemplateDeskType("perps"), "Perps bots");
+assert.equal(formatTemplateDeskType("flex"), "Flex");
 assert.equal(parseTemplateVisibility("backtested"), "backtested");
 assert.equal(parseTemplateVisibility("platform"), "platform");
 assert.equal(templateIsLibraryRow("backtested"), false);
@@ -600,9 +600,9 @@ const bothPerps = snapshotPerpsRecipe({
     },
   },
 });
-const loadedPerps = parseTemplateRecipe(bothPerps, "perps", TEMPLATE_RECIPE_VERSION);
+const loadedPerps = parseTemplateRecipe(bothPerps, "flex", TEMPLATE_RECIPE_VERSION);
 assert.equal(loadedPerps.ok, true);
-if (!loadedPerps.ok || loadedPerps.recipe.kind !== "perps") {
+if (!loadedPerps.ok || loadedPerps.recipe.kind !== "flex") {
   throw new Error("expected a perps recipe");
 }
 assert.equal(loadedPerps.recipe.direction, "both");
@@ -655,11 +655,11 @@ const legacyConfirm = snapshotPerpsRecipe({
 });
 const legacyLoaded = parseTemplateRecipe(
   legacyConfirm,
-  "perps",
+  "flex",
   TEMPLATE_RECIPE_VERSION,
 );
 assert.equal(legacyLoaded.ok, true);
-if (!legacyLoaded.ok || legacyLoaded.recipe.kind !== "perps") {
+if (!legacyLoaded.ok || legacyLoaded.recipe.kind !== "flex") {
   throw new Error("expected a perps recipe");
 }
 const legacySeed = perpsRecipeFormSeed(legacyLoaded.recipe);

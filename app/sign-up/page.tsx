@@ -50,7 +50,7 @@ export default async function SignUpPage({
               trade-only key from this login.
             </li>
             <li>
-              Cash and Carry, Perps, Perps bots, TradingView Strategy, and DCA.
+              Cash and Carry, Manual, Flex, TradingView Strategy, and DCA.
               Type is set at create.
             </li>
             <li>

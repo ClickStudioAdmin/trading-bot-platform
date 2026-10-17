@@ -555,7 +555,7 @@ export async function savePerpsAsTemplateAction(
     userId: auth.member.id,
     isAdmin: auth.isAdmin,
     visibility: meta.visibility,
-    deskType: "perps",
+    deskType: "flex",
     name: meta.name,
     description: meta.description,
     replace: meta.replace,
@@ -1208,7 +1208,7 @@ export async function createTemplateSetAction(
   const deskTypeRaw = String(formData.get("deskType") ?? "");
   if (
     deskTypeRaw !== "dca" &&
-    deskTypeRaw !== "perps" &&
+    deskTypeRaw !== "flex" &&
     deskTypeRaw !== "cash_and_carry"
   ) {
     return { ok: false, error: "Choose a desk type." };

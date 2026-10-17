@@ -34,7 +34,7 @@ export async function startAppliedStarterBot(input: {
     }
     return { ok: true, detail: armed.message };
   }
-  if (input.applied.deskType === "perps") {
+  if (input.applied.deskType === "flex") {
     return enablePerpsRule({
       userId: input.userId,
       desk: input.desk,

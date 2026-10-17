@@ -30,7 +30,7 @@ export function BotRecipeEditor({
   onChange: (recipe: BacktestRecipe, fromUser?: boolean) => void;
   onIssuesChange: (issues: string[]) => void;
 }) {
-  if (recipe.kind === "perps") {
+  if (recipe.kind === "flex") {
     return (
       <PerpsRecipeMount
         recipe={recipe}

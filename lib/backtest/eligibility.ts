@@ -69,7 +69,7 @@ export function libraryTemplateCanBacktest(recipe: TemplateRecipe): boolean {
   if (recipe.kind === "dca") {
     return canBacktestDcaRecipe(recipe).ok;
   }
-  if (recipe.kind === "perps") {
+  if (recipe.kind === "flex") {
     return canBacktestPerpsRecipe(recipe).ok;
   }
   return false;

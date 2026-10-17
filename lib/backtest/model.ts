@@ -22,7 +22,7 @@ import { strategyLeafTimeframe } from "@/lib/strategy/expr";
 import type { BacktestProgressPhase } from "./progress";
 
 export type BacktestRecipe = PerpsTemplateRecipe | DcaTemplateRecipe;
-export type BacktestDeskType = "perps" | "dca";
+export type BacktestDeskType = "flex" | "dca";
 
 export const BACKTEST_FEE_PRESETS = {
   vip0_taker: {
@@ -794,7 +794,7 @@ export function backtestTapeInterval(
   fromMs: number,
   toMs: number,
 ): DcaIndicatorTimeframe {
-  if (recipe?.kind === "perps") {
+  if (recipe?.kind === "flex") {
     const indicatorStart =
       recipe.entrySource === "indicator" || recipe.entrySource === "trend";
     const shortStart =

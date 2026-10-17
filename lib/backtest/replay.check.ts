@@ -9,7 +9,7 @@ import {
 
 async function main(): Promise<void> {
 const base: PerpsTemplateRecipe = {
-  kind: "perps",
+  kind: "flex",
   name: "Long cross",
   symbol: "BTCUSDT",
   formAction: "buy",

@@ -101,7 +101,7 @@ function access(input: {
 
 function row(
   rows: ReturnType<typeof access>,
-  deskType: "dca" | "perps" | "perps_bots" | "cash_and_carry" | "signal_follower",
+  deskType: "dca" | "manual" | "flex" | "cash_and_carry" | "signal_follower",
 ) {
   const found = rows.find((item) => item.deskType === deskType);
   assert.ok(found);
@@ -126,10 +126,10 @@ assert.equal(
   deskTypeRejectLead(row(closed, "dca").message ?? "", "Plus"),
   "DCA desks are not allowed on your plan.",
 );
-assert.equal(row(closed, "perps").allowed, false);
+assert.equal(row(closed, "manual").allowed, false);
 assert.equal(
-  row(closed, "perps_bots").message,
-  "Perps bots desks are not allowed on your plan.",
+  row(closed, "flex").message,
+  "Flex desks are not allowed on your plan.",
 );
 
 const included = access({ on: { desk_dca: true }, plans: [plus] });
@@ -184,7 +184,7 @@ const closedTypes = access({ plans: [unlock("Free", { priceUsd: 0, sortOrder: 1,
 const bundled = bundledDeskTypeDenial(closedTypes);
 assert.equal(
   bundled?.message,
-  "Perps bots, DCA, Cash and Carry, TradingView Strategy, and Perps desks are not allowed on your plan.",
+  "Flex, DCA, Cash and Carry, TradingView Strategy, and Manual desks are not allowed on your plan.",
 );
 assert.equal(bundled?.upgradePlan, null);
 const sharedPlan = bundledDeskTypeDenial([
@@ -195,23 +195,23 @@ const sharedPlan = bundledDeskTypeDenial([
     upgradePlan: "Free",
   },
   {
-    deskType: "perps",
+    deskType: "manual",
     allowed: false,
-    message: deskTypeUpgradeMessage("perps", "Free"),
+    message: deskTypeUpgradeMessage("manual", "Free"),
     upgradePlan: "Free",
   },
 ]);
 assert.equal(
   sharedPlan?.message,
-  "DCA and Perps desks are not allowed on your plan. Upgrade to Free to enable it.",
+  "DCA and Manual desks are not allowed on your plan. Upgrade to Free to enable it.",
 );
 assert.equal(sharedPlan?.upgradePlan, "Free");
 assert.equal(
   bundledDeskTypeDenial([
     {
-      deskType: "perps",
+      deskType: "manual",
       allowed: false,
-      message: deskTypeUpgradeMessage("perps", "Plus"),
+      message: deskTypeUpgradeMessage("manual", "Plus"),
       upgradePlan: "Plus",
     },
     {

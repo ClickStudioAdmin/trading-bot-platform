@@ -78,7 +78,7 @@ export default async function AdminOverviewPage() {
           <StatCard
             label="Bots on"
             value={String(overview.automations.running)}
-            hint={`${overview.automations.cashAndCarry} Cash and Carry · ${overview.automations.perps} Perps`}
+            hint={`${overview.automations.cashAndCarry} Cash and Carry · ${overview.automations.flex} Flex`}
           />
         </div>
       </section>
@@ -98,10 +98,10 @@ export default async function AdminOverviewPage() {
               label={formatDeskType("cash_and_carry")}
               value={overview.desks.cashAndCarry}
             />
-            <Row label={formatDeskType("perps")} value={overview.desks.perps} />
+            <Row label={formatDeskType("manual")} value={overview.desks.manual} />
             <Row
-              label={formatDeskType("perps_bots")}
-              value={overview.desks.perpsBots}
+              label={formatDeskType("flex")}
+              value={overview.desks.flex}
             />
             <Row
               label={formatDeskType("signal_follower")}
@@ -143,9 +143,9 @@ export default async function AdminOverviewPage() {
         <h2 className="text-lg font-semibold tracking-tight">Engine</h2>
         <p className="mt-1 text-sm text-ink-muted">
           One public Bybit scan per tick. Cash and Carry bots run only
-          on those desks. Perps price-cross bots run on Perps desks.
+          on those desks. Flex price-cross bots run on Flex desks.
           TradingView Strategy desks take orders from alerts only. DCA desks
-          do not run Perps bots.
+          do not run Flex.
         </p>
         <dl className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
           <div>
@@ -258,12 +258,12 @@ export default async function AdminOverviewPage() {
 
 function deskTypeHint(desks: {
   cashAndCarry: number;
-  perps: number;
-  perpsBots: number;
+  manual: number;
+  flex: number;
   signalFollower: number;
   dca: number;
 }): string {
-  return `${desks.cashAndCarry} ${formatDeskType("cash_and_carry")} · ${desks.perps} ${formatDeskType("perps")} · ${desks.perpsBots} ${formatDeskType("perps_bots")} · ${desks.signalFollower} ${formatDeskType("signal_follower")} · ${desks.dca} ${formatDeskType("dca")}`;
+  return `${desks.cashAndCarry} ${formatDeskType("cash_and_carry")} · ${desks.manual} ${formatDeskType("manual")} · ${desks.flex} ${formatDeskType("flex")} · ${desks.signalFollower} ${formatDeskType("signal_follower")} · ${desks.dca} ${formatDeskType("dca")}`;
 }
 
 function openPositionHint(positions: {

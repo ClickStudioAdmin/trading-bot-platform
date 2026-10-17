@@ -454,7 +454,7 @@ export function EntryConditionStack({
   groupFooter?: (groupIndex: number) => ReactNode;
   /** Paint empty required controls after the form has been edited. */
   showErrors?: boolean;
-  /** Perps added rows can stay on Select Condition Type. */
+  /** Flex added rows can stay on Select Condition Type. */
   optionalAddedKind?: boolean;
 }) {
   const column = useBotColumnLayout();

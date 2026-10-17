@@ -68,21 +68,18 @@ export const TEMPLATE_RECIPE_VERSION = 1;
 export const TEMPLATE_NAME_MAX = 80;
 export const RECIPE_NAME_MAX = 40;
 
-export const TEMPLATE_DESK_TYPES = ["dca", "perps", "cash_and_carry"] as const;
+export const TEMPLATE_DESK_TYPES = ["dca", "flex", "cash_and_carry"] as const;
 export type TemplateDeskType = (typeof TEMPLATE_DESK_TYPES)[number];
 
 export function templateFitsDesk(
   templateDeskType: TemplateDeskType,
   deskType: DeskType,
 ): boolean {
-  if (templateDeskType === "perps") {
-    return deskType === "perps_bots";
-  }
   return deskType === templateDeskType;
 }
 
 export function formatTemplateDeskType(deskType: TemplateDeskType): string {
-  return deskType === "perps" ? "Perps bots" : formatDeskType(deskType);
+  return formatDeskType(deskType);
 }
 export const TEMPLATE_VISIBILITIES = ["user", "platform", "backtested"] as const;
 export type TemplateVisibility = (typeof TEMPLATE_VISIBILITIES)[number];
@@ -167,7 +164,7 @@ export type DcaTemplateRecipe = {
 };
 
 export type PerpsTemplateRecipe = {
-  kind: "perps";
+  kind: "flex";
   name: string;
   symbol: string;
   formAction: FuturesAutomationFormValues["formAction"];
@@ -220,7 +217,7 @@ export type TemplateRecipe =
 
 export function isTemplateDeskType(value: unknown): value is TemplateDeskType {
   return (
-    value === "dca" || value === "perps" || value === "cash_and_carry"
+    value === "dca" || value === "flex" || value === "cash_and_carry"
   );
 }
 
@@ -459,7 +456,7 @@ export function snapshotPerpsRecipe(
   const stack = resolveEntryStack(rule.entryStack, rule.confirm);
   const legacyStack = entryStackIsLegacy(stack);
   return {
-    kind: "perps",
+    kind: "flex",
     name: rule.name,
     symbol: rule.symbol,
     formAction,
@@ -672,7 +669,7 @@ export function parseTemplateRecipe(
   if (deskType === "dca") {
     return parseDcaTemplateRecipe(row, venue);
   }
-  if (deskType === "perps") {
+  if (deskType === "flex") {
     return parsePerpsTemplateRecipe(row, venue);
   }
   return parsePaperTemplateRecipe(row);
@@ -715,7 +712,7 @@ function parsePerpsTemplateRecipe(
     return { ok: false, error: STALE_TEMPLATE_ERROR };
   }
   const recipe: PerpsTemplateRecipe = {
-    kind: "perps",
+    kind: "flex",
     name: typeof row.name === "string" ? row.name : "",
     symbol: String(row.symbol),
     formAction: (row.formAction as PerpsTemplateRecipe["formAction"]) ?? "buy",

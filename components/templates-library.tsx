@@ -1376,7 +1376,7 @@ export function TemplatesLibrary({
               >
                 <option value="all">All desk types</option>
                 <option value="dca">DCA</option>
-                <option value="perps">Perps bots</option>
+                <option value="flex">Flex</option>
                 <option value="cash_and_carry">Cash and Carry</option>
               </AppSelect>
             </TableFilterField>
@@ -1422,7 +1422,7 @@ export function TemplatesLibrary({
           empty={
             tab === "templates"
               ? variant === "account"
-                ? "No templates yet. Open Automations on a DCA, Perps, or Cash and Carry desk and use Save as template."
+                ? "No templates yet. Open Automations on a DCA, Flex, or Cash and Carry desk and use Save as template."
                 : "No platform templates yet. Save as a platform template from Automations."
               : "Nothing shared with you yet. Another member can share a template, or a folder that contains templates, by entering your email."
           }
@@ -3104,7 +3104,7 @@ function CreateFolderModal({
           }}
           className={fieldClass}
         >
-          {(["dca", "perps", "cash_and_carry"] as const).map((type) => (
+          {(["dca", "flex", "cash_and_carry"] as const).map((type) => (
             <option key={type} value={type}>
               {formatTemplateDeskType(type)}
             </option>

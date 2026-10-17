@@ -7,8 +7,8 @@ import {
 } from "@/lib/futures/stats";
 
 const FUTURES_DESK_TYPES = [
-  "perps",
-  "perps_bots",
+  "manual",
+  "flex",
   "signal_follower",
   "dca",
 ] as const;

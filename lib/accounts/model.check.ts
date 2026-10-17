@@ -202,30 +202,30 @@ if (renamed.ok) {
 }
 assert.equal(parseDeskNameChange("paper", ["Paper"], "DCA").ok, false);
 
-assert.equal(parseDeskType("perps"), "perps");
-assert.equal(parseDeskType("perps_bots"), "perps_bots");
+assert.equal(parseDeskType("manual"), "manual");
+assert.equal(parseDeskType("flex"), "flex");
 assert.equal(parseDeskType("signal_follower"), "signal_follower");
 assert.equal(parseDeskType("dca"), "dca");
 assert.equal(parseDeskType("cash_and_carry"), "cash_and_carry");
 assert.equal(parseDeskType("other"), "cash_and_carry");
-assert.equal(parseDeskTypeChoice("perps").ok, true);
-assert.equal(parseDeskTypeChoice("perps_bots").ok, true);
+assert.equal(parseDeskTypeChoice("manual").ok, true);
+assert.equal(parseDeskTypeChoice("flex").ok, true);
 assert.equal(parseDeskTypeChoice("dca").ok, true);
 assert.equal(parseDeskTypeChoice("").ok, false);
-assert.equal(formatDeskType("perps"), "Perps");
-assert.equal(formatDeskType("perps_bots"), "Perps bots");
-assert.equal(formatDeskNavLabel("perps_bots"), "Perps");
+assert.equal(formatDeskType("manual"), "Manual");
+assert.equal(formatDeskType("flex"), "Flex");
+assert.equal(formatDeskNavLabel("flex"), "Flex");
 assert.equal(formatDeskNavLabel("dca"), "DCA");
 assert.equal(formatDeskType("signal_follower"), "TradingView Strategy");
 assert.equal(formatDeskType("dca"), "DCA");
 assert.equal(formatDeskType("cash_and_carry"), "Cash and Carry");
 assert.equal(
-  formatDeskTypeChoice("perps"),
-  "Perps (buy / sell / close from the ticket)",
+  formatDeskTypeChoice("manual"),
+  "Manual (buy / sell / close from the ticket)",
 );
 assert.equal(
-  formatDeskTypeChoice("perps_bots"),
-  "Perps bots (price-cross automations own the orders)",
+  formatDeskTypeChoice("flex"),
+  "Flex (price-cross automations own the orders)",
 );
 assert.equal(
   formatDeskTypeChoice("signal_follower"),
@@ -239,8 +239,8 @@ assert.equal(
   deskHomePath("cash_and_carry"),
   "/strategies/cash-and-carry/automations",
 );
-assert.equal(deskHomePath("perps"), "/strategies/futures/positions");
-assert.equal(deskHomePath("perps_bots"), "/strategies/futures/automations");
+assert.equal(deskHomePath("manual"), "/strategies/futures/positions");
+assert.equal(deskHomePath("flex"), "/strategies/futures/automations");
 assert.equal(deskHomePath("signal_follower"), "/strategies/futures/positions");
 assert.equal(deskHomePath("dca"), "/strategies/futures/automations");
 assert.equal(
@@ -254,7 +254,7 @@ assert.equal(
   "/strategies/futures/positions?desk=11111111-1111-4111-8111-111111111111",
 );
 assert.equal(
-  deskHomePath("perps", "11111111-1111-4111-8111-111111111111"),
+  deskHomePath("manual", "11111111-1111-4111-8111-111111111111"),
   "/strategies/futures/positions?desk=11111111-1111-4111-8111-111111111111",
 );
 assert.equal(
@@ -296,33 +296,33 @@ assert.equal(
   "/strategies/futures/automations?desk=11111111-1111-4111-8111-111111111111&saved=1",
 );
 assert.equal(deskUsesCashAndCarry("cash_and_carry"), true);
-assert.equal(deskUsesCashAndCarry("perps"), false);
-assert.equal(deskUsesPerpsUi("perps"), true);
-assert.equal(deskUsesPerpsUi("perps_bots"), true);
+assert.equal(deskUsesCashAndCarry("manual"), false);
+assert.equal(deskUsesPerpsUi("manual"), true);
+assert.equal(deskUsesPerpsUi("flex"), true);
 assert.equal(deskUsesPerpsUi("signal_follower"), true);
 assert.equal(deskUsesPerpsUi("dca"), true);
 assert.equal(deskUsesPerpsUi("cash_and_carry"), false);
-assert.equal(deskAllowsManualPerpTicket("perps"), true);
-assert.equal(deskAllowsManualPerpTicket("perps_bots"), false);
+assert.equal(deskAllowsManualPerpTicket("manual"), true);
+assert.equal(deskAllowsManualPerpTicket("flex"), false);
 assert.equal(deskAllowsManualPerpTicket("signal_follower"), false);
 assert.equal(deskAllowsManualPerpTicket("dca"), false);
 assert.equal(deskAllowsManualPerpTicket("cash_and_carry"), false);
-assert.equal(deskAllowsPerpsRecipes("perps"), false);
-assert.equal(deskAllowsPerpsRecipes("perps_bots"), true);
+assert.equal(deskAllowsPerpsRecipes("manual"), false);
+assert.equal(deskAllowsPerpsRecipes("flex"), true);
 assert.equal(deskAllowsPerpsRecipes("dca"), false);
-assert.equal(deskAllowsSignalWebhooks("perps"), false);
-assert.equal(deskAllowsSignalWebhooks("perps_bots"), true);
+assert.equal(deskAllowsSignalWebhooks("manual"), false);
+assert.equal(deskAllowsSignalWebhooks("flex"), true);
 assert.equal(deskAllowsSignalWebhooks("dca"), true);
 assert.equal(deskAllowsSignalWebhooks("signal_follower"), false);
 assert.equal(deskAllowsSignalWebhooks("cash_and_carry"), false);
-assert.equal(deskAllowsOrderWebhooks("perps"), false);
-assert.equal(deskAllowsOrderWebhooks("perps_bots"), false);
+assert.equal(deskAllowsOrderWebhooks("manual"), false);
+assert.equal(deskAllowsOrderWebhooks("flex"), false);
 assert.equal(deskAllowsOrderWebhooks("signal_follower"), true);
 assert.equal(deskAllowsOrderWebhooks("dca"), false);
-assert.equal(deskManualBuySellBlockReason("perps"), null);
+assert.equal(deskManualBuySellBlockReason("manual"), null);
 assert.equal(
-  deskManualBuySellBlockReason("perps_bots"),
-  "This is a Perps bots desk. Automations own orders. Buy and Sell are not on this ticket.",
+  deskManualBuySellBlockReason("flex"),
+  "This is a Flex desk. Automations own orders. Buy and Sell are not on this ticket.",
 );
 assert.equal(
   deskManualBuySellBlockReason("dca"),
@@ -333,15 +333,15 @@ assert.equal(
   "This is a TradingView Strategy desk. Buy and Sell come from a webhook.",
 );
 const copyPerps = {
-  deskType: "perps" as const,
+  deskType: "manual" as const,
   copyOfAccountId: "11111111-1111-4111-8111-111111111111",
 };
 assert.equal(deskIsCopy(copyPerps), true);
-assert.equal(deskIsCopy({ deskType: "perps", copyOfAccountId: null }), false);
+assert.equal(deskIsCopy({ deskType: "manual", copyOfAccountId: null }), false);
 assert.equal(deskAllowsManualPerpTicket(copyPerps), false);
 assert.equal(
   deskAllowsPerpsRecipes({
-    deskType: "perps_bots",
+    deskType: "flex",
     copyOfAccountId: copyPerps.copyOfAccountId,
   }),
   false,
@@ -391,8 +391,8 @@ assert.equal(
 );
 assert.equal(deskShowsDcaBlotter("dca"), true);
 assert.equal(deskShowsDcaBlotter(copyPerps), false);
-assert.equal(deskAllowsTemplateApply("perps_bots"), true);
-assert.equal(deskAllowsBacktestFrom("perps"), false);
+assert.equal(deskAllowsTemplateApply("flex"), true);
+assert.equal(deskAllowsBacktestFrom("manual"), false);
 assert.equal(deskManualBuySellBlockReason(copyPerps), COPY_DESK_BLOCK);
 
 const paper = parseTradingAccountRow({
@@ -412,12 +412,12 @@ const live = parseTradingAccountRow({
   user_id: "user-1",
   name: "Live",
   mode: "live",
-  desk_type: "perps",
+  desk_type: "manual",
   venue: "hyperliquid",
   venue_environment: "demo",
   created_at: "2026-08-23T01:00:00.000Z",
 });
-assert.equal(live.deskType, "perps");
+assert.equal(live.deskType, "manual");
 assert.equal(live.venue, "hyperliquid");
 assert.equal(live.venueEnvironment, "testnet");
 assert.equal(live.copyOfAccountId, null);
@@ -426,7 +426,7 @@ const copied = parseTradingAccountRow({
   user_id: "user-2",
   name: "Follow",
   mode: "paper",
-  desk_type: "perps",
+  desk_type: "manual",
   copy_of_account_id: "11111111-1111-4111-8111-111111111111",
   created_at: "2026-08-31T00:00:00.000Z",
 });
@@ -434,7 +434,7 @@ assert.equal(copied.copyOfAccountId, "11111111-1111-4111-8111-111111111111");
 assert.equal(deskAllowsManualPerpTicket(copied), false);
 
 const bybitCreate = parseDeskCreateChoice({
-  deskType: "perps",
+  deskType: "manual",
   venue: "bybit",
   mode: "live",
   track: "testnet",

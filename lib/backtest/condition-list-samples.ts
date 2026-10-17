@@ -98,7 +98,7 @@ export function adminConditionReview(): ConditionReviewSample[] {
     exitIfStack1TriggerPrice: "100",
   }).filter((section) => section.title === "Short Exit Conditions");
   const perps = snapshotPerpsRecipe({
-    name: "Perps groups",
+    name: "Flex groups",
     symbol: "ETHUSDT",
     action: "sell",
     closeSide: null,
@@ -151,9 +151,9 @@ export function adminConditionReview(): ConditionReviewSample[] {
       sections: customExit,
     },
     {
-      title: "Perps Or group",
+      title: "Flex Or group",
       detail:
-        "Short Perps entry. Or opens Group 2. The price cross stays in Group 1.",
+        "Short Flex entry. Or opens Group 2. The price cross stays in Group 1.",
       sections: recipeParamSections(perps).filter(
         (section) => section.title === "Short Entry Conditions",
       ),

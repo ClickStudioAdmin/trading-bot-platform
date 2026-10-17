@@ -1,7 +1,7 @@
 export type VenueDeskType =
   | "cash_and_carry"
-  | "perps"
-  | "perps_bots"
+  | "manual"
+  | "flex"
   | "signal_follower"
   | "dca";
 
@@ -49,7 +49,7 @@ export const VENUES: readonly VenueDefinition[] = [
     label: "Bybit",
     enabled: true,
     connectionsEnabled: true,
-    deskTypes: ["cash_and_carry", "perps", "perps_bots", "signal_follower", "dca"],
+    deskTypes: ["cash_and_carry", "manual", "flex", "signal_follower", "dca"],
     positionMode: "hedge",
     quote: "USDT",
     symbolKind: "linear_usdt",
@@ -84,7 +84,7 @@ export const VENUES: readonly VenueDefinition[] = [
     label: "Hyperliquid",
     enabled: true,
     connectionsEnabled: true,
-    deskTypes: ["perps", "perps_bots", "signal_follower", "dca"],
+    deskTypes: ["manual", "flex", "signal_follower", "dca"],
     positionMode: "one_way",
     quote: "USDC",
     symbolKind: "coin",

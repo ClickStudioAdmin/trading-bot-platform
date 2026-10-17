@@ -132,7 +132,7 @@ function parseRecipe(
   if (!parsed.ok) {
     return null;
   }
-  if (parsed.recipe.kind !== "perps" && parsed.recipe.kind !== "dca") {
+  if (parsed.recipe.kind !== "flex" && parsed.recipe.kind !== "dca") {
     return null;
   }
   return parsed.recipe;
@@ -144,7 +144,7 @@ export function parseBacktestRunRow(
   const status = parseBacktestStatus(row.status);
   const interval = parseDcaIndicatorTimeframe(row.interval);
   const deskType: BacktestDeskType =
-    row.desk_type === "dca" ? "dca" : "perps";
+    row.desk_type === "dca" ? "dca" : "flex";
   const venue = String(row.venue ?? "bybit");
   const recipe = parseRecipe(row.recipe, deskType, venue);
   if (!status || !interval || !recipe) {

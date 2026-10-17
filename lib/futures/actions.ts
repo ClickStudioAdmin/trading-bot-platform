@@ -638,7 +638,7 @@ export async function setFuturesBotModesAction(
   const session = await requirePerpsUiSession();
   const { member: user, account } = session;
   if (!deskAllowsPerpsRecipes(account)) {
-    return deskActionError("This desk is not a Perps bots desk.");
+    return deskActionError("This desk is not a Flex desk.");
   }
   const bulk = parseBotBulkAction(formData.get("bulk"));
   const ids = parseBulkBotIds(formData);
@@ -648,7 +648,7 @@ export async function setFuturesBotModesAction(
   if (bulk === "delete") {
     return deleteFuturesBots(user.id, account.id, ids);
   }
-  const mode = parseAutomationMode(bulkModeFor("perps", bulk));
+  const mode = parseAutomationMode(bulkModeFor("flex", bulk));
   const existing = await loadFuturesAutomationRules(account.id);
   const selected = existing.filter(
     (rule) => rule.id && ids.includes(rule.id),
@@ -825,7 +825,7 @@ export async function deleteFuturesAutomationAction(
   const session = await requirePerpsUiSession();
   const { member: user, account } = session;
   if (!deskAllowsPerpsRecipes(account)) {
-    return deskActionError("This desk is not a Perps bots desk.");
+    return deskActionError("This desk is not a Flex desk.");
   }
   const id = String(formData.get("ruleId") ?? "").trim();
   if (!id) {

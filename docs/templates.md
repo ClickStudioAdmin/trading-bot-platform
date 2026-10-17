@@ -6,7 +6,7 @@ Phase 11 is complete. See [phase-11.md](phase-11.md). This is a **login-scoped t
 
 ## Purpose
 
-Users save a bot as a **template**, or several templates as a **folder** (stored as a template set). They create a new idle or disabled bot from one template, or stamp a whole folder onto a desk. Admins manage **platform** templates and folders on `/admin/templates`. Member libraries stay on `/account/templates`. Every member can apply their own templates and platform templates. Desk types that already have automations: **DCA**, **Perps**, **Cash and Carry**. TradingView Strategy desks have no bot form — out of scope.
+Users save a bot as a **template**, or several templates as a **folder** (stored as a template set). They create a new idle or disabled bot from one template, or stamp a whole folder onto a desk. Admins manage **platform** templates and folders on `/admin/templates`. Member libraries stay on `/account/templates`. Every member can apply their own templates and platform templates. Desk types that already have automations: **DCA**, **Flex**, **Cash and Carry**. TradingView Strategy desks have no bot form — out of scope.
 
 Clone on Automations stays. Clone is an in-desk duplicate of one live row. Templates are a library, reusable across desks of the same type.
 
@@ -16,8 +16,8 @@ A live DCA bot still owns one contract (`unique (account_id, symbol)`). Template
 
 ## Current facts this plan sits on
 
-- Desk types: `cash_and_carry`, `perps` (ticket), `perps_bots` (Perps bots), `signal_follower`, `dca`. Type is immutable. Perps automation templates stay `desk_type = perps` and apply only to `perps_bots` desks.
-- Automations today: C&C `paper_rules`; Perps `futures_automation_rules`; DCA `dca_playbooks`; TV Strategy is webhook-only.
+- Desk types: `cash_and_carry`, `manual` (ticket), `flex` (Flex), `signal_follower`, `dca`. Type is immutable. Flex automation templates stay `desk_type = flex` and apply only to `flex` desks.
+- Automations today: C&C `paper_rules`; Flex `futures_automation_rules`; DCA `dca_playbooks`; TV Strategy is webhook-only.
 - Live bot fields are **typed columns**, not JSON, on the live tables. The template library stores a `recipe` JSON snapshot. Clone today is a **client draft** (`dcaCloneIdleDraft`, `cloneFuturesAutomationForm`, `clonePaperLayerForm`) until Save.
 - Writes go through server actions and the service role. Never trust the browser for permissions.
 - Admin is `members.role = admin` or listed email (`click.studio.admin@gmail.com`). Extra UI is admin-only; apply to a desk is not admin-only.
@@ -26,7 +26,7 @@ A live DCA bot still owns one contract (`unique (account_id, symbol)`). Template
 
 | # | Choice | Decision |
 | --- | --- | --- |
-| 1 | Perps / C&C mode after apply | Always **`disabled`**. Source mode is not copied. A folder cannot surprise-trade. The user enables the bot on the desk. DCA apply stays **idle** (not armed). |
+| 1 | Flex / C&C mode after apply | Always **`disabled`**. Source mode is not copied. A folder cannot surprise-trade. The user enables the bot on the desk. DCA apply stays **idle** (not armed). |
 | 2 | Member library | **`/account/templates`**. Login-scoped. View and manage **own** templates and folders. Platform rows stay off this list; members apply them from Automations. Account nav gains Templates. |
 | 3 | Publish to platform | **Copy**, do not promote. The user row stays. Platform is a snapshot with its own id. The member can keep iterating; admins can edit the platform copy without rewriting the user’s library. If the platform name is taken, the confirm dialog asks for another name. |
 | 4 | Folder apply | **Skip failures, keep successes.** Not all-or-nothing. Apply uses the template’s saved contract. After write, a result list shows applied / skipped / failed. One taken contract must not roll back the rest of the folder. |
@@ -41,14 +41,14 @@ A named snapshot of **one** idle bot for **one** `desk_type`.
 
 Stored as versioned JSON (`recipe` + `recipe_version`) plus metadata. Live tables keep evolving with migrations; apply runs the same parsers the Save form uses (defaults for missing keys, reject unknown desk type). Do not create parallel copies of every `dca_playbooks` column.
 
-**Snapshot includes:** contract/symbol if present, sizing, start, averaging, exits, Perps action/trigger plus Indicator / Trend / Secondary Entry / Hard Exit / Move Breakeven, C&C bot filters — the fields a user would type on Automations, except the bot name.
+**Snapshot includes:** contract/symbol if present, sizing, start, averaging, exits, Flex action/trigger plus Indicator / Trend / Secondary Entry / Hard Exit / Move Breakeven, C&C bot filters — the fields a user would type on Automations, except the bot name.
 
-**Snapshot never includes:** the bot name. The template row’s own name is the only name. Apply names the new bot from that template name, shortened to 40 characters. Perps and Cash and Carry add a suffix when that name is already on the desk. Also never stored: API keys, webhook tokens, `webhook_id` (desk-specific door), runtime (`condition_true`, `clips_filled`, `long_*` / `short_*` status, `last_fired_at`, arm/disarm latches), position or working-order ids, reduce-only / desk caps.
+**Snapshot never includes:** the bot name. The template row’s own name is the only name. Apply names the new bot from that template name, shortened to 40 characters. Flex and Cash and Carry add a suffix when that name is already on the desk. Also never stored: API keys, webhook tokens, `webhook_id` (desk-specific door), runtime (`condition_true`, `clips_filled`, `long_*` / `short_*` status, `last_fired_at`, arm/disarm latches), position or working-order ids, reduce-only / desk caps.
 
 After apply:
 
 - DCA: new bot **idle** (not armed).
-- Perps and Cash and Carry: new bot **`disabled`**. Never copy `mode` / `enabled` from the source.
+- Flex and Cash and Carry: new bot **`disabled`**. Never copy `mode` / `enabled` from the source.
 - Signal webhook unbound (`webhook_id` null). Copy: “Bind a Signal on this desk after apply.”
 - User must Save / Arm / Enable as today. Never place orders on apply.
 
@@ -94,7 +94,7 @@ GitHub migrations when this work starts. Names are indicative.
 - `id` uuid
 - `user_id` uuid null (null when `visibility = platform`, or published `backtested`)
 - `visibility` `user` \| `platform` \| `backtested`
-- `desk_type` `dca` \| `perps` \| `cash_and_carry`
+- `desk_type` `dca` \| `flex` \| `cash_and_carry`
 - `name` text
 - `description` text null
 - `starter_pack` boolean, platform only (user rows stay false)
@@ -134,7 +134,7 @@ Save-as-template with a name the owner already uses for that desk type: dialog a
 
 1. Chosen desk `desk_type` must equal the template (or folder) `desk_type`. Wrong type is a hard error.
 2. DCA: insert a new bot. If `(account_id, symbol)` is taken, the wizard asks for another contract or skip. Do not overwrite a live bot.
-3. Perps / C&C: insert a new stacked rule, **`disabled`**. Name collision on the desk: suffix ` (from template)` or ask.
+3. Flex / C&C: insert a new stacked rule, **`disabled`**. Name collision on the desk: suffix ` (from template)` or ask.
 4. Rebind Signal webhook: leave `webhook_id` null.
 5. Never arm, never enable the C&C engine, never place orders.
 6. Paper vs Live: a template is a venue-agnostic snapshot. Apply to whichever mode the desk already has. Size vs ticket-size is the same Save guard as today.
@@ -158,7 +158,7 @@ Tokens from [ui-theme.md](ui-theme.md).
 
 Login library. Not desk-scoped. Account nav: Templates, with Settings, Exchanges, Manage desks.
 
-- Tabs: **My Templates**, **My Folders**, **Shared Templates**, **Shared Folders**. Table with columns, search, desk-type filter, folder filter, click-to-sort, and row checkboxes. Template tabs include **Bots**, between Backtests and Shared with. The column stays narrow so the other columns fit. Each link is a bot on one of this member’s desks whose saved settings match that template. The link text is the bot name, and a long name wraps. The desk name is not shown. The link opens that bot on its desk. A template with no match shows an em dash. Folders and `/admin/templates` do not have this column. Bulk: **Add to folder** (templates), **Export**, **Delete**. Row actions are **Edit**, **Share**, **Backtest**, **Delete**. **Backtest** sits to the right of **Share** and opens New backtest with that template loaded. Cash and Carry, and a DCA or Perps template that cannot replay, have no **Backtest** action. Row **Delete** (confirm) sits with **Edit** and **Share**. Folder delete (row, Edit, and bulk) confirms with **Also delete the templates in this folder**, unticked. Leave it unticked and the templates stay in the library. Tick it and the templates that belong to the folder are deleted, including from any other folder they sit in. A platform template that was only added to a user folder stays in the catalog. The checkbox is hidden when the folder has no templates that would be deleted. **Edit** has **Details** (name, description, folders) and **Backtests**. **Backtests** lists finished runs attached to this template, newest first. Each run shows the same card as the Backtests tab. **Detach** clears that attachment. The run stays in Backtests. A platform run that only shows because the recipes match is not listed on the user template’s Edit dialog. **Share** is a separate action and modal (email grant). **Edit** folder uses **In Folder** / **Not in Folder** columns; Save writes membership. Apply is on Automations.
+- Tabs: **My Templates**, **My Folders**, **Shared Templates**, **Shared Folders**. Table with columns, search, desk-type filter, folder filter, click-to-sort, and row checkboxes. Template tabs include **Bots**, between Backtests and Shared with. The column stays narrow so the other columns fit. Each link is a bot on one of this member’s desks whose saved settings match that template. The link text is the bot name, and a long name wraps. The desk name is not shown. The link opens that bot on its desk. A template with no match shows an em dash. Folders and `/admin/templates` do not have this column. Bulk: **Add to folder** (templates), **Export**, **Delete**. Row actions are **Edit**, **Share**, **Backtest**, **Delete**. **Backtest** sits to the right of **Share** and opens New backtest with that template loaded. Cash and Carry, and a DCA or Flex template that cannot replay, have no **Backtest** action. Row **Delete** (confirm) sits with **Edit** and **Share**. Folder delete (row, Edit, and bulk) confirms with **Also delete the templates in this folder**, unticked. Leave it unticked and the templates stay in the library. Tick it and the templates that belong to the folder are deleted, including from any other folder they sit in. A platform template that was only added to a user folder stays in the catalog. The checkbox is hidden when the folder has no templates that would be deleted. **Edit** has **Details** (name, description, folders) and **Backtests**. **Backtests** lists finished runs attached to this template, newest first. Each run shows the same card as the Backtests tab. **Detach** clears that attachment. The run stays in Backtests. A platform run that only shows because the recipes match is not listed on the user template’s Edit dialog. **Share** is a separate action and modal (email grant). **Edit** folder uses **In Folder** / **Not in Folder** columns; Save writes membership. Apply is on Automations.
 - **Export all** / **Import** on the right of the My Templates / My Folders toolbar, just left of **Hide Filters** / **Show Filters**. Bulk actions sit on the left of that row when rows are selected. Import is a modal: pick a JSON file, then choose templates and folders. Shared tabs keep row **Import** / **Remove** only.
 - **Folders tab:** same table. **Add New Folder** sits on that toolbar and opens a modal for name, desk type, and optional templates. Add templates now or later from Edit. The Templates column lists one name per line (max 5), each with the parameters button. **See All** appears when there are more and opens the full list, still with a parameters button on each name.
 - The same parameters button sits beside template names on My Templates, Shared Templates, admin Templates, folder membership (In Folder / Not in Folder), Share, and Import. Edit template does not open that popup. When a finished run is attached, the backtest icon is beside it on those same names, and on starter-bot pickers in setup and Create Desk, and on the backtest bot picker (each template option, the selected template, and the Template badge). That icon marks the attachment. The parameters button is what opens the popup. A user template also shows a finished run attached to a platform template with the same replay settings, when this member can open that run. The popup uses the same two tabs. The **Backtests** column shows the backtest icon when a finished run is attached. Hover or click opens the same popup on the **Backtests** tab and lists every finished run this member can open. Each card opens that run in a new tab. A template with no run this member can open shows —.
@@ -169,7 +169,7 @@ Login library. Not desk-scoped. Account nav: Templates, with Settings, Exchanges
 
 Admin nav next to Members / Logs. Members who are not admins get the usual admin gate.
 
-**Templates**, **Folders**, and **Condition list** are the tabs. Templates and Folders list **platform** rows only. No user templates, user folders, Scope filter, or owner column. **Condition list** shows the parameter-list grouping for a few saved shapes (one group, two groups, a custom exit, and a Perps Or group) so it can be reviewed. That list is the same component as template parameters, replay, and backtest detail. Inbound **Shared Templates / Shared Folders** live on `/account/templates`, not here. The **Backtests** column shows the backtest icon for a platform template with a finished run this admin can open. Hover or click opens the popup on the **Backtests** tab and lists every such run.
+**Templates**, **Folders**, and **Condition list** are the tabs. Templates and Folders list **platform** rows only. No user templates, user folders, Scope filter, or owner column. **Condition list** shows the parameter-list grouping for a few saved shapes (one group, two groups, a custom exit, and a Flex Or group) so it can be reviewed. That list is the same component as template parameters, replay, and backtest detail. Inbound **Shared Templates / Shared Folders** live on `/account/templates`, not here. The **Backtests** column shows the backtest icon for a platform template with a finished run this admin can open. Hover or click opens the popup on the **Backtests** tab and lists every such run.
 
 - **Edit** has **Details** (rename, description, **Include in Starter Pack**, folder membership) and **Backtests**. **Backtests** lists finished runs attached to that platform template, with the same card as the Backtests tab. **Detach** clears the attachment. The run stays. Folder membership for platform templates is also on the **Folders** tab. Row **Delete** (confirm) is on each platform template and folder. Folder delete uses the same **Also delete the templates in this folder** checkbox. Ticking it deletes the platform templates in that folder, including from any other folder. The Templates table **Starter Pack** column ticks if the template’s own flag is on **or** it sits in a folder whose flag is on. Edit still shows only the template’s own flag. Onboarding (V1 item 5) offers bots from **folders** with this flag and from platform templates whose own flag is on. See [phase-onboarding.md](phase-onboarding.md).
 - **Unpublish** removes the platform row. Members will no longer see it. User copies are unchanged.
@@ -197,7 +197,7 @@ Admin does **not** rewrite a user’s `recipe` JSON in place. Support path: save
 
 ## Recipe JSON (per type, version 1)
 
-Each type has a documented allow-list of keys matching today’s parse functions. Apply maps JSON → `FormData` or the existing `parseDcaPlaybookForm` / Perps / paper parsers, then the same insert as Save. Force Perps/C&C `mode` to disabled after parse.
+Each type has a documented allow-list of keys matching today’s parse functions. Apply maps JSON → `FormData` or the existing `parseDcaPlaybookForm` / Flex / paper parsers, then the same insert as Save. Force Flex/C&C `mode` to disabled after parse.
 
 - **dca:** fields from `parseDcaPlaybookForm` (not leg runtime). `startKind`, symbol, direction, clip, averaging, TP/SL, indicator / Trend, not `webhookId`.
 - **perps:** fields from the automation form (symbol, action, trigger, size). Not `webhookId`, not `conditionTrue`, not source `mode`.
@@ -211,7 +211,7 @@ Bump `recipe_version` when a breaking key is renamed. Old templates: parser fill
 | --- | --- | --- |
 | 1 | Spec + migrations | Done |
 | 2 | Snapshot / apply DCA | Done |
-| 3 | Perps rules | Done |
+| 3 | Flex rules | Done |
 | 4 | Cash and Carry | Done |
 | 5 | Folders (template sets) | Done |
 | 6 | `/account/templates` | Done |
@@ -230,7 +230,7 @@ Stop after acceptance. Do not start Fly.io, Hyperliquid, scale-in, or backup kli
 - In-place edit of another member’s `recipe` JSON
 - Marketplace
 - Fly.io, private APIs from the browser
-- Strategy Builder and bot structures, including their full test (V1 item 7). Replaces the parked position builder / scale-in desk. Perps entry conditions are an And/Or stack. See [phase-strategy-builder.md](phase-strategy-builder.md).
+- Strategy Builder and bot structures, including their full test (V1 item 7). Replaces the parked position builder / scale-in desk. Flex entry conditions are an And/Or stack. See [phase-strategy-builder.md](phase-strategy-builder.md).
 - Onboarding delivery (V1 item 5). The wizard applies templates from platform folders flagged Include in Starter Pack, and from platform templates with that flag, idle or disabled, and never copies them into the member library. See [phase-onboarding.md](phase-onboarding.md).
 - Plans, payments, and affiliates (shipped; [phase-membership.md](phase-membership.md))
 - Hyperliquid leftover desk-test (V1 system test); MEXC (V2) ([phase-hyperliquid.md](phase-hyperliquid.md))
