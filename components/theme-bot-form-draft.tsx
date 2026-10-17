@@ -1156,10 +1156,19 @@ export function ThemeBotFormDraft() {
         multiplier: shortMultiplier,
       }),
     entryRows:
-      desk !== "cnc" && entryRows.some((row) => !entryDraftComplete(row.draft)),
+      desk !== "cnc" &&
+      entryRows.some(
+        (row) =>
+          !(desk === "perps" && row.draft.kind === "unset") &&
+          !entryDraftComplete(row.draft),
+      ),
     shortEntryRows:
       themeBothExits &&
-      shortEntryRows.some((row) => !entryDraftComplete(row.draft)),
+      shortEntryRows.some(
+        (row) =>
+          !(desk === "perps" && row.draft.kind === "unset") &&
+          !entryDraftComplete(row.draft),
+      ),
     exitKind: desk !== "cnc" && exitClauseListMissing(exitClauses),
     shortExitKind: themeBothExits && exitClauseListMissing(shortClauses),
     priceLevel: requirePrice && !filled(priceLevel),
@@ -2352,6 +2361,7 @@ export function ThemeBotFormDraft() {
                 fieldClass={fieldClass}
                 labelClass={labelClass}
                 showErrors={showFieldErrors}
+                optionalAddedKind
                 groupFooter={perpsOrderFooter(
                   entryRows,
                   longExtraOrders,
@@ -2552,6 +2562,7 @@ export function ThemeBotFormDraft() {
               fieldClass={fieldClass}
               labelClass={labelClass}
               showErrors={showFieldErrors}
+              optionalAddedKind
               groupFooter={perpsOrderFooter(
                 shortEntryRows,
                 shortExtraOrders,

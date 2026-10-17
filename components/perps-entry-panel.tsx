@@ -286,7 +286,9 @@ export function perpsEntryDraftMissing(
       return true;
     }
   }
-  return draft.entryRows.some((row) => !entryDraftComplete(row.draft));
+  return draft.entryRows.some(
+    (row) => row.draft.kind !== "unset" && !entryDraftComplete(row.draft),
+  );
 }
 
 export function PerpsEntryPanel({
@@ -656,6 +658,7 @@ export function PerpsEntryPanel({
       fieldClass={fieldClass}
       labelClass={labelClass}
       showErrors={showErrors}
+      optionalAddedKind
       groupFooter={
         order && onOrderChange
           ? (groupIndex) => {

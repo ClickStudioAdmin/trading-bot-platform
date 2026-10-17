@@ -102,6 +102,32 @@ assert.equal(
   true,
 );
 assert.equal(perpsEntryDraftMissing(openedLong.long, false), false);
+assert.equal(
+  perpsEntryDraftMissing(
+    {
+      ...openedLong.long,
+      entryRows: [{ key: "extra", join: "and", draft: { kind: "unset" } }],
+    },
+    false,
+  ),
+  false,
+);
+assert.equal(
+  perpsEntryDraftMissing(
+    {
+      ...openedLong.long,
+      entryRows: [
+        {
+          key: "extra",
+          join: "and",
+          draft: { kind: "price", triggerBy: "last", compare: "gte", price: "" },
+        },
+      ],
+    },
+    false,
+  ),
+  true,
+);
 
 const blankIndicator = {
   family: "indicator" as const,
