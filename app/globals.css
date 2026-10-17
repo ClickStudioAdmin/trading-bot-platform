@@ -177,6 +177,11 @@ button:not(:disabled),
   cursor: pointer;
 }
 
+/* Theme condition builders only. The step is canvas; each group matches a normal form card. */
+.condition-shell .condition-group {
+  background-color: var(--color-surface);
+}
+
 /* Step-card hairlines. A Tailwind child variant set the width but not border-color, so the line painted as the text colour. */
 .bot-step-body > :not([hidden]) {
   padding-top: 1.25rem;

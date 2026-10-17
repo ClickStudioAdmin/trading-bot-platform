@@ -174,6 +174,7 @@ export function BotFormStep({
   hint,
   locked = false,
   defaultCollapsed = false,
+  shell = "surface",
   className,
   children,
 }: {
@@ -182,16 +183,19 @@ export function BotFormStep({
   locked?: boolean;
   /** Start closed. Live bots pass this when the bot owns an open position. */
   defaultCollapsed?: boolean;
+  /** Canvas shell is the theme-page trial: black outer card, surface groups. */
+  shell?: "surface" | "canvas";
   className?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(!defaultCollapsed);
   const panelId = useId();
+  const canvasShell = shell === "canvas";
   return (
     <section
-      className={`min-w-0 overflow-hidden rounded-card border border-line bg-surface${
-        className ? ` ${className}` : ""
-      }`}
+      className={`min-w-0 overflow-hidden rounded-card border border-line ${
+        canvasShell ? "condition-shell bg-canvas" : "bg-surface"
+      }${className ? ` ${className}` : ""}`}
     >
       <h3
         className={`${botStepTitleClass} bg-surface-raised${
