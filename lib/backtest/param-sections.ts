@@ -684,7 +684,7 @@ function repeatLevelRows(action: StoredExitAction): ParamRow[] {
       const rows: ParamRow[] = [
         { label: "Type", value: percent ? "Percentage" : "Price" },
         { label: percent ? "%" : "Price", value: levels.target || "—" },
-        { label: "Trigger", value: priceSourceLabel(levels.trigger) },
+        { label: "Price source", value: priceSourceLabel(levels.trigger) },
         { label: "Order type", value: orderLabel(levels.orderType === "limit") },
       ];
       if (levels.orderType === "limit") {
@@ -714,7 +714,7 @@ function repeatLevelRows(action: StoredExitAction): ParamRow[] {
       const rows: ParamRow[] = [
         { label: "Type", value: percent ? "Percentage" : "Price" },
         { label: percent ? "%" : "Price", value: levels.target || "—" },
-        { label: "Trigger", value: priceSourceLabel(levels.trigger) },
+        { label: "Price source", value: priceSourceLabel(levels.trigger) },
         { label: "Order type", value: orderLabel(levels.orderType === "limit") },
       ];
       if (levels.orderType === "limit") {
@@ -1036,7 +1036,7 @@ function perpsExitLevel(
   const rows: ParamRow[] = [
     { label: "Type", value: percent ? "Percentage" : "Price" },
     { label: percent ? "%" : "Price", value: percent ? pct(level) : num(level) },
-    { label: "Trigger", value: priceSourceLabel(trigger) },
+    { label: "Price source", value: priceSourceLabel(trigger) },
     { label: "Order type", value: orderLabel(orderType === "limit") },
   ];
   if (orderType === "limit") {

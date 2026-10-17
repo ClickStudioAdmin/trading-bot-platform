@@ -1786,7 +1786,7 @@ export function ThemeBotFormDraft() {
                 />
               )}
             </Field>
-            <Field label="Trigger" required>
+            <Field label="Price source" required>
               <AppSelect
                 className={fieldClass}
                 value={trigger}
@@ -2065,7 +2065,7 @@ export function ThemeBotFormDraft() {
                   />
                 )}
               </Field>
-              <Field label="Trigger" required>
+              <Field label="Price source" required>
                 <AppSelect
                   className={fieldClass}
                   value={trigger}

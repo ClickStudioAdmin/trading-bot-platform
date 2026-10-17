@@ -1390,7 +1390,7 @@ function RuleCard({
             />
           )}
         </BotField>
-        <BotField label="Trigger" required>
+        <BotField label="Price source" required>
           <AppSelect
             name={fieldName("tpTrigger")}
             value={trigger}
@@ -1641,7 +1641,7 @@ function RuleCard({
                   />
                 )}
               </BotField>
-              <BotField label="Trigger" required>
+              <BotField label="Price source" required>
                 <AppSelect
                   name={fieldName("slTrigger")}
                   value={trigger}
