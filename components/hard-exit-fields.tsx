@@ -97,7 +97,7 @@ export function HardExitFields({
   seriesIndex?: number;
   disabledKinds?: HardExitTrigger[];
   disabledWebhookIds?: string[];
-  /** First row of the Condition Builder. Added rows stay Trigger. */
+  /** First row of the Condition Builder. Added rows use Condition Type too. */
   lead?: boolean;
   /** Exit groups pick the trigger on Condition Type. Keep the posted name. */
   showTrigger?: boolean;
@@ -117,8 +117,8 @@ export function HardExitFields({
         <input type="hidden" name={`${prefix}Trigger`} value={value.trigger} />
       ) : null}
       {showTrigger ? (
-      <label className={lead ? `${labelClass} whitespace-nowrap` : labelClass}>
-        <HintLabel text={lead ? "Condition Type" : "Trigger"} required />
+      <label className={`${labelClass} whitespace-nowrap`}>
+        <HintLabel text="Condition Type" required />
         <AppSelect
           name={named ? `${prefix}Trigger` : undefined}
           value={value.trigger === "unset" ? "" : value.trigger}
@@ -143,7 +143,7 @@ export function HardExitFields({
                 : fieldClass
           }
         >
-          <option value="">{lead ? "Select Condition Type" : "Select Trigger"}</option>
+          <option value="">Select Condition Type</option>
           {TRIGGER_OPTIONS.map((option) => (
             <option
               key={option.value}
