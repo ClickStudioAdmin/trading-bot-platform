@@ -20,17 +20,7 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import { dcaAveragingKind, dcaIntervalParts } from "@/lib/dca/playbook";
-import {
-  hardExitParts as splitExitDraft,
-  templateHardExit,
-  type HardExitDraft,
-  type TemplateHardExitSignal,
-} from "@/lib/dca/hard-exit";
-import {
-  actionKindLabel,
-  scopeLabel,
-  type StoredExitAction,
-} from "@/lib/strategy/exit-actions";
+import type { TemplateHardExitSignal } from "@/lib/dca/hard-exit";
 import {
   resolveEntryStack,
   type EntryStack,
@@ -58,7 +48,6 @@ export type ParamCondition = { rows: ParamRow[] };
  */
 export type ParamStack = {
   title?: string;
-  rows?: ParamRow[];
   groups: ParamCondition[][];
 };
 
@@ -66,7 +55,6 @@ export type ParamSection = {
   title: string;
   groups: ParamGroup[];
   stack?: ParamStack;
-  stacks?: ParamStack[];
 };
 
 export type BacktestWindowFields = {
@@ -670,78 +658,6 @@ function nestBreakeven(
   return { title: group.title, rows: [...group.rows, ...extra] };
 }
 
-function actionPriceRows(action: StoredExitAction): ParamRow[] {
-  if (action.kind === "take_profit") {
-    if (action.takeProfitPrice != null) {
-      return [{ label: "Target price", value: num(action.takeProfitPrice) }];
-    }
-    if (action.takeProfitPct != null) {
-      return [{ label: "Target %", value: pct(action.takeProfitPct) }];
-    }
-  }
-  if (action.kind === "stop_loss") {
-    if (action.stopLossPrice != null) {
-      return [{ label: "Stop price", value: num(action.stopLossPrice) }];
-    }
-    if (action.stopLossPct != null) {
-      return [{ label: "Stop loss %", value: pct(action.stopLossPct) }];
-    }
-  }
-  if (action.kind === "trailing_stop") {
-    const rows: ParamRow[] = [];
-    if (action.trailingPct != null) {
-      rows.push({ label: "Trailing %", value: pct(action.trailingPct) });
-    }
-    if (action.trailingDistance != null) {
-      rows.push({ label: "Distance", value: num(action.trailingDistance) });
-    }
-    if (action.trailingActivation != null) {
-      rows.push({ label: "Activation", value: num(action.trailingActivation) });
-    }
-    return rows;
-  }
-  return [];
-}
-
-function actionDraftRows(
-  draft: HardExitDraft,
-  side: "long" | "short",
-): ParamRow[] | null {
-  const parts = splitExitDraft(draft);
-  return hardExitAnchorRows(parts.filter, templateHardExit(parts.signal), side);
-}
-
-function exitActionStacks(
-  actions: readonly StoredExitAction[],
-  side: "long" | "short",
-): ParamStack[] {
-  return actions.map((action) => {
-    const when = action.kind === "close" ? "Fire when" : "Enable when";
-    const rows: ParamRow[] = [
-      { label: "Action", value: actionKindLabel(action.kind) },
-      { label: "Scope", value: scopeLabel(action.scope) },
-      ...actionPriceRows(action),
-    ];
-    if (action.groups.length === 0) {
-      rows.push({
-        label: when,
-        value: action.kind === "close" ? "Fills in profit" : "Always on",
-      });
-    }
-    return {
-      title: actionKindLabel(action.kind),
-      rows,
-      groups: action.groups.flatMap((group) => {
-        const conditions = [group.anchor, ...group.rows].flatMap((draft) => {
-          const condition = actionDraftRows(draft, side);
-          return condition ? [{ rows: condition }] : [];
-        });
-        return conditions.length > 0 ? [conditions] : [];
-      }),
-    };
-  });
-}
-
 function dcaExitSections(recipe: DcaTemplateRecipe): ParamSection[] {
   const sides: Array<"long" | "short"> =
     recipe.direction === "both"
@@ -751,15 +667,6 @@ function dcaExitSections(recipe: DcaTemplateRecipe): ParamSection[] {
         : ["long"];
   return sides.map((side) => {
     const ownShort = side === "short" && recipe.direction === "both";
-    const actions = ownShort ? recipe.shortExitActions : recipe.exitActions;
-    const title = side === "short" ? "Short Exit Conditions" : "Long Exit Conditions";
-    if (actions && actions.length > 0) {
-      return {
-        title,
-        groups: [],
-        stacks: exitActionStacks(actions, side),
-      };
-    }
     const custom = hardExitParts(
       "Custom conditions",
       ownShort ? recipe.shortExitIf : recipe.exitIf,
@@ -768,7 +675,10 @@ function dcaExitSections(recipe: DcaTemplateRecipe): ParamSection[] {
       ownShort ? recipe.shortExitStack : recipe.exitStack,
     );
     return {
-      title,
+      title:
+        side === "short"
+          ? "Short Exit Conditions"
+          : "Long Exit Conditions",
       groups: [
         ...dcaClassicGroups(recipe, side),
         ...(custom.group ? [custom.group] : []),
@@ -1191,16 +1101,6 @@ function perpsExitSections(
           shortClassic.breakevenOffsetPct,
         )
       : longClassic;
-    const actions = ownShort ? recipe.shortEntry?.actions : recipe.exitActions;
-    const title =
-      exitSide === "short" ? "Short Exit Conditions" : "Long Exit Conditions";
-    if (actions && actions.length > 0) {
-      return {
-        title,
-        groups: [],
-        stacks: exitActionStacks(actions, exitSide),
-      };
-    }
     const custom = hardExitParts(
       "Custom conditions",
       ownShort ? (short?.exitIf ?? null) : recipe.exitIf,
@@ -1209,7 +1109,10 @@ function perpsExitSections(
       ownShort ? (short?.exitStack ?? null) : recipe.exitStack,
     );
     return {
-      title,
+      title:
+        exitSide === "short"
+          ? "Short Exit Conditions"
+          : "Long Exit Conditions",
       groups: [...classic, ...(custom.group ? [custom.group] : [])],
       stack: custom.stack,
     };
@@ -1337,11 +1240,7 @@ function withoutBotName(sections: ParamSection[]): ParamSection[] {
       const rows = group.rows.filter((row) => row.label !== "Name");
       return rows.length > 0 ? [{ ...group, rows }] : [];
     });
-    if (
-      groups.length === 0 &&
-      !section.stack &&
-      !(section.stacks && section.stacks.length > 0)
-    ) {
+    if (groups.length === 0 && !section.stack) {
       return [];
     }
     return [{ ...section, groups }];
@@ -1407,27 +1306,15 @@ function sectionRowScopes(
       scope: group.title ?? section.title,
     })),
   );
-  const stacks = [
-    ...(section.stack ? [section.stack] : []),
-    ...(section.stacks ?? []),
-  ];
-  const fromStack = stacks.flatMap((stack) => {
-    const head = (stack.rows ?? []).map((row) => ({
-      label: row.label,
-      value: row.value,
-      scope: stack.title ?? section.title,
-    }));
-    const groups = stack.groups.flatMap((conditions, index) =>
-      conditions.flatMap((condition) =>
-        condition.rows.map((row) => ({
-          label: row.label,
-          value: row.value,
-          scope: stack.title ? `${stack.title} · Group ${index + 1}` : `Group ${index + 1}`,
-        })),
-      ),
-    );
-    return [...head, ...groups];
-  });
+  const fromStack = (section.stack?.groups ?? []).flatMap((conditions, index) =>
+    conditions.flatMap((condition) =>
+      condition.rows.map((row) => ({
+        label: row.label,
+        value: row.value,
+        scope: `Group ${index + 1}`,
+      })),
+    ),
+  );
   return [...fromGroups, ...fromStack];
 }
 

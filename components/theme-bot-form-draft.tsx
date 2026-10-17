@@ -57,7 +57,6 @@ import {
   exitClausesFromSaved,
   type ExitBuilderClause,
 } from "@/lib/strategy/exit-clauses";
-import { exitCardsBlockReason } from "@/lib/strategy/exit-actions";
 import {
   EntryConditionStack,
   entryConflictSlots,
@@ -1199,12 +1198,8 @@ export function ThemeBotFormDraft() {
           !(desk === "flex" && row.draft.kind === "unset") &&
           !entryDraftComplete(row.draft),
       ),
-    exitKind:
-      desk !== "cnc" &&
-      (exitClauseListMissing(exitClauses) || Boolean(exitCardsBlockReason(exitClauses))),
-    shortExitKind:
-      themeBothExits &&
-      (exitClauseListMissing(shortClauses) || Boolean(exitCardsBlockReason(shortClauses))),
+    exitKind: desk !== "cnc" && exitClauseListMissing(exitClauses),
+    shortExitKind: themeBothExits && exitClauseListMissing(shortClauses),
     priceLevel: requirePrice && !filled(priceLevel),
     shortPriceLevel: requireShortPrice && !filled(shortPriceLevel),
     limitPrice: requireLimitPrice,

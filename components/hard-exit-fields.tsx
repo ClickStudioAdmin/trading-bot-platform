@@ -82,7 +82,6 @@ export function HardExitFields({
   disabledWebhookIds = [],
   showTrigger = true,
   showErrors = false,
-  embed = false,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -101,8 +100,6 @@ export function HardExitFields({
   showTrigger?: boolean;
   /** Paint empty required controls after the form has been edited. */
   showErrors?: boolean;
-  /** Join these fields to the parent grid instead of starting a new row. */
-  embed?: boolean;
 }) {
   const column = useBotColumnLayout();
   const webhookChoices =
@@ -111,15 +108,11 @@ export function HardExitFields({
     !webhooks.some((hook) => hook.id === value.webhookId)
       ? [...webhooks, { id: value.webhookId, name: "Webhook (removed)" }]
       : webhooks;
-  const triggerInput =
-    showTrigger || !named || value.trigger === "unset" ? null : (
-      <input type="hidden" name={`${prefix}Trigger`} value={value.trigger} />
-    );
   return (
-    <>
-    {embed ? triggerInput : null}
-    <div className={embed ? "contents" : gridClass}>
-      {embed ? null : triggerInput}
+    <div className={gridClass}>
+      {showTrigger ? null : named && value.trigger !== "unset" ? (
+        <input type="hidden" name={`${prefix}Trigger`} value={value.trigger} />
+      ) : null}
       {showTrigger ? (
       <label className={`${labelClass} whitespace-nowrap`}>
         <HintLabel text="Condition Type" required />
@@ -389,6 +382,5 @@ export function HardExitFields({
         </div>
       )}
     </div>
-    </>
   );
 }

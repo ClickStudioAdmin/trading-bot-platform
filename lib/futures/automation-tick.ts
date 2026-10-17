@@ -16,15 +16,6 @@ import {
   perpsExitForSide,
 } from "./conditions";
 import { entryStackListensOnPriceTick, entryStackMatchesWebhook } from "@/lib/strategy/expr";
-import {
-  exitClaimsCover,
-  sideExitActions,
-} from "@/lib/strategy/exit-actions";
-import {
-  applyPaperExitClaims,
-  decideOpenExit,
-  saveExitRuntime,
-} from "@/lib/strategy/exit-desk";
 import { hardExitMet } from "@/lib/dca/hard-exit";
 import {
   exitExpressionMet,
@@ -422,16 +413,12 @@ export async function fireWebhookAutomationEntries(input: {
   const klineCache = new Map<string, CandleBar[]>();
   const needsPrice = matchedRows.some((raw) => {
     const rule = parseFuturesAutomationRow(raw as Record<string, unknown>);
-    return (
-      Boolean(rule.exitActions?.length) ||
-      Boolean(rule.shortEntry?.actions?.length) ||
-      perpsAutomationLegs(rule).some(
-        (leg) =>
-          leg.rule.entrySource === "price" ||
-          leg.rule.entryStack.leaves.some((leaf) => leaf.kind === "price") ||
-          leg.rule.exitHard?.trigger === "price" ||
-          (leg.rule.exitStack?.leaves ?? []).some((leaf) => leaf.kind === "price"),
-      )
+    return perpsAutomationLegs(rule).some(
+      (leg) =>
+        leg.rule.entrySource === "price" ||
+        leg.rule.entryStack.leaves.some((leaf) => leaf.kind === "price") ||
+        leg.rule.exitHard?.trigger === "price" ||
+        (leg.rule.exitStack?.leaves ?? []).some((leaf) => leaf.kind === "price"),
     );
   });
   let tickers = new Map<string, BybitTicker>();
@@ -447,8 +434,7 @@ export async function fireWebhookAutomationEntries(input: {
     if (!rule.id) {
       continue;
     }
-    const exitWebhookHit = ruleUsesExitWebhook(rule, input.webhookId) ||
-      (["long", "short"] as const).some((side) => {
+    const exitWebhookHit = (["long", "short"] as const).some((side) => {
       const exit = perpsExitForSide(rule, side);
       return (
         (exit.exitHard?.trigger === "webhook" &&
@@ -472,20 +458,6 @@ export async function fireWebhookAutomationEntries(input: {
       const prices = ticker ? tickerTriggerPrices(ticker) : null;
       let flattened = false;
       for (const open of owned) {
-        const ownedExit = await commitOwnedExit({
-          rule,
-          account,
-          open,
-          barsByTimeframe,
-          prices,
-          firedWebhookId: input.webhookId,
-        });
-        if (ownedExit) {
-          if (ownedExit === "flat") {
-            flattened = true;
-          }
-          continue;
-        }
         const exit = perpsExitForSide(rule, open.side);
         const exitBars = exit.exitIf
           ? (barsByTimeframe.get(exit.exitIf.timeframe) ?? [])
@@ -691,104 +663,6 @@ export async function fireWebhookAutomationEntries(input: {
   return { fired };
 }
 
-function ruleUsesExitWebhook(
-  rule: FuturesAutomationRule,
-  webhookId: string,
-): boolean {
-  const lists = [rule.exitActions, rule.shortEntry?.actions];
-  for (const list of lists) {
-    for (const action of list ?? []) {
-      for (const group of action.groups) {
-        for (const draft of [group.anchor, ...group.rows]) {
-          if (draft.trigger === "webhook" && draft.webhookId === webhookId) {
-            return true;
-          }
-        }
-      }
-    }
-  }
-  return false;
-}
-
-async function commitOwnedExit(input: {
-  rule: FuturesAutomationRule;
-  account: DeskAccount;
-  open: FuturesPosition;
-  barsByTimeframe: Map<string, CandleBar[]>;
-  prices: { last: number | null; mark: number | null; index: number | null } | null;
-  firedWebhookId?: string | null;
-}): Promise<false | "held" | "flat"> {
-  const actions = sideExitActions(
-    input.rule.exitActions,
-    input.rule.shortEntry?.actions,
-    input.rule.direction,
-    input.open.side,
-  );
-  if (!actions) {
-    return false;
-  }
-  const mark = input.prices?.mark ?? input.prices?.last ?? null;
-  const last = input.prices?.last ?? mark;
-  if (!(mark != null && mark > 0) || !(last != null && last > 0)) {
-    return "held";
-  }
-  const settled = await decideOpenExit({
-    actions,
-    positionId: input.open.id,
-    side: input.open.side,
-    qty: input.open.qty,
-    entryPrice: input.open.entryPrice,
-    mark,
-    last,
-    barsByTimeframe: input.barsByTimeframe,
-    firedWebhookId: input.firedWebhookId,
-  });
-  if (!settled) {
-    return "held";
-  }
-  if (settled.claims.length === 0) {
-    await saveExitRuntime(input.open.id, settled.runtime);
-    return "held";
-  }
-  const full = exitClaimsCover(settled.claims, input.open.qty);
-  if (input.account.mode === "paper") {
-    const applied = await applyPaperExitClaims({
-      mode: input.account.mode,
-      position: input.open,
-      price: last,
-      claims: settled.claims,
-      runtime: settled.runtime,
-    });
-    return applied.applied && applied.remaining <= 1e-8 ? "flat" : "held";
-  }
-  if (!full) {
-    return "held";
-  }
-  const closed = await runFuturesCommand({
-    actor: {
-      userId: input.account.userId,
-      accountId: input.open.accountId,
-      mode: input.account.mode,
-    },
-    command: {
-      kind: "place",
-      action: "flatten",
-      symbol: input.open.symbol,
-      positionId: input.open.id,
-      orderType: "market",
-      source: input.firedWebhookId ? "webhook" : "engine",
-      ruleId: input.rule.id,
-      ruleName: input.rule.name,
-      reason: "exit_actions",
-    },
-  });
-  if (!closed.ok) {
-    return "held";
-  }
-  await saveExitRuntime(input.open.id, settled.runtime);
-  return "flat";
-}
-
 async function monitorOwnedFuturesPositions(input: {
   opens: FuturesPosition[];
   rules: {
@@ -815,12 +689,6 @@ async function monitorOwnedFuturesPositions(input: {
       continue;
     }
     const { rule, account } = owned;
-    const sideActions = sideExitActions(
-      rule.exitActions,
-      rule.shortEntry?.actions,
-      rule.direction,
-      open.side,
-    );
     const watchedExit = perpsExitForSide(rule, open.side);
     const sideClassic =
       open.side === "short" && rule.direction === "both"
@@ -833,7 +701,6 @@ async function monitorOwnedFuturesPositions(input: {
       ? sideClassic.breakevenOffsetPct
       : rule.breakevenOffsetPct;
     if (
-      !sideActions &&
       !watchedExit.exitIf &&
       !watchedExit.exitHard &&
       watchedExit.exitStack.leaves.length === 0 &&
@@ -866,16 +733,6 @@ async function monitorOwnedFuturesPositions(input: {
     const exitBars = watchedExit.exitIf
       ? (barsByTimeframe.get(watchedExit.exitIf.timeframe) ?? [])
       : [];
-    if (sideActions) {
-      await commitOwnedExit({
-        rule,
-        account,
-        open,
-        barsByTimeframe,
-        prices,
-      });
-      continue;
-    }
     const exitMet = exitExpressionMet({
       first: hardExitMet({
         filter: watchedExit.exitIf,
@@ -1137,26 +994,8 @@ async function fireAutomationRule(input: {
       ruleId: rule.id,
       ruleName: rule.name,
       reason: input.reason,
-      tpsl:
-        rule.action === "flatten" ||
-        sideExitActions(
-          rule.exitActions,
-          rule.shortEntry?.actions,
-          rule.direction,
-          rule.action === "sell" ? "short" : "long",
-        )
-          ? null
-          : rule.tpsl,
-      trailing:
-        rule.action === "flatten" ||
-        sideExitActions(
-          rule.exitActions,
-          rule.shortEntry?.actions,
-          rule.direction,
-          rule.action === "sell" ? "short" : "long",
-        )
-          ? null
-          : rule.trailing,
+      tpsl: rule.action === "flatten" ? null : rule.tpsl,
+      trailing: rule.action === "flatten" ? null : rule.trailing,
     },
   });
   if (!result.ok) {

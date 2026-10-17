@@ -1359,38 +1359,6 @@ async function syncDcaPlaybookExitsUnlocked(input: {
   if (!open) {
     return;
   }
-  const sideActions =
-    input.side === "short" && input.playbook.direction === "both"
-      ? input.playbook.shortExitActions
-      : input.playbook.exitActions;
-  if (sideActions && sideActions.length > 0) {
-    if (open.takeProfit != null || open.stopLoss != null) {
-      await runFuturesCommand({
-        actor: playbookActor(input.playbook, input.mode),
-        command: {
-          kind: "set-tpsl",
-          positionId: open.id,
-          symbol: input.playbook.symbol,
-          form: new FormData(),
-          tpsl: emptyFuturesTpsl(),
-          reason: "exit_actions",
-        },
-      });
-    }
-    if (open.trailingStop != null) {
-      await runFuturesCommand({
-        actor: playbookActor(input.playbook, input.mode),
-        command: {
-          kind: "set-trailing",
-          positionId: open.id,
-          symbol: input.playbook.symbol,
-          form: new FormData(),
-          trailing: null,
-        },
-      });
-    }
-    return;
-  }
   const leg = dcaLegFor(input.playbook, input.side);
   const classic = dcaClassicForSide(input.playbook, input.side);
   const atr = await atrForPlaybook(
