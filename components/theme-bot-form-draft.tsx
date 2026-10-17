@@ -2199,10 +2199,11 @@ export function ThemeBotFormDraft() {
         <>
         <BotFormStep
           shell="canvas"
+          badge="Condition Builder"
           title={
             (desk === "perps" ? perpsDirection : direction) === "short"
-              ? "Short Entry Condition Builder"
-              : "Long Entry Condition Builder"
+              ? "Short Entry"
+              : "Long Entry"
           }
         >
         {(() => {
@@ -2465,7 +2466,7 @@ export function ThemeBotFormDraft() {
         </BotFormStep>
 
         {desk === "perps" && perpsDirection === "both" ? (
-          <BotFormStep shell="canvas" title="Short Entry Condition Builder">
+          <BotFormStep shell="canvas" badge="Condition Builder" title="Short Entry">
             {(() => {
               const lead = (
                 <>
@@ -2621,7 +2622,7 @@ export function ThemeBotFormDraft() {
         ) : null}
 
         {desk === "dca" && direction === "both" ? (
-          <BotFormStep shell="canvas" title="Short Entry Condition Builder">
+          <BotFormStep shell="canvas" badge="Condition Builder" title="Short Entry">
             {(() => {
               const lead = (
                 <>
@@ -2969,7 +2970,7 @@ export function ThemeBotFormDraft() {
         ) : desk === "perps" && !closing ? (
           <>
             {perpsDirection !== "short" ? (
-              <BotFormStep shell="canvas" title="Long Additional Orders Condition Builder">
+              <BotFormStep shell="canvas" badge="Condition Builder" title="Long Additional Orders">
                 <PerpsAdditionalOrders
                   groups={longAddGroups}
                   onGroupsChange={setLongAddGroups}
@@ -2989,7 +2990,7 @@ export function ThemeBotFormDraft() {
               </BotFormStep>
             ) : null}
             {perpsDirection === "short" || perpsDirection === "both" ? (
-              <BotFormStep shell="canvas" title="Short Additional Orders Condition Builder">
+              <BotFormStep shell="canvas" badge="Condition Builder" title="Short Additional Orders">
                 <PerpsAdditionalOrders
                   groups={shortAddGroups}
                   onGroupsChange={setShortAddGroups}
@@ -3012,7 +3013,7 @@ export function ThemeBotFormDraft() {
         ) : null}
 
         {(desk === "perps" ? perpsDirection !== "short" : direction !== "short") ? (
-          <BotFormStep shell="canvas" title="Long Exit Condition Builder">
+          <BotFormStep shell="canvas" badge="Condition Builder" title="Long Exit">
             <ExitSideBuilder
               clauses={exitClauses}
               onChange={(next) => commitThemeExit(next, "primary")}
@@ -3033,7 +3034,7 @@ export function ThemeBotFormDraft() {
         {(desk === "perps"
           ? perpsDirection === "short" || perpsDirection === "both"
           : direction === "short" || direction === "both") ? (
-          <BotFormStep shell="canvas" title="Short Exit Condition Builder">
+          <BotFormStep shell="canvas" badge="Condition Builder" title="Short Exit">
             <ExitSideBuilder
               clauses={
                 (desk === "perps" ? perpsDirection === "both" : direction === "both")
