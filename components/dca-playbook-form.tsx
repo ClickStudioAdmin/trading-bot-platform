@@ -1168,6 +1168,7 @@ export function DcaPlaybookForm({
   const [intervalUnit, setIntervalUnit] = useState<DcaIntervalUnit>(
     intervalParts.unit,
   );
+  const [intervalValue, setIntervalValue] = useState(intervalParts.value);
   const [sizeMultiplier, setSizeMultiplier] = useState(
     source ? String(source.sizeMultiplier) : "1",
   );
@@ -1827,6 +1828,7 @@ export function DcaPlaybookForm({
       maxValueKind: maxValueMode,
       dipPct,
       intervalUnit,
+      intervalValue,
       sizeMultiplier,
       deviationMultiplier,
       spacingKind,
@@ -2225,7 +2227,11 @@ export function DcaPlaybookForm({
               onChange={(event) =>
                 applyDcaStartKind(side, event.target.value as DcaStartKind)
               }
-              className={conditionFieldClass(fieldClass, column)}
+              className={
+                dirty && value === ""
+                  ? conditionFieldClass(botFieldInvalidClass, column)
+                  : conditionFieldClass(fieldClass, column)
+              }
             >
               {value === "immediate" ? (
                 <option value="immediate">Immediate</option>
@@ -2288,6 +2294,7 @@ export function DcaPlaybookForm({
                 quoteLabel={policy.quoteLabel}
                 seriesSlots={entryConflictSlots(dcaStackAnchor(side), rows)}
                 seriesIndex={0}
+                priceInvalid={dirty && asNumber(shortLeg ? shortArmPrice : armPrice) == null}
               />
             </div>
           </BotFormGroup>
@@ -2306,7 +2313,11 @@ export function DcaPlaybookForm({
                         ? setShortWebhookId(event.target.value)
                         : setWebhookId(event.target.value)
                     }
-                    className={fieldClass}
+                    className={
+                      dirty && hookId.trim() === ""
+                        ? botFieldInvalidClass
+                        : fieldClass
+                    }
                   >
                     {signalWebhooks.map((row) => (
                       <option
@@ -2380,6 +2391,7 @@ export function DcaPlaybookForm({
                 }
                 seriesSlots={entryConflictSlots(dcaStackAnchor(side), rows)}
                 seriesIndex={0}
+                showErrors={dirty}
               />
             </div>
           </BotFormGroup>
@@ -2416,6 +2428,7 @@ export function DcaPlaybookForm({
                 }
                 seriesSlots={entryConflictSlots(dcaStackAnchor(side), rows)}
                 seriesIndex={0}
+                showErrors={dirty}
               />
             </div>
           </BotFormGroup>
@@ -2442,6 +2455,7 @@ export function DcaPlaybookForm({
           gridClass={fieldRowClass5}
           fieldClass={fieldClass}
           labelClass={labelClass}
+          showErrors={dirty}
           groupFooter={(groupIndex) => {
             const key = entryGroupOrderKey(rows, groupIndex);
             const extra = shortLeg ? shortExtraOrders : longExtraOrders;
@@ -2458,6 +2472,14 @@ export function DcaPlaybookForm({
                     quoteLabel={quote}
                     baseCoin={base}
                     fieldClass={sizeError ? botFieldInvalidClass : fieldClass}
+                    sizeInputClass={
+                      sizeError ||
+                      (dirty &&
+                        derivedClip == null &&
+                        asNumber(clipSize) == null)
+                        ? botFieldInvalidClass
+                        : fieldClass
+                    }
                     gridClass={fieldRowClass}
                     named={!shortLeg}
                     required
@@ -2593,7 +2615,9 @@ export function DcaPlaybookForm({
                   onChange={(next) =>
                     shortLeg ? patchShort("atrPeriod", next) : setAtrPeriod(next)
                   }
-                  className={fieldClass}
+                  className={
+                    dirty && asNumber(period) == null ? botFieldInvalidClass : fieldClass
+                  }
                   ariaLabel="ATR period"
                 />
               </label>
@@ -2925,7 +2949,17 @@ export function DcaPlaybookForm({
                 name="maxClips"
                 value={maxClips}
                 onChange={setMaxClips}
-                className={fieldClass}
+                className={
+                  dirty &&
+                  averaging === "dip" &&
+                  restGrid &&
+                  !(
+                    Number.isInteger(Number(maxClips.replace(/,/g, "").trim())) &&
+                    Number(maxClips.replace(/,/g, "").trim()) >= 2
+                  )
+                    ? botFieldInvalidClass
+                    : fieldClass
+                }
                 placeholder="No cap"
               />
             </label>
@@ -2975,7 +3009,11 @@ export function DcaPlaybookForm({
                   value={maxValue}
                   onChange={setMaxValue}
                   allowDecimal
-                  className={fieldClass}
+                  className={
+                    dirty && asNumber(maxValue) == null
+                      ? botFieldInvalidClass
+                      : fieldClass
+                  }
                   placeholder={
                     dcaMaxValueUsesBook(maxValueKind) ? "e.g. 20" : "e.g. 700"
                   }
@@ -3089,6 +3127,7 @@ export function DcaPlaybookForm({
                   value={dipPct}
                   onChange={setDipPct}
                   ariaLabel="Price deviation percent"
+                  invalid={dirty && asNumber(dipPct) == null}
                 />
               </label>
             ) : null}
@@ -3100,7 +3139,11 @@ export function DcaPlaybookForm({
                     name="atrPeriod"
                     value={atrPeriod}
                     onChange={setAtrPeriod}
-                    className={fieldClass}
+                    className={
+                      dirty && asNumber(atrPeriod) == null
+                        ? botFieldInvalidClass
+                        : fieldClass
+                    }
                     ariaLabel="ATR period"
                   />
                 </label>
@@ -3115,7 +3158,11 @@ export function DcaPlaybookForm({
                     value={atrSpacingMult}
                     onChange={setAtrSpacingMult}
                     allowDecimal
-                    className={fieldClass}
+                    className={
+                      dirty && asNumber(atrSpacingMult) == null
+                        ? botFieldInvalidClass
+                        : fieldClass
+                    }
                     ariaLabel="ATR spacing multiple"
                   />
                 </label>
@@ -3148,8 +3195,18 @@ export function DcaPlaybookForm({
                   </AppSelect>
                   <GroupedNumberInput
                     name="intervalValue"
-                    defaultValue={intervalParts.value}
-                    className={fieldClass}
+                    value={intervalValue}
+                    onChange={setIntervalValue}
+                    className={
+                      dirty &&
+                      !(
+                        Number.isInteger(
+                          Number(intervalValue.replace(/,/g, "").trim()),
+                        ) && Number(intervalValue.replace(/,/g, "").trim()) > 0
+                      )
+                        ? botFieldInvalidClass
+                        : fieldClass
+                    }
                     placeholder={
                       intervalUnit === "minutes"
                         ? "15"
@@ -3318,6 +3375,7 @@ export function DcaPlaybookForm({
           fieldClass={fieldClass}
           labelClass={labelClass}
           gridClass={fieldRowClass5}
+          showErrors={dirty}
           renderTakeProfit={() => dcaTakeProfitFields("primary")}
           renderTrailingStop={() => dcaTrailingFields("primary")}
           renderStopLoss={() => dcaStopFields("primary")}
@@ -3337,6 +3395,7 @@ export function DcaPlaybookForm({
           fieldClass={fieldClass}
           labelClass={labelClass}
           gridClass={fieldRowClass5}
+          showErrors={dirty}
           renderTakeProfit={() =>
             dcaTakeProfitFields(direction === "both" ? "short" : "primary")
           }
@@ -3817,6 +3876,7 @@ function TriggerFields({
   quoteLabel,
   seriesSlots,
   seriesIndex,
+  priceInvalid = false,
 }: {
   prefix: "arm" | "disarm" | "shortArm";
   triggerBy: string;
@@ -3828,6 +3888,7 @@ function TriggerFields({
   quoteLabel: string;
   seriesSlots?: readonly EntryConflictSlot[];
   seriesIndex?: number;
+  priceInvalid?: boolean;
 }) {
   return (
     <>
@@ -3886,7 +3947,7 @@ function TriggerFields({
           value={price}
           onChange={onPrice}
           allowDecimal
-          className={fieldClass}
+          className={priceInvalid ? botFieldInvalidClass : fieldClass}
         />
       </label>
     </>

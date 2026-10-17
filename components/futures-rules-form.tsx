@@ -1651,7 +1651,7 @@ function RuleCard({
               name={`${prefix}name`}
               defaultValue={layer.name}
               maxLength={40}
-              className={botFieldClass}
+              className={dirty && nameMissing ? botFieldInvalidClass : botFieldClass}
             />
           </BotField>
           )}
@@ -1841,6 +1841,7 @@ function RuleCard({
             fieldClass={botFieldClass}
             labelClass={botLabelClass}
             gridClass={fieldRow5}
+            showErrors={dirty}
             renderTakeProfit={() => perpsTakeProfitFields("primary")}
             renderTrailingStop={() => perpsTrailingFields("primary")}
             renderStopLoss={() => perpsStopFields("primary")}
@@ -1860,6 +1861,7 @@ function RuleCard({
             fieldClass={botFieldClass}
             labelClass={botLabelClass}
             gridClass={fieldRow5}
+            showErrors={dirty}
             renderTakeProfit={() =>
               perpsTakeProfitFields(direction === "both" ? "short" : "primary")
             }

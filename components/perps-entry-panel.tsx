@@ -419,7 +419,11 @@ export function PerpsEntryPanel({
                 }
                 patch(partial);
               }}
-              className={conditionFieldClass(fieldClass, column)}
+              className={
+                showErrors && draft.entrySource === "" && !closing
+                  ? conditionFieldClass(botFieldInvalidClass, column)
+                  : conditionFieldClass(fieldClass, column)
+              }
             >
               {closing ? null : <option value="">Select Condition Type</option>}
               {closing ? null : <option value="indicator">Indicator</option>}
@@ -479,6 +483,7 @@ export function PerpsEntryPanel({
               }
               seriesSlots={entrySlots}
               seriesIndex={0}
+              showErrors={showErrors}
             />
           ) : draft.entrySource === "trend" && !closing ? (
             <TrendStartFields
@@ -500,6 +505,7 @@ export function PerpsEntryPanel({
               }
               seriesSlots={entrySlots}
               seriesIndex={0}
+              showErrors={showErrors}
             />
           ) : draft.entrySource === "webhook" ? (
             <BotField label="Webhook" className={pairSpan} required>
@@ -648,6 +654,7 @@ export function PerpsEntryPanel({
       gridClass={fieldRow5}
       fieldClass={fieldClass}
       labelClass={labelClass}
+      showErrors={showErrors}
       groupFooter={
         order && onOrderChange
           ? (groupIndex) => {

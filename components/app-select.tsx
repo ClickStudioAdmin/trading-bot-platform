@@ -50,13 +50,16 @@ function triggerVisualClass(className: string) {
 
 function mergeTriggerClass(base: string, className: string) {
   const visual = triggerVisualClass(className);
-  if (!/\bbg-/.test(visual)) {
-    return `${base} ${visual}`.trim();
+  let tokens = base.split(/\s+/).filter(Boolean);
+  if (/\bbg-/.test(visual)) {
+    tokens = tokens.filter((token) => !token.startsWith("bg-"));
   }
-  return `${base
-    .split(/\s+/)
-    .filter((token) => !token.startsWith("bg-"))
-    .join(" ")} ${visual}`.trim();
+  if (visual.split(/\s+/).includes("border-danger")) {
+    tokens = tokens.filter(
+      (token) => token !== "border-line" && !token.endsWith("border-line-strong"),
+    );
+  }
+  return `${tokens.join(" ")} ${visual}`.trim();
 }
 
 function selectRootClass(variant: "field" | "action", className: string) {

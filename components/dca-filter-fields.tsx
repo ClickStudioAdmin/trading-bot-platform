@@ -1,6 +1,10 @@
 "use client";
 
-import { HintLabel, useBotColumnLayout } from "@/components/bot-form-chrome";
+import {
+  HintLabel,
+  botFieldInvalidClass,
+  useBotColumnLayout,
+} from "@/components/bot-form-chrome";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   DCA_FILTER_KIND_OPTIONS,
@@ -90,6 +94,7 @@ export function DcaFilterBlock({
   labelClass,
   seriesSlots,
   seriesIndex,
+  showErrors = false,
 }: {
   label: string;
   prefix: string;
@@ -103,6 +108,7 @@ export function DcaFilterBlock({
   whenClass?: string;
   fieldClass: string;
   labelClass: string;
+  showErrors?: boolean;
 } & SeriesProps) {
   const kindField = (
     <label className={labelClass}>
@@ -114,7 +120,9 @@ export function DcaFilterBlock({
           const kind = parseDcaFilterKind(event.target.value);
           onChange(kind ? nextFilterSpec(spec, kind, side) : null);
         }}
-        className={fieldClass}
+        className={
+          showErrors && spec == null && !allowOff ? botFieldInvalidClass : fieldClass
+        }
       >
         <option value="">{allowOff ? "Off" : "Select Indicator"}</option>
         {DCA_FILTER_KIND_OPTIONS.map((option) => (
@@ -149,6 +157,7 @@ export function DcaFilterBlock({
       named={named}
       fieldClass={fieldClass}
       labelClass={labelClass}
+      showErrors={showErrors}
       bare={dense}
       whenClass={whenClassProp ?? "col-span-2"}
       seriesSlots={seriesSlots}
@@ -187,6 +196,7 @@ export function DcaFilterParamFields({
   whenClass = "col-span-2",
   seriesSlots,
   seriesIndex,
+  showErrors = false,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -197,8 +207,14 @@ export function DcaFilterParamFields({
   labelClass: string;
   bare?: boolean;
   whenClass?: string;
+  showErrors?: boolean;
 } & SeriesProps) {
   const column = useBotColumnLayout();
+  function numberClass(value: number | null | undefined) {
+    return showErrors && (value == null || !Number.isFinite(value))
+      ? botFieldInvalidClass
+      : fieldClass;
+  }
   const pair = spec.kind === "ema_cross" || spec.kind === "sma_cross";
   const macd = spec.kind === "macd";
   const whenOptions = dcaFilterWhenOptions(spec.kind, side);
@@ -219,7 +235,7 @@ export function DcaFilterParamFields({
             period: Number.isFinite(period) && period > 0 ? period : spec.period,
           });
         }}
-        className={fieldClass}
+        className={numberClass(spec.period)}
       />
     </label>
   );
@@ -239,7 +255,7 @@ export function DcaFilterParamFields({
                 : spec.slowPeriod,
           });
         }}
-        className={fieldClass}
+        className={numberClass(spec.slowPeriod)}
       />
     </label>
   ) : null;
@@ -263,7 +279,7 @@ export function DcaFilterParamFields({
               });
             }}
             allowDecimal
-            className={fieldClass}
+            className={numberClass(spec.multiplier)}
           />
         </label>
       ) : null}
@@ -358,7 +374,7 @@ export function DcaFilterParamFields({
             }}
             allowDecimal
             allowNegative={macd}
-            className={fieldClass}
+            className={numberClass(spec.level)}
           />
         </label>
       ) : null}
@@ -377,7 +393,7 @@ export function DcaFilterParamFields({
                 });
               }}
               allowDecimal
-              className={fieldClass}
+              className={numberClass(spec.level)}
             />
           </label>
           <label className={`${labelClass} min-w-0`}>
@@ -393,7 +409,7 @@ export function DcaFilterParamFields({
                 });
               }}
               allowDecimal
-              className={fieldClass}
+              className={numberClass(spec.levelTo)}
             />
           </label>
         </>
