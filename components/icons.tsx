@@ -79,6 +79,7 @@ import {
   UserCog,
   Users,
   Wallet,
+  WandSparkles,
   X,
   ZoomIn,
   ZoomOut,
@@ -512,6 +513,13 @@ export const LUCIDE_ICONS = [
     lucide: "X",
     usedIn: "AppSelect pills, panel close, cancel order, clear selection, setup wizard Not now and Cancel",
     Icon: X,
+  },
+  {
+    id: "wand",
+    name: "Wand",
+    lucide: "WandSparkles",
+    usedIn: "Theme Condition Builder badge",
+    Icon: WandSparkles,
   },
   {
     id: "zoom-in",
@@ -1018,6 +1026,10 @@ export function IconFit(props: LucideProps) {
 
 export function IconSearch(props: LucideProps) {
   return <Search aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconWand(props: LucideProps) {
+  return <WandSparkles aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconZoomIn(props: LucideProps) {

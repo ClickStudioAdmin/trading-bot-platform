@@ -11,7 +11,7 @@ import {
 } from "@/lib/bots/status";
 import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
-import { IconCheck, IconChevronDown, IconFilters, IconOpen } from "@/components/icons";
+import { IconCheck, IconChevronDown, IconOpen, IconWand } from "@/components/icons";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 
 export const botFieldClass = BILLING_FIELD_CLASS;
@@ -216,8 +216,8 @@ export function BotFormStep({
         >
           <HintLabel text={title} hint={hint} />
           {badge ? (
-            <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full border border-join/30 bg-join/15 px-2.5 py-1 text-xs font-medium text-join">
-              <IconFilters size={14} className="size-3.5" />
+            <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full bg-join px-2.5 py-1 text-xs font-medium text-white">
+              <IconWand size={14} className="size-3.5" />
               {badge}
             </span>
           ) : null}
