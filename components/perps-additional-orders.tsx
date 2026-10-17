@@ -559,7 +559,9 @@ function OrderFields({
   onChange: (partial: Partial<PerpsAddOrderValues>) => void;
 }) {
   return (
-    <div className={gridClass}>
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-ink">Position Sizing</h3>
+      <div className={gridClass}>
       <BotField label="Size">
         <span className="relative mt-1 block">
           {order.sizeUnit === "usdt" ? (
@@ -606,6 +608,7 @@ function OrderFields({
           />
         </BotField>
       ) : null}
+      </div>
     </div>
   );
 }
