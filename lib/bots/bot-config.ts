@@ -214,11 +214,6 @@ function dcaSizingLines(playbook: DcaPlaybook): BotConfigLine[] {
   const sizeUnit = playbook.sizeUnit === "qty" ? "Token qty" : "USDT";
   const size = amount(playbook.clipSize);
   const lines: Array<BotConfigLine | null> = [
-    setting(
-      "Max orders",
-      playbook.maxClips == null ? "No cap" : amount(playbook.maxClips),
-    ),
-    setting("Max value", dcaMaxValueLabel(playbook)),
     setting("Size unit", sizeUnit),
     setting("Order size", size ? `${size} ${sizeUnit === "USDT" ? "USDT" : "tokens"}` : null),
     setting(
@@ -354,6 +349,11 @@ export function dcaBotConfig(playbook: DcaPlaybook): BotConfigSection[] {
     section("General", [
       setting("Contract", playbook.symbol),
       setting("Direction", dcaDirectionLabel(playbook.direction)),
+      setting(
+        "Max orders",
+        playbook.maxClips == null ? "No cap" : amount(playbook.maxClips),
+      ),
+      setting("Max value", dcaMaxValueLabel(playbook)),
     ]),
     ...dcaEntrySections(playbook),
     section("Position Sizing", dcaSizingLines(playbook)),

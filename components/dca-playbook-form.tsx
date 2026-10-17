@@ -2857,44 +2857,7 @@ export function DcaPlaybookForm({
               </AppSelect>
             </label>
         </div>
-      </BotFormStep>
-      {cycleLocked ? (
-        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          {status === "disabled" && statusDirty
-            ? "Save Disabled to close this position. Cycle settings stay locked until the close is accepted."
-            : "A position is open. Cycle settings are locked. Take profit and stops still save."}
-        </p>
-      ) : hasOpenPosition && !running ? (
-        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Closing this position. Cycle settings are unlocked for the next
-          cycle.
-        </p>
-      ) : null}
-
-      {direction !== "short" ? (
-      <BotFormStep
-        title="Long Entry Condition Builder"
-        locked={cycleLocked}
-        defaultCollapsed={hasOpenPosition}
-      >
-        {dcaEntryFields("long")}
-      </BotFormStep>
-      ) : null}
-      {direction !== "long" ? (
-      <BotFormStep
-        title="Short Entry Condition Builder"
-        locked={cycleLocked}
-        defaultCollapsed={hasOpenPosition}
-      >
-        {dcaEntryFields("short")}
-      </BotFormStep>
-      ) : null}
-      <BotFormStep
-        title="Position Sizing"
-        locked={cycleLocked}
-        defaultCollapsed={hasOpenPosition}
-      >
-      <BotFormGroup title="Maximum Exposure" locked={cycleLocked}>
+        <BotFormGroup title="Maximum Exposure" locked={cycleLocked}>
           <div className={fieldRowClass}>
             <label className={`min-w-0 ${labelClass}`}>
               Max orders
@@ -2975,6 +2938,43 @@ export function DcaPlaybookForm({
             />
           ) : null}
         </BotFormGroup>
+      </BotFormStep>
+      {cycleLocked ? (
+        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+          {status === "disabled" && statusDirty
+            ? "Save Disabled to close this position. Cycle settings stay locked until the close is accepted."
+            : "A position is open. Cycle settings are locked. Take profit and stops still save."}
+        </p>
+      ) : hasOpenPosition && !running ? (
+        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+          Closing this position. Cycle settings are unlocked for the next
+          cycle.
+        </p>
+      ) : null}
+
+      {direction !== "short" ? (
+      <BotFormStep
+        title="Long Entry Condition Builder"
+        locked={cycleLocked}
+        defaultCollapsed={hasOpenPosition}
+      >
+        {dcaEntryFields("long")}
+      </BotFormStep>
+      ) : null}
+      {direction !== "long" ? (
+      <BotFormStep
+        title="Short Entry Condition Builder"
+        locked={cycleLocked}
+        defaultCollapsed={hasOpenPosition}
+      >
+        {dcaEntryFields("short")}
+      </BotFormStep>
+      ) : null}
+      <BotFormStep
+        title="Position Sizing"
+        locked={cycleLocked}
+        defaultCollapsed={hasOpenPosition}
+      >
         <BotFormGroup title="Initial Order Size" locked={cycleLocked}>
           <div className={fieldRowClass}>
             {budgetSizesClip ? (

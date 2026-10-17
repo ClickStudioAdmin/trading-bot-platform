@@ -613,7 +613,6 @@ function sizingGroups(recipe: DcaTemplateRecipe, quote: string): ParamGroup[] {
     });
   }
   return [
-    { title: "Maximum Exposure", rows: exposureRows(recipe, quote) },
     { title: "Initial Order Size", rows: initial },
     { title: "Additional Order Types", rows: averagingRows },
     {
@@ -775,6 +774,7 @@ function dcaSections(recipe: DcaTemplateRecipe): ParamSection[] {
             { label: "Direction", value: directionLabel(recipe.direction) },
           ],
         },
+        { title: "Maximum Exposure", rows: exposureRows(recipe, quote) },
       ],
     },
     ...entrySides.map((side) => {
@@ -787,11 +787,7 @@ function dcaSections(recipe: DcaTemplateRecipe): ParamSection[] {
     }),
     {
       title: "Position Sizing",
-      groups: orderGroups.filter(
-        (group) =>
-          group.title === "Maximum Exposure" ||
-          group.title === "Initial Order Size",
-      ),
+      groups: orderGroups.filter((group) => group.title === "Initial Order Size"),
     },
     {
       title: "Additional Orders",
