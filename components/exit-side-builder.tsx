@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { AppSelect } from "@/components/app-select";
 import {
   BotColumnLayout,
@@ -242,6 +242,24 @@ export function ExitSideBuilder({
   actionName?: string;
   prices?: ExitSidePrices;
 }) {
+  useEffect(() => {
+    const hasEmptyGroup = clauses.some((clause) =>
+      clauseOrGroups(clause).some(
+        (group) => group.anchor.trigger === "unset" && group.rows.length === 0,
+      ),
+    );
+    if (!hasEmptyGroup) {
+      return;
+    }
+    onChange(
+      clauses.map((clause) => ({
+        ...clause,
+        orGroups: clauseOrGroups(clause).filter(
+          (group) => group.anchor.trigger !== "unset" || group.rows.length > 0,
+        ),
+      })),
+    );
+  }, [clauses, onChange]);
   const webhookIds = webhooks.map((hook) => hook.id);
   const firstClose = clauses.find((clause) => clause.kind === "custom");
   const closePlaced = firstClose ? placeFirstClose(firstClose) : [];
@@ -326,20 +344,6 @@ export function ExitSideBuilder({
         ...current.rows,
         { key: rowKey(), join: "and" as const, draft: { trigger: "unset" } },
       ],
-    }));
-  }
-  function addOrGroup(clause: ExitBuilderClause) {
-    if (conditionCount(clause) >= STRATEGY_CONDITION_CAP || clause.anchor.trigger === "unset") {
-      return;
-    }
-    const group: ExitOrGroup = {
-      key: rowKey(),
-      anchor: { trigger: "unset" },
-      rows: [],
-    };
-    patch(clause.key, (current) => ({
-      ...current,
-      orGroups: [...clauseOrGroups(current), group],
     }));
   }
   function setScope(clause: ExitBuilderClause, kind: ExitScope["kind"]) {
@@ -558,12 +562,7 @@ export function ExitSideBuilder({
                     onAnchor={(value) => setAnchor(clause, value)}
                     onPatch={(update) => patch(clause.key, update)}
                   />
-                  {canAddRow ? (
-                    <div className="flex flex-wrap gap-2">
-                      <AddConditionButton onClick={() => addRow(clause)} />
-                      <AddConditionButton label="Add Condition Group" onClick={() => addOrGroup(clause)} />
-                    </div>
-                  ) : null}
+                  {canAddRow ? <AddConditionButton onClick={() => addRow(clause)} /> : null}
                 </div>
               ) : null}
             </section>
