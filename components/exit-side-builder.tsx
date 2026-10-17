@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { AppSelect } from "@/components/app-select";
 import {
   BotColumnLayout,
@@ -35,6 +35,7 @@ import {
   customExitClause,
   emptyExitClause,
   isClassicExitKind,
+  normalizeExitClause,
   seedRepeatLevels,
   priceRuleForKind,
   type ClassicExitKind,
@@ -101,39 +102,18 @@ function choiceDraft(
   );
 }
 
-function ruleChoices(
-  kind: ExitBuilderClause["kind"],
-  used: boolean,
-): { value: ExitPriceRuleTrigger; label: string; disabled?: boolean }[] {
-  const rule = priceRuleForKind(kind);
-  if (!rule) {
-    return [];
-  }
-  return [{ value: rule, label: exitPriceRuleLabel(rule), disabled: used }];
-}
-
-function firstRuleLeaf(clause: ExitBuilderClause): string | null {
-  const rule = priceRuleForKind(clause.kind);
-  if (!rule) {
-    return null;
-  }
-  if (clause.anchor.trigger === rule) {
-    return "anchor";
-  }
-  const row = clause.rows.find((item) => item.draft.trigger === rule);
-  if (row) {
-    return row.key;
-  }
-  for (const group of clauseOrGroups(clause)) {
-    if (group.anchor.trigger === rule) {
-      return group.key;
+function withoutPriceRules(groups: ExitOrGroup[]): ExitOrGroup[] {
+  return groups.flatMap((group) => {
+    const kept = group.rows.filter((row) => !isExitPriceRule(row.draft.trigger));
+    if (isExitPriceRule(group.anchor.trigger)) {
+      const [next, ...tail] = kept;
+      if (!next) {
+        return [];
+      }
+      return [{ ...group, anchor: next.draft, rows: tail }];
     }
-    const leaf = group.rows.find((item) => item.draft.trigger === rule);
-    if (leaf) {
-      return leaf.key;
-    }
-  }
-  return null;
+    return kept.length === group.rows.length ? [group] : [{ ...group, rows: kept }];
+  });
 }
 
 function actionValue(clause: ExitBuilderClause): string {
@@ -248,30 +228,21 @@ export function ExitSideBuilder({
   /** Later cards use this desk's price fields. */
   priceStyle?: ExitPriceStyle;
 }) {
+  const normalized = useMemo(
+    () => clauses.map((clause) => normalizeExitClause(clause)),
+    [clauses],
+  );
   useEffect(() => {
-    const hasEmptyGroup = clauses.some((clause) =>
-      clauseOrGroups(clause).some(
-        (group) => group.anchor.trigger === "unset" && group.rows.length === 0,
-      ),
-    );
-    if (!hasEmptyGroup) {
-      return;
+    if (normalized.some((clause, index) => clause !== clauses[index])) {
+      onChange(normalized);
     }
-    onChange(
-      clauses.map((clause) => ({
-        ...clause,
-        orGroups: clauseOrGroups(clause).filter(
-          (group) => group.anchor.trigger !== "unset" || group.rows.length > 0,
-        ),
-      })),
-    );
-  }, [clauses, onChange]);
+  }, [clauses, normalized, onChange]);
   const webhookIds = webhooks.map((hook) => hook.id);
-  const firstClose = clauses.find((clause) => clause.kind === "custom");
+  const firstClose = normalized.find((clause) => clause.kind === "custom");
   const closePlaced = firstClose ? placeFirstClose(firstClose) : [];
   const stackCount = closePlaced.filter((row) => row.stackIndex != null).length;
-  const savedActions = exitActionsForSave(clauses, prices);
-  const remainderUsed = clauses.some(
+  const savedActions = exitActionsForSave(normalized, prices);
+  const remainderUsed = normalized.some(
     (clause) => clause.kind !== "" && clauseScope(clause).kind === "remainder",
   );
 
@@ -279,7 +250,7 @@ export function ExitSideBuilder({
     onChange(next.length > 0 ? next : [emptyExitClause()]);
   }
   function patch(key: string, update: (clause: ExitBuilderClause) => ExitBuilderClause) {
-    commit(clauses.map((clause) => (clause.key === key ? update(clause) : clause)));
+    commit(normalized.map((clause) => (clause.key === key ? update(clause) : clause)));
   }
   function setChoice(clause: ExitBuilderClause, value: string) {
     if (
@@ -289,43 +260,50 @@ export function ExitSideBuilder({
     ) {
       const rule = priceRuleForKind(value);
       patch(clause.key, (current) => {
-        const fromClose = current.kind === "custom";
-        const anchor =
-          rule &&
-          (fromClose ||
-            current.anchor.trigger === "unset" ||
-            isExitPriceRule(current.anchor.trigger))
-            ? { trigger: rule }
-            : current.anchor;
-        return {
+        const keptRows = current.rows.filter((row) => !isExitPriceRule(row.draft.trigger));
+        const keepAnchor =
+          current.anchor.trigger !== "unset" && !isExitPriceRule(current.anchor.trigger);
+        return normalizeExitClause({
           ...current,
           kind: value,
-          anchor,
-          rows: fromClose ? [] : current.rows,
-          orGroups: fromClose ? [] : current.orGroups,
-        };
+          anchor: rule ? { trigger: rule } : current.anchor,
+          rows: keepAnchor
+            ? [{ key: rowKey(), join: "and", draft: current.anchor }, ...keptRows]
+            : keptRows,
+          orGroups: withoutPriceRules(clauseOrGroups(current)),
+        });
       });
       return;
     }
     if (value === "close") {
-      patch(clause.key, (current) =>
-        current.kind === "custom"
-          ? current
-          : {
-              ...customExitClause(
-                current.anchor.trigger === "unset" ? { trigger: "unset" } : current.anchor,
-                current.rows,
-                current.key,
-              ),
-              scope: current.scope,
-              orGroups: current.orGroups,
-            },
-      );
+      patch(clause.key, (current) => {
+        if (current.kind === "custom") {
+          return current;
+        }
+        const keptRows = current.rows.filter((row) => !isExitPriceRule(row.draft.trigger));
+        let anchor =
+          current.anchor.trigger === "unset" || isExitPriceRule(current.anchor.trigger)
+            ? ({ trigger: "unset" } as const)
+            : current.anchor;
+        let rows = keptRows;
+        if (anchor.trigger === "unset" && rows[0]) {
+          anchor = rows[0].draft;
+          rows = rows.slice(1);
+        }
+        return {
+          ...customExitClause(anchor, rows, current.key),
+          scope: current.scope,
+          orGroups: withoutPriceRules(clauseOrGroups(current)),
+        };
+      });
       return;
     }
     patch(clause.key, (current) => ({ ...emptyExitClause(), key: current.key }));
   }
   function setAnchor(clause: ExitBuilderClause, value: string) {
+    if (isClassicExitKind(clause.kind)) {
+      return;
+    }
     if (value === "") {
       patch(clause.key, (current) => ({
         ...current,
@@ -414,7 +392,7 @@ export function ExitSideBuilder({
       {named && firstClose ? (
         <input type="hidden" name={`${prefix}StackCount`} value={String(stackCount)} />
       ) : null}
-      {clauses.map((clause, index) => {
+      {normalized.map((clause, index) => {
         const seen = (kindCounts.get(clause.kind) ?? 0) + (clause.kind === "" ? 0 : 1);
         if (clause.kind !== "") {
           kindCounts.set(clause.kind, seen);
@@ -446,10 +424,10 @@ export function ExitSideBuilder({
                     - Fires when its conditions are true.
                   </span>
                 </h3>
-                {clauses.length > 1 ? (
+                {normalized.length > 1 ? (
                   <RemoveConditionButton
                     scope="group"
-                    onClick={() => commit(clauses.filter((item) => item.key !== clause.key))}
+                    onClick={() => commit(normalized.filter((item) => item.key !== clause.key))}
                   />
                 ) : null}
               </div>
@@ -460,7 +438,7 @@ export function ExitSideBuilder({
                     value={actionValue(clause)}
                     onChange={(event) => setChoice(clause, event.target.value)}
                     className={
-                      showErrors && clause.kind === "" && clauses.some((item) => item.kind !== "")
+                      showErrors && clause.kind === "" && normalized.some((item) => item.kind !== "")
                         ? botFieldInvalidClass
                         : fieldClass
                     }
@@ -548,7 +526,6 @@ export function ExitSideBuilder({
                     fieldClass={fieldClass}
                     labelClass={labelClass}
                     showErrors={showErrors}
-                    ruleLeaf={firstRuleLeaf(clause)}
                     ruleFields={ruleFields(clause, firstOfKind)}
                     onAnchor={(value) => setAnchor(clause, value)}
                     onPatch={(update) => patch(clause.key, update)}
@@ -564,10 +541,10 @@ export function ExitSideBuilder({
           </div>
         );
       })}
-      {clauses.length < STRATEGY_CONDITION_CAP ? (
+      {normalized.length < STRATEGY_CONDITION_CAP ? (
         <AddConditionButton
           label="Add action"
-          onClick={() => commit([...clauses, emptyExitClause()])}
+          onClick={() => commit([...normalized, emptyExitClause()])}
         />
       ) : null}
     </div>
@@ -589,7 +566,6 @@ function ConditionStack({
   fieldClass,
   labelClass,
   showErrors,
-  ruleLeaf,
   ruleFields,
   onAnchor,
   onPatch,
@@ -607,59 +583,53 @@ function ConditionStack({
   fieldClass: string;
   labelClass: string;
   showErrors: boolean;
-  ruleLeaf: string | null;
   ruleFields: ReactNode;
   onAnchor: (value: string) => void;
   onPatch: (update: (clause: ExitBuilderClause) => ExitBuilderClause) => void;
 }) {
   const anchorPlaced = placed.find((row) => row.role === "anchor") ?? null;
   const seriesIndex = 0;
+  const fixedRule = priceRuleForKind(clause.kind);
   const disabled = (["price", "indicator", "trend", "webhook"] as const).filter(
     (kind) =>
       kind !== clause.anchor.trigger &&
       anchorDisabledKinds(lead, rows, webhookIds).includes(kind),
   );
-  const label = clause.kind === "custom" ? "Condition Type" : "Enable when";
   return (
     <div className="space-y-3">
       <div className={exitCardGrid}>
-        <label className={`${labelClass} whitespace-nowrap`}>
-          <HintLabel text={label} />
-          <AppSelect
-            value={clause.anchor.trigger === "unset" ? "" : clause.anchor.trigger}
-            onChange={(event) => onAnchor(event.target.value)}
-            className={
-              showErrors && clause.kind === "custom" && clause.anchor.trigger === "unset"
-                ? botFieldInvalidClass
-                : fieldClass
-            }
-          >
-            <option value="">{clause.kind === "custom" ? "Select Condition Type" : "Always on"}</option>
-            {ruleChoices(
-              clause.kind,
-              ruleLeaf != null && ruleLeaf !== "anchor",
-            ).map((option) => (
-              <option
-                key={option.value}
-                value={option.value}
-                disabled={option.disabled === true && clause.anchor.trigger !== option.value}
-              >
-                {option.label}
-              </option>
-            ))}
-            {CONDITION_OPTIONS.map((option) => (
-              <option
-                key={option.value}
-                value={option.value}
-                disabled={disabled.includes(option.value)}
-              >
-                {option.label}
-              </option>
-            ))}
-          </AppSelect>
-        </label>
-        {isExitPriceRule(clause.anchor.trigger) ? ruleFields : null}
-        {clause.anchor.trigger !== "unset" && !isExitPriceRule(clause.anchor.trigger) ? (
+        {fixedRule ? (
+          <label className={`${labelClass} whitespace-nowrap`}>
+            <HintLabel text="Enable when" />
+            <div className={fieldClass}>{exitPriceRuleLabel(fixedRule)}</div>
+          </label>
+        ) : (
+          <label className={`${labelClass} whitespace-nowrap`}>
+            <HintLabel text="Condition Type" />
+            <AppSelect
+              value={clause.anchor.trigger === "unset" ? "" : clause.anchor.trigger}
+              onChange={(event) => onAnchor(event.target.value)}
+              className={
+                showErrors && clause.anchor.trigger === "unset"
+                  ? botFieldInvalidClass
+                  : fieldClass
+              }
+            >
+              <option value="">Select Condition Type</option>
+              {CONDITION_OPTIONS.map((option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                  disabled={disabled.includes(option.value)}
+                >
+                  {option.label}
+                </option>
+              ))}
+            </AppSelect>
+          </label>
+        )}
+        {fixedRule ? ruleFields : null}
+        {!fixedRule && clause.anchor.trigger !== "unset" ? (
           <HardExitFields
             embed
             showTrigger={false}
@@ -696,8 +666,8 @@ function ConditionStack({
           fieldClass={fieldClass}
           labelClass={labelClass}
           showErrors={showErrors}
-          ruleChoices={ruleChoices(clause.kind, ruleLeaf != null && ruleLeaf !== row.key)}
-          ruleFields={ruleLeaf === row.key ? ruleFields : null}
+          ruleChoices={[]}
+          ruleFields={null}
           onChange={(draft) =>
             onPatch((current) => ({
               ...current,
@@ -730,9 +700,9 @@ function ConditionStack({
           fieldClass={fieldClass}
           labelClass={labelClass}
           showErrors={showErrors}
-          ruleChoices={ruleChoices(clause.kind, ruleLeaf != null && ruleLeaf !== group.key)}
-          ruleFields={ruleFields}
-          ruleLeaf={ruleLeaf}
+          ruleChoices={[]}
+          ruleFields={null}
+          ruleLeaf={null}
           onPatch={onPatch}
         />
       ))}

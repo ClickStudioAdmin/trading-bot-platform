@@ -66,21 +66,31 @@ half.scope = { kind: "percent", pct: 50 };
 const rest = classicExitClause("trailing_stop");
 rest.key = "trail-rest";
 rest.scope = { kind: "remainder" };
-rest.anchor = {
-  trigger: "indicator",
-  spec: {
-    kind: "rsi",
-    timeframe: "60",
-    compare: "cross_gte",
-    level: 70,
-    levelTo: null,
-    period: 14,
-    slowPeriod: null,
-    multiplier: null,
+rest.rows = [
+  {
+    key: "rsi",
+    join: "and",
+    draft: {
+      trigger: "indicator",
+      spec: {
+        kind: "rsi",
+        timeframe: "60",
+        compare: "cross_gte",
+        level: 70,
+        levelTo: null,
+        period: 14,
+        slowPeriod: null,
+        multiplier: null,
+      },
+    },
   },
-};
+];
 assert.equal(exitActionsForSave([half, rest], prices)?.[1]?.scope.kind, "remainder");
+assert.equal(exitActionsForSave([half, rest], prices)?.[1]?.trailingDistance, 2);
 assert.equal(exitCardsBlockReason([half, rest]), null);
+const indicatorOnly = classicExitClause("take_profit");
+indicatorOnly.anchor = { trigger: "webhook", webhookId: "arm" };
+assert.match(exitCardsBlockReason([indicatorOnly]) ?? "", /Target Hit/);
 
 const missingScope = classicExitClause("take_profit");
 missingScope.scope = { kind: "percent", pct: null };
@@ -390,8 +400,25 @@ const gateOpen = exitActionGate({
   barsByTimeframe: new Map(),
   firedWebhookId: "arm",
 });
-assert.equal(gateOpen.confirm, true);
-assert.equal(gateOpen.needsPrice, false);
+assert.equal(gateOpen.confirm, false);
+assert.equal(gateOpen.needsPrice, true);
+const openedIndicator = clausesFromExitActions([
+  {
+    id: "tp-ind",
+    kind: "take_profit",
+    scope: { kind: "all" },
+    groups: [{ anchor: { trigger: "webhook", webhookId: "arm" }, rows: [] }],
+    takeProfitPct: null,
+    takeProfitPrice: null,
+    stopLossPct: null,
+    stopLossPrice: null,
+    trailingDistance: null,
+    trailingActivation: null,
+  },
+]);
+assert.equal(openedIndicator?.[0]?.anchor.trigger, "target");
+assert.equal(openedIndicator?.[0]?.rows[0]?.draft.trigger, "webhook");
+assert.equal(openedIndicator?.[0]?.rows[0]?.draft.webhookId, "arm");
 
 const legacy = clausesFromExitActions([
   {

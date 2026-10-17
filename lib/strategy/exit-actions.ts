@@ -16,6 +16,7 @@ import {
   emptyExitClause,
   emptyRepeatLevels,
   isClassicExitKind,
+  pinExitPriceRule,
   priceRuleForKind,
   priceRuleName,
   type ClassicExitKind,
@@ -423,11 +424,7 @@ function forEachBlock(
       return "Close needs a condition.";
     }
     const ruleName = priceRuleName(clause.kind);
-    if (
-      ruleName &&
-      !clauseHasPriceRule(clause) &&
-      groupsOf(clause).length === 0
-    ) {
+    if (ruleName && !clauseHasPriceRule(clause)) {
       return `${label} needs a ${ruleName}.`;
     }
     if (seen > 1 && isClassicExitKind(clause.kind)) {
@@ -728,13 +725,6 @@ export function clausesFromExitActions(
         join: "and" as const,
         draft,
       })) ?? [];
-    const placed = placePriceRule(
-      kind,
-      first?.anchor ?? { trigger: "unset" },
-      rows,
-      action,
-      rest,
-    );
     const orGroups: ExitOrGroup[] = rest.map((group, index) => ({
       key: `${action.id}-or-${index}`,
       anchor: group.anchor,
@@ -744,16 +734,16 @@ export function clausesFromExitActions(
         draft,
       })),
     }));
-    return {
+    return pinExitPriceRule({
       ...base,
-      anchor: placed.anchor,
-      rows: placed.rows,
+      anchor: first?.anchor ?? { trigger: "unset" },
+      rows,
       orGroups,
       scope: action.scope,
       ownPct: null,
       ownDistance: null,
       levels: seenCount > 1 ? levelsForAction(action) : undefined,
-    };
+    });
   });
 }
 
@@ -793,40 +783,6 @@ function actionHasNumbers(action: StoredExitAction): boolean {
   return false;
 }
 
-/** A saved price level with no price-rule leaf opens as Target Hit, Stop Hit, or Trail. */
-function placePriceRule(
-  kind: ExitBuilderClause["kind"],
-  anchor: HardExitDraft,
-  rows: ExitBuilderClause["rows"],
-  action: StoredExitAction,
-  rest: readonly ExitConditionGroup[],
-): { anchor: HardExitDraft; rows: ExitBuilderClause["rows"] } {
-  const rule = priceRuleForKind(kind);
-  if (!rule) {
-    return { anchor, rows };
-  }
-  const present =
-    anchor.trigger === rule ||
-    rows.some((row) => row.draft.trigger === rule) ||
-    rest.some(
-      (group) =>
-        group.anchor.trigger === rule ||
-        group.rows.some((draft) => draft.trigger === rule),
-    );
-  if (present) {
-    return { anchor, rows };
-  }
-  if (!actionHasNumbers(action) && anchor.trigger !== "unset") {
-    return { anchor, rows };
-  }
-  if (anchor.trigger === "unset") {
-    return { anchor: { trigger: rule }, rows };
-  }
-  return {
-    anchor: { trigger: rule },
-    rows: [{ key: `${action.id}-kept`, join: "and", draft: anchor }, ...rows],
-  };
-}
 
 function pnlPct(side: FuturesSide, entry: number, mark: number): number | null {
   if (!(entry > 0) || !(mark > 0)) {
@@ -962,7 +918,10 @@ function leafMet(
   });
 }
 
-/** Confirm is the non-price leaves. needsPrice is false when a matched group has no price rule. */
+/**
+ * A take profit, stop, or trailing stop confirms only when a group containing
+ * its price rule is met. Close confirms on its own conditions.
+ */
 export function exitActionGate(input: {
   action: StoredExitAction;
   side: FuturesSide;
@@ -985,14 +944,14 @@ export function exitActionGate(input: {
     }
     if (leaves.some((draft) => isExitPriceRule(draft.trigger))) {
       priced = true;
-    } else {
+    } else if (input.action.kind === "close") {
       open = true;
     }
   }
-  return {
-    confirm: priced || open,
-    needsPrice: open ? false : true,
-  };
+  if (input.action.kind === "close") {
+    return { confirm: open || priced, needsPrice: false };
+  }
+  return { confirm: priced, needsPrice: true };
 }
 
 export function exitActionStackTrue(input: {

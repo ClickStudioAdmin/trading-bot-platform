@@ -185,6 +185,72 @@ export function clauseHasPriceRule(clause: ExitBuilderClause): boolean {
   );
 }
 
+/**
+ * Take profit, stop, and trail keep their price rule as the first condition.
+ * A saved indicator, trend, price cross, or webhook moves under it.
+ */
+export function pinExitPriceRule(clause: ExitBuilderClause): ExitBuilderClause {
+  const rule = priceRuleForKind(clause.kind);
+  if (!rule) {
+    return clause;
+  }
+  const groups = clauseOrGroups(clause);
+  let stripped = false;
+  const rows = clause.rows.filter((row) => {
+    if (row.draft.trigger === rule) {
+      stripped = true;
+      return false;
+    }
+    return true;
+  });
+  const orGroups = groups.flatMap((group) => {
+    const kept = group.rows.filter((row) => row.draft.trigger !== rule);
+    const anchorIsRule = group.anchor.trigger === rule;
+    if (!anchorIsRule && kept.length === group.rows.length) {
+      return [group];
+    }
+    stripped = true;
+    if (!anchorIsRule) {
+      return [{ ...group, rows: kept }];
+    }
+    const [next, ...tail] = kept;
+    if (!next) {
+      return [];
+    }
+    return [{ ...group, anchor: next.draft, rows: tail }];
+  });
+  const anchorIsRule = clause.anchor.trigger === rule;
+  if (anchorIsRule && !stripped) {
+    return clause;
+  }
+  const displaced =
+    !anchorIsRule && clause.anchor.trigger !== "unset" ? clause.anchor : null;
+  return {
+    ...clause,
+    anchor: anchorIsRule ? clause.anchor : { trigger: rule },
+    rows: displaced
+      ? [{ key: `${clause.key}-kept`, join: "and", draft: displaced }, ...rows]
+      : rows,
+    orGroups,
+  };
+}
+
+/** Pin the price rule and drop an Or group that has no condition. */
+export function normalizeExitClause(clause: ExitBuilderClause): ExitBuilderClause {
+  const pinned = pinExitPriceRule(clause);
+  const groups = clauseOrGroups(pinned);
+  const kept = groups.filter(
+    (group) => group.anchor.trigger !== "unset" || group.rows.length > 0,
+  );
+  if (pinned === clause && kept.length === groups.length) {
+    return clause;
+  }
+  if (kept.length === groups.length) {
+    return pinned;
+  }
+  return { ...pinned, orGroups: kept };
+}
+
 /** Column price fields belong to the first card of that kind. */
 export function exitPriceLive(clauses: readonly ExitBuilderClause[]): {
   takeProfit: boolean;
