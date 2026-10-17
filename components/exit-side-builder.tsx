@@ -601,7 +601,9 @@ function ConditionStack({
         {fixedRule ? (
           <label className={`${labelClass} whitespace-nowrap`}>
             <HintLabel text="Enable when" />
-            <div className={fieldClass}>{exitPriceRuleLabel(fixedRule)}</div>
+            <AppSelect value={fixedRule} trackDirty={false} className={fieldClass}>
+              <option value={fixedRule}>{exitPriceRuleLabel(fixedRule)}</option>
+            </AppSelect>
           </label>
         ) : (
           <label className={`${labelClass} whitespace-nowrap`}>
