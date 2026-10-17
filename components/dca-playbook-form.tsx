@@ -3083,7 +3083,8 @@ export function DcaPlaybookForm({
 
       {direction !== "short" ? (
       <BotFormStep
-        title="Long Entry Condition Builder"
+        title="Long Entry"
+        badge="Condition Builder"
         shell="canvas"
         locked={cycleLocked}
         defaultCollapsed={hasOpenPosition}
@@ -3093,7 +3094,8 @@ export function DcaPlaybookForm({
       ) : null}
       {direction !== "long" ? (
       <BotFormStep
-        title="Short Entry Condition Builder"
+        title="Short Entry"
+        badge="Condition Builder"
         shell="canvas"
         locked={cycleLocked}
         defaultCollapsed={hasOpenPosition}
@@ -3398,7 +3400,7 @@ export function DcaPlaybookForm({
         </div>
       ) : null}
       {direction !== "short" ? (
-      <BotFormStep title="Long Exit Condition Builder" shell="canvas">
+      <BotFormStep title="Long Exit" badge="Condition Builder" shell="canvas">
         <ExitSideBuilder
           clauses={exitClauses}
           onChange={(next) => commitExitClauses(next, "primary")}
@@ -3416,7 +3418,7 @@ export function DcaPlaybookForm({
       </BotFormStep>
       ) : null}
       {direction !== "long" ? (
-      <BotFormStep title="Short Exit Condition Builder" shell="canvas">
+      <BotFormStep title="Short Exit" badge="Condition Builder" shell="canvas">
         <ExitSideBuilder
           clauses={direction === "both" ? shortClauses : exitClauses}
           onChange={(next) =>

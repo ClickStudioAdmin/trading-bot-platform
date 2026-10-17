@@ -518,7 +518,7 @@ export const LUCIDE_ICONS = [
     id: "wand",
     name: "Wand",
     lucide: "WandSparkles",
-    usedIn: "Theme Condition Builder badge",
+    usedIn: "Condition Builder badge",
     Icon: WandSparkles,
   },
   {
