@@ -216,7 +216,7 @@ export function PerpsAdditionalOrders({
         return (
           <div key={group.key} className="space-y-3">
             {groupIndex > 0 ? <JoinWord label="Or" /> : null}
-            <section className="space-y-4 rounded-card border border-line bg-canvas px-4 py-4">
+            <section className="condition-group space-y-4 rounded-card border border-line bg-canvas px-4 py-4">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="min-w-0 text-sm font-semibold text-ink">
                   Group {groupIndex + 1}
