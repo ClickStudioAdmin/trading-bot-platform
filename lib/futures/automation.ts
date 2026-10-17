@@ -451,7 +451,9 @@ function parseAutomationExits(
   if (!tpsl.ok) {
     return tpsl;
   }
-  const trailing = parseFuturesTrailingForm(sliced, undefined);
+  const trailing = parseFuturesTrailingForm(sliced, undefined, {
+    requireActivation: true,
+  });
   if (!trailing.ok) {
     return trailing;
   }

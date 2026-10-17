@@ -888,6 +888,7 @@ function RuleCard({
   const tpMissing = tpLive && !positiveText(takeProfit);
   const slMissing = slLive && !positiveText(stopLoss);
   const trailMissing = trailLive && !positiveText(trailingStop);
+  const trailActiveMissing = trailLive && !positiveText(trailingActive);
   const breakevenMissing =
     !closing &&
     slLive &&
@@ -901,6 +902,8 @@ function RuleCard({
   const shortSlMissing = shortSlLive && !positiveText(shortClassic.stopLoss);
   const shortTrailMissing =
     shortTrailLive && !positiveText(shortClassic.trailingStop);
+  const shortTrailActiveMissing =
+    shortTrailLive && !positiveText(shortClassic.trailingActive);
   const shortBreakevenMissing =
     shortSlLive &&
     shortClassic.breakevenOn &&
@@ -1059,12 +1062,14 @@ function RuleCard({
     tpMissing ||
     slMissing ||
     trailMissing ||
+    trailActiveMissing ||
     breakevenMissing ||
     tpLimitMissing ||
     slLimitMissing ||
     shortTpMissing ||
     shortSlMissing ||
     shortTrailMissing ||
+    shortTrailActiveMissing ||
     shortBreakevenMissing ||
     shortTpLimitMissing ||
     shortSlLimitMissing ||
@@ -1393,7 +1398,7 @@ function RuleCard({
             className={dirty && missing ? botFieldInvalidClass : botFieldClass}
           />
         </BotField>
-        <BotField label="Activation price" hint="Empty is Off.">
+        <BotField label="Activation price" required>
           <GroupedNumberInput
             name={exitFieldName(leg, "trailingActive")}
             value={active}
@@ -1401,12 +1406,14 @@ function RuleCard({
               shortLeg ? patchShort({ trailingActive: next }) : setTrailingActive(next)
             }
             allowDecimal
-            className={botFieldClass}
+            className={
+              dirty && (shortLeg ? shortTrailActiveMissing : trailActiveMissing)
+                ? botFieldInvalidClass
+                : botFieldClass
+            }
           />
         </BotField>
-        {active.trim() !== "" ? (
-          <input type="hidden" name={exitFieldName(leg, "trailingActivation")} value="on" />
-        ) : null}
+        <input type="hidden" name={exitFieldName(leg, "trailingActivation")} value="on" />
       </div>
     );
   }

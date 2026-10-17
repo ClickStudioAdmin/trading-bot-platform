@@ -12,6 +12,7 @@ export type FuturesTrailing = {
 export function parseFuturesTrailingForm(
   form: FormData,
   instrument: BybitInstrument | undefined,
+  options?: { requireActivation?: boolean },
 ): { ok: true; trailing: FuturesTrailing | null } | { ok: false; error: string } {
   const enabled =
     form.get("trailing") === "on" ||
@@ -20,7 +21,12 @@ export function parseFuturesTrailingForm(
   if (!enabled) {
     return { ok: true, trailing: null };
   }
-  return readTrailingFromForm(form, instrument, true);
+  return readTrailingFromForm(
+    form,
+    instrument,
+    true,
+    options?.requireActivation === true,
+  );
 }
 
 export function parseFuturesTrailingPatch(
@@ -38,6 +44,7 @@ function readTrailingFromForm(
   form: FormData,
   instrument: BybitInstrument | undefined,
   requireDistance: boolean,
+  requireActivation = false,
 ): { ok: true; trailing: FuturesTrailing } | { ok: false; error: string } {
   const distanceRaw = parseOptionalPositive(
     form.get("trailingStop"),
@@ -57,6 +64,7 @@ function readTrailingFromForm(
     return priced;
   }
   const activationOn =
+    requireActivation ||
     form.get("trailingActivation") === "on" ||
     form.get("trailingActivation") === "true";
   let activePrice: number | null = null;

@@ -25,6 +25,13 @@ if (parsed.ok && parsed.trailing) {
   assert.equal(parsed.trailing.distance, 250);
   assert.equal(parsed.trailing.activePrice, null);
 }
+const requiredActivation = parseFuturesTrailingForm(on, undefined, {
+  requireActivation: true,
+});
+assert.equal(requiredActivation.ok, false);
+if (!requiredActivation.ok) {
+  assert.equal(requiredActivation.error, "Enter an activation price.");
+}
 
 const withActive = new FormData();
 withActive.set("trailing", "on");

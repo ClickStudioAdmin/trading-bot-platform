@@ -1064,8 +1064,10 @@ export function ThemeBotFormDraft() {
   const requireShortTp = themeBothExits && shortExitFlags.takeProfit;
   const requireShortSl = themeBothExits && shortExitFlags.stopLoss;
   const requireShortTrail = themeBothExits && shortExitFlags.trailing;
-  const requireTrailTrigger = requireTrail && desk === "dca";
-  const requireShortTrailTrigger = requireShortTrail && desk === "dca";
+  const requireTrailTrigger =
+    requireTrail && (desk === "dca" || desk === "perps");
+  const requireShortTrailTrigger =
+    requireShortTrail && (desk === "dca" || desk === "perps");
   const requireBreakeven =
     desk !== "cnc" && !closing && primaryExitFlags.stopLoss && breakevenOn;
   const requireShortBreakeven =
@@ -1799,7 +1801,7 @@ export function ThemeBotFormDraft() {
                 invalid={valueInvalid}
               />
             </Field>
-            <Field label="Activation price" hint="Empty is Off.">
+            <Field label="Activation price" required>
               <OffNumber
                 value={trigger}
                 onChange={(next) =>
@@ -1807,6 +1809,8 @@ export function ThemeBotFormDraft() {
                     ? patchThemeShort({ trailTrigger: next })
                     : setTrailTrigger(next)
                 }
+                required
+                invalid={triggerInvalid}
               />
             </Field>
           </>
