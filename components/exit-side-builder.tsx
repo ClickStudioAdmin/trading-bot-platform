@@ -602,7 +602,7 @@ function ConditionStack({
       <div className={exitCardGrid}>
         {fixedRule ? (
           <label className={`${labelClass} whitespace-nowrap`}>
-            <HintLabel text="Enable when" />
+            <HintLabel text="Condition Type" />
             <AppSelect value={fixedRule} trackDirty={false} className={fieldClass}>
               <option value={fixedRule}>{exitPriceRuleLabel(fixedRule)}</option>
             </AppSelect>
