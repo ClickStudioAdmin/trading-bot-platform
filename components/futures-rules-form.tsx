@@ -1735,7 +1735,8 @@ function RuleCard({
 
       {showLong ? (
       <BotFormStep
-        title="Long Entry Condition Builder"
+        title="Long Entry"
+        badge="Condition Builder"
         shell="canvas"
         defaultCollapsed={inUse}
       >
@@ -1769,7 +1770,8 @@ function RuleCard({
       ) : null}
       {showShort ? (
       <BotFormStep
-        title="Short Entry Condition Builder"
+        title="Short Entry"
+        badge="Condition Builder"
         shell="canvas"
         defaultCollapsed={inUse}
       >
@@ -1841,7 +1843,7 @@ function RuleCard({
       ) : null}
 
       {!closing && (direction === "long" || direction === "both") ? (
-        <BotFormStep title="Long Additional Orders Condition Builder" shell="canvas" defaultCollapsed={inUse}>
+        <BotFormStep title="Long Additional Orders" badge="Condition Builder" shell="canvas" defaultCollapsed={inUse}>
           <PerpsAdditionalOrders
             groups={longAddGroups}
             onGroupsChange={setLongAddGroups}
@@ -1858,7 +1860,7 @@ function RuleCard({
         </BotFormStep>
       ) : null}
       {!closing && (direction === "short" || direction === "both") ? (
-        <BotFormStep title="Short Additional Orders Condition Builder" shell="canvas" defaultCollapsed={inUse}>
+        <BotFormStep title="Short Additional Orders" badge="Condition Builder" shell="canvas" defaultCollapsed={inUse}>
           <PerpsAdditionalOrders
             groups={shortAddGroups}
             onGroupsChange={setShortAddGroups}
@@ -1876,7 +1878,7 @@ function RuleCard({
       ) : null}
 
       {!closing && (direction === "long" || direction === "both") ? (
-        <BotFormStep title="Long Exit Condition Builder" shell="canvas">
+        <BotFormStep title="Long Exit" badge="Condition Builder" shell="canvas">
           <ExitSideBuilder
             clauses={exitClauses}
             onChange={(next) => commitExitClauses(next, "primary")}
@@ -1894,7 +1896,7 @@ function RuleCard({
         </BotFormStep>
       ) : null}
       {!closing && (direction === "short" || direction === "both") ? (
-        <BotFormStep title="Short Exit Condition Builder" shell="canvas">
+        <BotFormStep title="Short Exit" badge="Condition Builder" shell="canvas">
           <ExitSideBuilder
             clauses={direction === "both" ? shortClauses : exitClauses}
             onChange={(next) =>
