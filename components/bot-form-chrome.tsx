@@ -183,7 +183,7 @@ export function BotFormStep({
   locked?: boolean;
   /** Start closed. Live bots pass this when the bot owns an open position. */
   defaultCollapsed?: boolean;
-  /** Canvas shell is the theme-page trial: black outer card, surface groups. */
+  /** Condition builders: page-colour body, form-colour groups. Header stays raised. */
   shell?: "surface" | "canvas";
   className?: string;
   children: ReactNode;
