@@ -31,6 +31,13 @@ import {
 import { ColumnHint } from "@/components/column-hint";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { ExitSideBuilder } from "@/components/exit-side-builder";
+import {
+  DcaGroupSizeFields,
+  entryGroupOrderKey,
+  GroupPositionSizing,
+  PerpsGroupOrderFields,
+  useExtraGroupOrders,
+} from "@/components/entry-group-order";
 import { PerpsAdditionalOrders } from "@/components/perps-additional-orders";
 import { blankPerpsAddOrderGroups } from "@/lib/futures/perps-add-condition";
 import {
@@ -465,6 +472,7 @@ function ThemeSecondaryEntry({
   onChange,
   enabled,
   onEnabled,
+  showErrors = false,
 }: {
   side: "long" | "short";
   prefix: string;
@@ -472,6 +480,7 @@ function ThemeSecondaryEntry({
   onChange: (next: DcaFilterSpec | null) => void;
   enabled: boolean;
   onEnabled: (next: boolean) => void;
+  showErrors?: boolean;
 }) {
   return (
     <OptionalSection
@@ -494,6 +503,7 @@ function ThemeSecondaryEntry({
         gridClass={rowClass5}
         fieldClass={fieldClass}
         labelClass={labelClass}
+        showErrors={showErrors}
       />
     </OptionalSection>
   );
@@ -759,7 +769,12 @@ export function ThemeBotFormDraft() {
   const [carrySl, setCarrySl] = useState("");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPrice, setLimitPrice] = useState("");
-  const [addGroups, setAddGroups] = useState(() => blankPerpsAddOrderGroups("long"));
+  const [longAddGroups, setLongAddGroups] = useState(() =>
+    blankPerpsAddOrderGroups("long"),
+  );
+  const [shortAddGroups, setShortAddGroups] = useState(() =>
+    blankPerpsAddOrderGroups("short"),
+  );
   const [webhookId, setWebhookId] = useState("sample");
   const themeLongAnchor: EntryAnchor = {
     kind: startKind === "" ? "indicator" : startKind,
@@ -799,6 +814,8 @@ export function ThemeBotFormDraft() {
   const themeShortSlots = entryConflictSlots(themeShortAnchor, shortEntryRows);
   const [size, setSize] = useState("100");
   const [sizeUnit, setSizeUnit] = useState<"qty" | "usdt">("usdt");
+  const longExtraOrders = useExtraGroupOrders();
+  const shortExtraOrders = useExtraGroupOrders();
   const [sizeMultiplier, setSizeMultiplier] = useState("1");
   const [deviationMultiplier, setDeviationMultiplier] = useState("1");
   const [ladderOpen, setLadderOpen] = useState(true);
@@ -924,7 +941,8 @@ export function ThemeBotFormDraft() {
     startKind,
     orderType,
     limitPrice,
-    addGroups,
+    longAddGroups,
+    shortAddGroups,
     webhookId,
     priceSource,
     priceWhen,
@@ -956,6 +974,10 @@ export function ThemeBotFormDraft() {
     breakevenOn,
     size,
     sizeUnit,
+    longExtraOrders: longExtraOrders.orders,
+    shortExtraOrders: shortExtraOrders.orders,
+    longExtraSame: longExtraOrders.sameAsLead,
+    shortExtraSame: shortExtraOrders.sameAsLead,
     sizeMultiplier,
     deviationMultiplier,
     maxClips,
@@ -1056,8 +1078,9 @@ export function ThemeBotFormDraft() {
     shortClauses.some((clause) => clause.kind === "custom");
   const requirePrice =
     startKind === "price" && (desk === "perps" || !closing);
-  const requireShortPrice =
-    desk === "dca" && direction === "both" && shortStartKind === "price";
+  const requireShortPrice = themeBothExits && shortStartKind === "price";
+  const requireShortWebhook =
+    themeBothExits && shortStartKind === "webhook" && !filled(shortWebhookId);
   const requireLimitPrice =
     desk === "perps" && orderType === "limit" && !filled(limitPrice);
   const requireWebhook =
@@ -1104,6 +1127,7 @@ export function ThemeBotFormDraft() {
   const requireCarrySize =
     desk === "cnc" && carrySizeType === "fixed" && !filled(orderSizeUsdt);
   const missing = {
+    name: !filled(name),
     conditionType: desk !== "cnc" && startKind === "",
     shortConditionType: themeBothExits && shortStartKind === "",
     indicatorStart:
@@ -1141,6 +1165,7 @@ export function ThemeBotFormDraft() {
     shortPriceLevel: requireShortPrice && !filled(shortPriceLevel),
     limitPrice: requireLimitPrice,
     webhookId: requireWebhook,
+    shortWebhookId: requireShortWebhook,
     size: requireSize,
     dipPct: requireDip,
     atrPeriod: requireAtrPeriod,
@@ -1180,6 +1205,121 @@ export function ThemeBotFormDraft() {
   };
   const hasMissing = Object.values(missing).some(Boolean);
   const showFieldErrors = dirty && hasMissing;
+  const sampleBase =
+    SAMPLE_PAIRS.find((pair) => pair.symbol === symbol)?.baseCoin ?? "BTC";
+
+  function perpsOrderFooter(
+    rows: typeof entryRows,
+    extra: typeof longExtraOrders,
+    named: boolean,
+  ) {
+    function renderPerpsOrderFooter(groupIndex: number) {
+      const key = entryGroupOrderKey(rows, groupIndex);
+      const lead = key === "lead";
+      const values = lead
+        ? { size, sizeUnit, orderType, limitPrice }
+        : extra.orderFor(key);
+      return (
+        <GroupPositionSizing
+          groupIndex={groupIndex}
+          sameAsGroup1={lead || extra.sharesLead(key)}
+          onSameAsGroup1={
+            lead
+              ? undefined
+              : (same) =>
+                  extra.setShares(key, same, {
+                    size,
+                    sizeUnit,
+                    orderType,
+                    limitPrice,
+                  })
+          }
+        >
+          <PerpsGroupOrderFields
+            order={values}
+            quoteLabel="USDT"
+            baseCoin={sampleBase}
+            fieldClass={fieldClass}
+            invalidFieldClass={fieldInvalidClass}
+            gridClass={rowClass}
+            named={lead && named}
+            required={lead}
+            sizeInvalid={lead && showFieldErrors && missing.size}
+            limitInvalid={lead && showFieldErrors && missing.limitPrice}
+            onChange={(partial) => {
+              if (!lead) {
+                extra.patch(key, partial);
+                return;
+              }
+              if (partial.size != null) setSize(partial.size);
+              if (partial.sizeUnit != null) setSizeUnit(partial.sizeUnit);
+              if (partial.orderType != null) setOrderType(partial.orderType);
+              if (partial.limitPrice != null) setLimitPrice(partial.limitPrice);
+            }}
+          />
+        </GroupPositionSizing>
+      );
+    }
+    return renderPerpsOrderFooter;
+  }
+
+  function dcaSizeFooter(
+    rows: typeof entryRows,
+    extra: typeof longExtraOrders,
+    named: boolean,
+  ) {
+    function renderDcaSizeFooter(groupIndex: number) {
+      const key = entryGroupOrderKey(rows, groupIndex);
+      const lead = key === "lead";
+      const values = lead ? { size, sizeUnit } : extra.orderFor(key);
+      return (
+        <GroupPositionSizing
+          groupIndex={groupIndex}
+          sameAsGroup1={lead || extra.sharesLead(key)}
+          onSameAsGroup1={
+            lead
+              ? undefined
+              : (same) =>
+                  extra.setShares(key, same, {
+                    size,
+                    sizeUnit,
+                    orderType: "market",
+                    limitPrice: "",
+                  })
+          }
+        >
+          <DcaGroupSizeFields
+            size={values.size}
+            sizeUnit={values.sizeUnit}
+            onSize={(next) => {
+              if (lead) {
+                setSize(next);
+                return;
+              }
+              extra.patch(key, { size: next });
+            }}
+            onUnit={(unit) => {
+              if (lead) {
+                setSizeUnit(unit);
+                return;
+              }
+              extra.patch(key, { sizeUnit: unit, size: "" });
+            }}
+            quoteLabel="USDT"
+            baseCoin={sampleBase}
+            fieldClass={fieldClass}
+            sizeInputClass={
+              lead && showFieldErrors && missing.size ? fieldInvalidClass : fieldClass
+            }
+            gridClass={rowClass}
+            named={lead && named}
+            required={lead}
+          />
+        </GroupPositionSizing>
+      );
+    }
+    return renderDcaSizeFooter;
+  }
 
   function applyStartKind(next: StartKind) {
     const touchShort = !(desk === "dca" && direction === "both");
@@ -1865,7 +2005,9 @@ export function ThemeBotFormDraft() {
               value={name}
               onChange={(event) => setName(event.target.value)}
               maxLength={40}
-              className={fieldClass}
+              className={
+                showFieldErrors && !filled(name) ? fieldInvalidClass : fieldClass
+              }
             />
           </Field>
           {desk !== "cnc" ? (
@@ -2017,7 +2159,11 @@ export function ThemeBotFormDraft() {
                   onChange={(event) =>
                     applyStartKind(event.target.value as StartKind)
                   }
-                  className={`${fieldClass} !min-w-72`}
+                  className={
+                    showFieldErrors && startKind === ""
+                      ? `${fieldInvalidClass} !min-w-72`
+                      : `${fieldClass} !min-w-72`
+                  }
                 >
                   {closing ? null : <option value="">Select Condition Type</option>}
                   {closing ? null : (
@@ -2056,7 +2202,11 @@ export function ThemeBotFormDraft() {
                   onChange={(event) =>
                     applyStartKind(event.target.value as StartKind)
                   }
-                  className={`${fieldClass} !min-w-72`}
+                  className={
+                    showFieldErrors && startKind === ""
+                      ? `${fieldInvalidClass} !min-w-72`
+                      : `${fieldClass} !min-w-72`
+                  }
                 >
                   <option value="">Select Condition Type</option>
                   <option value="indicator">Indicator</option>
@@ -2140,6 +2290,7 @@ export function ThemeBotFormDraft() {
                   onMultiplierChange={setMultiplier}
                   seriesSlots={themeEntrySlots}
                   seriesIndex={0}
+                  showErrors={showFieldErrors}
                 />
               </div>
           ) : startKind === "trend" && !closing ? (
@@ -2159,6 +2310,7 @@ export function ThemeBotFormDraft() {
                   onMultiplierChange={setMultiplier}
                   seriesSlots={themeEntrySlots}
                   seriesIndex={0}
+                  showErrors={showFieldErrors}
                 />
               </div>
           ) : startKind === "price" ? (
@@ -2194,6 +2346,8 @@ export function ThemeBotFormDraft() {
                 gridClass={rowClass5}
                 fieldClass={fieldClass}
                 labelClass={labelClass}
+                showErrors={showFieldErrors}
+                groupFooter={perpsOrderFooter(entryRows, longExtraOrders, true)}
               />
             );
           }
@@ -2216,6 +2370,8 @@ export function ThemeBotFormDraft() {
                 gridClass={rowClass5}
                 fieldClass={fieldClass}
                 labelClass={labelClass}
+                showErrors={showFieldErrors}
+                groupFooter={dcaSizeFooter(entryRows, longExtraOrders, true)}
               />
             );
           }
@@ -2230,6 +2386,7 @@ export function ThemeBotFormDraft() {
                   onChange={setConfirm}
                   enabled={confirmOn}
                   onEnabled={setConfirmOn}
+                  showErrors={showFieldErrors}
                 />
               ) : null}
             </>
@@ -2250,7 +2407,11 @@ export function ThemeBotFormDraft() {
                     onChange={(event) =>
                       applyShortStartKind(event.target.value as StartKind)
                     }
-                    className={`${fieldClass} !min-w-72`}
+                    className={
+                      showFieldErrors && shortStartKind === ""
+                        ? `${fieldInvalidClass} !min-w-72`
+                        : `${fieldClass} !min-w-72`
+                    }
                   >
                     <option value="">Select Condition Type</option>
                     <option value="indicator">Indicator</option>
@@ -2288,7 +2449,11 @@ export function ThemeBotFormDraft() {
                     <AppSelect
                       value={shortWebhookId}
                       onChange={(event) => setShortWebhookId(event.target.value)}
-                      className={fieldClass}
+                      className={
+                        showFieldErrors && !filled(shortWebhookId)
+                          ? fieldInvalidClass
+                          : fieldClass
+                      }
                     >
                       <option value="">Pick a webhook</option>
                       <option value="sample">Sample signal</option>
@@ -2316,6 +2481,7 @@ export function ThemeBotFormDraft() {
                     onMultiplierChange={setShortMultiplier}
                     seriesSlots={themeShortSlots}
                     seriesIndex={0}
+                    showErrors={showFieldErrors}
                   />
                 </div>
               ) : shortStartKind === "trend" ? (
@@ -2335,6 +2501,7 @@ export function ThemeBotFormDraft() {
                     onMultiplierChange={setShortMultiplier}
                     seriesSlots={themeShortSlots}
                     seriesIndex={0}
+                    showErrors={showFieldErrors}
                   />
                 </div>
               ) : shortStartKind === "price" ? (
@@ -2347,7 +2514,7 @@ export function ThemeBotFormDraft() {
                     onPriceWhen={setShortPriceWhen}
                     priceLevel={shortPriceLevel}
                     onPriceLevel={setShortPriceLevel}
-                    invalid={false}
+                    invalid={showFieldErrors && !filled(shortPriceLevel)}
                     seriesSlots={themeShortSlots}
                     seriesIndex={0}
                   />
@@ -2369,6 +2536,12 @@ export function ThemeBotFormDraft() {
               gridClass={rowClass5}
               fieldClass={fieldClass}
               labelClass={labelClass}
+              showErrors={showFieldErrors}
+              groupFooter={perpsOrderFooter(
+                shortEntryRows,
+                shortExtraOrders,
+                false,
+              )}
             />
               );
             })()}
@@ -2388,7 +2561,11 @@ export function ThemeBotFormDraft() {
                     onChange={(event) =>
                       applyShortStartKind(event.target.value as StartKind)
                     }
-                    className={`${fieldClass} !min-w-72`}
+                    className={
+                      showFieldErrors && shortStartKind === ""
+                        ? `${fieldInvalidClass} !min-w-72`
+                        : `${fieldClass} !min-w-72`
+                    }
                   >
                     <option value="">Select Condition Type</option>
                     <option value="indicator">Indicator</option>
@@ -2416,7 +2593,11 @@ export function ThemeBotFormDraft() {
                     <AppSelect
                       value={shortWebhookId}
                       onChange={(event) => setShortWebhookId(event.target.value)}
-                      className={fieldClass}
+                      className={
+                        showFieldErrors && !filled(shortWebhookId)
+                          ? fieldInvalidClass
+                          : fieldClass
+                      }
                     >
                       <option value="">Pick a Signal webhook</option>
                       <option value="sample">Sample signal</option>
@@ -2444,6 +2625,7 @@ export function ThemeBotFormDraft() {
                     onMultiplierChange={setShortMultiplier}
                     seriesSlots={themeShortSlots}
                     seriesIndex={0}
+                    showErrors={showFieldErrors}
                   />
                 </div>
               ) : shortStartKind === "trend" ? (
@@ -2463,6 +2645,7 @@ export function ThemeBotFormDraft() {
                     onMultiplierChange={setShortMultiplier}
                     seriesSlots={themeShortSlots}
                     seriesIndex={0}
+                    showErrors={showFieldErrors}
                   />
                 </div>
               ) : shortStartKind === "price" ? (
@@ -2502,130 +2685,13 @@ export function ThemeBotFormDraft() {
               gridClass={rowClass5}
               fieldClass={fieldClass}
               labelClass={labelClass}
+              showErrors={showFieldErrors}
+              groupFooter={dcaSizeFooter(shortEntryRows, shortExtraOrders, false)}
             />
               );
             })()}
           </BotFormStep>
         ) : null}
-
-        <BotFormStep title="Position Sizing">
-        {!closing ? (
-          <Group title={desk === "dca" ? "Initial Order Size" : "Order Size"}>
-            <div className={rowClass}>
-              {desk === "dca" ? (
-                <>
-                  <Field label="Size unit" required>
-                    <AppSelect
-                      value={sizeUnit}
-                      onChange={(event) =>
-                        setSizeUnit(event.target.value as "qty" | "usdt")
-                      }
-                      className={fieldClass}
-                    >
-                      <option value="usdt">USDT</option>
-                      <option value="qty">Token qty</option>
-                    </AppSelect>
-                  </Field>
-                  <Field label="Order size" required>
-                    <GroupedNumberInput
-                      value={size}
-                      onChange={setSize}
-                      allowDecimal
-                      className={
-                        showFieldErrors && missing.size
-                          ? fieldInvalidClass
-                          : fieldClass
-                      }
-                    />
-                  </Field>
-                </>
-              ) : (
-                <>
-                  <Field label="Size" required>
-                    <span className="relative mt-1 block">
-                      {sizeUnit === "usdt" ? (
-                        <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-                          $
-                        </span>
-                      ) : null}
-                      <GroupedNumberInput
-                        value={size}
-                        onChange={setSize}
-                        allowDecimal
-                        className={`${
-                          showFieldErrors && missing.size
-                            ? fieldInvalidClass
-                            : fieldClass
-                        } ${sizeUnit === "usdt" ? "pl-7" : ""}`}
-                      />
-                    </span>
-                  </Field>
-                  <Field label="Unit" required>
-                    <AppSelect
-                      value={sizeUnit}
-                      onChange={(event) => {
-                        setSizeUnit(event.target.value as "qty" | "usdt");
-                        setSize("");
-                      }}
-                      className={fieldClass}
-                    >
-                      <option value="usdt">USDT</option>
-                      <option value="qty">
-                        {SAMPLE_PAIRS.find((pair) => pair.symbol === symbol)
-                          ?.baseCoin ?? "BTC"}
-                      </option>
-                    </AppSelect>
-                  </Field>
-                  <Field label="Order" required>
-                    <OrderTypePill value={orderType} onChange={setOrderType} />
-                  </Field>
-                  {orderType === "limit" ? (
-                    <Field label="Limit price" required>
-                      <OffNumber
-                        value={limitPrice}
-                        onChange={setLimitPrice}
-                        required
-                        invalid={showFieldErrors && missing.limitPrice}
-                      />
-                    </Field>
-                  ) : null}
-                </>
-              )}
-            </div>
-          </Group>
-        ) : (
-          <Group>
-            <div className={rowClass}>
-              <Field label="Qty to close" hint="Empty closes the whole row.">
-                <GroupedNumberInput
-                  value={size}
-                  onChange={setSize}
-                  allowDecimal
-                  placeholder="All"
-                  className={fieldClass}
-                />
-              </Field>
-              {desk === "perps" ? (
-                <>
-                  <Field label="Order" required>
-                    <OrderTypePill value={orderType} onChange={setOrderType} />
-                  </Field>
-                  {orderType === "limit" ? (
-                    <Field label="Limit price" required>
-                      <OffNumber
-                        value={limitPrice}
-                        onChange={setLimitPrice}
-                        required
-                        invalid={showFieldErrors && missing.limitPrice}
-                      />
-                    </Field>
-                  ) : null}
-                </>
-              ) : null}
-            </div>
-          </Group>
-        )}
-        </BotFormStep>
 
         {desk === "dca" ? (
         <BotFormStep title="Additional Orders">
@@ -2677,7 +2743,11 @@ export function ThemeBotFormDraft() {
                     value={dipPct}
                     onChange={setDipPct}
                     allowDecimal
-                    className={`${fieldClass} mt-0 pr-7`}
+                    className={`${
+                      showFieldErrors && missing.dipPct
+                        ? fieldInvalidClass
+                        : fieldClass
+                    } mt-0 pr-7`}
                   />
                   <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
                     %
@@ -2820,22 +2890,44 @@ export function ThemeBotFormDraft() {
         </Group>
         </BotFormStep>
         ) : desk === "perps" && !closing ? (
-          <BotFormStep title="Additional Orders Condition Builder">
-            <PerpsAdditionalOrders
-              groups={addGroups}
-              onGroupsChange={setAddGroups}
-              quoteLabel="USDT"
-              baseCoin={
-                SAMPLE_PAIRS.find((pair) => pair.symbol === symbol)?.baseCoin ??
-                "BTC"
-              }
-              fieldClass={fieldClass}
-              gridClass={rowClass}
-              fieldsClass={rowClass5}
-              side={perpsDirection === "short" ? "short" : "long"}
-              webhooks={themeWebhooks}
-            />
-          </BotFormStep>
+          <>
+            {perpsDirection !== "short" ? (
+              <BotFormStep title="Long Additional Orders Condition Builder">
+                <PerpsAdditionalOrders
+                  groups={longAddGroups}
+                  onGroupsChange={setLongAddGroups}
+                  quoteLabel="USDT"
+                  baseCoin={
+                    SAMPLE_PAIRS.find((pair) => pair.symbol === symbol)?.baseCoin ??
+                    "BTC"
+                  }
+                  fieldClass={fieldClass}
+                  gridClass={rowClass}
+                  fieldsClass={rowClass5}
+                  side="long"
+                  webhooks={themeWebhooks}
+                />
+              </BotFormStep>
+            ) : null}
+            {perpsDirection === "short" || perpsDirection === "both" ? (
+              <BotFormStep title="Short Additional Orders Condition Builder">
+                <PerpsAdditionalOrders
+                  groups={shortAddGroups}
+                  onGroupsChange={setShortAddGroups}
+                  quoteLabel="USDT"
+                  baseCoin={
+                    SAMPLE_PAIRS.find((pair) => pair.symbol === symbol)?.baseCoin ??
+                    "BTC"
+                  }
+                  fieldClass={fieldClass}
+                  gridClass={rowClass}
+                  fieldsClass={rowClass5}
+                  side="short"
+                  webhooks={themeWebhooks}
+                />
+              </BotFormStep>
+            ) : null}
+          </>
         ) : null}
 
         {(desk === "perps" ? perpsDirection !== "short" : direction !== "short") ? (
@@ -2850,6 +2942,7 @@ export function ThemeBotFormDraft() {
               fieldClass={fieldClass}
               labelClass={labelClass}
               gridClass={rowClass5}
+              showErrors={showFieldErrors}
               renderTakeProfit={() => themeTakeProfitFields("primary")}
               renderTrailingStop={() => themeTrailingFields("primary")}
               renderStopLoss={() => themeStopFields("primary")}
@@ -2881,6 +2974,7 @@ export function ThemeBotFormDraft() {
               fieldClass={fieldClass}
               labelClass={labelClass}
               gridClass={rowClass5}
+              showErrors={showFieldErrors}
               renderTakeProfit={() =>
                 themeTakeProfitFields(themeBothExits ? "short" : "primary")
               }

@@ -206,10 +206,10 @@ assert.match(
 );
 assert.match(value(stacked, "Long Entry Conditions", "Entry conditions"), /or Price is above EMA 21/);
 assert.equal(value(perps, "Position Sizing", "Size"), "10 USDT");
-assert.equal(value(perps, "Additional Orders", "Condition Type"), "Off");
-assert.equal(value(perps, "Additional Orders", "Size"), "Off");
-assert.equal(value(perps, "Additional Orders", "Unit"), "Off");
-assert.equal(value(perps, "Additional Orders", "Order"), "Off");
+assert.equal(value(perps, "Long Additional Orders", "Condition Type"), "Off");
+assert.equal(value(perps, "Long Additional Orders", "Size"), "Off");
+assert.equal(value(perps, "Long Additional Orders", "Unit"), "Off");
+assert.equal(value(perps, "Long Additional Orders", "Order"), "Off");
 assert.equal(value(perps, "Long Exit Conditions", "Take profit"), "3% · Last · Market");
 assert.equal(value(perps, "Long Exit Conditions", "Stop loss"), "Off");
 assert.equal(value(perps, "Long Exit Conditions", "Custom conditions"), "Off");
@@ -295,6 +295,8 @@ assert.match(value(perpsBoth, "Long Exit Conditions", "Stop loss"), /9%/);
 assert.match(value(perpsBoth, "Short Exit Conditions", "Stop loss"), /4%/);
 assert.match(value(perpsBoth, "Short Exit Conditions", "Stop loss"), /6%/);
 assert.match(value(perpsBoth, "Short Exit Conditions", "Trailing stop"), /1.5/);
+assert.equal(value(perpsBoth, "Long Additional Orders", "Condition Type"), "Off");
+assert.equal(value(perpsBoth, "Short Additional Orders", "Size"), "Off");
 
 const closeRule = perpsBotConfig({
   ...defaultFuturesAutomationForm(0, "ETHUSDT"),
@@ -303,7 +305,7 @@ const closeRule = perpsBotConfig({
 });
 assert.equal(value(closeRule, "Position Sizing", "Qty to close"), "All");
 assert.equal(
-  closeRule.find((row) => row.title === "Additional Orders"),
+  closeRule.find((row) => row.title.endsWith("Additional Orders")),
   undefined,
 );
 assert.equal(

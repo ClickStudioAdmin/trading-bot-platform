@@ -8,7 +8,6 @@ import {
 } from "@/components/bot-indicator-fields";
 import {
   BotField,
-  OrderTypePill,
   conditionFieldClass,
   useBotColumnLayout,
 } from "@/components/bot-form-chrome";
@@ -27,10 +26,15 @@ import { useDeskFormStatus } from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { DcaIndicatorKind, DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import {
+  GroupPositionSizing,
+  PerpsGroupOrderFields,
+} from "@/components/entry-group-order";
+import {
   appendPerpsAddCondition,
   appendPerpsAddOrderGroup,
   countPerpsAddConditions,
   perpsAddConditionDraftForType,
+  revealGroupOrder,
   type PerpsAddCondition,
   type PerpsAddConditionDraft,
   type PerpsAddConditionType,
@@ -284,6 +288,18 @@ export function PerpsAdditionalOrders({
                 />
               ) : null}
               <OrderFields
+                groupIndex={groupIndex}
+                sameAsGroup1={group.sameAsGroup1 !== false}
+                onSameAsGroup1={(same) => {
+                  const leadOrder = groupsRef.current[0]?.order ?? group.order;
+                  updateGroup(group.key, (current) => ({
+                    ...current,
+                    sameAsGroup1: same,
+                    order: same
+                      ? current.order
+                      : revealGroupOrder(current.order, leadOrder),
+                  }));
+                }}
                 order={group.order}
                 quoteLabel={quoteLabel}
                 baseCoin={baseCoin}
@@ -544,6 +560,9 @@ function ConditionFields({
 }
 
 function OrderFields({
+  groupIndex,
+  sameAsGroup1,
+  onSameAsGroup1,
   order,
   quoteLabel,
   baseCoin,
@@ -551,6 +570,9 @@ function OrderFields({
   gridClass,
   onChange,
 }: {
+  groupIndex: number;
+  sameAsGroup1: boolean;
+  onSameAsGroup1: (same: boolean) => void;
   order: PerpsAddOrderValues;
   quoteLabel: string;
   baseCoin: string;
@@ -559,56 +581,19 @@ function OrderFields({
   onChange: (partial: Partial<PerpsAddOrderValues>) => void;
 }) {
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-ink">Position Sizing</h3>
-      <div className={gridClass}>
-      <BotField label="Size">
-        <span className="relative mt-1 block">
-          {order.sizeUnit === "usdt" ? (
-            <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-              $
-            </span>
-          ) : null}
-          <GroupedNumberInput
-            value={order.size}
-            onChange={(size) => onChange({ size })}
-            allowDecimal
-            className={`${fieldClass} !mt-0 ${order.sizeUnit === "usdt" ? "pl-7" : ""}`}
-          />
-        </span>
-      </BotField>
-      <BotField label="Unit">
-        <AppSelect
-          value={order.sizeUnit}
-          onChange={(event) =>
-            onChange({
-              sizeUnit: event.target.value === "qty" ? "qty" : "usdt",
-              size: "",
-            })
-          }
-          className={fieldClass}
-        >
-          <option value="usdt">{quoteLabel}</option>
-          <option value="qty">{baseCoin}</option>
-        </AppSelect>
-      </BotField>
-      <BotField label="Order">
-        <OrderTypePill
-          value={order.orderType}
-          onChange={(orderType) => onChange({ orderType })}
-        />
-      </BotField>
-      {order.orderType === "limit" ? (
-        <BotField label="Limit price">
-          <GroupedNumberInput
-            value={order.limitPrice}
-            onChange={(limitPrice) => onChange({ limitPrice })}
-            allowDecimal
-            className={fieldClass}
-          />
-        </BotField>
-      ) : null}
-      </div>
-    </div>
+    <GroupPositionSizing
+      groupIndex={groupIndex}
+      sameAsGroup1={sameAsGroup1}
+      onSameAsGroup1={onSameAsGroup1}
+    >
+      <PerpsGroupOrderFields
+        order={order}
+        quoteLabel={quoteLabel}
+        baseCoin={baseCoin}
+        fieldClass={fieldClass}
+        gridClass={gridClass}
+        onChange={onChange}
+      />
+    </GroupPositionSizing>
   );
 }

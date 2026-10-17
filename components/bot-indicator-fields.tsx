@@ -3,6 +3,7 @@
 import {
   HintLabel,
   botFieldClass,
+  botFieldInvalidClass,
   botCompactRowClass,
   botLabelClass,
   useBotColumnLayout,
@@ -24,6 +25,7 @@ import {
   dcaIndicatorWhenOptions,
   dcaIndicatorWhenValue,
   indicatorCompareForDirection,
+  indicatorFieldInvalid,
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
@@ -104,6 +106,7 @@ export function IndicatorStartFields({
   onMultiplierChange,
   seriesSlots,
   seriesIndex,
+  showErrors = false,
 }: {
   side: "long" | "short";
   prefix: string;
@@ -121,8 +124,23 @@ export function IndicatorStartFields({
   onPeriodChange: (next: string) => void;
   onSlowPeriodChange: (next: string) => void;
   onMultiplierChange: (next: string) => void;
+  showErrors?: boolean;
 } & SeriesProps) {
   const column = useBotColumnLayout();
+  const draft = {
+    family: "indicator" as const,
+    kind,
+    compare,
+    level,
+    period,
+    slowPeriod,
+    multiplier,
+  };
+  function controlClass(name: "kind" | "level" | "period" | "slowPeriod" | "multiplier") {
+    return showErrors && indicatorFieldInvalid(draft, name)
+      ? botFieldInvalidClass
+      : fieldClass;
+  }
   const compactGrid = `col-span-full ${botCompactRowClass}`;
   function entryDisabled(
     claim: ReturnType<typeof indicatorClaim>,
@@ -177,7 +195,7 @@ export function IndicatorStartFields({
         name={`${prefix}Kind`}
         value={kind}
         onChange={(event) => chooseKind(event.target.value)}
-        className={fieldClass}
+        className={controlClass("kind")}
       >
         <option value="">Select Indicator</option>
         {DCA_INDICATOR_KIND_OPTIONS.map((option) => (
@@ -301,7 +319,7 @@ export function IndicatorStartFields({
           name={`${prefix}Period`}
           value={period}
           onChange={onPeriodChange}
-          className={fieldClass}
+          className={controlClass("period")}
         />
       </label>
       {whenField}
@@ -311,7 +329,7 @@ export function IndicatorStartFields({
           name={`${prefix}SlowPeriod`}
           value={slowPeriod}
           onChange={onSlowPeriodChange}
-          className={fieldClass}
+          className={controlClass("slowPeriod")}
         />
       </label>
     </>
@@ -323,7 +341,7 @@ export function IndicatorStartFields({
         name={`${prefix}Period`}
         value={period}
         onChange={onPeriodChange}
-        className={fieldClass}
+        className={controlClass("period")}
       />
     </label>
   ) : null;
@@ -339,7 +357,7 @@ export function IndicatorStartFields({
         onChange={onLevelChange}
         allowDecimal
         allowNegative={kind === "macd"}
-        className={fieldClass}
+        className={controlClass("level")}
       />
     </label>
   ) : null;
@@ -351,7 +369,7 @@ export function IndicatorStartFields({
         value={multiplier}
         onChange={onMultiplierChange}
         allowDecimal
-        className={fieldClass}
+        className={controlClass("multiplier")}
       />
     </label>
   ) : null;
@@ -435,6 +453,7 @@ export function TrendStartFields({
   onMultiplierChange,
   seriesSlots,
   seriesIndex,
+  showErrors = false,
 }: {
   side: "long" | "short";
   prefix: string;
@@ -448,9 +467,24 @@ export function TrendStartFields({
   onCompareChange: (next: string) => void;
   onPeriodChange: (next: string) => void;
   onMultiplierChange: (next: string) => void;
+  showErrors?: boolean;
 } & SeriesProps) {
   const trendKind = kind === "supertrend" ? kind : "supertrend";
   const column = useBotColumnLayout();
+  const trendDraft = {
+    family: "trend" as const,
+    kind: trendKind,
+    compare,
+    level: "",
+    period,
+    slowPeriod: "",
+    multiplier,
+  };
+  function trendClass(name: "period" | "multiplier") {
+    return showErrors && indicatorFieldInvalid(trendDraft, name)
+      ? botFieldInvalidClass
+      : fieldClass;
+  }
   const whenOptions = dcaIndicatorWhenOptions(trendKind, side, false);
   const currentWhen = dcaIndicatorWhenValue(trendKind, side, compare);
   function trendDisabled(
@@ -494,7 +528,7 @@ export function TrendStartFields({
           name={`${prefix}Period`}
           value={period}
           onChange={onPeriodChange}
-          className={fieldClass}
+          className={trendClass("period")}
         />
       </label>
       <label className={labelClass}>
@@ -504,7 +538,7 @@ export function TrendStartFields({
           value={multiplier}
           onChange={onMultiplierChange}
           allowDecimal
-          className={fieldClass}
+          className={trendClass("multiplier")}
         />
       </label>
       <label className={labelClass}>

@@ -187,11 +187,11 @@ const perps = snapshotPerpsRecipe({
 const perpsSections = recipeParamSections(perps);
 assert.deepEqual(
   perpsSections.map((section) => section.title),
-  ["General", "Long Entry Conditions", "Position Sizing", "Additional Orders", "Long Exit Conditions"],
+  ["General", "Long Entry Conditions", "Position Sizing", "Long Additional Orders", "Long Exit Conditions"],
 );
 assert.deepEqual(
   perpsSections
-    .find((section) => section.title === "Additional Orders")
+    .find((section) => section.title === "Long Additional Orders")
     ?.groups[0]?.rows.map((row) => `${row.label}: ${row.value}`),
   ["Condition Type: Off", "Size: Off", "Unit: Off", "Order: Off"],
 );
@@ -291,7 +291,9 @@ assert.equal(
   false,
 );
 assert.equal(
-  recipeParamSections(closeRecipe).some((section) => section.title === "Additional Orders"),
+  recipeParamSections(closeRecipe).some((section) =>
+    section.title.endsWith("Additional Orders"),
+  ),
   false,
 );
 assert.equal(
@@ -399,7 +401,8 @@ assert.deepEqual(
     "Long Entry Conditions",
     "Short Entry Conditions",
     "Position Sizing",
-    "Additional Orders",
+    "Long Additional Orders",
+    "Short Additional Orders",
     "Long Exit Conditions",
     "Short Exit Conditions",
   ],

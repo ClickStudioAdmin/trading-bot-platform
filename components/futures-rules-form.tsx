@@ -633,8 +633,11 @@ function RuleCard({
   const [sizeUnit, setSizeUnit] = useState(layer.sizeUnit);
   const [size, setSize] = useState(layer.size);
   const [limitPrice, setLimitPrice] = useState(layer.limitPrice);
-  const [addGroups, setAddGroups] = useState(() =>
-    blankPerpsAddOrderGroups(direction === "short" ? "short" : "long"),
+  const [longAddGroups, setLongAddGroups] = useState(() =>
+    blankPerpsAddOrderGroups("long"),
+  );
+  const [shortAddGroups, setShortAddGroups] = useState(() =>
+    blankPerpsAddOrderGroups("short"),
   );
   const [symbolState, setSymbolState] = useState(() =>
     embedded || layer.id
@@ -1648,7 +1651,7 @@ function RuleCard({
               name={`${prefix}name`}
               defaultValue={layer.name}
               maxLength={40}
-              className={botFieldClass}
+              className={dirty && nameMissing ? botFieldInvalidClass : botFieldClass}
             />
           </BotField>
           )}
@@ -1709,6 +1712,18 @@ function RuleCard({
           fieldClass={botFieldClass}
           labelClass={botLabelClass}
           showErrors={dirty}
+          order={{ size, sizeUnit, orderType, limitPrice }}
+          onOrderChange={(partial) => {
+            if (partial.size != null) setSize(partial.size);
+            if (partial.sizeUnit != null) setSizeUnit(partial.sizeUnit);
+            if (partial.orderType != null) setOrderType(partial.orderType);
+            if (partial.limitPrice != null) setLimitPrice(partial.limitPrice);
+          }}
+          orderNamed
+          quoteLabel={quoteLabel}
+          baseCoin={baseCoin}
+          orderSizeInvalid={dirty && sizeMissing}
+          orderLimitInvalid={dirty && orderLimitMissing}
         />
       </BotFormStep>
       ) : null}
@@ -1730,54 +1745,37 @@ function RuleCard({
           fieldClass={botFieldClass}
           labelClass={botLabelClass}
           showErrors={dirty}
+          order={{ size, sizeUnit, orderType, limitPrice }}
+          onOrderChange={(partial) => {
+            if (partial.size != null) setSize(partial.size);
+            if (partial.sizeUnit != null) setSizeUnit(partial.sizeUnit);
+            if (partial.orderType != null) setOrderType(partial.orderType);
+            if (partial.limitPrice != null) setLimitPrice(partial.limitPrice);
+          }}
+          orderNamed={!showLong}
+          quoteLabel={quoteLabel}
+          baseCoin={baseCoin}
+          orderSizeInvalid={dirty && sizeMissing}
+          orderLimitInvalid={dirty && orderLimitMissing}
         />
       </BotFormStep>
       ) : null}
 
+      {closing ? (
       <BotFormStep title="Position Sizing" defaultCollapsed={inUse}>
-      <BotFormGroup title={closing ? undefined : "Order Size"}>
+      <BotFormGroup>
         <div className={fieldRow}>
-          <BotField
-            label={closing ? "Qty to close" : "Size"}
-            hint={closing ? "Empty closes the whole row." : undefined}
-            required={!closing}
-          >
-            <span className="relative mt-1 block">
-              {!closing && sizeUnit === "usdt" ? (
-                <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-                  $
-                </span>
-              ) : null}
-              <GroupedNumberInput
-                name={`${prefix}size`}
-                value={size}
-                onChange={setSize}
-                allowDecimal
-                placeholder={closing ? "All" : undefined}
-                className={`${dirty && sizeMissing ? botFieldInvalidClass : botFieldClass} !mt-0 ${
-                  !closing && sizeUnit === "usdt" ? "pl-7" : ""
-                }`}
-              />
-            </span>
+          <BotField label="Qty to close" hint="Empty closes the whole row.">
+            <GroupedNumberInput
+              name={`${prefix}size`}
+              value={size}
+              onChange={setSize}
+              allowDecimal
+              placeholder="All"
+              className={botFieldClass}
+            />
           </BotField>
-          {closing ? (
-            <input type="hidden" name={`${prefix}sizeUnit`} value="qty" />
-          ) : (
-            <BotField label="Unit" required>
-              <input type="hidden" name={`${prefix}sizeUnit`} value={sizeUnit} />
-              <AppSelect
-                value={sizeUnit}
-                onChange={(event) => {
-                  setSizeUnit(event.target.value as "qty" | "usdt");
-                  setSize("");
-                }}
-                className={botFieldClass}
-              >
-                <option value="usdt">{quoteLabel}</option>
-                <option value="qty">{baseCoin}</option>
-              </AppSelect>
-            </BotField>
-          )}
+          <input type="hidden" name={`${prefix}sizeUnit`} value="qty" />
           <BotField label="Order" required>
             <OrderTypePill
               name={`${prefix}orderType`}
@@ -1799,18 +1797,34 @@ function RuleCard({
         </div>
       </BotFormGroup>
       </BotFormStep>
+      ) : null}
 
-      {!closing ? (
-        <BotFormStep title="Additional Orders Condition Builder" defaultCollapsed={inUse}>
+      {!closing && (direction === "long" || direction === "both") ? (
+        <BotFormStep title="Long Additional Orders Condition Builder" defaultCollapsed={inUse}>
           <PerpsAdditionalOrders
-            groups={addGroups}
-            onGroupsChange={setAddGroups}
+            groups={longAddGroups}
+            onGroupsChange={setLongAddGroups}
             quoteLabel={quoteLabel}
             baseCoin={baseCoin}
             fieldClass={botFieldClass}
             gridClass={fieldRow}
             fieldsClass={fieldRow5}
-            side={direction === "short" ? "short" : "long"}
+            side="long"
+            webhooks={triggerWebhooks}
+          />
+        </BotFormStep>
+      ) : null}
+      {!closing && (direction === "short" || direction === "both") ? (
+        <BotFormStep title="Short Additional Orders Condition Builder" defaultCollapsed={inUse}>
+          <PerpsAdditionalOrders
+            groups={shortAddGroups}
+            onGroupsChange={setShortAddGroups}
+            quoteLabel={quoteLabel}
+            baseCoin={baseCoin}
+            fieldClass={botFieldClass}
+            gridClass={fieldRow}
+            fieldsClass={fieldRow5}
+            side="short"
             webhooks={triggerWebhooks}
           />
         </BotFormStep>
@@ -1827,6 +1841,7 @@ function RuleCard({
             fieldClass={botFieldClass}
             labelClass={botLabelClass}
             gridClass={fieldRow5}
+            showErrors={dirty}
             renderTakeProfit={() => perpsTakeProfitFields("primary")}
             renderTrailingStop={() => perpsTrailingFields("primary")}
             renderStopLoss={() => perpsStopFields("primary")}
@@ -1846,6 +1861,7 @@ function RuleCard({
             fieldClass={botFieldClass}
             labelClass={botLabelClass}
             gridClass={fieldRow5}
+            showErrors={dirty}
             renderTakeProfit={() =>
               perpsTakeProfitFields(direction === "both" ? "short" : "primary")
             }

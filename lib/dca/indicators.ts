@@ -291,6 +291,91 @@ export function indicatorDraftMissing(input: {
   return false;
 }
 
+export type IndicatorDraftField =
+  | "kind"
+  | "level"
+  | "period"
+  | "slowPeriod"
+  | "multiplier";
+
+/** True when that visible indicator field is empty or out of range. */
+export function indicatorFieldInvalid(
+  input: {
+    family: "indicator" | "trend";
+    kind: string;
+    compare: string;
+    level: string;
+    period: string;
+    slowPeriod: string;
+    multiplier: string;
+  },
+  field: IndicatorDraftField,
+): boolean {
+  const kind = (input.kind ||
+    (input.family === "trend" ? "supertrend" : "")) as DcaIndicatorKind | "";
+  if (field === "kind") {
+    if (kind === "") {
+      return true;
+    }
+    if (input.family === "trend" && kind !== "supertrend") {
+      return true;
+    }
+    return input.family === "indicator" && kind === "supertrend";
+  }
+  if (
+    kind === "" ||
+    (input.family === "indicator" && kind === "supertrend") ||
+    (input.family === "trend" && kind !== "supertrend")
+  ) {
+    return false;
+  }
+  if (field === "level") {
+    if (!dcaIndicatorShowsLevel(kind, input.compare, input.level)) {
+      return false;
+    }
+    const text = input.level.replace(/,/g, "").trim();
+    if (kind === "macd") {
+      return text === "" || text === "-" || !Number.isFinite(Number(text));
+    }
+    return !dcaIndicatorHasLevel(input.level);
+  }
+  const legacyPrice = dcaIndicatorIsLegacyEmaPrice(
+    kind,
+    input.compare,
+    input.level,
+  );
+  if (field === "slowPeriod") {
+    if (!(dcaIndicatorUsesPairPeriods(kind) && !legacyPrice)) {
+      return false;
+    }
+    const slow = draftNumber(input.slowPeriod);
+    const fast = draftNumber(input.period);
+    return !(slow >= DCA_INDICATOR_PERIOD_MIN) || fast === slow;
+  }
+  if (field === "period") {
+    if (dcaIndicatorUsesPairPeriods(kind) && !legacyPrice) {
+      const fast = draftNumber(input.period);
+      return !(fast >= DCA_INDICATOR_PERIOD_MIN);
+    }
+    if (kind === "supertrend" || dcaIndicatorUsesPeriod(kind)) {
+      const period = draftNumber(input.period);
+      return (
+        !(period >= DCA_INDICATOR_PERIOD_MIN) ||
+        period > DCA_INDICATOR_PERIOD_MAX
+      );
+    }
+    return false;
+  }
+  if (kind !== "supertrend" && kind !== "atr_band") {
+    return false;
+  }
+  const multiplier = draftNumber(input.multiplier);
+  return (
+    !(multiplier >= DCA_SUPERTREND_MULTIPLIER_MIN) ||
+    multiplier > DCA_SUPERTREND_MULTIPLIER_MAX
+  );
+}
+
 export function defaultDcaIndicatorLevel(
   kind: DcaIndicatorKind,
 ): number | null {

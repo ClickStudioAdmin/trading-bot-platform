@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { AppSelect } from "@/components/app-select";
 import {
   HintLabel,
+  botFieldInvalidClass,
   conditionFieldClass,
   useBotColumnLayout,
 } from "@/components/bot-form-chrome";
@@ -119,6 +120,7 @@ export function ExitSideBuilder({
   renderTakeProfit,
   renderTrailingStop,
   renderStopLoss,
+  showErrors = false,
 }: {
   clauses: ExitBuilderClause[];
   onChange: (next: ExitBuilderClause[]) => void;
@@ -133,6 +135,8 @@ export function ExitSideBuilder({
   renderTakeProfit: () => ReactNode;
   renderTrailingStop: () => ReactNode;
   renderStopLoss: () => ReactNode;
+  /** Paint empty required controls after the form has been edited. */
+  showErrors?: boolean;
 }) {
   const column = useBotColumnLayout();
   const custom = clauses.filter((clause) => clause.kind === "custom");
@@ -263,6 +267,7 @@ export function ExitSideBuilder({
   }
 
   const stackCount = placed.filter((row) => row.stackIndex != null).length;
+  const exitStarted = clauses.some((clause) => clause.kind !== "");
 
   return (
     <div className="space-y-3">
@@ -310,7 +315,11 @@ export function ExitSideBuilder({
                   <AppSelect
                     value={clauseSelectValue(clause)}
                     onChange={(event) => setChoice(clause, event.target.value)}
-                    className={conditionFieldClass(fieldClass, column)}
+                    className={
+                      showErrors && clause.kind === "" && exitStarted
+                        ? conditionFieldClass(botFieldInvalidClass, column)
+                        : conditionFieldClass(fieldClass, column)
+                    }
                   >
                     <option value="">Select Condition Type</option>
                     <optgroup label="Common">
@@ -369,6 +378,7 @@ export function ExitSideBuilder({
                     fieldClass={fieldClass}
                     labelClass={labelClass}
                     named={named}
+                    showErrors={showErrors}
                     seriesSlots={slots}
                     seriesIndex={anchorSeries}
                     disabledWebhookIds={
@@ -428,6 +438,7 @@ export function ExitSideBuilder({
                             fieldClass={fieldClass}
                             labelClass={labelClass}
                             named={named}
+                            showErrors={showErrors}
                             seriesSlots={slots}
                             seriesIndex={seriesIndex}
                             disabledKinds={disabledTriggers(row, draft, seriesIndex)}
