@@ -41,7 +41,7 @@ import {
   blankExitClauses,
   customStackFromClauses,
   exitClauseListMissing,
-  classicExitFlags,
+  exitPriceLive,
   exitClausesFromSaved,
 } from "@/lib/strategy/exit-clauses";
 import {
@@ -821,8 +821,8 @@ function RuleCard({
   const shortExitParts = hardExitParts(
     storedDirection === "both" ? shortExitIf : null,
   );
-  const primaryFlags = classicExitFlags(exitClauses);
-  const shortFlags = classicExitFlags(shortClauses);
+  const primaryFlags = exitPriceLive(exitClauses);
+  const shortFlags = exitPriceLive(shortClauses);
   const tpLive = primaryFlags.takeProfit;
   const slLive = primaryFlags.stopLoss;
   const trailLive = primaryFlags.trailing;
@@ -1300,7 +1300,7 @@ function RuleCard({
     const missing = shortLeg ? shortTpMissing : tpMissing;
     const limitMissing = shortLeg ? shortTpLimitMissing : tpLimitMissing;
     return (
-      <div className={`${fieldRow5} [&>*]:min-w-0`}>
+      <div className="contents">
         <BotField label="Type" required>
           <AppSelect
             name={exitFieldName(leg, "tpKind")}
@@ -1400,7 +1400,7 @@ function RuleCard({
     const active = shortLeg ? shortClassic.trailingActive : trailingActive;
     const missing = shortLeg ? shortTrailMissing : trailMissing;
     return (
-      <div className={`${fieldRow} [&>*]:min-w-0`}>
+      <div className="contents">
         <BotField label="Retracement" required>
           <GroupedNumberInput
             name={exitFieldName(leg, "trailingStop")}
@@ -1455,7 +1455,7 @@ function RuleCard({
             <input type="hidden" name={exitFieldName(leg, "breakevenOffsetPct")} value="" />
           </div>
         ) : null}
-        <div className="@container">
+        <div className="@container col-span-full">
           <div className="grid items-start gap-4 @min-[40rem]:grid-cols-2">
             <div className="grid grid-cols-2 gap-4 [&>*]:min-w-0">
               <BotField label="Type" required>

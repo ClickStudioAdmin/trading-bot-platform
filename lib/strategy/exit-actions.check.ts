@@ -7,6 +7,7 @@ import {
 import {
   clausesFromExitActions,
   emptyExitRuntime,
+  exitActionGate,
   exitActionsForSave,
   exitActionsFromJson,
   exitCardsBlockReason,
@@ -34,13 +35,12 @@ assert.equal(exitSideUsesColumns(classic), true);
 assert.equal(exitActionsForSave(classic, prices), null);
 assert.equal(exitCardsBlockReason([emptyExitClause()]), null);
 
-const armed = classicExitClause("trailing_stop");
-armed.anchor = {
-  trigger: "trend",
+const trendDraft = {
+  trigger: "trend" as const,
   spec: {
-    kind: "supertrend",
-    timeframe: "15",
-    compare: "cross_gte",
+    kind: "supertrend" as const,
+    timeframe: "15" as const,
+    compare: "cross_gte" as const,
     level: null,
     levelTo: null,
     period: 10,
@@ -48,11 +48,15 @@ armed.anchor = {
     multiplier: 3,
   },
 };
+const armed = classicExitClause("trailing_stop");
+armed.rows = [{ key: "trend", join: "and", draft: trendDraft }];
 assert.equal(exitSideUsesColumns([armed]), false);
 const saved = exitActionsForSave([armed], prices);
 assert.equal(saved?.length, 1);
 assert.equal(saved?.[0]?.kind, "trailing_stop");
 assert.equal(saved?.[0]?.groups.length, 1);
+assert.equal(saved?.[0]?.groups[0]?.anchor.trigger, "trail");
+assert.equal(saved?.[0]?.groups[0]?.rows[0]?.trigger, "trend");
 assert.equal(saved?.[0]?.trailingDistance, 2);
 assert.equal(exitCardsBlockReason([armed]), null);
 
@@ -290,11 +294,124 @@ const trailHit = planExitClaims({
   nowMs: 20,
   conditionTrue: { trail: false },
 });
-assert.equal(trailHit.claims.length, 1);
+assert.equal(trailHit.claims.length, 0);
 assert.equal(trailHit.runtime.arms.trail?.armedAt, 10);
+
+const trailConfirmed = planExitClaims({
+  actions: trailHit.claims.length === 0 ? [
+    {
+      id: "trail",
+      kind: "trailing_stop",
+      scope: { kind: "all" },
+      groups: [
+        {
+          anchor: { trigger: "webhook", webhookId: "arm" },
+          rows: [],
+        },
+      ],
+      takeProfitPct: null,
+      takeProfitPrice: null,
+      stopLossPct: null,
+      stopLossPrice: null,
+      trailingDistance: 5,
+      trailingActivation: null,
+    },
+  ] : [],
+  runtime: trailHit.runtime,
+  lots: [{ id: "a", qty: 1, price: 100 }],
+  side: "long",
+  mark: 90,
+  last: 90,
+  entryPrice: 100,
+  nowMs: 30,
+  conditionTrue: { trail: true },
+});
+assert.equal(trailConfirmed.claims.length, 1);
+
+const confirmedTp = {
+  id: "tp",
+  kind: "take_profit" as const,
+  scope: { kind: "all" as const },
+  groups: [
+    {
+      anchor: { trigger: "target" as const },
+      rows: [{ trigger: "webhook" as const, webhookId: "arm" }],
+    },
+  ],
+  takeProfitPct: 10,
+  takeProfitPrice: null,
+  stopLossPct: null,
+  stopLossPrice: null,
+  trailingDistance: null,
+  trailingActivation: null,
+};
+const blockedTp = planExitClaims({
+  actions: [confirmedTp],
+  runtime: emptyExitRuntime(),
+  lots: [{ id: "a", qty: 1, price: 100 }],
+  side: "long",
+  mark: 120,
+  last: 120,
+  entryPrice: 100,
+  nowMs: 1,
+  conditionTrue: { tp: false },
+});
+assert.equal(blockedTp.claims.length, 0);
+const passedTp = planExitClaims({
+  actions: [confirmedTp],
+  runtime: emptyExitRuntime(),
+  lots: [{ id: "a", qty: 1, price: 100 }],
+  side: "long",
+  mark: 120,
+  last: 120,
+  entryPrice: 100,
+  nowMs: 1,
+  conditionTrue: { tp: true },
+});
+assert.equal(passedTp.claims.length, 1);
+const gate = exitActionGate({
+  action: confirmedTp,
+  side: "long",
+  prices: { last: 120, mark: 120, index: null },
+  barsByTimeframe: new Map(),
+  firedWebhookId: null,
+});
+assert.equal(gate.confirm, false);
+assert.equal(gate.needsPrice, true);
+const gateOpen = exitActionGate({
+  action: {
+    ...confirmedTp,
+    groups: [{ anchor: { trigger: "webhook", webhookId: "arm" }, rows: [] }],
+    takeProfitPct: null,
+  },
+  side: "long",
+  prices: { last: 120, mark: 120, index: null },
+  barsByTimeframe: new Map(),
+  firedWebhookId: "arm",
+});
+assert.equal(gateOpen.confirm, true);
+assert.equal(gateOpen.needsPrice, false);
+
+const legacy = clausesFromExitActions([
+  {
+    id: "old-trail",
+    kind: "trailing_stop",
+    scope: { kind: "all" },
+    groups: [{ anchor: trendDraft, rows: [] }],
+    takeProfitPct: null,
+    takeProfitPrice: null,
+    stopLossPct: null,
+    stopLossPrice: null,
+    trailingDistance: 2,
+    trailingActivation: null,
+  },
+]);
+assert.equal(legacy?.[0]?.anchor.trigger, "trail");
+assert.equal(legacy?.[0]?.rows[0]?.draft.trigger, "trend");
 
 const round = clausesFromExitActions(exitActionsFromJson(saved));
 assert.equal(round?.[0]?.kind, "trailing_stop");
-assert.equal(round?.[0]?.anchor.trigger, "trend");
+assert.equal(round?.[0]?.anchor.trigger, "trail");
+assert.equal(round?.[0]?.rows[0]?.draft.trigger, "trend");
 
 console.log("exit-actions.check ok");

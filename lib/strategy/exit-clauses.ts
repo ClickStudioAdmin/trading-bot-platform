@@ -1,5 +1,9 @@
 import type { ExitStackRow } from "@/components/exit-condition-stack";
-import type { HardExitDraft } from "@/lib/dca/hard-exit";
+import {
+  exitPriceRuleLabel,
+  type ExitPriceRuleTrigger,
+  type HardExitDraft,
+} from "@/lib/dca/hard-exit";
 import type { StrategyJoin } from "@/lib/strategy/expr";
 
 export const EXIT_CLAUSE_KINDS = [
@@ -71,11 +75,65 @@ export function emptyExitClause(): ExitBuilderClause {
   };
 }
 
+export function priceRuleForKind(
+  kind: ExitBuilderClause["kind"],
+): ExitPriceRuleTrigger | null {
+  if (kind === "take_profit") {
+    return "target";
+  }
+  if (kind === "stop_loss") {
+    return "stop";
+  }
+  if (kind === "trailing_stop") {
+    return "trail";
+  }
+  return null;
+}
+
+export function priceRuleName(kind: ExitBuilderClause["kind"]): string | null {
+  const rule = priceRuleForKind(kind);
+  return rule ? exitPriceRuleLabel(rule) : null;
+}
+
+export function clauseHasPriceRule(clause: ExitBuilderClause): boolean {
+  const rule = priceRuleForKind(clause.kind);
+  if (!rule) {
+    return false;
+  }
+  if (clause.anchor.trigger === rule) {
+    return true;
+  }
+  if (clause.rows.some((row) => row.draft.trigger === rule)) {
+    return true;
+  }
+  return clauseOrGroups(clause).some(
+    (group) =>
+      group.anchor.trigger === rule ||
+      group.rows.some((row) => row.draft.trigger === rule),
+  );
+}
+
+/** Column price fields belong to the first card of that kind. */
+export function exitPriceLive(clauses: readonly ExitBuilderClause[]): {
+  takeProfit: boolean;
+  trailing: boolean;
+  stopLoss: boolean;
+} {
+  const first = (kind: ClassicExitKind) =>
+    clauses.find((clause) => clause.kind === kind);
+  return {
+    takeProfit: clauseHasPriceRule(first("take_profit") ?? emptyExitClause()),
+    trailing: clauseHasPriceRule(first("trailing_stop") ?? emptyExitClause()),
+    stopLoss: clauseHasPriceRule(first("stop_loss") ?? emptyExitClause()),
+  };
+}
+
 export function classicExitClause(kind: ClassicExitKind): ExitBuilderClause {
+  const rule = priceRuleForKind(kind);
   return {
     key: `classic-${kind}`,
     kind,
-    anchor: { trigger: "unset" },
+    anchor: rule ? { trigger: rule } : { trigger: "unset" },
     rows: [],
     orGroups: [],
     scope: EXIT_SCOPE_ALL,

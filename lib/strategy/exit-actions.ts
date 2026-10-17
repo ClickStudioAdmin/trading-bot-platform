@@ -1,13 +1,21 @@
-import { hardExitMet, hardExitParts, type HardExitDraft } from "@/lib/dca/hard-exit";
+import {
+  hardExitMet,
+  hardExitParts,
+  isExitPriceRule,
+  type HardExitDraft,
+} from "@/lib/dca/hard-exit";
 import type { FuturesSide } from "@/lib/futures/model";
 import type { CandleBar } from "@/lib/market/candles";
 import {
+  clauseHasPriceRule,
   clauseOrGroups,
   clauseScope,
   classicExitClause,
   customExitClause,
   emptyExitClause,
   isClassicExitKind,
+  priceRuleForKind,
+  priceRuleName,
   type ClassicExitKind,
   type ExitBuilderClause,
   type ExitOrGroup,
@@ -145,6 +153,9 @@ function draftOf(value: unknown): HardExitDraft | null {
     row.trigger !== "indicator" &&
     row.trigger !== "trend" &&
     row.trigger !== "webhook" &&
+    row.trigger !== "target" &&
+    row.trigger !== "stop" &&
+    row.trigger !== "trail" &&
     row.trigger !== "unset"
   ) {
     return null;
@@ -279,11 +290,14 @@ function groupsOf(clause: ExitBuilderClause): ExitConditionGroup[] {
 }
 
 function stackStarted(clause: ExitBuilderClause): boolean {
-  return (
-    clause.anchor.trigger !== "unset" ||
-    clause.rows.length > 0 ||
-    clauseOrGroups(clause).length > 0
-  );
+  if (clause.rows.length > 0 || clauseOrGroups(clause).length > 0) {
+    return true;
+  }
+  const rule = priceRuleForKind(clause.kind);
+  if (clause.anchor.trigger === "unset") {
+    return false;
+  }
+  return !(rule != null && clause.anchor.trigger === rule);
 }
 
 function scopeComplete(scope: ExitScope): StoredExitAction["scope"] | null {
@@ -371,6 +385,14 @@ function forEachBlock(
     if (clause.kind === "custom" && groupsOf(clause).length === 0 && clauseScope(clause).kind !== "fills") {
       return "Close needs a condition.";
     }
+    const ruleName = priceRuleName(clause.kind);
+    if (
+      ruleName &&
+      !clauseHasPriceRule(clause) &&
+      groupsOf(clause).length === 0
+    ) {
+      return `${label} needs a ${ruleName}.`;
+    }
     if (seen > 1 && clause.kind === "trailing_stop" && !(clause.ownDistance != null && clause.ownDistance > 0)) {
       return "Enter a distance for the extra trailing stop.";
     }
@@ -436,6 +458,9 @@ function pricesFor(
     trailingActivation: null,
     trailingPct: null,
   };
+  if (!clauseHasPriceRule(clause)) {
+    return blank;
+  }
   if (clause.kind === "take_profit") {
     if (kindCount > 1) {
       return { ...blank, takeProfitPct: clause.ownPct };
@@ -524,6 +549,13 @@ export function clausesFromExitActions(
         join: "and" as const,
         draft,
       })) ?? [];
+    const placed = placePriceRule(
+      kind,
+      first?.anchor ?? { trigger: "unset" },
+      rows,
+      action,
+      rest,
+    );
     const orGroups: ExitOrGroup[] = rest.map((group, index) => ({
       key: `${action.id}-or-${index}`,
       anchor: group.anchor,
@@ -535,8 +567,8 @@ export function clausesFromExitActions(
     }));
     return {
       ...base,
-      anchor: first?.anchor ?? { trigger: "unset" },
-      rows,
+      anchor: placed.anchor,
+      rows: placed.rows,
       orGroups,
       scope: action.scope,
       ownPct:
@@ -572,6 +604,58 @@ export function parseExitActionsField(
   } catch {
     return { ok: false, error: "Exit actions could not be read." };
   }
+}
+
+function actionHasNumbers(action: StoredExitAction): boolean {
+  if (action.kind === "take_profit") {
+    return action.takeProfitPct != null || action.takeProfitPrice != null;
+  }
+  if (action.kind === "stop_loss") {
+    return action.stopLossPct != null || action.stopLossPrice != null;
+  }
+  if (action.kind === "trailing_stop") {
+    return (
+      action.trailingDistance != null ||
+      action.trailingActivation != null ||
+      (action.trailingPct != null && action.trailingPct > 0)
+    );
+  }
+  return false;
+}
+
+/** A saved price level with no price-rule leaf opens as Target Hit, Stop Hit, or Trail. */
+function placePriceRule(
+  kind: ExitBuilderClause["kind"],
+  anchor: HardExitDraft,
+  rows: ExitBuilderClause["rows"],
+  action: StoredExitAction,
+  rest: readonly ExitConditionGroup[],
+): { anchor: HardExitDraft; rows: ExitBuilderClause["rows"] } {
+  const rule = priceRuleForKind(kind);
+  if (!rule) {
+    return { anchor, rows };
+  }
+  const present =
+    anchor.trigger === rule ||
+    rows.some((row) => row.draft.trigger === rule) ||
+    rest.some(
+      (group) =>
+        group.anchor.trigger === rule ||
+        group.rows.some((draft) => draft.trigger === rule),
+    );
+  if (present) {
+    return { anchor, rows };
+  }
+  if (!actionHasNumbers(action) && anchor.trigger !== "unset") {
+    return { anchor, rows };
+  }
+  if (anchor.trigger === "unset") {
+    return { anchor: { trigger: rule }, rows };
+  }
+  return {
+    anchor: { trigger: rule },
+    rows: [{ key: `${action.id}-kept`, join: "and", draft: anchor }, ...rows],
+  };
 }
 
 function pnlPct(side: FuturesSide, entry: number, mark: number): number | null {
@@ -652,14 +736,17 @@ export function evaluateExitActions(input: {
     index: null,
   };
   const conditionTrue: Record<string, boolean> = {};
+  const needsPrice: Record<string, boolean> = {};
   for (const action of input.actions) {
-    conditionTrue[action.id] = exitActionStackTrue({
+    const gate = exitActionGate({
       action,
       side: input.side,
       prices,
       barsByTimeframe: input.barsByTimeframe,
       firedWebhookId: input.firedWebhookId,
     });
+    conditionTrue[action.id] = gate.confirm;
+    needsPrice[action.id] = gate.needsPrice;
   }
   return planExitClaims({
     actions: input.actions,
@@ -671,8 +758,71 @@ export function evaluateExitActions(input: {
     entryPrice: input.entryPrice,
     nowMs: input.nowMs,
     conditionTrue,
+    needsPrice,
     stepQty: input.stepQty,
   });
+}
+
+function leafMet(
+  draft: HardExitDraft,
+  input: {
+    side: FuturesSide;
+    prices: { last: number | null; mark: number | null; index: number | null } | null;
+    barsByTimeframe: Map<string, CandleBar[]>;
+    firedWebhookId?: string | null;
+  },
+): boolean {
+  if (isExitPriceRule(draft.trigger)) {
+    return true;
+  }
+  const parts = hardExitParts(draft);
+  const timeframe =
+    draft.trigger === "indicator" || draft.trigger === "trend"
+      ? draft.spec?.timeframe ?? null
+      : null;
+  const bars = timeframe ? (input.barsByTimeframe.get(timeframe) ?? []) : [];
+  return hardExitMet({
+    filter: parts.filter,
+    signal: parts.signal,
+    side: input.side,
+    closes: bars.map((row) => row.close),
+    bars,
+    prices: input.prices,
+    firedWebhookId: input.firedWebhookId,
+  });
+}
+
+/** Confirm is the non-price leaves. needsPrice is false when a matched group has no price rule. */
+export function exitActionGate(input: {
+  action: StoredExitAction;
+  side: FuturesSide;
+  prices: { last: number | null; mark: number | null; index: number | null } | null;
+  barsByTimeframe: Map<string, CandleBar[]>;
+  firedWebhookId?: string | null;
+}): { confirm: boolean; needsPrice: boolean } {
+  if (input.action.groups.length === 0) {
+    return {
+      confirm: false,
+      needsPrice: input.action.kind !== "close",
+    };
+  }
+  let priced = false;
+  let open = false;
+  for (const group of input.action.groups) {
+    const leaves = [group.anchor, ...group.rows];
+    if (!leaves.every((draft) => leafMet(draft, input))) {
+      continue;
+    }
+    if (leaves.some((draft) => isExitPriceRule(draft.trigger))) {
+      priced = true;
+    } else {
+      open = true;
+    }
+  }
+  return {
+    confirm: priced || open,
+    needsPrice: open ? false : true,
+  };
 }
 
 export function exitActionStackTrue(input: {
@@ -682,29 +832,7 @@ export function exitActionStackTrue(input: {
   barsByTimeframe: Map<string, CandleBar[]>;
   firedWebhookId?: string | null;
 }): boolean {
-  if (input.action.groups.length === 0) {
-    return false;
-  }
-  return input.action.groups.some((group) => {
-    const leaves = [group.anchor, ...group.rows];
-    return leaves.every((draft) => {
-      const parts = hardExitParts(draft);
-      const timeframe =
-        draft.trigger === "indicator" || draft.trigger === "trend"
-          ? draft.spec?.timeframe ?? null
-          : null;
-      const bars = timeframe ? (input.barsByTimeframe.get(timeframe) ?? []) : [];
-      return hardExitMet({
-        filter: parts.filter,
-        signal: parts.signal,
-        side: input.side,
-        closes: bars.map((row) => row.close),
-        bars,
-        prices: input.prices,
-        firedWebhookId: input.firedWebhookId,
-      });
-    });
-  });
+  return exitActionGate(input).confirm;
 }
 
 function lotQty(lots: readonly ExitLot[]): number {
@@ -853,6 +981,8 @@ export function planExitClaims(input: {
   entryPrice: number | null;
   nowMs: number;
   conditionTrue: Readonly<Record<string, boolean>>;
+  /** When false, a matched group can fire without the price level. Defaults from the stored prices. */
+  needsPrice?: Readonly<Record<string, boolean>>;
   stepQty?: number;
 }): { claims: ExitClaim[]; runtime: ExitRuntime; lots: ExitLot[] } {
   const stepQty = input.stepQty ?? 0;
@@ -872,12 +1002,14 @@ export function planExitClaims(input: {
     const previous = armOf(input.runtime, action.id);
     const condition = input.conditionTrue[action.id] === true;
     const alwaysArmed = action.groups.length === 0 && action.kind !== "close";
-    const armed = alwaysArmed || previous.armedAt != null || condition;
+    const confirm = alwaysArmed || condition;
+    const needsPrice = input.needsPrice?.[action.id] ?? actionHasNumbers(action);
+    const armed = alwaysArmed || previous.armedAt != null || (confirm && needsPrice);
     const justArmed = previous.armedAt == null && armed && !alwaysArmed;
     const next: ExitArmState = {
       armedAt: armed ? (previous.armedAt ?? input.nowMs) : null,
       peak: previous.peak,
-      condition,
+      condition: confirm,
       scopeLive: previous.scopeLive,
     };
     if (action.kind === "close") {
@@ -891,6 +1023,10 @@ export function planExitClaims(input: {
       if (edge) {
         firing.set(action.id, { peak: null, edge: true });
       }
+    } else if (!needsPrice) {
+      if (confirm && !previous.condition) {
+        firing.set(action.id, { peak: null, edge: true });
+      }
     } else if (armed) {
       const hit = priceFires({
         action,
@@ -902,7 +1038,7 @@ export function planExitClaims(input: {
         justArmed,
       });
       next.peak = hit.peak;
-      if (hit.fire) {
+      if (hit.fire && confirm) {
         firing.set(action.id, { peak: hit.peak, edge: false });
       }
     }

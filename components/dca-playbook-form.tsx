@@ -49,7 +49,7 @@ import {
 import {
   blankExitClauses,
   customStackFromClauses,
-  classicExitFlags,
+  exitPriceLive,
   exitClauseListMissing,
   exitClausesFromSaved,
   type ExitBuilderClause,
@@ -1648,8 +1648,8 @@ export function DcaPlaybookForm({
     (asNumber(clipForSave) === null ? null : (sizeError ?? ladderMaxError));
   const saveBlocked = cycleLocked ? null : saveError;
   const restGridEffective = averaging !== "interval" && restGrid;
-  const primaryFlags = classicExitFlags(exitClauses);
-  const shortFlags = classicExitFlags(shortClauses);
+  const primaryFlags = exitPriceLive(exitClauses);
+  const shortFlags = exitPriceLive(shortClauses);
   const needsAtr =
     (averaging === "dip" && spacingKind === "atr") ||
     takeProfitKind === "atr" ||
@@ -2595,7 +2595,7 @@ export function DcaPlaybookForm({
     const lockSpacing =
       !shortLeg && cycleLocked && averaging === "dip" && spacingKind === "atr";
     return (
-      <div className={`${fieldRowClass} [&>*]:min-w-0`}>
+      <div className="contents">
         <label className={labelClass}>
           <HintLabel text="Basis" required />
           <AppSelect
@@ -2705,7 +2705,7 @@ export function DcaPlaybookForm({
     const trail = shortLeg ? shortClassic.trailingPct : trailingPct;
     const missing = shortLeg ? shortTrailMissing : trailMissing;
     return (
-      <div className={`${fieldRowClass} [&>*]:min-w-0`}>
+      <div className="contents">
         <BotField
           label="Trigger %"
           hint="Trail starts after price moves this %."
@@ -2749,8 +2749,8 @@ export function DcaPlaybookForm({
     const missing = shortLeg ? shortSlMissing : slMissing;
     const breakevenInvalid = shortLeg ? shortBreakevenMissing : breakevenMissing;
     return (
-      <div className="@container">
-        <div className="grid grid-cols-2 items-start gap-4 [&>*]:min-w-0 @min-[40rem]:grid-cols-4">
+      <div className="contents">
+        <div className="contents">
           <label className={labelClass}>
             <HintLabel text="Basis" required />
             <AppSelect

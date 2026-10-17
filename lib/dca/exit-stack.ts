@@ -19,6 +19,7 @@ import {
 import { dcaFilterMet, type DcaFilterSpec } from "./filters";
 import {
   hardExitDraftFromStored,
+  isPriceRuleDraft,
   parseHardExitForm,
   writeHardExitFormFields,
   type HardExitDraft,
@@ -43,7 +44,12 @@ export function exitStackMet(input: {
 export function hardExitClaim(
   draft: HardExitDraft | null | undefined,
 ): EntryConflictSlot["claim"] {
-  if (!draft || draft.trigger === "webhook" || draft.trigger === "unset") {
+  if (
+    !draft ||
+    draft.trigger === "webhook" ||
+    draft.trigger === "unset" ||
+    isPriceRuleDraft(draft)
+  ) {
     return null;
   }
   if (draft.trigger === "price") {
@@ -76,17 +82,43 @@ export function hardExitAnchor(
     return null;
   }
   if (
+    draft.trigger === "target" ||
+    draft.trigger === "stop" ||
+    draft.trigger === "trail"
+  ) {
+    return null;
+  }
+  if (
     (draft.trigger === "indicator" || draft.trigger === "trend") &&
     !draft.spec
   ) {
     return null;
   }
-  return {
-    kind: draft.trigger,
-    join: "and",
-    webhookId: draft.trigger === "webhook" ? draft.webhookId : null,
-    claim: hardExitClaim(draft),
-  };
+  if (draft.trigger === "price") {
+    return {
+      kind: "price",
+      join: "and",
+      webhookId: null,
+      claim: hardExitClaim(draft),
+    };
+  }
+  if (draft.trigger === "webhook") {
+    return {
+      kind: "webhook",
+      join: "and",
+      webhookId: draft.webhookId,
+      claim: hardExitClaim(draft),
+    };
+  }
+  if (draft.trigger === "indicator" || draft.trigger === "trend") {
+    return {
+      kind: draft.trigger,
+      join: "and",
+      webhookId: null,
+      claim: hardExitClaim(draft),
+    };
+  }
+  return null;
 }
 
 export function hardExitTriggerTimeframe(
@@ -97,6 +129,7 @@ export function hardExitTriggerTimeframe(
     draft.trigger === "price" ||
     draft.trigger === "webhook" ||
     draft.trigger === "unset" ||
+    isPriceRuleDraft(draft) ||
     !draft.spec
   ) {
     return null;

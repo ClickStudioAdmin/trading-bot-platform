@@ -21,7 +21,9 @@ import {
 } from "@/lib/dca/indicators";
 import { dcaAveragingKind, dcaIntervalParts } from "@/lib/dca/playbook";
 import {
+  exitPriceRuleLabel,
   hardExitParts as splitExitDraft,
+  isExitPriceRule,
   templateHardExit,
   type HardExitDraft,
   type TemplateHardExitSignal,
@@ -707,6 +709,9 @@ function actionDraftRows(
   draft: HardExitDraft,
   side: "long" | "short",
 ): ParamRow[] | null {
+  if (isExitPriceRule(draft.trigger)) {
+    return [{ label: "Condition Type", value: exitPriceRuleLabel(draft.trigger) }];
+  }
   const parts = splitExitDraft(draft);
   return hardExitAnchorRows(parts.filter, templateHardExit(parts.signal), side);
 }
@@ -717,10 +722,13 @@ function exitActionStacks(
 ): ParamStack[] {
   return actions.map((action) => {
     const when = action.kind === "close" ? "Fire when" : "Enable when";
+    const hasPriceRule = action.groups.some((group) =>
+      [group.anchor, ...group.rows].some((draft) => isExitPriceRule(draft.trigger)),
+    );
     const rows: ParamRow[] = [
       { label: "Action", value: actionKindLabel(action.kind) },
       { label: "Scope", value: scopeLabel(action.scope) },
-      ...actionPriceRows(action),
+      ...(hasPriceRule ? [] : actionPriceRows(action)),
     ];
     if (action.groups.length === 0) {
       rows.push({
@@ -731,13 +739,23 @@ function exitActionStacks(
     return {
       title: actionKindLabel(action.kind),
       rows,
-      groups: action.groups.flatMap((group) => {
+      groups: (() => {
+        let priced = false;
+        return action.groups.flatMap((group) => {
         const conditions = [group.anchor, ...group.rows].flatMap((draft) => {
           const condition = actionDraftRows(draft, side);
-          return condition ? [{ rows: condition }] : [];
+          if (!condition) {
+            return [];
+          }
+          if (isExitPriceRule(draft.trigger) && !priced) {
+            priced = true;
+            return [{ rows: [...condition, ...actionPriceRows(action)] }];
+          }
+          return [{ rows: condition }];
         });
         return conditions.length > 0 ? [conditions] : [];
-      }),
+        });
+      })(),
     };
   });
 }

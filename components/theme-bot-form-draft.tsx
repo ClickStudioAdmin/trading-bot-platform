@@ -53,6 +53,7 @@ import {
   blankExitClauses,
   customStackFromClauses,
   classicExitFlags,
+  exitPriceLive,
   exitClauseListMissing,
   exitClausesFromSaved,
   type ExitBuilderClause,
@@ -1057,8 +1058,8 @@ export function ThemeBotFormDraft() {
   const themeBothExits =
     (desk === "flex" && perpsDirection === "both") ||
     (desk === "dca" && direction === "both");
-  const primaryExitFlags = classicExitFlags(exitClauses);
-  const shortExitFlags = classicExitFlags(shortClauses);
+  const primaryExitFlags = exitPriceLive(exitClauses);
+  const shortExitFlags = exitPriceLive(shortClauses);
   const requireTp = desk !== "cnc" && !closing && primaryExitFlags.takeProfit;
   const requireSl = desk !== "cnc" && !closing && primaryExitFlags.stopLoss;
   const requireTrail = desk !== "cnc" && !closing && primaryExitFlags.trailing;
@@ -1673,7 +1674,7 @@ export function ThemeBotFormDraft() {
             invalid={valueInvalid}
           />
         ) : (
-          <div className={`${rowClass} [&>*]:min-w-0`}>
+          <div className="contents">
             <Field label="Type" required>
               <AppSelect
                 className={fieldClass}
@@ -1764,7 +1765,7 @@ export function ThemeBotFormDraft() {
     const valueInvalid =
       showFieldErrors && (shortLeg ? missing.shortTrailValue : missing.trailValue);
     return (
-      <div className={`${rowClass} [&>*]:min-w-0`}>
+      <div className="contents">
         {desk === "dca" ? (
           <>
             <Field
@@ -1840,7 +1841,7 @@ export function ThemeBotFormDraft() {
     const moveInvalid =
       showFieldErrors && (shortLeg ? missing.shortBreakevenAt : missing.breakevenAt);
     return (
-      <div className="@container">
+      <div className="@container col-span-full">
         <div
           className={
             desk === "dca"
@@ -3628,7 +3629,7 @@ function ExitMethodFields({
   invalid?: boolean;
 }) {
   return (
-    <div className={`${rowClass} [&>*]:min-w-0`}>
+    <div className="contents">
       <Field label="Basis" required>
         <AppSelect
           className={fieldClass}

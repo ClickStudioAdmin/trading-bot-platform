@@ -21,7 +21,10 @@ import {
 import { hardExitAnchor } from "@/lib/dca/exit-stack";
 import { HardExitFields } from "@/components/hard-exit-fields";
 import {
+  exitPriceRuleLabel,
   hardExitForTrigger,
+  isExitPriceRule,
+  type ExitPriceRuleTrigger,
   type HardExitDraft,
   type HardExitTrigger,
 } from "@/lib/dca/hard-exit";
@@ -32,6 +35,7 @@ import {
   customExitClause,
   emptyExitClause,
   isClassicExitKind,
+  priceRuleForKind,
   type ClassicExitKind,
   type ExitBuilderClause,
   type ExitOrGroup,
@@ -74,6 +78,59 @@ function isConditionTrigger(value: string): value is HardExitTrigger {
     value === "price" ||
     value === "webhook"
   );
+}
+
+function choiceDraft(
+  value: string,
+  side: FuturesSide,
+  current: HardExitDraft,
+): HardExitDraft {
+  if (value === "target" || value === "stop" || value === "trail") {
+    return { trigger: value };
+  }
+  if (!isConditionTrigger(value)) {
+    return { trigger: "unset" };
+  }
+  return hardExitForTrigger(
+    value,
+    side,
+    current.trigger === value ? current : null,
+  );
+}
+
+function ruleChoices(
+  kind: ExitBuilderClause["kind"],
+  used: boolean,
+): { value: ExitPriceRuleTrigger; label: string; disabled?: boolean }[] {
+  const rule = priceRuleForKind(kind);
+  if (!rule) {
+    return [];
+  }
+  return [{ value: rule, label: exitPriceRuleLabel(rule), disabled: used }];
+}
+
+function firstRuleLeaf(clause: ExitBuilderClause): string | null {
+  const rule = priceRuleForKind(clause.kind);
+  if (!rule) {
+    return null;
+  }
+  if (clause.anchor.trigger === rule) {
+    return "anchor";
+  }
+  const row = clause.rows.find((item) => item.draft.trigger === rule);
+  if (row) {
+    return row.key;
+  }
+  for (const group of clauseOrGroups(clause)) {
+    if (group.anchor.trigger === rule) {
+      return group.key;
+    }
+    const leaf = group.rows.find((item) => item.draft.trigger === rule);
+    if (leaf) {
+      return leaf.key;
+    }
+  }
+  return null;
 }
 
 function actionValue(clause: ExitBuilderClause): string {
@@ -206,13 +263,24 @@ export function ExitSideBuilder({
       value === "trailing_stop" ||
       value === "stop_loss"
     ) {
-      patch(clause.key, (current) => ({
-        ...current,
-        kind: value,
-        anchor: current.kind === "custom" ? { trigger: "unset" } : current.anchor,
-        rows: current.kind === "custom" ? [] : current.rows,
-        orGroups: current.kind === "custom" ? [] : current.orGroups,
-      }));
+      const rule = priceRuleForKind(value);
+      patch(clause.key, (current) => {
+        const fromClose = current.kind === "custom";
+        const anchor =
+          rule &&
+          (fromClose ||
+            current.anchor.trigger === "unset" ||
+            isExitPriceRule(current.anchor.trigger))
+            ? { trigger: rule }
+            : current.anchor;
+        return {
+          ...current,
+          kind: value,
+          anchor,
+          rows: fromClose ? [] : current.rows,
+          orGroups: fromClose ? [] : current.orGroups,
+        };
+      });
       return;
     }
     if (value === "close") {
@@ -234,7 +302,7 @@ export function ExitSideBuilder({
     patch(clause.key, (current) => ({ ...emptyExitClause(), key: current.key }));
   }
   function setAnchor(clause: ExitBuilderClause, value: string) {
-    if (!isConditionTrigger(value)) {
+    if (value === "") {
       patch(clause.key, (current) => ({
         ...current,
         anchor: { trigger: "unset" },
@@ -245,11 +313,7 @@ export function ExitSideBuilder({
     }
     patch(clause.key, (current) => ({
       ...current,
-      anchor: hardExitForTrigger(
-        value,
-        side,
-        current.anchor.trigger === value ? current.anchor : null,
-      ),
+      anchor: choiceDraft(value, side, current.anchor),
     }));
   }
   function addRow(clause: ExitBuilderClause) {
@@ -288,6 +352,51 @@ export function ExitSideBuilder({
             ? { kind, minProfitPct: null }
             : { kind };
     patch(clause.key, (current) => ({ ...current, scope: next }));
+  }
+
+  function ruleFields(
+    clause: ExitBuilderClause,
+    firstOfKind: boolean,
+    ownInvalid: boolean,
+  ): ReactNode {
+    if (clause.kind === "take_profit" && firstOfKind) {
+      return renderTakeProfit();
+    }
+    if (clause.kind === "trailing_stop" && firstOfKind) {
+      return renderTrailingStop();
+    }
+    if (clause.kind === "stop_loss" && firstOfKind) {
+      return renderStopLoss();
+    }
+    if (
+      clause.kind !== "take_profit" &&
+      clause.kind !== "stop_loss" &&
+      clause.kind !== "trailing_stop"
+    ) {
+      return null;
+    }
+    return (
+      <label className={labelClass}>
+        <HintLabel text={clause.kind === "trailing_stop" ? "Distance" : "Target %"} />
+        <input
+          value={
+            clause.kind === "trailing_stop" ? clause.ownDistance ?? "" : clause.ownPct ?? ""
+          }
+          onChange={(event) => {
+            const raw = event.target.value.replace(/,/g, "").trim();
+            const number = raw === "" ? null : Number(raw);
+            const next = number != null && Number.isFinite(number) ? number : null;
+            patch(clause.key, (current) =>
+              current.kind === "trailing_stop"
+                ? { ...current, ownDistance: next }
+                : { ...current, ownPct: next },
+            );
+          }}
+          inputMode="decimal"
+          className={ownInvalid ? botFieldInvalidClass : fieldClass}
+        />
+      </label>
+    );
   }
 
   const kindCounts = new Map<string, number>();
@@ -339,9 +448,7 @@ export function ExitSideBuilder({
                 <h3 className="min-w-0 text-sm font-semibold text-ink">
                   {clause.kind === "" ? "Action" : actionKindLabel(clause.kind)}
                   <span className="ml-2 text-hint font-normal text-ink-muted">
-                    {clause.kind === "custom"
-                      ? "- Fires when its conditions are true."
-                      : "- Turns on when its conditions are true."}
+                    - Fires when its conditions are true.
                   </span>
                 </h3>
                 {clauses.length > 1 ? (
@@ -430,38 +537,6 @@ export function ExitSideBuilder({
                   </label>
                 ) : null}
               </div>
-              {clause.kind === "take_profit" && firstOfKind ? renderTakeProfit() : null}
-              {clause.kind === "trailing_stop" && firstOfKind ? renderTrailingStop() : null}
-              {clause.kind === "stop_loss" && firstOfKind ? renderStopLoss() : null}
-              {!firstOfKind &&
-              (clause.kind === "take_profit" ||
-                clause.kind === "stop_loss" ||
-                clause.kind === "trailing_stop") ? (
-                <label className={labelClass}>
-                  <HintLabel
-                    text={clause.kind === "trailing_stop" ? "Distance" : "Target %"}
-                  />
-                  <input
-                    value={
-                      clause.kind === "trailing_stop"
-                        ? clause.ownDistance ?? ""
-                        : clause.ownPct ?? ""
-                    }
-                    onChange={(event) => {
-                      const raw = event.target.value.replace(/,/g, "").trim();
-                      const number = raw === "" ? null : Number(raw);
-                      const next = number != null && Number.isFinite(number) ? number : null;
-                      patch(clause.key, (current) =>
-                        current.kind === "trailing_stop"
-                          ? { ...current, ownDistance: next }
-                          : { ...current, ownPct: next },
-                      );
-                    }}
-                    inputMode="decimal"
-                    className={ownInvalid ? botFieldInvalidClass : fieldClass}
-                  />
-                </label>
-              ) : null}
               {clause.kind !== "" ? (
                 <div className="space-y-3 border-t border-line pt-4">
                   <ConditionStack
@@ -478,6 +553,8 @@ export function ExitSideBuilder({
                     fieldClass={fieldClass}
                     labelClass={labelClass}
                     showErrors={showErrors}
+                    ruleLeaf={firstRuleLeaf(clause)}
+                    ruleFields={ruleFields(clause, firstOfKind, ownInvalid)}
                     onAnchor={(value) => setAnchor(clause, value)}
                     onPatch={(update) => patch(clause.key, update)}
                   />
@@ -518,6 +595,8 @@ function ConditionStack({
   fieldClass,
   labelClass,
   showErrors,
+  ruleLeaf,
+  ruleFields,
   onAnchor,
   onPatch,
 }: {
@@ -534,6 +613,8 @@ function ConditionStack({
   fieldClass: string;
   labelClass: string;
   showErrors: boolean;
+  ruleLeaf: string | null;
+  ruleFields: ReactNode;
   onAnchor: (value: string) => void;
   onPatch: (update: (clause: ExitBuilderClause) => ExitBuilderClause) => void;
 }) {
@@ -560,6 +641,18 @@ function ConditionStack({
             }
           >
             <option value="">{clause.kind === "custom" ? "Select Condition Type" : "Always on"}</option>
+            {ruleChoices(
+              clause.kind,
+              ruleLeaf != null && ruleLeaf !== "anchor",
+            ).map((option) => (
+              <option
+                key={option.value}
+                value={option.value}
+                disabled={option.disabled === true && clause.anchor.trigger !== option.value}
+              >
+                {option.label}
+              </option>
+            ))}
             {CONDITION_OPTIONS.map((option) => (
               <option
                 key={option.value}
@@ -571,7 +664,8 @@ function ConditionStack({
             ))}
           </AppSelect>
         </label>
-        {clause.anchor.trigger !== "unset" ? (
+        {isExitPriceRule(clause.anchor.trigger) ? ruleFields : null}
+        {clause.anchor.trigger !== "unset" && !isExitPriceRule(clause.anchor.trigger) ? (
           <HardExitFields
             embed
             showTrigger={false}
@@ -608,6 +702,8 @@ function ConditionStack({
           fieldClass={fieldClass}
           labelClass={labelClass}
           showErrors={showErrors}
+          ruleChoices={ruleChoices(clause.kind, ruleLeaf != null && ruleLeaf !== row.key)}
+          ruleFields={ruleLeaf === row.key ? ruleFields : null}
           onChange={(draft) =>
             onPatch((current) => ({
               ...current,
@@ -640,6 +736,9 @@ function ConditionStack({
           fieldClass={fieldClass}
           labelClass={labelClass}
           showErrors={showErrors}
+          ruleChoices={ruleChoices(clause.kind, ruleLeaf != null && ruleLeaf !== group.key)}
+          ruleFields={ruleFields}
+          ruleLeaf={ruleLeaf}
           onPatch={onPatch}
         />
       ))}
@@ -662,6 +761,9 @@ function OrGroup(props: {
   fieldClass: string;
   labelClass: string;
   showErrors: boolean;
+  ruleChoices: { value: ExitPriceRuleTrigger; label: string; disabled?: boolean }[];
+  ruleFields: ReactNode;
+  ruleLeaf: string | null;
   onPatch: (update: (clause: ExitBuilderClause) => ExitBuilderClause) => void;
 }) {
   const { group, onPatch } = props;
@@ -684,9 +786,7 @@ function OrGroup(props: {
                   item.key === group.key
                     ? {
                         ...item,
-                        anchor: isConditionTrigger(value)
-                          ? hardExitForTrigger(value, props.side, item.anchor)
-                          : { trigger: "unset" },
+                        anchor: choiceDraft(value, props.side, item.anchor),
                       }
                     : item,
                 ),
@@ -699,6 +799,15 @@ function OrGroup(props: {
             }
           >
             <option value="">Select Condition Type</option>
+            {props.ruleChoices.map((option) => (
+              <option
+                key={option.value}
+                value={option.value}
+                disabled={option.disabled === true && group.anchor.trigger !== option.value}
+              >
+                {option.label}
+              </option>
+            ))}
             {CONDITION_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -723,6 +832,8 @@ function OrGroup(props: {
           labelClass={props.labelClass}
           showErrors={props.showErrors}
           showTrigger={false}
+          ruleChoices={props.ruleChoices}
+          ruleFields={props.ruleLeaf === group.key ? props.ruleFields : null}
           onChange={(draft) =>
             onPatch((current) => ({
               ...current,
@@ -750,6 +861,11 @@ function OrGroup(props: {
           fieldClass={props.fieldClass}
           labelClass={props.labelClass}
           showErrors={props.showErrors}
+          ruleChoices={props.ruleChoices.map((option) => ({
+            ...option,
+            disabled: props.ruleLeaf != null && props.ruleLeaf !== row.key,
+          }))}
+          ruleFields={props.ruleLeaf === row.key ? props.ruleFields : null}
           onChange={(draft) =>
             onPatch((current) => ({
               ...current,
@@ -796,6 +912,8 @@ function DraftRow(props: {
   fieldClass: string;
   labelClass: string;
   showErrors: boolean;
+  ruleChoices: { value: ExitPriceRuleTrigger; label: string; disabled?: boolean }[];
+  ruleFields: ReactNode;
   onChange: (draft: HardExitDraft) => void;
   onRemove: () => void;
 }) {
@@ -819,6 +937,8 @@ function DraftRow(props: {
             labelClass={props.labelClass}
             showErrors={props.showErrors}
             showTrigger
+            ruleChoices={props.ruleChoices}
+            ruleFields={props.ruleFields}
             onChange={props.onChange}
           />
         </div>
@@ -843,6 +963,8 @@ function DraftFields({
   labelClass,
   showErrors,
   showTrigger,
+  ruleChoices = [],
+  ruleFields = null,
   onChange,
 }: {
   draft: HardExitDraft;
@@ -859,6 +981,8 @@ function DraftFields({
   labelClass: string;
   showErrors: boolean;
   showTrigger: boolean;
+  ruleChoices?: { value: ExitPriceRuleTrigger; label: string; disabled?: boolean }[];
+  ruleFields?: ReactNode;
   onChange: (draft: HardExitDraft) => void;
 }) {
   const fieldPrefix = stackIndex == null ? prefix : `${prefix}Stack${stackIndex}`;
@@ -889,6 +1013,8 @@ function DraftFields({
         disabledWebhookIds={webhookIds.filter((id) =>
           entryWebhookIdDisabled({ slots, index: seriesIndex, webhookId: id }),
         )}
+        extraTriggers={ruleChoices}
+        extra={ruleFields}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import {
   HintLabel,
   botFieldInvalidClass,
@@ -17,6 +18,8 @@ import {
 } from "@/lib/dca/filters";
 import {
   hardExitForTrigger,
+  isPriceRuleDraft,
+  type ExitPriceRuleTrigger,
   type HardExitDraft,
   type HardExitTrigger,
 } from "@/lib/dca/hard-exit";
@@ -83,6 +86,8 @@ export function HardExitFields({
   showTrigger = true,
   showErrors = false,
   embed = false,
+  extraTriggers = [],
+  extra = null,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -103,6 +108,9 @@ export function HardExitFields({
   showErrors?: boolean;
   /** Join these fields to the parent grid instead of starting a new row. */
   embed?: boolean;
+  /** Price rules such as Target Hit. Their fields render through `extra`. */
+  extraTriggers?: { value: ExitPriceRuleTrigger; label: string; disabled?: boolean }[];
+  extra?: ReactNode;
 }) {
   const column = useBotColumnLayout();
   const webhookChoices =
@@ -112,7 +120,9 @@ export function HardExitFields({
       ? [...webhooks, { id: value.webhookId, name: "Webhook (removed)" }]
       : webhooks;
   const triggerInput =
-    showTrigger || !named || value.trigger === "unset" ? null : (
+    showTrigger || !named || value.trigger === "unset" || isPriceRuleDraft(value)
+      ? null
+      : (
       <input type="hidden" name={`${prefix}Trigger`} value={value.trigger} />
     );
   return (
@@ -127,7 +137,11 @@ export function HardExitFields({
           name={named ? `${prefix}Trigger` : undefined}
           value={value.trigger === "unset" ? "" : value.trigger}
           onChange={(event) => {
-            const trigger = event.target.value as HardExitTrigger;
+            const trigger = event.target.value;
+            if (trigger === "target" || trigger === "stop" || trigger === "trail") {
+              onChange({ trigger });
+              return;
+            }
             if (
               trigger !== "price" &&
               trigger !== "indicator" &&
@@ -146,6 +160,15 @@ export function HardExitFields({
           }
         >
           <option value="">Select Condition Type</option>
+          {extraTriggers.map((option) => (
+            <option
+              key={option.value}
+              value={option.value}
+              disabled={option.disabled === true && option.value !== value.trigger}
+            >
+              {option.label}
+            </option>
+          ))}
           {TRIGGER_OPTIONS.map((option) => (
             <option
               key={option.value}
@@ -248,6 +271,8 @@ export function HardExitFields({
             />
           </label>
         </>
+      ) : isPriceRuleDraft(value) ? (
+        extra
       ) : value.trigger === "webhook" ? (
         <label className={`${labelClass} col-span-full min-w-0`}>
           <HintLabel text="Webhook" required />
