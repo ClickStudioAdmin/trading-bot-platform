@@ -372,7 +372,6 @@ function ConditionFields({
         <BotField
           label={label}
           className={label === "Condition Type" ? "whitespace-nowrap" : undefined}
-          required
         >
           <AppSelect
             value={type}
