@@ -31,6 +31,12 @@ import {
 import { ColumnHint } from "@/components/column-hint";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { ExitSideBuilder } from "@/components/exit-side-builder";
+import {
+  DcaGroupSizeFields,
+  entryGroupOrderKey,
+  PerpsGroupOrderFields,
+  useExtraGroupOrders,
+} from "@/components/entry-group-order";
 import { PerpsAdditionalOrders } from "@/components/perps-additional-orders";
 import { blankPerpsAddOrderGroups } from "@/lib/futures/perps-add-condition";
 import {
@@ -799,6 +805,8 @@ export function ThemeBotFormDraft() {
   const themeShortSlots = entryConflictSlots(themeShortAnchor, shortEntryRows);
   const [size, setSize] = useState("100");
   const [sizeUnit, setSizeUnit] = useState<"qty" | "usdt">("usdt");
+  const longExtraOrders = useExtraGroupOrders();
+  const shortExtraOrders = useExtraGroupOrders();
   const [sizeMultiplier, setSizeMultiplier] = useState("1");
   const [deviationMultiplier, setDeviationMultiplier] = useState("1");
   const [ladderOpen, setLadderOpen] = useState(true);
@@ -956,6 +964,8 @@ export function ThemeBotFormDraft() {
     breakevenOn,
     size,
     sizeUnit,
+    longExtraOrders: longExtraOrders.orders,
+    shortExtraOrders: shortExtraOrders.orders,
     sizeMultiplier,
     deviationMultiplier,
     maxClips,
@@ -1180,6 +1190,88 @@ export function ThemeBotFormDraft() {
   };
   const hasMissing = Object.values(missing).some(Boolean);
   const showFieldErrors = dirty && hasMissing;
+  const sampleBase =
+    SAMPLE_PAIRS.find((pair) => pair.symbol === symbol)?.baseCoin ?? "BTC";
+
+  function perpsOrderFooter(
+    rows: typeof entryRows,
+    extra: typeof longExtraOrders,
+    named: boolean,
+  ) {
+    function renderPerpsOrderFooter(groupIndex: number) {
+      const key = entryGroupOrderKey(rows, groupIndex);
+      const lead = key === "lead";
+      const values = lead
+        ? { size, sizeUnit, orderType, limitPrice }
+        : extra.orderFor(key);
+      return (
+        <PerpsGroupOrderFields
+          order={values}
+          quoteLabel="USDT"
+          baseCoin={sampleBase}
+          fieldClass={fieldClass}
+          invalidFieldClass={fieldInvalidClass}
+          gridClass={rowClass}
+          named={lead && named}
+          required={lead}
+          sizeInvalid={lead && showFieldErrors && missing.size}
+          limitInvalid={lead && showFieldErrors && missing.limitPrice}
+          onChange={(partial) => {
+            if (!lead) {
+              extra.patch(key, partial);
+              return;
+            }
+            if (partial.size != null) setSize(partial.size);
+            if (partial.sizeUnit != null) setSizeUnit(partial.sizeUnit);
+            if (partial.orderType != null) setOrderType(partial.orderType);
+            if (partial.limitPrice != null) setLimitPrice(partial.limitPrice);
+          }}
+        />
+      );
+    }
+    return renderPerpsOrderFooter;
+  }
+
+  function dcaSizeFooter(
+    rows: typeof entryRows,
+    extra: typeof longExtraOrders,
+    named: boolean,
+  ) {
+    function renderDcaSizeFooter(groupIndex: number) {
+      const key = entryGroupOrderKey(rows, groupIndex);
+      const lead = key === "lead";
+      const values = lead ? { size, sizeUnit } : extra.orderFor(key);
+      return (
+        <DcaGroupSizeFields
+          size={values.size}
+          sizeUnit={values.sizeUnit}
+          onSize={(next) => {
+            if (lead) {
+              setSize(next);
+              return;
+            }
+            extra.patch(key, { size: next });
+          }}
+          onUnit={(unit) => {
+            if (lead) {
+              setSizeUnit(unit);
+              return;
+            }
+            extra.patch(key, { sizeUnit: unit, size: "" });
+          }}
+          quoteLabel="USDT"
+          baseCoin={sampleBase}
+          fieldClass={
+            lead && showFieldErrors && missing.size ? fieldInvalidClass : fieldClass
+          }
+          gridClass={rowClass}
+          named={lead && named}
+          required={lead}
+        />
+      );
+    }
+    return renderDcaSizeFooter;
+  }
 
   function applyStartKind(next: StartKind) {
     const touchShort = !(desk === "dca" && direction === "both");
@@ -2194,6 +2286,7 @@ export function ThemeBotFormDraft() {
                 gridClass={rowClass5}
                 fieldClass={fieldClass}
                 labelClass={labelClass}
+                groupFooter={perpsOrderFooter(entryRows, longExtraOrders, true)}
               />
             );
           }
@@ -2216,6 +2309,7 @@ export function ThemeBotFormDraft() {
                 gridClass={rowClass5}
                 fieldClass={fieldClass}
                 labelClass={labelClass}
+                groupFooter={dcaSizeFooter(entryRows, longExtraOrders, true)}
               />
             );
           }
@@ -2369,6 +2463,11 @@ export function ThemeBotFormDraft() {
               gridClass={rowClass5}
               fieldClass={fieldClass}
               labelClass={labelClass}
+              groupFooter={perpsOrderFooter(
+                shortEntryRows,
+                shortExtraOrders,
+                false,
+              )}
             />
               );
             })()}
@@ -2502,130 +2601,12 @@ export function ThemeBotFormDraft() {
               gridClass={rowClass5}
               fieldClass={fieldClass}
               labelClass={labelClass}
+              groupFooter={dcaSizeFooter(shortEntryRows, shortExtraOrders, false)}
             />
               );
             })()}
           </BotFormStep>
         ) : null}
-
-        <BotFormStep title="Position Sizing">
-        {!closing ? (
-          <Group title={desk === "dca" ? "Initial Order Size" : "Order Size"}>
-            <div className={rowClass}>
-              {desk === "dca" ? (
-                <>
-                  <Field label="Size unit" required>
-                    <AppSelect
-                      value={sizeUnit}
-                      onChange={(event) =>
-                        setSizeUnit(event.target.value as "qty" | "usdt")
-                      }
-                      className={fieldClass}
-                    >
-                      <option value="usdt">USDT</option>
-                      <option value="qty">Token qty</option>
-                    </AppSelect>
-                  </Field>
-                  <Field label="Order size" required>
-                    <GroupedNumberInput
-                      value={size}
-                      onChange={setSize}
-                      allowDecimal
-                      className={
-                        showFieldErrors && missing.size
-                          ? fieldInvalidClass
-                          : fieldClass
-                      }
-                    />
-                  </Field>
-                </>
-              ) : (
-                <>
-                  <Field label="Size" required>
-                    <span className="relative mt-1 block">
-                      {sizeUnit === "usdt" ? (
-                        <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-                          $
-                        </span>
-                      ) : null}
-                      <GroupedNumberInput
-                        value={size}
-                        onChange={setSize}
-                        allowDecimal
-                        className={`${
-                          showFieldErrors && missing.size
-                            ? fieldInvalidClass
-                            : fieldClass
-                        } ${sizeUnit === "usdt" ? "pl-7" : ""}`}
-                      />
-                    </span>
-                  </Field>
-                  <Field label="Unit" required>
-                    <AppSelect
-                      value={sizeUnit}
-                      onChange={(event) => {
-                        setSizeUnit(event.target.value as "qty" | "usdt");
-                        setSize("");
-                      }}
-                      className={fieldClass}
-                    >
-                      <option value="usdt">USDT</option>
-                      <option value="qty">
-                        {SAMPLE_PAIRS.find((pair) => pair.symbol === symbol)
-                          ?.baseCoin ?? "BTC"}
-                      </option>
-                    </AppSelect>
-                  </Field>
-                  <Field label="Order" required>
-                    <OrderTypePill value={orderType} onChange={setOrderType} />
-                  </Field>
-                  {orderType === "limit" ? (
-                    <Field label="Limit price" required>
-                      <OffNumber
-                        value={limitPrice}
-                        onChange={setLimitPrice}
-                        required
-                        invalid={showFieldErrors && missing.limitPrice}
-                      />
-                    </Field>
-                  ) : null}
-                </>
-              )}
-            </div>
-          </Group>
-        ) : (
-          <Group>
-            <div className={rowClass}>
-              <Field label="Qty to close" hint="Empty closes the whole row.">
-                <GroupedNumberInput
-                  value={size}
-                  onChange={setSize}
-                  allowDecimal
-                  placeholder="All"
-                  className={fieldClass}
-                />
-              </Field>
-              {desk === "perps" ? (
-                <>
-                  <Field label="Order" required>
-                    <OrderTypePill value={orderType} onChange={setOrderType} />
-                  </Field>
-                  {orderType === "limit" ? (
-                    <Field label="Limit price" required>
-                      <OffNumber
-                        value={limitPrice}
-                        onChange={setLimitPrice}
-                        required
-                        invalid={showFieldErrors && missing.limitPrice}
-                      />
-                    </Field>
-                  ) : null}
-                </>
-              ) : null}
-            </div>
-          </Group>
-        )}
-        </BotFormStep>
 
         {desk === "dca" ? (
         <BotFormStep title="Additional Orders">

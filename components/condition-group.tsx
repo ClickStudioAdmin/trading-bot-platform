@@ -8,7 +8,9 @@ import { IconPlus, IconTrash } from "@/components/icons";
 import { TableHint, useActionHint } from "@/components/table-actions";
 import type { StrategyJoin } from "@/lib/strategy/expr";
 
-export function partitionByOr<T extends { join: StrategyJoin }>(rows: T[]): T[][] {
+export function partitionByOr<T extends { join: StrategyJoin }>(
+  rows: readonly T[],
+): T[][] {
   const groups: T[][] = [[]];
   for (const row of rows) {
     if (row.join === "or") {
@@ -95,6 +97,7 @@ export function GroupedConditions<T extends { key: string; join: StrategyJoin }>
   renderRemove,
   renderBody,
   renderAddInGroup,
+  renderGroupFooter,
   addGroup,
 }: {
   rows: T[];
@@ -102,6 +105,7 @@ export function GroupedConditions<T extends { key: string; join: StrategyJoin }>
   renderRemove: (row: T, scope: "group" | "condition") => ReactNode;
   renderBody: (row: T) => ReactNode;
   renderAddInGroup?: (groupIndex: number) => ReactNode;
+  renderGroupFooter?: (groupIndex: number) => ReactNode;
   addGroup?: ReactNode;
 }) {
   const groups = partitionByOr(rows);
@@ -145,6 +149,7 @@ export function GroupedConditions<T extends { key: string; join: StrategyJoin }>
                 );
               })}
               {renderAddInGroup?.(groupIndex)}
+              {renderGroupFooter?.(groupIndex)}
             </section>
           </div>
         );

@@ -1,0 +1,199 @@
+"use client";
+
+import { useState } from "react";
+import { AppSelect } from "@/components/app-select";
+import { BotField, OrderTypePill } from "@/components/bot-form-chrome";
+import { partitionByOr } from "@/components/condition-group";
+import { useDeskFormStatus } from "@/components/stay-on-page-form";
+import { GroupedNumberInput } from "@/components/usdt-size-input";
+import {
+  blankPerpsAddOrderValues,
+  type PerpsAddOrderValues,
+} from "@/lib/futures/perps-add-condition";
+import type { StrategyJoin } from "@/lib/strategy/expr";
+
+export function entryGroupOrderKey(
+  rows: readonly { key: string; join: StrategyJoin }[],
+  groupIndex: number,
+): string {
+  if (groupIndex === 0) {
+    return "lead";
+  }
+  const groups = partitionByOr(rows);
+  return groups[groupIndex]?.[0]?.key ?? `group-${groupIndex}`;
+}
+
+export function useExtraGroupOrders() {
+  const { markDirty } = useDeskFormStatus();
+  const [orders, setOrders] = useState<Record<string, PerpsAddOrderValues>>({});
+  function orderFor(key: string): PerpsAddOrderValues {
+    return orders[key] ?? blankPerpsAddOrderValues();
+  }
+  function patch(key: string, partial: Partial<PerpsAddOrderValues>) {
+    setOrders((current) => {
+      const prev = current[key] ?? blankPerpsAddOrderValues();
+      return { ...current, [key]: { ...prev, ...partial } };
+    });
+    markDirty();
+  }
+  return { orders, orderFor, patch };
+}
+
+export function PerpsGroupOrderFields({
+  order,
+  quoteLabel,
+  baseCoin,
+  fieldClass,
+  gridClass,
+  onChange,
+  named = false,
+  namePrefix = "",
+  required = false,
+  sizeInvalid = false,
+  limitInvalid = false,
+  invalidFieldClass,
+}: {
+  order: PerpsAddOrderValues;
+  quoteLabel: string;
+  baseCoin: string;
+  fieldClass: string;
+  gridClass: string;
+  onChange: (partial: Partial<PerpsAddOrderValues>) => void;
+  named?: boolean;
+  namePrefix?: string;
+  required?: boolean;
+  sizeInvalid?: boolean;
+  limitInvalid?: boolean;
+  invalidFieldClass?: string;
+}) {
+  const sizeClass = `${sizeInvalid && invalidFieldClass ? invalidFieldClass : fieldClass} !mt-0 ${
+    order.sizeUnit === "usdt" ? "pl-7" : ""
+  }`;
+  const limitClass = limitInvalid && invalidFieldClass ? invalidFieldClass : fieldClass;
+  return (
+    <div className={gridClass}>
+      <BotField label="Size" required={required}>
+        <span className="relative mt-1 block">
+          {order.sizeUnit === "usdt" ? (
+            <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
+              $
+            </span>
+          ) : null}
+          <GroupedNumberInput
+            name={named ? `${namePrefix}size` : undefined}
+            value={order.size}
+            onChange={(size) => onChange({ size })}
+            allowDecimal
+            className={sizeClass}
+          />
+        </span>
+      </BotField>
+      <BotField label="Unit" required={required}>
+        {named ? (
+          <input type="hidden" name={`${namePrefix}sizeUnit`} value={order.sizeUnit} />
+        ) : null}
+        <AppSelect
+          value={order.sizeUnit}
+          onChange={(event) =>
+            onChange({
+              sizeUnit: event.target.value === "qty" ? "qty" : "usdt",
+              size: "",
+            })
+          }
+          className={fieldClass}
+        >
+          <option value="usdt">{quoteLabel}</option>
+          <option value="qty">{baseCoin}</option>
+        </AppSelect>
+      </BotField>
+      <BotField label="Order" required={required}>
+        <OrderTypePill
+          name={named ? `${namePrefix}orderType` : undefined}
+          value={order.orderType}
+          onChange={(orderType) => onChange({ orderType })}
+        />
+      </BotField>
+      {order.orderType === "limit" ? (
+        <BotField label="Limit price" required={required}>
+          <GroupedNumberInput
+            name={named ? `${namePrefix}limitPrice` : undefined}
+            value={order.limitPrice}
+            onChange={(limitPrice) => onChange({ limitPrice })}
+            allowDecimal
+            className={limitClass}
+          />
+        </BotField>
+      ) : null}
+    </div>
+  );
+}
+
+export function DcaGroupSizeFields({
+  size,
+  sizeUnit,
+  onSize,
+  onUnit,
+  quoteLabel,
+  baseCoin,
+  fieldClass,
+  gridClass,
+  named = false,
+  required = false,
+  calculated = null,
+  sizeError = null,
+}: {
+  size: string;
+  sizeUnit: "qty" | "usdt";
+  onSize: (size: string) => void;
+  onUnit: (unit: "qty" | "usdt") => void;
+  quoteLabel: string;
+  baseCoin: string;
+  fieldClass: string;
+  gridClass: string;
+  named?: boolean;
+  required?: boolean;
+  calculated?: string | null;
+  sizeError?: string | null;
+}) {
+  return (
+    <div className={gridClass}>
+      {calculated != null ? (
+        named ? <input type="hidden" name="sizeUnit" value="usdt" /> : null
+      ) : (
+        <BotField label="Size unit" required={required}>
+          <AppSelect
+            name={named ? "sizeUnit" : undefined}
+            value={sizeUnit}
+            onChange={(event) => onUnit(event.target.value === "qty" ? "qty" : "usdt")}
+            className={fieldClass}
+          >
+            <option value="usdt">{quoteLabel}</option>
+            <option value="qty">{baseCoin}</option>
+          </AppSelect>
+        </BotField>
+      )}
+      <BotField
+        label={calculated != null ? `Order size (${quoteLabel})` : "Order size"}
+        required={required}
+        error={sizeError ?? undefined}
+      >
+        {calculated != null ? (
+          <>
+            {named ? <input type="hidden" name="clipSize" value={calculated} /> : null}
+            <p className={`${fieldClass} cursor-default text-ink-muted`} aria-label="Calculated order size">
+              {calculated}
+            </p>
+          </>
+        ) : (
+          <GroupedNumberInput
+            name={named ? "clipSize" : undefined}
+            value={size}
+            onChange={onSize}
+            allowDecimal
+            className={fieldClass}
+          />
+        )}
+      </BotField>
+    </div>
+  );
+}

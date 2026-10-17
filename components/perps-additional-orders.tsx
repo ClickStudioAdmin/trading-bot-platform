@@ -8,7 +8,6 @@ import {
 } from "@/components/bot-indicator-fields";
 import {
   BotField,
-  OrderTypePill,
   conditionFieldClass,
   useBotColumnLayout,
 } from "@/components/bot-form-chrome";
@@ -26,6 +25,7 @@ import {
 import { useDeskFormStatus } from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { DcaIndicatorKind, DcaIndicatorTimeframe } from "@/lib/dca/indicators";
+import { PerpsGroupOrderFields } from "@/components/entry-group-order";
 import {
   appendPerpsAddCondition,
   appendPerpsAddOrderGroup,
@@ -559,53 +559,13 @@ function OrderFields({
   onChange: (partial: Partial<PerpsAddOrderValues>) => void;
 }) {
   return (
-    <div className={gridClass}>
-      <BotField label="Size">
-        <span className="relative mt-1 block">
-          {order.sizeUnit === "usdt" ? (
-            <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-              $
-            </span>
-          ) : null}
-          <GroupedNumberInput
-            value={order.size}
-            onChange={(size) => onChange({ size })}
-            allowDecimal
-            className={`${fieldClass} !mt-0 ${order.sizeUnit === "usdt" ? "pl-7" : ""}`}
-          />
-        </span>
-      </BotField>
-      <BotField label="Unit">
-        <AppSelect
-          value={order.sizeUnit}
-          onChange={(event) =>
-            onChange({
-              sizeUnit: event.target.value === "qty" ? "qty" : "usdt",
-              size: "",
-            })
-          }
-          className={fieldClass}
-        >
-          <option value="usdt">{quoteLabel}</option>
-          <option value="qty">{baseCoin}</option>
-        </AppSelect>
-      </BotField>
-      <BotField label="Order">
-        <OrderTypePill
-          value={order.orderType}
-          onChange={(orderType) => onChange({ orderType })}
-        />
-      </BotField>
-      {order.orderType === "limit" ? (
-        <BotField label="Limit price">
-          <GroupedNumberInput
-            value={order.limitPrice}
-            onChange={(limitPrice) => onChange({ limitPrice })}
-            allowDecimal
-            className={fieldClass}
-          />
-        </BotField>
-      ) : null}
-    </div>
+    <PerpsGroupOrderFields
+      order={order}
+      quoteLabel={quoteLabel}
+      baseCoin={baseCoin}
+      fieldClass={fieldClass}
+      gridClass={gridClass}
+      onChange={onChange}
+    />
   );
 }
