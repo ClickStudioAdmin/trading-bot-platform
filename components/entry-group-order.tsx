@@ -196,6 +196,7 @@ export function DcaGroupSizeFields({
   required = false,
   calculated = null,
   sizeError = null,
+  sizeInputClass,
 }: {
   size: string;
   sizeUnit: "qty" | "usdt";
@@ -209,6 +210,7 @@ export function DcaGroupSizeFields({
   required?: boolean;
   calculated?: string | null;
   sizeError?: string | null;
+  sizeInputClass?: string;
 }) {
   return (
     <div className={gridClass}>
@@ -245,7 +247,7 @@ export function DcaGroupSizeFields({
             value={size}
             onChange={onSize}
             allowDecimal
-            className={fieldClass}
+            className={sizeInputClass ?? fieldClass}
           />
         )}
       </BotField>

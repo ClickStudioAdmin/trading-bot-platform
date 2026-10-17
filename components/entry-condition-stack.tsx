@@ -16,6 +16,7 @@ import {
 } from "@/components/bot-indicator-fields";
 import {
   HintLabel,
+  botFieldInvalidClass,
   conditionFieldClass,
   useBotColumnLayout,
 } from "@/components/bot-form-chrome";
@@ -433,6 +434,7 @@ export function EntryConditionStack({
   grouped = false,
   lead,
   groupFooter,
+  showErrors = false,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -449,6 +451,8 @@ export function EntryConditionStack({
   lead?: ReactNode;
   /** Size fields at the bottom of each group, after Add Condition. */
   groupFooter?: (groupIndex: number) => ReactNode;
+  /** Paint empty required controls after the form has been edited. */
+  showErrors?: boolean;
 }) {
   const column = useBotColumnLayout();
   const cap = STRATEGY_CONDITION_CAP - 1;
@@ -570,6 +574,7 @@ export function EntryConditionStack({
                   gridClass={gridClass}
                   fieldClass={fieldClass}
                   labelClass={labelClass}
+                  showErrors={showErrors}
                   seriesSlots={slots}
                   seriesIndex={slotIndex}
                 />
@@ -606,9 +611,11 @@ export function EntryConditionStack({
                       });
                     }}
                     className={
-                      row.join === "or"
-                        ? conditionFieldClass(fieldClass, column)
-                        : fieldClass
+                      showErrors && draft.kind === "unset"
+                        ? conditionFieldClass(botFieldInvalidClass, column)
+                        : row.join === "or"
+                          ? conditionFieldClass(fieldClass, column)
+                          : fieldClass
                     }
                   >
                     <option value="">
@@ -720,7 +727,12 @@ export function EntryConditionStack({
                           })
                         }
                         allowDecimal
-                        className={fieldClass}
+                        className={
+                          showErrors &&
+                          !(Number(draft.price.replace(/,/g, "").trim()) > 0)
+                            ? botFieldInvalidClass
+                            : fieldClass
+                        }
                       />
                     </label>
                   </>
@@ -737,6 +749,7 @@ export function EntryConditionStack({
                     multiplier={draft.multiplier}
                     seriesSlots={slots}
                     seriesIndex={slotIndex}
+                    showErrors={showErrors}
                     onKindChange={(indicatorKind) =>
                       patchDraft(row.key, { indicatorKind })
                     }
@@ -766,6 +779,7 @@ export function EntryConditionStack({
                     multiplier={draft.multiplier}
                     seriesSlots={slots}
                     seriesIndex={slotIndex}
+                    showErrors={showErrors}
                     onKindChange={(indicatorKind) =>
                       patchDraft(row.key, { indicatorKind })
                     }
@@ -792,13 +806,17 @@ export function EntryConditionStack({
                           draft: { ...draft, webhookId: event.target.value },
                         })
                       }
-                      className={fieldClass}
+                      className={
+                        showErrors && draft.webhookId.trim() === ""
+                          ? botFieldInvalidClass
+                          : fieldClass
+                      }
                     >
                       <option value="">
                         {webhooks.length === 0
                           ? "Create a Signal webhook first"
                           : "Pick a webhook"}
-                      </option>
+                        </option>
                       {webhookChoices.map((hook) => (
                         <option
                           key={hook.id}

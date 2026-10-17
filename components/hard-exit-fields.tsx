@@ -2,6 +2,7 @@
 
 import {
   HintLabel,
+  botFieldInvalidClass,
   conditionFieldClass,
   useBotColumnLayout,
 } from "@/components/bot-form-chrome";
@@ -81,6 +82,7 @@ export function HardExitFields({
   disabledWebhookIds = [],
   lead = true,
   showTrigger = true,
+  showErrors = false,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -99,6 +101,8 @@ export function HardExitFields({
   lead?: boolean;
   /** Exit groups pick the trigger on Condition Type. Keep the posted name. */
   showTrigger?: boolean;
+  /** Paint empty required controls after the form has been edited. */
+  showErrors?: boolean;
 }) {
   const column = useBotColumnLayout();
   const webhookChoices =
@@ -131,7 +135,13 @@ export function HardExitFields({
             }
             onChange(hardExitForTrigger(trigger, side, value));
           }}
-          className={lead ? conditionFieldClass(fieldClass, column) : fieldClass}
+          className={
+            showErrors && value.trigger === "unset"
+              ? conditionFieldClass(botFieldInvalidClass, column)
+              : lead
+                ? conditionFieldClass(fieldClass, column)
+                : fieldClass
+          }
         >
           <option value="">{lead ? "Select Condition Type" : "Select Trigger"}</option>
           {TRIGGER_OPTIONS.map((option) => (
@@ -228,7 +238,11 @@ export function HardExitFields({
               value={value.price}
               onChange={(price) => onChange({ ...value, price })}
               allowDecimal
-              className={fieldClass}
+              className={
+                showErrors && !(Number(value.price.replace(/,/g, "").trim()) > 0)
+                  ? botFieldInvalidClass
+                  : fieldClass
+              }
             />
           </label>
         </>
@@ -241,7 +255,11 @@ export function HardExitFields({
             onChange={(event) =>
               onChange({ ...value, webhookId: event.target.value })
             }
-            className={fieldClass}
+            className={
+              showErrors && value.webhookId.trim() === ""
+                ? botFieldInvalidClass
+                : fieldClass
+            }
           >
             <option value="">
               {webhooks.length === 0
@@ -278,7 +296,7 @@ export function HardExitFields({
                 spec: dcaFilterSpecForKind(kind, side),
               });
             }}
-            className={fieldClass}
+            className={showErrors ? botFieldInvalidClass : fieldClass}
           >
             <option value="">Select Indicator</option>
             {INDICATOR_OPTIONS.map((option) => (
@@ -360,6 +378,7 @@ export function HardExitFields({
             named={named}
             fieldClass={fieldClass}
             labelClass={labelClass}
+            showErrors={showErrors}
             bare
             whenClass="min-w-0"
             seriesSlots={seriesSlots}

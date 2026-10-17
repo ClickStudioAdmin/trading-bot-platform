@@ -3,7 +3,10 @@ import {
   initialPerpsEntryDrafts,
   perpsEntryDraftMissing,
 } from "@/components/perps-entry-panel";
-import { indicatorDraftMissing } from "@/lib/dca/indicators";
+import {
+  indicatorDraftMissing,
+  indicatorFieldInvalid,
+} from "@/lib/dca/indicators";
 import { defaultFuturesAutomationForm } from "@/lib/futures/automation";
 
 const fresh = initialPerpsEntryDrafts(defaultFuturesAutomationForm(0, "BTCUSDT"));
@@ -99,5 +102,42 @@ assert.equal(
   true,
 );
 assert.equal(perpsEntryDraftMissing(openedLong.long, false), false);
+
+const blankIndicator = {
+  family: "indicator" as const,
+  kind: "",
+  compare: "cross_lte",
+  level: "",
+  period: "14",
+  slowPeriod: "",
+  multiplier: "3",
+};
+assert.equal(indicatorFieldInvalid(blankIndicator, "kind"), true);
+assert.equal(
+  indicatorFieldInvalid({ ...blankIndicator, kind: "rsi", level: "" }, "level"),
+  true,
+);
+assert.equal(
+  indicatorFieldInvalid(
+    { ...blankIndicator, kind: "rsi", level: "30", period: "14" },
+    "period",
+  ),
+  false,
+);
+assert.equal(
+  indicatorFieldInvalid(
+    {
+      family: "trend",
+      kind: "supertrend",
+      compare: "flip_up",
+      level: "",
+      period: "1",
+      slowPeriod: "",
+      multiplier: "3",
+    },
+    "period",
+  ),
+  true,
+);
 
 console.log("perps entry draft checks passed");
