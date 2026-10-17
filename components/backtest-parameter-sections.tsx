@@ -38,6 +38,9 @@ function ConditionStackView({ stack }: { stack: ParamStack }) {
       {stack.title ? (
         <p className="text-sm font-semibold text-ink">{stack.title}</p>
       ) : null}
+      {stack.rows && stack.rows.length > 0 ? (
+        <ParamRows rows={stack.rows} inset={false} />
+      ) : null}
       {stack.groups.map((conditions, groupIndex) => (
         <div key={`group-${groupIndex}`} className="space-y-3">
           {groupIndex > 0 ? <JoinWord label="Or" /> : null}
@@ -89,6 +92,12 @@ export function BacktestParameterSections({
             </div>
           ) : null}
           {section.stack ? <ConditionStackView stack={section.stack} /> : null}
+          {section.stacks?.map((stack, index) => (
+            <ConditionStackView
+              key={`${stack.title ?? "action"}-${index}`}
+              stack={stack}
+            />
+          ))}
         </section>
       ))}
     </div>

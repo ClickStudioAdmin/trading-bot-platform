@@ -1,3 +1,4 @@
+import { exitActionsToJson } from "@/lib/strategy/exit-actions";
 import { entryStackToJson } from "@/lib/strategy/expr";
 import { filterColumns } from "./filters";
 import { hardExitSignalToJson } from "./hard-exit";
@@ -113,6 +114,11 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
       config.shortExitStack &&
       config.shortExitStack.leaves.length > 0
         ? entryStackToJson(config.shortExitStack)
+        : null,
+    exit_actions: exitActionsToJson(config.exitActions),
+    short_exit_actions:
+      config.direction === "both"
+        ? exitActionsToJson(config.shortExitActions)
         : null,
   };
 }

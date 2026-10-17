@@ -1,3 +1,4 @@
+import { exitActionsFromJson, parseExitActionsField } from "@/lib/strategy/exit-actions";
 import { parseStep } from "@/lib/exchanges/bybit/qty";
 import { formatPerpMinQty } from "@/lib/exchanges/bybit/ticket-size";
 import type { BybitInstrument } from "@/lib/exchanges/bybit/universe";
@@ -216,6 +217,9 @@ export type DcaPlaybookConfig = {
   /** Conditions after the first Hard Exit. Null keeps that single exit. */
   exitStack?: EntryStack | null;
   shortExitStack?: EntryStack | null;
+  /** Set when the long side does not fit the classic columns. */
+  exitActions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
+  shortExitActions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
 };
 
 export type DcaPlaybook = DcaPlaybookConfig & {
@@ -2311,6 +2315,14 @@ export function parseDcaPlaybookForm(
         ? confirmFromEntryStack(shortStack.stack)
         : shortConfirm.spec
       : null;
+  const exitActions = parseExitActionsField(form, "exitActions");
+  if (!exitActions.ok) {
+    return exitActions;
+  }
+  const shortExitActions = parseExitActionsField(form, "shortExitActions");
+  if (!shortExitActions.ok) {
+    return shortExitActions;
+  }
   return {
     ok: true,
     config: {
@@ -2378,6 +2390,9 @@ export function parseDcaPlaybookForm(
         direction === "both" && shortExitStack.present
           ? shortExitStack.stack
           : null,
+      exitActions: exitActions.actions,
+      shortExitActions:
+        direction === "both" ? shortExitActions.actions : null,
     },
   };
 }
@@ -2897,6 +2912,8 @@ export function parseDcaPlaybookRow(
     shortExitHard: hardExitSignalFromJson(row.short_exit_hard),
     exitStack: entryStackFromJson(row.exit_expr),
     shortExitStack: entryStackFromJson(row.short_exit_expr),
+    exitActions: exitActionsFromJson(row.exit_actions),
+    shortExitActions: exitActionsFromJson(row.short_exit_actions),
     updatedAtMs: (() => {
       const ms = new Date(String(row.updated_at ?? "")).getTime();
       return Number.isFinite(ms) ? ms : 0;
