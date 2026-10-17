@@ -804,7 +804,7 @@ export function EntryConditionStack({
                     }
                   />
                 ) : draft.kind === "webhook" ? (
-                  <label className={labelClass}>
+                  <label className={`${labelClass} col-span-full`}>
                     <HintLabel text="Webhook" required />
                     <AppSelect
                       name={`${prefix}${nameIndex}WebhookId`}
@@ -817,8 +817,8 @@ export function EntryConditionStack({
                       }
                       className={
                         showErrors && draft.webhookId.trim() === ""
-                          ? botFieldInvalidClass
-                          : fieldClass
+                          ? conditionFieldClass(botFieldInvalidClass, column)
+                          : conditionFieldClass(fieldClass, column)
                       }
                     >
                       <option value="">

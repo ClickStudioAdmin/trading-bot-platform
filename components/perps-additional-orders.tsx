@@ -535,11 +535,11 @@ function ConditionFields({
       ) : null}
       {type === "webhook" ? (
         <div className={conditionGrid}>
-          <BotField label="Webhook" className="lg:col-span-2" required>
+          <BotField label="Webhook" className="col-span-full" required>
             <AppSelect
               value={draft.webhookId}
               onChange={(event) => onDraft({ webhookId: event.target.value })}
-              className={fieldClass}
+              className={conditionFieldClass(fieldClass, column)}
             >
               <option value="">
                 {webhooks.length === 0

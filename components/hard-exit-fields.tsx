@@ -247,7 +247,7 @@ export function HardExitFields({
           </label>
         </>
       ) : value.trigger === "webhook" ? (
-        <label className={labelClass}>
+        <label className={`${labelClass} col-span-full`}>
           <HintLabel text="Webhook" required />
           <AppSelect
             name={named ? `${prefix}WebhookId` : undefined}
@@ -257,8 +257,8 @@ export function HardExitFields({
             }
             className={
               showErrors && value.webhookId.trim() === ""
-                ? botFieldInvalidClass
-                : fieldClass
+                ? conditionFieldClass(botFieldInvalidClass, column)
+                : conditionFieldClass(fieldClass, column)
             }
           >
             <option value="">

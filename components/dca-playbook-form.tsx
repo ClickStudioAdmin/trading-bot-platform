@@ -2322,7 +2322,7 @@ export function DcaPlaybookForm({
           <BotFormGroup locked={cycleLocked}>
             <div className={fieldRowClass}>
               {signalWebhooks.length > 0 ? (
-                <label className={`${labelClass} ${pairSpan}${lockClass}`}>
+                <label className={`${labelClass} col-span-full${lockClass}`}>
                   <HintLabel text="Signal Webhook" required />
                   <AppSelect
                     name={shortLeg ? "shortWebhookId" : "webhookId"}
