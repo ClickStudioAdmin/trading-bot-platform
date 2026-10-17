@@ -1367,13 +1367,13 @@ export function actionKindLabel(kind: ExitActionKind | ClassicExitKind | "custom
 
 export function scopeLabel(scope: ExitScope | StoredExitAction["scope"]): string {
   if (scope.kind === "all") {
-    return "All";
+    return "Entire Position";
   }
   if (scope.kind === "remainder") {
     return "Remainder";
   }
   if (scope.kind === "percent") {
-    return scope.pct == null ? "Percent" : `${scope.pct}% of open size`;
+    return scope.pct == null ? "Percentage of Position" : `${scope.pct}% of position`;
   }
   if (scope.kind === "qty") {
     return scope.qty == null ? "Quantity" : `Quantity ${scope.qty}`;

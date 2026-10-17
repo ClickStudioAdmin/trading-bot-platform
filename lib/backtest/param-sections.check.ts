@@ -567,7 +567,7 @@ assert.equal(actionCards?.groups.length, 0);
 assert.equal(actionCards?.stacks?.length, 1);
 assert.equal(actionCards?.stacks?.[0]?.title, "Close");
 assert.equal(
-  actionCards?.stacks?.[0]?.rows?.find((row) => row.label === "Scope")?.value,
+  actionCards?.stacks?.[0]?.rows?.find((row) => row.label === "Applies To")?.value,
   "Fills at least 20% in profit",
 );
 assert.equal(

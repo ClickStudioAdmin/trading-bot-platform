@@ -475,7 +475,7 @@ export function ExitSideBuilder({
                 </label>
                 {clause.kind !== "" ? (
                   <label className={labelClass}>
-                    <HintLabel text="Responsibility" />
+                    <HintLabel text="Applies To" />
                     <AppSelect
                       value={scope.kind}
                       onChange={(event) =>
@@ -483,8 +483,8 @@ export function ExitSideBuilder({
                       }
                       className={fieldClass}
                     >
-                      <option value="all">All</option>
-                      <option value="percent">Percent of open size</option>
+                      <option value="all">Entire Position</option>
+                      <option value="percent">Percentage of Position</option>
                       <option value="qty">Quantity</option>
                       <option value="fills">Fills in profit</option>
                       <option value="remainder" disabled={remainderUsed && scope.kind !== "remainder"}>

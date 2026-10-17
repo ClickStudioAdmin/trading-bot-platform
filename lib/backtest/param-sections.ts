@@ -811,7 +811,7 @@ function exitActionStacks(
     );
     const rows: ParamRow[] = [
       { label: "Action", value: actionKindLabel(action.kind) },
-      { label: "Scope", value: scopeLabel(action.scope) },
+      { label: "Applies To", value: scopeLabel(action.scope) },
       ...(hasPriceRule ? [] : actionPriceRows(action)),
     ];
     if (action.groups.length === 0) {
