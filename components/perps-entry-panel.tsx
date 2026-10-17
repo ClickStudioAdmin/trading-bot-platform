@@ -421,7 +421,7 @@ export function PerpsEntryPanel({
                 patch(partial);
               }}
               className={
-                showErrors && draft.entrySource === "" && !closing
+                draft.entrySource === "" && !closing
                   ? conditionFieldClass(botFieldInvalidClass, column)
                   : conditionFieldClass(fieldClass, column)
               }

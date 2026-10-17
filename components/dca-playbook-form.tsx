@@ -2229,7 +2229,7 @@ export function DcaPlaybookForm({
                 applyDcaStartKind(side, event.target.value as DcaStartKind)
               }
               className={
-                dirty && value === ""
+                value === ""
                   ? conditionFieldClass(botFieldInvalidClass, column)
                   : conditionFieldClass(fieldClass, column)
               }

@@ -2165,7 +2165,7 @@ export function ThemeBotFormDraft() {
                     applyStartKind(event.target.value as StartKind)
                   }
                   className={
-                    showFieldErrors && startKind === ""
+                    !closing && startKind === ""
                       ? `${fieldInvalidClass} !min-w-72`
                       : `${fieldClass} !min-w-72`
                   }
@@ -2208,7 +2208,7 @@ export function ThemeBotFormDraft() {
                     applyStartKind(event.target.value as StartKind)
                   }
                   className={
-                    showFieldErrors && startKind === ""
+                    startKind === ""
                       ? `${fieldInvalidClass} !min-w-72`
                       : `${fieldClass} !min-w-72`
                   }
@@ -2423,7 +2423,7 @@ export function ThemeBotFormDraft() {
                       applyShortStartKind(event.target.value as StartKind)
                     }
                     className={
-                      showFieldErrors && shortStartKind === ""
+                      shortStartKind === ""
                         ? `${fieldInvalidClass} !min-w-72`
                         : `${fieldClass} !min-w-72`
                     }
@@ -2578,7 +2578,7 @@ export function ThemeBotFormDraft() {
                       applyShortStartKind(event.target.value as StartKind)
                     }
                     className={
-                      showFieldErrors && shortStartKind === ""
+                      shortStartKind === ""
                         ? `${fieldInvalidClass} !min-w-72`
                         : `${fieldClass} !min-w-72`
                     }
