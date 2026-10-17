@@ -39,8 +39,14 @@ assert.deepEqual(
 );
 const general = sections[0]?.groups[0]?.rows.map((row) => row.label);
 assert.deepEqual(general, ["Name", "Contract", "Direction"]);
+const exposure = sections[0]?.groups[1];
+assert.equal(exposure?.title, "Maximum Exposure");
+assert.deepEqual(
+  exposure?.rows.map((row) => row.label),
+  ["Max orders", "Max value"],
+);
 const sizing = sections[2]?.groups.map((group) => group.title);
-assert.deepEqual(sizing, ["Maximum Exposure", "Initial Order Size"]);
+assert.deepEqual(sizing, ["Initial Order Size"]);
 const adds = sections[3]?.groups.map((group) => group.title);
 assert.deepEqual(adds, ["Additional Order Types", "Additional Order Scaling"]);
 const labels = recipeParamRows(dca).map((row) => row.label);
