@@ -7,6 +7,7 @@ import {
   attachedTemplateName,
   inheritPlatformBacktests,
   matchingPlatformTemplateIds,
+  parseListedRecipe,
 } from "@/lib/backtest/library";
 import {
   listSharedTemplates,
@@ -893,6 +894,48 @@ function attachedBacktestRow(
     stats: parseStats(row.stats),
     orders: parseSimulatedOrders(row.orders),
   };
+}
+
+/** Finished runs this member can open on the given contracts. Recipe is normalized. */
+export async function listDoneBacktestsForSymbols(
+  userId: string,
+  symbols: string[],
+): Promise<Array<AttachedBacktestRow & { recipe: TemplateRecipe }>> {
+  const unique = [
+    ...new Set(symbols.map((symbol) => symbol.trim()).filter(Boolean)),
+  ].slice(0, 40);
+  const id = userId.trim();
+  if (!id || unique.length === 0) {
+    return [];
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from("backtest_runs")
+    .select(
+      "id, user_id, name, symbol, parent_run_id, from_ms, to_ms, created_at, recipe, status, interval, leverage, stats, orders",
+    )
+    .eq("status", "done")
+    .in("symbol", unique)
+    .or(`user_id.eq.${id},user_id.is.null`)
+    .order("created_at", { ascending: false })
+    .limit(400);
+  if (error || !data) {
+    return [];
+  }
+  const rows: Array<AttachedBacktestRow & { recipe: TemplateRecipe }> = [];
+  for (const item of data) {
+    const record = item as Record<string, unknown>;
+    const recipe = parseListedRecipe(record.recipe);
+    const parsed = attachedBacktestRow(record);
+    if (!recipe || !parsed) {
+      continue;
+    }
+    rows.push({ ...parsed, recipe });
+  }
+  return rows;
 }
 
 export { canDeleteBacktestRun } from "./model";

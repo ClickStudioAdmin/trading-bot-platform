@@ -83,8 +83,10 @@ function writeAutomationsListView(key: string, view: AutomationsListView) {
   }
 }
 import { formatCount, formatPct, signedTone } from "@/lib/opportunities/format";
-import { TokenIcon } from "@/components/token-icon";
+import type { TemplateRecipe } from "@/lib/templates/recipe";
 import { ColumnHint } from "@/components/column-hint";
+import { BotParametersButton } from "@/components/template-parameters-tip";
+import { TokenIcon } from "@/components/token-icon";
 import { ExpandableTradeRows } from "@/components/trade-expand";
 import type { BotConfigSection } from "@/lib/bots/bot-config";
 import {
@@ -103,6 +105,8 @@ export type AutomationsBotRow = {
   status: string;
   statusKey?: string;
   summary: string;
+  /** Saved recipe for the parameters popup. Cash and Carry, DCA, and Flex all set this. */
+  recipe?: TemplateRecipe | null;
   config: readonly BotConfigSection[];
   positionCount: number;
   roePct: number | null;
@@ -834,12 +838,27 @@ function BotPairLine({ pair }: { pair: string }) {
 
 function BotRecipeCell({ row }: { row: AutomationsBotRow }) {
   const { side } = splitPairSide(row.pair);
+  const parameters = row.recipe ? (
+    <BotParametersButton
+      name={row.name || "Bot"}
+      recipe={row.recipe}
+      botId={row.id}
+    />
+  ) : null;
   if (!side) {
-    return <span className="text-ink-muted">{row.summary}</span>;
+    return (
+      <span className="inline-flex min-w-0 items-center gap-1">
+        <span className="min-w-0 truncate text-ink-muted">{row.summary}</span>
+        {parameters}
+      </span>
+    );
   }
   return (
     <span className="block min-w-0">
-      <span className={`block font-medium ${pairSideClass(side)}`}>{side}</span>
+      <span className="flex items-center gap-1">
+        <span className={`font-medium ${pairSideClass(side)}`}>{side}</span>
+        {parameters}
+      </span>
       <span className="mt-0.5 block truncate text-hint text-ink-muted">
         {row.summary}
       </span>

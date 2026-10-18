@@ -21,6 +21,8 @@ import {
   paperBotSummary,
   perpsBotPair,
   perpsBotSummary,
+  perpsListRecipe,
+  paperListRecipe,
 } from "./automations-list";
 import {
   automationsBotBlotterHref,
@@ -29,8 +31,16 @@ import {
   focusedBotTitle,
 } from "./automations-path";
 import { pruneRemovedIds, withRemovedIds } from "@/lib/table-chrome";
-import { defaultFuturesAutomationForm } from "@/lib/futures/automation";
+import { defaultFuturesAutomationForm, futuresRuleToForm } from "@/lib/futures/automation";
 import { paperConfigToFormValues, defaultPaperLayer } from "@/lib/engine/rules";
+import { templateParamSections } from "@/lib/backtest/param-sections";
+import { parseListedRecipe } from "@/lib/backtest/library";
+import {
+  perpsRecipeToRule,
+  recipesMatchReplayFields,
+  snapshotPaperRecipe,
+  snapshotPerpsRecipe,
+} from "@/lib/templates/recipe";
 import type { DcaPlaybook } from "@/lib/dca/playbook";
 
 assert.deepEqual(
@@ -542,3 +552,81 @@ assert.equal(
   parseAutomationsListView(JSON.stringify({ ...savedView, page: 0 })),
   null,
 );
+
+const flexSnap = snapshotPerpsRecipe({
+  name: "Flex Entry — ATR band",
+  symbol: "BCHUSDT",
+  action: "buy",
+  closeSide: null,
+  orderType: "market",
+  sizeUnit: "usdt",
+  size: 25000,
+  limitPrice: null,
+  entrySource: "price",
+  triggerBy: "last",
+  triggerCompare: "gte",
+  triggerPrice: 264,
+  skipIfOpen: true,
+  tpsl: null,
+  trailing: null,
+  exitActions: [
+    {
+      id: "tp",
+      kind: "take_profit",
+      scope: { kind: "all" },
+      groups: [],
+      takeProfitPct: 3,
+      takeProfitPrice: null,
+      stopLossPct: null,
+      stopLossPrice: null,
+      trailingDistance: null,
+      trailingActivation: null,
+    },
+  ],
+  direction: "long",
+  shortEntry: null,
+});
+const flexRule = perpsRecipeToRule(flexSnap, { sortOrder: 0 });
+assert.equal(flexRule.ok, true);
+if (flexRule.ok) {
+  const listed = perpsListRecipe(futuresRuleToForm(flexRule.rule));
+  const saved = snapshotPerpsRecipe(flexRule.rule);
+  assert.deepEqual(listed, saved);
+  const parsedListed = parseListedRecipe(listed);
+  const parsedSaved = parseListedRecipe(saved);
+  assert.equal(parsedListed?.kind, "flex");
+  assert.ok(parsedListed && parsedSaved);
+  if (parsedListed && parsedSaved) {
+    assert.equal(recipesMatchReplayFields(parsedListed, parsedSaved), true);
+  }
+  const exit = templateParamSections(listed).find(
+    (section) => section.title === "Long Exit Conditions",
+  );
+  assert.equal(exit?.stacks?.[0]?.title, "Take profit");
+  assert.equal(
+    templateParamSections(listed).some((section) =>
+      section.groups.some((group) =>
+        group.rows.some((row) => row.label === "Name"),
+      ),
+    ),
+    false,
+  );
+}
+
+const carry = {
+  ...defaultPaperLayer(0),
+  name: "Carry core",
+  minNetApr: 0.12,
+  takeProfitPct: 0.04,
+  stopLossPct: -0.02,
+};
+const carryForm = paperConfigToFormValues({
+  enabled: true,
+  layers: [carry],
+}).layers[0];
+assert.ok(carryForm);
+if (carryForm) {
+  const listed = paperListRecipe(carryForm);
+  assert.deepEqual(listed, snapshotPaperRecipe(carry));
+  assert.equal(listed ? parseListedRecipe(listed)?.kind : null, "cash_and_carry");
+}

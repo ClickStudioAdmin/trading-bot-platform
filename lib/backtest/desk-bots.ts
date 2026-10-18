@@ -6,12 +6,16 @@ import {
 import { listTradingAccounts } from "@/lib/accounts/store";
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import {
+  backtestLinksForBotRecipes,
   canQueueUserBacktest,
   deskBacktestBotCandidates,
   findMatchingBacktestDeskBot,
+  parseListedRecipe,
   type BacktestDeskBot,
   type BacktestDeskBotOption,
 } from "@/lib/backtest/library";
+import type { TemplateBacktestLink } from "@/lib/backtest/model";
+import { listDoneBacktestsForSymbols } from "@/lib/backtest/store";
 import { parseDcaPlaybookRow, type DcaPlaybook } from "@/lib/dca/playbook";
 import {
   parseFuturesAutomationRow,
@@ -50,6 +54,27 @@ export async function listDeskBacktestBots(
     ...optionsForDesks(dcaDesks, playbooks, "dca"),
     ...optionsForDesks(perpsDesks, rules, "flex"),
   ];
+}
+
+/** Finished backtests whose recipe still matches these bots. Ids are `kind:botId`. */
+export async function backtestsForBotRecipes(input: {
+  userId: string;
+  isAdmin: boolean;
+  bots: readonly { id: string; recipe: unknown }[];
+}): Promise<Record<string, TemplateBacktestLink[]>> {
+  const bots = input.bots.slice(0, 40).flatMap((bot) => {
+    const id = String(bot.id ?? "").trim();
+    const recipe = parseListedRecipe(bot.recipe);
+    return id && recipe ? [{ id, recipe }] : [];
+  });
+  const symbols = [...new Set(bots.map((bot) => bot.recipe.symbol))];
+  const runs = await listDoneBacktestsForSymbols(input.userId, symbols);
+  return backtestLinksForBotRecipes({
+    bots,
+    runs,
+    viewerId: input.userId,
+    isAdmin: input.isAdmin,
+  });
 }
 
 export async function loadDeskBacktestBot(

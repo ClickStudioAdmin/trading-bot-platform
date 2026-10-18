@@ -7,7 +7,15 @@ import {
 } from "@/lib/table-chrome";
 import type { DcaPlaybook } from "@/lib/dca/playbook";
 import type { PaperLayerFormValues } from "@/lib/engine/rules";
+import { parsePaperRulesForm } from "@/lib/engine/rules";
 import type { FuturesAutomationFormValues } from "@/lib/futures/automation";
+import {
+  paperFormToSnapshotSource,
+  snapshotPaperRecipe,
+  snapshotPerpsRecipe,
+  type PaperTemplateRecipe,
+  type PerpsTemplateRecipe,
+} from "@/lib/templates/recipe";
 import {
   dcaStatusFromLegs,
   statusOptionsFor,
@@ -546,4 +554,70 @@ export function dcaBotSummary(playbook: DcaPlaybook): string {
         : "";
   const dip = playbook.dipPct != null ? `${playbook.dipPct}% dip` : "";
   return [start, clips, dip].filter(Boolean).join(" · ");
+}
+
+function numberOrNull(value: string): number | null {
+  const text = value.trim();
+  if (!text) {
+    return null;
+  }
+  const parsed = Number(text.replace(/,/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/** Recipe shown in the bots-list parameters popup. Same snapshot the backtest queue stores. */
+export function perpsListRecipe(
+  layer: FuturesAutomationFormValues,
+): PerpsTemplateRecipe {
+  const closing =
+    layer.formAction === "close_long" || layer.formAction === "close_short";
+  const action = closing ? "flatten" : layer.formAction === "sell" ? "sell" : "buy";
+  const closeSide =
+    layer.formAction === "close_short"
+      ? "short"
+      : layer.formAction === "close_long"
+        ? "long"
+        : null;
+  return snapshotPerpsRecipe({
+    name: layer.name,
+    symbol: layer.symbol,
+    action,
+    closeSide,
+    orderType: layer.orderType,
+    sizeUnit: layer.sizeUnit,
+    size: numberOrNull(layer.size),
+    limitPrice: numberOrNull(layer.limitPrice),
+    entrySource: layer.entrySource,
+    triggerBy: layer.triggerBy,
+    triggerCompare: layer.triggerCompare,
+    triggerPrice: numberOrNull(layer.triggerPrice) ?? 0,
+    skipIfOpen: layer.skipIfOpen,
+    tpsl: layer.tpsl,
+    trailing: layer.trailing,
+    indicator: layer.indicator,
+    retrace: layer.retrace ?? null,
+    addStack: layer.addStack ?? null,
+    confirm: layer.confirm,
+    entryStack: layer.entryStack,
+    exitIf: layer.exitIf,
+    exitHard: layer.exitHard ?? null,
+    exitStack: layer.exitStack ?? null,
+    exitActions: layer.exitActions ?? null,
+    breakevenActivationPct: numberOrNull(layer.breakevenActivationPct),
+    breakevenOffsetPct: numberOrNull(layer.breakevenOffsetPct),
+    direction: layer.direction,
+    shortEntry: layer.shortEntry ?? null,
+  });
+}
+
+/** Recipe shown in the Cash and Carry bots-list parameters popup. */
+export function paperListRecipe(
+  layer: PaperLayerFormValues,
+): PaperTemplateRecipe | null {
+  const parsed = parsePaperRulesForm(paperFormToSnapshotSource(layer));
+  if (!parsed.ok) {
+    return null;
+  }
+  const engine = parsed.config.layers[0];
+  return engine ? snapshotPaperRecipe(engine) : null;
 }
