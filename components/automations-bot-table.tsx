@@ -710,13 +710,6 @@ export function AutomationsBotTable({
               <td className={`${TABLE_ACTIONS_TD_CLASS} align-top`}>
                 <TableActions>
                   <TableIconAction
-                    href={row.activityHref}
-                    label="Activity"
-                    detail="See this bot’s activity."
-                  >
-                    <IconActivity {...TABLE_BTN_ICON} />
-                  </TableIconAction>
-                  <TableIconAction
                     href={row.editHref}
                     label="Edit"
                     detail="Modify the bot’s parameters & status"
@@ -738,6 +731,13 @@ export function AutomationsBotTable({
                       <IconCopy {...TABLE_BTN_ICON} />
                     </TableIconAction>
                   ) : null}
+                  <TableIconAction
+                    href={row.activityHref}
+                    label="Activity"
+                    detail="See this bot’s activity."
+                  >
+                    <IconActivity {...TABLE_BTN_ICON} />
+                  </TableIconAction>
                   {row.onRemove ? (
                     <TableIconAction
                       danger
