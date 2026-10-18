@@ -1426,8 +1426,8 @@ export function monthlyBacktestDecision(
   adding: number,
 ): { allowed: boolean; message: string | null; upgradePlan: string | null } {
   return capCountDecision(gate.monthly, adding, {
-    open: "Backtests per month",
-    ended: "backtests per month",
+    open: "Backtests",
+    ended: "backtests",
     closed: monthlyBacktestClosedMessage,
   });
 }

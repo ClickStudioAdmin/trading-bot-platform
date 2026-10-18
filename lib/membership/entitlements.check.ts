@@ -1183,12 +1183,12 @@ const monthlyTrial = researchGate({
 });
 assert.equal(
   monthlyBacktestDecision(monthlyTrial, 1).message,
-  "Backtests per month are in a free trial until 28/10/2026.",
+  "Backtests are in a free trial until 28/10/2026.",
 );
 assert.equal(monthlyBacktestDecision(monthlyTrial, 1).allowed, true);
 assert.deepEqual(
   queueTrialLines(monthlyTrial, { variant: false, adding: 1, ...window }),
-  ["Backtests per month are in a free trial until 28/10/2026."],
+  ["Backtests are in a free trial until 28/10/2026."],
 );
 const monthlyEnded = researchGate({
   on: { research_backtest: true },
@@ -1199,14 +1199,14 @@ const monthlyEnded = researchGate({
 });
 assert.equal(
   monthlyBacktestDecision(monthlyEnded, 1).message,
-  "Your free trial of backtests per month ended on 01/10/2026.",
+  "Your free trial of backtests ended on 01/10/2026.",
 );
 assert.equal(monthlyBacktestDecision(monthlyEnded, 1).allowed, false);
 assert.deepEqual(
   newBacktestPageNotices(monthlyEnded, { adding: 1, fromMs: 0, toMs: year }).map(
     (row) => row.message,
   ),
-  ["Your free trial of backtests per month ended on 01/10/2026."],
+  ["Your free trial of backtests ended on 01/10/2026."],
 );
 assert.deepEqual(
   newBacktestPageNotices(
