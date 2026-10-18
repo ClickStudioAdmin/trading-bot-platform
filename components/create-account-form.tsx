@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import Link from "next/link";
+import { useMemo, useState, type FormEvent } from "react";
 import { AppCheck } from "@/components/app-check";
 import { BotButtonLead, botBtnIcon } from "@/components/bot-form-chrome";
 import { DeskTypeMark } from "@/components/desk-mark";
 import { IconPlus } from "@/components/icons";
 import { TemplateNameWithParameters } from "@/components/template-parameters-tip";
+import { ExchangeConnectForm } from "@/components/exchange-connect-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { createTradingAccount } from "@/lib/accounts/actions";
 import {
@@ -19,14 +19,17 @@ import {
 import {
   connectionListedForBind,
   formatConnectionSummary,
+  mergeExchangeConnections,
   sharedKeyWarningKind,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
+import type { SavedMemberConnection } from "@/lib/exchanges/member-connection";
 import {
   foldersForDesk,
   type StarterFolder,
 } from "@/lib/onboarding/model";
 import {
+  connectionVenuesForDeskType,
   getVenue,
   venueAllowsDeskType,
   venuesForDeskType,
@@ -89,16 +92,26 @@ export function CreateAccountForm({
   const [deskType, setDeskType] = useState<DeskType>(
     initialDeskType ?? "cash_and_carry",
   );
+  const [trackedDeskType, setTrackedDeskType] = useState(initialDeskType);
   const [mode, setMode] = useState<"paper" | "live">("paper");
-  const [bindChoice, setBindChoice] = useState<"later" | "existing">("later");
+  const [bindChoice, setBindChoice] = useState<"later" | "new" | "existing">(
+    "later",
+  );
   const [connectionId, setConnectionId] = useState("");
+  const [addedConnections, setAddedConnections] = useState<ExchangeConnection[]>(
+    [],
+  );
   const [paperVenue, setPaperVenue] = useState("bybit");
   const [name, setName] = useState("");
   const [addStarter, setAddStarter] = useState(false);
   const [starterIds, setStarterIds] = useState<string[]>([]);
+  const connectionRows = useMemo(
+    () => mergeExchangeConnections(connections, addedConnections),
+    [addedConnections, connections],
+  );
   const liveKeys = useMemo(
     () =>
-      connections.filter((row) => {
+      connectionRows.filter((row) => {
         if (row.status !== "active") {
           return false;
         }
@@ -114,7 +127,11 @@ export function CreateAccountForm({
         const venue = getVenue(row.venue);
         return venue ? venueAllowsDeskType(venue, deskType) : false;
       }),
-    [allowSharedKeys, connections, deskType, sharedConnectionIds],
+    [allowSharedKeys, connectionRows, deskType, sharedConnectionIds],
+  );
+  const keyVenues = useMemo(
+    () => connectionVenuesForDeskType(deskType),
+    [deskType],
   );
   const paperVenues = useMemo(
     () => venuesForDeskType(deskType),
@@ -185,10 +202,29 @@ export function CreateAccountForm({
     setConnectionId("");
   }
 
-  useEffect(() => {
-    if (!initialDeskType) {
-      return;
-    }
+  function handleKeyCreated(saved: SavedMemberConnection) {
+    const now = Date.now();
+    const row: ExchangeConnection = {
+      id: saved.id,
+      userId: "",
+      venue: saved.venue,
+      environment: saved.environment,
+      label: saved.label,
+      fingerprint: saved.fingerprint,
+      venueAccountId: null,
+      status: "active",
+      verifiedAtMs: now,
+      createdAtMs: now,
+    };
+    setAddedConnections((current) =>
+      current.some((item) => item.id === row.id) ? current : [...current, row],
+    );
+    setConnectionId(saved.id);
+    setBindChoice("existing");
+  }
+
+  if (initialDeskType && initialDeskType !== trackedDeskType) {
+    setTrackedDeskType(initialDeskType);
     setDeskType(initialDeskType);
     setConnectionId("");
     setPaperVenue((current) => {
@@ -197,19 +233,20 @@ export function CreateAccountForm({
         ? current
         : (allowed[0]?.id ?? "bybit");
     });
-  }, [initialDeskType]);
+  }
+
+  const formClass = embedded
+    ? "mt-4 space-y-4"
+    : hideTitle
+      ? "space-y-4 rounded-card border border-line bg-surface p-5"
+      : "mt-6 space-y-4 rounded-card border border-line bg-surface p-5";
 
   return (
+    <div>
     <form
       action={createTradingAccount}
       onSubmit={onSubmit}
-      className={
-        embedded
-          ? "mt-4 space-y-4"
-          : hideTitle
-            ? "space-y-4 rounded-card border border-line bg-surface p-5"
-            : "mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
-      }
+      className={formClass}
     >
       {embedded || hideTitle ? null : (
         <h2 className="text-lg font-semibold tracking-tight">New desk</h2>
@@ -338,8 +375,9 @@ export function CreateAccountForm({
             <AppSelect
               value={bindChoice}
               onChange={(event) => {
+                const value = event.target.value;
                 const nextChoice =
-                  event.target.value === "existing" ? "existing" : "later";
+                  value === "existing" || value === "new" ? value : "later";
                 setBindChoice(nextChoice);
                 if (nextChoice !== "existing") {
                   setConnectionId("");
@@ -349,6 +387,9 @@ export function CreateAccountForm({
             >
               <option value="later" disabled={Boolean(liveBlocked)}>
                 Bind Later in Desk Settings
+              </option>
+              <option value="new" disabled={keyVenues.length === 0}>
+                Add New Exchange Key
               </option>
               <option value="existing">
                 Select Existing Exchange Connection
@@ -389,18 +430,9 @@ export function CreateAccountForm({
                 {sharedConnectionIds.length > 0 ? (
                   "Every matching key is already bound to another desk. Save a new trade-only key, or unbind one first."
                 ) : firstDesk ? (
-                  "No connections on this login yet. Choose Bind Later — you can add a key after this desk is created."
+                  "No connections on this login yet. Choose Add New Exchange Key, or bind later after this desk is created."
                 ) : (
-                  <>
-                    No connections saved yet.{" "}
-                    <Link
-                      href="/account/sub-accounts?tab=exchanges"
-                      className="text-accent hover:text-accent-strong"
-                    >
-                      Add a connection on Exchanges
-                    </Link>{" "}
-                    first, or bind later in Desk Settings.
-                  </>
+                  "No connections saved yet. Choose Add New Exchange Key, or bind later in Desk Settings."
                 )}
               </p>
             )
@@ -451,6 +483,14 @@ export function CreateAccountForm({
         ) : null}
       </div>
     </form>
+    {mode === "live" && bindChoice === "new" && keyVenues.length > 0 ? (
+      <ExchangeConnectForm
+        venues={keyVenues}
+        title="Add New Exchange Key"
+        onCreated={handleKeyCreated}
+      />
+    ) : null}
+    </div>
   );
 }
 

@@ -8,7 +8,9 @@ import {
 import {
   checkExchangeConnection,
   saveExchangeConnection,
+  saveExchangeConnectionInline,
 } from "@/lib/exchanges/actions";
+import type { SavedMemberConnection } from "@/lib/exchanges/member-connection";
 import type { VenueDefinition } from "@/lib/exchanges/venues";
 import { AppSelect } from "@/components/app-select";
 import { StepUpForm } from "@/components/step-up-code-field";
@@ -21,18 +23,27 @@ export function ExchangeConnectForm({
   next,
   compact = false,
   hideTitle = false,
+  title,
+  onCreated,
 }: {
   venues: VenueDefinition[];
   next?: string;
   compact?: boolean;
   hideTitle?: boolean;
+  title?: string;
+  /** Stay on the page and hand the saved key back. No redirect. */
+  onCreated?: (connection: SavedMemberConnection) => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [venueId, setVenueId] = useState(venues[0]?.id ?? "");
   const [check, setCheck] = useState<
     { ok: true } | { ok: false; error: string } | null
   >(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [stepUpError, setStepUpError] = useState<string | null>(null);
   const [checking, startCheck] = useTransition();
+  const [saving, startSave] = useTransition();
+  const busy = checking || saving;
   const venue = venues.find((item) => item.id === venueId) ?? venues[0];
   if (!venue) {
     return null;
@@ -53,6 +64,9 @@ export function ExchangeConnectForm({
     if (check) {
       setCheck(null);
     }
+    if (saveError) {
+      setSaveError(null);
+    }
   }
 
   function runCheck() {
@@ -66,13 +80,41 @@ export function ExchangeConnectForm({
     });
   }
 
+  const heading = title ?? (compact ? "Add a connection" : "Connect");
+
+  function saveHere(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!check?.ok || busy) {
+      return;
+    }
+    const data = new FormData(event.currentTarget);
+    setSaveError(null);
+    setStepUpError(null);
+    startSave(async () => {
+      const saved = await saveExchangeConnectionInline(data);
+      if ("stepUpError" in saved) {
+        setStepUpError(saved.stepUpError);
+        return;
+      }
+      if (!saved.ok) {
+        setSaveError(saved.error);
+        return;
+      }
+      onCreated?.(saved.connection);
+    });
+  }
+
   return (
     <StepUpForm
       formRef={formRef}
-      action={saveExchangeConnection}
+      action={onCreated ? undefined : saveExchangeConnection}
       confirmLabel="Save connection"
       autoComplete="off"
+      error={stepUpError ?? saveError}
+      pending={saving}
+      onSubmit={onCreated ? saveHere : undefined}
       onInput={clearCheck}
+      onCancel={() => setStepUpError(null)}
       className={
         compact
           ? "space-y-4"
@@ -81,12 +123,12 @@ export function ExchangeConnectForm({
     >
       {hideTitle ? null : compact ? (
         <h3 className="text-lg font-semibold tracking-tight text-ink">
-          Add a connection
+          {heading}
         </h3>
       ) : (
-        <h2 className="text-lg font-semibold tracking-tight">Connect</h2>
+        <h2 className="text-lg font-semibold tracking-tight">{heading}</h2>
       )}
-      {next ? <input type="hidden" name="next" value={next} /> : null}
+      {next && !onCreated ? <input type="hidden" name="next" value={next} /> : null}
       <label className="block text-sm text-ink">
         Exchange
         <AppSelect
@@ -148,11 +190,12 @@ export function ExchangeConnectForm({
       {check && !check.ok ? (
         <p className="text-sm text-danger">{check.error}</p>
       ) : null}
+      {saveError ? <p className="text-sm text-danger">{saveError}</p> : null}
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={runCheck}
-          disabled={checking}
+          disabled={busy}
           className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong disabled:opacity-70"
         >
           {checking ? (
@@ -164,19 +207,39 @@ export function ExchangeConnectForm({
             "Check connection"
           )}
         </button>
-        <PendingSubmitButton
-          pendingLabel="Saving…"
-          successKey="exchange-connect"
-          disabled={!check?.ok || checking}
-          title={
-            check?.ok
-              ? undefined
-              : "Check the connection before saving."
-          }
-          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-        >
-          Save connection
-        </PendingSubmitButton>
+        {onCreated ? (
+          <button
+            type="submit"
+            disabled={!check?.ok || busy}
+            title={
+              check?.ok ? undefined : "Check the connection before saving."
+            }
+            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:opacity-70"
+          >
+            {saving ? (
+              <span className="inline-flex items-center gap-2">
+                <ButtonBusyIcon />
+                Saving…
+              </span>
+            ) : (
+              "Save connection"
+            )}
+          </button>
+        ) : (
+          <PendingSubmitButton
+            pendingLabel="Saving…"
+            successKey="exchange-connect"
+            disabled={!check?.ok || checking}
+            title={
+              check?.ok
+                ? undefined
+                : "Check the connection before saving."
+            }
+            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          >
+            Save connection
+          </PendingSubmitButton>
+        )}
       </div>
     </StepUpForm>
   );
