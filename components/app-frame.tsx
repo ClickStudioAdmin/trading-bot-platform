@@ -4,6 +4,7 @@ import { QuotaAccessProvider } from "@/components/quota-access";
 import { TemplateFeatureAccessProvider } from "@/components/template-feature-access";
 import { CopyGateProvider } from "@/components/copy-gate-access";
 import { ResearchGateProvider } from "@/components/research-gate-access";
+import { PositionBuilderAccessProvider } from "@/components/position-builder-access";
 import { TotpStepUpProvider } from "@/components/step-up-code-field";
 import { PlatformTour } from "@/components/platform-tour";
 import { SetupGate } from "@/components/setup-gate";
@@ -47,6 +48,7 @@ import { loadQuotaAccess } from "@/lib/membership/load-quota-access";
 import { loadTemplateFeatureAccess } from "@/lib/membership/load-template-feature-access";
 import { loadCopyGateAccess } from "@/lib/membership/load-copy-gate-access";
 import { loadResearchGateAccess } from "@/lib/membership/load-research-gate-access";
+import { loadPositionBuilderAccess } from "@/lib/membership/load-position-builder-access";
 import { loadPlatformBrand } from "@/lib/platform/brand";
 
 export async function AppFrame({ children }: { children: React.ReactNode }) {
@@ -59,6 +61,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
     templateFeatureAccess,
     copyGateAccess,
     researchGateAccess,
+    positionBuilderAccess,
   ] = member
     ? await Promise.all([
         listTradingAccounts(member.id),
@@ -80,8 +83,11 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
         member.emailVerifiedAt && member.platformMember
           ? loadResearchGateAccess(member.id)
           : Promise.resolve(null),
+        member.emailVerifiedAt && member.platformMember
+          ? loadPositionBuilderAccess(member.id)
+          : Promise.resolve(null),
       ])
-    : [[], null, [], [], [], null, null];
+    : [[], null, [], [], [], null, null, null];
   const verified = Boolean(member?.emailVerifiedAt);
   const admin = verified && member ? await getAdminUser() : null;
   const autoTick = admin ? await loadAutoTickEnabled() : false;
@@ -122,6 +128,10 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
       <TemplateFeatureAccessProvider access={templateFeatureAccess}>
       <CopyGateProvider access={copyGateAccess}>
       <ResearchGateProvider access={researchGateAccess}>
+      <PositionBuilderAccessProvider
+        access={positionBuilderAccess}
+        active={Boolean(member?.emailVerifiedAt && member.platformMember) && !adminPath}
+      >
       <div
         inert={needsSetup ? true : undefined}
         className={needsSetup ? "h-dvh overflow-hidden" : undefined}
@@ -180,6 +190,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
           />
         </Suspense>
       ) : null}
+      </PositionBuilderAccessProvider>
       </ResearchGateProvider>
       </CopyGateProvider>
       </TemplateFeatureAccessProvider>

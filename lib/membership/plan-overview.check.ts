@@ -103,7 +103,15 @@ assert.equal(
   true,
 );
 assert.equal(line(groups, "Bots & Templates", "cap:max_bots").text, "4 of Unlimited");
+assert.equal(line(groups, "Bots & Templates", "feature:position_builder").text, "—");
+assert.equal(line(groups, "Bots & Templates", "feature:position_builder").included, false);
 assert.equal(line(groups, "Bots & Templates", "feature:extras_templates").included, true);
+const botLines = groups.find((group) => group.title === "Bots & Templates");
+assert.ok(botLines);
+assert.deepEqual(
+  botLines.lines.slice(0, 2).map((item) => item.key),
+  ["cap:max_bots", "feature:position_builder"],
+);
 assert.equal(
   line(groups, "Copy Trading", "cap:max_copy_follows").text,
   "3 of 2",

@@ -8,6 +8,7 @@ import {
   insertAt,
   RemoveConditionButton,
 } from "@/components/condition-group";
+import { usePositionBuilderAddBlocked } from "@/components/position-builder-access";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { AppSelect } from "@/components/app-select";
 import {
@@ -567,6 +568,7 @@ export function EntryConditionStack({
   kinds?: readonly StrategyTriggerKind[];
 }) {
   const column = useBotColumnLayout();
+  const blockAdd = usePositionBuilderAddBlocked();
   const typeOptions = kinds
     ? TRIGGER_OPTIONS.filter((option) => kinds.includes(option.value))
     : TRIGGER_OPTIONS;
@@ -1004,11 +1006,16 @@ export function EntryConditionStack({
   }
   const canAdd = rows.length < cap;
   const addButton = canAdd ? (
-    <button
-      type="button"
-      className="inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink"
-        onClick={() => onChange([...rows, blankEntryRow("and")])}
-    >
+      <button
+        type="button"
+        className="inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink"
+        onClick={(event) => {
+          if (blockAdd(event.currentTarget)) {
+            return;
+          }
+          onChange([...rows, blankEntryRow("and")]);
+        }}
+      >
       <IconPlus size={14} className="size-3.5" />
       Add Condition
     </button>
