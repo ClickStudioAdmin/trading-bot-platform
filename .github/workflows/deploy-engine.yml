@@ -12,14 +12,17 @@ on:
   workflow_dispatch:
 
 concurrency:
+  # One deploy per branch. A newer push cancels the run still going so a
+  # stalled image push cannot queue every later merge.
   group: engine-${{ github.ref_name }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy-development:
     name: Deploy development engine
     if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     environment: development
     permissions:
       contents: read
@@ -81,12 +84,13 @@ jobs:
       - name: Deploy
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: flyctl deploy --config fly.development.toml --remote-only
+        run: bash scripts/fly-deploy.sh fly.development.toml --remote-only
 
   deploy-development-backtest:
     name: Deploy development backtests
     if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     environment: development
     permissions:
       contents: read
@@ -148,13 +152,14 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          flyctl deploy --config fly.backtest.development.toml --remote-only --ha=false
-          flyctl scale count 1 --app tbp-backtest-dev --yes
+          bash scripts/fly-deploy.sh fly.backtest.development.toml --remote-only --ha=false
+          timeout --kill-after=20s 2m flyctl scale count 1 --app tbp-backtest-dev --yes
 
   deploy-production:
     name: Deploy production engine
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     environment: production
     permissions:
       contents: read
@@ -202,12 +207,13 @@ jobs:
       - name: Deploy
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: flyctl deploy --config fly.production.toml --remote-only
+        run: bash scripts/fly-deploy.sh fly.production.toml --remote-only
 
   deploy-production-backtest:
     name: Deploy production backtests
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     environment: production
     permissions:
       contents: read
@@ -269,5 +275,5 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          flyctl deploy --config fly.backtest.production.toml --remote-only --ha=false
-          flyctl scale count 1 --app tbp-backtest --yes
+          bash scripts/fly-deploy.sh fly.backtest.production.toml --remote-only --ha=false
+          timeout --kill-after=20s 2m flyctl scale count 1 --app tbp-backtest --yes
