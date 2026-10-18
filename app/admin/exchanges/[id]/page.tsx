@@ -78,7 +78,7 @@ export default async function AdminExchangePage({
       ) : null}
       <form
         action={saveExchangeAvailability}
-        className="mt-6 space-y-6 rounded-card border border-line bg-surface p-5"
+        className="mt-6 rounded-card border border-line bg-surface p-5"
       >
         <input type="hidden" name="venue" value={venue.id} />
         <div>
@@ -90,8 +90,9 @@ export default async function AdminExchangePage({
             demo or testnet. Live is the exchange live environment.
           </p>
         </div>
+        <div className="mt-6 divide-y divide-line border-t border-line">
         {deskTypesInSidebarOrder(venue.deskTypes).map((deskType) => (
-          <section key={deskType}>
+          <section key={deskType} className="py-5">
             <h3 className="text-sm font-semibold text-ink">
               {isVenueDeskType(deskType) ? formatDeskType(deskType) : deskType}
             </h3>
@@ -143,8 +144,9 @@ export default async function AdminExchangePage({
             </div>
           </section>
         ))}
+        </div>
         {unsupported.length > 0 ? (
-          <p className="text-sm text-ink-muted">
+          <p className="mt-6 text-sm text-ink-muted">
             {unsupported
               .map((deskType) => formatDeskType(deskType))
               .join(", ")}{" "}
@@ -154,7 +156,7 @@ export default async function AdminExchangePage({
         ) : null}
         <PendingSubmitButton
           pendingLabel="Saving…"
-          className="inline-flex items-center rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          className="mt-6 inline-flex items-center rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
         >
           Save
         </PendingSubmitButton>
