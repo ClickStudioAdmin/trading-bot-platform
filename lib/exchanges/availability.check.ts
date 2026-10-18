@@ -4,6 +4,7 @@ import {
   availabilityCounts,
   availabilitySetting,
   cellFor,
+  deskTypesInSidebarOrder,
   defaultExchangeAvailability,
   environmentDeskMode,
   exclusiveChoice,
@@ -220,6 +221,20 @@ assert.equal(availabilitySetting(hidden, "bybit", "manual", "demo"), "live");
 assert.equal(availabilitySetting(hidden, "bybit", "manual", "live"), "live");
 assert.equal(availabilitySetting(defaults, "bybit", "dca", "paper"), "live");
 assert.equal(availabilitySetting([], "bybit", "dca", "paper"), "live");
+assert.deepEqual(
+  deskTypesInSidebarOrder([
+    "cash_and_carry",
+    "manual",
+    "flex",
+    "signal_follower",
+    "dca",
+  ]),
+  ["flex", "dca", "cash_and_carry", "signal_follower", "manual"],
+);
+assert.deepEqual(
+  deskTypesInSidebarOrder(["manual", "flex", "signal_follower", "dca"]),
+  ["flex", "dca", "signal_follower", "manual"],
+);
 const manualCounts = availabilityCounts("bybit", hidden, "manual");
 assert.equal(manualCounts.slots, 3);
 assert.equal(manualCounts.live, 2);

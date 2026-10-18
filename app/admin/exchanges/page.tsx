@@ -18,6 +18,7 @@ import {
 import {
   EXCHANGE_DESK_MODES,
   availabilitySetting,
+  deskTypesInSidebarOrder,
 } from "@/lib/exchanges/availability";
 import { loadExchangeAvailability } from "@/lib/exchanges/availability-store";
 import { VENUES } from "@/lib/exchanges/venues";
@@ -71,12 +72,13 @@ export default async function AdminExchangesPage({
                 </td>
               </tr>
             ) : (
-              VENUES.map((venue, venueIndex) =>
-                venue.deskTypes.map((deskType, typeIndex) => {
+              VENUES.map((venue, venueIndex) => {
+                const deskTypes = deskTypesInSidebarOrder(venue.deskTypes);
+                return deskTypes.map((deskType, typeIndex) => {
                   const first = typeIndex === 0;
                   const last =
                     venueIndex === VENUES.length - 1 &&
-                    typeIndex === venue.deskTypes.length - 1;
+                    typeIndex === deskTypes.length - 1;
                   return (
                     <tr
                       key={`${venue.id}:${deskType}`}
@@ -84,7 +86,7 @@ export default async function AdminExchangesPage({
                     >
                       {first ? (
                         <td
-                          rowSpan={venue.deskTypes.length}
+                          rowSpan={deskTypes.length}
                           className="px-4 py-3 align-top"
                         >
                           <Link
@@ -118,7 +120,7 @@ export default async function AdminExchangesPage({
                       })}
                       {first ? (
                         <td
-                          rowSpan={venue.deskTypes.length}
+                          rowSpan={deskTypes.length}
                           className={`${TABLE_ACTIONS_TD_CLASS} align-top text-right`}
                         >
                           <TableActions className="justify-end">
@@ -134,8 +136,8 @@ export default async function AdminExchangesPage({
                       ) : null}
                     </tr>
                   );
-                }),
-              )
+                });
+              })
             )}
           </tbody>
         </table>

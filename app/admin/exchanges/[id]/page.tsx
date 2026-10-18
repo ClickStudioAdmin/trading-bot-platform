@@ -9,6 +9,7 @@ import { saveExchangeAvailability } from "@/lib/exchanges/availability-actions";
 import {
   EXCHANGE_DESK_MODES,
   cellFor,
+  deskTypesInSidebarOrder,
   isVenueDeskType,
 } from "@/lib/exchanges/availability";
 import { loadExchangeAvailability } from "@/lib/exchanges/availability-store";
@@ -86,7 +87,7 @@ export default async function AdminExchangePage({
             demo or testnet. Live is the exchange live environment.
           </p>
         </div>
-        {venue.deskTypes.map((deskType) => (
+        {deskTypesInSidebarOrder(venue.deskTypes).map((deskType) => (
           <section key={deskType}>
             <h3 className="text-sm font-semibold text-ink">
               {isVenueDeskType(deskType) ? formatDeskType(deskType) : deskType}

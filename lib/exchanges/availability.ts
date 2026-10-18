@@ -1,4 +1,8 @@
 import {
+  AUTOMATED_DESK_TYPES,
+  MANUAL_DESK_TYPES,
+} from "@/lib/accounts/model";
+import {
   connectionVenuesForDeskType,
   getVenue,
   venueAllowsDeskType,
@@ -38,6 +42,21 @@ export type ExchangeAccess = {
   admin: boolean;
   cells: ExchangeAvailabilityCell[];
 };
+
+/** Sidebar: automated desks, then Manual. */
+const SIDEBAR_DESK_ORDER: readonly string[] = [
+  ...AUTOMATED_DESK_TYPES,
+  ...MANUAL_DESK_TYPES,
+];
+
+export function deskTypesInSidebarOrder<T extends string>(
+  types: readonly T[],
+): T[] {
+  return [...types].sort(
+    (left, right) =>
+      SIDEBAR_DESK_ORDER.indexOf(left) - SIDEBAR_DESK_ORDER.indexOf(right),
+  );
+}
 
 const DESK_TYPE_LABEL: Record<VenueDeskType, string> = {
   cash_and_carry: "Cash and Carry",
