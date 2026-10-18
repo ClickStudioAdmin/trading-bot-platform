@@ -12,6 +12,7 @@ import {
   JoinWord,
   RemoveConditionButton,
 } from "@/components/condition-group";
+import { CONDITION_GROUP_HELPER } from "@/components/condition-join";
 import {
   anchorDisabledKinds,
   anchorDisabledWebhookIds,
@@ -46,7 +47,6 @@ import {
 } from "@/lib/strategy/exit-clauses";
 import {
   EMPTY_EXIT_PRICES,
-  actionKindLabel,
   exitActionsForSave,
   type ExitSidePrices,
 } from "@/lib/strategy/exit-actions";
@@ -429,9 +429,9 @@ export function ExitSideBuilder({
             <section className="condition-group space-y-4 rounded-card border border-line bg-canvas px-4 py-4">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="min-w-0 text-sm font-semibold text-ink">
-                  {clause.kind === "" ? "Action" : actionKindLabel(clause.kind)}
+                  Group {index + 1}
                   <span className="ml-2 text-hint font-normal text-ink-muted">
-                    - Fires when its conditions are true.
+                    - {CONDITION_GROUP_HELPER}
                   </span>
                 </h3>
                 {normalized.length > 1 ? (

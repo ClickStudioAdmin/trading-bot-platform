@@ -15,7 +15,7 @@ import {
   AddConditionButton,
   RemoveConditionButton,
 } from "@/components/condition-group";
-import { JoinWord } from "@/components/condition-join";
+import { CONDITION_GROUP_HELPER, JoinWord } from "@/components/condition-join";
 import {
   claimFromEntryDraft,
   entryConflictSlots,
@@ -221,7 +221,7 @@ export function PerpsAdditionalOrders({
                 <h3 className="min-w-0 text-sm font-semibold text-ink">
                   Group {groupIndex + 1}
                   <span className="ml-2 text-hint font-normal text-ink-muted">
-                    - Every condition in this group must be true.
+                    - {CONDITION_GROUP_HELPER}
                   </span>
                 </h3>
                 {groupIndex > 0 ? (

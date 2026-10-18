@@ -1,4 +1,4 @@
-import { JoinWord } from "@/components/condition-join";
+import { CONDITION_GROUP_HELPER, JoinWord } from "@/components/condition-join";
 import type { ParamRow, ParamSection, ParamStack } from "@/lib/backtest/param-sections";
 
 function ParamRows({
@@ -48,7 +48,7 @@ function ConditionStackView({ stack }: { stack: ParamStack }) {
             <h4 className="text-sm font-semibold text-ink">
               Group {groupIndex + 1}
               <span className="ml-2 text-hint font-normal text-ink-muted">
-                - Every condition in this group must be true.
+                - {CONDITION_GROUP_HELPER}
               </span>
             </h4>
             {conditions.map((condition, conditionIndex) => (
