@@ -99,6 +99,7 @@ export default async function AdminMembersPage({
               >
                 <option value="">All</option>
                 <option value="member">Member</option>
+                <option value="developer">Developer</option>
                 <option value="admin">Admin</option>
               </AppSelect>
             </TableFilterField>

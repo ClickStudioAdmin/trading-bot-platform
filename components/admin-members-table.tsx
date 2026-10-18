@@ -14,6 +14,7 @@ import {
   toggleMemberSort,
   type MemberListQuery,
 } from "@/lib/members/query";
+import { formatMemberRole } from "@/lib/members/form";
 import type { MemberRow } from "@/lib/members/rows";
 
 export function AdminMembersTable({
@@ -75,7 +76,9 @@ export function AdminMembersTable({
               <tr key={row.id} className="border-b border-line last:border-b-0">
                 <td className="px-4 py-3">{row.name}</td>
                 <td className="px-4 py-3 text-ink-muted">{row.email}</td>
-                <td className="px-4 py-3 text-ink-muted">{row.role}</td>
+                <td className="px-4 py-3 text-ink-muted">
+                  {formatMemberRole(row.role)}
+                </td>
                 <td className="px-4 py-3">
                   <StatusBadge
                     label={row.status === "disabled" ? "Disabled" : "Active"}

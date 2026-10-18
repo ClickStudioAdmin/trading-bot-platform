@@ -22,6 +22,7 @@ import {
   listExchangeConnections,
 } from "@/lib/exchanges/store";
 import { memberIsAdmin } from "@/lib/admin/access";
+import { loginSeesRestrictedExchanges } from "@/lib/admin/emails";
 import { loadExchangeAvailability } from "@/lib/exchanges/availability-store";
 import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
 import { requireVerifiedEmail } from "@/lib/auth/session";
@@ -92,7 +93,7 @@ export default async function NewDeskPage({
         <div className="grid items-start gap-6 lg:grid-cols-2">
           <CreateAccountForm
             exchangeAccess={{
-              admin: memberIsAdmin(member),
+              restricted: loginSeesRestrictedExchanges(member),
               cells: exchangeCells,
             }}
             connections={connections}

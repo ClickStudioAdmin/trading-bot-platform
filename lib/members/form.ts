@@ -2,7 +2,7 @@ import { emailIsListedAdmin } from "@/lib/admin/emails";
 import { parseOptionalReferralCode } from "@/lib/membership/affiliate";
 import { parsePlanId } from "@/lib/membership/form";
 
-export type MemberRole = "member" | "admin";
+export type MemberRole = "member" | "developer" | "admin";
 export type MemberStatus = "active" | "disabled";
 
 export type MemberFormValues = {
@@ -41,7 +41,7 @@ export function parseMemberForm(
   if (mode === "edit" && password.length > 0 && password.length < 8) {
     return { ok: false, error: "New password must be at least 8 characters." };
   }
-  if (roleRaw !== "member" && roleRaw !== "admin") {
+  if (roleRaw !== "member" && roleRaw !== "developer" && roleRaw !== "admin") {
     return { ok: false, error: "Choose a role." };
   }
   if (statusRaw !== "active" && statusRaw !== "disabled") {
@@ -163,6 +163,23 @@ export function parseAffiliateSignup(formData: FormData):
     password,
     referralCode: referral.code,
   };
+}
+
+export function parseMemberRole(value: unknown): MemberRole {
+  if (value === "admin" || value === "developer" || value === "member") {
+    return value;
+  }
+  return "member";
+}
+
+export function formatMemberRole(role: MemberRole): string {
+  if (role === "admin") {
+    return "Admin";
+  }
+  if (role === "developer") {
+    return "Developer";
+  }
+  return "Member";
 }
 
 export function parseMemberId(raw: string): number | null {

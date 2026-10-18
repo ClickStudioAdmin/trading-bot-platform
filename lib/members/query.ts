@@ -97,7 +97,9 @@ function isMemberSort(value: string): value is MemberSort {
 }
 
 function parseRoleFilter(value: string): string {
-  return value === "member" || value === "admin" ? value : "";
+  return value === "member" || value === "developer" || value === "admin"
+    ? value
+    : "";
 }
 
 function parseStatusFilter(value: string): string {

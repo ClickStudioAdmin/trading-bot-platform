@@ -19,7 +19,7 @@ import {
 } from "@/lib/auth/session";
 import { stepUpError } from "@/lib/auth/step-up-guard";
 import { STEP_UP_FIELD } from "@/lib/auth/step-up";
-import { memberIsAdmin } from "@/lib/admin/access";
+import { loginSeesRestrictedExchanges } from "@/lib/admin/emails";
 import { exchangeCreateAllowed } from "@/lib/exchanges/availability";
 import { loadExchangeAvailability } from "@/lib/exchanges/availability-store";
 import { createMemberExchangeConnection } from "@/lib/exchanges/member-connection";
@@ -179,7 +179,7 @@ export async function createSetupBeforeTour(
     const prepared = await materializeSetup(
       member.id,
       raw,
-      memberIsAdmin(member),
+      loginSeesRestrictedExchanges(member),
     );
     if (!prepared.ok) {
       return prepared;
@@ -231,7 +231,7 @@ async function finishSetupNow(
     const prepared = await materializeSetup(
       member.id,
       raw,
-      memberIsAdmin(member),
+      loginSeesRestrictedExchanges(member),
     );
     if (!prepared.ok) {
       return prepared;
@@ -270,7 +270,7 @@ async function finishSetupNow(
 async function materializeSetup(
   userId: string,
   raw: string,
-  admin: boolean,
+  restricted: boolean,
 ): Promise<{ ok: true; draft: SetupDraft } | { ok: false; error: string }> {
   const parsed = parseSetupDraft(raw);
   if (!parsed.ok) {
@@ -357,7 +357,7 @@ async function materializeSetup(
   for (const desk of desksStillToCreate(working.desks)) {
     const exchangeAllowed = exchangeCreateAllowed({
       cells: exchangeCells,
-      admin,
+      restricted,
       deskType: desk.deskType,
       venueId: desk.venue,
       accountMode: desk.mode,

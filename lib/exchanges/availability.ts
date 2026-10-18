@@ -5,6 +5,7 @@ import {
 } from "@/lib/accounts/model";
 import {
   connectionVenuesForDeskType,
+  enabledVenues,
   getVenue,
   venueAllowsDeskType,
   venuesForDeskType,
@@ -82,7 +83,8 @@ export function exclusiveChoice(
 }
 
 export type ExchangeAccess = {
-  admin: boolean;
+  /** Admin or developer. Can see In Development and Testing. */
+  restricted: boolean;
   cells: ExchangeAvailabilityCell[];
 };
 
@@ -284,13 +286,14 @@ export function exchangeChoiceLabel(
   deskType: string,
   mode: ExchangeDeskMode,
 ): string {
-  if (
-    !cells ||
-    availabilitySetting(cells, venueId, deskType, mode) !== "beta"
-  ) {
+  if (!cells) {
     return label;
   }
-  return `${label} · Beta`;
+  const status = availabilitySetting(cells, venueId, deskType, mode);
+  if (status === "live") {
+    return label;
+  }
+  return `${label} · ${availabilityStatusLabel(status)}`;
 }
 
 export function connectedVenueChoiceLabel(
@@ -301,17 +304,19 @@ export function connectedVenueChoiceLabel(
   if (!cells || venue.environments.length === 0) {
     return venue.label;
   }
-  const allBeta = venue.environments.every((environment) => {
-    return (
-      availabilitySetting(
-        cells,
-        venue.id,
-        deskType,
-        environmentDeskMode(environment.id),
-      ) === "beta"
-    );
-  });
-  return allBeta ? `${venue.label} · Beta` : venue.label;
+  const statuses = venue.environments.map((environment) =>
+    availabilitySetting(
+      cells,
+      venue.id,
+      deskType,
+      environmentDeskMode(environment.id),
+    ),
+  );
+  const first = statuses[0];
+  if (first && first !== "live" && statuses.every((status) => status === first)) {
+    return `${venue.label} · ${availabilityStatusLabel(first)}`;
+  }
+  return venue.label;
 }
 
 /** Notice for a desk whose exchange, type, and mode are Beta. */
@@ -359,7 +364,7 @@ function flagAllows(
     beta?: boolean;
     inDevelopment?: boolean;
   },
-  admin: boolean,
+  restricted: boolean,
 ): boolean {
   const choice = exclusiveChoice(
     flag.live,
@@ -367,11 +372,8 @@ function flagAllows(
     flag.beta,
     flag.inDevelopment,
   );
-  if (choice.inDevelopment) {
-    return false;
-  }
-  if (choice.testing) {
-    return admin;
+  if (choice.inDevelopment || choice.testing) {
+    return restricted;
   }
   return true;
 }
@@ -389,7 +391,7 @@ function unsupportedMessage(venueId: string, deskType: string): string {
  */
 export function exchangeCreateAllowed(input: {
   cells: readonly ExchangeAvailabilityCell[];
-  admin: boolean;
+  restricted: boolean;
   deskType: string;
   venueId: string;
   accountMode: "paper" | "live";
@@ -435,7 +437,7 @@ export function exchangeCreateAllowed(input: {
 function modeAllowed(
   input: {
     cells: readonly ExchangeAvailabilityCell[];
-    admin: boolean;
+    restricted: boolean;
     deskType: string;
     venueId: string;
   },
@@ -453,7 +455,7 @@ function modeAllowed(
     beta: false,
     inDevelopment: false,
   };
-  if (!flagAllows(flag, input.admin)) {
+  if (!flagAllows(flag, input.restricted)) {
     return { ok: false, error };
   }
   return { ok: true };
@@ -475,7 +477,7 @@ export function offeredVenues(
     (venue) =>
       exchangeCreateAllowed({
         cells: access.cells,
-        admin: access.admin,
+        restricted: access.restricted,
         deskType,
         venueId: venue.id,
         accountMode: kind === "paper" ? "paper" : "live",
@@ -496,7 +498,7 @@ export function offeredEnvironments(
     (environment) =>
       exchangeCreateAllowed({
         cells: access.cells,
-        admin: access.admin,
+        restricted: access.restricted,
         deskType,
         venueId: venue.id,
         accountMode: "live",
@@ -520,6 +522,119 @@ export function offeredConnectionVenues(
     }
     return [{ ...venue, environments }];
   });
+}
+
+/** Venues and environments this viewer can add a key for on any desk type. */
+export function offeredAccountVenues(
+  access: ExchangeAccess | null,
+): VenueDefinition[] {
+  const venues = enabledVenues();
+  if (!access) {
+    return venues;
+  }
+  return venues.flatMap((venue) => {
+    const environments = venue.environments.filter((environment) =>
+      SIDEBAR_DESK_TYPES.some(
+        (deskType) =>
+          venueAllowsDeskType(venue, deskType) &&
+          exchangeCreateAllowed({
+            cells: access.cells,
+            restricted: access.restricted,
+            deskType,
+            venueId: venue.id,
+            accountMode: "live",
+            environmentId: environment.id,
+          }).ok,
+      ),
+    );
+    if (environments.length === 0) {
+      return [];
+    }
+    if (environments.length === venue.environments.length) {
+      return [venue];
+    }
+    return [{ ...venue, environments }];
+  });
+}
+
+/** The desk's venue, limited to environments this viewer can use. */
+export function deskBindVenues(
+  access: ExchangeAccess | null,
+  deskType: VenueDeskType,
+  venueId: string,
+  environmentId: string | null,
+): VenueDefinition[] {
+  const current = getVenue(venueId);
+  if (!current || !current.connectionsEnabled) {
+    return [];
+  }
+  const offered = offeredConnectionVenues(access, deskType).find(
+    (venue) => venue.id === venueId,
+  );
+  const environments = [...(offered?.environments ?? [])];
+  if (environmentId) {
+    const locked = current.environments.find((item) => item.id === environmentId);
+    if (locked && !environments.some((item) => item.id === locked.id)) {
+      environments.push(locked);
+    }
+  }
+  if (environments.length === 0) {
+    return [];
+  }
+  return [{ ...current, environments }];
+}
+
+/** A shared live desk is visible when this viewer can use its exchange and mode. */
+export function sharedDeskVisible(
+  access: ExchangeAccess,
+  desk: {
+    deskType: string;
+    venue: string;
+    venueEnvironment: string | null;
+  },
+): boolean {
+  return exchangeCreateAllowed({
+    cells: access.cells,
+    restricted: access.restricted,
+    deskType: desk.deskType,
+    venueId: desk.venue,
+    accountMode: "live",
+    environmentId: desk.venueEnvironment,
+  }).ok;
+}
+
+export function environmentAllowedForDesk(
+  access: ExchangeAccess | null,
+  deskType: string,
+  venueId: string,
+  environmentId: string,
+): boolean {
+  if (!access) {
+    return true;
+  }
+  return exchangeCreateAllowed({
+    cells: access.cells,
+    restricted: access.restricted,
+    deskType,
+    venueId,
+    accountMode: "live",
+    environmentId,
+  }).ok;
+}
+
+export function viewerMayUseEnvironment(
+  access: ExchangeAccess | null,
+  venueId: string,
+  environmentId: string,
+): boolean {
+  if (!access) {
+    return true;
+  }
+  return offeredAccountVenues(access).some(
+    (venue) =>
+      venue.id === venueId &&
+      venue.environments.some((environment) => environment.id === environmentId),
+  );
 }
 
 export function readAvailabilityForm(

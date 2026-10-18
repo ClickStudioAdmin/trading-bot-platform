@@ -61,10 +61,9 @@ export default async function AdminExchangePage({
       <PageHeading title={venue.label} />
       <p className="-mt-4 text-sm text-ink-muted">
         Each desk type and mode is In Development, Testing, Beta, or Live.
-        In Development keeps it off new desks. Testing lets admins pick it
-        and use it while you test. Beta lets members pick it, and that desk
-        shows a beta notice. Live lets members pick it. Desks that already
-        exist stay as they are.
+        In Development and Testing are visible to developers and admins.
+        Members only see Beta and Live. Beta shows a beta notice on the desk.
+        Desks that already exist stay as they are.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

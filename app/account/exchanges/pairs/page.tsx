@@ -6,8 +6,11 @@ import { PairsScopeSelect } from "@/components/pair-filters";
 import { BybitCarryPairs } from "@/components/venues/bybit/carry-pairs";
 import { BybitFuturesPairs } from "@/components/venues/bybit/pairs";
 import { HyperliquidFuturesPairs } from "@/components/venues/hyperliquid/pairs";
-import { enabledVenues } from "@/lib/exchanges/venues";
+import { offeredAccountVenues } from "@/lib/exchanges/availability";
+import { loadExchangeAccessForUser } from "@/lib/exchanges/availability-store";
+import { getSessionMember } from "@/lib/auth/session";
 import { firstSearchValue } from "@/lib/paper/open";
+import { redirect } from "next/navigation";
 import { parsePairFilters } from "@/lib/pairs/filter";
 import {
   ACCOUNT_PAIRS_PATH,
@@ -27,9 +30,28 @@ export default async function AccountPairsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+  }
   const query = await searchParams;
-  const venue = parsePairsVenue(firstSearchValue(query.venue));
-  const environment = parsePairsEnvironment(venue, firstSearchValue(query.env));
+  const catalog = offeredAccountVenues(
+    await loadExchangeAccessForUser(member.id),
+  );
+  const requested = parsePairsVenue(firstSearchValue(query.venue));
+  const venue = catalog.find((item) => item.id === requested.id) ?? catalog[0];
+  if (!venue) {
+    redirect("/account/exchanges");
+  }
+  const requestedEnvironment = parsePairsEnvironment(
+    venue,
+    firstSearchValue(query.env),
+  );
+  const environment = venue.environments.some(
+    (item) => item.id === requestedEnvironment,
+  )
+    ? requestedEnvironment
+    : (venue.environments[0]?.id ?? "live");
   const kind =
     firstSearchValue(query.kind) === "carry" && venue.datedCarry
       ? "carry"
@@ -40,7 +62,7 @@ export default async function AccountPairsPage({
     kind: kind === "carry" ? "carry" : undefined,
   };
   const filters = parsePairFilters(query);
-  const venues = enabledVenues();
+  const venues = catalog;
 
   return (
     <>

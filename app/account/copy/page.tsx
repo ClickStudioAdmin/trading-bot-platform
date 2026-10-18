@@ -8,6 +8,8 @@ import {
   parseCopyCatalogueTab,
 } from "@/lib/copy/model";
 import { memberIsAdmin } from "@/lib/admin/access";
+import { sharedDeskVisible } from "@/lib/exchanges/availability";
+import { loadExchangeAccessForUser } from "@/lib/exchanges/availability-store";
 import { getSessionMember } from "@/lib/auth/session";
 import { loadMemberNotificationChrome } from "@/lib/notifications/badges";
 import { connectionIdsBoundToOtherDesks } from "@/lib/exchanges/connections";
@@ -39,13 +41,16 @@ export default async function AccountCopyCataloguePage({
   const privateOnly = firstSearchValue(params.private) === "1";
   const error = firstSearchValue(params.error);
   const unfollowed = firstSearchValue(params.unfollowed) === "1";
-  const cards = await loadCopyCatalogue({
-    viewerUserId: member.id,
-    tab,
-    privateOnly,
-    query,
-    sort,
-  });
+  const exchangeAccess = await loadExchangeAccessForUser(member.id);
+  const cards = (
+    await loadCopyCatalogue({
+      viewerUserId: member.id,
+      tab,
+      privateOnly,
+      query,
+      sort,
+    })
+  ).filter((card) => sharedDeskVisible(exchangeAccess, card));
   const [connections, sharedConnectionIds] = await Promise.all([
     listExchangeConnections(member.id),
     listConnectionDeskBinds(member.id).then((binds) =>

@@ -18,3 +18,11 @@ export function loginIsAdmin(input: {
 }): boolean {
   return input.role === "admin" || emailIsListedAdmin(input.email ?? undefined);
 }
+
+/** Admins and developers can see In Development and Testing exchanges. */
+export function loginSeesRestrictedExchanges(input: {
+  role: string | null | undefined;
+  email: string | null | undefined;
+}): boolean {
+  return loginIsAdmin(input) || input.role === "developer";
+}

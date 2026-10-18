@@ -21,9 +21,13 @@ import {
 } from "@/lib/exchanges/store";
 import {
   accountCanHoldConnections,
-  connectionVenuesForDeskType,
   connectionsForDeskBind,
 } from "@/lib/exchanges/venues";
+import {
+  deskBindVenues,
+  environmentAllowedForDesk,
+} from "@/lib/exchanges/availability";
+import { loadExchangeAccessForUser } from "@/lib/exchanges/availability-store";
 import { usableBookShareToInput } from "@/lib/opportunities/capacity";
 import { firstSearchValue } from "@/lib/paper/open";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
@@ -71,6 +75,20 @@ export default async function CashAndCarrySettingsPage({
     }).length > 0;
   const saved = firstSearchValue(params.saved) === "1";
   const error = firstSearchValue(params.error);
+  const exchangeAccess = await loadExchangeAccessForUser(session.member.id);
+  const bindConnections = connections.filter(
+    (row) =>
+      row.id === settings.connectionId ||
+      (session.account.venueEnvironment != null &&
+        row.venue === session.account.venue &&
+        row.environment === session.account.venueEnvironment) ||
+      environmentAllowedForDesk(
+        exchangeAccess,
+        session.account.deskType,
+        row.venue,
+        row.environment,
+      ),
+  );
   const canSave = exchangeCredentialsConfigured();
   const settingsHref = deskHref(
     "/strategies/cash-and-carry/settings",
@@ -101,7 +119,7 @@ export default async function CashAndCarrySettingsPage({
         {live ? (
           <ExchangeBindField
             connections={connectionsForDeskBind(
-              connections,
+              bindConnections,
               session.account,
               settings.connectionId,
             )}
@@ -111,7 +129,12 @@ export default async function CashAndCarrySettingsPage({
             sharedConnectionIds={sharedConnectionIds}
             allowSharedKeys={allowSharedKeys}
             canSave={canSave}
-            venues={connectionVenuesForDeskType(session.account.deskType)}
+            venues={deskBindVenues(
+              exchangeAccess,
+              session.account.deskType,
+              session.account.venue,
+              session.account.venueEnvironment,
+            )}
             next={settingsHref}
           />
         ) : null}
@@ -166,7 +189,7 @@ function ExchangeBindField({
   sharedConnectionIds: string[];
   allowSharedKeys: boolean;
   canSave: boolean;
-  venues: ReturnType<typeof connectionVenuesForDeskType>;
+  venues: ReturnType<typeof deskBindVenues>;
   next: string;
 }) {
   const addConnection = canSave ? (

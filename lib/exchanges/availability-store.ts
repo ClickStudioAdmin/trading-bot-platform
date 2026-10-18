@@ -1,7 +1,8 @@
-import { loginIsAdmin } from "@/lib/admin/emails";
+import { loginSeesRestrictedExchanges } from "@/lib/admin/emails";
 import {
   mergeExchangeAvailability,
   parseAvailabilityRow,
+  viewerMayUseEnvironment,
   type ExchangeAccess,
   type ExchangeAvailabilityCell,
 } from "@/lib/exchanges/availability";
@@ -59,17 +60,43 @@ export async function saveVenueAvailability(
   return { ok: true };
 }
 
+/** New keys, plus a key for a live desk already locked to that environment. */
+export async function memberMayConnectEnvironment(
+  userId: string,
+  venueId: string,
+  environmentId: string,
+): Promise<boolean> {
+  const access = await loadExchangeAccessForUser(userId);
+  if (viewerMayUseEnvironment(access, venueId, environmentId)) {
+    return true;
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return false;
+  }
+  const { data, error } = await supabase
+    .from("trading_accounts")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("mode", "live")
+    .eq("venue", venueId)
+    .eq("venue_environment", environmentId)
+    .is("closed_at", null)
+    .limit(1);
+  return !error && Array.isArray(data) && data.length > 0;
+}
+
 export async function loadExchangeAccessForUser(
   userId: string,
 ): Promise<ExchangeAccess> {
-  const [cells, admin] = await Promise.all([
+  const [cells, restricted] = await Promise.all([
     loadExchangeAvailability(),
-    userIsAdmin(userId),
+    userSeesRestrictedExchanges(userId),
   ]);
-  return { admin, cells };
+  return { restricted, cells };
 }
 
-async function userIsAdmin(userId: string): Promise<boolean> {
+async function userSeesRestrictedExchanges(userId: string): Promise<boolean> {
   const supabase = createServiceClient();
   if (!supabase) {
     return false;
@@ -83,7 +110,7 @@ async function userIsAdmin(userId: string): Promise<boolean> {
     return false;
   }
   const row = data as { role?: unknown; email?: unknown };
-  return loginIsAdmin({
+  return loginSeesRestrictedExchanges({
     role: row.role == null ? null : String(row.role),
     email: row.email == null ? null : String(row.email),
   });

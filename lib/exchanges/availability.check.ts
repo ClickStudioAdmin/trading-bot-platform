@@ -125,7 +125,7 @@ assert.deepEqual(exclusiveChoice(false, true, false, true), {
 
 const publicFlex = exchangeCreateAllowed({
   cells: hidden,
-  admin: false,
+  restricted: false,
   deskType: "flex",
   venueId: "hyperliquid",
   accountMode: "live",
@@ -134,7 +134,7 @@ const publicFlex = exchangeCreateAllowed({
 assert.equal(publicFlex.ok, false);
 const adminFlex = exchangeCreateAllowed({
   cells: hidden,
-  admin: true,
+  restricted: true,
   deskType: "flex",
   venueId: "hyperliquid",
   accountMode: "live",
@@ -143,7 +143,7 @@ const adminFlex = exchangeCreateAllowed({
 assert.equal(adminFlex.ok, true);
 const publicBeta = exchangeCreateAllowed({
   cells: hidden,
-  admin: false,
+  restricted: false,
   deskType: "flex",
   venueId: "bybit",
   accountMode: "live",
@@ -157,8 +157,8 @@ const developingDesk = {
   accountMode: "paper" as const,
   environmentId: null,
 };
-assert.equal(exchangeCreateAllowed({ ...developingDesk, admin: false }).ok, false);
-assert.equal(exchangeCreateAllowed({ ...developingDesk, admin: true }).ok, false);
+assert.equal(exchangeCreateAllowed({ ...developingDesk, restricted: false }).ok, false);
+assert.equal(exchangeCreateAllowed({ ...developingDesk, restricted: true }).ok, true);
 assert.equal(
   deskBetaNotice({
     cells: hidden,
@@ -197,12 +197,20 @@ assert.equal(
   exchangeChoiceLabel("Bybit", hidden, "bybit", "flex", "live"),
   "Bybit",
 );
+assert.equal(
+  exchangeChoiceLabel("Bybit", hidden, "bybit", "manual", "paper"),
+  "Bybit · Testing",
+);
+assert.equal(
+  exchangeChoiceLabel("Bybit", hidden, "bybit", "dca", "paper"),
+  "Bybit · In Development",
+);
 const bybitVenue = getVenue("bybit");
 assert.ok(bybitVenue);
 assert.equal(connectedVenueChoiceLabel(bybitVenue, hidden, "flex"), "Bybit");
 const publicLive = exchangeCreateAllowed({
   cells: hidden,
-  admin: false,
+  restricted: false,
   deskType: "flex",
   venueId: "hyperliquid",
   accountMode: "live",
@@ -212,7 +220,7 @@ assert.equal(publicLive.ok, true);
 
 const testingPaper = exchangeCreateAllowed({
   cells: hidden,
-  admin: false,
+  restricted: false,
   deskType: "manual",
   venueId: "bybit",
   accountMode: "paper",
@@ -221,7 +229,7 @@ const testingPaper = exchangeCreateAllowed({
 assert.equal(testingPaper.ok, false);
 const adminPaper = exchangeCreateAllowed({
   cells: hidden,
-  admin: true,
+  restricted: true,
   deskType: "manual",
   venueId: "bybit",
   accountMode: "paper",
@@ -231,7 +239,7 @@ assert.equal(adminPaper.ok, true);
 
 const eitherConnected = exchangeCreateAllowed({
   cells: hidden,
-  admin: false,
+  restricted: false,
   deskType: "manual",
   venueId: "bybit",
   accountMode: "live",
@@ -241,7 +249,7 @@ assert.equal(eitherConnected.ok, true);
 
 const carry = exchangeCreateAllowed({
   cells: hidden,
-  admin: true,
+  restricted: true,
   deskType: "cash_and_carry",
   venueId: "hyperliquid",
   accountMode: "paper",
@@ -255,13 +263,13 @@ assert.equal(environmentDeskMode("live"), "live");
 assert.equal(environmentDeskMode("mainnet"), "live");
 assert.equal(environmentDeskMode(null), "live");
 
-const access = { admin: false, cells: hidden };
+const access = { restricted: false, cells: hidden };
 assert.deepEqual(
   offeredVenues(access, "manual", "paper").map((venue) => venue.id),
   ["hyperliquid"],
 );
 assert.deepEqual(
-  offeredVenues({ admin: true, cells: hidden }, "flex", "connected").map(
+  offeredVenues({ restricted: true, cells: hidden }, "flex", "connected").map(
     (venue) => venue.id,
   ),
   ["bybit", "hyperliquid"],
@@ -273,7 +281,7 @@ assert.deepEqual(
   ["live"],
 );
 assert.deepEqual(
-  offeredEnvironments({ admin: true, cells: hidden }, hl, "flex").map(
+  offeredEnvironments({ restricted: true, cells: hidden }, hl, "flex").map(
     (environment) => environment.id,
   ),
   ["live", "testnet"],

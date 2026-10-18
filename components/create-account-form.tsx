@@ -145,7 +145,7 @@ export function CreateAccountForm({
         }
         return exchangeCreateAllowed({
           cells: exchangeAccess.cells,
-          admin: exchangeAccess.admin,
+          restricted: exchangeAccess.restricted,
           deskType,
           venueId: row.venue,
           accountMode: "live",
@@ -219,7 +219,7 @@ export function CreateAccountForm({
   const venueChoice = exchangeAccess
     ? exchangeCreateAllowed({
         cells: exchangeAccess.cells,
-        admin: exchangeAccess.admin,
+        restricted: exchangeAccess.restricted,
         deskType,
         venueId: venue,
         accountMode: mode,
