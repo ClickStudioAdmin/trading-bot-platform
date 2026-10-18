@@ -10,15 +10,11 @@ import {
   TableCard,
   TableIconAction,
 } from "@/components/table-chrome";
-import {
-  formatDeskDisplayMode,
-  formatDeskType,
-  type DeskType,
-} from "@/lib/accounts/model";
+import { formatDeskDisplayMode, formatDeskType } from "@/lib/accounts/model";
 import {
   EXCHANGE_DESK_MODES,
   availabilitySetting,
-  deskTypesInSidebarOrder,
+  exchangeListDeskTypes,
 } from "@/lib/exchanges/availability";
 import { loadExchangeAvailability } from "@/lib/exchanges/availability-store";
 import { VENUES } from "@/lib/exchanges/venues";
@@ -73,12 +69,13 @@ export default async function AdminExchangesPage({
               </tr>
             ) : (
               VENUES.map((venue, venueIndex) => {
-                const deskTypes = deskTypesInSidebarOrder(venue.deskTypes);
-                return deskTypes.map((deskType, typeIndex) => {
+                const deskTypes = exchangeListDeskTypes(venue);
+                return deskTypes.map((row, typeIndex) => {
                   const first = typeIndex === 0;
                   const last =
                     venueIndex === VENUES.length - 1 &&
                     typeIndex === deskTypes.length - 1;
+                  const deskType = row.deskType;
                   return (
                     <tr
                       key={`${venue.id}:${deskType}`}
@@ -98,26 +95,37 @@ export default async function AdminExchangesPage({
                         </td>
                       ) : null}
                       <td className="px-4 py-3 text-ink">
-                        {formatDeskType(deskType as DeskType)}
+                        {formatDeskType(deskType)}
                       </td>
-                      {EXCHANGE_DESK_MODES.map((mode) => {
-                        const setting = availabilitySetting(
-                          cells,
-                          venue.id,
-                          deskType,
-                          mode,
-                        );
-                        return (
-                          <td
-                            key={mode}
-                            className={`px-4 py-3 ${
-                              setting === "testing" ? "text-warning" : "text-ink"
-                            }`}
-                          >
-                            {setting === "testing" ? "Testing" : "Live"}
-                          </td>
-                        );
-                      })}
+                      {row.offered ? (
+                        EXCHANGE_DESK_MODES.map((mode) => {
+                          const setting = availabilitySetting(
+                            cells,
+                            venue.id,
+                            deskType,
+                            mode,
+                          );
+                          return (
+                            <td
+                              key={mode}
+                              className={`px-4 py-3 ${
+                                setting === "testing"
+                                  ? "text-warning"
+                                  : "text-ink"
+                              }`}
+                            >
+                              {setting === "testing" ? "Testing" : "Live"}
+                            </td>
+                          );
+                        })
+                      ) : (
+                        <td
+                          colSpan={EXCHANGE_DESK_MODES.length}
+                          className="px-4 py-3 text-ink-faint"
+                        >
+                          NA
+                        </td>
+                      )}
                       {first ? (
                         <td
                           rowSpan={deskTypes.length}

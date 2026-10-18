@@ -5,6 +5,7 @@ import {
   availabilitySetting,
   cellFor,
   deskTypesInSidebarOrder,
+  exchangeListDeskTypes,
   defaultExchangeAvailability,
   environmentDeskMode,
   exclusiveChoice,
@@ -234,6 +235,23 @@ assert.deepEqual(
 assert.deepEqual(
   deskTypesInSidebarOrder(["manual", "flex", "signal_follower", "dca"]),
   ["flex", "dca", "signal_follower", "manual"],
+);
+const hyperliquidRows = exchangeListDeskTypes(getVenue("hyperliquid")!);
+assert.deepEqual(
+  hyperliquidRows.map((row) => row.deskType),
+  ["flex", "dca", "cash_and_carry", "signal_follower", "manual"],
+);
+assert.equal(
+  hyperliquidRows.find((row) => row.deskType === "cash_and_carry")?.offered,
+  false,
+);
+assert.equal(
+  hyperliquidRows.find((row) => row.deskType === "flex")?.offered,
+  true,
+);
+assert.equal(
+  exchangeListDeskTypes(getVenue("bybit")!).every((row) => row.offered),
+  true,
 );
 const manualCounts = availabilityCounts("bybit", hidden, "manual");
 assert.equal(manualCounts.slots, 3);

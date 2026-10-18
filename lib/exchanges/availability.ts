@@ -1,6 +1,7 @@
 import {
   AUTOMATED_DESK_TYPES,
   MANUAL_DESK_TYPES,
+  type DeskType,
 } from "@/lib/accounts/model";
 import {
   connectionVenuesForDeskType,
@@ -44,7 +45,7 @@ export type ExchangeAccess = {
 };
 
 /** Sidebar: automated desks, then Manual. */
-const SIDEBAR_DESK_ORDER: readonly string[] = [
+export const SIDEBAR_DESK_TYPES: readonly DeskType[] = [
   ...AUTOMATED_DESK_TYPES,
   ...MANUAL_DESK_TYPES,
 ];
@@ -54,8 +55,19 @@ export function deskTypesInSidebarOrder<T extends string>(
 ): T[] {
   return [...types].sort(
     (left, right) =>
-      SIDEBAR_DESK_ORDER.indexOf(left) - SIDEBAR_DESK_ORDER.indexOf(right),
+      SIDEBAR_DESK_TYPES.indexOf(left as DeskType) -
+      SIDEBAR_DESK_TYPES.indexOf(right as DeskType),
   );
+}
+
+/** Every sidebar desk type, including ones this exchange cannot run. */
+export function exchangeListDeskTypes(
+  venue: VenueDefinition,
+): { deskType: DeskType; offered: boolean }[] {
+  return SIDEBAR_DESK_TYPES.map((deskType) => ({
+    deskType,
+    offered: venueAllowsDeskType(venue, deskType),
+  }));
 }
 
 const DESK_TYPE_LABEL: Record<VenueDeskType, string> = {
