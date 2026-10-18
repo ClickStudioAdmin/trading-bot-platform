@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import {
+  bulkDeskDeleteGrantAllows,
   deskDeleteGrantAllows,
+  parseBulkDeskDeleteGrant,
   parseDeskDeleteGrant,
+  signBulkDeskDeleteGrant,
   signDeskDeleteGrant,
 } from "./desk-delete-grant";
 
@@ -23,6 +26,22 @@ assert.equal(deskDeleteGrantAllows(null, userId, accountId, now), false);
 assert.equal(parseDeskDeleteGrant(token, expires), null);
 assert.equal(parseDeskDeleteGrant(`${token}x`, now), null);
 assert.equal(deskDeleteGrantAllows("", userId, accountId, now), false);
+
+const otherId = "33333333-3333-3333-3333-333333333333";
+const bulk = signBulkDeskDeleteGrant(userId, [otherId, accountId], expires);
+assert.ok(bulk);
+assert.deepEqual(parseBulkDeskDeleteGrant(bulk, now)?.accountIds, [
+  accountId,
+  otherId,
+]);
+assert.equal(bulkDeskDeleteGrantAllows(bulk, userId, accountId, now), true);
+assert.equal(bulkDeskDeleteGrantAllows(bulk, userId, otherId, now), true);
+assert.equal(bulkDeskDeleteGrantAllows(bulk, userId, "44444444-4444-4444-4444-444444444444", now), false);
+assert.equal(bulkDeskDeleteGrantAllows(bulk, "other-user", accountId, now), false);
+assert.equal(parseBulkDeskDeleteGrant(bulk, expires), null);
+assert.equal(parseBulkDeskDeleteGrant(`${bulk}x`, now), null);
+assert.equal(signBulkDeskDeleteGrant(userId, ["bad,id"], expires), null);
+assert.equal(deskDeleteGrantAllows(bulk, userId, accountId, now), false);
 
 process.env.SESSION_SECRET = previous;
 
