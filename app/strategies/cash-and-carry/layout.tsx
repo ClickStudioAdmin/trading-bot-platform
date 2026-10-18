@@ -12,6 +12,7 @@ import { pinDeskSearchParam } from "@/lib/accounts/guard";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadCashAndCarryNavModes } from "@/lib/engine/load";
 import { loadEngineSettings } from "@/lib/engine/settings";
+import { DeskBetaNotice } from "@/components/desk-beta-notice";
 import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { listExchangeConnections } from "@/lib/exchanges/store";
@@ -119,6 +120,11 @@ export default async function CashAndCarryLayout({
           href: settingsHref,
           overline: "Market Data",
         },
+    notice: session ? (
+      <Suspense fallback={null}>
+        <DeskBetaNotice account={session.account} />
+      </Suspense>
+    ) : null,
   };
   const nav =
     live && session && bound ? (

@@ -2,9 +2,15 @@ import assert from "node:assert/strict";
 import { ADMIN_NAV_LINKS } from "@/lib/site-links";
 import {
   availabilityCounts,
+  availabilitySetting,
   cellFor,
+  deskTypesInSidebarOrder,
+  exchangeListDeskTypes,
+  connectedVenueChoiceLabel,
   defaultExchangeAvailability,
+  deskBetaNotice,
   environmentDeskMode,
+  exchangeChoiceLabel,
   exclusiveChoice,
   exchangeCreateAllowed,
   mergeExchangeAvailability,
@@ -19,7 +25,7 @@ import { getVenue } from "./venues";
 const defaults = defaultExchangeAvailability();
 assert.equal(defaults.length, 5 * 3 + 4 * 3);
 assert.equal(
-  defaults.every((cell) => cell.live && !cell.testing),
+  defaults.every((cell) => cell.live && !cell.testing && !cell.beta),
   true,
 );
 assert.equal(
@@ -35,6 +41,7 @@ const hidden = mergeExchangeAvailability([
     mode: "demo",
     live: false,
     testing: true,
+    beta: false,
   },
   {
     venueId: "bybit",
@@ -42,6 +49,15 @@ const hidden = mergeExchangeAvailability([
     mode: "paper",
     live: false,
     testing: true,
+    beta: false,
+  },
+  {
+    venueId: "bybit",
+    deskType: "flex",
+    mode: "demo",
+    live: false,
+    testing: false,
+    beta: true,
   },
 ]);
 assert.equal(hidden.length, defaults.length);
@@ -50,9 +66,31 @@ assert.equal(cellFor(hidden, "hyperliquid", "flex", "demo")?.testing, true);
 assert.equal(cellFor(hidden, "hyperliquid", "flex", "demo")?.live, false);
 assert.equal(cellFor(hidden, "bybit", "manual", "paper")?.live, false);
 assert.equal(cellFor(hidden, "bybit", "manual", "paper")?.testing, true);
-assert.deepEqual(exclusiveChoice(true, true), { live: true, testing: false });
-assert.deepEqual(exclusiveChoice(false, false), { live: true, testing: false });
-assert.deepEqual(exclusiveChoice(false, true), { live: false, testing: true });
+assert.deepEqual(exclusiveChoice(true, true), {
+  live: true,
+  testing: false,
+  beta: false,
+});
+assert.deepEqual(exclusiveChoice(false, false), {
+  live: true,
+  testing: false,
+  beta: false,
+});
+assert.deepEqual(exclusiveChoice(false, true), {
+  live: false,
+  testing: true,
+  beta: false,
+});
+assert.deepEqual(exclusiveChoice(false, false, true), {
+  live: false,
+  testing: false,
+  beta: true,
+});
+assert.deepEqual(exclusiveChoice(true, false, true), {
+  live: true,
+  testing: false,
+  beta: false,
+});
 
 const publicFlex = exchangeCreateAllowed({
   cells: hidden,
@@ -72,6 +110,56 @@ const adminFlex = exchangeCreateAllowed({
   environmentId: "demo",
 });
 assert.equal(adminFlex.ok, true);
+const publicBeta = exchangeCreateAllowed({
+  cells: hidden,
+  admin: false,
+  deskType: "flex",
+  venueId: "bybit",
+  accountMode: "live",
+  environmentId: "demo",
+});
+assert.equal(publicBeta.ok, true);
+assert.equal(
+  deskBetaNotice({
+    cells: hidden,
+    deskType: "flex",
+    venueId: "bybit",
+    accountMode: "live",
+    environmentId: "demo",
+  }),
+  "Bybit Demo is in beta.",
+);
+assert.equal(
+  deskBetaNotice({
+    cells: hidden,
+    deskType: "flex",
+    venueId: "bybit",
+    accountMode: "live",
+    environmentId: "live",
+  }),
+  null,
+);
+assert.equal(
+  deskBetaNotice({
+    cells: hidden,
+    deskType: "flex",
+    venueId: "bybit",
+    accountMode: "live",
+    environmentId: null,
+  }),
+  null,
+);
+assert.equal(
+  exchangeChoiceLabel("Bybit", hidden, "bybit", "flex", "demo"),
+  "Bybit · Beta",
+);
+assert.equal(
+  exchangeChoiceLabel("Bybit", hidden, "bybit", "flex", "live"),
+  "Bybit",
+);
+const bybitVenue = getVenue("bybit");
+assert.ok(bybitVenue);
+assert.equal(connectedVenueChoiceLabel(bybitVenue, hidden, "flex"), "Bybit");
 const publicLive = exchangeCreateAllowed({
   cells: hidden,
   admin: false,
@@ -161,6 +249,7 @@ const form = new FormData();
 form.set("availability:manual:paper", "live");
 form.set("availability:manual:demo", "testing");
 form.set("availability:cash_and_carry:live", "live");
+form.set("availability:flex:demo", "beta");
 const bybit = getVenue("bybit");
 assert.ok(bybit);
 const read = readAvailabilityForm(bybit, form);
@@ -171,8 +260,10 @@ assert.equal(cellFor(read, "bybit", "manual", "demo")?.testing, true);
 assert.equal(cellFor(read, "bybit", "manual", "demo")?.live, false);
 assert.equal(cellFor(read, "bybit", "manual", "live")?.live, true);
 assert.equal(cellFor(read, "bybit", "manual", "live")?.testing, false);
+assert.equal(cellFor(read, "bybit", "flex", "demo")?.beta, true);
+assert.equal(cellFor(read, "bybit", "flex", "demo")?.live, false);
 assert.equal(
-  read.every((cell) => cell.live !== cell.testing),
+  read.every((cell) => Number(cell.live) + Number(cell.testing) + Number(cell.beta) === 1),
   true,
 );
 assert.equal(
@@ -209,11 +300,59 @@ const bothOn = parseAvailabilityRow({
 });
 assert.equal(bothOn?.live, true);
 assert.equal(bothOn?.testing, false);
+assert.equal(bothOn?.beta, false);
+const betaRow = parseAvailabilityRow({
+  venue: "bybit",
+  desk_type: "flex",
+  mode: "paper",
+  live: false,
+  testing: false,
+  beta: true,
+});
+assert.equal(betaRow?.beta, true);
+assert.equal(betaRow?.live, false);
+assert.equal(availabilitySetting(hidden, "bybit", "flex", "demo"), "beta");
 
 const counts = availabilityCounts("bybit", defaults);
 assert.equal(counts.slots, 15);
 assert.equal(counts.live, 15);
 assert.equal(counts.testing, 0);
+assert.equal(availabilitySetting(hidden, "bybit", "manual", "paper"), "testing");
+assert.equal(availabilitySetting(hidden, "bybit", "manual", "demo"), "live");
+assert.equal(availabilitySetting(hidden, "bybit", "manual", "live"), "live");
+assert.equal(availabilitySetting(defaults, "bybit", "dca", "paper"), "live");
+assert.equal(availabilitySetting([], "bybit", "dca", "paper"), "live");
+assert.deepEqual(
+  deskTypesInSidebarOrder([
+    "cash_and_carry",
+    "manual",
+    "flex",
+    "signal_follower",
+    "dca",
+  ]),
+  ["flex", "dca", "cash_and_carry", "signal_follower", "manual"],
+);
+assert.deepEqual(
+  deskTypesInSidebarOrder(["manual", "flex", "signal_follower", "dca"]),
+  ["flex", "dca", "signal_follower", "manual"],
+);
+const hyperliquidRows = exchangeListDeskTypes(getVenue("hyperliquid")!);
+assert.deepEqual(
+  hyperliquidRows.map((row) => row.deskType),
+  ["flex", "dca", "cash_and_carry", "signal_follower", "manual"],
+);
+assert.equal(
+  hyperliquidRows.find((row) => row.deskType === "cash_and_carry")?.offered,
+  false,
+);
+assert.equal(
+  hyperliquidRows.find((row) => row.deskType === "flex")?.offered,
+  true,
+);
+assert.equal(
+  exchangeListDeskTypes(getVenue("bybit")!).every((row) => row.offered),
+  true,
+);
 const manualCounts = availabilityCounts("bybit", hidden, "manual");
 assert.equal(manualCounts.slots, 3);
 assert.equal(manualCounts.live, 2);

@@ -16,7 +16,7 @@ export async function loadExchangeAvailability(): Promise<
   }
   const { data, error } = await supabase
     .from("exchange_availability")
-    .select("venue, desk_type, mode, live, testing");
+    .select("venue, desk_type, mode, live, testing, beta");
   if (error || !data) {
     return mergeExchangeAvailability([]);
   }
@@ -47,6 +47,7 @@ export async function saveVenueAvailability(
       mode: cell.mode,
       live: cell.live,
       testing: cell.testing,
+      beta: cell.beta,
       updated_at: now,
     })),
     { onConflict: "venue,desk_type,mode" },
