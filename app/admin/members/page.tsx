@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { AdminMembersTable } from "@/components/admin-members-table";
+import { AdminRoleCredentials } from "@/components/admin-role-credentials";
 import { PageHeading } from "@/components/page-heading";
 import { IconFilterClear, IconPlus } from "@/components/icons";
 import {
@@ -20,6 +22,7 @@ import {
   memberListHref,
   parseMemberListQuery,
 } from "@/lib/members/query";
+import { parseMembersAreaTab } from "@/lib/members/roles";
 import {
   tableFiltersSuggestOpen,
   tablePageHrefs,
@@ -38,6 +41,16 @@ export default async function AdminMembersPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  const tab = parseMembersAreaTab(firstSearchValue(params.tab));
+  if (tab === "roles") {
+    return (
+      <div>
+        <PageHeading overline="Admin" title="Members" />
+        <MembersAreaTabs tab={tab} />
+        <AdminRoleCredentials />
+      </div>
+    );
+  }
   const query = parseMemberListQuery(params);
   const list = await listMembers(query);
   const listed = await listMembershipPlans();
@@ -52,6 +65,7 @@ export default async function AdminMembersPage({
   return (
     <div>
       <PageHeading overline="Admin" title="Members" />
+      <MembersAreaTabs tab="members" />
       {error || list.error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error ?? list.error}
@@ -140,5 +154,42 @@ export default async function AdminMembersPage({
         <AdminMembersTable rows={list.rows} query={query} planNames={planNames} />
       </TableCard>
     </div>
+  );
+}
+
+function MembersAreaTabs({ tab }: { tab: "members" | "roles" }) {
+  return (
+    <nav aria-label="Members" className="mt-5 flex flex-wrap border-b border-line">
+      <TabLink href="/admin/members" selected={tab === "members"}>
+        Members
+      </TabLink>
+      <TabLink href="/admin/members?tab=roles" selected={tab === "roles"}>
+        Roles
+      </TabLink>
+    </nav>
+  );
+}
+
+function TabLink({
+  href,
+  selected,
+  children,
+}: {
+  href: string;
+  selected: boolean;
+  children: string;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={selected ? "page" : undefined}
+      className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+        selected
+          ? "border-accent text-ink"
+          : "border-transparent text-ink-muted hover:text-ink"
+      }`}
+    >
+      {children}
+    </Link>
   );
 }
