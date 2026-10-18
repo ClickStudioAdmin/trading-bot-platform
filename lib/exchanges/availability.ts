@@ -19,9 +19,20 @@ export type ExchangeAvailabilityCell = {
   mode: ExchangeDeskMode;
   /** Members can pick this exchange when creating a desk. */
   live: boolean;
-  /** Admins can pick it when Live is off. */
+  /** Only admins can pick it. Never set with live. */
   testing: boolean;
 };
+
+/** A row is Live or Testing. Both on, or both off, stays Live. */
+export function exclusiveChoice(
+  live: boolean,
+  testing: boolean,
+): { live: boolean; testing: boolean } {
+  if (testing && !live) {
+    return { live: false, testing: true };
+  }
+  return { live: true, testing: false };
+}
 
 export type ExchangeAccess = {
   admin: boolean;
@@ -126,20 +137,26 @@ export function parseAvailabilityRow(
   if (!venueAllowsDeskType(venue, deskType)) {
     return null;
   }
+  const choice = exclusiveChoice(row.live === true, row.testing === true);
   return {
     venueId,
     deskType,
     mode,
-    live: row.live === true,
-    testing: row.testing === true,
+    live: choice.live,
+    testing: choice.testing,
   };
 }
 
 export function availabilityCounts(
   venueId: string,
   cells: readonly ExchangeAvailabilityCell[],
+  deskType?: string,
 ): { slots: number; live: number; testing: number } {
-  const rows = cells.filter((cell) => cell.venueId === venueId);
+  const rows = cells.filter(
+    (cell) =>
+      cell.venueId === venueId &&
+      (deskType == null || cell.deskType === deskType),
+  );
   return {
     slots: rows.length,
     live: rows.filter((cell) => cell.live).length,
@@ -167,10 +184,11 @@ function flagAllows(
   flag: { live: boolean; testing: boolean },
   admin: boolean,
 ): boolean {
-  if (flag.live) {
-    return true;
+  const choice = exclusiveChoice(flag.live, flag.testing);
+  if (choice.testing) {
+    return admin;
   }
-  return admin && flag.testing;
+  return true;
 }
 
 function unsupportedMessage(venueId: string, deskType: string): string {
@@ -322,12 +340,16 @@ export function readAvailabilityForm(
   for (const deskType of venue.deskTypes) {
     for (const mode of EXCHANGE_DESK_MODES) {
       const key = `${deskType}:${mode}`;
+      const choice = exclusiveChoice(
+        false,
+        String(form.get(`availability:${key}`) ?? "") === "testing",
+      );
       cells.push({
         venueId: venue.id,
         deskType,
         mode,
-        live: form.get(`live:${key}`) != null,
-        testing: form.get(`testing:${key}`) != null,
+        live: choice.live,
+        testing: choice.testing,
       });
     }
   }

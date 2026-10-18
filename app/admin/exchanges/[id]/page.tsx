@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { AppCheck } from "@/components/app-check";
+import { AppRadio } from "@/components/app-check";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -58,10 +58,9 @@ export default async function AdminExchangePage({
       />
       <PageHeading title={venue.label} />
       <p className="-mt-4 text-sm text-ink-muted">
-        Live lets members pick this exchange when they create a desk. Testing
-        lets admins pick it and use it while you test. Each desk type and mode
-        can have Live, Testing, or both. Leave both off to hide that
-        combination from new desks. Desks that already exist stay as they are.
+        Each desk type and mode is Live or Testing. Live lets members pick
+        this exchange when they create a desk. Testing lets admins pick it
+        and use it while you test. Desks that already exist stay as they are.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -103,25 +102,27 @@ export default async function AdminExchangePage({
               <tbody>
                 {EXCHANGE_DESK_MODES.map((mode) => {
                   const cell = cellFor(cells, venue.id, deskType, mode);
+                  const testingOnly = Boolean(cell?.testing && !cell.live);
                   const modeLabel = formatDeskDisplayMode(mode);
                   const typeLabel = formatDeskType(deskType as DeskType);
+                  const group = `availability:${deskType}:${mode}`;
                   return (
                     <tr key={mode} className="border-b border-line last:border-0">
                       <td className="py-3 pr-4 text-ink">{modeLabel}</td>
                       <td className="px-4 py-3">
-                        <AppCheck
-                          name={`live:${deskType}:${mode}`}
-                          value="1"
-                          defaultChecked={cell?.live ?? true}
+                        <AppRadio
+                          name={group}
+                          value="live"
+                          defaultChecked={!testingOnly}
                           aria-label={`${typeLabel} ${modeLabel} Live`}
                           className=""
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <AppCheck
-                          name={`testing:${deskType}:${mode}`}
-                          value="1"
-                          defaultChecked={cell?.testing ?? false}
+                        <AppRadio
+                          name={group}
+                          value="testing"
+                          defaultChecked={testingOnly}
                           aria-label={`${typeLabel} ${modeLabel} Testing`}
                           className=""
                         />
