@@ -58,9 +58,9 @@ import {
 
 const ACTION_OPTIONS: { value: ClassicExitKind | "breakeven" | "close"; label: string }[] = [
   { value: "take_profit", label: "Take Profit" },
-  { value: "trailing_stop", label: "Trailing Stop" },
   { value: "stop_loss", label: "Stop Loss" },
   { value: "breakeven", label: "Breakeven Stop" },
+  { value: "trailing_stop", label: "Trailing Stop" },
   { value: "close", label: "Close" },
 ];
 
