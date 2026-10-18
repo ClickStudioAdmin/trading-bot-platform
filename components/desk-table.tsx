@@ -514,7 +514,7 @@ function CreateDeskTypeItem({
   return (
     <Link
       role="menuitem"
-      href={createDeskPath(deskType)}
+      href={createDeskPath(deskType, "manage")}
       title={trial}
       className="flex items-center gap-2 rounded-control px-2 py-1.5 text-sm text-ink hover:bg-surface-raised"
       onClick={onPick}

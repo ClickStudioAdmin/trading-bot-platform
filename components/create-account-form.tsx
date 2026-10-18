@@ -13,6 +13,7 @@ import {
   formatAccountModeChoice,
   formatDeskType,
   formatDeskTypeChoice,
+  type DeskCreateOrigin,
   type DeskType,
   validateNewDeskName,
 } from "@/lib/accounts/model";
@@ -64,6 +65,7 @@ export function CreateAccountForm({
   allowSharedKeys = false,
   existingNames = [],
   next,
+  createFrom = null,
   embedded = false,
   firstDesk = false,
   initialDeskType,
@@ -77,6 +79,7 @@ export function CreateAccountForm({
   allowSharedKeys?: boolean;
   existingNames?: string[];
   next?: string;
+  createFrom?: DeskCreateOrigin | null;
   embedded?: boolean;
   firstDesk?: boolean;
   initialDeskType?: DeskType;
@@ -258,6 +261,9 @@ export function CreateAccountForm({
         <QuotaRejectNotices keys={QUOTA_CAP_KEYS} className="space-y-3" />
       )}
       {next ? <input type="hidden" name="next" value={next} /> : null}
+      {createFrom ? (
+        <input type="hidden" name="createFrom" value={createFrom} />
+      ) : null}
       <input type="hidden" name="venue" value={venue} />
       {track ? <input type="hidden" name="track" value={track} /> : null}
       {lockType ? (

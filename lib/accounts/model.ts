@@ -217,8 +217,56 @@ export function navLinksWithDesk<T extends { href: string }>(
   }));
 }
 
-export function createDeskPath(deskType: DeskType): string {
-  return `/account/desks/new?type=${deskType}`;
+export type DeskCreateOrigin = "manage" | "sidebar";
+
+export const DESK_CREATED_REDIRECT_SECONDS = 5;
+
+export function parseDeskCreateOrigin(value: unknown): DeskCreateOrigin | null {
+  const raw = String(value ?? "").trim();
+  if (raw === "manage" || raw === "sidebar") {
+    return raw;
+  }
+  return null;
+}
+
+export function createDeskPath(
+  deskType: DeskType,
+  origin?: DeskCreateOrigin | null,
+): string {
+  const params = new URLSearchParams({ type: deskType });
+  if (origin) {
+    params.set("from", origin);
+  }
+  return `/account/desks/new?${params}`;
+}
+
+export function deskCreatedPath(input: {
+  deskType: DeskType;
+  origin: DeskCreateOrigin;
+  accountId: string;
+  error?: string | null;
+}): string {
+  const params = new URLSearchParams({
+    type: input.deskType,
+    from: input.origin,
+    created: input.accountId,
+  });
+  const error = String(input.error ?? "").trim();
+  if (error) {
+    params.set("error", error);
+  }
+  return `/account/desks/new?${params}`;
+}
+
+export function deskCreatedRedirectLabel(seconds: number): string {
+  const left = Number.isFinite(seconds) ? Math.max(0, Math.trunc(seconds)) : 0;
+  if (left <= 0) {
+    return "Redirecting to the new desk.";
+  }
+  if (left === 1) {
+    return "Redirecting to the new desk in 1 second.";
+  }
+  return `Redirecting to the new desk in ${left} seconds.`;
 }
 
 export function deskHomePath(
