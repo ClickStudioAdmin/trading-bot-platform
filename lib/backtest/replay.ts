@@ -221,6 +221,32 @@ function feeUsdt(qty: number, price: number, feeRate: number): number {
   return Math.abs(qty * price) * feeRate;
 }
 
+function moveSimBreakeven(open: OpenSim, offsetPct: number): void {
+  const stop = futuresBreakevenStop({
+    side: open.side,
+    entryPrice: open.entry,
+    currentStop: open.tpsl?.stopLoss ?? null,
+    offsetPct,
+  });
+  if (stop == null || !(stop > 0)) {
+    return;
+  }
+  open.tpsl = {
+    takeProfit: open.tpsl?.takeProfit ?? null,
+    stopLoss: stop,
+    tpTrigger: open.tpsl?.tpTrigger ?? "last",
+    slTrigger: open.tpsl?.slTrigger ?? "last",
+    mode: open.tpsl?.mode ?? "full",
+    tpQty: open.tpsl?.tpQty ?? null,
+    slQty: open.tpsl?.slQty ?? null,
+    tpOrderType: open.tpsl?.tpOrderType ?? "market",
+    slOrderType: "market",
+    tpLimitPrice: open.tpsl?.tpLimitPrice ?? null,
+    slLimitPrice: null,
+  };
+  open.breakevenDone = true;
+}
+
 function unrealized(
   side: FuturesSide,
   qty: number,
@@ -456,9 +482,13 @@ export async function replayPerpsPriceCross(input: {
           entryPrice: open.entry,
           nowMs: bar.timeMs,
           barsByTimeframe: bars,
+          breakevenDone: open.breakevenDone,
         });
         flexRuntime = settled.runtime;
         flexLots = settled.lots;
+        if (settled.breakeven && !open.breakevenDone) {
+          moveSimBreakeven(open, settled.breakeven.offsetPct);
+        }
         for (const claim of settled.claims) {
           if (!open) {
             break;
@@ -957,9 +987,13 @@ async function replayPerpsBoth(input: {
             entryPrice: row.entry,
             nowMs: bar.timeMs,
             barsByTimeframe: bars,
+            breakevenDone: row.breakevenDone,
           });
           bookArms[side] = settled.runtime;
           bookLots[side] = settled.lots;
+          if (settled.breakeven && !row.breakevenDone) {
+            moveSimBreakeven(row, settled.breakeven.offsetPct);
+          }
           for (const claim of settled.claims) {
             const current = book[side];
             if (!current) {
@@ -1069,8 +1103,10 @@ async function replayPerpsBoth(input: {
       const breakevenOffsetPct = sideClassic
         ? sideClassic.breakevenOffsetPct
         : input.recipe.breakevenOffsetPct;
+      const sideActions = perpsSideActions(input.recipe, leg.side);
       if (
         open &&
+        !sideActions &&
         futuresBreakevenDue({
           side: leg.side,
           qty: open.qty,

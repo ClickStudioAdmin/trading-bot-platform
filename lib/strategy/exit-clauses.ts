@@ -10,6 +10,7 @@ export const EXIT_CLAUSE_KINDS = [
   "take_profit",
   "trailing_stop",
   "stop_loss",
+  "breakeven",
   "custom",
 ] as const;
 
@@ -197,6 +198,9 @@ export function priceRuleForKind(
   if (kind === "trailing_stop") {
     return "trail";
   }
+  if (kind === "breakeven") {
+    return "profit";
+  }
   return null;
 }
 
@@ -276,17 +280,21 @@ export function pinExitPriceRule(clause: ExitBuilderClause): ExitBuilderClause {
 /** Pin the price rule and drop an Or group that has no condition. */
 export function normalizeExitClause(clause: ExitBuilderClause): ExitBuilderClause {
   const pinned = pinExitPriceRule(clause);
-  const groups = clauseOrGroups(pinned);
+  const scoped =
+    pinned.kind === "breakeven" && clauseScope(pinned).kind !== "all"
+      ? { ...pinned, scope: EXIT_SCOPE_ALL }
+      : pinned;
+  const groups = clauseOrGroups(scoped);
   const kept = groups.filter(
     (group) => group.anchor.trigger !== "unset" || group.rows.length > 0,
   );
-  if (pinned === clause && kept.length === groups.length) {
+  if (scoped === clause && kept.length === groups.length) {
     return clause;
   }
   if (kept.length === groups.length) {
-    return pinned;
+    return scoped;
   }
-  return { ...pinned, orGroups: kept };
+  return { ...scoped, orGroups: kept };
 }
 
 /** Column price fields belong to the first card of that kind. */
@@ -302,6 +310,34 @@ export function exitPriceLive(clauses: readonly ExitBuilderClause[]): {
     trailing: clauseHasPriceRule(first("trailing_stop") ?? emptyExitClause()),
     stopLoss: clauseHasPriceRule(first("stop_loss") ?? emptyExitClause()),
   };
+}
+
+export function breakevenExitClause(): ExitBuilderClause {
+  return {
+    key: clauseKey("breakeven"),
+    kind: "breakeven",
+    anchor: { trigger: "profit" },
+    rows: [],
+    orGroups: [],
+    scope: EXIT_SCOPE_ALL,
+    ownPct: null,
+    ownDistance: null,
+  };
+}
+
+/** A saved column breakeven opens as its own card. An action list that already has one stays as it is. */
+export function ensureBreakevenClause(
+  clauses: readonly ExitBuilderClause[],
+  enabled: boolean,
+): ExitBuilderClause[] {
+  if (!enabled || clauses.some((clause) => clause.kind === "breakeven")) {
+    return [...clauses];
+  }
+  const card = breakevenExitClause();
+  if (clauses.length === 1 && clauses[0]?.kind === "") {
+    return [card];
+  }
+  return [...clauses, card];
 }
 
 export function classicExitClause(kind: ClassicExitKind): ExitBuilderClause {
@@ -440,6 +476,7 @@ export function exitClausesFromSaved(input: {
   takeProfit: boolean;
   trailing: boolean;
   stopLoss: boolean;
+  breakeven?: boolean;
   anchor: HardExitDraft | null;
   rows: readonly ExitStackRow[];
 }): ExitBuilderClause[] {
@@ -452,6 +489,9 @@ export function exitClausesFromSaved(input: {
   }
   if (input.stopLoss) {
     clauses.push(classicExitClause("stop_loss"));
+  }
+  if (input.breakeven) {
+    clauses.push(breakevenExitClause());
   }
   clauses.push(...customClausesFromStack(input.anchor, input.rows));
   if (clauses.length === 0) {

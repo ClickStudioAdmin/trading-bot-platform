@@ -7,6 +7,7 @@ import {
 import type { FuturesSide } from "@/lib/futures/model";
 import type { CandleBar } from "@/lib/market/candles";
 import {
+  breakevenExitClause,
   clauseHasPriceRule,
   clauseLevels,
   clauseOrGroups,
@@ -28,7 +29,7 @@ import {
   type ExitScope,
 } from "@/lib/strategy/exit-clauses";
 
-export type ExitActionKind = "take_profit" | "trailing_stop" | "stop_loss" | "close";
+export type ExitActionKind = "take_profit" | "trailing_stop" | "stop_loss" | "breakeven" | "close";
 
 export type ExitConditionGroup = {
   anchor: HardExitDraft;
@@ -57,6 +58,9 @@ export type StoredExitAction = {
   trailingPct?: number | null;
   /** Profit percent that must be reached before a DCA trailing stop starts. */
   trailingTriggerPct?: number | null;
+  /** Profit percent that moves the stop to entry. A breakeven action does not close size. */
+  breakevenActivationPct?: number | null;
+  breakevenOffsetPct?: number | null;
   /** Price fields for a later card. Absent on the first card of that kind. */
   levels?: ExitRepeatLevels;
 };
@@ -70,6 +74,8 @@ export type ExitSidePrices = {
   trailingActivation: number | null;
   trailingPct?: number | null;
   trailingTriggerPct?: number | null;
+  breakevenActivationPct?: number | null;
+  breakevenOffsetPct?: number | null;
 };
 
 function levelNumber(value: string | null | undefined): number | null {
@@ -87,6 +93,8 @@ export function exitPricesFromLevels(input: {
   trailingActivationKind?: TrailActivationKind | null;
   trailingPct?: string | null;
   trailingTriggerPct?: string | null;
+  breakevenActivationPct?: string | null;
+  breakevenOffsetPct?: string | null;
 }): ExitSidePrices {
   const takeProfit = levelNumber(input.takeProfit);
   const stopLoss = levelNumber(input.stopLoss);
@@ -106,7 +114,14 @@ export function exitPricesFromLevels(input: {
     trailingPct: levelNumber(input.trailingPct),
     trailingTriggerPct:
       activationKind === "price" ? null : activationKind === "percent" ? (triggerPct ?? activation) : triggerPct,
+    breakevenActivationPct: levelNumber(input.breakevenActivationPct),
+    breakevenOffsetPct: nonNegativeLevel(input.breakevenOffsetPct),
   };
+}
+
+function nonNegativeLevel(value: string | null | undefined): number | null {
+  const number = Number(String(value ?? "").replace(/,/g, "").trim());
+  return Number.isFinite(number) && number >= 0 ? number : null;
 }
 
 export const EMPTY_EXIT_PRICES: ExitSidePrices = {
@@ -118,6 +133,8 @@ export const EMPTY_EXIT_PRICES: ExitSidePrices = {
   trailingActivation: null,
   trailingPct: null,
   trailingTriggerPct: null,
+  breakevenActivationPct: null,
+  breakevenOffsetPct: null,
 };
 
 /** A Flex percent gate or a DCA price gate cannot live on the classic columns. */
@@ -197,6 +214,11 @@ export type ExitRuntime = {
   arms: Record<string, ExitArmState>;
 };
 
+export type ExitBreakevenMove = {
+  activationPct: number;
+  offsetPct: number;
+};
+
 export type ExitClaim = {
   actionId: string;
   kind: ExitActionKind;
@@ -223,6 +245,11 @@ function positiveOrNull(value: unknown): number | null {
   return number != null && number > 0 ? number : null;
 }
 
+function nonNegativeOrNull(value: unknown): number | null {
+  const number = finiteOrNull(value);
+  return number != null && number >= 0 ? number : null;
+}
+
 function draftOf(value: unknown): HardExitDraft | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
@@ -236,6 +263,7 @@ function draftOf(value: unknown): HardExitDraft | null {
     row.trigger !== "target" &&
     row.trigger !== "stop" &&
     row.trigger !== "trail" &&
+    row.trigger !== "profit" &&
     row.trigger !== "unset"
   ) {
     return null;
@@ -312,6 +340,7 @@ export function exitActionsFromJson(value: unknown): StoredExitAction[] | null {
       kind !== "take_profit" &&
       kind !== "trailing_stop" &&
       kind !== "stop_loss" &&
+      kind !== "breakeven" &&
       kind !== "close"
     ) {
       return null;
@@ -357,6 +386,8 @@ export function exitActionsFromJson(value: unknown): StoredExitAction[] | null {
       trailingActivation: positiveOrNull(row.trailingActivation),
       trailingPct: positiveOrNull(row.trailingPct),
       trailingTriggerPct: positiveOrNull(row.trailingTriggerPct),
+      breakevenActivationPct: positiveOrNull(row.breakevenActivationPct),
+      breakevenOffsetPct: nonNegativeOrNull(row.breakevenOffsetPct),
       levels: levelsFromJson(row.levels),
     });
   }
@@ -433,6 +464,13 @@ export function exitSideUsesColumns(clauses: readonly ExitBuilderClause[]): bool
   const seen = new Set<string>();
   let closes = 0;
   for (const clause of started) {
+    if (clause.kind === "breakeven") {
+      if (seen.has("breakeven") || stackStarted(clause)) {
+        return false;
+      }
+      seen.add("breakeven");
+      continue;
+    }
     if (clause.kind === "custom") {
       closes += 1;
       if (closes > 1 || clauseScope(clause).kind !== "all") {
@@ -462,9 +500,11 @@ function actionLabel(kind: ExitBuilderClause["kind"], index: number): string {
         ? "trailing stop"
         : kind === "stop_loss"
           ? "stop loss"
-          : kind === "custom"
-            ? "close"
-            : "action";
+          : kind === "breakeven"
+            ? "breakeven"
+            : kind === "custom"
+              ? "close"
+              : "action";
   return `${name} ${index}`;
 }
 
@@ -495,6 +535,9 @@ function forEachBlock(
     if (clause.kind === "custom" && groupsOf(clause).length === 0 && clauseScope(clause).kind !== "fills") {
       return "Close needs a condition.";
     }
+    if (clause.kind === "breakeven" && seen > 1) {
+      return "Only one breakeven on a side.";
+    }
     const ruleName = priceRuleName(clause.kind);
     if (ruleName && !clauseHasPriceRule(clause)) {
       return `${label} needs a ${ruleName}.`;
@@ -517,6 +560,9 @@ function forEachBlock(
       );
     if (loose) {
       return `${label} has a condition with no type.`;
+    }
+    if (clause.kind === "breakeven") {
+      continue;
     }
     if (!scopeComplete(clauseScope(clause))) {
       if (clauseScope(clause).kind === "percent") {
@@ -595,6 +641,8 @@ function pricesFor(
   | "trailingActivation"
   | "trailingPct"
   | "trailingTriggerPct"
+  | "breakevenActivationPct"
+  | "breakevenOffsetPct"
 > {
   const blank = {
     takeProfitPct: null,
@@ -605,7 +653,16 @@ function pricesFor(
     trailingActivation: null,
     trailingPct: null,
     trailingTriggerPct: null,
+    breakevenActivationPct: null,
+    breakevenOffsetPct: null,
   };
+  if (clause.kind === "breakeven") {
+    return {
+      ...blank,
+      breakevenActivationPct: prices.breakevenActivationPct ?? null,
+      breakevenOffsetPct: prices.breakevenOffsetPct ?? 0,
+    };
+  }
   if (!clauseHasPriceRule(clause)) {
     return blank;
   }
@@ -650,6 +707,8 @@ function repeatPrices(
   | "trailingActivation"
   | "trailingPct"
   | "trailingTriggerPct"
+  | "breakevenActivationPct"
+  | "breakevenOffsetPct"
 > {
   const blank = {
     takeProfitPct: null,
@@ -660,6 +719,8 @@ function repeatPrices(
     trailingActivation: null,
     trailingPct: null,
     trailingTriggerPct: null,
+    breakevenActivationPct: null,
+    breakevenOffsetPct: null,
   };
   const levels = clauseLevels(clause);
   const flex = levels.style === "flex";
@@ -724,7 +785,10 @@ export function exitActionsForSave(
     }
     const seenCount = (seen.get(clause.kind) ?? 0) + 1;
     seen.set(clause.kind, seenCount);
-    const scope = scopeComplete(clauseScope(clause));
+    const scope =
+      clause.kind === "breakeven"
+        ? ({ kind: "all" } as const)
+        : scopeComplete(clauseScope(clause));
     if (!scope) {
       continue;
     }
@@ -802,15 +866,17 @@ export function clausesFromExitActions(
     return null;
   }
   const seen = new Map<string, number>();
-  return actions.map((action) => {
+  const clauses = actions.map((action) => {
     const seenCount = (seen.get(action.kind) ?? 0) + 1;
     seen.set(action.kind, seenCount);
     const [first, ...rest] = action.groups;
     const kind = action.kind === "close" ? "custom" : action.kind;
     const base =
-      kind === "custom"
-        ? customExitClause(first?.anchor ?? { trigger: "unset" }, [], action.id)
-        : { ...classicExitClause(kind), key: action.id };
+      kind === "breakeven"
+        ? { ...breakevenExitClause(), key: action.id }
+        : kind === "custom"
+          ? customExitClause(first?.anchor ?? { trigger: "unset" }, [], action.id)
+          : { ...classicExitClause(kind), key: action.id };
     const rows =
       first?.rows.map((draft, index) => ({
         key: `${action.id}-and-${index}`,
@@ -826,6 +892,12 @@ export function clausesFromExitActions(
         draft,
       })),
     }));
+    const levels = seenCount > 1 ? levelsForAction(action) : undefined;
+    if (levels?.breakeven) {
+      levels.breakeven = false;
+      levels.breakevenActivation = "";
+      levels.breakevenOffset = "";
+    }
     return pinExitPriceRule({
       ...base,
       anchor: first?.anchor ?? { trigger: "unset" },
@@ -834,9 +906,39 @@ export function clausesFromExitActions(
       scope: action.scope,
       ownPct: null,
       ownDistance: null,
-      levels: seenCount > 1 ? levelsForAction(action) : undefined,
+      levels,
     });
   });
+  const nested = actions.some(
+    (action) => action.kind === "stop_loss" && action.levels?.breakeven === true,
+  );
+  if (nested && !clauses.some((clause) => clause.kind === "breakeven")) {
+    clauses.push(breakevenExitClause());
+  }
+  return clauses;
+}
+
+export function savedBreakevenNumbers(
+  actions: readonly StoredExitAction[] | null | undefined,
+): { activation: string; offset: string } | null {
+  const card = actions?.find((action) => action.kind === "breakeven");
+  if (card?.breakevenActivationPct != null) {
+    return {
+      activation: String(card.breakevenActivationPct),
+      offset:
+        card.breakevenOffsetPct == null ? "" : String(card.breakevenOffsetPct),
+    };
+  }
+  const nested = actions?.find(
+    (action) => action.kind === "stop_loss" && action.levels?.breakeven === true,
+  );
+  if (nested?.levels?.breakevenActivation) {
+    return {
+      activation: nested.levels.breakevenActivation,
+      offset: nested.levels.breakevenOffset,
+    };
+  }
+  return null;
 }
 
 export function parseExitActionsField(
@@ -872,6 +974,9 @@ function actionHasNumbers(action: StoredExitAction): boolean {
       (action.trailingPct != null && action.trailingPct > 0) ||
       (action.trailingTriggerPct != null && action.trailingTriggerPct > 0)
     );
+  }
+  if (action.kind === "breakeven") {
+    return action.breakevenActivationPct != null && action.breakevenActivationPct > 0;
   }
   return false;
 }
@@ -947,8 +1052,9 @@ export function evaluateExitActions(input: {
   barsByTimeframe: Map<string, CandleBar[]>;
   firedWebhookId?: string | null;
   stepQty?: number;
+  breakevenDone?: boolean;
   prices?: { last: number | null; mark: number | null; index: number | null } | null;
-}): { claims: ExitClaim[]; runtime: ExitRuntime; lots: ExitLot[] } {
+}): { claims: ExitClaim[]; runtime: ExitRuntime; lots: ExitLot[]; breakeven: ExitBreakevenMove | null } {
   const prices = input.prices ?? {
     last: input.last,
     mark: input.mark,
@@ -979,6 +1085,7 @@ export function evaluateExitActions(input: {
     conditionTrue,
     needsPrice,
     stepQty: input.stepQty,
+    breakevenDone: input.breakevenDone,
   });
 }
 
@@ -1129,6 +1236,12 @@ function priceFires(input: {
     const pnl = entry != null && pct != null ? pnlPct(side, entry, input.mark) : null;
     return { fire: pnl != null && pnl >= pct!, peak: arm.peak };
   }
+  if (action.kind === "breakeven") {
+    const pct = action.breakevenActivationPct;
+    const entry = input.entryPrice;
+    const pnl = entry != null && pct != null ? pnlPct(side, entry, input.mark) : null;
+    return { fire: pnl != null && pct != null && pnl >= pct, peak: arm.peak };
+  }
   if (action.kind === "stop_loss") {
     if (action.stopLossPrice != null) {
       const fire =
@@ -1213,7 +1326,8 @@ export function planExitClaims(input: {
   /** When false, a matched group can fire without the price level. Defaults from the stored prices. */
   needsPrice?: Readonly<Record<string, boolean>>;
   stepQty?: number;
-}): { claims: ExitClaim[]; runtime: ExitRuntime; lots: ExitLot[] } {
+  breakevenDone?: boolean;
+}): { claims: ExitClaim[]; runtime: ExitRuntime; lots: ExitLot[]; breakeven: ExitBreakevenMove | null } {
   const stepQty = input.stepQty ?? 0;
   const book = input.lots
     .map((lot) => ({ ...lot }))
@@ -1223,7 +1337,7 @@ export function planExitClaims(input: {
   };
   const openQty = lotQty(book);
   if (!(openQty > QTY_EPS) || !(input.mark > 0)) {
-    return { claims: [], runtime, lots: book };
+    return { claims: [], runtime, lots: book, breakeven: null };
   }
 
   const firing = new Map<string, { peak: number | null; edge: boolean }>();
@@ -1288,6 +1402,7 @@ export function planExitClaims(input: {
     }
   }
 
+  let breakeven: ExitBreakevenMove | null = null;
   const claims: ExitClaim[] = [];
   const ordered = [
     ...input.actions.filter((action) => action.scope.kind !== "remainder"),
@@ -1295,6 +1410,20 @@ export function planExitClaims(input: {
   ];
   for (const action of ordered) {
     if (!firing.has(action.id)) {
+      continue;
+    }
+    if (action.kind === "breakeven") {
+      if (
+        !input.breakevenDone &&
+        breakeven == null &&
+        action.breakevenActivationPct != null &&
+        action.breakevenActivationPct > 0
+      ) {
+        breakeven = {
+          activationPct: action.breakevenActivationPct,
+          offsetPct: action.breakevenOffsetPct ?? 0,
+        };
+      }
       continue;
     }
     const remaining = book.filter((lot) => lot.qty > QTY_EPS);
@@ -1326,6 +1455,7 @@ export function planExitClaims(input: {
     claims,
     runtime,
     lots: book.filter((lot) => lot.qty > QTY_EPS),
+    breakeven,
   };
 }
 
@@ -1413,6 +1543,9 @@ export function actionKindLabel(kind: ExitActionKind | ClassicExitKind | "custom
   }
   if (kind === "stop_loss") {
     return "Stop loss";
+  }
+  if (kind === "breakeven") {
+    return "Breakeven";
   }
   return "Close";
 }

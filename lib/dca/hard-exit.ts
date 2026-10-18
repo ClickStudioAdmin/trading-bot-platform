@@ -19,13 +19,18 @@ export const HARD_EXIT_TRIGGERS = [
 export type HardExitTrigger = (typeof HARD_EXIT_TRIGGERS)[number];
 
 /** Price rule inside an exit action. The numbers stay on the action, not the leaf. */
-export const EXIT_PRICE_RULES = ["target", "stop", "trail"] as const;
+export const EXIT_PRICE_RULES = ["target", "stop", "trail", "profit"] as const;
 export type ExitPriceRuleTrigger = (typeof EXIT_PRICE_RULES)[number];
 
 export function isExitPriceRule(
   trigger: string,
 ): trigger is ExitPriceRuleTrigger {
-  return trigger === "target" || trigger === "stop" || trigger === "trail";
+  return (
+    trigger === "target" ||
+    trigger === "stop" ||
+    trigger === "trail" ||
+    trigger === "profit"
+  );
 }
 
 export function exitPriceRuleLabel(trigger: ExitPriceRuleTrigger): string {
@@ -34,6 +39,9 @@ export function exitPriceRuleLabel(trigger: ExitPriceRuleTrigger): string {
   }
   if (trigger === "stop") {
     return "Stop Hit";
+  }
+  if (trigger === "profit") {
+    return "Profit Hit";
   }
   return "Trail";
 }
@@ -71,7 +79,8 @@ export type HardExitDraft =
   | { trigger: "webhook"; webhookId: string }
   | { trigger: "target" }
   | { trigger: "stop" }
-  | { trigger: "trail" };
+  | { trigger: "trail" }
+  | { trigger: "profit" };
 
 export function isPriceRuleDraft(
   draft: HardExitDraft,
@@ -79,7 +88,8 @@ export function isPriceRuleDraft(
   return (
     draft.trigger === "target" ||
     draft.trigger === "stop" ||
-    draft.trigger === "trail"
+    draft.trigger === "trail" ||
+    draft.trigger === "profit"
   );
 }
 

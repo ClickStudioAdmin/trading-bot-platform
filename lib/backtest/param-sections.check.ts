@@ -102,7 +102,13 @@ const nestedStop = recipeParamSections(
 const stopGroup = nestedStop?.groups.find((group) => group.title === "Stop loss");
 assert.deepEqual(
   stopGroup?.rows.map((row) => row.label),
-  ["Basis", "Stop loss %", "Move stop to breakeven at %", "Breakeven offset %"],
+  ["Basis", "Stop loss %"],
+);
+assert.deepEqual(
+  nestedStop?.groups
+    .find((group) => group.title === "Breakeven")
+    ?.rows.map((row) => row.label),
+  ["Move stop to breakeven at %", "Breakeven offset %"],
 );
 assert.equal(
   nestedStop?.groups.some((group) => group.title === "Move Breakeven"),
@@ -111,9 +117,16 @@ assert.equal(
 const breakevenOnly = recipeParamSections(
   dcaWithExits({ breakevenActivationPct: "1.5" }),
 ).find((section) => section.title === "Long Exit Conditions");
+assert.equal(
+  breakevenOnly?.groups.some(
+    (group) =>
+      group.rows.some((row) => row.label === "Stop loss" && row.value === "Off"),
+  ),
+  true,
+);
 assert.deepEqual(
   breakevenOnly?.groups
-    .find((group) => group.title === "Stop loss")
+    .find((group) => group.title === "Breakeven")
     ?.rows.map((row) => row.label),
   ["Move stop to breakeven at %", "Breakeven offset %"],
 );

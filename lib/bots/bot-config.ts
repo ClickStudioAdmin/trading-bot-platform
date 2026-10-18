@@ -288,19 +288,15 @@ function dcaExitLines(classic: DcaClassicExit): BotConfigLine[] {
     ),
     setting(
       "Stop loss",
-      classic.stopLossPct == null && classic.breakevenActivationPct == null
+      classic.stopLossPct == null
         ? null
-        : joinParts([
-            classic.stopLossPct == null
-              ? null
-              : joinParts([
-                  pct(classic.stopLossPct),
-                  basisLabel(classic.stopLossBasis),
-                ]),
-            classic.breakevenActivationPct == null
-              ? null
-              : `Move breakeven at ${pct(classic.breakevenActivationPct)} · offset ${pct(classic.breakevenOffsetPct) ?? "0%"}`,
-          ]),
+        : joinParts([pct(classic.stopLossPct), basisLabel(classic.stopLossBasis)]),
+    ),
+    setting(
+      "Breakeven",
+      classic.breakevenActivationPct == null
+        ? null
+        : `Move breakeven at ${pct(classic.breakevenActivationPct)} · offset ${pct(classic.breakevenOffsetPct) ?? "0%"}`,
     ),
   ];
   return lines;
@@ -507,29 +503,26 @@ function perpsClassicLines(input: {
     ),
     setting(
       "Stop loss",
-      perpsLevel(input.tpsl?.stopLoss, input.tpsl?.slKind) || activation
+      perpsLevel(input.tpsl?.stopLoss, input.tpsl?.slKind)
         ? joinParts([
-            perpsLevel(input.tpsl?.stopLoss, input.tpsl?.slKind)
-              ? joinParts([
-                  perpsLevel(input.tpsl?.stopLoss, input.tpsl?.slKind),
-                  input.tpsl?.slTrigger === "mark"
-                    ? "Mark"
-                    : input.tpsl?.slTrigger === "index"
-                      ? "Index"
-                      : "Last",
-                  orderLabel(input.tpsl?.slOrderType),
-                  input.tpsl?.slOrderType === "limit"
-                    ? amount(input.tpsl.slLimitPrice)
-                    : null,
-                  input.tpsl?.mode === "partial" && input.tpsl.slQty
-                    ? `Partial ${amount(input.tpsl.slQty)}`
-                    : null,
-                ])
-              : null,
-            activation
-              ? `Move breakeven at ${activation}% · offset ${input.breakevenOffsetPct.trim() || "0"}%`
+            perpsLevel(input.tpsl?.stopLoss, input.tpsl?.slKind),
+            input.tpsl?.slTrigger === "mark"
+              ? "Mark"
+              : input.tpsl?.slTrigger === "index"
+                ? "Index"
+                : "Last",
+            orderLabel(input.tpsl?.slOrderType),
+            input.tpsl?.slOrderType === "limit" ? amount(input.tpsl.slLimitPrice) : null,
+            input.tpsl?.mode === "partial" && input.tpsl.slQty
+              ? `Partial ${amount(input.tpsl.slQty)}`
               : null,
           ])
+        : null,
+    ),
+    setting(
+      "Breakeven",
+      activation
+        ? `Move breakeven at ${activation}% · offset ${input.breakevenOffsetPct.trim() || "0"}%`
         : null,
     ),
   ];

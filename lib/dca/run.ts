@@ -1805,6 +1805,7 @@ async function moveStopToBreakeven(input: {
   mode: TradingAccountMode;
   side: FuturesSide;
   reason?: string;
+  offsetPct?: number | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
     accountId: input.playbook.accountId,
@@ -1822,7 +1823,9 @@ async function moveStopToBreakeven(input: {
       side: input.side,
       basisPrice: open.entryPrice,
       offsetPct:
-        dcaClassicForSide(input.playbook, input.side).breakevenOffsetPct ?? 0,
+        input.offsetPct ??
+        dcaClassicForSide(input.playbook, input.side).breakevenOffsetPct ??
+        0,
     }),
   });
   const result = await runFuturesCommand({

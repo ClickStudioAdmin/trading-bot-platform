@@ -847,12 +847,11 @@ export function ThemeBotFormDraft() {
     setTpOn(flags.takeProfit);
     setTrailOn(flags.trailing);
     setSlOn(flags.stopLoss);
-    if (!flags.stopLoss) {
-      setBreakevenOn(false);
-    }
-    if (short && !short.some((clause) => clause.kind === "stop_loss")) {
+    setBreakevenOn(primary.some((clause) => clause.kind === "breakeven"));
+    if (short) {
+      const on = short.some((clause) => clause.kind === "breakeven");
       setShortClassic((draft) =>
-        draft.breakevenOn ? { ...draft, breakevenOn: false } : draft,
+        draft.breakevenOn === on ? draft : { ...draft, breakevenOn: on },
       );
     }
   }
@@ -1020,9 +1019,9 @@ export function ThemeBotFormDraft() {
   const requireShortTrailTrigger =
     requireShortTrail && (desk === "dca" || desk === "flex");
   const requireBreakeven =
-    desk !== "cnc" && !closing && primaryExitFlags.stopLoss && breakevenOn;
+    desk !== "cnc" && !closing && exitClauses.some((clause) => clause.kind === "breakeven");
   const requireShortBreakeven =
-    themeBothExits && shortExitFlags.stopLoss && shortClassic.breakevenOn;
+    themeBothExits && shortClauses.some((clause) => clause.kind === "breakeven");
   const requireCarryTp = desk === "cnc" && carryTpOn;
   const requireCarrySl = desk === "cnc" && carrySlOn;
   const requireConfirm = desk !== "cnc" && !closing && confirmOn;
@@ -1492,7 +1491,8 @@ export function ThemeBotFormDraft() {
       (clause) =>
         clause.kind === "take_profit" ||
         clause.kind === "trailing_stop" ||
-        clause.kind === "stop_loss",
+        clause.kind === "stop_loss" ||
+        clause.kind === "breakeven",
     );
     if (!shortHasClassic) {
       setShortClassic(blankThemeClassic());
@@ -1929,39 +1929,15 @@ export function ThemeBotFormDraft() {
         : slTrigger;
     const order = repeat ? slot.levels.orderType : shortLeg ? shortClassic.slOrderType : slOrderType;
     const limit = repeat ? slot.levels.limitPrice : shortLeg ? shortClassic.slLimitPrice : slLimitPrice;
-    const breakeven = repeat
-      ? slot.levels.breakeven
-      : shortLeg
-        ? shortClassic.breakevenOn
-        : breakevenOn;
-    const activation = repeat
-      ? slot.levels.breakevenActivation
-      : shortLeg
-        ? shortClassic.breakevenAt
-        : breakevenAt;
-    const offset = repeat
-      ? slot.levels.breakevenOffset
-      : shortLeg
-        ? shortClassic.breakevenOffset
-        : breakevenOffset;
     const valueInvalid = repeat
       ? slot.showErrors && !filled(value)
       : showFieldErrors && (shortLeg ? missing.shortSlValue : missing.slValue);
     const limitInvalid = repeat
       ? slot.showErrors && order === "limit" && !filled(limit)
       : showFieldErrors && (shortLeg ? missing.shortSlLimitPrice : missing.slLimitPrice);
-    const moveInvalid = repeat
-      ? slot.showErrors && breakeven && !filled(activation)
-      : showFieldErrors && (shortLeg ? missing.shortBreakevenAt : missing.breakevenAt);
     return (
       <div className="@container col-span-full">
-        <div
-          className={
-            desk === "dca"
-              ? "grid grid-cols-2 items-start gap-4 [&>*]:min-w-0 @min-[40rem]:grid-cols-4"
-              : "grid items-start gap-4 [&>*]:min-w-0 @min-[40rem]:grid-cols-2"
-          }
-        >
+        <div className="grid grid-cols-2 items-start gap-4 [&>*]:min-w-0">
           {desk === "dca" ? (
             <>
               <Field label="Basis" required>
@@ -1996,7 +1972,7 @@ export function ThemeBotFormDraft() {
               </Field>
             </>
           ) : (
-            <div className="grid grid-cols-2 gap-4 [&>*]:min-w-0">
+            <div className="col-span-full grid grid-cols-2 gap-4 [&>*]:min-w-0">
               <Field label="Type" required>
                 <AppSelect
                   className={fieldClass}
@@ -2093,50 +2069,41 @@ export function ThemeBotFormDraft() {
               ) : null}
             </div>
           )}
-          <OptionalSection
-            title="Move Breakeven"
-            className={desk === "dca" ? "col-span-2" : "min-w-0"}
-            enabled={breakeven}
-            onEnabled={(next) =>
-              repeat
-                ? slot.onChange({ breakeven: next })
-                : shortLeg
-                  ? patchThemeShort({ breakevenOn: next })
-                  : setBreakevenOn(next)
-            }
-          >
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Move stop to breakeven at %" required>
-                <PercentField
-                  value={activation}
-                  onChange={(next) =>
-                    repeat
-                      ? slot.onChange({ breakevenActivation: next })
-                      : shortLeg
-                        ? patchThemeShort({ breakevenAt: next })
-                        : setBreakevenAt(next)
-                  }
-                  required
-                  invalid={moveInvalid}
-                />
-              </Field>
-              <Field label="Breakeven offset %">
-                <PercentField
-                  value={offset}
-                  onChange={(next) =>
-                    repeat
-                      ? slot.onChange({ breakevenOffset: next })
-                      : shortLeg
-                        ? patchThemeShort({ breakevenOffset: next })
-                        : setBreakevenOffset(next)
-                  }
-                  placeholder="0"
-                />
-              </Field>
-            </div>
-          </OptionalSection>
         </div>
       </div>
+    );
+  }
+  function themeBreakevenFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
+    if (slot) {
+      return null;
+    }
+    const shortLeg = themeUsesShort(leg);
+    const activation = shortLeg ? shortClassic.breakevenAt : breakevenAt;
+    const offset = shortLeg ? shortClassic.breakevenOffset : breakevenOffset;
+    const invalid =
+      showFieldErrors && (shortLeg ? missing.shortBreakevenAt : missing.breakevenAt);
+    return (
+      <>
+        <Field label="Move stop to breakeven at %" required>
+          <PercentField
+            value={activation}
+            onChange={(next) =>
+              shortLeg ? patchThemeShort({ breakevenAt: next }) : setBreakevenAt(next)
+            }
+            required
+            invalid={invalid}
+          />
+        </Field>
+        <Field label="Breakeven offset %">
+          <PercentField
+            value={offset}
+            onChange={(next) =>
+              shortLeg ? patchThemeShort({ breakevenOffset: next }) : setBreakevenOffset(next)
+            }
+            placeholder="0"
+          />
+        </Field>
+      </>
     );
   }
 
@@ -3172,6 +3139,7 @@ export function ThemeBotFormDraft() {
               renderTakeProfit={(slot) => themeTakeProfitFields("primary", slot)}
               renderTrailingStop={(slot) => themeTrailingFields("primary", slot)}
               renderStopLoss={(slot) => themeStopFields("primary", slot)}
+              renderBreakeven={(slot) => themeBreakevenFields("primary", slot)}
             />
           </BotFormStep>
         ) : null}
@@ -3209,6 +3177,9 @@ export function ThemeBotFormDraft() {
               }
               renderStopLoss={(slot) =>
                 themeStopFields(themeBothExits ? "short" : "primary", slot)
+              }
+              renderBreakeven={(slot) =>
+                themeBreakevenFields(themeBothExits ? "short" : "primary", slot)
               }
             />
           </BotFormStep>

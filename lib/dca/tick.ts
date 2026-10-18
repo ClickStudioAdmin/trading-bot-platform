@@ -343,6 +343,7 @@ export async function runDcaPlaybookTick(input?: {
     cache: DcaSyncCache;
     exitClaims?: ExitClaim[] | null;
     exitRuntime?: ExitRuntime | null;
+    breakevenOffsetPct?: number | null;
   };
   const work: TickWork[] = [];
   const flagWrites: {
@@ -605,6 +606,7 @@ export async function runDcaPlaybookTick(input?: {
       why: item.why,
       positionId: item.positionId,
       fast: item.kind === "close" && Boolean(item.positionId),
+      breakevenOffsetPct: item.breakevenOffsetPct,
     });
     if (result.acted) {
       acted += 1;
@@ -1124,7 +1126,36 @@ export async function runDcaPlaybookTick(input?: {
           last: prices.last,
           barsByTimeframe,
           nowMs: Date.now(),
+          breakevenDone: leg.breakevenDone,
         });
+        if (settled?.breakeven && !leg.breakevenDone) {
+          work.push({
+            rank: dcaTickWorkRank("breakeven"),
+            kind: "breakeven",
+            playbook,
+            mode: account.mode,
+            side,
+            lastPrice: prices.last,
+            atr: spacingAtr,
+            clipsFilled: leg.clipsFilled,
+            positionId: open.id,
+            entryPrice: open.entryPrice,
+            mark: prices.mark,
+            tpLimitResting,
+            keepListening: false,
+            flattenReason: "",
+            action: { kind: "breakeven" },
+            why: formatBreakevenReason({
+              side,
+              entryPrice: open.entryPrice,
+              mark: prices.mark,
+              activationPct: settled.breakeven.activationPct,
+              offsetPct: settled.breakeven.offsetPct,
+            }),
+            cache: syncCache,
+            breakevenOffsetPct: settled.breakeven.offsetPct,
+          });
+        }
         if (settled && settled.claims.length === 0) {
           await saveExitRuntime(open.id, settled.runtime);
         } else if (settled && settled.claims.length > 0) {
@@ -1451,6 +1482,7 @@ async function applyTickAction(input: {
   why?: string;
   positionId?: string | null;
   fast?: boolean;
+  breakevenOffsetPct?: number | null;
 }): Promise<{ acted: boolean }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -1536,6 +1568,7 @@ async function applyTickAction(input: {
       mode: input.mode,
       side: input.side,
       reason: input.why,
+      offsetPct: input.breakevenOffsetPct,
     });
     return { acted: moved.ok };
   }

@@ -20,7 +20,6 @@ import {
   botBtnIcon,
   BotStatusField,
   HintLabel,
-  OptionalSection,
   OrderTypePill,
   botCompactRowClass,
   botFieldClass,
@@ -49,6 +48,7 @@ import {
 import {
   blankExitClauses,
   customStackFromClauses,
+  ensureBreakevenClause,
   exitPriceLive,
   exitClauseListMissing,
   exitClausesFromSaved,
@@ -59,6 +59,7 @@ import {
   clausesFromExitActions,
   exitCardsBlockReason,
   exitPricesFromLevels,
+  savedBreakevenNumbers,
   savedTrailActivation,
 } from "@/lib/strategy/exit-actions";
 import {
@@ -322,9 +323,14 @@ function classicDraftFromLeg(
     trailingTriggerPct: trail.value,
     trailingPct: optional(leg.trailingPct),
     trailActiveKind: trail.kind,
-    breakevenActivationPct: optional(leg.breakevenActivationPct),
-    breakevenOffsetPct: optional(leg.breakevenOffsetPct),
-    breakevenOn: leg.breakevenActivationPct != null,
+    breakevenActivationPct:
+      optional(leg.breakevenActivationPct) ||
+      savedBreakevenNumbers(actions)?.activation ||
+      "",
+    breakevenOffsetPct:
+      optional(leg.breakevenOffsetPct) || savedBreakevenNumbers(actions)?.offset || "",
+    breakevenOn:
+      leg.breakevenActivationPct != null || savedBreakevenNumbers(actions) != null,
   };
 }
 
@@ -1230,19 +1236,17 @@ export function DcaPlaybookForm({
   const [trailOn] = useState(
     () => source?.trailingPct != null || source?.trailingTriggerPct != null,
   );
+  const savedPrimaryBreakeven = savedBreakevenNumbers(source?.exitActions);
   const [breakevenActivationPct, setBreakevenActivationPct] = useState(
-    optional(source?.breakevenActivationPct),
+    optional(source?.breakevenActivationPct) || savedPrimaryBreakeven?.activation || "",
   );
   const [breakevenOffsetPct, setBreakevenOffsetPct] = useState(
-    optional(source?.breakevenOffsetPct),
+    optional(source?.breakevenOffsetPct) || savedPrimaryBreakeven?.offset || "",
   );
   const [breakevenOn, setBreakevenOn] = useState(
-    () => source?.breakevenActivationPct != null,
+    () => source?.breakevenActivationPct != null || savedPrimaryBreakeven != null,
   );
-  const [slOn] = useState(
-    () =>
-      source?.stopLossPct != null || source?.breakevenActivationPct != null,
-  );
+  const [slOn] = useState(() => source?.stopLossPct != null);
   const [shortClassic, setShortClassic] = useState<DcaClassicDraft>(() => {
     if (source?.direction !== "both") {
       return blankClassicDraft();
@@ -1369,54 +1373,49 @@ export function DcaPlaybookForm({
   const [shortExitRows, setShortExitRows] = useState<ExitStackRow[]>(() =>
     exitRowsFromStack(source?.shortExitStack),
   );
-  const [exitClauses, setExitClauses] = useState(() =>
-    clausesFromExitActions(source?.exitActions) ??
-    exitClausesFromSaved({
-      takeProfit: tpOn,
-      trailing: trailOn,
-      stopLoss: slOn,
-      anchor: exitIf,
-      rows: exitRows,
-    }),
-  );
+  const [exitClauses, setExitClauses] = useState(() => {
+    const fromActions = clausesFromExitActions(source?.exitActions);
+    const columnBreakeven = source?.breakevenActivationPct != null;
+    return ensureBreakevenClause(
+      fromActions ??
+        exitClausesFromSaved({
+          takeProfit: tpOn,
+          trailing: trailOn,
+          stopLoss: slOn,
+          breakeven: columnBreakeven,
+          anchor: exitIf,
+          rows: exitRows,
+        }),
+      columnBreakeven || savedPrimaryBreakeven != null,
+    );
+  });
   const [shortClauses, setShortClauses] = useState(() => {
     const saved =
       source?.direction === "both" ? (source.shortClassic ?? null) : null;
     const legacy = source?.direction === "both" && saved == null;
-    return (
-      (source?.direction === "both"
-        ? clausesFromExitActions(source.shortExitActions)
-        : null) ??
-      exitClausesFromSaved({
-      takeProfit: saved
-        ? saved.takeProfitKind === "atr"
-          ? saved.takeProfitAtrMult != null
-          : saved.takeProfitPct != null
-        : legacy && tpOn,
-      trailing: saved
-        ? saved.trailingPct != null || saved.trailingTriggerPct != null
-        : legacy && trailOn,
-      stopLoss: saved
-        ? saved.stopLossPct != null || saved.breakevenActivationPct != null
-        : legacy && slOn,
-      anchor: shortExitIf,
-      rows: shortExitRows,
-    })
+    const shortActions = source?.direction === "both" ? source.shortExitActions : null;
+    const columnBreakeven = saved
+      ? saved.breakevenActivationPct != null
+      : legacy && source?.breakevenActivationPct != null;
+    return ensureBreakevenClause(
+      (source?.direction === "both" ? clausesFromExitActions(shortActions) : null) ??
+        exitClausesFromSaved({
+          takeProfit: saved
+            ? saved.takeProfitKind === "atr"
+              ? saved.takeProfitAtrMult != null
+              : saved.takeProfitPct != null
+            : legacy && tpOn,
+          trailing: saved
+            ? saved.trailingPct != null || saved.trailingTriggerPct != null
+            : legacy && trailOn,
+          stopLoss: saved ? saved.stopLossPct != null : legacy && slOn,
+          breakeven: columnBreakeven,
+          anchor: shortExitIf,
+          rows: shortExitRows,
+        }),
+      columnBreakeven || savedBreakevenNumbers(shortActions) != null,
     );
   });
-  function applyClassicFlags(
-    primary: readonly ExitBuilderClause[],
-    short: readonly ExitBuilderClause[] | null,
-  ) {
-    if (!primary.some((clause) => clause.kind === "stop_loss")) {
-      setBreakevenOn(false);
-    }
-    if (short && !short.some((clause) => clause.kind === "stop_loss")) {
-      setShortClassic((draft) =>
-        draft.breakevenOn ? { ...draft, breakevenOn: false } : draft,
-      );
-    }
-  }
   function copyPrimaryClassicToShort() {
     setShortClassic({
       takeProfitKind,
@@ -1477,12 +1476,10 @@ export function DcaPlaybookForm({
       setShortClauses(next);
       setShortExitIf(custom.anchor);
       setShortExitRows(custom.rows);
-      applyClassicFlags(exitClauses, next);
     } else {
       setExitClauses(next);
       setExitIf(custom.anchor);
       setExitRows(custom.rows);
-      applyClassicFlags(next, direction === "both" ? shortClauses : null);
     }
     setTouched(true);
     setFormTick((tick) => tick + 1);
@@ -1842,9 +1839,12 @@ export function DcaPlaybookForm({
   const tpLive = primaryFlags.takeProfit;
   const slLive = primaryFlags.stopLoss;
   const trailLive = primaryFlags.trailing;
+  const breakevenLive = exitClauses.some((clause) => clause.kind === "breakeven");
   const shortTpLive = direction === "both" && shortFlags.takeProfit;
   const shortSlLive = direction === "both" && shortFlags.stopLoss;
   const shortTrailLive = direction === "both" && shortFlags.trailing;
+  const shortBreakevenLive =
+    direction === "both" && shortClauses.some((clause) => clause.kind === "breakeven");
   function snapshotOverlay() {
     return {
       name: source?.name || defaultName || DEFAULT_DCA_NAME,
@@ -1882,13 +1882,12 @@ export function DcaPlaybookForm({
       trailingTriggerPct: trailLive && trailActiveKind === "percent" ? trailingTriggerPct : "",
       trailingActiveKind: trailLive ? trailActiveKind : "percent",
       trailingPct: trailLive ? trailingPct : "",
-      breakevenActivationPct:
-        slLive && breakevenOn ? breakevenActivationPct : "",
-      breakevenOffsetPct: slLive && breakevenOn ? breakevenOffsetPct : "",
+      breakevenActivationPct: breakevenLive ? breakevenActivationPct : "",
+      breakevenOffsetPct: breakevenLive ? breakevenOffsetPct : "",
       tpOn: tpLive ? "on" : "",
       slOn: slLive ? "on" : "",
       trailOn: trailLive ? "on" : "",
-      breakeven: slLive && breakevenOn ? "on" : "",
+      breakeven: breakevenLive ? "on" : "",
       ...(direction === "both"
         ? {
             shortClassic: "on",
@@ -1914,19 +1913,16 @@ export function DcaPlaybookForm({
                 : "",
             shortTrailingActiveKind: shortTrailLive ? shortClassic.trailActiveKind : "percent",
             shortTrailingPct: shortTrailLive ? shortClassic.trailingPct : "",
-            shortBreakevenActivationPct:
-              shortSlLive && shortClassic.breakevenOn
-                ? shortClassic.breakevenActivationPct
-                : "",
-            shortBreakevenOffsetPct:
-              shortSlLive && shortClassic.breakevenOn
-                ? shortClassic.breakevenOffsetPct
-                : "",
+            shortBreakevenActivationPct: shortBreakevenLive
+              ? shortClassic.breakevenActivationPct
+              : "",
+            shortBreakevenOffsetPct: shortBreakevenLive
+              ? shortClassic.breakevenOffsetPct
+              : "",
             shortTpOn: shortTpLive ? "on" : "",
             shortSlOn: shortSlLive ? "on" : "",
             shortTrailOn: shortTrailLive ? "on" : "",
-            shortBreakeven:
-              shortSlLive && shortClassic.breakevenOn ? "on" : "",
+            shortBreakeven: shortBreakevenLive ? "on" : "",
           }
         : {}),
       indicatorKind,
@@ -1985,7 +1981,7 @@ export function DcaPlaybookForm({
     (asNumber(trailingTriggerPct) == null || asNumber(trailingPct) == null);
   const slMissing = slLive && asNumber(stopLossPct) == null;
   const breakevenMissing =
-    slLive && breakevenOn && asNumber(breakevenActivationPct) == null;
+    breakevenLive && asNumber(breakevenActivationPct) == null;
   const shortTpMissing =
     shortTpLive &&
     (shortClassic.takeProfitKind === "atr"
@@ -1998,9 +1994,7 @@ export function DcaPlaybookForm({
       asNumber(shortClassic.trailingPct) == null);
   const shortSlMissing = shortSlLive && asNumber(shortClassic.stopLossPct) == null;
   const shortBreakevenMissing =
-    shortSlLive &&
-    shortClassic.breakevenOn &&
-    asNumber(shortClassic.breakevenActivationPct) == null;
+    shortBreakevenLive && asNumber(shortClassic.breakevenActivationPct) == null;
   const parseConstraint =
     !parsedLive.ok && parsedLive.error === "Percent must be 100 or less."
       ? parsedLive.error
@@ -2888,31 +2882,11 @@ export function DcaPlaybookForm({
         ? shortClassic.stopLossBasis
         : stopLossBasis;
     const pct = repeat ? slot.levels.target : shortLeg ? shortClassic.stopLossPct : stopLossPct;
-    const breakeven = repeat
-      ? slot.levels.breakeven
-      : shortLeg
-        ? shortClassic.breakevenOn
-        : breakevenOn;
-    const activation = repeat
-      ? slot.levels.breakevenActivation
-      : shortLeg
-        ? shortClassic.breakevenActivationPct
-        : breakevenActivationPct;
-    const offset = repeat
-      ? slot.levels.breakevenOffset
-      : shortLeg
-        ? shortClassic.breakevenOffsetPct
-        : breakevenOffsetPct;
     const missing = repeat
       ? slot.showErrors && asNumber(pct) == null
       : shortLeg
         ? shortSlMissing
         : slMissing;
-    const breakevenInvalid = repeat
-      ? slot.showErrors && breakeven && asNumber(activation) == null
-      : shortLeg
-        ? shortBreakevenMissing
-        : breakevenMissing;
     const fieldName = (name: string) => (repeat ? undefined : classicField(leg, name));
     return (
       <div className="contents">
@@ -2953,54 +2927,49 @@ export function DcaPlaybookForm({
               invalid={dirty && missing}
             />
           </BotField>
-          <OptionalSection
-            title="Move Breakeven"
-            className="col-span-2"
-            enabled={breakeven}
-            onEnabled={(next) =>
-              repeat
-                ? slot.onChange({ breakeven: next })
-                : shortLeg
-                  ? patchShort("breakevenOn", next)
-                  : setBreakevenOn(next)
-            }
-          >
-            <div className="grid grid-cols-2 gap-4">
-              <BotField label="Move stop to breakeven at %" required>
-                <PercentInput
-                  name={fieldName("breakevenActivationPct")}
-                  value={activation}
-                  onChange={(next) =>
-                    repeat
-                      ? slot.onChange({ breakevenActivation: next })
-                      : shortLeg
-                        ? patchShort("breakevenActivationPct", next)
-                        : setBreakevenActivationPct(next)
-                  }
-                  ariaLabel="Move stop to breakeven at percent"
-                  invalid={dirty && breakevenInvalid}
-                />
-              </BotField>
-              <label className={labelClass}>
-                Breakeven offset %
-                <PercentInput
-                  name={fieldName("breakevenOffsetPct")}
-                  value={offset}
-                  onChange={(next) =>
-                    repeat
-                      ? slot.onChange({ breakevenOffset: next })
-                      : shortLeg
-                        ? patchShort("breakevenOffsetPct", next)
-                        : setBreakevenOffsetPct(next)
-                  }
-                  placeholder="0"
-                  ariaLabel="Breakeven offset percent"
-                />
-              </label>
-            </div>
-          </OptionalSection>
         </div>
       </div>
+    );
+  }
+  function dcaBreakevenFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
+    if (slot) {
+      return null;
+    }
+    const shortLeg = usesShortExit(leg);
+    const activation = shortLeg
+      ? shortClassic.breakevenActivationPct
+      : breakevenActivationPct;
+    const offset = shortLeg ? shortClassic.breakevenOffsetPct : breakevenOffsetPct;
+    const invalid = shortLeg ? shortBreakevenMissing : breakevenMissing;
+    const fieldName = (name: string) => classicField(leg, name);
+    return (
+      <>
+        <BotField label="Move stop to breakeven at %" required>
+          <PercentInput
+            name={fieldName("breakevenActivationPct")}
+            value={activation}
+            onChange={(next) =>
+              shortLeg
+                ? patchShort("breakevenActivationPct", next)
+                : setBreakevenActivationPct(next)
+            }
+            ariaLabel="Move stop to breakeven at percent"
+            invalid={dirty && invalid}
+          />
+        </BotField>
+        <label className={labelClass}>
+          Breakeven offset %
+          <PercentInput
+            name={fieldName("breakevenOffsetPct")}
+            value={offset}
+            onChange={(next) =>
+              shortLeg ? patchShort("breakevenOffsetPct", next) : setBreakevenOffsetPct(next)
+            }
+            placeholder="0"
+            ariaLabel="Breakeven offset percent"
+          />
+        </label>
+      </>
     );
   }
 
@@ -3132,18 +3101,17 @@ export function DcaPlaybookForm({
                     setExitClauses(blank);
                     setExitIf(null);
                     setExitRows([]);
-                    applyClassicFlags(blank, kept);
                   } else if (next === "both" && direction !== "both") {
                     const shortHasClassic = shortClauses.some(
                       (clause) =>
                         clause.kind === "take_profit" ||
                         clause.kind === "trailing_stop" ||
-                        clause.kind === "stop_loss",
+                        clause.kind === "stop_loss" ||
+                        clause.kind === "breakeven",
                     );
                     if (!shortHasClassic) {
                       setShortClassic(blankClassicDraft());
                     }
-                    applyClassicFlags(exitClauses, shortClauses);
                   } else if (direction === "both" && next === "short") {
                     copyDcaShortEntryToPrimary();
                     copyShortClassicToPrimary();
@@ -3151,9 +3119,6 @@ export function DcaPlaybookForm({
                     const moved = customStackFromClauses(shortClauses);
                     setExitIf(moved.anchor);
                     setExitRows(moved.rows);
-                    applyClassicFlags(shortClauses, null);
-                  } else if (direction === "both" && next === "long") {
-                    applyClassicFlags(exitClauses, null);
                   }
                   setDirection(next);
                 }}
@@ -3556,15 +3521,14 @@ export function DcaPlaybookForm({
           <input type="hidden" name="stopLossBasis" value={stopLossBasis} />
         </div>
       )}
-      {slLive && breakevenOn ? (
+      {breakevenLive ? (
         <input type="hidden" name="breakeven" value="on" />
-      ) : null}
-      {!slLive || !breakevenOn ? (
+      ) : (
         <div hidden>
           <input type="hidden" name="breakevenActivationPct" value="" />
           <input type="hidden" name="breakevenOffsetPct" value="" />
         </div>
-      ) : null}
+      )}
       {direction === "both" ? (
         <input type="hidden" name="shortClassic" value="on" />
       ) : null}
@@ -3586,7 +3550,7 @@ export function DcaPlaybookForm({
           <input type="hidden" name="shortStopLossPct" value="" />
         </div>
       ) : null}
-      {shortSlLive && shortClassic.breakevenOn ? (
+      {shortBreakevenLive ? (
         <input type="hidden" name="shortBreakeven" value="on" />
       ) : direction === "both" ? (
         <div hidden>
@@ -3613,11 +3577,14 @@ export function DcaPlaybookForm({
             trailingActivationKind: trailActiveKind,
             trailingTriggerPct: trailActiveKind === "percent" ? trailingTriggerPct : "",
             trailingActivation: trailActiveKind === "price" ? trailingTriggerPct : "",
+            breakevenActivationPct,
+            breakevenOffsetPct,
           })}
           priceStyle="dca"
           renderTakeProfit={(slot) => dcaTakeProfitFields("primary", slot)}
           renderTrailingStop={(slot) => dcaTrailingFields("primary", slot)}
           renderStopLoss={(slot) => dcaStopFields("primary", slot)}
+          renderBreakeven={(slot) => dcaBreakevenFields("primary", slot)}
         />
       </BotFormStep>
       ) : null}
@@ -3650,6 +3617,8 @@ export function DcaPlaybookForm({
                     shortClassic.trailActiveKind === "price"
                       ? shortClassic.trailingTriggerPct
                       : "",
+                  breakevenActivationPct: shortClassic.breakevenActivationPct,
+                  breakevenOffsetPct: shortClassic.breakevenOffsetPct,
                 }
               : {
                   takeProfit: takeProfitPct,
@@ -3658,6 +3627,8 @@ export function DcaPlaybookForm({
                   trailingActivationKind: trailActiveKind,
                   trailingTriggerPct: trailActiveKind === "percent" ? trailingTriggerPct : "",
                   trailingActivation: trailActiveKind === "price" ? trailingTriggerPct : "",
+                  breakevenActivationPct,
+                  breakevenOffsetPct,
                 },
           )}
           priceStyle="dca"
@@ -3669,6 +3640,9 @@ export function DcaPlaybookForm({
           }
           renderStopLoss={(slot) =>
             dcaStopFields(direction === "both" ? "short" : "primary", slot)
+          }
+          renderBreakeven={(slot) =>
+            dcaBreakevenFields(direction === "both" ? "short" : "primary", slot)
           }
         />
       </BotFormStep>

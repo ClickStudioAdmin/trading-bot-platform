@@ -9,6 +9,7 @@ import {
   exitRuntimeFromJson,
   openLotsFromFills,
   sideExitActions,
+  type ExitBreakevenMove,
   type ExitClaim,
   type ExitLot,
   type ExitRuntime,
@@ -75,7 +76,8 @@ export async function decideOpenExit(input: {
   firedWebhookId?: string | null;
   nowMs?: number;
   stepQty?: number;
-}): Promise<{ claims: ExitClaim[]; runtime: ExitRuntime; lots: ExitLot[] } | null> {
+  breakevenDone?: boolean;
+}): Promise<{ claims: ExitClaim[]; runtime: ExitRuntime; lots: ExitLot[]; breakeven: ExitBreakevenMove | null } | null> {
   if (!(input.mark != null && input.mark > 0) || !(input.qty > 0)) {
     return null;
   }
@@ -101,6 +103,7 @@ export async function decideOpenExit(input: {
     barsByTimeframe: input.barsByTimeframe,
     firedWebhookId: input.firedWebhookId,
     stepQty: input.stepQty,
+    breakevenDone: input.breakevenDone,
     prices: {
       last: input.last,
       mark: input.mark,

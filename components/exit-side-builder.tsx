@@ -57,10 +57,11 @@ import {
   STRATEGY_CONDITION_CAP,
 } from "@/lib/strategy/expr";
 
-const ACTION_OPTIONS: { value: ClassicExitKind | "close"; label: string }[] = [
+const ACTION_OPTIONS: { value: ClassicExitKind | "breakeven" | "close"; label: string }[] = [
   { value: "take_profit", label: "Take Profit" },
   { value: "trailing_stop", label: "Trailing Stop" },
   { value: "stop_loss", label: "Stop Loss" },
+  { value: "breakeven", label: "Breakeven" },
   { value: "close", label: "Close" },
 ];
 
@@ -117,7 +118,7 @@ function withoutPriceRules(groups: ExitOrGroup[]): ExitOrGroup[] {
 }
 
 function actionValue(clause: ExitBuilderClause): string {
-  if (isClassicExitKind(clause.kind)) {
+  if (isClassicExitKind(clause.kind) || clause.kind === "breakeven") {
     return clause.kind;
   }
   if (clause.kind === "custom") {
@@ -204,6 +205,7 @@ export function ExitSideBuilder({
   renderTakeProfit,
   renderTrailingStop,
   renderStopLoss,
+  renderBreakeven,
   showErrors = false,
   actionName,
   prices = EMPTY_EXIT_PRICES,
@@ -221,6 +223,7 @@ export function ExitSideBuilder({
   renderTakeProfit: (slot: ExitFieldSlot | null) => ReactNode;
   renderTrailingStop: (slot: ExitFieldSlot | null) => ReactNode;
   renderStopLoss: (slot: ExitFieldSlot | null) => ReactNode;
+  renderBreakeven: (slot: ExitFieldSlot | null) => ReactNode;
   showErrors?: boolean;
   /** Posts the action list. Empty when the side still uses the classic columns. */
   actionName?: string;
@@ -256,7 +259,8 @@ export function ExitSideBuilder({
     if (
       value === "take_profit" ||
       value === "trailing_stop" ||
-      value === "stop_loss"
+      value === "stop_loss" ||
+      value === "breakeven"
     ) {
       const rule = priceRuleForKind(value);
       patch(clause.key, (current) => {
@@ -266,6 +270,7 @@ export function ExitSideBuilder({
         return normalizeExitClause({
           ...current,
           kind: value,
+          scope: value === "breakeven" ? { kind: "all" } : current.scope,
           anchor: rule ? { trigger: rule } : current.anchor,
           rows: keepAnchor
             ? [{ key: rowKey(), join: "and", draft: current.anchor }, ...keptRows]
@@ -301,7 +306,7 @@ export function ExitSideBuilder({
     patch(clause.key, (current) => ({ ...emptyExitClause(), key: current.key }));
   }
   function setAnchor(clause: ExitBuilderClause, value: string) {
-    if (isClassicExitKind(clause.kind)) {
+    if (priceRuleForKind(clause.kind)) {
       return;
     }
     if (value === "") {
@@ -353,6 +358,12 @@ export function ExitSideBuilder({
       if (clause.kind === "stop_loss") {
         return renderStopLoss(null);
       }
+      if (clause.kind === "breakeven") {
+        return renderBreakeven(null);
+      }
+      return null;
+    }
+    if (clause.kind === "breakeven") {
       return null;
     }
     if (!isClassicExitKind(clause.kind)) {
@@ -479,7 +490,7 @@ export function ExitSideBuilder({
                   ) : null}
                 </div>
               ) : null}
-              {clause.kind !== "" ? (
+              {clause.kind !== "" && clause.kind !== "breakeven" ? (
                 <div className={`${exitCardGrid} border-t border-line pt-4`}>
                   <label className={labelClass}>
                     <HintLabel text="Applies To" />

@@ -1843,7 +1843,7 @@ function parseDcaShortClassicForm(
   const tpOn = form.get("shortTpOn") === "on";
   const slOn = form.get("shortSlOn") === "on";
   const trailOn = form.get("shortTrailOn") === "on";
-  const breakevenOn = slOn && form.get("shortBreakeven") === "on";
+  const breakevenOn = form.get("shortBreakeven") === "on";
   if (tpOn && takeProfitKind === "atr") {
     if (atrPeriod == null) {
       return { ok: false, error: "Enter a short ATR period." };

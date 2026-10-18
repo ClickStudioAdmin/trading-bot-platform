@@ -971,9 +971,18 @@ export async function replayDcaPlaybook(input: {
           nowMs: bar.timeMs,
           barsByTimeframe: bars,
           prices: triggerPrices,
+          breakevenDone: heldLeg.breakevenDone,
         });
         exitArms[side] = settled.runtime;
         exitLots[side] = settled.lots;
+        if (settled.breakeven && !heldLeg.breakevenDone) {
+          const offset = settled.breakeven.offsetPct;
+          const sl =
+            side === "long"
+              ? heldLeg.entry * (1 + offset / 100)
+              : heldLeg.entry * (1 - offset / 100);
+          legs[side] = { ...heldLeg, breakevenDone: true, slPrice: sl };
+        }
         for (const claim of settled.claims) {
           const current = legs[side];
           const take = Math.min(current.qty, claim.qty);

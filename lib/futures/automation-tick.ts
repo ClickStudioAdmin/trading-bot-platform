@@ -742,9 +742,72 @@ async function commitOwnedExit(input: {
     last,
     barsByTimeframe: input.barsByTimeframe,
     firedWebhookId: input.firedWebhookId,
+    breakevenDone: input.open.breakevenDone,
   });
   if (!settled) {
     return "held";
+  }
+  if (settled.breakeven && !input.open.breakevenDone) {
+    const current = tpslFromRow(input.open);
+    const stop = futuresBreakevenStop({
+      side: input.open.side,
+      entryPrice: input.open.entryPrice,
+      currentStop: current?.stopLoss ?? input.open.stopLoss,
+      offsetPct: settled.breakeven.offsetPct,
+    });
+    if (stop != null && stop > 0) {
+      const reasons = formatBreakevenReason({
+        side: input.open.side,
+        entryPrice: input.open.entryPrice,
+        mark: last,
+        activationPct: settled.breakeven.activationPct,
+        offsetPct: settled.breakeven.offsetPct,
+        stop,
+      });
+      const moved = await runFuturesCommand({
+        actor: {
+          userId: input.account.userId,
+          accountId: input.open.accountId,
+          mode: input.account.mode,
+        },
+        command: {
+          kind: "set-tpsl",
+          positionId: input.open.id,
+          symbol: input.open.symbol,
+          form: new FormData(),
+          reason: reasons,
+          tpsl: {
+            ...(current ?? {
+              takeProfit: input.open.takeProfit,
+              stopLoss: stop,
+              tpTrigger: input.open.tpTrigger,
+              slTrigger: input.open.slTrigger,
+              mode: input.open.tpslMode,
+              tpQty: input.open.tpQty,
+              slQty: input.open.slQty,
+              tpOrderType: input.open.tpOrderType,
+              slOrderType: "market",
+              tpLimitPrice: input.open.tpLimitPrice,
+              slLimitPrice: null,
+            }),
+            stopLoss: stop,
+            slOrderType: "market",
+            slLimitPrice: null,
+          },
+        },
+      });
+      if (moved.ok) {
+        input.open.breakevenDone = true;
+        const supabase = createServiceClient();
+        if (supabase) {
+          await supabase
+            .from("futures_positions")
+            .update({ breakeven_done: true })
+            .eq("id", input.open.id)
+            .eq("status", "open");
+        }
+      }
+    }
   }
   if (settled.claims.length === 0) {
     await saveExitRuntime(input.open.id, settled.runtime);

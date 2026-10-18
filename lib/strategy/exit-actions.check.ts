@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  breakevenExitClause,
   classicExitClause,
   customExitClause,
   emptyExitClause,
@@ -9,6 +10,7 @@ import {
 import {
   clausesFromExitActions,
   emptyExitRuntime,
+  evaluateExitActions,
   exitActionGate,
   exitActionsForSave,
   exitActionsFromJson,
@@ -634,5 +636,79 @@ assert.equal(
   "Enter an activation percent.",
 );
 assert.equal(trailingGateError([flexPercentSaved![1]!], "percent"), null);
+
+const breakevenPrices: ExitSidePrices = {
+  ...prices,
+  breakevenActivationPct: 1,
+  breakevenOffsetPct: 0.2,
+};
+const simpleBreakeven = breakevenExitClause();
+assert.equal(exitSideUsesColumns([simpleBreakeven]), true);
+assert.equal(exitActionsForSave([simpleBreakeven], breakevenPrices), null);
+assert.equal(
+  exitCardsBlockReason([simpleBreakeven, breakevenExitClause()]),
+  "Only one breakeven on a side.",
+);
+const breakevenAndRsi = breakevenExitClause();
+breakevenAndRsi.rows = [
+  {
+    key: "rsi",
+    join: "and",
+    draft: {
+      trigger: "indicator",
+      spec: {
+        kind: "rsi",
+        timeframe: "15",
+        compare: "gte",
+        level: 70,
+        levelTo: null,
+        period: 14,
+        slowPeriod: null,
+        multiplier: null,
+      },
+    },
+  },
+];
+const breakevenSaved = exitActionsForSave([breakevenAndRsi], breakevenPrices);
+assert.equal(breakevenSaved?.[0]?.kind, "breakeven");
+assert.equal(breakevenSaved?.[0]?.breakevenActivationPct, 1);
+assert.equal(breakevenSaved?.[0]?.breakevenOffsetPct, 0.2);
+assert.equal(breakevenSaved?.[0]?.stopLossPct ?? null, null);
+assert.equal(breakevenSaved?.[0]?.scope.kind, "all");
+
+const profitOnly: StoredExitAction = {
+  id: "be",
+  kind: "breakeven",
+  scope: { kind: "all" },
+  groups: [{ anchor: { trigger: "profit" }, rows: [] }],
+  takeProfitPct: null,
+  takeProfitPrice: null,
+  stopLossPct: null,
+  stopLossPrice: null,
+  trailingDistance: null,
+  trailingActivation: null,
+  breakevenActivationPct: 1,
+  breakevenOffsetPct: 0.2,
+};
+function breakevenAt(mark: number, done = false) {
+  return evaluateExitActions({
+    actions: [profitOnly],
+    runtime: emptyExitRuntime(),
+    lots: [{ id: "position", qty: 1, price: 100 }],
+    side: "long",
+    mark,
+    last: mark,
+    entryPrice: 100,
+    nowMs: 1,
+    barsByTimeframe: new Map(),
+    breakevenDone: done,
+  });
+}
+const moved = breakevenAt(102);
+assert.equal(moved.claims.length, 0);
+assert.equal(moved.breakeven?.activationPct, 1);
+assert.equal(moved.breakeven?.offsetPct, 0.2);
+assert.equal(breakevenAt(100.5).breakeven, null);
+assert.equal(breakevenAt(102, true).breakeven, null);
 
 console.log("exit-actions.check ok");

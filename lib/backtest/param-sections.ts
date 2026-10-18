@@ -649,23 +649,20 @@ function optionalGroup(
   return { title, rows };
 }
 
-function nestBreakeven(
-  group: ParamGroup,
-  title: string,
+function breakevenGroup(
   activation: number | null | undefined,
   offset: number | null | undefined,
 ): ParamGroup {
   if (activation == null) {
-    return group;
+    return { rows: [{ label: "Breakeven", value: "Off" }] };
   }
-  const extra: ParamRow[] = [
-    { label: "Move stop to breakeven at %", value: pct(activation) },
-    { label: "Breakeven offset %", value: pct(offset ?? 0) },
-  ];
-  if (!group.title) {
-    return { title, rows: extra };
-  }
-  return { title: group.title, rows: [...group.rows, ...extra] };
+  return {
+    title: "Breakeven",
+    rows: [
+      { label: "Move stop to breakeven at %", value: pct(activation) },
+      { label: "Breakeven offset %", value: pct(offset ?? 0) },
+    ],
+  };
 }
 
 function repeatLevelRows(action: StoredExitAction): ParamRow[] {
@@ -722,16 +719,6 @@ function repeatLevelRows(action: StoredExitAction): ParamRow[] {
       { label: "Basis", value: basisLabel(levels.basis) },
       { label: "Stop loss %", value: levels.target ? pct(levels.target) : "—" },
     ];
-    if (levels.breakeven) {
-      rows.push({
-        label: "Move stop to breakeven at %",
-        value: pct(levels.breakevenActivation),
-      });
-      rows.push({
-        label: "Breakeven offset %",
-        value: pct(levels.breakevenOffset || "0"),
-      });
-    }
     return rows;
   }
   if (action.kind === "trailing_stop") {
@@ -794,6 +781,18 @@ function actionPriceRows(action: StoredExitAction): ParamRow[] {
     }
     return rows;
   }
+  if (action.kind === "breakeven") {
+    return [
+      {
+        label: "Move stop to breakeven at %",
+        value: pct(action.breakevenActivationPct),
+      },
+      {
+        label: "Breakeven offset %",
+        value: pct(action.breakevenOffsetPct ?? 0),
+      },
+    ];
+  }
   return [];
 }
 
@@ -808,18 +807,58 @@ function actionDraftRows(
   return hardExitAnchorRows(parts.filter, templateHardExit(parts.signal), side);
 }
 
+function withSeparateBreakeven(
+  actions: readonly StoredExitAction[],
+): StoredExitAction[] {
+  const listed: StoredExitAction[] = [];
+  for (const action of actions) {
+    if (action.kind === "stop_loss" && action.levels?.breakeven) {
+      listed.push({
+        ...action,
+        levels: {
+          ...action.levels,
+          breakeven: false,
+          breakevenActivation: "",
+          breakevenOffset: "",
+        },
+      });
+      const activation = Number(String(action.levels.breakevenActivation).replace(/,/g, ""));
+      const offset = Number(String(action.levels.breakevenOffset || "0").replace(/,/g, ""));
+      listed.push({
+        id: `${action.id}-breakeven`,
+        kind: "breakeven",
+        scope: { kind: "all" },
+        groups: [{ anchor: { trigger: "profit" }, rows: [] }],
+        takeProfitPct: null,
+        takeProfitPrice: null,
+        stopLossPct: null,
+        stopLossPrice: null,
+        trailingDistance: null,
+        trailingActivation: null,
+        breakevenActivationPct: Number.isFinite(activation) ? activation : null,
+        breakevenOffsetPct: Number.isFinite(offset) ? offset : 0,
+      });
+      continue;
+    }
+    listed.push(action);
+  }
+  return listed;
+}
+
 function exitActionStacks(
   actions: readonly StoredExitAction[],
   side: "long" | "short",
 ): ParamStack[] {
-  return actions.map((action) => {
+  return withSeparateBreakeven(actions).map((action) => {
     const when = action.kind === "close" ? "Fire when" : "Enable when";
     const hasPriceRule = action.groups.some((group) =>
       [group.anchor, ...group.rows].some((draft) => isExitPriceRule(draft.trigger)),
     );
     const rows: ParamRow[] = [
       { label: "Action", value: actionKindLabel(action.kind) },
-      { label: "Applies To", value: scopeLabel(action.scope) },
+      ...(action.kind === "breakeven"
+        ? []
+        : [{ label: "Applies To", value: scopeLabel(action.scope) }]),
       ...(hasPriceRule ? [] : actionPriceRows(action)),
     ];
     if (action.groups.length === 0) {
@@ -942,15 +981,11 @@ function dcaClassicGroups(
       { label: "Trigger %", value: pct(trailingTriggerPct) },
       { label: "Trailing %", value: pct(trailingPct) },
     ]),
-    nestBreakeven(
-      optionalGroup("Stop loss", slOn, [
-        { label: "Basis", value: basisLabel(stopLossBasis) },
-        { label: "Stop loss %", value: pct(stopLossPct) },
-      ]),
-      "Stop loss",
-      breakevenActivationPct,
-      breakevenOffsetPct,
-    ),
+    optionalGroup("Stop loss", slOn, [
+      { label: "Basis", value: basisLabel(stopLossBasis) },
+      { label: "Stop loss %", value: pct(stopLossPct) },
+    ]),
+    breakevenGroup(breakevenActivationPct, breakevenOffsetPct),
   ];
 }
 
@@ -1240,19 +1275,15 @@ function perpsClassicGroups(
           trailing?.activePrice == null ? "Off" : num(trailing.activePrice),
       },
     ]),
-    nestBreakeven(
-      perpsExitLevel(
-        "Stop loss",
-        tpsl?.stopLoss,
-        tpsl?.slKind,
-        tpsl?.slTrigger,
-        tpsl?.slOrderType,
-        tpsl?.slLimitPrice,
-      ),
+    perpsExitLevel(
       "Stop loss",
-      breakevenActivationPct,
-      breakevenOffsetPct,
+      tpsl?.stopLoss,
+      tpsl?.slKind,
+      tpsl?.slTrigger,
+      tpsl?.slOrderType,
+      tpsl?.slLimitPrice,
     ),
+    breakevenGroup(breakevenActivationPct, breakevenOffsetPct),
   ];
 }
 
