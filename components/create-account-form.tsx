@@ -30,10 +30,14 @@ import {
   type StarterFolder,
 } from "@/lib/onboarding/model";
 import {
-  connectionVenuesForDeskType,
+  exchangeCreateAllowed,
+  offeredConnectionVenues,
+  offeredVenues,
+  type ExchangeAccess,
+} from "@/lib/exchanges/availability";
+import {
   getVenue,
   venueAllowsDeskType,
-  venuesForDeskType,
 } from "@/lib/exchanges/venues";
 import { SharedKeyWarning } from "@/components/shared-key-warning";
 import { AppSelect } from "@/components/app-select";
@@ -60,6 +64,7 @@ const DESK_TYPES: DeskType[] = [
 ];
 
 export function CreateAccountForm({
+  exchangeAccess = null,
   connections,
   sharedConnectionIds = [],
   allowSharedKeys = false,
@@ -74,6 +79,7 @@ export function CreateAccountForm({
   onCancel,
   starterFolders = [],
 }: {
+  exchangeAccess?: ExchangeAccess | null;
   connections: ExchangeConnection[];
   sharedConnectionIds?: string[];
   allowSharedKeys?: boolean;
@@ -128,17 +134,30 @@ export function CreateAccountForm({
           return false;
         }
         const venue = getVenue(row.venue);
-        return venue ? venueAllowsDeskType(venue, deskType) : false;
+        if (!venue || !venueAllowsDeskType(venue, deskType)) {
+          return false;
+        }
+        if (!exchangeAccess) {
+          return true;
+        }
+        return exchangeCreateAllowed({
+          cells: exchangeAccess.cells,
+          admin: exchangeAccess.admin,
+          deskType,
+          venueId: row.venue,
+          accountMode: "live",
+          environmentId: row.environment,
+        }).ok;
       }),
-    [allowSharedKeys, connectionRows, deskType, sharedConnectionIds],
+    [allowSharedKeys, connectionRows, deskType, exchangeAccess, sharedConnectionIds],
   );
   const keyVenues = useMemo(
-    () => connectionVenuesForDeskType(deskType),
-    [deskType],
+    () => offeredConnectionVenues(exchangeAccess, deskType),
+    [deskType, exchangeAccess],
   );
   const paperVenues = useMemo(
-    () => venuesForDeskType(deskType),
-    [deskType],
+    () => offeredVenues(exchangeAccess, deskType, "paper"),
+    [deskType, exchangeAccess],
   );
   const selected = liveKeys.find((row) => row.id === connectionId) ?? null;
   const venue =
@@ -194,8 +213,21 @@ export function CreateAccountForm({
   const quotaNotice =
     quotasGated && quotaRow?.allowed ? quotaRow.message : null;
 
+  const venueChoice = exchangeAccess
+    ? exchangeCreateAllowed({
+        cells: exchangeAccess.cells,
+        admin: exchangeAccess.admin,
+        deskType,
+        venueId: venue,
+        accountMode: mode,
+        environmentId: mode === "live" ? track || null : null,
+      })
+    : { ok: true as const };
+  const venueDenied = !venueChoice.ok;
+  const venueNotice = venueChoice.ok ? null : venueChoice.error;
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
-    if (!nameCheck.ok || typeDenied || quotaDenied) {
+    if (!nameCheck.ok || typeDenied || quotaDenied || venueDenied) {
       event.preventDefault();
     }
   }
@@ -231,7 +263,7 @@ export function CreateAccountForm({
     setDeskType(initialDeskType);
     setConnectionId("");
     setPaperVenue((current) => {
-      const allowed = venuesForDeskType(initialDeskType);
+      const allowed = offeredVenues(exchangeAccess, initialDeskType, "paper");
       return allowed.some((row) => row.id === current)
         ? current
         : (allowed[0]?.id ?? "bybit");
@@ -291,7 +323,7 @@ export function CreateAccountForm({
               setConnectionId("");
               setAddStarter(false);
               setStarterIds([]);
-              const allowed = venuesForDeskType(nextType);
+              const allowed = offeredVenues(exchangeAccess, nextType, "paper");
               if (!allowed.some((row) => row.id === paperVenue)) {
                 setPaperVenue(allowed[0]?.id ?? "bybit");
               }
@@ -314,6 +346,7 @@ export function CreateAccountForm({
         <FreeTrialBadge message={typeNotice} />
       ) : null}
       {quotaNotice ? <FreeTrialBadge message={quotaNotice} /> : null}
+      {venueNotice ? <p className="text-sm text-danger">{venueNotice}</p> : null}
       <label className="block text-sm text-ink">
         Name
         <input
@@ -466,11 +499,13 @@ export function CreateAccountForm({
       <div className="flex flex-wrap items-center gap-2">
         <PendingSubmitButton
           pendingLabel="Creating…"
-          disabled={!nameCheck.ok || typeDenied || Boolean(quotaDenied)}
+          disabled={
+            !nameCheck.ok || typeDenied || Boolean(quotaDenied) || venueDenied
+          }
           title={
             typeDenied
               ? typeNotice ?? undefined
-              : quotaDenied?.message ?? undefined
+              : venueNotice ?? quotaDenied?.message ?? undefined
           }
           className="inline-flex items-center gap-2 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
         >

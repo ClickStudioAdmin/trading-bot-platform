@@ -10,6 +10,10 @@ import {
   type DeskType,
 } from "@/lib/accounts/model";
 import {
+  exchangeCreateAllowed,
+  type ExchangeAccess,
+} from "@/lib/exchanges/availability";
+import {
   connectionVenuesForDeskType,
   getVenue,
   parseVenueEnvironment,
@@ -459,6 +463,7 @@ export function setupDeskFromDetails(input: {
   takenNames: readonly string[];
   takenKeys?: readonly string[];
   previous?: SetupDesk | null;
+  exchangeAccess?: ExchangeAccess | null;
 }): { ok: true; desk: SetupDesk } | { ok: false; error: string } {
   const named = validateNewDeskName(input.name, [...input.takenNames]);
   if (!named.ok) {
@@ -482,6 +487,19 @@ export function setupDeskFromDetails(input: {
       return environment;
     }
     environmentId = environment.environment.id;
+  }
+  if (input.exchangeAccess) {
+    const visible = exchangeCreateAllowed({
+      cells: input.exchangeAccess.cells,
+      admin: input.exchangeAccess.admin,
+      deskType: input.deskType,
+      venueId: venue.id,
+      accountMode: input.mode,
+      environmentId: input.mode === "live" ? environmentId : null,
+    });
+    if (!visible.ok) {
+      return visible;
+    }
   }
   const previous = input.previous ?? null;
   const bindingChanged = Boolean(

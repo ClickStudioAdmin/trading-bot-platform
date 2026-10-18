@@ -20,6 +20,9 @@ import {
   parseDeskNameChange,
   withQuery,
 } from "@/lib/accounts/model";
+import { memberIsAdmin } from "@/lib/admin/access";
+import { exchangeCreateAllowed } from "@/lib/exchanges/availability";
+import { loadExchangeAvailability } from "@/lib/exchanges/availability-store";
 import { parseBoundConnectionId } from "@/lib/exchanges/connections";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import {
@@ -124,7 +127,10 @@ export async function switchTradingAccount(formData: FormData) {
 
 export async function createTradingAccount(formData: FormData) {
   const member = await requireVerifiedEmail();
-  const desks = await listTradingAccounts(member.id);
+  const [desks, exchangeCells] = await Promise.all([
+    listTradingAccounts(member.id),
+    loadExchangeAvailability(),
+  ]);
   const fail = (message: string): never =>
     redirect(createDeskErrorPath(formData, message));
   const named = validateNewDeskName(
@@ -177,6 +183,17 @@ export async function createTradingAccount(formData: FormData) {
         );
       }
     }
+  }
+  const exchangeAllowed = exchangeCreateAllowed({
+    cells: exchangeCells,
+    admin: memberIsAdmin(member),
+    deskType: choice.deskType,
+    venueId: choice.venue,
+    accountMode: choice.mode,
+    environmentId: choice.mode === "live" ? venueEnvironment : null,
+  });
+  if (!exchangeAllowed.ok) {
+    return fail(exchangeAllowed.error);
   }
   const quotaDenied = await deniedDeskQuotaMessage(member.id, {
     mode: choice.mode,

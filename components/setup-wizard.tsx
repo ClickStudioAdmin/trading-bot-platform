@@ -53,6 +53,11 @@ import {
   TableLabelButton,
 } from "@/components/table-chrome";
 import { checkExchangeConnection } from "@/lib/exchanges/actions";
+import {
+  offeredEnvironments,
+  offeredVenues,
+  type ExchangeAccess,
+} from "@/lib/exchanges/availability";
 import { getVenue } from "@/lib/exchanges/venues";
 import {
   allowedDeskTypes,
@@ -69,7 +74,6 @@ import {
   ONBOARDING_DESK_TYPES,
   allocateSetupName,
   connectedSetupName,
-  connectedVenuesFor,
   defaultEnvironmentId,
   defaultSetupName,
   SETUP_MAIN_STEPS,
@@ -85,7 +89,6 @@ import {
   foldersForDesk,
   starterArmIdsAfterSelection,
   makeSetupDesk,
-  paperVenuesFor,
   setupDeskDetails,
   setupDeskFromDetails,
   setupScreenId,
@@ -226,10 +229,12 @@ export function SetupWizard({
   initialDraft,
   existingNames,
   folders,
+  exchangeAccess,
 }: {
   initialDraft: SetupDraft;
   existingNames: string[];
   folders: StarterFolder[];
+  exchangeAccess: ExchangeAccess;
 }) {
   const router = useRouter();
   const deskTypeAccess = useDeskTypeAccess();
@@ -695,6 +700,7 @@ export function SetupWizard({
           desks={desks.filter((desk) => desk.mode === "live")}
           onChange={updateDesk}
           takenNames={takenNames}
+          exchangeAccess={exchangeAccess}
         />
       ) : null}
       {screen.main === "bots" && screen.sub === "blocked" ? (
@@ -902,6 +908,7 @@ export function SetupWizard({
       <CreateDeskDialog
         desk={deskEditor.desk}
         desks={desks}
+        exchangeAccess={exchangeAccess}
         takenNames={takenNames(deskEditor.desk?.key)}
         takenKeys={desks
           .filter((row) => row.key !== deskEditor.desk?.key)
@@ -1387,9 +1394,32 @@ function DeskStep({
   );
 }
 
+function offeredEnvironmentId(
+  access: ExchangeAccess,
+  deskType: DeskType,
+  venueId: string,
+  current: string | null,
+): string | null {
+  const venue = getVenue(venueId);
+  if (!venue) {
+    return current;
+  }
+  const environments = offeredEnvironments(access, venue, deskType);
+  if (environments.some((item) => item.id === current)) {
+    return current;
+  }
+  const preferred = defaultEnvironmentId(venueId);
+  return (
+    environments.find((item) => item.id === preferred)?.id ??
+    environments[0]?.id ??
+    null
+  );
+}
+
 function CreateDeskDialog({
   desk,
   desks,
+  exchangeAccess,
   takenNames,
   takenKeys,
   onClose,
@@ -1397,6 +1427,7 @@ function CreateDeskDialog({
 }: {
   desk: SetupDesk | null;
   desks: SetupDesk[];
+  exchangeAccess: ExchangeAccess;
   takenNames: string[];
   takenKeys: string[];
   onClose: () => void;
@@ -1437,8 +1468,8 @@ function CreateDeskDialog({
   const [error, setError] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const [host, setHost] = useState<HTMLDivElement | null>(null);
-  const paperVenues = paperVenuesFor(deskType);
-  const liveVenues = connectedVenuesFor(deskType);
+  const paperVenues = offeredVenues(exchangeAccess, deskType, "paper");
+  const liveVenues = offeredVenues(exchangeAccess, deskType, "connected");
   const showMarket = mode === "paper" && paperVenues.length > 1;
   const venueDef = getVenue(venue);
 
@@ -1504,12 +1535,17 @@ function CreateDeskDialog({
     if (gated && nextRow && !nextRow.allowed) {
       return;
     }
-    const allowed =
-      mode === "paper" ? paperVenuesFor(nextType) : connectedVenuesFor(nextType);
+    const allowed = offeredVenues(
+      exchangeAccess,
+      nextType,
+      mode === "paper" ? "paper" : "connected",
+    );
     const nextVenue =
       allowed.find((item) => item.id === venue)?.id ?? allowed[0]?.id ?? "bybit";
     const nextEnvironment =
-      mode === "live" ? defaultEnvironmentId(nextVenue) : null;
+      mode === "live"
+        ? offeredEnvironmentId(exchangeAccess, nextType, nextVenue, null)
+        : null;
     setDeskType(nextType);
     setVenue(nextVenue);
     setEnvironmentId(nextEnvironment);
@@ -1530,7 +1566,9 @@ function CreateDeskDialog({
           liveVenues[0]?.id ??
           "bybit");
     const nextEnvironment =
-      nextMode === "live" ? defaultEnvironmentId(nextVenue) : null;
+      nextMode === "live"
+        ? offeredEnvironmentId(exchangeAccess, deskType, nextVenue, null)
+        : null;
     setMode(nextMode);
     setVenue(nextVenue);
     setEnvironmentId(nextEnvironment);
@@ -1543,7 +1581,9 @@ function CreateDeskDialog({
 
   function selectVenue(nextVenue: string) {
     const nextEnvironment =
-      mode === "live" ? defaultEnvironmentId(nextVenue) : null;
+      mode === "live"
+        ? offeredEnvironmentId(exchangeAccess, deskType, nextVenue, null)
+        : null;
     setVenue(nextVenue);
     setEnvironmentId(nextEnvironment);
     setConnectionId(null);
@@ -1569,12 +1609,16 @@ function CreateDeskDialog({
       mode,
       name,
       venue,
-      environmentId,
+      environmentId:
+        mode === "live"
+          ? offeredEnvironmentId(exchangeAccess, deskType, venue, environmentId)
+          : null,
       bindLater: mode !== "live" || choice !== "new",
       connectionId: mode === "live" && choice === "new" ? connectionId : null,
       takenNames,
       takenKeys,
       previous: desk,
+      exchangeAccess,
     });
     if (!result.ok) {
       setError(result.error);
@@ -1722,11 +1766,21 @@ function CreateDeskDialog({
                 <label className="block text-sm text-ink">
                   Environment
                   <AppSelect
-                    value={environmentId ?? ""}
+                    value={
+                      offeredEnvironmentId(
+                        exchangeAccess,
+                        deskType,
+                        venue,
+                        environmentId,
+                      ) ?? ""
+                    }
                     onChange={(event) => selectEnvironment(event.target.value)}
                     className={fieldClass}
                   >
-                    {(venueDef?.environments ?? []).map((item) => {
+                    {(venueDef
+                      ? offeredEnvironments(exchangeAccess, venueDef, deskType)
+                      : []
+                    ).map((item) => {
                       const key = quotaKeyForDesk({
                         mode: "live",
                         venueEnvironment: item.id,
@@ -1764,7 +1818,14 @@ function CreateDeskDialog({
               {choice === "new" && !connectionId && venueDef ? (
                 <SetupKeyForm
                   venueId={venueDef.id}
-                  environmentId={environmentId ?? defaultEnvironmentId(venueDef.id)}
+                  environmentId={
+                    offeredEnvironmentId(
+                      exchangeAccess,
+                      deskType,
+                      venueDef.id,
+                      environmentId,
+                    ) ?? defaultEnvironmentId(venueDef.id)
+                  }
                   onSaved={(connection) => {
                     setConnectionId(connection.id);
                     setVenue(connection.venue);
@@ -1824,10 +1885,12 @@ function ExchangeStep({
   desks,
   onChange,
   takenNames,
+  exchangeAccess,
 }: {
   desks: SetupDesk[];
   onChange: (key: string, patch: Partial<SetupDesk>) => void;
   takenNames: (exceptKey?: string) => string[];
+  exchangeAccess: ExchangeAccess;
 }) {
   return (
     <section className="space-y-4">
@@ -1845,6 +1908,7 @@ function ExchangeStep({
         <ExchangeDesk
           key={desk.key}
           desk={desk}
+          exchangeAccess={exchangeAccess}
           onChange={(patch) => {
             const next = { ...desk, ...patch };
             if (
@@ -1871,13 +1935,18 @@ function ExchangeStep({
 
 function ExchangeDesk({
   desk,
+  exchangeAccess,
   onChange,
 }: {
   desk: SetupDesk;
+  exchangeAccess: ExchangeAccess;
   onChange: (patch: Partial<SetupDesk>) => void;
 }) {
-  const venues = connectedVenuesFor(desk.deskType);
+  const venues = offeredVenues(exchangeAccess, desk.deskType, "connected");
   const venue = getVenue(desk.venue) ?? venues[0];
+  const environments = venue
+    ? offeredEnvironments(exchangeAccess, venue, desk.deskType)
+    : [];
   const choice: BindChoice = desk.bindLater ? "later" : "new";
 
   return (
@@ -1897,7 +1966,12 @@ function ExchangeDesk({
               const nextVenue = event.target.value;
               onChange({
                 venue: nextVenue,
-                environmentId: defaultEnvironmentId(nextVenue),
+                environmentId: offeredEnvironmentId(
+                  exchangeAccess,
+                  desk.deskType,
+                  nextVenue,
+                  null,
+                ),
                 connectionId: null,
                 bindLater: true,
               });
@@ -1914,7 +1988,16 @@ function ExchangeDesk({
         <label className="block text-sm text-ink">
           Environment
           <AppSelect
-            value={desk.environmentId ?? ""}
+            value={
+              venue
+                ? (offeredEnvironmentId(
+                    exchangeAccess,
+                    desk.deskType,
+                    venue.id,
+                    desk.environmentId,
+                  ) ?? "")
+                : ""
+            }
             onChange={(event) =>
               onChange({
                 environmentId: event.target.value,
@@ -1924,7 +2007,7 @@ function ExchangeDesk({
             }
             className={fieldClass}
           >
-            {(venue?.environments ?? []).map((item) => (
+            {environments.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.label}
               </option>
@@ -1957,7 +2040,14 @@ function ExchangeDesk({
       {choice === "new" && !desk.connectionId && venue ? (
         <SetupKeyForm
           venueId={venue.id}
-          environmentId={desk.environmentId ?? defaultEnvironmentId(venue.id)}
+          environmentId={
+            offeredEnvironmentId(
+              exchangeAccess,
+              desk.deskType,
+              venue.id,
+              desk.environmentId,
+            ) ?? defaultEnvironmentId(venue.id)
+          }
           onSaved={(connection) => {
             onChange({
               connectionId: connection.id,

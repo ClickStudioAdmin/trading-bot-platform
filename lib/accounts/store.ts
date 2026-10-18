@@ -4,6 +4,7 @@ import {
   DEFAULT_ACCOUNT_NAME,
   DESK_NAME_TAKEN,
   formatDeleteBlockers,
+  parseDeskTypeChoice,
   parseTradingAccountRow,
   type AccountDeleteBlock,
   type DeskType,
@@ -23,6 +24,8 @@ import {
 } from "@/lib/accounts/desk-delete";
 import { countArmedRules } from "@/lib/accounts/overview";
 import { selectPaperEngineSettings } from "@/lib/engine/settings";
+import { exchangeCreateAllowed } from "@/lib/exchanges/availability";
+import { loadExchangeAvailability } from "@/lib/exchanges/availability-store";
 import {
   connectionFitsDesk,
   parseStoredVenueEnvironment,
@@ -205,6 +208,43 @@ async function memberMayShareExchangeKey(userId: string): Promise<boolean> {
   });
 }
 
+async function lockedEnvironmentAllowed(input: {
+  userId: string;
+  accountId: string;
+  venueId: string;
+  environmentId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Auth is not configured." };
+  }
+  const { data, error } = await supabase
+    .from("trading_accounts")
+    .select("desk_type")
+    .eq("id", input.accountId)
+    .eq("user_id", input.userId)
+    .maybeSingle();
+  const deskType = String(
+    (data as { desk_type?: unknown } | null)?.desk_type ?? "",
+  );
+  const typed = parseDeskTypeChoice(deskType);
+  if (error || !typed.ok) {
+    return { ok: false, error: "Could not check that exchange." };
+  }
+  const [admin, cells] = await Promise.all([
+    memberMayShareExchangeKey(input.userId),
+    loadExchangeAvailability(),
+  ]);
+  return exchangeCreateAllowed({
+    cells,
+    admin,
+    deskType: typed.deskType,
+    venueId: input.venueId,
+    accountMode: "live",
+    environmentId: input.environmentId,
+  });
+}
+
 export async function applyDeskBindRules(input: {
   userId: string;
   account: {
@@ -227,6 +267,17 @@ export async function applyDeskBindRules(input: {
   });
   if (!fit.ok) {
     return { error: fit.error };
+  }
+  if (!input.account.venueEnvironment) {
+    const locked = await lockedEnvironmentAllowed({
+      userId: input.userId,
+      accountId: input.account.id,
+      venueId: input.account.venue,
+      environmentId: match.environment,
+    });
+    if (!locked.ok) {
+      return { error: locked.error };
+    }
   }
   const [allowShared, binds] = await Promise.all([
     memberMayShareExchangeKey(input.userId),

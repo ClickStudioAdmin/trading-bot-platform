@@ -1,6 +1,7 @@
 import { SetupModal } from "@/components/setup-modal";
 import { SetupWizard } from "@/components/setup-wizard";
 import { listTradingAccounts } from "@/lib/accounts/store";
+import { loadExchangeAccessForUser } from "@/lib/exchanges/availability-store";
 import { listOnboardingFolders } from "@/lib/onboarding/catalog";
 import { emptySetupDraft } from "@/lib/onboarding/model";
 import {
@@ -10,10 +11,11 @@ import {
 import { redirect } from "next/navigation";
 
 export async function SetupGate({ userId }: { userId: string }) {
-  const [accounts, folders, onboarding] = await Promise.all([
+  const [accounts, folders, onboarding, exchangeAccess] = await Promise.all([
     listTradingAccounts(userId),
     listOnboardingFolders(),
     loadMemberOnboarding(userId),
+    loadExchangeAccessForUser(userId),
   ]);
   const draftIds = new Set(
     (onboarding?.draft.desks ?? [])
@@ -36,6 +38,7 @@ export async function SetupGate({ userId }: { userId: string }) {
           .filter((account) => !draftIds.has(account.id))
           .map((account) => account.name)}
         folders={folders}
+        exchangeAccess={exchangeAccess}
       />
     </SetupModal>
   );
