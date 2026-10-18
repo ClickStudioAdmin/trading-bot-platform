@@ -18,7 +18,19 @@ import {
 export const EXCHANGE_DESK_MODES = ["paper", "demo", "live"] as const;
 export type ExchangeDeskMode = (typeof EXCHANGE_DESK_MODES)[number];
 
-export type ExchangeAvailabilityStatus = "live" | "testing" | "beta";
+export type ExchangeAvailabilityStatus =
+  | "in_development"
+  | "testing"
+  | "beta"
+  | "live";
+
+/** Edit matrix order: In Development, then Testing, Beta, and Live. */
+export const EXCHANGE_STATUS_CHOICES = [
+  ["in_development", "In Development"],
+  ["testing", "Testing"],
+  ["beta", "Beta"],
+  ["live", "Live"],
+] as const satisfies readonly (readonly [ExchangeAvailabilityStatus, string])[];
 
 export type ExchangeAvailabilityCell = {
   venueId: string;
@@ -30,21 +42,43 @@ export type ExchangeAvailabilityCell = {
   testing: boolean;
   /** Members can pick it. The desk shows a beta notice. */
   beta: boolean;
+  /** Off for new desks, including admins. */
+  inDevelopment: boolean;
 };
 
-/** A row is Live, Testing, or Beta. Anything mixed stays Live. */
+export type ExchangeAvailabilityFlags = {
+  live: boolean;
+  testing: boolean;
+  beta: boolean;
+  inDevelopment: boolean;
+};
+
+function flagsFor(status: ExchangeAvailabilityStatus): ExchangeAvailabilityFlags {
+  return {
+    live: status === "live",
+    testing: status === "testing",
+    beta: status === "beta",
+    inDevelopment: status === "in_development",
+  };
+}
+
+/** A row is one status. Anything mixed stays Live. */
 export function exclusiveChoice(
   live: boolean,
   testing: boolean,
   beta = false,
-): { live: boolean; testing: boolean; beta: boolean } {
-  if (beta && !live && !testing) {
-    return { live: false, testing: false, beta: true };
+  inDevelopment = false,
+): ExchangeAvailabilityFlags {
+  if (inDevelopment && !live && !testing && !beta) {
+    return flagsFor("in_development");
   }
-  if (testing && !live && !beta) {
-    return { live: false, testing: true, beta: false };
+  if (beta && !live && !testing && !inDevelopment) {
+    return flagsFor("beta");
   }
-  return { live: true, testing: false, beta: false };
+  if (testing && !live && !beta && !inDevelopment) {
+    return flagsFor("testing");
+  }
+  return flagsFor("live");
 }
 
 export type ExchangeAccess = {
@@ -140,6 +174,7 @@ export function defaultExchangeAvailability(): ExchangeAvailabilityCell[] {
           live: true,
           testing: false,
           beta: false,
+          inDevelopment: false,
         });
       }
     }
@@ -181,6 +216,7 @@ export function parseAvailabilityRow(
     row.live === true,
     row.testing === true,
     row.beta === true,
+    row.in_development === true,
   );
   return {
     venueId,
@@ -189,6 +225,7 @@ export function parseAvailabilityRow(
     live: choice.live,
     testing: choice.testing,
     beta: choice.beta,
+    inDevelopment: choice.inDevelopment,
   };
 }
 
@@ -209,7 +246,7 @@ export function availabilityCounts(
   };
 }
 
-/** Live, Testing, or Beta for one desk type and mode. A missing row stays Live. */
+/** One status for a desk type and mode. A missing row stays Live. */
 export function availabilitySetting(
   cells: readonly ExchangeAvailabilityCell[],
   venueId: string,
@@ -221,11 +258,23 @@ export function availabilitySetting(
     Boolean(cell?.live),
     Boolean(cell?.testing),
     Boolean(cell?.beta),
+    Boolean(cell?.inDevelopment),
   );
+  if (choice.inDevelopment) {
+    return "in_development";
+  }
   if (choice.beta) {
     return "beta";
   }
   return choice.testing ? "testing" : "live";
+}
+
+export function availabilityStatusLabel(
+  status: ExchangeAvailabilityStatus,
+): string {
+  return (
+    EXCHANGE_STATUS_CHOICES.find(([value]) => value === status)?.[1] ?? "Live"
+  );
 }
 
 export function exchangeChoiceLabel(
@@ -304,10 +353,23 @@ export function cellFor(
 }
 
 function flagAllows(
-  flag: { live: boolean; testing: boolean; beta?: boolean },
+  flag: {
+    live: boolean;
+    testing: boolean;
+    beta?: boolean;
+    inDevelopment?: boolean;
+  },
   admin: boolean,
 ): boolean {
-  const choice = exclusiveChoice(flag.live, flag.testing, flag.beta);
+  const choice = exclusiveChoice(
+    flag.live,
+    flag.testing,
+    flag.beta,
+    flag.inDevelopment,
+  );
+  if (choice.inDevelopment) {
+    return false;
+  }
   if (choice.testing) {
     return admin;
   }
@@ -385,7 +447,12 @@ function modeAllowed(
     return { ok: false, error };
   }
   const cell = cellFor(input.cells, input.venueId, input.deskType, mode);
-  const flag = cell ?? { live: true, testing: false, beta: false };
+  const flag = cell ?? {
+    live: true,
+    testing: false,
+    beta: false,
+    inDevelopment: false,
+  };
   if (!flagAllows(flag, input.admin)) {
     return { ok: false, error };
   }
@@ -465,9 +532,10 @@ export function readAvailabilityForm(
       const key = `${deskType}:${mode}`;
       const raw = String(form.get(`availability:${key}`) ?? "");
       const choice = exclusiveChoice(
-        raw !== "testing" && raw !== "beta",
+        raw !== "testing" && raw !== "beta" && raw !== "in_development",
         raw === "testing",
         raw === "beta",
+        raw === "in_development",
       );
       cells.push({
         venueId: venue.id,
@@ -476,6 +544,7 @@ export function readAvailabilityForm(
         live: choice.live,
         testing: choice.testing,
         beta: choice.beta,
+        inDevelopment: choice.inDevelopment,
       });
     }
   }
