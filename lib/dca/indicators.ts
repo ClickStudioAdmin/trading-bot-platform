@@ -9,7 +9,8 @@ export type DcaIndicatorKind =
   | "sma_cross"
   | "bb"
   | "atr_band"
-  | "supertrend";
+  | "supertrend"
+  | "rsi_divergence";
 export type DcaIndicatorCompare =
   | "gte"
   | "lte"
@@ -117,6 +118,7 @@ export const DCA_INDICATOR_KIND_OPTIONS: {
   label: string;
 }[] = [
   { value: "rsi", label: "RSI" },
+  { value: "rsi_divergence", label: "RSI divergence" },
   { value: "macd", label: "MACD" },
   { value: "sma", label: "Price vs SMA" },
   { value: "ema", label: "Price vs EMA" },
@@ -136,6 +138,7 @@ export function dcaIndicatorUsesPeriod(kind: DcaIndicatorKind): boolean {
     kind === "ema" ||
     kind === "sma" ||
     kind === "rsi" ||
+    kind === "rsi_divergence" ||
     kind === "bb" ||
     kind === "atr_band"
   );
@@ -149,7 +152,7 @@ export function defaultDcaIndicatorPeriod(kind: DcaIndicatorKind): number {
   if (kind === "bb") {
     return DEFAULT_DCA_BB_PERIOD;
   }
-  if (kind === "rsi") {
+  if (kind === "rsi" || kind === "rsi_divergence") {
     return DEFAULT_DCA_RSI_PERIOD;
   }
   if (kind === "supertrend" || kind === "atr_band") {

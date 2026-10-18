@@ -869,6 +869,7 @@ assert.deepEqual(
   DCA_INDICATOR_KIND_OPTIONS.map((row) => row.label),
   [
     "RSI",
+    "RSI divergence",
     "MACD",
     "Price vs SMA",
     "Price vs EMA",

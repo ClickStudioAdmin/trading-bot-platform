@@ -15,6 +15,7 @@ export const HARD_EXIT_TRIGGERS = [
   "indicator",
   "trend",
   "webhook",
+  "retrace",
 ] as const;
 export type HardExitTrigger = (typeof HARD_EXIT_TRIGGERS)[number];
 
@@ -77,6 +78,14 @@ export type HardExitDraft =
       price: string;
     }
   | { trigger: "webhook"; webhookId: string }
+  | {
+      trigger: "retrace";
+      source: "last" | "mark" | "index";
+      from: "high" | "low";
+      pct: string;
+      lookback: string;
+      timeframe: import("@/lib/dca/indicators").DcaIndicatorTimeframe;
+    }
   | { trigger: "target" }
   | { trigger: "stop" }
   | { trigger: "trail" }
@@ -126,6 +135,16 @@ export function hardExitForTrigger(
   if (trigger === "webhook") {
     return { trigger: "webhook", webhookId: "" };
   }
+  if (trigger === "retrace") {
+    return {
+      trigger: "retrace",
+      source: "last",
+      from: side === "short" ? "low" : "high",
+      pct: "",
+      lookback: "20",
+      timeframe: "15",
+    };
+  }
   if (trigger === "trend") {
     return {
       trigger: "trend",
@@ -159,6 +178,11 @@ export function hardExitComplete(
   }
   if (draft.trigger === "webhook") {
     return draft.webhookId.trim() !== "";
+  }
+  if (draft.trigger === "retrace") {
+    const pct = Number(draft.pct.replace(/,/g, "").trim());
+    const lookback = Math.trunc(Number(draft.lookback));
+    return pct > 0 && lookback >= 1 && lookback <= 400;
   }
   return draft.spec != null && dcaFilterComplete(draft.spec);
 }
@@ -227,6 +251,9 @@ export function hardExitParts(draft: HardExitDraft | null | undefined): {
     return webhookId
       ? { filter: null, signal: { trigger: "webhook", webhookId } }
       : { filter: null, signal: null };
+  }
+  if (draft.trigger === "retrace") {
+    return { filter: null, signal: null };
   }
   return { filter: draft.spec, signal: null };
 }
@@ -369,6 +396,15 @@ export function writeHardExitFormFields(
     if (draft.webhookId.trim()) {
       form.set(`${prefix}WebhookId`, draft.webhookId.trim());
     }
+    return;
+  }
+  if (draft.trigger === "retrace") {
+    writeDcaFilterFormFields(form, prefix, null);
+    form.set(`${prefix}RetraceSource`, draft.source);
+    form.set(`${prefix}RetraceFrom`, draft.from);
+    form.set(`${prefix}RetracePct`, draft.pct);
+    form.set(`${prefix}RetraceLookback`, draft.lookback);
+    form.set(`${prefix}RetraceTimeframe`, draft.timeframe);
     return;
   }
   writeDcaFilterFormFields(form, prefix, draft.spec);

@@ -22,6 +22,8 @@ import {
   type EntryConditionDraft,
   type EntryStackRow,
 } from "@/components/entry-condition-stack";
+import { ProtectionFields } from "@/components/protection-fields";
+import { RetraceFields } from "@/components/retrace-fields";
 import { useDeskFormStatus } from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { DcaIndicatorKind, DcaIndicatorTimeframe } from "@/lib/dca/indicators";
@@ -52,6 +54,19 @@ import {
 export type { PerpsAddConditionType, PerpsAddOrderGroup };
 
 function entryDraftFromAdd(condition: PerpsAddCondition): EntryConditionDraft {
+  if (condition.type === "retrace") {
+    return {
+      kind: "retrace",
+      source: condition.draft.triggerBy,
+      from: condition.draft.retraceFrom,
+      pct: condition.draft.retracePct,
+      lookback: condition.draft.retraceLookback,
+      timeframe: condition.draft.timeframe,
+    };
+  }
+  if (condition.type === "protection") {
+    return { kind: "unset" };
+  }
   if (condition.type === "price") {
     return {
       kind: "price",
@@ -73,6 +88,12 @@ function entryDraftFromAdd(condition: PerpsAddCondition): EntryConditionDraft {
       period: condition.draft.period,
       slowPeriod: condition.draft.slowPeriod,
       multiplier: condition.draft.multiplier,
+      divergenceWhen: condition.draft.divergenceWhen,
+      divergenceStyle: condition.draft.divergenceStyle,
+      pivotBars: condition.draft.pivotBars,
+      span: condition.draft.span,
+      minPricePct: condition.draft.minPricePct,
+      minRsi: condition.draft.minRsi,
     };
   }
   return { kind: "unset" };
@@ -82,7 +103,9 @@ function parseType(value: string): PerpsAddConditionType {
   return value === "indicator" ||
     value === "trend" ||
     value === "price" ||
-    value === "webhook"
+    value === "retrace" ||
+    value === "webhook" ||
+    value === "protection"
     ? value
     : "";
 }
@@ -412,6 +435,8 @@ function ConditionFields({
             >
               Price Cross
             </option>
+            <option value="retrace">Retrace</option>
+            <option value="protection">Position protection</option>
             <option
               value="webhook"
               disabled={entryKindDisabled({
@@ -445,6 +470,18 @@ function ConditionFields({
             onPeriodChange={(period) => onDraft({ period })}
             onSlowPeriodChange={(slowPeriod) => onDraft({ slowPeriod })}
             onMultiplierChange={(multiplier) => onDraft({ multiplier })}
+            divergenceWhen={draft.divergenceWhen}
+            divergenceStyle={draft.divergenceStyle}
+            pivotBars={draft.pivotBars}
+            span={draft.span}
+            minPricePct={draft.minPricePct}
+            minRsi={draft.minRsi}
+            onDivergenceWhenChange={(divergenceWhen) => onDraft({ divergenceWhen })}
+            onDivergenceStyleChange={(divergenceStyle) => onDraft({ divergenceStyle })}
+            onPivotBarsChange={(pivotBars) => onDraft({ pivotBars })}
+            onSpanChange={(span) => onDraft({ span })}
+            onMinPricePctChange={(minPricePct) => onDraft({ minPricePct })}
+            onMinRsiChange={(minRsi) => onDraft({ minRsi })}
             seriesSlots={slots}
             seriesIndex={slotIndex}
           />
@@ -469,6 +506,54 @@ function ConditionFields({
             onMultiplierChange={(multiplier) => onDraft({ multiplier })}
             seriesSlots={slots}
             seriesIndex={slotIndex}
+          />
+        </div>
+      ) : null}
+      {type === "retrace" ? (
+        <div className={conditionGrid}>
+          <RetraceFields
+            prefix=""
+            draft={{
+              source: draft.triggerBy,
+              from: draft.retraceFrom,
+              pct: draft.retracePct,
+              lookback: draft.retraceLookback,
+              timeframe: draft.timeframe,
+            }}
+            onChange={(next) =>
+              onDraft({
+                triggerBy: next.source,
+                retraceFrom: next.from,
+                retracePct: next.pct,
+                retraceLookback: next.lookback,
+                timeframe: next.timeframe,
+              })
+            }
+            fieldClass={fieldClass}
+            labelClass="flex min-w-0 flex-col gap-1 text-sm text-ink"
+            slots={slots}
+            slotIndex={slotIndex}
+          />
+        </div>
+      ) : null}
+      {type === "protection" ? (
+        <div className={conditionGrid}>
+          <ProtectionFields
+            prefix=""
+            draft={{
+              is: draft.protectionIs,
+              amount: draft.protectionAmount,
+              pct: draft.protectionPct,
+            }}
+            onChange={(next) =>
+              onDraft({
+                protectionIs: next.is,
+                protectionAmount: next.amount,
+                protectionPct: next.pct,
+              })
+            }
+            fieldClass={fieldClass}
+            labelClass="flex min-w-0 flex-col gap-1 text-sm text-ink"
           />
         </div>
       ) : null}

@@ -68,6 +68,7 @@ const CONDITION_OPTIONS: { value: HardExitTrigger; label: string }[] = [
   { value: "indicator", label: "Indicator" },
   { value: "trend", label: "Trend" },
   { value: "price", label: "Price Cross" },
+  { value: "retrace", label: "Retrace" },
   { value: "webhook", label: "Signal Webhook" },
 ];
 
@@ -80,6 +81,7 @@ function isConditionTrigger(value: string): value is HardExitTrigger {
     value === "indicator" ||
     value === "trend" ||
     value === "price" ||
+    value === "retrace" ||
     value === "webhook"
   );
 }
@@ -602,7 +604,7 @@ function ConditionStack({
   const anchorPlaced = placed.find((row) => row.role === "anchor") ?? null;
   const seriesIndex = 0;
   const fixedRule = priceRuleForKind(clause.kind);
-  const disabled = (["price", "indicator", "trend", "webhook"] as const).filter(
+  const disabled = (["price", "indicator", "trend", "webhook", "retrace"] as const).filter(
     (kind) =>
       kind !== clause.anchor.trigger &&
       anchorDisabledKinds(lead, rows, webhookIds).includes(kind),

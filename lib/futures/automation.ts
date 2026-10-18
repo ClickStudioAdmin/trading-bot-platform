@@ -52,6 +52,7 @@ import {
   emptyEntryStack,
   entryStackMatchesWebhook,
 } from "@/lib/strategy/expr";
+import type { RetraceSpec } from "@/lib/strategy/retrace";
 import {
   parsePerpsDirection,
   perpsDirectionFromAction,
@@ -83,8 +84,10 @@ export type FuturesAutomationRule = {
   tpsl: FuturesTpsl | null;
   trailing: FuturesTrailing | null;
   indicator: DcaIndicatorStart | null;
+  retrace?: RetraceSpec | null;
   confirm: DcaFilterSpec | null;
   entryStack: EntryStack;
+  addStack?: EntryStack | null;
   exitIf: DcaFilterSpec | null;
   exitHard?: HardExitSignal | null;
   exitStack?: EntryStack | null;
@@ -119,8 +122,10 @@ export type FuturesAutomationFormValues = {
   tpsl: FuturesTpsl | null;
   trailing: FuturesTrailing | null;
   indicator: DcaIndicatorStart | null;
+  retrace?: RetraceSpec | null;
   confirm: DcaFilterSpec | null;
   entryStack: EntryStack;
+  addStack?: EntryStack | null;
   exitIf: DcaFilterSpec | null;
   exitHard?: HardExitSignal | null;
   exitStack?: EntryStack | null;
@@ -384,6 +389,8 @@ export function parseFuturesAutomationForm(
       return conditions;
     }
     parsed.rule.indicator = conditions.indicator;
+    parsed.rule.retrace = conditions.retrace;
+    parsed.rule.addStack = conditions.addStack;
     parsed.rule.confirm = conditions.confirm;
     parsed.rule.entryStack = conditions.entryStack;
     parsed.rule.exitIf = conditions.exitIf;
@@ -537,6 +544,8 @@ export function writePerpsShortEntryFields(
   }
   writeFuturesConditionFormFields(form, prefix, {
     indicator: leg.indicator,
+    retrace: leg.retrace,
+    addStack: leg.addStack,
     confirm: leg.confirm,
     entryStack: leg.entryStack,
     exitIf: leg.exitIf ?? null,
@@ -626,7 +635,9 @@ export function parseFuturesAutomationFields(input: {
   let entrySource = parseAutomationEntry(input.entrySource);
   if (
     actionParsed.action === "flatten" &&
-    (entrySource === "indicator" || entrySource === "trend")
+    (entrySource === "indicator" ||
+      entrySource === "trend" ||
+      entrySource === "retrace")
   ) {
     entrySource = "price";
   }
@@ -804,6 +815,8 @@ function applyPerpsDirection(
       triggerPrice: triggerPrice.price,
       skipIfOpen: true,
       indicator: conditions.indicator,
+      retrace: conditions.retrace,
+      addStack: conditions.addStack,
       confirm: conditions.confirm,
       entryStack: conditions.entryStack,
       ...(shortExit
@@ -841,7 +854,12 @@ function applyPerpsDirection(
 
 export function parseAutomationEntry(raw: unknown): FuturesAutomationEntry {
   const value = String(raw ?? "").trim().toLowerCase();
-  if (value === "webhook" || value === "indicator" || value === "trend") {
+  if (
+    value === "webhook" ||
+    value === "indicator" ||
+    value === "trend" ||
+    value === "retrace"
+  ) {
     return value;
   }
   return "price";
@@ -1018,6 +1036,8 @@ export function futuresRuleToForm(
     tpsl: rule.tpsl,
     trailing: rule.trailing,
     indicator: rule.indicator,
+    retrace: rule.retrace ?? null,
+    addStack: rule.addStack ?? null,
     confirm: rule.confirm,
     entryStack: rule.entryStack ?? emptyEntryStack(),
     exitIf: rule.exitIf,
@@ -1109,6 +1129,10 @@ function attachRuleConditions(
   if (rule.entrySource === "indicator" || rule.entrySource === "trend") {
     rule.indicator = conditions.indicator;
   }
+  if (rule.entrySource === "retrace") {
+    rule.retrace = conditions.retrace;
+  }
+  rule.addStack = conditions.addStack;
   rule.confirm = conditions.confirm;
   rule.entryStack = conditions.entryStack;
   rule.exitIf = conditions.exitIf;

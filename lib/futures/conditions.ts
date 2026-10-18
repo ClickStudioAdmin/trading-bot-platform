@@ -15,6 +15,17 @@ import {
   exitActionsToJson,
   parseExitActionsField,
 } from "@/lib/strategy/exit-actions";
+import { parseProtectionSpec, protectionMet } from "@/lib/strategy/protection";
+import { parseRsiDivergenceSettings } from "@/lib/strategy/rsi-divergence";
+import {
+  parseRetraceFrom,
+  parseRetraceLookback,
+  parseRetracePct,
+  parseRetraceSource,
+  parseRetraceSpec,
+  retraceMet,
+  type RetraceSpec,
+} from "@/lib/strategy/retrace";
 import {
   hardExitDraftFromStored,
   hardExitSignalFromJson,
@@ -57,6 +68,8 @@ import {
   emptyEntryStack,
   entryStackConflictMessage,
   entryStackError,
+  entryExprMetaFromJson,
+  entryExprToJson,
   entryStackFromJson,
   entryStackMet,
   entryStackTimeframes,
@@ -81,8 +94,11 @@ export type PerpsEntryLeg = {
   triggerPrice: number;
   skipIfOpen: boolean;
   indicator: DcaIndicatorStart | null;
+  retrace?: RetraceSpec | null;
   confirm: DcaFilterSpec | null;
   entryStack: EntryStack;
+  /** Flex additional-order conditions. Sizing stays on the form. */
+  addStack?: EntryStack | null;
   /** Custom exit for the short leg. Absent means the short leg uses the long exit. */
   exitIf?: DcaFilterSpec | null;
   exitHard?: HardExitSignal | null;
@@ -155,7 +171,8 @@ export type FuturesAutomationEntry =
   | "price"
   | "webhook"
   | "indicator"
-  | "trend";
+  | "trend"
+  | "retrace";
 
 export function futuresIndicatorFieldNames(prefix: string): {
   kind: string;
@@ -302,11 +319,54 @@ function parsePriceEntryLeaf(
   };
 }
 
+function parseRetraceEntryLeaf(
+  form: FormData,
+  prefix: string,
+): { ok: true; leaf: StrategyLeaf } | { ok: false; error: string } {
+  const source = parseRetraceSource(form.get(`${prefix}RetraceSource`) ?? "last");
+  const from = parseRetraceFrom(form.get(`${prefix}RetraceFrom`) ?? "high");
+  const pct = parseRetracePct(form.get(`${prefix}RetracePct`));
+  const lookback = parseRetraceLookback(
+    form.get(`${prefix}RetraceLookback`) ?? "20",
+  );
+  const timeframe = parseDcaIndicatorTimeframe(
+    form.get(`${prefix}RetraceTimeframe`) ?? "15",
+  );
+  if (!source || !from || pct == null || lookback == null || !timeframe) {
+    return { ok: false, error: "Enter the retrace percent, lookback, and timeframe." };
+  }
+  return {
+    ok: true,
+    leaf: { kind: "retrace", source, from, pct, lookback, timeframe },
+  };
+}
+
+function parseProtectionEntryLeaf(
+  form: FormData,
+  prefix: string,
+): { ok: true; leaf: StrategyLeaf } | { ok: false; error: string } {
+  const spec = parseProtectionSpec({
+    is: form.get(`${prefix}ProtectionIs`) ?? "protected",
+    amount: form.get(`${prefix}ProtectionAmount`) ?? "entire",
+    pct: form.get(`${prefix}ProtectionPct`),
+  });
+  if (!spec) {
+    return { ok: false, error: "Enter how much of the position must be protected." };
+  }
+  return { ok: true, leaf: { kind: "protection", ...spec } };
+}
+
 function parseTriggerEntryLeaf(
   form: FormData,
   prefix: string,
   source: string,
 ): { ok: true; leaf: StrategyLeaf } | { ok: false; error: string } {
+  if (source === "retrace") {
+    return parseRetraceEntryLeaf(form, prefix);
+  }
+  if (source === "protection") {
+    return parseProtectionEntryLeaf(form, prefix);
+  }
   if (source === "price") {
     return parsePriceEntryLeaf(form, prefix);
   }
@@ -412,6 +472,22 @@ export function writeEntryStackFormFields(
       form.set(`${row}WebhookId`, leaf.webhookId);
       return;
     }
+    if (leaf.kind === "retrace") {
+      form.set(`${row}RetraceSource`, leaf.source);
+      form.set(`${row}RetraceFrom`, leaf.from);
+      form.set(`${row}RetracePct`, String(leaf.pct));
+      form.set(`${row}RetraceLookback`, String(leaf.lookback));
+      form.set(`${row}RetraceTimeframe`, leaf.timeframe);
+      return;
+    }
+    if (leaf.kind === "protection") {
+      form.set(`${row}ProtectionIs`, leaf.is);
+      form.set(`${row}ProtectionAmount`, leaf.amount);
+      if (leaf.pct != null) {
+        form.set(`${row}ProtectionPct`, String(leaf.pct));
+      }
+      return;
+    }
     const names = futuresIndicatorFieldNames(row);
     form.set(names.kind, leaf.start.kind);
     form.set(names.timeframe, leaf.start.timeframe);
@@ -452,6 +528,8 @@ export function parseFuturesConditionForm(
       exitActions: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
       breakevenActivationPct: number | null;
       breakevenOffsetPct: number | null;
+      retrace: RetraceSpec | null;
+      addStack: EntryStack | null;
     }
   | { ok: false; error: string } {
   if (input.closing) {
@@ -466,6 +544,8 @@ export function parseFuturesConditionForm(
       exitActions: null,
       breakevenActivationPct: null,
       breakevenOffsetPct: null,
+      retrace: null,
+      addStack: null,
     };
   }
   const indicator = parseFuturesIndicatorStart(
@@ -541,6 +621,28 @@ export function parseFuturesConditionForm(
   if (!exitActions.ok) {
     return exitActions;
   }
+  const retrace =
+    input.entrySource === "retrace"
+      ? parseRetraceSpec({
+          source: form.get(`${prefix}RetraceSource`) ?? "last",
+          from: form.get(`${prefix}RetraceFrom`),
+          pct: form.get(`${prefix}RetracePct`),
+          lookback: form.get(`${prefix}RetraceLookback`) ?? "20",
+          timeframe: form.get(`${prefix}RetraceTimeframe`) ?? "15",
+        })
+      : null;
+  if (input.entrySource === "retrace" && !retrace) {
+    return { ok: false, error: "Enter the retrace percent, lookback, and timeframe." };
+  }
+  const addRaw = String(form.get(`${prefix}addExpr`) ?? "").trim();
+  let addStack: EntryStack | null = null;
+  if (addRaw) {
+    try {
+      addStack = entryStackFromJson(JSON.parse(addRaw));
+    } catch {
+      return { ok: false, error: "Additional order conditions are incomplete." };
+    }
+  }
   return {
     ok: true,
     indicator: indicator.start,
@@ -554,6 +656,8 @@ export function parseFuturesConditionForm(
     exitActions: exitActions.actions,
     breakevenActivationPct: breakeven.activationPct,
     breakevenOffsetPct: breakeven.offsetPct,
+    retrace,
+    addStack,
   };
 }
 
@@ -567,15 +671,24 @@ export function conditionsFromRow(row: Record<string, unknown>): {
   exitActions: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
   breakevenActivationPct: number | null;
   breakevenOffsetPct: number | null;
+  retrace: RetraceSpec | null;
+  addStack: EntryStack | null;
 } {
   const activation = Number(row.breakeven_activation_pct);
   const offset = Number(row.breakeven_offset_pct);
   const stored = entryStackFromJson(row.entry_expr);
+  const meta = entryExprMetaFromJson(row.entry_expr);
   const confirm = filterFromRow(row, "confirm");
   const entryStack = stored ?? legacyEntryStack(confirm);
   const exitHard = hardExitSignalFromJson(row.exit_hard);
+  const indicator = indicatorStartFromRow(row);
   return {
-    indicator: indicatorStartFromRow(row),
+    indicator:
+      indicator && indicator.kind === "rsi_divergence"
+        ? { ...indicator, divergence: meta.divergence }
+        : indicator,
+    retrace: meta.retrace,
+    addStack: meta.add,
     confirm: stored ? confirmFromEntryStack(stored) : confirm,
     entryStack,
     exitIf: exitHard ? null : filterFromRow(row, "exit_if"),
@@ -597,6 +710,8 @@ export function conditionColumns(rule: {
   breakevenActivationPct?: number | null;
   breakevenOffsetPct?: number | null;
   exitActions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
+  retrace?: RetraceSpec | null;
+  addStack?: EntryStack | null;
 }): Record<string, unknown> {
   const stack =
     rule.entryStack != null
@@ -616,7 +731,23 @@ export function conditionColumns(rule: {
         ? entryStackToJson(rule.exitStack)
         : null,
     exit_actions: exitActionsToJson(rule.exitActions),
-    entry_expr: stack.leaves.length > 0 ? entryStackToJson(stack) : null,
+    entry_expr: (() => {
+      const divergence =
+        rule.indicator?.kind === "rsi_divergence"
+          ? (rule.indicator.divergence ?? null)
+          : null;
+      const hasMeta = Boolean(
+        rule.retrace || divergence || (rule.addStack && rule.addStack.leaves.length > 0),
+      );
+      if (stack.leaves.length === 0 && !hasMeta) {
+        return null;
+      }
+      return entryExprToJson(stack, {
+        retrace: rule.retrace,
+        divergence,
+        add: rule.addStack,
+      });
+    })(),
     breakeven_activation_pct: rule.breakevenActivationPct ?? null,
     breakeven_offset_pct:
       rule.breakevenActivationPct != null
@@ -638,6 +769,8 @@ export function writeFuturesConditionFormFields(
     exitStack?: EntryStack | null;
     breakevenActivationPct?: number | null;
     breakevenOffsetPct?: number | null;
+    retrace?: RetraceSpec | null;
+    addStack?: EntryStack | null;
   },
 ): void {
   const start = rule.indicator;
@@ -660,6 +793,31 @@ export function writeFuturesConditionFormFields(
     if (start.multiplier != null) {
       form.set(names.multiplier, String(start.multiplier));
     }
+    if (start.kind === "rsi_divergence" && start.divergence) {
+      const base = names.kind.endsWith("Kind")
+        ? names.kind.slice(0, -4)
+        : names.kind;
+      form.set(`${base}DivergenceWhen`, start.divergence.when);
+      form.set(`${base}DivergenceStyle`, start.divergence.style);
+      form.set(`${base}PivotBars`, String(start.divergence.pivotBars));
+      form.set(`${base}Span`, String(start.divergence.span));
+      if (start.divergence.minPricePct != null) {
+        form.set(`${base}MinPricePct`, String(start.divergence.minPricePct));
+      }
+      if (start.divergence.minRsi != null) {
+        form.set(`${base}MinRsi`, String(start.divergence.minRsi));
+      }
+    }
+  }
+  if (rule.retrace) {
+    form.set(`${prefix}RetraceSource`, rule.retrace.source);
+    form.set(`${prefix}RetraceFrom`, rule.retrace.from);
+    form.set(`${prefix}RetracePct`, String(rule.retrace.pct));
+    form.set(`${prefix}RetraceLookback`, String(rule.retrace.lookback));
+    form.set(`${prefix}RetraceTimeframe`, rule.retrace.timeframe);
+  }
+  if (rule.addStack && rule.addStack.leaves.length > 0) {
+    form.set(`${prefix}addExpr`, JSON.stringify(entryStackToJson(rule.addStack)));
   }
   if (rule.entryStack) {
     writeEntryStackFormFields(form, prefix, rule.entryStack);
@@ -704,6 +862,8 @@ export function writeFuturesConditionFormFields(
 export function futuresAutomationTimeframes(rule: {
   entrySource: FuturesAutomationEntry;
   indicator?: DcaIndicatorStart | null;
+  retrace?: RetraceSpec | null;
+  addStack?: EntryStack | null;
   confirm?: DcaFilterSpec | null;
   entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
@@ -723,6 +883,14 @@ export function futuresAutomationTimeframes(rule: {
   ) {
     add(rule.indicator.timeframe);
   }
+  if (rule.entrySource === "retrace" && rule.retrace) {
+    add(rule.retrace.timeframe);
+  }
+  if (rule.addStack) {
+    for (const timeframe of entryStackTimeframes(rule.addStack)) {
+      add(timeframe);
+    }
+  }
   const stack = resolveEntryStack(rule.entryStack, rule.confirm);
   for (const timeframe of entryStackTimeframes(stack)) {
     add(timeframe);
@@ -734,6 +902,14 @@ export function futuresAutomationTimeframes(rule: {
       short.indicator
     ) {
       add(short.indicator.timeframe);
+    }
+    if (short.entrySource === "retrace" && short.retrace) {
+      add(short.retrace.timeframe);
+    }
+    if (short.addStack) {
+      for (const timeframe of entryStackTimeframes(short.addStack)) {
+        add(timeframe);
+      }
     }
     const shortStack = resolveEntryStack(short.entryStack, short.confirm);
     for (const timeframe of entryStackTimeframes(shortStack)) {
@@ -827,8 +1003,10 @@ function barsForTimeframe(
 export function futuresStartMet(input: {
   entrySource: FuturesAutomationEntry;
   indicator?: DcaIndicatorStart | null;
+  retrace?: RetraceSpec | null;
   side: FuturesSide;
   price: number | null;
+  prices?: { last: number | null; mark: number | null; index: number | null } | null;
   triggerCompare: "gte" | "lte";
   triggerPrice: number;
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
@@ -852,6 +1030,17 @@ export function futuresStartMet(input: {
       ? input.price >= input.triggerPrice
       : input.price <= input.triggerPrice;
   }
+  if (input.entrySource === "retrace") {
+    const spec = input.retrace;
+    if (!spec) {
+      return false;
+    }
+    const quoted = input.prices
+      ? triggerPrice(spec.source, input.prices)
+      : input.price;
+    const bars = barsForTimeframe(input.barsByTimeframe, spec.timeframe);
+    return retraceMet({ spec, price: quoted, bars });
+  }
   const start = input.indicator;
   if (!start) {
     return false;
@@ -866,6 +1055,7 @@ export function futuresStartMet(input: {
     indicatorPeriod: start.period,
     indicatorSlowPeriod: start.slowPeriod,
     indicatorMultiplier: start.multiplier,
+    divergence: start.divergence,
     clipsFilled: 0,
     closes: bars.map((row) => row.close),
     bars,
@@ -908,6 +1098,8 @@ export function entryLeafMet(input: {
   prices?: { last: number | null; mark: number | null; index: number | null } | null;
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
   firedWebhookId?: string | null;
+  /** Open size and the largest protective stop. Flat stays unmet. */
+  protection?: { openQty: number | null; provenPct: number | null } | null;
 }): boolean {
   const leaf = input.leaf;
   if (leaf.kind === "filter") {
@@ -927,6 +1119,18 @@ export function entryLeafMet(input: {
   if (leaf.kind === "webhook") {
     return input.firedWebhookId != null && input.firedWebhookId === leaf.webhookId;
   }
+  if (leaf.kind === "retrace") {
+    const price = quotedPrice(leaf.source, input.price, input.prices);
+    const bars = barsForTimeframe(input.barsByTimeframe, leaf.timeframe);
+    return retraceMet({ spec: leaf, price, bars });
+  }
+  if (leaf.kind === "protection") {
+    return protectionMet({
+      spec: leaf,
+      openQty: input.protection?.openQty ?? null,
+      provenPct: input.protection?.provenPct ?? null,
+    });
+  }
   const bars = barsForTimeframe(input.barsByTimeframe, leaf.start.timeframe);
   return dcaSeriesStartEval({
     startKind: leaf.kind,
@@ -937,6 +1141,7 @@ export function entryLeafMet(input: {
     indicatorPeriod: leaf.start.period,
     indicatorSlowPeriod: leaf.start.slowPeriod,
     indicatorMultiplier: leaf.start.multiplier,
+    divergence: leaf.start.divergence,
     clipsFilled: 0,
     closes: bars.map((row) => row.close),
     bars,
@@ -951,6 +1156,7 @@ export function futuresEntryConditionMet(input: {
     entryStack?: EntryStack | null;
     triggerCompare: "gte" | "lte";
     triggerPrice: number;
+    retrace?: RetraceSpec | null;
     webhookId?: string | null;
     action?: FuturesAction;
     closeSide?: FuturesSide | null;
@@ -964,8 +1170,10 @@ export function futuresEntryConditionMet(input: {
   const start = futuresStartMet({
     entrySource: input.rule.entrySource,
     indicator: input.rule.indicator,
+    retrace: input.rule.retrace,
     side: input.side,
     price: input.price,
+    prices: input.prices,
     triggerCompare: input.rule.triggerCompare,
     triggerPrice: input.rule.triggerPrice,
     barsByTimeframe: input.barsByTimeframe,
@@ -1070,6 +1278,11 @@ function indicatorStartFromRaw(raw: unknown): DcaIndicatorStart | null {
   if (row.multiplier != null && multiplier == null) {
     return null;
   }
+  const divergence =
+    kind === "rsi_divergence" ? parseRsiDivergenceSettings(row.divergence) : null;
+  if (kind === "rsi_divergence" && !divergence) {
+    return null;
+  }
   return {
     kind,
     timeframe,
@@ -1078,6 +1291,7 @@ function indicatorStartFromRaw(raw: unknown): DcaIndicatorStart | null {
     period,
     slowPeriod,
     multiplier,
+    divergence,
   };
 }
 
@@ -1099,7 +1313,12 @@ export function shortEntryToJson(leg: PerpsEntryLeg): Record<string, unknown> {
           period: leg.indicator.period,
           slowPeriod: leg.indicator.slowPeriod,
           multiplier: leg.indicator.multiplier ?? null,
+          divergence: leg.indicator.divergence ?? null,
         }
+      : null,
+    retrace: leg.retrace ?? null,
+    add: leg.addStack && leg.addStack.leaves.length > 0
+      ? entryStackToJson(leg.addStack)
       : null,
     entryStack: entryStackToJson(leg.entryStack),
     ...(perpsLegHasOwnExit(leg)
@@ -1128,7 +1347,8 @@ export function shortEntryFromJson(raw: unknown): PerpsEntryLeg | null {
     source !== "price" &&
     source !== "indicator" &&
     source !== "trend" &&
-    source !== "webhook"
+    source !== "webhook" &&
+    source !== "retrace"
   ) {
     return null;
   }
@@ -1156,6 +1376,11 @@ export function shortEntryFromJson(raw: unknown): PerpsEntryLeg | null {
   if ((source === "indicator" || source === "trend") && !indicator) {
     return null;
   }
+  const retrace = source === "retrace" ? parseRetraceSpec(row.retrace) : null;
+  if (source === "retrace" && !retrace) {
+    return null;
+  }
+  const addStack = row.add == null ? null : entryStackFromJson(row.add);
   const stack =
     row.entryStack == null
       ? emptyEntryStack()
@@ -1181,6 +1406,8 @@ export function shortEntryFromJson(raw: unknown): PerpsEntryLeg | null {
     triggerPrice: triggerPrice > 0 ? triggerPrice : 1,
     skipIfOpen: row.skipIfOpen === true,
     indicator,
+    retrace,
+    addStack,
     confirm: confirmFromEntryStack(stack),
     entryStack: stack,
     ...exit,

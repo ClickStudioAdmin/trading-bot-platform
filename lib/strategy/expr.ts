@@ -19,6 +19,22 @@ import {
   SERIES_CONFLICT_MESSAGE,
   type ConflictClaim,
 } from "@/lib/strategy/conflicts";
+import {
+  parseProtectionSpec,
+  type ProtectionAmount,
+  type ProtectionIs,
+} from "@/lib/strategy/protection";
+import {
+  parseRetraceSpec,
+  retraceClaim,
+  type RetraceFrom,
+  type RetraceSource,
+  type RetraceSpec,
+} from "@/lib/strategy/retrace";
+import {
+  parseRsiDivergenceSettings,
+  type RsiDivergenceSettings,
+} from "@/lib/strategy/rsi-divergence";
 
 export { SERIES_CONFLICT_MESSAGE, type ConflictClaim };
 
@@ -51,13 +67,37 @@ export type StrategyWebhookLeaf = {
   webhookId: string;
 };
 
+export type StrategyRetraceLeaf = {
+  kind: "retrace";
+  source: RetraceSource;
+  from: RetraceFrom;
+  pct: number;
+  lookback: number;
+  timeframe: DcaIndicatorTimeframe;
+};
+
+export type StrategyProtectionLeaf = {
+  kind: "protection";
+  is: ProtectionIs;
+  amount: ProtectionAmount;
+  pct: number | null;
+};
+
 export type StrategyLeaf =
   | StrategyFilterLeaf
   | StrategyPriceLeaf
   | StrategyIndicatorLeaf
-  | StrategyWebhookLeaf;
+  | StrategyWebhookLeaf
+  | StrategyRetraceLeaf
+  | StrategyProtectionLeaf;
 
-export type StrategyTriggerKind = "price" | "indicator" | "trend" | "webhook";
+export type StrategyTriggerKind =
+  | "price"
+  | "indicator"
+  | "trend"
+  | "webhook"
+  | "retrace"
+  | "protection";
 
 /** One slot in the entry expression. Index 0 is the initial trigger. */
 export type EntryConflictSlot = {
@@ -140,6 +180,24 @@ export function entryStackMet(input: {
   return groups.some((group) => group.every(Boolean));
 }
 
+/**
+ * Additional-order stack. The first leaf is the trigger, so an Or group
+ * does not pass just because a dummy lead is true.
+ */
+export function addStackMet(input: {
+  stack: EntryStack;
+  leaves: readonly boolean[];
+}): boolean {
+  if (input.stack.leaves.length === 0) {
+    return true;
+  }
+  return entryStackMet({
+    trigger: input.leaves[0] === true,
+    leaves: input.leaves.slice(1),
+    joins: input.stack.joins.slice(1),
+  });
+}
+
 export function strategyLeafTimeframe(
   leaf: StrategyLeaf,
 ): DcaIndicatorTimeframe | null {
@@ -148,6 +206,9 @@ export function strategyLeafTimeframe(
   }
   if (leaf.kind === "indicator" || leaf.kind === "trend") {
     return leaf.start.timeframe;
+  }
+  if (leaf.kind === "retrace") {
+    return leaf.timeframe;
   }
   return null;
 }
@@ -193,7 +254,13 @@ export function entryKindDisabled(input: {
   kind: StrategyTriggerKind;
   webhookIds?: readonly string[];
 }): boolean {
-  if (input.kind === "indicator" || input.kind === "trend" || input.kind === "price") {
+  if (
+    input.kind === "indicator" ||
+    input.kind === "trend" ||
+    input.kind === "price" ||
+    input.kind === "retrace" ||
+    input.kind === "protection"
+  ) {
     return false;
   }
   const slots = slotsWithJoin(input.slots, input.index, null);
@@ -340,6 +407,12 @@ export function claimFromLeaf(leaf: StrategyLeaf): ConflictClaim | null {
   if (leaf.kind === "webhook") {
     return null;
   }
+  if (leaf.kind === "retrace") {
+    return retraceClaim(leaf);
+  }
+  if (leaf.kind === "protection") {
+    return null;
+  }
   if (leaf.kind === "filter") {
     return indicatorClaim({
       surface: "filter",
@@ -351,6 +424,7 @@ export function claimFromLeaf(leaf: StrategyLeaf): ConflictClaim | null {
       period: leaf.spec.period,
       slowPeriod: leaf.spec.slowPeriod,
       multiplier: leaf.spec.multiplier,
+      when: leaf.spec.divergence?.when,
     });
   }
   return indicatorClaim({
@@ -362,6 +436,7 @@ export function claimFromLeaf(leaf: StrategyLeaf): ConflictClaim | null {
     period: leaf.start.period,
     slowPeriod: leaf.start.slowPeriod,
     multiplier: leaf.start.multiplier,
+    when: leaf.start.divergence?.when,
   });
 }
 
@@ -492,6 +567,24 @@ export function entryStackToJson(stack: EntryStack): {
       if (leaf.kind === "webhook") {
         return { kind: "webhook", webhookId: leaf.webhookId };
       }
+      if (leaf.kind === "retrace") {
+        return {
+          kind: "retrace",
+          source: leaf.source,
+          from: leaf.from,
+          pct: leaf.pct,
+          lookback: leaf.lookback,
+          timeframe: leaf.timeframe,
+        };
+      }
+      if (leaf.kind === "protection") {
+        return {
+          kind: "protection",
+          is: leaf.is,
+          amount: leaf.amount,
+          pct: leaf.pct,
+        };
+      }
       return {
         kind: leaf.kind,
         start: leaf.start,
@@ -503,6 +596,7 @@ export function entryStackToJson(stack: EntryStack): {
 
 const LEAF_INDICATOR_KINDS = [
   "rsi",
+  "rsi_divergence",
   "macd",
   "ema_cross",
   "ema",
@@ -566,6 +660,13 @@ function indicatorLeafFromRaw(
   if (row.multiplier != null && multiplier == null) {
     return null;
   }
+  const divergence =
+    indicatorKind === "rsi_divergence"
+      ? parseRsiDivergenceSettings(row.divergence)
+      : null;
+  if (indicatorKind === "rsi_divergence" && !divergence) {
+    return null;
+  }
   return {
     kind,
     start: {
@@ -576,6 +677,7 @@ function indicatorLeafFromRaw(
       period,
       slowPeriod,
       multiplier,
+      ...(divergence ? { divergence } : {}),
     },
   };
 }
@@ -649,6 +751,12 @@ export function entryStackFromJson(raw: unknown): EntryStack | null {
     } else if (kind === "webhook") {
       const webhookId = String(record.webhookId ?? "").trim();
       parsed = webhookId ? { kind: "webhook", webhookId } : null;
+    } else if (kind === "retrace") {
+      const spec = parseRetraceSpec(record);
+      parsed = spec ? { kind: "retrace", ...spec } : null;
+    } else if (kind === "protection") {
+      const spec = parseProtectionSpec(record);
+      parsed = spec ? { kind: "protection", ...spec } : null;
     } else if (kind === "indicator" || kind === "trend") {
       parsed = indicatorLeafFromRaw(kind, record.start);
     }
@@ -663,6 +771,52 @@ export function entryStackFromJson(raw: unknown): EntryStack | null {
     return null;
   }
   return stack;
+}
+
+export type EntryExprMeta = {
+  retrace: RetraceSpec | null;
+  divergence: RsiDivergenceSettings | null;
+  add: EntryStack | null;
+};
+
+export function emptyEntryExprMeta(): EntryExprMeta {
+  return { retrace: null, divergence: null, add: null };
+}
+
+export type EntryExprJson = ReturnType<typeof entryStackToJson> & {
+  retrace?: RetraceSpec;
+  divergence?: RsiDivergenceSettings;
+  add?: ReturnType<typeof entryStackToJson>;
+};
+
+/** Stack plus the lead retrace, lead RSI divergence, and additional-order stack. */
+export function entryExprToJson(
+  stack: EntryStack,
+  meta?: Partial<EntryExprMeta> | null,
+): EntryExprJson {
+  const body: EntryExprJson = entryStackToJson(stack);
+  if (meta?.retrace) {
+    body.retrace = meta.retrace;
+  }
+  if (meta?.divergence) {
+    body.divergence = meta.divergence;
+  }
+  if (meta?.add && meta.add.leaves.length > 0) {
+    body.add = entryStackToJson(meta.add);
+  }
+  return body;
+}
+
+export function entryExprMetaFromJson(raw: unknown): EntryExprMeta {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return emptyEntryExprMeta();
+  }
+  const row = raw as Record<string, unknown>;
+  return {
+    retrace: parseRetraceSpec(row.retrace),
+    divergence: parseRsiDivergenceSettings(row.divergence),
+    add: entryStackFromJson(row.add),
+  };
 }
 
 export function formatEntryWithStack(

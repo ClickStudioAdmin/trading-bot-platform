@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { entryRowsMissing } from "@/components/entry-condition-stack";
 import {
   initialPerpsEntryDrafts,
   perpsEntryDraftMissing,
@@ -111,6 +112,16 @@ assert.equal(
     false,
   ),
   false,
+);
+assert.equal(
+  entryRowsMissing([{ draft: { kind: "unset" } }]),
+  false,
+);
+assert.equal(
+  entryRowsMissing([
+    { draft: { kind: "price", triggerBy: "last", compare: "gte", price: "" } },
+  ]),
+  true,
 );
 assert.equal(
   perpsEntryDraftMissing(

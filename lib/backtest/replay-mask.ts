@@ -34,6 +34,8 @@ import {
   type StrategyLeaf,
 } from "@/lib/strategy/expr";
 import type { PerpsTemplateRecipe } from "@/lib/templates/recipe";
+import { retraceMet, type RetraceSpec } from "@/lib/strategy/retrace";
+import { rsiDivergenceMet } from "@/lib/strategy/rsi-divergence";
 import { intervalMs } from "./model";
 
 export type ReplayEntryInput = {
@@ -44,6 +46,7 @@ export type ReplayEntryInput = {
   indicator: DcaIndicatorStart | null;
   confirm: DcaFilterSpec | null;
   entryStack: EntryStack | null;
+  retrace?: RetraceSpec | null;
 };
 
 type Frame = {
@@ -172,9 +175,15 @@ export class ReplayBook {
         ? price >= input.triggerPrice
         : price <= input.triggerPrice;
     }
+    if (input.entrySource === "retrace") {
+      return this.retraceAt(input.retrace, index, price);
+    }
     const start = input.indicator;
     if (!start) {
       return false;
+    }
+    if (start.kind === "rsi_divergence") {
+      return this.divergenceAt(start, index);
     }
     return this.seriesStartAt(start, input.side, index);
   }
@@ -194,8 +203,14 @@ export class ReplayBook {
       }
       return leaf.compare === "gte" ? price >= leaf.price : price <= leaf.price;
     }
-    if (leaf.kind === "webhook") {
+    if (leaf.kind === "webhook" || leaf.kind === "protection") {
       return false;
+    }
+    if (leaf.kind === "retrace") {
+      return this.retraceAt(leaf, index, price);
+    }
+    if (leaf.start.kind === "rsi_divergence") {
+      return this.divergenceAt(leaf.start, index);
     }
     return this.seriesStartAt(leaf.start, side, index);
   }
@@ -214,6 +229,15 @@ export class ReplayBook {
         return false;
       }
       return leaf.compare === "gte" ? price >= leaf.price : price <= leaf.price;
+    }
+    if (leaf.kind === "retrace") {
+      return this.retraceAt(leaf, index, price);
+    }
+    if (
+      (leaf.kind === "indicator" || leaf.kind === "trend") &&
+      leaf.start.kind === "rsi_divergence"
+    ) {
+      return this.divergenceAt(leaf.start, index);
     }
     return false;
   }
@@ -255,6 +279,14 @@ export class ReplayBook {
   ): boolean {
     if (end < 0) {
       return false;
+    }
+    if (spec.kind === "rsi_divergence") {
+      const frame = this.frame(spec.timeframe);
+      return rsiDivergenceMet({
+        bars: frame.bars.slice(0, end + 1),
+        period: spec.period,
+        settings: spec.divergence,
+      });
     }
     if (spec.kind === "atr_band") {
       return this.atrBandAt(
@@ -503,6 +535,39 @@ export class ReplayBook {
       return price <= lower;
     }
     return price >= upper;
+  }
+
+  private retraceAt(
+    spec: RetraceSpec | null | undefined,
+    index: number,
+    price: number,
+  ): boolean {
+    if (!spec || !(price > 0)) {
+      return false;
+    }
+    const frame = this.frame(spec.timeframe);
+    const end = frame.closedEnd[index] ?? -1;
+    if (end < 0) {
+      return false;
+    }
+    return retraceMet({
+      spec,
+      price,
+      bars: frame.bars.slice(0, end + 1),
+    });
+  }
+
+  private divergenceAt(start: DcaIndicatorStart, index: number): boolean {
+    const frame = this.frame(start.timeframe);
+    const end = frame.closedEnd[index] ?? -1;
+    if (end < 0) {
+      return false;
+    }
+    return rsiDivergenceMet({
+      bars: frame.bars.slice(0, end + 1),
+      period: start.period,
+      settings: start.divergence,
+    });
   }
 
   private frame(timeframe: DcaIndicatorTimeframe): Frame {

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { NewBotLink } from "@/components/quota-access";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -68,7 +67,7 @@ import {
 import {
   EntryConditionStack,
   entryConflictSlots,
-  entryDraftComplete,
+  entryRowsMissing,
   entryRowsFromSources,
   type EntryStackRow,
 } from "@/components/entry-condition-stack";
@@ -82,6 +81,8 @@ import {
 } from "@/components/entry-group-order";
 import { positiveSizingText } from "@/lib/futures/perps-add-condition";
 import { indicatorClaim, priceClaim, type ConflictClaim } from "@/lib/strategy/conflicts";
+import { retraceClaim } from "@/lib/strategy/retrace";
+import { RetraceFields, blankRetraceDraft, type RetraceDraft } from "@/components/retrace-fields";
 import {
   entryKindDisabled,
   entryWebhookIdDisabled,
@@ -378,6 +379,8 @@ function dcaStartDraftMissing(input: {
   multiplier: string;
   armPrice: string;
   webhookId: string;
+  retracePct?: string;
+  retraceLookback?: string;
 }): boolean {
   if (input.kind === "") {
     return true;
@@ -387,6 +390,11 @@ function dcaStartDraftMissing(input: {
   }
   if (input.kind === "webhook") {
     return input.webhookId.trim() === "";
+  }
+  if (input.kind === "retrace") {
+    const pct = Number(String(input.retracePct ?? "").replace(/,/g, "").trim());
+    const lookback = Number(String(input.retraceLookback ?? "").replace(/,/g, "").trim());
+    return !(pct > 0) || !(lookback >= 1);
   }
   if (input.kind === "indicator" || input.kind === "trend") {
     return indicatorDraftMissing({
@@ -1360,6 +1368,78 @@ export function DcaPlaybookForm({
   const [shortEntryRows, setShortEntryRows] = useState<EntryStackRow[]>(() =>
     entryRowsFromSources(source?.shortEntryStack, source?.shortConfirm),
   );
+  const [retrace, setRetrace] = useState<RetraceDraft>(() => ({
+    ...blankRetraceDraft(source?.direction === "short" ? "short" : "long"),
+    ...(source?.retrace
+      ? {
+          source: source.retrace.source,
+          from: source.retrace.from,
+          pct: String(source.retrace.pct),
+          lookback: String(source.retrace.lookback),
+          timeframe: source.retrace.timeframe,
+        }
+      : {}),
+  }));
+  const [shortRetrace, setShortRetrace] = useState<RetraceDraft>(() => ({
+    ...blankRetraceDraft("short"),
+    ...(source?.shortRetrace
+      ? {
+          source: source.shortRetrace.source,
+          from: source.shortRetrace.from,
+          pct: String(source.shortRetrace.pct),
+          lookback: String(source.shortRetrace.lookback),
+          timeframe: source.shortRetrace.timeframe,
+        }
+      : {}),
+  }));
+  const [divergenceWhen, setDivergenceWhen] = useState(
+    source?.leadDivergence?.when ?? "bullish",
+  );
+  const [divergenceStyle, setDivergenceStyle] = useState(
+    source?.leadDivergence?.style ?? "regular",
+  );
+  const [pivotBars, setPivotBars] = useState(
+    String(source?.leadDivergence?.pivotBars ?? 5),
+  );
+  const [divergenceSpan, setDivergenceSpan] = useState(
+    String(source?.leadDivergence?.span ?? 50),
+  );
+  const [minPricePct, setMinPricePct] = useState(
+    source?.leadDivergence?.minPricePct == null
+      ? ""
+      : String(source.leadDivergence.minPricePct),
+  );
+  const [minRsi, setMinRsi] = useState(
+    source?.leadDivergence?.minRsi == null ? "" : String(source.leadDivergence.minRsi),
+  );
+  const [shortDivergenceWhen, setShortDivergenceWhen] = useState(
+    source?.shortLeadDivergence?.when ?? "bearish",
+  );
+  const [shortDivergenceStyle, setShortDivergenceStyle] = useState(
+    source?.shortLeadDivergence?.style ?? "regular",
+  );
+  const [shortPivotBars, setShortPivotBars] = useState(
+    String(source?.shortLeadDivergence?.pivotBars ?? 5),
+  );
+  const [shortDivergenceSpan, setShortDivergenceSpan] = useState(
+    String(source?.shortLeadDivergence?.span ?? 50),
+  );
+  const [shortMinPricePct, setShortMinPricePct] = useState(
+    source?.shortLeadDivergence?.minPricePct == null
+      ? ""
+      : String(source.shortLeadDivergence.minPricePct),
+  );
+  const [shortMinRsi, setShortMinRsi] = useState(
+    source?.shortLeadDivergence?.minRsi == null
+      ? ""
+      : String(source.shortLeadDivergence.minRsi),
+  );
+  const [addRows, setAddRows] = useState<EntryStackRow[]>(() =>
+    entryRowsFromSources(source?.addStack, null),
+  );
+  const [shortAddRows, setShortAddRows] = useState<EntryStackRow[]>(() =>
+    entryRowsFromSources(source?.shortAddStack, null),
+  );
   const [exitIf, setExitIf] = useState<HardExitDraft | null>(() =>
     hardExitDraftFromStored(source?.exitIf, source?.exitHard),
   );
@@ -2006,6 +2086,8 @@ export function DcaPlaybookForm({
       multiplier: indicatorMultiplier,
       armPrice,
       webhookId,
+      retracePct: retrace.pct,
+      retraceLookback: retrace.lookback,
     }) ||
     (direction === "both" &&
       dcaStartDraftMissing({
@@ -2018,6 +2100,8 @@ export function DcaPlaybookForm({
         multiplier: shortIndicatorMultiplier,
         armPrice: shortArmPrice,
         webhookId: shortWebhookId,
+        retracePct: shortRetrace.pct,
+        retraceLookback: shortRetrace.lookback,
       }));
   const exitBlock =
     exitCardsBlockReason(exitClauses) ||
@@ -2043,9 +2127,10 @@ export function DcaPlaybookForm({
   const requiredMissing =
     triggerMissing ||
     groupSizingMissing ||
-    entryRows.some((row) => !entryDraftComplete(row.draft)) ||
-    (direction === "both" &&
-      shortEntryRows.some((row) => !entryDraftComplete(row.draft))) ||
+    entryRowsMissing(entryRows) ||
+    (direction === "both" && entryRowsMissing(shortEntryRows)) ||
+    entryRowsMissing(addRows) ||
+    (direction === "both" && entryRowsMissing(shortAddRows)) ||
     Boolean(
       exitIf &&
         (!hardExitComplete(exitIf) ||
@@ -2092,9 +2177,10 @@ export function DcaPlaybookForm({
       slMissing ||
       breakevenMissing ||
       exitKindMissing ||
-      entryRows.some((row) => !entryDraftComplete(row.draft)) ||
-      (direction === "both" &&
-        shortEntryRows.some((row) => !entryDraftComplete(row.draft))) ||
+      entryRowsMissing(entryRows) ||
+      (direction === "both" && entryRowsMissing(shortEntryRows)) ||
+      entryRowsMissing(addRows) ||
+      (direction === "both" && entryRowsMissing(shortAddRows)) ||
       Boolean(
         exitIf &&
           (!hardExitComplete(exitIf) ||
@@ -2217,6 +2303,8 @@ export function DcaPlaybookForm({
             compare: shortLeg ? shortArmCompare : armCompare,
             price: shortLeg ? shortArmPrice : armPrice,
           })
+        : kind === "retrace"
+          ? retraceClaim(shortLeg ? shortRetrace : retrace)
         : kind === "indicator" || kind === "trend"
           ? indicatorClaim({
               surface: "entry",
@@ -2231,13 +2319,20 @@ export function DcaPlaybookForm({
               multiplier: shortLeg
                 ? shortIndicatorMultiplier
                 : indicatorMultiplier,
+              when:
+                (shortLeg ? shortIndicatorKind : indicatorKind) === "rsi_divergence"
+                  ? shortLeg
+                    ? shortDivergenceWhen
+                    : divergenceWhen
+                  : undefined,
             })
           : null;
     if (
       kind === "price" ||
       kind === "indicator" ||
       kind === "trend" ||
-      kind === "webhook"
+      kind === "webhook" ||
+      kind === "retrace"
     ) {
       return {
         kind,
@@ -2297,6 +2392,12 @@ export function DcaPlaybookForm({
                 Price Cross
               </option>
               <option
+                value="retrace"
+                disabled={dcaStartDisabled(side, "retrace")}
+              >
+                Retrace
+              </option>
+              <option
                 value="webhook"
                 disabled={dcaStartDisabled(side, "webhook")}
               >
@@ -2325,7 +2426,7 @@ export function DcaPlaybookForm({
             {dcaTriggerSelect(side)}
             {kind === "price" ? (
           <BotFormGroup locked={cycleLocked}>
-            <div className={fieldRowClass}>
+            <div className={fieldRowClass5}>
               <TriggerFields
                 prefix={shortLeg ? "shortArm" : "arm"}
                 triggerBy={shortLeg ? shortArmTriggerBy : armTriggerBy}
@@ -2349,61 +2450,70 @@ export function DcaPlaybookForm({
             </div>
           </BotFormGroup>
         ) : null}
+        {kind === "retrace" ? (
+          <BotFormGroup locked={cycleLocked}>
+            <div className={fieldRowClass5}>
+              <RetraceFields
+                prefix={shortLeg ? "short" : ""}
+                draft={shortLeg ? shortRetrace : retrace}
+                onChange={shortLeg ? setShortRetrace : setRetrace}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+                slots={entryConflictSlots(dcaStackAnchor(side), rows)}
+                slotIndex={0}
+                showErrors={dirty}
+              />
+            </div>
+          </BotFormGroup>
+        ) : null}
         {kind === "webhook" ? (
           <BotFormGroup locked={cycleLocked}>
-            <div className={fieldRowClass}>
-              {signalWebhooks.length > 0 ? (
-                <label className={`${labelClass} col-span-full${lockClass}`}>
-                  <HintLabel text="Webhook" required />
-                  <AppSelect
-                    name={shortLeg ? "shortWebhookId" : "webhookId"}
-                    value={hookId}
-                    onChange={(event) =>
-                      shortLeg
-                        ? setShortWebhookId(event.target.value)
-                        : setWebhookId(event.target.value)
-                    }
-                    className={
-                      dirty && hookId.trim() === ""
-                        ? botFieldInvalidClass
-                        : fieldClass
-                    }
-                  >
-                    {signalWebhooks.map((row) => (
-                      <option
-                        key={row.id}
-                        value={row.id}
-                        disabled={entryWebhookIdDisabled({
-                          slots: entryConflictSlots(dcaStackAnchor(side), rows),
-                          index: 0,
-                          webhookId: row.id,
-                        })}
-                      >
-                        {row.name}
-                      </option>
-                    ))}
-                  </AppSelect>
-                </label>
-              ) : (
-                <p
-                  className={`self-end text-hint text-ink-muted ${
-                    embedded ? "col-span-full" : "lg:col-span-3"
-                  }`}
+            <div className={fieldRowClass5}>
+              <label className={`${labelClass} col-span-full${lockClass}`}>
+                <HintLabel text="Webhook" required />
+                <AppSelect
+                  name={shortLeg ? "shortWebhookId" : "webhookId"}
+                  value={hookId}
+                  onChange={(event) =>
+                    shortLeg
+                      ? setShortWebhookId(event.target.value)
+                      : setWebhookId(event.target.value)
+                  }
+                  className={
+                    dirty && hookId.trim() === ""
+                      ? conditionFieldClass(botFieldInvalidClass, column)
+                      : conditionFieldClass(fieldClass, column)
+                  }
                 >
-                  Create a Signal on{" "}
-                  <Link href={webhooksHref} className="text-accent">
-                    Webhooks
-                  </Link>{" "}
-                  first. Set Status to Active and Save, then buy / sell starts
-                  that side only.
-                </p>
-              )}
+                  <option value="">
+                    {signalWebhooks.length === 0
+                      ? "Create a Signal webhook first"
+                      : "Pick a webhook"}
+                  </option>
+                  {(hookId && !signalWebhooks.some((row) => row.id === hookId)
+                    ? [...signalWebhooks, { id: hookId, name: "Webhook (removed)" }]
+                    : signalWebhooks
+                  ).map((row) => (
+                    <option
+                      key={row.id}
+                      value={row.id}
+                      disabled={entryWebhookIdDisabled({
+                        slots: entryConflictSlots(dcaStackAnchor(side), rows),
+                        index: 0,
+                        webhookId: row.id,
+                      })}
+                    >
+                      {row.name}
+                    </option>
+                  ))}
+                </AppSelect>
+              </label>
             </div>
           </BotFormGroup>
         ) : null}
         {kind === "indicator" ? (
           <BotFormGroup locked={cycleLocked}>
-            <div className={fieldRowClass}>
+            <div className={fieldRowClass5}>
               <IndicatorStartFields
                 side={fieldSide}
                 prefix={shortLeg ? "shortIndicator" : "indicator"}
@@ -2439,6 +2549,26 @@ export function DcaPlaybookForm({
                     ? setShortIndicatorMultiplier
                     : setIndicatorMultiplier
                 }
+                divergenceWhen={shortLeg ? shortDivergenceWhen : divergenceWhen}
+                divergenceStyle={shortLeg ? shortDivergenceStyle : divergenceStyle}
+                pivotBars={shortLeg ? shortPivotBars : pivotBars}
+                span={shortLeg ? shortDivergenceSpan : divergenceSpan}
+                minPricePct={shortLeg ? shortMinPricePct : minPricePct}
+                minRsi={shortLeg ? shortMinRsi : minRsi}
+                onDivergenceWhenChange={(next) =>
+                  (shortLeg ? setShortDivergenceWhen : setDivergenceWhen)(
+                    next === "bearish" ? "bearish" : "bullish",
+                  )
+                }
+                onDivergenceStyleChange={(next) =>
+                  (shortLeg ? setShortDivergenceStyle : setDivergenceStyle)(
+                    next === "hidden" ? "hidden" : "regular",
+                  )
+                }
+                onPivotBarsChange={shortLeg ? setShortPivotBars : setPivotBars}
+                onSpanChange={shortLeg ? setShortDivergenceSpan : setDivergenceSpan}
+                onMinPricePctChange={shortLeg ? setShortMinPricePct : setMinPricePct}
+                onMinRsiChange={shortLeg ? setShortMinRsi : setMinRsi}
                 seriesSlots={entryConflictSlots(dcaStackAnchor(side), rows)}
                 seriesIndex={0}
                 showErrors={dirty}
@@ -2448,7 +2578,7 @@ export function DcaPlaybookForm({
         ) : null}
         {kind === "trend" ? (
           <BotFormGroup locked={cycleLocked}>
-            <div className={fieldRowClass}>
+            <div className={fieldRowClass5}>
               <TrendStartFields
                 side={fieldSide}
                 prefix={shortLeg ? "shortIndicator" : "indicator"}
@@ -2506,6 +2636,7 @@ export function DcaPlaybookForm({
           fieldClass={fieldClass}
           labelClass={labelClass}
           showErrors={dirty}
+          optionalAddedKind
           groupFooter={(groupIndex) => {
             const key = entryGroupOrderKey(rows, groupIndex);
             const extra = shortLeg ? shortExtraOrders : longExtraOrders;
@@ -3451,6 +3582,45 @@ export function DcaPlaybookForm({
           {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         </BotFormGroup>
       </BotFormStep>
+        <BotFormStep
+          title={direction === "short" ? "Short additional conditions" : "Additional order conditions"}
+          badge="Condition Builder"
+          shell="canvas"
+          hint="Optional. The ladder still places the add. These have to be true on the same check."
+        >
+          {direction !== "short" ? (
+            <EntryConditionStack
+              grouped
+              prefix="add"
+              side="long"
+              rows={addRows}
+              onChange={setAddRows}
+              anchor={{ kind: "indicator", webhookId: null, claim: null }}
+              gridClass={fieldRowClass5}
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+              showErrors={dirty}
+              optionalAddedKind
+              kinds={["retrace", "indicator"]}
+            />
+          ) : null}
+          {direction === "both" || direction === "short" ? (
+            <EntryConditionStack
+              grouped
+              prefix={direction === "both" ? "shortAdd" : "add"}
+              side="short"
+              rows={direction === "both" ? shortAddRows : addRows}
+              onChange={direction === "both" ? setShortAddRows : setAddRows}
+              anchor={{ kind: "indicator", webhookId: null, claim: null }}
+              gridClass={fieldRowClass5}
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+              showErrors={dirty}
+              optionalAddedKind
+              kinds={["retrace", "indicator"]}
+            />
+          ) : null}
+        </BotFormStep>
       
       {tpLive ? <input type="hidden" name="tpOn" value="on" /> : (
         <div hidden>

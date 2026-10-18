@@ -372,7 +372,7 @@ export function anchorDisabledKinds(
   webhookIds: string[],
 ): HardExitTrigger[] {
   const slots = exitConflictSlots(anchor, rows);
-  return (["price", "indicator", "trend", "webhook"] as const).filter((kind) =>
+  return (["price", "indicator", "trend", "webhook", "retrace"] as const).filter((kind) =>
     entryKindDisabled({ slots, index: 0, kind, webhookIds }),
   );
 }

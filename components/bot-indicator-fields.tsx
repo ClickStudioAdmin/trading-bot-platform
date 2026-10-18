@@ -104,6 +104,18 @@ export function IndicatorStartFields({
   onPeriodChange,
   onSlowPeriodChange,
   onMultiplierChange,
+  divergenceWhen = "",
+  divergenceStyle = "regular",
+  pivotBars = "5",
+  span = "50",
+  minPricePct = "",
+  minRsi = "",
+  onDivergenceWhenChange,
+  onDivergenceStyleChange,
+  onPivotBarsChange,
+  onSpanChange,
+  onMinPricePctChange,
+  onMinRsiChange,
   seriesSlots,
   seriesIndex,
   showErrors = false,
@@ -124,6 +136,18 @@ export function IndicatorStartFields({
   onPeriodChange: (next: string) => void;
   onSlowPeriodChange: (next: string) => void;
   onMultiplierChange: (next: string) => void;
+  divergenceWhen?: string;
+  divergenceStyle?: string;
+  pivotBars?: string;
+  span?: string;
+  minPricePct?: string;
+  minRsi?: string;
+  onDivergenceWhenChange?: (next: string) => void;
+  onDivergenceStyleChange?: (next: string) => void;
+  onPivotBarsChange?: (next: string) => void;
+  onSpanChange?: (next: string) => void;
+  onMinPricePctChange?: (next: string) => void;
+  onMinRsiChange?: (next: string) => void;
   showErrors?: boolean;
 } & SeriesProps) {
   const column = useBotColumnLayout();
@@ -157,7 +181,8 @@ export function IndicatorStartFields({
       next !== "sma_cross" &&
       next !== "ema_cross" &&
       next !== "bb" &&
-      next !== "atr_band"
+      next !== "atr_band" &&
+      next !== "rsi_divergence"
     ) {
       return;
     }
@@ -165,6 +190,14 @@ export function IndicatorStartFields({
     onCompareChange(indicatorCompareForDirection(side, next, ""));
     if (next === "rsi") {
       onLevelChange(side === "short" ? "70" : "30");
+    } else if (next === "rsi_divergence") {
+      onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
+      onDivergenceWhenChange?.(side === "short" ? "bearish" : "bullish");
+      onDivergenceStyleChange?.("regular");
+      onPivotBarsChange?.("5");
+      onSpanChange?.("50");
+      onMinPricePctChange?.("");
+      onMinRsiChange?.("");
     } else if (next === "macd") {
       onLevelChange("0");
     } else if (
@@ -224,6 +257,121 @@ export function IndicatorStartFields({
       >
         {indicatorField}
       </div>
+    );
+  }
+  if (kind === "rsi_divergence") {
+    const whenValue = divergenceWhen || (side === "short" ? "bearish" : "bullish");
+    function divergenceDisabled(when: string, selected: boolean) {
+      return entryDisabled(
+        indicatorClaim({
+          surface: "entry",
+          kind: "rsi_divergence",
+          timeframe,
+          compare: "",
+          period,
+          when,
+        }),
+        selected,
+      );
+    }
+    return (
+      <>
+        {indicatorField}
+        <label className={labelClass}>
+          <HintLabel text="When" required />
+          <AppSelect
+            name={`${prefix}DivergenceWhen`}
+            value={whenValue}
+            onChange={(event) => onDivergenceWhenChange?.(event.target.value)}
+            className={
+              showErrors && whenValue === "" ? botFieldInvalidClass : fieldClass
+            }
+          >
+            <option value="bullish" disabled={divergenceDisabled("bullish", whenValue === "bullish")}>
+              Bullish
+            </option>
+            <option value="bearish" disabled={divergenceDisabled("bearish", whenValue === "bearish")}>
+              Bearish
+            </option>
+          </AppSelect>
+        </label>
+        <label className={labelClass}>
+          <HintLabel text="Style" required />
+          <AppSelect
+            name={`${prefix}DivergenceStyle`}
+            value={divergenceStyle || "regular"}
+            onChange={(event) => onDivergenceStyleChange?.(event.target.value)}
+            className={fieldClass}
+          >
+            <option value="regular">Regular</option>
+            <option value="hidden">Hidden</option>
+          </AppSelect>
+        </label>
+        <label className={labelClass}>
+          <HintLabel text="Period" required />
+          <GroupedNumberInput
+            name={`${prefix}Period`}
+            value={period}
+            onChange={onPeriodChange}
+            className={controlClass("period")}
+          />
+        </label>
+        <label className={labelClass}>
+          <HintLabel text="Timeframe" required />
+          <AppSelect
+            name={`${prefix}Timeframe`}
+            value={timeframe}
+            onChange={(event) =>
+              onTimeframeChange(event.target.value as DcaIndicatorTimeframe)
+            }
+            className={fieldClass}
+          >
+            {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
+              <option key={interval} value={interval}>
+                {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
+              </option>
+            ))}
+          </AppSelect>
+        </label>
+        <label className={labelClass}>
+          <HintLabel text="Pivot bars" required />
+          <GroupedNumberInput
+            name={`${prefix}PivotBars`}
+            value={pivotBars}
+            onChange={(next) => onPivotBarsChange?.(next)}
+            className={fieldClass}
+          />
+        </label>
+        <label className={labelClass}>
+          <HintLabel text="Span" required />
+          <GroupedNumberInput
+            name={`${prefix}Span`}
+            value={span}
+            onChange={(next) => onSpanChange?.(next)}
+            className={fieldClass}
+          />
+        </label>
+        <label className={labelClass}>
+          <HintLabel text="Min price %" />
+          <GroupedNumberInput
+            name={`${prefix}MinPricePct`}
+            value={minPricePct}
+            onChange={(next) => onMinPricePctChange?.(next)}
+            allowDecimal
+            className={fieldClass}
+          />
+        </label>
+        <label className={labelClass}>
+          <HintLabel text="Min RSI" />
+          <GroupedNumberInput
+            name={`${prefix}MinRsi`}
+            value={minRsi}
+            onChange={(next) => onMinRsiChange?.(next)}
+            allowDecimal
+            className={fieldClass}
+          />
+        </label>
+      </>
     );
   }
   const includeLegacyEmaPrice = dcaIndicatorIsLegacyEmaPrice(

@@ -136,6 +136,9 @@ function dcaTriggerLabel(kind: DcaTemplateRecipe["startKind"]): string {
   if (kind === "webhook") {
     return "Signal Webhook";
   }
+  if (kind === "retrace") {
+    return "Retrace";
+  }
   return "Indicator";
 }
 
@@ -236,6 +239,32 @@ function leafConditionRows(
   }
   if (leaf.kind === "webhook") {
     return [{ label: "Condition Type", value: "Signal webhook" }];
+  }
+  if (leaf.kind === "retrace") {
+    return [
+      { label: "Condition Type", value: "Retrace" },
+      { label: "Price source", value: priceSourceLabel(leaf.source) },
+      { label: "From", value: leaf.from === "low" ? "Low" : "High" },
+      { label: "Retrace %", value: num(leaf.pct) },
+      { label: "Lookback", value: num(leaf.lookback) },
+      { label: "Timeframe", value: timeframeLabel(leaf.timeframe) },
+    ];
+  }
+  if (leaf.kind === "protection") {
+    return [
+      { label: "Condition Type", value: "Position protection" },
+      {
+        label: "Is",
+        value: leaf.is === "unprotected" ? "Not protected" : "Protected",
+      },
+      {
+        label: "Amount",
+        value:
+          leaf.amount === "at_least" && leaf.pct != null
+            ? `At least ${leaf.pct}%`
+            : "Entire position",
+      },
+    ];
   }
   if (leaf.kind === "filter") {
     return [
@@ -1035,6 +1064,9 @@ function perpsTriggerLabel(source: PerpsTemplateRecipe["entrySource"]): string {
   }
   if (source === "webhook") {
     return "Signal webhook";
+  }
+  if (source === "retrace") {
+    return "Retrace";
   }
   return "Price cross";
 }

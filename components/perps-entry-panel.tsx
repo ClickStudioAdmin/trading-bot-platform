@@ -24,7 +24,7 @@ import {
 import {
   EntryConditionStack,
   entryConflictSlots,
-  entryDraftComplete,
+  entryRowsMissing,
   entryRowsFromSources,
   entryStackFromRows,
   type EntryStackRow,
@@ -48,6 +48,9 @@ import type { PerpsEntryLeg } from "@/lib/futures/conditions";
 import type { PerpsAddOrderValues } from "@/lib/futures/perps-add-condition";
 import type { FuturesSide, FuturesTrigger } from "@/lib/futures/model";
 import { indicatorClaim, priceClaim } from "@/lib/strategy/conflicts";
+import { retraceClaim } from "@/lib/strategy/retrace";
+import { parseRsiDivergenceSettings } from "@/lib/strategy/rsi-divergence";
+import { RetraceFields } from "@/components/retrace-fields";
 import {
   confirmFromEntryStack,
   entryKindDisabled,
@@ -70,6 +73,17 @@ export type PerpsEntryDraft = {
   indicatorPeriod: string;
   indicatorSlowPeriod: string;
   indicatorMultiplier: string;
+  divergenceWhen: string;
+  divergenceStyle: string;
+  pivotBars: string;
+  span: string;
+  minPricePct: string;
+  minRsi: string;
+  retraceSource: "last" | "mark" | "index";
+  retraceFrom: "high" | "low";
+  retracePct: string;
+  retraceLookback: string;
+  retraceTimeframe: DcaIndicatorTimeframe;
   entryRows: EntryStackRow[];
 };
 
@@ -138,6 +152,24 @@ export function perpsEntryDraftFromLayer(
     indicatorMultiplier: String(
       layer.indicator?.multiplier ?? DEFAULT_DCA_SUPERTREND_MULTIPLIER,
     ),
+    divergenceWhen:
+      layer.indicator?.divergence?.when ?? (side === "short" ? "bearish" : "bullish"),
+    divergenceStyle: layer.indicator?.divergence?.style ?? "regular",
+    pivotBars: String(layer.indicator?.divergence?.pivotBars ?? 5),
+    span: String(layer.indicator?.divergence?.span ?? 50),
+    minPricePct:
+      layer.indicator?.divergence?.minPricePct == null
+        ? ""
+        : String(layer.indicator.divergence.minPricePct),
+    minRsi:
+      layer.indicator?.divergence?.minRsi == null
+        ? ""
+        : String(layer.indicator.divergence.minRsi),
+    retraceSource: layer.retrace?.source ?? "last",
+    retraceFrom: layer.retrace?.from ?? (side === "short" ? "low" : "high"),
+    retracePct: layer.retrace ? String(layer.retrace.pct) : "",
+    retraceLookback: String(layer.retrace?.lookback ?? 20),
+    retraceTimeframe: layer.retrace?.timeframe ?? "15",
     entryRows: entryRowsFromSources(layer.entryStack, layer.confirm),
   };
 }
@@ -158,6 +190,17 @@ export function emptyPerpsEntryDraft(side: FuturesSide): PerpsEntryDraft {
     indicatorPeriod: String(DEFAULT_DCA_RSI_PERIOD),
     indicatorSlowPeriod: "",
     indicatorMultiplier: String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
+    divergenceWhen: side === "short" ? "bearish" : "bullish",
+    divergenceStyle: "regular",
+    pivotBars: "5",
+    span: "50",
+    minPricePct: "",
+    minRsi: "",
+    retraceSource: "last",
+    retraceFrom: side === "short" ? "low" : "high",
+    retracePct: "",
+    retraceLookback: "20",
+    retraceTimeframe: "15",
     entryRows: [],
   };
 }
@@ -224,6 +267,17 @@ export function indicatorFromPerpsDraft(
     period: Number(draft.indicatorPeriod) || null,
     slowPeriod: Number(draft.indicatorSlowPeriod) || null,
     multiplier: Number(draft.indicatorMultiplier) || null,
+    divergence:
+      draft.indicatorKind === "rsi_divergence"
+        ? parseRsiDivergenceSettings({
+            when: draft.divergenceWhen,
+            style: draft.divergenceStyle,
+            pivotBars: draft.pivotBars,
+            span: draft.span,
+            minPricePct: draft.minPricePct,
+            minRsi: draft.minRsi,
+          })
+        : null,
   };
 }
 
@@ -248,6 +302,16 @@ export function perpsEntryLegFromDraft(
     triggerPrice: Number(draft.triggerPrice.replace(/,/g, "")) || 0,
     skipIfOpen: draft.skipIfOpen,
     indicator: closing ? null : indicatorFromPerpsDraft(draft),
+    retrace:
+      !closing && entrySource === "retrace"
+        ? {
+            source: draft.retraceSource,
+            from: draft.retraceFrom,
+            pct: Number(draft.retracePct.replace(/,/g, "")) || 0,
+            lookback: Number(draft.retraceLookback) || 20,
+            timeframe: draft.retraceTimeframe,
+          }
+        : null,
     confirm: closing ? null : confirmFromEntryStack(entryStack),
     entryStack,
   };
@@ -272,6 +336,13 @@ export function perpsEntryDraftMissing(
   if (draft.entrySource === "webhook" && draft.webhookId.trim() === "") {
     return true;
   }
+  if (draft.entrySource === "retrace") {
+    const pct = Number(draft.retracePct.replace(/,/g, "").trim());
+    const lookback = Number(draft.retraceLookback.replace(/,/g, "").trim());
+    if (!(pct > 0) || !(lookback >= 1)) {
+      return true;
+    }
+  }
   if (draft.entrySource === "indicator" || draft.entrySource === "trend") {
     if (
       indicatorDraftMissing({
@@ -287,9 +358,7 @@ export function perpsEntryDraftMissing(
       return true;
     }
   }
-  return draft.entryRows.some(
-    (row) => row.draft.kind !== "unset" && !entryDraftComplete(row.draft),
-  );
+  return entryRowsMissing(draft.entryRows);
 }
 
 export function PerpsEntryPanel({
@@ -355,6 +424,12 @@ export function PerpsEntryPanel({
             compare: draft.triggerCompare,
             price: draft.triggerPrice,
           })
+        : draft.entrySource === "retrace"
+          ? retraceClaim({
+              source: draft.retraceSource,
+              from: draft.retraceFrom,
+              timeframe: draft.retraceTimeframe,
+            })
         : draft.entrySource === "indicator" || draft.entrySource === "trend"
           ? indicatorClaim({
               surface: "entry",
@@ -365,6 +440,10 @@ export function PerpsEntryPanel({
               period: draft.indicatorPeriod,
               slowPeriod: draft.indicatorSlowPeriod,
               multiplier: draft.indicatorMultiplier,
+              when:
+                draft.indicatorKind === "rsi_divergence"
+                  ? draft.divergenceWhen
+                  : undefined,
             })
           : null,
   };
@@ -442,6 +521,19 @@ export function PerpsEntryPanel({
               >
                 Price Cross
               </option>
+              {closing ? null : (
+                <option
+                  value="retrace"
+                  disabled={entryKindDisabled({
+                    slots: entrySlots,
+                    index: 0,
+                    kind: "retrace",
+                    webhookIds,
+                  })}
+                >
+                  Retrace
+                </option>
+              )}
               <option
                 value="webhook"
                 disabled={entryKindDisabled({
@@ -484,6 +576,18 @@ export function PerpsEntryPanel({
               onMultiplierChange={(indicatorMultiplier) =>
                 patch({ indicatorMultiplier })
               }
+              divergenceWhen={draft.divergenceWhen}
+              divergenceStyle={draft.divergenceStyle}
+              pivotBars={draft.pivotBars}
+              span={draft.span}
+              minPricePct={draft.minPricePct}
+              minRsi={draft.minRsi}
+              onDivergenceWhenChange={(divergenceWhen) => patch({ divergenceWhen })}
+              onDivergenceStyleChange={(divergenceStyle) => patch({ divergenceStyle })}
+              onPivotBarsChange={(pivotBars) => patch({ pivotBars })}
+              onSpanChange={(span) => patch({ span })}
+              onMinPricePctChange={(minPricePct) => patch({ minPricePct })}
+              onMinRsiChange={(minRsi) => patch({ minRsi })}
               seriesSlots={entrySlots}
               seriesIndex={0}
               showErrors={showErrors}
@@ -508,6 +612,31 @@ export function PerpsEntryPanel({
               }
               seriesSlots={entrySlots}
               seriesIndex={0}
+              showErrors={showErrors}
+            />
+          ) : draft.entrySource === "retrace" && !closing ? (
+            <RetraceFields
+              prefix={prefix}
+              draft={{
+                source: draft.retraceSource,
+                from: draft.retraceFrom,
+                pct: draft.retracePct,
+                lookback: draft.retraceLookback,
+                timeframe: draft.retraceTimeframe,
+              }}
+              onChange={(next) =>
+                patch({
+                  retraceSource: next.source,
+                  retraceFrom: next.from,
+                  retracePct: next.pct,
+                  retraceLookback: next.lookback,
+                  retraceTimeframe: next.timeframe,
+                })
+              }
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+              slots={entrySlots}
+              slotIndex={0}
               showErrors={showErrors}
             />
           ) : draft.entrySource === "webhook" ? (

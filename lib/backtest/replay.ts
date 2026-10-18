@@ -331,6 +331,7 @@ export async function replayPerpsPriceCross(input: {
     indicator: input.recipe.indicator ?? null,
     confirm: input.recipe.confirm ?? null,
     entryStack: input.recipe.entryStack ?? null,
+    retrace: input.recipe.retrace ?? null,
   });
   const longExitMask = series.exitMask(input.recipe, "long");
   const shortExitMask = series.exitMask(input.recipe, "short");
@@ -815,6 +816,7 @@ async function replayPerpsBoth(input: {
     indicator: input.recipe.indicator ?? null,
     confirm: input.recipe.confirm ?? null,
     entryStack: input.recipe.entryStack ?? null,
+    retrace: input.recipe.retrace ?? null,
   });
   const shortEntryMask = series.entryMask({
     side: "short",
@@ -824,6 +826,7 @@ async function replayPerpsBoth(input: {
     indicator: short.indicator ?? null,
     confirm: short.confirm ?? null,
     entryStack: short.entryStack ?? null,
+    retrace: short.retrace ?? null,
   });
   const longExitMask = series.exitMask(input.recipe, "long");
   const shortExitMask = series.exitMask(input.recipe, "short");

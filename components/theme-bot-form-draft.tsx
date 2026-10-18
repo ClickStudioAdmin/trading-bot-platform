@@ -64,11 +64,13 @@ import { type TrailActivationKind } from "@/lib/strategy/exit-clauses";
 import {
   EntryConditionStack,
   entryConflictSlots,
-  entryDraftComplete,
+  entryRowsMissing,
   type EntryAnchor,
   type EntryStackRow,
 } from "@/components/entry-condition-stack";
 import { indicatorClaim, priceClaim, type ConflictClaim } from "@/lib/strategy/conflicts";
+import { retraceClaim } from "@/lib/strategy/retrace";
+import { RetraceFields, blankRetraceDraft, type RetraceDraft } from "@/components/retrace-fields";
 import {
   entryKindDisabled,
   entryWebhookIdDisabled,
@@ -368,7 +370,7 @@ function blankThemeClassic(): ThemeClassicDraft {
     atrPeriod: "14",
   };
 }
-type StartKind = "" | "price" | "indicator" | "trend" | "webhook";
+type StartKind = "" | "price" | "indicator" | "trend" | "webhook" | "retrace";
 function Field({
   label,
   hint,
@@ -616,6 +618,8 @@ function themeStartClaim(input: {
   slowPeriod: string;
   level: string;
   multiplier: string;
+  retrace?: RetraceDraft;
+  divergenceWhen?: string;
 }): ConflictClaim | null {
   if (input.kind === "price") {
     return priceClaim({
@@ -623,6 +627,9 @@ function themeStartClaim(input: {
       compare: input.priceWhen,
       price: input.priceLevel,
     });
+  }
+  if (input.kind === "retrace" && input.retrace) {
+    return retraceClaim(input.retrace);
   }
   if (input.kind === "indicator" || input.kind === "trend") {
     if (!input.indicatorKind) {
@@ -637,6 +644,7 @@ function themeStartClaim(input: {
       period: input.period,
       slowPeriod: input.slowPeriod,
       multiplier: input.multiplier,
+      when: input.indicatorKind === "rsi_divergence" ? input.divergenceWhen : undefined,
     });
   }
   return null;
@@ -652,6 +660,24 @@ export function ThemeBotFormDraft() {
   const [shortWebhookId, setShortWebhookId] = useState("sample");
   const [shortEntryRows, setShortEntryRows] = useState<EntryStackRow[]>([]);
   const [startKind, setStartKind] = useState<StartKind>("");
+  const [retrace, setRetrace] = useState<RetraceDraft>(() => blankRetraceDraft("long"));
+  const [shortRetrace, setShortRetrace] = useState<RetraceDraft>(() =>
+    blankRetraceDraft("short"),
+  );
+  const [divergenceWhen, setDivergenceWhen] = useState("bullish");
+  const [divergenceStyle, setDivergenceStyle] = useState("regular");
+  const [pivotBars, setPivotBars] = useState("5");
+  const [divergenceSpan, setDivergenceSpan] = useState("50");
+  const [minPricePct, setMinPricePct] = useState("");
+  const [minRsi, setMinRsi] = useState("");
+  const [shortDivergenceWhen, setShortDivergenceWhen] = useState("bearish");
+  const [shortDivergenceStyle, setShortDivergenceStyle] = useState("regular");
+  const [shortPivotBars, setShortPivotBars] = useState("5");
+  const [shortDivergenceSpan, setShortDivergenceSpan] = useState("50");
+  const [shortMinPricePct, setShortMinPricePct] = useState("");
+  const [shortMinRsi, setShortMinRsi] = useState("");
+  const [addRows, setAddRows] = useState<EntryStackRow[]>([]);
+  const [shortAddRows, setShortAddRows] = useState<EntryStackRow[]>([]);
   const [priceSource, setPriceSource] = useState("last");
   const [priceWhen, setPriceWhen] = useState("gte");
   const [priceLevel, setPriceLevel] = useState("");
@@ -743,6 +769,8 @@ export function ThemeBotFormDraft() {
       slowPeriod,
       level,
       multiplier,
+      retrace,
+      divergenceWhen,
     }),
   };
   const themeShortAnchor: EntryAnchor = {
@@ -760,6 +788,8 @@ export function ThemeBotFormDraft() {
       slowPeriod: shortSlowPeriod,
       level: shortLevel,
       multiplier: shortMultiplier,
+      retrace: shortRetrace,
+      divergenceWhen: shortDivergenceWhen,
     }),
   };
   const themeEntrySlots = entryConflictSlots(themeLongAnchor, entryRows);
@@ -1131,20 +1161,8 @@ export function ThemeBotFormDraft() {
         slowPeriod: shortSlowPeriod,
         multiplier: shortMultiplier,
       }),
-    entryRows:
-      desk !== "cnc" &&
-      entryRows.some(
-        (row) =>
-          !(desk === "flex" && row.draft.kind === "unset") &&
-          !entryDraftComplete(row.draft),
-      ),
-    shortEntryRows:
-      themeBothExits &&
-      shortEntryRows.some(
-        (row) =>
-          !(desk === "flex" && row.draft.kind === "unset") &&
-          !entryDraftComplete(row.draft),
-      ),
+    entryRows: desk !== "cnc" && entryRowsMissing(entryRows),
+    shortEntryRows: themeBothExits && entryRowsMissing(shortEntryRows),
     exitKind:
       desk !== "cnc" &&
       (exitClauseListMissing(exitClauses) || Boolean(exitCardsBlockReason(exitClauses))),
@@ -2261,8 +2279,6 @@ export function ThemeBotFormDraft() {
             <>
         <Group>
           <div className={rowClass}>
-            {desk === "flex" ? (
-              <>
               <Field label="Condition Type" required>
                 <AppSelect
                   value={startKind}
@@ -2291,6 +2307,7 @@ export function ThemeBotFormDraft() {
                   >
                     Price Cross
                   </option>
+                  <option value="retrace">Retrace</option>
                   <option
                     value="webhook"
                     disabled={entryKindDisabled({
@@ -2304,38 +2321,6 @@ export function ThemeBotFormDraft() {
                   </option>
                 </AppSelect>
               </Field>
-              </>
-            ) : (
-              <Field label="Condition Type" required>
-                <AppSelect
-                  value={startKind}
-                  onChange={(event) =>
-                    applyStartKind(event.target.value as StartKind)
-                  }
-                  className={
-                    startKind === ""
-                      ? `${fieldInvalidClass} !min-w-72`
-                      : `${fieldClass} !min-w-72`
-                  }
-                >
-                  <option value="">Select Condition Type</option>
-                  <option value="indicator">Indicator</option>
-                  <option value="trend">Trend</option>
-                  <option value="price">Price Cross</option>
-                  <option
-                    value="webhook"
-                    disabled={entryKindDisabled({
-                      slots: themeEntrySlots,
-                      index: 0,
-                      kind: "webhook",
-                      webhookIds: ["sample"],
-                    })}
-                  >
-                    Signal Webhook
-                  </option>
-                </AppSelect>
-              </Field>
-            )}
           </div>
         </Group>
 
@@ -2362,14 +2347,11 @@ export function ThemeBotFormDraft() {
                   </option>
                   <option
                     value="sample"
-                    disabled={
-                      desk === "flex" &&
-                      entryWebhookIdDisabled({
-                        slots: themeEntrySlots,
-                        index: 0,
-                        webhookId: "sample",
-                      })
-                    }
+                    disabled={entryWebhookIdDisabled({
+                      slots: themeEntrySlots,
+                      index: 0,
+                      webhookId: "sample",
+                    })}
                   >
                     Sample signal
                   </option>
@@ -2396,6 +2378,18 @@ export function ThemeBotFormDraft() {
                   onPeriodChange={setPeriod}
                   onSlowPeriodChange={setSlowPeriod}
                   onMultiplierChange={setMultiplier}
+                  divergenceWhen={divergenceWhen}
+                  divergenceStyle={divergenceStyle}
+                  pivotBars={pivotBars}
+                  span={divergenceSpan}
+                  minPricePct={minPricePct}
+                  minRsi={minRsi}
+                  onDivergenceWhenChange={setDivergenceWhen}
+                  onDivergenceStyleChange={setDivergenceStyle}
+                  onPivotBarsChange={setPivotBars}
+                  onSpanChange={setDivergenceSpan}
+                  onMinPricePctChange={setMinPricePct}
+                  onMinRsiChange={setMinRsi}
                   seriesSlots={themeEntrySlots}
                   seriesIndex={0}
                   showErrors={showFieldErrors}
@@ -2421,6 +2415,19 @@ export function ThemeBotFormDraft() {
                   showErrors={showFieldErrors}
                 />
               </div>
+          ) : startKind === "retrace" ? (
+            <div className={rowClass5}>
+              <RetraceFields
+                prefix="theme"
+                draft={retrace}
+                onChange={setRetrace}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+                slots={themeEntrySlots}
+                slotIndex={0}
+                showErrors={showFieldErrors}
+              />
+            </div>
           ) : startKind === "price" ? (
             <div className={rowClass5}>
                 <PriceTriggerFields
@@ -2484,6 +2491,7 @@ export function ThemeBotFormDraft() {
                 fieldClass={fieldClass}
                 labelClass={labelClass}
                 showErrors={showFieldErrors}
+                optionalAddedKind
                 groupFooter={dcaSizeFooter(
                   entryRows,
                   longExtraOrders,
@@ -2545,6 +2553,7 @@ export function ThemeBotFormDraft() {
                     >
                       Price Cross
                     </option>
+                    <option value="retrace">Retrace</option>
                     <option
                       value="webhook"
                       disabled={entryKindDisabled({
@@ -2574,7 +2583,16 @@ export function ThemeBotFormDraft() {
                       }
                     >
                       <option value="">Pick a webhook</option>
-                      <option value="sample">Sample signal</option>
+                      <option
+                        value="sample"
+                        disabled={entryWebhookIdDisabled({
+                          slots: themeShortSlots,
+                          index: 0,
+                          webhookId: "sample",
+                        })}
+                      >
+                        Sample signal
+                      </option>
                     </AppSelect>
                   </Field>
                 </div>
@@ -2597,6 +2615,18 @@ export function ThemeBotFormDraft() {
                     onPeriodChange={setShortPeriod}
                     onSlowPeriodChange={setShortSlowPeriod}
                     onMultiplierChange={setShortMultiplier}
+                    divergenceWhen={shortDivergenceWhen}
+                    divergenceStyle={shortDivergenceStyle}
+                    pivotBars={shortPivotBars}
+                    span={shortDivergenceSpan}
+                    minPricePct={shortMinPricePct}
+                    minRsi={shortMinRsi}
+                    onDivergenceWhenChange={setShortDivergenceWhen}
+                    onDivergenceStyleChange={setShortDivergenceStyle}
+                    onPivotBarsChange={setShortPivotBars}
+                    onSpanChange={setShortDivergenceSpan}
+                    onMinPricePctChange={setShortMinPricePct}
+                    onMinRsiChange={setShortMinRsi}
                     seriesSlots={themeShortSlots}
                     seriesIndex={0}
                     showErrors={showFieldErrors}
@@ -2619,6 +2649,19 @@ export function ThemeBotFormDraft() {
                     onMultiplierChange={setShortMultiplier}
                     seriesSlots={themeShortSlots}
                     seriesIndex={0}
+                    showErrors={showFieldErrors}
+                  />
+                </div>
+              ) : shortStartKind === "retrace" ? (
+                <div className={rowClass5}>
+                  <RetraceFields
+                    prefix="themeShort"
+                    draft={shortRetrace}
+                    onChange={setShortRetrace}
+                    fieldClass={fieldClass}
+                    labelClass={labelClass}
+                    slots={themeShortSlots}
+                    slotIndex={0}
                     showErrors={showFieldErrors}
                   />
                 </div>
@@ -2689,7 +2732,18 @@ export function ThemeBotFormDraft() {
                     <option value="">Select Condition Type</option>
                     <option value="indicator">Indicator</option>
                     <option value="trend">Trend</option>
-                    <option value="price">Price Cross</option>
+                    <option
+                      value="price"
+                      disabled={entryKindDisabled({
+                        slots: themeShortSlots,
+                        index: 0,
+                        kind: "price",
+                        webhookIds: ["sample"],
+                      })}
+                    >
+                      Price Cross
+                    </option>
+                    <option value="retrace">Retrace</option>
                     <option
                       value="webhook"
                       disabled={entryKindDisabled({
@@ -2719,7 +2773,16 @@ export function ThemeBotFormDraft() {
                       }
                     >
                       <option value="">Pick a webhook</option>
-                      <option value="sample">Sample signal</option>
+                      <option
+                        value="sample"
+                        disabled={entryWebhookIdDisabled({
+                          slots: themeShortSlots,
+                          index: 0,
+                          webhookId: "sample",
+                        })}
+                      >
+                        Sample signal
+                      </option>
                     </AppSelect>
                   </Field>
                 </div>
@@ -2742,6 +2805,18 @@ export function ThemeBotFormDraft() {
                     onPeriodChange={setShortPeriod}
                     onSlowPeriodChange={setShortSlowPeriod}
                     onMultiplierChange={setShortMultiplier}
+                    divergenceWhen={shortDivergenceWhen}
+                    divergenceStyle={shortDivergenceStyle}
+                    pivotBars={shortPivotBars}
+                    span={shortDivergenceSpan}
+                    minPricePct={shortMinPricePct}
+                    minRsi={shortMinRsi}
+                    onDivergenceWhenChange={setShortDivergenceWhen}
+                    onDivergenceStyleChange={setShortDivergenceStyle}
+                    onPivotBarsChange={setShortPivotBars}
+                    onSpanChange={setShortDivergenceSpan}
+                    onMinPricePctChange={setShortMinPricePct}
+                    onMinRsiChange={setShortMinRsi}
                     seriesSlots={themeShortSlots}
                     seriesIndex={0}
                     showErrors={showFieldErrors}
@@ -2764,6 +2839,19 @@ export function ThemeBotFormDraft() {
                     onMultiplierChange={setShortMultiplier}
                     seriesSlots={themeShortSlots}
                     seriesIndex={0}
+                    showErrors={showFieldErrors}
+                  />
+                </div>
+              ) : shortStartKind === "retrace" ? (
+                <div className={rowClass5}>
+                  <RetraceFields
+                    prefix="themeShort"
+                    draft={shortRetrace}
+                    onChange={setShortRetrace}
+                    fieldClass={fieldClass}
+                    labelClass={labelClass}
+                    slots={themeShortSlots}
+                    slotIndex={0}
                     showErrors={showFieldErrors}
                   />
                 </div>
@@ -2804,6 +2892,7 @@ export function ThemeBotFormDraft() {
               fieldClass={fieldClass}
               labelClass={labelClass}
               showErrors={showFieldErrors}
+              optionalAddedKind
               groupFooter={dcaSizeFooter(
                 shortEntryRows,
                 shortExtraOrders,
@@ -2817,6 +2906,7 @@ export function ThemeBotFormDraft() {
         ) : null}
 
         {desk === "dca" ? (
+        <>
         <BotFormStep title="Additional Orders">
         <Group
           title="Additional Order Types"
@@ -3012,6 +3102,44 @@ export function ThemeBotFormDraft() {
           </div>
         </Group>
         </BotFormStep>
+        <BotFormStep
+          title="Additional order conditions"
+          badge="Condition Builder"
+          shell="canvas"
+          hint="Optional. The ladder still places the add. These have to be true on the same check."
+        >
+          <EntryConditionStack
+            grouped
+            prefix="themeAdd"
+            side={entrySide}
+            rows={addRows}
+            onChange={setAddRows}
+            anchor={{ kind: "indicator", webhookId: null, claim: null }}
+            gridClass={rowClass5}
+            fieldClass={fieldClass}
+            labelClass={labelClass}
+            showErrors={showFieldErrors}
+            optionalAddedKind
+            kinds={["retrace", "indicator"]}
+          />
+          {direction === "both" ? (
+            <EntryConditionStack
+              grouped
+              prefix="themeShortAdd"
+              side="short"
+              rows={shortAddRows}
+              onChange={setShortAddRows}
+              anchor={{ kind: "indicator", webhookId: null, claim: null }}
+              gridClass={rowClass5}
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+              showErrors={showFieldErrors}
+              optionalAddedKind
+              kinds={["retrace", "indicator"]}
+            />
+          ) : null}
+        </BotFormStep>
+        </>
         ) : desk === "flex" && !closing ? (
           <>
             {perpsDirection !== "short" ? (

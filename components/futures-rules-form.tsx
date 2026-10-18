@@ -98,6 +98,8 @@ import {
 import { venueAllowsPerpsBoth } from "@/lib/futures/perps-direction";
 import {
   blankPerpsAddOrderGroups,
+  perpsAddGroupsExpr,
+  perpsAddGroupsFromStack,
   perpsAddGroupsSizingMissing,
 } from "@/lib/futures/perps-add-condition";
 import {
@@ -677,10 +679,16 @@ function RuleCard({
   const [size, setSize] = useState(layer.size);
   const [limitPrice, setLimitPrice] = useState(layer.limitPrice);
   const [longAddGroups, setLongAddGroups] = useState(() =>
-    blankPerpsAddOrderGroups("long"),
+    layer.direction === "short"
+      ? blankPerpsAddOrderGroups("long")
+      : perpsAddGroupsFromStack(layer.addStack, "long"),
   );
   const [shortAddGroups, setShortAddGroups] = useState(() =>
-    blankPerpsAddOrderGroups("short"),
+    layer.direction === "both"
+      ? perpsAddGroupsFromStack(layer.shortEntry?.addStack, "short")
+      : layer.direction === "short" || layer.formAction === "sell"
+        ? perpsAddGroupsFromStack(layer.addStack, "short")
+        : blankPerpsAddOrderGroups("short"),
   );
   const longExtraOrders = useExtraGroupOrders();
   const shortExtraOrders = useExtraGroupOrders();
@@ -1067,6 +1075,7 @@ function RuleCard({
     tpsl,
     trailing,
     indicator: primaryLeg.indicator,
+    retrace: primaryLeg.retrace,
     confirm: primaryLeg.confirm,
     entryStack: primaryLeg.entryStack,
     shortEntry: shortLeg,
@@ -1101,6 +1110,18 @@ function RuleCard({
     }
     if (breakevenLive) {
       snapshot.set(`${prefix}breakeven`, "on");
+    }
+    const addExpr = perpsAddGroupsExpr(
+      storedDirection === "short" ? shortAddGroups : longAddGroups,
+    );
+    if (addExpr) {
+      snapshot.set(`${prefix}addExpr`, addExpr);
+    }
+    if (storedDirection === "both") {
+      const shortExpr = perpsAddGroupsExpr(shortAddGroups);
+      if (shortExpr) {
+        snapshot.set(`${prefix}short_addExpr`, shortExpr);
+      }
     }
     parsedLive = parseFuturesAutomationForm(snapshot, venueId);
   } catch {
@@ -1812,6 +1833,22 @@ function RuleCard({
       <BotColumnLayout enabled={embedded}>
       <input type="hidden" name="saveScope" value="one" />
       <input type="hidden" name="ruleCount" value="1" />
+      <input
+        type="hidden"
+        name={`${prefix}addExpr`}
+        value={perpsAddGroupsExpr(
+          direction === "close_short" || direction === "short"
+            ? shortAddGroups
+            : longAddGroups,
+        )}
+      />
+      {direction === "both" ? (
+        <input
+          type="hidden"
+          name={`${prefix}short_addExpr`}
+          value={perpsAddGroupsExpr(shortAddGroups)}
+        />
+      ) : null}
       <input type="hidden" name="deskVenue" value={venueId} />
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
       {!closing && (tpLive || slLive) ? (

@@ -14,6 +14,7 @@ import {
 import {
   dcaEntryStackForSide,
   dcaEntryTickExtras,
+  dcaSideGates,
 } from "@/lib/dca/entry-stack";
 import {
   exitExpressionMet,
@@ -811,24 +812,44 @@ export async function replayDcaPlaybook(input: {
       );
       const entryStack = dcaEntryStackForSide(config, side);
       const entryBars = new Map<DcaIndicatorTimeframe, CandleBar[]>();
-      if (!entryStackIsLegacy(entryStack)) {
-        for (const timeframe of entryStackTimeframes(entryStack)) {
-          const sampled = resampleBarsForTimeframe(
-            barWindow,
-            tapeInterval,
-            timeframe,
-          );
-          entryBars.set(
-            timeframe,
-            sampled.map((row) => ({
-              timeMs: 0,
-              open: row.close,
-              high: row.high,
-              low: row.low,
-              close: row.close,
-            })),
-          );
+      const gateTimeframes = [
+        ...(entryStackIsLegacy(entryStack)
+          ? []
+          : entryStackTimeframes(entryStack)),
+      ];
+      const sideRetrace =
+        config.direction === "both" && side === "short"
+          ? config.shortRetrace
+          : config.retrace;
+      if (dcaStartKindForSide(config, side) === "retrace" && sideRetrace) {
+        gateTimeframes.push(sideRetrace.timeframe);
+      }
+      const sideAdd =
+        config.direction === "both" && side === "short"
+          ? config.shortAddStack
+          : config.addStack;
+      if (sideAdd) {
+        gateTimeframes.push(...entryStackTimeframes(sideAdd));
+      }
+      for (const timeframe of gateTimeframes) {
+        if (entryBars.has(timeframe)) {
+          continue;
         }
+        const sampled = resampleBarsForTimeframe(
+          barWindow,
+          tapeInterval,
+          timeframe,
+        );
+        entryBars.set(
+          timeframe,
+          sampled.map((row) => ({
+            timeMs: 0,
+            open: row.close,
+            high: row.high,
+            low: row.low,
+            close: row.close,
+          })),
+        );
       }
       const decision = decideDcaTick({
         status: live.status,
@@ -884,6 +905,7 @@ export async function replayDcaPlaybook(input: {
         indicatorPeriod: indicatorStart?.period ?? null,
         indicatorSlowPeriod: indicatorStart?.slowPeriod ?? null,
         indicatorMultiplier: indicatorStart?.multiplier ?? null,
+        divergence: indicatorStart?.divergence ?? null,
         indicatorConditionTrue: live.indicatorTrue,
         splitIndicatorSides:
           splitSides &&
@@ -907,6 +929,13 @@ export async function replayDcaPlaybook(input: {
         confirmCloses: confirmSeries.closes,
         confirmBars: confirmSeries.bars,
         ...dcaEntryTickExtras({
+          playbook: config,
+          side,
+          price,
+          prices: triggerPrices,
+          barsByTimeframe: entryBars,
+        }),
+        ...dcaSideGates({
           playbook: config,
           side,
           price,

@@ -369,6 +369,7 @@ function perpsEntryLabel(source: FuturesAutomationFormValues["entrySource"]): st
   if (source === "indicator") return "Indicator";
   if (source === "trend") return "Trend";
   if (source === "webhook") return "Signal webhook";
+  if (source === "retrace") return "Retrace";
   return "Price cross";
 }
 

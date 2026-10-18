@@ -215,6 +215,150 @@ export function DcaFilterParamFields({
       ? botFieldInvalidClass
       : fieldClass;
   }
+  if (spec.kind === "rsi_divergence") {
+    const settings = spec.divergence ?? {
+      when: side === "short" ? ("bearish" as const) : ("bullish" as const),
+      style: "regular" as const,
+      pivotBars: 5,
+      span: 50,
+      minPricePct: null,
+      minRsi: null,
+    };
+    function setDivergence(partial: Partial<typeof settings>) {
+      onChange({ ...spec, divergence: { ...settings, ...partial } });
+    }
+    return (
+      <>
+        <label className={`${labelClass} min-w-0`}>
+          <HintLabel text="When" required />
+          <AppSelect
+            name={named ? `${prefix}DivergenceWhen` : undefined}
+            value={settings.when}
+            onChange={(event) =>
+              setDivergence({
+                when: event.target.value === "bearish" ? "bearish" : "bullish",
+              })
+            }
+            className={fieldClass}
+          >
+            <option value="bullish">Bullish</option>
+            <option value="bearish">Bearish</option>
+          </AppSelect>
+        </label>
+        <label className={`${labelClass} min-w-0`}>
+          <HintLabel text="Style" required />
+          <AppSelect
+            name={named ? `${prefix}DivergenceStyle` : undefined}
+            value={settings.style}
+            onChange={(event) =>
+              setDivergence({
+                style: event.target.value === "hidden" ? "hidden" : "regular",
+              })
+            }
+            className={fieldClass}
+          >
+            <option value="regular">Regular</option>
+            <option value="hidden">Hidden</option>
+          </AppSelect>
+        </label>
+        <label className={`${labelClass} min-w-0`}>
+          <HintLabel text="Period" required />
+          <GroupedNumberInput
+            name={named ? `${prefix}Period` : undefined}
+            value={spec.period == null ? "" : String(spec.period)}
+            onChange={(next) => {
+              const period = Number(next.replace(/,/g, "").trim());
+              onChange({
+                ...spec,
+                divergence: settings,
+                period: Number.isFinite(period) && period > 0 ? period : spec.period,
+              });
+            }}
+            className={numberClass(spec.period)}
+          />
+        </label>
+        <label className={`${labelClass} min-w-0`}>
+          <HintLabel text="Timeframe" required />
+          <AppSelect
+            name={named ? `${prefix}Timeframe` : undefined}
+            value={spec.timeframe}
+            onChange={(event) =>
+              onChange({
+                ...spec,
+                divergence: settings,
+                timeframe: event.target.value as DcaIndicatorTimeframe,
+              })
+            }
+            className={fieldClass}
+          >
+            {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
+              <option key={interval} value={interval}>
+                {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
+              </option>
+            ))}
+          </AppSelect>
+        </label>
+        <label className={`${labelClass} min-w-0`}>
+          <HintLabel text="Pivot bars" required />
+          <GroupedNumberInput
+            name={named ? `${prefix}PivotBars` : undefined}
+            value={String(settings.pivotBars)}
+            onChange={(next) => {
+              const pivotBars = Number(next.replace(/,/g, "").trim());
+              setDivergence({
+                pivotBars: Number.isFinite(pivotBars) && pivotBars > 0 ? pivotBars : settings.pivotBars,
+              });
+            }}
+            className={numberClass(settings.pivotBars)}
+          />
+        </label>
+        <label className={`${labelClass} min-w-0`}>
+          <HintLabel text="Span" required />
+          <GroupedNumberInput
+            name={named ? `${prefix}Span` : undefined}
+            value={String(settings.span)}
+            onChange={(next) => {
+              const span = Number(next.replace(/,/g, "").trim());
+              setDivergence({
+                span: Number.isFinite(span) && span > 1 ? span : settings.span,
+              });
+            }}
+            className={numberClass(settings.span)}
+          />
+        </label>
+        <label className={`${labelClass} min-w-0`}>
+          <HintLabel text="Min price %" />
+          <GroupedNumberInput
+            name={named ? `${prefix}MinPricePct` : undefined}
+            value={settings.minPricePct == null ? "" : String(settings.minPricePct)}
+            onChange={(next) => {
+              const value = Number(next.replace(/,/g, "").trim());
+              setDivergence({
+                minPricePct: next.trim() === "" || !Number.isFinite(value) ? null : value,
+              });
+            }}
+            allowDecimal
+            className={fieldClass}
+          />
+        </label>
+        <label className={`${labelClass} min-w-0`}>
+          <HintLabel text="Min RSI" />
+          <GroupedNumberInput
+            name={named ? `${prefix}MinRsi` : undefined}
+            value={settings.minRsi == null ? "" : String(settings.minRsi)}
+            onChange={(next) => {
+              const value = Number(next.replace(/,/g, "").trim());
+              setDivergence({
+                minRsi: next.trim() === "" || !Number.isFinite(value) ? null : value,
+              });
+            }}
+            allowDecimal
+            className={fieldClass}
+          />
+        </label>
+      </>
+    );
+  }
   const pair = spec.kind === "ema_cross" || spec.kind === "sma_cross";
   const macd = spec.kind === "macd";
   const whenOptions = dcaFilterWhenOptions(spec.kind, side);

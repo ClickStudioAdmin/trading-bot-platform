@@ -59,6 +59,11 @@ export type IndicatorLayer = {
   inputsLocked: boolean;
   /** Shown on the Inputs tab. References follow the chart candles. */
   timeframeLabel: string;
+  /** Confirmed swings. The player draws the latest pair through the playhead. */
+  divergence?: {
+    period: number;
+    settings: import("@/lib/strategy/rsi-divergence").RsiDivergenceSettings;
+  } | null;
 };
 
 export type IndicatorInputId =
@@ -103,6 +108,7 @@ type Spec = {
   reference?: boolean;
   levels: number[];
   timeframe: DcaIndicatorTimeframe | null;
+  divergence?: import("@/lib/strategy/rsi-divergence").RsiDivergenceSettings | null;
 };
 
 function addSpec(specs: Spec[], spec: Spec | null) {
@@ -176,6 +182,7 @@ function specFromIndicator(
     slowPeriod: number | null;
     multiplier?: number | null;
     level: number | null;
+    divergence?: Spec["divergence"];
   },
   role: string,
 ): Spec {
@@ -194,6 +201,7 @@ function specFromIndicator(
     multiplier: start.multiplier ?? null,
     levels: start.level != null ? [start.level] : [],
     timeframe: start.timeframe,
+    divergence: start.divergence ?? null,
   };
 }
 
@@ -216,6 +224,7 @@ function fromFilter(spec: DcaFilterSpec | null | undefined, role: string): Spec 
     multiplier: spec.multiplier,
     levels: spec.level != null ? [spec.level] : [],
     timeframe: spec.timeframe,
+    divergence: spec.divergence ?? null,
   };
 }
 
@@ -241,6 +250,10 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
         multiplier: recipe.indicatorMultiplier ?? null,
         levels: recipe.indicatorLevel != null ? [recipe.indicatorLevel] : [],
         timeframe: recipe.indicatorTimeframe,
+        divergence:
+          recipe.indicatorKind === "rsi_divergence"
+            ? (recipe.leadDivergence ?? null)
+            : null,
       });
     }
     const shortStartKind = recipe.shortStartKind ?? recipe.startKind;
@@ -669,7 +682,8 @@ export function replayChartSeries(
     let oscillator: OscillatorPlot | null = null;
     let dotValues: (number | null)[] = closes.map(() => null);
     let pane: "price" | "oscillator" = "price";
-    if (spec.kind === "rsi") {
+    let divergence: IndicatorLayer["divergence"] = null;
+    if (spec.kind === "rsi" || spec.kind === "rsi_divergence") {
       const period = spec.period ?? DEFAULT_DCA_RSI_PERIOD;
       const rsi = rsiSeries(closes, period);
       pane = "oscillator";
@@ -682,6 +696,12 @@ export function replayChartSeries(
         signal: null,
         histogram: null,
       };
+      if (spec.kind === "rsi_divergence" && spec.divergence) {
+        divergence = {
+          period: spec.period ?? DEFAULT_DCA_RSI_PERIOD,
+          settings: spec.divergence,
+        };
+      }
     } else if (spec.kind === "macd") {
       const fast = spec.reference ? (spec.period ?? MACD_FAST) : MACD_FAST;
       const slow = spec.reference ? (spec.slowPeriod ?? MACD_SLOW) : MACD_SLOW;
@@ -806,6 +826,7 @@ export function replayChartSeries(
       inputs: indicatorInputs(spec),
       inputsLocked: spec.reference !== true,
       timeframeLabel: chartTimeframeLabel(spec),
+      divergence,
     });
   }
   return { layers };

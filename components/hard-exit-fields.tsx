@@ -30,11 +30,13 @@ import {
   type EntryConflictSlot,
 } from "@/lib/strategy/expr";
 import type { FuturesSide, FuturesTrigger } from "@/lib/futures/model";
+import { RetraceFields } from "@/components/retrace-fields";
 
 const TRIGGER_OPTIONS: { value: HardExitTrigger; label: string }[] = [
   { value: "indicator", label: "Indicator" },
   { value: "trend", label: "Trend" },
   { value: "price", label: "Price Cross" },
+  { value: "retrace", label: "Retrace" },
   { value: "webhook", label: "Signal Webhook" },
 ];
 
@@ -184,7 +186,18 @@ export function HardExitFields({
         </AppSelect>
       </label>
       ) : null}
-      {value.trigger === "price" ? (
+      {value.trigger === "retrace" ? (
+        <RetraceFields
+          prefix={named ? prefix : ""}
+          draft={value}
+          onChange={(next) => onChange({ trigger: "retrace", ...next })}
+          fieldClass={fieldClass}
+          labelClass={labelClass}
+          slots={seriesSlots}
+          slotIndex={seriesIndex}
+          showErrors={showErrors}
+        />
+      ) : value.trigger === "price" ? (
         <>
           <label className={`${labelClass} min-w-0`}>
             <HintLabel text="Price source" required />

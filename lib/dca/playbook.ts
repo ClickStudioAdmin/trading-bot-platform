@@ -3,6 +3,18 @@ import {
   parseExitActionsField,
   trailingGateError,
 } from "@/lib/strategy/exit-actions";
+import {
+  DEFAULT_RSI_PIVOT_BARS,
+  DEFAULT_RSI_SPAN,
+  parseRsiDivergenceSettings,
+  rsiDivergenceMet,
+  type RsiDivergenceSettings,
+} from "@/lib/strategy/rsi-divergence";
+import {
+  parseRetraceSpec,
+  retraceClaim,
+  type RetraceSpec,
+} from "@/lib/strategy/retrace";
 import { parseStep } from "@/lib/exchanges/bybit/qty";
 import { formatPerpMinQty } from "@/lib/exchanges/bybit/ticket-size";
 import type { BybitInstrument } from "@/lib/exchanges/bybit/universe";
@@ -98,6 +110,7 @@ import {
   emptyEntryStack,
   entryStackConflictMessage,
   entryStackError,
+  entryExprMetaFromJson,
   entryStackFromJson,
   entryStackIsLegacy,
   entryStackMet,
@@ -113,7 +126,13 @@ export type { EntryStack } from "@/lib/strategy/expr";
 
 export type DcaStatus = "idle" | "armed" | "stop_adding" | "closing";
 export type DcaDirection = "long" | "short" | "both";
-export type DcaStartKind = "immediate" | "price" | "webhook" | "indicator" | "trend";
+export type DcaStartKind =
+  | "immediate"
+  | "price"
+  | "webhook"
+  | "indicator"
+  | "trend"
+  | "retrace";
 export type DcaMode = "position" | "order";
 export type DcaExitBasis = "average" | "first_entry";
 export type DcaMaxType = "orders" | "value";
@@ -159,6 +178,12 @@ export type DcaPlaybookConfig = {
   startKind: DcaStartKind;
   /** Set on direction both. Null means this row still shares startKind. */
   shortStartKind?: DcaStartKind | null;
+  retrace?: RetraceSpec | null;
+  shortRetrace?: RetraceSpec | null;
+  leadDivergence?: RsiDivergenceSettings | null;
+  shortLeadDivergence?: RsiDivergenceSettings | null;
+  addStack?: EntryStack | null;
+  shortAddStack?: EntryStack | null;
   webhookId: string | null;
   shortWebhookId?: string | null;
   dcaMode: DcaMode;
@@ -288,7 +313,8 @@ export function parseDcaStartKind(value: unknown): DcaStartKind {
     value === "price" ||
     value === "webhook" ||
     value === "indicator" ||
-    value === "trend"
+    value === "trend" ||
+    value === "retrace"
   ) {
     return value;
   }
@@ -329,7 +355,8 @@ function dcaStartConflictSlot(
     kind === "price" ||
     kind === "indicator" ||
     kind === "trend" ||
-    kind === "webhook"
+    kind === "webhook" ||
+    kind === "retrace"
   ) {
     return {
       kind,
@@ -345,6 +372,7 @@ function dcaStartClaim(
   kind: DcaStartKind | null,
   trigger: DcaPriceTrigger | null,
   start: DcaIndicatorStart | null,
+  retrace: RetraceSpec | null = null,
 ): ConflictClaim | null {
   if (kind === "price" && trigger) {
     return priceClaim({
@@ -352,6 +380,9 @@ function dcaStartClaim(
       compare: trigger.compare,
       price: trigger.price,
     });
+  }
+  if (kind === "retrace" && retrace) {
+    return retraceClaim(retrace);
   }
   if ((kind === "indicator" || kind === "trend") && start) {
     return indicatorClaim({
@@ -363,6 +394,7 @@ function dcaStartClaim(
       period: start.period,
       slowPeriod: start.slowPeriod,
       multiplier: start.multiplier,
+      when: start.kind === "rsi_divergence" ? start.divergence?.when : undefined,
     });
   }
   return null;
@@ -819,7 +851,8 @@ export function dcaStartListens(startKind: DcaStartKind): boolean {
     startKind === "price" ||
     startKind === "indicator" ||
     startKind === "trend" ||
-    startKind === "webhook"
+    startKind === "webhook" ||
+    startKind === "retrace"
   );
 }
 
@@ -831,6 +864,7 @@ export type DcaIndicatorStart = {
   period: number | null;
   slowPeriod: number | null;
   multiplier?: number | null;
+  divergence?: RsiDivergenceSettings | null;
 };
 
 export function parseDcaIndicatorKind(
@@ -845,7 +879,8 @@ export function parseDcaIndicatorKind(
     raw === "sma_cross" ||
     raw === "bb" ||
     raw === "atr_band" ||
-    raw === "supertrend"
+    raw === "supertrend" ||
+    raw === "rsi_divergence"
     ? raw
     : null;
 }
@@ -867,6 +902,8 @@ export function dcaIndicatorStartForSide(
     | "shortIndicatorPeriod"
     | "shortIndicatorSlowPeriod"
     | "shortIndicatorMultiplier"
+    | "leadDivergence"
+    | "shortLeadDivergence"
   >,
   side: FuturesSide,
 ): DcaIndicatorStart | null {
@@ -904,6 +941,12 @@ export function dcaIndicatorStartForSide(
       side === "short" && playbook.shortIndicatorKind
         ? (playbook.shortIndicatorMultiplier ?? null)
         : playbook.indicatorMultiplier,
+    divergence:
+      kind === "rsi_divergence"
+        ? side === "short" && playbook.shortIndicatorKind
+          ? (playbook.shortLeadDivergence ?? null)
+          : (playbook.leadDivergence ?? null)
+        : null,
   };
 }
 
@@ -930,6 +973,10 @@ export function dcaIndicatorTimeframes(playbook: {
   shortExitStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
   shortExitIf?: DcaFilterSpec | null;
+  retrace?: RetraceSpec | null;
+  shortRetrace?: RetraceSpec | null;
+  addStack?: EntryStack | null;
+  shortAddStack?: EntryStack | null;
 }): DcaIndicatorTimeframe[] {
   const rows: DcaIndicatorTimeframe[] = [];
   const shortKind = playbook.shortStartKind ?? playbook.startKind;
@@ -942,6 +989,26 @@ export function dcaIndicatorTimeframes(playbook: {
     !rows.includes(playbook.shortIndicatorTimeframe)
   ) {
     rows.push(playbook.shortIndicatorTimeframe);
+  }
+  if (playbook.startKind === "retrace" && playbook.retrace) {
+    if (!rows.includes(playbook.retrace.timeframe)) {
+      rows.push(playbook.retrace.timeframe);
+    }
+  }
+  if (shortKind === "retrace" && playbook.shortRetrace) {
+    if (!rows.includes(playbook.shortRetrace.timeframe)) {
+      rows.push(playbook.shortRetrace.timeframe);
+    }
+  }
+  for (const stack of [playbook.addStack, playbook.shortAddStack]) {
+    if (!stack) {
+      continue;
+    }
+    for (const timeframe of entryStackTimeframes(stack)) {
+      if (!rows.includes(timeframe)) {
+        rows.push(timeframe);
+      }
+    }
   }
   for (const row of dcaFilterTimeframes(playbook)) {
     if (!rows.includes(row)) {
@@ -1673,6 +1740,19 @@ function parseDcaEntryLeaf(
     }
     return { ok: true, leaf: { kind: "price", triggerBy, compare, price } };
   }
+  if (source === "retrace") {
+    const spec = parseRetraceSpec({
+      source: form.get(`${prefix}RetraceSource`) ?? "last",
+      from: form.get(`${prefix}RetraceFrom`),
+      pct: form.get(`${prefix}RetracePct`),
+      lookback: form.get(`${prefix}RetraceLookback`) ?? "20",
+      timeframe: form.get(`${prefix}RetraceTimeframe`) ?? "15",
+    });
+    if (!spec) {
+      return { ok: false, error: "Enter the retrace percent, lookback, and timeframe." };
+    }
+    return { ok: true, leaf: { kind: "retrace", ...spec } };
+  }
   if (source === "webhook") {
     const webhookId = String(form.get(`${prefix}WebhookId`) ?? "").trim();
     if (!webhookId) {
@@ -1749,7 +1829,7 @@ function parseDcaEntryStackForm(
   return { ok: true, present: true, stack };
 }
 
-function writeDcaEntryStackFields(
+export function writeDcaEntryStackFields(
   form: FormData,
   prefix: string,
   stack: EntryStack,
@@ -1773,6 +1853,22 @@ function writeDcaEntryStackFields(
       form.set(`${row}WebhookId`, leaf.webhookId);
       return;
     }
+    if (leaf.kind === "retrace") {
+      form.set(`${row}RetraceSource`, leaf.source);
+      form.set(`${row}RetraceFrom`, leaf.from);
+      form.set(`${row}RetracePct`, String(leaf.pct));
+      form.set(`${row}RetraceLookback`, String(leaf.lookback));
+      form.set(`${row}RetraceTimeframe`, leaf.timeframe);
+      return;
+    }
+    if (leaf.kind === "protection") {
+      form.set(`${row}ProtectionIs`, leaf.is);
+      form.set(`${row}ProtectionAmount`, leaf.amount);
+      if (leaf.pct != null) {
+        form.set(`${row}ProtectionPct`, String(leaf.pct));
+      }
+      return;
+    }
     const names = dcaIndicatorFieldNames(row);
     form.set(names.kind, leaf.start.kind);
     form.set(names.timeframe, leaf.start.timeframe);
@@ -1790,6 +1886,22 @@ function writeDcaEntryStackFields(
     }
     if (leaf.start.multiplier != null) {
       form.set(names.multiplier, String(leaf.start.multiplier));
+    }
+    if (leaf.start.kind === "rsi_divergence" && leaf.start.divergence) {
+      const base = names.kind.endsWith("Kind")
+        ? names.kind.slice(0, -4)
+        : names.kind;
+      const settings = leaf.start.divergence;
+      form.set(`${base}DivergenceWhen`, settings.when);
+      form.set(`${base}DivergenceStyle`, settings.style);
+      form.set(`${base}PivotBars`, String(settings.pivotBars));
+      form.set(`${base}Span`, String(settings.span));
+      if (settings.minPricePct != null) {
+        form.set(`${base}MinPricePct`, String(settings.minPricePct));
+      }
+      if (settings.minRsi != null) {
+        form.set(`${base}MinRsi`, String(settings.minRsi));
+      }
     }
   });
 }
@@ -2278,18 +2390,48 @@ export function parseDcaPlaybookForm(
   if (!shortExitStack.ok) {
     return shortExitStack;
   }
+  const retrace =
+    startKind === "retrace"
+      ? parseRetraceSpec({
+          source: form.get("RetraceSource") ?? "last",
+          from: form.get("RetraceFrom") ?? (direction === "short" ? "low" : "high"),
+          pct: form.get("RetracePct"),
+          lookback: form.get("RetraceLookback") ?? "20",
+          timeframe: form.get("RetraceTimeframe") ?? "15",
+        })
+      : null;
+  if (startKind === "retrace" && !retrace) {
+    return { ok: false, error: "Enter the retrace percent, lookback, and timeframe." };
+  }
+  const shortRetrace =
+    shortStartKind === "retrace"
+      ? parseRetraceSpec({
+          source: form.get("shortRetraceSource") ?? "last",
+          from: form.get("shortRetraceFrom") ?? "low",
+          pct: form.get("shortRetracePct"),
+          lookback: form.get("shortRetraceLookback") ?? "20",
+          timeframe: form.get("shortRetraceTimeframe") ?? "15",
+        })
+      : null;
+  if (shortStartKind === "retrace" && !shortRetrace) {
+    return { ok: false, error: "Enter the short retrace percent, lookback, and timeframe." };
+  }
   const longTriggerTimeframe =
-    longIndicator.start && dcaSeriesStart(startKind)
-      ? longIndicator.start.timeframe
-      : null;
+    startKind === "retrace" && retrace
+      ? retrace.timeframe
+      : longIndicator.start && dcaSeriesStart(startKind)
+        ? longIndicator.start.timeframe
+        : null;
   const shortTriggerTimeframe =
-    shortIndicator.start && dcaSeriesStart(shortStartKind)
-      ? shortIndicator.start.timeframe
-      : null;
+    shortStartKind === "retrace" && shortRetrace
+      ? shortRetrace.timeframe
+      : shortIndicator.start && dcaSeriesStart(shortStartKind)
+        ? shortIndicator.start.timeframe
+        : null;
   const longTriggerSlot = dcaStartConflictSlot(
     startKind,
     webhookId,
-    dcaStartClaim(startKind, armTrigger.trigger, longIndicator.start),
+    dcaStartClaim(startKind, armTrigger.trigger, longIndicator.start, retrace),
   );
   const shortTriggerSlot = dcaStartConflictSlot(
     shortStartKind ?? startKind,
@@ -2298,6 +2440,7 @@ export function parseDcaPlaybookForm(
       shortStartKind ?? startKind,
       shortArmTrigger.trigger,
       shortIndicator.start,
+      shortRetrace,
     ),
   );
   const longStack = parseDcaEntryStackForm(
@@ -2350,6 +2493,17 @@ export function parseDcaPlaybookForm(
       return { ok: false, error: gate };
     }
   }
+  const addParsed = parseDcaEntryStackForm(form, "add", null);
+  if (!addParsed.ok) {
+    return addParsed;
+  }
+  const shortAddParsed =
+    direction === "both"
+      ? parseDcaEntryStackForm(form, "shortAdd", null)
+      : { ok: true as const, present: false, stack: emptyEntryStack() };
+  if (!shortAddParsed.ok) {
+    return shortAddParsed;
+  }
   return {
     ok: true,
     config: {
@@ -2358,6 +2512,12 @@ export function parseDcaPlaybookForm(
       direction,
       startKind,
       shortStartKind,
+      retrace,
+      shortRetrace,
+      leadDivergence: longIndicator.start?.divergence ?? null,
+      shortLeadDivergence: shortIndicator.start?.divergence ?? null,
+      addStack: addParsed.present ? addParsed.stack : null,
+      shortAddStack: shortAddParsed.present ? shortAddParsed.stack : null,
       webhookId,
       shortWebhookId,
       dcaMode,
@@ -2481,6 +2641,9 @@ export function parseDcaIndicatorStartFields(
   if (family === "trend" && kind === "atr_band") {
     return { ok: false, error: `ATR band is an Indicator, not a Trend.` };
   }
+  if (kind === "rsi_divergence" && family === "trend") {
+    return { ok: false, error: `RSI divergence is an Indicator, not a Trend.` };
+  }
   const timeframe = parseDcaIndicatorTimeframe(
     form.get(names.timeframe) ?? "15",
   );
@@ -2488,6 +2651,42 @@ export function parseDcaIndicatorStartFields(
     return { ok: false, error: `Choose a ${prefix}timeframe.` };
   }
   const compareRaw = String(form.get(names.compare) ?? "").trim();
+  if (kind === "rsi_divergence") {
+    const period = requiredWhenPosted(
+      form,
+      names.period,
+      parseDcaIndicatorPeriod,
+      DEFAULT_DCA_RSI_PERIOD,
+      `${prefix}RSI period`,
+    );
+    if (!period.ok) {
+      return period;
+    }
+    const base = names.kind.endsWith("Kind") ? names.kind.slice(0, -4) : names.kind;
+    const divergence = parseRsiDivergenceSettings({
+      when: form.get(`${base}DivergenceWhen`),
+      style: form.get(`${base}DivergenceStyle`) || "regular",
+      pivotBars: form.get(`${base}PivotBars`) || DEFAULT_RSI_PIVOT_BARS,
+      span: form.get(`${base}Span`) || DEFAULT_RSI_SPAN,
+      minPricePct: form.get(`${base}MinPricePct`),
+      minRsi: form.get(`${base}MinRsi`),
+    });
+    if (!divergence) {
+      return { ok: false, error: `Choose when ${prefix}RSI divergence should fire.` };
+    }
+    return {
+      ok: true,
+      start: {
+        kind,
+        timeframe,
+        compare: null,
+        level: null,
+        period: period.value,
+        slowPeriod: null,
+        divergence,
+      },
+    };
+  }
   if (kind === "rsi") {
     const cmp = parseDcaIndicatorCompare(compareRaw || "cross_lte");
     const level = parseOptionalPositive(form.get(names.level));
@@ -2829,6 +3028,8 @@ export function parseDcaPlaybookRow(
   );
   const indicatorCompare = parseDcaIndicatorCompare(row.indicator_compare);
   const shortIndicatorKind = parseDcaIndicatorKind(row.short_indicator_kind);
+  const longMeta = entryExprMetaFromJson(row.entry_expr);
+  const shortMeta = entryExprMetaFromJson(row.short_entry_expr);
   return {
     id,
     userId,
@@ -2841,6 +3042,12 @@ export function parseDcaPlaybookRow(
       direction === "both"
         ? parseOptionalDcaStartKind(row.short_start_kind)
         : null,
+    retrace: longMeta.retrace,
+    shortRetrace: direction === "both" ? shortMeta.retrace : null,
+    leadDivergence: longMeta.divergence,
+    shortLeadDivergence: direction === "both" ? shortMeta.divergence : null,
+    addStack: longMeta.add,
+    shortAddStack: direction === "both" ? shortMeta.add : null,
     webhookId: parseDcaPlaybookId(row.webhook_id),
     shortWebhookId: parseDcaPlaybookId(row.short_webhook_id),
     dcaMode: parseDcaMode(row.dca_mode),
@@ -3240,6 +3447,7 @@ export function dcaSeriesStartEval(input: {
   indicatorPeriod?: number | null;
   indicatorSlowPeriod?: number | null;
   indicatorMultiplier?: number | null;
+  divergence?: RsiDivergenceSettings | null;
   splitIndicatorSides?: boolean;
   indicatorConditionTrue?: boolean;
   clipsFilled: number;
@@ -3254,6 +3462,14 @@ export function dcaSeriesStartEval(input: {
   const closes = input.closes ?? null;
   const bars = input.bars ?? null;
   const latchCross = dcaIndicatorStartLatches(indicatorKind, indicatorCompare);
+  if (usesSeriesStart && indicatorKind === "rsi_divergence") {
+    const met = rsiDivergenceMet({
+      bars: bars ?? [],
+      period: input.indicatorPeriod,
+      settings: input.divergence,
+    });
+    return { now: met, due: met };
+  }
   const now = Boolean(
     usesSeriesStart &&
       indicatorKind &&
@@ -3336,6 +3552,11 @@ export function decideDcaTick(input: {
   indicatorPeriod?: number | null;
   indicatorSlowPeriod?: number | null;
   indicatorMultiplier?: number | null;
+  divergence?: RsiDivergenceSettings | null;
+  /** Required when the start is retrace. Omitted stays unmet. */
+  retraceMet?: boolean;
+  /** Omitted keeps the ladder. False holds the next clip. */
+  addMet?: boolean;
   indicatorConditionTrue?: boolean;
   splitIndicatorSides?: boolean;
   closes?: number[] | null;
@@ -3386,6 +3607,7 @@ export function decideDcaTick(input: {
     indicatorPeriod,
     indicatorSlowPeriod,
     indicatorMultiplier,
+    divergence: input.divergence,
     splitIndicatorSides: splitBySide,
     indicatorConditionTrue: input.indicatorConditionTrue,
     clipsFilled: input.clipsFilled,
@@ -3637,6 +3859,7 @@ export function decideDcaTick(input: {
     const startReady =
       startKind === "immediate" ||
       (startKind === "price" && armMet) ||
+      (startKind === "retrace" && input.retraceMet === true) ||
       ((startKind === "indicator" || startKind === "trend") && indicatorDue);
     const entryMet = stackedEntry
       ? entryStackMet({
@@ -3729,7 +3952,7 @@ export function decideDcaTick(input: {
     lastClipAtMs: input.lastClipAtMs,
     intervalMinutes: input.intervalMinutes,
   });
-  if (dip || interval) {
+  if ((dip || interval) && input.addMet !== false) {
     return {
       action: { kind: "clip" },
       nextArmTrue,

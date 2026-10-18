@@ -79,6 +79,7 @@ import {
 import {
   dcaEntryStackNeedsWideBars,
   dcaEntryTickExtras,
+  dcaSideGates,
 } from "./entry-stack";
 import {
   dcaFilterForSide,
@@ -1020,6 +1021,7 @@ export async function runDcaPlaybookTick(input?: {
         indicatorPeriod: indicatorStart?.period ?? null,
         indicatorSlowPeriod: indicatorStart?.slowPeriod ?? null,
         indicatorMultiplier: indicatorStart?.multiplier ?? null,
+        divergence: indicatorStart?.divergence ?? null,
         splitIndicatorSides:
           playbook.direction === "both" &&
           !playbook.shortIndicatorKind &&
@@ -1044,6 +1046,13 @@ export async function runDcaPlaybookTick(input?: {
         confirmCloses: confirmSeries.closes,
         confirmBars: confirmSeries.bars,
         ...dcaEntryTickExtras({
+          playbook,
+          side,
+          price: prices.last,
+          prices,
+          barsByTimeframe,
+        }),
+        ...dcaSideGates({
           playbook,
           side,
           price: prices.last,

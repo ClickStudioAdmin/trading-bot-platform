@@ -21,6 +21,12 @@ import {
   type DcaIndicatorTimeframe,
   type SupertrendBar,
 } from "./indicators";
+import {
+  blankRsiDivergenceSettings,
+  parseRsiDivergenceSettings,
+  rsiDivergenceMet,
+  type RsiDivergenceSettings,
+} from "@/lib/strategy/rsi-divergence";
 
 export { atrBandMet, DEFAULT_DCA_ATR_BAND_MULT };
 
@@ -34,6 +40,7 @@ export const DCA_FILTER_KINDS = [
   "bb",
   "atr_band",
   "supertrend",
+  "rsi_divergence",
 ] as const;
 export type DcaFilterKind = (typeof DCA_FILTER_KINDS)[number];
 export const DCA_FILTER_COMPARES = [
@@ -55,6 +62,7 @@ export type DcaFilterSpec = {
   period: number | null;
   slowPeriod?: number | null;
   multiplier: number | null;
+  divergence?: RsiDivergenceSettings | null;
 };
 
 export const DCA_FILTER_KIND_OPTIONS: {
@@ -62,6 +70,7 @@ export const DCA_FILTER_KIND_OPTIONS: {
   label: string;
 }[] = [
   { value: "rsi", label: "RSI" },
+  { value: "rsi_divergence", label: "RSI divergence" },
   { value: "macd", label: "MACD" },
   { value: "sma", label: "Price vs SMA" },
   { value: "ema", label: "Price vs EMA" },
@@ -93,6 +102,9 @@ export function dcaFilterComplete(
       spec.period !== spec.slowPeriod
     );
   }
+  if (spec.kind === "rsi_divergence") {
+    return spec.period != null && spec.period > 0 && spec.divergence != null;
+  }
   if (spec.kind === "rsi") {
     if (spec.level == null) {
       return false;
@@ -112,7 +124,7 @@ export function parseDcaFilterKind(value: unknown): DcaFilterKind | null {
 }
 
 export function defaultDcaFilterPeriod(kind: DcaFilterKind): number {
-  if (kind === "rsi") {
+  if (kind === "rsi" || kind === "rsi_divergence") {
     return DEFAULT_DCA_RSI_PERIOD;
   }
   if (kind === "bb") {
@@ -248,6 +260,9 @@ export function dcaFilterSpecForKind(
         : kind === "atr_band"
           ? DEFAULT_DCA_ATR_BAND_MULT
           : null,
+    ...(kind === "rsi_divergence"
+      ? { divergence: blankRsiDivergenceSettings(side) }
+      : {}),
   };
 }
 
@@ -260,6 +275,7 @@ export function parseDcaFilterSpec(input: {
   period: unknown;
   slowPeriod?: unknown;
   multiplier: unknown;
+  divergence?: unknown;
 }): DcaFilterSpec | null {
   const kind = parseDcaFilterKind(input.kind);
   const timeframe = parseDcaIndicatorTimeframe(input.timeframe);
@@ -313,6 +329,13 @@ export function parseDcaFilterSpec(input: {
         : kind === "atr_band"
           ? (multiplier ?? DEFAULT_DCA_ATR_BAND_MULT)
           : null,
+    ...(kind === "rsi_divergence"
+      ? {
+          divergence:
+            parseRsiDivergenceSettings(input.divergence) ??
+            blankRsiDivergenceSettings("long"),
+        }
+      : {}),
   };
 }
 
@@ -338,6 +361,17 @@ export function parseDcaFilterForm(
     period: form.get(`${prefix}Period`),
     slowPeriod: form.get(`${prefix}SlowPeriod`),
     multiplier: form.get(`${prefix}Multiplier`),
+    divergence:
+      kindRaw === "rsi_divergence"
+        ? {
+            when: form.get(`${prefix}DivergenceWhen`),
+            style: form.get(`${prefix}DivergenceStyle`) || "regular",
+            pivotBars: form.get(`${prefix}PivotBars`) || "5",
+            span: form.get(`${prefix}Span`) || "50",
+            minPricePct: form.get(`${prefix}MinPricePct`),
+            minRsi: form.get(`${prefix}MinRsi`),
+          }
+        : undefined,
   });
   if (!spec) {
     return { ok: false, error: `Enter a valid ${label} filter.` };
@@ -393,6 +427,18 @@ export function writeDcaFilterFormFields(
     form.set(`${prefix}SlowPeriod`, String(spec.slowPeriod));
   } else {
     form.delete(`${prefix}SlowPeriod`);
+  }
+  if (spec.kind === "rsi_divergence" && spec.divergence) {
+    form.set(`${prefix}DivergenceWhen`, spec.divergence.when);
+    form.set(`${prefix}DivergenceStyle`, spec.divergence.style);
+    form.set(`${prefix}PivotBars`, String(spec.divergence.pivotBars));
+    form.set(`${prefix}Span`, String(spec.divergence.span));
+    if (spec.divergence.minPricePct != null) {
+      form.set(`${prefix}MinPricePct`, String(spec.divergence.minPricePct));
+    }
+    if (spec.divergence.minRsi != null) {
+      form.set(`${prefix}MinRsi`, String(spec.divergence.minRsi));
+    }
   }
   if (spec.multiplier != null) {
     form.set(`${prefix}Multiplier`, String(spec.multiplier));
@@ -645,6 +691,13 @@ export function dcaFilterMet(input: {
   const spec = input.spec;
   if (!spec) {
     return true;
+  }
+  if (spec.kind === "rsi_divergence") {
+    return rsiDivergenceMet({
+      bars: input.bars ?? [],
+      period: spec.period,
+      settings: spec.divergence,
+    });
   }
   const closes = input.closes ?? [];
   const bars = input.bars ?? [];

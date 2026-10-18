@@ -429,7 +429,10 @@ export async function fireWebhookAutomationEntries(input: {
       perpsAutomationLegs(rule).some(
         (leg) =>
           leg.rule.entrySource === "price" ||
-          leg.rule.entryStack.leaves.some((leaf) => leaf.kind === "price") ||
+          leg.rule.entrySource === "retrace" ||
+          leg.rule.entryStack.leaves.some(
+            (leaf) => leaf.kind === "price" || leaf.kind === "retrace",
+          ) ||
           leg.rule.exitHard?.trigger === "price" ||
           (leg.rule.exitStack?.leaves ?? []).some((leaf) => leaf.kind === "price"),
       )

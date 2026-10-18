@@ -42,6 +42,12 @@ import {
   priceClaim,
   type ConflictClaim,
 } from "@/lib/strategy/conflicts";
+import { retraceClaim } from "@/lib/strategy/retrace";
+import {
+  blankRetraceDraft,
+  RetraceFields,
+  type RetraceDraft,
+} from "@/components/retrace-fields";
 import {
   STRATEGY_CONDITION_CAP,
   entryJoinDisabled,
@@ -64,6 +70,12 @@ type IndicatorConditionDraft = {
   period: string;
   slowPeriod: string;
   multiplier: string;
+  divergenceWhen?: string;
+  divergenceStyle?: string;
+  pivotBars?: string;
+  span?: string;
+  minPricePct?: string;
+  minRsi?: string;
 };
 
 export type EntryConditionDraft =
@@ -75,6 +87,7 @@ export type EntryConditionDraft =
       compare: "gte" | "lte";
       price: string;
     }
+  | ({ kind: "retrace" } & RetraceDraft)
   | ({ kind: "indicator" } & IndicatorConditionDraft)
   | ({ kind: "trend" } & IndicatorConditionDraft)
   | { kind: "webhook"; webhookId: string };
@@ -96,6 +109,13 @@ export type EntryAnchor = {
 export function claimFromEntryDraft(
   draft: EntryConditionDraft,
 ): ConflictClaim | null {
+  if (draft.kind === "retrace") {
+    return retraceClaim({
+      source: draft.source,
+      from: draft.from,
+      timeframe: draft.timeframe,
+    });
+  }
   if (draft.kind === "price") {
     return priceClaim({
       source: draft.triggerBy,
@@ -131,6 +151,7 @@ export function claimFromEntryDraft(
     period: draft.period,
     slowPeriod: draft.slowPeriod,
     multiplier: draft.multiplier,
+    when: draft.indicatorKind === "rsi_divergence" ? draft.divergenceWhen : undefined,
   });
 }
 
@@ -153,6 +174,19 @@ function draftFromLeaf(leaf: StrategyLeaf): EntryConditionDraft {
   if (leaf.kind === "webhook") {
     return { kind: "webhook", webhookId: leaf.webhookId };
   }
+  if (leaf.kind === "retrace") {
+    return {
+      kind: "retrace",
+      source: leaf.source,
+      from: leaf.from,
+      pct: String(leaf.pct),
+      lookback: String(leaf.lookback),
+      timeframe: leaf.timeframe,
+    };
+  }
+  if (leaf.kind === "protection") {
+    return { kind: "unset" };
+  }
   return {
     kind: leaf.kind,
     indicatorKind: leaf.start.kind,
@@ -164,6 +198,24 @@ function draftFromLeaf(leaf: StrategyLeaf): EntryConditionDraft {
       leaf.start.slowPeriod != null ? String(leaf.start.slowPeriod) : "",
     multiplier:
       leaf.start.multiplier != null ? String(leaf.start.multiplier) : "",
+    divergenceWhen: leaf.start.divergence?.when ?? "",
+    divergenceStyle: leaf.start.divergence?.style ?? "regular",
+    pivotBars:
+      leaf.start.divergence?.pivotBars != null
+        ? String(leaf.start.divergence.pivotBars)
+        : "5",
+    span:
+      leaf.start.divergence?.span != null
+        ? String(leaf.start.divergence.span)
+        : "50",
+    minPricePct:
+      leaf.start.divergence?.minPricePct != null
+        ? String(leaf.start.divergence.minPricePct)
+        : "",
+    minRsi:
+      leaf.start.divergence?.minRsi != null
+        ? String(leaf.start.divergence.minRsi)
+        : "",
   };
 }
 
@@ -207,6 +259,24 @@ function indicatorStartFromDraft(
   if (draft.multiplier.trim() !== "") {
     form.set(names.multiplier, draft.multiplier);
   }
+  if (draft.divergenceWhen) {
+    form.set("indicatorDivergenceWhen", draft.divergenceWhen);
+  }
+  if (draft.divergenceStyle) {
+    form.set("indicatorDivergenceStyle", draft.divergenceStyle);
+  }
+  if (draft.pivotBars) {
+    form.set("indicatorPivotBars", draft.pivotBars);
+  }
+  if (draft.span) {
+    form.set("indicatorSpan", draft.span);
+  }
+  if (draft.minPricePct) {
+    form.set("indicatorMinPricePct", draft.minPricePct);
+  }
+  if (draft.minRsi) {
+    form.set("indicatorMinRsi", draft.minRsi);
+  }
   const parsed = parseDcaIndicatorStartFields(
     form,
     names,
@@ -215,6 +285,15 @@ function indicatorStartFromDraft(
     draft.kind === "trend" ? "trend" : "indicator",
   );
   return parsed.ok ? parsed.start : null;
+}
+
+/** An added row left on Select Condition Type does not block Save. A chosen type must be complete. */
+export function entryRowsMissing(
+  rows: readonly { draft: EntryConditionDraft }[],
+): boolean {
+  return rows.some(
+    (row) => row.draft.kind !== "unset" && !entryDraftComplete(row.draft),
+  );
 }
 
 export function entryDraftComplete(draft: EntryConditionDraft): boolean {
@@ -229,6 +308,11 @@ export function entryDraftComplete(draft: EntryConditionDraft): boolean {
   }
   if (draft.kind === "webhook") {
     return draft.webhookId.trim() !== "";
+  }
+  if (draft.kind === "retrace") {
+    const pct = Number(draft.pct.replace(/,/g, "").trim());
+    const lookback = Math.trunc(Number(draft.lookback));
+    return pct > 0 && lookback >= 1 && lookback <= 400;
   }
   if (
     indicatorDraftMissing({
@@ -284,6 +368,21 @@ function leafFromDraft(draft: EntryConditionDraft): StrategyLeaf | null {
       return null;
     }
     return { kind: "webhook", webhookId: draft.webhookId };
+  }
+  if (draft.kind === "retrace") {
+    const pct = Number(draft.pct.replace(/,/g, "").trim());
+    const lookback = Math.trunc(Number(draft.lookback));
+    if (!(pct > 0) || !(lookback >= 1) || lookback > 400) {
+      return null;
+    }
+    return {
+      kind: "retrace",
+      source: draft.source,
+      from: draft.from,
+      pct,
+      lookback,
+      timeframe: draft.timeframe,
+    };
   }
   const start = indicatorStartFromDraft(draft);
   if (!start) {
@@ -382,6 +481,12 @@ function draftForKind(
   if (kind === "price") {
     return { kind: "price", triggerBy: "last", compare: "gte", price: "" };
   }
+  if (kind === "retrace") {
+    return { kind: "retrace", ...blankRetraceDraft(side), timeframe };
+  }
+  if (kind === "protection") {
+    return { kind: "unset" };
+  }
   if (kind === "webhook") {
     return { kind: "webhook", webhookId: "" };
   }
@@ -417,6 +522,7 @@ const TRIGGER_OPTIONS: { value: StrategyTriggerKind; label: string }[] = [
   { value: "indicator", label: "Indicator" },
   { value: "trend", label: "Trend" },
   { value: "price", label: "Price Cross" },
+  { value: "retrace", label: "Retrace" },
   { value: "webhook", label: "Signal Webhook" },
 ];
 
@@ -436,6 +542,7 @@ export function EntryConditionStack({
   groupFooter,
   showErrors = false,
   optionalAddedKind = false,
+  kinds,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -454,10 +561,15 @@ export function EntryConditionStack({
   groupFooter?: (groupIndex: number) => ReactNode;
   /** Paint empty required controls after the form has been edited. */
   showErrors?: boolean;
-  /** Flex added rows can stay on Select Condition Type. */
+  /** An added row can stay on Select Condition Type. */
   optionalAddedKind?: boolean;
+  /** Limits the Condition Type list. Entries keep the full list. */
+  kinds?: readonly StrategyTriggerKind[];
 }) {
   const column = useBotColumnLayout();
+  const typeOptions = kinds
+    ? TRIGGER_OPTIONS.filter((option) => kinds.includes(option.value))
+    : TRIGGER_OPTIONS;
   const cap = STRATEGY_CONDITION_CAP - 1;
   const webhookIds = webhooks.map((hook) => hook.id);
   const slots = entryConflictSlots(anchor, rows);
@@ -602,10 +714,15 @@ export function EntryConditionStack({
                       const kind = event.target.value as StrategyTriggerKind;
                       if (
                         kind !== "price" &&
+                        kind !== "retrace" &&
                         kind !== "indicator" &&
                         kind !== "trend" &&
                         kind !== "webhook"
                       ) {
+                        replace(row.key, { ...row, draft: { kind: "unset" } });
+                        return;
+                      }
+                      if (kinds && !kinds.includes(kind)) {
                         replace(row.key, { ...row, draft: { kind: "unset" } });
                         return;
                       }
@@ -626,7 +743,7 @@ export function EntryConditionStack({
                     }
                   >
                     <option value="">Select Condition Type</option>
-                    {TRIGGER_OPTIONS.map((option) => (
+                    {typeOptions.map((option) => (
                       <option
                         key={option.value}
                         value={option.value}
@@ -741,6 +858,19 @@ export function EntryConditionStack({
                       />
                     </label>
                   </>
+                ) : draft.kind === "retrace" ? (
+                  <RetraceFields
+                    prefix={`${prefix}${nameIndex}`}
+                    draft={draft}
+                    onChange={(next) =>
+                      replace(row.key, { ...row, draft: { kind: "retrace", ...next } })
+                    }
+                    fieldClass={fieldClass}
+                    labelClass={labelClass}
+                    slots={slots}
+                    slotIndex={slotIndex}
+                    showErrors={showErrors}
+                  />
                 ) : draft.kind === "indicator" ? (
                   <IndicatorStartFields
                     side={side}
@@ -772,6 +902,24 @@ export function EntryConditionStack({
                     onMultiplierChange={(multiplier) =>
                       patchDraft(row.key, { multiplier })
                     }
+                    divergenceWhen={draft.divergenceWhen}
+                    divergenceStyle={draft.divergenceStyle}
+                    pivotBars={draft.pivotBars}
+                    span={draft.span}
+                    minPricePct={draft.minPricePct}
+                    minRsi={draft.minRsi}
+                    onDivergenceWhenChange={(divergenceWhen) =>
+                      patchDraft(row.key, { divergenceWhen })
+                    }
+                    onDivergenceStyleChange={(divergenceStyle) =>
+                      patchDraft(row.key, { divergenceStyle })
+                    }
+                    onPivotBarsChange={(pivotBars) => patchDraft(row.key, { pivotBars })}
+                    onSpanChange={(span) => patchDraft(row.key, { span })}
+                    onMinPricePctChange={(minPricePct) =>
+                      patchDraft(row.key, { minPricePct })
+                    }
+                    onMinRsiChange={(minRsi) => patchDraft(row.key, { minRsi })}
                   />
                 ) : draft.kind === "trend" ? (
                   <TrendStartFields

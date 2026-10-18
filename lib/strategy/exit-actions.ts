@@ -5,7 +5,9 @@ import {
   isExitPriceRule,
   type HardExitDraft,
 } from "@/lib/dca/hard-exit";
+import { parseDcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import type { FuturesSide } from "@/lib/futures/model";
+import { retraceMet } from "@/lib/strategy/retrace";
 import type { CandleBar } from "@/lib/market/candles";
 import {
   breakevenExitClause,
@@ -338,6 +340,7 @@ function draftOf(value: unknown): HardExitDraft | null {
     row.trigger !== "indicator" &&
     row.trigger !== "trend" &&
     row.trigger !== "webhook" &&
+    row.trigger !== "retrace" &&
     row.trigger !== "target" &&
     row.trigger !== "stop" &&
     row.trigger !== "trail" &&
@@ -1098,6 +1101,10 @@ export function exitActionTimeframes(
   for (const action of actions ?? []) {
     for (const group of action.groups) {
       for (const draft of [group.anchor, ...group.rows]) {
+        if (draft.trigger === "retrace") {
+          frames.add(draft.timeframe);
+          continue;
+        }
         if (draft.trigger !== "indicator" && draft.trigger !== "trend") {
           continue;
         }
@@ -1197,6 +1204,27 @@ function leafMet(
 ): boolean {
   if (isExitPriceRule(draft.trigger)) {
     return true;
+  }
+  if (draft.trigger === "retrace") {
+    const pct = Number(draft.pct.replace(/,/g, "").trim());
+    const lookback = Math.trunc(Number(draft.lookback));
+    const timeframe = parseDcaIndicatorTimeframe(draft.timeframe);
+    if (!(pct > 0) || !(lookback >= 1) || !timeframe) {
+      return false;
+    }
+    const quoted = input.prices?.[draft.source] ?? null;
+    const bars = input.barsByTimeframe.get(timeframe) ?? [];
+    return retraceMet({
+      spec: {
+        source: draft.source,
+        from: draft.from,
+        pct,
+        lookback,
+        timeframe,
+      },
+      price: quoted,
+      bars,
+    });
   }
   const parts = hardExitParts(draft);
   const timeframe =
@@ -1633,6 +1661,9 @@ function leafLabel(draft: HardExitDraft): string {
   }
   if (draft.trigger === "price") {
     return "Price cross";
+  }
+  if (draft.trigger === "retrace") {
+    return "Retrace";
   }
   return "Condition";
 }
