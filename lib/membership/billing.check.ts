@@ -15,6 +15,7 @@ import {
   billingPageLabel,
   paginateBillingRows,
   parseBillingPage,
+  activeBillingCycle,
   checkoutCharge,
   checkoutPath,
   decideUpgrade,
@@ -465,5 +466,45 @@ assert.equal(cycle.remainingMs, 15 * 24 * 60 * 60 * 1000);
 assert.equal(formatRemainingCycle(15 * 24 * 60 * 60 * 1000), "15 days left");
 assert.equal(formatRemainingCycle(0), "Ended");
 assert.equal(resolveBillingCycle({ periodEnd: null }), null);
+
+const cycleNow = Date.parse("2026-10-18T00:00:00.000Z");
+const cycleMs = 30 * 24 * 60 * 60 * 1000;
+const openEnd = Date.parse("2026-10-28T00:00:00.000Z");
+const openCycle = activeBillingCycle({
+  periodEnd: new Date(openEnd).toISOString(),
+  nowMs: cycleNow,
+});
+assert.ok(openCycle);
+assert.equal(openCycle.startMs, openEnd - cycleMs);
+assert.equal(openCycle.endMs, openEnd);
+
+const lapsedEnd = Date.parse("2026-10-01T00:00:00.000Z");
+const nextCycle = activeBillingCycle({
+  periodEnd: new Date(lapsedEnd).toISOString(),
+  nowMs: cycleNow,
+});
+assert.ok(nextCycle);
+assert.equal(nextCycle.startMs, lapsedEnd);
+assert.equal(nextCycle.endMs, lapsedEnd + cycleMs);
+assert.equal(cycleNow >= nextCycle.startMs && cycleNow < nextCycle.endMs, true);
+
+const rolled = activeBillingCycle({
+  periodEnd: new Date(cycleNow).toISOString(),
+  nowMs: cycleNow,
+});
+assert.ok(rolled);
+assert.equal(rolled.startMs, cycleNow);
+assert.equal(rolled.endMs, cycleNow + cycleMs);
+
+const signup = Date.parse("2026-08-01T00:00:00.000Z");
+const freeCycle = activeBillingCycle({
+  periodEnd: null,
+  anchorMs: signup,
+  nowMs: cycleNow,
+});
+assert.ok(freeCycle);
+assert.equal(freeCycle.startMs, signup + 2 * cycleMs);
+assert.equal(freeCycle.endMs, signup + 3 * cycleMs);
+assert.equal(activeBillingCycle({ periodEnd: null, nowMs: cycleNow }), null);
 
 console.log("membership billing checks passed");

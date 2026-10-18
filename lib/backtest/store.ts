@@ -299,7 +299,11 @@ export async function insertBacktestRun(input: {
       .select("*")
       .single();
     if (!result.error && result.data) {
-      return parseBacktestRunRow(result.data as Record<string, unknown>);
+      const run = parseBacktestRunRow(result.data as Record<string, unknown>);
+      if (run && run.status !== "draft" && run.userId) {
+        await recordBacktestQueueUse({ userId: run.userId, runId: run.id });
+      }
+      return run;
     }
     if (!result.error) {
       return null;
@@ -426,7 +430,11 @@ export async function promoteDraftBacktestRun(
       .select("*")
       .maybeSingle();
     if (!result.error && result.data) {
-      return parseBacktestRunRow(result.data as Record<string, unknown>);
+      const run = parseBacktestRunRow(result.data as Record<string, unknown>);
+      if (run?.userId) {
+        await recordBacktestQueueUse({ userId: run.userId, runId: run.id });
+      }
+      return run;
     }
     if (!result.error) {
       return null;
@@ -925,6 +933,46 @@ export async function listLinkedBacktestRuns(
     linked[run.templateId] = backtestLinkHighlight(run);
   }
   return linked;
+}
+
+/** One queued backtest, kept after the run itself is deleted. */
+export async function recordBacktestQueueUse(input: {
+  userId: string;
+  runId: string;
+}): Promise<void> {
+  const supabase = createServiceClient();
+  if (!supabase || !input.userId) {
+    return;
+  }
+  await supabase.from("backtest_queue_uses").insert({
+    user_id: input.userId,
+    run_id: input.runId,
+    queued_at: new Date().toISOString(),
+  });
+}
+
+/**
+ * Backtests this login queued inside one billing window.
+ * Deleting the run does not give the slot back. Drafts are not recorded.
+ */
+export async function countQueuedBacktestsInCycle(
+  userId: string,
+  window: { startMs: number; endMs: number },
+): Promise<number | null> {
+  const supabase = createServiceClient();
+  if (!supabase || !userId) {
+    return null;
+  }
+  const { count, error } = await supabase
+    .from("backtest_queue_uses")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .gte("queued_at", new Date(window.startMs).toISOString())
+    .lt("queued_at", new Date(window.endMs).toISOString());
+  if (error || count == null) {
+    return null;
+  }
+  return count;
 }
 
 /** Saved runs this login owns. Drafts and published rows do not count. */

@@ -43,6 +43,7 @@ export const PLAN_CAP_KEYS = [
   "max_bots",
   "max_copy_follows",
   "max_followers_accepted",
+  "max_backtests_per_month",
   "max_stored_backtests",
   "max_backtest_years",
   "affiliate_max_depth",
@@ -85,6 +86,7 @@ export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
   max_bots: "Max Bots",
   max_copy_follows: "Max Desk Copies",
   max_followers_accepted: "Max Followers per Desk",
+  max_backtests_per_month: "Max backtests per month",
   max_stored_backtests: "Max Saved Backtests",
   max_backtest_years: "Max Backtest Timeframe (years)",
   affiliate_max_depth: "Earning Depth (1–5)",
@@ -410,9 +412,10 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     fixedOrder: true,
     rows: [
       { kind: "feature", key: "research_backtest", label: "Backtesting Tool" },
+      { kind: "cap", key: "max_backtests_per_month", label: "Max backtests per month" },
+      { kind: "cap", key: "max_stored_backtests", label: "Max Saved Backtests" },
       { kind: "feature", key: "research_backtest_attach_templates", label: "Attach Results to Bot Template" },
       { kind: "cap", key: "max_backtest_years", label: "Max Backtest Timeframe" },
-      { kind: "cap", key: "max_stored_backtests", label: "Max Saved Backtests" },
     ],
   },
   {

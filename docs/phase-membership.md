@@ -68,7 +68,7 @@ Affiliate: every login is an affiliate (not a plan tick). Referral code, earn mu
 
 ### Resource caps
 
-Max Paper Trading, Exchange Connected - Demo Mode, Exchange Connected - Live Mode, Max Bots (across every desk on the login, not per desk), Max Desk Copies, Max Followers per Desk, Max Saved Backtests, Max Backtest Timeframe in years (limits the date range they can run), optional per-plan earn depth (capped by program max). No per-desk-type counts, no combined max-desks or max Live-desks total, no max exchange connections, and no Paper / Live ticks. Demo covers exchange Demo / Testnet; Live-environment is exchange Live.
+Max Paper Trading, Exchange Connected - Demo Mode, Exchange Connected - Live Mode, Max Bots (across every desk on the login, not per desk), Max Desk Copies, Max Followers per Desk, Max backtests per month (queues during the current billing cycle; the count resets when the next cycle starts), Max Saved Backtests, Max Backtest Timeframe in years (limits the date range they can run), optional per-plan earn depth (capped by program max). No per-desk-type counts, no combined max-desks or max Live-desks total, no max exchange connections, and no Paper / Live ticks. Demo covers exchange Demo / Testnet; Live-environment is exchange Live.
 
 ### Gates
 

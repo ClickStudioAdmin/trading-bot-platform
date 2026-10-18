@@ -1173,6 +1173,7 @@ const RESEARCH_ACTIVITY: Record<ResearchFeatureKey, string> = {
 };
 
 export const RESEARCH_CAP_KEYS = [
+  "max_backtests_per_month",
   "max_stored_backtests",
   "max_backtest_years",
 ] as const;
@@ -1205,8 +1206,12 @@ export type ResearchGateAccess = {
   replay: ResearchFeatureAccess;
   indicators: ResearchFeatureAccess;
   optimize: ResearchFeatureAccess;
+  /** Queued runs in the current billing cycle. Drafts do not count. */
+  monthly: ResearchCapSnapshot & { used: number };
   saved: ResearchCapSnapshot & { used: number };
   years: ResearchCapSnapshot;
+  /** False when the cycle count could not be read. The monthly cap then fails closed. */
+  monthlyCountOk: boolean;
   /** False when the owned-run count could not be read. Caps then fail closed on the server. */
   savedCountOk: boolean;
 };
@@ -1240,6 +1245,8 @@ export function researchGateAccess(input: {
   grants: readonly { key: string; endsAt: string }[];
   nowMs: number;
   plans: readonly CapUnlockCandidate[];
+  monthlyUsed: number;
+  monthlyCountOk?: boolean;
   savedUsed: number;
   savedCountOk?: boolean;
 }): ResearchGateAccess {
@@ -1265,11 +1272,16 @@ export function researchGateAccess(input: {
     replay: feature("replay_backtests"),
     indicators: feature("replay_chart_indicators"),
     optimize: feature("replay_strategy_optimization"),
+    monthly: {
+      ...researchCapSnapshot({ ...capInput, key: "max_backtests_per_month" }),
+      used: input.monthlyUsed,
+    },
     saved: {
       ...researchCapSnapshot({ ...capInput, key: "max_stored_backtests" }),
       used: input.savedUsed,
     },
     years: researchCapSnapshot({ ...capInput, key: "max_backtest_years" }),
+    monthlyCountOk: input.monthlyCountOk ?? true,
     savedCountOk: input.savedCountOk ?? true,
   };
 }
@@ -1382,6 +1394,14 @@ export function newBacktestPageNotices(
     }
   }
   const notices: ResearchNotice[] = [];
+  const monthly = monthlyBacktestDecision(gate, input.adding);
+  if (!monthly.allowed && monthly.message) {
+    notices.push({
+      allowed: false,
+      message: monthly.message,
+      upgradePlan: monthly.upgradePlan,
+    });
+  }
   const saved = savedBacktestDecision(gate, input.adding);
   if (!saved.allowed && saved.message) {
     notices.push({
@@ -1399,6 +1419,17 @@ export function newBacktestPageNotices(
     });
   }
   return notices;
+}
+
+export function monthlyBacktestDecision(
+  gate: ResearchGateAccess,
+  adding: number,
+): { allowed: boolean; message: string | null; upgradePlan: string | null } {
+  return capCountDecision(gate.monthly, adding, {
+    open: "Backtests per month",
+    ended: "backtests per month",
+    closed: monthlyBacktestClosedMessage,
+  });
 }
 
 export function savedBacktestDecision(
@@ -1471,6 +1502,10 @@ export function queueTrialLines(
     if (optimize) {
       lines.push(optimize);
     }
+  }
+  const monthly = monthlyBacktestDecision(gate, input.adding);
+  if (monthly.allowed && monthly.message) {
+    lines.push(monthly.message);
   }
   const saved = savedBacktestDecision(gate, input.adding);
   if (saved.allowed && saved.message) {
@@ -1607,6 +1642,21 @@ function capCountDecision(
     message: copy.closed(limit, snapshot.upgradePlan),
     upgradePlan: snapshot.upgradePlan,
   };
+}
+
+function monthlyBacktestClosedMessage(
+  limit: number,
+  planName: string | null,
+): string {
+  if (limit <= 0) {
+    return researchNotAllowedMessage("research_backtest", planName);
+  }
+  const noun = limit === 1 ? "Backtest" : "Backtests";
+  const lead = `You have hit your maximum of ${limit} ${noun} this billing cycle.`;
+  if (!planName) {
+    return lead;
+  }
+  return `${lead} Upgrade to ${planName} to add another.`;
 }
 
 function savedBacktestClosedMessage(

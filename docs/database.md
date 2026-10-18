@@ -66,6 +66,7 @@ Current tables:
 | `user_notification_preferences` | notifications | Per-login mute arrays (`disabled_emails`, `disabled_in_app`). Service-role upsert RPC. |
 | `replay_view_preferences` | backtesting | One row per login for replay layout and chart settings: positions to the right of the chart by default, or below the chart, favourite chart timeframes, bar and canvas colours, and indicator styles. The chart opens on that run’s tape interval. Service-role upsert. RLS on, no anon or authenticated grants. |
 | `replay_run_indicators` | backtesting | Added replay chart indicators and their inputs, one row per login and backtest. Service-role upsert. RLS on, no anon or authenticated grants. |
+| `backtest_queue_uses` | backtesting | One row each time a login queues a backtest, including a comparable row and a draft that is later queued. `queued_at` is what Max backtests per month counts inside the current billing cycle. Deleting the run does not delete this row. Service-role insert. RLS on, no anon or authenticated grants. |
 | `email_dispatches` | notifications | Idempotency `(template, entity_key)` for one-shot and reminder mail. `claim_email_dispatch` returns `new` / `retry` / `done`. `completed_at` is set after a send or a mute/skip. Failed or unconfigured Resend stays retryable. |
 | `platform_settings.disabled_emails` | notifications | Platform kill switch for outbound email template IDs. |
 | `platform_settings.disabled_badges` | notifications | Platform kill switch for required-action badge IDs. Off hides the number; live work stays. |

@@ -119,6 +119,8 @@ export type MemberBilling = {
   stripeSubscriptionId: string | null;
   subscriptionStatus: SubscriptionStatus;
   periodEnd: string | null;
+  /** Member row `created_at`. Anchors a cycle when `periodEnd` is still empty. */
+  createdAt: string | null;
   paySubscriptionFromAffiliate: boolean;
   paySubscriptionFromCredit: boolean;
 };
@@ -704,6 +706,43 @@ export function resolveBillingCycle(input: {
     endMs,
     remainingMs: endMs - now,
   };
+}
+
+/**
+ * The billing window that contains `now`. Paid cycles follow `periodEnd`
+ * (the current period ends then; the next one starts there). A missing
+ * `periodEnd` steps the same length from `anchorMs`, usually signup.
+ * The window moves forward when that end passes, so a monthly quota resets
+ * at the start of the next cycle.
+ */
+export function activeBillingCycle(input: {
+  periodEnd: string | null;
+  anchorMs?: number | null;
+  nowMs?: number;
+  periodMs?: number;
+}): { startMs: number; endMs: number } | null {
+  const periodMs = input.periodMs ?? WALLET_PERIOD_MS;
+  if (!(periodMs > 0)) {
+    return null;
+  }
+  const now = input.nowMs ?? Date.now();
+  const endParsed = input.periodEnd ? Date.parse(input.periodEnd) : NaN;
+  let startMs: number;
+  if (Number.isFinite(endParsed) && endParsed > 0) {
+    startMs = endParsed - periodMs;
+  } else if (input.anchorMs != null && Number.isFinite(input.anchorMs)) {
+    startMs = input.anchorMs;
+  } else {
+    return null;
+  }
+  if (now >= startMs) {
+    const steps = Math.floor((now - startMs) / periodMs);
+    startMs += steps * periodMs;
+  } else {
+    const steps = Math.floor((startMs - now) / periodMs) + 1;
+    startMs -= steps * periodMs;
+  }
+  return { startMs, endMs: startMs + periodMs };
 }
 
 export function formatRemainingCycle(remainingMs: number): string {

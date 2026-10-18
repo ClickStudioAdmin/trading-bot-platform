@@ -53,6 +53,7 @@ import {
   backtestYearsDecision,
   backtestYearsHint,
   indicatorAddDenial,
+  monthlyBacktestDecision,
   optimizeClickDenial,
   queueBacktestDenial,
   queueTrialLines,
@@ -980,6 +981,8 @@ function researchGate(input: {
   grants?: { key: string; endsAt: string }[];
   plans?: CapUnlockCandidate[];
   savedUsed?: number;
+  monthlyUsed?: number;
+  monthlyCountOk?: boolean;
 } = {}): ResearchGateAccess {
   return researchGateAccess({
     features: features(input.on),
@@ -988,6 +991,8 @@ function researchGate(input: {
     grants: input.grants ?? [],
     nowMs,
     plans: input.plans ?? [researchPlus],
+    monthlyUsed: input.monthlyUsed ?? 0,
+    monthlyCountOk: input.monthlyCountOk,
     savedUsed: input.savedUsed ?? 0,
   });
 }
@@ -1123,6 +1128,102 @@ const savedFull = researchGate({
   caps: { max_stored_backtests: 3 },
   savedUsed: 3,
 });
+const monthlyFull = researchGate({
+  on: { research_backtest: true },
+  caps: { max_backtests_per_month: 3 },
+  monthlyUsed: 3,
+});
+assert.equal(
+  monthlyBacktestDecision(monthlyFull, 1).message,
+  "You have hit your maximum of 3 Backtests this billing cycle. Upgrade to Plus to add another.",
+);
+assert.equal(
+  gateRejectLead(monthlyBacktestDecision(monthlyFull, 1).message ?? "", "Plus"),
+  "You have hit your maximum of 3 Backtests this billing cycle.",
+);
+assert.equal(
+  monthlyBacktestDecision(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_backtests_per_month: 1 },
+      monthlyUsed: 1,
+    }),
+    1,
+  ).message,
+  "You have hit your maximum of 1 Backtest this billing cycle. Upgrade to Plus to add another.",
+);
+assert.equal(
+  monthlyBacktestDecision(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_backtests_per_month: 3 },
+      monthlyUsed: 2,
+    }),
+    1,
+  ).allowed,
+  true,
+);
+assert.equal(
+  queueBacktestDenial(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_backtests_per_month: 0 },
+      monthlyUsed: 0,
+    }),
+    { variant: false, adding: 1, ...window },
+  )?.message,
+  "Backtesting is not allowed on your plan. Upgrade to Plus to enable it.",
+);
+const monthlyTrial = researchGate({
+  on: { research_backtest: true },
+  caps: { max_backtests_per_month: 1 },
+  monthlyUsed: 1,
+  trials: { features: {}, caps: { max_backtests_per_month: { days: 14, limit: 4 } } },
+  grants: [{ key: "max_backtests_per_month", endsAt: "2026-10-28T00:00:00.000Z" }],
+});
+assert.equal(
+  monthlyBacktestDecision(monthlyTrial, 1).message,
+  "Backtests per month are in a free trial until 28/10/2026.",
+);
+assert.equal(monthlyBacktestDecision(monthlyTrial, 1).allowed, true);
+assert.deepEqual(
+  queueTrialLines(monthlyTrial, { variant: false, adding: 1, ...window }),
+  ["Backtests per month are in a free trial until 28/10/2026."],
+);
+const monthlyEnded = researchGate({
+  on: { research_backtest: true },
+  caps: { max_backtests_per_month: 1 },
+  monthlyUsed: 1,
+  trials: { features: {}, caps: { max_backtests_per_month: { days: 14, limit: 4 } } },
+  grants: [{ key: "max_backtests_per_month", endsAt: "2026-10-01T00:00:00.000Z" }],
+});
+assert.equal(
+  monthlyBacktestDecision(monthlyEnded, 1).message,
+  "Your free trial of backtests per month ended on 01/10/2026.",
+);
+assert.equal(monthlyBacktestDecision(monthlyEnded, 1).allowed, false);
+assert.deepEqual(
+  newBacktestPageNotices(monthlyEnded, { adding: 1, fromMs: 0, toMs: year }).map(
+    (row) => row.message,
+  ),
+  ["Your free trial of backtests per month ended on 01/10/2026."],
+);
+assert.deepEqual(
+  newBacktestPageNotices(
+    researchGate({
+      on: { research_backtest: true },
+      caps: { max_backtests_per_month: 2, max_stored_backtests: 1 },
+      monthlyUsed: 2,
+      savedUsed: 1,
+    }),
+    { adding: 1, fromMs: 0, toMs: year },
+  ).map((row) => row.message),
+  [
+    "You have hit your maximum of 2 Backtests this billing cycle. Upgrade to Plus to add another.",
+    "You have hit your maximum of 1 Saved Backtest. Upgrade to Plus to add another.",
+  ],
+);
+
 assert.equal(
   savedBacktestDecision(savedFull, 1).message,
   "You have hit your maximum of 3 Saved Backtests. Upgrade to Plus to add another.",

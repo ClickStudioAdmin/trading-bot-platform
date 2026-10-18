@@ -1,10 +1,13 @@
+import { countQueuedBacktestsInCycle } from "@/lib/backtest/store";
+import type { TradingAccountMode } from "@/lib/accounts/model";
+import { activeBillingCycle } from "@/lib/membership/billing";
+import { getMemberBilling } from "@/lib/membership/billing-store";
 import {
   emptyPlanUsageCounts,
   planDeskCounts,
   type PlanUsageCounts,
 } from "@/lib/membership/plan-overview";
 import { createServiceClient } from "@/lib/supabase/admin";
-import type { TradingAccountMode } from "@/lib/accounts/model";
 
 export async function loadPlanUsageCounts(input: {
   userId: string;
@@ -24,7 +27,12 @@ export async function loadPlanUsageCounts(input: {
     return counts;
   }
   const accountIds = input.accountIds.filter(Boolean);
-  const [bots, backtests, followers] = await Promise.all([
+  const billing = await getMemberBilling(input.userId);
+  const cycle = activeBillingCycle({
+    periodEnd: billing?.periodEnd ?? null,
+    anchorMs: billing?.createdAt ? Date.parse(billing.createdAt) : null,
+  });
+  const [bots, backtests, monthly, followers] = await Promise.all([
     countBotRows(supabase, accountIds),
     countRows(
       supabase.from("backtest_runs").select("id", { count: "exact", head: true }).eq(
@@ -32,10 +40,14 @@ export async function loadPlanUsageCounts(input: {
         input.userId,
       ),
     ),
+    cycle
+      ? countQueuedBacktestsInCycle(input.userId, cycle)
+      : Promise.resolve(0),
     countBusiestDeskFollowers(supabase, accountIds),
   ]);
   counts.max_bots = bots;
   counts.max_stored_backtests = backtests;
+  counts.max_backtests_per_month = monthly ?? 0;
   counts.max_followers_accepted = followers;
   return counts;
 }
