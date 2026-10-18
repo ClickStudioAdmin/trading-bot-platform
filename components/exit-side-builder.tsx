@@ -21,7 +21,6 @@ import {
 import { hardExitAnchor } from "@/lib/dca/exit-stack";
 import { HardExitFields } from "@/components/hard-exit-fields";
 import {
-  exitPriceRuleLabel,
   hardExitForTrigger,
   isExitPriceRule,
   type ExitPriceRuleTrigger,
@@ -611,14 +610,7 @@ function ConditionStack({
   return (
     <div className="space-y-3">
       <div className={exitCardGrid}>
-        {fixedRule ? (
-          <label className={`${labelClass} whitespace-nowrap`}>
-            <HintLabel text="Condition Type" />
-            <AppSelect value={fixedRule} trackDirty={false} className={fieldClass}>
-              <option value={fixedRule}>{exitPriceRuleLabel(fixedRule)}</option>
-            </AppSelect>
-          </label>
-        ) : (
+        {fixedRule ? null : (
           <label className={`${labelClass} whitespace-nowrap`}>
             <HintLabel text="Condition Type" />
             <AppSelect

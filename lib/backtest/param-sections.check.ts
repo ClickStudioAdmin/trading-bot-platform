@@ -604,5 +604,30 @@ assert.equal(
   ).some((row) => row.label === "Take profit"),
   false,
 );
+const pricedAction = recipeParamSections(
+  dcaWithExits({
+    exitActions: JSON.stringify([
+      {
+        id: "tp",
+        kind: "take_profit",
+        scope: { kind: "all" },
+        groups: [{ anchor: { trigger: "target" }, rows: [] }],
+        takeProfitPct: 2,
+        takeProfitPrice: null,
+        stopLossPct: null,
+        stopLossPrice: null,
+        trailingDistance: null,
+        trailingActivation: null,
+      },
+    ]),
+  }),
+).find((section) => section.title === "Long Exit Conditions");
+const pricedRows =
+  pricedAction?.stacks?.[0]?.groups?.flat().flatMap((group) => group.rows) ?? [];
+assert.equal(
+  pricedRows.some((row) => row.label === "Condition Type"),
+  false,
+);
+assert.equal(pricedRows.find((row) => row.label === "Target %")?.value, "2%");
 
 console.log("backtest param section checks passed");

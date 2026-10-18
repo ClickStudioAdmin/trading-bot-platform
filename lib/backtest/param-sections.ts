@@ -21,7 +21,6 @@ import {
 } from "@/lib/dca/indicators";
 import { dcaAveragingKind, dcaIntervalParts } from "@/lib/dca/playbook";
 import {
-  exitPriceRuleLabel,
   hardExitParts as splitExitDraft,
   isExitPriceRule,
   templateHardExit,
@@ -801,7 +800,7 @@ function actionDraftRows(
   side: "long" | "short",
 ): ParamRow[] | null {
   if (isExitPriceRule(draft.trigger)) {
-    return [{ label: "Condition Type", value: exitPriceRuleLabel(draft.trigger) }];
+    return [];
   }
   const parts = splitExitDraft(draft);
   return hardExitAnchorRows(parts.filter, templateHardExit(parts.signal), side);
@@ -880,7 +879,8 @@ function exitActionStacks(
           }
           if (isExitPriceRule(draft.trigger) && !priced) {
             priced = true;
-            return [{ rows: [...condition, ...actionPriceRows(action)] }];
+            const pricedRows = [...condition, ...actionPriceRows(action)];
+            return pricedRows.length > 0 ? [{ rows: pricedRows }] : [];
           }
           return [{ rows: condition }];
         });
