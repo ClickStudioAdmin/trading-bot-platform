@@ -97,9 +97,9 @@ export default async function AdminExchangePage({
               <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-muted">
                 <tr>
                   <th className="py-2 pr-4 font-medium">Mode</th>
-                  <th className="px-4 py-2 font-medium">Live</th>
                   <th className="px-4 py-2 font-medium">Testing</th>
                   <th className="px-4 py-2 font-medium">Beta</th>
+                  <th className="px-4 py-2 font-medium">Live</th>
                 </tr>
               </thead>
               <tbody>
@@ -118,9 +118,9 @@ export default async function AdminExchangePage({
                       <td className="py-3 pr-4 text-ink">{modeLabel}</td>
                       {(
                         [
-                          ["live", "Live"],
                           ["testing", "Testing"],
                           ["beta", "Beta"],
+                          ["live", "Live"],
                         ] as const
                       ).map(([value, label]) => (
                         <td key={value} className="px-4 py-3">
