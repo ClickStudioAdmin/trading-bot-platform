@@ -2,10 +2,16 @@
 
 import { closeTradingAccountRow } from "@/lib/accounts/close-store";
 import {
+  bulkDeskDeleteBlockReason,
+  parseBulkDeskIds,
+  pickBulkDeleteSwitch,
+} from "@/lib/accounts/desk-bulk";
+import {
   bindConnectionToDesk,
   deleteTradingAccountRow,
   insertTradingAccount,
   listTradingAccounts,
+  loadAccountUsage,
   renameTradingAccountRow,
 } from "@/lib/accounts/store";
 import {
@@ -40,11 +46,17 @@ import { listOnboardingFolders } from "@/lib/onboarding/catalog";
 import { starterTemplateAllowed } from "@/lib/onboarding/model";
 import { skipOnboardingForExternalDesk } from "@/lib/onboarding/store";
 import { applyTemplateToDesk } from "@/lib/templates/apply";
-import { DESK_DELETE_TIMED_OUT } from "@/lib/accounts/desk-delete";
+import {
+  DESK_DELETE_FAILED,
+  DESK_DELETE_TIMED_OUT,
+} from "@/lib/accounts/desk-delete";
 import {
   DESK_DELETE_GRANT_COOKIE,
   DESK_DELETE_GRANT_MS,
+  bulkDeskDeleteGrantAllows,
   deskDeleteGrantAllows,
+  parseBulkDeskDeleteGrant,
+  signBulkDeskDeleteGrant,
   signDeskDeleteGrant,
 } from "@/lib/accounts/desk-delete-grant";
 import { stepUpFromForm } from "@/lib/auth/step-up-guard";
@@ -316,18 +328,64 @@ async function rememberDeskDeleteGrant(
   accountId: string,
 ): Promise<void> {
   const expiresAtMs = Date.now() + DESK_DELETE_GRANT_MS;
-  const store = await cookies();
-  store.set(
-    DESK_DELETE_GRANT_COOKIE,
+  await rememberDeskDeleteGrantToken(
     signDeskDeleteGrant(userId, accountId, expiresAtMs),
-    {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      expires: new Date(expiresAtMs),
-    },
+    expiresAtMs,
   );
+}
+
+async function rememberDeskDeleteGrantToken(
+  token: string,
+  expiresAtMs: number,
+): Promise<void> {
+  if (token.length > 3500) {
+    return;
+  }
+  const store = await cookies();
+  store.set(DESK_DELETE_GRANT_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    expires: new Date(expiresAtMs),
+  });
+}
+
+async function bulkDeletePreflight(
+  userId: string,
+  bulkIds: readonly string[],
+): Promise<string | null> {
+  const accounts = await listTradingAccounts(userId);
+  const usage = await loadAccountUsage(accounts);
+  const owned = new Set(accounts.map((account) => account.id));
+  return bulkDeskDeleteBlockReason(
+    bulkIds.map((id) => {
+      const account = accounts.find((row) => row.id === id);
+      const row = usage.get(id);
+      return {
+        name: account?.name ?? "Desk",
+        found: owned.has(id),
+        blocks: row?.blocks ?? (owned.has(id) ? ["last"] : []),
+        closeKind: row?.closeKind ?? null,
+      };
+    }),
+    accounts.length,
+  );
+}
+
+function presentedBulkGrant(
+  presented: string,
+  cookieToken: string | null,
+  userId: string,
+  accountId: string,
+): string {
+  if (bulkDeskDeleteGrantAllows(presented, userId, accountId)) {
+    return presented;
+  }
+  if (bulkDeskDeleteGrantAllows(cookieToken, userId, accountId)) {
+    return cookieToken ?? "";
+  }
+  return "";
 }
 
 async function clearDeskDeleteGrant(): Promise<void> {
@@ -403,6 +461,87 @@ export async function deleteTradingAccount(formData: FormData) {
   }
   refreshAccountChrome();
   redirect(`${SUB_ACCOUNTS_PATH}?deleted=1`);
+}
+
+/** One desk from a bulk delete. The caller repeats this for the rest of the selection. */
+export async function deleteTradingAccountForBulk(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    return stepUpRejection("Sign in to continue.");
+  }
+  const userId = session.member.id;
+  const accountId = String(formData.get("accountId") ?? "").trim();
+  const bulkIds = parseBulkDeskIds(formData.getAll("bulkAccountId"));
+  if (!accountId || !bulkIds.includes(accountId)) {
+    return stepUpRejection("That desk was not found.");
+  }
+  let signed = presentedBulkGrant(
+    String(formData.get("deskDeleteGrant") ?? ""),
+    await deskDeleteGrantToken(),
+    userId,
+    accountId,
+  );
+  if (!signed) {
+    const reason = await bulkDeletePreflight(userId, bulkIds);
+    if (reason) {
+      return stepUpRejection(reason);
+    }
+    const stepUp = await stepUpFromForm(userId, formData);
+    if (stepUp) {
+      return stepUpRejection(stepUp);
+    }
+    const expiresAtMs = Date.now() + DESK_DELETE_GRANT_MS;
+    try {
+      signed = signBulkDeskDeleteGrant(userId, bulkIds, expiresAtMs) ?? "";
+    } catch {
+      return stepUpRejection(DESK_DELETE_FAILED);
+    }
+    if (!signed) {
+      return stepUpRejection(DESK_DELETE_FAILED);
+    }
+  }
+  const expiresAtMs =
+    parseBulkDeskDeleteGrant(signed)?.expiresAtMs ??
+    Date.now() + DESK_DELETE_GRANT_MS;
+  try {
+    await rememberDeskDeleteGrantToken(signed, expiresAtMs);
+  } catch {
+    // The returned grant still covers the rest of this batch.
+  }
+  const written = await deleteTradingAccountRow(userId, accountId);
+  if (written.error) {
+    if (written.error !== DESK_DELETE_TIMED_OUT) {
+      await clearDeskDeleteGrant();
+      return stepUpRejection(written.error);
+    }
+    return {
+      ...stepUpRejection(written.error),
+      deskDeleteGrant: signed,
+    };
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "account.deleted",
+    message: "Deleted a trading account",
+    userId,
+    data: { accountId, bulk: true },
+  });
+  if (session.account.id === accountId) {
+    const remaining = await listTradingAccounts(userId);
+    const next = pickBulkDeleteSwitch(
+      remaining,
+      bulkIds,
+      formData.get("switchToAccountId"),
+    );
+    if (next) {
+      await setActiveAccountId(next.id);
+    }
+  }
+  if (String(formData.get("bulkLast") ?? "") === "1") {
+    await clearDeskDeleteGrant();
+  }
+  refreshAccountChrome();
+  return { deskDeleteGrant: signed };
 }
 
 export async function closeTradingAccount(formData: FormData) {

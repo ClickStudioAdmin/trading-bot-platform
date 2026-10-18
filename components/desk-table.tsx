@@ -5,7 +5,13 @@ import Link from "next/link";
 import { AccountDeleteControl } from "@/components/account-delete-control";
 import { AccountDisableControl } from "@/components/account-disable-control";
 import { AccountRenameControl } from "@/components/account-rename-control";
+import { AppCheck } from "@/components/app-check";
 import { AppSelect } from "@/components/app-select";
+import {
+  DeskBulkDeleteDialog,
+  DeskBulkDisableDialog,
+  DeskBulkToolbar,
+} from "@/components/desk-bulk-controls";
 import { DeskTypeMark } from "@/components/desk-mark";
 import { useDeskTypeAccess } from "@/components/desk-type-access";
 import { IconFilterClear, IconPlus } from "@/components/icons";
@@ -61,8 +67,10 @@ import type { ExchangeConnection } from "@/lib/exchanges/connections";
 
 const DESK_CELL = "px-2.5 py-3 align-top";
 const DESK_HEAD = "px-2.5!";
-const DESK_NAME_CELL = "py-3 pr-2.5 pl-5 align-top";
-const DESK_NAME_HEAD = "pr-2.5! pl-5!";
+const DESK_CHECK_CELL = "py-3 pr-1 pl-5 align-top";
+const DESK_CHECK_HEAD = "py-3! pr-1! pl-5!";
+const DESK_NAME_CELL = "py-3 pr-2.5 pl-2 align-top";
+const DESK_NAME_HEAD = "pr-2.5! pl-2!";
 
 let clientFilters: DeskListFilterStore | null = null;
 
@@ -127,6 +135,50 @@ export function DeskTable({
   );
   const table = useClientTable(filtered, compareDeskList, { defaultKey: "name" });
   const filtering = deskListFiltersActive(filters);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [disableRows, setDisableRows] = useState<DeskListRow[] | null>(null);
+  const [deleteRows, setDeleteRows] = useState<DeskListRow[] | null>(null);
+  const filteredKey = filtered.map((row) => row.account.id).join("\n");
+  const [selectionScope, setSelectionScope] = useState(filteredKey);
+  if (selectionScope !== filteredKey) {
+    setSelectionScope(filteredKey);
+    const allowed = new Set(filteredKey.split("\n").filter(Boolean));
+    setSelected((current) => {
+      const next = current.filter((id) => allowed.has(id));
+      return next.length === current.length ? current : next;
+    });
+  }
+
+  const pageIds = table.pageRows.map((row) => row.account.id);
+  const allPageSelected =
+    pageIds.length > 0 && pageIds.every((id) => selected.includes(id));
+  const selectedRows = filtered.filter((row) =>
+    selected.includes(row.account.id),
+  );
+
+  function toggleAll() {
+    setSelected((current) =>
+      allPageSelected
+        ? current.filter((id) => !pageIds.includes(id))
+        : [...new Set([...current, ...pageIds])],
+    );
+  }
+
+  function toggleOne(id: string) {
+    setSelected((current) =>
+      current.includes(id)
+        ? current.filter((value) => value !== id)
+        : [...current, id],
+    );
+  }
+
+  function dropSelected(ids: string[]) {
+    if (ids.length === 0) {
+      return;
+    }
+    setSelected((current) => current.filter((id) => !ids.includes(id)));
+  }
 
   function changeFilter<K extends keyof DeskListFilters>(
     key: K,
@@ -143,8 +195,29 @@ export function DeskTable({
 
   return (
     <>
+      {notice ? (
+        <p className="mb-6 rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
+          {notice}
+        </p>
+      ) : null}
       <TableFilterSession
         id="desks"
+        toolbar={
+          selectedRows.length > 0 ? (
+            <DeskBulkToolbar
+              rows={selectedRows}
+              ownedCount={accounts.length}
+              onDisable={() => {
+                setNotice(null);
+                setDisableRows(selectedRows);
+              }}
+              onDelete={() => {
+                setNotice(null);
+                setDeleteRows(selectedRows);
+              }}
+            />
+          ) : undefined
+        }
         actions={<CreateDeskMenu />}
       >
         <TableFilterBar>
@@ -249,10 +322,11 @@ export function DeskTable({
       >
         <table className="w-full table-fixed text-left text-base">
           <colgroup>
-            <col className="w-[16%]" />
-            <col className="w-[15%]" />
-            <col className="w-[15%]" />
-            <col className="w-[13%]" />
+            <col className="w-11" />
+            <col className="w-[14%]" />
+            <col className="w-[14%]" />
+            <col className="w-[14%]" />
+            <col className="w-[12%]" />
             <col className="w-[11%]" />
             <col className="w-[12%]" />
             <col className="w-[8%]" />
@@ -260,6 +334,19 @@ export function DeskTable({
           </colgroup>
           <thead className={`${TABLE_THEAD_CLASS} text-sm text-ink-muted`}>
             <tr>
+              <th className={DESK_CHECK_HEAD}>
+                <AppCheck
+                  checked={allPageSelected}
+                  indeterminate={
+                    !allPageSelected &&
+                    pageIds.some((id) => selected.includes(id))
+                  }
+                  onChange={toggleAll}
+                  disabled={pageIds.length === 0}
+                  aria-label="Select all desks on this page"
+                  className=""
+                />
+              </th>
               <SortTh
                 label="Name"
                 className={DESK_NAME_HEAD}
@@ -315,7 +402,7 @@ export function DeskTable({
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-6 pr-4 pl-5 text-ink-muted">
+                <td colSpan={9} className="py-6 pr-4 pl-5 text-ink-muted">
                   {filtering
                     ? "No desks match these filters."
                     : "No desks yet."}
@@ -328,12 +415,34 @@ export function DeskTable({
                   row={row}
                   accounts={accounts}
                   currentId={currentId}
+                  selected={selected.includes(row.account.id)}
+                  onToggle={() => toggleOne(row.account.id)}
                 />
               ))
             )}
           </tbody>
         </table>
       </TableCard>
+      {disableRows ? (
+        <DeskBulkDisableDialog
+          rows={disableRows}
+          onClose={() => setDisableRows(null)}
+          onFinished={dropSelected}
+        />
+      ) : null}
+      {deleteRows ? (
+        <DeskBulkDeleteDialog
+          rows={deleteRows}
+          accounts={accounts}
+          currentId={currentId}
+          onClose={() => setDeleteRows(null)}
+          onFinished={dropSelected}
+          onDeleted={(message) => {
+            setNotice(message);
+            setDeleteRows(null);
+          }}
+        />
+      ) : null}
     </>
   );
 }
@@ -342,10 +451,14 @@ function DeskRow({
   row,
   accounts,
   currentId,
+  selected,
+  onToggle,
 }: {
   row: DeskListRow;
   accounts: TradingAccount[];
   currentId: string;
+  selected: boolean;
+  onToggle: () => void;
 }) {
   const account = row.account;
   const current = account.id === currentId;
@@ -355,6 +468,14 @@ function DeskRow({
   const defaultSwitch = pickDefaultAccount(remaining);
   return (
     <tr className="border-b border-line last:border-b-0">
+      <td className={DESK_CHECK_CELL}>
+        <AppCheck
+          checked={selected}
+          onChange={onToggle}
+          aria-label={`Select ${account.name}`}
+          className=""
+        />
+      </td>
       <td className={DESK_NAME_CELL}>{account.name}</td>
       <td className={DESK_CELL}>
         <p>{formatDeskType(account.deskType)}</p>
