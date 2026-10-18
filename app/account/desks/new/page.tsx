@@ -17,6 +17,7 @@ import {
   listExchangeConnections,
 } from "@/lib/exchanges/store";
 import { memberIsAdmin } from "@/lib/admin/access";
+import { loadExchangeAvailability } from "@/lib/exchanges/availability-store";
 import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
 import { requireVerifiedEmail } from "@/lib/auth/session";
 import { listOnboardingFolders } from "@/lib/onboarding/catalog";
@@ -43,12 +44,15 @@ export default async function NewDeskPage({
     redirect(createDeskPath(DEFAULT_DESK_TYPE));
   }
   const error = firstSearchValue(params.error);
-  const accounts = await listTradingAccounts(member.id);
-  const connections = await listExchangeConnections(member.id);
-  const starterFolders = await listOnboardingFolders();
-  const sharedConnectionIds = connectionIdsBoundToOtherDesks(
-    await listConnectionDeskBinds(member.id),
-  );
+  const [accounts, exchangeCells, connections, starterFolders, binds] =
+    await Promise.all([
+      listTradingAccounts(member.id),
+      loadExchangeAvailability(),
+      listExchangeConnections(member.id),
+      listOnboardingFolders(),
+      listConnectionDeskBinds(member.id),
+    ]);
+  const sharedConnectionIds = connectionIdsBoundToOtherDesks(binds);
 
   return (
     <div>
@@ -63,6 +67,10 @@ export default async function NewDeskPage({
       />
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <CreateAccountForm
+          exchangeAccess={{
+            admin: memberIsAdmin(member),
+            cells: exchangeCells,
+          }}
           connections={connections}
           sharedConnectionIds={sharedConnectionIds}
           allowSharedKeys={memberIsAdmin(member)}

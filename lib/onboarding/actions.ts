@@ -19,6 +19,9 @@ import {
 } from "@/lib/auth/session";
 import { stepUpError } from "@/lib/auth/step-up-guard";
 import { STEP_UP_FIELD } from "@/lib/auth/step-up";
+import { memberIsAdmin } from "@/lib/admin/access";
+import { exchangeCreateAllowed } from "@/lib/exchanges/availability";
+import { loadExchangeAvailability } from "@/lib/exchanges/availability-store";
 import { createMemberExchangeConnection } from "@/lib/exchanges/member-connection";
 import { connectionFitsDesk } from "@/lib/exchanges/venues";
 import {
@@ -173,7 +176,11 @@ export async function createSetupBeforeTour(
 ): Promise<{ ok: true; draft: SetupDraft } | { ok: false; error: string }> {
   try {
     const member = await requirePlatformMember();
-    const prepared = await materializeSetup(member.id, raw);
+    const prepared = await materializeSetup(
+      member.id,
+      raw,
+      memberIsAdmin(member),
+    );
     if (!prepared.ok) {
       return prepared;
     }
@@ -221,7 +228,11 @@ async function finishSetupNow(
   if (skipCreate && existing) {
     working = mergeClaimedDraft(parsed.draft, existing.draft);
   } else {
-    const prepared = await materializeSetup(member.id, raw);
+    const prepared = await materializeSetup(
+      member.id,
+      raw,
+      memberIsAdmin(member),
+    );
     if (!prepared.ok) {
       return prepared;
     }
@@ -259,6 +270,7 @@ async function finishSetupNow(
 async function materializeSetup(
   userId: string,
   raw: string,
+  admin: boolean,
 ): Promise<{ ok: true; draft: SetupDraft } | { ok: false; error: string }> {
   const parsed = parseSetupDraft(raw);
   if (!parsed.ok) {
@@ -341,7 +353,20 @@ async function materializeSetup(
     await saveOnboardingDraft(userId, working);
     return { ok: false, error: botMessage };
   }
+  const exchangeCells = await loadExchangeAvailability();
   for (const desk of desksStillToCreate(working.desks)) {
+    const exchangeAllowed = exchangeCreateAllowed({
+      cells: exchangeCells,
+      admin,
+      deskType: desk.deskType,
+      venueId: desk.venue,
+      accountMode: desk.mode,
+      environmentId: desk.mode === "live" ? desk.environmentId : null,
+    });
+    if (!exchangeAllowed.ok) {
+      await saveOnboardingDraft(userId, working);
+      return exchangeAllowed;
+    }
     let connectionId: string | null = null;
     if (desk.mode === "live" && desk.connectionId && !desk.bindLater) {
       const match = connections.find((row) => row.id === desk.connectionId);
