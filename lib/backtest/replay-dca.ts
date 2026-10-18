@@ -14,6 +14,7 @@ import {
 import {
   dcaEntryStackForSide,
   dcaEntryTickExtras,
+  dcaSideGates,
 } from "@/lib/dca/entry-stack";
 import {
   exitExpressionMet,
@@ -65,6 +66,16 @@ import {
   yieldBacktestReplay,
 } from "./model";
 import { fillSentence, skippedEntrySentence } from "./events";
+import {
+  emptyExitRuntime,
+  evaluateExitActions,
+  exitActionTimeframes,
+  exitBookForClassic,
+  sideExitActions,
+  type ExitActionKind,
+  type ExitLot,
+  type ExitRuntime,
+} from "@/lib/strategy/exit-actions";
 import type { ReplayEvent } from "./model";
 import { filterBecause, indicatorBecause, priceStartBecause } from "./explain";
 
@@ -88,6 +99,7 @@ type SimLeg = DcaLegState & {
   entry: number;
   trailing: FuturesTrailing | null;
   slPrice: number | null;
+  slQty: number | null;
   armTrue: boolean;
   disarmTrue: boolean;
   indicatorTrue: boolean;
@@ -102,6 +114,7 @@ function emptyLeg(): SimLeg {
     entry: 0,
     trailing: null,
     slPrice: null,
+    slQty: null,
     armTrue: false,
     disarmTrue: false,
     indicatorTrue: false,
@@ -189,10 +202,42 @@ export async function replayDcaPlaybook(input: {
         )
       : null;
 
+  function bookForLeg(side: FuturesSide, atMs: number, mark: number) {
+    const leg = legs[side];
+    if (!(leg.qty > 0)) {
+      return null;
+    }
+    if (actionsFor(side)) {
+      return exitArms[side].book ?? null;
+    }
+    const classic =
+      side === "short" && config.direction === "both" && config.shortClassic
+        ? config.shortClassic
+        : config;
+    return exitBookForClassic({
+      side,
+      qty: leg.qty,
+      entryPrice: leg.entry,
+      mark,
+      last: mark,
+      nowMs: atMs,
+      breakevenDone: leg.breakevenDone,
+      trailingPeak: leg.trailing?.peak ?? null,
+      stopLossPrice: leg.slPrice,
+      takeProfitPct: classic.takeProfitPct,
+      stopLossPct: leg.slPrice != null ? null : classic.stopLossPct,
+      trailingPct: classic.trailingPct,
+      trailingTriggerPct: classic.trailingTriggerPct,
+      breakevenActivationPct: classic.breakevenActivationPct,
+      breakevenOffsetPct: classic.breakevenOffsetPct,
+    });
+  }
+
   function remember(
     order: SimulatedOrder,
     because?: string,
   ) {
+    const exitBook = bookForLeg(order.side, order.atMs, order.price);
     const orderIndex = orders.length;
     orders.push(order);
     events.push({
@@ -209,7 +254,34 @@ export async function replayDcaPlaybook(input: {
         clipIndex: order.clipIndex,
         because,
       }),
+      ...(exitBook ? { exitBook } : {}),
     });
+  }
+
+  const exitLots: Record<FuturesSide, ExitLot[]> = { long: [], short: [] };
+  const exitArms: Record<FuturesSide, ExitRuntime> = {
+    long: emptyExitRuntime(),
+    short: emptyExitRuntime(),
+  };
+  function actionsFor(side: FuturesSide) {
+    return sideExitActions(
+      config.exitActions,
+      config.shortExitActions,
+      config.direction,
+      side,
+    );
+  }
+  function claimFillReason(kind: ExitActionKind): BacktestFillReason {
+    if (kind === "stop_loss") {
+      return "stop";
+    }
+    if (kind === "trailing_stop") {
+      return "trailing";
+    }
+    if (kind === "close") {
+      return "exit_if";
+    }
+    return "take_profit";
   }
 
   function flatten(
@@ -249,6 +321,46 @@ export async function replayDcaPlaybook(input: {
       because,
     );
     legs[side] = rearm ? emptyLeg() : { ...emptyLeg(), status: "idle" };
+    exitLots[side] = [];
+    exitArms[side] = emptyExitRuntime();
+  }
+
+  function reduceLeg(
+    side: FuturesSide,
+    atMs: number,
+    fill: number,
+    qty: number,
+    reason: BacktestFillReason,
+  ) {
+    const leg = legs[side];
+    const take = Math.min(leg.qty, qty);
+    if (!(take > 0) || take + 1e-8 >= leg.qty) {
+      flatten(side, atMs, fill, true, reason);
+      return;
+    }
+    const fee = feeUsdt(take, fill, input.feeRate);
+    const pnl = unrealized(side, take, leg.entry, fill) - fee;
+    realized += pnl;
+    trades += 1;
+    if (pnl > 0) {
+      wins += 1;
+      grossWin += pnl;
+    } else {
+      grossLoss += Math.abs(pnl);
+    }
+    remember(
+      {
+        atMs,
+        action: "flatten",
+        side,
+        qty: take,
+        price: fill,
+        feeUsdt: fee,
+        realizedUsdt: pnl,
+        reason,
+      },
+    );
+    legs[side] = { ...leg, qty: leg.qty - take, slPrice: null, slQty: null };
   }
 
   function cashUsdt() {
@@ -368,7 +480,11 @@ export async function replayDcaPlaybook(input: {
       nextQty > 0 ? (leg.entry * leg.qty + price * qty) / nextQty : price;
     let trailing = leg.trailing;
     const classic = dcaClassicForSide(config, side);
-    if (classic.trailingPct != null && classic.trailingPct > 0) {
+    const sideActions = actionsFor(side);
+    if (sideActions) {
+      exitLots[side].push({ id: `${side}-${clipIndex}-${atMs}`, qty, price });
+      trailing = null;
+    } else if (classic.trailingPct != null && classic.trailingPct > 0) {
       const distance = dcaTrailingDistance(price, classic.trailingPct);
       trailing = armTrailingAt(
         {
@@ -535,8 +651,11 @@ export async function replayDcaPlaybook(input: {
         held = true;
         const adverse = side === "long" ? bar.low : bar.high;
         const exitClassic = dcaClassicForSide(config, side);
+        const actionBook = actionsFor(side);
         const plannedStop =
-          exitClassic.stopLossPct != null && exitClassic.stopLossPct > 0
+          actionBook
+            ? null
+            : exitClassic.stopLossPct != null && exitClassic.stopLossPct > 0
             ? dcaPlannedExits({
                 side,
                 entryPrice: leg.entry,
@@ -559,13 +678,20 @@ export async function replayDcaPlaybook(input: {
         if (firstHit) {
           if (firstHit.reason === "liquidation") {
             wipeAccount(bar.timeMs, side, firstHit.price, price);
+          } else if (
+            firstHit.reason === "stop" &&
+            leg.slQty != null &&
+            leg.slQty > 0 &&
+            leg.slQty + 1e-8 < leg.qty
+          ) {
+            reduceLeg(side, bar.timeMs, firstHit.price, leg.slQty, "stop");
           } else {
             flatten(side, bar.timeMs, firstHit.price, true, firstHit.reason);
           }
           closedThisBar = true;
           continue;
         }
-        if (leg.trailing) {
+        if (!actionBook && leg.trailing) {
           const trail = paperTrailingAdvance({
             side,
             trailing: leg.trailing,
@@ -590,7 +716,7 @@ export async function replayDcaPlaybook(input: {
             continue;
           }
         }
-        const limitTp = limitTakeProfitPrice(side, bar);
+        const limitTp = actionsFor(side) ? null : limitTakeProfitPrice(side, bar);
         if (limitTp != null) {
           const exitNow = hardExitForSide(config, side);
           const exitStackNow = exitStackForSide(config, side);
@@ -686,24 +812,44 @@ export async function replayDcaPlaybook(input: {
       );
       const entryStack = dcaEntryStackForSide(config, side);
       const entryBars = new Map<DcaIndicatorTimeframe, CandleBar[]>();
-      if (!entryStackIsLegacy(entryStack)) {
-        for (const timeframe of entryStackTimeframes(entryStack)) {
-          const sampled = resampleBarsForTimeframe(
-            barWindow,
-            tapeInterval,
-            timeframe,
-          );
-          entryBars.set(
-            timeframe,
-            sampled.map((row) => ({
-              timeMs: 0,
-              open: row.close,
-              high: row.high,
-              low: row.low,
-              close: row.close,
-            })),
-          );
+      const gateTimeframes = [
+        ...(entryStackIsLegacy(entryStack)
+          ? []
+          : entryStackTimeframes(entryStack)),
+      ];
+      const sideRetrace =
+        config.direction === "both" && side === "short"
+          ? config.shortRetrace
+          : config.retrace;
+      if (dcaStartKindForSide(config, side) === "retrace" && sideRetrace) {
+        gateTimeframes.push(sideRetrace.timeframe);
+      }
+      const sideAdd =
+        config.direction === "both" && side === "short"
+          ? config.shortAddStack
+          : config.addStack;
+      if (sideAdd) {
+        gateTimeframes.push(...entryStackTimeframes(sideAdd));
+      }
+      for (const timeframe of gateTimeframes) {
+        if (entryBars.has(timeframe)) {
+          continue;
         }
+        const sampled = resampleBarsForTimeframe(
+          barWindow,
+          tapeInterval,
+          timeframe,
+        );
+        entryBars.set(
+          timeframe,
+          sampled.map((row) => ({
+            timeMs: 0,
+            open: row.close,
+            high: row.high,
+            low: row.low,
+            close: row.close,
+          })),
+        );
       }
       const decision = decideDcaTick({
         status: live.status,
@@ -737,11 +883,17 @@ export async function replayDcaPlaybook(input: {
         entryPrice: live.qty > 0 ? live.entry : null,
         takeProfitKind: dcaClassicForSide(config, side).takeProfitKind,
         takeProfitAtrMult: dcaClassicForSide(config, side).takeProfitAtrMult,
-        takeProfitPct: dcaClassicForSide(config, side).takeProfitPct,
-        stopLossPct: dcaClassicForSide(config, side).stopLossPct,
+        takeProfitPct: actionsFor(side)
+          ? null
+          : dcaClassicForSide(config, side).takeProfitPct,
+        stopLossPct: actionsFor(side)
+          ? null
+          : dcaClassicForSide(config, side).stopLossPct,
         takeProfitBasis: dcaClassicForSide(config, side).takeProfitBasis,
         stopLossBasis: dcaClassicForSide(config, side).stopLossBasis,
-        breakevenActivationPct: dcaClassicForSide(config, side).breakevenActivationPct,
+        breakevenActivationPct: actionsFor(side)
+          ? null
+          : dcaClassicForSide(config, side).breakevenActivationPct,
         breakevenDone: live.breakevenDone,
         armTrigger: dcaArmTriggerForSide(config, side),
         armConditionTrue: live.armTrue,
@@ -753,6 +905,7 @@ export async function replayDcaPlaybook(input: {
         indicatorPeriod: indicatorStart?.period ?? null,
         indicatorSlowPeriod: indicatorStart?.slowPeriod ?? null,
         indicatorMultiplier: indicatorStart?.multiplier ?? null,
+        divergence: indicatorStart?.divergence ?? null,
         indicatorConditionTrue: live.indicatorTrue,
         splitIndicatorSides:
           splitSides &&
@@ -782,11 +935,20 @@ export async function replayDcaPlaybook(input: {
           prices: triggerPrices,
           barsByTimeframe: entryBars,
         }),
-        exitIf,
-        exitHard: exit.signal,
+        ...dcaSideGates({
+          playbook: config,
+          side,
+          price,
+          prices: triggerPrices,
+          barsByTimeframe: entryBars,
+        }),
+        exitIf: actionsFor(side) ? null : exitIf,
+        exitHard: actionsFor(side) ? null : exit.signal,
         exitIfCloses: exitIfSeries.closes,
         exitIfBars: exitIfSeries.bars,
-        ...(exitStack.leaves.length > 0
+        ...(actionsFor(side) || exitStack.leaves.length === 0
+          ? {}
+          : exitStack.leaves.length > 0
           ? {
               exitJoins: exitStack.joins,
               exitLeaves: exitLeafResults({
@@ -881,7 +1043,100 @@ export async function replayDcaPlaybook(input: {
           side === "long"
             ? live.entry * (1 + offset / 100)
             : live.entry * (1 - offset / 100);
-        legs[side] = { ...live, breakevenDone: true, slPrice: sl };
+        legs[side] = { ...live, breakevenDone: true, slPrice: sl, slQty: null };
+      }
+      const book = actionsFor(side);
+      const heldLeg = legs[side];
+      if (book && heldLeg.qty > 0 && !closedThisBar) {
+        const bars = new Map<string, CandleBar[]>();
+        for (const timeframe of exitActionTimeframes(book)) {
+          const sampled = resampleBarsForTimeframe(
+            barWindow,
+            tapeInterval,
+            timeframe as DcaIndicatorTimeframe,
+          );
+          bars.set(
+            timeframe,
+            sampled.map((row) => ({
+              timeMs: bar.timeMs,
+              open: row.close,
+              high: row.high,
+              low: row.low,
+              close: row.close,
+            })),
+          );
+        }
+        const seeded =
+          exitLots[side].length > 0
+            ? exitLots[side]
+            : [{ id: "position", qty: heldLeg.qty, price: heldLeg.entry }];
+        const settled = evaluateExitActions({
+          actions: book,
+          runtime: exitArms[side],
+          lots: seeded,
+          side,
+          mark: price,
+          last: price,
+          entryPrice: heldLeg.entry,
+          nowMs: bar.timeMs,
+          barsByTimeframe: bars,
+          prices: triggerPrices,
+          breakevenDone: heldLeg.breakevenDone,
+        });
+        exitArms[side] = settled.runtime;
+        exitLots[side] = settled.lots;
+        if (settled.breakeven && !heldLeg.breakevenDone) {
+          const offset = settled.breakeven.offsetPct;
+          const sl =
+            side === "long"
+              ? heldLeg.entry * (1 + offset / 100)
+              : heldLeg.entry * (1 - offset / 100);
+          const cover = settled.breakeven.qty;
+          legs[side] = {
+            ...heldLeg,
+            breakevenDone: true,
+            slPrice: sl,
+            slQty: cover != null && cover > 0 && cover + 1e-8 < heldLeg.qty ? cover : null,
+          };
+        }
+        for (const claim of settled.claims) {
+          const current = legs[side];
+          const take = Math.min(current.qty, claim.qty);
+          if (!(take > 0)) {
+            continue;
+          }
+          const fee = feeUsdt(take, price, input.feeRate);
+          const pnl = unrealized(side, take, current.entry, price) - fee;
+          realized += pnl;
+          trades += 1;
+          if (pnl > 0) {
+            wins += 1;
+            grossWin += pnl;
+          } else {
+            grossLoss += Math.abs(pnl);
+          }
+          remember(
+            {
+              atMs: bar.timeMs,
+              action: "flatten",
+              side,
+              qty: take,
+              price,
+              feeUsdt: fee,
+              realizedUsdt: pnl,
+              reason: claimFillReason(claim.kind),
+            },
+          );
+          const left = current.qty - take;
+          if (!(left > 1e-8)) {
+            legs[side] = emptyLeg();
+            exitLots[side] = [];
+            exitArms[side] = emptyExitRuntime();
+            closedThisBar = true;
+            break;
+          }
+          legs[side] = { ...current, qty: left };
+        }
       }
     }
     if (held) {

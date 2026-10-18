@@ -63,6 +63,24 @@ function readTrailingFromForm(
   if (!priced.ok) {
     return priced;
   }
+  const activationKind = String(form.get("trailingActiveKind") ?? "");
+  if (activationKind === "percent") {
+    const pct = parseOptionalPositive(form.get("trailingTriggerPct"), "activation percent");
+    if (!pct.ok) {
+      return pct;
+    }
+    if (requireActivation && pct.value === null) {
+      return { ok: false, error: "Enter an activation percent." };
+    }
+    return {
+      ok: true,
+      trailing: {
+        distance: priced.price,
+        activePrice: null,
+        peak: null,
+      },
+    };
+  }
   const activationOn =
     requireActivation ||
     form.get("trailingActivation") === "on" ||

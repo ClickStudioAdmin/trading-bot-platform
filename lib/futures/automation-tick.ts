@@ -16,6 +16,16 @@ import {
   perpsExitForSide,
 } from "./conditions";
 import { entryStackListensOnPriceTick, entryStackMatchesWebhook } from "@/lib/strategy/expr";
+import {
+  exitBookForClassic,
+  exitClaimsCover,
+  sideExitActions,
+} from "@/lib/strategy/exit-actions";
+import {
+  applyPaperExitClaims,
+  decideOpenExit,
+  saveExitRuntime,
+} from "@/lib/strategy/exit-desk";
 import { hardExitMet } from "@/lib/dca/hard-exit";
 import {
   exitExpressionMet,
@@ -39,7 +49,7 @@ import {
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
-import { triggerPrice, tickerTriggerPrices, tpslFromRow } from "./tpsl";
+import { breakevenStopTpsl, triggerPrice, tickerTriggerPrices, tpslFromRow } from "./tpsl";
 import {
   deskAllowsPerpsRecipes,
   parseDeskQuery,
@@ -413,12 +423,19 @@ export async function fireWebhookAutomationEntries(input: {
   const klineCache = new Map<string, CandleBar[]>();
   const needsPrice = matchedRows.some((raw) => {
     const rule = parseFuturesAutomationRow(raw as Record<string, unknown>);
-    return perpsAutomationLegs(rule).some(
-      (leg) =>
-        leg.rule.entrySource === "price" ||
-        leg.rule.entryStack.leaves.some((leaf) => leaf.kind === "price") ||
-        leg.rule.exitHard?.trigger === "price" ||
-        (leg.rule.exitStack?.leaves ?? []).some((leaf) => leaf.kind === "price"),
+    return (
+      Boolean(rule.exitActions?.length) ||
+      Boolean(rule.shortEntry?.actions?.length) ||
+      perpsAutomationLegs(rule).some(
+        (leg) =>
+          leg.rule.entrySource === "price" ||
+          leg.rule.entrySource === "retrace" ||
+          leg.rule.entryStack.leaves.some(
+            (leaf) => leaf.kind === "price" || leaf.kind === "retrace",
+          ) ||
+          leg.rule.exitHard?.trigger === "price" ||
+          (leg.rule.exitStack?.leaves ?? []).some((leaf) => leaf.kind === "price"),
+      )
     );
   });
   let tickers = new Map<string, BybitTicker>();
@@ -434,7 +451,8 @@ export async function fireWebhookAutomationEntries(input: {
     if (!rule.id) {
       continue;
     }
-    const exitWebhookHit = (["long", "short"] as const).some((side) => {
+    const exitWebhookHit = ruleUsesExitWebhook(rule, input.webhookId) ||
+      (["long", "short"] as const).some((side) => {
       const exit = perpsExitForSide(rule, side);
       return (
         (exit.exitHard?.trigger === "webhook" &&
@@ -458,6 +476,20 @@ export async function fireWebhookAutomationEntries(input: {
       const prices = ticker ? tickerTriggerPrices(ticker) : null;
       let flattened = false;
       for (const open of owned) {
+        const ownedExit = await commitOwnedExit({
+          rule,
+          account,
+          open,
+          barsByTimeframe,
+          prices,
+          firedWebhookId: input.webhookId,
+        });
+        if (ownedExit) {
+          if (ownedExit === "flat") {
+            flattened = true;
+          }
+          continue;
+        }
         const exit = perpsExitForSide(rule, open.side);
         const exitBars = exit.exitIf
           ? (barsByTimeframe.get(exit.exitIf.timeframe) ?? [])
@@ -663,6 +695,168 @@ export async function fireWebhookAutomationEntries(input: {
   return { fired };
 }
 
+function ruleUsesExitWebhook(
+  rule: FuturesAutomationRule,
+  webhookId: string,
+): boolean {
+  const lists = [rule.exitActions, rule.shortEntry?.actions];
+  for (const list of lists) {
+    for (const action of list ?? []) {
+      for (const group of action.groups) {
+        for (const draft of [group.anchor, ...group.rows]) {
+          if (draft.trigger === "webhook" && draft.webhookId === webhookId) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
+async function commitOwnedExit(input: {
+  rule: FuturesAutomationRule;
+  account: DeskAccount;
+  open: FuturesPosition;
+  barsByTimeframe: Map<string, CandleBar[]>;
+  prices: { last: number | null; mark: number | null; index: number | null } | null;
+  firedWebhookId?: string | null;
+}): Promise<false | "held" | "flat"> {
+  const actions = sideExitActions(
+    input.rule.exitActions,
+    input.rule.shortEntry?.actions,
+    input.rule.direction,
+    input.open.side,
+  );
+  if (!actions) {
+    return false;
+  }
+  const mark = input.prices?.mark ?? input.prices?.last ?? null;
+  const last = input.prices?.last ?? mark;
+  if (!(mark != null && mark > 0) || !(last != null && last > 0)) {
+    return "held";
+  }
+  const settled = await decideOpenExit({
+    actions,
+    positionId: input.open.id,
+    side: input.open.side,
+    qty: input.open.qty,
+    entryPrice: input.open.entryPrice,
+    mark,
+    last,
+    index: input.prices?.index ?? null,
+    barsByTimeframe: input.barsByTimeframe,
+    firedWebhookId: input.firedWebhookId,
+    breakevenDone: input.open.breakevenDone,
+  });
+  if (!settled) {
+    return "held";
+  }
+  if (settled.breakeven && !input.open.breakevenDone) {
+    const current = tpslFromRow(input.open);
+    const stop = futuresBreakevenStop({
+      side: input.open.side,
+      entryPrice: input.open.entryPrice,
+      currentStop: current?.stopLoss ?? input.open.stopLoss,
+      offsetPct: settled.breakeven.offsetPct,
+    });
+    if (stop != null && stop > 0) {
+      const reasons = formatBreakevenReason({
+        side: input.open.side,
+        entryPrice: input.open.entryPrice,
+        mark: last,
+        activationPct: settled.breakeven.activationPct,
+        offsetPct: settled.breakeven.offsetPct,
+        stop,
+      });
+      const moved = await runFuturesCommand({
+        actor: {
+          userId: input.account.userId,
+          accountId: input.open.accountId,
+          mode: input.account.mode,
+        },
+        command: {
+          kind: "set-tpsl",
+          positionId: input.open.id,
+          symbol: input.open.symbol,
+          form: new FormData(),
+          reason: reasons,
+          tpsl: breakevenStopTpsl({
+            current: current ?? {
+              takeProfit: input.open.takeProfit,
+              stopLoss: stop,
+              tpTrigger: input.open.tpTrigger,
+              slTrigger: input.open.slTrigger,
+              mode: input.open.tpslMode,
+              tpQty: input.open.tpQty,
+              slQty: input.open.slQty,
+              tpOrderType: input.open.tpOrderType,
+              slOrderType: "market",
+              tpLimitPrice: input.open.tpLimitPrice,
+              slLimitPrice: null,
+            },
+            stop,
+            positionQty: input.open.qty,
+            appliesQty: settled.breakeven.qty,
+          }),
+        },
+      });
+      if (moved.ok) {
+        input.open.breakevenDone = true;
+        const supabase = createServiceClient();
+        if (supabase) {
+          await supabase
+            .from("futures_positions")
+            .update({ breakeven_done: true })
+            .eq("id", input.open.id)
+            .eq("status", "open");
+        }
+      }
+    }
+  }
+  if (settled.claims.length === 0) {
+    await saveExitRuntime(input.open.id, settled.runtime);
+    return "held";
+  }
+  const full = exitClaimsCover(settled.claims, input.open.qty);
+  if (input.account.mode === "paper") {
+    const applied = await applyPaperExitClaims({
+      mode: input.account.mode,
+      position: input.open,
+      price: last,
+      claims: settled.claims,
+      runtime: settled.runtime,
+    });
+    return applied.applied && applied.remaining <= 1e-8 ? "flat" : "held";
+  }
+  if (!full) {
+    return "held";
+  }
+  const closed = await runFuturesCommand({
+    actor: {
+      userId: input.account.userId,
+      accountId: input.open.accountId,
+      mode: input.account.mode,
+    },
+    command: {
+      kind: "place",
+      action: "flatten",
+      symbol: input.open.symbol,
+      positionId: input.open.id,
+      orderType: "market",
+      source: input.firedWebhookId ? "webhook" : "engine",
+      ruleId: input.rule.id,
+      ruleName: input.rule.name,
+      reason: "exit_actions",
+    },
+  });
+  if (!closed.ok) {
+    return "held";
+  }
+  await saveExitRuntime(input.open.id, settled.runtime);
+  return "flat";
+}
+
 async function monitorOwnedFuturesPositions(input: {
   opens: FuturesPosition[];
   rules: {
@@ -689,6 +883,12 @@ async function monitorOwnedFuturesPositions(input: {
       continue;
     }
     const { rule, account } = owned;
+    const sideActions = sideExitActions(
+      rule.exitActions,
+      rule.shortEntry?.actions,
+      rule.direction,
+      open.side,
+    );
     const watchedExit = perpsExitForSide(rule, open.side);
     const sideClassic =
       open.side === "short" && rule.direction === "both"
@@ -700,14 +900,6 @@ async function monitorOwnedFuturesPositions(input: {
     const breakevenOffsetPct = sideClassic
       ? sideClassic.breakevenOffsetPct
       : rule.breakevenOffsetPct;
-    if (
-      !watchedExit.exitIf &&
-      !watchedExit.exitHard &&
-      watchedExit.exitStack.leaves.length === 0 &&
-      breakevenActivationPct == null
-    ) {
-      continue;
-    }
     let deskTickers = input.tickers;
     if (account.venue === "hyperliquid" && !input.providedTickers) {
       const cacheKey = `${account.venue}:${account.venueEnvironment ?? ""}`;
@@ -733,6 +925,55 @@ async function monitorOwnedFuturesPositions(input: {
     const exitBars = watchedExit.exitIf
       ? (barsByTimeframe.get(watchedExit.exitIf.timeframe) ?? [])
       : [];
+    if (sideActions) {
+      await commitOwnedExit({
+        rule,
+        account,
+        open,
+        barsByTimeframe,
+        prices,
+      });
+      continue;
+    }
+    const mark = prices?.mark != null && prices.mark > 0 ? prices.mark : last;
+    if (mark != null && mark > 0 && last != null && last > 0 && open.qty > 0) {
+      const breakevenMoving =
+        breakevenActivationPct != null &&
+        futuresBreakevenDue({
+          side: open.side,
+          qty: open.qty,
+          entryPrice: open.entryPrice,
+          mark: last,
+          activationPct: breakevenActivationPct,
+          done: open.breakevenDone,
+        });
+      const book = exitBookForClassic({
+        side: open.side,
+        qty: open.qty,
+        entryPrice: open.entryPrice,
+        mark,
+        last,
+        nowMs: Date.now(),
+        breakevenDone: open.breakevenDone,
+        trailingPeak: open.trailingPeak,
+        takeProfitPrice: open.takeProfit,
+        takeProfitQty: open.tpQty,
+        stopLossPrice: open.stopLoss,
+        stopLossQty: open.slQty,
+        trailingDistance: open.trailingStop,
+        trailingActivation: open.trailingActive,
+        breakevenActivationPct,
+        breakevenOffsetPct,
+            breakeven: breakevenMoving
+          ? {
+              activationPct: breakevenActivationPct,
+              offsetPct: breakevenOffsetPct ?? 0,
+              qty: null,
+            }
+          : null,
+      });
+      await saveExitRuntime(open.id, { arms: {}, book });
+    }
     const exitMet = exitExpressionMet({
       first: hardExitMet({
         filter: watchedExit.exitIf,
@@ -854,8 +1095,8 @@ async function monitorOwnedFuturesPositions(input: {
           symbol: open.symbol,
           form: new FormData(),
           reason: reasons,
-          tpsl: {
-            ...(current ?? {
+          tpsl: breakevenStopTpsl({
+            current: current ?? {
               takeProfit: open.takeProfit,
               stopLoss: stop,
               tpTrigger: open.tpTrigger,
@@ -867,11 +1108,10 @@ async function monitorOwnedFuturesPositions(input: {
               slOrderType: "market",
               tpLimitPrice: open.tpLimitPrice,
               slLimitPrice: null,
-            }),
-            stopLoss: stop,
-            slOrderType: "market",
-            slLimitPrice: null,
-          },
+            },
+            stop,
+            positionQty: open.qty,
+          }),
         },
       });
       if (!moved.ok) {
@@ -994,8 +1234,26 @@ async function fireAutomationRule(input: {
       ruleId: rule.id,
       ruleName: rule.name,
       reason: input.reason,
-      tpsl: rule.action === "flatten" ? null : rule.tpsl,
-      trailing: rule.action === "flatten" ? null : rule.trailing,
+      tpsl:
+        rule.action === "flatten" ||
+        sideExitActions(
+          rule.exitActions,
+          rule.shortEntry?.actions,
+          rule.direction,
+          rule.action === "sell" ? "short" : "long",
+        )
+          ? null
+          : rule.tpsl,
+      trailing:
+        rule.action === "flatten" ||
+        sideExitActions(
+          rule.exitActions,
+          rule.shortEntry?.actions,
+          rule.direction,
+          rule.action === "sell" ? "short" : "long",
+        )
+          ? null
+          : rule.trailing,
     },
   });
   if (!result.ok) {

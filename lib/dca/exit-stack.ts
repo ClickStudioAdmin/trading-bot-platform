@@ -19,12 +19,15 @@ import {
 import { dcaFilterMet, type DcaFilterSpec } from "./filters";
 import {
   hardExitDraftFromStored,
+  isPriceRuleDraft,
   parseHardExitForm,
   writeHardExitFormFields,
   type HardExitDraft,
   type HardExitSignal,
 } from "./hard-exit";
-import type { DcaIndicatorTimeframe } from "./indicators";
+import { indicatorStartMet, type DcaIndicatorTimeframe } from "./indicators";
+import { retraceClaim, retraceMet } from "@/lib/strategy/retrace";
+import { rsiDivergenceMet } from "@/lib/strategy/rsi-divergence";
 
 export type { EntryStack as ExitStack };
 
@@ -43,15 +46,27 @@ export function exitStackMet(input: {
 export function hardExitClaim(
   draft: HardExitDraft | null | undefined,
 ): EntryConflictSlot["claim"] {
-  if (!draft || draft.trigger === "webhook" || draft.trigger === "unset") {
+  if (
+    !draft ||
+    draft.trigger === "webhook" ||
+    draft.trigger === "unset" ||
+    isPriceRuleDraft(draft)
+  ) {
     return null;
   }
   if (draft.trigger === "price") {
     return priceClaim({
       source: draft.triggerBy,
       compare: draft.compare,
-    price: draft.price,
-  });
+      price: draft.price,
+    });
+  }
+  if (draft.trigger === "retrace") {
+    return retraceClaim({
+      source: draft.source,
+      from: draft.from,
+      timeframe: draft.timeframe,
+    });
   }
   if (!draft.spec) {
     return null;
@@ -66,6 +81,7 @@ export function hardExitClaim(
     period: draft.spec.period,
     slowPeriod: draft.spec.slowPeriod,
     multiplier: draft.spec.multiplier,
+    when: draft.spec.divergence?.when,
   });
 }
 
@@ -76,27 +92,65 @@ export function hardExitAnchor(
     return null;
   }
   if (
+    draft.trigger === "target" ||
+    draft.trigger === "stop" ||
+    draft.trigger === "trail"
+  ) {
+    return null;
+  }
+  if (
     (draft.trigger === "indicator" || draft.trigger === "trend") &&
     !draft.spec
   ) {
     return null;
   }
-  return {
-    kind: draft.trigger,
-    join: "and",
-    webhookId: draft.trigger === "webhook" ? draft.webhookId : null,
-    claim: hardExitClaim(draft),
-  };
+  if (draft.trigger === "price") {
+    return {
+      kind: "price",
+      join: "and",
+      webhookId: null,
+      claim: hardExitClaim(draft),
+    };
+  }
+  if (draft.trigger === "webhook") {
+    return {
+      kind: "webhook",
+      join: "and",
+      webhookId: draft.webhookId,
+      claim: hardExitClaim(draft),
+    };
+  }
+  if (draft.trigger === "indicator" || draft.trigger === "trend") {
+    return {
+      kind: draft.trigger,
+      join: "and",
+      webhookId: null,
+      claim: hardExitClaim(draft),
+    };
+  }
+  if (draft.trigger === "retrace") {
+    return {
+      kind: "retrace",
+      join: "and",
+      webhookId: null,
+      claim: hardExitClaim(draft),
+    };
+  }
+  return null;
 }
 
 export function hardExitTriggerTimeframe(
   draft: HardExitDraft | null | undefined,
 ): DcaIndicatorTimeframe | null {
+  if (!draft || draft.trigger === "unset" || isPriceRuleDraft(draft)) {
+    return null;
+  }
+  if (draft.trigger === "retrace") {
+    return draft.timeframe;
+  }
   if (
-    !draft ||
     draft.trigger === "price" ||
     draft.trigger === "webhook" ||
-    draft.trigger === "unset" ||
     !draft.spec
   ) {
     return null;
@@ -424,6 +478,36 @@ function exitLeafMet(input: {
   }
   if (leaf.kind === "webhook") {
     return input.firedWebhookId != null && input.firedWebhookId === leaf.webhookId;
+  }
+  if (leaf.kind === "retrace") {
+    const quoted = input.prices?.[leaf.source] ?? (leaf.source === "last" ? input.price : null);
+    const bars = input.barsByTimeframe.get(leaf.timeframe) ?? [];
+    return retraceMet({
+      spec: leaf,
+      price: quoted != null && quoted > 0 ? quoted : null,
+      bars,
+    });
+  }
+  if (leaf.kind === "indicator" || leaf.kind === "trend") {
+    const bars = input.barsByTimeframe.get(leaf.start.timeframe) ?? [];
+    if (leaf.start.kind === "rsi_divergence") {
+      return rsiDivergenceMet({
+        bars,
+        period: leaf.start.period,
+        settings: leaf.start.divergence,
+      });
+    }
+    return indicatorStartMet({
+      kind: leaf.start.kind,
+      side: input.side,
+      closes: bars.map((row) => row.close),
+      bars,
+      compare: leaf.start.compare,
+      level: leaf.start.level,
+      period: leaf.start.period,
+      slowPeriod: leaf.start.slowPeriod,
+      multiplier: leaf.start.multiplier,
+    });
   }
   return false;
 }

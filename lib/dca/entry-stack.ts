@@ -2,6 +2,7 @@ import { entryLeafMet } from "@/lib/futures/conditions";
 import type { FuturesSide } from "@/lib/futures/model";
 import type { CandleBar } from "@/lib/market/candles";
 import {
+  addStackMet,
   entryStackIsLegacy,
   entryStackMet,
   entryStackTimeframes,
@@ -9,6 +10,8 @@ import {
   type EntryStack,
   type StrategyJoin,
 } from "@/lib/strategy/expr";
+import { retraceMet } from "@/lib/strategy/retrace";
+import type { RetraceSpec } from "@/lib/strategy/retrace";
 import { dcaFilterForSide, dcaFilterMet } from "./filters";
 import { exitStackForSide, exitStackWebhookIds } from "./exit-stack";
 import { hardExitForSide } from "./hard-exit";
@@ -37,7 +40,12 @@ type StackPlaybook = Pick<
   | "shortExitHard"
   | "exitStack"
   | "shortExitStack"
->;
+> & {
+  retrace?: RetraceSpec | null;
+  shortRetrace?: RetraceSpec | null;
+  addStack?: EntryStack | null;
+  shortAddStack?: EntryStack | null;
+};
 
 export function dcaEntryStackForSide(
   playbook: StackPlaybook,
@@ -156,6 +164,72 @@ export function dcaEntryTickExtras(input: {
         firedWebhookId: input.firedWebhookId,
       }),
     ),
+  };
+}
+
+function quotedSource(
+  source: "last" | "mark" | "index",
+  price: number | null,
+  prices?: {
+    last: number | null;
+    mark: number | null;
+    index: number | null;
+  } | null,
+): number | null {
+  if (!prices) {
+    return price;
+  }
+  if (source === "mark") {
+    return prices.mark;
+  }
+  if (source === "index") {
+    return prices.index;
+  }
+  return prices.last;
+}
+
+/** Retrace start and the additional-order gate for one side. */
+export function dcaSideGates(input: {
+  playbook: StackPlaybook;
+  side: FuturesSide;
+  price: number | null;
+  prices?: {
+    last: number | null;
+    mark: number | null;
+    index: number | null;
+  } | null;
+  barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
+  firedWebhookId?: string | null;
+}): { retraceMet: boolean; addMet: boolean } {
+  const shortLeg = input.playbook.direction === "both" && input.side === "short";
+  const spec = shortLeg ? input.playbook.shortRetrace : input.playbook.retrace;
+  const startKind = dcaStartKindForSide(input.playbook, input.side);
+  let retraceNow = false;
+  if (startKind === "retrace" && spec) {
+    const bars = input.barsByTimeframe.get(spec.timeframe) ?? [];
+    retraceNow = retraceMet({
+      spec,
+      price: quotedSource(spec.source, input.price, input.prices),
+      bars,
+    });
+  }
+  const add = shortLeg ? input.playbook.shortAddStack : input.playbook.addStack;
+  if (!add || add.leaves.length === 0) {
+    return { retraceMet: retraceNow, addMet: true };
+  }
+  const leaves = add.leaves.map((leaf) =>
+    entryLeafMet({
+      leaf,
+      side: input.side,
+      price: input.price,
+      prices: input.prices,
+      barsByTimeframe: input.barsByTimeframe,
+      firedWebhookId: input.firedWebhookId,
+    }),
+  );
+  return {
+    retraceMet: retraceNow,
+    addMet: addStackMet({ stack: add, leaves }),
   };
 }
 

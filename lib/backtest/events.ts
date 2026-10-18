@@ -1,4 +1,5 @@
 import type { FuturesSide } from "@/lib/futures/model";
+import { exitBookFromJson } from "@/lib/strategy/exit-actions";
 import { formatPrice } from "@/lib/opportunities/format";
 import {
   parseBacktestClipIndex,
@@ -101,6 +102,7 @@ export function parseReplayEvents(raw: unknown): ReplayEvent[] | null {
       clipIndex: parseBacktestClipIndex(row.clipIndex),
       text,
       facts: parseFacts(row.facts),
+      exitBook: exitBookFromJson(row.exitBook) ?? undefined,
     });
   }
   return rows;

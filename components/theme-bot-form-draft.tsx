@@ -53,18 +53,24 @@ import {
   blankExitClauses,
   customStackFromClauses,
   classicExitFlags,
+  exitPriceLive,
   exitClauseListMissing,
   exitClausesFromSaved,
   type ExitBuilderClause,
+  type ExitFieldSlot,
 } from "@/lib/strategy/exit-clauses";
+import { exitCardsBlockReason } from "@/lib/strategy/exit-actions";
+import { type TrailActivationKind } from "@/lib/strategy/exit-clauses";
 import {
   EntryConditionStack,
   entryConflictSlots,
-  entryDraftComplete,
+  entryRowsMissing,
   type EntryAnchor,
   type EntryStackRow,
 } from "@/components/entry-condition-stack";
 import { indicatorClaim, priceClaim, type ConflictClaim } from "@/lib/strategy/conflicts";
+import { retraceClaim } from "@/lib/strategy/retrace";
+import { RetraceFields, blankRetraceDraft, type RetraceDraft } from "@/components/retrace-fields";
 import {
   entryKindDisabled,
   entryWebhookIdDisabled,
@@ -328,6 +334,7 @@ type ThemeClassicDraft = {
   tpLimitPrice: string;
   trailValue: string;
   trailTrigger: string;
+  trailActiveKind: TrailActivationKind;
   slMethod: ExitMethod;
   slValue: string;
   slBasis: string;
@@ -350,6 +357,7 @@ function blankThemeClassic(): ThemeClassicDraft {
     tpLimitPrice: "",
     trailValue: "",
     trailTrigger: "",
+    trailActiveKind: "percent",
     slMethod: "percent",
     slValue: "",
     slBasis: "average",
@@ -362,7 +370,7 @@ function blankThemeClassic(): ThemeClassicDraft {
     atrPeriod: "14",
   };
 }
-type StartKind = "" | "price" | "indicator" | "trend" | "webhook";
+type StartKind = "" | "price" | "indicator" | "trend" | "webhook" | "retrace";
 function Field({
   label,
   hint,
@@ -516,7 +524,6 @@ function ThemeSecondaryEntry({
 }
 
 function PriceTriggerFields({
-  desk,
   priceSource,
   onPriceSource,
   priceWhen,
@@ -527,7 +534,6 @@ function PriceTriggerFields({
   seriesSlots,
   seriesIndex,
 }: {
-  desk: DeskKind;
   priceSource: string;
   onPriceSource: (next: string) => void;
   priceWhen: string;
@@ -538,10 +544,9 @@ function PriceTriggerFields({
   seriesSlots?: readonly EntryConflictSlot[];
   seriesIndex?: number;
 }) {
-  if (desk === "flex") {
-    return (
-      <>
-        <Field label="Price source" required>
+  return (
+    <>
+      <Field label="Price source" required>
           <AppSelect
             value={priceSource}
             onChange={(event) => onPriceSource(event.target.value)}
@@ -597,63 +602,6 @@ function PriceTriggerFields({
             invalid={invalid}
           />
         </Field>
-      </>
-    );
-  }
-  return (
-    <>
-      <Field label="Price" required>
-        <AppSelect
-          value={priceSource}
-          onChange={(event) => onPriceSource(event.target.value)}
-          className={fieldClass}
-        >
-          {(["last", "mark", "index"] as const).map((source) => (
-            <option
-              key={source}
-              value={source}
-              disabled={priceChoiceConflicts(
-                seriesSlots,
-                seriesIndex,
-                { source: priceSource, compare: priceWhen, price: priceLevel },
-                { source },
-              )}
-            >
-              {source === "last" ? "Last" : source === "mark" ? "Mark" : "Index"}
-            </option>
-          ))}
-        </AppSelect>
-      </Field>
-      <Field label="When" required>
-        <AppSelect
-          value={priceWhen}
-          onChange={(event) => onPriceWhen(event.target.value)}
-          className={fieldClass}
-        >
-          {(["gte", "lte"] as const).map((compare) => (
-            <option
-              key={compare}
-              value={compare}
-              disabled={priceChoiceConflicts(
-                seriesSlots,
-                seriesIndex,
-                { source: priceSource, compare: priceWhen, price: priceLevel },
-                { compare },
-              )}
-            >
-              {compare === "gte" ? "At or above" : "At or below"}
-            </option>
-          ))}
-        </AppSelect>
-      </Field>
-      <Field label="Level (USDT)" required>
-        <OffNumber
-          value={priceLevel}
-          onChange={onPriceLevel}
-          required
-          invalid={invalid}
-        />
-      </Field>
     </>
   );
 }
@@ -670,6 +618,8 @@ function themeStartClaim(input: {
   slowPeriod: string;
   level: string;
   multiplier: string;
+  retrace?: RetraceDraft;
+  divergenceWhen?: string;
 }): ConflictClaim | null {
   if (input.kind === "price") {
     return priceClaim({
@@ -677,6 +627,9 @@ function themeStartClaim(input: {
       compare: input.priceWhen,
       price: input.priceLevel,
     });
+  }
+  if (input.kind === "retrace" && input.retrace) {
+    return retraceClaim(input.retrace);
   }
   if (input.kind === "indicator" || input.kind === "trend") {
     if (!input.indicatorKind) {
@@ -691,6 +644,7 @@ function themeStartClaim(input: {
       period: input.period,
       slowPeriod: input.slowPeriod,
       multiplier: input.multiplier,
+      when: input.indicatorKind === "rsi_divergence" ? input.divergenceWhen : undefined,
     });
   }
   return null;
@@ -706,6 +660,24 @@ export function ThemeBotFormDraft() {
   const [shortWebhookId, setShortWebhookId] = useState("sample");
   const [shortEntryRows, setShortEntryRows] = useState<EntryStackRow[]>([]);
   const [startKind, setStartKind] = useState<StartKind>("");
+  const [retrace, setRetrace] = useState<RetraceDraft>(() => blankRetraceDraft("long"));
+  const [shortRetrace, setShortRetrace] = useState<RetraceDraft>(() =>
+    blankRetraceDraft("short"),
+  );
+  const [divergenceWhen, setDivergenceWhen] = useState("bullish");
+  const [divergenceStyle, setDivergenceStyle] = useState("regular");
+  const [pivotBars, setPivotBars] = useState("5");
+  const [divergenceSpan, setDivergenceSpan] = useState("50");
+  const [minPricePct, setMinPricePct] = useState("");
+  const [minRsi, setMinRsi] = useState("");
+  const [shortDivergenceWhen, setShortDivergenceWhen] = useState("bearish");
+  const [shortDivergenceStyle, setShortDivergenceStyle] = useState("regular");
+  const [shortPivotBars, setShortPivotBars] = useState("5");
+  const [shortDivergenceSpan, setShortDivergenceSpan] = useState("50");
+  const [shortMinPricePct, setShortMinPricePct] = useState("");
+  const [shortMinRsi, setShortMinRsi] = useState("");
+  const [addRows, setAddRows] = useState<EntryStackRow[]>([]);
+  const [shortAddRows, setShortAddRows] = useState<EntryStackRow[]>([]);
   const [priceSource, setPriceSource] = useState("last");
   const [priceWhen, setPriceWhen] = useState("gte");
   const [priceLevel, setPriceLevel] = useState("");
@@ -797,6 +769,8 @@ export function ThemeBotFormDraft() {
       slowPeriod,
       level,
       multiplier,
+      retrace,
+      divergenceWhen,
     }),
   };
   const themeShortAnchor: EntryAnchor = {
@@ -814,6 +788,8 @@ export function ThemeBotFormDraft() {
       slowPeriod: shortSlowPeriod,
       level: shortLevel,
       multiplier: shortMultiplier,
+      retrace: shortRetrace,
+      divergenceWhen: shortDivergenceWhen,
     }),
   };
   const themeEntrySlots = entryConflictSlots(themeLongAnchor, entryRows);
@@ -839,6 +815,7 @@ export function ThemeBotFormDraft() {
   const [tpLimitPrice, setTpLimitPrice] = useState("");
   const [trailValue, setTrailValue] = useState("");
   const [trailTrigger, setTrailTrigger] = useState("");
+  const [trailActiveKind, setTrailActiveKind] = useState<TrailActivationKind>("percent");
   const [slMethod, setSlMethod] = useState<ExitMethod>("percent");
   const [slValue, setSlValue] = useState("");
   const [slBasis, setSlBasis] = useState("average");
@@ -897,12 +874,11 @@ export function ThemeBotFormDraft() {
     setTpOn(flags.takeProfit);
     setTrailOn(flags.trailing);
     setSlOn(flags.stopLoss);
-    if (!flags.stopLoss) {
-      setBreakevenOn(false);
-    }
-    if (short && !short.some((clause) => clause.kind === "stop_loss")) {
+    setBreakevenOn(primary.some((clause) => clause.kind === "breakeven"));
+    if (short) {
+      const on = short.some((clause) => clause.kind === "breakeven");
       setShortClassic((draft) =>
-        draft.breakevenOn ? { ...draft, breakevenOn: false } : draft,
+        draft.breakevenOn === on ? draft : { ...draft, breakevenOn: on },
       );
     }
   }
@@ -997,6 +973,7 @@ export function ThemeBotFormDraft() {
     tpLimitPrice,
     trailValue,
     trailTrigger,
+    trailActiveKind,
     slMethod,
     slValue,
     slBasis,
@@ -1056,8 +1033,8 @@ export function ThemeBotFormDraft() {
   const themeBothExits =
     (desk === "flex" && perpsDirection === "both") ||
     (desk === "dca" && direction === "both");
-  const primaryExitFlags = classicExitFlags(exitClauses);
-  const shortExitFlags = classicExitFlags(shortClauses);
+  const primaryExitFlags = exitPriceLive(exitClauses);
+  const shortExitFlags = exitPriceLive(shortClauses);
   const requireTp = desk !== "cnc" && !closing && primaryExitFlags.takeProfit;
   const requireSl = desk !== "cnc" && !closing && primaryExitFlags.stopLoss;
   const requireTrail = desk !== "cnc" && !closing && primaryExitFlags.trailing;
@@ -1069,9 +1046,9 @@ export function ThemeBotFormDraft() {
   const requireShortTrailTrigger =
     requireShortTrail && (desk === "dca" || desk === "flex");
   const requireBreakeven =
-    desk !== "cnc" && !closing && primaryExitFlags.stopLoss && breakevenOn;
+    desk !== "cnc" && !closing && exitClauses.some((clause) => clause.kind === "breakeven");
   const requireShortBreakeven =
-    themeBothExits && shortExitFlags.stopLoss && shortClassic.breakevenOn;
+    themeBothExits && shortClauses.some((clause) => clause.kind === "breakeven");
   const requireCarryTp = desk === "cnc" && carryTpOn;
   const requireCarrySl = desk === "cnc" && carrySlOn;
   const requireConfirm = desk !== "cnc" && !closing && confirmOn;
@@ -1184,22 +1161,14 @@ export function ThemeBotFormDraft() {
         slowPeriod: shortSlowPeriod,
         multiplier: shortMultiplier,
       }),
-    entryRows:
+    entryRows: desk !== "cnc" && entryRowsMissing(entryRows),
+    shortEntryRows: themeBothExits && entryRowsMissing(shortEntryRows),
+    exitKind:
       desk !== "cnc" &&
-      entryRows.some(
-        (row) =>
-          !(desk === "flex" && row.draft.kind === "unset") &&
-          !entryDraftComplete(row.draft),
-      ),
-    shortEntryRows:
+      (exitClauseListMissing(exitClauses) || Boolean(exitCardsBlockReason(exitClauses))),
+    shortExitKind:
       themeBothExits &&
-      shortEntryRows.some(
-        (row) =>
-          !(desk === "flex" && row.draft.kind === "unset") &&
-          !entryDraftComplete(row.draft),
-      ),
-    exitKind: desk !== "cnc" && exitClauseListMissing(exitClauses),
-    shortExitKind: themeBothExits && exitClauseListMissing(shortClauses),
+      (exitClauseListMissing(shortClauses) || Boolean(exitCardsBlockReason(shortClauses))),
     priceLevel: requirePrice && !filled(priceLevel),
     shortPriceLevel: requireShortPrice && !filled(shortPriceLevel),
     limitPrice: requireLimitPrice,
@@ -1473,6 +1442,7 @@ export function ThemeBotFormDraft() {
       tpLimitPrice,
       trailValue,
       trailTrigger,
+      trailActiveKind,
       slMethod,
       slValue,
       slBasis,
@@ -1497,6 +1467,7 @@ export function ThemeBotFormDraft() {
     setTpLimitPrice("");
     setTrailValue("");
     setTrailTrigger("");
+    setTrailActiveKind("percent");
     setSlMethod("");
     setSlValue("");
     setSlBasis("average");
@@ -1516,6 +1487,7 @@ export function ThemeBotFormDraft() {
     setTpLimitPrice(shortClassic.tpLimitPrice);
     setTrailValue(shortClassic.trailValue);
     setTrailTrigger(shortClassic.trailTrigger);
+    setTrailActiveKind(shortClassic.trailActiveKind);
     setSlMethod(shortClassic.slMethod);
     setSlValue(shortClassic.slValue);
     setSlBasis(shortClassic.slBasis);
@@ -1534,7 +1506,8 @@ export function ThemeBotFormDraft() {
       (clause) =>
         clause.kind === "take_profit" ||
         clause.kind === "trailing_stop" ||
-        clause.kind === "stop_loss",
+        clause.kind === "stop_loss" ||
+        clause.kind === "breakeven",
     );
     if (!shortHasClassic) {
       setShortClassic(blankThemeClassic());
@@ -1626,56 +1599,119 @@ export function ThemeBotFormDraft() {
   function patchThemeShort(patch: Partial<ThemeClassicDraft>) {
     setShortClassic((draft) => ({ ...draft, ...patch }));
   }
-  function themeTakeProfitFields(leg: "primary" | "short") {
+  function themeTakeProfitFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = themeUsesShort(leg);
-    const method = shortLeg ? shortClassic.tpMethod : tpMethod;
-    const value = shortLeg ? shortClassic.tpValue : tpValue;
-    const basis = shortLeg ? shortClassic.tpBasis : tpBasis;
-    const trigger = shortLeg ? shortClassic.tpTrigger : tpTrigger;
-    const order = shortLeg ? shortClassic.tpOrderType : tpOrderType;
-    const limit = shortLeg ? shortClassic.tpLimitPrice : tpLimitPrice;
-    const period = shortLeg ? shortClassic.atrPeriod : atrPeriod;
-    const valueInvalid = showFieldErrors && (shortLeg ? missing.shortTpValue : missing.tpValue);
-    const periodInvalid =
-      showFieldErrors && (shortLeg ? missing.shortAtrPeriod : missing.atrPeriod);
-    const limitInvalid =
-      showFieldErrors && (shortLeg ? missing.shortTpLimitPrice : missing.tpLimitPrice);
+    const repeat = slot != null;
+    const method = repeat
+      ? desk === "dca"
+        ? slot.levels.method === "atr"
+          ? "atr"
+          : "percent"
+        : slot.levels.method === "percent"
+          ? "percent"
+          : "price"
+      : shortLeg
+        ? shortClassic.tpMethod
+        : tpMethod;
+    const value = repeat
+      ? method === "atr"
+        ? slot.levels.atrMult
+        : slot.levels.target
+      : shortLeg
+        ? shortClassic.tpValue
+        : tpValue;
+    const basis = repeat
+      ? slot.levels.basis
+      : shortLeg
+        ? shortClassic.tpBasis
+        : tpBasis;
+    const trigger = repeat
+      ? slot.levels.trigger || "last"
+      : shortLeg
+        ? shortClassic.tpTrigger
+        : tpTrigger;
+    const order = repeat
+      ? slot.levels.orderType
+      : shortLeg
+        ? shortClassic.tpOrderType
+        : tpOrderType;
+    const limit = repeat
+      ? slot.levels.limitPrice
+      : shortLeg
+        ? shortClassic.tpLimitPrice
+        : tpLimitPrice;
+    const period = repeat
+      ? slot.levels.atrPeriod
+      : shortLeg
+        ? shortClassic.atrPeriod
+        : atrPeriod;
+    const valueInvalid = repeat
+      ? slot.showErrors && !filled(value)
+      : showFieldErrors && (shortLeg ? missing.shortTpValue : missing.tpValue);
+    const periodInvalid = repeat
+      ? slot.showErrors && method === "atr" && !filled(period)
+      : showFieldErrors && (shortLeg ? missing.shortAtrPeriod : missing.atrPeriod);
+    const limitInvalid = repeat
+      ? slot.showErrors && order === "limit" && !filled(limit)
+      : showFieldErrors && (shortLeg ? missing.shortTpLimitPrice : missing.tpLimitPrice);
     return (
       <>
         {desk === "dca" ? (
           <ExitMethodFields
             method={method === "atr" ? "atr" : "percent"}
             onMethod={(next) =>
-              shortLeg ? patchThemeShort({ tpMethod: next }) : setTpMethod(next)
+              repeat
+                ? slot.onChange({ method: next })
+                : shortLeg
+                  ? patchThemeShort({ tpMethod: next })
+                  : setTpMethod(next)
             }
             value={value}
             onValue={(next) =>
-              shortLeg ? patchThemeShort({ tpValue: next }) : setTpValue(next)
+              repeat
+                ? slot.onChange(method === "atr" ? { atrMult: next } : { target: next })
+                : shortLeg
+                  ? patchThemeShort({ tpValue: next })
+                  : setTpValue(next)
             }
             basis={basis}
             onBasis={(next) =>
-              shortLeg ? patchThemeShort({ tpBasis: next }) : setTpBasis(next)
+              repeat
+                ? slot.onChange({ basis: next })
+                : shortLeg
+                  ? patchThemeShort({ tpBasis: next })
+                  : setTpBasis(next)
             }
             orderType={order}
             onOrderType={(next) =>
-              shortLeg ? patchThemeShort({ tpOrderType: next }) : setTpOrderType(next)
+              repeat
+                ? slot.onChange({ orderType: next })
+                : shortLeg
+                  ? patchThemeShort({ tpOrderType: next })
+                  : setTpOrderType(next)
             }
             atrPeriod={period}
             onAtrPeriod={(next) =>
-              shortLeg ? patchThemeShort({ atrPeriod: next }) : setAtrPeriod(next)
+              repeat
+                ? slot.onChange({ atrPeriod: next })
+                : shortLeg
+                  ? patchThemeShort({ atrPeriod: next })
+                  : setAtrPeriod(next)
             }
             atrPeriodInvalid={periodInvalid}
             invalid={valueInvalid}
           />
         ) : (
-          <div className={rowClass}>
+          <div className="contents">
             <Field label="Type" required>
               <AppSelect
                 className={fieldClass}
                 value={method === "percent" ? "percent" : "price"}
                 onChange={(event) => {
                   const next = event.target.value === "percent" ? "percent" : "price";
-                  if (shortLeg) {
+                  if (repeat) {
+                    slot.onChange({ method: next, target: "" });
+                  } else if (shortLeg) {
                     patchThemeShort({ tpMethod: next, tpValue: "" });
                   } else {
                     setTpMethod(next);
@@ -1692,7 +1728,11 @@ export function ThemeBotFormDraft() {
                 <PercentField
                   value={value}
                   onChange={(next) =>
-                    shortLeg ? patchThemeShort({ tpValue: next }) : setTpValue(next)
+                    repeat
+                      ? slot.onChange({ target: next })
+                      : shortLeg
+                        ? patchThemeShort({ tpValue: next })
+                        : setTpValue(next)
                   }
                   required
                   invalid={valueInvalid}
@@ -1701,21 +1741,27 @@ export function ThemeBotFormDraft() {
                 <OffNumber
                   value={value}
                   onChange={(next) =>
-                    shortLeg ? patchThemeShort({ tpValue: next }) : setTpValue(next)
+                    repeat
+                      ? slot.onChange({ target: next })
+                      : shortLeg
+                        ? patchThemeShort({ tpValue: next })
+                        : setTpValue(next)
                   }
                   required
                   invalid={valueInvalid}
                 />
               )}
             </Field>
-            <Field label="Trigger" required>
+            <Field label="Price source" required>
               <AppSelect
                 className={fieldClass}
                 value={trigger}
                 onChange={(event) =>
-                  shortLeg
-                    ? patchThemeShort({ tpTrigger: event.target.value })
-                    : setTpTrigger(event.target.value)
+                  repeat
+                    ? slot.onChange({ trigger: event.target.value })
+                    : shortLeg
+                      ? patchThemeShort({ tpTrigger: event.target.value })
+                      : setTpTrigger(event.target.value)
                 }
               >
                 <option value="last">Last</option>
@@ -1727,7 +1773,11 @@ export function ThemeBotFormDraft() {
               <OrderTypePill
                 value={order === "limit" ? "limit" : "market"}
                 onChange={(next) =>
-                  shortLeg ? patchThemeShort({ tpOrderType: next }) : setTpOrderType(next)
+                  repeat
+                    ? slot.onChange({ orderType: next })
+                    : shortLeg
+                      ? patchThemeShort({ tpOrderType: next })
+                      : setTpOrderType(next)
                 }
               />
             </Field>
@@ -1736,9 +1786,11 @@ export function ThemeBotFormDraft() {
                 <OffNumber
                   value={limit}
                   onChange={(next) =>
-                    shortLeg
-                      ? patchThemeShort({ tpLimitPrice: next })
-                      : setTpLimitPrice(next)
+                    repeat
+                      ? slot.onChange({ limitPrice: next })
+                      : shortLeg
+                        ? patchThemeShort({ tpLimitPrice: next })
+                        : setTpLimitPrice(next)
                   }
                   required
                   invalid={limitInvalid}
@@ -1750,244 +1802,260 @@ export function ThemeBotFormDraft() {
       </>
     );
   }
-  function themeTrailingFields(leg: "primary" | "short") {
+  function themeTrailingFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = themeUsesShort(leg);
-    const trigger = shortLeg ? shortClassic.trailTrigger : trailTrigger;
-    const value = shortLeg ? shortClassic.trailValue : trailValue;
-    const triggerInvalid =
-      showFieldErrors && (shortLeg ? missing.shortTrailTrigger : missing.trailTrigger);
-    const valueInvalid =
-      showFieldErrors && (shortLeg ? missing.shortTrailValue : missing.trailValue);
+    const repeat = slot != null;
+    const trigger = repeat
+      ? slot.levels.trigger
+      : shortLeg
+        ? shortClassic.trailTrigger
+        : trailTrigger;
+    const value = repeat
+      ? slot.levels.trail
+      : shortLeg
+        ? shortClassic.trailValue
+        : trailValue;
+    const triggerInvalid = repeat
+      ? slot.showErrors && !filled(trigger)
+      : showFieldErrors && (shortLeg ? missing.shortTrailTrigger : missing.trailTrigger);
+    const valueInvalid = repeat
+      ? slot.showErrors && !filled(value)
+      : showFieldErrors && (shortLeg ? missing.shortTrailValue : missing.trailValue);
+    const writeTrigger = (next: string) => {
+      if (repeat) {
+        slot.onChange({ method: "percent", trigger: next });
+      } else if (shortLeg) {
+        patchThemeShort({ trailActiveKind: "percent", trailTrigger: next });
+      } else {
+        setTrailActiveKind("percent");
+        setTrailTrigger(next);
+      }
+    };
+    const writeDistance = (next: string) => {
+      if (repeat) {
+        slot.onChange({ method: "percent", trail: next });
+      } else if (shortLeg) {
+        patchThemeShort({ trailValue: next });
+      } else {
+        setTrailValue(next);
+      }
+    };
     return (
-      <div className={rowClass}>
-        {desk === "dca" ? (
-          <>
-            <Field
-              label="Trigger %"
-              hint="Trail starts after price moves this %."
-              required
-            >
-              <PercentField
-                value={trigger}
-                onChange={(next) =>
-                  shortLeg
-                    ? patchThemeShort({ trailTrigger: next })
-                    : setTrailTrigger(next)
-                }
-                required
-                invalid={triggerInvalid}
-              />
-            </Field>
-            <Field label="Trailing %" required>
-              <PercentField
-                value={value}
-                onChange={(next) =>
-                  shortLeg ? patchThemeShort({ trailValue: next }) : setTrailValue(next)
-                }
-                required
-                invalid={valueInvalid}
-              />
-            </Field>
-          </>
-        ) : (
-          <>
-            <Field label="Retracement" required>
-              <OffNumber
-                value={value}
-                onChange={(next) =>
-                  shortLeg ? patchThemeShort({ trailValue: next }) : setTrailValue(next)
-                }
-                required
-                invalid={valueInvalid}
-              />
-            </Field>
-            <Field label="Activation price" required>
-              <OffNumber
-                value={trigger}
-                onChange={(next) =>
-                  shortLeg
-                    ? patchThemeShort({ trailTrigger: next })
-                    : setTrailTrigger(next)
-                }
-                required
-                invalid={triggerInvalid}
-              />
-            </Field>
-          </>
-        )}
+      <div className="contents">
+        <Field label="Activation %" required>
+          <PercentField
+            value={trigger}
+            onChange={writeTrigger}
+            required
+            invalid={triggerInvalid}
+          />
+        </Field>
+        <Field label="Trailing %" required>
+          <PercentField
+            value={value}
+            onChange={writeDistance}
+            required
+            invalid={valueInvalid}
+          />
+        </Field>
       </div>
     );
   }
-  function themeStopFields(leg: "primary" | "short") {
+  function themeStopFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = themeUsesShort(leg);
-    const basis = shortLeg ? shortClassic.slBasis : slBasis;
-    const value = shortLeg ? shortClassic.slValue : slValue;
-    const method = shortLeg ? shortClassic.slMethod : slMethod;
-    const trigger = shortLeg ? shortClassic.slTrigger : slTrigger;
-    const order = shortLeg ? shortClassic.slOrderType : slOrderType;
-    const limit = shortLeg ? shortClassic.slLimitPrice : slLimitPrice;
-    const breakeven = shortLeg ? shortClassic.breakevenOn : breakevenOn;
-    const activation = shortLeg ? shortClassic.breakevenAt : breakevenAt;
-    const offset = shortLeg ? shortClassic.breakevenOffset : breakevenOffset;
-    const valueInvalid = showFieldErrors && (shortLeg ? missing.shortSlValue : missing.slValue);
-    const limitInvalid =
-      showFieldErrors && (shortLeg ? missing.shortSlLimitPrice : missing.slLimitPrice);
-    const moveInvalid =
-      showFieldErrors && (shortLeg ? missing.shortBreakevenAt : missing.breakevenAt);
+    const repeat = slot != null;
+    const basis = repeat ? slot.levels.basis : shortLeg ? shortClassic.slBasis : slBasis;
+    const value = repeat ? slot.levels.target : shortLeg ? shortClassic.slValue : slValue;
+    const method = repeat
+      ? desk === "dca"
+        ? "percent"
+        : slot.levels.method === "percent"
+          ? "percent"
+          : "price"
+      : shortLeg
+        ? shortClassic.slMethod
+        : slMethod;
+    const trigger = repeat
+      ? slot.levels.trigger || "last"
+      : shortLeg
+        ? shortClassic.slTrigger
+        : slTrigger;
+    const order = repeat ? slot.levels.orderType : shortLeg ? shortClassic.slOrderType : slOrderType;
+    const limit = repeat ? slot.levels.limitPrice : shortLeg ? shortClassic.slLimitPrice : slLimitPrice;
+    const valueInvalid = repeat
+      ? slot.showErrors && !filled(value)
+      : showFieldErrors && (shortLeg ? missing.shortSlValue : missing.slValue);
+    const limitInvalid = repeat
+      ? slot.showErrors && order === "limit" && !filled(limit)
+      : showFieldErrors && (shortLeg ? missing.shortSlLimitPrice : missing.slLimitPrice);
+    if (desk !== "dca") {
+      return (
+        <div className="contents">
+          <Field label="Type" required>
+            <AppSelect
+              className={fieldClass}
+              value={method === "percent" ? "percent" : "price"}
+              onChange={(event) => {
+                const next = event.target.value === "percent" ? "percent" : "price";
+                if (repeat) {
+                  slot.onChange({ method: next, target: "" });
+                } else if (shortLeg) {
+                  patchThemeShort({ slMethod: next, slValue: "" });
+                } else {
+                  setSlMethod(next);
+                  setSlValue("");
+                }
+              }}
+            >
+              <option value="price">Price</option>
+              <option value="percent">Percentage</option>
+            </AppSelect>
+          </Field>
+          <Field label={method === "percent" ? "%" : "Price"} required>
+            {method === "percent" ? (
+              <PercentField
+                value={value}
+                onChange={(next) =>
+                  repeat
+                    ? slot.onChange({ target: next })
+                    : shortLeg
+                      ? patchThemeShort({ slValue: next })
+                      : setSlValue(next)
+                }
+                required
+                invalid={valueInvalid}
+              />
+            ) : (
+              <OffNumber
+                value={value}
+                onChange={(next) =>
+                  repeat
+                    ? slot.onChange({ target: next })
+                    : shortLeg
+                      ? patchThemeShort({ slValue: next })
+                      : setSlValue(next)
+                }
+                required
+                invalid={valueInvalid}
+              />
+            )}
+          </Field>
+          <Field label="Price source" required>
+            <AppSelect
+              className={fieldClass}
+              value={trigger}
+              onChange={(event) =>
+                repeat
+                  ? slot.onChange({ trigger: event.target.value })
+                  : shortLeg
+                    ? patchThemeShort({ slTrigger: event.target.value })
+                    : setSlTrigger(event.target.value)
+              }
+            >
+              <option value="last">Last</option>
+              <option value="mark">Mark</option>
+              <option value="index">Index</option>
+            </AppSelect>
+          </Field>
+          <Field label="Order type" required>
+            <OrderTypePill
+              value={order === "limit" ? "limit" : "market"}
+              onChange={(next) =>
+                repeat
+                  ? slot.onChange({ orderType: next })
+                  : shortLeg
+                    ? patchThemeShort({ slOrderType: next })
+                    : setSlOrderType(next)
+              }
+            />
+          </Field>
+          {order === "limit" ? (
+            <Field label="Limit price" required>
+              <OffNumber
+                value={limit}
+                onChange={(next) =>
+                  repeat
+                    ? slot.onChange({ limitPrice: next })
+                    : shortLeg
+                      ? patchThemeShort({ slLimitPrice: next })
+                      : setSlLimitPrice(next)
+                }
+                required
+                invalid={limitInvalid}
+              />
+            </Field>
+          ) : null}
+        </div>
+      );
+    }
     return (
-      <div className="@container">
-        <div
-          className={
-            desk === "dca"
-              ? "grid grid-cols-2 items-start gap-4 @min-[40rem]:grid-cols-4"
-              : "grid items-start gap-4 @min-[40rem]:grid-cols-2"
-          }
-        >
-          {desk === "dca" ? (
-            <>
-              <Field label="Basis" required>
-                <AppSelect
-                  className={fieldClass}
-                  value={basis}
-                  onChange={(event) =>
-                    shortLeg
-                      ? patchThemeShort({ slBasis: event.target.value })
-                      : setSlBasis(event.target.value)
-                  }
-                >
-                  <option value="average">Average entry</option>
-                  <option value="first_entry">First fill</option>
-                </AppSelect>
-              </Field>
-              <Field label="Stop loss %" required>
-                <PercentField
-                  value={value}
-                  onChange={(next) =>
-                    shortLeg ? patchThemeShort({ slValue: next }) : setSlValue(next)
-                  }
-                  required
-                  invalid={valueInvalid}
-                />
-              </Field>
-            </>
-          ) : (
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Type" required>
-                <AppSelect
-                  className={fieldClass}
-                  value={method === "percent" ? "percent" : "price"}
-                  onChange={(event) => {
-                    const next = event.target.value === "percent" ? "percent" : "price";
-                    if (shortLeg) {
-                      patchThemeShort({ slMethod: next, slValue: "" });
-                    } else {
-                      setSlMethod(next);
-                      setSlValue("");
-                    }
-                  }}
-                >
-                  <option value="price">Price</option>
-                  <option value="percent">Percentage</option>
-                </AppSelect>
-              </Field>
-              <Field label={method === "percent" ? "%" : "Price"} required>
-                {method === "percent" ? (
-                  <PercentField
-                    value={value}
-                    onChange={(next) =>
-                      shortLeg ? patchThemeShort({ slValue: next }) : setSlValue(next)
-                    }
-                    required
-                    invalid={valueInvalid}
-                  />
-                ) : (
-                  <OffNumber
-                    value={value}
-                    onChange={(next) =>
-                      shortLeg ? patchThemeShort({ slValue: next }) : setSlValue(next)
-                    }
-                    required
-                    invalid={valueInvalid}
-                  />
-                )}
-              </Field>
-              <Field label="Trigger" required>
-                <AppSelect
-                  className={fieldClass}
-                  value={trigger}
-                  onChange={(event) =>
-                    shortLeg
-                      ? patchThemeShort({ slTrigger: event.target.value })
-                      : setSlTrigger(event.target.value)
-                  }
-                >
-                  <option value="last">Last</option>
-                  <option value="mark">Mark</option>
-                  <option value="index">Index</option>
-                </AppSelect>
-              </Field>
-              <Field label="Order type" required>
-                <OrderTypePill
-                  value={order === "limit" ? "limit" : "market"}
-                  onChange={(next) =>
-                    shortLeg
-                      ? patchThemeShort({ slOrderType: next })
-                      : setSlOrderType(next)
-                  }
-                />
-              </Field>
-              {order === "limit" ? (
-                <Field label="Limit price" required>
-                  <OffNumber
-                    value={limit}
-                    onChange={(next) =>
-                      shortLeg
-                        ? patchThemeShort({ slLimitPrice: next })
-                        : setSlLimitPrice(next)
-                    }
-                    required
-                    invalid={limitInvalid}
-                  />
-                </Field>
-              ) : null}
-            </div>
-          )}
-          <OptionalSection
-            title="Move Breakeven"
-            className={desk === "dca" ? "col-span-2" : "min-w-0"}
-            enabled={breakeven}
-            onEnabled={(next) =>
-              shortLeg ? patchThemeShort({ breakevenOn: next }) : setBreakevenOn(next)
-            }
-          >
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Move stop to breakeven at %" required>
-                <PercentField
-                  value={activation}
-                  onChange={(next) =>
-                    shortLeg
-                      ? patchThemeShort({ breakevenAt: next })
-                      : setBreakevenAt(next)
-                  }
-                  required
-                  invalid={moveInvalid}
-                />
-              </Field>
-              <Field label="Breakeven offset %">
-                <PercentField
-                  value={offset}
-                  onChange={(next) =>
-                    shortLeg
-                      ? patchThemeShort({ breakevenOffset: next })
-                      : setBreakevenOffset(next)
-                  }
-                  placeholder="0"
-                />
-              </Field>
-            </div>
-          </OptionalSection>
+      <div className="@container col-span-full">
+        <div className="grid grid-cols-2 items-start gap-4 [&>*]:min-w-0">
+          <Field label="Basis" required>
+            <AppSelect
+              className={fieldClass}
+              value={basis}
+              onChange={(event) =>
+                repeat
+                  ? slot.onChange({ basis: event.target.value })
+                  : shortLeg
+                    ? patchThemeShort({ slBasis: event.target.value })
+                    : setSlBasis(event.target.value)
+              }
+            >
+              <option value="average">Average entry</option>
+              <option value="first_entry">First fill</option>
+            </AppSelect>
+          </Field>
+          <Field label="Stop loss %" required>
+            <PercentField
+              value={value}
+              onChange={(next) =>
+                repeat
+                  ? slot.onChange({ target: next })
+                  : shortLeg
+                    ? patchThemeShort({ slValue: next })
+                    : setSlValue(next)
+              }
+              required
+              invalid={valueInvalid}
+            />
+          </Field>
         </div>
       </div>
+    );
+  }
+  function themeBreakevenFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
+    if (slot) {
+      return null;
+    }
+    const shortLeg = themeUsesShort(leg);
+    const activation = shortLeg ? shortClassic.breakevenAt : breakevenAt;
+    const offset = shortLeg ? shortClassic.breakevenOffset : breakevenOffset;
+    const invalid =
+      showFieldErrors && (shortLeg ? missing.shortBreakevenAt : missing.breakevenAt);
+    return (
+      <>
+        <Field label="Activation %" required>
+          <PercentField
+            value={activation}
+            onChange={(next) =>
+              shortLeg ? patchThemeShort({ breakevenAt: next }) : setBreakevenAt(next)
+            }
+            required
+            invalid={invalid}
+          />
+        </Field>
+        <Field label="Buffer %">
+          <PercentField
+            value={offset}
+            onChange={(next) =>
+              shortLeg ? patchThemeShort({ breakevenOffset: next }) : setBreakevenOffset(next)
+            }
+            placeholder="0"
+          />
+        </Field>
+      </>
     );
   }
 
@@ -2211,8 +2279,6 @@ export function ThemeBotFormDraft() {
             <>
         <Group>
           <div className={rowClass}>
-            {desk === "flex" ? (
-              <>
               <Field label="Condition Type" required>
                 <AppSelect
                   value={startKind}
@@ -2241,6 +2307,7 @@ export function ThemeBotFormDraft() {
                   >
                     Price Cross
                   </option>
+                  <option value="retrace">Retrace</option>
                   <option
                     value="webhook"
                     disabled={entryKindDisabled({
@@ -2254,38 +2321,6 @@ export function ThemeBotFormDraft() {
                   </option>
                 </AppSelect>
               </Field>
-              </>
-            ) : (
-              <Field label="Condition Type" required>
-                <AppSelect
-                  value={startKind}
-                  onChange={(event) =>
-                    applyStartKind(event.target.value as StartKind)
-                  }
-                  className={
-                    startKind === ""
-                      ? `${fieldInvalidClass} !min-w-72`
-                      : `${fieldClass} !min-w-72`
-                  }
-                >
-                  <option value="">Select Condition Type</option>
-                  <option value="indicator">Indicator</option>
-                  <option value="trend">Trend</option>
-                  <option value="price">Price Cross</option>
-                  <option
-                    value="webhook"
-                    disabled={entryKindDisabled({
-                      slots: themeEntrySlots,
-                      index: 0,
-                      kind: "webhook",
-                      webhookIds: ["sample"],
-                    })}
-                  >
-                    Signal Webhook
-                  </option>
-                </AppSelect>
-              </Field>
-            )}
           </div>
         </Group>
 
@@ -2294,7 +2329,7 @@ export function ThemeBotFormDraft() {
             <>
             <div className={rowClass5}>
               <Field
-                label={desk === "flex" ? "Webhook" : "Signal Webhook"}
+                label="Webhook"
                 className="col-span-full"
                 required
               >
@@ -2308,20 +2343,15 @@ export function ThemeBotFormDraft() {
                   onChange={(event) => setWebhookId(event.target.value)}
                 >
                   <option value="">
-                    {desk === "flex"
-                      ? "Pick a webhook"
-                      : "Pick a Signal webhook"}
+                    Pick a webhook
                   </option>
                   <option
                     value="sample"
-                    disabled={
-                      desk === "flex" &&
-                      entryWebhookIdDisabled({
-                        slots: themeEntrySlots,
-                        index: 0,
-                        webhookId: "sample",
-                      })
-                    }
+                    disabled={entryWebhookIdDisabled({
+                      slots: themeEntrySlots,
+                      index: 0,
+                      webhookId: "sample",
+                    })}
                   >
                     Sample signal
                   </option>
@@ -2348,6 +2378,18 @@ export function ThemeBotFormDraft() {
                   onPeriodChange={setPeriod}
                   onSlowPeriodChange={setSlowPeriod}
                   onMultiplierChange={setMultiplier}
+                  divergenceWhen={divergenceWhen}
+                  divergenceStyle={divergenceStyle}
+                  pivotBars={pivotBars}
+                  span={divergenceSpan}
+                  minPricePct={minPricePct}
+                  minRsi={minRsi}
+                  onDivergenceWhenChange={setDivergenceWhen}
+                  onDivergenceStyleChange={setDivergenceStyle}
+                  onPivotBarsChange={setPivotBars}
+                  onSpanChange={setDivergenceSpan}
+                  onMinPricePctChange={setMinPricePct}
+                  onMinRsiChange={setMinRsi}
                   seriesSlots={themeEntrySlots}
                   seriesIndex={0}
                   showErrors={showFieldErrors}
@@ -2373,10 +2415,22 @@ export function ThemeBotFormDraft() {
                   showErrors={showFieldErrors}
                 />
               </div>
+          ) : startKind === "retrace" ? (
+            <div className={rowClass5}>
+              <RetraceFields
+                prefix="theme"
+                draft={retrace}
+                onChange={setRetrace}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+                slots={themeEntrySlots}
+                slotIndex={0}
+                showErrors={showFieldErrors}
+              />
+            </div>
           ) : startKind === "price" ? (
-            <div className={desk === "flex" ? rowClass5 : rowClass}>
+            <div className={rowClass5}>
                 <PriceTriggerFields
-                  desk={desk}
                   priceSource={priceSource}
                   onPriceSource={setPriceSource}
                   priceWhen={priceWhen}
@@ -2437,6 +2491,7 @@ export function ThemeBotFormDraft() {
                 fieldClass={fieldClass}
                 labelClass={labelClass}
                 showErrors={showFieldErrors}
+                optionalAddedKind
                 groupFooter={dcaSizeFooter(
                   entryRows,
                   longExtraOrders,
@@ -2498,6 +2553,7 @@ export function ThemeBotFormDraft() {
                     >
                       Price Cross
                     </option>
+                    <option value="retrace">Retrace</option>
                     <option
                       value="webhook"
                       disabled={entryKindDisabled({
@@ -2527,7 +2583,16 @@ export function ThemeBotFormDraft() {
                       }
                     >
                       <option value="">Pick a webhook</option>
-                      <option value="sample">Sample signal</option>
+                      <option
+                        value="sample"
+                        disabled={entryWebhookIdDisabled({
+                          slots: themeShortSlots,
+                          index: 0,
+                          webhookId: "sample",
+                        })}
+                      >
+                        Sample signal
+                      </option>
                     </AppSelect>
                   </Field>
                 </div>
@@ -2550,6 +2615,18 @@ export function ThemeBotFormDraft() {
                     onPeriodChange={setShortPeriod}
                     onSlowPeriodChange={setShortSlowPeriod}
                     onMultiplierChange={setShortMultiplier}
+                    divergenceWhen={shortDivergenceWhen}
+                    divergenceStyle={shortDivergenceStyle}
+                    pivotBars={shortPivotBars}
+                    span={shortDivergenceSpan}
+                    minPricePct={shortMinPricePct}
+                    minRsi={shortMinRsi}
+                    onDivergenceWhenChange={setShortDivergenceWhen}
+                    onDivergenceStyleChange={setShortDivergenceStyle}
+                    onPivotBarsChange={setShortPivotBars}
+                    onSpanChange={setShortDivergenceSpan}
+                    onMinPricePctChange={setShortMinPricePct}
+                    onMinRsiChange={setShortMinRsi}
                     seriesSlots={themeShortSlots}
                     seriesIndex={0}
                     showErrors={showFieldErrors}
@@ -2575,10 +2652,22 @@ export function ThemeBotFormDraft() {
                     showErrors={showFieldErrors}
                   />
                 </div>
+              ) : shortStartKind === "retrace" ? (
+                <div className={rowClass5}>
+                  <RetraceFields
+                    prefix="themeShort"
+                    draft={shortRetrace}
+                    onChange={setShortRetrace}
+                    fieldClass={fieldClass}
+                    labelClass={labelClass}
+                    slots={themeShortSlots}
+                    slotIndex={0}
+                    showErrors={showFieldErrors}
+                  />
+                </div>
               ) : shortStartKind === "price" ? (
                 <div className={rowClass5}>
                   <PriceTriggerFields
-                    desk="flex"
                     priceSource={shortPriceSource}
                     onPriceSource={setShortPriceSource}
                     priceWhen={shortPriceWhen}
@@ -2643,7 +2732,18 @@ export function ThemeBotFormDraft() {
                     <option value="">Select Condition Type</option>
                     <option value="indicator">Indicator</option>
                     <option value="trend">Trend</option>
-                    <option value="price">Price Cross</option>
+                    <option
+                      value="price"
+                      disabled={entryKindDisabled({
+                        slots: themeShortSlots,
+                        index: 0,
+                        kind: "price",
+                        webhookIds: ["sample"],
+                      })}
+                    >
+                      Price Cross
+                    </option>
+                    <option value="retrace">Retrace</option>
                     <option
                       value="webhook"
                       disabled={entryKindDisabled({
@@ -2662,7 +2762,7 @@ export function ThemeBotFormDraft() {
             <Group>
               {shortStartKind === "webhook" ? (
                 <div className={rowClass5}>
-                  <Field label="Signal Webhook" className="col-span-full" required>
+                  <Field label="Webhook" className="col-span-full" required>
                     <AppSelect
                       value={shortWebhookId}
                       onChange={(event) => setShortWebhookId(event.target.value)}
@@ -2672,8 +2772,17 @@ export function ThemeBotFormDraft() {
                           : fieldClass
                       }
                     >
-                      <option value="">Pick a Signal webhook</option>
-                      <option value="sample">Sample signal</option>
+                      <option value="">Pick a webhook</option>
+                      <option
+                        value="sample"
+                        disabled={entryWebhookIdDisabled({
+                          slots: themeShortSlots,
+                          index: 0,
+                          webhookId: "sample",
+                        })}
+                      >
+                        Sample signal
+                      </option>
                     </AppSelect>
                   </Field>
                 </div>
@@ -2696,6 +2805,18 @@ export function ThemeBotFormDraft() {
                     onPeriodChange={setShortPeriod}
                     onSlowPeriodChange={setShortSlowPeriod}
                     onMultiplierChange={setShortMultiplier}
+                    divergenceWhen={shortDivergenceWhen}
+                    divergenceStyle={shortDivergenceStyle}
+                    pivotBars={shortPivotBars}
+                    span={shortDivergenceSpan}
+                    minPricePct={shortMinPricePct}
+                    minRsi={shortMinRsi}
+                    onDivergenceWhenChange={setShortDivergenceWhen}
+                    onDivergenceStyleChange={setShortDivergenceStyle}
+                    onPivotBarsChange={setShortPivotBars}
+                    onSpanChange={setShortDivergenceSpan}
+                    onMinPricePctChange={setShortMinPricePct}
+                    onMinRsiChange={setShortMinRsi}
                     seriesSlots={themeShortSlots}
                     seriesIndex={0}
                     showErrors={showFieldErrors}
@@ -2721,10 +2842,22 @@ export function ThemeBotFormDraft() {
                     showErrors={showFieldErrors}
                   />
                 </div>
+              ) : shortStartKind === "retrace" ? (
+                <div className={rowClass5}>
+                  <RetraceFields
+                    prefix="themeShort"
+                    draft={shortRetrace}
+                    onChange={setShortRetrace}
+                    fieldClass={fieldClass}
+                    labelClass={labelClass}
+                    slots={themeShortSlots}
+                    slotIndex={0}
+                    showErrors={showFieldErrors}
+                  />
+                </div>
               ) : shortStartKind === "price" ? (
-                <div className={rowClass}>
+                <div className={rowClass5}>
                   <PriceTriggerFields
-                    desk="dca"
                     priceSource={shortPriceSource}
                     onPriceSource={setShortPriceSource}
                     priceWhen={shortPriceWhen}
@@ -2759,6 +2892,7 @@ export function ThemeBotFormDraft() {
               fieldClass={fieldClass}
               labelClass={labelClass}
               showErrors={showFieldErrors}
+              optionalAddedKind
               groupFooter={dcaSizeFooter(
                 shortEntryRows,
                 shortExtraOrders,
@@ -2772,6 +2906,7 @@ export function ThemeBotFormDraft() {
         ) : null}
 
         {desk === "dca" ? (
+        <>
         <BotFormStep title="Additional Orders">
         <Group
           title="Additional Order Types"
@@ -2967,6 +3102,44 @@ export function ThemeBotFormDraft() {
           </div>
         </Group>
         </BotFormStep>
+        <BotFormStep
+          title="Additional order conditions"
+          badge="Condition Builder"
+          shell="canvas"
+          hint="Optional. The ladder still places the add. These have to be true on the same check."
+        >
+          <EntryConditionStack
+            grouped
+            prefix="themeAdd"
+            side={entrySide}
+            rows={addRows}
+            onChange={setAddRows}
+            anchor={{ kind: "indicator", webhookId: null, claim: null }}
+            gridClass={rowClass5}
+            fieldClass={fieldClass}
+            labelClass={labelClass}
+            showErrors={showFieldErrors}
+            optionalAddedKind
+            kinds={["retrace", "indicator"]}
+          />
+          {direction === "both" ? (
+            <EntryConditionStack
+              grouped
+              prefix="themeShortAdd"
+              side="short"
+              rows={shortAddRows}
+              onChange={setShortAddRows}
+              anchor={{ kind: "indicator", webhookId: null, claim: null }}
+              gridClass={rowClass5}
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+              showErrors={showFieldErrors}
+              optionalAddedKind
+              kinds={["retrace", "indicator"]}
+            />
+          ) : null}
+        </BotFormStep>
+        </>
         ) : desk === "flex" && !closing ? (
           <>
             {perpsDirection !== "short" ? (
@@ -3023,11 +3196,12 @@ export function ThemeBotFormDraft() {
               webhooks={themeWebhooks}
               fieldClass={fieldClass}
               labelClass={labelClass}
-              gridClass={rowClass5}
               showErrors={showFieldErrors}
-              renderTakeProfit={() => themeTakeProfitFields("primary")}
-              renderTrailingStop={() => themeTrailingFields("primary")}
-              renderStopLoss={() => themeStopFields("primary")}
+              priceStyle={desk === "dca" ? "dca" : "flex"}
+              renderTakeProfit={(slot) => themeTakeProfitFields("primary", slot)}
+              renderTrailingStop={(slot) => themeTrailingFields("primary", slot)}
+              renderStopLoss={(slot) => themeStopFields("primary", slot)}
+              renderBreakeven={(slot) => themeBreakevenFields("primary", slot)}
             />
           </BotFormStep>
         ) : null}
@@ -3055,16 +3229,19 @@ export function ThemeBotFormDraft() {
               webhooks={themeWebhooks}
               fieldClass={fieldClass}
               labelClass={labelClass}
-              gridClass={rowClass5}
               showErrors={showFieldErrors}
-              renderTakeProfit={() =>
-                themeTakeProfitFields(themeBothExits ? "short" : "primary")
+              priceStyle={desk === "dca" ? "dca" : "flex"}
+              renderTakeProfit={(slot) =>
+                themeTakeProfitFields(themeBothExits ? "short" : "primary", slot)
               }
-              renderTrailingStop={() =>
-                themeTrailingFields(themeBothExits ? "short" : "primary")
+              renderTrailingStop={(slot) =>
+                themeTrailingFields(themeBothExits ? "short" : "primary", slot)
               }
-              renderStopLoss={() =>
-                themeStopFields(themeBothExits ? "short" : "primary")
+              renderStopLoss={(slot) =>
+                themeStopFields(themeBothExits ? "short" : "primary", slot)
+              }
+              renderBreakeven={(slot) =>
+                themeBreakevenFields(themeBothExits ? "short" : "primary", slot)
               }
             />
           </BotFormStep>
@@ -3625,7 +3802,7 @@ function ExitMethodFields({
   invalid?: boolean;
 }) {
   return (
-    <div className={rowClass}>
+    <div className="contents">
       <Field label="Basis" required>
         <AppSelect
           className={fieldClass}

@@ -92,15 +92,10 @@ assert.equal(
   value(dca, "Short Exit Conditions", "Take profit"),
   "1.2% · Average entry · Market",
 );
+assert.equal(value(dca, "Long Exit Conditions", "Stop loss"), "Off");
 assert.equal(
-  value(dca, "Long Exit Conditions", "Stop loss"),
-  "Move breakeven at 0.8% · offset 0.1%",
-);
-assert.equal(
-  dca
-    .find((row) => row.title === "Long Exit Conditions")
-    ?.lines.some((line) => line.label === "Move breakeven"),
-  false,
+  value(dca, "Long Exit Conditions", "Breakeven Stop"),
+  "Activation % 0.8% · Buffer 0.1%",
 );
 assert.equal(value(dca, "Long Exit Conditions", "Custom conditions"), "Off");
 assert.match(value(dca, "Short Exit Conditions", "Custom conditions"), /RSI 14/);
@@ -131,8 +126,11 @@ assert.equal(
   "4% · First fill · Limit",
 );
 assert.match(value(splitExits, "Long Exit Conditions", "Stop loss"), /9%/);
-assert.match(value(splitExits, "Short Exit Conditions", "Stop loss"), /3%/);
-assert.match(value(splitExits, "Short Exit Conditions", "Stop loss"), /6%/);
+assert.equal(
+  value(splitExits, "Short Exit Conditions", "Stop loss"),
+  "3% · First fill",
+);
+assert.match(value(splitExits, "Short Exit Conditions", "Breakeven Stop"), /6%/);
 
 const perps = perpsBotConfig({
   ...defaultFuturesAutomationForm(0, "ETHUSDT"),
@@ -236,7 +234,11 @@ const perpsStop = perpsBotConfig({
 });
 assert.equal(
   value(perpsStop, "Long Exit Conditions", "Stop loss"),
-  "2% · Mark · Market · Move breakeven at 1.5% · offset 0.2%",
+  "2% · Mark · Market",
+);
+assert.equal(
+  value(perpsStop, "Long Exit Conditions", "Breakeven Stop"),
+  "Activation % 1.5% · Buffer 0.2%",
 );
 const perpsBoth = perpsBotConfig({
   ...defaultFuturesAutomationForm(0, "ETHUSDT"),
@@ -292,8 +294,8 @@ const perpsBoth = perpsBotConfig({
 assert.equal(value(perpsBoth, "Long Exit Conditions", "Take profit"), "3% · Last · Market");
 assert.equal(value(perpsBoth, "Short Exit Conditions", "Take profit"), "7% · Index · Market");
 assert.match(value(perpsBoth, "Long Exit Conditions", "Stop loss"), /9%/);
-assert.match(value(perpsBoth, "Short Exit Conditions", "Stop loss"), /4%/);
-assert.match(value(perpsBoth, "Short Exit Conditions", "Stop loss"), /6%/);
+assert.equal(value(perpsBoth, "Short Exit Conditions", "Stop loss"), "4% · Last · Market");
+assert.match(value(perpsBoth, "Short Exit Conditions", "Breakeven Stop"), /6%/);
 assert.match(value(perpsBoth, "Short Exit Conditions", "Trailing stop"), /1.5/);
 assert.equal(value(perpsBoth, "Long Additional Orders", "Condition Type"), "Off");
 assert.equal(value(perpsBoth, "Short Additional Orders", "Size"), "Off");

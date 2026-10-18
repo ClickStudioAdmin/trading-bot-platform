@@ -55,7 +55,7 @@ assert.equal(labels.includes("Take profit"), false);
 assert.ok(labels.includes("Basis"));
 assert.ok(labels.includes("Target %"));
 assert.equal(
-  labels.includes("Trigger %"),
+  labels.includes("Activation %"),
   false,
   "trailing fields stay hidden while Trailing stop is off",
 );
@@ -102,7 +102,13 @@ const nestedStop = recipeParamSections(
 const stopGroup = nestedStop?.groups.find((group) => group.title === "Stop loss");
 assert.deepEqual(
   stopGroup?.rows.map((row) => row.label),
-  ["Basis", "Stop loss %", "Move stop to breakeven at %", "Breakeven offset %"],
+  ["Basis", "Stop loss %"],
+);
+assert.deepEqual(
+  nestedStop?.groups
+    .find((group) => group.title === "Breakeven Stop")
+    ?.rows.map((row) => row.label),
+  ["Activation %", "Buffer %", "Applies To"],
 );
 assert.equal(
   nestedStop?.groups.some((group) => group.title === "Move Breakeven"),
@@ -111,11 +117,18 @@ assert.equal(
 const breakevenOnly = recipeParamSections(
   dcaWithExits({ breakevenActivationPct: "1.5" }),
 ).find((section) => section.title === "Long Exit Conditions");
+assert.equal(
+  breakevenOnly?.groups.some(
+    (group) =>
+      group.rows.some((row) => row.label === "Stop loss" && row.value === "Off"),
+  ),
+  true,
+);
 assert.deepEqual(
   breakevenOnly?.groups
-    .find((group) => group.title === "Stop loss")
+    .find((group) => group.title === "Breakeven Stop")
     ?.rows.map((row) => row.label),
-  ["Move stop to breakeven at %", "Breakeven offset %"],
+  ["Activation %", "Buffer %", "Applies To"],
 );
 assert.equal(
   recipeParamRows(dca).find((row) => row.label === "Custom conditions")?.value,
@@ -544,5 +557,77 @@ assert.equal(exitSample?.stack?.groups[0]?.length, 2);
 const perpsOr = review[3]?.sections[0];
 assert.equal(perpsOr?.stack?.groups.length, 2);
 assert.equal(perpsOr?.stack?.groups[0]?.length, 1);
+
+const actionCards = recipeParamSections(
+  dcaWithExits({
+    exitActions: JSON.stringify([
+      {
+        id: "harvest",
+        kind: "close",
+        scope: { kind: "fills", minProfitPct: 20 },
+        groups: [],
+        takeProfitPct: null,
+        takeProfitPrice: null,
+        stopLossPct: null,
+        stopLossPrice: null,
+        trailingDistance: null,
+        trailingActivation: null,
+      },
+    ]),
+  }),
+).find((section) => section.title === "Long Exit Conditions");
+assert.equal(actionCards?.groups.length, 0);
+assert.equal(actionCards?.stacks?.length, 1);
+assert.equal(actionCards?.stacks?.[0]?.title, "Close");
+assert.equal(
+  actionCards?.stacks?.[0]?.rows?.find((row) => row.label === "Applies To")?.value,
+  "Fills at least 20% in profit",
+);
+assert.equal(
+  recipeParamRows(
+    dcaWithExits({
+      exitActions: JSON.stringify([
+        {
+          id: "harvest",
+          kind: "close",
+          scope: { kind: "fills", minProfitPct: 20 },
+          groups: [],
+          takeProfitPct: null,
+          takeProfitPrice: null,
+          stopLossPct: null,
+          stopLossPrice: null,
+          trailingDistance: null,
+          trailingActivation: null,
+        },
+      ]),
+    }),
+  ).some((row) => row.label === "Take profit"),
+  false,
+);
+const pricedAction = recipeParamSections(
+  dcaWithExits({
+    exitActions: JSON.stringify([
+      {
+        id: "tp",
+        kind: "take_profit",
+        scope: { kind: "all" },
+        groups: [{ anchor: { trigger: "target" }, rows: [] }],
+        takeProfitPct: 2,
+        takeProfitPrice: null,
+        stopLossPct: null,
+        stopLossPrice: null,
+        trailingDistance: null,
+        trailingActivation: null,
+      },
+    ]),
+  }),
+).find((section) => section.title === "Long Exit Conditions");
+const pricedRows =
+  pricedAction?.stacks?.[0]?.groups?.flat().flatMap((group) => group.rows) ?? [];
+assert.equal(
+  pricedRows.some((row) => row.label === "Condition Type"),
+  false,
+);
+assert.equal(pricedRows.find((row) => row.label === "Target %")?.value, "2%");
 
 console.log("backtest param section checks passed");

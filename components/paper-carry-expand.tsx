@@ -782,8 +782,8 @@ function formatLogEvent(event: string): string {
     "engine.close_failed": "Engine close failed",
     "engine.exit_if": "Hard Exit",
     "engine.exit_if_failed": "Hard Exit failed",
-    "engine.breakeven": "Moved breakeven",
-    "engine.breakeven_failed": "Breakeven failed",
+    "engine.breakeven": "Breakeven Stop",
+    "engine.breakeven_failed": "Breakeven Stop failed",
   };
   return labels[event] ?? event;
 }

@@ -15,6 +15,7 @@ import {
   validateTpslVsReference,
   venueTpslFields,
   venueTradingStopFields,
+  breakevenStopTpsl,
   tpslWithoutLimitExits,
 } from "./tpsl";
 
@@ -491,6 +492,26 @@ if (atrTp.ok) {
   assert.equal(atrTp.tpsl.takeProfit, 1212.4);
   assert.equal(venueTradingStopFields(atrTp.tpsl).takeProfit, "1212.4");
 }
+
+const sizedStop = breakevenStopTpsl({
+  current: levels({ takeProfit: 110, stopLoss: null }),
+  stop: 100,
+  positionQty: 4,
+  appliesQty: 2,
+});
+assert.equal(sizedStop.mode, "partial");
+assert.equal(sizedStop.slQty, 2);
+assert.equal(sizedStop.tpQty, 4);
+assert.equal(sizedStop.stopLoss, 100);
+const fullStop = breakevenStopTpsl({
+  current: levels({ takeProfit: 110, stopLoss: 90, slQty: 1, mode: "partial" }),
+  stop: 100,
+  positionQty: 4,
+  appliesQty: null,
+});
+assert.equal(fullStop.mode, "partial");
+assert.equal(fullStop.slQty, 1);
+assert.equal(fullStop.stopLoss, 100);
 
 assert.equal(isUnchangedTradingStop("Bybit rejected that order: not modified"), true);
 assert.equal(isUnchangedTradingStop("Bybit rejected that order: price is invalid"), false);

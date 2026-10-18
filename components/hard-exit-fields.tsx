@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import {
   HintLabel,
   botFieldInvalidClass,
@@ -17,6 +18,8 @@ import {
 } from "@/lib/dca/filters";
 import {
   hardExitForTrigger,
+  isPriceRuleDraft,
+  type ExitPriceRuleTrigger,
   type HardExitDraft,
   type HardExitTrigger,
 } from "@/lib/dca/hard-exit";
@@ -27,11 +30,13 @@ import {
   type EntryConflictSlot,
 } from "@/lib/strategy/expr";
 import type { FuturesSide, FuturesTrigger } from "@/lib/futures/model";
+import { RetraceFields } from "@/components/retrace-fields";
 
 const TRIGGER_OPTIONS: { value: HardExitTrigger; label: string }[] = [
   { value: "indicator", label: "Indicator" },
   { value: "trend", label: "Trend" },
   { value: "price", label: "Price Cross" },
+  { value: "retrace", label: "Retrace" },
   { value: "webhook", label: "Signal Webhook" },
 ];
 
@@ -82,6 +87,9 @@ export function HardExitFields({
   disabledWebhookIds = [],
   showTrigger = true,
   showErrors = false,
+  embed = false,
+  extraTriggers = [],
+  extra = null,
 }: {
   prefix: string;
   side: FuturesSide;
@@ -100,6 +108,11 @@ export function HardExitFields({
   showTrigger?: boolean;
   /** Paint empty required controls after the form has been edited. */
   showErrors?: boolean;
+  /** Join these fields to the parent grid instead of starting a new row. */
+  embed?: boolean;
+  /** Price rules such as Target Hit. Their fields render through `extra`. */
+  extraTriggers?: { value: ExitPriceRuleTrigger; label: string; disabled?: boolean }[];
+  extra?: ReactNode;
 }) {
   const column = useBotColumnLayout();
   const webhookChoices =
@@ -108,19 +121,29 @@ export function HardExitFields({
     !webhooks.some((hook) => hook.id === value.webhookId)
       ? [...webhooks, { id: value.webhookId, name: "Webhook (removed)" }]
       : webhooks;
+  const triggerInput =
+    showTrigger || !named || value.trigger === "unset" || isPriceRuleDraft(value)
+      ? null
+      : (
+      <input type="hidden" name={`${prefix}Trigger`} value={value.trigger} />
+    );
   return (
-    <div className={gridClass}>
-      {showTrigger ? null : named && value.trigger !== "unset" ? (
-        <input type="hidden" name={`${prefix}Trigger`} value={value.trigger} />
-      ) : null}
+    <>
+    {embed ? triggerInput : null}
+    <div className={embed ? "contents" : gridClass}>
+      {embed ? null : triggerInput}
       {showTrigger ? (
-      <label className={`${labelClass} whitespace-nowrap`}>
+      <label className={`${labelClass} min-w-0 whitespace-nowrap`}>
         <HintLabel text="Condition Type" required />
         <AppSelect
           name={named ? `${prefix}Trigger` : undefined}
           value={value.trigger === "unset" ? "" : value.trigger}
           onChange={(event) => {
-            const trigger = event.target.value as HardExitTrigger;
+            const trigger = event.target.value;
+            if (trigger === "target" || trigger === "stop" || trigger === "trail") {
+              onChange({ trigger });
+              return;
+            }
             if (
               trigger !== "price" &&
               trigger !== "indicator" &&
@@ -139,6 +162,15 @@ export function HardExitFields({
           }
         >
           <option value="">Select Condition Type</option>
+          {extraTriggers.map((option) => (
+            <option
+              key={option.value}
+              value={option.value}
+              disabled={option.disabled === true && option.value !== value.trigger}
+            >
+              {option.label}
+            </option>
+          ))}
           {TRIGGER_OPTIONS.map((option) => (
             <option
               key={option.value}
@@ -154,9 +186,20 @@ export function HardExitFields({
         </AppSelect>
       </label>
       ) : null}
-      {value.trigger === "price" ? (
+      {value.trigger === "retrace" ? (
+        <RetraceFields
+          prefix={named ? prefix : ""}
+          draft={value}
+          onChange={(next) => onChange({ trigger: "retrace", ...next })}
+          fieldClass={fieldClass}
+          labelClass={labelClass}
+          slots={seriesSlots}
+          slotIndex={seriesIndex}
+          showErrors={showErrors}
+        />
+      ) : value.trigger === "price" ? (
         <>
-          <label className={labelClass}>
+          <label className={`${labelClass} min-w-0`}>
             <HintLabel text="Price source" required />
             <AppSelect
               name={named ? `${prefix}TriggerBy` : undefined}
@@ -193,7 +236,7 @@ export function HardExitFields({
               ))}
             </AppSelect>
           </label>
-          <label className={labelClass}>
+          <label className={`${labelClass} min-w-0`}>
             <HintLabel text="Compare" required />
             <AppSelect
               name={named ? `${prefix}TriggerCompare` : undefined}
@@ -226,7 +269,7 @@ export function HardExitFields({
               ))}
             </AppSelect>
           </label>
-          <label className={labelClass}>
+          <label className={`${labelClass} min-w-0`}>
             <HintLabel text="Price" required />
             <GroupedNumberInput
               name={named ? `${prefix}TriggerPrice` : undefined}
@@ -241,8 +284,10 @@ export function HardExitFields({
             />
           </label>
         </>
+      ) : isPriceRuleDraft(value) ? (
+        extra
       ) : value.trigger === "webhook" ? (
-        <label className={`${labelClass} col-span-full`}>
+        <label className={`${labelClass} col-span-full min-w-0`}>
           <HintLabel text="Webhook" required />
           <AppSelect
             name={named ? `${prefix}WebhookId` : undefined}
@@ -276,7 +321,7 @@ export function HardExitFields({
           </AppSelect>
         </label>
       ) : value.trigger === "unset" ? null : value.spec == null ? (
-        <label className={labelClass}>
+        <label className={`${labelClass} min-w-0`}>
           <HintLabel text="Indicator" required />
           <AppSelect
             name={named ? `${prefix}Kind` : undefined}
@@ -382,5 +427,6 @@ export function HardExitFields({
         </div>
       )}
     </div>
+    </>
   );
 }

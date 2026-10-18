@@ -1,4 +1,4 @@
-import { JoinWord } from "@/components/condition-join";
+import { CONDITION_GROUP_HELPER, JoinWord } from "@/components/condition-join";
 import type { ParamRow, ParamSection, ParamStack } from "@/lib/backtest/param-sections";
 
 function ParamRows({
@@ -38,6 +38,9 @@ function ConditionStackView({ stack }: { stack: ParamStack }) {
       {stack.title ? (
         <p className="text-sm font-semibold text-ink">{stack.title}</p>
       ) : null}
+      {stack.rows && stack.rows.length > 0 ? (
+        <ParamRows rows={stack.rows} inset={false} />
+      ) : null}
       {stack.groups.map((conditions, groupIndex) => (
         <div key={`group-${groupIndex}`} className="space-y-3">
           {groupIndex > 0 ? <JoinWord label="Or" /> : null}
@@ -45,7 +48,7 @@ function ConditionStackView({ stack }: { stack: ParamStack }) {
             <h4 className="text-sm font-semibold text-ink">
               Group {groupIndex + 1}
               <span className="ml-2 text-hint font-normal text-ink-muted">
-                - Every condition in this group must be true.
+                - {CONDITION_GROUP_HELPER}
               </span>
             </h4>
             {conditions.map((condition, conditionIndex) => (
@@ -89,6 +92,12 @@ export function BacktestParameterSections({
             </div>
           ) : null}
           {section.stack ? <ConditionStackView stack={section.stack} /> : null}
+          {section.stacks?.map((stack, index) => (
+            <div key={`${stack.title ?? "action"}-${index}`} className="space-y-3">
+              {index > 0 ? <JoinWord label="Or" /> : null}
+              <ConditionStackView stack={stack} />
+            </div>
+          ))}
         </section>
       ))}
     </div>

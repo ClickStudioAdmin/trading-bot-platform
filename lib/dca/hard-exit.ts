@@ -15,8 +15,37 @@ export const HARD_EXIT_TRIGGERS = [
   "indicator",
   "trend",
   "webhook",
+  "retrace",
 ] as const;
 export type HardExitTrigger = (typeof HARD_EXIT_TRIGGERS)[number];
+
+/** Price rule inside an exit action. The numbers stay on the action, not the leaf. */
+export const EXIT_PRICE_RULES = ["target", "stop", "trail", "profit"] as const;
+export type ExitPriceRuleTrigger = (typeof EXIT_PRICE_RULES)[number];
+
+export function isExitPriceRule(
+  trigger: string,
+): trigger is ExitPriceRuleTrigger {
+  return (
+    trigger === "target" ||
+    trigger === "stop" ||
+    trigger === "trail" ||
+    trigger === "profit"
+  );
+}
+
+export function exitPriceRuleLabel(trigger: ExitPriceRuleTrigger): string {
+  if (trigger === "target") {
+    return "Target Hit";
+  }
+  if (trigger === "stop") {
+    return "Stop Hit";
+  }
+  if (trigger === "profit") {
+    return "Profit Hit";
+  }
+  return "Trail";
+}
 
 export type HardExitPrice = {
   trigger: "price";
@@ -48,7 +77,30 @@ export type HardExitDraft =
       compare: "gte" | "lte";
       price: string;
     }
-  | { trigger: "webhook"; webhookId: string };
+  | { trigger: "webhook"; webhookId: string }
+  | {
+      trigger: "retrace";
+      source: "last" | "mark" | "index";
+      from: "high" | "low";
+      pct: string;
+      lookback: string;
+      timeframe: import("@/lib/dca/indicators").DcaIndicatorTimeframe;
+    }
+  | { trigger: "target" }
+  | { trigger: "stop" }
+  | { trigger: "trail" }
+  | { trigger: "profit" };
+
+export function isPriceRuleDraft(
+  draft: HardExitDraft,
+): draft is Extract<HardExitDraft, { trigger: ExitPriceRuleTrigger }> {
+  return (
+    draft.trigger === "target" ||
+    draft.trigger === "stop" ||
+    draft.trigger === "trail" ||
+    draft.trigger === "profit"
+  );
+}
 
 export function hardExitFromFilter(
   spec: DcaFilterSpec | null | undefined,
@@ -83,6 +135,16 @@ export function hardExitForTrigger(
   if (trigger === "webhook") {
     return { trigger: "webhook", webhookId: "" };
   }
+  if (trigger === "retrace") {
+    return {
+      trigger: "retrace",
+      source: "last",
+      from: side === "short" ? "low" : "high",
+      pct: "",
+      lookback: "20",
+      timeframe: "15",
+    };
+  }
   if (trigger === "trend") {
     return {
       trigger: "trend",
@@ -108,11 +170,19 @@ export function hardExitComplete(
   if (!draft || draft.trigger === "unset") {
     return false;
   }
+  if (isPriceRuleDraft(draft)) {
+    return true;
+  }
   if (draft.trigger === "price") {
     return hardExitPrice(draft.price) != null;
   }
   if (draft.trigger === "webhook") {
     return draft.webhookId.trim() !== "";
+  }
+  if (draft.trigger === "retrace") {
+    const pct = Number(draft.pct.replace(/,/g, "").trim());
+    const lookback = Math.trunc(Number(draft.lookback));
+    return pct > 0 && lookback >= 1 && lookback <= 400;
   }
   return draft.spec != null && dcaFilterComplete(draft.spec);
 }
@@ -158,7 +228,7 @@ export function hardExitParts(draft: HardExitDraft | null | undefined): {
   filter: DcaFilterSpec | null;
   signal: HardExitSignal | null;
 } {
-  if (!draft || draft.trigger === "unset") {
+  if (!draft || draft.trigger === "unset" || isPriceRuleDraft(draft)) {
     return { filter: null, signal: null };
   }
   if (draft.trigger === "price") {
@@ -181,6 +251,9 @@ export function hardExitParts(draft: HardExitDraft | null | undefined): {
     return webhookId
       ? { filter: null, signal: { trigger: "webhook", webhookId } }
       : { filter: null, signal: null };
+  }
+  if (draft.trigger === "retrace") {
+    return { filter: null, signal: null };
   }
   return { filter: draft.spec, signal: null };
 }
@@ -302,7 +375,7 @@ export function writeHardExitFormFields(
   form.delete(`${prefix}TriggerCompare`);
   form.delete(`${prefix}TriggerPrice`);
   form.delete(`${prefix}WebhookId`);
-  if (!draft) {
+  if (!draft || isPriceRuleDraft(draft)) {
     writeDcaFilterFormFields(form, prefix, null);
     return;
   }
@@ -323,6 +396,15 @@ export function writeHardExitFormFields(
     if (draft.webhookId.trim()) {
       form.set(`${prefix}WebhookId`, draft.webhookId.trim());
     }
+    return;
+  }
+  if (draft.trigger === "retrace") {
+    writeDcaFilterFormFields(form, prefix, null);
+    form.set(`${prefix}RetraceSource`, draft.source);
+    form.set(`${prefix}RetraceFrom`, draft.from);
+    form.set(`${prefix}RetracePct`, draft.pct);
+    form.set(`${prefix}RetraceLookback`, draft.lookback);
+    form.set(`${prefix}RetraceTimeframe`, draft.timeframe);
     return;
   }
   writeDcaFilterFormFields(form, prefix, draft.spec);

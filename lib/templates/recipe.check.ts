@@ -396,7 +396,7 @@ const perpsWithExits = snapshotPerpsRecipe({
     tpLimitPrice: null,
     slLimitPrice: null,
   },
-  trailing: { distance: 200, activePrice: null, peak: null },
+  trailing: { distance: 200, activePrice: 49000, peak: null },
 });
 const exitsRule = perpsRecipeToRule(perpsWithExits, { sortOrder: 0 });
 assert.equal(exitsRule.ok, true);
@@ -404,6 +404,7 @@ if (exitsRule.ok) {
   assert.equal(exitsRule.rule.tpsl?.takeProfit, 55000);
   assert.equal(exitsRule.rule.tpsl?.stopLoss, 48000);
   assert.equal(exitsRule.rule.trailing?.distance, 200);
+  assert.equal(exitsRule.rule.trailing?.activePrice, 49000);
 }
 
 const webhookPerps = snapshotPerpsRecipe({

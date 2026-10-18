@@ -44,6 +44,7 @@ import type { FuturesPosition, FuturesSide } from "@/lib/futures/model";
 import type { FuturesWorkingOrder } from "@/lib/futures/working";
 import type { FuturesTrailing } from "@/lib/futures/trailing";
 import {
+  breakevenStopTpsl,
   emptyFuturesTpsl,
   resolveFuturesTpslPrices,
   tickerTriggerPrices,
@@ -1359,6 +1360,38 @@ async function syncDcaPlaybookExitsUnlocked(input: {
   if (!open) {
     return;
   }
+  const sideActions =
+    input.side === "short" && input.playbook.direction === "both"
+      ? input.playbook.shortExitActions
+      : input.playbook.exitActions;
+  if (sideActions && sideActions.length > 0) {
+    if (open.takeProfit != null || open.stopLoss != null) {
+      await runFuturesCommand({
+        actor: playbookActor(input.playbook, input.mode),
+        command: {
+          kind: "set-tpsl",
+          positionId: open.id,
+          symbol: input.playbook.symbol,
+          form: new FormData(),
+          tpsl: emptyFuturesTpsl(),
+          reason: "exit_actions",
+        },
+      });
+    }
+    if (open.trailingStop != null) {
+      await runFuturesCommand({
+        actor: playbookActor(input.playbook, input.mode),
+        command: {
+          kind: "set-trailing",
+          positionId: open.id,
+          symbol: input.playbook.symbol,
+          form: new FormData(),
+          trailing: null,
+        },
+      });
+    }
+    return;
+  }
   const leg = dcaLegFor(input.playbook, input.side);
   const classic = dcaClassicForSide(input.playbook, input.side);
   const atr = await atrForPlaybook(
@@ -1773,6 +1806,8 @@ async function moveStopToBreakeven(input: {
   mode: TradingAccountMode;
   side: FuturesSide;
   reason?: string;
+  offsetPct?: number | null;
+  qty?: number | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
     accountId: input.playbook.accountId,
@@ -1790,9 +1825,14 @@ async function moveStopToBreakeven(input: {
       side: input.side,
       basisPrice: open.entryPrice,
       offsetPct:
-        dcaClassicForSide(input.playbook, input.side).breakevenOffsetPct ?? 0,
+        input.offsetPct ??
+        dcaClassicForSide(input.playbook, input.side).breakevenOffsetPct ??
+        0,
     }),
   });
+  if (stop == null || !(stop > 0)) {
+    return { ok: true };
+  }
   const result = await runFuturesCommand({
     actor: playbookActor(input.playbook, input.mode),
     command: {
@@ -1801,12 +1841,12 @@ async function moveStopToBreakeven(input: {
       symbol: input.playbook.symbol,
       form: new FormData(),
       reason: input.reason,
-      tpsl: {
-        ...current,
-        stopLoss: stop,
-        slOrderType: "market",
-        slLimitPrice: null,
-      },
+      tpsl: breakevenStopTpsl({
+        current,
+        stop,
+        positionQty: open.qty,
+        appliesQty: input.qty,
+      }),
     },
   });
   if (!result.ok) {

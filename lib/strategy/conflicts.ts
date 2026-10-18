@@ -1,4 +1,5 @@
 import { DEFAULT_DCA_ATR_BAND_MULT } from "@/lib/dca/filters";
+import { rsiDivergenceClaim } from "@/lib/strategy/rsi-divergence";
 import {
   DEFAULT_DCA_BB_PERIOD,
   DEFAULT_DCA_MA_PERIOD,
@@ -38,7 +39,8 @@ type ConflictPred =
   | { type: "bull" }
   | { type: "bear" }
   | { type: "turn_bull" }
-  | { type: "turn_bear" };
+  | { type: "turn_bear" }
+  | { type: "exclusive" };
 
 type Interval = {
   lo: number;
@@ -120,12 +122,20 @@ export function indicatorClaim(input: {
   period?: unknown;
   slowPeriod?: unknown;
   multiplier?: unknown;
+  when?: unknown;
 }): ConflictClaim | null {
   const kind = input.kind;
   const timeframe = timeframeOf(input.timeframe);
   const compare = String(input.compare ?? "");
   const level = finite(input.level);
   const levelTo = finite(input.levelTo);
+  if (kind === "rsi_divergence") {
+    return rsiDivergenceClaim({
+      when: input.when ?? "bullish",
+      period: input.period,
+      timeframe,
+    });
+  }
   if (kind === "macd") {
     const line = macdHistogramLevel(level);
     return {
@@ -316,6 +326,9 @@ export function claimsConflict(
 }
 
 function predsConflict(left: ConflictPred, right: ConflictPred): boolean {
+  if (left.type === "exclusive" && right.type === "exclusive") {
+    return true;
+  }
   if (left.type === right.type && numeric(left) && numeric(right)) {
     return !intervalsOverlap(intervalOf(left), intervalOf(right));
   }

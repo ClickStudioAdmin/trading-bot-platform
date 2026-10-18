@@ -20,7 +20,19 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import { dcaAveragingKind, dcaIntervalParts } from "@/lib/dca/playbook";
-import type { TemplateHardExitSignal } from "@/lib/dca/hard-exit";
+import {
+  hardExitParts as splitExitDraft,
+  isExitPriceRule,
+  templateHardExit,
+  type HardExitDraft,
+  type TemplateHardExitSignal,
+} from "@/lib/dca/hard-exit";
+import {
+  actionKindLabel,
+  scopeLabel,
+  type StoredExitAction,
+} from "@/lib/strategy/exit-actions";
+import { trailActivationKind } from "@/lib/strategy/exit-clauses";
 import {
   resolveEntryStack,
   type EntryStack,
@@ -48,6 +60,7 @@ export type ParamCondition = { rows: ParamRow[] };
  */
 export type ParamStack = {
   title?: string;
+  rows?: ParamRow[];
   groups: ParamCondition[][];
 };
 
@@ -55,6 +68,7 @@ export type ParamSection = {
   title: string;
   groups: ParamGroup[];
   stack?: ParamStack;
+  stacks?: ParamStack[];
 };
 
 export type BacktestWindowFields = {
@@ -121,6 +135,9 @@ function dcaTriggerLabel(kind: DcaTemplateRecipe["startKind"]): string {
   }
   if (kind === "webhook") {
     return "Signal Webhook";
+  }
+  if (kind === "retrace") {
+    return "Retrace";
   }
   return "Indicator";
 }
@@ -206,14 +223,11 @@ function leafConditionRows(
     if (priceStyle === "dca") {
       return [
         { label: "Condition Type", value: "Price cross" },
-        ...priceRows(
-          {
-            triggerBy: leaf.triggerBy,
-            compare: leaf.compare,
-            price: leaf.price,
-          },
-          quote,
-        ),
+        ...priceRows({
+          triggerBy: leaf.triggerBy,
+          compare: leaf.compare,
+          price: leaf.price,
+        }),
       ];
     }
     return [
@@ -225,6 +239,32 @@ function leafConditionRows(
   }
   if (leaf.kind === "webhook") {
     return [{ label: "Condition Type", value: "Signal webhook" }];
+  }
+  if (leaf.kind === "retrace") {
+    return [
+      { label: "Condition Type", value: "Retrace" },
+      { label: "Price source", value: priceSourceLabel(leaf.source) },
+      { label: "From", value: leaf.from === "low" ? "Low" : "High" },
+      { label: "Retrace %", value: num(leaf.pct) },
+      { label: "Lookback", value: num(leaf.lookback) },
+      { label: "Timeframe", value: timeframeLabel(leaf.timeframe) },
+    ];
+  }
+  if (leaf.kind === "protection") {
+    return [
+      { label: "Condition Type", value: "Position protection" },
+      {
+        label: "Is",
+        value: leaf.is === "unprotected" ? "Not protected" : "Protected",
+      },
+      {
+        label: "Amount",
+        value:
+          leaf.amount === "at_least" && leaf.pct != null
+            ? `At least ${leaf.pct}%`
+            : "Entire position",
+      },
+    ];
   }
   if (leaf.kind === "filter") {
     return [
@@ -439,12 +479,11 @@ function indicatorRows(input: {
 
 function priceRows(
   trigger: DcaTemplateRecipe["armTrigger"] | null | undefined,
-  quote: string,
 ): ParamRow[] {
   return [
-    { label: "Price", value: priceSourceLabel(trigger?.triggerBy) },
-    { label: "When", value: whenLabel(trigger?.compare) },
-    { label: `Level (${quote})`, value: num(trigger?.price) },
+    { label: "Price source", value: perpsPriceSource(trigger?.triggerBy) },
+    { label: "Compare", value: whenLabel(trigger?.compare) },
+    { label: "Price", value: num(trigger?.price) },
   ];
 }
 
@@ -465,7 +504,6 @@ function dcaSideEntry(
     lead.push(
       ...priceRows(
         shortLeg ? (recipe.shortArmTrigger ?? recipe.armTrigger) : recipe.armTrigger,
-        quote,
       ),
     );
   } else if (startKind === "indicator" || startKind === "trend") {
@@ -639,23 +677,237 @@ function optionalGroup(
   return { title, rows };
 }
 
-function nestBreakeven(
-  group: ParamGroup,
-  title: string,
+function breakevenGroup(
   activation: number | null | undefined,
   offset: number | null | undefined,
 ): ParamGroup {
   if (activation == null) {
-    return group;
+    return { rows: [{ label: "Breakeven Stop", value: "Off" }] };
   }
-  const extra: ParamRow[] = [
-    { label: "Move stop to breakeven at %", value: pct(activation) },
-    { label: "Breakeven offset %", value: pct(offset ?? 0) },
-  ];
-  if (!group.title) {
-    return { title, rows: extra };
+  return {
+    title: "Breakeven Stop",
+    rows: [
+      { label: "Activation %", value: pct(activation) },
+      { label: "Buffer %", value: pct(offset ?? 0) },
+      { label: "Applies To", value: "Entire Position" },
+    ],
+  };
+}
+
+function repeatLevelRows(action: StoredExitAction): ParamRow[] {
+  const levels = action.levels;
+  if (!levels) {
+    return [];
   }
-  return { title: group.title, rows: [...group.rows, ...extra] };
+  const flex = levels.style === "flex";
+  if (action.kind === "take_profit") {
+    if (flex) {
+      const percent = levels.method === "percent";
+      const rows: ParamRow[] = [
+        { label: "Type", value: percent ? "Percentage" : "Price" },
+        { label: percent ? "%" : "Price", value: levels.target || "—" },
+        { label: "Price source", value: priceSourceLabel(levels.trigger) },
+        { label: "Order type", value: orderLabel(levels.orderType === "limit") },
+      ];
+      if (levels.orderType === "limit") {
+        rows.push({ label: "Limit price", value: levels.limitPrice || "—" });
+      }
+      return rows;
+    }
+    const rows: ParamRow[] = [
+      { label: "Basis", value: basisLabel(levels.basis) },
+      {
+        label: "Method",
+        value: levels.method === "atr" ? "ATR × multiplier" : "Percentage",
+      },
+    ];
+    if (levels.method === "atr") {
+      rows.push({ label: "ATR period", value: levels.atrPeriod || "—" });
+      rows.push({ label: "ATR multiple", value: levels.atrMult || "—" });
+    } else {
+      rows.push({ label: "Target %", value: levels.target ? pct(levels.target) : "—" });
+    }
+    rows.push({ label: "Order type", value: orderLabel(levels.orderType === "limit") });
+    return rows;
+  }
+  if (action.kind === "stop_loss") {
+    if (flex) {
+      const percent = levels.method === "percent";
+      const rows: ParamRow[] = [
+        { label: "Type", value: percent ? "Percentage" : "Price" },
+        { label: percent ? "%" : "Price", value: levels.target || "—" },
+        { label: "Price source", value: priceSourceLabel(levels.trigger) },
+        { label: "Order type", value: orderLabel(levels.orderType === "limit") },
+      ];
+      if (levels.orderType === "limit") {
+        rows.push({ label: "Limit price", value: levels.limitPrice || "—" });
+      }
+      return rows;
+    }
+    const rows: ParamRow[] = [
+      { label: "Basis", value: basisLabel(levels.basis) },
+      { label: "Stop loss %", value: levels.target ? pct(levels.target) : "—" },
+    ];
+    return rows;
+  }
+  if (action.kind === "trailing_stop") {
+    const percent =
+      trailActivationKind({
+        method: levels.method,
+        style: flex ? "flex" : levels.style || "dca",
+        trigger: levels.trigger,
+      }) === "percent";
+    return [
+      { label: "Activation %", value: percent ? pct(levels.trigger) : levels.trigger || "—" },
+      { label: "Trailing %", value: levels.trail ? (flex && !percent ? levels.trail : pct(levels.trail)) : "—" },
+    ];
+  }
+  return [];
+}
+
+function actionPriceRows(action: StoredExitAction): ParamRow[] {
+  if (action.levels) {
+    return repeatLevelRows(action);
+  }
+  if (action.kind === "take_profit") {
+    if (action.takeProfitPrice != null) {
+      return [{ label: "Target price", value: num(action.takeProfitPrice) }];
+    }
+    if (action.takeProfitPct != null) {
+      return [{ label: "Target %", value: pct(action.takeProfitPct) }];
+    }
+  }
+  if (action.kind === "stop_loss") {
+    if (action.stopLossPrice != null) {
+      return [{ label: "Stop price", value: num(action.stopLossPrice) }];
+    }
+    if (action.stopLossPct != null) {
+      return [{ label: "Stop loss %", value: pct(action.stopLossPct) }];
+    }
+  }
+  if (action.kind === "trailing_stop") {
+    const rows: ParamRow[] = [];
+    if (action.trailingTriggerPct != null) {
+      rows.push({ label: "Activation %", value: pct(action.trailingTriggerPct) });
+    }
+    if (action.trailingActivation != null) {
+      rows.push({ label: "Activation price", value: num(action.trailingActivation) });
+    }
+    if (action.trailingPct != null) {
+      rows.push({ label: "Trailing %", value: pct(action.trailingPct) });
+    }
+    if (action.trailingDistance != null) {
+      rows.push({ label: "Distance", value: num(action.trailingDistance) });
+    }
+    return rows;
+  }
+  if (action.kind === "breakeven") {
+    return [
+      {
+        label: "Activation %",
+        value: pct(action.breakevenActivationPct),
+      },
+      {
+        label: "Buffer %",
+        value: pct(action.breakevenOffsetPct ?? 0),
+      },
+    ];
+  }
+  return [];
+}
+
+function actionDraftRows(
+  draft: HardExitDraft,
+  side: "long" | "short",
+): ParamRow[] | null {
+  if (isExitPriceRule(draft.trigger)) {
+    return [];
+  }
+  const parts = splitExitDraft(draft);
+  return hardExitAnchorRows(parts.filter, templateHardExit(parts.signal), side);
+}
+
+function withSeparateBreakeven(
+  actions: readonly StoredExitAction[],
+): StoredExitAction[] {
+  const listed: StoredExitAction[] = [];
+  for (const action of actions) {
+    if (action.kind === "stop_loss" && action.levels?.breakeven) {
+      listed.push({
+        ...action,
+        levels: {
+          ...action.levels,
+          breakeven: false,
+          breakevenActivation: "",
+          breakevenOffset: "",
+        },
+      });
+      const activation = Number(String(action.levels.breakevenActivation).replace(/,/g, ""));
+      const offset = Number(String(action.levels.breakevenOffset || "0").replace(/,/g, ""));
+      listed.push({
+        id: `${action.id}-breakeven`,
+        kind: "breakeven",
+        scope: { kind: "all" },
+        groups: [{ anchor: { trigger: "profit" }, rows: [] }],
+        takeProfitPct: null,
+        takeProfitPrice: null,
+        stopLossPct: null,
+        stopLossPrice: null,
+        trailingDistance: null,
+        trailingActivation: null,
+        breakevenActivationPct: Number.isFinite(activation) ? activation : null,
+        breakevenOffsetPct: Number.isFinite(offset) ? offset : 0,
+      });
+      continue;
+    }
+    listed.push(action);
+  }
+  return listed;
+}
+
+function exitActionStacks(
+  actions: readonly StoredExitAction[],
+  side: "long" | "short",
+): ParamStack[] {
+  return withSeparateBreakeven(actions).map((action) => {
+    const when = action.kind === "close" ? "Fire when" : "Enable when";
+    const hasPriceRule = action.groups.some((group) =>
+      [group.anchor, ...group.rows].some((draft) => isExitPriceRule(draft.trigger)),
+    );
+    const rows: ParamRow[] = [
+      { label: "Action", value: actionKindLabel(action.kind) },
+      { label: "Applies To", value: scopeLabel(action.scope) },
+      ...(hasPriceRule ? [] : actionPriceRows(action)),
+    ];
+    if (action.groups.length === 0) {
+      rows.push({
+        label: when,
+        value: action.kind === "close" ? "Fills in profit" : "Always on",
+      });
+    }
+    return {
+      title: actionKindLabel(action.kind),
+      rows,
+      groups: (() => {
+        let priced = false;
+        return action.groups.flatMap((group) => {
+        const conditions = [group.anchor, ...group.rows].flatMap((draft) => {
+          const condition = actionDraftRows(draft, side);
+          if (!condition) {
+            return [];
+          }
+          if (isExitPriceRule(draft.trigger) && !priced) {
+            priced = true;
+            const pricedRows = [...condition, ...actionPriceRows(action)];
+            return pricedRows.length > 0 ? [{ rows: pricedRows }] : [];
+          }
+          return [{ rows: condition }];
+        });
+        return conditions.length > 0 ? [conditions] : [];
+        });
+      })(),
+    };
+  });
 }
 
 function dcaExitSections(recipe: DcaTemplateRecipe): ParamSection[] {
@@ -667,6 +919,15 @@ function dcaExitSections(recipe: DcaTemplateRecipe): ParamSection[] {
         : ["long"];
   return sides.map((side) => {
     const ownShort = side === "short" && recipe.direction === "both";
+    const actions = ownShort ? recipe.shortExitActions : recipe.exitActions;
+    const title = side === "short" ? "Short Exit Conditions" : "Long Exit Conditions";
+    if (actions && actions.length > 0) {
+      return {
+        title,
+        groups: [],
+        stacks: exitActionStacks(actions, side),
+      };
+    }
     const custom = hardExitParts(
       "Custom conditions",
       ownShort ? recipe.shortExitIf : recipe.exitIf,
@@ -675,10 +936,7 @@ function dcaExitSections(recipe: DcaTemplateRecipe): ParamSection[] {
       ownShort ? recipe.shortExitStack : recipe.exitStack,
     );
     return {
-      title:
-        side === "short"
-          ? "Short Exit Conditions"
-          : "Long Exit Conditions",
+      title,
       groups: [
         ...dcaClassicGroups(recipe, side),
         ...(custom.group ? [custom.group] : []),
@@ -739,18 +997,14 @@ function dcaClassicGroups(
   return [
     optionalGroup("Take profit", tpOn, tpRows),
     optionalGroup("Trailing stop", trailOn, [
-      { label: "Trigger %", value: pct(trailingTriggerPct) },
+      { label: "Activation %", value: pct(trailingTriggerPct) },
       { label: "Trailing %", value: pct(trailingPct) },
     ]),
-    nestBreakeven(
-      optionalGroup("Stop loss", slOn, [
-        { label: "Basis", value: basisLabel(stopLossBasis) },
-        { label: "Stop loss %", value: pct(stopLossPct) },
-      ]),
-      "Stop loss",
-      breakevenActivationPct,
-      breakevenOffsetPct,
-    ),
+    optionalGroup("Stop loss", slOn, [
+      { label: "Basis", value: basisLabel(stopLossBasis) },
+      { label: "Stop loss %", value: pct(stopLossPct) },
+    ]),
+    breakevenGroup(breakevenActivationPct, breakevenOffsetPct),
   ];
 }
 
@@ -811,6 +1065,9 @@ function perpsTriggerLabel(source: PerpsTemplateRecipe["entrySource"]): string {
   if (source === "webhook") {
     return "Signal webhook";
   }
+  if (source === "retrace") {
+    return "Retrace";
+  }
   return "Price cross";
 }
 
@@ -844,7 +1101,7 @@ function perpsExitLevel(
   const rows: ParamRow[] = [
     { label: "Type", value: percent ? "Percentage" : "Price" },
     { label: percent ? "%" : "Price", value: percent ? pct(level) : num(level) },
-    { label: "Trigger", value: priceSourceLabel(trigger) },
+    { label: "Price source", value: priceSourceLabel(trigger) },
     { label: "Order type", value: orderLabel(orderType === "limit") },
   ];
   if (orderType === "limit") {
@@ -1040,19 +1297,15 @@ function perpsClassicGroups(
           trailing?.activePrice == null ? "Off" : num(trailing.activePrice),
       },
     ]),
-    nestBreakeven(
-      perpsExitLevel(
-        "Stop loss",
-        tpsl?.stopLoss,
-        tpsl?.slKind,
-        tpsl?.slTrigger,
-        tpsl?.slOrderType,
-        tpsl?.slLimitPrice,
-      ),
+    perpsExitLevel(
       "Stop loss",
-      breakevenActivationPct,
-      breakevenOffsetPct,
+      tpsl?.stopLoss,
+      tpsl?.slKind,
+      tpsl?.slTrigger,
+      tpsl?.slOrderType,
+      tpsl?.slLimitPrice,
     ),
+    breakevenGroup(breakevenActivationPct, breakevenOffsetPct),
   ];
 }
 
@@ -1101,6 +1354,16 @@ function perpsExitSections(
           shortClassic.breakevenOffsetPct,
         )
       : longClassic;
+    const actions = ownShort ? recipe.shortEntry?.actions : recipe.exitActions;
+    const title =
+      exitSide === "short" ? "Short Exit Conditions" : "Long Exit Conditions";
+    if (actions && actions.length > 0) {
+      return {
+        title,
+        groups: [],
+        stacks: exitActionStacks(actions, exitSide),
+      };
+    }
     const custom = hardExitParts(
       "Custom conditions",
       ownShort ? (short?.exitIf ?? null) : recipe.exitIf,
@@ -1109,10 +1372,7 @@ function perpsExitSections(
       ownShort ? (short?.exitStack ?? null) : recipe.exitStack,
     );
     return {
-      title:
-        exitSide === "short"
-          ? "Short Exit Conditions"
-          : "Long Exit Conditions",
+      title,
       groups: [...classic, ...(custom.group ? [custom.group] : [])],
       stack: custom.stack,
     };
@@ -1240,7 +1500,11 @@ function withoutBotName(sections: ParamSection[]): ParamSection[] {
       const rows = group.rows.filter((row) => row.label !== "Name");
       return rows.length > 0 ? [{ ...group, rows }] : [];
     });
-    if (groups.length === 0 && !section.stack) {
+    if (
+      groups.length === 0 &&
+      !section.stack &&
+      !(section.stacks && section.stacks.length > 0)
+    ) {
       return [];
     }
     return [{ ...section, groups }];
@@ -1306,15 +1570,27 @@ function sectionRowScopes(
       scope: group.title ?? section.title,
     })),
   );
-  const fromStack = (section.stack?.groups ?? []).flatMap((conditions, index) =>
-    conditions.flatMap((condition) =>
-      condition.rows.map((row) => ({
-        label: row.label,
-        value: row.value,
-        scope: `Group ${index + 1}`,
-      })),
-    ),
-  );
+  const stacks = [
+    ...(section.stack ? [section.stack] : []),
+    ...(section.stacks ?? []),
+  ];
+  const fromStack = stacks.flatMap((stack) => {
+    const head = (stack.rows ?? []).map((row) => ({
+      label: row.label,
+      value: row.value,
+      scope: stack.title ?? section.title,
+    }));
+    const groups = stack.groups.flatMap((conditions, index) =>
+      conditions.flatMap((condition) =>
+        condition.rows.map((row) => ({
+          label: row.label,
+          value: row.value,
+          scope: stack.title ? `${stack.title} · Group ${index + 1}` : `Group ${index + 1}`,
+        })),
+      ),
+    );
+    return [...head, ...groups];
+  });
   return [...fromGroups, ...fromStack];
 }
 

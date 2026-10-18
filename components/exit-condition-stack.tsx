@@ -20,6 +20,7 @@ import {
 import {
   hardExitComplete,
   hardExitParts,
+  isPriceRuleDraft,
   type HardExitDraft,
   type HardExitTrigger,
 } from "@/lib/dca/hard-exit";
@@ -121,7 +122,14 @@ export function exitConflictSlots(
             webhookId: null,
             claim: null,
           }
-        : {
+        : isPriceRuleDraft(row.draft)
+          ? {
+              kind: "indicator" as const,
+              join: row.join,
+              webhookId: null,
+              claim: null,
+            }
+          : {
             kind: row.draft.trigger,
             join: row.join,
             webhookId:
@@ -364,7 +372,7 @@ export function anchorDisabledKinds(
   webhookIds: string[],
 ): HardExitTrigger[] {
   const slots = exitConflictSlots(anchor, rows);
-  return (["price", "indicator", "trend", "webhook"] as const).filter((kind) =>
+  return (["price", "indicator", "trend", "webhook", "retrace"] as const).filter((kind) =>
     entryKindDisabled({ slots, index: 0, kind, webhookIds }),
   );
 }

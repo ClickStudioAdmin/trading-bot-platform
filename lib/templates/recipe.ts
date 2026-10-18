@@ -33,6 +33,7 @@ import {
   dcaShortClassicFromJson,
   IDLE_DCA_LEG,
   parseDcaPlaybookForm,
+  writeDcaEntryStackFields,
   type DcaClassicExit,
   type DcaPlaybook,
   type DcaPlaybookConfig,
@@ -62,6 +63,11 @@ import {
   resolveEntryStack,
   type EntryStack,
 } from "@/lib/strategy/expr";
+import { parseRetraceSpec, type RetraceSpec } from "@/lib/strategy/retrace";
+import {
+  parseRsiDivergenceSettings,
+  type RsiDivergenceSettings,
+} from "@/lib/strategy/rsi-divergence";
 import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 
 export const TEMPLATE_RECIPE_VERSION = 1;
@@ -137,6 +143,12 @@ export type DcaTemplateRecipe = {
   shortClassic?: DcaClassicExit | null;
   armTrigger: DcaPlaybookConfig["armTrigger"];
   shortArmTrigger?: DcaPlaybookConfig["shortArmTrigger"];
+  leadDivergence?: DcaPlaybookConfig["leadDivergence"];
+  shortLeadDivergence?: DcaPlaybookConfig["shortLeadDivergence"];
+  retrace?: DcaPlaybookConfig["retrace"];
+  shortRetrace?: DcaPlaybookConfig["shortRetrace"];
+  addStack?: DcaPlaybookConfig["addStack"];
+  shortAddStack?: DcaPlaybookConfig["shortAddStack"];
   indicatorKind: DcaPlaybookConfig["indicatorKind"];
   indicatorTimeframe: DcaPlaybookConfig["indicatorTimeframe"];
   indicatorCompare: DcaPlaybookConfig["indicatorCompare"];
@@ -161,6 +173,8 @@ export type DcaTemplateRecipe = {
   shortExitHard?: TemplateHardExitSignal | null;
   exitStack?: EntryStack | null;
   shortExitStack?: EntryStack | null;
+  exitActions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
+  shortExitActions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
 };
 
 export type PerpsTemplateRecipe = {
@@ -180,11 +194,14 @@ export type PerpsTemplateRecipe = {
   tpsl: FuturesAutomationFormValues["tpsl"];
   trailing: FuturesAutomationFormValues["trailing"];
   indicator?: FuturesAutomationFormValues["indicator"];
+  retrace?: RetraceSpec | null;
+  addStack?: EntryStack | null;
   confirm?: DcaFilterSpec | null;
   entryStack?: EntryStack | null;
   exitIf?: DcaFilterSpec | null;
   exitHard?: TemplateHardExitSignal | null;
   exitStack?: EntryStack | null;
+  exitActions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
   breakevenActivationPct?: number | null;
   breakevenOffsetPct?: number | null;
   direction: "long" | "short" | "both";
@@ -368,6 +385,18 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
       : {}),
     armTrigger: config.armTrigger,
     shortArmTrigger: config.shortArmTrigger ?? null,
+    leadDivergence: config.leadDivergence ?? null,
+    shortLeadDivergence: config.shortLeadDivergence ?? null,
+    retrace: config.retrace ?? null,
+    shortRetrace: config.shortRetrace ?? null,
+    ...(config.addStack && config.addStack.leaves.length > 0
+      ? { addStack: config.addStack }
+      : {}),
+    ...(config.direction === "both" &&
+    config.shortAddStack &&
+    config.shortAddStack.leaves.length > 0
+      ? { shortAddStack: config.shortAddStack }
+      : {}),
     indicatorKind: config.indicatorKind,
     indicatorTimeframe: config.indicatorTimeframe,
     indicatorCompare: config.indicatorCompare,
@@ -406,6 +435,14 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     ...(config.direction === "both" && templateExitStack(config.shortExitStack)
       ? { shortExitStack: templateExitStack(config.shortExitStack) }
       : {}),
+    ...(config.exitActions && config.exitActions.length > 0
+      ? { exitActions: config.exitActions }
+      : {}),
+    ...(config.direction === "both" &&
+    config.shortExitActions &&
+    config.shortExitActions.length > 0
+      ? { shortExitActions: config.shortExitActions }
+      : {}),
   };
 }
 
@@ -432,11 +469,14 @@ export function snapshotPerpsRecipe(
       Pick<
         FuturesAutomationRule,
         | "indicator"
+        | "retrace"
+        | "addStack"
         | "confirm"
         | "entryStack"
         | "exitIf"
         | "exitHard"
         | "exitStack"
+        | "exitActions"
         | "breakevenActivationPct"
         | "breakevenOffsetPct"
         | "direction"
@@ -472,6 +512,10 @@ export function snapshotPerpsRecipe(
     tpsl: rule.tpsl,
     trailing: rule.trailing,
     indicator: rule.indicator ?? null,
+    ...(rule.retrace ? { retrace: rule.retrace } : {}),
+    ...(rule.addStack && rule.addStack.leaves.length > 0
+      ? { addStack: rule.addStack }
+      : {}),
     confirm:
       hasStack || !legacyStack
         ? confirmFromEntryStack(stack)
@@ -483,6 +527,9 @@ export function snapshotPerpsRecipe(
       : {}),
     ...(templateExitStack(rule.exitStack)
       ? { exitStack: templateExitStack(rule.exitStack) }
+      : {}),
+    ...(rule.exitActions && rule.exitActions.length > 0
+      ? { exitActions: rule.exitActions }
       : {}),
     breakevenActivationPct: rule.breakevenActivationPct ?? null,
     breakevenOffsetPct: rule.breakevenOffsetPct ?? null,
@@ -544,6 +591,13 @@ export function dcaRecipePlaybookSeed(recipe: DcaTemplateRecipe): DcaPlaybook {
     shortArmTrigger: recipe.shortArmTrigger ?? null,
     disarmTrigger: null,
     indicatorKind: recipe.indicatorKind,
+    leadDivergence: recipe.leadDivergence ?? null,
+    shortLeadDivergence: recipe.shortLeadDivergence ?? null,
+    retrace: recipe.retrace ?? null,
+    shortRetrace: recipe.shortRetrace ?? null,
+    addStack: recipe.addStack ?? null,
+    shortAddStack:
+      recipe.direction === "both" ? (recipe.shortAddStack ?? null) : null,
     indicatorTimeframe: recipe.indicatorTimeframe,
     indicatorCompare: recipe.indicatorCompare,
     indicatorLevel: recipe.indicatorLevel,
@@ -597,6 +651,8 @@ export function perpsRecipeFormSeed(
     tpsl: recipe.tpsl,
     trailing: recipe.trailing,
     indicator: recipe.indicator ?? null,
+    retrace: recipe.retrace ?? null,
+    addStack: recipe.addStack ?? null,
     confirm: recipe.confirm ?? null,
     entryStack: recipe.entryStack ?? legacyEntryStack(recipe.confirm ?? null),
     exitIf: recipe.exitHard ? null : (recipe.exitIf ?? null),
@@ -723,7 +779,8 @@ function parsePerpsTemplateRecipe(
     entrySource:
       row.entrySource === "webhook" ||
       row.entrySource === "indicator" ||
-      row.entrySource === "trend"
+      row.entrySource === "trend" ||
+      row.entrySource === "retrace"
         ? row.entrySource
         : "price",
     triggerBy:
@@ -736,6 +793,8 @@ function parsePerpsTemplateRecipe(
     tpsl: (row.tpsl as PerpsTemplateRecipe["tpsl"]) ?? null,
     trailing: (row.trailing as PerpsTemplateRecipe["trailing"]) ?? null,
     indicator: (row.indicator as PerpsTemplateRecipe["indicator"]) ?? null,
+    retrace: parseRetraceSpec(row.retrace),
+    addStack: entryStackFromJson(row.addStack) ?? undefined,
     confirm: filterSpecFromRecipe(row.confirm),
     entryStack: entryStackFromJson(row.entryStack) ?? undefined,
     exitIf: filterSpecFromRecipe(row.exitIf),
@@ -1034,6 +1093,38 @@ export function dcaRecipeToConfig(
   if (recipe.indicatorKind) {
     form.set("indicatorKind", String(recipe.indicatorKind));
   }
+  writeRecipeRetrace(form, "", "retrace" in recipe ? recipe.retrace : null);
+  writeRecipeRetrace(
+    form,
+    "short",
+    "shortRetrace" in recipe ? recipe.shortRetrace : null,
+  );
+  writeRecipeDivergence(
+    form,
+    "indicator",
+    "leadDivergence" in recipe ? recipe.leadDivergence : null,
+  );
+  writeRecipeDivergence(
+    form,
+    "shortIndicator",
+    "shortLeadDivergence" in recipe ? recipe.shortLeadDivergence : null,
+  );
+  const addStack = entryStackFromJson(
+    "addStack" in recipe ? recipe.addStack : null,
+  );
+  if (addStack && addStack.leaves.length > 0) {
+    writeDcaEntryStackFields(form, "add", addStack);
+  }
+  const shortAddStack = entryStackFromJson(
+    "shortAddStack" in recipe ? recipe.shortAddStack : null,
+  );
+  if (
+    String(form.get("direction")) === "both" &&
+    shortAddStack &&
+    shortAddStack.leaves.length > 0
+  ) {
+    writeDcaEntryStackFields(form, "shortAdd", shortAddStack);
+  }
   if (recipe.indicatorTimeframe) {
     form.set("indicatorTimeframe", String(recipe.indicatorTimeframe));
   }
@@ -1194,6 +1285,16 @@ export function dcaRecipeToConfig(
       notes,
     );
   }
+  if ("exitActions" in recipe && recipe.exitActions) {
+    form.set("exitActions", JSON.stringify(recipe.exitActions));
+  }
+  if (
+    direction === "both" &&
+    "shortExitActions" in recipe &&
+    recipe.shortExitActions
+  ) {
+    form.set("shortExitActions", JSON.stringify(recipe.shortExitActions));
+  }
   const parsed = parseDcaPlaybookForm(form, venue);
   if (!parsed.ok) {
     return parsed;
@@ -1273,8 +1374,16 @@ export function perpsRecipeToRule(
   const exitStack = exitKept
     ? appliedExitStack(recipe.exitStack, webhookId, notes)
     : null;
+  if (recipe.exitActions && recipe.exitActions.length > 0) {
+    form.set("r0_exitActions", JSON.stringify(recipe.exitActions));
+  }
+  if (recipe.shortEntry?.actions && recipe.shortEntry.actions.length > 0) {
+    form.set("r0_short_exitActions", JSON.stringify(recipe.shortEntry.actions));
+  }
   writeFuturesConditionFormFields(form, "r0_", {
     indicator: recipe.indicator,
+    retrace: recipe.retrace,
+    addStack: recipe.addStack,
     confirm: recipe.confirm,
     entryStack: recipe.entryStack,
     exitIf: exitKept ? recipe.exitIf : null,
@@ -1575,6 +1684,8 @@ export function perpsFormToSnapshotSource(
   }
   writeFuturesConditionFormFields(form, "r0_", {
     indicator: layer.indicator,
+    retrace: layer.retrace,
+    addStack: layer.addStack,
     confirm: layer.confirm,
     entryStack: layer.entryStack,
     exitIf: layer.exitIf,
@@ -1657,4 +1768,41 @@ export function recipeHasRuntimeKeys(value: unknown): boolean {
       key,
     ),
   );
+}
+
+function writeRecipeRetrace(
+  form: FormData,
+  prefix: string,
+  raw: unknown,
+): void {
+  const spec = parseRetraceSpec(raw);
+  if (!spec) {
+    return;
+  }
+  form.set(`${prefix}RetraceSource`, spec.source);
+  form.set(`${prefix}RetraceFrom`, spec.from);
+  form.set(`${prefix}RetracePct`, String(spec.pct));
+  form.set(`${prefix}RetraceLookback`, String(spec.lookback));
+  form.set(`${prefix}RetraceTimeframe`, spec.timeframe);
+}
+
+function writeRecipeDivergence(
+  form: FormData,
+  prefix: string,
+  raw: unknown,
+): void {
+  const settings: RsiDivergenceSettings | null = parseRsiDivergenceSettings(raw);
+  if (!settings) {
+    return;
+  }
+  form.set(`${prefix}DivergenceWhen`, settings.when);
+  form.set(`${prefix}DivergenceStyle`, settings.style);
+  form.set(`${prefix}PivotBars`, String(settings.pivotBars));
+  form.set(`${prefix}Span`, String(settings.span));
+  if (settings.minPricePct != null) {
+    form.set(`${prefix}MinPricePct`, String(settings.minPricePct));
+  }
+  if (settings.minRsi != null) {
+    form.set(`${prefix}MinRsi`, String(settings.minRsi));
+  }
 }

@@ -1,8 +1,11 @@
 import type { ReactNode } from "react";
 
+/** Helper beside the group title on every condition builder. */
+export const CONDITION_GROUP_HELPER = "Fires when all conditions are true.";
+
 export function Hairline({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex w-full items-center gap-3">
       <span className="h-px min-w-0 flex-1 bg-line" aria-hidden />
       {children}
       <span className="h-px min-w-0 flex-1 bg-line" aria-hidden />

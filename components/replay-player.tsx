@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { AutoscaleInfo } from "lightweight-charts";
+import { rsiDivergenceLine } from "@/lib/strategy/rsi-divergence";
 import {
   indicatorRolesForReason,
   indicatorStyleTargets,
@@ -1134,6 +1135,8 @@ export function ReplayPlayer({
       let drawn: Array<{
         lines: ReturnType<typeof chart.addSeries>[];
         dots: ReturnType<typeof chart.addSeries>;
+        priceSegment: ReturnType<typeof chart.addSeries> | null;
+        rsiSegment: ReturnType<typeof chart.addSeries> | null;
         oscillator: {
           rsi: ReturnType<typeof chart.addSeries> | null;
           macd: ReturnType<typeof chart.addSeries> | null;
@@ -1282,7 +1285,29 @@ export function ReplayPlayer({
           pane,
         );
         indicatorApis.push(dots);
-        drawn.push({ lines, dots, oscillator });
+        let priceSegment: ReturnType<typeof chart.addSeries> | null = null;
+        let rsiSegment: ReturnType<typeof chart.addSeries> | null = null;
+        if (layer.divergence) {
+          priceSegment = chart.addSeries(charts.LineSeries, {
+            color: "#F5B942",
+            lineWidth: 2,
+            priceLineVisible: false,
+            lastValueVisible: false,
+            autoscaleInfoProvider: () => null,
+          });
+          rsiSegment = chart.addSeries(
+            charts.LineSeries,
+            {
+              color: "#F5B942",
+              lineWidth: 2,
+              lineStyle: charts.LineStyle.Dashed,
+              priceLineVisible: false,
+              lastValueVisible: false,
+            },
+            pane,
+          );
+        }
+        drawn.push({ lines, dots, oscillator, priceSegment, rsiSegment });
       }
       }
       mountIndicators();
@@ -1316,6 +1341,38 @@ export function ReplayPlayer({
               lineData(candles, plot.values, end) as never,
             );
           });
+          if (layer.divergence && row.priceSegment && row.rsiSegment) {
+            const slice = candles.slice(0, end + 1);
+            const line = rsiDivergenceLine({
+              bars: slice.map((bar) => ({
+                high: bar.high,
+                low: bar.low,
+                close: bar.close,
+              })),
+              period: layer.divergence.period,
+              settings: layer.divergence.settings,
+            });
+            const older = line ? candles[line.olderIndex] : null;
+            const newer = line ? candles[line.newerIndex] : null;
+            if (
+              line &&
+              older &&
+              newer &&
+              line.confirmIndex <= end
+            ) {
+              row.priceSegment.setData([
+                { time: Math.floor(older.timeMs / 1000), value: line.olderPrice },
+                { time: Math.floor(newer.timeMs / 1000), value: line.newerPrice },
+              ] as never);
+              row.rsiSegment.setData([
+                { time: Math.floor(older.timeMs / 1000), value: line.olderRsi },
+                { time: Math.floor(newer.timeMs / 1000), value: line.newerRsi },
+              ] as never);
+            } else {
+              row.priceSegment.setData([]);
+              row.rsiSegment.setData([]);
+            }
+          }
           if (layer.oscillator?.rsi && row.oscillator.rsi) {
             row.oscillator.rsi.setData(
               lineData(candles, layer.oscillator.rsi, end) as never,

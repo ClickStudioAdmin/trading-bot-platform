@@ -2,6 +2,7 @@ import {
   parseAutomationMode,
   type AutomationMode,
 } from "@/lib/engine/decide";
+import { trailingGateError } from "@/lib/strategy/exit-actions";
 import {
   parseFuturesAction,
   parseFuturesLimitPrice,
@@ -51,6 +52,7 @@ import {
   emptyEntryStack,
   entryStackMatchesWebhook,
 } from "@/lib/strategy/expr";
+import type { RetraceSpec } from "@/lib/strategy/retrace";
 import {
   parsePerpsDirection,
   perpsDirectionFromAction,
@@ -82,11 +84,15 @@ export type FuturesAutomationRule = {
   tpsl: FuturesTpsl | null;
   trailing: FuturesTrailing | null;
   indicator: DcaIndicatorStart | null;
+  retrace?: RetraceSpec | null;
   confirm: DcaFilterSpec | null;
   entryStack: EntryStack;
+  addStack?: EntryStack | null;
   exitIf: DcaFilterSpec | null;
   exitHard?: HardExitSignal | null;
   exitStack?: EntryStack | null;
+  /** Set when this side does not fit the classic columns. The worker runs this list and skips those columns. */
+  exitActions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
   breakevenActivationPct: number | null;
   breakevenOffsetPct: number | null;
   direction: PerpsDirection;
@@ -116,11 +122,14 @@ export type FuturesAutomationFormValues = {
   tpsl: FuturesTpsl | null;
   trailing: FuturesTrailing | null;
   indicator: DcaIndicatorStart | null;
+  retrace?: RetraceSpec | null;
   confirm: DcaFilterSpec | null;
   entryStack: EntryStack;
+  addStack?: EntryStack | null;
   exitIf: DcaFilterSpec | null;
   exitHard?: HardExitSignal | null;
   exitStack?: EntryStack | null;
+  exitActions?: import("@/lib/strategy/exit-actions").StoredExitAction[] | null;
   exitDraft?: HardExitDraft | null;
   breakevenActivationPct: string;
   breakevenOffsetPct: string;
@@ -380,13 +389,25 @@ export function parseFuturesAutomationForm(
       return conditions;
     }
     parsed.rule.indicator = conditions.indicator;
+    parsed.rule.retrace = conditions.retrace;
+    parsed.rule.addStack = conditions.addStack;
     parsed.rule.confirm = conditions.confirm;
     parsed.rule.entryStack = conditions.entryStack;
     parsed.rule.exitIf = conditions.exitIf;
     parsed.rule.exitHard = conditions.exitHard;
     parsed.rule.exitStack = conditions.exitStack;
+    parsed.rule.exitActions = conditions.exitActions;
     parsed.rule.breakevenActivationPct = conditions.breakevenActivationPct;
     parsed.rule.breakevenOffsetPct = conditions.breakevenOffsetPct;
+    if (
+      String(form.get(`${prefix}trailingActiveKind`) ?? "") === "percent" &&
+      exits.trailing
+    ) {
+      const gate = trailingGateError(conditions.exitActions, "percent");
+      if (gate) {
+        return { ok: false, error: gate };
+      }
+    }
     const directed = applyPerpsDirection(form, prefix, deskVenue, parsed.rule);
     if (!directed.ok) {
       return directed;
@@ -415,6 +436,8 @@ const EXIT_FORM_KEYS = [
   "trailingStop",
   "trailingActivation",
   "trailingActive",
+  "trailingActiveKind",
+  "trailingTriggerPct",
 ] as const;
 
 export function slicePrefixedForm(form: FormData, prefix: string): FormData {
@@ -521,6 +544,8 @@ export function writePerpsShortEntryFields(
   }
   writeFuturesConditionFormFields(form, prefix, {
     indicator: leg.indicator,
+    retrace: leg.retrace,
+    addStack: leg.addStack,
     confirm: leg.confirm,
     entryStack: leg.entryStack,
     exitIf: leg.exitIf ?? null,
@@ -610,7 +635,9 @@ export function parseFuturesAutomationFields(input: {
   let entrySource = parseAutomationEntry(input.entrySource);
   if (
     actionParsed.action === "flatten" &&
-    (entrySource === "indicator" || entrySource === "trend")
+    (entrySource === "indicator" ||
+      entrySource === "trend" ||
+      entrySource === "retrace")
   ) {
     entrySource = "price";
   }
@@ -771,6 +798,15 @@ function applyPerpsDirection(
     if (!shortExits.ok) {
       return shortExits;
     }
+    if (
+      String(form.get(`${shortPrefix}trailingActiveKind`) ?? "") === "percent" &&
+      shortExits.trailing
+    ) {
+      const gate = trailingGateError(conditions.exitActions, "percent");
+      if (gate) {
+        return { ok: false, error: gate };
+      }
+    }
     rule.shortEntry = {
       entrySource,
       webhookId: entrySource === "webhook" ? webhookId : null,
@@ -779,6 +815,8 @@ function applyPerpsDirection(
       triggerPrice: triggerPrice.price,
       skipIfOpen: true,
       indicator: conditions.indicator,
+      retrace: conditions.retrace,
+      addStack: conditions.addStack,
       confirm: conditions.confirm,
       entryStack: conditions.entryStack,
       ...(shortExit
@@ -788,6 +826,7 @@ function applyPerpsDirection(
             exitStack: conditions.exitStack,
           }
         : {}),
+      ...(conditions.exitActions ? { actions: conditions.exitActions } : {}),
       ...(shortClassicOn
         ? {
             classic: {
@@ -815,7 +854,12 @@ function applyPerpsDirection(
 
 export function parseAutomationEntry(raw: unknown): FuturesAutomationEntry {
   const value = String(raw ?? "").trim().toLowerCase();
-  if (value === "webhook" || value === "indicator" || value === "trend") {
+  if (
+    value === "webhook" ||
+    value === "indicator" ||
+    value === "trend" ||
+    value === "retrace"
+  ) {
     return value;
   }
   return "price";
@@ -992,11 +1036,14 @@ export function futuresRuleToForm(
     tpsl: rule.tpsl,
     trailing: rule.trailing,
     indicator: rule.indicator,
+    retrace: rule.retrace ?? null,
+    addStack: rule.addStack ?? null,
     confirm: rule.confirm,
     entryStack: rule.entryStack ?? emptyEntryStack(),
     exitIf: rule.exitIf,
     exitHard: rule.exitHard ?? null,
     exitStack: rule.exitStack ?? emptyEntryStack(),
+    exitActions: rule.exitActions ?? null,
     exitDraft: hardExitDraftFromStored(rule.exitIf, rule.exitHard),
     breakevenActivationPct:
       rule.breakevenActivationPct == null
@@ -1082,11 +1129,16 @@ function attachRuleConditions(
   if (rule.entrySource === "indicator" || rule.entrySource === "trend") {
     rule.indicator = conditions.indicator;
   }
+  if (rule.entrySource === "retrace") {
+    rule.retrace = conditions.retrace;
+  }
+  rule.addStack = conditions.addStack;
   rule.confirm = conditions.confirm;
   rule.entryStack = conditions.entryStack;
   rule.exitIf = conditions.exitIf;
   rule.exitHard = conditions.exitHard;
   rule.exitStack = conditions.exitStack;
+  rule.exitActions = conditions.exitActions;
   rule.breakevenActivationPct = conditions.breakevenActivationPct;
   rule.breakevenOffsetPct = conditions.breakevenOffsetPct;
 }

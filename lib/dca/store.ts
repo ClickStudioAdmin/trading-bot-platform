@@ -1,4 +1,12 @@
-import { entryStackToJson } from "@/lib/strategy/expr";
+import { exitActionsToJson } from "@/lib/strategy/exit-actions";
+import {
+  emptyEntryStack,
+  entryExprToJson,
+  entryStackToJson,
+  type EntryStack,
+} from "@/lib/strategy/expr";
+import type { RetraceSpec } from "@/lib/strategy/retrace";
+import type { RsiDivergenceSettings } from "@/lib/strategy/rsi-divergence";
 import { filterColumns } from "./filters";
 import { hardExitSignalToJson } from "./hard-exit";
 import {
@@ -16,6 +24,26 @@ import { deniedQuotaMessage } from "@/lib/membership/load-quota-access";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FuturesSide } from "@/lib/futures/model";
+
+function entryExprColumn(
+  stack: EntryStack | null | undefined,
+  meta: {
+    retrace?: RetraceSpec | null;
+    divergence?: RsiDivergenceSettings | null;
+    add?: EntryStack | null;
+  },
+): ReturnType<typeof entryExprToJson> | null {
+  const body = stack ?? emptyEntryStack();
+  const hasMeta = Boolean(
+    meta.retrace ||
+      meta.divergence ||
+      (meta.add && meta.add.leaves.length > 0),
+  );
+  if (body.leaves.length === 0 && !hasMeta) {
+    return null;
+  }
+  return entryExprToJson(body, meta);
+}
 
 function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
   return {
@@ -87,15 +115,18 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
     short_indicator_multiplier: config.shortIndicatorMultiplier ?? null,
     ...filterColumns("confirm", config.confirm),
     ...filterColumns("short_confirm", config.shortConfirm),
-    entry_expr:
-      config.entryStack && config.entryStack.leaves.length > 0
-        ? entryStackToJson(config.entryStack)
-        : null,
+    entry_expr: entryExprColumn(config.entryStack, {
+      retrace: config.retrace,
+      divergence: config.leadDivergence,
+      add: config.addStack,
+    }),
     short_entry_expr:
-      config.direction === "both" &&
-      config.shortEntryStack &&
-      config.shortEntryStack.leaves.length > 0
-        ? entryStackToJson(config.shortEntryStack)
+      config.direction === "both"
+        ? entryExprColumn(config.shortEntryStack, {
+            retrace: config.shortRetrace,
+            divergence: config.shortLeadDivergence,
+            add: config.shortAddStack,
+          })
         : null,
     ...filterColumns("exit_if", config.exitHard ? null : config.exitIf),
     ...filterColumns(
@@ -113,6 +144,11 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
       config.shortExitStack &&
       config.shortExitStack.leaves.length > 0
         ? entryStackToJson(config.shortExitStack)
+        : null,
+    exit_actions: exitActionsToJson(config.exitActions),
+    short_exit_actions:
+      config.direction === "both"
+        ? exitActionsToJson(config.shortExitActions)
         : null,
   };
 }

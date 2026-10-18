@@ -7,6 +7,9 @@ import { formatDcaIndicatorStartLabel } from "@/lib/dca/indicators";
 import type { DcaIndicatorStart, DcaPriceTrigger, DcaStartKind } from "@/lib/dca/playbook";
 import type { FuturesAutomationEntry, FuturesTriggerCompare } from "@/lib/futures/automation";
 import type { EntryStack, StrategyLeaf } from "@/lib/strategy/expr";
+import { formatProtectionLabel } from "@/lib/strategy/protection";
+import { formatRetraceLabel } from "@/lib/strategy/retrace";
+import { formatRsiDivergenceLabel } from "@/lib/strategy/rsi-divergence";
 import {
   confirmFromEntryStack,
   entryStackIsLegacy,
@@ -77,6 +80,18 @@ export function formatStrategyLeafReason(
   }
   if (leaf.kind === "webhook") {
     return "Signal webhook";
+  }
+  if (leaf.kind === "retrace") {
+    return formatRetraceLabel(leaf);
+  }
+  if (leaf.kind === "protection") {
+    return formatProtectionLabel(leaf);
+  }
+  if (leaf.start.kind === "rsi_divergence" && leaf.start.divergence) {
+    return formatRsiDivergenceLabel({
+      settings: leaf.start.divergence,
+      period: leaf.start.period,
+    });
   }
   return formatIndicatorStartReason(leaf.start, side);
 }

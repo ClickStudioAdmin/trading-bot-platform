@@ -28,7 +28,7 @@ const DECISION_KIND_LABELS: Record<string, string> = {
   close: "Close",
   end_cycle: "Cycle end",
   stop_adding: "Order cap",
-  breakeven: "Move stop to breakeven",
+  breakeven: "Breakeven Stop",
 };
 
 export function dcaSyncReasonLabel(reason: string): string | null {

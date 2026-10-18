@@ -25,9 +25,40 @@ if (parsed.ok && parsed.trailing) {
   assert.equal(parsed.trailing.distance, 250);
   assert.equal(parsed.trailing.activePrice, null);
 }
-const requiredActivation = parseFuturesTrailingForm(on, undefined, {
+const percentActivation = new FormData();
+percentActivation.set("trailing", "on");
+percentActivation.set("trailingStop", "250");
+percentActivation.set("trailingActiveKind", "percent");
+percentActivation.set("trailingTriggerPct", "2.5");
+const percentParsed = parseFuturesTrailingForm(percentActivation, undefined, {
   requireActivation: true,
 });
+assert.equal(percentParsed.ok, true);
+if (percentParsed.ok && percentParsed.trailing) {
+  assert.equal(percentParsed.trailing.distance, 250);
+  assert.equal(percentParsed.trailing.activePrice, null);
+}
+const percentBlank = new FormData();
+percentBlank.set("trailing", "on");
+percentBlank.set("trailingStop", "250");
+percentBlank.set("trailingActiveKind", "percent");
+const percentMissing = parseFuturesTrailingForm(percentBlank, undefined, {
+  requireActivation: true,
+});
+assert.equal(percentMissing.ok, false);
+if (!percentMissing.ok) {
+  assert.equal(percentMissing.error, "Enter an activation percent.");
+}
+const requiredActivation = parseFuturesTrailingForm(
+  (() => {
+    const form = new FormData();
+    form.set("trailing", "on");
+    form.set("trailingStop", "250");
+    return form;
+  })(),
+  undefined,
+  { requireActivation: true },
+);
 assert.equal(requiredActivation.ok, false);
 if (!requiredActivation.ok) {
   assert.equal(requiredActivation.error, "Enter an activation price.");

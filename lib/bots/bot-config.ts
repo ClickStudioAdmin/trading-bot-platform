@@ -280,27 +280,23 @@ function dcaExitLines(classic: DcaClassicExit): BotConfigLine[] {
       trailOn
         ? joinParts([
             pct(classic.trailingTriggerPct)
-              ? `Trigger ${pct(classic.trailingTriggerPct)}`
+              ? `Activation % ${pct(classic.trailingTriggerPct)}`
               : null,
-            pct(classic.trailingPct) ? `Trail ${pct(classic.trailingPct)}` : null,
+            pct(classic.trailingPct) ? `Trailing % ${pct(classic.trailingPct)}` : null,
           ])
         : null,
     ),
     setting(
       "Stop loss",
-      classic.stopLossPct == null && classic.breakevenActivationPct == null
+      classic.stopLossPct == null
         ? null
-        : joinParts([
-            classic.stopLossPct == null
-              ? null
-              : joinParts([
-                  pct(classic.stopLossPct),
-                  basisLabel(classic.stopLossBasis),
-                ]),
-            classic.breakevenActivationPct == null
-              ? null
-              : `Move breakeven at ${pct(classic.breakevenActivationPct)} · offset ${pct(classic.breakevenOffsetPct) ?? "0%"}`,
-          ]),
+        : joinParts([pct(classic.stopLossPct), basisLabel(classic.stopLossBasis)]),
+    ),
+    setting(
+      "Breakeven Stop",
+      classic.breakevenActivationPct == null
+        ? null
+        : `Activation % ${pct(classic.breakevenActivationPct)} · Buffer ${pct(classic.breakevenOffsetPct) ?? "0%"}`,
     ),
   ];
   return lines;
@@ -373,6 +369,7 @@ function perpsEntryLabel(source: FuturesAutomationFormValues["entrySource"]): st
   if (source === "indicator") return "Indicator";
   if (source === "trend") return "Trend";
   if (source === "webhook") return "Signal webhook";
+  if (source === "retrace") return "Retrace";
   return "Price cross";
 }
 
@@ -498,7 +495,7 @@ function perpsClassicLines(input: {
       "Trailing stop",
       input.trailing
         ? joinParts([
-            `Retracement ${amount(input.trailing.distance)}`,
+            `Trailing % ${amount(input.trailing.distance)}`,
             input.trailing.activePrice != null
               ? `Activation ${amount(input.trailing.activePrice)}`
               : null,
@@ -507,29 +504,26 @@ function perpsClassicLines(input: {
     ),
     setting(
       "Stop loss",
-      perpsLevel(input.tpsl?.stopLoss, input.tpsl?.slKind) || activation
+      perpsLevel(input.tpsl?.stopLoss, input.tpsl?.slKind)
         ? joinParts([
-            perpsLevel(input.tpsl?.stopLoss, input.tpsl?.slKind)
-              ? joinParts([
-                  perpsLevel(input.tpsl?.stopLoss, input.tpsl?.slKind),
-                  input.tpsl?.slTrigger === "mark"
-                    ? "Mark"
-                    : input.tpsl?.slTrigger === "index"
-                      ? "Index"
-                      : "Last",
-                  orderLabel(input.tpsl?.slOrderType),
-                  input.tpsl?.slOrderType === "limit"
-                    ? amount(input.tpsl.slLimitPrice)
-                    : null,
-                  input.tpsl?.mode === "partial" && input.tpsl.slQty
-                    ? `Partial ${amount(input.tpsl.slQty)}`
-                    : null,
-                ])
-              : null,
-            activation
-              ? `Move breakeven at ${activation}% · offset ${input.breakevenOffsetPct.trim() || "0"}%`
+            perpsLevel(input.tpsl?.stopLoss, input.tpsl?.slKind),
+            input.tpsl?.slTrigger === "mark"
+              ? "Mark"
+              : input.tpsl?.slTrigger === "index"
+                ? "Index"
+                : "Last",
+            orderLabel(input.tpsl?.slOrderType),
+            input.tpsl?.slOrderType === "limit" ? amount(input.tpsl.slLimitPrice) : null,
+            input.tpsl?.mode === "partial" && input.tpsl.slQty
+              ? `Partial ${amount(input.tpsl.slQty)}`
               : null,
           ])
+        : null,
+    ),
+    setting(
+      "Breakeven Stop",
+      activation
+        ? `Activation % ${activation}% · Buffer ${input.breakevenOffsetPct.trim() || "0"}%`
         : null,
     ),
   ];
