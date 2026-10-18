@@ -5,12 +5,18 @@ import {
   dcaLegStatusesOn,
   deskDetailLines,
   deskExchangeView,
+  createDeskListFilterStore,
+  deskListChoiceValues,
   deskListFilterChoices,
   deskListFiltersActive,
+  deskListFiltersServerSnapshot,
   deskListStatus,
+  DESK_LIST_FILTERS_STORAGE_KEY,
   EMPTY_DESK_LIST_FILTERS,
   filterDeskList,
   formatDeskListStatus,
+  parseDeskListFilters,
+  serializeDeskListFilters,
   type DeskListRow,
 } from "@/lib/accounts/desk-list";
 import type { TradingAccount } from "@/lib/accounts/model";
@@ -241,6 +247,108 @@ assert.deepEqual(
   }).map((item) => item.account.id),
   ["paper"],
 );
+const keptFilters = {
+  name: "cloud",
+  type: "dca" as const,
+  mode: "paper" as const,
+  exchange: "Bybit",
+  environment: "Paper",
+  status: "active" as const,
+};
+assert.equal(
+  DESK_LIST_FILTERS_STORAGE_KEY,
+  "tbp.ui.desk-list-filters",
+);
+assert.deepEqual(
+  parseDeskListFilters(serializeDeskListFilters(keptFilters)),
+  keptFilters,
+);
+assert.deepEqual(
+  parseDeskListFilters(serializeDeskListFilters(EMPTY_DESK_LIST_FILTERS)),
+  EMPTY_DESK_LIST_FILTERS,
+);
+assert.equal(parseDeskListFilters(null), null);
+assert.equal(parseDeskListFilters(""), null);
+assert.equal(parseDeskListFilters("{"), null);
+assert.equal(parseDeskListFilters("[]"), null);
+assert.equal(
+  parseDeskListFilters(JSON.stringify({ ...keptFilters, type: "spot" })),
+  null,
+);
+assert.equal(
+  parseDeskListFilters(JSON.stringify({ ...keptFilters, mode: "demo" })),
+  null,
+);
+assert.equal(
+  parseDeskListFilters(JSON.stringify({ ...keptFilters, status: "closed" })),
+  null,
+);
+assert.equal(
+  parseDeskListFilters(JSON.stringify({ ...keptFilters, exchange: " " })),
+  null,
+);
+function memoryStorage(seed?: string) {
+  const values = new Map<string, string>();
+  if (seed != null) {
+    values.set(DESK_LIST_FILTERS_STORAGE_KEY, seed);
+  }
+  return {
+    getItem(key: string) {
+      return values.get(key) ?? null;
+    },
+    setItem(key: string, value: string) {
+      values.set(key, value);
+    },
+  };
+}
+
+const beforeCreate = createDeskListFilterStore(memoryStorage());
+assert.equal(beforeCreate.getSnapshot(), deskListFiltersServerSnapshot());
+const firstRead = beforeCreate.getSnapshot();
+assert.equal(beforeCreate.getSnapshot(), firstRead);
+let notices = 0;
+const stop = beforeCreate.subscribe(() => {
+  notices += 1;
+});
+beforeCreate.write(keptFilters);
+assert.equal(notices, 1);
+assert.equal(beforeCreate.getSnapshot(), keptFilters);
+stop();
+beforeCreate.write({ ...keptFilters, name: "later" });
+assert.equal(notices, 1);
+const afterCreate = createDeskListFilterStore(
+  memoryStorage(serializeDeskListFilters(keptFilters)),
+);
+assert.deepEqual(afterCreate.getSnapshot(), keptFilters);
+assert.deepEqual(
+  filterDeskList(rows, afterCreate.getSnapshot()).map((item) => item.account.id),
+  filterDeskList(rows, keptFilters).map((item) => item.account.id),
+);
+const blocked = createDeskListFilterStore({
+  getItem() {
+    throw new Error("blocked");
+  },
+  setItem() {
+    throw new Error("quota");
+  },
+});
+blocked.write({ ...EMPTY_DESK_LIST_FILTERS, mode: "paper" });
+assert.equal(blocked.getSnapshot().mode, "paper");
+const stale = memoryStorage(serializeDeskListFilters(EMPTY_DESK_LIST_FILTERS));
+const quota = createDeskListFilterStore({
+  getItem: (key) => stale.getItem(key),
+  setItem() {
+    throw new Error("quota");
+  },
+});
+quota.write(keptFilters);
+assert.deepEqual(quota.getSnapshot(), keptFilters);
+assert.deepEqual(deskListChoiceValues(["Bybit"], "all"), ["Bybit"]);
+assert.deepEqual(deskListChoiceValues(["Bybit"], "Bybit"), ["Bybit"]);
+assert.deepEqual(deskListChoiceValues(["Bybit"], "Hyperliquid"), [
+  "Bybit",
+  "Hyperliquid",
+]);
 assert.equal(deskListFiltersActive(EMPTY_DESK_LIST_FILTERS), false);
 assert.equal(
   deskListFiltersActive({ ...EMPTY_DESK_LIST_FILTERS, name: " " }),

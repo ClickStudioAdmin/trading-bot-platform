@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AccountDeleteControl } from "@/components/account-delete-control";
 import { AccountDisableControl } from "@/components/account-disable-control";
@@ -34,11 +34,15 @@ import {
   buildDeskListRow,
   compareDeskList,
   DESK_LIST_TYPES,
+  createDeskListFilterStore,
+  deskListChoiceValues,
   deskListFilterChoices,
   deskListFiltersActive,
+  deskListFiltersServerSnapshot,
   EMPTY_DESK_LIST_FILTERS,
   filterDeskList,
   formatDeskListStatus,
+  type DeskListFilterStore,
   type DeskListFilters,
   type DeskListRow,
 } from "@/lib/accounts/desk-list";
@@ -60,6 +64,35 @@ const DESK_HEAD = "px-2.5!";
 const DESK_NAME_CELL = "py-3 pr-2.5 pl-5 align-top";
 const DESK_NAME_HEAD = "pr-2.5! pl-5!";
 
+let clientFilters: DeskListFilterStore | null = null;
+
+function clientDeskListFilters(): DeskListFilterStore {
+  if (!clientFilters) {
+    clientFilters = createDeskListFilterStore(window.sessionStorage);
+  }
+  return clientFilters;
+}
+
+function subscribeDeskListFilters(onStoreChange: () => void) {
+  return clientDeskListFilters().subscribe(onStoreChange);
+}
+
+function readDeskListFilters(): DeskListFilters {
+  return clientDeskListFilters().getSnapshot();
+}
+
+function writeDeskListFilters(next: DeskListFilters) {
+  clientDeskListFilters().write(next);
+}
+
+function useDeskListFilters(): DeskListFilters {
+  return useSyncExternalStore(
+    subscribeDeskListFilters,
+    readDeskListFilters,
+    deskListFiltersServerSnapshot,
+  );
+}
+
 export function DeskTable({
   accounts,
   usage,
@@ -71,7 +104,7 @@ export function DeskTable({
   connections: readonly ExchangeConnection[];
   currentId: string;
 }) {
-  const [filters, setFilters] = useState(EMPTY_DESK_LIST_FILTERS);
+  const filters = useDeskListFilters();
   const rows = useMemo(
     () =>
       accounts.map((account) =>
@@ -84,6 +117,14 @@ export function DeskTable({
     [filters, rows],
   );
   const choices = useMemo(() => deskListFilterChoices(rows), [rows]);
+  const typeOptions = DESK_LIST_TYPES.filter(
+    (type) => choices.types.includes(type) || filters.type === type,
+  );
+  const exchangeOptions = deskListChoiceValues(choices.exchanges, filters.exchange);
+  const environmentOptions = deskListChoiceValues(
+    choices.environments,
+    filters.environment,
+  );
   const table = useClientTable(filtered, compareDeskList, { defaultKey: "name" });
   const filtering = deskListFiltersActive(filters);
 
@@ -91,12 +132,12 @@ export function DeskTable({
     key: K,
     value: DeskListFilters[K],
   ) {
-    setFilters((current) => ({ ...current, [key]: value }));
+    writeDeskListFilters({ ...filters, [key]: value });
     table.setPage(1);
   }
 
   function clearFilters() {
-    setFilters(EMPTY_DESK_LIST_FILTERS);
+    writeDeskListFilters(EMPTY_DESK_LIST_FILTERS);
     table.setPage(1);
   }
 
@@ -126,7 +167,7 @@ export function DeskTable({
               className={TABLE_FILTER_FIELD_CLASS}
             >
               <option value="all">All</option>
-              {choices.types.map((type) => (
+              {typeOptions.map((type) => (
                 <option key={type} value={type}>
                   {formatDeskType(type)}
                 </option>
@@ -153,7 +194,7 @@ export function DeskTable({
               className={TABLE_FILTER_FIELD_CLASS}
             >
               <option value="all">All</option>
-              {choices.exchanges.map((exchange) => (
+              {exchangeOptions.map((exchange) => (
                 <option key={exchange} value={exchange}>
                   {exchange}
                 </option>
@@ -167,7 +208,7 @@ export function DeskTable({
               className={TABLE_FILTER_FIELD_CLASS}
             >
               <option value="all">All</option>
-              {choices.environments.map((environment) => (
+              {environmentOptions.map((environment) => (
                 <option key={environment} value={environment}>
                   {environment}
                 </option>
