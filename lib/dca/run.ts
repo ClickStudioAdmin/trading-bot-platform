@@ -44,6 +44,7 @@ import type { FuturesPosition, FuturesSide } from "@/lib/futures/model";
 import type { FuturesWorkingOrder } from "@/lib/futures/working";
 import type { FuturesTrailing } from "@/lib/futures/trailing";
 import {
+  breakevenStopTpsl,
   emptyFuturesTpsl,
   resolveFuturesTpslPrices,
   tickerTriggerPrices,
@@ -1806,6 +1807,7 @@ async function moveStopToBreakeven(input: {
   side: FuturesSide;
   reason?: string;
   offsetPct?: number | null;
+  qty?: number | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
     accountId: input.playbook.accountId,
@@ -1828,6 +1830,9 @@ async function moveStopToBreakeven(input: {
         0,
     }),
   });
+  if (stop == null || !(stop > 0)) {
+    return { ok: true };
+  }
   const result = await runFuturesCommand({
     actor: playbookActor(input.playbook, input.mode),
     command: {
@@ -1836,12 +1841,12 @@ async function moveStopToBreakeven(input: {
       symbol: input.playbook.symbol,
       form: new FormData(),
       reason: input.reason,
-      tpsl: {
-        ...current,
-        stopLoss: stop,
-        slOrderType: "market",
-        slLimitPrice: null,
-      },
+      tpsl: breakevenStopTpsl({
+        current,
+        stop,
+        positionQty: open.qty,
+        appliesQty: input.qty,
+      }),
     },
   });
   if (!result.ok) {

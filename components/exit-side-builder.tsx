@@ -269,7 +269,7 @@ export function ExitSideBuilder({
         return normalizeExitClause({
           ...current,
           kind: value,
-          scope: value === "breakeven" ? { kind: "all" } : current.scope,
+          scope: current.scope,
           anchor: rule ? { trigger: rule } : current.anchor,
           rows: keepAnchor
             ? [{ key: rowKey(), join: "and", draft: current.anchor }, ...keptRows]
@@ -489,7 +489,7 @@ export function ExitSideBuilder({
                   ) : null}
                 </div>
               ) : null}
-              {clause.kind !== "" && clause.kind !== "breakeven" ? (
+              {clause.kind !== "" ? (
                 <div className={`${exitCardGrid} border-t border-line pt-4`}>
                   <label className={labelClass}>
                     <HintLabel text="Applies To" />

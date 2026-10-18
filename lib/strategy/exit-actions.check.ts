@@ -711,6 +711,7 @@ const moved = breakevenAt(102);
 assert.equal(moved.claims.length, 0);
 assert.equal(moved.breakeven?.activationPct, 1);
 assert.equal(moved.breakeven?.offsetPct, 0.2);
+assert.equal(moved.breakeven?.qty, null);
 assert.equal(moved.book.actions[0]?.status, "moving");
 assert.equal(moved.book.trailingOrBreakeven.provenQty, 0);
 assert.equal(moved.runtime.book?.atMs, 1);
@@ -720,6 +721,40 @@ const latched = breakevenAt(102, true);
 assert.equal(latched.breakeven, null);
 assert.equal(latched.book.actions[0]?.status, "done");
 assert.equal(latched.book.trailingOrBreakeven.provenPct, 100);
+const halfBreakeven = breakevenExitClause();
+halfBreakeven.scope = { kind: "percent", pct: 50 };
+assert.equal(exitSideUsesColumns([halfBreakeven]), false);
+assert.equal(exitActionsForSave([halfBreakeven], breakevenPrices)?.[0]?.scope.kind, "percent");
+const blankPercent = breakevenExitClause();
+blankPercent.scope = { kind: "percent", pct: null };
+assert.match(exitCardsBlockReason([blankPercent]) ?? "", /percent/i);
+const halfMoved = evaluateExitActions({
+  actions: [{ ...profitOnly, id: "be-half", scope: { kind: "percent", pct: 50 } }],
+  runtime: emptyExitRuntime(),
+  lots: [{ id: "position", qty: 4, price: 100 }],
+  side: "long",
+  mark: 102,
+  last: 102,
+  entryPrice: 100,
+  nowMs: 2,
+  barsByTimeframe: new Map(),
+});
+assert.equal(halfMoved.breakeven?.qty, 2);
+assert.equal(halfMoved.book.trailingOrBreakeven.provenQty, 0);
+const halfLatched = evaluateExitActions({
+  actions: [{ ...profitOnly, id: "be-half", scope: { kind: "percent", pct: 50 } }],
+  runtime: emptyExitRuntime(),
+  lots: [{ id: "position", qty: 4, price: 100 }],
+  side: "long",
+  mark: 102,
+  last: 102,
+  entryPrice: 100,
+  nowMs: 3,
+  barsByTimeframe: new Map(),
+  breakevenDone: true,
+});
+assert.equal(halfLatched.book.actions[0]?.status, "done");
+assert.equal(halfLatched.book.trailingOrBreakeven.provenQty, 2);
 
 const halfStops = describeExitBook({
   source: "actions",
@@ -829,7 +864,7 @@ const classicMove = exitBookForClassic({
   nowMs: 10,
   breakevenActivationPct: 1,
   breakevenOffsetPct: 0,
-  breakeven: { activationPct: 1, offsetPct: 0 },
+  breakeven: { activationPct: 1, offsetPct: 0, qty: null },
 });
 assert.equal(classicMove.actions[0]?.status, "moving");
 assert.equal(classicMove.trailingOrBreakeven.provenQty, 0);

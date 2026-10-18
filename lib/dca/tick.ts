@@ -345,6 +345,7 @@ export async function runDcaPlaybookTick(input?: {
     exitClaims?: ExitClaim[] | null;
     exitRuntime?: ExitRuntime | null;
     breakevenOffsetPct?: number | null;
+    breakevenQty?: number | null;
   };
   const work: TickWork[] = [];
   const flagWrites: {
@@ -608,6 +609,7 @@ export async function runDcaPlaybookTick(input?: {
       positionId: item.positionId,
       fast: item.kind === "close" && Boolean(item.positionId),
       breakevenOffsetPct: item.breakevenOffsetPct,
+      breakevenQty: item.breakevenQty,
     });
     if (result.acted) {
       acted += 1;
@@ -1156,6 +1158,7 @@ export async function runDcaPlaybookTick(input?: {
             }),
             cache: syncCache,
             breakevenOffsetPct: settled.breakeven.offsetPct,
+            breakevenQty: settled.breakeven.qty,
           });
         }
         if (settled && settled.claims.length === 0) {
@@ -1220,6 +1223,7 @@ export async function runDcaPlaybookTick(input?: {
               ? {
                   activationPct: classic.breakevenActivationPct,
                   offsetPct: classic.breakevenOffsetPct ?? 0,
+                  qty: null,
                 }
               : null,
         });
@@ -1511,6 +1515,7 @@ async function applyTickAction(input: {
   positionId?: string | null;
   fast?: boolean;
   breakevenOffsetPct?: number | null;
+  breakevenQty?: number | null;
 }): Promise<{ acted: boolean }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -1597,6 +1602,7 @@ async function applyTickAction(input: {
       side: input.side,
       reason: input.why,
       offsetPct: input.breakevenOffsetPct,
+      qty: input.breakevenQty,
     });
     return { acted: moved.ok };
   }

@@ -660,6 +660,7 @@ function breakevenGroup(
     rows: [
       { label: "Move stop to breakeven at %", value: pct(activation) },
       { label: "Breakeven offset %", value: pct(offset ?? 0) },
+      { label: "Applies To", value: "Entire Position" },
     ],
   };
 }
@@ -855,9 +856,7 @@ function exitActionStacks(
     );
     const rows: ParamRow[] = [
       { label: "Action", value: actionKindLabel(action.kind) },
-      ...(action.kind === "breakeven"
-        ? []
-        : [{ label: "Applies To", value: scopeLabel(action.scope) }]),
+      { label: "Applies To", value: scopeLabel(action.scope) },
       ...(hasPriceRule ? [] : actionPriceRows(action)),
     ];
     if (action.groups.length === 0) {

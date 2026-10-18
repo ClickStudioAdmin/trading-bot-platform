@@ -108,7 +108,7 @@ assert.deepEqual(
   nestedStop?.groups
     .find((group) => group.title === "Breakeven")
     ?.rows.map((row) => row.label),
-  ["Move stop to breakeven at %", "Breakeven offset %"],
+  ["Move stop to breakeven at %", "Breakeven offset %", "Applies To"],
 );
 assert.equal(
   nestedStop?.groups.some((group) => group.title === "Move Breakeven"),
@@ -128,7 +128,7 @@ assert.deepEqual(
   breakevenOnly?.groups
     .find((group) => group.title === "Breakeven")
     ?.rows.map((row) => row.label),
-  ["Move stop to breakeven at %", "Breakeven offset %"],
+  ["Move stop to breakeven at %", "Breakeven offset %", "Applies To"],
 );
 assert.equal(
   recipeParamRows(dca).find((row) => row.label === "Custom conditions")?.value,

@@ -280,21 +280,17 @@ export function pinExitPriceRule(clause: ExitBuilderClause): ExitBuilderClause {
 /** Pin the price rule and drop an Or group that has no condition. */
 export function normalizeExitClause(clause: ExitBuilderClause): ExitBuilderClause {
   const pinned = pinExitPriceRule(clause);
-  const scoped =
-    pinned.kind === "breakeven" && clauseScope(pinned).kind !== "all"
-      ? { ...pinned, scope: EXIT_SCOPE_ALL }
-      : pinned;
-  const groups = clauseOrGroups(scoped);
+  const groups = clauseOrGroups(pinned);
   const kept = groups.filter(
     (group) => group.anchor.trigger !== "unset" || group.rows.length > 0,
   );
-  if (scoped === clause && kept.length === groups.length) {
+  if (pinned === clause && kept.length === groups.length) {
     return clause;
   }
   if (kept.length === groups.length) {
-    return scoped;
+    return pinned;
   }
-  return { ...scoped, orGroups: kept };
+  return { ...pinned, orGroups: kept };
 }
 
 /** Column price fields belong to the first card of that kind. */

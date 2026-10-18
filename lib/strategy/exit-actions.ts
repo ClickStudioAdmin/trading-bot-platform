@@ -283,6 +283,8 @@ export type ExitBookSnapshot = {
 export type ExitBreakevenMove = {
   activationPct: number;
   offsetPct: number;
+  /** Applies To size. Null covers the whole open position. */
+  qty: number | null;
 };
 
 export type ExitClaim = {
@@ -531,7 +533,11 @@ export function exitSideUsesColumns(clauses: readonly ExitBuilderClause[]): bool
   let closes = 0;
   for (const clause of started) {
     if (clause.kind === "breakeven") {
-      if (seen.has("breakeven") || stackStarted(clause)) {
+      if (
+        seen.has("breakeven") ||
+        stackStarted(clause) ||
+        clauseScope(clause).kind !== "all"
+      ) {
         return false;
       }
       seen.add("breakeven");
@@ -626,9 +632,6 @@ function forEachBlock(
       );
     if (loose) {
       return `${label} has a condition with no type.`;
-    }
-    if (clause.kind === "breakeven") {
-      continue;
     }
     if (!scopeComplete(clauseScope(clause))) {
       if (clauseScope(clause).kind === "percent") {
@@ -851,10 +854,7 @@ export function exitActionsForSave(
     }
     const seenCount = (seen.get(clause.kind) ?? 0) + 1;
     seen.set(clause.kind, seenCount);
-    const scope =
-      clause.kind === "breakeven"
-        ? ({ kind: "all" } as const)
-        : scopeComplete(clauseScope(clause));
+    const scope = scopeComplete(clauseScope(clause));
     if (!scope) {
       continue;
     }
@@ -1530,10 +1530,18 @@ export function planExitClaims(input: {
         action.breakevenActivationPct != null &&
         action.breakevenActivationPct > 0
       ) {
-        breakeven = {
-          activationPct: action.breakevenActivationPct,
-          offsetPct: action.breakevenOffsetPct ?? 0,
-        };
+        const remaining = book.filter((lot) => lot.qty > QTY_EPS);
+        const eligible = eligibleLots(action, remaining, input.side, input.mark);
+        const basis =
+          action.scope.kind === "fills" ? lotQty(eligible) : lotQty(remaining);
+        const wanted = floorToStep(scopeQty(action, eligible, basis), stepQty);
+        if (action.scope.kind === "all" || wanted > QTY_EPS) {
+          breakeven = {
+            activationPct: action.breakevenActivationPct,
+            offsetPct: action.breakevenOffsetPct ?? 0,
+            qty: action.scope.kind === "all" ? null : wanted,
+          };
+        }
       }
       continue;
     }
@@ -1717,7 +1725,7 @@ export function describeExitBook(input: {
     let protectingQty = 0;
     if (action.kind === "breakeven" && input.breakevenDone) {
       status = "done";
-      protectingQty = openQty;
+      protectingQty = appliesQty;
     } else if (
       action.kind === "breakeven" &&
       input.breakeven != null &&

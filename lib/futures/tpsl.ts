@@ -822,6 +822,32 @@ export function applyTrailingToVenueStop(
   return stop;
 }
 
+/** Price the breakeven move writes. A sized Applies To amount becomes a partial stop. */
+export function breakevenStopTpsl(input: {
+  current: FuturesTpsl;
+  stop: number;
+  positionQty: number;
+  appliesQty?: number | null;
+}): FuturesTpsl {
+  const next: FuturesTpsl = {
+    ...input.current,
+    stopLoss: input.stop,
+    slOrderType: "market",
+    slLimitPrice: null,
+  };
+  const qty = input.appliesQty;
+  if (qty == null || !(qty > 0) || qty + QTY_EPS >= input.positionQty) {
+    return next;
+  }
+  return {
+    ...next,
+    mode: "partial",
+    slQty: qty,
+    tpQty:
+      next.takeProfit != null && next.tpQty == null ? input.positionQty : next.tpQty,
+  };
+}
+
 export function emptyFuturesTpsl(): FuturesTpsl {
   return {
     takeProfit: null,

@@ -98,6 +98,7 @@ type SimLeg = DcaLegState & {
   entry: number;
   trailing: FuturesTrailing | null;
   slPrice: number | null;
+  slQty: number | null;
   armTrue: boolean;
   disarmTrue: boolean;
   indicatorTrue: boolean;
@@ -112,6 +113,7 @@ function emptyLeg(): SimLeg {
     entry: 0,
     trailing: null,
     slPrice: null,
+    slQty: null,
     armTrue: false,
     disarmTrue: false,
     indicatorTrue: false,
@@ -320,6 +322,44 @@ export async function replayDcaPlaybook(input: {
     legs[side] = rearm ? emptyLeg() : { ...emptyLeg(), status: "idle" };
     exitLots[side] = [];
     exitArms[side] = emptyExitRuntime();
+  }
+
+  function reduceLeg(
+    side: FuturesSide,
+    atMs: number,
+    fill: number,
+    qty: number,
+    reason: BacktestFillReason,
+  ) {
+    const leg = legs[side];
+    const take = Math.min(leg.qty, qty);
+    if (!(take > 0) || take + 1e-8 >= leg.qty) {
+      flatten(side, atMs, fill, true, reason);
+      return;
+    }
+    const fee = feeUsdt(take, fill, input.feeRate);
+    const pnl = unrealized(side, take, leg.entry, fill) - fee;
+    realized += pnl;
+    trades += 1;
+    if (pnl > 0) {
+      wins += 1;
+      grossWin += pnl;
+    } else {
+      grossLoss += Math.abs(pnl);
+    }
+    remember(
+      {
+        atMs,
+        action: "flatten",
+        side,
+        qty: take,
+        price: fill,
+        feeUsdt: fee,
+        realizedUsdt: pnl,
+        reason,
+      },
+    );
+    legs[side] = { ...leg, qty: leg.qty - take, slPrice: null, slQty: null };
   }
 
   function cashUsdt() {
@@ -637,6 +677,13 @@ export async function replayDcaPlaybook(input: {
         if (firstHit) {
           if (firstHit.reason === "liquidation") {
             wipeAccount(bar.timeMs, side, firstHit.price, price);
+          } else if (
+            firstHit.reason === "stop" &&
+            leg.slQty != null &&
+            leg.slQty > 0 &&
+            leg.slQty + 1e-8 < leg.qty
+          ) {
+            reduceLeg(side, bar.timeMs, firstHit.price, leg.slQty, "stop");
           } else {
             flatten(side, bar.timeMs, firstHit.price, true, firstHit.reason);
           }
@@ -967,7 +1014,7 @@ export async function replayDcaPlaybook(input: {
           side === "long"
             ? live.entry * (1 + offset / 100)
             : live.entry * (1 - offset / 100);
-        legs[side] = { ...live, breakevenDone: true, slPrice: sl };
+        legs[side] = { ...live, breakevenDone: true, slPrice: sl, slQty: null };
       }
       const book = actionsFor(side);
       const heldLeg = legs[side];
@@ -1015,7 +1062,13 @@ export async function replayDcaPlaybook(input: {
             side === "long"
               ? heldLeg.entry * (1 + offset / 100)
               : heldLeg.entry * (1 - offset / 100);
-          legs[side] = { ...heldLeg, breakevenDone: true, slPrice: sl };
+          const cover = settled.breakeven.qty;
+          legs[side] = {
+            ...heldLeg,
+            breakevenDone: true,
+            slPrice: sl,
+            slQty: cover != null && cover > 0 && cover + 1e-8 < heldLeg.qty ? cover : null,
+          };
         }
         for (const claim of settled.claims) {
           const current = legs[side];

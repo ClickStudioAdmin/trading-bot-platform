@@ -49,7 +49,7 @@ import {
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
-import { triggerPrice, tickerTriggerPrices, tpslFromRow } from "./tpsl";
+import { breakevenStopTpsl, triggerPrice, tickerTriggerPrices, tpslFromRow } from "./tpsl";
 import {
   deskAllowsPerpsRecipes,
   parseDeskQuery,
@@ -778,8 +778,8 @@ async function commitOwnedExit(input: {
           symbol: input.open.symbol,
           form: new FormData(),
           reason: reasons,
-          tpsl: {
-            ...(current ?? {
+          tpsl: breakevenStopTpsl({
+            current: current ?? {
               takeProfit: input.open.takeProfit,
               stopLoss: stop,
               tpTrigger: input.open.tpTrigger,
@@ -791,11 +791,11 @@ async function commitOwnedExit(input: {
               slOrderType: "market",
               tpLimitPrice: input.open.tpLimitPrice,
               slLimitPrice: null,
-            }),
-            stopLoss: stop,
-            slOrderType: "market",
-            slLimitPrice: null,
-          },
+            },
+            stop,
+            positionQty: input.open.qty,
+            appliesQty: settled.breakeven.qty,
+          }),
         },
       });
       if (moved.ok) {
@@ -961,10 +961,11 @@ async function monitorOwnedFuturesPositions(input: {
         trailingActivation: open.trailingActive,
         breakevenActivationPct,
         breakevenOffsetPct,
-        breakeven: breakevenMoving
+            breakeven: breakevenMoving
           ? {
               activationPct: breakevenActivationPct,
               offsetPct: breakevenOffsetPct ?? 0,
+              qty: null,
             }
           : null,
       });
@@ -1091,8 +1092,8 @@ async function monitorOwnedFuturesPositions(input: {
           symbol: open.symbol,
           form: new FormData(),
           reason: reasons,
-          tpsl: {
-            ...(current ?? {
+          tpsl: breakevenStopTpsl({
+            current: current ?? {
               takeProfit: open.takeProfit,
               stopLoss: stop,
               tpTrigger: open.tpTrigger,
@@ -1104,11 +1105,10 @@ async function monitorOwnedFuturesPositions(input: {
               slOrderType: "market",
               tpLimitPrice: open.tpLimitPrice,
               slLimitPrice: null,
-            }),
-            stopLoss: stop,
-            slOrderType: "market",
-            slLimitPrice: null,
-          },
+            },
+            stop,
+            positionQty: open.qty,
+          }),
         },
       });
       if (!moved.ok) {
