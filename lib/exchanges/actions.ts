@@ -21,8 +21,10 @@ import {
   updateExchangeConnectionLabel,
 } from "@/lib/exchanges/store";
 import {
+  createMemberExchangeConnection,
   readConnectForm,
   rejectTakenVenueAccount,
+  type SavedMemberConnection,
 } from "@/lib/exchanges/member-connection";
 import { verifyExchangeCredentials } from "@/lib/exchanges/verify";
 import {
@@ -196,6 +198,56 @@ export async function saveExchangeConnection(formData: FormData) {
   revalidatePath("/strategies/futures/settings");
   revalidatePath("/strategies/cash-and-carry/settings");
   finish(next, { saved: "1" });
+}
+
+/**
+ * Save a key from New Desk without leaving the page.
+ * No redirect, cookie write, or revalidatePath: those re-render the route
+ * and would drop the desk name and other fields already entered.
+ */
+export async function saveExchangeConnectionInline(
+  formData: FormData,
+): Promise<
+  | { ok: true; connection: SavedMemberConnection }
+  | { ok: false; error: string }
+  | { stepUpError: string }
+> {
+  const member = await getSessionMember();
+  if (!member?.emailVerifiedAt || !member.platformMember) {
+    return { ok: false, error: "Sign in to save a connection." };
+  }
+  const stepUp = await stepUpFromForm(member.id, formData);
+  if (stepUp) {
+    return stepUpRejection(stepUp);
+  }
+  const written = await createMemberExchangeConnection({
+    userId: member.id,
+    formData,
+  });
+  if (!written.ok) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "exchange.verify_failed",
+      message: written.error,
+      userId: member.id,
+      data: { source: "new-desk" },
+    });
+    return written;
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "exchange.saved",
+    message: `Connected ${written.connection.venue} ${written.connection.environment}`,
+    userId: member.id,
+    data: {
+      source: "new-desk",
+      venue: written.connection.venue,
+      environment: written.connection.environment,
+      fingerprint: written.connection.fingerprint,
+    },
+  });
+  return written;
 }
 
 export async function renameExchangeConnection(formData: FormData) {

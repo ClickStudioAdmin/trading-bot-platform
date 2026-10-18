@@ -153,6 +153,15 @@ export function keyFingerprint(
   return value.slice(-4);
 }
 
+/** Saved keys stay first. A key just added on this page is appended once. */
+export function mergeExchangeConnections(
+  saved: readonly ExchangeConnection[],
+  added: readonly ExchangeConnection[],
+): ExchangeConnection[] {
+  const ids = new Set(saved.map((row) => row.id));
+  return [...saved, ...added.filter((row) => row.id && !ids.has(row.id))];
+}
+
 export function formatConnectionSummary(row: ExchangeConnection): string {
   const venue = formatVenueLabel(row.venue);
   const environment = formatEnvironmentLabel(row.venue, row.environment);

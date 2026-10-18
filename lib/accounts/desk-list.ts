@@ -76,6 +76,136 @@ export const EMPTY_DESK_LIST_FILTERS: DeskListFilters = {
   status: "all",
 };
 
+/** Session key for Manage Desks filters. Create Desk leaves the page. */
+export const DESK_LIST_FILTERS_STORAGE_KEY = "tbp.ui.desk-list-filters";
+
+const DESK_LIST_FILTER_TYPES = new Set<string>(["all", ...DESK_LIST_TYPES]);
+
+export function parseDeskListFilters(raw: unknown): DeskListFilters | null {
+  if (typeof raw !== "string" || raw === "") {
+    return null;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return null;
+  }
+  const row = parsed as Record<string, unknown>;
+  if (
+    typeof row.name !== "string" ||
+    typeof row.type !== "string" ||
+    !DESK_LIST_FILTER_TYPES.has(row.type) ||
+    (row.mode !== "all" && row.mode !== "paper" && row.mode !== "live") ||
+    typeof row.exchange !== "string" ||
+    row.exchange.trim() === "" ||
+    typeof row.environment !== "string" ||
+    row.environment.trim() === "" ||
+    (row.status !== "all" &&
+      row.status !== "active" &&
+      row.status !== "inactive")
+  ) {
+    return null;
+  }
+  return {
+    name: row.name,
+    type: row.type as DeskListFilters["type"],
+    mode: row.mode,
+    exchange: row.exchange,
+    environment: row.environment,
+    status: row.status,
+  };
+}
+
+export function serializeDeskListFilters(filters: DeskListFilters): string {
+  return JSON.stringify({
+    name: filters.name,
+    type: filters.type,
+    mode: filters.mode,
+    exchange: filters.exchange,
+    environment: filters.environment,
+    status: filters.status,
+  });
+}
+
+/** Keep a saved choice visible when no current row uses it. */
+export function deskListChoiceValues(
+  options: readonly string[],
+  current: string,
+): string[] {
+  if (current === "all" || options.includes(current)) {
+    return [...options];
+  }
+  return [...options, current];
+}
+
+export type DeskListFilterStorage = {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+};
+
+export type DeskListFilterStore = {
+  subscribe: (onStoreChange: () => void) => () => void;
+  getSnapshot: () => DeskListFilters;
+  write: (next: DeskListFilters) => void;
+};
+
+export function deskListFiltersServerSnapshot(): DeskListFilters {
+  return EMPTY_DESK_LIST_FILTERS;
+}
+
+/** Session store so Manage Desks filters survive leaving to create a desk. */
+export function createDeskListFilterStore(
+  storage: DeskListFilterStorage,
+): DeskListFilterStore {
+  let cachedRaw: string | null | undefined;
+  let cached = EMPTY_DESK_LIST_FILTERS;
+  const listeners = new Set<() => void>();
+
+  function getSnapshot(): DeskListFilters {
+    let raw: string | null = null;
+    try {
+      raw = storage.getItem(DESK_LIST_FILTERS_STORAGE_KEY);
+    } catch {
+      return cached;
+    }
+    if (raw === cachedRaw) {
+      return cached;
+    }
+    cachedRaw = raw;
+    cached = parseDeskListFilters(raw) ?? EMPTY_DESK_LIST_FILTERS;
+    return cached;
+  }
+
+  return {
+    subscribe(onStoreChange) {
+      listeners.add(onStoreChange);
+      return () => listeners.delete(onStoreChange);
+    },
+    getSnapshot,
+    write(next) {
+      const raw = serializeDeskListFilters(next);
+      try {
+        storage.setItem(DESK_LIST_FILTERS_STORAGE_KEY, raw);
+        cachedRaw = raw;
+      } catch {
+        try {
+          cachedRaw = storage.getItem(DESK_LIST_FILTERS_STORAGE_KEY);
+        } catch {
+          cachedRaw = raw;
+        }
+      }
+      cached = next;
+      for (const listener of listeners) {
+        listener();
+      }
+    },
+  };
+}
+
 const DCA_ON_STATUSES = new Set(["armed", "stop_adding"]);
 
 /** Matches `dcaLegIsRunning`: a playbook is on when either leg is armed or stop-adding. */

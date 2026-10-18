@@ -12,6 +12,7 @@ import {
   connectionIdsBoundToOtherDesks,
   exclusiveConnectionBindError,
   connectionListedForBind,
+  mergeExchangeConnections,
   sharedKeyWarningKind,
   parseConnectionLabel,
   parseExchangeConnectionRow,
@@ -340,6 +341,25 @@ assert.match(
     "insert",
   ) ?? "",
   /already saved/,
+);
+
+const fresh = {
+  ...row!,
+  id: "conn-new",
+  label: "Fresh",
+  fingerprint: "9999",
+};
+assert.deepEqual(
+  mergeExchangeConnections([row!], [fresh]).map((item) => item.id),
+  ["conn-1", "conn-new"],
+);
+assert.equal(
+  formatConnectionSummary(mergeExchangeConnections([row!], [fresh])[1]!),
+  "Bybit Live · Fresh · ••••9999",
+);
+assert.deepEqual(
+  mergeExchangeConnections([row!, fresh], [fresh]).map((item) => item.id),
+  ["conn-1", "conn-new"],
 );
 
 console.log("exchange connection checks passed");

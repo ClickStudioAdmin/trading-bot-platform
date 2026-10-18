@@ -10,7 +10,7 @@ New members start with zero desks. After they confirm email they land on Overvie
 
 Platform templates and folders can be flagged **Include in Starter Pack** on `/admin/templates`. That flag does **not** copy or apply anything yet. Stored JSON is still a `recipe`. See [templates.md](templates.md).
 
-Create desk (`/account/desks/new`, Manage desks) already picks one type, a name, and Paper Trading or Connected Exchange. Connected can bind an existing trade-only key or bind later. Type and mode never change. Paper uses public marks and the in-app ledger. One live desk binds one key. Members cannot share that key across desks. Admins can, for testing, with the shared-balance warning on Desk Settings and New desk. Two keys still cannot be the same venue account.
+Create desk (`/account/desks/new`, Manage desks) already picks one type, a name, and Paper Trading or Connected Exchange. Connected can bind later, add a new exchange key on this page, or bind an existing trade-only key. Adding a key stays on the page and keeps the desk fields already entered. The new key is then selected in the connection list. Type and mode never change. Paper uses public marks and the in-app ledger. One live desk binds one key. Members cannot share that key across desks. Admins can, for testing, with the shared-balance warning on Desk Settings and New desk. Two keys still cannot be the same venue account.
 
 ## Purpose
 
