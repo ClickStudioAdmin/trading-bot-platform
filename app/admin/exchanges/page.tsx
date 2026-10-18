@@ -10,8 +10,15 @@ import {
   TableCard,
   TableIconAction,
 } from "@/components/table-chrome";
-import { formatDeskType, type DeskType } from "@/lib/accounts/model";
-import { availabilityCounts } from "@/lib/exchanges/availability";
+import {
+  formatDeskDisplayMode,
+  formatDeskType,
+  type DeskType,
+} from "@/lib/accounts/model";
+import {
+  EXCHANGE_DESK_MODES,
+  availabilitySetting,
+} from "@/lib/exchanges/availability";
 import { loadExchangeAvailability } from "@/lib/exchanges/availability-store";
 import { VENUES } from "@/lib/exchanges/venues";
 import { firstSearchValue } from "@/lib/paper/open";
@@ -48,22 +55,24 @@ export default async function AdminExchangesPage({
             <tr>
               <th className="px-4 py-3 font-medium">Exchange</th>
               <th className="px-4 py-3 font-medium">Desk type</th>
-              <th className="px-4 py-3 font-medium">Live</th>
-              <th className="px-4 py-3 font-medium">Testing</th>
+              {EXCHANGE_DESK_MODES.map((mode) => (
+                <th key={mode} className="px-4 py-3 font-medium">
+                  {formatDeskDisplayMode(mode)}
+                </th>
+              ))}
               <th className={`${TABLE_ACTIONS_TH_CLASS} text-right`}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {VENUES.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-ink-muted">
+                <td colSpan={6} className="px-4 py-6 text-ink-muted">
                   No exchanges are integrated.
                 </td>
               </tr>
             ) : (
               VENUES.map((venue, venueIndex) =>
                 venue.deskTypes.map((deskType, typeIndex) => {
-                  const counts = availabilityCounts(venue.id, cells, deskType);
                   const first = typeIndex === 0;
                   const last =
                     venueIndex === VENUES.length - 1 &&
@@ -89,12 +98,24 @@ export default async function AdminExchangesPage({
                       <td className="px-4 py-3 text-ink">
                         {formatDeskType(deskType as DeskType)}
                       </td>
-                      <td className="px-4 py-3 tabular-nums text-ink">
-                        {counts.live} of {counts.slots}
-                      </td>
-                      <td className="px-4 py-3 tabular-nums text-ink">
-                        {counts.testing} of {counts.slots}
-                      </td>
+                      {EXCHANGE_DESK_MODES.map((mode) => {
+                        const setting = availabilitySetting(
+                          cells,
+                          venue.id,
+                          deskType,
+                          mode,
+                        );
+                        return (
+                          <td
+                            key={mode}
+                            className={`px-4 py-3 ${
+                              setting === "testing" ? "text-warning" : "text-ink"
+                            }`}
+                          >
+                            {setting === "testing" ? "Testing" : "Live"}
+                          </td>
+                        );
+                      })}
                       {first ? (
                         <td
                           rowSpan={venue.deskTypes.length}

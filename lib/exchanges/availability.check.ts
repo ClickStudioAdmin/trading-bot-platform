@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { ADMIN_NAV_LINKS } from "@/lib/site-links";
 import {
   availabilityCounts,
+  availabilitySetting,
   cellFor,
   defaultExchangeAvailability,
   environmentDeskMode,
@@ -214,6 +215,11 @@ const counts = availabilityCounts("bybit", defaults);
 assert.equal(counts.slots, 15);
 assert.equal(counts.live, 15);
 assert.equal(counts.testing, 0);
+assert.equal(availabilitySetting(hidden, "bybit", "manual", "paper"), "testing");
+assert.equal(availabilitySetting(hidden, "bybit", "manual", "demo"), "live");
+assert.equal(availabilitySetting(hidden, "bybit", "manual", "live"), "live");
+assert.equal(availabilitySetting(defaults, "bybit", "dca", "paper"), "live");
+assert.equal(availabilitySetting([], "bybit", "dca", "paper"), "live");
 const manualCounts = availabilityCounts("bybit", hidden, "manual");
 assert.equal(manualCounts.slots, 3);
 assert.equal(manualCounts.live, 2);

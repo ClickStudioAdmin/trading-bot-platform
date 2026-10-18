@@ -164,6 +164,18 @@ export function availabilityCounts(
   };
 }
 
+/** Live or Testing for one desk type and mode. A missing row stays Live. */
+export function availabilitySetting(
+  cells: readonly ExchangeAvailabilityCell[],
+  venueId: string,
+  deskType: string,
+  mode: ExchangeDeskMode,
+): "live" | "testing" {
+  const cell = cellFor(cells, venueId, deskType, mode);
+  const choice = exclusiveChoice(Boolean(cell?.live), Boolean(cell?.testing));
+  return choice.testing ? "testing" : "live";
+}
+
 export function cellFor(
   cells: readonly ExchangeAvailabilityCell[],
   venueId: string,
