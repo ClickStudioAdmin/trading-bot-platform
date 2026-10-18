@@ -1935,140 +1935,139 @@ export function ThemeBotFormDraft() {
     const limitInvalid = repeat
       ? slot.showErrors && order === "limit" && !filled(limit)
       : showFieldErrors && (shortLeg ? missing.shortSlLimitPrice : missing.slLimitPrice);
+    if (desk !== "dca") {
+      return (
+        <div className="contents">
+          <Field label="Type" required>
+            <AppSelect
+              className={fieldClass}
+              value={method === "percent" ? "percent" : "price"}
+              onChange={(event) => {
+                const next = event.target.value === "percent" ? "percent" : "price";
+                if (repeat) {
+                  slot.onChange({ method: next, target: "" });
+                } else if (shortLeg) {
+                  patchThemeShort({ slMethod: next, slValue: "" });
+                } else {
+                  setSlMethod(next);
+                  setSlValue("");
+                }
+              }}
+            >
+              <option value="price">Price</option>
+              <option value="percent">Percentage</option>
+            </AppSelect>
+          </Field>
+          <Field label={method === "percent" ? "%" : "Price"} required>
+            {method === "percent" ? (
+              <PercentField
+                value={value}
+                onChange={(next) =>
+                  repeat
+                    ? slot.onChange({ target: next })
+                    : shortLeg
+                      ? patchThemeShort({ slValue: next })
+                      : setSlValue(next)
+                }
+                required
+                invalid={valueInvalid}
+              />
+            ) : (
+              <OffNumber
+                value={value}
+                onChange={(next) =>
+                  repeat
+                    ? slot.onChange({ target: next })
+                    : shortLeg
+                      ? patchThemeShort({ slValue: next })
+                      : setSlValue(next)
+                }
+                required
+                invalid={valueInvalid}
+              />
+            )}
+          </Field>
+          <Field label="Price source" required>
+            <AppSelect
+              className={fieldClass}
+              value={trigger}
+              onChange={(event) =>
+                repeat
+                  ? slot.onChange({ trigger: event.target.value })
+                  : shortLeg
+                    ? patchThemeShort({ slTrigger: event.target.value })
+                    : setSlTrigger(event.target.value)
+              }
+            >
+              <option value="last">Last</option>
+              <option value="mark">Mark</option>
+              <option value="index">Index</option>
+            </AppSelect>
+          </Field>
+          <Field label="Order type" required>
+            <OrderTypePill
+              value={order === "limit" ? "limit" : "market"}
+              onChange={(next) =>
+                repeat
+                  ? slot.onChange({ orderType: next })
+                  : shortLeg
+                    ? patchThemeShort({ slOrderType: next })
+                    : setSlOrderType(next)
+              }
+            />
+          </Field>
+          {order === "limit" ? (
+            <Field label="Limit price" required>
+              <OffNumber
+                value={limit}
+                onChange={(next) =>
+                  repeat
+                    ? slot.onChange({ limitPrice: next })
+                    : shortLeg
+                      ? patchThemeShort({ slLimitPrice: next })
+                      : setSlLimitPrice(next)
+                }
+                required
+                invalid={limitInvalid}
+              />
+            </Field>
+          ) : null}
+        </div>
+      );
+    }
     return (
       <div className="@container col-span-full">
         <div className="grid grid-cols-2 items-start gap-4 [&>*]:min-w-0">
-          {desk === "dca" ? (
-            <>
-              <Field label="Basis" required>
-                <AppSelect
-                  className={fieldClass}
-                  value={basis}
-                  onChange={(event) =>
-                    repeat
-                      ? slot.onChange({ basis: event.target.value })
-                      : shortLeg
-                        ? patchThemeShort({ slBasis: event.target.value })
-                        : setSlBasis(event.target.value)
-                  }
-                >
-                  <option value="average">Average entry</option>
-                  <option value="first_entry">First fill</option>
-                </AppSelect>
-              </Field>
-              <Field label="Stop loss %" required>
-                <PercentField
-                  value={value}
-                  onChange={(next) =>
-                    repeat
-                      ? slot.onChange({ target: next })
-                      : shortLeg
-                        ? patchThemeShort({ slValue: next })
-                        : setSlValue(next)
-                  }
-                  required
-                  invalid={valueInvalid}
-                />
-              </Field>
-            </>
-          ) : (
-            <div className="col-span-full grid grid-cols-2 gap-4 [&>*]:min-w-0">
-              <Field label="Type" required>
-                <AppSelect
-                  className={fieldClass}
-                  value={method === "percent" ? "percent" : "price"}
-                  onChange={(event) => {
-                    const next = event.target.value === "percent" ? "percent" : "price";
-                    if (repeat) {
-                      slot.onChange({ method: next, target: "" });
-                    } else if (shortLeg) {
-                      patchThemeShort({ slMethod: next, slValue: "" });
-                    } else {
-                      setSlMethod(next);
-                      setSlValue("");
-                    }
-                  }}
-                >
-                  <option value="price">Price</option>
-                  <option value="percent">Percentage</option>
-                </AppSelect>
-              </Field>
-              <Field label={method === "percent" ? "%" : "Price"} required>
-                {method === "percent" ? (
-                  <PercentField
-                    value={value}
-                    onChange={(next) =>
-                      repeat
-                        ? slot.onChange({ target: next })
-                        : shortLeg
-                          ? patchThemeShort({ slValue: next })
-                          : setSlValue(next)
-                    }
-                    required
-                    invalid={valueInvalid}
-                  />
-                ) : (
-                  <OffNumber
-                    value={value}
-                    onChange={(next) =>
-                      repeat
-                        ? slot.onChange({ target: next })
-                        : shortLeg
-                          ? patchThemeShort({ slValue: next })
-                          : setSlValue(next)
-                    }
-                    required
-                    invalid={valueInvalid}
-                  />
-                )}
-              </Field>
-              <Field label="Price source" required>
-                <AppSelect
-                  className={fieldClass}
-                  value={trigger}
-                  onChange={(event) =>
-                    repeat
-                      ? slot.onChange({ trigger: event.target.value })
-                      : shortLeg
-                        ? patchThemeShort({ slTrigger: event.target.value })
-                        : setSlTrigger(event.target.value)
-                  }
-                >
-                  <option value="last">Last</option>
-                  <option value="mark">Mark</option>
-                  <option value="index">Index</option>
-                </AppSelect>
-              </Field>
-              <Field label="Order type" required>
-                <OrderTypePill
-                  value={order === "limit" ? "limit" : "market"}
-                  onChange={(next) =>
-                    repeat
-                      ? slot.onChange({ orderType: next })
-                      : shortLeg
-                        ? patchThemeShort({ slOrderType: next })
-                        : setSlOrderType(next)
-                  }
-                />
-              </Field>
-              {order === "limit" ? (
-                <Field label="Limit price" required>
-                  <OffNumber
-                    value={limit}
-                    onChange={(next) =>
-                      repeat
-                        ? slot.onChange({ limitPrice: next })
-                        : shortLeg
-                          ? patchThemeShort({ slLimitPrice: next })
-                          : setSlLimitPrice(next)
-                    }
-                    required
-                    invalid={limitInvalid}
-                  />
-                </Field>
-              ) : null}
-            </div>
-          )}
+          <Field label="Basis" required>
+            <AppSelect
+              className={fieldClass}
+              value={basis}
+              onChange={(event) =>
+                repeat
+                  ? slot.onChange({ basis: event.target.value })
+                  : shortLeg
+                    ? patchThemeShort({ slBasis: event.target.value })
+                    : setSlBasis(event.target.value)
+              }
+            >
+              <option value="average">Average entry</option>
+              <option value="first_entry">First fill</option>
+            </AppSelect>
+          </Field>
+          <Field label="Stop loss %" required>
+            <PercentField
+              value={value}
+              onChange={(next) =>
+                repeat
+                  ? slot.onChange({ target: next })
+                  : shortLeg
+                    ? patchThemeShort({ slValue: next })
+                    : setSlValue(next)
+              }
+              required
+              invalid={valueInvalid}
+            />
+          </Field>
         </div>
       </div>
     );

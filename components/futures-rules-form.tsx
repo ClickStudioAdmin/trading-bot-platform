@@ -1629,8 +1629,7 @@ function RuleCard({
     const fieldName = (name: string) => (repeat ? undefined : exitFieldName(leg, name));
     const showInvalid = (flag: boolean) => (repeat ? flag : dirty && flag);
     return (
-      <div className="@container col-span-full">
-        <div className="grid grid-cols-2 gap-4 [&>*]:min-w-0">
+      <div className="contents">
               <BotField label="Type" required>
                 <AppSelect
                   name={fieldName("slKind")}
@@ -1741,7 +1740,6 @@ function RuleCard({
               ) : repeat ? null : (
                 <input type="hidden" name={exitFieldName(leg, "slLimitPrice")} value="" />
               )}
-        </div>
       </div>
     );
   }
