@@ -5,6 +5,7 @@ import {
   cellFor,
   defaultExchangeAvailability,
   environmentDeskMode,
+  exclusiveChoice,
   exchangeCreateAllowed,
   mergeExchangeAvailability,
   offeredConnectionVenues,
@@ -40,7 +41,7 @@ const hidden = mergeExchangeAvailability([
     deskType: "manual",
     mode: "paper",
     live: false,
-    testing: false,
+    testing: true,
   },
 ]);
 assert.equal(hidden.length, defaults.length);
@@ -48,6 +49,10 @@ assert.equal(cellFor(hidden, "hyperliquid", "flex", "live")?.live, true);
 assert.equal(cellFor(hidden, "hyperliquid", "flex", "demo")?.testing, true);
 assert.equal(cellFor(hidden, "hyperliquid", "flex", "demo")?.live, false);
 assert.equal(cellFor(hidden, "bybit", "manual", "paper")?.live, false);
+assert.equal(cellFor(hidden, "bybit", "manual", "paper")?.testing, true);
+assert.deepEqual(exclusiveChoice(true, true), { live: true, testing: false });
+assert.deepEqual(exclusiveChoice(false, false), { live: true, testing: false });
+assert.deepEqual(exclusiveChoice(false, true), { live: false, testing: true });
 
 const publicFlex = exchangeCreateAllowed({
   cells: hidden,
@@ -77,7 +82,16 @@ const publicLive = exchangeCreateAllowed({
 });
 assert.equal(publicLive.ok, true);
 
-const neither = exchangeCreateAllowed({
+const testingPaper = exchangeCreateAllowed({
+  cells: hidden,
+  admin: false,
+  deskType: "manual",
+  venueId: "bybit",
+  accountMode: "paper",
+  environmentId: null,
+});
+assert.equal(testingPaper.ok, false);
+const adminPaper = exchangeCreateAllowed({
   cells: hidden,
   admin: true,
   deskType: "manual",
@@ -85,7 +99,7 @@ const neither = exchangeCreateAllowed({
   accountMode: "paper",
   environmentId: null,
 });
-assert.equal(neither.ok, false);
+assert.equal(adminPaper.ok, true);
 
 const eitherConnected = exchangeCreateAllowed({
   cells: hidden,
@@ -144,9 +158,9 @@ assert.deepEqual(
 );
 
 const form = new FormData();
-form.set("live:manual:paper", "1");
-form.set("testing:manual:demo", "1");
-form.set("live:cash_and_carry:live", "1");
+form.set("availability:manual:paper", "live");
+form.set("availability:manual:demo", "testing");
+form.set("availability:cash_and_carry:live", "live");
 const bybit = getVenue("bybit");
 assert.ok(bybit);
 const read = readAvailabilityForm(bybit, form);
@@ -154,7 +168,13 @@ assert.equal(read.length, 15);
 assert.equal(cellFor(read, "bybit", "manual", "paper")?.live, true);
 assert.equal(cellFor(read, "bybit", "manual", "paper")?.testing, false);
 assert.equal(cellFor(read, "bybit", "manual", "demo")?.testing, true);
-assert.equal(cellFor(read, "bybit", "manual", "live")?.live, false);
+assert.equal(cellFor(read, "bybit", "manual", "demo")?.live, false);
+assert.equal(cellFor(read, "bybit", "manual", "live")?.live, true);
+assert.equal(cellFor(read, "bybit", "manual", "live")?.testing, false);
+assert.equal(
+  read.every((cell) => cell.live !== cell.testing),
+  true,
+);
 assert.equal(
   read.some((cell) => cell.deskType === "cash_and_carry" && cell.mode === "live" && cell.live),
   true,
@@ -180,6 +200,15 @@ const parsed = parseAvailabilityRow({
 });
 assert.equal(parsed?.testing, true);
 assert.equal(parsed?.live, false);
+const bothOn = parseAvailabilityRow({
+  venue: "bybit",
+  desk_type: "dca",
+  mode: "paper",
+  live: true,
+  testing: true,
+});
+assert.equal(bothOn?.live, true);
+assert.equal(bothOn?.testing, false);
 
 const counts = availabilityCounts("bybit", defaults);
 assert.equal(counts.slots, 15);
