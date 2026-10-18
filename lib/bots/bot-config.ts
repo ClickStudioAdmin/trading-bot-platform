@@ -280,9 +280,9 @@ function dcaExitLines(classic: DcaClassicExit): BotConfigLine[] {
       trailOn
         ? joinParts([
             pct(classic.trailingTriggerPct)
-              ? `Trigger ${pct(classic.trailingTriggerPct)}`
+              ? `Trigger P/L ${pct(classic.trailingTriggerPct)}`
               : null,
-            pct(classic.trailingPct) ? `Trail ${pct(classic.trailingPct)}` : null,
+            pct(classic.trailingPct) ? `Trailing % ${pct(classic.trailingPct)}` : null,
           ])
         : null,
     ),
@@ -296,7 +296,7 @@ function dcaExitLines(classic: DcaClassicExit): BotConfigLine[] {
       "Breakeven Stop",
       classic.breakevenActivationPct == null
         ? null
-        : `Move breakeven at ${pct(classic.breakevenActivationPct)} · offset ${pct(classic.breakevenOffsetPct) ?? "0%"}`,
+        : `Trigger P/L ${pct(classic.breakevenActivationPct)} · Buffer ${pct(classic.breakevenOffsetPct) ?? "0%"}`,
     ),
   ];
   return lines;
@@ -494,7 +494,7 @@ function perpsClassicLines(input: {
       "Trailing stop",
       input.trailing
         ? joinParts([
-            `Retracement ${amount(input.trailing.distance)}`,
+            `Trailing % ${amount(input.trailing.distance)}`,
             input.trailing.activePrice != null
               ? `Activation ${amount(input.trailing.activePrice)}`
               : null,
@@ -522,7 +522,7 @@ function perpsClassicLines(input: {
     setting(
       "Breakeven Stop",
       activation
-        ? `Move breakeven at ${activation}% · offset ${input.breakevenOffsetPct.trim() || "0"}%`
+        ? `Trigger P/L ${activation}% · Buffer ${input.breakevenOffsetPct.trim() || "0"}%`
         : null,
     ),
   ];

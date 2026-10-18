@@ -658,8 +658,8 @@ function breakevenGroup(
   return {
     title: "Breakeven Stop",
     rows: [
-      { label: "Move stop to breakeven at %", value: pct(activation) },
-      { label: "Breakeven offset %", value: pct(offset ?? 0) },
+      { label: "Trigger P/L", value: pct(activation) },
+      { label: "Buffer %", value: pct(offset ?? 0) },
       { label: "Applies To", value: "Entire Position" },
     ],
   };
@@ -728,18 +728,9 @@ function repeatLevelRows(action: StoredExitAction): ParamRow[] {
         style: flex ? "flex" : levels.style || "dca",
         trigger: levels.trigger,
       }) === "percent";
-    const activation = percent ? pct(levels.trigger) : levels.trigger || "—";
-    if (flex) {
-      return [
-        { label: "Retracement", value: levels.trail || "—" },
-        { label: "Type", value: percent ? "Percentage" : "Price" },
-        { label: percent ? "%" : "Price", value: activation },
-      ];
-    }
     return [
-      { label: "Trailing %", value: levels.trail ? pct(levels.trail) : "—" },
-      { label: "Type", value: percent ? "Percentage" : "Price" },
-      { label: percent ? "%" : "Price", value: activation },
+      { label: "Trigger P/L", value: percent ? pct(levels.trigger) : levels.trigger || "—" },
+      { label: "Trailing %", value: levels.trail ? (flex && !percent ? levels.trail : pct(levels.trail)) : "—" },
     ];
   }
   return [];
@@ -767,28 +758,28 @@ function actionPriceRows(action: StoredExitAction): ParamRow[] {
   }
   if (action.kind === "trailing_stop") {
     const rows: ParamRow[] = [];
+    if (action.trailingTriggerPct != null) {
+      rows.push({ label: "Trigger P/L", value: pct(action.trailingTriggerPct) });
+    }
+    if (action.trailingActivation != null) {
+      rows.push({ label: "Activation price", value: num(action.trailingActivation) });
+    }
     if (action.trailingPct != null) {
       rows.push({ label: "Trailing %", value: pct(action.trailingPct) });
     }
     if (action.trailingDistance != null) {
       rows.push({ label: "Distance", value: num(action.trailingDistance) });
     }
-    if (action.trailingTriggerPct != null) {
-      rows.push({ label: "Activation %", value: pct(action.trailingTriggerPct) });
-    }
-    if (action.trailingActivation != null) {
-      rows.push({ label: "Activation price", value: num(action.trailingActivation) });
-    }
     return rows;
   }
   if (action.kind === "breakeven") {
     return [
       {
-        label: "Move stop to breakeven at %",
+        label: "Trigger P/L",
         value: pct(action.breakevenActivationPct),
       },
       {
-        label: "Breakeven offset %",
+        label: "Buffer %",
         value: pct(action.breakevenOffsetPct ?? 0),
       },
     ];
@@ -977,7 +968,7 @@ function dcaClassicGroups(
   return [
     optionalGroup("Take profit", tpOn, tpRows),
     optionalGroup("Trailing stop", trailOn, [
-      { label: "Trigger %", value: pct(trailingTriggerPct) },
+      { label: "Trigger P/L", value: pct(trailingTriggerPct) },
       { label: "Trailing %", value: pct(trailingPct) },
     ]),
     optionalGroup("Stop loss", slOn, [

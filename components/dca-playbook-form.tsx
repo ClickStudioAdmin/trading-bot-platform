@@ -63,7 +63,6 @@ import {
   savedTrailActivation,
 } from "@/lib/strategy/exit-actions";
 import {
-  trailActivationKind,
   type TrailActivationKind,
 } from "@/lib/strategy/exit-clauses";
 import {
@@ -1879,8 +1878,8 @@ export function DcaPlaybookForm({
       takeProfitOrderType,
       stopLossPct: slLive ? stopLossPct : "",
       stopLossBasis,
-      trailingTriggerPct: trailLive && trailActiveKind === "percent" ? trailingTriggerPct : "",
-      trailingActiveKind: trailLive ? trailActiveKind : "percent",
+      trailingTriggerPct: trailLive ? trailingTriggerPct : "",
+      trailingActiveKind: "percent",
       trailingPct: trailLive ? trailingPct : "",
       breakevenActivationPct: breakevenLive ? breakevenActivationPct : "",
       breakevenOffsetPct: breakevenLive ? breakevenOffsetPct : "",
@@ -1907,11 +1906,8 @@ export function DcaPlaybookForm({
             shortAtrPeriod: shortClassic.atrPeriod,
             shortStopLossPct: shortSlLive ? shortClassic.stopLossPct : "",
             shortStopLossBasis: shortClassic.stopLossBasis,
-            shortTrailingTriggerPct:
-              shortTrailLive && shortClassic.trailActiveKind === "percent"
-                ? shortClassic.trailingTriggerPct
-                : "",
-            shortTrailingActiveKind: shortTrailLive ? shortClassic.trailActiveKind : "percent",
+            shortTrailingTriggerPct: shortTrailLive ? shortClassic.trailingTriggerPct : "",
+            shortTrailingActiveKind: "percent",
             shortTrailingPct: shortTrailLive ? shortClassic.trailingPct : "",
             shortBreakevenActivationPct: shortBreakevenLive
               ? shortClassic.breakevenActivationPct
@@ -2769,15 +2765,6 @@ export function DcaPlaybookForm({
   function dcaTrailingFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = usesShortExit(leg);
     const repeat = slot != null;
-    const activeKind: TrailActivationKind = repeat
-      ? trailActivationKind({
-          method: slot.levels.method,
-          style: slot.levels.style || "dca",
-          trigger: slot.levels.trigger,
-        })
-      : shortLeg
-        ? shortClassic.trailActiveKind
-        : trailActiveKind;
     const trigger = repeat
       ? slot.levels.trigger
       : shortLeg
@@ -2790,84 +2777,49 @@ export function DcaPlaybookForm({
         ? shortTrailMissing
         : trailMissing;
     const fieldName = (name: string) => (repeat ? undefined : classicField(leg, name));
+    const writeTrigger = (next: string) => {
+      if (repeat) {
+        slot.onChange({ method: "percent", trigger: next });
+      } else if (shortLeg) {
+        patchShort("trailActiveKind", "percent");
+        patchShort("trailingTriggerPct", next);
+      } else {
+        setTrailActiveKind("percent");
+        setTrailingTriggerPct(next);
+      }
+    };
+    const writeDistance = (next: string) => {
+      if (repeat) {
+        slot.onChange({ method: "percent", trail: next });
+      } else if (shortLeg) {
+        patchShort("trailingPct", next);
+      } else {
+        setTrailingPct(next);
+      }
+    };
     return (
       <div className="contents">
+        <BotField label="Trigger P/L" required>
+          <PercentInput
+            name={fieldName("trailingTriggerPct")}
+            value={trigger}
+            onChange={writeTrigger}
+            ariaLabel="Trigger P/L"
+            invalid={repeat ? missing : dirty && missing}
+          />
+        </BotField>
         <BotField label="Trailing %" required>
           <PercentInput
             name={fieldName("trailingPct")}
             value={trail}
-            onChange={(next) =>
-              repeat
-                ? slot.onChange({ trail: next })
-                : shortLeg
-                  ? patchShort("trailingPct", next)
-                  : setTrailingPct(next)
-            }
+            onChange={writeDistance}
             ariaLabel="Trailing percent"
             invalid={repeat ? missing : dirty && missing}
           />
         </BotField>
-        <BotField label="Type" required>
-          <AppSelect
-            name={fieldName("trailingActiveKind")}
-            value={activeKind}
-            onChange={(event) => {
-              const next = event.target.value === "price" ? "price" : "percent";
-              if (repeat) {
-                slot.onChange({ method: next, trigger: "" });
-              } else if (shortLeg) {
-                patchShort("trailActiveKind", next);
-                patchShort("trailingTriggerPct", "");
-              } else {
-                setTrailActiveKind(next);
-                setTrailingTriggerPct("");
-              }
-            }}
-            className={fieldClass}
-          >
-            <option value="price">Price</option>
-            <option value="percent">Percentage</option>
-          </AppSelect>
-        </BotField>
-        <BotField
-          label={activeKind === "percent" ? "%" : "Price"}
-          hint={
-            activeKind === "percent"
-              ? "Trail starts after the position is up this %."
-              : "Trail starts when price reaches this level."
-          }
-          required
-        >
-          {activeKind === "percent" ? (
-            <PercentInput
-              name={fieldName("trailingTriggerPct")}
-              value={trigger}
-              onChange={(next) =>
-                repeat
-                  ? slot.onChange({ trigger: next })
-                  : shortLeg
-                    ? patchShort("trailingTriggerPct", next)
-                    : setTrailingTriggerPct(next)
-              }
-              ariaLabel="Trailing activation percent"
-              invalid={repeat ? missing : dirty && missing}
-            />
-          ) : (
-            <GroupedNumberInput
-              value={trigger}
-              onChange={(next) =>
-                repeat
-                  ? slot.onChange({ trigger: next })
-                  : shortLeg
-                    ? patchShort("trailingTriggerPct", next)
-                    : setTrailingTriggerPct(next)
-              }
-              allowDecimal
-              ariaLabel="Trailing activation price"
-              className={(repeat ? missing : dirty && missing) ? botFieldInvalidClass : fieldClass}
-            />
-          )}
-        </BotField>
+        {repeat ? null : (
+          <input type="hidden" name={fieldName("trailingActiveKind")} value="percent" />
+        )}
       </div>
     );
   }
@@ -2944,7 +2896,7 @@ export function DcaPlaybookForm({
     const fieldName = (name: string) => classicField(leg, name);
     return (
       <>
-        <BotField label="Move stop to breakeven at %" required>
+        <BotField label="Trigger P/L" required>
           <PercentInput
             name={fieldName("breakevenActivationPct")}
             value={activation}
@@ -2953,12 +2905,12 @@ export function DcaPlaybookForm({
                 ? patchShort("breakevenActivationPct", next)
                 : setBreakevenActivationPct(next)
             }
-            ariaLabel="Move stop to breakeven at percent"
+            ariaLabel="Trigger P/L"
             invalid={dirty && invalid}
           />
         </BotField>
         <label className={labelClass}>
-          Breakeven offset %
+          Buffer %
           <PercentInput
             name={fieldName("breakevenOffsetPct")}
             value={offset}
@@ -2966,7 +2918,7 @@ export function DcaPlaybookForm({
               shortLeg ? patchShort("breakevenOffsetPct", next) : setBreakevenOffsetPct(next)
             }
             placeholder="0"
-            ariaLabel="Breakeven offset percent"
+            ariaLabel="Buffer percent"
           />
         </label>
       </>
@@ -3574,9 +3526,8 @@ export function DcaPlaybookForm({
             takeProfit: takeProfitPct,
             stopLoss: stopLossPct,
             trailingPct,
-            trailingActivationKind: trailActiveKind,
-            trailingTriggerPct: trailActiveKind === "percent" ? trailingTriggerPct : "",
-            trailingActivation: trailActiveKind === "price" ? trailingTriggerPct : "",
+            trailingActivationKind: "percent",
+            trailingTriggerPct,
             breakevenActivationPct,
             breakevenOffsetPct,
           })}
@@ -3608,15 +3559,8 @@ export function DcaPlaybookForm({
                   takeProfit: shortClassic.takeProfitPct,
                   stopLoss: shortClassic.stopLossPct,
                   trailingPct: shortClassic.trailingPct,
-                  trailingActivationKind: shortClassic.trailActiveKind,
-                  trailingTriggerPct:
-                    shortClassic.trailActiveKind === "percent"
-                      ? shortClassic.trailingTriggerPct
-                      : "",
-                  trailingActivation:
-                    shortClassic.trailActiveKind === "price"
-                      ? shortClassic.trailingTriggerPct
-                      : "",
+                  trailingActivationKind: "percent",
+                  trailingTriggerPct: shortClassic.trailingTriggerPct,
                   breakevenActivationPct: shortClassic.breakevenActivationPct,
                   breakevenOffsetPct: shortClassic.breakevenOffsetPct,
                 }
@@ -3624,9 +3568,8 @@ export function DcaPlaybookForm({
                   takeProfit: takeProfitPct,
                   stopLoss: stopLossPct,
                   trailingPct,
-                  trailingActivationKind: trailActiveKind,
-                  trailingTriggerPct: trailActiveKind === "percent" ? trailingTriggerPct : "",
-                  trailingActivation: trailActiveKind === "price" ? trailingTriggerPct : "",
+                  trailingActivationKind: "percent",
+                  trailingTriggerPct,
                   breakevenActivationPct,
                   breakevenOffsetPct,
                 },

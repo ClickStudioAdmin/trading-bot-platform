@@ -243,7 +243,7 @@ export function ExitSideBuilder({
   const firstClose = normalized.find((clause) => clause.kind === "custom");
   const closePlaced = firstClose ? placeFirstClose(firstClose) : [];
   const stackCount = closePlaced.filter((row) => row.stackIndex != null).length;
-  const savedActions = exitActionsForSave(normalized, prices);
+  const savedActions = exitActionsForSave(normalized, prices, priceStyle);
   const remainderUsed = normalized.some(
     (clause) => clause.kind !== "" && clauseScope(clause).kind === "remainder",
   );

@@ -55,7 +55,7 @@ assert.equal(labels.includes("Take profit"), false);
 assert.ok(labels.includes("Basis"));
 assert.ok(labels.includes("Target %"));
 assert.equal(
-  labels.includes("Trigger %"),
+  labels.includes("Trigger P/L"),
   false,
   "trailing fields stay hidden while Trailing stop is off",
 );
@@ -108,7 +108,7 @@ assert.deepEqual(
   nestedStop?.groups
     .find((group) => group.title === "Breakeven Stop")
     ?.rows.map((row) => row.label),
-  ["Move stop to breakeven at %", "Breakeven offset %", "Applies To"],
+  ["Trigger P/L", "Buffer %", "Applies To"],
 );
 assert.equal(
   nestedStop?.groups.some((group) => group.title === "Move Breakeven"),
@@ -128,7 +128,7 @@ assert.deepEqual(
   breakevenOnly?.groups
     .find((group) => group.title === "Breakeven Stop")
     ?.rows.map((row) => row.label),
-  ["Move stop to breakeven at %", "Breakeven offset %", "Applies To"],
+  ["Trigger P/L", "Buffer %", "Applies To"],
 );
 assert.equal(
   recipeParamRows(dca).find((row) => row.label === "Custom conditions")?.value,

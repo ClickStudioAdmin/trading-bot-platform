@@ -570,6 +570,8 @@ const flexPercentSaved = exitActionsForSave(
 );
 assert.equal(flexPercentSaved?.[1]?.trailingTriggerPct, 3);
 assert.equal(flexPercentSaved?.[1]?.trailingActivation, null);
+assert.equal(flexPercentSaved?.[1]?.trailingPct, 200);
+assert.equal(flexPercentSaved?.[1]?.trailingDistance, null);
 
 const dcaPriceTrail = classicExitClause("trailing_stop");
 dcaPriceTrail.key = "dca-trail-price";
@@ -619,6 +621,20 @@ assert.equal(
   }),
   null,
 );
+const flexPercentColumns: ExitSidePrices = {
+  ...prices,
+  trailingDistance: null,
+  trailingPct: 1.5,
+  trailingTriggerPct: 2,
+  trailingActivation: null,
+};
+assert.equal(trailFitsColumns(flexPercentColumns, "flex"), false);
+const flexColumnSaved = exitActionsForSave([onlyTrail], flexPercentColumns, "flex");
+assert.equal(flexColumnSaved?.[0]?.trailingPct, 1.5);
+assert.equal(flexColumnSaved?.[0]?.trailingTriggerPct, 2);
+assert.equal(flexColumnSaved?.[0]?.trailingDistance, null);
+assert.equal(trailFitsColumns(flexPercentColumns, "dca"), true);
+assert.equal(exitActionsForSave([onlyTrail], flexPercentColumns, "dca"), null);
 
 assert.equal(trailActivationKind({ style: "flex", trigger: "65000" }), "price");
 assert.equal(trailActivationKind({ style: "dca", trigger: "3" }), "percent");

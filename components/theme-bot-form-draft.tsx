@@ -60,10 +60,7 @@ import {
   type ExitFieldSlot,
 } from "@/lib/strategy/exit-clauses";
 import { exitCardsBlockReason } from "@/lib/strategy/exit-actions";
-import {
-  trailActivationKind,
-  type TrailActivationKind,
-} from "@/lib/strategy/exit-clauses";
+import { type TrailActivationKind } from "@/lib/strategy/exit-clauses";
 import {
   EntryConditionStack,
   entryConflictSlots,
@@ -1790,15 +1787,6 @@ export function ThemeBotFormDraft() {
   function themeTrailingFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = themeUsesShort(leg);
     const repeat = slot != null;
-    const activeKind: TrailActivationKind = repeat
-      ? trailActivationKind({
-          method: slot.levels.method,
-          style: slot.levels.style || (desk === "dca" ? "dca" : "flex"),
-          trigger: slot.levels.trigger,
-        })
-      : shortLeg
-        ? shortClassic.trailActiveKind
-        : trailActiveKind;
     const trigger = repeat
       ? slot.levels.trigger
       : shortLeg
@@ -1815,95 +1803,42 @@ export function ThemeBotFormDraft() {
     const valueInvalid = repeat
       ? slot.showErrors && !filled(value)
       : showFieldErrors && (shortLeg ? missing.shortTrailValue : missing.trailValue);
+    const writeTrigger = (next: string) => {
+      if (repeat) {
+        slot.onChange({ method: "percent", trigger: next });
+      } else if (shortLeg) {
+        patchThemeShort({ trailActiveKind: "percent", trailTrigger: next });
+      } else {
+        setTrailActiveKind("percent");
+        setTrailTrigger(next);
+      }
+    };
+    const writeDistance = (next: string) => {
+      if (repeat) {
+        slot.onChange({ method: "percent", trail: next });
+      } else if (shortLeg) {
+        patchThemeShort({ trailValue: next });
+      } else {
+        setTrailValue(next);
+      }
+    };
     return (
       <div className="contents">
-        {desk === "dca" ? (
-          <Field label="Trailing %" required>
-            <PercentField
-              value={value}
-              onChange={(next) =>
-                repeat
-                  ? slot.onChange({ trail: next })
-                  : shortLeg
-                    ? patchThemeShort({ trailValue: next })
-                    : setTrailValue(next)
-              }
-              required
-              invalid={valueInvalid}
-            />
-          </Field>
-        ) : (
-          <Field label="Retracement" required>
-            <OffNumber
-              value={value}
-              onChange={(next) =>
-                repeat
-                  ? slot.onChange({ trail: next })
-                  : shortLeg
-                    ? patchThemeShort({ trailValue: next })
-                    : setTrailValue(next)
-              }
-              required
-              invalid={valueInvalid}
-            />
-          </Field>
-        )}
-        <Field label="Type" required>
-          <AppSelect
-            className={fieldClass}
-            value={activeKind}
-            onChange={(event) => {
-              const next = event.target.value === "price" ? "price" : "percent";
-              if (repeat) {
-                slot.onChange({ method: next, trigger: "" });
-              } else if (shortLeg) {
-                patchThemeShort({ trailActiveKind: next, trailTrigger: "" });
-              } else {
-                setTrailActiveKind(next);
-                setTrailTrigger("");
-              }
-            }}
-          >
-            <option value="price">Price</option>
-            <option value="percent">Percentage</option>
-          </AppSelect>
+        <Field label="Trigger P/L" required>
+          <PercentField
+            value={trigger}
+            onChange={writeTrigger}
+            required
+            invalid={triggerInvalid}
+          />
         </Field>
-        <Field
-          label={activeKind === "percent" ? "%" : "Price"}
-          hint={
-            activeKind === "percent"
-              ? "Trail starts after the position is up this %."
-              : "Trail starts when price reaches this level."
-          }
-          required
-        >
-          {activeKind === "percent" ? (
-            <PercentField
-              value={trigger}
-              onChange={(next) =>
-                repeat
-                  ? slot.onChange({ trigger: next })
-                  : shortLeg
-                    ? patchThemeShort({ trailTrigger: next })
-                    : setTrailTrigger(next)
-              }
-              required
-              invalid={triggerInvalid}
-            />
-          ) : (
-            <OffNumber
-              value={trigger}
-              onChange={(next) =>
-                repeat
-                  ? slot.onChange({ trigger: next })
-                  : shortLeg
-                    ? patchThemeShort({ trailTrigger: next })
-                    : setTrailTrigger(next)
-              }
-              required
-              invalid={triggerInvalid}
-            />
-          )}
+        <Field label="Trailing %" required>
+          <PercentField
+            value={value}
+            onChange={writeDistance}
+            required
+            invalid={valueInvalid}
+          />
         </Field>
       </div>
     );
@@ -2083,7 +2018,7 @@ export function ThemeBotFormDraft() {
       showFieldErrors && (shortLeg ? missing.shortBreakevenAt : missing.breakevenAt);
     return (
       <>
-        <Field label="Move stop to breakeven at %" required>
+        <Field label="Trigger P/L" required>
           <PercentField
             value={activation}
             onChange={(next) =>
@@ -2093,7 +2028,7 @@ export function ThemeBotFormDraft() {
             invalid={invalid}
           />
         </Field>
-        <Field label="Breakeven offset %">
+        <Field label="Buffer %">
           <PercentField
             value={offset}
             onChange={(next) =>

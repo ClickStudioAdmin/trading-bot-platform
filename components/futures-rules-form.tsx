@@ -51,10 +51,7 @@ import {
   savedBreakevenNumbers,
   savedTrailActivation,
 } from "@/lib/strategy/exit-actions";
-import {
-  trailActivationKind,
-  type TrailActivationKind,
-} from "@/lib/strategy/exit-clauses";
+import { type TrailActivationKind } from "@/lib/strategy/exit-clauses";
 import type { ExitBuilderClause, ExitFieldSlot } from "@/lib/strategy/exit-clauses";
 import {
   initialPerpsEntryDrafts,
@@ -506,6 +503,23 @@ type PerpsClassicDraft = {
   breakevenOffsetPct: string;
 };
 
+function savedFlexTrailPct(
+  actions: FuturesAutomationFormValues["exitActions"],
+  columnDistance: number | null,
+): string {
+  const first = actions?.find((action) => action.kind === "trailing_stop");
+  if (first?.trailingPct != null && first.trailingPct > 0) {
+    return String(first.trailingPct);
+  }
+  if (columnDistance != null && columnDistance > 0) {
+    return String(columnDistance);
+  }
+  if (first?.trailingDistance != null && first.trailingDistance > 0) {
+    return String(first.trailingDistance);
+  }
+  return "";
+}
+
 function blankPerpsClassic(): PerpsClassicDraft {
   return {
     tpKind: "percent",
@@ -549,7 +563,7 @@ function perpsDraftFromClassic(
       classic.tpsl?.tpLimitPrice != null ? String(classic.tpsl.tpLimitPrice) : "",
     slLimitPrice:
       classic.tpsl?.slLimitPrice != null ? String(classic.tpsl.slLimitPrice) : "",
-    trailingStop: classic.trailing != null ? String(classic.trailing.distance) : "",
+    trailingStop: savedFlexTrailPct(actions, classic.trailing?.distance ?? null),
     trailingActive: trail.value,
     trailActiveKind: trail.kind,
     breakevenOn:
@@ -584,7 +598,7 @@ function perpsDraftFromLong(layer: FuturesAutomationFormValues): PerpsClassicDra
       layer.tpsl?.tpLimitPrice != null ? String(layer.tpsl.tpLimitPrice) : "",
     slLimitPrice:
       layer.tpsl?.slLimitPrice != null ? String(layer.tpsl.slLimitPrice) : "",
-    trailingStop: layer.trailing != null ? String(layer.trailing.distance) : "",
+    trailingStop: savedFlexTrailPct(layer.exitActions, layer.trailing?.distance ?? null),
     trailingActive: trail.value,
     trailActiveKind: trail.kind,
     breakevenOn: layer.breakevenActivationPct.trim() !== "",
@@ -742,8 +756,8 @@ function RuleCard({
     actions: layer.exitActions,
     activePrice: layer.trailing?.activePrice ?? null,
   });
-  const [trailingStop, setTrailingStop] = useState(
-    layer.trailing != null ? String(layer.trailing.distance) : "",
+  const [trailingStop, setTrailingStop] = useState(() =>
+    savedFlexTrailPct(layer.exitActions, layer.trailing?.distance ?? null),
   );
   const [trailActiveKind, setTrailActiveKind] = useState<TrailActivationKind>(
     initialPrimaryTrail.kind,
@@ -1471,15 +1485,6 @@ function RuleCard({
       : shortLeg
         ? shortClassic.trailingStop
         : trailingStop;
-    const activeKind: TrailActivationKind = repeat
-      ? trailActivationKind({
-          method: slot.levels.method,
-          style: slot.levels.style || "flex",
-          trigger: slot.levels.trigger,
-        })
-      : shortLeg
-        ? shortClassic.trailActiveKind
-        : trailActiveKind;
     const active = repeat
       ? slot.levels.trigger
       : shortLeg
@@ -1498,90 +1503,58 @@ function RuleCard({
       ? slot.showErrors && blank(active)
       : dirty && (shortLeg ? shortTrailActiveMissing : trailActiveMissing);
     const fieldName = (name: string) => (repeat ? undefined : exitFieldName(leg, name));
+    const writeTrigger = (next: string) => {
+      if (repeat) {
+        slot.onChange({ method: "percent", trigger: next });
+      } else if (shortLeg) {
+        patchShort({ trailActiveKind: "percent", trailingActive: next });
+      } else {
+        setTrailActiveKind("percent");
+        setTrailingActive(next);
+      }
+    };
+    const writeDistance = (next: string) => {
+      if (repeat) {
+        slot.onChange({ method: "percent", trail: next });
+      } else if (shortLeg) {
+        patchShort({ trailActiveKind: "percent", trailingStop: next });
+      } else {
+        setTrailActiveKind("percent");
+        setTrailingStop(next);
+      }
+    };
     return (
       <div className="contents">
-        <BotField label="Retracement" required>
-          <GroupedNumberInput
-            name={fieldName("trailingStop")}
-            value={distance}
-            onChange={(next) =>
-              repeat
-                ? slot.onChange({ trail: next })
-                : shortLeg
-                  ? patchShort({ trailingStop: next })
-                  : setTrailingStop(next)
-            }
-            allowDecimal
-            className={(repeat ? missing : dirty && missing) ? botFieldInvalidClass : botFieldClass}
-          />
-        </BotField>
-        <BotField label="Type" required>
-          <AppSelect
-            name={fieldName("trailingActiveKind")}
-            value={activeKind}
-            onChange={(event) => {
-              const next = event.target.value === "price" ? "price" : "percent";
-              if (repeat) {
-                slot.onChange({ method: next, trigger: "" });
-              } else if (shortLeg) {
-                patchShort({ trailActiveKind: next, trailingActive: "" });
-              } else {
-                setTrailActiveKind(next);
-                setTrailingActive("");
-              }
-            }}
-            className={botFieldClass}
-          >
-            <option value="price">Price</option>
-            <option value="percent">Percentage</option>
-          </AppSelect>
-        </BotField>
-        <BotField
-          label={activeKind === "percent" ? "%" : "Price"}
-          hint={
-            activeKind === "percent"
-              ? "Trail starts after the position is up this %."
-              : "Trail starts when price reaches this level."
-          }
-          required
-        >
-          {activeKind === "percent" ? (
-            <span className="relative mt-1 block">
-              <GroupedNumberInput
-                name={fieldName("trailingTriggerPct")}
-                value={active}
-                onChange={(next) =>
-                  repeat
-                    ? slot.onChange({ trigger: next })
-                    : shortLeg
-                      ? patchShort({ trailingActive: next })
-                      : setTrailingActive(next)
-                }
-                allowDecimal
-                className={`${activeMissing ? botFieldInvalidClass : botFieldClass} !mt-0 pr-7`}
-              />
-              <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
-                %
-              </span>
-            </span>
-          ) : (
+        <BotField label="Trigger P/L" required>
+          <span className="relative mt-1 block">
             <GroupedNumberInput
-              name={fieldName("trailingActive")}
+              name={fieldName("trailingTriggerPct")}
               value={active}
-              onChange={(next) =>
-                repeat
-                  ? slot.onChange({ trigger: next })
-                  : shortLeg
-                    ? patchShort({ trailingActive: next })
-                    : setTrailingActive(next)
-              }
+              onChange={writeTrigger}
               allowDecimal
-              className={activeMissing ? botFieldInvalidClass : botFieldClass}
+              className={`${activeMissing ? botFieldInvalidClass : botFieldClass} !mt-0 pr-7`}
             />
-          )}
+            <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+              %
+            </span>
+          </span>
         </BotField>
-        {repeat || activeKind !== "price" ? null : (
-          <input type="hidden" name={exitFieldName(leg, "trailingActivation")} value="on" />
+        <BotField label="Trailing %" required>
+          <span className="relative mt-1 block">
+            <GroupedNumberInput
+              name={fieldName("trailingStop")}
+              value={distance}
+              onChange={writeDistance}
+              allowDecimal
+              className={`${(repeat ? missing : dirty && missing) ? botFieldInvalidClass : botFieldClass} !mt-0 pr-7`}
+            />
+            <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+              %
+            </span>
+          </span>
+        </BotField>
+        {repeat ? null : (
+          <input type="hidden" name={exitFieldName(leg, "trailingActiveKind")} value="percent" />
         )}
       </div>
     );
@@ -1756,7 +1729,7 @@ function RuleCard({
     const fieldName = (name: string) => exitFieldName(leg, name);
     return (
       <>
-        <BotField label="Move stop to breakeven at %" required>
+        <BotField label="Trigger P/L" required>
           <span className="relative mt-1 block">
             <GroupedNumberInput
               name={fieldName("breakevenActivationPct")}
@@ -1774,7 +1747,7 @@ function RuleCard({
             </span>
           </span>
         </BotField>
-        <BotField label="Breakeven offset %">
+        <BotField label="Buffer %">
           <span className="relative mt-1 block">
             <GroupedNumberInput
               name={fieldName("breakevenOffsetPct")}
@@ -2110,10 +2083,9 @@ function RuleCard({
               takeProfitKind: tpKind,
               stopLoss,
               stopLossKind: slKind,
-              trailingDistance: trailingStop,
-              trailingActivation: trailActiveKind === "price" ? trailingActive : "",
-              trailingActivationKind: trailActiveKind,
-              trailingTriggerPct: trailActiveKind === "percent" ? trailingActive : "",
+              trailingPct: trailingStop,
+              trailingActivationKind: "percent",
+              trailingTriggerPct: trailingActive,
               breakevenActivationPct,
               breakevenOffsetPct,
             })}
@@ -2148,12 +2120,9 @@ function RuleCard({
                     takeProfitKind: shortClassic.tpKind,
                     stopLoss: shortClassic.stopLoss,
                     stopLossKind: shortClassic.slKind,
-                    trailingDistance: shortClassic.trailingStop,
-                    trailingActivation:
-                      shortClassic.trailActiveKind === "price" ? shortClassic.trailingActive : "",
-                    trailingActivationKind: shortClassic.trailActiveKind,
-                    trailingTriggerPct:
-                      shortClassic.trailActiveKind === "percent" ? shortClassic.trailingActive : "",
+                    trailingPct: shortClassic.trailingStop,
+                    trailingActivationKind: "percent",
+                    trailingTriggerPct: shortClassic.trailingActive,
                     breakevenActivationPct: shortClassic.breakevenActivationPct,
                     breakevenOffsetPct: shortClassic.breakevenOffsetPct,
                   }
@@ -2162,10 +2131,9 @@ function RuleCard({
                     takeProfitKind: tpKind,
                     stopLoss,
                     stopLossKind: slKind,
-                    trailingDistance: trailingStop,
-                    trailingActivation: trailActiveKind === "price" ? trailingActive : "",
-                    trailingActivationKind: trailActiveKind,
-                    trailingTriggerPct: trailActiveKind === "percent" ? trailingActive : "",
+                    trailingPct: trailingStop,
+                    trailingActivationKind: "percent",
+                    trailingTriggerPct: trailingActive,
                     breakevenActivationPct,
                     breakevenOffsetPct,
                   },

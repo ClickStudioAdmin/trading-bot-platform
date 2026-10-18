@@ -95,7 +95,7 @@ assert.equal(
 assert.equal(value(dca, "Long Exit Conditions", "Stop loss"), "Off");
 assert.equal(
   value(dca, "Long Exit Conditions", "Breakeven Stop"),
-  "Move breakeven at 0.8% · offset 0.1%",
+  "Trigger P/L 0.8% · Buffer 0.1%",
 );
 assert.equal(value(dca, "Long Exit Conditions", "Custom conditions"), "Off");
 assert.match(value(dca, "Short Exit Conditions", "Custom conditions"), /RSI 14/);
@@ -238,7 +238,7 @@ assert.equal(
 );
 assert.equal(
   value(perpsStop, "Long Exit Conditions", "Breakeven Stop"),
-  "Move breakeven at 1.5% · offset 0.2%",
+  "Trigger P/L 1.5% · Buffer 0.2%",
 );
 const perpsBoth = perpsBotConfig({
   ...defaultFuturesAutomationForm(0, "ETHUSDT"),

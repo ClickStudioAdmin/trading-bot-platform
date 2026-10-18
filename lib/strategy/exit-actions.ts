@@ -138,10 +138,20 @@ export const EMPTY_EXIT_PRICES: ExitSidePrices = {
   breakevenOffsetPct: null,
 };
 
-/** A Flex percent gate or a DCA price gate cannot live on the classic columns. */
-export function trailFitsColumns(prices: ExitSidePrices): boolean {
+/** A Flex percent trail, a Flex percent gate, or a DCA price gate cannot live on the classic columns. */
+export function trailFitsColumns(
+  prices: ExitSidePrices,
+  style?: "flex" | "dca" | null,
+): boolean {
   const priceGate = prices.trailingActivation != null;
   const pctGate = prices.trailingTriggerPct != null && prices.trailingTriggerPct > 0;
+  if (
+    style === "flex" &&
+    prices.trailingDistance == null &&
+    ((prices.trailingPct != null && prices.trailingPct > 0) || pctGate)
+  ) {
+    return false;
+  }
   if (prices.trailingDistance != null && pctGate && !priceGate) {
     return false;
   }
@@ -828,7 +838,7 @@ function repeatPrices(
     if (flex) {
       return activationPrice
         ? { ...blank, trailingDistance: trail, trailingActivation: trigger }
-        : { ...blank, trailingDistance: trail, trailingTriggerPct: trigger };
+        : { ...blank, trailingPct: trail, trailingTriggerPct: trigger };
     }
     return activationPrice
       ? { ...blank, trailingPct: trail, trailingActivation: trigger }
@@ -841,9 +851,10 @@ function repeatPrices(
 export function exitActionsForSave(
   clauses: readonly ExitBuilderClause[],
   prices: ExitSidePrices,
+  style?: "flex" | "dca" | null,
 ): StoredExitAction[] | null {
   const trailingCard = clauses.some((clause) => clause.kind === "trailing_stop");
-  if (exitSideUsesColumns(clauses) && (!trailingCard || trailFitsColumns(prices))) {
+  if (exitSideUsesColumns(clauses) && (!trailingCard || trailFitsColumns(prices, style))) {
     return null;
   }
   const seen = new Map<string, number>();
