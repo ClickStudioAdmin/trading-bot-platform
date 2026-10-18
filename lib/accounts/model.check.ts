@@ -15,7 +15,12 @@ import {
   formatDeskNavLabel,
   formatDeskType,
   formatDeskTypeChoice,
+  createDeskPath,
+  deskCreatedPath,
+  deskCreatedRedirectLabel,
   deskHomePath,
+  DESK_CREATED_REDIRECT_SECONDS,
+  parseDeskCreateOrigin,
   DESK_QUERY,
   parseDeskQuery,
   pathWithDesk,
@@ -239,6 +244,45 @@ assert.equal(
   deskHomePath("cash_and_carry"),
   "/strategies/cash-and-carry/automations",
 );
+assert.equal(createDeskPath("dca"), "/account/desks/new?type=dca");
+assert.equal(
+  createDeskPath("dca", "manage"),
+  "/account/desks/new?type=dca&from=manage",
+);
+assert.equal(
+  createDeskPath("manual", "sidebar"),
+  "/account/desks/new?type=manual&from=sidebar",
+);
+assert.equal(parseDeskCreateOrigin("manage"), "manage");
+assert.equal(parseDeskCreateOrigin("sidebar"), "sidebar");
+assert.equal(parseDeskCreateOrigin("home"), null);
+assert.equal(
+  deskCreatedPath({
+    deskType: "dca",
+    origin: "manage",
+    accountId: "11111111-1111-4111-8111-111111111111",
+  }),
+  "/account/desks/new?type=dca&from=manage&created=11111111-1111-4111-8111-111111111111",
+);
+assert.equal(
+  deskCreatedPath({
+    deskType: "flex",
+    origin: "sidebar",
+    accountId: "11111111-1111-4111-8111-111111111111",
+    error: "Could not load that bot.",
+  }),
+  "/account/desks/new?type=flex&from=sidebar&created=11111111-1111-4111-8111-111111111111&error=Could+not+load+that+bot.",
+);
+assert.equal(DESK_CREATED_REDIRECT_SECONDS, 5);
+assert.equal(
+  deskCreatedRedirectLabel(5),
+  "Redirecting to the new desk in 5 seconds.",
+);
+assert.equal(
+  deskCreatedRedirectLabel(1),
+  "Redirecting to the new desk in 1 second.",
+);
+assert.equal(deskCreatedRedirectLabel(0), "Redirecting to the new desk.");
 assert.equal(deskHomePath("manual"), "/strategies/futures/positions");
 assert.equal(deskHomePath("flex"), "/strategies/futures/automations");
 assert.equal(deskHomePath("signal_follower"), "/strategies/futures/positions");

@@ -40,12 +40,13 @@ type MemberBillingRow = {
   stripe_subscription_id?: string | null;
   subscription_status: string | null;
   period_end: string | null;
+  created_at?: string | null;
   pay_subscription_from_affiliate?: boolean | null;
   pay_subscription_from_credit?: boolean | null;
 };
 
 const BILLING_COLUMNS_CORE =
-  "user_id, email, name, plan_id, billing_method, stripe_customer_id, stripe_subscription_id, subscription_status, period_end, pay_subscription_from_affiliate";
+  "user_id, email, name, plan_id, billing_method, stripe_customer_id, stripe_subscription_id, subscription_status, period_end, created_at, pay_subscription_from_affiliate";
 
 const BILLING_COLUMNS = `${BILLING_COLUMNS_CORE}, pay_subscription_from_credit`;
 
@@ -60,6 +61,7 @@ function mapBilling(row: MemberBillingRow): MemberBilling {
     stripeSubscriptionId: row.stripe_subscription_id ?? null,
     subscriptionStatus: parseSubscriptionStatus(row.subscription_status),
     periodEnd: row.period_end,
+    createdAt: typeof row.created_at === "string" ? row.created_at : null,
     paySubscriptionFromAffiliate: row.pay_subscription_from_affiliate === true,
     paySubscriptionFromCredit: row.pay_subscription_from_credit === true,
   };

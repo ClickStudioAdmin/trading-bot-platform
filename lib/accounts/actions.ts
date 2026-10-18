@@ -9,7 +9,9 @@ import {
   renameTradingAccountRow,
 } from "@/lib/accounts/store";
 import {
+  deskCreatedPath,
   parseDeskCreateChoice,
+  parseDeskCreateOrigin,
   pickSwitchAfterDelete,
   deskHomePath,
   validateNewDeskName,
@@ -68,6 +70,10 @@ function createDeskErrorPath(
     const params = new URLSearchParams();
     if (typed) {
       params.set("type", typed);
+    }
+    const origin = parseDeskCreateOrigin(formData.get("createFrom"));
+    if (origin) {
+      params.set("from", origin);
     }
     params.set("error", message);
     return `/account/desks/new?${params}`;
@@ -279,12 +285,21 @@ export async function createTradingAccount(formData: FormData) {
   });
   await setActiveAccountId(created.id);
   refreshAccountChrome();
+  const starterError =
+    starterErrors.length > 0 ? [...new Set(starterErrors)].join(" ") : "";
+  const origin = parseDeskCreateOrigin(formData.get("createFrom"));
+  if (origin) {
+    redirect(
+      deskCreatedPath({
+        deskType: created.deskType,
+        origin,
+        accountId: created.id,
+        error: starterError,
+      }),
+    );
+  }
   const home = deskHomePath(created.deskType, created.id);
-  redirect(
-    starterErrors.length > 0
-      ? withQuery(home, { error: [...new Set(starterErrors)].join(" ") })
-      : home,
-  );
+  redirect(starterError ? withQuery(home, { error: starterError }) : home);
 }
 
 async function deskDeleteGrantToken(): Promise<string | null> {

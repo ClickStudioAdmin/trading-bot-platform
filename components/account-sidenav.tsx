@@ -265,7 +265,7 @@ function DeskTypeCreateLink({
   const row = deskTypeAccessFor(access, deskType);
   return (
     <Link
-      href={createDeskPath(deskType)}
+      href={createDeskPath(deskType, "sidebar")}
       aria-current={creating ? "true" : undefined}
       aria-label={label}
       title={row?.allowed && row.message ? row.message : label}

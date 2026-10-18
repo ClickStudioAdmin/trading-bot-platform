@@ -346,6 +346,16 @@ assert.ok(backtesting);
 assert.equal(backtesting.fixedOrder, true);
 assert.equal(backtesting.rows[0].kind, "feature");
 assert.equal(backtesting.rows[0].key, "research_backtest");
+assert.deepEqual(
+  backtesting.rows.map((row) => row.key),
+  [
+    "research_backtest",
+    "max_backtests_per_month",
+    "max_stored_backtests",
+    "research_backtest_attach_templates",
+    "max_backtest_years",
+  ],
+);
 const replayStudio = PLAN_COMPARE_SECTIONS.find(
   (section) => section.title === "Replay Studio",
 );

@@ -1,4 +1,8 @@
-import { countOwnedSavedBacktests } from "@/lib/backtest/store";
+import {
+  countOwnedSavedBacktests,
+  countQueuedBacktestsInCycle,
+} from "@/lib/backtest/store";
+import { activeBillingCycle } from "@/lib/membership/billing";
 import { emptyCaps, emptyFeatures, type PlanCaps } from "@/lib/membership/catalog";
 import {
   RESEARCH_CAP_KEYS,
@@ -21,10 +25,15 @@ export async function loadResearchGateAccess(
   userId: string,
 ): Promise<ResearchGateAccess> {
   const billing = await getMemberBilling(userId);
-  const [planResult, catalog, savedUsed] = await Promise.all([
+  const cycle = activeBillingCycle({
+    periodEnd: billing?.periodEnd ?? null,
+    anchorMs: billing?.createdAt ? Date.parse(billing.createdAt) : null,
+  });
+  const [planResult, catalog, savedUsed, monthlyUsed] = await Promise.all([
     billing ? getMembershipPlan(billing.planId) : Promise.resolve(null),
     listCatalogMembershipPlans(),
     countOwnedSavedBacktests(userId),
+    cycle ? countQueuedBacktestsInCycle(userId, cycle) : Promise.resolve(null),
   ]);
   const plan = planResult && planResult.ok ? planResult.plan : null;
   const plans = catalog.ok ? catalog.plans : [];
@@ -51,6 +60,8 @@ export async function loadResearchGateAccess(
     grants,
     nowMs,
     plans,
+    monthlyUsed: monthlyUsed ?? 0,
+    monthlyCountOk: cycle != null && monthlyUsed != null,
     savedUsed: savedUsed ?? 0,
     savedCountOk: savedUsed != null,
   });
@@ -87,6 +98,9 @@ export async function deniedQueueBacktestMessage(
   }
   if (input.variant && !gate.optimize.allowed) {
     return gate.optimize.message;
+  }
+  if (gate.monthly.limit != null && !gate.monthlyCountOk) {
+    return "Could not check your backtests this billing cycle.";
   }
   if (gate.saved.limit != null && !gate.savedCountOk) {
     return "Could not check your saved backtests.";
