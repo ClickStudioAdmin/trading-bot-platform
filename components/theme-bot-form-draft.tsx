@@ -1824,7 +1824,7 @@ export function ThemeBotFormDraft() {
     };
     return (
       <div className="contents">
-        <Field label="Trigger P/L" required>
+        <Field label="Activation %" required>
           <PercentField
             value={trigger}
             onChange={writeTrigger}
@@ -2018,7 +2018,7 @@ export function ThemeBotFormDraft() {
       showFieldErrors && (shortLeg ? missing.shortBreakevenAt : missing.breakevenAt);
     return (
       <>
-        <Field label="Trigger P/L" required>
+        <Field label="Activation %" required>
           <PercentField
             value={activation}
             onChange={(next) =>

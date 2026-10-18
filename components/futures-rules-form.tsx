@@ -1525,7 +1525,7 @@ function RuleCard({
     };
     return (
       <div className="contents">
-        <BotField label="Trigger P/L" required>
+        <BotField label="Activation %" required>
           <span className="relative mt-1 block">
             <GroupedNumberInput
               name={fieldName("trailingTriggerPct")}
@@ -1729,7 +1729,7 @@ function RuleCard({
     const fieldName = (name: string) => exitFieldName(leg, name);
     return (
       <>
-        <BotField label="Trigger P/L" required>
+        <BotField label="Activation %" required>
           <span className="relative mt-1 block">
             <GroupedNumberInput
               name={fieldName("breakevenActivationPct")}

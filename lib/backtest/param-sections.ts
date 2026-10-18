@@ -658,7 +658,7 @@ function breakevenGroup(
   return {
     title: "Breakeven Stop",
     rows: [
-      { label: "Trigger P/L", value: pct(activation) },
+      { label: "Activation %", value: pct(activation) },
       { label: "Buffer %", value: pct(offset ?? 0) },
       { label: "Applies To", value: "Entire Position" },
     ],
@@ -729,7 +729,7 @@ function repeatLevelRows(action: StoredExitAction): ParamRow[] {
         trigger: levels.trigger,
       }) === "percent";
     return [
-      { label: "Trigger P/L", value: percent ? pct(levels.trigger) : levels.trigger || "—" },
+      { label: "Activation %", value: percent ? pct(levels.trigger) : levels.trigger || "—" },
       { label: "Trailing %", value: levels.trail ? (flex && !percent ? levels.trail : pct(levels.trail)) : "—" },
     ];
   }
@@ -759,7 +759,7 @@ function actionPriceRows(action: StoredExitAction): ParamRow[] {
   if (action.kind === "trailing_stop") {
     const rows: ParamRow[] = [];
     if (action.trailingTriggerPct != null) {
-      rows.push({ label: "Trigger P/L", value: pct(action.trailingTriggerPct) });
+      rows.push({ label: "Activation %", value: pct(action.trailingTriggerPct) });
     }
     if (action.trailingActivation != null) {
       rows.push({ label: "Activation price", value: num(action.trailingActivation) });
@@ -775,7 +775,7 @@ function actionPriceRows(action: StoredExitAction): ParamRow[] {
   if (action.kind === "breakeven") {
     return [
       {
-        label: "Trigger P/L",
+        label: "Activation %",
         value: pct(action.breakevenActivationPct),
       },
       {
@@ -968,7 +968,7 @@ function dcaClassicGroups(
   return [
     optionalGroup("Take profit", tpOn, tpRows),
     optionalGroup("Trailing stop", trailOn, [
-      { label: "Trigger P/L", value: pct(trailingTriggerPct) },
+      { label: "Activation %", value: pct(trailingTriggerPct) },
       { label: "Trailing %", value: pct(trailingPct) },
     ]),
     optionalGroup("Stop loss", slOn, [

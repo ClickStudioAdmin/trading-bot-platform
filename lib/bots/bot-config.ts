@@ -280,7 +280,7 @@ function dcaExitLines(classic: DcaClassicExit): BotConfigLine[] {
       trailOn
         ? joinParts([
             pct(classic.trailingTriggerPct)
-              ? `Trigger P/L ${pct(classic.trailingTriggerPct)}`
+              ? `Activation % ${pct(classic.trailingTriggerPct)}`
               : null,
             pct(classic.trailingPct) ? `Trailing % ${pct(classic.trailingPct)}` : null,
           ])
@@ -296,7 +296,7 @@ function dcaExitLines(classic: DcaClassicExit): BotConfigLine[] {
       "Breakeven Stop",
       classic.breakevenActivationPct == null
         ? null
-        : `Trigger P/L ${pct(classic.breakevenActivationPct)} · Buffer ${pct(classic.breakevenOffsetPct) ?? "0%"}`,
+        : `Activation % ${pct(classic.breakevenActivationPct)} · Buffer ${pct(classic.breakevenOffsetPct) ?? "0%"}`,
     ),
   ];
   return lines;
@@ -522,7 +522,7 @@ function perpsClassicLines(input: {
     setting(
       "Breakeven Stop",
       activation
-        ? `Trigger P/L ${activation}% · Buffer ${input.breakevenOffsetPct.trim() || "0"}%`
+        ? `Activation % ${activation}% · Buffer ${input.breakevenOffsetPct.trim() || "0"}%`
         : null,
     ),
   ];

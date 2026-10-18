@@ -2799,12 +2799,12 @@ export function DcaPlaybookForm({
     };
     return (
       <div className="contents">
-        <BotField label="Trigger P/L" required>
+        <BotField label="Activation %" required>
           <PercentInput
             name={fieldName("trailingTriggerPct")}
             value={trigger}
             onChange={writeTrigger}
-            ariaLabel="Trigger P/L"
+            ariaLabel="Activation percent"
             invalid={repeat ? missing : dirty && missing}
           />
         </BotField>
@@ -2896,7 +2896,7 @@ export function DcaPlaybookForm({
     const fieldName = (name: string) => classicField(leg, name);
     return (
       <>
-        <BotField label="Trigger P/L" required>
+        <BotField label="Activation %" required>
           <PercentInput
             name={fieldName("breakevenActivationPct")}
             value={activation}
@@ -2905,7 +2905,7 @@ export function DcaPlaybookForm({
                 ? patchShort("breakevenActivationPct", next)
                 : setBreakevenActivationPct(next)
             }
-            ariaLabel="Trigger P/L"
+            ariaLabel="Activation percent"
             invalid={dirty && invalid}
           />
         </BotField>
