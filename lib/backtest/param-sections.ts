@@ -653,10 +653,10 @@ function breakevenGroup(
   offset: number | null | undefined,
 ): ParamGroup {
   if (activation == null) {
-    return { rows: [{ label: "Breakeven", value: "Off" }] };
+    return { rows: [{ label: "Breakeven Stop", value: "Off" }] };
   }
   return {
-    title: "Breakeven",
+    title: "Breakeven Stop",
     rows: [
       { label: "Move stop to breakeven at %", value: pct(activation) },
       { label: "Breakeven offset %", value: pct(offset ?? 0) },

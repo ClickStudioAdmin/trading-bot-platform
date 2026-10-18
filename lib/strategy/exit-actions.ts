@@ -573,7 +573,7 @@ function actionLabel(kind: ExitBuilderClause["kind"], index: number): string {
         : kind === "stop_loss"
           ? "stop loss"
           : kind === "breakeven"
-            ? "breakeven"
+            ? "breakeven stop"
             : kind === "custom"
               ? "close"
               : "action";
@@ -608,7 +608,7 @@ function forEachBlock(
       return "Close needs a condition.";
     }
     if (clause.kind === "breakeven" && seen > 1) {
-      return "Only one breakeven on a side.";
+      return "Only one Breakeven Stop on a side.";
     }
     const ruleName = priceRuleName(clause.kind);
     if (ruleName && !clauseHasPriceRule(clause)) {
@@ -2103,7 +2103,7 @@ export function actionKindLabel(kind: ExitActionKind | ClassicExitKind | "custom
     return "Stop loss";
   }
   if (kind === "breakeven") {
-    return "Breakeven";
+    return "Breakeven Stop";
   }
   return "Close";
 }

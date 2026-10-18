@@ -293,7 +293,7 @@ function dcaExitLines(classic: DcaClassicExit): BotConfigLine[] {
         : joinParts([pct(classic.stopLossPct), basisLabel(classic.stopLossBasis)]),
     ),
     setting(
-      "Breakeven",
+      "Breakeven Stop",
       classic.breakevenActivationPct == null
         ? null
         : `Move breakeven at ${pct(classic.breakevenActivationPct)} · offset ${pct(classic.breakevenOffsetPct) ?? "0%"}`,
@@ -520,7 +520,7 @@ function perpsClassicLines(input: {
         : null,
     ),
     setting(
-      "Breakeven",
+      "Breakeven Stop",
       activation
         ? `Move breakeven at ${activation}% · offset ${input.breakevenOffsetPct.trim() || "0"}%`
         : null,

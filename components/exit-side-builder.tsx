@@ -60,7 +60,7 @@ const ACTION_OPTIONS: { value: ClassicExitKind | "breakeven" | "close"; label: s
   { value: "take_profit", label: "Take Profit" },
   { value: "trailing_stop", label: "Trailing Stop" },
   { value: "stop_loss", label: "Stop Loss" },
-  { value: "breakeven", label: "Breakeven" },
+  { value: "breakeven", label: "Breakeven Stop" },
   { value: "close", label: "Close" },
 ];
 

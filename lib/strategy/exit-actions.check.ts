@@ -650,7 +650,7 @@ assert.equal(exitSideUsesColumns([simpleBreakeven]), true);
 assert.equal(exitActionsForSave([simpleBreakeven], breakevenPrices), null);
 assert.equal(
   exitCardsBlockReason([simpleBreakeven, breakevenExitClause()]),
-  "Only one breakeven on a side.",
+  "Only one Breakeven Stop on a side.",
 );
 const breakevenAndRsi = breakevenExitClause();
 breakevenAndRsi.rows = [

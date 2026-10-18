@@ -106,7 +106,7 @@ assert.deepEqual(
 );
 assert.deepEqual(
   nestedStop?.groups
-    .find((group) => group.title === "Breakeven")
+    .find((group) => group.title === "Breakeven Stop")
     ?.rows.map((row) => row.label),
   ["Move stop to breakeven at %", "Breakeven offset %", "Applies To"],
 );
@@ -126,7 +126,7 @@ assert.equal(
 );
 assert.deepEqual(
   breakevenOnly?.groups
-    .find((group) => group.title === "Breakeven")
+    .find((group) => group.title === "Breakeven Stop")
     ?.rows.map((row) => row.label),
   ["Move stop to breakeven at %", "Breakeven offset %", "Applies To"],
 );
