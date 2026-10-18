@@ -67,7 +67,13 @@ export async function backtestsForBotRecipes(input: {
     const recipe = parseListedRecipe(bot.recipe);
     return id && recipe ? [{ id, recipe }] : [];
   });
-  const symbols = [...new Set(bots.map((bot) => bot.recipe.symbol))];
+  const symbols = [
+    ...new Set(
+      bots.flatMap((bot) =>
+        bot.recipe.kind === "cash_and_carry" ? [] : [bot.recipe.symbol],
+      ),
+    ),
+  ];
   const runs = await listDoneBacktestsForSymbols(input.userId, symbols);
   return backtestLinksForBotRecipes({
     bots,
