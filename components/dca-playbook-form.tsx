@@ -59,7 +59,12 @@ import {
   clausesFromExitActions,
   exitCardsBlockReason,
   exitPricesFromLevels,
+  savedTrailActivation,
 } from "@/lib/strategy/exit-actions";
+import {
+  trailActivationKind,
+  type TrailActivationKind,
+} from "@/lib/strategy/exit-clauses";
 import {
   EntryConditionStack,
   entryConflictSlots,
@@ -256,6 +261,7 @@ type DcaClassicDraft = {
   stopLossBasis: DcaExitBasis;
   trailingTriggerPct: string;
   trailingPct: string;
+  trailActiveKind: TrailActivationKind;
   breakevenActivationPct: string;
   breakevenOffsetPct: string;
   breakevenOn: boolean;
@@ -273,29 +279,37 @@ function blankClassicDraft(): DcaClassicDraft {
     stopLossBasis: "average",
     trailingTriggerPct: "",
     trailingPct: "",
+    trailActiveKind: "percent",
     breakevenActivationPct: "",
     breakevenOffsetPct: "",
     breakevenOn: false,
   };
 }
 
-function classicDraftFromLeg(leg: {
-  takeProfitKind?: DcaTakeProfitKind | null;
-  takeProfitAtrMult?: number | null;
-  takeProfitPct: number | null;
-  takeProfitBasis?: DcaExitBasis | null;
-  takeProfitOrderType?: FuturesOrderType | null;
-  atrPeriod?: number | null;
-  stopLossPct: number | null;
-  stopLossBasis?: DcaExitBasis | null;
-  trailingTriggerPct: number | null;
-  trailingPct: number | null;
-  breakevenActivationPct: number | null;
-  breakevenOffsetPct: number | null;
-} | null): DcaClassicDraft {
+function classicDraftFromLeg(
+  leg: {
+    takeProfitKind?: DcaTakeProfitKind | null;
+    takeProfitAtrMult?: number | null;
+    takeProfitPct: number | null;
+    takeProfitBasis?: DcaExitBasis | null;
+    takeProfitOrderType?: FuturesOrderType | null;
+    atrPeriod?: number | null;
+    stopLossPct: number | null;
+    stopLossBasis?: DcaExitBasis | null;
+    trailingTriggerPct: number | null;
+    trailingPct: number | null;
+    breakevenActivationPct: number | null;
+    breakevenOffsetPct: number | null;
+  } | null,
+  actions?: DcaPlaybook["exitActions"],
+): DcaClassicDraft {
   if (!leg) {
     return blankClassicDraft();
   }
+  const trail = savedTrailActivation({
+    actions,
+    triggerPct: leg.trailingTriggerPct,
+  });
   return {
     takeProfitKind: leg.takeProfitKind ?? "percent",
     takeProfitAtrMult: optional(leg.takeProfitAtrMult),
@@ -305,8 +319,9 @@ function classicDraftFromLeg(leg: {
     atrPeriod: optional(leg.atrPeriod),
     stopLossPct: optional(leg.stopLossPct),
     stopLossBasis: leg.stopLossBasis ?? "average",
-    trailingTriggerPct: optional(leg.trailingTriggerPct),
+    trailingTriggerPct: trail.value,
     trailingPct: optional(leg.trailingPct),
+    trailActiveKind: trail.kind,
     breakevenActivationPct: optional(leg.breakevenActivationPct),
     breakevenOffsetPct: optional(leg.breakevenOffsetPct),
     breakevenOn: leg.breakevenActivationPct != null,
@@ -1203,9 +1218,14 @@ export function DcaPlaybookForm({
       ? source.takeProfitAtrMult != null
       : source?.takeProfitPct != null,
   );
-  const [trailingTriggerPct, setTrailingTriggerPct] = useState(
-    optional(source?.trailingTriggerPct),
+  const initialTrail = savedTrailActivation({
+    actions: source?.exitActions,
+    triggerPct: source?.trailingTriggerPct,
+  });
+  const [trailActiveKind, setTrailActiveKind] = useState<TrailActivationKind>(
+    initialTrail.kind,
   );
+  const [trailingTriggerPct, setTrailingTriggerPct] = useState(initialTrail.value);
   const [trailingPct, setTrailingPct] = useState(optional(source?.trailingPct));
   const [trailOn] = useState(
     () => source?.trailingPct != null || source?.trailingTriggerPct != null,
@@ -1228,9 +1248,9 @@ export function DcaPlaybookForm({
       return blankClassicDraft();
     }
     if (source.shortClassic) {
-      return classicDraftFromLeg(source.shortClassic);
+      return classicDraftFromLeg(source.shortClassic, source.shortExitActions);
     }
-    return classicDraftFromLeg(source);
+    return classicDraftFromLeg(source, source.exitActions);
   });
   const [indicatorKind, setIndicatorKind] = useState<DcaIndicatorKind | "">(
     source
@@ -1409,6 +1429,7 @@ export function DcaPlaybookForm({
       stopLossBasis,
       trailingTriggerPct,
       trailingPct,
+      trailActiveKind,
       breakevenActivationPct,
       breakevenOffsetPct,
       breakevenOn,
@@ -1423,6 +1444,7 @@ export function DcaPlaybookForm({
     setStopLossPct("");
     setStopLossBasis("average");
     setTrailingTriggerPct("");
+    setTrailActiveKind("percent");
     setTrailingPct("");
     setBreakevenActivationPct("");
     setBreakevenOffsetPct("");
@@ -1440,6 +1462,7 @@ export function DcaPlaybookForm({
     setStopLossPct(shortClassic.stopLossPct);
     setStopLossBasis(shortClassic.stopLossBasis);
     setTrailingTriggerPct(shortClassic.trailingTriggerPct);
+    setTrailActiveKind(shortClassic.trailActiveKind);
     setTrailingPct(shortClassic.trailingPct);
     setBreakevenActivationPct(shortClassic.breakevenActivationPct);
     setBreakevenOffsetPct(shortClassic.breakevenOffsetPct);
@@ -1856,7 +1879,8 @@ export function DcaPlaybookForm({
       takeProfitOrderType,
       stopLossPct: slLive ? stopLossPct : "",
       stopLossBasis,
-      trailingTriggerPct: trailLive ? trailingTriggerPct : "",
+      trailingTriggerPct: trailLive && trailActiveKind === "percent" ? trailingTriggerPct : "",
+      trailingActiveKind: trailLive ? trailActiveKind : "percent",
       trailingPct: trailLive ? trailingPct : "",
       breakevenActivationPct:
         slLive && breakevenOn ? breakevenActivationPct : "",
@@ -1884,9 +1908,11 @@ export function DcaPlaybookForm({
             shortAtrPeriod: shortClassic.atrPeriod,
             shortStopLossPct: shortSlLive ? shortClassic.stopLossPct : "",
             shortStopLossBasis: shortClassic.stopLossBasis,
-            shortTrailingTriggerPct: shortTrailLive
-              ? shortClassic.trailingTriggerPct
-              : "",
+            shortTrailingTriggerPct:
+              shortTrailLive && shortClassic.trailActiveKind === "percent"
+                ? shortClassic.trailingTriggerPct
+                : "",
+            shortTrailingActiveKind: shortTrailLive ? shortClassic.trailActiveKind : "percent",
             shortTrailingPct: shortTrailLive ? shortClassic.trailingPct : "",
             shortBreakevenActivationPct:
               shortSlLive && shortClassic.breakevenOn
@@ -2326,7 +2352,6 @@ export function DcaPlaybookForm({
                   )
                 }
                 onPrice={shortLeg ? setShortArmPrice : setArmPrice}
-                quoteLabel={policy.quoteLabel}
                 seriesSlots={entryConflictSlots(dcaStackAnchor(side), rows)}
                 seriesIndex={0}
                 priceInvalid={dirty && asNumber(shortLeg ? shortArmPrice : armPrice) == null}
@@ -2339,7 +2364,7 @@ export function DcaPlaybookForm({
             <div className={fieldRowClass}>
               {signalWebhooks.length > 0 ? (
                 <label className={`${labelClass} col-span-full${lockClass}`}>
-                  <HintLabel text="Signal Webhook" required />
+                  <HintLabel text="Webhook" required />
                   <AppSelect
                     name={shortLeg ? "shortWebhookId" : "webhookId"}
                     value={hookId}
@@ -2750,6 +2775,15 @@ export function DcaPlaybookForm({
   function dcaTrailingFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = usesShortExit(leg);
     const repeat = slot != null;
+    const activeKind: TrailActivationKind = repeat
+      ? trailActivationKind({
+          method: slot.levels.method,
+          style: slot.levels.style || "dca",
+          trigger: slot.levels.trigger,
+        })
+      : shortLeg
+        ? shortClassic.trailActiveKind
+        : trailActiveKind;
     const trigger = repeat
       ? slot.levels.trigger
       : shortLeg
@@ -2764,25 +2798,6 @@ export function DcaPlaybookForm({
     const fieldName = (name: string) => (repeat ? undefined : classicField(leg, name));
     return (
       <div className="contents">
-        <BotField
-          label="Trigger %"
-          hint="Trail starts after price moves this %."
-          required
-        >
-          <PercentInput
-            name={fieldName("trailingTriggerPct")}
-            value={trigger}
-            onChange={(next) =>
-              repeat
-                ? slot.onChange({ trigger: next })
-                : shortLeg
-                  ? patchShort("trailingTriggerPct", next)
-                  : setTrailingTriggerPct(next)
-            }
-            ariaLabel="Trailing trigger percent"
-            invalid={repeat ? missing : dirty && missing}
-          />
-        </BotField>
         <BotField label="Trailing %" required>
           <PercentInput
             name={fieldName("trailingPct")}
@@ -2797,6 +2812,67 @@ export function DcaPlaybookForm({
             ariaLabel="Trailing percent"
             invalid={repeat ? missing : dirty && missing}
           />
+        </BotField>
+        <BotField label="Type" required>
+          <AppSelect
+            name={fieldName("trailingActiveKind")}
+            value={activeKind}
+            onChange={(event) => {
+              const next = event.target.value === "price" ? "price" : "percent";
+              if (repeat) {
+                slot.onChange({ method: next, trigger: "" });
+              } else if (shortLeg) {
+                patchShort("trailActiveKind", next);
+                patchShort("trailingTriggerPct", "");
+              } else {
+                setTrailActiveKind(next);
+                setTrailingTriggerPct("");
+              }
+            }}
+            className={fieldClass}
+          >
+            <option value="price">Price</option>
+            <option value="percent">Percentage</option>
+          </AppSelect>
+        </BotField>
+        <BotField
+          label={activeKind === "percent" ? "%" : "Price"}
+          hint={
+            activeKind === "percent"
+              ? "Trail starts after the position is up this %."
+              : "Trail starts when price reaches this level."
+          }
+          required
+        >
+          {activeKind === "percent" ? (
+            <PercentInput
+              name={fieldName("trailingTriggerPct")}
+              value={trigger}
+              onChange={(next) =>
+                repeat
+                  ? slot.onChange({ trigger: next })
+                  : shortLeg
+                    ? patchShort("trailingTriggerPct", next)
+                    : setTrailingTriggerPct(next)
+              }
+              ariaLabel="Trailing activation percent"
+              invalid={repeat ? missing : dirty && missing}
+            />
+          ) : (
+            <GroupedNumberInput
+              value={trigger}
+              onChange={(next) =>
+                repeat
+                  ? slot.onChange({ trigger: next })
+                  : shortLeg
+                    ? patchShort("trailingTriggerPct", next)
+                    : setTrailingTriggerPct(next)
+              }
+              allowDecimal
+              ariaLabel="Trailing activation price"
+              className={(repeat ? missing : dirty && missing) ? botFieldInvalidClass : fieldClass}
+            />
+          )}
         </BotField>
       </div>
     );
@@ -3534,6 +3610,9 @@ export function DcaPlaybookForm({
             takeProfit: takeProfitPct,
             stopLoss: stopLossPct,
             trailingPct,
+            trailingActivationKind: trailActiveKind,
+            trailingTriggerPct: trailActiveKind === "percent" ? trailingTriggerPct : "",
+            trailingActivation: trailActiveKind === "price" ? trailingTriggerPct : "",
           })}
           priceStyle="dca"
           renderTakeProfit={(slot) => dcaTakeProfitFields("primary", slot)}
@@ -3562,11 +3641,23 @@ export function DcaPlaybookForm({
                   takeProfit: shortClassic.takeProfitPct,
                   stopLoss: shortClassic.stopLossPct,
                   trailingPct: shortClassic.trailingPct,
+                  trailingActivationKind: shortClassic.trailActiveKind,
+                  trailingTriggerPct:
+                    shortClassic.trailActiveKind === "percent"
+                      ? shortClassic.trailingTriggerPct
+                      : "",
+                  trailingActivation:
+                    shortClassic.trailActiveKind === "price"
+                      ? shortClassic.trailingTriggerPct
+                      : "",
                 }
               : {
                   takeProfit: takeProfitPct,
                   stopLoss: stopLossPct,
                   trailingPct,
+                  trailingActivationKind: trailActiveKind,
+                  trailingTriggerPct: trailActiveKind === "percent" ? trailingTriggerPct : "",
+                  trailingActivation: trailActiveKind === "price" ? trailingTriggerPct : "",
                 },
           )}
           priceStyle="dca"
@@ -4049,7 +4140,6 @@ function TriggerFields({
   onTriggerBy,
   onCompare,
   onPrice,
-  quoteLabel,
   seriesSlots,
   seriesIndex,
   priceInvalid = false,
@@ -4061,7 +4151,6 @@ function TriggerFields({
   onTriggerBy: (next: string) => void;
   onCompare: (next: string) => void;
   onPrice: (next: string) => void;
-  quoteLabel: string;
   seriesSlots?: readonly EntryConflictSlot[];
   seriesIndex?: number;
   priceInvalid?: boolean;
@@ -4069,7 +4158,7 @@ function TriggerFields({
   return (
     <>
       <label className={labelClass}>
-        <HintLabel text="Price" required />
+        <HintLabel text="Price source" required />
         <AppSelect
           name={`${prefix}TriggerBy`}
           value={triggerBy}
@@ -4087,13 +4176,13 @@ function TriggerFields({
                 { source },
               )}
             >
-              {source === "last" ? "Last" : source === "mark" ? "Mark" : "Index"}
+              {source === "last" ? "Last is" : source === "mark" ? "Mark is" : "Index is"}
             </option>
           ))}
         </AppSelect>
       </label>
       <label className={labelClass}>
-        <HintLabel text="When" required />
+        <HintLabel text="Compare" required />
         <AppSelect
           name={`${prefix}Compare`}
           value={compare}
@@ -4117,7 +4206,7 @@ function TriggerFields({
         </AppSelect>
       </label>
       <label className={labelClass}>
-        <HintLabel text={`Level (${quoteLabel})`} required />
+        <HintLabel text="Price" required />
         <GroupedNumberInput
           name={`${prefix}Price`}
           value={price}

@@ -48,7 +48,12 @@ import {
   clausesFromExitActions,
   exitCardsBlockReason,
   exitPricesFromLevels,
+  savedTrailActivation,
 } from "@/lib/strategy/exit-actions";
+import {
+  trailActivationKind,
+  type TrailActivationKind,
+} from "@/lib/strategy/exit-clauses";
 import type { ExitBuilderClause, ExitFieldSlot } from "@/lib/strategy/exit-clauses";
 import {
   initialPerpsEntryDrafts,
@@ -494,6 +499,7 @@ type PerpsClassicDraft = {
   slLimitPrice: string;
   trailingStop: string;
   trailingActive: string;
+  trailActiveKind: TrailActivationKind;
   breakevenOn: boolean;
   breakevenActivationPct: string;
   breakevenOffsetPct: string;
@@ -513,6 +519,7 @@ function blankPerpsClassic(): PerpsClassicDraft {
     slLimitPrice: "",
     trailingStop: "",
     trailingActive: "",
+    trailActiveKind: "percent",
     breakevenOn: false,
     breakevenActivationPct: "",
     breakevenOffsetPct: "",
@@ -521,7 +528,12 @@ function blankPerpsClassic(): PerpsClassicDraft {
 
 function perpsDraftFromClassic(
   classic: NonNullable<NonNullable<FuturesAutomationFormValues["shortEntry"]>["classic"]>,
+  actions?: FuturesAutomationFormValues["exitActions"],
 ): PerpsClassicDraft {
+  const trail = savedTrailActivation({
+    actions,
+    activePrice: classic.trailing?.activePrice ?? null,
+  });
   return {
     tpKind: defaultTpslLevelKind(classic.tpsl?.takeProfit, classic.tpsl?.tpKind),
     slKind: defaultTpslLevelKind(classic.tpsl?.stopLoss, classic.tpsl?.slKind),
@@ -537,10 +549,8 @@ function perpsDraftFromClassic(
     slLimitPrice:
       classic.tpsl?.slLimitPrice != null ? String(classic.tpsl.slLimitPrice) : "",
     trailingStop: classic.trailing != null ? String(classic.trailing.distance) : "",
-    trailingActive:
-      classic.trailing?.activePrice != null
-        ? String(classic.trailing.activePrice)
-        : "",
+    trailingActive: trail.value,
+    trailActiveKind: trail.kind,
     breakevenOn: classic.breakevenActivationPct != null,
     breakevenActivationPct:
       classic.breakevenActivationPct != null
@@ -552,6 +562,10 @@ function perpsDraftFromClassic(
 }
 
 function perpsDraftFromLong(layer: FuturesAutomationFormValues): PerpsClassicDraft {
+  const trail = savedTrailActivation({
+    actions: layer.exitActions,
+    activePrice: layer.trailing?.activePrice ?? null,
+  });
   return {
     tpKind: defaultTpslLevelKind(layer.tpsl?.takeProfit, layer.tpsl?.tpKind),
     slKind: defaultTpslLevelKind(layer.tpsl?.stopLoss, layer.tpsl?.slKind),
@@ -567,8 +581,8 @@ function perpsDraftFromLong(layer: FuturesAutomationFormValues): PerpsClassicDra
     slLimitPrice:
       layer.tpsl?.slLimitPrice != null ? String(layer.tpsl.slLimitPrice) : "",
     trailingStop: layer.trailing != null ? String(layer.trailing.distance) : "",
-    trailingActive:
-      layer.trailing?.activePrice != null ? String(layer.trailing.activePrice) : "",
+    trailingActive: trail.value,
+    trailActiveKind: trail.kind,
     breakevenOn: layer.breakevenActivationPct.trim() !== "",
     breakevenActivationPct: layer.breakevenActivationPct,
     breakevenOffsetPct: layer.breakevenOffsetPct,
@@ -719,18 +733,23 @@ function RuleCard({
   const [slLimitPrice, setSlLimitPrice] = useState(
     layer.tpsl?.slLimitPrice != null ? String(layer.tpsl.slLimitPrice) : "",
   );
+  const initialPrimaryTrail = savedTrailActivation({
+    actions: layer.exitActions,
+    activePrice: layer.trailing?.activePrice ?? null,
+  });
   const [trailingStop, setTrailingStop] = useState(
     layer.trailing != null ? String(layer.trailing.distance) : "",
   );
-  const [trailingActive, setTrailingActive] = useState(
-    layer.trailing?.activePrice != null ? String(layer.trailing.activePrice) : "",
+  const [trailActiveKind, setTrailActiveKind] = useState<TrailActivationKind>(
+    initialPrimaryTrail.kind,
   );
+  const [trailingActive, setTrailingActive] = useState(initialPrimaryTrail.value);
   const [shortClassic, setShortClassic] = useState<PerpsClassicDraft>(() => {
     if (initialPerpsFormDirection(layer, allowBoth) !== "both") {
       return blankPerpsClassic();
     }
     if (layer.shortEntry?.classic) {
-      return perpsDraftFromClassic(layer.shortEntry.classic);
+      return perpsDraftFromClassic(layer.shortEntry.classic, layer.shortEntry.actions);
     }
     return perpsDraftFromLong(layer);
   });
@@ -863,7 +882,10 @@ function RuleCard({
       shortTrailLive && Number(shortClassic.trailingStop.replace(/,/g, "")) > 0
         ? {
             distance: Number(shortClassic.trailingStop.replace(/,/g, "")),
-            activePrice: Number(shortClassic.trailingActive.replace(/,/g, "")) || null,
+            activePrice:
+              shortClassic.trailActiveKind === "price"
+                ? Number(shortClassic.trailingActive.replace(/,/g, "")) || null
+                : null,
             peak: storedShort?.trailing?.peak ?? null,
           }
         : null,
@@ -1006,7 +1028,10 @@ function RuleCard({
         trailLive && Number(trailingStop.replace(/,/g, "")) > 0
       ? {
           distance: Number(trailingStop.replace(/,/g, "")),
-          activePrice: Number(trailingActive.replace(/,/g, "")) || null,
+          activePrice:
+            trailActiveKind === "price"
+              ? Number(trailingActive.replace(/,/g, "")) || null
+              : null,
           peak: layer.trailing?.peak ?? null,
         }
       : null;
@@ -1195,6 +1220,7 @@ function RuleCard({
       slLimitPrice,
       trailingStop,
       trailingActive,
+      trailActiveKind,
       breakevenOn,
       breakevenActivationPct,
       breakevenOffsetPct,
@@ -1216,6 +1242,7 @@ function RuleCard({
     setSlLimitPrice("");
     setTrailingStop("");
     setTrailingActive("");
+    setTrailActiveKind("percent");
     setBreakevenOn(false);
     setBreakevenActivationPct("");
     setBreakevenOffsetPct("");
@@ -1233,6 +1260,7 @@ function RuleCard({
     setSlLimitPrice(shortClassic.slLimitPrice);
     setTrailingStop(shortClassic.trailingStop);
     setTrailingActive(shortClassic.trailingActive);
+    setTrailActiveKind(shortClassic.trailActiveKind);
     setBreakevenOn(shortClassic.breakevenOn);
     setBreakevenActivationPct(shortClassic.breakevenActivationPct);
     setBreakevenOffsetPct(shortClassic.breakevenOffsetPct);
@@ -1454,6 +1482,15 @@ function RuleCard({
       : shortLeg
         ? shortClassic.trailingStop
         : trailingStop;
+    const activeKind: TrailActivationKind = repeat
+      ? trailActivationKind({
+          method: slot.levels.method,
+          style: slot.levels.style || "flex",
+          trigger: slot.levels.trigger,
+        })
+      : shortLeg
+        ? shortClassic.trailActiveKind
+        : trailActiveKind;
     const active = repeat
       ? slot.levels.trigger
       : shortLeg
@@ -1489,22 +1526,72 @@ function RuleCard({
             className={(repeat ? missing : dirty && missing) ? botFieldInvalidClass : botFieldClass}
           />
         </BotField>
-        <BotField label="Activation price" required>
-          <GroupedNumberInput
-            name={fieldName("trailingActive")}
-            value={active}
-            onChange={(next) =>
-              repeat
-                ? slot.onChange({ trigger: next })
-                : shortLeg
-                  ? patchShort({ trailingActive: next })
-                  : setTrailingActive(next)
-            }
-            allowDecimal
-            className={activeMissing ? botFieldInvalidClass : botFieldClass}
-          />
+        <BotField label="Type" required>
+          <AppSelect
+            name={fieldName("trailingActiveKind")}
+            value={activeKind}
+            onChange={(event) => {
+              const next = event.target.value === "price" ? "price" : "percent";
+              if (repeat) {
+                slot.onChange({ method: next, trigger: "" });
+              } else if (shortLeg) {
+                patchShort({ trailActiveKind: next, trailingActive: "" });
+              } else {
+                setTrailActiveKind(next);
+                setTrailingActive("");
+              }
+            }}
+            className={botFieldClass}
+          >
+            <option value="price">Price</option>
+            <option value="percent">Percentage</option>
+          </AppSelect>
         </BotField>
-        {repeat ? null : (
+        <BotField
+          label={activeKind === "percent" ? "%" : "Price"}
+          hint={
+            activeKind === "percent"
+              ? "Trail starts after the position is up this %."
+              : "Trail starts when price reaches this level."
+          }
+          required
+        >
+          {activeKind === "percent" ? (
+            <span className="relative mt-1 block">
+              <GroupedNumberInput
+                name={fieldName("trailingTriggerPct")}
+                value={active}
+                onChange={(next) =>
+                  repeat
+                    ? slot.onChange({ trigger: next })
+                    : shortLeg
+                      ? patchShort({ trailingActive: next })
+                      : setTrailingActive(next)
+                }
+                allowDecimal
+                className={`${activeMissing ? botFieldInvalidClass : botFieldClass} !mt-0 pr-7`}
+              />
+              <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                %
+              </span>
+            </span>
+          ) : (
+            <GroupedNumberInput
+              name={fieldName("trailingActive")}
+              value={active}
+              onChange={(next) =>
+                repeat
+                  ? slot.onChange({ trigger: next })
+                  : shortLeg
+                    ? patchShort({ trailingActive: next })
+                    : setTrailingActive(next)
+              }
+              allowDecimal
+              className={activeMissing ? botFieldInvalidClass : botFieldClass}
+            />
+          )}
+        </BotField>
+        {repeat || activeKind !== "price" ? null : (
           <input type="hidden" name={exitFieldName(leg, "trailingActivation")} value="on" />
         )}
       </div>
@@ -2061,7 +2148,9 @@ function RuleCard({
               stopLoss,
               stopLossKind: slKind,
               trailingDistance: trailingStop,
-              trailingActivation: trailingActive,
+              trailingActivation: trailActiveKind === "price" ? trailingActive : "",
+              trailingActivationKind: trailActiveKind,
+              trailingTriggerPct: trailActiveKind === "percent" ? trailingActive : "",
             })}
             priceStyle="flex"
             renderTakeProfit={(slot) => perpsTakeProfitFields("primary", slot)}
@@ -2094,7 +2183,11 @@ function RuleCard({
                     stopLoss: shortClassic.stopLoss,
                     stopLossKind: shortClassic.slKind,
                     trailingDistance: shortClassic.trailingStop,
-                    trailingActivation: shortClassic.trailingActive,
+                    trailingActivation:
+                      shortClassic.trailActiveKind === "price" ? shortClassic.trailingActive : "",
+                    trailingActivationKind: shortClassic.trailActiveKind,
+                    trailingTriggerPct:
+                      shortClassic.trailActiveKind === "percent" ? shortClassic.trailingActive : "",
                   }
                 : {
                     takeProfit,
@@ -2102,7 +2195,9 @@ function RuleCard({
                     stopLoss,
                     stopLossKind: slKind,
                     trailingDistance: trailingStop,
-                    trailingActivation: trailingActive,
+                    trailingActivation: trailActiveKind === "price" ? trailingActive : "",
+                    trailingActivationKind: trailActiveKind,
+                    trailingTriggerPct: trailActiveKind === "percent" ? trailingActive : "",
                   },
             )}
             priceStyle="flex"

@@ -104,6 +104,37 @@ export function clauseLevels(clause: { levels?: ExitRepeatLevels | null }): Exit
   return { ...emptyRepeatLevels(), ...clause.levels };
 }
 
+export type TrailActivationKind = "percent" | "price";
+
+/**
+ * When a trailing stop starts. Percent is profit from entry. Price is a
+ * market level. A new trail defaults to percent. A saved Flex activation
+ * price stays a price.
+ */
+export function trailActivationKind(input: {
+  method?: string | null;
+  style?: string | null;
+  trigger?: string | null;
+  trailingActivation?: number | null;
+  trailingTriggerPct?: number | null;
+}): TrailActivationKind {
+  if (input.method === "price" || input.method === "percent") {
+    return input.method;
+  }
+  const triggerPct = input.trailingTriggerPct;
+  const activation = input.trailingActivation;
+  if (activation != null && activation > 0 && !(triggerPct != null && triggerPct > 0)) {
+    return "price";
+  }
+  if (triggerPct != null && triggerPct > 0 && activation == null) {
+    return "percent";
+  }
+  if (String(input.trigger ?? "").trim() !== "" && input.style === "flex") {
+    return "price";
+  }
+  return "percent";
+}
+
 /** Fill desk defaults on a later card without wiping a value the user already set. */
 export function seedRepeatLevels(
   clause: ExitBuilderClause,
@@ -117,7 +148,14 @@ export function seedRepeatLevels(
     orderType: levels.orderType || "market",
     method:
       levels.method ||
-      (clause.kind === "trailing_stop" ? "" : style === "flex" ? "price" : "percent"),
+      (clause.kind === "trailing_stop"
+        ? trailActivationKind({
+            style: levels.style || style,
+            trigger: levels.trigger,
+          })
+        : style === "flex"
+          ? "price"
+          : "percent"),
     trigger:
       levels.trigger ||
       (style === "flex" && clause.kind !== "trailing_stop" ? "last" : ""),

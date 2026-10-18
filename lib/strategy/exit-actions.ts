@@ -19,7 +19,9 @@ import {
   pinExitPriceRule,
   priceRuleForKind,
   priceRuleName,
+  trailActivationKind,
   type ClassicExitKind,
+  type TrailActivationKind,
   type ExitBuilderClause,
   type ExitOrGroup,
   type ExitRepeatLevels,
@@ -67,6 +69,7 @@ export type ExitSidePrices = {
   trailingDistance: number | null;
   trailingActivation: number | null;
   trailingPct?: number | null;
+  trailingTriggerPct?: number | null;
 };
 
 function levelNumber(value: string | null | undefined): number | null {
@@ -81,20 +84,28 @@ export function exitPricesFromLevels(input: {
   stopLossKind?: "percent" | "price" | null;
   trailingDistance?: string | null;
   trailingActivation?: string | null;
+  trailingActivationKind?: TrailActivationKind | null;
   trailingPct?: string | null;
+  trailingTriggerPct?: string | null;
 }): ExitSidePrices {
   const takeProfit = levelNumber(input.takeProfit);
   const stopLoss = levelNumber(input.stopLoss);
   const takeProfitKind = input.takeProfitKind === "price" ? "price" : "percent";
   const stopLossKind = input.stopLossKind === "price" ? "price" : "percent";
+  const activation = levelNumber(input.trailingActivation);
+  const triggerPct = levelNumber(input.trailingTriggerPct);
+  const activationKind = input.trailingActivationKind;
   return {
     takeProfitPct: takeProfitKind === "percent" ? takeProfit : null,
     takeProfitPrice: takeProfitKind === "price" ? takeProfit : null,
     stopLossPct: stopLossKind === "percent" ? stopLoss : null,
     stopLossPrice: stopLossKind === "price" ? stopLoss : null,
     trailingDistance: levelNumber(input.trailingDistance),
-    trailingActivation: levelNumber(input.trailingActivation),
+    trailingActivation:
+      activationKind === "percent" ? null : activationKind === "price" ? (activation ?? triggerPct) : activation,
     trailingPct: levelNumber(input.trailingPct),
+    trailingTriggerPct:
+      activationKind === "price" ? null : activationKind === "percent" ? (triggerPct ?? activation) : triggerPct,
   };
 }
 
@@ -106,7 +117,68 @@ export const EMPTY_EXIT_PRICES: ExitSidePrices = {
   trailingDistance: null,
   trailingActivation: null,
   trailingPct: null,
+  trailingTriggerPct: null,
 };
+
+/** A Flex percent gate or a DCA price gate cannot live on the classic columns. */
+export function trailFitsColumns(prices: ExitSidePrices): boolean {
+  const priceGate = prices.trailingActivation != null;
+  const pctGate = prices.trailingTriggerPct != null && prices.trailingTriggerPct > 0;
+  if (prices.trailingDistance != null && pctGate && !priceGate) {
+    return false;
+  }
+  if (
+    (prices.trailingPct ?? null) != null &&
+    priceGate &&
+    !pctGate &&
+    prices.trailingDistance == null
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/** The first trailing card's activation, preferring the action over the columns. */
+export function savedTrailActivation(input: {
+  actions?: readonly StoredExitAction[] | null;
+  activePrice?: number | null;
+  triggerPct?: number | null;
+}): { kind: TrailActivationKind; value: string } {
+  const first = input.actions?.find((action) => action.kind === "trailing_stop");
+  if (
+    first &&
+    (first.trailingTriggerPct ?? null) != null &&
+    first.trailingActivation == null
+  ) {
+    return { kind: "percent", value: String(first.trailingTriggerPct) };
+  }
+  if (
+    first &&
+    first.trailingActivation != null &&
+    (first.trailingTriggerPct ?? null) == null
+  ) {
+    return { kind: "price", value: String(first.trailingActivation) };
+  }
+  if (input.activePrice != null && input.activePrice > 0) {
+    return { kind: "price", value: String(input.activePrice) };
+  }
+  if (input.triggerPct != null && input.triggerPct > 0) {
+    return { kind: "percent", value: String(input.triggerPct) };
+  }
+  return { kind: "percent", value: "" };
+}
+
+/** The first trailing action must carry the gate the columns cannot store. */
+export function trailingGateError(
+  actions: readonly StoredExitAction[] | null | undefined,
+  kind: TrailActivationKind,
+): string | null {
+  const first = actions?.find((action) => action.kind === "trailing_stop");
+  if (kind === "percent") {
+    return first?.trailingTriggerPct != null ? null : "Enter an activation percent.";
+  }
+  return first?.trailingActivation != null ? null : "Enter an activation price.";
+}
 
 export type ExitLot = {
   id: string;
@@ -560,6 +632,7 @@ function pricesFor(
       trailingDistance: prices.trailingDistance,
       trailingActivation: prices.trailingActivation,
       trailingPct: prices.trailingPct ?? null,
+      trailingTriggerPct: prices.trailingTriggerPct ?? null,
     };
   }
   return blank;
@@ -616,10 +689,20 @@ function repeatPrices(
       levelNumber(levels.trail) ??
       (clause.ownDistance != null && clause.ownDistance > 0 ? clause.ownDistance : null);
     const trigger = levelNumber(levels.trigger);
+    const activationPrice =
+      trailActivationKind({
+        method: levels.method,
+        style: levels.style,
+        trigger: levels.trigger,
+      }) === "price";
     if (flex) {
-      return { ...blank, trailingDistance: trail, trailingActivation: trigger };
+      return activationPrice
+        ? { ...blank, trailingDistance: trail, trailingActivation: trigger }
+        : { ...blank, trailingDistance: trail, trailingTriggerPct: trigger };
     }
-    return { ...blank, trailingPct: trail, trailingTriggerPct: trigger };
+    return activationPrice
+      ? { ...blank, trailingPct: trail, trailingActivation: trigger }
+      : { ...blank, trailingPct: trail, trailingTriggerPct: trigger };
   }
   return blank;
 }
@@ -629,7 +712,8 @@ export function exitActionsForSave(
   clauses: readonly ExitBuilderClause[],
   prices: ExitSidePrices,
 ): StoredExitAction[] | null {
-  if (exitSideUsesColumns(clauses)) {
+  const trailingCard = clauses.some((clause) => clause.kind === "trailing_stop");
+  if (exitSideUsesColumns(clauses) && (!trailingCard || trailFitsColumns(prices))) {
     return null;
   }
   const seen = new Map<string, number>();
@@ -698,6 +782,14 @@ function levelsForAction(action: StoredExitAction): ExitRepeatLevels {
           : action.trailingActivation != null
             ? String(action.trailingActivation)
             : "";
+    }
+    if (!stored.method) {
+      stored.method = trailActivationKind({
+        style: stored.style,
+        trigger: stored.trigger,
+        trailingActivation: action.trailingActivation,
+        trailingTriggerPct: action.trailingTriggerPct ?? null,
+      });
     }
   }
   return stored;
@@ -777,7 +869,8 @@ function actionHasNumbers(action: StoredExitAction): boolean {
     return (
       action.trailingDistance != null ||
       action.trailingActivation != null ||
-      (action.trailingPct != null && action.trailingPct > 0)
+      (action.trailingPct != null && action.trailingPct > 0) ||
+      (action.trailingTriggerPct != null && action.trailingTriggerPct > 0)
     );
   }
   return false;

@@ -1,4 +1,8 @@
-import { exitActionsFromJson, parseExitActionsField } from "@/lib/strategy/exit-actions";
+import {
+  exitActionsFromJson,
+  parseExitActionsField,
+  trailingGateError,
+} from "@/lib/strategy/exit-actions";
 import { parseStep } from "@/lib/exchanges/bybit/qty";
 import { formatPerpMinQty } from "@/lib/exchanges/bybit/ticket-size";
 import type { BybitInstrument } from "@/lib/exchanges/bybit/universe";
@@ -1854,7 +1858,12 @@ function parseDcaShortClassicForm(
   if (slOn && stopLossPct.value == null) {
     return { ok: false, error: "Enter a short stop loss." };
   }
-  if (trailOn && (trailingTriggerPct.value == null || trailingPct.value == null)) {
+  const shortTrailKind =
+    form.get("shortTrailingActiveKind") === "price" ? "price" : "percent";
+  if (trailOn && trailingPct.value == null) {
+    return { ok: false, error: "Enter a short trailing stop." };
+  }
+  if (trailOn && shortTrailKind !== "price" && trailingTriggerPct.value == null) {
     return { ok: false, error: "Enter a short trailing stop." };
   }
   if (breakevenOn && breakevenActivationPct.value == null) {
@@ -1872,7 +1881,8 @@ function parseDcaShortClassicForm(
       stopLossBasis: parseDcaExitBasis(form.get("shortStopLossBasis")),
       breakevenActivationPct: breakevenOn ? breakevenActivationPct.value : null,
       breakevenOffsetPct: breakevenOn ? breakevenOffsetPct.value : null,
-      trailingTriggerPct: trailOn ? trailingTriggerPct.value : null,
+      trailingTriggerPct:
+        trailOn && shortTrailKind !== "price" ? trailingTriggerPct.value : null,
       trailingPct: trailOn ? trailingPct.value : null,
       atrPeriod: tpOn && takeProfitKind === "atr" ? atrPeriod : null,
     },
@@ -2126,9 +2136,14 @@ export function parseDcaPlaybookForm(
   if (form.get("slOn") === "on" && stopLossPct.value == null) {
     return { ok: false, error: "Enter a stop loss." };
   }
+  const trailKind = form.get("trailingActiveKind") === "price" ? "price" : "percent";
+  if (form.get("trailOn") === "on" && trailingPct.value == null) {
+    return { ok: false, error: "Enter a trailing stop." };
+  }
   if (
     form.get("trailOn") === "on" &&
-    (trailingTriggerPct.value == null || trailingPct.value == null)
+    trailKind !== "price" &&
+    trailingTriggerPct.value == null
   ) {
     return { ok: false, error: "Enter a trailing stop." };
   }
@@ -2323,6 +2338,18 @@ export function parseDcaPlaybookForm(
   if (!shortExitActions.ok) {
     return shortExitActions;
   }
+  if (form.get("trailOn") === "on" && trailKind === "price") {
+    const gate = trailingGateError(exitActions.actions, "price");
+    if (gate) {
+      return { ok: false, error: gate };
+    }
+  }
+  if (form.get("shortTrailOn") === "on" && form.get("shortTrailingActiveKind") === "price") {
+    const gate = trailingGateError(shortExitActions.actions, "price");
+    if (gate) {
+      return { ok: false, error: gate };
+    }
+  }
   return {
     ok: true,
     config: {
@@ -2356,7 +2383,7 @@ export function parseDcaPlaybookForm(
       stopLossOrderType: "market",
       breakevenActivationPct: breakevenActivationPct.value,
       breakevenOffsetPct: breakevenOffsetPct.value,
-      trailingTriggerPct: trailingTriggerPct.value,
+      trailingTriggerPct: trailKind === "price" ? null : trailingTriggerPct.value,
       trailingPct: trailingPct.value,
       shortClassic: shortClassicParsed.classic,
       armTrigger: armTrigger.trigger,

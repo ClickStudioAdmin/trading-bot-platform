@@ -2,6 +2,7 @@ import {
   parseAutomationMode,
   type AutomationMode,
 } from "@/lib/engine/decide";
+import { trailingGateError } from "@/lib/strategy/exit-actions";
 import {
   parseFuturesAction,
   parseFuturesLimitPrice,
@@ -391,6 +392,15 @@ export function parseFuturesAutomationForm(
     parsed.rule.exitActions = conditions.exitActions;
     parsed.rule.breakevenActivationPct = conditions.breakevenActivationPct;
     parsed.rule.breakevenOffsetPct = conditions.breakevenOffsetPct;
+    if (
+      String(form.get(`${prefix}trailingActiveKind`) ?? "") === "percent" &&
+      exits.trailing
+    ) {
+      const gate = trailingGateError(conditions.exitActions, "percent");
+      if (gate) {
+        return { ok: false, error: gate };
+      }
+    }
     const directed = applyPerpsDirection(form, prefix, deskVenue, parsed.rule);
     if (!directed.ok) {
       return directed;
@@ -419,6 +429,8 @@ const EXIT_FORM_KEYS = [
   "trailingStop",
   "trailingActivation",
   "trailingActive",
+  "trailingActiveKind",
+  "trailingTriggerPct",
 ] as const;
 
 export function slicePrefixedForm(form: FormData, prefix: string): FormData {
@@ -774,6 +786,15 @@ function applyPerpsDirection(
       : { ok: true as const, tpsl: null, trailing: null };
     if (!shortExits.ok) {
       return shortExits;
+    }
+    if (
+      String(form.get(`${shortPrefix}trailingActiveKind`) ?? "") === "percent" &&
+      shortExits.trailing
+    ) {
+      const gate = trailingGateError(conditions.exitActions, "percent");
+      if (gate) {
+        return { ok: false, error: gate };
+      }
     }
     rule.shortEntry = {
       entrySource,

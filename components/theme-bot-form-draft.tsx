@@ -61,6 +61,10 @@ import {
 } from "@/lib/strategy/exit-clauses";
 import { exitCardsBlockReason } from "@/lib/strategy/exit-actions";
 import {
+  trailActivationKind,
+  type TrailActivationKind,
+} from "@/lib/strategy/exit-clauses";
+import {
   EntryConditionStack,
   entryConflictSlots,
   entryDraftComplete,
@@ -331,6 +335,7 @@ type ThemeClassicDraft = {
   tpLimitPrice: string;
   trailValue: string;
   trailTrigger: string;
+  trailActiveKind: TrailActivationKind;
   slMethod: ExitMethod;
   slValue: string;
   slBasis: string;
@@ -353,6 +358,7 @@ function blankThemeClassic(): ThemeClassicDraft {
     tpLimitPrice: "",
     trailValue: "",
     trailTrigger: "",
+    trailActiveKind: "percent",
     slMethod: "percent",
     slValue: "",
     slBasis: "average",
@@ -519,7 +525,6 @@ function ThemeSecondaryEntry({
 }
 
 function PriceTriggerFields({
-  desk,
   priceSource,
   onPriceSource,
   priceWhen,
@@ -530,7 +535,6 @@ function PriceTriggerFields({
   seriesSlots,
   seriesIndex,
 }: {
-  desk: DeskKind;
   priceSource: string;
   onPriceSource: (next: string) => void;
   priceWhen: string;
@@ -541,10 +545,9 @@ function PriceTriggerFields({
   seriesSlots?: readonly EntryConflictSlot[];
   seriesIndex?: number;
 }) {
-  if (desk === "flex") {
-    return (
-      <>
-        <Field label="Price source" required>
+  return (
+    <>
+      <Field label="Price source" required>
           <AppSelect
             value={priceSource}
             onChange={(event) => onPriceSource(event.target.value)}
@@ -600,63 +603,6 @@ function PriceTriggerFields({
             invalid={invalid}
           />
         </Field>
-      </>
-    );
-  }
-  return (
-    <>
-      <Field label="Price" required>
-        <AppSelect
-          value={priceSource}
-          onChange={(event) => onPriceSource(event.target.value)}
-          className={fieldClass}
-        >
-          {(["last", "mark", "index"] as const).map((source) => (
-            <option
-              key={source}
-              value={source}
-              disabled={priceChoiceConflicts(
-                seriesSlots,
-                seriesIndex,
-                { source: priceSource, compare: priceWhen, price: priceLevel },
-                { source },
-              )}
-            >
-              {source === "last" ? "Last" : source === "mark" ? "Mark" : "Index"}
-            </option>
-          ))}
-        </AppSelect>
-      </Field>
-      <Field label="When" required>
-        <AppSelect
-          value={priceWhen}
-          onChange={(event) => onPriceWhen(event.target.value)}
-          className={fieldClass}
-        >
-          {(["gte", "lte"] as const).map((compare) => (
-            <option
-              key={compare}
-              value={compare}
-              disabled={priceChoiceConflicts(
-                seriesSlots,
-                seriesIndex,
-                { source: priceSource, compare: priceWhen, price: priceLevel },
-                { compare },
-              )}
-            >
-              {compare === "gte" ? "At or above" : "At or below"}
-            </option>
-          ))}
-        </AppSelect>
-      </Field>
-      <Field label="Level (USDT)" required>
-        <OffNumber
-          value={priceLevel}
-          onChange={onPriceLevel}
-          required
-          invalid={invalid}
-        />
-      </Field>
     </>
   );
 }
@@ -842,6 +788,7 @@ export function ThemeBotFormDraft() {
   const [tpLimitPrice, setTpLimitPrice] = useState("");
   const [trailValue, setTrailValue] = useState("");
   const [trailTrigger, setTrailTrigger] = useState("");
+  const [trailActiveKind, setTrailActiveKind] = useState<TrailActivationKind>("percent");
   const [slMethod, setSlMethod] = useState<ExitMethod>("percent");
   const [slValue, setSlValue] = useState("");
   const [slBasis, setSlBasis] = useState("average");
@@ -1000,6 +947,7 @@ export function ThemeBotFormDraft() {
     tpLimitPrice,
     trailValue,
     trailTrigger,
+    trailActiveKind,
     slMethod,
     slValue,
     slBasis,
@@ -1480,6 +1428,7 @@ export function ThemeBotFormDraft() {
       tpLimitPrice,
       trailValue,
       trailTrigger,
+      trailActiveKind,
       slMethod,
       slValue,
       slBasis,
@@ -1504,6 +1453,7 @@ export function ThemeBotFormDraft() {
     setTpLimitPrice("");
     setTrailValue("");
     setTrailTrigger("");
+    setTrailActiveKind("percent");
     setSlMethod("");
     setSlValue("");
     setSlBasis("average");
@@ -1523,6 +1473,7 @@ export function ThemeBotFormDraft() {
     setTpLimitPrice(shortClassic.tpLimitPrice);
     setTrailValue(shortClassic.trailValue);
     setTrailTrigger(shortClassic.trailTrigger);
+    setTrailActiveKind(shortClassic.trailActiveKind);
     setSlMethod(shortClassic.slMethod);
     setSlValue(shortClassic.slValue);
     setSlBasis(shortClassic.slBasis);
@@ -1839,6 +1790,15 @@ export function ThemeBotFormDraft() {
   function themeTrailingFields(leg: "primary" | "short", slot?: ExitFieldSlot | null) {
     const shortLeg = themeUsesShort(leg);
     const repeat = slot != null;
+    const activeKind: TrailActivationKind = repeat
+      ? trailActivationKind({
+          method: slot.levels.method,
+          style: slot.levels.style || (desk === "dca" ? "dca" : "flex"),
+          trigger: slot.levels.trigger,
+        })
+      : shortLeg
+        ? shortClassic.trailActiveKind
+        : trailActiveKind;
     const trigger = repeat
       ? slot.levels.trigger
       : shortLeg
@@ -1858,72 +1818,93 @@ export function ThemeBotFormDraft() {
     return (
       <div className="contents">
         {desk === "dca" ? (
-          <>
-            <Field
-              label="Trigger %"
-              hint="Trail starts after price moves this %."
+          <Field label="Trailing %" required>
+            <PercentField
+              value={value}
+              onChange={(next) =>
+                repeat
+                  ? slot.onChange({ trail: next })
+                  : shortLeg
+                    ? patchThemeShort({ trailValue: next })
+                    : setTrailValue(next)
+              }
               required
-            >
-              <PercentField
-                value={trigger}
-                onChange={(next) =>
-                  repeat
-                    ? slot.onChange({ trigger: next })
-                    : shortLeg
-                      ? patchThemeShort({ trailTrigger: next })
-                      : setTrailTrigger(next)
-                }
-                required
-                invalid={triggerInvalid}
-              />
-            </Field>
-            <Field label="Trailing %" required>
-              <PercentField
-                value={value}
-                onChange={(next) =>
-                  repeat
-                    ? slot.onChange({ trail: next })
-                    : shortLeg
-                      ? patchThemeShort({ trailValue: next })
-                      : setTrailValue(next)
-                }
-                required
-                invalid={valueInvalid}
-              />
-            </Field>
-          </>
+              invalid={valueInvalid}
+            />
+          </Field>
         ) : (
-          <>
-            <Field label="Retracement" required>
-              <OffNumber
-                value={value}
-                onChange={(next) =>
-                  repeat
-                    ? slot.onChange({ trail: next })
-                    : shortLeg
-                      ? patchThemeShort({ trailValue: next })
-                      : setTrailValue(next)
-                }
-                required
-                invalid={valueInvalid}
-              />
-            </Field>
-            <Field label="Activation price" required>
-              <OffNumber
-                value={trigger}
-                onChange={(next) =>
-                  repeat
-                    ? slot.onChange({ trigger: next })
-                    : shortLeg
-                      ? patchThemeShort({ trailTrigger: next })
-                      : setTrailTrigger(next)
-                }
-                required
-                invalid={triggerInvalid}
-              />
-            </Field>
-          </>
+          <Field label="Retracement" required>
+            <OffNumber
+              value={value}
+              onChange={(next) =>
+                repeat
+                  ? slot.onChange({ trail: next })
+                  : shortLeg
+                    ? patchThemeShort({ trailValue: next })
+                    : setTrailValue(next)
+              }
+              required
+              invalid={valueInvalid}
+            />
+          </Field>
         )}
+        <Field label="Type" required>
+          <AppSelect
+            className={fieldClass}
+            value={activeKind}
+            onChange={(event) => {
+              const next = event.target.value === "price" ? "price" : "percent";
+              if (repeat) {
+                slot.onChange({ method: next, trigger: "" });
+              } else if (shortLeg) {
+                patchThemeShort({ trailActiveKind: next, trailTrigger: "" });
+              } else {
+                setTrailActiveKind(next);
+                setTrailTrigger("");
+              }
+            }}
+          >
+            <option value="price">Price</option>
+            <option value="percent">Percentage</option>
+          </AppSelect>
+        </Field>
+        <Field
+          label={activeKind === "percent" ? "%" : "Price"}
+          hint={
+            activeKind === "percent"
+              ? "Trail starts after the position is up this %."
+              : "Trail starts when price reaches this level."
+          }
+          required
+        >
+          {activeKind === "percent" ? (
+            <PercentField
+              value={trigger}
+              onChange={(next) =>
+                repeat
+                  ? slot.onChange({ trigger: next })
+                  : shortLeg
+                    ? patchThemeShort({ trailTrigger: next })
+                    : setTrailTrigger(next)
+              }
+              required
+              invalid={triggerInvalid}
+            />
+          ) : (
+            <OffNumber
+              value={trigger}
+              onChange={(next) =>
+                repeat
+                  ? slot.onChange({ trigger: next })
+                  : shortLeg
+                    ? patchThemeShort({ trailTrigger: next })
+                    : setTrailTrigger(next)
+              }
+              required
+              invalid={triggerInvalid}
+            />
+          )}
+        </Field>
       </div>
     );
   }
@@ -2462,7 +2443,7 @@ export function ThemeBotFormDraft() {
             <>
             <div className={rowClass5}>
               <Field
-                label={desk === "flex" ? "Webhook" : "Signal Webhook"}
+                label="Webhook"
                 className="col-span-full"
                 required
               >
@@ -2476,9 +2457,7 @@ export function ThemeBotFormDraft() {
                   onChange={(event) => setWebhookId(event.target.value)}
                 >
                   <option value="">
-                    {desk === "flex"
-                      ? "Pick a webhook"
-                      : "Pick a Signal webhook"}
+                    Pick a webhook
                   </option>
                   <option
                     value="sample"
@@ -2542,9 +2521,8 @@ export function ThemeBotFormDraft() {
                 />
               </div>
           ) : startKind === "price" ? (
-            <div className={desk === "flex" ? rowClass5 : rowClass}>
+            <div className={rowClass5}>
                 <PriceTriggerFields
-                  desk={desk}
                   priceSource={priceSource}
                   onPriceSource={setPriceSource}
                   priceWhen={priceWhen}
@@ -2746,7 +2724,6 @@ export function ThemeBotFormDraft() {
               ) : shortStartKind === "price" ? (
                 <div className={rowClass5}>
                   <PriceTriggerFields
-                    desk="flex"
                     priceSource={shortPriceSource}
                     onPriceSource={setShortPriceSource}
                     priceWhen={shortPriceWhen}
@@ -2830,7 +2807,7 @@ export function ThemeBotFormDraft() {
             <Group>
               {shortStartKind === "webhook" ? (
                 <div className={rowClass5}>
-                  <Field label="Signal Webhook" className="col-span-full" required>
+                  <Field label="Webhook" className="col-span-full" required>
                     <AppSelect
                       value={shortWebhookId}
                       onChange={(event) => setShortWebhookId(event.target.value)}
@@ -2840,7 +2817,7 @@ export function ThemeBotFormDraft() {
                           : fieldClass
                       }
                     >
-                      <option value="">Pick a Signal webhook</option>
+                      <option value="">Pick a webhook</option>
                       <option value="sample">Sample signal</option>
                     </AppSelect>
                   </Field>
@@ -2890,9 +2867,8 @@ export function ThemeBotFormDraft() {
                   />
                 </div>
               ) : shortStartKind === "price" ? (
-                <div className={rowClass}>
+                <div className={rowClass5}>
                   <PriceTriggerFields
-                    desk="dca"
                     priceSource={shortPriceSource}
                     onPriceSource={setShortPriceSource}
                     priceWhen={shortPriceWhen}

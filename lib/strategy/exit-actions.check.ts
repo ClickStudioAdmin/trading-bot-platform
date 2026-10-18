@@ -4,6 +4,7 @@ import {
   customExitClause,
   emptyExitClause,
   emptyRepeatLevels,
+  trailActivationKind,
 } from "./exit-clauses";
 import {
   clausesFromExitActions,
@@ -14,6 +15,9 @@ import {
   exitCardsBlockReason,
   exitSideUsesColumns,
   planExitClaims,
+  savedTrailActivation,
+  trailFitsColumns,
+  trailingGateError,
   type ExitSidePrices,
   type StoredExitAction,
 } from "./exit-actions";
@@ -527,5 +531,108 @@ flexTp.levels = {
 const flexSaved = exitActionsForSave([classicExitClause("take_profit"), flexTp], prices);
 assert.equal(flexSaved?.[1]?.takeProfitPrice, 25000);
 assert.equal(flexSaved?.[1]?.takeProfitPct, null);
+
+const flexLegacyTrail = classicExitClause("trailing_stop");
+flexLegacyTrail.key = "flex-trail-legacy";
+flexLegacyTrail.levels = {
+  ...emptyRepeatLevels(),
+  style: "flex",
+  trigger: "65000",
+  trail: "200",
+};
+const flexLegacySaved = exitActionsForSave(
+  [classicExitClause("trailing_stop"), flexLegacyTrail],
+  prices,
+);
+assert.equal(flexLegacySaved?.[1]?.trailingActivation, 65000);
+assert.equal(flexLegacySaved?.[1]?.trailingTriggerPct, null);
+assert.equal(flexLegacySaved?.[1]?.trailingDistance, 200);
+const flexLegacyRound = clausesFromExitActions(exitActionsFromJson(flexLegacySaved));
+assert.equal(flexLegacyRound?.[1]?.levels?.method, "price");
+
+const flexPercentTrail = classicExitClause("trailing_stop");
+flexPercentTrail.key = "flex-trail-pct";
+flexPercentTrail.levels = {
+  ...emptyRepeatLevels(),
+  style: "flex",
+  method: "percent",
+  trigger: "3",
+  trail: "200",
+};
+const flexPercentSaved = exitActionsForSave(
+  [classicExitClause("trailing_stop"), flexPercentTrail],
+  prices,
+);
+assert.equal(flexPercentSaved?.[1]?.trailingTriggerPct, 3);
+assert.equal(flexPercentSaved?.[1]?.trailingActivation, null);
+
+const dcaPriceTrail = classicExitClause("trailing_stop");
+dcaPriceTrail.key = "dca-trail-price";
+dcaPriceTrail.levels = {
+  ...emptyRepeatLevels(),
+  style: "dca",
+  method: "price",
+  trigger: "90",
+  trail: "1",
+};
+const dcaPriceSaved = exitActionsForSave(
+  [classicExitClause("trailing_stop"), dcaPriceTrail],
+  { ...prices, trailingDistance: null, trailingPct: 2, trailingTriggerPct: 4 },
+);
+assert.equal(dcaPriceSaved?.[1]?.trailingActivation, 90);
+assert.equal(dcaPriceSaved?.[1]?.trailingPct, 1);
+assert.equal(dcaPriceSaved?.[1]?.trailingTriggerPct, null);
+
+const onlyTrail = classicExitClause("trailing_stop");
+assert.equal(exitActionsForSave([onlyTrail], prices), null);
+assert.equal(trailFitsColumns(prices), true);
+const percentPrices: ExitSidePrices = {
+  ...prices,
+  trailingActivation: null,
+  trailingTriggerPct: 2,
+};
+assert.equal(trailFitsColumns(percentPrices), false);
+assert.equal(exitActionsForSave([onlyTrail], percentPrices)?.[0]?.trailingTriggerPct, 2);
+assert.equal(exitActionsForSave([classicExitClause("take_profit")], percentPrices), null);
+assert.equal(exitActionsForSave([onlyTrail], percentPrices)?.[0]?.trailingActivation, null);
+const dcaPricePrices: ExitSidePrices = {
+  ...prices,
+  trailingDistance: null,
+  trailingPct: 1,
+  trailingActivation: 90,
+  trailingTriggerPct: null,
+};
+assert.equal(trailFitsColumns(dcaPricePrices), false);
+assert.equal(exitActionsForSave([onlyTrail], dcaPricePrices)?.[0]?.trailingActivation, 90);
+assert.equal(
+  exitActionsForSave([onlyTrail], {
+    ...prices,
+    trailingDistance: null,
+    trailingPct: 1,
+    trailingTriggerPct: 2,
+    trailingActivation: null,
+  }),
+  null,
+);
+
+assert.equal(trailActivationKind({ style: "flex", trigger: "65000" }), "price");
+assert.equal(trailActivationKind({ style: "dca", trigger: "3" }), "percent");
+assert.equal(trailActivationKind({}), "percent");
+assert.deepEqual(
+  savedTrailActivation({ activePrice: 80000 }),
+  { kind: "price", value: "80000" },
+);
+assert.deepEqual(
+  savedTrailActivation({ triggerPct: 2 }),
+  { kind: "percent", value: "2" },
+);
+assert.equal(
+  trailingGateError(
+    [{ ...flexPercentSaved![1]!, trailingTriggerPct: null, trailingActivation: null }],
+    "percent",
+  ),
+  "Enter an activation percent.",
+);
+assert.equal(trailingGateError([flexPercentSaved![1]!], "percent"), null);
 
 console.log("exit-actions.check ok");

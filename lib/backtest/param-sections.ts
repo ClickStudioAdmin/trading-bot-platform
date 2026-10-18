@@ -33,6 +33,7 @@ import {
   scopeLabel,
   type StoredExitAction,
 } from "@/lib/strategy/exit-actions";
+import { trailActivationKind } from "@/lib/strategy/exit-clauses";
 import {
   resolveEntryStack,
   type EntryStack,
@@ -220,14 +221,11 @@ function leafConditionRows(
     if (priceStyle === "dca") {
       return [
         { label: "Condition Type", value: "Price cross" },
-        ...priceRows(
-          {
-            triggerBy: leaf.triggerBy,
-            compare: leaf.compare,
-            price: leaf.price,
-          },
-          quote,
-        ),
+        ...priceRows({
+          triggerBy: leaf.triggerBy,
+          compare: leaf.compare,
+          price: leaf.price,
+        }),
       ];
     }
     return [
@@ -453,12 +451,11 @@ function indicatorRows(input: {
 
 function priceRows(
   trigger: DcaTemplateRecipe["armTrigger"] | null | undefined,
-  quote: string,
 ): ParamRow[] {
   return [
-    { label: "Price", value: priceSourceLabel(trigger?.triggerBy) },
-    { label: "When", value: whenLabel(trigger?.compare) },
-    { label: `Level (${quote})`, value: num(trigger?.price) },
+    { label: "Price source", value: perpsPriceSource(trigger?.triggerBy) },
+    { label: "Compare", value: whenLabel(trigger?.compare) },
+    { label: "Price", value: num(trigger?.price) },
   ];
 }
 
@@ -479,7 +476,6 @@ function dcaSideEntry(
     lead.push(
       ...priceRows(
         shortLeg ? (recipe.shortArmTrigger ?? recipe.armTrigger) : recipe.armTrigger,
-        quote,
       ),
     );
   } else if (startKind === "indicator" || startKind === "trend") {
@@ -739,15 +735,24 @@ function repeatLevelRows(action: StoredExitAction): ParamRow[] {
     return rows;
   }
   if (action.kind === "trailing_stop") {
+    const percent =
+      trailActivationKind({
+        method: levels.method,
+        style: flex ? "flex" : levels.style || "dca",
+        trigger: levels.trigger,
+      }) === "percent";
+    const activation = percent ? pct(levels.trigger) : levels.trigger || "—";
     if (flex) {
       return [
         { label: "Retracement", value: levels.trail || "—" },
-        { label: "Activation price", value: levels.trigger || "—" },
+        { label: "Type", value: percent ? "Percentage" : "Price" },
+        { label: percent ? "%" : "Price", value: activation },
       ];
     }
     return [
-      { label: "Trigger %", value: levels.trigger ? pct(levels.trigger) : "—" },
       { label: "Trailing %", value: levels.trail ? pct(levels.trail) : "—" },
+      { label: "Type", value: percent ? "Percentage" : "Price" },
+      { label: percent ? "%" : "Price", value: activation },
     ];
   }
   return [];
@@ -781,8 +786,11 @@ function actionPriceRows(action: StoredExitAction): ParamRow[] {
     if (action.trailingDistance != null) {
       rows.push({ label: "Distance", value: num(action.trailingDistance) });
     }
+    if (action.trailingTriggerPct != null) {
+      rows.push({ label: "Activation %", value: pct(action.trailingTriggerPct) });
+    }
     if (action.trailingActivation != null) {
-      rows.push({ label: "Activation", value: num(action.trailingActivation) });
+      rows.push({ label: "Activation price", value: num(action.trailingActivation) });
     }
     return rows;
   }
