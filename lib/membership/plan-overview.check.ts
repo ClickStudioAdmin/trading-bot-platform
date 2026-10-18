@@ -22,6 +22,7 @@ caps.max_live_env_desks = 0;
 caps.max_bots = null;
 caps.max_copy_follows = 2;
 caps.max_followers_accepted = 5;
+caps.max_backtests_per_month = 4;
 caps.max_stored_backtests = 3;
 caps.max_backtest_years = 2;
 caps.affiliate_max_depth = 3;
@@ -43,6 +44,7 @@ const usage: PlanUsageCounts = {
   max_bots: 4,
   max_copy_follows: 3,
   max_followers_accepted: 2,
+  max_backtests_per_month: 4,
   max_stored_backtests: 3,
 };
 
@@ -114,6 +116,14 @@ assert.equal(
 assert.equal(
   line(groups, "Copy Trading", "cap:max_followers_accepted").note,
   "Highest on one desk",
+);
+assert.equal(
+  line(groups, "Backtesting", "cap:max_backtests_per_month").text,
+  "4 of 4",
+);
+assert.equal(
+  line(groups, "Backtesting", "cap:max_backtests_per_month").note,
+  "This billing cycle",
 );
 assert.equal(line(groups, "Backtesting", "cap:max_stored_backtests").text, "3 of 3");
 assert.equal(line(groups, "Backtesting", "cap:max_backtest_years").text, "2 years");

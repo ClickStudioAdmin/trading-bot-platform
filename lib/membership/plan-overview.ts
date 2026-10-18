@@ -44,6 +44,7 @@ export type PlanUsageCounts = {
   max_bots: number;
   max_copy_follows: number;
   max_followers_accepted: number;
+  max_backtests_per_month: number;
   max_stored_backtests: number;
 };
 
@@ -60,6 +61,7 @@ const COUNTED_CAPS = new Set<PlanCapKey>([
   "max_bots",
   "max_copy_follows",
   "max_followers_accepted",
+  "max_backtests_per_month",
   "max_stored_backtests",
 ]);
 
@@ -82,6 +84,7 @@ export function emptyPlanUsageCounts(): PlanUsageCounts {
     max_bots: 0,
     max_copy_follows: 0,
     max_followers_accepted: 0,
+    max_backtests_per_month: 0,
     max_stored_backtests: 0,
   };
 }
@@ -304,7 +307,12 @@ function usageLine(
     text: `${used} of ${limitText}${activeTrial ? " · trial" : ""}`,
     included: false,
     over: usageNearLimit(used, limit),
-    note: cap === "max_followers_accepted" ? "Highest on one desk" : null,
+    note:
+      cap === "max_followers_accepted"
+        ? "Highest on one desk"
+        : cap === "max_backtests_per_month"
+          ? "This billing cycle"
+          : null,
     trial,
   };
 }

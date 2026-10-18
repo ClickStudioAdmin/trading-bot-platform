@@ -692,10 +692,10 @@ export function BacktestQueueForm({
           if (
             gate &&
             range.ok &&
-            gate.saved.limit != null &&
-            !gate.savedCountOk &&
             gate.backtest.allowed &&
-            !(variant && !gate.optimize.allowed)
+            !(variant && !gate.optimize.allowed) &&
+            ((gate.monthly.limit != null && !gate.monthlyCountOk) ||
+              (gate.saved.limit != null && !gate.savedCountOk))
           ) {
             clickGate.hide();
             flushSync(() => setPending(true));
@@ -732,14 +732,19 @@ export function BacktestQueueForm({
           const range = parseBacktestDates(fromDate, toDate);
           if (gate && range.ok) {
             if (
-              gate.saved.limit != null &&
-              !gate.savedCountOk &&
               gate.backtest.allowed &&
               !(variant && !gate.optimize.allowed)
             ) {
-              clickGate.hide();
-              setError("Could not check your saved backtests.");
-              return;
+              if (gate.monthly.limit != null && !gate.monthlyCountOk) {
+                clickGate.hide();
+                setError("Could not check your backtests this billing cycle.");
+                return;
+              }
+              if (gate.saved.limit != null && !gate.savedCountOk) {
+                clickGate.hide();
+                setError("Could not check your saved backtests.");
+                return;
+              }
             }
           }
           setPending(true);
