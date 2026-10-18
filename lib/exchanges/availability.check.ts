@@ -25,7 +25,9 @@ import { getVenue } from "./venues";
 const defaults = defaultExchangeAvailability();
 assert.equal(defaults.length, 5 * 3 + 4 * 3);
 assert.equal(
-  defaults.every((cell) => cell.live && !cell.testing && !cell.beta),
+  defaults.every(
+    (cell) => cell.live && !cell.testing && !cell.beta && !cell.inDevelopment,
+  ),
   true,
 );
 assert.equal(
@@ -42,6 +44,7 @@ const hidden = mergeExchangeAvailability([
     live: false,
     testing: true,
     beta: false,
+    inDevelopment: false,
   },
   {
     venueId: "bybit",
@@ -50,6 +53,7 @@ const hidden = mergeExchangeAvailability([
     live: false,
     testing: true,
     beta: false,
+    inDevelopment: false,
   },
   {
     venueId: "bybit",
@@ -58,6 +62,16 @@ const hidden = mergeExchangeAvailability([
     live: false,
     testing: false,
     beta: true,
+    inDevelopment: false,
+  },
+  {
+    venueId: "bybit",
+    deskType: "dca",
+    mode: "paper",
+    live: false,
+    testing: false,
+    beta: false,
+    inDevelopment: true,
   },
 ]);
 assert.equal(hidden.length, defaults.length);
@@ -70,26 +84,43 @@ assert.deepEqual(exclusiveChoice(true, true), {
   live: true,
   testing: false,
   beta: false,
+  inDevelopment: false,
 });
 assert.deepEqual(exclusiveChoice(false, false), {
   live: true,
   testing: false,
   beta: false,
+  inDevelopment: false,
 });
 assert.deepEqual(exclusiveChoice(false, true), {
   live: false,
   testing: true,
   beta: false,
+  inDevelopment: false,
 });
 assert.deepEqual(exclusiveChoice(false, false, true), {
   live: false,
   testing: false,
   beta: true,
+  inDevelopment: false,
 });
 assert.deepEqual(exclusiveChoice(true, false, true), {
   live: true,
   testing: false,
   beta: false,
+  inDevelopment: false,
+});
+assert.deepEqual(exclusiveChoice(false, false, false, true), {
+  live: false,
+  testing: false,
+  beta: false,
+  inDevelopment: true,
+});
+assert.deepEqual(exclusiveChoice(false, true, false, true), {
+  live: true,
+  testing: false,
+  beta: false,
+  inDevelopment: false,
 });
 
 const publicFlex = exchangeCreateAllowed({
@@ -119,6 +150,15 @@ const publicBeta = exchangeCreateAllowed({
   environmentId: "demo",
 });
 assert.equal(publicBeta.ok, true);
+const developingDesk = {
+  cells: hidden,
+  deskType: "dca",
+  venueId: "bybit",
+  accountMode: "paper" as const,
+  environmentId: null,
+};
+assert.equal(exchangeCreateAllowed({ ...developingDesk, admin: false }).ok, false);
+assert.equal(exchangeCreateAllowed({ ...developingDesk, admin: true }).ok, false);
 assert.equal(
   deskBetaNotice({
     cells: hidden,
@@ -250,6 +290,7 @@ form.set("availability:manual:paper", "live");
 form.set("availability:manual:demo", "testing");
 form.set("availability:cash_and_carry:live", "live");
 form.set("availability:flex:demo", "beta");
+form.set("availability:dca:paper", "in_development");
 const bybit = getVenue("bybit");
 assert.ok(bybit);
 const read = readAvailabilityForm(bybit, form);
@@ -262,8 +303,17 @@ assert.equal(cellFor(read, "bybit", "manual", "live")?.live, true);
 assert.equal(cellFor(read, "bybit", "manual", "live")?.testing, false);
 assert.equal(cellFor(read, "bybit", "flex", "demo")?.beta, true);
 assert.equal(cellFor(read, "bybit", "flex", "demo")?.live, false);
+assert.equal(cellFor(read, "bybit", "dca", "paper")?.inDevelopment, true);
+assert.equal(cellFor(read, "bybit", "dca", "paper")?.live, false);
 assert.equal(
-  read.every((cell) => Number(cell.live) + Number(cell.testing) + Number(cell.beta) === 1),
+  read.every(
+    (cell) =>
+      Number(cell.live) +
+        Number(cell.testing) +
+        Number(cell.beta) +
+        Number(cell.inDevelopment) ===
+      1,
+  ),
   true,
 );
 assert.equal(
@@ -311,7 +361,20 @@ const betaRow = parseAvailabilityRow({
 });
 assert.equal(betaRow?.beta, true);
 assert.equal(betaRow?.live, false);
+assert.equal(betaRow?.inDevelopment, false);
+const developingRow = parseAvailabilityRow({
+  venue: "bybit",
+  desk_type: "dca",
+  mode: "demo",
+  live: false,
+  testing: false,
+  beta: false,
+  in_development: true,
+});
+assert.equal(developingRow?.inDevelopment, true);
+assert.equal(developingRow?.live, false);
 assert.equal(availabilitySetting(hidden, "bybit", "flex", "demo"), "beta");
+assert.equal(availabilitySetting(hidden, "bybit", "dca", "paper"), "in_development");
 
 const counts = availabilityCounts("bybit", defaults);
 assert.equal(counts.slots, 15);

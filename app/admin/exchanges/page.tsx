@@ -14,6 +14,7 @@ import { formatDeskDisplayMode, formatDeskType } from "@/lib/accounts/model";
 import {
   EXCHANGE_DESK_MODES,
   availabilitySetting,
+  availabilityStatusLabel,
   exchangeListDeskTypes,
 } from "@/lib/exchanges/availability";
 import { loadExchangeAvailability } from "@/lib/exchanges/availability-store";
@@ -38,9 +39,9 @@ export default async function AdminExchangesPage({
     <div>
       <PageHeading overline="Admin" title="Exchanges" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
-        Integrated exchanges. Live is what members see when they create a
-        desk. Testing is only for admins. Beta lets members use it and shows
-        a beta notice.
+        Integrated exchanges. In Development stays off new desks. Testing is
+        only for admins. Beta lets members use it and shows a beta notice.
+        Live is what members see when they create a desk.
       </p>
       {error ? (
         <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -110,18 +111,16 @@ export default async function AdminExchangesPage({
                             <td
                               key={mode}
                               className={`px-4 py-3 ${
-                              setting === "testing"
-                                ? "text-warning"
-                                : setting === "beta"
-                                  ? "text-accent"
-                                  : "text-ink"
-                            }`}
+                                setting === "in_development"
+                                  ? "text-ink-muted"
+                                  : setting === "testing"
+                                    ? "text-warning"
+                                    : setting === "beta"
+                                      ? "text-accent"
+                                      : "text-ink"
+                              }`}
                             >
-                              {setting === "testing"
-                                ? "Testing"
-                                : setting === "beta"
-                                  ? "Beta"
-                                  : "Live"}
+                              {availabilityStatusLabel(setting)}
                             </td>
                           );
                         })
@@ -142,7 +141,7 @@ export default async function AdminExchangesPage({
                             <TableIconAction
                               href={`/admin/exchanges/${venue.id}`}
                               label="Edit"
-                              detail="Set Live and Testing for each desk type and mode."
+                              detail="Set In Development, Testing, Beta, or Live for each desk type and mode."
                             >
                               <IconPencil {...TABLE_BTN_ICON} />
                             </TableIconAction>

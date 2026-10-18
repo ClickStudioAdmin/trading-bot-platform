@@ -8,6 +8,7 @@ import { formatDeskDisplayMode, formatDeskType, type DeskType } from "@/lib/acco
 import { saveExchangeAvailability } from "@/lib/exchanges/availability-actions";
 import {
   EXCHANGE_DESK_MODES,
+  EXCHANGE_STATUS_CHOICES,
   availabilitySetting,
   deskTypesInSidebarOrder,
   isVenueDeskType,
@@ -59,10 +60,11 @@ export default async function AdminExchangePage({
       />
       <PageHeading title={venue.label} />
       <p className="-mt-4 text-sm text-ink-muted">
-        Each desk type and mode is Live, Testing, or Beta. Live lets members
-        pick this exchange when they create a desk. Testing lets admins pick
-        it and use it while you test. Beta lets members pick it, and that
-        desk shows a beta notice. Desks that already exist stay as they are.
+        Each desk type and mode is In Development, Testing, Beta, or Live.
+        In Development keeps it off new desks. Testing lets admins pick it
+        and use it while you test. Beta lets members pick it, and that desk
+        shows a beta notice. Live lets members pick it. Desks that already
+        exist stay as they are.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -97,9 +99,11 @@ export default async function AdminExchangePage({
               <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-muted">
                 <tr>
                   <th className="py-2 pr-4 font-medium">Mode</th>
-                  <th className="px-4 py-2 font-medium">Testing</th>
-                  <th className="px-4 py-2 font-medium">Beta</th>
-                  <th className="px-4 py-2 font-medium">Live</th>
+                  {EXCHANGE_STATUS_CHOICES.map(([, label]) => (
+                    <th key={label} className="px-4 py-2 font-medium">
+                      {label}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -116,13 +120,7 @@ export default async function AdminExchangePage({
                   return (
                     <tr key={mode} className="border-b border-line last:border-0">
                       <td className="py-3 pr-4 text-ink">{modeLabel}</td>
-                      {(
-                        [
-                          ["testing", "Testing"],
-                          ["beta", "Beta"],
-                          ["live", "Live"],
-                        ] as const
-                      ).map(([value, label]) => (
+                      {EXCHANGE_STATUS_CHOICES.map(([value, label]) => (
                         <td key={value} className="px-4 py-3">
                           <AppRadio
                             name={group}
