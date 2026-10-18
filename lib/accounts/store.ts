@@ -234,7 +234,7 @@ async function lockedEnvironmentAllowed(input: {
   const access = await loadExchangeAccessForUser(input.userId);
   return exchangeCreateAllowed({
     cells: access.cells,
-    restricted: access.restricted,
+    preview: access.preview,
     deskType: typed.deskType,
     venueId: input.venueId,
     accountMode: "live",

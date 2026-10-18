@@ -539,7 +539,7 @@ export async function createCopyDeskAction(formData: FormData) {
   const exchangeAccess = await loadExchangeAccessForUser(member.id);
   const exchangeVisible = exchangeCreateAllowed({
     cells: exchangeAccess.cells,
-    restricted: exchangeAccess.restricted,
+    preview: exchangeAccess.preview,
     deskType: parent.deskType,
     venueId: parent.venue,
     accountMode: mode,

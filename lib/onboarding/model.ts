@@ -491,7 +491,7 @@ export function setupDeskFromDetails(input: {
   if (input.exchangeAccess) {
     const visible = exchangeCreateAllowed({
       cells: input.exchangeAccess.cells,
-      restricted: input.exchangeAccess.restricted,
+      preview: input.exchangeAccess.preview,
       deskType: input.deskType,
       venueId: venue.id,
       accountMode: input.mode,

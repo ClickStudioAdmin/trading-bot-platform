@@ -1,4 +1,7 @@
-import { loginSeesRestrictedExchanges } from "@/lib/admin/emails";
+import {
+  exchangePreviewForLogin,
+  type ExchangePreview,
+} from "@/lib/admin/emails";
 import {
   mergeExchangeAvailability,
   parseAvailabilityRow,
@@ -89,17 +92,17 @@ export async function memberMayConnectEnvironment(
 export async function loadExchangeAccessForUser(
   userId: string,
 ): Promise<ExchangeAccess> {
-  const [cells, restricted] = await Promise.all([
+  const [cells, preview] = await Promise.all([
     loadExchangeAvailability(),
-    userSeesRestrictedExchanges(userId),
+    userExchangePreview(userId),
   ]);
-  return { restricted, cells };
+  return { preview, cells };
 }
 
-async function userSeesRestrictedExchanges(userId: string): Promise<boolean> {
+async function userExchangePreview(userId: string): Promise<ExchangePreview> {
   const supabase = createServiceClient();
   if (!supabase) {
-    return false;
+    return "public";
   }
   const { data, error } = await supabase
     .from("members")
@@ -107,10 +110,10 @@ async function userSeesRestrictedExchanges(userId: string): Promise<boolean> {
     .eq("user_id", userId)
     .maybeSingle();
   if (error || !data) {
-    return false;
+    return "public";
   }
   const row = data as { role?: unknown; email?: unknown };
-  return loginSeesRestrictedExchanges({
+  return exchangePreviewForLogin({
     role: row.role == null ? null : String(row.role),
     email: row.email == null ? null : String(row.email),
   });

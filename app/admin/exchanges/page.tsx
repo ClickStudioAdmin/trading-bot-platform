@@ -39,9 +39,10 @@ export default async function AdminExchangesPage({
     <div>
       <PageHeading overline="Admin" title="Exchanges" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
-        Integrated exchanges. In Development and Testing are for developers
-        and admins. Members only see Beta and Live. Beta shows a beta notice.
-        Live is what members see when they create a desk.
+        Integrated exchanges. In Development is for developers and admins.
+        Testing is for platform testers, developers, and admins. Members only
+        see Beta and Live. Beta shows a beta notice. Live is what members see
+        when they create a desk.
       </p>
       {error ? (
         <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

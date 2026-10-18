@@ -81,8 +81,10 @@ if (developed.ok) {
   assert.equal(developed.values.role, "developer");
 }
 assert.equal(parseMemberRole("developer"), "developer");
+assert.equal(parseMemberRole("platform_tester"), "platform_tester");
 assert.equal(parseMemberRole("owner"), "member");
 assert.equal(formatMemberRole("developer"), "Developer");
+assert.equal(formatMemberRole("platform_tester"), "Platform Tester");
 
 assert.equal(parseMemberId("12"), 12);
 assert.equal(parseMemberId("nope"), null);

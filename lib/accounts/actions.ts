@@ -26,7 +26,7 @@ import {
   parseDeskNameChange,
   withQuery,
 } from "@/lib/accounts/model";
-import { loginSeesRestrictedExchanges } from "@/lib/admin/emails";
+import { exchangePreviewForLogin } from "@/lib/admin/emails";
 import { exchangeCreateAllowed } from "@/lib/exchanges/availability";
 import { loadExchangeAvailability } from "@/lib/exchanges/availability-store";
 import { parseBoundConnectionId } from "@/lib/exchanges/connections";
@@ -198,7 +198,7 @@ export async function createTradingAccount(formData: FormData) {
   }
   const exchangeAllowed = exchangeCreateAllowed({
     cells: exchangeCells,
-    restricted: loginSeesRestrictedExchanges(member),
+    preview: exchangePreviewForLogin(member),
     deskType: choice.deskType,
     venueId: choice.venue,
     accountMode: choice.mode,

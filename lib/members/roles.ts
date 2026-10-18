@@ -20,6 +20,17 @@ export const MEMBER_ROLE_CREDENTIALS: readonly MemberRoleCredential[] = [
     ],
   },
   {
+    role: "platform_tester",
+    label: "Platform Tester",
+    credentials: [
+      "Create desks on Beta and Live exchanges.",
+      "See and use Testing exchanges and modes.",
+      "In Development stays hidden, including on desk creation.",
+      "One exchange key binds to one desk.",
+      "The admin area stays closed.",
+    ],
+  },
+  {
     role: "developer",
     label: "Developer",
     credentials: [

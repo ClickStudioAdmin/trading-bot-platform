@@ -19,10 +19,23 @@ export function loginIsAdmin(input: {
   return input.role === "admin" || emailIsListedAdmin(input.email ?? undefined);
 }
 
-/** Admins and developers can see In Development and Testing exchanges. */
-export function loginSeesRestrictedExchanges(input: {
+/** Which exchange statuses a login can use. Public is Beta and Live. */
+export type ExchangePreview = "public" | "testing" | "development";
+
+/**
+ * Members see Beta and Live.
+ * Platform testers also see Testing.
+ * Developers and admins also see In Development.
+ */
+export function exchangePreviewForLogin(input: {
   role: string | null | undefined;
   email: string | null | undefined;
-}): boolean {
-  return loginIsAdmin(input) || input.role === "developer";
+}): ExchangePreview {
+  if (loginIsAdmin(input) || input.role === "developer") {
+    return "development";
+  }
+  if (input.role === "platform_tester") {
+    return "testing";
+  }
+  return "public";
 }

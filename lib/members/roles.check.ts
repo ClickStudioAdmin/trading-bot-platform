@@ -11,7 +11,7 @@ assert.equal(parseMembersAreaTab("admin"), "members");
 
 assert.deepEqual(
   MEMBER_ROLE_CREDENTIALS.map((row) => row.role),
-  ["member", "developer", "admin"],
+  ["member", "platform_tester", "developer", "admin"],
 );
 
 for (const row of MEMBER_ROLE_CREDENTIALS) {
@@ -19,11 +19,20 @@ for (const row of MEMBER_ROLE_CREDENTIALS) {
 }
 
 const member = MEMBER_ROLE_CREDENTIALS[0]!;
-const developer = MEMBER_ROLE_CREDENTIALS[1]!;
-const admin = MEMBER_ROLE_CREDENTIALS[2]!;
+const tester = MEMBER_ROLE_CREDENTIALS[1]!;
+const developer = MEMBER_ROLE_CREDENTIALS[2]!;
+const admin = MEMBER_ROLE_CREDENTIALS[3]!;
 
 assert.equal(
   member.credentials.some((line) => line.includes("stay hidden")),
+  true,
+);
+assert.equal(
+  tester.credentials.some((line) => line.includes("Testing")),
+  true,
+);
+assert.equal(
+  tester.credentials.some((line) => line.includes("In Development stays hidden")),
   true,
 );
 assert.equal(

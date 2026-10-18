@@ -1,3 +1,4 @@
+import { isMemberRole } from "@/lib/members/form";
 import { firstSearchValue } from "@/lib/paper/open";
 
 export const MEMBER_PAGE_SIZE = 20;
@@ -97,9 +98,7 @@ function isMemberSort(value: string): value is MemberSort {
 }
 
 function parseRoleFilter(value: string): string {
-  return value === "member" || value === "developer" || value === "admin"
-    ? value
-    : "";
+  return isMemberRole(value) ? value : "";
 }
 
 function parseStatusFilter(value: string): string {

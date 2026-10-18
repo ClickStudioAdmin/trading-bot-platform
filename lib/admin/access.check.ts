@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import {
   emailIsListedAdmin,
+  exchangePreviewForLogin,
   listedAdminEmails,
   loginIsAdmin,
-  loginSeesRestrictedExchanges,
 } from "./emails";
 
 assert.deepEqual(listedAdminEmails(), ["click.studio.admin@gmail.com"]);
@@ -25,15 +25,34 @@ assert.equal(
 );
 assert.equal(loginIsAdmin({ role: null, email: null }), false);
 assert.equal(
-  loginSeesRestrictedExchanges({ role: "developer", email: "dev@example.com" }),
-  true,
+  exchangePreviewForLogin({ role: "developer", email: "dev@example.com" }),
+  "development",
 );
 assert.equal(
-  loginSeesRestrictedExchanges({ role: "member", email: "member@example.com" }),
-  false,
+  exchangePreviewForLogin({ role: "platform_tester", email: "qa@example.com" }),
+  "testing",
+);
+assert.equal(
+  exchangePreviewForLogin({ role: "member", email: "member@example.com" }),
+  "public",
+);
+assert.equal(
+  exchangePreviewForLogin({ role: "admin", email: "member@example.com" }),
+  "development",
+);
+assert.equal(
+  exchangePreviewForLogin({
+    role: "platform_tester",
+    email: "click.studio.admin@gmail.com",
+  }),
+  "development",
 );
 assert.equal(
   loginIsAdmin({ role: "developer", email: "dev@example.com" }),
+  false,
+);
+assert.equal(
+  loginIsAdmin({ role: "platform_tester", email: "qa@example.com" }),
   false,
 );
 

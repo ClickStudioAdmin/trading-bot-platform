@@ -1,3 +1,4 @@
+import type { ExchangePreview } from "@/lib/admin/emails";
 import {
   AUTOMATED_DESK_TYPES,
   MANUAL_DESK_TYPES,
@@ -39,11 +40,11 @@ export type ExchangeAvailabilityCell = {
   mode: ExchangeDeskMode;
   /** Members can pick this exchange when creating a desk. */
   live: boolean;
-  /** Only admins can pick it. */
+  /** Platform testers, developers, and admins can pick it. */
   testing: boolean;
   /** Members can pick it. The desk shows a beta notice. */
   beta: boolean;
-  /** Off for new desks, including admins. */
+  /** Developers and admins can pick it. */
   inDevelopment: boolean;
 };
 
@@ -83,8 +84,8 @@ export function exclusiveChoice(
 }
 
 export type ExchangeAccess = {
-  /** Admin or developer. Can see In Development and Testing. */
-  restricted: boolean;
+  /** public is Beta and Live. testing adds Testing. development adds In Development. */
+  preview: ExchangePreview;
   cells: ExchangeAvailabilityCell[];
 };
 
@@ -364,7 +365,7 @@ function flagAllows(
     beta?: boolean;
     inDevelopment?: boolean;
   },
-  restricted: boolean,
+  preview: ExchangePreview,
 ): boolean {
   const choice = exclusiveChoice(
     flag.live,
@@ -372,8 +373,11 @@ function flagAllows(
     flag.beta,
     flag.inDevelopment,
   );
-  if (choice.inDevelopment || choice.testing) {
-    return restricted;
+  if (choice.inDevelopment) {
+    return preview === "development";
+  }
+  if (choice.testing) {
+    return preview === "testing" || preview === "development";
   }
   return true;
 }
@@ -391,7 +395,7 @@ function unsupportedMessage(venueId: string, deskType: string): string {
  */
 export function exchangeCreateAllowed(input: {
   cells: readonly ExchangeAvailabilityCell[];
-  restricted: boolean;
+  preview: ExchangePreview;
   deskType: string;
   venueId: string;
   accountMode: "paper" | "live";
@@ -437,7 +441,7 @@ export function exchangeCreateAllowed(input: {
 function modeAllowed(
   input: {
     cells: readonly ExchangeAvailabilityCell[];
-    restricted: boolean;
+    preview: ExchangePreview;
     deskType: string;
     venueId: string;
   },
@@ -455,7 +459,7 @@ function modeAllowed(
     beta: false,
     inDevelopment: false,
   };
-  if (!flagAllows(flag, input.restricted)) {
+  if (!flagAllows(flag, input.preview)) {
     return { ok: false, error };
   }
   return { ok: true };
@@ -477,7 +481,7 @@ export function offeredVenues(
     (venue) =>
       exchangeCreateAllowed({
         cells: access.cells,
-        restricted: access.restricted,
+        preview: access.preview,
         deskType,
         venueId: venue.id,
         accountMode: kind === "paper" ? "paper" : "live",
@@ -498,7 +502,7 @@ export function offeredEnvironments(
     (environment) =>
       exchangeCreateAllowed({
         cells: access.cells,
-        restricted: access.restricted,
+        preview: access.preview,
         deskType,
         venueId: venue.id,
         accountMode: "live",
@@ -539,7 +543,7 @@ export function offeredAccountVenues(
           venueAllowsDeskType(venue, deskType) &&
           exchangeCreateAllowed({
             cells: access.cells,
-            restricted: access.restricted,
+            preview: access.preview,
             deskType,
             venueId: venue.id,
             accountMode: "live",
@@ -595,7 +599,7 @@ export function sharedDeskVisible(
 ): boolean {
   return exchangeCreateAllowed({
     cells: access.cells,
-    restricted: access.restricted,
+    preview: access.preview,
     deskType: desk.deskType,
     venueId: desk.venue,
     accountMode: "live",
@@ -614,7 +618,7 @@ export function environmentAllowedForDesk(
   }
   return exchangeCreateAllowed({
     cells: access.cells,
-    restricted: access.restricted,
+    preview: access.preview,
     deskType,
     venueId,
     accountMode: "live",

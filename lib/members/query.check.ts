@@ -30,6 +30,10 @@ const ignored = parseMemberListQuery({
 });
 assert.deepEqual(ignored, DEFAULT_MEMBER_QUERY);
 assert.equal(parseMemberListQuery({ role: "developer" }).role, "developer");
+assert.equal(
+  parseMemberListQuery({ role: "platform_tester" }).role,
+  "platform_tester",
+);
 
 assert.equal(memberListHref(DEFAULT_MEMBER_QUERY), "/admin/members");
 assert.equal(
