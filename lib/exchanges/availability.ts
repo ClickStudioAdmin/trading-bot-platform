@@ -18,25 +18,33 @@ import {
 export const EXCHANGE_DESK_MODES = ["paper", "demo", "live"] as const;
 export type ExchangeDeskMode = (typeof EXCHANGE_DESK_MODES)[number];
 
+export type ExchangeAvailabilityStatus = "live" | "testing" | "beta";
+
 export type ExchangeAvailabilityCell = {
   venueId: string;
   deskType: VenueDeskType;
   mode: ExchangeDeskMode;
   /** Members can pick this exchange when creating a desk. */
   live: boolean;
-  /** Only admins can pick it. Never set with live. */
+  /** Only admins can pick it. */
   testing: boolean;
+  /** Members can pick it. The desk shows a beta notice. */
+  beta: boolean;
 };
 
-/** A row is Live or Testing. Both on, or both off, stays Live. */
+/** A row is Live, Testing, or Beta. Anything mixed stays Live. */
 export function exclusiveChoice(
   live: boolean,
   testing: boolean,
-): { live: boolean; testing: boolean } {
-  if (testing && !live) {
-    return { live: false, testing: true };
+  beta = false,
+): { live: boolean; testing: boolean; beta: boolean } {
+  if (beta && !live && !testing) {
+    return { live: false, testing: false, beta: true };
   }
-  return { live: true, testing: false };
+  if (testing && !live && !beta) {
+    return { live: false, testing: true, beta: false };
+  }
+  return { live: true, testing: false, beta: false };
 }
 
 export type ExchangeAccess = {
@@ -131,6 +139,7 @@ export function defaultExchangeAvailability(): ExchangeAvailabilityCell[] {
           mode,
           live: true,
           testing: false,
+          beta: false,
         });
       }
     }
@@ -168,13 +177,18 @@ export function parseAvailabilityRow(
   if (!venueAllowsDeskType(venue, deskType)) {
     return null;
   }
-  const choice = exclusiveChoice(row.live === true, row.testing === true);
+  const choice = exclusiveChoice(
+    row.live === true,
+    row.testing === true,
+    row.beta === true,
+  );
   return {
     venueId,
     deskType,
     mode,
     live: choice.live,
     testing: choice.testing,
+    beta: choice.beta,
   };
 }
 
@@ -195,16 +209,82 @@ export function availabilityCounts(
   };
 }
 
-/** Live or Testing for one desk type and mode. A missing row stays Live. */
+/** Live, Testing, or Beta for one desk type and mode. A missing row stays Live. */
 export function availabilitySetting(
   cells: readonly ExchangeAvailabilityCell[],
   venueId: string,
   deskType: string,
   mode: ExchangeDeskMode,
-): "live" | "testing" {
+): ExchangeAvailabilityStatus {
   const cell = cellFor(cells, venueId, deskType, mode);
-  const choice = exclusiveChoice(Boolean(cell?.live), Boolean(cell?.testing));
+  const choice = exclusiveChoice(
+    Boolean(cell?.live),
+    Boolean(cell?.testing),
+    Boolean(cell?.beta),
+  );
+  if (choice.beta) {
+    return "beta";
+  }
   return choice.testing ? "testing" : "live";
+}
+
+export function exchangeChoiceLabel(
+  label: string,
+  cells: readonly ExchangeAvailabilityCell[] | null | undefined,
+  venueId: string,
+  deskType: string,
+  mode: ExchangeDeskMode,
+): string {
+  if (
+    !cells ||
+    availabilitySetting(cells, venueId, deskType, mode) !== "beta"
+  ) {
+    return label;
+  }
+  return `${label} · Beta`;
+}
+
+export function connectedVenueChoiceLabel(
+  venue: VenueDefinition,
+  cells: readonly ExchangeAvailabilityCell[] | null | undefined,
+  deskType: string,
+): string {
+  if (!cells || venue.environments.length === 0) {
+    return venue.label;
+  }
+  const allBeta = venue.environments.every((environment) => {
+    return (
+      availabilitySetting(
+        cells,
+        venue.id,
+        deskType,
+        environmentDeskMode(environment.id),
+      ) === "beta"
+    );
+  });
+  return allBeta ? `${venue.label} · Beta` : venue.label;
+}
+
+/** Notice for a desk whose exchange, type, and mode are Beta. */
+export function deskBetaNotice(input: {
+  cells: readonly ExchangeAvailabilityCell[];
+  deskType: string;
+  venueId: string;
+  accountMode: "paper" | "live";
+  environmentId: string | null;
+}): string | null {
+  if (input.accountMode === "live" && !input.environmentId) {
+    return null;
+  }
+  const mode: ExchangeDeskMode =
+    input.accountMode === "paper"
+      ? "paper"
+      : environmentDeskMode(input.environmentId);
+  if (availabilitySetting(input.cells, input.venueId, input.deskType, mode) !== "beta") {
+    return null;
+  }
+  const venue = getVenue(input.venueId)?.label ?? "This exchange";
+  return `${venue} ${MODE_LABEL[mode]} is in beta.`;
 }
 
 export function cellFor(
@@ -224,10 +304,10 @@ export function cellFor(
 }
 
 function flagAllows(
-  flag: { live: boolean; testing: boolean },
+  flag: { live: boolean; testing: boolean; beta?: boolean },
   admin: boolean,
 ): boolean {
-  const choice = exclusiveChoice(flag.live, flag.testing);
+  const choice = exclusiveChoice(flag.live, flag.testing, flag.beta);
   if (choice.testing) {
     return admin;
   }
@@ -305,7 +385,7 @@ function modeAllowed(
     return { ok: false, error };
   }
   const cell = cellFor(input.cells, input.venueId, input.deskType, mode);
-  const flag = cell ?? { live: true, testing: false };
+  const flag = cell ?? { live: true, testing: false, beta: false };
   if (!flagAllows(flag, input.admin)) {
     return { ok: false, error };
   }
@@ -383,9 +463,11 @@ export function readAvailabilityForm(
   for (const deskType of venue.deskTypes) {
     for (const mode of EXCHANGE_DESK_MODES) {
       const key = `${deskType}:${mode}`;
+      const raw = String(form.get(`availability:${key}`) ?? "");
       const choice = exclusiveChoice(
-        false,
-        String(form.get(`availability:${key}`) ?? "") === "testing",
+        raw !== "testing" && raw !== "beta",
+        raw === "testing",
+        raw === "beta",
       );
       cells.push({
         venueId: venue.id,
@@ -393,6 +475,7 @@ export function readAvailabilityForm(
         mode,
         live: choice.live,
         testing: choice.testing,
+        beta: choice.beta,
       });
     }
   }

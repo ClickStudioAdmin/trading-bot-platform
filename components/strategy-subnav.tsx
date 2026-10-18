@@ -26,6 +26,7 @@ export function StrategySubnav({
   connection,
   paperBook,
   identity,
+  notice,
 }: {
   title?: string;
   typeLabel?: string;
@@ -46,6 +47,7 @@ export function StrategySubnav({
   } | null;
   paperBook?: CopyPaperEquityView | null;
   identity?: ReactNode;
+  notice?: ReactNode;
 }) {
   const pathname = usePathname();
   const status = reduceOnly
@@ -114,6 +116,7 @@ export function StrategySubnav({
           </div>
         ) : null}
       </div>
+      {notice ? <div className="mt-4">{notice}</div> : null}
       <nav
         aria-label={navLabel}
         className="mt-5 flex items-end justify-between gap-4 border-b border-line"

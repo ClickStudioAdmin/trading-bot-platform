@@ -39,7 +39,8 @@ export default async function AdminExchangesPage({
       <PageHeading overline="Admin" title="Exchanges" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
         Integrated exchanges. Live is what members see when they create a
-        desk. Testing is only for admins.
+        desk. Testing is only for admins. Beta lets members use it and shows
+        a beta notice.
       </p>
       {error ? (
         <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -109,12 +110,18 @@ export default async function AdminExchangesPage({
                             <td
                               key={mode}
                               className={`px-4 py-3 ${
-                                setting === "testing"
-                                  ? "text-warning"
+                              setting === "testing"
+                                ? "text-warning"
+                                : setting === "beta"
+                                  ? "text-accent"
                                   : "text-ink"
-                              }`}
+                            }`}
                             >
-                              {setting === "testing" ? "Testing" : "Live"}
+                              {setting === "testing"
+                                ? "Testing"
+                                : setting === "beta"
+                                  ? "Beta"
+                                  : "Live"}
                             </td>
                           );
                         })

@@ -15,6 +15,7 @@ import { dcaDeskHasRunningPlaybook } from "@/lib/dca/store";
 import { getSessionContext } from "@/lib/auth/session";
 import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
 import { CopyDeskHeader } from "@/components/copy-desk-header";
+import { DeskBetaNotice } from "@/components/desk-beta-notice";
 import { HashScroll } from "@/components/hash-scroll";
 import { loadCopyPaperLedger } from "@/lib/copy/balance";
 import { copyPaperEquityView, type CopyPaperEquityView } from "@/lib/copy/decide";
@@ -134,8 +135,10 @@ async function FuturesPaperMarks({
 
 async function FuturesDeskChrome({
   session,
+  notice,
 }: {
   session: NonNullable<Awaited<ReturnType<typeof getSessionContext>>>;
+  notice?: ComponentProps<typeof StrategySubnav>["notice"];
 }) {
   const deskType = session.account.deskType;
   const copyDesk = deskIsCopy(session.account);
@@ -187,6 +190,7 @@ async function FuturesDeskChrome({
     connectionsEmpty: connections.length === 0,
     connectionKnown: true,
     showIdentity: true,
+    notice,
   });
   const warning =
     live && !bound ? (
@@ -248,6 +252,7 @@ function futuresNavProps(input: {
   boundCaption?: ReturnType<typeof formatStrategyConnectionCaption> | null;
   connectionKnown?: boolean;
   showIdentity?: boolean;
+  notice?: ComponentProps<typeof StrategySubnav>["notice"];
 }): ComponentProps<typeof StrategySubnav> {
   const account = input.account;
   const deskType = account?.deskType ?? "manual";
@@ -319,6 +324,7 @@ function futuresNavProps(input: {
         : Boolean(input.automationsRunning),
     reduceOnly: Boolean(input.reduceOnly),
     paperBook: input.paperBook ?? null,
+    notice: input.notice,
     connection: live
       ? input.bound && caption
         ? {
@@ -365,12 +371,24 @@ export default async function FuturesLayout({
     account: session?.account ?? null,
     live: Boolean(session && accountCanHoldConnections(session.account.mode)),
     connectionsEmpty: true,
+    notice: session ? (
+      <Suspense fallback={null}>
+        <DeskBetaNotice account={session.account} />
+      </Suspense>
+    ) : null,
   });
   return (
     <div>
       {session ? (
         <Suspense fallback={<FuturesDeskNav {...shell} />}>
-          <FuturesDeskChrome session={session} />
+          <FuturesDeskChrome
+            session={session}
+            notice={
+              <Suspense fallback={null}>
+                <DeskBetaNotice account={session.account} />
+              </Suspense>
+            }
+          />
         </Suspense>
       ) : (
         <FuturesDeskNav {...shell} />

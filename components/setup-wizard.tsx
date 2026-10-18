@@ -54,6 +54,10 @@ import {
 } from "@/components/table-chrome";
 import { checkExchangeConnection } from "@/lib/exchanges/actions";
 import {
+  connectedVenueChoiceLabel,
+  deskBetaNotice,
+  environmentDeskMode,
+  exchangeChoiceLabel,
   offeredEnvironments,
   offeredVenues,
   type ExchangeAccess,
@@ -1472,6 +1476,15 @@ function CreateDeskDialog({
   const liveVenues = offeredVenues(exchangeAccess, deskType, "connected");
   const showMarket = mode === "paper" && paperVenues.length > 1;
   const venueDef = getVenue(venue);
+  const betaNotice = exchangeAccess
+    ? deskBetaNotice({
+        cells: exchangeAccess.cells,
+        deskType,
+        venueId: venue,
+        accountMode: mode,
+        environmentId: mode === "live" ? environmentId || null : null,
+      })
+    : null;
 
   useEffect(() => {
     nameRef.current?.focus();
@@ -1730,6 +1743,7 @@ function CreateDeskDialog({
               </span>
             ) : null}
           </label>
+          {betaNotice ? <p className="text-sm text-warning">{betaNotice}</p> : null}
           {showMarket ? (
             <label className="block text-sm text-ink">
               Market data
@@ -1740,7 +1754,13 @@ function CreateDeskDialog({
               >
                 {paperVenues.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.label}
+                    {exchangeChoiceLabel(
+                      item.label,
+                      exchangeAccess?.cells,
+                      item.id,
+                      deskType,
+                      "paper",
+                    )}
                   </option>
                 ))}
               </AppSelect>
@@ -1758,7 +1778,11 @@ function CreateDeskDialog({
                   >
                     {liveVenues.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.label}
+                        {connectedVenueChoiceLabel(
+                          item,
+                          exchangeAccess?.cells,
+                          deskType,
+                        )}
                       </option>
                     ))}
                   </AppSelect>
@@ -1788,7 +1812,13 @@ function CreateDeskDialog({
                       const off = key === "max_demo_desks" ? demoOff : liveOff;
                       return (
                         <option key={item.id} value={item.id} disabled={off}>
-                          {item.label}
+                          {exchangeChoiceLabel(
+                            item.label,
+                            exchangeAccess?.cells,
+                            venue,
+                            deskType,
+                            environmentDeskMode(item.id),
+                          )}
                         </option>
                       );
                     })}
@@ -1948,6 +1978,15 @@ function ExchangeDesk({
     ? offeredEnvironments(exchangeAccess, venue, desk.deskType)
     : [];
   const choice: BindChoice = desk.bindLater ? "later" : "new";
+  const betaNotice = venue
+    ? deskBetaNotice({
+        cells: exchangeAccess.cells,
+        deskType: desk.deskType,
+        venueId: venue.id,
+        accountMode: "live",
+        environmentId: desk.environmentId,
+      })
+    : null;
 
   return (
     <div>
@@ -1980,7 +2019,11 @@ function ExchangeDesk({
           >
             {venues.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.label}
+                {connectedVenueChoiceLabel(
+                  item,
+                  exchangeAccess.cells,
+                  desk.deskType,
+                )}
               </option>
             ))}
           </AppSelect>
@@ -2009,12 +2052,23 @@ function ExchangeDesk({
           >
             {environments.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.label}
+                {venue
+                  ? exchangeChoiceLabel(
+                      item.label,
+                      exchangeAccess?.cells,
+                      venue.id,
+                      desk.deskType,
+                      environmentDeskMode(item.id),
+                    )
+                  : item.label}
               </option>
             ))}
           </AppSelect>
         </label>
       </div>
+      {betaNotice ? (
+        <p className="mt-3 text-sm text-warning">{betaNotice}</p>
+      ) : null}
       <label className="mt-3 block text-sm text-ink">
         Key
         <AppSelect
