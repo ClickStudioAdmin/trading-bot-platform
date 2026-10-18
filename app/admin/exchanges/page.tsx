@@ -47,7 +47,7 @@ export default async function AdminExchangesPage({
           <thead className="border-b border-line bg-surface-raised text-xs uppercase tracking-[0.12em] text-ink-muted">
             <tr>
               <th className="px-4 py-3 font-medium">Exchange</th>
-              <th className="px-4 py-3 font-medium">Desk types</th>
+              <th className="px-4 py-3 font-medium">Desk type</th>
               <th className="px-4 py-3 font-medium">Live</th>
               <th className="px-4 py-3 font-medium">Testing</th>
               <th className={`${TABLE_ACTIONS_TH_CLASS} text-right`}>Actions</th>
@@ -61,43 +61,60 @@ export default async function AdminExchangesPage({
                 </td>
               </tr>
             ) : (
-              VENUES.map((venue) => {
-                const counts = availabilityCounts(venue.id, cells);
-                return (
-                  <tr key={venue.id} className="border-b border-line last:border-0">
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/exchanges/${venue.id}`}
-                        className="font-medium text-ink hover:text-accent"
-                      >
-                        {venue.label}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-ink">
-                      {venue.deskTypes
-                        .map((deskType) => formatDeskType(deskType as DeskType))
-                        .join(", ")}
-                    </td>
-                    <td className="px-4 py-3 tabular-nums text-ink">
-                      {counts.live} of {counts.slots}
-                    </td>
-                    <td className="px-4 py-3 tabular-nums text-ink">
-                      {counts.testing} of {counts.slots}
-                    </td>
-                    <td className={`${TABLE_ACTIONS_TD_CLASS} text-right`}>
-                      <TableActions className="justify-end">
-                        <TableIconAction
-                          href={`/admin/exchanges/${venue.id}`}
-                          label="Edit"
-                          detail="Set Live and Testing for each desk type and mode."
+              VENUES.map((venue, venueIndex) =>
+                venue.deskTypes.map((deskType, typeIndex) => {
+                  const counts = availabilityCounts(venue.id, cells, deskType);
+                  const first = typeIndex === 0;
+                  const last =
+                    venueIndex === VENUES.length - 1 &&
+                    typeIndex === venue.deskTypes.length - 1;
+                  return (
+                    <tr
+                      key={`${venue.id}:${deskType}`}
+                      className={last ? "" : "border-b border-line"}
+                    >
+                      {first ? (
+                        <td
+                          rowSpan={venue.deskTypes.length}
+                          className="px-4 py-3 align-top"
                         >
-                          <IconPencil {...TABLE_BTN_ICON} />
-                        </TableIconAction>
-                      </TableActions>
-                    </td>
-                  </tr>
-                );
-              })
+                          <Link
+                            href={`/admin/exchanges/${venue.id}`}
+                            className="font-medium text-ink hover:text-accent"
+                          >
+                            {venue.label}
+                          </Link>
+                        </td>
+                      ) : null}
+                      <td className="px-4 py-3 text-ink">
+                        {formatDeskType(deskType as DeskType)}
+                      </td>
+                      <td className="px-4 py-3 tabular-nums text-ink">
+                        {counts.live} of {counts.slots}
+                      </td>
+                      <td className="px-4 py-3 tabular-nums text-ink">
+                        {counts.testing} of {counts.slots}
+                      </td>
+                      {first ? (
+                        <td
+                          rowSpan={venue.deskTypes.length}
+                          className={`${TABLE_ACTIONS_TD_CLASS} align-top text-right`}
+                        >
+                          <TableActions className="justify-end">
+                            <TableIconAction
+                              href={`/admin/exchanges/${venue.id}`}
+                              label="Edit"
+                              detail="Set Live and Testing for each desk type and mode."
+                            >
+                              <IconPencil {...TABLE_BTN_ICON} />
+                            </TableIconAction>
+                          </TableActions>
+                        </td>
+                      ) : null}
+                    </tr>
+                  );
+                }),
+              )
             )}
           </tbody>
         </table>

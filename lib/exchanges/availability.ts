@@ -150,8 +150,13 @@ export function parseAvailabilityRow(
 export function availabilityCounts(
   venueId: string,
   cells: readonly ExchangeAvailabilityCell[],
+  deskType?: string,
 ): { slots: number; live: number; testing: number } {
-  const rows = cells.filter((cell) => cell.venueId === venueId);
+  const rows = cells.filter(
+    (cell) =>
+      cell.venueId === venueId &&
+      (deskType == null || cell.deskType === deskType),
+  );
   return {
     slots: rows.length,
     live: rows.filter((cell) => cell.live).length,

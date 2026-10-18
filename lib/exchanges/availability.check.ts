@@ -214,6 +214,10 @@ const counts = availabilityCounts("bybit", defaults);
 assert.equal(counts.slots, 15);
 assert.equal(counts.live, 15);
 assert.equal(counts.testing, 0);
+const manualCounts = availabilityCounts("bybit", hidden, "manual");
+assert.equal(manualCounts.slots, 3);
+assert.equal(manualCounts.live, 2);
+assert.equal(manualCounts.testing, 1);
 assert.equal(availabilityCounts("hyperliquid", defaults).slots, 12);
 
 assert.equal(
