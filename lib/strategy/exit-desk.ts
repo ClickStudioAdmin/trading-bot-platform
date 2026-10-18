@@ -72,6 +72,7 @@ export async function decideOpenExit(input: {
   entryPrice: number | null;
   mark: number | null;
   last: number | null;
+  index?: number | null;
   barsByTimeframe: Map<string, CandleBar[]>;
   firedWebhookId?: string | null;
   nowMs?: number;
@@ -107,7 +108,7 @@ export async function decideOpenExit(input: {
     prices: {
       last: input.last,
       mark: input.mark,
-      index: null,
+      index: input.index ?? null,
     },
   });
 }

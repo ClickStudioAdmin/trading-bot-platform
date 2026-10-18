@@ -17,6 +17,7 @@ import {
 } from "./conditions";
 import { entryStackListensOnPriceTick, entryStackMatchesWebhook } from "@/lib/strategy/expr";
 import {
+  exitBookForClassic,
   exitClaimsCover,
   sideExitActions,
 } from "@/lib/strategy/exit-actions";
@@ -740,6 +741,7 @@ async function commitOwnedExit(input: {
     entryPrice: input.open.entryPrice,
     mark,
     last,
+    index: input.prices?.index ?? null,
     barsByTimeframe: input.barsByTimeframe,
     firedWebhookId: input.firedWebhookId,
     breakevenDone: input.open.breakevenDone,
@@ -895,15 +897,6 @@ async function monitorOwnedFuturesPositions(input: {
     const breakevenOffsetPct = sideClassic
       ? sideClassic.breakevenOffsetPct
       : rule.breakevenOffsetPct;
-    if (
-      !sideActions &&
-      !watchedExit.exitIf &&
-      !watchedExit.exitHard &&
-      watchedExit.exitStack.leaves.length === 0 &&
-      breakevenActivationPct == null
-    ) {
-      continue;
-    }
     let deskTickers = input.tickers;
     if (account.venue === "hyperliquid" && !input.providedTickers) {
       const cacheKey = `${account.venue}:${account.venueEnvironment ?? ""}`;
@@ -938,6 +931,44 @@ async function monitorOwnedFuturesPositions(input: {
         prices,
       });
       continue;
+    }
+    const mark = prices?.mark != null && prices.mark > 0 ? prices.mark : last;
+    if (mark != null && mark > 0 && last != null && last > 0 && open.qty > 0) {
+      const breakevenMoving =
+        breakevenActivationPct != null &&
+        futuresBreakevenDue({
+          side: open.side,
+          qty: open.qty,
+          entryPrice: open.entryPrice,
+          mark: last,
+          activationPct: breakevenActivationPct,
+          done: open.breakevenDone,
+        });
+      const book = exitBookForClassic({
+        side: open.side,
+        qty: open.qty,
+        entryPrice: open.entryPrice,
+        mark,
+        last,
+        nowMs: Date.now(),
+        breakevenDone: open.breakevenDone,
+        trailingPeak: open.trailingPeak,
+        takeProfitPrice: open.takeProfit,
+        takeProfitQty: open.tpQty,
+        stopLossPrice: open.stopLoss,
+        stopLossQty: open.slQty,
+        trailingDistance: open.trailingStop,
+        trailingActivation: open.trailingActive,
+        breakevenActivationPct,
+        breakevenOffsetPct,
+        breakeven: breakevenMoving
+          ? {
+              activationPct: breakevenActivationPct,
+              offsetPct: breakevenOffsetPct ?? 0,
+            }
+          : null,
+      });
+      await saveExitRuntime(open.id, { arms: {}, book });
     }
     const exitMet = exitExpressionMet({
       first: hardExitMet({

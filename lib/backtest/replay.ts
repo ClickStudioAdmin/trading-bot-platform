@@ -17,6 +17,7 @@ import {
   emptyExitRuntime,
   evaluateExitActions,
   exitActionTimeframes,
+  exitBookForClassic,
   sideExitActions,
   type ExitActionKind,
   type ExitLot,
@@ -338,7 +339,38 @@ export async function replayPerpsPriceCross(input: {
   let barsIn = 0;
   let liquidated = false;
 
+  function bookForOpen(sim: OpenSim, atMs: number, mark: number) {
+    if (perpsSideActions(input.recipe, sim.side)) {
+      return flexRuntime.book ?? null;
+    }
+    const shortClassic =
+      sim.side === "short" && input.recipe.direction === "both"
+        ? input.recipe.shortEntry?.classic
+        : null;
+    return exitBookForClassic({
+      side: sim.side,
+      qty: sim.qty,
+      entryPrice: sim.entry,
+      mark,
+      last: mark,
+      nowMs: atMs,
+      breakevenDone: sim.breakevenDone,
+      trailingPeak: sim.trailing?.peak ?? null,
+      takeProfitPrice: sim.tpsl?.takeProfit ?? null,
+      takeProfitQty: sim.tpsl?.tpQty ?? null,
+      stopLossPrice: sim.tpsl?.stopLoss ?? null,
+      stopLossQty: sim.tpsl?.slQty ?? null,
+      trailingDistance: sim.trailing?.distance ?? null,
+      trailingActivation: sim.trailing?.activePrice ?? null,
+      breakevenActivationPct:
+        shortClassic?.breakevenActivationPct ?? input.recipe.breakevenActivationPct ?? null,
+      breakevenOffsetPct:
+        shortClassic?.breakevenOffsetPct ?? input.recipe.breakevenOffsetPct ?? null,
+    });
+  }
+
   function remember(order: SimulatedOrder, because?: string) {
+    const exitBook = open ? bookForOpen(open, order.atMs, order.price) : null;
     const orderIndex = orders.length;
     orders.push(order);
     events.push({
@@ -353,6 +385,7 @@ export async function replayPerpsPriceCross(input: {
         price: order.price,
         because,
       }),
+      ...(exitBook ? { exitBook } : {}),
     });
   }
 
@@ -838,7 +871,39 @@ async function replayPerpsBoth(input: {
   let barsIn = 0;
   let liquidated = false;
 
+  function bookForSide(sim: OpenSim, atMs: number, mark: number) {
+    if (perpsSideActions(input.recipe, sim.side)) {
+      return bookArms[sim.side].book ?? null;
+    }
+    const shortClassic =
+      sim.side === "short" && input.recipe.direction === "both"
+        ? input.recipe.shortEntry?.classic
+        : null;
+    return exitBookForClassic({
+      side: sim.side,
+      qty: sim.qty,
+      entryPrice: sim.entry,
+      mark,
+      last: mark,
+      nowMs: atMs,
+      breakevenDone: sim.breakevenDone,
+      trailingPeak: sim.trailing?.peak ?? null,
+      takeProfitPrice: sim.tpsl?.takeProfit ?? null,
+      takeProfitQty: sim.tpsl?.tpQty ?? null,
+      stopLossPrice: sim.tpsl?.stopLoss ?? null,
+      stopLossQty: sim.tpsl?.slQty ?? null,
+      trailingDistance: sim.trailing?.distance ?? null,
+      trailingActivation: sim.trailing?.activePrice ?? null,
+      breakevenActivationPct:
+        shortClassic?.breakevenActivationPct ?? input.recipe.breakevenActivationPct ?? null,
+      breakevenOffsetPct:
+        shortClassic?.breakevenOffsetPct ?? input.recipe.breakevenOffsetPct ?? null,
+    });
+  }
+
   function remember(order: SimulatedOrder, because?: string) {
+    const sim = book[order.side];
+    const exitBook = sim ? bookForSide(sim, order.atMs, order.price) : null;
     const orderIndex = orders.length;
     orders.push(order);
     events.push({
@@ -853,6 +918,7 @@ async function replayPerpsBoth(input: {
         price: order.price,
         because,
       }),
+      ...(exitBook ? { exitBook } : {}),
     });
   }
 

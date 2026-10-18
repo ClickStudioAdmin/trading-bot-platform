@@ -1,4 +1,5 @@
 import {
+  exitPriceRuleLabel,
   hardExitMet,
   hardExitParts,
   isExitPriceRule,
@@ -212,6 +213,71 @@ export type ExitArmState = {
 
 export type ExitRuntime = {
   arms: Record<string, ExitArmState>;
+  /** Last decision tree for this position. Absent on rows saved before the book existed. */
+  book?: ExitBookSnapshot | null;
+};
+
+export type ExitActionStatus =
+  | "off"
+  | "waiting"
+  | "armed"
+  | "protecting"
+  | "moving"
+  | "firing"
+  | "done";
+
+export type ExitLeafSnapshot = {
+  trigger: string;
+  label: string;
+  /** Null when the leaf could not be evaluated, for example because its candles were missing. */
+  met: boolean | null;
+};
+
+export type ExitGroupSnapshot = {
+  met: boolean;
+  leaves: ExitLeafSnapshot[];
+};
+
+/** One exit action at a single check. Later conditions and the position tree read this. */
+export type ExitActionSnapshot = {
+  id: string;
+  kind: ExitActionKind;
+  scope: SavedExitScope;
+  status: ExitActionStatus;
+  conditionsMet: boolean;
+  priceMet: boolean | null;
+  /** Trailing activation only. Null on every other kind. */
+  activationMet: boolean | null;
+  scopeQty: number;
+  protectingQty: number;
+  claimQty: number;
+  groups: ExitGroupSnapshot[];
+};
+
+/**
+ * Coverage of the open quantity.
+ * `provenQty` is the largest single protecting action, so overlap cannot inflate it.
+ * `stackedQty` adds those quantities and caps at the open quantity, which counts
+ * scopes as disjoint until they pass the open size.
+ */
+export type ExitCoverageSnapshot = {
+  openQty: number;
+  provenQty: number;
+  stackedQty: number;
+  provenPct: number | null;
+  stackedPct: number | null;
+};
+
+export type ExitBookSnapshot = {
+  atMs: number;
+  source: "actions" | "classic";
+  openQty: number;
+  actions: ExitActionSnapshot[];
+  byKind: Record<ExitActionKind, ExitCoverageSnapshot>;
+  /** Stop loss, trailing stop, and a latched breakeven. */
+  protective: ExitCoverageSnapshot;
+  /** Trailing stops that are tracking, plus a breakeven move that has latched. */
+  trailingOrBreakeven: ExitCoverageSnapshot;
 };
 
 export type ExitBreakevenMove = {
@@ -968,12 +1034,7 @@ function actionHasNumbers(action: StoredExitAction): boolean {
     return action.stopLossPct != null || action.stopLossPrice != null;
   }
   if (action.kind === "trailing_stop") {
-    return (
-      action.trailingDistance != null ||
-      action.trailingActivation != null ||
-      (action.trailingPct != null && action.trailingPct > 0) ||
-      (action.trailingTriggerPct != null && action.trailingTriggerPct > 0)
-    );
+    return trailConfigured(action);
   }
   if (action.kind === "breakeven") {
     return action.breakevenActivationPct != null && action.breakevenActivationPct > 0;
@@ -1054,7 +1115,13 @@ export function evaluateExitActions(input: {
   stepQty?: number;
   breakevenDone?: boolean;
   prices?: { last: number | null; mark: number | null; index: number | null } | null;
-}): { claims: ExitClaim[]; runtime: ExitRuntime; lots: ExitLot[]; breakeven: ExitBreakevenMove | null } {
+}): {
+  claims: ExitClaim[];
+  runtime: ExitRuntime;
+  lots: ExitLot[];
+  breakeven: ExitBreakevenMove | null;
+  book: ExitBookSnapshot;
+} {
   const prices = input.prices ?? {
     last: input.last,
     mark: input.mark,
@@ -1073,7 +1140,7 @@ export function evaluateExitActions(input: {
     conditionTrue[action.id] = gate.confirm;
     needsPrice[action.id] = gate.needsPrice;
   }
-  return planExitClaims({
+  const settled = planExitClaims({
     actions: input.actions,
     runtime: input.runtime,
     lots: input.lots,
@@ -1087,6 +1154,25 @@ export function evaluateExitActions(input: {
     stepQty: input.stepQty,
     breakevenDone: input.breakevenDone,
   });
+  const book = describeExitBook({
+    source: "actions",
+    actions: input.actions,
+    runtime: settled.runtime,
+    lots: input.lots,
+    side: input.side,
+    mark: input.mark,
+    last: input.last,
+    entryPrice: input.entryPrice,
+    nowMs: input.nowMs,
+    claims: settled.claims,
+    breakevenDone: input.breakevenDone,
+    breakeven: settled.breakeven,
+    barsByTimeframe: input.barsByTimeframe,
+    firedWebhookId: input.firedWebhookId,
+    prices,
+  });
+  const runtime: ExitRuntime = { ...settled.runtime, book };
+  return { ...settled, runtime, book };
 }
 
 function leafMet(
@@ -1212,6 +1298,49 @@ function scopeQty(
   return Math.min(lotQty(eligible), unclaimedQty);
 }
 
+function trailConfigured(action: StoredExitAction): boolean {
+  return (
+    action.trailingDistance != null ||
+    action.trailingActivation != null ||
+    (action.trailingPct != null && action.trailingPct > 0) ||
+    (action.trailingTriggerPct != null && action.trailingTriggerPct > 0)
+  );
+}
+
+function trailDistance(action: StoredExitAction, last: number): number | null {
+  if (action.trailingDistance != null) {
+    return action.trailingDistance;
+  }
+  if (action.trailingPct != null && last > 0) {
+    return (last * action.trailingPct) / 100;
+  }
+  return null;
+}
+
+/** Activation percent or activation price has been reached, and a distance exists. */
+function trailReady(input: {
+  action: StoredExitAction;
+  side: FuturesSide;
+  last: number;
+  entryPrice: number | null;
+}): boolean {
+  if (input.action.trailingTriggerPct != null && input.action.trailingTriggerPct > 0) {
+    const entry = input.entryPrice;
+    const moved = entry != null ? pnlPct(input.side, entry, input.last) : null;
+    if (moved == null || moved < input.action.trailingTriggerPct) {
+      return false;
+    }
+  }
+  if (trailDistance(input.action, input.last) == null || !(input.last > 0)) {
+    return false;
+  }
+  const activation = input.action.trailingActivation;
+  if (activation == null) {
+    return true;
+  }
+  return input.side === "long" ? input.last >= activation : input.last <= activation;
+}
+
 function priceFires(input: {
   action: StoredExitAction;
   side: FuturesSide;
@@ -1253,32 +1382,14 @@ function priceFires(input: {
     const pnl = entry != null && pct != null ? pnlPct(side, entry, input.mark) : null;
     return { fire: pnl != null && pnl <= -pct!, peak: arm.peak };
   }
-  if (action.trailingTriggerPct != null && action.trailingTriggerPct > 0) {
-    const entry = input.entryPrice;
-    const moved = entry != null ? pnlPct(side, entry, input.last) : null;
-    if (moved == null || moved < action.trailingTriggerPct) {
-      return { fire: false, peak: arm.peak };
-    }
+  if (!trailReady({ action, side, last: input.last, entryPrice: input.entryPrice })) {
+    return { fire: false, peak: arm.peak };
   }
-  const distance =
-    action.trailingDistance ??
-    (action.trailingPct != null && input.last > 0
-      ? (input.last * action.trailingPct) / 100
-      : null);
+  const distance = trailDistance(action, input.last);
   if (distance == null) {
     return { fire: false, peak: arm.peak };
   }
   const ref = input.last;
-  if (!(ref > 0)) {
-    return { fire: false, peak: arm.peak };
-  }
-  const activation = action.trailingActivation;
-  if (activation != null) {
-    const reached = side === "long" ? ref >= activation : ref <= activation;
-    if (!reached) {
-      return { fire: false, peak: arm.peak };
-    }
-  }
   const peak = arm.peak == null || input.justArmed
     ? ref
     : side === "long"
@@ -1459,6 +1570,338 @@ export function planExitClaims(input: {
   };
 }
 
+const EXIT_KINDS: ExitActionKind[] = [
+  "take_profit",
+  "trailing_stop",
+  "stop_loss",
+  "breakeven",
+  "close",
+];
+
+function coverageOf(openQty: number, qtys: readonly number[]): ExitCoverageSnapshot {
+  const positive = qtys.filter((qty) => qty > QTY_EPS);
+  const provenQty = positive.length === 0 ? 0 : Math.min(openQty, Math.max(...positive));
+  const stackedQty = Math.min(
+    openQty,
+    positive.reduce((sum, qty) => sum + qty, 0),
+  );
+  const pct = (qty: number) => (openQty > QTY_EPS ? (qty / openQty) * 100 : null);
+  return {
+    openQty,
+    provenQty,
+    stackedQty,
+    provenPct: pct(provenQty),
+    stackedPct: pct(stackedQty),
+  };
+}
+
+function emptyCoverage(openQty: number): ExitCoverageSnapshot {
+  return coverageOf(openQty, []);
+}
+
+function leafLabel(draft: HardExitDraft): string {
+  if (isExitPriceRule(draft.trigger)) {
+    return exitPriceRuleLabel(draft.trigger);
+  }
+  if (draft.trigger === "indicator") {
+    return "Indicator";
+  }
+  if (draft.trigger === "trend") {
+    return "Trend";
+  }
+  if (draft.trigger === "webhook") {
+    return "Signal webhook";
+  }
+  if (draft.trigger === "price") {
+    return "Price cross";
+  }
+  return "Condition";
+}
+
+function leafSnapshot(
+  draft: HardExitDraft,
+  input: {
+    side: FuturesSide;
+    prices: { last: number | null; mark: number | null; index: number | null } | null;
+    barsByTimeframe: Map<string, CandleBar[]>;
+    firedWebhookId?: string | null;
+    priceMet: boolean | null;
+  },
+): ExitLeafSnapshot {
+  if (isExitPriceRule(draft.trigger)) {
+    return { trigger: draft.trigger, label: leafLabel(draft), met: input.priceMet };
+  }
+  if (draft.trigger === "indicator" || draft.trigger === "trend") {
+    const timeframe = draft.spec?.timeframe ?? null;
+    const bars = timeframe ? (input.barsByTimeframe.get(timeframe) ?? []) : [];
+    if (bars.length === 0) {
+      return { trigger: draft.trigger, label: leafLabel(draft), met: null };
+    }
+  }
+  return {
+    trigger: draft.trigger,
+    label: leafLabel(draft),
+    met: leafMet(draft, input),
+  };
+}
+
+/** Read-only picture of every exit action and the coverage they share. */
+export function describeExitBook(input: {
+  source: ExitBookSnapshot["source"];
+  actions: readonly StoredExitAction[];
+  runtime: ExitRuntime;
+  lots: readonly ExitLot[];
+  side: FuturesSide;
+  mark: number;
+  last: number;
+  entryPrice: number | null;
+  nowMs: number;
+  claims: readonly ExitClaim[];
+  breakevenDone?: boolean;
+  breakeven?: ExitBreakevenMove | null;
+  barsByTimeframe?: Map<string, CandleBar[]>;
+  firedWebhookId?: string | null;
+  prices?: { last: number | null; mark: number | null; index: number | null } | null;
+}): ExitBookSnapshot {
+  const openQty = lotQty(input.lots);
+  const barsByTimeframe = input.barsByTimeframe ?? new Map<string, CandleBar[]>();
+  const prices = input.prices ?? {
+    last: input.last,
+    mark: input.mark,
+    index: null,
+  };
+  const actions = input.actions.map((action) => {
+    const arm = armOf(input.runtime, action.id);
+    const claimQty = input.claims
+      .filter((claim) => claim.actionId === action.id)
+      .reduce((sum, claim) => sum + claim.qty, 0);
+    const eligible = eligibleLots(action, input.lots, input.side, input.mark);
+    const appliesQty =
+      action.scope.kind === "remainder"
+        ? 0
+        : scopeQty(action, eligible, action.scope.kind === "fills" ? lotQty(eligible) : openQty);
+    const hit = priceFires({
+      action,
+      side: input.side,
+      mark: input.mark,
+      last: input.last,
+      entryPrice: input.entryPrice,
+      arm,
+      justArmed: false,
+    });
+    const activationMet =
+      action.kind === "trailing_stop"
+        ? trailReady({
+            action,
+            side: input.side,
+            last: input.last,
+            entryPrice: input.entryPrice,
+          })
+        : null;
+    const priceMet = action.kind === "close" ? null : hit.fire;
+    const groups = action.groups.map((group) => {
+      const leaves = [group.anchor, ...group.rows].map((draft) =>
+        leafSnapshot(draft, {
+          side: input.side,
+          prices,
+          barsByTimeframe,
+          firedWebhookId: input.firedWebhookId,
+          priceMet,
+        }),
+      );
+      return { met: leaves.length > 0 && leaves.every((leaf) => leaf.met === true), leaves };
+    });
+    const conditionsMet = groups.some((group) => group.met);
+    const configured = action.kind === "close" || actionHasNumbers(action) || action.groups.length > 0;
+    let status: ExitActionStatus = configured ? "waiting" : "off";
+    let protectingQty = 0;
+    if (action.kind === "breakeven" && input.breakevenDone) {
+      status = "done";
+      protectingQty = openQty;
+    } else if (
+      action.kind === "breakeven" &&
+      input.breakeven != null &&
+      input.breakeven.activationPct === action.breakevenActivationPct
+    ) {
+      status = "moving";
+    } else if (claimQty > QTY_EPS) {
+      status = "firing";
+      if (action.kind === "stop_loss" || action.kind === "trailing_stop") {
+        protectingQty = appliesQty > QTY_EPS ? appliesQty : claimQty;
+      }
+    } else if (
+      action.kind === "stop_loss" &&
+      actionHasNumbers(action) &&
+      action.scope.kind !== "remainder"
+    ) {
+      status = "protecting";
+      protectingQty = appliesQty;
+    } else if (action.kind === "trailing_stop" && arm.peak != null && activationMet === true) {
+      status = "protecting";
+      protectingQty = appliesQty;
+    } else if (action.kind === "trailing_stop" && arm.armedAt != null) {
+      status = "armed";
+    }
+    return {
+      id: action.id,
+      kind: action.kind,
+      scope: action.scope,
+      status,
+      conditionsMet,
+      priceMet,
+      activationMet,
+      scopeQty: action.scope.kind === "remainder" ? openQty : appliesQty,
+      protectingQty,
+      claimQty,
+      groups,
+    };
+  });
+  const protecting = (kinds: readonly ExitActionKind[]) =>
+    coverageOf(
+      openQty,
+      actions.filter((action) => kinds.includes(action.kind)).map((action) => action.protectingQty),
+    );
+  const byKind = Object.fromEntries(
+    EXIT_KINDS.map((kind) => [kind, protecting([kind])]),
+  ) as Record<ExitActionKind, ExitCoverageSnapshot>;
+  return {
+    atMs: input.nowMs,
+    source: input.source,
+    openQty,
+    actions,
+    byKind,
+    protective: protecting(["stop_loss", "trailing_stop", "breakeven"]),
+    trailingOrBreakeven: protecting(["trailing_stop", "breakeven"]),
+  };
+}
+
+const CLASSIC_EXIT_IDS = {
+  take_profit: "classic:take_profit",
+  stop_loss: "classic:stop_loss",
+  trailing_stop: "classic:trailing_stop",
+  breakeven: "classic:breakeven",
+} as const;
+
+function classicScope(qty: number | null | undefined): SavedExitScope {
+  return qty != null && qty > 0 ? { kind: "qty", qty } : { kind: "all" };
+}
+
+function classicAction(
+  kind: Exclude<ExitActionKind, "close">,
+  scope: SavedExitScope,
+  prices: Partial<ExitSidePrices>,
+): StoredExitAction {
+  const trigger =
+    kind === "take_profit" ? "target" : kind === "stop_loss" ? "stop" : kind === "trailing_stop" ? "trail" : "profit";
+  return {
+    id: CLASSIC_EXIT_IDS[kind],
+    kind,
+    scope,
+    groups: [{ anchor: { trigger }, rows: [] }],
+    takeProfitPct: null,
+    takeProfitPrice: null,
+    stopLossPct: null,
+    stopLossPrice: null,
+    trailingDistance: null,
+    trailingActivation: null,
+    ...prices,
+  };
+}
+
+/** Column exits use the same book as an action list, with one card per column that is set. */
+export function exitBookForClassic(input: {
+  side: FuturesSide;
+  qty: number;
+  entryPrice: number | null;
+  mark: number;
+  last: number;
+  nowMs: number;
+  breakevenDone?: boolean;
+  trailingPeak?: number | null;
+  takeProfitPct?: number | null;
+  takeProfitPrice?: number | null;
+  takeProfitQty?: number | null;
+  stopLossPct?: number | null;
+  stopLossPrice?: number | null;
+  stopLossQty?: number | null;
+  trailingDistance?: number | null;
+  trailingPct?: number | null;
+  trailingActivation?: number | null;
+  trailingTriggerPct?: number | null;
+  breakevenActivationPct?: number | null;
+  breakevenOffsetPct?: number | null;
+  /** Set on the check that is about to move the stop. Coverage stays at zero until the move latches. */
+  breakeven?: ExitBreakevenMove | null;
+}): ExitBookSnapshot {
+  const actions: StoredExitAction[] = [];
+  if (input.takeProfitPrice != null || input.takeProfitPct != null) {
+    actions.push(
+      classicAction("take_profit", classicScope(input.takeProfitQty), {
+        takeProfitPrice: input.takeProfitPrice ?? null,
+        takeProfitPct: input.takeProfitPrice != null ? null : (input.takeProfitPct ?? null),
+      }),
+    );
+  }
+  if (input.stopLossPrice != null || input.stopLossPct != null) {
+    actions.push(
+      classicAction("stop_loss", classicScope(input.stopLossQty), {
+        stopLossPrice: input.stopLossPrice ?? null,
+        stopLossPct: input.stopLossPrice != null ? null : (input.stopLossPct ?? null),
+      }),
+    );
+  }
+  if (
+    input.trailingDistance != null ||
+    (input.trailingPct != null && input.trailingPct > 0) ||
+    input.trailingActivation != null ||
+    (input.trailingTriggerPct != null && input.trailingTriggerPct > 0)
+  ) {
+    actions.push(
+      classicAction("trailing_stop", { kind: "all" }, {
+        trailingDistance: input.trailingDistance ?? null,
+        trailingPct: input.trailingPct ?? null,
+        trailingActivation: input.trailingActivation ?? null,
+        trailingTriggerPct: input.trailingTriggerPct ?? null,
+      }),
+    );
+  }
+  if (input.breakevenActivationPct != null || input.breakevenDone) {
+    actions.push(
+      classicAction("breakeven", { kind: "all" }, {
+        breakevenActivationPct: input.breakevenActivationPct ?? null,
+        breakevenOffsetPct: input.breakevenOffsetPct ?? 0,
+      }),
+    );
+  }
+  const runtime = emptyExitRuntime();
+  if (input.trailingPeak != null && input.trailingPeak > 0) {
+    runtime.arms[CLASSIC_EXIT_IDS.trailing_stop] = {
+      armedAt: input.nowMs,
+      peak: input.trailingPeak,
+      condition: true,
+      scopeLive: true,
+    };
+  }
+  const lots =
+    input.qty > QTY_EPS && input.entryPrice != null && input.entryPrice > 0
+      ? [{ id: "position", qty: input.qty, price: input.entryPrice }]
+      : [];
+  return describeExitBook({
+    source: "classic",
+    actions,
+    runtime,
+    lots,
+    side: input.side,
+    mark: input.mark,
+    last: input.last,
+    entryPrice: input.entryPrice,
+    nowMs: input.nowMs,
+    claims: [],
+    breakevenDone: input.breakevenDone,
+    breakeven: input.breakeven,
+  });
+}
+
 /** Rebuild open lots from entry fills minus later flatten orders. */
 export function openLotsFromFills(
   fills: readonly { id: string; action: string; qty: number; price: number | null }[],
@@ -1510,11 +1953,117 @@ export function mergeEntryLots(
   return next;
 }
 
+function coverageFromJson(value: unknown, openQty: number): ExitCoverageSnapshot | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const row = value as Partial<ExitCoverageSnapshot>;
+  const provenQty = finiteOrNull(row.provenQty);
+  const stackedQty = finiteOrNull(row.stackedQty);
+  if (provenQty == null || stackedQty == null) {
+    return null;
+  }
+  return {
+    openQty,
+    provenQty,
+    stackedQty,
+    provenPct: finiteOrNull(row.provenPct),
+    stackedPct: finiteOrNull(row.stackedPct),
+  };
+}
+
+export function exitBookFromJson(value: unknown): ExitBookSnapshot | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const row = value as Partial<ExitBookSnapshot> & { actions?: unknown; byKind?: unknown };
+  if (row.source !== "actions" && row.source !== "classic") {
+    return null;
+  }
+  if (!Array.isArray(row.actions)) {
+    return null;
+  }
+  const openQty = finiteOrNull(row.openQty) ?? 0;
+  const actions: ExitActionSnapshot[] = [];
+  for (const item of row.actions) {
+    if (!item || typeof item !== "object") {
+      return null;
+    }
+    const action = item as Partial<ExitActionSnapshot>;
+    if (typeof action.id !== "string" || !EXIT_KINDS.includes(action.kind as ExitActionKind)) {
+      return null;
+    }
+    const scope = scopeFromJson(action.scope);
+    if (!scope) {
+      return null;
+    }
+    actions.push({
+      id: action.id,
+      kind: action.kind as ExitActionKind,
+      scope,
+      status:
+        action.status === "off" ||
+        action.status === "waiting" ||
+        action.status === "armed" ||
+        action.status === "protecting" ||
+        action.status === "moving" ||
+        action.status === "firing" ||
+        action.status === "done"
+          ? action.status
+          : "waiting",
+      conditionsMet: action.conditionsMet === true,
+      priceMet: action.priceMet == null ? null : action.priceMet === true,
+      activationMet: action.activationMet == null ? null : action.activationMet === true,
+      scopeQty: finiteOrNull(action.scopeQty) ?? 0,
+      protectingQty: finiteOrNull(action.protectingQty) ?? 0,
+      claimQty: finiteOrNull(action.claimQty) ?? 0,
+      groups: Array.isArray(action.groups)
+        ? action.groups.flatMap((group) => {
+            if (!group || typeof group !== "object") {
+              return [];
+            }
+            const leaves = Array.isArray(group.leaves)
+              ? group.leaves.flatMap((leaf) => {
+                  if (!leaf || typeof leaf !== "object" || typeof leaf.trigger !== "string") {
+                    return [];
+                  }
+                  return [
+                    {
+                      trigger: leaf.trigger,
+                      label: typeof leaf.label === "string" ? leaf.label : leaf.trigger,
+                      met: leaf.met == null ? null : leaf.met === true,
+                    },
+                  ];
+                })
+              : [];
+            return [{ met: group.met === true, leaves }];
+          })
+        : [],
+    });
+  }
+  const byKind = {} as Record<ExitActionKind, ExitCoverageSnapshot>;
+  const rawKinds =
+    row.byKind && typeof row.byKind === "object" ? (row.byKind as Record<string, unknown>) : {};
+  for (const kind of EXIT_KINDS) {
+    byKind[kind] = coverageFromJson(rawKinds[kind], openQty) ?? emptyCoverage(openQty);
+  }
+  return {
+    atMs: finiteOrNull(row.atMs) ?? 0,
+    source: row.source,
+    openQty,
+    actions,
+    byKind,
+    protective: coverageFromJson(row.protective, openQty) ?? emptyCoverage(openQty),
+    trailingOrBreakeven:
+      coverageFromJson(row.trailingOrBreakeven, openQty) ?? emptyCoverage(openQty),
+  };
+}
+
 export function exitRuntimeFromJson(value: unknown): ExitRuntime {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return emptyExitRuntime();
   }
-  const row = value as { arms?: unknown };
+  const row = value as { arms?: unknown; book?: unknown };
   if (!row.arms || typeof row.arms !== "object" || Array.isArray(row.arms)) {
     return emptyExitRuntime();
   }
@@ -1531,7 +2080,8 @@ export function exitRuntimeFromJson(value: unknown): ExitRuntime {
       scopeLive: item.scopeLive === true,
     };
   }
-  return { arms };
+  const book = exitBookFromJson(row.book);
+  return book ? { arms, book } : { arms };
 }
 
 export function actionKindLabel(kind: ExitActionKind | ClassicExitKind | "custom"): string {

@@ -114,6 +114,7 @@ import { loadAccountDcaSyncFailures } from "./sync-failure-store";
 import {
   actionKindLabel,
   exitActionTimeframes,
+  exitBookForClassic,
   exitClaimsCover,
   sideExitActions,
 } from "@/lib/strategy/exit-actions";
@@ -1124,6 +1125,7 @@ export async function runDcaPlaybookTick(input?: {
           entryPrice: open.entryPrice,
           mark: prices.mark,
           last: prices.last,
+          index: prices.index,
           barsByTimeframe,
           nowMs: Date.now(),
           breakevenDone: leg.breakevenDone,
@@ -1196,6 +1198,32 @@ export async function runDcaPlaybookTick(input?: {
             }
           }
         }
+      } else if (open && open.qty > 0 && prices.mark != null && prices.mark > 0) {
+        const book = exitBookForClassic({
+          side,
+          qty: open.qty,
+          entryPrice: open.entryPrice,
+          mark: prices.mark,
+          last: prices.last ?? prices.mark,
+          nowMs: Date.now(),
+          breakevenDone: leg.breakevenDone,
+          trailingPeak: open.trailingPeak,
+          takeProfitPct: classic.takeProfitPct,
+          takeProfitPrice: classic.takeProfitKind === "atr" ? open.takeProfit : null,
+          stopLossPct: classic.stopLossPct,
+          trailingPct: classic.trailingPct,
+          trailingTriggerPct: classic.trailingTriggerPct,
+          breakevenActivationPct: classic.breakevenActivationPct,
+          breakevenOffsetPct: classic.breakevenOffsetPct,
+          breakeven:
+            decision.action.kind === "breakeven" && classic.breakevenActivationPct != null
+              ? {
+                  activationPct: classic.breakevenActivationPct,
+                  offsetPct: classic.breakevenOffsetPct ?? 0,
+                }
+              : null,
+        });
+        await saveExitRuntime(open.id, { arms: {}, book });
       }
       const why = dcaActionWhy({
         playbook,

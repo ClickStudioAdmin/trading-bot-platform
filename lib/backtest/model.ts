@@ -19,6 +19,7 @@ import {
 } from "@/lib/templates/recipe";
 import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 import { strategyLeafTimeframe } from "@/lib/strategy/expr";
+import type { ExitBookSnapshot } from "@/lib/strategy/exit-actions";
 import type { BacktestProgressPhase } from "./progress";
 
 export type BacktestRecipe = PerpsTemplateRecipe | DcaTemplateRecipe;
@@ -81,6 +82,8 @@ export type ReplayEvent = {
   clipIndex?: number;
   text: string;
   facts?: ReplayFact[];
+  /** Exit decision tree at this fill. Absent on rows saved before the book existed. */
+  exitBook?: ExitBookSnapshot;
 };
 
 export type SimulatedOrder = {

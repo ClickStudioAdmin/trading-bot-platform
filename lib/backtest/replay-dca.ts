@@ -69,6 +69,7 @@ import {
   emptyExitRuntime,
   evaluateExitActions,
   exitActionTimeframes,
+  exitBookForClassic,
   sideExitActions,
   type ExitActionKind,
   type ExitLot,
@@ -198,10 +199,42 @@ export async function replayDcaPlaybook(input: {
         )
       : null;
 
+  function bookForLeg(side: FuturesSide, atMs: number, mark: number) {
+    const leg = legs[side];
+    if (!(leg.qty > 0)) {
+      return null;
+    }
+    if (actionsFor(side)) {
+      return exitArms[side].book ?? null;
+    }
+    const classic =
+      side === "short" && config.direction === "both" && config.shortClassic
+        ? config.shortClassic
+        : config;
+    return exitBookForClassic({
+      side,
+      qty: leg.qty,
+      entryPrice: leg.entry,
+      mark,
+      last: mark,
+      nowMs: atMs,
+      breakevenDone: leg.breakevenDone,
+      trailingPeak: leg.trailing?.peak ?? null,
+      stopLossPrice: leg.slPrice,
+      takeProfitPct: classic.takeProfitPct,
+      stopLossPct: leg.slPrice != null ? null : classic.stopLossPct,
+      trailingPct: classic.trailingPct,
+      trailingTriggerPct: classic.trailingTriggerPct,
+      breakevenActivationPct: classic.breakevenActivationPct,
+      breakevenOffsetPct: classic.breakevenOffsetPct,
+    });
+  }
+
   function remember(
     order: SimulatedOrder,
     because?: string,
   ) {
+    const exitBook = bookForLeg(order.side, order.atMs, order.price);
     const orderIndex = orders.length;
     orders.push(order);
     events.push({
@@ -218,6 +251,7 @@ export async function replayDcaPlaybook(input: {
         clipIndex: order.clipIndex,
         because,
       }),
+      ...(exitBook ? { exitBook } : {}),
     });
   }
 

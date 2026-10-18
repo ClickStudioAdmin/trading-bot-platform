@@ -9,8 +9,11 @@ import {
 } from "./exit-clauses";
 import {
   clausesFromExitActions,
+  describeExitBook,
   emptyExitRuntime,
   evaluateExitActions,
+  exitBookForClassic,
+  exitRuntimeFromJson,
   exitActionGate,
   exitActionsForSave,
   exitActionsFromJson,
@@ -708,7 +711,147 @@ const moved = breakevenAt(102);
 assert.equal(moved.claims.length, 0);
 assert.equal(moved.breakeven?.activationPct, 1);
 assert.equal(moved.breakeven?.offsetPct, 0.2);
+assert.equal(moved.book.actions[0]?.status, "moving");
+assert.equal(moved.book.trailingOrBreakeven.provenQty, 0);
+assert.equal(moved.runtime.book?.atMs, 1);
 assert.equal(breakevenAt(100.5).breakeven, null);
-assert.equal(breakevenAt(102, true).breakeven, null);
+assert.equal(breakevenAt(100.5).book.actions[0]?.status, "waiting");
+const latched = breakevenAt(102, true);
+assert.equal(latched.breakeven, null);
+assert.equal(latched.book.actions[0]?.status, "done");
+assert.equal(latched.book.trailingOrBreakeven.provenPct, 100);
+
+const halfStops = describeExitBook({
+  source: "actions",
+  actions: [
+    {
+      id: "stop-a",
+      kind: "stop_loss",
+      scope: { kind: "percent", pct: 50 },
+      groups: [{ anchor: { trigger: "stop" }, rows: [] }],
+      takeProfitPct: null,
+      takeProfitPrice: null,
+      stopLossPct: 2,
+      stopLossPrice: null,
+      trailingDistance: null,
+      trailingActivation: null,
+    },
+    {
+      id: "stop-b",
+      kind: "stop_loss",
+      scope: { kind: "percent", pct: 50 },
+      groups: [{ anchor: { trigger: "stop" }, rows: [] }],
+      takeProfitPct: null,
+      takeProfitPrice: null,
+      stopLossPct: 4,
+      stopLossPrice: null,
+      trailingDistance: null,
+      trailingActivation: null,
+    },
+  ],
+  runtime: emptyExitRuntime(),
+  lots: [{ id: "position", qty: 4, price: 100 }],
+  side: "long",
+  mark: 100,
+  last: 100,
+  entryPrice: 100,
+  nowMs: 5,
+  claims: [],
+});
+assert.equal(halfStops.protective.provenQty, 2);
+assert.equal(halfStops.protective.stackedQty, 4);
+assert.equal(halfStops.protective.provenPct, 50);
+assert.equal(halfStops.protective.stackedPct, 100);
+assert.equal(halfStops.actions[0]?.groups[0]?.leaves[0]?.label, "Stop Hit");
+
+const overlapped = describeExitBook({
+  source: "actions",
+  actions: ["stop-a", "stop-b"].map((id) => ({
+    id,
+    kind: "stop_loss" as const,
+    scope: { kind: "all" as const },
+    groups: [{ anchor: { trigger: "stop" as const }, rows: [] }],
+    takeProfitPct: null,
+    takeProfitPrice: null,
+    stopLossPct: 2,
+    stopLossPrice: null,
+    trailingDistance: null,
+    trailingActivation: null,
+  })),
+  runtime: emptyExitRuntime(),
+  lots: [{ id: "position", qty: 4, price: 100 }],
+  side: "long",
+  mark: 100,
+  last: 100,
+  entryPrice: 100,
+  nowMs: 5,
+  claims: [],
+});
+assert.equal(overlapped.protective.provenPct, 100);
+assert.equal(overlapped.protective.stackedPct, 100);
+
+const tracked = exitBookForClassic({
+  side: "long",
+  qty: 2,
+  entryPrice: 100,
+  mark: 110,
+  last: 110,
+  nowMs: 9,
+  trailingDistance: 1,
+  trailingActivation: 105,
+  trailingPeak: 110,
+  stopLossPrice: 90,
+});
+assert.equal(tracked.source, "classic");
+assert.equal(tracked.actions.find((action) => action.kind === "trailing_stop")?.status, "protecting");
+assert.equal(tracked.trailingOrBreakeven.provenPct, 100);
+assert.equal(tracked.byKind.stop_loss.provenPct, 100);
+
+const classicQuietTrail = exitBookForClassic({
+  side: "long",
+  qty: 2,
+  entryPrice: 100,
+  mark: 101,
+  last: 101,
+  nowMs: 9,
+  trailingDistance: 1,
+  trailingActivation: 105,
+});
+assert.equal(classicQuietTrail.actions[0]?.status, "waiting");
+assert.equal(classicQuietTrail.trailingOrBreakeven.provenQty, 0);
+
+const classicMove = exitBookForClassic({
+  side: "long",
+  qty: 2,
+  entryPrice: 100,
+  mark: 102,
+  last: 102,
+  nowMs: 10,
+  breakevenActivationPct: 1,
+  breakevenOffsetPct: 0,
+  breakeven: { activationPct: 1, offsetPct: 0 },
+});
+assert.equal(classicMove.actions[0]?.status, "moving");
+assert.equal(classicMove.trailingOrBreakeven.provenQty, 0);
+const classicLatched = exitBookForClassic({
+  side: "long",
+  qty: 2,
+  entryPrice: 100,
+  mark: 102,
+  last: 102,
+  nowMs: 11,
+  breakevenDone: true,
+  breakevenActivationPct: 1,
+});
+assert.equal(classicLatched.actions[0]?.status, "done");
+assert.equal(classicLatched.trailingOrBreakeven.provenPct, 100);
+
+const roundTrip = exitRuntimeFromJson({
+  arms: { "classic:trailing_stop": { armedAt: 9, peak: 110, condition: true, scopeLive: true } },
+  book: tracked,
+});
+assert.equal(roundTrip.book?.trailingOrBreakeven.provenPct, 100);
+assert.equal(roundTrip.arms["classic:trailing_stop"]?.peak, 110);
+assert.equal(exitRuntimeFromJson({ arms: { a: { armedAt: 1, peak: 2, condition: false } } }).book, undefined);
 
 console.log("exit-actions.check ok");
