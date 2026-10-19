@@ -290,11 +290,13 @@ export default async function FuturesPositionsPage({
         />
 
         <LiveTickerScope symbols={open.map((row) => row.symbol)}>
+        {!showTicket || bots.length > 0 || botReturn.backHref ? (
         <section>
         <DeskReturnHeading
           title={botReturn.titleFor("Positions Snapshot")}
           backHref={botReturn.backHref}
           className="mb-3"
+          showTitle={!showTicket}
           meta={<FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />}
           actions={
             <DeskBlotterScopeSelect
@@ -306,6 +308,7 @@ export default async function FuturesPositionsPage({
           }
         />
         </section>
+        ) : null}
         {showTicket ? (
           <ManualTradeWorkspace
             venue="bybit"
