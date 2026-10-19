@@ -100,6 +100,7 @@ export default async function CashAndCarryPositionsPage({
           title={botReturn.titleFor("Positions Snapshot")}
           backHref={botReturn.backHref}
           className="mb-3"
+          meta={<PaperOpenStats signedIn={openBook.signedIn} open={visibleOpen} />}
           actions={
             <DeskBlotterScopeSelect
               values={filters}
@@ -109,7 +110,6 @@ export default async function CashAndCarryPositionsPage({
             />
           }
         />
-        <PaperOpenStats signedIn={openBook.signedIn} open={visibleOpen} />
         </section>
         <OpenPaperTrades
           signedIn={openBook.signedIn}

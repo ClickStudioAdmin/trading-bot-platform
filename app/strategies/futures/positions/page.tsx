@@ -295,6 +295,7 @@ export default async function FuturesPositionsPage({
           title={botReturn.titleFor("Positions Snapshot")}
           backHref={botReturn.backHref}
           className="mb-3"
+          meta={<FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />}
           actions={
             <DeskBlotterScopeSelect
               values={filters}
@@ -304,7 +305,6 @@ export default async function FuturesPositionsPage({
             />
           }
         />
-        <FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />
         </section>
         {showTicket ? (
           <ManualTradeWorkspace
