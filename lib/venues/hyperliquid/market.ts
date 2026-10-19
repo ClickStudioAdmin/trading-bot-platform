@@ -49,6 +49,7 @@ export function hyperliquidLinearPerp(asset: HyperliquidAsset): LinearPerp {
     qtyStep: step,
     minPrice: 0.0001,
     tickSize: 0.0001,
+    maxLeverage: asset.maxLeverage,
   };
 }
 
