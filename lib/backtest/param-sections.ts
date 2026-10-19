@@ -32,6 +32,7 @@ import {
   scopeLabel,
   type StoredExitAction,
 } from "@/lib/strategy/exit-actions";
+import type { RsiDivergenceSettings } from "@/lib/strategy/rsi-divergence";
 import { trailActivationKind } from "@/lib/strategy/exit-clauses";
 import {
   resolveEntryStack,
@@ -223,12 +224,61 @@ function whenLabel(value: string | null | undefined): string {
   return value === "lte" ? "At or below" : "At or above";
 }
 
+function divergenceWhenLabel(when: string | null | undefined): string {
+  if (when === "bearish") {
+    return "Bearish";
+  }
+  if (when === "bullish") {
+    return "Bullish";
+  }
+  return "—";
+}
+
+function divergenceStyleLabel(style: string | null | undefined): string {
+  if (style === "hidden") {
+    return "Hidden";
+  }
+  if (style === "regular") {
+    return "Regular";
+  }
+  return "—";
+}
+
+function rsiDivergenceRows(input: {
+  settings: RsiDivergenceSettings | null | undefined;
+  period: number | null | undefined;
+  timeframe: string | null | undefined;
+}): ParamRow[] {
+  const settings = input.settings;
+  return [
+    { label: "When", value: divergenceWhenLabel(settings?.when) },
+    { label: "Style", value: divergenceStyleLabel(settings?.style) },
+    { label: "Period", value: num(input.period) },
+    { label: "Timeframe", value: timeframeLabel(input.timeframe) },
+    { label: "Pivot bars", value: num(settings?.pivotBars) },
+    { label: "Span", value: num(settings?.span) },
+    { label: "Min price %", value: num(settings?.minPricePct) },
+    { label: "Min RSI", value: num(settings?.minRsi) },
+  ];
+}
+
 function filterRows(spec: DcaFilterSpec, side: "long" | "short"): ParamRow[] {
+  const kindLabel = optionLabel(DCA_FILTER_KIND_OPTIONS, spec.kind);
+  if (spec.kind === "rsi_divergence") {
+    return [
+      { label: "Kind", value: kindLabel },
+      ...rsiDivergenceRows({
+        settings: spec.divergence,
+        period: spec.period,
+        timeframe: spec.timeframe,
+      }),
+    ];
+  }
   const when = dcaFilterWhenValue(spec.compare);
   const rows: ParamRow[] = [
     {
       label: "Kind",
-      value: optionLabel(DCA_FILTER_KIND_OPTIONS, spec.kind),
+      value: kindLabel,
     },
   ];
   if (spec.kind === "ema_cross" || spec.kind === "sma_cross") {
@@ -339,6 +389,7 @@ function leafConditionRows(
       period: leaf.start.period,
       slowPeriod: leaf.start.slowPeriod,
       multiplier: leaf.start.multiplier,
+      divergence: leaf.start.divergence,
     }),
   ];
 }
@@ -467,8 +518,22 @@ function indicatorRows(input: {
   period: number | null | undefined;
   slowPeriod: number | null | undefined;
   multiplier: number | null | undefined;
+  divergence?: RsiDivergenceSettings | null;
 }): ParamRow[] {
   const kind = input.kind ?? (input.trend ? "supertrend" : "rsi");
+  if (kind === "rsi_divergence") {
+    return [
+      {
+        label: "Indicator",
+        value: optionLabel(DCA_INDICATOR_KIND_OPTIONS, kind),
+      },
+      ...rsiDivergenceRows({
+        settings: input.divergence,
+        period: input.period,
+        timeframe: input.timeframe,
+      }),
+    ];
+  }
   const whenValue = dcaIndicatorWhenValue(
     kind,
     input.side,
@@ -579,6 +644,11 @@ function dcaSideEntry(
         multiplier: shortLeg
           ? (recipe.shortIndicatorMultiplier ?? recipe.indicatorMultiplier)
           : recipe.indicatorMultiplier,
+        divergence: shortLeg
+          ? recipe.shortIndicatorKind
+            ? recipe.shortLeadDivergence
+            : recipe.leadDivergence
+          : recipe.leadDivergence,
       }),
     );
   }
@@ -1183,6 +1253,7 @@ function perpsEntry(
         period: start?.period,
         slowPeriod: start?.slowPeriod,
         multiplier: start?.multiplier,
+        divergence: start?.divergence,
       }),
     );
   } else if (recipe.entrySource === "webhook") {

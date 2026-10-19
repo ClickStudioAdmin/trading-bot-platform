@@ -8,6 +8,7 @@ import {
   dcaFilterSpecForKind,
   dcaFilterSummaryLine,
   dcaFilterWhenOptions,
+  formatDcaFilterReason,
   filterColumns,
   filterFromRow,
   parseDcaFilterForm,
@@ -79,6 +80,26 @@ assert.deepEqual(
 assert.deepEqual(
   dcaFilterWhenOptions("ema_cross").map((row) => row.value),
   ["cross_gte", "cross_lte"],
+);
+assert.deepEqual(dcaFilterWhenOptions("rsi_divergence"), []);
+assert.equal(
+  formatDcaFilterReason({
+    kind: "rsi_divergence",
+    timeframe: "240",
+    compare: "lte",
+    level: null,
+    period: 14,
+    multiplier: null,
+    divergence: {
+      when: "bullish",
+      style: "regular",
+      pivotBars: 5,
+      span: 50,
+      minPricePct: null,
+      minRsi: null,
+    },
+  }),
+  "RSI 14 bullish regular divergence · 4h",
 );
 const macdExit = dcaFilterSpecForKind("macd", "long");
 assert.equal(macdExit.compare, "cross_gte");

@@ -23,6 +23,7 @@ import {
 } from "./indicators";
 import {
   blankRsiDivergenceSettings,
+  formatRsiDivergenceLabel,
   parseRsiDivergenceSettings,
   rsiDivergenceMet,
   type RsiDivergenceSettings,
@@ -562,6 +563,9 @@ export function dcaFilterWhenOptions(kind: DcaFilterKind, _side?: FuturesSide) {
       { value: "inside", label: "Price is inside" },
     ];
   }
+  if (kind === "rsi_divergence") {
+    return [];
+  }
   return [
     { value: "gte", label: "Price is above" },
     { value: "lte", label: "Price is below" },
@@ -639,6 +643,15 @@ export function formatDcaFilterReason(
           ? "Price is below lower ATR band"
           : "Price is above upper ATR band";
     return `${when} ${period} × ${multiplier}${suffix}`;
+  }
+  if (spec.kind === "rsi_divergence") {
+    if (!spec.divergence) {
+      return `RSI divergence${suffix}`;
+    }
+    return `${formatRsiDivergenceLabel({
+      settings: spec.divergence,
+      period: spec.period,
+    })}${suffix}`;
   }
   if (
     spec.kind === "macd" ||
