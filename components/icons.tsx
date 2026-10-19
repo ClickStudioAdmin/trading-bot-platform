@@ -22,6 +22,7 @@ import {
   Copy,
   CornerDownRight,
   Download,
+  Eye,
   FileText,
   FilterX,
   FlaskConical,
@@ -380,6 +381,13 @@ export const LUCIDE_ICONS = [
     lucide: "Play",
     usedIn: "Create desk placeholder, bot table bulk enable, replay play, report Replay, saved backtests Replay, setup wizard Watch",
     Icon: Play,
+  },
+  {
+    id: "eye",
+    name: "Load",
+    lucide: "Eye",
+    usedIn: "Replay comparables and variations, open a replay without playback",
+    Icon: Eye,
   },
   {
     id: "skip-back",
@@ -806,6 +814,10 @@ export function IconPause(props: LucideProps) {
 
 export function IconPlay(props: LucideProps) {
   return <Play aria-hidden strokeWidth={STROKE} {...props} />;
+}
+
+export function IconEye(props: LucideProps) {
+  return <Eye aria-hidden strokeWidth={STROKE} {...props} />;
 }
 
 export function IconSkipBack(props: LucideProps) {
