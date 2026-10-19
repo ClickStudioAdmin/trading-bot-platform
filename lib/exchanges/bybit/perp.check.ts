@@ -120,6 +120,24 @@ assert.deepEqual(
   ["BTCUSDT", "ETHUSDT", "PEPEUSDT"],
 );
 
+const leveraged = listUsdtLinearPerps([
+  {
+    symbol: "SOLUSDT",
+    status: "Trading",
+    baseCoin: "SOL",
+    quoteCoin: "USDT",
+    contractType: "LinearPerpetual",
+    deliveryTime: "0",
+    leverageFilter: { maxLeverage: "100.00" },
+    lotSizeFilter: { qtyStep: "0.01", minOrderQty: "0.01", maxOrderQty: "20" },
+    priceFilter: { tickSize: "0.001" },
+  },
+]);
+assert.equal(leveraged[0]?.maxLeverage, 100);
+assert.equal(leveraged[0]?.minQty, 0.01);
+assert.equal(leveraged[0]?.maxQty, 20);
+assert.equal(leveraged[0]?.qtyStep, 0.01);
+
 const sized = qtyForPerp(0.00123, {
   symbol: "BTCUSDT",
   status: "Trading",
