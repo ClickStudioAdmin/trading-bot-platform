@@ -307,7 +307,7 @@ export function OpenPaperTrades({
                 colSpan={colSpan}
                 message={
                   emptyMessage ??
-                  (exchangeBook ? "No open carries." : "No open paper carries.")
+                  "No open futures. The bot adds orders once it is armed."
                 }
               />
             ) : (
