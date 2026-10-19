@@ -13,7 +13,7 @@ import {
 import { createPortal, flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useModalPortalHost } from "@/components/portal-host";
-import { TableCard, TableIconAction } from "@/components/table-chrome";
+import { TableActions, TableCard, TableIconAction } from "@/components/table-chrome";
 import { TemplateParametersButton } from "@/components/template-parameters-tip";
 import { TokenIcon } from "@/components/token-icon";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
@@ -32,6 +32,7 @@ import {
   IconChevronDown,
   IconClose,
   IconCornerDownRight,
+  IconEye,
   IconLoader,
   IconPerformance,
   IconPlay,
@@ -248,7 +249,7 @@ export function ReplayRailNav({
         icon={<IconPerformance className="size-5" />}
       />
       <RailButton
-        label="Comparables and variations"
+        label="Comparables and Variations"
         pressed={panel === "related"}
         onClick={() => selectReplayRail("related", panel)}
         badge={runningCount}
@@ -477,7 +478,7 @@ function RelatedBody({
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden pr-3">
       <h2 className="mb-3 shrink-0 text-lg font-semibold">
-        Comparables and variations
+        Comparables and Variations
       </h2>
       {showComparables || showVariations ? (
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
@@ -547,17 +548,16 @@ function RelatedTable({
     <table className="w-full table-fixed text-left text-sm">
       <thead className="sticky top-0 z-10 border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
         <tr>
-          <th className="w-[24%] bg-surface-raised px-4 py-3 font-medium">
+          <th className="w-[8.5rem] bg-surface-raised px-3 py-3 text-left align-middle font-medium">
             Contract
           </th>
-          <th className="bg-surface-raised px-4 py-3 font-medium">Name</th>
-          <th className="w-[18%] bg-surface-raised px-4 py-3 font-medium">
-            Win rate
+          <th className="bg-surface-raised px-3 py-3 text-left align-middle font-medium">
+            Name
           </th>
-          <th className="w-[16%] bg-surface-raised px-4 py-3 font-medium">
+          <th className="w-[6rem] bg-surface-raised px-3 py-3 text-left align-middle font-medium">
             ROE
           </th>
-          <th className="w-[20%] bg-surface-raised px-4 py-3 text-right font-medium">
+          <th className="w-[7.25rem] bg-surface-raised px-3 py-3 text-right align-middle font-medium">
             Actions
           </th>
         </tr>
@@ -619,11 +619,10 @@ function PendingMark() {
 function RelatedPendingRow() {
   return (
     <tr className="border-b border-line last:border-b-0">
-      <td className="px-2 py-2 text-ink-faint">—</td>
-      <td className="px-2 py-2 text-ink">New backtest</td>
-      <td className="px-2 py-2 text-ink-faint">—</td>
-      <td className="px-2 py-2 text-ink-faint">—</td>
-      <td className="px-2 py-2 text-right">
+      <td className="px-3 py-3 align-middle text-ink-faint">—</td>
+      <td className="px-3 py-3 align-middle text-ink">New backtest</td>
+      <td className="px-3 py-3 align-middle text-ink-faint">—</td>
+      <td className="px-3 py-3 text-right align-middle">
         <PendingMark />
       </td>
     </tr>
@@ -643,19 +642,18 @@ function RelatedRunRow({
 }) {
   const pending = entry.status === "queued" || entry.status === "running";
   const done = entry.status === "done";
-  const winRate =
-    entry.winRate == null ? "—" : `${Math.round(entry.winRate * 100)}%`;
-  const href = backtestReplayHref(entry.id, true);
+  const loadHref = backtestReplayHref(entry.id);
+  const playHref = backtestReplayHref(entry.id, true);
   return (
     <tr
       className={`border-b border-line last:border-b-0 ${
         viewing ? "bg-surface-raised" : ""
       }`}
     >
-      <td className="overflow-hidden px-2 py-2 align-top">
+      <td className="overflow-hidden px-3 py-3 align-middle">
         <RelatedContractCell symbol={entry.symbol} />
       </td>
-      <td className="overflow-hidden px-2 py-2 align-top">
+      <td className="overflow-hidden px-3 py-3 align-middle">
         <span className="flex min-w-0 items-center gap-1">
           <span className="min-w-0 flex-1 truncate text-ink" title={entry.name}>
             {entry.name}
@@ -670,41 +668,63 @@ function RelatedRunRow({
           </span>
         ) : null}
       </td>
-      <td className="overflow-hidden px-2 py-2 tabular-nums" title={winRate}>
-        {winRate}
-      </td>
       <td
-        className={`overflow-hidden px-2 py-2 tabular-nums ${signedTone(entry.roePct)}`}
+        className={`overflow-hidden px-3 py-3 align-middle tabular-nums whitespace-nowrap ${signedTone(entry.roePct)}`}
         title={formatBacktestReturnPct(entry.roePct)}
       >
         <span className="block truncate">{formatBacktestReturnPct(entry.roePct)}</span>
       </td>
-      <td className="px-2 py-2 text-right align-top">
+      <td className="px-3 py-3 text-right align-middle whitespace-nowrap">
         {done ? (
-          <TableIconAction
-            label={`Play ${entry.name}`}
-            detail="Load this replay and start playback."
-            href={href}
-            onClick={(event) => {
-              if (
-                event.button !== 0 ||
-                event.metaKey ||
-                event.ctrlKey ||
-                event.shiftKey ||
-                event.altKey
-              ) {
-                return;
-              }
-              event.preventDefault();
-              if (viewing) {
-                onPlay?.();
-                return;
-              }
-              window.location.assign(href);
-            }}
-          >
-            <IconPlay className="fill-current" />
-          </TableIconAction>
+          <TableActions>
+            <TableIconAction
+              label={`Load ${entry.name}`}
+              detail="Open this replay without starting playback."
+              href={loadHref}
+              onClick={(event) => {
+                if (
+                  event.button !== 0 ||
+                  event.metaKey ||
+                  event.ctrlKey ||
+                  event.shiftKey ||
+                  event.altKey
+                ) {
+                  return;
+                }
+                event.preventDefault();
+                if (viewing) {
+                  return;
+                }
+                window.location.assign(loadHref);
+              }}
+            >
+              <IconEye />
+            </TableIconAction>
+            <TableIconAction
+              label={`Play ${entry.name}`}
+              detail="Load this replay and start playback."
+              href={playHref}
+              onClick={(event) => {
+                if (
+                  event.button !== 0 ||
+                  event.metaKey ||
+                  event.ctrlKey ||
+                  event.shiftKey ||
+                  event.altKey
+                ) {
+                  return;
+                }
+                event.preventDefault();
+                if (viewing) {
+                  onPlay?.();
+                  return;
+                }
+                window.location.assign(playHref);
+              }}
+            >
+              <IconPlay className="fill-current" />
+            </TableIconAction>
+          </TableActions>
         ) : pending ? (
           <PendingMark />
         ) : (
