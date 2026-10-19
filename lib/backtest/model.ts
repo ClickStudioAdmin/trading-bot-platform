@@ -856,39 +856,6 @@ export function backtestTapeInterval(
   return "D";
 }
 
-export const BACKTEST_CHART_TRAIL_BARS = 8;
-
-export function backtestChartTrailMs(interval: DcaIndicatorTimeframe): number {
-  return intervalMs(interval) * BACKTEST_CHART_TRAIL_BARS;
-}
-
-export function backtestActivityBounds(input: {
-  fromMs: number;
-  toMs: number;
-  orders: ReadonlyArray<{ atMs: number }>;
-  padMs?: number;
-}): { fromMs: number; toMs: number } {
-  const padMs = Math.max(0, input.padMs ?? 0);
-  if (input.orders.length === 0) {
-    return { fromMs: input.fromMs, toMs: input.toMs + padMs };
-  }
-  let first = input.orders[0].atMs;
-  let last = first;
-  for (const order of input.orders) {
-    if (order.atMs < first) {
-      first = order.atMs;
-    }
-    if (order.atMs > last) {
-      last = order.atMs;
-    }
-  }
-  const fromMs = Math.max(input.fromMs, first - padMs);
-  const toMs = Math.min(input.toMs, last) + padMs;
-  return toMs > fromMs
-    ? { fromMs, toMs }
-    : { fromMs: input.fromMs, toMs: input.toMs + padMs };
-}
-
 export const BACKTEST_CHART_INTERVALS: readonly DcaIndicatorTimeframe[] = [
   "15",
   "60",
@@ -930,16 +897,24 @@ export function backtestChartIntervalFits(
   return estimateBacktestBars(fromMs, toMs, interval) <= BACKTEST_CHART_BAR_LIMIT;
 }
 
+/** Report chart and replay. The series is the market window, including the bars after the last fill. */
 export function backtestChartFetchBounds(
-  run: Pick<BacktestRun, "fromMs" | "toMs" | "orders">,
-  interval: DcaIndicatorTimeframe,
+  run: Pick<BacktestRun, "fromMs" | "toMs">,
 ): { fromMs: number; toMs: number } {
-  return backtestActivityBounds({
-    fromMs: run.fromMs,
-    toMs: run.toMs,
-    orders: run.orders,
-    padMs: backtestChartTrailMs(interval),
-  });
+  return { fromMs: run.fromMs, toMs: run.toMs };
+}
+
+/** Play in the middle resumes. Before the chart starts, or on the last candle, it begins at the first candle. */
+export function replayPlayRestarts(input: {
+  started: boolean;
+  head: number;
+  candleCount: number;
+}): boolean {
+  return (
+    !input.started ||
+    input.candleCount <= 0 ||
+    input.head >= input.candleCount - 1
+  );
 }
 
 export function backtestShouldRunInline(

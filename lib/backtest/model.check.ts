@@ -8,8 +8,9 @@ import {
   estimateBacktestBars,
   formatBacktestReturnPct,
   intervalMs,
-  backtestActivityBounds,
+  backtestChartFetchBounds,
   backtestChartIntervalChoices,
+  replayPlayRestarts,
   backtestChartIntervalFits,
   chartIntervalForWindow,
   parseBacktestDateRange,
@@ -290,29 +291,23 @@ assert.equal(
   false,
 );
 assert.deepEqual(
-  backtestActivityBounds({
-    fromMs: 1_000,
-    toMs: 10_000,
-    orders: [{ atMs: 4_000 }, { atMs: 7_000 }, { atMs: 5_000 }],
+  backtestChartFetchBounds({
+    fromMs: Date.UTC(2020, 11, 14),
+    toMs: Date.UTC(2026, 9, 19),
   }),
-  { fromMs: 4_000, toMs: 7_000 },
+  { fromMs: Date.UTC(2020, 11, 14), toMs: Date.UTC(2026, 9, 19) },
 );
-assert.deepEqual(
-  backtestActivityBounds({
-    fromMs: 1_000,
-    toMs: 10_000,
-    orders: [],
-  }),
-  { fromMs: 1_000, toMs: 10_000 },
+assert.equal(
+  replayPlayRestarts({ started: true, head: 13, candleCount: 14 }),
+  true,
 );
-assert.deepEqual(
-  backtestActivityBounds({
-    fromMs: 1_000,
-    toMs: 10_000,
-    orders: [{ atMs: 4_000 }, { atMs: 7_000 }],
-    padMs: 2_000,
-  }),
-  { fromMs: 2_000, toMs: 9_000 },
+assert.equal(
+  replayPlayRestarts({ started: true, head: 3, candleCount: 14 }),
+  false,
+);
+assert.equal(
+  replayPlayRestarts({ started: false, head: 0, candleCount: 14 }),
+  true,
 );
 assert.equal(backtestShouldRunInline(800, 2), true);
 assert.equal(backtestShouldRunInline(2000, 1), true);

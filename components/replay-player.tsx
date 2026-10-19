@@ -100,6 +100,7 @@ import {
 import {
   backtestChartFetchBounds,
   chartIntervalForWindow,
+  replayPlayRestarts,
   type BacktestRun,
   type ReplayEvent,
   type SimulatedOrder,
@@ -592,9 +593,17 @@ export function ReplayPlayer({
     setCursor((current) => ({ ...current, playing: true, head: 0 }));
   }
 
+  function togglePlayback() {
+    if (replayPlayRestarts({ started, head, candleCount: candles.length })) {
+      beginPlayback();
+      return;
+    }
+    setCursor((current) => ({ ...current, playing: !current.playing }));
+  }
+
   useEffect(() => {
     let cancelled = false;
-    const bounds = backtestChartFetchBounds(run, interval);
+    const bounds = backtestChartFetchBounds(run);
     const key = `${run.id}:${interval}`;
     void loadBacktestDisplayCandles({
       venue: run.venue,
@@ -669,11 +678,7 @@ export function ReplayPlayer({
       }
       if (event.key === " ") {
         event.preventDefault();
-        if (!started) {
-          beginPlayback();
-          return;
-        }
-        setCursor((current) => ({ ...current, playing: !current.playing }));
+        togglePlayback();
       } else if (event.key === "ArrowRight" && event.shiftKey) {
         event.preventDefault();
         revealChart();
@@ -2205,13 +2210,7 @@ export function ReplayPlayer({
           <button
             type="button"
             className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-3 py-1 text-sm text-ink"
-            onClick={() => {
-              if (!started) {
-                beginPlayback();
-                return;
-              }
-              setCursor((current) => ({ ...current, playing: !current.playing }));
-            }}
+            onClick={togglePlayback}
           >
             {playing ? (
               <IconPause size={14} className="size-3.5 fill-current" />
