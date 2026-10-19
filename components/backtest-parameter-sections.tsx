@@ -95,7 +95,7 @@ export function BacktestParameterSections({
     <div>
       {both ? (
         <div className="sticky top-0 z-20 h-0">
-          <div className="absolute top-0 right-0 pt-1">
+          <div className="absolute top-0 right-0">
             <ParamSideFilter value={side} onChange={setSide} />
           </div>
         </div>
@@ -111,8 +111,8 @@ export function BacktestParameterSections({
             className={index < shown.length - 1 ? "pb-2" : undefined}
           >
             <h3
-              className={`sticky top-0 z-10 bg-canvas py-2 text-sm font-semibold text-ink ${
-                both ? "pr-36" : ""
+              className={`sticky top-0 z-10 bg-canvas text-sm font-semibold text-ink ${
+                both ? "pt-2 pr-36 pb-4" : "py-2"
               }`}
             >
               {section.title}
