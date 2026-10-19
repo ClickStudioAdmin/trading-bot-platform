@@ -11,6 +11,7 @@ import {
   dcaClipKey,
   dcaClipCycleKey,
   dcaClipRestKey,
+  dcaClipForSide,
   dcaConfigMarginError,
   dcaConfigMaxOrderError,
   dcaCycleEnded,
@@ -1478,7 +1479,57 @@ if (bothManualParsed.ok) {
   assert.equal(bothManualParsed.config.direction, "both");
   assert.equal(bothManualParsed.config.startKind, "immediate");
   assert.equal(bothManualParsed.config.shortStartKind, "immediate");
+  assert.equal(bothManualParsed.config.shortClipSize ?? null, null);
 }
+
+const splitSize = new FormData();
+splitSize.set("symbol", "BTCUSDT");
+splitSize.set("direction", "both");
+splitSize.set("clipSize", "100");
+splitSize.set("sizeUnit", "usdt");
+splitSize.set("shortClipSize", "3");
+splitSize.set("shortSizeUnit", "qty");
+splitSize.set("startKind", "immediate");
+const splitSizeParsed = parseDcaPlaybookForm(splitSize);
+assert.equal(splitSizeParsed.ok, true);
+if (splitSizeParsed.ok) {
+  assert.equal(splitSizeParsed.config.shortClipSize, 3);
+  assert.equal(splitSizeParsed.config.shortSizeUnit, "qty");
+  assert.deepEqual(dcaClipForSide(splitSizeParsed.config, "long"), {
+    clipSize: 100,
+    sizeUnit: "usdt",
+  });
+  assert.deepEqual(dcaClipForSide(splitSizeParsed.config, "short"), {
+    clipSize: 3,
+    sizeUnit: "qty",
+  });
+}
+const matchedSize = new FormData();
+matchedSize.set("symbol", "BTCUSDT");
+matchedSize.set("direction", "both");
+matchedSize.set("clipSize", "100");
+matchedSize.set("sizeUnit", "usdt");
+matchedSize.set("shortClipSize", "100");
+matchedSize.set("shortSizeUnit", "usdt");
+matchedSize.set("startKind", "immediate");
+const matchedSizeParsed = parseDcaPlaybookForm(matchedSize);
+assert.equal(matchedSizeParsed.ok, true);
+if (matchedSizeParsed.ok) {
+  assert.equal(matchedSizeParsed.config.shortClipSize ?? null, null);
+}
+const storedShortClip = parseDcaPlaybookRow({
+  id: "pb-both-size",
+  user_id: "user-1",
+  account_id: "acc-1",
+  name: "Both size",
+  symbol: "BTCUSDT",
+  direction: "both",
+  clip_size: "100",
+  size_unit: "usdt",
+  short_entry_expr: { clipSize: 3, sizeUnit: "qty" },
+});
+assert.equal(storedShortClip?.shortClipSize, 3);
+assert.equal(dcaClipForSide(storedShortClip!, "short").sizeUnit, "qty");
 
 const splitStart = new FormData();
 splitStart.set("symbol", "BTCUSDT");

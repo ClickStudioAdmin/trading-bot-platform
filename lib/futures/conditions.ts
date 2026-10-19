@@ -99,6 +99,14 @@ export type PerpsEntryLeg = {
   entryStack: EntryStack;
   /** Flex additional-order conditions. Sizing stays on the form. */
   addStack?: EntryStack | null;
+  /**
+   * Short entry order. Absent means this side still uses the long size,
+   * unit, and order. A stored order is independent of the long columns.
+   */
+  size?: number | null;
+  sizeUnit?: "qty" | "usdt" | null;
+  orderType?: "market" | "limit" | null;
+  limitPrice?: number | null;
   /** Custom exit for the short leg. Absent means the short leg uses the long exit. */
   exitIf?: DcaFilterSpec | null;
   exitHard?: HardExitSignal | null;
@@ -1355,6 +1363,7 @@ export function shortEntryToJson(leg: PerpsEntryLeg): Record<string, unknown> {
       : {}),
     ...(leg.classic ? { classic: leg.classic } : {}),
     ...(leg.actions && leg.actions.length > 0 ? { actions: leg.actions } : {}),
+    ...perpsLegOrderToJson(leg),
   };
 }
 
@@ -1436,6 +1445,36 @@ export function shortEntryFromJson(raw: unknown): PerpsEntryLeg | null {
     ...(exitActionsFromJson(row.actions)
       ? { actions: exitActionsFromJson(row.actions) }
       : {}),
+    ...perpsLegOrderFromJson(row),
+  };
+}
+
+function perpsLegOrderToJson(leg: PerpsEntryLeg): Record<string, unknown> {
+  if (leg.size == null || !(leg.size > 0)) {
+    return {};
+  }
+  const orderType = leg.orderType === "limit" ? "limit" : "market";
+  return {
+    size: leg.size,
+    sizeUnit: leg.sizeUnit === "qty" ? "qty" : "usdt",
+    orderType,
+    limitPrice: orderType === "limit" ? (leg.limitPrice ?? null) : null,
+  };
+}
+
+function perpsLegOrderFromJson(
+  row: Record<string, unknown>,
+): Pick<PerpsEntryLeg, "size" | "sizeUnit" | "orderType" | "limitPrice"> {
+  const size = positiveOrNull(row.size);
+  if (size == null) {
+    return {};
+  }
+  const orderType = row.orderType === "limit" ? "limit" : "market";
+  return {
+    size,
+    sizeUnit: row.sizeUnit === "qty" ? "qty" : "usdt",
+    orderType,
+    limitPrice: orderType === "limit" ? positiveOrNull(row.limitPrice) : null,
   };
 }
 

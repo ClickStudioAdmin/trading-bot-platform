@@ -239,6 +239,8 @@ export function DcaGroupSizeFields({
   calculated = null,
   sizeError = null,
   sizeInputClass,
+  sizeName = "clipSize",
+  unitName = "sizeUnit",
 }: {
   size: string;
   sizeUnit: "qty" | "usdt";
@@ -253,15 +255,17 @@ export function DcaGroupSizeFields({
   calculated?: string | null;
   sizeError?: string | null;
   sizeInputClass?: string;
+  sizeName?: string;
+  unitName?: string;
 }) {
   return (
     <div className={gridClass}>
       {calculated != null ? (
-        named ? <input type="hidden" name="sizeUnit" value="usdt" /> : null
+        named ? <input type="hidden" name={unitName} value="usdt" /> : null
       ) : (
         <BotField label="Size unit" required={required}>
           <AppSelect
-            name={named ? "sizeUnit" : undefined}
+            name={named ? unitName : undefined}
             value={sizeUnit}
             onChange={(event) => onUnit(event.target.value === "qty" ? "qty" : "usdt")}
             className={fieldClass}
@@ -278,14 +282,14 @@ export function DcaGroupSizeFields({
       >
         {calculated != null ? (
           <>
-            {named ? <input type="hidden" name="clipSize" value={calculated} /> : null}
+            {named ? <input type="hidden" name={sizeName} value={calculated} /> : null}
             <p className={`${fieldClass} cursor-default text-ink-muted`} aria-label="Calculated order size">
               {calculated}
             </p>
           </>
         ) : (
           <GroupedNumberInput
-            name={named ? "clipSize" : undefined}
+            name={named ? sizeName : undefined}
             value={size}
             onChange={onSize}
             allowDecimal

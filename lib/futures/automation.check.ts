@@ -12,6 +12,7 @@ import {
   futuresAutomationToRow,
   parseFuturesAutomationForm,
   parseFuturesAutomationRow,
+  perpsAutomationLegs,
   parseFuturesTriggerCompare,
   triggerConditionMet,
 } from "./automation";
@@ -476,6 +477,65 @@ if (both.ok) {
   assert.equal(loaded.direction, "both");
   assert.equal(loaded.shortEntry?.triggerPrice, 90);
   assert.equal(loaded.action, "buy");
+}
+
+const bothSized = parseFuturesAutomationForm(
+  perpsForm({
+    r0_action: "buy",
+    r0_direction: "both",
+    r0_size: "2",
+    r0_sizeUnit: "usdt",
+    r0_orderType: "market",
+    r0_short_entrySource: "price",
+    r0_short_triggerBy: "mark",
+    r0_short_triggerCompare: "lte",
+    r0_short_triggerPrice: "90",
+    r0_short_size: "5",
+    r0_short_sizeUnit: "qty",
+    r0_short_orderType: "limit",
+    r0_short_limitPrice: "80",
+  }),
+);
+assert.equal(bothSized.ok, true);
+if (bothSized.ok) {
+  const rule = bothSized.rules[0];
+  assert.equal(rule?.size, 2);
+  assert.equal(rule?.sizeUnit, "usdt");
+  assert.equal(rule?.shortEntry?.size, 5);
+  assert.equal(rule?.shortEntry?.sizeUnit, "qty");
+  assert.equal(rule?.shortEntry?.orderType, "limit");
+  assert.equal(rule?.shortEntry?.limitPrice, 80);
+  const legs = perpsAutomationLegs(rule!);
+  assert.equal(legs[1]?.rule.size, 5);
+  assert.equal(legs[1]?.rule.sizeUnit, "qty");
+  assert.equal(legs[1]?.rule.orderType, "limit");
+  assert.equal(legs[1]?.rule.limitPrice, 80);
+  assert.equal(legs[0]?.rule.size, 2);
+  const loaded = parseFuturesAutomationRow(
+    futuresAutomationToRow("user", "account", rule!),
+  );
+  assert.equal(loaded.size, 2);
+  assert.equal(loaded.shortEntry?.size, 5);
+  assert.equal(loaded.shortEntry?.limitPrice, 80);
+}
+
+const bothSameSize = parseFuturesAutomationForm(
+  perpsForm({
+    r0_action: "buy",
+    r0_direction: "both",
+    r0_short_entrySource: "price",
+    r0_short_triggerBy: "last",
+    r0_short_triggerCompare: "lte",
+    r0_short_triggerPrice: "90",
+    r0_short_size: "1",
+    r0_short_sizeUnit: "qty",
+    r0_short_orderType: "market",
+  }),
+);
+assert.equal(bothSameSize.ok, true);
+if (bothSameSize.ok) {
+  assert.equal(bothSameSize.rules[0]?.shortEntry?.size, undefined);
+  assert.equal(perpsAutomationLegs(bothSameSize.rules[0]!)[1]?.rule.size, 1);
 }
 
 const oneWay = parseFuturesAutomationForm(

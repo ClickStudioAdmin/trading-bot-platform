@@ -189,6 +189,12 @@ export type DcaPlaybookConfig = {
   dcaMode: DcaMode;
   clipSize: number;
   sizeUnit: "qty" | "usdt";
+  /**
+   * Direction both. Null means the short leg still uses clipSize and sizeUnit.
+   * A stored pair is that side's own first-order size.
+   */
+  shortClipSize?: number | null;
+  shortSizeUnit?: "qty" | "usdt" | null;
   maxClips: number | null;
   maxValue: number | null;
   maxValueKind: DcaMaxValueKind;
@@ -662,6 +668,8 @@ export function dcaConfigMarginError(input: {
     | "direction"
     | "clipSize"
     | "sizeUnit"
+    | "shortClipSize"
+    | "shortSizeUnit"
     | "maxClips"
     | "maxValue"
     | "maxValueKind"
@@ -700,20 +708,21 @@ export function dcaConfigMarginError(input: {
     input.lastPrice && input.lastPrice > 0 ? input.lastPrice : 1;
   let exposure = 0;
   for (const side of sides) {
+    const clip = dcaClipForSide(config, side);
     const clips = dcaPlannedOrderCount({
       side,
       entryPrice,
       maxClips: config.maxClips,
       maxValue,
       dipPct: config.dipPct,
-      clipSize: config.clipSize,
-      sizeUnit: config.sizeUnit,
+      clipSize: clip.clipSize,
+      sizeUnit: clip.sizeUnit,
       sizeMultiplier: config.sizeMultiplier,
       deviationMultiplier: config.deviationMultiplier,
     });
     const sideExposure = dcaRequiredUsdt({
-      clipSize: config.clipSize,
-      sizeUnit: config.sizeUnit,
+      clipSize: clip.clipSize,
+      sizeUnit: clip.sizeUnit,
       maxClips: clips,
       sizeMultiplier: config.sizeMultiplier,
       mark: input.lastPrice,
@@ -739,6 +748,8 @@ export function dcaConfigMaxOrderError(input: {
     | "dcaMode"
     | "clipSize"
     | "sizeUnit"
+    | "shortClipSize"
+    | "shortSizeUnit"
     | "maxClips"
     | "maxValue"
     | "maxValueKind"
@@ -780,50 +791,58 @@ export function dcaConfigMaxOrderError(input: {
   const restGrid = config.dcaMode === "order";
   const entryPrice =
     input.lastPrice && input.lastPrice > 0 ? input.lastPrice : 1;
-  const canCheckVenueQty =
-    (input.maxQty > 0 || input.maxMktQty > 0) &&
-    (config.sizeUnit !== "usdt" ||
-      (input.lastPrice != null && input.lastPrice > 0));
-  if (canCheckVenueQty) {
-    const venue = dcaLadderMaxOrderError({
-      sides,
-      restGrid,
-      entryPrice,
-      maxClips: config.maxClips,
-      maxValue: resolvedMaxValue,
-      dipPct: config.dipPct,
-      clipSize: config.clipSize,
-      sizeUnit: config.sizeUnit,
-      sizeMultiplier: config.sizeMultiplier,
-      deviationMultiplier: config.deviationMultiplier,
-      maxQty: input.maxQty,
-      maxMktQty: input.maxMktQty,
-      minQty: input.minQty ?? 0,
-      minNotional: input.minNotional ?? 0,
-      qtyStep: input.qtyStep,
-      baseCoin: input.baseCoin,
-    });
-    if (venue) {
-      return venue;
+  for (const side of sides) {
+    const clip = dcaClipForSide(config, side);
+    const canCheckVenueQty =
+      (input.maxQty > 0 || input.maxMktQty > 0) &&
+      (clip.sizeUnit !== "usdt" ||
+        (input.lastPrice != null && input.lastPrice > 0));
+    if (canCheckVenueQty) {
+      const venue = dcaLadderMaxOrderError({
+        sides: [side],
+        restGrid,
+        entryPrice,
+        maxClips: config.maxClips,
+        maxValue: resolvedMaxValue,
+        dipPct: config.dipPct,
+        clipSize: clip.clipSize,
+        sizeUnit: clip.sizeUnit,
+        sizeMultiplier: config.sizeMultiplier,
+        deviationMultiplier: config.deviationMultiplier,
+        maxQty: input.maxQty,
+        maxMktQty: input.maxMktQty,
+        minQty: input.minQty ?? 0,
+        minNotional: input.minNotional ?? 0,
+        qtyStep: input.qtyStep,
+        baseCoin: input.baseCoin,
+      });
+      if (venue) {
+        return sides.length > 1 ? `${side === "long" ? "Long" : "Short"} ${venue}` : venue;
+      }
     }
   }
   if (restGrid && input.lastPrice != null && input.lastPrice > 0) {
-    const restPrice = dcaLadderRestPriceError({
-      sides,
-      restGrid,
-      entryPrice: input.lastPrice,
-      maxClips: config.maxClips,
-      maxValue: resolvedMaxValue,
-      dipPct: config.dipPct,
-      clipSize: config.clipSize,
-      sizeUnit: config.sizeUnit,
-      sizeMultiplier: config.sizeMultiplier,
-      deviationMultiplier: config.deviationMultiplier,
-      minPrice: input.minPrice,
-      tickSize: input.tickSize,
-    });
-    if (restPrice) {
-      return restPrice;
+    for (const side of sides) {
+      const clip = dcaClipForSide(config, side);
+      const restPrice = dcaLadderRestPriceError({
+        sides: [side],
+        restGrid,
+        entryPrice: input.lastPrice,
+        maxClips: config.maxClips,
+        maxValue: resolvedMaxValue,
+        dipPct: config.dipPct,
+        clipSize: clip.clipSize,
+        sizeUnit: clip.sizeUnit,
+        sizeMultiplier: config.sizeMultiplier,
+        deviationMultiplier: config.deviationMultiplier,
+        minPrice: input.minPrice,
+        tickSize: input.tickSize,
+      });
+      if (restPrice) {
+        return sides.length > 1
+          ? `${side === "long" ? "Long" : "Short"} ${restPrice}`
+          : restPrice;
+      }
     }
   }
   return dcaConfigMarginError({
@@ -1118,6 +1137,51 @@ export function dcaClassicFromConfig(
   };
 }
 
+/** Short leg of a Both bot uses its own clip when that size was saved. */
+export function dcaClipForSide(
+  config: {
+    direction?: DcaDirection | null;
+    clipSize: number;
+    sizeUnit: "qty" | "usdt";
+    shortClipSize?: number | null;
+    shortSizeUnit?: "qty" | "usdt" | null;
+  },
+  side: FuturesSide,
+): { clipSize: number; sizeUnit: "qty" | "usdt" } {
+  if (
+    side === "short" &&
+    config.direction === "both" &&
+    config.shortClipSize != null &&
+    config.shortClipSize > 0
+  ) {
+    return {
+      clipSize: config.shortClipSize,
+      sizeUnit:
+        config.shortSizeUnit === "qty" || config.shortSizeUnit === "usdt"
+          ? config.shortSizeUnit
+          : config.sizeUnit,
+    };
+  }
+  return { clipSize: config.clipSize, sizeUnit: config.sizeUnit };
+}
+
+export function dcaShortClipFromExpr(raw: unknown): {
+  clipSize: number | null;
+  sizeUnit: "qty" | "usdt" | null;
+} {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { clipSize: null, sizeUnit: null };
+  }
+  const row = raw as Record<string, unknown>;
+  const clipSize = Number(String(row.clipSize ?? "").replace(/,/g, ""));
+  if (!(clipSize > 0) || !Number.isFinite(clipSize)) {
+    return { clipSize: null, sizeUnit: null };
+  }
+  const sizeUnit =
+    row.sizeUnit === "qty" || row.sizeUnit === "usdt" ? row.sizeUnit : null;
+  return { clipSize, sizeUnit };
+}
+
 /** Short leg of a Both bot uses shortClassic when that object was saved. */
 export function dcaClassicForSide(
   config: DcaPlaybookConfig,
@@ -1328,6 +1392,19 @@ export function writeDcaCycleFormFields(
   }
   form.set("sizeUnit", current.sizeUnit);
   form.set("clipSize", String(current.clipSize));
+  if (
+    current.direction === "both" &&
+    current.shortClipSize != null &&
+    current.shortClipSize > 0
+  ) {
+    form.set("shortClipSize", String(current.shortClipSize));
+    form.set(
+      "shortSizeUnit",
+      current.shortSizeUnit === "qty" || current.shortSizeUnit === "usdt"
+        ? current.shortSizeUnit
+        : current.sizeUnit,
+    );
+  }
   if (current.maxClips != null) {
     form.set("maxClips", String(current.maxClips));
   } else {
@@ -1471,6 +1548,8 @@ export function dcaWithLockedCycleConfig(
     dcaMode: current.dcaMode,
     clipSize: current.clipSize,
     sizeUnit: current.sizeUnit,
+    shortClipSize: current.shortClipSize ?? null,
+    shortSizeUnit: current.shortSizeUnit ?? null,
     maxClips: current.maxClips,
     maxValue: current.maxValue,
     maxValueKind: current.maxValueKind,
@@ -1906,6 +1985,32 @@ export function writeDcaEntryStackFields(
   });
 }
 
+function parseDcaShortClipForm(
+  form: FormData,
+  direction: DcaDirection | null,
+  longSize: number,
+  longUnit: "qty" | "usdt",
+):
+  | { ok: true; clipSize: number | null; sizeUnit: "qty" | "usdt" | null }
+  | { ok: false; error: string } {
+  if (direction !== "both" || form.get("shortClipSize") == null) {
+    return { ok: true, clipSize: null, sizeUnit: null };
+  }
+  const unitParsed = parseFuturesSizeUnit(form.get("shortSizeUnit") ?? longUnit);
+  if (!unitParsed.ok) {
+    return unitParsed;
+  }
+  const unit = unitParsed.unit === "usdt" ? "usdt" : "qty";
+  const size = parseFuturesQty(form.get("shortClipSize"));
+  if (!size.ok) {
+    return { ok: false, error: "Enter a short order size." };
+  }
+  if (size.qty === longSize && unit === longUnit) {
+    return { ok: true, clipSize: null, sizeUnit: null };
+  }
+  return { ok: true, clipSize: size.qty, sizeUnit: unit };
+}
+
 function parseDcaShortClassicForm(
   form: FormData,
   direction: DcaDirection | null,
@@ -2181,6 +2286,13 @@ export function parseDcaPlaybookForm(
           ? "Enter an order size, or use USDT size so the first order can be calculated."
           : "Enter an order size.",
     };
+  }
+  const shortClip =
+    derivedClip != null
+      ? { ok: true as const, clipSize: null, sizeUnit: null }
+      : parseDcaShortClipForm(form, direction, clipQty, sizeUnit.unit);
+  if (!shortClip.ok) {
+    return shortClip;
   }
   if (!dipPct.ok) {
     return dipPct;
@@ -2523,6 +2635,8 @@ export function parseDcaPlaybookForm(
       dcaMode,
       clipSize: clipQty,
       sizeUnit: sizeUnit.unit,
+      shortClipSize: shortClip.clipSize,
+      shortSizeUnit: shortClip.sizeUnit,
       maxClips: clipsCap,
       maxValue: valueCap,
       maxValueKind,
@@ -3030,6 +3144,10 @@ export function parseDcaPlaybookRow(
   const shortIndicatorKind = parseDcaIndicatorKind(row.short_indicator_kind);
   const longMeta = entryExprMetaFromJson(row.entry_expr);
   const shortMeta = entryExprMetaFromJson(row.short_entry_expr);
+  const shortClip =
+    direction === "both"
+      ? dcaShortClipFromExpr(row.short_entry_expr)
+      : { clipSize: null, sizeUnit: null };
   return {
     id,
     userId,
@@ -3053,6 +3171,8 @@ export function parseDcaPlaybookRow(
     dcaMode: parseDcaMode(row.dca_mode),
     clipSize,
     sizeUnit: sizeUnit.unit,
+    shortClipSize: shortClip.clipSize,
+    shortSizeUnit: shortClip.sizeUnit,
     maxClips: asPositiveIntOrNull(row.max_clips),
     maxValue: asPositiveOrNull(row.max_value),
     maxValueKind: parseDcaMaxValueKind(row.max_value_kind),

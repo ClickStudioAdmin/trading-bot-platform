@@ -790,6 +790,12 @@ export function ThemeBotFormDraft() {
   const themeShortSlots = entryConflictSlots(themeShortAnchor, shortEntryRows);
   const [size, setSize] = useState("100");
   const [sizeUnit, setSizeUnit] = useState<"qty" | "usdt">("usdt");
+  const [shortEntrySize, setShortEntrySize] = useState("100");
+  const [shortEntryUnit, setShortEntryUnit] = useState<"qty" | "usdt">("usdt");
+  const [shortEntryOrderType, setShortEntryOrderType] = useState<
+    "market" | "limit"
+  >("market");
+  const [shortEntryLimit, setShortEntryLimit] = useState("");
   const longExtraOrders = useExtraGroupOrders();
   const shortExtraOrders = useExtraGroupOrders();
   const [sizeMultiplier, setSizeMultiplier] = useState("1");
@@ -1059,6 +1065,8 @@ export function ThemeBotFormDraft() {
   const requireWebhook =
     startKind === "webhook" && (desk === "flex" || !closing) && !filled(webhookId);
   const requireSize = desk !== "cnc" && !closing && !filled(size);
+  const requireShortSize =
+    themeBothExits && !closing && !filled(shortEntrySize);
   const groupSizingMissing =
     !closing &&
     desk !== "cnc" &&
@@ -1163,6 +1171,7 @@ export function ThemeBotFormDraft() {
     webhookId: requireWebhook,
     shortWebhookId: requireShortWebhook,
     size: requireSize,
+    shortSize: requireShortSize,
     groupSizing: groupSizingMissing,
     dipPct: requireDip,
     atrPeriod: requireAtrPeriod,
@@ -1208,13 +1217,23 @@ export function ThemeBotFormDraft() {
     extra: typeof longExtraOrders,
     named: boolean,
     leadChosen: boolean,
+    leadOrder: {
+      size: string;
+      sizeUnit: "qty" | "usdt";
+      orderType: "market" | "limit";
+      limitPrice: string;
+    },
+    onLead: (partial: {
+      size?: string;
+      sizeUnit?: "qty" | "usdt";
+      orderType?: "market" | "limit";
+      limitPrice?: string;
+    }) => void,
   ) {
     function renderPerpsOrderFooter(groupIndex: number) {
       const key = entryGroupOrderKey(rows, groupIndex);
       const lead = key === "lead";
-      const values = lead
-        ? { size, sizeUnit, orderType, limitPrice }
-        : extra.orderFor(key);
+      const values = lead ? leadOrder : extra.orderFor(key);
       return (
         <GroupPositionSizing
           groupIndex={groupIndex}
@@ -1223,13 +1242,7 @@ export function ThemeBotFormDraft() {
           onSameAsGroup1={
             lead
               ? undefined
-              : (same) =>
-                  extra.setShares(key, same, {
-                    size,
-                    sizeUnit,
-                    orderType,
-                    limitPrice,
-                  })
+              : (same) => extra.setShares(key, same, leadOrder)
           }
         >
           <PerpsGroupOrderFields
@@ -1243,12 +1256,12 @@ export function ThemeBotFormDraft() {
             required
             sizeInvalid={
               showFieldErrors &&
-              (lead ? missing.size : !positiveSizingText(values.size))
+              (lead ? !filled(leadOrder.size) : !positiveSizingText(values.size))
             }
             limitInvalid={
               showFieldErrors &&
               (lead
-                ? missing.limitPrice
+                ? leadOrder.orderType === "limit" && !filled(leadOrder.limitPrice)
                 : values.orderType === "limit" &&
                   !positiveSizingText(values.limitPrice))
             }
@@ -1257,10 +1270,7 @@ export function ThemeBotFormDraft() {
                 extra.patch(key, partial);
                 return;
               }
-              if (partial.size != null) setSize(partial.size);
-              if (partial.sizeUnit != null) setSizeUnit(partial.sizeUnit);
-              if (partial.orderType != null) setOrderType(partial.orderType);
-              if (partial.limitPrice != null) setLimitPrice(partial.limitPrice);
+              onLead(partial);
             }}
           />
         </GroupPositionSizing>
@@ -1274,11 +1284,14 @@ export function ThemeBotFormDraft() {
     extra: typeof longExtraOrders,
     named: boolean,
     leadChosen: boolean,
+    leadOrder: { size: string; sizeUnit: "qty" | "usdt" },
+    onLeadSize: (size: string) => void,
+    onLeadUnit: (unit: "qty" | "usdt") => void,
   ) {
     function renderDcaSizeFooter(groupIndex: number) {
       const key = entryGroupOrderKey(rows, groupIndex);
       const lead = key === "lead";
-      const values = lead ? { size, sizeUnit } : extra.orderFor(key);
+      const values = lead ? leadOrder : extra.orderFor(key);
       return (
         <GroupPositionSizing
           groupIndex={groupIndex}
@@ -1289,8 +1302,8 @@ export function ThemeBotFormDraft() {
               ? undefined
               : (same) =>
                   extra.setShares(key, same, {
-                    size,
-                    sizeUnit,
+                    size: leadOrder.size,
+                    sizeUnit: leadOrder.sizeUnit,
                     orderType: "market",
                     limitPrice: "",
                   })
@@ -1301,14 +1314,14 @@ export function ThemeBotFormDraft() {
             sizeUnit={values.sizeUnit}
             onSize={(next) => {
               if (lead) {
-                setSize(next);
+                onLeadSize(next);
                 return;
               }
               extra.patch(key, { size: next });
             }}
             onUnit={(unit) => {
               if (lead) {
-                setSizeUnit(unit);
+                onLeadUnit(unit);
                 return;
               }
               extra.patch(key, { sizeUnit: unit, size: "" });
@@ -1318,7 +1331,7 @@ export function ThemeBotFormDraft() {
             fieldClass={fieldClass}
             sizeInputClass={
               showFieldErrors &&
-              (lead ? missing.size : !positiveSizingText(values.size))
+              (lead ? !filled(leadOrder.size) : !positiveSizingText(values.size))
                 ? fieldInvalidClass
                 : fieldClass
             }
@@ -2453,6 +2466,13 @@ export function ThemeBotFormDraft() {
                   longExtraOrders,
                   true,
                   startKind !== "",
+                  { size, sizeUnit, orderType, limitPrice },
+                  (partial) => {
+                    if (partial.size != null) setSize(partial.size);
+                    if (partial.sizeUnit != null) setSizeUnit(partial.sizeUnit);
+                    if (partial.orderType != null) setOrderType(partial.orderType);
+                    if (partial.limitPrice != null) setLimitPrice(partial.limitPrice);
+                  },
                 )}
               />
             );
@@ -2483,6 +2503,9 @@ export function ThemeBotFormDraft() {
                   longExtraOrders,
                   true,
                   startKind !== "",
+                  { size, sizeUnit },
+                  setSize,
+                  setSizeUnit,
                 )}
               />
             );
@@ -2689,6 +2712,18 @@ export function ThemeBotFormDraft() {
                 shortExtraOrders,
                 false,
                 shortStartKind !== "",
+                {
+                  size: shortEntrySize,
+                  sizeUnit: shortEntryUnit,
+                  orderType: shortEntryOrderType,
+                  limitPrice: shortEntryLimit,
+                },
+                (partial) => {
+                  if (partial.size != null) setShortEntrySize(partial.size);
+                  if (partial.sizeUnit != null) setShortEntryUnit(partial.sizeUnit);
+                  if (partial.orderType != null) setShortEntryOrderType(partial.orderType);
+                  if (partial.limitPrice != null) setShortEntryLimit(partial.limitPrice);
+                },
               )}
             />
               );
@@ -2884,6 +2919,9 @@ export function ThemeBotFormDraft() {
                 shortExtraOrders,
                 false,
                 shortStartKind !== "",
+                { size: shortEntrySize, sizeUnit: shortEntryUnit },
+                setShortEntrySize,
+                setShortEntryUnit,
               )}
             />
               );

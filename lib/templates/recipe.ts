@@ -119,6 +119,9 @@ export type DcaTemplateRecipe = {
   dcaMode: DcaPlaybookConfig["dcaMode"];
   clipSize: number;
   sizeUnit: DcaPlaybookConfig["sizeUnit"];
+  /** Direction Both. Absent means the short leg still uses clipSize. */
+  shortClipSize?: number | null;
+  shortSizeUnit?: DcaPlaybookConfig["sizeUnit"] | null;
   maxClips: number | null;
   maxValue: number | null;
   maxValueKind: DcaPlaybookConfig["maxValueKind"];
@@ -360,6 +363,17 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     dcaMode: config.dcaMode,
     clipSize: config.clipSize,
     sizeUnit: config.sizeUnit,
+    ...(config.direction === "both" &&
+    config.shortClipSize != null &&
+    config.shortClipSize > 0
+      ? {
+          shortClipSize: config.shortClipSize,
+          shortSizeUnit:
+            config.shortSizeUnit === "qty" || config.shortSizeUnit === "usdt"
+              ? config.shortSizeUnit
+              : config.sizeUnit,
+        }
+      : {}),
     maxClips: config.maxClips,
     maxValue: config.maxValue,
     maxValueKind: config.maxValueKind,
@@ -562,6 +576,12 @@ export function dcaRecipePlaybookSeed(recipe: DcaTemplateRecipe): DcaPlaybook {
     dcaMode: recipe.dcaMode,
     clipSize: recipe.clipSize,
     sizeUnit: recipe.sizeUnit,
+    shortClipSize:
+      recipe.direction === "both" && recipe.shortClipSize != null && recipe.shortClipSize > 0
+        ? recipe.shortClipSize
+        : null,
+    shortSizeUnit:
+      recipe.direction === "both" ? (recipe.shortSizeUnit ?? null) : null,
     maxClips: recipe.maxClips,
     maxValue: recipe.maxValue,
     maxValueKind: recipe.maxValueKind,
@@ -970,6 +990,19 @@ export function dcaRecipeToConfig(
   }
   form.set("sizeUnit", String(recipe.sizeUnit ?? "qty"));
   form.set("clipSize", String(recipe.clipSize ?? ""));
+  if (
+    String(form.get("direction")) === "both" &&
+    typeof recipe.shortClipSize === "number" &&
+    recipe.shortClipSize > 0
+  ) {
+    form.set("shortClipSize", String(recipe.shortClipSize));
+    form.set(
+      "shortSizeUnit",
+      recipe.shortSizeUnit === "qty" || recipe.shortSizeUnit === "usdt"
+        ? recipe.shortSizeUnit
+        : String(recipe.sizeUnit ?? "usdt"),
+    );
+  }
   const maxClips = asNullableNumber(recipe.maxClips);
   const maxValue = asNullableNumber(recipe.maxValue);
   if (maxClips != null && maxValue == null) {

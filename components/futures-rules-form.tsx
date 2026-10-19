@@ -616,6 +616,42 @@ function perpsDraftFromLong(layer: FuturesAutomationFormValues): PerpsClassicDra
   };
 }
 
+function initialShortEntryOrder(layer: FuturesAutomationFormValues): {
+  size: string;
+  sizeUnit: FuturesAutomationFormValues["sizeUnit"];
+  orderType: FuturesAutomationFormValues["orderType"];
+  limitPrice: string;
+} {
+  const leg = layer.direction === "both" ? layer.shortEntry : null;
+  if (leg?.size != null && leg.size > 0) {
+    return {
+      size: String(leg.size),
+      sizeUnit:
+        leg.sizeUnit === "qty"
+          ? "qty"
+          : leg.sizeUnit === "usdt"
+            ? "usdt"
+            : layer.sizeUnit,
+      orderType:
+        leg.orderType === "limit"
+          ? "limit"
+          : leg.orderType === "market"
+            ? "market"
+            : layer.orderType,
+      limitPrice:
+        leg.orderType === "limit" && leg.limitPrice != null && leg.limitPrice > 0
+          ? String(leg.limitPrice)
+          : "",
+    };
+  }
+  return {
+    size: layer.size,
+    sizeUnit: layer.sizeUnit,
+    orderType: layer.orderType,
+    limitPrice: layer.limitPrice,
+  };
+}
+
 function RuleCard({
   layer,
   options,
@@ -686,6 +722,18 @@ function RuleCard({
   const [sizeUnit, setSizeUnit] = useState(layer.sizeUnit);
   const [size, setSize] = useState(layer.size);
   const [limitPrice, setLimitPrice] = useState(layer.limitPrice);
+  const [shortSize, setShortSize] = useState(
+    () => initialShortEntryOrder(layer).size,
+  );
+  const [shortSizeUnit, setShortSizeUnit] = useState(
+    () => initialShortEntryOrder(layer).sizeUnit,
+  );
+  const [shortOrderType, setShortOrderType] = useState(
+    () => initialShortEntryOrder(layer).orderType,
+  );
+  const [shortLimitPrice, setShortLimitPrice] = useState(
+    () => initialShortEntryOrder(layer).limitPrice,
+  );
   const [longAddGroups, setLongAddGroups] = useState(() =>
     layer.direction === "short"
       ? blankPerpsAddOrderGroups("long")
@@ -977,6 +1025,13 @@ function RuleCard({
   const sizeMissing = !closing && !positiveText(size);
   const orderLimitMissing =
     !closing && orderType === "limit" && !positiveText(limitPrice);
+  const shortSizeMissing =
+    !closing && direction === "both" && !positiveText(shortSize);
+  const shortOrderLimitMissing =
+    !closing &&
+    direction === "both" &&
+    shortOrderType === "limit" &&
+    !positiveText(shortLimitPrice);
   const groupSizingMissing =
     (!closing &&
       showLong &&
@@ -1152,6 +1207,8 @@ function RuleCard({
     shortSlLimitMissing ||
     sizeMissing ||
     orderLimitMissing ||
+    shortSizeMissing ||
+    shortOrderLimitMissing ||
     groupSizingMissing ||
     exitKindMissing ||
     nameMissing ||
@@ -2027,18 +2084,36 @@ function RuleCard({
           fieldClass={botFieldClass}
           labelClass={botLabelClass}
           showErrors={dirty}
-          order={{ size, sizeUnit, orderType, limitPrice }}
+          order={
+            direction === "both"
+              ? {
+                  size: shortSize,
+                  sizeUnit: shortSizeUnit,
+                  orderType: shortOrderType,
+                  limitPrice: shortLimitPrice,
+                }
+              : { size, sizeUnit, orderType, limitPrice }
+          }
           onOrderChange={(partial) => {
+            if (direction === "both") {
+              if (partial.size != null) setShortSize(partial.size);
+              if (partial.sizeUnit != null) setShortSizeUnit(partial.sizeUnit);
+              if (partial.orderType != null) setShortOrderType(partial.orderType);
+              if (partial.limitPrice != null) setShortLimitPrice(partial.limitPrice);
+              return;
+            }
             if (partial.size != null) setSize(partial.size);
             if (partial.sizeUnit != null) setSizeUnit(partial.sizeUnit);
             if (partial.orderType != null) setOrderType(partial.orderType);
             if (partial.limitPrice != null) setLimitPrice(partial.limitPrice);
           }}
-          orderNamed={!showLong}
+          orderNamed
           quoteLabel={quoteLabel}
           baseCoin={baseCoin}
-          orderSizeInvalid={dirty && sizeMissing}
-          orderLimitInvalid={dirty && orderLimitMissing}
+          orderSizeInvalid={dirty && (direction === "both" ? shortSizeMissing : sizeMissing)}
+          orderLimitInvalid={
+            dirty && (direction === "both" ? shortOrderLimitMissing : orderLimitMissing)
+          }
           extraOrders={shortExtraOrders}
         />
       </BotFormStep>

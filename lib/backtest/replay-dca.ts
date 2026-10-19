@@ -4,6 +4,7 @@ import {
   dcaStartKindForSide,
   dcaAtrTimeframe,
   dcaClassicForSide,
+  dcaClipForSide,
   dcaCycleClipSize,
   dcaEnabledSides,
   dcaIndicatorStartForSide,
@@ -412,27 +413,28 @@ export async function replayDcaPlaybook(input: {
     const leg = legs[side];
     const firstClip = leg.clipsFilled === 0;
     const leverage = normalizeBacktestLeverage(input.leverage);
+    const sideClip = dcaClipForSide(config, side);
     const sized = firstClip
       ? dcaCycleClipSize({
           kind: config.maxValueKind,
           maxValue: config.maxValue,
           maxClips: config.maxClips,
-          clipSize: config.clipSize,
+          clipSize: sideClip.clipSize,
           sizeMultiplier: config.sizeMultiplier,
-          sizeUnit: config.sizeUnit,
+          sizeUnit: sideClip.sizeUnit,
           bookUsdt: input.startingUsdt + realized,
           leverage,
           mark: price,
         })
       : {
-          clipSize: leg.cycleClipSize ?? config.clipSize,
+          clipSize: leg.cycleClipSize ?? sideClip.clipSize,
           cycleMaxValue: leg.cycleMaxValue,
         };
     const qty = dcaClipQtyAt(
       leg.clipsFilled,
       sized.clipSize,
       config.sizeMultiplier,
-      config.sizeUnit,
+      sideClip.sizeUnit,
       price,
     );
     if (!(qty > 0)) {

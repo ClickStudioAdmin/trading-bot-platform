@@ -83,6 +83,7 @@ import {
   dcaFlattenRearms,
   dcaAtrTimeframe,
   dcaClassicForSide,
+  dcaClipForSide,
   dcaArmTriggerForSide,
   dcaIndicatorStartForSide,
   dcaIndicatorTimeframes,
@@ -832,9 +833,9 @@ async function syncDcaPlaybookGridUnlocked(input: {
     atr,
     atrSpacingMult: input.playbook.atrSpacingMult,
     deviationMultiplier: input.playbook.deviationMultiplier,
-    clipSize: input.playbook.clipSize,
+    clipSize: dcaClipForSide(input.playbook, input.side).clipSize,
     sizeMultiplier: input.playbook.sizeMultiplier,
-    sizeUnit: input.playbook.sizeUnit,
+    sizeUnit: dcaClipForSide(input.playbook, input.side).sizeUnit,
     entryPrice:
       input.entryPrice ??
       open?.entryPrice ??
@@ -988,7 +989,7 @@ async function syncDcaPlaybookGridUnlocked(input: {
     const snapped = instrument
       ? snapPerpSizedLimit({
           size: item.qty,
-          sizeUnit: input.playbook.sizeUnit,
+          sizeUnit: dcaClipForSide(input.playbook, input.side).sizeUnit,
           limitPrice: item.limitPrice,
           instrument,
         })
@@ -1011,7 +1012,9 @@ async function syncDcaPlaybookGridUnlocked(input: {
     const limitPrice = snapped?.ok ? snapped.price : item.limitPrice;
     const sizeText = snapped?.ok ? snapped.qtyText : String(item.qty);
     const priceText = snapped?.ok ? snapped.priceText : String(item.limitPrice);
-    const sizeUnit = snapped?.ok ? "qty" : input.playbook.sizeUnit;
+    const sizeUnit = snapped?.ok
+      ? "qty"
+      : dcaClipForSide(input.playbook, input.side).sizeUnit;
     const restStamp = dcaSyncFailureStamp({
       playbookId: input.playbook.id,
       playbookUpdatedAtMs: input.playbook.updatedAtMs,
@@ -1104,7 +1107,8 @@ async function placeClip(input: {
   }
   const leg = dcaLegFor(input.playbook, input.side);
   const firstClip = leg.clipsFilled === 0;
-  let clipSize = input.playbook.clipSize;
+  const sideClip = dcaClipForSide(input.playbook, input.side);
+  let clipSize = sideClip.clipSize;
   if (firstClip && dcaMaxValueUsesBook(input.playbook.maxValueKind)) {
     const book = await loadDcaBookUsdt({
       userId: input.playbook.userId,
@@ -1148,9 +1152,9 @@ async function placeClip(input: {
       kind: input.playbook.maxValueKind,
       maxValue: input.playbook.maxValue,
       maxClips: input.playbook.maxClips,
-      clipSize: input.playbook.clipSize,
+      clipSize: sideClip.clipSize,
       sizeMultiplier: input.playbook.sizeMultiplier,
-      sizeUnit: input.playbook.sizeUnit,
+      sizeUnit: sideClip.sizeUnit,
       bookUsdt: book,
       leverage,
       mark: input.lastPrice,
@@ -1170,7 +1174,12 @@ async function placeClip(input: {
     if (!stamped.ok) {
       return stamped;
     }
-    input.playbook.clipSize = clipSize;
+    if (input.side === "short" && input.playbook.shortClipSize != null) {
+      input.playbook.shortClipSize = clipSize;
+      input.playbook.shortSizeUnit = "usdt";
+    } else {
+      input.playbook.clipSize = clipSize;
+    }
     if (input.side === "long") {
       input.playbook.long = {
         ...input.playbook.long,
@@ -1201,7 +1210,7 @@ async function placeClip(input: {
       symbol: input.playbook.symbol,
       orderType: "market",
       size: String(size),
-      sizeUnit: input.playbook.sizeUnit,
+      sizeUnit: sideClip.sizeUnit,
       idempotencyKey: dcaClipRestKey(
         input.playbook.id,
         input.side,

@@ -37,17 +37,22 @@ function entryExprColumn(
     divergence?: RsiDivergenceSettings | null;
     add?: EntryStack | null;
   },
-): ReturnType<typeof entryExprToJson> | null {
+  clip?: { clipSize: number; sizeUnit: "qty" | "usdt" } | null,
+): Record<string, unknown> | null {
   const body = stack ?? emptyEntryStack();
   const hasMeta = Boolean(
     meta.retrace ||
       meta.divergence ||
       (meta.add && meta.add.leaves.length > 0),
   );
+  const clipFields =
+    clip && clip.clipSize > 0
+      ? { clipSize: clip.clipSize, sizeUnit: clip.sizeUnit }
+      : null;
   if (body.leaves.length === 0 && !hasMeta) {
-    return null;
+    return clipFields;
   }
-  return entryExprToJson(body, meta);
+  return { ...entryExprToJson(body, meta), ...clipFields };
 }
 
 function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
@@ -127,11 +132,23 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
     }),
     short_entry_expr:
       config.direction === "both"
-        ? entryExprColumn(config.shortEntryStack, {
-            retrace: config.shortRetrace,
-            divergence: config.shortLeadDivergence,
-            add: config.shortAddStack,
-          })
+        ? entryExprColumn(
+            config.shortEntryStack,
+            {
+              retrace: config.shortRetrace,
+              divergence: config.shortLeadDivergence,
+              add: config.shortAddStack,
+            },
+            config.shortClipSize != null && config.shortClipSize > 0
+              ? {
+                  clipSize: config.shortClipSize,
+                  sizeUnit:
+                    config.shortSizeUnit === "qty" || config.shortSizeUnit === "usdt"
+                      ? config.shortSizeUnit
+                      : config.sizeUnit,
+                }
+              : null,
+          )
         : null,
     ...filterColumns("exit_if", config.exitHard ? null : config.exitIf),
     ...filterColumns(
