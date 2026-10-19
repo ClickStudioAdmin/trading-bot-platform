@@ -7,6 +7,11 @@ import {
   type FuturesAutomationRule,
 } from "./automation";
 import { deniedQuotaMessage } from "@/lib/membership/load-quota-access";
+import { loadPositionBuilderAccess } from "@/lib/membership/load-position-builder-access";
+import {
+  countPositionBuilderParts,
+  positionBuilderSaveDenial,
+} from "@/lib/membership/position-builder";
 import { getSessionContext } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -142,6 +147,61 @@ export async function futuresAutomationsAreRunning(
   return (data ?? []).length > 0;
 }
 
+async function positionBuilderGrowthError(
+  userId: string,
+  supabase: SupabaseClient,
+  accountId: string,
+  rules: FuturesAutomationRule[],
+): Promise<string | null> {
+  const access = await loadPositionBuilderAccess(userId);
+  if (access.allowed) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("futures_automation_rules")
+    .select("*")
+    .eq("account_id", accountId);
+  if (error) {
+    return error.message;
+  }
+  const stored = new Map(
+    (data ?? []).map((row) => {
+      const rule = parseFuturesAutomationRow(row as Record<string, unknown>);
+      return [rule.id, rule] as const;
+    }),
+  );
+  for (const rule of rules) {
+    const before = rule.id ? (stored.get(rule.id) ?? null) : null;
+    const denial = positionBuilderSaveDenial(
+      access,
+      countPositionBuilderParts(futuresPositionBuilderParts(before)),
+      countPositionBuilderParts(futuresPositionBuilderParts(rule)),
+    );
+    if (denial) {
+      return denial;
+    }
+  }
+  return null;
+}
+
+function futuresPositionBuilderParts(rule: FuturesAutomationRule | null) {
+  if (!rule) {
+    return null;
+  }
+  return {
+    entryStack: rule.entryStack,
+    confirm: rule.confirm,
+    shortEntryStack: rule.shortEntry?.entryStack,
+    shortConfirm: rule.shortEntry?.confirm,
+    addStack: rule.addStack,
+    shortAddStack: rule.shortEntry?.addStack,
+    exitStack: rule.exitStack,
+    shortExitStack: rule.shortEntry?.exitStack,
+    exitActions: rule.exitActions,
+    shortExitActions: rule.shortEntry?.actions,
+  };
+}
+
 export async function upsertFuturesAutomationRules(input: {
   supabase: SupabaseClient;
   userId: string;
@@ -154,6 +214,15 @@ export async function upsertFuturesAutomationRules(input: {
     if (botDenied) {
       return { ok: false, error: botDenied };
     }
+  }
+  const builderDenied = await positionBuilderGrowthError(
+    input.userId,
+    input.supabase,
+    input.accountId,
+    input.rules,
+  );
+  if (builderDenied) {
+    return { ok: false, error: builderDenied };
   }
   for (const rule of input.rules) {
     const row = futuresAutomationToRow(input.userId, input.accountId, rule);
@@ -197,6 +266,15 @@ export async function saveFuturesAutomationRules(input: {
     if (botDenied) {
       return { ok: false, error: botDenied };
     }
+  }
+  const builderDenied = await positionBuilderGrowthError(
+    input.userId,
+    input.supabase,
+    input.accountId,
+    input.rules,
+  );
+  if (builderDenied) {
+    return { ok: false, error: builderDenied };
   }
   const keep = new Set(
     input.rules.map((rule) => rule.id).filter((id): id is string => Boolean(id)),

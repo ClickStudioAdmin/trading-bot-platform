@@ -59,6 +59,10 @@ RSI divergence fields are When (Bullish or Bearish, required, default follows th
 
 Position protection reads the exit book's largest single protective stop (`provenPct`), not the stacked sum. It counts a resting stop, a trailing stop that is tracking after Activation %, and a breakeven stop after it has latched. It does not count take profit, Close, a waiting trail, or a breakeven that has not moved. Fields are Position (this bot's open position on this contract and side), Is (Protected or Not protected), and Amount (Entire position or At least %). At least % is required when Amount is At least. A flat position is unmet, so the add does not fire. Replay uses the book already stored on fills. A backtest with no protective stop never sees Protected as true.
 
+## Plan
+
+Position Builder is a plan row under Max Bots. Admin can include it or give it a free trial. While the trial is open, Add Condition, Add Condition Group, and Add action work, and a bot saved then keeps that structure. After the trial, those buttons stay visible and the click shows the trial-ended gate. The conditions already on that bot stay editable. A plan that never included it uses the not-allowed gate on the same clicks. See [phase-entitlements.md](phase-entitlements.md).
+
 ## Out of this step
 
 - While-true repeats and live partial reduce-only

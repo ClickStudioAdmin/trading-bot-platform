@@ -417,6 +417,81 @@ function decideTemplateFeature(input: {
   };
 }
 
+export const POSITION_BUILDER_FEATURE = "position_builder" as const;
+
+export type PositionBuilderAccess = {
+  allowed: boolean;
+  message: string | null;
+  upgradePlan: string | null;
+};
+
+export function positionBuilderNotAllowedMessage(
+  planName: string | null,
+): string {
+  const lead = "Position Builder is not allowed on your plan.";
+  if (!planName) {
+    return lead;
+  }
+  return `${lead} Upgrade to ${planName} to enable it.`;
+}
+
+export function positionBuilderTrialEndedMessage(endedOn: string): string {
+  return `Your free trial of Position Builder ended on ${endedOn}.`;
+}
+
+export function positionBuilderTrialOpenMessage(until: string): string {
+  return `Position Builder is in a free trial until ${until}.`;
+}
+
+export function positionBuilderAccess(input: {
+  features: PlanFeatures;
+  trials: PlanTrials;
+  grants: readonly { key: string; endsAt: string }[];
+  nowMs: number;
+  plans: readonly UnlockCandidate[];
+}): PositionBuilderAccess {
+  const key = POSITION_BUILDER_FEATURE;
+  const upgradePlan = cheapestPublicPlanName(input.plans, key);
+  if (input.features[key]) {
+    return { allowed: true, message: null, upgradePlan: null };
+  }
+  const offer = featureTrialOffer(
+    { features: input.features, caps: emptyCaps(), trials: input.trials },
+    key,
+  );
+  const grant = input.grants.find((row) => row.key === key) ?? null;
+  const phase = grant ? trialPhase(grant.endsAt, input.nowMs) : null;
+  const access = featureAccess({
+    included: false,
+    phase: phase ?? (offer ? "active" : null),
+  });
+  if (access === "trial") {
+    return {
+      allowed: true,
+      message: grant
+        ? positionBuilderTrialOpenMessage(
+            formatAuDateUtc(Date.parse(grant.endsAt)),
+          )
+        : "Position Builder is in a free trial.",
+      upgradePlan: null,
+    };
+  }
+  if (grant && phase === "ended") {
+    return {
+      allowed: false,
+      message: positionBuilderTrialEndedMessage(
+        formatAuDateUtc(Date.parse(grant.endsAt)),
+      ),
+      upgradePlan,
+    };
+  }
+  return {
+    allowed: false,
+    message: positionBuilderNotAllowedMessage(upgradePlan),
+    upgradePlan,
+  };
+}
+
 export const COPY_FEATURE_KEYS = [
   "copy_follow",
   "copy_catalogue",

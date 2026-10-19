@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { CONDITION_GROUP_HELPER, Hairline, JoinWord } from "@/components/condition-join";
+import { usePositionBuilderAddBlocked } from "@/components/position-builder-access";
 
 export { JoinWord };
 import { IconPlus, IconTrash } from "@/components/icons";
@@ -48,12 +49,18 @@ export function AddConditionButton({
   onClick: () => void;
   label?: string;
 }) {
+  const blockAdd = usePositionBuilderAddBlocked();
   return (
     <Hairline>
       <button
         type="button"
         className="inline-flex shrink-0 items-center gap-2 text-sm text-ink-muted hover:text-ink"
-        onClick={onClick}
+        onClick={(event) => {
+          if (blockAdd(event.currentTarget)) {
+            return;
+          }
+          onClick();
+        }}
       >
         <IconPlus size={14} className="size-3.5" />
         {label}
