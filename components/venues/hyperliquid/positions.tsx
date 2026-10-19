@@ -252,6 +252,7 @@ export async function HyperliquidFuturesPositions({
           title={botReturn.titleFor("Positions Snapshot")}
           backHref={botReturn.backHref}
           className="mb-3"
+          meta={<FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />}
           actions={
             <DeskBlotterScopeSelect
               values={filters}
@@ -261,7 +262,6 @@ export async function HyperliquidFuturesPositions({
             />
           }
         />
-        <FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />
         </section>
         {showTicket ? (
           <ManualTradeWorkspace
