@@ -374,8 +374,9 @@ export async function HyperliquidFuturesPositions({
             hideRowExits={copyDesk}
             copyDesk={copyDesk}
             dcaHints={dcaHints}
-            deferFills={!desk.fillsLoaded}
-            deferVenueRisk={deferVenueRisk}
+          deferFills={!desk.fillsLoaded}
+          deferVenueRisk={deferVenueRisk}
+          showSource={!showTicket}
             emptyMessage={
               deskBlotterFiltersActive(filters)
                 ? "No positions match these filters."
@@ -407,6 +408,7 @@ export async function HyperliquidFuturesPositions({
           webhookNames={desk.webhookNames}
           playbookOwnsOrders={dcaBlotter}
           copyDesk={copyDesk}
+          showSource={!showTicket}
           exchangeName="Hyperliquid"
           filtersOpen={tableFiltersSuggestOpen(params)}
           filterBar={

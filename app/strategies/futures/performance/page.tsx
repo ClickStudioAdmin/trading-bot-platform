@@ -7,7 +7,11 @@ import {
   ClosedFuturesTrades,
   FuturesPerformanceStats,
 } from "@/components/futures-blotter";
-import { deskIsCopy, deskShowsDcaBlotter } from "@/lib/accounts/model";
+import {
+  deskAllowsManualPerpTicket,
+  deskIsCopy,
+  deskShowsDcaBlotter,
+} from "@/lib/accounts/model";
 import {
   automationsBotReturn,
   automationsReturnHref,
@@ -41,6 +45,9 @@ export default async function FuturesPerformancePage({
   const session = await getSessionContext();
   const deskType = session?.account.deskType ?? "manual";
   const copyDesk = session ? deskIsCopy(session.account) : false;
+  const manualDesk = session
+    ? deskAllowsManualPerpTicket(session.account)
+    : deskType === "manual";
   const filters = blotterFiltersForCopyDesk(
     parseDeskBlotterFilters(params),
     copyDesk,
@@ -157,6 +164,7 @@ export default async function FuturesPerformancePage({
         filterBar={filterBar}
         emptyMessage={filteredEmpty}
         deferFills
+        showSource={!manualDesk}
       />
     </main>
   );

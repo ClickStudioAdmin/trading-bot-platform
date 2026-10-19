@@ -64,6 +64,7 @@ export function FuturesWorkingOrders({
   filterBar,
   filtersOpen = false,
   cancelAllCount,
+  showSource = true,
 }: {
   signedIn: boolean;
   working: FuturesWorkingOrder[];
@@ -79,12 +80,16 @@ export function FuturesWorkingOrders({
   filterBar?: ReactNode;
   filtersOpen?: boolean;
   cancelAllCount?: number;
+  showSource?: boolean;
 }) {
   const showOrderMeta = !playbookOwnsOrders;
   const { visible: storedVisible, setColumn } = useFuturesWorkingColumns();
-  const visible = showOrderMeta
-    ? storedVisible
-    : { ...storedVisible, tpsl: false, trailing: false };
+  const visible = {
+    ...(showOrderMeta
+      ? storedVisible
+      : { ...storedVisible, tpsl: false, trailing: false }),
+    ...(showSource ? {} : { source: false as const }),
+  };
   const colSpan = futuresWorkingColumnCount(
     visible,
     showOrderMeta ? 1 : 0,
@@ -148,7 +153,10 @@ export function FuturesWorkingOrders({
             <FuturesWorkingColumnPicker
               visible={visible}
               setColumn={setColumn}
-              hiddenColumns={showOrderMeta ? [] : ["tpsl", "trailing"]}
+              hiddenColumns={[
+                ...(showOrderMeta ? [] : (["tpsl", "trailing"] as const)),
+                ...(showSource ? [] : (["source"] as const)),
+              ]}
             />
             {showOrderMeta && working.length > 0 ? (
               <FuturesCancelAllOrders
