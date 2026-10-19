@@ -4,7 +4,13 @@ import { createMember, updateMember } from "@/lib/members/actions";
 import type { MemberFormValues } from "@/lib/members/form";
 import type { MembershipPlan } from "@/lib/membership/catalog";
 import { planIsArchived } from "@/lib/membership/catalog";
+import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import { AppSelect } from "@/components/app-select";
+
+const formCardClass =
+  "mt-6 max-w-3xl space-y-4 rounded-card border border-line bg-surface p-5";
+const submitClass =
+  "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
 
 export function AdminMemberForm({
   mode,
@@ -21,10 +27,24 @@ export function AdminMemberForm({
   const action = mode === "create" ? createMember : updateMember;
 
   return (
-    <form action={action} className="mt-6 max-w-xl space-y-4">
-      {memberId !== undefined ? (
-        <input type="hidden" name="memberId" value={memberId} />
-      ) : null}
+    <form action={action} className={formCardClass}>
+      <div>
+        {memberId !== undefined ? (
+          <input type="hidden" name="memberId" value={memberId} />
+        ) : null}
+        {locked ? (
+          <>
+            <input type="hidden" name="role" value="admin" />
+            <input type="hidden" name="status" value="active" />
+          </>
+        ) : null}
+        <h2 className="text-lg font-semibold tracking-tight">Member</h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          {mode === "create"
+            ? "Desk sign-in, role, and plan."
+            : "Name, sign-in, role, and plan."}
+        </p>
+      </div>
       <label className="block text-sm text-ink" htmlFor="name">
         Name
         <input
@@ -33,7 +53,7 @@ export function AdminMemberForm({
           defaultValue={values.name}
           required
           maxLength={80}
-          className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+          className={BILLING_FIELD_CLASS}
         />
       </label>
       <label className="block text-sm text-ink" htmlFor="email">
@@ -45,7 +65,7 @@ export function AdminMemberForm({
           defaultValue={values.email}
           required
           readOnly={locked}
-          className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none read-only:text-ink-muted"
+          className={`${BILLING_FIELD_CLASS} read-only:text-ink-muted`}
         />
       </label>
       <label className="block text-sm text-ink" htmlFor="password">
@@ -57,7 +77,7 @@ export function AdminMemberForm({
           autoComplete="new-password"
           required={mode === "create"}
           minLength={mode === "create" ? 8 : undefined}
-          className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+          className={BILLING_FIELD_CLASS}
         />
         <span className="mt-1 block text-hint text-ink-muted">
           {mode === "create"
@@ -65,7 +85,7 @@ export function AdminMemberForm({
             : "Leave blank to keep the current password."}
         </span>
       </label>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm text-ink" htmlFor="role">
           Role
           <AppSelect
@@ -73,7 +93,7 @@ export function AdminMemberForm({
             name="role"
             defaultValue={values.role}
             disabled={locked}
-            className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+            className={BILLING_FIELD_CLASS}
           >
             <option value="member">Member</option>
             <option value="platform_tester">Platform Tester</option>
@@ -88,7 +108,7 @@ export function AdminMemberForm({
             name="status"
             defaultValue={values.status}
             disabled={locked}
-            className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+            className={BILLING_FIELD_CLASS}
           >
             <option value="active">Active</option>
             <option value="disabled">Disabled</option>
@@ -102,7 +122,7 @@ export function AdminMemberForm({
           name="planId"
           defaultValue={values.planId}
           required
-          className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+          className={BILLING_FIELD_CLASS}
         >
           {plans.map((plan) => (
             <option key={plan.id} value={plan.id}>
@@ -124,7 +144,7 @@ export function AdminMemberForm({
             name="referralCode"
             defaultValue={values.referralCode ?? ""}
             maxLength={32}
-            className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+            className={BILLING_FIELD_CLASS}
           />
           <span className="mt-1 block text-hint text-ink-muted">
             Optional first-touch attribution. Must match an enrolled member’s
@@ -132,15 +152,9 @@ export function AdminMemberForm({
           </span>
         </label>
       ) : null}
-      {locked ? (
-        <>
-          <input type="hidden" name="role" value="admin" />
-          <input type="hidden" name="status" value="active" />
-        </>
-      ) : null}
       <PendingSubmitButton
         pendingLabel={mode === "create" ? "Creating…" : "Saving…"}
-        className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+        className={submitClass}
       >
         {mode === "create" ? "Create member" : "Save member"}
       </PendingSubmitButton>

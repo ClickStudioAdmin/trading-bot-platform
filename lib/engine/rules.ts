@@ -249,18 +249,6 @@ function parseLayer(
     return { ok: false, error: `Position ${index + 1}: min order size must be positive.` };
   }
 
-  const takeProfitPct = parsePercent(form.get(`${prefix}takeProfit`));
-  if (form.get(`${prefix}takeProfitOn`) === "1" && takeProfitPct === null) {
-    return { ok: false, error: `Position ${index + 1}: enter a take profit %.` };
-  }
-  if (takeProfitPct !== null && takeProfitPct <= 0) {
-    return { ok: false, error: `Position ${index + 1}: take profit % must be positive.` };
-  }
-
-  const stopLossRaw = parsePercent(form.get(`${prefix}stopLoss`));
-  if (form.get(`${prefix}stopLossOn`) === "1" && stopLossRaw === null) {
-    return { ok: false, error: `Position ${index + 1}: enter a stop loss %.` };
-  }
   const idRaw = String(form.get(`${prefix}id`) ?? "").trim();
 
   return {
@@ -284,8 +272,9 @@ function parseLayer(
       maxOpenNotionalUsdt,
       closeMaxDte: parseBound(form.get(`${prefix}closeMaxDte`)),
       closeMinNetApr: parsePercent(form.get(`${prefix}closeMinApr`)),
-      takeProfitPct,
-      stopLossPct: stopLossRaw === null ? null : -Math.abs(stopLossRaw),
+      // Take profit and stop loss are not Cash and Carry exits.
+      takeProfitPct: null,
+      stopLossPct: null,
     },
   };
 }

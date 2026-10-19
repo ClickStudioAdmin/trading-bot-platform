@@ -165,7 +165,10 @@ export const TableIconAction = forwardRef<
     href?: string;
     target?: string;
     rel?: string;
-    onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
+    prefetch?: boolean | null;
+    onClick?: (
+      event: MouseEvent<HTMLButtonElement> | MouseEvent<HTMLAnchorElement>,
+    ) => void;
     type?: "button" | "submit";
     form?: string;
     disabled?: boolean;
@@ -180,6 +183,7 @@ export const TableIconAction = forwardRef<
     href,
     target,
     rel,
+    prefetch,
     onClick,
     type = "button",
     form,
@@ -201,10 +205,14 @@ export const TableIconAction = forwardRef<
           href={href}
           target={target}
           rel={rel}
+          prefetch={prefetch}
           aria-label={spoken}
           className={mark}
-          onClick={dismiss}
           {...tip}
+          onClick={(event) => {
+            dismiss();
+            onClick?.(event);
+          }}
         >
           <TableIconGlyph>{children}</TableIconGlyph>
         </Link>

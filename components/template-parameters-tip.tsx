@@ -503,7 +503,7 @@ export function TemplateParametersButton({
               </div>
               <div
                 data-parameters-body=""
-                className="min-h-0 overflow-y-auto"
+                className="min-h-0 overflow-y-auto pr-3"
                 style={{ maxHeight: box?.bodyMax ?? POPUP_MAX_HEIGHT }}
               >
                 {popupTab === "backtests" && showTabs ? (

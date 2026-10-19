@@ -686,8 +686,8 @@ export function snapshotPaperRecipe(layer: PaperEngineLayer): PaperTemplateRecip
     maxOpenNotionalUsdt: layer.maxOpenNotionalUsdt,
     closeMaxDte: layer.closeMaxDte,
     closeMinNetApr: layer.closeMinNetApr,
-    takeProfitPct: layer.takeProfitPct,
-    stopLossPct: layer.stopLossPct,
+    takeProfitPct: null,
+    stopLossPct: null,
   };
 }
 
@@ -1454,12 +1454,6 @@ export function paperRecipeToLayer(
   }
   if (recipe.closeMinNetApr != null) {
     form.set("r0_closeMinApr", String(recipe.closeMinNetApr * 100));
-  }
-  if (recipe.takeProfitPct != null) {
-    form.set("r0_takeProfit", String(recipe.takeProfitPct * 100));
-  }
-  if (recipe.stopLossPct != null) {
-    form.set("r0_stopLoss", String(Math.abs(recipe.stopLossPct) * 100));
   }
   const parsed = parsePaperRulesForm(form);
   if (!parsed.ok) {

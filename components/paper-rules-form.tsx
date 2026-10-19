@@ -17,7 +17,6 @@ import {
   BotButtonLead,
   botBtnIcon,
   BotStatusField,
-  OptionalSection,
   botFieldClass,
   botRowClass,
   botSidebarActionClass,
@@ -497,17 +496,11 @@ function RuleRow({
   const [sizeType, setSizeType] = useState(layer.sizeType);
   const [exitSizeType, setExitSizeType] = useState(layer.exitSizeType);
   const [mode, setMode] = useState(layer.mode);
-  const [tpOn, setTpOn] = useState(Boolean(layer.takeProfit.trim()));
-  const [slOn, setSlOn] = useState(Boolean(layer.stopLoss.trim()));
-  const [takeProfit, setTakeProfit] = useState(layer.takeProfit);
-  const [stopLoss, setStopLoss] = useState(layer.stopLoss);
   const [maxOpenCount, setMaxOpenCount] = useState(layer.maxOpenCount || "1");
   const [orderSizeUsdt, setOrderSizeUsdt] = useState(String(layer.notionalUsdt));
-  const missingTp = tpOn && !takeProfit.trim();
-  const missingSl = slOn && !stopLoss.trim();
   const missingCount = !maxOpenCount.trim();
   const missingSize = sizeType === "fixed" && !orderSizeUsdt.trim();
-  const missing = missingTp || missingSl || missingCount || missingSize;
+  const missing = missingCount || missingSize;
 
   const { confirm: askConfirm, dialog } = useConfirmDialog();
 
@@ -666,40 +659,6 @@ function RuleRow({
           </BotField>
         </div>
       </BotFormGroup>
-      <OptionalSection
-        title="Take profit"
-        enabled={tpOn}
-        onEnabled={setTpOn}
-      >
-        <input type="hidden" name={`${prefix}takeProfitOn`} value="1" />
-        <div className={botRowClass}>
-          <CarryNumber
-            name={`${prefix}takeProfit`}
-            label="Take profit %"
-            value={takeProfit}
-            onChange={setTakeProfit}
-            allowDecimal
-            required
-          />
-        </div>
-      </OptionalSection>
-      <OptionalSection
-        title="Stop loss"
-        enabled={slOn}
-        onEnabled={setSlOn}
-      >
-        <input type="hidden" name={`${prefix}stopLossOn`} value="1" />
-        <div className={botRowClass}>
-          <CarryNumber
-            name={`${prefix}stopLoss`}
-            label="Stop loss %"
-            value={stopLoss}
-            onChange={setStopLoss}
-            allowDecimal
-            required
-          />
-        </div>
-      </OptionalSection>
       </BotFormStep>
       </BotFormCard>
       <BotFormSidebar
@@ -752,8 +711,8 @@ function RuleRow({
                   exitSizeType,
                   maxOpenCount,
                   notionalUsdt: Number(orderSizeUsdt.replace(/,/g, "")) || 0,
-                  takeProfit: tpOn ? takeProfit : "",
-                  stopLoss: slOn ? stopLoss : "",
+                  takeProfit: "",
+                  stopLoss: "",
                 }),
               );
               return parsed.ok && parsed.config.layers[0]
@@ -768,8 +727,8 @@ function RuleRow({
                 exitSizeType,
                 maxOpenCount,
                 notionalUsdt: Number(orderSizeUsdt.replace(/,/g, "")) || 0,
-                takeProfit: tpOn ? takeProfit : "",
-                stopLoss: slOn ? stopLoss : "",
+                takeProfit: "",
+                stopLoss: "",
               })
             }
             buttonClassName={botSidebarActionClass}
