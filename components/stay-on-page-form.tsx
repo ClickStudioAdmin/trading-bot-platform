@@ -42,6 +42,18 @@ export function useDeskFormStatus(): DeskFormStatus {
   return useContext(DeskFormContext);
 }
 
+export function DeskFormError({ className }: { className?: string }) {
+  const { error } = useDeskFormStatus();
+  if (!error) {
+    return null;
+  }
+  return (
+    <p className={className ?? "text-sm text-danger"} role="alert">
+      {error}
+    </p>
+  );
+}
+
 export function DeskFormFlash({ className }: { className?: string }) {
   const { error, notice } = useDeskFormStatus();
   if (error) {
@@ -143,11 +155,14 @@ export const StayOnPageForm = forwardRef<
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
     const submitter = (event.nativeEvent as SubmitEvent).submitter as
       | HTMLButtonElement
       | null;
+    if (submitter?.dataset.bypassStay === "1") {
+      return;
+    }
+    event.preventDefault();
+    const form = event.currentTarget;
     if (guard && !(await guard(event))) {
       return;
     }

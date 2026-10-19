@@ -27,6 +27,7 @@ export function FuturesOrderTicket({
   defaultSymbol = "BTCUSDT",
   agreementGate = CLOSED_AGREEMENT_GATE,
   stacked = false,
+  symbolCookie,
 }: {
   options: LinearPerp[];
   lastPrices?: Record<string, number>;
@@ -35,6 +36,7 @@ export function FuturesOrderTicket({
   defaultSymbol?: string;
   agreementGate?: BybitAgreementGate;
   stacked?: boolean;
+  symbolCookie?: string;
 }) {
   const [symbol, setSymbol] = useState(() =>
     firstOpenPerp(options, agreementGate, defaultSymbol),
@@ -42,7 +44,11 @@ export function FuturesOrderTicket({
   const reportSymbol = useReportDeskChartSymbol();
   useEffect(() => {
     reportSymbol?.(symbol);
-  }, [reportSymbol, symbol]);
+    if (!symbolCookie || !symbol) {
+      return;
+    }
+    document.cookie = `${symbolCookie}=${encodeURIComponent(symbol)}; Path=/; Max-Age=2592000; SameSite=Lax`;
+  }, [reportSymbol, symbol, symbolCookie]);
   const [unit, setUnit] = useState<"qty" | "usdt">("usdt");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [size, setSize] = useState("");

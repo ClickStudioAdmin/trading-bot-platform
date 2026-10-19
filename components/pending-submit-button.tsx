@@ -106,6 +106,7 @@ export function PendingSubmitButton({
   title,
   skipSizeGuard = false,
   deskAction,
+  bypassStay = false,
   align = "center",
   "aria-label": ariaLabel,
 }: {
@@ -121,6 +122,8 @@ export function PendingSubmitButton({
   title?: string;
   skipSizeGuard?: boolean;
   deskAction?: string;
+  /** Leave this submit to the button's own form action, including a redirect. */
+  bypassStay?: boolean;
   /** Full-width buttons stay centered. Menu rows pass start. */
   align?: "center" | "start";
   "aria-label"?: string;
@@ -176,6 +179,7 @@ export function PendingSubmitButton({
       title={title}
       data-skip-size-guard={skipSizeGuard ? "1" : undefined}
       data-desk-action={deskAction}
+      data-bypass-stay={bypassStay ? "1" : undefined}
       aria-busy={thisPending}
       aria-label={
         thisPending ? pendingLabel : ok ? "Done" : ariaLabel

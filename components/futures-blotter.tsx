@@ -288,6 +288,7 @@ export function OpenFuturesTrades({
   closeAllOpenCount,
   deferFills = false,
   deferVenueRisk = false,
+  showSource = true,
 }: {
   signedIn: boolean;
   open: MarkedFutures[];
@@ -311,6 +312,7 @@ export function OpenFuturesTrades({
   closeAllOpenCount?: number;
   deferFills?: boolean;
   deferVenueRisk?: boolean;
+  showSource?: boolean;
 }) {
   const { visible: storedVisible, setColumn } = useFuturesOpenColumns();
   const visible = hideRowExits
@@ -328,10 +330,11 @@ export function OpenFuturesTrades({
     [webhookNames],
   );
   const table = useClientTable(rows, compare, { defaultKey: "contract" });
-  const colSpan = futuresOpenColumnCount(
-    visible,
-    showDcaColumns ? FUTURES_DCA_OPEN_COLUMN_COUNT : 0,
-  );
+  const colSpan =
+    futuresOpenColumnCount(
+      visible,
+      showDcaColumns ? FUTURES_DCA_OPEN_COLUMN_COUNT : 0,
+    ) - (showSource ? 0 : 1);
 
   return (
     <section>
@@ -411,12 +414,14 @@ export function OpenFuturesTrades({
                 dir={table.sortDir}
                 onSort={() => table.onSort("contract")}
               />
-              <SortTh
-                label="Source"
-                active={table.sortKey === "source"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("source")}
-              />
+              {showSource ? (
+                <SortTh
+                  label="Source"
+                  active={table.sortKey === "source"}
+                  dir={table.sortDir}
+                  onSort={() => table.onSort("source")}
+                />
+              ) : null}
               <SortTh
                 label="Side"
                 active={table.sortKey === "side"}
@@ -565,6 +570,7 @@ export function OpenFuturesTrades({
                   next={next}
                   visible={visible}
                   colSpan={colSpan}
+                  showSource={showSource}
                   webhookNames={webhookNames}
                   showDcaColumns={showDcaColumns}
                   playbookOwnsOrders={playbookOwnsOrders}
@@ -592,6 +598,7 @@ export function ClosedFuturesTrades({
   filtersOpen = false,
   emptyMessage,
   deferFills = false,
+  showSource = true,
 }: {
   signedIn: boolean;
   closed: FuturesDeskPosition[];
@@ -601,6 +608,7 @@ export function ClosedFuturesTrades({
   filtersOpen?: boolean;
   emptyMessage?: ReactNode;
   deferFills?: boolean;
+  showSource?: boolean;
 }) {
   const compare = useCallback(
     (
@@ -623,7 +631,10 @@ export function ClosedFuturesTrades({
     defaultKey: "closed",
     defaultDir: "desc",
   });
-  const { visible, setColumn } = useFuturesClosedColumns();
+  const { visible: storedVisible, setColumn } = useFuturesClosedColumns();
+  const visible = showSource
+    ? storedVisible
+    : { ...storedVisible, source: false };
   const colSpan = futuresClosedColumnCount(visible);
   return (
     <section>
@@ -631,7 +642,11 @@ export function ClosedFuturesTrades({
         title={<TableSectionTitle title="Past Positions" />}
         defaultOpen={filtersOpen}
         actions={
-          <FuturesClosedColumnPicker visible={visible} setColumn={setColumn} />
+          <FuturesClosedColumnPicker
+            visible={visible}
+            setColumn={setColumn}
+            hiddenColumns={showSource ? [] : ["source"]}
+          />
         }
       >
         {filterBar}
@@ -1001,6 +1016,7 @@ function OpenFuturesRows({
   next,
   visible,
   colSpan,
+  showSource,
   webhookNames,
   showDcaColumns,
   playbookOwnsOrders,
@@ -1012,6 +1028,7 @@ function OpenFuturesRows({
   next: string;
   visible: FuturesOpenColumnVisibility;
   colSpan: number;
+  showSource: boolean;
   webhookNames: readonly string[];
   showDcaColumns: boolean;
   playbookOwnsOrders: boolean;
@@ -1065,13 +1082,15 @@ function OpenFuturesRows({
           </span>
         </span>
       </td>
-      <td className="min-w-0 px-3 py-3">
-        <FuturesSourceCell
-          source={trade.source}
-          ruleName={trade.ruleName}
-          webhookNames={webhookNames}
-        />
-      </td>
+      {showSource ? (
+        <td className="min-w-0 px-3 py-3">
+          <FuturesSourceCell
+            source={trade.source}
+            ruleName={trade.ruleName}
+            webhookNames={webhookNames}
+          />
+        </td>
+      ) : null}
       <td
         className={`min-w-0 px-3 py-3 capitalize ${
           trade.side === "short" ? "text-danger" : "text-success"
