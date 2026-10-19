@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { LiveTickerScope } from "@/components/live-ticker";
 import { FuturesOrderTicket } from "@/components/futures-order-ticket";
@@ -307,17 +306,6 @@ export async function HyperliquidFuturesPositions({
                     allowSignal={allowSignal}
                     defaultSymbol="BTC"
                   />
-                ) : canTestWebhook && session ? (
-                  <p className="mt-4 text-hint text-ink-muted">
-                    Create a named webhook on{" "}
-                    <Link
-                      href={deskHref(FUTURES_PATHS.webhooks, session.account.id)}
-                      className="text-accent"
-                    >
-                      Webhooks
-                    </Link>{" "}
-                    to send a dummy TradingView call from this ticket.
-                  </p>
                 ) : null}
               </form>
               {live && !settings.connectionId ? (
