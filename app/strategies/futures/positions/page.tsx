@@ -402,6 +402,7 @@ export default async function FuturesPositionsPage({
           dcaHints={dcaHints}
           deferFills={!desk.fillsLoaded}
           deferVenueRisk={deferVenueRisk}
+          showSource={!showTicket}
           emptyMessage={
             deskBlotterFiltersActive(filters)
               ? "No positions match these filters."
@@ -433,6 +434,7 @@ export default async function FuturesPositionsPage({
           webhookNames={desk.webhookNames}
           playbookOwnsOrders={dcaBlotter}
           copyDesk={copyDesk}
+          showSource={!showTicket}
           filtersOpen={tableFiltersSuggestOpen(params)}
           filterBar={
             <DeskBlotterFilters

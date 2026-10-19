@@ -142,10 +142,12 @@ export function useFuturesClosedColumns() {
 export function FuturesClosedColumnPicker({
   visible,
   setColumn,
+  hiddenColumns = [],
   align = "end",
 }: {
   visible: FuturesClosedColumnVisibility;
   setColumn: (id: FuturesClosedOptionalColumn, on: boolean) => void;
+  hiddenColumns?: readonly FuturesClosedOptionalColumn[];
   align?: "start" | "end";
 }) {
   return (
@@ -153,7 +155,9 @@ export function FuturesClosedColumnPicker({
       align={align}
       visible={visible}
       onToggle={(id, on) => setColumn(id as FuturesClosedOptionalColumn, on)}
-      columns={FUTURES_CLOSED_OPTIONAL_COLUMNS.map((id) => ({
+      columns={FUTURES_CLOSED_OPTIONAL_COLUMNS.filter(
+        (id) => !hiddenColumns.includes(id),
+      ).map((id) => ({
         id,
         label: FUTURES_CLOSED_COLUMN_LABELS[id],
       }))}
