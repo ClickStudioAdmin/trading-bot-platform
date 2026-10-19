@@ -18,6 +18,7 @@ export type LinearPerp = {
   qtyStep: number;
   minPrice: number;
   tickSize: number;
+  maxLeverage?: number | null;
 };
 
 export function formatPerpPairLabel(
@@ -63,6 +64,11 @@ function lotMax(instrument: BybitInstrument | undefined): number {
 
 function lotMaxMkt(instrument: BybitInstrument | undefined): number {
   return parseStep(instrument?.lotSizeFilter?.maxMktOrderQty, 0);
+}
+
+function listedMaxLeverage(instrument: BybitInstrument): number | null {
+  const leverage = parseStep(instrument.leverageFilter?.maxLeverage, 0);
+  return leverage > 0 ? leverage : null;
 }
 
 export function perpVenueMinimums(
@@ -299,6 +305,7 @@ export function listUsdtLinearPerps(
         qtyStep: step,
         minPrice: parseStep(row.priceFilter?.minPrice, 0),
         tickSize,
+        maxLeverage: listedMaxLeverage(row),
       };
     })
     .sort((a, b) => {

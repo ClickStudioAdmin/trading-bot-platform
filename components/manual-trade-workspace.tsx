@@ -2,7 +2,10 @@
 
 import { useState, type ReactNode } from "react";
 import { DeskTradeChart } from "@/components/desk-trade-chart";
-import { DeskChartSymbolProvider } from "@/components/desk-chart-symbol";
+import {
+  DeskChartSymbolProvider,
+  DeskChartSymbolValueProvider,
+} from "@/components/desk-chart-symbol";
 import type { CandleVenue } from "@/lib/market/candles";
 
 export function ManualTradeWorkspace({
@@ -19,16 +22,18 @@ export function ManualTradeWorkspace({
   const [symbol, setSymbol] = useState(defaultSymbol);
   return (
     <DeskChartSymbolProvider value={setSymbol}>
-      <div className="@container">
-        <div className="grid items-start gap-4 @min-[960px]:grid-cols-[minmax(0,1fr)_22.5rem]">
-          <DeskTradeChart
-            venue={venue}
-            environment={environment}
-            symbol={symbol}
-          />
-          <div className="min-w-0">{children}</div>
+      <DeskChartSymbolValueProvider value={symbol}>
+        <div className="@container">
+          <div className="grid items-start gap-4 @min-[960px]:grid-cols-[minmax(0,1fr)_22.5rem]">
+            <DeskTradeChart
+              venue={venue}
+              environment={environment}
+              symbol={symbol}
+            />
+            <div className="min-w-0">{children}</div>
+          </div>
         </div>
-      </div>
+      </DeskChartSymbolValueProvider>
     </DeskChartSymbolProvider>
   );
 }
