@@ -48,6 +48,7 @@ import {
 } from "@/components/table-chrome";
 import { AppCheck } from "@/components/app-check";
 import { TemplateParametersButton } from "@/components/template-parameters-tip";
+import { TokenIcon } from "@/components/token-icon";
 import { deleteBacktestRunsAction } from "@/lib/backtest/actions";
 import { pruneRemovedIds, withRemovedIds } from "@/lib/table-chrome";
 import {
@@ -722,6 +723,12 @@ export function BacktestRunsTable({
                 ) : null}
               </th>
               <SortTh
+                label="Contract"
+                active={table.sortKey === "contract"}
+                dir={table.sortDir}
+                onSort={() => table.onSort("contract")}
+              />
+              <SortTh
                 label="Name"
                 active={table.sortKey === "name"}
                 dir={table.sortDir}
@@ -733,12 +740,6 @@ export function BacktestRunsTable({
                 active={table.sortKey === "type"}
                 dir={table.sortDir}
                 onSort={() => table.onSort("type")}
-              />
-              <SortTh
-                label="Contract"
-                active={table.sortKey === "contract"}
-                dir={table.sortDir}
-                onSort={() => table.onSort("contract")}
               />
               <SortTh
                 label="Template"
@@ -846,6 +847,33 @@ export function BacktestRunsTable({
   );
 }
 
+function backtestBaseCoin(symbol: string): string {
+  const upper = symbol.trim().toUpperCase();
+  if (upper.endsWith("USDT") || upper.endsWith("USDC")) {
+    return upper.slice(0, -4) || upper;
+  }
+  return upper;
+}
+
+function BacktestContractCell({ symbol }: { symbol: string }) {
+  const pair = symbol.trim();
+  if (!pair) {
+    return <span className="text-ink-faint">—</span>;
+  }
+  const baseCoin = backtestBaseCoin(pair);
+  return (
+    <span className="flex items-start gap-2">
+      <TokenIcon symbol={baseCoin} />
+      <span className="min-w-0">
+        <span className="block font-medium text-ink">{baseCoin}</span>
+        <span className="mt-0.5 block truncate text-hint text-ink-muted">
+          {pair}
+        </span>
+      </span>
+    </span>
+  );
+}
+
 function BacktestRunRow({
   row,
   memberId,
@@ -937,7 +965,10 @@ function BacktestRunRow({
           />
         ) : null}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 align-top">
+        <BacktestContractCell symbol={row.symbol} />
+      </td>
+      <td className="px-4 py-3 align-top">
         <span
           className={`inline-flex flex-wrap items-center gap-2 ${
             childRole ? "pl-4" : ""
@@ -1013,10 +1044,9 @@ function BacktestRunRow({
           ) : null}
         </span>
       </td>
-      <td className="px-4 py-3 text-ink-muted">
+      <td className="px-4 py-3 align-top text-ink-muted">
         {row.deskType === "dca" ? "DCA" : "Flex"}
       </td>
-      <td className="px-4 py-3 font-medium tabular-nums">{row.symbol}</td>
       <td className="px-4 py-3">
         {templateName && templateHref ? (
           <Link href={templateHref} className="text-ink hover:underline">

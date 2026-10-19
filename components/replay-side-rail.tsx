@@ -21,6 +21,7 @@ import {
   TableIconAction,
 } from "@/components/table-chrome";
 import { TemplateParametersButton } from "@/components/template-parameters-tip";
+import { TokenIcon } from "@/components/token-icon";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
 import { ClickGateNotice, useClickGate } from "@/components/click-gate-notice";
 import { useResearchGateAccess } from "@/components/research-gate-access";
@@ -496,9 +497,9 @@ function RelatedBody({
           <table className="w-full table-fixed text-left text-sm">
             <thead className={TABLE_THEAD_CLASS}>
               <tr>
-                <th className="w-[32%] px-3 py-2 font-medium">Name</th>
+                <th className="w-[34%] px-3 py-2 font-medium">Contract</th>
+                <th className="px-3 py-2 font-medium">Name</th>
                 <th className="px-3 py-2 font-medium">Type</th>
-                <th className="px-3 py-2 font-medium">Contract</th>
                 <th className="px-3 py-2 font-medium">Win rate</th>
                 <th className="px-3 py-2 font-medium">ROE</th>
                 <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
@@ -525,6 +526,33 @@ function RelatedBody({
   );
 }
 
+function relatedBaseCoin(symbol: string): string {
+  const upper = symbol.trim().toUpperCase();
+  if (upper.endsWith("USDT") || upper.endsWith("USDC")) {
+    return upper.slice(0, -4) || upper;
+  }
+  return upper;
+}
+
+function RelatedContractCell({ symbol }: { symbol: string }) {
+  const pair = symbol.trim();
+  if (!pair) {
+    return <span className="text-ink-faint">—</span>;
+  }
+  const baseCoin = relatedBaseCoin(pair);
+  return (
+    <span className="flex items-start gap-2">
+      <TokenIcon symbol={baseCoin} />
+      <span className="min-w-0">
+        <span className="block truncate font-medium text-ink">{baseCoin}</span>
+        <span className="mt-0.5 block truncate text-hint text-ink-muted">
+          {pair}
+        </span>
+      </span>
+    </span>
+  );
+}
+
 function PendingMark() {
   return (
     <span className="inline-flex shrink-0 items-center gap-1 text-xs text-warning">
@@ -537,9 +565,9 @@ function PendingMark() {
 function RelatedPendingRow() {
   return (
     <tr className="border-b border-line last:border-b-0">
+      <td className="px-3 py-2 text-ink-faint">—</td>
       <td className="px-3 py-2 text-ink">New backtest</td>
       <td className="px-3 py-2 text-ink-muted">Variation</td>
-      <td className="px-3 py-2 text-ink-faint">—</td>
       <td className="px-3 py-2 text-ink-faint">—</td>
       <td className="px-3 py-2 text-ink-faint">—</td>
       <td className={TABLE_ACTIONS_TD_CLASS}>
@@ -571,7 +599,10 @@ function RelatedRunRow({
         viewing ? "bg-surface-raised" : ""
       }`}
     >
-      <td className="px-3 py-2">
+      <td className="px-3 py-2 align-top">
+        <RelatedContractCell symbol={entry.symbol} />
+      </td>
+      <td className="px-3 py-2 align-top">
         <span className="flex min-w-0 items-center gap-1">
           <span className="min-w-0 flex-1 truncate text-ink" title={entry.name}>
             {entry.name}
@@ -584,11 +615,8 @@ function RelatedRunRow({
           <span className="mt-1 block text-xs text-danger">{entry.error}</span>
         ) : null}
       </td>
-      <td className="px-3 py-2 text-ink-muted">
+      <td className="px-3 py-2 align-top text-ink-muted">
         {entry.role === "comparable" ? "Comparable" : "Variation"}
-      </td>
-      <td className="px-3 py-2 font-medium tabular-nums">
-        {entry.symbol || "—"}
       </td>
       <td className="px-3 py-2 tabular-nums">{winRate}</td>
       <td className={`px-3 py-2 tabular-nums ${signedTone(entry.roePct)}`}>
