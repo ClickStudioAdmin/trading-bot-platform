@@ -334,7 +334,6 @@ function ParametersBody({
   const pendingToken = useRef<string | null>(null);
   const [modifying, setModifying] = useState(false);
   const clickGate = useClickGate();
-  const variant = run.id !== rootId;
   const seed = useMemo(() => {
     const next = backtestQueueSeedFromRun(run);
     return { ...next, comparables: [] as string[] };
@@ -347,7 +346,7 @@ function ParametersBody({
     toMs: run.toMs,
   });
 
-  const showKeep = variant && run.status === "done";
+  const showKeep = run.status === "done";
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
