@@ -332,8 +332,10 @@ export function deskBetaNotice(input: {
   if (availabilitySetting(input.cells, input.venueId, input.deskType, mode) !== "beta") {
     return null;
   }
-  const venue = getVenue(input.venueId)?.label ?? "This exchange";
-  return `${venue} ${MODE_LABEL[mode]} is in beta.`;
+  const desk = isVenueDeskType(input.deskType)
+    ? `${DESK_TYPE_LABEL[input.deskType]} Bots`
+    : "Bots";
+  return `${desk} are currently in Beta for ${MODE_LABEL[mode]} mode.`;
 }
 
 export function cellFor(
