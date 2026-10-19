@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AppCheck } from "@/components/app-check";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { PageHeading } from "@/components/page-heading";
 import { CopyDeskGuardsFields } from "@/components/copy-desk-guards-fields";
@@ -183,7 +182,7 @@ export default async function FuturesSettingsPage({
           </>
         ) : (
           session.account.copyOfAccountId
-            ? "This is a copy desk. Bind, sizing, reduce-only, max daily loss, and Close All live in one place. Pause or unfollow in the header. No ticket, bots, or webhooks."
+            ? "This is a copy desk. Bind, sizing, max daily loss, and Close All live in one place. Pause or unfollow in the header. No ticket, bots, or webhooks."
             : "This desk is ticket only. No automations or webhooks."
         )}{" "}
         Bind a matching key from this login.
@@ -261,7 +260,6 @@ export default async function FuturesSettingsPage({
                   ? ""
                   : String(followerSettings.sizeBookUsdt)
               }
-              defaultReduceOnly={settings.reduceOnly}
               defaultMaxDailyLossUsdt={
                 followerSettings.maxDailyLossUsdt == null
                   ? ""
@@ -308,58 +306,6 @@ export default async function FuturesSettingsPage({
                   defaultValue={settings.paperLeverage}
                 />
               )}
-              <label className="flex items-start gap-2 text-sm text-ink">
-                <AppCheck
-                  name="reduceOnly"
-                  defaultChecked={settings.reduceOnly}
-                />
-                <span>
-                  Reduce only
-                  <span className="mt-1 block text-hint text-ink-muted">
-                    Blocks Buy and Sell. Close still works.
-                  </span>
-                </span>
-              </label>
-              <div className="space-y-3 border-t border-line pt-4">
-                <p className="text-sm font-semibold text-ink">Risk caps</p>
-                <p className="text-hint text-ink-muted">
-                  Empty means no cap. Buy and Sell reject if they would breach.
-                  Close is never blocked.
-                </p>
-                <label className="block text-sm text-ink">
-                  Max value per symbol
-                  <span className="relative mt-1 block">
-                    <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-                      $
-                    </span>
-                    <GroupedNumberInput
-                      name="maxValuePerSymbol"
-                      defaultValue={
-                        settings.maxValuePerSymbol === null
-                          ? ""
-                          : String(settings.maxValuePerSymbol)
-                      }
-                      allowDecimal
-                      placeholder="No cap"
-                      ariaLabel="Max value per symbol"
-                      className="w-full rounded-control border border-line bg-canvas py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
-                    />
-                  </span>
-                </label>
-                <label className="block text-sm text-ink">
-                  Max open positions
-                  <GroupedNumberInput
-                    name="maxOpenPositions"
-                    defaultValue={
-                      settings.maxOpenPositions === null
-                        ? ""
-                        : String(settings.maxOpenPositions)
-                    }
-                    placeholder="No cap"
-                    className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
-                  />
-                </label>
-              </div>
             </>
           )}
         </DeskSettingsForm>
@@ -470,15 +416,15 @@ function ExchangeBindField({
         allowNone={!selected}
         sharedConnectionIds={sharedConnectionIds}
         allowSharedKeys={allowSharedKeys}
+        trailing={
+          selected ? (
+            <StrategyDetachControl
+              blocked={detachBlocked}
+              detachAction={detachFuturesConnection}
+            />
+          ) : null
+        }
       />
-      {selected ? (
-        <div className="mt-2">
-          <StrategyDetachControl
-            blocked={detachBlocked}
-            detachAction={detachFuturesConnection}
-          />
-        </div>
-      ) : null}
       {addConnection}
     </div>
   );

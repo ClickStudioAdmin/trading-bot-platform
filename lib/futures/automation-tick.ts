@@ -109,7 +109,6 @@ export async function runFuturesAutomationTick(input?: {
 
   const [
     { data: accountRows },
-    { data: settingsRows },
     { data: openRows },
     fetchedTickers,
   ] = await Promise.all([
@@ -117,11 +116,6 @@ export async function runFuturesAutomationTick(input?: {
       .from("trading_accounts")
       .select("id, user_id, mode, desk_type, venue, venue_environment, copy_of_account_id")
       .in("id", uniqueAccountIds),
-    supabase
-      .from("strategy_settings")
-      .select("account_id, reduce_only")
-      .eq("strategy_id", FUTURES_STRATEGY_ID)
-      .in("account_id", uniqueAccountIds),
     supabase
       .from("futures_positions")
       .select("*")
@@ -153,11 +147,6 @@ export async function runFuturesAutomationTick(input?: {
         },
       ] as const;
     }),
-  );
-  const reduceOnly = new Set(
-    (settingsRows ?? [])
-      .filter((row) => Boolean((row as { reduce_only?: unknown }).reduce_only))
-      .map((row) => String((row as { account_id: string }).account_id)),
   );
   const opens = (openRows ?? []).map((row) =>
     parseFuturesPositionRow(row as Record<string, unknown>),
@@ -240,7 +229,7 @@ export async function runFuturesAutomationTick(input?: {
         wasTrue: legRule.conditionTrue,
         action: legRule.action,
         mode: rule.mode,
-        bookReduceOnly: reduceOnly.has(accountId),
+        bookReduceOnly: false,
         skipIfOpen: legRule.skipIfOpen,
         hasOpenOnSide: Boolean(openOnSide),
       });
@@ -381,14 +370,8 @@ export async function fireWebhookAutomationEntries(input: {
   if (matchedRows.length === 0) {
     return { fired: 0 };
   }
-  const [{ data: settingsRow }, { data: openRows }, { data: accountRow }] =
+  const [{ data: openRows }, { data: accountRow }] =
     await Promise.all([
-      supabase
-        .from("strategy_settings")
-        .select("reduce_only")
-        .eq("strategy_id", FUTURES_STRATEGY_ID)
-        .eq("account_id", input.accountId)
-        .maybeSingle(),
       supabase
         .from("futures_positions")
         .select("*")
@@ -400,9 +383,7 @@ export async function fireWebhookAutomationEntries(input: {
         .eq("id", input.accountId)
         .maybeSingle(),
     ]);
-  const bookReduceOnly = Boolean(
-    (settingsRow as { reduce_only?: unknown } | null)?.reduce_only,
-  );
+  const bookReduceOnly = false;
   const venue = parseStoredVenueId(
     (accountRow as { venue?: unknown } | null)?.venue,
   );

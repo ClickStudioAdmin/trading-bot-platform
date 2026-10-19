@@ -19,10 +19,6 @@ const SETTINGS_SELECT_WITHOUT_CONNECTION =
 const SETTINGS_SELECT_FALLBACK =
   "account_id, user_id, enabled, usable_book_share";
 
-export function parseReduceOnly(value: unknown): boolean {
-  return value === "on" || value === true || value === "true";
-}
-
 export async function selectPaperEngineSettings(
   supabase: SupabaseClient,
   filter?: { accountId?: string; accountIds?: string[] },
@@ -79,7 +75,7 @@ export async function loadEngineSettings(): Promise<EngineSettings> {
         share !== null && share > 0 && share <= 1
           ? share
           : DEFAULT_USABLE_BOOK_SHARE,
-      reduceOnly: Boolean(data.reduce_only),
+      reduceOnly: false,
       connectionId: connectionId || null,
     };
   } catch {

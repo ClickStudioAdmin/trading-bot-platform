@@ -380,7 +380,7 @@ function CopyFollowModal({
                 </p>
               )}
             </div>
-            <CopyDeskGuardsFields paper={mode === "paper"} showReduceOnly={false} />
+            <CopyDeskGuardsFields paper={mode === "paper"} />
           </div>
           <div className="space-y-3 border-t border-line pt-4">
             <PendingSubmitButton

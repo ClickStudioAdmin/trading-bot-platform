@@ -268,9 +268,6 @@ export async function HyperliquidFuturesPositions({
               trailing stop attach to that order. Market or Limit close is on
               each open row. Close All sits above the table. Size is coin
               quantity or USDC value.
-              {settings.reduceOnly
-                ? " Reduce only is on — Buy and Sell are blocked."
-                : ""}
             </p>
             <div className="mt-3 rounded-card border border-line bg-surface p-5">
               <form action={submitFuturesTrade} className="block">

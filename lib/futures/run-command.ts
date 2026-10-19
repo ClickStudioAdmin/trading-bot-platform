@@ -39,8 +39,8 @@ import {
   reconcileOpenFuturesBooks,
 } from "./reconcile";
 import {
+  armDcaPlaybooksStopAdding,
   armFuturesAutomationReduceOnly,
-  armFuturesReduceOnly,
   loadFuturesSettings,
 } from "./settings";
 import {
@@ -51,7 +51,6 @@ import {
 } from "./venue-close";
 import { resolveWriteLeverage } from "./venue-risk-load";
 import { COPY_RULE_NAME } from "@/lib/copy/decide";
-import { checkFuturesRiskCaps } from "./risk";
 import {
   futuresOriginLog,
   withFuturesOrigin,
@@ -500,7 +499,7 @@ async function runPlace(
       const decided = decideFuturesAction({
         action: "flatten",
         open: { side: row.side, qty: row.qty },
-        reduceOnly: settings.reduceOnly,
+        reduceOnly: false,
       });
       if (!decided.ok || decided.kind !== "flatten") {
         return fail(
@@ -802,7 +801,7 @@ async function runPlace(
   const decided = decideFuturesAction({
     action: actionParsed.action,
     open: sameSide ? { side: sameSide.side, qty: sameSide.qty } : null,
-    reduceOnly: settings.reduceOnly,
+    reduceOnly: false,
   });
   if (!decided.ok) {
     return fail(decided.error);
@@ -903,22 +902,6 @@ async function runPlace(
     if (!checked.ok) {
       return fail(checked.error);
     }
-  }
-
-  const working = await loadOpenFuturesWorking(actorScope(actor));
-  const risk = checkFuturesRiskCaps({
-    caps:
-      ruleName === COPY_RULE_NAME
-        ? { maxValuePerSymbol: null, maxOpenPositions: null }
-        : settings,
-    symbol,
-    side: decided.positionSide,
-    orderValue: qtyNumber * sizePrice,
-    opens,
-    working,
-  });
-  if (!risk.ok) {
-    return fail(risk.error);
   }
 
   if (limit) {
@@ -1759,20 +1742,19 @@ async function runCloseAll(
   }
 
   if (setReduceOnly) {
-    const armed = await armFuturesReduceOnly({
-      supabase,
-      userId: actor.userId,
-      accountId: actor.accountId,
-    });
-    if (!armed.ok) {
-      return fail(armed.error);
-    }
     const automationArmed = await armFuturesAutomationReduceOnly({
       supabase,
       accountId: actor.accountId,
     });
     if (!automationArmed.ok) {
       return fail(automationArmed.error);
+    }
+    const dcaArmed = await armDcaPlaybooksStopAdding({
+      supabase,
+      accountId: actor.accountId,
+    });
+    if (!dcaArmed.ok) {
+      return fail(dcaArmed.error);
     }
     await writeEventLog({
       scope: "strategy",

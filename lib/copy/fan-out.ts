@@ -473,7 +473,7 @@ async function fanOutToFollower(input: {
     const decision = decideCopyFanOut({
       paused: copySettings.paused,
       shareActive: input.shareActive,
-      reduceOnly: futuresSettings.reduceOnly,
+      reduceOnly: false,
       liveUnbound,
       fill,
       followerCreatedAtMs: input.follower.createdAtMs,
@@ -737,7 +737,7 @@ async function syncCopyWorkingOrders(input: {
     const decision = decideCopyFanOut({
       paused: input.copySettings.paused,
       shareActive: input.shareActive,
-      reduceOnly: input.futuresSettings.reduceOnly,
+      reduceOnly: false,
       liveUnbound: input.liveUnbound,
       fill,
       followerCreatedAtMs: 0,

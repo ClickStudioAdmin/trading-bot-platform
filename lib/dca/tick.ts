@@ -50,7 +50,6 @@ import type { FuturesWorkingOrder } from "@/lib/futures/working";
 import { FUTURES_LIVE_POSITION_STATUSES } from "@/lib/futures/pending-close";
 import type { FuturesSide } from "@/lib/futures/model";
 import { tickerTriggerPrices } from "@/lib/futures/tpsl";
-import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   dcaArmTriggerForSide,
@@ -164,7 +163,6 @@ export async function runDcaPlaybookTick(input?: {
   const accountIds = [...new Set(playbooks.map((row) => row.accountId))];
   const [
     { data: accountRows },
-    { data: settingsRows },
     { data: openRows },
     fetchedTickers,
   ] = await Promise.all([
@@ -172,11 +170,6 @@ export async function runDcaPlaybookTick(input?: {
       .from("trading_accounts")
       .select("id, user_id, mode, desk_type, venue, venue_environment, copy_of_account_id")
       .in("id", accountIds),
-    supabase
-      .from("strategy_settings")
-      .select("account_id, reduce_only")
-      .eq("strategy_id", FUTURES_STRATEGY_ID)
-      .in("account_id", accountIds),
     supabase
       .from("futures_positions")
       .select("*")
@@ -207,11 +200,6 @@ export async function runDcaPlaybookTick(input?: {
         },
       ] as const;
     }),
-  );
-  const reduceOnly = new Set(
-    (settingsRows ?? [])
-      .filter((row) => Boolean((row as { reduce_only?: unknown }).reduce_only))
-      .map((row) => String((row as { account_id: string }).account_id)),
   );
   const opens = (openRows ?? []).map((row) =>
     parseFuturesPositionRow(row as Record<string, unknown>),
@@ -976,7 +964,7 @@ export async function runDcaPlaybookTick(input?: {
       const decision = decideDcaTick({
         status: leg.status,
         side,
-        reduceOnly: reduceOnly.has(playbook.accountId),
+        reduceOnly: false,
         lastPrice: prices.last,
         mark: prices.mark,
         lastClipPrice: leg.lastClipPrice,

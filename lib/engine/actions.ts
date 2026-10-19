@@ -27,7 +27,6 @@ import {
 } from "@/lib/accounts/model";
 import { parseAutomationMode, type PaperEngineLayer } from "@/lib/engine/decide";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
-import { parseReduceOnly } from "@/lib/engine/settings";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { parseUsableBookShare } from "@/lib/opportunities/capacity";
 import { writeEventLog } from "@/lib/logs/write";
@@ -654,8 +653,6 @@ export async function savePaperSettings(formData: FormData) {
   if (typeof parsed !== "number") {
     settingsFail(account.id, parsed.error);
   }
-  const reduceOnly = parseReduceOnly(formData.get("reduceOnly"));
-
   const supabase = createServiceClient();
   if (!supabase) {
     settingsFail(account.id, "Auth is not configured.");
@@ -718,7 +715,6 @@ export async function savePaperSettings(formData: FormData) {
     user_id: user.id,
     account_id: account.id,
     usable_book_share: parsed,
-    reduce_only: reduceOnly,
     ...(accountCanHoldConnections(account.mode) && bindSubmitted
       ? { exchange_connection_id: connectionId }
       : {}),
@@ -758,7 +754,6 @@ export async function savePaperSettings(formData: FormData) {
     strategy: "cash-and-carry",
     data: {
       usableBookShare: parsed,
-      reduceOnly,
       ...(bindSubmitted ? { exchangeConnectionId: connectionId } : {}),
     },
   });
