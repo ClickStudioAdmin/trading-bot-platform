@@ -1,8 +1,11 @@
 import { recipeParamRows } from "@/lib/backtest/library";
 import {
   backtestReplayHref,
+  backtestRunTitle,
   isoDateUtc,
+  splitBacktestFamily,
   type BacktestRecipe,
+  type BacktestRun,
 } from "@/lib/backtest/model";
 
 type VariantSnapshot = {
@@ -84,6 +87,73 @@ export type ReplayVariantRow = {
   error: string | null;
   createdAtMs: number;
 };
+
+export type ReplayRelatedRole = "comparable" | "variation";
+
+export type ReplayRelatedEntry = {
+  id: string;
+  role: ReplayRelatedRole;
+  name: string;
+  symbol: string;
+  status: string;
+  error: string | null;
+  createdAtMs: number;
+};
+
+function relatedEntry(
+  row: BacktestRun,
+  role: ReplayRelatedRole,
+  live: ReplayVariantRow | undefined,
+): ReplayRelatedEntry {
+  return {
+    id: row.id,
+    role,
+    name: live?.name || backtestRunTitle(row),
+    symbol: row.symbol,
+    status: live?.status ?? row.status,
+    error: live ? live.error : row.error,
+    createdAtMs: live?.createdAtMs ?? row.createdAtMs,
+  };
+}
+
+function byCreated(left: ReplayRelatedEntry, right: ReplayRelatedEntry): number {
+  return left.createdAtMs - right.createdAtMs || left.id.localeCompare(right.id);
+}
+
+/** Comparables, then variations, oldest first. A polled row with no family record is a variation. */
+export function replayRelatedList(input: {
+  root: BacktestRun;
+  family: readonly BacktestRun[];
+  live: readonly ReplayVariantRow[];
+}): { comparables: ReplayRelatedEntry[]; variations: ReplayRelatedEntry[] } {
+  const liveById = new Map(input.live.map((row) => [row.id, row]));
+  const split = splitBacktestFamily(input.root, input.family);
+  const known = new Set(input.family.map((row) => row.id));
+  const extras = input.live
+    .filter((row) => row.id !== input.root.id && !known.has(row.id))
+    .map(
+      (row): ReplayRelatedEntry => ({
+        id: row.id,
+        role: "variation",
+        name: row.name,
+        symbol: "",
+        status: row.status,
+        error: row.error,
+        createdAtMs: row.createdAtMs,
+      }),
+    );
+  return {
+    comparables: split.comparables
+      .map((row) => relatedEntry(row, "comparable", liveById.get(row.id)))
+      .sort(byCreated),
+    variations: [
+      ...split.variations.map((row) =>
+        relatedEntry(row, "variation", liveById.get(row.id)),
+      ),
+      ...extras,
+    ].sort(byCreated),
+  };
+}
 
 export function mergeReplayVariantRows(
   family: ReplayVariantRow[],
