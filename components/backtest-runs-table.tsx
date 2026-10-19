@@ -725,14 +725,14 @@ export function BacktestRunsTable({
                     returnTo={returnTo}
                     selected={selected.has(entry.run.id)}
                     onToggle={() => toggleRow(entry.run.id)}
-                    onReplay={(runId, anchor) => {
+                    onReplay={(runId, anchor, event) => {
                       const denial = gate ? replayClickDenial(gate) : null;
                       if (denial) {
+                        event.preventDefault();
                         clickGate.show(denial, anchor);
                         return;
                       }
                       clickGate.hide();
-                      router.push(`/account/backtests/${runId}/replay`);
                     }}
                   />
                 );
@@ -781,7 +781,11 @@ function BacktestRunRow({
   returnTo: string;
   selected: boolean;
   onToggle: () => void;
-  onReplay?: (runId: string, anchor: HTMLElement) => void;
+  onReplay?: (
+    runId: string,
+    anchor: HTMLElement,
+    event: { preventDefault: () => void },
+  ) => void;
 }) {
   const href =
     row.status === "draft"
@@ -938,9 +942,15 @@ function BacktestRunRow({
         <TableActions>
           {row.status === "done" ? (
             <TableIconAction
+              href={`/account/backtests/${row.id}/replay`}
+              target="_blank"
+              rel="noreferrer"
+              prefetch={false}
               label="Replay"
-              detail="Open this run on the replay page."
-              onClick={(event) => onReplay?.(row.id, event.currentTarget)}
+              detail="Open this run on the replay page in a new tab."
+              onClick={(event) =>
+                onReplay?.(row.id, event.currentTarget, event)
+              }
             >
               <IconPlay
                 {...TABLE_BTN_ICON}
