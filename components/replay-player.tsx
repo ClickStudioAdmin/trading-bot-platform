@@ -2745,6 +2745,7 @@ export function ReplayPlayer({
           <ReplayRailBody
             panel={rail}
             run={run}
+            family={family}
             rootId={rootId}
             positions={positions}
             allowKeep={allowKeep}

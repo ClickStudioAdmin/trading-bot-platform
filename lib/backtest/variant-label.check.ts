@@ -7,8 +7,10 @@ import {
   completedBacktestVariantIds,
   mergeReplayVariantRows,
   replayHrefAfterVariantDelete,
+  replayRelatedList,
   sameReplayVariantRows,
 } from "./variant-label";
+import type { BacktestRun } from "./model";
 
 function recipe(stop: string) {
   const form = new FormData();
@@ -176,6 +178,91 @@ assert.equal(
     rootId: "root",
   }),
   null,
+);
+
+const relatedRecipe = {
+  kind: "dca",
+  name: "ETH DCA",
+  symbol: "ETHUSDT",
+} as import("./model").BacktestRecipe;
+const relatedRoot = {
+  id: "root",
+  parentRunId: null,
+  symbol: "ETHUSDT",
+  recipe: relatedRecipe,
+  name: "ETH DCA",
+  status: "done",
+  error: null,
+  createdAtMs: 1,
+  fromMs: 1,
+  toMs: 2,
+  startingUsdt: 1000,
+  leverage: 5,
+  venue: "bybit",
+  interval: "15",
+  feePreset: "vip0_taker",
+} as unknown as BacktestRun;
+const relatedComparable = {
+  ...relatedRoot,
+  id: "comp",
+  parentRunId: "root",
+  symbol: "SOLUSDT",
+  recipe: { ...relatedRecipe, symbol: "SOLUSDT" },
+  name: "ETH DCA",
+  status: "done",
+  createdAtMs: 30,
+} as BacktestRun;
+const olderVariation = {
+  ...relatedRoot,
+  id: "var-old",
+  parentRunId: "root",
+  name: "ETH DCA tight",
+  recipe: { ...relatedRecipe, name: "ETH DCA tight" },
+  leverage: 3,
+  status: "queued",
+  createdAtMs: 10,
+} as BacktestRun;
+const newerVariation = {
+  ...relatedRoot,
+  id: "var-new",
+  parentRunId: "root",
+  name: "ETH DCA wide",
+  recipe: { ...relatedRecipe, name: "ETH DCA wide" },
+  leverage: 8,
+  status: "done",
+  createdAtMs: 20,
+} as BacktestRun;
+const related = replayRelatedList({
+  root: relatedRoot,
+  family: [relatedRoot, newerVariation, relatedComparable, olderVariation],
+  live: [
+    {
+      id: "var-old",
+      status: "running",
+      name: "ETH DCA tight",
+      error: null,
+      createdAtMs: 10,
+    },
+    {
+      id: "fresh",
+      status: "queued",
+      name: "ETH DCA fresh",
+      error: null,
+      createdAtMs: 15,
+    },
+  ],
+});
+assert.deepEqual(
+  related.comparables.map((row) => [row.id, row.symbol, row.status]),
+  [["comp", "SOLUSDT", "done"]],
+);
+assert.deepEqual(
+  related.variations.map((row) => [row.id, row.status, row.name]),
+  [
+    ["var-old", "running", "ETH DCA tight"],
+    ["fresh", "queued", "ETH DCA fresh"],
+    ["var-new", "done", "ETH DCA wide"],
+  ],
 );
 
 console.log("backtest variant label checks passed");

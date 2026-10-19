@@ -238,7 +238,7 @@ export const LUCIDE_ICONS = [
     id: "corner-down-right",
     name: "Nested row",
     lucide: "CornerDownRight",
-    usedIn: "Saved backtests, comparable and variation rows",
+    usedIn: "Saved backtests, comparable and variation rows, replay rail",
     Icon: CornerDownRight,
   },
   {

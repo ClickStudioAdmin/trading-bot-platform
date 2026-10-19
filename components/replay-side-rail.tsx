@@ -28,6 +28,7 @@ import {
   IconActivity,
   IconChevronDown,
   IconClose,
+  IconCornerDownRight,
   IconLoader,
   IconPerformance,
   IconPlay,
@@ -50,7 +51,9 @@ import {
   completedBacktestVariantIds,
   mergeReplayVariantRows,
   replayHrefAfterVariantDelete,
+  replayRelatedList,
   sameReplayVariantRows,
+  type ReplayRelatedEntry,
   type ReplayVariantRow,
 } from "@/lib/backtest/variant-label";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
@@ -167,11 +170,17 @@ export function useOptimisticVariants(): OptimisticVariant[] {
   );
 }
 
-export type ReplayRailPanel = "positions" | "parameters" | "statistics" | "closed";
+export type ReplayRailPanel =
+  | "related"
+  | "positions"
+  | "parameters"
+  | "statistics"
+  | "closed";
 
 function railSnapshot(): ReplayRailPanel {
   const raw = sessionStorage.getItem(RAIL_KEY);
   if (
+    raw === "related" ||
     raw === "positions" ||
     raw === "parameters" ||
     raw === "statistics" ||
@@ -216,10 +225,16 @@ export function ReplayRailNav({
   return (
     <nav aria-label="Replay panels" className={className}>
       <RailButton
+        label="Comparables and variations"
+        pressed={panel === "related"}
+        onClick={() => selectReplayRail("related", panel)}
+        badge={runningCount}
+        icon={<IconCornerDownRight className="size-5" />}
+      />
+      <RailButton
         label="Parameters"
         pressed={panel === "parameters"}
         onClick={() => selectReplayRail("parameters", panel)}
-        badge={runningCount}
         icon={<IconActivity className="size-5" />}
       />
       <RailButton
@@ -241,6 +256,7 @@ export function ReplayRailNav({
 export function ReplayRailBody({
   panel,
   run,
+  family,
   rootId,
   positions,
   allowKeep,
@@ -250,6 +266,7 @@ export function ReplayRailBody({
 }: {
   panel: Exclude<ReplayRailPanel, "closed">;
   run: BacktestRun;
+  family: BacktestRun[];
   rootId: string;
   positions: ReactNode;
   allowKeep: boolean;
@@ -257,6 +274,9 @@ export function ReplayRailBody({
   folders: AutomationTemplateSet[];
   applyDesks: Array<{ id: string; name: string }>;
 }) {
+  if (panel === "related") {
+    return <RelatedBody run={run} family={family} rootId={rootId} />;
+  }
   if (panel === "positions") {
     return positions;
   }
@@ -415,6 +435,166 @@ function ParametersBody({
         </>
       )}
     </div>
+  );
+}
+
+function RelatedBody({
+  run,
+  family,
+  rootId,
+}: {
+  run: BacktestRun;
+  family: BacktestRun[];
+  rootId: string;
+}) {
+  const rows = useReplayVariantRows(rootId, family);
+  const optimistic = useOptimisticVariants();
+  const root = family.find((row) => row.id === rootId) ?? run;
+  const list = useMemo(
+    () => replayRelatedList({ root, family, live: rows }),
+    [family, root, rows],
+  );
+  const known = new Set(rows.map((row) => row.id));
+  const waiting = optimistic.filter(
+    (row) => row.runId == null || !known.has(row.runId),
+  );
+  const empty =
+    list.comparables.length === 0 &&
+    list.variations.length === 0 &&
+    waiting.length === 0;
+
+  return (
+    <div className="h-full min-h-0 flex-1 overflow-auto pr-3">
+      <h2 className="mb-3 text-lg font-semibold">Comparables and variations</h2>
+      {empty ? (
+        <p className="text-sm text-ink-muted">No comparables or variations yet.</p>
+      ) : (
+        <div className="space-y-5">
+          {list.comparables.length > 0 ? (
+            <RelatedSection title="Comparables">
+              {list.comparables.map((entry) => (
+                <RelatedRunRow
+                  key={entry.id}
+                  entry={entry}
+                  viewing={entry.id === run.id}
+                  symbol={entry.symbol}
+                />
+              ))}
+            </RelatedSection>
+          ) : null}
+          {list.variations.length > 0 || waiting.length > 0 ? (
+            <RelatedSection title="Variations">
+              {waiting.map((row) => (
+                <li key={row.token} className="px-3 py-2">
+                  <span className="flex items-center justify-between gap-2 text-sm text-ink">
+                    New backtest
+                    <PendingMark />
+                  </span>
+                </li>
+              ))}
+              {list.variations.map((entry) => (
+                <RelatedRunRow
+                  key={entry.id}
+                  entry={entry}
+                  viewing={entry.id === run.id}
+                />
+              ))}
+            </RelatedSection>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RelatedSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section>
+      <h3 className="mb-2 text-sm font-semibold text-ink-muted">{title}</h3>
+      <ul className="divide-y divide-line overflow-hidden rounded-card border border-line">
+        {children}
+      </ul>
+    </section>
+  );
+}
+
+function PendingMark() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 text-xs text-warning">
+      <IconLoader className="size-3.5 animate-spin" />
+      Pending
+    </span>
+  );
+}
+
+function RelatedRunRow({
+  entry,
+  viewing,
+  symbol,
+}: {
+  entry: ReplayRelatedEntry;
+  viewing: boolean;
+  symbol?: string;
+}) {
+  const pending = entry.status === "queued" || entry.status === "running";
+  const done = entry.status === "done";
+  const body = (
+    <>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm text-ink" title={entry.name}>
+          {entry.name}
+        </span>
+        {symbol ? (
+          <span className="block truncate text-xs text-ink-muted">{symbol}</span>
+        ) : null}
+        {entry.status === "failed" && entry.error ? (
+          <span className="mt-1 block text-xs text-danger">{entry.error}</span>
+        ) : null}
+      </span>
+      {pending ? (
+        <PendingMark />
+      ) : !done ? (
+        <span className="shrink-0 text-xs capitalize text-danger">
+          {entry.status}
+        </span>
+      ) : null}
+    </>
+  );
+  if (!done) {
+    return <li className="flex items-center gap-2 px-3 py-2">{body}</li>;
+  }
+  return (
+    <li className={viewing ? "bg-surface-raised" : ""}>
+      <a
+        href={backtestReplayHref(entry.id)}
+        aria-current={viewing ? "page" : undefined}
+        onClick={(event) => {
+          if (
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+          ) {
+            return;
+          }
+          event.preventDefault();
+          if (viewing) {
+            return;
+          }
+          window.location.assign(backtestReplayHref(entry.id));
+        }}
+        className="flex items-center gap-2 px-3 py-2 hover:bg-surface-raised"
+      >
+        {body}
+      </a>
+    </li>
   );
 }
 
