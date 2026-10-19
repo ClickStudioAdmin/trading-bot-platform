@@ -256,11 +256,13 @@ export async function HyperliquidFuturesPositions({
           venue="hyperliquid"
           environment={session?.account.venueEnvironment}
         >
+        {!showTicket || bots.length > 0 || botReturn.backHref ? (
         <section>
         <DeskReturnHeading
           title={botReturn.titleFor("Positions Snapshot")}
           backHref={botReturn.backHref}
           className="mb-3"
+          showTitle={!showTicket}
           meta={<FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />}
           actions={
             <DeskBlotterScopeSelect
@@ -272,6 +274,7 @@ export async function HyperliquidFuturesPositions({
           }
         />
         </section>
+        ) : null}
         {showTicket ? (
           <ManualTradeWorkspace
             venue="hyperliquid"
