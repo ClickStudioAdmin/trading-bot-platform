@@ -464,6 +464,29 @@ export function replayIndicatorCatalog(recipe: BacktestRecipe): ReplayIndicatorC
   }));
 }
 
+/** Manual desk has no strategy row, so every catalog indicator can be turned on. */
+const DESK_REFERENCE_RECIPE = {
+  kind: "dca",
+  startKind: "price",
+} as BacktestRecipe;
+
+export function deskIndicatorCatalog(): ReplayIndicatorChoice[] {
+  return replayIndicatorCatalog(DESK_REFERENCE_RECIPE);
+}
+
+export function deskChartSeries(
+  candles: CandleBar[],
+  references: readonly string[] = [],
+  referenceInputs: ReplayReferenceInputs = {},
+): ReplayChartSeries {
+  return replayChartSeries(
+    DESK_REFERENCE_RECIPE,
+    candles,
+    references,
+    referenceInputs,
+  );
+}
+
 const LENGTH_RANGE = {
   min: DCA_INDICATOR_PERIOD_MIN,
   max: DCA_INDICATOR_PERIOD_MAX,

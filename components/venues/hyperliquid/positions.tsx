@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { LiveTickerScope } from "@/components/live-ticker";
 import { FuturesOrderTicket } from "@/components/futures-order-ticket";
+import { ManualTradeWorkspace } from "@/components/manual-trade-workspace";
 import {
   DeskBlotterFilters,
   DeskBlotterScopeSelect,
@@ -255,19 +256,19 @@ export async function HyperliquidFuturesPositions({
         <FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />
         </section>
         {showTicket ? (
+          <ManualTradeWorkspace
+            venue="hyperliquid"
+            environment={env}
+            defaultSymbol="BTC"
+          >
           <section>
             <h2 className="text-lg font-semibold tracking-tight">
               Place an order
             </h2>
             <p className="text-sm text-ink-muted">
-              USDC perpetual. One open side per coin. Buy opens or adds a long,
-              or reduces a short. Sell opens or adds a short, or reduces a
-              long. Size above the open opposite side closes that row; open the
-              other side after it is flat. Market fills now. Limit rests until
-              it matches — watch it under Open orders. Optional TP/SL and
-              trailing stop attach to that order. Market or Limit close is on
-              each open row. Close All sits above the table. Size is coin
-              quantity or USDC value.
+              USDC perpetual. One open side per coin. Buy opens or adds a
+              long, or reduces a short. Sell opens or adds a short, or reduces
+              a long. Market fills now. Limit rests under Open orders.
               {settings.reduceOnly
                 ? " Reduce only is on — Buy and Sell are blocked."
                 : ""}
@@ -279,6 +280,7 @@ export async function HyperliquidFuturesPositions({
                   options={pairs}
                   lastPrices={lastPrices}
                   defaultSymbol="BTC"
+                  stacked
                   actions={
                     <>
                       <PendingSubmitButton
@@ -286,7 +288,7 @@ export async function HyperliquidFuturesPositions({
                         successKey="futures-buy"
                         name="action"
                         value="buy"
-                        className="rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas"
+                        className="w-full rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas"
                       >
                         Buy
                       </PendingSubmitButton>
@@ -295,7 +297,7 @@ export async function HyperliquidFuturesPositions({
                         successKey="futures-sell"
                         name="action"
                         value="sell"
-                        className="rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink"
+                        className="w-full rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink"
                       >
                         Sell
                       </PendingSubmitButton>
@@ -329,6 +331,7 @@ export async function HyperliquidFuturesPositions({
               ) : null}
             </div>
           </section>
+          </ManualTradeWorkspace>
         ) : null}
 
           <OpenFuturesTrades

@@ -1,5 +1,7 @@
 import { ContainerLoading } from "@/components/container-loading";
 import { TableCard } from "@/components/table-chrome";
+import { deskAllowsManualPerpTicket } from "@/lib/accounts/model";
+import { getSessionContext } from "@/lib/auth/session";
 
 function LoadingStat({ label }: { label: string }) {
   return (
@@ -14,7 +16,9 @@ function LoadingStat({ label }: { label: string }) {
   );
 }
 
-export default function FuturesPositionsLoading() {
+export default async function FuturesPositionsLoading() {
+  const session = await getSessionContext();
+  const manual = session ? deskAllowsManualPerpTicket(session.account) : true;
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <div className="space-y-6">
@@ -26,6 +30,23 @@ export default function FuturesPositionsLoading() {
           <LoadingStat label="Unrealized P&L" />
           <LoadingStat label="Open exposure" />
         </section>
+        {manual ? (
+          <div className="@container">
+            <div className="grid items-start gap-4 @min-[960px]:grid-cols-[minmax(0,1fr)_22.5rem]">
+              <div className="flex h-[28rem] items-center justify-center rounded-card border border-line bg-canvas @min-[960px]:h-[40rem]">
+                <ContainerLoading label="Loading chart" />
+              </div>
+              <section>
+                <h2 className="text-lg font-semibold tracking-tight">
+                  Place an order
+                </h2>
+                <div className="mt-3 rounded-card border border-line bg-surface p-5">
+                  <ContainerLoading label="Loading order ticket" />
+                </div>
+              </section>
+            </div>
+          </div>
+        ) : null}
         <h2 className="mb-3 text-lg font-semibold tracking-tight">
           Current Positions
         </h2>

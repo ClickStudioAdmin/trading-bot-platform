@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { FuturesFlash } from "@/components/futures-flash";
 import { LiveTickerScope } from "@/components/live-ticker";
 import { FuturesOrderTicket } from "@/components/futures-order-ticket";
+import { ManualTradeWorkspace } from "@/components/manual-trade-workspace";
 import {
   DeskBlotterFilters,
   DeskBlotterScopeSelect,
@@ -301,21 +302,18 @@ export default async function FuturesPositionsPage({
         <FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />
         </section>
         {showTicket ? (
+          <ManualTradeWorkspace
+            venue="bybit"
+            environment={session?.account.venueEnvironment ?? null}
+            defaultSymbol="BTCUSDT"
+          >
           <section>
             <h2 className="text-lg font-semibold tracking-tight">
               Place an order
             </h2>
             <p className="text-sm text-ink-muted">
               USDT linear perpetual. Buy opens or adds a long. Sell opens or
-              adds a short. Both sides can be open on the same contract. Market
-              fills now. Limit rests until it matches — watch it under Open
-              orders. Optional TP/SL and trailing stop attach to that order.
-              Add or edit stops on an open row. Market or Limit close is on
-              each open row; both set qty (full row or a slice).               Close All and
-              Close All & Cancel All Open Orders sit above the table when
-              there are positions. Cancel All Open Orders sits on Open
-              orders only when orders are listed. Size is token quantity or
-              USDT value (mark for market, limit price for limit).
+              adds a short. Market fills now. Limit rests under Open orders.
               {settings.reduceOnly
                 ? " Reduce only is on — Buy and Sell are blocked."
                 : ""}
@@ -327,6 +325,7 @@ export default async function FuturesPositionsPage({
                   options={pairs}
                   lastPrices={lastPrices}
                   agreementGate={agreementGate}
+                  stacked
                   actions={
                     <>
                       <PendingSubmitButton
@@ -334,7 +333,7 @@ export default async function FuturesPositionsPage({
                         successKey="futures-buy"
                         name="action"
                         value="buy"
-                        className="rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas"
+                        className="w-full rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas"
                       >
                         Buy
                       </PendingSubmitButton>
@@ -343,7 +342,7 @@ export default async function FuturesPositionsPage({
                         successKey="futures-sell"
                         name="action"
                         value="sell"
-                        className="rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink"
+                        className="w-full rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink"
                       >
                         Sell
                       </PendingSubmitButton>
@@ -374,6 +373,7 @@ export default async function FuturesPositionsPage({
               ) : null}
             </div>
           </section>
+          </ManualTradeWorkspace>
         ) : null}
 
         <OpenFuturesTrades

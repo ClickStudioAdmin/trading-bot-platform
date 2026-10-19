@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useReportDeskChartSymbol } from "@/components/desk-chart-symbol";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { FuturesTpslFields } from "@/components/futures-tpsl";
 import { FuturesTrailingFields } from "@/components/futures-trailing";
@@ -25,6 +26,7 @@ export function FuturesOrderTicket({
   includeStops = true,
   defaultSymbol = "BTCUSDT",
   agreementGate = CLOSED_AGREEMENT_GATE,
+  stacked = false,
 }: {
   options: LinearPerp[];
   lastPrices?: Record<string, number>;
@@ -32,10 +34,15 @@ export function FuturesOrderTicket({
   includeStops?: boolean;
   defaultSymbol?: string;
   agreementGate?: BybitAgreementGate;
+  stacked?: boolean;
 }) {
   const [symbol, setSymbol] = useState(() =>
     firstOpenPerp(options, agreementGate, defaultSymbol),
   );
+  const reportSymbol = useReportDeskChartSymbol();
+  useEffect(() => {
+    reportSymbol?.(symbol);
+  }, [reportSymbol, symbol]);
   const [unit, setUnit] = useState<"qty" | "usdt">("usdt");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [size, setSize] = useState("");
@@ -83,12 +90,14 @@ export function FuturesOrderTicket({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start gap-3">
+      <div className={stacked ? "grid gap-3" : "flex flex-wrap items-start gap-3"}>
         <div
           className={
-            orderType === "limit"
-              ? "grid min-w-0 flex-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(9rem,1.1fr)_auto_minmax(10rem,1.2fr)_minmax(8rem,0.95fr)]"
-              : "grid min-w-0 flex-1 items-start gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1.1fr)_auto_minmax(13rem,1.2fr)]"
+            stacked
+              ? "grid gap-3"
+              : orderType === "limit"
+                ? "grid min-w-0 flex-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(9rem,1.1fr)_auto_minmax(10rem,1.2fr)_minmax(8rem,0.95fr)]"
+                : "grid min-w-0 flex-1 items-start gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1.1fr)_auto_minmax(13rem,1.2fr)]"
           }
         >
           <div className="block text-sm text-ink">
@@ -199,13 +208,19 @@ export function FuturesOrderTicket({
           ) : null}
         </div>
         {actions ? (
-          <div className="ml-auto text-sm">
-            <span className="invisible select-none" aria-hidden>
-              Order
-            </span>
+          <div className={stacked ? "text-sm" : "ml-auto text-sm"}>
+            {stacked ? null : (
+              <span className="invisible select-none" aria-hidden>
+                Order
+              </span>
+            )}
             <fieldset
               disabled={Boolean(ticketError)}
-              className="mt-1 flex flex-wrap gap-2 border-0 p-0 disabled:opacity-40"
+              className={
+                stacked
+                  ? "grid grid-cols-2 gap-2 border-0 p-0 disabled:opacity-40"
+                  : "mt-1 flex flex-wrap gap-2 border-0 p-0 disabled:opacity-40"
+              }
             >
               {actions}
             </fieldset>
@@ -214,8 +229,8 @@ export function FuturesOrderTicket({
       </div>
       {includeStops ? (
         <>
-          <FuturesTpslFields />
-          <FuturesTrailingFields />
+          <FuturesTpslFields stacked={stacked} />
+          <FuturesTrailingFields stacked={stacked} />
         </>
       ) : null}
     </div>

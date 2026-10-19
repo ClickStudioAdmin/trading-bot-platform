@@ -39,6 +39,9 @@ export function ReplayChartBar({
   appliedReferences,
   onToggleReference,
   indicatorNotice = null,
+  indicatorsIntro = "Strategy indicators stay on. Anything else is a visual reference only.",
+  leading = null,
+  trailing = null,
 }: {
   interval: DcaIndicatorTimeframe;
   onInterval: (value: DcaIndicatorTimeframe) => void;
@@ -59,12 +62,16 @@ export function ReplayChartBar({
     anchor: HTMLElement,
   ) => void;
   indicatorNotice?: ReactNode;
+  indicatorsIntro?: string;
+  leading?: ReactNode;
+  trailing?: ReactNode;
 }) {
   const [open, setOpen] = useState<"bars" | "canvas" | null>(null);
   const [indicatorsOpen, setIndicatorsOpen] = useState(false);
   return (
     <div className="relative z-20 flex flex-wrap items-center justify-between gap-2 border-b border-line px-2 py-1">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
+        {leading}
         <ReplayChartIntervalControl
           interval={interval}
           onInterval={onInterval}
@@ -106,6 +113,7 @@ export function ReplayChartBar({
           <IconPalette size={16} className="size-4" />
         </button>
         <ChartScreenshotControls getChart={getChart} filename={screenshotName} />
+        {trailing}
       </div>
       {open === "bars" ? (
         <Panel title="Bar settings" onClose={() => setOpen(null)}>
@@ -192,9 +200,7 @@ export function ReplayChartBar({
       ) : null}
       {indicatorsOpen ? (
         <Modal title="Indicators" onClose={() => setIndicatorsOpen(false)} elevated>
-          <p className="mt-2 text-sm text-ink-muted">
-            Strategy indicators stay on. Anything else is a visual reference only.
-          </p>
+          <p className="mt-2 text-sm text-ink-muted">{indicatorsIntro}</p>
           {indicatorNotice ? <div className="mt-3">{indicatorNotice}</div> : null}
           <ul className="mt-4 space-y-2">
             {indicators.map((row) => {

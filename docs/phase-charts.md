@@ -53,10 +53,20 @@ C&C / basis charts stay parked.
 6. **Stop for live popup.** Automations / Pairs / Activity later if Click keeps the popup.
 7. Backtest page consumes the same chart (plan B). **Done.**
 
+## Manual desk (19 Oct 2026)
+
+Click asked for a Bybit-style manual Positions page. This is the live chart on **manual desks only**. Flex, DCA, TradingView Strategy, and copy desks stay stacked, with no chart.
+
+- Chart on the left. Place an order in the right column. Current Positions and Open Orders stay full width under both.
+- The chart is the replay chart: same candle route, interval control, bar and canvas styles, and indicator catalog (RSI, MACD, SMA, EMA, Bollinger Bands, Supertrend, ATR Band). The user turns any of them on. Inputs and colours work the same way.
+- Candles still come from `/api/market/candles`. The browser does not call the venue.
+- Orders still come from the ticket. The chart does not place or amend.
+- Interval, indicators, inputs, and colours stay in the browser under `tbp.desk.chart`.
+
 ## Out of scope
 
-- Changing Current Positions / ticket / stats card layout.
-- Chart as a permanent column or docked pane.
+- Changing Current Positions / ticket / stats card layout on non-manual desks.
+- Chart as a permanent column, except the manual desk layout above.
 - Chart trading.
 - C&C charts.
 - MEXC.
