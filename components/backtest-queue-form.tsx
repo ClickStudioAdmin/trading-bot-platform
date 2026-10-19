@@ -5,7 +5,7 @@ import { flushSync, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AppMultiSelect, AppSelect, type AppSelectOption } from "@/components/app-select";
 import { TemplateParametersButton } from "@/components/template-parameters-tip";
-import { BotFormStep } from "@/components/bot-form-chrome";
+import { BotFormStep, botFieldInvalidClass } from "@/components/bot-form-chrome";
 import { BotRecipeEditor } from "@/components/bot-recipe-editor";
 import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
@@ -344,6 +344,9 @@ export function BacktestQueueForm({
   const libraryTemplateSelected = templates.some((row) => row.id === templateId);
   const deskBotSelected =
     !libraryTemplateSelected && deskBots.some((row) => row.id === templateId);
+  const nameMissing = !backtestName.trim();
+  const sourceMissing =
+    !recipe && !deskBotSelected && !libraryTemplateSelected;
   const deskBotOptions = useMemo((): AppSelectOption[] => {
     return [
       { value: "", label: "Pick a desk bot" },
@@ -880,7 +883,8 @@ export function BacktestQueueForm({
             value={backtestName}
             maxLength={BACKTEST_NAME_MAX}
             onChange={(event) => setBacktestName(event.target.value)}
-            className={BILLING_FIELD_CLASS}
+            className={nameMissing ? botFieldInvalidClass : BILLING_FIELD_CLASS}
+            aria-invalid={nameMissing || undefined}
           />
         </label>
         {variant ? null : (
@@ -895,7 +899,7 @@ export function BacktestQueueForm({
                 disabled={libraryTemplateSelected}
                 searchable
                 onChange={(event) => pickDeskBot(event.target.value)}
-                className={BILLING_FIELD_CLASS}
+                className={sourceMissing ? botFieldInvalidClass : BILLING_FIELD_CLASS}
               />
             </span>
           </label>
@@ -915,7 +919,9 @@ export function BacktestQueueForm({
                   disabled={deskBotSelected}
                   searchable
                   onChange={(event) => pickTemplate(event.target.value)}
-                  className={BILLING_FIELD_CLASS}
+                  className={
+                    sourceMissing ? botFieldInvalidClass : BILLING_FIELD_CLASS
+                  }
                 />
               </span>
               {pickedTemplate && matchingTemplate?.id !== pickedTemplate.id ? (
@@ -1263,8 +1269,7 @@ export function BacktestQueueForm({
             Bot to replay
           </h3>
           <p className="mt-2 text-sm text-ink-muted">
-            Pick a template, or open Backtest from a Flex or DCA bot on
-            Automations.
+            Pick a Bot or Bot Template from the left column.
           </p>
         </aside>
       )}
