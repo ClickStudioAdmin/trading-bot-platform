@@ -100,6 +100,12 @@ import {
 import {
   backtestChartFetchBounds,
   chartIntervalForWindow,
+  markReplayPlaybackConsumed,
+  replayAutoplayStep,
+  replayPlaybackConsumed,
+  replayPlaybackRunId,
+  replayRequestsPlayback,
+  replaySearchWithoutPlayback,
   type BacktestRun,
   type ReplayEvent,
   type SimulatedOrder,
@@ -150,6 +156,30 @@ import { compareTableNum, compareTableText, type TableSortDir } from "@/lib/tabl
 import type { BacktestPositionCycle } from "@/lib/backtest/positions";
 
 const SPEEDS = [1, 2, 4, 8] as const;
+
+let cachedPlaybackRunId: string | null | undefined;
+
+function subscribeReplayPlaybackRequest() {
+  return () => {};
+}
+
+function replayPlaybackRequestSnapshot(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  if (cachedPlaybackRunId === undefined) {
+    cachedPlaybackRunId = replayPlaybackRunId(
+      window.location.pathname,
+      window.location.search,
+    );
+  }
+  return cachedPlaybackRunId;
+}
+
+function replayPlaybackRequestServerSnapshot(): string | null {
+  return null;
+}
+
 const EMPTY_CANDLES: CandleBar[] = [];
 const FRAME_ICON = { size: 16, className: "size-4" } as const;
 
@@ -505,6 +535,11 @@ export function ReplayPlayer({
   const focusRef = useRef<number | null>(null);
   const focusSpanRef = useRef<{ from: number; to: number } | null>(null);
   const [playback, setPlayback] = useState({ key: "", started: false });
+  const requestedRunId = useSyncExternalStore(
+    subscribeReplayPlaybackRequest,
+    replayPlaybackRequestSnapshot,
+    replayPlaybackRequestServerSnapshot,
+  );
   const [expanded, setExpanded] = useState(false);
   const [monitorFull, setMonitorFull] = useState(false);
   const [positionsRight, setPositionsRight] = useState(
@@ -535,15 +570,36 @@ export function ReplayPlayer({
   const candleKey = `${loadKey}:${candles.length}:${candles[0]?.timeMs ?? 0}`;
   const startHead = 0;
   const [cursor, setCursor] = useState({ key: "", head: 0, playing: false });
-  if (cursor.key !== candleKey) {
-    setCursor({ key: candleKey, head: startHead, playing: false });
+  const playbackArm = useRef(false);
+  if (
+    !playbackArm.current &&
+    requestedRunId === run.id &&
+    typeof sessionStorage !== "undefined" &&
+    !replayPlaybackConsumed(sessionStorage, requestedRunId)
+  ) {
+    playbackArm.current = true;
   }
-  const head = cursor.key === candleKey ? cursor.head : startHead;
-  const playing = cursor.key === candleKey ? cursor.playing : false;
-  if (playback.key !== candleKey) {
-    setPlayback({ key: candleKey, started: false });
+  const step = replayAutoplayStep({
+    armed: playbackArm.current,
+    candlesReady: !loading && candles.length > 0,
+    candleKey,
+    startHead,
+    cursor,
+    playback,
+  });
+  if (step.cursor) {
+    setCursor(step.cursor);
   }
-  const started = playback.key === candleKey ? playback.started : false;
+  if (step.playback) {
+    setPlayback(step.playback);
+  }
+  if (step.disarm) {
+    markReplayPlaybackConsumed(sessionStorage, run.id);
+    playbackArm.current = false;
+  }
+  const head = step.head;
+  const playing = step.playing;
+  const started = step.started;
   headRef.current = head;
   const fillViewport = expanded || monitorFull;
   const sideGridRef = useRef<HTMLDivElement | null>(null);
@@ -555,6 +611,14 @@ export function ReplayPlayer({
   function revealChart() {
     setPlayback({ key: candleKey, started: true });
   }
+
+  useEffect(() => {
+    if (!replayRequestsPlayback(window.location.search)) {
+      return;
+    }
+    const next = `${window.location.pathname}${replaySearchWithoutPlayback(window.location.search)}${window.location.hash}`;
+    window.history.replaceState(window.history.state, "", next);
+  }, []);
 
   useEffect(() => {
     function syncFs() {

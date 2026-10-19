@@ -1,5 +1,9 @@
 import { recipeParamRows } from "@/lib/backtest/library";
-import { isoDateUtc, type BacktestRecipe } from "@/lib/backtest/model";
+import {
+  backtestReplayHref,
+  isoDateUtc,
+  type BacktestRecipe,
+} from "@/lib/backtest/model";
 
 type VariantSnapshot = {
   id?: string;
@@ -141,6 +145,18 @@ export function completedBacktestVariantIds(input: {
     done.push(id);
   }
   return done;
+}
+
+/** The open variant is gone, so replay reloads the original. Other deletes stay put. */
+export function replayHrefAfterVariantDelete(input: {
+  deletedId: string;
+  viewingId: string;
+  rootId: string;
+}): string | null {
+  if (input.deletedId !== input.viewingId) {
+    return null;
+  }
+  return backtestReplayHref(input.rootId);
 }
 
 export function backtestVariantsStillRunning(

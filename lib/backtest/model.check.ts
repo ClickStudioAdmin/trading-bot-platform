@@ -51,8 +51,15 @@ import {
   completedBacktestNotionalUsdt,
   backtestListEntryHref,
   backtestNewHref,
+  backtestReplayHref,
   backtestRerunHref,
   backtestSavedListHref,
+  markReplayPlaybackConsumed,
+  replayAutoplayStep,
+  replayPlaybackConsumed,
+  replayPlaybackRunId,
+  replayRequestsPlayback,
+  replaySearchWithoutPlayback,
   paginateBacktestList,
   parseBacktestListPage,
   parseBacktestRunIds,
@@ -767,6 +774,97 @@ assert.equal(
   backtestRerunHref("run-abc"),
   "/account/backtests/new?rerun=run-abc#replay",
 );
+assert.equal(
+  backtestReplayHref("run-abc"),
+  "/account/backtests/run-abc/replay",
+);
+assert.equal(
+  backtestReplayHref("run-abc", true),
+  "/account/backtests/run-abc/replay?play=1",
+);
+assert.equal(replayRequestsPlayback(""), false);
+assert.equal(replayRequestsPlayback("?play=1"), true);
+assert.equal(replayRequestsPlayback("?page=2&play=1"), true);
+assert.equal(replayRequestsPlayback("?play=0"), false);
+assert.equal(replaySearchWithoutPlayback("?play=1"), "");
+assert.equal(replaySearchWithoutPlayback("?page=2&play=1"), "?page=2");
+assert.equal(replaySearchWithoutPlayback("?page=2"), "?page=2");
+assert.equal(
+  replayPlaybackRunId("/account/backtests/run-abc/replay", "?play=1"),
+  "run-abc",
+);
+assert.equal(
+  replayPlaybackRunId("/account/backtests/run-abc/replay", ""),
+  null,
+);
+assert.equal(
+  replayPlaybackRunId("/account/backtests/run-abc", "?play=1"),
+  null,
+);
+const playbackMemory = new Map<string, string>();
+const playbackStorage = {
+  getItem: (key: string) => playbackMemory.get(key) ?? null,
+  setItem: (key: string, value: string) => {
+    playbackMemory.set(key, value);
+  },
+};
+assert.equal(replayPlaybackConsumed(playbackStorage, "run-abc"), false);
+markReplayPlaybackConsumed(playbackStorage, "run-abc");
+assert.equal(replayPlaybackConsumed(playbackStorage, "run-abc"), true);
+assert.equal(replayPlaybackConsumed(playbackStorage, "other"), false);
+
+const idleCursor = { key: "", head: 0, playing: false };
+const idlePlayback = { key: "", started: false };
+const waiting = replayAutoplayStep({
+  armed: true,
+  candlesReady: false,
+  candleKey: "run:15m:0:0",
+  startHead: 0,
+  cursor: idleCursor,
+  playback: idlePlayback,
+});
+assert.equal(waiting.playing, false);
+assert.equal(waiting.started, false);
+assert.equal(waiting.disarm, false);
+const candleKey = "run:15m:10:1000";
+const starting = replayAutoplayStep({
+  armed: true,
+  candlesReady: true,
+  candleKey,
+  startHead: 0,
+  cursor: waiting.cursor ?? idleCursor,
+  playback: waiting.playback ?? idlePlayback,
+});
+assert.deepEqual(starting.cursor, { key: candleKey, head: 0, playing: true });
+assert.deepEqual(starting.playback, { key: candleKey, started: true });
+assert.equal(starting.playing, true);
+assert.equal(starting.started, true);
+assert.equal(starting.disarm, false);
+const playingCursor = starting.cursor ?? idleCursor;
+const playingFlag = starting.playback ?? idlePlayback;
+const settled = replayAutoplayStep({
+  armed: true,
+  candlesReady: true,
+  candleKey,
+  startHead: 0,
+  cursor: playingCursor,
+  playback: playingFlag,
+});
+assert.equal(settled.cursor, null);
+assert.equal(settled.playback, null);
+assert.equal(settled.disarm, true);
+assert.equal(settled.playing, true);
+const paused = replayAutoplayStep({
+  armed: false,
+  candlesReady: true,
+  candleKey,
+  startHead: 0,
+  cursor: { ...playingCursor, playing: false },
+  playback: playingFlag,
+});
+assert.equal(paused.playing, false);
+assert.equal(paused.cursor, null);
+assert.equal(paused.disarm, false);
 assert.equal(backtestNewHref(), "/account/backtests/new");
 assert.equal(
   backtestNewHref({ draft: "d1", venue: "bybit", env: "demo", template: "" }),

@@ -6,6 +6,7 @@ import {
   backtestVariantsStillRunning,
   completedBacktestVariantIds,
   mergeReplayVariantRows,
+  replayHrefAfterVariantDelete,
   sameReplayVariantRows,
 } from "./variant-label";
 
@@ -152,5 +153,29 @@ assert.deepEqual(
 );
 assert.equal(sameReplayVariantRows(familyRows, familyRows), true);
 assert.equal(sameReplayVariantRows(familyRows, polled), false);
+assert.equal(
+  replayHrefAfterVariantDelete({
+    deletedId: "child",
+    viewingId: "child",
+    rootId: "root",
+  }),
+  "/account/backtests/root/replay",
+);
+assert.equal(
+  replayHrefAfterVariantDelete({
+    deletedId: "child",
+    viewingId: "root",
+    rootId: "root",
+  }),
+  null,
+);
+assert.equal(
+  replayHrefAfterVariantDelete({
+    deletedId: "other",
+    viewingId: "child",
+    rootId: "root",
+  }),
+  null,
+);
 
 console.log("backtest variant label checks passed");
