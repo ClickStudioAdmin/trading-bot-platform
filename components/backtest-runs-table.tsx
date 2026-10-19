@@ -80,7 +80,9 @@ import {
 import { AppSelect } from "@/components/app-select";
 import { formatDeskType } from "@/lib/accounts/model";
 import {
+  backtestDeskFilterChoices,
   backtestDeskFilterLabel,
+  backtestDeskTypeFilterChoices,
   type BacktestListDesk,
 } from "@/lib/backtest/library";
 
@@ -110,12 +112,6 @@ const STATUS_FILTERS: Array<BacktestStatus | "all"> = [
   "failed",
   "cancelled",
   "draft",
-];
-
-const DESK_TYPE_FILTERS: Array<BacktestDeskType | "all"> = [
-  "all",
-  "flex",
-  "dca",
 ];
 
 function deskTypeFilterLabel(value: BacktestDeskType | "all"): string {
@@ -309,6 +305,17 @@ export function BacktestRunsTable({
   ) {
     setDeskId("all");
   }
+  const deskChoices = useMemo(
+    () => (desks ? backtestDeskFilterChoices(desks, typeFilter) : []),
+    [desks, typeFilter],
+  );
+  const typeChoices = useMemo(
+    () =>
+      desks
+        ? backtestDeskTypeFilterChoices(desks, deskId)
+        : (["all", "flex", "dca"] as const),
+    [desks, deskId],
+  );
   const runs =
     keptRemoved.size === 0
       ? sourceRuns
@@ -610,18 +617,48 @@ export function BacktestRunsTable({
                 className={TABLE_FILTER_FIELD_CLASS}
               />
             </TableFilterField>
+            <TableFilterField label="Desk Type">
+              <AppSelect
+                value={typeFilter}
+                onChange={(event) => {
+                  const next = event.target.value as "all" | BacktestDeskType;
+                  setTypeFilter(next);
+                  if (next !== "all" && deskId !== "all" && desks) {
+                    const desk = desks.find((row) => row.id === deskId);
+                    if (!desk || desk.deskType !== next) {
+                      setDeskId("all");
+                    }
+                  }
+                  table.setPage(1);
+                }}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                {typeChoices.map((value) => (
+                  <option key={value} value={value}>
+                    {deskTypeFilterLabel(value)}
+                  </option>
+                ))}
+              </AppSelect>
+            </TableFilterField>
             {desks ? (
               <TableFilterField label="Desk">
                 <AppSelect
                   value={deskId}
                   onChange={(event) => {
-                    setDeskId(event.target.value);
+                    const next = event.target.value;
+                    setDeskId(next);
+                    if (next !== "all" && typeFilter !== "all") {
+                      const desk = desks.find((row) => row.id === next);
+                      if (!desk || desk.deskType !== typeFilter) {
+                        setTypeFilter("all");
+                      }
+                    }
                     table.setPage(1);
                   }}
                   className={TABLE_FILTER_FIELD_CLASS}
                 >
                   <option value="all">All desks</option>
-                  {desks.map((desk) => (
+                  {deskChoices.map((desk) => (
                     <option key={desk.id} value={desk.id}>
                       {backtestDeskFilterLabel(desk, desks)}
                     </option>
@@ -629,22 +666,6 @@ export function BacktestRunsTable({
                 </AppSelect>
               </TableFilterField>
             ) : null}
-            <TableFilterField label="Desk Type">
-              <AppSelect
-                value={typeFilter}
-                onChange={(event) => {
-                  setTypeFilter(event.target.value as "all" | BacktestDeskType);
-                  table.setPage(1);
-                }}
-                className={TABLE_FILTER_FIELD_CLASS}
-              >
-                {DESK_TYPE_FILTERS.map((value) => (
-                  <option key={value} value={value}>
-                    {deskTypeFilterLabel(value)}
-                  </option>
-                ))}
-              </AppSelect>
-            </TableFilterField>
             <TableFilterField label="Status">
               <AppSelect
                 value={status}
