@@ -11,7 +11,9 @@ import {
   groupBacktestLibrary,
   attachedTemplateHref,
   attachedTemplateName,
+  backtestDeskFilterChoices,
   backtestDeskFilterLabel,
+  backtestDeskTypeFilterChoices,
   indexBacktestRunsByDesk,
   inheritPlatformBacktests,
   matchingPlatformTemplateIds,
@@ -712,5 +714,39 @@ assert.equal(
   ),
   "DCA · ByBit",
 );
+const mixedDesks = [
+  { id: "desk-flex", name: "Flex desk", deskType: "flex" as const },
+  { id: "desk-dca", name: "DCA desk", deskType: "dca" as const },
+];
+assert.deepEqual(
+  backtestDeskFilterChoices(mixedDesks, "all").map((desk) => desk.id),
+  ["desk-flex", "desk-dca"],
+);
+assert.deepEqual(
+  backtestDeskFilterChoices(mixedDesks, "flex").map((desk) => desk.id),
+  ["desk-flex"],
+);
+assert.deepEqual(
+  backtestDeskFilterChoices(mixedDesks, "dca").map((desk) => desk.id),
+  ["desk-dca"],
+);
+assert.deepEqual(backtestDeskTypeFilterChoices(mixedDesks, "all"), [
+  "all",
+  "flex",
+  "dca",
+]);
+assert.deepEqual(backtestDeskTypeFilterChoices(mixedDesks, "desk-dca"), [
+  "all",
+  "dca",
+]);
+assert.deepEqual(backtestDeskTypeFilterChoices(mixedDesks, "desk-flex"), [
+  "all",
+  "flex",
+]);
+assert.deepEqual(backtestDeskTypeFilterChoices(mixedDesks, "missing"), [
+  "all",
+  "flex",
+  "dca",
+]);
 
 console.log("backtest library checks passed");

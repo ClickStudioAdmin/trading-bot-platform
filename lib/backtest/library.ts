@@ -296,6 +296,38 @@ export function indexBacktestRunsByDesk(
   return { desks, runDeskIds };
 }
 
+/**
+ * Desk choices for the saved list. A selected desk type leaves only desks of
+ * that type. All desks stays available so the type filter can stand alone.
+ */
+export function backtestDeskFilterChoices(
+  desks: readonly BacktestListDesk[],
+  typeFilter: "all" | BacktestListDesk["deskType"],
+): BacktestListDesk[] {
+  if (typeFilter === "all") {
+    return [...desks];
+  }
+  return desks.filter((desk) => desk.deskType === typeFilter);
+}
+
+/**
+ * Desk type choices for the saved list. A selected desk leaves only that
+ * desk's type. All desk types stays available so the desk filter can stand alone.
+ */
+export function backtestDeskTypeFilterChoices(
+  desks: readonly BacktestListDesk[],
+  deskId: string,
+): Array<"all" | BacktestListDesk["deskType"]> {
+  if (deskId === "all") {
+    return ["all", "flex", "dca"];
+  }
+  const desk = desks.find((row) => row.id === deskId);
+  if (!desk) {
+    return ["all", "flex", "dca"];
+  }
+  return ["all", desk.deskType];
+}
+
 /** Desk names that collide get the type in front so the filter can tell them apart. */
 export function backtestDeskFilterLabel(
   desk: BacktestListDesk,
