@@ -6,6 +6,7 @@ import { BacktestRunRefresh } from "@/components/backtest-run-view";
 import { BacktestRunsTable } from "@/components/backtest-runs-table";
 import { getSessionMember } from "@/lib/auth/session";
 import { memberIsAdmin } from "@/lib/admin/access";
+import { loadBacktestListDeskIndex } from "@/lib/backtest/desk-bots";
 import {
   backtestListEntryHref,
   backtestListSnapshot,
@@ -66,6 +67,9 @@ export default async function AccountBacktestsPage({
   } catch {
     runs = [];
   }
+  const deskIndex = await loadBacktestListDeskIndex(member.id, runs).catch(
+    () => ({ desks: [], runDeskIds: {} }),
+  );
   let templates: Awaited<ReturnType<typeof listAttachedTemplateNames>> = {};
   try {
     templates = await listAttachedTemplateNames(
@@ -98,6 +102,8 @@ export default async function AccountBacktestsPage({
         createHref={backtestNewHref()}
         nestChildren
         templates={templates}
+        desks={deskIndex.desks}
+        runDeskIds={deskIndex.runDeskIds}
         empty="No backtests yet. Create one to replay a desk bot or a library template."
       />
     </main>

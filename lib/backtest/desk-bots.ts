@@ -4,17 +4,19 @@ import {
   type TradingAccount,
 } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
-import type { BacktestRecipe } from "@/lib/backtest/model";
 import {
   backtestLinksForBotRecipes,
   canQueueUserBacktest,
   deskBacktestBotCandidates,
   findMatchingBacktestDeskBot,
+  indexBacktestRunsByDesk,
   parseListedRecipe,
   type BacktestDeskBot,
   type BacktestDeskBotOption,
+  type BacktestListDesk,
+  type BacktestRunDeskIndex,
 } from "@/lib/backtest/library";
-import type { TemplateBacktestLink } from "@/lib/backtest/model";
+import type { BacktestRecipe, TemplateBacktestLink } from "@/lib/backtest/model";
 import { listDoneBacktestsForSymbols } from "@/lib/backtest/store";
 import { parseDcaPlaybookRow, type DcaPlaybook } from "@/lib/dca/playbook";
 import {
@@ -108,6 +110,74 @@ export async function loadDeskBacktestBot(
     return allowedRecipe;
   }
   return { ok: true, bot };
+}
+
+function backtestListDesks(
+  desks: readonly TradingAccount[],
+): BacktestListDesk[] {
+  return desks.flatMap((desk) => {
+    if (deskAllowsDcaPlaybooks(desk)) {
+      return [{ id: desk.id, name: desk.name, deskType: "dca" as const }];
+    }
+    if (deskAllowsPerpsRecipes(desk)) {
+      return [{ id: desk.id, name: desk.name, deskType: "flex" as const }];
+    }
+    return [];
+  });
+}
+
+/** Flex and DCA desks, plus which runs still match a replayable bot on each desk. */
+export async function loadBacktestListDeskIndex(
+  userId: string,
+  runs: readonly { id: string; recipe: BacktestRecipe }[],
+): Promise<BacktestRunDeskIndex> {
+  const desks = await listTradingAccounts(userId);
+  const bots = await listReplayableBacktestDeskBots(userId, desks);
+  return indexBacktestRunsByDesk(runs, bots, backtestListDesks(desks));
+}
+
+/** Replayable bots on this member's Flex and DCA desks, with recipes. */
+export async function listReplayableBacktestDeskBots(
+  userId: string,
+  desks?: readonly TradingAccount[],
+): Promise<BacktestDeskBot[]> {
+  const listed = desks ?? (await listTradingAccounts(userId));
+  const dcaDesks = listed.filter((desk) => deskAllowsDcaPlaybooks(desk));
+  const flexDesks = listed.filter((desk) => deskAllowsPerpsRecipes(desk));
+  const [playbooks, rules] = await Promise.all([
+    loadRowsByAccount(
+      "dca_playbooks",
+      dcaDesks.map((desk) => desk.id),
+    ),
+    loadRowsByAccount(
+      "futures_automation_rules",
+      flexDesks.map((desk) => desk.id),
+    ),
+  ]);
+  const dcaById = new Map(dcaDesks.map((desk) => [desk.id, desk]));
+  const flexById = new Map(flexDesks.map((desk) => [desk.id, desk]));
+  const bots: BacktestDeskBot[] = [];
+  for (const row of playbooks) {
+    const desk = dcaById.get(String(row.account_id ?? ""));
+    const playbook = desk ? parseDcaPlaybookRow(row, desk.venue) : null;
+    if (!playbook || !desk) {
+      continue;
+    }
+    const bot = botFromPlaybook(playbook, desk);
+    if (canQueueUserBacktest(bot.recipe).ok) {
+      bots.push(bot);
+    }
+  }
+  for (const row of rules) {
+    const desk = flexById.get(String(row.account_id ?? ""));
+    const bot = desk
+      ? botFromRule(parseFuturesAutomationRow(row, desk.venue), desk)
+      : null;
+    if (bot && canQueueUserBacktest(bot.recipe).ok) {
+      bots.push(bot);
+    }
+  }
+  return bots;
 }
 
 /** Full recipes only for bots on the same symbol. Used to label a saved run. */
@@ -278,6 +348,25 @@ async function loadCandidateRecipes(
     }
   }
   return bots;
+}
+
+async function loadRowsByAccount(
+  table: "dca_playbooks" | "futures_automation_rules",
+  accountIds: string[],
+): Promise<Record<string, unknown>[]> {
+  const supabase = createServiceClient();
+  const uniqueAccounts = [...new Set(accountIds.filter(Boolean))];
+  if (!supabase || uniqueAccounts.length === 0) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from(table)
+    .select("*")
+    .in("account_id", uniqueAccounts);
+  if (error || !data) {
+    return [];
+  }
+  return data as Record<string, unknown>[];
 }
 
 async function loadRows(
