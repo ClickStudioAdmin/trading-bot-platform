@@ -9,6 +9,8 @@ import {
 import { adminConditionReview } from "./condition-list-samples";
 import {
   backtestListedSections,
+  filterParamSections,
+  paramSectionsHaveBothSides,
   recipeParamRows,
   recipeParamSections,
   templateParamSections,
@@ -629,5 +631,32 @@ assert.equal(
   false,
 );
 assert.equal(pricedRows.find((row) => row.label === "Target %")?.value, "2%");
+
+assert.equal(paramSectionsHaveBothSides(sections), false);
+assert.equal(paramSectionsHaveBothSides(bothSections), true);
+assert.deepEqual(
+  filterParamSections(bothSections, "long").map((section) => section.title),
+  [
+    "General",
+    "Long Entry Conditions",
+    "Position Sizing",
+    "Long Additional Orders",
+    "Long Exit Conditions",
+  ],
+);
+assert.deepEqual(
+  filterParamSections(bothSections, "short").map((section) => section.title),
+  [
+    "General",
+    "Short Entry Conditions",
+    "Position Sizing",
+    "Short Additional Orders",
+    "Short Exit Conditions",
+  ],
+);
+assert.deepEqual(
+  filterParamSections(bothSections, "all").map((section) => section.title),
+  bothSections.map((section) => section.title),
+);
 
 console.log("backtest param section checks passed");

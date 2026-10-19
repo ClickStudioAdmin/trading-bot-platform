@@ -1,5 +1,55 @@
+"use client";
+
+import { useLayoutEffect, useState } from "react";
 import { CONDITION_GROUP_HELPER, JoinWord } from "@/components/condition-join";
-import type { ParamRow, ParamSection, ParamStack } from "@/lib/backtest/param-sections";
+import {
+  filterParamSections,
+  paramSectionsHaveBothSides,
+  type ParamRow,
+  type ParamSection,
+  type ParamStack,
+} from "@/lib/backtest/param-sections";
+
+type SideChoice = "all" | "long" | "short";
+
+const SIDE_OPTIONS: { value: SideChoice; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "long", label: "Long" },
+  { value: "short", label: "Short" },
+];
+
+function ParamSideFilter({
+  value,
+  onChange,
+}: {
+  value: SideChoice;
+  onChange: (next: SideChoice) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="Side"
+      className="flex gap-0.5 rounded-control border border-line bg-surface p-0.5"
+    >
+      {SIDE_OPTIONS.map((option) => {
+        const active = value === option.value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(option.value)}
+            className={`rounded-control px-2 py-1 text-[11px] text-ink-muted ${
+              active ? "bg-surface-raised font-medium" : "hover:bg-canvas"
+            }`}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function ParamRows({
   rows,
@@ -69,9 +119,25 @@ export function BacktestParameterSections({
 }: {
   sections: ParamSection[];
 }) {
+  const both = paramSectionsHaveBothSides(sections);
+  const [side, setSide] = useState<SideChoice>("all");
+  const shown = filterParamSections(sections, both ? side : "all");
+  useLayoutEffect(() => {
+    if (!both) {
+      return;
+    }
+    window.dispatchEvent(new Event("resize"));
+  }, [both, side]);
   return (
     <div>
-      {sections.map((section, index) => {
+      {both ? (
+        <div className="sticky top-0 z-20 h-0">
+          <div className="absolute top-0 right-0 pt-1">
+            <ParamSideFilter value={side} onChange={setSide} />
+          </div>
+        </div>
+      ) : null}
+      {shown.map((section, index) => {
         const hasBody =
           section.groups.length > 0 ||
           section.stack != null ||
@@ -79,9 +145,13 @@ export function BacktestParameterSections({
         return (
           <section
             key={section.title}
-            className={index < sections.length - 1 ? "pb-2" : undefined}
+            className={index < shown.length - 1 ? "pb-2" : undefined}
           >
-            <h3 className="sticky top-0 z-10 bg-canvas py-2 text-sm font-semibold text-ink">
+            <h3
+              className={`sticky top-0 z-10 bg-canvas py-2 text-sm font-semibold text-ink ${
+                both ? "pr-36" : ""
+              }`}
+            >
               {section.title}
             </h3>
             {hasBody ? (
