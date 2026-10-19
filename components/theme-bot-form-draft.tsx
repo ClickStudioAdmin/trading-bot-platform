@@ -676,8 +676,6 @@ export function ThemeBotFormDraft() {
   const [shortDivergenceSpan, setShortDivergenceSpan] = useState("50");
   const [shortMinPricePct, setShortMinPricePct] = useState("");
   const [shortMinRsi, setShortMinRsi] = useState("");
-  const [addRows, setAddRows] = useState<EntryStackRow[]>([]);
-  const [shortAddRows, setShortAddRows] = useState<EntryStackRow[]>([]);
   const [priceSource, setPriceSource] = useState("last");
   const [priceWhen, setPriceWhen] = useState("gte");
   const [priceLevel, setPriceLevel] = useState("");
@@ -3101,43 +3099,6 @@ export function ThemeBotFormDraft() {
             </Field>
           </div>
         </Group>
-        </BotFormStep>
-        <BotFormStep
-          title="Additional order conditions"
-          badge="Condition Builder"
-          shell="canvas"
-          hint="Optional. The ladder still places the add. These have to be true on the same check."
-        >
-          <EntryConditionStack
-            grouped
-            prefix="themeAdd"
-            side={entrySide}
-            rows={addRows}
-            onChange={setAddRows}
-            anchor={{ kind: "indicator", webhookId: null, claim: null }}
-            gridClass={rowClass5}
-            fieldClass={fieldClass}
-            labelClass={labelClass}
-            showErrors={showFieldErrors}
-            optionalAddedKind
-            kinds={["retrace", "indicator"]}
-          />
-          {direction === "both" ? (
-            <EntryConditionStack
-              grouped
-              prefix="themeShortAdd"
-              side="short"
-              rows={shortAddRows}
-              onChange={setShortAddRows}
-              anchor={{ kind: "indicator", webhookId: null, claim: null }}
-              gridClass={rowClass5}
-              fieldClass={fieldClass}
-              labelClass={labelClass}
-              showErrors={showFieldErrors}
-              optionalAddedKind
-              kinds={["retrace", "indicator"]}
-            />
-          ) : null}
         </BotFormStep>
         </>
         ) : desk === "flex" && !closing ? (
