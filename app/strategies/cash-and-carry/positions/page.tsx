@@ -135,10 +135,6 @@ export default async function CashAndCarryPositionsPage({
               ? "No positions match these filters."
               : undefined
           }
-          opportunitiesHref={deskHref(
-            "/strategies/cash-and-carry/opportunities",
-            session?.account.id,
-          )}
         />
       </div>
     </main>

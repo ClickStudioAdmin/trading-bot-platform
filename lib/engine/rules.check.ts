@@ -33,9 +33,11 @@ filled.set("r0_name", "Core carry");
 filled.set("r0_notionalUsdt", "10000");
 filled.set("r0_minApr", "10");
 filled.set("r0_stopLoss", "2");
+filled.set("r0_stopLossOn", "1");
 filled.set("r1_notionalUsdt", "25000");
 filled.set("r1_minApr", "20");
 filled.set("r1_takeProfit", "1");
+filled.set("r1_takeProfitOn", "1");
 
 const parsed = parsePaperRulesForm(filled);
 assert.equal(parsed.ok, true);
@@ -45,9 +47,9 @@ if (parsed.ok) {
   assert.equal(parsed.config.layers[0]?.name, "Core carry");
   assert.equal(parsed.config.layers[1]?.name, "Bot 2");
   assert.equal(parsed.config.layers[0]?.minNetApr, 0.1);
-  assert.equal(parsed.config.layers[0]?.stopLossPct, -0.02);
+  assert.equal(parsed.config.layers[0]?.stopLossPct, null);
   assert.equal(parsed.config.layers[1]?.minNetApr, 0.2);
-  assert.equal(parsed.config.layers[1]?.takeProfitPct, 0.01);
+  assert.equal(parsed.config.layers[1]?.takeProfitPct, null);
   const row = paperLayerToRow("user-1", parsed.config.layers[0]!);
   assert.equal(row.user_id, "user-1");
   assert.equal(row.mode, "active");
@@ -55,7 +57,7 @@ if (parsed.ok) {
   const roundTrip = parsePaperRulesRow({ id: 4, ...row }, 0);
   assert.equal(roundTrip.id, 4);
   assert.equal(roundTrip.sizeType, "dynamic");
-  assert.equal(paperConfigToFormValues(parsed.config).layers[0]?.stopLoss, "2");
+  assert.equal(paperConfigToFormValues(parsed.config).layers[0]?.stopLoss, "");
 }
 
 const none = new FormData();
@@ -113,17 +115,19 @@ missingSize.set("ruleCount", "1");
 missingSize.set("r0_sizeType", "fixed");
 assert.equal(parsePaperRulesForm(missingSize).ok, false);
 
-const missingTp = new FormData();
-missingTp.set("ruleCount", "1");
-missingTp.set("r0_notionalUsdt", "10000");
-missingTp.set("r0_takeProfitOn", "1");
-assert.equal(parsePaperRulesForm(missingTp).ok, false);
-
-const missingSl = new FormData();
-missingSl.set("ruleCount", "1");
-missingSl.set("r0_notionalUsdt", "10000");
-missingSl.set("r0_stopLossOn", "1");
-assert.equal(parsePaperRulesForm(missingSl).ok, false);
+const ignoredExits = new FormData();
+ignoredExits.set("ruleCount", "1");
+ignoredExits.set("r0_notionalUsdt", "10000");
+ignoredExits.set("r0_takeProfitOn", "1");
+ignoredExits.set("r0_takeProfit", "4");
+ignoredExits.set("r0_stopLossOn", "1");
+ignoredExits.set("r0_stopLoss", "2");
+const parsedIgnored = parsePaperRulesForm(ignoredExits);
+assert.equal(parsedIgnored.ok, true);
+if (parsedIgnored.ok) {
+  assert.equal(parsedIgnored.config.layers[0]?.takeProfitPct, null);
+  assert.equal(parsedIgnored.config.layers[0]?.stopLossPct, null);
+}
 
 assert.deepEqual(blockedRuleDeletes([1, 2, 3], [2, 9]), [2]);
 assert.deepEqual(blockedRuleDeletes([4], []), []);

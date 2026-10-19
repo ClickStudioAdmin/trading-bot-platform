@@ -663,9 +663,6 @@ export async function updatePaperCarryExits(formData: FormData) {
   }
 
   const parsed = parseCarryExitForm(formData);
-  if ("error" in parsed) {
-    flash(next, { paperError:parsed.error });
-  }
 
   const { data, error: loadError } = await supabase
     .from("paper_carries")

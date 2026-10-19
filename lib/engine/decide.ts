@@ -379,6 +379,7 @@ function exitReason(
   position: EngineMarkedPosition,
   exits: PositionExits,
 ): ExitReason | null {
+  // Cash and Carry closes on DTE and mark APR. Stored take profit and stop loss do not close a carry.
   if (
     exits.closeMaxDte !== null &&
     position.daysToExpiry !== null &&
@@ -392,20 +393,6 @@ function exitReason(
     position.markNetApr < exits.closeMinNetApr
   ) {
     return "mark_apr";
-  }
-  if (
-    exits.takeProfitPct !== null &&
-    position.pnlPct !== null &&
-    position.pnlPct >= exits.takeProfitPct
-  ) {
-    return "take_profit";
-  }
-  if (
-    exits.stopLossPct !== null &&
-    position.pnlPct !== null &&
-    position.pnlPct <= exits.stopLossPct
-  ) {
-    return "stop_loss";
   }
   return null;
 }

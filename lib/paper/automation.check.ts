@@ -51,8 +51,6 @@ assert.deepEqual(formatExitTriggers(automation), [
   "Order Type Fixed (entire position)",
   "DTE ≤ 3",
   "APR below 5%",
-  "Take profit 1%",
-  "Stop loss 2%",
 ]);
 assert.deepEqual(formatEntryTriggers({
   ...automation,
@@ -87,21 +85,21 @@ form.set("closeMinApr", "6");
 form.set("takeProfit", "1.5");
 form.set("stopLoss", "3");
 const parsed = parseCarryExitForm(form);
-assert.equal("error" in parsed, false);
-if (!("error" in parsed)) {
-  assert.equal(parsed.closeMaxDte, 4);
-  assert.equal(parsed.closeMinNetApr, 0.06);
-  assert.equal(parsed.takeProfitPct, 0.015);
-  assert.equal(parsed.stopLossPct, -0.03);
-}
+assert.equal(parsed.closeMaxDte, 4);
+assert.equal(parsed.closeMinNetApr, 0.06);
+assert.equal(parsed.takeProfitPct, null);
+assert.equal(parsed.stopLossPct, null);
 
 const values = exitFormValues(automation);
-assert.equal(values.takeProfit, "1");
-assert.equal(values.stopLoss, "2");
+assert.equal(values.closeMaxDte, "3");
+assert.equal(values.closeMinApr, "5");
 
-const bad = new FormData();
-bad.set("takeProfit", "0");
-assert.equal("error" in parseCarryExitForm(bad), true);
+const ignored = new FormData();
+ignored.set("takeProfit", "0");
+ignored.set("stopLoss", "3");
+const ignoredParsed = parseCarryExitForm(ignored);
+assert.equal(ignoredParsed.takeProfitPct, null);
+assert.equal(ignoredParsed.stopLossPct, null);
 
 assert.equal(parseTradeSource("engine"), "engine");
 assert.equal(parseTradeSource(null), "manual");

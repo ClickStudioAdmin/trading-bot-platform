@@ -343,7 +343,13 @@ assert.equal(value(carry, "Entry Conditions", "Min DTE"), "10");
 assert.equal(value(carry, "Position Sizing", "Order type"), "Fixed");
 assert.equal(value(carry, "Position Sizing", "Order size"), "2500 USDT");
 assert.equal(value(carry, "Position Sizing", "Max pairs"), "3");
-assert.equal(value(carry, "Exit Conditions", "Take profit"), "Off");
+const carryExit = carry.find((row) => row.title === "Exit Conditions");
+assert.equal(
+  carryExit?.lines.some(
+    (line) => line.label === "Take profit" || line.label === "Stop loss",
+  ),
+  false,
+);
 assert.equal(
   value(carry, "Exit Conditions", "Exit order type"),
   "Fixed (entire position)",
