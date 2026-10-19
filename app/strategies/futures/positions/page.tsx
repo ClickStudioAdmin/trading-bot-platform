@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { FuturesFlash } from "@/components/futures-flash";
 import { LiveTickerScope } from "@/components/live-ticker";
 import { FuturesOrderTicket } from "@/components/futures-order-ticket";
+import { SymbolDetails } from "@/components/symbol-details";
 import { ManualTradeWorkspace } from "@/components/manual-trade-workspace";
 import {
   DeskBlotterFilters,
@@ -21,6 +22,7 @@ import {
   baseCoinForPerpSymbol,
   loadUsdtLinearPerps,
 } from "@/lib/exchanges/bybit/perp";
+import { symbolQuotesFromTickers } from "@/lib/exchanges/symbol-details";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { deskAllowsManualPerpTicket, deskAllowsSignalWebhooks, deskHref, deskIsCopy, deskShowsDcaBlotter } from "@/lib/accounts/model";
 import {
@@ -50,7 +52,6 @@ import { submitFuturesTrade } from "@/lib/futures/actions";
 import { futuresWebhookOrigin } from "@/lib/futures/webhook";
 import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { loadFuturesPositionsBotBook } from "@/lib/futures/bot-book";
 import { futuresOpenBookFromDesk, loadFuturesDesk } from "@/lib/futures/list";
 import { futuresDeskNeedsUrgentRefresh } from "@/lib/futures/pending-close";
@@ -197,6 +198,7 @@ export default async function FuturesPositionsPage({
       lastPrices[symbol] = last;
     }
   }
+  const symbolQuotes = symbolQuotesFromTickers(tickers);
   const hintRows = desk.fillsLoaded
     ? open
     : open.map((row) => ({ ...row, orders: undefined }));
@@ -353,14 +355,6 @@ export default async function FuturesPositionsPage({
                     allowSignal={allowSignal}
                     agreementGate={agreementGate}
                   />
-                ) : canTestWebhook && session ? (
-                  <p className="mt-4 text-hint text-ink-muted">
-                    Create a named webhook on{" "}
-                    <Link href={deskHref(FUTURES_PATHS.webhooks, session?.account.id)} className="text-accent">
-                      Webhooks
-                    </Link>{" "}
-                    to send a dummy TradingView call from this ticket.
-                  </p>
                 ) : null}
               </form>
               {live && !settings.connectionId ? (
@@ -369,6 +363,11 @@ export default async function FuturesPositionsPage({
                   venue orders.
                 </p>
               ) : null}
+              <SymbolDetails
+                options={pairs}
+                quotes={symbolQuotes}
+                environment={session?.account.venueEnvironment ?? null}
+              />
             </div>
           </section>
           </ManualTradeWorkspace>
