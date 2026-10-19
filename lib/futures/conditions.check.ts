@@ -426,4 +426,17 @@ assert.equal(readDivergence.indicator?.divergence?.style, "regular");
 assert.equal(readDivergence.indicator?.divergence?.pivotBars, divergence.pivotBars);
 assert.equal(readDivergence.indicator?.divergence?.span, divergence.span);
 
+const blankBreakeven = conditionsFromRow({
+  breakeven_activation_pct: null,
+  breakeven_offset_pct: null,
+});
+assert.equal(blankBreakeven.breakevenActivationPct, null);
+assert.equal(blankBreakeven.breakevenOffsetPct, null);
+const zeroOffset = conditionsFromRow({
+  breakeven_activation_pct: 1,
+  breakeven_offset_pct: 0,
+});
+assert.equal(zeroOffset.breakevenActivationPct, 1);
+assert.equal(zeroOffset.breakevenOffsetPct, 0);
+
 console.log("futures conditions checks passed");

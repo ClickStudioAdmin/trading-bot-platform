@@ -693,7 +693,9 @@ export function conditionsFromRow(row: Record<string, unknown>): {
   addStack: EntryStack | null;
 } {
   const activation = Number(row.breakeven_activation_pct);
-  const offset = Number(row.breakeven_offset_pct);
+  const offsetRaw = row.breakeven_offset_pct;
+  const offset =
+    offsetRaw == null || offsetRaw === "" ? null : Number(offsetRaw);
   const stored = entryStackFromJson(row.entry_expr);
   const meta = entryExprMetaFromJson(row.entry_expr);
   const confirm = filterFromRow(row, "confirm");
@@ -714,7 +716,8 @@ export function conditionsFromRow(row: Record<string, unknown>): {
     exitStack: entryStackFromJson(row.exit_expr) ?? emptyEntryStack(),
     exitActions: exitActionsFromJson(row.exit_actions),
     breakevenActivationPct: activation > 0 ? activation : null,
-    breakevenOffsetPct: Number.isFinite(offset) && offset >= 0 ? offset : null,
+    breakevenOffsetPct:
+      offset != null && Number.isFinite(offset) && offset >= 0 ? offset : null,
   };
 }
 

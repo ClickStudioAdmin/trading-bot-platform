@@ -63,6 +63,7 @@ import {
   resolveEntryStack,
   type EntryStack,
 } from "@/lib/strategy/expr";
+import { exitActionsFromJson } from "@/lib/strategy/exit-actions";
 import { parseRetraceSpec, type RetraceSpec } from "@/lib/strategy/retrace";
 import {
   parseRsiDivergenceSettings,
@@ -800,6 +801,7 @@ function parsePerpsTemplateRecipe(
     exitIf: filterSpecFromRecipe(row.exitIf),
     exitHard: (row.exitHard as PerpsTemplateRecipe["exitHard"]) ?? null,
     exitStack: entryStackFromJson(row.exitStack) ?? undefined,
+    exitActions: exitActionsFromJson(row.exitActions) ?? undefined,
     breakevenActivationPct: asNullableNumber(row.breakevenActivationPct),
     breakevenOffsetPct: asNullableNumber(row.breakevenOffsetPct),
     direction:
