@@ -5,7 +5,7 @@ import { flushSync, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AppMultiSelect, AppSelect, type AppSelectOption } from "@/components/app-select";
 import { TemplateParametersButton } from "@/components/template-parameters-tip";
-import { BotFormStep } from "@/components/bot-form-chrome";
+import { BotFormStep, botFieldInvalidClass } from "@/components/bot-form-chrome";
 import { BotRecipeEditor } from "@/components/bot-recipe-editor";
 import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
@@ -341,22 +341,26 @@ export function BacktestQueueForm({
     () => groupBacktestLibrary(templates, folders),
     [folders, templates],
   );
-  const botOptions = useMemo((): AppSelectOption[] => {
-    const placeholder =
-      loadedFromRun && recipe
-        ? "Loaded from previous run"
-        : recipe && !templateId
-          ? "Loaded from Automations"
-          : "Pick a desk bot or template";
+  const libraryTemplateSelected = templates.some((row) => row.id === templateId);
+  const deskBotSelected =
+    !libraryTemplateSelected && deskBots.some((row) => row.id === templateId);
+  const nameMissing = !backtestName.trim();
+  const sourceMissing =
+    !recipe && !deskBotSelected && !libraryTemplateSelected;
+  const deskBotOptions = useMemo((): AppSelectOption[] => {
     return [
-      { value: "", label: placeholder },
+      { value: "", label: "Pick a desk bot" },
       ...deskBots.map((row) => ({
         value: row.id,
-        group: "Desk automations",
         label: `${row.kind === "dca" ? "DCA" : "Flex"} · ${row.name}${
           row.symbol ? ` · ${row.symbol}` : ""
         } · ${row.deskName}`,
       })),
+    ];
+  }, [deskBots]);
+  const templateOptions = useMemo((): AppSelectOption[] => {
+    return [
+      { value: "", label: "Pick a template" },
       ...templateGroups.flatMap((group) =>
         group.items.map((row) => ({
           value: templateOptionValue(group.id, row.id),
@@ -373,14 +377,14 @@ export function BacktestQueueForm({
         })),
       ),
     ];
-  }, [deskBots, loadedFromRun, recipe, templateGroups, templateId]);
-  const pickedTemplate =
-    templates.find((row) => row.id === templateId) ?? null;
-  const selectValue =
-    botOptions.find(
+  }, [templateGroups]);
+  const pickedTemplate = libraryTemplateSelected
+    ? (templates.find((row) => row.id === templateId) ?? null)
+    : null;
+  const templateSelectValue =
+    templateOptions.find(
       (option) => templateIdFromOption(option.value) === templateId,
-    )?.value ??
-    (deskBots.some((row) => row.id === templateId) ? templateId : "");
+    )?.value ?? "";
   const editedAway = Boolean(
     recipe &&
       (sourceTemplateId || templateId || loadedFromRun) &&
@@ -622,6 +626,88 @@ export function BacktestQueueForm({
       </div>
     ) : null;
 
+  function keepTypedName(nextName: string) {
+    setBacktestName((current) => {
+      const previous = (
+        templates.find((row) => row.id === templateId)?.name ??
+        recipe?.name ??
+        ""
+      ).trim();
+      const typed = current.trim();
+      if (!typed || typed === previous) {
+        return nextName;
+      }
+      return current;
+    });
+  }
+
+  function clearSourcePick() {
+    botRequest.current += 1;
+    setBotPending(false);
+    setBotLoadError("");
+    setTemplateId("");
+    setPickedDeskBot(null);
+  }
+
+  function pickDeskBot(id: string) {
+    const desk = deskBots.find((row) => row.id === id);
+    if (!desk) {
+      clearSourcePick();
+      return;
+    }
+    const ticket = botRequest.current + 1;
+    botRequest.current = ticket;
+    setTemplateId(id);
+    setBotLoadError("");
+    setBotPending(true);
+    setRecipe(null);
+    setPickedDeskBot(null);
+    void loadBacktestDeskBotAction(desk.id).then((result) => {
+      if (ticket !== botRequest.current) {
+        return;
+      }
+      setBotPending(false);
+      if (!result.ok) {
+        setBotLoadError(result.error);
+        return;
+      }
+      const match = findBacktestableTemplate(result.bot.recipe, templates);
+      setPickedDeskBot(result.bot);
+      setRecipe(result.bot.recipe);
+      keepTypedName(result.bot.recipe.name);
+      setSourceTemplateId(match?.id ?? "");
+      setSymbol(result.bot.recipe.symbol);
+      setVenue(result.bot.venue === "hyperliquid" ? "hyperliquid" : "bybit");
+      setVenueEnvironment(result.bot.venueEnvironment);
+      setComparables((rows) =>
+        rows.filter((row) => row !== result.bot.recipe.symbol),
+      );
+      setActiveDraftId("");
+    });
+  }
+
+  function pickTemplate(value: string) {
+    const pickedId = templateIdFromOption(value);
+    const next = pickedId
+      ? templates.find((row) => row.id === pickedId)
+      : undefined;
+    if (!next) {
+      clearSourcePick();
+      return;
+    }
+    botRequest.current += 1;
+    setBotPending(false);
+    setBotLoadError("");
+    setPickedDeskBot(null);
+    setTemplateId(next.id);
+    setRecipe(next.recipe);
+    keepTypedName(next.name);
+    setSourceTemplateId(next.id);
+    setSymbol(next.recipe.symbol);
+    setComparables((rows) => rows.filter((row) => row !== next.recipe.symbol));
+    setActiveDraftId("");
+  }
+
   return (
     <>
     {variant ? null : pageNoticeBlock}
@@ -797,124 +883,69 @@ export function BacktestQueueForm({
             value={backtestName}
             maxLength={BACKTEST_NAME_MAX}
             onChange={(event) => setBacktestName(event.target.value)}
-            className={BILLING_FIELD_CLASS}
+            className={nameMissing ? botFieldInvalidClass : BILLING_FIELD_CLASS}
+            aria-invalid={nameMissing || undefined}
           />
         </label>
         {variant ? null : (
-        <label className="block text-sm text-ink">
-          Bot
-          <input
-            type="hidden"
-            name="templateId"
-            value={
-              templates.some((row) => row.id === templateId) ? templateId : ""
-            }
-          />
-          <span className="mt-1 flex items-start gap-2">
-          <span className="min-w-0 flex-1">
-          <AppSelect
-            value={selectValue}
-            options={botOptions}
-            onChange={(event) => {
-              const value = event.target.value;
-              const pickedId = templateIdFromOption(value);
-              const desk = deskBots.find((row) => row.id === value);
-              const next = pickedId
-                ? templates.find((row) => row.id === pickedId)
-                : undefined;
-              setTemplateId(pickedId ?? (desk ? value : ""));
-              setBotLoadError("");
-              if (desk) {
-                const ticket = botRequest.current + 1;
-                botRequest.current = ticket;
-                setBotPending(true);
-                setRecipe(null);
-                setPickedDeskBot(null);
-                void loadBacktestDeskBotAction(desk.id).then((result) => {
-                  if (ticket !== botRequest.current) {
-                    return;
-                  }
-                  setBotPending(false);
-                  if (!result.ok) {
-                    setBotLoadError(result.error);
-                    return;
-                  }
-                  const match = findBacktestableTemplate(
-                    result.bot.recipe,
-                    templates,
-                  );
-                  setPickedDeskBot(result.bot);
-                  setRecipe(result.bot.recipe);
-                  setBacktestName((current) => {
-                    const previous = (
-                      templates.find((row) => row.id === templateId)?.name ??
-                      recipe?.name ??
-                      ""
-                    ).trim();
-                    const typed = current.trim();
-                    if (!typed || typed === previous) {
-                      return result.bot.recipe.name;
-                    }
-                    return current;
-                  });
-                  setSourceTemplateId(match?.id ?? "");
-                  setSymbol(result.bot.recipe.symbol);
-                  setVenue(
-                    result.bot.venue === "hyperliquid" ? "hyperliquid" : "bybit",
-                  );
-                  setVenueEnvironment(result.bot.venueEnvironment);
-                  setComparables((rows) =>
-                    rows.filter((row) => row !== result.bot.recipe.symbol),
-                  );
-                  setActiveDraftId("");
-                });
-                return;
-              }
-              botRequest.current += 1;
-              setBotPending(false);
-              setPickedDeskBot(null);
-              if (next) {
-                setRecipe(next.recipe);
-                setBacktestName((current) => {
-                  const previous = (
-                    templates.find((row) => row.id === templateId)?.name ??
-                    recipe?.name ??
-                    ""
-                  ).trim();
-                  const typed = current.trim();
-                  if (!typed || typed === previous) {
-                    return next.name;
-                  }
-                  return current;
-                });
-                setSourceTemplateId(next.id);
-                setSymbol(next.recipe.symbol);
-                setComparables((rows) =>
-                  rows.filter((row) => row !== next.recipe.symbol),
-                );
-                setActiveDraftId("");
-              }
-            }}
-            className={BILLING_FIELD_CLASS}
-          />
-          </span>
-          {pickedTemplate && matchingTemplate?.id !== pickedTemplate.id ? (
-            <TemplateParametersButton
-              name={pickedTemplate.name}
-              description={pickedTemplate.description}
-              recipe={pickedTemplate.recipe}
-              templateId={pickedTemplate.id}
-              className="mt-2"
+        <div className="grid min-w-0 gap-3 @min-[22rem]:grid-cols-2 [&>*]:min-w-0">
+          <label className="block text-sm text-ink">
+            Bot
+            <span className="mt-1 block">
+              <AppSelect
+                aria-label="Bot"
+                value={deskBotSelected ? templateId : ""}
+                options={deskBotOptions}
+                disabled={libraryTemplateSelected}
+                searchable
+                onChange={(event) => pickDeskBot(event.target.value)}
+                className={sourceMissing ? botFieldInvalidClass : BILLING_FIELD_CLASS}
+              />
+            </span>
+          </label>
+          <label className="block text-sm text-ink">
+            Template
+            <input
+              type="hidden"
+              name="templateId"
+              value={libraryTemplateSelected ? templateId : ""}
             />
-          ) : null}
-          </span>
+            <span className="mt-1 flex items-start gap-2">
+              <span className="min-w-0 flex-1">
+                <AppSelect
+                  aria-label="Template"
+                  value={templateSelectValue}
+                  options={templateOptions}
+                  disabled={deskBotSelected}
+                  searchable
+                  onChange={(event) => pickTemplate(event.target.value)}
+                  className={
+                    sourceMissing ? botFieldInvalidClass : BILLING_FIELD_CLASS
+                  }
+                />
+              </span>
+              {pickedTemplate && matchingTemplate?.id !== pickedTemplate.id ? (
+                <TemplateParametersButton
+                  name={pickedTemplate.name}
+                  description={pickedTemplate.description}
+                  recipe={pickedTemplate.recipe}
+                  templateId={pickedTemplate.id}
+                  className="mt-2"
+                />
+              ) : null}
+            </span>
+          </label>
           {botPending ? (
-            <p className="mt-2 text-sm text-ink-muted">Loading bot</p>
+            <p className="text-sm text-ink-muted @min-[22rem]:col-span-2">
+              Loading bot
+            </p>
           ) : null}
           {botLoadError ? (
-            <p className="mt-2 text-sm text-danger">{botLoadError}</p>
+            <p className="text-sm text-danger @min-[22rem]:col-span-2">
+              {botLoadError}
+            </p>
           ) : null}
-        </label>
+        </div>
         )}
         <div>
           <div className="grid min-w-0 gap-3 @min-[22rem]:grid-cols-2 [&>*]:min-w-0">
@@ -1238,8 +1269,7 @@ export function BacktestQueueForm({
             Bot to replay
           </h3>
           <p className="mt-2 text-sm text-ink-muted">
-            Pick a template, or open Backtest from a Flex or DCA bot on
-            Automations.
+            Pick a Bot or Bot Template from the left column.
           </p>
         </aside>
       )}
