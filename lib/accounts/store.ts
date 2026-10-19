@@ -469,11 +469,6 @@ export async function loadAccountUsage(
     const id = String((row as { account_id: string }).account_id);
     workingCount.set(id, (workingCount.get(id) ?? 0) + 1);
   }
-  const reduceOnlyIds = new Set(
-    settings
-      .filter((row) => Boolean(row.reduce_only))
-      .map((row) => String(row.account_id)),
-  );
   const ruleModes = new Map<string, unknown[]>();
   function pushRuleMode(row: Record<string, unknown>) {
     const id = String(row.account_id ?? "");
@@ -524,7 +519,6 @@ export async function loadAccountUsage(
     const botsOn = countArmedRules(rules) + (dcaBotsOn.get(account.id) ?? 0);
     const botCount = rules.length + (dcaBotCount.get(account.id) ?? 0);
     const automationsRunning = botsOn > 0;
-    const reduceOnly = reduceOnlyIds.has(account.id);
     const facts = closeFacts.get(account.id);
     const wind = deskWindDown({
       accountCount,
@@ -542,7 +536,7 @@ export async function loadAccountUsage(
       botCount,
       botsOn,
       automationsRunning,
-      reduceOnly,
+      reduceOnly: false,
       strategyConnectionId: connectionByAccount.get(account.id) ?? null,
       futuresConnectionId: futuresBinds.get(account.id) ?? null,
       blocks: wind.action === "blocked" ? [...wind.blocks] : [],

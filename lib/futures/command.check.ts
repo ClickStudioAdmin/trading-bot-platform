@@ -83,7 +83,11 @@ assert.equal(closeAllExtraBody({}), null);
 assert.equal(closeAllBlockNewSizeCopy({ dcaDesk: true }).label, "Block new clips");
 assert.match(
   closeAllBlockNewSizeCopy({ dcaDesk: true }).hint,
-  /Desk Settings/,
+  /Stop adding/,
+);
+assert.equal(
+  closeAllBlockNewSizeCopy({ dcaDesk: true }).hint.includes("Desk Settings"),
+  false,
 );
 assert.equal(
   closeAllBlockNewSizeCopy({ dcaDesk: true }).hint.includes(

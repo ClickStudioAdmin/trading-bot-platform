@@ -316,9 +316,6 @@ export default async function FuturesPositionsPage({
               there are positions. Cancel All Open Orders sits on Open
               orders only when orders are listed. Size is token quantity or
               USDT value (mark for market, limit price for limit).
-              {settings.reduceOnly
-                ? " Reduce only is on — Buy and Sell are blocked."
-                : ""}
             </p>
             <div className="mt-3 rounded-card border border-line bg-surface p-5">
               <form action={submitFuturesTrade} className="block">

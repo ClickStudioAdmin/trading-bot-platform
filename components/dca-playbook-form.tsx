@@ -675,7 +675,6 @@ export function DcaPlaybooksDesk({
   bookUsdt = null,
   leverage = null,
   lastPrices = {},
-  reduceOnly = false,
   webhooksHref = FUTURES_PATHS.webhooks,
   isAdmin = false,
   accountId,
@@ -700,7 +699,6 @@ export function DcaPlaybooksDesk({
   bookUsdt?: number | null;
   leverage?: number | null;
   lastPrices?: Record<string, number>;
-  reduceOnly?: boolean;
   webhooksHref?: string;
   isAdmin?: boolean;
   accountId?: string;
@@ -835,12 +833,6 @@ export function DcaPlaybooksDesk({
 
   return (
     <div className="space-y-3">
-      {reduceOnly ? (
-        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Reduce only is on. New orders stay blocked until you turn it off in
-          Desk Settings. Take profit and stop still run.
-        </p>
-      ) : null}
       {showForm && formCard ? (
         <DcaPlaybookForm
           key={formCard.key}
@@ -3099,12 +3091,6 @@ export function DcaPlaybookForm({
       <input type="hidden" name="botStatus" value={status} />
       <BotFormColumns single={embedded}>
       <BotFormCard>
-      {reduceOnly ? (
-        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Reduce only is on. New orders stay blocked until you turn it off in
-          Desk Settings. Take profit and stop still run.
-        </p>
-      ) : null}
       <BotFormStep title="General">
         {embedded ? (
           <input

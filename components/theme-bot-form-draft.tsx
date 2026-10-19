@@ -3664,10 +3664,6 @@ function ThemeBotFormReference() {
         <DraftCallout tone="warning">
           Size is above the desk max. Save is blocked.
         </DraftCallout>
-        <DraftCallout tone="warning">
-          Reduce only is on. New orders stay blocked until you turn it off in
-          Desk Settings. Take profit and stop still run.
-        </DraftCallout>
         <p className="text-xs text-warning">
           A position is open. Cycle settings are locked. Take profit and stops
           still save.
