@@ -60,6 +60,7 @@ import {
   type TradingAccount,
 } from "@/lib/accounts/model";
 import { requirePerpsUiSession } from "@/lib/accounts/guard";
+import { loginCanSendWebhookTest } from "@/lib/admin/emails";
 import {
   commitDeskRename,
   readDeskNameFromSettingsForm,
@@ -1085,6 +1086,9 @@ export async function testFuturesWebhook(formData: FormData) {
     String(formData.get("successNext") ?? next),
   );
   const session = await requirePerpsUiSession();
+  if (!loginCanSendWebhookTest(session.member)) {
+    fail(next, "Webhook tests are for developers and admins.");
+  }
   const supabase = createServiceClient();
   if (!supabase) {
     fail(next, "Auth is not configured.");

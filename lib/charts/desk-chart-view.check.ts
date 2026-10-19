@@ -43,7 +43,8 @@ assert.equal(readDeskChartView("not-json").interval, "60");
 assert.equal(readDeskChartView(null).chartAppearance.gridOpacity, 30);
 
 const catalog = deskIndicatorCatalog();
-assert.equal(catalog.length, 7);
+assert.equal(catalog.length, 8);
+assert.equal(catalog.some((row) => row.id === "rsi_divergence"), true);
 assert.equal(catalog.every((row) => row.locked === false), true);
 const closes = Array.from({ length: 40 }, (_, index) => 100 + index);
 const bars = closes.map((close, index) => ({

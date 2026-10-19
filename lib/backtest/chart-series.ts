@@ -26,6 +26,14 @@ import {
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
 import type { CandleBar } from "@/lib/market/candles";
+import {
+  DEFAULT_RSI_PIVOT_BARS,
+  DEFAULT_RSI_SPAN,
+  RSI_PIVOT_MAX,
+  RSI_PIVOT_MIN,
+  RSI_SPAN_MAX,
+  RSI_SPAN_MIN,
+} from "@/lib/strategy/rsi-divergence";
 import type { BacktestFillReason, BacktestRecipe } from "./model";
 
 export type PricePlot = {
@@ -71,7 +79,9 @@ export type IndicatorInputId =
   | "slowLength"
   | "multiplier"
   | "signal"
-  | "stddev";
+  | "stddev"
+  | "pivotBars"
+  | "span";
 
 export type IndicatorInput = {
   id: IndicatorInputId;
@@ -383,6 +393,8 @@ function layerTitle(spec: Spec): string {
     name = `Supertrend ${spec.period ?? DEFAULT_DCA_SUPERTREND_PERIOD} × ${multiplier}`;
   } else if (spec.kind === "rsi") {
     name = `RSI ${spec.period ?? DEFAULT_DCA_RSI_PERIOD}`;
+  } else if (spec.kind === "rsi_divergence") {
+    name = `RSI divergence ${spec.period ?? DEFAULT_DCA_RSI_PERIOD}`;
   } else if (spec.kind === "macd") {
     name = "MACD";
   } else if (spec.kind === "bb") {
@@ -446,6 +458,7 @@ const REPLAY_INDICATOR_CATALOG: {
   kinds: readonly ReplayIndicatorId[];
 }[] = [
   { id: "rsi", label: "RSI", kinds: ["rsi"] },
+  { id: "rsi_divergence", label: "RSI divergence", kinds: ["rsi_divergence"] },
   { id: "macd", label: "MACD", kinds: ["macd"] },
   { id: "sma", label: "Simple Moving Average", kinds: ["sma", "sma_cross"] },
   { id: "ema", label: "Exponential Moving Average", kinds: ["ema", "ema_cross"] },
@@ -505,6 +518,16 @@ function clampLength(value: number | undefined, fallback: number): number {
   );
 }
 
+function clampBounded(
+  value: number | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  const raw = value == null || !Number.isFinite(value) ? fallback : value;
+  return Math.min(max, Math.max(min, Math.round(raw)));
+}
+
 function clampFactor(value: number | undefined, fallback: number): number {
   const raw = value == null || !Number.isFinite(value) ? fallback : value;
   const rounded = Math.round(raw * 10) / 10;
@@ -521,9 +544,27 @@ function indicatorField(
 }
 
 function indicatorInputs(spec: Spec): IndicatorInput[] {
-  if (spec.kind === "rsi") {
-    return [
+  if (spec.kind === "rsi" || spec.kind === "rsi_divergence") {
+    const length = [
       indicatorField("length", "Length", spec.period ?? DEFAULT_DCA_RSI_PERIOD, LENGTH_RANGE),
+    ];
+    if (spec.kind !== "rsi_divergence") {
+      return length;
+    }
+    return [
+      ...length,
+      indicatorField(
+        "pivotBars",
+        "Pivot bars",
+        spec.divergence?.pivotBars ?? DEFAULT_RSI_PIVOT_BARS,
+        { min: RSI_PIVOT_MIN, max: RSI_PIVOT_MAX, step: 1 },
+      ),
+      indicatorField(
+        "span",
+        "Span",
+        spec.divergence?.span ?? DEFAULT_RSI_SPAN,
+        { min: RSI_SPAN_MIN, max: RSI_SPAN_MAX, step: 1 },
+      ),
     ];
   }
   if (spec.kind === "ema" || spec.kind === "sma") {
@@ -619,7 +660,7 @@ function referenceSpec(
       ? clampLength(settings.length, MACD_FAST)
       : kind === "bb"
         ? clampLength(settings.length, DEFAULT_DCA_BB_PERIOD)
-        : kind === "rsi"
+        : kind === "rsi" || kind === "rsi_divergence"
           ? clampLength(settings.length, DEFAULT_DCA_RSI_PERIOD)
           : kind === "supertrend" || kind === "atr_band"
             ? clampLength(settings.length, DEFAULT_DCA_SUPERTREND_PERIOD)
@@ -640,6 +681,27 @@ function referenceSpec(
         : null;
   const signal = kind === "macd" ? clampLength(settings.signal, MACD_SIGNAL) : null;
   const stddev = kind === "bb" ? clampFactor(settings.stddev, DCA_BB_STDDEV) : null;
+  const divergence =
+    kind === "rsi_divergence"
+      ? {
+          when: "bullish" as const,
+          style: "regular" as const,
+          pivotBars: clampBounded(
+            settings.pivotBars,
+            DEFAULT_RSI_PIVOT_BARS,
+            RSI_PIVOT_MIN,
+            RSI_PIVOT_MAX,
+          ),
+          span: clampBounded(
+            settings.span,
+            DEFAULT_RSI_SPAN,
+            RSI_SPAN_MIN,
+            RSI_SPAN_MAX,
+          ),
+          minPricePct: null,
+          minRsi: null,
+        }
+      : null;
   return {
     key: specKey({
       kind,
@@ -655,6 +717,7 @@ function referenceSpec(
     multiplier,
     signal,
     stddev,
+    divergence,
     reference: true,
     levels: [],
     timeframe: null,

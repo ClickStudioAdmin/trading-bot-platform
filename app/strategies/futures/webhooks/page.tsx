@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { FuturesWebhooksDesk } from "@/components/futures-webhooks-desk";
 import { FuturesWebhookTest } from "@/components/futures-webhook-test";
+import { loginCanSendWebhookTest } from "@/lib/admin/emails";
 import { getSessionContext } from "@/lib/auth/session";
 import { deskAllowsOrderWebhooks, deskAllowsPerpsRecipes, deskAllowsSignalWebhooks, deskHref, deskHomePath } from "@/lib/accounts/model";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
@@ -43,6 +44,8 @@ export default async function FuturesWebhooksPage({
   const allowOrder = session
     ? deskAllowsOrderWebhooks(session.account)
     : deskAllowsOrderWebhooks(deskType);
+  const canTestWebhook = session ? loginCanSendWebhookTest(session.member) : false;
+  const dummyLine = canTestWebhook ? "Send a dummy below. " : "";
   if (session && !allowSignal && !allowOrder) {
     redirect(deskHomePath(session.account, session.account.id));
   }
@@ -118,8 +121,7 @@ export default async function FuturesWebhooksPage({
             sends every buy, sell, and close.{" "}
             <span className="text-ink">Signal</span> is just the entry ping —
             Automations When shows the webhook name.
-            {hl ? " Strategy orders use the coin (BTC), not BTCUSDT." : ""} Send
-            a dummy below. A fill opens{" "}
+            {hl ? " Strategy orders use the coin (BTC), not BTCUSDT." : ""} {dummyLine}A fill opens{" "}
             <Link href={href(FUTURES_PATHS.positions)} className="text-accent">
               Positions
             </Link>
@@ -131,7 +133,7 @@ export default async function FuturesWebhooksPage({
           <>
             Signal webhooks are a When trigger. Bind the name on Automations.
             Arm (or buy / sell) fires that bot. The bot owns size and side.
-            Send a dummy below. Fired orders open{" "}
+            {dummyLine}Fired orders open{" "}
             <Link href={href(FUTURES_PATHS.positions)} className="text-accent">
               Positions
             </Link>
@@ -141,7 +143,7 @@ export default async function FuturesWebhooksPage({
           <>
             Signal webhooks arm the bound bot. Arm / disarm /
             close-playbook still work. Buy / sell arms that side only; the
-            bot owns size. Send a dummy below. Armed orders open{" "}
+            bot owns size. {dummyLine}Armed orders open{" "}
             <Link href={href(FUTURES_PATHS.positions)} className="text-accent">
               Positions
             </Link>
@@ -150,8 +152,7 @@ export default async function FuturesWebhooksPage({
         ) : (
           <>
             TradingView sends buy, sell, and close on this URL.
-            {hl ? " Use the coin symbol (BTC), not BTCUSDT." : ""} Send a dummy
-            below. A fill opens{" "}
+            {hl ? " Use the coin symbol (BTC), not BTCUSDT." : ""} {dummyLine}A fill opens{" "}
             <Link href={href(FUTURES_PATHS.positions)} className="text-accent">
               Positions
             </Link>
@@ -185,7 +186,7 @@ export default async function FuturesWebhooksPage({
             allowSignal={allowSignal}
             allowOrder={allowOrder}
           />
-          {testWebhooks.length > 0 ? (
+          {canTestWebhook && testWebhooks.length > 0 ? (
             <div>
               <FuturesWebhookTest
                 webhooks={testWebhooks}
@@ -210,11 +211,11 @@ export default async function FuturesWebhooksPage({
                 </p>
               ) : null}
             </div>
-          ) : (
+          ) : canTestWebhook ? (
             <p className="text-sm text-ink-muted">
               Create a webhook above to send a dummy TradingView call.
             </p>
-          )}
+          ) : null}
         </div>
       ) : (
         <p className="mt-6 text-sm text-ink-muted">

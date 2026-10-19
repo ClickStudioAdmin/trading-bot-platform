@@ -19,6 +19,14 @@ export function loginIsAdmin(input: {
   return input.role === "admin" || emailIsListedAdmin(input.email ?? undefined);
 }
 
+/** Dummy webhook sends from Positions and Webhooks. */
+export function loginCanSendWebhookTest(input: {
+  role: string | null | undefined;
+  email: string | null | undefined;
+}): boolean {
+  return loginIsAdmin(input) || input.role === "developer";
+}
+
 /** Which exchange statuses a login can use. Public is Beta and Live. */
 export type ExchangePreview = "public" | "testing" | "development";
 

@@ -14,7 +14,11 @@ import {
 import { FuturesWorkingOrders } from "@/components/futures-working";
 import { DeskReturnHeading } from "@/components/desk-return-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { FuturesWebhookTest } from "@/components/futures-webhook-test";
+import {
+  FuturesWebhookTest,
+  MANUAL_ORDER_FORM_ID,
+} from "@/components/futures-webhook-test";
+import { loginCanSendWebhookTest } from "@/lib/admin/emails";
 import { HyperliquidDeskFlash } from "@/components/venues/hyperliquid/desk-flash";
 import { getSessionContext } from "@/lib/auth/session";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
@@ -100,6 +104,7 @@ export async function HyperliquidFuturesPositions({
   const allowSignal = session
     ? deskAllowsSignalWebhooks(session.account)
     : deskAllowsSignalWebhooks(deskType);
+  const canTestWebhook = session ? loginCanSendWebhookTest(session.member) : false;
   const loadCatalog = !botScope || showTicket;
   const emptyTickers = new Map<
     string,
@@ -125,7 +130,7 @@ export async function HyperliquidFuturesPositions({
             maxValuePerSymbol: null,
             maxOpenPositions: null,
           }),
-      session && showTicket
+      session && showTicket && canTestWebhook
         ? headerList.then((headerStore) =>
             listFuturesWebhooks({
               accountId: session.account.id,
@@ -265,13 +270,8 @@ export async function HyperliquidFuturesPositions({
             <h2 className="text-lg font-semibold tracking-tight">
               Place an order
             </h2>
-            <p className="text-sm text-ink-muted">
-              USDC perpetual. One open side per coin. Buy opens or adds a
-              long, or reduces a short. Sell opens or adds a short, or reduces
-              a long. Market fills now. Limit rests under Open orders.
-            </p>
             <div className="mt-3 rounded-card border border-line bg-surface p-5">
-              <form action={submitFuturesTrade} className="block">
+              <form id={MANUAL_ORDER_FORM_ID} action={submitFuturesTrade} className="block">
                 <input type="hidden" name="next" value={NEXT} />
                 <FuturesOrderTicket
                   options={pairs}
@@ -301,13 +301,13 @@ export async function HyperliquidFuturesPositions({
                     </>
                   }
                 />
-                {testWebhooks.length > 0 ? (
+                {canTestWebhook && testWebhooks.length > 0 ? (
                   <FuturesWebhookTest
                     webhooks={testWebhooks}
                     allowSignal={allowSignal}
                     defaultSymbol="BTC"
                   />
-                ) : session ? (
+                ) : canTestWebhook && session ? (
                   <p className="mt-4 text-hint text-ink-muted">
                     Create a named webhook on{" "}
                     <Link

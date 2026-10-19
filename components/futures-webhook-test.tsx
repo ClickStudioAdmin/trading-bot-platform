@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { FuturesOrderTicket } from "@/components/futures-order-ticket";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { useModalPortalHost } from "@/components/portal-host";
 import { testFuturesWebhook } from "@/lib/futures/actions";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import {
@@ -11,6 +13,8 @@ import {
 } from "@/lib/exchanges/agreement";
 import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
 import { AppSelect } from "@/components/app-select";
+
+export const MANUAL_ORDER_FORM_ID = "manual-order-form";
 
 export function FuturesWebhookTest({
   webhooks,
@@ -40,6 +44,9 @@ export function FuturesWebhookTest({
     () => webhooks.find((row) => row.id === webhookId) ?? webhooks[0],
     [webhookId, webhooks],
   );
+  const [open, setOpen] = useState(false);
+  const titleId = useId();
+  const portalHost = useModalPortalHost();
   const signal = selected?.kind === "signal";
   const help = standalone
     ? [
@@ -88,18 +95,13 @@ export function FuturesWebhookTest({
           agreementGate={agreementGate}
         />
       ) : null}
-      <div className={standalone ? "mt-4 space-y-2" : "mt-4 space-y-2 border-t border-line pt-4"}>
-        {standalone ? null : (
-          <>
-            <p className="text-sm font-semibold text-ink">Send a test</p>
-            <p className="text-hint text-ink-muted">{help}</p>
-          </>
-        )}
-        <div className="mt-3 flex flex-wrap items-end gap-x-6 gap-y-4">
+      <div className={standalone ? "mt-4 space-y-2" : "space-y-4"}>
+        <div className={standalone ? "mt-3 flex flex-wrap items-end gap-x-6 gap-y-4" : "space-y-4"}>
           <label className="block min-w-[14rem] flex-1 text-sm text-ink">
             Webhook
             <AppSelect
               name="webhookId"
+              form={standalone ? undefined : MANUAL_ORDER_FORM_ID}
               value={webhookId}
               onChange={(event) => setWebhookId(event.target.value)}
               className="mt-1 w-full"
@@ -120,6 +122,7 @@ export function FuturesWebhookTest({
             <AppSelect
               key={selected?.kind ?? "order"}
               name="testAction"
+              form={standalone ? undefined : MANUAL_ORDER_FORM_ID}
               defaultValue={signal ? "arm" : "buy"}
               className="mt-1 w-full"
             >
@@ -139,6 +142,7 @@ export function FuturesWebhookTest({
             </AppSelect>
           </label>
           <PendingSubmitButton
+            form={standalone ? undefined : MANUAL_ORDER_FORM_ID}
             formAction={standalone ? undefined : testFuturesWebhook}
             pendingLabel="Sending…"
             successKey="test-futures-webhook"
@@ -151,8 +155,67 @@ export function FuturesWebhookTest({
     </>
   );
 
+  useEffect(() => {
+    if (standalone || !open) {
+      return;
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, standalone]);
+
   if (!standalone) {
-    return fields;
+    return (
+      <>
+        <div className="mt-4 border-t border-line pt-4">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="text-sm text-accent"
+          >
+            Test Webhook
+          </button>
+        </div>
+        {open && portalHost
+          ? createPortal(
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/70 p-4">
+                <button
+                  type="button"
+                  className="absolute inset-0"
+                  aria-label="Close"
+                  onClick={() => setOpen(false)}
+                />
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby={titleId}
+                  className="relative w-full max-w-md rounded-card border border-line bg-surface p-5"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <h2 id={titleId} className="text-lg font-semibold tracking-tight">
+                      Test Webhook
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setOpen(false)}
+                      className="text-ink-muted hover:text-ink"
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="mt-4">{fields}</div>
+                </div>
+              </div>,
+              portalHost,
+            )
+          : null}
+      </>
+    );
   }
 
   return (

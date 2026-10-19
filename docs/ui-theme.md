@@ -95,4 +95,4 @@ Short press on buttons (`scale` + opacity). Server-action submits swap the label
 
 ## Loading
 
-A route `loading.tsx` paints the same containers as the loaded page: the page heading, stat cards, and table cards. `ContainerLoading` (`components/container-loading.tsx`) sits inside each container that is still waiting — the same spinner as a submit button. Do not replace the page with one line of loading text under the title. Positions, Performance, and Bots are the reference.
+A route `loading.tsx` paints the same containers as the loaded page: the page heading, stat cards, and table cards. Positions open value, unrealized P&L, and open exposure are one text row under the heading, not cards. `ContainerLoading` (`components/container-loading.tsx`) sits inside each container that is still waiting — the same spinner as a submit button. Do not replace the page with one line of loading text under the title. Positions, Performance, and Bots are the reference.

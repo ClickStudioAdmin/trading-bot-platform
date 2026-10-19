@@ -14,6 +14,7 @@ import {
 import { FuturesWorkingOrders } from "@/components/futures-working";
 import { DeskReturnHeading } from "@/components/desk-return-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { loginCanSendWebhookTest } from "@/lib/admin/emails";
 import { getSessionContext } from "@/lib/auth/session";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
 import {
@@ -41,7 +42,10 @@ import {
 } from "@/lib/desk-blotter-filters";
 import { loadFuturesAutomationRules } from "@/lib/futures/automation-load";
 import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
-import { FuturesWebhookTest } from "@/components/futures-webhook-test";
+import {
+  FuturesWebhookTest,
+  MANUAL_ORDER_FORM_ID,
+} from "@/components/futures-webhook-test";
 import { submitFuturesTrade } from "@/lib/futures/actions";
 import { futuresWebhookOrigin } from "@/lib/futures/webhook";
 import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
@@ -104,6 +108,7 @@ export default async function FuturesPositionsPage({
   const allowSignal = session
     ? deskAllowsSignalWebhooks(session.account)
     : deskAllowsSignalWebhooks(deskType);
+  const canTestWebhook = session ? loginCanSendWebhookTest(session.member) : false;
   const loadCatalog = !botScope || showTicket;
   const emptyTickers = new Map<
     string,
@@ -129,7 +134,7 @@ export default async function FuturesPositionsPage({
             maxValuePerSymbol: null,
             maxOpenPositions: null,
           }),
-      session && showTicket
+      session && showTicket && canTestWebhook
         ? headerList.then((headerStore) =>
             listFuturesWebhooks({
               accountId: session.account.id,
@@ -311,12 +316,8 @@ export default async function FuturesPositionsPage({
             <h2 className="text-lg font-semibold tracking-tight">
               Place an order
             </h2>
-            <p className="text-sm text-ink-muted">
-              USDT linear perpetual. Buy opens or adds a long. Sell opens or
-              adds a short. Market fills now. Limit rests under Open orders.
-            </p>
             <div className="mt-3 rounded-card border border-line bg-surface p-5">
-              <form action={submitFuturesTrade} className="block">
+              <form id={MANUAL_ORDER_FORM_ID} action={submitFuturesTrade} className="block">
                 <input type="hidden" name="next" value={NEXT} />
                 <FuturesOrderTicket
                   options={pairs}
@@ -346,13 +347,13 @@ export default async function FuturesPositionsPage({
                     </>
                   }
                 />
-                {testWebhooks.length > 0 ? (
+                {canTestWebhook && testWebhooks.length > 0 ? (
                   <FuturesWebhookTest
                     webhooks={testWebhooks}
                     allowSignal={allowSignal}
                     agreementGate={agreementGate}
                   />
-                ) : session ? (
+                ) : canTestWebhook && session ? (
                   <p className="mt-4 text-hint text-ink-muted">
                     Create a named webhook on{" "}
                     <Link href={deskHref(FUTURES_PATHS.webhooks, session?.account.id)} className="text-accent">

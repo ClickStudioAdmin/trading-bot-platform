@@ -60,6 +60,7 @@ import {
 } from "@/lib/charts/desk-chart-view";
 import { indicatorAddDenial, researchTrialLine } from "@/lib/membership/entitlements";
 import { DESK_CANDLE_LIMIT, type CandleBar, type CandleVenue } from "@/lib/market/candles";
+import { rsiDivergenceLine } from "@/lib/strategy/rsi-divergence";
 
 const EMPTY_CANDLES: CandleBar[] = [];
 const DESK_CHART_EVENT = "tbp-desk-chart";
@@ -469,6 +470,8 @@ export function DeskTradeChart({
           signal: PlotSeries | null;
           histogram: PlotSeries | null;
         };
+        priceSegment: PlotSeries | null;
+        rsiSegment: PlotSeries | null;
       };
       function plotSeries(series: { setData: (data: never) => void }): PlotSeries {
         return {
@@ -601,7 +604,32 @@ export function DeskTradeChart({
             indicatorApis.push(signal);
             oscillator.signal = plotSeries(signal);
           }
-          drawn.push({ lines, oscillator });
+          let priceSegment: PlotSeries | null = null;
+          let rsiSegment: PlotSeries | null = null;
+          if (layer.divergence) {
+            const priceLine = chart.addSeries(charts.LineSeries, {
+              color: "#F5B942",
+              lineWidth: 2,
+              priceLineVisible: false,
+              lastValueVisible: false,
+              autoscaleInfoProvider: () => null,
+            });
+            const rsiLine = chart.addSeries(
+              charts.LineSeries,
+              {
+                color: "#F5B942",
+                lineWidth: 2,
+                lineStyle: charts.LineStyle.Dashed,
+                priceLineVisible: false,
+                lastValueVisible: false,
+              },
+              pane,
+            );
+            indicatorApis.push(priceLine, rsiLine);
+            priceSegment = plotSeries(priceLine);
+            rsiSegment = plotSeries(rsiLine);
+          }
+          drawn.push({ lines, oscillator, priceSegment, rsiSegment });
         }
       }
 
@@ -617,6 +645,32 @@ export function DeskTradeChart({
           });
           if (layer.oscillator?.rsi && row.oscillator.rsi) {
             row.oscillator.rsi.setData(lineData(shown, layer.oscillator.rsi));
+          }
+          if (layer.divergence && row.priceSegment && row.rsiSegment) {
+            const line = rsiDivergenceLine({
+              bars: shown.map((bar) => ({
+                high: bar.high,
+                low: bar.low,
+                close: bar.close,
+              })),
+              period: layer.divergence.period,
+              settings: layer.divergence.settings,
+            });
+            const older = line ? shown[line.olderIndex] : null;
+            const newer = line ? shown[line.newerIndex] : null;
+            if (line && older && newer) {
+              row.priceSegment.setData([
+                { time: Math.floor(older.timeMs / 1000), value: line.olderPrice },
+                { time: Math.floor(newer.timeMs / 1000), value: line.newerPrice },
+              ]);
+              row.rsiSegment.setData([
+                { time: Math.floor(older.timeMs / 1000), value: line.olderRsi },
+                { time: Math.floor(newer.timeMs / 1000), value: line.newerRsi },
+              ]);
+            } else {
+              row.priceSegment.setData([]);
+              row.rsiSegment.setData([]);
+            }
           }
           if (layer.oscillator?.histogram && row.oscillator.histogram) {
             const histogramStyle = indicatorLineStyle(
