@@ -10,8 +10,13 @@ import {
   TableCard,
   TableIconAction,
 } from "@/components/table-chrome";
-import { formatDeskType, type DeskType } from "@/lib/accounts/model";
-import { availabilityCounts } from "@/lib/exchanges/availability";
+import { formatDeskDisplayMode, formatDeskType } from "@/lib/accounts/model";
+import {
+  EXCHANGE_DESK_MODES,
+  availabilitySetting,
+  availabilityStatusLabel,
+  exchangeListDeskTypes,
+} from "@/lib/exchanges/availability";
 import { loadExchangeAvailability } from "@/lib/exchanges/availability-store";
 import { VENUES } from "@/lib/exchanges/venues";
 import { firstSearchValue } from "@/lib/paper/open";
@@ -34,8 +39,10 @@ export default async function AdminExchangesPage({
     <div>
       <PageHeading overline="Admin" title="Exchanges" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
-        Integrated exchanges. Live is what members see when they create a
-        desk. Testing is only for admins.
+        Integrated exchanges. In Development is for developers and admins.
+        Testing is for platform testers, developers, and admins. Members only
+        see Beta and Live. Beta shows a beta notice. Live is what members see
+        when they create a desk.
       </p>
       {error ? (
         <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -48,26 +55,30 @@ export default async function AdminExchangesPage({
             <tr>
               <th className="px-4 py-3 font-medium">Exchange</th>
               <th className="px-4 py-3 font-medium">Desk type</th>
-              <th className="px-4 py-3 font-medium">Live</th>
-              <th className="px-4 py-3 font-medium">Testing</th>
+              {EXCHANGE_DESK_MODES.map((mode) => (
+                <th key={mode} className="px-4 py-3 font-medium">
+                  {formatDeskDisplayMode(mode)}
+                </th>
+              ))}
               <th className={`${TABLE_ACTIONS_TH_CLASS} text-right`}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {VENUES.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-ink-muted">
+                <td colSpan={6} className="px-4 py-6 text-ink-muted">
                   No exchanges are integrated.
                 </td>
               </tr>
             ) : (
-              VENUES.map((venue, venueIndex) =>
-                venue.deskTypes.map((deskType, typeIndex) => {
-                  const counts = availabilityCounts(venue.id, cells, deskType);
+              VENUES.map((venue, venueIndex) => {
+                const deskTypes = exchangeListDeskTypes(venue);
+                return deskTypes.map((row, typeIndex) => {
                   const first = typeIndex === 0;
                   const last =
                     venueIndex === VENUES.length - 1 &&
-                    typeIndex === venue.deskTypes.length - 1;
+                    typeIndex === deskTypes.length - 1;
+                  const deskType = row.deskType;
                   return (
                     <tr
                       key={`${venue.id}:${deskType}`}
@@ -75,7 +86,7 @@ export default async function AdminExchangesPage({
                     >
                       {first ? (
                         <td
-                          rowSpan={venue.deskTypes.length}
+                          rowSpan={deskTypes.length}
                           className="px-4 py-3 align-top"
                         >
                           <Link
@@ -87,24 +98,51 @@ export default async function AdminExchangesPage({
                         </td>
                       ) : null}
                       <td className="px-4 py-3 text-ink">
-                        {formatDeskType(deskType as DeskType)}
+                        {formatDeskType(deskType)}
                       </td>
-                      <td className="px-4 py-3 tabular-nums text-ink">
-                        {counts.live} of {counts.slots}
-                      </td>
-                      <td className="px-4 py-3 tabular-nums text-ink">
-                        {counts.testing} of {counts.slots}
-                      </td>
+                      {row.offered ? (
+                        EXCHANGE_DESK_MODES.map((mode) => {
+                          const setting = availabilitySetting(
+                            cells,
+                            venue.id,
+                            deskType,
+                            mode,
+                          );
+                          return (
+                            <td
+                              key={mode}
+                              className={`px-4 py-3 ${
+                                setting === "in_development"
+                                  ? "text-ink-muted"
+                                  : setting === "testing"
+                                    ? "text-warning"
+                                    : setting === "beta"
+                                      ? "text-accent"
+                                      : "text-ink"
+                              }`}
+                            >
+                              {availabilityStatusLabel(setting)}
+                            </td>
+                          );
+                        })
+                      ) : (
+                        <td
+                          colSpan={EXCHANGE_DESK_MODES.length}
+                          className="px-4 py-3 text-ink-faint"
+                        >
+                          NA
+                        </td>
+                      )}
                       {first ? (
                         <td
-                          rowSpan={venue.deskTypes.length}
+                          rowSpan={deskTypes.length}
                           className={`${TABLE_ACTIONS_TD_CLASS} align-top text-right`}
                         >
                           <TableActions className="justify-end">
                             <TableIconAction
                               href={`/admin/exchanges/${venue.id}`}
                               label="Edit"
-                              detail="Set Live and Testing for each desk type and mode."
+                              detail="Set In Development, Testing, Beta, or Live for each desk type and mode."
                             >
                               <IconPencil {...TABLE_BTN_ICON} />
                             </TableIconAction>
@@ -113,8 +151,8 @@ export default async function AdminExchangesPage({
                       ) : null}
                     </tr>
                   );
-                }),
-              )
+                });
+              })
             )}
           </tbody>
         </table>

@@ -5,7 +5,8 @@ import {
 } from "@/lib/exchanges/store";
 import { loadBybitAgreementOffers } from "@/lib/exchanges/agreement-store";
 import { exchangeCredentialsConfigured } from "@/lib/exchanges/encrypt";
-import { enabledVenues } from "@/lib/exchanges/venues";
+import { offeredAccountVenues } from "@/lib/exchanges/availability";
+import { loadExchangeAccessForUser } from "@/lib/exchanges/availability-store";
 import { loadExchangePairCounts } from "@/lib/pairs/page";
 import { ACCOUNT_EXCHANGES_HREF } from "@/lib/site-links";
 
@@ -32,7 +33,9 @@ export async function AccountExchangesPanel({
     loadExchangePairCounts(connections),
     loadBybitAgreementOffers(connections),
   ]);
-  const venues = enabledVenues();
+  const venues = offeredAccountVenues(
+    await loadExchangeAccessForUser(memberId),
+  );
   const canSave = exchangeCredentialsConfigured();
 
   return (

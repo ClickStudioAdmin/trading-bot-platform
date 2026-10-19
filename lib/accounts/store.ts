@@ -25,7 +25,7 @@ import {
 import { countArmedRules } from "@/lib/accounts/overview";
 import { selectPaperEngineSettings } from "@/lib/engine/settings";
 import { exchangeCreateAllowed } from "@/lib/exchanges/availability";
-import { loadExchangeAvailability } from "@/lib/exchanges/availability-store";
+import { loadExchangeAccessForUser } from "@/lib/exchanges/availability-store";
 import {
   connectionFitsDesk,
   parseStoredVenueEnvironment,
@@ -231,13 +231,10 @@ async function lockedEnvironmentAllowed(input: {
   if (error || !typed.ok) {
     return { ok: false, error: "Could not check that exchange." };
   }
-  const [admin, cells] = await Promise.all([
-    memberMayShareExchangeKey(input.userId),
-    loadExchangeAvailability(),
-  ]);
+  const access = await loadExchangeAccessForUser(input.userId);
   return exchangeCreateAllowed({
-    cells,
-    admin,
+    cells: access.cells,
+    preview: access.preview,
     deskType: typed.deskType,
     venueId: input.venueId,
     accountMode: "live",

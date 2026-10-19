@@ -30,6 +30,9 @@ import {
   type StarterFolder,
 } from "@/lib/onboarding/model";
 import {
+  deskBetaNotice,
+  environmentDeskMode,
+  exchangeChoiceLabel,
   exchangeCreateAllowed,
   offeredConnectionVenues,
   offeredVenues,
@@ -142,7 +145,7 @@ export function CreateAccountForm({
         }
         return exchangeCreateAllowed({
           cells: exchangeAccess.cells,
-          admin: exchangeAccess.admin,
+          preview: exchangeAccess.preview,
           deskType,
           venueId: row.venue,
           accountMode: "live",
@@ -216,7 +219,7 @@ export function CreateAccountForm({
   const venueChoice = exchangeAccess
     ? exchangeCreateAllowed({
         cells: exchangeAccess.cells,
-        admin: exchangeAccess.admin,
+        preview: exchangeAccess.preview,
         deskType,
         venueId: venue,
         accountMode: mode,
@@ -225,6 +228,15 @@ export function CreateAccountForm({
     : { ok: true as const };
   const venueDenied = !venueChoice.ok;
   const venueNotice = venueChoice.ok ? null : venueChoice.error;
+  const betaNotice = exchangeAccess
+    ? deskBetaNotice({
+        cells: exchangeAccess.cells,
+        deskType,
+        venueId: venue,
+        accountMode: mode,
+        environmentId: mode === "live" ? track || null : null,
+      })
+    : null;
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     if (!nameCheck.ok || typeDenied || quotaDenied || venueDenied) {
@@ -347,6 +359,7 @@ export function CreateAccountForm({
       ) : null}
       {quotaNotice ? <FreeTrialBadge message={quotaNotice} /> : null}
       {venueNotice ? <p className="text-sm text-danger">{venueNotice}</p> : null}
+      {betaNotice ? <p className="text-sm text-warning">{betaNotice}</p> : null}
       <label className="block text-sm text-ink">
         Name
         <input
@@ -401,7 +414,13 @@ export function CreateAccountForm({
           >
             {paperVenues.map((row) => (
               <option key={row.id} value={row.id}>
-                {row.label}
+                {exchangeChoiceLabel(
+                  row.label,
+                  exchangeAccess?.cells,
+                  row.id,
+                  deskType,
+                  "paper",
+                )}
               </option>
             ))}
           </AppSelect>
@@ -458,7 +477,13 @@ export function CreateAccountForm({
                       band === "max_demo_desks" ? demoBlocked : liveBlocked;
                     return (
                       <option key={row.id} value={row.id} disabled={Boolean(off)}>
-                        {formatConnectionSummary(row)}
+                        {exchangeChoiceLabel(
+                          formatConnectionSummary(row),
+                          exchangeAccess?.cells,
+                          row.venue,
+                          deskType,
+                          environmentDeskMode(row.environment),
+                        )}
                       </option>
                     );
                   })}
@@ -529,6 +554,8 @@ export function CreateAccountForm({
         venues={keyVenues}
         title="Add New Exchange Key"
         onCreated={handleKeyCreated}
+        deskType={deskType}
+        availability={exchangeAccess?.cells}
       />
     ) : null}
     </div>

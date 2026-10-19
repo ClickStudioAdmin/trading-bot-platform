@@ -11,6 +11,7 @@ import {
   insertExchangeConnection,
 } from "@/lib/exchanges/store";
 import { exclusiveVenueAccountError } from "@/lib/exchanges/venue-account";
+import { memberMayConnectEnvironment } from "@/lib/exchanges/availability-store";
 import { verifyExchangeCredentials } from "@/lib/exchanges/verify";
 import {
   parseConnectionVenueId,
@@ -116,6 +117,15 @@ export async function createMemberExchangeConnection(input: {
   const parsed = readConnectForm(input.formData);
   if (!parsed.ok) {
     return parsed;
+  }
+  if (
+    !(await memberMayConnectEnvironment(
+      input.userId,
+      parsed.venue.id,
+      parsed.environment.id,
+    ))
+  ) {
+    return { ok: false, error: "That exchange is not available." };
   }
   const verified = await verifyExchangeCredentials({
     venueId: parsed.venue.id,

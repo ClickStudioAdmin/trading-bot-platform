@@ -2,10 +2,15 @@
 
 import Link from "next/link";
 import {
+  Children,
+  cloneElement,
   forwardRef,
+  isValidElement,
   useRef,
   useState,
+  type CSSProperties,
   type MouseEvent,
+  type ReactElement,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -133,6 +138,24 @@ function LabelIcon({ children }: { children: ReactNode }) {
   );
 }
 
+/** Row icons stay 14px. The button is the hit target; the glyph does not fill it. */
+function TableIconGlyph({ children }: { children: ReactNode }) {
+  const sized = Children.map(children, (child) => {
+    if (!isValidElement(child)) {
+      return child;
+    }
+    const element = child as ReactElement<{ style?: CSSProperties }>;
+    return cloneElement(element, {
+      style: { ...element.props.style, width: 14, height: 14 },
+    });
+  });
+  return (
+    <span className="inline-flex size-3.5 shrink-0 items-center justify-center [&_svg]:h-3.5 [&_svg]:w-3.5">
+      {sized}
+    </span>
+  );
+}
+
 export const TableIconAction = forwardRef<
   HTMLButtonElement,
   {
@@ -183,7 +206,7 @@ export const TableIconAction = forwardRef<
           onClick={dismiss}
           {...tip}
         >
-          {children}
+          <TableIconGlyph>{children}</TableIconGlyph>
         </Link>
         <TableHint box={box} label={label} detail={detail} />
       </>
@@ -204,7 +227,7 @@ export const TableIconAction = forwardRef<
         }}
         {...tip}
       >
-        {children}
+        <TableIconGlyph>{children}</TableIconGlyph>
       </button>
       <TableHint box={box} label={label} detail={detail} />
     </>
@@ -245,7 +268,7 @@ export function TablePendingIconAction({
         } ${className}`.trim()}
         {...rest}
       >
-        {children}
+        <TableIconGlyph>{children}</TableIconGlyph>
       </PendingSubmitButton>
       <TableHint box={box} label={label} detail={detail} />
     </span>

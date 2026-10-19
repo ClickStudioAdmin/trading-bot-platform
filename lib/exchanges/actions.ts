@@ -37,6 +37,7 @@ import { withQuery } from "@/lib/accounts/model";
 import { getSessionContext, getSessionMember } from "@/lib/auth/session";
 import { stepUpRejection } from "@/lib/auth/step-up";
 import { stepUpFromForm } from "@/lib/auth/step-up-guard";
+import { memberMayConnectEnvironment } from "@/lib/exchanges/availability-store";
 import { ACCOUNT_EXCHANGES_HREF } from "@/lib/site-links";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -67,6 +68,15 @@ export async function checkExchangeConnection(
   const parsed = readConnectForm(formData);
   if (!parsed.ok) {
     return parsed;
+  }
+  if (
+    !(await memberMayConnectEnvironment(
+      member.id,
+      parsed.venue.id,
+      parsed.environment.id,
+    ))
+  ) {
+    return { ok: false, error: "That exchange is not available." };
   }
   const verified = await verifyExchangeCredentials({
     venueId: parsed.venue.id,
@@ -104,6 +114,15 @@ export async function saveExchangeConnection(formData: FormData) {
   const parsed = readConnectForm(formData);
   if (!parsed.ok) {
     return failTo(parsed.error);
+  }
+  if (
+    !(await memberMayConnectEnvironment(
+      session.member.id,
+      parsed.venue.id,
+      parsed.environment.id,
+    ))
+  ) {
+    return failTo("That exchange is not available.");
   }
   const { venue, environment, label, credentials, fingerprint } = parsed;
 

@@ -11,6 +11,12 @@ import {
   saveExchangeConnectionInline,
 } from "@/lib/exchanges/actions";
 import type { SavedMemberConnection } from "@/lib/exchanges/member-connection";
+import {
+  connectedVenueChoiceLabel,
+  environmentDeskMode,
+  exchangeChoiceLabel,
+  type ExchangeAvailabilityCell,
+} from "@/lib/exchanges/availability";
 import type { VenueDefinition } from "@/lib/exchanges/venues";
 import { AppSelect } from "@/components/app-select";
 import { StepUpForm } from "@/components/step-up-code-field";
@@ -25,6 +31,8 @@ export function ExchangeConnectForm({
   hideTitle = false,
   title,
   onCreated,
+  deskType,
+  availability,
 }: {
   venues: VenueDefinition[];
   next?: string;
@@ -33,6 +41,8 @@ export function ExchangeConnectForm({
   title?: string;
   /** Stay on the page and hand the saved key back. No redirect. */
   onCreated?: (connection: SavedMemberConnection) => void;
+  deskType?: string;
+  availability?: readonly ExchangeAvailabilityCell[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [venueId, setVenueId] = useState(venues[0]?.id ?? "");
@@ -142,7 +152,9 @@ export function ExchangeConnectForm({
         >
           {venues.map((item) => (
             <option key={item.id} value={item.id}>
-              {item.label}
+              {deskType
+                ? connectedVenueChoiceLabel(item, availability, deskType)
+                : item.label}
             </option>
           ))}
         </AppSelect>
@@ -157,7 +169,15 @@ export function ExchangeConnectForm({
         >
           {venue.environments.map((item) => (
             <option key={item.id} value={item.id}>
-              {item.label}
+              {deskType
+                ? exchangeChoiceLabel(
+                    item.label,
+                    availability,
+                    venue.id,
+                    deskType,
+                    environmentDeskMode(item.id),
+                  )
+                : item.label}
             </option>
           ))}
         </AppSelect>

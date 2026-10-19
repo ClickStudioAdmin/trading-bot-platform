@@ -8,7 +8,9 @@ import { formatDeskDisplayMode, formatDeskType, type DeskType } from "@/lib/acco
 import { saveExchangeAvailability } from "@/lib/exchanges/availability-actions";
 import {
   EXCHANGE_DESK_MODES,
-  cellFor,
+  EXCHANGE_STATUS_CHOICES,
+  availabilitySetting,
+  deskTypesInSidebarOrder,
   isVenueDeskType,
 } from "@/lib/exchanges/availability";
 import { loadExchangeAvailability } from "@/lib/exchanges/availability-store";
@@ -58,9 +60,11 @@ export default async function AdminExchangePage({
       />
       <PageHeading title={venue.label} />
       <p className="-mt-4 text-sm text-ink-muted">
-        Each desk type and mode is Live or Testing. Live lets members pick
-        this exchange when they create a desk. Testing lets admins pick it
-        and use it while you test. Desks that already exist stay as they are.
+        Each desk type and mode is In Development, Testing, Beta, or Live.
+        In Development is for developers and admins. Testing is for platform
+        testers, developers, and admins. Members only see Beta and Live. Beta
+        shows a beta notice on the desk.
+        Desks that already exist stay as they are.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -74,7 +78,7 @@ export default async function AdminExchangePage({
       ) : null}
       <form
         action={saveExchangeAvailability}
-        className="mt-6 space-y-6 rounded-card border border-line bg-surface p-5"
+        className="mt-6 rounded-card border border-line bg-surface p-5"
       >
         <input type="hidden" name="venue" value={venue.id} />
         <div>
@@ -86,56 +90,63 @@ export default async function AdminExchangePage({
             demo or testnet. Live is the exchange live environment.
           </p>
         </div>
-        {venue.deskTypes.map((deskType) => (
-          <section key={deskType}>
+        <div className="mt-6 divide-y divide-line border-t border-line">
+        {deskTypesInSidebarOrder(venue.deskTypes).map((deskType) => (
+          <section key={deskType} className="py-5">
             <h3 className="text-sm font-semibold text-ink">
               {isVenueDeskType(deskType) ? formatDeskType(deskType) : deskType}
             </h3>
-            <table className="mt-3 min-w-full text-left text-sm">
-              <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-muted">
-                <tr>
-                  <th className="py-2 pr-4 font-medium">Mode</th>
-                  <th className="px-4 py-2 font-medium">Live</th>
-                  <th className="px-4 py-2 font-medium">Testing</th>
-                </tr>
-              </thead>
-              <tbody>
-                {EXCHANGE_DESK_MODES.map((mode) => {
-                  const cell = cellFor(cells, venue.id, deskType, mode);
-                  const testingOnly = Boolean(cell?.testing && !cell.live);
-                  const modeLabel = formatDeskDisplayMode(mode);
-                  const typeLabel = formatDeskType(deskType as DeskType);
-                  const group = `availability:${deskType}:${mode}`;
-                  return (
-                    <tr key={mode} className="border-b border-line last:border-0">
-                      <td className="py-3 pr-4 text-ink">{modeLabel}</td>
-                      <td className="px-4 py-3">
-                        <AppRadio
-                          name={group}
-                          value="live"
-                          defaultChecked={!testingOnly}
-                          aria-label={`${typeLabel} ${modeLabel} Live`}
-                          className=""
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <AppRadio
-                          name={group}
-                          value="testing"
-                          defaultChecked={testingOnly}
-                          aria-label={`${typeLabel} ${modeLabel} Testing`}
-                          className=""
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="mt-3 w-full min-w-[46rem] table-fixed text-left text-sm">
+                <thead className="border-b border-line text-xs uppercase tracking-[0.12em] text-ink-muted">
+                  <tr>
+                    <th className="py-2 pr-4 text-left font-medium">Mode</th>
+                    {EXCHANGE_STATUS_CHOICES.map(([, label]) => (
+                      <th
+                        key={label}
+                        className="w-[10.5rem] whitespace-nowrap px-2 py-2 text-center font-medium"
+                      >
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {EXCHANGE_DESK_MODES.map((mode) => {
+                    const setting = availabilitySetting(
+                      cells,
+                      venue.id,
+                      deskType,
+                      mode,
+                    );
+                    const modeLabel = formatDeskDisplayMode(mode);
+                    const typeLabel = formatDeskType(deskType as DeskType);
+                    const group = `availability:${deskType}:${mode}`;
+                    return (
+                      <tr key={mode} className="border-b border-line last:border-0">
+                        <td className="py-3 pr-4 text-left text-ink">{modeLabel}</td>
+                        {EXCHANGE_STATUS_CHOICES.map(([value, label]) => (
+                          <td key={value} className="px-2 py-3 text-center">
+                            <AppRadio
+                              name={group}
+                              value={value}
+                              defaultChecked={setting === value}
+                              aria-label={`${typeLabel} ${modeLabel} ${label}`}
+                              className=""
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </section>
         ))}
+        </div>
         {unsupported.length > 0 ? (
-          <p className="text-sm text-ink-muted">
+          <p className="mt-6 text-sm text-ink-muted">
             {unsupported
               .map((deskType) => formatDeskType(deskType))
               .join(", ")}{" "}
@@ -145,7 +156,7 @@ export default async function AdminExchangePage({
         ) : null}
         <PendingSubmitButton
           pendingLabel="Saving…"
-          className="inline-flex items-center rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          className="mt-6 inline-flex items-center rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
         >
           Save
         </PendingSubmitButton>
