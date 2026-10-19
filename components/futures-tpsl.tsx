@@ -525,6 +525,8 @@ function FuturesTpslDialog({
           <input type="hidden" name="positionId" value={positionId} />
           <input type="hidden" name="tpslMode" value={mode} />
           <ModeToggle mode={mode} onChange={setModeAndPrefill} />
+          <section className="space-y-3 border-t border-line pt-4">
+            <h3 className="text-sm font-semibold text-ink">Take profit</h3>
           <TpslDialogRow
             name="takeProfit"
             kindName="tpKind"
@@ -565,6 +567,9 @@ function FuturesTpslDialog({
               setTpQtyText(qtyFromPercent(nextPct, qty));
             }}
           />
+          </section>
+          <section className="space-y-3 border-t border-line pt-4">
+            <h3 className="text-sm font-semibold text-ink">Stop loss</h3>
           <TpslDialogRow
             name="stopLoss"
             kindName="slKind"
@@ -605,6 +610,7 @@ function FuturesTpslDialog({
               setSlQtyText(qtyFromPercent(nextPct, qty));
             }}
           />
+          </section>
           <div className="flex flex-col gap-2 pt-2">
             <PendingSubmitButton
               pendingLabel="Saving"
