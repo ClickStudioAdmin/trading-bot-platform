@@ -358,12 +358,6 @@ function ParametersBody({
             loadedFromRun
             variantParentId={rootId}
             onVariantCancel={() => setModifying(false)}
-            variantLeading={
-              <p className="text-sm text-ink-muted">
-                This saves a new run linked to the original. Playback stays on
-                this replay until you select that variant.
-              </p>
-            }
             onVariantPending={() => {
               if (pendingToken.current) {
                 clearOptimisticVariant(pendingToken.current);
