@@ -15,6 +15,8 @@ import { loadCopyCatalogueDesk } from "@/lib/copy/catalogue";
 import { copyDeskPagePath } from "@/lib/copy/model";
 import { loadCopyDeskPublicClosed } from "@/lib/copy/desk-performance";
 import { memberIsAdmin } from "@/lib/admin/access";
+import { sharedDeskVisible } from "@/lib/exchanges/availability";
+import { loadExchangeAccessForUser } from "@/lib/exchanges/availability-store";
 import { getSessionMember } from "@/lib/auth/session";
 import { connectionIdsBoundToOtherDesks } from "@/lib/exchanges/connections";
 import {
@@ -43,8 +45,11 @@ export async function generateMetadata({
     viewerUserId: member.id,
     accountId: decodeURIComponent(rawId),
   });
+  const visible =
+    card &&
+    sharedDeskVisible(await loadExchangeAccessForUser(member.id), card);
   return {
-    title: card?.deskName ?? "Copy desk",
+    title: visible ? card.deskName : "Copy desk",
     description: "Performance for a shared copy desk.",
   };
 }
@@ -67,6 +72,10 @@ export default async function CopyDeskPerformancePage({
     accountId,
   });
   if (!card) {
+    notFound();
+  }
+  const exchangeAccess = await loadExchangeAccessForUser(member.id);
+  if (!sharedDeskVisible(exchangeAccess, card)) {
     notFound();
   }
   const [closed, connections, sharedConnectionIds] = await Promise.all([

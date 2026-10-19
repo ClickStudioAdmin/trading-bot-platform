@@ -981,6 +981,7 @@ export function DcaPlaybooksDesk({
                 : dcaListStatus(playbook),
               statusKey,
               summary: dcaBotSummary(playbook),
+              recipe: snapshotDcaRecipe(playbook),
               config: dcaBotConfig(playbook),
               canRemove:
                 botDeleteAllowed(statusKey) && !dcaPlaybookIsRunning(playbook),

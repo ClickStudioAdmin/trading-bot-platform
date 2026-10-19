@@ -21,6 +21,11 @@ import {
   type DcaStatus,
 } from "./playbook";
 import { deniedQuotaMessage } from "@/lib/membership/load-quota-access";
+import { loadPositionBuilderAccess } from "@/lib/membership/load-position-builder-access";
+import {
+  countPositionBuilderParts,
+  positionBuilderSaveDenial,
+} from "@/lib/membership/position-builder";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FuturesSide } from "@/lib/futures/model";
@@ -358,6 +363,15 @@ export async function saveDcaPlaybook(input: {
     : null;
   if (input.id && !existing) {
     return { ok: false, error: "That bot was not found." };
+  }
+  const builderAccess = await loadPositionBuilderAccess(input.userId);
+  const builderDenied = positionBuilderSaveDenial(
+    builderAccess,
+    countPositionBuilderParts(existing),
+    countPositionBuilderParts(input.config),
+  );
+  if (builderDenied) {
+    return { ok: false, error: builderDenied };
   }
   const siblings = await listDcaPlaybooksForAccount(
     input.accountId,

@@ -228,6 +228,24 @@ export function indicatorStartFromRow(
   if (row.indicator_multiplier != null) {
     form.set(names.multiplier, String(row.indicator_multiplier));
   }
+  if (String(row.indicator_kind ?? "") === "rsi_divergence") {
+    const divergence = entryExprMetaFromJson(row.entry_expr).divergence;
+    const base = names.kind.endsWith("Kind")
+      ? names.kind.slice(0, -4)
+      : names.kind;
+    if (divergence) {
+      form.set(`${base}DivergenceWhen`, divergence.when);
+      form.set(`${base}DivergenceStyle`, divergence.style);
+      form.set(`${base}PivotBars`, String(divergence.pivotBars));
+      form.set(`${base}Span`, String(divergence.span));
+      if (divergence.minPricePct != null) {
+        form.set(`${base}MinPricePct`, String(divergence.minPricePct));
+      }
+      if (divergence.minRsi != null) {
+        form.set(`${base}MinRsi`, String(divergence.minRsi));
+      }
+    }
+  }
   const family =
     String(row.indicator_kind ?? "") === "supertrend" ? "trend" : "indicator";
   const parsed = parseDcaIndicatorStartFields(form, names, true, "", family);

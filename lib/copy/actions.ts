@@ -23,6 +23,8 @@ import {
 } from "@/lib/auth/session";
 import { stepUpFromForm } from "@/lib/auth/step-up-guard";
 import { stepUpRejection, traderAliasNeedsStepUp } from "@/lib/auth/step-up";
+import { exchangeCreateAllowed } from "@/lib/exchanges/availability";
+import { loadExchangeAccessForUser } from "@/lib/exchanges/availability-store";
 import {
   accountCanHoldConnections,
   connectionFitsDesk,
@@ -534,6 +536,18 @@ export async function createCopyDeskAction(formData: FormData) {
   const goToDesk =
     formData.get("goToDesk") === "on" || formData.get("goToDesk") === "true";
   const mode = parseAccountMode(formData.get("mode"));
+  const exchangeAccess = await loadExchangeAccessForUser(member.id);
+  const exchangeVisible = exchangeCreateAllowed({
+    cells: exchangeAccess.cells,
+    preview: exchangeAccess.preview,
+    deskType: parent.deskType,
+    venueId: parent.venue,
+    accountMode: mode,
+    environmentId: mode === "live" ? parent.venueEnvironment : null,
+  });
+  if (!exchangeVisible.ok) {
+    return fail("That desk is not available.");
+  }
   let connectionId: string | null = null;
   const venueEnvironment = mode === "live" ? parent.venueEnvironment : null;
   const sized = parseCopySizeForm({

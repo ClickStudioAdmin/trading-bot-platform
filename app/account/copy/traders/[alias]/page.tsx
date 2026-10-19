@@ -8,6 +8,8 @@ import { loadTraderCatalogueDesks } from "@/lib/copy/catalogue";
 import { loadTraderProfileByAlias } from "@/lib/copy/profile";
 import { formatAuDateUtc, parseDisplayTime } from "@/lib/time/display";
 import { memberIsAdmin } from "@/lib/admin/access";
+import { sharedDeskVisible } from "@/lib/exchanges/availability";
+import { loadExchangeAccessForUser } from "@/lib/exchanges/availability-store";
 import { getSessionMember } from "@/lib/auth/session";
 import { connectionIdsBoundToOtherDesks } from "@/lib/exchanges/connections";
 import {
@@ -35,10 +37,13 @@ export default async function CopyTraderPage({
   if (!trader) {
     notFound();
   }
-  const desks = await loadTraderCatalogueDesks({
-    viewerUserId: member.id,
-    traderUserId: trader.userId,
-  });
+  const exchangeAccess = await loadExchangeAccessForUser(member.id);
+  const desks = (
+    await loadTraderCatalogueDesks({
+      viewerUserId: member.id,
+      traderUserId: trader.userId,
+    })
+  ).filter((desk) => sharedDeskVisible(exchangeAccess, desk));
   const firstSharedMs = desks
     .map((row) => parseDisplayTime(row.createdAt))
     .filter((ms): ms is number => ms != null)

@@ -70,6 +70,7 @@ import {
   deskBotRows,
   paperBotPair,
   paperBotSummary,
+  paperListRecipe,
   type AutomationsBotBlotter,
 } from "@/lib/bots/automations-list";
 import { withRemovedIds } from "@/lib/table-chrome";
@@ -402,6 +403,7 @@ export function PaperRulesForm({
               status: botModeLabel("cnc", layer.mode),
               statusKey: layer.mode,
               summary: paperBotSummary(layer),
+              recipe: paperListRecipe(layer),
               config: paperBotConfig(layer),
               canRemove:
                 botDeleteAllowed(layer.mode) &&

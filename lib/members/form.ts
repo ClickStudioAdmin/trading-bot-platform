@@ -2,7 +2,14 @@ import { emailIsListedAdmin } from "@/lib/admin/emails";
 import { parseOptionalReferralCode } from "@/lib/membership/affiliate";
 import { parsePlanId } from "@/lib/membership/form";
 
-export type MemberRole = "member" | "admin";
+export const MEMBER_ROLES = [
+  "member",
+  "platform_tester",
+  "developer",
+  "admin",
+] as const;
+
+export type MemberRole = (typeof MEMBER_ROLES)[number];
 export type MemberStatus = "active" | "disabled";
 
 export type MemberFormValues = {
@@ -41,7 +48,7 @@ export function parseMemberForm(
   if (mode === "edit" && password.length > 0 && password.length < 8) {
     return { ok: false, error: "New password must be at least 8 characters." };
   }
-  if (roleRaw !== "member" && roleRaw !== "admin") {
+  if (!isMemberRole(roleRaw)) {
     return { ok: false, error: "Choose a role." };
   }
   if (statusRaw !== "active" && statusRaw !== "disabled") {
@@ -163,6 +170,28 @@ export function parseAffiliateSignup(formData: FormData):
     password,
     referralCode: referral.code,
   };
+}
+
+export function isMemberRole(value: string): value is MemberRole {
+  return (MEMBER_ROLES as readonly string[]).includes(value);
+}
+
+export function parseMemberRole(value: unknown): MemberRole {
+  if (typeof value === "string" && isMemberRole(value)) {
+    return value;
+  }
+  return "member";
+}
+
+const MEMBER_ROLE_LABEL: Record<MemberRole, string> = {
+  member: "Member",
+  platform_tester: "Platform Tester",
+  developer: "Developer",
+  admin: "Admin",
+};
+
+export function formatMemberRole(role: MemberRole): string {
+  return MEMBER_ROLE_LABEL[role];
 }
 
 export function parseMemberId(raw: string): number | null {

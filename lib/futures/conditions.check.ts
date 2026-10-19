@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { blankRsiDivergenceSettings } from "@/lib/strategy/rsi-divergence";
 import {
+  conditionColumns,
+  conditionsFromRow,
   futuresAutomationNeedsWideBars,
   futuresBreakevenDue,
   futuresBreakevenStop,
@@ -400,5 +403,27 @@ assert.equal(
   }),
   true,
 );
+
+const divergence = blankRsiDivergenceSettings("long");
+const savedDivergence = conditionColumns({
+  indicator: {
+    kind: "rsi_divergence",
+    timeframe: "240",
+    compare: null,
+    level: null,
+    period: 14,
+    slowPeriod: null,
+    divergence,
+  },
+  entryStack: { leaves: [], joins: [] },
+});
+const readDivergence = conditionsFromRow(savedDivergence);
+assert.equal(readDivergence.indicator?.kind, "rsi_divergence");
+assert.equal(readDivergence.indicator?.timeframe, "240");
+assert.equal(readDivergence.indicator?.period, 14);
+assert.equal(readDivergence.indicator?.divergence?.when, "bullish");
+assert.equal(readDivergence.indicator?.divergence?.style, "regular");
+assert.equal(readDivergence.indicator?.divergence?.pivotBars, divergence.pivotBars);
+assert.equal(readDivergence.indicator?.divergence?.span, divergence.span);
 
 console.log("futures conditions checks passed");

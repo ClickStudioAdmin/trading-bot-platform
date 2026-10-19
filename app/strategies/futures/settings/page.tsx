@@ -32,10 +32,15 @@ import {
 import { exchangeCredentialsConfigured } from "@/lib/exchanges/encrypt";
 import {
   accountCanHoldConnections,
-  connectionVenuesForDeskType,
   connectionsForDeskBind,
   getVenue,
 } from "@/lib/exchanges/venues";
+import {
+  deskBindVenues,
+  environmentAllowedForDesk,
+  offeredConnectionVenues,
+} from "@/lib/exchanges/availability";
+import { loadExchangeAccessForUser } from "@/lib/exchanges/availability-store";
 import {
   listConnectionDeskBinds,
   listExchangeConnections,
@@ -121,10 +126,29 @@ export default async function FuturesSettingsPage({
       });
   const canSave = exchangeCredentialsConfigured();
   const settingsHref = deskHref(FUTURES_PATHS.settings, session.account.id);
+  const exchangeAccess = await loadExchangeAccessForUser(session.member.id);
   const deskVenue = getVenue(session.account.venue);
   const bindVenues = deskVenue
-    ? [deskVenue]
-    : connectionVenuesForDeskType(session.account.deskType);
+    ? deskBindVenues(
+        exchangeAccess,
+        session.account.deskType,
+        deskVenue.id,
+        session.account.venueEnvironment,
+      )
+    : offeredConnectionVenues(exchangeAccess, session.account.deskType);
+  const bindConnections = connections.filter(
+    (row) =>
+      row.id === settings.connectionId ||
+      (session.account.venueEnvironment != null &&
+        row.venue === session.account.venue &&
+        row.environment === session.account.venueEnvironment) ||
+      environmentAllowedForDesk(
+        exchangeAccess,
+        session.account.deskType,
+        row.venue,
+        row.environment,
+      ),
+  );
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -198,7 +222,7 @@ export default async function FuturesSettingsPage({
               live ? (
                 <ExchangeBindField
                   connections={connectionsForDeskBind(
-                    connections,
+                    bindConnections,
                     session.account,
                     settings.connectionId,
                   )}
@@ -260,7 +284,7 @@ export default async function FuturesSettingsPage({
               {live ? (
                 <ExchangeBindField
                   connections={connectionsForDeskBind(
-                    connections,
+                    bindConnections,
                     session.account,
                     settings.connectionId,
                   )}
@@ -402,7 +426,7 @@ function ExchangeBindField({
   sharedConnectionIds: string[];
   allowSharedKeys: boolean;
   canSave: boolean;
-  venues: ReturnType<typeof connectionVenuesForDeskType>;
+  venues: ReturnType<typeof deskBindVenues>;
   next: string;
 }) {
   const addConnection = canSave ? (

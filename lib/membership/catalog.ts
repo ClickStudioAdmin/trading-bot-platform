@@ -26,6 +26,7 @@ export const PLAN_FEATURE_KEYS = [
   "replay_strategy_optimization",
   "signals_inbound_webhooks",
   "extras_advanced_dca",
+  "position_builder",
   "extras_templates",
   "extras_share_templates",
   "extras_import_export_templates",
@@ -72,6 +73,7 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   replay_strategy_optimization: "Strategy Optimization",
   signals_inbound_webhooks: "Inbound TradingView / Signal webhooks",
   extras_advanced_dca: "Advanced DCA (Confirm, Exit-if, ATR)",
+  position_builder: "Position Builder",
   extras_templates: "Save Templates",
   extras_share_templates: "Share Templates",
   extras_import_export_templates: "Import / Export Templates",
@@ -385,6 +387,7 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     fixedOrder: true,
     rows: [
       { kind: "cap", key: "max_bots", label: "Max Bots" },
+      { kind: "feature", key: "position_builder", label: "Position Builder" },
       { kind: "feature", key: "extras_templates", label: "Save Templates" },
       { kind: "feature", key: "extras_share_templates", label: "Share Templates" },
       { kind: "feature", key: "extras_import_export_templates", label: "Import / Export Templates" },

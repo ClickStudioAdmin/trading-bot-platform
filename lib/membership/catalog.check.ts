@@ -339,6 +339,16 @@ assert.equal(
   deskResources.rows.some((row) => row.kind === "feature" && row.key === "mode_live"),
   false,
 );
+const botsAndTemplates = PLAN_COMPARE_SECTIONS.find(
+  (section) => section.title === "Bots & Templates",
+);
+assert.ok(botsAndTemplates);
+assert.equal(botsAndTemplates.fixedOrder, true);
+assert.deepEqual(
+  botsAndTemplates.rows.slice(0, 2).map((row) => `${row.kind}:${row.key}`),
+  ["cap:max_bots", "feature:position_builder"],
+);
+assert.equal(botsAndTemplates.rows[1]?.label, "Position Builder");
 const backtesting = PLAN_COMPARE_SECTIONS.find(
   (section) => section.title === "Backtesting",
 );

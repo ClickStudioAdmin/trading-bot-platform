@@ -76,6 +76,8 @@ export function AdminMemberForm({
             className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
           >
             <option value="member">Member</option>
+            <option value="platform_tester">Platform Tester</option>
+            <option value="developer">Developer</option>
             <option value="admin">Admin</option>
           </AppSelect>
         </label>

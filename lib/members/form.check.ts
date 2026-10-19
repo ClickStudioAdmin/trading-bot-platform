@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import {
+  formatMemberRole,
   parseAffiliateSignup,
   parseMemberForm,
   parseMemberId,
+  parseMemberRole,
   parseOwnPasswordChange,
   parseOwnPasswordReset,
   parseOwnProfile,
@@ -65,6 +67,24 @@ noPlan.set("password", "password1");
 noPlan.set("role", "member");
 noPlan.set("status", "active");
 assert.equal(parseMemberForm(noPlan, "create").ok, false);
+
+const developer = new FormData();
+developer.set("name", "Desk Trader");
+developer.set("email", "dev@click.studio");
+developer.set("password", "");
+developer.set("role", "developer");
+developer.set("status", "active");
+developer.set("planId", "00000000-0000-4000-8000-000000000001");
+const developed = parseMemberForm(developer, "edit");
+assert.equal(developed.ok, true);
+if (developed.ok) {
+  assert.equal(developed.values.role, "developer");
+}
+assert.equal(parseMemberRole("developer"), "developer");
+assert.equal(parseMemberRole("platform_tester"), "platform_tester");
+assert.equal(parseMemberRole("owner"), "member");
+assert.equal(formatMemberRole("developer"), "Developer");
+assert.equal(formatMemberRole("platform_tester"), "Platform Tester");
 
 assert.equal(parseMemberId("12"), 12);
 assert.equal(parseMemberId("nope"), null);
