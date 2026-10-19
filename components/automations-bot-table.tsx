@@ -845,23 +845,14 @@ function BotRecipeCell({ row }: { row: AutomationsBotRow }) {
       botId={row.id}
     />
   ) : null;
-  if (!side) {
-    return (
-      <span className="inline-flex min-w-0 items-center gap-1">
-        <span className="min-w-0 truncate text-ink-muted">{row.summary}</span>
-        {parameters}
-      </span>
-    );
-  }
   return (
-    <span className="block min-w-0">
-      <span className="flex items-center gap-1">
+    <span className="inline-flex min-w-0 items-center gap-1">
+      {side ? (
         <span className={`font-medium ${pairSideClass(side)}`}>{side}</span>
-        {parameters}
-      </span>
-      <span className="mt-0.5 block truncate text-hint text-ink-muted">
-        {row.summary}
-      </span>
+      ) : (
+        <span className="min-w-0 truncate text-ink-muted">{row.summary}</span>
+      )}
+      {parameters}
     </span>
   );
 }
