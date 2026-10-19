@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import {
   CLICK_GATE_MARGIN,
+  clickGatePanelHeight,
+  clickGateScrolls,
   placeClickGate,
   type ClickGatePlacement,
 } from "../components/click-gate-notice";
@@ -83,5 +85,9 @@ const partial = placeClickGate(
 inside(partial, tight);
 assert.ok(partial.maxHeight <= tight.height - CLICK_GATE_MARGIN * 2);
 assert.ok(partial.maxHeight > 0);
+
+assert.equal(clickGatePanelHeight(46.2), 47);
+assert.equal(clickGateScrolls(48, 48), false);
+assert.equal(clickGateScrolls(200, 80), true);
 
 console.log("place click gate checks passed");

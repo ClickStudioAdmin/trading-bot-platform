@@ -49,6 +49,15 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+/** CSS max-height is the border box. scrollHeight leaves out the gate border and paints a scrollbar. */
+export function clickGatePanelHeight(borderBoxHeight: number) {
+  return Math.max(0, Math.ceil(borderBoxHeight));
+}
+
+export function clickGateScrolls(naturalHeight: number, maxHeight: number) {
+  return maxHeight + 1 < naturalHeight;
+}
+
 export function placeClickGate(
   anchor: ClickGateBox,
   panel: { width: number; height: number },
@@ -270,6 +279,7 @@ export function ClickGateNotice({
   const dismissRef = useRef<HTMLButtonElement>(null);
   const scrolledFor = useRef(0);
   const [box, setBox] = useState<ClickGatePlacement | null>(null);
+  const [scrolls, setScrolls] = useState(false);
 
   useLayoutEffect(() => {
     if (!access) {
@@ -310,7 +320,8 @@ export function ClickGateNotice({
       );
       node.style.width = `${preferred}px`;
       node.style.maxHeight = "none";
-      let height = node.scrollHeight;
+      node.style.overflowY = "hidden";
+      let height = clickGatePanelHeight(node.getBoundingClientRect().height);
       let placed = placeClickGate(
         {
           top: rect.top,
@@ -323,7 +334,7 @@ export function ClickGateNotice({
       );
       if (Math.abs(placed.width - preferred) > 1) {
         node.style.width = `${placed.width}px`;
-        height = node.scrollHeight;
+        height = clickGatePanelHeight(node.getBoundingClientRect().height);
         placed = placeClickGate(
           {
             top: rect.top,
@@ -337,6 +348,9 @@ export function ClickGateNotice({
       }
       node.style.width = `${placed.width}px`;
       node.style.maxHeight = `${placed.maxHeight}px`;
+      const nextScrolls = clickGateScrolls(height, placed.maxHeight);
+      node.style.overflowY = nextScrolls ? "auto" : "hidden";
+      setScrolls((current) => (current === nextScrolls ? current : nextScrolls));
       setBox((currentBox) =>
         currentBox &&
         currentBox.top === placed.top &&
@@ -392,7 +406,9 @@ export function ClickGateNotice({
       ref={panelRef}
       role="status"
       data-click-gate-notice=""
-      className={`fixed z-[70] overflow-y-auto rounded-card gate-notice ${previewClass}`.trim()}
+      className={`fixed z-[70] overflow-x-hidden rounded-card gate-notice ${
+        scrolls ? "overflow-y-auto" : "overflow-y-hidden"
+      } ${previewClass}`.trim()}
       style={{
         top: box?.top ?? 0,
         left: box?.left ?? 0,
