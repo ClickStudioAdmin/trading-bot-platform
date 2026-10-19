@@ -11,6 +11,8 @@ import {
   groupBacktestLibrary,
   attachedTemplateHref,
   attachedTemplateName,
+  backtestDeskFilterLabel,
+  indexBacktestRunsByDesk,
   inheritPlatformBacktests,
   matchingPlatformTemplateIds,
   parseBacktestRecipeJson,
@@ -628,5 +630,87 @@ if (listedDca) {
     ["stranger"],
   );
 }
+
+function deskBot(
+  deskId: string,
+  deskName: string,
+  recipe: typeof perps,
+  kind: "dca" | "flex" = "flex",
+) {
+  return {
+    id: `${kind}:bot-${deskId}`,
+    name: recipe.name,
+    symbol: recipe.symbol,
+    kind,
+    deskId,
+    deskName,
+    recipe,
+    venue: "bybit",
+    venueEnvironment: null,
+  };
+}
+
+const alpha = deskBot("desk-alpha", "Alpha", perps);
+const paper = deskBot("desk-paper", "Paper", perps);
+const otherSymbol = deskBot(
+  "desk-eth",
+  "Ether",
+  { ...perps, symbol: "ETHUSDT" },
+);
+const otherPrice = deskBot("desk-price", "Price", {
+  ...perps,
+  triggerPrice: "1",
+});
+const renamed = deskBot("desk-renamed", "Renamed", {
+  ...perps,
+  name: "Renamed bot",
+});
+const indexed = indexBacktestRunsByDesk(
+  [
+    { id: "run-btc", recipe: perps },
+    { id: "run-eth", recipe: { ...perps, symbol: "ETHUSDT" } },
+    { id: "run-other", recipe: { ...perps, triggerPrice: "9" } },
+  ],
+  [paper, alpha, otherSymbol, otherPrice, renamed],
+);
+assert.deepEqual(
+  indexed.desks.map((desk) => desk.name),
+  ["Alpha", "Ether", "Paper", "Price", "Renamed"],
+);
+assert.deepEqual(indexed.runDeskIds["run-btc"], [
+  "desk-paper",
+  "desk-alpha",
+  "desk-renamed",
+]);
+assert.deepEqual(indexed.runDeskIds["run-eth"], ["desk-eth"]);
+assert.equal(indexed.runDeskIds["run-other"], undefined);
+const withEmpty = indexBacktestRunsByDesk(
+  [{ id: "run-btc", recipe: perps }],
+  [alpha],
+  [{ id: "desk-empty", name: "ByBit Paper", deskType: "dca" }],
+);
+assert.deepEqual(
+  withEmpty.desks.map((desk) => desk.name),
+  ["Alpha", "ByBit Paper"],
+);
+assert.deepEqual(withEmpty.runDeskIds["run-btc"], ["desk-alpha"]);
+assert.equal(indexed.desks.find((desk) => desk.id === "desk-alpha")?.deskType, "flex");
+assert.equal(
+  backtestDeskFilterLabel(
+    { id: "desk-alpha", name: "Alpha", deskType: "flex" },
+    indexed.desks,
+  ),
+  "Alpha",
+);
+assert.equal(
+  backtestDeskFilterLabel(
+    { id: "desk-a", name: "ByBit", deskType: "dca" },
+    [
+      { id: "desk-a", name: "ByBit", deskType: "dca" },
+      { id: "desk-b", name: "ByBit", deskType: "flex" },
+    ],
+  ),
+  "DCA · ByBit",
+);
 
 console.log("backtest library checks passed");

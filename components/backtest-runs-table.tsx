@@ -64,6 +64,7 @@ import {
   savedBacktestChildBadge,
   savedBacktestFamilies,
   savedBacktestListRows,
+  type BacktestDeskType,
   type BacktestRun,
   type BacktestStatus,
   type SavedBacktestChildRole,
@@ -77,6 +78,11 @@ import {
   type TableSortDir,
 } from "@/lib/table-chrome";
 import { AppSelect } from "@/components/app-select";
+import { formatDeskType } from "@/lib/accounts/model";
+import {
+  backtestDeskFilterLabel,
+  type BacktestListDesk,
+} from "@/lib/backtest/library";
 
 function statusLabel(status: string): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
@@ -105,6 +111,16 @@ const STATUS_FILTERS: Array<BacktestStatus | "all"> = [
   "cancelled",
   "draft",
 ];
+
+const DESK_TYPE_FILTERS: Array<BacktestDeskType | "all"> = [
+  "all",
+  "flex",
+  "dca",
+];
+
+function deskTypeFilterLabel(value: BacktestDeskType | "all"): string {
+  return value === "all" ? "All desk types" : formatDeskType(value);
+}
 
 function compareNullableNum(
   left: number | null,
@@ -246,6 +262,8 @@ export function BacktestRunsTable({
   createHref,
   nestChildren = false,
   templates = {},
+  desks,
+  runDeskIds = {},
 }: {
   runs: BacktestRun[];
   memberId: string;
@@ -263,10 +281,16 @@ export function BacktestRunsTable({
   nestChildren?: boolean;
   /** Library templates keyed by `template_id`. Missing ids render as an em dash. */
   templates?: Record<string, { name: string; href: string }>;
+  /** Saved list. Flex and DCA desks this member can backtest. */
+  desks?: readonly BacktestListDesk[];
+  /** Desk ids whose current bot still matches each run. */
+  runDeskIds?: Readonly<Record<string, readonly string[]>>;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | BacktestStatus>("all");
+  const [deskId, setDeskId] = useState("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | BacktestDeskType>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [removedIds, setRemovedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -277,6 +301,13 @@ export function BacktestRunsTable({
   );
   if (keptRemoved !== removedIds) {
     setRemovedIds(keptRemoved);
+  }
+  if (
+    deskId !== "all" &&
+    desks &&
+    !desks.some((desk) => desk.id === deskId)
+  ) {
+    setDeskId("all");
   }
   const runs =
     keptRemoved.size === 0
@@ -296,6 +327,12 @@ export function BacktestRunsTable({
       if (status !== "all" && row.status !== status) {
         return false;
       }
+      if (typeFilter !== "all" && row.deskType !== typeFilter) {
+        return false;
+      }
+      if (deskId !== "all" && !(runDeskIds[row.id] ?? []).includes(deskId)) {
+        return false;
+      }
       const needle = query.trim().toLowerCase();
       if (!needle) {
         return true;
@@ -311,7 +348,7 @@ export function BacktestRunsTable({
         .toLowerCase();
       return hay.includes(needle);
     },
-    [query, status, templates, titleMode],
+    [deskId, query, runDeskIds, status, templates, titleMode, typeFilter],
   );
   const filteredFamilies = useMemo(() => {
     if (!nestChildren) {
@@ -451,8 +488,16 @@ export function BacktestRunsTable({
   function clearFilters() {
     setQuery("");
     setStatus("all");
+    setDeskId("all");
+    setTypeFilter("all");
     table.setPage(1);
   }
+
+  const filtersActive =
+    Boolean(query.trim()) ||
+    status !== "all" ||
+    deskId !== "all" ||
+    typeFilter !== "all";
 
   async function deleteSelected() {
     if (selectedCount === 0 || pending) {
@@ -564,6 +609,41 @@ export function BacktestRunsTable({
                 autoComplete="off"
                 className={TABLE_FILTER_FIELD_CLASS}
               />
+            </TableFilterField>
+            {desks ? (
+              <TableFilterField label="Desk">
+                <AppSelect
+                  value={deskId}
+                  onChange={(event) => {
+                    setDeskId(event.target.value);
+                    table.setPage(1);
+                  }}
+                  className={TABLE_FILTER_FIELD_CLASS}
+                >
+                  <option value="all">All desks</option>
+                  {desks.map((desk) => (
+                    <option key={desk.id} value={desk.id}>
+                      {backtestDeskFilterLabel(desk, desks)}
+                    </option>
+                  ))}
+                </AppSelect>
+              </TableFilterField>
+            ) : null}
+            <TableFilterField label="Desk Type">
+              <AppSelect
+                value={typeFilter}
+                onChange={(event) => {
+                  setTypeFilter(event.target.value as "all" | BacktestDeskType);
+                  table.setPage(1);
+                }}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                {DESK_TYPE_FILTERS.map((value) => (
+                  <option key={value} value={value}>
+                    {deskTypeFilterLabel(value)}
+                  </option>
+                ))}
+              </AppSelect>
             </TableFilterField>
             <TableFilterField label="Status">
               <AppSelect
@@ -685,7 +765,7 @@ export function BacktestRunsTable({
                   colSpan={BACKTEST_RUN_COLUMNS}
                   className="px-4 py-6 text-sm text-ink-muted"
                 >
-                  {query.trim() || status !== "all"
+                  {filtersActive
                     ? "No backtests match these filters."
                     : empty}
                 </td>
