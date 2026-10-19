@@ -630,18 +630,25 @@ export function BacktestQueueForm({
       </div>
     ) : null;
 
-  function clearSourcePick() {
+  function resetSource() {
     botRequest.current += 1;
     setBotPending(false);
     setBotLoadError("");
     setTemplateId("");
     setPickedDeskBot(null);
+    setRecipe(null);
+    setSourceTemplateId("");
+    setSymbol("");
+    formIssueRef.current = null;
+    setRecipeFieldIssues([]);
+    setBacktestName("");
+    setActiveDraftId("");
   }
 
   function pickDeskBot(id: string) {
     const desk = deskBots.find((row) => row.id === id);
     if (!desk) {
-      clearSourcePick();
+      resetSource();
       return;
     }
     const ticket = botRequest.current + 1;
@@ -680,7 +687,7 @@ export function BacktestQueueForm({
       ? templates.find((row) => row.id === pickedId)
       : undefined;
     if (!next) {
-      clearSourcePick();
+      resetSource();
       return;
     }
     botRequest.current += 1;
@@ -1121,30 +1128,48 @@ export function BacktestQueueForm({
                   edited={editedAway}
                 />
               </div>
-              <div className="mt-3 grid min-w-0 gap-3 @min-[22rem]:grid-cols-2 [&>*]:min-w-0">
+              <div
+                className={`mt-3 grid min-w-0 gap-3 [&>*]:min-w-0${
+                  deskBotSelected || libraryTemplateSelected
+                    ? ""
+                    : " @min-[22rem]:grid-cols-2"
+                }`}
+              >
+                {libraryTemplateSelected ? null : (
                 <label className="block text-sm text-ink">
                   Bot
-                  <span className="mt-1 block">
-                    <AppSelect
-                      aria-label="Bot"
-                      value={deskBotSelected ? templateId : ""}
-                      options={deskBotOptions}
-                      disabled={libraryTemplateSelected}
-                      searchable
-                      onChange={(event) => pickDeskBot(event.target.value)}
-                      className={sourceSelectClass(sourceMissing)}
-                    />
+                  <span className="mt-1 flex items-center gap-3">
+                    <span className="min-w-0 flex-1">
+                      <AppSelect
+                        aria-label="Bot"
+                        value={deskBotSelected ? templateId : ""}
+                        options={deskBotOptions}
+                        searchable
+                        onChange={(event) => pickDeskBot(event.target.value)}
+                        className={sourceSelectClass(sourceMissing)}
+                      />
+                    </span>
+                    {deskBotSelected ? (
+                      <button
+                        type="button"
+                        onClick={resetSource}
+                        className="shrink-0 text-sm text-accent hover:text-accent-strong"
+                      >
+                        Change
+                      </button>
+                    ) : null}
                   </span>
                 </label>
+                )}
+                {deskBotSelected ? null : (
                 <label className="block text-sm text-ink">
                   Template
-                  <span className="mt-1 flex items-center gap-2">
+                  <span className="mt-1 flex items-center gap-3">
                     <span className="min-w-0 flex-1">
                       <AppSelect
                         aria-label="Template"
                         value={templateSelectValue}
                         options={templateOptions}
-                        disabled={deskBotSelected}
                         searchable
                         onChange={(event) => pickTemplate(event.target.value)}
                         className={sourceSelectClass(sourceMissing)}
@@ -1158,15 +1183,25 @@ export function BacktestQueueForm({
                         templateId={pickedTemplate.id}
                       />
                     ) : null}
+                    {libraryTemplateSelected ? (
+                      <button
+                        type="button"
+                        onClick={resetSource}
+                        className="shrink-0 text-sm text-accent hover:text-accent-strong"
+                      >
+                        Change
+                      </button>
+                    ) : null}
                   </span>
                 </label>
+                )}
                 {botPending ? (
-                  <p className="text-sm text-ink-muted @min-[22rem]:col-span-2">
+                  <p className="text-sm text-ink-muted">
                     Loading bot
                   </p>
                 ) : null}
                 {botLoadError ? (
-                  <p className="text-sm text-danger @min-[22rem]:col-span-2">
+                  <p className="text-sm text-danger">
                     {botLoadError}
                   </p>
                 ) : null}
