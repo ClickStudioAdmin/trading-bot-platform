@@ -207,20 +207,14 @@ export function FuturesOrderTicket({
             </div>
           ) : null}
         </div>
-        {actions ? (
-          <div className={stacked ? "text-sm" : "ml-auto text-sm"}>
-            {stacked ? null : (
-              <span className="invisible select-none" aria-hidden>
-                Order
-              </span>
-            )}
+        {actions && !stacked ? (
+          <div className="ml-auto text-sm">
+            <span className="invisible select-none" aria-hidden>
+              Order
+            </span>
             <fieldset
               disabled={Boolean(ticketError)}
-              className={
-                stacked
-                  ? "grid grid-cols-2 gap-2 border-0 p-0 disabled:opacity-40"
-                  : "mt-1 flex flex-wrap gap-2 border-0 p-0 disabled:opacity-40"
-              }
+              className="mt-1 flex flex-wrap gap-2 border-0 p-0 disabled:opacity-40"
             >
               {actions}
             </fieldset>
@@ -232,6 +226,14 @@ export function FuturesOrderTicket({
           <FuturesTpslFields />
           <FuturesTrailingFields stacked={stacked} />
         </>
+      ) : null}
+      {actions && stacked ? (
+        <fieldset
+          disabled={Boolean(ticketError)}
+          className="grid grid-cols-2 gap-2 border-0 p-0 disabled:opacity-40"
+        >
+          {actions}
+        </fieldset>
       ) : null}
     </div>
   );
