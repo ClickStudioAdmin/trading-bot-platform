@@ -168,7 +168,7 @@ assert.equal(
     accountMode: "live",
     environmentId: "demo",
   }),
-  "Bybit Demo is in beta.",
+  "Flex Bots are currently in Beta for Demo mode.",
 );
 assert.equal(
   deskBetaNotice({
