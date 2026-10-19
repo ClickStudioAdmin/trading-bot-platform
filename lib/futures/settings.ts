@@ -146,6 +146,30 @@ export async function armFuturesReduceOnly(input: {
   return { ok: true };
 }
 
+export async function armDcaPlaybooksStopAdding(input: {
+  supabase: SupabaseClient;
+  accountId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const now = new Date().toISOString();
+  const long = await input.supabase
+    .from("dca_playbooks")
+    .update({ long_status: "stop_adding", updated_at: now })
+    .eq("account_id", input.accountId)
+    .eq("long_status", "armed");
+  if (long.error) {
+    return { ok: false, error: "Could not stop adding on DCA bots." };
+  }
+  const short = await input.supabase
+    .from("dca_playbooks")
+    .update({ short_status: "stop_adding", updated_at: now })
+    .eq("account_id", input.accountId)
+    .eq("short_status", "armed");
+  if (short.error) {
+    return { ok: false, error: "Could not stop adding on DCA bots." };
+  }
+  return { ok: true };
+}
+
 export async function armFuturesAutomationReduceOnly(input: {
   supabase: SupabaseClient;
   accountId: string;

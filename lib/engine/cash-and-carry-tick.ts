@@ -75,9 +75,7 @@ export async function runCashAndCarryDeskTick(input: {
     enabled: Boolean(
       (settingsRow as { enabled?: unknown } | undefined)?.enabled,
     ),
-    reduceOnly: Boolean(
-      (settingsRow as { reduce_only?: unknown } | undefined)?.reduce_only,
-    ),
+    reduceOnly: false,
     share:
       share !== null && share > 0 && share <= 1
         ? share

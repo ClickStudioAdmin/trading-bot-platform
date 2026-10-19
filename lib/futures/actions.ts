@@ -34,7 +34,6 @@ import { parseFuturesAction } from "./model";
 import { safeFuturesReturnPath } from "./path";
 import {
   parseOptionalPositive,
-  parseOptionalPositiveInt,
 } from "./risk";
 import { rejectUnsignedBybitSymbol } from "@/lib/exchanges/agreement-store";
 import { loadFuturesSettings } from "./settings";
@@ -325,28 +324,7 @@ export async function saveFuturesSettings(formData: FormData) {
     settingsFail(account.id, "Auth is not configured.");
   }
 
-  const reduceOnly =
-    formData.get("reduceOnly") === "on" ||
-    formData.get("reduceOnly") === "true";
   const copyDesk = deskIsCopy(account);
-  const maxValue = copyDesk
-    ? { ok: true as const, value: null }
-    : parseOptionalPositive(
-        formData.get("maxValuePerSymbol") ?? formData.get("maxNotionalPerSymbol"),
-        "Max value per symbol",
-      );
-  if (!maxValue.ok) {
-    settingsFail(account.id, maxValue.error);
-  }
-  const maxRows = copyDesk
-    ? { ok: true as const, value: null }
-    : parseOptionalPositiveInt(
-        formData.get("maxOpenPositions") ?? formData.get("maxOpenRows"),
-        "Max open positions",
-      );
-  if (!maxRows.ok) {
-    settingsFail(account.id, maxRows.error);
-  }
   const paperDesk = !accountCanHoldConnections(account.mode);
   const paperLeverage = paperDesk
     ? parseOptionalPositive(formData.get("paperLeverage"), "Paper leverage")
@@ -407,9 +385,6 @@ export async function saveFuturesSettings(formData: FormData) {
     user_id: user.id,
     account_id: account.id,
     strategy_id: FUTURES_STRATEGY_ID,
-    reduce_only: reduceOnly,
-    max_notional_per_symbol: maxValue.value,
-    max_open_rows: maxRows.value,
     ...(paperDesk ? { paper_leverage: paperLeverage.value } : {}),
     ...(accountCanHoldConnections(account.mode) && bindSubmitted
       ? { exchange_connection_id: connectionId }
@@ -476,9 +451,6 @@ export async function saveFuturesSettings(formData: FormData) {
     accountId: account.id,
     strategy: FUTURES_STRATEGY_ID,
     data: {
-      reduceOnly,
-      maxValuePerSymbol: maxValue.value,
-      maxOpenPositions: maxRows.value,
       ...(bindSubmitted ? { exchangeConnectionId: connectionId } : {}),
     },
   });

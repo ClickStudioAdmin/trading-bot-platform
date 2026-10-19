@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { NewBotLink } from "@/components/quota-access";
 import { useRouter } from "next/navigation";
 import { AutomationsBotTable } from "@/components/automations-bot-table";
@@ -74,7 +73,6 @@ import {
 } from "@/lib/bots/automations-list";
 import { withRemovedIds } from "@/lib/table-chrome";
 import { paperBotConfig } from "@/lib/bots/bot-config";
-import { deskHref } from "@/lib/accounts/model";
 import {
   AUTOMATIONS_NEW,
   CASH_AND_CARRY_ACTIVITY_PATH,
@@ -226,7 +224,6 @@ export function PaperRulesForm({
   }
   const inUse = new Set(deskChanged ? inUseRuleIds : inUseIds);
   const savedLayers = visibleLayers.filter((layer) => layer.id);
-  const empty = savedLayers.length === 0;
   const formLayer =
     shownEdit === AUTOMATIONS_NEW
       ? nextDraft
@@ -305,21 +302,6 @@ export function PaperRulesForm({
 
   return (
     <div className="space-y-4">
-      {reduceOnly && !empty ? (
-        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Reduce only is on. Active bots will not open or add size until you
-          turn it off in{" "}
-          <Link
-            href={deskHref("/strategies/cash-and-carry/settings", accountId)}
-            className="underline"
-          >
-            Desk Settings
-          </Link>
-          . Automated exits still run unless a bot is Disabled. Manual Open,
-          Close, and Unwind still work.
-        </p>
-      ) : null}
-
       {showForm && formLayer ? (
         <RuleRow
           key={formLayer.key}

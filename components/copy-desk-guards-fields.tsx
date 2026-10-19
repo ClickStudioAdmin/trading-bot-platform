@@ -1,6 +1,5 @@
 "use client";
 
-import { AppCheck } from "@/components/app-check";
 import { CopySizeFields } from "@/components/copy-size-fields";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { formatCopyPaperStartingUsdt } from "@/lib/copy/decide";
@@ -10,32 +9,27 @@ export function CopyDeskGuardsFields({
   defaultSizeMode,
   defaultPercent,
   defaultBookUsdt,
-  defaultReduceOnly = false,
   defaultMaxDailyLossUsdt,
   defaultMaxDrawdownPct,
   defaultMaxAdverseMovePct,
   paper = false,
-  showReduceOnly = true,
 }: {
   defaultSizeMode?: CopySizeMode;
   defaultPercent?: string;
   defaultBookUsdt?: string;
-  defaultReduceOnly?: boolean;
   defaultMaxDailyLossUsdt?: string;
   defaultMaxDrawdownPct?: string;
   defaultMaxAdverseMovePct?: string;
   paper?: boolean;
-  showReduceOnly?: boolean;
 }) {
   return (
     <div className="space-y-4">
       <div>
         <p className="text-sm font-semibold text-ink">Guards</p>
         <p className="mt-1 text-hint text-ink-muted">
-          Sizing follows the parent fill.
-          {showReduceOnly ? " Reduce-only blocks new entries." : ""} Max
-          daily loss and max drawdown flatten and pause. Max adverse move skips
-          a late entry. Position caps are parked until we design them.
+          Sizing follows the parent fill. Max daily loss and max drawdown
+          flatten and pause. Max adverse move skips a late entry. Position
+          caps are parked until we design them.
         </p>
       </div>
       <CopySizeFields
@@ -44,20 +38,6 @@ export function CopyDeskGuardsFields({
         defaultBookUsdt={defaultBookUsdt}
         paper={paper}
       />
-      {showReduceOnly ? (
-        <label className="flex items-start gap-2 text-sm text-ink">
-          <AppCheck
-            name="reduceOnly"
-            defaultChecked={defaultReduceOnly}
-          />
-          <span>
-            Reduce only
-            <span className="mt-1 block text-hint text-ink-muted">
-              Blocks new copied entries. Close still works.
-            </span>
-          </span>
-        </label>
-      ) : null}
       <label className="block text-sm text-ink">
         Max daily loss
         <span className="relative mt-1 block">
