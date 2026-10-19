@@ -82,7 +82,6 @@ export function OpenPaperTrades({
   tableTitle,
   exchangeBook = false,
   positionsHref = "/strategies/cash-and-carry/positions",
-  opportunitiesHref = "/strategies/cash-and-carry/opportunities",
   filterBar,
   filtersOpen = false,
   emptyMessage,
@@ -95,7 +94,6 @@ export function OpenPaperTrades({
   tableTitle?: string;
   exchangeBook?: boolean;
   positionsHref?: string;
-  opportunitiesHref?: string;
   filterBar?: ReactNode;
   filtersOpen?: boolean;
   emptyMessage?: ReactNode;
@@ -308,17 +306,8 @@ export function OpenPaperTrades({
               <EmptyRow
                 colSpan={colSpan}
                 message={
-                  emptyMessage ?? (
-                  <>
-                    {exchangeBook
-                      ? "No open carries. Open one from "
-                      : "No open paper carries. Open one from "}
-                    <Link href={opportunitiesHref} className="text-accent">
-                      Opportunities
-                    </Link>
-                    .
-                  </>
-                  )
+                  emptyMessage ??
+                  (exchangeBook ? "No open carries." : "No open paper carries.")
                 }
               />
             ) : (
