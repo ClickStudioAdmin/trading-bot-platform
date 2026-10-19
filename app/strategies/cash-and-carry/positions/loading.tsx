@@ -3,14 +3,10 @@ import { TableCard } from "@/components/table-chrome";
 
 function LoadingStat({ label }: { label: string }) {
   return (
-    <div className="h-full rounded-card border border-line bg-surface p-5">
-      <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-        {label}
-      </p>
-      <div className="mt-3 flex h-8 items-center">
-        <ContainerLoading />
-      </div>
-    </div>
+    <span className="inline-flex items-center gap-2 text-sm text-ink-muted">
+      {label}
+      <ContainerLoading />
+    </span>
   );
 }
 
@@ -21,11 +17,11 @@ export default function CashAndCarryPositionsLoading() {
         <h2 className="mb-3 text-lg font-semibold tracking-tight">
           Positions Snapshot
         </h2>
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <p className="flex flex-wrap items-center gap-x-6 gap-y-2">
           <LoadingStat label="Open value" />
           <LoadingStat label="Unrealized P&L" />
           <LoadingStat label="Open exposure" />
-        </section>
+        </p>
         <h2 className="mb-3 text-lg font-semibold tracking-tight">
           Current Positions
         </h2>

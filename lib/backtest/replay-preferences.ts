@@ -32,10 +32,13 @@ const REFERENCE_IDS = [
   "bb",
   "supertrend",
   "atr_band",
+  "rsi_divergence",
 ] as const satisfies readonly ReplayIndicatorId[];
 
 const LENGTH_INPUTS = new Set<IndicatorInputId>(["length", "slowLength", "signal"]);
 const FACTOR_INPUTS = new Set<IndicatorInputId>(["multiplier", "stddev"]);
+const PIVOT_INPUTS = new Set<IndicatorInputId>(["pivotBars"]);
+const SPAN_INPUTS = new Set<IndicatorInputId>(["span"]);
 const STYLE_ID = /^[a-z0-9_.:|-]{1,120}$/i;
 const MAX_STYLE_LAYERS = 48;
 const MAX_STYLE_LINES = 16;
@@ -272,6 +275,18 @@ function referenceInputsFrom(value: unknown): ReplayReferenceInputs {
         settings[inputId] = clamped;
       }
     }
+    for (const inputId of PIVOT_INPUTS) {
+      const clamped = clampBounded(fields[inputId], 1, 50);
+      if (clamped != null) {
+        settings[inputId] = clamped;
+      }
+    }
+    for (const inputId of SPAN_INPUTS) {
+      const clamped = clampBounded(fields[inputId], 2, 400);
+      if (clamped != null) {
+        settings[inputId] = clamped;
+      }
+    }
     if (Object.keys(settings).length > 0) {
       next[id] = settings;
     }
@@ -295,4 +310,11 @@ function clampFactor(value: unknown): number | null {
   }
   const rounded = Math.round(value * 10) / 10;
   return Math.min(50, Math.max(0.1, rounded));
+}
+
+function clampBounded(value: unknown, min: number, max: number): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+  return Math.min(max, Math.max(min, Math.round(value)));
 }

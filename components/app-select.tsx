@@ -80,6 +80,7 @@ function selectRootClass(variant: "field" | "action", className: string) {
 
 export function AppSelect({
   name,
+  form,
   value,
   defaultValue,
   options,
@@ -95,6 +96,7 @@ export function AppSelect({
   trackDirty = true,
 }: {
   name?: string;
+  form?: string;
   value?: string | number;
   defaultValue?: string | number;
   options?: readonly AppSelectOption[];
@@ -205,6 +207,7 @@ export function AppSelect({
           ref={hiddenRef}
           type="hidden"
           name={name}
+          form={form}
           value={current}
           required={required}
         />

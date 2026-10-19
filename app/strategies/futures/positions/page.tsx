@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { FuturesFlash } from "@/components/futures-flash";
 import { LiveTickerScope } from "@/components/live-ticker";
 import { FuturesOrderTicket } from "@/components/futures-order-ticket";
+import { ManualTradeWorkspace } from "@/components/manual-trade-workspace";
 import {
   DeskBlotterFilters,
   DeskBlotterScopeSelect,
@@ -13,6 +14,7 @@ import {
 import { FuturesWorkingOrders } from "@/components/futures-working";
 import { DeskReturnHeading } from "@/components/desk-return-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { loginCanSendWebhookTest } from "@/lib/admin/emails";
 import { getSessionContext } from "@/lib/auth/session";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
 import {
@@ -40,7 +42,10 @@ import {
 } from "@/lib/desk-blotter-filters";
 import { loadFuturesAutomationRules } from "@/lib/futures/automation-load";
 import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
-import { FuturesWebhookTest } from "@/components/futures-webhook-test";
+import {
+  FuturesWebhookTest,
+  MANUAL_ORDER_FORM_ID,
+} from "@/components/futures-webhook-test";
 import { submitFuturesTrade } from "@/lib/futures/actions";
 import { futuresWebhookOrigin } from "@/lib/futures/webhook";
 import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
@@ -103,6 +108,7 @@ export default async function FuturesPositionsPage({
   const allowSignal = session
     ? deskAllowsSignalWebhooks(session.account)
     : deskAllowsSignalWebhooks(deskType);
+  const canTestWebhook = session ? loginCanSendWebhookTest(session.member) : false;
   const loadCatalog = !botScope || showTicket;
   const emptyTickers = new Map<
     string,
@@ -128,7 +134,7 @@ export default async function FuturesPositionsPage({
             maxValuePerSymbol: null,
             maxOpenPositions: null,
           }),
-      session && showTicket
+      session && showTicket && canTestWebhook
         ? headerList.then((headerStore) =>
             listFuturesWebhooks({
               accountId: session.account.id,
@@ -301,29 +307,23 @@ export default async function FuturesPositionsPage({
         <FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />
         </section>
         {showTicket ? (
+          <ManualTradeWorkspace
+            venue="bybit"
+            environment={session?.account.venueEnvironment ?? null}
+            defaultSymbol="BTCUSDT"
+          >
           <section>
             <h2 className="text-lg font-semibold tracking-tight">
               Place an order
             </h2>
-            <p className="text-sm text-ink-muted">
-              USDT linear perpetual. Buy opens or adds a long. Sell opens or
-              adds a short. Both sides can be open on the same contract. Market
-              fills now. Limit rests until it matches — watch it under Open
-              orders. Optional TP/SL and trailing stop attach to that order.
-              Add or edit stops on an open row. Market or Limit close is on
-              each open row; both set qty (full row or a slice).               Close All and
-              Close All & Cancel All Open Orders sit above the table when
-              there are positions. Cancel All Open Orders sits on Open
-              orders only when orders are listed. Size is token quantity or
-              USDT value (mark for market, limit price for limit).
-            </p>
             <div className="mt-3 rounded-card border border-line bg-surface p-5">
-              <form action={submitFuturesTrade} className="block">
+              <form id={MANUAL_ORDER_FORM_ID} action={submitFuturesTrade} className="block">
                 <input type="hidden" name="next" value={NEXT} />
                 <FuturesOrderTicket
                   options={pairs}
                   lastPrices={lastPrices}
                   agreementGate={agreementGate}
+                  stacked
                   actions={
                     <>
                       <PendingSubmitButton
@@ -331,7 +331,7 @@ export default async function FuturesPositionsPage({
                         successKey="futures-buy"
                         name="action"
                         value="buy"
-                        className="rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas"
+                        className="w-full rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas"
                       >
                         Buy
                       </PendingSubmitButton>
@@ -340,20 +340,20 @@ export default async function FuturesPositionsPage({
                         successKey="futures-sell"
                         name="action"
                         value="sell"
-                        className="rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink"
+                        className="w-full rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink"
                       >
                         Sell
                       </PendingSubmitButton>
                     </>
                   }
                 />
-                {testWebhooks.length > 0 ? (
+                {canTestWebhook && testWebhooks.length > 0 ? (
                   <FuturesWebhookTest
                     webhooks={testWebhooks}
                     allowSignal={allowSignal}
                     agreementGate={agreementGate}
                   />
-                ) : session ? (
+                ) : canTestWebhook && session ? (
                   <p className="mt-4 text-hint text-ink-muted">
                     Create a named webhook on{" "}
                     <Link href={deskHref(FUTURES_PATHS.webhooks, session?.account.id)} className="text-accent">
@@ -371,6 +371,7 @@ export default async function FuturesPositionsPage({
               ) : null}
             </div>
           </section>
+          </ManualTradeWorkspace>
         ) : null}
 
         <OpenFuturesTrades

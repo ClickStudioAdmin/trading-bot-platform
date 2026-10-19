@@ -3,6 +3,7 @@ import {
   emailIsListedAdmin,
   exchangePreviewForLogin,
   listedAdminEmails,
+  loginCanSendWebhookTest,
   loginIsAdmin,
 } from "./emails";
 
@@ -24,6 +25,26 @@ assert.equal(
   false,
 );
 assert.equal(loginIsAdmin({ role: null, email: null }), false);
+assert.equal(
+  loginCanSendWebhookTest({ role: "developer", email: "dev@example.com" }),
+  true,
+);
+assert.equal(
+  loginCanSendWebhookTest({ role: "admin", email: "member@example.com" }),
+  true,
+);
+assert.equal(
+  loginCanSendWebhookTest({ role: "member", email: "click.studio.admin@gmail.com" }),
+  true,
+);
+assert.equal(
+  loginCanSendWebhookTest({ role: "platform_tester", email: "qa@example.com" }),
+  false,
+);
+assert.equal(
+  loginCanSendWebhookTest({ role: "member", email: "member@example.com" }),
+  false,
+);
 assert.equal(
   exchangePreviewForLogin({ role: "developer", email: "dev@example.com" }),
   "development",

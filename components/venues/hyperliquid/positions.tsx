@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { LiveTickerScope } from "@/components/live-ticker";
 import { FuturesOrderTicket } from "@/components/futures-order-ticket";
+import { ManualTradeWorkspace } from "@/components/manual-trade-workspace";
 import {
   DeskBlotterFilters,
   DeskBlotterScopeSelect,
@@ -13,7 +14,11 @@ import {
 import { FuturesWorkingOrders } from "@/components/futures-working";
 import { DeskReturnHeading } from "@/components/desk-return-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { FuturesWebhookTest } from "@/components/futures-webhook-test";
+import {
+  FuturesWebhookTest,
+  MANUAL_ORDER_FORM_ID,
+} from "@/components/futures-webhook-test";
+import { loginCanSendWebhookTest } from "@/lib/admin/emails";
 import { HyperliquidDeskFlash } from "@/components/venues/hyperliquid/desk-flash";
 import { getSessionContext } from "@/lib/auth/session";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
@@ -99,6 +104,7 @@ export async function HyperliquidFuturesPositions({
   const allowSignal = session
     ? deskAllowsSignalWebhooks(session.account)
     : deskAllowsSignalWebhooks(deskType);
+  const canTestWebhook = session ? loginCanSendWebhookTest(session.member) : false;
   const loadCatalog = !botScope || showTicket;
   const emptyTickers = new Map<
     string,
@@ -124,7 +130,7 @@ export async function HyperliquidFuturesPositions({
             maxValuePerSymbol: null,
             maxOpenPositions: null,
           }),
-      session && showTicket
+      session && showTicket && canTestWebhook
         ? headerList.then((headerStore) =>
             listFuturesWebhooks({
               accountId: session.account.id,
@@ -255,27 +261,23 @@ export async function HyperliquidFuturesPositions({
         <FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />
         </section>
         {showTicket ? (
+          <ManualTradeWorkspace
+            venue="hyperliquid"
+            environment={env}
+            defaultSymbol="BTC"
+          >
           <section>
             <h2 className="text-lg font-semibold tracking-tight">
               Place an order
             </h2>
-            <p className="text-sm text-ink-muted">
-              USDC perpetual. One open side per coin. Buy opens or adds a long,
-              or reduces a short. Sell opens or adds a short, or reduces a
-              long. Size above the open opposite side closes that row; open the
-              other side after it is flat. Market fills now. Limit rests until
-              it matches — watch it under Open orders. Optional TP/SL and
-              trailing stop attach to that order. Market or Limit close is on
-              each open row. Close All sits above the table. Size is coin
-              quantity or USDC value.
-            </p>
             <div className="mt-3 rounded-card border border-line bg-surface p-5">
-              <form action={submitFuturesTrade} className="block">
+              <form id={MANUAL_ORDER_FORM_ID} action={submitFuturesTrade} className="block">
                 <input type="hidden" name="next" value={NEXT} />
                 <FuturesOrderTicket
                   options={pairs}
                   lastPrices={lastPrices}
                   defaultSymbol="BTC"
+                  stacked
                   actions={
                     <>
                       <PendingSubmitButton
@@ -283,7 +285,7 @@ export async function HyperliquidFuturesPositions({
                         successKey="futures-buy"
                         name="action"
                         value="buy"
-                        className="rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas"
+                        className="w-full rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas"
                       >
                         Buy
                       </PendingSubmitButton>
@@ -292,20 +294,20 @@ export async function HyperliquidFuturesPositions({
                         successKey="futures-sell"
                         name="action"
                         value="sell"
-                        className="rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink"
+                        className="w-full rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink"
                       >
                         Sell
                       </PendingSubmitButton>
                     </>
                   }
                 />
-                {testWebhooks.length > 0 ? (
+                {canTestWebhook && testWebhooks.length > 0 ? (
                   <FuturesWebhookTest
                     webhooks={testWebhooks}
                     allowSignal={allowSignal}
                     defaultSymbol="BTC"
                   />
-                ) : session ? (
+                ) : canTestWebhook && session ? (
                   <p className="mt-4 text-hint text-ink-muted">
                     Create a named webhook on{" "}
                     <Link
@@ -326,6 +328,7 @@ export async function HyperliquidFuturesPositions({
               ) : null}
             </div>
           </section>
+          </ManualTradeWorkspace>
         ) : null}
 
           <OpenFuturesTrades

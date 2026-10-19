@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AppCheck } from "@/components/app-check";
 import { IconPencil } from "@/components/icons";
@@ -35,10 +35,8 @@ const TICKET_QTY =
 export function FuturesTpslFields({
   namePrefix = "",
   defaultTpsl = null,
-  stacked = false,
 }: {
   namePrefix?: string;
-  stacked?: boolean;
   defaultTpsl?: {
     takeProfit: number | null;
     stopLoss: number | null;
@@ -55,38 +53,34 @@ export function FuturesTpslFields({
     slLimitPrice?: number | null;
   } | null;
 }) {
-  const [enabled, setEnabled] = useState(() =>
-    Boolean(
-      defaultTpsl &&
-        (defaultTpsl.takeProfit != null || defaultTpsl.stopLoss != null),
-    ),
+  const [takeProfitOn, setTakeProfitOn] = useState(
+    () => defaultTpsl?.takeProfit != null,
+  );
+  const [stopLossOn, setStopLossOn] = useState(
+    () => defaultTpsl?.stopLoss != null,
   );
   const [mode, setMode] = useState<FuturesTpslMode>(
     defaultTpsl?.mode === "partial" ? "partial" : "full",
   );
+  const enabled = takeProfitOn || stopLossOn;
   const partial = enabled && mode === "partial";
   return (
-    <div className="space-y-3 border-t border-line-strong pt-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-sm text-ink">
-          <AppCheck
-            name={`${namePrefix}tpsl`}
-            value="on"
-            checked={enabled}
-            onChange={(event) => setEnabled(event.target.checked)}
-            className=""
-          />
-          Take profit / Stop loss
-        </label>
-        {enabled ? (
-          <>
-            <input type="hidden" name={`${namePrefix}tpslMode`} value={mode} />
-            <ModeToggle mode={mode} onChange={setMode} />
-          </>
-        ) : null}
-      </div>
+    <div>
       {enabled ? (
-        <div className={stacked ? "grid gap-3" : "grid gap-3 sm:grid-cols-2"}>
+        <>
+          <input type="hidden" name={`${namePrefix}tpsl`} value="on" />
+          <input type="hidden" name={`${namePrefix}tpslMode`} value={mode} />
+        </>
+      ) : null}
+      <TpslTicketSection
+        label="Take profit"
+        checked={takeProfitOn}
+        onChecked={setTakeProfitOn}
+        checkName={`${namePrefix}tpOn`}
+        mode={mode}
+        onMode={setMode}
+      >
+        {takeProfitOn ? (
           <TpslPriceField
             name={`${namePrefix}takeProfit`}
             kindName={`${namePrefix}tpKind`}
@@ -103,6 +97,17 @@ export function FuturesTpslFields({
             qtyAria={partial ? "Take profit qty" : undefined}
             defaultQty={partial ? defaultTpsl?.tpQty : null}
           />
+        ) : null}
+      </TpslTicketSection>
+      <TpslTicketSection
+        label="Stop loss"
+        checked={stopLossOn}
+        onChecked={setStopLossOn}
+        checkName={`${namePrefix}slOn`}
+        mode={mode}
+        onMode={setMode}
+      >
+        {stopLossOn ? (
           <TpslPriceField
             name={`${namePrefix}stopLoss`}
             kindName={`${namePrefix}slKind`}
@@ -119,8 +124,8 @@ export function FuturesTpslFields({
             qtyAria={partial ? "Stop loss qty" : undefined}
             defaultQty={partial ? defaultTpsl?.slQty : null}
           />
-        </div>
-      ) : null}
+        ) : null}
+      </TpslTicketSection>
     </div>
   );
 }
@@ -1038,6 +1043,43 @@ function TpslTypeSelect({
       <option value="price">Price</option>
       <option value="percent">Percentage</option>
     </AppSelect>
+  );
+}
+
+function TpslTicketSection({
+  label,
+  checked,
+  onChecked,
+  checkName,
+  mode,
+  onMode,
+  children,
+}: {
+  label: string;
+  checked: boolean;
+  onChecked: (next: boolean) => void;
+  checkName: string;
+  mode: FuturesTpslMode;
+  onMode: (mode: FuturesTpslMode) => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-3 border-t border-line-strong pt-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm text-ink">
+          <AppCheck
+            name={checkName}
+            value="on"
+            checked={checked}
+            onChange={(event) => onChecked(event.target.checked)}
+            className=""
+          />
+          {label}
+        </label>
+        {checked ? <ModeToggle mode={mode} onChange={onMode} /> : null}
+      </div>
+      {children}
+    </div>
   );
 }
 

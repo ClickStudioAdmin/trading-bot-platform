@@ -99,6 +99,22 @@ if (stopOnlyFilledParsed.ok && stopOnlyFilledParsed.tpsl) {
   assert.equal(stopOnlyFilledParsed.tpsl.takeProfit, null);
 }
 
+const takeOnly = new FormData();
+takeOnly.set("tpsl", "on");
+takeOnly.set("tpOn", "on");
+takeOnly.set("takeProfit", "1.5");
+takeOnly.set("tpKind", "percent");
+takeOnly.set("tpTrigger", "last");
+takeOnly.set("tpOrderType", "market");
+const takeOnlyParsed = parseFuturesTpslForm(takeOnly, undefined);
+assert.equal(takeOnlyParsed.ok, true);
+if (takeOnlyParsed.ok && takeOnlyParsed.tpsl) {
+  assert.equal(takeOnlyParsed.tpsl.takeProfit, 1.5);
+  assert.equal(takeOnlyParsed.tpsl.tpKind, "percent");
+  assert.equal(takeOnlyParsed.tpsl.stopLoss, null);
+  assert.equal(takeOnlyParsed.tpsl.mode, "full");
+}
+
 const stopLimitEmpty = new FormData();
 stopLimitEmpty.set("tpsl", "on");
 stopLimitEmpty.set("slOn", "on");

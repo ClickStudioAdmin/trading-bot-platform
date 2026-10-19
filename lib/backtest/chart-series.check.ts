@@ -283,6 +283,8 @@ const catalogRecipe = {
 const catalog = replayIndicatorCatalog(catalogRecipe);
 assert.equal(catalog.find((row) => row.id === "rsi")?.locked, true);
 assert.equal(catalog.find((row) => row.id === "rsi")?.label, "RSI");
+assert.equal(catalog.find((row) => row.id === "rsi_divergence")?.label, "RSI divergence");
+assert.equal(catalog.find((row) => row.id === "rsi_divergence")?.locked, false);
 assert.equal(catalog.find((row) => row.id === "rsi")?.label.includes("Long entry"), false);
 assert.equal(new Set(catalog.map((row) => row.id)).size, catalog.length);
 assert.equal(catalog.find((row) => row.id === "supertrend")?.locked, true);
@@ -363,6 +365,12 @@ const bars = closes.map((close, index) => ({
   close,
 }));
 const bare = { kind: "dca", startKind: "price" } as BacktestRecipe;
+const referenceDivergence = replayChartSeries(bare, bars, ["rsi_divergence"], {
+  rsi_divergence: { length: 14, pivotBars: 5, span: 50 },
+}).layers.find((row) => row.id === "ref:rsi_divergence");
+assert.equal(referenceDivergence?.divergence?.settings.style, "regular");
+assert.equal(referenceDivergence?.divergence?.settings.pivotBars, 5);
+assert.equal(referenceDivergence?.inputs.find((field) => field.id === "span")?.value, 50);
 const referenceRsi = replayChartSeries(bare, bars, ["rsi"], {
   rsi: { length: 30 },
 }).layers.find((row) => row.id === "ref:rsi");
