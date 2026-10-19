@@ -158,6 +158,14 @@ function VariantShell({ children }: { children: ReactNode }) {
   return <BotFormStep title="Backtest Parameters">{children}</BotFormStep>;
 }
 
+/** The label wrapper already has mt-1. AppSelect puts that margin on its root, and a flex wrapper does not collapse it. */
+function sourceSelectClass(invalid: boolean) {
+  return (invalid ? botFieldInvalidClass : BILLING_FIELD_CLASS)
+    .replace(/(^|\s)mt-1(?=\s|$)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function BacktestQueueForm({
   templates,
   folders = [],
@@ -863,7 +871,7 @@ export function BacktestQueueForm({
                 disabled={libraryTemplateSelected}
                 searchable
                 onChange={(event) => pickDeskBot(event.target.value)}
-                className={sourceMissing ? botFieldInvalidClass : BILLING_FIELD_CLASS}
+                className={sourceSelectClass(sourceMissing)}
               />
             </span>
           </label>
@@ -874,7 +882,7 @@ export function BacktestQueueForm({
               name="templateId"
               value={libraryTemplateSelected ? templateId : ""}
             />
-            <span className="mt-1 flex items-start gap-2">
+            <span className="mt-1 flex items-center gap-2">
               <span className="min-w-0 flex-1">
                 <AppSelect
                   aria-label="Template"
@@ -883,9 +891,7 @@ export function BacktestQueueForm({
                   disabled={deskBotSelected}
                   searchable
                   onChange={(event) => pickTemplate(event.target.value)}
-                  className={
-                    sourceMissing ? botFieldInvalidClass : BILLING_FIELD_CLASS
-                  }
+                  className={sourceSelectClass(sourceMissing)}
                 />
               </span>
               {pickedTemplate && matchingTemplate?.id !== pickedTemplate.id ? (
@@ -894,7 +900,6 @@ export function BacktestQueueForm({
                   description={pickedTemplate.description}
                   recipe={pickedTemplate.recipe}
                   templateId={pickedTemplate.id}
-                  className="mt-2"
                 />
               ) : null}
             </span>
