@@ -1435,12 +1435,6 @@ export function DcaPlaybookForm({
       ? ""
       : String(source.shortLeadDivergence.minRsi),
   );
-  const [addRows, setAddRows] = useState<EntryStackRow[]>(() =>
-    entryRowsFromSources(source?.addStack, null),
-  );
-  const [shortAddRows, setShortAddRows] = useState<EntryStackRow[]>(() =>
-    entryRowsFromSources(source?.shortAddStack, null),
-  );
   const [exitIf, setExitIf] = useState<HardExitDraft | null>(() =>
     hardExitDraftFromStored(source?.exitIf, source?.exitHard),
   );
@@ -2130,8 +2124,6 @@ export function DcaPlaybookForm({
     groupSizingMissing ||
     entryRowsMissing(entryRows) ||
     (direction === "both" && entryRowsMissing(shortEntryRows)) ||
-    entryRowsMissing(addRows) ||
-    (direction === "both" && entryRowsMissing(shortAddRows)) ||
     Boolean(
       exitIf &&
         (!hardExitComplete(exitIf) ||
@@ -2180,8 +2172,6 @@ export function DcaPlaybookForm({
       exitKindMissing ||
       entryRowsMissing(entryRows) ||
       (direction === "both" && entryRowsMissing(shortEntryRows)) ||
-      entryRowsMissing(addRows) ||
-      (direction === "both" && entryRowsMissing(shortAddRows)) ||
       Boolean(
         exitIf &&
           (!hardExitComplete(exitIf) ||
@@ -3583,46 +3573,6 @@ export function DcaPlaybookForm({
           {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         </BotFormGroup>
       </BotFormStep>
-        <BotFormStep
-          title={direction === "short" ? "Short additional conditions" : "Additional order conditions"}
-          badge="Condition Builder"
-          shell="canvas"
-          hint="Optional. The ladder still places the add. These have to be true on the same check."
-        >
-          {direction !== "short" ? (
-            <EntryConditionStack
-              grouped
-              prefix="add"
-              side="long"
-              rows={addRows}
-              onChange={setAddRows}
-              anchor={{ kind: "indicator", webhookId: null, claim: null }}
-              gridClass={fieldRowClass5}
-              fieldClass={fieldClass}
-              labelClass={labelClass}
-              showErrors={dirty}
-              optionalAddedKind
-              kinds={["retrace", "indicator"]}
-            />
-          ) : null}
-          {direction === "both" || direction === "short" ? (
-            <EntryConditionStack
-              grouped
-              prefix={direction === "both" ? "shortAdd" : "add"}
-              side="short"
-              rows={direction === "both" ? shortAddRows : addRows}
-              onChange={direction === "both" ? setShortAddRows : setAddRows}
-              anchor={{ kind: "indicator", webhookId: null, claim: null }}
-              gridClass={fieldRowClass5}
-              fieldClass={fieldClass}
-              labelClass={labelClass}
-              showErrors={dirty}
-              optionalAddedKind
-              kinds={["retrace", "indicator"]}
-            />
-          ) : null}
-        </BotFormStep>
-      
       {tpLive ? <input type="hidden" name="tpOn" value="on" /> : (
         <div hidden>
           <input type="hidden" name="takeProfitKind" value="percent" />
