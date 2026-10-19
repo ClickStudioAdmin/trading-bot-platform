@@ -1,4 +1,8 @@
-import type { MemberRole, MemberStatus } from "@/lib/members/form";
+import {
+  parseMemberRole,
+  type MemberRole,
+  type MemberStatus,
+} from "@/lib/members/form";
 
 export type MemberRow = {
   id: number;
@@ -13,7 +17,7 @@ export type MemberRow = {
 };
 
 export function parseMemberRow(row: Record<string, unknown>): MemberRow {
-  const role = row.role === "admin" ? "admin" : "member";
+  const role = parseMemberRole(row.role);
   const status = row.status === "disabled" ? "disabled" : "active";
   return {
     id: Number(row.id),

@@ -24,7 +24,11 @@ import {
   signSessionToken,
 } from "@/lib/auth/token";
 import { VERIFY_PATH } from "@/lib/auth/onboarding-path";
-import type { MemberRole, MemberStatus } from "@/lib/members/form";
+import {
+  parseMemberRole,
+  type MemberRole,
+  type MemberStatus,
+} from "@/lib/members/form";
 import { DESK_DELETE_GRANT_COOKIE } from "@/lib/accounts/desk-delete-grant";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
@@ -90,7 +94,7 @@ export async function getSessionMember(): Promise<SessionMember | null> {
     id: String(loaded.user_id),
     email: String(loaded.email),
     name: String(loaded.name),
-    role: loaded.role === "admin" ? "admin" : "member",
+    role: parseMemberRole(loaded.role),
     status: loaded.status === "disabled" ? "disabled" : "active",
     platformMember: loaded.platform_member !== false,
     emailVerifiedAt:
