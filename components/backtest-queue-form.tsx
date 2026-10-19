@@ -5,6 +5,7 @@ import { flushSync, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AppMultiSelect, AppSelect, type AppSelectOption } from "@/components/app-select";
 import { TemplateParametersButton } from "@/components/template-parameters-tip";
+import { BotFormStep } from "@/components/bot-form-chrome";
 import { BotRecipeEditor } from "@/components/bot-recipe-editor";
 import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
@@ -157,17 +158,17 @@ function QueueSubmitButton({
 
 function VariantShell({
   variant,
-  leading,
   children,
 }: {
   variant: boolean;
-  leading?: ReactNode;
   children: ReactNode;
 }) {
+  if (variant) {
+    return <BotFormStep title="Backtest Parameters">{children}</BotFormStep>;
+  }
   return (
     <div className="min-w-0 rounded-card border border-line bg-surface p-5">
-      {variant ? leading : null}
-      <div className={variant && leading ? "mt-4" : undefined}>{children}</div>
+      {children}
     </div>
   );
 }
@@ -188,7 +189,6 @@ export function BacktestQueueForm({
   onVariantQueued,
   onVariantFailed,
   onVariantCancel,
-  variantLeading = null,
   showTitle = true,
 }: {
   templates: BacktestLibraryItem[];
@@ -206,7 +206,6 @@ export function BacktestQueueForm({
   onVariantQueued?: (runId: string) => void;
   onVariantFailed?: () => void;
   onVariantCancel?: () => void;
-  variantLeading?: ReactNode;
   /** Page chrome owns the title on the create page. Replay variants stay untitled here. */
   showTitle?: boolean;
 }) {
@@ -673,7 +672,7 @@ export function BacktestQueueForm({
             : "grid min-w-0 items-start gap-6 lg:grid-cols-2 [&>*]:min-w-0"
         }
       >
-      <VariantShell variant={variant} leading={variantLeading}>
+      <VariantShell variant={variant}>
       {variant || !showTitle ? null : (
         <h2 className="text-lg font-semibold">New backtest</h2>
       )}
