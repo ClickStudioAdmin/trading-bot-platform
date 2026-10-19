@@ -36,6 +36,11 @@ import {
 } from "@/components/bot-form-chrome";
 import { ColumnHint } from "@/components/column-hint";
 import {
+  BotFormSideFilter,
+  BotFormSidePane,
+  type ParamSideChoice,
+} from "@/components/param-side-filter";
+import {
   IndicatorStartFields,
   TrendStartFields,
 } from "@/components/bot-indicator-fields";
@@ -1896,6 +1901,7 @@ export function DcaPlaybookForm({
     leverage,
   ]);
   const showLadderTabs = direction === "both";
+  const [sideChoice, setSideChoice] = useState<ParamSideChoice>("all");
   const activeLadderSide: FuturesSide = showLadderTabs
     ? ladderTab
     : direction === "short"
@@ -3091,6 +3097,9 @@ export function DcaPlaybookForm({
       <input type="hidden" name="botStatus" value={status} />
       <BotFormColumns single={embedded}>
       <BotFormCard>
+      {direction === "both" ? (
+        <BotFormSideFilter value={sideChoice} onChange={setSideChoice} />
+      ) : null}
       <BotFormStep title="General">
         {embedded ? (
           <input
@@ -3302,6 +3311,7 @@ export function DcaPlaybookForm({
       ) : null}
 
       {direction !== "short" ? (
+      <BotFormSidePane hidden={direction === "both" && sideChoice === "short"}>
       <BotFormStep
         title="Long Entry"
         badge="Condition Builder"
@@ -3311,8 +3321,10 @@ export function DcaPlaybookForm({
       >
         {dcaEntryFields("long")}
       </BotFormStep>
+      </BotFormSidePane>
       ) : null}
       {direction !== "long" ? (
+      <BotFormSidePane hidden={direction === "both" && sideChoice === "long"}>
       <BotFormStep
         title="Short Entry"
         badge="Condition Builder"
@@ -3322,6 +3334,7 @@ export function DcaPlaybookForm({
       >
         {dcaEntryFields("short")}
       </BotFormStep>
+      </BotFormSidePane>
       ) : null}
       <BotFormStep
         title="Additional Orders"
@@ -3618,6 +3631,7 @@ export function DcaPlaybookForm({
         </div>
       ) : null}
       {direction !== "short" ? (
+      <BotFormSidePane hidden={direction === "both" && sideChoice === "short"}>
       <BotFormStep title="Long Exit" badge="Condition Builder" shell="canvas">
         <ExitSideBuilder
           clauses={exitClauses}
@@ -3645,8 +3659,10 @@ export function DcaPlaybookForm({
           renderBreakeven={(slot) => dcaBreakevenFields("primary", slot)}
         />
       </BotFormStep>
+      </BotFormSidePane>
       ) : null}
       {direction !== "long" ? (
+      <BotFormSidePane hidden={direction === "both" && sideChoice === "long"}>
       <BotFormStep title="Short Exit" badge="Condition Builder" shell="canvas">
         <ExitSideBuilder
           clauses={direction === "both" ? shortClauses : exitClauses}
@@ -3696,6 +3712,7 @@ export function DcaPlaybookForm({
           }
         />
       </BotFormStep>
+      </BotFormSidePane>
       ) : null}
 
 

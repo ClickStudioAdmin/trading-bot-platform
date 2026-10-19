@@ -9,6 +9,9 @@ import {
 import { adminConditionReview } from "./condition-list-samples";
 import {
   backtestListedSections,
+  filterParamSections,
+  paramSectionsHaveBothSides,
+  paramSideShows,
   recipeParamRows,
   recipeParamSections,
   templateParamSections,
@@ -629,5 +632,38 @@ assert.equal(
   false,
 );
 assert.equal(pricedRows.find((row) => row.label === "Target %")?.value, "2%");
+
+assert.equal(paramSectionsHaveBothSides(sections), false);
+assert.equal(paramSectionsHaveBothSides(bothSections), true);
+assert.deepEqual(
+  filterParamSections(bothSections, "long").map((section) => section.title),
+  [
+    "General",
+    "Long Entry Conditions",
+    "Position Sizing",
+    "Long Additional Orders",
+    "Long Exit Conditions",
+  ],
+);
+assert.deepEqual(
+  filterParamSections(bothSections, "short").map((section) => section.title),
+  [
+    "General",
+    "Short Entry Conditions",
+    "Position Sizing",
+    "Short Additional Orders",
+    "Short Exit Conditions",
+  ],
+);
+assert.deepEqual(
+  filterParamSections(bothSections, "all").map((section) => section.title),
+  bothSections.map((section) => section.title),
+);
+assert.equal(paramSideShows("all", "long"), true);
+assert.equal(paramSideShows("all", "short"), true);
+assert.equal(paramSideShows("long", "long"), true);
+assert.equal(paramSideShows("long", "short"), false);
+assert.equal(paramSideShows("short", "long"), false);
+assert.equal(paramSideShows("short", "short"), true);
 
 console.log("backtest param section checks passed");
