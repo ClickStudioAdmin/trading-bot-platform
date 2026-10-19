@@ -248,7 +248,7 @@ export function ReplayRailNav({
         icon={<IconPerformance className="size-5" />}
       />
       <RailButton
-        label="Comparables and variations"
+        label="Comparables and Variations"
         pressed={panel === "related"}
         onClick={() => selectReplayRail("related", panel)}
         badge={runningCount}
@@ -477,7 +477,7 @@ function RelatedBody({
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden pr-3">
       <h2 className="mb-3 shrink-0 text-lg font-semibold">
-        Comparables and variations
+        Comparables and Variations
       </h2>
       {showComparables || showVariations ? (
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
