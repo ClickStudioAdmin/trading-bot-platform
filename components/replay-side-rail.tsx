@@ -13,6 +13,14 @@ import {
 import { createPortal, flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useModalPortalHost } from "@/components/portal-host";
+import {
+  TABLE_ACTIONS_TD_CLASS,
+  TABLE_ACTIONS_TH_CLASS,
+  TABLE_THEAD_CLASS,
+  TableCard,
+  TableIconAction,
+} from "@/components/table-chrome";
+import { TemplateParametersButton } from "@/components/template-parameters-tip";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
 import { ClickGateNotice, useClickGate } from "@/components/click-gate-notice";
 import { useResearchGateAccess } from "@/components/research-gate-access";
@@ -45,8 +53,10 @@ import {
   backtestQueueSeedFromRun,
   backtestReplayHref,
   backtestRunTitle,
+  formatBacktestReturnPct,
   type BacktestRun,
 } from "@/lib/backtest/model";
+import { signedTone } from "@/lib/opportunities/format";
 import {
   completedBacktestVariantIds,
   mergeReplayVariantRows,
@@ -263,6 +273,7 @@ export function ReplayRailBody({
   allowKeepPlatform,
   folders,
   applyDesks,
+  onPlay,
 }: {
   panel: Exclude<ReplayRailPanel, "closed">;
   run: BacktestRun;
@@ -273,9 +284,17 @@ export function ReplayRailBody({
   allowKeepPlatform: boolean;
   folders: AutomationTemplateSet[];
   applyDesks: Array<{ id: string; name: string }>;
+  onPlay?: () => void;
 }) {
   if (panel === "related") {
-    return <RelatedBody run={run} family={family} rootId={rootId} />;
+    return (
+      <RelatedBody
+        run={run}
+        family={family}
+        rootId={rootId}
+        onPlay={onPlay}
+      />
+    );
   }
   if (panel === "positions") {
     return positions;
@@ -442,10 +461,12 @@ function RelatedBody({
   run,
   family,
   rootId,
+  onPlay,
 }: {
   run: BacktestRun;
   family: BacktestRun[];
   rootId: string;
+  onPlay?: () => void;
 }) {
   const rows = useReplayVariantRows(rootId, family);
   const optimistic = useOptimisticVariants();
@@ -454,14 +475,16 @@ function RelatedBody({
     () => replayRelatedList({ root, family, live: rows }),
     [family, root, rows],
   );
+  const byId = useMemo(
+    () => new Map(family.map((row) => [row.id, row])),
+    [family],
+  );
   const known = new Set(rows.map((row) => row.id));
   const waiting = optimistic.filter(
     (row) => row.runId == null || !known.has(row.runId),
   );
-  const empty =
-    list.comparables.length === 0 &&
-    list.variations.length === 0 &&
-    waiting.length === 0;
+  const tableRows = [...list.comparables, ...list.variations];
+  const empty = tableRows.length === 0 && waiting.length === 0;
 
   return (
     <div className="h-full min-h-0 flex-1 overflow-auto pr-3">
@@ -469,58 +492,36 @@ function RelatedBody({
       {empty ? (
         <p className="text-sm text-ink-muted">No comparables or variations yet.</p>
       ) : (
-        <div className="space-y-5">
-          {list.comparables.length > 0 ? (
-            <RelatedSection title="Comparables">
-              {list.comparables.map((entry) => (
-                <RelatedRunRow
-                  key={entry.id}
-                  entry={entry}
-                  viewing={entry.id === run.id}
-                  symbol={entry.symbol}
-                />
-              ))}
-            </RelatedSection>
-          ) : null}
-          {list.variations.length > 0 || waiting.length > 0 ? (
-            <RelatedSection title="Variations">
+        <TableCard className="mt-0">
+          <table className="w-full table-fixed text-left text-sm">
+            <thead className={TABLE_THEAD_CLASS}>
+              <tr>
+                <th className="w-[32%] px-3 py-2 font-medium">Name</th>
+                <th className="px-3 py-2 font-medium">Type</th>
+                <th className="px-3 py-2 font-medium">Contract</th>
+                <th className="px-3 py-2 font-medium">Win rate</th>
+                <th className="px-3 py-2 font-medium">ROE</th>
+                <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
               {waiting.map((row) => (
-                <li key={row.token} className="px-3 py-2">
-                  <span className="flex items-center justify-between gap-2 text-sm text-ink">
-                    New backtest
-                    <PendingMark />
-                  </span>
-                </li>
+                <RelatedPendingRow key={row.token} />
               ))}
-              {list.variations.map((entry) => (
+              {tableRows.map((entry) => (
                 <RelatedRunRow
                   key={entry.id}
                   entry={entry}
+                  source={byId.get(entry.id) ?? null}
                   viewing={entry.id === run.id}
+                  onPlay={onPlay}
                 />
               ))}
-            </RelatedSection>
-          ) : null}
-        </div>
+            </tbody>
+          </table>
+        </TableCard>
       )}
     </div>
-  );
-}
-
-function RelatedSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section>
-      <h3 className="mb-2 text-sm font-semibold text-ink-muted">{title}</h3>
-      <ul className="divide-y divide-line overflow-hidden rounded-card border border-line">
-        {children}
-      </ul>
-    </section>
   );
 }
 
@@ -533,68 +534,99 @@ function PendingMark() {
   );
 }
 
+function RelatedPendingRow() {
+  return (
+    <tr className="border-b border-line last:border-b-0">
+      <td className="px-3 py-2 text-ink">New backtest</td>
+      <td className="px-3 py-2 text-ink-muted">Variation</td>
+      <td className="px-3 py-2 text-ink-faint">—</td>
+      <td className="px-3 py-2 text-ink-faint">—</td>
+      <td className="px-3 py-2 text-ink-faint">—</td>
+      <td className={TABLE_ACTIONS_TD_CLASS}>
+        <PendingMark />
+      </td>
+    </tr>
+  );
+}
+
 function RelatedRunRow({
   entry,
+  source,
   viewing,
-  symbol,
+  onPlay,
 }: {
   entry: ReplayRelatedEntry;
+  source: BacktestRun | null;
   viewing: boolean;
-  symbol?: string;
+  onPlay?: () => void;
 }) {
   const pending = entry.status === "queued" || entry.status === "running";
   const done = entry.status === "done";
-  const body = (
-    <>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm text-ink" title={entry.name}>
-          {entry.name}
+  const winRate =
+    entry.winRate == null ? "—" : `${Math.round(entry.winRate * 100)}%`;
+  const href = backtestReplayHref(entry.id, true);
+  return (
+    <tr
+      className={`border-b border-line last:border-b-0 ${
+        viewing ? "bg-surface-raised" : ""
+      }`}
+    >
+      <td className="px-3 py-2">
+        <span className="flex min-w-0 items-center gap-1">
+          <span className="min-w-0 flex-1 truncate text-ink" title={entry.name}>
+            {entry.name}
+          </span>
+          {source ? (
+            <TemplateParametersButton name={entry.name} recipe={source.recipe} />
+          ) : null}
         </span>
-        {symbol ? (
-          <span className="block truncate text-xs text-ink-muted">{symbol}</span>
-        ) : null}
         {entry.status === "failed" && entry.error ? (
           <span className="mt-1 block text-xs text-danger">{entry.error}</span>
         ) : null}
-      </span>
-      {pending ? (
-        <PendingMark />
-      ) : !done ? (
-        <span className="shrink-0 text-xs capitalize text-danger">
-          {entry.status}
-        </span>
-      ) : null}
-    </>
-  );
-  if (!done) {
-    return <li className="flex items-center gap-2 px-3 py-2">{body}</li>;
-  }
-  return (
-    <li className={viewing ? "bg-surface-raised" : ""}>
-      <a
-        href={backtestReplayHref(entry.id)}
-        aria-current={viewing ? "page" : undefined}
-        onClick={(event) => {
-          if (
-            event.button !== 0 ||
-            event.metaKey ||
-            event.ctrlKey ||
-            event.shiftKey ||
-            event.altKey
-          ) {
-            return;
-          }
-          event.preventDefault();
-          if (viewing) {
-            return;
-          }
-          window.location.assign(backtestReplayHref(entry.id));
-        }}
-        className="flex items-center gap-2 px-3 py-2 hover:bg-surface-raised"
-      >
-        {body}
-      </a>
-    </li>
+      </td>
+      <td className="px-3 py-2 text-ink-muted">
+        {entry.role === "comparable" ? "Comparable" : "Variation"}
+      </td>
+      <td className="px-3 py-2 font-medium tabular-nums">
+        {entry.symbol || "—"}
+      </td>
+      <td className="px-3 py-2 tabular-nums">{winRate}</td>
+      <td className={`px-3 py-2 tabular-nums ${signedTone(entry.roePct)}`}>
+        {formatBacktestReturnPct(entry.roePct)}
+      </td>
+      <td className={TABLE_ACTIONS_TD_CLASS}>
+        {done ? (
+          <TableIconAction
+            label={`Play ${entry.name}`}
+            detail="Load this replay and start playback."
+            href={href}
+            onClick={(event) => {
+              if (
+                event.button !== 0 ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey
+              ) {
+                return;
+              }
+              event.preventDefault();
+              if (viewing) {
+                onPlay?.();
+                return;
+              }
+              window.location.assign(href);
+            }}
+          >
+            <IconPlay className="fill-current" />
+          </TableIconAction>
+        ) : pending ? (
+          <PendingMark />
+        ) : (
+          <span className="text-xs capitalize text-danger">{entry.status}</span>
+        )}
+      </td>
+    </tr>
   );
 }
 

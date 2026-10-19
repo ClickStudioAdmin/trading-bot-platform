@@ -1,6 +1,7 @@
 import { recipeParamRows } from "@/lib/backtest/library";
 import {
   backtestReplayHref,
+  backtestRoePct,
   backtestRunTitle,
   isoDateUtc,
   splitBacktestFamily,
@@ -98,7 +99,23 @@ export type ReplayRelatedEntry = {
   status: string;
   error: string | null;
   createdAtMs: number;
+  winRate: number | null;
+  roePct: number | null;
 };
+
+function relatedResults(row: BacktestRun): {
+  winRate: number | null;
+  roePct: number | null;
+} {
+  const stats = row.stats;
+  if (!stats) {
+    return { winRate: null, roePct: null };
+  }
+  return {
+    winRate: stats.trades > 0 ? stats.winRate : null,
+    roePct: backtestRoePct(stats.realizedUsdt, row.orders ?? [], row.leverage),
+  };
+}
 
 function relatedEntry(
   row: BacktestRun,
@@ -113,6 +130,7 @@ function relatedEntry(
     status: live?.status ?? row.status,
     error: live ? live.error : row.error,
     createdAtMs: live?.createdAtMs ?? row.createdAtMs,
+    ...relatedResults(row),
   };
 }
 
@@ -140,6 +158,8 @@ export function replayRelatedList(input: {
         status: row.status,
         error: row.error,
         createdAtMs: row.createdAtMs,
+        winRate: null,
+        roePct: null,
       }),
     );
   return {
