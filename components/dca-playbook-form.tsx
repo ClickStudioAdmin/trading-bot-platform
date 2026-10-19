@@ -1163,6 +1163,18 @@ export function DcaPlaybookForm({
     source ? String(source.clipSize) : "",
   );
   const [sizeUnit, setSizeUnit] = useState(source?.sizeUnit ?? "usdt");
+  const [shortClipSize, setShortClipSize] = useState(
+    source?.shortClipSize != null && source.shortClipSize > 0
+      ? String(source.shortClipSize)
+      : source
+        ? String(source.clipSize)
+        : "",
+  );
+  const [shortSizeUnit, setShortSizeUnit] = useState<"qty" | "usdt">(
+    source?.shortSizeUnit === "qty" || source?.shortSizeUnit === "usdt"
+      ? source.shortSizeUnit
+      : (source?.sizeUnit ?? "usdt"),
+  );
   const [maxClips, setMaxClips] = useState(optional(source?.maxClips));
   const [maxValueMode, setMaxValueMode] = useState<"none" | DcaMaxValueKind>(
     source?.maxValue != null
@@ -1695,12 +1707,32 @@ export function DcaPlaybookForm({
   const sizeCheckReady =
     !dcaMaxValueUsesBook(maxValueKind) || maxValue === maxValueSettled;
   const sizeError = sizeCheckReady ? sizeErrorLive : null;
+  const shortSizeErrorLive =
+    direction === "both" && derivedClip == null
+      ? perpTicketSizeError({
+          size: shortClipSize,
+          unit: shortSizeUnit,
+          minQty: selectedPair?.minQty ?? 0,
+          maxQty: selectedPair?.maxQty ?? 0,
+          minNotional: selectedPair?.minNotional ?? 0,
+          qtyStep: selectedPair?.qtyStep,
+          lastPrice,
+          baseCoin: selectedPair?.baseCoin ?? "Token",
+        })
+      : null;
+  const shortSizeError = sizeCheckReady ? shortSizeErrorLive : null;
   const ladderMaxErrorLive = dcaConfigMaxOrderError({
     config: {
       direction,
       dcaMode: averaging !== "interval" && restGrid ? "order" : "position",
       clipSize: asNumber(clipForSave) ?? 0,
       sizeUnit: sizeUnitForClip,
+      shortClipSize:
+        direction === "both" && derivedClip == null
+          ? asNumber(shortClipSize)
+          : null,
+      shortSizeUnit:
+        direction === "both" && derivedClip == null ? shortSizeUnit : null,
       maxClips: asNumber(maxClips),
       maxValue: maxValueMode === "none" ? null : asNumber(maxValue),
       maxValueKind,
@@ -1737,7 +1769,9 @@ export function DcaPlaybookForm({
   const saveError =
     maxValueOverCap ??
     marginLeverageError ??
-    (asNumber(clipForSave) === null ? null : (sizeError ?? ladderMaxError));
+    (asNumber(clipForSave) === null
+      ? null
+      : (sizeError ?? shortSizeError ?? ladderMaxError));
   const saveBlocked = cycleLocked ? null : saveError;
   const restGridEffective = averaging !== "interval" && restGrid;
   const primaryFlags = exitPriceLive(exitClauses);
@@ -1838,8 +1872,10 @@ export function DcaPlaybookForm({
         side,
         lastPrice,
         averaging,
-        clipSize: clipForSave,
-        sizeUnit: sizeUnitForClip,
+        clipSize:
+          useShort && derivedClip == null ? shortClipSize : clipForSave,
+        sizeUnit:
+          useShort && derivedClip == null ? shortSizeUnit : sizeUnitForClip,
         sizeMultiplier,
         deviationMultiplier,
         dipPct,
@@ -1889,6 +1925,8 @@ export function DcaPlaybookForm({
     sizeMultiplier,
     sizeUnit,
     sizeUnitForClip,
+    shortClipSize,
+    shortSizeUnit,
     primaryFlags,
     shortFlags,
     shortClassic,
@@ -2637,34 +2675,51 @@ export function DcaPlaybookForm({
               rows,
             );
             if (key === "lead") {
+              const leadSize =
+                derivedClip != null
+                  ? clipForSave
+                  : shortLeg
+                    ? shortClipSize
+                    : clipSize;
+              const leadUnit =
+                derivedClip != null ? "usdt" : shortLeg ? shortSizeUnit : sizeUnit;
+              const leadError = shortLeg ? shortSizeError : sizeError;
               return (
                 <GroupPositionSizing groupIndex={groupIndex} show={showSizing}>
                   <DcaGroupSizeFields
-                    size={clipSize}
-                    sizeUnit={sizeUnit}
-                    onSize={setClipSize}
-                    onUnit={setSizeUnit}
+                    size={leadSize}
+                    sizeUnit={leadUnit}
+                    onSize={shortLeg ? setShortClipSize : setClipSize}
+                    onUnit={shortLeg ? setShortSizeUnit : setSizeUnit}
                     quoteLabel={quote}
                     baseCoin={base}
-                    fieldClass={sizeError ? botFieldInvalidClass : fieldClass}
+                    fieldClass={leadError ? botFieldInvalidClass : fieldClass}
                     sizeInputClass={
-                      sizeError ||
-                      (dirty &&
-                        derivedClip == null &&
-                        asNumber(clipSize) == null)
+                      leadError ||
+                      (dirty && derivedClip == null && asNumber(leadSize) == null)
                         ? botFieldInvalidClass
                         : fieldClass
                     }
                     gridClass={fieldRowClass}
-                    named={!shortLeg}
+                    named={shortLeg ? derivedClip == null : true}
+                    sizeName={shortLeg ? "shortClipSize" : "clipSize"}
+                    unitName={shortLeg ? "shortSizeUnit" : "sizeUnit"}
                     required
                     calculated={derivedClip != null ? clipForSave : null}
-                    sizeError={sizeError}
+                    sizeError={leadError}
                   />
                 </GroupPositionSizing>
               );
             }
             const values = extra.orderFor(key);
+            const leadCopySize =
+              derivedClip != null
+                ? clipForSave
+                : shortLeg
+                  ? shortClipSize
+                  : clipSize;
+            const leadCopyUnit =
+              derivedClip != null ? "usdt" : shortLeg ? shortSizeUnit : sizeUnit;
             return (
               <GroupPositionSizing
                 groupIndex={groupIndex}
@@ -2672,8 +2727,8 @@ export function DcaPlaybookForm({
                 sameAsGroup1={extra.sharesLead(key)}
                 onSameAsGroup1={(same) =>
                   extra.setShares(key, same, {
-                    size: derivedClip != null ? clipForSave : clipSize,
-                    sizeUnit: derivedClip != null ? "usdt" : sizeUnit,
+                    size: leadCopySize,
+                    sizeUnit: leadCopyUnit,
                     orderType: "market",
                     limitPrice: "",
                   })

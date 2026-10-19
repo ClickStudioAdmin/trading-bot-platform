@@ -339,6 +339,103 @@ function parseOptionalSize(
   return parsed.ok ? { ok: true, size: parsed.qty } : parsed;
 }
 
+function parsePerpsLegOrder(
+  form: FormData,
+  prefix: string,
+):
+  | {
+      ok: true;
+      order: {
+        size: number;
+        sizeUnit: "qty" | "usdt";
+        orderType: FuturesOrderType;
+        limitPrice: number | null;
+      } | null;
+    }
+  | { ok: false; error: string } {
+  const rawSize = form.get(`${prefix}size`);
+  const rawUnit = form.get(`${prefix}sizeUnit`);
+  const rawType = form.get(`${prefix}orderType`);
+  if (rawSize == null && rawUnit == null && rawType == null) {
+    return { ok: true, order: null };
+  }
+  const sizeUnit = parseFuturesSizeUnit(rawUnit ?? "usdt");
+  if (!sizeUnit.ok) {
+    return sizeUnit;
+  }
+  const unit = sizeUnit.unit === "usdt" ? "usdt" : "qty";
+  const size = parseOptionalSize(rawSize, unit, true);
+  if (!size.ok || size.size == null) {
+    return { ok: false, error: "Enter a short order size." };
+  }
+  const orderType = parseFuturesOrderType(rawType ?? "market");
+  if (!orderType.ok) {
+    return orderType;
+  }
+  let limitPrice: number | null = null;
+  if (orderType.orderType === "limit") {
+    const parsed = parseFuturesLimitPrice(form.get(`${prefix}limitPrice`));
+    if (!parsed.ok) {
+      return { ok: false, error: "Enter a short limit price." };
+    }
+    limitPrice = parsed.price;
+  }
+  return {
+    ok: true,
+    order: {
+      size: size.size,
+      sizeUnit: unit,
+      orderType: orderType.orderType,
+      limitPrice,
+    },
+  };
+}
+
+function perpsLegOrderDiffers(
+  rule: FuturesAutomationRule,
+  order: {
+    size: number;
+    sizeUnit: "qty" | "usdt";
+    orderType: FuturesOrderType;
+    limitPrice: number | null;
+  },
+): boolean {
+  return (
+    order.size !== rule.size ||
+    order.sizeUnit !== rule.sizeUnit ||
+    order.orderType !== rule.orderType ||
+    (order.orderType === "limit" && order.limitPrice !== rule.limitPrice)
+  );
+}
+
+function shortLegOrder(
+  rule: FuturesAutomationRule,
+  short: PerpsEntryLeg,
+): Partial<
+  Pick<FuturesAutomationRule, "size" | "sizeUnit" | "orderType" | "limitPrice">
+> {
+  if (short.size == null || !(short.size > 0)) {
+    return {};
+  }
+  const orderType =
+    short.orderType === "limit"
+      ? "limit"
+      : short.orderType === "market"
+        ? "market"
+        : rule.orderType;
+  return {
+    size: short.size,
+    sizeUnit:
+      short.sizeUnit === "qty"
+        ? "qty"
+        : short.sizeUnit === "usdt"
+          ? "usdt"
+          : rule.sizeUnit,
+    orderType,
+    limitPrice: orderType === "limit" ? (short.limitPrice ?? null) : null,
+  };
+}
+
 export function parseFuturesAutomationForm(
   form: FormData,
   venue = "bybit",
@@ -541,6 +638,17 @@ export function writePerpsShortEntryFields(
   form.set(`${prefix}triggerPrice`, String(leg.triggerPrice));
   if (leg.skipIfOpen) {
     form.set(`${prefix}skipIfOpen`, "on");
+  }
+  if (leg.size != null && leg.size > 0) {
+    form.set(`${prefix}size`, String(leg.size));
+    form.set(`${prefix}sizeUnit`, leg.sizeUnit === "qty" ? "qty" : "usdt");
+    form.set(
+      `${prefix}orderType`,
+      leg.orderType === "limit" ? "limit" : "market",
+    );
+    if (leg.orderType === "limit" && leg.limitPrice != null) {
+      form.set(`${prefix}limitPrice`, String(leg.limitPrice));
+    }
   }
   writeFuturesConditionFormFields(form, prefix, {
     indicator: leg.indicator,
@@ -838,6 +946,16 @@ function applyPerpsDirection(
           }
         : {}),
     };
+    const shortOrder = parsePerpsLegOrder(form, shortPrefix);
+    if (!shortOrder.ok) {
+      return shortOrder;
+    }
+    if (
+      shortOrder.order &&
+      perpsLegOrderDiffers(rule, shortOrder.order)
+    ) {
+      rule.shortEntry = { ...rule.shortEntry, ...shortOrder.order };
+    }
     return { ok: true };
   }
   if (chosen === "long") {
@@ -1188,6 +1306,7 @@ export function perpsAutomationLegs(
     indicator: short.indicator,
     confirm: short.confirm,
     entryStack: short.entryStack,
+    ...shortLegOrder(rule, short),
     conditionTrue: rule.shortConditionTrue,
     ...(short.classic
       ? {

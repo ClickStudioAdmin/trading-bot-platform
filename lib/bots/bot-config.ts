@@ -213,9 +213,25 @@ function dcaSizingLines(playbook: DcaPlaybook): BotConfigLine[] {
   const atr = !interval && playbook.spacingKind === "atr";
   const sizeUnit = playbook.sizeUnit === "qty" ? "Token qty" : "USDT";
   const size = amount(playbook.clipSize);
+  const shortUnit =
+    playbook.shortSizeUnit === "qty"
+      ? "Token qty"
+      : playbook.shortSizeUnit === "usdt"
+        ? "USDT"
+        : sizeUnit;
+  const shortSize = amount(playbook.shortClipSize);
   const lines: Array<BotConfigLine | null> = [
     setting("Size unit", sizeUnit),
     setting("Order size", size ? `${size} ${sizeUnit === "USDT" ? "USDT" : "tokens"}` : null),
+    playbook.direction === "both" && shortSize
+      ? setting("Short size unit", shortUnit)
+      : null,
+    playbook.direction === "both" && shortSize
+      ? setting(
+          "Short order size",
+          `${shortSize} ${shortUnit === "USDT" ? "USDT" : "tokens"}`,
+        )
+      : null,
     setting(
       "Averaging",
       interval ? "Add on interval" : "Add on price deviation",
@@ -529,6 +545,24 @@ function perpsClassicLines(input: {
   ];
 }
 
+function perpsShortOrderLines(
+  leg: NonNullable<FuturesAutomationFormValues["shortEntry"]>,
+): BotConfigLine[] {
+  if (leg.size == null || !(leg.size > 0)) {
+    return [];
+  }
+  const unit = leg.sizeUnit === "qty" ? "Token qty" : "USDT";
+  const orderType = leg.orderType === "limit" ? "limit" : "market";
+  return [
+    setting("Size", `${amount(leg.size) ?? leg.size}${unit === "USDT" ? " USDT" : ""}`),
+    setting("Unit", unit),
+    setting("Order", orderLabel(orderType)),
+    orderType === "limit"
+      ? setting("Limit price", leg.limitPrice != null ? amount(leg.limitPrice) : null)
+      : null,
+  ].filter((row): row is BotConfigLine => row != null);
+}
+
 export function perpsBotConfig(
   rule: FuturesAutomationFormValues,
 ): BotConfigSection[] {
@@ -549,17 +583,20 @@ export function perpsBotConfig(
   });
   const shortEntry =
     rule.direction === "both" && rule.shortEntry
-      ? perpsEntryLines({
-          closing: false,
-          side: "short",
-          entrySource: rule.shortEntry.entrySource,
-          triggerBy: rule.shortEntry.triggerBy,
-          triggerCompare: rule.shortEntry.triggerCompare,
-          triggerPrice: String(rule.shortEntry.triggerPrice),
-          indicator: rule.shortEntry.indicator,
-          confirm: rule.shortEntry.confirm,
-          entryStack: rule.shortEntry.entryStack,
-        })
+      ? [
+          ...perpsEntryLines({
+            closing: false,
+            side: "short",
+            entrySource: rule.shortEntry.entrySource,
+            triggerBy: rule.shortEntry.triggerBy,
+            triggerCompare: rule.shortEntry.triggerCompare,
+            triggerPrice: String(rule.shortEntry.triggerPrice),
+            indicator: rule.shortEntry.indicator,
+            confirm: rule.shortEntry.confirm,
+            entryStack: rule.shortEntry.entryStack,
+          }),
+          ...perpsShortOrderLines(rule.shortEntry),
+        ]
       : null;
 
   const sizing: Array<BotConfigLine | null> = [
