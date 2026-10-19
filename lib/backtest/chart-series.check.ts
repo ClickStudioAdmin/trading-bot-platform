@@ -554,7 +554,7 @@ const closeRecipe = {
     ],
     joins: [],
   },
-} as BacktestRecipe;
+} as unknown as BacktestRecipe;
 const closeLayers = replayChartSeries(closeRecipe, bars).layers;
 const divergenceLayers = closeLayers.filter((row) =>
   row.title.includes("RSI divergence"),
