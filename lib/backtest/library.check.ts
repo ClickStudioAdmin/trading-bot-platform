@@ -14,10 +14,20 @@ import {
   inheritPlatformBacktests,
   matchingPlatformTemplateIds,
   parseBacktestRecipeJson,
+  parseListedRecipe,
+  backtestLinksForBotRecipes,
   userBacktestFieldIssues,
 } from "./library";
-import { snapshotDcaRecipe, snapshotPerpsRecipe } from "@/lib/templates/recipe";
+import {
+  recipesMatchReplayFields,
+  snapshotDcaRecipe,
+  snapshotPaperRecipe,
+  snapshotPerpsRecipe,
+  type TemplateRecipe,
+} from "@/lib/templates/recipe";
 import { parseDcaPlaybookForm } from "@/lib/dca/playbook";
+import { defaultPaperLayer } from "@/lib/engine/rules";
+import type { AttachedBacktestRow } from "./model";
 
 const perps = snapshotPerpsRecipe({
   name: "Buy dip",
@@ -535,5 +545,88 @@ assert.equal(
   ),
   "/account/templates?template=plat-1",
 );
+
+const listedDca = parseListedRecipe(dca);
+assert.equal(listedDca?.kind, "dca");
+assert.ok(listedDca);
+const renamedDca = parseListedRecipe({ ...dca, name: "renamed" });
+assert.ok(listedDca && renamedDca);
+if (listedDca && renamedDca) {
+  assert.equal(recipesMatchReplayFields(listedDca, renamedDca), true);
+}
+assert.equal(parseListedRecipe(null), null);
+assert.equal(parseListedRecipe({ kind: "spot", symbol: "BTCUSDT" }), null);
+const carryRecipe = snapshotPaperRecipe({
+  ...defaultPaperLayer(0),
+  name: "Carry core",
+  notionalUsdt: 1000,
+});
+assert.equal(parseListedRecipe(carryRecipe)?.kind, "cash_and_carry");
+assert.equal(parseBacktestRecipeJson(carryRecipe), null);
+
+function doneRun(
+  id: string,
+  recipe: TemplateRecipe,
+  extra: Partial<AttachedBacktestRow> = {},
+): AttachedBacktestRow & { recipe: TemplateRecipe } {
+  return {
+    id,
+    userId: "user-1",
+    status: "done",
+    name: id,
+    symbol: "symbol" in recipe ? recipe.symbol : "",
+    recipeName: recipe.name,
+    parentRunId: null,
+    fromMs: 1,
+    toMs: 2,
+    createdAtMs: 1,
+    recipe,
+    ...extra,
+  };
+}
+
+if (listedDca) {
+  const other = parseListedRecipe({ ...dca, dipPct: 9 });
+  assert.ok(other);
+  const links = backtestLinksForBotRecipes({
+    viewerId: "user-1",
+    isAdmin: false,
+    bots: [
+      { id: "dca:atr", recipe: listedDca },
+      { id: " ", recipe: listedDca },
+      { id: "dca:other", recipe: other! },
+    ],
+    runs: [
+      doneRun("newer", listedDca, { createdAtMs: 20 }),
+      doneRun("older", listedDca, { createdAtMs: 10 }),
+      doneRun("stranger", listedDca, { userId: "user-2", createdAtMs: 30 }),
+      doneRun("published", { ...listedDca, name: "renamed" }, {
+        userId: null,
+        createdAtMs: 5,
+      }),
+      doneRun("queued", listedDca, { status: "queued", createdAtMs: 40 }),
+      doneRun("different", other!, { createdAtMs: 50 }),
+    ],
+  });
+  assert.deepEqual(
+    links["dca:atr"]?.map((link) => link.runId),
+    ["newer", "older", "published"],
+  );
+  assert.equal(links[" "], undefined);
+  assert.deepEqual(
+    links["dca:other"]?.map((link) => link.runId),
+    ["different"],
+  );
+  const asAdmin = backtestLinksForBotRecipes({
+    viewerId: "admin-1",
+    isAdmin: true,
+    bots: [{ id: "dca:atr", recipe: listedDca }],
+    runs: [doneRun("stranger", listedDca, { userId: "user-2" })],
+  });
+  assert.deepEqual(
+    asAdmin["dca:atr"]?.map((link) => link.runId),
+    ["stranger"],
+  );
+}
 
 console.log("backtest library checks passed");

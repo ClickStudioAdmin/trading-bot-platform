@@ -143,6 +143,7 @@ import {
   deskBotRows,
   perpsBotPair,
   perpsBotSummary,
+  perpsListRecipe,
   type AutomationsBotBlotter,
 } from "@/lib/bots/automations-list";
 import { withRemovedIds } from "@/lib/table-chrome";
@@ -433,6 +434,7 @@ export function FuturesAutomationsDesk({
               status: botModeLabel("flex", statusKey),
               statusKey,
               summary: perpsBotSummary(layer),
+              recipe: perpsListRecipe(layer),
               config: perpsBotConfig(layer),
               canRemove:
                 botDeleteAllowed(statusKey) && !inUse.has(layer.id),

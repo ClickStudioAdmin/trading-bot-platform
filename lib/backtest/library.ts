@@ -1,5 +1,12 @@
 import { deskPath } from "@/lib/accounts/model";
-import { backtestRunTitle, type BacktestRecipe } from "@/lib/backtest/model";
+import {
+  backtestRunTitle,
+  memberCanReadBacktestRun,
+  templateBacktestLinks,
+  type AttachedBacktestRow,
+  type BacktestRecipe,
+  type TemplateBacktestLink,
+} from "@/lib/backtest/model";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { templatePageHref } from "@/lib/templates/library-tab";
 import {
@@ -326,6 +333,53 @@ function backtestFolderLabel(
     return `${folder.name} · shared`;
   }
   return folder.name;
+}
+
+/** Any saved template recipe, including Cash and Carry. Rejects a stale or partial payload. */
+export function parseListedRecipe(raw: unknown): TemplateRecipe | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return null;
+  }
+  const kind = (raw as { kind?: unknown }).kind;
+  if (kind !== "dca" && kind !== "flex" && kind !== "cash_and_carry") {
+    return null;
+  }
+  const parsed = parseTemplateRecipe(raw, kind, TEMPLATE_RECIPE_VERSION);
+  return parsed.ok ? parsed.recipe : null;
+}
+
+/**
+ * Finished runs whose recipe still matches each bot. A run can sit on more
+ * than one bot when those bots share a recipe. Newest first.
+ */
+export function backtestLinksForBotRecipes(input: {
+  bots: readonly { id: string; recipe: TemplateRecipe }[];
+  runs: readonly (AttachedBacktestRow & { recipe: TemplateRecipe })[];
+  viewerId: string;
+  isAdmin: boolean;
+}): Record<string, TemplateBacktestLink[]> {
+  const links: Record<string, TemplateBacktestLink[]> = {};
+  for (const bot of input.bots) {
+    const id = bot.id.trim();
+    if (!id) {
+      continue;
+    }
+    const rows = input.runs.filter(
+      (run) =>
+        run.status === "done" &&
+        memberCanReadBacktestRun(
+          { userId: run.userId },
+          input.viewerId,
+          input.isAdmin,
+        ) &&
+        recipesMatchReplayFields(bot.recipe, run.recipe),
+    );
+    const visible = templateBacktestLinks(rows, input.viewerId, input.isAdmin);
+    if (visible.length > 0) {
+      links[id] = visible;
+    }
+  }
+  return links;
 }
 
 export function readBacktestRecipeJson(

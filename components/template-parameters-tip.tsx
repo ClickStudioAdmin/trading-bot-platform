@@ -14,6 +14,7 @@ import { BacktestHighlightBody } from "@/components/backtest-highlight-hover";
 import { IconBacktest, IconInfo } from "@/components/icons";
 import { useThemePreviewPortalClass } from "@/components/theme-scheme-preview";
 import { attachedBacktestsByTemplateAction } from "@/lib/backtest/actions";
+import { backtestsForBotRecipesAction } from "@/lib/backtest/desk-bot-action";
 import { templateParamSections } from "@/lib/backtest/param-sections";
 import type { TemplateBacktestLink } from "@/lib/backtest/model";
 import type { TemplateRecipe } from "@/lib/templates/recipe";
@@ -67,6 +68,82 @@ function enqueueAttachedBacktests(
         });
     }, 0);
   });
+}
+
+type BotBacktestWaiter = {
+  id: string;
+  recipe: TemplateRecipe;
+  resolve: (rows: TemplateBacktestLink[]) => void;
+};
+
+let botBacktestQueue: BotBacktestWaiter[] = [];
+let botBacktestFlush: number | null = null;
+
+function enqueueBotBacktests(
+  id: string,
+  recipe: TemplateRecipe,
+): Promise<TemplateBacktestLink[]> {
+  return new Promise((resolve) => {
+    botBacktestQueue.push({ id, recipe, resolve });
+    if (botBacktestFlush != null) {
+      return;
+    }
+    botBacktestFlush = window.setTimeout(() => {
+      botBacktestFlush = null;
+      const batch = botBacktestQueue;
+      botBacktestQueue = [];
+      void backtestsForBotRecipesAction(
+        batch.map((item) => ({ id: item.id, recipe: item.recipe })),
+      )
+        .then((map) => {
+          for (const item of batch) {
+            item.resolve(map[item.id] ?? []);
+          }
+        })
+        .catch(() => {
+          for (const item of batch) {
+            item.resolve([]);
+          }
+        });
+    }, 0);
+  });
+}
+
+export function BotParametersButton({
+  name,
+  recipe,
+  botId,
+}: {
+  name: string;
+  recipe: TemplateRecipe;
+  botId: string;
+}) {
+  const key = `${recipe.kind}:${botId}`;
+  const recipeRef = useRef(recipe);
+  const [backtests, setBacktests] = useState<TemplateBacktestLink[] | null>(
+    null,
+  );
+  useEffect(() => {
+    recipeRef.current = recipe;
+  }, [recipe]);
+  useEffect(() => {
+    let cancelled = false;
+    void enqueueBotBacktests(key, recipeRef.current).then((rows) => {
+      if (!cancelled) {
+        setBacktests(rows);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [key]);
+  return (
+    <TemplateParametersButton
+      name={name}
+      recipe={recipe}
+      backtests={backtests ?? undefined}
+    />
+  );
 }
 
 export function TemplateParametersButton({
