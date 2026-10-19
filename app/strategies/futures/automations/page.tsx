@@ -218,7 +218,6 @@ export default async function FuturesAutomationsPage({
             bookUsdt={bookUsdt}
             leverage={leverage}
             lastPrices={lastPrices}
-            reduceOnly={Boolean(settings.reduceOnly)}
             webhooksHref={deskHref(FUTURES_PATHS.webhooks, session.account.id)}
             isAdmin={memberIsAdmin(session.member)}
             accountId={session.account.id}
@@ -336,15 +335,6 @@ export default async function FuturesAutomationsPage({
           {error}
         </p>
       ) : null}
-      {settings.reduceOnly ? (
-        <p className="mt-4 mb-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Reduce only is on. Buy and Sell stay blocked until you turn it off in{" "}
-          <Link href={deskHref(FUTURES_PATHS.settings, session.account.id)} className="underline">
-            Desk Settings
-          </Link>
-          .
-        </p>
-      ) : null}
       <div className="mt-6">
         <FuturesAutomationsDesk
           key={session.account.id}
@@ -352,7 +342,7 @@ export default async function FuturesAutomationsPage({
           options={pairs}
           triggerWebhooks={triggerWebhooks}
           inUseRuleIds={inUseRuleIds}
-          reduceOnly={Boolean(settings.reduceOnly)}
+          reduceOnly={false}
           isAdmin={memberIsAdmin(session.member)}
           accountId={session.account.id}
           templates={templates.map(templateToSummary)}

@@ -1,4 +1,4 @@
-import { deskPath } from "@/lib/accounts/model";
+import { deskPath, formatDeskType } from "@/lib/accounts/model";
 import {
   backtestRunTitle,
   memberCanReadBacktestRun,
@@ -209,6 +209,106 @@ export function findMatchingBacktestDeskBot(
     deskBots.find((row) => recipesMatchReplayFields(recipe, row.recipe)) ??
     null
   );
+}
+
+export type BacktestListDesk = {
+  id: string;
+  name: string;
+  deskType: "dca" | "flex";
+};
+
+export type BacktestRunDeskIndex = {
+  desks: BacktestListDesk[];
+  /** Desk ids whose current bot recipe still matches this run. A run can match more than one desk. */
+  runDeskIds: Record<string, string[]>;
+};
+
+function backtestDeskBotKey(kind: string, symbol: string): string {
+  return `${kind}:${symbol.trim().toUpperCase()}`;
+}
+
+/**
+ * Saved-list desk filter. Desks come from the member's replayable bots.
+ * A run is on a desk when one of those bots still matches the recipe.
+ */
+export function indexBacktestRunsByDesk(
+  runs: readonly { id: string; recipe: BacktestRecipe }[],
+  bots: readonly BacktestDeskBot[],
+  listedDesks: readonly BacktestListDesk[] = [],
+): BacktestRunDeskIndex {
+  const desks: BacktestListDesk[] = [];
+  const seenDesk = new Set<string>();
+  const seeded = [
+    ...listedDesks,
+    ...bots.map((bot) => ({
+      id: bot.deskId,
+      name: bot.deskName,
+      deskType: bot.kind,
+    })),
+  ];
+  for (const desk of seeded) {
+    const id = desk.id.trim();
+    if (!id || seenDesk.has(id)) {
+      continue;
+    }
+    seenDesk.add(id);
+    desks.push({
+      id,
+      name: desk.name.trim() || "Desk",
+      deskType: desk.deskType,
+    });
+  }
+  desks.sort(
+    (left, right) =>
+      left.name.localeCompare(right.name) || left.id.localeCompare(right.id),
+  );
+  const byKey = new Map<string, BacktestDeskBot[]>();
+  for (const bot of bots) {
+    const key = backtestDeskBotKey(bot.recipe.kind, bot.recipe.symbol);
+    const list = byKey.get(key) ?? [];
+    list.push(bot);
+    byKey.set(key, list);
+  }
+  const runDeskIds: Record<string, string[]> = {};
+  for (const run of runs) {
+    const candidates = byKey.get(
+      backtestDeskBotKey(run.recipe.kind, run.recipe.symbol),
+    );
+    if (!candidates || candidates.length === 0) {
+      continue;
+    }
+    const ids: string[] = [];
+    const seen = new Set<string>();
+    for (const bot of candidates) {
+      if (seen.has(bot.deskId)) {
+        continue;
+      }
+      if (!recipesMatchReplayFields(run.recipe, bot.recipe)) {
+        continue;
+      }
+      seen.add(bot.deskId);
+      ids.push(bot.deskId);
+    }
+    if (ids.length > 0) {
+      runDeskIds[run.id] = ids;
+    }
+  }
+  return { desks, runDeskIds };
+}
+
+/** Desk names that collide get the type in front so the filter can tell them apart. */
+export function backtestDeskFilterLabel(
+  desk: BacktestListDesk,
+  desks: readonly BacktestListDesk[],
+): string {
+  const name = desk.name.trim() || "Desk";
+  const clash = desks.some(
+    (row) => row.id !== desk.id && row.name.trim() === desk.name.trim(),
+  );
+  if (!clash) {
+    return name;
+  }
+  return `${formatDeskType(desk.deskType)} · ${name}`;
 }
 
 export type BacktestDeskBotOption = {

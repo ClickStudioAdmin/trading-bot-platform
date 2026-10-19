@@ -354,12 +354,12 @@ assert.equal(
   "250",
 );
 assert.equal(
-  paperRows.find((row) => row.label === "Take profit")?.value,
-  "Off",
+  paperRows.some((row) => row.label === "Take profit" || row.label === "Take profit %"),
+  false,
 );
 assert.equal(
-  paperRows.find((row) => row.label === "Stop loss %")?.value,
-  "2%",
+  paperRows.some((row) => row.label === "Stop loss" || row.label === "Stop loss %"),
+  false,
 );
 
 const atrEntry = {

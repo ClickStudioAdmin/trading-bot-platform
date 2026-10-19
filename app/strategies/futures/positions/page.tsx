@@ -314,9 +314,6 @@ export default async function FuturesPositionsPage({
             <p className="text-sm text-ink-muted">
               USDT linear perpetual. Buy opens or adds a long. Sell opens or
               adds a short. Market fills now. Limit rests under Open orders.
-              {settings.reduceOnly
-                ? " Reduce only is on — Buy and Sell are blocked."
-                : ""}
             </p>
             <div className="mt-3 rounded-card border border-line bg-surface p-5">
               <form action={submitFuturesTrade} className="block">

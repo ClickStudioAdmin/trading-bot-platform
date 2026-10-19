@@ -169,7 +169,7 @@ async function FuturesDeskChrome({
   const deskStatus = futuresDeskAutomationStatus({
     signedIn: true,
     modes: navModes(modes),
-    reduceOnly: settings.reduceOnly,
+    reduceOnly: false,
     liveBook: live,
     bound: Boolean(bound),
   });

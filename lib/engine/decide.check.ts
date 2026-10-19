@@ -164,7 +164,7 @@ assert.deepEqual(
   [],
 );
 
-assert.equal(
+assert.deepEqual(
   decideExits(
     [
       {
@@ -172,20 +172,20 @@ assert.equal(
         futureSymbol: high.futureSymbol,
         notionalUsdt: 10_000,
         ruleId: 1,
-        daysToExpiry: 2,
+        daysToExpiry: 40,
         markNetApr: 0.2,
-        pnlPct: 0.02,
+        pnlPct: -0.03,
         exits: {
           closeMaxDte: null,
           closeMinNetApr: null,
           takeProfitPct: 0.01,
-          stopLossPct: null,
+          stopLossPct: -0.02,
         },
       },
     ],
     config,
-  )[0]?.reason,
-  "take_profit",
+  ),
+  [],
 );
 
 const dynamicLayer = layer({

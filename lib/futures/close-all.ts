@@ -66,12 +66,12 @@ export function closeAllBlockNewSizeCopy(input: { dcaDesk?: boolean }): {
   if (input.dcaDesk) {
     return {
       label: "Block new clips",
-      hint: "Turns on Reduce only in Desk Settings so this Active bot cannot place a new first order or adds. It does not Stop adding or Disable the bot.",
+      hint: "Sets each Active bot to Stop adding so it cannot place a new first order or adds. Take profit and stop still run.",
     };
   }
   return {
     label: "Set reduce only",
-    hint: "Blocks Buy and Sell on this book so size cannot come back. Active automation rules also switch to Reduce only.",
+    hint: "Switches Active bots to Reduce only so they cannot open or add. Close still works.",
   };
 }
 
