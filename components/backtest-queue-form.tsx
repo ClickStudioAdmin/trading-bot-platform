@@ -7,7 +7,6 @@ import { AppMultiSelect, AppSelect, type AppSelectOption } from "@/components/ap
 import { TemplateParametersButton } from "@/components/template-parameters-tip";
 import { BotFormStep, botFieldInvalidClass } from "@/components/bot-form-chrome";
 import { BotRecipeEditor } from "@/components/bot-recipe-editor";
-import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { ClickGateNotice, formSubmitAnchor, useClickGate } from "@/components/click-gate-notice";
@@ -48,7 +47,6 @@ import {
 import {
   canQueueUserBacktest,
   findMatchingBacktestTemplate,
-  formatBacktestDeskMatch,
   groupBacktestLibrary,
   userBacktestFieldIssues,
   type BacktestDeskBot,
@@ -156,21 +154,16 @@ function QueueSubmitButton({
   );
 }
 
-function VariantShell({
-  variant,
-  children,
-}: {
-  variant: boolean;
-  children: ReactNode;
-}) {
-  if (variant) {
-    return <BotFormStep title="Backtest Parameters">{children}</BotFormStep>;
-  }
-  return (
-    <div className="min-w-0 rounded-card border border-line bg-surface p-5">
-      {children}
-    </div>
-  );
+function VariantShell({ children }: { children: ReactNode }) {
+  return <BotFormStep title="Backtest Parameters">{children}</BotFormStep>;
+}
+
+/** The label wrapper already has mt-1. AppSelect puts that margin on its root, and a flex wrapper does not collapse it. */
+function sourceSelectClass(invalid: boolean) {
+  return (invalid ? botFieldInvalidClass : BILLING_FIELD_CLASS)
+    .replace(/(^|\s)mt-1(?=\s|$)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function BacktestQueueForm({
@@ -329,14 +322,6 @@ export function BacktestQueueForm({
         : null,
     [recipe, sourceTemplateId, templates],
   );
-  const matchingDeskBot = useMemo(() => {
-    if (!recipe || !pickedDeskBot) {
-      return null;
-    }
-    return recipesMatchReplayFields(recipe, pickedDeskBot.recipe)
-      ? pickedDeskBot
-      : null;
-  }, [pickedDeskBot, recipe]);
   const templateGroups = useMemo(
     () => groupBacktestLibrary(templates, folders),
     [folders, templates],
@@ -385,12 +370,6 @@ export function BacktestQueueForm({
     templateOptions.find(
       (option) => templateIdFromOption(option.value) === templateId,
     )?.value ?? "";
-  const editedAway = Boolean(
-    recipe &&
-      (sourceTemplateId || templateId || loadedFromRun) &&
-      !matchingTemplate &&
-      !matchingDeskBot,
-  );
   const pairs = withSymbol(
     venue === "hyperliquid" ? hyperliquidPairs : bybitPairs,
     symbol,
@@ -758,16 +737,9 @@ export function BacktestQueueForm({
             : "grid min-w-0 items-start gap-6 lg:grid-cols-2 [&>*]:min-w-0"
         }
       >
-      <VariantShell variant={variant}>
+      <VariantShell>
       {variant || !showTitle ? null : (
         <h2 className="text-lg font-semibold">New backtest</h2>
-      )}
-      {variant ? null : (
-      <p className={showTitle ? "mt-1 mb-4 text-sm text-ink-muted" : "mb-4 text-sm text-ink-muted"}>
-        {loadedFromRun
-          ? "Parameters loaded from the previous run. Tweak them and queue a new one."
-          : "Pick a desk bot or a library template. Edit the replay fields, then queue. Long windows go to the engine worker."}
-      </p>
       )}
       <form
         id={variant ? "backtest-variant-queue" : undefined}
@@ -899,7 +871,7 @@ export function BacktestQueueForm({
                 disabled={libraryTemplateSelected}
                 searchable
                 onChange={(event) => pickDeskBot(event.target.value)}
-                className={sourceMissing ? botFieldInvalidClass : BILLING_FIELD_CLASS}
+                className={sourceSelectClass(sourceMissing)}
               />
             </span>
           </label>
@@ -910,7 +882,7 @@ export function BacktestQueueForm({
               name="templateId"
               value={libraryTemplateSelected ? templateId : ""}
             />
-            <span className="mt-1 flex items-start gap-2">
+            <span className="mt-1 flex items-center gap-2">
               <span className="min-w-0 flex-1">
                 <AppSelect
                   aria-label="Template"
@@ -919,9 +891,7 @@ export function BacktestQueueForm({
                   disabled={deskBotSelected}
                   searchable
                   onChange={(event) => pickTemplate(event.target.value)}
-                  className={
-                    sourceMissing ? botFieldInvalidClass : BILLING_FIELD_CLASS
-                  }
+                  className={sourceSelectClass(sourceMissing)}
                 />
               </span>
               {pickedTemplate && matchingTemplate?.id !== pickedTemplate.id ? (
@@ -930,7 +900,6 @@ export function BacktestQueueForm({
                   description={pickedTemplate.description}
                   recipe={pickedTemplate.recipe}
                   templateId={pickedTemplate.id}
-                  className="mt-2"
                 />
               ) : null}
             </span>
@@ -1150,46 +1119,13 @@ export function BacktestQueueForm({
       ) : null}
       </VariantShell>
       {recipe ? (
-        <aside
-          className={
-            variant
-              ? "min-w-0"
-              : "min-w-0 rounded-card border border-line bg-surface p-5"
-          }
-        >
-          {variant ? null : (
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <h3 className="text-lg font-semibold tracking-tight text-ink">
-                Bot to replay
-              </h3>
-              <p className="mt-1 text-sm text-ink-muted">
-                {loadedFromRun
-                  ? "These are the recipe fields from that run. Edit any of them before you queue."
-                  : "Change the replay fields here. Name, dates, and venue on the left are the market window. Contract in General is the pair. The replay tape follows the bot."}
-              </p>
-            </div>
-            <BacktestOriginBadges
-              templateName={matchingTemplate?.name ?? null}
-              templateDescription={matchingTemplate?.description ?? null}
-              templateRecipe={matchingTemplate?.recipe ?? null}
-              templateId={matchingTemplate?.id ?? null}
-              deskLabel={
-                matchingDeskBot
-                  ? formatBacktestDeskMatch(matchingDeskBot)
-                  : null
-              }
-              edited={editedAway}
-            />
-          </div>
-          )}
+        <aside className="min-w-0">
           {variant || !pairChanged ? null : (
-            <p className="mt-2 text-xs text-warning">
+            <p className="mb-2 text-xs text-warning">
               Contract is {symbol}. The bot was saved on {recipe.symbol}.
             </p>
           )}
-          <div className={variant ? undefined : "mt-4"}>
-            <BotRecipeEditor
+          <BotRecipeEditor
               key={`${recipe.kind}:${venue}:${sourceTemplateId}:${pickedDeskBot?.id ?? ""}:${draftId}:${loadedFromRun ? "rerun" : "current"}`}
               recipe={recipe}
               options={withSymbol(pairs, recipe.symbol || symbol)}
@@ -1260,18 +1196,12 @@ export function BacktestQueueForm({
                   }
                 }
               }}
-            />
-          </div>
+          />
         </aside>
       ) : variant ? null : (
-        <aside className="min-w-0 rounded-card border border-line bg-surface p-5">
-          <h3 className="text-lg font-semibold tracking-tight text-ink">
-            Bot to replay
-          </h3>
-          <p className="mt-2 text-sm text-ink-muted">
-            Pick a Bot or Bot Template from the left column.
-          </p>
-        </aside>
+        <p className="text-sm text-ink-muted">
+          Pick a Bot or Bot Template from the left column.
+        </p>
       )}
       </div>
     </section>
