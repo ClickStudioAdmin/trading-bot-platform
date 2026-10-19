@@ -42,12 +42,14 @@ import {
 import { backtestListedSections } from "@/lib/backtest/param-sections";
 import {
   backtestQueueSeedFromRun,
+  backtestReplayHref,
   backtestRunTitle,
   type BacktestRun,
 } from "@/lib/backtest/model";
 import {
   completedBacktestVariantIds,
   mergeReplayVariantRows,
+  replayHrefAfterVariantDelete,
   sameReplayVariantRows,
   type ReplayVariantRow,
 } from "@/lib/backtest/variant-label";
@@ -579,8 +581,15 @@ export function ReplayVariantSelect({
       return;
     }
     setOpen(false);
-    if (run.id === row.id) {
-      router.push(`/account/backtests/${rootId}/replay`);
+    const next = replayHrefAfterVariantDelete({
+      deletedId: row.id,
+      viewingId: run.id,
+      rootId,
+    });
+    if (next) {
+      onBeforeNavigate?.();
+      window.location.replace(next);
+      return;
     }
     router.refresh();
   }
@@ -764,15 +773,16 @@ export function ReplayVariantSelect({
             title={finished.playLabel}
             aria-label={finished.playLabel}
             onClick={() => {
+              if (!finished.runId) {
+                return;
+              }
               if (finished.runId === run.id) {
                 onPlayHere?.();
                 setFinished(null);
                 return;
               }
-              openVariant(
-                `/account/backtests/${finished.runId}/replay`,
-                false,
-              );
+              onBeforeNavigate?.();
+              window.location.assign(backtestReplayHref(finished.runId, true));
             }}
             className="inline-flex min-w-0 items-center gap-1.5 rounded-control py-1 pl-2 pr-1.5 hover:bg-success/20"
           >

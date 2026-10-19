@@ -498,6 +498,105 @@ export function backtestRerunHref(runId: string): string {
   return backtestNewHref({ rerun: runId }, "replay");
 }
 
+/** Replay page. `play` starts playback once candles are ready. */
+export function backtestReplayHref(runId: string, play = false): string {
+  const path = `/account/backtests/${runId}/replay`;
+  return play ? `${path}?play=1` : path;
+}
+
+export function replayRequestsPlayback(search: string): boolean {
+  const query = search.startsWith("?") ? search.slice(1) : search;
+  return new URLSearchParams(query).get("play") === "1";
+}
+
+/** Same search string with the one-shot playback flag removed. */
+export function replaySearchWithoutPlayback(search: string): string {
+  const params = new URLSearchParams(
+    search.startsWith("?") ? search.slice(1) : search,
+  );
+  params.delete("play");
+  const next = params.toString();
+  return next ? `?${next}` : "";
+}
+
+const REPLAY_PLAYBACK_CONSUMED_KEY = "tbp-replay-playback";
+
+/** Run id when this replay URL asked to start playback. */
+export function replayPlaybackRunId(pathname: string, search: string): string | null {
+  if (!replayRequestsPlayback(search)) {
+    return null;
+  }
+  const match = pathname.match(/\/account\/backtests\/([^/]+)\/replay\/?$/);
+  const runId = match?.[1] ? decodeURIComponent(match[1]) : "";
+  return runId || null;
+}
+
+export function replayPlaybackConsumed(
+  storage: Pick<Storage, "getItem">,
+  runId: string,
+): boolean {
+  return storage.getItem(REPLAY_PLAYBACK_CONSUMED_KEY) === runId;
+}
+
+export function markReplayPlaybackConsumed(
+  storage: Pick<Storage, "setItem">,
+  runId: string,
+): void {
+  storage.setItem(REPLAY_PLAYBACK_CONSUMED_KEY, runId);
+}
+
+type ReplayPlayCursor = { key: string; head: number; playing: boolean };
+type ReplayPlayFlag = { key: string; started: boolean };
+
+/** One render of replay transport. Armed playback starts once candles exist. */
+export function replayAutoplayStep(input: {
+  armed: boolean;
+  candlesReady: boolean;
+  candleKey: string;
+  startHead: number;
+  cursor: ReplayPlayCursor;
+  playback: ReplayPlayFlag;
+}): {
+  cursor: ReplayPlayCursor | null;
+  playback: ReplayPlayFlag | null;
+  disarm: boolean;
+  head: number;
+  playing: boolean;
+  started: boolean;
+} {
+  const autoplay = input.armed && input.candlesReady;
+  if (autoplay) {
+    const playingNow =
+      input.cursor.key === input.candleKey &&
+      input.cursor.head === 0 &&
+      input.cursor.playing &&
+      input.playback.key === input.candleKey &&
+      input.playback.started;
+    return {
+      cursor: playingNow
+        ? null
+        : { key: input.candleKey, head: 0, playing: true },
+      playback: playingNow ? null : { key: input.candleKey, started: true },
+      disarm: playingNow,
+      head: 0,
+      playing: true,
+      started: true,
+    };
+  }
+  const cursorMatches = input.cursor.key === input.candleKey;
+  const playbackMatches = input.playback.key === input.candleKey;
+  return {
+    cursor: cursorMatches
+      ? null
+      : { key: input.candleKey, head: input.startHead, playing: false },
+    playback: playbackMatches ? null : { key: input.candleKey, started: false },
+    disarm: false,
+    head: cursorMatches ? input.cursor.head : input.startHead,
+    playing: cursorMatches ? input.cursor.playing : false,
+    started: playbackMatches ? input.playback.started : false,
+  };
+}
+
 export const BACKTEST_SAVED_PAGE_SIZE = 20;
 
 export function parseBacktestListPage(raw: unknown): number {
