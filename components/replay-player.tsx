@@ -2752,6 +2752,7 @@ export function ReplayPlayer({
             allowKeepPlatform={allowKeepPlatform}
             folders={folders}
             applyDesks={applyDesks}
+            onPlay={beginPlayback}
           />
         </aside>
       ) : null}

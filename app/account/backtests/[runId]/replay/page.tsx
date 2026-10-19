@@ -150,9 +150,9 @@ async function loadReplayFamily(
   const children = await listBacktestRuns({
     parentRunId: root.id,
     limit: 40,
-    orders: false,
     replayEvents: false,
   });
+  // Orders stay on each child so the rail table can show ROE.
   const rows = [replayRailRun(root)];
   for (const child of children) {
     if (child.id !== root.id && canReadBacktestRun(child, userId, isAdmin)) {

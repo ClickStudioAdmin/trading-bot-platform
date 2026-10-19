@@ -211,6 +211,22 @@ const relatedComparable = {
   name: "ETH DCA",
   status: "done",
   createdAtMs: 30,
+  stats: {
+    trades: 0,
+    wins: 0,
+    winRate: 0,
+    realizedUsdt: 0,
+    maxDrawdownUsdt: 0,
+    profitFactor: null,
+    timeInMarket: 0,
+    openQty: 0,
+    openSide: null,
+    markUsdt: 0,
+    startingUsdt: 1000,
+    endingUsdt: 1000,
+    returnPct: 0,
+  },
+  orders: [],
 } as BacktestRun;
 const olderVariation = {
   ...relatedRoot,
@@ -231,6 +247,41 @@ const newerVariation = {
   leverage: 8,
   status: "done",
   createdAtMs: 20,
+  stats: {
+    trades: 2,
+    wins: 1,
+    winRate: 0.5,
+    realizedUsdt: 50,
+    maxDrawdownUsdt: 0,
+    profitFactor: null,
+    timeInMarket: 0,
+    openQty: 0,
+    openSide: null,
+    markUsdt: 0,
+    startingUsdt: 1000,
+    endingUsdt: 1050,
+    returnPct: 0.05,
+  },
+  orders: [
+    {
+      atMs: 1,
+      action: "buy",
+      side: "long",
+      qty: 1,
+      price: 100,
+      feeUsdt: 0,
+      realizedUsdt: null,
+    },
+    {
+      atMs: 2,
+      action: "flatten",
+      side: "long",
+      qty: 1,
+      price: 150,
+      feeUsdt: 0,
+      realizedUsdt: 50,
+    },
+  ],
 } as BacktestRun;
 const related = replayRelatedList({
   root: relatedRoot,
@@ -262,6 +313,16 @@ assert.deepEqual(
     ["var-old", "running", "ETH DCA tight"],
     ["fresh", "queued", "ETH DCA fresh"],
     ["var-new", "done", "ETH DCA wide"],
+  ],
+);
+assert.equal(related.comparables[0]?.winRate, null);
+assert.equal(related.comparables[0]?.roePct, null);
+assert.deepEqual(
+  related.variations.map((row) => [row.winRate, row.roePct]),
+  [
+    [null, null],
+    [null, null],
+    [0.5, 4],
   ],
 );
 
