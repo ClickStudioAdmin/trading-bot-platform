@@ -70,36 +70,51 @@ export function BacktestParameterSections({
   sections: ParamSection[];
 }) {
   return (
-    <div className="space-y-4">
-      {sections.map((section) => (
-        <section key={section.title} className="space-y-4">
-          <h3 className="text-sm font-semibold text-ink">{section.title}</h3>
-          {section.groups.length > 0 ? (
-            <div className="overflow-hidden rounded-card border border-line bg-surface">
-              {section.groups.map((group, index) => (
-                <div
-                  key={`${group.title ?? "fields"}-${index}`}
-                  className={index > 0 ? "border-t border-line" : undefined}
-                >
-                  {group.title ? (
-                    <p className="bg-surface-raised px-5 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
-                      {group.title}
-                    </p>
-                  ) : null}
-                  <ParamRows rows={group.rows} inset />
-                </div>
-              ))}
-            </div>
-          ) : null}
-          {section.stack ? <ConditionStackView stack={section.stack} /> : null}
-          {section.stacks?.map((stack, index) => (
-            <div key={`${stack.title ?? "action"}-${index}`} className="space-y-3">
-              {index > 0 ? <JoinWord label="Or" /> : null}
-              <ConditionStackView stack={stack} />
-            </div>
-          ))}
-        </section>
-      ))}
+    <div>
+      {sections.map((section, index) => {
+        const hasBody =
+          section.groups.length > 0 ||
+          section.stack != null ||
+          (section.stacks != null && section.stacks.length > 0);
+        return (
+          <section
+            key={section.title}
+            className={index < sections.length - 1 ? "pb-2" : undefined}
+          >
+            <h3 className="sticky top-0 z-10 bg-canvas py-2 text-sm font-semibold text-ink">
+              {section.title}
+            </h3>
+            {hasBody ? (
+              <div className="mt-2 space-y-4">
+                {section.groups.length > 0 ? (
+                  <div className="overflow-hidden rounded-card border border-line bg-surface">
+                    {section.groups.map((group, groupIndex) => (
+                      <div
+                        key={`${group.title ?? "fields"}-${groupIndex}`}
+                        className={groupIndex > 0 ? "border-t border-line" : undefined}
+                      >
+                        {group.title ? (
+                          <p className="bg-surface-raised px-5 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
+                            {group.title}
+                          </p>
+                        ) : null}
+                        <ParamRows rows={group.rows} inset />
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {section.stack ? <ConditionStackView stack={section.stack} /> : null}
+                {section.stacks?.map((stack, stackIndex) => (
+                  <div key={`${stack.title ?? "action"}-${stackIndex}`} className="space-y-3">
+                    {stackIndex > 0 ? <JoinWord label="Or" /> : null}
+                    <ConditionStackView stack={stack} />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        );
+      })}
     </div>
   );
 }
