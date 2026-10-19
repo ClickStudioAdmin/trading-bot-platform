@@ -74,7 +74,7 @@ Theme page section headings stay 20px (`text-xl`) so they sit above the samples.
 
 Cards: `bg-surface`, `border-line`, radius 16px, padding 20–24px. No heavy drop shadows. Soft border only.
 
-Scrollbars on `overflow-auto`, `overflow-x-auto`, and `overflow-y-auto` are the thin bar: 8px, no arrow buttons, transparent track, `line-strong` thumb, `ink-faint` on hover. The parameters popup body uses `overflow-y-auto`, so it uses that same bar.
+Scrollbars on `overflow-auto`, `overflow-x-auto`, and `overflow-y-auto` are the thin bar: 8px, no arrow buttons, transparent track, `line-strong` thumb, `ink-faint` on hover. The parameters popup body uses `overflow-y-auto`, so it uses that same bar, with 12px (`pr-3`) between the parameter tables and the bar.
 
 ## Layout
 
