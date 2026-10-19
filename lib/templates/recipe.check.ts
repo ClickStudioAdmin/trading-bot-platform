@@ -407,6 +407,55 @@ if (exitsRule.ok) {
   assert.equal(exitsRule.rule.trailing?.activePrice, 49000);
 }
 
+const flexWithExitActions = snapshotPerpsRecipe({
+  name: "Flex Entry — ATR band",
+  symbol: "BCHUSDT",
+  action: "buy",
+  closeSide: null,
+  orderType: "market",
+  sizeUnit: "qty",
+  size: 1,
+  limitPrice: null,
+  entrySource: "price",
+  triggerBy: "last",
+  triggerCompare: "gte",
+  triggerPrice: 1,
+  skipIfOpen: true,
+  tpsl: null,
+  trailing: null,
+  breakevenActivationPct: null,
+  breakevenOffsetPct: null,
+  exitActions: [
+    {
+      id: "take-profit",
+      kind: "take_profit",
+      scope: { kind: "all" },
+      groups: [{ anchor: { trigger: "target" }, rows: [] }],
+      takeProfitPct: 3,
+      takeProfitPrice: null,
+      stopLossPct: null,
+      stopLossPrice: null,
+      trailingDistance: null,
+      trailingActivation: null,
+      trailingPct: null,
+      trailingTriggerPct: null,
+      breakevenActivationPct: null,
+      breakevenOffsetPct: null,
+    },
+  ],
+});
+const loadedFlexExits = parseTemplateRecipe(flexWithExitActions, "flex", 1);
+assert.equal(loadedFlexExits.ok, true);
+if (loadedFlexExits.ok && loadedFlexExits.recipe.kind === "flex") {
+  assert.equal(loadedFlexExits.recipe.exitActions?.length, 1);
+  assert.equal(loadedFlexExits.recipe.exitActions?.[0]?.takeProfitPct, 3);
+  assert.equal(loadedFlexExits.recipe.breakevenOffsetPct, null);
+  assert.equal(
+    recipesMatchReplayFields(flexWithExitActions, loadedFlexExits.recipe),
+    true,
+  );
+}
+
 const webhookPerps = snapshotPerpsRecipe({
   name: "Signal buy",
   symbol: "BTCUSDT",
