@@ -340,8 +340,12 @@ export function BacktestQueueForm({
   const deskBotSelected =
     !libraryTemplateSelected && deskBots.some((row) => row.id === templateId);
   const nameMissing = !backtestName.trim();
+  const noBacktestSources = deskBots.length === 0 && templates.length === 0;
   const sourceMissing =
-    !recipe && !deskBotSelected && !libraryTemplateSelected;
+    !noBacktestSources &&
+    !recipe &&
+    !deskBotSelected &&
+    !libraryTemplateSelected;
   const deskBotOptions = useMemo((): AppSelectOption[] => {
     return [
       { value: "", label: "Pick a desk bot" },
@@ -1087,6 +1091,12 @@ export function BacktestQueueForm({
           {variant ? null : (
             <BotFormStep title="Bot or Template">
               <div>
+              {noBacktestSources ? (
+                <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+                  No bots or templates exist. Start by creating a new Bot
+                </p>
+              ) : (
+              <>
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="text-sm text-ink-muted">
                   Select a bot or a template.
@@ -1154,6 +1164,8 @@ export function BacktestQueueForm({
                   </p>
                 ) : null}
               </div>
+              </>
+              )}
               </div>
             </BotFormStep>
           )}
