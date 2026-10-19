@@ -52,7 +52,6 @@ import { submitFuturesTrade } from "@/lib/futures/actions";
 import { futuresWebhookOrigin } from "@/lib/futures/webhook";
 import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { loadFuturesPositionsBotBook } from "@/lib/futures/bot-book";
 import { futuresOpenBookFromDesk, loadFuturesDesk } from "@/lib/futures/list";
 import { futuresDeskNeedsUrgentRefresh } from "@/lib/futures/pending-close";
@@ -356,14 +355,6 @@ export default async function FuturesPositionsPage({
                     allowSignal={allowSignal}
                     agreementGate={agreementGate}
                   />
-                ) : canTestWebhook && session ? (
-                  <p className="mt-4 text-hint text-ink-muted">
-                    Create a named webhook on{" "}
-                    <Link href={deskHref(FUTURES_PATHS.webhooks, session?.account.id)} className="text-accent">
-                      Webhooks
-                    </Link>{" "}
-                    to send a dummy TradingView call from this ticket.
-                  </p>
                 ) : null}
               </form>
               {live && !settings.connectionId ? (
