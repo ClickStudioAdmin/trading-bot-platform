@@ -1064,7 +1064,7 @@ function TpslTicketSection({
   children: ReactNode;
 }) {
   return (
-    <div className="space-y-3 border-t border-line-strong pt-4">
+    <div className="space-y-3 border-t border-line px-5 py-3 first:border-t-0">
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-sm text-ink">
           <AppCheck
