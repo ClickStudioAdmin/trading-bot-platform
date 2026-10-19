@@ -28,7 +28,8 @@ import {
 } from "./pending-close";
 import { parseCloseAllScope } from "./close-all";
 import type { DeskActionResult } from "@/lib/ui/desk-action";
-import { deskActionError } from "@/lib/ui/desk-action";
+import { deskActionError, deskActionOk } from "@/lib/ui/desk-action";
+import { futuresPlaceNotice } from "./flash-notice";
 import { runFuturesCommand } from "./command";
 import { parseFuturesAction } from "./model";
 import { safeFuturesReturnPath } from "./path";
@@ -82,7 +83,7 @@ import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { afterDeskWork } from "@/lib/ui/after-desk-work";
 import { createServiceClient } from "@/lib/supabase/admin";
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 function fail(next: string, message: string): never {
@@ -148,6 +149,50 @@ export async function submitFuturesTrade(formData: FormData) {
     fail(next, result.error);
   }
   redirect(withQuery(next, { paper: result.flash }));
+}
+
+/** Buy and Sell from the manual ticket. Stays on the page so the selected contract remains. */
+export async function placeManualFuturesOrder(
+  formData: FormData,
+): Promise<DeskActionResult> {
+  const session = await requirePerpsUiSession();
+  const { member, account } = session;
+  const parsed = parseFuturesAction(formData.get("action"));
+  if (
+    !deskAllowsManualPerpTicket(account) &&
+    parsed.ok &&
+    (parsed.action === "buy" || parsed.action === "sell")
+  ) {
+    return deskActionError(
+      deskManualBuySellBlockReason(account) ??
+        "This desk does not take Buy or Sell from the ticket.",
+    );
+  }
+  const result = await runFuturesCommand({
+    actor: {
+      userId: member.id,
+      accountId: account.id,
+      mode: account.mode,
+    },
+    command: {
+      kind: "place",
+      action: formData.get("action"),
+      symbol: formData.get("symbol"),
+      orderType: formData.get("orderType"),
+      positionId: formData.get("positionId"),
+      size: formData.get("size") ?? formData.get("qty"),
+      sizeUnit: formData.get("sizeUnit"),
+      limitPrice: formData.get("limitPrice"),
+      tpslForm: formData,
+      trailingForm: formData,
+      idempotencyKey: formData.get("idempotencyKey"),
+    },
+  });
+  if (!result.ok) {
+    return deskActionError(result.error);
+  }
+  refresh();
+  return deskActionOk(futuresPlaceNotice(result.flash));
 }
 
 export async function saveFuturesTpsl(formData: FormData) {

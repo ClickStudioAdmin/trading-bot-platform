@@ -14,6 +14,7 @@ import {
 import { FuturesWorkingOrders } from "@/components/futures-working";
 import { DeskReturnHeading } from "@/components/desk-return-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { DeskFormError, StayOnPageForm } from "@/components/stay-on-page-form";
 import { loginCanSendWebhookTest } from "@/lib/admin/emails";
 import { getSessionContext } from "@/lib/auth/session";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
@@ -46,10 +47,14 @@ import {
   FuturesWebhookTest,
   MANUAL_ORDER_FORM_ID,
 } from "@/components/futures-webhook-test";
-import { submitFuturesTrade } from "@/lib/futures/actions";
+import { placeManualFuturesOrder } from "@/lib/futures/actions";
+import {
+  TICKET_SYMBOL_COOKIES,
+  ticketSymbolFromCookie,
+} from "@/lib/futures/ticket-symbol";
 import { futuresWebhookOrigin } from "@/lib/futures/webhook";
 import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import { loadFuturesPositionsBotBook } from "@/lib/futures/bot-book";
 import { futuresOpenBookFromDesk, loadFuturesDesk } from "@/lib/futures/list";
@@ -197,6 +202,11 @@ export default async function FuturesPositionsPage({
       lastPrices[symbol] = last;
     }
   }
+  const ticketSymbol = ticketSymbolFromCookie(
+    (await cookies()).get(TICKET_SYMBOL_COOKIES.bybit)?.value,
+    pairs,
+    "BTCUSDT",
+  );
   const hintRows = desk.fillsLoaded
     ? open
     : open.map((row) => ({ ...row, orders: undefined }));
@@ -310,18 +320,25 @@ export default async function FuturesPositionsPage({
           <ManualTradeWorkspace
             venue="bybit"
             environment={session?.account.venueEnvironment ?? null}
-            defaultSymbol="BTCUSDT"
+            defaultSymbol={ticketSymbol}
           >
           <section>
             <h2 className="text-lg font-semibold tracking-tight">
               Place an order
             </h2>
             <div className="mt-3 rounded-card border border-line bg-surface p-5">
-              <form id={MANUAL_ORDER_FORM_ID} action={submitFuturesTrade} className="block">
+              <StayOnPageForm
+                id={MANUAL_ORDER_FORM_ID}
+                action={placeManualFuturesOrder}
+                className="block"
+              >
                 <input type="hidden" name="next" value={NEXT} />
+                <DeskFormError className="mb-3 text-sm text-danger" />
                 <FuturesOrderTicket
                   options={pairs}
                   lastPrices={lastPrices}
+                  defaultSymbol={ticketSymbol}
+                  symbolCookie={TICKET_SYMBOL_COOKIES.bybit}
                   agreementGate={agreementGate}
                   stacked
                   actions={
@@ -329,6 +346,7 @@ export default async function FuturesPositionsPage({
                       <PendingSubmitButton
                         pendingLabel="Buying…"
                         successKey="futures-buy"
+                        deskAction="buy"
                         name="action"
                         value="buy"
                         className="w-full rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas"
@@ -338,6 +356,7 @@ export default async function FuturesPositionsPage({
                       <PendingSubmitButton
                         pendingLabel="Selling…"
                         successKey="futures-sell"
+                        deskAction="sell"
                         name="action"
                         value="sell"
                         className="w-full rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink"
@@ -362,7 +381,7 @@ export default async function FuturesPositionsPage({
                     to send a dummy TradingView call from this ticket.
                   </p>
                 ) : null}
-              </form>
+              </StayOnPageForm>
               {live && !settings.connectionId ? (
                 <p className="mt-3 text-xs text-warning">
                   Bind an exchange in Desk Settings before these buttons place

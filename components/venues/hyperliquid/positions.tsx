@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { LiveTickerScope } from "@/components/live-ticker";
 import { FuturesOrderTicket } from "@/components/futures-order-ticket";
 import { ManualTradeWorkspace } from "@/components/manual-trade-workspace";
@@ -14,6 +14,7 @@ import {
 import { FuturesWorkingOrders } from "@/components/futures-working";
 import { DeskReturnHeading } from "@/components/desk-return-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { DeskFormError, StayOnPageForm } from "@/components/stay-on-page-form";
 import {
   FuturesWebhookTest,
   MANUAL_ORDER_FORM_ID,
@@ -48,7 +49,11 @@ import {
 } from "@/lib/desk-blotter-filters";
 import { loadFuturesAutomationRules } from "@/lib/futures/automation-load";
 import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
-import { submitFuturesTrade } from "@/lib/futures/actions";
+import { placeManualFuturesOrder } from "@/lib/futures/actions";
+import {
+  TICKET_SYMBOL_COOKIES,
+  ticketSymbolFromCookie,
+} from "@/lib/futures/ticket-symbol";
 import { futuresWebhookOrigin } from "@/lib/futures/webhook";
 import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
 import { loadFuturesPositionsBotBook } from "@/lib/futures/bot-book";
@@ -186,6 +191,11 @@ export async function HyperliquidFuturesPositions({
       lastPrices[symbol] = last;
     }
   }
+  const ticketSymbol = ticketSymbolFromCookie(
+    (await cookies()).get(TICKET_SYMBOL_COOKIES.hyperliquid)?.value,
+    pairs,
+    "BTC",
+  );
   const hintRows = desk.fillsLoaded
     ? open
     : open.map((row) => ({ ...row, orders: undefined }));
@@ -264,25 +274,32 @@ export async function HyperliquidFuturesPositions({
           <ManualTradeWorkspace
             venue="hyperliquid"
             environment={env}
-            defaultSymbol="BTC"
+            defaultSymbol={ticketSymbol}
           >
           <section>
             <h2 className="text-lg font-semibold tracking-tight">
               Place an order
             </h2>
             <div className="mt-3 rounded-card border border-line bg-surface p-5">
-              <form id={MANUAL_ORDER_FORM_ID} action={submitFuturesTrade} className="block">
+              <StayOnPageForm
+                id={MANUAL_ORDER_FORM_ID}
+                action={placeManualFuturesOrder}
+                className="block"
+              >
                 <input type="hidden" name="next" value={NEXT} />
+                <DeskFormError className="mb-3 text-sm text-danger" />
                 <FuturesOrderTicket
                   options={pairs}
                   lastPrices={lastPrices}
-                  defaultSymbol="BTC"
+                  defaultSymbol={ticketSymbol}
+                  symbolCookie={TICKET_SYMBOL_COOKIES.hyperliquid}
                   stacked
                   actions={
                     <>
                       <PendingSubmitButton
                         pendingLabel="Buying…"
                         successKey="futures-buy"
+                        deskAction="buy"
                         name="action"
                         value="buy"
                         className="w-full rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas"
@@ -292,6 +309,7 @@ export async function HyperliquidFuturesPositions({
                       <PendingSubmitButton
                         pendingLabel="Selling…"
                         successKey="futures-sell"
+                        deskAction="sell"
                         name="action"
                         value="sell"
                         className="w-full rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink"
@@ -319,7 +337,7 @@ export async function HyperliquidFuturesPositions({
                     to send a dummy TradingView call from this ticket.
                   </p>
                 ) : null}
-              </form>
+              </StayOnPageForm>
               {live && !settings.connectionId ? (
                 <p className="mt-3 text-xs text-warning">
                   Bind a Hyperliquid connection in Desk Settings before these

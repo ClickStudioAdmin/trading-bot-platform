@@ -144,6 +144,7 @@ export function FuturesWebhookTest({
           <PendingSubmitButton
             form={standalone ? undefined : MANUAL_ORDER_FORM_ID}
             formAction={standalone ? undefined : testFuturesWebhook}
+            bypassStay={!standalone}
             pendingLabel="Sending…"
             successKey="test-futures-webhook"
             className="rounded-control bg-accent-strong px-4 py-2 text-xs font-medium text-ink"
