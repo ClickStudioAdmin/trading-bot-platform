@@ -115,15 +115,15 @@ export async function loadDeskBacktestBot(
 function backtestListDesks(
   desks: readonly TradingAccount[],
 ): BacktestListDesk[] {
-  return desks.flatMap((desk) => {
+  const listed: BacktestListDesk[] = [];
+  for (const desk of desks) {
     if (deskAllowsDcaPlaybooks(desk)) {
-      return [{ id: desk.id, name: desk.name, deskType: "dca" as const }];
+      listed.push({ id: desk.id, name: desk.name, deskType: "dca" });
+    } else if (deskAllowsPerpsRecipes(desk)) {
+      listed.push({ id: desk.id, name: desk.name, deskType: "flex" });
     }
-    if (deskAllowsPerpsRecipes(desk)) {
-      return [{ id: desk.id, name: desk.name, deskType: "flex" as const }];
-    }
-    return [];
-  });
+  }
+  return listed;
 }
 
 /** Flex and DCA desks, plus which runs still match a replayable bot on each desk. */
