@@ -11,6 +11,7 @@ import {
   backtestListedSections,
   filterParamSections,
   paramSectionsHaveBothSides,
+  paramSideShows,
   recipeParamRows,
   recipeParamSections,
   templateParamSections,
@@ -658,5 +659,11 @@ assert.deepEqual(
   filterParamSections(bothSections, "all").map((section) => section.title),
   bothSections.map((section) => section.title),
 );
+assert.equal(paramSideShows("all", "long"), true);
+assert.equal(paramSideShows("all", "short"), true);
+assert.equal(paramSideShows("long", "long"), true);
+assert.equal(paramSideShows("long", "short"), false);
+assert.equal(paramSideShows("short", "long"), false);
+assert.equal(paramSideShows("short", "short"), true);
 
 console.log("backtest param section checks passed");

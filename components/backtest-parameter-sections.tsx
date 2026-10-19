@@ -3,53 +3,16 @@
 import { useLayoutEffect, useState } from "react";
 import { CONDITION_GROUP_HELPER, JoinWord } from "@/components/condition-join";
 import {
+  ParamSideFilter,
+  type ParamSideChoice,
+} from "@/components/param-side-filter";
+import {
   filterParamSections,
   paramSectionsHaveBothSides,
   type ParamRow,
   type ParamSection,
   type ParamStack,
 } from "@/lib/backtest/param-sections";
-
-type SideChoice = "all" | "long" | "short";
-
-const SIDE_OPTIONS: { value: SideChoice; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "long", label: "Long" },
-  { value: "short", label: "Short" },
-];
-
-function ParamSideFilter({
-  value,
-  onChange,
-}: {
-  value: SideChoice;
-  onChange: (next: SideChoice) => void;
-}) {
-  return (
-    <div
-      role="group"
-      aria-label="Side"
-      className="flex gap-0.5 rounded-control border border-line bg-surface p-0.5"
-    >
-      {SIDE_OPTIONS.map((option) => {
-        const active = value === option.value;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            aria-pressed={active}
-            onClick={() => onChange(option.value)}
-            className={`rounded-control px-2 py-1 text-[11px] text-ink-muted ${
-              active ? "bg-surface-raised font-medium" : "hover:bg-canvas"
-            }`}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 function ParamRows({
   rows,
@@ -120,7 +83,7 @@ export function BacktestParameterSections({
   sections: ParamSection[];
 }) {
   const both = paramSectionsHaveBothSides(sections);
-  const [side, setSide] = useState<SideChoice>("all");
+  const [side, setSide] = useState<ParamSideChoice>("all");
   const shown = filterParamSections(sections, both ? side : "all");
   useLayoutEffect(() => {
     if (!both) {

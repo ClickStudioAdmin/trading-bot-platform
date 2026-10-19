@@ -100,6 +100,13 @@ export function paramSectionsHaveBothSides(
   return long && short;
 }
 
+export function paramSideShows(
+  choice: "all" | "long" | "short",
+  side: "long" | "short",
+): boolean {
+  return choice === "all" || choice === side;
+}
+
 export function filterParamSections(
   sections: readonly ParamSection[],
   side: "all" | "long" | "short",
