@@ -56,7 +56,7 @@ export function BacktestEquityPanel({
   const [candles, setCandles] = useState<CandleBar[]>([]);
   useEffect(() => {
     let cancelled = false;
-    const bounds = backtestChartFetchBounds(run, interval);
+    const bounds = backtestChartFetchBounds(run);
     void loadBacktestDisplayCandles({
       venue: run.venue,
       venueEnvironment: run.venueEnvironment,
