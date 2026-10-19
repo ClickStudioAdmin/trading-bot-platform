@@ -71,6 +71,55 @@ export type ParamSection = {
   stacks?: ParamStack[];
 };
 
+export type ParamSide = "long" | "short" | "shared";
+
+export function paramSectionSide(title: string): ParamSide {
+  if (title.startsWith("Long ")) {
+    return "long";
+  }
+  if (title.startsWith("Short ")) {
+    return "short";
+  }
+  return "shared";
+}
+
+export function paramSectionsHaveBothSides(
+  sections: readonly ParamSection[],
+): boolean {
+  let long = false;
+  let short = false;
+  for (const section of sections) {
+    const side = paramSectionSide(section.title);
+    if (side === "long") {
+      long = true;
+    }
+    if (side === "short") {
+      short = true;
+    }
+  }
+  return long && short;
+}
+
+export function paramSideShows(
+  choice: "all" | "long" | "short",
+  side: "long" | "short",
+): boolean {
+  return choice === "all" || choice === side;
+}
+
+export function filterParamSections(
+  sections: readonly ParamSection[],
+  side: "all" | "long" | "short",
+): ParamSection[] {
+  if (side === "all") {
+    return [...sections];
+  }
+  return sections.filter((section) => {
+    const kind = paramSectionSide(section.title);
+    return kind === "shared" || kind === side;
+  });
+}
+
 export type BacktestWindowFields = {
   name?: string | null;
   leverage: number;

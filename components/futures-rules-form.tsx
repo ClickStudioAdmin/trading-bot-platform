@@ -29,6 +29,11 @@ import {
   botSidebarSaveClass,
   deskActionBtnClass,
 } from "@/components/bot-form-chrome";
+import {
+  BotFormSideFilter,
+  BotFormSidePane,
+  type ParamSideChoice,
+} from "@/components/param-side-filter";
 import { ExitSideBuilder } from "@/components/exit-side-builder";
 import { PerpsAdditionalOrders } from "@/components/perps-additional-orders";
 import {
@@ -673,6 +678,7 @@ function RuleCard({
   const [direction, setDirection] = useState<PerpsFormDirection>(() =>
     initialPerpsFormDirection(layer, allowBoth),
   );
+  const [sideChoice, setSideChoice] = useState<ParamSideChoice>("all");
   const [entryDrafts, setEntryDrafts] = useState(() =>
     initialPerpsEntryDrafts(layer),
   );
@@ -1902,6 +1908,9 @@ function RuleCard({
       ) : null}
       <BotFormColumns single={embedded}>
       <BotFormCard>
+      {direction === "both" ? (
+        <BotFormSideFilter value={sideChoice} onChange={setSideChoice} />
+      ) : null}
       <BotFormStep title="General">
         {embedded ? (
           <input
@@ -1962,6 +1971,7 @@ function RuleCard({
       </BotFormStep>
 
       {showLong ? (
+      <BotFormSidePane hidden={direction === "both" && sideChoice === "short"}>
       <BotFormStep
         title="Long Entry"
         badge="Condition Builder"
@@ -1995,8 +2005,10 @@ function RuleCard({
           extraOrders={longExtraOrders}
         />
       </BotFormStep>
+      </BotFormSidePane>
       ) : null}
       {showShort ? (
+      <BotFormSidePane hidden={direction === "both" && sideChoice === "long"}>
       <BotFormStep
         title="Short Entry"
         badge="Condition Builder"
@@ -2030,6 +2042,7 @@ function RuleCard({
           extraOrders={shortExtraOrders}
         />
       </BotFormStep>
+      </BotFormSidePane>
       ) : null}
 
       {closing ? (
@@ -2071,6 +2084,7 @@ function RuleCard({
       ) : null}
 
       {!closing && (direction === "long" || direction === "both") ? (
+        <BotFormSidePane hidden={direction === "both" && sideChoice === "short"}>
         <BotFormStep title="Long Additional Orders" badge="Condition Builder" shell="canvas" defaultCollapsed={inUse}>
           <PerpsAdditionalOrders
             groups={longAddGroups}
@@ -2086,8 +2100,10 @@ function RuleCard({
             invalidFieldClass={botFieldInvalidClass}
           />
         </BotFormStep>
+        </BotFormSidePane>
       ) : null}
       {!closing && (direction === "short" || direction === "both") ? (
+        <BotFormSidePane hidden={direction === "both" && sideChoice === "long"}>
         <BotFormStep title="Short Additional Orders" badge="Condition Builder" shell="canvas" defaultCollapsed={inUse}>
           <PerpsAdditionalOrders
             groups={shortAddGroups}
@@ -2103,9 +2119,11 @@ function RuleCard({
             invalidFieldClass={botFieldInvalidClass}
           />
         </BotFormStep>
+        </BotFormSidePane>
       ) : null}
 
       {!closing && (direction === "long" || direction === "both") ? (
+        <BotFormSidePane hidden={direction === "both" && sideChoice === "short"}>
         <BotFormStep title="Long Exit" badge="Condition Builder" shell="canvas">
           <ExitSideBuilder
             clauses={exitClauses}
@@ -2135,8 +2153,10 @@ function RuleCard({
             renderBreakeven={(slot) => perpsBreakevenFields("primary", slot)}
           />
         </BotFormStep>
+        </BotFormSidePane>
       ) : null}
       {!closing && (direction === "short" || direction === "both") ? (
+        <BotFormSidePane hidden={direction === "both" && sideChoice === "long"}>
         <BotFormStep title="Short Exit" badge="Condition Builder" shell="canvas">
           <ExitSideBuilder
             clauses={direction === "both" ? shortClauses : exitClauses}
@@ -2192,6 +2212,7 @@ function RuleCard({
             }
           />
         </BotFormStep>
+        </BotFormSidePane>
       ) : null}
 
       </BotFormCard>
