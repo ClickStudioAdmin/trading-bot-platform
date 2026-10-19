@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import type { BacktestRecipe } from "./model";
 import { macdSeries, rsiSeries } from "@/lib/dca/indicators";
+import { blankRsiDivergenceSettings } from "@/lib/strategy/rsi-divergence";
 import {
   indicatorConditionLabel,
   indicatorRolesForReason,
@@ -370,7 +371,21 @@ const referenceDivergence = replayChartSeries(bare, bars, ["rsi_divergence"], {
 }).layers.find((row) => row.id === "ref:rsi_divergence");
 assert.equal(referenceDivergence?.divergence?.settings.style, "regular");
 assert.equal(referenceDivergence?.divergence?.settings.pivotBars, 5);
+assert.equal(referenceDivergence?.divergence?.everyShape, true);
 assert.equal(referenceDivergence?.inputs.find((field) => field.id === "span")?.value, 50);
+const conditionDivergence = replayChartSeries(
+  {
+    kind: "dca",
+    startKind: "indicator",
+    indicatorKind: "rsi_divergence",
+    indicatorPeriod: 14,
+    indicatorTimeframe: "15",
+    leadDivergence: blankRsiDivergenceSettings("long"),
+  } as BacktestRecipe,
+  bars,
+).layers.find((row) => row.roles.includes("Entry"));
+assert.equal(conditionDivergence?.divergence?.everyShape, false);
+assert.equal(conditionDivergence?.divergence?.settings.when, "bullish");
 const referenceRsi = replayChartSeries(bare, bars, ["rsi"], {
   rsi: { length: 30 },
 }).layers.find((row) => row.id === "ref:rsi");

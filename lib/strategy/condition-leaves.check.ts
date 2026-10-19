@@ -11,9 +11,13 @@ import {
 import { protectionMet } from "@/lib/strategy/protection";
 import { retraceClaim, retraceMet, type RetraceSpec } from "@/lib/strategy/retrace";
 import {
+  RSI_DIVERGENCE_LINE_COLOR,
+  rsiDivergenceChartLines,
   rsiDivergenceClaim,
   rsiDivergenceLine,
+  rsiDivergenceLineColor,
   rsiDivergenceMet,
+  rsiDivergenceSegments,
   type RsiDivergenceBar,
   type RsiDivergenceSettings,
 } from "@/lib/strategy/rsi-divergence";
@@ -192,6 +196,71 @@ const hiddenBearLine = rsiDivergenceLine({
 assert.ok(hiddenBearLine);
 assert.equal(hiddenBearLine.newerPrice < hiddenBearLine.olderPrice, true);
 assert.equal(hiddenBearLine.newerRsi > hiddenBearLine.olderRsi, true);
+
+const chartBull = rsiDivergenceChartLines({
+  bars: bullish,
+  period: 2,
+  settings: regularBull,
+  everyShape: false,
+});
+assert.ok(
+  chartBull.some(
+    (line) =>
+      line.olderIndex === bullLine.olderIndex && line.newerIndex === bullLine.newerIndex,
+  ),
+  "the chart keeps the pair the signal would use",
+);
+const everyShape = rsiDivergenceChartLines({
+  bars: bullish,
+  period: 2,
+  settings: regularBull,
+  everyShape: true,
+});
+assert.ok(everyShape.some((line) => line.when === "bullish" && line.style === "regular"));
+
+const gap = Array.from({ length: 30 }, (_, index) => {
+  const close = 180 + (index % 2 === 0 ? 3 : -3);
+  return { high: close + 2, low: close - 2, close };
+});
+const history = [
+  ...bullish,
+  ...gap,
+  ...bullish.map((bar) => ({
+    high: bar.high + 80,
+    low: bar.low + 80,
+    close: bar.close + 80,
+  })),
+];
+const narrow = { ...regularBull, span: 8 };
+const signal = rsiDivergenceLine({ bars: history, period: 2, settings: narrow });
+const painted = rsiDivergenceChartLines({
+  bars: history,
+  period: 2,
+  settings: narrow,
+  everyShape: false,
+});
+assert.ok(signal);
+assert.ok(painted.length >= 2, "older divergences stay on the chart");
+assert.ok(
+  painted.some((line) => line.olderIndex < history.length - narrow.span),
+  "a pair outside the signal window is still drawn",
+);
+assert.ok(signal.olderIndex >= history.length - narrow.span);
+
+const segments = rsiDivergenceSegments({
+  bars: bullish.map((bar, index) => ({ ...bar, timeMs: (index + 1) * 86_400_000 })),
+  period: 2,
+  settings: regularBull,
+  everyShape: true,
+});
+assert.ok(segments.length >= 1);
+assert.ok(segments.some((segment) => segment.color === RSI_DIVERGENCE_LINE_COLOR.regularBullish));
+assert.equal(
+  rsiDivergenceLineColor("bearish", "hidden"),
+  RSI_DIVERGENCE_LINE_COLOR.hiddenBearish,
+);
+assert.ok(segments.every((segment) => segment.newerTime > segment.olderTime));
+assert.ok(segments.some((segment) => segment.marker === "up"));
 
 assert.equal(
   claimsConflict(

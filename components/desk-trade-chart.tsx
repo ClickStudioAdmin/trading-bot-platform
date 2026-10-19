@@ -60,7 +60,8 @@ import {
 } from "@/lib/charts/desk-chart-view";
 import { indicatorAddDenial, researchTrialLine } from "@/lib/membership/entitlements";
 import { DESK_CANDLE_LIMIT, type CandleBar, type CandleVenue } from "@/lib/market/candles";
-import { rsiDivergenceLine } from "@/lib/strategy/rsi-divergence";
+import { DivergenceLinesPrimitive } from "@/lib/charts/divergence-lines";
+import { rsiDivergenceSegments } from "@/lib/strategy/rsi-divergence";
 
 const EMPTY_CANDLES: CandleBar[] = [];
 const DESK_CHART_EVENT = "tbp-desk-chart";
@@ -470,8 +471,8 @@ export function DeskTradeChart({
           signal: PlotSeries | null;
           histogram: PlotSeries | null;
         };
-        priceSegment: PlotSeries | null;
-        rsiSegment: PlotSeries | null;
+        priceLines: DivergenceLinesPrimitive | null;
+        rsiLines: DivergenceLinesPrimitive | null;
       };
       function plotSeries(series: { setData: (data: never) => void }): PlotSeries {
         return {
@@ -562,17 +563,18 @@ export function DeskTradeChart({
             priceLineVisible: false,
             lastValueVisible: false,
           };
+          let rsiSeries: ReturnType<typeof chart.addSeries> | null = null;
           if (layer.oscillator?.rsi) {
-            const rsi = chart.addSeries(
+            rsiSeries = chart.addSeries(
               charts.LineSeries,
               { color: "#A78BFA", lineWidth: 2, ...hiddenScaleLabel },
               pane,
             );
-            rememberIndicator(layer.id, "rsi", "line", "#A78BFA", rsi);
-            indicatorApis.push(rsi);
-            oscillator.rsi = plotSeries(rsi);
+            rememberIndicator(layer.id, "rsi", "line", "#A78BFA", rsiSeries);
+            indicatorApis.push(rsiSeries);
+            oscillator.rsi = plotSeries(rsiSeries);
             for (const level of layer.oscillator.levels) {
-              rsi.createPriceLine({
+              rsiSeries.createPriceLine({
                 price: level,
                 color: "#F5B942",
                 lineWidth: 1,
@@ -604,32 +606,15 @@ export function DeskTradeChart({
             indicatorApis.push(signal);
             oscillator.signal = plotSeries(signal);
           }
-          let priceSegment: PlotSeries | null = null;
-          let rsiSegment: PlotSeries | null = null;
-          if (layer.divergence) {
-            const priceLine = chart.addSeries(charts.LineSeries, {
-              color: "#F5B942",
-              lineWidth: 2,
-              priceLineVisible: false,
-              lastValueVisible: false,
-              autoscaleInfoProvider: () => null,
-            });
-            const rsiLine = chart.addSeries(
-              charts.LineSeries,
-              {
-                color: "#F5B942",
-                lineWidth: 2,
-                lineStyle: charts.LineStyle.Dashed,
-                priceLineVisible: false,
-                lastValueVisible: false,
-              },
-              pane,
-            );
-            indicatorApis.push(priceLine, rsiLine);
-            priceSegment = plotSeries(priceLine);
-            rsiSegment = plotSeries(rsiLine);
+          let priceLines: DivergenceLinesPrimitive | null = null;
+          let rsiLines: DivergenceLinesPrimitive | null = null;
+          if (layer.divergence && rsiSeries) {
+            priceLines = new DivergenceLinesPrimitive();
+            rsiLines = new DivergenceLinesPrimitive();
+            candleSeries.attachPrimitive(priceLines);
+            rsiSeries.attachPrimitive(rsiLines);
           }
-          drawn.push({ lines, oscillator, priceSegment, rsiSegment });
+          drawn.push({ lines, oscillator, priceLines, rsiLines });
         }
       }
 
@@ -646,31 +631,33 @@ export function DeskTradeChart({
           if (layer.oscillator?.rsi && row.oscillator.rsi) {
             row.oscillator.rsi.setData(lineData(shown, layer.oscillator.rsi));
           }
-          if (layer.divergence && row.priceSegment && row.rsiSegment) {
-            const line = rsiDivergenceLine({
-              bars: shown.map((bar) => ({
-                high: bar.high,
-                low: bar.low,
-                close: bar.close,
-              })),
+          if (layer.divergence && row.priceLines && row.rsiLines) {
+            const segments = rsiDivergenceSegments({
+              bars: shown,
               period: layer.divergence.period,
               settings: layer.divergence.settings,
+              everyShape: layer.divergence.everyShape,
             });
-            const older = line ? shown[line.olderIndex] : null;
-            const newer = line ? shown[line.newerIndex] : null;
-            if (line && older && newer) {
-              row.priceSegment.setData([
-                { time: Math.floor(older.timeMs / 1000), value: line.olderPrice },
-                { time: Math.floor(newer.timeMs / 1000), value: line.newerPrice },
-              ]);
-              row.rsiSegment.setData([
-                { time: Math.floor(older.timeMs / 1000), value: line.olderRsi },
-                { time: Math.floor(newer.timeMs / 1000), value: line.newerRsi },
-              ]);
-            } else {
-              row.priceSegment.setData([]);
-              row.rsiSegment.setData([]);
-            }
+            row.priceLines.setSegments(
+              segments.map((segment) => ({
+                olderTime: segment.olderTime,
+                newerTime: segment.newerTime,
+                olderValue: segment.olderPrice,
+                newerValue: segment.newerPrice,
+                color: segment.color,
+                marker: null,
+              })),
+            );
+            row.rsiLines.setSegments(
+              segments.map((segment) => ({
+                olderTime: segment.olderTime,
+                newerTime: segment.newerTime,
+                olderValue: segment.olderRsi,
+                newerValue: segment.newerRsi,
+                color: segment.color,
+                marker: segment.marker,
+              })),
+            );
           }
           if (layer.oscillator?.histogram && row.oscillator.histogram) {
             const histogramStyle = indicatorLineStyle(

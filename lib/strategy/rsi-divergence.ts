@@ -37,7 +37,41 @@ export type RsiDivergenceLine = {
   newerRsi: number;
   confirmIndex: number;
   minsPass: boolean;
+  when: RsiDivergenceWhen;
+  style: RsiDivergenceStyle;
 };
+
+/** Indicator paint. Regular bullish, hidden bullish, regular bearish, hidden bearish. */
+export const RSI_DIVERGENCE_LINE_COLOR = {
+  regularBullish: "#34D399",
+  hiddenBullish: "#22D3EE",
+  regularBearish: "#F07167",
+  hiddenBearish: "#F5B942",
+} as const;
+
+const CHART_SHAPES: readonly {
+  when: RsiDivergenceWhen;
+  style: RsiDivergenceStyle;
+}[] = [
+  { when: "bullish", style: "regular" },
+  { when: "bullish", style: "hidden" },
+  { when: "bearish", style: "regular" },
+  { when: "bearish", style: "hidden" },
+];
+
+export function rsiDivergenceLineColor(
+  when: RsiDivergenceWhen,
+  style: RsiDivergenceStyle,
+): string {
+  if (when === "bullish") {
+    return style === "hidden"
+      ? RSI_DIVERGENCE_LINE_COLOR.hiddenBullish
+      : RSI_DIVERGENCE_LINE_COLOR.regularBullish;
+  }
+  return style === "hidden"
+    ? RSI_DIVERGENCE_LINE_COLOR.hiddenBearish
+    : RSI_DIVERGENCE_LINE_COLOR.regularBearish;
+}
 
 export function defaultRsiDivergenceWhen(side: FuturesSide): RsiDivergenceWhen {
   return side === "short" ? "bearish" : "bullish";
@@ -226,59 +260,147 @@ function minsPass(
   return true;
 }
 
-/** Latest confirmed pair. Drawn even when the minimums fail. */
-export function rsiDivergenceLine(input: {
-  bars: readonly RsiDivergenceBar[];
-  period?: number | null;
-  settings: RsiDivergenceSettings;
-}): RsiDivergenceLine | null {
-  const bars = input.bars;
-  const period = input.period ?? DEFAULT_DCA_RSI_PERIOD;
-  const settings = input.settings;
+function collectLines(
+  bars: readonly RsiDivergenceBar[],
+  period: number,
+  settings: RsiDivergenceSettings,
+  shapes: readonly { when: RsiDivergenceWhen; style: RsiDivergenceStyle }[],
+  scan: "signal" | "chart",
+): RsiDivergenceLine[] {
   if (bars.length < settings.pivotBars * 2 + 2) {
-    return null;
+    return [];
   }
   const rsi = rsiSeries(
     bars.map((bar) => bar.close),
     period,
   );
-  const field = settings.when === "bullish" ? "low" : "high";
-  const pivots = swingIndexes(bars, settings.pivotBars, field).filter(
-    (index) => index >= bars.length - settings.span,
-  );
-  for (let newerAt = pivots.length - 1; newerAt >= 1; newerAt -= 1) {
-    const newerIndex = pivots[newerAt]!;
-    const newerPrice = bars[newerIndex]?.[field];
-    const newerRsi = rsi[newerIndex];
-    if (newerPrice == null || newerRsi == null) {
-      continue;
+  const lines: RsiDivergenceLine[] = [];
+  for (const shape of shapes) {
+    const field = shape.when === "bullish" ? "low" : "high";
+    const shaped: RsiDivergenceSettings = { ...settings, ...shape };
+    let pivots = swingIndexes(bars, settings.pivotBars, field);
+    if (scan === "signal") {
+      pivots = pivots.filter((index) => index >= bars.length - settings.span);
     }
-    for (let olderAt = newerAt - 1; olderAt >= 0; olderAt -= 1) {
-      const olderIndex = pivots[olderAt]!;
-      if (newerIndex - olderIndex > settings.span) {
+    for (let newerAt = 0; newerAt < pivots.length; newerAt += 1) {
+      const newerIndex = pivots[newerAt]!;
+      const newerPrice = bars[newerIndex]?.[field];
+      const newerRsi = rsi[newerIndex];
+      if (newerPrice == null || newerRsi == null) {
+        continue;
+      }
+      for (let olderAt = newerAt - 1; olderAt >= 0; olderAt -= 1) {
+        const olderIndex = pivots[olderAt]!;
+        if (newerIndex - olderIndex > settings.span) {
+          break;
+        }
+        const olderPrice = bars[olderIndex]?.[field];
+        const olderRsi = rsi[olderIndex];
+        if (olderPrice == null || olderRsi == null) {
+          continue;
+        }
+        if (!shapeMatches(shaped, olderPrice, newerPrice, olderRsi, newerRsi)) {
+          continue;
+        }
+        lines.push({
+          olderIndex,
+          newerIndex,
+          olderPrice,
+          newerPrice,
+          olderRsi,
+          newerRsi,
+          confirmIndex: newerIndex + settings.pivotBars,
+          minsPass: minsPass(shaped, olderPrice, newerPrice, olderRsi, newerRsi),
+          when: shape.when,
+          style: shape.style,
+        });
         break;
       }
-      const olderPrice = bars[olderIndex]?.[field];
-      const olderRsi = rsi[olderIndex];
-      if (olderPrice == null || olderRsi == null) {
-        continue;
-      }
-      if (!shapeMatches(settings, olderPrice, newerPrice, olderRsi, newerRsi)) {
-        continue;
-      }
-      return {
-        olderIndex,
-        newerIndex,
-        olderPrice,
-        newerPrice,
-        olderRsi,
-        newerRsi,
-        confirmIndex: newerIndex + settings.pivotBars,
-        minsPass: minsPass(settings, olderPrice, newerPrice, olderRsi, newerRsi),
-      };
     }
   }
-  return null;
+  return lines;
+}
+
+/** Latest confirmed pair in the trailing span. The signal uses this pair. */
+export function rsiDivergenceLine(input: {
+  bars: readonly RsiDivergenceBar[];
+  period?: number | null;
+  settings: RsiDivergenceSettings;
+}): RsiDivergenceLine | null {
+  const lines = collectLines(
+    input.bars,
+    input.period ?? DEFAULT_DCA_RSI_PERIOD,
+    input.settings,
+    [{ when: input.settings.when, style: input.settings.style }],
+    "signal",
+  );
+  return lines.at(-1) ?? null;
+}
+
+/**
+ * Every confirmed pair on the loaded candles. Span is the maximum distance
+ * between the two swings. A reference study passes every shape.
+ */
+export function rsiDivergenceChartLines(input: {
+  bars: readonly RsiDivergenceBar[];
+  period?: number | null;
+  settings: RsiDivergenceSettings;
+  everyShape: boolean;
+}): RsiDivergenceLine[] {
+  return collectLines(
+    input.bars,
+    input.period ?? DEFAULT_DCA_RSI_PERIOD,
+    input.settings,
+    input.everyShape
+      ? CHART_SHAPES
+      : [{ when: input.settings.when, style: input.settings.style }],
+    "chart",
+  );
+}
+
+export type RsiDivergenceSegment = {
+  olderTime: number;
+  newerTime: number;
+  olderPrice: number;
+  newerPrice: number;
+  olderRsi: number;
+  newerRsi: number;
+  color: string;
+  marker: "up" | "down";
+};
+
+/** Price and RSI segments for the chart. Times are unix seconds. */
+export function rsiDivergenceSegments(input: {
+  bars: readonly (RsiDivergenceBar & { timeMs: number })[];
+  period?: number | null;
+  settings: RsiDivergenceSettings;
+  everyShape: boolean;
+}): RsiDivergenceSegment[] {
+  const lines = rsiDivergenceChartLines(input);
+  const segments: RsiDivergenceSegment[] = [];
+  for (const line of lines) {
+    const older = input.bars[line.olderIndex];
+    const newer = input.bars[line.newerIndex];
+    if (!older || !newer) {
+      continue;
+    }
+    const olderTime = Math.floor(older.timeMs / 1000);
+    const newerTime = Math.floor(newer.timeMs / 1000);
+    if (!(newerTime > olderTime)) {
+      continue;
+    }
+    segments.push({
+      olderTime,
+      newerTime,
+      olderPrice: line.olderPrice,
+      newerPrice: line.newerPrice,
+      olderRsi: line.olderRsi,
+      newerRsi: line.newerRsi,
+      color: rsiDivergenceLineColor(line.when, line.style),
+      marker: line.when === "bullish" ? "up" : "down",
+    });
+  }
+  return segments;
 }
 
 /** True only on the candle that confirms the second swing, after the minimums pass. */
